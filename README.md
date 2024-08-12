@@ -3,7 +3,7 @@ Cultural Journeys through Hong Kong
 
 ## Developing
 
-Once you've installed dependencies with `bun install` start a development server:
+First install dependencies with `bun install`.
 
 ### Networking
 
