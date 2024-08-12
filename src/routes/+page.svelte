@@ -1,2 +1,6 @@
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>
+<div class="h-screen flex justify-center items-center">
+	<article class="prose lg:prose-xl text-center">
+		<h1>DEV of GhostSigns</h1>
+		<p>Visit <a href="https://www.instagram.com/hkghostsigns">@ghostsigns</a> to watch Hong Kong ✨</p>
+	</article>
+</div>
