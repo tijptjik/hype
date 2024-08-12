@@ -1,5 +1,6 @@
 {
 	"useTabs": true,
+	"svelteBracketNewLine": false,
 	"singleQuote": true,
 	"trailingComma": "none",
 	"printWidth": 100,
