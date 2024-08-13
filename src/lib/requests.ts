@@ -55,7 +55,7 @@ export const sendUnauthorizedRequest = async (
 		// TODO: Should type this as Response | ErrorResponse
 		return {
 			status: response?.status,
-			ok: response.ok ? true : false,
+			ok: response.ok,
 			...responseData
 		};
 	} catch (e) {
@@ -145,7 +145,7 @@ export const sendAuthorizedRequest = async (
 		// TODO: Should type this as Response | ErrorResponse
 		return {
 			status: response?.status,
-			ok: response.ok ? true : false,
+			ok: response.ok,
 			...responseData
 		};
 	} catch (e) {
