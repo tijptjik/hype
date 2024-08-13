@@ -8,6 +8,9 @@ node_modules
 /build-static
 /package
 
+# Cache
+/.wrangler/state/
+
 # OS
 .DS_Store
 Thumbs.db
