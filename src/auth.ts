@@ -1,24 +1,24 @@
 import { SvelteKitAuth } from '@auth/sveltekit';
-import Google from '@auth/sveltekit/providers/google';
-import dotenv from 'dotenv';
-
-// Load environment variables from .env file during development
-if (process.env.NODE_ENV !== 'production') {
-    dotenv.config();
-}
+import GoogleProvider from '@auth/sveltekit/providers/google';
+import { PRIVATE_AUTH_GOOGLE_ID, PRIVATE_AUTH_GOOGLE_SECRET, PRIVATE_AUTH_SECRET } from '$env/static/private';
 
 export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
-  //   TODO proper stage detection
-	const dev = process.env.NODE_ENV !== 'production';
-    const envScope = dev ? process.env : event.platform?.env
-    return {
-        providers: [
-            Google({
-                clientId: envScope?.AUTH_GOOGLE_ID,
-                clientSecret: envScope?.AUTH_GOOGLE_SECRET
-            })
-        ],
-        secret: envScope?.AUTH_SECRET,
-        trustHost: true
-    };
+	return {
+		providers: [
+			GoogleProvider({
+				clientId: PRIVATE_AUTH_GOOGLE_ID,
+				clientSecret: PRIVATE_AUTH_GOOGLE_SECRET,
+				allowDangerousEmailAccountLinking: true,
+				authorization: {
+					params: {
+						prompt: 'consent',
+						access_type: 'offline',
+						response_type: 'code'
+					}
+				}
+			})
+		],
+		secret: PRIVATE_AUTH_SECRET,
+		trustHost: true
+	};
 });
