@@ -4,7 +4,9 @@ import { PRIVATE_AUTH_GOOGLE_ID, PRIVATE_AUTH_GOOGLE_SECRET, PRIVATE_AUTH_SECRET
 import { D1Adapter } from '@auth/d1-adapter';
 
 export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
-		return {
+	console.log(event);
+	console.log(event.platform?.env.DB);
+	return {
 			providers: [
 				GoogleProvider({
 					clientId: PRIVATE_AUTH_GOOGLE_ID,
@@ -21,21 +23,21 @@ export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
 			],
 			secret: PRIVATE_AUTH_SECRET,
 			trustHost: true,
-			adapter: D1Adapter(event.platform?.env.DB),
-			session: {
-				strategy: 'database',
-				maxAge: 30 * 24 * 60 * 60, // 30 days
-				updateAge: 24 * 60 * 60 // update session age every 24 hours
-			},
-			callbacks: {
-				async session({ session, token }) {
-					// Include the user ID (sub) in the session
-					if (token?.sub) {
-						session.user.id = token.sub;
-					}
-					return session;
-				}
-			}
+			adapter: D1Adapter(event.platform?.env.DB)
+			// session: {
+			// 	strategy: 'database',
+			// 	maxAge: 30 * 24 * 60 * 60, // 30 days
+			// 	updateAge: 24 * 60 * 60 // update session age every 24 hours
+			// },
+			// callbacks: {
+			// 	async session({ session, token }) {
+			// 		// Include the user ID (sub) in the session
+			// 		if (token?.sub) {
+			// 			session.user.id = token.sub;
+			// 		}
+			// 		return session;
+			// 	}
+			// }
 		};
 	})
 ;
