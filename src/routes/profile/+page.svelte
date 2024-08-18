@@ -1,5 +1,4 @@
 <script lang="ts">
-
 	import { signOut } from '@auth/sveltekit/client';
 
 	export let data;

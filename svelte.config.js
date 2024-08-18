@@ -2,23 +2,25 @@ import adapterStatic from '@sveltejs/adapter-static';
 import adapterCloudflare from '@sveltejs/adapter-cloudflare';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
-// Build a SSR version of the app for Cloudflare, or a static version when targeting Android.
-const adapter = process.env.SVELTEADAPTER === 'cloudflare' ? adapterCloudflare : adapterStatic;
 
-const adapterConfig =
-	process.env.ADAPTER === 'cloudflare'
-		? {
+// Build a SSR version of the app for Cloudflare, or a static version when targeting Android.
+const selectAdapter = () => {
+	if (process.env.SVELTE_ADAPTER === 'cloudflare') {
+		return adapterCloudflare({
 			// See https://kit.svelte.dev/docs/adapter-cloudflare
 			routes: {
 				include: ['/*'],
 				exclude: ['<all>']
 			}
-		}
-		: {
+		});
+	} else {
+		return adapterStatic({
 			fallback: 'index.html',
 			pages: 'build-static',
 			assets: 'build-static'
-		};
+		});
+	}
+};
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -30,8 +32,12 @@ const config = {
 	},
 	preprocess: vitePreprocess(),
 	kit: {
-		adapter: adapter(adapterConfig)
-	},
+		adapter: selectAdapter(),
+		env: {
+			privatePrefix: 'PRIVATE',
+			publicPrefix: 'PUBLIC'
+		}
+	}
 };
 
 export default config;
