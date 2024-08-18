@@ -69,8 +69,11 @@ preview_database_id = "DB" # Required for Pages local development
 
 ######## PREVIEW environment config ########
 
-# [env.preview.vars]
-# API_KEY = "xyz789"
+[env.preview.vars]
+BUN_VERSION = "1.1.22"
+NODE_VERSION = "22.6.0"
+NODE_ENV = "staging"
+SVELTE_ADAPTER = "cloudflare"
 
 # [[env.preview.kv_namespaces]]
 # binding = "MY_KV_NAMESPACE"
@@ -78,8 +81,11 @@ preview_database_id = "DB" # Required for Pages local development
 
 ######## PRODUCTION environment config ########
 
-# [env.production.vars]
-# API_KEY = "abc123"
+[env.production.vars]
+BUN_VERSION = "1.1.22"
+NODE_VERSION = "22.6.0"
+NODE_ENV = "producation"
+SVELTE_ADAPTER = "cloudflare"
 
 # [[env.production.kv_namespaces]]
 # binding = "MY_KV_NAMESPACE"
