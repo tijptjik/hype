@@ -73,6 +73,7 @@ ENVIRONMENT = "staging"
 NODE_ENV = "staging"
 BUN_VERSION = "1.1.22"
 SVELTE_ADAPTER = "cloudflare"
+AUTH_TRUST_HOST = true
 
 # [[env.preview.kv_namespaces]]
 # binding = "MY_KV_NAMESPACE"
@@ -85,6 +86,7 @@ ENVIRONMENT = "production"
 NODE_ENV = "production"
 BUN_VERSION = "1.1.22"
 SVELTE_ADAPTER = "cloudflare"
+AUTH_TRUST_HOST = true
 
 # [[env.production.kv_namespaces]]
 # binding = "MY_KV_NAMESPACE"

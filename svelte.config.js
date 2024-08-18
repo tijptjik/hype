@@ -27,6 +27,7 @@ const config = {
 	// Consult https://kit.svelte.dev/docs/integrations#preprocessors
 	// for more information about preprocessors
 	compilerOptions: {
+		runes: true,
 		// disable all warnings coming from node_modules and all accessibility warnings
 		warningFilter: (warning) => !warning.filename?.includes('node_modules') && !warning.code.startsWith('a11y')
 	},
