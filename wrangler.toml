@@ -16,6 +16,7 @@ mode = "smart"
 # Note: Use secrets to store sensitive data.
 # - https://developers.cloudflare.com/pages/functions/bindings/#secrets
 [vars]
+ENVIRONMENT = "dev"
 BUN_VERSION = "1.1.22"
 SVELTE_ADAPTER = "cloudflare"
 
@@ -71,6 +72,7 @@ preview_database_id = "DB" # Required for Pages local development
 ######## PREVIEW environment config ########
 
 [env.preview.vars]
+ENVIRONMENT = "staging"
 NODE_ENV = "staging"
 
 # [[env.preview.kv_namespaces]]
@@ -80,7 +82,8 @@ NODE_ENV = "staging"
 ######## PRODUCTION environment config ########
 
 [env.production.vars]
-NODE_ENV = "producation"
+ENVIRONMENT = "production"
+NODE_ENV = "production"
 
 # [[env.production.kv_namespaces]]
 # binding = "MY_KV_NAMESPACE"
