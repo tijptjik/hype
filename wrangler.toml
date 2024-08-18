@@ -15,10 +15,7 @@ mode = "smart"
 # - https://developers.cloudflare.com/pages/functions/bindings/#environment-variables
 # Note: Use secrets to store sensitive data.
 # - https://developers.cloudflare.com/pages/functions/bindings/#secrets
-[vars]
-ENVIRONMENT = "dev"
-BUN_VERSION = "1.1.22"
-SVELTE_ADAPTER = "cloudflare"
+#[vars]
 
 # Bind the Workers AI model catalog. Run machine learning models, powered by serverless GPUs, on Cloudflare’s global network
 # Docs: https://developers.cloudflare.com/pages/functions/bindings/#workers-ai
@@ -74,6 +71,8 @@ preview_database_id = "DB" # Required for Pages local development
 [env.preview.vars]
 ENVIRONMENT = "staging"
 NODE_ENV = "staging"
+BUN_VERSION = "1.1.22"
+SVELTE_ADAPTER = "cloudflare"
 
 # [[env.preview.kv_namespaces]]
 # binding = "MY_KV_NAMESPACE"
@@ -84,6 +83,8 @@ NODE_ENV = "staging"
 [env.production.vars]
 ENVIRONMENT = "production"
 NODE_ENV = "production"
+BUN_VERSION = "1.1.22"
+SVELTE_ADAPTER = "cloudflare"
 
 # [[env.production.kv_namespaces]]
 # binding = "MY_KV_NAMESPACE"
