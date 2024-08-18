@@ -87,6 +87,9 @@ NODE_ENV = "production"
 BUN_VERSION = "1.1.22"
 SVELTE_ADAPTER = "cloudflare"
 AUTH_TRUST_HOST = "true"
+PRIVATE_AUTH_GOOGLE_ID = "558657803313-pnnd8dqo27l1rvj6d64n1qmke57amp2i.apps.googleusercontent.com"
+PRIVATE_AUTH_GOOGLE_SECRET = "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"
+PRIVATE_AUTH_SECRET = "5oqJwTxEa3pr/2kMFqxn2CGRTarAeN1GMucNGSq4dI"
 
 # [[env.production.kv_namespaces]]
 # binding = "MY_KV_NAMESPACE"
