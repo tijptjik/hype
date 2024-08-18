@@ -10,6 +10,7 @@ node_modules
 
 # Cache
 /.wrangler/state/
+/.wrangler/tmp/
 
 # OS
 .DS_Store
