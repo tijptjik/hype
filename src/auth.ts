@@ -12,13 +12,13 @@ export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
 					clientId: PRIVATE_AUTH_GOOGLE_ID,
 					clientSecret: PRIVATE_AUTH_GOOGLE_SECRET,
 					allowDangerousEmailAccountLinking: true,
-					authorization: {
-						params: {
-							prompt: 'consent',
-							access_type: 'offline',
-							response_type: 'code'
-						}
-					}
+					// authorization: {
+					// 	params: {
+					// 		prompt: 'consent',
+					// 		access_type: 'offline',
+					// 		response_type: 'code'
+					// 	}
+					// }
 				})
 			],
 			secret: PRIVATE_AUTH_SECRET,
