@@ -3,7 +3,7 @@
 	import { signIn, signOut } from '@auth/sveltekit/client';
 	import { page } from '$app/stores';
 
-	$: ({ session } = $page.data);
+	const { session } = $page.data;
 </script>
 
 <header class="bg-white fixed top-0 w-full">

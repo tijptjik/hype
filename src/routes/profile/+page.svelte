@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { signOut } from '@auth/sveltekit/client';
 
-	export let data;
-	const { user } = data;
+const { data } = $props();
+const { user } = data;
+
 </script>
 
 <div class="container mx-auto flex justify-center mt-24">
