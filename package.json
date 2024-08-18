@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "mullvad-exclude vite dev",
+    "dev:full": "bun run build && mullvad-exclude bunx wrangler pages dev .svelte-kit/cloudflare --port 5173",
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
@@ -15,6 +16,7 @@
   },
   "devDependencies": {
     "@auth/core": "^0.34.2",
+    "@auth/d1-adapter": "^1.4.2",
     "@auth/sveltekit": "^1.4.2",
     "@sveltejs/adapter-cloudflare": "^4.7.2",
     "@sveltejs/adapter-static": "^3.0.4",
