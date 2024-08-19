@@ -4,10 +4,7 @@ import { PRIVATE_AUTH_GOOGLE_ID, PRIVATE_AUTH_GOOGLE_SECRET, PRIVATE_AUTH_SECRET
 import { D1Adapter } from '@auth/d1-adapter';
 
 export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
-	console.log(event);
-	console.log(event.platform?.env.DB);
-	console.log(PRIVATE_AUTH_SECRET);
-	return {
+		return {
 			providers: [
 				GoogleProvider({
 					clientId: PRIVATE_AUTH_GOOGLE_ID,
@@ -30,6 +27,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
 				maxAge: 30 * 24 * 60 * 60, // 30 days
 				updateAge: 24 * 60 * 60 // update session age every 24 hours
 			},
+			debug: true,
 			callbacks: {
 				async session({ session, token }) {
 					// Include the user ID (sub) in the session
