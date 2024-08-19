@@ -1,4 +1,5 @@
 import { error, json, type RequestHandler } from '@sveltejs/kit';
+import DB from '$lib/prisma';
 
 export const GET: RequestHandler = async ({ locals, platform }) => {
 	const session = await locals.auth();
@@ -6,9 +7,8 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
 		throw error(401, 'No nice, no rice');
 	}
 	try {
-		const result = await platform?.env.DB.prepare(
-			'SELECT * FROM users LIMIT 5'
-		).run();
+		const prisma = DB(platform?.env.DB);
+		const result = await prisma.users.findMany({ take: 10 });
 		return json(result);
 	} catch (e) {
 		console.error('Database query error:', e);
