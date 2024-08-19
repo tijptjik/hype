@@ -8,40 +8,56 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model accounts {
-  id                 String  @id
-  userId             String
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String?
-  access_token       String?
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String?
-  session_state      String?
-  oauth_token_secret String?
-  oauth_token        String?
-}
-
-model sessions {
-  id           String
-  sessionToken String   @id
-  userId       String
-  expires      DateTime
-}
-
-model users {
-  id            String    @id @default("")
+model User {
+  id            String    @id @default(cuid())
   name          String?
-  email         String?
+  email         String?   @unique
   emailVerified DateTime?
   image         String?
+  accounts      Account[]
+  sessions      Session[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-model verification_tokens {
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VerificationToken {
   identifier String
-  token      String   @id
+  token      String
   expires    DateTime
+
+  @@unique([identifier, token])
 }
