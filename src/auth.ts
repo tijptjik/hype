@@ -1,14 +1,14 @@
 import { SvelteKitAuth } from '@auth/sveltekit';
 import GoogleProvider from '@auth/sveltekit/providers/google';
-// import { PRIVATE_AUTH_GOOGLE_ID, PRIVATE_AUTH_GOOGLE_SECRET, PRIVATE_AUTH_SECRET } from '$env/static/private';
+import { PRIVATE_AUTH_GOOGLE_ID, PRIVATE_AUTH_GOOGLE_SECRET, PRIVATE_AUTH_SECRET } from '$env/static/private';
 import { D1Adapter } from '@auth/d1-adapter';
 
 export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
 		return {
 			providers: [
 				GoogleProvider({
-					// clientId: PRIVATE_AUTH_GOOGLE_ID,
-					// clientSecret: PRIVATE_AUTH_GOOGLE_SECRET,
+					clientId: PRIVATE_AUTH_GOOGLE_ID,
+					clientSecret: PRIVATE_AUTH_GOOGLE_SECRET,
 					allowDangerousEmailAccountLinking: true,
 					authorization: {
 						params: {
@@ -19,7 +19,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
 					}
 				})
 			],
-			// secret: PRIVATE_AUTH_SECRET,
+			secret: PRIVATE_AUTH_SECRET,
 			trustHost: true,
 			adapter: D1Adapter(event.platform?.env.DB),
 			session: {

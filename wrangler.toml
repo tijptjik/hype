@@ -79,7 +79,7 @@ BUN_VERSION = "1.1.22"
 SVELTE_ADAPTER = "cloudflare"
 
 [[env.production.d1_databases]]
-binding = "DB" # i.e. available in your Worker on env.DB
+binding = "DB"
 database_name = "ghostsigns-dev"
 database_id = "528f43d4-caeb-4f73-8723-39be6d7146e7"
 
@@ -92,6 +92,6 @@ BUN_VERSION = "1.1.22"
 SVELTE_ADAPTER = "cloudflare"
 
 [[env.preview.d1_databases]]
-binding = "DB" # i.e. available in your Worker on env.DB
+binding = "DB"
 database_name = "ghostsigns-dev"
 database_id = "528f43d4-caeb-4f73-8723-39be6d7146e7"
