@@ -27,7 +27,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
 				maxAge: 30 * 24 * 60 * 60, // 30 days
 				updateAge: 24 * 60 * 60 // update session age every 24 hours
 			},
-			debug: true,
+			debug: false,
 			callbacks: {
 				async session({ session, token }) {
 					// Include the user ID (sub) in the session

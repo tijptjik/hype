@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "mullvad-exclude vite dev",
-    "dev:full": "bun run build && mullvad-exclude bunx wrangler pages dev .svelte-kit/cloudflare --port 5173",
+    "dev:cf": "mullvad-exclude bunx wrangler pages dev",
+    "dev:full": "vite build && mullvad-exclude bunx wrangler pages dev",
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
