@@ -77,4 +77,7 @@
 
 <style>
     @import 'https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css';
+		.maplibregl-canvas {
+				outline: none;
+		}
 </style>
