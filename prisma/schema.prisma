@@ -8,6 +8,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Orgs
+
+// Georeferences
+
+// model GeoProject {
+// }
+//
+// model GeoFeatureCollection {
+// }
+
+model GeoFeature {
+  id          Int    @id @default(autoincrement())
+  name        String
+  description String
+}
+
+// AuthJS
+
 model User {
   id            String    @id @default(cuid())
   name          String?
