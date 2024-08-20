@@ -1,0 +1,14 @@
+[
+  {
+    "AllowedOrigins": [
+      "http://localhost:5173",
+      "https://ghostsigns.pages.dev",
+      "https://tiles.hype.hk",
+      "https://hype.hk"
+    ],
+      "AllowedMethods": ["GET","HEAD"],
+      "AllowedHeaders": ["range","if-match"],
+      "ExposeHeaders": ["etag"],
+      "MaxAgeSeconds": 3000
+  }
+]
