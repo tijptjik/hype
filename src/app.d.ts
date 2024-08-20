@@ -10,6 +10,7 @@ declare global {
 			env : {
 				COUNTER : DurableObjectNamespace;
 				DB: D1Database;
+				CF_PAGES : string;
 			};
 			context: {
 				waitUntil(promise: Promise<any>): void;
