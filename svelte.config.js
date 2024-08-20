@@ -3,7 +3,7 @@ import adapterCloudflare from '@sveltejs/adapter-cloudflare';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 
-// Build a SSR version of the app for Cloudflare, or a static version when targeting Android.
+// Build an SSR version of the app for Cloudflare, or a static version when targeting Android.
 const selectAdapter = () => {
 	if (process.env.SVELTE_ADAPTER === 'cloudflare') {
 		return adapterCloudflare({
@@ -29,7 +29,12 @@ const config = {
 	compilerOptions: {
 		runes: true,
 		// disable all warnings coming from node_modules and all accessibility warnings
-		warningFilter: (warning) => !warning.filename?.includes('node_modules') && !warning.code.startsWith('a11y')
+		warningFilter: (warning) =>
+			!warning.filename?.includes('node_modules')
+			&& !warning.code.startsWith('a11y')
+			&& !warning.message.startsWith('Unused CSS selector')
+			&& !warning.message.startsWith('You are using Svelte 5.0.0')
+			&& warning.code !== 'css-unused-selector'
 	},
 	preprocess: vitePreprocess(),
 	kit: {
