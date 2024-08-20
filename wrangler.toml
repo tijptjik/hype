@@ -77,6 +77,7 @@ ENVIRONMENT = "production"
 NODE_ENV = "production"
 BUN_VERSION = "1.1.22"
 SVELTE_ADAPTER = "cloudflare"
+PUBLIC_MAPTILER_KEY = "SMf0v0mZlsqfCMBgZdy1"
 
 [[env.production.d1_databases]]
 binding = "DB"
@@ -90,6 +91,7 @@ ENVIRONMENT = "staging"
 NODE_ENV = "staging"
 BUN_VERSION = "1.1.22"
 SVELTE_ADAPTER = "cloudflare"
+PUBLIC_MAPTILER_KEY = "SMf0v0mZlsqfCMBgZdy1"
 
 [[env.preview.d1_databases]]
 binding = "DB"
