@@ -22,10 +22,12 @@
 
 
 	onMount(async () => {
-		await loadScript('https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js')
-		console.log('🗺️ Sideloaded MapLibre v'+maplibregl.getVersion());
 		// eslint-disable-next-line no-undef
-		const map = new maplibregl.Map({
+		await loadScript('https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js')
+		const maplibre = maplibregl;
+		console.log('🗺️ Sideloaded MapLibre v'+maplibre?.getVersion());
+		// const map = new Map({
+		const map = new maplibre.Map({
 			container: mapContainer,
 			style: `https://api.maptiler.com/maps/streets/style.json?key=${PUBLIC_MAPTILER_KEY}`,
 			center: [114.15166, 22.28781],
