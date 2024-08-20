@@ -20,16 +20,21 @@
 		});
 	}
 
-
 	onMount(async () => {
+		// To minimize the payload in Cloudflare, we are manually inserting mapping dependencies here as they are heavy
+		// and the max worker size in the free tier is 1 MB
+		await loadScript('https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js');
+
 		// eslint-disable-next-line no-undef
-		await loadScript('https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js')
 		const maplibre = maplibregl;
-		console.log('🗺️ Sideloaded MapLibre v'+maplibre?.getVersion());
+		console.log('Built with 🗺️ MapLibre ' + maplibre?.getVersion());
+
 		// const map = new Map({
 		const map = new maplibre.Map({
 			container: mapContainer,
-			style: `https://api.maptiler.com/maps/streets/style.json?key=${PUBLIC_MAPTILER_KEY}`,
+			// style: `https://api.maptiler.com/maps/streets/style.json?key=${PUBLIC_MAPTILER_KEY}`,
+			// style: `https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json`,
+			style: { version: 8, sources: {}, layers: [] },
 			center: [114.15166, 22.28781],
 			pitch: 60,
 			bearing: 68,
@@ -37,6 +42,22 @@
 			hash: true,
 			attributionControl: false
 		});
+		map.on('load', () => {
+			map.addSource('hongkong-latest', {
+				type: 'vector',
+				url: 'https://tiles.hype.hk/hongkong-latest.json'
+			});
+
+			map.addLayer({
+				id: 'hk-transportation',
+				source: 'hongkong-latest',
+				'source-layer': 'transportation',
+				type: 'line',
+				paint: { 'line-color': '#198EC8' }
+			// }, 'building');
+			});
+		});
+
 		// map.addControl(new NavigationControl({}), 'top-right');
 		// map.addControl(
 		// 	new GeolocateControl({
