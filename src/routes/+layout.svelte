@@ -73,7 +73,7 @@
 						<li><a>Hoods</a></li>
 						<li><a>Blog</a></li>
 						<li><a>About</a></li>
-						<a onclick={() => signIn("google")}> class="btn btn-primary btn-sm">
+						<a onclick={() => signIn("google")} class="btn btn-primary btn-sm">
 							<i class="fa-brands fa-space-awesome"></i>
 							Login
 						</a>
