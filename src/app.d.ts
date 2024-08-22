@@ -1,5 +1,7 @@
 // See https://kit.svelte.dev/docs/types#app
 // for information about these interfaces
+
+
 declare global {
 	namespace App {
 		// interface Error {}
@@ -7,10 +9,9 @@ declare global {
 		// interface PageData {}
 		// interface PageState {}
 		interface Platform {
-			env : {
-				COUNTER : DurableObjectNamespace;
+			env: {
 				DB: D1Database;
-				CF_PAGES : string;
+				CF_PAGES: string;
 			};
 			context: {
 				waitUntil(promise: Promise<any>): void;
