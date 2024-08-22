@@ -8,7 +8,7 @@ export const getSessionOrThrow = async (locals : App.Locals) => {
 	return session;
 }
 
-export const JSONResponseOrThrow = async (result : any): Promise<void> => {
+export const JSONResponseOrThrow = async (result : any) : Promise<any> =>  {
   if (!result) {
   	throw error(404, "These aren't the signs you're looking for");
   }

@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "mullvad-exclude vite dev",
     "dev:cf": "mullvad-exclude bunx wrangler pages dev",
-    "dev:sync": "SVELTE_ADAPTER=cloudflare vite build --watch",
+    "dev:sync": "SVELTE_ADAPTER=cloudflare bunx vite build --watch",
     "dev:serve": "mullvad-exclude bunx wrangler pages dev --live-reload",
     "dev:full": "bun run dev:sync && bun run dev:serve",
     "build": "SVELTE_ADAPTER=cloudflare vite build",

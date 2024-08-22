@@ -1,8 +1,8 @@
 import { SvelteKitAuth } from '@auth/sveltekit';
 import GoogleProvider from '@auth/sveltekit/providers/google';
 import { PRIVATE_AUTH_GOOGLE_ID, PRIVATE_AUTH_GOOGLE_SECRET, PRIVATE_AUTH_SECRET } from '$env/static/private';
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import D1DB from '$lib/prisma';
+import { KyselyAdapter } from "@auth/kysely-adapter"
+import { connect } from "$lib/db"
 
 export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
 	return {
@@ -22,7 +22,8 @@ export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
 			],
 			secret: PRIVATE_AUTH_SECRET,
 			trustHost: true,
-			adapter: PrismaAdapter(D1DB(event.platform?.env.DB)),
+			// @ts-ignore
+			adapter: KyselyAdapter(connect(event.platform)),
 			session: {
 				strategy: 'database',
 				maxAge: 30 * 24 * 60 * 60, // 30 days
