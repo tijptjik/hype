@@ -4,13 +4,16 @@
 	import { page } from '$app/stores';
 	import { afterNavigate } from '$app/navigation';
 
+	// Props
+	const { children } = $props();
+
 	// User Session
 	const { session } = $page.data;
 
 	// Set Page Metadata
-	let title = $page.data.title;
-	let site_name = $page.data.site_name;
-	let site_description = $page.data.site_description;
+	let title = $state($page.data.title);
+	let site_name = $state($page.data.site_name);
+	let site_description = $state($page.data.site_description);
 	let socialImage = {
 		image: '/favicon.png',
 		width: '200',
@@ -139,6 +142,6 @@
 		</nav>
 	</header>
 	<main class="flex flex-auto w-full">
-		<slot />
+		{@render children()}
 	</main>
 </div>
