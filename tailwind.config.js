@@ -7,6 +7,11 @@ export default {
 	daisyui: {
 		themes: ['dark', 'emerald']
 	},
-	plugins: [require('@tailwindcss/typography'), require('daisyui')]
+	plugins: [
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
+		require('@tailwindcss/typography'),
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
+		require('daisyui')
+	]
 };
 
