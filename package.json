@@ -20,7 +20,6 @@
   "devDependencies": {
     "@auth/core": "^0.34.2",
     "@auth/d1-adapter": "^1.4.2",
-    "@auth/kysely-adapter": "^1.4.2",
     "@auth/sveltekit": "^1.4.2",
     "@sveltejs/adapter-cloudflare": "^4.7.2",
     "@sveltejs/adapter-static": "^3.0.4",
