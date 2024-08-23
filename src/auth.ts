@@ -1,7 +1,7 @@
 import { SvelteKitAuth } from '@auth/sveltekit';
 import GoogleProvider from '@auth/sveltekit/providers/google';
 import { PRIVATE_AUTH_GOOGLE_ID, PRIVATE_AUTH_GOOGLE_SECRET, PRIVATE_AUTH_SECRET } from '$env/static/private';
-import { KyselyAdapter } from "@auth/kysely-adapter"
+import { KyselyAdapter } from "$lib/auth/kysely-adapter"
 import { connect } from "$lib/db"
 
 export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
