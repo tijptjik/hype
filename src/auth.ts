@@ -23,7 +23,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
 		secret: PRIVATE_AUTH_SECRET,
 		trustHost: true,
 		// @ts-ignore
-		adapter: KyselyAdapter(connect(event.platform)),
+		adapter: KyselyAdapter(connect({platform:event.platform})),
 		session: {
 			strategy: 'database',
 			maxAge: 30 * 24 * 60 * 60, // 30 days
