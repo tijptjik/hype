@@ -1,5 +1,4 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
-
 import { connect } from '$lib/db';
 import { getSessionOrThrow, JSONResponseOrThrow } from '$lib/api';
 
@@ -8,7 +7,7 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
 	// AUTH : Pass or Fail
 	await getSessionOrThrow(locals)
 	// DB : Connect to D1
-  const db = connect(platform);
+  const db = connect({platform:platform});
 	try {
 		// DB : Build & Execute Query
   	const result = await db.selectFrom('User').selectAll().executeTakeFirst();
