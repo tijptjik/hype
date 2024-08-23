@@ -8,7 +8,7 @@
     "dev:sync": "SVELTE_ADAPTER=cloudflare bunx vite build --watch",
     "dev:serve": "mullvad-exclude bunx wrangler pages dev --live-reload",
     "dev:full": "bun run dev:sync && bun run dev:serve",
-    "build": "SVELTE_ADAPTER=cloudflare vite build",
+    "build": "VITE_USER_NODE_ENV=production SVELTE_ADAPTER=cloudflare vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
