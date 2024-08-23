@@ -1,4 +1,4 @@
-import type { Kysely } from 'kysely';
+import { Kysely, sql } from 'kysely';
 
 export async function up(db: Kysely<any>): Promise<void> {
 	// up migration code goes here...
@@ -9,7 +9,7 @@ export async function up(db: Kysely<any>): Promise<void> {
 		.addColumn('id', 'text', (col) => col.primaryKey())
 		.addColumn('name', 'text')
 		.addColumn('email', 'text', (col) => col.unique().notNull())
-		.addColumn('emailVerified', 'text', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull())
+		.addColumn('emailVerified', 'text')
 		.addColumn('image', 'text')
 		.execute();
 
