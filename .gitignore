@@ -7,6 +7,9 @@ node_modules
 /build
 /build-static
 /package
+# Output:migrations
+/migrations/*.js
+
 
 # Cache
 /.wrangler/state/
