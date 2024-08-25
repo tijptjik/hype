@@ -2,27 +2,34 @@ import { defineConfig, type Plugin } from 'vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { migrateToLatest } from './src/lib/migrate';
 
-function ClosePlugin() : Plugin {
-    return {
-        name: 'ClosePlugin', // required, will show up in warnings and errors
+let bundleCounter = 0;
 
-        // use this to catch errors when building
-        buildEnd(error) {
-            if(error) {
-                console.error('Error bundling')
-                console.error(error)
-                process.exit(1)
-            } else {
-                console.log('Build ended')
-            }
-        },
+function ClosePlugin(): Plugin {
+	return {
+		name: 'ClosePlugin', // required, will show up in warnings and errors
 
-        // use this to catch the end of a build without errors
-        closeBundle(id) {
-            console.log('Bundle closed')
-            process.exit(0)
-        },
-    } satisfies Plugin
+		// use this to catch errors when building
+		buildEnd(error) {
+			if (error) {
+				console.error('Error bundling');
+				console.error(error);
+				process.exit(1);
+			} else {
+				console.log('Build ended');
+			}
+		},
+
+		// use this to catch the end of a build without errors
+		closeBundle(id) {
+			if (bundleCounter === 0) {
+				bundleCounter += 1;
+				console.log('Client Bundle closed');
+			} else {
+				console.log('Server Bundle closed');
+				process.exit(0);
+		}
+		}
+	} satisfies Plugin;
 }
 
 
@@ -38,9 +45,9 @@ const kyselyMigration = async ({ glob }: { glob: string }): Promise<Plugin> => {
 
 export default defineConfig({
 	plugins: [
-		sveltekit(),
 		// Migrations are defined in TSC, but migrations are run as JS to avoid import issues.
 		kyselyMigration({ glob: 'migrations/*.js' }),
+		sveltekit(),
 		ClosePlugin()
 	]
 });
