@@ -25,9 +25,11 @@ class FileMigrationProvider {
 	}
 }
 
+// Obtain a database connection OUTSIDE of the cloudflate worker context,
+// so this should only be used in local development / during builds on CF.
 async function getDB() {
 	let db: D1Database;
-	if (process.env.VITE_USER_NODE_ENV === 'development') {
+	if (process.env.VITE_USER_NODE_ENV === 'development' || process.env.WRANGLER_ENV === 'cf') {
 		const { getPlatformProxy } = await import('wrangler');
 		console.log('getPlatformProxy', getPlatformProxy);
 		try {
@@ -39,6 +41,8 @@ async function getDB() {
 			console.log(e);
 		}
 	} else {
+		console.log('CLOUDFLARE PLATFORM with ENV', process.env);
+		console.log('DB', process.env.DB);
 		db = connect(process.env.DB);
 	}
 	return db;

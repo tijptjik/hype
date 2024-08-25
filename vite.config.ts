@@ -16,6 +16,6 @@ export default defineConfig({
 	plugins: [
 		sveltekit(),
 		// Migrations are defined in TSC, but migrations are run as JS to avoid import issues.
-		// kyselyMigration({ glob: 'migrations/*.js' })
+		kyselyMigration({ glob: 'migrations/*.js' })
 	]
 });
