@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "vite build",
-    "build:cf": "bun run db:migration:prep > /dev/null; WRANGLER_ENV=cf VITE_USER_NODE_ENV=production vite build; WRANGLER_ENV=skip VITE_USER_NODE_ENV=production vite build",
+    "build:cf": "bun run db:migration:prep > /dev/null; WRANGLER_ENV=cf VITE_USER_NODE_ENV=production vite build",
     "build:cf:watch": "bun run build:cf --watch",
     "build:local": "WRANGLER_ENV=cf VITE_USER_NODE_ENV=development vite build",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
