@@ -7,13 +7,13 @@ import type { PlatformProxy } from 'wrangler';
 
 // When developing, this hook will add proxy objects to the `platform` object
 // which will emulate any bindings defined in `wrangler.toml`.
-const dev = import.meta.env.VITE_USER_NODE_ENV !== 'production';
+const dev = import.meta.env.VITE_USER_NODE_ENV === 'development';
 let platform: PlatformProxy<Record<string, unknown>>;
 
 if (dev) {
 	const { getPlatformProxy } = await import('wrangler');
 	platform = await getPlatformProxy();
-	// console.log('Platform initialised for local development', platform);
+	console.log('Platform initialised for local development', platform);
 }
 
 export const mock_cloudflare = (async ({ event, resolve }) => {
