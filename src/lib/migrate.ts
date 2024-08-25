@@ -75,4 +75,10 @@ export async function migrateToLatest({ glob }: { glob: string }) {
 		process.exit(1);
 	}
 	await db.destroy();
+	// HACK : Exit the build process early if wrangler has been imported as it currently hangs
+	// the build if we continue. Instead we call bun run build a second time but set
+	// WRANGLER_ENV === 'skip' which will skip over the wrangler dependency.
+	if (process.env.VITE_USER_NODE_ENV === "production" && process.env.WRANGLER_ENV === 'cf'){
+		process.exit()
+	}
 }

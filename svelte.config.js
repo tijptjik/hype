@@ -5,19 +5,19 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 // Build an SSR version of the app for Cloudflare, or a static version when targeting Android.
 const selectAdapter = () => {
-	if (process.env.SVELTE_ADAPTER === 'cloudflare') {
+	if (process.env.SVELTE_ADAPTER === 'static') {
+		return adapterStatic({
+			fallback: 'index.html',
+			pages: 'build-static',
+			assets: 'build-static'
+		});
+	} else {
 		return adapterCloudflare({
 			// See https://kit.svelte.dev/docs/adapter-cloudflare
 			routes: {
 				include: ['/*'],
 				exclude: ['<all>']
 			}
-		});
-	} else {
-		return adapterStatic({
-			fallback: 'index.html',
-			pages: 'build-static',
-			assets: 'build-static'
 		});
 	}
 };
