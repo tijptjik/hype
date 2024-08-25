@@ -1,14 +1,27 @@
-import { type Migration, type MigrationProvider, Migrator } from 'kysely';
-import { connect } from '$lib/db';
+import { type Migration, Migrator } from 'kysely';
+import { connect } from '../lib/db';
 import type { D1Database } from '@auth/d1-adapter';
+import FastGlob from 'fast-glob';
+import * as path from 'node:path';
+
 
 class FileMigrationProvider {
+	private globPath: string;
+
+	constructor(globPath: string) {
+		this.globPath = globPath;
+	}
+
 	async getMigrations(): Promise<Record<string, Migration>> {
-		// @ts-ignore
-		return import.meta.glob('../../migrations/**.ts', {
-			eager: true
-		// @ts-ignore
-		}) satisfies MigrationProvider;
+		const importPaths: string[] = await FastGlob(this.globPath);
+		const migrations: Record<string, Migration> = {};
+		for (const importPath of importPaths) {
+			const migrationName: string = importPath.substring(
+				importPath.lastIndexOf('/') + 1, importPath.lastIndexOf('.')
+			);
+			migrations[migrationName] = await import(path.join(process.cwd(), importPath));
+		}
+		return migrations;
 	}
 }
 
@@ -26,23 +39,22 @@ async function getDB() {
 			console.log(e);
 		}
 	} else {
-		console.log('PROD DB')
 		db = connect({ database: process.env.DB });
 	}
 	return db;
 }
 
 
-export async function migrateToLatest() {
-	console.log('VITE_USER_NODE_ENV', process.env.VITE_USER_NODE_ENV);
+export async function migrateToLatest({ glob }: { glob: string }) {
+	if (glob === undefined) {
+		glob = '../../migrations/*.js';
+	}
 	const db = await getDB();
 	const migrator = new Migrator({
 		db,
-		provider: new FileMigrationProvider(),
+		provider: new FileMigrationProvider(glob),
 		allowUnorderedMigrations: true
 	});
-	console.log('Migrator', migrator);
-
 	const { error, results } = await migrator.migrateToLatest();
 
 	results?.forEach((it) => {

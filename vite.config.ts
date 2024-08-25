@@ -1,10 +1,21 @@
+import { defineConfig, type Plugin } from 'vite';
 import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vitest/config';
+import { migrateToLatest } from './src/lib/migrate';
+
+const kyselyMigration = async ({ glob }: { glob: string }): Promise<Plugin> => {
+	return {
+		name: 'kysely-migration',
+		apply: process.env.NODE_ENV === 'development' ? 'serve' : 'build',
+		configResolved() {
+			migrateToLatest({ glob: glob });
+		}
+	} satisfies Plugin ;
+};
 
 export default defineConfig({
-	// @ts-ignore
-	plugins: [sveltekit()],
-	test: {
-		include: ['src/**/*.{test,spec}.{js,ts}']
-	}
+	plugins: [
+		sveltekit(),
+		// Migrations are defined in TSC, but migrations are run as JS to avoid import issues.
+		kyselyMigration({ glob: 'migrations/*.js' })
+	]
 });
