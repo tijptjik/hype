@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "vite build",
-    "build:cf": "bun run db:migration:prep > /dev/null; VITE_USER_NODE_ENV=production SVELTE_ADAPTER=cloudflare bun run build",
+    "build:cf": "bun run db:migration:prep > /dev/null; VITE_USER_NODE_ENV=production SVELTE_ADAPTER=cloudflare vite build",
     "build:cf:watch": "bun run build:cf --watch",
     "build:local": "VITE_USER_NODE_ENV=development SVELTE_ADAPTER=cloudflare bun run build",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",

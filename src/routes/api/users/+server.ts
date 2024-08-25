@@ -7,7 +7,7 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
 	// AUTH : Pass or Fail
 	await getSessionOrThrow(locals)
 	// DB : Connect to D1
-  const db = connect({platform:platform});
+  const db = connect(platform?.env.DB);
 	try {
 		// DB : Build & Execute Query
   	const result = await db.selectFrom('User').selectAll().executeTakeFirst();

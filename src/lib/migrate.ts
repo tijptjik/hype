@@ -34,12 +34,12 @@ async function getDB() {
 			const { env } = await getPlatformProxy();
 			console.log('env', env);
 			console.log('Env initialised for local development', env);
-			db = connect({ database: env.DB });
+			db = connect(env.DB);
 		} catch (e) {
 			console.log(e);
 		}
 	} else {
-		db = connect({ database: process.env.DB });
+		db = connect(process.env.DB);
 	}
 	return db;
 }

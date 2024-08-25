@@ -41,22 +41,13 @@ export interface Database {
 
 
 // DB CONNECTOR
-interface connectParams {
-	database?: D1Database;
-	platform?: PlatformProxy;
-}
-
-export const connect = (params:connectParams) => {
+export const connect = (database?: D1Database) => {
 	let db;
-	console.log('platform', params?.platform);
-	console.log('database', params?.database);
-	if (params?.database !== undefined && params?.database !== null) {
-		db = params?.database;
-	} else if (params?.platform !== undefined && params?.platform !== null) {
-		console.log(params?.platform);
-		db = params?.platform?.env.DB
+	if (database !== undefined && database !== null) {
+		console.log('database', database);
+		db = database;
 	} else {
-		throw new Error('Either platform or database must be defined');
+		throw new Error('Database must be defined');
 	}
 	return new Kysely<Database>({ dialect: new D1Dialect({ database: db }) });
 };
