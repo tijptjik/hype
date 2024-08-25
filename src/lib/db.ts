@@ -1,6 +1,5 @@
 import { type GeneratedAlways, Kysely } from 'kysely';
 import { D1Dialect } from 'kysely-d1';
-import type { PlatformProxy } from 'wrangler';
 import type { D1Database } from '@auth/d1-adapter';
 
 // SCHEMA
