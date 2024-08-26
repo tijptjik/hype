@@ -32,8 +32,10 @@ mode = "smart"
 # Docs: https://developers.cloudflare.com/pages/functions/bindings/#d1-databases
 [[d1_databases]]
 binding = "DB" # i.e. available in your Worker on env.DB
-database_name = "ghostsigns-dev"
-database_id = "2b253ddf-a5c9-4fb6-a3ee-e13e3aa17f4b"
+database_name = "ghostmapper-prod"
+database_id = "117e417f-6b38-4b52-a5b5-0320d6944fbe"
+preview_database_id = "DB"
+#sqlite = " e7352547963de7050bd7d94658afc4fe78b61811b7815da12d90be8e863abf4d.sqlite"
 
 # Bind a Durable Object. Durable objects are a scale-to-zero compute primitive based on the actor model.
 # Durable Objects can live for as long as needed. Use these when you need a long-running "server", such as in realtime apps.
@@ -78,13 +80,13 @@ ENVIRONMENT = "production"
 NODE_ENV = "production"
 VITE_USER_NODE_ENV="production"
 BUN_VERSION = "1.1.22"
-SVELTE_ADAPTER = "cloudflare"
 PUBLIC_MAPTILER_KEY = "SMf0v0mZlsqfCMBgZdy1"
 
 [[env.production.d1_databases]]
 binding = "DB"
-database_name = "ghostsigns-dev"
-database_id = "2b253ddf-a5c9-4fb6-a3ee-e13e3aa17f4b"
+database_name = "ghostmapper-prod"
+database_id = "117e417f-6b38-4b52-a5b5-0320d6944fbe"
+preview_database_id = "DB"
 
 ######## PREVIEW environment config ########
 
@@ -93,10 +95,9 @@ ENVIRONMENT = "staging"
 NODE_ENV = "staging"
 VITE_USER_NODE_ENV="staging"
 BUN_VERSION = "1.1.22"
-SVELTE_ADAPTER = "cloudflare"
 PUBLIC_MAPTILER_KEY = "SMf0v0mZlsqfCMBgZdy1"
 
 [[env.preview.d1_databases]]
 binding = "DB"
-database_name = "ghostsigns-dev"
-database_id = "2b253ddf-a5c9-4fb6-a3ee-e13e3aa17f4b"
+database_name = "ghostmapper-preview"
+database_id = "b7a2dc55-f43b-40f0-993a-abb36a6a5543"
