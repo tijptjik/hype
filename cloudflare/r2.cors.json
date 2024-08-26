@@ -6,9 +6,9 @@
       "https://tiles.hype.hk",
       "https://hype.hk"
     ],
-      "AllowedMethods": ["GET","HEAD"],
-      "AllowedHeaders": ["range","if-match"],
-      "ExposeHeaders": ["etag"],
-      "MaxAgeSeconds": 3000
+    "AllowedMethods": ["GET", "HEAD"],
+    "AllowedHeaders": ["range", "if-match"],
+    "ExposeHeaders": ["etag"],
+    "MaxAgeSeconds": 3000
   }
 ]

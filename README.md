@@ -1,4 +1,5 @@
 # ghostsigns
+
 Cultural Journeys through Hong Kong
 
 ## Developing
@@ -16,6 +17,7 @@ Set `NGROK_AUTHTOKEN` and `NGROK_DOMAIN` environment variables, and make sure ng
 ```sh
 mullvad-exclude docker run --net=host -it -e NGROK_AUTHTOKEN=$NGROK_AUTHTOKEN ngrok/ngrok:latest http --domain=$NGROK_DOMAIN 5173
 ```
+
 Then in another shell run
 
 ```bash
@@ -34,5 +36,3 @@ bun run build
 ```
 
 You can preview the production build with `bun run preview`.
-
-
