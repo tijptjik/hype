@@ -1,8 +1,9 @@
+# Dependencies
 node_modules
 
 # Output
 .output
-.vercel
+/.wrangler
 /.svelte-kit
 /build
 /build-static
@@ -10,19 +11,11 @@ node_modules
 # Output:migrations
 /migrations/*.js
 
-
-# Cache
-/.wrangler/state/
-/.wrangler/tmp/
-
-# OS
-.DS_Store
-Thumbs.db
-
 # Env
 .env
 .env.*
 !.env.example
+.drizzle.env
 
 # Runners
 vite.config.js.timestamp-*
@@ -30,3 +23,7 @@ vite.config.ts.timestamp-*
 
 # IDE
 .idea
+
+# OS
+.DS_Store
+Thumbs.db
