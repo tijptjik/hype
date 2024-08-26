@@ -1,23 +1,29 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
 import { getSessionOrThrow, JSONResponseOrThrow } from '$lib/api';
+import client from '$lib/db';
 
-// export default {
 export const GET: RequestHandler = async ({ locals, platform }) => {
   // AUTH : Pass or Fail
   await getSessionOrThrow(locals);
   // DB : Connect to D1
-  // const db = connect(platform?.env.DB);
-  // try {
-  // DB : Build & Execute Query
-  // const result = await db.selectFrom('User').selectAll().executeTakeFirst();
-  // HTTP : 200 JSON or 404
-  // return JSONResponseOrThrow(result)}
-  // catch (e) {
-  // DB : Query Error
-  // console.error('Database query error:', e);
-  // throw error(500, 'Internal Server Error');
-  // }
+  const db = client(platform?.env.DB);
+  try {
+    // DB : Build & Execute Query
+    const result = await db.query.users.findMany({
+      with: {
+        accounts: true
+      }
+    });
+    // HTTP : 200 JSON or 404
+    return JSONResponseOrThrow(result);
+  } catch (e) {
+    // DB : Query Error
+    console.error('Database query error:', e);
+    // HTTP : 500 Error
+    throw error(500, 'Dust Accumulation Critical');
+  }
 };
+
 // async fetch(request: Request, env: Env): Promise<Response> {
 //   const { searchParams } = new URL(params.url);
 //   const action = searchParams.get('action');

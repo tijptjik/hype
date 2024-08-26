@@ -19,8 +19,8 @@ function maskPrivateValues(obj: Record<string, string>): Record<string, string> 
   return result;
 }
 
-// export default {
-export const GET: RequestHandler = async ({ locals, platform }) => {
+// @ts-ignore
+export const GET: RequestHandler = async ({ locals, platform: { env } }) => {
   // HTTP : 200 JSON or 404
   const vars = import.meta.env.VITE_WRANGLER_ENV === 'local' ? process.env : import.meta.env;
   try {
@@ -29,7 +29,7 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
       // @ts-ignore
       env: maskPrivateValues(vars),
       locals: locals,
-      env_platform: Object.keys(platform?.env)
+      env_platform: Object.keys(env)
     });
   } catch (e) {
     // DB : Query Error
