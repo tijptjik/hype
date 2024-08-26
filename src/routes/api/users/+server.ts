@@ -1,5 +1,4 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
-import { connect } from '$lib/db';
 import { getSessionOrThrow, JSONResponseOrThrow } from '$lib/api';
 
 // export default {
@@ -7,17 +6,17 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
 	// AUTH : Pass or Fail
 	await getSessionOrThrow(locals)
 	// DB : Connect to D1
-  const db = connect(platform?.env.DB);
-	try {
+  // const db = connect(platform?.env.DB);
+	// try {
 		// DB : Build & Execute Query
-  	const result = await db.selectFrom('User').selectAll().executeTakeFirst();
+  	// const result = await db.selectFrom('User').selectAll().executeTakeFirst();
 		// HTTP : 200 JSON or 404
-		return JSONResponseOrThrow(result)}
-	catch (e) {
+		// return JSONResponseOrThrow(result)}
+	// catch (e) {
 		// DB : Query Error
-		console.error('Database query error:', e);
-		throw error(500, 'Internal Server Error');
-	}
+		// console.error('Database query error:', e);
+		// throw error(500, 'Internal Server Error');
+	// }
 };
   // async fetch(request: Request, env: Env): Promise<Response> {
   //   const { searchParams } = new URL(params.url);
