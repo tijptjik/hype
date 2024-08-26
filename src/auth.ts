@@ -1,8 +1,8 @@
 import { SvelteKitAuth } from '@auth/sveltekit';
+import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import GoogleProvider from '@auth/sveltekit/providers/google';
 import { PRIVATE_AUTH_GOOGLE_ID, PRIVATE_AUTH_GOOGLE_SECRET, PRIVATE_AUTH_SECRET } from '$env/static/private';
-import { KyselyAdapter } from '$lib/auth/kysely-adapter';
-import { connect } from '$lib/db';
+import db from '$lib/db/client';
 
 export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
 	return {
@@ -22,8 +22,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
 		],
 		secret: PRIVATE_AUTH_SECRET,
 		trustHost: true,
-		// @ts-ignore
-		adapter: KyselyAdapter(connect(event.platform?.env.DB)),
+		adapter: DrizzleAdapter(db(event.platform?.env.DB)),
 		session: {
 			strategy: 'database',
 			maxAge: 30 * 24 * 60 * 60, // 30 days
