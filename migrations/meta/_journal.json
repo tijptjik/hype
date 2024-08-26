@@ -8,6 +8,13 @@
       "when": 1724665183524,
       "tag": "0000_setup_auth",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1724693604409,
+      "tag": "0001_geo_setup",
+      "breakpoints": true
     }
   ]
 }
