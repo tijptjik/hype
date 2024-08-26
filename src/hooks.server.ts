@@ -1,5 +1,5 @@
 // /src/hooks.server.ts
-import { handle as inject_auth } from './auth';
+import { handle as inject_auth } from '$lib/auth';
 import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle } from '@sveltejs/kit';
 
@@ -8,12 +8,12 @@ const localWranglerEnv = import.meta.env.VITE_WRANGLER_ENV === 'local';
 
 if (localWranglerEnv) {
   // This is an ugly hack to avoid Vite loading in the wrangler dep regardless
-  // of the conditional import, and throwing errors when buidling for CF workers
+  // of the conditional import, and throwing errors when building for CF workers
   // as wrangler itself has node requirements :doh:
   const wrangler = 'wrangler';
   // When developing, this hook will add proxy objects to the `platform` object
   // which will emulate any bindings defined in `wrangler.toml`.
-  const { getPlatformProxy } = await import(wrangler);
+  const { getPlatformProxy } = await import(/* @vite-ignore */ wrangler);
   const platform = await getPlatformProxy();
 
   const mock_cloudflare = (async ({ event, resolve }) => {
