@@ -19,6 +19,7 @@ class FileMigrationProvider {
 			const migrationName: string = importPath.substring(
 				importPath.lastIndexOf('/') + 1, importPath.lastIndexOf('.')
 			);
+		 /* @vite-ignore */
 			migrations[migrationName] = await import(path.join(process.cwd(), importPath));
 		}
 		return migrations;
@@ -29,12 +30,11 @@ class FileMigrationProvider {
 // so this should only be used in local development / during builds on CF.
 async function getDB() {
 	let db: D1Database;
-	if (process.env.VITE_USER_NODE_ENV === 'development' || process.env.WRANGLER_ENV === 'cf') {
+	if (process.env.VITE_USER_NODE_ENV === 'development') {
 		const { getPlatformProxy } = await import('wrangler');
 		console.log('getPlatformProxy', getPlatformProxy);
 		try {
 			const { env } = await getPlatformProxy();
-			console.log('env', env);
 			console.log('Env initialised for local development', env);
 			db = connect(env.DB);
 		} catch (e) {
@@ -75,4 +75,5 @@ export async function migrateToLatest({ glob }: { glob: string }) {
 		process.exit(1);
 	}
 	await db.destroy();
+	return results;
 }
