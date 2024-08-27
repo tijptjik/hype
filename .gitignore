@@ -26,3 +26,6 @@ vite.config.ts.timestamp-*
 # OS
 .DS_Store
 Thumbs.db
+
+# Data
+local_*.sql
