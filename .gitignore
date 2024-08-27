@@ -15,7 +15,6 @@ node_modules
 .env
 .env.*
 !.env.example
-.drizzle.env
 
 # Runners
 vite.config.js.timestamp-*
