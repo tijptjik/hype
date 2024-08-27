@@ -15,6 +15,13 @@
       "when": 1724693604409,
       "tag": "0001_geo_setup",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1724734267781,
+      "tag": "0002_timestamps",
+      "breakpoints": true
     }
   ]
 }
