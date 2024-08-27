@@ -90,7 +90,7 @@ interface GeoProjectMetadata {
   filterProperties?: string[]; // ['district', 'script', 'isPublished']
 }
 
-export const geoProject = sqliteTable('geoProject', {
+export const geoProjects = sqliteTable('geoProject', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
