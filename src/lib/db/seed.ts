@@ -1,14 +1,15 @@
-import { accounts, sessions, users } from './schema';
+import { accounts, geoProjects, sessions, users } from './schema';
 import connect from '../../lib/db';
 
 import usersJson from './data/user.json';
 import accountsJson from './data/account.json';
 import sessionsJson from './data/session.json';
+import geoProjectsJson from './data/geoProject.json';
 import type { DrizzleD1Database } from 'drizzle-orm/d1/driver';
 import { count } from 'drizzle-orm';
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core/table';
 
-// Define the configuration object
+// Mapping between JSON files and Tables
 const seedBank = {
   users: {
     name: 'Users',
@@ -24,6 +25,11 @@ const seedBank = {
     name: 'Sessions',
     table: sessions,
     data: sessionsJson
+  },
+  geoProjects: {
+    name: 'GeoProjects',
+    table: geoProjects,
+    data: geoProjectsJson
   }
 };
 
@@ -51,11 +57,9 @@ async function isEmpty(db: DrizzleD1Database, table: SQLiteTable) {
   return result.count === 0;
 }
 
-export default async function seedDrizzle(printData: boolean = false) {
+export default async function seed(printData: boolean = false) {
   if (printData) {
-    console.log(usersJson);
-    console.log(accountsJson);
-    console.log(sessionsJson);
+    Object.entries(seedBank).map(([key, val]) => console.log(val.data));
   }
 
   if (process.env.VITE_WRANGLER_ENV === 'local') {
