@@ -1,0 +1,26 @@
+diff --git a/node_modules/drizzle-orm/sqlite-core/columns/integer.cjs b/node_modules/drizzle-orm/sqlite-core/columns/integer.cjs
+index b3d1837..56eaf41 100644
+--- a/node_modules/drizzle-orm/sqlite-core/columns/integer.cjs
++++ b/node_modules/drizzle-orm/sqlite-core/columns/integer.cjs
+@@ -100,7 +100,7 @@ class SQLiteTimestamp extends SQLiteBaseInteger {
+     return new Date(value);
+   }
+   mapToDriverValue(value) {
+-    const unix = value.getTime();
++    const unix = value?.getTime?.() ?? Date.now();
+     if (this.config.mode === "timestamp") {
+       return Math.floor(unix / 1e3);
+     }
+diff --git a/node_modules/drizzle-orm/sqlite-core/columns/integer.js b/node_modules/drizzle-orm/sqlite-core/columns/integer.js
+index fa17466..06ebb75 100644
+--- a/node_modules/drizzle-orm/sqlite-core/columns/integer.js
++++ b/node_modules/drizzle-orm/sqlite-core/columns/integer.js
+@@ -68,7 +68,7 @@ class SQLiteTimestamp extends SQLiteBaseInteger {
+     return new Date(value);
+   }
+   mapToDriverValue(value) {
+-    const unix = value.getTime();
++    const unix = value?.getTime?.() ?? Date.now();
+     if (this.config.mode === "timestamp") {
+       return Math.floor(unix / 1e3);
+     }
