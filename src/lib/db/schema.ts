@@ -95,7 +95,14 @@ export const geoProject = sqliteTable('geoProject', {
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   metadata: text('metadata', { mode: 'json' }).$type<GeoProjectMetadata>(),
-  maintainerId: text('maintainerId').references(() => users.id, { onDelete: 'set null' })
+  maintainerId: text('maintainerId').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: text('createdAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .notNull(),
+  modifiedAt: text('modifiedAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .$onUpdate(() => new Date())
+    .notNull()
 });
 
 interface GeoCollectionMetadata {
@@ -113,7 +120,14 @@ export const geoCollections = sqliteTable('geoCollection', {
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   geometry: text('geometry', { mode: 'json' }).$type<GeometryObject>(),
-  metadata: text('metadata', { mode: 'json' }).$type<GeoCollectionMetadata>()
+  metadata: text('metadata', { mode: 'json' }).$type<GeoCollectionMetadata>(),
+  createdAt: text('createdAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .notNull(),
+  modifiedAt: text('modifiedAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .$onUpdate(() => new Date())
+    .notNull()
 });
 
 export const geoCollectionRelations = relations(geoCollections, ({ many }) => ({
@@ -141,7 +155,14 @@ export const geoFeatures = sqliteTable('geoFeature', {
   contributorId: text('contributorId').references(() => users.id, { onDelete: 'set null' }),
   publisherId: text('publisherId').references(() => users.id, { onDelete: 'set null' }),
   isPublished: integer('isPublished', { mode: 'boolean' }).default(false),
-  lastSeen: text('lastSeen').default(sql`(CURRENT_DATE)`)
+  lastSeen: text('lastSeen').default(sql`(CURRENT_DATE)`),
+  createdAt: text('createdAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .notNull(),
+  modifiedAt: text('modifiedAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .$onUpdate(() => new Date())
+    .notNull()
 });
 
 export const geoFeatureRelations = relations(geoFeatures, ({ one }) => ({
