@@ -1,3 +1,4 @@
+import { paraglide } from '@inlang/paraglide-sveltekit/vite';
 import { defineConfig, type Plugin } from 'vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import seed from './src/lib/db/seed';
@@ -20,7 +21,14 @@ const seedDrizzle = async (): Promise<Plugin> => {
 };
 
 export default defineConfig({
-  plugins: [seedDrizzle(), sveltekit()],
+  plugins: [
+    paraglide({
+      project: './project.inlang',
+      outdir: './src/lib/paraglide'
+    }),
+    seedDrizzle(),
+    sveltekit()
+  ],
   optimizeDeps: {
     esbuildOptions: {
       target: 'esnext'

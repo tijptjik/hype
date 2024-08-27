@@ -2,9 +2,11 @@
 import { handle as inject_auth } from '$lib/auth';
 import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle } from '@sveltejs/kit';
+import { i18n } from '$lib/i18n';
 
 let handle: Handle;
 const localWranglerEnv = import.meta.env.VITE_WRANGLER_ENV === 'local';
+const translation = i18n.handle();
 
 if (localWranglerEnv) {
   // This is an ugly hack to avoid Vite loading in the wrangler dep regardless
@@ -28,9 +30,9 @@ if (localWranglerEnv) {
   }) satisfies Handle;
 
   // console.log('Platform initialised for local development', platform);
-  handle = sequence(mock_cloudflare, inject_auth);
+  handle = sequence(mock_cloudflare, inject_auth, translation);
 } else {
-  handle = inject_auth;
+  handle = sequence(inject_auth, translation);
 }
 
 export { handle };
