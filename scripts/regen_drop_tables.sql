@@ -1,0 +1,1 @@
+select 'drop table ' || name || ';' from sqlite_master where type = 'table';
