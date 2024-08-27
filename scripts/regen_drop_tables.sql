@@ -1,1 +1,1 @@
-select 'drop table ' || name || ';' from sqlite_master where type = 'table';
+select 'drop table IF EXISTS ' || name || ';' from sqlite_master where type = 'table';
