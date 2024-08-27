@@ -1,0 +1,13 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "navbar__projects": "項目",
+  "navbar__neighbourhoods": "胡德",
+  "navbar__blog": "部落格",
+  "navbar__about": "關於",
+  "navbar__ghostmapper": "映射幽靈",
+  "navbar__profile": "個人資料",
+  "navbar__settings": "設定",
+  "navbar__signin": "登入",
+  "navbar__signout": "註銷",
+  "navbar__new": "新的"
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "navbar__projects": "Projects",
+  "navbar__neighbourhoods": "Hoods",
+  "navbar__blog": "Blog",
+  "navbar__about": "About",
+  "navbar__ghostmapper": "GhostMapper",
+  "navbar__profile": "Profile",
+  "navbar__settings": "Settings",
+  "navbar__signin": "Login",
+  "navbar__signout": "Logout",
+  "navbar__new": "New"
+}
