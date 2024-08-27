@@ -5,7 +5,7 @@ import { relations, sql } from 'drizzle-orm';
 import type { GeoJsonProperties, GeometryObject } from 'geojson';
 
 /* ----------------- */
-// AUTH
+// USERS
 /* -------- */
 
 export const users = sqliteTable('user', {
@@ -14,8 +14,17 @@ export const users = sqliteTable('user', {
     .$defaultFn(() => crypto.randomUUID()),
   name: text('name'),
   email: text('email').unique(),
-  emailVerified: integer('emailVerified', { mode: 'timestamp_ms' }),
-  image: text('image')
+  emailVerified: integer('emailVerified', { mode: 'timestamp_ms' })
+    .$onUpdateFn(() => new Date())
+    .$type<Date>(),
+  image: text('image'),
+  createdAt: text('createdAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .notNull(),
+  modifiedAt: text('modifiedAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .$onUpdate(() => new Date())
+    .notNull()
 });
 
 export const userActivity = sqliteTable('userActivity', {
@@ -63,7 +72,10 @@ export const sessions = sqliteTable('session', {
   userId: text('userId')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  expires: integer('expires', { mode: 'timestamp_ms' }).notNull()
+  expires: integer('expires', { mode: 'timestamp_ms' })
+    .notNull()
+    .$onUpdateFn(() => new Date())
+    .$type<Date>()
 });
 
 /* ----------------- */
