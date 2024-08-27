@@ -18,6 +18,22 @@ export const users = sqliteTable('user', {
   image: text('image')
 });
 
+export const userActivity = sqliteTable('userActivity', {
+  userId: text('userId')
+    .primaryKey()
+    .references(() => users.id, { onUpdate: 'cascade', onDelete: 'cascade' }),
+  loginCount: integer('loginCount')
+    .default(sql`0`)
+    .$onUpdateFn(() => sql`login_count + 1`),
+  lastLogin: text('lastLogin')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .$onUpdate(() => new Date())
+});
+
+/* ----------------- */
+// AUTH
+/* -------- */
+
 export const accounts = sqliteTable(
   'account',
   {
