@@ -7,6 +7,7 @@ import {
   PRIVATE_AUTH_SECRET
 } from '$env/static/private';
 import client from '$lib/db';
+import { account, session, user } from '$lib/db/schema';
 
 export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
   return {
@@ -26,7 +27,11 @@ export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
     ],
     secret: PRIVATE_AUTH_SECRET,
     trustHost: true,
-    adapter: DrizzleAdapter(client(event.platform?.env.DB)),
+    adapter: DrizzleAdapter(client(event.platform?.env.DB), {
+      usersTable: user,
+      accountsTable: account,
+      sessionsTable: session
+    }),
     session: {
       strategy: 'database',
       maxAge: 30 * 24 * 60 * 60, // 30 days
