@@ -1,0 +1,11 @@
+[
+  {
+    "id": "85d503ae-9ea6-43d7-a40c-0853a722313d",
+    "metadata": "{\\\"defaultEnabled\\\" : true,\\\"mlCluster\\\" : false,\\\"mlClusterRadius\\\" : 50,\\\"mlClusterMaxZoom\\\" : 14,\\\"mlClusterMinPoints\\\" : 2}",
+    "createdAt": "2024-08-28T18:55:30.371Z",
+    "modifiedAt": "2024-08-28T18:55:30.371Z",
+    "name": "Ghost Signs",
+    "nameShort": "GhostSigns",
+    "description": "Public record of Ghost Signs in Hong Kong"
+  }
+]
