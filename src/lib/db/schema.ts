@@ -222,6 +222,10 @@ export const geoProject = sqliteTable('geoProject', {
     .notNull()
 });
 
+export const geoProjectRelations = relations(geoProject, ({ many }) => ({
+  collections: many(geoCollection)
+}));
+
 interface GeoCollectionMetadata {
   defaultEnabled: boolean; // true
   mlCluster?: boolean; // false
@@ -235,6 +239,9 @@ export const geoCollection = sqliteTable('geoCollection', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
+  geoProjectId: text('geoProjectId')
+    .notNull()
+    .references(() => geoProject.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
   // Full Name in English
   name: text('name').notNull(),
   // Short Name in English, used in controls and legends
