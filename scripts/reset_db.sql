@@ -1,13 +1,17 @@
 PRAGMA foreign_keys = OFF;
 
-drop table d1_migrations;
-drop table account;
-drop table session;
-drop table geoCollection;
-drop table geoFeature;
-drop table geoProject;
-drop table user;
-drop table userActivity;
+drop table IF EXISTS sqlite_sequence;
+drop table IF EXISTS d1_migrations;
+drop table IF EXISTS account;
+drop table IF EXISTS session;
+drop table IF EXISTS user;
+drop table IF EXISTS geoCollection;
+drop table IF EXISTS geoFeature;
+drop table IF EXISTS geoProject;
+drop table IF EXISTS userActivity;
+drop table IF EXISTS organisation;
+drop table IF EXISTS organisationI18n;
+drop table IF EXISTS organisationRole;
 
 
 UPDATE sqlite_sequence
