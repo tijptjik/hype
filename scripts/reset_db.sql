@@ -1,6 +1,5 @@
 PRAGMA foreign_keys = OFF;
 
-drop table IF EXISTS sqlite_sequence;
 drop table IF EXISTS d1_migrations;
 drop table IF EXISTS account;
 drop table IF EXISTS session;

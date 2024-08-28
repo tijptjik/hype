@@ -10,8 +10,26 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
   try {
     // DB : Build & Execute Query
     const result = await db.query.user.findMany({
+      columns: {
+        email: false,
+        emailVerified: false,
+        createdAt: false,
+        modifiedAt: false
+      },
       with: {
-        memberships: true
+        memberships: {
+          columns: {
+            role: true
+          },
+          with: {
+            organisation: {
+              columns: {
+                createdAt: false,
+                modifiedAt: false
+              }
+            }
+          }
+        }
       }
     });
     // HTTP : 200 JSON or 404
