@@ -26,8 +26,7 @@ const config = {
   // Consult https://kit.svelte.dev/docs/integrations#preprocessors
   // for more information about preprocessors
   compilerOptions: {
-    // TODO Disabled to enforce compatibility with Paraglide
-    // runes: true,
+    runes: true,
     // disable all warnings coming from node_modules and all accessibility warnings
     warningFilter: (warning) =>
       !warning.filename?.includes('node_modules') &&
@@ -42,6 +41,15 @@ const config = {
     env: {
       privatePrefix: 'PRIVATE',
       publicPrefix: 'PUBLIC'
+    }
+  },
+  vitePlugin: {
+    // Required to avoid runes mode being enforce for all node_modules
+    // https://github.com/sveltejs/svelte/issues/9632#issuecomment-1825498213
+    dynamicCompileOptions({ filename }) {
+      if (filename.includes('node_modules')) {
+        return { runes: undefined }; // or false, check what works
+      }
     }
   }
 };
