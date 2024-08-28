@@ -68,7 +68,7 @@ async function insertData(
   data: SQLiteInsertValue<SQLiteTable>[]
 ) {
   const inserted = await db.insert(table).values(data);
-  console.log(`> ${name} inserted:`, inserted.meta.changes);
+  console.log(`> ${name}`.padEnd(32), inserted.meta.changes);
 }
 
 type CountResult = {
@@ -111,7 +111,7 @@ export default async function seed(printData: boolean = false) {
       // @ts-ignore
       if (await isEmpty(db, item.table)) {
         if (!hasSeedingStarted) {
-          console.log('\n🌱 SEEDING START');
+          console.log('\n🌱 SEEDING\n');
           hasSeedingStarted = true;
         }
         // @ts-ignore
@@ -123,7 +123,7 @@ export default async function seed(printData: boolean = false) {
       }
     }
     if (hasSeedingStarted) {
-      console.log('🌼 SEEDING DONE\n');
+      console.log('\n🌼 ALL FLOURISHING\n');
     }
   }
 }
