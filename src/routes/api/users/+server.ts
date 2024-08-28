@@ -9,9 +9,9 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
   const db = client(platform?.env.DB);
   try {
     // DB : Build & Execute Query
-    const result = await db.query.users.findMany({
+    const result = await db.query.user.findMany({
       with: {
-        accounts: true
+        memberships: true
       }
     });
     // HTTP : 200 JSON or 404

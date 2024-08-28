@@ -8,7 +8,7 @@ import type { GeoJsonProperties, GeometryObject } from 'geojson';
 // USERS
 /* -------- */
 
-export const users = sqliteTable('user', {
+export const user = sqliteTable('user', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -30,7 +30,7 @@ export const users = sqliteTable('user', {
 export const userActivity = sqliteTable('userActivity', {
   userId: text('userId')
     .primaryKey()
-    .references(() => users.id, { onUpdate: 'cascade', onDelete: 'cascade' }),
+    .references(() => user.id, { onUpdate: 'cascade', onDelete: 'cascade' }),
   loginCount: integer('loginCount')
     .default(sql`0`)
     .$onUpdateFn(() => sql`login_count + 1`),
@@ -43,12 +43,12 @@ export const userActivity = sqliteTable('userActivity', {
 // AUTH
 /* -------- */
 
-export const accounts = sqliteTable(
+export const account = sqliteTable(
   'account',
   {
     userId: text('userId')
       .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
+      .references(() => user.id, { onDelete: 'cascade' }),
     type: text('type').$type<AdapterAccountType>().notNull(),
     provider: text('provider').notNull(),
     providerAccountId: text('providerAccountId').notNull(),
@@ -67,11 +67,11 @@ export const accounts = sqliteTable(
   })
 );
 
-export const sessions = sqliteTable('session', {
+export const session = sqliteTable('session', {
   sessionToken: text('sessionToken').primaryKey(),
   userId: text('userId')
     .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
+    .references(() => user.id, { onDelete: 'cascade' }),
   expires: integer('expires', { mode: 'timestamp_ms' })
     .notNull()
     .$onUpdateFn(() => new Date())
@@ -90,12 +90,12 @@ interface GeoProjectMetadata {
   filterProperties?: string[]; // ['district', 'script', 'isPublished']
 }
 
-export const geoProjects = sqliteTable('geoProject', {
+export const geoProject = sqliteTable('geoProject', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   metadata: text('metadata', { mode: 'json' }).$type<GeoProjectMetadata>(),
-  maintainerId: text('maintainerId').references(() => users.id, { onDelete: 'set null' }),
+  maintainerId: text('maintainerId').references(() => user.id, { onDelete: 'set null' }),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -115,7 +115,7 @@ interface GeoCollectionMetadata {
 }
 
 /* @geojson/GeometryCollection */
-export const geoCollections = sqliteTable('geoCollection', {
+export const geoCollection = sqliteTable('geoCollection', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -130,8 +130,8 @@ export const geoCollections = sqliteTable('geoCollection', {
     .notNull()
 });
 
-export const geoCollectionRelations = relations(geoCollections, ({ many }) => ({
-  posts: many(geoFeatures)
+export const geoCollectionRelations = relations(geoCollection, ({ many }) => ({
+  posts: many(geoFeature)
 }));
 
 interface GeoFeatureProperties {
@@ -143,7 +143,7 @@ interface GeoFeatureProperties {
 }
 
 /* @geojson/Feature */
-export const geoFeatures = sqliteTable('geoFeature', {
+export const geoFeature = sqliteTable('geoFeature', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -151,9 +151,9 @@ export const geoFeatures = sqliteTable('geoFeature', {
   properties: text('properties', { mode: 'json' }).notNull().$type<GeoJsonProperties>(),
   geoCollectionId: text('geoCollectionId')
     .notNull()
-    .references(() => geoCollections.id, { onDelete: 'cascade' }),
-  contributorId: text('contributorId').references(() => users.id, { onDelete: 'set null' }),
-  publisherId: text('publisherId').references(() => users.id, { onDelete: 'set null' }),
+    .references(() => geoCollection.id, { onDelete: 'cascade' }),
+  contributorId: text('contributorId').references(() => user.id, { onDelete: 'set null' }),
+  publisherId: text('publisherId').references(() => user.id, { onDelete: 'set null' }),
   isPublished: integer('isPublished', { mode: 'boolean' }).default(false),
   lastSeen: text('lastSeen').default(sql`(CURRENT_DATE)`),
   createdAt: text('createdAt')
@@ -165,9 +165,9 @@ export const geoFeatures = sqliteTable('geoFeature', {
     .notNull()
 });
 
-export const geoFeatureRelations = relations(geoFeatures, ({ one }) => ({
-  author: one(geoCollections, {
-    fields: [geoFeatures.geoCollectionId],
-    references: [geoCollections.id]
+export const geoFeatureRelations = relations(geoFeature, ({ one }) => ({
+  author: one(geoCollection, {
+    fields: [geoFeature.geoCollectionId],
+    references: [geoCollection.id]
   })
 }));

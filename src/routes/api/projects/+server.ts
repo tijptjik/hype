@@ -9,7 +9,7 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
   const db = client(platform?.env.DB);
   try {
     // DB : Build & Execute Query
-    const result = await db.query.geoProjects.findMany();
+    const result = await db.query.geoProject.findMany();
     // HTTP : 200 JSON or 404
     return JSONResponseOrThrow(result);
   } catch (e) {

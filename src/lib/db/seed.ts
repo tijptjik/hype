@@ -1,35 +1,35 @@
-import { accounts, geoProjects, sessions, users } from './schema';
+import { account, geoProject, session, user } from './schema';
 import connect from '../../lib/db';
 
-import usersJson from './data/user.json';
-import accountsJson from './data/account.json';
-import sessionsJson from './data/session.json';
-import geoProjectsJson from './data/geoProject.json';
+import userJson from './data/user.json';
+import accountJson from './data/account.json';
+import sessionJson from './data/session.json';
+import geoProjectJson from './data/geoProject.json';
 import type { DrizzleD1Database } from 'drizzle-orm/d1/driver';
 import { count } from 'drizzle-orm';
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core/table';
 
 // Mapping between JSON files and Tables
 const seedBank = {
-  users: {
+  user: {
     name: 'Users',
-    table: users,
-    data: usersJson
+    table: user,
+    data: userJson
   },
-  accounts: {
+  account: {
     name: 'Accounts',
-    table: accounts,
-    data: accountsJson
+    table: account,
+    data: accountJson
   },
-  sessions: {
+  session: {
     name: 'Sessions',
-    table: sessions,
-    data: sessionsJson
+    table: session,
+    data: sessionJson
   },
-  geoProjects: {
+  geoProject: {
     name: 'GeoProjects',
-    table: geoProjects,
-    data: geoProjectsJson
+    table: geoProject,
+    data: geoProjectJson
   }
 };
 
