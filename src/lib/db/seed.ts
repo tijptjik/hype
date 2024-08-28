@@ -1,10 +1,21 @@
-import { account, geoProject, session, user } from './schema';
+import {
+  account,
+  geoProject,
+  organisation,
+  organisationI18n,
+  organisationRole,
+  session,
+  user
+} from './schema';
 import connect from '../../lib/db';
 
 import userJson from './data/user.json';
 import accountJson from './data/account.json';
 import sessionJson from './data/session.json';
 import geoProjectJson from './data/geoProject.json';
+import organisationJson from './data/organisation.json';
+import organisationI18nJson from './data/organisationI18n.json';
+import organisationRoleJson from './data/organisationRole.json';
 import type { DrizzleD1Database } from 'drizzle-orm/d1/driver';
 import { count } from 'drizzle-orm';
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core/table';
@@ -31,6 +42,21 @@ const seedBank = {
     name: 'GeoProjects',
     table: geoProject,
     data: geoProjectJson
+  },
+  organisation: {
+    name: 'Organisations',
+    table: organisation,
+    data: organisationJson
+  },
+  organisationI18n: {
+    name: 'OrganisationI18n',
+    table: organisationI18n,
+    data: organisationI18nJson
+  },
+  organisationRole: {
+    name: 'OrganisationRoles',
+    table: organisationRole,
+    data: organisationRoleJson
   }
 };
 
