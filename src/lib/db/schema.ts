@@ -1,8 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+// noinspection JSUnusedGlobalSymbols
+
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import type { AdapterAccountType } from '@auth/core/adapters';
 import { relations, sql } from 'drizzle-orm';
-import type { GeoJsonProperties, GeometryObject } from 'geojson';
+import type { GeometryObject } from 'geojson';
 
 /* ----------------- */
 // USERS
@@ -23,7 +24,7 @@ export const user = sqliteTable('user', {
     .notNull(),
   modifiedAt: text('modifiedAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .$onUpdate(() => new Date())
+    .$onUpdate(() => new Date().toISOString())
     .notNull()
 });
 
@@ -40,7 +41,7 @@ export const userActivity = sqliteTable('userActivity', {
     .$onUpdateFn(() => sql`login_count + 1`),
   lastLogin: text('lastLogin')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .$onUpdate(() => new Date())
+    .$onUpdate(() => new Date().toISOString())
 });
 
 /* ----------------- */
@@ -86,7 +87,7 @@ export const organisation = sqliteTable('organisation', {
     .notNull(),
   modifiedAt: text('modifiedAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .$onUpdate(() => new Date())
+    .$onUpdate(() => new Date().toISOString())
     .notNull()
 });
 
@@ -206,7 +207,7 @@ export const geoProject = sqliteTable('geoProject', {
     .notNull(),
   modifiedAt: text('modifiedAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .$onUpdate(() => new Date())
+    .$onUpdate(() => new Date().toISOString())
     .notNull()
 });
 
@@ -231,7 +232,7 @@ export const geoCollection = sqliteTable('geoCollection', {
     .notNull(),
   modifiedAt: text('modifiedAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .$onUpdate(() => new Date())
+    .$onUpdate(() => new Date().toISOString())
     .notNull()
 });
 
@@ -253,7 +254,7 @@ export const geoFeature = sqliteTable('geoFeature', {
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   geometry: text('geometry', { mode: 'json' }).notNull().$type<GeometryObject>(),
-  properties: text('properties', { mode: 'json' }).notNull().$type<GeoJsonProperties>(),
+  properties: text('properties', { mode: 'json' }).notNull().$type<GeoFeatureProperties>(),
   geoCollectionId: text('geoCollectionId')
     .notNull()
     .references(() => geoCollection.id, { onDelete: 'cascade' }),
@@ -266,7 +267,7 @@ export const geoFeature = sqliteTable('geoFeature', {
     .notNull(),
   modifiedAt: text('modifiedAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .$onUpdate(() => new Date())
+    .$onUpdate(() => new Date().toISOString())
     .notNull()
 });
 
