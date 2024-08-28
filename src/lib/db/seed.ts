@@ -8,6 +8,7 @@ import geoProjectJson from './data/geoProject.json';
 import type { DrizzleD1Database } from 'drizzle-orm/d1/driver';
 import { count } from 'drizzle-orm';
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core/table';
+import type { SQLiteInsertValue } from 'drizzle-orm/sqlite-core';
 
 // Mapping between JSON files and Tables
 const seedBank = {
@@ -34,7 +35,12 @@ const seedBank = {
 };
 
 // Function to perform database operations
-async function insertData(db: DrizzleD1Database, name: string, table: SQLiteTable, data: any) {
+async function insertData(
+  db: DrizzleD1Database,
+  name: string,
+  table: SQLiteTable,
+  data: SQLiteInsertValue<SQLiteTable>[]
+) {
   const inserted = await db.insert(table).values(data);
   console.log(`> ${name} inserted:`, inserted.meta.changes);
 }
@@ -43,9 +49,8 @@ type CountResult = {
   count: number;
 };
 
-// Define this helper somewhere in your codebase:
-const takeUniqueOrThrow = <T extends any[]>(values: T): T[number] => {
-  if (values.length !== 1) throw new Error('Found non unique or inexistent value');
+const takeUniqueOrThrow = <T extends unknown[]>(values: T): T[number] => {
+  if (values.length !== 1) throw new Error('Found non unique or absent value');
   return values[0]!;
 };
 
@@ -59,7 +64,7 @@ async function isEmpty(db: DrizzleD1Database, table: SQLiteTable) {
 
 export default async function seed(printData: boolean = false) {
   if (printData) {
-    Object.entries(seedBank).map(([key, val]) => console.log(val.data));
+    Object.values(seedBank).map((val) => console.log(val.data));
   }
 
   if (process.env.VITE_WRANGLER_ENV === 'local') {
