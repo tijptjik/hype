@@ -1,5 +1,6 @@
 import {
   account,
+  geoCollection,
   geoProject,
   organisation,
   organisationI18n,
@@ -16,6 +17,7 @@ import geoProjectJson from './data/geoProject.json';
 import organisationJson from './data/organisation.json';
 import organisationI18nJson from './data/organisationI18n.json';
 import organisationRoleJson from './data/organisationRole.json';
+import geoCollectionJson from './data/geoCollection.json';
 import type { DrizzleD1Database } from 'drizzle-orm/d1/driver';
 import { count } from 'drizzle-orm';
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core/table';
@@ -38,11 +40,6 @@ const seedBank = {
     table: session,
     data: sessionJson
   },
-  geoProject: {
-    name: 'GeoProjects',
-    table: geoProject,
-    data: geoProjectJson
-  },
   organisation: {
     name: 'Organisations',
     table: organisation,
@@ -57,6 +54,16 @@ const seedBank = {
     name: 'OrganisationRoles',
     table: organisationRole,
     data: organisationRoleJson
+  },
+  geoProject: {
+    name: 'GeoProjects',
+    table: geoProject,
+    data: geoProjectJson
+  },
+  geoCollection: {
+    name: 'GeoCollections',
+    table: geoCollection,
+    data: geoCollectionJson
   }
 };
 
