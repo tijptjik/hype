@@ -3,8 +3,8 @@
   "sourceLanguageTag": "en",
   "languageTags": [
     "en",
-    "zh-ch",
-    "zh-hk"
+    "zh-hans",
+    "zh-hant"
   ],
   "modules": [
     "https://cdn.jsdelivr.net/npm/@inlang/message-lint-rule-empty-pattern@latest/dist/index.js",
