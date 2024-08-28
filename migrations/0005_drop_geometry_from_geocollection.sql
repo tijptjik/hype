@@ -1,0 +1,1 @@
+ALTER TABLE `geoCollection` DROP COLUMN `geometry`;

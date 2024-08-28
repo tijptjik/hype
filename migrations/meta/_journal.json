@@ -36,6 +36,34 @@
       "when": 1724835719249,
       "tag": "0004_add_organisation",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1724867727071,
+      "tag": "0005_drop_geometry_from_geocollection",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1724870406306,
+      "tag": "0006_extend_geo_project_and_geo_collection",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1724870448728,
+      "tag": "0007_drop_fk_on_maintainerId",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1724870917988,
+      "tag": "0008_drop_maintainerId",
+      "breakpoints": true
     }
   ]
 }
