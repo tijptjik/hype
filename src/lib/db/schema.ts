@@ -1,5 +1,4 @@
 // noinspection JSUnusedGlobalSymbols
-
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import type { AdapterAccountType } from '@auth/core/adapters';
 import { relations, sql } from 'drizzle-orm';
@@ -29,7 +28,8 @@ export const user = sqliteTable('user', {
 });
 
 export const userRelations = relations(user, ({ many }) => ({
-  memberships: many(organisationRole, { relationName: 'membership' })
+  memberships: many(organisationRole),
+  accounts: many(account)
 }));
 
 export const userActivity = sqliteTable('userActivity', {
@@ -92,7 +92,7 @@ export const organisation = sqliteTable('organisation', {
 });
 
 export const organisationRelations = relations(organisation, ({ many }) => ({
-  members: many(organisationRole, { relationName: 'membership' })
+  users: many(organisationRole)
 }));
 
 export const organisationI18n = sqliteTable(
@@ -135,13 +135,13 @@ export const organisationRole = sqliteTable(
 );
 
 export const organisationRoleRelations = relations(organisationRole, ({ one }) => ({
-  organisation: one(organisation, {
-    fields: [organisationRole.organisationId],
-    references: [organisation.id]
-  }),
   user: one(user, {
     fields: [organisationRole.userId],
     references: [user.id]
+  }),
+  organisation: one(organisation, {
+    fields: [organisationRole.organisationId],
+    references: [organisation.id]
   })
 }));
 
@@ -189,10 +189,6 @@ export const session = sqliteTable('session', {
 /* -------- */
 
 interface GeoProjectMetadata {
-  title: string;
-  description?: string;
-  license?: string; // ODbl
-  attribution?: string; // © Hong Kong Maritime Museum
   filterProperties?: string[]; // ['district', 'script', 'isPublished']
 }
 
@@ -200,8 +196,23 @@ export const geoProject = sqliteTable('geoProject', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
+  organisationId: text('organisationId')
+    .notNull()
+    .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  // Public identifier
+  code: text('code').unique().notNull(),
+  // Full Name in English
+  name: text('name').notNull(),
+  // Short Name in English, used in navigation
+  nameShort: text('nameShort').notNull(),
+  // Description in English
+  description: text('description'),
+  // License under which the dataset is made public
+  license: text('license').default('Copyright').notNull(),
+  // Attribution for the dataset
+  attribution: text('attribution').notNull(),
+  // Additional Information
   metadata: text('metadata', { mode: 'json' }).$type<GeoProjectMetadata>(),
-  maintainerId: text('maintainerId').references(() => user.id, { onDelete: 'set null' }),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -212,8 +223,7 @@ export const geoProject = sqliteTable('geoProject', {
 });
 
 interface GeoCollectionMetadata {
-  title: string;
-  description?: string;
+  defaultEnabled: boolean; // true
   mlCluster?: boolean; // false
   mlClusterRadius?: number; // 50
   mlClusterMaxZoom?: number; // 14
@@ -225,7 +235,13 @@ export const geoCollection = sqliteTable('geoCollection', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
-  geometry: text('geometry', { mode: 'json' }).$type<GeometryObject>(),
+  // Full Name in English
+  name: text('name').notNull(),
+  // Short Name in English, used in controls and legends
+  nameShort: text('nameShort').notNull(),
+  // Description in English
+  description: text('description'),
+  // Additional Information
   metadata: text('metadata', { mode: 'json' }).$type<GeoCollectionMetadata>(),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
