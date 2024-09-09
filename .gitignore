@@ -15,6 +15,7 @@ node_modules
 .env
 .env.*
 !.env.example
+scripts/.venv
 
 # Runners
 vite.config.js.timestamp-*
@@ -29,3 +30,5 @@ Thumbs.db
 
 # Data
 local_*.sql
+scripts/data/
+scripts/.ipynb_checkpoints/

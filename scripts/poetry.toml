@@ -1,0 +1,4 @@
+[virtualenvs]
+create = true
+prefer-active-python = true
+prompt = "󰢔{project_name}"

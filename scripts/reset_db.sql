@@ -16,3 +16,5 @@ drop table IF EXISTS organisationRole;
 UPDATE sqlite_sequence
 SET seq = 0
 WHERE name = 'd1_migrations';
+
+PRAGMA foreign_keys = ON;
