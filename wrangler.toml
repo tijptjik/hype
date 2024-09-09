@@ -81,6 +81,8 @@ NODE_ENV = "production"
 VITE_USER_NODE_ENV="production"
 BUN_VERSION = "1.1.22"
 PUBLIC_MAPTILER_KEY = "SMf0v0mZlsqfCMBgZdy1"
+PUBLIC_MAPBOX_KEY = "pk.eyJ1IjoidGlqcHRqaWsiLCJhIjoiY20wb3Rrb2J6MGMyNjJqcXkyazFvYmc3ZiJ9.jEmTmlD2aXjiGzgo7gjBPA"
+PUBLIC_GOOGLEMAPS_KEY = "AIzaSyD2vy_8I1q2WKo4J0z0Ot2ZhVvteDoLntI"
 
 [[env.production.d1_databases]]
 binding = "DB"
@@ -96,6 +98,8 @@ NODE_ENV = "staging"
 VITE_USER_NODE_ENV="staging"
 BUN_VERSION = "1.1.22"
 PUBLIC_MAPTILER_KEY = "SMf0v0mZlsqfCMBgZdy1"
+PUBLIC_MAPBOX_KEY = "pk.eyJ1IjoidGlqcHRqaWsiLCJhIjoiY20wb3Rrb2J6MGMyNjJqcXkyazFvYmc3ZiJ9.jEmTmlD2aXjiGzgo7gjBPA"
+PUBLIC_GOOGLEMAPS_KEY = "AIzaSyD2vy_8I1q2WKo4J0z0Ot2ZhVvteDoLntI"
 
 [[env.preview.d1_databases]]
 binding = "DB"
