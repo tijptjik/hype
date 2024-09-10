@@ -8,6 +8,13 @@
       "when": 1724872862823,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1725960304657,
+      "tag": "0001_GeoFields",
+      "breakpoints": true
     }
   ]
 }
