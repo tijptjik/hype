@@ -36,3 +36,33 @@ bun run build
 ```
 
 You can preview the production build with `bun run preview`.
+
+## Database Management
+
+### Migration
+
+#### Generate Migration
+
+```shell
+bun run db:generate <DESCRIPTION>
+```
+
+#### Run Migration
+
+Migrate `local` database to the latest migration
+
+```shell
+bun run db:migrate:local
+```
+
+Migrate `production` database on `cloudflare` to the latest migration
+
+```shell
+bun run db:migrate:cf:prod
+```
+
+Migrate `staging` database on `cloudflare` to the latest migration
+
+```shell
+bun run db:migrate:cf:preview
+```
