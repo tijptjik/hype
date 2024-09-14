@@ -394,3 +394,8 @@ export const geoFeatureRelations = relations(geoFeature, ({ one }) => ({
     references: [geoCollection.id]
   })
 }));
+
+// TODO Add visit table linking Users with GeoFeatures for a given date
+// TODO When a new visit is created for a GeoFeature, update its "visitableAsOf" field to that date.
+// TODO Add a checkinType of values "visit" and "reportMissing"
+// TODO Add a isHandled to indicate that follow up action was taken (e.g. report missing was dealt with)
