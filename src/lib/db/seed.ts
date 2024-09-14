@@ -1,8 +1,8 @@
 import {
   account,
   geoCollection,
-  geoProject,
   geoFeature,
+  geoProject,
   organisation,
   organisationI18n,
   organisationRole,
@@ -30,48 +30,65 @@ const seedBank = {
   user: {
     name: 'Users',
     table: user,
-    data: userJson
+    data: userJson,
+    chunk: 0
   },
   account: {
     name: 'Accounts',
     table: account,
-    data: accountJson
+    data: accountJson,
+    chunk: 0
   },
   session: {
     name: 'Sessions',
     table: session,
-    data: sessionJson
+    data: sessionJson,
+    chunk: 0
   },
   organisation: {
     name: 'Organisations',
     table: organisation,
-    data: organisationJson
+    data: organisationJson,
+    chunk: 0
   },
   organisationI18n: {
     name: 'OrganisationI18n',
     table: organisationI18n,
-    data: organisationI18nJson
+    data: organisationI18nJson,
+    chunk: 0
   },
   organisationRole: {
     name: 'OrganisationRoles',
     table: organisationRole,
-    data: organisationRoleJson
+    data: organisationRoleJson,
+    chunk: 0
   },
   geoProject: {
     name: 'GeoProjects',
     table: geoProject,
-    data: geoProjectJson
+    data: geoProjectJson,
+    chunk: 0
   },
   geoCollection: {
     name: 'GeoCollections',
     table: geoCollection,
-    data: geoCollectionJson
+    data: geoCollectionJson,
+    chunk: 0
   },
   geoFeature: {
     name: 'geoFeatures',
     table: geoFeature,
-    data: geoFeatureJson
+    data: geoFeatureJson,
+    chunk: 8
   }
+};
+
+const chunkArray = <T>(array: T[], size: number): T[][] => {
+  const result: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    result.push(array.slice(i, i + size));
+  }
+  return result;
 };
 
 // Function to perform database operations
@@ -79,10 +96,23 @@ async function insertData(
   db: DrizzleD1Database,
   name: string,
   table: SQLiteTable,
-  data: SQLiteInsertValue<SQLiteTable>[]
+  data: SQLiteInsertValue<SQLiteTable>[],
+  chunkSize: number
 ) {
-  const inserted = await db.insert(table).values(data);
-  console.log(`> ${name}`.padEnd(32), inserted.meta.changes);
+  let insertedCount = 0;
+  if (chunkSize > 0) {
+    const chunks = chunkArray(data, chunkSize);
+    await Promise.all(
+      chunks.map(async (dataToInsert) => {
+        const inserted = await db.insert(table).values(dataToInsert);
+        insertedCount = insertedCount + inserted.meta.changes;
+      })
+    );
+  } else {
+    const inserted = await db.insert(table).values(data);
+    insertedCount = inserted.meta.changes;
+  }
+  console.log(`> ${name}`.padEnd(32), insertedCount);
 }
 
 type CountResult = {
@@ -129,7 +159,7 @@ export default async function seed(printData: boolean = false) {
           hasSeedingStarted = true;
         }
         // @ts-ignore
-        await insertData(db, item.name, item.table, item.data);
+        await insertData(db, item.name, item.table, item.data, item.chunk);
       } else {
         if (hasSeedingStarted) {
           console.log(`> ${item.name} skipped`);
