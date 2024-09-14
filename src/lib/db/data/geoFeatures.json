@@ -1,0 +1,24 @@
+[{
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          114.149992,
+          22.284140
+        ]
+      },
+      "properties": {
+        "name": "Tai Hing House",
+        "description": "Ghosts Beware",
+        "grade": 5,
+        "size": "L",
+        "material": "Painted",
+        "Visibility": "Physical",
+        "name__zh-hant": "大興樓",
+        "name__zh-hans": "大興樓",
+        "description__zh-hant": "小心鬼魂",
+        "description__zh-hans": "小心鬼魂",
+        "script": "comicSans"
+      }
+    }
+  ]
+}
