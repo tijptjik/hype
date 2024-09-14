@@ -16,6 +16,7 @@ googlemaps = "^4.10.0"
 shortuuid = "^1.0.13"
 haversine = "^2.8.1"
 datefinder = "^0.7.3"
+google-cloud-translate = "^3.16.0"
 
 
 [build-system]
