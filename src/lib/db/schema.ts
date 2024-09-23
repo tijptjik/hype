@@ -3,6 +3,9 @@ import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import type { AdapterAccountType } from '@auth/core/adapters';
 import { relations, sql } from 'drizzle-orm';
 import type { GeometryObject } from 'geojson';
+import shortUUID from 'short-uuid';
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+import { z } from 'zod';
 
 /* ----------------- */
 // USERS
@@ -11,7 +14,7 @@ import type { GeometryObject } from 'geojson';
 export const user = sqliteTable('user', {
   id: text('id')
     .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
+    .$defaultFn(() => shortUUID.generate()),
   name: text('name'),
   attribution: text('attribution'),
   email: text('email').unique(),
@@ -93,7 +96,8 @@ export const organisation = sqliteTable('organisation', {
 });
 
 export const organisationRelations = relations(organisation, ({ many }) => ({
-  users: many(organisationRole)
+  users: many(organisationRole),
+  translations: many(organisationI18n)
 }));
 
 export const organisationI18n = sqliteTable(
@@ -116,6 +120,25 @@ export const organisationI18n = sqliteTable(
     pk: primaryKey({ columns: [t.organisationId, t.lang] })
   })
 );
+
+export const organisationI18nRelations = relations(organisationI18n, ({ one }) => ({
+  organisation: one(organisation, {
+    fields: [organisationI18n.organisationId],
+    references: [organisation.id]
+  })
+}));
+
+// Schema for inserting an organisation - can be used to validate API requests
+export const insertOrganisationSchema = createInsertSchema(organisation);
+
+// Schema for selecting a user - can be used to validate API responses
+export const OrganisationBase = createSelectSchema(organisation);
+export const OrganisationI18n = createSelectSchema(organisationI18n);
+
+export const OranisationSchema = z.object({
+  ...OrganisationBase.shape,
+  translations: z.array(createInsertSchema(organisationI18n))
+});
 
 export const organisationRole = sqliteTable(
   'organisationRole',
@@ -193,7 +216,7 @@ interface GeoProjectMetadata {
   filterProperties?: string[]; // ['district', 'script', 'isPublished']
 }
 
-export const geoProject = sqliteTable('geoProject', {
+export const project = sqliteTable('project', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -236,13 +259,13 @@ interface GeoCollectionMetadata {
 }
 
 /* @geojson/GeometryCollection */
-export const geoCollection = sqliteTable('geoCollection', {
+export const layer = sqliteTable('layer', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
-  geoProjectId: text('geoProjectId')
+  projectId: text('projectId')
     .notNull()
-    .references(() => geoProject.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
   // Full Name in English
   name: text('name').notNull(),
   // Short Name in English, used in controls and legends
@@ -260,8 +283,8 @@ export const geoCollection = sqliteTable('geoCollection', {
     .notNull()
 });
 
-export const geoCollectionRelations = relations(geoCollection, ({ many }) => ({
-  posts: many(geoFeature)
+export const layerRelations = relations(layer, ({ many }) => ({
+  posts: many(feature)
 }));
 
 interface GeoFeatureProperties {
@@ -354,7 +377,7 @@ interface AddressProperties {
 }
 
 /* @geojson/Feature */
-export const geoFeature = sqliteTable('geoFeature', {
+export const feature = sqliteTable('feature', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -363,19 +386,26 @@ export const geoFeature = sqliteTable('geoFeature', {
     .notNull()
     .$type<GhostSignsGeoFeatureProperties>(),
   addressProperties: text('addressProperties', { mode: 'json' }).$type<AddressProperties>(),
-  geoCollectionId: text('geoCollectionId')
+  layerId: text('layerId')
     .notNull()
-    .references(() => geoCollection.id, { onDelete: 'cascade' }),
+    .references(() => layer.id, { onDelete: 'cascade' }),
   contributorId: text('contributorId').references(() => user.id, { onDelete: 'set null' }),
   publisherId: text('publisherId').references(() => user.id, { onDelete: 'set null' }),
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
 
-  // NOT Historic + Visitable      : Feature has a physical presence and can be visited - the default
-  // NOT Historic + NOT Visitable  : Feature is extant, but is (temporarily) not visitable due to obstruction / access rights
-  // Historic + NOT Visitable      : Feature removed without a trace, AND the "place" at present does not enrich the experience of the historic Feature
-  // Historic + Visitable          : Feature removed without a trace, BUT the "place" itself still holds historic importance
+  // PUBLISHED
+  // Visitable + Tangible            : Listing - Feature has a physical presence and can be visited - the default
+  // Visitable + NOT Tangible        : Intangible Listing - Feature lacks physical presence, BUT the site itself holds historic value
+  // NOT Visitable + Tangible        : Unavailable - Feature is extant, but is (temporarily) not visitable due to obstruction / access rights
+  // NOT Visitable + NOT Tangible    : Inaccessible - Feature has intangible value, BUT the site is (temporarily) not accessible.
 
-  isHistoric: integer('isHistoric', { mode: 'boolean' }).notNull().default(false),
+  // NOT PUBLISHED
+  // Visitable + Tangible           : Draft - Unpublished Tangible Listing
+  // Visitable + NOT Tangible       : Draft - Unpublished Intangible Listing
+  // NOT Visitable + Tangible       : Delisted - Feature destroyed / removed / otherwise erased, and should no longer be shown on public maps.
+  // NOT Visitable + NOT Tangible   : Delisted - Feature no longer offers any significance to the collection and should not be shown on public maps.
+
+  isIntangible: integer('isIntangible', { mode: 'boolean' }).notNull().default(false),
   isVisitable: integer('isVisitable', { mode: 'boolean' }).notNull().default(false),
   visitableAsOf: text('visitableAsOf').default(sql`(CURRENT_DATE)`),
 
@@ -388,10 +418,10 @@ export const geoFeature = sqliteTable('geoFeature', {
     .notNull()
 });
 
-export const geoFeatureRelations = relations(geoFeature, ({ one }) => ({
-  author: one(geoCollection, {
-    fields: [geoFeature.geoCollectionId],
-    references: [geoCollection.id]
+export const featureRelations = relations(feature, ({ one }) => ({
+  layer: one(layer, {
+    fields: [feature.layerId],
+    references: [layer.id]
   })
 }));
 
