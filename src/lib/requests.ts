@@ -149,7 +149,7 @@
 // 			...responseData
 // 		};
 // 	} catch (e) {
-// 		console.log('Error when fetching data', e);
+// 		console.error('Error when fetching data', e);
 //
 // 		// Clear timeout as there was an error
 // 		clearTimeout(timeoutPromise);
