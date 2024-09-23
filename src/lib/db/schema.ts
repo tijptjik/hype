@@ -246,8 +246,41 @@ export const project = sqliteTable('project', {
     .notNull()
 });
 
-export const geoProjectRelations = relations(geoProject, ({ many }) => ({
-  collections: many(geoCollection)
+export const projectRelations = relations(project, ({ many }) => ({
+  layers: many(layer),
+  translations: many(projectI18n)
+}));
+
+export const projectI18n = sqliteTable(
+  'projectI18n',
+  {
+    projectId: text('projectId')
+      .notNull()
+      .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    // IETF BCP 47 language tag
+    // https://www.rfc-editor.org/info/bcp47
+    lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
+    // Full Name in {lang}
+    name: text('name').notNull(),
+    // Short Name  in {lang}, used in navigation
+    nameShort: text('nameShort').notNull(),
+    // Description in {lang}
+    description: text('description'),
+    // Licence in {lang}
+    license: text('license'),
+    // Description in {lang}
+    attribution: text('attribution')
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.projectId, t.lang] })
+  })
+);
+
+export const projectI18nRelations = relations(projectI18n, ({ one }) => ({
+  project: one(project, {
+    fields: [projectI18n.projectId],
+    references: [project.id]
+  })
 }));
 
 interface GeoCollectionMetadata {
