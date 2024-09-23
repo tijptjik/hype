@@ -1,8 +1,8 @@
 import {
   account,
-  geoCollection,
-  geoFeature,
-  geoProject,
+  layer,
+  feature,
+  project,
   organisation,
   organisationI18n,
   organisationRole,
@@ -11,15 +11,15 @@ import {
 } from './schema';
 import connect from '../../lib/db';
 
-import userJson from './data/user.json';
-import accountJson from './data/account.json';
-import sessionJson from './data/session.json';
-import geoProjectJson from './data/geoProject.json';
-import organisationJson from './data/organisation.json';
-import organisationI18nJson from './data/organisationI18n.json';
-import organisationRoleJson from './data/organisationRole.json';
-import geoCollectionJson from './data/geoCollection.json';
-import geoFeatureJson from './data/geoFeatures.json';
+import userJson from './data/users.json';
+import accountJson from './data/accounts.json';
+import sessionJson from './data/sessions.json';
+import projectJson from './data/projects.json';
+import organisationJson from './data/organisations.json';
+import organisationI18nJson from './data/organisationsI18n.json';
+import organisationRoleJson from './data/organisationRoles.json';
+import layerJson from './data/layers.json';
+import featureJson from './data/features.json';
 import type { DrizzleD1Database } from 'drizzle-orm/d1/driver';
 import { count } from 'drizzle-orm';
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core/table';
@@ -63,22 +63,22 @@ const seedBank = {
     data: organisationRoleJson,
     chunk: 0
   },
-  geoProject: {
-    name: 'GeoProjects',
-    table: geoProject,
-    data: geoProjectJson,
+  project: {
+    name: 'projects',
+    table: project,
+    data: projectJson,
     chunk: 0
   },
-  geoCollection: {
-    name: 'GeoCollections',
-    table: geoCollection,
-    data: geoCollectionJson,
+  layer: {
+    name: 'layers',
+    table: layer,
+    data: layerJson,
     chunk: 0
   },
-  geoFeature: {
-    name: 'geoFeatures',
-    table: geoFeature,
-    data: geoFeatureJson,
+  feature: {
+    name: 'features',
+    table: feature,
+    data: featureJson,
     chunk: 8
   }
 };
@@ -112,7 +112,7 @@ async function insertData(
     const inserted = await db.insert(table).values(data);
     insertedCount = inserted.meta.changes;
   }
-  console.log(`> ${name}`.padEnd(32), insertedCount);
+  console.info(`> ${name}`.padEnd(32), insertedCount);
 }
 
 type CountResult = {
@@ -134,7 +134,7 @@ async function isEmpty(db: DrizzleD1Database, table: SQLiteTable) {
 
 export default async function seed(printData: boolean = false) {
   if (printData) {
-    Object.values(seedBank).map((val) => console.log(val.data));
+    Object.values(seedBank).map((val) => console.info(val.data));
   }
 
   if (process.env.VITE_WRANGLER_ENV === 'local') {
@@ -155,19 +155,19 @@ export default async function seed(printData: boolean = false) {
       // @ts-ignore
       if (await isEmpty(db, item.table)) {
         if (!hasSeedingStarted) {
-          console.log('\n🌱 SEEDING\n');
+          console.info('\n🌱 SEEDING\n');
           hasSeedingStarted = true;
         }
         // @ts-ignore
         await insertData(db, item.name, item.table, item.data, item.chunk);
       } else {
         if (hasSeedingStarted) {
-          console.log(`> ${item.name} skipped`);
+          console.info(`> ${item.name} skipped`);
         }
       }
     }
     if (hasSeedingStarted) {
-      console.log('\n🌼 ALL FLOURISHING\n');
+      console.info('\n🌼 ALL FLOURISHING\n');
     }
   }
 }

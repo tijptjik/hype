@@ -2,13 +2,13 @@ delete
 from account;
 
 delete
-from geoFeature;
+from feature;
 
 delete
-from geoCollection;
+from layer;
 
 delete
-from geoProject;
+from project;
 
 delete
 from organisationI18n;
