@@ -1,6 +1,6 @@
 <script lang="ts">
 // noinspection TypeScriptCheckImport
-import { PUBLIC_MAPTILER_KEY } from '$env/static/public';
+// import { PUBLIC_MAPTILER_KEY } from '$env/static/public';
 import { type MapStore, MAPSTORE_CONTEXT_KEY } from '$lib/stores';
 // import { AttributionControl, GeolocateControl, Map, NavigationControl, ScaleControl } from 'maplibre-gl';
 import { getContext, onMount } from 'svelte';
@@ -27,7 +27,7 @@ onMount(async () => {
 
   // eslint-disable-next-line no-undef
   const maplibre = maplibregl;
-  console.log('Built with 🗺️ MapLibre ' + maplibre?.getVersion());
+  console.info('Built with 🗺️ MapLibre ' + maplibre?.getVersion());
 
   // const map = new Map({
   const map = new maplibre.Map({
