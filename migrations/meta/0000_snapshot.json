@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "1a528d30-ccd5-4e98-bf72-d0f1cff2f272",
+  "id": "dcf97352-3abf-4c8d-ab93-ba450fae6d0e",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account": {
@@ -112,89 +112,8 @@
       },
       "uniqueConstraints": {}
     },
-    "geoCollection": {
-      "name": "geoCollection",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "geoProjectId": {
-          "name": "geoProjectId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "nameShort": {
-          "name": "nameShort",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "metadata": {
-          "name": "metadata",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
-        },
-        "modifiedAt": {
-          "name": "modifiedAt",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "geoCollection_geoProjectId_geoProject_id_fk": {
-          "name": "geoCollection_geoProjectId_geoProject_id_fk",
-          "tableFrom": "geoCollection",
-          "tableTo": "geoProject",
-          "columnsFrom": [
-            "geoProjectId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "cascade"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
-    },
-    "geoFeature": {
-      "name": "geoFeature",
+    "feature": {
+      "name": "feature",
       "columns": {
         "id": {
           "name": "id",
@@ -217,8 +136,15 @@
           "notNull": true,
           "autoincrement": false
         },
-        "geoCollectionId": {
-          "name": "geoCollectionId",
+        "addressProperties": {
+          "name": "addressProperties",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "layerId": {
+          "name": "layerId",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -242,12 +168,28 @@
           "name": "isPublished",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false,
           "default": false
         },
-        "lastSeen": {
-          "name": "lastSeen",
+        "isIntangible": {
+          "name": "isIntangible",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "isVisitable": {
+          "name": "isVisitable",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "visitableAsOf": {
+          "name": "visitableAsOf",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -273,12 +215,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "geoFeature_geoCollectionId_geoCollection_id_fk": {
-          "name": "geoFeature_geoCollectionId_geoCollection_id_fk",
-          "tableFrom": "geoFeature",
-          "tableTo": "geoCollection",
+        "feature_layerId_layer_id_fk": {
+          "name": "feature_layerId_layer_id_fk",
+          "tableFrom": "feature",
+          "tableTo": "layer",
           "columnsFrom": [
-            "geoCollectionId"
+            "layerId"
           ],
           "columnsTo": [
             "id"
@@ -286,9 +228,9 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "geoFeature_contributorId_user_id_fk": {
-          "name": "geoFeature_contributorId_user_id_fk",
-          "tableFrom": "geoFeature",
+        "feature_contributorId_user_id_fk": {
+          "name": "feature_contributorId_user_id_fk",
+          "tableFrom": "feature",
           "tableTo": "user",
           "columnsFrom": [
             "contributorId"
@@ -299,9 +241,9 @@
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "geoFeature_publisherId_user_id_fk": {
-          "name": "geoFeature_publisherId_user_id_fk",
-          "tableFrom": "geoFeature",
+        "feature_publisherId_user_id_fk": {
+          "name": "feature_publisherId_user_id_fk",
+          "tableFrom": "feature",
           "tableTo": "user",
           "columnsFrom": [
             "publisherId"
@@ -316,8 +258,8 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "geoProject": {
-      "name": "geoProject",
+    "layer": {
+      "name": "layer",
       "columns": {
         "id": {
           "name": "id",
@@ -326,15 +268,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "organisationId": {
-          "name": "organisationId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "code": {
-          "name": "code",
+        "projectId": {
+          "name": "projectId",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -361,21 +296,6 @@
           "notNull": false,
           "autoincrement": false
         },
-        "license": {
-          "name": "license",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'Copyright'"
-        },
-        "attribution": {
-          "name": "attribution",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "metadata": {
           "name": "metadata",
           "type": "text",
@@ -400,22 +320,14 @@
           "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
         }
       },
-      "indexes": {
-        "geoProject_code_unique": {
-          "name": "geoProject_code_unique",
-          "columns": [
-            "code"
-          ],
-          "isUnique": true
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
-        "geoProject_organisationId_organisation_id_fk": {
-          "name": "geoProject_organisationId_organisation_id_fk",
-          "tableFrom": "geoProject",
-          "tableTo": "organisation",
+        "layer_projectId_project_id_fk": {
+          "name": "layer_projectId_project_id_fk",
+          "tableFrom": "layer",
+          "tableTo": "project",
           "columnsFrom": [
-            "organisationId"
+            "projectId"
           ],
           "columnsTo": [
             "id"
@@ -641,6 +553,117 @@
       },
       "uniqueConstraints": {}
     },
+    "project": {
+      "name": "project",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "organisationId": {
+          "name": "organisationId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "nameShort": {
+          "name": "nameShort",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "license": {
+          "name": "license",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'Copyright'"
+        },
+        "attribution": {
+          "name": "attribution",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "modifiedAt": {
+          "name": "modifiedAt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "project_code_unique": {
+          "name": "project_code_unique",
+          "columns": [
+            "code"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "project_organisationId_organisation_id_fk": {
+          "name": "project_organisationId_organisation_id_fk",
+          "tableFrom": "project",
+          "tableTo": "organisation",
+          "columnsFrom": [
+            "organisationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
     "session": {
       "name": "session",
       "columns": {
@@ -697,6 +720,13 @@
         },
         "name": {
           "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "attribution": {
+          "name": "attribution",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
