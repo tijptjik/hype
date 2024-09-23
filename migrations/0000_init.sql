@@ -14,47 +14,35 @@ CREATE TABLE `account` (
 	FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE TABLE `geoCollection` (
-	`id` text PRIMARY KEY NOT NULL,
-	`geoProjectId` text NOT NULL,
-	`name` text NOT NULL,
-	`nameShort` text NOT NULL,
-	`description` text,
-	`metadata` text,
-	`createdAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
-	`modifiedAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
-	FOREIGN KEY (`geoProjectId`) REFERENCES `geoProject`(`id`) ON UPDATE cascade ON DELETE cascade
-);
---> statement-breakpoint
-CREATE TABLE `geoFeature` (
+CREATE TABLE `feature` (
 	`id` text PRIMARY KEY NOT NULL,
 	`geometry` text NOT NULL,
 	`properties` text NOT NULL,
-	`geoCollectionId` text NOT NULL,
+	`addressProperties` text,
+	`layerId` text NOT NULL,
 	`contributorId` text,
 	`publisherId` text,
-	`isPublished` integer DEFAULT false,
-	`lastSeen` text DEFAULT (CURRENT_DATE),
+	`isPublished` integer DEFAULT false NOT NULL,
+	`isIntangible` integer DEFAULT false NOT NULL,
+	`isVisitable` integer DEFAULT false NOT NULL,
+	`visitableAsOf` text DEFAULT (CURRENT_DATE),
 	`createdAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
 	`modifiedAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
-	FOREIGN KEY (`geoCollectionId`) REFERENCES `geoCollection`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`layerId`) REFERENCES `layer`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`contributorId`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null,
 	FOREIGN KEY (`publisherId`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null
 );
 --> statement-breakpoint
-CREATE TABLE `geoProject` (
+CREATE TABLE `layer` (
 	`id` text PRIMARY KEY NOT NULL,
-	`organisationId` text NOT NULL,
-	`code` text NOT NULL,
+	`projectId` text NOT NULL,
 	`name` text NOT NULL,
 	`nameShort` text NOT NULL,
 	`description` text,
-	`license` text DEFAULT 'Copyright' NOT NULL,
-	`attribution` text NOT NULL,
 	`metadata` text,
 	`createdAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
 	`modifiedAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
-	FOREIGN KEY (`organisationId`) REFERENCES `organisation`(`id`) ON UPDATE cascade ON DELETE cascade
+	FOREIGN KEY (`projectId`) REFERENCES `project`(`id`) ON UPDATE cascade ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE TABLE `organisation` (
@@ -88,6 +76,21 @@ CREATE TABLE `organisationRole` (
 	FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON UPDATE cascade ON DELETE cascade
 );
 --> statement-breakpoint
+CREATE TABLE `project` (
+	`id` text PRIMARY KEY NOT NULL,
+	`organisationId` text NOT NULL,
+	`code` text NOT NULL,
+	`name` text NOT NULL,
+	`nameShort` text NOT NULL,
+	`description` text,
+	`license` text DEFAULT 'Copyright' NOT NULL,
+	`attribution` text NOT NULL,
+	`metadata` text,
+	`createdAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	`modifiedAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	FOREIGN KEY (`organisationId`) REFERENCES `organisation`(`id`) ON UPDATE cascade ON DELETE cascade
+);
+--> statement-breakpoint
 CREATE TABLE `session` (
 	`sessionToken` text PRIMARY KEY NOT NULL,
 	`userId` text NOT NULL,
@@ -98,6 +101,7 @@ CREATE TABLE `session` (
 CREATE TABLE `user` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text,
+	`attribution` text,
 	`email` text,
 	`emailVerified` integer,
 	`image` text,
@@ -112,6 +116,6 @@ CREATE TABLE `userActivity` (
 	FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON UPDATE cascade ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `geoProject_code_unique` ON `geoProject` (`code`);--> statement-breakpoint
 CREATE UNIQUE INDEX `organisation_code_unique` ON `organisation` (`code`);--> statement-breakpoint
+CREATE UNIQUE INDEX `project_code_unique` ON `project` (`code`);--> statement-breakpoint
 CREATE UNIQUE INDEX `user_email_unique` ON `user` (`email`);
