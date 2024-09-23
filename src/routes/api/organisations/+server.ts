@@ -9,7 +9,7 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
   const db = client(platform?.env.DB);
   try {
     // DB : Build & Execute Query
-    const result = await db.query.project.findMany({
+    const result = await db.query.organisation.findMany({
       with: {
         translations: true
       }

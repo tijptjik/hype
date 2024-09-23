@@ -1,5 +1,5 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
-import { JSONResponseOrThrow } from '$lib/api';
+import { JSONResponseOrError } from '$lib/api';
 
 function maskPrivateValues(obj: Record<string, string>): Record<string, string> {
   const result: Record<string, string> = {};
@@ -25,7 +25,7 @@ export const GET: RequestHandler = async ({ locals, platform: { env } }) => {
   const vars = import.meta.env.VITE_WRANGLER_ENV === 'local' ? process.env : import.meta.env;
   try {
     // HTTP : 200 JSON or 404
-    return JSONResponseOrThrow({
+    return JSONResponseOrError({
       // @ts-ignore
       env: maskPrivateValues(vars),
       locals: locals,

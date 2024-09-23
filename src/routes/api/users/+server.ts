@@ -1,10 +1,10 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
-import { getSessionOrThrow, JSONResponseOrThrow } from '$lib/api';
+import { getSessionOrError, JSONResponseOrError } from '$lib/api';
 import client from '$lib/db';
 
 export const GET: RequestHandler = async ({ locals, platform }) => {
   // AUTH : Pass or Fail
-  await getSessionOrThrow(locals);
+  await getSessionOrError(locals);
   // DB : Connect to D1
   const db = client(platform?.env.DB);
   try {
@@ -33,7 +33,7 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
       }
     });
     // HTTP : 200 JSON or 404
-    return JSONResponseOrThrow(result);
+    return JSONResponseOrError(result);
   } catch (e) {
     // DB : Query Error
     console.error('Database query error:', e);
@@ -59,8 +59,7 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
 //         .onConflict((oc) => oc.column('key').doUpdateSet({ value }))
 //         .execute();
 //     } catch (err) {
-//       console.log(err);
-//       console.log((err as any).cause);
+//       console.error(err);
 //       throw err;
 //     }
 //     return new Response(value, { status: 200 });

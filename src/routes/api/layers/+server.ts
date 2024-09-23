@@ -9,11 +9,7 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
   const db = client(platform?.env.DB);
   try {
     // DB : Build & Execute Query
-    const result = await db.query.project.findMany({
-      with: {
-        translations: true
-      }
-    });
+    const result = await db.query.layer.findMany();
     // HTTP : 200 JSON or 404
     return JSONResponseOrError(result);
   } catch (e) {
