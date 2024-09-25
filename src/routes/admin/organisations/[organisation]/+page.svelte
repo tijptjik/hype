@@ -1,43 +1,45 @@
 <script lang="ts">
   import SuperDebug, { defaults, superForm } from 'sveltekit-superforms';
   import { zod } from 'sveltekit-superforms/adapters';
-  import { OranisationSchema } from '$lib/db/schema';
+  import { OrganisationSchema } from '$lib/db/schema';
 
   let data = $props();
 
   const { form, errors, message, constraints, enhance, validateForm } = superForm(
-    defaults(data.form, zod(OranisationSchema)), {
+    defaults(data.form, zod(OrganisationSchema)), {
       dataType: 'json',
       SPA: true,
-      validators: zod(OranisationSchema),
-      onSubmit: ({ action, formData, formElement, controller, submitter, cancel }) => {
-        console.debug('SUBMITTED');
-        console.debug(action);
-        
-        console.debug($form);
-        if ($form.valid) {
-          console.debug('VALID');
+      validators: zod(OrganisationSchema),
+      onSubmit: async ({ action, formData, formElement, controller, submitter, cancel }) => {
+        const response = await fetch(`/api/organisations/${$form.code}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify($form)
+        });
+
+        if (response.ok) {
+          console.debug('Form submitted successfully');
         } else {
-          console.debug('VALID');
+          console.error('Form submission failed');
         }
       },
-      // onUpdate({ form }) {
-      //     console.debug('form Valid');
-      //   }
-      // }
     }
   );
 
-
   validateForm({ update: true });
-
 </script>
+
 <main class="flex flex-col">
   <SuperDebug data={$form} />
   <div>
     <h1 class="text-lg">Edit user</h1>
     {#if $message}<h3>{$message}</h3>{/if}
-    <form method="POST" class="flex flex-row" use:enhance>
+    <form class="flex flex-row" use:enhance>
+      <div>
+        <button>Submit</button>
+      </div>
       <div class="flex flex-col w-1/3 items-star">
 
         <div>
@@ -98,30 +100,7 @@
           </div>
         </div>
       {/each}
-      <div>
-        <button>Submit</button>
-      </div>
+
     </form>
   </div>
 </main>
-
-
-<!--<FormRoot {data} {formFields} bind:open {...props} />-->
-
-
-<!--<h1>Edit Organisation</h1>-->
-
-<!--&lt;!&ndash;{#if $message}<h3>{$message}</h3>{/if}&ndash;&gt;-->
-
-<!--<form method="POST" use:enhance>-->
-<!--  <label>-->
-<!--    Name<br />-->
-<!--    <input-->
-<!--      aria-invalid={errors.name ? 'true' : undefined}-->
-<!--      bind:value={form.name}-->
-<!--      {...constraints.name} />-->
-<!--  </label>-->
-<!--  {#if errors.name}<span class="invalid">{errors.name}</span>{/if}-->
-
-<!--  <button>Submit</button>-->
-<!--</form>-->

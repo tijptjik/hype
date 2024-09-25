@@ -135,9 +135,9 @@ export const insertOrganisationSchema = createInsertSchema(organisation);
 export const OrganisationBase = createSelectSchema(organisation);
 export const OrganisationI18n = createSelectSchema(organisationI18n);
 
-export const OranisationSchema = z.object({
+export const OrganisationSchema = z.object({
   ...OrganisationBase.shape,
-  translations: z.array(createInsertSchema(organisationI18n))
+  translations: z.array(OrganisationI18n).optional()
 });
 
 export const organisationRole = sqliteTable(
