@@ -31,6 +31,12 @@ export const user = sqliteTable('user', {
     .notNull()
 });
 
+export const UserBase = createSelectSchema(user);
+
+// Infer the type of OrganisationSchema
+export type User = z.infer<typeof UserBase>;
+
+
 export const userRelations = relations(user, ({ many }) => ({
   memberships: many(organisationRole),
   accounts: many(account),
@@ -97,7 +103,7 @@ export const organisation = sqliteTable('organisation', {
 });
 
 export const organisationRelations = relations(organisation, ({ many }) => ({
-  users: many(organisationRole),
+  userRoles: many(organisationRole),
   translations: many(organisationI18n)
 }));
 
