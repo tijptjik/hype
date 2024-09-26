@@ -11,38 +11,46 @@ function formatDate(dateString: string): string {
 }
 </script>
 
-<div class="container mx-auto mb-12 mt-24 flex justify-center">
-  <div class="card min-h-64 h-auto max-h-96 max-w-96 bg-white text-black shadow-xl">
-    <div class="card-body">
-      <h2 class="card-title">{user.name}</h2>
+<div class="container mx-auto mb-12 mt-24 flex justify-center h-fit">
+  <div class="card min-h-64 max-w-128 bg-white text-black shadow-xl">
+    <div class="card-body flex flex-col">
+      <h1 class="card-title">{user.name}</h1>
       <div class="space-y-2">
         <p><b>{m.profile__registered_account()}</b> {user.email}</p>
         <p><b>{m.profile__member_since()}</b> {formatDate(user.createdAt)}</p>
       </div>
       <div class="mt-4">
-        <h3 class="font-bold">{m.profile__credit()}</h3>
+        <h2 class="font-bold">{m.profile__attribution()}</h2>
+        <small class="text-gray-500">{m.profile__attribution_note()}</small>
         <p>{user.attribution}</p>
       </div>
       {#if user.roles && user.roles.length > 0}
-        <div class="mt-4">
-          <h3 class="font-bold">{m.profile__memberships()}</h3>
+        <div class="mt-4 flex-grow">
+          <h2 class="font-bold">{m.profile__memberships()}</h2>
+          <small class="text-gray-500">{m.profile__memberships_note()}</small>
+
+          <h3 class="mt-3 mb-2 font-semibold">{m.profile__organisations()}</h3>
           <ul class="mt-2 space-y-2">
-            {#each user.roles as role}
+            {#each user.roles.filter(role => role.type === 'organisations') as role}
               <li>
-                <div class="flex items-center">
-                  <span
-                    class="badge badge-{role.type === 'organisations' ? 'primary' : 'secondary'} mr-2"
-                  >
-                    {m[`profile__role_resource_type__${role.type}`]()}
-                  </span>
-                  <span class="badge badge-outline mr-2">{m[`profile__role_type__${role.role}`]()}</span>
-                  {#if role.parentId}
-                    <a href="/admin/{role.type === 'projects' ? 'organisations' : role.type}/{role.parentRef}" class="hover:underline">{role.parentName}</a>
-                    <span class="mx-1">/</span>
-                  {/if}
-                  <a href="/admin/{role.type}/{role.resourceRef}" class="hover:underline">{role.resourceName}</a>
+                <div class="flex flex-wrap items-center">
+                  <span class="badge badge-outline mr-2 mb-1">{m[`profile__role_type__${role.role}`]()}</span>
+                  <a href="/admin/{role.type}/{role.resourceRef}" class="hover:underline break-all">{role.resourceName}</a>
                 </div>
               </li>
+            {/each}
+          </ul>
+
+          <h3 class="mt-4 mb-2 font-semibold">{m.profile__projects()}</h3>
+          <ul class="mt-2 space-y-2">
+            {#each user.roles.filter(role => role.type === 'projects') as role}
+              <li>
+                <div class="flex flex-wrap items-center">
+                  <span class="badge badge-outline mr-2 mb-1">{m[`profile__role_type__${role.role}`]()}</span>
+                  <a href="/admin/organisations/{role.parentRef}" class="hover:underline break-all">{role.parentName}</a>
+                  <span class="mx-1">/</span>
+                  <a href="/admin/{role.type}/{role.resourceRef}" class="hover:underline break-all">{role.resourceName}</a>
+                </div>
               </li>
             {/each}
           </ul>
