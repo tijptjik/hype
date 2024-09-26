@@ -1,8 +1,10 @@
-<script>
-	import * as m from '$lib/paraglide/messages.js'
-  import { signIn, signOut } from '@auth/sveltekit/client';
-  import { page } from '$app/stores';
-  const { session } = $page.data;
+<script lang="ts">
+import * as m from '$lib/paraglide/messages.js';
+import { signIn, signOut } from '@auth/sveltekit/client';
+import { page } from '$app/stores';
+import { hasControlPanelAccess } from '$lib/auth';
+
+const { session } = $page.data;
 </script>
 
 <nav class="navbar bg-base-300">
@@ -24,7 +26,7 @@
           d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"
         ></path>
       </svg>
-       {m.navbar__ghostmapper()}
+      {m.navbar__ghostmapper()}
     </a>
 
     <div class="dropdown dropdown-end">
@@ -52,6 +54,11 @@
         <li><a>{m.navbar__neighbourhoods()}</a></li>
         <li><a>{m.navbar__blog()}</a></li>
         <li><a>{m.navbar__about()}</a></li>
+        {#if session}
+          {#if hasControlPanelAccess(session)}
+            <li><a href="/admin">{m.navbar__admin()}</a></li>
+          {/if}
+        {/if}
         <a onclick={() => signIn('google')} class="btn btn-primary btn-sm">
           <i class="fa-brands fa-space-awesome"></i>
           {m.navbar__signin()}
@@ -86,7 +93,7 @@
             d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"
           ></path>
         </svg>
-         {m.navbar__ghostmapper()}
+        {m.navbar__ghostmapper()}
       </a>
     </div>
     <!-- Logo -->

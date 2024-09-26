@@ -9,5 +9,6 @@
   "navbar__settings": "Settings",
   "navbar__signin": "Login",
   "navbar__signout": "Logout",
-  "navbar__new": "New"
+  "navbar__new": "New",
+  "navbar__admin": "Admin"
 }

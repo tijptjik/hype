@@ -9,5 +9,6 @@
   "navbar__settings": "設定",
   "navbar__signin": "登入",
   "navbar__signout": "註銷",
-  "navbar__new": "新的"
+  "navbar__new": "新的",
+  "navbar__admin": "管理"
 }
