@@ -1,4 +1,7 @@
 import { error, json } from '@sveltejs/kit';
+import { getUserRoles, type UserRole } from '$lib/auth/utils';
+import client from '$lib/db';
+import type { Session } from '@auth/sveltekit';
 
 export const getSessionOrError = async (locals: App.Locals) => {
   const session = await locals.auth();
@@ -13,4 +16,56 @@ export const JSONResponseOrError = async (result: any): Promise<any> => {
     return error(404, "These aren't the signs you're looking for");
   }
   return json(result);
+};
+
+const checkAccessOrError = (userRoles: UserRole[], accessStrategy: 'public' | 'superAdmin' | 'listingAll' | 'listingOwn' | 'ProfileAll' | 'ProfileOwn', resourceType: string = 'EVERYTHING') => {
+  let hasAccess = false;
+
+  if (['public', 'superAdmin','listingAll', 'profileAll'].includes(accessStrategy)) {
+    hasAccess = true;
+  } else if (['listingOwn', 'profileOwn'].includes(accessStrategy)) {
+    hasAccess = userRoles.some(
+      role => role.type === resourceType
+    );  
+  }
+
+  if (!hasAccess) {
+    error(401, `All out of ${resourceType}`);
+  }
+
+  return hasAccess;
+}
+
+export const getDatabaseOrError = async (
+  locals: App.Locals,
+  platform: App.Platform | undefined,
+  accessStrategy: 'public' | 'superAdmin' | 'listingAll' | 'listingOwn' | 'ProfileAll' | 'ProfileOwn',
+  resourceType?: string
+) => {
+  
+  // Checks whether the user is logged in
+  const session = await getSessionOrError(locals);
+
+  // Connects to the database
+  const db = client(platform?.env.DB);
+  
+  // Gets the user's roles
+  const userRoles = await getUserRoles(db, session.user.id);
+
+  // TODO Add SuperAdmin to User Table
+  if (session.user.superAdmin === true) {
+  // if (session.user.email === 'm@type.hk') {
+    accessStrategy = 'superAdmin';
+  }
+
+  // Checks whether the user has access to the resource
+  checkAccessOrError(userRoles, accessStrategy, resourceType);
+
+  return {
+    db,
+    session,
+    userId: session.user.id,
+    userRoles,
+    accessStrategy
+  }
 };
