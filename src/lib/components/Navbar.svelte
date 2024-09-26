@@ -2,7 +2,7 @@
 import * as m from '$lib/paraglide/messages.js';
 import { signIn, signOut } from '@auth/sveltekit/client';
 import { page } from '$app/stores';
-import { hasControlPanelAccess } from '$lib/auth';
+import { hasControlPanelAccess } from '$lib/auth/utils';
 
 const { session } = $page.data;
 </script>
@@ -100,6 +100,11 @@ const { session } = $page.data;
     <!-- Right menu -->
     <div class="menu col-span-2 hidden items-center justify-end gap-8 md:menu-horizontal">
       <div><a> {m.navbar__about()}</a></div>
+      {#if session}
+        {#if hasControlPanelAccess(session)}
+          <li><a href="/admin">{m.navbar__admin()}</a></li>
+        {/if}
+      {/if}
       {#if session}
         <div class="dropdown dropdown-end">
           <div tabindex="0" role="button" class="avatar btn btn-circle btn-ghost">
