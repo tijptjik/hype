@@ -1,0 +1,38 @@
+[
+  {
+    "projectId": "CsQrfLk8cqxKbruePHHemY",
+    "lang": "zh-hans",
+    "name": "香港鬼招牌",
+    "nameShort": "鬼招牌",
+    "description": "召唤我们城市过去的字符。记录香港城市景观中已停用和褪色的招牌。这是由Billy Potts和Ben Marans发起的项目",
+    "license": "版权所有 - 请联系以获取许可",
+    "attribution": "© 香港鬼招牌"
+  },
+  {
+    "projectId": "CsQrfLk8cqxKbruePHHemY",
+    "lang": "zh-hant",
+    "name": "香港鬼招牌",
+    "nameShort": "鬼招牌",
+    "description": "召喚我們城市過去的字符。記錄香港城市景觀中已停用和褪色的招牌。這是由Billy Potts和Ben Marans發起的項目",
+    "license": "版權所有 - 請聯繫以獲取許可",
+    "attribution": "© 香港鬼招牌"
+  },
+  {
+    "projectId": "BsWyxFUGfPmLhjsu7zsAkj",
+    "lang": "zh-hans",
+    "name": "香港街道名称",
+    "nameShort": "港街名",
+    "description": "4.2%是一个持续进行的互动数据讲故事项目，探索香港城市发展的地名学和历史。",
+    "license": "版权所有 - 请联系以获取许可",
+    "attribution": "© Diana Pang"
+  },
+  {
+    "projectId": "BsWyxFUGfPmLhjsu7zsAkj",
+    "lang": "zh-hant",
+    "name": "香港街道名稱",
+    "nameShort": "港街名",
+    "description": "4.2%是一個持續進行的互動數據講故事項目，探索香港城市發展的地名學和歷史。",
+    "license": "版權所有 - 請聯繫以獲取許可",
+    "attribution": "© Diana Pang"
+  }
+]
