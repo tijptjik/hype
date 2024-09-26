@@ -74,6 +74,7 @@
     "@tailwindcss/typography": "^0.5.15",
     "autoprefixer": "^10.4.20",
     "daisyui": "^4.12.10",
+    "date-fns": "^4.1.0",
     "drizzle-orm": "^0.33.0",
     "drizzle-zod": "^0.5.1",
     "maplibre-gl": "^4.7.1",
