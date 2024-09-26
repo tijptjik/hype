@@ -8,6 +8,9 @@ import {
 } from '$env/static/private';
 import client from '$lib/db';
 import { account, session, user } from '$lib/db/schema';
+import type { Session } from '@auth/core/types';
+
+// Auth configuration
 
 export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
   return {
@@ -49,3 +52,10 @@ export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
     }
   };
 });
+
+// Utility functions
+
+export function hasControlPanelAccess(session: Session | null): boolean {
+  // TODO Adjust this logic based on how roles are stored in your session
+  return session?.user?.role === 'admin';
+}
