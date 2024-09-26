@@ -10,5 +10,17 @@
   "navbar__signin": "Login",
   "navbar__signout": "Logout",
   "navbar__new": "New",
-  "navbar__admin": "Admin"
+  "navbar__admin": "Admin",
+
+  "profile__registered_account": "Registered account:",
+  "profile__member_since": "Member since:",
+  "profile__credit": "Credit",
+  "profile__memberships": "Memberships",
+  "profile__logout": "Logout",
+  "profile__role_resource_type__organisations": "Organisation",
+  "profile__role_resource_type__projects": "Project",
+  "profile__role_type__owner": "Owner",
+  "profile__role_type__maintainer": "Maintainer",
+  "profile__role_type__member": "Member",
+  "profile__role_type__contributor": "Contributor"
 }
