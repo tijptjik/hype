@@ -8,7 +8,8 @@
 	- Simple, readable, changeable, extensible, and maintainable
 	- Follows standard conventions and best practices
 
-# Language & Framework Instructions
+
+# Stack Instructions
 
 ## Typescript
 
@@ -928,6 +929,15 @@ With these adjusted guidelines, your AI can now generate SvelteKit 2 code accura
 - Implement relations with `relations` object in schema definitions
 - Use `db.insert()`, `db.select()`, `db.update()`, `db.delete()` for CRUD operations
 - Implement migrations using Drizzle Kit
+
+## Paraglide
+
+- Use Paraglide to manage all language and translation files.
+- Support English (en), Chinese (zh-hans), and Chinese (zh-hant).
+- The messages should be written in English.
+- The messages should be written in the [Message Syntax](https://inlang.com/docs/message-syntax).
+- The messages should be written in the [Message Format](https://inlang.com/docs/message-format).
+- The messages are defined in the `messages` directory.
 
 # Best Practices
 
