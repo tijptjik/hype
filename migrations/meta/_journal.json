@@ -15,6 +15,13 @@
       "when": 1726741976374,
       "tag": "0001_translations_project",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1727338532914,
+      "tag": "0002_projectRole",
+      "breakpoints": true
     }
   ]
 }
