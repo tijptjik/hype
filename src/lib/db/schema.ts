@@ -33,7 +33,8 @@ export const user = sqliteTable('user', {
 
 export const userRelations = relations(user, ({ many }) => ({
   memberships: many(organisationRole),
-  accounts: many(account)
+  accounts: many(account),
+  projectRoles: many(projectRole)
 }));
 
 export const userActivity = sqliteTable('userActivity', {
@@ -248,7 +249,8 @@ export const project = sqliteTable('project', {
 
 export const projectRelations = relations(project, ({ many }) => ({
   layers: many(layer),
-  translations: many(projectI18n)
+  translations: many(projectI18n),
+  maintainerRoles: many(projectRole)
 }));
 
 export const projectI18n = sqliteTable(
@@ -280,6 +282,36 @@ export const projectI18nRelations = relations(projectI18n, ({ one }) => ({
   project: one(project, {
     fields: [projectI18n.projectId],
     references: [project.id]
+  })
+}));
+
+export const projectRole = sqliteTable(
+  'projectRole',
+  {
+    projectId: text('projectId')
+      .notNull()
+      .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    userId: text('userId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    role: text('role', { enum: ['member', 'owner', 'admin'] })
+      .notNull()
+      .default('member')
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.projectId, t.userId] })
+  })
+);
+
+// Define relations
+export const projectRoleRelations = relations(projectRole, ({ one }) => ({
+  project: one(project, {
+    fields: [projectRole.projectId],
+    references: [project.id]
+  }),
+  user: one(user, {
+    fields: [projectRole.userId],
+    references: [user.id]
   })
 }));
 
