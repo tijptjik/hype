@@ -1,18 +1,8 @@
-// import type { Session } from '@auth/core/types';
-import { type DefaultSession } from "@auth/sveltekit";
-import type { User as SchemaUser } from '$lib/db/schema';
+import type { Session } from '@auth/core/types';
 import { eq } from 'drizzle-orm';
 import { organisationRole, projectRole, organisation, project } from '$lib/db/schema';
 
-
-interface Session {
-  user: {
-      roles?: UserRole[];
-  } & DefaultSession['user'] & SchemaUser;
-}
-
 // Utility functions
-
 
 export interface UserRole {
   type: 'organisations' | 'projects';
@@ -150,5 +140,5 @@ export async function getUserRoles(db: any, userId: string): Promise<UserRole[]>
  */
 export function hasControlPanelAccess(session: Session | null): boolean {
   const permittedRoles = ['superadmin', 'owner', 'maintainer'];
-  return session?.user?.roles?.some((role: UserRole) => permittedRoles.includes(role.type)) || false;
+  return session?.user?.roles?.some((role: UserRole) => permittedRoles.includes(role.role)) || false;
 }
