@@ -3,6 +3,7 @@ import {
   layer,
   feature,
   project,
+  projectRole,
   organisation,
   organisationI18n,
   organisationRole,
@@ -15,6 +16,7 @@ import userJson from './data/users.json';
 import accountJson from './data/accounts.json';
 import sessionJson from './data/sessions.json';
 import projectJson from './data/projects.json';
+import projectRoleJson from './data/projectRoles.json';
 import organisationJson from './data/organisations.json';
 import organisationI18nJson from './data/organisationsI18n.json';
 import organisationRoleJson from './data/organisationRoles.json';
@@ -67,6 +69,12 @@ const seedBank = {
     name: 'projects',
     table: project,
     data: projectJson,
+    chunk: 0
+  },
+  projectRole: {
+    name: 'ProjectRoles',
+    table: projectRole,
+    data: projectRoleJson,
     chunk: 0
   },
   layer: {
