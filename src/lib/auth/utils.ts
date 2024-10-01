@@ -18,25 +18,25 @@ export interface UserRole {
 
 /**
  * Fetches and constructs user roles from the database.
- * 
+ *
  * @param db - The database instance to query.
  * @param userId - The ID of the user to fetch roles for.
  * @returns A Promise that resolves to an array of UserRole objects.
- * 
+ *
  * @remarks
  * This function performs two separate database queries:
  * 1. It fetches organisation roles for the user.
  * 2. It fetches project roles for the user, including associated organisation information.
- * 
+ *
  * The results are then mapped into UserRole objects and combined into a single array.
- * 
+ *
  * Organisation roles are structured as:
  * - type: 'organisations'
  * - role: The user's role in the organisation
  * - resourceId: The organisation's ID
  * - resourceName: The organisation's name
  * - resourceRef: The organisation's code
- * 
+ *
  * Project roles are structured as:
  * - type: 'projects'
  * - role: The user's role in the project
@@ -123,22 +123,22 @@ export async function getUserRoles(db: any, userId: string): Promise<UserRole[]>
   return userRoles;
 }
 
-
-
 /**
  * Checks if the user has access to the control panel based on their roles.
- * 
+ *
  * @param session - The user's session object, which may be null if not authenticated.
  * @returns A boolean indicating whether the user has control panel access.
- * 
+ *
  * @remarks
  * This function considers 'superadmin', 'owner', and 'maintainer' as roles
  * that grant access to the control panel. It checks the user's roles array
  * in the session object and returns true if any of these roles are present.
- * 
+ *
  * If the session is null or the user has no roles, it returns false.
  */
 export function hasControlPanelAccess(session: Session | null): boolean {
   const permittedRoles = ['superadmin', 'owner', 'maintainer'];
-  return session?.user?.roles?.some((role: UserRole) => permittedRoles.includes(role.role)) || false;
+  return (
+    session?.user?.roles?.some((role: UserRole) => permittedRoles.includes(role.role)) || false
+  );
 }

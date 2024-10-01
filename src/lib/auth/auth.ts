@@ -11,18 +11,18 @@ import { getUserRoles, type UserRole } from './utils';
 import type { User as SchemaUser } from '$lib/db/schema';
 import { SvelteKitAuth, type DefaultSession, type Session } from '@auth/sveltekit';
 
-
 declare module '@auth/sveltekit' {
   interface Session {
     user: {
-        roles?: UserRole[];
+      roles?: UserRole[];
       /**
        * By default, TypeScript merges new interface properties and overwrites existing ones.
        * In this case, the default session user properties will be overwritten,
        * with the new ones defined above. To keep the default session user properties,
        * you need to add them back into the newly declared interface.
        */
-    } & DefaultSession['user'] & SchemaUser;
+    } & DefaultSession['user'] &
+      SchemaUser;
   }
 }
 
@@ -60,7 +60,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
       async session({ session, user }): Promise<Session> {
         const db = client(event.platform?.env.DB);
         session.user.roles = await getUserRoles(db, user.id);
-        console.info('session', session);
+        // console.debug('session', session);
 
         return session;
       }
