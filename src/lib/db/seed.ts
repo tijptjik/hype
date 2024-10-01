@@ -1,6 +1,7 @@
 import {
   account,
   layer,
+  layerI18n,
   feature,
   project,
   projectI18n,
@@ -23,6 +24,7 @@ import organisationJson from './data/organisations.json';
 import organisationI18nJson from './data/organisationsI18n.json';
 import organisationRoleJson from './data/organisationRoles.json';
 import layerJson from './data/layers.json';
+import layerI18nJson from './data/layersI18n.json';
 import featureJson from './data/features.json';
 import type { DrizzleD1Database } from 'drizzle-orm/d1/driver';
 import { count } from 'drizzle-orm';
@@ -89,6 +91,12 @@ const seedBank = {
     name: 'layers',
     table: layer,
     data: layerJson,
+    chunk: 0
+  },
+  layerI18n: {
+    name: 'LayerI18n',
+    table: layerI18n,
+    data: layerI18nJson,
     chunk: 0
   },
   feature: {
