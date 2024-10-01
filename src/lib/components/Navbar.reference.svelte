@@ -18,8 +18,7 @@ const { session } = $page.data;
         viewBox="0 0 24 24"
         stroke-width="1.5"
         stroke="currentColor"
-        class="size-6"
-      >
+        class="size-6">
         <path
           stroke-linecap="round"
           stroke-linejoin="round"
@@ -37,19 +36,16 @@ const { session } = $page.data;
           viewBox="0 0 24 24"
           stroke-width="1.5"
           stroke="currentColor"
-          class="size-6"
-        >
+          class="size-6">
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
-            d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-          ></path>
+            d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"></path>
         </svg>
       </button>
       <ul
         tabindex="0"
-        class="menu dropdown-content z-[1] w-56 gap-2 rounded-box bg-base-200 p-6 shadow"
-      >
+        class="menu dropdown-content z-[1] w-56 gap-2 rounded-box bg-base-200 p-6 shadow">
         <li><a>{m.navbar__projects()}</a></li>
         <li><a>{m.navbar__neighbourhoods()}</a></li>
         <li><a>{m.navbar__blog()}</a></li>
@@ -85,8 +81,7 @@ const { session } = $page.data;
           viewBox="0 0 24 24"
           stroke-width="1.5"
           stroke="currentColor"
-          class="size-6"
-        >
+          class="size-6">
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -114,8 +109,7 @@ const { session } = $page.data;
           </div>
           <ul
             tabindex="0"
-            class="menu dropdown-content menu-sm z-[1] mt-6 w-52 rounded-box bg-base-300 p-2 shadow"
-          >
+            class="menu dropdown-content menu-sm z-[1] mt-6 w-52 rounded-box bg-base-300 p-2 shadow">
             <li>
               <a href="/profile" class="justify-between">
                 {m.navbar__profile()}
@@ -136,8 +130,7 @@ const { session } = $page.data;
             data-icon="google"
             role="img"
             xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 488 512"
-          >
+            viewBox="0 0 488 512">
             <path
               fill="currentColor"
               d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"
