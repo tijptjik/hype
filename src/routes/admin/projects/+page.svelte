@@ -1,21 +1,27 @@
 <script lang="ts">
-  const { data } = $props();
-  const { projects } = data;
-  console.log(projects);
+import type { project } from '$lib/db/schema';
+
+const { data } = $props<{ data: { projects: (typeof project)[] } }>();
+const { projects } = data;
 </script>
 
 <div class="container mx-auto p-4">
-  <h1 class="text-2xl font-bold mb-4">Your Projects</h1>
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  <h1 class="mb-4 text-2xl font-bold">Your Projects</h1>
+  <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
     {#each projects as project}
       <div class="card bg-base-100 shadow-xl">
         <figure>
-          <img src='https://placehold.co/600x400?text={project.name}' alt={project.name} class="w-full h-48 object-cover" />
+          <img
+            src="https://placehold.co/600x400?text={project.name}"
+            alt={project.name}
+            class="h-48 w-full object-cover" />
         </figure>
         <div class="card-body">
-          <h2 class="card-title">{project.name} <small class="text-sm text-gray-500">{project.nameShort}</small></h2>
+          <h2 class="card-title">
+            {project.name} <small class="text-sm text-gray-500">{project.nameShort}</small>
+          </h2>
           <p class="mt-2">{project.description}</p>
-          <div class="flex flex-row justify-between items-center mt-4">
+          <div class="mt-4 flex flex-row items-center justify-between">
             <div class="flex flex-wrap gap-2">
               {#each project.maintainerRoles as maintainerRole}
                 <span class="badge badge-outline">{maintainerRole.role}</span>

@@ -1,13 +1,13 @@
 import type { PageLoad } from './$types';
-import { ProjectSchema } from '$lib/db/schema';
+import { LayerSchema } from '$lib/db/schema';
 import { getResponseOrError } from '$lib/api';
 
-const ENDPOINT = `/api/projects/`;
+const ENDPOINT = `/api/layers/`;
 
 export const load: PageLoad = async ({ params, fetch }) => {
   const request = await fetch(ENDPOINT);
 
-  const projects = await getResponseOrError(request) as typeof ProjectSchema[];
+  const layers = await getResponseOrError(request) as typeof LayerSchema[];
 
-  return { projects };
+  return { layers };
 };
