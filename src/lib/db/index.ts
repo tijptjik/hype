@@ -10,7 +10,7 @@ const client = (database: D1Database) => {
 export async function genericIndexQuery<
   T extends Table,
   usersT extends Table,
-  translationsT extends Table,    
+  translationsT extends Table,
   RelationsT extends Record<string, Relation>
 >(
   db: any,
@@ -32,10 +32,7 @@ export async function genericIndexQuery<
               .select({ id: userTable[remoteIdColumn] })
               .from(userTable)
               .where(
-                and(
-                  eq(userTable[remoteIdColumn], selectTable.id),
-                  eq(userTable.userId, userId)
-                )
+                and(eq(userTable[remoteIdColumn], selectTable.id), eq(userTable.userId, userId))
               )
           ),
       inArray(
