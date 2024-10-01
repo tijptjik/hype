@@ -91,22 +91,15 @@
           "name": "account_userId_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "account_provider_providerAccountId_pk": {
-          "columns": [
-            "provider",
-            "providerAccountId"
-          ],
+          "columns": ["provider", "providerAccountId"],
           "name": "account_provider_providerAccountId_pk"
         }
       },
@@ -219,12 +212,8 @@
           "name": "feature_layerId_layer_id_fk",
           "tableFrom": "feature",
           "tableTo": "layer",
-          "columnsFrom": [
-            "layerId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["layerId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -232,12 +221,8 @@
           "name": "feature_contributorId_user_id_fk",
           "tableFrom": "feature",
           "tableTo": "user",
-          "columnsFrom": [
-            "contributorId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["contributorId"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -245,12 +230,8 @@
           "name": "feature_publisherId_user_id_fk",
           "tableFrom": "feature",
           "tableTo": "user",
-          "columnsFrom": [
-            "publisherId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["publisherId"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -326,12 +307,8 @@
           "name": "layer_projectId_project_id_fk",
           "tableFrom": "layer",
           "tableTo": "project",
-          "columnsFrom": [
-            "projectId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["projectId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         }
@@ -411,9 +388,7 @@
       "indexes": {
         "organisation_code_unique": {
           "name": "organisation_code_unique",
-          "columns": [
-            "code"
-          ],
+          "columns": ["code"],
           "isUnique": true
         }
       },
@@ -466,22 +441,15 @@
           "name": "organisationI18n_organisationId_organisation_id_fk",
           "tableFrom": "organisationI18n",
           "tableTo": "organisation",
-          "columnsFrom": [
-            "organisationId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organisationId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "organisationI18n_organisationId_lang_pk": {
-          "columns": [
-            "organisationId",
-            "lang"
-          ],
+          "columns": ["organisationId", "lang"],
           "name": "organisationI18n_organisationId_lang_pk"
         }
       },
@@ -519,12 +487,8 @@
           "name": "organisationRole_organisationId_organisation_id_fk",
           "tableFrom": "organisationRole",
           "tableTo": "organisation",
-          "columnsFrom": [
-            "organisationId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organisationId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         },
@@ -532,22 +496,15 @@
           "name": "organisationRole_userId_user_id_fk",
           "tableFrom": "organisationRole",
           "tableTo": "user",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "organisationRole_organisationId_userId_pk": {
-          "columns": [
-            "organisationId",
-            "userId"
-          ],
+          "columns": ["organisationId", "userId"],
           "name": "organisationRole_organisationId_userId_pk"
         }
       },
@@ -640,9 +597,7 @@
       "indexes": {
         "project_code_unique": {
           "name": "project_code_unique",
-          "columns": [
-            "code"
-          ],
+          "columns": ["code"],
           "isUnique": true
         }
       },
@@ -651,12 +606,8 @@
           "name": "project_organisationId_organisation_id_fk",
           "tableFrom": "project",
           "tableTo": "organisation",
-          "columnsFrom": [
-            "organisationId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organisationId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         }
@@ -723,22 +674,15 @@
           "name": "projectI18n_projectId_project_id_fk",
           "tableFrom": "projectI18n",
           "tableTo": "project",
-          "columnsFrom": [
-            "projectId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["projectId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "projectI18n_projectId_lang_pk": {
-          "columns": [
-            "projectId",
-            "lang"
-          ],
+          "columns": ["projectId", "lang"],
           "name": "projectI18n_projectId_lang_pk"
         }
       },
@@ -775,12 +719,8 @@
           "name": "session_userId_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -853,9 +793,7 @@
       "indexes": {
         "user_email_unique": {
           "name": "user_email_unique",
-          "columns": [
-            "email"
-          ],
+          "columns": ["email"],
           "isUnique": true
         }
       },
@@ -896,12 +834,8 @@
           "name": "userActivity_userId_user_id_fk",
           "tableFrom": "userActivity",
           "tableTo": "user",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         }
