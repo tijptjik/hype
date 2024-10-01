@@ -1,7 +1,12 @@
 import { defaults, superForm, superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { error, json, type RequestHandler } from '@sveltejs/kit';
-import { OrganisationSchema, organisation, organisationI18n, OrganisationI18n } from '$lib/db/schema';
+import {
+  OrganisationSchema,
+  organisation,
+  organisationI18n,
+  OrganisationI18n
+} from '$lib/db/schema';
 import { getSessionOrError, JSONResponseOrError } from '$lib/api';
 import client from '$lib/db';
 import { and, eq } from 'drizzle-orm';
@@ -11,7 +16,6 @@ import { actionResult } from 'sveltekit-superforms';
 // Infer the type of OrganisationSchema
 type OrganisationType = z.infer<typeof OrganisationSchema>;
 type OrganisationI18nType = z.infer<typeof OrganisationI18n>;
-
 
 export const GET: RequestHandler = async ({ params, locals, platform }) => {
   // AUTH : Pass or Fail
@@ -42,21 +46,22 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
 };
 
 export const PUT: RequestHandler = async ({ params, request, locals, platform }) => {
-    // AUTH : Pass or Fail
+  // AUTH : Pass or Fail
   await getSessionOrError(locals);
   // DB : Connect to D1
   const db = client(platform?.env.DB);
   try {
-    const formData : OrganisationType = await request.json();
-    const translations : OrganisationI18nType[] = formData.translations;
-    
+    const formData: OrganisationType = await request.json();
+    const translations: OrganisationI18nType[] = formData.translations;
+
     delete formData.translations;
-    
+
     console.debug('formData', formData);
     console.debug('translations', translations);
 
-    const updatedOrganisation = await db.update(organisation)
-      .set({...formData})
+    const updatedOrganisation = await db
+      .update(organisation)
+      .set({ ...formData })
       // @ts-ignore
       .where(eq(organisation.code, params.code))
       .returning();
@@ -75,33 +80,38 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
         )
       });
 
-
       if (existingTranslation) {
-        const updatedTranslation = await db.update(organisationI18n)
+        const updatedTranslation = await db
+          .update(organisationI18n)
           .set(translation)
-          .where(and(
-            eq(organisationI18n.organisationId, translation.organisationId),
-            eq(organisationI18n.lang, translation.lang)
-          ))
+          .where(
+            and(
+              eq(organisationI18n.organisationId, translation.organisationId),
+              eq(organisationI18n.lang, translation.lang)
+            )
+          )
           .returning();
-          modifiedTranslations.push(updatedTranslation[0]);
+        modifiedTranslations.push(updatedTranslation[0]);
       } else {
-        const insertedTranslation = await db.insert(organisationI18n)
+        const insertedTranslation = await db
+          .insert(organisationI18n)
           .values(translation)
           .returning();
-          modifiedTranslations.push(insertedTranslation[0]);
+        modifiedTranslations.push(insertedTranslation[0]);
       }
     }
-    
-    const rebuildForm = await superValidate({
+
+    const rebuildForm = await superValidate(
+      {
         ...updatedOrganisation,
         translations: modifiedTranslations
-      }, zod(OrganisationSchema));
+      },
+      zod(OrganisationSchema)
+    );
 
     console.debug('rebuildForm', rebuildForm);
 
     return actionResult('success', rebuildForm, 200);
-
   } catch (err) {
     console.error(err);
     return error(500, 'Failed to update organisation');

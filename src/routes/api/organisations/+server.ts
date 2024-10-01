@@ -1,10 +1,6 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
 import { getDatabaseOrError, JSONResponseOrError } from '$lib/api';
-import {
-  organisation,
-  organisationRole,
-  organisationI18n,
-} from '$lib/db/schema';
+import { organisation, organisationRole, organisationI18n } from '$lib/db/schema';
 import { genericIndexQuery } from '$lib/db';
 
 const RESOURCE_TYPE = 'organisations';
