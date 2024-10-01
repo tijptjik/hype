@@ -1,33 +1,32 @@
 <script lang="ts">
-  import { ParaglideJS } from '@inlang/paraglide-sveltekit';
-  import { i18n } from '$lib/i18n';
+import { ParaglideJS } from '@inlang/paraglide-sveltekit';
+import { i18n } from '$lib/i18n';
 
-  import 'tailwindcss/tailwind.css';
-  import { page } from '$app/stores';
-  import { afterNavigate } from '$app/navigation';
-  import Navbar from '$lib/components/Navbar.svelte';
+import 'tailwindcss/tailwind.css';
+import { page } from '$app/stores';
+import { afterNavigate } from '$app/navigation';
 
-  // Props
-  const { children } = $props();
+// Props
+let { children } = $props();
 
-  // User Session
-  const { session } = $page.data;
+// User Session
+const { session } = $page.data;
 
-  // Set Page Metadata
-  let title = $state($page.data.title);
-  let site_name = $state($page.data.site_name);
-  let site_description = $state($page.data.site_description);
-  let socialImage = {
-    image: '/favicon.png',
-    width: '200',
-    height: '200'
-  };
+// Set Page Metadata
+let title = $state($page.data.title);
+let site_name = $state($page.data.site_name);
+let site_description = $state($page.data.site_description);
+let socialImage = {
+  image: '/favicon.png',
+  width: '200',
+  height: '200'
+};
 
-  afterNavigate(() => {
-    title = $page.data.title;
-    site_name = $page.data.site_name;
-    site_description = $page.data.site_description;
-  });
+afterNavigate(() => {
+  title = $page.data.title;
+  site_name = $page.data.site_name;
+  site_description = $page.data.site_description;
+});
 </script>
 
 <svelte:head>
@@ -47,12 +46,7 @@
 </svelte:head>
 
 <ParaglideJS {i18n}>
-  <div class="flex h-screen w-full flex-col">
-    <header class="w-full flex-none bg-white">
-      <Navbar />
-    </header>
-    <main class="flex w-full flex-auto">
-      {@render children()}
-    </main>
+  <div class="flex h-screen w-full flex-row">
+    {@render children()}
   </div>
 </ParaglideJS>
