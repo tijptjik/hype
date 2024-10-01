@@ -36,7 +36,6 @@ export const UserBase = createSelectSchema(user);
 // Infer the type of OrganisationSchema
 export type User = z.infer<typeof UserBase>;
 
-
 export const userRelations = relations(user, ({ many }) => ({
   memberships: many(organisationRole),
   accounts: many(account),
@@ -216,10 +215,11 @@ export const session = sqliteTable('session', {
 });
 
 /* ----------------- */
-// GEO
+// PROJECTS
 /* -------- */
 
-interface GeoProjectMetadata {
+
+interface ProjectMetadata {
   filterProperties?: string[]; // ['district', 'script', 'isPublished']
 }
 
@@ -243,7 +243,7 @@ export const project = sqliteTable('project', {
   // Attribution for the dataset
   attribution: text('attribution').notNull(),
   // Additional Information
-  metadata: text('metadata', { mode: 'json' }).$type<GeoProjectMetadata>(),
+  metadata: text('metadata', { mode: 'json' }).$type<ProjectMetadata>(),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -321,7 +321,26 @@ export const projectRoleRelations = relations(projectRole, ({ one }) => ({
   })
 }));
 
-interface GeoCollectionMetadata {
+
+// Schema for inserting an project - can be used to validate API requests
+export const insertProjectSchema = createInsertSchema(project);
+
+// Schema for selecting a user - can be used to validate API responses
+export const ProjectBase = createSelectSchema(project);
+export const ProjectI18n = createSelectSchema(projectI18n);
+export const ProjectRole = createSelectSchema(projectRole);
+
+export const ProjectSchema = z.object({
+  ...ProjectBase.shape,
+  translations: z.array(ProjectI18n).optional(),
+  maintainerRoles: z.array(ProjectRole).optional()
+});
+
+/* ----------------- */
+// LAYERS
+/* -------- */
+
+interface LayerMetadata {
   defaultEnabled: boolean; // true
   mlCluster?: boolean; // false
   mlClusterRadius?: number; // 50
@@ -344,7 +363,7 @@ export const layer = sqliteTable('layer', {
   // Description in English
   description: text('description'),
   // Additional Information
-  metadata: text('metadata', { mode: 'json' }).$type<GeoCollectionMetadata>(),
+  metadata: text('metadata', { mode: 'json' }).$type<LayerMetadata>(),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -355,10 +374,115 @@ export const layer = sqliteTable('layer', {
 });
 
 export const layerRelations = relations(layer, ({ many }) => ({
-  posts: many(feature)
+  features: many(feature)
 }));
 
-interface GeoFeatureProperties {
+export const layerI18n = sqliteTable(
+  'layerI18n',
+  {
+    layerId: text('layerId')
+      .notNull()
+      .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    // IETF BCP 47 language tag
+    // https://www.rfc-editor.org/info/bcp47
+    lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
+    // Full Name in {lang}
+    name: text('name').notNull(),
+    // Short Name in {lang}, used in controls and legends
+    nameShort: text('nameShort').notNull(),
+    // Description in {lang}
+    description: text('description')
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.layerId, t.lang] })
+  })
+);
+
+export const layerI18nRelations = relations(layerI18n, ({ one }) => ({
+  layer: one(layer, {
+    fields: [layerI18n.layerId],
+    references: [layer.id]
+  })
+}));
+
+
+// Schema for inserting a layer - can be used to validate API requests
+export const insertLayerSchema = createInsertSchema(layer);
+
+// Schema for selecting a layer - can be used to validate API responses
+export const LayerBase = createSelectSchema(layer);
+export const LayerI18n = createSelectSchema(layerI18n);
+
+export const LayerSchema = z.object({
+  ...LayerBase.shape,
+  translations: z.array(LayerI18n).optional()});
+
+/* ----------------- */
+// FEATURES
+/* -------- */
+
+/* @geojson/Feature */
+export const feature = sqliteTable('feature', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  geometry: text('geometry', { mode: 'json' }).notNull().$type<GeometryObject>(),
+  properties: text('properties', { mode: 'json' })
+    .notNull()
+    .$type<GhostSignsFeatureProperties>(),
+  addressProperties: text('addressProperties', { mode: 'json' }).$type<AddressProperties>(),
+  layerId: text('layerId')
+    .notNull()
+    .references(() => layer.id, { onDelete: 'cascade' }),
+  contributorId: text('contributorId').references(() => user.id, { onDelete: 'set null' }),
+  publisherId: text('publisherId').references(() => user.id, { onDelete: 'set null' }),
+  isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
+
+  // PUBLISHED
+  // Visitable + Tangible            : Listing - Feature has a physical presence and can be visited - the default
+  // Visitable + NOT Tangible        : Intangible Listing - Feature lacks physical presence, BUT the site itself holds historic value
+  // NOT Visitable + Tangible        : Unavailable - Feature is extant, but is (temporarily) not visitable due to obstruction / access rights
+  // NOT Visitable + NOT Tangible    : Inaccessible - Feature has intangible value, BUT the site is (temporarily) not accessible.
+
+  // NOT PUBLISHED
+  // Visitable + Tangible           : Draft - Unpublished Tangible Listing
+  // Visitable + NOT Tangible       : Draft - Unpublished Intangible Listing
+  // NOT Visitable + Tangible       : Delisted - Feature destroyed / removed / otherwise erased, and should no longer be shown on public maps.
+  // NOT Visitable + NOT Tangible   : Delisted - Feature no longer offers any significance to the collection and should not be shown on public maps.
+
+  isIntangible: integer('isIntangible', { mode: 'boolean' }).notNull().default(false),
+  isVisitable: integer('isVisitable', { mode: 'boolean' }).notNull().default(false),
+  visitableAsOf: text('visitableAsOf').default(sql`(CURRENT_DATE)`),
+
+  createdAt: text('createdAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .notNull(),
+  modifiedAt: text('modifiedAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .$onUpdate(() => new Date().toISOString())
+    .notNull()
+});
+
+export const featureRelations = relations(feature, ({ one }) => ({
+  layer: one(layer, {
+    fields: [feature.layerId],
+    references: [layer.id]
+  })
+}));
+
+// Schema for inserting a feature - can be used to validate API requests
+export const insertFeatureSchema = createInsertSchema(feature);
+
+// Schema for selecting a feature - can be used to validate API responses
+export const FeatureBase = createSelectSchema(feature);
+
+export const FeatureSchema = FeatureBase;
+
+/* ----------------- */
+// FEATURES : PROPERTIES
+/* -------- */
+
+interface FeatureProperties {
   // Title
   title: string;
   'title__zh-hant': string;
@@ -382,7 +506,7 @@ interface GeoFeatureProperties {
   markerColor?: string; // "#fff"
 }
 
-interface GhostSignsGeoFeatureProperties extends GeoFeatureProperties {
+interface GhostSignsFeatureProperties extends FeatureProperties {
   // Description
   graphemes?: string; // Literal
 
@@ -391,6 +515,10 @@ interface GhostSignsGeoFeatureProperties extends GeoFeatureProperties {
   material?: string; // Painted on Cement, Painted on Metal, Painted on Brick, Painted on Tile, Painted over, Acrylic, Metal, Wood, Terrazzo, Stone, Molded Cement, Zinc Stenciled
   visibility?: string; // Revenant, Physical, Palimpsest, Uncovering
 }
+
+/* ----------------- */
+// FEATURES : ADDRESS
+/* -------- */
 
 interface AddressProperties {
   // Metrics
@@ -447,54 +575,6 @@ interface AddressProperties {
   addressForwardGen: boolean; // Were the address components generated by a Forward Geocoder
 }
 
-/* @geojson/Feature */
-export const feature = sqliteTable('feature', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  geometry: text('geometry', { mode: 'json' }).notNull().$type<GeometryObject>(),
-  properties: text('properties', { mode: 'json' })
-    .notNull()
-    .$type<GhostSignsGeoFeatureProperties>(),
-  addressProperties: text('addressProperties', { mode: 'json' }).$type<AddressProperties>(),
-  layerId: text('layerId')
-    .notNull()
-    .references(() => layer.id, { onDelete: 'cascade' }),
-  contributorId: text('contributorId').references(() => user.id, { onDelete: 'set null' }),
-  publisherId: text('publisherId').references(() => user.id, { onDelete: 'set null' }),
-  isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
-
-  // PUBLISHED
-  // Visitable + Tangible            : Listing - Feature has a physical presence and can be visited - the default
-  // Visitable + NOT Tangible        : Intangible Listing - Feature lacks physical presence, BUT the site itself holds historic value
-  // NOT Visitable + Tangible        : Unavailable - Feature is extant, but is (temporarily) not visitable due to obstruction / access rights
-  // NOT Visitable + NOT Tangible    : Inaccessible - Feature has intangible value, BUT the site is (temporarily) not accessible.
-
-  // NOT PUBLISHED
-  // Visitable + Tangible           : Draft - Unpublished Tangible Listing
-  // Visitable + NOT Tangible       : Draft - Unpublished Intangible Listing
-  // NOT Visitable + Tangible       : Delisted - Feature destroyed / removed / otherwise erased, and should no longer be shown on public maps.
-  // NOT Visitable + NOT Tangible   : Delisted - Feature no longer offers any significance to the collection and should not be shown on public maps.
-
-  isIntangible: integer('isIntangible', { mode: 'boolean' }).notNull().default(false),
-  isVisitable: integer('isVisitable', { mode: 'boolean' }).notNull().default(false),
-  visitableAsOf: text('visitableAsOf').default(sql`(CURRENT_DATE)`),
-
-  createdAt: text('createdAt')
-    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .notNull(),
-  modifiedAt: text('modifiedAt')
-    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .$onUpdate(() => new Date().toISOString())
-    .notNull()
-});
-
-export const featureRelations = relations(feature, ({ one }) => ({
-  layer: one(layer, {
-    fields: [feature.layerId],
-    references: [layer.id]
-  })
-}));
 
 // TODO Add visit table linking Users with GeoFeatures for a given date
 // TODO When a new visit is created for a GeoFeature, update its "visitableAsOf" field to that date.
