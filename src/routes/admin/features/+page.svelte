@@ -5,14 +5,14 @@ const { data } = $props<{ data: { features: (typeof feature)[] } }>();
 const { features } = data;
 </script>
 
-<div class="container mx-auto p-4">
-  <h1 class="mb-4 text-2xl font-bold">Your Features</h1>
+<div class="relative container mx-auto p-4 overflow-y-auto h-screen">
+  <!-- <h1 class="mb-4 text-2xl font-bold">Your Features</h1> -->
   <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-    {#each features as feature}
+    {#each features as feature, idx}
       <div class="card bg-base-100 shadow-xl">
         <figure>
           <img
-            src="https://placehold.co/600x400?text={feature.properties.title}"
+            src="https://picsum.photos/600/{400 + idx}"
             alt={feature.properties.title}
             class="h-48 w-full object-cover" />
         </figure>
