@@ -13,6 +13,9 @@ export default {
         'secondary': '#7482FF' // color-variable
       },
       borderStyle: ['hover'],
+      borderWidth: {
+        '1': '1px',
+      },
     }
   },
   // daisyUI config
@@ -22,11 +25,11 @@ export default {
       {
         spectre: {
           // Colours
-          primary: '#E04D7A',
+          primary: '#F04D7F',
           'primary-content': '#D4DBFF',
-          secondary: '#7482FF',
+          secondary: '#D653B9',
           'secondary-content': '#190211',
-          accent: '#E3DE6F',
+          accent: '#7859F1',
           'accent-content': '#262601',
           neutral: '#2A323C',
           'neutral-content': '#A6ADBB',
