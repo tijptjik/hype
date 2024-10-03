@@ -7,14 +7,18 @@ export default {
       serif: ['Merriweather', 'serif']
     },
     extend: {
-      colors: {
-        'gradient-start': 'hsl(var(--rose-500))', // color-variable
-        'gradient-end': 'hsl(var(--fuchsia-800))', // color-variable
-        'secondary': '#7482FF' // color-variable
-      },
       borderStyle: ['hover'],
       borderWidth: {
         '1': '1px',
+      },
+      colors: {
+        'gradient-end': 'hsl(var(--fuchsia-800))', // color-variable
+        'gradient-start': 'hsl(var(--rose-500))', // color-variable
+        'secondary': '#7482FF' // color-variable
+      },
+      fontSize: {
+        '2xs': '0.625rem',
+        '3xs': '0.5rem',
       },
     }
   },
