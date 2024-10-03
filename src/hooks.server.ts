@@ -29,7 +29,6 @@ if (localWranglerEnv) {
     return resolve(event);
   }) satisfies Handle;
 
-  // console.info('Platform initialised for local development', platform);
   handle = sequence(mock_cloudflare, inject_auth, translation);
 } else {
   handle = sequence(inject_auth, translation);
