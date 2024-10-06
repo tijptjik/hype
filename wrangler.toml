@@ -1,6 +1,6 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "ghostsigns"
-compatibility_date = "2024-08-06"
+compatibility_date = "2024-09-23"
 pages_build_output_dir = ".svelte-kit/cloudflare"
 compatibility_flags = [ "nodejs_compat" ]
 
@@ -8,6 +8,9 @@ compatibility_flags = [ "nodejs_compat" ]
 ip = "localhost"
 port = 5173
 local_protocol = "http"
+
+[observability]
+enabled = true
 
 # Automatically place your workloads in an optimal location to minimize latency.
 # If you are running back-end logic in a Pages Function, running it closer to your back-end infrastructure
