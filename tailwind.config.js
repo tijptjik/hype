@@ -3,13 +3,15 @@ export default {
   content: ['./src/**/*.{html,svelte,js,ts}'],
   theme: {
     fontFamily: {
-      sans: ['Inter', 'sans-serif'],
-      serif: ['Merriweather', 'serif']
+      sans: ['IBM Plex Sans', 'sans-serif'],
+      serif: ['Merriweather', 'serif'],
+      mono: ['IBM Plex Mono', 'monospace'],
     },
     extend: {
       borderStyle: ['hover'],
       borderWidth: {
         '1': '1px',
+        '3': '3px',
       },
       colors: {
         'gradient-end': 'hsl(var(--fuchsia-800))', // color-variable
@@ -18,7 +20,7 @@ export default {
       },
       fontSize: {
         '2xs': '0.625rem',
-        '3xs': '0.5rem',
+        '3xs': '0.55rem',
       },
     }
   },
