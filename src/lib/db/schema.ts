@@ -81,7 +81,7 @@ export const organisation = sqliteTable('organisation', {
   // Database identifier
   id: text('id')
     .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
+    .$defaultFn(() => shortUUID.generate()),
   // Public identifier
   code: text('code').unique().notNull(),
   // Full Name in English
@@ -226,7 +226,7 @@ interface ProjectMetadata {
 export const project = sqliteTable('project', {
   id: text('id')
     .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
+    .$defaultFn(() => shortUUID.generate()),
   organisationId: text('organisationId')
     .notNull()
     .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
@@ -352,7 +352,7 @@ interface LayerMetadata {
 export const layer = sqliteTable('layer', {
   id: text('id')
     .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
+    .$defaultFn(() => shortUUID.generate()),
   projectId: text('projectId')
     .notNull()
     .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
@@ -374,6 +374,7 @@ export const layer = sqliteTable('layer', {
 });
 
 export const layerRelations = relations(layer, ({ many }) => ({
+  translations: many(layerI18n),
   features: many(feature)
 }));
 
@@ -425,7 +426,7 @@ export const LayerSchema = z.object({
 export const feature = sqliteTable('feature', {
   id: text('id')
     .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
+    .$defaultFn(() => shortUUID.generate()),
   geometry: text('geometry', { mode: 'json' }).notNull().$type<GeometryObject>(),
   properties: text('properties', { mode: 'json' })
     .notNull()
