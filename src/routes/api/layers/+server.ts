@@ -1,21 +1,44 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
-import { getSessionOrError, JSONResponseOrError } from '$lib/api';
-import client from '$lib/db';
+import { getDatabaseOrError, JSONResponseOrError } from '$lib/api';
+import { projectRole, layerI18n } from '$lib/db/schema';
+import { genericIndexQuery } from '$lib/db';
 
-export const GET: RequestHandler = async ({ locals, platform }) => {
+const RESOURCE_TYPE = 'layer';
+const ACCESS_STRATEGY = 'listingOwnChildren';
+
+export const GET: RequestHandler = async ({ locals, platform, url }) => {
   // AUTH : Pass or Fail
-  await getSessionOrError(locals);
-  // DB : Connect to D1
-  const db = client(platform?.env.DB);
+  const { db, userId, accessStrategy } = await getDatabaseOrError(
+    locals,
+    platform,
+    ACCESS_STRATEGY,
+    RESOURCE_TYPE
+  );
+
   try {
     // DB : Build & Execute Query
-    const result = await db.query.layer.findMany();
+    const result = await genericIndexQuery(
+      db,
+      accessStrategy,
+      {
+        translations: true
+      },
+      userId,
+      projectRole,
+      layerI18n,
+      {
+        organisation: url.searchParams.getAll('organisation'),
+        project: url.searchParams.getAll('project')
+      },
+      3
+    );
+
     // HTTP : 200 JSON or 404
     return JSONResponseOrError(result);
   } catch (e) {
     // DB : Query Error
     console.error('Database query error:', e);
     // HTTP : 500 Error
-    throw error(500, 'Dust Accumulation Critical');
+    return error(500, 'Dust Accumulation Critical');
   }
 };

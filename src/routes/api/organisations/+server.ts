@@ -1,9 +1,9 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
 import { getDatabaseOrError, JSONResponseOrError } from '$lib/api';
-import { organisation, organisationRole, organisationI18n } from '$lib/db/schema';
+import { organisationRole, organisationI18n } from '$lib/db/schema';
 import { genericIndexQuery } from '$lib/db';
 
-const RESOURCE_TYPE = 'organisations';
+const RESOURCE_TYPE = 'organisation';
 const ACCESS_STRATEGY = 'listingOwn';
 
 export const GET: RequestHandler = async ({ locals, platform }) => {
@@ -19,16 +19,14 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
     // DB : Build & Execute Query
     const result = await genericIndexQuery(
       db,
-      organisation,
+      accessStrategy,
       {
         userRoles: true,
         translations: true
       },
-      organisationRole,
-      organisationI18n,
-      'organisationId',
       userId,
-      accessStrategy
+      organisationRole,
+      organisationI18n
     );
 
     // HTTP : 200 JSON or 404

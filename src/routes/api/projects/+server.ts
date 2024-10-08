@@ -1,12 +1,12 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
 import { getDatabaseOrError, JSONResponseOrError } from '$lib/api';
-import { project, projectRole, projectI18n } from '$lib/db/schema';
+import { projectRole, projectI18n } from '$lib/db/schema';
 import { genericIndexQuery } from '$lib/db';
 
-const RESOURCE_TYPE = 'projects';
+const RESOURCE_TYPE = 'project';
 const ACCESS_STRATEGY = 'listingOwn';
 
-export const GET: RequestHandler = async ({ locals, platform }) => {
+export const GET: RequestHandler = async ({ locals, platform, url }) => {
   // AUTH : Pass or Fail
   const { db, userId, accessStrategy } = await getDatabaseOrError(
     locals,
@@ -19,16 +19,18 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
     // DB : Build & Execute Query
     const result = await genericIndexQuery(
       db,
-      project,
+      accessStrategy,
       {
         translations: true,
         maintainerRoles: true
       },
+      userId,
       projectRole,
       projectI18n,
-      'projectId',
-      userId,
-      accessStrategy
+      {
+        organisation: url.searchParams.getAll('organisation')  
+      },
+      2
     );
 
     // HTTP : 200 JSON or 404
