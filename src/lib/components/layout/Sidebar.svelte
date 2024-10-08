@@ -13,29 +13,45 @@ import {
   Minus
 } from '@steeze-ui/heroicons';
 import { goto } from '$app/navigation';
-import { getOperators } from 'drizzle-orm';
 
 // TYPES
-type ResourceTypes = 'organisations' | 'projects' | 'layers' | 'features';
-type FilterableResourceTypes = 'organisations' | 'projects' | 'layers';
+type ResourceTypes = 'organisation' | 'project' | 'layer' | 'feature';
+type FilterableResourceTypes = 'organisation' | 'project' | 'layer';
 type ResourceFilters = { [key in FilterableResourceTypes]?: string[] };
-type Resource = { id: string; nameShort: string; ref: string };
+type Resource = { id: string; nameShort: string; ref: string; description: string };
 
 // STATE
 let isExpanded = $state(true);
 let resources = $state<{ [key in ResourceTypes]: Resource[] }>({
-  organisations: [],
-  projects: [],
-  layers: [],
-  features: []
+  organisation: [],
+  project: [],
+  layer: [],
+  feature: []
+});
+let filterTexts = $state<{ [key in ResourceTypes]: string }>({
+  organisation: '',
+  project: '',
+  layer: '',
+  feature: ''
+});
+let filteredResources = $state<{ [key in ResourceTypes]: Resource[] }>({
+  organisation: [],
+  project: [],
+  layer: [],
+  feature: []
+});
+let maxHeightItemsContainer = $state<{ [key in ResourceTypes]: string }>({
+  organisation: '',
+  project: '',
+  layer: '',
+  feature: ''
 });
 
 // STATE : PROPS
-let simpleSignal = $state(false);
 let queryFilters = $state<ResourceFilters>({
-  organisations: [],
-  projects: [],
-  layers: []
+  organisation: [],
+  project: [],
+  layer: []
 });
 
 // STATE : DERIVED
@@ -47,24 +63,15 @@ let active = $derived(() => {
     .filter(Boolean);
 
   if (parts.length === 2) {
-    return { resourceType: parts[0], ref: parts[1] };
+    return { resourceType: parts[0].slice(0, -1) as ResourceTypes, ref: parts[1] };
   } else if (parts.length === 1) {
-    return { resourceType: parts[0], ref: false };
+    return { resourceType: parts[0].slice(0, -1) as ResourceTypes, ref: false };
   } else {
     return { resourceType: false, ref: false };
   }
 });
 
 // STATE : EFFECTS
-$effect(() => {
-  if (active().resourceType) {
-    const resourceType = active().resourceType as keyof typeof navItems;
-    // Fetch resources for the active resource type
-    fetchResources(resourceType);
-    // Remove the Query Params for child resources
-    deleteQueryParamsForChildResources(resourceType);
-  }
-});
 
 $effect(() => {
   if ($page.url.searchParams) {
@@ -78,22 +85,59 @@ $effect(() => {
 });
 
 $effect(() => {
-  ['organisations', 'projects', 'layers'].forEach((resourceType) => {
-    if (queryFilters[resourceType].length > 0) {
+  ['organisation', 'project', 'layer'].forEach((resourceType) => {
+    if (queryFilters[resourceType as keyof ResourceFilters].length > 0) {
       fetchResources(resourceType as keyof typeof navItems);
     }
+  });
+  // Always refetch features
+  fetchResources('feature');
+});
+
+$effect(() => {
+  if (active().resourceType) {
+    const resourceType = active().resourceType as keyof typeof navItems;
+    // Fetch resources for the active resource type
+    fetchResources(resourceType);
+    // Remove the Query Params for child resources
+    deleteQueryParamsForChildResources(resourceType);
+    // Reset filteredResources for child resources
+    // resetFilteredForChildResources(resourceType);
+  }
+});
+
+$effect(() => {
+  Object.keys(resources).forEach((resourceType) => {
+    const type = resourceType as ResourceTypes;
+    // $inspect(queryFilters);
+    // $inspect(filteredResources['layer']);
+    // $inspect(resources['layer']);
+    filteredResources[type] = resources[type].filter(
+      (item) =>
+        filterTexts[type] === '' ||
+        item.nameShort.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
+        item.description?.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
+        queryFilters[type as keyof ResourceFilters]?.includes(item.id)
+    );
+  });
+});
+
+$effect(() => {
+  Object.keys(resources).forEach((resourceType) => {
+    const type = resourceType as ResourceTypes;
+    maxHeightItemsContainer[type] = getMaxHeightItemsContainer(type);
   });
 });
 
 // CONFIG
 const navItems = {
-  organisations: { name: 'Organisations', icon: Users, seq: 1, ref: 'organisations' },
-  projects: { name: 'Projects', icon: Projects, seq: 2, ref: 'projects' },
-  layers: { name: 'Layers', icon: Layers, seq: 3, ref: 'layers' },
-  features: { name: 'Features', icon: MapPin, seq: 4, ref: 'features' }
+  organisation: { name: 'Organisations', icon: Users, seq: 1, ref: 'organisations' },
+  project: { name: 'Projects', icon: Projects, seq: 2, ref: 'projects' },
+  layer: { name: 'Layers', icon: Layers, seq: 3, ref: 'layers' },
+  feature: { name: 'Features', icon: MapPin, seq: 4, ref: 'features' }
 };
 
-const filterableByQueryParams = ['organisations', 'projects', 'layers'];
+const filterableByQueryParams = ['organisation', 'project', 'layer'];
 
 // FUNCTIONS
 const toggleSidebar = () => {
@@ -101,7 +145,6 @@ const toggleSidebar = () => {
 };
 
 // FUNCTIONS : QUERY PARAMS
-
 function toggleQueryParam(resourceType: string, id: string) {
   let queryParams = new URLSearchParams($page.url.searchParams.toString());
   if (queryParams.has(resourceType)) {
@@ -117,33 +160,37 @@ function toggleQueryParam(resourceType: string, id: string) {
 }
 
 const deleteQueryParamsForChildResources = (resourceType: keyof typeof navItems) => {
-  // console.log('deleteQueryParamsForChildResources', resourceType);
   const activeSeq = navItems[resourceType]?.seq;
-  // console.log('activeSeq', activeSeq);
   if (activeSeq) {
     const queryParams = new URLSearchParams($page.url.searchParams.toString());
-    // console.log('queryParams', queryParams);
-    // console.log('cookie', { filterableByQueryParams });
-    $inspect(queryFilters);
     Object.entries(navItems).forEach(([resourceType, item]) => {
-      console.log('resourceType', resourceType);
-      console.log('item', item);
       if (item.seq > activeSeq && Object.keys(queryFilters).includes(resourceType)) {
-        console.log('deleting', resourceType);
         queryParams.delete(resourceType);
       }
     });
-    console.log('new queryParams', queryParams);
     goto(`?${queryParams.toString()}`, { replaceState: true });
   }
 };
 
-// FUNCTIONS : FETCH
+const resetFilteredForChildResources = (resourceType: keyof typeof navItems) => {
+  const activeSeq = navItems[resourceType]?.seq;
+  if (activeSeq) {
+    Object.keys(filteredResources).forEach((key) => {
+      if (navItems[key as keyof typeof navItems]?.seq > activeSeq) {
+        filteredResources[key as keyof typeof filteredResources] = [
+          ...resources[key as keyof typeof resources]
+        ];
+      }
+    });
+  }
+};
 
+// FUNCTIONS : FETCH
 const fetchResources = async (resourceType: keyof typeof navItems) => {
   if (resourceType) {
     try {
-      const response = await fetch(`/api/${resourceType}`);
+      const queryParams = new URLSearchParams($page.url.searchParams.toString());
+      const response = await fetch(`/api/${navItems[resourceType].ref}?${queryParams}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -151,6 +198,7 @@ const fetchResources = async (resourceType: keyof typeof navItems) => {
         id: string;
         nameShort: string;
         name?: string;
+        description?: string;
         ref?: string;
         code?: string;
         properties?: { title: string };
@@ -158,20 +206,100 @@ const fetchResources = async (resourceType: keyof typeof navItems) => {
       resources[resourceType] = data.map((item) => ({
         id: item.id,
         nameShort: item.properties?.title || item.nameShort || item.name || '',
-        ref: item.ref || item.code || item.id
+        ref: item.ref || item.code || item.id,
+        description: item.properties?.description || ''
       }));
     } catch (error) {
       console.error(`Error fetching ${resourceType}:`, error);
     }
   }
 };
+
+// UTILS
+const hasManyResources = (resourceType: string) =>
+  resources[resourceType as keyof typeof resources].length > 3;
+
+const getFilteredResourceCount = (resourceType: ResourceTypes) => {
+  if (active().resourceType == resourceType || resourceType === 'feature') {
+    return filteredResources[resourceType].length;
+  } else {
+    return queryFilters[resourceType as keyof ResourceFilters]?.length || 0;
+  }
+};
+
+const getMaxHeightItemsContainer = (resourceType: ResourceTypes) => {
+  const count = getFilteredResourceCount(resourceType);
+  const maxHeight = Math.min(count * 52, 520); // Limit to 10 items (520px) max
+  console.log('MaxHeightItemsContainer', resourceType, maxHeight);
+  return `max-h-${maxHeight / 4}`;
+};
+
+function getMaxHeight(resourceType: ResourceTypes): string {
+  $inspect(filteredResources['feature']);
+  const itemCount =
+    active().resourceType === resourceType || resourceType === 'feature'
+      ? filteredResources[resourceType].length
+      : queryFilters[resourceType as keyof ResourceFilters]?.length || 0;
+  console.log('getMaxHeight', resourceType, itemCount);
+  return `${Math.max(itemCount * 54, 54)}px`; // Ensure a minimum of 52px
+}
 </script>
 
+<!-- SNIPPETS -->
+{#snippet filterInput(resourceType)}
+  <div class="relative flex-shrink-0 border-l-3 border-base-200">
+    <input
+      type="text"
+      placeholder="Match name and description"
+      class="input m-0 w-full rounded-none bg-neutral px-6 pr-10 text-sm focus:border-none focus:outline-none"
+      bind:value={filterTexts[resourceType as keyof typeof filterTexts]} />
+    <div class="pointer-events-none absolute inset-y-0 right-2 flex items-center pr-3">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        class="h-4 w-4 stroke-current">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+      </svg>
+    </div>
+  </div>
+{/snippet}
+
+{#snippet filterToggleButton(resourceType, itemId, onHoverOnly = true)}
+  <button
+    class="btn btn-circle btn-ghost btn-sm transition-all {onHoverOnly
+      ? 'absolute right-4 top-1/2 -translate-y-1/2  opacity-0 active:-translate-y-1/2 group-hover:opacity-100'
+      : ''} hover:bg-base-200"
+    aria-label={queryFilters[resourceType as keyof ResourceFilters]?.includes(itemId)
+      ? 'Remove item from filters'
+      : 'Add item to filters'}
+    onclick={() => toggleQueryParam(resourceType, itemId)}>
+    <Icon
+      src={queryFilters[resourceType as keyof ResourceFilters]?.includes(itemId) ? Minus : Plus}
+      class="h-4 w-4" />
+  </button>
+{/snippet}
+
+{#snippet filterStat(source, resourceType, label)}
+  <p class="flex-grow">
+    <span>{source[resourceType]?.length || '-'}</span>
+    <span class="text-3xs">{label}</span>
+  </p>
+{/snippet}
+<!-- <pre>
+  {JSON.stringify(queryFilters, null, 2)}
+  {JSON.stringify(filteredResources['layer'], null, 2)}
+</pre> -->
+
+<!-- COMPONENT -->
 <aside
-  class="h-screen bg-base-300 transition-all duration-300 ease-in-out {isExpanded
-    ? 'w-96'
-    : 'w-20'}">
-  <div class="flex h-20 items-center justify-between bg-black p-4">
+  class="flex h-screen flex-col bg-base-300 transition-all w-{isExpanded ? '96' : '20'}"
+  style="width: {isExpanded ? '400px' : '80px'};">
+  <div class="flex flex-shrink-0 flex-row items-center justify-between bg-black p-4">
     {#if isExpanded}
       <div class="invisible h-12 w-12"></div>
       <div class="flex w-full items-center justify-center">
@@ -181,65 +309,97 @@ const fetchResources = async (resourceType: keyof typeof navItems) => {
         <Icon src={Menu} class="h-6 w-6" />
       </button>
     {:else}
-      <div class="flex w-full items-center justify-center" onclick={toggleSidebar}>
+      <div class="flex w-full items-center justify-center py-2" onclick={toggleSidebar}>
         <Icon src={Bolt} class="h-8 w-8 text-primary" />
       </div>
     {/if}
   </div>
 
-  <ul class="p-0 border-r-2 border-base-300">
+  <div class="flex flex-shrink-0 flex-grow flex-col overflow-hidden border-r-2 border-base-300 p-0">
     {#each Object.entries(navItems) as [resourceType, resource]}
-      <li class="">
+      <!-- RESOURCE -->
+      <div class="flex-shrink-0">
         <a
           href="/admin/{resource.ref}{$page.url.search}"
-          class="flex items-center border-l-4 p-6 {active().resourceType === resourceType &&
+          class="flex items-center border-l-3 p-6 {active().resourceType === resourceType &&
           !active().ref
             ? 'border-primary'
             : 'border-base-300'} rounded-none">
           <Icon src={resource.icon} class="h-6 w-6" />
           {#if isExpanded}
-            <span class="ml-3">{resource.name}</span>
+            <span class="ml-3 font-mono">{resource.name}</span>
           {/if}
         </a>
-        <ul class="max-h-64 min-h-0 divide-y divide-base-300 overflow-y-auto bg-base-100">
-          {#each resources[resourceType as keyof typeof resources] as item}
-            {#if active().resourceType === resourceType || queryFilters[resourceType]?.includes(item.id)}
-              <li class="group relative">
+      </div>
+
+      <!-- ITEMS -->
+      <div
+        class="duration-00 flex flex-col transition-[max-height] ease-in-out {hasManyResources(
+          resourceType
+        ) &&
+        (active().resourceType === resourceType || resourceType === 'feature')
+          ? 'flex-grow'
+          : ''}"
+        style={hasManyResources(resourceType)
+          ? ''
+          : 'max-height: ' + getMaxHeight(resourceType as ResourceTypes)}>
+        <!-- ITEMS : FILTER -->
+        {#if isExpanded && hasManyResources(resourceType) && (active().resourceType === resourceType || resourceType === 'feature')}
+          {@render filterInput(resourceType)}
+        {/if}
+
+        <!-- ITEMS : LIST -->
+        <ul
+          class="divide-y divide-base-300 bg-base-300
+          {hasManyResources(resourceType) &&
+          (active().resourceType === resourceType || resourceType === 'feature')
+            ? 'h-0 flex-grow overflow-y-auto'
+            : 'overflow-scroll'}">
+          {#each filteredResources[resourceType as keyof typeof filteredResources] as item}
+            {#if active().resourceType === resourceType || queryFilters[resourceType as keyof ResourceFilters]?.includes(item.id) || resourceType === 'feature'}
+              <li class="group relative bg-base-100">
                 <div class="relative">
                   <a
                     href="/admin/{resource.ref}/{item.ref}{$page.url.search}"
-                    class="flex items-center border-l-4 p-4 pl-6 {active().ref === item.ref
+                    class="flex items-center border-l-3 {active().ref === item.ref
                       ? 'border-primary'
-                      : queryFilters[resourceType]?.includes(item.id)
+                      : queryFilters[resourceType as keyof ResourceFilters]?.includes(item.id)
                         ? 'border-secondary'
-                        : 'border-base-300'}">
-                    <Icon src={ChevronRight} class="h-5 w-5" />
+                        : 'border-base-300'}
+                        {!isExpanded && active().ref === item.ref
+                      ? 'h-[52px] p-[18px]'
+                      : 'p-4 pl-6'}
+                        ">
+                    {#if isExpanded || active().ref !== item.ref}
+                      <Icon src={ChevronRight} class="h-5 w-5" />
+                    {:else if active().ref === item.ref}
+                      {@render filterToggleButton(resourceType, item.id, false)}
+                    {/if}
                     {#if isExpanded}
                       <span class="ml-3 text-sm">
                         {item.nameShort}
                       </span>
                     {/if}
                   </a>
-                  {#if filterableByQueryParams.includes(resourceType)}
-                    <button
-                      class="btn btn-circle btn-ghost btn-sm absolute right-4 top-1/2 -translate-y-1/2 opacity-0 transition-all hover:bg-base-200 active:-translate-y-1/2 group-hover:opacity-100"
-                      aria-label={queryFilters[resourceType]?.includes(item.id)
-                        ? 'Remove item from filters'
-                        : 'Add item to filters'}
-                      onclick={() => {
-                        toggleQueryParam(resourceType, item.id);
-                      }}>
-                      <Icon
-                        src={queryFilters[resourceType]?.includes(item.id) ? Minus : Plus}
-                        class="h-4 w-4" />
-                    </button>
+                  {#if isExpanded && filterableByQueryParams.includes(resourceType)}
+                    {@render filterToggleButton(resourceType, item.id)}
                   {/if}
                 </div>
               </li>
             {/if}
           {/each}
         </ul>
-      </li>
+
+        <!-- ITEMS : FOOTER -->
+        {#if isExpanded && hasManyResources(resourceType) && (active().resourceType === resourceType || resourceType === 'feature')}
+          <footer
+            class="base-content flex w-full flex-shrink-0 flex-row justify-between border-b-1 border-base-100 px-3 py-2 text-center font-mono text-sm font-light uppercase opacity-60">
+            {@render filterStat(resources, resourceType, 'Total')}
+            {@render filterStat(filteredResources, resourceType, 'Filtered')}
+            {@render filterStat(queryFilters, resourceType, 'Selected')}
+          </footer>
+        {/if}
+      </div>
     {/each}
-  </ul>
+  </div>
 </aside>
