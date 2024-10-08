@@ -8,6 +8,5 @@ export const load: PageLoad = async ({ params, fetch }) => {
   const request = await fetch(ENDPOINT);
 
   const features = await getResponseOrError(request) as typeof FeatureSchema[];
-  console.log(features);
   return { features };
 };
