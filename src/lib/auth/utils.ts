@@ -5,7 +5,7 @@ import { organisationRole, projectRole, organisation, project } from '$lib/db/sc
 // Utility functions
 
 export interface UserRole {
-  type: 'organisations' | 'projects';
+  type: 'organisation' | 'project';
   role: string;
   resourceId: string;
   resourceName: string;
@@ -13,7 +13,7 @@ export interface UserRole {
   parentId?: string;
   parentName?: string;
   parentRef?: string;
-  parentType?: 'organisations' | 'projects';
+  parentType?: 'organisation' | 'project';
 }
 
 /**
@@ -31,14 +31,14 @@ export interface UserRole {
  * The results are then mapped into UserRole objects and combined into a single array.
  *
  * Organisation roles are structured as:
- * - type: 'organisations'
+ * - type: 'organisation'
  * - role: The user's role in the organisation
  * - resourceId: The organisation's ID
  * - resourceName: The organisation's name
  * - resourceRef: The organisation's code
  *
  * Project roles are structured as:
- * - type: 'projects'
+ * - type: 'project'
  * - role: The user's role in the project
  * - resourceId: The project's ID
  * - resourceName: The project's name
@@ -46,7 +46,7 @@ export interface UserRole {
  * - parentId: The associated organisation's ID
  * - parentName: The associated organisation's name
  * - parentRef: The associated organisation's code
- * - parentType: Always 'organisations'
+ * - parentType: Always 'organisation'
  */
 export async function getUserRoles(db: any, userId: string): Promise<UserRole[]> {
   const userRoles: UserRole[] = [];
@@ -71,7 +71,7 @@ export async function getUserRoles(db: any, userId: string): Promise<UserRole[]>
         organisationName: string;
         organisationRef: string;
       }) => ({
-        type: 'organisations' as const,
+        type: 'organisation' as const,
         role: role.role,
         resourceId: role.organisationId,
         resourceName: role.organisationName,
@@ -107,7 +107,7 @@ export async function getUserRoles(db: any, userId: string): Promise<UserRole[]>
         organisationName: string;
         organisationRef: string;
       }) => ({
-        type: 'projects' as const,
+        type: 'project' as const,
         role: role.role,
         resourceId: role.projectId,
         resourceName: role.projectName,
@@ -115,7 +115,7 @@ export async function getUserRoles(db: any, userId: string): Promise<UserRole[]>
         parentId: role.organisationId,
         parentName: role.organisationName,
         parentRef: role.organisationRef,
-        parentType: 'organisations' as const
+        parentType: 'organisation' as const
       })
     )
   );
