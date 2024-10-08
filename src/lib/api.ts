@@ -24,16 +24,30 @@ const checkAccessOrError = (
     | 'superAdmin'
     | 'listingAll'
     | 'listingOwn'
+    | 'listingOwnChildren'
+    | 'listingOwnGrandChildren'
     | 'ProfileAll'
     | 'ProfileOwn',
   resourceType: string = 'EVERYTHING'
 ) => {
   let hasAccess = false;
 
+  const resourceParents = {
+    layer: 'project',
+    project: 'organisation',
+    feature: 'layer'
+  };
+
   if (['public', 'superAdmin', 'listingAll', 'profileAll'].includes(accessStrategy)) {
     hasAccess = true;
   } else if (['listingOwn', 'profileOwn'].includes(accessStrategy)) {
     hasAccess = userRoles.some((role) => role.type === resourceType);
+  } else if (accessStrategy === 'listingOwnChildren') {
+    hasAccess = userRoles.some((role) => role.type === resourceParents[resourceType]);
+  } else if (accessStrategy === 'listingOwnGrandChildren') {
+    hasAccess = userRoles.some(
+      (role) => role.type === resourceParents[resourceParents[resourceType]]
+    );
   }
 
   if (!hasAccess) {
@@ -51,6 +65,8 @@ export const getDatabaseOrError = async (
     | 'superAdmin'
     | 'listingAll'
     | 'listingOwn'
+    | 'listingOwnChildren'
+    | 'listingOwnGrandChildren'
     | 'ProfileAll'
     | 'ProfileOwn',
   resourceType?: string
@@ -81,12 +97,11 @@ export const getDatabaseOrError = async (
   };
 };
 
-
 // Client Services
 
 export async function getResponseOrError(request: Response) {
   if (request.status >= 400) {
-    const { message } = await request.json() as { message: string };
+    const { message } = (await request.json()) as { message: string };
     return error(request.status, message);
   }
   return request.json();
