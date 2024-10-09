@@ -2,7 +2,7 @@ import { error, json } from '@sveltejs/kit';
 import { getUserRoles, type UserRole } from '$lib/auth/utils';
 import client from '$lib/db';
 
-type AccessStrategyOption =
+export type AccessStrategyOption =
   | 'public'
   | 'superAdmin'
   | 'listingAll'

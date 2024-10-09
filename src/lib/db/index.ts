@@ -63,7 +63,7 @@ const applyAccessStrategy = (
   userTable: Table,
   userId: string
 ) => {
-  if (['superAdmin', 'public', 'listingAll'].includes(accessStrategy)) {
+  if (['superAdmin', 'public', 'listingAll', 'profileAny'].includes(accessStrategy)) {
     return [];
   }
 
@@ -73,6 +73,7 @@ const applyAccessStrategy = (
 
   switch (accessStrategy) {
     case 'listingOwn':
+    case 'profileOwn':
       conditions.push(
         inArray(
           table0.id,
@@ -84,6 +85,7 @@ const applyAccessStrategy = (
       );
       break;
     case 'listingOwnChildren':
+    case 'profileOwnChild':
       conditions.push(
         inArray(
           table0[getForeignKey(slicedHierarchy, 0)],
@@ -102,6 +104,7 @@ const applyAccessStrategy = (
       );
       break;
     case 'listingOwnGrandChildren':
+    case 'profileOwnGrandChild':
       conditions.push(
         inArray(
           table0[getForeignKey(slicedHierarchy, 0)],
@@ -126,13 +129,9 @@ const applyAccessStrategy = (
         )
       );
       break;
-    case 'ProfileAll':
-    case 'ProfileOwn':
-      throw new Error('Invalid Generic Query - use genericProfileQuery instead');
     default:
       throw new Error('Invalid access strategy');
   }
-
   return conditions;
 };
 
@@ -272,10 +271,7 @@ const applyFilterConstraints = (
   return [inArray(getTable(slicedHierarchy, 0).id, baseQuery.where(or(...subQueryConditions)))];
 };
 
-export async function genericIndexQuery<
-  usersT extends Table,
-  translationsT extends Table
->(
+export async function genericIndexQuery<usersT extends Table, translationsT extends Table>(
   db: any,
   accessStrategy: string = 'listingOwn',
   selectTableRelations: Record<string, boolean>,
