@@ -2,6 +2,18 @@ import { error, json } from '@sveltejs/kit';
 import { getUserRoles, type UserRole } from '$lib/auth/utils';
 import client from '$lib/db';
 
+type AccessStrategyOption =
+  | 'public'
+  | 'superAdmin'
+  | 'listingAll'
+  | 'listingOwn'
+  | 'listingOwnChildren'
+  | 'listingOwnGrandChildren'
+  | 'ProfileAny'
+  | 'ProfileOwn'
+  | 'ProfileOwnChild'
+  | 'ProfileOwnGrandChild';
+
 export const getSessionOrError = async (locals: App.Locals) => {
   const session = await locals.auth();
   if (!session?.user) {
@@ -19,15 +31,7 @@ export const JSONResponseOrError = async (result: any): Promise<any> => {
 
 const checkAccessOrError = (
   userRoles: UserRole[],
-  accessStrategy:
-    | 'public'
-    | 'superAdmin'
-    | 'listingAll'
-    | 'listingOwn'
-    | 'listingOwnChildren'
-    | 'listingOwnGrandChildren'
-    | 'ProfileAll'
-    | 'ProfileOwn',
+  accessStrategy: AccessStrategyOption,
   resourceType: string = 'EVERYTHING'
 ) => {
   let hasAccess = false;
@@ -38,7 +42,7 @@ const checkAccessOrError = (
     feature: 'layer'
   };
 
-  if (['public', 'superAdmin', 'listingAll', 'profileAll'].includes(accessStrategy)) {
+  if (['public', 'superAdmin', 'listingAll', 'ProfileAny'].includes(accessStrategy)) {
     hasAccess = true;
   } else if (['listingOwn', 'profileOwn'].includes(accessStrategy)) {
     hasAccess = userRoles.some((role) => role.type === resourceType);
@@ -60,15 +64,7 @@ const checkAccessOrError = (
 export const getDatabaseOrError = async (
   locals: App.Locals,
   platform: App.Platform | undefined,
-  accessStrategy:
-    | 'public'
-    | 'superAdmin'
-    | 'listingAll'
-    | 'listingOwn'
-    | 'listingOwnChildren'
-    | 'listingOwnGrandChildren'
-    | 'ProfileAll'
-    | 'ProfileOwn',
+  accessStrategy: AccessStrategyOption,
   resourceType?: string
 ) => {
   // Checks whether the user is logged in
