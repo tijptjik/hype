@@ -46,9 +46,9 @@ const checkAccessOrError = (
     hasAccess = true;
   } else if (['listingOwn', 'profileOwn'].includes(accessStrategy)) {
     hasAccess = userRoles.some((role) => role.type === resourceType);
-  } else if (accessStrategy === 'listingOwnChildren') {
+  } else if (['listingOwnChildren', 'profileOwnChild'].includes(accessStrategy)) {
     hasAccess = userRoles.some((role) => role.type === resourceParents[resourceType]);
-  } else if (accessStrategy === 'listingOwnGrandChildren') {
+  } else if (['listingOwnGrandChildren', 'profileOwnGrandChild'].includes(accessStrategy)) {
     hasAccess = userRoles.some(
       (role) => role.type === resourceParents[resourceParents[resourceType]]
     );
