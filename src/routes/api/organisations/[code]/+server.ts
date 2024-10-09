@@ -1,14 +1,20 @@
-import { defaults, superForm, superValidate } from 'sveltekit-superforms';
+import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
-import { error, json, type RequestHandler } from '@sveltejs/kit';
+import { error, type RequestHandler } from '@sveltejs/kit';
 import {
+  organisationRole,
   OrganisationSchema,
   organisation,
   organisationI18n,
   OrganisationI18n
 } from '$lib/db/schema';
-import { getSessionOrError, JSONResponseOrError } from '$lib/api';
-import client from '$lib/db';
+import {
+  getDatabaseOrError,
+  getSessionOrError,
+  JSONResponseOrError,
+  type AccessStrategyOption
+} from '$lib/api';
+import { genericProfileQuery } from '$lib/db';
 import { and, eq } from 'drizzle-orm';
 import type { z } from 'zod';
 import { actionResult } from 'sveltekit-superforms';
@@ -17,25 +23,35 @@ import { actionResult } from 'sveltekit-superforms';
 type OrganisationType = z.infer<typeof OrganisationSchema>;
 type OrganisationI18nType = z.infer<typeof OrganisationI18n>;
 
+const RESOURCE_TYPE = 'organisation';
+const ACCESS_STRATEGY = 'profileOwn' as AccessStrategyOption;
+const PUBLIC_IDENTIFIER = 'code';
+
 export const GET: RequestHandler = async ({ params, locals, platform }) => {
   // AUTH : Pass or Fail
-  await getSessionOrError(locals);
-  // DB : Connect to D1
-  const db = client(platform?.env.DB);
+  const { db, userId, accessStrategy } = await getDatabaseOrError(
+    locals,
+    platform,
+    ACCESS_STRATEGY,
+    RESOURCE_TYPE
+  );
   try {
     // DB : Build & Execute Query
-    // @ts-ignore
-    console.info('Searching for', params.code);
-    const result = await db.query.organisation.findFirst({
-      // @ts-ignore
-      where: eq(organisation.code, params.code),
-      with: {
+    const result = await genericProfileQuery(
+      db,
+      params[PUBLIC_IDENTIFIER] as string,
+      PUBLIC_IDENTIFIER,
+      accessStrategy,
+      {
+        userRoles: true,
         translations: true
-      }
-    });
+      },
+      userId,
+      organisationRole,
+      organisationI18n
+    );
 
     // HTTP : 200 JSON or 404
-    // Always return { form }
     return JSONResponseOrError(result);
   } catch (e) {
     // DB : Query Error
@@ -44,6 +60,29 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
     return error(500, 'Dust Accumulation Critical');
   }
 };
+
+//   try {
+//     // DB : Build & Execute Query
+//     // @ts-ignore
+//     console.info('Searching for', params.code);
+//     const result = await db.query.organisation.findFirst({
+//       // @ts-ignore
+//       where: eq(organisation.code, params.code),
+//       with: {
+//         translations: true
+//       }
+//     });
+
+//     // HTTP : 200 JSON or 404
+//     // Always return { form }
+//     return JSONResponseOrError(result);
+//   } catch (e) {
+//     // DB : Query Error
+//     console.error('Database query error:', e);
+//     // HTTP : 500 Error
+//     return error(500, 'Dust Accumulation Critical');
+//   }
+// };
 
 export const PUT: RequestHandler = async ({ params, request, locals, platform }) => {
   // AUTH : Pass or Fail

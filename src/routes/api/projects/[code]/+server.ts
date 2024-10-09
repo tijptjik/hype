@@ -1,41 +1,48 @@
-import { defaults, superForm, superValidate } from 'sveltekit-superforms';
+import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
-import { error, json, type RequestHandler } from '@sveltejs/kit';
-import {
-  ProjectSchema,
-  project,
-  projectI18n,
-  ProjectI18n
-} from '$lib/db/schema';
-import { getSessionOrError, JSONResponseOrError } from '$lib/api';
-import client from '$lib/db';
+import { error, type RequestHandler } from '@sveltejs/kit';
+import { ProjectSchema, project, projectI18n, ProjectI18n, projectRole } from '$lib/db/schema';
+import { getDatabaseOrError, getSessionOrError, JSONResponseOrError } from '$lib/api';
+import { genericProfileQuery } from '$lib/db';
 import { and, eq } from 'drizzle-orm';
 import type { z } from 'zod';
 import { actionResult } from 'sveltekit-superforms';
+import { type AccessStrategyOption } from '$lib/api';
 
 // Infer the type of ProjectSchema
 type ProjectType = z.infer<typeof ProjectSchema>;
 type ProjectI18nType = z.infer<typeof ProjectI18n>;
 
+const RESOURCE_TYPE = 'project';
+const ACCESS_STRATEGY = 'profileOwn' as AccessStrategyOption;
+const PUBLIC_IDENTIFIER = 'code';
+
 export const GET: RequestHandler = async ({ params, locals, platform }) => {
   // AUTH : Pass or Fail
-  await getSessionOrError(locals);
-  // DB : Connect to D1
-  const db = client(platform?.env.DB);
+  const { db, userId, accessStrategy } = await getDatabaseOrError(
+    locals,
+    platform,
+    ACCESS_STRATEGY,
+    RESOURCE_TYPE
+  );
   try {
     // DB : Build & Execute Query
-    // @ts-ignore
-    console.info('Searching for', params.code);
-    const result = await db.query.project.findFirst({
-      // @ts-ignore
-      where: eq(project.code, params.code),
-      with: {
-        translations: true
-      }
-    });
+    const result = await genericProfileQuery(
+      db,
+      params[PUBLIC_IDENTIFIER] as string,
+      PUBLIC_IDENTIFIER,
+      accessStrategy,
+      {
+        translations: true,
+        maintainerRoles: true
+      },
+      userId,
+      projectRole,
+      projectI18n,
+      2
+    );
 
     // HTTP : 200 JSON or 404
-    // Always return { form }
     return JSONResponseOrError(result);
   } catch (e) {
     // DB : Query Error
@@ -90,10 +97,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
           .returning();
         modifiedTranslations.push(updatedTranslation[0]);
       } else {
-        const insertedTranslation = await db
-          .insert(projectI18n)
-          .values(translation)
-          .returning();
+        const insertedTranslation = await db.insert(projectI18n).values(translation).returning();
         modifiedTranslations.push(insertedTranslation[0]);
       }
     }
