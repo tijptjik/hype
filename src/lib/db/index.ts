@@ -298,4 +298,29 @@ export async function genericIndexQuery<usersT extends Table, translationsT exte
   });
 }
 
+export async function genericProfileQuery<usersT extends Table, translationsT extends Table>(
+  db: any,
+  id: string,
+  publicIdentifier: string = 'id',
+  accessStrategy: string = 'ProfileOwn',
+  selectTableRelations: Record<string, boolean>,
+  userId: string,
+  userTable: usersT,
+  translationTable: translationsT | boolean,
+  depth: number = 1
+) {
+  const slicedHierarchy = resourceHierarchy.slice(-depth, resourceHierarchy.length);
+
+  const conditions = [
+    eq(getTable(slicedHierarchy, 0)[publicIdentifier], id),
+    ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId),
+    ...applyTranslationCondition(db, slicedHierarchy, translationTable),
+  ];
+
+  return await db.query[getTableName(getTable(slicedHierarchy, 0))].findFirst({
+    where: and(...conditions),
+    with: selectTableRelations
+  });
+}
+
 export default client;
