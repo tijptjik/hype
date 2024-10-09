@@ -3,7 +3,7 @@ import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import type { AdapterAccountType } from '@auth/core/adapters';
 import { relations, sql } from 'drizzle-orm';
 import type { GeometryObject } from 'geojson';
-import shortUUID from 'short-uuid';
+import { nanoid } from 'nanoid'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
@@ -14,7 +14,7 @@ import { z } from 'zod';
 export const user = sqliteTable('user', {
   id: text('id')
     .primaryKey()
-    .$defaultFn(() => shortUUID.generate()),
+    .$defaultFn(() => nanoid(12)),
   name: text('name'),
   attribution: text('attribution'),
   email: text('email').unique(),
@@ -81,7 +81,7 @@ export const organisation = sqliteTable('organisation', {
   // Database identifier
   id: text('id')
     .primaryKey()
-    .$defaultFn(() => shortUUID.generate()),
+    .$defaultFn(() => nanoid(12)),
   // Public identifier
   code: text('code').unique().notNull(),
   // Full Name in English
@@ -226,7 +226,7 @@ interface ProjectMetadata {
 export const project = sqliteTable('project', {
   id: text('id')
     .primaryKey()
-    .$defaultFn(() => shortUUID.generate()),
+    .$defaultFn(() => nanoid(12)),
   organisationId: text('organisationId')
     .notNull()
     .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
@@ -352,7 +352,7 @@ interface LayerMetadata {
 export const layer = sqliteTable('layer', {
   id: text('id')
     .primaryKey()
-    .$defaultFn(() => shortUUID.generate()),
+    .$defaultFn(() => nanoid(12)),
   projectId: text('projectId')
     .notNull()
     .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
@@ -426,7 +426,7 @@ export const LayerSchema = z.object({
 export const feature = sqliteTable('feature', {
   id: text('id')
     .primaryKey()
-    .$defaultFn(() => shortUUID.generate()),
+    .$defaultFn(() => nanoid(12)),
   geometry: text('geometry', { mode: 'json' }).notNull().$type<GeometryObject>(),
   properties: text('properties', { mode: 'json' })
     .notNull()
