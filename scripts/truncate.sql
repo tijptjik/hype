@@ -1,33 +1,13 @@
-delete
-from account;
-
-delete
-from feature;
-
-delete
-from layer;
-
-delete
-from project;
-
-delete
-from organisationI18n;
-
-delete
-from organisationRole;
-
-delete
-from organisation;
-
-delete
-from session;
-
-delete
-from sqlite_sequence;
-
-delete
-from userActivity;
-
-delete
-from user;
-
+DELETE FROM account;
+DELETE FROM feature;
+DELETE FROM layer;
+DELETE FROM organisation;
+DELETE FROM organisationI18n;
+DELETE FROM organisationRole;
+DELETE FROM project;
+DELETE FROM session;
+DELETE FROM user;
+DELETE FROM userActivity;
+DELETE FROM projectI18n;
+DELETE FROM projectRole;
+DELETE FROM layerI18n;

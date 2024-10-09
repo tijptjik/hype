@@ -1,17 +1,20 @@
 PRAGMA foreign_keys = OFF;
 
+-- drop table IF EXISTS sqlite_sequence;
 drop table IF EXISTS d1_migrations;
 drop table IF EXISTS account;
-drop table IF EXISTS session;
-drop table IF EXISTS user;
-drop table IF EXISTS layer;
 drop table IF EXISTS feature;
-drop table IF EXISTS project;
-drop table IF EXISTS userActivity;
+drop table IF EXISTS layer;
 drop table IF EXISTS organisation;
 drop table IF EXISTS organisationI18n;
 drop table IF EXISTS organisationRole;
-
+drop table IF EXISTS project;
+drop table IF EXISTS session;
+drop table IF EXISTS user;
+drop table IF EXISTS userActivity;
+drop table IF EXISTS projectI18n;
+drop table IF EXISTS projectRole;
+drop table IF EXISTS layerI18n;
 
 UPDATE sqlite_sequence
 SET seq = 0
