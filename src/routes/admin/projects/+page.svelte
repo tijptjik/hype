@@ -1,14 +1,14 @@
 <script lang="ts">
-import type { project } from '$lib/db/schema';
+import { filteredResources } from '$lib/stores/resources.svelte';
 
-const { data } = $props<{ data: { projects: (typeof project)[] } }>();
-const { projects } = data;
+let projects = $derived(filteredResources.project);
+
 </script>
 
 <div class="container mx-auto p-4">
   <h1 class="mb-4 text-2xl font-bold">Your Projects</h1>
   <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-    {#each projects as project}
+    {#each projects as { data: project }}
       <div class="card bg-base-100 shadow-xl">
         <figure>
           <img

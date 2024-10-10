@@ -1,14 +1,12 @@
 <script lang="ts">
-import type { feature } from '$lib/db/schema';
+import { filteredResources } from '$lib/stores/resources.svelte';
 
-const { data } = $props<{ data: { features: (typeof feature)[] } }>();
-const { features } = data;
+let features = $derived(filteredResources.feature);
 </script>
 
-<div class="relative container mx-auto p-4 overflow-y-auto h-screen">
-  <!-- <h1 class="mb-4 text-2xl font-bold">Your Features</h1> -->
+<div class="container relative mx-auto h-screen overflow-y-auto p-4">
   <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-    {#each features as feature, idx}
+    {#each features as { data: feature }, idx}
       <div class="card bg-base-100 shadow-xl">
         <figure>
           <img
@@ -16,7 +14,7 @@ const { features } = data;
             alt={feature.properties.title}
             class="h-48 w-full object-cover" />
         </figure>
-        <div class="flex flex-row flex-wrap gap-2 py-2 align-middle justify-center">
+        <div class="flex flex-row flex-wrap justify-center gap-2 py-2 align-middle">
           <span class="badge badge-primary">{feature.isPublished ? 'Published' : 'Draft'}</span>
           <span class="badge badge-secondary">{feature.properties.material}</span>
           <span class="badge badge-outline"
