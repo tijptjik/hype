@@ -14,11 +14,8 @@ import {
 } from '@steeze-ui/heroicons';
 import { goto } from '$app/navigation';
 
-// TYPES
-type ResourceTypes = 'organisation' | 'project' | 'layer' | 'feature';
-type FilterableResourceTypes = 'organisation' | 'project' | 'layer';
-type ResourceFilters = { [key in FilterableResourceTypes]?: string[] };
-type Resource = { id: string; nameShort: string; ref: string; description: string };
+import type { ResourceTypes, ResourceFilters, Resource } from '$lib/types';
+import { filteredResources } from '$lib/stores/resources.svelte';
 
 // STATE
 let isExpanded = $state(true);
@@ -34,12 +31,12 @@ let filterTexts = $state<{ [key in ResourceTypes]: string }>({
   layer: '',
   feature: ''
 });
-let filteredResources = $state<{ [key in ResourceTypes]: Resource[] }>({
-  organisation: [],
-  project: [],
-  layer: [],
-  feature: []
-});
+// let filteredResources = $state<{ [key in ResourceTypes]: Resource[] }>({
+//   organisation: [],
+//   project: [],
+//   layer: [],
+//   feature: []
+// });
 let maxHeightItemsContainer = $state<{ [key in ResourceTypes]: string }>({
   organisation: '',
   project: '',
@@ -204,10 +201,11 @@ const fetchResources = async (resourceType: keyof typeof navItems) => {
         properties?: { title: string };
       }[] = await response.json();
       resources[resourceType] = data.map((item) => ({
+        data: item,
         id: item.id,
         nameShort: item.properties?.title || item.nameShort || item.name || '',
         ref: item.ref || item.code || item.id,
-        description: item.properties?.description || ''
+        description: item.properties?.description || item.description || '',
       }));
     } catch (error) {
       console.error(`Error fetching ${resourceType}:`, error);
@@ -230,7 +228,6 @@ const getFilteredResourceCount = (resourceType: ResourceTypes) => {
 const getMaxHeightItemsContainer = (resourceType: ResourceTypes) => {
   const count = getFilteredResourceCount(resourceType);
   const maxHeight = Math.min(count * 52, 520); // Limit to 10 items (520px) max
-  console.log('MaxHeightItemsContainer', resourceType, maxHeight);
   return `max-h-${maxHeight / 4}`;
 };
 
@@ -240,7 +237,6 @@ function getMaxHeight(resourceType: ResourceTypes): string {
     active().resourceType === resourceType || resourceType === 'feature'
       ? filteredResources[resourceType].length
       : queryFilters[resourceType as keyof ResourceFilters]?.length || 0;
-  console.log('getMaxHeight', resourceType, itemCount);
   return `${Math.max(itemCount * 54, 54)}px`; // Ensure a minimum of 52px
 }
 </script>
