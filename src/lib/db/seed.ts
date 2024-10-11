@@ -25,9 +25,10 @@ import organisationI18nJson from './data/organisationsI18n.json';
 import organisationRoleJson from './data/organisationRoles.json';
 import layerJson from './data/layers.json';
 import layerI18nJson from './data/layersI18n.json';
-import featureJson from './data/features.json';
+import featureStreetnamesJson from './data/features-streetnames.json';
+import featureHKGhostsignsJson from './data/features-hkghostsigns.json';
 import type { DrizzleD1Database } from 'drizzle-orm/d1/driver';
-import { count } from 'drizzle-orm';
+import { count, getTableName } from 'drizzle-orm';
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core/table';
 import type { SQLiteInsertValue } from 'drizzle-orm/sqlite-core';
 
@@ -70,7 +71,7 @@ const seedBank = {
     chunk: 0
   },
   project: {
-    name: 'projects',
+    name: 'Projects',
     table: project,
     data: projectJson,
     chunk: 0
@@ -88,7 +89,7 @@ const seedBank = {
     chunk: 0
   },
   layer: {
-    name: 'layers',
+    name: 'Layers',
     table: layer,
     data: layerJson,
     chunk: 0
@@ -99,11 +100,19 @@ const seedBank = {
     data: layerI18nJson,
     chunk: 0
   },
-  feature: {
-    name: 'features',
+  featureStreetnames: {
+    name: 'Features::StreetNames',
     table: feature,
-    data: featureJson,
-    chunk: 8
+    data: featureStreetnamesJson,
+    chunk: 0,
+    partial: true
+  },
+  featureHKGhostsigns: {
+    name: 'Features::HKGhostSigns',
+    table: feature,
+    data: featureHKGhostsignsJson,
+    chunk: 8,
+    partial: true
   }
 };
 
@@ -161,6 +170,28 @@ export default async function seed(printData: boolean = false) {
     Object.values(seedBank).map((val) => console.info(val.data));
   }
 
+  // Combine partial and non-partial data
+  const SuperSeedBank = Object.values(seedBank).reduce((acc, member) => {
+    if (member.partial === true) {
+      const tableName = getTableName(member.table);
+      const baseName = member.name.split('::')[0];
+      if (!acc[tableName]) {
+        acc[tableName] = {
+          name: baseName,
+          table: member.table,
+          data: [],
+          chunk: 0
+        };
+      }
+      acc[tableName].data = acc[tableName].data.concat(member.data);
+      acc[tableName].chunk += member.chunk || 0;
+    } else {
+      acc[getTableName(member.table)] = member;
+    }
+    return acc;
+  }, {} as Record<string, typeof seedBank[keyof typeof seedBank]>);
+
+
   if (process.env.VITE_WRANGLER_ENV === 'local') {
     // This is an ugly hack to avoid Vite loading in the wrangler dep regardless
     // of the conditional import, and throwing errors when building for CF workers
@@ -174,7 +205,7 @@ export default async function seed(printData: boolean = false) {
 
     let hasSeedingStarted = false;
 
-    for (const item of Object.values(seedBank)) {
+    for (const item of Object.values(SuperSeedBank)) {
       // DB : Only insert data if there is no data present in the table
       // @ts-ignore
       if (await isEmpty(db, item.table)) {
