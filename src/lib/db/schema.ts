@@ -452,7 +452,7 @@ export const feature = sqliteTable('feature', {
   // NOT Visitable + NOT Tangible   : Delisted - Feature no longer offers any significance to the collection and should not be shown on public maps.
 
   isIntangible: integer('isIntangible', { mode: 'boolean' }).notNull().default(false),
-  isVisitable: integer('isVisitable', { mode: 'boolean' }).notNull().default(false),
+  isVisitable: integer('isVisitable', { mode: 'boolean' }).notNull().default(true),
   visitableAsOf: text('visitableAsOf').default(sql`(CURRENT_DATE)`),
 
   createdAt: text('createdAt')
