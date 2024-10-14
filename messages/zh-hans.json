@@ -32,9 +32,17 @@
   "forms__reset": "重置",
   "forms__save": "保存",
 
+  "organisation__core": "核心",
+  "organisation__images": "图片",
+
+  "project__core": "核心",
+  "project__images": "图片",
+
+  "layer__core": "核心",
+
   "feature__core": "核心",
   "feature__address": "地址",
-  "feature__photos": "照片",
+  "feature__images": "照片",
   "feature__publish": "发布",
   "feature__unpublish": "取消发布",
   "feature__actions": "操作",

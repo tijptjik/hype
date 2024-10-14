@@ -28,13 +28,21 @@
   "profile__role_type__member": "Member",
   "profile__role_type__contributor": "Contributor",
 
-  "forms__type_here" : "Type here",
+  "forms__type_here": "Type here",
   "forms__reset": "Reset",
   "forms__save": "Save",
 
+  "organisation__core": "Core",
+  "organisation__images": "Image",
+
+  "project__core": "Core",
+  "project__images": "Image",
+
+  "layer__core": "Core",
+
   "feature__core": "Core",
   "feature__address": "Address",
-  "feature__photos": "Photos",
+  "feature__images": "Photos",
   "feature__publish": "Publish",
   "feature__unpublish": "Unpublish",
   "feature__actions": "Actions",
