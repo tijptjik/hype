@@ -1,42 +1,23 @@
 <script lang="ts">
 import { page } from '$app/stores';
 import { Icon } from '@steeze-ui/svelte-icon';
-import {
-  Bolt,
-  Bars3BottomRight as Menu,
-  Users,
-  Squares2x2 as Projects,
-  Square3Stack3d as Layers,
-  MapPin,
-  ChevronRight,
-  Plus,
-  Minus
-} from '@steeze-ui/heroicons';
+import { Bolt, Bars3BottomRight as Menu, ChevronRight, Plus, Minus } from '@steeze-ui/heroicons';
 import { goto } from '$app/navigation';
 
-import type { ResourceTypes, ResourceFilters, Resource } from '$lib/types';
-import { filteredResources } from '$lib/stores/resources.svelte';
+import type { ResourceTypes, ResourceFilters } from '$lib/types';
+import {
+  resources,
+  filteredResources,
+  queryFilters
+} from '$lib/stores/resources.svelte';
+import { navItems } from '$lib/stores/navigation.svelte';
+import { getActiveFromPath } from '$lib';
+import FilterInput from '$lib/components/menu/FilterInput.svelte';
 
 // STATE
+
 let isExpanded = $state(true);
-let resources = $state<{ [key in ResourceTypes]: Resource[] }>({
-  organisation: [],
-  project: [],
-  layer: [],
-  feature: []
-});
-let filterTexts = $state<{ [key in ResourceTypes]: string }>({
-  organisation: '',
-  project: '',
-  layer: '',
-  feature: ''
-});
-// let filteredResources = $state<{ [key in ResourceTypes]: Resource[] }>({
-//   organisation: [],
-//   project: [],
-//   layer: [],
-//   feature: []
-// });
+
 let maxHeightItemsContainer = $state<{ [key in ResourceTypes]: string }>({
   organisation: '',
   project: '',
@@ -44,28 +25,10 @@ let maxHeightItemsContainer = $state<{ [key in ResourceTypes]: string }>({
   feature: ''
 });
 
-// STATE : PROPS
-let queryFilters = $state<ResourceFilters>({
-  organisation: [],
-  project: [],
-  layer: []
-});
-
 // STATE : DERIVED
-let active = $derived(() => {
-  const path = $page.url.pathname;
-  const parts = path
-    .replace(/^\/admin\//, '')
-    .split('/')
-    .filter(Boolean);
 
-  if (parts.length === 2) {
-    return { resourceType: parts[0].slice(0, -1) as ResourceTypes, ref: parts[1] };
-  } else if (parts.length === 1) {
-    return { resourceType: parts[0].slice(0, -1) as ResourceTypes, ref: false };
-  } else {
-    return { resourceType: false, ref: false };
-  }
+const active = $derived(() => {
+  return getActiveFromPath($page.url.pathname);
 });
 
 // STATE : EFFECTS
@@ -74,10 +37,9 @@ $effect(() => {
   if ($page.url.searchParams) {
     const newQueryFilters: ResourceFilters = {};
     filterableByQueryParams.forEach((resourceType) => {
-      newQueryFilters[resourceType as keyof ResourceFilters] =
+      queryFilters[resourceType as keyof ResourceFilters] =
         $page.url.searchParams.getAll(resourceType);
     });
-    queryFilters = newQueryFilters;
   }
 });
 
@@ -103,21 +65,6 @@ $effect(() => {
   }
 });
 
-$effect(() => {
-  Object.keys(resources).forEach((resourceType) => {
-    const type = resourceType as ResourceTypes;
-    // $inspect(queryFilters);
-    // $inspect(filteredResources['layer']);
-    // $inspect(resources['layer']);
-    filteredResources[type] = resources[type].filter(
-      (item) =>
-        filterTexts[type] === '' ||
-        item.nameShort.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
-        item.description?.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
-        queryFilters[type as keyof ResourceFilters]?.includes(item.id)
-    );
-  });
-});
 
 $effect(() => {
   Object.keys(resources).forEach((resourceType) => {
@@ -127,13 +74,6 @@ $effect(() => {
 });
 
 // CONFIG
-const navItems = {
-  organisation: { name: 'Organisations', icon: Users, seq: 1, ref: 'organisations' },
-  project: { name: 'Projects', icon: Projects, seq: 2, ref: 'projects' },
-  layer: { name: 'Layers', icon: Layers, seq: 3, ref: 'layers' },
-  feature: { name: 'Features', icon: MapPin, seq: 4, ref: 'features' }
-};
-
 const filterableByQueryParams = ['organisation', 'project', 'layer'];
 
 // FUNCTIONS
@@ -169,25 +109,12 @@ const deleteQueryParamsForChildResources = (resourceType: keyof typeof navItems)
   }
 };
 
-const resetFilteredForChildResources = (resourceType: keyof typeof navItems) => {
-  const activeSeq = navItems[resourceType]?.seq;
-  if (activeSeq) {
-    Object.keys(filteredResources).forEach((key) => {
-      if (navItems[key as keyof typeof navItems]?.seq > activeSeq) {
-        filteredResources[key as keyof typeof filteredResources] = [
-          ...resources[key as keyof typeof resources]
-        ];
-      }
-    });
-  }
-};
-
 // FUNCTIONS : FETCH
 const fetchResources = async (resourceType: keyof typeof navItems) => {
   if (resourceType) {
     try {
       const queryParams = new URLSearchParams($page.url.searchParams.toString());
-      const response = await fetch(`/api/${navItems[resourceType].ref}?${queryParams}`);
+      const response = await fetch(`/api/${navItems[resourceType].path}?${queryParams}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -201,11 +128,12 @@ const fetchResources = async (resourceType: keyof typeof navItems) => {
         properties?: { title: string };
       }[] = await response.json();
       resources[resourceType] = data.map((item) => ({
-        data: item,
         id: item.id,
+        name: item.name || item.properties?.title || '',
         nameShort: item.properties?.title || item.nameShort || item.name || '',
+        description: item.description || item.properties?.description || '',
         ref: item.ref || item.code || item.id,
-        description: item.properties?.description || item.description || '',
+        data: item,
       }));
     } catch (error) {
       console.error(`Error fetching ${resourceType}:`, error);
@@ -232,7 +160,6 @@ const getMaxHeightItemsContainer = (resourceType: ResourceTypes) => {
 };
 
 function getMaxHeight(resourceType: ResourceTypes): string {
-  $inspect(filteredResources['feature']);
   const itemCount =
     active().resourceType === resourceType || resourceType === 'feature'
       ? filteredResources[resourceType].length
@@ -242,28 +169,6 @@ function getMaxHeight(resourceType: ResourceTypes): string {
 </script>
 
 <!-- SNIPPETS -->
-{#snippet filterInput(resourceType)}
-  <div class="relative flex-shrink-0 border-l-3 border-base-200">
-    <input
-      type="text"
-      placeholder="Match name and description"
-      class="input m-0 w-full rounded-none bg-neutral px-6 pr-10 text-sm focus:border-none focus:outline-none"
-      bind:value={filterTexts[resourceType as keyof typeof filterTexts]} />
-    <div class="pointer-events-none absolute inset-y-0 right-2 flex items-center pr-3">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        class="h-4 w-4 stroke-current">
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-      </svg>
-    </div>
-  </div>
-{/snippet}
 
 {#snippet filterToggleButton(resourceType, itemId, onHoverOnly = true)}
   <button
@@ -286,6 +191,9 @@ function getMaxHeight(resourceType: ResourceTypes): string {
     <span class="text-3xs">{label}</span>
   </p>
 {/snippet}
+
+<!-- DEBUG -->
+
 <!-- <pre>
   {JSON.stringify(queryFilters, null, 2)}
   {JSON.stringify(filteredResources['layer'], null, 2)}
@@ -316,7 +224,7 @@ function getMaxHeight(resourceType: ResourceTypes): string {
       <!-- RESOURCE -->
       <div class="flex-shrink-0">
         <a
-          href="/admin/{resource.ref}{$page.url.search}"
+          href="/admin/{resource.path}{$page.url.search}"
           class="flex items-center border-l-3 p-6 {active().resourceType === resourceType &&
           !active().ref
             ? 'border-primary'
@@ -341,7 +249,7 @@ function getMaxHeight(resourceType: ResourceTypes): string {
           : 'max-height: ' + getMaxHeight(resourceType as ResourceTypes)}>
         <!-- ITEMS : FILTER -->
         {#if isExpanded && hasManyResources(resourceType) && (active().resourceType === resourceType || resourceType === 'feature')}
-          {@render filterInput(resourceType)}
+          <FilterInput {resourceType} />
         {/if}
 
         <!-- ITEMS : LIST -->
@@ -356,7 +264,7 @@ function getMaxHeight(resourceType: ResourceTypes): string {
               <li class="group relative bg-base-100">
                 <div class="relative">
                   <a
-                    href="/admin/{resource.ref}/{item.ref}{$page.url.search}"
+                    href="/admin/{resource.path}/{item.ref}/core{$page.url.search}"
                     class="flex items-center border-l-3 {active().ref === item.ref
                       ? 'border-primary'
                       : queryFilters[resourceType as keyof ResourceFilters]?.includes(item.id)
