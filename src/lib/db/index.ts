@@ -300,7 +300,7 @@ export async function genericIndexQuery<usersT extends Table, translationsT exte
 
 export async function genericProfileQuery<usersT extends Table, translationsT extends Table>(
   db: any,
-  id: string,
+  id: string,``
   publicIdentifier: string = 'id',
   accessStrategy: string = 'ProfileOwn',
   selectTableRelations: Record<string, boolean>,
