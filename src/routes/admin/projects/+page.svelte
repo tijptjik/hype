@@ -6,7 +6,6 @@ let projects = $derived(filteredResources.project);
 </script>
 
 <div class="container mx-auto p-4">
-  <h1 class="mb-4 text-2xl font-bold">Your Projects</h1>
   <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
     {#each projects as { data: project }}
       <div class="card bg-base-100 shadow-xl">
@@ -27,7 +26,7 @@ let projects = $derived(filteredResources.project);
                 <span class="badge badge-outline">{maintainerRole.role}</span>
               {/each}
             </div>
-            <a href="/admin/projects/{project.code}" class="btn btn-primary">View Profile</a>
+            <a href="/admin/projects/{project.code}/core" class="btn btn-primary">View Profile</a>
           </div>
         </div>
       </div>

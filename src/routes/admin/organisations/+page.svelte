@@ -1,11 +1,18 @@
 <script lang="ts">
-  import { filteredResources } from '$lib/stores/resources.svelte';
+import { filteredResources } from '$lib/stores/resources.svelte';
 
-  let organisations = $derived(filteredResources.organisation);
+$effect(() => {
+  console.log('filteredResources', filteredResources);
+});
+
+const organisations = $derived(
+  filteredResources.organisation
+);
+
+const RESOURCE_TYPE = 'organisation';
 </script>
 
 <div class="container mx-auto p-4">
-  <h1 class="mb-4 text-2xl font-bold">Your Organisations</h1>
   <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
     {#each organisations as { data: org }}
       <div class="card bg-base-100 shadow-xl">
@@ -26,7 +33,7 @@
                 <span class="badge badge-outline">{userRole.role}</span>
               {/each}
             </div>
-            <a href="/admin/organisations/{org.code}" class="btn btn-primary">View Profile</a>
+            <a href="/admin/organisations/{org.code}/core" class="btn btn-primary">View Profile</a>
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 <script lang="ts">
 import { filteredResources } from '$lib/stores/resources.svelte';
+import type { Feature } from '$lib/db/schema';
 
 let features = $derived(filteredResources.feature);
 </script>
@@ -28,7 +29,7 @@ let features = $derived(filteredResources.feature);
           </h2>
           <p class="mt-2">{feature.properties.description}</p>
           <div class="mt-4 flex flex-row items-center justify-end">
-            <a href="/admin/features/{feature.id}" class="btn btn-primary">View Details</a>
+            <a href="/admin/features/{feature.id}/core" class="btn btn-primary">View Details</a>
           </div>
         </div>
       </div>

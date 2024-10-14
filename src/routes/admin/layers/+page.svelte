@@ -5,7 +5,6 @@ let layers = $derived(filteredResources.layer);
 </script>
 
 <div class="container mx-auto p-4">
-  <h1 class="mb-4 text-2xl font-bold">Your Layers</h1>
   <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
     {#each layers as { data: layer }}
       <div class="card bg-base-100 shadow-xl">
@@ -23,7 +22,7 @@ let layers = $derived(filteredResources.layer);
           <div class="mt-4 flex flex-row items-center justify-between">
             <div class="flex flex-wrap gap-2">
             </div>
-            <a href="/admin/layers/{layer.id}" class="btn btn-primary">Edit</a>
+            <a href="/admin/layers/{layer.id}/core" class="btn btn-primary">Edit</a>
           </div>
         </div>
       </div>
