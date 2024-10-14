@@ -38,5 +38,15 @@
     "name": "Behind the Name",
     "nameShort": "By Odonym",
     "description": "What can the streets of Hong Kong tell us about its culture and history?"
+  },
+  {
+    "id": "Qw3Er5TyUi",
+    "projectId": "Xk9Lm2PqRs3T",
+    "metadata": "{\\\"defaultEnabled\\\" : true,\\\"mlCluster\\\" : false,\\\"mlClusterRadius\\\" : 50,\\\"mlClusterMaxZoom\\\" : 14,\\\"mlClusterMinPoints\\\" : 2}",
+    "createdAt": "2024-10-14T12:30:00.000Z",
+    "modifiedAt": "2024-10-14T12:30:00.000Z",
+    "name": "Building Age",
+    "nameShort": "BuildingAge",
+    "description": "Visualizing the age of buildings across Hong Kong"
   }
 ]

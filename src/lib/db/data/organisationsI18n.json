@@ -26,5 +26,19 @@
     "name": "香港街名稱",
     "nameShort": "香港街名稱",
     "description": "身為多學科研究員和設計師，Diana Pang 創造了沉浸式體驗，探索系統、城市環境和療癒途徑的交叉點。透過融合物理和數位元素，她精心製作了令人回味的敘事，激發人們重新想像他們與世界的關係。"
+  },
+  {
+    "organisationId": "oZTVNE4brR7m",
+    "lang": "zh-hans",
+    "name": "香港数据层",
+    "nameShort": "HKDL",
+    "description": "一个有用、美丽的香港"
+  },
+  {
+    "organisationId": "oZTVNE4brR7m",
+    "lang": "zh-hant",
+    "name": "香港數據層",
+    "nameShort": "HKDL",
+    "description": "一個有用、美麗的香港"
   }
 ]

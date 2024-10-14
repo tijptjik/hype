@@ -54,5 +54,19 @@
     "name": "名字背后",
     "nameShort": "按地名学",
     "description": "香港的街道能告诉我们什么关于其文化和历史？"
+  },
+  {
+    "layerId": "Qw3Er5TyUi",
+    "lang": "zh-hant",
+    "name": "建築年齡",
+    "nameShort": "建築年齡",
+    "description": "視覺化呈現香港各地建築物的年齡"
+  },
+  {
+    "layerId": "Qw3Er5TyUi",
+    "lang": "zh-hans",
+    "name": "建筑年龄",
+    "nameShort": "建筑年龄",
+    "description": "视觉化呈现香港各地建筑物的年龄"
   }
 ]

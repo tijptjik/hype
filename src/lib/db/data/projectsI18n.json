@@ -34,5 +34,23 @@
     "description": "4.2%是一個持續進行的互動數據講故事項目，探索香港城市發展的地名學和歷史。",
     "license": "版權所有 - 請聯繫以獲取許可",
     "attribution": "© Diana Pang"
+  },
+  {
+    "projectId": "Xk9Lm2PqRs3T",
+    "lang": "zh-hans",
+    "name": "香港建筑年龄",
+    "nameShort": "港建年龄",
+    "description": "一个美丽的渲染，展示了香港建筑的历史发展。",
+    "license": "CC BY 4.0",
+    "attribution": "CC:BY 香港数据层"
+  },
+  {
+    "projectId": "Xk9Lm2PqRs3T",
+    "lang": "zh-hant",
+    "name": "香港建築年齡",
+    "nameShort": "港建年齡",
+    "description": "一個美麗的渲染，展示了香港建築的歷史發展。",
+    "license": "CC BY 4.0",
+    "attribution": "CC:BY 香港數據層"
   }
 ]
