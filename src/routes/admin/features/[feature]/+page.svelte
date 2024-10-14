@@ -2,7 +2,7 @@
 import SuperDebug, { defaults, superForm } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { FeatureSchema } from '$lib/db/schema';
-
+import Header from '$lib/components/layout/Header.svelte';
 let data = $props();
 
 const { form, errors, message, constraints, enhance, validateForm } = superForm(
@@ -30,6 +30,7 @@ validateForm({ update: true });
 </script>
 
 <main class="flex flex-col">
+  <Header />
   <SuperDebug data={$form} />
   <div>
     <h1 class="text-lg">Edit Feature</h1>
