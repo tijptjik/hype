@@ -20,13 +20,13 @@ const {
 
 $effect(() => {
   Object.keys(resources).forEach((resourceType) => {
-    const type = resourceType as keyof typeof filteredResources;
-    filteredResources[type] = resources[type].filter((item) => {
+    const type = resourceType;
+    filteredResources[type] = resources[type as keyof typeof resources].filter((item) => {
       return (
-        filterTexts[type] === '' ||
-        item.name.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
-        item.nameShort?.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
-        item.description?.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
+        filterTexts[type as keyof typeof filterTexts] === '' ||
+        item.name.toLowerCase().includes(filterTexts[type as keyof typeof filterTexts].toLowerCase()) ||
+        item.nameShort?.toLowerCase().includes(filterTexts[type as keyof typeof filterTexts].toLowerCase()) ||
+        item.description?.toLowerCase().includes(filterTexts[type as keyof typeof filterTexts].toLowerCase()) ||
         queryFilters[type as keyof ResourceFilters]?.includes(item.id)
       );
     });

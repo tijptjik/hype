@@ -4,7 +4,7 @@ import { Icon } from '@steeze-ui/svelte-icon';
 import { Bolt, Bars3BottomRight as Menu, ChevronRight, Plus, Minus } from '@steeze-ui/heroicons';
 import { goto } from '$app/navigation';
 
-import type { ResourceTypes, ResourceFilters } from '$lib/types';
+import type { Resource, ResourceTypes, ResourceFilters } from '$lib/types';
 import {
   resources,
   filteredResources,
@@ -35,7 +35,6 @@ const active = $derived(() => {
 
 $effect(() => {
   if ($page.url.searchParams) {
-    const newQueryFilters: ResourceFilters = {};
     filterableByQueryParams.forEach((resourceType) => {
       queryFilters[resourceType as keyof ResourceFilters] =
         $page.url.searchParams.getAll(resourceType);
@@ -44,8 +43,8 @@ $effect(() => {
 });
 
 $effect(() => {
-  ['organisation', 'project', 'layer'].forEach((resourceType) => {
-    if (queryFilters[resourceType as keyof ResourceFilters].length > 0) {
+  ['organisation', 'project', 'layer'].forEach((resourceType: string) => {
+    if (queryFilters[resourceType as keyof ResourceFilters]?.length > 0) {
       fetchResources(resourceType as keyof typeof navItems);
     }
   });
@@ -125,7 +124,7 @@ const fetchResources = async (resourceType: keyof typeof navItems) => {
         description?: string;
         ref?: string;
         code?: string;
-        properties?: { title: string };
+        properties?: { title: string; description: string };
       }[] = await response.json();
       resources[resourceType] = data.map((item) => ({
         id: item.id,
@@ -170,7 +169,7 @@ function getMaxHeight(resourceType: ResourceTypes): string {
 
 <!-- SNIPPETS -->
 
-{#snippet filterToggleButton(resourceType, itemId, onHoverOnly = true)}
+{#snippet filterToggleButton(resourceType: ResourceTypes, itemId: string, onHoverOnly = true)}
   <button
     class="btn btn-circle btn-ghost btn-sm transition-all {onHoverOnly
       ? 'absolute right-4 top-1/2 -translate-y-1/2  opacity-0 active:-translate-y-1/2 group-hover:opacity-100'
@@ -185,7 +184,7 @@ function getMaxHeight(resourceType: ResourceTypes): string {
   </button>
 {/snippet}
 
-{#snippet filterStat(source, resourceType, label)}
+{#snippet filterStat(source: { [key in ResourceTypes]: Resource[] }, resourceType: ResourceTypes, label: string )}
   <p class="flex-grow">
     <span>{source[resourceType]?.length || '-'}</span>
     <span class="text-3xs">{label}</span>
@@ -277,7 +276,7 @@ function getMaxHeight(resourceType: ResourceTypes): string {
                     {#if isExpanded || active().ref !== item.ref}
                       <Icon src={ChevronRight} class="h-5 w-5" />
                     {:else if active().ref === item.ref}
-                      {@render filterToggleButton(resourceType, item.id, false)}
+                      {@render filterToggleButton(resourceType as ResourceTypes, item.id, false)}
                     {/if}
                     {#if isExpanded}
                       <span class="ml-3 text-sm">
@@ -286,7 +285,7 @@ function getMaxHeight(resourceType: ResourceTypes): string {
                     {/if}
                   </a>
                   {#if isExpanded && filterableByQueryParams.includes(resourceType)}
-                    {@render filterToggleButton(resourceType, item.id)}
+                    {@render filterToggleButton(resourceType as ResourceTypes, item.id)}
                   {/if}
                 </div>
               </li>
@@ -300,7 +299,7 @@ function getMaxHeight(resourceType: ResourceTypes): string {
             class="base-content flex w-full flex-shrink-0 flex-row justify-between border-b-1 border-base-100 px-3 py-2 text-center font-mono text-sm font-light uppercase opacity-60">
             {@render filterStat(resources, resourceType, 'Total')}
             {@render filterStat(filteredResources, resourceType, 'Filtered')}
-            {@render filterStat(queryFilters, resourceType, 'Selected')}
+            {@render filterStat(queryFilters[resourceType], resourceType, 'Selected')}
           </footer>
         {/if}
       </div>

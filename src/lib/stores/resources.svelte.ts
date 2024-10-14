@@ -15,7 +15,7 @@ export const filterTexts = $state<{ [key in ResourceTypes]: string }>({
   layer: '',
   feature: ''
 });
-export const queryFilters = $state<ResourceFilters>({
+export const queryFilters : ResourceFilters = $state({
   organisation: [],
   project: [],
   layer: []

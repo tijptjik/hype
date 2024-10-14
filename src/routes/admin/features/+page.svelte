@@ -7,7 +7,7 @@ let features = $derived(filteredResources.feature);
 
 <div class="container relative mx-auto h-screen overflow-y-auto p-4">
   <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-    {#each features as { data: feature }, idx}
+    {#each features as { data: feature as Feature }, idx}
       <div class="card bg-base-100 shadow-xl">
         <figure>
           <img
