@@ -20,8 +20,12 @@ export default {
       },
       fontSize: {
         '2xs': '0.625rem',
-        '3xs': '0.55rem',
+        '3xs': '0.55rem'
       },
+      height: {
+        '0.25': '0.0625rem',
+        '17.5': '4.375rem',
+      }
     }
   },
   // daisyUI config
