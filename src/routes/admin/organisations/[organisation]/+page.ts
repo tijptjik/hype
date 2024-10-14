@@ -1,8 +1,3 @@
-import { redirect } from '@sveltejs/kit';
+import { redirectToCore } from '$lib';
 
-export function load() {
-  const currentPath = window.location.pathname;
-  const queryParams = window.location.search;
-
-  redirect(307, `${currentPath}core${queryParams}`);
-}
+export const load = redirectToCore;
