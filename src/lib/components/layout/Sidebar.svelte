@@ -59,8 +59,6 @@ $effect(() => {
     fetchResources(resourceType);
     // Remove the Query Params for child resources
     deleteQueryParamsForChildResources(resourceType);
-    // Reset filteredResources for child resources
-    // resetFilteredForChildResources(resourceType);
   }
 });
 
