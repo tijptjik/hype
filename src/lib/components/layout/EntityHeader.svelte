@@ -86,7 +86,6 @@ const menuItems = {
     </div>
   </div>
   <div class="flex-none">
-    <!-- ENTITY MODE -->
     {#if routerState.entity !== false}
     {@const Actions = menuActions[routerState.resource as ResourceType]}
     <ul class="mt-1 flex flex-row space-x-2 px-2">

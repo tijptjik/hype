@@ -5,6 +5,7 @@ import FilterInput from '$lib/components/menu/FilterInput.svelte';
 import { meta } from '$lib/stores/resources.svelte';
 import { getRouterState } from '$lib/context/router.svelte';
 import type { ResourceType } from '$lib/types';
+import NewEntityButton from '$lib/components/menu/NewEntityButton.svelte';
 
 // STATE : PROPS
 const routerState = getRouterState();
@@ -25,7 +26,9 @@ const title = $derived(() => {
       <h2 class="text-2xl font-semibold">{title()}</h2>
     </div>
   </div>
-  <div class="flex-none">
+  <div class="flex-none flex items-center space-x-4">
+    <NewEntityButton resourceType={routerState.resource as ResourceType} />
+    <div class="divider divider-horizontal"></div>
     <FilterInput resourceType={routerState.resource as ResourceType} rounded={true} />
   </div>
 </header>
