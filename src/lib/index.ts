@@ -4,8 +4,8 @@ import { derived } from 'svelte/store';
 import { page } from '$app/stores';
 import { browser } from '$app/environment';
 import deepEquals from 'fast-deep-equal';
-import type { ResourceTypes, SectionTypes } from './types';
 import { redirect } from '@sveltejs/kit';
+
 /**
  * Check whether the code is being run by a Cloudflare worker
  */
@@ -30,31 +30,10 @@ export const pageState = derived<typeof page, App.PageState>(
   {}
 );
 
-// Utils
-export const getActiveFromPath = (path: string) => {
-  const parts = path
-    .replace(/^\/admin\//, '')
-    .split('/')
-    .filter(Boolean);
 
-    const urlToResourceMap = {
-      'organisations': 'organisation',
-      'projects': 'project',
-      'layers': 'layer',
-      'features': 'feature'
-    } as { [key: string]: ResourceTypes };
-
-  return {
-    resourceType: urlToResourceMap[parts[0]] as ResourceTypes || false,
-    ref: parts[1] as string || false,
-    section: parts[2] as SectionTypes || false
-  };
-};
-
-
-export const redirectToCore = () => {
-  const currentPath = window.location.pathname;
-  const queryParams = window.location.search;
-
-  redirect(307, `${currentPath}core${queryParams}`);
+export function toTitleCase(str: string) {
+  return str.replace(
+    /\w\S*/g,
+    (text) => text.charAt(0).toUpperCase() + text.substring(1).toLowerCase()
+  );
 }
