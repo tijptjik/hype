@@ -1,11 +1,15 @@
-// noinspection JSUnusedGlobalSymbols
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import type { AdapterAccountType } from '@auth/core/adapters';
 import { relations, sql } from 'drizzle-orm';
-import type { GeometryObject } from 'geojson';
 import { nanoid } from 'nanoid'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
+import type { GeometryObject } from 'geojson';
+
+// TYPES
+import type {
+  GhostSignsFeatureProperties,
+  AddressProperties } from '$lib/types';
 
 /* ----------------- */
 // USERS
@@ -30,11 +34,6 @@ export const user = sqliteTable('user', {
     .$onUpdate(() => new Date().toISOString())
     .notNull()
 });
-
-export const UserBase = createSelectSchema(user);
-
-// Infer the type of OrganisationSchema
-export type User = z.infer<typeof UserBase>;
 
 export const userRelations = relations(user, ({ many }) => ({
   memberships: many(organisationRole),
@@ -105,8 +104,8 @@ export const organisation = sqliteTable('organisation', {
 });
 
 export const organisationRelations = relations(organisation, ({ many }) => ({
-  userRoles: many(organisationRole),
-  translations: many(organisationI18n)
+  translations: many(organisationI18n),
+  userRoles: many(organisationRole)
 }));
 
 export const organisationI18n = sqliteTable(
@@ -139,41 +138,6 @@ export const organisationI18nRelations = relations(organisationI18n, ({ one }) =
     references: [organisation.id]
   })
 }));
-
-const codeConstraint = z.string().min(1, { message: 'Code is required' }).max(24, { message: 'Code must be 24 characters or less' })
-const nameConstraint = z.string().min(1, { message: 'Name is required' }).max(124, { message: 'Name must be 124 characters or less' })
-const nameShortConstraint = z.string().min(1, { message: 'Short Name is required'}).max(32, { message: 'Short Name must be 32 characters or less' })
-const descriptionConstraint = z.string().min(6, { message: 'Description should add something more ...' }).max(1024, { message: 'Description must be 1024 characters or less' }).optional
-const urlConstraint = z.string().url({ message: 'URL is invalid' }).optional()
-
-// Schema for inserting an organisation - can be used to validate API requests
-export const insertOrganisationSchema = createInsertSchema(organisation, {
-  code: codeConstraint,
-  name: nameConstraint,
-  nameShort: nameShortConstraint,
-  description: descriptionConstraint,
-  url: urlConstraint,
-});
-
-export const insertOrganisationI18nSchema = createInsertSchema(organisationI18n, {
-  name: nameConstraint,
-  nameShort: nameShortConstraint,
-  description: descriptionConstraint,
-});
-
-// Schema for selecting a user - can be used to validate API responses
-export const OrganisationBase = createSelectSchema(organisation);
-export const OrganisationI18n = createSelectSchema(organisationI18n);
-
-export const OrganisationSchema = z.object({
-  ...insertOrganisationSchema.shape,
-  translations: z.record(insertOrganisationI18nSchema.omit({ lang: true })).optional()
-});
-
-export const OrganisationDBSchema = z.object({
-  ...OrganisationBase.shape,
-  translations: z.array(OrganisationI18n).optional()
-});
 
 export const organisationRole = sqliteTable(
   'organisationRole',
@@ -361,20 +325,6 @@ export const projectRoleRelations = relations(projectRole, ({ one }) => ({
 }));
 
 
-// Schema for inserting an project - can be used to validate API requests
-export const insertProjectSchema = createInsertSchema(project);
-
-// Schema for selecting a user - can be used to validate API responses
-export const ProjectBase = createSelectSchema(project);
-export const ProjectI18n = createSelectSchema(projectI18n);
-export const ProjectRole = createSelectSchema(projectRole);
-
-export const ProjectSchema = z.object({
-  ...ProjectBase.shape,
-  translations: z.array(ProjectI18n).optional(),
-  maintainerRoles: z.array(ProjectRole).optional()
-});
-
 /* ----------------- */
 // LAYERS
 /* -------- */
@@ -526,108 +476,6 @@ export const FeatureBase = createSelectSchema(feature);
 export const FeatureSchema = FeatureBase;
 
 export type Feature = z.infer<typeof FeatureSchema>;
-
-/* ----------------- */
-// FEATURES : PROPERTIES
-/* -------- */
-
-interface FeatureProperties {
-  // Title
-  title: string;
-  'title__zh-hant': string;
-  'title__zh-hans': string;
-  titleGen: boolean;
-  'titleGen__zh-hant': boolean;
-  'titleGen__zh-hans': boolean;
-
-  // Description
-  description?: string;
-  'description__zh-hant'?: string;
-  'description__zh-hans'?: string;
-  descriptionGen?: boolean;
-  'descriptionGen__zh-hant'?: boolean;
-  'descriptionGen__zh-hans'?: boolean;
-  // Misc
-  grade?: number; // Value between 1 and 5
-
-  // Markers
-  markerSize?: string; // small, medium, large
-  markerSymbol?: string;
-  markerColor?: string; // "#fff"
-}
-
-interface GhostSignsFeatureProperties extends FeatureProperties {
-  // Description
-  graphemes?: string; // Literal
-
-  // Misc
-  size?: string; // large, medium, small
-  material?: string; // Painted on Cement, Painted on Metal, Painted on Brick, Painted on Tile, Painted over, Acrylic, Metal, Wood, Terrazzo, Stone, Molded Cement, Zinc Stenciled
-  visibility?: string; // Revenant, Physical, Palimpsest, Uncovering
-}
-
-/* ----------------- */
-// FEATURES : ADDRESS
-/* -------- */
-
-interface AddressProperties {
-  // Metrics
-  distanceFromPoint?: number;
-
-  // Display Address
-  formattedAddress?: string;
-  formattedAddressGen?: boolean;
-  'formattedAddress__zh-hant'?: string;
-  'formattedAddressGen__zh-hant'?: boolean;
-  'formattedAddress__zh-hans'?: string;
-  'formattedAddressGen__zh-hans'?: boolean;
-
-  // Address Components
-  plusCode?: string;
-  'plusCode__zh-hant'?: string;
-  'plusCode__zh-hans'?: string;
-
-  subPremise?: string;
-  'subPremise__zh-hant'?: string;
-  'subPremise__zh-hans'?: string;
-
-  premise?: string;
-  'premise__zh-hant'?: string;
-  'premise__zh-hans'?: string;
-
-  streetNumber?: string;
-  'streetNumber__zh-hant'?: string;
-  'streetNumber__zh-hans'?: string;
-
-  route?: string;
-  'route__zh-hant'?: string;
-  'route__zh-hans'?: string;
-
-  intersection?: string;
-  'intersection__zh-hant'?: string;
-  'intersection__zh-hans'?: string;
-
-  neighbourhood?: string;
-  'neighbourhood__zh-hant'?: string;
-  'neighbourhood__zh-hans'?: string;
-
-  administrativeAreaLevel1?: string;
-  'administrativeAreaLevel1__zh-hant'?: string;
-  'administrativeAreaLevel1__zh-hans'?: string;
-
-  country?: string;
-  'country__zh-hant'?: string;
-  'country__zh-hans'?: string;
-
-  // Identifier
-  googlePlaceId?: string;
-
-  // Metadata
-  addressGeocoder: string; // The Geocoder used are the source
-  addressReverseGen: boolean; // Were the address components generator by a Reverse Geocoder
-  addressForwardGen: boolean; // Were the address components generated by a Forward Geocoder
-}
-
 
 // TODO Add visit table linking Users with GeoFeatures for a given date
 // TODO When a new visit is created for a GeoFeature, update its "visitableAsOf" field to that date.
