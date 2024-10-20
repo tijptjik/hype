@@ -1,30 +1,30 @@
 import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { error, type RequestHandler } from '@sveltejs/kit';
-import {
-  organisationRole,
-  OrganisationSchema,
-  OrganisationDBSchema,
-  organisation,
-  organisationI18n,
-  OrganisationI18n
-} from '$lib/db/schema';
+import { organisationRole, organisation, organisationI18n } from '$lib/db/schema';
 import { getDatabaseOrError, JSONResponseOrError, type AccessStrategyOption } from '$lib/api';
 import { genericEntityQuery } from '$lib/db';
 import { and, eq } from 'drizzle-orm';
-import type { z } from 'zod';
 import { actionResult } from 'sveltekit-superforms';
-import type { TargetLang } from '$lib/types';
-
-// Infer the type of OrganisationSchema
-type OrganisationDBType = z.infer<typeof OrganisationDBSchema>;
-type OrganisationType = z.infer<typeof OrganisationSchema>;
-type OrganisationI18nType = z.infer<typeof OrganisationI18n>;
+import type {
+  TargetLang,
+  Organisation,
+  OrganisationI18n,
+  OrganisationI18nKeyed,
+  OrganisationRole,
+  OrganisationRoleKeyed
+} from '$lib/types';
+// ZOD
+import {
+  OrganisationReqBody,
+  OrganisationI18nReqBase,
+  OrganisationRoleReqBase,
+  OrganisationRoleBase
+} from '$lib/db/zod';
 
 const RESOURCE_TYPE = 'organisation';
 const ACCESS_STRATEGY = 'EntityOwn' as AccessStrategyOption;
 const PUBLIC_IDENTIFIER = 'code';
-
 
 export const GET: RequestHandler = async ({ params, locals, platform }) => {
   // AUTH : Pass or Fail
@@ -34,54 +34,39 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
     ACCESS_STRATEGY,
     RESOURCE_TYPE
   );
-  try {
-    // DB : Build & Execute Query
-    const result = await genericEntityQuery(
-      db,
-      params[PUBLIC_IDENTIFIER] as string,
-      PUBLIC_IDENTIFIER,
-      accessStrategy,
-      {
-        userRoles: true,
-        translations: true
-      },
-      userId,
-      organisationRole,
-      organisationI18n
-    );
+  if (params.code !== 'new') {
+    try {
+      // DB : Build & Execute Query
+      const result = await genericEntityQuery(
+        db,
+        params[PUBLIC_IDENTIFIER] as string,
+        PUBLIC_IDENTIFIER,
+        accessStrategy,
+        {
+          userRoles: {
+            with: {
+              user: true
+            }
+          },
+          translations: true
+        },
+        userId,
+        organisationRole,
+        organisationI18n
+      );
 
-    // HTTP : 200 JSON or 404
-    return JSONResponseOrError(result);
-  } catch (e) {
-    // DB : Query Error
-    console.error('Database query error:', e);
-    // HTTP : 500 Error
-    return error(500, 'Dust Accumulation Critical');
+      // HTTP : 200 JSON or 404
+      return JSONResponseOrError(result);
+    } catch (e) {
+      // DB : Query Error
+      console.error('Database query error:', e);
+      // HTTP : 500 Error
+      return error(500, 'Dust Accumulation Critical');
+    }
+  } else {
+    return error(500, 'The old shall never be new again');
   }
 };
-
-//   try {
-//     // DB : Build & Execute Query
-//     // @ts-ignore
-//     console.info('Searching for', params.code);
-//     const result = await db.query.organisation.findFirst({
-//       // @ts-ignore
-//       where: eq(organisation.code, params.code),
-//       with: {
-//         translations: true
-//       }
-//     });
-
-//     // HTTP : 200 JSON or 404
-//     // Always return { form }
-//     return JSONResponseOrError(result);
-//   } catch (e) {
-//     // DB : Query Error
-//     console.error('Database query error:', e);
-//     // HTTP : 500 Error
-//     return error(500, 'Dust Accumulation Critical');
-//   }
-// };
 
 export const PUT: RequestHandler = async ({ params, request, locals, platform }) => {
   // AUTH : Pass or Fail
@@ -92,14 +77,15 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     RESOURCE_TYPE
   );
 
+  // TODO : Validate the form data
+
   try {
-    const formData: OrganisationType = await request.json();
-    const formTranslations: Record<TargetLang, Omit<OrganisationI18nType, 'lang'>> = formData.translations || {};
+    const formData: Organisation = await request.json();
+    const formTranslations: OrganisationI18n = formData.translations;
+    const formUserRoles: OrganisationRole = formData.userRoles;
 
     delete formData.translations;
-
-    console.debug('formData', formData);
-    console.debug('translations', formTranslations);
+    delete formData.userRoles;
 
     const [updatedOrganisation] = await db
       .update(organisation)
@@ -115,7 +101,13 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     const modifiedTranslations = [];
 
     for (let [lang, formTranslation] of Object.entries(formTranslations)) {
-      const translation = { ...formTranslation, lang: lang as 'zh-hant' | 'zh-hans' } as OrganisationI18nType;
+      // Convert API Schema to DB Schema
+      const translation = {
+        ...formTranslation,
+        lang: lang as 'zh-hant' | 'zh-hans'
+      } as OrganisationI18nKeyed;
+
+      // Check if the translation already exists
       const existingTranslation = await db.query.organisationI18n.findFirst({
         where: and(
           eq(organisationI18n.organisationId, translation.organisationId),
@@ -123,6 +115,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
         )
       });
 
+      // If it does, update it
       if (existingTranslation) {
         const [updatedTranslation] = await db
           .update(organisationI18n)
@@ -135,6 +128,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
           )
           .returning();
         modifiedTranslations.push(updatedTranslation);
+        // If it doesn't, insert it
       } else {
         const [insertedTranslation] = await db
           .insert(organisationI18n)
@@ -144,14 +138,52 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
       }
     }
 
-    const rebuildForm = await superValidate({
-      ...updatedOrganisation,
-      translations: modifiedTranslations
-    },
-    zod(OrganisationSchema)
-    );
+    const modifiedUserRoles = [];
+    for (let [userId, formUserRole] of Object.entries(formUserRoles)) {
+      console.log('formUserRole', formUserRole);
+      // Convert API Schema to DB Schema
+      // Drop user from the object
+      const { user, ...formUserRoleWithoutUser } = formUserRole;
+      // Add organisationId and userId
+      const userRole = {
+        ...formUserRoleWithoutUser,
+        organisationId: updatedOrganisation.id,
+        userId: userId
+      } as OrganisationRoleKeyed;
 
-    console.debug('rebuildForm', rebuildForm);
+      const existingUserRole = await db.query.organisationRole.findFirst({
+        where: and(
+          eq(organisationRole.organisationId, userRole.organisationId),
+          eq(organisationRole.userId, userRole.userId)
+        )
+      });
+
+      if (existingUserRole) {
+        const [updatedUserRole] = await db
+          .update(organisationRole)
+          .set(userRole)
+          .where(
+            and(
+              eq(organisationRole.organisationId, userRole.organisationId),
+              eq(organisationRole.userId, userRole.userId)
+            )
+          )
+          .returning();
+        modifiedUserRoles.push(updatedUserRole);
+      } else {
+        const [insertedUserRole] = await db.insert(organisationRole).values(userRole).returning();
+        modifiedUserRoles.push(insertedUserRole);
+      }
+    }
+
+    const rebuildForm = await superValidate(
+      {
+        ...updatedOrganisation,
+        translations: modifiedTranslations,
+        userRoles: modifiedUserRoles
+      },
+      zod(OrganisationReqBody)
+    );
 
     return actionResult('success', rebuildForm, 200);
   } catch (err) {
