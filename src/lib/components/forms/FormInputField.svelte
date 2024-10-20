@@ -71,7 +71,7 @@ const getError = (languageTag: string, fieldId: string) => {
   </div>
   {#if isError(languageTag, fieldId)}
   <div class="label">
-    <span class="label-text-alt text-error">{fieldId}</span>
+    <span class="label-text-alt text-error"></span>
       <span class="label-text-alt text-error">{getError(languageTag, fieldId)}</span>
     </div>
   {/if}
