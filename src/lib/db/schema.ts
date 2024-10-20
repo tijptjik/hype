@@ -86,10 +86,13 @@ export const organisation = sqliteTable('organisation', {
   code: text('code').unique().notNull(),
   // Full Name in English
   name: text('name').notNull(),
+  nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(false),
   // Short Name in English, used in navigation
   nameShort: text('nameShort').notNull(),
+  nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(false),
   // Description in English
   description: text('description'),
+  descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(false),
   url: text('url'),
   image: text('image'),
   createdAt: text('createdAt')
@@ -117,10 +120,13 @@ export const organisationI18n = sqliteTable(
     lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
     // Full Name in {lang}
     name: text('name').notNull(),
+    nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(true),
     // Short Name  in {lang}, used in navigation
     nameShort: text('nameShort').notNull(),
+    nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(true),
     // Description in {lang}
-    description: text('description')
+    description: text('description'),
+    descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(true)
   },
   (t) => ({
     pk: primaryKey({ columns: [t.organisationId, t.lang] })
@@ -134,14 +140,37 @@ export const organisationI18nRelations = relations(organisationI18n, ({ one }) =
   })
 }));
 
+const codeConstraint = z.string().min(1, { message: 'Code is required' }).max(24, { message: 'Code must be 24 characters or less' })
+const nameConstraint = z.string().min(1, { message: 'Name is required' }).max(124, { message: 'Name must be 124 characters or less' })
+const nameShortConstraint = z.string().min(1, { message: 'Short Name is required'}).max(32, { message: 'Short Name must be 32 characters or less' })
+const descriptionConstraint = z.string().min(6, { message: 'Description should add something more ...' }).max(1024, { message: 'Description must be 1024 characters or less' }).optional
+const urlConstraint = z.string().url({ message: 'URL is invalid' }).optional()
+
 // Schema for inserting an organisation - can be used to validate API requests
-export const insertOrganisationSchema = createInsertSchema(organisation);
+export const insertOrganisationSchema = createInsertSchema(organisation, {
+  code: codeConstraint,
+  name: nameConstraint,
+  nameShort: nameShortConstraint,
+  description: descriptionConstraint,
+  url: urlConstraint,
+});
+
+export const insertOrganisationI18nSchema = createInsertSchema(organisationI18n, {
+  name: nameConstraint,
+  nameShort: nameShortConstraint,
+  description: descriptionConstraint,
+});
 
 // Schema for selecting a user - can be used to validate API responses
 export const OrganisationBase = createSelectSchema(organisation);
 export const OrganisationI18n = createSelectSchema(organisationI18n);
 
 export const OrganisationSchema = z.object({
+  ...insertOrganisationSchema.shape,
+  translations: z.record(insertOrganisationI18nSchema.omit({ lang: true })).optional()
+});
+
+export const OrganisationDBSchema = z.object({
   ...OrganisationBase.shape,
   translations: z.array(OrganisationI18n).optional()
 });
@@ -234,14 +263,19 @@ export const project = sqliteTable('project', {
   code: text('code').unique().notNull(),
   // Full Name in English
   name: text('name').notNull(),
+  nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(false),
   // Short Name in English, used in navigation
   nameShort: text('nameShort').notNull(),
+  nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(false),
   // Description in English
   description: text('description'),
+  descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(false),
   // License under which the dataset is made public
   license: text('license').default('Copyright').notNull(),
+  licenseGen: integer('licenseGen', { mode: 'boolean' }).notNull().default(false),
   // Attribution for the dataset
   attribution: text('attribution').notNull(),
+  attributionGen: integer('attributionGen', { mode: 'boolean' }).notNull().default(false),
   // Additional Information
   metadata: text('metadata', { mode: 'json' }).$type<ProjectMetadata>(),
   createdAt: text('createdAt')
@@ -270,14 +304,19 @@ export const projectI18n = sqliteTable(
     lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
     // Full Name in {lang}
     name: text('name').notNull(),
+    nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(true),
     // Short Name  in {lang}, used in navigation
     nameShort: text('nameShort').notNull(),
+    nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(true),
     // Description in {lang}
     description: text('description'),
+    descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(true),
     // Licence in {lang}
     license: text('license'),
+    licenseGen: integer('licenseGen', { mode: 'boolean' }).notNull().default(true),
     // Description in {lang}
-    attribution: text('attribution')
+    attribution: text('attribution'),
+    attributionGen: integer('attributionGen', { mode: 'boolean' }).notNull().default(true)
   },
   (t) => ({
     pk: primaryKey({ columns: [t.projectId, t.lang] })
@@ -358,10 +397,13 @@ export const layer = sqliteTable('layer', {
     .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
   // Full Name in English
   name: text('name').notNull(),
+  nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(false),
   // Short Name in English, used in controls and legends
   nameShort: text('nameShort').notNull(),
+  nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(false),
   // Description in English
   description: text('description'),
+  descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(false),
   // Additional Information
   metadata: text('metadata', { mode: 'json' }).$type<LayerMetadata>(),
   createdAt: text('createdAt')
@@ -389,10 +431,13 @@ export const layerI18n = sqliteTable(
     lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
     // Full Name in {lang}
     name: text('name').notNull(),
+    nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(true),
     // Short Name in {lang}, used in controls and legends
     nameShort: text('nameShort').notNull(),
+    nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(true),
     // Description in {lang}
-    description: text('description')
+    description: text('description'),
+    descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(true)
   },
   (t) => ({
     pk: primaryKey({ columns: [t.layerId, t.lang] })
@@ -471,6 +516,7 @@ export const featureRelations = relations(feature, ({ one }) => ({
   })
 }));
 
+// TODO Understand Zod types, and fix this mess
 // Schema for inserting a feature - can be used to validate API requests
 export const insertFeatureSchema = createInsertSchema(feature);
 
@@ -478,6 +524,8 @@ export const insertFeatureSchema = createInsertSchema(feature);
 export const FeatureBase = createSelectSchema(feature);
 
 export const FeatureSchema = FeatureBase;
+
+export type Feature = z.infer<typeof FeatureSchema>;
 
 /* ----------------- */
 // FEATURES : PROPERTIES
@@ -490,6 +538,7 @@ interface FeatureProperties {
   'title__zh-hans': string;
   titleGen: boolean;
   'titleGen__zh-hant': boolean;
+  'titleGen__zh-hans': boolean;
 
   // Description
   description?: string;
@@ -497,7 +546,7 @@ interface FeatureProperties {
   'description__zh-hans'?: string;
   descriptionGen?: boolean;
   'descriptionGen__zh-hant'?: boolean;
-
+  'descriptionGen__zh-hans'?: boolean;
   // Misc
   grade?: number; // Value between 1 and 5
 
@@ -527,8 +576,11 @@ interface AddressProperties {
 
   // Display Address
   formattedAddress?: string;
+  formattedAddressGen?: boolean;
   'formattedAddress__zh-hant'?: string;
+  'formattedAddressGen__zh-hant'?: boolean;
   'formattedAddress__zh-hans'?: string;
+  'formattedAddressGen__zh-hans'?: boolean;
 
   // Address Components
   plusCode?: string;
