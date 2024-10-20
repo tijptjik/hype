@@ -1,24 +1,29 @@
 <script lang="ts">
-import { page } from '$app/stores';
-import { getActiveFromPath } from '$lib';
 import Sidebar from '$lib/components/layout/Sidebar.svelte';
 import Navbar from '$lib/components/layout/Navbar.svelte';
-import Header from '$lib/components/layout/Header.svelte';
+import { setRouterState } from '$lib/context/router.svelte';
+import { page } from '$app/stores';
 import { meta } from '$lib/stores/resources.svelte';
 import { navItems } from '$lib/stores/navigation.svelte';
 
 // PROPS
 let { children } = $props();
 
-const active = $derived(() => {
-  return getActiveFromPath($page.url.pathname);
-});
+// Initialize Router State
+const routerState = setRouterState();
+routerState.update();
 
-// STATE : DERIVED
 $effect(() => {
-  if (active().ref === false) {
-    meta.title = (navItems[active().resourceType as keyof typeof navItems].name);
-  }
+  const getUrlWithoutHash = (url: URL) => url.pathname ;
+  
+  const currentUrlWithoutHash = getUrlWithoutHash(new URL($page.url));
+  const stateUrlWithoutHash = getUrlWithoutHash(routerState.urlState);
+  if (currentUrlWithoutHash !== stateUrlWithoutHash) {
+    routerState.update();
+    if (routerState.entity === false) {
+      meta.title = navItems[routerState.resource as keyof typeof navItems].name;
+    }
+  } 
 });
 
 </script>
@@ -29,9 +34,7 @@ $effect(() => {
   <header class="w-full flex-none bg-black">
     <Navbar />
   </header>
-  <Header {active} />
-  <main
-    class="flex w-full flex-auto overflow-y-auto bg-gradient-to-bl from-rose-500 to-fuchsia-800 bg-fixed">
+  <main class="h-full">
     {@render children()}
   </main>
 </div>
