@@ -1,6 +1,6 @@
 import { zod } from "sveltekit-superforms/adapters";
 import { getContext, setContext } from 'svelte';
-import { OrganisationSchema } from '$lib/db/schema';
+import { OrganisationReqBody } from '$lib/db/zod';
 import { superForm, superValidate } from 'sveltekit-superforms';
 import { defaults } from 'sveltekit-superforms';
 import { get } from "svelte/store";
@@ -21,10 +21,10 @@ class OrganisationForm {
   constructor(data) {
     // ZodClient() works only with the same schema as the one used on the server. 
     // If you need to switch schemas on the client, you need the full adapter (for example zod instead of zodClient).
-    const formConfig = superForm(defaults(data.form.data, zod(OrganisationSchema)), {
+    const formConfig = superForm(defaults(data.form.data, zod(OrganisationReqBody)), {
       dataType: 'json',
       SPA: true,
-      validators: zod(OrganisationSchema),
+      validators: zod(OrganisationReqBody),
       validationMethod: 'auto',
       onSubmit: this.handleSubmit.bind(this)
     });
@@ -49,7 +49,7 @@ class OrganisationForm {
       body: JSON.stringify(currentJsonData)
     });
 
-    const validationResult = await superValidate(result.form, zod(OrganisationSchema));
+    const validationResult = await superValidate(result.form, zod(OrganisationReqBody));
     console.log('VALIDATION RESULT', validationResult);
 
     if (!response.ok) {
