@@ -11,6 +11,8 @@ import FormSpecificationSection from '$lib/components/forms/FormSpecificationSec
 import FormImageSection from '$lib/components/forms/FormImageSection.svelte';
 import FormInputField from '$lib/components/forms/FormInputField.svelte';
 import FormTextField from '$lib/components/forms/FormTextField.svelte';
+import FormUserCard from '$lib/components/forms/FormUserCard.svelte';
+import FormUserSection from '$lib/components/forms/FormUserSection.svelte';
 
 // CONFIG
 const FIELDS = {
@@ -26,6 +28,12 @@ const FIELDS = {
     description: {
       label: 'Description',
       component: FormTextField
+    }
+  },
+  users: {
+    userRoles: {
+      label: 'Members',
+      component: FormUserCard
     }
   },
   specification: {
@@ -77,7 +85,10 @@ $effect(() => {
     <form method="POST" use:enhance class="flex flex-col gap-6">
       {#if routerState.facet === 'core' || routerState.facet === false}
         <FormI18nSection title="Descriptors" fields={FIELDS.i18n} />
-        <FormSpecificationSection title="Specification" fields={FIELDS.specification} />
+        <div class="flex flex-row gap-6">
+          <FormUserSection title="Members" fields={FIELDS.users} />
+          <FormSpecificationSection title="Specification" fields={FIELDS.specification} />
+        </div>
       {:else if routerState.facet === 'images'}
         <FormImageSection title="Image" fields={FIELDS.images} />
       {:else}
