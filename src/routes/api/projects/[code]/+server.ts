@@ -3,7 +3,7 @@ import { zod } from 'sveltekit-superforms/adapters';
 import { error, type RequestHandler } from '@sveltejs/kit';
 import { ProjectSchema, project, projectI18n, ProjectI18n, projectRole } from '$lib/db/schema';
 import { getDatabaseOrError, getSessionOrError, JSONResponseOrError } from '$lib/api';
-import { genericProfileQuery } from '$lib/db';
+import client, { genericEntityQuery } from '$lib/db';
 import { and, eq } from 'drizzle-orm';
 import type { z } from 'zod';
 import { actionResult } from 'sveltekit-superforms';
@@ -14,7 +14,7 @@ type ProjectType = z.infer<typeof ProjectSchema>;
 type ProjectI18nType = z.infer<typeof ProjectI18n>;
 
 const RESOURCE_TYPE = 'project';
-const ACCESS_STRATEGY = 'profileOwn' as AccessStrategyOption;
+const ACCESS_STRATEGY = 'EntityOwn' as AccessStrategyOption;
 const PUBLIC_IDENTIFIER = 'code';
 
 export const GET: RequestHandler = async ({ params, locals, platform }) => {
@@ -27,7 +27,7 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
   );
   try {
     // DB : Build & Execute Query
-    const result = await genericProfileQuery(
+    const result = await genericEntityQuery(
       db,
       params[PUBLIC_IDENTIFIER] as string,
       PUBLIC_IDENTIFIER,
@@ -59,25 +59,25 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
   const db = client(platform?.env.DB);
   try {
     const formData: ProjectType = await request.json();
-    const translations: ProjectI18nType[] = formData.translations;
+    const translations: ProjectI18nType[] = formData.translations || [];
 
     delete formData.translations;
 
-    const updatedProject = await db
+    const [updatedProject] = await db
       .update(project)
       .set({ ...formData })
       // @ts-ignore
       .where(eq(project.code, params.code))
       .returning();
 
-    if (updatedProject.length === 0) {
+    if (!updatedProject) {
       return error(404, 'Project not found');
     }
 
     const modifiedTranslations = [];
 
     for (const translation of translations) {
-      const existingTranslation = await db.query.projectI18n.findFirst({
+      const [existingTranslation] = await db.query.projectI18n.findFirst({
         where: and(
           eq(projectI18n.projectId, translation.projectId),
           eq(projectI18n.lang, translation.lang)
@@ -85,7 +85,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
       });
 
       if (existingTranslation) {
-        const updatedTranslation = await db
+        const [updatedTranslation] = await db
           .update(projectI18n)
           .set(translation)
           .where(
@@ -95,10 +95,10 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
             )
           )
           .returning();
-        modifiedTranslations.push(updatedTranslation[0]);
+        modifiedTranslations.push(updatedTranslation);
       } else {
-        const insertedTranslation = await db.insert(projectI18n).values(translation).returning();
-        modifiedTranslations.push(insertedTranslation[0]);
+        const [insertedTranslation] = await db.insert(projectI18n).values(translation).returning();
+        modifiedTranslations.push(insertedTranslation);
       }
     }
 

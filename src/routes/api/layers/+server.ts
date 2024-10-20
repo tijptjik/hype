@@ -4,7 +4,7 @@ import { projectRole, layerI18n } from '$lib/db/schema';
 import { genericIndexQuery } from '$lib/db';
 
 const RESOURCE_TYPE = 'layer';
-const ACCESS_STRATEGY = 'listingOwnChildren';
+const ACCESS_STRATEGY = 'ResourceOwnChildren';
 
 export const GET: RequestHandler = async ({ locals, platform, url }) => {
   // AUTH : Pass or Fail

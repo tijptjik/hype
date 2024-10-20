@@ -4,7 +4,7 @@ import { projectRole } from '$lib/db/schema';
 import { genericIndexQuery } from '$lib/db';
 
 const RESOURCE_TYPE = 'feature';
-const ACCESS_STRATEGY = 'listingOwnGrandChildren';
+const ACCESS_STRATEGY = 'ResourceOwnGrandChildren';
 
 export const GET: RequestHandler = async ({ locals, platform, url }) => {
   // AUTH : Pass or Fail
