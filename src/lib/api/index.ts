@@ -47,10 +47,12 @@ const checkAccessOrError = (
   } else if (['ResourceOwn', 'EntityOwn'].includes(accessStrategy)) {
     hasAccess = userRoles.some((role) => role.type === resourceType);
   } else if (['ResourceOwnChildren', 'EntityOwnChild'].includes(accessStrategy)) {
-    hasAccess = userRoles.some((role) => role.type === resourceParents[resourceType]);
+    hasAccess = userRoles.some((role) => role.type === resourceParents[resourceType as keyof typeof resourceParents]);
   } else if (['ResourceOwnGrandChildren', 'EntityOwnGrandChild'].includes(accessStrategy)) {
     hasAccess = userRoles.some(
-      (role) => role.type === resourceParents[resourceParents[resourceType]]
+      (role) =>
+        role.type ===
+        resourceParents[resourceParents[resourceType as keyof typeof resourceParents] as keyof typeof resourceParents]
     );
   }
 
