@@ -1,10 +1,14 @@
+// TYPES
 import type {
   FilterableResourceToEntityId,
   EntityWithData,
   ResourceToEntity,
-  ResourceToText
+  ResourceToText,
+  Organisation,
+  Project,
+  Layer,
+  Feature
 } from '$lib/types';
-import { OrganisationSchema, ProjectSchema, LayerSchema, type Feature } from '$lib/db/schema';
 
 // Meta
 export const meta = $state({ title: 'Admin' });
@@ -28,9 +32,9 @@ export const queryFilters: FilterableResourceToEntityId = $state({
   layer: []
 });
 export const filteredResources : ResourceToEntity = $state<{
-  organisation: EntityWithData<typeof OrganisationSchema>[];
-  project: EntityWithData<typeof ProjectSchema>[];
-  layer: EntityWithData<typeof LayerSchema>[];
+  organisation: EntityWithData<Organisation>[];
+  project: EntityWithData<Project>[];
+  layer: EntityWithData<Layer>[];
   feature: EntityWithData<Feature>[];
 }>({
   organisation: [],
