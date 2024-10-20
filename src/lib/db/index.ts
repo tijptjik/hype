@@ -2,11 +2,15 @@ import { drizzle } from 'drizzle-orm/d1';
 import type { D1Database } from '@auth/d1-adapter';
 import * as schema from './schema';
 import { Table, getTableName, and, sql, inArray, eq, or, not, exists } from 'drizzle-orm';
+// TYPES
+import type { NestedRelations } from '$lib/types';
 
 const client = (database: D1Database) => {
   return drizzle(database, { schema });
 };
 
+
+// CONFIG
 const resourceConfig = {
   feature: {
     name: 'feature',
@@ -48,7 +52,7 @@ const resourceConfig = {
 
 const resourceHierarchy = Object.values(resourceConfig);
 
-// Utility functions
+// UTILITY
 const getTable = (slicedHierarchy: typeof resourceHierarchy, index: number) =>
   slicedHierarchy[index].table;
 const getForeignKey = (slicedHierarchy: typeof resourceHierarchy, index: number) =>
@@ -298,28 +302,51 @@ export async function genericIndexQuery<usersT extends Table, translationsT exte
   });
 }
 
+function findUserJoinTables(relations: NestedRelations): string[] {
+  const userJoinTables: string[] = [];
+
+  function traverse(obj: NestedRelations, path: string[] = []) {
+    for (const [key, value] of Object.entries(obj)) {
+      if (typeof value === 'object' && 'with' in value) {
+        if ('user' in value.with) {
+          userJoinTables.push(key);
+        }
+        traverse(value.with, [...path, key]);
+      }
+    }
+  }
+
+  traverse(relations);
+  return userJoinTables;
+}
+
 export async function genericEntityQuery<usersT extends Table, translationsT extends Table>(
   db: any,
   ref: string,
   publicIdentifier: string = 'id',
   accessStrategy: string = 'EntityOwn',
-  selectTableRelations: Record<string, boolean>,
+  selectTableRelations: NestedRelations,
   userId: string,
   userTable: usersT,
   translationTable: translationsT | boolean,
   depth: number = 1
 ) {
+  // NEW is a reserved keyword for new entities
+  if (ref == 'new') {
+    throw new Error('The old shall never be new again');
+  }
   const slicedHierarchy = resourceHierarchy.slice(-depth, resourceHierarchy.length);
 
   const conditions = [
     eq(getTable(slicedHierarchy, 0)[publicIdentifier], ref),
-    ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId)
-  ];
+    ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId)];
 
   if (translationTable) {
     conditions.push(...applyTranslationCondition(db, slicedHierarchy, translationTable));
   }
-  
+
+  const userJoinTables = findUserJoinTables(selectTableRelations);
+
   let result = await db.query[getTableName(getTable(slicedHierarchy, 0))].findFirst({
     where: and(...conditions),
     with: selectTableRelations
@@ -327,13 +354,28 @@ export async function genericEntityQuery<usersT extends Table, translationsT ext
 
   // Reduce translations to a single object with language as key
   if (translationTable) {
-    result.translations = result.translations.reduce((acc: Record<string, Record<string, any>>, translation: Record<string, any>) => {
-      const { lang, ...translationWithoutLang } = translation;
-      acc[lang] = translationWithoutLang;
-      return acc;
-    }, {});
+    result.translations = result.translations.reduce(
+      (acc: Record<string, Record<string, any>>, translation: Record<string, any>) => {
+        const { lang, ...translationWithoutLang } = translation;
+        acc[lang] = translationWithoutLang;
+        return acc;
+      },
+      {}
+    );
   }
-  
+  console.log('USER JOIN TABLES', userJoinTables);
+  if (userJoinTables) {
+    for (const table of userJoinTables) {
+      result[table] = result[table].reduce(
+        (acc: Record<string, Record<string, any>>, role: Record<string, any>) => {
+          const { userId, ...roleWithoutUserId } = role;
+          acc[userId] = roleWithoutUserId;
+          return acc;
+        },
+        {}
+      );
+    }
+  }
   return result;
 }
 
