@@ -147,6 +147,14 @@
         U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF,
         U+FFFD;
     }
+    /* GLOBALE STYLES */
+    .form-control {
+      @apply focus-within:outline focus-within:outline-1 focus-within:outline-neutral-500;
+    }
+    ::selection {
+      color: #15191E;
+      background: #A6ADBB;
+    }
   </style>
   <body data-sveltekit-preload-data="hover">
     <div style="display: contents">%sveltekit.body%</div>
