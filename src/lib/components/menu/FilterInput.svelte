@@ -1,5 +1,5 @@
 <script lang="ts">
-import { type ResourceTypes, type ResourceFilters } from '$lib/types';
+import { type ResourceType, type FilterableResourceToEntityId } from '$lib/types';
 import {
   resources,
   filteredResources,
@@ -12,7 +12,7 @@ const {
   resourceType,
   rounded = false
 }: {
-  resourceType: ResourceTypes;
+  resourceType: ResourceType;
   rounded?: boolean;
 } = $props();
 
@@ -27,7 +27,7 @@ $effect(() => {
         item.name.toLowerCase().includes(filterTexts[type as keyof typeof filterTexts].toLowerCase()) ||
         item.nameShort?.toLowerCase().includes(filterTexts[type as keyof typeof filterTexts].toLowerCase()) ||
         item.description?.toLowerCase().includes(filterTexts[type as keyof typeof filterTexts].toLowerCase()) ||
-        queryFilters[type as keyof ResourceFilters]?.includes(item.id)
+        queryFilters[type as keyof FilterableResourceToEntityId]?.includes(item.id)
       );
     });
   });
@@ -50,7 +50,7 @@ function handleKeydown(event: KeyboardEvent) {
   <input
     type="text"
     placeholder="Match name and description"
-    class="input m-0 w-full bg-neutral px-6 pr-10 text-sm focus:border-none focus:outline-none {rounded ? 'min-w-72 h-11 rounded-xl' : 'rounded-none'}"
+    class="input m-0 w-full bg-neutral px-6 pr-10 text-sm focus:border-none focus:outline-none {rounded ? 'min-w-72 h-10 rounded-xl' : 'rounded-none'}"
     bind:value={filterTexts[resourceType as keyof typeof filterTexts]}
     onkeydown={handleKeydown} />
   <div class="absolute inset-y-0 right-2 flex items-center pr-3">
