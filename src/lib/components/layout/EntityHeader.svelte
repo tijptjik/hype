@@ -11,21 +11,11 @@ import ProjectActions from '$lib/components/menu/ProjectActions.svelte';
 import LayerActions from '$lib/components/menu/LayerActions.svelte';
 import FeatureActions from '$lib/components/menu/FeatureActions.svelte';
 import { meta } from '$lib/stores/resources.svelte';
-import { type ResourceTypes } from '$lib/types';
-
-// TYPES
-type Props = { 
-  active: Proxy<{ 
-    resourceType: ResourceTypes; 
-    section: string; 
-    ref: string | false 
-  }>,
-  form?: unknown 
-}
+import { getRouterState } from '$lib/context/router.svelte';
+import type { ResourceType } from '$lib/types';
 
 // STATE : PROPS
-let { active, form = undefined } : Props = $props();
-
+const routerState = getRouterState();
 
 // STATE : DERIVED
 const title = $derived(() => {
@@ -86,39 +76,28 @@ const menuItems = {
 
 // UTILS
 
-const getUrl = (section: string) => {
-  const path = $page.url.pathname;
-  const queryParams = $page.url.search;
-  const pathParts = path.split('/').filter(Boolean);
-  pathParts[pathParts.length - 1] = section;
-  return `/${pathParts.join('/')}${queryParams}`;
-};
 </script>
 
-<header class="navbar h-17.5 px-12 py-4 shadow-lg {active().ref === false ? 'bg-base-300' : 'bg-gradient-to-r from-rose-500 to-fuchsia-800'}">
+<header class="navbar h-17.5 px-12 py-4 shadow-lg sticky top-0 z-10 {routerState.entity === false ? 'bg-base-300' : 'bg-gradient-to-r from-rose-500 to-fuchsia-800'}">
   <div class="flex-1">
     <div class="flex items-center space-x-4">
-      <Icon src={navItems[active().resourceType as ResourceTypes].icon} class="h-6 w-6" />
+      <Icon src={navItems[routerState.resource as ResourceType].icon} class="h-6 w-6" />
       <h2 class="text-2xl font-semibold">{title()}</h2>
     </div>
   </div>
   <div class="flex-none">
-    {#if active().ref !== false}
-    {@const Actions = menuActions[active().resourceType as ResourceTypes]}
+    <!-- ENTITY MODE -->
+    {#if routerState.entity !== false}
+    {@const Actions = menuActions[routerState.resource as ResourceType]}
     <ul class="mt-1 flex flex-row space-x-2 px-2">
-      {#each menuItems[active().resourceType as ResourceTypes] as item}
-        <MenuItem
-          label={item.label}
-          href={getUrl(item.ref)}
-          isActive={active().section == item.ref} />
+      {#each menuItems[routerState.resource as ResourceType] as facet}
+        <MenuItem {facet} />
       {/each}
     </ul>
     <Icon src={Bars3} class="mx-2 h-6 w-6 text-black" />
     <ul class="menu menu-horizontal space-x-2">
       <Actions />
     </ul>
-    {:else}
-     <FilterInput resourceType={active().resourceType as ResourceTypes} rounded={true}/>
     {/if}
   </div>
 </header>
