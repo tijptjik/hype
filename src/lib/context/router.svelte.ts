@@ -24,6 +24,10 @@ export class RouterState {
     features: 'feature'
   };
 
+  resourceToRef: Record<ResourceType, string> = Object.fromEntries(
+    Object.entries(this.refToResourceType).map(([key, value]) => [value , key])
+  );
+
   constructor() {}
 
   get resource(): ResourceType | false {
