@@ -11,6 +11,7 @@ import FormSpecificationSection from '$lib/components/forms/FormSpecificationSec
 import FormImageSection from '$lib/components/forms/FormImageSection.svelte';
 import FormInputField from '$lib/components/forms/FormInputField.svelte';
 import FormTextField from '$lib/components/forms/FormTextField.svelte';
+
 // CONFIG
 const FIELDS = {
   i18n: {
