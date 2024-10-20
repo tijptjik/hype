@@ -4,7 +4,7 @@ import { organisationRole, organisationI18n } from '$lib/db/schema';
 import { genericIndexQuery } from '$lib/db';
 
 const RESOURCE_TYPE = 'organisation';
-const ACCESS_STRATEGY = 'listingOwn';
+const ACCESS_STRATEGY = 'ResourceOwn';
 
 export const GET: RequestHandler = async ({ locals, platform }) => {
   // AUTH : Pass or Fail

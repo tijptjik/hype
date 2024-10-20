@@ -63,7 +63,7 @@ const applyAccessStrategy = (
   userTable: Table,
   userId: string
 ) => {
-  if (['superAdmin', 'public', 'listingAll', 'profileAny'].includes(accessStrategy)) {
+  if (['SuperAdmin', 'Public', 'ResourceAll', 'EntityAny'].includes(accessStrategy)) {
     return [];
   }
 
@@ -72,8 +72,8 @@ const applyAccessStrategy = (
   const reverseFK0 = getReverseForeignKey(slicedHierarchy, 0);
 
   switch (accessStrategy) {
-    case 'listingOwn':
-    case 'profileOwn':
+    case 'ResourceOwn':
+    case 'EntityOwn':
       conditions.push(
         inArray(
           table0.id,
@@ -84,8 +84,8 @@ const applyAccessStrategy = (
         )
       );
       break;
-    case 'listingOwnChildren':
-    case 'profileOwnChild':
+    case 'ResourceOwnChildren':
+    case 'EntityOwnChild':
       conditions.push(
         inArray(
           table0[getForeignKey(slicedHierarchy, 0)],
@@ -103,8 +103,8 @@ const applyAccessStrategy = (
         )
       );
       break;
-    case 'listingOwnGrandChildren':
-    case 'profileOwnGrandChild':
+    case 'ResourceOwnGrandChildren':
+    case 'EntityOwnGrandChild':
       conditions.push(
         inArray(
           table0[getForeignKey(slicedHierarchy, 0)],
@@ -273,7 +273,7 @@ const applyFilterConstraints = (
 
 export async function genericIndexQuery<usersT extends Table, translationsT extends Table>(
   db: any,
-  accessStrategy: string = 'listingOwn',
+  accessStrategy: string = 'ResourceOwn',
   selectTableRelations: Record<string, boolean>,
   userId: string,
   userTable: usersT,
@@ -298,11 +298,11 @@ export async function genericIndexQuery<usersT extends Table, translationsT exte
   });
 }
 
-export async function genericProfileQuery<usersT extends Table, translationsT extends Table>(
+export async function genericEntityQuery<usersT extends Table, translationsT extends Table>(
   db: any,
-  id: string,
+  ref: string,
   publicIdentifier: string = 'id',
-  accessStrategy: string = 'ProfileOwn',
+  accessStrategy: string = 'EntityOwn',
   selectTableRelations: Record<string, boolean>,
   userId: string,
   userTable: usersT,
@@ -312,15 +312,29 @@ export async function genericProfileQuery<usersT extends Table, translationsT ex
   const slicedHierarchy = resourceHierarchy.slice(-depth, resourceHierarchy.length);
 
   const conditions = [
-    eq(getTable(slicedHierarchy, 0)[publicIdentifier], id),
-    ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId),
-    ...applyTranslationCondition(db, slicedHierarchy, translationTable),
+    eq(getTable(slicedHierarchy, 0)[publicIdentifier], ref),
+    ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId)
   ];
 
-  return await db.query[getTableName(getTable(slicedHierarchy, 0))].findFirst({
+  if (translationTable) {
+    conditions.push(...applyTranslationCondition(db, slicedHierarchy, translationTable));
+  }
+  
+  let result = await db.query[getTableName(getTable(slicedHierarchy, 0))].findFirst({
     where: and(...conditions),
     with: selectTableRelations
   });
+
+  // Reduce translations to a single object with language as key
+  if (translationTable) {
+    result.translations = result.translations.reduce((acc: Record<string, Record<string, any>>, translation: Record<string, any>) => {
+      const { lang, ...translationWithoutLang } = translation;
+      acc[lang] = translationWithoutLang;
+      return acc;
+    }, {});
+  }
+  
+  return result;
 }
 
 export default client;

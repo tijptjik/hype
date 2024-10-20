@@ -13,7 +13,7 @@ import {
 import { genericProfileQuery } from '$lib/db';
 
 const RESOURCE_TYPE = 'layer';
-const ACCESS_STRATEGY = 'profileOwnChild' as AccessStrategyOption;
+const ACCESS_STRATEGY = 'EntityOwnChild' as AccessStrategyOption;
 const PUBLIC_IDENTIFIER = 'id';
 
 export const GET: RequestHandler = async ({ params, locals, platform }) => {

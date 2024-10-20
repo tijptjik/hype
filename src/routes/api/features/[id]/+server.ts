@@ -10,7 +10,7 @@ import {
 import { genericProfileQuery } from '$lib/db';
 
 const RESOURCE_TYPE = 'feature';
-const ACCESS_STRATEGY = 'profileOwnGrandChild' as AccessStrategyOption;
+const ACCESS_STRATEGY = 'EntityOwnGrandChild' as AccessStrategyOption;
 const PUBLIC_IDENTIFIER = 'id';
 
 export const GET: RequestHandler = async ({ params, locals, platform }) => {

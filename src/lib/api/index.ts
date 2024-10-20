@@ -3,16 +3,16 @@ import { getUserRoles, type UserRole } from '$lib/auth/utils';
 import client from '$lib/db';
 
 export type AccessStrategyOption =
-  | 'public'
-  | 'superAdmin'
-  | 'listingAll'
-  | 'listingOwn'
-  | 'listingOwnChildren'
-  | 'listingOwnGrandChildren'
-  | 'ProfileAny'
-  | 'ProfileOwn'
-  | 'ProfileOwnChild'
-  | 'ProfileOwnGrandChild';
+  | 'Public'
+  | 'SuperAdmin'
+  | 'ResourceAll'
+  | 'ResourceOwn'
+  | 'ResourceOwnChildren'
+  | 'ResourceOwnGrandChildren'
+  | 'EntityAny'
+  | 'EntityOwn'
+  | 'EntityOwnChild'
+  | 'EntityOwnGrandChild';
 
 export const getSessionOrError = async (locals: App.Locals) => {
   const session = await locals.auth();
@@ -42,13 +42,13 @@ const checkAccessOrError = (
     feature: 'layer'
   };
 
-  if (['public', 'superAdmin', 'listingAll', 'ProfileAny'].includes(accessStrategy)) {
+  if (['Public', 'SuperAdmin', 'ResourceAll', 'EntityAny'].includes(accessStrategy)) {
     hasAccess = true;
-  } else if (['listingOwn', 'profileOwn'].includes(accessStrategy)) {
+  } else if (['ResourceOwn', 'EntityOwn'].includes(accessStrategy)) {
     hasAccess = userRoles.some((role) => role.type === resourceType);
-  } else if (['listingOwnChildren', 'profileOwnChild'].includes(accessStrategy)) {
+  } else if (['ResourceOwnChildren', 'EntityOwnChild'].includes(accessStrategy)) {
     hasAccess = userRoles.some((role) => role.type === resourceParents[resourceType]);
-  } else if (['listingOwnGrandChildren', 'profileOwnGrandChild'].includes(accessStrategy)) {
+  } else if (['ResourceOwnGrandChildren', 'EntityOwnGrandChild'].includes(accessStrategy)) {
     hasAccess = userRoles.some(
       (role) => role.type === resourceParents[resourceParents[resourceType]]
     );
@@ -78,7 +78,7 @@ export const getDatabaseOrError = async (
   // TODO Add SuperAdmin to User Table
   if (session.user.superAdmin === true) {
     // if (session.user.email === 'm@type.hk') {
-    accessStrategy = 'superAdmin';
+    accessStrategy = 'SuperAdmin';
   }
 
   // Checks whether the user has access to the resource
