@@ -4,8 +4,9 @@ import { getForm } from '$lib/context/forms.svelte';
 
 const { tainted, isTainted, submit, errors } = getForm();
 
-const hasErrors = (): boolean => Object.values($errors).some((error: string[]) => error && error.length > 0);
+const hasErrors = (): boolean => Object.keys($errors).length > 0;
 </script>
+
 <button
   class="btn disabled:bg-transparent disabled:text-opacity-60"
   onclick={submit}
