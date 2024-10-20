@@ -1,35 +1,40 @@
-import type { Resource, ResourceFilters, ResourceTypes, ResourceWithData } from '$lib/types';
-import { OrganisationSchema, ProjectSchema, LayerSchema, FeatureSchema } from '$lib/db/schema';
+import type {
+  FilterableResourceToEntityId,
+  EntityWithData,
+  ResourceToEntity,
+  ResourceToText
+} from '$lib/types';
+import { OrganisationSchema, ProjectSchema, LayerSchema, type Feature } from '$lib/db/schema';
+
+// Meta
+export const meta = $state({ title: 'Admin' });
 
 // Resources
-
-export const resources = $state<{ [key in ResourceTypes]: Resource[] }>({
+export const resources: ResourceToEntity = $state({
   organisation: [],
   project: [],
   layer: [],
   feature: []
 });
-export const filterTexts = $state<{ [key in ResourceTypes]: string }>({
+export const filterTexts: ResourceToText = $state({
   organisation: '',
   project: '',
   layer: '',
   feature: ''
 });
-export const queryFilters : ResourceFilters = $state({
+export const queryFilters: FilterableResourceToEntityId = $state({
   organisation: [],
   project: [],
   layer: []
 });
-export const filteredResources = $state<{
-  organisation: ResourceWithData<typeof OrganisationSchema>[];
-  project: ResourceWithData<typeof ProjectSchema>[];
-  layer: ResourceWithData<typeof LayerSchema>[];
-  feature: ResourceWithData<typeof FeatureSchema>[];
-  }>({
+export const filteredResources : ResourceToEntity = $state<{
+  organisation: EntityWithData<typeof OrganisationSchema>[];
+  project: EntityWithData<typeof ProjectSchema>[];
+  layer: EntityWithData<typeof LayerSchema>[];
+  feature: EntityWithData<Feature>[];
+}>({
   organisation: [],
   project: [],
   layer: [],
   feature: []
 });
-export const meta = $state(
-  {'title' : 'Admin'});
