@@ -365,17 +365,18 @@ export async function genericEntityQuery<usersT extends Table, translationsT ext
   }
   console.log('USER JOIN TABLES', userJoinTables);
   if (userJoinTables) {
-    for (const table of userJoinTables) {
-      result[table] = result[table].reduce(
-        (acc: Record<string, Record<string, any>>, role: Record<string, any>) => {
-          const { userId, ...roleWithoutUserId } = role;
-          acc[userId] = roleWithoutUserId;
+    for (const userJoinTable of userJoinTables) {
+      result[userJoinTable] = result[userJoinTable].reduce(
+        (acc: Record<string, Record<string, any>>, user: Record<string, any>) => {
+          const { userId, ...userWithoutId } = user;
+          acc[userId] = userWithoutId;
           return acc;
         },
         {}
       );
     }
   }
+
   return result;
 }
 
