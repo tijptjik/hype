@@ -5,7 +5,11 @@ import {
   UserBase,
   OrganisationReqBody,
   NewOrganisationReqBody,
-  OrganisationI18nReqBase,
+  OrganisationI18nDekeyed,
+  OrganisationRoleReqBase,
+  OrganisationRoleBase,
+  OrganisationI18nBase
+  OrganisationRoleDekeyed,
   ProjectReqBody,
   NewProjectReqBody,
   ProjectI18nReqBase,
@@ -14,9 +18,6 @@ import {
   LayerI18nReqBase,
   FeatureReqBody,
   NewFeatureReqBody,
-  OrganisationRoleReqBase,
-  OrganisationRoleBase,
-  OrganisationI18nBase
 } from '$lib/db/zod';
 
 export type ResourceType = 'organisation' | 'project' | 'layer' | 'feature';
@@ -70,9 +71,9 @@ export type User = z.infer<typeof UserBase>;
 
 export type Organisation = z.infer<typeof OrganisationReqBody>;
 export type NewOrganisation = z.infer<typeof NewOrganisationReqBody>;
-export type OrganisationI18n = z.infer<typeof OrganisationI18nReqBase>;
+export type OrganisationI18n = z.infer<typeof OrganisationI18nDekeyed>;
 export type OrganisationI18nKeyed = z.infer<typeof OrganisationI18nBase>;
-export type OrganisationRole = z.infer<typeof OrganisationRoleReqBase>;
+export type OrganisationRole = z.infer<typeof OrganisationRoleDekeyed>;
 export type OrganisationRoleKeyed = z.infer<typeof OrganisationRoleBase>;
 
 /* ----------------- */
