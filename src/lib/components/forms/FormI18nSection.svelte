@@ -7,10 +7,10 @@ import FormSectionHeader from '$lib/components/forms/FormSectionHeader.svelte';
 import FormTranslationBar from './FormTranslationBar.svelte';
 // Types
 import type { Component } from 'svelte';
+import SuperDebug from 'sveltekit-superforms';
 
 const sourceLanguageTag = 'en';
 const languageTags = [sourceLanguageTag, 'zh-hant', 'zh-hans'];
-const transLangs = languageTags.slice(1);
 
 let {
   title,
@@ -33,7 +33,7 @@ const {form, errors, constraints} = getForm();
 </script>
 
 <div class="w-full overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
-  <FormSectionHeader {title} />
+  <FormSectionHeader {title}/>
   <div class="flex flex-row gap-4 p-4 items-baseline">
     {#each languageTags as languageTag}
       <div class="group flex flex-grow flex-col gap-4 rounded-xl bg-base-100">
@@ -59,3 +59,5 @@ const {form, errors, constraints} = getForm();
     {/each}
   </div>
 </div>
+    <!-- <SuperDebug data={$form} /> -->
+
