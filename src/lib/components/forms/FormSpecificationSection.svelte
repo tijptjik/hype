@@ -23,7 +23,7 @@ let {
 const { form, errors, constraints } = getForm();
 </script>
 
-<div class="w-full overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
+<div class="basis-1/3 overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
   <FormSectionHeader {title} />
   <div class="flex flex-row flex-wrap items-baseline gap-4 p-4">
     <div class="group flex flex-grow flex-col gap-4">
