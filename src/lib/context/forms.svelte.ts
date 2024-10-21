@@ -17,6 +17,7 @@ class OrganisationForm {
   reset;
   errors;
   message;
+  posted;
 
   constructor(data) {
     // ZodClient() works only with the same schema as the one used on the server. 
@@ -26,21 +27,20 @@ class OrganisationForm {
       SPA: true,
       validators: zod(OrganisationReqBody),
       validationMethod: 'auto',
-      onSubmit: this.handleSubmit.bind(this)
+      onSubmit: this.handleSubmit.bind(this),
+      onResult: this.handleResult.bind(this)
     });
 
     Object.assign(this, formConfig);
-    // this.validateForm({ update: true });
   }
 
   async handleSubmit({ action, formElement, controller, submitter, cancel }) {
     const result = await this.validateForm();
     const currentJsonData = get(this.form); // Get the current value of the form data
-    console.log('JSON DATA', currentJsonData);
-
-
     const apiUrl = new URL(action.href);
+
     apiUrl.pathname = apiUrl.pathname.replace('/admin/', '/api/');
+    
     const response = await fetch(apiUrl, {
       method: 'PUT',
       headers: {
@@ -49,11 +49,19 @@ class OrganisationForm {
       body: JSON.stringify(currentJsonData)
     });
 
-    const validationResult = await superValidate(result.form, zod(OrganisationReqBody));
-    console.log('VALIDATION RESULT', validationResult);
+    const formValidationResult = await superValidate(result.form, zod(OrganisationReqBody));
+    Object.assign(this, formValidationResult);
 
     if (!response.ok) {
       console.error('Form submission failed');
+    }
+  }
+
+  async handleResult({result}) {
+    if (result.status !== 200) {
+      console.error(result);
+    } else if (result.status === 200) {
+      console.log('Form submission successful');
     }
   }
 }
@@ -62,4 +70,3 @@ const FORM_STATE_KEY = Symbol('form');
 
 export const setForm = (data) => setContext(FORM_STATE_KEY, new OrganisationForm(data));
 export const getForm = (): ReturnType<typeof setForm> => getContext(FORM_STATE_KEY);
-
