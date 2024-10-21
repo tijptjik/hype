@@ -5,7 +5,7 @@ import { Icon } from '@steeze-ui/svelte-icon';
 import { Trash } from '@steeze-ui/heroicons';
 import { fade } from 'svelte/transition';
 
-// TYPES
+// CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
 
 type Props = {
@@ -19,9 +19,9 @@ type Props = {
   uncheckedValue: string;
   searchMode: boolean;
   removeMode: boolean;
+  entity: string;
 };
 
-const { form, validate} = getForm();
 
 // STATE : PROPS
 let {
@@ -34,7 +34,11 @@ let {
     searchMode: false,
     removeMode: false
   }),
+  entity
 }: Props = $props();
+
+// CONTEXT
+const { form, validate} = getForm(entity);
 
 const updateUserJoinState = (userId: string, isChecked: boolean) => {
   form.update(($form) => {

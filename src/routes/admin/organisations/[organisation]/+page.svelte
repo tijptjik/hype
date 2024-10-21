@@ -68,24 +68,23 @@ $effect(() => {
 });
 
 // STATE : FORM
-const { message, enhance } = setForm(data, routerState.entity === false);
-
+const { message, enhance } = setForm(data, data.entity);
 </script>
 
 <!-- LAYOUT -->
 <div class="h-full overflow-y-auto bg-black">
-  <EntityHeader />
+  <EntityHeader entity={data.entity}/>
   <main class="flex w-full flex-col p-6">
     {#if $message}<h3>{$message}</h3>{/if}
     <form method="POST" use:enhance class="flex flex-col gap-6">
       {#if routerState.facet === 'core' || routerState.facet === false}
-        <FormI18nSection title="Descriptors" fields={FIELDS.i18n} />
+        <FormI18nSection title="Descriptors" fields={FIELDS.i18n} entity={data.entity} />
         <div class="flex flex-row gap-6">
-          <FormUserSection title="Members" fields={FIELDS.users} />
-          <FormSpecificationSection title="Specification" fields={FIELDS.specification} />
+          <FormUserSection title="Members" fields={FIELDS.users} entity={data.entity} />
+          <FormSpecificationSection title="Specification" fields={FIELDS.specification} entity={data.entity} />
         </div>
       {:else if routerState.facet === 'images'}
-        <FormImageSection title="Image" fields={FIELDS.images} />
+        <FormImageSection title="Image" fields={FIELDS.images} entity={data.entity} />
       {:else}
         <h1>FACET NOT FOUND</h1>
       {/if}

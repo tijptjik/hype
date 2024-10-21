@@ -7,17 +7,19 @@ import { OrganisationReqBody } from '$lib/db/zod';
 
 export const load: PageLoad = async ({
   params,
-  fetch
+  fetch,
+  url
 }: {
   params: RouteParams;
   fetch: typeof globalThis.fetch;
+  url: URL;
 }) => {
-  const organisationCode = params.organisation;
+  const entity = params.organisation || 'new';
   let form;
-  if (organisationCode === 'new') {
+  if (entity === 'new') {
     form = await superValidate(zod(OrganisationReqBody));
   } else {
-    const endPoint = `/api/organisations/${organisationCode}`;
+    const endPoint = `/api/organisations/${entity}`;
 
     const request = await fetch(endPoint);
     if (request.status >= 400) return error(request.status);
@@ -27,5 +29,5 @@ export const load: PageLoad = async ({
     form = await superValidate(formData, zod(OrganisationReqBody));
   }
 
-  return { form };
+  return { entity, form };
 };

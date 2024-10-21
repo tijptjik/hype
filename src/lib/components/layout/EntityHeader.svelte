@@ -1,10 +1,8 @@
 <script lang="ts">
-import { page } from '$app/stores';
 import { Icon } from '@steeze-ui/svelte-icon';
 import { Bars3 } from '@steeze-ui/heroicons';
 import { navItems } from '$lib/stores/navigation.svelte';
 import * as m from '$lib/paraglide/messages.js';
-import FilterInput from '$lib/components/menu/FilterInput.svelte';
 import MenuItem from '$lib/components/menu/MenuItem.svelte';
 import OrganisationActions from '$lib/components/menu/OrganisationActions.svelte';
 import ProjectActions from '$lib/components/menu/ProjectActions.svelte';
@@ -15,6 +13,9 @@ import { getRouterState } from '$lib/context/router.svelte';
 import type { ResourceType } from '$lib/types';
 
 // STATE : PROPS
+let { entity }: { entity: string } = $props();
+
+// STATE : CONTEXT
 const routerState = getRouterState();
 
 // STATE : DERIVED
@@ -95,7 +96,7 @@ const menuItems = {
     </ul>
     <Icon src={Bars3} class="mx-2 h-6 w-6 text-black" />
     <ul class="menu menu-horizontal space-x-2">
-      <Actions />
+      <Actions {entity} />
     </ul>
     {/if}
   </div>

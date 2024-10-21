@@ -13,6 +13,7 @@ type Props = {
   Info?: Component;
   fields?: Record<string, Record<string, string>>;
   errors?: Record<string, string>;
+  entity: string;
 };
 
 // STATE : PROPS
@@ -26,10 +27,11 @@ let {
   Info,
   fields,
   errors,
+  entity,
 }: Props = $props();
 
 // STATE : CONTEXT
-const { form, posted } = getForm();
+const { form, posted } = getForm(entity);
 
 $effect(() => {
   if ($posted) {
@@ -56,12 +58,12 @@ $effect(() => {
     </div>
     {#if Actions}
       <div class="flex items-center gap-6">
-        <Actions bind:searchMode={actionProps.searchMode} bind:removeMode={actionProps.removeMode} />
+        <Actions bind:searchMode={actionProps.searchMode} bind:removeMode={actionProps.removeMode} {entity} />
       </div>
     {/if}
     {#if Info}
       <div class="flex items-center gap-6">
-        {@render Info()}
+        <Info {entity} />
       </div>
     {/if}
   </div>
@@ -74,5 +76,6 @@ $effect(() => {
       role: 'member',
       user: item
     })}
-    itemRef="id" />
+    itemRef="id"
+    {entity} />
 </div>

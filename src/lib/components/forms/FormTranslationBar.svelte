@@ -2,7 +2,7 @@
 import { Icon } from '@steeze-ui/svelte-icon';
 import { Language } from '@steeze-ui/heroicons';
 import { getTranslation } from '$lib/api/translation';
-// Context
+// CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
 // Types
 import type { Component } from 'svelte';
@@ -18,14 +18,16 @@ const allLanguages = [
 // STATE
 let {
   languageTag,
-  fields
+  fields,
+  entity
 }: {
   languageTag: string;
   fields: Record<string, { label: string; type: string; component: Component }>;
+  entity: string;
 } = $props();
 
 // CONTEXT
-const { form } = getForm();
+const { form } = getForm(entity);
 
 
 const languageOptions = $derived(allLanguages.filter((lang) => lang.code !== languageTag));

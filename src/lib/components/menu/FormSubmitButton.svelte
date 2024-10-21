@@ -1,11 +1,15 @@
 <script lang="ts">
   import * as m from '$lib/paraglide/messages.js';
-  import { getForm } from '$lib/context/forms.svelte';
   import { CheckCircle } from '@steeze-ui/heroicons';
   import { Icon } from '@steeze-ui/svelte-icon';
+  // CONTEXT
+  import { getForm } from '$lib/context/forms.svelte';
+
+  // STATE : PROPS
+  let { entity }: { entity: string } = $props();
 
   // STATE : CONTEXT
-  const { tainted, isTainted, submit, errors} = getForm();
+  const { tainted, isTainted, submit, errors} = getForm(entity);
   
   // STATE : UI
   let isInvalid = $state(false);

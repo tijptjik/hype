@@ -15,6 +15,7 @@ const languageTags = [sourceLanguageTag, 'zh-hant', 'zh-hans'];
 let {
   title,
   fields,
+  entity,
 }: {
   title: string;
   form: Form;
@@ -26,14 +27,15 @@ let {
       component: Component;
     }
   >;
+  entity: string;
 } = $props();
 
-const {form, errors, constraints} = getForm();
+const {form, errors, constraints} = getForm(entity);
 
 </script>
 
 <div class="w-full overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
-  <FormSectionHeader {title}/>
+  <FormSectionHeader {title} {entity} />
   <div class="flex flex-row gap-4 p-4 items-baseline">
     {#each languageTags as languageTag}
       <div class="group flex flex-grow flex-col gap-4 rounded-xl bg-base-100">
@@ -47,13 +49,14 @@ const {form, errors, constraints} = getForm();
               {field}
               {form}
               {constraints}
-              {errors} />
+              {errors}
+              {entity} />
           {/each}
         </div>
         <div class="w-full h-2 group-hover:h-0 group-focus-within:h-0 transition-[height] delay-700 duration-300">
         </div>
         <div class="overflow-hidden transition-[max-height] delay-700 duration-300 ease-in-quad max-h-0 group-hover:max-h-32 group-focus-within:max-h-32">
-          <FormTranslationBar {languageTag} {fields} />
+          <FormTranslationBar {languageTag} {fields} {entity} />
         </div>
       </div>
     {/each}

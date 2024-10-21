@@ -1,9 +1,11 @@
 <script lang="ts">
-import { getForm } from '$lib/context/forms.svelte';
-// Components
-import type { Component } from 'svelte';
-import FormSectionHeader from '$lib/components/forms/FormSectionHeader.svelte';
-import FormUserActions from '$lib/components/forms/FormUserActions.svelte';
+  // Components
+  import type { Component } from 'svelte';
+  import FormSectionHeader from '$lib/components/forms/FormSectionHeader.svelte';
+  import FormUserActions from '$lib/components/forms/FormUserActions.svelte';
+  // CONTEXT
+  import { getRouterState } from '$lib/context/router.svelte';
+  import { getForm } from '$lib/context/forms.svelte';
 
 // Types
 type Props = {
@@ -18,14 +20,15 @@ let actionProps = $state({
 });
 
 // STATE : PROPS
-let { title, fields }: Props = $props();
+let { title, fields, entity }: Props & { entity: string } = $props();
 
-const { form, errors, constraints } = getForm();
+// CONTEXT
+const { form, errors, constraints } = getForm(entity);
 </script>
 
 <div
   class="basis-2/3 overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
-  <FormSectionHeader {title} Actions={FormUserActions} bind:actionProps {fields} {errors} />
+  <FormSectionHeader {title} Actions={FormUserActions} bind:actionProps {fields} {errors} {entity}/>
   {#each Object.entries(fields) as [fieldId, field]}
     <!-- svelte-ignore svelte_component_deprecated -->
     <svelte:component
@@ -38,6 +41,7 @@ const { form, errors, constraints } = getForm();
       {errors}
       userJoinStateKey="role"
       checkedValue="owner"
-      uncheckedValue="member" />
+      uncheckedValue="member"
+      {entity} />
   {/each}
 </div>

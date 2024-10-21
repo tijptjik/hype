@@ -2,10 +2,14 @@
 import * as m from '$lib/paraglide/messages.js';
 import { Icon } from '@steeze-ui/svelte-icon';
 import { XCircle } from '@steeze-ui/heroicons';
+// CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
 
-const { tainted, isTainted, reset } = getForm();
+// STATE : PROPS
+let { entity }: { entity: string } = $props();
 
+// STATE : CONTEXT
+const { tainted, isTainted, reset } = getForm(entity);
 </script>
 <button
   class="btn {!isTainted($tainted)

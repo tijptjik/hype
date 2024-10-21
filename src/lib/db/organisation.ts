@@ -92,11 +92,7 @@ export const updateUserRoles = async (
 export const extractEntities = (formData: Organisation) => {
   let formTranslations: Record<TargetLang, OrganisationI18n> = formData.translations;
   let formUserRoles: Record<Id, OrganisationRole> = formData.userRoles;
-  console.log('baseOrganisation', formData);
-
   let baseOrganisation = NewOrganisationReqBody.parse(formData);
-
-    
   return { baseOrganisation, formTranslations, formUserRoles };
 };
 

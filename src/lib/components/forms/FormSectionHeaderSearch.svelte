@@ -2,6 +2,7 @@
 import { slide } from 'svelte/transition';
 import { MagnifyingGlass, XMark, ChevronRight } from '@steeze-ui/heroicons';
 import { Icon } from '@steeze-ui/svelte-icon';
+// CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
 
 // TYPES
@@ -15,10 +16,8 @@ type Props = {
   destination: string;
   toItem: (item: ResultType) => object;
   itemRef: 'id' | 'code';
+  entity: string;
 };
-
-// STATE : CONTEXT
-const { form } = getForm();
 
 // PROPS
 let {
@@ -30,8 +29,12 @@ let {
     role: 'member',
     user: item
   }),
-  itemRef = 'id'
+  itemRef = 'id',
+  entity
 }: Props = $props();
+
+// STATE : CONTEXT
+const { form } = getForm(entity);
 
 // STATE
 let searchQuery = $state('');
@@ -47,8 +50,8 @@ const handleInputKeydown = (event: KeyboardEvent) => {
     resetInput(event);
   } else if ((event.key === 'Tab' || event.key === 'ArrowDown') && searchResults.length > 0) {
     event.preventDefault();
+    // TODO Understand why this doesn't work - input is not focusable
     document.getElementById('search-results')?.querySelector('button')?.focus();
-    console.log('focusing search results');
   } 
 }
 
