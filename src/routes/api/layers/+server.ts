@@ -1,7 +1,7 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
 import { getDatabaseOrError, JSONResponseOrError } from '$lib/api';
 import { projectRole, layerI18n } from '$lib/db/schema';
-import { genericIndexQuery } from '$lib/db';
+import { hierarchicalResourceQuery } from '$lib/db';
 
 const RESOURCE_TYPE = 'layer';
 const ACCESS_STRATEGY = 'ResourceOwnChildren';
@@ -17,7 +17,7 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
 
   try {
     // DB : Build & Execute Query
-    const result = await genericIndexQuery(
+    const result = await hierarchicalResourceQuery(
       db,
       accessStrategy,
       {

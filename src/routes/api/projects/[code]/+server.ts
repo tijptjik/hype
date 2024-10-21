@@ -3,7 +3,7 @@ import { zod } from 'sveltekit-superforms/adapters';
 import { error, type RequestHandler } from '@sveltejs/kit';
 import { ProjectSchema, project, projectI18n, ProjectI18n, projectRole } from '$lib/db/schema';
 import { getDatabaseOrError, getSessionOrError, JSONResponseOrError } from '$lib/api';
-import client, { genericEntityQuery } from '$lib/db';
+import client, { hierarchicalEntityQuery } from '$lib/db';
 import { and, eq } from 'drizzle-orm';
 import type { z } from 'zod';
 import { actionResult } from 'sveltekit-superforms';
@@ -27,7 +27,7 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
   );
   try {
     // DB : Build & Execute Query
-    const result = await genericEntityQuery(
+    const result = await hierarchicalEntityQuery(
       db,
       params[PUBLIC_IDENTIFIER] as string,
       PUBLIC_IDENTIFIER,

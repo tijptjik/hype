@@ -7,7 +7,7 @@ import {
   JSONResponseOrError,
   type AccessStrategyOption
 } from '$lib/api';
-import { genericEntityQuery } from '$lib/db';
+import { hierarchicalEntityQuery } from '$lib/db';
 
 const RESOURCE_TYPE = 'feature';
 const ACCESS_STRATEGY = 'EntityOwnGrandChild' as AccessStrategyOption;
@@ -23,7 +23,7 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
   );
   try {
     // DB : Build & Execute Query
-    const result = await genericEntityQuery(
+    const result = await hierarchicalEntityQuery(
       db,
       params[PUBLIC_IDENTIFIER] as string,
       PUBLIC_IDENTIFIER,
