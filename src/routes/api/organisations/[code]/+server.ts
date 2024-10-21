@@ -3,24 +3,21 @@ import { zod } from 'sveltekit-superforms/adapters';
 import { error, type RequestHandler } from '@sveltejs/kit';
 import { organisationRole, organisation, organisationI18n } from '$lib/db/schema';
 import { getDatabaseOrError, JSONResponseOrError, type AccessStrategyOption } from '$lib/api';
-import { genericEntityQuery } from '$lib/db';
+import { hierarchicalEntityQuery } from '$lib/db';
 import { and, eq } from 'drizzle-orm';
 import { actionResult } from 'sveltekit-superforms';
 import type {
   TargetLang,
   Organisation,
-  OrganisationI18n,
   OrganisationI18nKeyed,
+  OrganisationI18n,
+  OrganisationRoleKeyed,
   OrganisationRole,
-  OrganisationRoleKeyed
+  Id
 } from '$lib/types';
 // ZOD
-import {
-  OrganisationReqBody,
-  OrganisationI18nReqBase,
-  OrganisationRoleReqBase,
-  OrganisationRoleBase
-} from '$lib/db/zod';
+import { OrganisationReqBody, OrganisationBase } from '$lib/db/zod';
+import { fail } from '@sveltejs/kit';
 
 const RESOURCE_TYPE = 'organisation';
 const ACCESS_STRATEGY = 'EntityOwn' as AccessStrategyOption;
@@ -37,7 +34,7 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
   if (params.code !== 'new') {
     try {
       // DB : Build & Execute Query
-      const result = await genericEntityQuery(
+      const result = await hierarchicalEntityQuery(
         db,
         params[PUBLIC_IDENTIFIER] as string,
         PUBLIC_IDENTIFIER,
@@ -45,7 +42,14 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
         {
           userRoles: {
             with: {
-              user: true
+              user: {
+                columns: {
+                  email: false,
+                  emailVerified: false,
+                  createdAt: false,
+                  modifiedAt: false
+                }
+              }
             }
           },
           translations: true
@@ -77,19 +81,24 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     RESOURCE_TYPE
   );
 
-  // TODO : Validate the form data
-
   try {
     const formData: Organisation = await request.json();
-    const formTranslations: OrganisationI18n = formData.translations;
-    const formUserRoles: OrganisationRole = formData.userRoles;
+    const form = await superValidate(formData, zod(OrganisationReqBody));
 
-    delete formData.translations;
-    delete formData.userRoles;
+    // If validation fails, return a 400 response with the validation errors
+    if (!form.valid) {
+      console.log('VALIDATION FAILED', form);
+      return fail(400, { form });
+    }
+
+    let formTranslations: Record<TargetLang, OrganisationI18n> = form.data.translations;
+    let formUserRoles: Record<Id, OrganisationRole> = formData.userRoles;
+
+    const baseOrganisation = OrganisationBase.parse(formData);
 
     const [updatedOrganisation] = await db
       .update(organisation)
-      .set({ ...formData })
+      .set({ ...baseOrganisation })
       // @ts-ignore
       .where(eq(organisation.code, params.code))
       .returning();
@@ -138,49 +147,57 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
       }
     }
 
-    const modifiedUserRoles = [];
-    for (let [userId, formUserRole] of Object.entries(formUserRoles)) {
-      console.log('formUserRole', formUserRole);
+    // First, delete all existing user roles for this organisation
+    await db
+      .delete(organisationRole)
+      .where(eq(organisationRole.organisationId, updatedOrganisation.id));
+
+    // Prepare all user roles for insertion
+    const userRolesToInsert = Object.entries(formUserRoles).map(([userId, formUserRole]) => {
       // Convert API Schema to DB Schema
       // Drop user from the object
       const { user, ...formUserRoleWithoutUser } = formUserRole;
       // Add organisationId and userId
-      const userRole = {
+      return {
         ...formUserRoleWithoutUser,
         organisationId: updatedOrganisation.id,
         userId: userId
       } as OrganisationRoleKeyed;
+    });
 
-      const existingUserRole = await db.query.organisationRole.findFirst({
-        where: and(
-          eq(organisationRole.organisationId, userRole.organisationId),
-          eq(organisationRole.userId, userRole.userId)
-        )
-      });
+    // Insert all user roles at once
+    const modifiedUserRoles = await db
+      .insert(organisationRole)
+      .values(userRolesToInsert)
+      .returning();
 
-      if (existingUserRole) {
-        const [updatedUserRole] = await db
-          .update(organisationRole)
-          .set(userRole)
-          .where(
-            and(
-              eq(organisationRole.organisationId, userRole.organisationId),
-              eq(organisationRole.userId, userRole.userId)
-            )
-          )
-          .returning();
-        modifiedUserRoles.push(updatedUserRole);
-      } else {
-        const [insertedUserRole] = await db.insert(organisationRole).values(userRole).returning();
-        modifiedUserRoles.push(insertedUserRole);
-      }
+    // Reduce translations to a single object with language as key
+    if (modifiedTranslations) {
+      formTranslations = modifiedTranslations.reduce(
+        (acc: Record<string, Record<string, any>>, translation: Record<string, any>) => {
+          const { lang, ...translationWithoutLang } = translation;
+          acc[lang] = translationWithoutLang;
+          return acc;
+        },
+        {}
+      ) as Record<TargetLang, OrganisationI18n>;
+    }
+    if (modifiedUserRoles) {
+      formUserRoles = modifiedUserRoles.reduce(
+        (acc: Record<string, Record<string, any>>, user: Record<string, any>) => {
+          const { userId, ...userWithoutId } = user;
+          acc[userId] = userWithoutId;
+          return acc;
+        },
+        {}
+      ) as Record<Id, OrganisationRole>;
     }
 
     const rebuildForm = await superValidate(
       {
         ...updatedOrganisation,
-        translations: modifiedTranslations,
-        userRoles: modifiedUserRoles
+        translations: formTranslations,
+        userRoles: formUserRoles
       },
       zod(OrganisationReqBody)
     );
