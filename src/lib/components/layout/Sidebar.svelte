@@ -393,7 +393,7 @@ const isResourceExpanded = (resourceType: ResourceType) => {
               <li class="group relative bg-base-100">
                 <div class="relative">
                   <a
-                    href="/admin/{resource.path}/{entity.ref}/{$page.url.search}"
+                    href="/admin/{resource.path}/{entity.ref}{$page.url.search}"
                     class="flex items-center border-l-3 {routerState.entity === entity.ref
                       ? 'border-primary'
                       : queryFilters[resourceType as FilterableResourceType]?.includes(entity.id)
