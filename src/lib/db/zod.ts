@@ -101,20 +101,44 @@ export const OrganisationRoleDekeyed = OrganisationRoleReqBase.omit({ userId: tr
 
 export const OrganisationReqBody = z.object({
   ...OrganisationReqBase.shape,
-  translations: z.record(z.string(), OrganisationI18nDekeyed),
-  userRoles: z.record(z.string(), OrganisationRoleDekeyed).refine(
-    (schema) => Object.keys(schema).length > 0,
-    "Add at least 1 User"
-  ).refine(
-    (schema) => Object.values(schema).some((user) => user.role === 'owner'),
-    "Set at least 1 Owner"
-  )
+  translations: z.record(z.string(), OrganisationI18nDekeyed).default({
+    'zh-hant': {
+      name: '',
+      nameGen: false,
+      nameShort: '',
+      nameShortGen: false,
+      description: '',
+      descriptionGen: false
+    },
+    'zh-hans': {
+      name: '',
+      nameGen: false,
+      nameShort: '',
+      nameShortGen: false,
+      description: '',
+      descriptionGen: false
+    }
+  }),
+  userRoles: z
+    .record(z.string(), OrganisationRoleDekeyed)
+    .refine((schema) => Object.keys(schema).length > 0, 'Add at least 1 User')
+    .refine(
+      (schema) => Object.values(schema).some((user) => user.role === 'owner'),
+      'Set at least 1 Owner'
+    )
 });
 
 export const NewOrganisationReqBody = z.object({
-  ...OrganisationReqBase.omit({ id: true }).shape,
+  ...OrganisationReqBase.omit({
+    id: true,
+    createdAt: true,
+    modifiedAt: true
+  }).shape,
+  nameGen: z.boolean().default(false),
+  nameShortGen: z.boolean().default(false),
+  descriptionGen: z.boolean().default(false),
   translations: z.record(z.string(), OrganisationI18nDekeyed.omit({ organisationId: true })),
-  userRoles: z.record(z.string(), OrganisationRoleDekeyed.omit({ organisationId: true }))
+  userRoles: z.record(z.string(), OrganisationRoleDekeyed.omit({ organisationId: true, user: true }))
 });
 
 /* ----------------- */
