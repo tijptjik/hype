@@ -50,9 +50,9 @@ const {form, errors, constraints} = getForm();
               {errors} />
           {/each}
         </div>
-        <div class="w-full h-2 group-hover:h-0 group-focus-within:h-0 transition-[height]">
+        <div class="w-full h-2 group-hover:h-0 group-focus-within:h-0 transition-[height] delay-700 duration-300">
         </div>
-        <div class="overflow-hidden transition-[max-height] duration-300 ease-in-out max-h-0 group-hover:max-h-32 group-focus-within:max-h-32">
+        <div class="overflow-hidden transition-[max-height] delay-700 duration-300 ease-in-quad max-h-0 group-hover:max-h-32 group-focus-within:max-h-32">
           <FormTranslationBar {languageTag} {fields} />
         </div>
       </div>
