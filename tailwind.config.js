@@ -51,7 +51,7 @@ export default {
           'info-content': '#1D232A',
           success: '#31FAC2',
           'success-content': '#1D232A',
-          warning: '#F9CC76',
+          warning: 'rgb(223, 69, 69)',
           'warning-content': '#1D232A',
           error: '#FD5555',
           'error-content': '#1D232A',
