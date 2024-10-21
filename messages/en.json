@@ -31,6 +31,7 @@
   "forms__type_here": "Type here",
   "forms__reset": "Reset",
   "forms__save": "Save",
+  "forms__saved": "Saved",
   "forms_invalid": "Invalid",
   
   "organisation__core": "Core",

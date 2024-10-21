@@ -31,8 +31,8 @@
   "forms__type_here": "喺呢度輸入",
   "forms__reset": "重設",
   "forms__save": "保存",
-  "forms_invalid": "請修復",
-
+  "forms__saved": "已保存",
+  "forms_invalid": "请修复",
   "organisation__core": "核心",
   "organisation__images": "相片",
 
