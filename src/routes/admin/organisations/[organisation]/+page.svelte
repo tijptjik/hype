@@ -63,12 +63,12 @@ const routerState = getRouterState();
 // STATE : EFFECTS
 $effect(() => {
   if (routerState.entity) {
-    meta.title = data.form.data.name || 'Unknown';
+    meta.title = data.form.data.name || 'New';
   }
 });
 
 // STATE : FORM
-const { message, enhance } = setForm(data);
+const { message, enhance } = setForm(data, routerState.entity === false);
 
 </script>
 
