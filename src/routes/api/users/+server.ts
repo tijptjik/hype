@@ -1,77 +1,95 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
-import { getSessionOrError, JSONResponseOrError } from '$lib/api';
-import client from '$lib/db';
+import {
+  getDatabaseOrError,
+  getSessionOrError,
+  JSONResponseOrError,
+  type AccessStrategyOption
+} from '$lib/api';
+import client, { genericResourceQuery } from '$lib/db';
+import { organisationRole, user } from '$lib/db/schema';
+import * as schema from '$lib/db/schema';
 
-export const GET: RequestHandler = async ({ locals, platform }) => {
+const RESOURCE_TYPE = 'user';
+const TABLE = user;
+// TODO: Restrict access to Organisation / Project Owners
+const ACCESS_STRATEGY = 'ResourceAll' as AccessStrategyOption;
+const PUBLIC_IDENTIFIER = 'id';
+
+export const GET: RequestHandler = async ({ url, locals, platform }) => {
   // AUTH : Pass or Fail
-  await getSessionOrError(locals);
-  // DB : Connect to D1
-  const db = client(platform?.env.DB);
+  const { db, userId, accessStrategy } = await getDatabaseOrError(
+    locals,
+    platform,
+    ACCESS_STRATEGY,
+    RESOURCE_TYPE
+  );
+
   try {
     // DB : Build & Execute Query
-    const result = await db.query.user.findMany({
-      columns: {
+    const result = await genericResourceQuery(
+      db,
+      user,
+      url.searchParams.get('q') as string,
+      ['name', 'email'],
+      accessStrategy,
+      {
         email: false,
         emailVerified: false,
         createdAt: false,
         modifiedAt: false
       },
-      with: {
-        memberships: {
-          columns: {
-            role: true
-          },
-          with: {
-            organisation: {
-              columns: {
-                createdAt: false,
-                modifiedAt: false
-              }
-            }
-          }
-        }
+      {
+        memberships: true,
+        projectRoles: true
       }
-    });
+    );
+
     // HTTP : 200 JSON or 404
     return JSONResponseOrError(result);
   } catch (e) {
     // DB : Query Error
     console.error('Database query error:', e);
     // HTTP : 500 Error
-    throw error(500, 'Dust Accumulation Critical');
+    return error(500, 'Dust Accumulation Critical');
   }
 };
 
-// async fetch(request: Request, env: Env): Promise<Response> {
-//   const { searchParams } = new URL(params.url);
-//   const action = searchParams.get('action');
-//   const key = searchParams.get('key');
-//   const value = searchParams.get('value');
-
-//   case 'set': {
-//     if (!(key && value)) {
-//       return new Response('Key and value must be defined.', { status: 400 });
-//     }
-//     try {
-//       await db
-//         .insertInto('kv')
-//         .values([{ key, value }])
-//         .onConflict((oc) => oc.column('key').doUpdateSet({ value }))
-//         .execute();
-//     } catch (err) {
-//       console.error(err);
-//       throw err;
-//     }
-//     return new Response(value, { status: 200 });
+// export const GET: RequestHandler = async ({ locals, platform }) => {
+//   // AUTH : Pass or Fail
+//   await getSessionOrError(locals);
+//   // DB : Connect to D1
+//   const db = client(platform?.env.DB);
+//   try {
+//     // DB : Build & Execute Query
+//     const result = await db.query.user.findMany({
+//       columns: {
+//         email: false,
+//         emailVerified: false,
+//         createdAt: false,
+//         modifiedAt: false
+//       },
+//       with: {
+//         memberships: {
+//           columns: {
+//             role: true
+//           },
+//           with: {
+//             organisation: {
+//               columns: {
+//                 createdAt: false,
+//                 modifiedAt: false
+//               }
+//             }
+//           }
+//         }
+//       }
+//     });
+//     // HTTP : 200 JSON or 404
+//     return JSONResponseOrError(result);
+//   } catch (e) {
+//     // DB : Query Error
+//     console.error('Database query error:', e);
+//     // HTTP : 500 Error
+//     throw error(500, 'Dust Accumulation Critical');
 //   }
-//
-//   case 'delete': {
-//     if (!key) {
-//       return new Response('Key is not defined.', { status: 400 });
-//     }
-//     await db.deleteFrom('kv').where('key', '=', key).execute();
-//     return new Response('', { status: 200 });
-//   }
-// }
-//
-// return new Response(`Action must be get/set/delete`, { status: 400 });
+// };
