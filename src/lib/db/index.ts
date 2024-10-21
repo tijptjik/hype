@@ -4,7 +4,7 @@ import * as schema from './schema';
 import { Table, getTableName, and, sql, inArray, eq, or, not, exists, ilike } from 'drizzle-orm';
 // TYPES
 import type { NestedRelations } from '$lib/types';
-
+import { error } from '@sveltejs/kit';
 const client = (database: D1Database) => {
   return drizzle(database, { schema });
 };
@@ -400,7 +400,8 @@ export async function hierarchicalEntityQuery<usersT extends Table, translations
 
   const conditions = [
     eq(getTable(slicedHierarchy, 0)[publicIdentifier], ref),
-    ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId)];
+    ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId)
+  ];
 
   if (translationTable) {
     conditions.push(...applyTranslationCondition(db, slicedHierarchy, translationTable));
@@ -412,6 +413,10 @@ export async function hierarchicalEntityQuery<usersT extends Table, translations
     where: and(...conditions),
     with: selectTableRelations
   });
+
+  if (!result) {
+    return error(401, 'Doors have ears, but they haven\'t ever heard of this.');
+  }
 
   // Reduce translations to a single object with language as key
   if (translationTable) {
