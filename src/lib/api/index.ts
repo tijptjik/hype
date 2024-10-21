@@ -29,6 +29,13 @@ export const JSONResponseOrError = async (result: any): Promise<any> => {
   return json(result);
 };
 
+export const SuperFormResponseOrError = async (form: FormData, code: number = 200): Promise<any> => {
+  if (!form) {
+    return error(404, "Bad Form");
+  }
+  return json({form});
+};
+
 const checkAccessOrError = (
   userRoles: UserRole[],
   accessStrategy: AccessStrategyOption,
