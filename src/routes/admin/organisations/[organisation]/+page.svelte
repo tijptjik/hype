@@ -68,12 +68,7 @@ $effect(() => {
 });
 
 // STATE : FORM
-const { message, enhance, errors } = setForm(data);
-
-$effect(() => {
-  $inspect('ERRORS', $errors);
-});
-
+const { message, enhance } = setForm(data);
 
 </script>
 

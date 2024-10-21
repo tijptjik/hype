@@ -68,7 +68,7 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
       return error(500, 'Dust Accumulation Critical');
     }
   } else {
-    return error(500, 'The old shall never be new again');
+    return error(500, 'The Old Shall Never Be New Again');
   }
 };
 

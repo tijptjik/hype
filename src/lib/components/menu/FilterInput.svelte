@@ -58,10 +58,10 @@ function handleKeydown(event: KeyboardEvent) {
   <div class="absolute inset-y-0 right-2 flex items-center pr-3">
     {#if filterTexts[resourceType as keyof typeof filterTexts]}
       <button onclick={resetInput} class="focus:outline-none">
-        <Icon src={MagnifyingGlass} class="h-6 w-6" />
+        <Icon src={XMark} class="h-6 w-6" />
       </button>
-    {:else}
-      <Icon src={XMark} class="h-6 w-6" />
+      {:else}
+      <Icon src={MagnifyingGlass} class="h-6 w-6" />
     {/if}
   </div>
 </div>
