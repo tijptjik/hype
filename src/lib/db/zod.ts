@@ -38,7 +38,6 @@ const constraints: Record<string, z.ZodType<any>> = {
     .max(32, { message: 'Short Name must be 32 characters or less' }),
   description: z
     .string()
-    .min(6, { message: 'Description should add something more ...' })
     .max(1024, { message: 'Description must be 1024 characters or less' })
     .optional(),
   url: z.string().url({ message: 'URL is invalid' }).optional()
@@ -63,6 +62,12 @@ const getDefaultConstraints = (table: Table) => {
 // USERS
 /* -------- */
 export const UserBase = createSelectSchema(user);
+export const UserReqBase = UserBase.omit({
+  email: true,
+  emailVerified: true,
+  createdAt: true,
+  modifiedAt: true
+});
 
 /* ----------------- */
 // ORGANISATIONS
@@ -82,23 +87,33 @@ export const OrganisationI18nReqBase = createInsertSchema(organisationI18n, {
   ...getDefaultConstraints(organisationI18n as Table)
 });
 
-export const OrganisationRoleReqBase = createInsertSchema(organisationRole, {
-  user: UserBase,
+export const OrganisationRoleBareBase = createInsertSchema(organisationRole, {
   ...getDefaultConstraints(organisationRole as Table)
 });
 
-const OrganisationI18nDekeyed = OrganisationI18nReqBase.omit({ lang: true });
-const OrganisationRoleDekeyed = OrganisationRoleReqBase.omit({ userId: true });
+export const OrganisationRoleReqBase = z.object({
+  ...OrganisationRoleBareBase.shape,
+  user: UserReqBase
+});
+
+export const OrganisationI18nDekeyed = OrganisationI18nReqBase.omit({ lang: true });
+export const OrganisationRoleDekeyed = OrganisationRoleReqBase.omit({ userId: true });
 
 export const OrganisationReqBody = z.object({
   ...OrganisationReqBase.shape,
-  translations: z.record(z.enum(targetLangs), OrganisationI18nDekeyed),
-  userRoles: z.record(z.string(), OrganisationRoleDekeyed)
+  translations: z.record(z.string(), OrganisationI18nDekeyed),
+  userRoles: z.record(z.string(), OrganisationRoleDekeyed).refine(
+    (schema) => Object.keys(schema).length > 0,
+    "Add at least 1 User"
+  ).refine(
+    (schema) => Object.values(schema).some((user) => user.role === 'owner'),
+    "Set at least 1 Owner"
+  )
 });
 
 export const NewOrganisationReqBody = z.object({
   ...OrganisationReqBase.omit({ id: true }).shape,
-  translations: z.record(z.enum(targetLangs), OrganisationI18nDekeyed.omit({ organisationId: true })),
+  translations: z.record(z.string(), OrganisationI18nDekeyed.omit({ organisationId: true })),
   userRoles: z.record(z.string(), OrganisationRoleDekeyed.omit({ organisationId: true }))
 });
 
