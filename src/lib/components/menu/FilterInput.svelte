@@ -6,6 +6,8 @@ import {
   filterTexts,
   queryFilters
 } from '$lib/stores/resources.svelte';
+import { MagnifyingGlass, XMark } from '@steeze-ui/heroicons';
+import { Icon } from '@steeze-ui/svelte-icon';
 
 // STATE : PROPS
 const {
@@ -56,30 +58,10 @@ function handleKeydown(event: KeyboardEvent) {
   <div class="absolute inset-y-0 right-2 flex items-center pr-3">
     {#if filterTexts[resourceType as keyof typeof filterTexts]}
       <button onclick={resetInput} class="focus:outline-none">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          class="h-4 w-4 stroke-current">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M6 18L18 6M6 6l12 12"></path>
-        </svg>
+        <Icon src={MagnifyingGlass} class="h-6 w-6" />
       </button>
     {:else}
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        class="pointer-events-none h-4 w-4 stroke-current">
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-      </svg>
+      <Icon src={XMark} class="h-6 w-6" />
     {/if}
   </div>
 </div>
