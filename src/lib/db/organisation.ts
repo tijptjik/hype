@@ -3,18 +3,33 @@ import { zod } from 'sveltekit-superforms/adapters';
 import { error } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 // SCHEMA
-import { organisationRole, organisationI18n, organisation } from '$lib/db/schema';
+import { organisationRole, organisationI18n, organisation, user } from '$lib/db/schema';
 // ZOD
-import { NewOrganisationReqBody, OrganisationBase, OrganisationReqBody, NewOrganisationReqBase } from '$lib/db/zod';
+import {
+  OrganisationInsert,
+  OrganisationUpdate,
+  OrganisationUpdateAPI
+} from '$lib/db/zod';
 // TYPES
-import type { Organisation, OrganisationI18n, OrganisationI18nKeyed, OrganisationRole, OrganisationRoleKeyed } from '$lib/types';
+import type {
+  Organisation,
+  OrganisationDB,
+  NewOrganisation,
+  NewOrganisationDB,
+  NewOrganisationI18n,
+  OrganisationI18nDB,
+  NewOrganisationRole,
+  OrganisationRoleDB,
+  OrganisationI18n,
+  OrganisationRole
+} from '$lib/types';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import type { TargetLang, Id } from '$lib/types';
 type Database = DrizzleD1Database<typeof import('/home/io/code/ghostsigns/src/lib/db/schema')>;
 
 // CREATE / UPDATE
 
-export const createOrganisation = async (db: Database, data: Organisation) => {
+export const createOrganisation = async (db: Database, data: NewOrganisationDB) => {
   const [insertedOrganisation] = await db
     .insert(organisation)
     .values({ ...data })
@@ -27,7 +42,15 @@ export const createOrganisation = async (db: Database, data: Organisation) => {
   return insertedOrganisation;
 };
 
-export const updateOrganisation = async (db: Database, data: Organisation, ref: string) => {
+export const isCodeUnique = async (db: Database, data: NewOrganisation): Promise<boolean> => {
+  // Check whether the organisation code already exists
+  const existingOrganisation = await db.query.organisation.findFirst({
+    where: eq(organisation.code, data.code)
+  });
+  return existingOrganisation ? false : true;
+};
+
+export const updateOrganisation = async (db: Database, data: OrganisationDB, ref: string) => {
   const [updatedOrganisation] = await db
     .update(organisation)
     .set({ ...data })
@@ -43,7 +66,7 @@ export const updateOrganisation = async (db: Database, data: Organisation, ref: 
 
 export const createTranslations = async (
   db: Database,
-  translations: Record<TargetLang, OrganisationI18n>,
+  translations: Record<TargetLang, NewOrganisationI18n>,
   organisationId: string
 ) => {
   const translationsToInsert = Object.entries(translations).map(([lang, translation]) => ({
@@ -66,7 +89,7 @@ export const updateTranslations = async (
 
 export const createUserRoles = async (
   db: Database,
-  userRoles: Record<Id, OrganisationRole>,
+  userRoles: Record<Id, NewOrganisationRole>,
   organisationId: string
 ) => {
   const userRolesToInsert = Object.entries(userRoles).map(([userId, role]) => ({
@@ -75,7 +98,21 @@ export const createUserRoles = async (
     userId
   }));
 
-  return await db.insert(organisationRole).values(userRolesToInsert).returning();
+  await db.insert(organisationRole).values(userRolesToInsert).returning();
+
+  const rolesWithUsers = await db
+    .select({
+      role: organisationRole,
+      user: user
+    })
+    .from(organisationRole)
+    .innerJoin(user, eq(organisationRole.userId, user.id))
+    .where(eq(organisationRole.organisationId, organisationId));
+
+  return Object.values(rolesWithUsers).map((role) => ({
+    ...role.role,
+    user: role.user
+  }));
 };
 
 export const updateUserRoles = async (
@@ -89,17 +126,24 @@ export const updateUserRoles = async (
 
 // UTILS
 
-export const extractEntities = (formData: Organisation) => {
+export const extractEntitiesToInsert = (formData: NewOrganisation) => {
+  let baseOrganisation = OrganisationInsert.parse(formData);
+  let formTranslations: Record<TargetLang, NewOrganisationI18n> = formData.translations;
+  let formUserRoles: Record<Id, NewOrganisationRole> = formData.userRoles;
+  return { baseOrganisation, formTranslations, formUserRoles };
+};
+
+export const extractEntitiesToUpdate = (formData: Organisation) => {
+  let baseOrganisation = OrganisationUpdate.parse(formData);
   let formTranslations: Record<TargetLang, OrganisationI18n> = formData.translations;
   let formUserRoles: Record<Id, OrganisationRole> = formData.userRoles;
-  let baseOrganisation = NewOrganisationReqBody.parse(formData);
   return { baseOrganisation, formTranslations, formUserRoles };
 };
 
 export const rebuildFormData = async (
-  organisation: Organisation,
-  translations: OrganisationI18nKeyed[],
-  userRoles: OrganisationRoleKeyed[]
+  organisation: OrganisationDB,
+  translations: OrganisationI18nDB[],
+  userRoles: OrganisationRoleDB[]
 ) => {
   const formTranslations = translations.reduce(
     (acc: Record<string, Record<string, any>>, translation: Record<string, any>) => {
@@ -125,6 +169,6 @@ export const rebuildFormData = async (
       translations: formTranslations,
       userRoles: formUserRoles
     },
-    zod(OrganisationReqBody)
+    zod(OrganisationUpdateAPI)
   );
 };
