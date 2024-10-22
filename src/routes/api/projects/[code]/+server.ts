@@ -77,7 +77,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     const modifiedTranslations = [];
 
     for (const translation of translations) {
-      const [existingTranslation] = await db.query.projectI18n.findFirst({
+      const existingTranslation = await db.query.projectI18n.findFirst({
         where: and(
           eq(projectI18n.projectId, translation.projectId),
           eq(projectI18n.lang, translation.lang)
