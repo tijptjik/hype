@@ -8,23 +8,17 @@ import OrganisationActions from '$lib/components/menu/OrganisationActions.svelte
 import ProjectActions from '$lib/components/menu/ProjectActions.svelte';
 import LayerActions from '$lib/components/menu/LayerActions.svelte';
 import FeatureActions from '$lib/components/menu/FeatureActions.svelte';
-import { meta } from '$lib/stores/resources.svelte';
 import { getRouterState } from '$lib/context/router.svelte';
 import type { ResourceType } from '$lib/types';
+import type { Component } from 'svelte';
 
 // STATE : PROPS
-let { entity }: { entity: string } = $props();
+let { entity, title }: { entity: string; title: string } = $props();
 
 // STATE : CONTEXT
 const routerState = getRouterState();
 
-// STATE : DERIVED
-const title = $derived(() => {
-  return meta.title;
-});
-
 // CONFIG
-
 const menuActions = {
   organisation: OrganisationActions,
   project: ProjectActions,
@@ -75,20 +69,18 @@ const menuItems = {
   ]
 };
 
-// UTILS
-
 </script>
 
 <header class="navbar h-17.5 px-12 py-4 shadow-lg sticky top-0 z-10 {routerState.entity === false ? 'bg-base-300' : 'bg-gradient-to-r from-rose-500 to-fuchsia-800'}">
   <div class="flex-1">
     <div class="flex items-center space-x-4">
       <Icon src={navItems[routerState.resource as ResourceType].icon} class="h-6 w-6" />
-      <h2 class="text-2xl font-semibold">{title()}</h2>
+      <h2 class="text-2xl font-semibold">{title}</h2>
     </div>
   </div>
   <div class="flex-none">
     {#if routerState.entity !== false}
-    {@const Actions = menuActions[routerState.resource as ResourceType]}
+    {@const Actions = menuActions[routerState.resource as ResourceType] as Component}
     <ul class="mt-1 flex flex-row space-x-2 px-2">
       {#each menuItems[routerState.resource as ResourceType] as facet}
         <MenuItem {facet} />
