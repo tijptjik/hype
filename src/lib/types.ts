@@ -3,13 +3,11 @@ import type { IconSource } from '@steeze-ui/heroicons';
 import { z } from 'zod';
 import {
   UserBase,
-  OrganisationReqBody,
-  NewOrganisationReqBody,
-  OrganisationI18nDekeyed,
-  OrganisationRoleReqBase,
+  OrganisationInsertAPI,
+  OrganisationI18nAPI,
   OrganisationRoleBase,
-  OrganisationI18nBase
-  OrganisationRoleDekeyed,
+  OrganisationI18nBase,
+  OrganisationRoleAPI,
   ProjectReqBody,
   NewProjectReqBody,
   ProjectI18nReqBase,
@@ -18,7 +16,16 @@ import {
   LayerI18nReqBase,
   FeatureReqBody,
   NewFeatureReqBody,
+  OrganisationUpdateAPI,
+  OrganisationInsert,
+  OrganisationUpdate,
+  OrganisationI18nWithoutPK,
+  OrganisationRoleWithoutPK,
 } from '$lib/db/zod';
+// Components
+import FormInputField from '$lib/components/forms/FormInputField.svelte';
+import FormTextField from '$lib/components/forms/FormTextField.svelte';
+import FormUserCard from '$lib/components/forms/FormUserCard.svelte';
 
 export type ResourceType = 'organisation' | 'project' | 'layer' | 'feature';
 export type SourceLang = 'en';
@@ -52,8 +59,13 @@ export type NavItem = {
 };
 
 export type NestedRelations = {
-  [key: string]: boolean | { with: NestedRelations };
+  [key: string]: boolean | { columns: NestedRelations } | { with: NestedRelations };
 };
+
+export type FormFieldConfig = Record<string, FormField>;
+export type FormField = Record<string, FormFieldDefinition>;
+export type FormFieldDefinition = { label: string; component: FormFieldComponent };
+export type FormFieldComponent = typeof FormInputField | typeof FormTextField | typeof FormUserCard;
 
 /* ----------------- */
 // SCHEMA TYPES
@@ -69,12 +81,28 @@ export type User = z.infer<typeof UserBase>;
 // ORGANISATIONS
 /* -------- */
 
-export type Organisation = z.infer<typeof OrganisationReqBody>;
-export type NewOrganisation = z.infer<typeof NewOrganisationReqBody>;
-export type OrganisationI18n = z.infer<typeof OrganisationI18nDekeyed>;
-export type OrganisationI18nKeyed = z.infer<typeof OrganisationI18nBase>;
-export type OrganisationRole = z.infer<typeof OrganisationRoleDekeyed>;
-export type OrganisationRoleKeyed = z.infer<typeof OrganisationRoleBase>;
+// Organisation with all fields, including userRoles & translations, and User
+export type Organisation = z.infer<typeof OrganisationUpdateAPI>;
+// Like Organisation, but without the organisationId in userRoles and translations
+export type NewOrganisation = z.infer<typeof OrganisationInsertAPI>;
+// Organisation without relations, for use in updating an organisation
+export type OrganisationDB = z.infer<typeof OrganisationUpdate>;
+// Organisation without relations, for use in inserting a new organisation
+export type NewOrganisationDB = z.infer<typeof OrganisationInsert>;
+
+// organisationI18n, but without organisationId and langCode - for use in API insertions
+export type NewOrganisationI18n = z.infer<typeof OrganisationI18nAPI>;
+// Same as NewOrganisationI18n, but with the organisationId - for use in API updates
+export type OrganisationI18n = z.infer<typeof OrganisationI18nWithoutPK>;
+// Database representation of OrganisationI18n, so with organisationId and langCode
+export type OrganisationI18nDB = z.infer<typeof OrganisationI18nBase>;
+
+// organisationRole, but without organisationId and userId - for use in API insertions
+export type NewOrganisationRole = z.infer<typeof OrganisationRoleAPI>;
+// Same as NewOrganisationRole, but with the organisationId - for use in API updates
+export type OrganisationRole = z.infer<typeof OrganisationRoleWithoutPK>;
+// Database representation of OrganisationRole, so with organisationId and userId
+export type OrganisationRoleDB = z.infer<typeof OrganisationRoleBase>;
 
 /* ----------------- */
 // PROJECTS
