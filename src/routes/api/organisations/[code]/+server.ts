@@ -2,23 +2,21 @@ import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { error, type RequestHandler } from '@sveltejs/kit';
 import { organisationRole, organisationI18n } from '$lib/db/schema';
-import { getDatabaseOrError, JSONResponseOrError, SuperFormResponseOrError, type AccessStrategyOption } from '$lib/api';
+import { getDatabaseOrError, JSONResponseOrError, SuperFormResponse, SuperFormErrorResponse, type AccessStrategyOption } from '$lib/api';
 import { hierarchicalEntityQuery } from '$lib/db';
-import { actionResult } from 'sveltekit-superforms';
-import type { Organisation } from '$lib/types';
 // DB
 import {
   updateOrganisation,
   updateTranslations,
   updateUserRoles,
   rebuildFormData,
-  extractEntities
+  extractEntitiesToUpdate
 } from '$lib/db/organisation';
 // ZOD
-import { OrganisationReqBody } from '$lib/db/zod';
-import { fail } from '@sveltejs/kit';
-import type { DrizzleD1Database } from 'drizzle-orm/d1';
-type Database = DrizzleD1Database<typeof import('/home/io/code/ghostsigns/src/lib/db/schema')>;
+import { OrganisationUpdateAPI } from '$lib/db/zod';
+// TYPES
+import type { SuperValidated } from 'sveltekit-superforms/client';
+import type { Organisation } from '$lib/types';
 
 const RESOURCE_TYPE = 'organisation';
 const ACCESS_STRATEGY = 'EntityOwn' as AccessStrategyOption;
@@ -84,32 +82,30 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 
   try {
     const formData: Organisation = await request.json();
-    const form = await superValidate(formData, zod(OrganisationReqBody));
+    const form = await superValidate(formData, zod(OrganisationUpdateAPI)) as SuperValidated<Organisation>;
 
-    // If validation fails, return a 400 response with the validation errors
     if (!form.valid) {
-      return fail(400, { form });
+      // If validation fails, return form with the errors
+      return SuperFormResponse(form, 400);
     }
 
-    const { baseOrganisation, formTranslations, formUserRoles } = extractEntities(form.data);
-
-    const updatedOrganisation = await updateOrganisation(db, baseOrganisation, params.code);
+    const { baseOrganisation, formTranslations, formUserRoles } = extractEntitiesToUpdate(form.data as Organisation);
+    const updatedOrganisation = await updateOrganisation(db, baseOrganisation, params.code as string);
     const updatedTranslations = await updateTranslations(
       db,
       formTranslations,
       updatedOrganisation.id
     );
     const updatedUserRoles = await updateUserRoles(db, formUserRoles, updatedOrganisation.id);
-
     const rebuildForm = await rebuildFormData(
       updatedOrganisation,
       updatedTranslations,
       updatedUserRoles
     );
 
-    return SuperFormResponseOrError(rebuildForm);
+    return SuperFormResponse(rebuildForm);
   } catch (err) {
     console.error(err);
-    return error(500, 'Failed to update organisation');
+    return SuperFormErrorResponse(RESOURCE_TYPE);
   }
 };
