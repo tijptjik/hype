@@ -9,7 +9,7 @@ const { isGenAI, languageTag, absolute = false } = $props();
 {/snippet}
 
 {#if absolute}
-  <div class="flex flex-col flex-col-reverse gap-2.5 flex-shrink-0">
+  <div class="flex flex-col-reverse gap-2.5 flex-shrink-0">
     {#if isGenAI}
       {@render label('GenAI')}
     {/if}
