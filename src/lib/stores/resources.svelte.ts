@@ -4,14 +4,14 @@ import type {
   EntityWithData,
   ResourceToEntity,
   ResourceToText,
-  Organisation,
+  NewOrganisation,
   Project,
   Layer,
   Feature
 } from '$lib/types';
 
 // Meta
-export const meta = $state({ title: 'Admin' });
+let meta = $state({ title: 'Admin' });
 
 // Resources
 export const resources: ResourceToEntity = $state({
@@ -31,8 +31,8 @@ export const queryFilters: FilterableResourceToEntityId = $state({
   project: [],
   layer: []
 });
-export const filteredResources : ResourceToEntity = $state<{
-  organisation: EntityWithData<Organisation>[];
+export const filteredResources: ResourceToEntity = $state<{
+  organisation: EntityWithData<NewOrganisation>[];
   project: EntityWithData<Project>[];
   layer: EntityWithData<Layer>[];
   feature: EntityWithData<Feature>[];
@@ -42,3 +42,5 @@ export const filteredResources : ResourceToEntity = $state<{
   layer: [],
   feature: []
 });
+
+export const appMeta = { meta };

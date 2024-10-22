@@ -3,7 +3,7 @@ import Sidebar from '$lib/components/layout/Sidebar.svelte';
 import Navbar from '$lib/components/layout/Navbar.svelte';
 import { setRouterState } from '$lib/context/router.svelte';
 import { page } from '$app/stores';
-import { meta } from '$lib/stores/resources.svelte';
+import { appMeta } from '$lib/stores/resources.svelte';
 import { navItems } from '$lib/stores/navigation.svelte';
 
 // PROPS
@@ -21,7 +21,10 @@ $effect(() => {
   if (currentUrlWithoutHash !== stateUrlWithoutHash) {
     routerState.update();
     if (routerState.entity === false) {
-      meta.title = navItems[routerState.resource as keyof typeof navItems].name;
+      appMeta.meta = {
+        ...appMeta.meta,
+        title: navItems[routerState.resource as keyof typeof navItems].name
+      };
     }
   } 
 });
