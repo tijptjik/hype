@@ -1,17 +1,19 @@
 <script lang="ts">
-  // Components
-  import type { Component } from 'svelte';
-  import FormSectionHeader from '$lib/components/forms/FormSectionHeader.svelte';
-  import FormUserActions from '$lib/components/forms/FormUserActions.svelte';
-  // CONTEXT
-  import { getRouterState } from '$lib/context/router.svelte';
-  import { getForm } from '$lib/context/forms.svelte';
+// Components
+import FormSectionHeader from '$lib/components/forms/FormSectionHeader.svelte';
+import FormUserActions from '$lib/components/forms/FormUserActions.svelte';
+// CONTEXT
+import { getForm } from '$lib/context/forms.svelte';
+// TYPES
+import type { FormField } from '$lib/types';
 
-// Types
 type Props = {
   title: string;
-  fields: Record<string, Record<string, string>>;
+  fields: FormField;
 };
+
+// STATE : PROPS
+let { title, fields, entity }: Props & { entity: string } = $props();
 
 // STATE
 let actionProps = $state({
@@ -19,20 +21,22 @@ let actionProps = $state({
   removeMode: false
 });
 
-// STATE : PROPS
-let { title, fields, entity }: Props & { entity: string } = $props();
-
-// CONTEXT
+// STATE : CONTEXT
 const { form, errors, constraints } = getForm(entity);
 </script>
 
 <div
   class="basis-2/3 overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
-  <FormSectionHeader {title} Actions={FormUserActions} bind:actionProps {fields} {errors} {entity}/>
+  <FormSectionHeader
+    {title}
+    Actions={FormUserActions}
+    bind:actionProps
+    {fields}
+    {errors}
+    {entity} />
   {#each Object.entries(fields) as [fieldId, field]}
-    <!-- svelte-ignore svelte_component_deprecated -->
-    <svelte:component
-      this={field.component as Component}
+    {@const UserComponent = field.component}
+    <UserComponent
       bind:actionProps
       {fieldId}
       {field}

@@ -2,7 +2,7 @@
 // Components
 import FormSectionHeader from '$lib/components/forms/FormSectionHeader.svelte';
 // Types
-import type { Component } from 'svelte';
+import type { FormField } from '$lib/types';
 // Context
 import { getForm } from '$lib/context/forms.svelte';
 
@@ -12,14 +12,7 @@ let {
   entity
 }: {
   title: string;
-  fields: Record<
-    string,
-    {
-      label: string;
-      type: string;
-      component: Component;
-    }
-  >;
+  fields: FormField;
   entity: string;
 } = $props();
 
@@ -27,14 +20,15 @@ let {
 const { form, errors, constraints } = getForm(entity);
 </script>
 
-<div class="basis-1/3 overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
+<div
+  class="basis-1/3 overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
   <FormSectionHeader {title} {entity} />
   <div class="flex flex-row flex-wrap items-baseline gap-4 p-4">
     <div class="group flex flex-grow flex-col gap-4">
       {#each Object.entries(fields) as [fieldId, field]}
+      {@const SpecificationComponent = field.component}
         <div class="rounded-xl bg-base-100 px-6 py-2 pb-6 pt-4">
-          <!-- svelte-ignore svelte_component_deprecated -->
-          <svelte:component this={field.component} {fieldId} {field} {form} {constraints} {errors} {entity}/>
+          <SpecificationComponent {fieldId} {field} {form} {constraints} {errors} {entity} />
         </div>
       {/each}
     </div>
