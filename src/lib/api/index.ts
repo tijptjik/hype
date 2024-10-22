@@ -1,6 +1,11 @@
 import { error, json } from '@sveltejs/kit';
-import { getUserRoles, type UserRole } from '$lib/auth/utils';
+import { actionResult } from 'sveltekit-superforms';
 import client from '$lib/db';
+import { getUserRoles } from '$lib/auth/utils';
+// Types
+import type { SuperValidated } from 'sveltekit-superforms/client';
+import type { Organisation } from '$lib/types';
+import type { UserRole } from '$lib/auth/utils';
 
 export type AccessStrategyOption =
   | 'Public'
@@ -29,11 +34,32 @@ export const JSONResponseOrError = async (result: any): Promise<any> => {
   return json(result);
 };
 
-export const SuperFormResponseOrError = async (form: FormData, code: number = 200): Promise<any> => {
-  if (!form) {
-    return error(404, "Bad Form");
+export const SuperFormErrorResponse = (resourceType: string): Response => {
+  return json(
+    {
+      type: 'error',
+      status: 500,
+      error: `Failed to update ${resourceType}`
+    },
+    { status: 500 }
+  );
+};
+
+export const SuperFormResponse = (
+  validatedForm: SuperValidated<Organisation>,
+  code: number = 200,
+  isNew: boolean = false,
+  resourcePath: string = ''
+): Response => {
+  if (!validatedForm.valid) {
+    return actionResult<SuperValidated<Organisation>, 'failure'>('failure', validatedForm, { status: 400 });
   }
-  return json({form});
+  if (isNew) {
+    return actionResult('redirect', `/admin/${resourcePath}/${validatedForm.data.code || validatedForm.data.id}`, {
+      status: 303
+    });
+  }
+  return actionResult<SuperValidated<Organisation>, 'success'>('success', validatedForm, { status: code });
 };
 
 const checkAccessOrError = (
@@ -54,12 +80,18 @@ const checkAccessOrError = (
   } else if (['ResourceOwn', 'EntityOwn'].includes(accessStrategy)) {
     hasAccess = userRoles.some((role) => role.type === resourceType);
   } else if (['ResourceOwnChildren', 'EntityOwnChild'].includes(accessStrategy)) {
-    hasAccess = userRoles.some((role) => role.type === resourceParents[resourceType as keyof typeof resourceParents]);
+    hasAccess = userRoles.some(
+      (role) => role.type === resourceParents[resourceType as keyof typeof resourceParents]
+    );
   } else if (['ResourceOwnGrandChildren', 'EntityOwnGrandChild'].includes(accessStrategy)) {
     hasAccess = userRoles.some(
       (role) =>
         role.type ===
-        resourceParents[resourceParents[resourceType as keyof typeof resourceParents] as keyof typeof resourceParents]
+        resourceParents[
+          resourceParents[
+            resourceType as keyof typeof resourceParents
+          ] as keyof typeof resourceParents
+        ]
     );
   }
 
