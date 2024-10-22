@@ -10,15 +10,16 @@ import { getForm } from '$lib/context/forms.svelte';
 
 type Props = {
   fieldId: string;
-  field: Record<string, string>;
   form: Form;
   constraints: InputConstraints<Record<string, InputConstraint>>;
   errors: ValidationErrors<Record<string, string>>;
   userJoinStateKey: string;
   checkedValue: string;
   uncheckedValue: string;
-  searchMode: boolean;
-  removeMode: boolean;
+  actionProps: {
+    searchMode: boolean;
+    removeMode: boolean;
+  };
   entity: string;
 };
 
@@ -26,7 +27,6 @@ type Props = {
 // STATE : PROPS
 let {
   fieldId,
-  field,
   userJoinStateKey,
   checkedValue,
   uncheckedValue,
@@ -68,7 +68,7 @@ const removeUser = async (e: Event, userId: string) => {
     <div class="grid-span-1 group" transition:fade>
       <div class="card card-side h-full flex-row items-center bg-base-100 pr-6 shadow-xl relative rounded-l-xl overflow-hidden">
         {#if actionProps.removeMode}
-        <div class="absolute left-0 top-0 flex w-24 items-center justify-center opacity-0 opacity-80 ">
+        <div class="absolute left-0 top-0 flex w-24 items-center justify-center opacity-80">
           <button
             onclick={(e) => removeUser(e, userId)}
             class="btn btn-ghost w-24 h-24 bg-base-200 rounded-none">

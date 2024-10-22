@@ -1,9 +1,14 @@
 <script lang="ts">
-import { ChevronRight } from '@steeze-ui/heroicons';
+// COMPONENTS
 import { Icon } from '@steeze-ui/svelte-icon';
-import type { Component } from 'svelte';
+import { ChevronRight } from '@steeze-ui/heroicons';
 import FormSectionHeaderSearch from './FormSectionHeaderSearch.svelte';
+// CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
+// TYPES
+import type { Component } from 'svelte';
+import type { Writable } from 'svelte/store';
+import type { FormField } from '$lib/types';
 
 // TYPES
 type Props = {
@@ -11,8 +16,8 @@ type Props = {
   Actions?: Component;
   actionProps?: Record<string, any>;
   Info?: Component;
-  fields?: Record<string, Record<string, string>>;
-  errors?: Record<string, string>;
+  fields?: FormField;
+  errors?: Writable<Record<string, Record<string, string | string[]>>>;
   entity: string;
 };
 
@@ -27,7 +32,7 @@ let {
   Info,
   fields,
   errors,
-  entity,
+  entity
 }: Props = $props();
 
 // STATE : CONTEXT
@@ -48,9 +53,11 @@ $effect(() => {
       <h3 class="text-lg">{title}</h3>
       {#if $errors}
         {#each Object.entries($errors) as [fieldId, error]}
-          {#if error && fields[fieldId] && error["_errors"] && error["_errors"].length > 0}
-            {#each error["_errors"] as error}
-            <div class="badge badge-lg font-mono p-3 text-base-content badge-error">{error}</div>
+          {#if error && fields?.[fieldId] && error['_errors'] && error['_errors'].length > 0}
+            {#each error['_errors'] as message}
+              <div class="badge badge-error badge-lg p-3 font-mono text-base-content">
+                {message}
+              </div>
             {/each}
           {/if}
         {/each}
@@ -58,7 +65,10 @@ $effect(() => {
     </div>
     {#if Actions}
       <div class="flex items-center gap-6">
-        <Actions bind:searchMode={actionProps.searchMode} bind:removeMode={actionProps.removeMode} {entity} />
+        <Actions
+          bind:searchMode={actionProps.searchMode}
+          bind:removeMode={actionProps.removeMode}
+          {entity} />
       </div>
     {/if}
     {#if Info}
