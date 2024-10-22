@@ -14,7 +14,6 @@ import {
 } from '$lib/db/schema';
 import type { GeometryObject } from 'geojson';
 import type { GhostSignsFeatureProperties, AddressProperties } from '$lib/types';
-import type { TargetLang } from '$lib/types';
 import type { Table } from 'drizzle-orm';
 
 const targetLangs = ['zh-hant', 'zh-hans'] as const;
@@ -54,6 +53,7 @@ const getDefaultConstraints = (table: Table) => {
     {} as Record<keyof typeof table, z.ZodType<any>>
   );
 };
+
 /* ----------------- */
 // ZOD SCHEMAS
 /* -------- */
@@ -61,8 +61,9 @@ const getDefaultConstraints = (table: Table) => {
 /* ----------------- */
 // USERS
 /* -------- */
+
 export const UserBase = createSelectSchema(user);
-export const UserReqBase = UserBase.omit({
+export const UserPrivacyPreserving = UserBase.omit({
   email: true,
   emailVerified: true,
   createdAt: true,
@@ -79,48 +80,40 @@ export const OrganisationI18nBase = createSelectSchema(organisationI18n);
 export const OrganisationRoleBase = createSelectSchema(organisationRole);
 
 // Base schema to validate submit data
-export const OrganisationReqBase = createInsertSchema(organisation, {
+export const OrganisationInsert = createInsertSchema(organisation, {
   ...getDefaultConstraints(organisation as Table)
 });
 
-export const OrganisationI18nReqBase = createInsertSchema(organisationI18n, {
+export const OrganisationUpdate = createInsertSchema(organisation, {
+  ...getDefaultConstraints(organisation as Table),
+  id: z.string()
+});
+
+export const OrganisationI18nInsert = createInsertSchema(organisationI18n, {
   ...getDefaultConstraints(organisationI18n as Table)
 });
 
-export const OrganisationRoleBareBase = createInsertSchema(organisationRole, {
+export const OrganisationRoleInsert = createInsertSchema(organisationRole, {
   ...getDefaultConstraints(organisationRole as Table)
 });
 
-export const OrganisationRoleReqBase = z.object({
-  ...OrganisationRoleBareBase.shape,
-  user: UserReqBase
+export const OrganisationRoleInsertWithAssociatedFields = z.object({
+  ...OrganisationRoleInsert.shape,
+  user: UserPrivacyPreserving
 });
 
-export const OrganisationI18nDekeyed = OrganisationI18nReqBase.omit({ lang: true });
-export const OrganisationRoleDekeyed = OrganisationRoleReqBase.omit({ userId: true });
+export const OrganisationI18nWithoutPK = OrganisationI18nInsert.omit({ lang: true });
+export const OrganisationRoleWithoutPK = OrganisationRoleInsertWithAssociatedFields.omit({ userId: true });
+export const OrganisationI18nAPI = OrganisationI18nWithoutPK.omit({ organisationId: true });
+export const OrganisationRoleAPI = OrganisationRoleWithoutPK.omit({ organisationId: true });
 
-export const OrganisationReqBody = z.object({
-  ...OrganisationReqBase.shape,
-  translations: z.record(z.string(), OrganisationI18nDekeyed).default({
-    'zh-hant': {
-      name: '',
-      nameGen: false,
-      nameShort: '',
-      nameShortGen: false,
-      description: '',
-      descriptionGen: false
-    },
-    'zh-hans': {
-      name: '',
-      nameGen: false,
-      nameShort: '',
-      nameShortGen: false,
-      description: '',
-      descriptionGen: false
-    }
+export const OrganisationInsertAPI = z.object({
+  ...OrganisationInsert.shape,
+  translations: z.record(z.string(), OrganisationI18nAPI).default({
+    'zh-hant': {},
+    'zh-hans': {}
   }),
-  userRoles: z
-    .record(z.string(), OrganisationRoleDekeyed)
+  userRoles: z.record(z.string(), OrganisationRoleAPI)
     .refine((schema) => Object.keys(schema).length > 0, 'Add at least 1 User')
     .refine(
       (schema) => Object.values(schema).some((user) => user.role === 'owner'),
@@ -128,17 +121,18 @@ export const OrganisationReqBody = z.object({
     )
 });
 
-export const NewOrganisationReqBody = z.object({
-  ...OrganisationReqBase.omit({
-    id: true,
-    createdAt: true,
-    modifiedAt: true
-  }).shape,
-  nameGen: z.boolean().default(false),
-  nameShortGen: z.boolean().default(false),
-  descriptionGen: z.boolean().default(false),
-  translations: z.record(z.string(), OrganisationI18nDekeyed.omit({ organisationId: true })),
-  userRoles: z.record(z.string(), OrganisationRoleDekeyed.omit({ organisationId: true, user: true }))
+export const OrganisationUpdateAPI = z.object({
+  ...OrganisationInsert.shape,
+  translations: z.record(z.string(), OrganisationI18nWithoutPK).default({
+    'zh-hant': {},
+    'zh-hans': {}
+  }),
+  userRoles: z.record(z.string(), OrganisationRoleWithoutPK)
+    .refine((schema) => Object.keys(schema).length > 0, 'Add at least 1 User')
+    .refine(
+      (schema) => Object.values(schema).some((user) => user.role === 'owner'),
+      'Set at least 1 Owner'
+    )
 });
 
 /* ----------------- */
