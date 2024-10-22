@@ -5,7 +5,9 @@ import { getTranslation } from '$lib/api/translation';
 // CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
 // Types
-import type { Component } from 'svelte';
+import type { FormField } from '$lib/types';
+import type { SuperFormData } from 'sveltekit-superforms/client';
+import type { Organisation } from '$lib/types';
 
 // CONFIG
 const allLanguages = [
@@ -14,20 +16,22 @@ const allLanguages = [
   { code: 'zh-hans', label: 'CN' }
 ];
 
+// TYPES
+type Props = {
+  languageTag: string;
+  fields: FormField;
+  entity: string;
+};
 
 // STATE
 let {
   languageTag,
   fields,
   entity
-}: {
-  languageTag: string;
-  fields: Record<string, { label: string; type: string; component: Component }>;
-  entity: string;
-} = $props();
+}: Props = $props();
 
-// CONTEXT
-const { form } = getForm(entity);
+// STATE : CONTEXT
+const { form } : { form: SuperFormData<Organisation> } = getForm(entity);
 
 
 const languageOptions = $derived(allLanguages.filter((lang) => lang.code !== languageTag));
