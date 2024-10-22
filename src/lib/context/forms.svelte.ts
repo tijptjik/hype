@@ -1,77 +1,126 @@
 import { zod } from 'sveltekit-superforms/adapters';
 import { getContext, setContext } from 'svelte';
-import { OrganisationReqBody, NewOrganisationReqBody } from '$lib/db/zod';
-import { superForm, superValidate } from 'sveltekit-superforms';
+import { superForm } from 'sveltekit-superforms';
 import { defaults } from 'sveltekit-superforms';
-import { get } from 'svelte/store';
-import { redirect } from '@sveltejs/kit';
-class OrganisationForm {
-  form;
-  enhance;
-  constraints;
-  validate;
-  validateForm;
-  tainted;
-  isTainted;
-  submit;
-  reset;
-  errors;
-  message;
-  posted;
+import { get, type Writable } from 'svelte/store';
+import { deserialize, enhance } from '$app/forms';
+// ZOD
+import { OrganisationInsertAPI, OrganisationUpdateAPI } from '$lib/db/zod';
+// TYPES
+import type { ActionResult } from '@sveltejs/kit';
+import type Form from 'sveltekit-superforms';
+import type {
+  FormPath,
+  InputConstraints,
+  TaintedFields,
+  FormPathLeaves,
+  ValidateOptions,
+  FormPathType,
+  SuperValidated,
+  ValidationErrors
+} from 'sveltekit-superforms';
+import type { SuperFormData } from 'sveltekit-superforms/client';
+import type { Organisation } from '$lib/types';
+import { goto } from '$app/navigation';
 
-  constructor(data, isNew: boolean) {
+class OrganisationForm {
+  form!: SuperFormData<Organisation>;
+  enhance!: typeof enhance;
+  constraints!: InputConstraints<Organisation>;
+  validate!: (
+    path: FormPathLeaves<Organisation>,
+    opts?: ValidateOptions<
+      FormPathType<Organisation, FormPathLeaves<Organisation>>,
+      Organisation,
+      Record<string, unknown>
+    >
+  ) => Promise<string[] | undefined>;
+  validateForm!: () => Promise<SuperValidated<Record<string, unknown>, string, Form>>;
+  tainted!: Writable<TaintedFields<Organisation> | undefined>;
+  isTainted!: (
+    path?: FormPath<Organisation> | Record<string, unknown> | boolean | undefined
+  ) => boolean;
+  submit!: (event: Event) => void;
+  reset!: (options?: {
+    keepMessage?: boolean;
+    data?: Partial<Organisation>;
+    newState?: Partial<Organisation>;
+    id?: string;
+  }) => void;
+  errors!: Writable<ValidationErrors<Organisation>>;
+  message!: Writable<string | undefined>;
+  posted!: Writable<boolean>;
+
+  constructor(form: SuperValidated<Organisation>, isNew: boolean) {
     // ZodClient() works only with the same schema as the one used on the server.
     // If you need to switch schemas on the client, you need the full adapter (for example zod instead of zodClient).
     const formConfig = superForm(
-      defaults(data.form.data, zod(isNew ? NewOrganisationReqBody : OrganisationReqBody)),
+      defaults(form.data, zod(isNew ? OrganisationInsertAPI : OrganisationUpdateAPI)),
       {
         dataType: 'json',
         SPA: true,
-        validators: zod(isNew ? NewOrganisationReqBody : OrganisationReqBody),
+        validators: zod(isNew ? OrganisationInsertAPI : OrganisationUpdateAPI),
         validationMethod: 'auto',
-        onSubmit: this.handleSubmit.bind(this),
-        onResult: this.handleResult.bind(this)
+        resetForm: false,
+        onSubmit: this.handleSubmit.bind(this)
       }
     );
-
     Object.assign(this, formConfig);
   }
 
-  async handleSubmit({ action, formElement, controller, submitter, cancel }) {
-    const result = await this.validateForm();
-    const currentJsonData = get(this.form); // Get the current value of the form data
-    const apiUrl = new URL(action.href);
-    apiUrl.pathname = apiUrl.pathname.replace('/admin/', '/api/');
-    const isNew = apiUrl.pathname.endsWith('/new/');
-    const httpMethod = isNew ? 'POST' : 'PUT';
+  async handleSubmit({ action, cancel }: { action: URL; cancel: () => void }) {
+    const validatedForm = await this.validateForm();
 
-    if (isNew) {
-      apiUrl.pathname = apiUrl.pathname.replace('/new/', '');
-    }
+    // LOCAL VALIDATION
+    if (!validatedForm.valid) {
+      this.errors.set(validatedForm.errors);
+      cancel();
+      // SERVER VALIDATION
+    } else {
+      const response = await fetch(this.#getFetchUrl(action), this.#getFetchConfig(action));
+      const result = deserialize(await response.text()) as ActionResult;
 
-    const response = await fetch(apiUrl, {
-      method: httpMethod,
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(currentJsonData)
-    });
-
-    const formValidationResult = await superValidate(result.form, zod(OrganisationReqBody));
-    Object.assign(this, formValidationResult);
-
-    if (isNew) {
-      // TODO verify redirect works
-      console.log('formValidationResult', formValidationResult);
-      console.log('redirecting to', `/admin/organisations/${formValidationResult.data.code}`);
-      redirect(302, `/admin/organisations/${formValidationResult.data.code}`);
+      if (result.type === 'redirect') {
+        // CREATE SUCCESS
+        this.message.set('Created successfully');
+        await goto(result.location);
+      } else if (result.type === 'success') {
+        // UPDATE SUCCESS
+        this.message.set('Updated successfully');
+        this.form.set(result.data?.data);
+      } else {
+        // FAILURE / ERROR
+        if (result.type === 'failure') {
+          this.message.set('Submission failed');
+          this.errors.set(result.data?.errors);
+          this.form.set(result.data?.data);
+        } else {
+          this.message.set('Unexpected error');
+        }
+        cancel();
+      }
     }
   }
 
-  async handleResult({ result }) {
-    if (result.status !== 200) {
-      console.error(result);
+  #getFetchUrl(action: URL) {
+    const apiUrl = new URL(action.href);
+    apiUrl.pathname = apiUrl.pathname.replace('/admin/', '/api/');
+    if (action.pathname.endsWith('/new/')) {
+      apiUrl.pathname = apiUrl.pathname.replace('/new/', '');
     }
+    return apiUrl;
+  }
+
+  #getFetchConfig(action: URL) {
+    // DATA
+    const body = JSON.stringify(get(this.form));
+    // METHOD
+    const method = action.pathname.endsWith('/new/') ? 'POST' : 'PUT';
+    // HEADERS
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    return { method, headers, body };
   }
 }
 
@@ -79,7 +128,7 @@ const getEntitySymbol = (entity: string) => {
   return `form-${entity}`;
 };
 
-export const setForm = (data, entity: string) =>
-  setContext(getEntitySymbol(entity), new OrganisationForm(data, entity === 'new'));
-export const getForm = (entity: string | false): ReturnType<typeof setForm> => 
+export const setForm = (form: SuperValidated<Organisation>, entity: string) =>
+  setContext(getEntitySymbol(entity), new OrganisationForm(form, entity === 'new'));
+export const getForm = (entity: string | false): ReturnType<typeof setForm> =>
   getContext(getEntitySymbol(entity ? entity : 'new'));
