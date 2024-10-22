@@ -2,8 +2,6 @@
 // Context
 import { getRouterState } from '$lib/context/router.svelte';
 import { setForm } from '$lib/context/forms.svelte';
-// Stores
-import { meta } from '$lib/stores/resources.svelte';
 // Components
 import EntityHeader from '$lib/components/layout/EntityHeader.svelte';
 import FormI18nSection from '$lib/components/forms/FormI18nSection.svelte';
@@ -13,9 +11,13 @@ import FormInputField from '$lib/components/forms/FormInputField.svelte';
 import FormTextField from '$lib/components/forms/FormTextField.svelte';
 import FormUserCard from '$lib/components/forms/FormUserCard.svelte';
 import FormUserSection from '$lib/components/forms/FormUserSection.svelte';
+// TYPES
+import type { FormFieldConfig } from '$lib/types';
+import type { SuperValidated } from 'sveltekit-superforms';
+import type { Organisation } from '$lib/types';
 
 // CONFIG
-const FIELDS = {
+const FIELDS: FormFieldConfig = {
   i18n: {
     name: {
       label: 'Full Name',
@@ -55,36 +57,30 @@ const FIELDS = {
 };
 
 // STATE : PROPS
-let { data } = $props();
+let { data }: { data: { form: SuperValidated<Organisation>; entity: string } } = $props();
+let { form, entity } = data;
 
 // STATE : DERIVED
 const routerState = getRouterState();
 
-// STATE : EFFECTS
-$effect(() => {
-  if (routerState.entity) {
-    meta.title = data.form.data.name || 'New';
-  }
-});
-
 // STATE : FORM
-const { message, enhance } = setForm(data, data.entity);
+const { message, enhance } = setForm(form, entity);
 </script>
 
 <!-- LAYOUT -->
 <div class="h-full overflow-y-auto bg-black">
-  <EntityHeader entity={data.entity}/>
+  <EntityHeader entity={data.entity} title={data.form.data.name || 'New'} />
   <main class="flex w-full flex-col p-6">
     {#if $message}<h3>{$message}</h3>{/if}
     <form method="POST" use:enhance class="flex flex-col gap-6">
       {#if routerState.facet === 'core' || routerState.facet === false}
-        <FormI18nSection title="Descriptors" fields={FIELDS.i18n} entity={data.entity} />
+        <FormI18nSection title="Descriptors" fields={FIELDS.i18n} {entity} />
         <div class="flex flex-row gap-6">
-          <FormUserSection title="Members" fields={FIELDS.users} entity={data.entity} />
-          <FormSpecificationSection title="Specification" fields={FIELDS.specification} entity={data.entity} />
+          <FormUserSection title="Members" fields={FIELDS.users} {entity} />
+          <FormSpecificationSection title="Specification" fields={FIELDS.specification} {entity} />
         </div>
       {:else if routerState.facet === 'images'}
-        <FormImageSection title="Image" fields={FIELDS.images} entity={data.entity} />
+        <FormImageSection title="Image" fields={FIELDS.images} {entity} />
       {:else}
         <h1>FACET NOT FOUND</h1>
       {/if}
