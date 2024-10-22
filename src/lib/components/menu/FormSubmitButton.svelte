@@ -16,15 +16,17 @@
   
   // STATE : EFFECTS
   $effect(() => {
-    isInvalid = (function checkErrors(obj) {
+    isInvalid = (function checkErrors(obj: Record<string, unknown>): boolean {
       if (typeof obj !== 'object' || obj === null) {
         return obj !== undefined;
       }
-      return Object.values(obj).some(checkErrors);
-    })($errors);
+      return Object.values(obj).some((value) => 
+        typeof value === 'object' ? checkErrors(value as Record<string, unknown>) : value !== undefined
+      );
+    })($errors as Record<string, unknown>);
   });
 </script>
-  
+
 <button
   class="btn disabled:bg-transparent disabled:text-opacity-60 transition-all duration-500"
   onclick={(e) => submit(e)}
