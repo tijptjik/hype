@@ -57,7 +57,8 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
         },
         userId,
         organisationRole,
-        organisationI18n
+        organisationI18n,
+        1
       );
 
       // HTTP : 200 JSON or 404

@@ -398,7 +398,6 @@ export async function hierarchicalEntityQuery<usersT extends Table, translations
     throw new Error('The old shall never be new again');
   }
   const slicedHierarchy = resourceHierarchy.slice(-depth, resourceHierarchy.length);
-
   const conditions = [
     eq(getTable(slicedHierarchy, 0)[publicIdentifier], ref),
     ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId)
@@ -418,7 +417,6 @@ export async function hierarchicalEntityQuery<usersT extends Table, translations
   if (!result) {
     return error(401, 'Doors have ears, but they haven\'t ever heard of this.');
   }
-
   // Reduce translations to a single object with language as key
   if (translationTable) {
     result.translations = result.translations.reduce(
@@ -442,7 +440,6 @@ export async function hierarchicalEntityQuery<usersT extends Table, translations
       );
     }
   }
-
   return result;
 }
 

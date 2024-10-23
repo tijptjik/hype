@@ -25,7 +25,6 @@ const ACCESS_STRATEGY = 'EntityOwn' as AccessStrategyOption;
 const PUBLIC_IDENTIFIER = 'code';
 
 export const GET: RequestHandler = async ({ params, locals, platform }) => {
-  // AUTH : Pass or Fail
   const { db, userId, accessStrategy } = await getDatabaseOrError(
     locals,
     platform,
@@ -57,7 +56,8 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
         },
         userId,
         projectRole,
-        projectI18n
+        projectI18n,
+        2
       );
 
       // HTTP : 200 JSON or 404
