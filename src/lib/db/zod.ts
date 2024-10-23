@@ -11,12 +11,10 @@ import {
   feature,
   organisationRole,
   projectRole,
-  type ProjectMetadata
 } from '$lib/db/schema';
 import type { GeometryObject } from 'geojson';
-import type { GhostSignsFeatureProperties, AddressProperties } from '$lib/types';
+import type { GhostSignsFeatureProperties, AddressProperties, ProjectMetadata } from '$lib/types';
 import type { Table } from 'drizzle-orm';
-
 const targetLangs = ['zh-hant', 'zh-hans'] as const;
 
 /* ----------------- */
@@ -91,10 +89,6 @@ const getMaintainerRoles = (model: z.ZodType<any>) =>
   z
     .record(z.string(), model)
     .refine((schema) => Object.keys(schema).length > 0, 'Add at least 1 Maintainer')
-    .refine(
-      (schema) => Object.values(schema).some((user) => user.role === 'owner'),
-      'Set at least 1 Owner'
-    );
 
 /* ----------------- */
 // ZOD SCHEMAS
@@ -177,8 +171,9 @@ export const ProjectRoleBase = createSelectSchema(projectRole);
 // Base schema to validate submit data
 export const ProjectInsert = createInsertSchema(project, {
   ...getDefaultConstraints(project as Table),
-  metadata: z.custom<ProjectMetadata>()
+   metadata: z.custom<ProjectMetadata>().default({})
 });
+
 
 export const ProjectUpdate = ProjectInsert.extend({
   id: z.string()
@@ -189,7 +184,7 @@ export const ProjectI18nInsert = createInsertSchema(projectI18n, {
 });
 
 export const ProjectRoleInsert = createInsertSchema(projectRole, {
-  role: z.enum(['member', 'owner', 'admin'])
+  role: z.enum(['maintainer'])
 });
 
 export const ProjectRoleInsertWithAssociatedFields = ProjectRoleInsert.extend({
@@ -209,7 +204,7 @@ export const ProjectInsertAPI = ProjectInsert.extend({
 export const ProjectUpdateAPI = ProjectUpdate.extend({
   translations: getTranslations(ProjectI18nWithoutPK),
   maintainerRoles: getMaintainerRoles(ProjectRoleWithoutPK)
-});
+})
 
 /* ----------------- */
 // LAYERS

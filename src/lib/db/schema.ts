@@ -212,9 +212,11 @@ export const session = sqliteTable('session', {
 // PROJECTS
 /* -------- */
 
-export interface ProjectMetadata {
+export interface IProjectMetadata {
   filterProperties?: string[]; // ['district', 'script', 'isPublished']
 }
+
+
 
 export const project = sqliteTable('project', {
   id: text('id')
@@ -243,7 +245,7 @@ export const project = sqliteTable('project', {
   // Project Banner
   image: text('image').default(`https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=${getGenImageParam()}`),
   // Additional Information
-  metadata: text('metadata', { mode: 'json' }).$type<ProjectMetadata>(),
+  metadata: text('metadata', { mode: 'json' }).$type<IProjectMetadata>(),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -309,9 +311,9 @@ export const projectRole = sqliteTable(
     userId: text('userId')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    role: text('role', { enum: ['member', 'owner', 'admin'] })
+    role: text('role', { enum: ['maintainer'] })
       .notNull()
-      .default('member')
+      .default('maintainer')
   },
   (t) => ({
     pk: primaryKey({ columns: [t.projectId, t.userId] })
