@@ -23,6 +23,8 @@ let actionProps = $state({
   removeMode: false
 });
 
+let checkedValue = entity === 'project' ? 'member' : 'owner';
+let uncheckedValue = entity === 'project' ? 'maintainer' : 'member';
 // STATE : CONTEXT
 const { form, errors, constraints } = getForm(entity, resourceType);
 </script>
@@ -34,6 +36,7 @@ const { form, errors, constraints } = getForm(entity, resourceType);
     Actions={FormUserActions}
     bind:actionProps
     {fields}
+    {resourceType}
     {errors}
     {entity} />
   {#each Object.entries(fields) as [fieldId, field]}
@@ -46,8 +49,8 @@ const { form, errors, constraints } = getForm(entity, resourceType);
       {constraints}
       {errors}
       userJoinStateKey="role"
-      checkedValue="owner"
-      uncheckedValue="member"
+      checkedValue={checkedValue}
+      uncheckedValue={uncheckedValue}
       {entity}
       {resourceType} />
   {/each}
