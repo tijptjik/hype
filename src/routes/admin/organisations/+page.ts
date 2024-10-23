@@ -3,7 +3,6 @@ import { getResponseOrError } from '$lib/api';
 // ZOD Schemas
 import { OrganisationInsertAPI } from '$lib/db/zod';
 
-
 const ENDPOINT = `/api/organisations/`;
 
 export const load: PageLoad = async ({ params, fetch }) => {
