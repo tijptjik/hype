@@ -1,7 +1,7 @@
 import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { error } from '@sveltejs/kit';
-import { eq, Table } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 // CONFIG
 // SCHEMA
 import { organisationRole, organisationI18n, organisation, user } from '$lib/db/schema';
