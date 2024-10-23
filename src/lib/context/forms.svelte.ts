@@ -2,11 +2,22 @@ import { zod } from 'sveltekit-superforms/adapters';
 import { getContext, setContext } from 'svelte';
 import { superForm } from 'sveltekit-superforms';
 import { defaults } from 'sveltekit-superforms';
-import { get, type Writable } from 'svelte/store';
+import { get } from 'svelte/store';
 import { deserialize, enhance } from '$app/forms';
+import { goto } from '$app/navigation';
 // ZOD
-import { OrganisationInsertAPI, OrganisationUpdateAPI } from '$lib/db/zod';
+import {
+  OrganisationInsertAPI,
+  OrganisationUpdateAPI,
+  ProjectInsertAPI,
+  ProjectUpdateAPI,
+  LayerInsertAPI,
+  LayerUpdateAPI,
+  FeatureInsertAPI,
+  FeatureUpdateAPI
+} from '$lib/db/zod';
 // TYPES
+import type { Writable } from 'svelte/store';
 import type { ActionResult } from '@sveltejs/kit';
 import type Form from 'sveltekit-superforms';
 import type {
@@ -20,51 +31,46 @@ import type {
   ValidationErrors
 } from 'sveltekit-superforms';
 import type { SuperFormData } from 'sveltekit-superforms/client';
-import type { Organisation } from '$lib/types';
-import { goto } from '$app/navigation';
+import type {
+  Organisation,
+  Project,
+  Layer,
+  Feature,
+  ResourceType
+} from '$lib/types';
 
-class OrganisationForm {
-  form!: SuperFormData<Organisation>;
+class BaseForm<T extends Record<string, unknown>> {
+  form!: SuperFormData<T>;
   enhance!: typeof enhance;
-  constraints!: InputConstraints<Organisation>;
+  constraints!: InputConstraints<T>;
   validate!: (
-    path: FormPathLeaves<Organisation>,
-    opts?: ValidateOptions<
-      FormPathType<Organisation, FormPathLeaves<Organisation>>,
-      Organisation,
-      Record<string, unknown>
-    >
+    path: FormPathLeaves<T>,
+    opts?: ValidateOptions<FormPathType<T, FormPathLeaves<T>>, T, Record<string, unknown>>
   ) => Promise<string[] | undefined>;
   validateForm!: () => Promise<SuperValidated<Record<string, unknown>, string, Form>>;
-  tainted!: Writable<TaintedFields<Organisation> | undefined>;
-  isTainted!: (
-    path?: FormPath<Organisation> | Record<string, unknown> | boolean | undefined
-  ) => boolean;
+  tainted!: Writable<TaintedFields<T> | undefined>;
+  isTainted!: (path?: FormPath<T> | Record<string, unknown> | boolean | undefined) => boolean;
   submit!: (event: Event) => void;
   reset!: (options?: {
     keepMessage?: boolean;
-    data?: Partial<Organisation>;
-    newState?: Partial<Organisation>;
+    data?: Partial<T>;
+    newState?: Partial<T>;
     id?: string;
   }) => void;
-  errors!: Writable<ValidationErrors<Organisation>>;
+  errors!: Writable<ValidationErrors<T>>;
   message!: Writable<string | undefined>;
   posted!: Writable<boolean>;
-
-  constructor(form: SuperValidated<Organisation>, isNew: boolean) {
-    // ZodClient() works only with the same schema as the one used on the server.
-    // If you need to switch schemas on the client, you need the full adapter (for example zod instead of zodClient).
-    const formConfig = superForm(
-      defaults(form.data, zod(isNew ? OrganisationInsertAPI : OrganisationUpdateAPI)),
-      {
-        dataType: 'json',
-        SPA: true,
-        validators: zod(isNew ? OrganisationInsertAPI : OrganisationUpdateAPI),
-        validationMethod: 'auto',
-        resetForm: false,
-        onSubmit: this.handleSubmit.bind(this)
-      }
-    );
+  // ZodClient() works only with the same schema as the one used on the server.
+  // If you need to switch schemas on the client, you need the full adapter (for example zod instead of zodClient).
+  constructor(form: SuperValidated<T>, isNew: boolean, insertSchema: any, updateSchema: any) {
+    const formConfig = superForm(defaults(form.data, zod(isNew ? insertSchema : updateSchema)), {
+      dataType: 'json',
+      SPA: true,
+      validators: zod(isNew ? insertSchema : updateSchema),
+      validationMethod: 'auto',
+      resetForm: false,
+      onSubmit: this.handleSubmit.bind(this)
+    });
     Object.assign(this, formConfig);
   }
 
@@ -124,11 +130,60 @@ class OrganisationForm {
   }
 }
 
-const getEntitySymbol = (entity: string) => {
-  return `form-${entity}`;
+class OrganisationForm extends BaseForm<Organisation> {
+  constructor(form: SuperValidated<Organisation>, isNew: boolean) {
+    super(form, isNew, OrganisationInsertAPI, OrganisationUpdateAPI);
+  }
+}
+
+class ProjectForm extends BaseForm<Project> {
+  constructor(form: SuperValidated<Project>, isNew: boolean) {
+    super(form, isNew, ProjectInsertAPI, ProjectUpdateAPI);
+  }
+}
+
+class LayerForm extends BaseForm<Layer> {
+  constructor(form: SuperValidated<Layer>, isNew: boolean) {
+    super(form, isNew, LayerInsertAPI, LayerUpdateAPI);
+  }
+}
+
+class FeatureForm extends BaseForm<Feature> {
+  constructor(form: SuperValidated<Feature>, isNew: boolean) {
+    super(form, isNew, FeatureInsertAPI, FeatureUpdateAPI);
+  }
+}
+
+const getContextRef = (entity: string, resourceType: ResourceType) => {
+  return `form-${resourceType}-${entity}`;
 };
 
-export const setForm = (form: SuperValidated<Organisation>, entity: string) =>
-  setContext(getEntitySymbol(entity), new OrganisationForm(form, entity === 'new'));
-export const getForm = (entity: string | false): ReturnType<typeof setForm> =>
-  getContext(getEntitySymbol(entity ? entity : 'new'));
+export const setForm = <T extends Record<string, unknown>>(
+  form: SuperValidated<T>,
+  entity: string,
+  resourceType: ResourceType
+) => {
+  let FormClass;
+  switch (resourceType) {
+    case 'organisation':
+      FormClass = OrganisationForm;
+      break;
+    case 'project':
+      FormClass = ProjectForm;
+      break;
+    case 'layer':
+      FormClass = LayerForm;
+      break;
+    case 'feature':
+      FormClass = FeatureForm;
+      break;
+    default:
+      throw new Error(`Unknown entity type: ${resourceType}`);
+  }
+  return setContext(getContextRef(entity, resourceType), new FormClass(form, entity === 'new'));
+};
+
+export const getForm = (
+  entity: string | false,
+  resourceType: ResourceType = 'organisation'
+): ReturnType<typeof setForm> => getContext(getContextRef(entity ? entity : 'new', resourceType));
