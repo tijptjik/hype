@@ -9,6 +9,9 @@ import type {
   GhostSignsFeatureProperties,
   AddressProperties } from '$lib/types';
 
+// UTILS
+const generateRandomCellParam = (): number => Math.floor(Math.random() * (100 - 5 + 1)) + 5;
+
 /* ----------------- */
 // USERS
 /* -------- */
@@ -91,7 +94,7 @@ export const organisation = sqliteTable('organisation', {
   description: text('description'),
   descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(false),
   url: text('url'),
-  image: text('image'),
+  image: text('image').default(`https://generative-placeholders.glitch.me/image?width=720&height=720&style=triangles&gap=${generateRandomCellParam()}`),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -213,6 +216,7 @@ export interface ProjectMetadata {
   filterProperties?: string[]; // ['district', 'script', 'isPublished']
 }
 
+
 export const project = sqliteTable('project', {
   id: text('id')
     .primaryKey()
@@ -237,6 +241,8 @@ export const project = sqliteTable('project', {
   // Attribution for the dataset
   attribution: text('attribution').notNull(),
   attributionGen: integer('attributionGen', { mode: 'boolean' }).notNull().default(false),
+  // Project Banner
+  image: text('image').default(`https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=${generateRandomCellParam()}`),
   // Additional Information
   metadata: text('metadata', { mode: 'json' }).$type<ProjectMetadata>(),
   createdAt: text('createdAt')
