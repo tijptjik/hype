@@ -82,7 +82,7 @@ $effect(() => {
   <FormSectionHeaderSearch
     bind:searchMode={actionProps.searchMode}
     apiPath="users"
-    destination="userRoles"
+    destination={Object.keys(fields ?? {})[0]}
     toItem={(item) => ({
       organisationId: $form.id,
       role: 'member',
