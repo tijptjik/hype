@@ -10,7 +10,7 @@ import type {
   AddressProperties } from '$lib/types';
 
 // UTILS
-const generateRandomCellParam = (): number => Math.floor(Math.random() * (100 - 5 + 1)) + 5;
+const getGenImageParam = (): number => Math.floor(Math.random() * (100 - 5 + 1)) + 5;
 
 /* ----------------- */
 // USERS
@@ -94,7 +94,7 @@ export const organisation = sqliteTable('organisation', {
   description: text('description'),
   descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(false),
   url: text('url'),
-  image: text('image').default(`https://generative-placeholders.glitch.me/image?width=720&height=720&style=triangles&gap=${generateRandomCellParam()}`),
+  image: text('image').default(`https://generative-placeholders.glitch.me/image?width=720&height=720&style=triangles&gap=${getGenImageParam()}`),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -216,7 +216,6 @@ export interface ProjectMetadata {
   filterProperties?: string[]; // ['district', 'script', 'isPublished']
 }
 
-
 export const project = sqliteTable('project', {
   id: text('id')
     .primaryKey()
@@ -242,7 +241,7 @@ export const project = sqliteTable('project', {
   attribution: text('attribution').notNull(),
   attributionGen: integer('attributionGen', { mode: 'boolean' }).notNull().default(false),
   // Project Banner
-  image: text('image').default(`https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=${generateRandomCellParam()}`),
+  image: text('image').default(`https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=${getGenImageParam()}`),
   // Additional Information
   metadata: text('metadata', { mode: 'json' }).$type<ProjectMetadata>(),
   createdAt: text('createdAt')
@@ -254,7 +253,11 @@ export const project = sqliteTable('project', {
     .notNull()
 });
 
-export const projectRelations = relations(project, ({ many }) => ({
+export const projectRelations = relations(project, ({ one, many }) => ({
+  organisation: one(organisation, {
+    fields: [project.organisationId],
+    references: [organisation.id]
+  }),
   layers: many(layer),
   translations: many(projectI18n),
   maintainerRoles: many(projectRole)
