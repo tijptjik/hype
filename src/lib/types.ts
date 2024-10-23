@@ -84,6 +84,10 @@ export type FormFieldComponent = typeof FormInputField | typeof FormTextField | 
 // SCHEMA TYPES
 /* -------- */
 
+export type Field = keyof Organisation | keyof Project | keyof Layer | keyof Feature;
+export type Resource = Organisation | Project | Layer | Feature;
+export type ResourceDB = OrganisationDB | ProjectDB | LayerDB | FeatureDB;
+
 /* ----------------- */
 // USERS
 /* -------- */
