@@ -209,7 +209,7 @@ export const session = sqliteTable('session', {
 // PROJECTS
 /* -------- */
 
-interface ProjectMetadata {
+export interface ProjectMetadata {
   filterProperties?: string[]; // ['district', 'script', 'isPublished']
 }
 
