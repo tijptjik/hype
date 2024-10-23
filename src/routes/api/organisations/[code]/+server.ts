@@ -10,15 +10,16 @@ import {
   updateTranslations,
   updateUserRoles,
   rebuildFormData,
-  extractEntitiesToUpdate
-} from '$lib/db/organisation';
+  extractEntitiesToUpdate} from '$lib/db/organisation';
+import { isFieldUnique, isFieldChanged } from '$lib/db';
 // ZOD
 import { OrganisationUpdateAPI } from '$lib/db/zod';
 // TYPES
 import type { SuperValidated } from 'sveltekit-superforms/client';
-import type { Organisation } from '$lib/types';
+import type { Organisation, OrganisationDB } from '$lib/types';
 
 const RESOURCE_TYPE = 'organisation';
+const RESOURCE_PATH = 'organisations';
 const ACCESS_STRATEGY = 'EntityOwn' as AccessStrategyOption;
 const PUBLIC_IDENTIFIER = 'code';
 
@@ -70,7 +71,6 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
     return error(500, 'The Old Shall Never Be New Again');
   }
 };
-
 export const PUT: RequestHandler = async ({ params, request, locals, platform }) => {
   // AUTH : Pass or Fail
   const { db, userId, accessStrategy } = await getDatabaseOrError(
@@ -79,14 +79,27 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     ACCESS_STRATEGY,
     RESOURCE_TYPE
   );
+  let redirect = false;
 
   try {
     const formData: Organisation = await request.json();
     const form = await superValidate(formData, zod(OrganisationUpdateAPI)) as SuperValidated<Organisation>;
 
+    // Check if the current user will lose access on membership changes
+    const userLosesAccess = !Object.keys(form.data.userRoles).includes(userId) && accessStrategy !== 'SuperAdmin';
+    const codeChanged = await isFieldChanged<OrganisationDB>(db, formData.id as string, formData.code as string, RESOURCE_TYPE, 'code');
+    
+    if (codeChanged) {
+      const codeUnique = await isFieldUnique<Organisation>(db, formData, RESOURCE_TYPE, 'code');
+      if (!codeUnique) {
+        form.valid = false;
+        form.errors.code = ['Code already exists'];
+      }
+    }
+
     if (!form.valid) {
       // If validation fails, return form with the errors
-      return SuperFormResponse(form, 400);
+      return SuperFormResponse<Organisation>(form, );
     }
 
     const { baseOrganisation, formTranslations, formUserRoles } = extractEntitiesToUpdate(form.data as Organisation);
@@ -97,13 +110,17 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
       updatedOrganisation.id
     );
     const updatedUserRoles = await updateUserRoles(db, formUserRoles, updatedOrganisation.id);
-    const rebuildForm = await rebuildFormData(
+    const updatedForm = await rebuildFormData(
       updatedOrganisation,
       updatedTranslations,
       updatedUserRoles
     );
 
-    return SuperFormResponse(rebuildForm);
+    if (userLosesAccess || codeChanged) {
+      redirect = true;
+    }
+
+    return SuperFormResponse<Organisation>(updatedForm, redirect, userLosesAccess, RESOURCE_PATH);
   } catch (err) {
     console.error(err);
     return SuperFormErrorResponse(RESOURCE_TYPE);

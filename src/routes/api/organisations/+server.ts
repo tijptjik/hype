@@ -6,12 +6,12 @@ import { hierarchicalResourceQuery } from '$lib/db';
 import { organisationRole, organisationI18n } from '$lib/db/schema';
 import {
   createOrganisation,
-  isCodeUnique,
   createTranslations,
   createUserRoles,
   rebuildFormData,
   extractEntitiesToInsert
 } from '$lib/db/organisation';
+import { isFieldUnique } from '$lib/db';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
 import { OrganisationInsertAPI } from '$lib/db/zod';
@@ -71,7 +71,10 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       formData,
       zod(OrganisationInsertAPI)
     )) as SuperValidated<Organisation>;
-    const codeUnique = await isCodeUnique(db, formData);
+
+    // Check if the current user will lose access on membership changes
+    const userLosesAccess = !Object.keys(form.data.userRoles).includes(userId) && accessStrategy !== 'SuperAdmin'; 
+    const codeUnique = await isFieldUnique<Organisation>(db, formData as Organisation, RESOURCE_TYPE, 'code');
 
     if (!codeUnique) {
       form.valid = false;
@@ -79,7 +82,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
     }
 
     if (!form.valid) {
-      return SuperFormResponse(form);
+      return SuperFormResponse<Organisation>(form);
     }
 
     const { baseOrganisation, formTranslations, formUserRoles } = extractEntitiesToInsert(
@@ -97,7 +100,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       createdTranslations,
       createdUserRoles
     );
-    return SuperFormResponse(updatedForm, 201, true, RESOURCE_PATH);
+    return SuperFormResponse<Organisation>(updatedForm, true, userLosesAccess, RESOURCE_PATH, 201);
   } catch (err) {
     console.error(err);
     return actionResult('error', 'Failed to create organisation', { status: 500 });
