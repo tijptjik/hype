@@ -88,6 +88,13 @@ export type Field = keyof Organisation | keyof Project | keyof Layer | keyof Fea
 export type Resource = Organisation | Project | Layer | Feature;
 export type ResourceDB = OrganisationDB | ProjectDB | LayerDB | FeatureDB;
 
+// RELATED TYPES
+export type FormTranslations<T> = {
+  'zh-hant': T;
+  'zh-hans': T;
+};
+export type FormRelatedUsers<T> = Record<Id, T>;
+
 /* ----------------- */
 // USERS
 /* -------- */
