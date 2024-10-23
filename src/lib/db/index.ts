@@ -3,14 +3,15 @@ import type { D1Database } from '@auth/d1-adapter';
 import * as schema from './schema';
 import { Table, getTableName, and, sql, inArray, eq, or, not, exists, ilike } from 'drizzle-orm';
 // TYPES
-import type { NestedRelations } from '$lib/types';
+import type { Field, NestedRelations, Resource, ResourceDB, ResourceType } from '$lib/types';
 import { error } from '@sveltejs/kit';
+import type { Database } from './organisation';
 const client = (database: D1Database) => {
   return drizzle(database, { schema });
 };
 
 // CONFIG
-const resourceConfig = {
+export const resourceConfig = {
   feature: {
     name: 'feature',
     table: schema.feature,
@@ -445,4 +446,43 @@ export async function hierarchicalEntityQuery<usersT extends Table, translations
   return result;
 }
 
+// Testing Functions
+
+export const isFieldUnique = async <T extends Resource>(
+  db: Database,
+  data: T,
+  resourceType: ResourceType = 'organisation',
+  field: Field = 'code'
+): Promise<boolean> => {
+  // Check whether the organisation code already exists
+  const table = resourceConfig[resourceType].table;
+  const [existingEntity] = await db
+    .select()
+    .from(table)
+    .where(eq(table[field], data[field]))
+    .limit(1);
+  return existingEntity ? false : true;
+};
+
+export const isFieldChanged = async <T extends ResourceDB>(
+  db: Database,
+  id: string,
+  value: string,
+  resourceType: ResourceType = 'organisation',
+  field: Field = 'code'
+): Promise<boolean> => {
+  // Check whether the provided code is different from the one in the database
+  const table = resourceConfig[resourceType].table;
+  const [existingEntity]: T[] = await db.select().from(table).where(eq(table.id, id)).limit(1);
+
+  if (!existingEntity) {
+    return false; // Organisation not found
+  }
+
+  return existingEntity[field] !== value;
+};
+
+// EXPORTS
+
 export default client;
+

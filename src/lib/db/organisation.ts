@@ -1,15 +1,12 @@
 import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { error } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
+import { eq, Table } from 'drizzle-orm';
+// CONFIG
 // SCHEMA
 import { organisationRole, organisationI18n, organisation, user } from '$lib/db/schema';
 // ZOD
-import {
-  OrganisationInsert,
-  OrganisationUpdate,
-  OrganisationUpdateAPI
-} from '$lib/db/zod';
+import { OrganisationInsert, OrganisationUpdate, OrganisationUpdateAPI } from '$lib/db/zod';
 // TYPES
 import type {
   Organisation,
@@ -21,11 +18,10 @@ import type {
   NewOrganisationRole,
   OrganisationRoleDB,
   OrganisationI18n,
-  OrganisationRole
-} from '$lib/types';
+  OrganisationRole} from '$lib/types';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import type { TargetLang, Id } from '$lib/types';
-type Database = DrizzleD1Database<typeof import('/home/io/code/ghostsigns/src/lib/db/schema')>;
+export type Database = DrizzleD1Database<typeof import('/home/io/code/ghostsigns/src/lib/db/schema')>;
 
 // CREATE / UPDATE
 
@@ -40,14 +36,6 @@ export const createOrganisation = async (db: Database, data: NewOrganisationDB) 
   }
 
   return insertedOrganisation;
-};
-
-export const isCodeUnique = async (db: Database, data: NewOrganisation): Promise<boolean> => {
-  // Check whether the organisation code already exists
-  const existingOrganisation = await db.query.organisation.findFirst({
-    where: eq(organisation.code, data.code)
-  });
-  return existingOrganisation ? false : true;
 };
 
 export const updateOrganisation = async (db: Database, data: OrganisationDB, ref: string) => {
