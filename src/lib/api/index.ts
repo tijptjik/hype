@@ -4,7 +4,7 @@ import client from '$lib/db';
 import { getUserRoles } from '$lib/auth/utils';
 // Types
 import type { SuperValidated } from 'sveltekit-superforms/client';
-import type { Organisation } from '$lib/types';
+import type { Organisation, Resource } from '$lib/types';
 import type { UserRole } from '$lib/auth/utils';
 
 export type AccessStrategyOption =
@@ -45,21 +45,30 @@ export const SuperFormErrorResponse = (resourceType: string): Response => {
   );
 };
 
-export const SuperFormResponse = (
-  validatedForm: SuperValidated<Organisation>,
-  code: number = 200,
-  isNew: boolean = false,
-  resourcePath: string = ''
+export const SuperFormResponse = <T extends Resource>(
+  validatedForm: SuperValidated<T>,
+  redirect: boolean = false,
+  userLosesAccess: boolean = false,
+  resourcePath: string = '',
+  code: number = 200
 ): Response => {
   if (!validatedForm.valid) {
-    return actionResult<SuperValidated<Organisation>, 'failure'>('failure', validatedForm, { status: 400 });
+    return actionResult<SuperValidated<T>, 'failure'>('failure', validatedForm, { status: 400 });
   }
-  if (isNew) {
-    return actionResult('redirect', `/admin/${resourcePath}/${validatedForm.data.code || validatedForm.data.id}`, {
-      status: 303
-    });
+  if (redirect) {
+    // TODO : Make the redirect more robust by passing in the entityRef
+    if (userLosesAccess) {
+      return actionResult('redirect', `/admin/${resourcePath}/`, {
+        status: 302
+      });
+    } else {
+      const entityRef = validatedForm.data.code || validatedForm.data.id;
+      return actionResult('redirect', `/admin/${resourcePath}/${entityRef}`, {
+        status: 303
+      });
+    }
   }
-  return actionResult<SuperValidated<Organisation>, 'success'>('success', validatedForm, { status: code });
+  return actionResult<SuperValidated<T>, 'success'>('success', validatedForm, { status: code });
 };
 
 const checkAccessOrError = (
