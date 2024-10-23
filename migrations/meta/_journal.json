@@ -36,6 +36,13 @@
       "when": 1729014983670,
       "tag": "0004_GenAI_Columns",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1729678527560,
+      "tag": "0005_add_image_url_to_project",
+      "breakpoints": true
     }
   ]
 }
