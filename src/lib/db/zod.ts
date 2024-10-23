@@ -141,35 +141,66 @@ export const OrganisationUpdateAPI = z.object({
 
 // Schema for selecting a project - can be used to validate API responses
 export const ProjectBase = createSelectSchema(project);
-export const ProjectI18n = createSelectSchema(projectI18n);
-export const ProjectRole = createSelectSchema(projectRole);
+export const ProjectI18nBase = createSelectSchema(projectI18n);
+export const ProjectRoleBase = createSelectSchema(projectRole);
 
 // Base schema to validate submit data
-export const ProjectReqBase = createInsertSchema(project, {
+export const ProjectInsert = createInsertSchema(project, {
   ...getDefaultConstraints(project as Table)
 });
 
-export const ProjectI18nReqBase = createInsertSchema(projectI18n, {
+export const ProjectUpdate = createInsertSchema(project, {
+  ...getDefaultConstraints(project as Table),
+  id: z.string()
+});
+
+export const ProjectI18nInsert = createInsertSchema(projectI18n, {
   ...getDefaultConstraints(projectI18n as Table)
 });
 
-export const ProjectRoleReqBase = createInsertSchema(projectRole, {
-  ...getDefaultConstraints(projectRole as Table)
+export const ProjectRoleInsert = createInsertSchema(projectRole, {
+  // TODO : Verify that this is useful instead of the a pure string
+  role: z.enum(['member', 'owner', 'admin'])
 });
 
-const ProjectI18nDekeyed = ProjectI18nReqBase.omit({ lang: true });
-const ProjectRoleDekeyed = ProjectRoleReqBase.omit({ userId: true });
-
-export const ProjectReqBody = z.object({
-  ...ProjectReqBase.shape,
-  translations: z.record(z.enum(targetLangs), ProjectI18nDekeyed),
-  maintainerRoles: z.record(z.string(), ProjectRoleDekeyed)
+export const ProjectRoleInsertWithAssociatedFields = z.object({
+  ...ProjectRoleInsert.shape,
+  user: UserPrivacyPreserving
 });
 
-export const NewProjectReqBody = z.object({
-  ...ProjectReqBase.omit({ id: true }).shape,
-  translations: z.record(z.enum(targetLangs), ProjectI18nDekeyed.omit({ projectId: true })),
-  maintainerRoles: z.record(z.string(), ProjectRoleDekeyed.omit({ projectId: true }))
+export const ProjectI18nWithoutPK = ProjectI18nInsert.omit({ lang: true });
+export const ProjectRoleWithoutPK = ProjectRoleInsertWithAssociatedFields.omit({ userId: true });
+export const ProjectI18nAPI = ProjectI18nWithoutPK.omit({ projectId: true });
+export const ProjectRoleAPI = ProjectRoleWithoutPK.omit({ projectId: true });
+
+export const ProjectInsertAPI = z.object({
+  ...ProjectInsert.shape,
+  translations: z.record(z.enum(targetLangs), ProjectI18nAPI).default({
+    'zh-hant': {},
+    'zh-hans': {}
+  }),
+  maintainerRoles: z.record(z.string(), ProjectRoleAPI)
+  // TODO Refine the role requirements
+    .refine((schema) => Object.keys(schema).length > 0, 'Add at least 1 Maintainer')
+    .refine(
+      (schema) => Object.values(schema).some((user) => user.role === 'owner'),
+      'Set at least 1 Owner'
+    )
+});
+
+export const ProjectUpdateAPI = z.object({
+  ...ProjectUpdate.shape,
+  translations: z.record(z.enum(targetLangs), ProjectI18nWithoutPK).default({
+    'zh-hant': {},
+    'zh-hans': {}
+  }),
+    // TODO Refine the role requirements
+  maintainerRoles: z.record(z.string(), ProjectRoleWithoutPK)
+    .refine((schema) => Object.keys(schema).length > 0, 'Add at least 1 Maintainer')
+    .refine(
+      (schema) => Object.values(schema).some((user) => user.role === 'owner'),
+      'Set at least 1 Owner'
+    )
 });
 
 /* ----------------- */
@@ -178,51 +209,58 @@ export const NewProjectReqBody = z.object({
 
 // Schema for selecting a layer - can be used to validate API responses
 export const LayerBase = createSelectSchema(layer);
-export const LayerI18n = createSelectSchema(layerI18n);
+export const LayerI18nBase = createSelectSchema(layerI18n);
 
 // Base schema to validate submit data
-export const LayerReqBase = createInsertSchema(layer, {
+export const LayerInsert = createInsertSchema(layer, {
   ...getDefaultConstraints(layer as Table)
 });
 
-export const LayerI18nReqBase = createInsertSchema(layerI18n, {
+export const LayerUpdate = createInsertSchema(layer, {
+  ...getDefaultConstraints(layer as Table),
+  id: z.string()
+});
+
+export const LayerI18nInsert = createInsertSchema(layerI18n, {
   ...getDefaultConstraints(layerI18n as Table)
 });
 
-const LayerI18nDekeyed = LayerI18nReqBase.omit({ lang: true });
+export const LayerI18nWithoutPK = LayerI18nInsert.omit({ lang: true });
+export const LayerI18nAPI = LayerI18nWithoutPK.omit({ layerId: true });
 
-export const LayerReqBody = z.object({
-  ...LayerReqBase.shape,
-  translations: z.record(z.enum(targetLangs), LayerI18nDekeyed)
+export const LayerInsertAPI = z.object({
+  ...LayerInsert.shape,
+  translations: z.record(z.enum(targetLangs), LayerI18nAPI).default({
+    'zh-hant': {},
+    'zh-hans': {}
+  })
 });
 
-export const NewLayerReqBody = z.object({
-  ...LayerReqBase.omit({ id: true }).shape,
-  translations: z.record(z.enum(targetLangs), LayerI18nDekeyed)
+export const LayerUpdateAPI = z.object({
+  ...LayerUpdate.shape,
+  translations: z.record(z.enum(targetLangs), LayerI18nWithoutPK).default({
+    'zh-hant': {},
+    'zh-hans': {}
+  })
 });
 
 /* ----------------- */
 // FEATURES
 /* -------- */
 
-// Schema for selecting a feature - can be used to validate API responses
+// Feature Schemas
 export const FeatureBase = createSelectSchema(feature);
 
-// Base schema to validate submit data
-export const FeatureReqBase = createInsertSchema(feature, {
-  ...getDefaultConstraints(feature as Table)
-});
-
-export const FeatureReqBody = z.object({
-  ...FeatureReqBase.shape,
+export const FeatureInsert = createInsertSchema(feature, {
+  ...getDefaultConstraints(feature as Table),
   geometry: z.custom<GeometryObject>(),
   properties: z.custom<GhostSignsFeatureProperties>(),
   addressProperties: z.custom<AddressProperties>().optional()
 });
 
-export const NewFeatureReqBody = z.object({
-  ...FeatureReqBase.omit({ id: true }).shape,
-  geometry: z.custom<GeometryObject>(),
-  properties: z.custom<GhostSignsFeatureProperties>(),
-  addressProperties: z.custom<AddressProperties>().optional()
+export const FeatureUpdate = FeatureInsert.extend({
+  id: z.string()
 });
+
+export const FeatureInsertAPI = FeatureInsert;
+export const FeatureUpdateAPI = FeatureUpdate;

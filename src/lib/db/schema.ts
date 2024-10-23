@@ -2,8 +2,6 @@ import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import type { AdapterAccountType } from '@auth/core/adapters';
 import { relations, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid'
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
-import { z } from 'zod';
 import type { GeometryObject } from 'geojson';
 
 // TYPES
@@ -211,7 +209,6 @@ export const session = sqliteTable('session', {
 // PROJECTS
 /* -------- */
 
-
 interface ProjectMetadata {
   filterProperties?: string[]; // ['district', 'script', 'isPublished']
 }
@@ -402,17 +399,6 @@ export const layerI18nRelations = relations(layerI18n, ({ one }) => ({
 }));
 
 
-// Schema for inserting a layer - can be used to validate API requests
-export const insertLayerSchema = createInsertSchema(layer);
-
-// Schema for selecting a layer - can be used to validate API responses
-export const LayerBase = createSelectSchema(layer);
-export const LayerI18n = createSelectSchema(layerI18n);
-
-export const LayerSchema = z.object({
-  ...LayerBase.shape,
-  translations: z.array(LayerI18n).optional()});
-
 /* ----------------- */
 // FEATURES
 /* -------- */
@@ -465,17 +451,6 @@ export const featureRelations = relations(feature, ({ one }) => ({
     references: [layer.id]
   })
 }));
-
-// TODO Understand Zod types, and fix this mess
-// Schema for inserting a feature - can be used to validate API requests
-export const insertFeatureSchema = createInsertSchema(feature);
-
-// Schema for selecting a feature - can be used to validate API responses
-export const FeatureBase = createSelectSchema(feature);
-
-export const FeatureSchema = FeatureBase;
-
-export type Feature = z.infer<typeof FeatureSchema>;
 
 // TODO Add visit table linking Users with GeoFeatures for a given date
 // TODO When a new visit is created for a GeoFeature, update its "visitableAsOf" field to that date.
