@@ -90,7 +90,7 @@ const removeUser = async (e: Event, userId: string) => {
         <label
           class="label flex flex-shrink-0 flex-grow-0 flex-col items-center gap-2 pb-2 text-sm"
           style="font-variant: small-caps; font-variant-caps: small-caps;">
-          Owner
+          {resourceType === 'project' ? 'Maintainer' : 'Owner'}
           <input
             type="checkbox"
             name={userId}
