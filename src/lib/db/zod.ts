@@ -10,7 +10,8 @@ import {
   layerI18n,
   feature,
   organisationRole,
-  projectRole
+  projectRole,
+  type ProjectMetadata
 } from '$lib/db/schema';
 import type { GeometryObject } from 'geojson';
 import type { GhostSignsFeatureProperties, AddressProperties } from '$lib/types';
@@ -55,6 +56,47 @@ const getDefaultConstraints = (table: Table) => {
 };
 
 /* ----------------- */
+// UTILITY FUNCTIONS
+/* -------- */
+
+function createRequiredObjSchema<
+  K extends string,
+  V extends z.ZodTypeAny
+>(
+  keysSchema: z.ZodEnum<[K, ...K[]]>,
+  valueSchema: V
+) {
+  return z.record(keysSchema, valueSchema).refine((obj): obj is Record<K, z.infer<V>> =>
+    keysSchema.options.every((key) => obj[key] != null),
+  );
+}
+
+const getTranslations = (model: z.ZodType<any>) =>
+  createRequiredObjSchema(z.enum(targetLangs), model).default({
+    'zh-hant': {},
+    'zh-hans': {}
+  });
+
+
+const getUserRoles = (model: z.ZodType<any>) =>
+  z
+    .record(z.string(), model)
+    .refine((schema) => Object.keys(schema).length > 0, 'Add at least 1 User')
+    .refine(
+      (schema) => Object.values(schema).some((user) => user.role === 'owner'),
+      'Set at least 1 Owner'
+    );
+
+const getMaintainerRoles = (model: z.ZodType<any>) =>
+  z
+    .record(z.string(), model)
+    .refine((schema) => Object.keys(schema).length > 0, 'Add at least 1 Maintainer')
+    .refine(
+      (schema) => Object.values(schema).some((user) => user.role === 'owner'),
+      'Set at least 1 Owner'
+    );
+
+/* ----------------- */
 // ZOD SCHEMAS
 /* -------- */
 
@@ -74,6 +116,10 @@ export const UserPrivacyPreserving = UserBase.omit({
 // ORGANISATIONS
 /* -------- */
 
+// ORGANISATION UTILS
+
+// ORGANISATION SCHEMAS
+
 // Schema for selecting an organisation - can be used to validate API responses
 export const OrganisationBase = createSelectSchema(organisation);
 export const OrganisationI18nBase = createSelectSchema(organisationI18n);
@@ -84,8 +130,7 @@ export const OrganisationInsert = createInsertSchema(organisation, {
   ...getDefaultConstraints(organisation as Table)
 });
 
-export const OrganisationUpdate = createInsertSchema(organisation, {
-  ...getDefaultConstraints(organisation as Table),
+export const OrganisationUpdate = OrganisationInsert.extend({
   id: z.string()
 });
 
@@ -97,43 +142,28 @@ export const OrganisationRoleInsert = createInsertSchema(organisationRole, {
   ...getDefaultConstraints(organisationRole as Table)
 });
 
-export const OrganisationRoleInsertWithAssociatedFields = z.object({
-  ...OrganisationRoleInsert.shape,
+export const OrganisationRoleInsertWithAssociatedFields = OrganisationRoleInsert.extend({
   user: UserPrivacyPreserving
 });
 
 export const OrganisationI18nWithoutPK = OrganisationI18nInsert.omit({ lang: true });
-export const OrganisationRoleWithoutPK = OrganisationRoleInsertWithAssociatedFields.omit({ userId: true });
+export const OrganisationRoleWithoutPK = OrganisationRoleInsertWithAssociatedFields.omit({
+  userId: true
+});
 export const OrganisationI18nAPI = OrganisationI18nWithoutPK.omit({ organisationId: true });
 export const OrganisationRoleAPI = OrganisationRoleWithoutPK.omit({ organisationId: true });
 
-export const OrganisationInsertAPI = z.object({
-  ...OrganisationInsert.shape,
-  translations: z.record(z.string(), OrganisationI18nAPI).default({
-    'zh-hant': {},
-    'zh-hans': {}
-  }),
-  userRoles: z.record(z.string(), OrganisationRoleAPI)
-    .refine((schema) => Object.keys(schema).length > 0, 'Add at least 1 User')
-    .refine(
-      (schema) => Object.values(schema).some((user) => user.role === 'owner'),
-      'Set at least 1 Owner'
-    )
+
+export const OrganisationInsertAPI = OrganisationInsert.extend({
+  translations: getTranslations(OrganisationI18nAPI),
+  userRoles: getUserRoles(OrganisationRoleAPI)
 });
 
-export const OrganisationUpdateAPI = z.object({
-  ...OrganisationInsert.shape,
-  translations: z.record(z.string(), OrganisationI18nWithoutPK).default({
-    'zh-hant': {},
-    'zh-hans': {}
-  }),
-  userRoles: z.record(z.string(), OrganisationRoleWithoutPK)
-    .refine((schema) => Object.keys(schema).length > 0, 'Add at least 1 User')
-    .refine(
-      (schema) => Object.values(schema).some((user) => user.role === 'owner'),
-      'Set at least 1 Owner'
-    )
+export const OrganisationUpdateAPI = OrganisationInsertAPI.extend({
+  translations: getTranslations(OrganisationI18nWithoutPK),
+  userRoles: getUserRoles(OrganisationRoleWithoutPK)
 });
+
 
 /* ----------------- */
 // PROJECTS
@@ -146,11 +176,11 @@ export const ProjectRoleBase = createSelectSchema(projectRole);
 
 // Base schema to validate submit data
 export const ProjectInsert = createInsertSchema(project, {
-  ...getDefaultConstraints(project as Table)
+  ...getDefaultConstraints(project as Table),
+  metadata: z.custom<ProjectMetadata>()
 });
 
-export const ProjectUpdate = createInsertSchema(project, {
-  ...getDefaultConstraints(project as Table),
+export const ProjectUpdate = ProjectInsert.extend({
   id: z.string()
 });
 
@@ -159,12 +189,10 @@ export const ProjectI18nInsert = createInsertSchema(projectI18n, {
 });
 
 export const ProjectRoleInsert = createInsertSchema(projectRole, {
-  // TODO : Verify that this is useful instead of the a pure string
   role: z.enum(['member', 'owner', 'admin'])
 });
 
-export const ProjectRoleInsertWithAssociatedFields = z.object({
-  ...ProjectRoleInsert.shape,
+export const ProjectRoleInsertWithAssociatedFields = ProjectRoleInsert.extend({
   user: UserPrivacyPreserving
 });
 
@@ -173,34 +201,14 @@ export const ProjectRoleWithoutPK = ProjectRoleInsertWithAssociatedFields.omit({
 export const ProjectI18nAPI = ProjectI18nWithoutPK.omit({ projectId: true });
 export const ProjectRoleAPI = ProjectRoleWithoutPK.omit({ projectId: true });
 
-export const ProjectInsertAPI = z.object({
-  ...ProjectInsert.shape,
-  translations: z.record(z.enum(targetLangs), ProjectI18nAPI).default({
-    'zh-hant': {},
-    'zh-hans': {}
-  }),
-  maintainerRoles: z.record(z.string(), ProjectRoleAPI)
-  // TODO Refine the role requirements
-    .refine((schema) => Object.keys(schema).length > 0, 'Add at least 1 Maintainer')
-    .refine(
-      (schema) => Object.values(schema).some((user) => user.role === 'owner'),
-      'Set at least 1 Owner'
-    )
+export const ProjectInsertAPI = ProjectInsert.extend({
+  translations: getTranslations(ProjectI18nAPI),
+  maintainerRoles: getMaintainerRoles(ProjectRoleAPI)
 });
 
-export const ProjectUpdateAPI = z.object({
-  ...ProjectUpdate.shape,
-  translations: z.record(z.enum(targetLangs), ProjectI18nWithoutPK).default({
-    'zh-hant': {},
-    'zh-hans': {}
-  }),
-    // TODO Refine the role requirements
-  maintainerRoles: z.record(z.string(), ProjectRoleWithoutPK)
-    .refine((schema) => Object.keys(schema).length > 0, 'Add at least 1 Maintainer')
-    .refine(
-      (schema) => Object.values(schema).some((user) => user.role === 'owner'),
-      'Set at least 1 Owner'
-    )
+export const ProjectUpdateAPI = ProjectUpdate.extend({
+  translations: getTranslations(ProjectI18nWithoutPK),
+  maintainerRoles: getMaintainerRoles(ProjectRoleWithoutPK)
 });
 
 /* ----------------- */
@@ -216,8 +224,7 @@ export const LayerInsert = createInsertSchema(layer, {
   ...getDefaultConstraints(layer as Table)
 });
 
-export const LayerUpdate = createInsertSchema(layer, {
-  ...getDefaultConstraints(layer as Table),
+export const LayerUpdate = LayerInsert.extend({
   id: z.string()
 });
 
@@ -228,20 +235,12 @@ export const LayerI18nInsert = createInsertSchema(layerI18n, {
 export const LayerI18nWithoutPK = LayerI18nInsert.omit({ lang: true });
 export const LayerI18nAPI = LayerI18nWithoutPK.omit({ layerId: true });
 
-export const LayerInsertAPI = z.object({
-  ...LayerInsert.shape,
-  translations: z.record(z.enum(targetLangs), LayerI18nAPI).default({
-    'zh-hant': {},
-    'zh-hans': {}
-  })
+export const LayerInsertAPI = LayerInsert.extend({
+  translations: getTranslations(LayerI18nAPI)
 });
 
-export const LayerUpdateAPI = z.object({
-  ...LayerUpdate.shape,
-  translations: z.record(z.enum(targetLangs), LayerI18nWithoutPK).default({
-    'zh-hant': {},
-    'zh-hans': {}
-  })
+export const LayerUpdateAPI = LayerUpdate.extend({
+  translations: getTranslations(LayerI18nWithoutPK)
 });
 
 /* ----------------- */
