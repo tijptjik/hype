@@ -31,6 +31,8 @@ $effect(() => {
 
 </script>
 
+<!-- TODO Implement sveltekit-flash-message ⚡ - https://www.npmjs.com/package/sveltekit-flash-message -->
+
 <!-- LAYOUT -->
 <Sidebar />
 <div class="flex w-full flex-col">
