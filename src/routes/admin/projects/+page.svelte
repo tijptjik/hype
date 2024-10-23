@@ -16,7 +16,7 @@
           <div class="card bg-base-100 shadow-xl">
             <figure>
               <img
-                src="https://placehold.co/600x400?text={project.name}"
+                src="{project.image}"
                 alt={project.name}
                 class="h-48 w-full object-cover" />
             </figure>

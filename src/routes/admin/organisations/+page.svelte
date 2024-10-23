@@ -16,7 +16,7 @@ const RESOURCE_TYPE = 'organisation';
         <div class="card bg-base-100 shadow-xl">
           <figure>
             <img
-              src="https://placehold.co/600x400?text={org.name}"
+              src={org.image}
               alt={org.name}
               class="h-48 w-full object-cover" />
           </figure>
