@@ -11,7 +11,7 @@ import {
   updateMaintainerRoles,
   rebuildFormData,
   extractEntitiesToUpdate
-} from '$lib/db/project';
+} from '$lib/db/services/project';
 import { isFieldUnique, isFieldChanged } from '$lib/db';
 // ZOD
 import { ProjectUpdateAPI } from '$lib/db/zod';

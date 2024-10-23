@@ -10,7 +10,7 @@ import {
   createMaintainerRoles,
   rebuildFormData,
   extractEntitiesToInsert
-} from '$lib/db/project';
+} from '$lib/db/services/project';
 import { isFieldUnique } from '$lib/db';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';

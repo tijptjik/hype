@@ -5,7 +5,7 @@ import { Table, getTableName, and, sql, inArray, eq, or, not, exists, ilike } fr
 // TYPES
 import type { Field, NestedRelations, Resource, ResourceDB, ResourceType } from '$lib/types';
 import { error } from '@sveltejs/kit';
-import type { Database } from './organisation';
+import type { Database } from './services/organisation';
 const client = (database: D1Database) => {
   return drizzle(database, { schema });
 };

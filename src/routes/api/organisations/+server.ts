@@ -10,7 +10,7 @@ import {
   createUserRoles,
   rebuildFormData,
   extractEntitiesToInsert
-} from '$lib/db/organisation';
+} from '$lib/db/services/organisation';
 import { isFieldUnique } from '$lib/db';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';

@@ -1,28 +1,14 @@
-import { superValidate } from 'sveltekit-superforms';
-import { zod } from 'sveltekit-superforms/adapters';
+import type { NewOrganisationDB, OrganisationDB, TargetLang, NewOrganisationI18n, OrganisationI18n, Id, NewOrganisationRole, OrganisationRole, NewOrganisation, Organisation, OrganisationI18nDB, OrganisationRoleDB } from '$lib/types';
 import { error } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
-// CONFIG
-// SCHEMA
-import { organisationRole, organisationI18n, organisation, user } from '$lib/db/schema';
-// ZOD
-import { OrganisationInsert, OrganisationUpdate, OrganisationUpdateAPI } from '$lib/db/zod';
-// TYPES
-import type {
-  Organisation,
-  OrganisationDB,
-  NewOrganisation,
-  NewOrganisationDB,
-  NewOrganisationI18n,
-  OrganisationI18nDB,
-  NewOrganisationRole,
-  OrganisationRoleDB,
-  OrganisationI18n,
-  OrganisationRole} from '$lib/types';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
-import type { TargetLang, Id } from '$lib/types';
-export type Database = DrizzleD1Database<typeof import('/home/io/code/ghostsigns/src/lib/db/schema')>;
+import { superValidate } from 'sveltekit-superforms';
+import { zod } from 'sveltekit-superforms/adapters';
+import { organisation, organisationI18n, organisationRole, user } from '../schema';
+import { OrganisationInsert, OrganisationUpdate, OrganisationUpdateAPI } from '../zod';
 
+
+export type Database = DrizzleD1Database<typeof import('/home/io/code/ghostsigns/src/lib/db/schema')>;
 // CREATE / UPDATE
 
 export const createOrganisation = async (db: Database, data: NewOrganisationDB) => {
@@ -111,7 +97,6 @@ export const updateUserRoles = async (
   await db.delete(organisationRole).where(eq(organisationRole.organisationId, organisationId));
   return await createUserRoles(db, userRoles, organisationId);
 };
-
 // UTILS
 
 export const extractEntitiesToInsert = (formData: NewOrganisation) => {

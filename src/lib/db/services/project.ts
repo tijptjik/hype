@@ -1,30 +1,14 @@
-import { superValidate } from 'sveltekit-superforms';
-import { zod } from 'sveltekit-superforms/adapters';
+import type { NewProjectDB, ProjectDB, TargetLang, NewProjectI18n, ProjectI18n, Id, NewProjectRole, ProjectRole, NewProject, FormTranslations, FormRelatedUsers, Project, ProjectI18nDB, ProjectRoleDB } from '$lib/types';
 import { error } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
-// CONFIG
-// SCHEMA
-import { projectRole, projectI18n, project, user } from '$lib/db/schema';
-// ZOD
-import { ProjectInsert, ProjectUpdate, ProjectUpdateAPI } from '$lib/db/zod';
-// TYPES
-import type {
-  Project,
-  ProjectDB,
-  NewProject,
-  NewProjectDB,
-  NewProjectI18n,
-  ProjectI18nDB,
-  NewProjectRole,
-  ProjectRoleDB,
-  ProjectI18n,
-  ProjectRole,
-  FormTranslations,
-  FormRelatedUsers} from '$lib/types';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
-import type { TargetLang, Id } from '$lib/types';
-export type Database = DrizzleD1Database<typeof import('/home/io/code/ghostsigns/src/lib/db/schema')>;
+import { superValidate } from 'sveltekit-superforms';
+import { zod } from 'sveltekit-superforms/adapters';
+import { project, projectI18n, projectRole, user } from '../schema';
+import { ProjectInsert, ProjectUpdate, ProjectUpdateAPI } from '../zod';
 
+
+export type Database = DrizzleD1Database<typeof import('/home/io/code/ghostsigns/src/lib/db/schema')>;
 // CREATE / UPDATE
 
 export const createProject = async (db: Database, data: NewProjectDB) => {
@@ -113,7 +97,6 @@ export const updateMaintainerRoles = async (
   await db.delete(projectRole).where(eq(projectRole.projectId, projectId));
   return await createMaintainerRoles(db, maintainerRoles, projectId);
 };
-
 // UTILS
 
 export const extractEntitiesToInsert = (formData: NewProject) => {
@@ -162,4 +145,3 @@ export const rebuildFormData = async (
     zod(ProjectUpdateAPI)
   );
 };
-

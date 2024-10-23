@@ -10,7 +10,8 @@ import {
   updateTranslations,
   updateUserRoles,
   rebuildFormData,
-  extractEntitiesToUpdate} from '$lib/db/organisation';
+  extractEntitiesToUpdate
+} from '$lib/db/services/organisation';
 import { isFieldUnique, isFieldChanged } from '$lib/db';
 // ZOD
 import { OrganisationUpdateAPI } from '$lib/db/zod';
