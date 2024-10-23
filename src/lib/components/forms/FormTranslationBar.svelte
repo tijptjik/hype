@@ -6,8 +6,7 @@ import { getTranslation } from '$lib/api/translation';
 import { getForm } from '$lib/context/forms.svelte';
 // Types
 import type { FormField } from '$lib/types';
-import type { SuperFormData } from 'sveltekit-superforms/client';
-import type { Organisation } from '$lib/types';
+import type { ResourceType } from '$lib/types';
 
 // CONFIG
 const allLanguages = [
@@ -21,17 +20,19 @@ type Props = {
   languageTag: string;
   fields: FormField;
   entity: string;
+  resourceType: ResourceType;
 };
 
 // STATE
 let {
   languageTag,
   fields,
-  entity
+  entity,
+  resourceType
 }: Props = $props();
 
 // STATE : CONTEXT
-const { form } : { form: SuperFormData<Organisation> } = getForm(entity);
+const { form } = getForm(entity, resourceType);
 
 
 const languageOptions = $derived(allLanguages.filter((lang) => lang.code !== languageTag));

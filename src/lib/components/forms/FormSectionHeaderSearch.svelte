@@ -6,7 +6,7 @@ import { Icon } from '@steeze-ui/svelte-icon';
 import { getForm } from '$lib/context/forms.svelte';
 
 // TYPES
-import type { User, Project, Layer } from '$lib/types';
+import type { User, Project, Layer, ResourceType } from '$lib/types';
 
 type ResultType = User | Project | Layer;
 
@@ -17,6 +17,7 @@ type Props = {
   toItem: (item: ResultType) => object;
   itemRef: 'id' | 'code';
   entity: string;
+  resourceType: ResourceType;
 };
 
 // PROPS
@@ -30,11 +31,12 @@ let {
     user: item
   }),
   itemRef = 'id',
-  entity
+  entity,
+  resourceType
 }: Props = $props();
 
 // STATE : CONTEXT
-const { form } = getForm(entity);
+const { form } = getForm(entity, resourceType);
 
 // STATE
 let searchQuery = $state('');
@@ -115,7 +117,7 @@ const resetResults = () => (searchResults = []);
 
 </script>
 
-<div transition:slide|local={{ duration: 2000 }} class="bg-base-200 relative" class:hidden={!searchMode}>
+<div transition:slide={{ duration: 2000 }} class="bg-base-200 relative" class:hidden={!searchMode}>
   <div class="form-control">
     <div class="input-group relative">
       <input
@@ -143,7 +145,7 @@ const resetResults = () => (searchResults = []);
   {#if searchResults.length > 0}
     <div 
       class="absolute w-full z-10"
-      transition:slide|local={{ duration: 200 }}
+      transition:slide={{ duration: 200 }}
     >
       <ul id="search-results" class="menu w-full bg-base-100 shadow-lg overflow-y-auto max-h-64 rounded-b-lg" role="listbox">
         {#each searchResults as item, index}

@@ -4,18 +4,25 @@
   import { Icon } from '@steeze-ui/svelte-icon';
   // CONTEXT
   import { getForm } from '$lib/context/forms.svelte';
+// TYPES
+import type { ResourceType } from '$lib/types';
 
-  // STATE : PROPS
-  let { entity }: { entity: string } = $props();
+type Props = {
+  entity: string;
+  resourceType: ResourceType;
+};
 
-  // STATE : CONTEXT
-  const { tainted, isTainted, submit, errors} = getForm(entity);
-  
-  // STATE : UI
-  let isInvalid = $state(false);
-  
-  // STATE : EFFECTS
-  $effect(() => {
+// STATE : PROPS
+let { entity, resourceType }: Props = $props();
+
+// STATE : CONTEXT
+const { tainted, isTainted, submit, errors} = getForm(entity, resourceType);
+
+// STATE : UI
+let isInvalid = $state(false);
+
+// STATE : EFFECTS
+$effect(() => {
     isInvalid = (function checkErrors(obj: Record<string, unknown>): boolean {
       if (typeof obj !== 'object' || obj === null) {
         return obj !== undefined;

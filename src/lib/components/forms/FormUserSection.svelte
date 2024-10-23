@@ -5,15 +5,17 @@ import FormUserActions from '$lib/components/forms/FormUserActions.svelte';
 // CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
 // TYPES
-import type { FormField } from '$lib/types';
+import type { FormField, ResourceType } from '$lib/types';
 
 type Props = {
   title: string;
   fields: FormField;
+  entity: string;
+  resourceType: ResourceType;
 };
 
 // STATE : PROPS
-let { title, fields, entity }: Props & { entity: string } = $props();
+let { title, fields, entity, resourceType }: Props = $props();
 
 // STATE
 let actionProps = $state({
@@ -22,7 +24,7 @@ let actionProps = $state({
 });
 
 // STATE : CONTEXT
-const { form, errors, constraints } = getForm(entity);
+const { form, errors, constraints } = getForm(entity, resourceType);
 </script>
 
 <div
@@ -46,6 +48,7 @@ const { form, errors, constraints } = getForm(entity);
       userJoinStateKey="role"
       checkedValue="owner"
       uncheckedValue="member"
-      {entity} />
+      {entity}
+      {resourceType} />
   {/each}
 </div>

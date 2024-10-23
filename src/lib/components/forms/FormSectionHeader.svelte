@@ -8,7 +8,7 @@ import { getForm } from '$lib/context/forms.svelte';
 // TYPES
 import type { Component } from 'svelte';
 import type { Writable } from 'svelte/store';
-import type { FormField } from '$lib/types';
+import type { FormField, ResourceType } from '$lib/types';
 
 // TYPES
 type Props = {
@@ -19,6 +19,7 @@ type Props = {
   fields?: FormField;
   errors?: Writable<Record<string, Record<string, string | string[]>>>;
   entity: string;
+  resourceType: ResourceType;
 };
 
 // STATE : PROPS
@@ -32,11 +33,12 @@ let {
   Info,
   fields,
   errors,
-  entity
+  entity,
+  resourceType
 }: Props = $props();
 
 // STATE : CONTEXT
-const { form, posted } = getForm(entity);
+const { form, posted } = getForm(entity, resourceType);
 
 $effect(() => {
   if ($posted) {
@@ -68,12 +70,12 @@ $effect(() => {
         <Actions
           bind:searchMode={actionProps.searchMode}
           bind:removeMode={actionProps.removeMode}
-          {entity} />
+          {entity} {resourceType} />
       </div>
     {/if}
     {#if Info}
       <div class="flex items-center gap-6">
-        <Info {entity} />
+        <Info {entity} {resourceType}/>
       </div>
     {/if}
   </div>
@@ -87,5 +89,6 @@ $effect(() => {
       user: item
     })}
     itemRef="id"
-    {entity} />
+    {entity}
+    {resourceType} />
 </div>

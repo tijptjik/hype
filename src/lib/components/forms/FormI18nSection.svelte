@@ -6,7 +6,8 @@ import FormSectionHeader from '$lib/components/forms/FormSectionHeader.svelte';
 import FormTranslationBar from './FormTranslationBar.svelte';
 // Types
 import SuperDebug from 'sveltekit-superforms';
-import type { FormField } from '$lib/types';
+import type { FormField, ResourceType } from '$lib/types';
+
 // CONFIG
 const sourceLanguageTag = 'en';
 const languageTags = [sourceLanguageTag, 'zh-hant', 'zh-hans'];
@@ -16,24 +17,25 @@ type Props = {
   title: string;
   fields: FormField;
   entity: string;
+  resourceType: ResourceType;
 };
 
 // STATE : PROPS
-let { title, fields, entity }: Props = $props();
+let { title, fields, entity, resourceType }: Props = $props();
 
 // STATE : CONTEXT
-const { form, errors, constraints } = getForm(entity);
+const { form, errors, constraints } = getForm(entity, resourceType);
 </script>
 
 <div class="w-full overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
-  <FormSectionHeader {title} {entity} />
+  <FormSectionHeader {title} {entity} {resourceType} />
   <div class="flex flex-row items-baseline gap-4 p-4">
     {#each languageTags as languageTag}
       <div class="group flex flex-grow flex-col gap-4 rounded-xl bg-base-100">
         <div class="flex flex-col content-start items-start gap-4 px-6 py-2 pb-2 pt-4">
           {#each Object.entries(fields) as [fieldId, field]}
             {@const I18nComponent = field.component}
-            <I18nComponent {languageTag} {fieldId} {field} {form} {constraints} {errors} {entity} />
+            <I18nComponent {languageTag} {fieldId} {field} {form} {constraints} {errors} {entity} {resourceType} />
           {/each}
         </div>
         <div
@@ -41,7 +43,7 @@ const { form, errors, constraints } = getForm(entity);
         </div>
         <div
           class="ease-in-quad max-h-0 overflow-hidden transition-[max-height] delay-700 duration-300 group-focus-within:max-h-32 group-hover:max-h-32">
-          <FormTranslationBar {languageTag} {fields} {entity} />
+          <FormTranslationBar {languageTag} {fields} {entity} {resourceType} />
         </div>
       </div>
     {/each}

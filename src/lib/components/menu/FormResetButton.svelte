@@ -4,12 +4,19 @@ import { Icon } from '@steeze-ui/svelte-icon';
 import { XCircle } from '@steeze-ui/heroicons';
 // CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
+// TYPES
+import type { ResourceType } from '$lib/types';
+
+type Props = {  
+  entity: string;
+  resourceType: ResourceType;
+};
 
 // STATE : PROPS
-let { entity }: { entity: string } = $props();
+let { entity, resourceType }: Props = $props();
 
 // STATE : CONTEXT
-const { tainted, isTainted, reset } = getForm(entity);
+const { tainted, isTainted, reset } = getForm(entity, resourceType);
 </script>
 <button
   class="btn {!isTainted($tainted)

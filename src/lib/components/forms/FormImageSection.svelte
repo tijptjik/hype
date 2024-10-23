@@ -1,15 +1,16 @@
 <script lang="ts">
 // TYPES
-import type { FormField } from '$lib/types';
+import type { FormField, ResourceType } from '$lib/types';
 
 // TYPES
 type Props = {
   title: string;
   fields: FormField;
   entity: string;
+  resourceType: ResourceType;
 };
 
-let { title, fields, entity }: Props = $props();
+let { title, fields, entity, resourceType }: Props = $props();
 </script>
 
 <div>
