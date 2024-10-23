@@ -8,11 +8,9 @@ import { OrganisationInsertAPI, OrganisationUpdateAPI } from '$lib/db/zod';
 export const load: PageLoad = async ({
   params,
   fetch,
-  url
 }: {
   params: RouteParams;
   fetch: typeof globalThis.fetch;
-  url: URL;
 }) => {
   const entity = params.organisation || 'new';
   let form;
