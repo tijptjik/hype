@@ -188,6 +188,14 @@ export type LayerI18n = z.infer<typeof LayerI18nWithoutPK>;
 // Database representation of LayerI18n, so with layerId and langCode
 export type LayerI18nDB = z.infer<typeof LayerI18nBase>;
 
+export type LayerMetadata = {
+  defaultEnabled: boolean; // true
+  mlCluster?: boolean; // false
+  mlClusterRadius?: number; // 50
+  mlClusterMaxZoom?: number; // 14
+  mlClusterMinPoints?: number; // 2
+}
+
 /* ----------------- */
 // FEATURES
 /* -------- */

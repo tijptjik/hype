@@ -7,7 +7,10 @@ import type { GeometryObject } from 'geojson';
 // TYPES
 import type {
   GhostSignsFeatureProperties,
-  AddressProperties } from '$lib/types';
+  AddressProperties,
+  ProjectMetadata,
+  LayerMetadata
+} from '$lib/types';
 
 // UTILS
 const getGenImageParam = (): number => Math.floor(Math.random() * (100 - 5 + 1)) + 5;
@@ -211,13 +214,6 @@ export const session = sqliteTable('session', {
 /* ----------------- */
 // PROJECTS
 /* -------- */
-
-export interface IProjectMetadata {
-  filterProperties?: string[]; // ['district', 'script', 'isPublished']
-}
-
-
-
 export const project = sqliteTable('project', {
   id: text('id')
     .primaryKey()
@@ -245,7 +241,7 @@ export const project = sqliteTable('project', {
   // Project Banner
   image: text('image').default(`https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=${getGenImageParam()}`),
   // Additional Information
-  metadata: text('metadata', { mode: 'json' }).$type<IProjectMetadata>(),
+  metadata: text('metadata', { mode: 'json' }).$type<ProjectMetadata>(),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -336,14 +332,6 @@ export const projectRoleRelations = relations(projectRole, ({ one }) => ({
 /* ----------------- */
 // LAYERS
 /* -------- */
-
-interface LayerMetadata {
-  defaultEnabled: boolean; // true
-  mlCluster?: boolean; // false
-  mlClusterRadius?: number; // 50
-  mlClusterMaxZoom?: number; // 14
-  mlClusterMinPoints?: number; // 2
-}
 
 /* @geojson/GeometryCollection */
 export const layer = sqliteTable('layer', {

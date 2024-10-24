@@ -13,7 +13,7 @@ import {
   projectRole,
 } from '$lib/db/schema';
 import type { GeometryObject } from 'geojson';
-import type { GhostSignsFeatureProperties, AddressProperties, ProjectMetadata } from '$lib/types';
+import type { GhostSignsFeatureProperties, AddressProperties, ProjectMetadata, LayerMetadata } from '$lib/types';
 import type { Table } from 'drizzle-orm';
 const targetLangs = ['zh-hant', 'zh-hans'] as const;
 
@@ -216,7 +216,8 @@ export const LayerI18nBase = createSelectSchema(layerI18n);
 
 // Base schema to validate submit data
 export const LayerInsert = createInsertSchema(layer, {
-  ...getDefaultConstraints(layer as Table)
+  ...getDefaultConstraints(layer as Table),
+  metadata: z.custom<LayerMetadata>().default({defaultEnabled: true})
 });
 
 export const LayerUpdate = LayerInsert.extend({
