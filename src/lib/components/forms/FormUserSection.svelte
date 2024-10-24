@@ -38,8 +38,7 @@ const { form, errors, constraints } = getForm(resourceType, entity);
     {errors}
     {entity} />
   {#each Object.entries(fields) as [fieldId, field]}
-    {@const UserComponent = field.component}
-    <UserComponent
+    <field.component
       bind:actionProps
       {fieldId}
       {field}

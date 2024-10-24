@@ -66,6 +66,8 @@ const removeUser = async (e: Event, userId: string) => {
 };
 </script>
 
+<!-- TODO Consider which users to show for projects, and what the non-maintainer role really means -->
+
 <div class="grid grid-cols-1 gap-4 p-4 2xl:grid-cols-2">
   {#each Object.entries($form[fieldId]) as [userId, { user }]}
     <div class="grid-span-1 group" transition:fade>

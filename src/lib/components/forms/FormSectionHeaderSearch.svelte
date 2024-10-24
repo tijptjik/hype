@@ -89,6 +89,7 @@ async function search(minChars = 2) {
   // Minimum 2 characters
   if (searchQuery.length < minChars) return;
 
+  // TODO Add the projectId to the query when used for projects
   const response = await fetch(`/api/${apiPath}?q=${encodeURIComponent(searchQuery)}`);
   const allResults: ResultType[] = await response.json();
   searchResults = allResults.filter((item) => !$form[destination][item[itemRef]]);
