@@ -73,6 +73,7 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
     return error(500, 'The Old Shall Never Be New Again');
   }
 };
+
 export const PUT: RequestHandler = async ({ params, request, locals, platform }) => {
   // AUTH : Pass or Fail
   const { db, userId, accessStrategy } = await getDatabaseOrError(
@@ -89,10 +90,10 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 
     // Check if the current user will lose access on membership changes
     const userLosesAccess = !Object.keys(form.data.userRoles).includes(userId) && accessStrategy !== 'SuperAdmin';
-    const codeChanged = await isFieldChanged<OrganisationDB>(db, formData.id as string, formData.code as string, RESOURCE_TYPE, 'code');
+    const codeChanged = await isFieldChanged<OrganisationDB>(db, formData.id as string, formData.code as string, RESOURCE_TYPE, PUBLIC_IDENTIFIER);
     
     if (codeChanged) {
-      const codeUnique = await isFieldUnique<Organisation>(db, formData, RESOURCE_TYPE, 'code');
+      const codeUnique = await isFieldUnique<Organisation>(db, formData, RESOURCE_TYPE, PUBLIC_IDENTIFIER);
       if (!codeUnique) {
         form.valid = false;
         form.errors.code = ['Code already exists'];
@@ -105,7 +106,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     }
 
     const { baseOrganisation, formTranslations, formUserRoles } = extractEntitiesToUpdate(form.data as Organisation);
-    const updatedOrganisation = await updateOrganisation(db, baseOrganisation, params.code as string);
+    const updatedOrganisation = await updateOrganisation(db, baseOrganisation, params[PUBLIC_IDENTIFIER] as string);
     const updatedTranslations = await updateTranslations(
       db,
       formTranslations,

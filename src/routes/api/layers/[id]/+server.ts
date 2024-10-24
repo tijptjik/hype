@@ -1,18 +1,27 @@
-import { superValidate } from 'sveltekit-superforms';
-import { zod } from 'sveltekit-superforms/adapters';
 import { error, type RequestHandler } from '@sveltejs/kit';
+import { superValidate, type SuperValidated } from 'sveltekit-superforms';
+import { zod } from 'sveltekit-superforms/adapters';
+import {
+  getDatabaseOrError,
+  JSONResponseOrError,
+  SuperFormErrorResponse,
+  SuperFormResponse,
+  type AccessStrategyOption
+} from '$lib/api';
+// DB
+import { hierarchicalEntityQuery } from '$lib/db';
+import { updateLayer, updateTranslations, extractEntitiesToUpdate, rebuildFormData } from '$lib/db/services/layer';
 import {
   projectRole,
   layerI18n
 } from '$lib/db/schema';
-import {
-  getDatabaseOrError,
-  JSONResponseOrError,
-  type AccessStrategyOption
-} from '$lib/api';
-import { hierarchicalEntityQuery } from '$lib/db';
+// ZOD
+import { LayerUpdateAPI } from '$lib/db/zod';
+// TYPES
+import type { Layer } from '$lib/types';
 
 const RESOURCE_TYPE = 'layer';
+const RESOURCE_PATH = 'layers';
 const ACCESS_STRATEGY = 'EntityOwnChild' as AccessStrategyOption;
 const PUBLIC_IDENTIFIER = 'id';
 
@@ -47,5 +56,34 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
     console.error('Database query error:', e);
     // HTTP : 500 Error
     return error(500, 'Dust Accumulation Critical');
+  }
+};
+
+export const PUT: RequestHandler = async ({ params, request, locals, platform }) => {
+  // AUTH : Pass or Fail
+  const { db, userId, accessStrategy } = await getDatabaseOrError(
+    locals,
+    platform,
+    ACCESS_STRATEGY,
+    RESOURCE_TYPE
+  );
+
+  try {
+    const formData: Layer = await request.json();
+    const form = await superValidate(formData, zod(LayerUpdateAPI)) as SuperValidated<Layer>;
+
+    if (!form.valid) {
+      return SuperFormResponse(form);
+    }
+
+    const { baseLayer, formTranslations } = extractEntitiesToUpdate(form.data as Layer);
+    const updatedLayer = await updateLayer(db, baseLayer, params[PUBLIC_IDENTIFIER] as string);
+    const updatedTranslations = await updateTranslations(db, formTranslations, updatedLayer.id);
+
+    const updatedForm = await rebuildFormData(updatedLayer, updatedTranslations);
+    return SuperFormResponse(updatedForm, false, false, RESOURCE_PATH, 200);
+  } catch (err) {
+    console.error(err);
+    return SuperFormErrorResponse(RESOURCE_TYPE);
   }
 };
