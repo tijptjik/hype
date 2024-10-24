@@ -1,5 +1,5 @@
 import { getContext, setContext } from 'svelte';
-import type { FacetType, Ref, ResourceType, Router } from '../types';
+import type { FacetType, FalsableFacetType, FalsableRef, FalsableResourceType, ResourceType, Router } from '../types';
 
 export class RouterState {
   state: Router = $state({
@@ -30,19 +30,19 @@ export class RouterState {
 
   constructor() {}
 
-  get resource(): ResourceType | false {
+  get resource(): FalsableResourceType {
     return this.state.resource;
   }
 
-  get entity(): Ref | false {
+  get entity(): FalsableRef {
     return this.state.entity;
   }
 
-  get facet(): FacetType | false {
+  get facet(): FalsableFacetType {
     return this.state.facet;
   }
 
-  set facet(facet: FacetType | false) {
+  set facet(facet: FalsableFacetType) {
     this.state.facet = facet;
   }
 
@@ -54,15 +54,15 @@ export class RouterState {
     this.urlState = url;
   }
 
-  getResource = (): ResourceType | false => {
+  getResource = (): FalsableResourceType => {
     return this.refToResourceType[this.urlParts()[0]] || false;
   };
 
-  getEntity = (): Ref | false => {
+  getEntity = (): FalsableRef => {
     return this.urlParts()[1] || false;
   };
 
-  getFacet = (): FacetType | false => {
+  getFacet = (): FalsableFacetType => {
     const facet = this.urlState.hash.slice(1);
     return facet ? (facet as FacetType) : false;
   };

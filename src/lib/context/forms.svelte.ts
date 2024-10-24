@@ -36,7 +36,9 @@ import type {
   Project,
   Layer,
   Feature,
-  ResourceType
+  ResourceType,
+  FalsableRef,
+  FalsableResourceType,
 } from '$lib/types';
 
 class BaseForm<T extends Record<string, unknown>> {
@@ -154,14 +156,14 @@ class FeatureForm extends BaseForm<Feature> {
   }
 }
 
-const getContextRef = (entity: string, resourceType: ResourceType) => {
-  return `form-${resourceType}-${entity}`;
+const getContextRef = (resourceType: ResourceType, entity: FalsableRef) => {
+  return entity === false ? `form-${resourceType}-new` : `form-${resourceType}-${entity}`;
 };
 
 export const setForm = <T extends Record<string, unknown>>(
-  form: SuperValidated<T>,
-  entity: string,
-  resourceType: ResourceType
+  resourceType: FalsableResourceType,
+  entity: FalsableRef,
+  form: SuperValidated<T>
 ) => {
   let FormClass;
   switch (resourceType) {
@@ -180,10 +182,10 @@ export const setForm = <T extends Record<string, unknown>>(
     default:
       throw new Error(`Unknown entity type: ${resourceType}`);
   }
-  return setContext(getContextRef(entity, resourceType), new FormClass(form, entity === 'new'));
+  return setContext(getContextRef(resourceType, entity), new FormClass(form, entity === false));
 };
 
 export const getForm = (
-  entity: string | false,
-  resourceType: ResourceType = 'organisation'
-): ReturnType<typeof setForm> => getContext(getContextRef(entity ? entity : 'new', resourceType));
+  resourceType: ResourceType,
+  entity: FalsableRef
+): ReturnType<typeof setForm> => getContext(getContextRef(resourceType, entity));
