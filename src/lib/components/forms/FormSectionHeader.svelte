@@ -8,7 +8,7 @@ import { getForm } from '$lib/context/forms.svelte';
 // TYPES
 import type { Component } from 'svelte';
 import type { Writable } from 'svelte/store';
-import type { FormField, ResourceType } from '$lib/types';
+import type { FormField, ResourceType, FalsableRef } from '$lib/types';
 
 // TYPES
 type Props = {
@@ -18,7 +18,7 @@ type Props = {
   Info?: Component;
   fields?: FormField;
   errors?: Writable<Record<string, Record<string, string | string[]>>>;
-  entity: string;
+  entity: FalsableRef;
   resourceType: ResourceType;
 };
 
@@ -38,7 +38,7 @@ let {
 }: Props = $props();
 
 // STATE : CONTEXT
-const { form, posted } = getForm(entity, resourceType);
+const { form, posted } = getForm(resourceType, entity);
 
 $effect(() => {
   if ($posted) {

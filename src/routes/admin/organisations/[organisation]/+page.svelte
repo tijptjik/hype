@@ -67,13 +67,12 @@ let { form, entity } = data;
 const routerState = getRouterState();
 
 // STATE : FORM
-const FormContext = setForm(form, entity, routerState.resource as ResourceType);
-$inspect(get(FormContext.message));
+const FormContext = setForm(routerState.resource as ResourceType, entity, form);
 </script>
 
 <!-- LAYOUT -->
 <div class="h-full overflow-y-auto bg-black">
-  <EntityHeader entity={data.entity} title={data.form.data.name || 'New'}/>
+  <EntityHeader entity={data.entity} resourceType={routerState.resource as ResourceType} title={data.form.data.name || 'New'}/>
   <main class="flex w-full flex-col p-6">
     {#if Object.keys(FormContext.message).length > 0}<h3>{get(FormContext.message)}</h3>{/if}
     <form method="POST" use:FormContext.enhance class="flex flex-col gap-6">

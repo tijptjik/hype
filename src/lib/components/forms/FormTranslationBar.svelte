@@ -5,9 +5,8 @@ import { getTranslation } from '$lib/api/translation';
 // CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
 // Types
-import type { FormField } from '$lib/types';
-import type { ResourceType } from '$lib/types';
-
+import type { FormField, ResourceType, FalsableRef, OrganisationForm, ProjectForm, LayerForm } from '$lib/types';
+import SuperValidated from 'sveltekit-superforms';
 // CONFIG
 const allLanguages = [
   { code: 'en', label: 'EN' },
@@ -19,8 +18,8 @@ const allLanguages = [
 type Props = {
   languageTag: string;
   fields: FormField;
-  entity: string;
-  resourceType: ResourceType;
+  entity: FalsableRef;
+  resourceType: Exclude<ResourceType, 'feature'>;
 };
 
 // STATE
@@ -32,7 +31,7 @@ let {
 }: Props = $props();
 
 // STATE : CONTEXT
-const { form } = getForm(entity, resourceType);
+const { form } = getForm(resourceType, entity);
 
 
 const languageOptions = $derived(allLanguages.filter((lang) => lang.code !== languageTag));

@@ -5,10 +5,10 @@
   // CONTEXT
   import { getForm } from '$lib/context/forms.svelte';
 // TYPES
-import type { ResourceType } from '$lib/types';
+import type { ResourceType, FalsableRef } from '$lib/types';
 
 type Props = {
-  entity: string;
+  entity: FalsableRef;
   resourceType: ResourceType;
 };
 
@@ -16,7 +16,7 @@ type Props = {
 let { entity, resourceType }: Props = $props();
 
 // STATE : CONTEXT
-const { tainted, isTainted, submit, errors} = getForm(entity, resourceType);
+const { tainted, isTainted, submit, errors} = getForm(resourceType, entity);
 
 // STATE : UI
 let isInvalid = $state(false);

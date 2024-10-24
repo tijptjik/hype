@@ -2,7 +2,7 @@
 // Components
 import FormSectionHeader from '$lib/components/forms/FormSectionHeader.svelte';
 // Types
-import type { FormField, ResourceType } from '$lib/types';
+import type { FormField, ResourceType, FalsableRef } from '$lib/types';
 // Context
 import { getForm } from '$lib/context/forms.svelte';
 
@@ -10,7 +10,7 @@ import { getForm } from '$lib/context/forms.svelte';
 type Props = {
   title: string;
   fields: FormField;
-  entity: string;
+  entity: FalsableRef;
   resourceType: ResourceType;
 };
 
@@ -23,7 +23,7 @@ let {
 }: Props = $props();
 
 // STATE : CONTEXT
-const { form, errors, constraints } = getForm(entity, resourceType);
+const { form, errors, constraints } = getForm(resourceType, entity);
 </script>
 
 <div

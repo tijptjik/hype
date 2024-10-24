@@ -6,7 +6,7 @@ import { Icon } from '@steeze-ui/svelte-icon';
 import { getForm } from '$lib/context/forms.svelte';
 
 // TYPES
-import type { User, Project, Layer, ResourceType } from '$lib/types';
+import type { User, Project, Layer, ResourceType, FalsableRef } from '$lib/types';
 
 type ResultType = User | Project | Layer;
 
@@ -16,7 +16,7 @@ type Props = {
   destination: string;
   toItem: (item: ResultType) => object;
   itemRef: 'id' | 'code';
-  entity: string;
+  entity: FalsableRef;
   resourceType: ResourceType;
 };
 
@@ -36,7 +36,7 @@ let {
 }: Props = $props();
 
 // STATE : CONTEXT
-const { form } = getForm(entity, resourceType);
+const { form } = getForm(resourceType, entity);
 
 // STATE
 let searchQuery = $state('');

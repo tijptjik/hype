@@ -4,10 +4,10 @@ import type { InputConstraints, InputConstraint, ValidationErrors } from 'svelte
 import { Icon } from '@steeze-ui/svelte-icon';
 import { Trash } from '@steeze-ui/heroicons';
 import { fade } from 'svelte/transition';
-// Types
-import type { ResourceType } from '$lib/types';
 // CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
+// Types
+import type { ResourceType, FalsableRef } from '$lib/types';
 
 type Props = {
   fieldId: string;
@@ -21,8 +21,8 @@ type Props = {
     searchMode: boolean;
     removeMode: boolean;
   };
-  entity: string;
-  resourceType: ResourceType;
+  entity: FalsableRef;  
+  resourceType: Exclude<ResourceType, 'layer' | 'feature'>;
 };
 
 
@@ -41,7 +41,7 @@ let {
 }: Props = $props();
 
 // CONTEXT
-const { form, validate} = getForm(entity, resourceType);
+const { form, validate} = getForm(resourceType, entity);
 
 const updateUserJoinState = (userId: string, isChecked: boolean) => {
   form.update(($form) => {

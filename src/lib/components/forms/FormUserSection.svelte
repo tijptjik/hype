@@ -5,13 +5,13 @@ import FormUserActions from '$lib/components/forms/FormUserActions.svelte';
 // CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
 // TYPES
-import type { FormField, ResourceType } from '$lib/types';
+import type { FormField, ResourceType, FalsableRef } from '$lib/types';
 
 type Props = {
   title: string;
   fields: FormField;
-  entity: string;
-  resourceType: ResourceType;
+  entity: FalsableRef;
+  resourceType: Exclude<ResourceType, 'layer' | 'feature'>;
 };
 
 // STATE : PROPS
@@ -23,10 +23,8 @@ let actionProps = $state({
   removeMode: false
 });
 
-let checkedValue = entity === 'project' ? 'member' : 'owner';
-let uncheckedValue = entity === 'project' ? 'maintainer' : 'member';
 // STATE : CONTEXT
-const { form, errors, constraints } = getForm(entity, resourceType);
+const { form, errors, constraints } = getForm(resourceType, entity);
 </script>
 
 <div
@@ -49,8 +47,8 @@ const { form, errors, constraints } = getForm(entity, resourceType);
       {constraints}
       {errors}
       userJoinStateKey="role"
-      checkedValue={checkedValue}
-      uncheckedValue={uncheckedValue}
+      checkedValue={entity === 'project' ? 'member' : 'owner'}
+      uncheckedValue={entity === 'project' ? 'maintainer' : 'member'}
       {entity}
       {resourceType} />
   {/each}

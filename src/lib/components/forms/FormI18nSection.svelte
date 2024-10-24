@@ -6,7 +6,7 @@ import FormSectionHeader from '$lib/components/forms/FormSectionHeader.svelte';
 import FormTranslationBar from './FormTranslationBar.svelte';
 // Types
 import SuperDebug from 'sveltekit-superforms';
-import type { FormField, ResourceType } from '$lib/types';
+import type { FormField, ResourceType, FalsableRef } from '$lib/types';
 
 // CONFIG
 const sourceLanguageTag = 'en';
@@ -16,7 +16,7 @@ const languageTags = [sourceLanguageTag, 'zh-hant', 'zh-hans'];
 type Props = {
   title: string;
   fields: FormField;
-  entity: string;
+  entity: FalsableRef;
   resourceType: ResourceType;
 };
 
@@ -24,7 +24,7 @@ type Props = {
 let { title, fields, entity, resourceType }: Props = $props();
 
 // STATE : CONTEXT
-const { form, errors, constraints } = getForm(entity, resourceType);
+const { form, errors, constraints } = getForm(resourceType, entity);
 </script>
 
 <div class="w-full overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">

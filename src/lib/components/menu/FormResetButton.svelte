@@ -5,24 +5,24 @@ import { XCircle } from '@steeze-ui/heroicons';
 // CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
 // TYPES
-import type { ResourceType } from '$lib/types';
+import type { FalsableRef, ResourceType } from '$lib/types';
 
-type Props = {  
-  entity: string;
+// TYPES
+type Props = {
+  entity: FalsableRef;
   resourceType: ResourceType;
 };
-
 // STATE : PROPS
 let { entity, resourceType }: Props = $props();
 
 // STATE : CONTEXT
-const { tainted, isTainted, reset } = getForm(entity, resourceType);
+const { tainted, isTainted, reset } = getForm(resourceType, entity);
 </script>
 <button
   class="btn {!isTainted($tainted)
     ? 'btn-disabled'
     : 'btn-ghost'} pl-3 pr-4 disabled:bg-transparent disabled:text-opacity-60"
-  onclick={reset}
+  onclick={() => reset()}
   disabled={!isTainted($tainted)}>
   <Icon src={XCircle} class="h-6 w-6" />
   {m.forms__reset()}
