@@ -41,6 +41,7 @@ import FormTextField from '$lib/components/forms/FormTextField.svelte';
 import FormUserCard from '$lib/components/forms/FormUserCard.svelte';
 
 export type ResourceType = 'organisation' | 'project' | 'layer' | 'feature';
+export type FalsableResourceType = ResourceType | false;
 export type SourceLang = 'en';
 export type TargetLang = 'zh-hant' | 'zh-hans';
 export type ResourceToEntity = Record<ResourceType, Entity[]>;
@@ -50,6 +51,7 @@ export type FilterableResourceToEntityId = Record<FilterableResourceType, string
 export type Id = string;
 export type Code = string;
 export type Ref = string;
+export type FalsableRef = Ref | false;
 export type Entity = { id: Id; ref: Ref; name: string; nameShort: string; description: string };
 export type ApiEntity = Entity & {
   code?: Code;
@@ -57,13 +59,20 @@ export type ApiEntity = Entity & {
 };
 export type EntityWithData<T> = Entity & { data: T };
 export type FacetType = 'core' | 'address' | 'images';
+export type FalsableFacetType = FacetType | false;
 export type ResourceToNavItem = Record<ResourceType, NavItem>;
 
 export type Router = {
-  resource: ResourceType | false;
-  entity: Ref | false;
-  facet: FacetType | false;
+  resource: FalsableResourceType;
+  entity: FalsableRef;
+  facet: FalsableFacetType;
 };
+
+export type ResourceRouter = Router & {
+  resource: ResourceType;
+};
+
+
 export type NavItem = {
   name: string;
   icon: IconSource;
@@ -154,6 +163,10 @@ export type NewProjectRole = z.infer<typeof ProjectRoleAPI>;
 export type ProjectRole = z.infer<typeof ProjectRoleWithoutPK>;
 // Database representation of ProjectRole, so with projectId and userId
 export type ProjectRoleDB = z.infer<typeof ProjectRoleBase>;
+
+export type ProjectMetadata = {
+  filterProperties?: string[]; // ['district', 'script', 'isPublished']
+};
 
 /* ----------------- */
 // LAYERS

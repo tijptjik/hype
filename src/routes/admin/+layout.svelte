@@ -31,7 +31,7 @@ $effect(() => {
 
 </script>
 
-<!-- TODO Implement sveltekit-flash-message ⚡ - https://www.npmjs.com/package/sveltekit-flash-message -->
+<!-- TODO Implement Toast ⚡ - https://github.com/kbrgl/svelte-french-toast/pull/82 -->
 
 <!-- LAYOUT -->
 <Sidebar />
