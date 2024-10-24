@@ -240,6 +240,8 @@ export const project = sqliteTable('project', {
   attributionGen: integer('attributionGen', { mode: 'boolean' }).notNull().default(false),
   // Project Banner
   image: text('image').default(`https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=${getGenImageParam()}`),
+  // Accessible to the public in the app
+  isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
   // Additional Information
   metadata: text('metadata', { mode: 'json' }).$type<ProjectMetadata>(),
   createdAt: text('createdAt')
@@ -352,6 +354,8 @@ export const layer = sqliteTable('layer', {
   descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(false),
   // Additional Information
   metadata: text('metadata', { mode: 'json' }).$type<LayerMetadata>(),
+  // Accessible to the public in the app
+  isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
