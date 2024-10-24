@@ -1,14 +1,18 @@
 <script lang="ts">
-import { filteredResources } from '$lib/stores/resources.svelte';
-import type { Feature } from '$lib/db/schema';
-import type { EntityWithData } from '$lib/types';
-
-let features = $derived<EntityWithData<Feature>[]>(filteredResources.feature);
-</script>
-
-<div class="container relative mx-auto h-screen overflow-y-auto p-4">
-  <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-    {#each features as { data: feature }, idx}
+  import { filteredResources } from '$lib/stores/resources.svelte';
+  import ResourceHeader from '$lib/components/layout/ResourceHeader.svelte';
+    
+  const features = $derived(filteredResources.feature);
+  
+  const RESOURCE_TYPE = 'feature';
+  </script>
+  
+  <!-- LAYOUT -->
+  <ResourceHeader />
+  <div class="h-full overflow-y-auto bg-gradient-to-bl from-rose-500 to-fuchsia-800 bg-fixed">
+    <div class="container mx-auto flex w-full flex-auto p-4">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+    {#each features as { data : feature }, idx}
       <div class="card bg-base-100 shadow-xl">
         <figure>
           <img
@@ -30,10 +34,11 @@ let features = $derived<EntityWithData<Feature>[]>(filteredResources.feature);
           </h2>
           <p class="mt-2">{feature.properties?.description}</p>
           <div class="mt-4 flex flex-row items-center justify-end">
-            <a href="/admin/features/{feature.id}/core" class="btn btn-primary">View Details</a>
+            <a href="/admin/features/{feature.id}" class="btn btn-primary">View Details</a>
           </div>
         </div>
       </div>
     {/each}
   </div>
+</div>
 </div>
