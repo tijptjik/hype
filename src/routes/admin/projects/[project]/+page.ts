@@ -4,7 +4,8 @@ import { zod } from 'sveltekit-superforms/adapters';
 import type { PageLoad, RouteParams } from './$types';
 // ZOD Schemas
 import { ProjectInsertAPI, ProjectUpdateAPI } from '$lib/db/zod';
-
+// Types
+import type { Project } from '$lib/types';
 export const load: PageLoad = async ({
   params,
   fetch,
@@ -22,7 +23,7 @@ export const load: PageLoad = async ({
     const request = await fetch(endPoint);
     if (request.status >= 400) return error(request.status);
 
-    const formData: Record<string, unknown> = await request.json();
+    const formData: Project = await request.json();
 
     form = await superValidate(formData, zod(ProjectUpdateAPI));
   }
