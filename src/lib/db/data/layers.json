@@ -7,7 +7,8 @@
     "modifiedAt": "2024-08-28T18:55:30.371Z",
     "name": "Ghost Signs",
     "nameShort": "GhostSigns",
-    "description": "Public record of Ghost Signs in Hong Kong"
+    "description": "Public record of Ghost Signs in Hong Kong",
+    "isPublished": true
   },
   {
     "id": "shmOuBSVStTJ",
@@ -17,7 +18,8 @@
     "modifiedAt": "2024-08-28T18:55:30.371Z",
     "name": "Through the Years",
     "nameShort": "By Age",
-    "description": "Animated history of the streets of Hong Kong"
+    "description": "Animated history of the streets of Hong Kong",
+    "isPublished": true
   },
   {
     "id": "Ks9Ht2LmNp",
@@ -27,7 +29,8 @@
     "modifiedAt": "2024-03-14T12:00:00.000Z",
     "name": "Foreign Influence",
     "nameShort": "By Language",
-    "description": "The not-so-English 'English' street names in HK"
+    "description": "The not-so-English 'English' street names in HK",
+    "isPublished": false
   },
   {
     "id": "Jx7Fy5RqTm",
@@ -37,7 +40,8 @@
     "modifiedAt": "2024-03-14T12:00:00.000Z",
     "name": "Behind the Name",
     "nameShort": "By Odonym",
-    "description": "What can the streets of Hong Kong tell us about its culture and history?"
+    "description": "What can the streets of Hong Kong tell us about its culture and history?",
+    "isPublished": true
   },
   {
     "id": "Qw3Er5TyUi",
@@ -47,6 +51,7 @@
     "modifiedAt": "2024-10-14T12:30:00.000Z",
     "name": "Building Age",
     "nameShort": "BuildingAge",
-    "description": "Visualizing the age of buildings across Hong Kong"
+    "description": "Visualizing the age of buildings across Hong Kong",
+    "isPublished": false
   }
 ]

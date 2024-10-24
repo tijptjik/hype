@@ -9,6 +9,7 @@
     "license": "Copyright - Contact for License",
     "attribution": "© Hong Kong Ghost Signs",
     "image": "https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=10",
+    "isPublished": true,
     "metadata": {},
     "createdAt": "2024-08-27T08:06:26.087Z",
     "modifiedAt": "2024-08-27T08:06:26.087Z"
@@ -23,6 +24,7 @@
     "license": "Copyright - Contact for License",
     "attribution": "© Diana Pang",
     "image": "https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=15",
+    "isPublished": true,
     "metadata": {},
     "createdAt": "2024-08-27T08:06:26.087Z",
     "modifiedAt": "2024-08-27T08:06:26.087Z"
@@ -37,6 +39,7 @@
     "license": "CC BY 4.0",
     "attribution": "CC:BY Hong Kong Data Layer",
     "image": "https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=20",
+    "isPublished": false,
     "metadata": {},
     "createdAt": "2024-10-11T10:15:30.000Z",
     "modifiedAt": "2024-10-11T10:15:30.000Z"
