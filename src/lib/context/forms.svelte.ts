@@ -180,7 +180,7 @@ export const setForm = <T extends Record<string, unknown>>(
       FormClass = FeatureForm;
       break;
     default:
-      throw new Error(`Unknown entity type: ${resourceType}`);
+      throw new Error(`Unknown resource type: ${resourceType}`);
   }
   return setContext(getContextRef(resourceType, entity), new FormClass(form, entity === false));
 };
