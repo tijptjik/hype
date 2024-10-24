@@ -4,27 +4,22 @@ import { Bars3 } from '@steeze-ui/heroicons';
 import { navItems } from '$lib/stores/navigation.svelte';
 import * as m from '$lib/paraglide/messages.js';
 import MenuItem from '$lib/components/menu/MenuItem.svelte';
-import OrganisationActions from '$lib/components/menu/OrganisationActions.svelte';
-import ProjectActions from '$lib/components/menu/ProjectActions.svelte';
-import LayerActions from '$lib/components/menu/LayerActions.svelte';
-import FeatureActions from '$lib/components/menu/FeatureActions.svelte';
+import EntityActions from '$lib/components/menu/EntityActions.svelte';
 import { getRouterState } from '$lib/context/router.svelte';
-import type { ResourceType } from '$lib/types';
-import type { Component } from 'svelte';
+// TYPES
+import type { FalsableRef, ResourceType } from '$lib/types';
+
+type Props = {
+  entity: FalsableRef;
+  resourceType: ResourceType;
+  title: string;
+};
 
 // STATE : PROPS
-let { entity, title }: { entity: string; title: string } = $props();
+let { entity, resourceType, title }: Props = $props();
 
 // STATE : CONTEXT
 const routerState = getRouterState();
-
-// CONFIG
-const menuActions = {
-  organisation: OrganisationActions,
-  project: ProjectActions,
-  layer: LayerActions,
-  feature: FeatureActions
-};
 
 const menuItems = {
   organisation: [
@@ -71,7 +66,7 @@ const menuItems = {
 
 </script>
 
-<header class="navbar h-17.5 px-12 py-4 shadow-lg sticky top-0 z-10 {routerState.entity === false ? 'bg-base-300' : 'bg-gradient-to-r from-rose-500 to-fuchsia-800'}">
+<header class="navbar h-17.5 px-12 py-4 shadow-lg sticky top-0 z-10 bg-gradient-to-r from-rose-500 to-fuchsia-800">
   <div class="flex-1">
     <div class="flex items-center space-x-4">
       <Icon src={navItems[routerState.resource as ResourceType].icon} class="h-6 w-6" />
@@ -79,8 +74,6 @@ const menuItems = {
     </div>
   </div>
   <div class="flex-none">
-    {#if routerState.entity !== false}
-    {@const Actions = menuActions[routerState.resource as ResourceType] as Component}
     <ul class="mt-1 flex flex-row space-x-2 px-2">
       {#each menuItems[routerState.resource as ResourceType] as facet}
         <MenuItem {facet} />
@@ -88,8 +81,7 @@ const menuItems = {
     </ul>
     <Icon src={Bars3} class="mx-2 h-6 w-6 text-black" />
     <ul class="menu menu-horizontal space-x-2">
-      <Actions {entity} />
+      <EntityActions {entity} {resourceType} />
     </ul>
-    {/if}
   </div>
 </header>
