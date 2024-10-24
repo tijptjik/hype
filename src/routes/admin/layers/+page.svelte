@@ -22,7 +22,7 @@ let layers = $derived(filteredResources.layer);
           <div class="mt-4 flex flex-row items-center justify-between">
             <div class="flex flex-wrap gap-2">
             </div>
-            <a href="/admin/layers/{layer.id}/core" class="btn btn-primary">Edit</a>
+            <a href="/admin/layers/{layer.id}" class="btn btn-primary">Edit</a>
           </div>
         </div>
       </div>

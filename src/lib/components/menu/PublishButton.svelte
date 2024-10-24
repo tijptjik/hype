@@ -34,7 +34,7 @@ $effect(() => {
   });
 </script>
 
-// TODO Implement
+<!-- TODO Implement -->
 
 <button
   class="btn disabled:bg-transparent disabled:text-opacity-60 transition-all duration-500"
@@ -47,5 +47,6 @@ $effect(() => {
   {#if false}
     <Icon src={CheckCircle} />
   {/if}
-  {isInvalid ? m.forms_invalid() : m.forms__save()}
+  <!-- {isInvalid ? m.forms_invalid() : m.forms__save()} -->
+  Publish
 </button>
