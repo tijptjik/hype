@@ -1,5 +1,5 @@
 <script lang="ts">
-import FormFieldLabels from './FormFieldLabels.svelte';
+import Labels from './FormInputLabels.svelte';
 
 let { id, value = $bindable(), constraints, isGenAI, languageTag } = $props();
 </script>
@@ -13,4 +13,4 @@ let { id, value = $bindable(), constraints, isGenAI, languageTag } = $props();
   class="textarea w-full bg-neutral pl-4 pr-1 py-2 border-none focus:outline-none"
   rows="4">
 </textarea>
-<FormFieldLabels {isGenAI} {languageTag} absolute={true} />
+<Labels {isGenAI} {languageTag} absolute={true} />

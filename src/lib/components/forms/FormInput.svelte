@@ -1,5 +1,5 @@
 <script lang="ts">
-  import FormFieldLabels from './FormFieldLabels.svelte';
+import FormInputLabels from './FormInputLabels.svelte';
 let { id, value = $bindable(), constraints, isGenAI, languageTag } = $props();
 </script>
 
@@ -10,8 +10,7 @@ let { id, value = $bindable(), constraints, isGenAI, languageTag } = $props();
   bind:value
   {...constraints}
   placeholder="Type here"
-  class="w-full p-2 bg-neutral rounded-md focus:outline-none focus:border-none" />
-  {#if isGenAI || languageTag !== 'core'}
-    <FormFieldLabels {isGenAI} {languageTag} />
-  {/if}
-  
+  class="w-full rounded-md bg-neutral p-2 focus:border-none focus:outline-none" />
+{#if isGenAI || languageTag !== 'core'}
+  <FormInputLabels {isGenAI} {languageTag} />
+{/if}

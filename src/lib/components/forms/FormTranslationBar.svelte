@@ -5,7 +5,7 @@ import { getTranslation } from '$lib/api/translation';
 // CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
 // Types
-import type { FormField, ResourceType, FalsableRef, OrganisationForm, ProjectForm, LayerForm } from '$lib/types';
+import type { FormField, ResourceType, FalsableRef } from '$lib/types';
 import SuperValidated from 'sveltekit-superforms';
 // CONFIG
 const allLanguages = [

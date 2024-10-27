@@ -2,7 +2,7 @@
 // COMPONENTS
 import { Icon } from '@steeze-ui/svelte-icon';
 import { ChevronRight } from '@steeze-ui/heroicons';
-import FormSectionHeaderSearch from './FormSectionHeaderSearch.svelte';
+import SearchBar from './FormHeaderSearch.svelte';
 // CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
 // TYPES
@@ -14,6 +14,7 @@ import type { FormField, ResourceType, FalsableRef } from '$lib/types';
 type Props = {
   title: string;
   Actions?: Component;
+  addAction?: () => void;
   actionProps?: Record<string, any>;
   Info?: Component;
   fields?: FormField;
@@ -26,6 +27,7 @@ type Props = {
 let {
   title,
   Actions,
+  addAction,
   actionProps = $bindable({
     searchMode: false,
     removeMode: false
@@ -70,6 +72,7 @@ $effect(() => {
         <Actions
           bind:searchMode={actionProps.searchMode}
           bind:removeMode={actionProps.removeMode}
+          addAction={addAction}
           {entity} {resourceType} />
       </div>
     {/if}
@@ -79,7 +82,7 @@ $effect(() => {
       </div>
     {/if}
   </div>
-  <FormSectionHeaderSearch
+  <SearchBar
     bind:searchMode={actionProps.searchMode}
     apiPath="users"
     destination={Object.keys(fields ?? {})[0]}

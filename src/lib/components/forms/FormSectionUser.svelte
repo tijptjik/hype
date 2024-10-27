@@ -1,7 +1,7 @@
 <script lang="ts">
 // Components
-import FormSectionHeader from '$lib/components/forms/FormSectionHeader.svelte';
-import FormUserActions from '$lib/components/forms/FormUserActions.svelte';
+import Header from '$lib/components/forms/FormHeader.svelte';
+import Actions from '$lib/components/forms/FormActionsUser.svelte';
 // CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
 // TYPES
@@ -11,7 +11,7 @@ type Props = {
   title: string;
   fields: FormField;
   entity: FalsableRef;
-  resourceType: Exclude<ResourceType, 'layer' | 'feature'>;
+  resourceType: ResourceType;
 };
 
 // STATE : PROPS
@@ -29,9 +29,9 @@ const { form, errors, constraints } = getForm(resourceType, entity);
 
 <div
   class="basis-2/3 overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
-  <FormSectionHeader
+  <Header
     {title}
-    Actions={FormUserActions}
+    Actions={Actions}
     bind:actionProps
     {fields}
     {resourceType}

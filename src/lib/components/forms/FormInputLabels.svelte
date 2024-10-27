@@ -2,7 +2,7 @@
 const { isGenAI, languageTag, absolute = false } = $props();
 </script>
 
-{#snippet label(text, badgeType = 'ghost')}
+{#snippet label(text: string, badgeType: string = 'ghost')}
   <span
     class="badge badge-outline badge-sm flex-shrink-0 badge-{badgeType} border-primary bg-neutral p-2.5"
     >{text}</span>
