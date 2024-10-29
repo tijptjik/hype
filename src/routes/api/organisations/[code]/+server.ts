@@ -76,6 +76,7 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
 
 export const PUT: RequestHandler = async ({ params, request, locals, platform }) => {
   // AUTH : Pass or Fail
+  // TODO : If a user is NOT the owner, they should not be able to PUT updates to the organisation
   const { db, userId, accessStrategy } = await getDatabaseOrError(
     locals,
     platform,
