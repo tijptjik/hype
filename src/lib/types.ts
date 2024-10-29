@@ -36,14 +36,16 @@ import {
   FeatureUpdate
 } from '$lib/db/zod';
 // Components
-import FormInputField from '$lib/components/forms/FormInputField.svelte';
-import FormTextField from '$lib/components/forms/FormTextField.svelte';
-import FormUserCard from '$lib/components/forms/FormUserCard.svelte';
-
+import InputField from '$lib/components/forms/FormFieldInput.svelte';
+import TextareaField from '$lib/components/forms/FormFieldTextarea.svelte';
+import SelectField from '$lib/components/forms/FormFieldSelect.svelte';
+import RangeField from '$lib/components/forms/FormFieldRange.svelte';
+import TagsField from '$lib/components/forms/FormFieldTags.svelte';
 export type ResourceType = 'organisation' | 'project' | 'layer' | 'feature';
 export type FalsableResourceType = ResourceType | false;
 export type SourceLang = 'en';
 export type TargetLang = 'zh-hant' | 'zh-hans';
+export type LanguageTag = SourceLang | TargetLang | 'core';
 export type ResourceToEntity = Record<ResourceType, Entity[]>;
 export type ResourceToText = Record<ResourceType, string>;
 export type FilterableResourceType = Exclude<ResourceType, 'feature'>;
@@ -58,7 +60,7 @@ export type ApiEntity = Entity & {
   properties?: { title: string; description: string };
 };
 export type EntityWithData<T> = Entity & { data: T };
-export type FacetType = 'core' | 'address' | 'images';
+export type FacetType = 'core' | 'address' | 'images' | 'config';
 export type FalsableFacetType = FacetType | false;
 export type ResourceToNavItem = Record<ResourceType, NavItem>;
 
@@ -72,7 +74,6 @@ export type ResourceRouter = Router & {
   resource: ResourceType;
 };
 
-
 export type NavItem = {
   name: string;
   icon: IconSource;
@@ -84,10 +85,14 @@ export type NestedRelations = {
   [key: string]: boolean | { columns: NestedRelations } | { with: NestedRelations };
 };
 
+export const jsonFieldKeys = ['config', 'geometry', 'properties', 'addressProperties', 'metadata'] as const;
+export type JSONFieldKey = (typeof jsonFieldKeys)[number];
+export type FormFieldDefinition = { label: string; component: FieldComponentType };
+export type FormFieldSet = Record<string, FormFieldDefinition>
+export type FormField = FormFieldSet | Record<JSONFieldKey, Record<CustomPropertyType, FormFieldSet>>;
 export type FormFieldConfig = Record<string, FormField>;
-export type FormField = Record<string, FormFieldDefinition>;
-export type FormFieldDefinition = { label: string; component: FormFieldComponent };
-export type FormFieldComponent = typeof FormInputField | typeof FormTextField | typeof FormUserCard;
+
+
 
 /* ----------------- */
 // SCHEMA TYPES
@@ -164,9 +169,53 @@ export type ProjectRole = z.infer<typeof ProjectRoleWithoutPK>;
 // Database representation of ProjectRole, so with projectId and userId
 export type ProjectRoleDB = z.infer<typeof ProjectRoleBase>;
 
-export type ProjectMetadata = {
-  filterProperties?: string[]; // ['district', 'script', 'isPublished']
-};
+
+export const customPropertyTypes = ['classifiers', 'specifiers', 'display'] as const;
+export type CustomPropertyType = (typeof customPropertyTypes)[number];
+
+export const fieldComponentTypes = ['SelectField', 'RangeField', 'InputField', 'TextareaField', 'TagsField'] as const;
+export const classifierComponentTypes = ['SelectField', 'RangeField'] as const;
+export const specifierComponentTypes = ['InputField', 'TextareaField', 'TagsField'] as const;
+export const displayComponentTypes = ['InputField'] as const;
+export type FieldComponentType = (typeof fieldComponentTypes)[number];
+export type FieldComponent = typeof SelectField | typeof RangeField | typeof InputField | typeof TextareaField | typeof TagsField;
+
+export type ProjectMetadata = Record<CustomPropertyType, Record<string, CustomProperty>>;
+
+export type CustomProperty = {
+  // In which section is it stored in the database, and where should it be
+  // shown in the form.
+  // classifier:
+  //   FORM classification
+  //   DB properties.classifiers
+  // specifiers:
+  //   FORM specification
+  //   DB properties.specifiers
+  // display:
+  //   FORM display
+  //   DB properties.display
+  type : CustomPropertyType;
+  // The key of the property in the database
+  key : string;
+  // The label of the property in the form
+  label : string;
+  // The component to use in the form
+  // classifier: 
+  //   FormSelectField
+  //   FormRangeField
+  // specifiers:
+  //   FormInputField
+  //   FormTextField
+  // display:
+  //   FormInputField
+  component : FieldComponentType;
+  // If component is FormSelectField, the values it can take
+  values? : string[];
+  // If component is FormRangeField, the minimum value it can take
+  min? : number;
+  // If component is FormRangeField, the maximum value it can take
+  max? : number;
+}
 
 /* ----------------- */
 // LAYERS
@@ -194,7 +243,7 @@ export type LayerMetadata = {
   mlClusterRadius?: number; // 50
   mlClusterMaxZoom?: number; // 14
   mlClusterMinPoints?: number; // 2
-}
+};
 
 /* ----------------- */
 // FEATURES
@@ -213,40 +262,47 @@ export type NewFeatureDB = z.infer<typeof FeatureInsert>;
 // FEATURES : PROPERTIES
 /* -------- */
 
-interface FeatureProperties {
-  // Title
-  title: string;
-  'title__zh-hant': string;
-  'title__zh-hans': string;
-  titleGen: boolean;
-  'titleGen__zh-hant': boolean;
-  'titleGen__zh-hans': boolean;
+export type FeatureProperties = {
+  descriptors: {
+    // Title
+    title: string;
+    'title__zh-hant': string;
+    'title__zh-hans': string;
+    titleGen: boolean;
+    'titleGen__zh-hant': boolean;
+    'titleGen__zh-hans': boolean;
 
-  // Description
-  description?: string;
-  'description__zh-hant'?: string;
-  'description__zh-hans'?: string;
-  descriptionGen?: boolean;
-  'descriptionGen__zh-hant'?: boolean;
-  'descriptionGen__zh-hans'?: boolean;
-  // Misc
-  grade?: number; // Value between 1 and 5
+    // Description
+    description?: string;
+    'description__zh-hant'?: string;
+    'description__zh-hans'?: string;
+    descriptionGen?: boolean;
+    'descriptionGen__zh-hant'?: boolean;
+    'descriptionGen__zh-hans'?: boolean;
+  };
+  classifiers?: {
+    // Misc
+    grade?: number; // Value between 1 and 5
+  };
+  display?: {
+    markerSize?: string; // small, medium, large
+    markerSymbol?: string;
+    markerColor?: string; // "#fff"
+  };
+};
 
-  // Markers
-  markerSize?: string; // small, medium, large
-  markerSymbol?: string;
-  markerColor?: string; // "#fff"
-}
-
-export interface GhostSignsFeatureProperties extends FeatureProperties {
-  // Description
-  graphemes?: string; // Literal
-
-  // Misc
-  size?: string; // large, medium, small
-  material?: string; // Painted on Cement, Painted on Metal, Painted on Brick, Painted on Tile, Painted over, Acrylic, Metal, Wood, Terrazzo, Stone, Molded Cement, Zinc Stenciled
-  visibility?: string; // Revenant, Physical, Palimpsest, Uncovering
-}
+export type GhostSignsFeatureProperties = FeatureProperties & {
+  // Specification
+  specifiers: {
+    graphemes?: string; // Literal
+  };
+  // Classification
+  classifiers: {
+    size?: string; // large, medium, small
+    material?: string; // Painted on Cement, Painted on Metal, Painted on Brick, Painted on Tile, Painted over, Acrylic, Metal, Wood, Terrazzo, Stone, Molded Cement, Zinc Stenciled
+    visibility?: string; // Revenant, Physical, Palimpsest, Uncovering
+  };
+};
 
 /* ----------------- */
 // FEATURES : ADDRESS
