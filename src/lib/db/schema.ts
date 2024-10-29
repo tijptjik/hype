@@ -566,6 +566,7 @@ export const layerProperty = sqliteTable('layerProperty', {
   propertyId: text('propertyId')
     .notNull()
     .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  isVisible: integer('isVisible', { mode: 'boolean' }).notNull().default(true)
 });
 
 export const layerPropertyRelations = relations(layerProperty, ({ one }) => ({  
