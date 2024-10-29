@@ -38,6 +38,10 @@ const menuItems = {
       ref: 'core'
     },
     {
+      label: m.project__fields(),
+      ref: 'config'
+    },
+    {
       label: m.project__images(),
       ref: 'images'
     }

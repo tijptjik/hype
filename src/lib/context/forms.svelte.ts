@@ -80,9 +80,6 @@ class BaseForm<T extends Record<string, unknown>> {
   async handleSubmit({ action, cancel }: { action: URL; cancel: () => void }) {
     const validatedForm = await this.validateForm();
 
-    console.log('VALIDATION')
-    console.log('validatedForm', validatedForm);
-
     // LOCAL VALIDATION
     if (!validatedForm.valid) {
       this.errors.set(validatedForm.errors);

@@ -333,7 +333,7 @@ const isResourceExpanded = (resourceType: ResourceType) => {
 
 <!-- COMPONENT -->
 <aside
-  class="flex h-screen flex-col bg-base-300 transition-all w-{isSidebarExpanded ? '96' : '20'}"
+  class="flex h-screen flex-shrink-1 flex-col bg-base-300 transition-all w-{isSidebarExpanded ? '96' : '20'}"
   style="width: {isSidebarExpanded ? '400px' : '80px'};">
   <div class="flex flex-shrink-0 flex-row items-center justify-between bg-black p-4">
     {#if isSidebarExpanded}
