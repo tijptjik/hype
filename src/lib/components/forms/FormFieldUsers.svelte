@@ -3,10 +3,11 @@ import Form from 'sveltekit-superforms';
 import type { InputConstraints, InputConstraint, ValidationErrors } from 'sveltekit-superforms';
 import { Icon } from '@steeze-ui/svelte-icon';
 import { Trash } from '@steeze-ui/heroicons';
-import { fade } from 'svelte/transition';
+import { scale } from 'svelte/transition';
+import { flip } from 'svelte/animate';
 // CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
-// Types
+// TYPES
 import type { ResourceType, FalsableRef } from '$lib/types';
 
 type Props = {
@@ -69,8 +70,8 @@ const removeUser = async (e: Event, userId: string) => {
 <!-- TODO Consider which users to show for projects, and what the non-maintainer role really means -->
 
 <div class="grid grid-cols-1 gap-4 p-4 2xl:grid-cols-2">
-  {#each Object.entries($form[fieldId]) as [userId, { user }]}
-    <div class="grid-span-1 group" transition:fade>
+  {#each Object.entries($form[fieldId]) as [userId, { user }] (user.name)}
+    <div class="grid-span-1 group" in:scale out:scale animate:flip={{ duration: 200 }}>
       <div class="card card-side h-full flex-row items-center bg-base-100 pr-6 shadow-xl relative rounded-l-xl overflow-hidden">
         {#if actionProps.removeMode}
         <div class="absolute left-0 top-0 flex w-24 items-center justify-center opacity-80">
