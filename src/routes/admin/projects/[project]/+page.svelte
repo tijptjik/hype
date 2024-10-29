@@ -8,11 +8,12 @@ import Header from '$lib/components/layout/EntityHeader.svelte';
 import I18nSection from '$lib/components/forms/FormSectionI18n.svelte';
 import SpecificationSection from '$lib/components/forms/FormSectionSpecification.svelte';
 import ImageSection from '$lib/components/forms/FormSectionImage.svelte';
+import CustomFieldSection from '$lib/components/forms/FormSectionCustomField.svelte';
 import InputField from '$lib/components/forms/FormFieldInput.svelte';
 import TextareaField from '$lib/components/forms/FormFieldTextarea.svelte';
+import CustomField from '$lib/components/forms/FormFieldCustomFields.svelte';
 import FormUserCard from '$lib/components/forms/FormFieldUsers.svelte';
 import UserSection from '$lib/components/forms/FormSectionUser.svelte';
-import CustomFieldSection from '$lib/components/forms/FormSectionCustomField.svelte';
 // TYPES
 import type { FormFieldConfig } from '$lib/types';
 import type { SuperValidated } from 'sveltekit-superforms';
@@ -34,7 +35,7 @@ const FIELDS: FormFieldConfig = {
     description: {
       label: 'Description',
       component: TextareaField
-    },
+    }
   },
   credit: {
     license: {
@@ -44,7 +45,7 @@ const FIELDS: FormFieldConfig = {
     attribution: {
       label: 'Attribution',
       component: InputField
-    },
+    }
   },
   users: {
     maintainerRoles: {
@@ -56,13 +57,19 @@ const FIELDS: FormFieldConfig = {
     code: {
       label: 'Code',
       component: InputField
-    },
+    }
   },
   config: {
     metadata: {
-      label: 'Metadata',
-      component: CustomFieldSection
-    },
+      classifiers: {
+        label: 'Classifiers',
+        component: CustomField
+      },
+      specificiers: {
+        label: 'Specificiers',
+        component: CustomField
+      }
+    }
   },
   images: {
     image: {
@@ -73,37 +80,84 @@ const FIELDS: FormFieldConfig = {
 };
 
 // STATE : PROPS
-let { data }: { data: { form: SuperValidated<Project>; entity: string } } = $props();
-let { form, entity } = data;
+let { data }: { data: { validatedForm: SuperValidated<Project>; entity: string } } = $props();
+let { validatedForm, entity } = data;
 
 // STATE : DERIVED
 const routerState = getRouterState() as ResourceRouter;
+const title = $derived($form.name || 'New');
 
 // STATE : FORM
-const FormContext = setForm(routerState.resource as ResourceType, entity, form);
+let { message, enhance, form } = setForm(
+  routerState.resource as ResourceType,
+  entity,
+  validatedForm
+);
 </script>
 
 <!-- LAYOUT -->
-<div class="h-full overflow-y-auto bg-black">
-  <Header entity={data.entity} resourceType={routerState.resource} title={data.form.data.name || 'New'}/>
+<div class="h-full overflow-y-auto bg-black pb-16">
+  <Header entity={data.entity} resourceType={routerState.resource} {title} />
   <main class="flex w-full flex-col p-6">
-    {#if Object.keys(FormContext.message).length > 0}<h3>{get(FormContext.message)}</h3>{/if}
-    <form method="POST" use:FormContext.enhance class="flex flex-col gap-6">
+    {#if Object.keys(message).length > 0}<h3>{get(message)}</h3>{/if}
+    <form method="POST" use:enhance class="flex flex-col gap-6">
       {#if routerState.facet === 'core' || routerState.facet === false}
-        <I18nSection title="Descriptors" fields={FIELDS.i18n} {entity} resourceType={routerState.resource}  />
-        <I18nSection title="Credit" fields={FIELDS.credit} {entity} resourceType={routerState.resource}  />
+        <I18nSection
+          title="Descriptors"
+          fields={FIELDS.i18n}
+          facet={routerState.facet as string}
+          {entity}
+          resourceType={routerState.resource} />
+        <I18nSection
+          title="Credit"
+          fields={FIELDS.credit}
+          facet={routerState.facet as string}
+          {entity}
+          resourceType={routerState.resource} />
         <div class="flex flex-row gap-6">
-          <UserSection title="Members" fields={FIELDS.users} {entity} resourceType={routerState.resource as Exclude<ResourceType, 'layer' | 'feature'>}/>
-          <SpecificationSection title="Specification" fields={FIELDS.specification} {entity} resourceType={routerState.resource}/>
+          <UserSection
+            title="Members"
+            fields={FIELDS.users}
+            facet={routerState.facet as string}
+            {entity}
+            resourceType={routerState.resource as Exclude<ResourceType, 'layer' | 'feature'>} />
+          <SpecificationSection
+            title="Specification"
+            fields={FIELDS.specification}
+            facet={routerState.facet as string}
+            {entity}
+            resourceType={routerState.resource} />
         </div>
       {:else if routerState.facet === 'config'}
-        <CustomFieldSection title="Custom Fields" fields={FIELDS.config} {entity} resourceType={routerState.resource}/>
+        <CustomFieldSection
+          title="Categorical Fields"
+          subtitle="by which features can be filtered"
+          fieldId="metadata"
+          customPropertyType="classifiers"
+          fields={FIELDS.config.metadata.classifiers}
+          facet={routerState.facet as string}
+          {entity}
+          resourceType={routerState.resource} />
+        <CustomFieldSection
+          title="Freeform Fields"
+          subtitle="displayed in a feature's info panels"
+          fieldId="metadata"
+          customPropertyType="specifiers"
+          fields={FIELDS.config.metadata.specifiers}
+          facet={routerState.facet as string}
+          {entity}
+          resourceType={routerState.resource} />
       {:else if routerState.facet === 'images'}
-        <ImageSection title="Image" fields={FIELDS.images} {entity} resourceType={routerState.resource}/>
+        <ImageSection
+          title="Image"
+          fields={FIELDS.images}
+          facet={routerState.facet as string}
+          {entity}
+          resourceType={routerState.resource} />
       {:else}
         <h1>FACET NOT FOUND</h1>
       {/if}
     </form>
-    <!-- <SuperDebug data={FormContext.form} /> -->
+    <!-- <SuperDebug data={$form} /> -->
   </main>
 </div>
