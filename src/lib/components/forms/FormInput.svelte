@@ -1,16 +1,35 @@
 <script lang="ts">
-import FormInputLabels from './FormInputLabels.svelte';
-let { id, value = $bindable(), constraints, isGenAI, languageTag } = $props();
+import Labels from './FormInputLabels.svelte';
+// TYPES
+import type { InputConstraints, InputConstraint } from 'sveltekit-superforms';
+
+// PROPS
+type Props = {
+  id: string;
+  value: string;
+  isGenAI?: boolean;
+  languageTag?: string;
+  inputType?: string;
+};
+
+// STATE
+let {
+  id,
+  value = $bindable(),
+  isGenAI = false,
+  languageTag = 'core',
+  inputType = 'text'
+}: Props = $props();
+
 </script>
 
 <input
   {id}
-  type="text"
+  type={inputType}
   name={id}
   bind:value
-  {...constraints}
-  placeholder="Type here"
+  placeholder={inputType === 'text' ? 'Type here' : 'Set number'}
   class="w-full rounded-md bg-neutral p-2 focus:border-none focus:outline-none" />
 {#if isGenAI || languageTag !== 'core'}
-  <FormInputLabels {isGenAI} {languageTag} />
+  <Labels {isGenAI} {languageTag} />
 {/if}
