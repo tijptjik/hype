@@ -452,6 +452,14 @@ export const featureRelations = relations(feature, ({ one }) => ({
   layer: one(layer, {
     fields: [feature.layerId],
     references: [layer.id]
+  }),
+  contributor: one(user, {
+    fields: [feature.contributorId],
+    references: [user.id]
+  }),
+  publisher: one(user, {
+    fields: [feature.publisherId],
+    references: [user.id]
   })
 }));
 
