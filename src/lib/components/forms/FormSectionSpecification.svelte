@@ -10,6 +10,7 @@ import { getForm } from '$lib/context/forms.svelte';
 type Props = {
   title: string;
   fields: FormField;
+  facet: string;
   entity: FalsableRef;
   resourceType: ResourceType;
 };
@@ -18,6 +19,7 @@ type Props = {
 let {
   title,
   fields,
+  facet,
   entity,
   resourceType
 }: Props = $props();
@@ -29,7 +31,7 @@ const { form, errors, constraints } = getForm(resourceType, entity);
 <div
   class="basis-1/3 overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
   <Header {title} {entity} {resourceType} />
-  <div class="flex flex-row flex-wrap items-baseline gap-4 p-4">
+  <div class="flex flex-wrap items-baseline gap-4 p-4">
     <div class="group flex flex-grow flex-col gap-4">
       {#each Object.entries(fields) as [fieldId, field]}
         <div class="rounded-xl bg-base-100 px-6 py-2 pb-6 pt-4">

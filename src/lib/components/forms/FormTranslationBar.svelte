@@ -19,7 +19,7 @@ type Props = {
   languageTag: string;
   fields: FormField;
   entity: FalsableRef;
-  resourceType: Exclude<ResourceType, 'feature'>;
+  resourceType: ResourceType;
 };
 
 // STATE

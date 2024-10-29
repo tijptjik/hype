@@ -10,12 +10,13 @@ import type { FormField, ResourceType, FalsableRef } from '$lib/types';
 type Props = {
   title: string;
   fields: FormField;
+  facet: string;
   entity: FalsableRef;
   resourceType: ResourceType;
 };
 
 // STATE : PROPS
-let { title, fields, entity, resourceType }: Props = $props();
+let { title, fields, facet, entity, resourceType }: Props = $props();
 
 // STATE
 let actionProps = $state({
@@ -38,7 +39,8 @@ const { form, errors, constraints } = getForm(resourceType, entity);
     {errors}
     {entity} />
   {#each Object.entries(fields) as [fieldId, field]}
-    <field.component
+    <!-- UserField  -->
+  <field.component
       bind:actionProps
       {fieldId}
       {field}

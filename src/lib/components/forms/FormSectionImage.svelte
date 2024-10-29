@@ -6,16 +6,17 @@ import type { FormField, ResourceType } from '$lib/types';
 type Props = {
   title: string;
   fields: FormField;
+  facet: string;
   entity: string;
   resourceType: ResourceType;
 };
 
-let { title, fields, entity, resourceType }: Props = $props();
+let { title, fields, facet, entity, resourceType }: Props = $props();
 </script>
 
 <div>
   <h2 class="text-lg font-bold">{title}</h2>
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-wrap gap-4">
     {#each Object.entries(fields) as [fieldId, field]}
       <div class="flex flex-col gap-2">
         <label for={fieldId} class="text-sm font-medium text-gray-700">{field.label}</label>

@@ -16,25 +16,26 @@ const languageTags = [sourceLanguageTag, 'zh-hant', 'zh-hans'];
 type Props = {
   title: string;
   fields: FormField;
+  facet: string;
   entity: FalsableRef;
   resourceType: ResourceType;
 };
 
 // STATE : PROPS
-let { title, fields, entity, resourceType }: Props = $props();
+let { title, fields, facet, entity, resourceType }: Props = $props();
 
 // STATE : CONTEXT
 const { form, errors, constraints } = getForm(resourceType, entity);
 </script>
 
-<div class="w-full overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
+<div class="overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
   <Header {title} {entity} {resourceType} />
-  <div class="flex flex-row items-baseline gap-4 p-4">
+  <div class="flex flex-wrap items-baseline gap-4 p-4">
     {#each languageTags as languageTag}
       <div class="group flex flex-grow flex-col gap-4 rounded-xl bg-base-100">
         <div class="flex flex-col content-start items-start gap-4 px-6 py-2 pb-2 pt-4">
           {#each Object.entries(fields) as [fieldId, field]}
-            <field.component {languageTag} {fieldId} {field} {form} {constraints} {errors} {entity} {resourceType} />
+            <field.component {languageTag} {fieldId} {field} {form} {constraints} {errors} {facet} {entity} {resourceType} />
           {/each}
         </div>
         <div
