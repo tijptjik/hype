@@ -10,7 +10,7 @@ import {
 } from '$lib/api';
 // DB
 import { hierarchicalEntityQuery } from '$lib/db';
-import { updateFeature, extractEntitiesToUpdate, rebuildFormData } from '$lib/db/services/features';
+import { updateFeature, extractEntitiesToUpdate, rebuildFormData } from '$lib/db/services/feature';
 import { projectRole } from '$lib/db/schema';
 // ZOD
 import { FeatureUpdateAPI } from '$lib/db/zod';

@@ -263,6 +263,7 @@ export const projectRelations = relations(project, ({ one, many }) => ({
     references: [organisation.id]
   }),
   layers: many(layer),
+  properties: many(property),
   translations: many(projectI18n),
   maintainerRoles: many(projectRole)
 }));
@@ -370,6 +371,7 @@ export const layer = sqliteTable('layer', {
 
 export const layerRelations = relations(layer, ({ many }) => ({
   translations: many(layerI18n),
+  properties: many(layerProperty),
   features: many(feature)
 }));
 
@@ -550,7 +552,11 @@ export const propertyValueI18n = sqliteTable('propertyValueI18n', {
     .references(() => propertyValue.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
   lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
   value: text('value').notNull()
-});
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.propertyValueId, t.lang] })
+  })
+);
 
 export const propertyValueI18nRelations = relations(propertyValueI18n, ({ one }) => ({
   propertyValue: one(propertyValue, {

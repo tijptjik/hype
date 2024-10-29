@@ -5,7 +5,7 @@ import { getDatabaseOrError, JSONResponseOrError, SuperFormResponse } from '$lib
 // DB
 import { hierarchicalResourceQuery } from '$lib/db';
 import { projectRole } from '$lib/db/schema';
-import { createFeature, extractEntitiesToInsert, rebuildFormData } from '$lib/db/services/features';
+import { createFeature, extractEntitiesToInsert, rebuildFormData } from '$lib/db/services/feature';
 // ZOD
 import { FeatureInsertAPI } from '$lib/db/zod';
 // TYPES

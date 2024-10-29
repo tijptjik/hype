@@ -1,4 +1,17 @@
-import type { NewOrganisationDB, OrganisationDB, TargetLang, NewOrganisationI18n, OrganisationI18n, Id, NewOrganisationRole, OrganisationRole, NewOrganisation, Organisation, OrganisationI18nDB, OrganisationRoleDB } from '$lib/types';
+import type {
+  NewOrganisationDB,
+  OrganisationDB,
+  TargetLang,
+  NewOrganisationI18n,
+  OrganisationI18n,
+  Id,
+  NewOrganisationRole,
+  OrganisationRole,
+  NewOrganisation,
+  Organisation,
+  OrganisationI18nDB,
+  OrganisationRoleDB
+} from '$lib/types';
 import { error } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
@@ -7,8 +20,9 @@ import { zod } from 'sveltekit-superforms/adapters';
 import { organisation, organisationI18n, organisationRole, user } from '../schema';
 import { OrganisationInsert, OrganisationUpdate, OrganisationUpdateAPI } from '../zod';
 
-
-export type Database = DrizzleD1Database<typeof import('/home/io/code/ghostsigns/src/lib/db/schema')>;
+export type Database = DrizzleD1Database<
+  typeof import('/home/io/code/ghostsigns/src/lib/db/schema')
+>;
 // CREATE / UPDATE
 
 export const createOrganisation = async (db: Database, data: NewOrganisationDB) => {
