@@ -1,7 +1,7 @@
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import type { AdapterAccountType } from '@auth/core/adapters';
 import { relations, sql } from 'drizzle-orm';
-import { nanoid } from 'nanoid'
+import { nanoid } from 'nanoid';
 import type { GeometryObject } from 'geojson';
 
 // TYPES
@@ -97,7 +97,9 @@ export const organisation = sqliteTable('organisation', {
   description: text('description'),
   descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(false),
   url: text('url'),
-  image: text('image').default(`https://generative-placeholders.glitch.me/image?width=720&height=720&style=triangles&gap=${getGenImageParam()}`),
+  image: text('image').default(
+    `https://generative-placeholders.glitch.me/image?width=720&height=720&style=triangles&gap=${getGenImageParam()}`
+  ),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -239,7 +241,9 @@ export const project = sqliteTable('project', {
   attribution: text('attribution').notNull(),
   attributionGen: integer('attributionGen', { mode: 'boolean' }).notNull().default(false),
   // Project Banner
-  image: text('image').default(`https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=${getGenImageParam()}`),
+  image: text('image').default(
+    `https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=${getGenImageParam()}`
+  ),
   // Accessible to the public in the app
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
   // Additional Information
@@ -330,7 +334,6 @@ export const projectRoleRelations = relations(projectRole, ({ one }) => ({
   })
 }));
 
-
 /* ----------------- */
 // LAYERS
 /* -------- */
@@ -401,7 +404,6 @@ export const layerI18nRelations = relations(layerI18n, ({ one }) => ({
   })
 }));
 
-
 /* ----------------- */
 // FEATURES
 /* -------- */
@@ -412,9 +414,7 @@ export const feature = sqliteTable('feature', {
     .primaryKey()
     .$defaultFn(() => nanoid(12)),
   geometry: text('geometry', { mode: 'json' }).notNull().$type<GeometryObject>(),
-  properties: text('properties', { mode: 'json' })
-    .notNull()
-    .$type<GhostSignsFeatureProperties>(),
+  properties: text('properties', { mode: 'json' }).notNull().$type<GhostSignsFeatureProperties>(),
   addressProperties: text('addressProperties', { mode: 'json' }).$type<AddressProperties>(),
   layerId: text('layerId')
     .notNull()
@@ -467,3 +467,114 @@ export const featureRelations = relations(feature, ({ one }) => ({
 // TODO When a new visit is created for a GeoFeature, update its "visitableAsOf" field to that date.
 // TODO Add a checkinType of values "visit" and "reportMissing"
 // TODO Add a isHandled to indicate that follow up action was taken (e.g. report missing was dealt with)
+
+/* ----------------- */
+// PROPERTIES
+/* -------- */
+
+export const property = sqliteTable('property', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => nanoid(12)),
+  projectId: text('projectId')
+    .notNull()
+    .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  type: text('type', { enum: ['classifier', 'specifier', 'display'] })
+    .notNull()
+    .default('classifier'),
+  key: text('key').notNull(),
+  label: text('label').notNull(),
+  placeholder: text('placeholder').default('Type here'),
+  component: text('component', {
+    enum: ['SelectField', 'RangeField', 'InputField', 'TextareaField', 'TagsField']
+  })
+    .notNull()
+    .default('SelectField'),
+  min: integer('min'),
+  max: integer('max'),
+  createdAt: text('createdAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .notNull(),
+  modifiedAt: text('modifiedAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .$onUpdate(() => new Date().toISOString())
+    .notNull()
+});
+
+export const propertyRelations = relations(property, ({ one, many }) => ({
+  project: one(project, {
+    fields: [property.projectId],
+    references: [project.id]
+  }),
+  values: many(propertyValue),
+  translations: many(propertyI18n)
+}));
+
+export const propertyI18n = sqliteTable('propertyI18n', {
+  propertyId: text('propertyId')
+    .notNull()
+    .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
+  label: text('label').notNull(),
+  placeholder: text('placeholder').default('Type here')
+});
+
+export const propertyI18nRelations = relations(propertyI18n, ({ one }) => ({
+  property: one(property, {
+    fields: [propertyI18n.propertyId],
+    references: [property.id]
+  })
+}));
+
+export const propertyValue = sqliteTable('propertyValue', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => nanoid(12)),
+  propertyId: text('propertyId')
+    .notNull()
+    .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  value: text('value').notNull()
+});
+
+export const propertyValueRelations = relations(propertyValue, ({ one, many }) => ({
+  property: one(property, {
+    fields: [propertyValue.propertyId],
+    references: [property.id]
+  }),
+  translations: many(propertyValueI18n)
+}));
+
+export const propertyValueI18n = sqliteTable('propertyValueI18n', {
+  propertyValueId: text('propertyValueId')
+    .notNull()
+    .references(() => propertyValue.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
+  value: text('value').notNull()
+});
+
+export const propertyValueI18nRelations = relations(propertyValueI18n, ({ one }) => ({
+  propertyValue: one(propertyValue, {
+    fields: [propertyValueI18n.propertyValueId],
+    references: [propertyValue.id]
+  })
+}));
+
+export const layerProperty = sqliteTable('layerProperty', {
+  layerId: text('layerId')
+    .notNull()
+    .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  propertyId: text('propertyId')
+    .notNull()
+    .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+});
+
+export const layerPropertyRelations = relations(layerProperty, ({ one }) => ({  
+  layer: one(layer, {
+    fields: [layerProperty.layerId],
+    references: [layer.id]
+  }),
+  property: one(property, {
+    fields: [layerProperty.propertyId],
+    references: [property.id]
+  })
+}));

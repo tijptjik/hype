@@ -207,7 +207,7 @@ export let ProjectInsert = createInsertSchema(project, {
     classifiers: {},
     specifiers: {},
     display: {}
-  });
+  })  
 });
 
 export const ProjectUpdate = ProjectInsert.extend({
