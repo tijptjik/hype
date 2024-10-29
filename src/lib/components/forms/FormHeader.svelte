@@ -1,24 +1,34 @@
 <script lang="ts">
+import { slide } from 'svelte/transition';
 // COMPONENTS
 import { Icon } from '@steeze-ui/svelte-icon';
-import { ChevronRight } from '@steeze-ui/heroicons';
+import { ChevronRight, ExclamationTriangle } from '@steeze-ui/heroicons';
 import SearchBar from './FormHeaderSearch.svelte';
+
 // CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
 // TYPES
 import type { Component } from 'svelte';
 import type { Writable } from 'svelte/store';
-import type { FormField, ResourceType, FalsableRef } from '$lib/types';
+import type { FormField, ResourceType, FalsableRef, FalsableFacetType } from '$lib/types';
 
 // TYPES
 type Props = {
   title: string;
-  Actions?: Component;
-  addAction?: () => void;
+  subtitle?: string;
+  Actions?: Component<{
+    searchMode?: boolean;
+    removeMode?: boolean;
+    actions?: Record<string, () => void>;
+    entity: FalsableRef;
+    resourceType: ResourceType;
+  }>;
+  actions?: Record<string, () => void>;
   actionProps?: Record<string, any>;
   Info?: Component;
   fields?: FormField;
   errors?: Writable<Record<string, Record<string, string | string[]>>>;
+  facet?: FalsableFacetType;
   entity: FalsableRef;
   resourceType: ResourceType;
 };
@@ -26,8 +36,9 @@ type Props = {
 // STATE : PROPS
 let {
   title,
+  subtitle,
   Actions,
-  addAction,
+  actions,
   actionProps = $bindable({
     searchMode: false,
     removeMode: false
@@ -35,6 +46,7 @@ let {
   Info,
   fields,
   errors,
+  facet,
   entity,
   resourceType
 }: Props = $props();
@@ -50,11 +62,13 @@ $effect(() => {
 });
 </script>
 
-<div class="flex flex-col">
+<div class="flex flex-col relative">
   <div class="flex h-20 flex-row justify-between gap-2 bg-base-100 px-6">
     <div class="flex h-20 items-center gap-4">
       <Icon src={ChevronRight} class="h-6 w-6" />
-      <h3 class="text-lg">{title}</h3>
+      <h3 class="text-lg">
+        {title}<small class="block pr-3 text-sm text-base-content/50">{subtitle}</small>
+      </h3>
       {#if $errors}
         {#each Object.entries($errors) as [fieldId, error]}
           {#if error && fields?.[fieldId] && error['_errors'] && error['_errors'].length > 0}
@@ -72,13 +86,14 @@ $effect(() => {
         <Actions
           bind:searchMode={actionProps.searchMode}
           bind:removeMode={actionProps.removeMode}
-          addAction={addAction}
-          {entity} {resourceType} />
+          {actions}
+          {entity}
+          {resourceType} />
       </div>
     {/if}
     {#if Info}
       <div class="flex items-center gap-6">
-        <Info {entity} {resourceType}/>
+        <Info {entity} {resourceType} />
       </div>
     {/if}
   </div>
@@ -94,4 +109,10 @@ $effect(() => {
     itemRef="id"
     {entity}
     {resourceType} />
+  {#if actionProps.removeMode}
+    <div transition:slide={{ duration: 200 }} class="alert rounded-none border-0 border-b-4 border-warning w-full">
+      <Icon src={ExclamationTriangle} class="h-6 w-6 shrink-0 stroke-current" />
+      <span><span class="font-bold text-warning">Warning:</span> {facet === 'config' ? 'Removing fields will delete all associated feature values' : 'If you remove yourself as member or owner, you will lose edit or access rights respectively'}</span>
+    </div>
+  {/if}
 </div>
