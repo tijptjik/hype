@@ -27,5 +27,5 @@ export const load: PageLoad = async ({
     form = await superValidate(formData, zod(OrganisationUpdateAPI));
   }
 
-  return { entity, form };
+  return { entity, validatedForm: form };
 };

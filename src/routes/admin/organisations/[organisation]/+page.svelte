@@ -1,9 +1,10 @@
 <script lang="ts">
-// Context
+  import SuperDebug from 'sveltekit-superforms';
+// CONTEXT
 import { getRouterState } from '$lib/context/router.svelte';
 import { setForm } from '$lib/context/forms.svelte';
 import { get } from 'svelte/store';
-// Components
+// COMPONENTS
 import Header from '$lib/components/layout/EntityHeader.svelte';
 import I18nSection from '$lib/components/forms/FormSectionI18n.svelte';
 import SpecificationSection from '$lib/components/forms/FormSectionSpecification.svelte';
@@ -13,11 +14,8 @@ import TextareaField from '$lib/components/forms/FormFieldTextarea.svelte';
 import UserCards from '$lib/components/forms/FormFieldUsers.svelte';
 import UserSection from '$lib/components/forms/FormSectionUser.svelte';
 // TYPES
-import type { FormFieldConfig } from '$lib/types';
 import type { SuperValidated } from 'sveltekit-superforms';
-import type { Organisation } from '$lib/types';
-import type { ResourceType } from '$lib/types';
-import SuperDebug from 'sveltekit-superforms';
+import type { FormFieldConfig, Organisation, ResourceType, ResourceRouter } from '$lib/types';
 
 // CONFIG
 const FIELDS: FormFieldConfig = {
@@ -60,24 +58,26 @@ const FIELDS: FormFieldConfig = {
 };
 
 // STATE : PROPS
-let { data }: { data: { form: SuperValidated<Organisation>; entity: string } } = $props();
-let { form, entity } = data;
+let { data }: { data: { validatedForm: SuperValidated<Organisation>; entity: string } } = $props();
+let { validatedForm, entity } = data;
 
 // STATE : DERIVED
-const routerState = getRouterState();
+const routerState = getRouterState() as ResourceRouter;
+const title = $derived($form.name || 'New');
 
 // STATE : FORM
-const FormContext = setForm(routerState.resource as ResourceType, entity, form);
+let { message, enhance, form } = setForm(routerState.resource as ResourceType, entity, validatedForm);
+
 </script>
 
 <!-- LAYOUT -->
-<div class="h-full overflow-y-auto bg-black">
-  <Header entity={data.entity} resourceType={routerState.resource as ResourceType} title={data.form.data.name || 'New'}/>
-  <main class="flex w-full flex-col p-6">
-    {#if Object.keys(FormContext.message).length > 0}<h3>{get(FormContext.message)}</h3>{/if}
-    <form method="POST" use:FormContext.enhance class="flex flex-col gap-6">
+<div class="h-full overflow-y-auto bg-black pb-16">
+  <Header entity={data.entity} resourceType={routerState.resource as ResourceType} {title}/>
+  <main class="flex flex-col p-6">
+    {#if Object.keys(message).length > 0}<h3>{get(message)}</h3>{/if}
+    <form method="POST" use:enhance class="flex flex-col gap-6">
       {#if routerState.facet === 'core' || routerState.facet === false}
-        <I18nSection title="Descriptors" fields={FIELDS.i18n} {entity} resourceType={routerState.resource as ResourceType}  />
+        <I18nSection title="Descriptors" fields={FIELDS.i18n} {entity} resourceType={routerState.resource as ResourceType}/>
         <div class="flex flex-row gap-6">
           <UserSection title="Members" fields={FIELDS.users} {entity} resourceType={routerState.resource as ResourceType}/>
           <SpecificationSection title="Specification" fields={FIELDS.specification} {entity} resourceType={routerState.resource as ResourceType}/>
@@ -88,6 +88,6 @@ const FormContext = setForm(routerState.resource as ResourceType, entity, form);
         <h1>FACET NOT FOUND</h1>
       {/if}
     </form>
-    <!-- <SuperDebug data={FormContext.form} /> -->
+    <!-- <SuperDebug data={$form} /> -->
   </main>
 </div>
