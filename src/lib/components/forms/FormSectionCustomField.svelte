@@ -1,26 +1,41 @@
 <script lang="ts">
 import { createEventDispatcher } from 'svelte';
+import { nanoid } from 'nanoid';
+
 // COMPONENTS
-import Tags from "svelte-tags-input";
 import Header from '$lib/components/forms/FormHeader.svelte';
 import Actions from '$lib/components/forms/FormActionsCustomField.svelte';
+import CustomFields from '$lib/components/forms/FormFieldCustomFields.svelte';
 // CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
+// CONFIG
+import { classifierComponentTypes, specifierComponentTypes } from '$lib/types';
 // TYPES
-import type { CustomPropertyType, ComponentType, CustomProperty, ProjectMetadata, FormField, FalsableRef, ResourceType } from '$lib/types';
-
+import type {
+  CustomPropertyType,
+  FieldComponentType,
+  CustomProperty,
+  ProjectMetadata,
+  FormField,
+  FalsableRef,
+  ResourceType,
+  FalsableFacetType
+} from '$lib/types';
 
 // TYPES
 type Props = {
   title: string;
+  subtitle: string;
+  fieldId: string;
+  customPropertyType: CustomPropertyType;
   fields: FormField;
+  facet: FalsableFacetType;
   entity: FalsableRef;
   resourceType: ResourceType;
 };
 
 // STATE : PROPS
-let { title, fields, entity, resourceType }: Props = $props();
-
+let { title, subtitle, fieldId, customPropertyType, fields, facet, entity, resourceType }: Props = $props();
 
 // STATE
 let actionProps = $state({
@@ -31,171 +46,80 @@ let actionProps = $state({
 // STATE : CONTEXT
 const { form, errors, constraints } = getForm(resourceType, entity);
 
-// EVENTS
-const dispatch = createEventDispatcher();
 
-let metadata = $state({});
-let customProperties: CustomProperty[] = [];
-
-$effect(() => {
-  customProperties = Object.entries(fields.metadata).flatMap(
-    ([type, properties]) =>
-      Object.entries(properties).map(([key, prop]) => ({ ...prop, type: type as CustomPropertyType, key }))
-  );
-});
-
-const customPropertyTypes: CustomPropertyType[] = ['classifiers', 'specifiers', 'display'];
-const componentTypes: ComponentType[] = ['FormSelectField', 'FormRangeField', 'FormInputField', 'FormTextField'];
-
-function addCustomProperty() {
-  console.log('addCustomProperty');
+const addAction = (e: Event) => {
+  e.preventDefault();
   const newProperty: CustomProperty = {
-    type: 'classifiers',
-    key: '',
+    type: customPropertyType,
+    key: nanoid(12),
     label: '',
-    component: 'FormInputField'
+    component: customPropertyType === 'classifiers' ? classifierComponentTypes[0] : specifierComponentTypes[0]
   };
-  customProperties = [...customProperties, newProperty];
-  updateMetadata();
-}
+  form.update(($form) => {
+    $form[fieldId][customPropertyType][newProperty.key] = newProperty;
+    return $form;
+  });
+};
 
-function removeCustomProperty(index: number) {
-  customProperties = customProperties.filter((_, i) => i !== index);
-  updateMetadata();
-}
+const removeAction = (e: Event, key: string) => {
+  e.preventDefault();
+  form.update(($form) => {
+    delete $form[fieldId][customPropertyType][key];
+    return $form;
+  });
+  if (Object.keys($form[fieldId][customPropertyType]).length === 0) {
+    actionProps.removeMode = false;
+  }
+};
 
-function updateMetadata() {
-  metadata = customProperties.reduce((acc, prop) => {
-    if (!acc[prop.type]) acc[prop.type] = {};
-    acc[prop.type][prop.key] = prop;
-    return acc;
-  }, {} as ProjectMetadata);
-  dispatch('change', metadata);
-}
+const updateAction = () => {
+  console.log('updateAction');
+};
 
-function isValidJavascriptKey(key: string): boolean {
-  return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key);
-}
-const addAction = () => addCustomProperty();
+const actions = {
+  add: addAction,
+  remove: removeAction,
+  update: updateAction
+};
+
+// function removeCustomProperty(index: number) {
+//   customProperties = customProperties.filter((_, i) => i !== index);
+//   updateMetadata();
+// }
+
+// function updateMetadata() {
+//   metadata = customProperties.reduce((acc, prop) => {
+//     if (!acc[prop.type]) acc[prop.type] = {};
+//     acc[prop.type][prop.key] = prop;
+//     return acc;
+//   }, {} as ProjectMetadata);
+//   dispatch('change', metadata);
+// }
+
+
 </script>
 
-<div
-  class="overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
+<div class="overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
   <Header
-    {title}
-    {Actions}
-    {addAction}
     bind:actionProps
+    {title}
+    {subtitle}
+    {Actions}
+    {actions}
     {fields}
     {resourceType}
     {errors}
     {entity} />
-
+  <CustomFields
+    bind:actionProps
+    {fieldId}
+    {customPropertyType}
+    {fields}
+    {constraints}
+    {errors}
+    {actions}
+    {facet}
+    {entity}
+    {resourceType}
+     />
 </div>
-<div class="space-y-4">
-  {#each customProperties as property, index}
-    <div class="bg-base-200 p-4 rounded-lg">
-      <div class="grid grid-cols-2 gap-4">
-        <div class="form-control">
-          <label class="label" for={`type-${index}`}>Type</label>
-          <select
-            id={`type-${index}`}
-            class="select select-bordered w-full"
-            bind:value={property.type}
-            on:change={updateMetadata}
-          >
-            {#each customPropertyTypes as type}
-              <option value={type}>{type}</option>
-            {/each}
-          </select>
-        </div>
-
-        <div class="form-control">
-          <label class="label" for={`key-${index}`}>Key</label>
-          <input
-            id={`key-${index}`}
-            type="text"
-            class="input input-bordered w-full"
-            bind:value={property.key}
-            on:input={() => {
-              if (!isValidJavascriptKey(property.key)) {
-                property.key = property.key.replace(/[^a-zA-Z0-9_$]/g, '');
-              }
-              updateMetadata();
-            }}
-          />
-        </div>
-
-        <div class="form-control">
-          <label class="label" for={`label-${index}`}>Label</label>
-          <input
-            id={`label-${index}`}
-            type="text"
-            class="input input-bordered w-full"
-            bind:value={property.label}
-            maxlength="40"
-            on:input={updateMetadata}
-          />
-        </div>
-
-        <div class="form-control">
-          <label class="label" for={`component-${index}`}>Component</label>
-          <select
-            id={`component-${index}`}
-            class="select select-bordered w-full"
-            bind:value={property.component}
-            on:change={updateMetadata}
-          >
-            {#each componentTypes as component}
-              <option value={component}>{component}</option>
-            {/each}
-          </select>
-        </div>
-
-        {#if property.component === 'FormSelectField'}
-          <div class="form-control col-span-2">
-            <label class="label" for={`values-${index}`}>Values</label>
-            <Tags
-              id={`values-${index}`}
-              bind:tags={property.values}
-              on:tags={() => updateMetadata()}
-            />
-          </div>
-        {:else if property.component === 'FormRangeField'}
-          <div class="form-control">
-            <label class="label" for={`min-${index}`}>Min</label>
-            <input
-              id={`min-${index}`}
-              type="number"
-              class="input input-bordered w-full"
-              bind:value={property.min}
-              on:input={updateMetadata}
-            />
-          </div>
-          <div class="form-control">
-            <label class="label" for={`max-${index}`}>Max</label>
-            <input
-              id={`max-${index}`}
-              type="number"
-              class="input input-bordered w-full"
-              bind:value={property.max}
-              on:input={updateMetadata}
-            />
-          </div>
-        {/if}
-      </div>
-
-      <button
-        class="btn btn-error btn-sm mt-4"
-        on:click={() => removeCustomProperty(index)}
-      >
-        Remove
-      </button>
-    </div>
-  {/each}
-
-  <button class="btn btn-primary" on:click={addCustomProperty}>
-    Add Custom Property
-  </button>
-</div>
-
