@@ -10,13 +10,18 @@ import {
   layerI18n,
   feature,
   organisationRole,
-  projectRole,
+  projectRole
 } from '$lib/db/schema';
 import type { GeometryObject } from 'geojson';
-import type { GhostSignsFeatureProperties, AddressProperties, ProjectMetadata, LayerMetadata } from '$lib/types';
+import type {
+  GhostSignsFeatureProperties,
+  AddressProperties,
+  ProjectMetadata,
+  LayerMetadata
+} from '$lib/types';
 import type { Table } from 'drizzle-orm';
 const targetLangs = ['zh-hant', 'zh-hans'] as const;
-
+const customPropertyTypes = ['classifiers', 'specifiers', 'display'] as const;
 /* ----------------- */
 // CONSTRAINTS
 /* -------- */
@@ -41,11 +46,19 @@ const constraints: Record<string, z.ZodType<any>> = {
   url: z.string().url({ message: 'URL is invalid' }).optional()
 };
 
-const getDefaultConstraints = (table: Table) => {
+const getDefaultConstraints = (
+  table:
+    | typeof project
+    | typeof organisation
+    | typeof layer
+    | typeof projectI18n
+    | typeof organisationI18n
+    | typeof feature
+) => {
   return Object.keys(table).reduce(
     (acc, key) => {
       if (key in constraints) {
-        acc[key as keyof Table] = constraints[key as keyof typeof constraints];
+        acc[key as keyof typeof table] = constraints[key as keyof typeof constraints];
       }
       return acc;
     },
@@ -57,16 +70,15 @@ const getDefaultConstraints = (table: Table) => {
 // UTILITY FUNCTIONS
 /* -------- */
 
-function createRequiredObjSchema<
-  K extends string,
-  V extends z.ZodTypeAny
->(
+function createRequiredObjSchema<K extends string, V extends z.ZodTypeAny>(
   keysSchema: z.ZodEnum<[K, ...K[]]>,
   valueSchema: V
 ) {
-  return z.record(keysSchema, valueSchema).refine((obj): obj is Record<K, z.infer<V>> =>
-    keysSchema.options.every((key) => obj[key] != null),
-  );
+  return z
+    .record(keysSchema, valueSchema)
+    .refine((obj): obj is Record<K, z.infer<V>> =>
+      keysSchema.options.every((key) => obj[key] != null)
+    );
 }
 
 const getTranslations = (model: z.ZodType<any>) =>
@@ -74,7 +86,6 @@ const getTranslations = (model: z.ZodType<any>) =>
     'zh-hant': {},
     'zh-hans': {}
   });
-
 
 const getUserRoles = (model: z.ZodType<any>) =>
   z
@@ -88,7 +99,14 @@ const getUserRoles = (model: z.ZodType<any>) =>
 const getMaintainerRoles = (model: z.ZodType<any>) =>
   z
     .record(z.string(), model)
-    .refine((schema) => Object.keys(schema).length > 0, 'Add at least 1 Maintainer')
+    .refine((schema) => Object.keys(schema).length > 0, 'Add at least 1 Maintainer');
+
+const getCustomProperties = (model: z.ZodType<any>) =>
+  createRequiredObjSchema(z.enum(customPropertyTypes), model).default({
+    classifiers: {},
+    specifiers: {},
+    display: {}
+  });
 
 /* ----------------- */
 // ZOD SCHEMAS
@@ -147,7 +165,6 @@ export const OrganisationRoleWithoutPK = OrganisationRoleInsertWithAssociatedFie
 export const OrganisationI18nAPI = OrganisationI18nWithoutPK.omit({ organisationId: true });
 export const OrganisationRoleAPI = OrganisationRoleWithoutPK.omit({ organisationId: true });
 
-
 export const OrganisationInsertAPI = OrganisationInsert.extend({
   translations: getTranslations(OrganisationI18nAPI),
   userRoles: getUserRoles(OrganisationRoleAPI)
@@ -158,7 +175,6 @@ export const OrganisationUpdateAPI = OrganisationInsertAPI.extend({
   userRoles: getUserRoles(OrganisationRoleWithoutPK)
 });
 
-
 /* ----------------- */
 // PROJECTS
 /* -------- */
@@ -168,12 +184,31 @@ export const ProjectBase = createSelectSchema(project);
 export const ProjectI18nBase = createSelectSchema(projectI18n);
 export const ProjectRoleBase = createSelectSchema(projectRole);
 
-// Base schema to validate submit data
-export const ProjectInsert = createInsertSchema(project, {
-  ...getDefaultConstraints(project as Table),
-   metadata: z.custom<ProjectMetadata>().default({})
+export const CustomProperty = z.object({
+  type: z.enum(customPropertyTypes),
+  key: z.string().min(3, { message: 'Key should have at least 3 characters' }),
+  label: z.string().min(2, { message: 'Label should have at least 2 characters' }),
+  component: z.enum(['InputField', 'TextareaField', 'SelectField', 'RangeField']),
+  values: z.array(z.string()).optional(),
+  min: z.number().optional(),
+  max: z.number().optional()
 });
 
+export const CustomPropertySchema = z.object({
+  classifiers: z.record(z.string(), CustomProperty),
+  specifiers: z.record(z.string(), CustomProperty),
+  display: z.record(z.string(), CustomProperty)
+});
+
+// Base schema to validate submit data
+export let ProjectInsert = createInsertSchema(project, {
+  ...getDefaultConstraints(project as Table),
+  metadata: CustomPropertySchema.default({
+    classifiers: {},
+    specifiers: {},
+    display: {}
+  });
+});
 
 export const ProjectUpdate = ProjectInsert.extend({
   id: z.string()
@@ -204,7 +239,7 @@ export const ProjectInsertAPI = ProjectInsert.extend({
 export const ProjectUpdateAPI = ProjectUpdate.extend({
   translations: getTranslations(ProjectI18nWithoutPK),
   maintainerRoles: getMaintainerRoles(ProjectRoleWithoutPK)
-})
+});
 
 /* ----------------- */
 // LAYERS
@@ -217,7 +252,7 @@ export const LayerI18nBase = createSelectSchema(layerI18n);
 // Base schema to validate submit data
 export const LayerInsert = createInsertSchema(layer, {
   ...getDefaultConstraints(layer as Table),
-  metadata: z.custom<LayerMetadata>().default({defaultEnabled: true})
+  metadata: z.custom<LayerMetadata>().default({ defaultEnabled: true })
 });
 
 export const LayerUpdate = LayerInsert.extend({
