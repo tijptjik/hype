@@ -94,7 +94,7 @@ const FormContext = setForm(routerState.resource as ResourceType, entity, form);
 </script>
 
 <!-- LAYOUT -->
-<div class="h-full overflow-y-auto bg-black">
+<div class="h-full overflow-y-auto bg-black pb-16">
   <Header
     entity={data.entity}
     resourceType={routerState.resource as ResourceType}

@@ -47,13 +47,13 @@ const FormContext = setForm(routerState.resource as ResourceType, entity, form);
 </script>
 
 <!-- LAYOUT -->
-<div class="h-full overflow-y-auto bg-black">
+<div class="h-full overflow-y-auto bg-black pb-16">
   <Header entity={data.entity} resourceType={routerState.resource} title={data.form.data.name || 'New'}/>
-  <main class="flex w-full flex-col p-6">
+  <main class="flex flex-col p-6">
     {#if Object.keys(FormContext.message).length > 0}<h3>{get(FormContext.message)}</h3>{/if}
     <form method="POST" use:FormContext.enhance class="flex flex-col gap-6">
       {#if routerState.facet === 'core' || routerState.facet === false}
-        <SectionI18n title="Descriptors" fields={FIELDS.i18n} {entity} resourceType={routerState.resource}  />
+        <SectionI18n title="Descriptors" fields={FIELDS.i18n} facet={routerState.facet as string} {entity} resourceType={routerState.resource}  />
       {:else}
         <h1>FACET NOT FOUND</h1>
       {/if}

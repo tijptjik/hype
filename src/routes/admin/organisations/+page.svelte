@@ -9,7 +9,7 @@ const RESOURCE_TYPE = 'organisation';
 
 <!-- LAYOUT -->
 <ResourceHeader />
-<div class="h-full overflow-y-auto bg-gradient-to-bl from-rose-500 to-fuchsia-800 bg-fixed">
+<div class="h-full overflow-y-auto bg-gradient-to-bl from-rose-500 to-fuchsia-800 bg-fixed pb-16">
   <div class="container mx-auto flex w-full flex-auto p-4">
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
       {#each organisations as { data: org }}
