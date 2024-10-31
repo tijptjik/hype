@@ -50,6 +50,27 @@
       "when": 1729794964203,
       "tag": "0006_add_publish_flag_to_projects_and_layers",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1730257688714,
+      "tag": "0007_add_property_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1730258949086,
+      "tag": "0008_add_gen_property_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1730262190093,
+      "tag": "0009_remove_metadata_from_projects",
+      "breakpoints": true
     }
   ]
 }
