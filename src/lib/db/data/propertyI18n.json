@@ -1,0 +1,82 @@
+[
+  {
+    "propertyId": "kL9mN2pQ5rS4",
+    "lang": "zh-hant",
+    "label": "大小",
+    "labelGen": true,
+    "placeholder": "選擇大小",
+    "placeholderGen": true
+  },
+  {
+    "propertyId": "kL9mN2pQ5rS4",
+    "lang": "zh-hans",
+    "label": "大小",
+    "labelGen": true,
+    "placeholder": "选择大小",
+    "placeholderGen": true
+  },
+  {
+    "propertyId": "vX7yZ1wA3bC6",
+    "lang": "zh-hant",
+    "label": "材料",
+    "labelGen": true,
+    "placeholder": "選擇材料",
+    "placeholderGen": true
+  },
+  {
+    "propertyId": "vX7yZ1wA3bC6",
+    "lang": "zh-hans",
+    "label": "材料",
+    "labelGen": true,
+    "placeholder": "选择材料",
+    "placeholderGen": true
+  },
+  {
+    "propertyId": "hJ4kL7mN9pQ2",
+    "lang": "zh-hant",
+    "label": "可見度",
+    "labelGen": true,
+    "placeholder": "選擇可見度",
+    "placeholderGen": true
+  },
+  {
+    "propertyId": "hJ4kL7mN9pQ2",
+    "lang": "zh-hans",
+    "label": "可见度",
+    "labelGen": true,
+    "placeholder": "选择可见度",
+    "placeholderGen": true
+  },
+  {
+    "propertyId": "tU5vW8xY1zA4",
+    "lang": "zh-hant",
+    "label": "字形",
+    "labelGen": true,
+    "placeholder": "輸入字形",
+    "placeholderGen": true
+  },
+  {
+    "propertyId": "tU5vW8xY1zA4",
+    "lang": "zh-hans",
+    "label": "字形",
+    "labelGen": true,
+    "placeholder": "输入字形",
+    "placeholderGen": true
+  },
+  {
+    "propertyId": "bC7dF9gH2jK5",
+    "lang": "zh-hant",
+    "label": "書法家",
+    "labelGen": true,
+    "placeholder": "輸入書法家",
+    "placeholderGen": true
+  },
+  {
+    "propertyId": "bC7dF9gH2jK5",
+    "lang": "zh-hans",
+    "label": "书法家",
+    "labelGen": true,
+    "placeholder": "输入书法家",
+    "placeholderGen": true
+  }
+]

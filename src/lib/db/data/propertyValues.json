@@ -1,0 +1,135 @@
+[
+  {
+    "id": "mN2pQ5rS8tU4",
+    "propertyId": "kL9mN2pQ5rS4",
+    "value": "Small",
+    "valueGen": false,
+    "rank": 0
+  },
+  {
+    "id": "wA3bC6dF9gH3",
+    "propertyId": "kL9mN2pQ5rS4",
+    "value": "Medium",
+    "valueGen": false,
+    "rank": 1
+  },
+  {
+    "id": "jK5mN8pQ1rS4",
+    "propertyId": "kL9mN2pQ5rS4",
+    "value": "Large",
+    "valueGen": false,
+    "rank": 2
+  },
+  {
+    "id": "vX7yZ1wA3bC6",
+    "propertyId": "vX7yZ1wA3bC6",
+    "value": "Painted on Cement",
+    "valueGen": false,
+    "rank": 0
+  },
+  {
+    "id": "tU5vW8xY1zA4",
+    "propertyId": "vX7yZ1wA3bC6",
+    "value": "Painted on Metal",
+    "valueGen": false,
+    "rank": 1
+  },
+  {
+    "id": "bC7dF9gH2jK5",
+    "propertyId": "vX7yZ1wA3bC6",
+    "value": "Painted on Brick",
+    "valueGen": false,
+    "rank": 2
+  },
+  {
+    "id": "nQ1rS4tU7vW0",
+    "propertyId": "vX7yZ1wA3bC6",
+    "value": "Painted on Tile",
+    "valueGen": false,
+    "rank": 3
+  },
+  {
+    "id": "xY1zA4bC7dF9",
+    "propertyId": "vX7yZ1wA3bC6",
+    "value": "Painted over",
+    "valueGen": false,
+    "rank": 4
+  },
+  {
+    "id": "pQ5rS8tU2vW9",
+    "propertyId": "vX7yZ1wA3bC6",
+    "value": "Acrylic",
+    "valueGen": false,
+    "rank": 5
+  },
+  {
+    "id": "rS4tU7vW0xY3",
+    "propertyId": "vX7yZ1wA3bC6",
+    "value": "Metal",
+    "valueGen": false,
+    "rank": 6
+  },
+  {
+    "id": "zA4bC7dF9gH2",
+    "propertyId": "vX7yZ1wA3bC6",
+    "value": "Wood",
+    "valueGen": false,
+    "rank": 7
+  },
+  {
+    "id": "kL8mN1pQ4rS7",
+    "propertyId": "vX7yZ1wA3bC6",
+    "value": "Terrazzo",
+    "valueGen": false,
+    "rank": 8
+  },
+  {
+    "id": "tU7vW0xY3zA6",
+    "propertyId": "vX7yZ1wA3bC6",
+    "value": "Stone",
+    "valueGen": false,
+    "rank": 9
+  },
+  {
+    "id": "dF9gH2jK5mN8",
+    "propertyId": "vX7yZ1wA3bC6",
+    "value": "Molded Cement",
+    "valueGen": false,
+    "rank": 10
+  },
+  {
+    "id": "wA3bC6dF9gH2",
+    "propertyId": "vX7yZ1wA3bC6",
+    "value": "Zinc Stenciled",
+    "valueGen": false,
+    "rank": 11
+  },
+  {
+    "id": "xY3zA6bC9dF1",
+    "propertyId": "hJ4kL7mN9pQ2",
+    "value": "Revenant",
+    "valueGen": false,
+    "rank": 0
+  },
+  {
+    "id": "mN8pQ1rS4tU7",
+    "propertyId": "hJ4kL7mN9pQ2",
+    "value": "Physical",
+    "valueGen": false,
+    "rank": 1
+  },
+  {
+    "id": "vW0xY3zA6bC9",
+    "propertyId": "hJ4kL7mN9pQ2",
+    "value": "Palimpsest",
+    "valueGen": false,
+    "rank": 2
+  },
+  {
+    "id": "zA6bC9dF1gH4",
+    "propertyId": "hJ4kL7mN9pQ2",
+    "value": "Uncovering",
+    "valueGen": false,
+    "rank": 3
+  }
+]

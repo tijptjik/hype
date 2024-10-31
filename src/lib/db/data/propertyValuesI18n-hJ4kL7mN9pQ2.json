@@ -1,0 +1,50 @@
+[
+  {
+    "propertyValueId": "xY3zA6bC9dF1",
+    "lang": "zh-hant",
+    "value": "幽靈",
+    "valueGen": true
+  },
+  {
+    "propertyValueId": "xY3zA6bC9dF1",
+    "lang": "zh-hans",
+    "value": "幽灵",
+    "valueGen": true
+  },
+  {
+    "propertyValueId": "mN8pQ1rS4tU7",
+    "lang": "zh-hant",
+    "value": "實體",
+    "valueGen": true
+  },
+  {
+    "propertyValueId": "mN8pQ1rS4tU7",
+    "lang": "zh-hans",
+    "value": "实体",
+    "valueGen": true
+  },
+  {
+    "propertyValueId": "vW0xY3zA6bC9",
+    "lang": "zh-hant",
+    "value": "重疊",
+    "valueGen": true
+  },
+  {
+    "propertyValueId": "vW0xY3zA6bC9",
+    "lang": "zh-hans",
+    "value": "重叠",
+    "valueGen": true
+  },
+  {
+    "propertyValueId": "zA6bC9dF1gH4",
+    "lang": "zh-hant",
+    "value": "揭露中",
+    "valueGen": true
+  },
+  {
+    "propertyValueId": "zA6bC9dF1gH4",
+    "lang": "zh-hans",
+    "value": "揭露中",
+    "valueGen": true
+  }
+] 
