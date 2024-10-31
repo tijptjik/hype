@@ -6,6 +6,11 @@ import {
   project,
   projectI18n,
   projectRole,
+  property,
+  propertyI18n,
+  propertyValue,
+  propertyValueI18n,
+  layerProperty,
   organisation,
   organisationI18n,
   organisationRole,
@@ -27,6 +32,13 @@ import layerJson from './data/layers.json';
 import layerI18nJson from './data/layersI18n.json';
 import featureStreetnamesJson from './data/features-streetnames.json';
 import featureHKGhostsignsJson from './data/features-hkghostsigns.json';
+import propertyJson from './data/property.json';
+import propertyI18nJson from './data/propertyI18n.json';
+import layerPropertyJson from './data/layerProperties.json';
+import propertyValueJson from './data/propertyValues.json';
+import propertyValueI18nSizeJson from './data/propertyValuesI18n-kL9mN2pQ5rS4.json';
+import propertyValueI18nMaterialJson from './data/propertyValuesI18n-vX7yZ1wA3bC6.json';
+import propertyValueI18nVisibilityJson from './data/propertyValuesI18n-hJ4kL7mN9pQ2.json';
 import type { DrizzleD1Database } from 'drizzle-orm/d1/driver';
 import { count, getTableName } from 'drizzle-orm';
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core/table';
@@ -112,6 +124,51 @@ const seedBank = {
     table: feature,
     data: featureHKGhostsignsJson,
     chunk: 8,
+    partial: true
+  },
+  property: {
+    name: 'Properties',
+    table: property,
+    data: propertyJson,
+    chunk: 0
+  },
+  propertyI18n  : {
+    name: 'PropertyI18n',
+    table: propertyI18n,
+    data: propertyI18nJson,
+    chunk: 0
+  },
+  layerProperty: {
+    name: 'LayerProperties', 
+    table: layerProperty,
+    data: layerPropertyJson,
+    chunk: 0
+  },
+  propertyValue: {
+    name: 'PropertyValues',
+    table: propertyValue,
+    data: propertyValueJson,
+    chunk: 0
+  },
+  propertyValueI18n: {
+    name: 'PropertyValueI18n::Size',
+    table: propertyValueI18n,
+    data: propertyValueI18nSizeJson,
+    chunk: 0,
+    partial: true
+  },
+  propertyValueI18nMaterial: {
+    name: 'PropertyValueI18n::Material',
+    table: propertyValueI18n,
+    data: propertyValueI18nMaterialJson,
+    chunk: 8,
+    partial: true
+  },
+  propertyValueI18nVisibility: {
+    name: 'PropertyValueI18n::Visibility',
+    table: propertyValueI18n,
+    data: propertyValueI18nVisibilityJson,
+    chunk: 0,
     partial: true
   }
 };
