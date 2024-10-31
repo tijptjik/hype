@@ -1,6 +1,8 @@
 DELETE FROM account;
 DELETE FROM feature;
 DELETE FROM layer;
+DELETE FROM layerI18n;
+DELETE FROM layerProperty;
 DELETE FROM organisation;
 DELETE FROM organisationI18n;
 DELETE FROM organisationRole;
@@ -10,4 +12,7 @@ DELETE FROM user;
 DELETE FROM userActivity;
 DELETE FROM projectI18n;
 DELETE FROM projectRole;
-DELETE FROM layerI18n;
+DELETE from property;
+DELETE from propertyI18n;
+DELETE from propertyValue;
+DELETE from propertyValueI18n;
