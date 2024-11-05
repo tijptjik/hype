@@ -1,6 +1,8 @@
 <script lang="ts">
 import Form from 'sveltekit-superforms';
 import FormInput from './FormInput.svelte';
+import ErrorLabel from '$lib/components/forms/FormErrorLabel.svelte';
+
 // TYPES
 import type { InputConstraints, InputConstraint, ValidationErrors } from 'sveltekit-superforms';
 import type { Component } from 'svelte';
@@ -130,10 +132,5 @@ const isGenAI = (fieldId: string) => {
         {inputType} />
     {/if}
   </div>
-  {#if isError(languageTag, fieldId)}
-    <div class="label">
-      <span class="label-text-alt text-error"></span>
-      <span class="label-text-alt text-error">{getError(languageTag, fieldId)}</span>
-    </div>
-  {/if}
+  <ErrorLabel errors={$errors} {field} {languageTag} {fieldId} {fieldIndex} {fieldKey} />
 </label>

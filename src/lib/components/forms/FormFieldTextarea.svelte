@@ -48,10 +48,7 @@ let {
         {languageTag} />
     {/if}
   </div>
-  {#if $errors[fieldId]}
-  <div class="label">
-    <span class="label-text-alt text-error">Error</span>
-      <span class="label-text-alt text-error">{$errors[fieldId]}</span>
-    </div>
+  <ErrorLabel errors={$errors} {field} {languageTag} {fieldId} {fieldIndex} {fieldKey} />
+  </label>
   {/if}
 </label>

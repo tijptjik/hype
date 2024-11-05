@@ -1,6 +1,8 @@
 <script lang="ts">
 import Form from 'sveltekit-superforms';
 import Tags from '$lib/components/forms/FormTags.svelte';
+import ErrorLabel from '$lib/components/forms/FormErrorLabel.svelte';
+
 // TYPES
 import type { InputConstraints, InputConstraint, ValidationErrors } from 'sveltekit-superforms';
 import type { Component } from 'svelte';
@@ -80,10 +82,7 @@ const getError = (languageTag: string, fieldId: string) => {
         bind:tags={$form[fieldId][customPropertyType as CustomPropertyType][customProperty as string][customPropertyKey as string]} />
     {/if}
   </div>
-  {#if isError(languageTag, fieldId)}
-    <div class="label">
-      <span class="label-text-alt text-error"></span>
-      <span class="label-text-alt text-error">{getError(languageTag, fieldId)}</span>
-    </div>
+  <ErrorLabel errors={$errors} {field} {languageTag} {fieldId} {fieldIndex} {fieldKey} />
+  </label>
   {/if}
 </label>
