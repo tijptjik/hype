@@ -318,18 +318,18 @@ export const LayerUpdate = LayerInsert.extend({
   id: z.string()
 });
 
-export const LayerI18nInsert = createInsertSchema(layerI18n).extend({
+export const LayerI18nUpdate = createInsertSchema(layerI18n).extend({
   ...getDefaultConstraints(layerI18n)
 });
 
-export const LayerI18nAPI = LayerI18nInsert.omit({ layerId: true });
+export const LayerI18nInsert = LayerI18nUpdate.omit({ layerId: true });
 
 export const LayerInsertAPI = LayerInsert.extend({
-  translations: getTranslations(LayerI18nAPI)
+  translations: getTranslations(LayerI18nInsert)
 });
 
 export const LayerUpdateAPI = LayerUpdate.extend({
-  translations: getTranslations(LayerI18nInsert)
+  translations: getTranslations(LayerI18nUpdate)
 });
 
 /* ----------------- */
