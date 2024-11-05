@@ -2,59 +2,66 @@ import type { IconSource } from '@steeze-ui/heroicons';
 // ZOD Schemas
 import { z } from 'zod';
 import {
-  UserBase,
-  OrganisationInsertAPI,
-  OrganisationI18nAPI,
-  OrganisationRoleBase,
-  OrganisationI18nBase,
-  OrganisationRoleAPI,
-  OrganisationUpdateAPI,
-  OrganisationInsert,
-  OrganisationUpdate,
-  OrganisationI18nWithoutPK,
-  OrganisationRoleWithoutPK,
-  ProjectI18nBase,
-  ProjectRoleBase,
-  ProjectInsertAPI,
-  ProjectUpdateAPI,
-  ProjectInsert,
-  ProjectUpdate,
-  ProjectI18nAPI,
-  ProjectI18nWithoutPK,
-  ProjectRoleAPI,
-  ProjectRoleWithoutPK,
-  LayerI18nBase,
-  LayerInsertAPI,
-  LayerUpdateAPI,
-  LayerInsert,
-  LayerUpdate,
-  LayerI18nAPI,
-  LayerI18nWithoutPK,
-  FeatureInsertAPI,
-  FeatureUpdateAPI,
   FeatureInsert,
+  FeatureInsertAPI,
   FeatureUpdate,
-  PropertyInsert,
+  FeatureUpdateAPI,
+  fieldDiscriminators,
+  LayerI18nBase,
+  LayerI18nInsert,
+  LayerI18nUpdate,
+  LayerInsert,
+  LayerInsertAPI,
+  LayerUpdate,
+  LayerUpdateAPI,
+  OrganisationI18nBase,
+  OrganisationI18nInsert,
+  OrganisationI18nUpdate,
+  OrganisationInsert,
+  OrganisationInsertAPI,
+  OrganisationRoleBase,
+  OrganisationRoleInsert,
+  OrganisationRoleUpdateExtra,
+  OrganisationUpdate,
+  OrganisationUpdateAPI,
+  ProjectI18nBase,
+  ProjectI18nInsert,
+  ProjectI18nUpdate,
+  ProjectInsert,
+  ProjectInsertAPI,
+  ProjectRoleBase,
+  ProjectRoleInsertExtra,
+  ProjectRoleUpdateExtra,
+  ProjectUpdate,
+  ProjectUpdateAPI,
   PropertyI18nBase,
-  PropertyI18nAPI,
-  PropertyI18nWithoutPK,
-  PropertyUpdate,
+  PropertyI18nUpdate,
+  PropertyInsert,
   PropertyInsertAPI,
+  PropertyUpdate,
   PropertyUpdateAPI,
-  PropertyValueInsert,
-  PropertyValueUpdate,
-  PropertyValueInsertAPI,
   PropertyValueI18nBase,
-  PropertyValueI18nAPI,
-  PropertyValueI18nWithoutPK,
-  PropertyValueUpdateAPI
+  PropertyValueI18nInsert,
+  PropertyValueInsert,
+  PropertyValueInsertAPI,
+  PropertyValueUpdate,
+  PropertyValueUpdateAPI,
+  UserBase,
 } from '$lib/db/zod';
 // Components
+import CustomField from '$lib/components/forms/FormFieldProperties.svelte';
 import InputField from '$lib/components/forms/FormFieldInput.svelte';
 import TextareaField from '$lib/components/forms/FormFieldTextarea.svelte';
 import SelectField from '$lib/components/forms/FormFieldSelect.svelte';
 import RangeField from '$lib/components/forms/FormFieldRange.svelte';
 import TagsField from '$lib/components/forms/FormFieldTags.svelte';
+import UsersField from '$lib/components/forms/FormFieldUsers.svelte';
+import ComplexField from '$lib/components/forms/FormFieldComplex.svelte';
+
+// HTML
+export type InputType = 'text' | 'number' | 'email' | 'password';
+
+// BRANDED
 export type ResourceType = 'organisation' | 'project' | 'layer' | 'feature';
 export type FalsableResourceType = ResourceType | false;
 export type SourceLang = 'en';
@@ -64,9 +71,14 @@ export type ResourceToEntity = Record<ResourceType, Entity[]>;
 export type ResourceToText = Record<ResourceType, string>;
 export type FilterableResourceType = Exclude<ResourceType, 'feature'>;
 export type FilterableResourceToEntityId = Record<FilterableResourceType, string[]>;
+// (Nano) unique identifier
 export type Id = string;
+// Human-readable unique identifier
 export type Code = string;
-export type Ref = string;
+// How the object is publicly addressed
+export type Ref = Id | Code;
+// Property name in API or Database
+export type Key = string;
 export type FalsableRef = Ref | false;
 export type Entity = { id: Id; ref: Ref; name: string; nameShort: string; description: string };
 export type ApiEntity = Entity & {
@@ -74,7 +86,7 @@ export type ApiEntity = Entity & {
   properties?: { title: string; description: string };
 };
 export type EntityWithData<T> = Entity & { data: T };
-export type FacetType = 'core' | 'address' | 'images' | 'config';
+export type FacetType = 'core' | 'address' | 'images' | 'fields';
 export type FalsableFacetType = FacetType | false;
 export type ResourceToNavItem = Record<ResourceType, NavItem>;
 
@@ -99,14 +111,38 @@ export type NestedRelations = {
   [key: string]: boolean | { columns: NestedRelations } | { with: NestedRelations };
 };
 
-export const jsonFieldKeys = ['config', 'geometry', 'properties', 'addressProperties', 'metadata'] as const;
+export const jsonFieldKeys = [
+  'config',
+  'geometry',
+  'properties',
+  'addressProperties',
+  'metadata'
+] as const;
 export type JSONFieldKey = (typeof jsonFieldKeys)[number];
-export type FormFieldDefinition = { label: string; component: FieldComponentType };
-export type FormFieldSet = Record<string, FormFieldDefinition>
-export type FormField = FormFieldSet | Record<JSONFieldKey, Record<CustomPropertyType, FormFieldSet>>;
-export type FormFieldConfig = Record<string, FormField>;
-
-
+export type FormFieldDefinition = {
+  label?: string;
+  placeholder?: string;
+  component?: FieldComponentType;
+  isArray: boolean;
+  isTranslated?: boolean;
+};
+export type FormFieldExtendedDefinition = FormFieldDefinition & {
+  values?: readonly string[];
+  inputType?: InputType;
+  isNested?: boolean;
+  showForComponent?: FieldComponentType[];
+};
+export type FormFieldArrayDefinition = {
+  isArray: true;
+  discriminators: {
+    key: string;
+    values: readonly string[];
+    specs: Record<Exclude<FieldDiscriminator, 'display'>, Record<Key, FormFieldExtendedDefinition>>;
+  };
+};
+export type FormField = Record<string, FormFieldDefinition>;
+export type FormFieldArray = Record<string, FormFieldArrayDefinition>;
+export type FormFieldConfig = Record<Key, FormField | FormFieldArray>;
 
 /* ----------------- */
 // SCHEMA TYPES
@@ -121,7 +157,8 @@ export type FormTranslations<T> = {
   'zh-hant': T;
   'zh-hans': T;
 };
-export type FormRelatedUsers<T> = Record<Id, T>;
+export type FormRelatedUsers<T> = T[];
+export type FormRelatedProperties<T> = T[];
 
 /* ----------------- */
 // USERS
@@ -142,19 +179,15 @@ export type OrganisationDB = z.infer<typeof OrganisationUpdate>;
 // Organisation without relations, for use in inserting a new organisation
 export type NewOrganisationDB = z.infer<typeof OrganisationInsert>;
 
-// organisationI18n, but without organisationId and langCode - for use in API insertions
-export type NewOrganisationI18n = z.infer<typeof OrganisationI18nAPI>;
+// organisationI18n, but without organisationId - for use in API insertions
+export type NewOrganisationI18n = z.infer<typeof OrganisationI18nInsert>;
 // Same as NewOrganisationI18n, but with the organisationId - for use in API updates
-export type OrganisationI18n = z.infer<typeof OrganisationI18nWithoutPK>;
-// Database representation of OrganisationI18n, so with organisationId and langCode
-export type OrganisationI18nDB = z.infer<typeof OrganisationI18nBase>;
+export type OrganisationI18n = z.infer<typeof OrganisationI18nUpdate>;
 
-// organisationRole, but without organisationId and userId - for use in API insertions
-export type NewOrganisationRole = z.infer<typeof OrganisationRoleAPI>;
+// organisationRole, but without organisationId - for use in API insertions
+export type NewOrganisationRole = z.infer<typeof OrganisationRoleInsert>;
 // Same as NewOrganisationRole, but with the organisationId - for use in API updates
-export type OrganisationRole = z.infer<typeof OrganisationRoleWithoutPK>;
-// Database representation of OrganisationRole, so with organisationId and userId
-export type OrganisationRoleDB = z.infer<typeof OrganisationRoleBase>;
+export type OrganisationRole = z.infer<typeof OrganisationRoleUpdateExtra>;
 
 /* ----------------- */
 // PROJECTS
@@ -169,67 +202,58 @@ export type ProjectDB = z.infer<typeof ProjectUpdate>;
 // Project without relations, for use in inserting a new project
 export type NewProjectDB = z.infer<typeof ProjectInsert>;
 
-// projectI18n, but without projectId and langCode - for use in API insertions
-export type NewProjectI18n = z.infer<typeof ProjectI18nAPI>;
+// projectI18n, but without projectId and lang - for use in API insertions
+export type NewProjectI18n = z.infer<typeof ProjectI18nInsert>;
 // Same as NewProjectI18n, but with the projectId - for use in API updates
-export type ProjectI18n = z.infer<typeof ProjectI18nWithoutPK>;
-// Database representation of ProjectI18n, so with projectId and langCode
-export type ProjectI18nDB = z.infer<typeof ProjectI18nBase>;
+export type ProjectI18n = z.infer<typeof ProjectI18nUpdate>;
 
 // projectRole, but without projectId and userId - for use in API insertions
-export type NewProjectRole = z.infer<typeof ProjectRoleAPI>;
+export type NewProjectRole = z.infer<typeof ProjectRoleInsertExtra>;
 // Same as NewProjectRole, but with the projectId - for use in API updates
-export type ProjectRole = z.infer<typeof ProjectRoleWithoutPK>;
-// Database representation of ProjectRole, so with projectId and userId
-export type ProjectRoleDB = z.infer<typeof ProjectRoleBase>;
+export type ProjectRole = z.infer<typeof ProjectRoleUpdateExtra>;
 
+/* ----------------- */
+// PROJECTS : FIELDS
+/* -------- */
 
-export const customPropertyTypes = ['classifiers', 'specifiers', 'display'] as const;
-export type CustomPropertyType = (typeof customPropertyTypes)[number];
+export type FieldDiscriminator = (typeof fieldDiscriminators)[number];
 
-export const fieldComponentTypes = ['SelectField', 'RangeField', 'InputField', 'TextareaField', 'TagsField'] as const;
+export const fieldComponentTypes = [
+  'SelectField',
+  'RangeField',
+  'InputField',
+  'TextareaField',
+  'TagsField',
+  'ComplexField'
+] as const;
 export const classifierComponentTypes = ['SelectField', 'RangeField'] as const;
 export const specifierComponentTypes = ['InputField', 'TextareaField', 'TagsField'] as const;
 export const displayComponentTypes = ['InputField'] as const;
 export type FieldComponentType = (typeof fieldComponentTypes)[number];
-export type FieldComponent = typeof SelectField | typeof RangeField | typeof InputField | typeof TextareaField | typeof TagsField;
+export type FieldComponent =
+  | typeof SelectField
+  | typeof RangeField
+  | typeof InputField
+  | typeof TextareaField
+  | typeof TagsField
+  | typeof UsersField
+  | typeof CustomField
+  | typeof ComplexField;
 
-export type ProjectMetadata = Record<CustomPropertyType, Record<string, CustomProperty>>;
+/* ----------------- */
+// PROJECTS : FIELDS : INTERMEDIATE VALUE
+/* -------- */
 
-export type CustomProperty = {
-  // In which section is it stored in the database, and where should it be
-  // shown in the form.
-  // classifier:
-  //   FORM classification
-  //   DB properties.classifiers
-  // specifiers:
-  //   FORM specification
-  //   DB properties.specifiers
-  // display:
-  //   FORM display
-  //   DB properties.display
-  type : CustomPropertyType;
-  // The key of the property in the database
-  key : string;
-  // The label of the property in the form
-  label : string;
-  // The component to use in the form
-  // classifier: 
-  //   FormSelectField
-  //   FormRangeField
-  // specifiers:
-  //   FormInputField
-  //   FormTextField
-  // display:
-  //   FormInputField
-  component : FieldComponentType;
-  // If component is FormSelectField, the values it can take
-  values? : string[];
-  // If component is FormRangeField, the minimum value it can take
-  min? : number;
-  // If component is FormRangeField, the maximum value it can take
-  max? : number;
-}
+export type IntermediateValue = {
+  id: string;
+  rank: number;
+  en: string;
+  enGen: boolean;
+  'zh-hans': string;
+  'zh-hansGen': boolean;
+  'zh-hant': string;
+  'zh-hantGen': boolean;
+};
 
 /* ----------------- */
 // LAYERS
@@ -245,11 +269,9 @@ export type LayerDB = z.infer<typeof LayerUpdate>;
 export type NewLayerDB = z.infer<typeof LayerInsert>;
 
 // layerI18n, but without layerId and langCode - for use in API insertions
-export type NewLayerI18n = z.infer<typeof LayerI18nAPI>;
+export type NewLayerI18n = z.infer<typeof LayerI18nInsert>;
 // Same as NewLayerI18n, but with the layerId - for use in API updates
-export type LayerI18n = z.infer<typeof LayerI18nWithoutPK>;
-// Database representation of LayerI18n, so with layerId and langCode
-export type LayerI18nDB = z.infer<typeof LayerI18nBase>;
+export type LayerI18n = z.infer<typeof LayerI18nUpdate>;
 
 export type LayerMetadata = {
   defaultEnabled: boolean; // true
@@ -384,7 +406,7 @@ export interface AddressProperties {
 // PROPERTIES
 /* -------- */
 
-// Property with all fields, including translations and values  
+// Property with all fields, including translations and values
 export type Property = z.infer<typeof PropertyUpdateAPI>;
 // Like Property, but without the propertyId in translations and values
 export type NewProperty = z.infer<typeof PropertyInsertAPI>;
@@ -394,11 +416,9 @@ export type PropertyDB = z.infer<typeof PropertyUpdate>;
 export type NewPropertyDB = z.infer<typeof PropertyInsert>;
 
 // PropertyI18n, but without propertyId and langCode - for use in API insertions
-export type NewPropertyI18n = z.infer<typeof PropertyI18nAPI>;
+export type NewPropertyI18n = z.infer<typeof PropertyI18nInsert>;
 // Same as NewPropertyI18n, but with the propertyId - for use in API updates
-export type PropertyI18n = z.infer<typeof PropertyI18nWithoutPK>;
-// Database representation of PropertyI18n, so with propertyId and langCode
-export type PropertyI18nDB = z.infer<typeof PropertyI18nBase>;
+export type PropertyI18n = z.infer<typeof PropertyI18nUpdate>;
 
 /* ----------------- */
 // PROPERTY VALUES
@@ -414,8 +434,6 @@ export type PropertyValueDB = z.infer<typeof PropertyValueUpdate>;
 export type NewPropertyValueDB = z.infer<typeof PropertyValueInsert>;
 
 // PropertyValueI18n, but without propertyValueId and langCode - for use in API insertions
-export type NewPropertyValueI18n = z.infer<typeof PropertyValueI18nAPI>;
+export type NewPropertyValueI18n = z.infer<typeof PropertyValueI18nInsert>;
 // Same as NewPropertyValueI18n, but with the propertyValueId - for use in API updates
-export type PropertyValueI18n = z.infer<typeof PropertyValueI18nWithoutPK>;
-// Database representation of PropertyValueI18n, so with propertyValueId and langCode
-export type PropertyValueI18nDB = z.infer<typeof PropertyValueI18nBase>;
+export type PropertyValueI18n = z.infer<typeof PropertyValueI18nUpdate>;

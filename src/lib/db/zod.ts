@@ -24,8 +24,9 @@ import type {
   PropertyValue
 } from '$lib/types';
 import type { Table } from 'drizzle-orm';
-const targetLangs = ['zh-hant', 'zh-hans'] as const;
-const fieldDiscriminators = ['classifier', 'specifier', 'display'] as const;
+
+export const targetLangs = ['zh-hant', 'zh-hans'] as const;
+export const fieldDiscriminators = ['classifier', 'specifier', 'display'] as const;
 /* ----------------- */
 // CONSTRAINTS
 /* -------- */
