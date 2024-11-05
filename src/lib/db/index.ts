@@ -1,11 +1,13 @@
 import { drizzle } from 'drizzle-orm/d1';
-import type { D1Database } from '@auth/d1-adapter';
 import * as schema from './schema';
 import { Table, getTableName, and, sql, inArray, eq, or, not, exists, ilike } from 'drizzle-orm';
-// TYPES
-import type { Field, NestedRelations, Resource, ResourceDB, ResourceType } from '$lib/types';
 import { error } from '@sveltejs/kit';
+// TYPES
+import type { D1Database } from '@auth/d1-adapter';
+import type { Field, NestedRelations, Resource, ResourceDB, ResourceType } from '$lib/types';
 import type { Database } from './services/organisation';
+import type { TargetLang } from '../types';
+
 const client = (database: D1Database) => {
   return drizzle(database, { schema });
 };
@@ -382,6 +384,25 @@ export async function genericEntityQuery<usersT extends Table>(
   return result;
 }
 
+// Define the shape of a translation object
+interface Translation {
+  lang: TargetLang;
+  [key: string]: unknown;
+}
+
+// T extends Translation ensures the generic type has the required lang property
+export const toNestedTranslations = <T extends Translation>(
+  translations: T[]
+): Record<TargetLang, T> => {
+  return translations.reduce(
+    (acc: Record<TargetLang, T>, translation: T) => {
+      acc[translation.lang] = translation;
+      return acc;
+    },
+    {} as Record<TargetLang, T>
+  );
+};
+
 export async function hierarchicalEntityQuery<usersT extends Table, translationsT extends Table>(
   db: any,
   ref: string,
@@ -397,6 +418,7 @@ export async function hierarchicalEntityQuery<usersT extends Table, translations
   if (ref == 'new') {
     throw new Error('The old shall never be new again');
   }
+  
   const slicedHierarchy = resourceHierarchy.slice(-depth, resourceHierarchy.length);
   const conditions = [
     eq(getTable(slicedHierarchy, 0)[publicIdentifier], ref),
