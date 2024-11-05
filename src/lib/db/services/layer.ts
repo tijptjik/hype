@@ -77,7 +77,7 @@ export const extractEntitiesToUpdate = (formData: Layer) => {
 
 export const rebuildFormData = async (
   layer: LayerDB,
-  translations: LayerI18nDB[]
+  translations: LayerI18n[]
 ) => {
   const formTranslations = translations.reduce(
     (acc: Record<string, Record<string, any>>, translation: Record<string, any>) => {

@@ -1,24 +1,23 @@
+import { error } from '@sveltejs/kit';
+import { eq } from 'drizzle-orm';
+import { superValidate } from 'sveltekit-superforms';
+import { zod } from 'sveltekit-superforms/adapters';
+import { organisation, organisationI18n, organisationRole, user } from '../schema';
+import { OrganisationInsert, OrganisationInsertAPI, OrganisationUpdate, OrganisationUpdateAPI } from '../zod';
+import { toNestedTranslations } from '..';
+// TYPES
+import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import type {
   NewOrganisationDB,
   OrganisationDB,
   TargetLang,
   NewOrganisationI18n,
   OrganisationI18n,
-  Id,
   NewOrganisationRole,
   OrganisationRole,
   NewOrganisation,
   Organisation,
-  OrganisationI18nDB,
-  OrganisationRoleDB
 } from '$lib/types';
-import { error } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
-import type { DrizzleD1Database } from 'drizzle-orm/d1';
-import { superValidate } from 'sveltekit-superforms';
-import { zod } from 'sveltekit-superforms/adapters';
-import { organisation, organisationI18n, organisationRole, user } from '../schema';
-import { OrganisationInsert, OrganisationUpdate, OrganisationUpdateAPI } from '../zod';
 
 export type Database = DrizzleD1Database<
   typeof import('/home/io/code/ghostsigns/src/lib/db/schema')
@@ -77,13 +76,12 @@ export const updateTranslations = async (
 
 export const createUserRoles = async (
   db: Database,
-  userRoles: Record<Id, NewOrganisationRole>,
+  userRoles: NewOrganisationRole[],
   organisationId: string
 ) => {
-  const userRolesToInsert = Object.entries(userRoles).map(([userId, role]) => ({
+  const userRolesToInsert = userRoles.map((role) => ({
     ...role,
-    organisationId,
-    userId
+    organisationId
   }));
 
   await db.insert(organisationRole).values(userRolesToInsert).returning();
@@ -105,7 +103,7 @@ export const createUserRoles = async (
 
 export const updateUserRoles = async (
   db: Database,
-  userRoles: Record<Id, OrganisationRole>,
+  userRoles: OrganisationRole[],
   organisationId: string
 ) => {
   await db.delete(organisationRole).where(eq(organisationRole.organisationId, organisationId));
@@ -116,46 +114,31 @@ export const updateUserRoles = async (
 export const extractEntitiesToInsert = (formData: NewOrganisation) => {
   let baseOrganisation = OrganisationInsert.parse(formData);
   let formTranslations: Record<TargetLang, NewOrganisationI18n> = formData.translations;
-  let formUserRoles: Record<Id, NewOrganisationRole> = formData.userRoles;
+  let formUserRoles: NewOrganisationRole[] = formData.userRoles;
   return { baseOrganisation, formTranslations, formUserRoles };
 };
 
 export const extractEntitiesToUpdate = (formData: Organisation) => {
   let baseOrganisation = OrganisationUpdate.parse(formData);
   let formTranslations: Record<TargetLang, OrganisationI18n> = formData.translations;
-  let formUserRoles: Record<Id, OrganisationRole> = formData.userRoles;
+  let formUserRoles: OrganisationRole[] = formData.userRoles;
   return { baseOrganisation, formTranslations, formUserRoles };
 };
 
 export const rebuildFormData = async (
   organisation: OrganisationDB,
-  translations: OrganisationI18nDB[],
-  userRoles: OrganisationRoleDB[]
+  translations: OrganisationI18n[],
+  userRoles: OrganisationRole[]
 ) => {
-  const formTranslations = translations.reduce(
-    (acc: Record<string, Record<string, any>>, translation: Record<string, any>) => {
-      const { lang, ...translationWithoutLang } = translation;
-      acc[lang] = translationWithoutLang;
-      return acc;
-    },
-    {}
-  ) as Record<TargetLang, OrganisationI18n>;
 
-  const formUserRoles = userRoles.reduce(
-    (acc: Record<string, Record<string, any>>, user: Record<string, any>) => {
-      const { userId, ...userWithoutId } = user;
-      acc[userId] = userWithoutId;
-      return acc;
-    },
-    {}
-  ) as Record<Id, OrganisationRole>;
+  const formData : Organisation = {
+    ...organisation,
+    translations: toNestedTranslations<OrganisationI18n>(translations),
+    userRoles: userRoles
+  };
 
-  return await superValidate(
-    {
-      ...organisation,
-      translations: formTranslations,
-      userRoles: formUserRoles
-    },
-    zod(OrganisationUpdateAPI)
-  );
+  console.log('PARSED FORM DATA in rebuildFormData', OrganisationUpdateAPI.safeParse(formData));
+  console.log('UPDATED ORGANISATION in rebuildFormData', formData);
+
+  return await superValidate(formData, zod(OrganisationUpdateAPI));
 };
