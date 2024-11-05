@@ -95,12 +95,12 @@ function createRequiredObjSchema<K extends string, V extends z.ZodTypeAny>(
 
 const getTranslations = (model: z.ZodType<any>) =>
   createRequiredObjSchema(z.enum(targetLangs), model).default({
-    'zh-hant': {},
-    'zh-hans': {}
+    'zh-hant': {"lang": "zh-hant"},
+    'zh-hans': {"lang": "zh-hans"}
   });
 
 const getUserRoles = (model: z.ZodType<any>) =>
-  z
+  z 
     .array(model)
     .refine((schema) => schema.length > 0, 'Add a User')
     .refine(
@@ -109,7 +109,7 @@ const getUserRoles = (model: z.ZodType<any>) =>
     );
 
 const getMaintainerRoles = (model: z.ZodType<any>) =>
-  z
+  z 
     .array(model)
     .refine((schema) => schema.length > 0, 'Add at least 1 Maintainer')
 
