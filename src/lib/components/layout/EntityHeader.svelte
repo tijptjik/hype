@@ -39,7 +39,7 @@ const menuItems = {
     },
     {
       label: m.project__fields(),
-      ref: 'config'
+      ref: 'fields'
     },
     {
       label: m.project__images(),
