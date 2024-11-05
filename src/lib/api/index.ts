@@ -2,10 +2,13 @@ import { error, json } from '@sveltejs/kit';
 import { actionResult } from 'sveltekit-superforms';
 import client from '$lib/db';
 import { getUserRoles } from '$lib/auth/utils';
+import { superValidate } from 'sveltekit-superforms';
+import { zod } from 'sveltekit-superforms/adapters';
 // Types
-import type { SuperValidated } from 'sveltekit-superforms/client';
-import type { Organisation, Resource } from '$lib/types';
+import type { SuperValidated } from 'sveltekit-superforms';
+import type { Resource } from '$lib/types';
 import type { UserRole } from '$lib/auth/utils';
+import type { ZodSchema } from 'zod';
 
 export type AccessStrategyOption =
   | 'Public'
@@ -151,4 +154,43 @@ export async function getResponseOrError(request: Response) {
     return error(request.status, message);
   }
   return request.json();
+}
+
+export async function loadFormData<T extends Record<string, any>>({
+  entity,
+  resourcePath,
+  insertSchema,
+  updateSchema,
+  fetch
+}: {
+  entity: string | undefined;
+  resourcePath: string;
+  insertSchema: ZodSchema;
+  updateSchema: ZodSchema;
+  fetch: typeof globalThis.fetch;
+}): Promise<{
+  entity: string;
+  validatedForm: SuperValidated<T>;
+}> {
+  const entityRef = entity || 'new';
+  let form;
+
+  if (entityRef === 'new') {
+    form = await superValidate(zod(insertSchema));
+  } else {
+    const endPoint = `/api/${resourcePath}/${entityRef}`;
+    const request = await fetch(endPoint);
+    
+    if (request.status >= 400) {
+      throw error(request.status);
+    }
+
+    const formData: T = await request.json();
+    form = await superValidate<T>(formData, zod(updateSchema));
+  }
+
+  return {
+    entity: entityRef,
+    validatedForm: form
+  };
 }

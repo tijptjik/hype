@@ -1,31 +1,14 @@
-import { error } from '@sveltejs/kit';
-import { superValidate } from 'sveltekit-superforms';
-import { zod } from 'sveltekit-superforms/adapters';
-import type { PageLoad, RouteParams } from './$types';
-// ZOD Schemas
+import { loadFormData } from '$lib/api';
 import { OrganisationInsertAPI, OrganisationUpdateAPI } from '$lib/db/zod';
+import type { PageLoad } from './$types';
+import type { Organisation } from '$lib/types';
 
-export const load: PageLoad = async ({
-  params,
-  fetch,
-}: {
-  params: RouteParams;
-  fetch: typeof globalThis.fetch;
-}) => {
-  const entity = params.organisation || 'new';
-  let form;
-  if (entity === 'new') {
-    form = await superValidate(zod(OrganisationInsertAPI));
-  } else {
-    const endPoint = `/api/organisations/${entity}`;
-
-    const request = await fetch(endPoint);
-    if (request.status >= 400) return error(request.status);
-
-    const formData: Record<string, unknown> = await request.json();
-
-    form = await superValidate(formData, zod(OrganisationUpdateAPI));
-  }
-
-  return { entity, validatedForm: form };
+export const load: PageLoad = async ({ params, fetch }) => {
+  return loadFormData<Organisation>({
+    entity: params.organisation,
+    resourcePath: 'organisations',
+    insertSchema: OrganisationInsertAPI,
+    updateSchema: OrganisationUpdateAPI,
+    fetch
+  });
 };

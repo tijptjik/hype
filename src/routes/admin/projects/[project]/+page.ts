@@ -1,32 +1,14 @@
-import { error } from '@sveltejs/kit';
-import { superValidate } from 'sveltekit-superforms';
-import { zod } from 'sveltekit-superforms/adapters';
-import type { PageLoad, RouteParams } from './$types';
-// ZOD Schemas
+import { loadFormData } from '$lib/api';
 import { ProjectInsertAPI, ProjectUpdateAPI } from '$lib/db/zod';
-// Types
+import type { PageLoad } from './$types';
 import type { Project } from '$lib/types';
-export const load: PageLoad = async ({
-  params,
-  fetch,
-}: {
-  params: RouteParams;
-  fetch: typeof globalThis.fetch;
-}) => {
-  const entity = params.project || 'new';
-  let form;
-  if (entity === 'new') {
-    form = await superValidate(zod(ProjectInsertAPI));
-  } else {
-    const endPoint = `/api/projects/${entity}`;
 
-    const request = await fetch(endPoint);
-    if (request.status >= 400) return error(request.status);
-
-    const formData: Project = await request.json();
-
-    form = await superValidate(formData, zod(ProjectUpdateAPI));
-  }
-
-  return { entity, validatedForm: form };
+export const load: PageLoad = async ({ params, fetch }) => {
+  return loadFormData<Project>({
+    entity: params.project,
+    resourcePath: 'projects',
+    insertSchema: ProjectInsertAPI,
+    updateSchema: ProjectUpdateAPI,
+    fetch
+  });
 };
