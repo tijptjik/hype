@@ -439,29 +439,40 @@ export async function hierarchicalEntityQuery<usersT extends Table, translations
   if (!result) {
     return error(401, 'Doors have ears, but they haven\'t ever heard of this.');
   }
-  // Reduce translations to a single object with language as key
-  if (translationTable) {
-    result.translations = result.translations.reduce(
-      (acc: Record<string, Record<string, any>>, translation: Record<string, any>) => {
-        const { lang, ...translationWithoutLang } = translation;
-        acc[lang] = translationWithoutLang;
-        return acc;
-      },
-      {}
-    );
+
+  result = processTranslations<Translation>(result, selectTableRelations);
+  
+  return result;
+}
+
+function processTranslations<T extends Translation>(
+  data: Record<string, any>, 
+  relations: NestedRelations
+  ): Record<string, any> {
+  if (!data) return data;
+
+  const result = { ...data };
+
+  // Process current level translations if they exist
+  if (relations.translations === true && Array.isArray(result.translations)) {
+    result.translations = toNestedTranslations<T>(result.translations);
   }
-  if (userJoinTables) {
-    for (const userJoinTable of userJoinTables) {
-      result[userJoinTable] = result[userJoinTable].reduce(
-        (acc: Record<string, Record<string, any>>, user: Record<string, any>) => {
-          const { userId, ...userWithoutId } = user;
-          acc[userId] = userWithoutId;
-          return acc;
-        },
-        {}
-      );
+
+  // Process nested relations
+  for (const [key, value] of Object.entries(relations)) {
+    if (value && typeof value === 'object' && 'with' in value) {
+      if (Array.isArray(result[key])) {
+        // Handle array of nested objects
+        result[key] = result[key].map((item: Record<string, any>) => 
+          processTranslations(item, value.with)
+        );
+      } else if (result[key] && typeof result[key] === 'object') {
+        // Handle single nested object
+        result[key] = processTranslations(result[key], value.with);
+      }
     }
   }
+
   return result;
 }
 
