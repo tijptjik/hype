@@ -25,7 +25,7 @@ import type {
 } from '$lib/types';
 import type { Table } from 'drizzle-orm';
 const targetLangs = ['zh-hant', 'zh-hans'] as const;
-const customPropertyTypes = ['classifiers', 'specifiers', 'display'] as const;
+const fieldDiscriminators = ['classifier', 'specifier', 'display'] as const;
 /* ----------------- */
 // CONSTRAINTS
 /* -------- */
@@ -101,24 +101,17 @@ const getTranslations = (model: z.ZodType<any>) =>
 
 const getUserRoles = (model: z.ZodType<any>) =>
   z
-    .record(z.string(), model)
-    .refine((schema) => Object.keys(schema).length > 0, 'Add at least 1 User')
+    .array(model)
+    .refine((schema) => schema.length > 0, 'Add a User')
     .refine(
-      (schema) => Object.values(schema).some((user) => user.role === 'owner'),
-      'Set at least 1 Owner'
+      (schema) => schema.map((user) => user.role).some((role) => role === 'owner'),
+      'Set an Owner'
     );
 
 const getMaintainerRoles = (model: z.ZodType<any>) =>
   z
-    .record(z.string(), model)
-    .refine((schema) => Object.keys(schema).length > 0, 'Add at least 1 Maintainer');
-
-const getCustomProperties = (model: z.ZodType<any>) =>
-  createRequiredObjSchema(z.enum(customPropertyTypes), model).default({
-    classifiers: {},
-    specifiers: {},
-    display: {}
-  });
+    .array(model)
+    .refine((schema) => schema.length > 0, 'Add at least 1 Maintainer')
 
 /* ----------------- */
 // ZOD SCHEMAS
