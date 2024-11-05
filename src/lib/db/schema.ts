@@ -8,7 +8,6 @@ import type { GeometryObject } from 'geojson';
 import type {
   GhostSignsFeatureProperties,
   AddressProperties,
-  ProjectMetadata,
   LayerMetadata
 } from '$lib/types';
 
@@ -246,8 +245,6 @@ export const project = sqliteTable('project', {
   ),
   // Accessible to the public in the app
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
-  // Additional Information
-  metadata: text('metadata', { mode: 'json' }).$type<ProjectMetadata>(),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -486,7 +483,9 @@ export const property = sqliteTable('property', {
     .default('classifier'),
   key: text('key').notNull(),
   label: text('label').notNull(),
+  labelGen: integer('labelGen', { mode: 'boolean' }).notNull().default(true),
   placeholder: text('placeholder').default('Type here'),
+  placeholderGen: integer('placeholderGen', { mode: 'boolean' }).notNull().default(true),
   component: text('component', {
     enum: ['SelectField', 'RangeField', 'InputField', 'TextareaField', 'TagsField']
   })
@@ -518,7 +517,9 @@ export const propertyI18n = sqliteTable('propertyI18n', {
     .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
   lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
   label: text('label').notNull(),
-  placeholder: text('placeholder').default('Type here')
+  labelGen: integer('labelGen', { mode: 'boolean' }).notNull().default(true),
+  placeholder: text('placeholder').default('Type here'),
+  placeholderGen: integer('placeholderGen', { mode: 'boolean' }).notNull().default(true)
 });
 
 export const propertyI18nRelations = relations(propertyI18n, ({ one }) => ({
@@ -535,7 +536,10 @@ export const propertyValue = sqliteTable('propertyValue', {
   propertyId: text('propertyId')
     .notNull()
     .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  value: text('value').notNull()
+  value: text('value').notNull(),
+  valueGen: integer('valueGen', { mode: 'boolean' }).notNull().default(true),
+  // Priority in the rank order of the property values - lower numbers are shown first
+  rank: integer('rank').notNull().default(0)
 });
 
 export const propertyValueRelations = relations(propertyValue, ({ one, many }) => ({
@@ -551,7 +555,8 @@ export const propertyValueI18n = sqliteTable('propertyValueI18n', {
     .notNull()
     .references(() => propertyValue.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
   lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
-  value: text('value').notNull()
+  value: text('value').notNull(),
+  valueGen: integer('valueGen', { mode: 'boolean' }).notNull().default(true)
   },
   (t) => ({
     pk: primaryKey({ columns: [t.propertyValueId, t.lang] })
