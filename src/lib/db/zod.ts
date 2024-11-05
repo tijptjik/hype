@@ -316,8 +316,8 @@ export const LayerBase = createSelectSchema(layer);
 export const LayerI18nBase = createSelectSchema(layerI18n);
 
 // Base schema to validate submit data
-export const LayerInsert = createInsertSchema(layer, {
-  ...getDefaultConstraints(layer as Table),
+export const LayerInsert = createInsertSchema(layer).extend({
+  ...getDefaultConstraints(layer),
   metadata: z.custom<LayerMetadata>().default({ defaultEnabled: true })
 });
 
@@ -325,19 +325,18 @@ export const LayerUpdate = LayerInsert.extend({
   id: z.string()
 });
 
-export const LayerI18nInsert = createInsertSchema(layerI18n, {
-  ...getDefaultConstraints(layerI18n as Table)
+export const LayerI18nInsert = createInsertSchema(layerI18n).extend({
+  ...getDefaultConstraints(layerI18n)
 });
 
-export const LayerI18nWithoutPK = LayerI18nInsert.omit({ lang: true });
-export const LayerI18nAPI = LayerI18nWithoutPK.omit({ layerId: true });
+export const LayerI18nAPI = LayerI18nInsert.omit({ layerId: true });
 
 export const LayerInsertAPI = LayerInsert.extend({
   translations: getTranslations(LayerI18nAPI)
 });
 
 export const LayerUpdateAPI = LayerUpdate.extend({
-  translations: getTranslations(LayerI18nWithoutPK)
+  translations: getTranslations(LayerI18nInsert)
 });
 
 /* ----------------- */
@@ -347,8 +346,8 @@ export const LayerUpdateAPI = LayerUpdate.extend({
 // Feature Schemas
 export const FeatureBase = createSelectSchema(feature);
 
-export const FeatureInsert = createInsertSchema(feature, {
-  ...getDefaultConstraints(feature as Table),
+export const FeatureInsert = createInsertSchema(feature).extend({
+  ...getDefaultConstraints(feature),
   geometry: z.custom<GeometryObject>(),
   properties: z.custom<GhostSignsFeatureProperties>(),
   addressProperties: z.custom<AddressProperties>().optional()
