@@ -143,41 +143,33 @@ export const OrganisationI18nBase = createSelectSchema(organisationI18n);
 export const OrganisationRoleBase = createSelectSchema(organisationRole);
 
 // Base schema to validate submit data
-export const OrganisationInsert = createInsertSchema(organisation, {
-  ...getDefaultConstraints(organisation as Table)
+export const OrganisationInsert = createInsertSchema(organisation).extend({
+  ...getDefaultConstraints(organisation)
 });
 
 export const OrganisationUpdate = OrganisationInsert.extend({
   id: z.string()
 });
-
-export const OrganisationI18nInsert = createInsertSchema(organisationI18n, {
-  ...getDefaultConstraints(organisationI18n as Table)
+export const OrganisationI18nUpdate = createInsertSchema(organisationI18n).extend({
+  ...getDefaultConstraints(organisationI18n)
 });
-
-export const OrganisationRoleInsert = createInsertSchema(organisationRole, {
-  ...getDefaultConstraints(organisationRole as Table)
-});
-
-export const OrganisationRoleInsertWithAssociatedFields = OrganisationRoleInsert.extend({
+export const OrganisationRoleUpdate = createInsertSchema(organisationRole);
+export const OrganisationRoleUpdateExtra = OrganisationRoleUpdate.extend({
   user: UserPrivacyPreserving
 });
 
-export const OrganisationI18nWithoutPK = OrganisationI18nInsert.omit({ lang: true });
-export const OrganisationRoleWithoutPK = OrganisationRoleInsertWithAssociatedFields.omit({
-  userId: true
-});
-export const OrganisationI18nAPI = OrganisationI18nWithoutPK.omit({ organisationId: true });
-export const OrganisationRoleAPI = OrganisationRoleWithoutPK.omit({ organisationId: true });
+export const OrganisationI18nInsert = OrganisationI18nUpdate.omit({ organisationId: true });
+export const OrganisationRoleInsert = OrganisationRoleUpdateExtra.omit({ organisationId: true });
 
 export const OrganisationInsertAPI = OrganisationInsert.extend({
-  translations: getTranslations(OrganisationI18nAPI),
-  userRoles: getUserRoles(OrganisationRoleAPI)
+  translations: getTranslations(OrganisationI18nInsert),
+  userRoles: getUserRoles(OrganisationRoleInsert)
 });
+
 
 export const OrganisationUpdateAPI = OrganisationUpdate.extend({
   translations: getTranslations(OrganisationI18nUpdate),
-  userRoles: getUserRoles(OrganisationRoleUpdateWithAssociatedFields)
+  userRoles: getUserRoles(OrganisationRoleUpdateExtra)
 });
 
 console.log('ORGANISATION UPDATE API', OrganisationUpdateAPI.shape);
@@ -192,19 +184,19 @@ export const PropertyValueI18nBase = createSelectSchema(propertyValueI18n);
 
 // Base schema to validate submit data
 export const PropertyValueInsert = createInsertSchema(propertyValue);
-export const PropertyValueI18nInsert = createInsertSchema(propertyValueI18n);
+export const PropertyValueI18nUpdate = createInsertSchema(propertyValueI18n);
 
 export const PropertyValueUpdate = PropertyValueInsert.extend({
   id: z.string()
 });
 
-export const PropertyValueI18nAPI = PropertyValueI18nInsert.omit({ propertyValueId: true });
+export const PropertyValueI18nInsert = PropertyValueI18nUpdate.omit({ propertyValueId: true });
 
 export const PropertyValueInsertAPI = PropertyValueInsert.extend({
   translations: getTranslations(PropertyValueI18nInsert)
 });
 export const PropertyValueUpdateAPI = PropertyValueUpdate.extend({
-  translations: getTranslations(PropertyValueI18nInsert)
+  translations: getTranslations(PropertyValueI18nUpdate)
 });
 
 /* ----------------- */
@@ -224,17 +216,17 @@ export const PropertyUpdate = PropertyInsert.extend({
   id: z.string()
 });
 
-export const PropertyI18nInsert = createInsertSchema(propertyI18n);
+export const PropertyI18nUpdate = createInsertSchema(propertyI18n);
 
-// export const PropertyI18nWithoutPK = PropertyI18nInsert.omit({ lang: true });
-export const PropertyI18nAPI = PropertyI18nInsert.omit({ propertyId: true });
+// export const PropertyI18nWithoutPK = PropertyI18nUpdate.omit({ lang: true });
+export const PropertyI18nInsert = PropertyI18nUpdate.omit({ propertyId: true });
 
 export const PropertyInsertAPI = PropertyInsert.extend({
-  translations: getTranslations(PropertyI18nAPI),
+  translations: getTranslations(PropertyI18nInsert),
   values: z.array(PropertyValueInsertAPI)
 });
 export const PropertyUpdateAPI = PropertyUpdate.extend({
-  translations: getTranslations(PropertyI18nAPI),
+  translations: getTranslations(PropertyI18nUpdate),
   values: z.array(PropertyValueUpdateAPI)
 });
 
@@ -247,24 +239,8 @@ export const ProjectBase = createSelectSchema(project);
 export const ProjectI18nBase = createSelectSchema(projectI18n);
 export const ProjectRoleBase = createSelectSchema(projectRole);
 
-export const CustomProperty = z.object({
-  type: z.enum(fieldDiscriminators),
-  key: z.string().min(3, { message: 'Key should have at least 3 characters' }),
-  label: z.string().min(2, { message: 'Label should have at least 2 characters' }),
-  component: z.enum(['InputField', 'TextareaField', 'SelectField', 'RangeField']),
-  values: z.array(z.string()).optional(),
-  min: z.number().optional(),
-  max: z.number().optional()
-});
-
-export const CustomPropertySchema = z.object({
-  classifiers: z.record(z.string(), CustomProperty),
-  specifiers: z.record(z.string(), CustomProperty),
-  display: z.record(z.string(), CustomProperty)
-});
-
 // Base schema to validate submit data
-export let ProjectInsert = createInsertSchema(project).extend({
+export const ProjectInsert = createInsertSchema(project).extend({
   ...getDefaultConstraints(project)
 });
 
@@ -272,32 +248,31 @@ export const ProjectUpdate = ProjectInsert.extend({
   id: z.string()
 });
 
-export const ProjectI18nInsert = createInsertSchema(projectI18n).extend({
+export const ProjectI18nUpdate = createInsertSchema(projectI18n).extend({
   ...getDefaultConstraints(projectI18n)
 });
 
-export const ProjectRoleInsert = createInsertSchema(projectRole).extend({
+export const ProjectRoleUpdate = createInsertSchema(projectRole).extend({
   role: z.enum(['maintainer'])
 });
-
-export const ProjectRoleInsertWithAssociatedFields = ProjectRoleInsert.extend({
+export const ProjectRoleUpdateExtra = ProjectRoleUpdate.extend({
   role: z.enum(['maintainer', 'member']),
   user: UserPrivacyPreserving
 });
 
-export const ProjectI18nWithoutPK = ProjectI18nInsert.omit({ lang: true });
-export const ProjectRoleWithoutPK = ProjectRoleInsertWithAssociatedFields.omit({ userId: true });
-export const ProjectI18nAPI = ProjectI18nWithoutPK.omit({ projectId: true });
-export const ProjectRoleAPI = ProjectRoleWithoutPK.omit({ projectId: true });
+export const ProjectI18nInsert = ProjectI18nUpdate.omit({ projectId: true });
+export const ProjectRoleInsertExtra = ProjectRoleUpdateExtra.omit({ projectId: true });
 
 export const ProjectInsertAPI = ProjectInsert.extend({
-  translations: getTranslations(ProjectI18nAPI),
-  maintainerRoles: getMaintainerRoles(ProjectRoleAPI)
+  translations: getTranslations(ProjectI18nInsert),
+  maintainerRoles: getMaintainerRoles(ProjectRoleInsertExtra),
+  properties: z.array(PropertyInsertAPI)
 });
 
 export const ProjectUpdateAPI = ProjectUpdate.extend({
-  translations: getTranslations(ProjectI18nWithoutPK),
-  maintainerRoles: getMaintainerRoles(ProjectRoleWithoutPK)
+  translations: getTranslations(ProjectI18nUpdate),
+  maintainerRoles: getMaintainerRoles(ProjectRoleUpdateExtra),
+  properties: z.array(PropertyUpdateAPI)
 });
 
 /* ----------------- */
@@ -341,6 +316,7 @@ export const FeatureBase = createSelectSchema(feature);
 
 export const FeatureInsert = createInsertSchema(feature).extend({
   ...getDefaultConstraints(feature),
+  // TODO These are NOT custom, they should just be z.object()
   geometry: z.custom<GeometryObject>(),
   properties: z.custom<GhostSignsFeatureProperties>(),
   addressProperties: z.custom<AddressProperties>().optional()
