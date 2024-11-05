@@ -158,13 +158,13 @@ class FeatureForm extends BaseForm<Feature> {
   }
 }
 
-const getContextRef = (resourceType: ResourceType, entity: FalsableRef) => {
-  return entity === false ? `form-${resourceType}-new` : `form-${resourceType}-${entity}`;
+const getContextRef = (resourceType: ResourceType, entity: Ref) => {
+  return entity === 'new' ? `form-${resourceType}-new` : `form-${resourceType}-${entity}`;
 };
 
 export const setForm = <T extends Record<string, unknown>>(
   resourceType: FalsableResourceType,
-  entity: FalsableRef,
+  entity: Ref,
   form: SuperValidated<T>
 ) => {
   let FormClass;
@@ -184,7 +184,7 @@ export const setForm = <T extends Record<string, unknown>>(
     default:
       throw new Error(`Unknown resource type: ${resourceType}`);
   }
-  return setContext(getContextRef(resourceType, entity), new FormClass(form, entity === false));
+  return setContext(getContextRef(resourceType, entity), new FormClass(form, entity === 'new'));
 };
 
 export const getForm = (
