@@ -20,7 +20,6 @@ import type { GeometryObject } from 'geojson';
 import type {
   GhostSignsFeatureProperties,
   AddressProperties,
-  ProjectMetadata,
   LayerMetadata,
   PropertyValue
 } from '$lib/types';
@@ -48,23 +47,25 @@ const constraints: Record<string, z.ZodType<any>> = {
     .string()
     .max(1024, { message: 'Description must be 1024 characters or less' })
     .optional(),
-  key: z.string().regex(/^[a-zA-Z_$][a-zA-Z0-9_$]*$/,
-    { message: 'Not a valid JS identifier - must not contain spaces or funky characters' }
-  ).min(2,
-    { message: 'Key should have at least 2 characters' }
-  ),
+  key: z
+    .string()
+    .regex(/^[a-zA-Z_$][a-zA-Z0-9_$]*$/, {
+      message: 'Not a valid JS identifier - must not contain spaces or funky characters'
+    })
+    .min(2, { message: 'Key should have at least 2 characters' }),
   url: z.string().url({ message: 'URL is invalid' }).optional()
 };
 
 const getDefaultConstraints = (
   table:
-    | typeof project
     | typeof organisation
-    | typeof layer
-    | typeof projectI18n
     | typeof organisationI18n
-    | typeof feature
+    | typeof project
+    | typeof projectI18n
+    | typeof layer
+    | typeof layerI18n
     | typeof property
+    | typeof feature
 ) => {
   return Object.keys(table).reduce(
     (acc, key) => {
@@ -181,9 +182,67 @@ export const OrganisationInsertAPI = OrganisationInsert.extend({
   userRoles: getUserRoles(OrganisationRoleAPI)
 });
 
-export const OrganisationUpdateAPI = OrganisationInsertAPI.extend({
-  translations: getTranslations(OrganisationI18nWithoutPK),
-  userRoles: getUserRoles(OrganisationRoleWithoutPK)
+export const OrganisationUpdateAPI = OrganisationUpdate.extend({
+  translations: getTranslations(OrganisationI18nUpdate),
+  userRoles: getUserRoles(OrganisationRoleUpdateWithAssociatedFields)
+});
+
+console.log('ORGANISATION UPDATE API', OrganisationUpdateAPI.shape);
+
+/* ----------------- */
+// PROPERTY VALUES
+/* -------- */
+
+// Property Value Schemas
+export const PropertyValueBase = createSelectSchema(propertyValue);
+export const PropertyValueI18nBase = createSelectSchema(propertyValueI18n);
+
+// Base schema to validate submit data
+export const PropertyValueInsert = createInsertSchema(propertyValue);
+export const PropertyValueI18nInsert = createInsertSchema(propertyValueI18n);
+
+export const PropertyValueUpdate = PropertyValueInsert.extend({
+  id: z.string()
+});
+
+export const PropertyValueI18nAPI = PropertyValueI18nInsert.omit({ propertyValueId: true });
+
+export const PropertyValueInsertAPI = PropertyValueInsert.extend({
+  translations: getTranslations(PropertyValueI18nInsert)
+});
+export const PropertyValueUpdateAPI = PropertyValueUpdate.extend({
+  translations: getTranslations(PropertyValueI18nInsert)
+});
+
+/* ----------------- */
+// PROPERTIES
+/* -------- */
+
+// Property Schemas
+export const PropertyBase = createSelectSchema(property);
+export const PropertyI18nBase = createSelectSchema(propertyI18n);
+
+// Base schema to validate submit data
+export const PropertyInsert = createInsertSchema(property).extend({
+  ...getDefaultConstraints(property)
+});
+
+export const PropertyUpdate = PropertyInsert.extend({
+  id: z.string()
+});
+
+export const PropertyI18nInsert = createInsertSchema(propertyI18n);
+
+// export const PropertyI18nWithoutPK = PropertyI18nInsert.omit({ lang: true });
+export const PropertyI18nAPI = PropertyI18nInsert.omit({ propertyId: true });
+
+export const PropertyInsertAPI = PropertyInsert.extend({
+  translations: getTranslations(PropertyI18nAPI),
+  values: z.array(PropertyValueInsertAPI)
+});
+export const PropertyUpdateAPI = PropertyUpdate.extend({
+  translations: getTranslations(PropertyI18nAPI),
+  values: z.array(PropertyValueUpdateAPI)
 });
 
 /* ----------------- */
@@ -196,7 +255,7 @@ export const ProjectI18nBase = createSelectSchema(projectI18n);
 export const ProjectRoleBase = createSelectSchema(projectRole);
 
 export const CustomProperty = z.object({
-  type: z.enum(customPropertyTypes),
+  type: z.enum(fieldDiscriminators),
   key: z.string().min(3, { message: 'Key should have at least 3 characters' }),
   label: z.string().min(2, { message: 'Label should have at least 2 characters' }),
   component: z.enum(['InputField', 'TextareaField', 'SelectField', 'RangeField']),
@@ -212,28 +271,24 @@ export const CustomPropertySchema = z.object({
 });
 
 // Base schema to validate submit data
-export let ProjectInsert = createInsertSchema(project, {
-  ...getDefaultConstraints(project as Table),
-  metadata: CustomPropertySchema.default({
-    classifiers: {},
-    specifiers: {},
-    display: {}
-  })  
+export let ProjectInsert = createInsertSchema(project).extend({
+  ...getDefaultConstraints(project)
 });
 
 export const ProjectUpdate = ProjectInsert.extend({
   id: z.string()
 });
 
-export const ProjectI18nInsert = createInsertSchema(projectI18n, {
-  ...getDefaultConstraints(projectI18n as Table)
+export const ProjectI18nInsert = createInsertSchema(projectI18n).extend({
+  ...getDefaultConstraints(projectI18n)
 });
 
-export const ProjectRoleInsert = createInsertSchema(projectRole, {
+export const ProjectRoleInsert = createInsertSchema(projectRole).extend({
   role: z.enum(['maintainer'])
 });
 
 export const ProjectRoleInsertWithAssociatedFields = ProjectRoleInsert.extend({
+  role: z.enum(['maintainer', 'member']),
   user: UserPrivacyPreserving
 });
 
@@ -305,58 +360,4 @@ export const FeatureUpdate = FeatureInsert.extend({
 
 export const FeatureInsertAPI = FeatureInsert;
 export const FeatureUpdateAPI = FeatureUpdate;
-
-/* ----------------- */
-// PROPERTY VALUES
-/* -------- */
-
-// Property Value Schemas
-export const PropertyValueBase = createSelectSchema(propertyValue);
-export const PropertyValueI18nBase = createSelectSchema(propertyValueI18n);
-
-// Base schema to validate submit data
-export const PropertyValueInsert = createInsertSchema(propertyValue);
-export const PropertyValueI18nInsert = createInsertSchema(propertyValueI18n);
-
-export const PropertyValueUpdate = PropertyValueInsert.extend({
-  id: z.string()
-});
-
-export const PropertyValueI18nWithoutPK = PropertyValueI18nInsert.omit({ lang: true });
-export const PropertyValueI18nAPI = PropertyValueI18nWithoutPK.omit({ propertyValueId: true });
-
-export const PropertyValueInsertAPI = PropertyValueInsert;
-export const PropertyValueUpdateAPI = PropertyValueUpdate;
-
-
-/* ----------------- */
-// PROPERTIES
-/* -------- */
-
-// Property Schemas
-export const PropertyBase = createSelectSchema(property);
-export const PropertyI18nBase = createSelectSchema(propertyI18n);
-
-// Base schema to validate submit data
-export const PropertyInsert = createInsertSchema(property).extend({
-  ...getDefaultConstraints(property)
-});
-
-export const PropertyUpdate = PropertyInsert.extend({
-  id: z.string(),
-});
-
-export const PropertyI18nInsert = createInsertSchema(propertyI18n);
-
-export const PropertyI18nWithoutPK = PropertyI18nInsert.omit({ lang: true });
-export const PropertyI18nAPI = PropertyI18nWithoutPK.omit({ propertyId: true });
-
-export const PropertyInsertAPI = PropertyInsert.extend({
-  translations: getTranslations(PropertyI18nAPI),
-  values: z.record(z.string(), PropertyValueInsertAPI)
-});
-export const PropertyUpdateAPI = PropertyUpdate.extend({
-  translations: getTranslations(PropertyI18nAPI),
-  values: z.record(z.string(), PropertyValueUpdateAPI)
-});
 
