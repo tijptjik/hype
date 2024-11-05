@@ -186,7 +186,9 @@ export async function loadFormData<T extends Record<string, any>>({
     }
 
     const formData: T = await request.json();
-    form = await superValidate<T>(formData, zod(updateSchema));
+    // TODO re-enable typing generics if it's not causing issues
+    // form = await superValidate<T>(formData, zod(updateSchema));
+    form = await superValidate(formData, zod(updateSchema));
   }
 
   return {
