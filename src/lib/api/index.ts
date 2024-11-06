@@ -3,10 +3,18 @@ import { actionResult } from 'sveltekit-superforms';
 import client from '$lib/db';
 import { getUserRoles } from '$lib/auth/utils';
 import { superValidate } from 'sveltekit-superforms';
+// ZOD
 import { zod } from 'sveltekit-superforms/adapters';
+import { OrganisationUpdateAPI } from '../db/zod';
 // Types
 import type { SuperValidated } from 'sveltekit-superforms';
-import type { Resource } from '$lib/types';
+import type {
+  ApiEntity,
+  Id,
+  OrganisationRole,
+  Resource,
+  ResourceType
+} from '$lib/types';
 import type { UserRole } from '$lib/auth/utils';
 import type { ZodSchema } from 'zod';
 
@@ -156,6 +164,37 @@ export async function getResponseOrError(request: Response) {
   return request.json();
 }
 
+const refToResourceType = (ref: string) => {
+  return {
+    organisations: 'organisation',
+    projects: 'project',
+    layers: 'layer',
+    features: 'feature'
+  }[ref];
+};
+// Resource configuration mapping
+const resourceConfig: Record<
+  ResourceType,
+  { parentResourceType?: string; parentRefKey?: string; keyToParent?: string }
+> = {
+  organisation: {},
+  project: {
+    parentResourceType: 'organisation',
+    parentRefKey: 'code',
+    keyToParent: 'organisationId'
+  },
+  layer: {
+    parentResourceType: 'project',
+    parentRefKey: 'code',
+    keyToParent: 'projectId'
+  },
+  feature: {
+    parentResourceType: 'layer',
+    parentRefKey: 'id',
+    keyToParent: 'layerId'
+  }
+};
+
 export async function loadFormData<T extends Record<string, any>>({
   entity,
   resourcePath,
@@ -176,17 +215,58 @@ export async function loadFormData<T extends Record<string, any>>({
   let form;
 
   if (entityRef === 'new') {
-    form = await superValidate(zod(insertSchema));
+    const resourceType = refToResourceType(resourcePath) as ResourceType;
+    const { parentResourceType, parentRefKey, keyToParent } = resourceConfig[resourceType];
+
+    if (parentResourceType && parentRefKey) {
+      const url = new URL(window.location.href);
+      const parentRef = url.searchParams.get(parentResourceType);
+
+      if (!parentRef) {
+        throw error(
+          400,
+          `The jungle teems with the spirits of the dead. Perhaps ${parentResourceType}.${parentRefKey} has joined them?`
+        );
+      }
+
+      // First create the form with the schema
+      form = await superValidate(zod(insertSchema));
+      
+      // Initialize the base data
+      let initialData: Record<string, any> = {
+        ...form.data, // Include existing form defaults
+        resourceType: resourceType,
+        maintainerRoles: []
+      };
+
+      // Fetch and process parent data
+      const parentResponse = await fetch(`/api/${parentResourceType}s/${parentRef}`);
+      if (parentResponse.ok) {
+        const parentData : ApiEntity = await parentResponse.json();
+        
+        // Add parent ID
+        initialData[keyToParent as string] = parentData.id;
+
+        // Merge organization roles if this is a project
+        if (resourceType === 'project') {
+          initialData = mergeOrganisationRoles(initialData, parentData.userRoles);
+        }
+
+        // Update the form with the complete initial data
+        form.data = initialData;
+      }
+    } else {
+      form = await superValidate(zod(insertSchema));
+    }
   } else {
     const endPoint = `/api/${resourcePath}/${entityRef}`;
     const request = await fetch(endPoint);
-    
+
     if (request.status >= 400) {
       throw error(request.status);
     }
 
     const formData: T = await request.json();
-    // TODO re-enable typing generics if it's not causing issues
     // form = await superValidate<T>(formData, zod(updateSchema));
     form = await superValidate(formData, zod(updateSchema));
   }
@@ -195,4 +275,25 @@ export async function loadFormData<T extends Record<string, any>>({
     entity: entityRef,
     validatedForm: form
   };
+}
+
+function mergeOrganisationRoles(project: any, userRoles: OrganisationRole[]): any {
+  // Get existing maintainer user IDs
+  // const existingUserIds = project.maintainerRoles?.map((userRole: any) => userRole.userId) || [];
+  const existingUserIds: Id[] = [];
+  // Add organization members that aren't already maintainers
+  userRoles.forEach((userRole) => {
+    if (!existingUserIds.includes(userRole.userId)) {
+      project.maintainerRoles.push({
+        userId: userRole.userId,
+        role: 'member',
+        user: {
+          id: userRole.userId,
+          name: userRole.user.name,
+          image: userRole.user.image
+        }
+      });
+    }
+  });
+  return project;
 }
