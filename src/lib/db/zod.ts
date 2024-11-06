@@ -47,14 +47,14 @@ const constraints: Record<string, z.ZodType<any>> = {
   description: z
     .string()
     .max(1024, { message: 'Description must be 1024 characters or less' })
-    .optional(),
+    .optional().nullish().transform( x => x ?? undefined ),
   key: z
     .string()
     .regex(/^[a-zA-Z_$][a-zA-Z0-9_$]*$/, {
       message: 'Not a valid JS identifier - must not contain spaces or funky characters'
     })
     .min(2, { message: 'Key should have at least 2 characters' }),
-  url: z.string().url({ message: 'URL is invalid' }).optional()
+  url: z.string().url({ message: 'URL is invalid' }).optional().nullish().transform( x => x ?? undefined )
 };
 
 const getDefaultConstraints = (
@@ -145,7 +145,8 @@ export const OrganisationRoleBase = createSelectSchema(organisationRole);
 
 // Base schema to validate submit data
 export const OrganisationInsert = createInsertSchema(organisation).extend({
-  ...getDefaultConstraints(organisation)
+  ...getDefaultConstraints(organisation),
+  id: z.string().optional()
 });
 
 export const OrganisationUpdate = OrganisationInsert.extend({
@@ -172,8 +173,6 @@ export const OrganisationUpdateAPI = OrganisationUpdate.extend({
   translations: getTranslations(OrganisationI18nUpdate),
   userRoles: getUserRoles(OrganisationRoleUpdateExtra)
 });
-
-console.log('ORGANISATION UPDATE API', OrganisationUpdateAPI.shape);
 
 /* ----------------- */
 // PROPERTY VALUES

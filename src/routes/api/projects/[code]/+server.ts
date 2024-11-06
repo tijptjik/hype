@@ -1,8 +1,14 @@
 import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { error, type RequestHandler } from '@sveltejs/kit';
-import { projectRole, projectI18n } from '$lib/db/schema';
-import { getDatabaseOrError, JSONResponseOrError, SuperFormResponse, SuperFormErrorResponse, type AccessStrategyOption } from '$lib/api';
+import { projectRole, projectI18n, organisationRole } from '$lib/db/schema';
+import {
+  getDatabaseOrError,
+  JSONResponseOrError,
+  SuperFormResponse,
+  SuperFormErrorResponse,
+  type AccessStrategyOption
+} from '$lib/api';
 import { hierarchicalEntityQuery } from '$lib/db';
 // DB
 import {
@@ -10,14 +16,17 @@ import {
   updateTranslations,
   updateMaintainerRoles,
   rebuildFormData,
-  extractEntitiesToUpdate
+  extractEntitiesToUpdate,
+  mergeOrganizationRoles
 } from '$lib/db/services/project';
+import { updateRelatedProperties } from '$lib/db/services/property';
 import { isFieldUnique, isFieldChanged } from '$lib/db';
 // ZOD
 import { ProjectUpdateAPI } from '$lib/db/zod';
 // TYPES
 import type { SuperValidated } from 'sveltekit-superforms/client';
-import type { Project, ProjectDB } from '$lib/types';
+import type { OrganisationRole, Project, ProjectDB } from '$lib/types';
+import { and, eq } from 'drizzle-orm';
 
 const RESOURCE_TYPE = 'project';
 const RESOURCE_PATH = 'projects';
@@ -52,7 +61,17 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
               }
             }
           },
-          translations: true
+          translations: true,
+          properties: {
+            with: {
+              translations: true,
+              values: {
+                with: {
+                  translations: true
+                }
+              }
+            }
+          }
         },
         userId,
         projectRole,
@@ -60,8 +79,11 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
         2
       );
 
+      // Process result to include organization roles
+      const processedResult = await mergeOrganizationRoles(db, result);
+
       // HTTP : 200 JSON or 404
-      return JSONResponseOrError(result);
+      return JSONResponseOrError(processedResult);
     } catch (e) {
       // DB : Query Error
       console.error('Database query error:', e);
@@ -85,12 +107,20 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 
   try {
     const formData: Project = await request.json();
-    const form = await superValidate(formData, zod(ProjectUpdateAPI)) as SuperValidated<Project>;
+    const form = (await superValidate(formData, zod(ProjectUpdateAPI))) as SuperValidated<Project>;
 
     // Check if the current user will lose access on membership changes
-    const userLosesAccess = !Object.keys(form.data.maintainerRoles).includes(userId) && accessStrategy !== 'SuperAdmin';
-    const codeChanged = await isFieldChanged<ProjectDB>(db, formData.id as string, formData.code as string, RESOURCE_TYPE, 'code');
-    
+    const userLosesAccess =
+      !form.data.maintainerRoles.map((userRole) => userRole.userId).includes(userId) &&
+      accessStrategy !== 'SuperAdmin';
+    const codeChanged = await isFieldChanged<ProjectDB>(
+      db,
+      formData.id as string,
+      formData.code as string,
+      RESOURCE_TYPE,
+      'code'
+    );
+
     if (codeChanged) {
       const codeUnique = await isFieldUnique<Project>(db, formData, RESOURCE_TYPE, 'code');
       if (!codeUnique) {
@@ -104,19 +134,27 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
       return SuperFormResponse<Project>(form);
     }
 
-    const { baseProject, formTranslations, formMaintainerRoles } = extractEntitiesToUpdate(form.data as Project);
-    const updatedProject = await updateProject(db, baseProject, params.code as string);
-    const updatedTranslations = await updateTranslations(
-      db,
-      formTranslations,
-      updatedProject.id
+    const { baseProject, formTranslations, formMaintainerRoles, formProperties } = extractEntitiesToUpdate(
+      form.data as Project
     );
-    const updatedMaintainerRoles = await updateMaintainerRoles(db, formMaintainerRoles, updatedProject.id);
+    const updatedProject = await updateProject(db, baseProject, params.code as string);
+    const updatedTranslations = await updateTranslations(db, formTranslations, updatedProject.id);
+    const updatedMaintainerRoles = await updateMaintainerRoles(
+      db,
+      formMaintainerRoles,
+      updatedProject.id,
+      updatedProject.organisationId
+    );
+    const updatedProperties = await updateRelatedProperties(db, formProperties, updatedProject.id);
+
     const updatedForm = await rebuildFormData(
+      db,
       updatedProject,
       updatedTranslations,
-      updatedMaintainerRoles
+      updatedMaintainerRoles,
+      updatedProperties
     );
+
 
     if (userLosesAccess || codeChanged) {
       redirect = true;

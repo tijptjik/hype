@@ -3,6 +3,7 @@ import { actionResult, superValidate, type SuperValidated } from 'sveltekit-supe
 // DB
 import { getDatabaseOrError, JSONResponseOrError, SuperFormResponse } from '$lib/api';
 import { hierarchicalResourceQuery } from '$lib/db';
+import { createRelatedProperties } from '$lib/db/services/property';
 import { projectRole, projectI18n } from '$lib/db/schema';
 import {
   createProject,
@@ -16,7 +17,7 @@ import { isFieldUnique } from '$lib/db';
 import { zod } from 'sveltekit-superforms/adapters';
 import { ProjectInsertAPI } from '$lib/db/zod';
 // TYPES
-import type { NewProject, Project } from '$lib/types';
+import type { NewProject, Project, Property } from '$lib/types';
 
 const RESOURCE_TYPE = 'project';
 const RESOURCE_PATH = 'projects';
@@ -88,7 +89,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       return SuperFormResponse<Project>(form);
     }
 
-    const { baseProject, formTranslations, formMaintainerRoles } = extractEntitiesToInsert(
+    const { baseProject, formTranslations, formMaintainerRoles, formProperties } = extractEntitiesToInsert(
       form.data as NewProject
     );
     const createdProject = await createProject(db, baseProject);
@@ -98,10 +99,13 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       createdProject.id
     );
     const createdMaintainerRoles = await createMaintainerRoles(db, formMaintainerRoles, createdProject.id);
+    const createdProperties = await createRelatedProperties(db, formProperties, createdProject.id);
     const updatedForm = await rebuildFormData(
+      db,
       createdProject,
       createdTranslations,
-      createdMaintainerRoles
+      createdMaintainerRoles,
+      createdProperties
     );
     return SuperFormResponse<Project>(updatedForm, true, userLosesAccess, RESOURCE_PATH, 201);
   } catch (err) {
