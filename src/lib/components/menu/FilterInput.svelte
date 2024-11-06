@@ -23,7 +23,7 @@ const {
 $effect(() => {
   Object.keys(resources).forEach((resourceType) => {
     const type = resourceType;
-    filteredResources[type] = resources[type as keyof typeof resources].filter((item) => {
+    filteredResources[type as keyof typeof filteredResources] = resources[type as keyof typeof resources].filter((item) => {
       return (
         filterTexts[type as keyof typeof filterTexts] === '' ||
         item.name.toLowerCase().includes(filterTexts[type as keyof typeof filterTexts].toLowerCase()) ||
