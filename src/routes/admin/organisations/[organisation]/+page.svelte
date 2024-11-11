@@ -1,5 +1,5 @@
 <script lang="ts">
-  import SuperDebug from 'sveltekit-superforms';
+import SuperDebug from 'sveltekit-superforms';
 // CONTEXT
 import { getRouterState } from '$lib/context/router.svelte';
 import { setForm } from '$lib/context/forms.svelte';
@@ -17,73 +17,119 @@ import UserSection from '$lib/components/forms/FormSectionUser.svelte';
 import type { SuperValidated } from 'sveltekit-superforms';
 import type { FormFieldConfig, Organisation, ResourceType, ResourceRouter } from '$lib/types';
 
+// TYPES
+type Props = {
+  data: {
+    validatedForm: SuperValidated<Organisation>;
+    entity: string;
+  };
+};
+
 // CONFIG
 const FIELDS: FormFieldConfig = {
   i18n: {
     name: {
       label: 'Full Name',
-      component: InputField
+      component: 'InputField',
+      isArray: false,
+      isTranslated: true
     },
     nameShort: {
       label: 'Short Name',
-      component: InputField
+      component: 'InputField',
+      isArray: false,
+      isTranslated: true
     },
     description: {
       label: 'Description',
-      component: TextareaField
+      component: 'TextareaField',
+      isArray: false,
+      isTranslated: true
     }
   },
   users: {
     userRoles: {
       label: 'Members',
-      component: UserCards
+      isArray: true,
+      isTranslated: false
     }
   },
   specification: {
     code: {
       label: 'Code',
-      component: InputField
+      component: 'InputField',
+      isArray: false,
+      isTranslated: false
     },
     url: {
       label: 'URL',
-      component: InputField
+      component: 'InputField',
+      isArray: false,
+      isTranslated: false
     }
   },
   images: {
     image: {
       label: 'Profile Image',
-      component: InputField
+      component: 'InputField',
+      isArray: false,
+      isTranslated: false
     }
   }
 };
 
 // STATE : PROPS
-let { data }: { data: { validatedForm: SuperValidated<Organisation>; entity: string } } = $props();
+let { data }: Props = $props();
 let { validatedForm, entity } = data;
 
 // STATE : DERIVED
 const routerState = getRouterState() as ResourceRouter;
-const title = $derived($form.name || 'New');
+const title = $derived(validatedForm.data.name || 'New');
 
 // STATE : FORM
-let { message, enhance, form } = setForm(routerState.resource as ResourceType, entity, validatedForm);
+let { message, enhance, form, validateForm } = setForm(
+  routerState.resource,
+  entity,
+  validatedForm
+);
 
 </script>
 
 <!-- LAYOUT -->
 <div class="h-full overflow-y-auto bg-black pb-16">
-  <Header entity={data.entity} resourceType={routerState.resource as ResourceType} {title}/>
+  <Header entity={data.entity} resourceType={routerState.resource} {title} />
   <main class="flex flex-col p-6">
     {#if Object.keys(message).length > 0}<h3>{get(message)}</h3>{/if}
     <form method="POST" use:enhance class="flex flex-col gap-6">
       {#if routerState.facet === 'core' || routerState.facet === false}
-        <I18nSection title="Descriptors" fields={FIELDS.i18n} {entity} resourceType={routerState.resource as ResourceType}/>
+        <I18nSection
+          title="Descriptors"
+          fields={FIELDS.i18n}
+          facet="core"
+          {entity}
+          resourceType={routerState.resource} />
         <div class="flex flex-row gap-6">
-          <UserSection title="Members" fields={FIELDS.users} {entity} resourceType={routerState.resource as ResourceType}/>
-          <SpecificationSection title="Specification" fields={FIELDS.specification} {entity} resourceType={routerState.resource as ResourceType}/>
+          <UserSection
+            title="Members"
+            subtitle="Members can be set as Project Maintainers"
+            fields={FIELDS.users}
+            facet="core"
+            {entity}
+            resourceType={routerState.resource} />
+          <SpecificationSection
+            title="Specification"
+            fields={FIELDS.specification}
+            facet="core"
+            {entity}
+            resourceType={routerState.resource as ResourceType} />
         </div>
       {:else if routerState.facet === 'images'}
-        <ImageSection title="Image" fields={FIELDS.images} {entity} resourceType={routerState.resource as ResourceType}/>
+        <ImageSection
+          title="Image"
+          fields={FIELDS.images}
+          facet="core"
+          {entity}
+          resourceType={routerState.resource as ResourceType} />
       {:else}
         <h1>FACET NOT FOUND</h1>
       {/if}

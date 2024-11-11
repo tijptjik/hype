@@ -10,9 +10,10 @@ import SpecificationSection from '$lib/components/forms/FormSectionSpecification
 import ImageSection from '$lib/components/forms/FormSectionImage.svelte';
 import InputField from '$lib/components/forms/FormFieldInput.svelte';
 import TextareaField from '$lib/components/forms/FormFieldTextarea.svelte';
+import RangeField from '$lib/components/forms/FormFieldRange.svelte';
 // TYPES
 import type { FormFieldConfig } from '$lib/types';
-import type { SuperValidated } from 'sveltekit-superforms';
+import type { SuperForm } from 'sveltekit-superforms';
 import type { Feature } from '$lib/types';
 import type { ResourceType } from '$lib/types';
 import SuperDebug from 'sveltekit-superforms';
@@ -21,25 +22,39 @@ import SuperDebug from 'sveltekit-superforms';
 const FIELDS: FormFieldConfig = {
   i18n: {
     properties: {
+      // TODO Fix this -- and load in the custom fields
       descriptors: {
         title: {
           label: 'Title',
-          component: InputField
+          component: InputField,
+          isArray: false,
+          isTranslated: true
         },
         description: {
           label: 'Description',
-          component: TextareaField
+          component: TextareaField,
+          isArray: false,
+          isTranslated: true
         }
       }
     }
   },
   classification: {
     properties: {
-      classifiers: {
-        grade: {
-          label: 'Rating',
-          // TODO: Make range slider
-          component: InputField
+      isArray: true,
+      discriminators: {
+        key: 'type',
+        values: ['classifier', 'specifier'],
+        specs: {
+          classifier: {
+            grade: {
+              label: 'Rating',
+              // TODO: Make range slider
+              component: RangeField,
+              isArray: false,
+              isTranslated: false
+            }
+          }
         }
       }
     }
@@ -83,7 +98,7 @@ const CUSTOM_FIELDS = {
 }
 
 // STATE : PROPS
-let { data }: { data: { form: SuperValidated<Feature>; entity: string } } = $props();
+let { data }: { data: { form: SuperForm<Feature>; entity: string } } = $props();
 let { form, entity } = data;
 
 // STATE : DERIVED

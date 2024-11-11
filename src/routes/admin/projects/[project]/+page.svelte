@@ -1,91 +1,213 @@
 <script lang="ts">
-// Context
+// CONTEXT
 import { getRouterState } from '$lib/context/router.svelte';
 import { setForm } from '$lib/context/forms.svelte';
 import { get } from 'svelte/store';
-// Components
+import { goto } from '$app/navigation';
+// COMPONENTS
 import Header from '$lib/components/layout/EntityHeader.svelte';
 import I18nSection from '$lib/components/forms/FormSectionI18n.svelte';
 import SpecificationSection from '$lib/components/forms/FormSectionSpecification.svelte';
 import ImageSection from '$lib/components/forms/FormSectionImage.svelte';
-import CustomFieldSection from '$lib/components/forms/FormSectionCustomField.svelte';
-import InputField from '$lib/components/forms/FormFieldInput.svelte';
-import TextareaField from '$lib/components/forms/FormFieldTextarea.svelte';
-import CustomField from '$lib/components/forms/FormFieldCustomFields.svelte';
-import FormUserCard from '$lib/components/forms/FormFieldUsers.svelte';
+import PropertySection from '$lib/components/forms/FormSectionProperty.svelte';
 import UserSection from '$lib/components/forms/FormSectionUser.svelte';
+// CONFIG
+import { classifierComponentTypes, specifierComponentTypes } from '$lib/types';
 // TYPES
-import type { FormFieldConfig } from '$lib/types';
 import type { SuperValidated } from 'sveltekit-superforms';
 import type { Project } from '$lib/types';
-import type { ResourceType, ResourceRouter } from '$lib/types';
+import type {
+  FormFieldArray,
+  FormFieldConfig,
+  ResourceType,
+  ResourceRouter,
+  FalsableFacetType,
+  FormField,
+} from '$lib/types';
+
 import SuperDebug from 'sveltekit-superforms';
+
+// TYPES
+type Props = {
+  data: {
+    validatedForm: SuperValidated<Project>;
+    entity: string
+  }
+}
 
 // CONFIG
 const FIELDS: FormFieldConfig = {
   i18n: {
     name: {
       label: 'Full Name',
-      component: InputField
+      component: 'InputField',
+      isArray: false,
+      isTranslated: true
     },
     nameShort: {
       label: 'Short Name',
-      component: InputField
+      component: 'InputField',
+      isArray: false,
+      isTranslated: true
     },
     description: {
       label: 'Description',
-      component: TextareaField
+      component: 'TextareaField',
+      isArray: false,
+      isTranslated: true
     }
   },
   credit: {
     license: {
       label: 'License',
-      component: InputField
+      component: 'InputField',
+      isArray: false,
+      isTranslated: true
     },
     attribution: {
       label: 'Attribution',
-      component: InputField
+      component: 'InputField',
+      isArray: false,
+      isTranslated: true
     }
   },
   users: {
     maintainerRoles: {
       label: 'Maintainers',
-      component: FormUserCard
+      isArray: true,
+      isTranslated: false
     }
   },
   specification: {
     code: {
       label: 'Code',
-      component: InputField
+      component: 'InputField',
+      isArray: false,
+      isTranslated: false
     }
   },
   config: {
-    metadata: {
-      classifiers: {
-        label: 'Classifiers',
-        component: CustomField
-      },
-      specificiers: {
-        label: 'Specificiers',
-        component: CustomField
+    properties: {
+      isArray: true,
+      discriminators: {
+        key: 'type',
+        values: ['classifier', 'specifier'],
+        specs: {
+          classifier: {
+            key: {
+              label: 'Name in API',
+              component: 'InputField',
+              isArray: false,
+              isTranslated: false,
+              isNested: true
+            },
+            label: {
+              label: 'Name in UI',
+              component: 'InputField',
+              isArray: false,
+              isTranslated: true,
+              isNested: true
+            },
+            placeholder: {
+              label: 'Input Placeholder',
+              component: 'InputField',
+              isArray: false,
+              isTranslated: true,
+              isNested: true
+            },
+            component: {
+              label: 'Component',
+              component: 'SelectField',
+              values: classifierComponentTypes,
+              isArray: false,
+              isTranslated: false,
+              isNested: true
+            },
+            values: {
+              component: 'ComplexField',
+              isArray: true,
+              isTranslated: true,
+              isNested: true,
+              showForComponent: ['SelectField']
+            },
+            min: {
+              label: 'Minimum',
+              component: 'InputField',
+              inputType: 'number',
+              isArray: false,
+              isTranslated: false,
+              isNested: true,
+              showForComponent: ['RangeField']
+            },
+            max: {
+              label: 'Maximum',
+              component: 'InputField',
+              inputType: 'number',
+              isArray: false,
+              isTranslated: false,
+              isNested: true,
+              showForComponent: ['RangeField']
+            }
+          },
+          specifier: {
+            key: {
+              label: 'Name in API',
+              component: 'InputField',
+              isArray: false,
+              isNested: true,
+              isTranslated: false
+            },
+            label: {
+              label: 'Name in UI',
+              component: 'InputField',
+              isArray: false,
+              isNested: true,
+              isTranslated: true
+            },
+            placeholder: {
+              label: 'Input Placeholder',
+              component: 'InputField',
+              isArray: false,
+              isNested: true,
+              isTranslated: true
+            },
+            component: {
+              label: 'Component',
+              component: 'SelectField',
+              values: specifierComponentTypes,
+              isArray: false,
+              isNested: true,
+              isTranslated: false
+            }
+          }
+        }
       }
     }
   },
   images: {
     image: {
       label: 'Banner Image',
-      component: InputField
+      component: 'InputField',
+      isArray: false
     }
   }
 };
 
 // STATE : PROPS
-let { data }: { data: { validatedForm: SuperValidated<Project>; entity: string } } = $props();
+let { data }: Props = $props();
 let { validatedForm, entity } = data;
 
 // STATE : DERIVED
 const routerState = getRouterState() as ResourceRouter;
-const title = $derived($form.name || 'New');
+const title = $derived(validatedForm.data.name || 'New');
+
+$effect(() => {
+  //Remove parentRef from URL if it exists
+  const url = new URL(window.location.href);
+  url.searchParams.delete('parentRef');
+  // shallow navigation
+  goto(url.toString(), { replaceState: true });
+}); 
 
 // STATE : FORM
 let { message, enhance, form } = setForm(
@@ -104,54 +226,55 @@ let { message, enhance, form } = setForm(
       {#if routerState.facet === 'core' || routerState.facet === false}
         <I18nSection
           title="Descriptors"
-          fields={FIELDS.i18n}
-          facet={routerState.facet as string}
+          fields={FIELDS.i18n as FormField}
+          facet={routerState.facet}
           {entity}
           resourceType={routerState.resource} />
         <I18nSection
           title="Credit"
-          fields={FIELDS.credit}
-          facet={routerState.facet as string}
+          fields={FIELDS.credit as FormField}
+          facet={routerState.facet}
           {entity}
           resourceType={routerState.resource} />
         <div class="flex flex-row gap-6">
           <UserSection
-            title="Members"
-            fields={FIELDS.users}
-            facet={routerState.facet as string}
+            title="Members with Edit Access"
+            subtitle="Maintainers have access to the review queue and can accept or reject feature changes"
+            fields={FIELDS.users as FormField}
+            facet={routerState.facet}
             {entity}
-            resourceType={routerState.resource as Exclude<ResourceType, 'layer' | 'feature'>} />
+            resourceType={routerState.resource} />
           <SpecificationSection
             title="Specification"
-            fields={FIELDS.specification}
-            facet={routerState.facet as string}
+            fields={FIELDS.specification as FormField}
+            facet={routerState.facet}
             {entity}
             resourceType={routerState.resource} />
         </div>
-      {:else if routerState.facet === 'config'}
-        <CustomFieldSection
+      {:else if routerState.facet === 'fields'}
+        <PropertySection
           title="Categorical Fields"
           subtitle="by which features can be filtered"
-          fieldId="metadata"
-          customPropertyType="classifiers"
-          fields={FIELDS.config.metadata.classifiers}
-          facet={routerState.facet as string}
+          fieldId="properties"
+          fieldDiscriminator="classifier"
+          fields={FIELDS.config as FormFieldArray}
+          facet={routerState.facet}
           {entity}
           resourceType={routerState.resource} />
-        <CustomFieldSection
+          <PropertySection
           title="Freeform Fields"
           subtitle="displayed in a feature's info panels"
-          fieldId="metadata"
-          customPropertyType="specifiers"
-          fields={FIELDS.config.metadata.specifiers}
-          facet={routerState.facet as string}
+          fieldId="properties"
+          fieldDiscriminator="specifier"
+          fields={FIELDS.config as FormFieldArray}
+          facet={routerState.facet}
           {entity}
           resourceType={routerState.resource} />
       {:else if routerState.facet === 'images'}
         <ImageSection
           title="Image"
-          fields={FIELDS.images}
-          facet={routerState.facet as string}
+          fields={FIELDS.images as FormField}
+          facet={routerState.facet}
           {entity}
           resourceType={routerState.resource} />
       {:else}

@@ -9,51 +9,68 @@ import SectionI18n from '$lib/components/forms/FormSectionI18n.svelte';
 import InputField from '$lib/components/forms/FormFieldInput.svelte';
 import TextareaField from '$lib/components/forms/FormFieldTextarea.svelte';
 // TYPES
-import type { FormFieldConfig } from '$lib/types';
-import type { SuperValidated } from 'sveltekit-superforms';
+import type { SuperForm } from 'sveltekit-superforms';
 import type { Layer } from '$lib/types';
-import type { ResourceType, ResourceRouter } from '$lib/types';
-import SuperDebug from 'sveltekit-superforms';
-
-// TODO Add Metadata
+import type { 
+  FormField,
+  FormFieldConfig, 
+  ResourceType, 
+  ResourceRouter 
+} from '$lib/types';
 
 // CONFIG
 const FIELDS: FormFieldConfig = {
   i18n: {
     name: {
       label: 'Full Name',
-      component: InputField
+      component: 'InputField',
+      isArray: false,
+      isTranslated: true
     },
     nameShort: {
       label: 'Short Name',
-      component: InputField
+      component: 'InputField',
+      isArray: false,
+      isTranslated: true
     },
     description: {
       label: 'Description',
-      component: TextareaField
-    },
+      component: 'TextareaField',
+      isArray: false,
+      isTranslated: true
+    }
   }
 };
 
 // STATE : PROPS
-let { data }: { data: { form: SuperValidated<Layer>; entity: string } } = $props();
-let { form, entity } = data;
+let { data }: { data: { validatedForm: SuperForm<Layer>; entity: string } } = $props();
+let { validatedForm, entity } = data;
 
 // STATE : DERIVED
 const routerState = getRouterState() as ResourceRouter;
+const title = $derived($form.name || 'New');
 
 // STATE : FORM
-const FormContext = setForm(routerState.resource as ResourceType, entity, form);
+let { message, enhance, form, errors } = setForm(
+  routerState.resource as ResourceType,
+  entity,
+  validatedForm
+);
 </script>
 
 <!-- LAYOUT -->
 <div class="h-full overflow-y-auto bg-black pb-16">
-  <Header entity={data.entity} resourceType={routerState.resource} title={data.form.data.name || 'New'}/>
+  <Header entity={data.entity} resourceType={routerState.resource} {title} />
   <main class="flex flex-col p-6">
-    {#if Object.keys(FormContext.message).length > 0}<h3>{get(FormContext.message)}</h3>{/if}
-    <form method="POST" use:FormContext.enhance class="flex flex-col gap-6">
+    {#if Object.keys(message).length > 0}<h3>{get(message)}</h3>{/if}
+    <form method="POST" use:enhance class="flex flex-col gap-6">
       {#if routerState.facet === 'core' || routerState.facet === false}
-        <SectionI18n title="Descriptors" fields={FIELDS.i18n} facet={routerState.facet as string} {entity} resourceType={routerState.resource}  />
+        <SectionI18n
+          title="Descriptors"
+          fields={FIELDS.i18n as FormField}
+          facet={routerState.facet}
+          {entity}
+          resourceType={routerState.resource} />
       {:else}
         <h1>FACET NOT FOUND</h1>
       {/if}
