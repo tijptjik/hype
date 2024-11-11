@@ -14,20 +14,6 @@
     "modifiedAt": "2024-08-27T08:06:26.087Z"
   },
   {
-    "id": "0RASwODKHHqt",
-    "organisationId": "iLszdNS3w208",
-    "code": "hkstreetnames",
-    "name": "Hong Kong Street Names",
-    "nameShort": "HKStreetNames",
-    "description": "4.2% is an ongoing interactive data storytelling project exploring the odonymy and history of Hong Kong’s urban development.",
-    "license": "Copyright - Contact for License",
-    "attribution": "© Diana Pang",
-    "image": "https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=15",
-    "isPublished": true,
-    "createdAt": "2024-08-27T08:06:26.087Z",
-    "modifiedAt": "2024-08-27T08:06:26.087Z"
-  },
-  {
     "id": "Xk9Lm2PqRs3T",
     "organisationId": "oZTVNE4brR7m",
     "code": "hkbuildingage",
@@ -40,5 +26,47 @@
     "isPublished": false,
     "createdAt": "2024-10-11T10:15:30.000Z",
     "modifiedAt": "2024-10-11T10:15:30.000Z"
+  },
+  {
+    "id": "bN3Kw7MqPx5Y",
+    "organisationId": "iLszdNS3w208",
+    "code": "hk_odonymy",
+    "name": "Behind the Names",
+    "nameShort": "By Odonymy",
+    "description": "What can the streets of Hong Kong tell us about its culture and history? Explore the stories behind Hong Kong's street names.",
+    "license": "Copyright - Contact for License",
+    "attribution": "© Diana Pang",
+    "image": "https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=15",
+    "isPublished": true,
+    "createdAt": "2024-08-27T08:06:26.087Z",
+    "modifiedAt": "2024-08-27T08:06:26.087Z"
+  },
+  {
+    "id": "vR8Tm4HjLs2X",
+    "organisationId": "iLszdNS3w208",
+    "code": "hk_languages",
+    "name": "Foreign Influences",
+    "nameShort": "By Language",
+    "description": "Exploring the linguistic diversity in Hong Kong's street names and their cultural significance.",
+    "license": "Copyright - Contact for License",
+    "attribution": "© Diana Pang",
+    "image": "https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=15",
+    "isPublished": true,
+    "createdAt": "2024-08-27T08:06:26.087Z",
+    "modifiedAt": "2024-08-27T08:06:26.087Z"
+  },
+  {
+    "id": "gD6Yp9WkNm4Z",
+    "organisationId": "iLszdNS3w208",
+    "code": "hk_streetage",
+    "name": "Through Time",
+    "nameShort": "By Age",
+    "description": "A chronological journey through Hong Kong's street development and urban evolution.",
+    "license": "Copyright - Contact for License",
+    "attribution": "© Diana Pang",
+    "image": "https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=15",
+    "isPublished": true,
+    "createdAt": "2024-08-27T08:06:26.087Z",
+    "modifiedAt": "2024-08-27T08:06:26.087Z"
   }
 ]

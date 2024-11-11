@@ -11,39 +11,6 @@
     "isPublished": true
   },
   {
-    "id": "shmOuBSVStTJ",
-    "projectId": "0RASwODKHHqt",
-    "metadata": "{\\\"defaultEnabled\\\" : true,\\\"mlCluster\\\" : false,\\\"mlClusterRadius\\\" : 50,\\\"mlClusterMaxZoom\\\" : 14,\\\"mlClusterMinPoints\\\" : 2}",
-    "createdAt": "2024-08-28T18:55:30.371Z",
-    "modifiedAt": "2024-08-28T18:55:30.371Z",
-    "name": "Through the Years",
-    "nameShort": "By Age",
-    "description": "Animated history of the streets of Hong Kong",
-    "isPublished": true
-  },
-  {
-    "id": "Ks9Ht2LmNp",
-    "projectId": "0RASwODKHHqt",
-    "metadata": "{\\\"defaultEnabled\\\" : true,\\\"mlCluster\\\" : false,\\\"mlClusterRadius\\\" : 50,\\\"mlClusterMaxZoom\\\" : 14,\\\"mlClusterMinPoints\\\" : 2}",
-    "createdAt": "2024-03-14T12:00:00.000Z",
-    "modifiedAt": "2024-03-14T12:00:00.000Z",
-    "name": "Foreign Influence",
-    "nameShort": "By Language",
-    "description": "The not-so-English 'English' street names in HK",
-    "isPublished": false
-  },
-  {
-    "id": "Jx7Fy5RqTm",
-    "projectId": "0RASwODKHHqt",
-    "metadata": "{\\\"defaultEnabled\\\" : true,\\\"mlCluster\\\" : false,\\\"mlClusterRadius\\\" : 50,\\\"mlClusterMaxZoom\\\" : 14,\\\"mlClusterMinPoints\\\" : 2}",
-    "createdAt": "2024-03-14T12:00:00.000Z",
-    "modifiedAt": "2024-03-14T12:00:00.000Z",
-    "name": "Behind the Name",
-    "nameShort": "By Odonym",
-    "description": "What can the streets of Hong Kong tell us about its culture and history?",
-    "isPublished": true
-  },
-  {
     "id": "Qw3Er5TyUi",
     "projectId": "Xk9Lm2PqRs3T",
     "metadata": "{\\\"defaultEnabled\\\" : true,\\\"mlCluster\\\" : false,\\\"mlClusterRadius\\\" : 50,\\\"mlClusterMaxZoom\\\" : 14,\\\"mlClusterMinPoints\\\" : 2}",
@@ -53,5 +20,49 @@
     "nameShort": "BuildingAge",
     "description": "Visualizing the age of buildings across Hong Kong",
     "isPublished": false
+  },
+  {
+    "id": "mN9Kp4WxLs2",
+    "projectId": "bN3Kw7MqPx5Y",
+    "metadata": "{\\\"defaultEnabled\\\" : true,\\\"mlCluster\\\" : false,\\\"mlClusterRadius\\\" : 50,\\\"mlClusterMaxZoom\\\" : 14,\\\"mlClusterMinPoints\\\" : 2}",
+    "createdAt": "2024-08-28T18:55:30.371Z",
+    "modifiedAt": "2024-08-28T18:55:30.371Z",
+    "name": "People",
+    "nameShort": "People",
+    "description": "Explore the people behind Hong Kong street names",
+    "isPublished": true
+  },
+  {
+    "id": "hT5Ry7BvNm4",
+    "projectId": "bN3Kw7MqPx5Y",
+    "metadata": "{\\\"defaultEnabled\\\" : true,\\\"mlCluster\\\" : false,\\\"mlClusterRadius\\\" : 50,\\\"mlClusterMaxZoom\\\" : 14,\\\"mlClusterMinPoints\\\" : 2}",
+    "createdAt": "2024-08-28T18:55:30.371Z",
+    "modifiedAt": "2024-08-28T18:55:30.371Z",
+    "name": "Religion",
+    "nameShort": "Religion",
+    "description": "Explore the religion inspiration behind Hong Kong street names",
+    "isPublished": true
+  },
+  {
+    "id": "pL6Wj9QkMx5",
+    "projectId": "bN3Kw7MqPx5Y",
+    "metadata": "{\\\"defaultEnabled\\\" : true,\\\"mlCluster\\\" : false,\\\"mlClusterRadius\\\" : 50,\\\"mlClusterMaxZoom\\\" : 14,\\\"mlClusterMinPoints\\\" : 2}",
+    "createdAt": "2024-08-28T18:55:30.371Z",
+    "modifiedAt": "2024-08-28T18:55:30.371Z",
+    "name": "Places",
+    "nameShort": "Places",
+    "description": "Explore the places behind Hong Kong street names",
+    "isPublished": true
+  },
+  {
+    "id": "gD6Yp98kNm4Z",
+    "projectId": "bN3Kw7MqPx5Y",
+    "metadata": "{\\\"defaultEnabled\\\" : true,\\\"mlCluster\\\" : false,\\\"mlClusterRadius\\\" : 50,\\\"mlClusterMaxZoom\\\" : 14,\\\"mlClusterMinPoints\\\" : 2}",
+    "createdAt": "2024-08-28T18:55:30.371Z",
+    "modifiedAt": "2024-08-28T18:55:30.371Z",
+    "name": "Industry",
+    "nameShort": "Industry",
+    "description": "Explore the industry and companies behind Hong Kong street names",
+    "isPublished": true
   }
 ]

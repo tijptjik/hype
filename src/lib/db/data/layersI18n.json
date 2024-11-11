@@ -14,48 +14,6 @@
     "description": "香港鬼招牌的公开记录"
   },
   {
-    "layerId": "shmOuBSVStTJ",
-    "lang": "zh-hant",
-    "name": "歲月如梭",
-    "nameShort": "按年代",
-    "description": "香港街道的動畫歷史"
-  },
-  {
-    "layerId": "shmOuBSVStTJ",
-    "lang": "zh-hans",
-    "name": "岁月如梭",
-    "nameShort": "按年代",
-    "description": "香港街道的动画历史"
-  },
-  {
-    "layerId": "Ks9Ht2LmNp",
-    "lang": "zh-hant",
-    "name": "外來影響",
-    "nameShort": "按語言",
-    "description": "香港不太英語的「英文」街道名稱"
-  },
-  {
-    "layerId": "Ks9Ht2LmNp",
-    "lang": "zh-hans",
-    "name": "外来影响",
-    "nameShort": "按语言",
-    "description": "香港不太英语的'英文'街道名称"
-  },
-  {
-    "layerId": "Jx7Fy5RqTm",
-    "lang": "zh-hant",
-    "name": "名字背後",
-    "nameShort": "按地名學",
-    "description": "香港的街道能告訴我們什麼關於其文化和歷史？"
-  },
-  {
-    "layerId": "Jx7Fy5RqTm",
-    "lang": "zh-hans",
-    "name": "名字背后",
-    "nameShort": "按地名学",
-    "description": "香港的街道能告诉我们什么关于其文化和历史？"
-  },
-  {
     "layerId": "Qw3Er5TyUi",
     "lang": "zh-hant",
     "name": "建築年齡",
@@ -68,5 +26,47 @@
     "name": "建筑年龄",
     "nameShort": "建筑年龄",
     "description": "视觉化呈现香港各地建筑物的年龄"
+  },
+  {
+    "layerId": "mN9Kp4WxLs2",
+    "lang": "zh-hant",
+    "name": "街道起源",
+    "nameShort": "起源",
+    "description": "探索香港街道名稱的文化和歷史起源"
+  },
+  {
+    "layerId": "mN9Kp4WxLs2",
+    "lang": "zh-hans",
+    "name": "街道起源",
+    "nameShort": "起源",
+    "description": "探索香港街道名称的文化和历史起源"
+  },
+  {
+    "layerId": "hT5Ry7BvNm4",
+    "lang": "zh-hant",
+    "name": "語言分佈",
+    "nameShort": "語言",
+    "description": "繪製香港街道名稱中的語言多樣性"
+  },
+  {
+    "layerId": "hT5Ry7BvNm4",
+    "lang": "zh-hans",
+    "name": "语言分布",
+    "nameShort": "语言",
+    "description": "绘制香港街道名称中的语言多样性"
+  },
+  {
+    "layerId": "pL6Wj9QkMx5",
+    "lang": "zh-hant",
+    "name": "歷史時間線",
+    "nameShort": "時間線",
+    "description": "香港街道發展的時間軸視覺化"
+  },
+  {
+    "layerId": "pL6Wj9QkMx5",
+    "lang": "zh-hans",
+    "name": "历史时间线",
+    "nameShort": "时间线",
+    "description": "香港街道发展的时间轴视觉化"
   }
 ]
