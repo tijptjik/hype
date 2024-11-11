@@ -83,6 +83,8 @@ class BaseForm<T extends Record<string, unknown>> {
     // LOCAL VALIDATION
     if (!validatedForm.valid) {
       this.errors.set(validatedForm.errors);
+      console.error(validatedForm.errors);
+      console.error(validatedForm.data);
 
       cancel();
       // SERVER VALIDATION
