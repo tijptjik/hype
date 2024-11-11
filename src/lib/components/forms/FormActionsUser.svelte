@@ -2,10 +2,13 @@
 import { UserPlus, XMark } from '@steeze-ui/heroicons';
 import { Icon } from '@steeze-ui/svelte-icon';
 
+// TYPES
 // STATE : PROPS
 let {
   searchMode = $bindable(false),
-  removeMode = $bindable(false)
+  removeMode = $bindable(false),
+  entity,
+  resourceType
 } = $props();
 
 const toggleSearch = (e: Event) => {
@@ -20,7 +23,7 @@ const toggleRemoveMode = (e: Event) => {
 </script>
 
 <div>
-  {#if !searchMode}
+  {#if !searchMode && resourceType !== 'project'}
     <button class="btn-rounded btn btn-ghost ml-auto bg-base-100" onclick={toggleRemoveMode}>
       {#if !removeMode}
         <Icon src={UserPlus} class="mr-2 h-4 w-4" /> <span class="hidden md:block"> 

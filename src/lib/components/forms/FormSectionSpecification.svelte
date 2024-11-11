@@ -1,8 +1,9 @@
 <script lang="ts">
+import { getFieldComponent } from '$lib';
 // Components
 import Header from '$lib/components/forms/FormHeader.svelte';
 // Types
-import type { FormField, ResourceType, FalsableRef } from '$lib/types';
+import type { FormField, ResourceType, FalsableRef, FalsableFacetType } from '$lib/types';
 // Context
 import { getForm } from '$lib/context/forms.svelte';
 
@@ -10,19 +11,13 @@ import { getForm } from '$lib/context/forms.svelte';
 type Props = {
   title: string;
   fields: FormField;
-  facet: string;
+  facet: FalsableFacetType;
   entity: FalsableRef;
   resourceType: ResourceType;
 };
 
 // STATE : PROPS
-let {
-  title,
-  fields,
-  facet,
-  entity,
-  resourceType
-}: Props = $props();
+let { title, fields, facet, entity, resourceType }: Props = $props();
 
 // STATE : CONTEXT
 const { form, errors, constraints } = getForm(resourceType, entity);
@@ -34,8 +29,9 @@ const { form, errors, constraints } = getForm(resourceType, entity);
   <div class="flex flex-wrap items-baseline gap-4 p-4">
     <div class="group flex flex-grow flex-col gap-4">
       {#each Object.entries(fields) as [fieldId, field]}
+        {@const Field = getFieldComponent(field.component)}
         <div class="rounded-xl bg-base-100 px-6 py-2 pb-6 pt-4">
-          <field.component {fieldId} {field} {form} {constraints} {errors} {entity} {resourceType} />
+          <Field {fieldId} {field} {form} {constraints} {errors} {entity} {resourceType} />
         </div>
       {/each}
     </div>

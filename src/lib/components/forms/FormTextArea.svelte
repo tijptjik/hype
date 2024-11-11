@@ -1,16 +1,28 @@
 <script lang="ts">
 import Labels from './FormInputLabels.svelte';
+import type { InputConstraints } from 'sveltekit-superforms';
 
-let { id, value = $bindable(), constraints, isGenAI, languageTag } = $props();
+// PROPS
+type Props = {
+  id: string;
+  value: string;
+  placeholder?: string;
+  isGenAI: boolean;
+  languageTag: string;
+};
+
+let { id, value = $bindable(), placeholder, isGenAI, languageTag }: Props = $props();
+
+// SET PLACEHOLDER
+placeholder = placeholder ? placeholder : 'Type here';
 </script>
 
 <textarea
   {id}
   name={id}
   bind:value
-  {...constraints}
-  placeholder="Type here"
-  class="textarea w-full bg-neutral pl-4 pr-1 py-2 border-none focus:outline-none"
+  {placeholder}
+  class="textarea w-full border-none bg-neutral py-2 pl-4 pr-1 focus:outline-none"
   rows="4">
 </textarea>
 <Labels {isGenAI} {languageTag} absolute={true} />

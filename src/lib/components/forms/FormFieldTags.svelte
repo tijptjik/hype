@@ -6,26 +6,31 @@ import ErrorLabel from '$lib/components/forms/FormErrorLabel.svelte';
 // TYPES
 import type { InputConstraints, InputConstraint, ValidationErrors } from 'sveltekit-superforms';
 import type { Component } from 'svelte';
-import type { ResourceType, FalsableRef, FalsableFacetType, CustomPropertyType, LanguageTag, TargetLang } from '$lib/types';
+import type {
+  ResourceType,
+  FalsableRef,
+  FalsableFacetType,
+  FieldDiscriminator,
+  LanguageTag,
+  TargetLang
+} from '$lib/types';
 import type { Writable } from 'svelte/store';
-
+import type { FormFieldDefinition, Key } from '$lib/types';
 // TYPES
 type Props = {
   resourceType: ResourceType;
   entity: FalsableRef;
   facet: FalsableFacetType;
   languageTag: LanguageTag;
-  fieldId: string;
-  field: {
-    label: string;
-    component: Component;
-  };
+  fieldId: Key;
+  field: FormFieldDefinition;
   form: Writable<Form>;
   constraints?: Writable<InputConstraints<Record<string, InputConstraint>>>;
   errors?: Writable<ValidationErrors<Record<string, string>>>;
-  customPropertyType?: CustomPropertyType;
+  fieldDiscriminator?: FieldDiscriminator;
   customProperty?: string;
-  customPropertyKey?: string;
+  fieldIndex: number;
+  fieldKey?: Key;
 };
 
 // STATE : PROPS
@@ -39,50 +44,38 @@ let {
   form,
   constraints,
   errors,
-  customPropertyType,
+  fieldDiscriminator,
   customProperty,
-  customPropertyKey
+  fieldIndex,
+  fieldKey
 }: Props = $props();
-
-const isError = (languageTag: LanguageTag, fieldId: string) =>
-  (languageTag === 'core' && $errors?.[fieldId]) ||
-  (languageTag === 'en' && $errors?.[fieldId]) ||
-  $errors?.translations?.[languageTag as TargetLang]?.[fieldId];
-
-const getError = (languageTag: string, fieldId: string) => {
-  if (facet === 'config') {
-    return $errors?.[fieldId]?.[customPropertyType as CustomPropertyType][customProperty as string][customPropertyKey as string];
-  } else if (languageTag === 'core') {
-    return $errors?.[fieldId];
-  } else if (languageTag === 'en') {
-    return $errors?.[fieldId];
-  } else {
-    return $errors?.translations?.[languageTag]?.[fieldId];
-  }
-};
 </script>
 
-<label class="form-control w-full">
-  <div class="label text-sm">
-    <span class="label-text text-xs font-bold">{field.label}</span>
-    <span class="label-text-alt text-xs font-bold">
-      {#if facet === 'config'}
-        <!-- TODO - When https://github.com/ciscoheat/sveltekit-superforms/issues/447 is implemented in v3 revisit this and obtain the constraint from the constraint object -->
-        *
-      {:else}
-        {$constraints?.[fieldId]?.required ? '*' : ''}
-      {/if}
-    </span>
-  </div>
-  <div
-    class="flex items-center gap-2 rounded-lg border-1 border-transparent bg-neutral pl-2 pr-3 focus-within:outline focus-within:outline-1 focus-within:outline-neutral-500">
-    {#if facet == 'config'}
+{#if !field.isTranslated && languageTag !== 'core' && languageTag !== 'en'}
+  <!-- SPACER -->
+  <div class="h-[74px] w-full rounded-lg bg-neutral bg-opacity-10"></div>
+{:else}
+  <label class="form-control w-full">
+    <div class="label text-sm">
+      <span class="label-text text-xs font-bold">{field.label}</span>
+      <span class="label-text-alt text-xs font-bold">
+        {#if facet === 'fields'}
+          <!-- TODO - When https://github.com/ciscoheat/sveltekit-superforms/issues/447 is implemented in v3 revisit this and obtain the constraint from the constraint object -->
+          *
+        {:else}
+          {$constraints?.[fieldId]?.required ? '*' : ''}
+        {/if}
+      </span>
+    </div>
+    <div
+      class="flex items-center gap-2 rounded-lg border-1 border-transparent bg-neutral pl-2 pr-3 focus-within:outline focus-within:outline-1 focus-within:outline-neutral-500">
+      <!-- TODO Add Guard for field.isNested -->
+      <!-- {#if field.isNested} -->
       <Tags
-        id={`${fieldId}_${customPropertyType}_${customProperty}_${customPropertyKey}`}
-        bind:tags={$form[fieldId][customPropertyType as CustomPropertyType][customProperty as string][customPropertyKey as string]} />
-    {/if}
-  </div>
-  <ErrorLabel errors={$errors} {field} {languageTag} {fieldId} {fieldIndex} {fieldKey} />
+        id={`${fieldId}_${fieldDiscriminator}_${customProperty}_${fieldKey}`}
+        bind:tags={$form[fieldId][fieldIndex][fieldKey as string]} />
+      <!-- {/if} -->
+    </div>
+    <ErrorLabel errors={$errors} {field} {languageTag} {fieldId} {fieldIndex} {fieldKey} />
   </label>
-  {/if}
-</label>
+{/if}

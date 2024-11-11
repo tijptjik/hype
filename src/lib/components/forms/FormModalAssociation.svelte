@@ -1,14 +1,15 @@
 <script lang="ts">
 import { createEventDispatcher } from 'svelte';
 import { goto } from '$app/navigation';
-import { filteredResources, resources } from '$lib/stores/resources.svelte';
+import { filteredResources, resources, appMeta } from '$lib/stores/resources.svelte';
 import { page } from '$app/stores';
-import { navItems } from '$lib/stores/navigation.svelte';
-
 // COMPONENTS
+import { Icon } from '@steeze-ui/svelte-icon';
+import { Check } from '@steeze-ui/heroicons';
+import { navItems } from '$lib/stores/navigation.svelte';
 import FilterInput from '$lib/components/menu/FilterInput.svelte';
 // TYPES
-import type { ResourceType } from '$lib/types';
+import type { ResourceType, ApiEntity } from '$lib/types';
 
 // TYPES
 type Props = {
@@ -24,29 +25,39 @@ let selectedIndex = $state(-1);
 // PROPS
 let { parentResourceType, childResourceType }: Props = $props();
 
+// EVENTS
 const dispatch = createEventDispatcher();
 
-function close() {
+// UTILITIES
+const close = () => {
   isOpen = false;
   selectedItem = null;
-}
+};
 
-function handleSelect(item: any) {
+const handleSelect = (item: any) => {
   selectedItem = item;
 }
 
-function handleConfirm() {
+const getParentRefKey = (parentResourceType: ResourceType) => {
+  return {
+    organisation: 'code',
+    project: 'code',
+    layer: 'code',
+    feature: 'id'
+  }[parentResourceType];
+};
+
+const handleConfirm = () => {
   if (!selectedItem) return;
 
   const url = new URL(window.location.href);
   url.pathname = `/admin/${childResourceType}s/new`;
-  url.searchParams.set(`${parentResourceType}Id`, selectedItem.id);
-
+  appMeta.context.parentRef = selectedItem.ref;
   close();
   goto(url.toString());
-}
+};
 
-function handleKeydown(event: KeyboardEvent) {
+const handleKeydown = (event: KeyboardEvent) => {
   if (!filteredResources[parentResourceType]?.length) return;
   
   const items = filteredResources[parentResourceType];
@@ -85,8 +96,7 @@ function handleKeydown(event: KeyboardEvent) {
 }
 
 // Reset selectedIndex when modal opens
-function open() {
-  console.log('LESGO', parentResourceType);
+const open = () => {
   fetchResources(parentResourceType);
   selectedIndex = -1;
   isOpen = true;
@@ -189,19 +199,8 @@ export const toEntity = (apiEntity: ApiEntity) => {
                   handleSelect(item);
                 }}>
                 <span>{item.name || item.title}</span>
-                {#if selectedItem?.id === item.id}
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    class="h-5 w-5" 
-                    viewBox="0 0 20 20" 
-                    fill="currentColor"
-                  >
-                    <path 
-                      fill-rule="evenodd" 
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" 
-                      clip-rule="evenodd" 
-                    />
-                  </svg>
+                {#if selectedItem?.id === item.id }
+                  <Icon src={Check} class="w-5 h-5" />
                 {/if}
               </button>
             </li>

@@ -1,5 +1,13 @@
 <script lang="ts">
-const { isGenAI, languageTag, absolute = false } = $props();
+
+// TYPES
+type Props = {
+  isGenAI: boolean;
+  languageTag: string;
+  absolute?: boolean;
+};
+
+const { isGenAI, languageTag, absolute = false }: Props = $props();
 </script>
 
 {#snippet label(text: string, badgeType: string = 'ghost')}

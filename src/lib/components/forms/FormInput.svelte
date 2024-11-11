@@ -1,14 +1,14 @@
 <script lang="ts">
 import Labels from './FormInputLabels.svelte';
-// TYPES
-import type { InputConstraints, InputConstraint } from 'sveltekit-superforms';
 
 // PROPS
 type Props = {
   id: string;
   value: string;
+  placeholder?: string;
   isGenAI?: boolean;
   languageTag?: string;
+  isTranslated?: boolean;
   inputType?: string;
 };
 
@@ -16,20 +16,24 @@ type Props = {
 let {
   id,
   value = $bindable(),
+  placeholder,
   isGenAI = false,
   languageTag = 'core',
+  isTranslated = false,
   inputType = 'text'
 }: Props = $props();
 
-</script>
+// SET PLACEHOLDER
+placeholder = placeholder ? placeholder : inputType === 'text' ? 'Type here' : 'Set number';
 
+</script>
 <input
   {id}
   type={inputType}
   name={id}
   bind:value
-  placeholder={inputType === 'text' ? 'Type here' : 'Set number'}
+  {placeholder}
   class="w-full rounded-md bg-neutral p-2 focus:border-none focus:outline-none" />
-{#if isGenAI || languageTag !== 'core'}
+{#if (isGenAI || languageTag !== 'core') && isTranslated}
   <Labels {isGenAI} {languageTag} />
 {/if}

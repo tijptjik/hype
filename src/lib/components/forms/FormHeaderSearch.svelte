@@ -4,6 +4,7 @@ import { MagnifyingGlass, XMark, ChevronRight } from '@steeze-ui/heroicons';
 import { Icon } from '@steeze-ui/svelte-icon';
 // CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
+import { get } from 'svelte/store';
 
 // TYPES
 import type { User, Project, Layer, ResourceType, FalsableRef } from '$lib/types';
@@ -14,8 +15,8 @@ type Props = {
   searchMode: boolean;
   apiPath: string;
   destination: string;
-  toItem: (item: ResultType) => object;
-  itemRef: 'id' | 'code';
+  toItem?: (item: ResultType) => object;
+  itemRef?: 'id' | 'code';
   entity: FalsableRef;
   resourceType: ResourceType;
 };
@@ -25,11 +26,19 @@ let {
   searchMode = $bindable<boolean>(false),
   apiPath = 'users',
   destination = 'userRoles',
-  toItem = (item: ResultType) => ({
-    organisationId: $form.id,
-    role: 'member',
-    user: item
-  }),
+  toItem = (item: ResultType) => {
+    let newItem = {
+      userId: item.id,
+      role: 'member',
+      user: item
+    };
+    const formId = resourceType === 'project' ? 'projectId' : 'organisationId';
+    newItem = {
+      ...newItem,
+      [formId]: $form.id
+    };
+    return newItem;
+  },
   itemRef = 'id',
   entity,
   resourceType
@@ -46,22 +55,22 @@ let searchResults = $state<ResultType[]>([]);
 
 const handleInputKeydown = (event: KeyboardEvent) => {
   if (event.key === 'Escape') {
-    if (searchQuery === "") {
+    if (searchQuery === '') {
       searchMode = !searchMode;
-    } 
+    }
     resetInput(event);
   } else if ((event.key === 'Tab' || event.key === 'ArrowDown') && searchResults.length > 0) {
     event.preventDefault();
     // TODO Understand why this doesn't work - input is not focusable
     document.getElementById('search-results')?.querySelector('button')?.focus();
-  } 
-}
+  }
+};
 
 const handleInputKeyup = () => {
   if (searchQuery) {
-    search()
+    search();
   }
-}
+};
 
 const handleResultKeydown = (event: KeyboardEvent) => {
   if (event.key === 'Escape') {
@@ -70,14 +79,18 @@ const handleResultKeydown = (event: KeyboardEvent) => {
     (event.currentTarget as HTMLElement).click();
   } else if (event.key === 'ArrowDown') {
     event.preventDefault();
-    const nextItem = (event.currentTarget as HTMLElement).closest('li')?.nextElementSibling?.querySelector('button');
+    const nextItem = (event.currentTarget as HTMLElement)
+      .closest('li')
+      ?.nextElementSibling?.querySelector('button');
     nextItem?.focus();
   } else if (event.key === 'ArrowUp') {
     event.preventDefault();
-    const prevItem = (event.currentTarget as HTMLElement).closest('li')?.previousElementSibling?.querySelector('button');
+    const prevItem = (event.currentTarget as HTMLElement)
+      .closest('li')
+      ?.previousElementSibling?.querySelector('button');
     prevItem?.focus();
   }
-}
+};
 
 // UTILS
 
@@ -92,16 +105,20 @@ async function search(minChars = 2) {
   // TODO Add the projectId to the query when used for projects
   const response = await fetch(`/api/${apiPath}?q=${encodeURIComponent(searchQuery)}`);
   const allResults: ResultType[] = await response.json();
-  searchResults = allResults.filter((item) => !$form[destination][item[itemRef]]);
+
+  searchResults = allResults.filter((item) => {
+    return !$form[destination].some((existingItem) => existingItem[itemRef] === item[itemRef]);
+  });
 }
 
 const addItem = (e: Event, item: ResultType) => {
   e.preventDefault();
-  $form[destination] = {
-    ...$form[destination],
-    [item[itemRef]]: toItem(item)
-  };
-  // searchMode = false;
+  form.update(($form) => {
+    const newItem = toItem(item);
+    $form[destination] = [...$form[destination], newItem];
+    return $form;
+  });
+
   resetInput(e);
   document.getElementById('search')?.focus();
 };
@@ -114,24 +131,21 @@ const resetInput = (e: Event) => {
 };
 
 const resetResults = () => (searchResults = []);
-
-
 </script>
 
-<div transition:slide={{ duration: 2000 }} class="bg-base-200 relative" class:hidden={!searchMode}>
+<div transition:slide={{ duration: 2000 }} class="relative bg-base-200" class:hidden={!searchMode}>
   <div class="form-control">
     <div class="input-group relative">
       <input
         id="search"
         type="text"
         placeholder={`Search ${apiPath}...`}
-        class="input m-0 w-full h-12 rounded-none bg-neutral px-6 pr-10 text-sm focus:border-none focus:outline-none"
+        class="input m-0 h-12 w-full rounded-none bg-neutral px-6 pr-10 text-sm focus:border-none focus:outline-none"
         bind:value={searchQuery}
         onkeydown={(e) => handleInputKeydown(e)}
         onkeyup={(e) => handleInputKeyup(e)}
         autocomplete="off"
-        use:focusOnMount
-      />
+        use:focusOnMount />
       <div class="absolute inset-y-0 right-2 flex items-center pr-3">
         {#if !searchQuery}
           <Icon src={MagnifyingGlass} class="h-6 w-6" />
@@ -144,11 +158,11 @@ const resetResults = () => (searchResults = []);
     </div>
   </div>
   {#if searchResults.length > 0}
-    <div 
-      class="absolute w-full z-10"
-      transition:slide={{ duration: 200 }}
-    >
-      <ul id="search-results" class="menu w-full bg-base-100 shadow-lg overflow-y-auto max-h-64 rounded-b-lg" role="listbox">
+    <div class="absolute z-10 w-full" transition:slide={{ duration: 200 }}>
+      <ul
+        id="search-results"
+        class="menu max-h-64 w-full overflow-y-auto rounded-b-lg bg-base-100 shadow-lg"
+        role="listbox">
         {#each searchResults as item, index}
           <li>
             <button
@@ -156,8 +170,7 @@ const resetResults = () => (searchResults = []);
               onclick={(e) => addItem(e, item)}
               role="option"
               tabindex="0"
-              onkeydown={(e) => handleResultKeydown(e)}
-            >
+              onkeydown={(e) => handleResultKeydown(e)}>
               <Icon src={ChevronRight} class="h-4 w-4" />
               {item.name}
             </button>

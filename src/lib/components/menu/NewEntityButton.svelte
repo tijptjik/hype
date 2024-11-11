@@ -20,12 +20,10 @@ function handleModalReady(event: CustomEvent) {
 }
 
 const onclick = (e: MouseEvent) => {
-    console.log('onclick', props.resourceType);
     e.preventDefault();
     
     // If this resource type requires a parent association, show the modal
     if (requiresParentAssociation(props.resourceType)) {
-      console.log('requiresParentAssociation', props.resourceType);
         modalOpen?.();
         return;
     }

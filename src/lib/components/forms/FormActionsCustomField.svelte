@@ -1,19 +1,23 @@
 <script lang="ts">
 import { QueueList, XMark } from '@steeze-ui/heroicons';
 import { Icon } from '@steeze-ui/svelte-icon';
-import { slide } from 'svelte/transition';
 // TYPES
+import type { FalsableRef, ResourceType } from '$lib/types';
 type Props = {
-  searchMode: boolean;
-  removeMode: boolean;
-  actions: Record<string, () => void>;
+  searchMode?: boolean;
+  removeMode?: boolean;
+  actions: Record<string, (...args: any[]) => void>;
+  entity?: FalsableRef;
+  resourceType?: ResourceType;
 };
 
 // STATE : PROPS
 let {
   searchMode = $bindable(false),
   removeMode = $bindable(false),
-  actions
+  actions,
+  entity,
+  resourceType
 }: Props = $props();
 
 let showWarning = $state(false);

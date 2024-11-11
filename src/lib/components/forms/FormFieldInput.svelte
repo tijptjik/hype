@@ -5,132 +5,116 @@ import ErrorLabel from '$lib/components/forms/FormErrorLabel.svelte';
 
 // TYPES
 import type { InputConstraints, InputConstraint, ValidationErrors } from 'sveltekit-superforms';
-import type { Component } from 'svelte';
-import type { ResourceType, FalsableRef, FalsableFacetType, CustomPropertyType } from '$lib/types';
+import type { FormFieldExtendedDefinition } from '$lib/types';
+import type { ResourceType, FalsableRef, FalsableFacetType, FieldDiscriminator } from '$lib/types';
+import type { Writable } from 'svelte/store';
+import type { LanguageTag, Key, InputType } from '$lib/types';
 
 // TYPES
 type Props = {
   resourceType: ResourceType;
   entity: FalsableRef;
   facet: FalsableFacetType;
-  languageTag: string;
-  fieldId: string;
-  field: {
-    label: string;
-    component: Component;
-  };
-  form: Form;
-  constraints?: InputConstraints<Record<string, InputConstraint>>;
-  errors?: ValidationErrors<Record<string, string>>;
-  customPropertyType?: CustomPropertyType;
-  customProperty?: string;
-  customPropertyKey?: string;
-  inputType?: 'text' | 'number' | 'email' | 'password';
+  languageTag: LanguageTag;
+  fieldId: Key;
+  field: FormFieldExtendedDefinition;
+  fieldIndex: number;
+  fieldDiscriminator?: FieldDiscriminator;
+  fieldKey?: Key;
+  form: Writable<Form>;
+  constraints?: Writable<InputConstraints<Record<string, InputConstraint>>>;
+  errors?: Writable<ValidationErrors<Record<string, string>>>;
 };
 
 // STATE : PROPS
 let {
   resourceType,
-  entity,
-  facet,
   languageTag = 'core',
   fieldId,
+  fieldIndex,
+  fieldDiscriminator,
+  fieldKey,
   field,
   form,
   constraints,
   errors,
-  customPropertyType,
-  customProperty,
-  customPropertyKey,
-  inputType = 'text'
 }: Props = $props();
 
-const isError = (languageTag: string, fieldId: string) =>
-  (languageTag === 'core' && $errors[fieldId]) ||
-  (languageTag === 'en' && $errors[fieldId]) ||
-  $errors.translations?.[languageTag]?.[fieldId];
-
-const getError = (languageTag: string, fieldId: string) => {
-  if (facet === 'config') {
-    return $errors[fieldId][customPropertyType][customProperty][customPropertyKey];
-  } else if (languageTag === 'core') {
-    return $errors[fieldId];
-  } else if (languageTag === 'en') {
-    return $errors[fieldId];
-  } else {
-    return $errors.translations?.[languageTag]?.[fieldId];
+const getId = () => {
+  if (field.isNested) {
+    return `${fieldId}_${fieldDiscriminator}_${fieldIndex}_${fieldKey}_${languageTag}`;
   }
-};
-
-const isGenAI = (fieldId: string) => {
-  if (languageTag == 'core') {
-    return false;
-  } else if (resourceType === 'feature') {
-    if (languageTag == 'en') {
-      return $form.properties[`${fieldId}Gen`] === true;
-    } else {
-      return $form.properties[`${fieldId}Gen_${languageTag}`] === true;
-    }
-  } else {
-    if (languageTag === 'en') {
-      return $form[`${fieldId}Gen`] === true;
-    } else {
-      return $form.translations[languageTag][`${fieldId}Gen`] === true;
-    }
-  }
+  return `${fieldId}_${languageTag}`;
 };
 </script>
 
-<label class="form-control w-full">
-  <div class="label text-sm">
+{#if !field.isTranslated && (languageTag !== 'core' && languageTag !== 'en')}
+  <!-- SPACER -->
+  <div class="h-[74px] w-full bg-opacity-10 bg-neutral rounded-lg"></div>
+{:else}
+  <label class="form-control w-full">
+    <div class="label text-sm">
     <span class="label-text text-xs font-bold">{field.label}</span>
     <span class="label-text-alt text-xs font-bold">
-      {#if facet === 'config'}
-        <!-- TODO - When https://github.com/ciscoheat/sveltekit-superforms/issues/447 is implemented in v3 revisit this and obtain the constraint from the constraint object -->
-        *
+      {#if field.isNested}
+        {$constraints?.[fieldId]?.[fieldIndex]?.[fieldKey]?.required ? '*' : ''}
       {:else}
-        {$constraints[fieldId]?.required ? '*' : ''}
+        {$constraints?.[fieldId]?.required ? '*' : ''}
       {/if}
     </span>
   </div>
-  <div
-  class="flex items-center gap-2 rounded-lg border-1 border-transparent bg-neutral pl-2 pr-3 focus-within:outline focus-within:outline-1 focus-within:outline-neutral-500">
-  {#if facet == 'config'}
-      <FormInput
-        bind:value={$form[fieldId][customPropertyType][customProperty][customPropertyKey]}
-        id={`${fieldId}_${customPropertyType}_${customProperty}_${customPropertyKey}`}
-        {inputType} />
-    {:else if resourceType !== 'feature'}
+  <div class="flex items-center gap-2 rounded-lg border-1 border-transparent bg-neutral pl-2 pr-3 focus-within:outline focus-within:outline-1 focus-within:outline-neutral-500">
+    {#if field.isNested}
       {#if languageTag === 'core' || languageTag === 'en'}
-        <FormInput
-          bind:value={$form[fieldId]}
-          id={`${fieldId}_${languageTag}`}
-          isGenAI={isGenAI(fieldId)}
+          <FormInput
+          bind:value={$form[fieldId][fieldIndex][fieldKey]}
+          id={getId()}
           {languageTag}
-          {inputType} />
+          {...field}
+          isGenAI={$form[fieldId][fieldIndex][`${fieldKey}Gen`]} />
       {:else}
         <FormInput
-          bind:value={$form.translations[languageTag][fieldId]}
-          id={`${fieldId}_${languageTag}`}
-          isGenAI={isGenAI(fieldId)}
+          bind:value={$form[fieldId][fieldIndex]['translations'][languageTag][fieldKey]}
+          id={getId()}
           {languageTag}
-          {inputType} />
+          {...field}
+          isGenAI={$form[fieldId][fieldIndex]['translations'][languageTag][`${fieldKey}Gen`]} />
       {/if}
-    {:else if languageTag === 'core' || languageTag === 'en'}
-      <FormInput
-        bind:value={$form.properties[fieldId]}
-        id={`${fieldId}_${languageTag}`}
-        isGenAI={isGenAI(fieldId)}
-        {languageTag}
-        {inputType} />
     {:else}
-      <FormInput
-        bind:value={$form.properties[`${fieldId}_${languageTag}`]}
-        id={`${fieldId}_${languageTag}`}
-        isGenAI={isGenAI(fieldId)}
-        {languageTag}
-        {inputType} />
+      {#if resourceType !== 'feature'}
+        {#if languageTag === 'core' || languageTag === 'en'}
+          <FormInput
+            bind:value={$form[fieldId]}
+            id={getId()}
+            {languageTag}
+            {...field}
+            isGenAI={$form[`${fieldId}Gen`]} />
+        {:else}
+          <FormInput
+            bind:value={$form.translations[languageTag][fieldId]}
+            id={getId()}
+            {languageTag}
+            {...field}
+            isGenAI={$form.translations[languageTag][`${fieldId}Gen`]} />
+        {/if}
+      {:else if languageTag === 'core' || languageTag === 'en'}
+        <FormInput
+          bind:value={$form.properties[fieldId]} 
+          id={getId()}
+          {languageTag}
+          {...field}
+          isGenAI={$form.properties[`${fieldId}Gen`]} />
+      {:else}
+        <FormInput
+          bind:value={$form.properties[`${fieldId}_${languageTag}`]}
+          id={getId()}
+          {languageTag}
+          {...field}
+          isGenAI={$form.properties[`${fieldId}_${languageTag}Gen`]} />
+           />
+      {/if}
     {/if}
   </div>
   <ErrorLabel errors={$errors} {field} {languageTag} {fieldId} {fieldIndex} {fieldKey} />
 </label>
+{/if}

@@ -10,7 +10,7 @@ import { getForm } from '$lib/context/forms.svelte';
 // TYPES
 import type { Component } from 'svelte';
 import type { Writable } from 'svelte/store';
-import type { FormField, ResourceType, FalsableRef, FalsableFacetType } from '$lib/types';
+import type { FormField, FormFieldArray, FormFieldArrayDefinition, ResourceType, FalsableRef, FalsableFacetType } from '$lib/types';
 
 // TYPES
 type Props = {
@@ -19,18 +19,25 @@ type Props = {
   Actions?: Component<{
     searchMode?: boolean;
     removeMode?: boolean;
-    actions?: Record<string, () => void>;
-    entity: FalsableRef;
-    resourceType: ResourceType;
   }>;
-  actions?: Record<string, () => void>;
+  actions?: Record<string, (...args: any[]) => void>;
   actionProps?: Record<string, any>;
   Info?: Component;
-  fields?: FormField;
+  fields?: FormField | FormFieldArray | FormFieldArrayDefinition;
   errors?: Writable<Record<string, Record<string, string | string[]>>>;
   facet?: FalsableFacetType;
   entity: FalsableRef;
   resourceType: ResourceType;
+};
+
+// CONFIG
+
+let getWarningMessage = () => {
+  console.log('FACET', facet, entity);
+  if (facet === 'fields') {
+    return 'You are about to be VERY SAD if you accidentally remove a field. ';
+  }
+  return 'If you remove yourself as member or owner, you will lose edit or access rights respectively';
 };
 
 // STATE : PROPS
@@ -38,11 +45,11 @@ let {
   title,
   subtitle,
   Actions,
-  actions,
   actionProps = $bindable({
     searchMode: false,
     removeMode: false
   }),
+  actions,
   Info,
   fields,
   errors,
@@ -101,18 +108,12 @@ $effect(() => {
     bind:searchMode={actionProps.searchMode}
     apiPath="users"
     destination={Object.keys(fields ?? {})[0]}
-    toItem={(item) => ({
-      organisationId: $form.id,
-      role: 'member',
-      user: item
-    })}
-    itemRef="id"
     {entity}
     {resourceType} />
   {#if actionProps.removeMode}
     <div transition:slide={{ duration: 200 }} class="alert rounded-none border-0 border-b-4 border-warning w-full">
       <Icon src={ExclamationTriangle} class="h-6 w-6 shrink-0 stroke-current" />
-      <span><span class="font-bold text-warning">Warning:</span> {facet === 'config' ? 'Removing fields will delete all associated feature values' : 'If you remove yourself as member or owner, you will lose edit or access rights respectively'}</span>
+      <span><span class="font-bold text-warning">Warning:</span> {getWarningMessage()}</span>
     </div>
   {/if}
 </div>
