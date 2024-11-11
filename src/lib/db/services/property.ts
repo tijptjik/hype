@@ -7,12 +7,12 @@ import type {
   Id,
   NewProperty,
   Property,
-  PropertyI18nDB,
   NewPropertyValue,
   PropertyValue,
   PropertyValueI18n,
-  PropertyValueI18nDB,
-  PropertyValueDB
+  PropertyValueDB,
+  FormRelatedProperties
+  
 } from '$lib/types';
 import { error } from '@sveltejs/kit';
 import { and, eq, inArray } from 'drizzle-orm';
@@ -21,6 +21,7 @@ import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { property, propertyI18n, propertyValue, propertyValueI18n } from '../schema';
 import { PropertyInsert, PropertyUpdate, PropertyUpdateAPI } from '../zod';
+import { toNestedTranslations } from '..';
 
 export type Database = DrizzleD1Database<typeof import('/home/io/code/ghostsigns/src/lib/db/schema')>;
 
@@ -87,7 +88,7 @@ export const createPropertyValues = async (
     id
   }));
 
-  n await db.insert(propertyValue).values(valuesToInsert).returning();
+  return await db.insert(propertyValue).values(valuesToInsert).returning();
 };
 
 export const updatePropertyValues = async (
@@ -105,8 +106,9 @@ export const updatePropertyValues = async (
   const existingIds = new Set(existingValues.map(v => v.id));
   const newIds = new Set(Object.keys(values));
 
-  // Determine which records to add and remove
+  // Determine which records to add, update, and remove
   const idsToAdd = [...newIds].filter(id => !existingIds.has(id));
+  const idsToUpdate = [...newIds].filter(id => existingIds.has(id));
   const idsToRemove = [...existingIds].filter(id => !newIds.has(id));
 
   // Remove records that are no longer present
@@ -115,10 +117,10 @@ export const updatePropertyValues = async (
       .delete(propertyValue)
       .where(
         and(
-        eq(propertyValue.propertyId, propertyId),
-        inArray(propertyValue.id, idsToRemove)
-      )
-    );
+          eq(propertyValue.propertyId, propertyId),
+          inArray(propertyValue.id, idsToRemove)
+        )
+      );
   }
 
   // Add new records
@@ -130,6 +132,19 @@ export const updatePropertyValues = async (
     }));
     await db.insert(propertyValue).values(valuesToInsert);
   }
+
+  // Update existing records
+  await Promise.all(
+    idsToUpdate.map(async (id) => {
+      await db
+        .update(propertyValue)
+        .set({
+          ...values[id],
+          propertyId
+        })
+        .where(eq(propertyValue.id, id));
+    })
+  );
 
   // Return all current values
   return await db
@@ -172,9 +187,9 @@ export const updatePropertyValueTranslations = async (
 export const extractEntitiesToInsert = (formData: NewProperty) => {
   const baseProperty = PropertyInsert.parse(formData);
   const formTranslations: Record<TargetLang, NewPropertyI18n> = formData.translations;
-  const formValues: Record<Id, NewPropertyValue> = formData.values;
-  const formValueTranslations: Record<Id, Record<TargetLang, PropertyValueI18n>> = 
-    formData.valuesTranslations;
+  const formValues: NewPropertyValue[] = formData.values;
+  const formValueTranslations: PropertyValueI18n[] = 
+    formData.values.map(value => Object.values(value.translations)).flat();
   
   return { baseProperty, formTranslations, formValues, formValueTranslations };
 };
@@ -182,45 +197,171 @@ export const extractEntitiesToInsert = (formData: NewProperty) => {
 export const extractEntitiesToUpdate = (formData: Property) => {
   const baseProperty = PropertyUpdate.parse(formData);
   const formTranslations: Record<TargetLang, PropertyI18n> = formData.translations;
-  const formValues: Record<Id, PropertyValue> = formData.values;
-  const formValueTranslations: Record<Id, Record<TargetLang, PropertyValueI18n>> = 
-    formData.valuesTranslations;
+  const formValues: PropertyValue[] = formData.values;
+  const formValueTranslations: PropertyValueI18n[] = 
+  formData.values.map(value => Object.values(value.translations)).flat();
   
   return { baseProperty, formTranslations, formValues, formValueTranslations };
 };
 
 export const rebuildFormData = async (
   property: PropertyDB,
-  translations: PropertyI18nDB[],
+  translations: PropertyI18n[],
   values: PropertyValueDB[],
-  valueTranslations: PropertyValueI18nDB[]
+  valueTranslations: PropertyValueI18n[]
 ) => {
-  const formTranslations = translations.reduce(
-    (acc: Record<string, Record<string, any>>, translation: Record<string, any>) => {
-      const { lang, ...translationWithoutLang } = translation;
-      acc[lang] = translationWithoutLang;
-      return acc;
-    },
-    {}
-  ) as Record<TargetLang, PropertyI18n>;
-
-  const formValueTranslations = valueTranslations.reduce(
-    (acc: Record<string, Record<string, Record<string, any>>>, translation: Record<string, any>) => {
-      const { propertyValueId, lang, ...translationData } = translation;
-      acc[propertyValueId] = acc[propertyValueId] || {};
-      acc[propertyValueId][lang] = translationData;
-      return acc;
-    },
-    {}
-  ) as Record<string, Record<TargetLang, PropertyValueI18n>>;
-
   return await superValidate(
     {
       ...property,
-      translations: formTranslations,
       values,
-      valueTranslations: formValueTranslations
+      translations: toNestedTranslations<PropertyI18n>(translations)
     },
     zod(PropertyUpdateAPI)
   );
+};
+
+// Add these utility functions
+const getExistingProperties = async (db: Database, projectId: string) => {
+  const result = await db.query.property.findMany({
+    where: eq(property.projectId, projectId),
+    with: {
+      translations: true,
+      values: {
+        with: {
+          translations: true
+        }
+      }
+    }
+  });
+
+  return result.map(prop => ({
+    ...prop,
+    translations: toNestedTranslations<PropertyI18n>(prop.translations),
+    values: prop.values.map(val => ({
+      ...val,
+      translations: toNestedTranslations<PropertyValueI18n>(val.translations)
+    }))
+  }));
+};
+
+const compareAndGroupProperties = (existing: Property[], incoming: Property[]) => {
+  const existingIds = new Set(existing.map(p => p.id));
+  const incomingIds = new Set(incoming.map(p => p.id));
+
+  return {
+    toDelete: existing.filter(p => !incomingIds.has(p.id)),
+    toCreate: incoming.filter(p => !p.id || !existingIds.has(p.id)),
+    toUpdate: incoming.filter(p => p.id && existingIds.has(p.id))
+  };
+};
+
+export const upsertRelatedProperties = async (
+  db: Database, 
+  properties: Property[]|NewProperty[], 
+  projectId: string
+): Promise<Property[]> => {
+  // Get all existing properties with their relations
+  const existingProperties = await getExistingProperties(db, projectId);
+  // Group properties by operation needed
+  const { toDelete, toCreate, toUpdate } = compareAndGroupProperties(existingProperties, properties);
+
+  // Delete removed properties (cascades to related tables)
+  if (toDelete.length > 0) {
+    await db
+      .delete(property)
+      .where(and(
+        eq(property.projectId, projectId),
+        inArray(property.id, toDelete.map(p => p.id))
+      ));
+  }
+
+  // Create new properties
+  const createdProperties = await Promise.all(
+    toCreate.map(async (prop) => {
+      // Create base property
+      const newProp = await createProperty(db, {
+        ...PropertyInsert.parse(prop),
+        projectId
+      });
+
+      // Create translations
+      const translations = await createTranslations(db, prop.translations, newProp.id);
+
+      // Create values and their translations
+      const values = await Promise.all(prop.values.map(async (val) => {
+        const newValue = await db
+          .insert(propertyValue)
+          .values({ ...val, propertyId: newProp.id })
+          .returning()
+          .then(([v]) => v);
+
+        const valueTranslations = await createPropertyValueTranslations(
+          db,
+          { [newValue.id]: val.translations },
+          [newValue.id]
+        );
+
+        return { ...newValue, translations: toNestedTranslations(valueTranslations) };
+      }));
+
+      return {
+        ...newProp,
+        translations: toNestedTranslations(translations),
+        values
+      };
+    })
+  );
+
+  // Update existing properties
+  const updatedProperties = await Promise.all(
+    toUpdate.map(async (prop) => {
+      // Update base property
+      const updatedProp = await updateProperty(db, PropertyUpdate.parse(prop), prop.id);
+
+      // Update translations
+      const translations = await updateTranslations(db, prop.translations, prop.id);
+
+      // Update values and their translations
+      const values = await updatePropertyValues(db, 
+        prop.values.reduce((acc, val) => ({ ...acc, [val.id]: val }), {}), 
+        prop.id
+      );
+
+      // Update value translations
+      const valueTranslations = await Promise.all(
+        values.map(async (val) => {
+          const matchingValue = prop.values.find(v => v.id === val.id);
+          if (matchingValue) {
+            return await updatePropertyValueTranslations(
+              db,
+              { [val.id]: matchingValue.translations },
+              [val.id]
+            );
+          }
+          return [];
+        })
+      );
+
+      return {
+        ...updatedProp,
+        translations: toNestedTranslations(translations),
+        values: values.map((val, idx) => ({
+          ...val,
+          translations: toNestedTranslations(valueTranslations[idx])
+        }))
+      };
+    })
+  );
+
+  // Return combined results
+  return [...createdProperties, ...updatedProperties];
+};
+
+// Replace the existing implementations with calls to upsertRelatedProperties
+export const createRelatedProperties = (db: Database, properties: NewProperty[], projectId: string) => {
+  return upsertRelatedProperties(db, properties, projectId);
+};
+
+export const updateRelatedProperties = (db: Database, properties: Property[], projectId: string) => {
+  return upsertRelatedProperties(db, properties, projectId);
 };

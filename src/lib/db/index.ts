@@ -280,9 +280,7 @@ const applyFilterConstraints = (
 const applyQueryConstraints = (table: Table, query: string, filterFields: string[]) => {
   if (!query) return [];
   const results = or(
-    ...filterFields.map(
-      (field) => sql`${table[field]} LIKE ${'%' + query.replace('%', '') + '%'}`
-    )
+    ...filterFields.map((field) => sql`${table[field]} LIKE ${'%' + query.replace('%', '') + '%'}`)
   );
   return results;
 };
@@ -299,9 +297,7 @@ export async function genericResourceQuery(
   const conditions = [];
 
   if (query) {
-    conditions.push(
-      applyQueryConstraints(table, query, filterFields)
-    );
+    conditions.push(applyQueryConstraints(table, query, filterFields));
   }
 
   return await db.query[getTableName(table)].findMany({
@@ -418,12 +414,11 @@ export async function hierarchicalEntityQuery<usersT extends Table, translations
   if (ref == 'new') {
     throw new Error('The old shall never be new again');
   }
-  
+
   const slicedHierarchy = resourceHierarchy.slice(-depth, resourceHierarchy.length);
   const conditions = [
     eq(getTable(slicedHierarchy, 0)[publicIdentifier], ref),
-    ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId)
-  ];
+    ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId)];
 
   if (translationTable) {
     conditions.push(...applyTranslationCondition(db, slicedHierarchy, translationTable));
@@ -437,18 +432,18 @@ export async function hierarchicalEntityQuery<usersT extends Table, translations
   });
 
   if (!result) {
-    return error(401, 'Doors have ears, but they haven\'t ever heard of this.');
+    return error(401, "Doors have ears, but they haven't ever heard of this.");
   }
 
   result = processTranslations<Translation>(result, selectTableRelations);
-  
+
   return result;
 }
 
 function processTranslations<T extends Translation>(
-  data: Record<string, any>, 
+  data: Record<string, any>,
   relations: NestedRelations
-  ): Record<string, any> {
+): Record<string, any> {
   if (!data) return data;
 
   const result = { ...data };
@@ -463,7 +458,7 @@ function processTranslations<T extends Translation>(
     if (value && typeof value === 'object' && 'with' in value) {
       if (Array.isArray(result[key])) {
         // Handle array of nested objects
-        result[key] = result[key].map((item: Record<string, any>) => 
+        result[key] = result[key].map((item: Record<string, any>) =>
           processTranslations(item, value.with)
         );
       } else if (result[key] && typeof result[key] === 'object') {
@@ -515,4 +510,3 @@ export const isFieldChanged = async <T extends ResourceDB>(
 // EXPORTS
 
 export default client;
-
