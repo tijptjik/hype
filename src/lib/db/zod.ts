@@ -14,7 +14,8 @@ import {
   property,
   propertyI18n,
   propertyValueI18n,
-  propertyValue
+  propertyValue,
+  layerProperty
 } from '$lib/db/schema';
 import type { GeometryObject } from 'geojson';
 import type {
@@ -304,14 +305,21 @@ export const LayerI18nUpdate = createInsertSchema(layerI18n).extend({
   ...getDefaultConstraints(layerI18n)
 });
 
+export const LayerPropertyUpdate = createInsertSchema(layerProperty);
+export const LayerPropertyInsert = LayerPropertyUpdate.omit(
+  { layerId: true }
+);
+
 export const LayerI18nInsert = LayerI18nUpdate.omit({ layerId: true });
 
 export const LayerInsertAPI = LayerInsert.extend({
-  translations: getTranslations(LayerI18nInsert)
+  translations: getTranslations(LayerI18nInsert),
+  properties: z.array(LayerPropertyInsert)
 });
 
 export const LayerUpdateAPI = LayerUpdate.extend({
-  translations: getTranslations(LayerI18nUpdate)
+  translations: getTranslations(LayerI18nUpdate),
+  properties: z.array(LayerPropertyUpdate)
 });
 
 /* ----------------- */

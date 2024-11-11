@@ -508,7 +508,8 @@ export const propertyRelations = relations(property, ({ one, many }) => ({
     references: [project.id]
   }),
   values: many(propertyValue),
-  translations: many(propertyI18n)
+  translations: many(propertyI18n),
+  layerProperties: many(layerProperty)
 }));
 
 export const propertyI18n = sqliteTable('propertyI18n', {
@@ -580,7 +581,7 @@ export const layerProperty = sqliteTable('layerProperty', {
   isVisible: integer('isVisible', { mode: 'boolean' }).notNull().default(true)
 });
 
-export const layerPropertyRelations = relations(layerProperty, ({ one }) => ({  
+export const layerPropertyRelations = relations(layerProperty, ({ one, many }) => ({  
   layer: one(layer, {
     fields: [layerProperty.layerId],
     references: [layer.id]
