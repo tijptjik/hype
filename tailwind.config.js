@@ -9,6 +9,10 @@ export default {
     },
     extend: {
       borderStyle: ['hover'],
+      transitionDelay: {
+        '1500': '1500ms',
+        '2000': '2000ms'
+      },
       borderWidth: {
         '1': '1px',
         '3': '3px',
