@@ -17,6 +17,7 @@ import type {
 } from '$lib/types';
 import type { UserRole } from '$lib/auth/utils';
 import type { ZodSchema } from 'zod';
+import { appMeta } from '$lib/stores/resources.svelte';
 
 export type AccessStrategyOption =
   | 'Public'
@@ -219,8 +220,7 @@ export async function loadFormData<T extends Record<string, any>>({
     const { parentResourceType, parentRefKey, keyToParent } = resourceConfig[resourceType];
 
     if (parentResourceType && parentRefKey) {
-      const url = new URL(window.location.href);
-      const parentRef = url.searchParams.get(parentResourceType);
+      const parentRef = appMeta.context.parentRef;
 
       if (!parentRef) {
         throw error(
@@ -270,6 +270,8 @@ export async function loadFormData<T extends Record<string, any>>({
     // form = await superValidate<T>(formData, zod(updateSchema));
     form = await superValidate(formData, zod(updateSchema));
   }
+
+  appMeta.context.parentRef = null;
 
   return {
     entity: entityRef,
