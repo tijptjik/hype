@@ -10,7 +10,7 @@ import {
 } from '$lib/api';
 // DB
 import { hierarchicalEntityQuery } from '$lib/db';
-import { updateLayer, updateTranslations, extractEntitiesToUpdate, rebuildFormData } from '$lib/db/services/layer';
+import { updateLayer, updateTranslations, extractEntitiesToUpdate, rebuildFormData, updateLayerProperties, mergeProjectProperties } from '$lib/db/services/layer';
 import {
   projectRole,
   layerI18n
@@ -35,19 +35,33 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
   );
   try {
     // DB : Build & Execute Query
-    const result = await hierarchicalEntityQuery(
+    let result = await hierarchicalEntityQuery(
       db,
       params[PUBLIC_IDENTIFIER] as string,
       PUBLIC_IDENTIFIER,
       accessStrategy,
       {
-        translations: true
+        translations: true,
+        properties: {
+          with: {
+            property: {
+              with: {
+                translations: true
+              }
+            }
+          }
+        }
       },
       userId,
       projectRole,
       layerI18n,
       3
     );
+
+    // Merge in all available project properties
+    if (result) {
+      result = await mergeProjectProperties(db, result);
+    }
 
     // HTTP : 200 JSON or 404
     return JSONResponseOrError(result);
@@ -79,6 +93,11 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     const { baseLayer, formTranslations } = extractEntitiesToUpdate(form.data as Layer);
     const updatedLayer = await updateLayer(db, baseLayer, params[PUBLIC_IDENTIFIER] as string);
     const updatedTranslations = await updateTranslations(db, formTranslations, updatedLayer.id);
+
+    // Add property handling
+    if (form.data.properties) {
+      await updateLayerProperties(db, updatedLayer.id, form.data.properties);
+    }
 
     const updatedForm = await rebuildFormData(updatedLayer, updatedTranslations);
     return SuperFormResponse(updatedForm, false, false, RESOURCE_PATH, 200);

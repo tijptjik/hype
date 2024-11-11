@@ -189,7 +189,7 @@ export const toEntity = (apiEntity: ApiEntity) => {
 
     <div class="mb-4 max-h-60 overflow-y-auto">
       {#if filteredResources[parentResourceType]?.length > 0}
-        <ul class="menu rounded-box space-y-1 bg-base-100 rounded-lg">
+        <ul class="menu space-y-1 bg-base-100 rounded-lg">
           {#each filteredResources[parentResourceType].slice(0, 7) as item, i}
             <li class="bg-base-200 first:rounded-t-lg last:rounded-b-lg">
               <button

@@ -306,6 +306,9 @@ export const LayerI18nUpdate = createInsertSchema(layerI18n).extend({
 });
 
 export const LayerPropertyUpdate = createInsertSchema(layerProperty);
+export const LayerPropertyUpdateExtra = LayerPropertyUpdate.extend({
+  property: PropertyInsertAPI.omit({ values: true })
+});
 export const LayerPropertyInsert = LayerPropertyUpdate.omit(
   { layerId: true }
 );
@@ -319,7 +322,7 @@ export const LayerInsertAPI = LayerInsert.extend({
 
 export const LayerUpdateAPI = LayerUpdate.extend({
   translations: getTranslations(LayerI18nUpdate),
-  properties: z.array(LayerPropertyUpdate)
+  properties: z.array(LayerPropertyUpdateExtra)
 });
 
 /* ----------------- */

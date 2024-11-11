@@ -6,17 +6,11 @@ import { get } from 'svelte/store';
 // Components
 import Header from '$lib/components/layout/EntityHeader.svelte';
 import SectionI18n from '$lib/components/forms/FormSectionI18n.svelte';
-import InputField from '$lib/components/forms/FormFieldInput.svelte';
-import TextareaField from '$lib/components/forms/FormFieldTextarea.svelte';
+import LayerPropertySection from '$lib/components/forms/FormLayerSectionProperty.svelte';
 // TYPES
 import type { SuperForm } from 'sveltekit-superforms';
 import type { Layer } from '$lib/types';
-import type { 
-  FormField,
-  FormFieldConfig, 
-  ResourceType, 
-  ResourceRouter 
-} from '$lib/types';
+import type { FormField, FormFieldConfig, FormFieldArray, ResourceType, ResourceRouter } from '$lib/types';
 
 // CONFIG
 const FIELDS: FormFieldConfig = {
@@ -38,6 +32,15 @@ const FIELDS: FormFieldConfig = {
       component: 'TextareaField',
       isArray: false,
       isTranslated: true
+    }
+  },
+  property: {
+    properties: {
+      isArray: true,
+      discriminators: {
+        key: 'type',
+        values: ['classifier', 'specifier']
+      }
     }
   }
 };
@@ -71,6 +74,22 @@ let { message, enhance, form, errors } = setForm(
           facet={routerState.facet}
           {entity}
           resourceType={routerState.resource} />
+        <div class="flex flex-row gap-6">
+          <LayerPropertySection
+            title="Classifiers"
+            subtitle="by which features can be filtered"
+            fieldDiscriminator="classifier"
+            fields={FIELDS.property as FormFieldArray}
+            {entity}
+            resourceType={routerState.resource} />
+          <LayerPropertySection
+            title="Specifiers"
+            subtitle="which are displayed in feature info panels"
+            fieldDiscriminator="specifier"
+            fields={FIELDS.property as FormFieldArray}
+            {entity}
+            resourceType={routerState.resource} />
+        </div>
       {:else}
         <h1>FACET NOT FOUND</h1>
       {/if}

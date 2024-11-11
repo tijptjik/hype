@@ -8,7 +8,8 @@ import {
   createLayer,
   createTranslations,
   extractEntitiesToInsert,
-  rebuildFormData
+  rebuildFormData,
+  createLayerProperties
 } from '$lib/db/services/layer';
 import { isFieldUnique } from '$lib/db';
 // ZOD
@@ -85,6 +86,11 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
     const { baseLayer, formTranslations } = extractEntitiesToInsert(form.data);
     const createdLayer = await createLayer(db, baseLayer);
     const createdTranslations = await createTranslations(db, formTranslations, createdLayer.id);
+    
+    // Add property handling
+    if (form.data.properties) {
+      await createLayerProperties(db, createdLayer.id, form.data.properties);
+    }
 
     const updatedForm = await rebuildFormData(createdLayer, createdTranslations);
     return SuperFormResponse(updatedForm, true, false, RESOURCE_PATH, 201);
