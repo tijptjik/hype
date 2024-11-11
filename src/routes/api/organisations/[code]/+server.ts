@@ -2,7 +2,13 @@ import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { error, type RequestHandler } from '@sveltejs/kit';
 import { organisationRole, organisationI18n } from '$lib/db/schema';
-import { getDatabaseOrError, JSONResponseOrError, SuperFormResponse, SuperFormErrorResponse, type AccessStrategyOption } from '$lib/api';
+import {
+  getDatabaseOrError,
+  JSONResponseOrError,
+  SuperFormResponse,
+  SuperFormErrorResponse,
+  type AccessStrategyOption
+} from '$lib/api';
 import { hierarchicalEntityQuery } from '$lib/db';
 // DB
 import {
@@ -87,14 +93,30 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 
   try {
     const formData: Organisation = await request.json();
-    const form = await superValidate(formData, zod(OrganisationUpdateAPI)) as SuperValidated<Organisation>;
+    const form = (await superValidate(
+      formData,
+      zod(OrganisationUpdateAPI)
+    )) as SuperValidated<Organisation>;
 
     // Check if the current user will lose access on membership changes
-    const userLosesAccess = !Object.keys(form.data.userRoles).includes(userId) && accessStrategy !== 'SuperAdmin';
-    const codeChanged = await isFieldChanged<OrganisationDB>(db, formData.id as string, formData.code as string, RESOURCE_TYPE, PUBLIC_IDENTIFIER);
-    
+    const userLosesAccess =
+      !form.data.userRoles.map((role) => role.userId).includes(userId) &&
+      accessStrategy !== 'SuperAdmin';
+    const codeChanged = await isFieldChanged<OrganisationDB>(
+      db,
+      formData.id as string,
+      formData.code as string,
+      RESOURCE_TYPE,
+      PUBLIC_IDENTIFIER
+    );
+
     if (codeChanged) {
-      const codeUnique = await isFieldUnique<Organisation>(db, formData, RESOURCE_TYPE, PUBLIC_IDENTIFIER);
+      const codeUnique = await isFieldUnique<Organisation>(
+        db,
+        formData,
+        RESOURCE_TYPE,
+        PUBLIC_IDENTIFIER
+      );
       if (!codeUnique) {
         form.valid = false;
         form.errors.code = ['Code already exists'];
@@ -103,11 +125,17 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 
     if (!form.valid) {
       // If validation fails, return form with the errors
-      return SuperFormResponse<Organisation>(form, );
+      return SuperFormResponse<Organisation>(form);
     }
 
-    const { baseOrganisation, formTranslations, formUserRoles } = extractEntitiesToUpdate(form.data as Organisation);
-    const updatedOrganisation = await updateOrganisation(db, baseOrganisation, params[PUBLIC_IDENTIFIER] as string);
+    const { baseOrganisation, formTranslations, formUserRoles } = extractEntitiesToUpdate(
+      form.data as Organisation
+    );
+    const updatedOrganisation = await updateOrganisation(
+      db,
+      baseOrganisation,
+      params[PUBLIC_IDENTIFIER] as string
+    );
     const updatedTranslations = await updateTranslations(
       db,
       formTranslations,

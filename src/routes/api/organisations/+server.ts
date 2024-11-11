@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit';
 import { actionResult, superValidate, type SuperValidated } from 'sveltekit-superforms';
 import { getDatabaseOrError, JSONResponseOrError, SuperFormResponse } from '$lib/api';
 // DB
-import { hierarchicalResourceQuery } from '$lib/db';
+import { hierarchicalResourceQuery, toNestedTranslations } from '$lib/db';
 import { organisationRole, organisationI18n } from '$lib/db/schema';
 import {
   createOrganisation,
@@ -14,10 +14,10 @@ import {
 import { isFieldUnique } from '$lib/db';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
-import { OrganisationInsertAPI } from '$lib/db/zod';
+import { OrganisationInsertAPI, OrganisationUpdateAPI } from '$lib/db/zod';
 // TYPES
 import type { RequestHandler } from '@sveltejs/kit';
-import type { NewOrganisation, Organisation } from '$lib/types';
+import type { NewOrganisation, Organisation, OrganisationI18n } from '$lib/types';
 
 const RESOURCE_TYPE = 'organisation';
 const RESOURCE_PATH = 'organisations';
@@ -70,11 +70,17 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
     const form = (await superValidate(
       formData,
       zod(OrganisationInsertAPI)
-    )) as SuperValidated<Organisation>;
+    )) as SuperValidated<NewOrganisation>;
 
     // Check if the current user will lose access on membership changes
-    const userLosesAccess = !Object.keys(form.data.userRoles).includes(userId) && accessStrategy !== 'SuperAdmin'; 
-    const codeUnique = await isFieldUnique<Organisation>(db, formData as Organisation, RESOURCE_TYPE, 'code');
+    const userLosesAccess =
+      !Object.keys(form.data.userRoles).includes(userId) && accessStrategy !== 'SuperAdmin';
+    const codeUnique = await isFieldUnique<Organisation>(
+      db,
+      formData as Organisation,
+      RESOURCE_TYPE,
+      'code'
+    );
 
     if (!codeUnique) {
       form.valid = false;
@@ -86,7 +92,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
     }
 
     const { baseOrganisation, formTranslations, formUserRoles } = extractEntitiesToInsert(
-      form.data as NewOrganisation
+      form.data
     );
     const createdOrganisation = await createOrganisation(db, baseOrganisation);
     const createdTranslations = await createTranslations(
@@ -95,12 +101,25 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       createdOrganisation.id
     );
     const createdUserRoles = await createUserRoles(db, formUserRoles, createdOrganisation.id);
-    const updatedForm = await rebuildFormData(
-      createdOrganisation,
-      createdTranslations,
-      createdUserRoles
+
+    const updatedFormData = {
+      ...createdOrganisation,
+      translations: toNestedTranslations<OrganisationI18n>(createdTranslations),
+      userRoles: createdUserRoles
+    };
+
+    const updatedForm = await superValidate(
+      updatedFormData,
+      zod(OrganisationUpdateAPI)
+    ) as SuperValidated<Organisation>;
+
+    return SuperFormResponse<Organisation>(
+      updatedForm,
+      true,
+      userLosesAccess,
+      RESOURCE_PATH,
+      201
     );
-    return SuperFormResponse<Organisation>(updatedForm, true, userLosesAccess, RESOURCE_PATH, 201);
   } catch (err) {
     console.error(err);
     return actionResult('error', 'Failed to create organisation', { status: 500 });
