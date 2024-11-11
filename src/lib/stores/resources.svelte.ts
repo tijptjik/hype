@@ -13,6 +13,10 @@ import type {
 // Meta
 let meta = $state({ title: 'Admin' });
 
+
+let context = $state({ parentRef: null });
+
+
 // Resources
 export const resources: ResourceToEntity = $state({
   organisation: [],
@@ -43,4 +47,4 @@ export const filteredResources: ResourceToEntity = $state<{
   feature: []
 });
 
-export const appMeta = { meta };
+export const appMeta = { meta, context };
