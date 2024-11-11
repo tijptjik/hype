@@ -14,8 +14,8 @@ const routerState = setRouterState();
 routerState.update();
 
 $effect(() => {
-  const getUrlWithoutHash = (url: URL) => url.pathname ;
-  
+  const getUrlWithoutHash = (url: URL) => url.pathname;
+
   const currentUrlWithoutHash = getUrlWithoutHash(new URL($page.url));
   const stateUrlWithoutHash = getUrlWithoutHash(routerState.urlState);
   if (currentUrlWithoutHash !== stateUrlWithoutHash) {
@@ -26,7 +26,7 @@ $effect(() => {
         title: navItems[routerState.resource as keyof typeof navItems].name
       };
     }
-  } 
+  }
 });
 
 </script>
