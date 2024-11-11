@@ -35,7 +35,10 @@ const constraints: Record<string, z.ZodType<any>> = {
   code: z
     .string()
     .min(1, { message: 'Code is required' })
-    .max(24, { message: 'Code must be 24 characters or less' }),
+    .max(24, { message: 'Code must be 24 characters or less' })
+    .regex(/^[a-zA-Z_$][a-zA-Z0-9_$]*$/, {
+      message: 'Not a valid JS identifier - must not contain spaces or funky characters'
+    }),
   name: z
     .string()
     .min(1, { message: 'Name is required' })
@@ -47,14 +50,21 @@ const constraints: Record<string, z.ZodType<any>> = {
   description: z
     .string()
     .max(1024, { message: 'Description must be 1024 characters or less' })
-    .optional().nullish().transform( x => x ?? undefined ),
+    .optional()
+    .nullish()
+    .transform((x) => x ?? undefined),
   key: z
     .string()
     .regex(/^[a-zA-Z_$][a-zA-Z0-9_$]*$/, {
       message: 'Not a valid JS identifier - must not contain spaces or funky characters'
     })
     .min(2, { message: 'Key should have at least 2 characters' }),
-  url: z.string().url({ message: 'URL is invalid' }).optional().nullish().transform( x => x ?? undefined )
+  url: z
+    .string()
+    .url({ message: 'URL is invalid' })
+    .optional()
+    .nullish()
+    .transform((x) => x ?? undefined)
 };
 
 const getDefaultConstraints = (
@@ -96,12 +106,12 @@ function createRequiredObjSchema<K extends string, V extends z.ZodTypeAny>(
 
 const getTranslations = (model: z.ZodType<any>) =>
   createRequiredObjSchema(z.enum(targetLangs), model).default({
-    'zh-hant': {"lang": "zh-hant"},
-    'zh-hans': {"lang": "zh-hans"}
+    'zh-hant': { lang: 'zh-hant' },
+    'zh-hans': { lang: 'zh-hans' }
   });
 
 const getUserRoles = (model: z.ZodType<any>) =>
-  z 
+  z
     .array(model)
     .refine((schema) => schema.length > 0, 'Add a User')
     .refine(
@@ -110,9 +120,7 @@ const getUserRoles = (model: z.ZodType<any>) =>
     );
 
 const getMaintainerRoles = (model: z.ZodType<any>) =>
-  z 
-    .array(model)
-    .refine((schema) => schema.length > 0, 'Add at least 1 Maintainer')
+  z.array(model).refine((schema) => schema.length > 0, 'Add at least 1 Maintainer');
 
 /* ----------------- */
 // ZOD SCHEMAS
@@ -167,7 +175,6 @@ export const OrganisationInsertAPI = OrganisationInsert.extend({
   translations: getTranslations(OrganisationI18nInsert),
   userRoles: getUserRoles(OrganisationRoleInsert)
 });
-
 
 export const OrganisationUpdateAPI = OrganisationUpdate.extend({
   translations: getTranslations(OrganisationI18nUpdate),
@@ -328,4 +335,3 @@ export const FeatureUpdate = FeatureInsert.extend({
 
 export const FeatureInsertAPI = FeatureInsert;
 export const FeatureUpdateAPI = FeatureUpdate;
-
