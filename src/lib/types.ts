@@ -84,7 +84,7 @@ export type FalsableRef = Ref | false;
 export type Entity = { id: Id; ref: Ref; name: string; nameShort: string; description: string };
 export type ApiEntity = Entity & {
   code?: Code;
-  properties?: { title: string; description: string };
+  title?: string;
 };
 export type EntityWithData<T> = Entity & { data: T };
 export type FacetType = 'core' | 'address' | 'images' | 'fields';

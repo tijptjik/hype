@@ -281,9 +281,9 @@ const getQueryParams = (): URLSearchParams => {
 const toEntity = (apiEntity: ApiEntity) => {
   return {
     id: apiEntity.id,
-    name: apiEntity.name || apiEntity.properties?.title || '',
-    nameShort: apiEntity.properties?.title || apiEntity.nameShort || apiEntity.name || '',
-    description: apiEntity.description || apiEntity.properties?.description || '',
+    name: apiEntity.name || apiEntity.title || '',
+    nameShort: apiEntity.title || apiEntity.nameShort || apiEntity.name || '',
+    description: apiEntity.description || apiEntity.description || '',
     ref: apiEntity.ref || apiEntity.code || apiEntity.id,
     data: apiEntity
   };
