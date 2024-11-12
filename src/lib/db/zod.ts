@@ -37,8 +37,8 @@ const constraints: Record<string, z.ZodType<any>> = {
     .string()
     .min(1, { message: 'Code is required' })
     .max(24, { message: 'Code must be 24 characters or less' })
-    .regex(/^[a-zA-Z_$][a-zA-Z0-9_$]*$/, {
-      message: 'Not a valid JS identifier - must not contain spaces or funky characters'
+    .regex(/^[a-zA-Z0-9_$]*$/, {
+      message: 'Must contain only alphanumerics, underscores and $ characters'
     }),
   name: z
     .string()
@@ -56,8 +56,8 @@ const constraints: Record<string, z.ZodType<any>> = {
     .transform((x) => x ?? undefined),
   key: z
     .string()
-    .regex(/^[a-zA-Z_$][a-zA-Z0-9_$]*$/, {
-      message: 'Not a valid JS identifier - must not contain spaces or funky characters'
+    .regex(/^[a-zA-Z0-9_$]*$/, {
+      message: 'Must contain only alphanumerics, underscores and $ characters'
     })
     .min(2, { message: 'Key should have at least 2 characters' }),
   url: z
@@ -182,6 +182,8 @@ export const OrganisationUpdateAPI = OrganisationUpdate.extend({
   userRoles: getUserRoles(OrganisationRoleUpdateExtra)
 });
 
+export const OrganisationPatch = OrganisationUpdate.partial();
+
 /* ----------------- */
 // PROPERTY VALUES
 /* -------- */
@@ -283,6 +285,8 @@ export const ProjectUpdateAPI = ProjectUpdate.extend({
   properties: z.array(PropertyUpdateAPI)
 });
 
+export const ProjectPatch = ProjectUpdate.partial();
+
 /* ----------------- */
 // LAYERS
 /* -------- */
@@ -309,7 +313,7 @@ export const LayerPropertyUpdate = createInsertSchema(layerProperty);
 export const LayerPropertyUpdateExtra = LayerPropertyUpdate.extend({
   property: PropertyInsertAPI.omit({ values: true })
 });
-export const LayerPropertyInsert = LayerPropertyUpdate.omit(
+export const LayerPropertyInsert = LayerPropertyUpdateExtra.omit(
   { layerId: true }
 );
 
@@ -324,6 +328,8 @@ export const LayerUpdateAPI = LayerUpdate.extend({
   translations: getTranslations(LayerI18nUpdate),
   properties: z.array(LayerPropertyUpdateExtra)
 });
+
+export const LayerPatch = LayerUpdate.partial();
 
 /* ----------------- */
 // FEATURES
@@ -346,3 +352,5 @@ export const FeatureUpdate = FeatureInsert.extend({
 
 export const FeatureInsertAPI = FeatureInsert;
 export const FeatureUpdateAPI = FeatureUpdate;
+
+export const FeaturePatch = FeatureUpdate.partial();
