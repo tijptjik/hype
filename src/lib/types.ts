@@ -11,12 +11,16 @@ import {
   LayerI18nUpdate,
   LayerInsert,
   LayerInsertAPI,
+  LayerPatch,
+  LayerPropertyInsert,
+  LayerPropertyUpdate,
   LayerUpdate,
   LayerUpdateAPI,
   OrganisationI18nInsert,
   OrganisationI18nUpdate,
   OrganisationInsert,
   OrganisationInsertAPI,
+  OrganisationPatch,
   OrganisationRoleInsert,
   OrganisationRoleUpdateExtra,
   OrganisationUpdate,
@@ -25,16 +29,19 @@ import {
   ProjectI18nUpdate,
   ProjectInsert,
   ProjectInsertAPI,
+  ProjectPatch,
   ProjectRoleInsertExtra,
   ProjectRoleUpdateExtra,
   ProjectUpdate,
   ProjectUpdateAPI,
+  PropertyI18nInsert,
   PropertyI18nUpdate,
   PropertyInsert,
   PropertyInsertAPI,
   PropertyUpdate,
   PropertyUpdateAPI,
   PropertyValueI18nInsert,
+  PropertyValueI18nUpdate,
   PropertyValueInsert,
   PropertyValueInsertAPI,
   PropertyValueUpdate,
@@ -182,6 +189,9 @@ export type NewOrganisationRole = z.infer<typeof OrganisationRoleInsert>;
 // Same as NewOrganisationRole, but with the organisationId - for use in API updates
 export type OrganisationRole = z.infer<typeof OrganisationRoleUpdateExtra>;
 
+// Organisation where all fields are optional, no relations
+export type OrganisationPartialUpdate = z.infer<typeof OrganisationPatch>;
+
 /* ----------------- */
 // PROJECTS
 /* -------- */
@@ -204,6 +214,9 @@ export type ProjectI18n = z.infer<typeof ProjectI18nUpdate>;
 export type NewProjectRole = z.infer<typeof ProjectRoleInsertExtra>;
 // Same as NewProjectRole, but with the projectId - for use in API updates
 export type ProjectRole = z.infer<typeof ProjectRoleUpdateExtra>;
+
+// Project where all fields are optional, no relations
+export type ProjectPartialUpdate = z.infer<typeof ProjectPatch>;
 
 /* ----------------- */
 // PROJECTS : FIELDS
@@ -265,6 +278,14 @@ export type NewLayerDB = z.infer<typeof LayerInsert>;
 export type NewLayerI18n = z.infer<typeof LayerI18nInsert>;
 // Same as NewLayerI18n, but with the layerId - for use in API updates
 export type LayerI18n = z.infer<typeof LayerI18nUpdate>;
+
+// layerProperty, but without layerId and propertyId - for use in API insertions
+export type NewLayerProperty = z.infer<typeof LayerPropertyInsert>;
+// Same as NewLayerProperty, but with the layerId - for use in API updates
+export type LayerProperty = z.infer<typeof LayerPropertyUpdate>;
+
+// Layer where all fields are optional, no relations
+export type LayerPartialUpdate = z.infer<typeof LayerPatch>;
 
 export type LayerMetadata = {
   defaultEnabled: boolean; // true
