@@ -4,7 +4,7 @@ import { Table, getTableName, and, sql, inArray, eq, or, not, exists, ilike } fr
 import { error } from '@sveltejs/kit';
 // TYPES
 import type { D1Database } from '@auth/d1-adapter';
-import type { Field, NestedRelations, Resource, ResourceDB, ResourceType } from '$lib/types';
+import type { Field, NestedRelations, Ref, Resource, ResourceDB, ResourceType } from '$lib/types';
 import type { Database } from './services/organisation';
 import type { TargetLang } from '../types';
 
@@ -506,6 +506,26 @@ export const isFieldChanged = async <T extends ResourceDB>(
 
   return existingEntity[field] !== value;
 };
+
+export async function updatePartial<T extends Table>(
+  db: Database,
+  table: T,
+  ref: Ref,
+  refKey: string,
+  data: Partial<Record<string, unknown>>
+) {
+  const [updated] = await db
+    .update(table)
+    .set(data)
+    .where(eq(table[refKey], ref))
+    .returning();
+
+  if (!updated) {
+    return error(404, 'Entity not found');
+  }
+
+  return updated;
+}
 
 // EXPORTS
 
