@@ -1,5 +1,5 @@
 <script module>
-  const name = 'FieldSelect';
+const name = 'FieldSelect';
 </script>
 
 <script lang="ts">
@@ -80,22 +80,11 @@ let {
         {/if}
       {:else}
         {@const id = `${fieldId}_${languageTag}`}
-        {#if resourceType !== 'feature'}
-          {@const id = `${fieldId}_${languageTag}`}
-          {#if languageTag === 'core' || languageTag === 'en'}
-            <Select {id} bind:value={$form[fieldId]} values={field.values} {languageTag} />
-          {:else}
-            <Select
-              bind:value={$form.translations[languageTag][fieldId]}
-              {id}
-              values={field.values}
-              {languageTag} />
-          {/if}
-        {:else if languageTag === 'core' || languageTag === 'en'}
-          <Select bind:value={$form.properties[fieldId]} {id} values={field.values} {languageTag} />
+        {#if languageTag === 'core' || languageTag === 'en'}
+          <Select {id} bind:value={$form[fieldId]} values={field.values} {languageTag} />
         {:else}
           <Select
-            bind:value={$form.properties[`${fieldId}_${languageTag}`]}
+            bind:value={$form.translations[languageTag][fieldId]}
             {id}
             values={field.values}
             {languageTag} />

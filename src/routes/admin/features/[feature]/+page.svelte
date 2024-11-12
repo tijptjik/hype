@@ -107,6 +107,6 @@ let { enhance, form, errors } = setForm(
         <h1>FACET NOT FOUND</h1>
       {/if}
     </form>
-    <SuperDebug data={form} />
+    <!-- <SuperDebug data={form} /> -->
   </main>
 </div>

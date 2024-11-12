@@ -62,15 +62,31 @@ const getForeignKey = (slicedHierarchy: typeof resourceHierarchy, index: number)
 const getReverseForeignKey = (slicedHierarchy: typeof resourceHierarchy, index: number) =>
   slicedHierarchy[index].keyToSelf;
 
+// TODO Implement this
+const applyGeneralAccessStrategy = (
+  db: any,
+  accessStrategy: string,
+  userTable?: Table,
+  userId?: string
+) => {
+  if (['SuperAdmin', 'Public', 'ResourceAll', 'EntityAny'].includes(accessStrategy)) {
+    return [];
+  }
+  return [];
+};
+
 const applyAccessStrategy = (
   db: any,
   accessStrategy: string,
   slicedHierarchy: typeof resourceHierarchy,
-  userTable: Table,
-  userId: string
+  userTable?: Table,
+  userId?: string
 ) => {
   if (['SuperAdmin', 'Public', 'ResourceAll', 'EntityAny'].includes(accessStrategy)) {
     return [];
+  }
+  if (!userTable || !userId) {
+    throw new Error('User table or user ID is required');
   }
 
   const conditions = [];
@@ -359,18 +375,16 @@ export async function genericEntityQuery<usersT extends Table>(
   publicIdentifier: string = 'id',
   accessStrategy: string = 'EntityOwn',
   selectTableRelations: NestedRelations,
-  userId: string,
-  userTable: usersT
+  userId?: string,
+  userTable?: usersT
 ) {
   // NEW is a reserved keyword for new entities
   if (ref == 'new') {
     throw new Error('The old shall never be new again');
   }
-  const slicedHierarchy = resourceHierarchy.slice(-depth, resourceHierarchy.length);
-
   const conditions = [
     eq(table[publicIdentifier], ref),
-    ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId)];
+    ...applyGeneralAccessStrategy(db, accessStrategy, userTable, userId)];
 
   let result = await db.query[getTableName(table)].findFirst({
     where: and(...conditions),
@@ -515,11 +529,7 @@ export async function updatePartial<T extends Table>(
   refKey: string,
   data: Partial<Record<string, unknown>>
 ) {
-  const [updated] = await db
-    .update(table)
-    .set(data)
-    .where(eq(table[refKey], ref))
-    .returning();
+  const [updated] = await db.update(table).set(data).where(eq(table[refKey], ref)).returning();
 
   if (!updated) {
     return error(404, 'Entity not found');

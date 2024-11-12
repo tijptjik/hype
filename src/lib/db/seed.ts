@@ -189,12 +189,12 @@ const seedBank = {
     data: featurePropertyJson,
     chunk: 16
   },
-  featurePropertyI18n: {
-    name: 'FeaturePropertyI18n',
-    table: featurePropertyI18n,
-    data: featurePropertyI18nJson,
-    chunk: 16
-  }
+  // featurePropertyI18n: {
+  //   name: 'FeaturePropertyI18n',
+  //   table: featurePropertyI18n,
+  //   data: featurePropertyI18nJson,
+  //   chunk: 16
+  // }
 };
 
 const chunkArray = <T>(array: T[], size: number): T[][] => {

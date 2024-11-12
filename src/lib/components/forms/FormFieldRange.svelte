@@ -1,5 +1,5 @@
 <script module>
-  const name = 'FieldRange';
+const name = 'FieldRange';
 </script>
 
 <script lang="ts">
@@ -26,21 +26,20 @@ type Props = {
 };
 
 let {
-  resourceType,
-  entity,
-  facet,
-  languageTag = 'core',
   fieldId,
-  field,
   fieldIndex,
-  fieldDiscriminator,
   fieldKey,
-  form,
-  constraints,
-  errors,
+  form
 }: Props = $props();
 
+console.log($form[fieldId][fieldIndex][fieldKey])
 </script>
 
-<input type="range" />
+<input
+  type="range"
+  min={$form[fieldId][fieldIndex].property.min}
+  max={$form[fieldId][fieldIndex].property.max}
+  step="1"
+  bind:value={$form[fieldId][fieldIndex][fieldKey]}
+ />
 <!-- <ErrorLabel errors={$errors} {field} {languageTag} {fieldId} {fieldIndex} {fieldKey} /> -->

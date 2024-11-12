@@ -6,13 +6,12 @@ import ErrorLabel from '$lib/components/forms/FormErrorLabel.svelte';
 // TYPES
 import type { InputConstraints, InputConstraint, ValidationErrors } from 'sveltekit-superforms';
 import type { FormFieldExtendedDefinition } from '$lib/types';
-import type { ResourceType, FalsableRef, FalsableFacetType, FieldDiscriminator } from '$lib/types';
+import type { FalsableRef, FalsableFacetType, FieldDiscriminator } from '$lib/types';
 import type { Writable } from 'svelte/store';
-import type { LanguageTag, Key, InputType } from '$lib/types';
+import type { LanguageTag, Key } from '$lib/types';
 
 // TYPES
 type Props = {
-  resourceType: ResourceType;
   entity: FalsableRef;
   facet: FalsableFacetType;
   languageTag: LanguageTag;
@@ -28,7 +27,6 @@ type Props = {
 
 // STATE : PROPS
 let {
-  resourceType,
   languageTag = 'core',
   fieldId,
   fieldIndex,
@@ -43,8 +41,11 @@ let {
 const getId = () => {
   if (field.isNested) {
     return `${fieldId}_${fieldDiscriminator}_${fieldIndex}_${fieldKey}_${languageTag}`;
+  } else if (fieldDiscriminator === 'specifier') {
+    return `${fieldId}_${fieldIndex}_${fieldKey}_${languageTag}`;
+  } else {
+    return `${fieldId}_${languageTag}`;
   }
-  return `${fieldId}_${languageTag}`;
 };
 </script>
 
@@ -81,9 +82,16 @@ const getId = () => {
             {...field}
             isGenAI={$form[fieldId][fieldIndex]['translations'][languageTag][`${fieldKey}Gen`]} />
         {/if}
-      {:else if languageTag === 'core' || languageTag === 'en'}
+      {:else if (languageTag === 'core' || languageTag === 'en') && fieldDiscriminator !== 'specifier'}
         <FormInput
           bind:value={$form[fieldId]}
+          id={getId()}
+          {languageTag}
+          {...field}
+          isGenAI={$form[`${fieldId}Gen`]} />
+      {:else if fieldDiscriminator === 'specifier'}
+        <FormInput
+          bind:value={$form[fieldId][fieldIndex][fieldKey]}
           id={getId()}
           {languageTag}
           {...field}
