@@ -45,7 +45,6 @@ let {
 const { form, validate} = getForm(resourceType, entity);
 
 const updateUserJoinState = (userId: string, isChecked: boolean) => {
-  console.log(checkedValue, uncheckedValue);
   form.update(($form) => {
     const userIndex = $form[fieldId].findIndex((userRole) => userRole.userId === userId);
     if (userIndex !== -1) {
@@ -53,7 +52,6 @@ const updateUserJoinState = (userId: string, isChecked: boolean) => {
     }
     return $form;
   });
-  console.log($form);
 };
 
 const removeUser = async (e: Event, userId: string) => {

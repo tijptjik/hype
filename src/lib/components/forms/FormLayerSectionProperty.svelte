@@ -34,8 +34,6 @@ const { form, errors, constraints } = getForm(resourceType, entity);
       {constraints}
       {errors}
       propertyJoinStateKey="isVisible"
-      checkedValue={true}
-      uncheckedValue={false}
       {entity}
       {resourceType} />
   {/each}

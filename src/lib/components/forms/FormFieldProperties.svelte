@@ -1,5 +1,5 @@
 <script lang="ts">
-import { nanoid } from 'nanoid';
+import { customAlphabet } from 'nanoid';
 import Form from 'sveltekit-superforms';
 import { Icon } from '@steeze-ui/svelte-icon';
 import { Trash, ExclamationTriangle } from '@steeze-ui/heroicons';
@@ -34,6 +34,10 @@ import type {
 const sourceLanguageTag = 'en';
 const languageTags = [sourceLanguageTag, 'zh-hant', 'zh-hans'];
 
+// NANOID
+const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$', 12);
+
+
 // Add IntermediateValue type
 type IntermediateValue = {
   id: string;
@@ -53,7 +57,7 @@ type Props = {
   fieldDiscriminator: FieldDiscriminator;
   constraints: InputConstraints<Record<string, InputConstraint>>;
   errors: ValidationErrors<Record<string, string>>;
-  actions: Record<string, () => void>;
+  actions: Record<string, (...args: any[]) => void>;
   actionProps: {
     searchMode: boolean;
     removeMode: boolean;
@@ -109,7 +113,7 @@ const syncFormToComplexValues = () => {
 const syncComplexValuesToForm = () => {
   form.update(($form) => {
     let propertyId = $form[fieldId][fieldIndex].id;
-    const propertyValues = complexValues.map((v) => ({
+    $form[fieldId][fieldIndex].values = complexValues.map((v) => ({
       id: v.id,
       propertyId: propertyId,
       value: v.en,
@@ -130,12 +134,6 @@ const syncComplexValuesToForm = () => {
         }
       }
     }));
-
-    // Get the index of the property with the correct propertyId
-    const index = $form[fieldId].findIndex((prop) => prop.id === propertyId);
-    if (index !== -1) {
-      $form[fieldId][index].values = propertyValues;
-    }
 
     return $form;
   });
@@ -168,6 +166,7 @@ const updateValue = (valueId: string, languageTag: string, e: Event) => {
 
 const addValue = (e: Event) => {
   e.preventDefault();
+  const id = nanoid();
   complexValues.push({
     id: nanoid(12),
     rank: complexValues.length + 1,
@@ -234,7 +233,7 @@ const complexActionProps = $state({
         <button
           class="btn btn-error"
           onclick={(e) => {
-            actions.remove(e, $form[fieldId][fieldIndex].id);
+            actions.remove(e, fieldIndex);
             resetModes();
           }}>
           DESTROY

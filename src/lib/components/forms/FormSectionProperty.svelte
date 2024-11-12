@@ -1,7 +1,8 @@
 <script lang="ts">
-import { nanoid } from 'nanoid';
+import { customAlphabet } from 'nanoid';
 import { scale } from 'svelte/transition';
 import { flip } from 'svelte/animate';
+
 // COMPONENTS
 import Header from '$lib/components/forms/FormHeader.svelte';
 import Actions from '$lib/components/forms/FormActionsCustomField.svelte';
@@ -27,6 +28,12 @@ import type {
   Feature
 } from '$lib/types';
 import type { ValidationErrors, InputConstraints, InputConstraint } from 'sveltekit-superforms';
+
+// NANOID
+const nanoid = customAlphabet(
+  '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$',
+  12
+);
 
 // TYPES
 type Props = {
@@ -55,36 +62,52 @@ const { form, errors, constraints }: getFormType = getForm(resourceType, entity)
 // PROPERTY FIELDS
 // ***
 
-const addAction = (e: Event, projectId: string) => {
+const addAction = async (e: Event) => {
   e.preventDefault();
+  const id = nanoid();
   const newProperty: NewProperty = {
-    projectId: projectId,
+    id: id,
+    projectId: $form.id,
     type: fieldDiscriminator as 'classifier' | 'specifier',
-    key: nanoid(12),
+    key: id,
     label: '',
+    labelGen: false,
+    placeholder: '',
+    placeholderGen: false,
     component:
       fieldDiscriminator === 'classifier'
         ? classifierComponentTypes[0]
         : specifierComponentTypes[0],
     values: [],
     translations: {
-      'zh-hant': '',
-      'zh-hans': ''
+      'zh-hant': {
+        lang: 'zh-hant',
+        propertyId: id,
+        label: '',
+        labelGen: false,
+        placeholder: '',
+        placeholderGen: false
+      },
+      'zh-hans': {
+        lang: 'zh-hans',
+        propertyId: id,
+        label: '',
+        labelGen: false,
+        placeholder: '',
+        placeholderGen: false
+      }
     }
   };
   form.update(($form) => {
-    $form[fieldId].push(newProperty);
+    $form[fieldId].unshift(newProperty);
     return $form;
   });
 };
 
-const removeAction = (e: Event, id: string) => {
+const removeAction = (e: Event, fieldIndex: number) => {
   e.preventDefault();
   form.update(($form) => {
-    const index = $form[fieldId].findIndex((property) => property.id === id);
-    if (index !== -1) {
-      $form[fieldId].splice(index, 1);
-    }
+    $form[fieldId].splice(fieldIndex, 1);
     return $form;
   });
   if ($form[fieldId].length === 0) {
@@ -124,6 +147,7 @@ let actionProps = $state({
       {#if property.type === fieldDiscriminator}
         <PropertyFields
           bind:actionProps
+          {actions}
           {fieldId}
           {fieldIndex}
           {fieldDiscriminator}
