@@ -5,11 +5,7 @@ import { nanoid } from 'nanoid';
 import type { GeometryObject } from 'geojson';
 
 // TYPES
-import type {
-  GhostSignsFeatureProperties,
-  AddressProperties,
-  LayerMetadata
-} from '$lib/types';
+import type { GhostSignsFeatureProperties, AddressProperties, LayerMetadata } from '$lib/types';
 
 // UTILS
 const getGenImageParam = (): number => Math.floor(Math.random() * (100 - 5 + 1)) + 5;
@@ -502,9 +498,9 @@ export const featureProperty = sqliteTable('featureProperty', {
   propertyId: text('propertyId')
     .notNull()
     .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  propertyValueId: text('propertyValueId').references(() => propertyValue.id, { 
-    onDelete: 'set null', 
-    onUpdate: 'cascade' 
+  propertyValueId: text('propertyValueId').references(() => propertyValue.id, {
+    onDelete: 'set null',
+    onUpdate: 'cascade'
   }),
   value: text('value')
 });
@@ -577,6 +573,7 @@ export const property = sqliteTable('property', {
     .default('SelectField'),
   min: integer('min'),
   max: integer('max'),
+  isTranslatable: integer('isTranslatable', { mode: 'boolean' }).notNull().default(true),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -635,13 +632,15 @@ export const propertyValueRelations = relations(propertyValue, ({ one, many }) =
   translations: many(propertyValueI18n)
 }));
 
-export const propertyValueI18n = sqliteTable('propertyValueI18n', {
-  propertyValueId: text('propertyValueId')
-    .notNull()
-    .references(() => propertyValue.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
-  value: text('value').notNull(),
-  valueGen: integer('valueGen', { mode: 'boolean' }).notNull().default(true)
+export const propertyValueI18n = sqliteTable(
+  'propertyValueI18n',
+  {
+    propertyValueId: text('propertyValueId')
+      .notNull()
+      .references(() => propertyValue.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
+    value: text('value').notNull(),
+    valueGen: integer('valueGen', { mode: 'boolean' }).notNull().default(true)
   },
   (t) => ({
     pk: primaryKey({ columns: [t.propertyValueId, t.lang] })
@@ -665,7 +664,7 @@ export const layerProperty = sqliteTable('layerProperty', {
   isVisible: integer('isVisible', { mode: 'boolean' }).notNull().default(true)
 });
 
-export const layerPropertyRelations = relations(layerProperty, ({ one, many }) => ({  
+export const layerPropertyRelations = relations(layerProperty, ({ one, many }) => ({
   layer: one(layer, {
     fields: [layerProperty.layerId],
     references: [layer.id]
