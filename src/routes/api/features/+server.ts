@@ -29,7 +29,9 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
     const result = await hierarchicalResourceQuery(
       db,
       accessStrategy,
-      {},
+      {
+        translations: true
+      },
       userId,
       projectRole,
       false,
