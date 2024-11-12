@@ -413,7 +413,11 @@ export const feature = sqliteTable('feature', {
     .primaryKey()
     .$defaultFn(() => nanoid(12)),
   geometry: text('geometry', { mode: 'json' }).notNull().$type<GeometryObject>(),
-  properties: text('properties', { mode: 'json' }).notNull().$type<GhostSignsFeatureProperties>(),
+  title: text('title').notNull(),
+  titleGen: integer('titleGen', { mode: 'boolean' }).notNull().default(false),
+  description: text('description'),
+  descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(false),
+  // Remaining properties as JSON
   addressProperties: text('addressProperties', { mode: 'json' }).$type<AddressProperties>(),
   layerId: text('layerId')
     .notNull()
@@ -447,7 +451,7 @@ export const feature = sqliteTable('feature', {
     .notNull()
 });
 
-export const featureRelations = relations(feature, ({ one }) => ({
+export const featureRelations = relations(feature, ({ one, many }) => ({
   layer: one(layer, {
     fields: [feature.layerId],
     references: [layer.id]
@@ -459,6 +463,86 @@ export const featureRelations = relations(feature, ({ one }) => ({
   publisher: one(user, {
     fields: [feature.publisherId],
     references: [user.id]
+  }),
+  translations: many(featureI18n),
+  properties: many(featureProperty)
+}));
+
+export const featureI18n = sqliteTable(
+  'featureI18n',
+  {
+    featureId: text('featureId')
+      .notNull()
+      .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
+    title: text('title').notNull(),
+    titleGen: integer('titleGen', { mode: 'boolean' }).notNull().default(true),
+    description: text('description'),
+    descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(true)
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.featureId, t.lang] })
+  })
+);
+
+export const featureI18nRelations = relations(featureI18n, ({ one }) => ({
+  feature: one(feature, {
+    fields: [featureI18n.featureId],
+    references: [feature.id]
+  })
+}));
+
+export const featureProperty = sqliteTable('featureProperty', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => nanoid(12)),
+  featureId: text('featureId')
+    .notNull()
+    .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  propertyId: text('propertyId')
+    .notNull()
+    .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  propertyValueId: text('propertyValueId').references(() => propertyValue.id, { 
+    onDelete: 'set null', 
+    onUpdate: 'cascade' 
+  }),
+  value: text('value')
+});
+
+export const featurePropertyRelations = relations(featureProperty, ({ one, many }) => ({
+  feature: one(feature, {
+    fields: [featureProperty.featureId],
+    references: [feature.id]
+  }),
+  property: one(property, {
+    fields: [featureProperty.propertyId],
+    references: [property.id]
+  }),
+  propertyValue: one(propertyValue, {
+    fields: [featureProperty.propertyValueId],
+    references: [propertyValue.id]
+  }),
+  translations: many(featurePropertyI18n)
+}));
+
+export const featurePropertyI18n = sqliteTable(
+  'featurePropertyI18n',
+  {
+    featurePropertyId: text('featurePropertyId')
+      .notNull()
+      .references(() => featureProperty.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
+    value: text('value').notNull()
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.featurePropertyId, t.lang] })
+  })
+);
+
+export const featurePropertyI18nRelations = relations(featurePropertyI18n, ({ one }) => ({
+  featureProperty: one(featureProperty, {
+    fields: [featurePropertyI18n.featurePropertyId],
+    references: [featureProperty.id]
   })
 }));
 
