@@ -1,3 +1,13 @@
+
+import { error } from '@sveltejs/kit';
+import { and, eq, inArray } from 'drizzle-orm';
+import { superValidate } from 'sveltekit-superforms';
+import { zod } from 'sveltekit-superforms/adapters';
+import { property, propertyI18n, propertyValue, propertyValueI18n } from '../schema';
+import { PropertyInsert, PropertyUpdate, PropertyUpdateAPI } from '../zod';
+import { toNestedTranslations } from '$lib/db';
+// TYPES
+import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import type { 
   NewPropertyDB, 
   PropertyDB, 
@@ -14,14 +24,6 @@ import type {
   FormRelatedProperties
   
 } from '$lib/types';
-import { error } from '@sveltejs/kit';
-import { and, eq, inArray } from 'drizzle-orm';
-import type { DrizzleD1Database } from 'drizzle-orm/d1';
-import { superValidate } from 'sveltekit-superforms';
-import { zod } from 'sveltekit-superforms/adapters';
-import { property, propertyI18n, propertyValue, propertyValueI18n } from '../schema';
-import { PropertyInsert, PropertyUpdate, PropertyUpdateAPI } from '../zod';
-import { toNestedTranslations } from '..';
 
 export type Database = DrizzleD1Database<typeof import('/home/io/code/ghostsigns/src/lib/db/schema')>;
 

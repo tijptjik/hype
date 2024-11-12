@@ -4,7 +4,7 @@ import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { project, projectI18n, projectRole, user, organisationRole, property } from '../schema';
 import { ProjectInsert, ProjectUpdate, ProjectUpdateAPI } from '../zod';
-import { toNestedTranslations } from '..';
+import { toNestedTranslations, updatePartial } from '$lib/db';
 // TYPES
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import type {
@@ -143,6 +143,11 @@ export const updateMaintainerRoles = async (
   return await createMaintainerRoles(db, maintainerRoles, projectId);
 };
 
+export const patchProject = async (db: Database, ref: string, data: Partial<ProjectDB>) => {
+  return await updatePartial(db, project, ref, 'code', data);
+};
+
+
 // UTILS
 
 export const extractEntitiesToInsert = (formData: NewProject) => {
@@ -161,7 +166,7 @@ export const extractEntitiesToUpdate = (formData: Project) => {
   return { baseProject, formTranslations, formMaintainerRoles, formProperties };
 };
 
-export async function mergeOrganizationRoles(db: any, result: Project): Promise<Project> {
+export async function mergeOrganisationRoles(db: any, result: Project): Promise<Project> {
   // Get organization roles for the project's organization
   const orgRoles = await db.query.organisationRole.findMany({
     where: and(eq(organisationRole.organisationId, result.organisationId)),
@@ -210,7 +215,7 @@ export const rebuildFormData = async (
     properties
   } as Project;
 
-  const result = await mergeOrganizationRoles(db, extendedProject);
+  const result = await mergeOrganisationRoles(db, extendedProject);
 
   return await superValidate(result, zod(ProjectUpdateAPI));
 };

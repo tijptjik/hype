@@ -74,6 +74,10 @@ export const updateTranslations = async (
   return await createTranslations(db, translations, layerId);
 };
 
+export const patchLayer = async (db: Database, ref: string, data: Partial<LayerDB>) => {
+  return await updatePartial(db, layer, ref, 'id', data);
+};
+
 // UTILS
 
 export const extractEntitiesToInsert = (formData: NewLayer) => {

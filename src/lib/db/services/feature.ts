@@ -6,6 +6,7 @@ import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { feature } from '../schema';
 import { FeatureInsert, FeatureUpdate, FeatureUpdateAPI } from '../zod';
+import { updatePartial } from '..';
 
 export type Database = DrizzleD1Database<typeof import('/home/io/code/ghostsigns/src/lib/db/schema')>;
 
@@ -37,6 +38,11 @@ export const updateFeature = async (db: Database, data: FeatureDB, ref: string) 
 
   return updatedFeature;
 };
+
+export const patchFeature = async (db: Database, ref: string, data: Partial<FeatureDB>) => {
+  return await updatePartial(db, feature, ref, 'id', data);
+};
+
 
 // UTILS
 
