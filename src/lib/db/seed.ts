@@ -92,7 +92,7 @@ const seedBank = {
     name: 'ProjectI18n',
     table: projectI18n,
     data: projectI18nJson,
-    chunk: 0
+    chunk: 8
   },
   projectRole: {
     name: 'ProjectRoles',
@@ -136,7 +136,7 @@ const seedBank = {
     name: 'PropertyI18n',
     table: propertyI18n,
     data: propertyI18nJson,
-    chunk: 0
+    chunk: 16
   },
   layerProperty: {
     name: 'LayerProperties', 
