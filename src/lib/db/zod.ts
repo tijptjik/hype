@@ -348,17 +348,17 @@ export const FeaturePropertyUpdate = FeaturePropertyInsert.extend({
   id: z.string()
 });
 export const FeaturePropertyUpdateExtra = FeaturePropertyUpdate.extend({
-  property: PropertyInsertAPI.omit({ values: true })
+  property: PropertyInsertAPI.omit({ values: true }).deepPartial()
 });
 
 export const FeaturePropertyI18nUpdate = createInsertSchema(featurePropertyI18n);
 export const FeaturePropertyI18nInsert = FeaturePropertyI18nUpdate.omit({ featurePropertyId: true });
 
 export const FeaturePropertyInsertAPI = FeaturePropertyInsert.extend({
-  translations: getTranslations(FeaturePropertyI18nInsert)
+  translations: z.union([getTranslations(FeaturePropertyI18nInsert), z.object({})])
 });
 export const FeaturePropertyUpdateAPI = FeaturePropertyUpdateExtra.extend({
-  translations: getTranslations(FeaturePropertyI18nUpdate)
+  translations: z.union([getTranslations(FeaturePropertyI18nUpdate), z.object({})])
 });
 
 /* ----------------- */

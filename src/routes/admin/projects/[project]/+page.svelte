@@ -27,14 +27,6 @@ import type {
 
 import SuperDebug from 'sveltekit-superforms';
 
-// TYPES
-type Props = {
-  data: {
-    validatedForm: SuperValidated<Project>;
-    entity: string
-  }
-}
-
 // CONFIG
 const FIELDS: FormFieldConfig = {
   i18n: {
@@ -178,7 +170,14 @@ const FIELDS: FormFieldConfig = {
               isArray: false,
               isNested: true,
               isTranslated: false
-            }
+            },
+            isTranslatable: {
+              label: 'Translatable',
+              component: 'CheckboxField',
+              isArray: false,
+              isNested: true,
+              isTranslated: false
+            },
           }
         }
       }
@@ -192,6 +191,14 @@ const FIELDS: FormFieldConfig = {
     }
   }
 };
+
+// TYPES
+type Props = {
+  data: {
+    validatedForm: SuperValidated<Project>;
+    entity: string
+  }
+}
 
 // STATE : PROPS
 let { data }: Props = $props();

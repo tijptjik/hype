@@ -6,73 +6,46 @@ import { get } from 'svelte/store';
 // Components
 import Header from '$lib/components/layout/EntityHeader.svelte';
 import I18nSection from '$lib/components/forms/FormSectionI18n.svelte';
-import SpecificationSection from '$lib/components/forms/FormSectionSpecification.svelte';
+import PropertySection from '$lib/components/forms/FormSectionPropertyFeature.svelte';
 import ImageSection from '$lib/components/forms/FormSectionImage.svelte';
-import InputField from '$lib/components/forms/FormFieldInput.svelte';
-import TextareaField from '$lib/components/forms/FormFieldTextarea.svelte';
-import RangeField from '$lib/components/forms/FormFieldRange.svelte';
 // TYPES
-import type { FormFieldConfig } from '$lib/types';
 import type { SuperForm } from 'sveltekit-superforms';
-import type { Feature } from '$lib/types';
-import type { ResourceType } from '$lib/types';
+import type {
+  FormFieldConfig,
+  Feature,
+  ResourceType,
+  ResourceRouter,
+  FormField,
+  FormFieldArray
+} from '$lib/types';
+// DEBUG
 import SuperDebug from 'sveltekit-superforms';
 
 // CONFIG
 const FIELDS: FormFieldConfig = {
   i18n: {
-    properties: {
-      // TODO Fix this -- and load in the custom fields
-      descriptors: {
-        title: {
-          label: 'Title',
-          component: InputField,
-          isArray: false,
-          isTranslated: true
-        },
-        description: {
-          label: 'Description',
-          component: TextareaField,
-          isArray: false,
-          isTranslated: true
-        }
-      }
+    title: {
+      label: 'Title',
+      component: 'InputField',
+      isArray: false,
+      isTranslated: true
+    },
+    description: {
+      label: 'Description',
+      component: 'TextareaField',
+      isArray: false,
+      isTranslated: true
     }
   },
-  classification: {
+  property: {
     properties: {
       isArray: true,
       discriminators: {
         key: 'type',
         values: ['classifier', 'specifier'],
         specs: {
-          classifier: {
-            grade: {
-              label: 'Rating',
-              // TODO: Make range slider
-              component: RangeField,
-              isArray: false,
-              isTranslated: false
-            }
-          }
-        }
-      }
-    }
-  },
-  markers: {
-    properties: {
-      display: {
-        markerSize: {
-          label: 'Marker Size',
-          component: InputField
-        },
-        markerSymbol: {
-          label: 'Marker Symbol',
-          component: InputField
-        },
-        markerColor: {
-          label: 'Marker Color',
-          component: InputField
+          classifier: {},
+          specifier: {}
         }
       }
     }
@@ -80,71 +53,60 @@ const FIELDS: FormFieldConfig = {
   address: {
     formattedAddress: {
       label: 'Formatted Address',
-      component: InputField
+      component: 'InputField'
     }
   }
 };
 
-const CUSTOM_FIELDS = {
-  i18n : false,
-  classification: {
-    classifiers: {
-      grade: {
-        label: 'Rating',
-        component: InputField
-      }
-    }
-  }
-}
-
 // STATE : PROPS
-let { data }: { data: { form: SuperForm<Feature>; entity: string } } = $props();
-let { form, entity } = data;
+let { data }: { data: { validatedForm: SuperForm<Feature>; entity: string } } = $props();
+let { validatedForm, entity } = data;
 
 // STATE : DERIVED
-const routerState = getRouterState();
+const routerState = getRouterState() as ResourceRouter;
+const title = $derived(data.validatedForm.data.title || 'New');
 
 // STATE : FORM
-const FormContext = setForm(routerState.resource as ResourceType, entity, form);
+let { enhance, form, errors } = setForm(
+  routerState.resource as ResourceType,
+  entity,
+  validatedForm
+);
 </script>
 
 <!-- LAYOUT -->
 <div class="h-full overflow-y-auto bg-black pb-16">
-  <Header
-    entity={data.entity}
-    resourceType={routerState.resource as ResourceType}
-    title={data.form.data.title || 'New'} />
-  <main class="flex w-full flex-col p-6">
-    {#if Object.keys(FormContext.message).length > 0}<h3>{get(FormContext.message)}</h3>{/if}
-    <form method="POST" use:FormContext.enhance class="flex flex-col gap-6">
+  <Header entity={data.entity} resourceType={routerState.resource} {title} />
+  <main class="flex flex-col p-6">
+    <form method="POST" use:enhance class="flex flex-col gap-6">
       {#if routerState.facet === 'core' || routerState.facet === false}
         <I18nSection
           title="Descriptors"
-          fields={FIELDS.i18n}
+          fields={FIELDS.i18n as FormField}
+          facet={routerState.facet}
           {entity}
-          resourceType={routerState.resource as ResourceType} />
+          resourceType={routerState.resource} />
         <div class="flex flex-row gap-6">
-          <SpecificationSection
-            title="Properties"
-            fields={FIELDS.properties}
+          <PropertySection
+            title="Classifiers"
+            subtitle="by which features can be filtered"
+            fieldDiscriminator="classifier"
+            fields={FIELDS.property as FormFieldArray}
             {entity}
-            resourceType={routerState.resource as ResourceType} />
-          <I18nSection
-            title="Address"
-            fields={FIELDS.address}
+            resourceType={routerState.resource} />
+          <PropertySection
+            title="Specifiers"
+            subtitle="which are displayed in feature info panels"
+            fieldDiscriminator="specifier"
+            fields={FIELDS.property as FormFieldArray}
             {entity}
-            resourceType={routerState.resource as ResourceType} />
+            resourceType={routerState.resource} />
         </div>
-      {:else if routerState.facet === 'images'}
-        <ImageSection
-          title="Image"
-          fields={FIELDS.images}
-          {entity}
-          resourceType={routerState.resource as ResourceType} />
+        <!-- TODO Add support for translatable specifiers -->
       {:else}
         <h1>FACET NOT FOUND</h1>
       {/if}
     </form>
-    <!-- <SuperDebug data={FormContext.form} /> -->
+    <SuperDebug data={form} />
   </main>
 </div>

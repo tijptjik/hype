@@ -55,6 +55,7 @@ import {
   PropertyValueUpdate,
   PropertyValueUpdateAPI,
   UserBase,
+  FeaturePatch,
 } from '$lib/db/zod';
 // Components
 import CustomField from '$lib/components/forms/FormFieldProperties.svelte';
@@ -323,6 +324,9 @@ export type NewFeatureDB = z.infer<typeof FeatureInsert>;
 export type NewFeatureI18n = z.infer<typeof FeatureI18nInsert>;
 // Same as NewFeatureI18n, but with the featureId - for use in API updates
 export type FeatureI18n = z.infer<typeof FeatureI18nUpdate>;
+
+// Feature where all fields are optional, no relations
+export type FeaturePartialUpdate = z.infer<typeof FeaturePatch>;
 
 /* ----------------- */
 // FEATURES : PROPERTIES

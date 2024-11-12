@@ -389,7 +389,8 @@ interface Translation {
 // T extends Translation ensures the generic type has the required lang property
 export const toNestedTranslations = <T extends Translation>(
   translations: T[]
-): Record<TargetLang, T> => {
+): Record<TargetLang, T> | {} => {
+  if (translations.length === 0) return {};
   return translations.reduce(
     (acc: Record<TargetLang, T>, translation: T) => {
       acc[translation.lang] = translation;

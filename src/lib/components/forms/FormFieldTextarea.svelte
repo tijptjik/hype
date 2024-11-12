@@ -44,12 +44,6 @@ let {
 const isGenAI = (fieldId: string) => {
   if (languageTag == 'core') {
     return false;
-  } else if (resourceType === 'feature') {
-    if (languageTag == 'en') {
-      return $form.properties[`${fieldId}Gen`] === true;
-    } else {
-      return $form.properties[`${fieldId}Gen_${languageTag}`] === true;
-    }
   } else {
     if (languageTag === 'en') {
       return $form[`${fieldId}Gen`] === true;
@@ -96,34 +90,18 @@ const isGenAI = (fieldId: string) => {
         {/if}
       {:else}
         {@const id = `${fieldId}_${languageTag}`}
-        {#if resourceType !== 'feature'}
-          {#if languageTag === 'core' || languageTag === 'en'}
-            <FormTextArea
-              {id}
-              placeholder={field.placeholder}
-              bind:value={$form[fieldId]}
-              isGenAI={isGenAI(fieldId)}
-              {languageTag} />
-          {:else}
-            <FormTextArea
-              {id}
-              placeholder={field.placeholder}
-              bind:value={$form.translations[languageTag][fieldId]}
-              isGenAI={isGenAI(fieldId)}
-              {languageTag} />
-          {/if}
-        {:else if languageTag === 'core' || languageTag === 'en'}
+        {#if languageTag === 'core' || languageTag === 'en'}
           <FormTextArea
             {id}
             placeholder={field.placeholder}
-            bind:value={$form.properties[fieldId]}
+            bind:value={$form[fieldId]}
             isGenAI={isGenAI(fieldId)}
             {languageTag} />
         {:else}
           <FormTextArea
             {id}
             placeholder={field.placeholder}
-            bind:value={$form.properties[`${fieldId}_${languageTag}`]}
+            bind:value={$form.translations[languageTag][fieldId]}
             isGenAI={isGenAI(fieldId)}
             {languageTag} />
         {/if}

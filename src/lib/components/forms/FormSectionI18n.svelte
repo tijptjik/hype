@@ -5,9 +5,10 @@ import { getForm } from '$lib/context/forms.svelte';
 // Components
 import Header from '$lib/components/forms/FormHeader.svelte';
 import TranslationBar from './FormTranslationBar.svelte';
-// Types
-import SuperDebug from 'sveltekit-superforms';
+// TYPES
 import type { FormField, ResourceType, FalsableRef, FalsableFacetType } from '$lib/types';
+// DEBUG
+import SuperDebug from 'sveltekit-superforms';
 
 // CONFIG
 const sourceLanguageTag = 'en';

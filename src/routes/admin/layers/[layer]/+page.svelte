@@ -5,7 +5,7 @@ import { setForm } from '$lib/context/forms.svelte';
 import { get } from 'svelte/store';
 // Components
 import Header from '$lib/components/layout/EntityHeader.svelte';
-import SectionI18n from '$lib/components/forms/FormSectionI18n.svelte';
+import I18nSection from '$lib/components/forms/FormSectionI18n.svelte';
 import LayerPropertySection from '$lib/components/forms/FormLayerSectionProperty.svelte';
 // TYPES
 import type { SuperForm } from 'sveltekit-superforms';
@@ -71,7 +71,7 @@ let {enhance, form, errors } = setForm(
   <main class="flex flex-col p-6">
     <form method="POST" use:enhance class="flex flex-col gap-6">
       {#if routerState.facet === 'core' || routerState.facet === false}
-        <SectionI18n
+        <I18nSection
           title="Descriptors"
           fields={FIELDS.i18n as FormField}
           facet={routerState.facet}

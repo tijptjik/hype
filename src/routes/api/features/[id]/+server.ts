@@ -9,14 +9,16 @@ import {
   type AccessStrategyOption
 } from '$lib/api';
 // DB
-import { hierarchicalEntityQuery } from '$lib/db';
+import { hierarchicalEntityQuery, toNestedTranslations } from '$lib/db';
 import {
   updateFeature,
+  updateTranslations,
+  updateProperties,
   extractEntitiesToUpdate,
   rebuildFormData,
   patchFeature
 } from '$lib/db/services/feature';
-import { projectRole } from '$lib/db/schema';
+import { featureI18n, projectRole } from '$lib/db/schema';
 // ZOD
 import { FeaturePatch, FeatureUpdateAPI } from '$lib/db/zod';
 // TYPES
@@ -42,10 +44,18 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
       params[PUBLIC_IDENTIFIER] as string,
       PUBLIC_IDENTIFIER,
       accessStrategy,
-      {},
+      {
+        translations: true,
+        properties: {
+          with: {
+            translations: true,
+            property: true
+          }
+        }
+      },
       userId,
       projectRole,
-      false,
+      featureI18n,
       4 // Depth is 4 for features (organisation -> project -> layer -> feature)
     );
 
@@ -72,18 +82,53 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     const formData: Feature = await request.json();
     const form = (await superValidate(formData, zod(FeatureUpdateAPI))) as SuperValidated<Feature>;
 
+    // console.log('FORM ERRORS', form.errors);
     if (!form.valid) {
       return SuperFormResponse(form);
     }
 
-    const { baseFeature } = extractEntitiesToUpdate(form.data as Feature);
+    const { baseFeature, formTranslations, formProperties } = extractEntitiesToUpdate(
+      form.data as Feature
+    );
+
+    // console.log('FORM PROPERTIES', formProperties);
+
+    // Update the base feature
     const updatedFeature = await updateFeature(
       db,
       baseFeature,
       params[PUBLIC_IDENTIFIER] as string
     );
 
-    const updatedForm = await rebuildFormData(updatedFeature);
+    // console.log('UPDATED FEATURE', updatedFeature);
+
+    // Update translations
+    const updatedTranslations = await updateTranslations(
+      db, 
+      formTranslations, 
+      updatedFeature.id
+    );
+
+    // console.log('UPDATED TRANSLATIONS', updatedTranslations);
+
+    // Update feature properties
+    const updatedProperties = await updateProperties(
+      db,
+      formProperties,
+      updatedFeature.id
+    );
+
+    // console.log('UPDATED PROPERTIES', updatedProperties);
+
+    // Rebuild form data with all updated entities
+    const updatedForm = await rebuildFormData(
+      updatedFeature,
+      updatedTranslations,
+      updatedProperties
+    );
+
+    console.log('UPDATED FORM', updatedForm);
+
     return SuperFormResponse(updatedForm, false, false, RESOURCE_PATH, 200);
   } catch (err) {
     console.error(err);
