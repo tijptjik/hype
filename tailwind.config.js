@@ -13,6 +13,10 @@ export default {
         '1500': '1500ms',
         '2000': '2000ms'
       },
+      screens: {
+        '3xl': '1800px',
+        '4xl': '2400px'
+      },
       borderWidth: {
         '1': '1px',
         '3': '3px',
