@@ -1,23 +1,28 @@
 import { error } from '@sveltejs/kit';
 import { eq, and } from 'drizzle-orm';
-import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { layer, layerI18n, layerProperty, property } from '../schema';
 import { LayerInsert, LayerUpdate, LayerUpdateAPI, LayerPropertyUpdate } from '../zod';
+import { toNestedTranslations, updatePartial } from '$lib/db';
 // TYPES
+import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import type {
   NewLayerDB,
   LayerDB,
   TargetLang,
   NewLayerI18n,
-  LayerI18n,
-  Id,
   NewLayer,
-  Property,
   Layer,
-  LayerI18nDB
+  LayerI18n,
+  NewLayerProperty,
+  LayerProperty,
+  Property,
+  LayerPropertyUpdateExtra,
+  PropertyI18n
 } from '$lib/types';
+
+// TYPES
 export type Database = DrizzleD1Database<
   typeof import('/home/io/code/ghostsigns/src/lib/db/schema')
 >;
@@ -92,36 +97,46 @@ export const extractEntitiesToUpdate = (formData: Layer) => {
   return { baseLayer, formTranslations };
 };
 
-export const rebuildFormData = async (layer: LayerDB, translations: LayerI18n[]) => {
-  const formTranslations = translations.reduce(
-    (acc: Record<string, Record<string, any>>, translation: Record<string, any>) => {
-      const { lang, ...translationWithoutLang } = translation;
-      acc[lang] = translationWithoutLang;
-      return acc;
-    },
-    {}
-  ) as Record<TargetLang, LayerI18n>;
-
-  return await superValidate(
+export const rebuildFormData = async (layer: LayerDB, translations: LayerI18n[], properties: LayerPropertyUpdateExtra[]) => {
+  const formTranslations =  toNestedTranslations<LayerI18n>(translations);
+  const formProperties = properties.map((layerProp) => {
+    layerProp.property.translations = toNestedTranslations<PropertyI18n>(layerProp.property.translations);
+    return layerProp;
+  });
+  
+  return await superValidate<Layer>(
     {
       ...layer,
-      translations: formTranslations
+      translations: formTranslations,
+      properties: formProperties
     },
     zod(LayerUpdateAPI)
   );
 };
 
-export async function createLayerProperties(db: Database, layerId: string, properties: any[]) {
-  return await db.insert(layerProperty).values(
+export async function createLayerProperties(db: Database, layerId: string, properties: LayerPropertyUpdateExtra[]) {
+  await db.insert(layerProperty).values(
     properties.map((prop) => ({
       layerId,
       propertyId: prop.property.id,
       isVisible: prop.isVisible
     }))
-  );
+  )
+  const insertedProperties = await db.query.layerProperty.findMany({
+    where: eq(layerProperty.layerId, layerId),
+    with: {
+      property: {
+        with: {
+          translations: true,
+          values: true
+        }
+      }
+    }
+  });
+  return insertedProperties;
 }
 
-export async function updateLayerProperties(db: Database, layerId: string, properties: any[]) {
+export async function updateLayerProperties(db: Database, layerId: string, properties: LayerPropertyUpdateExtra[]) {
   // First delete existing properties
   await db.delete(layerProperty).where(eq(layerProperty.layerId, layerId));
 
@@ -147,8 +162,9 @@ export async function mergeProjectProperties(db: Database, result: Layer): Promi
   }
 
   // Add project properties that aren't already in the layer
-  projectProps.forEach((projectProp) => {
+  projectProps.forEach((projectProp: Property) => {
     if (!existingPropertyIds.includes(projectProp.id)) {
+      projectProp.translations = toNestedTranslations<PropertyI18n>(projectProp.translations);
       result.properties.push({
         layerId: result.id,
         propertyId: projectProp.id,
