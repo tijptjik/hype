@@ -1,6 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import { actionResult } from 'sveltekit-superforms';
-import client from '$lib/db';
+import client, { toNestedTranslations } from '$lib/db';
 import { getUserRoles } from '$lib/auth/utils';
 import { superValidate } from 'sveltekit-superforms';
 // ZOD
@@ -11,7 +11,11 @@ import type { SuperValidated } from 'sveltekit-superforms';
 import type {
   ApiEntity,
   Id,
+  Layer,
   OrganisationRole,
+  Project,
+  Property,
+  PropertyI18n,
   Resource,
   ResourceType
 } from '$lib/types';
@@ -249,11 +253,14 @@ export async function loadFormData<T extends Record<string, any>>({
 
         // Merge organization roles if this is a project
         if (resourceType === 'project') {
-          initialData = mergeOrganisationRoles(initialData, parentData.userRoles);
+          initialData = mergeOrganisationRoles(initialData as Project, parentData.userRoles);
+        } else if (resourceType === 'layer') {
+          initialData = mergeProjectProperties(initialData as Layer, parentData.properties);
         }
 
         // Update the form with the complete initial data
         form.data = initialData;
+        console.log('form in API index', form);
       }
     } else {
       form = await superValidate(zod(insertSchema));
@@ -279,10 +286,11 @@ export async function loadFormData<T extends Record<string, any>>({
   };
 }
 
-function mergeOrganisationRoles(project: any, userRoles: OrganisationRole[]): any {
+function mergeOrganisationRoles(project: Project, userRoles: OrganisationRole[]): Project {
   // Get existing maintainer user IDs
-  // const existingUserIds = project.maintainerRoles?.map((userRole: any) => userRole.userId) || [];
+  // since it's a new project, there are no existing maintainer user IDs
   const existingUserIds: Id[] = [];
+
   // Add organization members that aren't already maintainers
   userRoles.forEach((userRole) => {
     if (!existingUserIds.includes(userRole.userId)) {
@@ -298,4 +306,26 @@ function mergeOrganisationRoles(project: any, userRoles: OrganisationRole[]): an
     }
   });
   return project;
+}
+
+function mergeProjectProperties(layer: Layer, properties: Property[]): Layer {
+  // Get existing property IDs
+  // Since it's a new layer, there are no existing property IDs
+  const existingPropertyIds: Id[] = [];
+
+  // Add project properties that aren't already in the layer
+  properties.forEach((projectProp: Property) => {
+    if (!existingPropertyIds.includes(projectProp.id)) {
+      if (typeof projectProp.translations !== 'object') {
+        projectProp.translations = toNestedTranslations<PropertyI18n>(projectProp.translations);
+      }
+      layer.properties.push({
+        layerId: layer.id,
+        propertyId: projectProp.id,
+        isVisible: false,
+        property: projectProp
+      });
+    }
+  });
+  return layer;
 }
