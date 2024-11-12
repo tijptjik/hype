@@ -5,16 +5,10 @@
       "type": "Point",
       "coordinates": [114.1694, 22.3193]
     },
-    "properties": {
-      "title": "Tyrannosaurus Rex Avenue",
-      "title__zh-hant": "霸王龍大道",
-      "title__zh-hans": "霸王龙大道",
-      "titleGen": false,
-      "description": "Named after the largest carnivorous dinosaur, T. Rex could grow up to 40 feet long.",
-      "description__zh-hant": "以最大的肉食恐龍命名，霸王龍可以長到40英尺長。",
-      "description__zh-hans": "以最大的肉食恐龙命名，霸王龙可以长到40英尺长。",
-      "descriptionGen": false
-    },
+    "title": "Tyrannosaurus Rex Avenue",
+    "titleGen": false,
+    "description": "Named after the largest carnivorous dinosaur, T. Rex could grow up to 40 feet long.", 
+    "descriptionGen": false,
     "addressProperties": {
       "formattedAddress": "Mong Kok, Hong Kong",
       "formattedAddress__zh-hant": "香港旺角",
@@ -35,16 +29,10 @@
       "type": "Point",
       "coordinates": [114.1528, 22.2819]
     },
-    "properties": {
-      "title": "Velociraptor Lane",
-      "title__zh-hant": "迅猛龍巷",
-      "title__zh-hans": "迅猛龙巷",
-      "titleGen": false,
-      "description": "Velociraptors were actually much smaller than depicted in movies, only about the size of a turkey.",
-      "description__zh-hant": "迅猛龍實際上比電影中描繪的要小得多，只有火雞大小。",
-      "description__zh-hans": "迅猛龙实际上比电影中描绘的要小得多，只有火鸡大小。",
-      "descriptionGen": false
-    },
+    "title": "Velociraptor Lane",
+    "titleGen": false,
+    "description": "Velociraptors were actually much smaller than depicted in movies, only about the size of a turkey.",
+    "descriptionGen": false,
     "addressProperties": {
       "formattedAddress": "Central, Hong Kong",
       "formattedAddress__zh-hant": "香港中環",
@@ -65,16 +53,10 @@
       "type": "Point",
       "coordinates": [114.1721, 22.306]
     },
-    "properties": {
-      "title": "Stegosaurus Street",
-      "title__zh-hant": "劍龍街",
-      "title__zh-hans": "剑龙街",
-      "titleGen": false,
-      "description": "Stegosaurus had a brain the size of a walnut, one of the smallest brain-to-body ratios of any dinosaur.",
-      "description__zh-hant": "劍龍的大腦只有核桃大小，是所有恐龍中腦體比最小的之一。",
-      "description__zh-hans": "剑龙的大脑只有核桃大小，是所有恐龙中脑体比最小的之一。",
-      "descriptionGen": false
-    },
+    "title": "Stegosaurus Street",
+    "titleGen": false,
+    "description": "Stegosaurus had a brain the size of a walnut, one of the smallest brain-to-body ratios of any dinosaur.",
+    "descriptionGen": false,
     "addressProperties": {
       "formattedAddress": "Yau Ma Tei, Hong Kong",
       "formattedAddress__zh-hant": "香港油麻地",
@@ -95,16 +77,10 @@
       "type": "Point",
       "coordinates": [114.1873, 22.3179]
     },
-    "properties": {
-      "title": "Pterodactyl Passage",
-      "title__zh-hant": "翼龍通道",
-      "title__zh-hans": "翼龙通道",
-      "titleGen": false,
-      "description": "Despite popular belief, Pterodactyls were not dinosaurs but flying reptiles.",
-      "description__zh-hant": "儘管普遍認為翼龍是恐龍，但實際上它們是飛行爬行動物。",
-      "description__zh-hans": "尽管普遍认为翼龙是恐龙，但实际上它们是飞行爬行动物。",
-      "descriptionGen": false
-    },
+    "title": "Pterodactyl Passage",
+    "titleGen": false,
+    "description": "Despite popular belief, Pterodactyls were not dinosaurs but flying reptiles.",
+    "descriptionGen": false,
     "addressProperties": {
       "formattedAddress": "To Kwa Wan, Hong Kong",
       "formattedAddress__zh-hant": "香港土瓜灣",
@@ -125,16 +101,10 @@
       "type": "Point",
       "coordinates": [114.1922, 22.3293]
     },
-    "properties": {
-      "title": "Brachiosaurus Boulevard",
-      "title__zh-hant": "腕龍大道",
-      "title__zh-hans": "腕龙大道",
-      "titleGen": false,
-      "description": "Brachiosaurus could reach heights of up to 39 feet, making it one of the tallest known dinosaurs.",
-      "description__zh-hant": "腕龍可以長到39英尺高，是已知最高的恐龍之一。",
-      "description__zh-hans": "腕龙可以长到39英尺高，是已知最高的恐龙之一。",
-      "descriptionGen": false
-    },
+    "title": "Brachiosaurus Boulevard",
+    "titleGen": false,
+    "description": "Brachiosaurus could reach heights of up to 39 feet, making it one of the tallest known dinosaurs.",
+    "descriptionGen": false,
     "addressProperties": {
       "formattedAddress": "Kowloon City, Hong Kong",
       "formattedAddress__zh-hant": "香港九龍城",
@@ -155,16 +125,10 @@
       "type": "Point",
       "coordinates": [114.0293, 22.4443]
     },
-    "properties": {
-      "title": "Triceratops Terrace",
-      "title__zh-hant": "三角龍台",
-      "title__zh-hans": "三角龙台",
-      "titleGen": false,
-      "description": "Triceratops had up to 800 teeth, which were constantly replaced throughout its lifetime.",
-      "description__zh-hant": "三角龍有多達800顆牙齒，在其一生中不斷更換。",
-      "description__zh-hans": "三角龙有多达800颗牙齿，在其一生中不断更换。",
-      "descriptionGen": false
-    },
+    "title": "Triceratops Terrace",
+    "titleGen": false,
+    "description": "Triceratops had up to 800 teeth, which were constantly replaced throughout its lifetime.",
+    "descriptionGen": false,
     "addressProperties": {
       "formattedAddress": "Yuen Long, Hong Kong",
       "formattedAddress__zh-hant": "香港元朗",
@@ -185,16 +149,10 @@
       "type": "Point",
       "coordinates": [114.1457, 22.2881]
     },
-    "properties": {
-      "title": "Ankylosaurus Alley",
-      "title__zh-hant": "甲龍巷",
-      "title__zh-hans": "甲龙巷",
-      "titleGen": false,
-      "description": "Ankylosaurus had a club-like tail that it could swing with enough force to break the bones of large predators.",
-      "description__zh-hant": "甲龍有一個棒狀尾巴，可以用足夠的力量揮動以打斷大型掠食動物的骨頭。",
-      "description__zh-hans": "甲龙有一个棒状尾巴，可以用足够的力量挥动以打断大型掠食动物的骨头。",
-      "descriptionGen": false
-    },
+    "title": "Ankylosaurus Alley",
+    "titleGen": false,
+    "description": "Ankylosaurus had a club-like tail that it could swing with enough force to break the bones of large predators.",
+    "descriptionGen": false,
     "addressProperties": {
       "formattedAddress": "Sheung Wan, Hong Kong",
       "formattedAddress__zh-hant": "香港上環",
@@ -215,16 +173,10 @@
       "type": "Point",
       "coordinates": [114.146, 22.3755]
     },
-    "properties": {
-      "title": "Diplodocus Drive",
-      "title__zh-hant": "梁龍大道",
-      "title__zh-hans": "梁龙大道",
-      "titleGen": false,
-      "description": "Diplodocus could grow up to 108 feet long, with much of its length coming from its extremely long neck and tail.",
-      "description__zh-hant": "梁龍可以長到108英尺長，其大部分長度來自其極長的脖子和尾巴。",
-      "description__zh-hans": "梁龙可以长到108英尺长，其大部分长度来自其极长的脖子和尾巴。",
-      "descriptionGen": false
-    },
+    "title": "Diplodocus Drive",
+    "titleGen": false,
+    "description": "Diplodocus could grow up to 108 feet long, with much of its length coming from its extremely long neck and tail.",
+    "descriptionGen": false,
     "addressProperties": {
       "formattedAddress": "Kwai Chung, Hong Kong",
       "formattedAddress__zh-hant": "香港葵涌",
@@ -245,16 +197,10 @@
       "type": "Point",
       "coordinates": [114.2675, 22.3799]
     },
-    "properties": {
-      "title": "Spinosaurus Square",
-      "title__zh-hant": "棘龍廣場",
-      "title__zh-hans": "棘龙广场",
-      "titleGen": false,
-      "description": "Spinosaurus is the only known dinosaur adapted for swimming, with a fin-like sail on its back and paddle-like feet.",
-      "description__zh-hant": "棘龍是唯一已知適應游泳的恐龍，背部有鰭狀帆，腳呈槳狀。",
-      "description__zh-hans": "棘龙是唯一已知适应游泳的恐龙，背部有鳍状帆，脚呈桨状。",
-      "descriptionGen": false
-    },
+    "title": "Spinosaurus Square",
+    "titleGen": false,
+    "description": "Spinosaurus is the only known dinosaur adapted for swimming, with a fin-like sail on its back and paddle-like feet.",
+    "descriptionGen": false,
     "addressProperties": {
       "formattedAddress": "Sai Kung, Hong Kong",
       "formattedAddress__zh-hant": "香港西貢",

@@ -48,6 +48,22 @@
     "placeholderGen": true
   },
   {
+    "propertyId": "hJ4kL9mN9pQ2",
+    "lang": "zh-hant",
+    "label": "等级",
+    "labelGen": true,
+    "placeholder": "选择等级",
+    "placeholderGen": true
+  },
+  {
+    "propertyId": "hJ4kL9mN9pQ2",
+    "lang": "zh-hans",
+    "label": "等级",
+    "labelGen": true,
+    "placeholder": "选择等级",
+    "placeholderGen": true
+  },
+  {
     "propertyId": "tU5vW8xY1zA4",
     "lang": "zh-hant",
     "label": "字形",
