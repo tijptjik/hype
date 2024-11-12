@@ -76,23 +76,21 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       return SuperFormResponse(form);
     }
 
-    const codeUnique = await isFieldUnique<Layer>(db, formData as Layer, RESOURCE_TYPE, 'code');
-
-    if (!codeUnique) {
-      form.valid = false;
-      form.errors.code = ['Code already exists'];
-    }
-
     const { baseLayer, formTranslations } = extractEntitiesToInsert(form.data);
     const createdLayer = await createLayer(db, baseLayer);
     const createdTranslations = await createTranslations(db, formTranslations, createdLayer.id);
-    
-    // Add property handling
-    if (form.data.properties) {
-      await createLayerProperties(db, createdLayer.id, form.data.properties);
-    }
+    const createdProperties = await createLayerProperties(
+      db,
+      createdLayer.id,
+      form.data.properties
+    );
 
-    const updatedForm = await rebuildFormData(createdLayer, createdTranslations);
+    const updatedForm = await rebuildFormData(
+      createdLayer,
+      createdTranslations,
+      createdProperties
+    );
+
     return SuperFormResponse(updatedForm, true, false, RESOURCE_PATH, 201);
   } catch (err) {
     console.error(err);

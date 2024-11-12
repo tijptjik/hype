@@ -1,4 +1,4 @@
-import { error, type RequestHandler } from '@sveltejs/kit';
+import { error, type RequestHandler, json } from '@sveltejs/kit';
 import { superValidate, type SuperValidated } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import {
@@ -89,7 +89,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 
   try {
     const formData: Layer = await request.json();
-    const form = await superValidate(formData, zod(LayerUpdateAPI)) as SuperValidated<Layer>;
+    const form = (await superValidate(formData, zod(LayerUpdateAPI))) as SuperValidated<Layer>;
 
     if (!form.valid) {
       return SuperFormResponse(form);
@@ -99,12 +99,17 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     const updatedLayer = await updateLayer(db, baseLayer, params[PUBLIC_IDENTIFIER] as string);
     const updatedTranslations = await updateTranslations(db, formTranslations, updatedLayer.id);
 
-    // Add property handling
-    if (form.data.properties) {
-      await updateLayerProperties(db, updatedLayer.id, form.data.properties);
-    }
+    const updatedLayerProperties = await updateLayerProperties(
+      db,
+      updatedLayer.id,
+      formData.properties
+    );
 
-    const updatedForm = await rebuildFormData(updatedLayer, updatedTranslations);
+    const updatedForm = await rebuildFormData(
+      updatedLayer,
+      updatedTranslations,
+      updatedLayerProperties
+    );
     return SuperFormResponse(updatedForm, false, false, RESOURCE_PATH, 200);
   } catch (err) {
     console.error(err);
