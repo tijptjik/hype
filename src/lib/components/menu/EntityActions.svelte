@@ -20,7 +20,7 @@ let { entity, resourceType }: Props = $props();
 <li>
   <FormSubmitButton {entity} {resourceType} />
 </li>
-{#if resourceType === 'layer' || resourceType === 'feature'}
+{#if resourceType === 'project' || resourceType === 'layer' || resourceType === 'feature'}
   <li>
     <PublishButton {entity} {resourceType} />
   </li>
