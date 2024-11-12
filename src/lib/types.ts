@@ -57,6 +57,7 @@ import RangeField from '$lib/components/forms/FormFieldRange.svelte';
 import TagsField from '$lib/components/forms/FormFieldTags.svelte';
 import UsersField from '$lib/components/forms/FormFieldUsers.svelte';
 import ComplexField from '$lib/components/forms/FormFieldComplex.svelte';
+import CheckboxField from '$lib/components/forms/FormFieldCheckbox.svelte';
 
 // HTML
 export type InputType = 'text' | 'number' | 'email' | 'password';
@@ -230,7 +231,8 @@ export const fieldComponentTypes = [
   'InputField',
   'TextareaField',
   'TagsField',
-  'ComplexField'
+  'ComplexField',
+  'CheckboxField'
 ] as const;
 export const classifierComponentTypes = ['SelectField', 'RangeField'] as const;
 export const specifierComponentTypes = ['InputField', 'TextareaField', 'TagsField'] as const;
@@ -244,6 +246,7 @@ export type FieldComponent =
   | typeof TagsField
   | typeof UsersField
   | typeof CustomField
+  | typeof CheckboxField
   | typeof ComplexField;
 
 /* ----------------- */
