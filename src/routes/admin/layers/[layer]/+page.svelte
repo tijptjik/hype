@@ -39,7 +39,11 @@ const FIELDS: FormFieldConfig = {
       isArray: true,
       discriminators: {
         key: 'type',
-        values: ['classifier', 'specifier']
+        values: ['classifier', 'specifier'],
+        specs: {
+          classifier: {},
+          specifier: {}
+        }
       }
     }
   }
@@ -51,10 +55,10 @@ let { validatedForm, entity } = data;
 
 // STATE : DERIVED
 const routerState = getRouterState() as ResourceRouter;
-const title = $derived($form.name || 'New');
+const title = $derived(data.validatedForm.data.name || 'New');
 
 // STATE : FORM
-let { message, enhance, form, errors } = setForm(
+let {enhance, form, errors } = setForm(
   routerState.resource as ResourceType,
   entity,
   validatedForm
@@ -65,7 +69,6 @@ let { message, enhance, form, errors } = setForm(
 <div class="h-full overflow-y-auto bg-black pb-16">
   <Header entity={data.entity} resourceType={routerState.resource} {title} />
   <main class="flex flex-col p-6">
-    {#if Object.keys(message).length > 0}<h3>{get(message)}</h3>{/if}
     <form method="POST" use:enhance class="flex flex-col gap-6">
       {#if routerState.facet === 'core' || routerState.facet === false}
         <SectionI18n

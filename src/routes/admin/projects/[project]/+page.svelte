@@ -199,7 +199,7 @@ let { validatedForm, entity } = data;
 
 // STATE : DERIVED
 const routerState = getRouterState() as ResourceRouter;
-const title = $derived(validatedForm.data.name || 'New');
+const title = $derived(data.validatedForm.data.name || 'New');
 
 $effect(() => {
   //Remove parentRef from URL if it exists
