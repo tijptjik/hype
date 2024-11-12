@@ -2,8 +2,16 @@ import type { IconSource } from '@steeze-ui/heroicons';
 // ZOD Schemas
 import { z } from 'zod';
 import {
+  FeatureI18nInsert,
+  FeatureI18nUpdate,
   FeatureInsert,
   FeatureInsertAPI,
+  FeaturePropertyUpdateAPI,
+  FeaturePropertyInsertAPI,
+  FeaturePropertyUpdate,
+  FeaturePropertyInsert,
+  FeaturePropertyI18nInsert,
+  FeaturePropertyI18nUpdate,
   FeatureUpdate,
   FeatureUpdateAPI,
   fieldDiscriminators,
@@ -311,51 +319,28 @@ export type FeatureDB = z.infer<typeof FeatureUpdate>;
 // Feature without relations, for use in inserting a new feature
 export type NewFeatureDB = z.infer<typeof FeatureInsert>;
 
+// featureI18n, but without featureId - for use in API insertions
+export type NewFeatureI18n = z.infer<typeof FeatureI18nInsert>;
+// Same as NewFeatureI18n, but with the featureId - for use in API updates
+export type FeatureI18n = z.infer<typeof FeatureI18nUpdate>;
+
 /* ----------------- */
 // FEATURES : PROPERTIES
 /* -------- */
 
-export type FeatureProperties = {
-  descriptors: {
-    // Title
-    title: string;
-    'title__zh-hant': string;
-    'title__zh-hans': string;
-    titleGen: boolean;
-    'titleGen__zh-hant': boolean;
-    'titleGen__zh-hans': boolean;
+// FeatureProperty with all fields, including translations
+export type FeatureProperty = z.infer<typeof FeaturePropertyUpdateAPI>;
+// Like FeatureProperty, but for inserting a new feature property
+export type NewFeatureProperty = z.infer<typeof FeaturePropertyInsertAPI>;
+// FeatureProperty without relations, for use in updating a feature property
+export type FeaturePropertyDB = z.infer<typeof FeaturePropertyUpdate>;
+// FeatureProperty without relations, for use in inserting a new feature property
+export type NewFeaturePropertyDB = z.infer<typeof FeaturePropertyInsert>;
 
-    // Description
-    description?: string;
-    'description__zh-hant'?: string;
-    'description__zh-hans'?: string;
-    descriptionGen?: boolean;
-    'descriptionGen__zh-hant'?: boolean;
-    'descriptionGen__zh-hans'?: boolean;
-  };
-  classifiers?: {
-    // Misc
-    grade?: number; // Value between 1 and 5
-  };
-  display?: {
-    markerSize?: string; // small, medium, large
-    markerSymbol?: string;
-    markerColor?: string; // "#fff"
-  };
-};
-
-export type GhostSignsFeatureProperties = FeatureProperties & {
-  // Specification
-  specifiers: {
-    graphemes?: string; // Literal
-  };
-  // Classification
-  classifiers: {
-    size?: string; // large, medium, small
-    material?: string; // Painted on Cement, Painted on Metal, Painted on Brick, Painted on Tile, Painted over, Acrylic, Metal, Wood, Terrazzo, Stone, Molded Cement, Zinc Stenciled
-    visibility?: string; // Revenant, Physical, Palimpsest, Uncovering
-  };
-};
+// featurePropertyI18n, but without featurePropertyId - for use in API insertions
+export type NewFeaturePropertyI18n = z.infer<typeof FeaturePropertyI18nInsert>;
+// Same as NewFeaturePropertyI18n, but with the featurePropertyId - for use in API updates
+export type FeaturePropertyI18n = z.infer<typeof FeaturePropertyI18nUpdate>;
 
 /* ----------------- */
 // FEATURES : ADDRESS

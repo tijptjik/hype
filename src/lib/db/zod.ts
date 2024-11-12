@@ -15,7 +15,10 @@ import {
   propertyI18n,
   propertyValueI18n,
   propertyValue,
-  layerProperty
+  layerProperty,
+  featureI18n,
+  featureProperty,
+  featurePropertyI18n
 } from '$lib/db/schema';
 import type { GeometryObject } from 'geojson';
 import type {
@@ -78,6 +81,7 @@ const getDefaultConstraints = (
     | typeof layerI18n
     | typeof property
     | typeof feature
+    | typeof featureI18n
 ) => {
   return Object.keys(table).reduce(
     (acc, key) => {
@@ -332,17 +336,49 @@ export const LayerUpdateAPI = LayerUpdate.extend({
 export const LayerPatch = LayerUpdate.partial();
 
 /* ----------------- */
+// FEATURE PROPERTIES
+/* -------- */
+
+export const FeaturePropertyBase = createSelectSchema(featureProperty);
+export const FeaturePropertyI18nBase = createSelectSchema(featurePropertyI18n);
+
+// Base schema to validate submit data
+export const FeaturePropertyInsert = createInsertSchema(featureProperty);
+export const FeaturePropertyUpdate = FeaturePropertyInsert.extend({
+  id: z.string()
+});
+export const FeaturePropertyUpdateExtra = FeaturePropertyUpdate.extend({
+  property: PropertyInsertAPI.omit({ values: true })
+});
+
+export const FeaturePropertyI18nUpdate = createInsertSchema(featurePropertyI18n);
+export const FeaturePropertyI18nInsert = FeaturePropertyI18nUpdate.omit({ featurePropertyId: true });
+
+export const FeaturePropertyInsertAPI = FeaturePropertyInsert.extend({
+  translations: getTranslations(FeaturePropertyI18nInsert)
+});
+export const FeaturePropertyUpdateAPI = FeaturePropertyUpdateExtra.extend({
+  translations: getTranslations(FeaturePropertyI18nUpdate)
+});
+
+/* ----------------- */
 // FEATURES
 /* -------- */
 
+const PointGeometry = z.object({
+  type: z.literal("Point"),
+  coordinates: z.array(z.number())
+})
+
 // Feature Schemas
 export const FeatureBase = createSelectSchema(feature);
+export const FeatureI18nBase = createSelectSchema(featureI18n);
 
+// Base schema to validate submit data
 export const FeatureInsert = createInsertSchema(feature).extend({
   ...getDefaultConstraints(feature),
   // TODO These are NOT custom, they should just be z.object()
-  geometry: z.custom<GeometryObject>(),
-  properties: z.custom<GhostSignsFeatureProperties>(),
+  geometry: PointGeometry,
   addressProperties: z.custom<AddressProperties>().optional()
 });
 
@@ -350,7 +386,18 @@ export const FeatureUpdate = FeatureInsert.extend({
   id: z.string()
 });
 
-export const FeatureInsertAPI = FeatureInsert;
-export const FeatureUpdateAPI = FeatureUpdate;
+export const FeatureI18nUpdate = createInsertSchema(featureI18n).extend({
+  ...getDefaultConstraints(featureI18n)
+});
+export const FeatureI18nInsert = FeatureI18nUpdate.omit({ featureId: true });
+
+export const FeatureInsertAPI = FeatureInsert.extend({
+  translations: getTranslations(FeatureI18nInsert),
+  properties: z.array(FeaturePropertyInsertAPI)
+});
+export const FeatureUpdateAPI = FeatureUpdate.extend({
+  translations: getTranslations(FeatureI18nUpdate),
+  properties: z.array(FeaturePropertyUpdateAPI)
+});
 
 export const FeaturePatch = FeatureUpdate.partial();
