@@ -71,6 +71,13 @@
       "when": 1730262190093,
       "tag": "0009_remove_metadata_from_projects",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1731389978354,
+      "tag": "0010_feature_properties",
+      "breakpoints": true
     }
   ]
 }
