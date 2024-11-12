@@ -1,6 +1,6 @@
 import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
-import { error, type RequestHandler } from '@sveltejs/kit';
+import { error, json, type RequestHandler } from '@sveltejs/kit';
 import { projectRole, projectI18n, organisationRole } from '$lib/db/schema';
 import {
   getDatabaseOrError,
@@ -17,16 +17,18 @@ import {
   updateMaintainerRoles,
   rebuildFormData,
   extractEntitiesToUpdate,
-  mergeOrganizationRoles
+  mergeOrganisationRoles,
+  patchProject
 } from '$lib/db/services/project';
 import { updateRelatedProperties } from '$lib/db/services/property';
 import { isFieldUnique, isFieldChanged } from '$lib/db';
 // ZOD
-import { ProjectUpdateAPI } from '$lib/db/zod';
+import { ProjectPatch, ProjectUpdateAPI } from '$lib/db/zod';
 // TYPES
 import type { SuperValidated } from 'sveltekit-superforms/client';
-import type { OrganisationRole, Project, ProjectDB } from '$lib/types';
+import type { OrganisationRole, Project, ProjectDB, ProjectPartialUpdate } from '$lib/types';
 import { and, eq } from 'drizzle-orm';
+import { patchFeature } from '$lib/db/services/feature';
 
 const RESOURCE_TYPE = 'project';
 const RESOURCE_PATH = 'projects';
@@ -80,7 +82,9 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
       );
 
       // Process result to include organization roles
-      const processedResult = await mergeOrganizationRoles(db, result);
+      let processedResult = await mergeOrganisationRoles(db, result);
+      processedResult.properties.reverse();
+
 
       // HTTP : 200 JSON or 404
       return JSONResponseOrError(processedResult);
@@ -164,5 +168,25 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
   } catch (err) {
     console.error(err);
     return SuperFormErrorResponse(RESOURCE_TYPE);
+  }
+};
+
+
+export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
+  const { db } = await getDatabaseOrError(locals, platform, ACCESS_STRATEGY, RESOURCE_TYPE);
+  
+  try {
+    const formData: ProjectPartialUpdate = await request.json();
+    const form = await superValidate(formData, zod(ProjectPatch));
+
+    if (!form.valid) {
+      return json(form, { status: 400 });
+    }
+
+    const updated = await patchProject(db, params.code as string, form.data);
+    return json({ success: true, data: updated });
+  } catch (err) {
+    console.error(err);
+    return json({ success: false, error: 'Failed to update layer' }, { status: 500 });
   }
 };

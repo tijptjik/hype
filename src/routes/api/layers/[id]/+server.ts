@@ -10,15 +10,20 @@ import {
 } from '$lib/api';
 // DB
 import { hierarchicalEntityQuery } from '$lib/db';
-import { updateLayer, updateTranslations, extractEntitiesToUpdate, rebuildFormData, updateLayerProperties, mergeProjectProperties } from '$lib/db/services/layer';
 import {
-  projectRole,
-  layerI18n
-} from '$lib/db/schema';
+  updateLayer,
+  updateTranslations,
+  extractEntitiesToUpdate,
+  rebuildFormData,
+  updateLayerProperties,
+  mergeProjectProperties,
+  patchLayer
+} from '$lib/db/services/layer';
+import { projectRole, layerI18n } from '$lib/db/schema';
 // ZOD
-import { LayerUpdateAPI } from '$lib/db/zod';
+import { LayerUpdateAPI, LayerPatch } from '$lib/db/zod';
 // TYPES
-import type { Layer } from '$lib/types';
+import type { Layer, LayerPartialUpdate } from '$lib/types';
 
 const RESOURCE_TYPE = 'layer';
 const RESOURCE_PATH = 'layers';
@@ -104,5 +109,24 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
   } catch (err) {
     console.error(err);
     return SuperFormErrorResponse(RESOURCE_TYPE);
+  }
+};
+
+export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
+  const { db } = await getDatabaseOrError(locals, platform, ACCESS_STRATEGY, RESOURCE_TYPE);
+  
+  try {
+    const formData: LayerPartialUpdate = await request.json();
+    const form = await superValidate(formData, zod(LayerPatch));
+
+    if (!form.valid) {
+      return json(form, { status: 400 });
+    }
+
+    const updated = await patchLayer(db, params.id as string, form.data);
+    return json({ success: true, data: updated });
+  } catch (err) {
+    console.error(err);
+    return json({ success: false, error: 'Failed to update layer' }, { status: 500 });
   }
 };
