@@ -51,7 +51,7 @@
     "typescript-eslint": "^8.14.0",
     "vitest": "^2.1.4",
     "vitest-browser-svelte": "^0.0.1",
-    "webdriverio": "^9.2.11",
+    "webdriverio": "^9.2.12",
     "wrangler": "^3.86.1"
   },
   "type": "module",
@@ -82,7 +82,7 @@
     "drizzle-orm": "^0.33.0",
     "drizzle-zod": "^0.5.1",
     "maplibre-gl": "^4.7.1",
-    "postcss": "^8.4.48",
+    "postcss": "^8.4.49",
     "short-uuid": "^5.2.0",
     "svelte": "^5.1.15",
     "svelte-fa": "^4.0.3",
