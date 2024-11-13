@@ -70,7 +70,7 @@ const isGenAI = (fieldId: string) => {
       </span>
     </div>
     <div
-      class="relative flex items-baseline gap-2 rounded-lg border-none bg-neutral pl-0 pr-3 outline outline-1 outline-black focus-within:outline-neutral-500">
+      class="flex items-baseline gap-2 rounded-lg border-none bg-neutral pl-0 pr-3 outline outline-1 outline-black focus-within:outline-neutral-500">
       {#if field.isArray}
         {@const id = `${fieldId}_${fieldDiscriminator}_${fieldIndex}_${fieldKey}_${languageTag}`}
         {#if languageTag === 'core' || languageTag === 'en'}

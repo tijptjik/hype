@@ -53,7 +53,8 @@ const getId = () => {
   <!-- SPACER -->
   <div class="h-[74px] w-full rounded-lg bg-neutral bg-opacity-10"></div>
 {:else}
-  <label class="form-control w-full">
+<label class="form-control w-full">
+  {#if fieldDiscriminator !== 'specifier'}
     <div class="label text-sm">
       <span class="label-text text-xs font-bold">{field.label}</span>
       <span class="label-text-alt text-xs font-bold">
@@ -64,6 +65,7 @@ const getId = () => {
         {/if}
       </span>
     </div>
+    {/if}
     <div
       class="flex items-center gap-2 rounded-lg border-1 border-transparent bg-neutral pl-2 pr-3 focus-within:outline focus-within:outline-1 focus-within:outline-neutral-500">
       {#if field.isNested}

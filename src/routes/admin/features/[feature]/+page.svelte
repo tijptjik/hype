@@ -80,7 +80,7 @@ let { enhance, form, errors } = setForm(
 <Header entity={data.entity} resourceType={routerState.resource} {title} />
 <form method="POST" use:enhance class="h-full flex-1 overflow-hidden">
   <main class="h-full flex flex-1 flex-row gap-6 p-6 pb-0 pr-3 bg-black">
-    <div class="@container h-full relative flex-1 basis-1/3">
+    <div class="@container z-10 h-full relative flex-1 basis-1/3">
       <MapSection {entity} resourceType={routerState.resource} />
       <div class="absolute hidden @md:flex bottom-2 left-0 right-0 items-center justify-center gap-6 p-4">
         <UserAttributionCard
@@ -95,30 +95,30 @@ let { enhance, form, errors } = setForm(
         {/if}
       </div>
     </div>
-    <div class="basis-2/3 flex flex-col gap-6 overflow-auto pr-3 pb-12">
+    <div class="basis-2/3 flex gap-6 overflow-auto pr-3 pb-12 flex-col-reverse justify-end">
       {#if routerState.facet === 'core' || routerState.facet === false}
+      <div class="flex flex-row gap-6">
+        <PropertySection
+          title="Classifiers"
+          subtitle="by which features can be filtered"
+          fieldDiscriminator="classifier"
+          fields={FIELDS.property as FormFieldArray}
+          {entity}
+          resourceType={routerState.resource} />
+        <PropertySection
+          title="Specifiers"
+          subtitle="which are displayed in feature info panels"
+          fieldDiscriminator="specifier"
+          fields={FIELDS.property as FormFieldArray}
+          {entity}
+          resourceType={routerState.resource} />
+      </div>
         <I18nSection
           title="Descriptors"
           fields={FIELDS.i18n as FormField}
           facet={routerState.facet}
           {entity}
           resourceType={routerState.resource} />
-        <div class="flex flex-row gap-6">
-          <PropertySection
-            title="Classifiers"
-            subtitle="by which features can be filtered"
-            fieldDiscriminator="classifier"
-            fields={FIELDS.property as FormFieldArray}
-            {entity}
-            resourceType={routerState.resource} />
-          <PropertySection
-            title="Specifiers"
-            subtitle="which are displayed in feature info panels"
-            fieldDiscriminator="specifier"
-            fields={FIELDS.property as FormFieldArray}
-            {entity}
-            resourceType={routerState.resource} />
-        </div>
         <!-- TODO Add support for translatable specifiers -->
       {:else}
         <h1>FACET NOT FOUND</h1>

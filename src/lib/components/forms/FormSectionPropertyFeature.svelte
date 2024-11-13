@@ -27,7 +27,7 @@ const { form, errors, constraints } = getForm(resourceType, entity);
 </script>
 
 <div
-  class="@container rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0 {fieldDiscriminator ==
+  class="@container z-10 rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0 {fieldDiscriminator ==
   'classifier'
     ? 'basis-2/3'
     : 'basis-1/3'}">

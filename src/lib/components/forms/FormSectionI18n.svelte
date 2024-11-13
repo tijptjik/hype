@@ -4,6 +4,8 @@
 import { getForm } from '$lib/context/forms.svelte';
 // Components
 import Header from '$lib/components/forms/FormHeader.svelte';
+import Actions from '$lib/components/forms/FormFeatureActions.svelte';
+import Info from '$lib/components/forms/FormFeatureInfo.svelte';
 import TranslationBar from './FormTranslationBar.svelte';
 // TYPES
 import type { FormField, ResourceType, FalsableRef, FalsableFacetType } from '$lib/types';
@@ -30,8 +32,12 @@ let { title, fields, facet, entity, resourceType }: Props = $props();
 const { form, errors, constraints } = getForm(resourceType, entity);
 </script>
 
-<div class="@container rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
-  <Header {title} {entity} {resourceType} />
+<div class="@container z-10 rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
+  {#if (facet == 'core' || facet == false) && resourceType == 'feature'}
+    <Header {title} {facet} {entity} {resourceType} {Actions} {Info}/>
+  {:else}
+    <Header {title} {entity} {resourceType} />
+  {/if}
   <div class="grid grid-cols-1 @xl:grid-cols-2 @5xl:grid-cols-3 gap-4 p-4">
     {#each languageTags as languageTag}
       <div class="group flex flex-grow flex-col gap-4 rounded-xl bg-base-100">

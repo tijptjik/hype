@@ -1,6 +1,6 @@
 <script lang="ts">
-import { QueueList, XMark } from '@steeze-ui/heroicons';
-import { Icon } from '@steeze-ui/svelte-icon';
+  import { Icon } from '@steeze-ui/svelte-icon';
+  import { QueueList, XMark } from '@steeze-ui/heroicons';
 // TYPES
 import type { FalsableRef, ResourceType } from '$lib/types';
 type Props = {

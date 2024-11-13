@@ -46,7 +46,6 @@ function handleDragEnd(e) {
 
 // ON MOUNT
 $effect(async () => {
-    $inspect(lngLat);
     await loadScript('https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js');
     // await loadScript('../../map/maplibre-preload.modern.js');
 

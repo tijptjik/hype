@@ -1,12 +1,13 @@
 <script lang="ts">
 type Props = {
   checked: boolean;
+  size?: 'sm' | 'md' | 'lg';
   onChange: () => void;
 };
 
-let { checked, onChange }: Props = $props();
+let { checked, size = 'lg', onChange }: Props = $props();
 </script>
 
 <label class="label cursor-pointer">
-  <input type="checkbox" class="toggle toggle-primary toggle-lg" {checked} on:change={onChange} />
+  <input type="checkbox" class="toggle toggle-primary toggle-{size}" {checked} onchange={onChange} />
 </label>

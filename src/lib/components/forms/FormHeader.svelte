@@ -10,16 +10,25 @@ import { getForm } from '$lib/context/forms.svelte';
 // TYPES
 import type { Component } from 'svelte';
 import type { Writable } from 'svelte/store';
-import type { FormField, FormFieldArray, FormFieldArrayDefinition, ResourceType, FalsableRef, FalsableFacetType } from '$lib/types';
+import type {
+  FormField,
+  FormFieldArray,
+  FormFieldArrayDefinition,
+  ResourceType,
+  FalsableRef,
+  FalsableFacetType
+} from '$lib/types';
 
 // TYPES
 type Props = {
   title: string;
   subtitle?: string;
-  Actions?: Component<{
-    searchMode?: boolean;
-    removeMode?: boolean;
-  }>;
+  Actions?:
+    | Component<{
+        searchMode?: boolean;
+        removeMode?: boolean;
+      }>
+    | Component;
   actions?: Record<string, (...args: any[]) => void>;
   actionProps?: Record<string, any>;
   Info?: Component;
@@ -69,13 +78,13 @@ $effect(() => {
 });
 </script>
 
-<div class="flex flex-col relative rounded-t-2xl">
-  <div class="@container flex h-20 flex-row justify-between gap-2 bg-base-100 px-6 rounded-t-2xl">
+<div class="relative flex flex-col rounded-t-2xl">
+  <div class="@container z-10 flex h-20 flex-row justify-between gap-2 rounded-t-2xl bg-base-100 px-6">
     <div class=" flex h-20 items-center gap-4">
       <Icon src={ChevronRight} class="h-6 w-6" />
       <h3 class="text-lg">
         {title}
-        <small class="hidden @sm:block pr-3 text-sm text-base-content/50">{subtitle}</small>
+        <small class="@sm:block hidden pr-3 text-sm text-base-content/50">{subtitle}</small>
       </h3>
       {#if $errors}
         {#each Object.entries($errors) as [fieldId, error]}
@@ -90,18 +99,22 @@ $effect(() => {
       {/if}
     </div>
     {#if Actions}
-      <div class="flex items-center gap-6">
-        <Actions
-          bind:searchMode={actionProps.searchMode}
-          bind:removeMode={actionProps.removeMode}
-          {actions}
-          {entity}
-          {resourceType} />
-      </div>
-    {/if}
-    {#if Info}
-      <div class="flex items-center gap-6">
-        <Info {entity} {resourceType} />
+    <div class="flex items-center gap-6">
+        {#if resourceType !== 'feature'}
+          <Actions
+            bind:searchMode={actionProps.searchMode}
+            bind:removeMode={actionProps.removeMode}
+            {actions}
+            {entity}
+            {resourceType} />
+        {:else}
+          <Actions {actions} {entity} {resourceType} />
+        {/if}
+        {#if Info}
+          <div class="flex items-center gap-6">
+            <Info {entity} {resourceType} />
+          </div>
+        {/if}
       </div>
     {/if}
   </div>
@@ -112,7 +125,9 @@ $effect(() => {
     {entity}
     {resourceType} />
   {#if actionProps.removeMode}
-    <div transition:slide={{ duration: 200 }} class="alert rounded-none border-0 border-b-4 border-warning w-full">
+    <div
+      transition:slide={{ duration: 200 }}
+      class="alert w-full rounded-none border-0 border-b-4 border-warning">
       <Icon src={ExclamationTriangle} class="h-6 w-6 shrink-0 stroke-current" />
       <span><span class="font-bold text-warning">Warning:</span> {getWarningMessage()}</span>
     </div>
