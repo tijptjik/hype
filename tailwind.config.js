@@ -83,11 +83,9 @@ export default {
     ]
   },
   plugins: [
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     require('tailwindcss-unimportant'),
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require('@tailwindcss/container-queries'),
     require('@tailwindcss/typography'),
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     require('daisyui')
   ],
   darkMode: ['class', '[data-theme="spectre"]']
