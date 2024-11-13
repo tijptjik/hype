@@ -444,7 +444,8 @@ export const feature = sqliteTable('feature', {
   modifiedAt: text('modifiedAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .$onUpdate(() => new Date().toISOString())
-    .notNull()
+    .notNull(),
+  publishedAt: text('publishedAt')
 });
 
 export const featureRelations = relations(feature, ({ one, many }) => ({

@@ -49,7 +49,8 @@ const handleClick = async (e: Event) => {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        isPublished: !$form.isPublished
+        isPublished: !$form.isPublished,
+        publishedAt: !$form.isPublished ? new Date().toISOString() : null
       })
     });
 
@@ -60,6 +61,7 @@ const handleClick = async (e: Event) => {
       form.update(
         ($form) => {
           $form.isPublished = !$form.isPublished;
+          $form.publishedAt = result.data.publishedAt;
           return $form;
         },
         { taint: false }
