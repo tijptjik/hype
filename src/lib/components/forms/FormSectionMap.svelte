@@ -1,14 +1,17 @@
 <script lang="ts">
-import { setContext, onMount } from 'svelte';
+import { setContext, onMount, tick } from 'svelte';
 import { loadScript } from '$lib';
 import SpectralStyle from '$lib/map/style.json';
+
 // CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
 import { createMapStore, MAPSTORE_CONTEXT_KEY } from '$lib/stores';
 // TYPES
 import type { FalsableRef, ResourceType } from '$lib/types';
 // ENV
-import { PUBLIC_MAPTILER_KEY } from '$env/static/public';
+// import { PUBLIC_MAPTILER_KEY } from '$env/static/public';
+
+
 
 // TYPES
 type Props = {
@@ -18,6 +21,7 @@ type Props = {
 
 // STATE : PROPS
 let { entity, resourceType }: Props = $props();
+let mapEntity = $derived(entity);
 
 // STATE : CONTEXT : FORM
 const { form, errors, constraints } = getForm(resourceType, entity);
@@ -25,19 +29,32 @@ const { form, errors, constraints } = getForm(resourceType, entity);
 const lngLat = $derived($form.geometry?.coordinates);
 
 // STATE : CONTEXT : MAP
-const mapStore = createMapStore();
-setContext(MAPSTORE_CONTEXT_KEY, mapStore);
 let mapContainer: HTMLDivElement;
+let map = $state();
+let feature = $state();
+
+const syncUpCoordinates = (lngLat: number[]) => {
+  form.update(($form) => {
+    $form.geometry.coordinates = lngLat;
+    return $form;
+  });
+};
+
+function handleDragEnd(e) {
+  syncUpCoordinates(e.target.getLngLat().toArray());
+}
 
 // ON MOUNT
 $effect(async () => {
-  await loadScript('https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js');
+    $inspect(lngLat);
+    await loadScript('https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js');
+    // await loadScript('../../map/maplibre-preload.modern.js');
 
   // eslint-disable-next-line no-undef
   const maplibre = maplibregl;
   console.info('Built with 🗺️ MapLibre ' + maplibre?.getVersion());
-  // const map = new Map({
-  const map = new maplibre.Map({
+
+  map = new maplibre.Map({
     container: mapContainer,
     style: SpectralStyle,
     center: lngLat,
@@ -46,7 +63,8 @@ $effect(async () => {
     attributionControl: false
   });
 
-  const feature = new maplibre.Marker({
+
+  feature = new maplibre.Marker({
     color: '#F04D7F',
     clickTolerance: 24,
     draggable: true
@@ -54,22 +72,25 @@ $effect(async () => {
     .setLngLat(lngLat)
     .addTo(map);
 
-  function onDragEnd() {
-    const lngLat = feature.getLngLat();
-    form.update(($form) => {
-      $form.geometry.coordinates = lngLat.toArray();
-      return $form;
-    });
-  }
+  feature.on('dragend', handleDragEnd);
 
-  feature.on('dragend', onDragEnd);
+  maplibre.prewarm()
+});
 
-  mapStore?.set(map);
+
+$effect(async () => {
+    if (map) {
+      map.flyTo({
+        center: lngLat,
+        zoom: 20,
+      });
+      feature.setLngLat(lngLat)
+    }
 });
 </script>
 
 <div
-  class="map full-w relative flex-shrink-0 flex-grow basis-1/3 rounded-lg bg-base-300"
+  class="map rounded-lg bg-base-300 h-full w-full"
   data-testid="map"
   bind:this={mapContainer}>
 </div>

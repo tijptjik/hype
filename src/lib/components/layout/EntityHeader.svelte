@@ -70,7 +70,7 @@ const menuItems = {
 
 </script>
 
-<header class="navbar h-17.5 px-12 py-4 shadow-lg sticky top-0 z-10 bg-gradient-to-r from-rose-500 to-fuchsia-800">
+<header class="flex-none navbar h-17.5 px-12 py-4 shadow-lg sticky top-0 z-10 bg-gradient-to-r from-rose-500 to-fuchsia-800">
   <div class="flex-1">
     <div class="flex items-center space-x-4">
       <Icon src={navItems[routerState.resource as ResourceType].icon} class="h-6 w-6" />

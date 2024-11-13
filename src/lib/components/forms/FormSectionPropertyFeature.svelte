@@ -27,15 +27,15 @@ const { form, errors, constraints } = getForm(resourceType, entity);
 </script>
 
 <div
-  class="overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0 {fieldDiscriminator ==
+  class="@container rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0 {fieldDiscriminator ==
   'classifier'
     ? 'basis-2/3'
     : 'basis-1/3'}">
   <Header {title} {subtitle} {fields} {resourceType} {errors} {entity} />
   {#each Object.entries(fields) as [fieldId, field]}
     <div
-      class="grid grid-cols-1 gap-2 p-4 {fieldDiscriminator == 'classifier'
-        ? 'xl:grid-cols-2 3xl:grid-cols-3 4xl:grid-cols-4 ' : '4xl:grid-cols-2'}">
+      class="grid grid-cols-1 {fieldDiscriminator == 'classifier'
+        ? '@xl:grid-cols-2 @3xl:grid-cols-3 @4xl:grid-cols-4 ' : '@4xl:grid-cols-2'} gap-2 p-4">
       {#if $form[fieldId] && Array.isArray($form[fieldId])}
         {#each $form[fieldId] as item, index}
           {#if item?.property?.type === fieldDiscriminator}

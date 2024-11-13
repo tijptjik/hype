@@ -90,10 +90,11 @@ export type Ref = Id | Code;
 // Property name in API or Database
 export type Key = string;
 export type FalsableRef = Ref | false;
-export type Entity = { id: Id; ref: Ref; name: string; nameShort: string; description: string };
+export type Entity = { id: Id; ref: Ref; name: string; nameShort: string; description: string; address?: string;};
 export type ApiEntity = Entity & {
   code?: Code;
   title?: string;
+  addressProperties?: AddressProperties;
 };
 export type EntityWithData<T> = Entity & { data: T };
 export type FacetType = 'core' | 'address' | 'images' | 'fields';

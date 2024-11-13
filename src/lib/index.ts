@@ -73,3 +73,12 @@ export function loadScript(src: string) {
     script.addEventListener('error', () => reject(script));
   });
 }
+
+
+export function formatDate(dateString: string): string {
+  return new Date(dateString).toLocaleDateString('en-HK', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+  });
+}

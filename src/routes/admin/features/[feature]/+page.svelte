@@ -9,6 +9,7 @@ import I18nSection from '$lib/components/forms/FormSectionI18n.svelte';
 import PropertySection from '$lib/components/forms/FormSectionPropertyFeature.svelte';
 import ImageSection from '$lib/components/forms/FormSectionImage.svelte';
 import MapSection from '$lib/components/forms/FormSectionMap.svelte';
+import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte';
 // TYPES
 import type { SuperForm } from 'sveltekit-superforms';
 import type {
@@ -76,41 +77,53 @@ let { enhance, form, errors } = setForm(
 </script>
 
 <!-- LAYOUT -->
-<div class="h-full overflow-y-auto bg-black pb-16">
-  <Header entity={data.entity} resourceType={routerState.resource} {title} />
-  <main class="flex flex-col p-6 h-full">
-    <form method="POST" use:enhance class="flex flex-row gap-6 h-full">
+<Header entity={data.entity} resourceType={routerState.resource} {title} />
+<form method="POST" use:enhance class="h-full flex-1 overflow-hidden">
+  <main class="h-full flex flex-1 flex-row gap-6 p-6 pb-0 pr-3 bg-black">
+    <div class="@container h-full relative flex-1 basis-1/3">
+      <MapSection {entity} resourceType={routerState.resource} />
+      <div class="absolute hidden @md:flex bottom-2 left-0 right-0 items-center justify-center gap-6 p-4">
+        <UserAttributionCard
+          userId={$form.contributorId}
+          date={$form.createdAt}
+          type="contributor" />
+        {#if $form.publisherId && $form.publishedAt}
+          <UserAttributionCard
+            userId={$form.publisherId}
+            date={$form.publishedAt}
+            type="publisher" />
+        {/if}
+      </div>
+    </div>
+    <div class="basis-2/3 flex flex-col gap-6 overflow-auto pr-3 pb-12">
       {#if routerState.facet === 'core' || routerState.facet === false}
-          <MapSection {entity} resourceType={routerState.resource} />
-          <div class="basis-2/3 gap-6 flex flex-col">
-            <I18nSection
-              title="Descriptors"
-              fields={FIELDS.i18n as FormField}
-              facet={routerState.facet}
-              {entity}
-              resourceType={routerState.resource} />
-            <div class="flex flex-row gap-6">
-              <PropertySection
-                title="Classifiers"
-                subtitle="by which features can be filtered"
-                fieldDiscriminator="classifier"
-                fields={FIELDS.property as FormFieldArray}
-                {entity}
-                resourceType={routerState.resource} />
-              <PropertySection
-                title="Specifiers"
-                subtitle="which are displayed in feature info panels"
-                fieldDiscriminator="specifier"
-                fields={FIELDS.property as FormFieldArray}
-                {entity}
-                resourceType={routerState.resource} />
-          </div>
+        <I18nSection
+          title="Descriptors"
+          fields={FIELDS.i18n as FormField}
+          facet={routerState.facet}
+          {entity}
+          resourceType={routerState.resource} />
+        <div class="flex flex-row gap-6">
+          <PropertySection
+            title="Classifiers"
+            subtitle="by which features can be filtered"
+            fieldDiscriminator="classifier"
+            fields={FIELDS.property as FormFieldArray}
+            {entity}
+            resourceType={routerState.resource} />
+          <PropertySection
+            title="Specifiers"
+            subtitle="which are displayed in feature info panels"
+            fieldDiscriminator="specifier"
+            fields={FIELDS.property as FormFieldArray}
+            {entity}
+            resourceType={routerState.resource} />
         </div>
         <!-- TODO Add support for translatable specifiers -->
       {:else}
         <h1>FACET NOT FOUND</h1>
       {/if}
-    </form>
+    </div>
     <!-- <SuperDebug data={form} /> -->
   </main>
-</div>
+</form>

@@ -69,12 +69,13 @@ $effect(() => {
 });
 </script>
 
-<div class="flex flex-col relative">
-  <div class="flex h-20 flex-row justify-between gap-2 bg-base-100 px-6">
-    <div class="flex h-20 items-center gap-4">
+<div class="flex flex-col relative rounded-t-2xl">
+  <div class="@container flex h-20 flex-row justify-between gap-2 bg-base-100 px-6 rounded-t-2xl">
+    <div class=" flex h-20 items-center gap-4">
       <Icon src={ChevronRight} class="h-6 w-6" />
       <h3 class="text-lg">
-        {title}<small class="block pr-3 text-sm text-base-content/50">{subtitle}</small>
+        {title}
+        <small class="hidden @sm:block pr-3 text-sm text-base-content/50">{subtitle}</small>
       </h3>
       {#if $errors}
         {#each Object.entries($errors) as [fieldId, error]}

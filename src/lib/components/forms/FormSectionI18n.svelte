@@ -30,9 +30,9 @@ let { title, fields, facet, entity, resourceType }: Props = $props();
 const { form, errors, constraints } = getForm(resourceType, entity);
 </script>
 
-<div class="overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
+<div class="@container rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
   <Header {title} {entity} {resourceType} />
-  <div class="grid grid-cols-1 lg:grid-cols-2 3xl:grid-cols-3 gap-4 p-4">
+  <div class="grid grid-cols-1 @xl:grid-cols-2 @5xl:grid-cols-3 gap-4 p-4">
     {#each languageTags as languageTag}
       <div class="group flex flex-grow flex-col gap-4 rounded-xl bg-base-100">
         <div class="flex flex-col content-start items-start gap-4 px-6 py-2 pb-2 pt-4">

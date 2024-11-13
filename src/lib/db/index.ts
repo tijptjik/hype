@@ -376,7 +376,8 @@ export async function genericEntityQuery<usersT extends Table>(
   accessStrategy: string = 'EntityOwn',
   selectTableRelations: NestedRelations,
   userId?: string,
-  userTable?: usersT
+  userTable?: usersT,
+  columns?: Record<string, boolean>
 ) {
   // NEW is a reserved keyword for new entities
   if (ref == 'new') {
@@ -386,10 +387,16 @@ export async function genericEntityQuery<usersT extends Table>(
     eq(table[publicIdentifier], ref),
     ...applyGeneralAccessStrategy(db, accessStrategy, userTable, userId)];
 
-  let result = await db.query[getTableName(table)].findFirst({
+  let queryOpts = {
     where: and(...conditions),
     with: selectTableRelations
-  });
+  }
+
+  if (columns) {
+    queryOpts.columns = columns;
+  }
+
+  let result = await db.query[getTableName(table)].findFirst(queryOpts);
 
   return result;
 }
