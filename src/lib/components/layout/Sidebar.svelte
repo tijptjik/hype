@@ -284,6 +284,7 @@ const toEntity = (apiEntity: ApiEntity) => {
     name: apiEntity.name || apiEntity.title || '',
     nameShort: apiEntity.title || apiEntity.nameShort || apiEntity.name || '',
     description: apiEntity.description || apiEntity.description || '',
+    address: apiEntity.addressProperties?.formattedAddress || '',
     ref: apiEntity.ref || apiEntity.code || apiEntity.id,
     data: apiEntity
   };

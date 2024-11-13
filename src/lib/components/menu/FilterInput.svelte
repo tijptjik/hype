@@ -29,6 +29,7 @@ $effect(() => {
         item.name.toLowerCase().includes(filterTexts[type as keyof typeof filterTexts].toLowerCase()) ||
         item.nameShort?.toLowerCase().includes(filterTexts[type as keyof typeof filterTexts].toLowerCase()) ||
         item.description?.toLowerCase().includes(filterTexts[type as keyof typeof filterTexts].toLowerCase()) ||
+        item.address?.toLowerCase().includes(filterTexts[type as keyof typeof filterTexts].toLowerCase()) ||
         queryFilters[type as keyof FilterableResourceToEntityId]?.includes(item.id)
       );
     });
