@@ -8,6 +8,7 @@ import Header from '$lib/components/layout/EntityHeader.svelte';
 import I18nSection from '$lib/components/forms/FormSectionI18n.svelte';
 import PropertySection from '$lib/components/forms/FormSectionPropertyFeature.svelte';
 import ImageSection from '$lib/components/forms/FormSectionImage.svelte';
+import MapSection from '$lib/components/forms/FormSectionMap.svelte';
 // TYPES
 import type { SuperForm } from 'sveltekit-superforms';
 import type {
@@ -77,30 +78,33 @@ let { enhance, form, errors } = setForm(
 <!-- LAYOUT -->
 <div class="h-full overflow-y-auto bg-black pb-16">
   <Header entity={data.entity} resourceType={routerState.resource} {title} />
-  <main class="flex flex-col p-6">
-    <form method="POST" use:enhance class="flex flex-col gap-6">
+  <main class="flex flex-col p-6 h-full">
+    <form method="POST" use:enhance class="flex flex-row gap-6 h-full">
       {#if routerState.facet === 'core' || routerState.facet === false}
-        <I18nSection
-          title="Descriptors"
-          fields={FIELDS.i18n as FormField}
-          facet={routerState.facet}
-          {entity}
-          resourceType={routerState.resource} />
-        <div class="flex flex-row gap-6">
-          <PropertySection
-            title="Classifiers"
-            subtitle="by which features can be filtered"
-            fieldDiscriminator="classifier"
-            fields={FIELDS.property as FormFieldArray}
-            {entity}
-            resourceType={routerState.resource} />
-          <PropertySection
-            title="Specifiers"
-            subtitle="which are displayed in feature info panels"
-            fieldDiscriminator="specifier"
-            fields={FIELDS.property as FormFieldArray}
-            {entity}
-            resourceType={routerState.resource} />
+          <MapSection {entity} resourceType={routerState.resource} />
+          <div class="basis-2/3 gap-6 flex flex-col">
+            <I18nSection
+              title="Descriptors"
+              fields={FIELDS.i18n as FormField}
+              facet={routerState.facet}
+              {entity}
+              resourceType={routerState.resource} />
+            <div class="flex flex-row gap-6">
+              <PropertySection
+                title="Classifiers"
+                subtitle="by which features can be filtered"
+                fieldDiscriminator="classifier"
+                fields={FIELDS.property as FormFieldArray}
+                {entity}
+                resourceType={routerState.resource} />
+              <PropertySection
+                title="Specifiers"
+                subtitle="which are displayed in feature info panels"
+                fieldDiscriminator="specifier"
+                fields={FIELDS.property as FormFieldArray}
+                {entity}
+                resourceType={routerState.resource} />
+          </div>
         </div>
         <!-- TODO Add support for translatable specifiers -->
       {:else}
