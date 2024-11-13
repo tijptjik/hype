@@ -1991,7 +1991,7 @@
         "type": "symbol",
         "source": "hongkong-latest",
         "source-layer": "poi",
-        "minzoom": 15,
+        "minzoom": 18,
         "layout": {
           "icon-size": 0.4,
           "text-anchor": "left",
@@ -2021,7 +2021,7 @@
         "type": "symbol",
         "source": "hongkong-latest",
         "source-layer": "housenumber",
-        "minzoom": 16,
+        "minzoom": 18,
         "layout": {
           "icon-size": 0.4,
           "text-anchor": "left",
