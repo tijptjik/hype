@@ -36,11 +36,11 @@ $effect(() => {
 <!-- LAYOUT -->
 <Sidebar />
 <!-- <div class="flex w-full flex-col"> -->
-<div class="flex flex-col w-full">
+<div class="flex flex-col w-full h-screen">
   <header class="flex-none bg-black">
     <Navbar />
   </header>
-  <main class="h-full">
+  <main class="flex-1 flex flex-col overflow-hidden h-full">
     {@render children()}
   </main>
 </div>

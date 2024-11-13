@@ -46,7 +46,7 @@ afterNavigate(() => {
 </svelte:head>
 
 <ParaglideJS {i18n}>
-  <div class="flex flex-row w-full h-screen overflow-y-hidden">
+  <div class="flex flex-row w-screen h-screen bg-black">
     {@render children()}
   </div>
 </ParaglideJS>
