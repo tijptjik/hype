@@ -1,6 +1,7 @@
 <script lang="ts">
   import { filteredResources } from '$lib/stores/resources.svelte';
   import ResourceHeader from '$lib/components/layout/ResourceHeader.svelte';
+  import { page } from '$app/stores';
     
   const projects = $derived(filteredResources.project);
   
@@ -32,7 +33,7 @@
                   {/each}
                 </div>
                 <!-- TODO Verify if the query params are retained -->
-                <a href="/admin/projects/{project.code}" class="btn btn-primary"
+                <a href="/admin/projects/{project.code}{$page.url.search}" class="btn btn-primary"
                   >View Profile</a>
               </div>
             </div>

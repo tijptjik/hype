@@ -1,6 +1,7 @@
 <script lang="ts">
 import { filteredResources } from '$lib/stores/resources.svelte';
 import ResourceHeader from '$lib/components/layout/ResourceHeader.svelte';
+import { page } from '$app/stores';
 
 const layers = $derived(filteredResources.layer);
 
@@ -27,7 +28,7 @@ const RESOURCE_TYPE = 'layer';
             <p class="mt-2">{layer.description}</p>
             <div class="mt-4 flex flex-row items-center justify-between">
               <div class="flex flex-wrap gap-2"></div>
-              <a href="/admin/layers/{layer.id}" class="btn btn-primary">Edit</a>
+              <a href="/admin/layers/{layer.id}{$page.url.search}" class="btn btn-primary">Edit</a>
             </div>
           </div>
         </div>

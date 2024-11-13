@@ -40,7 +40,7 @@ $effect(() => {
   <header class="flex-none bg-black">
     <Navbar />
   </header>
-  <main class="h-full pb-16">
+  <main class="h-full">
     {@render children()}
   </main>
 </div>

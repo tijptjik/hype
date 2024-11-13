@@ -1,6 +1,7 @@
 <script lang="ts">
 import { filteredResources } from '$lib/stores/resources.svelte';
 import ResourceHeader from '$lib/components/layout/ResourceHeader.svelte';
+import { page } from '$app/stores';
   
 const organisations = $derived(filteredResources.organisation);
 
@@ -32,7 +33,7 @@ const RESOURCE_TYPE = 'organisation';
                 {/each}
               </div>
               <!-- TODO Verify if the query params are retained -->
-              <a href="/admin/organisations/{org.code}" class="btn btn-primary"
+              <a href="/admin/organisations/{org.code}{$page.url.search}" class="btn btn-primary"
                 >View Profile</a>
             </div>
           </div>
