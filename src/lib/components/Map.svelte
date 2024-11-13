@@ -4,21 +4,10 @@
 import { type MapStore, MAPSTORE_CONTEXT_KEY } from '$lib/stores';
 // import { AttributionControl, GeolocateControl, Map, NavigationControl, ScaleControl } from 'maplibre-gl';
 import { getContext, onMount } from 'svelte';
+import { loadScript } from '$lib';
 
 let mapStore: MapStore = getContext(MAPSTORE_CONTEXT_KEY);
 let mapContainer: HTMLDivElement;
-
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = src;
-
-    document.body.appendChild(script);
-
-    script.addEventListener('load', () => resolve(script));
-    script.addEventListener('error', () => reject(script));
-  });
-}
 
 onMount(async () => {
   // To minimize the payload in Cloudflare, we are manually inserting mapping dependencies here as they are heavy
