@@ -31,15 +31,21 @@ let {
   fieldKey,
   form
 }: Props = $props();
-
-console.log($form[fieldId][fieldIndex][fieldKey])
 </script>
 
 <input
   type="range"
+  class="range range-primary"
   min={$form[fieldId][fieldIndex].property.min}
   max={$form[fieldId][fieldIndex].property.max}
   step="1"
   bind:value={$form[fieldId][fieldIndex][fieldKey]}
  />
+ <div class="flex w-full justify-between px-2 text-xs">
+  <span>{$form[fieldId][fieldIndex].property.min}</span>
+  <span>❘</span>
+  <span>|</span>
+  <span>❘</span>
+  <span>{$form[fieldId][fieldIndex].property.max}</span>
+</div>
 <!-- <ErrorLabel errors={$errors} {field} {languageTag} {fieldId} {fieldIndex} {fieldKey} /> -->
