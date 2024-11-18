@@ -7,12 +7,11 @@
     },
     "title": "Tyrannosaurus Rex Avenue",
     "titleGen": false,
-    "description": "Named after the largest carnivorous dinosaur, T. Rex could grow up to 40 feet long.", 
+    "description": "Named after the largest carnivorous dinosaur, T. Rex could grow up to 40 feet long.",
     "descriptionGen": false,
+    "formattedAddress": "Mong Kok, Hong Kong",
+    "formattedAddressGen": false,
     "addressProperties": {
-      "formattedAddress": "Mong Kok, Hong Kong",
-      "formattedAddress__zh-hant": "香港旺角",
-      "formattedAddress__zh-hans": "香港旺角",
       "googlePlaceId": "ChIJewo7X8YABDQRM1KvD1AhOjM"
     },
     "layerId": "mN9Kp4WxLs2",
@@ -33,10 +32,9 @@
     "titleGen": false,
     "description": "Velociraptors were actually much smaller than depicted in movies, only about the size of a turkey.",
     "descriptionGen": false,
+    "formattedAddress": "Central, Hong Kong",
+    "formattedAddressGen": false,
     "addressProperties": {
-      "formattedAddress": "Central, Hong Kong",
-      "formattedAddress__zh-hant": "香港中環",
-      "formattedAddress__zh-hans": "香港中环",
       "googlePlaceId": "ChIJ5Uf4hXsABDQRLy1jKs6UE0Q"
     },
     "layerId": "mN9Kp4WxLs2",
@@ -57,10 +55,9 @@
     "titleGen": false,
     "description": "Stegosaurus had a brain the size of a walnut, one of the smallest brain-to-body ratios of any dinosaur.",
     "descriptionGen": false,
+    "formattedAddress": "Yau Ma Tei, Hong Kong",
+    "formattedAddressGen": false,
     "addressProperties": {
-      "formattedAddress": "Yau Ma Tei, Hong Kong",
-      "formattedAddress__zh-hant": "香港油麻地",
-      "formattedAddress__zh-hans": "香港油麻地",
       "googlePlaceId": "ChIJkZVzeoAABDQRKPrz8YBvCL4"
     },
     "layerId": "mN9Kp4WxLs2",
@@ -81,10 +78,9 @@
     "titleGen": false,
     "description": "Despite popular belief, Pterodactyls were not dinosaurs but flying reptiles.",
     "descriptionGen": false,
+    "formattedAddress": "To Kwa Wan, Hong Kong",
+    "formattedAddressGen": false,
     "addressProperties": {
-      "formattedAddress": "To Kwa Wan, Hong Kong",
-      "formattedAddress__zh-hant": "香港土瓜灣",
-      "formattedAddress__zh-hans": "香港土瓜湾",
       "googlePlaceId": "ChIJwcgRZtcABDQRYCISk9F_Qm0"
     },
     "layerId": "hT5Ry7BvNm4",
@@ -105,10 +101,9 @@
     "titleGen": false,
     "description": "Brachiosaurus could reach heights of up to 39 feet, making it one of the tallest known dinosaurs.",
     "descriptionGen": false,
+    "formattedAddress": "Kowloon City, Hong Kong",
+    "formattedAddressGen": false,
     "addressProperties": {
-      "formattedAddress": "Kowloon City, Hong Kong",
-      "formattedAddress__zh-hant": "香港九龍城",
-      "formattedAddress__zh-hans": "香港九龙城",
       "googlePlaceId": "ChIJD8KLaNUGBDQROsjDpiFhoO0"
     },
     "layerId": "hT5Ry7BvNm4",
@@ -129,10 +124,9 @@
     "titleGen": false,
     "description": "Triceratops had up to 800 teeth, which were constantly replaced throughout its lifetime.",
     "descriptionGen": false,
+    "formattedAddress": "Yuen Long, Hong Kong",
+    "formattedAddressGen": false,
     "addressProperties": {
-      "formattedAddress": "Yuen Long, Hong Kong",
-      "formattedAddress__zh-hant": "香港元朗",
-      "formattedAddress__zh-hans": "香港元朗",
       "googlePlaceId": "ChIJl2V666DwAzQR8Ckrut39VOQ"
     },
     "layerId": "hT5Ry7BvNm4",
@@ -153,10 +147,9 @@
     "titleGen": false,
     "description": "Ankylosaurus had a club-like tail that it could swing with enough force to break the bones of large predators.",
     "descriptionGen": false,
+    "formattedAddress": "Sheung Wan, Hong Kong",
+    "formattedAddressGen": false,
     "addressProperties": {
-      "formattedAddress": "Sheung Wan, Hong Kong",
-      "formattedAddress__zh-hant": "香港上環",
-      "formattedAddress__zh-hans": "香港上环",
       "googlePlaceId": "ChIJr8ydo38ABDQRO-T0pMdf8sI"
     },
     "layerId": "pL6Wj9QkMx5",
@@ -177,10 +170,9 @@
     "titleGen": false,
     "description": "Diplodocus could grow up to 108 feet long, with much of its length coming from its extremely long neck and tail.",
     "descriptionGen": false,
+    "formattedAddress": "Kwai Chung, Hong Kong",
+    "formattedAddressGen": false,
     "addressProperties": {
-      "formattedAddress": "Kwai Chung, Hong Kong",
-      "formattedAddress__zh-hant": "香港葵涌",
-      "formattedAddress__zh-hans": "香港葵涌",
       "googlePlaceId": "ChIJAQAAAMn4AzQRkF8cBLWvh-Q"
     },
     "layerId": "pL6Wj9QkMx5",
@@ -201,10 +193,9 @@
     "titleGen": false,
     "description": "Spinosaurus is the only known dinosaur adapted for swimming, with a fin-like sail on its back and paddle-like feet.",
     "descriptionGen": false,
+    "formattedAddress": "Sai Kung, Hong Kong",
+    "formattedAddressGen": false,
     "addressProperties": {
-      "formattedAddress": "Sai Kung, Hong Kong",
-      "formattedAddress__zh-hant": "香港西貢",
-      "formattedAddress__zh-hans": "香港西贡",
       "googlePlaceId": "ChIJKQoBYr4FBDQRaptvWv4Ymvs"
     },
     "layerId": "pL6Wj9QkMx5",

@@ -43,6 +43,7 @@ import propertyValueI18nSizeJson from './data/propertyValuesI18n-kL9mN2pQ5rS4.js
 import propertyValueI18nMaterialJson from './data/propertyValuesI18n-vX7yZ1wA3bC6.json';
 import propertyValueI18nVisibilityJson from './data/propertyValuesI18n-hJ4kL7mN9pQ2.json';
 import featureI18nJson from './data/featureI18n.json';
+import featureI18nStreetnamesJson from './data/featureI18n-streetnames.json';
 import featurePropertyJson from './data/featureProperty.json';
 import featurePropertyI18nJson from './data/featurePropertyI18n.json';
 import type { DrizzleD1Database } from 'drizzle-orm/d1/driver';
@@ -178,10 +179,18 @@ const seedBank = {
     partial: true
   },
   featureI18n: {
-    name: 'FeatureI18n',
+    name: 'FeatureI18n::HKGhostSigns',
     table: featureI18n,
     data: featureI18nJson,
-    chunk: 8
+    chunk: 4,
+    partial: true
+  },
+  featureI18nStreetnames: {
+    name: 'FeatureI18n::StreetNames',
+    table: featureI18n,
+    data: featureI18nStreetnamesJson,
+    chunk: 4,
+    partial: true
   },
   featureProperty: {
     name: 'FeatureProperty',
