@@ -3,7 +3,8 @@ import { page } from '$app/stores';
 import * as m from '$lib/paraglide/messages.js';
 import { signIn, signOut } from '@auth/sveltekit/client';
 import { hasControlPanelAccess } from '$lib/auth/utils';
-import Hamburger from '$lib/components/icons/Hamburger.svelte';
+import { Icon } from '@steeze-ui/svelte-icon';
+import { Bars3 } from '@steeze-ui/heroicons';
 import { ComputerDesktop, InboxArrowDown } from '@steeze-ui/heroicons';
 import IconicMenuButton from '$lib/components/menu/IconicMenuButton.svelte';
 
@@ -30,7 +31,9 @@ $effect(() => {
 <nav class="navbar sticky top-0 z-10 bg-black px-6 py-4 shadow-md">
   <div class="navbar-start">
     <div class="dropdown lg:hidden">
-      <label tabindex="0" class="btn btn-ghost" onclick={toggleMenu}><Hamburger /></label>
+      <label tabindex="0" class="btn btn-ghost" onclick={toggleMenu}>
+        <Icon src={Bars3} class="h-6 w-6" />
+      </label>
       {#if isMenuOpen}
         <ul
           tabindex="0"

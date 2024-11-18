@@ -15,6 +15,14 @@ drop table IF EXISTS userActivity;
 drop table IF EXISTS projectI18n;
 drop table IF EXISTS projectRole;
 drop table IF EXISTS layerI18n;
+drop table IF EXISTS layerProperty;
+drop table IF EXISTS property;
+drop table IF EXISTS propertyI18n;
+drop table IF EXISTS propertyValue;
+drop table IF EXISTS propertyValueI18n;
+drop table IF EXISTS featureI18n;
+drop table IF EXISTS featureProperty;
+drop table IF EXISTS featurePropertyI18n;
 
 UPDATE sqlite_sequence
 SET seq = 0

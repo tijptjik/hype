@@ -1,5 +1,4 @@
-import type { IconSource } from '@steeze-ui/heroicons';
-// ZOD Schemas
+// ZOD SCHEMAS
 import { z } from 'zod';
 import {
   FeatureI18nInsert,
@@ -55,18 +54,37 @@ import {
   PropertyValueUpdate,
   PropertyValueUpdateAPI,
   UserBase,
-  FeaturePatch,
+  FeaturePatch
 } from '$lib/db/zod';
-// Components
-import CustomField from '$lib/components/forms/FormFieldProperties.svelte';
-import InputField from '$lib/components/forms/FormFieldInput.svelte';
-import TextareaField from '$lib/components/forms/FormFieldTextarea.svelte';
-import SelectField from '$lib/components/forms/FormFieldSelect.svelte';
-import RangeField from '$lib/components/forms/FormFieldRange.svelte';
-import TagsField from '$lib/components/forms/FormFieldTags.svelte';
-import UsersField from '$lib/components/forms/FormFieldUsers.svelte';
-import ComplexField from '$lib/components/forms/FormFieldComplex.svelte';
-import CheckboxField from '$lib/components/forms/FormFieldCheckbox.svelte';
+// COMPONENTS
+import CustomField from '$lib/components/forms/fields/Properties.svelte';
+import InputField from '$lib/components/forms/fields/Input.svelte';
+import TextareaField from '$lib/components/forms/fields/Textarea.svelte';
+import SelectField from '$lib/components/forms/fields/Select.svelte';
+import RangeField from '$lib/components/forms/fields/Range.svelte';
+import UsersField from '$lib/components/forms/fields/Users.svelte';
+import ListField from '$lib/components/forms/fields/List.svelte';
+import ToggleField from '$lib/components/forms/fields/Toggle.svelte';
+import AddressActions from '$lib/components/forms/actions/Address.svelte';
+import FeatureActions from '$lib/components/forms/actions/Feature.svelte';
+import UserActions from '$lib/components/forms/actions/User.svelte';
+// TYPES
+import type { SuperForm } from 'sveltekit-superforms';
+import type { IconSource } from '@steeze-ui/heroicons';
+import type { Component } from 'svelte';
+import type {
+  InputConstraints,
+  InputConstraint,
+  ValidationErrors
+} from 'sveltekit-superforms';
+import type { Writable } from 'drizzle-orm/utils';
+import type {
+  LayerForm,
+  OrganisationForm,
+  ProjectForm,
+  FeatureForm
+} from './context/forms.svelte';
+import type { SuperValidated } from 'sveltekit-superforms';
 
 // HTML
 export type InputType = 'text' | 'number' | 'email' | 'password';
@@ -77,7 +95,12 @@ export type FalsableResourceType = ResourceType | false;
 export type SourceLang = 'en';
 export type TargetLang = 'zh-hant' | 'zh-hans';
 export type LanguageTag = SourceLang | TargetLang | 'core';
-export type ResourceToEntity = Record<ResourceType, Entity[]>;
+export type ResourceToEntity = {
+  organisation: EntityWithData<Organisation>[];
+  project: EntityWithData<Project>[];
+  layer: EntityWithData<Layer>[];
+  feature: EntityWithData<Feature>[];
+};
 export type ResourceToText = Record<ResourceType, string>;
 export type FilterableResourceType = Exclude<ResourceType, 'feature'>;
 export type FilterableResourceToEntityId = Record<FilterableResourceType, string[]>;
@@ -90,7 +113,14 @@ export type Ref = Id | Code;
 // Property name in API or Database
 export type Key = string;
 export type FalsableRef = Ref | false;
-export type Entity = { id: Id; ref: Ref; name: string; nameShort: string; description: string; address?: string;};
+export type Entity = {
+  id: Id;
+  ref: Ref;
+  name: string;
+  nameShort: string;
+  description: string;
+  address?: string;
+};
 export type ApiEntity = Entity & {
   code?: Code;
   title?: string;
@@ -135,12 +165,12 @@ export type FormFieldDefinition = {
   placeholder?: string;
   component?: FieldComponentType;
   isArray: boolean;
-  isTranslated?: boolean;
+  isNested: boolean;
+  isTranslated: boolean;
 };
 export type FormFieldExtendedDefinition = FormFieldDefinition & {
   values?: readonly string[];
   inputType?: InputType;
-  isNested?: boolean;
   showForComponent?: FieldComponentType[];
 };
 export type FormFieldArrayDefinition = {
@@ -148,18 +178,25 @@ export type FormFieldArrayDefinition = {
   discriminators: {
     key: string;
     values: readonly string[];
-    specs: Record<Exclude<FieldDiscriminator, 'display'>, Record<Key, FormFieldExtendedDefinition>>;
+    specs: Record<
+      Exclude<FieldDiscriminator, 'display'>,
+      Record<Key, FormFieldExtendedDefinition>
+    >;
   };
 };
-export type FormField = Record<string, FormFieldDefinition>;
-export type FormFieldArray = Record<string, FormFieldArrayDefinition>;
+export type FormField = Record<Field, FormFieldDefinition>;
+export type FormFieldArray = Record<Field, FormFieldArrayDefinition>;
 export type FormFieldConfig = Record<Key, FormField | FormFieldArray>;
 
 /* ----------------- */
 // SCHEMA TYPES
 /* -------- */
 
-export type Field = keyof Organisation | keyof Project | keyof Layer | keyof Feature;
+export type OrganisationField = keyof Organisation;
+export type ProjectField = keyof Project;
+export type LayerField = keyof Layer;
+export type FeatureField = keyof Feature;
+export type Field = OrganisationField | ProjectField | LayerField | FeatureField;
 export type Resource = Organisation | Project | Layer | Feature;
 export type ResourceDB = OrganisationDB | ProjectDB | LayerDB | FeatureDB;
 
@@ -236,28 +273,28 @@ export type ProjectPartialUpdate = z.infer<typeof ProjectPatch>;
 export type FieldDiscriminator = (typeof fieldDiscriminators)[number];
 
 export const fieldComponentTypes = [
+  'InputField',
   'SelectField',
   'RangeField',
-  'InputField',
   'TextareaField',
-  'TagsField',
-  'ComplexField',
-  'CheckboxField'
+  'UsersField',
+  'CustomField',
+  'ListField',
+  'ToggleField'
 ] as const;
 export const classifierComponentTypes = ['SelectField', 'RangeField'] as const;
-export const specifierComponentTypes = ['InputField', 'TextareaField', 'TagsField'] as const;
+export const specifierComponentTypes = ['InputField', 'TextareaField'] as const;
 export const displayComponentTypes = ['InputField'] as const;
 export type FieldComponentType = (typeof fieldComponentTypes)[number];
 export type FieldComponent =
+  | typeof InputField
   | typeof SelectField
   | typeof RangeField
-  | typeof InputField
   | typeof TextareaField
-  | typeof TagsField
   | typeof UsersField
   | typeof CustomField
-  | typeof CheckboxField
-  | typeof ComplexField;
+  | typeof ListField
+  | typeof ToggleField;
 
 /* ----------------- */
 // PROJECTS : FIELDS : INTERMEDIATE VALUE
@@ -351,63 +388,30 @@ export type FeaturePropertyI18n = z.infer<typeof FeaturePropertyI18nUpdate>;
 // FEATURES : ADDRESS
 /* -------- */
 
-export interface AddressProperties {
-  // Metrics
-  distanceFromPoint?: number;
-
-  // Display Address
-  formattedAddress?: string;
-  formattedAddressGen?: boolean;
-  'formattedAddress__zh-hant'?: string;
-  'formattedAddressGen__zh-hant'?: boolean;
-  'formattedAddress__zh-hans'?: string;
-  'formattedAddressGen__zh-hans'?: boolean;
-
-  // Address Components
-  plusCode?: string;
-  'plusCode__zh-hant'?: string;
-  'plusCode__zh-hans'?: string;
-
+export type AddressProperties = {
   subPremise?: string;
-  'subPremise__zh-hant'?: string;
-  'subPremise__zh-hans'?: string;
-
   premise?: string;
-  'premise__zh-hant'?: string;
-  'premise__zh-hans'?: string;
-
   streetNumber?: string;
-  'streetNumber__zh-hant'?: string;
-  'streetNumber__zh-hans'?: string;
-
   route?: string;
-  'route__zh-hant'?: string;
-  'route__zh-hans'?: string;
-
   intersection?: string;
-  'intersection__zh-hant'?: string;
-  'intersection__zh-hans'?: string;
-
   neighbourhood?: string;
-  'neighbourhood__zh-hant'?: string;
-  'neighbourhood__zh-hans'?: string;
-
   administrativeAreaLevel1?: string;
-  'administrativeAreaLevel1__zh-hant'?: string;
-  'administrativeAreaLevel1__zh-hans'?: string;
-
   country?: string;
-  'country__zh-hant'?: string;
-  'country__zh-hans'?: string;
-
-  // Identifier
-  googlePlaceId?: string;
 
   // Metadata
   addressGeocoder: string; // The Geocoder used are the source
   addressReverseGen: boolean; // Were the address components generator by a Reverse Geocoder
   addressForwardGen: boolean; // Were the address components generated by a Forward Geocoder
-}
+};
+
+export type AddressPropertiesExtended = AddressProperties & {
+  // Metrics
+  distanceFromPoint?: number;
+  // Address Components
+  plusCode?: string;
+  // Identifier
+  googlePlaceId?: string;
+};
 
 /* ----------------- */
 // PROPERTIES
@@ -444,3 +448,133 @@ export type NewPropertyValueDB = z.infer<typeof PropertyValueInsert>;
 export type NewPropertyValueI18n = z.infer<typeof PropertyValueI18nInsert>;
 // Same as NewPropertyValueI18n, but with the propertyValueId - for use in API updates
 export type PropertyValueI18n = z.infer<typeof PropertyValueI18nUpdate>;
+
+/* ----------------- */
+// SVELTE : PROPS
+/* -------- */
+
+export type ResourceNavProps = {
+  resource: ResourceType;
+  entity: false;
+  facet: false;
+};
+
+export type NavProps = {
+  resource: ResourceType;
+  entity: Ref;
+  facet: FacetType;
+};
+
+export type SectionProps = NavProps & {
+  fields: FormField;
+  fieldDiscriminator?: string;
+  title?: string;
+  subtitle?: string;
+};
+
+// Update FormProps to use the new type
+export type FormProps = OrganisationForm | ProjectForm | LayerForm | FeatureForm;
+
+export type FieldProps = SectionProps & {
+  languageTag?: LanguageTag;
+  fieldRoot?: keyof Resource;
+  field?: FormFieldDefinition;
+  fieldIndex?: number;
+  fieldKey?: Key;
+  values?: string[];
+  actions?: Record<string, (...args: any[]) => void>;
+};
+
+export type FieldPropsExtended = FieldProps & {
+  languageTag: LanguageTag;
+  field: FormFieldExtendedDefinition;
+  fieldRoot: keyof Resource;
+  fieldIndex: number;
+  fieldKey: Key;
+};
+
+export type BarProps = SectionProps & {
+  languageTag: LanguageTag;
+};
+
+export type ModalProps = {
+  searchMode?: boolean;
+  removeMode?: boolean;
+};
+
+export type ActionProps = {
+  Actions?: typeof UserActions | typeof FeatureActions | typeof AddressActions;
+  // | Component<{
+  //     searchMode?: boolean;
+  //     removeMode?: boolean;
+  //     actions?: Record<string, (...args: any[]) => void>;
+  //     entity: Ref;
+  //     resource: ResourceType;
+  //   }>
+  actions?: Record<string, (...args: any[]) => void>;
+  actionProps?: Record<string, any>;
+};
+
+export type ErrorParams = {
+  field: FormFieldExtendedDefinition;
+  languageTag: LanguageTag;
+  fieldRoot: Field;
+  fieldIndex: number;
+  fieldKey: Key;
+};
+
+export type PageProps<T extends Resource> = {
+  data: {
+    validatedForm: SuperValidated<T>;
+    entity: Ref;
+  };
+};
+
+// FIELDS
+
+export type ListFieldProps = FieldProps & {
+  field: FormFieldExtendedDefinition;
+  fieldRoot: keyof Resource;
+  fieldIndex: number;
+  fieldKey: Key;
+  values: IntermediateValue[];
+  actions: {
+    add: () => void;
+    remove: (e: Event, valueId: string) => void;
+    update: (valueId: string, languageTag: string, e: Event) => void;
+    syncUp: () => void;
+  };
+  actionProps: {
+    dragMode: boolean;
+    removeMode: boolean;
+    removeModeLang?: string;
+    confirmingId?: string;
+  };
+};
+
+// ELEMENTS
+
+export type InputProps = {
+  id: Id;
+  value: string;
+  isGenAI: boolean;
+  placeholder?: string;
+  languageTag: LanguageTag;
+  isTranslated?: boolean;
+  inputType?: 'text' | 'number' | 'email';
+  onchange: Function;
+};
+
+export type SelectProps = {
+  id: Id;
+  value: string;
+  values: string[] | { value: string; id: string }[];
+  isComplex?: boolean;
+};
+
+export type ResourceTypeMap = {
+  organisation: Organisation;
+  project: Project;
+  layer: Layer;
+  feature: Feature;
+};

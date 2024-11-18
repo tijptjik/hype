@@ -5,18 +5,15 @@ import { Icon } from '@steeze-ui/svelte-icon';
 // CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
 // TYPES
-import type { ResourceType, FalsableRef } from '$lib/types';
+import type { SectionProps, Project, Layer, Feature } from '$lib/types';
 
-type Props = {
-  entity: FalsableRef;
-  resourceType: ResourceType;
-};
 
 // STATE : PROPS
-let { entity, resourceType }: Props = $props();
+let sectionProps: SectionProps = $props();
+let { entity, resource } = sectionProps;
 
 // STATE : CONTEXT
-const { form, errors } = getForm(resourceType, entity);
+const { form, errors } = getForm<Project | Layer | Feature>(resource, entity);
 
 // STATE : UI
 let isInvalid = $state(false);
@@ -45,7 +42,7 @@ const handleClick = async (e: Event) => {
   isLoading = true;
 
   try {
-    const response = await fetch(`/api/${resourceType}s/${entity}`, {
+    const response: Response = await fetch(`/api/${resource}s/${entity}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -57,7 +54,7 @@ const handleClick = async (e: Event) => {
     if (!response.ok) throw new Error('Failed to update publication state');
 
     const result = await response.json();
-    if (result.success) {
+    if (result && result?.success) {
       form.update(
         ($form) => {
           $form.isPublished = !$form.isPublished;

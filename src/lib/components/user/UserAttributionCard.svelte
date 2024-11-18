@@ -16,7 +16,7 @@ let { userId, date, type }: Props = $props();
 // STATE : DATA
 let user = $state<{
   name: string;
-  profileImage: string;
+  image: string;
 } | null>(null);
 
 // EFFECTS : FETCH USER

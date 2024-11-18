@@ -2,11 +2,11 @@
 import type { ResourceType } from '$lib/types';
 import { getRouterState } from '$lib/context/router.svelte';
 import { goto } from '$app/navigation';
-import AssociationModal from '$lib/components/forms/FormModalAssociation.svelte';
+import AssociationModal from '$lib/components/forms/modals/Association.svelte';
 
 // STATE : PROPS
 const props = $props<{
-    resourceType: ResourceType;
+    resource: ResourceType;
 }>();
 
 // STATE : CONTEXT
@@ -23,14 +23,14 @@ const onclick = (e: MouseEvent) => {
     e.preventDefault();
     
     // If this resource type requires a parent association, show the modal
-    if (requiresParentAssociation(props.resourceType)) {
+    if (requiresParentAssociation(props.resource)) {
         modalOpen?.();
         return;
     }
 
     // Otherwise, proceed with direct navigation
     const url = new URL(window.location.href);
-    url.pathname = `/admin/${routerState.resourceToRef[props.resourceType as keyof typeof routerState.resourceToRef]}/new`;
+    url.pathname = `/admin/${routerState.resourceToRef[props.resource as keyof typeof routerState.resourceToRef]}/new`;
     goto(url.toString());
 };
 
@@ -40,13 +40,13 @@ const associationMap: Record<Exclude<ResourceType, 'organisation'>, ResourceType
     'feature': 'layer',
 };
 
-function requiresParentAssociation(resourceType: ResourceType): boolean {
-    return resourceType in associationMap;
+function requiresParentAssociation(resource: ResourceType): boolean {
+    return resource in associationMap;
 }
 
 // Helper function to get parent resource type
-function getParentResourceType(resourceType: ResourceType): ResourceType | null {
-    return associationMap[resourceType as keyof typeof associationMap] || null;
+function getParentResourceType(resource: ResourceType): ResourceType | null {
+    return associationMap[resource as keyof typeof associationMap] || null;
 }
 </script>
 
@@ -56,8 +56,8 @@ function getParentResourceType(resourceType: ResourceType): ResourceType | null 
 
 {#if requiresParentAssociation(props.resourceType)}
     <AssociationModal
-        parentResourceType={getParentResourceType(props.resourceType) as ResourceType}
-        childResourceType={props.resourceType}
+        parentResourceType={getParentResourceType(props.resource) as ResourceType}
+        childResourceType={props.resource}
         on:ready={handleModalReady}
     />
 {/if}

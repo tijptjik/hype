@@ -80,7 +80,7 @@ export class RouterState {
   };
 }
 
-const ROUTER_STATE_KEY = Symbol('routerState');
+export const ROUTER_STATE_KEY = Symbol('routerState');
 
 export const setRouterState = () => setContext(ROUTER_STATE_KEY, new RouterState());
 export const getRouterState = () : ReturnType<typeof setRouterState> => getContext(ROUTER_STATE_KEY);

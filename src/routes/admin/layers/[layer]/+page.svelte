@@ -2,36 +2,43 @@
 // Context
 import { getRouterState } from '$lib/context/router.svelte';
 import { setForm } from '$lib/context/forms.svelte';
-import { get } from 'svelte/store';
 // Components
 import Header from '$lib/components/layout/EntityHeader.svelte';
-import I18nSection from '$lib/components/forms/FormSectionI18n.svelte';
-import LayerPropertySection from '$lib/components/forms/FormLayerSectionProperty.svelte';
+import I18nSection from '$lib/components/forms/sections/I18n.svelte';
+import LayerPropertySection from '$lib/components/forms/sections/LayerProperty.svelte';
 // TYPES
-import type { SuperForm } from 'sveltekit-superforms';
-import type { Layer } from '$lib/types';
-import type { FormField, FormFieldConfig, FormFieldArray, ResourceType, ResourceRouter } from '$lib/types';
+import type {
+  Layer,
+  PageProps,
+  NavProps,
+  FormField,
+  FormFieldArray,
+  ResourceRouter
+} from '$lib/types';
 
 // CONFIG
-const FIELDS: FormFieldConfig = {
+const FIELDS: Record<string, FormField | FormFieldArray> = {
   i18n: {
     name: {
       label: 'Full Name',
       component: 'InputField',
       isArray: false,
-      isTranslated: true
+      isTranslated: true,
+      isNested: false
     },
     nameShort: {
       label: 'Short Name',
       component: 'InputField',
       isArray: false,
-      isTranslated: true
+      isTranslated: true,
+      isNested: false
     },
     description: {
       label: 'Description',
       component: 'TextareaField',
       isArray: false,
-      isTranslated: true
+      isTranslated: true,
+      isNested: false
     }
   },
   property: {
@@ -50,53 +57,56 @@ const FIELDS: FormFieldConfig = {
 };
 
 // STATE : PROPS
-let { data }: { data: { validatedForm: SuperForm<Layer>; entity: string } } = $props();
-let { validatedForm, entity } = data;
+let { data }: PageProps<Layer> = $props();
+let { validatedForm } = data;
 
 // STATE : DERIVED
 const routerState = getRouterState() as ResourceRouter;
-const title = $derived(data.validatedForm.data.name || 'New');
+let title = $derived(data.validatedForm.data.name || 'New');
+
+let navProps: NavProps = $derived({
+  resource: routerState.resource,
+  entity: data.entity,
+  facet: routerState.facet || 'core'
+});
 
 // STATE : FORM
-let {enhance, form, errors } = setForm(
-  routerState.resource as ResourceType,
-  entity,
-  validatedForm
-);
+let { enhance } = setForm<Layer>(navProps.resource, navProps.entity, validatedForm);
+
+$effect(() => {
+  //Remove parentRef from URL if it exists
+  const url = new URL(window.location.href);
+  url.searchParams.delete('parentRef');
+  // shallow navigation
+  goto(url.toString(), { replaceState: true });
+});
 </script>
 
 <!-- LAYOUT -->
 <div class="h-full overflow-y-auto bg-black pb-16">
-  <Header entity={data.entity} resourceType={routerState.resource} {title} />
-  <main class="flex flex-col p-6">
-    <form method="POST" use:enhance class="flex flex-col gap-6">
-      {#if routerState.facet === 'core' || routerState.facet === false}
-        <I18nSection
-          title="Descriptors"
-          fields={FIELDS.i18n as FormField}
-          facet={routerState.facet}
-          {entity}
-          resourceType={routerState.resource} />
+  <Header {title} {...navProps} />
+  <form method="POST" use:enhance>
+    <main class="flex flex-col gap-6 p-6">
+      {#if navProps.facet === 'core'}
+        <I18nSection title="Descriptors" fields={FIELDS.i18n as FormField} {...navProps} />
         <div class="flex flex-row gap-6">
           <LayerPropertySection
             title="Classifiers"
             subtitle="by which features can be filtered"
             fieldDiscriminator="classifier"
             fields={FIELDS.property as FormFieldArray}
-            {entity}
-            resourceType={routerState.resource} />
+            {...navProps} />
           <LayerPropertySection
             title="Specifiers"
             subtitle="which are displayed in feature info panels"
             fieldDiscriminator="specifier"
             fields={FIELDS.property as FormFieldArray}
-            {entity}
-            resourceType={routerState.resource} />
+            {...navProps} />
         </div>
       {:else}
         <h1>FACET NOT FOUND</h1>
       {/if}
-    </form>
-    <!-- <SuperDebug data={FormContext.form} /> -->
-  </main>
+    </main>
+  </form>
+  <!-- <SuperDebug data={FormContext.form} /> -->
 </div>

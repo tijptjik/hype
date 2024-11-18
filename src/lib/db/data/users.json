@@ -5,6 +5,7 @@
     "email": "m@type.hk",
     "emailVerified": null,
     "image": "https://lh3.googleusercontent.com/a/ACg8ocJiWWuBbf5n8GI5_0EeihmCiNbVGA8KWlVXEmwmTBqBwkEKEKBrhw=s96-c",
+    "attribution": "mart",
     "createdAt": "2024-08-27T04:52:16.884Z",
     "modifiedAt": "2024-08-27T04:52:16.884Z"
   },
@@ -14,6 +15,7 @@
     "email": "billy@type.hk",
     "emailVerified": null,
     "image": "https://lh3.googleusercontent.com/a/ACg8ocJiWWuBbf5n8GI5_0EeihmCiNbVGA8KWlVXEmwmTBqBwkEKEKBrhw=s96-c",
+    "attribution": "billy",
     "createdAt": "2024-08-27T04:52:16.884Z",
     "modifiedAt": "2024-08-27T04:52:16.884Z"
   },
@@ -23,6 +25,7 @@
     "email": "ben@type.hk",
     "emailVerified": null,
     "image": "https://lh3.googleusercontent.com/a/ACg8ocJiWWuBbf5n8GI5_0EeihmCiNbVGA8KWlVXEmwmTBqBwkEKEKBrhw=s96-c",
+    "attribution": "ben",
     "createdAt": "2024-08-27T04:52:16.884Z",
     "modifiedAt": "2024-08-27T04:52:16.884Z"
   },
@@ -32,6 +35,7 @@
     "email": "diana@type.hk",
     "emailVerified": null,
     "image": "https://lh3.googleusercontent.com/a/ACg8ocJiWWuBbf5n8GI5_0EeihmCiNbVGA8KWlVXEmwmTBqBwkEKEKBrhw=s96-c",
+    "attribution": "diana",
     "createdAt": "2024-08-27T04:52:16.884Z",
     "modifiedAt": "2024-08-27T04:52:16.884Z"
   },
@@ -41,6 +45,7 @@
     "email": "sjoerd@type.hk",
     "emailVerified": null,
     "image": "https://lh3.googleusercontent.com/a/ACg8ocJiWWuBbf5n8GI5_0EeihmCiNbVGA8KWlVXEmwmTBqBwkEKEKBrhw=s96-c",
+    "attribution": "sjoerd",
     "createdAt": "2024-08-27T04:52:16.884Z",
     "modifiedAt": "2024-08-27T04:52:16.884Z"
   },
@@ -50,6 +55,7 @@
     "email": "ben@needsmorerobots.com",
     "emailVerified": null,
     "image": "https://lh3.googleusercontent.com/a/ACg8ocJiWWuBbf5n8GI5_0EeihmCiNbVGA8KWlVXEmwmTBqBwkEKEKBrhw=s96-c",
+    "attribution": "ben",
     "createdAt": "2024-08-27T04:52:16.884Z",
     "modifiedAt": "2024-08-27T04:52:16.884Z"
   },
@@ -59,6 +65,7 @@
     "email": "sherin@szs.io",
     "emailVerified": null,
     "image": "https://lh3.googleusercontent.com/a/ACg8ocJiWWuBbf5n8GI5_0EeihmCiNbVGA8KWlVXEmwmTBqBwkEKEKBrhw=s96-c",
+    "attribution": "sherin",
     "createdAt": "2024-08-27T04:52:16.884Z",
     "modifiedAt": "2024-08-27T04:52:16.884Z"
   }

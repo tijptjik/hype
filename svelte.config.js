@@ -31,6 +31,7 @@ const config = {
     warningFilter: (warning) =>
       !warning.filename?.includes('node_modules') &&
       !warning.code.startsWith('a11y') &&
+      !warning.message.startsWith('State referenced in its own') &&
       !warning.message.startsWith('Unused CSS selector') &&
       !warning.message.startsWith('You are using Svelte 5.0.0') &&
       warning.code !== 'css-unused-selector'

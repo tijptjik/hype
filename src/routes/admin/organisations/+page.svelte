@@ -2,18 +2,27 @@
 import { filteredResources } from '$lib/stores/resources.svelte';
 import ResourceHeader from '$lib/components/layout/ResourceHeader.svelte';
 import { page } from '$app/stores';
-  
-const organisations = $derived(filteredResources.organisation);
 
-const RESOURCE_TYPE = 'organisation';
+import { getRouterState } from '$lib/context/router.svelte';
+import type { ResourceNavProps } from '$lib/types';
+import type { ResourceType } from '$lib/types';
+
+const routerState = getRouterState();
+let navProps: ResourceNavProps = $derived({
+  resource: routerState.resource as ResourceType,
+  entity: false,
+  facet: false
+});
+
+const organisations = $derived(filteredResources.organisation);
 </script>
 
 <!-- LAYOUT -->
-<ResourceHeader />
+<ResourceHeader {...navProps} />
 <div class="h-full overflow-y-auto bg-gradient-to-bl from-rose-500 to-fuchsia-800 bg-fixed pb-16">
   <div class="container mx-auto flex w-full flex-auto p-4">
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {#each organisations as { data: org }}
+      {#each organisations as { data: org }, index}
         <div class="card bg-base-100 shadow-xl">
           <figure>
             <img

@@ -234,7 +234,7 @@ export async function loadFormData<T extends Record<string, any>>({
       }
 
       // First create the form with the schema
-      form = await superValidate(zod(insertSchema));
+      form = (await superValidate(zod(insertSchema))) as SuperValidated<T>;
       
       // Initialize the base data
       let initialData: Record<string, any> = {
@@ -260,7 +260,6 @@ export async function loadFormData<T extends Record<string, any>>({
 
         // Update the form with the complete initial data
         form.data = initialData;
-        console.log('form in API index', form);
       }
     } else {
       form = await superValidate(zod(insertSchema));
@@ -275,7 +274,7 @@ export async function loadFormData<T extends Record<string, any>>({
 
     const formData: T = await request.json();
     // form = await superValidate<T>(formData, zod(updateSchema));
-    form = await superValidate(formData, zod(updateSchema));
+    form = (await superValidate(formData, zod(updateSchema))) as SuperValidated<T>;
   }
 
   appMeta.context.parentRef = null;

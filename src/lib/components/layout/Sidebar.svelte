@@ -38,13 +38,13 @@ const routerState = getRouterState();
  */
 $effect(() => {
   if (routerState.resource) {
-    const resourceType = routerState.resource as keyof typeof navItems;
+    const resource = routerState.resource;
 
     // Fetch resources for the active resource type
-    fetchResources(resourceType);
+    fetchResources(resource);
 
     // Remove the Query Params for child resources
-    deleteQueryParamsForChildResources(resourceType);
+    deleteQueryParamsForChildResources(resource);
   }
 });
 
@@ -57,8 +57,8 @@ $effect(() => {
  */
 $effect(() => {
   if ($page.url.searchParams) {
-    filterableByQueryParams.forEach((resourceType: FilterableResourceType) => {
-      queryFilters[resourceType] = $page.url.searchParams.getAll(resourceType);
+    filterableByQueryParams.forEach((resource: FilterableResourceType) => {
+      queryFilters[resource] = $page.url.searchParams.getAll(resource);
     });
   }
 });
@@ -73,9 +73,9 @@ $effect(() => {
  */
 $effect(() => {
   // Fetch resources for each filterable type with non-empty query filters
-  filterableByQueryParams.forEach((resourceType: FilterableResourceType) => {
-    if (queryFilters[resourceType]?.length > 0) {
-      fetchResources(resourceType);
+  filterableByQueryParams.forEach((resource: FilterableResourceType) => {
+    if (queryFilters[resource]?.length > 0) {
+      fetchResources(resource);
     }
   });
 
@@ -103,24 +103,24 @@ const toggleSidebar = () => {
  * This function manages the query parameters in the URL for filtering resources.
  * It adds or removes a specific ID for a given resource type in the query parameters.
  *
- * @param {string} resourceType - The type of resource (e.g., 'organisation', 'project')
+ * @param {string} resource - The type of resource (e.g., 'organisation', 'project')
  * @param {string} entityId - The ID of the resource to toggle in the query parameters
  */
-function toggleQueryParam(resourceType: string, entityId: string) {
+function toggleQueryParam(resource: string, entityId: string) {
   const queryParams = getQueryParams();
 
-  if (queryParams.has(resourceType)) {
+  if (queryParams.has(resource)) {
     // If the resource type exists in query params
-    if (queryParams.has(resourceType, entityId)) {
+    if (queryParams.has(resource, entityId)) {
       // If the specific ID exists, remove it
-      queryParams.delete(resourceType, entityId);
+      queryParams.delete(resource, entityId);
     } else {
       // If the ID doesn't exist, add it
-      queryParams.append(resourceType, entityId);
+      queryParams.append(resource, entityId);
     }
   } else {
     // If the resource type doesn't exist, add it with the ID
-    queryParams.append(resourceType, entityId);
+    queryParams.append(resource, entityId);
   }
 
   // Update the URL with the new query parameters
@@ -134,10 +134,10 @@ function toggleQueryParam(resourceType: string, entityId: string) {
  * of the specified resource type. It determines this based on the sequence number
  * of the resources in the navigation items.
  *
- * @param {keyof typeof navItems} resourceType - The type of resource to use as a reference point
+ * @param {keyof typeof navItems} resource - The type of resource to use as a reference point
  */
-const deleteQueryParamsForChildResources = (resourceType: ResourceType) => {
-  const activeSeq = navItems[resourceType]?.seq;
+const deleteQueryParamsForChildResources = (resource: ResourceType) => {
+  const activeSeq = navItems[resource]?.seq;
   if (activeSeq) {
     const queryParams = getQueryParams();
     Object.entries(navItems).forEach(([type, item]) => {
@@ -158,22 +158,22 @@ const deleteQueryParamsForChildResources = (resourceType: ResourceType) => {
  * It constructs the URL with the current query parameters and fetches the data.
  * The fetched data is then stored in the resources store.
  *
- * @param {ResourceType} resourceType - The type of resource to fetch
+ * @param {ResourceType} resource - The type of resource to fetch
  */
-const fetchResources = async (resourceType: ResourceType) => {
-  if (resourceType) {
+const fetchResources = async (resource: ResourceType) => {
+  if (resource) {
     try {
       const queryParams = getQueryParams();
       const response = await fetch(
-        `/api/${navItems[resourceType].path}${queryParams ? `?${queryParams}` : ''}`
+        `/api/${navItems[resource].path}${queryParams ? `?${queryParams}` : ''}`
       );
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const result: ApiEntity[] = await response.json();
-      resources[resourceType] = result.map(toEntity);
+      resources[resource] = result.map(toEntity);
     } catch (error) {
-      console.error(`Error fetching ${resourceType}:`, error);
+      console.error(`Error fetching ${resource}:`, error);
     }
   }
 };
@@ -183,10 +183,10 @@ const fetchResources = async (resourceType: ResourceType) => {
 /**
  * Checks if a given resource type has more than 3 entities.
  *
- * @param {ResourceType} resourceType - The type of resource to check.
+ * @param {ResourceType} resource - The type of resource to check.
  * @returns {boolean} True if the resource type has more than 3 entities, false otherwise.
  */
-const hasManyEntities = (resourceType: ResourceType): boolean => resources[resourceType].length > 3;
+const hasManyEntities = (resource: ResourceType): boolean => resources[resource].length > 3;
 
 /**
  * Gets the count of filtered resources for a given resource type.
@@ -196,17 +196,17 @@ const hasManyEntities = (resourceType: ResourceType): boolean => resources[resou
  * it returns the length of the filtered resources array for that type.
  * Otherwise, it returns the length of the query filters array for that type, or 0 if not present.
  *
- * @param {ResourceType} resourceType - The type of resource to get the count for
+ * @param {ResourceType} resource - The type of resource to get the count for
  * @returns {number} The count of filtered resources for the given type
  */
-const getFilteredResourceCount = (resourceType: ResourceType): number => {
-  if (isResourceExpanded(resourceType)) {
+const getFilteredResourceCount = (resource: ResourceType): number => {
+  if (isResourceExpanded(resource)) {
     // If the resource is expanded, return the filtered resources
-    return filteredResources[resourceType].length;
+    return filteredResources[resource].length;
   } else {
     // Since the filtered entities are pinned, even if the resource is not expanded,
     // the maximum height should allow for the pinned entities.
-    return queryFilters[resourceType as FilterableResourceType]?.length || 0;
+    return queryFilters[resource as FilterableResourceType]?.length || 0;
   }
 };
 
@@ -218,11 +218,11 @@ const getFilteredResourceCount = (resourceType: ResourceType): number => {
  * of filtered resources and applies a limit to ensure the container doesn't
  * grow too large.
  *
- * @param {ResourceType} resourceType - The type of resource to calculate the max height for
+ * @param {ResourceType} resource - The type of resource to calculate the max height for
  * @returns {string} A Tailwind CSS class string for the max-height
  */
-const getMaxHeightItemsContainer = (resourceType: ResourceType, isFilterable: boolean = false): string => {
-  const count = getFilteredResourceCount(resourceType);
+const getMaxHeightItemsContainer = (resource: ResourceType, isFilterable: boolean = false): string => {
+  const count = getFilteredResourceCount(resource);
   let height = count * 54; // 54px is the height of an entity
   if (isFilterable) {
     height += 54; // Add 54px for the filter
@@ -239,14 +239,14 @@ const getMaxHeightItemsContainer = (resourceType: ResourceType, isFilterable: bo
  * of filtered resources and applies a limit to ensure the container doesn't
  * grow too large.
  *
- * @param {ResourceType} resourceType - The type of resource to calculate the max height for
+ * @param {ResourceType} resource - The type of resource to calculate the max height for
  * @returns {string} A Tailwind CSS class string for the max-height
  */
 // TODO: Remove this of getMaxHeightItemsContainer
-// const getEntityContainerMaxHeight = (resourceType: ResourceType): string => {
-//   const itemCount = isResourceExpanded(resourceType)
-//     ? filteredResources[resourceType].length
-//     : queryFilters[resourceType as FilterableResourceType]?.length || 0;
+// const getEntityContainerMaxHeight = (resource: ResourceType): string => {
+//   const itemCount = isResourceExpanded(resource)
+//     ? filteredResources[resource].length
+//     : queryFilters[resource as FilterableResourceType]?.length || 0;
 //   return `max-h-[${Math.max(itemCount * 54, 54)}px]`; // Ensure a minimum of 52px
 // };
 
@@ -290,15 +290,15 @@ const toEntity = (apiEntity: ApiEntity) => {
   };
 };
 
-const isResourceExpanded = (resourceType: ResourceType) => {
-  return routerState.resource === resourceType || resourceType === 'feature';
+const isResourceExpanded = (resource: ResourceType) => {
+  return routerState.resource === resource || resource === 'feature';
 };
 </script>
 
 <!-- SNIPPETS -->
 
 {#snippet filterToggleButton(
-  resourceType: FilterableResourceType,
+  resource: FilterableResourceType,
   itemId: string,
   onHoverOnly = true
 )}
@@ -306,21 +306,21 @@ const isResourceExpanded = (resourceType: ResourceType) => {
     class="btn btn-circle btn-ghost btn-sm transition-all {onHoverOnly
       ? 'absolute right-4 top-1/2 -translate-y-1/2  opacity-0 active:-translate-y-1/2 group-hover:opacity-100'
       : ''} hover:bg-base-200"
-    aria-label={queryFilters[resourceType]?.includes(itemId)
+    aria-label={queryFilters[resource]?.includes(itemId)
       ? 'Remove item from filters'
       : 'Add item to filters'}
-    onclick={() => toggleQueryParam(resourceType, itemId)}>
-    <Icon src={queryFilters[resourceType]?.includes(itemId) ? Minus : Plus} class="h-4 w-4" />
+    onclick={() => toggleQueryParam(resource, itemId)}>
+    <Icon src={queryFilters[resource]?.includes(itemId) ? Minus : Plus} class="h-4 w-4" />
   </button>
 {/snippet}
 
 {#snippet filterStat(
   source: ResourceToEntity & FilterableResourceToEntityId,
-  resourceType: ResourceType | FilterableResourceType,
+  resource: ResourceType | FilterableResourceType,
   label: string
 )}
   <p class="flex-grow">
-    <span>{source[resourceType]?.length || '-'}</span>
+    <span>{source[resource]?.length || '-'}</span>
     <span class="text-3xs">{label}</span>
   </p>
 {/snippet}
@@ -380,7 +380,7 @@ const isResourceExpanded = (resourceType: ResourceType) => {
         
         <!-- ENTITIES : FILTER -->
         {#if isSidebarExpanded && isSectionExpanded && isFilterable}
-          <FilterInput {resourceType} />
+          <FilterInput resource={resourceType as ResourceType} />
         {/if}
 
         <!-- ENTITIES : LIST -->

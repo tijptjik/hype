@@ -7,20 +7,15 @@ import MenuItem from '$lib/components/menu/MenuItem.svelte';
 import EntityActions from '$lib/components/menu/EntityActions.svelte';
 import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
-import type { FalsableRef, ResourceType } from '$lib/types';
-
-type Props = {
-  entity: FalsableRef;
-  resourceType: ResourceType;
-  title: string;
-};
+import type { NavProps } from '$lib/types';
 
 // STATE : PROPS
-let { entity, resourceType, title }: Props = $props();
+let navProps: NavProps & { title: string } = $props();
 
-// STATE : CONTEXT
-const routerState = getRouterState();
+console.log('navProps HEADER', navProps.resource);
 
+
+// CONFIG
 const menuItems = {
   organisation: [
     {
@@ -70,22 +65,22 @@ const menuItems = {
 
 </script>
 
-<header class="flex-none navbar h-17.5 px-12 py-4 shadow-lg sticky top-0 z-10 bg-gradient-to-r from-rose-500 to-fuchsia-800">
+<header class="flex-none navbar h-17.5 px-12 py-4 shadow-lg bg-gradient-to-r from-rose-500 to-fuchsia-800 sticky top-0 left-0 w-full z-20">
   <div class="flex-1">
     <div class="flex items-center space-x-4">
-      <Icon src={navItems[routerState.resource as ResourceType].icon} class="h-6 w-6" />
-      <h2 class="text-2xl font-semibold">{title}</h2>
+      <Icon src={navItems[navProps.resource].icon} class="h-6 w-6" />
+      <h2 class="text-2xl font-semibold">{navProps.title}</h2>
     </div>
   </div>
   <div class="flex-none">
     <ul class="mt-1 flex flex-row space-x-2 px-2">
-      {#each menuItems[routerState.resource as ResourceType] as facet}
+      {#each menuItems[navProps.resource] as facet}
         <MenuItem {facet} />
       {/each}
     </ul>
     <Icon src={Bars3} class="mx-2 h-6 w-6 text-black" />
     <ul class="menu menu-horizontal space-x-2">
-      <EntityActions {entity} {resourceType} />
+      <EntityActions {...navProps} />
     </ul>
   </div>
 </header>

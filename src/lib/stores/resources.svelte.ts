@@ -7,7 +7,8 @@ import type {
   NewOrganisation,
   Project,
   Layer,
-  Feature
+  Feature,
+  Organisation
 } from '$lib/types';
 
 // Meta
@@ -35,12 +36,7 @@ export const queryFilters: FilterableResourceToEntityId = $state({
   project: [],
   layer: []
 });
-export const filteredResources: ResourceToEntity = $state<{
-  organisation: EntityWithData<NewOrganisation>[];
-  project: EntityWithData<Project>[];
-  layer: EntityWithData<Layer>[];
-  feature: EntityWithData<Feature>[];
-}>({
+export const filteredResources: ResourceToEntity = $state({
   organisation: [],
   project: [],
   layer: [],

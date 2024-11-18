@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "6740e14c-1220-488e-a41c-f353b2b20184",
-  "prevId": "788f308a-4e78-4e10-8f10-1f6b3d8798ae",
+  "id": "125546bc-0acb-44c7-b608-24ac01b6b697",
+  "prevId": "fa0c10d6-730a-4396-a996-e0551d541a81",
   "tables": {
     "account": {
       "name": "account",
@@ -91,19 +91,27 @@
           "name": "account_userId_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": ["userId"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "account_provider_providerAccountId_pk": {
-          "columns": ["provider", "providerAccountId"],
+          "columns": [
+            "provider",
+            "providerAccountId"
+          ],
           "name": "account_provider_providerAccountId_pk"
         }
       },
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "feature": {
       "name": "feature",
@@ -122,12 +130,50 @@
           "notNull": true,
           "autoincrement": false
         },
-        "properties": {
-          "name": "properties",
+        "title": {
+          "name": "title",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "titleGen": {
+          "name": "titleGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "descriptionGen": {
+          "name": "descriptionGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "formattedAddress": {
+          "name": "formattedAddress",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "formattedAddressGen": {
+          "name": "formattedAddressGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         },
         "addressProperties": {
           "name": "addressProperties",
@@ -179,7 +225,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": false
+          "default": true
         },
         "visitableAsOf": {
           "name": "visitableAsOf",
@@ -204,6 +250,13 @@
           "notNull": true,
           "autoincrement": false,
           "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "publishedAt": {
+          "name": "publishedAt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {},
@@ -212,8 +265,12 @@
           "name": "feature_layerId_layer_id_fk",
           "tableFrom": "feature",
           "tableTo": "layer",
-          "columnsFrom": ["layerId"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "layerId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -221,8 +278,12 @@
           "name": "feature_contributorId_user_id_fk",
           "tableFrom": "feature",
           "tableTo": "user",
-          "columnsFrom": ["contributorId"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "contributorId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -230,14 +291,255 @@
           "name": "feature_publisherId_user_id_fk",
           "tableFrom": "feature",
           "tableTo": "user",
-          "columnsFrom": ["publisherId"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "publisherId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "featureI18n": {
+      "name": "featureI18n",
+      "columns": {
+        "featureId": {
+          "name": "featureId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "lang": {
+          "name": "lang",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "titleGen": {
+          "name": "titleGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "descriptionGen": {
+          "name": "descriptionGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "formattedAddress": {
+          "name": "formattedAddress",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "formattedAddressGen": {
+          "name": "formattedAddressGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "addressProperties": {
+          "name": "addressProperties",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "featureI18n_featureId_feature_id_fk": {
+          "name": "featureI18n_featureId_feature_id_fk",
+          "tableFrom": "featureI18n",
+          "tableTo": "feature",
+          "columnsFrom": [
+            "featureId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "featureI18n_featureId_lang_pk": {
+          "columns": [
+            "featureId",
+            "lang"
+          ],
+          "name": "featureI18n_featureId_lang_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "featureProperty": {
+      "name": "featureProperty",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "featureId": {
+          "name": "featureId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "propertyId": {
+          "name": "propertyId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "propertyValueId": {
+          "name": "propertyValueId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "featureProperty_featureId_feature_id_fk": {
+          "name": "featureProperty_featureId_feature_id_fk",
+          "tableFrom": "featureProperty",
+          "tableTo": "feature",
+          "columnsFrom": [
+            "featureId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "featureProperty_propertyId_property_id_fk": {
+          "name": "featureProperty_propertyId_property_id_fk",
+          "tableFrom": "featureProperty",
+          "tableTo": "property",
+          "columnsFrom": [
+            "propertyId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "featureProperty_propertyValueId_propertyValue_id_fk": {
+          "name": "featureProperty_propertyValueId_propertyValue_id_fk",
+          "tableFrom": "featureProperty",
+          "tableTo": "propertyValue",
+          "columnsFrom": [
+            "propertyValueId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "featurePropertyI18n": {
+      "name": "featurePropertyI18n",
+      "columns": {
+        "featurePropertyId": {
+          "name": "featurePropertyId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "lang": {
+          "name": "lang",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "featurePropertyI18n_featurePropertyId_featureProperty_id_fk": {
+          "name": "featurePropertyI18n_featurePropertyId_featureProperty_id_fk",
+          "tableFrom": "featurePropertyI18n",
+          "tableTo": "featureProperty",
+          "columnsFrom": [
+            "featurePropertyId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "featurePropertyI18n_featurePropertyId_lang_pk": {
+          "columns": [
+            "featurePropertyId",
+            "lang"
+          ],
+          "name": "featurePropertyI18n_featurePropertyId_lang_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "layer": {
       "name": "layer",
@@ -263,12 +565,28 @@
           "notNull": true,
           "autoincrement": false
         },
+        "nameGen": {
+          "name": "nameGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
         "nameShort": {
           "name": "nameShort",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "nameShortGen": {
+          "name": "nameShortGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         },
         "description": {
           "name": "description",
@@ -277,12 +595,28 @@
           "notNull": false,
           "autoincrement": false
         },
+        "descriptionGen": {
+          "name": "descriptionGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
         "metadata": {
           "name": "metadata",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "isPublished": {
+          "name": "isPublished",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         },
         "createdAt": {
           "name": "createdAt",
@@ -307,14 +641,169 @@
           "name": "layer_projectId_project_id_fk",
           "tableFrom": "layer",
           "tableTo": "project",
-          "columnsFrom": ["projectId"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "projectId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "layerI18n": {
+      "name": "layerI18n",
+      "columns": {
+        "layerId": {
+          "name": "layerId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "lang": {
+          "name": "lang",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "nameGen": {
+          "name": "nameGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "nameShort": {
+          "name": "nameShort",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "nameShortGen": {
+          "name": "nameShortGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "descriptionGen": {
+          "name": "descriptionGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "layerI18n_layerId_layer_id_fk": {
+          "name": "layerI18n_layerId_layer_id_fk",
+          "tableFrom": "layerI18n",
+          "tableTo": "layer",
+          "columnsFrom": [
+            "layerId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "layerI18n_layerId_lang_pk": {
+          "columns": [
+            "layerId",
+            "lang"
+          ],
+          "name": "layerI18n_layerId_lang_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "layerProperty": {
+      "name": "layerProperty",
+      "columns": {
+        "layerId": {
+          "name": "layerId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "propertyId": {
+          "name": "propertyId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "isVisible": {
+          "name": "isVisible",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "layerProperty_layerId_layer_id_fk": {
+          "name": "layerProperty_layerId_layer_id_fk",
+          "tableFrom": "layerProperty",
+          "tableTo": "layer",
+          "columnsFrom": [
+            "layerId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "layerProperty_propertyId_property_id_fk": {
+          "name": "layerProperty_propertyId_property_id_fk",
+          "tableFrom": "layerProperty",
+          "tableTo": "property",
+          "columnsFrom": [
+            "propertyId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "organisation": {
       "name": "organisation",
@@ -340,6 +829,14 @@
           "notNull": true,
           "autoincrement": false
         },
+        "nameGen": {
+          "name": "nameGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
         "nameShort": {
           "name": "nameShort",
           "type": "text",
@@ -347,12 +844,28 @@
           "notNull": true,
           "autoincrement": false
         },
+        "nameShortGen": {
+          "name": "nameShortGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
         "description": {
           "name": "description",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "descriptionGen": {
+          "name": "descriptionGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         },
         "url": {
           "name": "url",
@@ -366,7 +879,8 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "'https://generative-placeholders.glitch.me/image?width=720&height=720&style=triangles&gap=25'"
         },
         "createdAt": {
           "name": "createdAt",
@@ -388,13 +902,16 @@
       "indexes": {
         "organisation_code_unique": {
           "name": "organisation_code_unique",
-          "columns": ["code"],
+          "columns": [
+            "code"
+          ],
           "isUnique": true
         }
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "organisationI18n": {
       "name": "organisationI18n",
@@ -420,6 +937,14 @@
           "notNull": true,
           "autoincrement": false
         },
+        "nameGen": {
+          "name": "nameGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
         "nameShort": {
           "name": "nameShort",
           "type": "text",
@@ -427,12 +952,28 @@
           "notNull": true,
           "autoincrement": false
         },
+        "nameShortGen": {
+          "name": "nameShortGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
         "description": {
           "name": "description",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "descriptionGen": {
+          "name": "descriptionGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
         }
       },
       "indexes": {},
@@ -441,19 +982,27 @@
           "name": "organisationI18n_organisationId_organisation_id_fk",
           "tableFrom": "organisationI18n",
           "tableTo": "organisation",
-          "columnsFrom": ["organisationId"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organisationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "organisationI18n_organisationId_lang_pk": {
-          "columns": ["organisationId", "lang"],
+          "columns": [
+            "organisationId",
+            "lang"
+          ],
           "name": "organisationI18n_organisationId_lang_pk"
         }
       },
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "organisationRole": {
       "name": "organisationRole",
@@ -487,8 +1036,12 @@
           "name": "organisationRole_organisationId_organisation_id_fk",
           "tableFrom": "organisationRole",
           "tableTo": "organisation",
-          "columnsFrom": ["organisationId"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organisationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         },
@@ -496,19 +1049,27 @@
           "name": "organisationRole_userId_user_id_fk",
           "tableFrom": "organisationRole",
           "tableTo": "user",
-          "columnsFrom": ["userId"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "organisationRole_organisationId_userId_pk": {
-          "columns": ["organisationId", "userId"],
+          "columns": [
+            "organisationId",
+            "userId"
+          ],
           "name": "organisationRole_organisationId_userId_pk"
         }
       },
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "project": {
       "name": "project",
@@ -541,6 +1102,14 @@
           "notNull": true,
           "autoincrement": false
         },
+        "nameGen": {
+          "name": "nameGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
         "nameShort": {
           "name": "nameShort",
           "type": "text",
@@ -548,12 +1117,28 @@
           "notNull": true,
           "autoincrement": false
         },
+        "nameShortGen": {
+          "name": "nameShortGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
         "description": {
           "name": "description",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "descriptionGen": {
+          "name": "descriptionGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         },
         "license": {
           "name": "license",
@@ -563,6 +1148,14 @@
           "autoincrement": false,
           "default": "'Copyright'"
         },
+        "licenseGen": {
+          "name": "licenseGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
         "attribution": {
           "name": "attribution",
           "type": "text",
@@ -570,12 +1163,29 @@
           "notNull": true,
           "autoincrement": false
         },
-        "metadata": {
-          "name": "metadata",
+        "attributionGen": {
+          "name": "attributionGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "image": {
+          "name": "image",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "'https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=55'"
+        },
+        "isPublished": {
+          "name": "isPublished",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         },
         "createdAt": {
           "name": "createdAt",
@@ -597,7 +1207,9 @@
       "indexes": {
         "project_code_unique": {
           "name": "project_code_unique",
-          "columns": ["code"],
+          "columns": [
+            "code"
+          ],
           "isUnique": true
         }
       },
@@ -606,14 +1218,19 @@
           "name": "project_organisationId_organisation_id_fk",
           "tableFrom": "project",
           "tableTo": "organisation",
-          "columnsFrom": ["organisationId"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organisationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "projectI18n": {
       "name": "projectI18n",
@@ -639,12 +1256,28 @@
           "notNull": true,
           "autoincrement": false
         },
+        "nameGen": {
+          "name": "nameGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
         "nameShort": {
           "name": "nameShort",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "nameShortGen": {
+          "name": "nameShortGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
         },
         "description": {
           "name": "description",
@@ -653,6 +1286,14 @@
           "notNull": false,
           "autoincrement": false
         },
+        "descriptionGen": {
+          "name": "descriptionGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
         "license": {
           "name": "license",
           "type": "text",
@@ -660,12 +1301,28 @@
           "notNull": false,
           "autoincrement": false
         },
+        "licenseGen": {
+          "name": "licenseGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
         "attribution": {
           "name": "attribution",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "attributionGen": {
+          "name": "attributionGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
         }
       },
       "indexes": {},
@@ -674,19 +1331,27 @@
           "name": "projectI18n_projectId_project_id_fk",
           "tableFrom": "projectI18n",
           "tableTo": "project",
-          "columnsFrom": ["projectId"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "projectId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "projectI18n_projectId_lang_pk": {
-          "columns": ["projectId", "lang"],
+          "columns": [
+            "projectId",
+            "lang"
+          ],
           "name": "projectI18n_projectId_lang_pk"
         }
       },
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "projectRole": {
       "name": "projectRole",
@@ -711,7 +1376,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'member'"
+          "default": "'maintainer'"
         }
       },
       "indexes": {},
@@ -720,8 +1385,12 @@
           "name": "projectRole_projectId_project_id_fk",
           "tableFrom": "projectRole",
           "tableTo": "project",
-          "columnsFrom": ["projectId"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "projectId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         },
@@ -729,19 +1398,348 @@
           "name": "projectRole_userId_user_id_fk",
           "tableFrom": "projectRole",
           "tableTo": "user",
-          "columnsFrom": ["userId"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "projectRole_projectId_userId_pk": {
-          "columns": ["projectId", "userId"],
+          "columns": [
+            "projectId",
+            "userId"
+          ],
           "name": "projectRole_projectId_userId_pk"
         }
       },
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "property": {
+      "name": "property",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "projectId": {
+          "name": "projectId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'classifier'"
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "labelGen": {
+          "name": "labelGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "placeholder": {
+          "name": "placeholder",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'Type here'"
+        },
+        "placeholderGen": {
+          "name": "placeholderGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "component": {
+          "name": "component",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'SelectField'"
+        },
+        "min": {
+          "name": "min",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "max": {
+          "name": "max",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "isTranslatable": {
+          "name": "isTranslatable",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "modifiedAt": {
+          "name": "modifiedAt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "property_projectId_project_id_fk": {
+          "name": "property_projectId_project_id_fk",
+          "tableFrom": "property",
+          "tableTo": "project",
+          "columnsFrom": [
+            "projectId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "propertyI18n": {
+      "name": "propertyI18n",
+      "columns": {
+        "propertyId": {
+          "name": "propertyId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "lang": {
+          "name": "lang",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "labelGen": {
+          "name": "labelGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "placeholder": {
+          "name": "placeholder",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'Type here'"
+        },
+        "placeholderGen": {
+          "name": "placeholderGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "propertyI18n_propertyId_property_id_fk": {
+          "name": "propertyI18n_propertyId_property_id_fk",
+          "tableFrom": "propertyI18n",
+          "tableTo": "property",
+          "columnsFrom": [
+            "propertyId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "propertyValue": {
+      "name": "propertyValue",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "propertyId": {
+          "name": "propertyId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "valueGen": {
+          "name": "valueGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "rank": {
+          "name": "rank",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "propertyValue_propertyId_property_id_fk": {
+          "name": "propertyValue_propertyId_property_id_fk",
+          "tableFrom": "propertyValue",
+          "tableTo": "property",
+          "columnsFrom": [
+            "propertyId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "propertyValueI18n": {
+      "name": "propertyValueI18n",
+      "columns": {
+        "propertyValueId": {
+          "name": "propertyValueId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "lang": {
+          "name": "lang",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "valueGen": {
+          "name": "valueGen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "propertyValueI18n_propertyValueId_propertyValue_id_fk": {
+          "name": "propertyValueI18n_propertyValueId_propertyValue_id_fk",
+          "tableFrom": "propertyValueI18n",
+          "tableTo": "propertyValue",
+          "columnsFrom": [
+            "propertyValueId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "propertyValueI18n_propertyValueId_lang_pk": {
+          "columns": [
+            "propertyValueId",
+            "lang"
+          ],
+          "name": "propertyValueI18n_propertyValueId_lang_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "session": {
       "name": "session",
@@ -774,14 +1772,19 @@
           "name": "session_userId_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": ["userId"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "user": {
       "name": "user",
@@ -848,13 +1851,16 @@
       "indexes": {
         "user_email_unique": {
           "name": "user_email_unique",
-          "columns": ["email"],
+          "columns": [
+            "email"
+          ],
           "isUnique": true
         }
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "userActivity": {
       "name": "userActivity",
@@ -889,16 +1895,22 @@
           "name": "userActivity_userId_user_id_fk",
           "tableFrom": "userActivity",
           "tableTo": "user",
-          "columnsFrom": ["userId"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     }
   },
+  "views": {},
   "enums": {},
   "_meta": {
     "schemas": {},

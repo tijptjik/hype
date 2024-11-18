@@ -5,18 +5,15 @@
   // CONTEXT
   import { getForm } from '$lib/context/forms.svelte';
 // TYPES
-import type { ResourceType, FalsableRef } from '$lib/types';
+import type { NavProps } from '$lib/types';
 
-type Props = {
-  entity: FalsableRef;
-  resourceType: ResourceType;
-};
 
 // STATE : PROPS
-let { entity, resourceType }: Props = $props();
+let navProps: NavProps = $props();
+let { entity, resource } = navProps;
 
 // STATE : CONTEXT
-const { tainted, isTainted, submit, errors} = getForm(resourceType, entity);
+const { tainted, isTainted, submit, errors} = getForm(resource, entity);
 
 // STATE : UI
 let isInvalid = $state(false);
@@ -36,6 +33,8 @@ $effect(() => {
 
 <button
   class="btn disabled:bg-transparent disabled:text-opacity-60 transition-all duration-500"
+  role="button"
+  data-testid="formSubmitButton"
   onclick={(e) => submit(e)}
   class:btn-primary={isTainted($tainted) && !isInvalid}
   class:btn-outline={!isTainted($tainted) || isInvalid}

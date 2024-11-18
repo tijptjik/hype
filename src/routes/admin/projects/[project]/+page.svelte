@@ -6,47 +6,50 @@ import { get } from 'svelte/store';
 import { goto } from '$app/navigation';
 // COMPONENTS
 import Header from '$lib/components/layout/EntityHeader.svelte';
-import I18nSection from '$lib/components/forms/FormSectionI18n.svelte';
-import SpecificationSection from '$lib/components/forms/FormSectionSpecification.svelte';
-import ImageSection from '$lib/components/forms/FormSectionImage.svelte';
-import PropertySection from '$lib/components/forms/FormSectionProperty.svelte';
-import UserSection from '$lib/components/forms/FormSectionUser.svelte';
+import I18nSection from '$lib/components/forms/sections/I18n.svelte';
+import SpecificationSection from '$lib/components/forms/sections/Specification.svelte';
+import ImageSection from '$lib/components/forms/sections/Image.svelte';
+import PropertySection from '$lib/components/forms/sections/Property.svelte';
+import UserSection from '$lib/components/forms/sections/User.svelte';
 // CONFIG
 import { classifierComponentTypes, specifierComponentTypes } from '$lib/types';
 // TYPES
 import type { SuperValidated } from 'sveltekit-superforms';
 import type { Project } from '$lib/types';
 import type {
-  FormFieldArray,
-  FormFieldConfig,
-  ResourceType,
   ResourceRouter,
-  FalsableFacetType,
   FormField,
+  FormFieldArray,
+  NavProps,
+  PageProps,
+  Organisation
 } from '$lib/types';
 
 import SuperDebug from 'sveltekit-superforms';
 
 // CONFIG
-const FIELDS: FormFieldConfig = {
+const FIELDS: Record<string, FormField | FormFieldArray> = {
   i18n: {
     name: {
       label: 'Full Name',
       component: 'InputField',
       isArray: false,
-      isTranslated: true
+      isTranslated: true,
+      isNested: false
     },
     nameShort: {
       label: 'Short Name',
       component: 'InputField',
       isArray: false,
-      isTranslated: true
+      isTranslated: true,
+      isNested: false
     },
     description: {
       label: 'Description',
       component: 'TextareaField',
       isArray: false,
-      isTranslated: true
+      isTranslated: true,
+      isNested: false
     }
   },
   credit: {
@@ -54,20 +57,23 @@ const FIELDS: FormFieldConfig = {
       label: 'License',
       component: 'InputField',
       isArray: false,
-      isTranslated: true
+      isTranslated: true,
+      isNested: false
     },
     attribution: {
       label: 'Attribution',
       component: 'InputField',
       isArray: false,
-      isTranslated: true
+      isTranslated: true,
+      isNested: false
     }
   },
   users: {
     maintainerRoles: {
       label: 'Maintainers',
       isArray: true,
-      isTranslated: false
+      isTranslated: false,
+      isNested: false
     }
   },
   specification: {
@@ -75,7 +81,8 @@ const FIELDS: FormFieldConfig = {
       label: 'Code',
       component: 'InputField',
       isArray: false,
-      isTranslated: false
+      isTranslated: false,
+      isNested: false
     }
   },
   config: {
@@ -116,7 +123,7 @@ const FIELDS: FormFieldConfig = {
               isNested: true
             },
             values: {
-              component: 'ComplexField',
+              component: 'ListField',
               isArray: true,
               isTranslated: true,
               isNested: true,
@@ -173,11 +180,11 @@ const FIELDS: FormFieldConfig = {
             },
             isTranslatable: {
               label: 'Translatable',
-              component: 'CheckboxField',
+              component: 'ToggleField',
               isArray: false,
               isNested: true,
               isTranslated: false
-            },
+            }
           }
         }
       }
@@ -192,21 +199,22 @@ const FIELDS: FormFieldConfig = {
   }
 };
 
-// TYPES
-type Props = {
-  data: {
-    validatedForm: SuperValidated<Project>;
-    entity: string
-  }
-}
-
 // STATE : PROPS
-let { data }: Props = $props();
-let { validatedForm, entity } = data;
+let { data }: PageProps<Organisation> = $props();
+let { validatedForm } = data;
 
 // STATE : DERIVED
 const routerState = getRouterState() as ResourceRouter;
-const title = $derived(data.validatedForm.data.name || 'New');
+let title = $derived(data.validatedForm.data.name || 'New');
+
+let navProps: NavProps = $derived({
+  resource: routerState.resource,
+  entity: data.entity,
+  facet: routerState.facet || 'core'
+});
+
+// STATE : FORM
+let { enhance } = setForm<Organisation>(navProps.resource, navProps.entity, validatedForm);
 
 $effect(() => {
   //Remove parentRef from URL if it exists
@@ -214,80 +222,45 @@ $effect(() => {
   url.searchParams.delete('parentRef');
   // shallow navigation
   goto(url.toString(), { replaceState: true });
-}); 
-
-// STATE : FORM
-let { message, enhance, form } = setForm(
-  routerState.resource as ResourceType,
-  entity,
-  validatedForm
-);
+  console.log('navProps INNER', navProps);
+});
 </script>
 
 <!-- LAYOUT -->
 <div class="h-full overflow-y-auto bg-black pb-16">
-  <Header entity={data.entity} resourceType={routerState.resource} {title} />
-  <main class="flex w-full flex-col p-6">
-    {#if Object.keys(message).length > 0}<h3>{get(message)}</h3>{/if}
-    <form method="POST" use:enhance class="flex flex-col gap-6">
-      {#if routerState.facet === 'core' || routerState.facet === false}
-        <I18nSection
-          title="Descriptors"
-          fields={FIELDS.i18n as FormField}
-          facet={routerState.facet}
-          {entity}
-          resourceType={routerState.resource} />
-        <I18nSection
-          title="Credit"
-          fields={FIELDS.credit as FormField}
-          facet={routerState.facet}
-          {entity}
-          resourceType={routerState.resource} />
+  <Header {title} {...navProps} />
+  <form method="POST" use:enhance>
+    <main class="flex flex-col gap-6 p-6">
+      {#if navProps.facet === 'core'}
+        <I18nSection title="Descriptors" fields={FIELDS.i18n} {...navProps} />
+        <I18nSection title="Credit" fields={FIELDS.credit} {...navProps} />
         <div class="flex flex-row gap-6">
           <UserSection
             title="Members with Edit Access"
             subtitle="Maintainers have access to the review queue and can accept or reject feature changes"
-            fields={FIELDS.users as FormField}
-            facet={routerState.facet}
-            {entity}
-            resourceType={routerState.resource} />
-          <SpecificationSection
-            title="Specification"
-            fields={FIELDS.specification as FormField}
-            facet={routerState.facet}
-            {entity}
-            resourceType={routerState.resource} />
+            fields={FIELDS.users}
+            {...navProps} />
+          <SpecificationSection title="Specification" fields={FIELDS.specification} {...navProps} />
         </div>
-      {:else if routerState.facet === 'fields'}
+      {:else if navProps.facet === 'fields'}
         <PropertySection
           title="Categorical Fields"
           subtitle="by which features can be filtered"
-          fieldId="properties"
-          fieldDiscriminator="classifier"
           fields={FIELDS.config as FormFieldArray}
-          facet={routerState.facet}
-          {entity}
-          resourceType={routerState.resource} />
-          <PropertySection
+          fieldDiscriminator="classifier"
+          {...navProps} />
+        <PropertySection
           title="Freeform Fields"
           subtitle="displayed in a feature's info panels"
-          fieldId="properties"
-          fieldDiscriminator="specifier"
           fields={FIELDS.config as FormFieldArray}
-          facet={routerState.facet}
-          {entity}
-          resourceType={routerState.resource} />
-      {:else if routerState.facet === 'images'}
-        <ImageSection
-          title="Image"
-          fields={FIELDS.images as FormField}
-          facet={routerState.facet}
-          {entity}
-          resourceType={routerState.resource} />
+          fieldDiscriminator="specifier"
+          {...navProps} />
+      {:else if navProps.facet === 'images'}
+        <ImageSection title="Image" fields={FIELDS.images} {...navProps} />
       {:else}
         <h1>FACET NOT FOUND</h1>
       {/if}
-    </form>
+    </main>
     <!-- <SuperDebug data={$form} /> -->
-  </main>
+  </form>
 </div>

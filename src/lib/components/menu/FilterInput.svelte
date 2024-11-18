@@ -11,18 +11,18 @@ import { Icon } from '@steeze-ui/svelte-icon';
 
 // STATE : PROPS
 const {
-  resourceType,
+  resource,
   rounded = false
 }: {
-  resourceType: ResourceType;
+  resource: ResourceType;
   rounded?: boolean;
 } = $props();
 
 // CONFIG
 
 $effect(() => {
-  Object.keys(resources).forEach((resourceType) => {
-    const type = resourceType;
+  Object.keys(resources).forEach((resource) => {
+    const type = resource;
     filteredResources[type as keyof typeof filteredResources] = resources[type as keyof typeof resources].filter((item) => {
       return (
         filterTexts[type as keyof typeof filterTexts] === '' ||
@@ -38,7 +38,7 @@ $effect(() => {
 
 // Function to reset the input field
 function resetInput() {
-  filterTexts[resourceType as keyof typeof filterTexts] = '';
+  filterTexts[resource as keyof typeof filterTexts] = '';
 }
 
 // Function to handle keydown events
@@ -54,10 +54,10 @@ function handleKeydown(event: KeyboardEvent) {
     type="text"
     placeholder="Match name and description"
     class="input m-0 w-full bg-neutral px-6 pr-10 text-sm focus:border-none focus:outline-none {rounded ? 'min-w-72 h-10 rounded-xl' : 'rounded-none'}"
-    bind:value={filterTexts[resourceType as keyof typeof filterTexts]}
+    bind:value={filterTexts[resource as keyof typeof filterTexts]}
     onkeydown={handleKeydown} />
   <div class="absolute inset-y-0 right-2 flex items-center pr-3">
-    {#if filterTexts[resourceType as keyof typeof filterTexts]}
+    {#if filterTexts[resource as keyof typeof filterTexts]}
       <button onclick={resetInput} class="focus:outline-none">
         <Icon src={XMark} class="h-6 w-6" />
       </button>

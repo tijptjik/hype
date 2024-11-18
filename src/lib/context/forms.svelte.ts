@@ -1,7 +1,6 @@
 import { zod } from 'sveltekit-superforms/adapters';
 import { getContext, setContext } from 'svelte';
-import { superForm } from 'sveltekit-superforms';
-import { defaults } from 'sveltekit-superforms';
+import { defaults, superForm } from 'sveltekit-superforms';
 import { get } from 'svelte/store';
 import { deserialize, enhance } from '$app/forms';
 import { goto } from '$app/navigation';
@@ -37,44 +36,86 @@ import type {
   Layer,
   Feature,
   ResourceType,
-  FalsableRef,
-  FalsableResourceType
+  FalsableResourceType,
+  Ref
 } from '$lib/types';
 
-class BaseForm<T extends Record<string, unknown>> {
-  form!: SuperFormData<T>;
-  enhance!: typeof enhance;
-  constraints!: InputConstraints<T>;
-  validate!: (
+export type SuperFormResult<T extends Record<string, unknown>> = {
+  form: Writable<T>;
+  enhance: typeof enhance;
+  constraints: Writable<InputConstraints<T>>;
+  validate: (
     path: FormPathLeaves<T>,
+    // opts?: ValidateOptions<FormPathType<T, FormPathLeaves<T>>, T, Record<string, unknown>>
     opts?: ValidateOptions<FormPathType<T, FormPathLeaves<T>>, T, Record<string, unknown>>
   ) => Promise<string[] | undefined>;
-  validateForm!: () => Promise<SuperValidated<Record<string, unknown>, string, Form>>;
-  tainted!: Writable<TaintedFields<T> | undefined>;
-  isTainted!: (path?: FormPath<T> | Record<string, unknown> | boolean | undefined) => boolean;
-  submit!: (event: Event) => void;
-  reset!: (options?: {
+  // validateForm!: () => Promise<SuperValidated<Record<string, unknown>, string, Form>>;
+  validateForm: () => Promise<SuperValidated<T>>;
+  tainted: Writable<TaintedFields<T> | undefined>;
+  // isTainted!: (path?: FormPath<T> | Record<string, unknown> | boolean | undefined) => boolean;
+  isTainted: (path?: FormPath<T> | boolean | undefined) => boolean;
+  submit: (event: Event) => void;
+  reset: (options?: {
     keepMessage?: boolean;
     data?: Partial<T>;
     newState?: Partial<T>;
     id?: string;
   }) => void;
-  errors!: Writable<ValidationErrors<T>>;
-  message!: Writable<string | undefined>;
-  posted!: Writable<boolean>;
+  errors: Writable<ValidationErrors<T>>;
+  message: Writable<string | undefined>;
+  posted: Writable<boolean>;
+};
 
-  // ZodClient() works only with the same schema as the one used on the server.
-  // If you need to switch schemas on the client, you need the full adapter (for example zod instead of zodClient).
+class BaseForm<T extends Record<string, unknown>> {
+  protected formResult: SuperFormResult<T>;
   constructor(form: SuperValidated<T>, isNew: boolean, insertSchema: any, updateSchema: any) {
-    const formConfig = superForm(defaults(form.data, zod(isNew ? insertSchema : updateSchema)), {
+    const formOptions = {
       dataType: 'json',
       SPA: true,
       validators: zod(isNew ? insertSchema : updateSchema),
       validationMethod: 'auto',
       resetForm: false,
       onSubmit: this.handleSubmit.bind(this)
-    });
-    Object.assign(this, formConfig);
+    };
+    const schema = zod(isNew ? insertSchema : updateSchema);
+    this.formResult = superForm(defaults(form.data, schema), formOptions);
+  }
+
+  get form() {
+    return this.formResult.form;
+  }
+  get enhance() {
+    return this.formResult.enhance;
+  }
+  get constraints() {
+    return this.formResult.constraints;
+  }
+  get validate() {
+    return this.formResult.validate;
+  }
+  get validateForm() {
+    return this.formResult.validateForm;
+  }
+  get tainted() {
+    return this.formResult.tainted;
+  }
+  get isTainted() {
+    return this.formResult.isTainted;
+  }
+  get submit() {
+    return this.formResult.submit;
+  }
+  get reset() {
+    return this.formResult.reset;
+  }
+  get errors() {
+    return this.formResult.errors;
+  }
+  get message() {
+    return this.formResult.message;
+  }
+  get posted() {
+    return this.formResult.posted;
   }
 
   async handleSubmit({ action, cancel }: { action: URL; cancel: () => void }) {
@@ -136,39 +177,39 @@ class BaseForm<T extends Record<string, unknown>> {
   }
 }
 
-class OrganisationForm extends BaseForm<Organisation> {
+export class OrganisationForm extends BaseForm<Organisation> {
   constructor(form: SuperValidated<Organisation>, isNew: boolean) {
     super(form, isNew, OrganisationInsertAPI, OrganisationUpdateAPI);
   }
 }
 
-class ProjectForm extends BaseForm<Project> {
+export class ProjectForm extends BaseForm<Project> {
   constructor(form: SuperValidated<Project>, isNew: boolean) {
     super(form, isNew, ProjectInsertAPI, ProjectUpdateAPI);
   }
 }
 
-class LayerForm extends BaseForm<Layer> {
+export class LayerForm extends BaseForm<Layer> {
   constructor(form: SuperValidated<Layer>, isNew: boolean) {
     super(form, isNew, LayerInsertAPI, LayerUpdateAPI);
   }
 }
 
-class FeatureForm extends BaseForm<Feature> {
+export class FeatureForm extends BaseForm<Feature> {
   constructor(form: SuperValidated<Feature>, isNew: boolean) {
     super(form, isNew, FeatureInsertAPI, FeatureUpdateAPI);
   }
 }
 
-const getContextRef = (resourceType: ResourceType, entity: Ref) => {
+export const getContextRef = (resourceType: ResourceType, entity: Ref) => {
   return entity === 'new' ? `form-${resourceType}-new` : `form-${resourceType}-${entity}`;
 };
 
-export const setForm = <T extends Record<string, unknown>>(
+export function setForm<T extends Organisation | Project | Layer | Feature>(
   resourceType: FalsableResourceType,
   entity: Ref,
   form: SuperValidated<T>
-) => {
+): SuperFormResult<T> {
   let FormClass;
   switch (resourceType) {
     case 'organisation':
@@ -186,10 +227,13 @@ export const setForm = <T extends Record<string, unknown>>(
     default:
       throw new Error(`Unknown resource type: ${resourceType}`);
   }
-  return setContext(getContextRef(resourceType, entity), new FormClass(form, entity === 'new'));
-};
+  const instance = new FormClass(form, entity === 'new');
+  return setContext(getContextRef(resourceType, entity), instance) as SuperFormResult<T>;
+}
 
-export const getForm = (
+export function getForm<T extends Organisation | Project | Layer | Feature>(
   resourceType: ResourceType,
-  entity: FalsableRef
-): ReturnType<typeof setForm> => getContext(getContextRef(resourceType, entity));
+  entity: Ref
+): SuperFormResult<T> {
+  return getContext<SuperFormResult<T>>(getContextRef(resourceType, entity));
+}

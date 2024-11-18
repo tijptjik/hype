@@ -2,26 +2,22 @@
 import FormResetButton from './FormResetButton.svelte';
 import FormSubmitButton from './FormSubmitButton.svelte';
 import PublishButton from './PublishButton.svelte';
-import type { FalsableRef, ResourceType } from '$lib/types';
-
-// TYPES
-type Props = {
-  entity: FalsableRef;
-  resourceType: ResourceType;
-};
+import type { NavProps } from '$lib/types';
 
 // STATE : PROPS
-let { entity, resourceType }: Props = $props();
+let navProps: NavProps = $props();
+let { resource } = navProps;
+
 </script>
 
 <li>
-  <FormResetButton {entity} {resourceType} />
+  <FormResetButton {...navProps} />
 </li>
 <li>
-  <FormSubmitButton {entity} {resourceType} />
+  <FormSubmitButton {...navProps} />
 </li>
-{#if resourceType === 'project' || resourceType === 'layer' || resourceType === 'feature'}
+{#if resource === 'project' || resource === 'layer' || resource === 'feature'}
   <li>
-    <PublishButton {entity} {resourceType} />
+    <PublishButton {...navProps} />
   </li>
 {/if}

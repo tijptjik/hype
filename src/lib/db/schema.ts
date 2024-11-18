@@ -5,7 +5,7 @@ import { nanoid } from 'nanoid';
 import type { GeometryObject } from 'geojson';
 
 // TYPES
-import type { GhostSignsFeatureProperties, AddressProperties, LayerMetadata } from '$lib/types';
+import type { AddressProperties, AddressPropertiesExtended, LayerMetadata } from '$lib/types';
 
 // UTILS
 const getGenImageParam = (): number => Math.floor(Math.random() * (100 - 5 + 1)) + 5;
@@ -413,8 +413,11 @@ export const feature = sqliteTable('feature', {
   titleGen: integer('titleGen', { mode: 'boolean' }).notNull().default(false),
   description: text('description'),
   descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(false),
+  // Display Address
+  formattedAddress: text('formattedAddress'),
+  formattedAddressGen: integer('formattedAddressGen', { mode: 'boolean' }).notNull().default(false),
   // Remaining properties as JSON
-  addressProperties: text('addressProperties', { mode: 'json' }).$type<AddressProperties>(),
+  addressProperties: text('addressProperties', { mode: 'json' }).$type<AddressPropertiesExtended>(),
   layerId: text('layerId')
     .notNull()
     .references(() => layer.id, { onDelete: 'cascade' }),
@@ -475,7 +478,13 @@ export const featureI18n = sqliteTable(
     title: text('title').notNull(),
     titleGen: integer('titleGen', { mode: 'boolean' }).notNull().default(true),
     description: text('description'),
-    descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(true)
+    descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(true),
+    // Display Address
+    formattedAddress: text('formattedAddress'),
+    formattedAddressGen: integer('formattedAddressGen', { mode: 'boolean' }).notNull().default(false),
+    // Address Properties
+    addressProperties: text('addressProperties', { mode: 'json' }).$type<AddressProperties>(),
+
   },
   (t) => ({
     pk: primaryKey({ columns: [t.featureId, t.lang] })
@@ -568,7 +577,7 @@ export const property = sqliteTable('property', {
   placeholder: text('placeholder').default('Type here'),
   placeholderGen: integer('placeholderGen', { mode: 'boolean' }).notNull().default(true),
   component: text('component', {
-    enum: ['SelectField', 'RangeField', 'InputField', 'TextareaField', 'TagsField']
+    enum: ['SelectField', 'RangeField', 'InputField', 'TextareaField']
   })
     .notNull()
     .default('SelectField'),

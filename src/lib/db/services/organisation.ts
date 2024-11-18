@@ -130,15 +130,10 @@ export const rebuildFormData = async (
   translations: OrganisationI18n[],
   userRoles: OrganisationRole[]
 ) => {
-
   const formData : Organisation = {
     ...organisation,
     translations: toNestedTranslations<OrganisationI18n>(translations),
     userRoles: userRoles
   };
-
-  console.log('PARSED FORM DATA in rebuildFormData', OrganisationUpdateAPI.safeParse(formData));
-  console.log('UPDATED ORGANISATION in rebuildFormData', formData);
-
   return await superValidate(formData, zod(OrganisationUpdateAPI));
 };
