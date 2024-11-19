@@ -284,7 +284,7 @@ const toEntity = (apiEntity: ApiEntity) => {
     name: apiEntity.name || apiEntity.title || '',
     nameShort: apiEntity.title || apiEntity.nameShort || apiEntity.name || '',
     description: apiEntity.description || apiEntity.description || '',
-    address: apiEntity.addressProperties?.formattedAddress || '',
+    address: apiEntity.displayAddress || '',
     ref: apiEntity.ref || apiEntity.code || apiEntity.id,
     data: apiEntity
   };
@@ -292,6 +292,20 @@ const toEntity = (apiEntity: ApiEntity) => {
 
 const isResourceExpanded = (resource: ResourceType) => {
   return routerState.resource === resource || resource === 'feature';
+};
+
+const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
+  e.preventDefault();
+  const url = new URL(window.location.href);
+  url.pathname = `/admin/${navItems[resourceType].path}/${entityPath}`;
+  if (resourceType === routerState.resource) {
+    const currentFacet = routerState.facet;
+  } else {
+    const url = new URL(window.location.href);
+    url.hash = `#core`;
+  }
+  routerState.url = url;
+  goto(url.toString());
 };
 </script>
 
@@ -395,6 +409,7 @@ const isResourceExpanded = (resource: ResourceType) => {
                 <div class="relative">
                   <a
                     href="/admin/{resource.path}/{entity.ref}{$page.url.search}"
+                    onclick={(e) => goToEntity(e, resourceType as ResourceType, entity.ref)}
                     class="flex items-center border-l-3 {routerState.entity === entity.ref
                       ? 'border-primary'
                       : queryFilters[resourceType as FilterableResourceType]?.includes(entity.id)
