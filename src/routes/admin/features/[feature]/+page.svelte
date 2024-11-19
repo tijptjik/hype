@@ -11,6 +11,7 @@ import ImageSection from '$lib/components/forms/sections/Image.svelte';
 import MapSection from '$lib/components/forms/sections/Map.svelte';
 import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte';
 import AddressSection from '$lib/components/forms/sections/Address.svelte';
+import AddressComponentSection from '$lib/components/forms/sections/AddressComponent.svelte';
 // TYPES
 import type { SuperForm } from 'sveltekit-superforms';
 import type {
@@ -19,7 +20,8 @@ import type {
   PageProps,
   ResourceRouter,
   FormField,
-  FormFieldArray
+  FormFieldArray,
+  FormFieldNested
 } from '$lib/types';
 // DEBUG
 import SuperDebug from 'sveltekit-superforms';
@@ -56,12 +58,51 @@ const FIELDS: FormFieldConfig = {
     }
   },
   address: {
-    formattedAddress: {
-      label: 'Formatted Address',
+    displayAddress: {
+      label: 'Display Address',
+      placeholder: 'As shown to users',
       component: 'TextareaField',
       isArray: false,
       isNested: false,
       isTranslated: true
+    },
+    addressProperties: {
+      label: 'Address Components',
+      component: 'DisplayField',
+      isArray: false,
+      isNested: true,
+      isTranslated: true,
+      coreValues: [
+        'formattedAddress',
+        'plusCode',
+        'subPremise',
+        'premise',
+        'streetNumber',
+        'route',
+        'intersection',
+        'neighbourhood',
+        'administrativeAreaLevel1',
+        'country',
+        'googlePlaceId',
+        'distanceFromPoint',
+        'addressGeocoder',
+        'addressReverseGen',
+        'addressForwardGen'
+      ],
+      translatedValues: [
+        'formattedAddress',
+        'subPremise',
+        'premise',
+        'streetNumber',
+        'route',
+        'intersection',
+        'neighbourhood',
+        'administrativeAreaLevel1',
+        'country',
+        'addressGeocoder',
+        'addressReverseGen',
+        'addressForwardGen'
+      ]
     }
   }
 };
@@ -99,7 +140,7 @@ $effect(() => {
 <form method="POST" use:enhance class="h-full flex-1 overflow-hidden">
   <main class="flex h-full flex-1 flex-row gap-6 bg-black p-6 pb-0 pr-3">
     <div class="relative z-10 h-full flex-1 basis-1/3 @container">
-      <MapSection {...navProps}/>
+      <MapSection {...navProps} />
       <div
         class="absolute bottom-2 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex">
         <UserAttributionCard
@@ -114,39 +155,42 @@ $effect(() => {
         {/if}
       </div>
     </div>
-    <div class="flex basis-2/3 flex-col-reverse justify-end gap-6 overflow-auto pb-12 pr-3">
-      {#if navProps.facet === 'core'}
-        <div class="flex flex-row gap-6">
-          <PropertySection
-            title="Classifiers"
-            subtitle="by which features can be filtered"
-            fieldDiscriminator="classifier"
-            fields={FIELDS.property as FormFieldArray}
+    <div class="basis-2/3 h-auto overflow-y-scroll  scroll-p-12 scroll-m-10">
+      <div class="flex flex-col-reverse justify-end gap-6 pb-12 pr-3">
+        {#if navProps.facet === 'core'}
+          <div class="flex flex-row gap-6">
+            <PropertySection
+              title="Classifiers"
+              subtitle="by which features can be filtered"
+              fieldDiscriminator="classifier"
+              fields={FIELDS.property as FormFieldArray}
+              {...navProps} />
+            <PropertySection
+              title="Specifiers"
+              subtitle="which are displayed in feature info panels"
+              fieldDiscriminator="specifier"
+              fields={FIELDS.property as FormFieldArray}
+              {...navProps} />
+          </div>
+          <I18nSection
+            title="Descriptors"
+            fields={FIELDS.i18n as FormField}
             {...navProps} />
-          <PropertySection
-            title="Specifiers"
-            subtitle="which are displayed in feature info panels"
-            fieldDiscriminator="specifier"
-            fields={FIELDS.property as FormFieldArray}
-            {...navProps} />
-        </div>
-        <I18nSection
-          title="Descriptors"
-          fields={FIELDS.i18n as FormField}
-          {...navProps} />
-        <!-- TODO Add support for translatable specifiers -->
-      {:else if navProps.facet === 'address'}
-        <AddressSection
-          title="Addressing"
-          subtitle="feature is listed under this address in the app"
-          fields={FIELDS.address as FormField}
-          {...navProps} />
-        <!-- <AddressComponentSection
+          <!-- TODO Add support for translatable specifiers -->
+        {:else if navProps.facet === 'address'}
+          <AddressComponentSection
+            {...navProps}
             title="Address Components"
-            {...navProps} /> -->
-      {:else}
-        <h1>FACET NOT FOUND</h1>
-      {/if}
+            fields={FIELDS.address as FormField & FormFieldNested} />
+          <AddressSection
+            {...navProps}
+            title="Addressing"
+            subtitle="feature is listed under this address in the app"
+            fields={FIELDS.address as FormField & FormFieldNested} />
+        {:else}
+          <h1>FACET NOT FOUND</h1>
+        {/if}
+      </div>
     </div>
     <!-- <SuperDebug data={form} /> -->
   </main>

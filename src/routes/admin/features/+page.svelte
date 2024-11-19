@@ -40,7 +40,7 @@ const RESOURCE_TYPE = 'feature';
           </div>
           <div class="card-body">
             <h2 class="card-title">
-              {feature.addressProperties?.formattedAddress}
+              {feature.displayAddress}
               <small class="text-sm text-gray-500"
                 >{feature.properties?.titleGen ? 'GenAI' : ''}</small>
             </h2>
