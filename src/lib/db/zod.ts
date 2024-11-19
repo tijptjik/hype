@@ -18,7 +18,11 @@ import {
   layerProperty,
   featureI18n,
   featureProperty,
-  featurePropertyI18n
+  featurePropertyI18n,
+  image,
+  featureImage,
+  userFeature,
+  task
 } from '$lib/db/schema';
 import type { GeometryObject } from 'geojson';
 import type {
@@ -280,14 +284,17 @@ export const ProjectRoleInsertExtra = ProjectRoleUpdateExtra.omit({ projectId: t
 export const ProjectInsertAPI = ProjectInsert.extend({
   translations: getTranslations(ProjectI18nInsert),
   maintainerRoles: getMaintainerRoles(ProjectRoleInsertExtra),
-  properties: z.array(PropertyInsertAPI)
+  properties: z.array(PropertyInsertAPI),
+  // tasks: z.array(TaskInsert).optional()
 });
 
 export const ProjectUpdateAPI = ProjectUpdate.extend({
   translations: getTranslations(ProjectI18nUpdate),
   maintainerRoles: getMaintainerRoles(ProjectRoleUpdateExtra),
-  properties: z.array(PropertyUpdateAPI)
+  properties: z.array(PropertyUpdateAPI),
+  // tasks: z.array(TaskUpdate).optional()
 });
+
 
 export const ProjectPatch = ProjectUpdate.partial();
 
@@ -393,13 +400,125 @@ export const FeatureI18nUpdate = createInsertSchema(featureI18n).extend({
 });
 export const FeatureI18nInsert = FeatureI18nUpdate.omit({ featureId: true });
 
+// Update existing Feature schemas to include new relations
 export const FeatureInsertAPI = FeatureInsert.extend({
   translations: getTranslations(FeatureI18nInsert),
-  properties: z.array(FeaturePropertyInsertAPI)
-});
-export const FeatureUpdateAPI = FeatureUpdate.extend({
-  translations: getTranslations(FeatureI18nUpdate),
-  properties: z.array(FeaturePropertyUpdateAPI)
+  properties: z.array(FeaturePropertyInsertAPI),
+  // images: z.array(FeatureImageInsert).optional(),
+  // users: z.array(UserFeatureInsert).optional(),
+  // tasks: z.array(TaskInsert).optional()
 });
 
+export const FeatureUpdateAPI = FeatureUpdate.extend({
+  translations: getTranslations(FeatureI18nUpdate),
+  properties: z.array(FeaturePropertyUpdateAPI),
+  // images: z.array(FeatureImageUpdate).optional(),
+  // users: z.array(UserFeatureUpdate).optional(),
+  // tasks: z.array(TaskUpdate).optional()
+});
+
+
 export const FeaturePatch = FeatureUpdate.partial();
+
+/* ----------------- */
+// IMAGES
+/* -------- */
+
+// Base schemas
+export const ImageBase = createSelectSchema(image);
+export const ImageInsert = createInsertSchema(image).extend({
+  id: z.string().optional(),
+  publicId: z.string().min(1, "Public ID is required"),
+  cdn: z.enum(['cloudinary']).default('cloudinary'),
+  contributorId: z.string().optional(),
+  capturedAt: z.string().optional()
+});
+
+export const ImageUpdate = ImageInsert.extend({
+  id: z.string()
+});
+
+// Feature Images (Join Table)
+export const FeatureImageBase = createSelectSchema(featureImage);
+export const FeatureImageInsert = createInsertSchema(featureImage).extend({
+  intent: z.enum(['canonical', 'closeUp', 'context', 'general', 'evidence', 'undefined'])
+  .default('undefined'),
+  isPublished: z.boolean().default(false),
+  publishedAt: z.string().optional()
+});
+
+export const FeatureImageUpdate = FeatureImageInsert.extend({
+  featureId: z.string(),
+  imageId: z.string()
+});
+
+export const FeatureImageUpdateAPI = FeatureImageUpdate.extend({
+  feature: FeatureBase.optional(),
+  image: ImageBase.optional()
+});
+
+
+export const ImageInsertAPI = ImageInsert.extend({
+  featureImages: z.array(FeatureImageInsert).optional()
+});
+
+export const ImageUpdateAPI = ImageUpdate.extend({
+  featureImages: z.array(FeatureImageUpdate).optional()
+});
+
+export const ImagePatch = ImageUpdate.partial();
+/* ----------------- */
+// USER FEATURES
+/* -------- */
+
+// Base schemas
+export const UserFeatureBase = createSelectSchema(userFeature);
+export const UserFeatureInsert = createInsertSchema(userFeature).extend({
+  isVisited: z.boolean().default(false),
+  isWishlisted: z.boolean().default(false)
+});
+
+export const UserFeatureUpdate = UserFeatureInsert.extend({
+  userId: z.string(),
+  featureId: z.string()
+});
+
+export const UserFeatureUpdateAPI = UserFeatureUpdate.extend({
+  user: UserBase.optional(),
+  feature: FeatureBase.optional()
+});
+
+/* ----------------- */
+// TASKS
+/* -------- */
+
+// Base schemas
+export const TaskBase = createSelectSchema(task);
+export const TaskInsert = createInsertSchema(task).extend({
+  id: z.string().optional(),
+  type: z.enum(['reportedMissing', 'newPhoto', 'newFeature']),
+  isReviewed: z.boolean().default(false),
+  reviewOutcome: z.enum(['rejected', 'accepted']).optional()
+});
+
+export const TaskUpdate = TaskInsert.extend({
+  id: z.string()
+});
+
+export const TaskInsertAPI = TaskInsert.extend({
+  project: ProjectBase.optional(),
+  feature: FeatureBase.optional(),
+  image: ImageBase.optional(),
+  contributor: UserBase.optional(),
+  reviewer: UserBase.optional()
+});
+
+export const TaskUpdateAPI = TaskUpdate.extend({
+  project: ProjectBase.optional(),
+  feature: FeatureBase.optional(),
+  image: ImageBase.optional(),
+  contributor: UserBase.optional(),
+  reviewer: UserBase.optional()
+});
+
+export const TaskPatch = TaskUpdate.partial();

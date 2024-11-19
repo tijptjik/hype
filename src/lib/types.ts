@@ -54,7 +54,23 @@ import {
   PropertyValueUpdate,
   PropertyValueUpdateAPI,
   UserBase,
-  FeaturePatch
+  FeaturePatch,
+  ImageInsert,
+  ImageUpdate,
+  FeatureImageInsert,
+  FeatureImageUpdate,
+  UserFeatureInsert,
+  UserFeatureUpdate,
+  TaskInsert,
+  TaskUpdate,
+  UserFeatureUpdateAPI,
+  FeatureImageUpdateAPI,
+  ImagePatch,
+  TaskInsertAPI,
+  TaskUpdateAPI,
+  TaskPatch,
+  ImageUpdateAPI,
+  ImageInsertAPI
 } from '$lib/db/zod';
 // COMPONENTS
 import CustomField from '$lib/components/forms/fields/Properties.svelte';
@@ -94,7 +110,8 @@ export type ResourceType = 'organisation' | 'project' | 'layer' | 'feature';
 export type FalsableResourceType = ResourceType | false;
 export type SourceLang = 'en';
 export type TargetLang = 'zh-hant' | 'zh-hans';
-export type LanguageTag = SourceLang | TargetLang | 'core';
+export type LanguageTag = SourceLang | TargetLang;
+export type LanguageTagExtended = LanguageTag | 'core';
 export type ResourceToEntity = {
   organisation: EntityWithData<Organisation>[];
   project: EntityWithData<Project>[];
@@ -124,7 +141,7 @@ export type Entity = {
 export type ApiEntity = Entity & {
   code?: Code;
   title?: string;
-  addressProperties?: AddressProperties;
+  displayAddress?: string;
 };
 export type EntityWithData<T> = Entity & { data: T };
 export type FacetType = 'core' | 'address' | 'images' | 'fields';
@@ -173,6 +190,11 @@ export type FormFieldExtendedDefinition = FormFieldDefinition & {
   inputType?: InputType;
   showForComponent?: FieldComponentType[];
 };
+export type FormFieldNestedDefinition = FormFieldDefinition & {
+  coreValues: string[];
+  translatedValues: string[];
+};
+
 export type FormFieldArrayDefinition = {
   isArray: true;
   discriminators: {
@@ -186,7 +208,8 @@ export type FormFieldArrayDefinition = {
 };
 export type FormField = Record<Field, FormFieldDefinition>;
 export type FormFieldArray = Record<Field, FormFieldArrayDefinition>;
-export type FormFieldConfig = Record<Key, FormField | FormFieldArray>;
+export type FormFieldNested = Record<Field, FormFieldNestedDefinition>;
+export type FormFieldConfig = Record<Key, FormField | FormFieldArray | FormFieldNested>;
 
 /* ----------------- */
 // SCHEMA TYPES
@@ -389,6 +412,10 @@ export type FeaturePropertyI18n = z.infer<typeof FeaturePropertyI18nUpdate>;
 /* -------- */
 
 export type AddressProperties = {
+  // Formatted Address
+  formattedAddress?: string;
+  
+  // Address Components
   subPremise?: string;
   premise?: string;
   streetNumber?: string;
@@ -578,3 +605,49 @@ export type ResourceTypeMap = {
   layer: Layer;
   feature: Feature;
 };
+
+export type DisplayFieldProps = {
+  label: string;
+  value: any;
+  justify?: 'start' | 'end';
+};
+
+/* ----------------- */
+// IMAGES
+/* -------- */
+
+export type Image = z.infer<typeof ImageUpdate>;
+export type NewImage = z.infer<typeof ImageInsert>;
+export type ImageDB = z.infer<typeof ImageUpdate>;
+export type NewImageDB = z.infer<typeof ImageInsert>;
+export type ImageAPI = z.infer<typeof ImageUpdateAPI>;
+export type NewImageAPI = z.infer<typeof ImageInsertAPI>;
+export type ImagePatchAPI = z.infer<typeof ImagePatch>;
+
+export type FeatureImage = z.infer<typeof FeatureImageUpdate>;
+export type NewFeatureImage = z.infer<typeof FeatureImageInsert>;
+export type FeatureImageDB = z.infer<typeof FeatureImageUpdate>;
+export type NewFeatureImageDB = z.infer<typeof FeatureImageInsert>;
+export type FeatureImageAPI = z.infer<typeof FeatureImageUpdateAPI>;
+
+/* ----------------- */
+// USER FEATURES
+/* -------- */
+
+export type UserFeature = z.infer<typeof UserFeatureUpdate>;
+export type NewUserFeature = z.infer<typeof UserFeatureInsert>;
+export type UserFeatureDB = z.infer<typeof UserFeatureUpdate>;
+export type NewUserFeatureDB = z.infer<typeof UserFeatureInsert>;
+export type UserFeatureAPI = z.infer<typeof UserFeatureUpdateAPI>;
+
+/* ----------------- */
+// TASKS
+/* -------- */
+
+export type Task = z.infer<typeof TaskUpdate>;
+export type NewTask = z.infer<typeof TaskInsert>;
+export type TaskDB = z.infer<typeof TaskUpdate>;
+export type NewTaskDB = z.infer<typeof TaskInsert>;
+export type TaskAPI = z.infer<typeof TaskUpdateAPI>;
+export type NewTaskAPI = z.infer<typeof TaskInsertAPI>;
+export type TaskPatchAPI = z.infer<typeof TaskPatch>;

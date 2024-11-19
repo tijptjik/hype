@@ -1,4 +1,4 @@
-import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import type { AdapterAccountType } from '@auth/core/adapters';
 import { relations, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
@@ -35,9 +35,12 @@ export const user = sqliteTable('user', {
 });
 
 export const userRelations = relations(user, ({ many }) => ({
-  memberships: many(organisationRole),
-  accounts: many(account),
-  projectRoles: many(projectRole)
+  organisationRoles: many(organisationRole),
+  projectRoles: many(projectRole),
+  contributedImages: many(image, { relationName: 'contributor' }),
+  contributedTasks: many(task, { relationName: 'contributor' }),
+  reviewedTasks: many(task, { relationName: 'reviewer' }),
+  userFeatures: many(userFeature)
 }));
 
 export const userActivity = sqliteTable('userActivity', {
@@ -255,10 +258,11 @@ export const projectRelations = relations(project, ({ one, many }) => ({
     fields: [project.organisationId],
     references: [organisation.id]
   }),
-  layers: many(layer),
-  properties: many(property),
   translations: many(projectI18n),
-  maintainerRoles: many(projectRole)
+  maintainerRoles: many(projectRole),
+  properties: many(property),
+  layers: many(layer),
+  tasks: many(task)
 }));
 
 export const projectI18n = sqliteTable(
@@ -414,8 +418,8 @@ export const feature = sqliteTable('feature', {
   description: text('description'),
   descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(false),
   // Display Address
-  formattedAddress: text('formattedAddress'),
-  formattedAddressGen: integer('formattedAddressGen', { mode: 'boolean' }).notNull().default(false),
+  displayAddress: text('displayAddress'),
+  displayAddressGen: integer('displayAddressGen', { mode: 'boolean' }).notNull().default(false),
   // Remaining properties as JSON
   addressProperties: text('addressProperties', { mode: 'json' }).$type<AddressPropertiesExtended>(),
   layerId: text('layerId')
@@ -465,7 +469,10 @@ export const featureRelations = relations(feature, ({ one, many }) => ({
     references: [user.id]
   }),
   translations: many(featureI18n),
-  properties: many(featureProperty)
+  properties: many(featureProperty),
+  images: many(featureImage),
+  users: many(userFeature),
+  tasks: many(task)
 }));
 
 export const featureI18n = sqliteTable(
@@ -480,8 +487,8 @@ export const featureI18n = sqliteTable(
     description: text('description'),
     descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(true),
     // Display Address
-    formattedAddress: text('formattedAddress'),
-    formattedAddressGen: integer('formattedAddressGen', { mode: 'boolean' }).notNull().default(false),
+    displayAddress: text('displayAddress'),
+    displayAddressGen: integer('displayAddressGen', { mode: 'boolean' }).notNull().default(false),
     // Address Properties
     addressProperties: text('addressProperties', { mode: 'json' }).$type<AddressProperties>(),
 
@@ -682,5 +689,162 @@ export const layerPropertyRelations = relations(layerProperty, ({ one, many }) =
   property: one(property, {
     fields: [layerProperty.propertyId],
     references: [property.id]
+  })
+}));
+
+export const image = sqliteTable('image', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => nanoid(12)),
+  publicId: text('publicId').notNull(),
+  cdn: text('cdn', { enum: ['cloudinary'] }).default('cloudinary').notNull(),
+  contributorId: text('contributorId')
+    .references(() => user.id, { onDelete: 'set null' }),
+  capturedAt: text('capturedAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .notNull(),
+  createdAt: text('createdAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .notNull(),
+  modifiedAt: text('modifiedAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .$onUpdate(() => new Date().toISOString())
+    .notNull()
+});
+
+// Add relations
+export const imageRelations = relations(image, ({ one, many }) => ({
+  contributor: one(user, {
+    fields: [image.contributorId],
+    references: [user.id]
+  }),
+  featureImages: many(featureImage)
+}));
+
+
+export const featureImage = sqliteTable('featureImage', {
+  featureId: text('featureId')
+    .notNull()
+    .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  imageId: text('imageId')
+    .notNull()
+    .references(() => image.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  intent: text('intent', { 
+    enum: ['canonical', 'closeUp', 'context', 'general', 'evidence', 'undefined'] 
+  })
+    .default('undefined')
+    .notNull(),
+  isPublished: integer('isPublished', { mode: 'boolean' })
+    .default(false)
+    .notNull(),
+  publishedAt: text('publishedAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+}, (t) => ({
+  pk: primaryKey({ columns: [t.featureId, t.imageId] }),
+  canonicalConstraint: uniqueIndex('canonical_intent').on(t.featureId).where(sql`intent = 'canonical'`)
+}));
+
+
+export const featureImageRelations = relations(featureImage, ({ one }) => ({
+  feature: one(feature, {
+    fields: [featureImage.featureId],
+    references: [feature.id]
+  }),
+  image: one(image, {
+    fields: [featureImage.imageId],
+    references: [image.id]
+  })
+}));
+
+
+export const userFeature = sqliteTable('userFeature', {
+  userId: text('userId')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  featureId: text('featureId')
+    .notNull()
+    .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  isVisited: integer('isVisited', { mode: 'boolean' })
+    .default(false)
+    .notNull(),
+  isWishlisted: integer('isWishlisted', { mode: 'boolean' })
+    .default(false)
+    .notNull(),
+  createdAt: text('createdAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .notNull(),
+  modifiedAt: text('modifiedAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .$onUpdate(() => new Date().toISOString())
+    .notNull()
+}, (t) => ({
+  pk: primaryKey({ columns: [t.userId, t.featureId] })
+}));
+
+
+export const userFeatureRelations = relations(userFeature, ({ one }) => ({
+  user: one(user, {
+    fields: [userFeature.userId],
+    references: [user.id]
+  }),
+  feature: one(feature, {
+    fields: [userFeature.featureId],
+    references: [feature.id]
+  })
+}));
+
+export const task = sqliteTable('task', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => nanoid(12)),
+  projectId: text('projectId')
+    .notNull()
+    .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  featureId: text('featureId')
+    .notNull()
+    .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  imageId: text('imageId')
+    .references(() => image.id, { onDelete: 'set null' }),
+  contributorId: text('contributorId')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  reviewerId: text('reviewerId')
+    .references(() => user.id, { onDelete: 'set null' }),
+  type: text('type', { enum: ['reportedMissing', 'newPhoto', 'newFeature'] })
+    .notNull(),
+  isReviewed: integer('isReviewed', { mode: 'boolean' })
+    .default(false)
+    .notNull(),
+  reviewOutcome: text('reviewOutcome', { enum: ['rejected', 'accepted'] }),
+  createdAt: text('createdAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .notNull(),
+  modifiedAt: text('modifiedAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .$onUpdate(() => new Date().toISOString())
+    .notNull()
+});
+
+
+export const taskRelations = relations(task, ({ one }) => ({
+  project: one(project, {
+    fields: [task.projectId],
+    references: [project.id]
+  }),
+  feature: one(feature, {
+    fields: [task.featureId],
+    references: [feature.id]
+  }),
+  image: one(image, {
+    fields: [task.imageId],
+    references: [image.id]
+  }),
+  contributor: one(user, {
+    fields: [task.contributorId],
+    references: [user.id]
+  }),
+  reviewer: one(user, {
+    fields: [task.reviewerId],
+    references: [user.id]
   })
 }));
