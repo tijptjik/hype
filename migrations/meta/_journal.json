@@ -29,6 +29,13 @@
       "when": 1731991543512,
       "tag": "0003_rename_address_field",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1732031781663,
+      "tag": "0004_add_env_to_images",
+      "breakpoints": true
     }
   ]
 }

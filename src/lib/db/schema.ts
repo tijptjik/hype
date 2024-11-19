@@ -698,6 +698,7 @@ export const image = sqliteTable('image', {
     .$defaultFn(() => nanoid(12)),
   publicId: text('publicId').notNull(),
   cdn: text('cdn', { enum: ['cloudinary'] }).default('cloudinary').notNull(),
+  env: text('env', { enum: ['dg6vtsga1'] }).default('dg6vtsga1').notNull(),
   contributorId: text('contributorId')
     .references(() => user.id, { onDelete: 'set null' }),
   capturedAt: text('capturedAt')
