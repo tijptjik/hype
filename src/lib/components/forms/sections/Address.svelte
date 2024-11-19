@@ -15,7 +15,8 @@ import type {
   FalsableRef,
   FalsableFacetType,
   SectionProps,
-  FormProps
+  FormProps,
+  Field
 } from '$lib/types';
 // DEBUG
 import SuperDebug from 'sveltekit-superforms';
@@ -26,6 +27,7 @@ const languageTags: LanguageTag[] = [sourceLanguageTag, 'zh-hant', 'zh-hans'];
 
 // STATE : PROPS
 let sectionProps: SectionProps = $props();
+const fieldRoot: Field = 'displayAddress';
 
 const actions = {
   geocode: () => {
@@ -44,14 +46,8 @@ const actions = {
           <TextField
             {...sectionProps}
             {languageTag}
-            fieldRoot="formattedAddress"
-            field={{
-              label: 'Formatted Address',
-              placeholder: 'As shown to users',
-              component: 'TextareaField',
-              isArray: false,
-              isTranslated: true
-            }} />
+            {fieldRoot}
+            field={sectionProps.fields[fieldRoot]} />
         </div>
         <div
           class="h-2 w-full transition-[height] delay-700 duration-300 group-focus-within:h-0 group-hover:h-0">
