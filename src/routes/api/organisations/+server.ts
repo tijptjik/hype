@@ -8,7 +8,6 @@ import {
   createOrganisation,
   createTranslations,
   createUserRoles,
-  rebuildFormData,
   extractEntitiesToInsert
 } from '$lib/db/services/organisation';
 import { isFieldUnique } from '$lib/db';
