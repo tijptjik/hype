@@ -2,7 +2,7 @@
 name = "ghostsigns"
 compatibility_date = "2024-09-23"
 pages_build_output_dir = ".svelte-kit/cloudflare"
-compatibility_flags = [ "nodejs_compat" ]
+compatibility_flags = ["nodejs_compat"]
 
 [dev]
 ip = "localhost"
@@ -34,7 +34,7 @@ mode = "smart"
 # Bind a D1 database. D1 is Cloudflare’s native serverless SQL database.
 # Docs: https://developers.cloudflare.com/pages/functions/bindings/#d1-databases
 [[d1_databases]]
-binding = "DB" # i.e. available in your Worker on env.DB
+binding = "DB"                                       # i.e. available in your Worker on env.DB
 database_name = "ghostmapper-prod"
 database_id = "117e417f-6b38-4b52-a5b5-0320d6944fbe"
 preview_database_id = "DB"
@@ -81,8 +81,11 @@ preview_database_id = "DB"
 [env.production.vars]
 ENVIRONMENT = "production"
 NODE_ENV = "production"
-VITE_USER_NODE_ENV="production"
-BUN_VERSION = "1.1.22"
+VITE_USER_NODE_ENV = "production"
+VITE_CLOUDINARY_CLOUD_NAME = "dg6vtsga1"
+VITE_CLOUDINARY_API_KEY = "226917649845399"
+VITE_CLOUDINARY_API_SECRET = "GO0XmobnlhL1IzRzK19zPsp1XPE"
+BUN_VERSION = "1.1.27"
 PUBLIC_MAPTILER_KEY = "SMf0v0mZlsqfCMBgZdy1"
 PUBLIC_MAPBOX_KEY = "pk.eyJ1IjoidGlqcHRqaWsiLCJhIjoiY20wb3Rrb2J6MGMyNjJqcXkyazFvYmc3ZiJ9.jEmTmlD2aXjiGzgo7gjBPA"
 PUBLIC_GOOGLEMAPS_KEY = "AIzaSyD2vy_8I1q2WKo4J0z0Ot2ZhVvteDoLntI"
@@ -98,8 +101,11 @@ preview_database_id = "DB"
 [env.preview.vars]
 ENVIRONMENT = "staging"
 NODE_ENV = "staging"
-VITE_USER_NODE_ENV="staging"
-BUN_VERSION = "1.1.22"
+VITE_USER_NODE_ENV = "staging"
+VITE_CLOUDINARY_CLOUD_NAME = "dg6vtsga1"
+VITE_CLOUDINARY_API_KEY = "226917649845399"
+VITE_CLOUDINARY_API_SECRET = "GO0XmobnlhL1IzRzK19zPsp1XPE"
+BUN_VERSION = "1.1.27"
 PUBLIC_MAPTILER_KEY = "SMf0v0mZlsqfCMBgZdy1"
 PUBLIC_MAPBOX_KEY = "pk.eyJ1IjoidGlqcHRqaWsiLCJhIjoiY20wb3Rrb2J6MGMyNjJqcXkyazFvYmc3ZiJ9.jEmTmlD2aXjiGzgo7gjBPA"
 PUBLIC_GOOGLEMAPS_KEY = "AIzaSyD2vy_8I1q2WKo4J0z0Ot2ZhVvteDoLntI"
