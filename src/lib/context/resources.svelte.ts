@@ -45,9 +45,29 @@ export class HierarchicalResourceState {
     ref: Ref
   ): Promise<Organisation | Project | Layer | Feature | null> {
     try {
-      const response = await fetch(`/api/${resource}s/${ref}`);
+      // Build URL with query parameter
+      const url = new URL(`/api/${resource}s`, window.location.origin);
+      url.searchParams.set('id', ref);
+
+      const response = await fetch(url.toString());
       if (!response.ok) return null;
-      return await response.json();
+      
+      const results = await response.json();
+      
+      // Handle array response
+      if (!Array.isArray(results)) {
+        console.error(`Expected array response for ${resource}, got:`, results);
+        return null;
+      }
+      
+      // Check for multiple results
+      if (results.length > 1) {
+        console.error(`Multiple ${resource}s found for id ${ref}`);
+        return null;
+      }
+      
+      // Return first result or null if empty
+      return results.length === 1 ? results[0] : null;
     } catch (error) {
       console.error(`Error fetching ${resource}:`, error);
       return null;

@@ -340,16 +340,26 @@ export async function hierarchicalResourceQuery<usersT extends Table, translatio
     project?: string[];
     layer?: string[];
   } = {},
-  depth: number = 1
+  depth: number = 1,
+  filters?: Record<string, string>
 ) {
   const slicedHierarchy = resourceHierarchy.slice(-depth, resourceHierarchy.length);
+  const table = getTable(slicedHierarchy, 0);
 
   const conditions = [
     ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId),
     ...applyTranslationCondition(db, slicedHierarchy, translationTable),
-    ...applyFilterConstraints(db, slicedHierarchy, depth, prisms)];
+    ...applyFilterConstraints(db, slicedHierarchy, depth, prisms)
+  ];
 
-  return await db.query[getTableName(getTable(slicedHierarchy, 0))].findMany({
+  if (filters) {
+    const filterConditions = Object.entries(filters).map(([column, value]) => 
+      eq(table[column], value)
+    );
+    conditions.push(...filterConditions);
+  }
+
+  return await db.query[getTableName(table)].findMany({
     where: and(...conditions),
     with: selectTableRelations
   });
@@ -550,3 +560,13 @@ export async function updatePartial<T extends Table>(
 // EXPORTS
 
 export default client;
+
+// Helper function to validate column names against a table
+export function validateTableColumns(table: Table, columns: string[]): { valid: boolean; invalidColumns: string[] } {
+  const tableColumns = Object.keys(table);
+  const invalidColumns = columns.filter(col => !tableColumns.includes(col));
+  return {
+    valid: invalidColumns.length === 0,
+    invalidColumns
+  };
+}

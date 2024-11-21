@@ -2,8 +2,8 @@ import { error } from '@sveltejs/kit';
 import { actionResult, superValidate, type SuperValidated } from 'sveltekit-superforms';
 import { getDatabaseOrError, JSONResponseOrError, SuperFormResponse } from '$lib/api';
 // DB
-import { hierarchicalResourceQuery, toNestedTranslations } from '$lib/db';
-import { organisationRole, organisationI18n } from '$lib/db/schema';
+import { hierarchicalResourceQuery, toNestedTranslations, validateTableColumns } from '$lib/db';
+import { organisationRole, organisationI18n, organisation } from '$lib/db/schema';
 import {
   createOrganisation,
   createTranslations,
@@ -22,7 +22,7 @@ const RESOURCE_TYPE = 'organisation';
 const RESOURCE_PATH = 'organisations';
 const ACCESS_STRATEGY = 'ResourceOwn';
 
-export const GET: RequestHandler = async ({ locals, platform }) => {
+export const GET: RequestHandler = async ({ url, locals, platform }) => {
   // AUTH : Pass or Fail
   const { db, userId, accessStrategy } = await getDatabaseOrError(
     locals,
@@ -32,7 +32,15 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
   );
 
   try {
-    // DB : Build & Execute Query
+    const queryParams = Object.fromEntries(Array.from(url.searchParams.entries()));
+
+    if (Object.keys(queryParams).length > 0) {
+      const { valid, invalidColumns } = validateTableColumns(organisation, Object.keys(queryParams));
+      if (!valid) {
+        return error(400, `Invalid filter fields: ${invalidColumns.join(', ')}`);
+      }
+    }
+
     const result = await hierarchicalResourceQuery(
       db,
       accessStrategy,
@@ -41,7 +49,10 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
       },
       userId,
       organisationRole,
-      organisationI18n
+      organisationI18n,
+      {},
+      1,
+      queryParams
     );
 
     // HTTP : 200 JSON or 404

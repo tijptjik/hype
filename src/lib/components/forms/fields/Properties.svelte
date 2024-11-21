@@ -72,8 +72,6 @@ const syncFormToComplexValues = () => {
 
 // Sync Complex Values to Form
 const syncComplexValuesToForm = () => {
-  console.log('syncComplexValuesToForm', complexValues);
-  console.log('form', $form);
   form.update(($form) => {
     let propertyId = $form[fieldRoot][fieldIndex].id;
     $form[fieldRoot][fieldIndex].values = complexValues.map((v) => ({

@@ -2,8 +2,8 @@ import { error, type RequestHandler } from '@sveltejs/kit';
 import { getDatabaseOrError, JSONResponseOrError, SuperFormResponse } from '$lib/api';
 import { superValidate, type SuperValidated } from 'sveltekit-superforms';
 // DB
-import { hierarchicalResourceQuery } from '$lib/db';
-import { projectRole, layerI18n } from '$lib/db/schema';
+import { hierarchicalResourceQuery, validateTableColumns } from '$lib/db';
+import { projectRole, layerI18n, layer } from '$lib/db/schema';
 import {
   createLayer,
   createTranslations,
@@ -32,7 +32,19 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
   );
 
   try {
-    // DB : Build & Execute Query
+    const queryParams = Object.fromEntries(
+      Array.from(url.searchParams.entries()).filter(([key]) => 
+        !['organisation', 'project'].includes(key)
+      )
+    );
+
+    if (Object.keys(queryParams).length > 0) {
+      const { valid, invalidColumns } = validateTableColumns(layer, Object.keys(queryParams));
+      if (!valid) {
+        return error(400, `Invalid filter fields: ${invalidColumns.join(', ')}`);
+      }
+    }
+
     const result = await hierarchicalResourceQuery(
       db,
       accessStrategy,
@@ -46,7 +58,8 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
         organisation: url.searchParams.getAll('organisation'),
         project: url.searchParams.getAll('project')
       },
-      3
+      3,
+      queryParams
     );
 
     // HTTP : 200 JSON or 404

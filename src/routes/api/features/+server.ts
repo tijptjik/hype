@@ -3,8 +3,8 @@ import { superValidate, type SuperValidated } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { getDatabaseOrError, JSONResponseOrError, SuperFormResponse } from '$lib/api';
 // DB
-import { hierarchicalResourceQuery } from '$lib/db';
-import { projectRole } from '$lib/db/schema';
+import { hierarchicalResourceQuery, validateTableColumns } from '$lib/db';
+import { feature, projectRole } from '$lib/db/schema';
 import { createFeature, extractEntitiesToInsert, rebuildFormData } from '$lib/db/services/feature';
 // ZOD
 import { FeatureInsertAPI } from '$lib/db/zod';
@@ -25,7 +25,21 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
   );
 
   try {
-    // DB : Build & Execute Query
+    // Get all query parameters except the known prism parameters
+    const queryParams = Object.fromEntries(
+      Array.from(url.searchParams.entries()).filter(([key]) => 
+        !['organisation', 'project', 'layer'].includes(key)
+      )
+    );
+
+    // Validate column names if query parameters exist
+    if (Object.keys(queryParams).length > 0) {
+      const { valid, invalidColumns } = validateTableColumns(feature, Object.keys(queryParams));
+      if (!valid) {
+        return error(400, `Invalid filter fields: ${invalidColumns.join(', ')}`);
+      }
+    }
+
     const result = await hierarchicalResourceQuery(
       db,
       accessStrategy,
@@ -40,7 +54,8 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
         project: url.searchParams.getAll('project'),
         layer: url.searchParams.getAll('layer')
       },
-      4
+      4,
+      queryParams
     );
 
     // HTTP : 200 JSON or 404
