@@ -1,24 +1,28 @@
 <script lang="ts">
-import { filteredResources } from '$lib/stores/resources.svelte';
-import ResourceHeader from '$lib/components/layout/ResourceHeader.svelte';
+import { goto } from '$app/navigation';
+// STORES
 import { page } from '$app/stores';
-
+import { filteredResources } from '$lib/stores/resources.svelte';
+// COMPONENTS
+import ResourceHeader from '$lib/components/layout/ResourceHeader.svelte';
+// CONTEXT
 import { getRouterState } from '$lib/context/router.svelte';
-import type { ResourceNavProps } from '$lib/types';
-import type { ResourceType } from '$lib/types';
-
-const routerState = getRouterState();
-let navProps: ResourceNavProps = $derived({
-  resource: routerState.resource as ResourceType,
-  entity: false,
-  facet: false
-});
 
 const organisations = $derived(filteredResources.organisation);
+const routerState = getRouterState();
+
+const onclick = (e: MouseEvent, entity: string) => {
+  e.preventDefault();
+  routerState.updateWith({
+    entity,
+    facet: 'core'
+  });
+  goto(`/admin/organisations/${entity}`);
+}
 </script>
 
 <!-- LAYOUT -->
-<ResourceHeader {...navProps} />
+<ResourceHeader/>
 <div class="h-full overflow-y-auto bg-gradient-to-bl from-rose-500 to-fuchsia-800 bg-fixed pb-16">
   <div class="container mx-auto flex w-full flex-auto p-4">
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -43,7 +47,7 @@ const organisations = $derived(filteredResources.organisation);
               </div>
               <!-- TODO Verify if the query params are retained -->
               <a href="/admin/organisations/{org.code}{$page.url.search}" class="btn btn-primary"
-                >View Profile</a>
+                onclick={(e) => onclick(e, org.code)}>View Profile</a>
             </div>
           </div>
         </div>
