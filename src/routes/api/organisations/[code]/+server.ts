@@ -2,6 +2,7 @@ import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { error, type RequestHandler } from '@sveltejs/kit';
 import { organisationRole, organisationI18n } from '$lib/db/schema';
+import { NEW_REF } from '$lib';
 import {
   getDatabaseOrError,
   JSONResponseOrError,
@@ -38,7 +39,7 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
     ACCESS_STRATEGY,
     RESOURCE_TYPE
   );
-  if (params.code !== 'new') {
+  if (params.code !== NEW_REF) {
     try {
       // DB : Build & Execute Query
       const result = await hierarchicalEntityQuery(

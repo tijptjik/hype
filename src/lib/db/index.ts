@@ -7,6 +7,7 @@ import type { D1Database } from '@auth/d1-adapter';
 import type { Field, NestedRelations, Ref, Resource, ResourceDB, ResourceType } from '$lib/types';
 import type { Database } from './services/organisation';
 import type { TargetLang } from '../types';
+import { NEW_REF } from '$lib';
 
 const client = (database: D1Database) => {
   return drizzle(database, { schema });
@@ -380,7 +381,7 @@ export async function genericEntityQuery<usersT extends Table>(
   columns?: Record<string, boolean>
 ) {
   // NEW is a reserved keyword for new entities
-  if (ref == 'new') {
+  if (ref == NEW_REF) {
     throw new Error('The old shall never be new again');
   }
   const conditions = [
@@ -430,7 +431,7 @@ export async function hierarchicalEntityQuery<usersT extends Table, translations
   depth: number = 1
 ) {
   // NEW is a reserved keyword for new entities
-  if (ref == 'new') {
+  if (ref == NEW_REF) {
     throw new Error('The old shall never be new again');
   }
 

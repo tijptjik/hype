@@ -1,4 +1,6 @@
 <script lang="ts">
+import { goto } from '$app/navigation';
+import { NEW_TITLE } from '$lib';
 // Context
 import { getRouterState } from '$lib/context/router.svelte';
 import { setForm } from '$lib/context/forms.svelte';
@@ -62,7 +64,7 @@ let { validatedForm } = data;
 
 // STATE : DERIVED
 const routerState = getRouterState() as ResourceRouter;
-let title = $derived(data.validatedForm.data.name || 'New');
+let title = $derived(data.validatedForm.data.name || NEW_TITLE);
 
 let navProps: NavProps = $derived({
   resource: routerState.resource,

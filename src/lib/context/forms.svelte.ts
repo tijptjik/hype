@@ -4,6 +4,7 @@ import { defaults, superForm } from 'sveltekit-superforms';
 import { get } from 'svelte/store';
 import { deserialize, enhance } from '$app/forms';
 import { goto } from '$app/navigation';
+import { NEW_REF } from '$lib';
 // ZOD
 import {
   OrganisationInsertAPI,
@@ -20,7 +21,7 @@ import type { Writable } from 'svelte/store';
 import type { ActionResult } from '@sveltejs/kit';
 import type Form from 'sveltekit-superforms';
 
-import type { SuperFormData } from 'sveltekit-superforms/client';
+import type { SuperFormData, SuperValidated } from 'sveltekit-superforms/client';
 import type {
   Organisation,
   Project,
@@ -169,7 +170,7 @@ export class FeatureForm extends BaseForm<Feature> {
 }
 
 export const getContextRef = (resourceType: ResourceType, entity: Ref) => {
-  return entity === 'new' ? `form-${resourceType}-new` : `form-${resourceType}-${entity}`;
+  return entity === NEW_REF ? `form-${resourceType}-new` : `form-${resourceType}-${entity}`;
 };
 
 export function setForm<T extends Organisation | Project | Layer | Feature>(
@@ -198,7 +199,7 @@ export function setForm<T extends Organisation | Project | Layer | Feature>(
     default:
       throw new Error(`Unknown resource type: ${resourceType}`);
   }
-  const instance = new FormClass(form, entity === 'new');
+  const instance = new FormClass(form, entity === NEW_REF);
   return setContext(getContextRef(resourceType, entity), instance) as SuperFormResult<T>;
 }
 

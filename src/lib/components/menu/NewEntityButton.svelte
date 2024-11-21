@@ -1,5 +1,6 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
+import { NEW_REF } from '$lib';
 // COMPONENTS
 import AssociationModal from '$lib/components/forms/modals/Association.svelte';
 // CONTEXT
@@ -28,7 +29,7 @@ const onclick = (e: MouseEvent) => {
 
     routerState.updateWith({
         resource: routerState.resource,
-        entity: 'new',
+        entity: NEW_REF,
         facet: 'core'
     });
     // Otherwise, proceed with direct navigation

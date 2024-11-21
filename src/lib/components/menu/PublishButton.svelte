@@ -1,9 +1,16 @@
 <script lang="ts">
-import { onMount, tick } from 'svelte';
+import { onMount } from 'svelte';
+import { NEW_REF } from '$lib';
 // CONTEXT
 import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
-import type { EntityRouter, Project, Layer, Feature, SuperFormResult } from '$lib/types';
+import type {
+  EntityRouter,
+  Project,
+  Layer,
+  Feature,
+  SuperFormResult
+} from '$lib/types';
 
 // STATE : CONTEXT :: ROUTER
 const routerState = getRouterState() as EntityRouter;
@@ -38,7 +45,7 @@ const handleClick = async (e: Event) => {
   e.preventDefault();
   e.stopPropagation();
 
-  if (isLoading || !routerState.entity || routerState.entity === 'new') return;
+  if (isLoading || !routerState.entity || routerState.entity === NEW_REF) return;
 
   isLoading = true;
 
@@ -86,7 +93,10 @@ const handleClick = async (e: Event) => {
   class:btn-outline={isInvalid}
   class:btn-error={isInvalid}
   class:loading={isLoading}
-  disabled={isInvalid || isLoading || !routerState.entity || routerState.entity === 'new'}>
+  disabled={isInvalid ||
+    isLoading ||
+    !routerState.entity ||
+    routerState.entity === NEW_REF}>
   {#if $form.isPublished}
     Unpublish
   {:else}

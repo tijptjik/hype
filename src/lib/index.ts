@@ -194,3 +194,5 @@ export const getId = (
 // CONFIG
 const sourceLanguageTag = 'en';
 export const languageTags: LanguageTag[] = [sourceLanguageTag, 'zh-hant', 'zh-hans'];
+export const NEW_TITLE = 'New';
+export const NEW_REF = NEW_TITLE.toLowerCase();
