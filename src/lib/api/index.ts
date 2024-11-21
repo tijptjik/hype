@@ -22,6 +22,8 @@ import type {
 import type { UserRole } from '$lib/auth/utils';
 import type { ZodSchema } from 'zod';
 import { appMeta } from '$lib/stores/resources.svelte';
+import { projectRole, project, feature, layer } from '$lib/db/schema';
+import { and, eq } from 'drizzle-orm';
 
 export type AccessStrategyOption =
   | 'Public'
@@ -33,7 +35,8 @@ export type AccessStrategyOption =
   | 'EntityAny'
   | 'EntityOwn'
   | 'EntityOwnChild'
-  | 'EntityOwnGrandChild';
+  | 'EntityOwnGrandChild'
+  | 'Published'
 
 export const getSessionOrError = async (locals: App.Locals) => {
   const session = await locals.auth();
@@ -100,7 +103,7 @@ const checkAccessOrError = (
     feature: 'layer'
   };
 
-  if (['Public', 'SuperAdmin', 'ResourceAll', 'EntityAny'].includes(accessStrategy)) {
+  if (['Public', 'SuperAdmin', 'ResourceAll', 'EntityAny', 'Published'].includes(accessStrategy)) {
     hasAccess = true;
   } else if (['ResourceOwn', 'EntityOwn'].includes(accessStrategy)) {
     hasAccess = userRoles.some((role) => role.type === resourceType);
@@ -131,7 +134,8 @@ export const getDatabaseOrError = async (
   locals: App.Locals,
   platform: App.Platform | undefined,
   accessStrategy: AccessStrategyOption,
-  resourceType?: string
+  resourceType?: string,
+  refId?: string
 ) => {
   // Checks whether the user is logged in
   const session = await getSessionOrError(locals);
@@ -145,6 +149,38 @@ export const getDatabaseOrError = async (
   if (session.user.superAdmin === true) {
     // if (session.user.email === 'm@type.hk') {
     accessStrategy = 'SuperAdmin';
+  }
+
+  // Special handling for image resource type
+  if (resourceType === 'image' && refId) {
+    // Get the project ID for the feature's layer
+    const projectAccess = await db
+      .select({
+        projectId: project.id,
+        role: projectRole.role
+      })
+      .from(feature)
+      .innerJoin(layer, eq(feature.layerId, layer.id))
+      .innerJoin(project, eq(layer.projectId, project.id))
+      .leftJoin(
+        projectRole,
+        and(
+          eq(projectRole.projectId, project.id),
+          eq(projectRole.userId, session.user.id)
+        )
+      )
+      .where(eq(feature.id, refId))
+      .get();
+
+    if (!projectAccess) {
+      error(404, 'Feature goes brrrr');
+    }
+
+    // If user has no role for this project and isn't SuperAdmin
+    if (projectAccess.role) {
+      // error(403, 'Insufficient permissions to access images for this feature');
+      accessStrategy = 'ResourceAll';
+    }
   }
 
   // Checks whether the user has access to the resource
