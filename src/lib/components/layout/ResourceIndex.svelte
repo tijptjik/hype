@@ -129,7 +129,10 @@ onDestroy(() => {
     {/if}
 
     <div
-      class="grid grid-cols-1 gap-4 @3xl/grid:grid-cols-2 @5xl/grid:grid-cols-3 @7xl/grid:grid-cols-4">
+      class="grid grid-cols-1 gap-4 @3xl/grid:grid-cols-2 @5xl/grid:grid-cols-3 @7xl/grid:grid-cols-4"
+      role="feed"
+      aria-busy={isLoading}
+    >
       {#each visibleEntities as { data: entity }, idx (entity.id)}
         <div
           in:blur={{
@@ -137,15 +140,19 @@ onDestroy(() => {
             duration: initializedDOM ? 0 : 250,
             easing: cubicOut
           }}
-          animate:flip={{ delay: 0, duration: 250, easing: cubicOut }}>
+          animate:flip={{ delay: 0, duration: 250, easing: cubicOut }}
+        >
           {@render children(entity, idx)}
         </div>
       {/each}
+      
       <!-- Load More Trigger -->
       {#if visibleEntities.length < entities.length}
         <div
           bind:this={loadMoreTriggerRef}
-          class="col-span-full flex justify-center p-4">
+          class="col-span-full flex justify-center p-4"
+          aria-hidden="true"
+        >
           <span class="loading loading-dots loading-md"></span>
         </div>
       {/if}
