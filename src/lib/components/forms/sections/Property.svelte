@@ -27,12 +27,11 @@ const nanoid = customAlphabet(
 let sectionProps: SectionProps = $props();
 let { fieldDiscriminator, fields } = sectionProps;
 
+// STATE : FORM
+let { form } = sectionProps.form;
+
 // STATE : CONTEXT :: ROUTER
 const routerState = getRouterState() as FacetRouter;
-
-// STATE : CONTEXT :: FORM
-const formProps = getForm(routerState.resource, routerState.entity);
-let { form } = formProps;
 
 // ***
 // PROPERTY FIELDS
@@ -110,12 +109,11 @@ let actionProps = $state({
     <div in:scale out:scale animate:flip={{ duration: 200 }}>
       {#if property.type === fieldDiscriminator}
         <PropertyFields
+          {...sectionProps}
           bind:actionProps
           {actions}
           {fieldRoot}
           {fieldIndex}
-          {...formProps}
-          {...sectionProps}
           fields={fields[fieldRoot].discriminators.specs[fieldDiscriminator]}
         />
       {/if}

@@ -1,23 +1,44 @@
 <script lang="ts">
-import { page } from '$app/stores';
-import { Icon } from '@steeze-ui/svelte-icon';
-import { Bolt, Bars3BottomRight as Menu, ChevronRight, Plus, Minus } from '@steeze-ui/heroicons';
 import { goto } from '$app/navigation';
-
+// STORES
+import { page } from '$app/stores';
 import {
-  type ResourceType,
-  type ResourceToEntity,
-  type FilterableResourceToEntityId,
-  type ApiEntity,
-  type FilterableResourceType
-} from '$lib/types';
-import { resources, filteredResources, queryFilters } from '$lib/stores/resources.svelte';
+  resources,
+  filteredResources,
+  queryFilters
+} from '$lib/stores/resources.svelte';
 import { navItems } from '$lib/stores/navigation.svelte';
+// CONTEXT
 import { getRouterState } from '$lib/context/router.svelte';
+// COMPONENTS
+import Icon from '$lib/components/common/Icon.svelte';
+import {
+  Bolt,
+  Bars3BottomRight as Menu,
+  ChevronRight,
+  Plus,
+  Minus
+} from '@steeze-ui/heroicons';
 import FilterInput from '$lib/components/menu/FilterInput.svelte';
+// TYPES
+import type {
+  Resource,
+  ResourceType,
+  ResourceToEntity,
+  FilterableResourceToEntityId,
+  ApiEntity,
+  FilterableResourceType,
+  EntityWithData,
+  Ref,
+  FacetType
+} from '$lib/types';
 
 // CONFIG
-const filterableByQueryParams: FilterableResourceType[] = ['organisation', 'project', 'layer'];
+const filterableByQueryParams: FilterableResourceType[] = [
+  'organisation',
+  'project',
+  'layer'
+];
 
 // STATE
 let isSidebarExpanded = $state(true);
@@ -186,7 +207,8 @@ const fetchResources = async (resource: ResourceType) => {
  * @param {ResourceType} resource - The type of resource to check.
  * @returns {boolean} True if the resource type has more than 3 entities, false otherwise.
  */
-const hasManyEntities = (resource: ResourceType): boolean => resources[resource].length > 3;
+const hasManyEntities = (resource: ResourceType): boolean =>
+  resources[resource].length > 3;
 
 /**
  * Gets the count of filtered resources for a given resource type.
@@ -221,7 +243,10 @@ const getFilteredResourceCount = (resource: ResourceType): number => {
  * @param {ResourceType} resource - The type of resource to calculate the max height for
  * @returns {string} A Tailwind CSS class string for the max-height
  */
-const getMaxHeightItemsContainer = (resource: ResourceType, isFilterable: boolean = false): string => {
+const getMaxHeightItemsContainer = (
+  resource: ResourceType,
+  isFilterable: boolean = false
+): string => {
   const count = getFilteredResourceCount(resource);
   let height = count * 54; // 54px is the height of an entity
   if (isFilterable) {
@@ -278,7 +303,7 @@ const getQueryParams = (): URLSearchParams => {
  *   - ref: A reference code for the entity (fallback to id)
  *   - data: The original API entity object
  */
-const toEntity = (apiEntity: ApiEntity) => {
+const toEntity = (apiEntity: ApiEntity): EntityWithData<Resource> => {
   return {
     id: apiEntity.id,
     name: apiEntity.name || apiEntity.title || '',
@@ -296,15 +321,19 @@ const isResourceExpanded = (resource: ResourceType) => {
 
 const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
   e.preventDefault();
+  let facet = 'core';
+ 
   const url = new URL(window.location.href);
   url.pathname = `/admin/${navItems[resourceType].path}/${entityPath}`;
-  if (resourceType === routerState.resource) {
-    const currentFacet = routerState.facet;
-  } else {
-    const url = new URL(window.location.href);
-    url.hash = `#core`;
-  }
-  routerState.url = url;
+  if (resourceType === routerState.resource && routerState.facet) {
+    facet = routerState.facet;
+  } 
+  // url.hash = `#${facet}`;
+  routerState.updateWith({
+    resource: resourceType,
+    entity: entityPath,
+    facet: facet as FacetType
+  });
   goto(url.toString());
 };
 </script>
@@ -324,7 +353,9 @@ const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
       ? 'Remove item from filters'
       : 'Add item to filters'}
     onclick={() => toggleQueryParam(resource, itemId)}>
-    <Icon src={queryFilters[resource]?.includes(itemId) ? Minus : Plus} class="h-4 w-4" />
+    <Icon
+      src={queryFilters[resource]?.includes(itemId) ? Minus : Plus}
+      class="h-4 w-4" />
   </button>
 {/snippet}
 
@@ -348,7 +379,9 @@ const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
 
 <!-- COMPONENT -->
 <aside
-  class="flex h-screen flex-shrink-1 flex-col bg-base-300 transition-all w-{isSidebarExpanded ? '96' : '20'}"
+  class="flex-shrink-1 flex h-screen flex-col bg-base-300 transition-all w-{isSidebarExpanded
+    ? '96'
+    : '20'}"
   style="width: {isSidebarExpanded ? '400px' : '80px'};">
   <div class="flex flex-shrink-0 flex-row items-center justify-between bg-black p-4">
     {#if isSidebarExpanded}
@@ -366,7 +399,8 @@ const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
     {/if}
   </div>
 
-  <div class="flex flex-shrink-0 flex-grow flex-col overflow-hidden border-r-2 border-base-300 p-0">
+  <div
+    class="flex flex-shrink-0 flex-grow flex-col overflow-hidden border-r-2 border-base-300 p-0">
     {#each Object.entries(navItems) as [resourceType, resource]}
       {@const isFilterable = hasManyEntities(resourceType as ResourceType)}
       {@const isSectionExpanded = isResourceExpanded(resourceType as ResourceType)}
@@ -375,8 +409,8 @@ const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
       <div class="flex-shrink-0">
         <a
           href="/admin/{resource.path}{$page.url.search}"
-          class="flex items-center border-l-3 p-6 {routerState.resource === resourceType &&
-          !routerState.entity
+          class="flex items-center border-l-3 p-6 {routerState.resource ===
+            resourceType && !routerState.entity
             ? 'border-primary'
             : 'border-base-300'} rounded-none">
           <Icon src={resource.icon} class="h-6 w-6" />
@@ -390,11 +424,12 @@ const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
       <div
         class="flex flex-col transition-[max-height] duration-300 ease-in-out
         {isFilterable && isSectionExpanded ? 'flex-grow' : ''}"
-        style="max-height: {resourceType != 'feature' ? getMaxHeightItemsContainer(resourceType as ResourceType, isFilterable) : ''}">
-        
+        style="max-height: {resourceType != 'feature'
+          ? getMaxHeightItemsContainer(resourceType as ResourceType, isFilterable)
+          : ''}">
         <!-- ENTITIES : FILTER -->
         {#if isSidebarExpanded && isSectionExpanded && isFilterable}
-          <FilterInput resource={resourceType as ResourceType} />
+          <FilterInput />
         {/if}
 
         <!-- ENTITIES : LIST -->
@@ -409,10 +444,14 @@ const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
                 <div class="relative">
                   <a
                     href="/admin/{resource.path}/{entity.ref}{$page.url.search}"
-                    onclick={(e) => goToEntity(e, resourceType as ResourceType, entity.ref)}
-                    class="flex items-center border-l-3 {routerState.entity === entity.ref
+                    onclick={(e) =>
+                      goToEntity(e, resourceType as ResourceType, entity.ref)}
+                    class="flex items-center border-l-3 {routerState.entity ===
+                    entity.ref
                       ? 'border-primary'
-                      : queryFilters[resourceType as FilterableResourceType]?.includes(entity.id)
+                      : queryFilters[resourceType as FilterableResourceType]?.includes(
+                            entity.id
+                          )
                         ? 'border-secondary'
                         : 'border-base-300'}
                         {!isSidebarExpanded && routerState.entity === entity.ref
@@ -422,7 +461,11 @@ const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
                     {#if isSidebarExpanded || routerState.entity !== entity.ref}
                       <Icon src={ChevronRight} class="h-5 w-5" />
                     {:else if routerState.entity === entity.ref}
-                      {@render filterToggleButton(resourceType as FilterableResourceType, entity.id, false)}
+                      {@render filterToggleButton(
+                        resourceType as FilterableResourceType,
+                        entity.id,
+                        false
+                      )}
                     {/if}
                     {#if isSidebarExpanded}
                       <span class="ml-3 text-sm">
@@ -431,7 +474,10 @@ const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
                     {/if}
                   </a>
                   {#if isSidebarExpanded && filterableByQueryParams.includes(resourceType as FilterableResourceType)}
-                    {@render filterToggleButton(resourceType as FilterableResourceType, entity.id)}
+                    {@render filterToggleButton(
+                      resourceType as FilterableResourceType,
+                      entity.id
+                    )}
                   {/if}
                 </div>
               </li>
@@ -443,9 +489,21 @@ const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
         {#if isSidebarExpanded && isFilterable && isSectionExpanded}
           <footer
             class="base-content flex w-full flex-shrink-0 flex-row justify-between border-b-1 border-base-100 px-3 py-2 text-center font-mono text-sm font-light uppercase opacity-60">
-            {@render filterStat(resources as ResourceToEntity & FilterableResourceToEntityId, resourceType as ResourceType, 'Total')}
-            {@render filterStat(filteredResources as ResourceToEntity & FilterableResourceToEntityId, resourceType as FilterableResourceType, 'Filtered')}
-            {@render filterStat(queryFilters as ResourceToEntity & FilterableResourceToEntityId, resourceType as FilterableResourceType, 'Selected')}
+            {@render filterStat(
+              resources as ResourceToEntity & FilterableResourceToEntityId,
+              resourceType as ResourceType,
+              'Total'
+            )}
+            {@render filterStat(
+              filteredResources as ResourceToEntity & FilterableResourceToEntityId,
+              resourceType as FilterableResourceType,
+              'Filtered'
+            )}
+            {@render filterStat(
+              queryFilters as ResourceToEntity & FilterableResourceToEntityId,
+              resourceType as FilterableResourceType,
+              'Selected'
+            )}
           </footer>
         {/if}
       </div>
