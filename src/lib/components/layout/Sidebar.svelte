@@ -319,21 +319,38 @@ const isResourceExpanded = (resource: ResourceType) => {
   return routerState.resource === resource || resource === 'feature';
 };
 
+const goToResource = (e: Event, resourceType: ResourceType) => {
+  e.preventDefault();
+  const url = new URL(window.location.href);
+  url.pathname = `/admin/${navItems[resourceType].path}`;
+  // UPDATE ROUTER STATE
+  routerState.updateWith({
+    resource: resourceType,
+    entity: false,
+    facet: false
+  });
+  // NAVIGATE
+  goto(url.toString()).then(() => {
+    goto(url.toString()).then(void 0);
+  });
+};
+
 const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
   e.preventDefault();
   let facet = 'core';
- 
   const url = new URL(window.location.href);
   url.pathname = `/admin/${navItems[resourceType].path}/${entityPath}`;
   if (resourceType === routerState.resource && routerState.facet) {
     facet = routerState.facet;
-  } 
+  }
   // url.hash = `#${facet}`;
+  // UPDATE ROUTER STATE
   routerState.updateWith({
     resource: resourceType,
     entity: entityPath,
     facet: facet as FacetType
   });
+  // NAVIGATE
   goto(url.toString());
 };
 </script>
@@ -409,6 +426,7 @@ const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
       <div class="flex-shrink-0">
         <a
           href="/admin/{resource.path}{$page.url.search}"
+          onclick={(e) => goToResource(e, resourceType as ResourceType)}
           class="flex items-center border-l-3 p-6 {routerState.resource ===
             resourceType && !routerState.entity
             ? 'border-primary'
