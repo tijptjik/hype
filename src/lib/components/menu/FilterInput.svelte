@@ -23,31 +23,39 @@ const routerState = getRouterState() as ResourceRouter;
 
 // STATE : PROPS
 const {
-  rounded = false
+  rounded = false,
+  resourceType,
+  clearInput = false
 }: {
   rounded?: boolean;
+  resourceType: ResourceType;
+  clearInput?: boolean;
 } = $props();
+
+$effect(() => {
+  if (clearInput) {
+    resetInput();
+  }
+});
 
 // STATE : DERIVED :: FILTERED RESOURCES
 $effect(() => {
-  Object.keys(resources).forEach((resource) => {
-    const type = resource as ResourceType;
-    filteredResources[type] = resources[type].filter((item) => {
-      return (
-        filterTexts[type] === '' ||
-        item.name.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
-        item.nameShort?.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
-        item.description?.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
-        item.address?.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
-        queryFilters[type as keyof FilterableResourceToEntityId]?.includes(item.id)
-      );
-    }) as EntityWithData<typeof type>[];
-  });
+  const type = resourceType;
+  filteredResources[type] = resources[type].filter((item) => {
+    return (
+      filterTexts[type] === '' ||
+      item.name.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
+      item.nameShort?.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
+      item.description?.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
+      item.address?.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
+      queryFilters[type as keyof FilterableResourceToEntityId]?.includes(item.id)
+    );
+  }) as EntityWithData<typeof type>[];
 });
 
-// Function to reset the input field
+// Function to reset the input field for this specific resource type
 function resetInput() {
-  filterTexts[routerState.resource as keyof typeof filterTexts] = '';
+  filterTexts[resourceType] = '';
 }
 
 // Function to handle keydown events
@@ -58,22 +66,32 @@ function handleKeydown(event: KeyboardEvent) {
 }
 </script>
 
-<div class="relative {rounded ? '' : 'flex-shrink-0 border-l-3 border-base-200'}">
+<div 
+  class="relative {rounded ? '' : 'flex-shrink-0 border-l-3 border-base-200'}"
+  role="search"
+>
   <input
     type="text"
     placeholder="Match name and description"
     class="input m-0 w-full bg-neutral px-6 pr-10 text-sm focus:border-none focus:outline-none {rounded
       ? 'h-10 min-w-72 rounded-xl'
       : 'rounded-none'}"
-    bind:value={filterTexts[routerState.resource as keyof typeof filterTexts]}
-    onkeydown={handleKeydown} />
+    bind:value={filterTexts[resourceType]}
+    onkeydown={handleKeydown}
+    tabindex="1" 
+    aria-label="Filter {resourceType}s" />
   <div class="absolute inset-y-0 right-2 flex items-center pr-3">
-    {#if filterTexts[routerState.resource as keyof typeof filterTexts]}
-      <button onclick={resetInput} class="focus:outline-none">
+    {#if filterTexts[resourceType]}
+      <button 
+        onclick={resetInput} 
+        class="focus:outline-none"
+        tabindex="-1"
+        aria-label="Clear {resourceType} filter"
+      >
         <Icon src={XMark} class="h-6 w-6" />
       </button>
     {:else}
-      <Icon src={MagnifyingGlass} class="h-6 w-6" />
+      <Icon src={MagnifyingGlass} class="h-6 w-6" aria-hidden="true" />
     {/if}
   </div>
 </div>

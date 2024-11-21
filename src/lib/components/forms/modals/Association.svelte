@@ -184,7 +184,7 @@ export const toEntity = (apiEntity: ApiEntity) => {
     <h3 class="mb-4 text-lg font-bold">Select {parentResourceType}</h3>
 
     <div class="mb-4">
-      <FilterInput resourceType={parentResourceType} rounded={true} />
+      <FilterInput resourceType={parentResourceType} rounded={true} clearInput={true} />
     </div>
 
     <div class="mb-4 max-h-60 overflow-y-auto">

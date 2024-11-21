@@ -447,7 +447,7 @@ const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
           : ''}">
         <!-- ENTITIES : FILTER -->
         {#if isSidebarExpanded && isSectionExpanded && isFilterable}
-          <FilterInput />
+          <FilterInput {resourceType}/>
         {/if}
 
         <!-- ENTITIES : LIST -->
