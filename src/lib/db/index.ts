@@ -1,13 +1,17 @@
-import { drizzle } from 'drizzle-orm/d1';
-import * as schema from './schema';
-import { Table, getTableName, and, sql, inArray, eq, or, not, exists, ilike } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
+// ORM
+import { drizzle } from 'drizzle-orm/d1';
+import { Table, getTableName, and, sql, inArray, eq, or, not, exists, ilike } from 'drizzle-orm';
+// SCHEMA 
+import * as schema from './schema';
 // TYPES
 import type { D1Database } from '@auth/d1-adapter';
-import type { Field, NestedRelations, Ref, Resource, ResourceDB, ResourceType } from '$lib/types';
 import type { Database } from './services/organisation';
-import type { TargetLang } from '../types';
-import { NEW_REF } from '$lib';
+import type {TargetLang, Field, NestedRelations, Ref, Resource, ResourceDB, ResourceType } from '../types';
+
+export const NEW_TITLE = 'New';
+export const NEW_REF = NEW_TITLE.toLowerCase();
+
 
 const client = (database: D1Database) => {
   return drizzle(database, { schema });

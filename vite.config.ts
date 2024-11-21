@@ -1,9 +1,14 @@
-import { paraglide } from '@inlang/paraglide-sveltekit/vite';
-import { defineConfig, type Plugin } from 'vite';
+// VITE
+import { defineConfig } from 'vite';
 import { sveltekit } from '@sveltejs/kit/vite';
+// TRANSLATION
+import { paraglide } from '@inlang/paraglide-sveltekit/vite';
+// DATA
 import seed from './src/lib/db/seed';
-import { svelteTesting } from '@testing-library/svelte/vite';
+// TYPES
+import type { Plugin } from 'vite';
 
+// PLUGIN :: SEED DRIZZLE
 const seedDrizzle = async (): Promise<Plugin> => {
   if (process.env.VITE_WRANGLER_ENV !== 'local') {
     return {
@@ -21,24 +26,16 @@ const seedDrizzle = async (): Promise<Plugin> => {
   }
 };
 
-export default defineConfig(({ mode }) => ({
+// CONFIG
+export default defineConfig({
   plugins: [
     paraglide({
       project: './project.inlang',
       outdir: './src/lib/paraglide'
     }),
     seedDrizzle(),
-    svelteTesting(),
-    sveltekit(),
-    svelteTesting()
-
+    sveltekit()
   ],
-  resolve: {
-    // The default would be [ 'svelte', 'node' ]
-    // as set by vite-plugin-svelte and vitest.
-    // This sets [ 'browser', 'svelte', 'node' ]
-    conditions: mode === 'test' ? ['browser'] : []
-  },
   optimizeDeps: {
     esbuildOptions: {
       target: 'esnext'
@@ -47,4 +44,4 @@ export default defineConfig(({ mode }) => ({
   build: {
     target: 'es2020'
   }
-}));
+});

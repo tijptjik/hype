@@ -5,7 +5,7 @@ import { nanoid } from 'nanoid';
 import type { GeometryObject } from 'geojson';
 
 // TYPES
-import type { AddressProperties, AddressPropertiesExtended, LayerMetadata } from '$lib/types';
+import type { AddressProperties, AddressPropertiesExtended, LayerMetadata } from '../types';
 
 // UTILS
 const getGenImageParam = (): number => Math.floor(Math.random() * (100 - 5 + 1)) + 5;

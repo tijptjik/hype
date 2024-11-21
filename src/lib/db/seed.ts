@@ -1,3 +1,6 @@
+
+// DB
+import connect from '../../lib/db';
 import {
   account,
   layer,
@@ -20,8 +23,9 @@ import {
   session,
   user
 } from './schema';
-import connect from '../../lib/db';
-
+// ORM
+import { count, getTableName } from 'drizzle-orm';
+// DATA
 import userJson from './data/users.json';
 import accountJson from './data/accounts.json';
 import sessionJson from './data/sessions.json';
@@ -46,8 +50,8 @@ import featureI18nJson from './data/featureI18n.json';
 import featureI18nStreetnamesJson from './data/featureI18n-streetnames.json';
 import featurePropertyJson from './data/featureProperty.json';
 import featurePropertyI18nJson from './data/featurePropertyI18n.json';
+// TYPES
 import type { DrizzleD1Database } from 'drizzle-orm/d1/driver';
-import { count, getTableName } from 'drizzle-orm';
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core/table';
 import type { SQLiteInsertValue } from 'drizzle-orm/sqlite-core';
 
