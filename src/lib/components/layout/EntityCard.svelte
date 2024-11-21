@@ -48,7 +48,15 @@ const onclick = (e: MouseEvent) => {
 <a
   {href}
   {onclick}
-  class="card bg-base-100 shadow-xl transition-all duration-800 hover:shadow-2xl hover:shadow-primary hover:scale-[.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+  role="article"
+  tabindex="2"
+  class="card bg-base-100 shadow-xl transition-shadow duration-800 hover:shadow-2xl hover:shadow-primary hover:scale-[.99] active:outline-none focus-visible:outline-secondary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:shadow-primary"
+  onkeydown={(e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onclick(e);
+    }
+  }}
 >
   <!-- Header Section -->
   {#if header}
