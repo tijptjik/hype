@@ -51,6 +51,6 @@ function onError() {
     {src}
     {alt}
     class="h-full w-full object-cover {!loaded ? 'invisible' : ''}"
-    on:load={onLoad}
-    on:error={onError} />
+    onload={onLoad}
+    onerror={onError} />
 </figure>

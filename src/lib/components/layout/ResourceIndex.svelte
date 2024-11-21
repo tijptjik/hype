@@ -1,5 +1,5 @@
 <script lang="ts">
-import { tick } from 'svelte';
+import { tick, untrack } from 'svelte';
 import { flip } from 'svelte/animate';
 import { fade, scale, fly, blur } from 'svelte/transition';
 import { onDestroy } from 'svelte';
@@ -32,8 +32,8 @@ let filterText = $derived(
   filterTexts[routerState.resource as keyof typeof filterTexts]
 );
 let lastUsedFilterText = $state('');
-let initialized = false;
-let initializedDOM = false;
+let initialized = $state(false);
+let initializedDOM = $state(false);
 
 let updateTimeout: number;
 
@@ -75,11 +75,11 @@ $effect(() => {
       updateVisibleEntities();
       setupObserver();
       if (!initialized) {
-        initialized = true;
+        untrack(() => initialized = true);
       }
       tick().then(() => {
         setTimeout(() => {
-          initializedDOM = true;
+          untrack(() => initializedDOM = true);
         }, 1000);
       });
     },
