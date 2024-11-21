@@ -385,20 +385,17 @@ export async function genericEntityQuery<usersT extends Table>(
   }
   const conditions = [
     eq(table[publicIdentifier], ref),
-    ...applyGeneralAccessStrategy(db, accessStrategy, userTable, userId)];
+    ...applyGeneralAccessStrategy(db, accessStrategy, userTable, userId)
+  ];
 
   let queryOpts = {
     where: and(...conditions),
     with: selectTableRelations
   }
-
   if (columns) {
     queryOpts.columns = columns;
   }
-
-  let result = await db.query[getTableName(table)].findFirst(queryOpts);
-
-  return result;
+  return await db.query[getTableName(table)].findFirst(queryOpts);
 }
 
 // Define the shape of a translation object

@@ -35,7 +35,7 @@ export const user = sqliteTable('user', {
 });
 
 export const userRelations = relations(user, ({ many }) => ({
-  organisationRoles: many(organisationRole),
+  memberships: many(organisationRole),
   projectRoles: many(projectRole),
   contributedImages: many(image, { relationName: 'contributor' }),
   contributedTasks: many(task, { relationName: 'contributor' }),

@@ -13,16 +13,14 @@ import ListField from '$lib/components/forms/fields/List.svelte';
 import ToggleField from '$lib/components/forms/fields/Toggle.svelte';
 import type {
   Field,
-  FieldComponenFormField,
-  tType,
-  Lang,
   LanguageTag,
-  ResourceuageTag,
-  FormField,
+  LanguageTagExtended,
   Resource,
+  FormField,
   FormFieldDefinition,
   FieldDiscriminator,
-  FieldComponentType
+  FieldComponentType,
+  TargetLang
 } from './types';
 
 /**
@@ -90,7 +88,7 @@ export function formatDate(dateString: string): string {
   });
 }
 
-export const isPrimaryLang = (languageTag: LanguageTag) => {
+export const isPrimaryLang = (languageTag: LanguageTagExtended) => {
   return languageTag === 'core' || languageTag === 'en' || languageTag == undefined;
 };
 
@@ -99,7 +97,7 @@ export const genField = (fieldRoot: string) => `${fieldRoot}Gen` as keyof Resour
 export const getValues = (
   form: Writable<Resource>,
   field: FormField,
-  languageTag: LanguageTag,
+  languageTag: LanguageTagExtended,
   fieldRoot: string,
   fieldIndex: number,
   fieldKey: string
@@ -147,7 +145,7 @@ export const updateForm = (
   isGenAI: boolean
 ) => {
   form.update(($form) => {
-    let ref: Record<string, string | boolean>;
+    let ref: Record<string, string | boolean | Record<TargetLang, unknown>>;
     let key: string;
     // FIELD : ROOT | NESTED
     // if (!field.isNested && fieldDiscriminator !== 'specifier') {
@@ -165,7 +163,7 @@ export const updateForm = (
     }
     // FIELD : PRIMARY | TRANSLATED
     if (!isPrimaryLang(languageTag)) {
-      ref = ref.translations[languageTag];
+      ref = ref.translations[languageTag as TargetLang];
     }
     // FIELD : SET VALUE
     ref[key] = value;
@@ -182,7 +180,7 @@ export const getId = (
   fieldIndex: number,
   fieldDiscriminator: FieldDiscriminator,
   fieldKey: string,
-  languageTag: LanguageTag
+  languageTag: LanguageTagExtended
 ) => {
   if (field.isNested) {
     return `${fieldRoot}_${fieldDiscriminator}_${fieldIndex}_${fieldKey}_${languageTag}`;

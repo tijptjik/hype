@@ -417,8 +417,13 @@ export const FeatureUpdateAPI = FeatureUpdate.extend({
   // tasks: z.array(TaskUpdate).optional()
 });
 
-
 export const FeaturePatch = FeatureUpdate.partial();
+
+export const FeatureGetAPI = FeatureUpdateAPI.extend({
+  layer: LayerUpdateAPI.optional(),
+  project: ProjectUpdateAPI.optional(),
+  organisation: OrganisationUpdateAPI.optional()
+})
 
 /* ----------------- */
 // IMAGES
