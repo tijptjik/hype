@@ -14,13 +14,15 @@ const routerState = setRouterState();
 
 // Initialize Hierarchical Resource State
 const hierarchicalState = setHierarchicalResourceState();
+
+// TODO :: Handle Back and Forward Navigation
+
 </script>
 
 <!-- TODO Implement Toast ⚡ - https://github.com/kbrgl/svelte-french-toast/pull/82 -->
 
 <!-- LAYOUT -->
 <Sidebar />
-<!-- <div class="flex w-full flex-col"> -->
 <div class="flex h-screen w-full flex-col">
   <header class="flex-none bg-black">
     <Navbar />

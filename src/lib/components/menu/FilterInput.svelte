@@ -2,6 +2,7 @@
 // COMPONENTS
 import { MagnifyingGlass, XMark } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
+import { afterNavigate } from '$app/navigation';
 // CONTEXT
 import {
   resources,
@@ -31,6 +32,13 @@ const {
   resourceType: ResourceType;
   clearInput?: boolean;
 } = $props();
+
+// Reset filter text after navigation if it's for the current resource
+afterNavigate(() => {
+  if (routerState.resource === resourceType) {
+    resetInput();
+  }
+});
 
 $effect(() => {
   if (clearInput) {
