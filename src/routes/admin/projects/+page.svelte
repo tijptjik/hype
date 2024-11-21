@@ -1,61 +1,28 @@
 <script lang="ts">
-import { goto } from '$app/navigation';
 // STORES
-import { page } from '$app/stores';
 import { filteredResources } from '$lib/stores/resources.svelte';
 // COMPONENTS
 import ResourceHeader from '$lib/components/layout/ResourceHeader.svelte';
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
+import ResourceIndex from '$lib/components/layout/ResourceIndex.svelte';
+import EntityCard from '$lib/components/layout/EntityCard.svelte';
 
-const projects = $derived(filteredResources.project);
-const routerState = getRouterState();
+// CONFIG :: KEY MAP
+const keyMap = {
+  id: 'code',
+  title: 'name',
+  subtitle: 'nameShort',
+  description: 'description',
+  image: 'image',
+};
 
-const onclick = (e: MouseEvent, entity: string) => {
-  e.preventDefault();
-  routerState.updateWith({
-    entity,
-    facet: 'core'
-  });
-  goto(`/admin/projects/${entity}`);
-}
+// STATE :: DERIVED :: PROJECTS
+const entities = $derived(filteredResources.project);
 </script>
 
 <!-- LAYOUT -->
 <ResourceHeader />
-<div
-  class="h-full overflow-y-auto bg-gradient-to-bl from-rose-500 to-fuchsia-800 bg-fixed pb-16">
-  <div class="container mx-auto flex w-full flex-auto p-4">
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {#each projects as { data: project }}
-        <div class="card bg-base-100 shadow-xl">
-          <figure>
-            <img
-              src={project.image}
-              alt={project.name}
-              class="h-48 w-full object-cover" />
-          </figure>
-          <div class="card-body">
-            <h2 class="card-title">
-              {project.name}
-              <small class="text-sm text-gray-500">{project.nameShort}</small>
-            </h2>
-            <p class="mt-2">{project.description}</p>
-            <div class="mt-4 flex flex-row items-center justify-between">
-              <div class="flex flex-wrap gap-2">
-                {#each project.maintainerRoles as maintainerRole}
-                  <span class="badge badge-outline">{maintainerRole.role}</span>
-                {/each}
-              </div>
-              <!-- TODO Verify if the query params are retained -->
-              <a
-                href="/admin/projects/{project.code}{$page.url.search}"
-                class="btn btn-primary"
-                onclick={(e) => onclick(e, project.code)}>View Profile</a>
-            </div>
-          </div>
-        </div>
-      {/each}
-    </div>
-  </div>
-</div>
+<ResourceIndex {entities}>
+  {#snippet children(entity)}
+    <EntityCard {entity} {keyMap} />
+  {/snippet}
+</ResourceIndex>

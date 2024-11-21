@@ -3,12 +3,12 @@
 import { MagnifyingGlass, XMark } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
-  import {
-    resources,
-    filteredResources,
-    filterTexts,
-    queryFilters
-  } from '$lib/stores/resources.svelte';
+import {
+  resources,
+  filteredResources,
+  filterTexts,
+  queryFilters
+} from '$lib/stores/resources.svelte';
 import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
 import type {
@@ -35,18 +35,10 @@ $effect(() => {
     filteredResources[type] = resources[type].filter((item) => {
       return (
         filterTexts[type] === '' ||
-        item.name
-          .toLowerCase()
-          .includes(filterTexts[type].toLowerCase()) ||
-        item.nameShort
-          ?.toLowerCase()
-          .includes(filterTexts[type].toLowerCase()) ||
-        item.description
-          ?.toLowerCase()
-          .includes(filterTexts[type].toLowerCase()) ||
-        item.address
-          ?.toLowerCase()
-          .includes(filterTexts[type].toLowerCase()) ||
+        item.name.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
+        item.nameShort?.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
+        item.description?.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
+        item.address?.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
         queryFilters[type as keyof FilterableResourceToEntityId]?.includes(item.id)
       );
     }) as EntityWithData<typeof type>[];
@@ -66,7 +58,7 @@ function handleKeydown(event: KeyboardEvent) {
 }
 </script>
 
-<div class="relative {rounded ? '' : 'border-l-3 border-base-200 flex-shrink-0'}">
+<div class="relative {rounded ? '' : 'flex-shrink-0 border-l-3 border-base-200'}">
   <input
     type="text"
     placeholder="Match name and description"

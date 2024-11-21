@@ -1,0 +1,154 @@
+<script lang="ts">
+import { tick } from 'svelte';
+import { flip } from 'svelte/animate';
+import { fade, scale, fly, blur } from 'svelte/transition';
+import { onDestroy } from 'svelte';
+import { cubicOut, expoIn, sineOut } from 'svelte/easing';
+// CONTEXT
+import { filterTexts } from '$lib/stores/resources.svelte';
+// TYPES
+import type { ResourceRouter } from '$lib/types';
+
+type Entity = { data: Record<string, any> };
+type Props = {
+  entities: Array<{ data: Record<string, any> }>;
+  children: (entity: Record<string, any>, index: number) => any;
+};
+let { entities, children }: Props = $props();
+
+// CONTEXT
+import { getRouterState } from '$lib/context/router.svelte';
+const routerState = getRouterState() as ResourceRouter;
+
+// STATE
+let visibleEntities: Entity[] = $state([]);
+let currentPage = $state(0);
+let isLoading = $state(false);
+let observer: IntersectionObserver | null = $state(null);
+let containerRef: HTMLDivElement;
+let loadMoreTriggerRef: HTMLDivElement | null = $state(null);
+const pageSize = 24;
+let filterText = $derived(
+  filterTexts[routerState.resource as keyof typeof filterTexts]
+);
+let lastUsedFilterText = $state('');
+let initialized = false;
+let initializedDOM = false;
+
+let updateTimeout: number;
+
+// Create and manage the observer
+function setupObserver() {
+  // Cleanup old observer if it exists
+  observer?.disconnect();
+
+  observer = new IntersectionObserver(
+    (entries) => {
+      const trigger = entries[0];
+      if (trigger.isIntersecting) {
+        loadMore();
+      }
+    },
+    {
+      root: null,
+      rootMargin: '200px',
+      threshold: 0.1
+    }
+  );
+
+  // Observe the trigger if it exists
+  if (loadMoreTriggerRef) {
+    observer.observe(loadMoreTriggerRef);
+  }
+}
+
+$effect(() => {
+  if (!entities) return;
+
+  updateTimeout = setTimeout(
+    (text: string, lastText: string) => {
+      if (text !== lastText) {
+        currentPage = 0;
+        lastUsedFilterText = text;
+      }
+      // Re-setup observer after updating visible entities
+      updateVisibleEntities();
+      setupObserver();
+      if (!initialized) {
+        initialized = true;
+      }
+      tick().then(() => {
+        setTimeout(() => {
+          initializedDOM = true;
+        }, 1000);
+      });
+    },
+    initialized ? 100 : 0,
+    filterText,
+    lastUsedFilterText
+  ) as unknown as number;
+  return () => clearTimeout(updateTimeout);
+});
+
+function updateVisibleEntities() {
+  const start = 0;
+  const end = Math.min((currentPage + 1) * pageSize, entities.length);
+  visibleEntities = entities.slice(start, end);
+}
+
+async function loadMore() {
+  if (isLoading || visibleEntities.length >= entities.length) return;
+
+  isLoading = true;
+  try {
+    // Simulate a small delay to prevent rapid loading
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    currentPage++;
+    updateVisibleEntities();
+  } finally {
+    isLoading = false;
+  }
+}
+
+onDestroy(() => {
+  clearTimeout(updateTimeout);
+  observer?.disconnect();
+});
+</script>
+
+<div
+  bind:this={containerRef}
+  class="h-full overflow-y-auto bg-gradient-to-bl from-rose-500 to-fuchsia-800 bg-fixed pb-16 @container/grid">
+  <div
+    class="flex w-full flex-auto p-4 {entities.length === 0
+      ? 'h-full w-full items-center justify-center text-center'
+      : ''}">
+    <!-- Empty State -->
+    {#if entities.length === 0}
+      <h2 class="w-full transition-opacity duration-500 delay-75 text-center text-xl text-base-content/70">No items found</h2>
+    {/if}
+
+    <div
+      class="grid grid-cols-1 gap-4 @3xl/grid:grid-cols-2 @5xl/grid:grid-cols-3 @7xl/grid:grid-cols-4">
+      {#each visibleEntities as { data: entity }, idx (entity.id)}
+        <div
+          in:blur={{
+            delay: initializedDOM ? 0 : 50 + (idx % pageSize) * 25,
+            duration: initializedDOM ? 0 : 250,
+            easing: cubicOut
+          }}
+          animate:flip={{ delay: 0, duration: 250, easing: cubicOut }}>
+          {@render children(entity, idx)}
+        </div>
+      {/each}
+      <!-- Load More Trigger -->
+      {#if visibleEntities.length < entities.length}
+        <div
+          bind:this={loadMoreTriggerRef}
+          class="col-span-full flex justify-center p-4">
+          <span class="loading loading-dots loading-md"></span>
+        </div>
+      {/if}
+    </div>
+  </div>
+</div>
