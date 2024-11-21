@@ -70,7 +70,8 @@ import {
   TaskUpdateAPI,
   TaskPatch,
   ImageUpdateAPI,
-  ImageInsertAPI
+  ImageInsertAPI,
+  FeatureGetAPI
 } from '$lib/db/zod';
 // COMPONENTS
 import CustomField from '$lib/components/forms/fields/Properties.svelte';
@@ -98,7 +99,8 @@ import type {
   LayerForm,
   OrganisationForm,
   ProjectForm,
-  FeatureForm
+  FeatureForm,
+  SuperFormResult
 } from './context/forms.svelte';
 import type { SuperValidated } from 'sveltekit-superforms';
 
@@ -143,8 +145,14 @@ export type ApiEntity = Entity & {
   title?: string;
   displayAddress?: string;
 };
-export type EntityWithData<T> = Entity & { data: T };
-export type FacetType = 'core' | 'address' | 'images' | 'fields';
+export type EntityWithData<T> = Entity & { data: T extends Resource ? T : never };
+export const Facets = [
+  'core',
+  'address',
+  'images',
+  'fields'
+] as const;
+export type FacetType = (typeof Facets)[number];
 export type FalsableFacetType = FacetType | false;
 export type ResourceToNavItem = Record<ResourceType, NavItem>;
 
@@ -156,6 +164,12 @@ export type Router = {
 
 export type ResourceRouter = Router & {
   resource: ResourceType;
+};
+export type EntityRouter = ResourceRouter & {
+  entity: Ref;
+};
+export type FacetRouter = EntityRouter & {
+  facet: FacetType;
 };
 
 export type NavItem = {
@@ -389,6 +403,9 @@ export type FeatureI18n = z.infer<typeof FeatureI18nUpdate>;
 // Feature where all fields are optional, no relations
 export type FeaturePartialUpdate = z.infer<typeof FeaturePatch>;
 
+// Feature with all relations
+export type FeatureResponse = z.infer<typeof FeatureGetAPI>;
+
 /* ----------------- */
 // FEATURES : PROPERTIES
 /* -------- */
@@ -480,21 +497,10 @@ export type PropertyValueI18n = z.infer<typeof PropertyValueI18nUpdate>;
 // SVELTE : PROPS
 /* -------- */
 
-export type ResourceNavProps = {
-  resource: ResourceType;
-  entity: false;
-  facet: false;
-};
-
-export type NavProps = {
-  resource: ResourceType;
-  entity: Ref;
-  facet: FacetType;
-};
-
-export type SectionProps = NavProps & {
+export type SectionProps = {
   fields: FormField;
-  fieldDiscriminator?: string;
+  form: SuperFormResult<Resource>;
+  fieldDiscriminator?: FieldDiscriminator;
   title?: string;
   subtitle?: string;
 };
@@ -503,7 +509,7 @@ export type SectionProps = NavProps & {
 export type FormProps = OrganisationForm | ProjectForm | LayerForm | FeatureForm;
 
 export type FieldProps = SectionProps & {
-  languageTag?: LanguageTag;
+  languageTag?: LanguageTagExtended;
   fieldRoot?: keyof Resource;
   field?: FormFieldDefinition;
   fieldIndex?: number;
@@ -513,7 +519,7 @@ export type FieldProps = SectionProps & {
 };
 
 export type FieldPropsExtended = FieldProps & {
-  languageTag: LanguageTag;
+  languageTag: LanguageTagExtended;
   field: FormFieldExtendedDefinition;
   fieldRoot: keyof Resource;
   fieldIndex: number;
@@ -522,6 +528,8 @@ export type FieldPropsExtended = FieldProps & {
 
 export type BarProps = SectionProps & {
   languageTag: LanguageTag;
+  form: SuperFormResult<Resource>;
+  fields: FormField;
 };
 
 export type ModalProps = {
@@ -586,7 +594,7 @@ export type InputProps = {
   value: string;
   isGenAI: boolean;
   placeholder?: string;
-  languageTag: LanguageTag;
+  languageTag: LanguageTagExtended;
   isTranslated?: boolean;
   inputType?: 'text' | 'number' | 'email';
   onchange: Function;
