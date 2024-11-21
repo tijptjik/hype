@@ -26,12 +26,6 @@ function handleInput(e: Event) {
 
 // Handle keyboard events
 function handleKeyDown(e: KeyboardEvent) {
-  // Handle tab key
-  if (e.key === 'Tab') {
-    e.preventDefault();
-    document.execCommand('insertText', false, '\t');
-  }
-
   // Handle enter key
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();

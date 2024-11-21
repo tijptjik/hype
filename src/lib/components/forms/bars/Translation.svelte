@@ -59,10 +59,8 @@ function translateFields(event: Event, sourceLang: string, targetLang: string) {
 </script>
 
 <div
-  class="h-2 max-h-2 w-full transition-[max-height] delay-700 duration-300 group-focus-within:max-h-0 group-hover:max-h-0">
-</div>
-<div
-  class="ease-in-quad max-h-0 overflow-hidden transition-[max-height] delay-700 duration-300 group-focus-within:max-h-32 group-hover:max-h-32">
+  class="overflow-hidden transition-opacity opacity-0 delay-300 duration-200 group-focus-within:opacity-100 group-hover:opacity-100"
+>
   <div class="flex items-center justify-between rounded-b-xl bg-base-200 px-6 py-3">
     <div class="flex items-center gap-4">
       <Icon src={Language} class="h-6 w-6 text-primary" />

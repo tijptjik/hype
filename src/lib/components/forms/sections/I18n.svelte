@@ -19,7 +19,8 @@ let { fields, form } = sectionProps;
 const routerState = getRouterState() as EntityRouter;
 </script>
 
-<div class="z-10 rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0 @container">
+<div
+  class="z-10 rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0 @container">
   {#if routerState.resource === 'feature' && routerState.facet === 'core'}
     <Header {...sectionProps} {Actions} {InfoContent} />
   {:else}
@@ -27,14 +28,18 @@ const routerState = getRouterState() as EntityRouter;
   {/if}
   <div class="grid grid-cols-1 gap-4 p-4 @xl:grid-cols-2 @5xl:grid-cols-3">
     {#each languageTags as languageTag}
-      <div class="group flex flex-grow flex-col gap-4 rounded-xl bg-base-100">
-        <div class="flex flex-col content-start items-start gap-4 px-6 py-2 pb-2 pt-4">
-          {#each Object.entries(fields) as [fieldRoot, field]}
-            {@const Field = getFieldComponent(field.component)}
-            <Field {languageTag} {fieldRoot} {field} {form} />
-          {/each}
+      <div class="group flex flex-col bg-base-200 rounded-xl overflow-hidden">
+        <div
+          class="flex flex-grow flex-col gap-4 rounded-xl bg-base-100 pb-3">
+          <div
+            class="flex flex-col content-start items-start gap-4 px-6 pb-2 pt-4">
+            {#each Object.entries(fields) as [fieldRoot, field]}
+              {@const Field = getFieldComponent(field.component)}
+              <Field {languageTag} {fieldRoot} {field} {form} />
+            {/each}
+          </div>
         </div>
-        <TranslationBar {...sectionProps} {languageTag} />
+          <TranslationBar {...sectionProps} {languageTag} />
       </div>
     {/each}
   </div>

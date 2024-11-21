@@ -102,10 +102,10 @@ let getWarningMessage = () => {
     {/if}
   </div>
   <SearchBar
+    {...fieldProps}
     bind:searchMode={actionProps.searchMode}
     apiPath="users"
-    destination={Object.keys(fields ?? {})[0]}
-    {form} />
+    destination={Object.keys(fields ?? {})[0]} />
   {#if actionProps.removeMode}
     <div
       transition:slide={{ duration: 200 }}
