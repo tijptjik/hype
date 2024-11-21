@@ -1,31 +1,42 @@
 <script lang="ts">
 import { flip } from 'svelte/animate';
 import { fade } from 'svelte/transition';
-import { Icon } from '@steeze-ui/svelte-icon';
-import { Plus, ExclamationTriangle } from '@steeze-ui/heroicons';
-import ErrorLabel from '../labels/Error.svelte';
-import { Bars3, XMark, Trash } from '@steeze-ui/heroicons';
-import { draggable, droppable, type DragDropState } from '@thisux/sveltednd';
+import { draggable, droppable} from '@thisux/sveltednd';
+// COMPONENTS
+import Icon from '$lib/components/common/Icon.svelte';
+import { Plus, ExclamationTriangle, Bars3, XMark, Trash } from '@steeze-ui/heroicons';
+import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
 // CONTEXT
-import { getForm } from '$lib/context/forms.svelte';
+import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
-import type {
-  IntermediateValue,
-  ListFieldProps
-} from '$lib/types';
+import type { DragDropState } from '@thisux/sveltednd';
+import type { FacetRouter, IntermediateValue, ListFieldProps } from '$lib/types';
 
 // STATE : PROPS
 let fieldProps: ListFieldProps = $props();
-let { resource, entity, languageTag, fieldRoot, fieldIndex, fieldKey, field, values, actions, actionProps } = fieldProps;
+let {
+  languageTag,
+  fieldRoot,
+  fieldIndex,
+  fieldKey,
+  field,
+  actions,
+  actionProps
+} = fieldProps;
 
-// STATE : CONTEXT
-const { constraints, errors } = getForm(resource, entity);
+// STATE : FORM
+const { constraints, errors } = fieldProps.form;
+
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as FacetRouter;
 
 let isDragging = $derived(actionProps.dragMode);
 
 function handleDrop(state: DragDropState<IntermediateValue>) {
   const { draggedItem, targetContainer } = state;
-  const dragIndex = fieldProps.values.findIndex((item: IntermediateValue) => item.id === draggedItem.id);
+  const dragIndex = fieldProps.values.findIndex(
+    (item: IntermediateValue) => item.id === draggedItem.id
+  );
   const dropIndex = parseInt(targetContainer ?? '0');
 
   // Swap items
@@ -95,7 +106,7 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
         animate:flip={{ duration: 200 }}
         in:fade={{ duration: 150 }}
         out:fade={{ duration: 150 }}
-        class="svelte-dnd-touch-feedback relative mt-1 flex cursor-move items-center gap-4 rounded-lg border-1 border-transparent bg-base-200 p-2 h-14 font-light text-white transition-all duration-200 focus-within:border-primary">
+        class="svelte-dnd-touch-feedback relative mt-1 flex h-14 cursor-move items-center gap-4 rounded-lg border-1 border-transparent bg-base-200 p-2 font-light text-white transition-all duration-200 focus-within:border-primary">
         {#if actionProps.removeMode && actionProps.confirmingId === property.id && actionProps.removeModeLang === languageTag}
           <div
             class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-200 bg-opacity-80">

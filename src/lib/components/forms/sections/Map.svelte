@@ -5,24 +5,22 @@ import SpectralStyle from '$lib/map/style.json';
 
 // CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
+import { getRouterState } from '$lib/context/router.svelte';
 import { createMapStore, MAPSTORE_CONTEXT_KEY } from '$lib/stores';
 // TYPES
-import type { SectionProps } from '$lib/types';
+import type { EntityRouter, SectionProps } from '$lib/types';
 // ENV
 // import { PUBLIC_MAPTILER_KEY } from '$env/static/public';
 
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as EntityRouter;
 
-
-// STATE : PROPS
-const sectionProps: SectionProps = $props();
-let { entity, resource } = sectionProps;
+let sectionProps: SectionProps = $props();
+let { form } = sectionProps.form;
 
 // STATE : DERIVED
-let mapEntity = $derived(entity);
+let mapEntity = $derived(routerState.entity);
 
-// STATE : CONTEXT : FORM
-const formProps = getForm(resource, entity);
-let { form } = formProps;
 
 const lngLat = $derived($form.geometry?.coordinates);
 

@@ -1,15 +1,19 @@
 <script lang="ts">
 import { customAlphabet } from 'nanoid';
-import { getFieldComponent } from '$lib';
-import { isPrimaryLang } from '$lib';
+import { getFieldComponent, isPrimaryLang, languageTags} from '$lib';
 // COMPONENTS
 import RemoveShim from '$lib/components/forms/shims/Remove.svelte';
 import ConfirmShim from '$lib/components/forms/shims/Confirm.svelte';
 import FauxInput from '$lib/components/forms/fields/FauxInput.svelte';
 // CONTEXT
-import { getForm } from '$lib/context/forms.svelte';
+import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
-import type { FieldProps, FormProps, ActionProps, LanguageTag } from '$lib/types';
+import type {
+  FieldProps,
+  FormProps,
+  ActionProps,
+  FacetRouter
+} from '$lib/types';
 
 // STATE : INTERMEDIATE VALUES
 type IntermediateValue = {
@@ -22,10 +26,6 @@ type IntermediateValue = {
   'zh-hant': string;
   'zh-hantGen': boolean;
 };
-
-// CONFIG
-const sourceLanguageTag = 'en';
-const languageTags: LanguageTag[] = [sourceLanguageTag, 'zh-hant', 'zh-hans'];
 
 // NANOID
 const nanoid = customAlphabet(
@@ -42,14 +42,17 @@ let {
     confirmingId: undefined
   }),
   ...fieldProps
-}: FieldProps & FormProps & ActionProps = $props();
-let { fieldRoot, fieldIndex, fields, actions, resource, entity } = fieldProps;
+}: FieldProps & ActionProps = $props();
+let { fieldRoot, fieldIndex, fields, actions } = fieldProps;
+
+// STATE : FORM
+let { form } = fieldProps.form;
 
 // STATE : INTERMEDIATE VALUES
 let complexValues: IntermediateValue[] = $state([]);
 
-let formProps = getForm(resource, entity);
-let { form } = formProps;
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as FacetRouter;
 
 // Sync Form to Complex Values
 const syncFormToComplexValues = () => {
@@ -114,7 +117,6 @@ function isConfirming(itemId: string) {
 }
 
 // COMPLEX ACTIONS
-
 const updateValue = (valueId: string, languageTag: string, e: Event) => {
   e.preventDefault();
   complexValues.find((v) => v.id === valueId)[languageTag] = e.target.innerText;
@@ -164,7 +166,6 @@ const isVisible = (field: Field) => {
       field.showForComponent.includes($form[fieldRoot][fieldIndex].component as string))
   );
 };
-
 </script>
 
 <div class="relative mx-auto w-32 rounded-lg bg-base-100">
@@ -201,18 +202,16 @@ const isVisible = (field: Field) => {
           {@const Field = getFieldComponent(field.component)}
           {#if isVisible(field) && field.component === 'ListField'}
             <Field
-              {...formProps}
               {...fieldProps}
               {languageTag}
               {fieldKey}
               {field}
               values={complexValues}
               actions={complexActions}
-              actionProps={complexActionProps}
-              />
+              actionProps={complexActionProps} />
           {:else if isVisible(field)}
             {#if field.isTranslated || isPrimaryLang(languageTag)}
-              <Field {languageTag} {fieldKey} {field} {...fieldProps} />
+              <Field {...fieldProps} {languageTag} {fieldKey} {field} />
             {:else}
               <FauxInput />
             {/if}

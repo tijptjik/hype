@@ -7,18 +7,19 @@ import ToggleField from '$lib/components/forms/fields/Toggle.svelte';
 import InputField from '$lib/components/forms/fields/Input.svelte';
 import { fade } from 'svelte/transition';
 // CONTEXT
-import { getForm } from '$lib/context/forms.svelte';
+import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
-import type { SectionProps, Feature } from '$lib/types';
+import type { SectionProps, Feature, FacetRouter } from '$lib/types';
 
 // STATE : PROPS
 let sectionProps: SectionProps = $props();
-let { fields, fieldDiscriminator, resource, entity } = sectionProps;
+let { fields, fieldDiscriminator } = sectionProps;
 
-// STATE : CONTEXT
-const { form } = getForm<Feature>(resource, entity);
+// STATE : FORM
+let { form } = sectionProps.form;
 
-console.log('form', $form);
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as FacetRouter;
 </script>
 
 <div

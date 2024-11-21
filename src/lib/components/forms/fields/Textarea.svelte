@@ -1,26 +1,28 @@
 <script lang="ts">
-import Form from 'sveltekit-superforms';
 import FormTextArea from '$lib/components/forms/elements/Textarea.svelte';
 import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
 import { getValues, updateForm, getId } from '$lib/index';
 // CONTEXT
-import { getForm } from '$lib/context/forms.svelte';
+import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
-import type { FieldPropsExtended, Resource, LanguageTag } from '$lib/types';
+import type { FieldPropsExtended, Resource, LanguageTag, EntityRouter } from '$lib/types';
 
 // STATE : PROPS
 let {
-  resource,
-  entity,
   languageTag,
   fieldRoot,
   fieldIndex,
   fieldDiscriminator,
   fieldKey,
-  field
-}: FieldPropsExtended = $props();
+  field,
+  ...fieldProps
+}: FieldPropsExtended & { fieldDiscriminator: FieldDiscriminator } = $props();
 
-let { form, constraints, errors } = getForm(resource, entity);
+// STATE : CONTEXT :: ROUTER  
+const routerState = getRouterState() as EntityRouter;
+
+// let { form, constraints, errors } = getForm(routerState.resource, routerState.entity);
+let { form, constraints, errors } = fieldProps.form;
 
 // STATE : INTERMEDIATE
 let value = $state('');

@@ -1,29 +1,40 @@
 <script lang="ts">
-import { Icon } from '@steeze-ui/svelte-icon';
-import { navItems } from '$lib/stores/navigation.svelte';
+// COMPONENTS
+import Icon from '$lib/components/common/Icon.svelte';
 import FilterInput from '$lib/components/menu/FilterInput.svelte';
-import type { ResourceNavProps } from '$lib/types';
 import NewEntityButton from '$lib/components/menu/NewEntityButton.svelte';
+// CONFIG
+import { navItems } from '$lib/stores/navigation.svelte';
+// CONTEXT
+import { getRouterState } from '$lib/context/router.svelte';
+// TYPES
+import type { ResourceRouter } from '$lib/types';
 
-// STATE : PROPS
-let { resource, entity } : ResourceNavProps = $props();
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as ResourceRouter;
 
-let title = $derived(navItems[resource].name);
+// STATE : DERIVED :: RESOURCE MODE
+let resourceMode = $derived(routerState.entity === false);
+
+// STATE : DERIVED :: TITLE
+let title = $derived(navItems[routerState.resource].name);
 </script>
 
 <header
-  class="navbar h-17.5 px-12 py-4 shadow-lg {entity
-    ? 'bg-gradient-to-r from-rose-500 to-fuchsia-800'
-    : 'bg-base-300'}">
+  class="navbar h-17.5 px-12 py-4 shadow-lg"
+  class:bg-base-300={resourceMode}
+  class:bg-gradient-to-r={!resourceMode}
+  class:from-rose-500={!resourceMode}
+  class:to-fuchsia-800={!resourceMode}>
   <div class="flex-1">
     <div class="flex items-center space-x-4">
-      <Icon src={navItems[resource].icon} class="h-6 w-6" />
+      <Icon src={navItems[routerState.resource].icon} class="h-6 w-6" />
       <h2 class="text-2xl font-semibold">{title}</h2>
     </div>
   </div>
-  <div class="flex-none flex items-center space-x-4">
-    <NewEntityButton {resource} />
+  <div class="flex flex-none items-center space-x-4">
+    <NewEntityButton />
     <div class="divider divider-horizontal"></div>
-    <FilterInput {resource} rounded={true} />
+    <FilterInput rounded={true} />
   </div>
 </header>

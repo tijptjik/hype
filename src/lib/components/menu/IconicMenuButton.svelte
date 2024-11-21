@@ -1,6 +1,6 @@
 <script lang="ts">
 import { page } from '$app/stores';
-import { Icon } from '@steeze-ui/svelte-icon';
+import Icon from '$lib/components/common/Icon.svelte';
 
 let {
   href,

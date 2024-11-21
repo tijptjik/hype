@@ -86,23 +86,25 @@ import AddressActions from '$lib/components/forms/actions/Address.svelte';
 import FeatureActions from '$lib/components/forms/actions/Feature.svelte';
 import UserActions from '$lib/components/forms/actions/User.svelte';
 // TYPES
-import type { SuperForm } from 'sveltekit-superforms';
-import type { IconSource } from '@steeze-ui/heroicons';
-import type { Component } from 'svelte';
 import type {
+  FormPath,
   InputConstraints,
-  InputConstraint,
+  TaintedFields,
+  FormPathLeaves,
+  ValidateOptions,
+  FormPathType,
+  SuperValidated,
   ValidationErrors
 } from 'sveltekit-superforms';
-import type { Writable } from 'drizzle-orm/utils';
 import type {
-  LayerForm,
-  OrganisationForm,
-  ProjectForm,
-  FeatureForm,
-  SuperFormResult
+  LayerForm as LayerFormType,
+  OrganisationForm as OrganisationFormType,
+  ProjectForm as ProjectFormType,
+  FeatureForm as FeatureFormType,
 } from './context/forms.svelte';
-import type { SuperValidated } from 'sveltekit-superforms';
+import type { IconSource } from '@steeze-ui/heroicons';
+import type { Writable } from 'drizzle-orm/utils';
+import type { enhance } from '$app/forms'
 
 // HTML
 export type InputType = 'text' | 'number' | 'email' | 'password';
@@ -659,3 +661,39 @@ export type NewTaskDB = z.infer<typeof TaskInsert>;
 export type TaskAPI = z.infer<typeof TaskUpdateAPI>;
 export type NewTaskAPI = z.infer<typeof TaskInsertAPI>;
 export type TaskPatchAPI = z.infer<typeof TaskPatch>;
+
+
+/* ----------------- */
+// FORMS
+/* -------- */
+
+export type SuperFormResult<T extends Record<string, unknown>> = {
+  form: Writable<T>;
+  enhance: typeof enhance;
+  constraints: Writable<InputConstraints<T>>;
+  validate: (
+    path: FormPathLeaves<T>,
+    // opts?: ValidateOptions<FormPathType<T, FormPathLeaves<T>>, T, Record<string, unknown>>
+    opts?: ValidateOptions<FormPathType<T, FormPathLeaves<T>>, T, Record<string, unknown>>
+  ) => Promise<string[] | undefined>;
+  // validateForm!: () => Promise<SuperValidated<Record<string, unknown>, string, Form>>;
+  validateForm: () => Promise<SuperValidated<T>>;
+  tainted: Writable<TaintedFields<T> | undefined>;
+  // isTainted!: (path?: FormPath<T> | Record<string, unknown> | boolean | undefined) => boolean;
+  isTainted: (path?: FormPath<T> | boolean | undefined) => boolean;
+  submit: (event: Event) => void;
+  reset: (options?: {
+    keepMessage?: boolean;
+    data?: Partial<T>;
+    newState?: Partial<T>;
+    id?: string;
+  }) => void;
+  errors: Writable<ValidationErrors<T>>;
+  message: Writable<string | undefined>;
+  posted: Writable<boolean>;
+};
+
+export type LayerForm = LayerFormType;
+export type OrganisationForm = OrganisationFormType;
+export type ProjectForm = ProjectFormType;
+export type FeatureForm = FeatureFormType;

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Icon } from '@steeze-ui/svelte-icon';
+import Icon from '$lib/components/common/Icon.svelte';
 import { Eye, PlusCircle } from '@steeze-ui/heroicons';
 import { formatDate } from '$lib';
 import { fade, scale } from 'svelte/transition';

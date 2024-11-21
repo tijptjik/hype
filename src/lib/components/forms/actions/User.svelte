@@ -1,17 +1,21 @@
 <script lang="ts">
-import { UserPlus, XMark } from '@steeze-ui/heroicons';
-import { Icon } from '@steeze-ui/svelte-icon';
+// COMPONENTS
+import Icon from '$lib/components/common/Icon.svelte';
 
+import { UserPlus, XMark } from '@steeze-ui/heroicons';
+// CONTEXT
+import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
-import type { FieldProps, ModalProps } from '$lib/types';
+import type { FieldProps, ModalProps, EntityRouter } from '$lib/types';
 
 // STATE : PROPS
 let {
   searchMode = $bindable(false),
-  removeMode = $bindable(false),
-  resource,
+  removeMode = $bindable(false)
 }: FieldProps & ModalProps = $props();
 
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as EntityRouter;
 
 const toggleSearch = (e: Event) => {
   e.preventDefault();
@@ -25,7 +29,7 @@ const toggleRemoveMode = (e: Event) => {
 </script>
 
 <div>
-  {#if !searchMode && resource !== 'project'}
+  {#if !searchMode && routerState.resource !== 'project'}
     <button class="btn-rounded btn btn-ghost ml-auto bg-base-100" onclick={toggleRemoveMode}>
       {#if !removeMode}
         <Icon src={UserPlus} class="mr-2 h-4 w-4" /> <span class="hidden md:block"> 

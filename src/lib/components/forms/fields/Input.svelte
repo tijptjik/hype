@@ -1,46 +1,57 @@
 <script lang="ts">
-import Form from 'sveltekit-superforms';
-import FormInput from '../elements/Input.svelte';
 import { getValues, updateForm, getId } from '$lib/index';
 // COMPONENTS
+import FormInput from '../elements/Input.svelte';
 import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
 import FieldLabel from '$lib/components/forms/labels/Field.svelte';
 // CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
+import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
-import type { FieldPropsExtended } from '$lib/types';
+import type { FieldPropsExtended, FacetRouter, FieldDiscriminator } from '$lib/types';
 
 // STATE : PROPS
 let {
-  resource,
-  entity,
   languageTag,
   fieldRoot,
   fieldIndex,
   fieldDiscriminator,
   fieldKey,
-  field
-}: FieldPropsExtended = $props();
+  field,
+  ...fieldProps
+}: FieldPropsExtended & { fieldDiscriminator: FieldDiscriminator } = $props();
+
+// STATE : FORM
+let { form, constraints, errors } = fieldProps.form;
+
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as FacetRouter;
 
 // STATE : INTERMEDIATE
 let value = $state('');
 let isGenAI = $state(false);
 
-// STATE : CONTEXT
-let { form, constraints, errors } = getForm(resource, entity);
-
 // EFFECTS
 $effect(() => {
-  ({ value, isGenAI } = getValues($form, field, languageTag, fieldRoot, fieldIndex, fieldKey));
+  ({ value, isGenAI } = getValues(
+    $form,
+    field,
+    languageTag,
+    fieldRoot,
+    fieldIndex,
+    fieldKey
+  ));
 });
 
 // STATE : DERIVED
-let id = $derived(getId(field, fieldRoot, fieldIndex, fieldDiscriminator, fieldKey, languageTag));
+let id = $derived(
+  getId(field, fieldRoot, fieldIndex, fieldDiscriminator, fieldKey, languageTag)
+);
 </script>
 
 <label class="form-control w-full" for={id} aria-label={field.label}>
   <!-- {#if fieldDiscriminator !== 'specifier'} -->
-    <FieldLabel {field} {fieldRoot} {fieldIndex} {fieldKey} {constraints} />
+  <FieldLabel {field} {fieldRoot} {fieldIndex} {fieldKey} {constraints} />
   <!-- {/if} -->
   <div
     class="flex items-center gap-2 rounded-lg border-1 border-transparent bg-neutral pl-2 pr-3 focus-within:outline focus-within:outline-1 focus-within:outline-neutral-500">
@@ -51,7 +62,16 @@ let id = $derived(getId(field, fieldRoot, fieldIndex, fieldDiscriminator, fieldK
       {languageTag}
       {...field}
       onchange={() =>
-        updateForm(form, field, languageTag, fieldRoot, fieldIndex, fieldKey, value, isGenAI)} />
+        updateForm(
+          form,
+          field,
+          languageTag,
+          fieldRoot,
+          fieldIndex,
+          fieldKey,
+          value,
+          isGenAI
+        )} />
   </div>
   <ErrorLabel {errors} {field} {languageTag} {fieldRoot} {fieldIndex} {fieldKey} />
 </label>

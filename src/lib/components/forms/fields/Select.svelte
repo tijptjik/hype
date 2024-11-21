@@ -5,23 +5,26 @@ import Select from '$lib/components/forms/elements/Select.svelte';
 import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
 import FieldLabel from '$lib/components/forms/labels/Field.svelte';
 // CONTEXT
-import { getForm } from '$lib/context/forms.svelte';
+import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
-import type { FieldPropsExtended } from '$lib/types';
+import type { FieldPropsExtended, EntityRouter, FieldDiscriminator } from '$lib/types';
 
 // STATE : PROPS
 let {
-  resource,
-  entity,
   languageTag,
   fieldRoot,
   fieldIndex,
   fieldDiscriminator,
   fieldKey,
-  field
-}: FieldPropsExtended = $props();
+  field,
+  ...fieldProps 
+}: FieldPropsExtended & { fieldDiscriminator: FieldDiscriminator } = $props();
 
-let { form, constraints, errors } = getForm(resource, entity);
+// STATE : FORM
+let { form, constraints, errors } = fieldProps.form;
+
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as EntityRouter;
 
 // STATE : INTERMEDIATE
 let value = $state('');

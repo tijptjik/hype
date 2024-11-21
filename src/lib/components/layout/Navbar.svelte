@@ -3,7 +3,7 @@ import { page } from '$app/stores';
 import * as m from '$lib/paraglide/messages.js';
 import { signIn, signOut } from '@auth/sveltekit/client';
 import { hasControlPanelAccess } from '$lib/auth/utils';
-import { Icon } from '@steeze-ui/svelte-icon';
+import Icon from '$lib/components/common/Icon.svelte';
 import { Bars3 } from '@steeze-ui/heroicons';
 import { ComputerDesktop, InboxArrowDown } from '@steeze-ui/heroicons';
 import IconicMenuButton from '$lib/components/menu/IconicMenuButton.svelte';

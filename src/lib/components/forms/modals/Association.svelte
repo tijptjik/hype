@@ -4,7 +4,7 @@ import { goto } from '$app/navigation';
 import { filteredResources, resources, appMeta } from '$lib/stores/resources.svelte';
 import { page } from '$app/stores';
 // COMPONENTS
-import { Icon } from '@steeze-ui/svelte-icon';
+import Icon from '$lib/components/common/Icon.svelte';
 import { Check } from '@steeze-ui/heroicons';
 import { navItems } from '$lib/stores/navigation.svelte';
 import FilterInput from '$lib/components/menu/FilterInput.svelte';

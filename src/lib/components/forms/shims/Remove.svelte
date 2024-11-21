@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Icon } from '@steeze-ui/svelte-icon';
+import Icon from '$lib/components/common/Icon.svelte';
 import { Trash } from '@steeze-ui/heroicons';
 
 let { onclick } = $props();

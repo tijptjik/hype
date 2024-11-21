@@ -1,7 +1,8 @@
 <script lang="ts">
-import { Icon } from '@steeze-ui/svelte-icon';
+import Icon from '$lib/components/common/Icon.svelte';
 import { ExclamationTriangle } from '@steeze-ui/heroicons';
 
+// STATE : PROPS
 let { onCancel, onAccept } = $props();
 </script>
 

@@ -19,16 +19,7 @@ import {
 import type { Writable } from 'svelte/store';
 import type { ActionResult } from '@sveltejs/kit';
 import type Form from 'sveltekit-superforms';
-import type {
-  FormPath,
-  InputConstraints,
-  TaintedFields,
-  FormPathLeaves,
-  ValidateOptions,
-  FormPathType,
-  SuperValidated,
-  ValidationErrors
-} from 'sveltekit-superforms';
+
 import type { SuperFormData } from 'sveltekit-superforms/client';
 import type {
   Organisation,
@@ -38,34 +29,9 @@ import type {
   ResourceType,
   FalsableResourceType,
   Ref,
-  EntityRouter
+  EntityRouter,
+  SuperFormResult
 } from '$lib/types';
-
-export type SuperFormResult<T extends Record<string, unknown>> = {
-  form: Writable<T>;
-  enhance: typeof enhance;
-  constraints: Writable<InputConstraints<T>>;
-  validate: (
-    path: FormPathLeaves<T>,
-    // opts?: ValidateOptions<FormPathType<T, FormPathLeaves<T>>, T, Record<string, unknown>>
-    opts?: ValidateOptions<FormPathType<T, FormPathLeaves<T>>, T, Record<string, unknown>>
-  ) => Promise<string[] | undefined>;
-  // validateForm!: () => Promise<SuperValidated<Record<string, unknown>, string, Form>>;
-  validateForm: () => Promise<SuperValidated<T>>;
-  tainted: Writable<TaintedFields<T> | undefined>;
-  // isTainted!: (path?: FormPath<T> | Record<string, unknown> | boolean | undefined) => boolean;
-  isTainted: (path?: FormPath<T> | boolean | undefined) => boolean;
-  submit: (event: Event) => void;
-  reset: (options?: {
-    keepMessage?: boolean;
-    data?: Partial<T>;
-    newState?: Partial<T>;
-    id?: string;
-  }) => void;
-  errors: Writable<ValidationErrors<T>>;
-  message: Writable<string | undefined>;
-  posted: Writable<boolean>;
-};
 
 class BaseForm<T extends Record<string, unknown>> {
   protected formResult: SuperFormResult<T>;

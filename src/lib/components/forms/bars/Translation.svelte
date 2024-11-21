@@ -1,12 +1,11 @@
 <script lang="ts">
-import { Icon } from '@steeze-ui/svelte-icon';
+import Icon from '$lib/components/common/Icon.svelte';
 import { Language } from '@steeze-ui/heroicons';
 import { getTranslation } from '$lib/api/translation';
 // CONTEXT
-import { getForm } from '$lib/context/forms.svelte';
+import { getRouterState } from '$lib/context/router.svelte';
 // Types
-import type { BarProps, FormProps } from '$lib/types';
-import SuperValidated from 'sveltekit-superforms';
+import type { BarProps, EntityRouter, Resource } from '$lib/types';
 
 // CONFIG
 const allLanguages = [
@@ -15,13 +14,12 @@ const allLanguages = [
   { code: 'zh-hans', label: 'CN' }
 ];
 
-// STATE
-const barProps: BarProps = $props();
-let { languageTag, resource, entity, fields } = barProps;
+// STATE : PROPS
+const { fields, languageTag, ...barProps }: BarProps = $props();
+let { form } = barProps.form;
 
-// STATE : CONTEXT
-const formProps: FormProps = getForm(resource, entity);
-let { form } = formProps;
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as EntityRouter;
 
 const languageOptions = $derived(allLanguages.filter((lang) => lang.code !== languageTag));
 

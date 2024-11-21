@@ -1,23 +1,27 @@
 <script lang="ts">
+// COMPONENTS
 import FormResetButton from './FormResetButton.svelte';
 import FormSubmitButton from './FormSubmitButton.svelte';
 import PublishButton from './PublishButton.svelte';
-import type { NavProps } from '$lib/types';
+// CONTEXT
+import { getRouterState } from '$lib/context/router.svelte';
+// TYPES
+import type { EntityRouter } from '$lib/types';
 
-// STATE : PROPS
-let navProps: NavProps = $props();
-let { resource } = navProps;
+let menuProps = $props();
 
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as EntityRouter;
 </script>
 
 <li>
-  <FormResetButton {...navProps} />
+  <FormResetButton {...menuProps}/>
 </li>
 <li>
-  <FormSubmitButton {...navProps} />
+  <FormSubmitButton {...menuProps} />
 </li>
-{#if resource === 'project' || resource === 'layer' || resource === 'feature'}
+{#if routerState.resource === 'project' || routerState.resource === 'layer' || routerState.resource === 'feature'}
   <li>
-    <PublishButton {...navProps} />
+    <PublishButton {...menuProps} />
   </li>
 {/if}

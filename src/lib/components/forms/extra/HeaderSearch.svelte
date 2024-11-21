@@ -1,13 +1,12 @@
 <script lang="ts">
 import { slide } from 'svelte/transition';
 import { MagnifyingGlass, XMark, ChevronRight } from '@steeze-ui/heroicons';
-import { Icon } from '@steeze-ui/svelte-icon';
+import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
-import { getForm } from '$lib/context/forms.svelte';
-import { get } from 'svelte/store';
+import { getRouterState } from '$lib/context/router.svelte';
 
 // TYPES
-import type { User, Project, Layer, ResourceType, FalsableRef } from '$lib/types';
+import type { User, Project, Layer, EntityRouter, SuperFormResult, Resource } from '$lib/types';
 
 type ResultType = User | Project | Layer;
 
@@ -17,8 +16,7 @@ type Props = {
   destination: string;
   toItem?: (item: ResultType) => object;
   itemRef?: 'id' | 'code';
-  entity: Ref;
-  resource: ResourceType;
+  form: SuperFormResult<Resource>;
 };
 
 // PROPS
@@ -32,7 +30,7 @@ let {
       role: 'member',
       user: item
     };
-    const formId = resource === 'project' ? 'projectId' : 'organisationId';
+    const formId = routerState.resource === 'project' ? 'projectId' : 'organisationId';
     newItem = {
       ...newItem,
       [formId]: $form.id
@@ -40,19 +38,21 @@ let {
     return newItem;
   },
   itemRef = 'id',
-  entity,
-  resource
+  ...barProps
 }: Props = $props();
 
+
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as EntityRouter;
+
 // STATE : CONTEXT
-const { form } = getForm(resource, entity);
+let { form } = barProps.form;
 
 // STATE
 let searchQuery = $state('');
 let searchResults = $state<ResultType[]>([]);
 
 // EVENTS
-
 const handleInputKeydown = (event: KeyboardEvent) => {
   if (event.key === 'Escape') {
     if (searchQuery === '') {

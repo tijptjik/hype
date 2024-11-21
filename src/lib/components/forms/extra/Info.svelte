@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Icon } from '@steeze-ui/svelte-icon';
+import Icon from '$lib/components/common/Icon.svelte';
 import { InformationCircle } from '@steeze-ui/heroicons';
 import { slide } from 'svelte/transition';
 // TYPES

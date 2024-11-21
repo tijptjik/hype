@@ -13,7 +13,7 @@ let {
   isTranslated = false,
   inputType = 'text',
   onchange
-}: InputProps & { onchange: (e: Event) => unknown } = $props();
+}: InputProps & { onchange: () => unknown } = $props();
 
 // SET PLACEHOLDER
 placeholder = placeholder ? placeholder : inputType === 'text' ? 'Type here' : 'Set number';

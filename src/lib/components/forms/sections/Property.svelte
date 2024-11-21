@@ -8,10 +8,11 @@ import Actions from '$lib/components/forms/actions/Custom.svelte';
 import PropertyFields from '$lib/components/forms/fields/Properties.svelte';
 // CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
-// CONFIG
+import { getRouterState } from '$lib/context/router.svelte';
+//CONFIG
 import { classifierComponentTypes, specifierComponentTypes } from '$lib/types';
 // TYPES
-import type { NewProperty, SectionProps } from '$lib/types';
+import type { SectionProps, NewProperty, FacetRouter } from '$lib/types';
 
 // CONFIG
 const fieldRoot = 'properties';
@@ -24,10 +25,13 @@ const nanoid = customAlphabet(
 
 // STATE : PROPS
 let sectionProps: SectionProps = $props();
-let { fieldDiscriminator, fields, entity, resource } = sectionProps;
+let { fieldDiscriminator, fields } = sectionProps;
 
-// STATE : CONTEXT
-const formProps = getForm(resource, entity);
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as FacetRouter;
+
+// STATE : CONTEXT :: FORM
+const formProps = getForm(routerState.resource, routerState.entity);
 let { form } = formProps;
 
 // ***

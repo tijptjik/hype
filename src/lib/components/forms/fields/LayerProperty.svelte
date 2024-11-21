@@ -1,15 +1,20 @@
 <script lang="ts">
 import { fade } from 'svelte/transition';
-import { getForm } from '$lib/context/forms.svelte';
+// CONTEXT
+import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
-import type { FieldProps } from '$lib/types';
+import type { FieldProps, FacetRouter } from '$lib/types';
 
 // STATE : PROPS
 let fieldProps: FieldProps & { propertyJoinStateKey: string } = $props();
-let { propertyJoinStateKey, fieldDiscriminator, fieldRoot, resource, entity } = fieldProps;
+let { propertyJoinStateKey, fieldDiscriminator, fieldRoot } = fieldProps;
 
 // STATE : FORM
-let { form } = getForm(resource, entity);
+let { form } = fieldProps.form;
+
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as FacetRouter;
+
 </script>
 
 <div

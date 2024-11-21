@@ -1,19 +1,18 @@
 <script lang="ts">
-import * as m from '$lib/paraglide/messages.js';
-import { CheckCircle } from '@steeze-ui/heroicons';
-import { Icon } from '@steeze-ui/svelte-icon';
+import { onMount, tick } from 'svelte';
 // CONTEXT
-import { getForm } from '$lib/context/forms.svelte';
+import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
-import type { SectionProps, Project, Layer, Feature } from '$lib/types';
+import type { EntityRouter, Project, Layer, Feature, SuperFormResult } from '$lib/types';
 
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as EntityRouter;
 
 // STATE : PROPS
-let sectionProps: SectionProps = $props();
-let { entity, resource } = sectionProps;
+let menuProps: { form: SuperFormResult<Project | Layer | Feature> } = $props();
 
-// STATE : CONTEXT
-const { form, errors } = getForm<Project | Layer | Feature>(resource, entity);
+// STATE : FORM
+let { form, errors } = menuProps.form;
 
 // STATE : UI
 let isInvalid = $state(false);
@@ -33,23 +32,28 @@ $effect(() => {
   })($errors as Record<string, unknown>);
 });
 
+// onMount(async () => await tick());
+
 const handleClick = async (e: Event) => {
   e.preventDefault();
   e.stopPropagation();
 
-  if (isLoading || !entity || entity === 'new') return;
+  if (isLoading || !routerState.entity || routerState.entity === 'new') return;
 
   isLoading = true;
 
   try {
-    const response: Response = await fetch(`/api/${resource}s/${entity}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        isPublished: !$form.isPublished,
-        publishedAt: !$form.isPublished ? new Date().toISOString() : null
-      })
-    });
+    const response: Response = await fetch(
+      `/api/${routerState.resource}s/${routerState.entity}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isPublished: !$form.isPublished,
+          publishedAt: !$form.isPublished ? new Date().toISOString() : null
+        })
+      }
+    );
 
     if (!response.ok) throw new Error('Failed to update publication state');
 
@@ -82,7 +86,7 @@ const handleClick = async (e: Event) => {
   class:btn-outline={isInvalid}
   class:btn-error={isInvalid}
   class:loading={isLoading}
-  disabled={isInvalid || isLoading || !entity || entity === 'new'}>
+  disabled={isInvalid || isLoading || !routerState.entity || routerState.entity === 'new'}>
   {#if $form.isPublished}
     Unpublish
   {:else}

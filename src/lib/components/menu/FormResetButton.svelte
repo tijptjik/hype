@@ -1,19 +1,24 @@
 <script lang="ts">
 import * as m from '$lib/paraglide/messages.js';
-import { Icon } from '@steeze-ui/svelte-icon';
+// COMPONENTS
+import Icon from '$lib/components/common/Icon.svelte';
 import { XCircle } from '@steeze-ui/heroicons';
 // CONTEXT
 import { getForm } from '$lib/context/forms.svelte';
 // TYPES
-import type { NavProps, Resource } from '$lib/types';
+import { getRouterState } from '$lib/context/router.svelte';
+import type { EntityRouter } from '$lib/types';
+
+// STATE : CONTEXT :: ROUTER
+const { resource, entity } = getRouterState() as EntityRouter;
 
 // STATE : PROPS
-let navProps: NavProps = $props();
-let { entity, resource } = navProps;
+let menuProps = $props();
 
-// STATE : CONTEXT
-const { tainted, isTainted, reset } = getForm<Resource>(resource, entity);
+// STATE : FORM
+let { tainted, isTainted, reset } = menuProps.form
 </script>
+
 <button
   class="btn {!isTainted($tainted as unknown as boolean)
     ? 'btn-disabled'

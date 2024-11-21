@@ -1,21 +1,17 @@
 <script lang="ts">
-import { getForm } from '$lib/context/forms.svelte';
 // COMPONENTS
 import Toggle from '$lib/components/forms/fields/Toggle.svelte';
-
+// CONTEXT
+import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
-import type { FieldProps, ModalProps, Feature } from '$lib/types';
+import type { FieldProps, ModalProps, Feature, EntityRouter } from '$lib/types';
 
 // STATE : PROPS
-let {
-  searchMode = $bindable(false),
-  removeMode = $bindable(false),
-  resource,
-  entity
-}: FieldProps & ModalProps = $props();
+let actionProps: FieldProps & ModalProps = $props();
+let { form } = actionProps.form;
 
-// STATE : CONTEXT
-const { form } = getForm<Feature>(resource, entity);
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as EntityRouter;
 
 // UTILS
 const onChange = (key: string) => {
@@ -28,7 +24,13 @@ const onChange = (key: string) => {
 
 <div class="flex flex-row items-center justify-between gap-2 align-baseline">
   <div class="text-sm font-light">Intangible</div>
-  <Toggle size="sm" checked={$form.isIntangible as boolean} onChange={() => onChange('isIntangible')} />
+  <Toggle
+    size="sm"
+    checked={$form.isIntangible as boolean}
+    onChange={() => onChange('isIntangible')} />
   <div class="text-ellipsis text-sm font-light">Publicly Accessible</div>
-  <Toggle size="sm" checked={$form.isVisitable as boolean} onChange={() => onChange('isVisitable')} />
+  <Toggle
+    size="sm"
+    checked={$form.isVisitable as boolean}
+    onChange={() => onChange('isVisitable')} />
 </div>

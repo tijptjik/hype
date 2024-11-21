@@ -1,17 +1,10 @@
 <script lang="ts">
-import Form from 'sveltekit-superforms';
-import type {
-  InputConstraints,
-  InputConstraint,
-  ValidationErrors,
-  FormPathLeaves
-} from 'sveltekit-superforms';
-import { Icon } from '@steeze-ui/svelte-icon';
+import Icon from '$lib/components/common/Icon.svelte';
 import { Trash } from '@steeze-ui/heroicons';
 import { scale } from 'svelte/transition';
 import { flip } from 'svelte/animate';
 // CONTEXT
-import { getForm } from '$lib/context/forms.svelte';
+import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
 import type {
   ProjectRole,
@@ -19,7 +12,8 @@ import type {
   SectionProps,
   ActionProps,
   Organisation,
-  Project
+  Project,
+  FacetRouter
 } from '$lib/types';
 
 // STATE : PROPS
@@ -32,8 +26,7 @@ let {
     searchMode: false,
     removeMode: false
   }),
-  entity,
-  resource
+  ...fieldProps
 }: SectionProps &
   ActionProps & {
     fieldRoot: keyof Resource;
@@ -42,8 +35,11 @@ let {
     checkedValue: string;
   } = $props();
 
+// STATE : CONTEXT :: ROUTER  
+const routerState = getRouterState() as FacetRouter;
+
 // CONTEXT
-const { form, validate } = getForm<Organisation | Project>(resource, entity);
+const { form, validate } = fieldProps.form;
 
 const updateUserJoinState = (userId: string, isChecked: boolean) => {
   form.update(($form) => {
@@ -103,7 +99,7 @@ const removeUser = async (e: Event, userId: string) => {
         <label
           class="label flex flex-shrink-0 flex-grow-0 flex-col items-center gap-2 pb-2 text-sm"
           style="font-variant: small-caps; font-variant-caps: small-caps;">
-          {resource === 'project' ? 'Maintainer' : 'Owner'}
+          {routerState.resource === 'project' ? 'Maintainer' : 'Owner'}
           <input
             type="checkbox"
             data-testid={`userCheckbox_${index}`}

@@ -1,44 +1,61 @@
 <script lang="ts">
-import { type ResourceType, type FilterableResourceToEntityId } from '$lib/types';
-import {
-  resources,
-  filteredResources,
-  filterTexts,
-  queryFilters
-} from '$lib/stores/resources.svelte';
+// COMPONENTS
 import { MagnifyingGlass, XMark } from '@steeze-ui/heroicons';
-import { Icon } from '@steeze-ui/svelte-icon';
+import Icon from '$lib/components/common/Icon.svelte';
+// CONTEXT
+  import {
+    resources,
+    filteredResources,
+    filterTexts,
+    queryFilters
+  } from '$lib/stores/resources.svelte';
+import { getRouterState } from '$lib/context/router.svelte';
+// TYPES
+import type {
+  ResourceRouter,
+  ResourceType,
+  FilterableResourceToEntityId,
+  EntityWithData
+} from '$lib/types';
+
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as ResourceRouter;
 
 // STATE : PROPS
 const {
-  resource,
   rounded = false
 }: {
-  resource: ResourceType;
   rounded?: boolean;
 } = $props();
 
-// CONFIG
-
+// STATE : DERIVED :: FILTERED RESOURCES
 $effect(() => {
   Object.keys(resources).forEach((resource) => {
-    const type = resource;
-    filteredResources[type as keyof typeof filteredResources] = resources[type as keyof typeof resources].filter((item) => {
+    const type = resource as ResourceType;
+    filteredResources[type] = resources[type].filter((item) => {
       return (
-        filterTexts[type as keyof typeof filterTexts] === '' ||
-        item.name.toLowerCase().includes(filterTexts[type as keyof typeof filterTexts].toLowerCase()) ||
-        item.nameShort?.toLowerCase().includes(filterTexts[type as keyof typeof filterTexts].toLowerCase()) ||
-        item.description?.toLowerCase().includes(filterTexts[type as keyof typeof filterTexts].toLowerCase()) ||
-        item.address?.toLowerCase().includes(filterTexts[type as keyof typeof filterTexts].toLowerCase()) ||
+        filterTexts[type] === '' ||
+        item.name
+          .toLowerCase()
+          .includes(filterTexts[type].toLowerCase()) ||
+        item.nameShort
+          ?.toLowerCase()
+          .includes(filterTexts[type].toLowerCase()) ||
+        item.description
+          ?.toLowerCase()
+          .includes(filterTexts[type].toLowerCase()) ||
+        item.address
+          ?.toLowerCase()
+          .includes(filterTexts[type].toLowerCase()) ||
         queryFilters[type as keyof FilterableResourceToEntityId]?.includes(item.id)
       );
-    });
+    }) as EntityWithData<typeof type>[];
   });
 });
 
 // Function to reset the input field
 function resetInput() {
-  filterTexts[resource as keyof typeof filterTexts] = '';
+  filterTexts[routerState.resource as keyof typeof filterTexts] = '';
 }
 
 // Function to handle keydown events
@@ -49,19 +66,21 @@ function handleKeydown(event: KeyboardEvent) {
 }
 </script>
 
-<div class="relative border-l-3 border-base-200 {rounded ? '' : 'flex-shrink-0'}">
+<div class="relative {rounded ? '' : 'border-l-3 border-base-200 flex-shrink-0'}">
   <input
     type="text"
     placeholder="Match name and description"
-    class="input m-0 w-full bg-neutral px-6 pr-10 text-sm focus:border-none focus:outline-none {rounded ? 'min-w-72 h-10 rounded-xl' : 'rounded-none'}"
-    bind:value={filterTexts[resource as keyof typeof filterTexts]}
+    class="input m-0 w-full bg-neutral px-6 pr-10 text-sm focus:border-none focus:outline-none {rounded
+      ? 'h-10 min-w-72 rounded-xl'
+      : 'rounded-none'}"
+    bind:value={filterTexts[routerState.resource as keyof typeof filterTexts]}
     onkeydown={handleKeydown} />
   <div class="absolute inset-y-0 right-2 flex items-center pr-3">
-    {#if filterTexts[resource as keyof typeof filterTexts]}
+    {#if filterTexts[routerState.resource as keyof typeof filterTexts]}
       <button onclick={resetInput} class="focus:outline-none">
         <Icon src={XMark} class="h-6 w-6" />
       </button>
-      {:else}
+    {:else}
       <Icon src={MagnifyingGlass} class="h-6 w-6" />
     {/if}
   </div>

@@ -1,19 +1,20 @@
 <script lang="ts">
+// COMPONENTS
+import Icon from '$lib/components/common/Icon.svelte';
 import { MagnifyingGlass, GlobeAsiaAustralia } from '@steeze-ui/heroicons';
-import { Icon } from '@steeze-ui/svelte-icon';
-import { getForm } from '$lib/context/forms.svelte';
+// CONTEXT
+import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
-import type { SectionProps, Feature } from '$lib/types';
+import type { EntityRouter, FeatureForm} from '$lib/types';
 
 // STATE : PROPS
-let {
-  entity,
-  resource,
-  actions
-}: SectionProps & { actions: Record<string, (...args: any[]) => void> } = $props();
+let { actions, ...actionProps }: { form: FeatureForm, actions: Record<string, (...args: any[]) => void> } = $props();
 
-// STATE : CONTEXT
-const { form } = getForm<Feature>(resource, entity);
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as EntityRouter;
+
+// STATE : CONTEXT :: FORM
+let { form } = actionProps.form;
 let [lng, lat] = $derived($form.geometry.coordinates);
 
 </script>

@@ -1,18 +1,22 @@
 <script lang="ts">
-import { Icon } from '@steeze-ui/svelte-icon';
+import Icon from '$lib/components/common/Icon.svelte';
 import { MapPin } from '@steeze-ui/heroicons';
 // CONTEXT
-import { getForm } from '$lib/context/forms.svelte';
+import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
-import type { Feature, SectionProps } from '$lib/types';
+import type { FeatureForm, EntityRouter } from '$lib/types';
+
+// CONFIG
+const coordinateLabels = ['Latitude', 'Longitude'];
+
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as EntityRouter;
 
 // STATE : PROPS
-let { entity, resource }: SectionProps = $props();
+let extraProps: { form: FeatureForm } = $props();
 
 // STATE : CONTEXT
-const { form } = getForm<Feature>(resource, entity);
-
-const coordinateLabels = ['Latitude', 'Longitude'];
+let { form } = extraProps.form;
 </script>
 
 <div class="flex flex-row gap-6 items-center">

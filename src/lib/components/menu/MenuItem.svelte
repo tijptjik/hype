@@ -1,9 +1,14 @@
 <script lang="ts">
 import { getRouterState } from '$lib/context/router.svelte';
 import { page } from '$app/stores';
+// TYPES
+import type { FacetType } from '$lib/types';
+
+// TYPES
+type Props = { facet: { ref: FacetType; label: string } };
 
 // PROPS
-const { facet } = $props<{ facet: { ref: string; label: string } }>();
+const { facet }: Props = $props();
 
 // STATE : CONTEXT
 const routerState = getRouterState();
@@ -17,10 +22,7 @@ const getUrl = (facet: string) => {
 
 const onclick = (e: MouseEvent) => {
   e.preventDefault();
-  const url = new URL(window.location.href);
-  url.hash = `#${facet.ref}`;
-  routerState.facet = facet.ref;
-  routerState.url = url;
+  routerState.updateWith({ facet: facet.ref });
 };
 </script>
 
@@ -33,9 +35,9 @@ const onclick = (e: MouseEvent) => {
     <span>{facet.label}</span>
     <span
       class="mt-1 h-0.25 w-full transition-colors duration-200 ease-in-out"
-      class:bg-white={routerState.facet === facet.ref || (routerState.facet === false && facet.ref === "core")}
+      class:bg-white={routerState.facet === facet.ref ||
+        (routerState.facet === false && facet.ref === 'core')}
       class:bg-transparent={routerState.facet !== facet.ref}
-      class:group-hover:bg-white={routerState.facet !== facet.ref}
-    ></span>
+      class:group-hover:bg-white={routerState.facet !== facet.ref}></span>
   </a>
 </li>
