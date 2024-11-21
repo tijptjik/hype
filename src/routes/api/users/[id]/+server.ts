@@ -26,7 +26,7 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
         memberships: true,
         projectRoles: true
       },
-      undefined,
+      params[PUBLIC_IDENTIFIER],
       undefined,
       {
         email: false,

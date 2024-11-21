@@ -6,6 +6,7 @@ import type { ParaglideLocals } from '@inlang/paraglide-sveltekit';
 // TODO Add Logging - https://jeffmcmorris.medium.com/awesome-logging-in-sveltekit-6afa29c5892c
 
 declare global {
+  let maplibregl: any;
   namespace App {
     // interface Error {}
     interface Locals {
