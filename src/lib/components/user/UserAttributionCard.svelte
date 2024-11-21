@@ -20,16 +20,24 @@ let user = $state<{
 } | null>(null);
 
 // EFFECTS : FETCH USER
-$effect(async () => {
+$effect(() => {
   if (!userId) return;
+  // Above the async part, obtain local references to necessary $state vars.
+  // This lets the Svelte compiler know these are used for this $effect.
+  const sync = { user };
 
   try {
-    const response = await fetch(`/api/users/${userId}`);
-    if (!response.ok) throw new Error('Failed to fetch user');
-    user = await response.json();
+    fetch(`/api/users/${userId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch user');
+        return res.json();
+      })
+      .then((user) => {
+        sync.user = user;
+      });
   } catch (err) {
     console.error('Error fetching user:', err);
-    user = null;
+    sync.user = null;
   }
 });
 </script>
