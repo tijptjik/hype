@@ -7,7 +7,6 @@ import Header from '$lib/components/forms/extra/Header.svelte';
 import Actions from '$lib/components/forms/actions/Custom.svelte';
 import PropertyFields from '$lib/components/forms/fields/Properties.svelte';
 // CONTEXT
-import { getForm } from '$lib/context/forms.svelte';
 import { getRouterState } from '$lib/context/router.svelte';
 //CONFIG
 import { classifierComponentTypes, specifierComponentTypes } from '$lib/types';

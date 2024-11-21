@@ -5,7 +5,6 @@ import FormInput from '../elements/Input.svelte';
 import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
 import FieldLabel from '$lib/components/forms/labels/Field.svelte';
 // CONTEXT
-import { getForm } from '$lib/context/forms.svelte';
 import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
 import type { FieldPropsExtended, FacetRouter, FieldDiscriminator } from '$lib/types';

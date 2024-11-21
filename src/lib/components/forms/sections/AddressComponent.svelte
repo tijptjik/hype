@@ -1,26 +1,28 @@
 <script lang="ts">
 import { languageTags } from '$lib';
 // CONTEXT
-import { getForm } from '$lib/context/forms.svelte';
+import { getRouterState } from '$lib/context/router.svelte';
 // COMPONENTS
 import Header from '$lib/components/forms/extra/Header.svelte';
 import DisplayField from '$lib/components/forms/fields/DisplayField.svelte';
 // TYPES
 import type {
   Feature,
-  HumanLang,
+  LanguageTag,
   SectionProps,
   FormField,
-  FormFieldNested
+  FormFieldNested,
+  EntityRouter,
+  Field
 } from '$lib/types';
 
 // CONFIG
-const columnHeaders: Record<HumanLang, string> = {
+const columnHeaders: Record<LanguageTag, string> = {
   en: 'English',
   'zh-hant': 'Trad. Chinese',
   'zh-hans': 'Simp. Chinese'
 };
-const columnColors: Record<HumanLang, string> = {
+const columnColors: Record<LanguageTag, string> = {
   en: '#E63A65',
   'zh-hant': '#C52F73',
   'zh-hans': '#A62481'
@@ -29,8 +31,13 @@ const fieldRoot: Field = 'addressProperties';
 
 // STATE : PROPS
 let sectionProps: SectionProps & { fields: FormField & FormFieldNested } = $props();
-let { resource, entity, fields } = sectionProps;
-const { form } = getForm<Feature>(resource, entity);
+let { fields } = sectionProps;
+
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as EntityRouter;
+
+// STATE : CONTEXT :: FORM
+let { form } = sectionProps.form;
 
 // Helper function to check if field is a special geocoder field
 function isGeocoderField(field: string): boolean {

@@ -1,7 +1,6 @@
 <script lang="ts">
 import { getFieldComponent, languageTags } from '$lib';
 // CONTEXT
-import { getForm } from '$lib/context/forms.svelte';
 import { getRouterState } from '$lib/context/router.svelte';
 // COMPONENTS
 import Header from '$lib/components/forms/extra/Header.svelte';

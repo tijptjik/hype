@@ -3,24 +3,26 @@ import { getValues, updateForm } from '$lib/index';
 // COMPONENTS
 import Select from '$lib/components/forms/elements/Select.svelte';
 // CONTEXT
-import { getForm } from '$lib/context/forms.svelte';
+import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
-import type { Property, FieldPropsExtended, Id, Organisation, Project, Feature } from '$lib/types';
+import type { Property, FieldPropsExtended, Id, Organisation, Project, Feature, EntityRouter } from '$lib/types';
 
 // STATE : PROPS
 let {
-  resource,
-  entity,
   languageTag,
   fieldRoot,
   fieldIndex = 0,
   fieldDiscriminator,
   fieldKey,
-  field
+  field,
+  ...fieldProps
 }: FieldPropsExtended = $props();
 
-// STATE : CONTEXT
-let { form } = getForm<Organisation | Project | Feature>(resource, entity);
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as EntityRouter;
+
+// STATE : CONTEXT :: FORM
+let { form } = fieldProps.form;
 
 // STATE : INTERMEDIATE
 let value = $state('');

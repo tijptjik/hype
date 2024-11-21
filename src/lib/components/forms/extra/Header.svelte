@@ -74,7 +74,7 @@ let getWarningMessage = () => {
       {/if}
     </div>
     {#if Stats}
-      <Stats {form} />
+      <Stats {...fieldProps} />
     {/if}
     {#if Actions}
       <div class="flex items-center gap-6">
@@ -85,10 +85,10 @@ let getWarningMessage = () => {
             bind:searchMode={actionProps.searchMode}
             bind:removeMode={actionProps.removeMode} />
         {:else if routerState.facet === 'core'}
-          <Actions {form} />
+          <Actions {...fieldProps} />
         {:else if routerState.facet === 'address'}
-          <Actions {actions} {form} />
-        {/if} -->
+          <Actions {...fieldProps} {actions} />
+        {/if}
         {#if InfoContent}
           <div class="flex items-center gap-6">
             <Info>

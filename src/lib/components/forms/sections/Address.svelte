@@ -1,6 +1,6 @@
 <script lang="ts">
 // CONTEXT
-import { getForm } from '$lib/context/forms.svelte';
+import { getRouterState } from '$lib/context/router.svelte';
 // COMPONENTS
 import Header from '$lib/components/forms/extra/Header.svelte';
 import Stats from '$lib/components/forms/extra/AddressStats.svelte';
@@ -10,12 +10,8 @@ import GeocodeBar from '$lib/components/forms/bars/Geocode.svelte';
 // TYPES
 import type {
   LanguageTag,
-  FormField,
-  ResourceType,
-  FalsableRef,
-  FalsableFacetType,
   SectionProps,
-  FormProps,
+  EntityRouter,
   Field
 } from '$lib/types';
 // DEBUG
@@ -28,6 +24,9 @@ const languageTags: LanguageTag[] = [sourceLanguageTag, 'zh-hant', 'zh-hans'];
 // STATE : PROPS
 let sectionProps: SectionProps = $props();
 const fieldRoot: Field = 'displayAddress';
+
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as EntityRouter;
 
 const actions = {
   geocode: () => {

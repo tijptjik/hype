@@ -49,21 +49,21 @@ const routerState = getRouterState() as FacetRouter;
               <div class="flex-grow">
                 {#if item?.property?.component === 'SelectField'}
                   <SelectFieldComplex
+                    {...sectionProps}
                     {fieldRoot}
                     {field}
                     fieldIndex={index}
-                    fieldKey={'propertyValueId'}
-                    {...sectionProps} />
+                    fieldKey={'propertyValueId'} />
                 {:else if item?.property?.component === 'RangeField'}
                   <RangeField
+                    {...sectionProps}
                     {fieldRoot}
                     fieldIndex={index}
                     fieldKey={'value'}
                     min={item.property.min}
                     max={item.property.max}
                     step="1"
-                    value={item.value}
-                    {...sectionProps} />
+                    value={item.value} />
                 {:else if item?.property?.component === 'ToggleField'}
                   <ToggleField
                     checked={item.value}
@@ -75,11 +75,11 @@ const routerState = getRouterState() as FacetRouter;
                     }} />
                 {:else if item?.property?.component === 'InputField'}
                   <InputField
+                    {...sectionProps}
                     {fieldRoot}
                     fieldIndex={index}
                     fieldKey={'value'}
-                    {field}
-                    {...sectionProps} />
+                    {field} />
                 {/if}
               </div>
             </div>

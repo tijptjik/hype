@@ -3,7 +3,6 @@ import * as m from '$lib/paraglide/messages.js';
 import { CheckCircle } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
-import { getForm } from '$lib/context/forms.svelte';
 import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
 import type { EntityRouter, Resource, SuperFormResult } from '$lib/types';

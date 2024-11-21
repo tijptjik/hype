@@ -1,9 +1,10 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
-import { NEW_TITLE } from '$lib';
+import { NEW_TITLE, NEW_REF } from '$lib';
 // Context
 import { getRouterState } from '$lib/context/router.svelte';
-import { setForm } from '$lib/context/forms.svelte';
+import { setForm, getForm } from '$lib/context/forms.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // Components
 import Header from '$lib/components/layout/EntityHeader.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
@@ -12,13 +13,13 @@ import LayerPropertySection from '$lib/components/forms/sections/LayerProperty.s
 import type {
   Layer,
   PageProps,
-  NavProps,
   FormField,
   FormFieldArray,
-  ResourceRouter
+  EntityRouter
 } from '$lib/types';
 
 // CONFIG
+const RESOURCE = 'layer';
 const FIELDS: Record<string, FormField | FormFieldArray> = {
   i18n: {
     name: {
@@ -59,22 +60,35 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
 };
 
 // STATE : PROPS
-let { data }: PageProps<Layer> = $props();
-let { validatedForm } = data;
+let pageProps: PageProps<Layer> = $props();
+let { validatedForm, entity } = pageProps.data;
 
-// STATE : DERIVED
-const routerState = getRouterState() as ResourceRouter;
-let title = $derived(data.validatedForm.data.name || NEW_TITLE);
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as EntityRouter;
 
-let navProps: NavProps = $derived({
-  resource: routerState.resource,
-  entity: data.entity,
-  facet: routerState.facet || 'core'
-});
+// STATE : CONTEXT :: RESOURCES
+const resourceState = getHierarchicalResourceState();
 
 // STATE : FORM
-let { enhance } = setForm<Layer>(navProps.resource, navProps.entity, validatedForm);
+let form = $state(setForm<Layer>(RESOURCE, entity, validatedForm));
+let enhance = $derived(form.enhance);
+let isNew = $state(entity === NEW_REF);
 
+$effect(() => {
+  if (isNew && title !== NEW_TITLE) {
+    form = setForm<Layer>(RESOURCE, routerState.entity, pageProps.data.validatedForm);
+    entity = routerState.entity;
+    isNew = false;
+    doRerender++;
+  } else {
+    form = getForm<Layer>(RESOURCE, entity);
+  }
+});
+
+// STATE : DERIVED :: TITLE
+let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
+
+// SYNC :: Remove parentRef from URL if it exists
 $effect(() => {
   //Remove parentRef from URL if it exists
   const url = new URL(window.location.href);
@@ -82,33 +96,36 @@ $effect(() => {
   // shallow navigation
   goto(url.toString(), { replaceState: true });
 });
+
+// SYNC :: Await immediately resolved promise to react to value change.
+const forceUpdate = async (_) => {};
+let doRerender = $state(0);
 </script>
 
-<!-- LAYOUT -->
-<div class="h-full overflow-y-auto bg-black pb-16">
-  <Header {title} {...navProps} />
-  <form method="POST" use:enhance>
-    <main class="flex flex-col gap-6 p-6">
-      {#if navProps.facet === 'core'}
-        <I18nSection title="Descriptors" fields={FIELDS.i18n as FormField} {...navProps} />
-        <div class="flex flex-row gap-6">
-          <LayerPropertySection
-            title="Classifiers"
-            subtitle="by which features can be filtered"
-            fieldDiscriminator="classifier"
-            fields={FIELDS.property as FormFieldArray}
-            {...navProps} />
-          <LayerPropertySection
-            title="Specifiers"
-            subtitle="which are displayed in feature info panels"
-            fieldDiscriminator="specifier"
-            fields={FIELDS.property as FormFieldArray}
-            {...navProps} />
-        </div>
-      {:else}
-        <h1>FACET NOT FOUND</h1>
-      {/if}
-    </main>
-  </form>
-  <!-- <SuperDebug data={FormContext.form} /> -->
-</div>
+{#await forceUpdate(doRerender) then _}
+  <!-- LAYOUT -->
+  <div class="h-full overflow-y-auto bg-black pb-16">
+    <Header {title} {form} />
+    <form method="POST" use:enhance role="form" data-testid="layerForm">
+      <main class="flex flex-col gap-6 p-6">
+        {#if routerState.facet === 'core'}
+          <I18nSection title="Descriptors" fields={FIELDS.i18n as FormField} {form} />
+          <div class="flex flex-row gap-6">
+            <LayerPropertySection
+              title="Classifiers"
+              subtitle="by which features can be filtered"
+              fieldDiscriminator="classifier"
+              fields={FIELDS.property as FormFieldArray}
+              {form} />
+            <LayerPropertySection
+              title="Specifiers"
+              subtitle="which are displayed in feature info panels"
+              fieldDiscriminator="specifier"
+              fields={FIELDS.property as FormFieldArray}
+              {form} />
+          </div>
+        {/if}
+      </main>
+    </form>
+  </div>
+{/await}

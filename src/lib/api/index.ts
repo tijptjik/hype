@@ -24,6 +24,7 @@ import type { ZodSchema } from 'zod';
 import { appMeta } from '$lib/stores/resources.svelte';
 import { projectRole, project, feature, layer } from '$lib/db/schema';
 import { and, eq } from 'drizzle-orm';
+import { NEW_REF } from '$lib';
 
 export type AccessStrategyOption =
   | 'Public'
@@ -252,10 +253,10 @@ export async function loadFormData<T extends Record<string, any>>({
   entity: string;
   validatedForm: SuperValidated<T>;
 }> {
-  const entityRef = entity || 'new';
+  const entityRef = entity || NEW_REF;
   let form;
 
-  if (entityRef === 'new') {
+  if (entityRef === NEW_REF) {
     const resourceType = refToResourceType(resourcePath) as ResourceType;
     const { parentResourceType, parentRefKey, keyToParent } = resourceConfig[resourceType];
 

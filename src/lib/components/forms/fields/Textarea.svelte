@@ -21,7 +21,7 @@ let {
 // STATE : CONTEXT :: ROUTER  
 const routerState = getRouterState() as EntityRouter;
 
-// let { form, constraints, errors } = getForm(routerState.resource, routerState.entity);
+// STATE : CONTEXT :: FORM
 let { form, constraints, errors } = fieldProps.form;
 
 // STATE : INTERMEDIATE

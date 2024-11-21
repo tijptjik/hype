@@ -1,15 +1,13 @@
 <script lang="ts">
-import { getForm } from '$lib/context/forms.svelte';
+// COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Photo } from '@steeze-ui/heroicons';
-// COMPONENTS
 import { CldImage } from 'svelte-cloudinary';
 import Dropzone from 'svelte-file-dropzone';
 // CONTEXT
 import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
-import type { Image } from '$lib/types';
-import type { EntityRouter } from '$lib/types';
+import type { SectionProps, Image, EntityRouter } from '$lib/types';
 
 // CONFIG
 const intentOrder = [
@@ -21,11 +19,15 @@ const intentOrder = [
   'undefined'
 ];
 
+// STATE : PROPS
+let sectionProps: SectionProps = $props();
+let { title } = sectionProps;
+
 // CONTEXT
 const routerState = getRouterState() as EntityRouter;
 
-// STATE : CONTEXT
-const { form } = getForm(routerState.resource, routerState.entity);
+// STATE : CONTEXT :: FORM
+let { form } = sectionProps.form;
 
 // STATE : DERIVED
 let images: Image[] = $state([]);
@@ -54,7 +56,7 @@ function handleFilesSelect(event: {
   selectedImages = [...selectedImages, ...event.detail.acceptedFiles];
   rejectedImages = [...rejectedImages, ...event.detail.fileRejections];
   // Handle file upload logic here
-  handleUpload()
+  handleUpload();
 }
 
 const handleUpload = async () => {
@@ -97,7 +99,7 @@ const handleUpload = async () => {
 
 <section class="w-full space-y-4">
   <header class="flex items-center justify-between">
-    <h3 class="text-lg font-semibold">Gallery</h3>
+    <h3 class="text-lg font-semibold">{title}</h3>
   </header>
 
   <main class="relative w-full overflow-x-auto">

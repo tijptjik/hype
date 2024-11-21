@@ -4,7 +4,6 @@ import { loadScript } from '$lib';
 import SpectralStyle from '$lib/map/style.json';
 
 // CONTEXT
-import { getForm } from '$lib/context/forms.svelte';
 import { getRouterState } from '$lib/context/router.svelte';
 import { createMapStore, MAPSTORE_CONTEXT_KEY } from '$lib/stores';
 // TYPES
@@ -20,8 +19,6 @@ let { form } = sectionProps.form;
 
 // STATE : DERIVED
 let mapEntity = $derived(routerState.entity);
-
-
 const lngLat = $derived($form.geometry?.coordinates);
 
 // STATE : CONTEXT : MAP

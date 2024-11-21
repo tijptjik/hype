@@ -15,6 +15,8 @@ const routerState = getRouterState() as EntityRouter;
 
 // STATE : CONTEXT :: FORM
 let { form } = actionProps.form;
+
+// STATE : DERIVED :: GEOMETRY
 let [lng, lat] = $derived($form.geometry.coordinates);
 
 </script>
