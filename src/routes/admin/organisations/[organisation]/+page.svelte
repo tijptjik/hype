@@ -1,11 +1,10 @@
 <script lang="ts">
-import SuperDebug from 'sveltekit-superforms';
-import { browser } from '$app/environment';
-import { onMount, onDestroy } from 'svelte';
+// CONFIG
+import { NEW_TITLE, NEW_REF } from '$lib';
 // CONTEXT
+import { setForm, getForm } from '$lib/context/forms.svelte';
 import { getRouterState } from '$lib/context/router.svelte';
-import { setForm } from '$lib/context/forms.svelte';
-import { get } from 'svelte/store';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS
 import Header from '$lib/components/layout/EntityHeader.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
@@ -13,9 +12,10 @@ import SpecificationSection from '$lib/components/forms/sections/Specification.s
 import ImageSection from '$lib/components/forms/sections/Image.svelte';
 import UserSection from '$lib/components/forms/sections/User.svelte';
 // TYPES
-import type { PageProps, FormField, Organisation, ResourceRouter, NavProps } from '$lib/types';
+import type { PageProps, FormField, Organisation, EntityRouter } from '$lib/types';
 
 // CONFIG
+const RESOURCE = 'organisation';
 const FIELDS: Record<string, FormField> = {
   i18n: {
     name: {
@@ -76,43 +76,62 @@ const FIELDS: Record<string, FormField> = {
 };
 
 // STATE : PROPS
-let { data }: PageProps<Organisation> = $props();
-let { validatedForm } = data;
+let pageProps: PageProps<Organisation> = $props();
+let { validatedForm, entity } = pageProps.data;
 
-// STATE : DERIVED
-const routerState = getRouterState() as ResourceRouter;
-let title = $derived(data.validatedForm.data.name || 'New');
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as EntityRouter;
 
-let navProps: NavProps = $derived({
-  resource: routerState.resource,
-  entity: data.entity,
-  facet: routerState.facet || 'core'
-});
+// STATE : CONTEXT :: RESOURCES
+const resourceState = getHierarchicalResourceState();
 
 // STATE : FORM
-let { enhance } = setForm<Organisation>(navProps.resource, navProps.entity, validatedForm);
+let form = $state(setForm<Organisation>(RESOURCE, entity, validatedForm));
+let enhance = $derived(form.enhance);
+let isNew = $state(entity === NEW_REF);
 
+$effect(() => {
+  if (isNew && title !== NEW_TITLE){
+    form = setForm<Organisation>(RESOURCE, routerState.entity, pageProps.data.validatedForm)
+    entity = routerState.entity;
+    isNew = false;
+    doRerender++
+  } else {
+    form = getForm<Organisation>(RESOURCE, entity);
+  }
+}); 
+
+// STATE : DERIVED :: TITLE
+let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
+
+// SYNC :: Await immediately resolved promise to react to value change.
+const forceUpdate = async (_) => {};
+let doRerender = $state(0);
 </script>
 
+{#await forceUpdate(doRerender) then _}
 <!-- LAYOUT -->
 <div class="h-full overflow-y-auto bg-black pb-16">
-  <Header {title} {...navProps} />
+  <Header {title} {form} />
   <form method="POST" use:enhance role="form" data-testid="organisationForm">
     <main class="flex flex-col gap-6 p-6">
-      {#if navProps.facet === 'core'}
-        <I18nSection title="Descriptors" fields={FIELDS.i18n} {...navProps} />
+      {#if routerState.facet === 'core'}
+        <I18nSection title="Descriptors" fields={FIELDS.i18n} {form} />
         <div class="flex flex-row gap-6">
           <UserSection
             title="Members"
             subtitle="Members can be set as Project Maintainers"
             fields={FIELDS.users}
-            {...navProps} />
-          <SpecificationSection title="Specification" fields={FIELDS.specification} {...navProps} />
+            {form} />
+          <SpecificationSection
+            title="Specification"
+            fields={FIELDS.specification}
+            {form} />
         </div>
-      {:else if navProps.facet === 'images'}
-        <ImageSection title="Image" fields={FIELDS.images} {...navProps} />
+      {:else if routerState.facet === 'images'}
+        <ImageSection title="Image" fields={FIELDS.images} {form} />
       {/if}
-      <!-- <SuperDebug data={$form} /> -->
     </main>
   </form>
 </div>
+{/await}

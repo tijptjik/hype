@@ -104,7 +104,7 @@ let actionProps = $state({
 </script>
 
 <div class="overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
-  <Header bind:actionProps {Actions} {actions} fields={fields[fieldRoot]} {...sectionProps} />
+  <Header {...sectionProps} bind:actionProps {Actions} {actions} fields={fields[fieldRoot]} />
   {#each $form[fieldRoot] as property, fieldIndex (property.id)}
     <div in:scale out:scale animate:flip={{ duration: 200 }}>
       {#if property.type === fieldDiscriminator}

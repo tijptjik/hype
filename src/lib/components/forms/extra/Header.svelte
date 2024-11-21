@@ -10,11 +10,7 @@ import Info from './Info.svelte';
 import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
 import type { Component } from 'svelte';
-import type {
-  FieldProps,
-  ActionProps,
-  EntityRouter,
-} from '$lib/types';
+import type { FieldProps, ActionProps, EntityRouter } from '$lib/types';
 
 // STATE : PROPS
 let {
@@ -78,19 +74,21 @@ let getWarningMessage = () => {
       {/if}
     </div>
     {#if Stats}
-      <Stats {form}/>
+      <Stats {form} />
     {/if}
     {#if Actions}
       <div class="flex items-center gap-6">
-        {#if routerState.resource !== 'feature'}
+        {#if routerState.resource == 'project' && routerState.facet === 'fields'}
+          <Actions bind:removeMode={actionProps.removeMode} />
+        {:else if routerState.resource !== 'feature'}
           <Actions
             bind:searchMode={actionProps.searchMode}
             bind:removeMode={actionProps.removeMode} />
         {:else if routerState.facet === 'core'}
-          <Actions {form}/>
+          <Actions {form} />
         {:else if routerState.facet === 'address'}
-          <Actions {actions} {form}/>
-        {/if}
+          <Actions {actions} {form} />
+        {/if} -->
         {#if InfoContent}
           <div class="flex items-center gap-6">
             <Info>

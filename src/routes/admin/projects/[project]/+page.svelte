@@ -1,9 +1,10 @@
 <script lang="ts">
+import { goto } from '$app/navigation';
+import { NEW_TITLE, NEW_REF } from '$lib';
 // CONTEXT
 import { getRouterState } from '$lib/context/router.svelte';
-import { setForm } from '$lib/context/forms.svelte';
-import { get } from 'svelte/store';
-import { goto } from '$app/navigation';
+import { setForm, getForm } from '$lib/context/forms.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS
 import Header from '$lib/components/layout/EntityHeader.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
@@ -14,20 +15,13 @@ import UserSection from '$lib/components/forms/sections/User.svelte';
 // CONFIG
 import { classifierComponentTypes, specifierComponentTypes } from '$lib/types';
 // TYPES
-import type { SuperValidated } from 'sveltekit-superforms';
 import type { Project } from '$lib/types';
-import type {
-  ResourceRouter,
-  FormField,
-  FormFieldArray,
-  NavProps,
-  PageProps,
-  Organisation
-} from '$lib/types';
+import type { EntityRouter, FormField, FormFieldArray, PageProps } from '$lib/types';
 
 import SuperDebug from 'sveltekit-superforms';
 
 // CONFIG
+const RESOURCE = 'project';
 const FIELDS: Record<string, FormField | FormFieldArray> = {
   i18n: {
     name: {
@@ -177,7 +171,7 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
               isArray: false,
               isNested: true,
               isTranslated: false
-            },
+            }
             // TODO: Add support for translatable specifiers
             // isTranslatable: {
             //   label: 'Translatable',
@@ -201,67 +195,87 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
 };
 
 // STATE : PROPS
-let { data }: PageProps<Organisation> = $props();
-let { validatedForm } = data;
+let pageProps: PageProps<Project> = $props();
+let { validatedForm, entity } = pageProps.data;
 
-// STATE : DERIVED
-const routerState = getRouterState() as ResourceRouter;
-let title = $derived(data.validatedForm.data.name || 'New');
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as EntityRouter;
 
-let navProps: NavProps = $derived({
-  resource: routerState.resource,
-  entity: data.entity,
-  facet: routerState.facet || 'core'
-});
+// STATE : CONTEXT :: RESOURCES
+const resourceState = getHierarchicalResourceState();
 
 // STATE : FORM
-let { enhance } = setForm<Organisation>(navProps.resource, navProps.entity, validatedForm);
+let form = $state(setForm<Project>(RESOURCE, entity, validatedForm));
+let enhance = $derived(form.enhance);
+let isNew = $state(entity === NEW_REF);
 
 $effect(() => {
-  //Remove parentRef from URL if it exists
+  if (isNew && title !== NEW_TITLE) {
+    form = setForm<Project>(RESOURCE, routerState.entity, pageProps.data.validatedForm);
+    entity = routerState.entity;
+    isNew = false;
+    doRerender++;
+  } else {
+    form = getForm<Project>(RESOURCE, entity);
+  }
+});
+
+// STATE : DERIVED :: TITLE
+let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
+
+$effect(() => {
+  resourceState.update('project', validatedForm.data);
+});
+
+// SYNC :: Remove parentRef from URL if it exists
+$effect(() => {
   const url = new URL(window.location.href);
   url.searchParams.delete('parentRef');
-  // shallow navigation
   goto(url.toString(), { replaceState: true });
-  console.log('navProps INNER', navProps);
 });
+
+// SYNC :: Await immediately resolved promise to react to value change.
+const forceUpdate = async (_) => {};
+let doRerender = $state(0);
 </script>
 
-<!-- LAYOUT -->
-<div class="h-full overflow-y-auto bg-black pb-16">
-  <Header {title} {...navProps} />
-  <form method="POST" use:enhance>
-    <main class="flex flex-col gap-6 p-6">
-      {#if navProps.facet === 'core'}
-        <I18nSection title="Descriptors" fields={FIELDS.i18n} {...navProps} />
-        <I18nSection title="Credit" fields={FIELDS.credit} {...navProps} />
-        <div class="flex flex-row gap-6">
-          <UserSection
-            title="Members with Edit Access"
-            subtitle="Maintainers have access to the review queue and can accept or reject feature changes"
-            fields={FIELDS.users}
-            {...navProps} />
-          <SpecificationSection title="Specification" fields={FIELDS.specification} {...navProps} />
-        </div>
-      {:else if navProps.facet === 'fields'}
-        <PropertySection
-          title="Categorical Fields"
-          subtitle="by which features can be filtered"
-          fields={FIELDS.config as FormFieldArray}
-          fieldDiscriminator="classifier"
-          {...navProps} />
-        <PropertySection
-          title="Freeform Fields"
-          subtitle="displayed in a feature's info panels"
-          fields={FIELDS.config as FormFieldArray}
-          fieldDiscriminator="specifier"
-          {...navProps} />
-      {:else if navProps.facet === 'images'}
-        <ImageSection title="Image" fields={FIELDS.images} {...navProps} />
-      {:else}
-        <h1>FACET NOT FOUND</h1>
-      {/if}
-    </main>
-    <!-- <SuperDebug data={$form} /> -->
-  </form>
-</div>
+{#await forceUpdate(doRerender) then _}
+  <!-- LAYOUT -->
+  <div class="h-full overflow-y-auto bg-black pb-16">
+    <Header {title} {form} />
+    <form method="POST" use:enhance role="form" data-testid="projectForm">
+      <main class="flex flex-col gap-6 p-6">
+        {#if routerState.facet === 'core'}
+          <I18nSection title="Descriptors" fields={FIELDS.i18n as FormField} {form} />
+          <I18nSection title="Credit" fields={FIELDS.credit as FormField} {form} />
+          <div class="flex flex-row gap-6">
+            <UserSection
+              title="Members with Edit Access"
+              subtitle="Maintainers have access to the review queue and can accept or reject feature changes"
+              fields={FIELDS.users as FormFieldArray}
+              {form} />
+            <SpecificationSection
+              title="Specification"
+              fields={FIELDS.specification as FormField}
+              {form} />
+          </div>
+        {:else if routerState.facet === 'fields'}
+          <PropertySection
+            title="Categorical Fields"
+            subtitle="by which features can be filtered"
+            fieldDiscriminator="classifier"
+            fields={FIELDS.config as FormFieldArray}
+            {form} />
+          <PropertySection
+            title="Freeform Fields"
+            subtitle="displayed in a feature's info panels"
+            fieldDiscriminator="specifier"
+            fields={FIELDS.config as FormFieldArray}
+            {form} />
+        {:else if routerState.facet === 'images'}
+          <ImageSection title="Image" fields={FIELDS.images as FormField} {form} />
+        {/if}
+      </main>
+    </form>
+  </div>
+{/await}
