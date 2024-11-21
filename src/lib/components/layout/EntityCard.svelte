@@ -33,6 +33,7 @@ type Props = {
 let { entity, keyMap, header, badges, content, actions }: Props = $props();
 
 const routerState = getRouterState();
+const href = $derived(`/admin/${routerState.resourcePath}/${entity[keyMap.id]}${$page.url.search}`);
 
 const onclick = (e: MouseEvent) => {
   e.preventDefault();
@@ -40,11 +41,15 @@ const onclick = (e: MouseEvent) => {
     entity: entity[keyMap.id as keyof typeof entity] as Ref,
     facet: 'core'
   });
-  goto(`/admin/${routerState.resourcePath}/${entity[keyMap.id]}${$page.url.search}`);
+  goto(href);
 };
 </script>
 
-<div class="card bg-base-100 shadow-xl">
+<a
+  {href}
+  {onclick}
+  class="card bg-base-100 shadow-xl transition-all duration-800 hover:shadow-2xl hover:shadow-primary hover:scale-[.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+>
   <!-- Header Section -->
   {#if header}
     {@render header(entity)}
@@ -96,13 +101,12 @@ const onclick = (e: MouseEvent) => {
             {/each}
           {/if}
         </div> -->
-        <a
-          href={`/admin/${routerState.resourcePath}/${entity[keyMap.id]}${$page.url.search}`}
+        <!-- <button
           {onclick}
           class="btn btn-primary">
           View Details
-        </a>
+        </button> -->
       {/if}
     </div>
   </div>
-</div>
+</a>
