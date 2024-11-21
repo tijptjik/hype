@@ -37,7 +37,8 @@ import type {
   Feature,
   ResourceType,
   FalsableResourceType,
-  Ref
+  Ref,
+  EntityRouter
 } from '$lib/types';
 
 export type SuperFormResult<T extends Record<string, unknown>> = {
@@ -210,6 +211,10 @@ export function setForm<T extends Organisation | Project | Layer | Feature>(
   entity: Ref,
   form: SuperValidated<T>
 ): SuperFormResult<T> {
+  if (!entity) {
+    console.trace();
+    throw new Error('Entity is required');
+  }
   let FormClass;
   switch (resourceType) {
     case 'organisation':
@@ -232,8 +237,10 @@ export function setForm<T extends Organisation | Project | Layer | Feature>(
 }
 
 export function getForm<T extends Organisation | Project | Layer | Feature>(
-  resourceType: ResourceType,
+  resource: ResourceType,
   entity: Ref
 ): SuperFormResult<T> {
-  return getContext<SuperFormResult<T>>(getContextRef(resourceType, entity));
+  return getContext<SuperFormResult<T>>(
+    getContextRef(resource, entity)
+  );
 }
