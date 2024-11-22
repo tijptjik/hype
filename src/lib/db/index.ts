@@ -353,9 +353,9 @@ export async function hierarchicalResourceQuery<usersT extends Table, translatio
   ];
 
   if (filters) {
-    const filterConditions = Object.entries(filters).map(([column, value]) => 
-      eq(table[column], value)
-    );
+    const filterConditions = Object.entries(filters).map(([column, value]) => {
+      return eq(table[column], value);
+    });
     conditions.push(...filterConditions);
   }
 
@@ -562,9 +562,9 @@ export async function updatePartial<T extends Table>(
 export default client;
 
 // Helper function to validate column names against a table
-export function validateTableColumns(table: Table, columns: string[]): { valid: boolean; invalidColumns: string[] } {
+export function validateTableColumns(table: Table, columns: string[], exclude: string[] = []): { valid: boolean; invalidColumns: string[] } {
   const tableColumns = Object.keys(table);
-  const invalidColumns = columns.filter(col => !tableColumns.includes(col));
+  const invalidColumns = columns.filter(col => !tableColumns.includes(col) && !exclude.includes(col));
   return {
     valid: invalidColumns.length === 0,
     invalidColumns

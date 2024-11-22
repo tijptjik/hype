@@ -1,8 +1,8 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
-import { getDatabaseOrError, JSONResponseOrError, SuperFormResponse } from '$lib/api';
+import { getDatabaseOrError, isValidQueryParamsOrError, JSONResponseOrError, SuperFormResponse } from '$lib/api';
 import { superValidate, type SuperValidated } from 'sveltekit-superforms';
 // DB
-import { hierarchicalResourceQuery, validateTableColumns } from '$lib/db';
+import { hierarchicalResourceQuery } from '$lib/db';
 import { projectRole, layerI18n, layer } from '$lib/db/schema';
 import {
   createLayer,
@@ -32,18 +32,8 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
   );
 
   try {
-    const queryParams = Object.fromEntries(
-      Array.from(url.searchParams.entries()).filter(([key]) => 
-        !['organisation', 'project'].includes(key)
-      )
-    );
-
-    if (Object.keys(queryParams).length > 0) {
-      const { valid, invalidColumns } = validateTableColumns(layer, Object.keys(queryParams));
-      if (!valid) {
-        return error(400, `Invalid filter fields: ${invalidColumns.join(', ')}`);
-      }
-    }
+    // Validate query parameters, or return 400
+    const queryParams = isValidQueryParamsOrError(layer, url);
 
     const result = await hierarchicalResourceQuery(
       db,

@@ -224,7 +224,7 @@ $effect(() => {
 let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
 
 $effect(() => {
-  resourceState.update('project', validatedForm.data);
+  resourceState.update('project', pageProps.data.validatedForm.data);
 });
 
 // SYNC :: Remove parentRef from URL if it exists

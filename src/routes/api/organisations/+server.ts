@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { actionResult, superValidate, type SuperValidated } from 'sveltekit-superforms';
-import { getDatabaseOrError, JSONResponseOrError, SuperFormResponse } from '$lib/api';
+import { getDatabaseOrError, isValidQueryParamsOrError, JSONResponseOrError, PRISM_PARAMETERS, SuperFormResponse } from '$lib/api';
 // DB
 import { hierarchicalResourceQuery, toNestedTranslations, validateTableColumns } from '$lib/db';
 import { organisationRole, organisationI18n, organisation } from '$lib/db/schema';
@@ -10,7 +10,7 @@ import {
   createUserRoles,
   extractEntitiesToInsert
 } from '$lib/db/services/organisation';
-import { isFieldUnique } from '$lib/db';
+import { isFieldUnique, getQueryParamsWithoutPrism } from '$lib/api';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
 import { OrganisationInsertAPI, OrganisationUpdateAPI } from '$lib/db/zod';
@@ -32,14 +32,8 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
   );
 
   try {
-    const queryParams = Object.fromEntries(Array.from(url.searchParams.entries()));
-
-    if (Object.keys(queryParams).length > 0) {
-      const { valid, invalidColumns } = validateTableColumns(organisation, Object.keys(queryParams));
-      if (!valid) {
-        return error(400, `Invalid filter fields: ${invalidColumns.join(', ')}`);
-      }
-    }
+    // Validate query parameters, or return 400
+    const queryParams = isValidQueryParamsOrError(organisation, url);
 
     const result = await hierarchicalResourceQuery(
       db,

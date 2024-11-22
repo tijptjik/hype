@@ -1,6 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import { actionResult } from 'sveltekit-superforms';
-import client, { toNestedTranslations } from '$lib/db';
+import client, { toNestedTranslations, validateTableColumns } from '$lib/db';
 import { getUserRoles } from '$lib/auth/utils';
 import { superValidate } from 'sveltekit-superforms';
 // ZOD
@@ -22,7 +22,7 @@ import type {
 import type { UserRole } from '$lib/auth/utils';
 import type { ZodSchema } from 'zod';
 import { appMeta } from '$lib/stores/resources.svelte';
-import { projectRole, project, feature, layer } from '$lib/db/schema';
+import { projectRole, project, feature, layer, organisation } from '$lib/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { NEW_REF } from '$lib';
 
@@ -365,3 +365,27 @@ function mergeProjectProperties(layer: Layer, properties: Property[]): Layer {
   });
   return layer;
 }
+
+export const PRISM_PARAMETERS = ['organisation', 'project', 'layer'];
+
+export const getQueryParamsWithoutPrism = (url: URL) => {
+  // Get all query parameters except the known prism parameters
+  return Object.fromEntries(
+    Array.from(url.searchParams.entries()).filter(([key]) => 
+      !PRISM_PARAMETERS.includes(key)
+    )
+  );
+};
+
+export const isValidQueryParamsOrError = (table: any, url: URL) => {
+  const queryParams = getQueryParamsWithoutPrism(url);
+  const queryParamsKeys = Object.keys(queryParams);
+  if (queryParamsKeys.length > 0) {
+    const { valid, invalidColumns } = validateTableColumns(table, Object.keys(queryParams));
+    if (!valid) {
+      return error(400, `Invalid filter fields: ${invalidColumns.join(', ')}`);
+    }
+  }
+
+  return queryParams;
+};

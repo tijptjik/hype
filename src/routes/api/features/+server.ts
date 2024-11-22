@@ -1,9 +1,9 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
 import { superValidate, type SuperValidated } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
-import { getDatabaseOrError, JSONResponseOrError, SuperFormResponse } from '$lib/api';
+import { getDatabaseOrError, isValidQueryParamsOrError, JSONResponseOrError, SuperFormResponse } from '$lib/api';
 // DB
-import { hierarchicalResourceQuery, validateTableColumns } from '$lib/db';
+import { hierarchicalResourceQuery } from '$lib/db';
 import { feature, projectRole } from '$lib/db/schema';
 import { createFeature, extractEntitiesToInsert, rebuildFormData } from '$lib/db/services/feature';
 // ZOD
@@ -25,20 +25,8 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
   );
 
   try {
-    // Get all query parameters except the known prism parameters
-    const queryParams = Object.fromEntries(
-      Array.from(url.searchParams.entries()).filter(([key]) => 
-        !['organisation', 'project', 'layer'].includes(key)
-      )
-    );
-
-    // Validate column names if query parameters exist
-    if (Object.keys(queryParams).length > 0) {
-      const { valid, invalidColumns } = validateTableColumns(feature, Object.keys(queryParams));
-      if (!valid) {
-        return error(400, `Invalid filter fields: ${invalidColumns.join(', ')}`);
-      }
-    }
+    // Validate query parameters, or return 400
+    const queryParams = isValidQueryParamsOrError(feature, url);
 
     const result = await hierarchicalResourceQuery(
       db,
