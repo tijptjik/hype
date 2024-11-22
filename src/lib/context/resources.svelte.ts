@@ -1,12 +1,5 @@
 import { getContext, setContext } from 'svelte';
-import type { Organisation, Project, Layer, Feature, Id, ResourceType, Ref } from '../types';
-
-type ResourceState = {
-  organisation: Organisation | null;
-  project: Project | null;
-  layer: Layer | null;
-  feature: Feature | null;
-};
+import type { Organisation, Project, Layer, Feature, Id, ResourceType, Ref, ResourceState, ParentEntity, ResourceTypeWithParent, ResourceTypeWithChildren } from '../types';
 
 export class HierarchicalResourceState {
   state: ResourceState = $state({
@@ -15,6 +8,8 @@ export class HierarchicalResourceState {
     layer: null,
     feature: null
   });
+
+  parents: ParentEntity[] = $state([]);
 
   constructor() {}
 
@@ -75,14 +70,25 @@ export class HierarchicalResourceState {
   }
 
   // Get parent resource
-  #getParentType(resource: ResourceType): ResourceType | null {
-    const parents: Partial<Record<ResourceType, ResourceType>> = {
+  #getParentType(resource: ResourceTypeWithParent): ResourceTypeWithChildren | null {
+    const parents: Record<ResourceTypeWithParent, ResourceTypeWithChildren> = {
       feature: 'layer',
       layer: 'project',
       project: 'organisation'
     };
     return parents[resource] || null;
   }
+
+    // Get parent resource
+    #getRefKey(resource: ResourceType): string | null {
+      const parents: Partial<Record<ResourceType, string>> = {
+      organisation : 'code',
+      project: 'code',
+      layer: 'id',
+      feature: 'id'
+    };
+      return parents[resource] || null;
+    }
 
   // Get parent reference from resource
   #getParentRef(entity: Organisation | Project | Layer | Feature): string | null {
@@ -97,23 +103,21 @@ export class HierarchicalResourceState {
     resource: ResourceType,
     entity: Organisation | Project | Layer | Feature
   ) {
-    const parentType = this.#getParentType(resource);
+    const parentType = this.#getParentType(resource as ResourceTypeWithParent);
     if (!parentType) return;
 
     const parentRef = this.#getParentRef(entity);
     if (!parentRef) return;
 
-    if (!this.state[parentType]) {
-      const parentEntity = await this.#fetchEntity(parentType, parentRef);
-      if (parentEntity) {
-        this.state[parentType] = parentEntity;
-        await this.#fetchParents(parentType, parentEntity);
-      }
+    const parentEntity = await this.#fetchEntity(parentType, parentRef);
+    if (parentEntity) {
+      this.state[parentType] = parentEntity;
+      await this.#fetchParents(parentType, parentEntity);
     }
   }
 
   // Update the state with a new resource
-  async update(resource: ResourceType, entity: Organisation | Project | Layer | Feature) {
+  async update(resource: keyof ResourceState, entity: Organisation | Project | Layer | Feature) {
     const level = this.#getResourceLevel(resource);
     
     // Clear all resources below this level
@@ -124,6 +128,48 @@ export class HierarchicalResourceState {
     
     // Fetch any missing parent resources
     await this.#fetchParents(resource, entity);
+
+    this.#setEntityParents(resource as ResourceTypeWithParent);
+  }
+
+
+  // Get parent entity for current resource
+  #getEntityParent(resource: ResourceTypeWithParent, entityRef: Ref): ParentEntity | null {
+    const parentType = this.#getParentType(resource);
+    if (!parentType) return null;
+
+    return {
+      type: parentType,
+      name: this.#getEntityShortName(this.state[parentType]),
+      href: `/admin/${parentType}s/${this.state[parentType]?.[this.#getRefKey(parentType)]}`,
+      entity: this.state[parentType],
+    };
+  }
+
+  // Get all parent entities recursively
+  #setEntityParents(resource: ResourceTypeWithParent): ParentEntity[] {
+    let newParents: ParentEntity[] = [];
+    let currentResource = resource;
+
+    while (true) {
+      const parent = this.#getEntityParent(currentResource as ResourceTypeWithParent);
+      if (!parent) break;
+
+      newParents.push(parent);
+      currentResource = parent.type;
+
+      // Break if we reach organisation (top level) or if parent type is not valid
+      if (currentResource === 'organisation' || !this.#getParentType(currentResource as ResourceTypeWithParent)) break;
+    }
+
+    // Return parents from highest level to lowest level
+    this.parents = newParents.reverse();
+  }
+
+  // Get entity short name
+  #getEntityShortName(entity: Organisation | Project | Layer | null): string {
+    if (!entity) return '';
+    return 'nameShort' in entity ? (entity.nameShort as string) : (entity.name as string);
   }
 }
 
