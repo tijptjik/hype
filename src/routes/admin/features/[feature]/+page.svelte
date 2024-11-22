@@ -159,21 +159,20 @@ let doRerender = $state(0);
   <!-- LAYOUT -->
   <div class="h-full overflow-y-auto bg-black pb-16">
     <Header {title} {form} />
-    <form method="POST" use:enhance role="form" data-testid="featureForm" class="h-full">
+    <form
+      method="POST"
+      use:enhance
+      role="form"
+      data-testid="featureForm"
+      class="h-full">
       <main class="flex h-full flex-1 flex-row gap-6 bg-black p-6 pb-0 pr-3">
-        <div class="@container relative z-10 h-full flex-1 basis-1/3">
+        <div class="relative z-10 h-full flex-1 basis-1/3 @container">
           <MapSection {form} />
           <div
             class="absolute bottom-2 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex">
-            <UserAttributionCard
-              userId={get(form.form).contributorId ?? ''}
-              date={get(form.form).createdAt ?? ''}
-              type="contributor" />
-            {#if get(form.form).publisherId && get(form.form).publishedAt}
-              <UserAttributionCard
-                userId={get(form.form).publisherId ?? ''}
-                date={get(form.form).publishedAt ?? ''}
-                type="publisher" />
+            <UserAttributionCard {form} type="contributor" />
+            {#if pageProps.data.validatedForm.data.isPublished}
+              <UserAttributionCard {form} type="publisher" />
             {/if}
           </div>
         </div>

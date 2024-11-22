@@ -22,6 +22,7 @@ function onError() {
   error = true;
   loaded = true;
 }
+
 </script>
 
 <figure class="relative {className ? className : 'h-64 w-full'}">
@@ -50,7 +51,7 @@ function onError() {
   <img
     {src}
     {alt}
-    class="h-full w-full object-cover {!loaded ? 'invisible' : ''}"
+    class="object-cover {className ? className : ''} h-full w-full {!loaded ? 'invisible' : ''}"
     onload={onLoad}
     onerror={onError} />
 </figure>
