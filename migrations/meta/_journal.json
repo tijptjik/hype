@@ -36,6 +36,13 @@
       "when": 1732031781663,
       "tag": "0004_add_env_to_images",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1732277061174,
+      "tag": "0005_add_cloudinary_fields",
+      "breakpoints": true
     }
   ]
 }
