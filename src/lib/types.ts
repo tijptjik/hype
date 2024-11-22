@@ -105,12 +105,27 @@ import type {
 import type { IconSource } from '@steeze-ui/heroicons';
 import type { Writable } from 'drizzle-orm/utils';
 import type { enhance } from '$app/forms'
+import type { RouterState } from './context/router.svelte';
 
 // HTML
 export type InputType = 'text' | 'number' | 'email' | 'password';
 
 // BRANDED
 export type ResourceType = 'organisation' | 'project' | 'layer' | 'feature';
+export type ResourceTypeWithParent = 'project' | 'layer' | 'feature';
+export type ResourceTypeWithChildren = 'organisation' | 'project' | 'layer';
+export type ParentEntity = {
+  type: ResourceTypeWithChildren;
+  name: string;
+  entity: Organisation | Project | Layer;
+  href: string;
+}
+export type ResourceState = {
+  organisation: Organisation | null;
+  project: Project | null;
+  layer: Layer | null;
+  feature: Feature | null;
+};
 export type FalsableResourceType = ResourceType | false;
 export type SourceLang = 'en';
 export type TargetLang = 'zh-hant' | 'zh-hans';
@@ -158,7 +173,7 @@ export type FacetType = (typeof Facets)[number];
 export type FalsableFacetType = FacetType | false;
 export type ResourceToNavItem = Record<ResourceType, NavItem>;
 
-export type Router = {
+export type Router = RouterState & {
   resource: FalsableResourceType;
   entity: FalsableRef;
   facet: FalsableFacetType;
