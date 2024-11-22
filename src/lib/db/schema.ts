@@ -696,9 +696,22 @@ export const image = sqliteTable('image', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => nanoid(12)),
-  publicId: text('publicId').notNull(),
+  // CDN
   cdn: text('cdn', { enum: ['cloudinary'] }).default('cloudinary').notNull(),
+  // Cloudinary Cloud Name
   env: text('env', { enum: ['dg6vtsga1'] }).default('dg6vtsga1').notNull(),
+  // Cloudinary Asset ID
+  cdnId: text('cdnId'),
+  // Cloudinary Public ID
+  publicId: text('publicId').notNull(),
+  // Cloudinary Version
+  version: integer('version'),
+
+  originalFilename: text('originalFilename'),
+  originalExtension: text('originalExtension'),
+  originalWidth: integer('originalWidth'),
+  originalHeight: integer('originalHeight'),
+
   contributorId: text('contributorId')
     .references(() => user.id, { onDelete: 'set null' }),
   capturedAt: text('capturedAt')
