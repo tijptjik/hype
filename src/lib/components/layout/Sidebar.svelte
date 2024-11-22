@@ -222,7 +222,7 @@ const hasManyEntities = (resource: ResourceType): boolean =>
  * @returns {number} The count of filtered resources for the given type
  */
 const getFilteredResourceCount = (resource: ResourceType): number => {
-  if (isResourceExpanded(resource)) {
+  if (expandedState[resource]) {
     // If the resource is expanded, return the filtered resources
     return filteredResources[resource].length;
   } else {
@@ -315,9 +315,13 @@ const toEntity = (apiEntity: ApiEntity): EntityWithData<Resource> => {
   };
 };
 
-const isResourceExpanded = (resource: ResourceType) => {
-  return routerState.resource === resource || resource === 'feature';
-};
+// Replace the isResourceExpanded function with a derived object
+let expandedState = $derived<Record<ResourceType, boolean>>({
+  organisation: routerState.resource === 'organisation',
+  project: routerState.resource === 'project',
+  layer: routerState.resource === 'layer',
+  feature: true
+})
 
 const goToResource = (e: Event, resourceType: ResourceType) => {
   e.preventDefault();
@@ -330,9 +334,7 @@ const goToResource = (e: Event, resourceType: ResourceType) => {
     facet: false
   });
   // NAVIGATE
-  goto(url.toString()).then(() => {
-    goto(url.toString()).then(void 0);
-  });
+  navigate(url.toString());
 };
 
 const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
@@ -351,8 +353,12 @@ const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
     facet: facet as FacetType
   });
   // NAVIGATE
-  goto(url.toString());
+  navigate(url.toString());
 };
+
+const navigate = (url: string) => {
+  goto(url).then(() => goto(url));
+}
 </script>
 
 <!-- SNIPPETS -->
@@ -387,13 +393,6 @@ const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
   </p>
 {/snippet}
 
-<!-- DEBUG -->
-
-<!-- <pre>
-  {JSON.stringify(queryFilters, null, 2)}
-  {JSON.stringify(filteredResources['layer'], null, 2)}
-</pre> -->
-
 <!-- COMPONENT -->
 <aside
   class="flex-shrink-1 flex h-screen flex-col bg-base-300 transition-all w-{isSidebarExpanded
@@ -420,7 +419,6 @@ const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
     class="flex flex-shrink-0 flex-grow flex-col overflow-hidden border-r-2 border-base-300 p-0">
     {#each Object.entries(navItems) as [resourceType, resource]}
       {@const isFilterable = hasManyEntities(resourceType as ResourceType)}
-      {@const isSectionExpanded = isResourceExpanded(resourceType as ResourceType)}
 
       <!-- RESOURCE -->
       <div class="flex-shrink-0">
@@ -441,19 +439,19 @@ const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
       <!-- ENTITIES -->
       <div
         class="flex flex-col transition-[max-height] duration-300 ease-in-out
-        {isFilterable && isSectionExpanded ? 'flex-grow' : ''}"
+        {isFilterable && expandedState[resourceType as ResourceType] ? 'flex-grow' : ''}"
         style="max-height: {resourceType != 'feature'
           ? getMaxHeightItemsContainer(resourceType as ResourceType, isFilterable)
           : ''}">
         <!-- ENTITIES : FILTER -->
-        {#if isSidebarExpanded && isSectionExpanded && isFilterable}
+        {#if isSidebarExpanded && expandedState[resourceType as ResourceType] && isFilterable}
           <FilterInput {resourceType}/>
         {/if}
 
         <!-- ENTITIES : LIST -->
         <ul
           class="divide-y divide-base-300 bg-base-300
-          {isSectionExpanded && isFilterable
+          {expandedState[resourceType as ResourceType] && isFilterable
             ? 'h-0 flex-grow overflow-y-auto'
             : 'overflow-scroll'}">
           {#each filteredResources[resourceType as FilterableResourceType] as entity}
@@ -504,7 +502,7 @@ const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
         </ul>
 
         <!-- ITEMS : FOOTER -->
-        {#if isSidebarExpanded && isFilterable && isSectionExpanded}
+        {#if isSidebarExpanded && isFilterable && expandedState[resourceType as ResourceType]}
           <footer
             class="base-content flex w-full flex-shrink-0 flex-row justify-between border-b-1 border-base-100 px-3 py-2 text-center font-mono text-sm font-light uppercase opacity-60">
             {@render filterStat(
