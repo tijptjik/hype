@@ -1,9 +1,9 @@
 [
   {
     "id": "4Jsk5LngvFZq",
-    "code": "ghostsigns",
-    "name": "Ghost Signs",
-    "nameShort": "GhostSigns",
+    "code": "ghostmappers",
+    "name": "Ghostmappers",
+    "nameShort": "Ghostmappers",
     "description": "Summoning characters from our city's past. Documenting defunct & faded signs of Hong Kong's cityscape.",
     "url": "https://linktr.ee/hkghostsigns",
     "image": "https://generative-placeholders.glitch.me/image?width=720&height=720&style=triangles&gap=25"
@@ -12,7 +12,7 @@
     "id": "iLszdNS3w208",
     "code": "hkstreetnames",
     "name": "Hong Kong Street Names",
-    "nameShort": "HKStreetNames",
+    "nameShort": "HK Street Names",
     "description": "Hong Kong Street Names is a project that explores the history and evolution of Hong Kong's street names.",
     "url": "https://dianapang.net",
     "image": "https://generative-placeholders.glitch.me/image?width=720&height=720&style=triangles&gap=30"

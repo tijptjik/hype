@@ -6,7 +6,7 @@
     "createdAt": "2024-08-28T18:55:30.371Z",
     "modifiedAt": "2024-08-28T18:55:30.371Z",
     "name": "Ghost Signs",
-    "nameShort": "GhostSigns",
+    "nameShort": "Ghost Signs",
     "description": "Public record of Ghost Signs in Hong Kong",
     "isPublished": true
   },
@@ -17,7 +17,7 @@
     "createdAt": "2024-10-14T12:30:00.000Z",
     "modifiedAt": "2024-10-14T12:30:00.000Z",
     "name": "Building Age",
-    "nameShort": "BuildingAge",
+    "nameShort": "Building Age",
     "description": "Visualizing the age of buildings across Hong Kong",
     "isPublished": false
   },
