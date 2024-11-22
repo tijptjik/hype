@@ -1,4 +1,3 @@
-
 // DB
 import connect from '../../lib/db';
 import {
@@ -21,7 +20,9 @@ import {
   organisationI18n,
   organisationRole,
   session,
-  user
+  user,
+  image,
+  featureImage
 } from './schema';
 // ORM
 import { count, getTableName } from 'drizzle-orm';
@@ -50,6 +51,8 @@ import featureI18nJson from './data/featureI18n.json';
 import featureI18nStreetnamesJson from './data/featureI18n-streetnames.json';
 import featurePropertyJson from './data/featureProperty.json';
 import featurePropertyI18nJson from './data/featurePropertyI18n.json';
+import imagesJson from './data/images.json';
+import featureImagesJson from './data/featureImages.json';
 // TYPES
 import type { DrizzleD1Database } from 'drizzle-orm/d1/driver';
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core/table';
@@ -202,12 +205,24 @@ const seedBank = {
     data: featurePropertyJson,
     chunk: 16
   },
-  // featurePropertyI18n: {
+    // featurePropertyI18n: {
   //   name: 'FeaturePropertyI18n',
   //   table: featurePropertyI18n,
   //   data: featurePropertyI18nJson,
   //   chunk: 16
   // }
+  image: {
+    name: 'Images',
+    table: image,
+    data: imagesJson,
+    chunk: 0
+  },
+  featureImage: {
+    name: 'FeatureImages',
+    table: featureImage,
+    data: featureImagesJson,
+    chunk: 0
+  }
 };
 
 const chunkArray = <T>(array: T[], size: number): T[][] => {
