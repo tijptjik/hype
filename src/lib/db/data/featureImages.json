@@ -1,0 +1,51 @@
+[
+    {
+      "featureId": "-7dU5oH9HEYk",
+      "imageId": "UTwFkZLx9SXJ",
+      "intent": "closeUp",
+      "isPublished": 0,
+      "publishedAt": "2024-11-22T20:08:02.628Z"
+    },
+    {
+      "featureId": "-7dU5oH9HEYk",
+      "imageId": "L5tjxgH8L7vy",
+      "intent": "general",
+      "isPublished": 0,
+      "publishedAt": "2024-11-22T20:13:54.795Z"
+    },
+    {
+      "featureId": "-7dU5oH9HEYk",
+      "imageId": "bHOYD4vCzEv7",
+      "intent": "evidence",
+      "isPublished": 1,
+      "publishedAt": "2024-11-22T20:16:34.181Z"
+    },
+    {
+      "featureId": "-7dU5oH9HEYk",
+      "imageId": "0A8kf9AVFpJy",
+      "intent": "canonical",
+      "isPublished": 1,
+      "publishedAt": "2024-11-22T20:17:36.173Z"
+    },
+    {
+      "featureId": "-7dU5oH9HEYk",
+      "imageId": "-oYwyM9FZiVk",
+      "intent": "general",
+      "isPublished": 1,
+      "publishedAt": "2024-11-22T20:19:51.977Z"
+    },
+    {
+      "featureId": "-7dU5oH9HEYk",
+      "imageId": "ZfKJ5-lKduSx",
+      "intent": "general",
+      "isPublished": 0,
+      "publishedAt": "2024-11-22T20:24:24.364Z"
+    },
+    {
+      "featureId": "-7dU5oH9HEYk",
+      "imageId": "Nx1XS-1-OM1n",
+      "intent": "evidence",
+      "isPublished": 1,
+      "publishedAt": "2024-11-22T20:24:34.874Z"
+    }
+  ]
