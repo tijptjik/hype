@@ -9,7 +9,7 @@ export const POST = async ({ request }) => {
 
   try {
     const signature = cloudinary.utils.api_sign_request(
-      { timestamp },
+      { ...paramsToSign, timestamp },
       PRIVATE_CLOUDINARY_API_SECRET
     );
     return json({
