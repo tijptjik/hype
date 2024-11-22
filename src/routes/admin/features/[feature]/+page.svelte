@@ -208,7 +208,7 @@ let doRerender = $state(0);
                 title="Addressing"
                 subtitle="feature is listed under this address in the app"
                 fields={FIELDS.address as FormField & FormFieldNested} />
-            {:else if routerState.facet === 'images'}
+            {:else if routerState.facet === 'images' && !isNew}
               <GallerySection {form} title="Gallery" />
             {/if}
           </div>
