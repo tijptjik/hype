@@ -462,7 +462,6 @@ export const FeatureImageUpdateAPI = FeatureImageUpdate.extend({
   image: ImageBase.optional()
 });
 
-
 export const ImageInsertAPI = ImageInsert.extend({
   featureImages: z.array(FeatureImageInsert).optional()
 });
@@ -472,6 +471,7 @@ export const ImageUpdateAPI = ImageUpdate.extend({
 });
 
 export const ImagePatch = ImageUpdate.partial();
+
 /* ----------------- */
 // USER FEATURES
 /* -------- */

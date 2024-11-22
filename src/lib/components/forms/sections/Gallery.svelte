@@ -1,8 +1,14 @@
 <script lang="ts">
 import { fade } from 'svelte/transition';
+import { flip } from 'svelte/animate';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
-import { Photo, ChevronLeft, ChevronRight } from '@steeze-ui/heroicons';
+import {
+  Photo,
+  ChevronLeft,
+  ChevronRight,
+  ExclamationCircle
+} from '@steeze-ui/heroicons';
 import { CldImage } from 'svelte-cloudinary';
 import Dropzone from 'svelte-file-dropzone';
 import Header from '$lib/components/forms/extra/Header.svelte';
@@ -15,12 +21,12 @@ import type { SectionProps, Image, EntityRouter } from '$lib/types';
 
 // CONFIG
 const intentOrder = [
+  'undefined',
   'canonical',
   'closeUp',
   'context',
   'general',
-  'evidence',
-  'undefined'
+  'evidence'
 ];
 
 // STATE : PROPS
@@ -38,14 +44,33 @@ let { form } = sectionProps.form;
 
 // STATE : DERIVED
 let images: Image[] = $state([]);
-let selectedImages: File[] = $state([]);
 let rejectedImages: File[] = $state([]);
 
 let scrollContainer: HTMLDivElement;
 
 // Track scroll position for arrows
 let showLeftArrow = $state(false);
-let showRightArrow = $state(true);
+let showRightArrow = $state(false);
+
+// Add these types for tracking upload status
+type UploadStatus = 'uploading' | 'error' | 'done';
+type ImageUploadState = {
+  file: File;
+  status: UploadStatus;
+  retries: number;
+};
+
+// Update state
+let uploadQueue = $state<ImageUploadState[]>([]);
+
+// Add loading state
+let isLoadingImages = $state(true);
+
+let imageLoadedMap = $state<Record<string, boolean>>({});
+
+function handleImageLoad(imageId: string) {
+  imageLoadedMap[imageId] = true;
+}
 
 function handleWheel(event: WheelEvent) {
   // Prevent default only when necessary
@@ -81,7 +106,8 @@ function updateScrollArrows() {
   showLeftArrow = scrollLeft > 20;
 
   // Show right arrow if we're not at the end (with small buffer)
-  showRightArrow = scrollLeft + clientWidth < scrollWidth - 20;
+  showRightArrow =
+    scrollWidth > clientWidth && scrollLeft + clientWidth < scrollWidth - 20;
 }
 
 function handleScroll() {
@@ -103,76 +129,150 @@ function scrollTo(direction: 'left' | 'right') {
   });
 }
 
+// Add this sorting function outside of the effect
+function sortImages(images: Image[]): Image[] {
+  return images.sort((a: Image, b: Image) => {
+    // First sort by publication status
+    if (a.isPublished !== b.isPublished) {
+      return a.isPublished ? -1 : 1;
+    }
+    
+    // Then sort by intent order
+    const intentCompare = intentOrder.indexOf(a.intent) - intentOrder.indexOf(b.intent);
+    if (intentCompare !== 0) {
+      return intentCompare;
+    }
+    
+    // Finally, sort by creation date (newest first)
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+}
+
+// Update the effect to use the sorting function
 $effect(async () => {
-  const response = await fetch(`/api/images?featureId=${routerState.entity}`);
-  if (response.ok) {
-    const fetchedImages = await response.json();
-    // Sort images by intent order and publication status
-    images = fetchedImages.sort((a: Image, b: Image) => {
-      // First sort by publication status
-      if (a.isPublished !== b.isPublished) {
-        return a.isPublished ? -1 : 1;
-      }
-      // Then sort by intent order
-      return intentOrder.indexOf(a.intent) - intentOrder.indexOf(b.intent);
-    });
+  isLoadingImages = true;
+  try {
+    const response = await fetch(`/api/images?featureId=${routerState.entity}`);
+    if (response.ok) {
+      const fetchedImages = await response.json();
+      images = sortImages(fetchedImages);
+    }
+  } catch (error) {
+    console.error('Failed to load images:', error);
+  } finally {
+    isLoadingImages = false;
   }
+  updateScrollArrows();
 });
 
 function handleFilesSelect(event: {
   detail: { acceptedFiles: File[]; fileRejections: File[] };
 }) {
-  selectedImages = [...selectedImages, ...event.detail.acceptedFiles];
+  const newFiles = event.detail.acceptedFiles.map((file) => ({
+    file,
+    status: 'uploading' as UploadStatus,
+    retries: 0
+  }));
+  uploadQueue = [...uploadQueue, ...newFiles];
   rejectedImages = [...rejectedImages, ...event.detail.fileRejections];
-  // Handle file upload logic here
-  handleUpload();
+
+  // Start upload for each new file
+  newFiles.forEach((fileState) => handleUpload(fileState));
+  updateScrollArrows();
 }
 
-const handleUpload = async () => {
+// Update handleUpload to use the sorting function
+const handleUpload = async (fileState: ImageUploadState) => {
   const folder = `${resourceState.state.organisation?.code ?? 'misc'}/${resourceState.state.project?.code ?? 'misc'}/`;
 
-  const signResponse = await fetch('/api/cloudinary', {
-    method: 'POST',
-    body: JSON.stringify({ paramsToSign: { folder } })
-  });
-  const signData = await signResponse.json();
+  try {
+    const signResponse = await fetch('/api/cloudinary', {
+      method: 'POST',
+      body: JSON.stringify({ paramsToSign: { folder } })
+    });
+    const signData = await signResponse.json();
 
-  const url = `https://api.cloudinary.com/v1_1/${signData.cloudname}/auto/upload`;
-  const form = document.querySelector('form');
+    const url = `https://api.cloudinary.com/v1_1/${signData.cloudname}/auto/upload`;
+    const formData = new FormData();
 
-  const formData = new FormData();
-
-  // Append parameters to the form data. The parameters that are signed using
-  // the signing function (signuploadform) need to match these.
-  for (let i = 0; i < selectedImages.length; i++) {
-    let file = selectedImages[i];
-    formData.append('file', file);
+    formData.append('file', fileState.file);
     formData.append('api_key', signData.apikey);
     formData.append('timestamp', signData.timestamp);
     formData.append('signature', signData.signature);
     // formData.append('eager', 'c_pad,h_300,w_400|c_crop,h_200,w_260');
-    // TODO: Add to Organisation/Project folder
     formData.append('folder', folder);
 
-    fetch(url, {
+    // Upload to Cloudinary
+    const cloudinaryResponse = await fetch(url, {
       method: 'POST',
       body: formData
-    })
-      .then((response) => {
-        return response.text();
-      })
-      .then((data) => {
-        JSON.parse(data);
-      });
+    });
+    const cloudinaryData = await cloudinaryResponse.json();
+
+    // Prepare the image data for our database
+    const imageData = {
+      featureId: routerState.entity,
+      cdn: 'cloudinary' as const,
+      env: import.meta.env.VITE_CLOUDINARY_ENV as const,
+      cdnId: cloudinaryData.asset_id,
+      publicId: cloudinaryData.public_id,
+      version: cloudinaryData.version,
+      originalFilename: cloudinaryData.original_filename,
+      originalExtension: cloudinaryData.format,
+      originalWidth: cloudinaryData.width,
+      originalHeight: cloudinaryData.height,
+      capturedAt: cloudinaryData.created_at,
+      featureImages: [
+        {
+          featureId: routerState.entity,
+          intent: 'undefined',
+          isPublished: true
+        }
+      ]
+    };
+
+    // Save to our database
+    const dbResponse = await fetch('/api/images', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(imageData)
+    });
+
+    if (!dbResponse.ok) {
+      throw new Error('Failed to save image to database');
+    }
+
+    // Get the saved image data
+    const savedImage = await dbResponse.json();
+    
+    // Add the new image and resort the array
+    images = sortImages([savedImage, ...images]);
+    
+    // Remove from upload queue
+    uploadQueue = uploadQueue.filter(item => item.file !== fileState.file);
+
+  } catch (error) {
+    console.error('Failed to process image:', error);
+    // Update status to error in upload queue
+    uploadQueue = uploadQueue.map(item => 
+      item.file === fileState.file 
+        ? { ...item, status: 'error' as UploadStatus }
+        : item
+    );
   }
 };
 
-// Initial check after images load
-$effect(() => {
-  if (images.length > 0) {
-    updateScrollArrows();
-  }
-});
+// Add retry function
+function retryUpload(fileState: ImageUploadState) {
+  uploadQueue = uploadQueue.map((item) =>
+    item.file === fileState.file
+      ? { ...item, status: 'uploading' as UploadStatus, retries: item.retries + 1 }
+      : item
+  );
+  handleUpload(fileState);
+}
 </script>
 
 <div
@@ -192,36 +292,12 @@ $effect(() => {
 
     <!-- Main scroll container -->
     <div
-      class="m-4 flex gap-4 overflow-x-auto scroll-smooth rounded-xl bg-base-100 p-4"
+      class="m-4 flex min-w-0 gap-4 overflow-x-auto scroll-smooth rounded-xl bg-base-100 p-4"
       bind:this={scrollContainer}
       onwheel={handleWheel}
       onscroll={handleScroll}>
-      {#each images as image, i (image.id)}
-        {@const isFirstUnpublished =
-          i > 0 && images[i - 1].isPublished && !image.isPublished}
-
-        {#if isFirstUnpublished}
-          <div class="h-[200px] w-0.5 bg-primary"></div>
-        {/if}
-
-        <div class="relative" class:opacity-80={!image.isPublished}>
-          <CldImage
-            width="200"
-            height="200"
-            src={image.publicId}
-            alt="{image.intent} image of {$form.name}"
-            crop="fill"
-            class="rounded-lg object-cover" />
-          <div class="absolute bottom-0 left-0 right-0 flex justify-center p-2">
-            <span class="rounded bg-base-100/80 px-2 py-1 text-sm">
-              {image.intent}
-            </span>
-          </div>
-        </div>
-      {/each}
-
-      <!-- Dropzone -->
-      <div class="h-[200px] w-[200px] shrink-0">
+      <!-- Dropzone always first -->
+      <div class="h-[200px] w-[200px] flex-none">
         <Dropzone
           accept={['image/*']}
           on:drop={handleFilesSelect}
@@ -232,12 +308,131 @@ $effect(() => {
           <span class="mx-auto pb-6 text-sm">Drop images</span>
         </Dropzone>
       </div>
-      {#if selectedImages.length > 0}
-        {#each [...selectedImages].reverse() as image}
+
+      <!-- Upload queue with loading states and transitions -->
+      {#each uploadQueue as fileState (fileState.file)}
+        <div 
+          animate:flip={{ duration: 300 }} 
+          in:fade={{ duration: 200 }}
+          out:fade={{ duration: 200 }}
+          class="relative h-[200px] w-[200px] flex-none">
           <img
-            src={`${URL.createObjectURL(image)}`}
+            src={URL.createObjectURL(fileState.file)}
             alt=""
-            class="h-[200px] w-[200px] rounded-lg object-cover" />
+            class="h-full w-full rounded-lg object-cover" />
+
+          <!-- Loading overlay -->
+          {#if fileState.status === 'uploading'}
+            <div
+              class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-100/50 backdrop-blur-sm"
+              transition:fade={{ duration: 200 }}>
+              <span class="loading loading-spinner loading-md"></span>
+            </div>
+          {/if}
+
+          <!-- Error overlay -->
+          {#if fileState.status === 'error'}
+            <div
+              class="absolute inset-0 flex flex-col items-center justify-center rounded-lg bg-base-100/50 backdrop-blur-sm"
+              transition:fade={{ duration: 200 }}>
+              <Icon src={ExclamationCircle} class="h-8 w-8 text-error" />
+              <button
+                class="btn btn-error btn-sm mt-2"
+                onclick={() => retryUpload(fileState)}>
+                Retry
+              </button>
+            </div>
+          {/if}
+        </div>
+      {/each}
+
+      <!-- Loading placeholders -->
+      {#if isLoadingImages}
+        {#each Array(3) as _, i}
+          <div 
+            class="relative h-[200px] w-[200px] flex-none animate-pulse rounded-lg bg-base-200"
+            in:fade={{ duration: 200, delay: i * 100 }}>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <span class="loading loading-spinner loading-md"></span>
+            </div>
+          </div>
+        {/each}
+      {:else}
+        <!-- Published images -->
+        {#each images.filter((image) => image.isPublished) as image, i (image.id)}
+          <div
+            animate:flip={{ duration: 300 }}
+            in:fade={{ duration: 200, delay: i * 100 }}
+            out:fade={{ duration: 200 }}
+            class="relative h-[200px] w-[200px] flex-none">
+            <div class="h-full w-full">
+              {#if !imageLoadedMap[image.id]}
+                <div 
+                  class="absolute inset-0 animate-pulse rounded-lg bg-base-200"
+                  transition:fade={{ duration: 200 }}>
+                  <div class="flex h-full w-full items-center justify-center">
+                    <span class="loading loading-spinner loading-md"></span>
+                  </div>
+                </div>
+              {/if}
+              
+              <CldImage
+                width="200"
+                height="200"
+                src={image.publicId}
+                alt="{image.intent} image of {$form.name}"
+                crop="fill"
+                class="h-full w-full rounded-lg object-cover"
+                style={!imageLoadedMap[image.id] ? 'visibility: hidden;' : ''}
+                on:load={() => handleImageLoad(image.id)}
+              />
+              
+              <div class="absolute bottom-0 left-0 right-0 flex justify-center p-2">
+                <span class="rounded bg-base-100/80 px-2 py-1 text-sm backdrop-blur-sm">
+                  {image.intent}
+                </span>
+              </div>
+            </div>
+          </div>
+        {/each}
+        {#if images.filter((image) => image.isPublished).length > 0 && images.filter((image) => !image.isPublished).length > 0}
+          <div class="h-[200px] w-0.5 flex-none bg-primary"></div>
+        {/if}
+        {#each images.filter((image) => !image.isPublished) as image, i (image.id)}
+          <div
+            animate:flip={{ duration: 300 }}
+            in:fade={{ duration: 200, delay: (images.filter((image) => image.isPublished).length + i) * 100 }}
+            out:fade={{ duration: 200 }}
+            class="relative h-[200px] w-[200px] flex-none opacity-70">
+            <div class="h-full w-full">
+              {#if !imageLoadedMap[image.id]}
+                <div 
+                  class="absolute inset-0 animate-pulse rounded-lg bg-base-200"
+                  transition:fade={{ duration: 200 }}>
+                  <div class="flex h-full w-full items-center justify-center">
+                    <span class="loading loading-spinner loading-md"></span>
+                  </div>
+                </div>
+              {/if}
+
+              <CldImage
+                width="200"
+                height="200"
+                src={image.publicId}
+                alt="{image.intent} image of {$form.name}"
+                crop="fill"
+                class="h-full w-full rounded-lg object-cover"
+                style={!imageLoadedMap[image.id] ? 'visibility: hidden;' : ''}
+                on:load={() => handleImageLoad(image.id)}
+              />
+              
+              <div class="absolute bottom-0 left-0 right-0 flex justify-center p-2">
+                <span class="rounded bg-base-100/80 px-2 py-1 text-sm backdrop-blur-sm">
+                  {image.intent}
+                </span>
+              </div>
+            </div>
+          </div>
         {/each}
       {/if}
     </div>
