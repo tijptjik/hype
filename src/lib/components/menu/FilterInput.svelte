@@ -35,7 +35,7 @@ const {
 
 // Reset filter text after navigation if it's for the current resource
 afterNavigate(() => {
-  if (routerState.resource === resourceType) {
+  if (routerState.resource === resourceType && resourceType !== 'feature') {
     resetInput();
   }
 });
