@@ -164,7 +164,7 @@ describe('Organization Management', () => {
       .from(organisation)
     .where(eq(organisation.code, newOrgData.code));
     const orgs = await db.select().from(organisation);
-    console.log(orgs);
+    console.info(orgs);
     expect(org).toBeDefined();
     expect(org?.name).toBe(newOrgData.name);
 

@@ -223,6 +223,7 @@ $effect(() => {
 // STATE : DERIVED :: TITLE
 let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
 
+// SYNC :: Update resource state with current entity
 $effect(() => {
   resourceState.update('project', pageProps.data.validatedForm.data);
 });

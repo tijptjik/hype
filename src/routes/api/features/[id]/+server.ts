@@ -82,7 +82,6 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     const formData: Feature = await request.json();
     const form = (await superValidate(formData, zod(FeatureUpdateAPI))) as SuperValidated<Feature>;
 
-    // console.log('FORM ERRORS', form.errors);
     if (!form.valid) {
       return SuperFormResponse(form);
     }
@@ -91,16 +90,12 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
       form.data as Feature
     );
 
-    // console.log('FORM PROPERTIES', formProperties);
-
     // Update the base feature
     const updatedFeature = await updateFeature(
       db,
       baseFeature,
       params[PUBLIC_IDENTIFIER] as string
     );
-
-    // console.log('UPDATED FEATURE', updatedFeature);
 
     // Update translations
     const updatedTranslations = await updateTranslations(
@@ -109,8 +104,6 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
       updatedFeature.id
     );
 
-    // console.log('UPDATED TRANSLATIONS', updatedTranslations);
-
     // Update feature properties
     const updatedProperties = await updateProperties(
       db,
@@ -118,16 +111,12 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
       updatedFeature.id
     );
 
-    // console.log('UPDATED PROPERTIES', updatedProperties);
-
     // Rebuild form data with all updated entities
     const updatedForm = await rebuildFormData(
       updatedFeature,
       updatedTranslations,
       updatedProperties
     );
-
-    console.log('UPDATED FORM', updatedForm);
 
     return SuperFormResponse(updatedForm, false, false, RESOURCE_PATH, 200);
   } catch (err) {

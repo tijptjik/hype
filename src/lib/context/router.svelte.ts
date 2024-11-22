@@ -10,7 +10,7 @@ import type {
 } from '../types';
 
 export class RouterState {
-  #urlState = new SvelteURL(window.location.href);
+  #urlState = $state(new SvelteURL(window.location.href));
 
   #urlParts: string[] = $derived(
     this.#urlState.pathname
@@ -73,7 +73,10 @@ export class RouterState {
     this.update();
   }
 
-  update = (url?: URL) => {
+  update = (url?: string) => {
+    if (url) {
+      this.#urlState = new SvelteURL(url);
+    }
     let resource = this.#getResource();
     let entity = this.#getEntity();
     let facet = this.#getFacet(this.#urlState.hash);

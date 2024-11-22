@@ -104,6 +104,12 @@ $effect(() => {
 // STATE : DERIVED :: TITLE
 let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
 
+// SYNC :: Update resource state with current entity
+$effect(() => {
+  resourceState.update('organisation', pageProps.data.validatedForm.data);
+});
+
+
 // SYNC :: Await immediately resolved promise to react to value change.
 const forceUpdate = async (_) => {};
 let doRerender = $state(0);

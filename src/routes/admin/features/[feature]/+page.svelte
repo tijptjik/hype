@@ -138,6 +138,11 @@ $effect(() => {
 // STATE : DERIVED :: TITLE
 let title = $derived(pageProps.data.validatedForm.data.title || NEW_TITLE);
 
+// SYNC :: Update resource state with current entity
+$effect(() => {
+  resourceState.update('feature', pageProps.data.validatedForm.data);
+});
+
 // SYNC :: Remove parentRef from URL if it exists
 $effect(() => {
   const url = new URL(window.location.href);

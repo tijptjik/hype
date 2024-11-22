@@ -15,7 +15,7 @@ import * as schema from '$lib/db/schema';
 // const dbPath = `/home/io/code/ghostsigns/.test-dbs/test.db`;
 const dbPath = `http://127.0.0.1:8080`;
 
-console.log(`DATABASE URL: ${dbPath}`);
+console.info(`DATABASE URL: ${dbPath}`);
 
 export const db: LibSQLDatabase<typeof schema> = drizzle(dbPath
   // , { schema }
