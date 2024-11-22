@@ -136,13 +136,13 @@ function sortImages(images: Image[]): Image[] {
     if (a.isPublished !== b.isPublished) {
       return a.isPublished ? -1 : 1;
     }
-    
+
     // Then sort by intent order
     const intentCompare = intentOrder.indexOf(a.intent) - intentOrder.indexOf(b.intent);
     if (intentCompare !== 0) {
       return intentCompare;
     }
-    
+
     // Finally, sort by creation date (newest first)
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
@@ -246,20 +246,17 @@ const handleUpload = async (fileState: ImageUploadState) => {
 
     // Get the saved image data
     const savedImage = await dbResponse.json();
-    
+
     // Add the new image and resort the array
     images = sortImages([savedImage, ...images]);
-    
-    // Remove from upload queue
-    uploadQueue = uploadQueue.filter(item => item.file !== fileState.file);
 
+    // Remove from upload queue
+    uploadQueue = uploadQueue.filter((item) => item.file !== fileState.file);
   } catch (error) {
     console.error('Failed to process image:', error);
     // Update status to error in upload queue
-    uploadQueue = uploadQueue.map(item => 
-      item.file === fileState.file 
-        ? { ...item, status: 'error' as UploadStatus }
-        : item
+    uploadQueue = uploadQueue.map((item) =>
+      item.file === fileState.file ? { ...item, status: 'error' as UploadStatus } : item
     );
   }
 };
@@ -274,6 +271,41 @@ function retryUpload(fileState: ImageUploadState) {
   handleUpload(fileState);
 }
 </script>
+
+<!-- Intent label -->
+{#snippet intentLabel(intent: string)}
+  <div class="absolute bottom-0 left-0 right-0 flex justify-center p-2">
+    <span class="rounded-lg bg-base-100/80 px-3 py-[6px] text-sm backdrop-blur-sm">
+      {intent}
+    </span>
+  </div>
+{/snippet}
+
+{#snippet cloudImage(image: Image)}
+  <div class="h-full w-full">
+    {#if !imageLoadedMap[image.id]}
+      <div
+        class="absolute inset-0 animate-pulse rounded-lg bg-base-200"
+        transition:fade={{ duration: 200 }}>
+        <div class="flex h-full w-full items-center justify-center">
+          <span class="loading loading-spinner loading-md"></span>
+        </div>
+      </div>
+    {/if}
+
+    <CldImage
+      width="200"
+      height="200"
+      src={image.publicId}
+      alt="{image.intent} image of {$form.name}"
+      crop="fill"
+      class="h-full w-full rounded-lg object-cover"
+      style={!imageLoadedMap[image.id] ? 'visibility: hidden;' : ''}
+      on:load={() => handleImageLoad(image.id)} />
+
+    {@render intentLabel(image.intent)}
+  </div>
+{/snippet}
 
 <div
   class="z-10 rounded-2xl bg-gradient-to-r from-rose-500/70 to-fuchsia-800/70 p-0 @container">
@@ -311,8 +343,8 @@ function retryUpload(fileState: ImageUploadState) {
 
       <!-- Upload queue with loading states and transitions -->
       {#each uploadQueue as fileState (fileState.file)}
-        <div 
-          animate:flip={{ duration: 300 }} 
+        <div
+          animate:flip={{ duration: 300 }}
           in:fade={{ duration: 200 }}
           out:fade={{ duration: 200 }}
           class="relative h-[200px] w-[200px] flex-none">
@@ -349,7 +381,7 @@ function retryUpload(fileState: ImageUploadState) {
       <!-- Loading placeholders -->
       {#if isLoadingImages}
         {#each Array(3) as _, i}
-          <div 
+          <div
             class="relative h-[200px] w-[200px] flex-none animate-pulse rounded-lg bg-base-200"
             in:fade={{ duration: 200, delay: i * 100 }}>
             <div class="absolute inset-0 flex items-center justify-center">
@@ -365,73 +397,22 @@ function retryUpload(fileState: ImageUploadState) {
             in:fade={{ duration: 200, delay: i * 100 }}
             out:fade={{ duration: 200 }}
             class="relative h-[200px] w-[200px] flex-none">
-            <div class="h-full w-full">
-              {#if !imageLoadedMap[image.id]}
-                <div 
-                  class="absolute inset-0 animate-pulse rounded-lg bg-base-200"
-                  transition:fade={{ duration: 200 }}>
-                  <div class="flex h-full w-full items-center justify-center">
-                    <span class="loading loading-spinner loading-md"></span>
-                  </div>
-                </div>
-              {/if}
-              
-              <CldImage
-                width="200"
-                height="200"
-                src={image.publicId}
-                alt="{image.intent} image of {$form.name}"
-                crop="fill"
-                class="h-full w-full rounded-lg object-cover"
-                style={!imageLoadedMap[image.id] ? 'visibility: hidden;' : ''}
-                on:load={() => handleImageLoad(image.id)}
-              />
-              
-              <div class="absolute bottom-0 left-0 right-0 flex justify-center p-2">
-                <span class="rounded bg-base-100/80 px-2 py-1 text-sm backdrop-blur-sm">
-                  {image.intent}
-                </span>
-              </div>
-            </div>
+            {@render cloudImage(image)}
           </div>
         {/each}
         {#if images.filter((image) => image.isPublished).length > 0 && images.filter((image) => !image.isPublished).length > 0}
-          <div class="h-[200px] w-0.5 flex-none bg-primary"></div>
+          <div class="h-[200px] w-1 flex-none bg-neutral"></div>
         {/if}
         {#each images.filter((image) => !image.isPublished) as image, i (image.id)}
           <div
             animate:flip={{ duration: 300 }}
-            in:fade={{ duration: 200, delay: (images.filter((image) => image.isPublished).length + i) * 100 }}
+            in:fade={{
+              duration: 200,
+              delay: (images.filter((image) => image.isPublished).length + i) * 100
+            }}
             out:fade={{ duration: 200 }}
-            class="relative h-[200px] w-[200px] flex-none opacity-70">
-            <div class="h-full w-full">
-              {#if !imageLoadedMap[image.id]}
-                <div 
-                  class="absolute inset-0 animate-pulse rounded-lg bg-base-200"
-                  transition:fade={{ duration: 200 }}>
-                  <div class="flex h-full w-full items-center justify-center">
-                    <span class="loading loading-spinner loading-md"></span>
-                  </div>
-                </div>
-              {/if}
-
-              <CldImage
-                width="200"
-                height="200"
-                src={image.publicId}
-                alt="{image.intent} image of {$form.name}"
-                crop="fill"
-                class="h-full w-full rounded-lg object-cover"
-                style={!imageLoadedMap[image.id] ? 'visibility: hidden;' : ''}
-                on:load={() => handleImageLoad(image.id)}
-              />
-              
-              <div class="absolute bottom-0 left-0 right-0 flex justify-center p-2">
-                <span class="rounded bg-base-100/80 px-2 py-1 text-sm backdrop-blur-sm">
-                  {image.intent}
-                </span>
-              </div>
-            </div>
+            class="relative h-[200px] w-[200px] flex-none opacity-50">
+            {@render cloudImage(image)}
           </div>
         {/each}
       {/if}
