@@ -3,9 +3,10 @@ import { actionResult } from 'sveltekit-superforms';
 import client, { toNestedTranslations, validateTableColumns } from '$lib/db';
 import { getUserRoles } from '$lib/auth/utils';
 import { superValidate } from 'sveltekit-superforms';
+// ACCESS CONTROL
+import { publicAccessOptions, hierarchicalOwnOptions, hierarchicalChildrenOptions, hierarchicalGrandChildrenOptions, relationalAccessOptions } from '$lib/types';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
-import { OrganisationUpdateAPI } from '../db/zod';
 // Types
 import type { SuperValidated } from 'sveltekit-superforms';
 import type {
@@ -22,22 +23,9 @@ import type {
 import type { UserRole } from '$lib/auth/utils';
 import type { ZodSchema } from 'zod';
 import { appMeta } from '$lib/stores/resources.svelte';
-import { projectRole, project, feature, layer, organisation } from '$lib/db/schema';
-import { and, eq } from 'drizzle-orm';
 import { NEW_REF } from '$lib';
+import type { AccessStrategyOption, StatefulAccessOption } from '$lib/types';
 
-export type AccessStrategyOption =
-  | 'Public'
-  | 'SuperAdmin'
-  | 'ResourceAll'
-  | 'ResourceOwn'
-  | 'ResourceOwnChildren'
-  | 'ResourceOwnGrandChildren'
-  | 'EntityAny'
-  | 'EntityOwn'
-  | 'EntityOwnChild'
-  | 'EntityOwnGrandChild'
-  | 'Published'
 
 export const getSessionOrError = async (locals: App.Locals) => {
   const session = await locals.auth();
@@ -73,7 +61,9 @@ export const SuperFormResponse = <T extends Resource>(
   code: number = 200
 ): Response => {
   if (!validatedForm.valid) {
-    return actionResult<SuperValidated<T>, 'failure'>('failure', validatedForm, { status: 400 });
+    return actionResult<SuperValidated<T>, 'failure'>('failure', validatedForm, {
+      status: 400
+    });
   }
   if (redirect) {
     // TODO : Make the redirect more robust by passing in the entityRef
@@ -88,40 +78,59 @@ export const SuperFormResponse = <T extends Resource>(
       });
     }
   }
-  return actionResult<SuperValidated<T>, 'success'>('success', validatedForm, { status: code });
+  return actionResult<SuperValidated<T>, 'success'>('success', validatedForm, {
+    status: code
+  });
 };
 
 const checkAccessOrError = (
   userRoles: UserRole[],
-  accessStrategy: AccessStrategyOption,
+  strategy: AccessStrategyOption,
   resourceType: string = 'EVERYTHING'
 ) => {
   let hasAccess = false;
 
-  const resourceParents = {
+  const resourceOwnership = {
     layer: 'project',
     project: 'organisation',
-    feature: 'layer'
+    feature: 'layer',
+    image: 'project'
   };
 
-  if (['Public', 'SuperAdmin', 'ResourceAll', 'EntityAny', 'Published'].includes(accessStrategy)) {
+  // Check each strategy until we find one that grants access
+  if (publicAccessOptions.includes(strategy)) {
     hasAccess = true;
-  } else if (['ResourceOwn', 'EntityOwn'].includes(accessStrategy)) {
-    hasAccess = userRoles.some((role) => role.type === resourceType);
-  } else if (['ResourceOwnChildren', 'EntityOwnChild'].includes(accessStrategy)) {
-    hasAccess = userRoles.some(
-      (role) => role.type === resourceParents[resourceType as keyof typeof resourceParents]
-    );
-  } else if (['ResourceOwnGrandChildren', 'EntityOwnGrandChild'].includes(accessStrategy)) {
-    hasAccess = userRoles.some(
-      (role) =>
-        role.type ===
-        resourceParents[
-          resourceParents[
-            resourceType as keyof typeof resourceParents
-          ] as keyof typeof resourceParents
-        ]
-    );
+  } else if (hierarchicalOwnOptions.includes(strategy)) {
+    if (userRoles.some((role) => role.type === resourceType)) {
+      hasAccess = true;
+    }
+  } else if (
+    hierarchicalChildrenOptions.includes(strategy) ||
+    relationalAccessOptions.includes(strategy)
+  ) {
+    if (
+      userRoles.some(
+        (role) =>
+          role.type ===
+          resourceOwnership[resourceType as keyof typeof resourceOwnership]
+      )
+    ) {
+      hasAccess = true;
+    }
+  } else if (hierarchicalGrandChildrenOptions.includes(strategy)) {
+    if (
+      userRoles.some(
+        (role) =>
+          role.type ===
+          resourceOwnership[
+            resourceOwnership[
+              resourceType as keyof typeof resourceOwnership
+            ] as keyof typeof resourceOwnership
+          ]
+      )
+    ) {
+      hasAccess = true;
+    }
   }
 
   if (!hasAccess) {
@@ -136,56 +145,48 @@ export const getDatabaseOrError = async (
   platform: App.Platform | undefined,
   accessStrategy: AccessStrategyOption,
   resourceType?: string,
-  refId?: string
+  refId?: string,
+  checkProjectAccess?: (db: any, userId: Id, refId: Id) => Promise<{ projectId: Id; role: string|null }|undefined>,
+  checkOrganisationAccess?: (
+    db: any,
+    userId: Id,
+    refId: Id
+  ) => Promise<{ organisationId: Id; role: string }|undefined>,
+  privilegedStrategy: StatefulAccessOption | null = null
 ) => {
   // Checks whether the user is logged in
   const session = await getSessionOrError(locals);
   // Connects to the database
   const db = client(platform?.env.DB);
-
   // Gets the user's roles
   const userRoles = await getUserRoles(db, session.user.id);
 
   // TODO Add SuperAdmin to User Table
   if (session.user.superAdmin === true) {
-    // if (session.user.email === 'm@type.hk') {
     accessStrategy = 'SuperAdmin';
   }
 
-  // Special handling for image resource type
-  if (resourceType === 'image' && refId) {
-    // Get the project ID for the feature's layer
-    const projectAccess = await db
-      .select({
-        projectId: project.id,
-        role: projectRole.role
-      })
-      .from(feature)
-      .innerJoin(layer, eq(feature.layerId, layer.id))
-      .innerJoin(project, eq(layer.projectId, project.id))
-      .leftJoin(
-        projectRole,
-        and(
-          eq(projectRole.projectId, project.id),
-          eq(projectRole.userId, session.user.id)
-        )
-      )
-      .where(eq(feature.id, refId))
-      .get();
-
-    if (!projectAccess) {
-      error(404, 'Feature goes brrrr');
-    }
-
-    // If user has no role for this project and isn't SuperAdmin
-    if (projectAccess.role) {
-      // error(403, 'Insufficient permissions to access images for this feature');
-      accessStrategy = 'ResourceAll';
-    }
-  }
-
-  // Checks whether the user has access to the resource
+  // Check whether privileges should be escalated
   checkAccessOrError(userRoles, accessStrategy, resourceType);
+
+  // Handle project access check if provided
+  if (
+    accessStrategy == 'EntityFromEditableProject' ||
+    accessStrategy == 'ResourceFromEditableProject'
+  ) {
+    if (!refId || !checkProjectAccess) {
+      error(400, 'Project ID or checkProjectAccess function is required');
+    }
+    const projectAccess = await checkProjectAccess(db, session.user.id, refId);
+
+    // Upgrade access strategy if project access is found and stateful strategy is provided
+    if (projectAccess?.role && privilegedStrategy !== null) {
+      accessStrategy = privilegedStrategy;
+    } else {
+      error(404, 'ProjectAccess goes brrrr');
+    }
+    // TODO : Add Organisational checks
+  }
 
   return {
     db,
@@ -258,7 +259,8 @@ export async function loadFormData<T extends Record<string, any>>({
 
   if (entityRef === NEW_REF) {
     const resourceType = refToResourceType(resourcePath) as ResourceType;
-    const { parentResourceType, parentRefKey, keyToParent } = resourceConfig[resourceType];
+    const { parentResourceType, parentRefKey, keyToParent } =
+      resourceConfig[resourceType];
 
     if (parentResourceType && parentRefKey) {
       const parentRef = appMeta.context.parentRef;
@@ -272,7 +274,7 @@ export async function loadFormData<T extends Record<string, any>>({
 
       // First create the form with the schema
       form = (await superValidate(zod(insertSchema))) as SuperValidated<T>;
-      
+
       // Initialize the base data
       let initialData: Record<string, any> = {
         ...form.data, // Include existing form defaults
@@ -283,16 +285,22 @@ export async function loadFormData<T extends Record<string, any>>({
       // Fetch and process parent data
       const parentResponse = await fetch(`/api/${parentResourceType}s/${parentRef}`);
       if (parentResponse.ok) {
-        const parentData : ApiEntity = await parentResponse.json();
-        
+        const parentData: ApiEntity = await parentResponse.json();
+
         // Add parent ID
         initialData[keyToParent as string] = parentData.id;
 
         // Merge organization roles if this is a project
         if (resourceType === 'project') {
-          initialData = mergeOrganisationRoles(initialData as Project, parentData.userRoles);
+          initialData = mergeOrganisationRoles(
+            initialData as Project,
+            parentData.userRoles
+          );
         } else if (resourceType === 'layer') {
-          initialData = mergeProjectProperties(initialData as Layer, parentData.properties);
+          initialData = mergeProjectProperties(
+            initialData as Layer,
+            parentData.properties
+          );
         }
 
         // Update the form with the complete initial data
@@ -322,7 +330,10 @@ export async function loadFormData<T extends Record<string, any>>({
   };
 }
 
-function mergeOrganisationRoles(project: Project, userRoles: OrganisationRole[]): Project {
+function mergeOrganisationRoles(
+  project: Project,
+  userRoles: OrganisationRole[]
+): Project {
   // Get existing maintainer user IDs
   // since it's a new project, there are no existing maintainer user IDs
   const existingUserIds: Id[] = [];
@@ -353,7 +364,9 @@ function mergeProjectProperties(layer: Layer, properties: Property[]): Layer {
   properties.forEach((projectProp: Property) => {
     if (!existingPropertyIds.includes(projectProp.id)) {
       if (typeof projectProp.translations !== 'object') {
-        projectProp.translations = toNestedTranslations<PropertyI18n>(projectProp.translations);
+        projectProp.translations = toNestedTranslations<PropertyI18n>(
+          projectProp.translations
+        );
       }
       layer.properties.push({
         layerId: layer.id,
@@ -371,8 +384,8 @@ export const PRISM_PARAMETERS = ['organisation', 'project', 'layer'];
 export const getQueryParamsWithoutPrism = (url: URL) => {
   // Get all query parameters except the known prism parameters
   return Object.fromEntries(
-    Array.from(url.searchParams.entries()).filter(([key]) => 
-      !PRISM_PARAMETERS.includes(key)
+    Array.from(url.searchParams.entries()).filter(
+      ([key]) => !PRISM_PARAMETERS.includes(key)
     )
   );
 };
@@ -381,7 +394,10 @@ export const isValidQueryParamsOrError = (table: any, url: URL) => {
   const queryParams = getQueryParamsWithoutPrism(url);
   const queryParamsKeys = Object.keys(queryParams);
   if (queryParamsKeys.length > 0) {
-    const { valid, invalidColumns } = validateTableColumns(table, Object.keys(queryParams));
+    const { valid, invalidColumns } = validateTableColumns(
+      table,
+      Object.keys(queryParams)
+    );
     if (!valid) {
       return error(400, `Invalid filter fields: ${invalidColumns.join(', ')}`);
     }
