@@ -12,7 +12,6 @@ let files = $state({
 
 function handleFilesSelect(e: CustomEvent) {
   const { acceptedFiles, fileRejections } = e.detail;
-  console.log(acceptedFiles, fileRejections);
   files.accepted = [...files.accepted, ...acceptedFiles];
   files.rejected = [...files.rejected, ...fileRejections];
 }

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { fade } from 'svelte/transition';
+import { fade, blur } from 'svelte/transition';
 import { flip } from 'svelte/animate';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
@@ -37,6 +37,10 @@ const intentOrder = [
 let sectionProps: SectionProps = $props();
 let { title } = sectionProps;
 
+// DOM
+let inputElement = $state<HTMLInputElement>();
+let isFileDialogActive = $state(false);
+
 // CONTEXT
 const routerState = getRouterState() as EntityRouter;
 
@@ -47,7 +51,7 @@ const resourceState = getHierarchicalResourceState();
 let { form } = sectionProps.form;
 
 // STATE : DERIVED
-let images: Image[] = $state([]);
+let images: GetImageAPI[] = $state([]);
 let rejectedImages: File[] = $state([]);
 
 let scrollContainer: HTMLDivElement;
@@ -69,11 +73,20 @@ let uploadQueue = $state<ImageUploadState[]>([]);
 
 // Add loading state
 let isLoadingImages = $state(true);
-
 let imageLoadedMap = $state<Record<string, boolean>>({});
+let allImagesLoaded = $derived(
+  images.length > 0 && 
+  images.every(img => imageLoadedMap[img.id])
+);
+
+// Add near other state declarations
+let imagesDeleting = $state(new Set<string>());
 
 function handleImageLoad(imageId: string) {
   imageLoadedMap[imageId] = true;
+  if (allImagesLoaded) {
+    updateScrollArrows();
+  }
 }
 
 function handleWheel(event: WheelEvent) {
@@ -119,14 +132,15 @@ function handleScroll() {
 }
 
 function scrollTo(direction: 'left' | 'right') {
+  
   if (!scrollContainer) return;
-
-  const scrollAmount = 400; // Adjust this value to control scroll distance
-  const targetScroll =
-    direction === 'left'
-      ? scrollContainer.scrollLeft - scrollAmount
-      : scrollContainer.scrollLeft + scrollAmount;
-
+  
+  const scrollAmount = 600; // Width of 3 images
+  const currentScroll = scrollContainer.scrollLeft;
+  const targetScroll = direction === 'left' 
+    ? currentScroll - scrollAmount 
+    : currentScroll + scrollAmount;
+    
   scrollContainer.scrollTo({
     left: targetScroll,
     behavior: 'smooth'
@@ -155,6 +169,7 @@ function sortImages(images: GetImageAPI[]): GetImageAPI[] {
 // Update the effect to use the sorting function
 $effect(() => {
   isLoadingImages = true;
+  imageLoadedMap = {}; // Reset the loaded state when fetching new images
   fetch(`/api/images?featureId=${routerState.entity}`)
     .then((res) => res.json())
     .then((data) => sortImages(data))
@@ -162,12 +177,15 @@ $effect(() => {
       images = sortedImages;
     })
     .catch((error) => {
-    console.error('Failed to load images:', error);
+      console.error('Failed to load images:', error);
     })
     .finally(() => {
-    isLoadingImages = false;
-  updateScrollArrows();
-});
+      isLoadingImages = false;
+      // Only call updateScrollArrows here if there are no images
+      if (images.length === 0) {
+        updateScrollArrows();
+      }
+    });
 });
 
 function handleFilesSelect(event: {
@@ -178,6 +196,7 @@ function handleFilesSelect(event: {
     status: 'uploading' as UploadStatus,
     retries: 0
   }));
+  
   uploadQueue = [...uploadQueue, ...newFiles];
   rejectedImages = [...rejectedImages, ...event.detail.fileRejections];
 
@@ -228,10 +247,10 @@ const handleUpload = async (fileState: ImageUploadState) => {
       originalHeight: cloudinaryData.height,
       capturedAt: cloudinaryData.created_at,
       featureImage: {
-          featureId: routerState.entity,
-          intent: 'undefined',
-          isPublished: true
-        }
+        featureId: routerState.entity,
+        intent: 'undefined',
+        isPublished: true
+      }
     };
 
     // Save to our database
@@ -273,22 +292,96 @@ function retryUpload(fileState: ImageUploadState) {
   );
   handleUpload(fileState);
 }
+
+// ACTIONS
+let actionProps = $state({
+  searchMode: false,
+  removeMode: false
+});
+
+// Fn for opening the file dialog programmatically
+const openFileDialog = () => {
+  if (inputElement) {
+    inputElement.value = null; // TODO check if null needs to be set
+    isFileDialogActive = true;
+    inputElement.click();
+  }
+};
+
+const actions = {
+  add: () => openFileDialog(),
+  remove: (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      actionProps.removeMode = !actionProps.removeMode;
+    imagesPendingConfirmation = new Set();
+  }
+};
+
+// DELETION
+
+// Add state for deletion
+let imagesToDelete = $state<Set<string>>(new Set());
+let imagesPendingConfirmation = $state(new Set<string>());
+
+// Add deletion handlers
+function handleDelete(e: Event, image: GetImageAPI) {
+  e.preventDefault();
+  e.stopPropagation();
+  imagesPendingConfirmation = new Set(imagesPendingConfirmation).add(image.id);
+}
+
+function cancelDelete(e: Event, image: GetImageAPI) {
+  e.preventDefault();
+  e.stopPropagation();
+  const newSet = new Set(imagesPendingConfirmation);
+  newSet.delete(image.id);
+  imagesPendingConfirmation = newSet;
+}
+
+// Update the confirmDelete function
+async function confirmDelete(e: Event, image: GetImageAPI) {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  // Add to deleting set and force a UI update
+  imagesDeleting = new Set(imagesDeleting).add(image.id);
+  
+  try {
+    const response = await fetch(`/api/images/${image.id}`, {
+      method: 'DELETE'
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete image');
+    }
+
+    // Only filter images after successful deletion
+    images = images.filter((img) => img.id !== image.id);
+  } catch (error) {
+    console.error('Failed to delete image:', error);
+    // Show error toast or notification
+  } finally {
+    // Clean up both sets with new Set to ensure reactivity
+    imagesPendingConfirmation = new Set([...imagesPendingConfirmation].filter(id => id !== image.id));
+    imagesDeleting = new Set([...imagesDeleting].filter(id => id !== image.id));
+  }
+}
 </script>
 
 <!-- Intent label -->
-{#snippet intentLabel(intent: string)}
-  <div class="absolute bottom-0 left-0 right-0 flex justify-center p-2">
+{#snippet intentLabel(intent: string, idx: number)}
+  <div class="absolute bottom-0 left-0 right-0 flex justify-center p-2" transition:fade={{ duration: 200, delay: 150 + idx * 50 }}>
     <span class="rounded-lg bg-base-100/80 px-3 py-[6px] text-sm backdrop-blur-sm">
       {intent}
     </span>
   </div>
 {/snippet}
 
-{#snippet cloudImage(image: GetImageAPI)}
+{#snippet cloudImage(image: GetImageAPI, idx: number)}
   <div class="h-full w-full">
     {#if !imageLoadedMap[image.id]}
-      <div
-        class="absolute inset-0 animate-pulse rounded-lg bg-base-200"
+      <div class="absolute inset-0 animate-pulse rounded-lg bg-base-200"
         transition:fade={{ duration: 200 }}>
         <div class="flex h-full w-full items-center justify-center">
           <span class="loading loading-spinner loading-md"></span>
@@ -302,11 +395,79 @@ function retryUpload(fileState: ImageUploadState) {
       src={image.publicId}
       alt="{image.intent} image of {$form.name}"
       crop="fill"
-      class="h-full w-full rounded-lg object-cover"
+      class="h-full w-full rounded-lg object-cover text-neutral
+      {!imageLoadedMap[image.id] ? 'hidden' : 'block'}
+      {image.isPublished ? '' : 'opacity-50'}
+      "
       on:load={() => handleImageLoad(image.id)} />
 
-    {@render intentLabel(image.intent)}
+    {#if imageLoadedMap[image.id] && !actionProps.removeMode}
+      {@render intentLabel(image.intent, idx)}
+    {/if}
+
+    <!-- Delete overlay -->
+    {#if actionProps.removeMode && !imagesPendingConfirmation.has(image.id) && !imagesDeleting.has(image.id)}
+      {@render deleteOverlay(image)}
+    {/if}
+
+    <!-- Delete confirmation -->
+    {#if imagesPendingConfirmation.has(image.id) && !imagesDeleting.has(image.id)}
+      {@render deleteConfirmation(image)}
+    {/if}
+
+    <!-- Deleting state -->
+    {#if imagesDeleting.has(image.id)}
+      {@render deletingOverlay()}
+    {/if}
   </div>
+{/snippet}
+
+{#snippet deleteOverlay(image: GetImageAPI)}
+  <div
+    class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-100/30"
+    transition:fade={{ duration: 200 }}>
+    <button 
+      class="btn btn-circle btn-error" 
+      onclick={(e) => handleDelete(e,image)}>
+      <Icon src={Trash} class="h-6 w-6" />
+    </button>
+  </div>
+{/snippet}
+
+{#snippet deleteConfirmation(image: GetImageAPI)}
+  <div
+    class="absolute inset-0 flex flex-col items-center justify-center rounded-lg bg-base-100/80 backdrop-blur-sm"
+    transition:fade={{ duration: 200 }}>
+    <p class="mb-4 text-sm">Delete this image?</p>
+    <div class="flex gap-2">
+      <button class="btn btn-ghost btn-sm" onclick={(e) => cancelDelete(e, image)}>
+        Cancel
+      </button>
+      <button class="btn btn-error btn-sm" onclick={(e) => confirmDelete(e, image)}>
+        Delete
+      </button>
+    </div>
+  </div>
+{/snippet}
+
+{#snippet deletingOverlay()}
+  <div
+    class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-100/80 backdrop-blur-sm"
+    transition:blur={{ duration: 2500, opacity: 0.3, amount: 10 }}>
+  </div>
+{/snippet}
+
+{#snippet scrollArrow(direction: 'left' | 'right')}
+  <button
+    class="arrow absolute {direction === 'left' ? 'left-6' : 'right-6'} top-1/2 z-20 -translate-y-1/2 transform rounded-full bg-base-100/80 p-2 shadow-lg transition-all hover:bg-base-100 hover:shadow-xl"
+    onclick={(e) => {
+      e.stopPropagation();
+      scrollTo(direction);
+    }}
+    in:fade={{ duration: 200 }}
+    out:fade={{ duration: 200 }}>
+    <Icon src={direction === 'left' ? ChevronLeft : ChevronRight} class="h-5 w-5" />
+  </button>
 {/snippet}
 
 <div
@@ -315,15 +476,8 @@ function retryUpload(fileState: ImageUploadState) {
   <main class="relative w-full">
     <!-- Left Arrow -->
     {#if showLeftArrow}
-      <button
-        class="absolute left-6 top-1/2 z-20 -translate-y-1/2 transform rounded-full bg-base-100/80 p-2 shadow-lg transition-all hover:bg-base-100 hover:shadow-xl"
-        onclick={() => scrollTo('left')}
-        in:fade={{ duration: 200 }}
-        out:fade={{ duration: 200 }}>
-        <Icon src={ChevronLeft} class="h-5 w-5" />
-      </button>
+      {@render scrollArrow('left')}
     {/if}
-
     <!-- Main scroll container -->
     <div
       class="m-4 flex min-w-0 gap-4 overflow-x-auto scroll-smooth rounded-xl bg-base-100 p-4"
@@ -335,9 +489,10 @@ function retryUpload(fileState: ImageUploadState) {
         <Dropzone
           accept={['image/*']}
           on:drop={handleFilesSelect}
+          on:select={handleFilesSelect}
           class="flex h-full w-full flex-col justify-center gap-2 rounded-lg border-2 border-dashed border-base-content/10 bg-base-100/50 text-center align-middle transition-colors hover:border-primary"
-          disableDefaultStyles={true}>
-          <Icon src={Photo} class="mx-auto mt-4 h-8 w-8" />
+          disableDefaultStyles={true}
+          bind:inputElement={inputElement}>
           <Icon src={Photo} class="mx-auto mt-4 h-8 w-8" />
           <span class="mx-auto pb-6 text-sm">Drop images</span>
         </Dropzone>
@@ -399,7 +554,7 @@ function retryUpload(fileState: ImageUploadState) {
             in:fade={{ duration: 200, delay: i * 100 }}
             out:fade={{ duration: 200 }}
             class="relative h-[200px] w-[200px] flex-none">
-            {@render cloudImage(image)}
+            {@render cloudImage(image, i)}
           </div>
         {/each}
         {#if images.filter((image) => image.isPublished).length > 0 && images.filter((image) => !image.isPublished).length > 0}
@@ -413,8 +568,8 @@ function retryUpload(fileState: ImageUploadState) {
               delay: (images.filter((image) => image.isPublished).length + i) * 100
             }}
             out:fade={{ duration: 200 }}
-            class="relative h-[200px] w-[200px] flex-none opacity-50">
-            {@render cloudImage(image)}
+            class="relative h-[200px] w-[200px] flex-none">
+            {@render cloudImage(image, i)}
           </div>
         {/each}
       {/if}
@@ -422,13 +577,7 @@ function retryUpload(fileState: ImageUploadState) {
 
     <!-- Right Arrow -->
     {#if showRightArrow}
-      <button
-        class="absolute right-6 top-1/2 z-20 -translate-y-1/2 transform rounded-full bg-base-100/80 p-2 shadow-lg transition-all hover:bg-base-100 hover:shadow-xl"
-        onclick={() => scrollTo('right')}
-        in:fade={{ duration: 200 }}
-        out:fade={{ duration: 200 }}>
-        <Icon src={ChevronRight} class="h-5 w-5" />
-      </button>
+      {@render scrollArrow('right')}
     {/if}
   </main>
 </div>
@@ -450,12 +599,12 @@ function retryUpload(fileState: ImageUploadState) {
 }
 
 /* Ensure arrows are clickable but don't interfere with content */
-button {
+button.arrow {
   backdrop-filter: blur(4px);
 }
 
 /* Optional: Add hover effect for arrows */
-button:hover {
+button.arrow:hover {
   transform: translateY(-50%) scale(1.1);
 }
 </style>

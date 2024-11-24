@@ -12,17 +12,13 @@
       actions
     }: FieldProps & ModalProps = $props();
     
-    const toggleRemoveMode = (e: Event) => {
-      e.preventDefault();
-      removeMode = !removeMode;
-    };
     </script>
     
     <div>
       {#if !removeMode}
         <button 
           class="btn-rounded btn btn-ghost ml-auto bg-base-100" 
-          onclick={() => actions.add()} 
+          onclick={(e) => actions?.add(e)} 
           data-testid="addImageButton"
         >
           <Icon src={Photo} class="mr-2 h-4 w-4" />
@@ -31,7 +27,7 @@
       {/if}
       <button 
         class="btn-rounded btn btn-ghost ml-auto bg-base-100" 
-        onclick={toggleRemoveMode}
+        onclick={(e) => actions?.remove(e)}
       >
         {#if !removeMode}
           <Icon src={Trash} class="mr-2 h-4 w-4" />
