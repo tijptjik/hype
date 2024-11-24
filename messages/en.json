@@ -34,16 +34,16 @@
   "forms__saved": "Saved",
   "forms_invalid": "Invalid",
   
-  "organisation__core": "Core",
+  "organisation__core": "Main",
   "organisation__images": "Image",
 
-  "project__core": "Core",
+  "project__core": "Main",
   "project__images": "Image",
   "project__fields": "Fields",
 
-  "layer__core": "Core",
+  "layer__core": "Main",
 
-  "feature__core": "Core",
+  "feature__core": "Main",
   "feature__address": "Address",
   "feature__images": "Photos",
   "feature__publish": "Publish",
