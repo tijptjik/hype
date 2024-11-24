@@ -7,17 +7,21 @@ import {
   Photo,
   ChevronLeft,
   ChevronRight,
-  ExclamationCircle
+  ExclamationCircle,
+  Trash
 } from '@steeze-ui/heroicons';
 import { CldImage } from 'svelte-cloudinary';
 import Dropzone from 'svelte-file-dropzone';
 import Header from '$lib/components/forms/extra/Header.svelte';
+import Actions from '$lib/components/forms/actions/Gallery.svelte';
+import Stats from '$lib/components/forms/stats/Gallery.svelte';
+
 // CONTEXT
 import { getRouterState } from '$lib/context/router.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 
 // TYPES
-import type { SectionProps, Image, EntityRouter } from '$lib/types';
+import type { SectionProps, Image, EntityRouter, GetImageAPI } from '$lib/types';
 
 // CONFIG
 const intentOrder = [
@@ -130,8 +134,8 @@ function scrollTo(direction: 'left' | 'right') {
 }
 
 // Add this sorting function outside of the effect
-function sortImages(images: Image[]): Image[] {
-  return images.sort((a: Image, b: Image) => {
+function sortImages(images: GetImageAPI[]): GetImageAPI[] {
+  return images.sort((a, b) => {
     // First sort by publication status
     if (a.isPublished !== b.isPublished) {
       return a.isPublished ? -1 : 1;
@@ -149,20 +153,21 @@ function sortImages(images: Image[]): Image[] {
 }
 
 // Update the effect to use the sorting function
-$effect(async () => {
+$effect(() => {
   isLoadingImages = true;
-  try {
-    const response = await fetch(`/api/images?featureId=${routerState.entity}`);
-    if (response.ok) {
-      const fetchedImages = await response.json();
-      images = sortImages(fetchedImages);
-    }
-  } catch (error) {
+  fetch(`/api/images?featureId=${routerState.entity}`)
+    .then((res) => res.json())
+    .then((data) => sortImages(data))
+    .then((sortedImages) => {
+      images = sortedImages;
+    })
+    .catch((error) => {
     console.error('Failed to load images:', error);
-  } finally {
+    })
+    .finally(() => {
     isLoadingImages = false;
-  }
   updateScrollArrows();
+});
 });
 
 function handleFilesSelect(event: {
@@ -213,7 +218,7 @@ const handleUpload = async (fileState: ImageUploadState) => {
     const imageData = {
       featureId: routerState.entity,
       cdn: 'cloudinary' as const,
-      env: import.meta.env.VITE_CLOUDINARY_ENV as const,
+      env: import.meta.env.VITE_CLOUDINARY_ENV,
       cdnId: cloudinaryData.asset_id,
       publicId: cloudinaryData.public_id,
       version: cloudinaryData.version,
@@ -222,13 +227,11 @@ const handleUpload = async (fileState: ImageUploadState) => {
       originalWidth: cloudinaryData.width,
       originalHeight: cloudinaryData.height,
       capturedAt: cloudinaryData.created_at,
-      featureImages: [
-        {
+      featureImage: {
           featureId: routerState.entity,
           intent: 'undefined',
           isPublished: true
         }
-      ]
     };
 
     // Save to our database
@@ -281,7 +284,7 @@ function retryUpload(fileState: ImageUploadState) {
   </div>
 {/snippet}
 
-{#snippet cloudImage(image: Image)}
+{#snippet cloudImage(image: GetImageAPI)}
   <div class="h-full w-full">
     {#if !imageLoadedMap[image.id]}
       <div
@@ -300,7 +303,6 @@ function retryUpload(fileState: ImageUploadState) {
       alt="{image.intent} image of {$form.name}"
       crop="fill"
       class="h-full w-full rounded-lg object-cover"
-      style={!imageLoadedMap[image.id] ? 'visibility: hidden;' : ''}
       on:load={() => handleImageLoad(image.id)} />
 
     {@render intentLabel(image.intent)}
@@ -309,7 +311,7 @@ function retryUpload(fileState: ImageUploadState) {
 
 <div
   class="z-10 rounded-2xl bg-gradient-to-r from-rose-500/70 to-fuchsia-800/70 p-0 @container">
-  <Header {...sectionProps} />
+  <Header {...sectionProps} bind:actionProps {Actions} {actions} {Stats} />
   <main class="relative w-full">
     <!-- Left Arrow -->
     {#if showLeftArrow}
@@ -335,7 +337,7 @@ function retryUpload(fileState: ImageUploadState) {
           on:drop={handleFilesSelect}
           class="flex h-full w-full flex-col justify-center gap-2 rounded-lg border-2 border-dashed border-base-content/10 bg-base-100/50 text-center align-middle transition-colors hover:border-primary"
           disableDefaultStyles={true}>
-          <button class="btn btn-sm mx-auto w-32">Select files</button>
+          <Icon src={Photo} class="mx-auto mt-4 h-8 w-8" />
           <Icon src={Photo} class="mx-auto mt-4 h-8 w-8" />
           <span class="mx-auto pb-6 text-sm">Drop images</span>
         </Dropzone>
