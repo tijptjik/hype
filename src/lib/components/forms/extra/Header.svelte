@@ -44,10 +44,13 @@ $effect(() => {
 // CONFIG
 
 let getWarningMessage = () => {
-  if (routerState.facet === 'fields') {
-    return 'You are about to be VERY SAD if you accidentally remove a field. ';
+  let msg = 'If you remove yourself as member or owner, you will lose edit or access rights respectively';
+  if (routerState.facet === 'images') {
+    msg = 'Removing images permanently deletes them from cloud storage and is irreversible.';
+  } else if (routerState.facet === 'fields') {
+    msg = 'You are about to be VERY SAD if you accidentally remove a field. ';
   }
-  return 'If you remove yourself as member or owner, you will lose edit or access rights respectively';
+  return msg;
 };
 </script>
 
@@ -88,6 +91,11 @@ let getWarningMessage = () => {
           <Actions {...fieldProps} />
         {:else if routerState.facet === 'address'}
           <Actions {...fieldProps} {actions} />
+        {:else if routerState.facet === 'images'}
+          <Actions
+            bind:removeMode={actionProps.removeMode}
+            bind:searchMode={actionProps.searchMode}
+            {actions} />
         {/if}
         {#if InfoContent}
           <div class="flex items-center gap-6">
@@ -99,11 +107,13 @@ let getWarningMessage = () => {
       </div>
     {/if}
   </div>
-  <SearchBar
-    {...fieldProps}
-    bind:searchMode={actionProps.searchMode}
-    apiPath="users"
-    destination={Object.keys(fields ?? {})[0]} />
+  {#if actionProps.searchMode}
+    <SearchBar
+      {...fieldProps}
+      bind:searchMode={actionProps.searchMode}
+      apiPath="users"
+      destination={Object.keys(fields ?? {})[0]} />
+  {/if}
   {#if actionProps.removeMode}
     <div
       transition:slide={{ duration: 200 }}
