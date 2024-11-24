@@ -5,14 +5,15 @@ import { eq, and, or } from 'drizzle-orm';
 import type { RequestHandler } from '@sveltejs/kit';
 import {
   createImage,
-  createFeatureImages,
   extractEntitiesToInsert,
+  createFeatureImage,
+  checkProjectAccessForFeature,
 } from '$lib/db/services/image';
 import type { NewImage, Image, NewImageAPI } from '$lib/types';
 
 const RESOURCE_TYPE = 'image';
-const RESOURCE_PATH = 'images';
-const ACCESS_STRATEGY = 'Published';
+const ACCESS_STRATEGY = 'ResourceFromEditableProject';
+const PRIVILEGED_STRATEGY = 'ResourceAll';
 
 export const GET: RequestHandler = async ({ url, locals, platform }) => {
   try {
@@ -28,7 +29,10 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
       platform,
       ACCESS_STRATEGY,
       RESOURCE_TYPE,
-      featureId
+      featureId,
+      checkProjectAccessForFeature,
+      undefined,
+      PRIVILEGED_STRATEGY
     );
 
     // Query images with publication status filter based on access
@@ -50,11 +54,10 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
       .where(
         and(
           eq(featureImage.featureId, featureId),
-          // Only show unpublished images to project maintainers
+          // Hide unpublished images from everyone except project maintainers and superadmins
           or(
             eq(featureImage.isPublished, true),
-            accessStrategy === 'SuperAdmin',
-            accessStrategy === 'ResourceAll'
+            accessStrategy === PRIVILEGED_STRATEGY
           )
         )
       );
@@ -69,36 +72,49 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
 };
 
 export const POST: RequestHandler = async ({ request, locals, platform }) => {
+  const formData: NewImageAPI = await request.json();
+  let featureId = formData.featureImage?.featureId;
+  if (!featureId) {
+    error(400, 'Give me FeatureId, or give me death');
+  }
+
   // AUTH : Pass or Fail
   const { db, userId, accessStrategy } = await getDatabaseOrError(
     locals,
     platform,
     ACCESS_STRATEGY,
-    RESOURCE_TYPE
+    RESOURCE_TYPE,
+    featureId,
+    checkProjectAccessForFeature,
+    undefined,
+    PRIVILEGED_STRATEGY
   );
 
-  try {
-    const formData: NewImageAPI = await request.json();
+  if (accessStrategy !== PRIVILEGED_STRATEGY) {
+    // Public user uploads should use the /api/tasks endpoint
+    error(403, 'Fat cat says no');
+  }
 
+  try {
     // Add contributor ID if not provided
     if (!formData.contributorId) {
       formData.contributorId = userId;
     }
 
-    const { baseImage, formFeatureImages } = extractEntitiesToInsert(formData);
+    const { baseImage, relatedFeatureImage } = extractEntitiesToInsert(formData);
 
     const createdImage = await createImage(db, baseImage);
-    const [createdFeatureImages] = await createFeatureImages(
+    const createdFeatureImage = await createFeatureImage(
       db,
-      formFeatureImages,
+      relatedFeatureImage,
       createdImage.id
     );
 
     return json({
       ...createdImage,
-      intent: createdFeatureImages.intent,
-      isPublished: createdFeatureImages.isPublished,
-      publishedAt: createdFeatureImages.publishedAt
+      intent: createdFeatureImage.intent,
+      isPublished: createdFeatureImage.isPublished,
+      publishedAt: createdFeatureImage.publishedAt
     }, { status: 201 });
 
   } catch (err) {
