@@ -119,15 +119,14 @@ export const checkProjectAccessForFeature = async (db: Database, userId: Id, fea
       projectId: project.id,
       role: projectRole.role
     })
-    .from(featureImage)
-    .innerJoin(feature, eq(featureImage.featureId, feature.id))
+    .from(feature)
     .innerJoin(layer, eq(feature.layerId, layer.id))
     .innerJoin(project, eq(layer.projectId, project.id))
     .leftJoin(
       projectRole,
       and(eq(projectRole.projectId, project.id), eq(projectRole.userId, userId))
     )
-    .where(eq(featureImage.featureId, featureId))
+    .where(eq(feature.id, featureId))
     .get();
 };
 
