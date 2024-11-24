@@ -463,11 +463,11 @@ export const FeatureImageUpdateAPI = FeatureImageUpdate.extend({
 });
 
 export const ImageInsertAPI = ImageInsert.extend({
-  featureImages: z.array(FeatureImageInsert).optional()
+  featureImage: FeatureImageInsert.optional()
 });
 
 export const ImageUpdateAPI = ImageUpdate.extend({
-  featureImages: z.array(FeatureImageUpdate).optional()
+  featureImage: FeatureImageUpdate.optional()
 });
 
 export const ImagePatch = ImageUpdate.partial();

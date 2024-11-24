@@ -732,7 +732,10 @@ export const imageRelations = relations(image, ({ one, many }) => ({
     fields: [image.contributorId],
     references: [user.id]
   }),
-  featureImages: many(featureImage)
+  featureImage: one(featureImage, {
+    fields: [image.id],
+    references: [featureImage.imageId]
+  })
 }));
 
 
