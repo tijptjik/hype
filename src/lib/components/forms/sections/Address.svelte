@@ -3,7 +3,7 @@
 import { getRouterState } from '$lib/context/router.svelte';
 // COMPONENTS
 import Header from '$lib/components/forms/extra/Header.svelte';
-import Stats from '$lib/components/forms/extra/AddressStats.svelte';
+import Stats from '$lib/components/forms/stats/Address.svelte';
 import Actions from '$lib/components/forms/actions/Address.svelte';
 import TextField from '$lib/components/forms/fields/Textarea.svelte';
 import GeocodeBar from '$lib/components/forms/bars/Geocode.svelte';
@@ -36,7 +36,7 @@ const actions = {
 </script>
 
 <div
-  class="z-10 rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0 @container">
+  class="@container z-10 rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0 select-none">
   <Header {...sectionProps} {Actions} {actions} {Stats} />
   <div class="grid grid-cols-1 gap-4 p-4 @xl:grid-cols-2 @5xl:grid-cols-3">
     {#each languageTags as languageTag}
