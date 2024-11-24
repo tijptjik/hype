@@ -1,17 +1,19 @@
 import { error } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
-import { image, featureImage } from '../schema';
+import { and, eq } from 'drizzle-orm';
+import { image, featureImage, feature, projectRole, project, layer } from '../schema';
 import { ImageInsert, ImageUpdate } from '../zod';
-import { updatePartial } from '$lib/db';
+import db, { updatePartial } from '$lib/db';
 // TYPES
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import type {
   NewImageDB,
   ImageDB,
-  NewImage,
-  Image,
   NewFeatureImage,
-  FeatureImage
+  FeatureImage,
+  ImageAPI,
+  NewImageAPI,
+  FeatureImageDB,
+  Id
 } from '$lib/types';
 
 export type Database = DrizzleD1Database<
@@ -47,35 +49,31 @@ export const updateImage = async (db: Database, data: ImageDB, ref: string) => {
   return updatedImage;
 };
 
-export const createFeatureImages = async (
+export const createFeatureImage = async (
   db: Database,
-  featureImages: NewFeatureImage[],
+  newFeatureImage: NewFeatureImage,
   imageId: string
-) => {
-  const featureImagesToInsert = featureImages.map((fi) => ({
-    ...fi,
+): Promise<FeatureImageDB> => {
+  const featureImageToInsert = {
+    ...newFeatureImage,
     imageId
-  }));
+  };
 
-  const insertedFeatureImages = await db
+  const [insertedFeatureImage] = await db
     .insert(featureImage)
-    .values(featureImagesToInsert)
+    .values(featureImageToInsert)
     .returning();
 
-  return insertedFeatureImages;
+  return insertedFeatureImage as FeatureImageDB;
 };
 
-export const updateFeatureImages = async (
+export const updateFeatureImage = async (
   db: Database,
-  featureImages: FeatureImage[],
+  modifiedFeatureImage: FeatureImage,
   imageId: string
-) => {
+): Promise<FeatureImageDB> => {
   await db.delete(featureImage).where(eq(featureImage.imageId, imageId));
-  return await createFeatureImages(
-    db,
-    featureImages,
-    imageId
-  );
+  return await createFeatureImage(db, modifiedFeatureImage, imageId);
 };
 
 export const patchImage = async (db: Database, ref: string, data: Partial<ImageDB>) => {
@@ -84,14 +82,52 @@ export const patchImage = async (db: Database, ref: string, data: Partial<ImageD
 
 // UTILS
 
-export const extractEntitiesToInsert = (formData: NewImage) => {
+export const extractEntitiesToInsert = (formData: NewImageAPI) : { baseImage: NewImageDB, relatedFeatureImage: NewFeatureImage } => {
   let baseImage = ImageInsert.parse(formData);
-  let formFeatureImages: NewFeatureImage[] = formData.featureImages || [];
-  return { baseImage, formFeatureImages };
+  let relatedFeatureImage = formData.featureImage as NewFeatureImage;
+  return { baseImage, relatedFeatureImage };
+}
+
+export const extractEntitiesToUpdate = (formData: ImageAPI) : { baseImage: ImageDB, relatedFeatureImage: FeatureImage } => {
+  let baseImage = ImageUpdate.parse(formData);
+  let relatedFeatureImage = formData.featureImage as FeatureImage;
+  return { baseImage, relatedFeatureImage };
 };
 
-export const extractEntitiesToUpdate = (formData: Image) => {
-  let baseImage = ImageUpdate.parse(formData);
-  let formFeatureImages: FeatureImage[] = formData.featureImages || [];
-  return { baseImage, formFeatureImages };
+export const checkProjectAccessForImage = async (db: Database, userId: Id, imageId: Id) : Promise<{ projectId: Id; role: string|null }|undefined> => {
+  return await db
+    .select({
+      projectId: project.id,
+      role: projectRole.role
+    })
+    .from(image)
+    .innerJoin(featureImage, eq(image.id, featureImage.imageId))
+    .innerJoin(feature, eq(featureImage.featureId, feature.id))
+    .innerJoin(layer, eq(feature.layerId, layer.id))
+    .innerJoin(project, eq(layer.projectId, project.id))
+    .leftJoin(
+      projectRole,
+      and(eq(projectRole.projectId, project.id), eq(projectRole.userId, userId))
+    )
+    .where(eq(image.id, imageId))
+    .get();
 };
+
+export const checkProjectAccessForFeature = async (db: Database, userId: Id, featureId: Id) : Promise<{ projectId: Id; role: string|null }|undefined> => {
+  return await db
+    .select({
+      projectId: project.id,
+      role: projectRole.role
+    })
+    .from(featureImage)
+    .innerJoin(feature, eq(featureImage.featureId, feature.id))
+    .innerJoin(layer, eq(feature.layerId, layer.id))
+    .innerJoin(project, eq(layer.projectId, project.id))
+    .leftJoin(
+      projectRole,
+      and(eq(projectRole.projectId, project.id), eq(projectRole.userId, userId))
+    )
+    .where(eq(featureImage.featureId, featureId))
+    .get();
+};
+
