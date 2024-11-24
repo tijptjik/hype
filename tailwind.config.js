@@ -1,3 +1,5 @@
+import plugin from 'tailwindcss/plugin';
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./src/**/*.{html,svelte,js,ts}'],
@@ -86,7 +88,18 @@ export default {
     require('tailwindcss-unimportant'),
     require('@tailwindcss/container-queries'),
     require('@tailwindcss/typography'),
-    require('daisyui')
+    require('daisyui'),
+    plugin(function ({ addUtilities }) {
+      addUtilities({
+        '.drag-none': {
+          '-webkit-user-drag': 'none',
+          '-khtml-user-drag': 'none',
+          '-moz-user-drag': 'none',
+          '-o-user-drag': 'none',
+          'user-drag': 'none'
+        }
+      });
+    })
   ],
   darkMode: ['class', '[data-theme="spectre"]']
 };
