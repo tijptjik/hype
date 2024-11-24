@@ -446,6 +446,7 @@ export const ImageUpdate = ImageInsert.extend({
 // Feature Images (Join Table)
 export const FeatureImageBase = createSelectSchema(featureImage);
 export const FeatureImageInsert = createInsertSchema(featureImage).extend({
+  featureId: z.string(),
   intent: z.enum(['canonical', 'closeUp', 'context', 'general', 'evidence', 'undefined'])
   .default('undefined'),
   isPublished: z.boolean().default(false),
@@ -462,6 +463,7 @@ export const FeatureImageUpdateAPI = FeatureImageUpdate.extend({
   image: ImageBase.optional()
 });
 
+
 export const ImageInsertAPI = ImageInsert.extend({
   featureImage: FeatureImageInsert.optional()
 });
@@ -469,6 +471,16 @@ export const ImageInsertAPI = ImageInsert.extend({
 export const ImageUpdateAPI = ImageUpdate.extend({
   featureImage: FeatureImageUpdate.optional()
 });
+
+export const ImageGetAPI = ImageUpdate.extend({
+  featureId: z.string(),
+  intent: z.enum(['canonical', 'closeUp', 'context', 'general', 'evidence', 'undefined'])
+  .default('undefined'),
+  isPublished: z.boolean().default(false),
+  publishedAt: z.string().optional(),
+  createdAt: z.string()
+});
+
 
 export const ImagePatch = ImageUpdate.partial();
 

@@ -71,7 +71,8 @@ import {
   TaskPatch,
   ImageUpdateAPI,
   ImageInsertAPI,
-  FeatureGetAPI
+  FeatureGetAPI,
+  ImageGetAPI
 } from '$lib/db/zod';
 // COMPONENTS
 import CustomField from '$lib/components/forms/fields/Properties.svelte';
@@ -648,6 +649,7 @@ export type NewImageDB = z.infer<typeof ImageInsert>;
 export type ImageAPI = z.infer<typeof ImageUpdateAPI>;
 export type NewImageAPI = z.infer<typeof ImageInsertAPI>;
 export type ImagePatchAPI = z.infer<typeof ImagePatch>;
+export type GetImageAPI = z.infer<typeof ImageGetAPI>;
 
 export type FeatureImage = z.infer<typeof FeatureImageUpdate>;
 export type NewFeatureImage = z.infer<typeof FeatureImageInsert>;
