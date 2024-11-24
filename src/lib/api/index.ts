@@ -4,7 +4,13 @@ import client, { toNestedTranslations, validateTableColumns } from '$lib/db';
 import { getUserRoles } from '$lib/auth/utils';
 import { superValidate } from 'sveltekit-superforms';
 // ACCESS CONTROL
-import { publicAccessOptions, hierarchicalOwnOptions, hierarchicalChildrenOptions, hierarchicalGrandChildrenOptions, relationalAccessOptions } from '$lib/types';
+import {
+  publicAccessOptions,
+  hierarchicalOwnOptions,
+  hierarchicalChildrenOptions,
+  hierarchicalGrandChildrenOptions,
+  relationalAccessOptions
+} from '$lib/types';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
 // Types
@@ -25,7 +31,6 @@ import type { ZodSchema } from 'zod';
 import { appMeta } from '$lib/stores/resources.svelte';
 import { NEW_REF } from '$lib';
 import type { AccessStrategyOption, StatefulAccessOption } from '$lib/types';
-
 
 export const getSessionOrError = async (locals: App.Locals) => {
   const session = await locals.auth();
@@ -146,12 +151,16 @@ export const getDatabaseOrError = async (
   accessStrategy: AccessStrategyOption,
   resourceType?: string,
   refId?: string,
-  checkProjectAccess?: (db: any, userId: Id, refId: Id) => Promise<{ projectId: Id; role: string|null }|undefined>,
+  checkProjectAccess?: (
+    db: any,
+    userId: Id,
+    refId: Id
+  ) => Promise<{ projectId: Id; role: string | null } | undefined>,
   checkOrganisationAccess?: (
     db: any,
     userId: Id,
     refId: Id
-  ) => Promise<{ organisationId: Id; role: string }|undefined>,
+  ) => Promise<{ organisationId: Id; role: string } | undefined>,
   privilegedStrategy: StatefulAccessOption | null = null
 ) => {
   // Checks whether the user is logged in
@@ -169,7 +178,7 @@ export const getDatabaseOrError = async (
   // Check whether privileges should be escalated
   checkAccessOrError(userRoles, accessStrategy, resourceType);
 
-  // Handle project access check if provided
+  // PROJECT ACCESS CHECK
   if (
     accessStrategy == 'EntityFromEditableProject' ||
     accessStrategy == 'ResourceFromEditableProject'
@@ -185,7 +194,27 @@ export const getDatabaseOrError = async (
     } else {
       error(404, 'ProjectAccess goes brrrr');
     }
-    // TODO : Add Organisational checks
+  }
+  // ORGANISATION ACCESS CHECK
+  else if (
+    accessStrategy == 'EntityFromEditableOrganisation' ||
+    accessStrategy == 'ResourceFromEditableOrganisation'
+  ) {
+    if (!refId || !checkOrganisationAccess) {
+      error(400, 'Organisation ID or checkOrganisationAccess function is required');
+    }
+    const organisationAccess = await checkOrganisationAccess(
+      db,
+      session.user.id,
+      refId
+    );
+
+    // Upgrade access strategy if project access is found and stateful strategy is provided
+    if (organisationAccess?.role && privilegedStrategy !== null) {
+      accessStrategy = privilegedStrategy;
+    } else {
+      error(404, 'OrganisationAccess goes brrrr');
+    }
   }
 
   return {
