@@ -712,3 +712,59 @@ export type LayerForm = LayerFormType;
 export type OrganisationForm = OrganisationFormType;
 export type ProjectForm = ProjectFormType;
 export type FeatureForm = FeatureFormType;
+
+/* ----------------- */
+// ACCESS CONTROL
+/* -------- */
+
+
+// ACCESS CONTROL - OPTIONS
+// - OPEN - No restrictions or filters, i.e. access is granted to all users
+// - ROLE - Restricted by role, i.e. access is accepted/denied based on the user's role
+// - STATE - Filtered by state, i.e. result set is filtered based on the state of the resource
+
+
+// ACCESS CONTROL - OPEN
+export const publicAccessOptions = ['Public', 'SuperAdmin', 'ResourceAll', 'EntityAny'];
+export type PublicAccessOption = (typeof publicAccessOptions)[number];
+
+// ACCESS CONTROL - RESTRICED BY ROLE - Note : Also used in hierarchicalResourceQuery() and hierarchicalEntityQuery()
+export const hierarchicalOwnOptions = ['ResourceOwn', 'EntityOwn'];
+export type HierarchicalOwnOption = (typeof hierarchicalOwnOptions)[number];
+
+export const hierarchicalChildrenOptions = ['ResourceOwnChildren', 'EntityOwnChild'];
+export type HierarchicalChildrenOption = (typeof hierarchicalChildrenOptions)[number];
+
+export const hierarchicalGrandChildrenOptions = [
+  'ResourceOwnGrandChildren',
+  'EntityOwnGrandChild'
+];
+export type HierarchicalGrandChildrenOption =
+  (typeof hierarchicalGrandChildrenOptions)[number];
+
+export const hierarchicalAccessOptions = [
+  ...hierarchicalOwnOptions,
+  ...hierarchicalChildrenOptions,
+  ...hierarchicalGrandChildrenOptions
+];
+export type HierarchicalAccessOption = (typeof hierarchicalAccessOptions)[number];
+
+// ACCESS CONTROL - RESTRICED BY ROLE - Note : Also used in genericResourceQuery() and genericEntityQuery()
+export const relationalAccessOptions = [
+  'EntityFromEditableProject',
+  'EntityFromEditableOrganisation',
+  'ResourceFromEditableProject',
+  'ResourceFromEditableOrganisation'
+];
+export type RelationalAccessOption = (typeof relationalAccessOptions)[number];
+
+// ACCESS CONTROL - FILTERED BY STATE
+export const statefulAccessOptions = ['Stateful'];
+export type StatefulAccessOption = (typeof statefulAccessOptions)[number];
+
+export type AccessStrategyOption =
+  | PublicAccessOption
+  | HierarchicalAccessOption
+  | RelationalAccessOption;
+
+export type AccessStrategy = AccessStrategyOption | AccessStrategyOption[];

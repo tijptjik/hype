@@ -12,6 +12,15 @@ import type {TargetLang, Field, NestedRelations, Ref, Resource, ResourceDB, Reso
 export const NEW_TITLE = 'New';
 export const NEW_REF = NEW_TITLE.toLowerCase();
 
+// ACCESS CONTROL
+export const publicAccessOptions = ['Public', 'SuperAdmin', 'ResourceAll', 'EntityAny'];
+export const relationalAccessOptions = [
+  'EntityFromEditableProject',
+  'EntityFromEditableOrganisation',
+  'ResourceFromEditableProject',
+  'ResourceFromEditableOrganisation'
+];
+
 
 const client = (database: D1Database) => {
   return drizzle(database, { schema });
@@ -67,17 +76,20 @@ const getForeignKey = (slicedHierarchy: typeof resourceHierarchy, index: number)
 const getReverseForeignKey = (slicedHierarchy: typeof resourceHierarchy, index: number) =>
   slicedHierarchy[index].keyToSelf;
 
-// TODO Implement this
-const applyGeneralAccessStrategy = (
+const applyGenericAccessStrategy = (
   db: any,
   accessStrategy: string,
   userTable?: Table,
   userId?: string
 ) => {
-  if (['SuperAdmin', 'Public', 'ResourceAll', 'EntityAny'].includes(accessStrategy)) {
+  if (publicAccessOptions.includes(accessStrategy)) {
     return [];
   }
-  return [];
+  // TODO restricting access by project maintainer / organisation admin
+  if (relationalAccessOptions.includes(accessStrategy)) {
+    return [];
+  }
+  throw new Error('Invalid access strategy');
 };
 
 const applyAccessStrategy = (
@@ -87,7 +99,7 @@ const applyAccessStrategy = (
   userTable?: Table,
   userId?: string
 ) => {
-  if (['SuperAdmin', 'Public', 'ResourceAll', 'EntityAny'].includes(accessStrategy)) {
+  if (publicAccessOptions.includes(accessStrategy)) {
     return [];
   }
   if (!userTable || !userId) {
@@ -400,7 +412,7 @@ export async function genericEntityQuery<usersT extends Table>(
   }
   const conditions = [
     eq(table[publicIdentifier], ref),
-    ...applyGeneralAccessStrategy(db, accessStrategy, userTable, userId)
+    ...applyGenericAccessStrategy(db, accessStrategy, userTable, userId)
   ];
 
   let queryOpts = {
