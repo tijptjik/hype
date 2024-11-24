@@ -40,7 +40,10 @@ $effect(() => {
           class="menu dropdown-content menu-sm z-[1] mt-3 w-52 rounded-box bg-base-100 p-2 shadow">
           {#each pathsMenuRight as { href, label }}
             <li>
-              <a {href} class:active={$page.url.pathname.startsWith(href)}>{label}</a>
+              <a
+                draggable="false"
+                {href}
+                class:select-none active={$page.url.pathname.startsWith(href)}>{label}</a>
             </li>
           {/each}
         </ul>
@@ -50,7 +53,11 @@ $effect(() => {
       <ul class="menu menu-horizontal space-x-2 p-0">
         {#each pathsMenuRight as { href, label }}
           <li>
-            <a {href} class="btn btn-ghost" class:btn-active={$page.url.pathname.startsWith(href)}>
+            <a
+              draggable="false"
+              {href}
+              class="btn btn-ghost select-none"
+              class:btn-active={$page.url.pathname.startsWith(href)}>
               {label}
             </a>
           </li>
@@ -60,7 +67,10 @@ $effect(() => {
   </div>
 
   <div class="navbar-center">
-    <a href="/" class="btn btn-ghost text-2xl font-light hover:bg-black">
+    <a
+      draggable="false"
+      href="/"
+      class="btn btn-ghost text-2xl font-light hover:bg-black select-none">
       {m.navbar__ghostmapper()}
     </a>
   </div>
@@ -68,7 +78,11 @@ $effect(() => {
   <div class="navbar-end space-x-2">
     <ul class="hidden lg:flex menu menu-horizontal space-x-2 p-0 ">
       <li>
-        <a href="/about" class="btn btn-ghost" class:btn-active={$page.url.pathname === '/about'}>
+        <a
+          draggable="false"
+          href="/about"
+          class="btn btn-ghost select-none"
+          class:btn-active={$page.url.pathname === '/about'}>
           {m.navbar__about()}
         </a>
       </li>
@@ -96,21 +110,35 @@ $effect(() => {
           tabindex="0"
           class="menu dropdown-content menu-sm z-[1] mt-6 w-52 rounded-box bg-base-300 p-2 shadow">
           <li>
-            <a href="/profile" class="justify-between">
+            <a
+              draggable="false"
+              href="/profile"
+              class="justify-between select-none">
               {m.navbar__profile()}
               <span class="badge">{m.navbar__new()}</span>
             </a>
           </li>
           <li class="lg:hidden">
-            <a href="/about" class="justify-between">
+            <a
+              draggable="false"
+              href="/about"
+              class="justify-between select-none">
               {m.navbar__about()}
             </a>
           </li>
-          <li><a onclick={() => signOut()}>{m.navbar__signout()}</a></li>
+          <li>
+            <a
+              draggable="false"
+              onclick={() => signOut()}
+              class="select-none">{m.navbar__signout()}</a>
+          </li>
         </ul>
       </div>
     {:else}
-      <a class="btn btn-primary" onclick={() => signIn('google')}>
+      <a
+        draggable="false"
+        class="btn btn-primary"
+        onclick={() => signIn('google')}>
         {m.navbar__signin()}
       </a>
     {/if}

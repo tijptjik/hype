@@ -46,11 +46,12 @@ const onclick = (e: MouseEvent) => {
 </script>
 
 <a
+  draggable="false"
   {href}
   {onclick}
   role="article"
   tabindex="2"
-  class="card bg-base-100 shadow-xl transition-shadow duration-800 hover:shadow-2xl hover:shadow-primary hover:scale-[.99] active:outline-none focus-visible:outline-secondary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:shadow-primary"
+  class="card bg-base-100 shadow-xl transition-shadow duration-800 hover:shadow-2xl hover:shadow-primary hover:scale-[.99] active:outline-none focus-visible:outline-secondary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:shadow-primary select-none"
   onkeydown={(e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();

@@ -23,7 +23,7 @@ const hierarchicalState = setHierarchicalResourceState();
 
 <!-- LAYOUT -->
 <Sidebar />
-<div class="flex h-screen w-full flex-col">
+<div class="flex h-screen w-full flex-col select-none drag-none">
   <header class="flex-none bg-black">
     <Navbar />
   </header>

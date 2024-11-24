@@ -17,7 +17,10 @@ const isActive = () => {
 };
 </script>
 
-<a {href} class="group btn btn-circle btn-ghost bg-inherit hover:bg-transparent {isActive() ? 'btn-active' : ''}">
+<a
+  draggable="false"
+  {href}
+  class="group btn btn-circle btn-ghost bg-inherit hover:bg-transparent select-none {isActive() ? 'btn-active' : ''}">
   {#if notificationCount > 0}
     <div class="badge size-5 badge-sm badge-primary absolute -top-1 -right-1 text-xs">{notificationCount}</div>
   {/if}

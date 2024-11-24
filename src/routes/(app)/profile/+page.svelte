@@ -36,8 +36,12 @@ function formatDate(dateString: string): string {
                 <div class="flex flex-wrap items-center">
                   <span class="badge badge-outline mb-1 mr-2"
                     >{m[`profile__role_type__${role.role}`]()}</span>
-                  <a href="/admin/{role.type}/{role.resourceRef}" class="break-all hover:underline"
-                    >{role.resourceName}</a>
+                  <a
+                    draggable="false"
+                    href="/admin/{role.type}/{role.resourceRef}"
+                    class="break-all hover:underline select-none"
+                    >{role.resourceName}</a
+                  >
                 </div>
               </li>
             {/each}
@@ -50,11 +54,19 @@ function formatDate(dateString: string): string {
                 <div class="flex flex-wrap items-center">
                   <span class="badge badge-outline mb-1 mr-2"
                     >{m[`profile__role_type__${role.role}`]()}</span>
-                  <a href="/admin/organisations/{role.parentRef}" class="break-all hover:underline"
-                    >{role.parentName}</a>
+                  <a
+                    draggable="false"
+                    href="/admin/organisations/{role.parentRef}"
+                    class="break-all hover:underline select-none"
+                    >{role.parentName}</a
+                  >
                   <span class="mx-1">/</span>
-                  <a href="/admin/{role.type}/{role.resourceRef}" class="break-all hover:underline"
-                    >{role.resourceName}</a>
+                  <a
+                    draggable="false"
+                    href="/admin/{role.type}/{role.resourceRef}"
+                    class="break-all hover:underline select-none"
+                    >{role.resourceName}</a
+                  >
                 </div>
               </li>
             {/each}

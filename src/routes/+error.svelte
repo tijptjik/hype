@@ -9,5 +9,10 @@ let { message } = data;
         <span class="align-middle text-neutral-500">{$page.status} |</span>
         <span class="text-2xl font-light align-middle ">{$page.error?.message}</span>
     </div>
-    <a href="/" class="text-s btn btn-neutral btn-sm font-light mt-4">Go Home</a>
+  <a
+    draggable="false"
+    href="/"
+    class="text-s btn btn-neutral btn-sm font-light mt-4 select-none">
+    Go Home
+  </a>
 </div>

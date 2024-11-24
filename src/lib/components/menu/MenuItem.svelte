@@ -28,9 +28,10 @@ const onclick = (e: MouseEvent) => {
 
 <li class="group">
   <a
+    draggable="false"
     href={getUrl(facet.ref)}
     {onclick}
-    class="flex flex-col items-center px-4 py-2 uppercase transition-colors duration-200 ease-in-out hover:bg-transparent"
+    class="flex flex-col items-center px-4 py-2 uppercase transition-colors duration-200 ease-in-out hover:bg-transparent select-none"
     class:active={routerState.facet === facet.ref}>
     <span>{facet.label}</span>
     <span

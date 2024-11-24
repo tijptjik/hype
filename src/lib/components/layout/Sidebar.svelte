@@ -423,9 +423,10 @@ const navigate = (url: string) => {
       <!-- RESOURCE -->
       <div class="flex-shrink-0">
         <a
+          draggable="false"
           href="/admin/{resource.path}{$page.url.search}"
           onclick={(e) => goToResource(e, resourceType as ResourceType)}
-          class="flex items-center border-l-3 p-6 {routerState.resource ===
+          class="flex items-center border-l-3 p-6 select-none {routerState.resource ===
             resourceType && !routerState.entity
             ? 'border-primary'
             : 'border-base-300'} rounded-none">
@@ -456,13 +457,14 @@ const navigate = (url: string) => {
             : 'overflow-scroll'}">
           {#each filteredResources[resourceType as FilterableResourceType] as entity}
             {#if routerState.resource === resourceType || queryFilters[resourceType as FilterableResourceType]?.includes(entity.id) || resourceType === 'feature'}
-              <li class="group relative bg-base-100">
-                <div class="relative">
+              <li class="group relative bg-base-100 drag-none">
+                <div class="relative drag-none">
                   <a
+                    draggable="false"
                     href="/admin/{resource.path}/{entity.ref}{$page.url.search}"
                     onclick={(e) =>
                       goToEntity(e, resourceType as ResourceType, entity.ref)}
-                    class="flex items-center border-l-3 {routerState.entity ===
+                    class="flex select-none drag-none items-center border-l-3 {routerState.entity ===
                     entity.ref
                       ? 'border-primary'
                       : queryFilters[resourceType as FilterableResourceType]?.includes(

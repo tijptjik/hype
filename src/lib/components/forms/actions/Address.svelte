@@ -23,7 +23,8 @@ let [lng, lat] = $derived($form.geometry.coordinates);
 
 <div class="flex flex-row items-center gap-4">
   <a
-    class="group btn btn-rounded btn-circle bg-neutral hover:bg-neutral-content/20 transition-colors duration-300"
+    draggable="false"
+    class="group btn btn-rounded btn-circle bg-neutral hover:bg-neutral-content/20 transition-colors duration-300 select-none"
     href={`https://earth.google.com/web/@${lat},${lng}`}
     target="_blank"
     aria-label="View on Google Earth">

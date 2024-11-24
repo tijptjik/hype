@@ -101,11 +101,12 @@ const onclick = (e: Event, url: string) => {
         <div class="hidden @md:flex items-center space-x-2 text-sm font-medium text-gray-300">
           {#each resourceState.parents as parent, i}
             <a
+              draggable="false"
               out:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
               in:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
               href={getParentHref(parent.href)}
               onclick={(e) => onclick(e, getParentHref(parent.href))}
-              class="inline-block h-5 overflow-hidden whitespace-nowrap hover:text-white">
+              class="inline-block h-5 overflow-hidden whitespace-nowrap hover:text-white select-none">
               {parent.name}
             </a>
             {#if i < resourceState.parents.length - 1}
