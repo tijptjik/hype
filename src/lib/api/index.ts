@@ -31,6 +31,7 @@ import type { ZodSchema } from 'zod';
 import { appMeta } from '$lib/stores/resources.svelte';
 import { NEW_REF } from '$lib';
 import type { AccessStrategyOption, StatefulAccessOption } from '$lib/types';
+import type { Session } from '@auth/core/types';
 
 export const getSessionOrError = async (locals: App.Locals) => {
   const session = await locals.auth();
@@ -272,22 +273,24 @@ export async function loadFormData<T extends Record<string, any>>({
   resourcePath,
   insertSchema,
   updateSchema,
-  fetch
+  fetch,
+  session
 }: {
   entity: string | undefined;
   resourcePath: string;
   insertSchema: ZodSchema;
   updateSchema: ZodSchema;
   fetch: typeof globalThis.fetch;
+  session?: Session;
 }): Promise<{
   entity: string;
   validatedForm: SuperValidated<T>;
 }> {
   const entityRef = entity || NEW_REF;
+  const resourceType = refToResourceType(resourcePath) as ResourceType;
   let form;
 
   if (entityRef === NEW_REF) {
-    const resourceType = refToResourceType(resourcePath) as ResourceType;
     const { parentResourceType, parentRefKey, keyToParent } =
       resourceConfig[resourceType];
 
@@ -337,6 +340,14 @@ export async function loadFormData<T extends Record<string, any>>({
       }
     } else {
       form = await superValidate(zod(insertSchema));
+      if (resourceType === 'organisation') {
+        // Merge in current user as the organisation owner
+        form.data.userRoles.push({
+        userId: session?.user.id,
+          role: 'owner',
+          user: session?.user
+        });
+      }
     }
   } else {
     const endPoint = `/api/${resourcePath}/${entityRef}`;
