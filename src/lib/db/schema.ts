@@ -95,7 +95,7 @@ export const organisation = sqliteTable('organisation', {
   description: text('description'),
   descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(false),
   url: text('url'),
-  imageId: text('imageId').references(() => image.id, { onDelete: 'set null' }),
+  imageId: text('imageId').references(() => image.id, { onDelete: 'set null', onUpdate: 'cascade' }),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -239,7 +239,7 @@ export const project = sqliteTable('project', {
   // Attribution for the dataset
   attribution: text('attribution').notNull(),
   attributionGen: integer('attributionGen', { mode: 'boolean' }).notNull().default(false),
-  imageId: text('imageId').references(() => image.id, { onDelete: 'set null' }),
+  imageId: text('imageId').references(() => image.id, { onDelete: 'set null', onUpdate: 'cascade' }),
   // Accessible to the public in the app
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('createdAt')
