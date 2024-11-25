@@ -8,6 +8,9 @@ import {
   extractEntitiesToInsert,
   createFeatureImage,
   checkProjectAccessForFeature,
+  getImagesForFeature,
+  getImageForProject,
+  getImageForOrganisation
 } from '$lib/db/services/image';
 import type { NewImage, Image, NewImageAPI } from '$lib/types';
 
@@ -17,53 +20,48 @@ const PRIVILEGED_STRATEGY = 'ResourceAll';
 
 export const GET: RequestHandler = async ({ url, locals, platform }) => {
   try {
+    const organisationId = url.searchParams.get('organisationId');
+    const projectId = url.searchParams.get('projectId');
     const featureId = url.searchParams.get('featureId');
 
-    if (!featureId) {
-      error(400, 'Feature ID is required');
+    if (!featureId && !organisationId && !projectId) {
+      error(400, 'Loosey goosey! A featureId, organisationId or projectId is required');
     }
 
     // AUTH : Pass or Fail - now includes feature access check
-    const { db, userId, accessStrategy } = await getDatabaseOrError(
-      locals,
-      platform,
-      ACCESS_STRATEGY,
-      RESOURCE_TYPE,
-      featureId,
-      checkProjectAccessForFeature,
-      undefined,
-      PRIVILEGED_STRATEGY
-    );
-
-    // Query images with publication status filter based on access
-    const images = await db
-      .select({
-        id: image.id,
-        publicId: image.publicId,
-        env: image.env,
-        cdn: image.cdn,
-        contributorId: image.contributorId,
-        capturedAt: image.capturedAt,
-        // Include featureImage fields
-        intent: featureImage.intent,
-        isPublished: featureImage.isPublished,
-        publishedAt: featureImage.publishedAt
-      })
-      .from(image)
-      .innerJoin(featureImage, eq(image.id, featureImage.imageId))
-      .where(
-        and(
-          eq(featureImage.featureId, featureId),
-          // Hide unpublished images from everyone except project maintainers and superadmins
-          or(
-            eq(featureImage.isPublished, true),
-            accessStrategy === PRIVILEGED_STRATEGY
-          )
+    const { db, userId, accessStrategy } = featureId
+      ? await getDatabaseOrError(
+          locals,
+          platform,
+          ACCESS_STRATEGY,
+          RESOURCE_TYPE,
+          featureId,
+          checkProjectAccessForFeature,
+          undefined,
+          PRIVILEGED_STRATEGY
         )
+      : await getDatabaseOrError(locals, platform, ACCESS_STRATEGY, RESOURCE_TYPE);
+
+    let images;
+    if (featureId) {
+      // Query images with publication status filter based on access
+      images = await getImagesForFeature(
+        db,
+        featureId,
+        accessStrategy,
+        PRIVILEGED_STRATEGY
       );
+      console.log('images', images);
+      console.log('accessStrategy', accessStrategy);
+      console.log('PRIVILEGED_STRATEGY', PRIVILEGED_STRATEGY);
+    } else if (projectId) {
+      images = await getImageForProject(db, projectId);
+    } else if (organisationId) {
+      images = await getImageForOrganisation(db, organisationId);
+    }
 
     return JSONResponseOrError(images);
-} catch (e) {
+  } catch (e) {
     // DB : Query Error
     console.error('Database query error:', e);
     // HTTP : 500 Error
@@ -110,13 +108,15 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       createdImage.id
     );
 
-    return json({
-      ...createdImage,
-      intent: createdFeatureImage.intent,
-      isPublished: createdFeatureImage.isPublished,
-      publishedAt: createdFeatureImage.publishedAt
-    }, { status: 201 });
-
+    return json(
+      {
+        ...createdImage,
+        intent: createdFeatureImage.intent,
+        isPublished: createdFeatureImage.isPublished,
+        publishedAt: createdFeatureImage.publishedAt
+      },
+      { status: 201 }
+    );
   } catch (err) {
     console.error('Failed to create image:', err);
     return error(500, 'Failed to create image');

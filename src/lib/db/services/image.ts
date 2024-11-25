@@ -1,6 +1,14 @@
 import { error } from '@sveltejs/kit';
-import { and, eq } from 'drizzle-orm';
-import { image, featureImage, feature, projectRole, project, layer } from '../schema';
+import { and, eq, or } from 'drizzle-orm';
+import {
+  image,
+  featureImage,
+  feature,
+  projectRole,
+  project,
+  layer,
+  organisation
+} from '../schema';
 import { ImageInsert, ImageUpdate } from '../zod';
 import db, { updatePartial } from '$lib/db';
 // TYPES
@@ -13,7 +21,9 @@ import type {
   ImageAPI,
   NewImageAPI,
   FeatureImageDB,
-  Id
+  Id,
+  StatefulAccessOption,
+  AccessStrategyOption
 } from '$lib/types';
 
 export type Database = DrizzleD1Database<
@@ -82,19 +92,27 @@ export const patchImage = async (db: Database, ref: string, data: Partial<ImageD
 
 // UTILS
 
-export const extractEntitiesToInsert = (formData: NewImageAPI) : { baseImage: NewImageDB, relatedFeatureImage: NewFeatureImage } => {
+export const extractEntitiesToInsert = (
+  formData: NewImageAPI
+): { baseImage: NewImageDB; relatedFeatureImage: NewFeatureImage } => {
   let baseImage = ImageInsert.parse(formData);
   let relatedFeatureImage = formData.featureImage as NewFeatureImage;
   return { baseImage, relatedFeatureImage };
-}
+};
 
-export const extractEntitiesToUpdate = (formData: ImageAPI) : { baseImage: ImageDB, relatedFeatureImage: FeatureImage } => {
+export const extractEntitiesToUpdate = (
+  formData: ImageAPI
+): { baseImage: ImageDB; relatedFeatureImage: FeatureImage } => {
   let baseImage = ImageUpdate.parse(formData);
   let relatedFeatureImage = formData.featureImage as FeatureImage;
   return { baseImage, relatedFeatureImage };
 };
 
-export const checkProjectAccessForImage = async (db: Database, userId: Id, imageId: Id) : Promise<{ projectId: Id; role: string|null }|undefined> => {
+export const checkProjectAccessForImage = async (
+  db: Database,
+  userId: Id,
+  imageId: Id
+): Promise<{ projectId: Id; role: string | null } | undefined> => {
   return await db
     .select({
       projectId: project.id,
@@ -113,7 +131,11 @@ export const checkProjectAccessForImage = async (db: Database, userId: Id, image
     .get();
 };
 
-export const checkProjectAccessForFeature = async (db: Database, userId: Id, featureId: Id) : Promise<{ projectId: Id; role: string|null }|undefined> => {
+export const checkProjectAccessForFeature = async (
+  db: Database,
+  userId: Id,
+  featureId: Id
+): Promise<{ projectId: Id; role: string | null } | undefined> => {
   return await db
     .select({
       projectId: project.id,
@@ -130,3 +152,55 @@ export const checkProjectAccessForFeature = async (db: Database, userId: Id, fea
     .get();
 };
 
+let imageSelect = {
+  id: image.id,
+  publicId: image.publicId,
+  env: image.env,
+  cdn: image.cdn,
+  contributorId: image.contributorId,
+  capturedAt: image.capturedAt
+};
+
+export const getImagesForFeature = async (
+  db: Database,
+  featureId: Id,
+  accessStrategy: AccessStrategyOption,
+  privilegedStrategy: AccessStrategyOption
+) => {
+  return await db
+    .select({
+      ...imageSelect,
+      // Include featureImage fields
+      intent: featureImage.intent,
+      isPublished: featureImage.isPublished,
+      publishedAt: featureImage.publishedAt
+    })
+    .from(image)
+    .innerJoin(featureImage, eq(image.id, featureImage.imageId))
+    .where(
+      and(
+        eq(featureImage.featureId, featureId),
+        // Hide unpublished images from everyone except project maintainers and superadmins
+        or(
+          eq(featureImage.isPublished, true),
+          accessStrategy === privilegedStrategy
+        )
+      )
+    );
+};
+
+export const getImageForProject = async (db: Database, projectId: Id) => {
+  return await db
+    .select(imageSelect)
+    .from(image)
+    .innerJoin(project, eq(image.id, project.imageId))
+    .where(eq(project.id, projectId));
+};
+
+export const getImageForOrganisation = async (db: Database, organisationId: Id) => {
+  return await db
+    .select(imageSelect)
+    .from(image)
+    .innerJoin(organisation, eq(image.id, organisation.imageId))
+    .where(eq(organisation.id, organisationId));
+};
