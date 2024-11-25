@@ -133,7 +133,7 @@ onDestroy(() => {
       role="feed"
       aria-busy={isLoading}
     >
-      {#each visibleEntities as { data: entity }, idx (entity.id)}
+      {#each visibleEntities as entity, idx (entity.data.id)}
         <div
           in:blur={{
             delay: initializedDOM ? 0 : 50 + (idx % pageSize) * 25,

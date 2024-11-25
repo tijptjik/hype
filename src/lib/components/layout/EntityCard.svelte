@@ -33,7 +33,7 @@ type Props = {
 let { entity, keyMap, header, badges, content, actions }: Props = $props();
 
 const routerState = getRouterState();
-const href = $derived(`/admin/${routerState.resourcePath}/${entity[keyMap.id]}${$page.url.search}`);
+const href = $derived(`/admin/${routerState.resourcePath}/${entity.data[keyMap.id]}${$page.url.search}`);
 
 const onclick = (e: MouseEvent) => {
   e.preventDefault();
@@ -76,12 +76,12 @@ const onclick = (e: MouseEvent) => {
       {@render content(entity)}
     {:else}
       <h2 class="card-title mt-0">
-        {entity[keyMap.title]}
+        {entity.data[keyMap.title]}
         {#if keyMap.subtitle}
-          <small class="text-sm text-gray-500">{entity[keyMap.subtitle]}</small>
+          <small class="text-sm text-gray-500">{entity.data[keyMap.subtitle]}</small>
         {/if}
       </h2>
-      <p class="mt-2">{@html entity[keyMap.description]}</p>
+      <p class="mt-2">{@html entity.data[keyMap.description]}</p>
     {/if}
 
     <!-- Actions Section -->
