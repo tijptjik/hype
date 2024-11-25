@@ -34,8 +34,17 @@ const intentOrder = [
 ];
 
 // STATE : PROPS
-let sectionProps: SectionProps = $props();
+let {
+  activeImage = $bindable(null),
+  images = $bindable([]),
+  ...sectionProps
+}: SectionProps & {
+  activeImage: GetImageAPI | null;
+  images: GetImageAPI[];
+} = $props();
 let { title } = sectionProps;
+
+let isLoadingImages = $state(false);
 
 // DOM
 let inputElement = $state<HTMLInputElement>();
@@ -47,13 +56,8 @@ const routerState = getRouterState() as EntityRouter;
 // CONTEXT :: RESOURCE
 const resourceState = getHierarchicalResourceState();
 
-// STATE : CONTEXT :: FORM
-let { form } = sectionProps.form;
-
 // STATE : DERIVED
-let images: GetImageAPI[] = $state([]);
 let rejectedImages: File[] = $state([]);
-
 let scrollContainer: HTMLDivElement;
 
 // Track scroll position for arrows
@@ -72,11 +76,9 @@ type ImageUploadState = {
 let uploadQueue = $state<ImageUploadState[]>([]);
 
 // Add loading state
-let isLoadingImages = $state(true);
 let imageLoadedMap = $state<Record<string, boolean>>({});
 let allImagesLoaded = $derived(
-  images.length > 0 && 
-  images.every(img => imageLoadedMap[img.id])
+  images.length > 0 && images.every((img) => imageLoadedMap[img.id])
 );
 
 // Add near other state declarations
@@ -132,15 +134,13 @@ function handleScroll() {
 }
 
 function scrollTo(direction: 'left' | 'right') {
-  
   if (!scrollContainer) return;
-  
+
   const scrollAmount = 600; // Width of 3 images
   const currentScroll = scrollContainer.scrollLeft;
-  const targetScroll = direction === 'left' 
-    ? currentScroll - scrollAmount 
-    : currentScroll + scrollAmount;
-    
+  const targetScroll =
+    direction === 'left' ? currentScroll - scrollAmount : currentScroll + scrollAmount;
+
   scrollContainer.scrollTo({
     left: targetScroll,
     behavior: 'smooth'
@@ -154,13 +154,11 @@ function sortImages(images: GetImageAPI[]): GetImageAPI[] {
     if (a.isPublished !== b.isPublished) {
       return a.isPublished ? -1 : 1;
     }
-
     // Then sort by intent order
     const intentCompare = intentOrder.indexOf(a.intent) - intentOrder.indexOf(b.intent);
     if (intentCompare !== 0) {
       return intentCompare;
     }
-
     // Finally, sort by creation date (newest first)
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
@@ -184,6 +182,8 @@ $effect(() => {
       // Only call updateScrollArrows here if there are no images
       if (images.length === 0) {
         updateScrollArrows();
+      } else {
+        selectActiveImage(images[0]);
       }
     });
 });
@@ -196,7 +196,7 @@ function handleFilesSelect(event: {
     status: 'uploading' as UploadStatus,
     retries: 0
   }));
-  
+
   uploadQueue = [...uploadQueue, ...newFiles];
   rejectedImages = [...rejectedImages, ...event.detail.fileRejections];
 
@@ -274,6 +274,9 @@ const handleUpload = async (fileState: ImageUploadState) => {
 
     // Remove from upload queue
     uploadQueue = uploadQueue.filter((item) => item.file !== fileState.file);
+
+    // Select the new image
+    selectActiveImage(savedImage);
   } catch (error) {
     console.error('Failed to process image:', error);
     // Update status to error in upload queue
@@ -311,9 +314,9 @@ const openFileDialog = () => {
 const actions = {
   add: () => openFileDialog(),
   remove: (e: Event) => {
-      e.preventDefault();
-      e.stopPropagation();
-      actionProps.removeMode = !actionProps.removeMode;
+    e.preventDefault();
+    e.stopPropagation();
+    actionProps.removeMode = !actionProps.removeMode;
     imagesPendingConfirmation = new Set();
   }
 };
@@ -343,10 +346,10 @@ function cancelDelete(e: Event, image: GetImageAPI) {
 async function confirmDelete(e: Event, image: GetImageAPI) {
   e.preventDefault();
   e.stopPropagation();
-  
+
   // Add to deleting set and force a UI update
   imagesDeleting = new Set(imagesDeleting).add(image.id);
-  
+
   try {
     const response = await fetch(`/api/images/${image.id}`, {
       method: 'DELETE'
@@ -358,20 +361,31 @@ async function confirmDelete(e: Event, image: GetImageAPI) {
 
     // Only filter images after successful deletion
     images = images.filter((img) => img.id !== image.id);
+    // Select the next image
+    selectActiveImage(images[0]);
   } catch (error) {
     console.error('Failed to delete image:', error);
     // Show error toast or notification
   } finally {
     // Clean up both sets with new Set to ensure reactivity
-    imagesPendingConfirmation = new Set([...imagesPendingConfirmation].filter(id => id !== image.id));
-    imagesDeleting = new Set([...imagesDeleting].filter(id => id !== image.id));
+    imagesPendingConfirmation = new Set(
+      [...imagesPendingConfirmation].filter((id) => id !== image.id)
+    );
+    imagesDeleting = new Set([...imagesDeleting].filter((id) => id !== image.id));
   }
+}
+
+// Add hover handler
+function selectActiveImage(image: GetImageAPI) {
+  activeImage = image;
 }
 </script>
 
 <!-- Intent label -->
 {#snippet intentLabel(intent: string, idx: number)}
-  <div class="absolute bottom-0 left-0 right-0 flex justify-center p-2" transition:fade={{ duration: 200, delay: 150 + idx * 50 }}>
+  <div
+    class="absolute bottom-0 left-0 right-0 flex justify-center p-2"
+    transition:fade={{ duration: 200, delay: 150 + idx * 50 }}>
     <span class="rounded-lg bg-base-100/80 px-3 py-[6px] text-sm backdrop-blur-sm">
       {intent}
     </span>
@@ -379,9 +393,13 @@ async function confirmDelete(e: Event, image: GetImageAPI) {
 {/snippet}
 
 {#snippet cloudImage(image: GetImageAPI, idx: number)}
-  <div class="h-full w-full">
+  <div
+    class="h-full w-full"
+    onmouseenter={() => selectActiveImage(image)}
+    onclick={() => selectActiveImage(image)}>
     {#if !imageLoadedMap[image.id]}
-      <div class="absolute inset-0 animate-pulse rounded-lg bg-base-200"
+      <div
+        class="absolute inset-0 animate-pulse rounded-lg bg-base-200"
         transition:fade={{ duration: 200 }}>
         <div class="flex h-full w-full items-center justify-center">
           <span class="loading loading-spinner loading-md"></span>
@@ -393,7 +411,6 @@ async function confirmDelete(e: Event, image: GetImageAPI) {
       width="200"
       height="200"
       src={image.publicId}
-      alt="{image.intent} image of {$form.name}"
       crop="fill"
       class="h-full w-full rounded-lg object-cover text-neutral
       {!imageLoadedMap[image.id] ? 'hidden' : 'block'}
@@ -426,9 +443,7 @@ async function confirmDelete(e: Event, image: GetImageAPI) {
   <div
     class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-100/30"
     transition:fade={{ duration: 200 }}>
-    <button 
-      class="btn btn-circle btn-error" 
-      onclick={(e) => handleDelete(e,image)}>
+    <button class="btn btn-circle btn-error" onclick={(e) => handleDelete(e, image)}>
       <Icon src={Trash} class="h-6 w-6" />
     </button>
   </div>
@@ -459,8 +474,11 @@ async function confirmDelete(e: Event, image: GetImageAPI) {
 
 {#snippet scrollArrow(direction: 'left' | 'right')}
   <button
-    class="arrow absolute {direction === 'left' ? 'left-6' : 'right-6'} top-1/2 z-20 -translate-y-1/2 transform rounded-full bg-base-100/80 p-2 shadow-lg transition-all hover:bg-base-100 hover:shadow-xl"
+    class="arrow absolute {direction === 'left'
+      ? 'left-6'
+      : 'right-6'} top-1/2 z-20 -translate-y-1/2 transform rounded-full bg-base-100/80 p-2 shadow-lg transition-all hover:bg-base-100 hover:shadow-xl"
     onclick={(e) => {
+      e.preventDefault();
       e.stopPropagation();
       scrollTo(direction);
     }}
@@ -472,7 +490,13 @@ async function confirmDelete(e: Event, image: GetImageAPI) {
 
 <div
   class="z-10 rounded-2xl bg-gradient-to-r from-rose-500/70 to-fuchsia-800/70 p-0 @container">
-  <Header {...sectionProps} bind:actionProps {Actions} {actions} {Stats} />
+  <Header
+    {...sectionProps}
+    bind:actionProps
+    {Actions}
+    {actions}
+    {Stats}
+    bind:activeImage />
   <main class="relative w-full">
     <!-- Left Arrow -->
     {#if showLeftArrow}
@@ -492,7 +516,7 @@ async function confirmDelete(e: Event, image: GetImageAPI) {
           on:select={handleFilesSelect}
           class="flex h-full w-full flex-col justify-center gap-2 rounded-lg border-2 border-dashed border-base-content/10 bg-base-100/50 text-center align-middle transition-colors hover:border-primary"
           disableDefaultStyles={true}
-          bind:inputElement={inputElement}>
+          bind:inputElement>
           <Icon src={Photo} class="mx-auto mt-4 h-8 w-8" />
           <span class="mx-auto pb-6 text-sm">Drop images</span>
         </Dropzone>
@@ -547,26 +571,18 @@ async function confirmDelete(e: Event, image: GetImageAPI) {
           </div>
         {/each}
       {:else}
-        <!-- Published images -->
-        {#each images.filter((image) => image.isPublished) as image, i (image.id)}
+        <!-- All images in a single list -->
+        {#each [...images].sort((a, b) => {
+          // Sort by published state first
+          if (a.isPublished !== b.isPublished) {
+            return a.isPublished ? -1 : 1;
+          }
+          // Keep original order within each group
+          return images.indexOf(a) - images.indexOf(b);
+        }) as image, i (image.id)}
           <div
             animate:flip={{ duration: 300 }}
             in:fade={{ duration: 200, delay: i * 100 }}
-            out:fade={{ duration: 200 }}
-            class="relative h-[200px] w-[200px] flex-none">
-            {@render cloudImage(image, i)}
-          </div>
-        {/each}
-        {#if images.filter((image) => image.isPublished).length > 0 && images.filter((image) => !image.isPublished).length > 0}
-          <div class="h-[200px] w-1 flex-none bg-neutral"></div>
-        {/if}
-        {#each images.filter((image) => !image.isPublished) as image, i (image.id)}
-          <div
-            animate:flip={{ duration: 300 }}
-            in:fade={{
-              duration: 200,
-              delay: (images.filter((image) => image.isPublished).length + i) * 100
-            }}
             out:fade={{ duration: 200 }}
             class="relative h-[200px] w-[200px] flex-none">
             {@render cloudImage(image, i)}
