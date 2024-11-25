@@ -387,6 +387,7 @@ export const FeatureI18nBase = createSelectSchema(featureI18n);
 export const FeatureInsert = createInsertSchema(feature).extend({
   ...getDefaultConstraints(feature),
   // TODO These are NOT custom, they should just be z.object()
+  contributorId: z.string(),
   geometry: PointGeometry,
   addressProperties: z.custom<AddressProperties>().optional()
 });
@@ -435,8 +436,8 @@ export const ImageInsert = createInsertSchema(image).extend({
   id: z.string().optional(),
   publicId: z.string().min(1, "Public ID is required"),
   cdn: z.enum(['cloudinary']).default('cloudinary'),
-  contributorId: z.string().optional(),
-  capturedAt: z.string().optional()
+  contributorId: z.string(),
+  capturedAt: z.string()
 });
 
 export const ImageUpdate = ImageInsert.extend({
@@ -477,7 +478,7 @@ export const ImageGetAPI = ImageUpdate.extend({
   intent: z.enum(['canonical', 'closeUp', 'context', 'general', 'evidence', 'undefined'])
   .default('undefined'),
   isPublished: z.boolean().default(false),
-  publishedAt: z.string().optional(),
+  publishedAt: z.coerce.date(),
   createdAt: z.string()
 });
 
