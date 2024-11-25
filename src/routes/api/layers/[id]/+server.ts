@@ -122,7 +122,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
   
   try {
     const formData: LayerPartialUpdate = await request.json();
-    const form = await superValidate(formData, zod(LayerPatch));
+    const form = await superValidate(formData, zod(LayerPatch), {defaults: {}});
 
     if (!form.valid) {
       return json(form, { status: 400 });

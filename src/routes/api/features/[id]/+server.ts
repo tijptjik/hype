@@ -130,7 +130,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
 
   try {
     const formData: FeaturePartialUpdate = await request.json();
-    const form = await superValidate(formData, zod(FeaturePatch));
+    const form = await superValidate(formData, zod(FeaturePatch), {defaults: {}});
 
     if (!form.valid) {
       return json(form, { status: 400 });

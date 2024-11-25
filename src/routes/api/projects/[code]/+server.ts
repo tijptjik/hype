@@ -178,7 +178,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
   
   try {
     const formData: ProjectPartialUpdate = await request.json();
-    const form = await superValidate(formData, zod(ProjectPatch));
+    const form = await superValidate(formData, zod(ProjectPatch), {defaults: {}});
 
     if (!form.valid) {
       return json(form, { status: 400 });

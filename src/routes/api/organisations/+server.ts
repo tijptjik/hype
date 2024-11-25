@@ -10,7 +10,9 @@ import {
   createUserRoles,
   extractEntitiesToInsert
 } from '$lib/db/services/organisation';
-import { isFieldUnique, getQueryParamsWithoutPrism } from '$lib/api';
+import { getQueryParamsWithoutPrism } from '$lib/api';
+import { isFieldUnique } from '$lib/db';
+
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
 import { OrganisationInsertAPI, OrganisationUpdateAPI } from '$lib/db/zod';
@@ -70,6 +72,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 
   try {
     const formData: NewOrganisation = await request.json();
+
     const form = (await superValidate(
       formData,
       zod(OrganisationInsertAPI)
