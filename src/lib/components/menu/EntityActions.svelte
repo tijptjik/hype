@@ -16,7 +16,7 @@ let menuProps = $props();
 const routerState = getRouterState() as EntityRouter;
 
 let showFormControler = $derived(
-  routerState.resource !== 'feature' || routerState.facet !== 'images'
+  routerState.facet !== 'images'
 );
 let showPublishButton = $derived(
   (routerState.resource === 'project' ||
