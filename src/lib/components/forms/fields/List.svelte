@@ -1,7 +1,7 @@
 <script lang="ts">
 import { flip } from 'svelte/animate';
 import { fade } from 'svelte/transition';
-import { draggable, droppable} from '@thisux/sveltednd';
+import { draggable, droppable } from '@thisux/sveltednd';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Plus, ExclamationTriangle, Bars3, XMark, Trash } from '@steeze-ui/heroicons';
@@ -14,15 +14,8 @@ import type { FacetRouter, IntermediateValue, ListFieldProps } from '$lib/types'
 
 // STATE : PROPS
 let fieldProps: ListFieldProps = $props();
-let {
-  languageTag,
-  fieldRoot,
-  fieldIndex,
-  fieldKey,
-  field,
-  actions,
-  actionProps
-} = fieldProps;
+let { languageTag, fieldRoot, fieldIndex, fieldKey, field, actions, actionProps } =
+  fieldProps;
 
 // STATE : FORM
 const { constraints, errors } = fieldProps.form;
@@ -116,15 +109,18 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
                 <p class="text-center font-bold text-error">Are you sure?</p>
                 <button
                   class="btn btn-ghost btn-sm"
-                  onclick={() => {
+                  onclick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     actionProps.confirmingId = undefined;
-                    actionProps.removeModeLang = undefined;
                   }}>
                   Cancel
                 </button>
                 <button
                   class="btn btn-error btn-sm"
                   onclick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     actions.remove(e, property.id);
                     actionProps.confirmingId = undefined;
                     actionProps.removeModeLang = undefined;
