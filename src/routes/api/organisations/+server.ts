@@ -41,7 +41,8 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
       db,
       accessStrategy,
       {
-        translations: true
+        translations: true,
+        image: true
       },
       userId,
       organisationRole,

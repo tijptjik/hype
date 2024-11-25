@@ -60,7 +60,8 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
               }
             }
           },
-          translations: true
+          translations: true,
+          image: true
         },
         userId,
         organisationRole,

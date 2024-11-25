@@ -8,7 +8,6 @@ import {
   JSONResponseOrError,
   SuperFormResponse,
   SuperFormErrorResponse,
-  type AccessStrategyOption
 } from '$lib/api';
 import { hierarchicalEntityQuery } from '$lib/db';
 // DB
@@ -27,9 +26,7 @@ import { isFieldUnique, isFieldChanged } from '$lib/db';
 import { ProjectPatch, ProjectUpdateAPI } from '$lib/db/zod';
 // TYPES
 import type { SuperValidated } from 'sveltekit-superforms/client';
-import type { OrganisationRole, Project, ProjectDB, ProjectPartialUpdate } from '$lib/types';
-import { and, eq } from 'drizzle-orm';
-import { patchFeature } from '$lib/db/services/feature';
+import type { AccessStrategyOption, Project, ProjectDB, ProjectPartialUpdate } from '$lib/types';
 
 const RESOURCE_TYPE = 'project';
 const RESOURCE_PATH = 'projects';
@@ -74,7 +71,8 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
                 }
               }
             }
-          }
+          },
+          image: true
         },
         userId,
         projectRole,
@@ -85,7 +83,6 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
       // Process result to include organization roles
       let processedResult = await mergeOrganisationRoles(db, result);
       processedResult.properties.reverse();
-
 
       // HTTP : 200 JSON or 404
       return JSONResponseOrError(processedResult);
@@ -112,7 +109,10 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 
   try {
     const formData: Project = await request.json();
-    const form = (await superValidate(formData, zod(ProjectUpdateAPI))) as SuperValidated<Project>;
+    const form = (await superValidate(
+      formData,
+      zod(ProjectUpdateAPI)
+    )) as SuperValidated<Project>;
 
     // Check if the current user will lose access on membership changes
     const userLosesAccess =
@@ -127,7 +127,12 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     );
 
     if (codeChanged) {
-      const codeUnique = await isFieldUnique<Project>(db, formData, RESOURCE_TYPE, 'code');
+      const codeUnique = await isFieldUnique<Project>(
+        db,
+        formData,
+        RESOURCE_TYPE,
+        'code'
+      );
       if (!codeUnique) {
         form.valid = false;
         form.errors.code = ['Code already exists'];
@@ -139,18 +144,25 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
       return SuperFormResponse<Project>(form);
     }
 
-    const { baseProject, formTranslations, formMaintainerRoles, formProperties } = extractEntitiesToUpdate(
-      form.data as Project
-    );
+    const { baseProject, formTranslations, formMaintainerRoles, formProperties } =
+      extractEntitiesToUpdate(form.data as Project);
     const updatedProject = await updateProject(db, baseProject, params.code as string);
-    const updatedTranslations = await updateTranslations(db, formTranslations, updatedProject.id);
+    const updatedTranslations = await updateTranslations(
+      db,
+      formTranslations,
+      updatedProject.id
+    );
     const updatedMaintainerRoles = await updateMaintainerRoles(
       db,
       formMaintainerRoles,
       updatedProject.id,
       updatedProject.organisationId
     );
-    const updatedProperties = await updateRelatedProperties(db, formProperties, updatedProject.id);
+    const updatedProperties = await updateRelatedProperties(
+      db,
+      formProperties,
+      updatedProject.id
+    );
 
     const updatedForm = await rebuildFormData(
       db,
@@ -160,34 +172,42 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
       updatedProperties
     );
 
-
     if (userLosesAccess || codeChanged) {
       redirect = true;
     }
 
-    return SuperFormResponse<Project>(updatedForm, redirect, userLosesAccess, RESOURCE_PATH);
+    return SuperFormResponse<Project>(
+      updatedForm,
+      redirect,
+      userLosesAccess,
+      RESOURCE_PATH
+    );
   } catch (err) {
     console.error(err);
     return SuperFormErrorResponse(RESOURCE_TYPE);
   }
 };
 
-
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
-  const { db } = await getDatabaseOrError(locals, platform, ACCESS_STRATEGY, RESOURCE_TYPE);
-  
+  const { db } = await getDatabaseOrError(
+    locals,
+    platform,
+    ACCESS_STRATEGY,
+    RESOURCE_TYPE
+  );
+
   try {
     const formData: ProjectPartialUpdate = await request.json();
-    const form = await superValidate(formData, zod(ProjectPatch), {defaults: {}});
+    const form = await superValidate(formData, zod(ProjectPatch), { defaults: {} });
 
     if (!form.valid) {
       return json(form, { status: 400 });
     }
 
-    const updated = await patchProject(db, params.code as string, form.data);
+    const updated = await patchProject(db, params.code as string, form.data, 'code');
     return json({ success: true, data: updated });
   } catch (err) {
     console.error(err);
-    return json({ success: false, error: 'Failed to update layer' }, { status: 500 });
+    return json({ success: false, error: 'Failed to update project' }, { status: 500 });
   }
 };

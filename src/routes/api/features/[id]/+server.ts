@@ -140,6 +140,6 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     return json({ success: true, data: updated });
   } catch (err) {
     console.error(err);
-    return json({ success: false, error: 'Failed to update layer' }, { status: 500 });
+    return json({ success: false, error: 'Failed to update feature' }, { status: 500 });
   }
 };
