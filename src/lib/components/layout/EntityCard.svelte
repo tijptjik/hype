@@ -63,12 +63,11 @@ const onclick = (e: MouseEvent) => {
   {#if header}
     {@render header(entity)}
   {:else}
-    <figure>
-      <Image
-        src={entity[keyMap.image] as string}
-        alt={entity[keyMap.title] as string}
-      />
-    </figure>
+    <Image
+      src={entity[keyMap.image] as string}
+      alt={entity[keyMap.title] as string}
+      layout="cover"
+    />
   {/if}
 
   <!-- Content Section -->
