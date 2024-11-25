@@ -15,19 +15,29 @@ const routerState = setRouterState();
 // Initialize Hierarchical Resource State
 const hierarchicalState = setHierarchicalResourceState();
 
-// TODO :: Handle Back and Forward Navigation
+let viewportContained = $derived(
+  routerState.entity == false ||
+  routerState.facet == 'address' ||
+    routerState.facet == 'images' ||
+    (routerState.resource == 'feature' && routerState.facet == 'core')
+);
 
+console.log(viewportContained);
+
+// TODO :: Handle Back and Forward Navigation
 </script>
 
 <!-- TODO Implement Toast ⚡ - https://github.com/kbrgl/svelte-french-toast/pull/82 -->
 
 <!-- LAYOUT -->
 <Sidebar />
-<div class="flex h-screen w-full flex-col select-none drag-none">
+<div class="flex h-screen w-full select-none flex-col drag-none">
   <header class="flex-none bg-black">
     <Navbar />
   </header>
-  <main class="flex h-full flex-1 flex-col overflow-hidden">
+  <main
+    class="flex h-full flex-1 flex-col overflow-hidden"
+    class:pb-[72px]={!viewportContained}>
     {@render children()}
   </main>
 </div>
