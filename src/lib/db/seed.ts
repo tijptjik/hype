@@ -60,17 +60,17 @@ import type { SQLiteInsertValue } from 'drizzle-orm/sqlite-core';
 
 // Mapping between JSON files and Tables
 const seedBank = {
-  image: {
-    name: 'Images',
-    table: image,
-    data: imagesJson,
-    chunk: 0
-  },
   user: {
     name: 'Users',
     table: user,
     data: userJson,
     chunk: 0
+  },
+  image: {
+    name: 'Images',
+    table: image,
+    data: imagesJson,
+    chunk: 4
   },
   account: {
     name: 'Accounts',
