@@ -30,7 +30,8 @@ import type {
   FilterableResourceType,
   EntityWithData,
   Ref,
-  FacetType
+  FacetType,
+  GetImageAPI
 } from '$lib/types';
 
 // CONFIG
@@ -288,6 +289,13 @@ const getQueryParams = (): URLSearchParams => {
   return new URLSearchParams($page.url.searchParams.toString());
 };
 
+const toImage = (image: GetImageAPI | undefined): string => {
+  if (image) {
+    return `https://res.cloudinary.com/${image.env}/image/upload/c_fit,h_320,w_320/v${image.version}/${image.publicId}`;
+  }
+  return 'https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=9';
+}
+
 /**
  * Converts an API entity to a standardized entity format.
  *
@@ -311,6 +319,7 @@ const toEntity = (apiEntity: ApiEntity): EntityWithData<Resource> => {
     description: apiEntity.description || apiEntity.description || '',
     address: apiEntity.displayAddress || '',
     ref: apiEntity.ref || apiEntity.code || apiEntity.id,
+    image: toImage(apiEntity.image),
     data: apiEntity
   };
 };

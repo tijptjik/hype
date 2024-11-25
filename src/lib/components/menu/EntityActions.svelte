@@ -24,8 +24,6 @@ let showPublishButton = $derived(
     routerState.resource === 'feature') &&
   (routerState.entity !== NEW_REF && routerState.entity !== false)
 );
-
-console.log(routerState.entity);
 </script>
 
 {#if showFormControler}
