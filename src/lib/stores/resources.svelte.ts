@@ -4,7 +4,6 @@ import type {
   EntityWithData,
   ResourceToEntity,
   ResourceToText,
-  NewOrganisation,
   Project,
   Layer,
   Feature,

@@ -466,11 +466,17 @@ export const FeatureImageUpdateAPI = FeatureImageUpdate.extend({
 
 
 export const ImageInsertAPI = ImageInsert.extend({
-  featureImage: FeatureImageInsert.optional()
+  featureImage: FeatureImageInsert.optional(),
+  // RELATED ENTITY
+  refType: z.enum(['feature', 'project', 'organisation']),
+  refId: z.string(),
 });
 
 export const ImageUpdateAPI = ImageUpdate.extend({
-  featureImage: FeatureImageUpdate.optional()
+  featureImage: FeatureImageUpdate.optional(),
+  // RELATED ENTITY
+  refType: z.enum(['feature', 'project', 'organisation']),
+  refId: z.string(),
 });
 
 export const ImageGetAPI = ImageUpdate.extend({
