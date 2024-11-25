@@ -10,12 +10,12 @@ import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 import Header from '$lib/components/layout/EntityHeader.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
 import PropertySection from '$lib/components/forms/sections/FeatureProperty.svelte';
-import ImageSection from '$lib/components/forms/sections/Image.svelte';
 import MapSection from '$lib/components/forms/sections/Map.svelte';
 import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte';
 import AddressSection from '$lib/components/forms/sections/Address.svelte';
 import AddressComponentSection from '$lib/components/forms/sections/AddressComponent.svelte';
 import GallerySection from '$lib/components/forms/sections/Gallery.svelte';
+import ViewerSection from '$lib/components/forms/sections/Viewer.svelte';
 // TYPES
 import type {
   Feature,
@@ -24,7 +24,8 @@ import type {
   FormFieldArray,
   FormFieldNested,
   EntityRouter,
-  FormFieldConfig
+  FormFieldConfig,
+  GetImageAPI
 } from '$lib/types';
 
 // CONFIG
@@ -123,6 +124,30 @@ const resourceState = getHierarchicalResourceState();
 let form = $state(setForm<Feature>(RESOURCE, entity, validatedForm));
 let enhance = $derived(form.enhance);
 let isNew = $state(entity === NEW_REF);
+let isPublished = $derived(form.form.publishedAt !== null);
+
+// STATE : SHARED
+let activeImage = $state<GetImageAPI | null>(null);
+let images = $state<GetImageAPI[]>([]);
+
+// Navigation functions
+function navigateImage(e: Event, direction: 'prev' | 'next') {
+  e.preventDefault();
+  e.stopPropagation();
+  if (!activeImage || !images.length) return;
+
+  const currentIndex = images.findIndex((img) => img.id === activeImage?.id);
+  if (currentIndex === -1) return;
+
+  let newIndex: number;
+  if (direction === 'prev') {
+    newIndex = currentIndex === 0 ? images.length - 1 : currentIndex - 1;
+  } else {
+    newIndex = currentIndex === images.length - 1 ? 0 : currentIndex + 1;
+  }
+
+  activeImage = images[newIndex];
+}
 
 $effect(() => {
   if (isNew && title !== NEW_TITLE) {
@@ -157,7 +182,7 @@ let doRerender = $state(0);
 
 {#await forceUpdate(doRerender) then _}
   <!-- LAYOUT -->
-  <div class="h-full overflow-y-auto bg-black pb-16">
+  <div class="h-full overflow-hidden bg-black">
     <Header {title} {form} />
     <form
       method="POST"
@@ -165,19 +190,18 @@ let doRerender = $state(0);
       role="form"
       data-testid="featureForm"
       class="h-full">
-      <main class="flex h-full flex-1 flex-row gap-6 bg-black p-6 pb-0 pr-3">
-        <div class="relative z-10 h-full flex-1 basis-1/3 @container">
+      <main
+        class="flex h-[calc(100vh-148px)] flex-1 flex-row gap-6 overflow-hidden bg-black p-6 pr-3">
+        <div class="relative z-10 h-full flex-1 basis-1/3 overflow-hidden @container">
           <MapSection {form} />
           <div
             class="absolute bottom-2 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex">
             <UserAttributionCard {form} type="contributor" />
-            {#if pageProps.data.validatedForm.data.isPublished}
-              <UserAttributionCard {form} type="publisher" />
-            {/if}
+            <UserAttributionCard {form} type="publisher" />
           </div>
         </div>
         <div class="h-auto basis-2/3 scroll-m-10 scroll-p-12 overflow-y-scroll">
-          <div class="flex flex-col-reverse justify-end gap-6 pb-12 pr-3">
+          <div class="flex h-full flex-col-reverse justify-end gap-6 pr-3">
             {#if routerState.facet === 'core'}
               <div class="flex flex-row gap-6">
                 <PropertySection
@@ -209,7 +233,13 @@ let doRerender = $state(0);
                 subtitle="feature is listed under this address in the app"
                 fields={FIELDS.address as FormField & FormFieldNested} />
             {:else if routerState.facet === 'images' && !isNew}
-              <GallerySection {form} title="Gallery" />
+              <ViewerSection
+                {form}
+                bind:activeImage
+                actions={{ navigateImage }}
+                showNav={images.length > 1}
+                title="Viewer" />
+              <GallerySection {form} bind:images bind:activeImage title="Gallery" />
             {/if}
           </div>
         </div>
