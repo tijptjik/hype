@@ -8,10 +8,10 @@
     "description": "Summoning characters from our city's past. Documenting defunct & faded signs of Hong Kong's cityscape. A project by <a href='https://www.instagram.com/handsome.co/'>Billy Potts</a> and <a href='https://www.instagram.com/benmaransphotography/'>Ben Marans</a>",
     "license": "Copyright - Contact for License",
     "attribution": "© Hong Kong Ghost Signs",
-    "image": "https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=10",
-    "isPublished": true,
+    "imageId": "s2mWN3HZOnLg",
+    "isPublished": 1,
     "createdAt": "2024-08-27T08:06:26.087Z",
-    "modifiedAt": "2024-08-27T08:06:26.087Z"
+    "modifiedAt": "2024-11-25T18:04:36.865Z"
   },
   {
     "id": "Xk9Lm2PqRs3T",
@@ -22,10 +22,10 @@
     "description": "A beautiful rendering of a the historical development of buildings across Hong Kong.",
     "license": "CC BY 4.0",
     "attribution": "CC:BY Hong Kong Data Layer",
-    "image": "https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=20",
-    "isPublished": false,
+    "imageId": "xov9_e37UBym",
+    "isPublished": 0,
     "createdAt": "2024-10-11T10:15:30.000Z",
-    "modifiedAt": "2024-10-11T10:15:30.000Z"
+    "modifiedAt": "2024-11-25T17:56:58.045Z"
   },
   {
     "id": "bN3Kw7MqPx5Y",
@@ -36,10 +36,10 @@
     "description": "What can the streets of Hong Kong tell us about its culture and history? Explore the stories behind Hong Kong's street names.",
     "license": "Copyright - Contact for License",
     "attribution": "© Diana Pang",
-    "image": "https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=15",
-    "isPublished": true,
+    "imageId": "wXOmUudz1DGe",
+    "isPublished": 1,
     "createdAt": "2024-08-27T08:06:26.087Z",
-    "modifiedAt": "2024-08-27T08:06:26.087Z"
+    "modifiedAt": "2024-11-25T17:57:51.579Z"
   },
   {
     "id": "vR8Tm4HjLs2X",
@@ -50,10 +50,10 @@
     "description": "Exploring the linguistic diversity in Hong Kong's street names and their cultural significance.",
     "license": "Copyright - Contact for License",
     "attribution": "© Diana Pang",
-    "image": "https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=15",
-    "isPublished": true,
+    "imageId": "kwpGlwX6UL9w",
+    "isPublished": 1,
     "createdAt": "2024-08-27T08:06:26.087Z",
-    "modifiedAt": "2024-08-27T08:06:26.087Z"
+    "modifiedAt": "2024-11-25T17:57:41.297Z"
   },
   {
     "id": "gD6Yp9WkNm4Z",
@@ -64,9 +64,9 @@
     "description": "A chronological journey through Hong Kong's street development and urban evolution.",
     "license": "Copyright - Contact for License",
     "attribution": "© Diana Pang",
-    "image": "https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=15",
-    "isPublished": true,
+    "imageId": "qZzQQecoKnU_",
+    "isPublished": 1,
     "createdAt": "2024-08-27T08:06:26.087Z",
-    "modifiedAt": "2024-08-27T08:06:26.087Z"
+    "modifiedAt": "2024-11-25T18:04:56.184Z"
   }
 ]

@@ -6,7 +6,9 @@
     "nameShort": "Ghostmappers",
     "description": "Summoning characters from our city's past. Documenting defunct & faded signs of Hong Kong's cityscape.",
     "url": "https://linktr.ee/hkghostsigns",
-    "image": "https://generative-placeholders.glitch.me/image?width=720&height=720&style=triangles&gap=25"
+    "imageId": "MMytTZtARlRA",
+    "createdAt": "2024-11-25T17:48:56.888Z",
+    "modifiedAt": "2024-11-25T17:49:31.295Z"
   },
   {
     "id": "iLszdNS3w208",
@@ -15,7 +17,9 @@
     "nameShort": "HK Street Names",
     "description": "Hong Kong Street Names is a project that explores the history and evolution of Hong Kong's street names.",
     "url": "https://dianapang.net",
-    "image": "https://generative-placeholders.glitch.me/image?width=720&height=720&style=triangles&gap=30"
+    "imageId": "nTb7GAxFol2q",
+    "createdAt": "2024-11-25T17:48:56.888Z",
+    "modifiedAt": "2024-11-25T17:49:40.774Z"
   },
   {
     "id": "oZTVNE4brR7m",
@@ -24,6 +28,8 @@
     "nameShort": "HKDL",
     "description": "A Useful, Beautiful Hong Kong",
     "url": "https://hype.hk",
-    "image": "https://generative-placeholders.glitch.me/image?width=720&height=720&style=triangles&gap=35"
+    "imageId": "BTFPYIK9Ho5B",
+    "createdAt": "2024-11-25T17:48:56.888Z",
+    "modifiedAt": "2024-11-25T17:49:48.470Z"
   }
 ]
