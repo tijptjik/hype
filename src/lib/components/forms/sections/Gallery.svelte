@@ -84,6 +84,10 @@ let allImagesLoaded = $derived(
 // Add near other state declarations
 let imagesDeleting = $state(new Set<string>());
 
+// Add these state variables near the top of the script section
+let editingIntentId = $state<string | null>(null);
+let editingIntentRef = $state<HTMLDivElement | null>(null);
+
 function handleImageLoad(imageId: string) {
   imageLoadedMap[imageId] = true;
   if (allImagesLoaded) {
@@ -235,7 +239,6 @@ const handleUpload = async (fileState: ImageUploadState) => {
 
     // Prepare the image data for our database
     const imageData = {
-      featureId: routerState.entity,
       cdn: 'cloudinary' as const,
       env: import.meta.env.VITE_CLOUDINARY_ENV,
       cdnId: cloudinaryData.asset_id,
@@ -246,6 +249,9 @@ const handleUpload = async (fileState: ImageUploadState) => {
       originalWidth: cloudinaryData.width,
       originalHeight: cloudinaryData.height,
       capturedAt: cloudinaryData.created_at,
+      // RELATED ENTITY
+      refType: routerState.resource,
+      refId: resourceState.state[routerState.resource]?.id,
       featureImage: {
         featureId: routerState.entity,
         intent: 'undefined',
@@ -379,16 +385,136 @@ async function confirmDelete(e: Event, image: GetImageAPI) {
 function selectActiveImage(image: GetImageAPI) {
   activeImage = image;
 }
+
+// Update the updateIntent function to handle canonical images
+async function updateIntent(imageId: string, newIntent: string) {
+  try {
+    // If trying to set as canonical, first check if another image is already canonical
+    if (newIntent === 'canonical') {
+      const currentCanonical = images.find(
+        (img) => img.id !== imageId && img.intent === 'canonical'
+      );
+
+      if (currentCanonical) {
+        // First update the current canonical image to undefined
+        const response = await fetch(`/api/images/${currentCanonical.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            featureImage: {
+              intent: 'undefined'
+            }
+          })
+        });
+
+        if (!response.ok) throw new Error('Failed to update previous canonical image');
+
+        // Update local state for the previous canonical image
+        images = sortImages(
+          images.map((img) =>
+            img.id === currentCanonical.id ? { ...img, intent: 'undefined' } : img
+          )
+        );
+      }
+    }
+
+    // Now update the current image
+    const response = await fetch(`/api/images/${imageId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        featureImage: {
+          intent: newIntent
+        }
+      })
+    });
+
+    if (!response.ok) throw new Error('Failed to update intent');
+
+    // Update local state for the current image
+    images = sortImages(
+      images.map((img) => (img.id === imageId ? { ...img, intent: newIntent } : img))
+    );
+  } catch (error) {
+    console.error('Failed to update intent:', error);
+    // You might want to add error handling UI here
+  } finally {
+    editingIntentId = null;
+  }
+}
+
+// Add keyboard handler for the intent selector
+function handleIntentKeydown(e: KeyboardEvent, imageId: string, intent: string) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    updateIntent(imageId, intent);
+  } else if (e.key === 'Escape') {
+    e.preventDefault();
+    editingIntentId = null;
+  }
+}
+
+// Add this effect near other effects
+$effect(() => {
+  if (editingIntentId) {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (editingIntentRef && !editingIntentRef.contains(e.target as Node)) {
+        editingIntentId = null;
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }
+});
 </script>
 
 <!-- Intent label -->
-{#snippet intentLabel(intent: string, idx: number)}
+{#snippet intentLabel(intent: string, idx: number, imageId: string)}
   <div
     class="absolute bottom-0 left-0 right-0 flex justify-center p-2"
     transition:fade={{ duration: 200, delay: 150 + idx * 50 }}>
-    <span class="rounded-lg bg-base-100/80 px-3 py-[6px] text-sm backdrop-blur-sm">
-      {intent}
-    </span>
+    <div class="relative">
+      <button
+        class="rounded-lg px-3 py-[6px] text-sm font-medium backdrop-blur-sm transition-all duration-200
+        {intent === 'canonical' ? 'bg-primary hover:bg-primary/90' : 'bg-base-100/80 hover:bg-base-200/80'}"
+        onclick={(e) => {
+          e.stopPropagation();
+          editingIntentId = editingIntentId === imageId ? null : imageId;
+        }}>
+        {intent}
+      </button>
+
+      {#if editingIntentId === imageId}
+        <div
+          class="absolute bottom-[34px] left-[-20px] mb-1 w-32 overflow-hidden rounded-lg bg-base-100 shadow-lg"
+          bind:this={editingIntentRef}
+          transition:fade={{ duration: 150 }}>
+          {#each intentOrder.filter((option) => option !== intent) as option, idx}
+            <button
+              class="w-full px-2 py-[5px] text-center text-sm hover:bg-base-200 focus:bg-base-200 focus:outline-none
+                {option === intent ? 'bg-base-200' : ''}
+                {option === 'canonical' &&
+              images.some((img) => img.id !== imageId && img.intent === 'canonical')
+                ? 'text-primary'
+                : ''}"
+              onclick={(e) => {
+                e.stopPropagation();
+                updateIntent(imageId, option);
+              }}
+              onkeydown={(e) => handleIntentKeydown(e, imageId, option)}
+              transition:fade={{ duration: 150, delay: 100 + idx * 100 }}
+              tabindex="0">
+              {option}
+            </button>
+          {/each}
+        </div>
+      {/if}
+    </div>
   </div>
 {/snippet}
 
@@ -419,7 +545,7 @@ function selectActiveImage(image: GetImageAPI) {
       on:load={() => handleImageLoad(image.id)} />
 
     {#if imageLoadedMap[image.id] && !actionProps.removeMode}
-      {@render intentLabel(image.intent, idx)}
+      {@render intentLabel(image.intent, idx, image.id)}
     {/if}
 
     <!-- Delete overlay -->
