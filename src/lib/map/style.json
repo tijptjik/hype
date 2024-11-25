@@ -193,7 +193,8 @@
       "type": "fill",
       "source": "hongkong-latest",
       "source-layer": "building",
-      "minzoom": 12,
+      "minzoom": 17,
+      "maxzoom": 19,
       "filter": [
         "==",
         "$type",
@@ -201,8 +202,24 @@
       ],
       "paint": {
         "fill-antialias": true,
-        "fill-color": "rgb(10,10,10)",
-        "fill-outline-color": "rgb(27 ,27 ,29)"
+        "fill-color": "rgb(21,25,30,7)"
+      }
+    },
+    {
+      "id": "building-outline",
+      "type": "fill",
+      "source": "hongkong-latest",
+      "source-layer": "building",
+      "minzoom": 19,
+      "filter": [
+        "==",
+        "$type",
+        "Polygon"
+      ],
+      "paint": {
+        "fill-antialias": true,
+        "fill-color": "rgb(21,25,30)",
+        "fill-outline-color": "#F37098"
       }
     },
     {
@@ -1991,7 +2008,7 @@
         "type": "symbol",
         "source": "hongkong-latest",
         "source-layer": "poi",
-        "minzoom": 18,
+        "minzoom": 19,
         "layout": {
           "icon-size": 0.4,
           "text-anchor": "left",
@@ -2021,7 +2038,7 @@
         "type": "symbol",
         "source": "hongkong-latest",
         "source-layer": "housenumber",
-        "minzoom": 18,
+        "minzoom": 19,
         "layout": {
           "icon-size": 0.4,
           "text-anchor": "left",
