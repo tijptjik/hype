@@ -103,8 +103,10 @@ const syncComplexValuesToForm = () => {
 syncFormToComplexValues();
 
 // Add helper function to reset modes
-function resetModes() {
-  actionProps.removeMode = false;
+function resetModes(closeRemove: boolean = true) {
+  if (closeRemove) {
+    actionProps.removeMode = false;
+  }
   actionProps.confirmationMode = false;
   actionProps.confirmingId = undefined;
 }
@@ -183,7 +185,7 @@ const isVisible = (field: Field) => {
 
   {#if isConfirming($form[fieldRoot][fieldIndex].id)}
     <ConfirmShim
-      onCancel={resetModes}
+      onCancel={() => resetModes(false)}
       onAccept={(e) => {
         actions.remove(e, fieldIndex);
         resetModes();
