@@ -95,9 +95,7 @@ export const organisation = sqliteTable('organisation', {
   description: text('description'),
   descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(false),
   url: text('url'),
-  image: text('image').default(
-    `https://generative-placeholders.glitch.me/image?width=720&height=720&style=triangles&gap=${getGenImageParam()}`
-  ),
+  imageId: text('imageId').references(() => image.id, { onDelete: 'set null' }),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -107,10 +105,13 @@ export const organisation = sqliteTable('organisation', {
     .notNull()
 });
 
-export const organisationRelations = relations(organisation, ({ many }) => ({
+export const organisationRelations = relations(organisation, ({ one, many }) => ({
   translations: many(organisationI18n),
-  userRoles: many(organisationRole)
-}));
+  userRoles: many(organisationRole),
+  image: one(image, {
+    fields: [organisation.imageId],
+    references: [image.id]
+  }),}));
 
 export const organisationI18n = sqliteTable(
   'organisationI18n',
@@ -238,10 +239,7 @@ export const project = sqliteTable('project', {
   // Attribution for the dataset
   attribution: text('attribution').notNull(),
   attributionGen: integer('attributionGen', { mode: 'boolean' }).notNull().default(false),
-  // Project Banner
-  image: text('image').default(
-    `https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=${getGenImageParam()}`
-  ),
+  imageId: text('imageId').references(() => image.id, { onDelete: 'set null' }),
   // Accessible to the public in the app
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('createdAt')
@@ -262,7 +260,11 @@ export const projectRelations = relations(project, ({ one, many }) => ({
   maintainerRoles: many(projectRole),
   properties: many(property),
   layers: many(layer),
-  tasks: many(task)
+  tasks: many(task),
+  image: one(image, {
+    fields: [project.imageId],
+    references: [image.id]
+  })
 }));
 
 export const projectI18n = sqliteTable(
