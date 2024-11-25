@@ -1,6 +1,7 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
 import { NEW_TITLE, NEW_REF } from '$lib';
+import { get } from 'svelte/store';
 // CONTEXT
 import { getRouterState } from '$lib/context/router.svelte';
 import { setForm, getForm } from '$lib/context/forms.svelte';
@@ -210,7 +211,10 @@ let enhance = $derived(form.enhance);
 let isNew = $state(entity === NEW_REF);
 
 $effect(() => {
-  if (isNew && title !== NEW_TITLE) {
+  if (routerState.entity !== entity) {
+    routerState.updateWith({ entity });
+  }
+  if (isNew && title === NEW_TITLE) {
     form = setForm<Project>(RESOURCE, routerState.entity, pageProps.data.validatedForm);
     entity = routerState.entity;
     isNew = false;
@@ -232,7 +236,6 @@ $effect(() => {
 $effect(() => {
   const url = new URL(window.location.href);
   url.searchParams.delete('parentRef');
-  goto(url.toString(), { replaceState: true });
 });
 
 // SYNC :: Await immediately resolved promise to react to value change.
@@ -241,42 +244,44 @@ let doRerender = $state(0);
 </script>
 
 {#await forceUpdate(doRerender) then _}
-  <!-- LAYOUT -->
-  <div class="h-full overflow-y-auto bg-black pb-16">
-    <Header {title} {form} />
-    <form method="POST" use:enhance role="form" data-testid="projectForm">
-      <main class="flex flex-col gap-6 p-6">
-        {#if routerState.facet === 'core'}
-          <I18nSection title="Descriptors" fields={FIELDS.i18n as FormField} {form} />
-          <I18nSection title="Credit" fields={FIELDS.credit as FormField} {form} />
-          <div class="flex flex-row gap-6">
-            <UserSection
-              title="Members with Edit Access"
-              subtitle="Maintainers have access to the review queue and can accept or reject feature changes"
-              fields={FIELDS.users as FormFieldArray}
-              {form} />
-            <SpecificationSection
-              title="Specification"
-              fields={FIELDS.specification as FormField}
-              {form} />
-          </div>
-        {:else if routerState.facet === 'fields'}
+<!-- LAYOUT -->
+<div class="h-full bg-black">
+  <Header {title} {form} />
+  <form method="POST" use:enhance role="form" data-testid="projectForm" class="h-full">
+    <main class="flex flex-col gap-6 p-6 h-full overflow-y-scroll">
+      {#if routerState.facet === 'core'}
+        <I18nSection title="Descriptors" fields={FIELDS.i18n as FormField} {form} />
+        <I18nSection title="Credit" fields={FIELDS.credit as FormField} {form} />
+        <div class="flex flex-row gap-6">
+          <UserSection
+            title="Members with Edit Access"
+            subtitle="Maintainers have access to the review queue and can accept or reject feature changes"
+            fields={FIELDS.users as FormFieldArray}
+            {form} />
+          <SpecificationSection
+            title="Specification"
+            fields={FIELDS.specification as FormField}
+            {form} />
+        </div>
+      {:else if routerState.facet === 'fields'}
+        <div class="flex flex-col gap-6">
           <PropertySection
             title="Categorical Fields"
-            subtitle="by which features can be filtered"
-            fieldDiscriminator="classifier"
-            fields={FIELDS.config as FormFieldArray}
-            {form} />
-          <PropertySection
-            title="Freeform Fields"
-            subtitle="displayed in a feature's info panels"
-            fieldDiscriminator="specifier"
-            fields={FIELDS.config as FormFieldArray}
-            {form} />
-        {:else if routerState.facet === 'images'}
-          <ImageSection title="Image" fields={FIELDS.images as FormField} {form} />
-        {/if}
-      </main>
-    </form>
-  </div>
+          subtitle="by which features can be filtered"
+          fieldDiscriminator="classifier"
+          fields={FIELDS.config as FormFieldArray}
+          {form} />
+        <PropertySection
+          title="Freeform Fields"
+          subtitle="displayed in a feature's info panels"
+          fieldDiscriminator="specifier"
+          fields={FIELDS.config as FormFieldArray}
+          {form} />
+        </div>
+      {:else if routerState.facet === 'images'}
+        <ImageSection title="Image" fields={FIELDS.images as FormField} {form} />
+      {/if}
+    </main>
+  </form>
+</div>
 {/await}

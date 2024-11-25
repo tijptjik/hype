@@ -91,15 +91,19 @@ let enhance = $derived(form.enhance);
 let isNew = $state(entity === NEW_REF);
 
 $effect(() => {
-  if (isNew && title !== NEW_TITLE){
-    form = setForm<Organisation>(RESOURCE, routerState.entity, pageProps.data.validatedForm)
+  if (isNew && title !== NEW_TITLE) {
+    form = setForm<Organisation>(
+      RESOURCE,
+      routerState.entity,
+      pageProps.data.validatedForm
+    );
     entity = routerState.entity;
     isNew = false;
-    doRerender++
+    doRerender++;
   } else {
     form = getForm<Organisation>(RESOURCE, entity);
   }
-}); 
+});
 
 // STATE : DERIVED :: TITLE
 let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
@@ -109,35 +113,40 @@ $effect(() => {
   resourceState.update('organisation', pageProps.data.validatedForm.data);
 });
 
-
 // SYNC :: Await immediately resolved promise to react to value change.
 const forceUpdate = async (_) => {};
 let doRerender = $state(0);
 </script>
 
 {#await forceUpdate(doRerender) then _}
-<!-- LAYOUT -->
-<div class="h-full overflow-y-auto bg-black pb-16">
-  <Header {title} {form} />
-  <form method="POST" use:enhance role="form" data-testid="organisationForm">
-    <main class="flex flex-col gap-6 p-6">
-      {#if routerState.facet === 'core'}
-        <I18nSection title="Descriptors" fields={FIELDS.i18n} {form} />
-        <div class="flex flex-row gap-6">
-          <UserSection
-            title="Members"
-            subtitle="Members can be set as Project Maintainers"
-            fields={FIELDS.users}
-            {form} />
-          <SpecificationSection
-            title="Specification"
-            fields={FIELDS.specification}
-            {form} />
-        </div>
-      {:else if routerState.facet === 'images'}
-        <ImageSection title="Image" fields={FIELDS.images} {form} />
-      {/if}
-    </main>
-  </form>
-</div>
+  <!-- LAYOUT -->
+  <div class="h-full bg-black mb-12">
+    <Header {title} {form} />
+    <form
+      method="POST"
+      use:enhance
+      role="form"
+      data-testid="organisationForm"
+      class="h-full">
+      <main
+        class="flex h-full flex-col gap-6 overflow-y-scroll p-6">
+        {#if routerState.facet === 'core'}
+          <I18nSection title="Descriptors" fields={FIELDS.i18n} {form} />
+          <div class="flex flex-row gap-6">
+            <UserSection
+              title="Members"
+              subtitle="Members can be set as Project Maintainers"
+              fields={FIELDS.users}
+              {form} />
+            <SpecificationSection
+              title="Specification"
+              fields={FIELDS.specification}
+              {form} />
+          </div>
+        {:else if routerState.facet === 'images'}
+          <ImageSection title="Image" fields={FIELDS.images} {form} />
+        {/if}
+      </main>
+    </form>
+  </div>
 {/await}

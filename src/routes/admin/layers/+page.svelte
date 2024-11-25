@@ -7,8 +7,6 @@ import ResourceHeader from '$lib/components/layout/ResourceHeader.svelte';
 import ResourceIndex from '$lib/components/layout/ResourceIndex.svelte';
 import EntityCard from '$lib/components/layout/EntityCard.svelte';
 import Image from '$lib/components/common/Image.svelte';
-// TYPES
-import type { EntityWithData, Layer } from '$lib/types';
 
 // CONFIG :: KEY MAP
 const keyMap = {
