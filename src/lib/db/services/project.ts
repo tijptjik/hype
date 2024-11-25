@@ -143,8 +143,8 @@ export const updateMaintainerRoles = async (
   return await createMaintainerRoles(db, maintainerRoles, projectId);
 };
 
-export const patchProject = async (db: Database, ref: string, data: Partial<ProjectDB>) => {
-  return await updatePartial(db, project, ref, 'code', data);
+export const patchProject = async (db: Database, ref: string, data: Partial<ProjectDB>, refType: 'id' | 'code') => {
+  return await updatePartial(db, project, ref, refType, data);
 };
 
 

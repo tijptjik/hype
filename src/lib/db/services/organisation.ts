@@ -4,7 +4,7 @@ import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { organisation, organisationI18n, organisationRole, user } from '../schema';
 import { OrganisationInsert, OrganisationInsertAPI, OrganisationUpdate, OrganisationUpdateAPI } from '../zod';
-import { toNestedTranslations } from '..';
+import { toNestedTranslations, updatePartial } from '..';
 // TYPES
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import type {
@@ -49,6 +49,10 @@ export const updateOrganisation = async (db: Database, data: OrganisationDB, ref
   }
 
   return updatedOrganisation;
+};
+
+export const patchOrganisation = async (db: Database, ref: string, data: Partial<OrganisationDB>, refType: 'id' | 'code') => {
+  return await updatePartial(db, organisation, ref, refType, data);
 };
 
 export const createTranslations = async (
