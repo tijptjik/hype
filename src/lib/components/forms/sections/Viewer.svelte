@@ -30,7 +30,7 @@ const [send, receive] = crossfade({
 });
 
 let imageSrc = $derived(
-  `https://res.cloudinary.com/${activeImage?.env}/image/upload/c_fit,h_1000,w_1000/${activeImage?.publicId}`
+  `https://res.cloudinary.com/${activeImage?.env}/image/upload/c_fit,h_1000,w_1000/v${activeImage?.version}/${activeImage?.publicId}`
 );
 </script>
 
