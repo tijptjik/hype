@@ -2,7 +2,7 @@ diff --git a/node_modules/drizzle-orm/sqlite-core/columns/integer.cjs b/node_mod
 index b3d1837..56eaf41 100644
 --- a/node_modules/drizzle-orm/sqlite-core/columns/integer.cjs
 +++ b/node_modules/drizzle-orm/sqlite-core/columns/integer.cjs
-@@ -100,7 +100,7 @@ class SQLiteTimestamp extends SQLiteBaseInteger {
+@@ -104,7 +104,7 @@ class SQLiteTimestamp extends SQLiteBaseInteger {
      return new Date(value);
    }
    mapToDriverValue(value) {
@@ -15,7 +15,7 @@ diff --git a/node_modules/drizzle-orm/sqlite-core/columns/integer.js b/node_modu
 index fa17466..06ebb75 100644
 --- a/node_modules/drizzle-orm/sqlite-core/columns/integer.js
 +++ b/node_modules/drizzle-orm/sqlite-core/columns/integer.js
-@@ -68,7 +68,7 @@ class SQLiteTimestamp extends SQLiteBaseInteger {
+@@ -72,7 +72,7 @@ class SQLiteTimestamp extends SQLiteBaseInteger {
      return new Date(value);
    }
    mapToDriverValue(value) {
