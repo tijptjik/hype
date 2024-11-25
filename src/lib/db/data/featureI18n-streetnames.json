@@ -92,39 +92,99 @@
     {
       "featureId": "Kt9Np2Lm7H",
       "lang": "zh-hant",
-      "title": "甲龍路",
+      "title": "翼龍徑",
       "titleGen": false,
-      "description": "甲龍有一個棒槌狀的尾巴，可以揮動並產生足夠的力量打斷大型掠食動物的骨頭。",
+      "description": "與普遍認知相反，翼龍並不是恐龍，而是飛行爬行動物。",
       "descriptionGen": false,
-      "displayAddress": "香港上環",
+      "displayAddress": "香港土瓜灣",
       "displayAddressGen": false,
       "addressProperties": {
-        "neighbourhood": "上環",
-        "administrativeAreaLevel1": "香港島",
+        "neighbourhood": "土瓜灣",
+        "administrativeAreaLevel1": "九龍",
         "country": "香港"
       }
     },
     {
       "featureId": "Kt9Np2Lm7H",
       "lang": "zh-hans",
-      "title": "甲龙路",
+      "title": "翼龙径",
       "titleGen": false,
-      "description": "甲龙有一个棒槌状的尾巴，可以挥动并产生足够的力量打断大型掠食动物的骨头。",
+      "description": "与普遍认知相反，翼龙并不是恐龙，而是飞行爬行动物。",
       "descriptionGen": false,
-      "displayAddress": "香港上环",
+      "displayAddress": "香港土瓜湾",
       "displayAddressGen": false,
       "addressProperties": {
-        "neighbourhood": "上环",
-        "administrativeAreaLevel1": "香港岛",
+        "neighbourhood": "土瓜湾",
+        "administrativeAreaLevel1": "九龙",
         "country": "香港"
       }
     },
     {
       "featureId": "Ht2Lm7Np9K",
       "lang": "zh-hant",
-      "title": "梁龍道",
+      "title": "腕龍大道",
       "titleGen": false,
-      "description": "梁龍可以長到108英尺長，其長度主要來自其極長的脖子和尾巴。",
+      "description": "腕龍可以長到39英尺高，是已知最高的恐龍之一。",
+      "descriptionGen": false,
+      "displayAddress": "香港九龍城",
+      "displayAddressGen": false,
+      "addressProperties": {
+        "neighbourhood": "九龍城",
+        "administrativeAreaLevel1": "九龍",
+        "country": "香港"
+      }
+    },
+    {
+      "featureId": "Ht2Lm7Np9K",
+      "lang": "zh-hans",
+      "title": "腕龙大道",
+      "titleGen": false,
+      "description": "腕龙可以长到39英尺高，是已知最高的恐龙之一。",
+      "descriptionGen": false,
+      "displayAddress": "香港九龙城",
+      "displayAddressGen": false,
+      "addressProperties": {
+        "neighbourhood": "九龙城",
+        "administrativeAreaLevel1": "九龙",
+        "country": "香港"
+      }
+    },
+    {
+      "featureId": "Np7Kt2Lm9H",
+      "lang": "zh-hant",
+      "title": "三角龍台",
+      "titleGen": false,
+      "description": "三角龍有多達800顆牙齒，這些牙齒在其一生中不斷更換。",
+      "descriptionGen": false,
+      "displayAddress": "香港元朗",
+      "displayAddressGen": false,
+      "addressProperties": {
+        "neighbourhood": "元朗",
+        "administrativeAreaLevel1": "新界",
+        "country": "香港"
+      }
+    },
+    {
+      "featureId": "Np7Kt2Lm9H",
+      "lang": "zh-hans",
+      "title": "三角龙台",
+      "titleGen": false,
+      "description": "三角龙有多达800颗牙齿，这些牙齿在其一生中不断更换。",
+      "descriptionGen": false,
+      "displayAddress": "香港元朗",
+      "displayAddressGen": false,
+      "addressProperties": {
+        "neighbourhood": "元朗",
+        "administrativeAreaLevel1": "新界",
+        "country": "香港"
+      }
+    },
+    {
+      "featureId": "Kt7Np2Lm9H",
+      "lang": "zh-hant",
+      "title": "雙型龍徑",
+      "titleGen": false,
+      "description": "雙型龍可以長到108英尺長，其長度主要來自其極長的脖子和尾巴。",
       "descriptionGen": false,
       "displayAddress": "香港葵涌",
       "displayAddressGen": false,
@@ -135,11 +195,11 @@
       }
     },
     {
-      "featureId": "Ht2Lm7Np9K",
+      "featureId": "Kt7Np2Lm9H",
       "lang": "zh-hans",
-      "title": "梁龙道",
+      "title": "双型龙径",
       "titleGen": false,
-      "description": "梁龙可以长到108英尺长，其长度主要来自其极长的脖子和尾巴。",
+      "description": "双型龙可以长到108英尺长，其长度主要来自其极长的脖子和尾巴。",
       "descriptionGen": false,
       "displayAddress": "香港葵涌",
       "displayAddressGen": false,
@@ -152,14 +212,14 @@
     {
       "featureId": "Ht9Lm2Np7K",
       "lang": "zh-hant",
-      "title": "棘龍廣場",
+      "title": "雙型龍徑",
       "titleGen": false,
-      "description": "棘龍是唯一已知適應游泳的恐龍，背部有鰭狀突起，腳部像槳一樣。",
+      "description": "雙型龍可以長到108英尺長，其長度主要來自其極長的脖子和尾巴。",
       "descriptionGen": false,
-      "displayAddress": "香港西貢",
+      "displayAddress": "香港葵涌",
       "displayAddressGen": false,
       "addressProperties": {
-        "neighbourhood": "西貢",
+        "neighbourhood": "葵涌",
         "administrativeAreaLevel1": "新界",
         "country": "香港"
       }
@@ -167,14 +227,44 @@
     {
       "featureId": "Ht9Lm2Np7K",
       "lang": "zh-hans",
-      "title": "棘龙广场",
+      "title": "双型龙径",
       "titleGen": false,
-      "description": "棘龙是唯一已知适应游泳的恐龙，背部有鳍状突起，脚部像桨一样。",
+      "description": "双型龙可以长到108英尺长，其长度主要来自其极长的脖子和尾巴。",
       "descriptionGen": false,
-      "displayAddress": "香港西贡",
+      "displayAddress": "香港葵涌",
       "displayAddressGen": false,
       "addressProperties": {
-        "neighbourhood": "西贡",
+        "neighbourhood": "葵涌",
+        "administrativeAreaLevel1": "新界",
+        "country": "香港"
+      }
+    },
+    {
+      "featureId": "Lm9Ht2Np7K",
+      "lang": "zh-hant",
+      "title": "雙型龍徑",
+      "titleGen": false,
+      "description": "雙型龍可以長到108英尺長，其長度主要來自其極長的脖子和尾巴。",
+      "descriptionGen": false,
+      "displayAddress": "香港葵涌",
+      "displayAddressGen": false,
+      "addressProperties": {
+        "neighbourhood": "葵涌",
+        "administrativeAreaLevel1": "新界",
+        "country": "香港"
+      }
+    },
+    {
+      "featureId": "Lm9Ht2Np7K",
+      "lang": "zh-hans",
+      "title": "双型龙径",
+      "titleGen": false,
+      "description": "双型龙可以长到108英尺长，其长度主要来自其极长的脖子和尾巴。",
+      "descriptionGen": false,
+      "displayAddress": "香港葵涌",
+      "displayAddressGen": false,
+      "addressProperties": {
+        "neighbourhood": "葵涌",
         "administrativeAreaLevel1": "新界",
         "country": "香港"
       }
