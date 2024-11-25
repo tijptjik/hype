@@ -86,6 +86,8 @@ import ToggleField from '$lib/components/forms/fields/Toggle.svelte';
 import AddressActions from '$lib/components/forms/actions/Address.svelte';
 import FeatureActions from '$lib/components/forms/actions/Feature.svelte';
 import UserActions from '$lib/components/forms/actions/User.svelte';
+import ViewerActions from '$lib/components/forms/actions/Viewer.svelte';
+import GalleryActions from '$lib/components/forms/actions/Gallery.svelte';
 // TYPES
 import type {
   FormPath,
@@ -556,7 +558,7 @@ export type ModalProps = {
 };
 
 export type ActionProps = {
-  Actions?: typeof UserActions | typeof FeatureActions | typeof AddressActions;
+  Actions?: typeof UserActions | typeof FeatureActions | typeof AddressActions | typeof ViewerActions | typeof GalleryActions;
   // | Component<{
   //     searchMode?: boolean;
   //     removeMode?: boolean;
