@@ -12,29 +12,44 @@
       actions
     }: FieldProps & ModalProps = $props();
     
-    </script>
     
-    <div>
-      {#if !removeMode}
-        <button 
-          class="btn-rounded btn btn-ghost ml-auto bg-base-100" 
-          onclick={(e) => actions?.add(e)} 
-          data-testid="addImageButton"
-        >
-          <Icon src={Photo} class="mr-2 h-4 w-4" />
-          <span class="hidden md:block">Add Image</span>
-        </button>
-      {/if}
-      <button 
-        class="btn-rounded btn btn-ghost ml-auto bg-base-100" 
-        onclick={(e) => actions?.remove(e)}
-      >
-        {#if !removeMode}
-          <Icon src={Trash} class="mr-2 h-4 w-4" />
-          <span class="hidden md:block">Remove Images</span>
-        {:else}
-          <Icon src={XMark} class="h-4 w-4" />
-          <span class="hidden md:block">Stop Removing</span>
-        {/if}
-      </button>
-    </div>
+    // Add and remove event listener
+    $effect(() => {
+      window.addEventListener('keydown', handleKeydown);
+      return () => {
+        window.removeEventListener('keydown', handleKeydown);
+      };
+    });
+
+    // Handle escape key
+    function handleKeydown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && removeMode) {
+        removeMode = false;
+      }
+    }
+</script>
+
+<div>
+  {#if !removeMode}
+    <button 
+      class="btn-rounded btn btn-ghost ml-auto bg-base-100" 
+      onclick={(e) => actions?.add(e)} 
+      data-testid="addImageButton"
+    >
+      <Icon src={Photo} class="mr-2 h-4 w-4" />
+      <span class="hidden md:block">Add Image</span>
+    </button>
+  {/if}
+  <button 
+    class="btn-rounded btn btn-ghost ml-auto bg-base-100" 
+    onclick={(e) => actions?.remove(e)}
+  >
+    {#if !removeMode}
+      <Icon src={Trash} class="mr-2 h-4 w-4" />
+      <span class="hidden md:block">Remove Images</span>
+    {:else}
+      <Icon src={XMark} class="h-4 w-4" />
+      <span class="hidden md:block">Stop Removing</span>
+    {/if}
+  </button>
+</div>

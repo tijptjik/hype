@@ -14,6 +14,21 @@ const toggleRemoveMode = (e: Event) => {
   e.preventDefault();
   removeMode = !removeMode;
 };
+
+// Add and remove event listener
+$effect(() => {
+  window.addEventListener('keydown', handleKeydown);
+  return () => {
+    window.removeEventListener('keydown', handleKeydown);
+  };
+});
+
+// Handle escape key
+function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && removeMode) {
+    removeMode = false;
+  }
+}
 </script>
 
 <div>
