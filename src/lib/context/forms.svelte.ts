@@ -108,7 +108,10 @@ class BaseForm<T extends Record<string, unknown>> {
       } else if (result.type === 'success') {
         // UPDATE SUCCESS
         this.message.set('Updated successfully');
-        this.form.set(result.data?.data);
+        this.reset({
+          data: result.data?.data,
+          newState: result.data?.data
+        });
       } else {
         // FAILURE / ERROR
         if (result.type === 'failure') {
