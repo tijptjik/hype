@@ -4,11 +4,17 @@ import { fade } from 'svelte/transition';
 let {
   src,
   alt,
-  class: className = ''
+  class: className = '',
+  layout = 'fill',
+  showLoading = true,
+  showError = true
 } = $props<{
   src: string;
   alt: string;
   class?: string;
+  layout?: 'cover' | 'fill' | 'fit' | 'contain';
+  showLoading?: boolean;
+  showError?: boolean;
 }>();
 
 let loaded = $state(false);
@@ -22,12 +28,11 @@ function onError() {
   error = true;
   loaded = true;
 }
-
 </script>
 
-<figure class="relative {className ? className : 'h-64 w-full'}">
+{#snippet loadingSkeleton()}
   <!-- Loading Skeleton -->
-  {#if !loaded}
+  {#if showLoading && !loaded}
     <div
       class="absolute inset-0 animate-pulse bg-base-300"
       transition:fade={{ duration: 200 }}>
@@ -36,22 +41,38 @@ function onError() {
       </div>
     </div>
   {/if}
+{/snippet}
 
+{#snippet errorState()}
   <!-- Error State -->
-  {#if error}
+  {#if showError && error}
     <div class="absolute inset-0 bg-base-300" transition:fade={{ duration: 50 }}>
-      <div class="flex h-full flex-col items-center justify-center gap-2">
+      <div class="flex h-full items-center justify-center">
         <span class="text-error">⚠️</span>
         <span class="text-sm text-base-content/70">Failed to load image</span>
       </div>
     </div>
   {/if}
+{/snippet}
 
-  <!-- Actual Image -->
+{#snippet cloudImage()}
   <img
     {src}
     {alt}
-    class="object-cover {className ? className : ''} h-full w-full {!loaded ? 'invisible' : ''}"
+    class="{className ? className : ''} {layout === 'cover'
+      ? 'object-cover h-full w-full'
+      : layout === 'fill'
+        ? 'object-fill'
+        : layout === 'fit'
+          ? 'object-fit'
+          : 'object-contain'}
+      {!loaded ? 'invisible' : ''}"
     onload={onLoad}
     onerror={onError} />
+{/snippet}
+
+<figure class="relative {className ? className : 'h-64 w-full'}">
+  {@render loadingSkeleton()}
+  {@render errorState()}
+  {@render cloudImage()}
 </figure>

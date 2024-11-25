@@ -31,7 +31,8 @@ const entities = $derived(filteredResources.layer);
       {#snippet header(entity)}
         <Image
           src="https://placehold.co/600x400?text={entity.name}"
-          alt={entity.name} />
+          alt={entity.name}
+          layout="cover" />
       {/snippet}
     </EntityCard>
   {/snippet}

@@ -32,10 +32,10 @@ const entities = $derived(filteredResources.feature);
   {#snippet children(entity, idx)}
     <EntityCard {entity} {keyMap}>
       {#snippet header(entity)}
-          <Image
-            src="https://picsum.photos/384/{192 + idx}"
-            alt={entity.displayAddress}
-            />
+        <Image
+          src="https://picsum.photos/384/{192 + idx}"
+          alt={entity.displayAddress}
+          layout="cover" />
       {/snippet}
 
       {#snippet badges(entity)}
