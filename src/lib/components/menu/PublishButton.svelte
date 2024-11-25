@@ -1,6 +1,6 @@
 <script lang="ts">
-import { onMount } from 'svelte';
 import { NEW_REF } from '$lib';
+import { page } from '$app/stores';
 // CONTEXT
 import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
@@ -12,14 +12,17 @@ import type {
   SuperFormResult
 } from '$lib/types';
 
-// STATE : CONTEXT :: ROUTER
+// STATE : PAGE :: DATA
+const { session } = $page.data;
+
+// CONTEXT :: ROUTER
 const routerState = getRouterState() as EntityRouter;
 
 // STATE : PROPS
 let menuProps: { form: SuperFormResult<Project | Layer | Feature> } = $props();
 
 // STATE : FORM
-let { form, errors } = menuProps.form;
+let { form, errors, reset } = menuProps.form;
 
 // STATE : UI
 let isInvalid = $state(false);
@@ -57,7 +60,8 @@ const handleClick = async (e: Event) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           isPublished: !$form.isPublished,
-          publishedAt: !$form.isPublished ? new Date().toISOString() : null
+          publishedAt: !$form.isPublished ? new Date().toISOString() : null,
+          publisherId: !$form.isPublished ? session?.user.id : null
         })
       }
     );
@@ -66,14 +70,14 @@ const handleClick = async (e: Event) => {
 
     const result = await response.json();
     if (result && result?.success) {
-      form.update(
-        ($form) => {
-          $form.isPublished = !$form.isPublished;
-          $form.publishedAt = result.data.publishedAt;
-          return $form;
-        },
-        { taint: false }
-      );
+      reset({
+        data: result.data,
+        newState: {
+          isPublished: result.data.isPublished,
+          publishedAt: result.data.publishedAt,
+          publisherId: result.data.publisherId
+        }
+      });
     }
   } catch (err) {
     console.error(err);
@@ -85,14 +89,13 @@ const handleClick = async (e: Event) => {
 </script>
 
 <button
-  class="btn transition-all duration-500 disabled:bg-transparent disabled:text-opacity-60"
+  class="btn transition-colors duration-500 border-none disabled:bg-transparent disabled:text-opacity-60"
   onclick={handleClick}
-  class:btn-primary={!isInvalid && !$form.isPublished}
-  class:btn-secondary={!isInvalid && $form.isPublished}
+  class:bg-rose-500={!isInvalid && !$form.isPublished}
+  class:bg-fuchsia-900={!isInvalid && $form.isPublished}
   class:text-white={!isInvalid && $form.isPublished}
   class:btn-outline={isInvalid}
   class:btn-error={isInvalid}
-  class:loading={isLoading}
   disabled={isInvalid ||
     isLoading ||
     !routerState.entity ||

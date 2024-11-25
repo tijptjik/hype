@@ -39,6 +39,7 @@ $effect(() => {
   data-testid="formSubmitButton"
   onclick={(e) => submit(e)}
   class:btn-primary={isTainted($tainted) && !isInvalid}
+  class:bg-rose-500={isTainted($tainted) && !isInvalid}
   class:btn-outline={!isTainted($tainted) || isInvalid}
   class:btn-error={isInvalid}
   disabled={!isTainted($tainted) || isInvalid}>
