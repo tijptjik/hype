@@ -2,6 +2,7 @@
 import { goto } from '$app/navigation';
 import * as m from '$lib/paraglide/messages.js';
 import { slide } from 'svelte/transition';
+import { NEW_REF } from '$lib';
 // STORES
 import { navItems } from '$lib/stores/navigation.svelte';
 // COMPONENTS
@@ -88,7 +89,7 @@ function getParentHref(parentPath: string): string {
 const onclick = (e: Event, url: string) => {
   e.preventDefault();
   routerState.update(url);
-  goto(url).then(() => goto(url));
+  goto(url).then(() => goto(url)).then(() => goto(url));
 }
 </script>
 
@@ -99,7 +100,7 @@ const onclick = (e: Event, url: string) => {
       <Icon src={navItems[routerState.resource].icon} class="h-6 w-6" />
       <div class=" flex flex-col">
         <div class="hidden @md:flex items-center space-x-2 text-sm font-medium text-gray-300">
-          {#each resourceState.parents as parent, i}
+          {#each parents as parent, i}
             <a
               draggable="false"
               out:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
@@ -124,7 +125,9 @@ const onclick = (e: Event, url: string) => {
   <div class="flex-none">
     <ul class="mt-1 flex flex-row space-x-2 px-2">
       {#each menuItems[routerState.resource] as facet}
-        <MenuItem {facet} />
+        {#if facet.ref !== 'images' || routerState.entity !== NEW_REF}
+          <MenuItem {facet} />
+        {/if}
       {/each}
     </ul>
     <Icon src={Bars3} class="mx-2 h-6 w-6 text-black" />
