@@ -159,13 +159,17 @@ export type Entity = {
   nameShort: string;
   description: string;
   address?: string;
+  image?: GetImageAPI;
 };
 export type ApiEntity = Entity & {
   code?: Code;
   title?: string;
   displayAddress?: string;
 };
-export type EntityWithData<T> = Entity & { data: T extends Resource ? T : never };
+export type EntityWithData<T> = Entity & {
+  data: T extends Resource ? T : never;
+  image?: string;
+};
 export const Facets = [
   'core',
   'address',
