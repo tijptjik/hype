@@ -89,3 +89,31 @@ export const DELETE: RequestHandler = async ({ params, locals, platform, fetch :
     return error(500, 'Failed to delete image');
   }
 };
+
+export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
+  const { db, userId, accessStrategy } = await getDatabaseOrError(
+    locals,
+    platform,
+    ACCESS_STRATEGY,
+    RESOURCE_TYPE,
+    params.id,
+    checkProjectAccessForImage,
+    undefined,
+    PRIVILEGED_STRATEGY
+  );
+
+  const body = await request.json();
+
+  try {
+    if (body.featureImage) {
+      await db
+        .update(featureImage)
+        .set(body.featureImage)
+        .where(eq(featureImage.imageId, params[PUBLIC_IDENTIFIER] as Id));
+    }
+    return json({ success: true });
+  } catch (err) {
+    console.error('Failed to update image:', err);
+    return error(500, 'Failed to update image');
+  }
+};
