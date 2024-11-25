@@ -3,6 +3,9 @@ import { createEventDispatcher } from 'svelte';
 import { goto } from '$app/navigation';
 import { filteredResources, resources, appMeta } from '$lib/stores/resources.svelte';
 import { page } from '$app/stores';
+import { NEW_REF } from '$lib';
+// CONTEXT
+import { getRouterState } from '$lib/context/router.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Check } from '@steeze-ui/heroicons';
@@ -21,6 +24,9 @@ type Props = {
 let selectedItem = $state<any>(null);
 let isOpen = $state(false);
 let selectedIndex = $state(-1);
+
+// STATE : CONTEXT
+const routerState = getRouterState();
 
 // PROPS
 let { parentResourceType, childResourceType }: Props = $props();
@@ -49,6 +55,12 @@ const getParentRefKey = (parentResourceType: ResourceType) => {
 
 const handleConfirm = () => {
   if (!selectedItem) return;
+
+  routerState.updateWith({
+        resource: routerState.resource,
+        entity: NEW_REF,
+        facet: 'core'
+    });
 
   const url = new URL(window.location.href);
   url.pathname = `/admin/${childResourceType}s/new`;
