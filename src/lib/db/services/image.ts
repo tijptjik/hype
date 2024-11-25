@@ -95,9 +95,13 @@ export const patchImage = async (db: Database, ref: string, data: Partial<ImageD
 export const extractEntitiesToInsert = (
   formData: NewImageAPI
 ): { baseImage: NewImageDB; relatedFeatureImage: NewFeatureImage } => {
-  let baseImage = ImageInsert.parse(formData);
-  let relatedFeatureImage = formData.featureImage as NewFeatureImage;
-  return { baseImage, relatedFeatureImage };
+  let entities: { baseImage: NewImageDB; relatedFeatureImage?: NewFeatureImage } = {
+    baseImage: ImageInsert.parse(formData)
+  };
+  if (formData.featureImage) {
+    entities.relatedFeatureImage = formData.featureImage as NewFeatureImage;
+  }
+  return entities;
 };
 
 export const extractEntitiesToUpdate = (
@@ -157,6 +161,11 @@ let imageSelect = {
   publicId: image.publicId,
   env: image.env,
   cdn: image.cdn,
+  version: image.version,
+  originalWidth: image.originalWidth,
+  originalHeight: image.originalHeight,
+  originalFilename: image.originalFilename,
+  originalExtension: image.originalExtension,
   contributorId: image.contributorId,
   capturedAt: image.capturedAt
 };
