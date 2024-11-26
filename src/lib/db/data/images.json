@@ -126,5 +126,37 @@
     "originalExtension": "jpg",
     "originalWidth": 640,
     "originalHeight": 640
+  },
+  {
+    "id": "9V_yCLhQOKYC",
+    "publicId": "ghostmappers/hkghostsigns/lt8jiubn0hnr70z69tat",
+    "env": "dg6vtsga1",
+    "cdn": "cloudinary",
+    "version": 1732593786,
+    "originalWidth": 1200,
+    "originalHeight": 800,
+    "originalFilename": "Ghost-signs_Sham-Shui-Po_2_zolima-citymag",
+    "originalExtension": "jpg",
+    "contributorId": "f16249f5-c045-496a-a441-16ad07600ce2",
+    "capturedAt": "2024-11-26T04:03:06Z",
+    "intent": "undefined",
+    "isPublished": true,
+    "publishedAt": "2024-11-26T04:03:07.748Z"
+  },
+  {
+    "id": "_NEJZ3NNZnJU",
+    "publicId": "ghostmappers/hkghostsigns/cjl3bnsntr9rzzy9j23n",
+    "env": "dg6vtsga1",
+    "cdn": "cloudinary",
+    "version": 1732594964,
+    "originalWidth": 700,
+    "originalHeight": 933,
+    "originalFilename": "Ghost-signs_Sham-Shui-Po_1_zolima-citymag",
+    "originalExtension": "jpg",
+    "contributorId": "f16249f5-c045-496a-a441-16ad07600ce2",
+    "capturedAt": "2024-11-26T04:22:44Z",
+    "intent": "canonical",
+    "isPublished": true,
+    "publishedAt": "2024-11-26T04:22:45.262Z"
   }
 ]

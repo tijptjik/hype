@@ -1,1 +1,16 @@
-{}
+[
+  {
+    "featureId": "-7dU5oH9HEYk",
+    "imageId": "9V_yCLhQOKYC",
+    "intent": "undefined",
+    "isPublished": 1,
+    "publishedAt": "2024-11-26T04:03:07.748Z"
+  },
+  {
+    "featureId": "-7dU5oH9HEYk",
+    "imageId": "_NEJZ3NNZnJU",
+    "intent": "canonical",
+    "isPublished": 1,
+    "publishedAt": "2024-11-26T04:22:45.262Z"
+  }
+]
