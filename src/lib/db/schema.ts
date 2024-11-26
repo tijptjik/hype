@@ -440,6 +440,7 @@ export const feature = sqliteTable('feature', {
   contributorId: text('contributorId').references(() => user.id, { onDelete: 'set null' }),
   publisherId: text('publisherId').references(() => user.id, { onDelete: 'set null' }),
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
+  isPendingReview: integer('isPendingReview', { mode: 'boolean' }).notNull().default(false),
 
   // PUBLISHED
   // Visitable + Tangible            : Listing - Feature has a physical presence and can be visited - the default
