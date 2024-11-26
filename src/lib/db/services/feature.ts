@@ -53,7 +53,7 @@ export const updateFeature = async (db: Database, data: FeatureDB, ref: string) 
     .returning();
 
   if (!updatedFeature) {
-    return error(404, 'Feature has stepped through the looking glass');
+    return error(404, `Feature <code>${ref}</code> has stepped through the looking glass`);
   }
 
   return updatedFeature;

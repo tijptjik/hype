@@ -53,7 +53,7 @@ export const updateProject = async (db: Database, data: ProjectDB, ref: string) 
     .returning();
 
   if (!updatedProject) {
-    return error(404, 'Project has stepped through the looking glass');
+    return error(404, `Project <code>${ref}</code> has stepped through the looking glass`);
   }
 
   return updatedProject;

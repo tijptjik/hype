@@ -45,7 +45,7 @@ export const updateOrganisation = async (db: Database, data: OrganisationDB, ref
     .returning();
 
   if (!updatedOrganisation) {
-    return error(404, 'Organisation has stepped through the looking glass');
+    return error(404, `Organisation <code>${ref}</code> has stepped through the looking glass`);
   }
 
   return updatedOrganisation;

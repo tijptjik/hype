@@ -53,7 +53,7 @@ export const updateImage = async (db: Database, data: ImageDB, ref: string) => {
     .returning();
 
   if (!updatedImage) {
-    return error(404, 'Image has stepped through the looking glass');
+    return error(404, `Image <code>${ref}</code> has stepped through the looking glass`);
   }
 
   return updatedImage;
@@ -218,7 +218,7 @@ export const getURLfromImage = (image: ImageDB, transformation: string = 'c_fit,
   if (image.cdn === 'cloudinary') {
     return raw ? `https://res.cloudinary.com/${image.env}/image/upload/fl_attachment/${image.publicId}`:  `https://res.cloudinary.com/${image.env}/image/upload/${transformation}/v${image.version}/${image.publicId}`;
   } else {
-    return error(404, 'Image CDN not supported');
+    return error(404, `Image CDN <code>${image.cdn}</code> not supported`);
   }
 };
 

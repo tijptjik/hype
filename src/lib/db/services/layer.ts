@@ -50,7 +50,7 @@ export const updateLayer = async (db: Database, data: LayerDB, ref: string) => {
     .returning();
 
   if (!updatedLayer) {
-    return error(404, 'Layer has stepped through the looking glass');
+    return error(404, `Layer <code>${ref}</code> has stepped through the looking glass`);
   }
 
   return updatedLayer;
