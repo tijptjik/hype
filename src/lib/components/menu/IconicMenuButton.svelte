@@ -10,10 +10,11 @@ let {
 } = $props<{ href: string; iconSrc: any; matchFromStart?: boolean; notificationCount?: number }>();
 
 const isActive = () => {
-  if (matchFromStart) {
-    return $page.url.pathname.startsWith(href);
+  if (href === '/admin/tasks') {
+    return $page.url.pathname.startsWith('/admin/tasks');
+  } else if (href === '/admin') {
+    return $page.url.pathname.startsWith('/admin') && ($page.url.pathname !== '/admin/tasks');
   }
-  return $page.url.pathname.endsWith(href);
 };
 </script>
 
