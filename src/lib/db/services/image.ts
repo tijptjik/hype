@@ -213,3 +213,15 @@ export const getImageForOrganisation = async (db: Database, organisationId: Id) 
     .innerJoin(organisation, eq(image.id, organisation.imageId))
     .where(eq(organisation.id, organisationId));
 };
+
+export const getURLfromImage = (image: ImageDB, transformation: string = 'c_fit,h_1000,w_1000', raw: boolean = false) => {
+  if (image.cdn === 'cloudinary') {
+    return raw ? `https://res.cloudinary.com/${image.env}/image/upload/fl_attachment/${image.publicId}`:  `https://res.cloudinary.com/${image.env}/image/upload/${transformation}/v${image.version}/${image.publicId}`;
+  } else {
+    return error(404, 'Image CDN not supported');
+  }
+};
+
+export const getUploadURL = (cloudname: string) => {
+  return `https://api.cloudinary.com/v1_1/${cloudname}/auto/upload`;
+};

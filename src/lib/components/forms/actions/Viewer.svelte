@@ -1,4 +1,5 @@
 <script lang="ts">
+import { getURLfromImage } from '$lib/db/services/image';
 // COMPONENTS
 import { ArrowDownTray } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
@@ -37,7 +38,7 @@ const handlePublishToggle = async () => {
   } catch (err) {
     console.error('Failed to toggle publication:', err);
   }
-}
+};
 
 // HANDLERS :: DOWNLOAD IMAGE
 const handleDownload = () => {
@@ -45,7 +46,7 @@ const handleDownload = () => {
   let downloadUrl = '';
 
   if (activeImage.cdn.toLowerCase() === 'cloudinary') {
-    downloadUrl = `https://res.cloudinary.com/${activeImage.env}/image/upload/fl_attachment/${activeImage.publicId}`;
+    downloadUrl = getURLfromImage(activeImage, null, true);
   } else {
     throw new Error('Unsupported CDN');
   }
@@ -62,7 +63,7 @@ const handleDownload = () => {
     .catch((err) => {
       console.error('Failed to download image:', err);
     });
-}
+};
 
 // UTILS
 const downloadBlobToFile = async (blob: Blob, filename: string) => {

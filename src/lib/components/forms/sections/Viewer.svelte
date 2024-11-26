@@ -1,5 +1,6 @@
 <script lang="ts">
 import { fade, crossfade } from 'svelte/transition';
+import { getURLfromImage } from '$lib/db/services/image';
 
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
@@ -29,9 +30,7 @@ const [send, receive] = crossfade({
   fallback: fade
 });
 
-let imageSrc = $derived(
-  `https://res.cloudinary.com/${activeImage?.env}/image/upload/c_fit,h_1000,w_1000/v${activeImage?.version}/${activeImage?.publicId}`
-);
+let imageSrc = $derived(activeImage ? getURLfromImage(activeImage) : null);
 </script>
 
 <div

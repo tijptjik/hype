@@ -1,5 +1,6 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
+import { getURLfromImage } from '$lib/db/services/image';
 // STORES
 import { page } from '$app/stores';
 import {
@@ -291,7 +292,7 @@ const getQueryParams = (): URLSearchParams => {
 
 const toImage = (image: GetImageAPI | undefined): string => {
   if (image) {
-    return `https://res.cloudinary.com/${image.env}/image/upload/c_fit,h_320,w_320/v${image.version}/${image.publicId}`;
+    return getURLfromImage(image, 'c_fit,h_320,w_320');
   }
   return 'https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=9';
 }

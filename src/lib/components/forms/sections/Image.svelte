@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { fade, crossfade } from 'svelte/transition';
+import { fade, crossfade } from 'svelte/transition';
+import { getURLfromImage, getUploadURL } from '$lib/db/services/image';
 
 // CONTEXT
 import { getRouterState } from '$lib/context/router.svelte';
@@ -22,9 +23,7 @@ const resourceState = getResourceState();
 let activeImage = $state(null);
 let activeResource = $state(null);
 let activeResourceId = $state(null);
-let imageSrc = $derived(
-  `https://res.cloudinary.com/${activeImage?.env}/image/upload/c_fit,h_1000,w_1000/v${activeImage?.version}/${activeImage?.publicId}`
-);
+let imageSrc = $derived(activeImage ? getURLfromImage(activeImage) : null);
 
 let isLoading = $state(false);
 
@@ -37,24 +36,27 @@ const [send, receive] = crossfade({
 $effect(() => {
   // GET IMAGE for ENTITY
   if (routerState.resource && routerState.entity) {
-    if (routerState.resource !== activeResource || resourceState.state[routerState.resource].id !== activeResourceId) {
+    if (
+      routerState.resource !== activeResource ||
+      resourceState.state[routerState.resource].id !== activeResourceId
+    ) {
       let url = `/api/images?${routerState.resource}Id=${resourceState.state[routerState.resource].id}`;
       fetch(url)
-      .then((res) => {
-        return res.json()
-      })
-      .then((data) => {
-        if (data.length > 0) {
-          activeImage = data[0];
-        }
-        else {
-          activeImage = null;
-        }
-        activeResource = routerState.resource;
-        activeResourceId = resourceState.state[routerState.resource].id;
-      }).catch((err) => {
-        console.error('error', err);
-      })
+        .then((res) => {
+          return res.json();
+        })
+        .then((data) => {
+          if (data.length > 0) {
+            activeImage = data[0];
+          } else {
+            activeImage = null;
+          }
+          activeResource = routerState.resource;
+          activeResourceId = resourceState.state[routerState.resource].id;
+        })
+        .catch((err) => {
+          console.error('error', err);
+        });
     }
   }
 });
@@ -109,7 +111,6 @@ const handleUpload = async (fileState: ImageUploadState) => {
     folder = `${folder}/${resourceState.state.project?.code ?? 'misc'}`;
   }
 
-
   try {
     const signResponse = await fetch('/api/cloudinary', {
       method: 'POST',
@@ -117,7 +118,7 @@ const handleUpload = async (fileState: ImageUploadState) => {
     });
     const signData = await signResponse.json();
 
-    const url = `https://api.cloudinary.com/v1_1/${signData.cloudname}/auto/upload`;
+    const url = getUploadURL(signData.cloudname);
     const formData = new FormData();
 
     formData.append('file', fileState.file);
@@ -216,7 +217,7 @@ const selectActiveImage = (image: GetImageAPI) => {
           {#key activeImage.id}
             <!-- Background Image -->
             <div
-              class="absolute transition-opacity duration-1500 ease-in-out inset-0 z-10 h-full w-full rounded-b-2xl bg-neutral opacity-30"
+              class="absolute inset-0 z-10 h-full w-full rounded-b-2xl bg-neutral opacity-30 transition-opacity duration-1500 ease-in-out"
               class:opacity-10={isLoading}
               in:receive={{ key: `${activeImage.id}` }}
               out:send={{ key: `${activeImage.id}` }}>
@@ -230,7 +231,7 @@ const selectActiveImage = (image: GetImageAPI) => {
             </div>
             <!-- Main Image -->
             <div
-              class="absolute z-20 transition-all duration-1500 ease-in-out h-full w-full overflow-hidden rounded-2xl p-4 opacity-100"
+              class="absolute z-20 h-full w-full overflow-hidden rounded-2xl p-4 opacity-100 transition-all duration-1500 ease-in-out"
               class:opacity-50={isLoading}
               in:receive={{ key: `${activeImage.id}` }}
               out:send={{ key: `${activeImage.id}` }}>

@@ -1,6 +1,7 @@
 <script lang="ts">
 import { fade, blur } from 'svelte/transition';
 import { flip } from 'svelte/animate';
+import { getUploadURL } from '$lib/db/services/image';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import {
@@ -220,7 +221,7 @@ const handleUpload = async (fileState: ImageUploadState) => {
     });
     const signData = await signResponse.json();
 
-    const url = `https://api.cloudinary.com/v1_1/${signData.cloudname}/auto/upload`;
+    const url = getUploadURL(signData.cloudname);
     const formData = new FormData();
 
     formData.append('file', fileState.file);
