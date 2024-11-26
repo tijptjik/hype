@@ -76,7 +76,7 @@ $effect(() => {
  * Effect to update query filters based on URL search params
  *
  * This effect runs whenever the page URL changes. It iterates through
- * the filterable resource types and updates the queryFilters store
+ * the filterable resource types and updates the queryPrimsParams store
  * with the values from the URL search params for each resource type.
  */
 $effect(() => {
@@ -90,7 +90,7 @@ $effect(() => {
 /**
  * Effect to fetch resources based on query filters
  *
- * This effect runs whenever the queryFilters store changes. It iterates through
+ * This effect runs whenever the queryPrimsParams store changes. It iterates through
  * the filterable resource types and fetches resources for each type that has
  * non-empty query filters. Additionally, it always fetches features regardless
  * of filters.
@@ -232,7 +232,7 @@ const getFilteredResourceCount = (resource: ResourceType): number => {
   } else {
     // Since the filtered entities are pinned, even if the resource is not expanded,
     // the maximum height should allow for the pinned entities.
-    return queryFilters[resource as FilterableResourceType]?.length || 0;
+    return queryPrimsParams[resource as FilterableResourceType]?.length || 0;
   }
 };
 
@@ -259,25 +259,6 @@ const getMaxHeightItemsContainer = (
   }
   return `${Math.min(height, 540)}px`; // Limit to 10 items (540px) max
 };
-
-/**
- * Calculates the maximum height for the items container based on the resource type.
- *
- * This function determines the appropriate maximum height for the container
- * that holds the list of items for a given resource type. It uses the count
- * of filtered resources and applies a limit to ensure the container doesn't
- * grow too large.
- *
- * @param {ResourceType} resource - The type of resource to calculate the max height for
- * @returns {string} A Tailwind CSS class string for the max-height
- */
-// TODO: Remove this of getMaxHeightItemsContainer
-// const getEntityContainerMaxHeight = (resource: ResourceType): string => {
-//   const itemCount = isResourceExpanded(resource)
-//     ? filteredResources[resource].length
-//     : queryFilters[resource as FilterableResourceType]?.length || 0;
-//   return `max-h-[${Math.max(itemCount * 54, 54)}px]`; // Ensure a minimum of 52px
-// };
 
 /**
  * Retrieves the current URL query parameters.
@@ -401,12 +382,12 @@ const navigate = (url: string) => {
     class="btn btn-circle btn-ghost btn-sm transition-all {onHoverOnly
       ? 'absolute right-4 top-1/2 -translate-y-1/2  opacity-0 active:-translate-y-1/2 group-hover:opacity-100'
       : ''} hover:bg-base-200"
-    aria-label={queryFilters[resource]?.includes(itemId)
+    aria-label={queryPrimsParams[resource]?.includes(itemId)
       ? 'Remove item from filters'
       : 'Add item to filters'}
     onclick={() => toggleQueryParam(resource, itemId)}>
     <Icon
-      src={queryFilters[resource]?.includes(itemId) ? Minus : Plus}
+      src={queryPrimsParams[resource]?.includes(itemId) ? Minus : Plus}
       class="h-4 w-4" />
   </button>
 {/snippet}
@@ -484,8 +465,8 @@ const navigate = (url: string) => {
           {expandedState[resourceType as ResourceType] && isFilterable
             ? 'h-0 flex-grow overflow-y-auto'
             : 'overflow-scroll'}">
-          {#each filteredResources[resourceType as FilterabqueryPrimsParamspe] as entity}
-            {#if (routerState.resource === resourceType || queryFilters[resourceType as FilterableResourceType]?.includes(entity.id) || navItems[resourceType as ResourceType].isAlwaysExpanded) && navItems[resourceType as ResourceType].isShownInSidebar}
+          {#each filteredResources[resourceType as FilterableResourceType] as entity}
+            {#if (routerState.resource === resourceType || queryPrimsParams[resourceType as FilterableResourceType]?.includes(entity.id) || navItems[resourceType as ResourceType].isAlwaysExpanded) && navItems[resourceType as ResourceType].isShownInSidebar}
               <li class="group relative bg-base-100 drag-none">
                 <div class="relative drag-none">
                   <a
@@ -496,7 +477,7 @@ const navigate = (url: string) => {
                     class="flex select-none drag-none items-center border-l-3 {routerState.entity ===
                     entity.ref
                       ? 'border-primary'
-                      : queryFilters[resourceType as FilterableResourceType]?.includes(
+                      : queryPrimsParams[resourceType as FilterableResourceType]?.includes(
                             entity.id
                           )
                         ? 'border-secondary'
@@ -547,7 +528,7 @@ const navigate = (url: string) => {
               'Filtered'
             )}
             {@render filterStat(
-              queryFilters as ResourceToEntity & FilterableResourceToEntityId,
+              queryPrimsParams as ResourceToEntity & FilterableResourceToEntityId,
               resourceType as FilterableResourceType,
               'Selected'
             )}
