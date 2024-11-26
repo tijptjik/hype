@@ -25,7 +25,7 @@ const routerState = getRouterState() as FacetRouter;
 <div
   class="z-10 rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0 @container {fieldDiscriminator ==
   'classifier'
-    ? 'basis-2/3'
+    ? 'basis-1/3'
     : 'basis-1/3'}">
   <Header {...sectionProps} />
   {#each Object.entries(fields) as [fieldRoot, field]}

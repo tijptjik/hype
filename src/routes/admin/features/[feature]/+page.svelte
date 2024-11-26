@@ -16,6 +16,7 @@ import AddressSection from '$lib/components/forms/sections/Address.svelte';
 import AddressComponentSection from '$lib/components/forms/sections/AddressComponent.svelte';
 import GallerySection from '$lib/components/forms/sections/Gallery.svelte';
 import ViewerSection from '$lib/components/forms/sections/Viewer.svelte';
+import CanonicalImage from '$lib/components/forms/sections/CanonicalImage.svelte';
 // TYPES
 import type {
   Feature,
@@ -205,17 +206,18 @@ let doRerender = $state(0);
             {#if routerState.facet === 'core'}
               <div class="flex flex-row gap-6">
                 <PropertySection
-                  {form}
-                  title="Classifiers"
-                  subtitle="by which features can be filtered"
-                  fieldDiscriminator="classifier"
-                  fields={FIELDS.property as FormFieldArray} />
+                {form}
+                title="Classifiers"
+                subtitle="by which features can be filtered"
+                fieldDiscriminator="classifier"
+                fields={FIELDS.property as FormFieldArray} />
                 <PropertySection
-                  {form}
-                  title="Specifiers"
-                  subtitle="which are displayed in feature info panels"
-                  fieldDiscriminator="specifier"
-                  fields={FIELDS.property as FormFieldArray} />
+                {form}
+                title="Specifiers"
+                subtitle="which are displayed in feature info panels"
+                fieldDiscriminator="specifier"
+                fields={FIELDS.property as FormFieldArray} />
+                <CanonicalImage {form} />
               </div>
               <I18nSection
                 {form}
