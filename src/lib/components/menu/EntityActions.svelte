@@ -19,9 +19,6 @@ let showFormControler = $derived(
   routerState.facet !== 'images'
 );
 let showPublishButton = $derived(
-  (routerState.resource === 'project' ||
-    routerState.resource === 'layer' ||
-    routerState.resource === 'feature') &&
   (routerState.entity !== NEW_REF && routerState.entity !== false)
 );
 </script>
