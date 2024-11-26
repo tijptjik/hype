@@ -351,7 +351,7 @@ export const FeaturePropertyI18nBase = createSelectSchema(featurePropertyI18n);
 
 // Base schema to validate submit data
 export const FeaturePropertyInsert = createInsertSchema(featureProperty).extend({
-  value: z.coerce.string()
+  value: z.string().nullable()
 });
 export const FeaturePropertyUpdate = FeaturePropertyInsert.extend({
   id: z.string()
