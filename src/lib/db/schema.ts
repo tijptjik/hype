@@ -102,7 +102,10 @@ export const organisation = sqliteTable('organisation', {
   modifiedAt: text('modifiedAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .$onUpdate(() => new Date().toISOString())
-    .notNull()
+    .notNull(),
+  isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(true),
+  publishedAt: text('publishedAt'),
+  publisherId: text('publisherId').references(() => user.id, { onDelete: 'set null', onUpdate: 'cascade' })
 });
 
 export const organisationRelations = relations(organisation, ({ one, many }) => ({
@@ -111,7 +114,12 @@ export const organisationRelations = relations(organisation, ({ one, many }) => 
   image: one(image, {
     fields: [organisation.imageId],
     references: [image.id]
-  }),}));
+  }),
+  publisher: one(user, {
+    fields: [organisation.publisherId],
+    references: [user.id]
+  })
+}));
 
 export const organisationI18n = sqliteTable(
   'organisationI18n',
