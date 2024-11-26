@@ -1,4 +1,6 @@
 <script lang="ts">
+// APP
+import { goto } from '$app/navigation';
 // COMPONENTS
 import { MagnifyingGlass, XMark, Sun } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
@@ -8,7 +10,8 @@ import {
   resources,
   filteredResources,
   filterTexts,
-  queryFilters
+  queryPrimsParams,
+  queryFilterParams
 } from '$lib/stores/resources.svelte';
 import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
@@ -27,13 +30,23 @@ const {
   rounded = false,
   resourceType,
   clearInput = false,
-  showUnpublishedToggle = false
+  showUnpublishedToggle = false,
+  showReviewedToggle = false
 }: {
   rounded?: boolean;
   resourceType: ResourceType;
   clearInput?: boolean;
   showUnpublishedToggle?: boolean;
+  showReviewedToggle?: boolean;
 } = $props();
+
+// STATE :: LOCAL
+let showUnpublishedOnly: boolean = $state(
+  queryFilterParams[routerState.resource].isPublished == false
+);
+let showUnreviewedOnly: boolean = $state(
+  queryFilterParams[routerState.resource].isReviewed == false
+);
 
 // Reset filter text after navigation if it's for the current resource
 afterNavigate(() => {
@@ -58,31 +71,45 @@ $effect(() => {
       item.nameShort?.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
       item.description?.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
       item.address?.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
-      queryFilters[type as keyof FilterableResourceToEntityId]?.includes(item.id);
+      queryPrimsParams[type as keyof FilterableResourceToEntityId]?.includes(item.id);
 
     const matchesPublished = !showUnpublishedOnly || !item.data.isPublished;
-
+    const matchesReviewed = !showReviewedToggle || item.data.isReviewed;
     return matchesSearch && matchesPublished;
   }) as EntityWithData<typeof type>[];
 });
 
-// Function to reset the input field for this specific resource type
-function resetInput() {
-  filterTexts[resourceType] = '';
+// HANDLERS : INPUTS EVENTS
+function handleUnpublishedOnlyToggle(e: Event) {
+  e.preventDefault();
+  showUnpublishedOnly = (e.target as HTMLInputElement).checked;
+  queryFilterParams[routerState.resource].isPublished = showUnpublishedOnly
+    ? false
+    : null;
 }
 
-// Function to handle keydown events
+function handleReviewedToggle(e: Event) {
+  e.preventDefault();
+  showUnreviewedOnly = (e.target as HTMLInputElement).checked;
+  queryFilterParams[routerState.resource].isReviewed = showUnreviewedOnly
+    ? false
+    : null;
+}
+
+// HANDLERS : KEYBOARD EVENTS
 function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') {
     resetInput();
   }
 }
 
-// Add new state
-let showUnpublishedOnly = $state(false);
+// UTILS
+function resetInput() {
+  filterTexts[resourceType] = '';
+}
 </script>
 
-<div class="{showUnpublishedToggle ? 'flex gap-4' : ''}">
+<div class={showUnpublishedToggle || showReviewedToggle ? 'flex gap-4' : ''}>
   {#if showUnpublishedToggle}
     <div class="flex items-center gap-2">
       <input
@@ -90,8 +117,21 @@ let showUnpublishedOnly = $state(false);
         id="unpublished-toggle"
         class="toggle toggle-primary toggle-sm"
         bind:checked={showUnpublishedOnly}
+        onchange={(e) => handleUnpublishedOnlyToggle(e)}
         aria-label="Show only unpublished items" />
       <label for="unpublished-toggle" class="text-sm"> Only Unpublished </label>
+    </div>
+  {/if}
+  {#if showReviewedToggle}
+    <div class="flex items-center gap-2">
+      <input
+        type="checkbox"
+        id="reviewed-toggle"
+        class="toggle toggle-primary toggle-sm"
+        bind:checked={showUnreviewedOnly}
+        onchange={(e) => handleReviewedToggle(e)}
+        aria-label="Hide reviewed items" />
+      <label for="reviewed-toggle" class="text-sm"> Hide Reviewed </label>
     </div>
   {/if}
   <div

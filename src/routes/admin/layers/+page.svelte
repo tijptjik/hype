@@ -27,6 +27,7 @@ const entities = $derived(filteredResources.layer);
   {#snippet children(entity)}
     <EntityCard {entity} {keyMap}>
       {#snippet header(entity)}
+      <!-- TODO Render these placeholders with the graphemes -->
         <Image
           src="https://placehold.co/600x400?text={entity.name}"
           alt={entity.name}
