@@ -340,6 +340,18 @@ export async function genericResourceQuery(
   });
 }
 
+export type ResourceConfig = {
+  name: string;
+  table: Table;
+  parentName: string | null;
+  parentTable: Table | null;
+  keyToParent: string | null;
+  keyToSelf: string;
+  depth: number;
+};
+
+export type ResourceHierarchy = ResourceConfig[];
+
 export async function hierarchicalResourceQuery<usersT extends Table, translationsT extends Table>(
   db: any,
   accessStrategy: string = 'ResourceOwn',
@@ -347,14 +359,12 @@ export async function hierarchicalResourceQuery<usersT extends Table, translatio
   userId: string,
   userTable: usersT,
   translationTable: translationsT | boolean,
-  prisms: {
-    organisation?: string[];
-    project?: string[];
-    layer?: string[];
-  } = {},
+  prisms: Record<string, string[]> = {},
   depth: number = 1,
-  filters?: Record<string, string>
+  filters?: Record<string, string>,
+  hierarchy?: ResourceHierarchy
 ) {
+  const resourceHierarchy = hierarchy || Object.values(resourceConfig);
   const slicedHierarchy = resourceHierarchy.slice(-depth, resourceHierarchy.length);
   const table = getTable(slicedHierarchy, 0);
 
@@ -451,26 +461,26 @@ export async function hierarchicalEntityQuery<usersT extends Table, translations
   publicIdentifier: string = 'id',
   accessStrategy: string = 'EntityOwn',
   selectTableRelations: NestedRelations,
-  userId: string,
-  userTable: usersT,
+  userId: string | undefined,
+  userTable: usersT | undefined,
   translationTable: translationsT | boolean,
-  depth: number = 1
+  depth: number = 1,
+  hierarchy?: ResourceHierarchy
 ) {
   // NEW is a reserved keyword for new entities
   if (ref == NEW_REF) {
     throw new Error('The old shall never be new again');
   }
-
+  const resourceHierarchy = hierarchy || Object.values(resourceConfig);
   const slicedHierarchy = resourceHierarchy.slice(-depth, resourceHierarchy.length);
   const conditions = [
     eq(getTable(slicedHierarchy, 0)[publicIdentifier], ref),
-    ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId)];
+    ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId)
+  ];
 
   if (translationTable) {
     conditions.push(...applyTranslationCondition(db, slicedHierarchy, translationTable));
   }
-
-  const userJoinTables = findUserJoinTables(selectTableRelations);
 
   let result = await db.query[getTableName(getTable(slicedHierarchy, 0))].findFirst({
     where: and(...conditions),
@@ -563,7 +573,7 @@ export async function updatePartial<T extends Table>(
   const [updated] = await db.update(table).set(data).where(eq(table[refKey], ref)).returning();
 
   if (!updated) {
-    return error(404, 'Entity not found');
+    return error(404, `Entity <code>${ref}</code> not found`);
   }
 
   return updated;
