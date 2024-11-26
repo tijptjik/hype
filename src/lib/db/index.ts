@@ -343,7 +343,7 @@ export async function genericResourceQuery(
 export async function hierarchicalResourceQuery<usersT extends Table, translationsT extends Table>(
   db: any,
   accessStrategy: string = 'ResourceOwn',
-  selectTableRelations: Record<string, boolean>,
+  selectTableRelations: Record<string, boolean | object> = {},
   userId: string,
   userTable: usersT,
   translationTable: translationsT | boolean,
