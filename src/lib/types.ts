@@ -141,6 +141,7 @@ export type ResourceToEntity = {
   feature: EntityWithData<Feature>[];
   task: EntityWithData<Task>[];
 };
+export type ResourceToRecord = Record<ResourceType, Record<string, boolean | null>>;
 export type ResourceToText = Record<ResourceType, string>;
 export type FilterableResourceType = Exclude<ResourceType, 'feature' | 'task'>;
 export type FilterableResourceToEntityId = Record<FilterableResourceType, string[]>;
