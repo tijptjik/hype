@@ -100,8 +100,10 @@ const checkAccessOrError = (
     layer: 'project',
     project: 'organisation',
     feature: 'layer',
-    image: 'project'
+    image: 'project',
+    task: 'project'
   };
+
 
   // Check each strategy until we find one that grants access
   if (publicAccessOptions.includes(strategy)) {
@@ -114,33 +116,19 @@ const checkAccessOrError = (
     hierarchicalChildrenOptions.includes(strategy) ||
     relationalAccessOptions.includes(strategy)
   ) {
-    if (
-      userRoles.some(
-        (role) =>
-          role.type ===
-          resourceOwnership[resourceType as keyof typeof resourceOwnership]
-      )
-    ) {
+    const parentResourceType = resourceOwnership[resourceType as keyof typeof resourceOwnership];
+    if (userRoles.some((role) => role.type === parentResourceType)) {
       hasAccess = true;
     }
   } else if (hierarchicalGrandChildrenOptions.includes(strategy)) {
-    if (
-      userRoles.some(
-        (role) =>
-          role.type ===
-          resourceOwnership[
-            resourceOwnership[
-              resourceType as keyof typeof resourceOwnership
-            ] as keyof typeof resourceOwnership
-          ]
-      )
-    ) {
+    const parentResourceType = resourceOwnership[resourceType as keyof typeof resourceOwnership];
+    const grandParentResourceType = resourceOwnership[parentResourceType as keyof typeof resourceOwnership];
+    if (userRoles.some((role) => role.type === grandParentResourceType)) {
       hasAccess = true;
     }
   }
-
   if (!hasAccess) {
-    return error(401, `All out of ${resourceType}`);
+    return error(401, `All out of <code>${resourceType}</code>s to give`);
   }
 
   return hasAccess;
@@ -439,7 +427,7 @@ export const isValidQueryParamsOrError = (table: any, url: URL) => {
       Object.keys(queryParams)
     );
     if (!valid) {
-      return error(400, `Invalid filter fields: ${invalidColumns.join(', ')}`);
+      return error(400, `Invalid filter fields: <code>${invalidColumns.join(', ')}</code>`);
     }
   }
 
