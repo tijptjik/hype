@@ -35,6 +35,6 @@ let title = $derived(navItems[routerState.resource].name);
   <div class="flex flex-none items-center space-x-4">
     <NewEntityButton />
     <div class="divider divider-horizontal"></div>
-    <FilterInput resourceType={routerState.resource} rounded={true} />
+    <FilterInput resourceType={routerState.resource} rounded={true} showUnpublishedToggle={true} />
   </div>
 </header>
