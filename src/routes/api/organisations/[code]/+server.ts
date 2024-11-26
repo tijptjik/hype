@@ -1,6 +1,6 @@
 import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
-import { error, type RequestHandler } from '@sveltejs/kit';
+import { error, json, type RequestHandler } from '@sveltejs/kit';
 import { organisationRole, organisationI18n } from '$lib/db/schema';
 import { NEW_REF } from '$lib';
 import {
@@ -21,10 +21,10 @@ import {
 } from '$lib/db/services/organisation';
 import { isFieldUnique, isFieldChanged } from '$lib/db';
 // ZOD
-import { OrganisationUpdateAPI } from '$lib/db/zod';
+import { OrganisationPatch, OrganisationUpdateAPI } from '$lib/db/zod';
 // TYPES
 import type { SuperValidated } from 'sveltekit-superforms/client';
-import type { Organisation, OrganisationDB } from '$lib/types';
+import type { Organisation, OrganisationDB, OrganisationPartialUpdate } from '$lib/types';
 
 const RESOURCE_TYPE = 'organisation';
 const RESOURCE_PATH = 'organisations';
@@ -158,5 +158,24 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
   } catch (err) {
     console.error(err);
     return SuperFormErrorResponse(RESOURCE_TYPE);
+  }
+};
+
+export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
+  const { db } = await getDatabaseOrError(locals, platform, ACCESS_STRATEGY, RESOURCE_TYPE);
+  
+  try {
+    const formData: OrganisationPartialUpdate = await request.json();
+    const form = await superValidate(formData, zod(OrganisationPatch), {defaults: {}});
+
+    if (!form.valid) {
+      return json(form, { status: 400 });
+    }
+
+    const updated = await updateOrganisation(db, form.data, params.code as string);
+    return json({ success: true, data: updated });
+  } catch (err) {
+    console.error(err);
+    return json({ success: false, error: 'Failed to update layer' }, { status: 500 });
   }
 };
