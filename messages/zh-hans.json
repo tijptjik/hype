@@ -11,6 +11,7 @@
   "navbar__signout": "注销",
   "navbar__new": "新的",
   "navbar__admin": "管理",
+  "navbar__tasks": "审核队列",
 
   "profile__registered_account": "注册账户",
   "profile__member_since": "成为会员时间",

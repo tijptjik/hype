@@ -11,6 +11,7 @@
   "navbar__signout": "Sign out",
   "navbar__new": "New",
   "navbar__admin": "Admin",
+  "navbar__tasks": "Review Queue",
 
   "profile__registered_account": "Registered account",
   "profile__member_since": "Member since",

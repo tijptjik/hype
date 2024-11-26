@@ -11,6 +11,7 @@
   "navbar__signout": "註銷",
   "navbar__new": "新的",
   "navbar__admin": "管理",
+  "navbar__tasks": "審核隊列",
 
   "profile__registered_account": "註冊賬戶",
   "profile__member_since": "成為會員時間",
