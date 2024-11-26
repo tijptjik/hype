@@ -32,9 +32,16 @@ let title = $derived(navItems[routerState.resource].name);
       <h2 class="text-2xl font-semibold">{title}</h2>
     </div>
   </div>
-  <div class="flex flex-none items-center space-x-4">
-    <NewEntityButton />
-    <div class="divider divider-horizontal"></div>
-    <FilterInput resourceType={routerState.resource} rounded={true} showUnpublishedToggle={true} />
+  <div class="flex flex-none items-center space-x-5">
+    {#if routerState.resource !== 'task'}
+      <NewEntityButton />
+      <div class="divider divider-horizontal"></div>
+    {/if}
+    <FilterInput
+      resourceType={routerState.resource}
+      rounded={true}
+      showUnpublishedToggle={routerState.resource !== 'task'}
+      showReviewedToggle={routerState.resource === 'task'}
+    />
   </div>
 </header>
