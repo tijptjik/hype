@@ -7,7 +7,7 @@ let { message } = data;
 <div class="flex h-screen w-full flex-col items-center justify-center">
     <div class="font-thin pb-8 text-6xl">
         <span class="align-middle text-neutral-500">{$page.status} |</span>
-        <span class="text-2xl font-light align-middle ">{$page.error?.message}</span>
+        <span class="text-2xl font-light align-middle ">{@html $page.error?.message}</span>
     </div>
   <a
     draggable="false"
