@@ -118,7 +118,9 @@ export const organisationRelations = relations(organisation, ({ one, many }) => 
   publisher: one(user, {
     fields: [organisation.publisherId],
     references: [user.id]
-  })
+  }),
+  projects: many(project),
+  tasks: many(task)
 }));
 
 export const organisationI18n = sqliteTable(
@@ -824,6 +826,9 @@ export const task = sqliteTable('task', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => nanoid(12)),
+  organisationId: text('organisationId')
+    .notNull()
+    .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
   projectId: text('projectId')
     .notNull()
     .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
@@ -854,6 +859,10 @@ export const task = sqliteTable('task', {
 
 
 export const taskRelations = relations(task, ({ one }) => ({
+  organisation: one(organisation, {
+    fields: [task.organisationId],
+    references: [organisation.id]
+  }),
   project: one(project, {
     fields: [task.projectId],
     references: [project.id]
