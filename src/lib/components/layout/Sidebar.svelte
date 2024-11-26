@@ -6,7 +6,8 @@ import { page } from '$app/stores';
 import {
   resources,
   filteredResources,
-  queryFilters
+  queryPrimsParams,
+  queryFilterParams
 } from '$lib/stores/resources.svelte';
 import { navItems } from '$lib/stores/navigation.svelte';
 // CONTEXT
@@ -81,7 +82,7 @@ $effect(() => {
 $effect(() => {
   if ($page.url.searchParams) {
     filterableByQueryParams.forEach((resource: FilterableResourceType) => {
-      queryFilters[resource] = $page.url.searchParams.getAll(resource);
+      queryPrimsParams[resource] = $page.url.searchParams.getAll(resource);
     });
   }
 });
@@ -97,7 +98,7 @@ $effect(() => {
 $effect(() => {
   // Fetch resources for each filterable type with non-empty query filters
   filterableByQueryParams.forEach((resource: FilterableResourceType) => {
-    if (queryFilters[resource]?.length > 0) {
+    if (queryPrimsParams[resource]?.length > 0) {
       fetchResources(resource);
     }
   });
@@ -164,7 +165,7 @@ const deleteQueryParamsForChildResources = (resource: ResourceType) => {
   if (activeSeq) {
     const queryParams = getQueryParams();
     Object.entries(navItems).forEach(([type, item]) => {
-      if (item.seq > activeSeq && Object.keys(queryFilters).includes(type)) {
+      if (item.seq > activeSeq && Object.keys(queryPrimsParams).includes(type)) {
         queryParams.delete(type);
       }
     });
@@ -183,6 +184,7 @@ const deleteQueryParamsForChildResources = (resource: ResourceType) => {
  *
  * @param {ResourceType} resource - The type of resource to fetch
  */
+// TODO Move this to /admin/+layout.svelte
 const fetchResources = async (resource: ResourceType) => {
   if (resource) {
     try {
@@ -286,8 +288,20 @@ const getMaxHeightItemsContainer = (
  *
  * @returns {URLSearchParams} A new URLSearchParams object containing the current query parameters
  */
-const getQueryParams = (): URLSearchParams => {
-  return new URLSearchParams($page.url.searchParams.toString());
+const getQueryParams = (includeParams: string[] = ['organisation', 'project', 'layer']): URLSearchParams => {
+  const queryParams = new URLSearchParams($page.url.searchParams.toString());
+  
+  // Get all parameter names
+  const paramNames = Array.from(queryParams.keys());
+  
+  // Remove parameters that aren't in includeParams
+  paramNames.forEach(param => {
+    if (!includeParams.includes(param)) {
+      queryParams.delete(param);
+    }
+  });
+  
+  return queryParams;
 };
 
 const toImage = (image: GetImageAPI | undefined): string => {
@@ -313,24 +327,29 @@ const toImage = (image: GetImageAPI | undefined): string => {
  *   - data: The original API entity object
  */
 const toEntity = (apiEntity: ApiEntity): EntityWithData<Resource> => {
-  return {
+  let entity: EntityWithData<Resource> = {
     id: apiEntity.id,
-    name: apiEntity.name || apiEntity.title || '',
-    nameShort: apiEntity.title || apiEntity.nameShort || apiEntity.name || '',
-    description: apiEntity.description || apiEntity.description || '',
-    address: apiEntity.displayAddress || '',
+    name: apiEntity.name || apiEntity.title || apiEntity.feature?.title || '',
+    nameShort: apiEntity.title || apiEntity.nameShort || apiEntity.name || apiEntity.project?.name || '',
+    description: apiEntity.description || apiEntity.description || apiEntity.feature?.description || '',
+    address: apiEntity.displayAddress || apiEntity.feature?.displayAddress || '',
     ref: apiEntity.ref || apiEntity.code || apiEntity.id,
     image: toImage(apiEntity.image),
     data: apiEntity
   };
+  if (apiEntity.feature) {
+    console.log(entity);
+  }
+  return entity;
 };
 
 // Replace the isResourceExpanded function with a derived object
-let expandedState = $derived<Record<ResourceType, boolean>>({
+let expandedState : Record<ResourceType, boolean> = $derived({
   organisation: routerState.resource === 'organisation',
   project: routerState.resource === 'project',
   layer: routerState.resource === 'layer',
-  feature: true
+  feature: true,
+  task: false
 })
 
 const goToResource = (e: Event, resourceType: ResourceType) => {
@@ -427,7 +446,7 @@ const navigate = (url: string) => {
 
   <div
     class="flex flex-shrink-0 flex-grow flex-col overflow-hidden border-r-2 border-base-300 p-0">
-    {#each Object.entries(navItems) as [resourceType, resource]}
+    {#each Object.entries(navItems).filter(([_, resource]) => resource.isShownInSidebar) as [resourceType, resource]}
       {@const isFilterable = hasManyEntities(resourceType as ResourceType)}
 
       <!-- RESOURCE -->
@@ -465,8 +484,8 @@ const navigate = (url: string) => {
           {expandedState[resourceType as ResourceType] && isFilterable
             ? 'h-0 flex-grow overflow-y-auto'
             : 'overflow-scroll'}">
-          {#each filteredResources[resourceType as FilterableResourceType] as entity}
-            {#if routerState.resource === resourceType || queryFilters[resourceType as FilterableResourceType]?.includes(entity.id) || resourceType === 'feature'}
+          {#each filteredResources[resourceType as FilterabqueryPrimsParamspe] as entity}
+            {#if (routerState.resource === resourceType || queryFilters[resourceType as FilterableResourceType]?.includes(entity.id) || navItems[resourceType as ResourceType].isAlwaysExpanded) && navItems[resourceType as ResourceType].isShownInSidebar}
               <li class="group relative bg-base-100 drag-none">
                 <div class="relative drag-none">
                   <a

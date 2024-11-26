@@ -857,7 +857,6 @@ export const task = sqliteTable('task', {
     .notNull()
 });
 
-
 export const taskRelations = relations(task, ({ one }) => ({
   organisation: one(organisation, {
     fields: [task.organisationId],

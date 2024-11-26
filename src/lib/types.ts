@@ -114,8 +114,8 @@ import type { RouterState } from './context/router.svelte';
 export type InputType = 'text' | 'number' | 'email' | 'password';
 
 // BRANDED
-export type ResourceType = 'organisation' | 'project' | 'layer' | 'feature';
-export type ResourceTypeWithParent = 'project' | 'layer' | 'feature';
+export type ResourceType = 'organisation' | 'project' | 'layer' | 'feature' | 'task';
+export type ResourceTypeWithParent = 'project' | 'layer' | 'feature' | 'task';
 export type ResourceTypeWithChildren = 'organisation' | 'project' | 'layer';
 export type ParentEntity = {
   type: ResourceTypeWithChildren;
@@ -139,9 +139,10 @@ export type ResourceToEntity = {
   project: EntityWithData<Project>[];
   layer: EntityWithData<Layer>[];
   feature: EntityWithData<Feature>[];
+  task: EntityWithData<Task>[];
 };
 export type ResourceToText = Record<ResourceType, string>;
-export type FilterableResourceType = Exclude<ResourceType, 'feature'>;
+export type FilterableResourceType = Exclude<ResourceType, 'feature' | 'task'>;
 export type FilterableResourceToEntityId = Record<FilterableResourceType, string[]>;
 // (Nano) unique identifier
 export type Id = string;
@@ -201,6 +202,8 @@ export type NavItem = {
   icon: IconSource;
   seq: number;
   path: string;
+  isShownInSidebar: boolean;
+  isAlwaysExpanded: boolean;
 };
 
 export type NestedRelations = {

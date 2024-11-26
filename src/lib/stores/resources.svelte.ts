@@ -7,7 +7,9 @@ import type {
   Project,
   Layer,
   Feature,
-  Organisation
+  Organisation,
+  Task,
+  ResourceToRecord
 } from '$lib/types';
 
 // Meta
@@ -22,24 +24,46 @@ export const resources: ResourceToEntity = $state({
   organisation: [],
   project: [],
   layer: [],
-  feature: []
+  feature: [],
+  task: []
 });
 export const filterTexts: ResourceToText = $state({
   organisation: '',
   project: '',
   layer: '',
-  feature: ''
+  feature: '',
+  task: ''
 });
-export const queryFilters: FilterableResourceToEntityId = $state({
+export const queryPrimsParams: FilterableResourceToEntityId = $state({
   organisation: [],
   project: [],
   layer: []
 });
+export const queryFilterParams: ResourceToRecord = $state({
+  organisation: {
+    isPublished: null
+  },
+  project: {
+    isPublished: null
+  },
+  layer: {
+    isPublished: null
+  },
+  feature: {
+    isPendingReview: false,
+    isPublished: null
+  },
+  task: {
+    isReviewed: false
+  }
+});
+
 export const filteredResources: ResourceToEntity = $state({
   organisation: [],
   project: [],
   layer: [],
-  feature: []
+  feature: [],
+  task: []
 });
 
 export const appMeta = { meta, context };
