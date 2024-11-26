@@ -8,8 +8,9 @@ import {
 // DB
 import { hierarchicalResourceQuery } from '$lib/db';
 import { projectRole, task } from '$lib/db/schema';
-import { createTask } from '$lib/db/services/task';
-// TYPES
+import { createTask, customHierarchy } from '$lib/db/services/task';
+
+  // TYPES
 import type { RequestHandler } from '@sveltejs/kit';
 import type { AccessStrategyOption } from '$lib/types';
 
@@ -23,12 +24,10 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
     ACCESS_STRATEGY,
     RESOURCE_TYPE
   );
-
   const isReviewed = url.searchParams.get('isReviewed');
   
   try {
     const queryParams = isValidQueryParamsOrError(task, url);
-
     const result = await hierarchicalResourceQuery(
       db,
       accessStrategy,
@@ -54,12 +53,12 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
         project: url.searchParams.getAll('project')
       },
       3,
-      queryParams
+      queryParams,
+      customHierarchy
     );
 
     return JSONResponseOrError(result);
   } catch (e) {
-    console.error('Database query error:', e);
     return error(500, 'Database Error');
   }
 };

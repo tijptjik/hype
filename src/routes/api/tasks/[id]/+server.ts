@@ -8,7 +8,7 @@ import {
 // DB
 import { hierarchicalEntityQuery } from '$lib/db';
 import { projectRole, task } from '$lib/db/schema';
-import { patchTask } from '$lib/db/services/task';
+import { patchTask, customHierarchy } from '$lib/db/services/task';
 // TYPES
 import type { RequestHandler } from '@sveltejs/kit';
 import type { AccessStrategyOption } from '$lib/types';
@@ -48,7 +48,8 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
       userId,
       projectRole,
       false,
-      2
+      3,
+      customHierarchy
     );
 
     return JSONResponseOrError(result);
