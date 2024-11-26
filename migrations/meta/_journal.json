@@ -64,6 +64,13 @@
       "when": 1732596963620,
       "tag": "0008_make_organisations_publishable",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1732600924604,
+      "tag": "0009_add_organisationId_to_task",
+      "breakpoints": true
     }
   ]
 }
