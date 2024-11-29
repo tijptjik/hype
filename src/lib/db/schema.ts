@@ -1,11 +1,21 @@
-import { integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import {
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex
+} from 'drizzle-orm/sqlite-core';
 import type { AdapterAccountType } from '@auth/core/adapters';
 import { relations, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
-import type { GeometryObject } from 'geojson';
 
 // TYPES
-import type { AddressProperties, AddressPropertiesExtended, LayerMetadata } from '../types';
+import type { GeometryObject } from 'geojson';
+import type {
+  AddressProperties,
+  AddressPropertiesExtended,
+  LayerMetadata
+} from '../types';
 
 // UTILS
 const getGenImageParam = (): number => Math.floor(Math.random() * (100 - 5 + 1)) + 5;
@@ -93,19 +103,30 @@ export const organisation = sqliteTable('organisation', {
   nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(false),
   // Description in English
   description: text('description'),
-  descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(false),
+  descriptionGen: integer('descriptionGen', { mode: 'boolean' })
+    .notNull()
+    .default(false),
   url: text('url'),
-  imageId: text('imageId').references(() => image.id, { onDelete: 'set null', onUpdate: 'cascade' }),
+  imageId: text('imageId').references(() => image.id, {
+    onDelete: 'set null',
+    onUpdate: 'cascade'
+  }),
+  isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(true),
+  // False : Organisation may be shown in the Admin Panel
+  // True : Organisation is considered deleted
+  isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
+  publishedAt: text('publishedAt'),
+  publisherId: text('publisherId').references(() => user.id, {
+    onDelete: 'set null',
+    onUpdate: 'cascade'
+  }),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
   modifiedAt: text('modifiedAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .$onUpdate(() => new Date().toISOString())
-    .notNull(),
-  isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(true),
-  publishedAt: text('publishedAt'),
-  publisherId: text('publisherId').references(() => user.id, { onDelete: 'set null', onUpdate: 'cascade' })
+    .notNull()
 });
 
 export const organisationRelations = relations(organisation, ({ one, many }) => ({
@@ -140,7 +161,9 @@ export const organisationI18n = sqliteTable(
     nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(true),
     // Description in {lang}
     description: text('description'),
-    descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(true)
+    descriptionGen: integer('descriptionGen', { mode: 'boolean' })
+      .notNull()
+      .default(true)
   },
   (t) => ({
     pk: primaryKey({ columns: [t.organisationId, t.lang] })
@@ -242,16 +265,26 @@ export const project = sqliteTable('project', {
   nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(false),
   // Description in English
   description: text('description'),
-  descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(false),
+  descriptionGen: integer('descriptionGen', { mode: 'boolean' })
+    .notNull()
+    .default(false),
   // License under which the dataset is made public
   license: text('license').default('Copyright').notNull(),
   licenseGen: integer('licenseGen', { mode: 'boolean' }).notNull().default(false),
   // Attribution for the dataset
   attribution: text('attribution').notNull(),
-  attributionGen: integer('attributionGen', { mode: 'boolean' }).notNull().default(false),
-  imageId: text('imageId').references(() => image.id, { onDelete: 'set null', onUpdate: 'cascade' }),
+  attributionGen: integer('attributionGen', { mode: 'boolean' })
+    .notNull()
+    .default(false),
+  imageId: text('imageId').references(() => image.id, {
+    onDelete: 'set null',
+    onUpdate: 'cascade'
+  }),
   // Accessible to the public in the app
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
+  // False : Project may be shown in the Admin Panel
+  // True : Project is considered deleted
+  isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -294,13 +327,17 @@ export const projectI18n = sqliteTable(
     nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(true),
     // Description in {lang}
     description: text('description'),
-    descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(true),
+    descriptionGen: integer('descriptionGen', { mode: 'boolean' })
+      .notNull()
+      .default(true),
     // Licence in {lang}
     license: text('license'),
     licenseGen: integer('licenseGen', { mode: 'boolean' }).notNull().default(true),
     // Description in {lang}
     attribution: text('attribution'),
-    attributionGen: integer('attributionGen', { mode: 'boolean' }).notNull().default(true)
+    attributionGen: integer('attributionGen', { mode: 'boolean' })
+      .notNull()
+      .default(true)
   },
   (t) => ({
     pk: primaryKey({ columns: [t.projectId, t.lang] })
@@ -364,11 +401,16 @@ export const layer = sqliteTable('layer', {
   nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(false),
   // Description in English
   description: text('description'),
-  descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(false),
+  descriptionGen: integer('descriptionGen', { mode: 'boolean' })
+    .notNull()
+    .default(false),
   // Additional Information
   metadata: text('metadata', { mode: 'json' }).$type<LayerMetadata>(),
   // Accessible to the public in the app
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
+  // False : Layer may be shown in the Admin Panel
+  // True : Layer is considered deleted
+  isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -401,7 +443,9 @@ export const layerI18n = sqliteTable(
     nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(true),
     // Description in {lang}
     description: text('description'),
-    descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(true)
+    descriptionGen: integer('descriptionGen', { mode: 'boolean' })
+      .notNull()
+      .default(true)
   },
   (t) => ({
     pk: primaryKey({ columns: [t.layerId, t.lang] })
@@ -428,19 +472,36 @@ export const feature = sqliteTable('feature', {
   title: text('title').notNull(),
   titleGen: integer('titleGen', { mode: 'boolean' }).notNull().default(false),
   description: text('description'),
-  descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(false),
+  descriptionGen: integer('descriptionGen', { mode: 'boolean' })
+    .notNull()
+    .default(false),
   // Display Address
   displayAddress: text('displayAddress'),
-  displayAddressGen: integer('displayAddressGen', { mode: 'boolean' }).notNull().default(false),
+  displayAddressGen: integer('displayAddressGen', { mode: 'boolean' })
+    .notNull()
+    .default(false),
   // Remaining properties as JSON
-  addressProperties: text('addressProperties', { mode: 'json' }).$type<AddressPropertiesExtended>(),
+  addressProperties: text('addressProperties', {
+    mode: 'json'
+  }).$type<AddressPropertiesExtended>(),
   layerId: text('layerId')
     .notNull()
     .references(() => layer.id, { onDelete: 'cascade' }),
-  contributorId: text('contributorId').references(() => user.id, { onDelete: 'set null' }),
+  contributorId: text('contributorId').references(() => user.id, {
+    onDelete: 'set null'
+  }),
   publisherId: text('publisherId').references(() => user.id, { onDelete: 'set null' }),
+  // True : Feature is shown in the User App
+  // False : Feature is only shown in the Admin Panel
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
-  isPendingReview: integer('isPendingReview', { mode: 'boolean' }).notNull().default(false),
+  // False : Feature shows up everywhere in the Admin Panel
+  // True : Feature only shows up in the Review Queue
+  isPendingReview: integer('isPendingReview', { mode: 'boolean' })
+    .notNull()
+    .default(false),
+  // False : Feature may be shown in the Admin Panel
+  // True : Feature is considered deleted
+  isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
 
   // PUBLISHED
   // Visitable + Tangible            : Listing - Feature has a physical presence and can be visited - the default
@@ -498,13 +559,18 @@ export const featureI18n = sqliteTable(
     title: text('title').notNull(),
     titleGen: integer('titleGen', { mode: 'boolean' }).notNull().default(true),
     description: text('description'),
-    descriptionGen: integer('descriptionGen', { mode: 'boolean' }).notNull().default(true),
+    descriptionGen: integer('descriptionGen', { mode: 'boolean' })
+      .notNull()
+      .default(true),
     // Display Address
     displayAddress: text('displayAddress'),
-    displayAddressGen: integer('displayAddressGen', { mode: 'boolean' }).notNull().default(false),
+    displayAddressGen: integer('displayAddressGen', { mode: 'boolean' })
+      .notNull()
+      .default(false),
     // Address Properties
-    addressProperties: text('addressProperties', { mode: 'json' }).$type<AddressProperties>(),
-
+    addressProperties: text('addressProperties', {
+      mode: 'json'
+    }).$type<AddressProperties>()
   },
   (t) => ({
     pk: primaryKey({ columns: [t.featureId, t.lang] })
@@ -556,7 +622,10 @@ export const featurePropertyI18n = sqliteTable(
   {
     featurePropertyId: text('featurePropertyId')
       .notNull()
-      .references(() => featureProperty.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+      .references(() => featureProperty.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
     lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
     value: text('value').notNull()
   },
@@ -565,12 +634,15 @@ export const featurePropertyI18n = sqliteTable(
   })
 );
 
-export const featurePropertyI18nRelations = relations(featurePropertyI18n, ({ one }) => ({
-  featureProperty: one(featureProperty, {
-    fields: [featurePropertyI18n.featurePropertyId],
-    references: [featureProperty.id]
+export const featurePropertyI18nRelations = relations(
+  featurePropertyI18n,
+  ({ one }) => ({
+    featureProperty: one(featureProperty, {
+      fields: [featurePropertyI18n.featurePropertyId],
+      references: [featureProperty.id]
+    })
   })
-}));
+);
 
 // TODO Add visit table linking Users with GeoFeatures for a given date
 // TODO When a new visit is created for a GeoFeature, update its "visitableAsOf" field to that date.
@@ -595,7 +667,9 @@ export const property = sqliteTable('property', {
   label: text('label').notNull(),
   labelGen: integer('labelGen', { mode: 'boolean' }).notNull().default(true),
   placeholder: text('placeholder').default('Type here'),
-  placeholderGen: integer('placeholderGen', { mode: 'boolean' }).notNull().default(true),
+  placeholderGen: integer('placeholderGen', { mode: 'boolean' })
+    .notNull()
+    .default(true),
   component: text('component', {
     enum: ['SelectField', 'RangeField', 'InputField', 'TextareaField']
   })
@@ -603,7 +677,9 @@ export const property = sqliteTable('property', {
     .default('SelectField'),
   min: integer('min'),
   max: integer('max'),
-  isTranslatable: integer('isTranslatable', { mode: 'boolean' }).notNull().default(true),
+  isTranslatable: integer('isTranslatable', { mode: 'boolean' })
+    .notNull()
+    .default(true),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -705,14 +781,34 @@ export const layerPropertyRelations = relations(layerProperty, ({ one, many }) =
   })
 }));
 
+type EXIF = {
+  CopyrightNotice: string;
+  Credit: string;
+  DateTimeOriginal: string;
+  CreateDate: string;
+  ModifyDate: string;
+  GPSLatitude: string;
+  GPSLongitude: string;
+  'By-line': string;
+  [key: string]: string;
+};
+
 export const image = sqliteTable('image', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => nanoid(12)),
+  contributorId: text('contributorId').references(() => user.id, {
+    onDelete: 'set null',
+    onUpdate: 'cascade'
+  }),
   // CDN
-  cdn: text('cdn', { enum: ['cloudinary'] }).default('cloudinary').notNull(),
+  cdn: text('cdn', { enum: ['cloudinary'] })
+    .default('cloudinary')
+    .notNull(),
   // Cloudinary Cloud Name
-  env: text('env', { enum: ['dg6vtsga1'] }).default('dg6vtsga1').notNull(),
+  env: text('env', { enum: ['dg6vtsga1'] })
+    .default('dg6vtsga1')
+    .notNull(),
   // Cloudinary Asset ID
   cdnId: text('cdnId'),
   // Cloudinary Public ID
@@ -725,11 +821,17 @@ export const image = sqliteTable('image', {
   originalWidth: integer('originalWidth'),
   originalHeight: integer('originalHeight'),
 
-  contributorId: text('contributorId')
-    .references(() => user.id, { onDelete: 'set null' }),
-  capturedAt: text('capturedAt')
-    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .notNull(),
+  // EXIF Metadata
+  metadata: text('metadata', { mode: 'json' }).$type<EXIF>(),
+  cameraModel: text('cameraModel'),
+  capturedAt: text('capturedAt'),
+  latitude: text('latitude'),
+  longitude: text('longitude'),
+  credit: text('credit'),
+
+  // False : Images may be shown in the Admin Panel
+  // True : Image is considered deleted
+  isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -751,29 +853,32 @@ export const imageRelations = relations(image, ({ one, many }) => ({
   })
 }));
 
-
-export const featureImage = sqliteTable('featureImage', {
-  featureId: text('featureId')
-    .notNull()
-    .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  imageId: text('imageId')
-    .notNull()
-    .references(() => image.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  intent: text('intent', { 
-    enum: ['canonical', 'closeUp', 'context', 'general', 'evidence', 'undefined'] 
+export const featureImage = sqliteTable(
+  'featureImage',
+  {
+    featureId: text('featureId')
+      .notNull()
+      .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    imageId: text('imageId')
+      .notNull()
+      .references(() => image.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    intent: text('intent', {
+      enum: ['canonical', 'closeUp', 'context', 'general', 'evidence', 'undefined']
+    })
+      .default('undefined')
+      .notNull(),
+    isPublished: integer('isPublished', { mode: 'boolean' }).default(false).notNull(),
+    publishedAt: text('publishedAt').default(
+      sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`
+    )
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.featureId, t.imageId] }),
+    canonicalConstraint: uniqueIndex('canonical_intent')
+      .on(t.featureId)
+      .where(sql`intent = 'canonical'`)
   })
-    .default('undefined')
-    .notNull(),
-  isPublished: integer('isPublished', { mode: 'boolean' })
-    .default(false)
-    .notNull(),
-  publishedAt: text('publishedAt')
-    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-}, (t) => ({
-  pk: primaryKey({ columns: [t.featureId, t.imageId] }),
-  canonicalConstraint: uniqueIndex('canonical_intent').on(t.featureId).where(sql`intent = 'canonical'`)
-}));
-
+);
 
 export const featureImageRelations = relations(featureImage, ({ one }) => ({
   feature: one(feature, {
@@ -786,31 +891,29 @@ export const featureImageRelations = relations(featureImage, ({ one }) => ({
   })
 }));
 
-
-export const userFeature = sqliteTable('userFeature', {
-  userId: text('userId')
-    .notNull()
-    .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  featureId: text('featureId')
-    .notNull()
-    .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  isVisited: integer('isVisited', { mode: 'boolean' })
-    .default(false)
-    .notNull(),
-  isWishlisted: integer('isWishlisted', { mode: 'boolean' })
-    .default(false)
-    .notNull(),
-  createdAt: text('createdAt')
-    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .notNull(),
-  modifiedAt: text('modifiedAt')
-    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .$onUpdate(() => new Date().toISOString())
-    .notNull()
-}, (t) => ({
-  pk: primaryKey({ columns: [t.userId, t.featureId] })
-}));
-
+export const userFeature = sqliteTable(
+  'userFeature',
+  {
+    userId: text('userId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    featureId: text('featureId')
+      .notNull()
+      .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    isVisited: integer('isVisited', { mode: 'boolean' }).default(false).notNull(),
+    isWishlisted: integer('isWishlisted', { mode: 'boolean' }).default(false).notNull(),
+    createdAt: text('createdAt')
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .notNull(),
+    modifiedAt: text('modifiedAt')
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .$onUpdate(() => new Date().toISOString())
+      .notNull()
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.userId, t.featureId] })
+  })
+);
 
 export const userFeatureRelations = relations(userFeature, ({ one }) => ({
   user: one(user, {
@@ -836,19 +939,17 @@ export const task = sqliteTable('task', {
   featureId: text('featureId')
     .notNull()
     .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  imageId: text('imageId')
-    .references(() => image.id, { onDelete: 'set null' }),
+  imageId: text('imageId').references(() => image.id, { onDelete: 'set null' }),
   contributorId: text('contributorId')
     .notNull()
     .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  reviewerId: text('reviewerId')
-    .references(() => user.id, { onDelete: 'set null' }),
-  type: text('type', { enum: ['reportedMissing', 'newPhoto', 'newFeature'] })
-    .notNull(),
-  isReviewed: integer('isReviewed', { mode: 'boolean' })
-    .default(false)
-    .notNull(),
-  reviewOutcome: text('reviewOutcome', { enum: ['rejected', 'accepted'] }),
+  reviewerId: text('reviewerId').references(() => user.id, { onDelete: 'set null' }),
+  type: text('type', { enum: ['reportedMissing', 'newPhoto', 'newFeature'] }).notNull(),
+  isReviewed: integer('isReviewed', { mode: 'boolean' }).default(false).notNull(),
+  reviewOutcome: text('reviewOutcome', { enum:  ['rejected', 'accepted'] }),
+  reviewAction: text('reviewAction', {
+    enum: ['ignored', 'set-unpublished', 'set-intangible', 'set-archived', 'add-photo', 'add-feature']
+  }),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
