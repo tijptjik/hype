@@ -4,7 +4,7 @@ import { slide } from 'svelte/transition';
 import Icon from '$lib/components/common/Icon.svelte';
 import { ChevronRight, ExclamationTriangle } from '@steeze-ui/heroicons';
 import SearchBar from './HeaderSearch.svelte';
-import Info from './Info.svelte';
+import Info from '$lib/components/forms/extra/Info.svelte';
 
 // CONTEXT
 import { getRouterState } from '$lib/context/router.svelte';
