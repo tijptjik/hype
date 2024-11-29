@@ -1,9 +1,9 @@
-import { error} from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 // API
 import {
-    getDatabaseOrError,
-    isValidQueryParamsOrError,
-    JSONResponseOrError,
+  getDatabaseOrError,
+  isValidQueryParamsOrError,
+  JSONResponseOrError
 } from '$lib/api';
 // DB
 import { hierarchicalEntityQuery } from '$lib/db';
@@ -34,7 +34,16 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
       {
         organisation: true,
         project: true,
-        feature: true,
+        feature: {
+          with: {
+            properties: {
+              with: {
+                propertyValue: true,
+                property: true
+              }
+            }
+          }
+        },
         image: true,
         contributor: {
           columns: {
