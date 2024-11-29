@@ -24,14 +24,12 @@ import {
   userFeature,
   task
 } from '$lib/db/schema';
-import type { GeometryObject } from 'geojson';
+// TYPES
 import type {
-  GhostSignsFeatureProperties,
   AddressProperties,
   LayerMetadata,
-  PropertyValue
+  TaskType
 } from '$lib/types';
-import type { Table } from 'drizzle-orm';
 
 export const targetLangs = ['zh-hant', 'zh-hans'] as const;
 export const fieldDiscriminators = ['classifier', 'specifier', 'display'] as const;
@@ -357,7 +355,8 @@ export const FeaturePropertyUpdate = FeaturePropertyInsert.extend({
   id: z.string()
 });
 export const FeaturePropertyUpdateExtra = FeaturePropertyUpdate.extend({
-  property: PropertyInsertAPI.omit({ values: true }).deepPartial()
+  property: PropertyInsertAPI.omit({ values: true }).deepPartial(),
+  propertyValue: PropertyValueInsertAPI.optional()
 });
 
 export const FeaturePropertyI18nUpdate = createInsertSchema(featurePropertyI18n);
@@ -485,7 +484,6 @@ export const ImageGetAPI = ImageUpdate.extend({
   .default('undefined'),
   isPublished: z.boolean().default(false),
   publishedAt: z.coerce.date(),
-  createdAt: z.string()
 });
 
 
@@ -522,7 +520,8 @@ export const TaskInsert = createInsertSchema(task).extend({
   id: z.string().optional(),
   type: z.enum(['reportedMissing', 'newPhoto', 'newFeature']),
   isReviewed: z.boolean().default(false),
-  reviewOutcome: z.enum(['rejected', 'accepted']).optional()
+  reviewOutcome: z.enum(['rejected', 'accepted']).optional(),
+  reviewAction: z.enum(['ignored', 'set-unpublished', 'set-intangible', 'set-archived', 'add-photo', 'add-feature']).optional()
 });
 
 export const TaskUpdate = TaskInsert.extend({
@@ -530,16 +529,18 @@ export const TaskUpdate = TaskInsert.extend({
 });
 
 export const TaskInsertAPI = TaskInsert.extend({
+  organisation: OrganisationBase.optional(),
   project: ProjectBase.optional(),
-  feature: FeatureBase.optional(),
+  feature: FeatureInsertAPI.optional(),
   image: ImageBase.optional(),
   contributor: UserBase.optional(),
   reviewer: UserBase.optional()
 });
 
 export const TaskUpdateAPI = TaskUpdate.extend({
+  organisation: OrganisationBase.optional(),
   project: ProjectBase.optional(),
-  feature: FeatureBase.optional(),
+  feature: FeatureUpdateAPI.optional(),
   image: ImageBase.optional(),
   contributor: UserBase.optional(),
   reviewer: UserBase.optional()

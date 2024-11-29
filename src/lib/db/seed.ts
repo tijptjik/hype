@@ -229,7 +229,7 @@ const seedBank = {
     name: 'Tasks',
     table: task,
     data: tasksJson,
-    chunk: 0
+    chunk: 6
   }
 };
 
