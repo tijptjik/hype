@@ -7,7 +7,8 @@ import {
   projectRole,
   project,
   layer,
-  organisation
+  organisation,
+  organisationRole
 } from '../schema';
 import { ImageInsert, ImageUpdate } from '../zod';
 import db, { updatePartial } from '$lib/db';
@@ -22,7 +23,6 @@ import type {
   NewImageAPI,
   FeatureImageDB,
   Id,
-  StatefulAccessOption,
   AccessStrategyOption
 } from '$lib/types';
 
@@ -112,13 +112,14 @@ export const extractEntitiesToUpdate = (
   return { baseImage, relatedFeatureImage };
 };
 
-export const checkProjectAccessForImage = async (
+export const checkFeatureAccessForImage = async (
   db: Database,
   userId: Id,
   imageId: Id
 ): Promise<{ projectId: Id; role: string | null } | undefined> => {
-  return await db
+  let result = await db
     .select({
+      featureId: feature.id,
       projectId: project.id,
       role: projectRole.role
     })
@@ -133,7 +134,53 @@ export const checkProjectAccessForImage = async (
     )
     .where(eq(image.id, imageId))
     .get();
+  return result;
 };
+
+
+export const checkProjectAccessForImage = async (
+  db: Database,
+  userId: Id,
+  imageId: Id
+): Promise<{ projectId: Id; role: string | null } | undefined> => {
+  let result = await db
+    .select({
+      projectId: project.id,
+      role: projectRole.role
+    })
+    .from(image)
+    .innerJoin(project, eq(image.id, project.imageId))
+    .leftJoin(
+      projectRole,
+      and(eq(projectRole.projectId, project.id), eq(projectRole.userId, userId))
+    )
+    .where(eq(image.id, imageId))
+    .get();
+  return result;
+};
+
+
+export const checkOrganisationAccessForImage = async (
+  db: Database,
+  userId: Id,
+  imageId: Id
+): Promise<{ organisationId: Id; role: string | null } | undefined> => {
+  let result = await db
+    .select({
+      organisationId: organisation.id,
+      role: organisationRole.role
+    })
+    .from(image)
+    .innerJoin(organisation, eq(image.id, organisation.imageId))
+    .leftJoin(
+      organisationRole,
+      and(eq(organisationRole.organisationId, organisation.id), eq(organisationRole.userId, userId))
+    )
+    .where(eq(image.id, imageId))
+    .get();
+  return result;
+};
+
 
 export const checkProjectAccessForFeature = async (
   db: Database,
@@ -167,7 +214,8 @@ let imageSelect = {
   originalFilename: image.originalFilename,
   originalExtension: image.originalExtension,
   contributorId: image.contributorId,
-  capturedAt: image.capturedAt
+  capturedAt: image.capturedAt,
+  createdAt: image.createdAt
 };
 
 export const getImagesForFeature = async (
@@ -214,14 +262,3 @@ export const getImageForOrganisation = async (db: Database, organisationId: Id) 
     .where(eq(organisation.id, organisationId));
 };
 
-export const getURLfromImage = (image: ImageDB, transformation: string = 'c_fit,h_1000,w_1000', raw: boolean = false) => {
-  if (image.cdn === 'cloudinary') {
-    return raw ? `https://res.cloudinary.com/${image.env}/image/upload/fl_attachment/${image.publicId}`:  `https://res.cloudinary.com/${image.env}/image/upload/${transformation}/v${image.version}/${image.publicId}`;
-  } else {
-    return error(404, `Image CDN <code>${image.cdn}</code> not supported`);
-  }
-};
-
-export const getUploadURL = (cloudname: string) => {
-  return `https://api.cloudinary.com/v1_1/${cloudname}/auto/upload`;
-};
