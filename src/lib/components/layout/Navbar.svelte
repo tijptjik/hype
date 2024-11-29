@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
 import { page } from '$app/stores';
 import * as m from '$lib/paraglide/messages.js';
 import { signIn, signOut } from '@auth/sveltekit/client';
@@ -6,11 +7,30 @@ import { hasControlPanelAccess } from '$lib/auth/utils';
 import Icon from '$lib/components/common/Icon.svelte';
 import { Bars3, ComputerDesktop, InboxArrowDown } from '@steeze-ui/heroicons';
 import IconicMenuButton from '$lib/components/menu/IconicMenuButton.svelte';
+import { RouterState } from '$lib/context/router.svelte';
+// CONTEXT
+import { getRouterState } from '$lib/context/router.svelte';
+
+
 
 const { session } = $page.data;
 
 let isMenuOpen = $state(false);
 let notificationCount = $state(0);
+
+// CONTEXT
+const routerState = getRouterState();
+
+$effect(() => {
+  if (session && hasControlPanelAccess(session)) {
+    let url = '/api/tasks?isReviewed=false';
+    fetch(url)
+      .then((res) => res.json())
+      .then((data) => {
+        notificationCount = data.length;
+      });
+  }
+});
 
 const toggleMenu = () => {
   isMenuOpen = !isMenuOpen;
@@ -25,12 +45,28 @@ const pathsMenuRight = [
 $effect(() => {
   isMenuOpen = false;
 });
+
+// HANDLERS
+const handleClick = (e: MouseEvent, href: string, resource: boolean = false) => {
+  e.preventDefault();
+  e.stopPropagation();
+  let url = new URL(window.location.href);
+  url.pathname = href;
+  routerState.updateWith({
+    resource: resource,
+    entity: false,
+    facet : false
+  });
+  console.log('url', url.toString());
+  goto(url.toString());
+};
 </script>
 
 {#snippet navLink(href, label, className = '')}
   <a
     draggable="false"
     {href}
+    onclick={(e) => handleClick(e, href, false)}
     class="select-none {className}"
     class:btn-active={$page.url.pathname.startsWith(href)}>
     {label}
@@ -57,12 +93,17 @@ $effect(() => {
       <li>
         <IconicMenuButton
           href="/admin/tasks"
+          handleClick={(e) => handleClick(e, href, 'tasks')}
           iconSrc={InboxArrowDown}
           matchFromStart={false}
           {notificationCount} />
       </li>
       <li>
-        <IconicMenuButton href="/admin" iconSrc={ComputerDesktop} />
+        <IconicMenuButton
+        href="/admin"
+          iconSrc={ComputerDesktop}
+          handleClick={() => handleClick(e, href)}
+        />
       </li>
     </ul>
     <div class="mx-2 hidden h-5 w-px bg-neutral-800 lg:block"></div>

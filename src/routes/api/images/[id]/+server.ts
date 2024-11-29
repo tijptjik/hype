@@ -1,23 +1,60 @@
 import { error, json } from '@sveltejs/kit';
 import { getDatabaseOrError, JSONResponseOrError } from '$lib/api';
 import { image, featureImage } from '$lib/db/schema';
-import { eq, and, or } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import type { RequestHandler } from '@sveltejs/kit';
 import {
-  createImage,
-  createFeatureImage,
-  extractEntitiesToInsert,
-  checkProjectAccessForImage
+  checkProjectAccessForImage,
+  checkOrganisationAccessForImage,
+  checkFeatureAccessForImage
 } from '$lib/db/services/image';
-import type { NewImage, Image, NewImageAPI, Id } from '$lib/types';
+import { genericEntityQuery } from '$lib/db';
+import type { AccessStrategyOption, Id, StatefulAccessOption } from '$lib/types';
+import type { ResourceType } from '$lib/types';
 
-const RESOURCE_TYPE = 'image';
+const RESOURCE_TYPE: ResourceType = 'image';
 const RESOURCE_PATH = 'images';
-const ACCESS_STRATEGY = 'EntityFromEditableProject';
-const PRIVILEGED_STRATEGY = 'EntityAny';
+const ACCESS_STRATEGY: AccessStrategyOption = 'EntityFromEditableProject';
+const PRIVILEGED_STRATEGY: StatefulAccessOption = 'EntityAny';
 const PUBLIC_IDENTIFIER = 'id';
 
-export const DELETE: RequestHandler = async ({ params, locals, platform, fetch : eventFetch }) => {
+export const GET: RequestHandler = async ({ params, locals, platform }) => {
+  const { db, userId, accessStrategy } = await getDatabaseOrError(
+    locals,
+    platform,
+    'EntityAny',
+    RESOURCE_TYPE
+  );
+
+  try {
+    const result = await genericEntityQuery(
+      db,
+      params[PUBLIC_IDENTIFIER] as string,
+      image,
+      PUBLIC_IDENTIFIER,
+      accessStrategy,
+      {
+        featureImage: true,
+        contributor: true
+      },
+      userId
+    );
+
+    return JSONResponseOrError(result);
+  } catch (e) {
+    console.error('Database query error:', e);
+    return error(500, 'Dust Accumulation Critical');
+  }
+};
+
+export const DELETE: RequestHandler = async ({
+  params,
+  request,
+  locals,
+  platform,
+  fetch: eventFetch
+}) => {
+  const body = await request.json();
 
   const { db, userId, accessStrategy } = await getDatabaseOrError(
     locals,
@@ -25,9 +62,11 @@ export const DELETE: RequestHandler = async ({ params, locals, platform, fetch :
     ACCESS_STRATEGY,
     RESOURCE_TYPE,
     params.id,
+    checkFeatureAccessForImage,
     checkProjectAccessForImage,
-    undefined,
-    PRIVILEGED_STRATEGY
+    checkOrganisationAccessForImage,
+    PRIVILEGED_STRATEGY,
+    body.refType
   );
 
   // Get image details first
@@ -47,7 +86,6 @@ export const DELETE: RequestHandler = async ({ params, locals, platform, fetch :
   }
 
   try {
-
     // Delete from Cloudinary first
     const signResponse = await eventFetch('/api/cloudinary', {
       method: 'POST',
@@ -76,7 +114,10 @@ export const DELETE: RequestHandler = async ({ params, locals, platform, fetch :
     );
 
     if (!destroyResponse.ok) {
-      error(500, `Failed to delete image from Cloudinary: ${await destroyResponse.text()}`);
+      error(
+        500,
+        `Failed to delete image from Cloudinary: ${await destroyResponse.text()}`
+      );
     }
 
     // Then delete from database
@@ -91,27 +132,43 @@ export const DELETE: RequestHandler = async ({ params, locals, platform, fetch :
 };
 
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
+  const body = await request.json();
   const { db, userId, accessStrategy } = await getDatabaseOrError(
     locals,
     platform,
     ACCESS_STRATEGY,
     RESOURCE_TYPE,
     params.id,
+    checkFeatureAccessForImage,
     checkProjectAccessForImage,
-    undefined,
-    PRIVILEGED_STRATEGY
+    checkOrganisationAccessForImage,
+    PRIVILEGED_STRATEGY,
+    body.refType
   );
 
-  const body = await request.json();
+  let updatedImage;
+  let updatedFeatureImage;
 
   try {
+    if (body) {
+      [updatedImage] = await db
+        .update(image)
+        .set(body)
+        .where(eq(image.id, params[PUBLIC_IDENTIFIER] as Id))
+        .returning();
+    }
     if (body.featureImage) {
-      await db
+      [updatedFeatureImage] = await db
         .update(featureImage)
         .set(body.featureImage)
-        .where(eq(featureImage.imageId, params[PUBLIC_IDENTIFIER] as Id));
+        .where(eq(featureImage.imageId, params[PUBLIC_IDENTIFIER] as Id))
+        .returning();
     }
-    return json({ success: true });
+
+    return json({
+      success: true,
+      image: { ...updatedImage, featureImage: updatedFeatureImage ?? null }
+    });
   } catch (err) {
     console.error('Failed to update image:', err);
     return error(500, 'Failed to update image');

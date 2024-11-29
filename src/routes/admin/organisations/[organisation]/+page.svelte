@@ -12,7 +12,12 @@ import SpecificationSection from '$lib/components/forms/sections/Specification.s
 import ImageSection from '$lib/components/forms/sections/Image.svelte';
 import UserSection from '$lib/components/forms/sections/User.svelte';
 // TYPES
-import type { PageProps, FormField, Organisation, EntityRouter } from '$lib/types';
+import type { FormPageProps, FormField, Organisation, EntityRouter, GetImageAPI } from '$lib/types';
+
+// STATE : CONTEXT :: ROUTER
+const routerState = getRouterState() as EntityRouter;
+// STATE : CONTEXT :: RESOURCES
+const resourceState = getHierarchicalResourceState();
 
 // CONFIG
 const RESOURCE = 'organisation';
@@ -76,16 +81,12 @@ const FIELDS: Record<string, FormField> = {
 };
 
 // STATE : PROPS
-let pageProps: PageProps<Organisation> = $props();
+let pageProps: FormPageProps<Organisation> = $props();
 let { validatedForm, entity } = pageProps.data;
 
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
-
-// STATE : CONTEXT :: RESOURCES
-const resourceState = getHierarchicalResourceState();
-
 // STATE : FORM
+console.log('ENTITY', pageProps.data);
+
 let form = $state(setForm<Organisation>(RESOURCE, entity, validatedForm));
 let enhance = $derived(form.enhance);
 let isNew = $state(entity === NEW_REF);
@@ -120,7 +121,7 @@ let doRerender = $state(0);
 
 {#await forceUpdate(doRerender) then _}
   <!-- LAYOUT -->
-  <div class="h-full bg-black mb-12">
+  <div class="mb-12 h-full bg-black">
     <Header {title} {form} />
     <form
       method="POST"
@@ -128,8 +129,7 @@ let doRerender = $state(0);
       role="form"
       data-testid="organisationForm"
       class="h-full">
-      <main
-        class="flex h-full flex-col gap-6 overflow-y-scroll p-6">
+      <main class="flex h-full flex-col gap-6 overflow-y-scroll p-6">
         {#if routerState.facet === 'core'}
           <I18nSection title="Descriptors" fields={FIELDS.i18n} {form} />
           <div class="flex flex-row gap-6">
@@ -144,7 +144,11 @@ let doRerender = $state(0);
               {form} />
           </div>
         {:else if routerState.facet === 'images'}
-          <ImageSection title="Image" fields={FIELDS.images} {form} />
+          <ImageSection
+            title="Image"
+            fields={FIELDS.images}
+            {form}
+            image={pageProps.data.image as GetImageAPI} />
         {/if}
       </main>
     </form>

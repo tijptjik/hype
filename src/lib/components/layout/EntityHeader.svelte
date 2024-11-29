@@ -2,7 +2,8 @@
 import { goto } from '$app/navigation';
 import * as m from '$lib/paraglide/messages.js';
 import { slide } from 'svelte/transition';
-import { NEW_REF } from '$lib';
+// LIB
+import { NEW_REF, goToResource, goToEntity } from '$lib';
 // STORES
 import { navItems } from '$lib/stores/navigation.svelte';
 // COMPONENTS
@@ -92,6 +93,8 @@ const onclick = (e: Event, url: string) => {
   goto(url).then(() => goto(url)).then(() => goto(url));
 }
 </script>
+
+
 
 <header
   class="navbar sticky left-0 top-0 z-20 h-17.5 w-full flex-none bg-gradient-to-r from-rose-500 to-fuchsia-800 px-12 py-4 shadow-lg">

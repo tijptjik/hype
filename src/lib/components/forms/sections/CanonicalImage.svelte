@@ -1,5 +1,5 @@
 <script lang="ts">
-import { getURLfromImage } from '$lib/db/services/image';
+import { getURLfromImage } from '$lib/images/index.svelte';
 // STORES
 import { page } from '$app/stores';
 // CONTEXT
@@ -43,7 +43,7 @@ const navigateToGallery = (e: Event) => {
 };
 </script>
 
-<div class="h-full basis-1/3">
+<div class="h-full basis-1/3 min-h-[300px]">
   {#await canonicalImage()}
     <div class="flex h-full w-full items-center justify-center rounded-lg bg-base-300">
       <span class="text-base-content/50">Loading...</span>
@@ -55,7 +55,7 @@ const navigateToGallery = (e: Event) => {
           <!-- Background Image -->
           <div class="absolute inset-0 z-10 h-full w-full bg-neutral opacity-50">
             <Image
-              src={getURLfromImage(image)}
+              src={getURLfromImage({ image, transformation: 'c_fill,h_320,w_320,' })}
               alt="Background Image"
               class="h-full w-full text-base-100 blur-sm"
               layout="cover"
@@ -66,7 +66,7 @@ const navigateToGallery = (e: Event) => {
           <!-- Main Image -->
           <div class="absolute z-20 h-full w-full overflow-hidden p-2">
             <Image
-              src={getURLfromImage(image)}
+              src={getURLfromImage({ image, transformation: 'c_fit,h_320,w_320' })}
               alt="Canonical image of feature"
               class="mx-auto h-full overflow-hidden rounded-lg text-base-100"
               layout="contain"

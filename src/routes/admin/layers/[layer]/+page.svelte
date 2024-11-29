@@ -12,7 +12,7 @@ import LayerPropertySection from '$lib/components/forms/sections/LayerProperty.s
 // TYPES
 import type {
   Layer,
-  PageProps,
+  FormPageProps,
   FormField,
   FormFieldArray,
   EntityRouter
@@ -60,7 +60,7 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
 };
 
 // STATE : PROPS
-let pageProps: PageProps<Layer> = $props();
+let pageProps: FormPageProps<Layer> = $props();
 let { validatedForm, entity } = pageProps.data;
 
 // STATE : CONTEXT :: ROUTER

@@ -114,7 +114,7 @@ import type { RouterState } from './context/router.svelte';
 export type InputType = 'text' | 'number' | 'email' | 'password';
 
 // BRANDED
-export type ResourceType = 'organisation' | 'project' | 'layer' | 'feature' | 'task';
+export type ResourceType = 'organisation' | 'project' | 'layer' | 'feature' | 'task' | 'image';
 export type ResourceTypeWithParent = 'project' | 'layer' | 'feature' | 'task';
 export type ResourceTypeWithChildren = 'organisation' | 'project' | 'layer';
 export type ParentEntity = {
@@ -168,8 +168,8 @@ export type ApiEntity = Entity & {
   title?: string;
   displayAddress?: string;
 };
-export type EntityWithData<T> = Entity & {
-  data: T extends Resource ? T : never;
+export type EntityWithData<T extends Resource> = Entity & {
+  data: T;
   image?: string;
 };
 export const Facets = [
@@ -262,8 +262,8 @@ export type ProjectField = keyof Project;
 export type LayerField = keyof Layer;
 export type FeatureField = keyof Feature;
 export type Field = OrganisationField | ProjectField | LayerField | FeatureField;
-export type Resource = Organisation | Project | Layer | Feature;
-export type ResourceDB = OrganisationDB | ProjectDB | LayerDB | FeatureDB;
+export type Resource = Organisation | Project | Layer | Feature | Task;
+export type ResourceDB = OrganisationDB | ProjectDB | LayerDB | FeatureDB | TaskDB;
 
 // RELATED TYPES
 export type FormTranslations<T> = {
@@ -586,12 +586,20 @@ export type ErrorParams = {
   fieldKey: Key;
 };
 
-export type PageProps<T extends Resource> = {
+export type FormPageProps<T extends Resource> = {
   data: {
     validatedForm: SuperValidated<T>;
     entity: Ref;
+    image?: GetImageAPI | null;
   };
 };
+
+export type PageProps<T extends Resource> = {
+  data: {
+    [key: string]: T;
+  };
+};
+
 
 // FIELDS
 
@@ -667,6 +675,18 @@ export type FeatureImageDB = z.infer<typeof FeatureImageUpdate>;
 export type NewFeatureImageDB = z.infer<typeof FeatureImageInsert>;
 export type FeatureImageAPI = z.infer<typeof FeatureImageUpdateAPI>;
 
+// Add these types for tracking upload status
+// Add new types for image states
+export type LoadStatus = 'idle' | 'loading' | 'loaded' | 'error';
+export type UploadStatus = 'idle' | 'uploading' | 'uploaded' | 'error';
+export type ImageUploadState = {
+  file: File;
+  status: UploadStatus;
+  retries: number;
+};
+
+export type Intent = 'canonical' | 'closeUp' | 'context' | 'general' | 'evidence' | 'undefined';
+
 /* ----------------- */
 // USER FEATURES
 /* -------- */
@@ -680,6 +700,25 @@ export type UserFeatureAPI = z.infer<typeof UserFeatureUpdateAPI>;
 /* ----------------- */
 // TASKS
 /* -------- */
+
+export const taskTypes = ['reportedMissing', 'newPhoto', 'newFeature'] as const;
+export type TaskType = (typeof taskTypes)[number];
+
+export const reviewActions = ['ignored', 'set-unpublished', 'set-intangible', 'set-archived', 'add-photo', 'add-feature'] as const;
+export type ReviewAction = (typeof reviewActions)[number];
+
+export const reportedMissingActions = ['ignored', 'set-archived', 'set-unpublished', 'set-intangible'] as const;
+export type ReportedMissingAction = (typeof reportedMissingActions)[number];
+
+export const newPhotoActions = ['ignored', 'add-photo'] as const;
+export type NewPhotoAction = (typeof newPhotoActions)[number];
+
+export const newFeatureActions = ['ignored', 'add-feature'] as const;
+export type NewFeatureAction = (typeof newFeatureActions)[number];
+
+export const reviewOutcomes = ['rejected', 'accepted'] as const;
+export type ReviewOutcome = (typeof reviewOutcomes)[number];
+  
 
 export type Task = z.infer<typeof TaskUpdate>;
 export type NewTask = z.infer<typeof TaskInsert>;
@@ -780,3 +819,16 @@ export type AccessStrategyOption =
   | RelationalAccessOption;
 
 export type AccessStrategy = AccessStrategyOption | AccessStrategyOption[];
+
+export type ImageUploadRefs = {
+  resource: ResourceType;
+  entity: Id;
+  organisation: Organisation;
+  project?: Project;
+  imageToReplace?: GetImageAPI;
+};
+
+export type ImageEditRefs = {
+  refType: ResourceType;
+  refId: Id;
+};

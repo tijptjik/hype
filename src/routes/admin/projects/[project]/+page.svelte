@@ -17,9 +17,8 @@ import UserSection from '$lib/components/forms/sections/User.svelte';
 import { classifierComponentTypes, specifierComponentTypes } from '$lib/types';
 // TYPES
 import type { Project } from '$lib/types';
-import type { EntityRouter, FormField, FormFieldArray, PageProps } from '$lib/types';
-
-import SuperDebug from 'sveltekit-superforms';
+// TYPES
+import type { FormPageProps, FormField, Organisation, EntityRouter, GetImageAPI } from '$lib/types';
 
 // CONFIG
 const RESOURCE = 'project';
@@ -196,8 +195,8 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
 };
 
 // STATE : PROPS
-let pageProps: PageProps<Project> = $props();
-let { validatedForm, entity } = pageProps.data;
+let pageProps: FormPageProps<Project> = $props();
+let { validatedForm, entity, image } = pageProps.data;
 
 // STATE : CONTEXT :: ROUTER
 const routerState = getRouterState() as EntityRouter;
@@ -278,9 +277,13 @@ let doRerender = $state(0);
           fields={FIELDS.config as FormFieldArray}
           {form} />
         </div>
-      {:else if routerState.facet === 'images'}
-        <ImageSection title="Image" fields={FIELDS.images as FormField} {form} />
-      {/if}
+        {:else if routerState.facet === 'images'}
+          <ImageSection
+            title="Image"
+            fields={FIELDS.images}
+            {form}
+            image={pageProps.data.image as GetImageAPI} />
+        {/if}
     </main>
   </form>
 </div>

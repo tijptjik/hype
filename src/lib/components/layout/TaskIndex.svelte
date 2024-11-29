@@ -1,16 +1,19 @@
 <script lang="ts">
+import { flip } from 'svelte/animate';
+import { cubicOut } from 'svelte/easing';
+import { blur, fade } from 'svelte/transition';
 // COMPONENTS
 import TaskHeader from '$lib/components/layout/TaskIndexHeader.svelte';
 import TaskRow from '$lib/components/layout/TaskIndexRow.svelte';
 import BackgroundLines from './BackgroundLines.svelte';
 // TYPES
-import type { Task } from '$lib/types';
+import type { Id, EntityWithData, TaskAPI, Project, Organisation } from '$lib/types';
 
 // STATE
-let { tasks }: { tasks: Task[] } = $props();
+let { tasks }: { tasks: EntityWithData<TaskAPI>[] } = $props();
 
 // Group tasks by projectId
-let groupedTasks = $derived(
+let groupedTasks: Record<Id, TaskAPI[]> = $derived(
   tasks.reduce(
     (acc, task) => {
       const projectId = task.data.projectId;
@@ -20,7 +23,7 @@ let groupedTasks = $derived(
       acc[projectId].push(task.data);
       return acc;
     },
-    {} as Record<string, Task[]>
+    {} as Record<Id, TaskAPI[]>
   )
 );
 </script>
@@ -28,17 +31,23 @@ let groupedTasks = $derived(
 <div class="flex flex-col gap-4 overflow-x-clip">
   {#if groupedTasks}
     {#each Object.entries(groupedTasks) as [projectId, projectTasks]}
-      <div class="relative">
-        <BackgroundLines 
-          numberOfTasks={projectTasks.length} 
-          key={projectId} />
+      <div class="relative" transition:fade={{ duration: 250, easing: cubicOut }}>
+        <BackgroundLines numberOfTasks={projectTasks.length} key={projectId} />
         <TaskHeader
-          project={projectTasks[0].project}
-          organisation={projectTasks[0].organisation} />
+          project={projectTasks[0].project as Project}
+          organisation={projectTasks[0].organisation as Organisation} />
         <div class="relative pt-4">
-          <div class="flex flex-col gap-4 px-6 overflow-x-clip">
-            {#each projectTasks as projectTask}
-              <TaskRow task={projectTask} />
+          <div class="flex flex-col gap-4 overflow-x-clip px-6">
+            {#each projectTasks as projectTask, idx (projectTask.id)}
+              <div
+                in:blur={{
+                  delay: 0,
+                  duration: 250,
+                  easing: cubicOut
+                }}
+                animate:flip={{ duration: 250, easing: cubicOut }}>
+                <TaskRow task={projectTask} />
+              </div>
             {/each}
           </div>
         </div>

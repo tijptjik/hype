@@ -27,11 +27,10 @@ import type {
   ResourceType
 } from '$lib/types';
 import type { UserRole } from '$lib/auth/utils';
-import type { ZodSchema } from 'zod';
 import { appMeta } from '$lib/stores/resources.svelte';
 import { NEW_REF } from '$lib';
 import type { AccessStrategyOption, StatefulAccessOption } from '$lib/types';
-import type { Session } from '@auth/core/types';
+import type { GetImageAPI } from '$lib/types';
 
 export const getSessionOrError = async (locals: App.Locals) => {
   const session = await locals.auth();
@@ -104,7 +103,6 @@ const checkAccessOrError = (
     task: 'project'
   };
 
-
   // Check each strategy until we find one that grants access
   if (publicAccessOptions.includes(strategy)) {
     hasAccess = true;
@@ -116,13 +114,16 @@ const checkAccessOrError = (
     hierarchicalChildrenOptions.includes(strategy) ||
     relationalAccessOptions.includes(strategy)
   ) {
-    const parentResourceType = resourceOwnership[resourceType as keyof typeof resourceOwnership];
+    const parentResourceType =
+      resourceOwnership[resourceType as keyof typeof resourceOwnership];
     if (userRoles.some((role) => role.type === parentResourceType)) {
       hasAccess = true;
     }
   } else if (hierarchicalGrandChildrenOptions.includes(strategy)) {
-    const parentResourceType = resourceOwnership[resourceType as keyof typeof resourceOwnership];
-    const grandParentResourceType = resourceOwnership[parentResourceType as keyof typeof resourceOwnership];
+    const parentResourceType =
+      resourceOwnership[resourceType as keyof typeof resourceOwnership];
+    const grandParentResourceType =
+      resourceOwnership[parentResourceType as keyof typeof resourceOwnership];
     if (userRoles.some((role) => role.type === grandParentResourceType)) {
       hasAccess = true;
     }
@@ -138,8 +139,13 @@ export const getDatabaseOrError = async (
   locals: App.Locals,
   platform: App.Platform | undefined,
   accessStrategy: AccessStrategyOption,
-  resourceType?: string,
+  resourceType?: ResourceType,
   refId?: string,
+  checkFeatureAccess?: (
+    db: any,
+    userId: Id,
+    refId: Id
+  ) => Promise<{ organisationId: Id; role: string } | undefined>,
   checkProjectAccess?: (
     db: any,
     userId: Id,
@@ -150,7 +156,8 @@ export const getDatabaseOrError = async (
     userId: Id,
     refId: Id
   ) => Promise<{ organisationId: Id; role: string } | undefined>,
-  privilegedStrategy: StatefulAccessOption | null = null
+  privilegedStrategy: StatefulAccessOption | null = null,
+  resourceOwner?: ResourceType
 ) => {
   // Checks whether the user is logged in
   const session = await getSessionOrError(locals);
@@ -172,16 +179,44 @@ export const getDatabaseOrError = async (
     accessStrategy == 'EntityFromEditableProject' ||
     accessStrategy == 'ResourceFromEditableProject'
   ) {
-    if (!refId || !checkProjectAccess) {
-      error(400, 'Project ID or checkProjectAccess function is required');
+    if (!refId || (!checkProjectAccess && !checkOrganisationAccess)) {
+      error(
+        400,
+        'Project ID and either checkProjectAccess or checkOrganisationAccess is required'
+      );
     }
-    const projectAccess = await checkProjectAccess(db, session.user.id, refId);
+    console.log('CALLED WITH resourceType', resourceType);
+    console.log('CALLED WITH resourceOwner', resourceOwner);
+    if (resourceOwner === 'organisation') {
+      const organisationAccess = await checkOrganisationAccess?.(
+        db,
+        session.user.id,
+        refId
+      );
+      // Upgrade access strategy if project access is found and stateful strategy is provided
+      if (organisationAccess?.role && privilegedStrategy !== null) {
+        accessStrategy = privilegedStrategy;
+      } else {
+        error(404, 'organisationAccess goes brrrr');
+      }
+    } else if (resourceOwner === 'project') {
+      const projectAccess = await checkProjectAccess?.(db, session.user.id, refId);
+      // Upgrade access strategy if project access is found and stateful strategy is provided
+      if (projectAccess?.role && privilegedStrategy !== null) {
+        accessStrategy = privilegedStrategy;
+      } else {
+        error(404, 'ProjectAccess goes brrrr');
+      }
+    } else if (resourceOwner === 'feature') {
+      const featureAccess = await checkFeatureAccess?.(db, session.user.id, refId);
+      if (featureAccess?.role && privilegedStrategy !== null) {
+        accessStrategy = privilegedStrategy;
+      } else {
+        error(404, 'ProjectAccess goes brrrr');
+      }
 
-    // Upgrade access strategy if project access is found and stateful strategy is provided
-    if (projectAccess?.role && privilegedStrategy !== null) {
-      accessStrategy = privilegedStrategy;
     } else {
-      error(404, 'ProjectAccess goes brrrr');
+      error(404, `ResourceOwner ${resourceOwner}? Ha! That's a no from me dawg`);
     }
   }
   // ORGANISATION ACCESS CHECK
@@ -256,29 +291,36 @@ const resourceConfig: Record<
   }
 };
 
-export async function loadFormData<T extends Record<string, any>>({
+type LoadFormDataOptions<T> = {
+  entity: string;
+  resourcePath: string;
+  insertSchema: any;
+  updateSchema: any;
+  fetch: typeof fetch;
+  session: any;
+};
+
+type LoadFormDataResponse<T> = Promise<{
+  entity: string;
+  validatedForm: SuperValidated<T>;
+  image?: GetImageAPI | null;
+}>;
+
+export async function loadFormData<T>({
   entity,
   resourcePath,
   insertSchema,
   updateSchema,
   fetch,
   session
-}: {
-  entity: string | undefined;
-  resourcePath: string;
-  insertSchema: ZodSchema;
-  updateSchema: ZodSchema;
-  fetch: typeof globalThis.fetch;
-  session?: Session;
-}): Promise<{
-  entity: string;
-  validatedForm: SuperValidated<T>;
-}> {
+}: LoadFormDataOptions<T>): LoadFormDataResponse<T> {
   const entityRef = entity || NEW_REF;
   const resourceType = refToResourceType(resourcePath) as ResourceType;
   let form;
+  let image: GetImageAPI | null = null;
 
   if (entityRef === NEW_REF) {
+    console.log('NEW REF');
     const { parentResourceType, parentRefKey, keyToParent } =
       resourceConfig[resourceType];
 
@@ -331,7 +373,7 @@ export async function loadFormData<T extends Record<string, any>>({
       if (resourceType === 'organisation') {
         // Merge in current user as the organisation owner
         form.data.userRoles.push({
-        userId: session?.user.id,
+          userId: session?.user.id,
           role: 'owner',
           user: session?.user
         });
@@ -346,15 +388,30 @@ export async function loadFormData<T extends Record<string, any>>({
     }
 
     const formData: T = await request.json();
-    // form = await superValidate<T>(formData, zod(updateSchema));
     form = (await superValidate(formData, zod(updateSchema))) as SuperValidated<T>;
+
+    // Fetch associated image if this is an organisation or project
+    if (resourceType == 'organisation' || resourceType == 'project') {
+      if (formData.imageId) {
+        const imageResponse = await fetch(`/api/images/${formData.imageId}`);
+        if (imageResponse.ok) {
+          image = await imageResponse.json();
+        } else {
+          console.error('Error fetching image:', imageResponse.statusText);
+        }
+      }
+    }
   }
-
   appMeta.context.parentRef = null;
-
+  console.log('Going to Return', {
+    entity: entityRef,
+    validatedForm: form,
+    image
+  });
   return {
     entity: entityRef,
-    validatedForm: form
+    validatedForm: form,
+    image
   };
 }
 
@@ -375,7 +432,8 @@ function mergeOrganisationRoles(
         user: {
           id: userRole.userId,
           name: userRole.user.name,
-          image: userRole.user.image
+          image: userRole.user.image,
+          attribution: userRole.user.attribution
         }
       });
     }
@@ -427,9 +485,41 @@ export const isValidQueryParamsOrError = (table: any, url: URL) => {
       Object.keys(queryParams)
     );
     if (!valid) {
-      return error(400, `Invalid filter fields: <code>${invalidColumns.join(', ')}</code>`);
+      return error(
+        400,
+        `Invalid filter fields: <code>${invalidColumns.join(', ')}</code>`
+      );
     }
   }
 
   return queryParams;
 };
+
+export async function loadData<T>({
+  entity,
+  resourcePath,
+  fetch,
+  dataKey
+}: {
+  entity: string | undefined;
+  resourcePath: string;
+  fetch: typeof globalThis.fetch;
+  dataKey: string;
+}): Promise<{ [key: string]: T }> {
+  if (!entity) {
+    throw new Error('Entity ID is required');
+  }
+
+  const endPoint = `/api/${resourcePath}/${entity}`;
+  const request = await fetch(endPoint);
+
+  if (request.status >= 400) {
+    throw new Error(`Failed to fetch data: ${request.statusText}`);
+  }
+
+  const entityData: T = await request.json();
+
+  return {
+    [dataKey]: entityData
+  };
+}

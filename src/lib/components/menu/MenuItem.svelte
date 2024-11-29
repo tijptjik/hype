@@ -1,4 +1,5 @@
 <script lang="ts">
+import { goToFacet, navigate } from '$lib';
 import { getRouterState } from '$lib/context/router.svelte';
 import { page } from '$app/stores';
 // TYPES
@@ -14,22 +15,21 @@ const { facet }: Props = $props();
 const routerState = getRouterState();
 
 // UTILS
-const getUrl = (facet: string) => {
-  const url = new URL($page.url.href);
-  url.hash = `#${facet}`;
-  return url.toString();
-};
-
 const onclick = (e: MouseEvent) => {
   e.preventDefault();
+  console.log('routerState.facet', routerState.facet);
+  console.log('facet.ref', facet.ref);
   routerState.updateWith({ facet: facet.ref });
+  console.log('routerState.facet', routerState.facet);
+  // navigate($page.url.href);
+  goToFacet(e, routerState, facet.ref);
 };
 </script>
 
 <li class="group">
   <a
     draggable="false"
-    href={getUrl(facet.ref)}
+    href={$page.url.href}
     {onclick}
     class="flex flex-col items-center px-4 py-2 uppercase transition-colors duration-200 ease-in-out hover:bg-transparent select-none"
     class:active={routerState.facet === facet.ref}>

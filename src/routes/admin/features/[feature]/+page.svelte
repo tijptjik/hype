@@ -20,13 +20,14 @@ import CanonicalImage from '$lib/components/forms/sections/CanonicalImage.svelte
 // TYPES
 import type {
   Feature,
-  PageProps,
+  FormPageProps,
   FormField,
   FormFieldArray,
   FormFieldNested,
   EntityRouter,
   FormFieldConfig,
-  GetImageAPI
+  GetImageAPI,
+  ImageEditRefs
 } from '$lib/types';
 
 // CONFIG
@@ -112,7 +113,7 @@ const FIELDS: FormFieldConfig = {
 };
 
 // STATE : PROPS
-let pageProps: PageProps<Feature> = $props();
+let pageProps: FormPageProps<Feature> = $props();
 let { validatedForm, entity } = pageProps.data;
 
 // STATE : CONTEXT :: ROUTER
@@ -125,30 +126,6 @@ const resourceState = getHierarchicalResourceState();
 let form = $state(setForm<Feature>(RESOURCE, entity, validatedForm));
 let enhance = $derived(form.enhance);
 let isNew = $state(entity === NEW_REF);
-let isPublished = $derived(form.form.publishedAt !== null);
-
-// STATE : SHARED
-let activeImage = $state<GetImageAPI | null>(null);
-let images = $state<GetImageAPI[]>([]);
-
-// Navigation functions
-function navigateImage(e: Event, direction: 'prev' | 'next') {
-  e.preventDefault();
-  e.stopPropagation();
-  if (!activeImage || !images.length) return;
-
-  const currentIndex = images.findIndex((img) => img.id === activeImage?.id);
-  if (currentIndex === -1) return;
-
-  let newIndex: number;
-  if (direction === 'prev') {
-    newIndex = currentIndex === 0 ? images.length - 1 : currentIndex - 1;
-  } else {
-    newIndex = currentIndex === images.length - 1 ? 0 : currentIndex + 1;
-  }
-
-  activeImage = images[newIndex];
-}
 
 $effect(() => {
   if (isNew && title !== NEW_TITLE) {
@@ -174,6 +151,11 @@ $effect(() => {
   const url = new URL(window.location.href);
   url.searchParams.delete('parentRef');
   goto(url.toString(), { replaceState: true });
+});
+
+let refs: ImageEditRefs = $derived({
+  refType: RESOURCE,
+  refId: entity
 });
 
 // SYNC :: Await immediately resolved promise to react to value change.
@@ -206,17 +188,17 @@ let doRerender = $state(0);
             {#if routerState.facet === 'core'}
               <div class="flex flex-row gap-6">
                 <PropertySection
-                {form}
-                title="Classifiers"
-                subtitle="by which features can be filtered"
-                fieldDiscriminator="classifier"
-                fields={FIELDS.property as FormFieldArray} />
+                  {form}
+                  title="Classifiers"
+                  subtitle="by which features can be filtered"
+                  fieldDiscriminator="classifier"
+                  fields={FIELDS.property as FormFieldArray} />
                 <PropertySection
-                {form}
-                title="Specifiers"
-                subtitle="which are displayed in feature info panels"
-                fieldDiscriminator="specifier"
-                fields={FIELDS.property as FormFieldArray} />
+                  {form}
+                  title="Specifiers"
+                  subtitle="which are displayed in feature info panels"
+                  fieldDiscriminator="specifier"
+                  fields={FIELDS.property as FormFieldArray} />
                 <CanonicalImage {form} />
               </div>
               <I18nSection
@@ -235,13 +217,8 @@ let doRerender = $state(0);
                 subtitle="feature is listed under this address in the app"
                 fields={FIELDS.address as FormField & FormFieldNested} />
             {:else if routerState.facet === 'images' && !isNew}
-              <ViewerSection
-                {form}
-                bind:activeImage
-                actions={{ navigateImage }}
-                showNav={images.length > 1}
-                title="Viewer" />
-              <GallerySection {form} bind:images bind:activeImage title="Gallery" />
+              <ViewerSection {form} {refs} title="Viewer" />
+              <GallerySection {form} title="Gallery" />
             {/if}
           </div>
         </div>
