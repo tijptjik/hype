@@ -71,6 +71,27 @@
       "when": 1732600924604,
       "tag": "0009_add_organisationId_to_task",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1732691839632,
+      "tag": "0010_add_isArchive_to_all_resources",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1732710377701,
+      "tag": "0011_add_metadata_to_images",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1732805583235,
+      "tag": "0012_make_capturedAt_nullable",
+      "breakpoints": true
     }
   ]
 }
