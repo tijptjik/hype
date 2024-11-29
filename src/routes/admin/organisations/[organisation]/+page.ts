@@ -4,7 +4,7 @@ import type { PageLoad } from './$types';
 import type { Organisation } from '$lib/types';
 
 export const load: PageLoad = async ({ params, fetch, data }) => {
-  return loadFormData<Organisation>({
+  return await loadFormData<Organisation>({
     entity: params.organisation,
     resourcePath: 'organisations',
     insertSchema: OrganisationInsertAPI,
@@ -12,4 +12,4 @@ export const load: PageLoad = async ({ params, fetch, data }) => {
     fetch,
     session: data?.session
   });
-}
+};

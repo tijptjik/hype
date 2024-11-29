@@ -1,7 +1,5 @@
 import { error, json } from '@sveltejs/kit';
 import { getDatabaseOrError, JSONResponseOrError } from '$lib/api';
-import { image, featureImage } from '$lib/db/schema';
-import { eq, and, or } from 'drizzle-orm';
 import type { RequestHandler } from '@sveltejs/kit';
 import {
   createImage,
@@ -10,7 +8,9 @@ import {
   checkProjectAccessForFeature,
   getImagesForFeature,
   getImageForProject,
-  getImageForOrganisation
+  getImageForOrganisation,
+  checkFeatureAccessForImage,
+  checkOrganisationAccessForFeature
 } from '$lib/db/services/image';
 import type { NewImage, Image, NewImageAPI } from '$lib/types';
 import { patchProject } from '$lib/db/services/project';
@@ -35,11 +35,12 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
       ? await getDatabaseOrError(
           locals,
           platform,
-          ACCESS_STRATEGY,
+          'ResourceAll',
           RESOURCE_TYPE,
           featureId,
+          checkFeatureAccessForImage,
           checkProjectAccessForFeature,
-          undefined,
+          checkOrganisationAccessForFeature,
           PRIVILEGED_STRATEGY
         )
       : await getDatabaseOrError(locals, platform, PRIVILEGED_STRATEGY, RESOURCE_TYPE);
@@ -87,8 +88,9 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
         ACCESS_STRATEGY,
         RESOURCE_TYPE,
         featureId,
+        checkFeatureAccessForImage,
         checkProjectAccessForFeature,
-        undefined,
+        checkOrganisationAccessForFeature,
         PRIVILEGED_STRATEGY
       );
 
