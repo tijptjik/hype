@@ -10,7 +10,7 @@ import Info from '$lib/components/forms/extra/Info.svelte';
 import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
 import type { Component } from 'svelte';
-import type { FieldProps, ActionProps, EntityRouter, GetImageAPI } from '$lib/types';
+import type { FieldProps, ActionProps, EntityRouter, GetImageAPI, ImageEditRefs } from '$lib/types';
 
 // STATE : PROPS
 let {
@@ -25,9 +25,8 @@ let {
   InfoContent,
   Stats,
   fields,
-  activeImage = $bindable(null),
   ...fieldProps
-}: FieldProps & ActionProps & { InfoContent?: Component; Stats?: Component; activeImage: GetImageAPI | null } = $props();
+}: FieldProps & ActionProps & { InfoContent?: Component; Stats?: Component; refs?: ImageEditRefs } = $props();
 
 // STATE : CONTEXT :: ROUTER
 const routerState = getRouterState() as EntityRouter;
@@ -98,7 +97,7 @@ let getWarningMessage = () => {
             bind:searchMode={actionProps.searchMode}
             {actions} />
         {:else if routerState.facet === 'images' && title === 'Viewer'}
-          <Actions bind:activeImage />
+          <Actions refs={fieldProps.refs as ImageEditRefs} />
         {/if}
         {#if InfoContent}
           <div class="flex items-center gap-6">
