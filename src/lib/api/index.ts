@@ -433,3 +433,32 @@ export const isValidQueryParamsOrError = (table: any, url: URL) => {
 
   return queryParams;
 };
+
+export async function loadData<T>({
+  entity,
+  resourcePath,
+  fetch,
+  dataKey
+}: {
+  entity: string | undefined;
+  resourcePath: string;
+  fetch: typeof globalThis.fetch;
+  dataKey: string;
+}): Promise<{ [key: string]: T }> {
+  if (!entity) {
+    throw new Error('Entity ID is required');
+  }
+
+  const endPoint = `/api/${resourcePath}/${entity}`;
+  const request = await fetch(endPoint);
+
+  if (request.status >= 400) {
+    throw new Error(`Failed to fetch data: ${request.statusText}`);
+  }
+
+  const entityData: T = await request.json();
+
+  return {
+    [dataKey]: entityData
+  };
+}
