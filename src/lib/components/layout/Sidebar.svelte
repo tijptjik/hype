@@ -1,6 +1,6 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
-import { getURLfromImage } from '$lib/db/services/image';
+import { getURLfromImage } from '$lib/images/index.svelte';
 // STORES
 import { page } from '$app/stores';
 import {
@@ -12,6 +12,8 @@ import {
 import { navItems } from '$lib/stores/navigation.svelte';
 // CONTEXT
 import { getRouterState } from '$lib/context/router.svelte';
+// LIB
+import { goToResource, goToEntity } from '$lib';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import {
@@ -287,7 +289,7 @@ const getQueryParams = (includeParams: string[] = ['organisation', 'project', 'l
 
 const toImage = (image: GetImageAPI | undefined): string => {
   if (image) {
-    return getURLfromImage(image, 'c_fit,h_320,w_320');
+    return getURLfromImage({ image, transformation: 'c_fill,h_320,w_320' });
   }
   return 'https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=9';
 }
@@ -332,43 +334,6 @@ let expandedState : Record<ResourceType, boolean> = $derived({
   feature: true,
   task: false
 })
-
-const goToResource = (e: Event, resourceType: ResourceType) => {
-  e.preventDefault();
-  const url = new URL(window.location.href);
-  url.pathname = `/admin/${navItems[resourceType].path}`;
-  // UPDATE ROUTER STATE
-  routerState.updateWith({
-    resource: resourceType,
-    entity: false,
-    facet: false
-  });
-  // NAVIGATE
-  navigate(url.toString());
-};
-
-const goToEntity = (e: Event, resourceType: ResourceType, entityPath: Ref) => {
-  e.preventDefault();
-  let facet = 'core';
-  const url = new URL(window.location.href);
-  url.pathname = `/admin/${navItems[resourceType].path}/${entityPath}`;
-  if (resourceType === routerState.resource && routerState.facet) {
-    facet = routerState.facet;
-  }
-  // url.hash = `#${facet}`;
-  // UPDATE ROUTER STATE
-  routerState.updateWith({
-    resource: resourceType,
-    entity: entityPath,
-    facet: facet as FacetType
-  });
-  // NAVIGATE
-  navigate(url.toString());
-};
-
-const navigate = (url: string) => {
-  goto(url).then(() => goto(url));
-}
 </script>
 
 <!-- SNIPPETS -->
@@ -426,7 +391,7 @@ const navigate = (url: string) => {
   </div>
 
   <div
-    class="flex flex-shrink-0 flex-grow flex-col overflow-hidden border-r-2 border-base-300 p-0">
+    class="flex flex-shrink-0 flex-grow flex-col overflow-hidden border-r-2 border-base-300 p-0 select-none">
     {#each Object.entries(navItems).filter(([_, resource]) => resource.isShownInSidebar) as [resourceType, resource]}
       {@const isFilterable = hasManyEntities(resourceType as ResourceType)}
 
@@ -435,7 +400,7 @@ const navigate = (url: string) => {
         <a
           draggable="false"
           href="/admin/{resource.path}{$page.url.search}"
-          onclick={(e) => goToResource(e, resourceType as ResourceType)}
+          onclick={(e) => goToResource(e, routerState, resourceType as ResourceType)}
           class="flex items-center border-l-3 p-6 select-none {routerState.resource ===
             resourceType && !routerState.entity
             ? 'border-primary'
@@ -473,7 +438,7 @@ const navigate = (url: string) => {
                     draggable="false"
                     href="/admin/{resource.path}/{entity.ref}{$page.url.search}"
                     onclick={(e) =>
-                      goToEntity(e, resourceType as ResourceType, entity.ref)}
+                      goToEntity(e, routerState, resourceType as ResourceType, entity.ref)}
                     class="flex select-none drag-none items-center border-l-3 {routerState.entity ===
                     entity.ref
                       ? 'border-primary'
