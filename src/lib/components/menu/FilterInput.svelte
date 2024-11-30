@@ -74,8 +74,8 @@ $effect(() => {
       queryPrimsParams[type as keyof FilterableResourceToEntityId]?.includes(item.id);
 
     const matchesPublished = !showUnpublishedOnly || !item.data.isPublished;
-    const matchesReviewed = !showReviewedToggle || item.data.isReviewed;
-    return matchesSearch && matchesPublished;
+    const matchesReviewed = !showUnreviewedOnly || !item.data.isReviewed;
+    return matchesSearch && matchesPublished && matchesReviewed;
   }) as EntityWithData<typeof type>[];
 });
 
