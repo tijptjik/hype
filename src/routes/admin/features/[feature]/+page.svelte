@@ -26,7 +26,6 @@ import type {
   FormFieldNested,
   EntityRouter,
   FormFieldConfig,
-  GetImageAPI,
   ImageEditRefs
 } from '$lib/types';
 
@@ -179,8 +178,14 @@ let doRerender = $state(0);
           <MapSection {form} />
           <div
             class="absolute bottom-2 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex">
-            <UserAttributionCard {form} type="contributor" />
-            <UserAttributionCard {form} type="publisher" />
+            <UserAttributionCard
+              userId={pageProps.data.validatedForm.data.contributorId || null}
+              date={pageProps.data.validatedForm.data.createdAt || null}
+              type="contributor" />
+            <UserAttributionCard
+              userId={pageProps.data.validatedForm.data.publisherId || null}
+              date={pageProps.data.validatedForm.data.publishedAt || null}
+              type="publisher" />
           </div>
         </div>
         <div class="h-auto basis-2/3 scroll-m-10 scroll-p-12 overflow-y-scroll">
