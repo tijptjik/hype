@@ -1,5 +1,5 @@
 <script lang="ts">
-import { getURLfromImage } from '$lib/images';
+import { getURLfromImage }  from '$lib/images/index.svelte';
 // STORES
 import { page } from '$app/stores';
 // CONTEXT
