@@ -2,80 +2,77 @@
 import Icon from '$lib/components/common/Icon.svelte';
 import { Eye, PlusCircle } from '@steeze-ui/heroicons';
 import { formatDate } from '$lib';
+import { formatDistanceToNow } from 'date-fns';
 import Image from '../common/Image.svelte';
-import type { SectionProps } from '$lib/types';
+import User from '../forms/actions/User.svelte';
+
 type Props = {
-  type: 'contributor' | 'publisher' | 'imageContributor';
-  userId?: string;
-  date?: string;
+  userId: string | null;
+  date: string | null;
+  type?: 'contributor' | 'publisher' | 'imageContributor';
+  class?: string;
+  friendlyDate?: boolean;
 };
 
 // STATE : PROPS
-let cardProps: SectionProps & Props = $props();
-let userType = $derived(cardProps.type);
+let {
+  userId,
+  date,
+  type = 'imageContributor',
+  class: className = '',
+  friendlyDate = true
+}: Props = $props();
 
-// STATE : FORM
-let { form } = cardProps.form;
-
-let userId = $derived(
-  {
-    contributor: $form.contributorId,
-    publisher: $form.publisherId,
-    imageContributor: cardProps.userId
-  }[userType]
-);
-let date = $derived(
-  {
-    contributor: $form.createdAt,
-    publisher: $form.publishedAt,
-    imageContributor: cardProps.date
-  }[userType]
+// STATE : DERIVED
+let formattedDate = $derived(
+  date
+    ? friendlyDate
+      ? formatDistanceToNow(new Date(date), { addSuffix: true })
+      : formatDate(date)
+    : ''
 );
 
 // STATE : PROMISE
-let userPromise = $state<Promise<{ name: string; image: string }>>();
+let userPromise: Promise<User> = $derived(fetchUser(userId));
 
 // FETCH USER
-async function fetchUser(id: string) {
+async function fetchUser(id: string | null) {
+  if (!id) throw new Error('Invalid user ID');
   const res = await fetch(`/api/users/${id}`);
   if (!res.ok) throw new Error('Failed to fetch user');
-  return res.json();
-};
-
-// EFFECT : UPDATE PROMISE ON USER ID CHANGE
-$effect(() => {
-  if (!userId) return;
-  userPromise = fetchUser(userId);
-});
+  return await res.json();
+}
 </script>
-
-{#if userId}
-  {#await userPromise}
-    <div
-      class="flex min-w-[200px] items-center gap-3 rounded-lg bg-base-200/40 p-3 backdrop-blur-sm transition-all duration-200">
+<!-- <div class="opacity-0 transition-opacity duration-200 group-hover:opacity-100"> -->
+<div>
+  {#if userId}
+    {#await userPromise}
+      <div
+      class="flex min-w-[200px] items-center gap-3 rounded-lg bg-base-200/30 p-3 backdrop-blur-sm transition-all duration-200">
       <div class="loading loading-spinner loading-md min-h-12"></div>
     </div>
-  {:then user}
-    <div
-      class="flex min-w-[200px] items-center gap-3 rounded-lg bg-base-200/40 p-3 backdrop-blur-sm">
-      <Image
-      src={user ? user.image : ''}
-      alt={user ? user.name : 'Anonymous'}
-      class="h-12 w-12 rounded-full object-cover" />
-    <div class="flex flex-col">
-      <span class="font-medium">{user ? user.name : 'No name'}</span>
-      <div class="flex items-center gap-1 text-sm text-base-content/60">
-        <Icon
-          src={cardProps.type.toLowerCase().includes('contributor') ? PlusCircle : Eye}
-          class="h-4 w-4" />
-        <span>{formatDate(date)}</span>
+    {:then user}
+      <div
+        class="flex min-w-[200px] items-center gap-3 rounded-lg bg-base-200/60 p-3 backdrop-blur-sm">
+        <Image
+          src={user.image}
+          alt={user.name}
+          class="h-12 w-12 rounded-full object-cover" />
+        <div class="flex flex-col">
+          <span class="font-medium">{user.name ?? 'Unknown User'}</span>
+          <div class="flex items-center gap-1 text-sm text-base-content/60">
+            <Icon
+              src={type.toLowerCase().includes('contributor') ? PlusCircle : Eye}
+              class="h-4 w-4" />
+            <span>{formattedDate}</span>
+          </div>
+        </div>
       </div>
-    </div>
-    </div>
-  {:catch error}
-    <div
-      class="flex min-w-[200px] items-center gap-3 rounded-lg bg-error/10 p-3 backdrop-blur-sm transition-all duration-200">
-      <span class="text-sm text-error">{error.message}</span>
-    </div>
-  {/await}
-{/if}
+    {:catch error}
+      <div
+        class="flex min-w-[200px] items-center gap-3 rounded-lg bg-error/10 p-3 backdrop-blur-sm transition-all duration-200">
+        <span class="text-sm text-error">{error.message}</span>
+      </div>
+    {/await}
+  {/if}
+</div>
