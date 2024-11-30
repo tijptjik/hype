@@ -1,3 +1,6 @@
+import { goto } from '$app/navigation';
+import { navItems } from '$lib/stores/navigation.svelte';
+import { getRouterState, RouterState } from '$lib/context/router.svelte';
 import type { RequestEvent } from '@sveltejs/kit';
 import { derived, type Writable } from 'svelte/store';
 import { page } from '$app/stores';
@@ -20,7 +23,10 @@ import type {
   FormFieldDefinition,
   FieldDiscriminator,
   FieldComponentType,
-  TargetLang
+  TargetLang,
+  ResourceType,
+  Ref,
+  FacetType
 } from './types';
 
 /**
@@ -196,3 +202,54 @@ const sourceLanguageTag = 'en';
 export const languageTags: LanguageTag[] = [sourceLanguageTag, 'zh-hant', 'zh-hans'];
 export const NEW_TITLE = 'New';
 export const NEW_REF = NEW_TITLE.toLowerCase();
+
+
+// STATE : CONTEXT
+export const goToResource = (e: Event, routerState: RouterState, resourceType: ResourceType) => {
+  e.preventDefault();
+  const url = new URL(window.location.href);
+  url.pathname = `/admin/${navItems[resourceType].path}`;
+  // UPDATE ROUTER STATE
+  routerState.updateWith({
+    resource: resourceType,
+    entity: false,
+    facet: false
+  });
+  // NAVIGATE
+  navigate(url.toString());
+};
+
+export const goToEntity = (e: Event, routerState: RouterState, resourceType: ResourceType, entityPath: Ref) => {
+  e.preventDefault();
+  let facet = 'core';
+  const url = new URL(window.location.href);
+  url.pathname = `/admin/${navItems[resourceType].path}/${entityPath}`;
+  if (resourceType === routerState.resource && routerState.facet) {
+    facet = routerState.facet;
+  }
+  // url.hash = `#${facet}`;
+  // UPDATE ROUTER STATE
+  routerState.updateWith({
+    resource: resourceType,
+    entity: entityPath,
+    facet: facet as FacetType
+  });
+  // NAVIGATE
+  navigate(url.toString());
+};
+
+export const goToFacet = (e: Event, routerState: RouterState, facet: FacetType) => {
+  e.preventDefault();
+  const url = new URL(window.location.href);
+  routerState.updateWith({ facet: facet });
+  navigate(url.toString());
+};
+
+export const navigate = (url: string) => {
+  goto(url).then(() => goto(url));
+}
+
+export const capitalizeFirstLetter = (text: string | null) => {
+  if (!text) return null;
+  return text.charAt(0).toUpperCase() + text.slice(1);
+};
