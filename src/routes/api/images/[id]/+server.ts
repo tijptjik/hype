@@ -132,27 +132,43 @@ export const DELETE: RequestHandler = async ({
 };
 
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
+  const body = await request.json();
   const { db, userId, accessStrategy } = await getDatabaseOrError(
     locals,
     platform,
     ACCESS_STRATEGY,
     RESOURCE_TYPE,
     params.id,
+    checkFeatureAccessForImage,
     checkProjectAccessForImage,
-    undefined,
-    PRIVILEGED_STRATEGY
+    checkOrganisationAccessForImage,
+    PRIVILEGED_STRATEGY,
+    body.refType
   );
 
-  const body = await request.json();
+  let updatedImage;
+  let updatedFeatureImage;
 
   try {
+    if (body) {
+      [updatedImage] = await db
+        .update(image)
+        .set(body)
+        .where(eq(image.id, params[PUBLIC_IDENTIFIER] as Id))
+        .returning();
+    }
     if (body.featureImage) {
-      await db
+      [updatedFeatureImage] = await db
         .update(featureImage)
         .set(body.featureImage)
-        .where(eq(featureImage.imageId, params[PUBLIC_IDENTIFIER] as Id));
+        .where(eq(featureImage.imageId, params[PUBLIC_IDENTIFIER] as Id))
+        .returning();
     }
-    return json({ success: true });
+
+    return json({
+      success: true,
+      image: { ...updatedImage, featureImage: updatedFeatureImage ?? null }
+    });
   } catch (err) {
     console.error('Failed to update image:', err);
     return error(500, 'Failed to update image');
