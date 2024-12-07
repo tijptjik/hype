@@ -14,10 +14,11 @@ type Props = {
 let { project, organisation }: Props = $props();
 </script>
 
-<div class="@container flex w-full flex-row gap-8 justify-between px-12 py-7 text-lg font-semibold bg-base-200 z-20">
+<div
+  class="z-20 flex w-full flex-row justify-between gap-8 bg-base-200 px-12 py-7 text-lg font-semibold">
   <h3 class="text-lg">
     {project.name}
-    <small class="pl-3 text-sm text-base-content/50 inline-block"
+    <small class="inline-block pl-3 text-sm text-base-content/50"
       ><span class="font-normal">by</span> {organisation.name}</small>
   </h3>
 </div>

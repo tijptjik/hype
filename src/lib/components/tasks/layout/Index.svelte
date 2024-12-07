@@ -3,9 +3,9 @@ import { flip } from 'svelte/animate';
 import { cubicOut } from 'svelte/easing';
 import { blur, fade } from 'svelte/transition';
 // COMPONENTS
-import TaskHeader from '$lib/components/layout/TaskIndexHeader.svelte';
-import TaskRow from '$lib/components/layout/TaskIndexRow.svelte';
-import BackgroundLines from './BackgroundLines.svelte';
+import TaskHeader from '$lib/components/tasks/layout/IndexHeader.svelte';
+import TaskRow from '$lib/components/tasks/layout/Row.svelte';
+import BackgroundLines from '../../layout/BackgroundLines.svelte';
 // TYPES
 import type { Id, EntityWithData, TaskAPI, Project, Organisation } from '$lib/types';
 
@@ -28,15 +28,18 @@ let groupedTasks: Record<Id, TaskAPI[]> = $derived(
 );
 </script>
 
-<div class="flex flex-col gap-4 overflow-x-clip">
+<div class="flex flex-col overflow-x-clip">
   {#if groupedTasks}
     {#each Object.entries(groupedTasks) as [projectId, projectTasks]}
-      <div class="relative" transition:fade={{ duration: 250, easing: cubicOut }}>
-        <BackgroundLines numberOfTasks={projectTasks.length} key={projectId} />
-        <TaskHeader
+    <TaskHeader
           project={projectTasks[0].project as Project}
-          organisation={projectTasks[0].organisation as Organisation} />
-        <div class="relative pt-4">
+          organisation={projectTasks[0].organisation as Organisation} />  
+    <div
+        class="relative"
+        transition:fade={{ duration: 250, easing: cubicOut }}>
+        <BackgroundLines numberOfTasks={projectTasks.length} key={projectId} />
+        
+        <div class="relative py-4">
           <div class="flex flex-col gap-4 overflow-x-clip px-6">
             {#each projectTasks as projectTask, idx (projectTask.id)}
               <div

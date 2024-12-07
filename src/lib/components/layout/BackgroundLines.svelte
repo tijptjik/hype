@@ -70,7 +70,7 @@ function generatePointsForKey(key: string) {
 const { startPoints, endPoints } = generatePointsForKey(key);
 
 // Calculate total height
-let totalHeight = $derived(HEADER_HEIGHT + numberOfTasks * LINE_HEIGHT);
+let totalHeight = $derived(20 + numberOfTasks * LINE_HEIGHT);
 
 // Calculate path for each line
 let paths = $derived(
@@ -83,7 +83,7 @@ let paths = $derived(
 </script>
 
 <div
-  class="absolute top-[{HEADER_HEIGHT}px] pointer-events-none inset-0 z-0 mx-auto w-[85%]"
+  class="background-lines @container/lines absolute top-[-20px] pointer-events-none inset-0 z-0 mx-auto w-[85%]"
   style="height: {totalHeight}px">
   <svg
     transition:fade={{ duration: 250, easing: cubicOut }}

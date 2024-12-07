@@ -7,7 +7,7 @@ import { filteredResources } from '$lib/stores/resources.svelte';
 import { getRouterState } from '$lib/context/router.svelte';
 // COMPONENTS
 import ResourceHeader from '$lib/components/layout/ResourceHeader.svelte';
-import TaskIndex from '$lib/components/layout/TaskIndex.svelte';
+import TaskIndex from '$lib/components/tasks/layout/Index.svelte';
 
 // STATE :: ROUTER
 const routerState = getRouterState();
