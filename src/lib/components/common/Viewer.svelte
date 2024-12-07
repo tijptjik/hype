@@ -242,13 +242,7 @@ $effect(() => {
       </div>
       <!-- {#if activeImageState.preview && (!image || !activeImageState.isLoaded)} -->
       {#if image}
-        {#if isCrossfade}
-          {#key image.id}
-            {@render ViewerContent(image, activeImageState.preview ? true : false)}
-          {/key}
-        {:else}
-          {@render ViewerContent(image, activeImageState.preview ? true : false)}
-        {/if}
+        {@render ViewerContent(image, activeImageState.preview ? true : false)}
       {/if}
       {#if activeImageState.preview && !activeImageState.isLoaded}
         {@render PreviewContent()}
@@ -293,7 +287,7 @@ $effect(() => {
           <IconAnchor position="right" icon={InformationCircle} class="mr-4">
             <UserAttributionCard
               userId={image.contributorId}
-              date={image.createdAt}
+              date={image.createdAt || null}
               type="imageContributor" />
           </IconAnchor>
           <DownloadImageButton {image} />
