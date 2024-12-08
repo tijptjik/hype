@@ -81,6 +81,9 @@ $effect(() => {
 
 // HANDLERS : INPUTS EVENTS
 function handleUnpublishedOnlyToggle(e: Event) {
+  // TODO - detach the display in the main view from the sidebar, otherwise
+  // the sidebar will display will also hide the unpublished items and potentially
+  // hide the pinned filters.
   e.preventDefault();
   showUnpublishedOnly = (e.target as HTMLInputElement).checked;
   queryFilterParams[routerState.resource].isPublished = showUnpublishedOnly

@@ -24,7 +24,6 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
     ACCESS_STRATEGY,
     RESOURCE_TYPE
   );
-  const isReviewed = url.searchParams.get('isReviewed');
   
   try {
     const queryParams = isValidQueryParamsOrError(task, url);

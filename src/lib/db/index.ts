@@ -1,13 +1,32 @@
 import { error } from '@sveltejs/kit';
 // ORM
 import { drizzle } from 'drizzle-orm/d1';
-import { Table, getTableName, and, sql, inArray, eq, or, not, exists, ilike } from 'drizzle-orm';
-// SCHEMA 
+import {
+  Table,
+  getTableName,
+  and,
+  sql,
+  inArray,
+  eq,
+  or,
+  not,
+  exists,
+  ilike
+} from 'drizzle-orm';
+// SCHEMA
 import * as schema from './schema';
 // TYPES
 import type { D1Database } from '@auth/d1-adapter';
 import type { Database } from './services/organisation';
-import type {TargetLang, Field, NestedRelations, Ref, Resource, ResourceDB, ResourceType } from '../types';
+import type {
+  TargetLang,
+  Field,
+  NestedRelations,
+  Ref,
+  Resource,
+  ResourceDB,
+  ResourceType
+} from '../types';
 
 export const NEW_TITLE = 'New';
 export const NEW_REF = NEW_TITLE.toLowerCase();
@@ -20,7 +39,6 @@ export const relationalAccessOptions = [
   'ResourceFromEditableProject',
   'ResourceFromEditableOrganisation'
 ];
-
 
 const client = (database: D1Database) => {
   return drizzle(database, { schema });
@@ -73,8 +91,10 @@ const getTable = (slicedHierarchy: typeof resourceHierarchy, index: number) =>
   slicedHierarchy[index].table;
 const getForeignKey = (slicedHierarchy: typeof resourceHierarchy, index: number) =>
   slicedHierarchy[index].keyToParent as string;
-const getReverseForeignKey = (slicedHierarchy: typeof resourceHierarchy, index: number) =>
-  slicedHierarchy[index].keyToSelf;
+const getReverseForeignKey = (
+  slicedHierarchy: typeof resourceHierarchy,
+  index: number
+) => slicedHierarchy[index].keyToSelf;
 
 const applyGenericAccessStrategy = (
   db: any,
@@ -119,7 +139,9 @@ const applyAccessStrategy = (
           db
             .select({ id: userTable[reverseFK0] })
             .from(userTable)
-            .where(and(eq(userTable[reverseFK0], table0.id), eq(userTable.userId, userId)))
+            .where(
+              and(eq(userTable[reverseFK0], table0.id), eq(userTable.userId, userId))
+            )
         )
       );
       break;
@@ -207,7 +229,10 @@ const createLevelQuery = (
 
   if (levelUp > 0) {
     conditions.push(
-      inArray(getTable(slicedHierarchy, levelUp).id, prisms[slicedHierarchy[levelUp].name] || [])
+      inArray(
+        getTable(slicedHierarchy, levelUp).id,
+        prisms[slicedHierarchy[levelUp].name] || []
+      )
     );
   }
 
@@ -242,12 +267,16 @@ const createLevelQuery = (
       not(
         exists(
           db
-            .select({ id: sql<string>`${getTable(slicedHierarchy, levelUp - 2).id}`.as('id') })
+            .select({
+              id: sql<string>`${getTable(slicedHierarchy, levelUp - 2).id}`.as('id')
+            })
             .from(getTable(slicedHierarchy, levelUp - 1))
             .innerJoin(
               getTable(slicedHierarchy, levelUp - 2),
               eq(
-                getTable(slicedHierarchy, levelUp - 2)[getForeignKey(slicedHierarchy, levelUp - 2)],
+                getTable(slicedHierarchy, levelUp - 2)[
+                  getForeignKey(slicedHierarchy, levelUp - 2)
+                ],
                 getTable(slicedHierarchy, levelUp - 1).id
               )
             )
@@ -284,7 +313,9 @@ const applyFilterConstraints = (
   let subQueries = [];
   for (let levelUp = 1; levelUp < depth; levelUp++) {
     let baseLevelQuery = db.$with(`level_min_${levelUp}`);
-    subQueries.push(baseLevelQuery.as(createLevelQuery(db, slicedHierarchy, levelUp, prisms)));
+    subQueries.push(
+      baseLevelQuery.as(createLevelQuery(db, slicedHierarchy, levelUp, prisms))
+    );
   }
 
   let baseQuery = db.with(...subQueries);
@@ -307,13 +338,17 @@ const applyFilterConstraints = (
     );
   }
 
-  return [inArray(getTable(slicedHierarchy, 0).id, baseQuery.where(or(...subQueryConditions)))];
+  return [
+    inArray(getTable(slicedHierarchy, 0).id, baseQuery.where(or(...subQueryConditions)))
+  ];
 };
 
 const applyQueryConstraints = (table: Table, query: string, filterFields: string[]) => {
   if (!query) return [];
   const results = or(
-    ...filterFields.map((field) => sql`${table[field]} LIKE ${'%' + query.replace('%', '') + '%'}`)
+    ...filterFields.map(
+      (field) => sql`${table[field]} LIKE ${'%' + query.replace('%', '') + '%'}`
+    )
   );
   return results;
 };
@@ -352,7 +387,10 @@ export type ResourceConfig = {
 
 export type ResourceHierarchy = ResourceConfig[];
 
-export async function hierarchicalResourceQuery<usersT extends Table, translationsT extends Table>(
+export async function hierarchicalResourceQuery<
+  usersT extends Table,
+  translationsT extends Table
+>(
   db: any,
   accessStrategy: string = 'ResourceOwn',
   selectTableRelations: Record<string, boolean | object> = {},
@@ -371,12 +409,11 @@ export async function hierarchicalResourceQuery<usersT extends Table, translatio
   const conditions = [
     ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId),
     ...applyTranslationCondition(db, slicedHierarchy, translationTable),
-    ...applyFilterConstraints(db, slicedHierarchy, depth, prisms)
-  ];
+    ...applyFilterConstraints(db, slicedHierarchy, depth, prisms)];
 
   if (filters) {
     const filterConditions = Object.entries(filters).map(([column, value]) => {
-      return eq(table[column], value);
+      return eq(table[column], value == 'true' ? true : value == 'false' ? false : value);
     });
     conditions.push(...filterConditions);
   }
@@ -422,13 +459,12 @@ export async function genericEntityQuery<usersT extends Table>(
   }
   const conditions = [
     eq(table[publicIdentifier], ref),
-    ...applyGenericAccessStrategy(db, accessStrategy, userTable, userId)
-  ];
+    ...applyGenericAccessStrategy(db, accessStrategy, userTable, userId)];
 
   let queryOpts = {
     where: and(...conditions),
     with: selectTableRelations
-  }
+  };
   if (columns) {
     queryOpts.columns = columns;
   }
@@ -455,7 +491,10 @@ export const toNestedTranslations = <T extends Translation>(
   );
 };
 
-export async function hierarchicalEntityQuery<usersT extends Table, translationsT extends Table>(
+export async function hierarchicalEntityQuery<
+  usersT extends Table,
+  translationsT extends Table
+>(
   db: any,
   ref: string,
   publicIdentifier: string = 'id',
@@ -475,11 +514,12 @@ export async function hierarchicalEntityQuery<usersT extends Table, translations
   const slicedHierarchy = resourceHierarchy.slice(-depth, resourceHierarchy.length);
   const conditions = [
     eq(getTable(slicedHierarchy, 0)[publicIdentifier], ref),
-    ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId)
-  ];
+    ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId)];
 
   if (translationTable) {
-    conditions.push(...applyTranslationCondition(db, slicedHierarchy, translationTable));
+    conditions.push(
+      ...applyTranslationCondition(db, slicedHierarchy, translationTable)
+    );
   }
 
   let result = await db.query[getTableName(getTable(slicedHierarchy, 0))].findFirst({
@@ -554,7 +594,11 @@ export const isFieldChanged = async <T extends ResourceDB>(
 ): Promise<boolean> => {
   // Check whether the provided code is different from the one in the database
   const table = resourceConfig[resourceType].table;
-  const [existingEntity]: T[] = await db.select().from(table).where(eq(table.id, id)).limit(1);
+  const [existingEntity]: T[] = await db
+    .select()
+    .from(table)
+    .where(eq(table.id, id))
+    .limit(1);
 
   if (!existingEntity) {
     return false; // Organisation not found
@@ -570,7 +614,11 @@ export async function updatePartial<T extends Table>(
   refKey: string,
   data: Partial<Record<string, unknown>>
 ) {
-  const [updated] = await db.update(table).set(data).where(eq(table[refKey], ref)).returning();
+  const [updated] = await db
+    .update(table)
+    .set(data)
+    .where(eq(table[refKey], ref))
+    .returning();
 
   if (!updated) {
     return error(404, `Entity <code>${ref}</code> not found`);
@@ -584,9 +632,15 @@ export async function updatePartial<T extends Table>(
 export default client;
 
 // Helper function to validate column names against a table
-export function validateTableColumns(table: Table, columns: string[], exclude: string[] = []): { valid: boolean; invalidColumns: string[] } {
+export function validateTableColumns(
+  table: Table,
+  columns: string[],
+  exclude: string[] = []
+): { valid: boolean; invalidColumns: string[] } {
   const tableColumns = Object.keys(table);
-  const invalidColumns = columns.filter(col => !tableColumns.includes(col) && !exclude.includes(col));
+  const invalidColumns = columns.filter(
+    (col) => !tableColumns.includes(col) && !exclude.includes(col)
+  );
   return {
     valid: invalidColumns.length === 0,
     invalidColumns
