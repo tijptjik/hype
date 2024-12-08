@@ -1,16 +1,16 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
+import { goto } from '$app/navigation';
 import { page } from '$app/stores';
 import * as m from '$lib/paraglide/messages.js';
 import { signIn, signOut } from '@auth/sveltekit/client';
 import { hasControlPanelAccess } from '$lib/auth/utils';
-import Icon from '$lib/components/common/Icon.svelte';
+import { goToResource } from '$lib/index';
+// COMPONENTS
 import { Bars3, ComputerDesktop, InboxArrowDown } from '@steeze-ui/heroicons';
+import Icon from '$lib/components/common/Icon.svelte';
 import IconicMenuButton from '$lib/components/menu/IconicMenuButton.svelte';
 // CONTEXT
 import { getRouterState } from '$lib/context/router.svelte';
-
-
 
 const { session } = $page.data;
 
@@ -54,7 +54,7 @@ const handleClick = (e: MouseEvent, href: string, resource: boolean = false) => 
   routerState.updateWith({
     resource: resource,
     entity: false,
-    facet : false
+    facet: false
   });
   console.log('url', url.toString());
   goto(url.toString());
@@ -92,17 +92,16 @@ const handleClick = (e: MouseEvent, href: string, resource: boolean = false) => 
       <li>
         <IconicMenuButton
           href="/admin/tasks"
-          handleClick={(e) => handleClick(e, href, 'tasks')}
+          handleClick={(e) => goToResource(e, routerState, 'task')}
           iconSrc={InboxArrowDown}
           matchFromStart={false}
           {notificationCount} />
       </li>
       <li>
         <IconicMenuButton
-        href="/admin"
+          href="/admin"
           iconSrc={ComputerDesktop}
-          handleClick={() => handleClick(e, href)}
-        />
+          handleClick={() => handleClick(e, href)} />
       </li>
     </ul>
     <div class="mx-2 hidden h-5 w-px bg-neutral-800 lg:block"></div>
@@ -121,14 +120,14 @@ const handleClick = (e: MouseEvent, href: string, resource: boolean = false) => 
         class="menu dropdown-content menu-sm z-[1] mt-6 w-52 rounded-box bg-base-300 p-2 shadow">
         {#if hasControlPanelAccess(session)}
           <div class="block lg:hidden">
-          <li>
-            {@render navLink('/admin', m.navbar__admin(), 'justify-between')}
-          </li>
-          <li>
-            {@render navLink('/admin/tasks', m.navbar__tasks(), 'justify-between')}
-          </li>
-          <div class="divider"></div>
-        </div>
+            <li>
+              {@render navLink('/admin', m.navbar__admin(), 'justify-between')}
+            </li>
+            <li>
+              {@render navLink('/admin/tasks', m.navbar__tasks(), 'justify-between')}
+            </li>
+            <div class="divider"></div>
+          </div>
         {/if}
         <li>
           {@render navLink('/profile', m.navbar__profile(), 'justify-between')}

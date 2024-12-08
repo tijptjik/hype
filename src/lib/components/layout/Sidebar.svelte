@@ -368,6 +368,7 @@ let expandedState : Record<ResourceType, boolean> = $derived({
   </p>
 {/snippet}
 
+<!-- TODO Add ability to expand section on hover of the resource header -->
 <!-- COMPONENT -->
 <aside
   class="flex-shrink-1 flex h-screen flex-col bg-base-300 transition-all w-{isSidebarExpanded
