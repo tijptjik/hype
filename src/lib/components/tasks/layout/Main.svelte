@@ -1,7 +1,4 @@
 <script lang="ts">
-import Image from '$lib/components/tasks/common/Image.svelte';
-import ReportedMissing from '$lib/components/tasks/controls/ReportedMissing.svelte';
-import NewFeature from '$lib/components/tasks/controls/NewFeature.svelte';
 // TYPES
 import type { TaskAPI } from '$lib/types';
 
