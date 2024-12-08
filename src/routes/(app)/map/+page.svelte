@@ -1,5 +1,5 @@
 <script lang="ts">
-import Map from '$lib/components/common/Map.svelte';
+import Map from '$lib/components/common/StandaloneMap.svelte';
 import { createMapStore, MAPSTORE_CONTEXT_KEY } from '$lib/stores';
 import { setContext } from 'svelte';
 
