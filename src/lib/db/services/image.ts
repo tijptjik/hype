@@ -137,7 +137,25 @@ export const checkFeatureAccessForImage = async (
   return result;
 };
 
-
+export const checkProjectAccessForNewImage = async (
+  db: Database,
+  userId: Id,
+  projectId: Id
+): Promise<{ projectId: Id; role: string | null } | undefined> => {
+  let result = await db
+    .select({
+      projectId: project.id,
+      role: projectRole.role
+    })
+    .from(project)
+    .leftJoin(
+      projectRole,
+      and(eq(projectRole.projectId, project.id), eq(projectRole.userId, userId))
+    )
+    .where(eq(project.id, projectId))
+    .get();
+  return result;
+};
 export const checkProjectAccessForImage = async (
   db: Database,
   userId: Id,

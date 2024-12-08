@@ -821,14 +821,21 @@ export type AccessStrategyOption =
 export type AccessStrategy = AccessStrategyOption | AccessStrategyOption[];
 
 export type ImageUploadRefs = {
+  // ResourceType which the image is associated with
   resource: ResourceType;
+  // ID of the entity which the image is associated with
   entity: Id;
+  // Parent Organisation
   organisation: Organisation;
+  // Parent Project
   project?: Project;
+  // Image to replace is used to determine the image being replaced
   imageToReplace?: GetImageAPI;
 };
 
 export type ImageEditRefs = {
+  // ResourceType which the image is associated with
   refType: ResourceType;
+  // ID of the entity which the image is associated with
   refId: Id;
 };

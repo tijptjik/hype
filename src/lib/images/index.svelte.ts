@@ -90,30 +90,18 @@ const activeImageState = $derived({
   get isLoading() {
     if (!imageSets.activeImage) return false;
     const isLoading = imageSets.imageLoadStates[imageSets.activeImage.id] === 'loading';
-    console.log('🔄 isLoading check:', { id: imageSets.activeImage.id, isLoading });
     return isLoading;
   },
   get isLoaded() {
     if (!imageSets.activeImage) return false;
     const isLoaded = imageSets.imageLoadStates[imageSets.activeImage.id] === 'loaded';
-    console.log('✅ isLoaded check:', { id: imageSets.activeImage.id, isLoaded });
     return isLoaded;
   },
   get isUploading() {
     const isUploading = imageSets.standaloneUploadState === 'uploading';
-    console.log('⬆️ isUploading check:', {
-      isUploading,
-      state: imageSets.standaloneUploadState
-    });
     return isUploading;
   },
   get preview() {
-    console.log('🖼️ Preview check:', {
-      preview: imageSets.activeImagePreview,
-      activeImage: imageSets.activeImage?.id,
-      isLoaded: this.isLoaded,
-      uploadState: imageSets.standaloneUploadState
-    });
     return imageSets.activeImagePreview;
   }
 });
@@ -124,9 +112,7 @@ export let getActiveImageState = () => {
 
 // Add helper functions to manage states
 export const setImageLoadState = (imageId: string, state: LoadStatus) => {
-  console.log('📝 Setting image load state:', { imageId, state });
   imageSets.imageLoadStates[imageId] = state;
-  console.log('Current load states:', imageSets.imageLoadStates);
 };
 
 export const setImageUploadState = (imageId: string, state: UploadStatus) => {
@@ -134,7 +120,6 @@ export const setImageUploadState = (imageId: string, state: UploadStatus) => {
 };
 
 export const setStandaloneUploadState = (state: UploadStatus, imageId?: string) => {
-  console.log('📤 Setting upload state:', { state, imageId });
   imageSets.standaloneUploadState = state;
 
   if (state === 'uploading') {
@@ -156,7 +141,6 @@ export const setStandaloneLoadState = (state: UploadStatus, imageId?: string) =>
 
 // Add a reset function for image states
 export const resetImageStates = (imageId?: string) => {
-  console.log('🔄 Resetting image states', { imageId });
   if (imageId) {
     // Reset specific image state
     delete imageSets.imageLoadStates[imageId];
@@ -191,7 +175,6 @@ export const sortImages = (): void => {
 
 /** Select an image as active */
 export const selectActiveImage = (image: GetImageAPI) => {
-  console.log('SELECT ACTIVE IMAGE', image);
   if (!image) return;
   imageSets.activeImage = image;
 };
@@ -219,7 +202,6 @@ export const navigateImage = (e: Event, direction: 'prev' | 'next') => {
 
 // Update the updateIntent function to handle canonical images
 export const updateIntent = async (imageId: string, newIntent: Intent, refs: EditRefs) => {
-  console.log('UPDATE INTENT', { imageId, newIntent, refs });
   try {
     // If trying to set as canonical, first check if another image is already canonical
     if (newIntent === 'canonical') {
@@ -376,11 +358,6 @@ export const handleFilesSelect = async (
     isStandalone?: boolean;
   }
 ) => {
-  console.log('🎯 handleFilesSelect called:', {
-    files: event.detail.acceptedFiles,
-    isStandalone: config.isStandalone
-  });
-
   const newFiles = event.detail.acceptedFiles.map((file) => ({
     file,
     status: 'uploading' as UploadStatus,
@@ -391,7 +368,6 @@ export const handleFilesSelect = async (
     // Reset states before setting new preview
     resetImageStates();
     const previewURL = URL.createObjectURL(newFiles[0].file);
-    console.log('🖼️ Setting preview URL:', previewURL);
     imageSets.activeImagePreview = previewURL;
   }
 
@@ -483,12 +459,9 @@ const handleUpload = async (args: { fileState: ImageUploadState; refs: Refs }) =
         .then((res) => res.json())
         .then(({ image: updatedImage }) => {
           // TODO INSPECT IF THIS IS CORRECT
-          console.log('UPDATED IMAGE', updatedImage);
-          console.log('IMAGE SETS IMAGES', imageSets.images);
           imageSets.images = imageSets.images.map((img) =>
             img.id === refs.imageToReplace?.id ? updatedImage : img
           );
-          console.log('IMAGE SETS IMAGES', imageSets.images);
           setImageUploadState(updatedImage.id, 'uploaded');
           return updatedImage;
         })
@@ -496,7 +469,6 @@ const handleUpload = async (args: { fileState: ImageUploadState; refs: Refs }) =
           console.error('Failed to save image to database:', err);
           throw err;
         });
-      console.log('SAVED IMAGE by REPLACEMENT', savedImage);
     } else {
       savedImage = await fetch('/api/images', {
         method: 'POST',

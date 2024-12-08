@@ -1,11 +1,20 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
 import { superValidate, type SuperValidated } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
-import { getDatabaseOrError, isValidQueryParamsOrError, JSONResponseOrError, SuperFormResponse } from '$lib/api';
+import {
+  getDatabaseOrError,
+  isValidQueryParamsOrError,
+  JSONResponseOrError,
+  SuperFormResponse
+} from '$lib/api';
 // DB
 import { hierarchicalResourceQuery } from '$lib/db';
 import { feature, projectRole } from '$lib/db/schema';
-import { createFeature, extractEntitiesToInsert, rebuildFormData } from '$lib/db/services/feature';
+import {
+  createFeature,
+  extractEntitiesToInsert,
+  rebuildFormData
+} from '$lib/db/services/feature';
 // ZOD
 import { FeatureInsertAPI } from '$lib/db/zod';
 // TYPES
@@ -67,7 +76,10 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 
   try {
     const formData: NewFeature = await request.json();
-    const form = (await superValidate(formData, zod(FeatureInsertAPI))) as SuperValidated<Feature>;
+    const form = (await superValidate(
+      formData,
+      zod(FeatureInsertAPI)
+    )) as SuperValidated<Feature>;
 
     if (!form.valid) {
       return SuperFormResponse<Feature>(form);

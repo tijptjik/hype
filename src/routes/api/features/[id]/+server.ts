@@ -80,7 +80,10 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 
   try {
     const formData: Feature = await request.json();
-    const form = (await superValidate(formData, zod(FeatureUpdateAPI))) as SuperValidated<Feature>;
+    const form = (await superValidate(
+      formData,
+      zod(FeatureUpdateAPI)
+    )) as SuperValidated<Feature>;
 
     if (!form.valid) {
       return SuperFormResponse(form);
@@ -99,8 +102,8 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 
     // Update translations
     const updatedTranslations = await updateTranslations(
-      db, 
-      formTranslations, 
+      db,
+      formTranslations,
       updatedFeature.id
     );
 
@@ -126,11 +129,16 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 };
 
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
-  const { db } = await getDatabaseOrError(locals, platform, ACCESS_STRATEGY, RESOURCE_TYPE);
+  const { db } = await getDatabaseOrError(
+    locals,
+    platform,
+    ACCESS_STRATEGY,
+    RESOURCE_TYPE
+  );
 
   try {
     const formData: FeaturePartialUpdate = await request.json();
-    const form = await superValidate(formData, zod(FeaturePatch), {defaults: {}});
+    const form = await superValidate(formData, zod(FeaturePatch), { defaults: {} });
 
     if (!form.valid) {
       return json(form, { status: 400 });

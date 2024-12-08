@@ -131,7 +131,6 @@ const checkAccessOrError = (
   if (!hasAccess) {
     return error(401, `All out of <code>${resourceType}</code>s to give`);
   }
-
   return hasAccess;
 };
 
@@ -210,9 +209,8 @@ export const getDatabaseOrError = async (
       if (featureAccess?.role && privilegedStrategy !== null) {
         accessStrategy = privilegedStrategy;
       } else {
-        error(404, 'ProjectAccess goes brrrr');
+        error(404, 'ProjectAccess for feature goes brrrr');
       }
-
     } else {
       error(404, `ResourceOwner ${resourceOwner}? Ha! That's a no from me dawg`);
     }

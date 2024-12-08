@@ -53,7 +53,10 @@ export const updateFeature = async (db: Database, data: FeatureDB, ref: string) 
     .returning();
 
   if (!updatedFeature) {
-    return error(404, `Feature <code>${ref}</code> has stepped through the looking glass`);
+    return error(
+      404,
+      `Feature <code>${ref}</code> has stepped through the looking glass`
+    );
   }
 
   return updatedFeature;
@@ -139,7 +142,11 @@ export const updateProperties = async (
   });
 };
 
-export const patchFeature = async (db: Database, ref: string, data: Partial<FeatureDB>) => {
+export const patchFeature = async (
+  db: Database,
+  ref: string,
+  data: Partial<FeatureDB>
+) => {
   return await updatePartial(db, feature, ref, 'id', data);
 };
 
@@ -164,7 +171,6 @@ export const rebuildFormData = async (
   translations: FeatureI18n[] = [],
   properties: FeatureProperty[] = []
 ) => {
-
   properties.forEach((prop) => {
     prop.translations = toNestedTranslations(prop.translations);
   });

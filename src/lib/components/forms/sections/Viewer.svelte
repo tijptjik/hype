@@ -3,6 +3,8 @@ import { fade, crossfade } from 'svelte/transition';
 import { beforeNavigate } from '$app/navigation';
 import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte';
 import { imageSets, navigateImage } from '$lib/images/index.svelte';
+// CONTEXT
+import { getRouterState } from '$lib/context/router.svelte';
 // COMPONENTS
 import { InformationCircle } from '@steeze-ui/heroicons';
 import Header from '$lib/components/forms/extra/Header.svelte';
@@ -17,6 +19,8 @@ import type { SectionProps, GetImageAPI, ImageEditRefs } from '$lib/types';
 let { ...sectionProps }: SectionProps & { refs: ImageEditRefs } = $props();
 
 let showNav: boolean = $derived(imageSets.images.length > 1);
+
+let routerState = getRouterState();
 
 // Setup crossfade
 const [send, receive] = crossfade({
@@ -37,7 +41,10 @@ beforeNavigate(() => {
       <Viewer
         image={imageSets.activeImage as GetImageAPI}
         isCrossfade={false}
-        enableDropzone={true}>
+        enableDropzone={true}
+        resource={routerState.resource as ResourceType}
+        entityId={routerState.entity as string}
+        >
         {#snippet RightActions()}
           {#if imageSets.activeImage}
             <IconAnchor position="right" icon={InformationCircle}>
