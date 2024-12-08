@@ -1,72 +1,107 @@
 <script lang="ts">
-// noinspection TypeScriptCheckImport
-// import { PUBLIC_MAPTILER_KEY } from '$env/static/public';
-import { type MapStore, MAPSTORE_CONTEXT_KEY } from '$lib/stores';
-// import { AttributionControl, GeolocateControl, Map, NavigationControl, ScaleControl } from 'maplibre-gl';
-import { getContext, onMount } from 'svelte';
+// MapLibre
+import SpectralStyle from '$lib/map/style.json';
+// UTILS
 import { loadScript } from '$lib';
+// CONTEXT
+import { getRouterState } from '$lib/context/router.svelte';
+// TYPES
+import type { EntityRouter, SectionProps } from '$lib/types';
+// ENV
+// import { PUBLIC_MAPTILER_KEY } from '$env/static/public';
 
-let mapStore: MapStore = getContext(MAPSTORE_CONTEXT_KEY);
+type MapProps = {
+  coordinates: number[];
+  draggable?: boolean;
+  dragEndCallback?: (lngLat: number[]) => void;
+};
+
+// STATE : PROPS
+let mapProps: MapProps = $props();
+
+// STATE : MAP
 let mapContainer: HTMLDivElement;
+let map = $state();
+let feature = $state();
+let isMapLoaded = $state(false);
 
-onMount(async () => {
-  // To minimize the payload in Cloudflare, we are manually inserting mapping dependencies here as they are heavy
-  // and the max worker size in the free tier is 1 MB
-  await loadScript('https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js');
-
+// EFFECTS :: ON MOUNT
+let loadMapLibre = loadScript(
+  'https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js'
+).then(() => {
+  // await loadScript('../../map/maplibre-preload.modern.js');
   // eslint-disable-next-line no-undef
   const maplibre = maplibregl;
+  maplibre.prewarm();
   console.info('Built with 🗺️ MapLibre ' + maplibre?.getVersion());
 
-  // const map = new Map({
-  const map = new maplibre.Map({
+  map = new maplibre.Map({
     container: mapContainer,
-    // style: `https://api.maptiler.com/maps/streets/style.json?key=${PUBLIC_MAPTILER_KEY}`,
-    // style: `https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json`,
-    style: { version: 8, sources: {}, layers: [] },
-    center: [114.15166, 22.28781],
-    pitch: 60,
-    bearing: 68,
-    zoom: 14.32,
-    hash: true,
+    style: SpectralStyle,
+    center: mapProps.coordinates,
+    zoom: 20,
+    hash: false,
     attributionControl: false
   });
-  map.on('load', () => {
-    map.addSource('hongkong-latest', {
-      type: 'vector',
-      url: 'https://tiles.hype.hk/hongkong-latest.json'
-    });
 
-    map.addLayer({
-      id: 'hk-transportation',
-      source: 'hongkong-latest',
-      'source-layer': 'transportation',
-      type: 'line',
-      paint: { 'line-color': '#198EC8' }
-      // }, 'building');
-    });
+  map.on('load', () => {
+    isMapLoaded = true;
   });
 
-  // map.addControl(new NavigationControl({}), 'top-right');
-  // map.addControl(
-  // 	new GeolocateControl({
-  // 		positionOptions: { enableHighAccuracy: true },
-  // 		trackUserLocation: true
-  // 	}),
-  // 	'top-right'
-  // );
-  // map.addControl(new ScaleControl({ maxWidth: 80, unit: 'metric' }), 'bottom-left');
-  // map.addControl(new AttributionControl({ compact: true }), 'bottom-right');
+  feature = new maplibre.Marker({
+    color: '#F04D7F',
+    clickTolerance: 24,
+    draggable: mapProps.draggable || true
+  })
+    .setLngLat(mapProps.coordinates)
+    .addTo(map);
 
-  mapStore?.set(map);
+  feature.on('dragend', handleDragEnd);
 });
+
+// EFFECTS :: ON UPDATE
+$effect(() => {
+  if (map) {
+    map.flyTo({
+      center: mapProps.coordinates,
+      zoom: 20
+    });
+    feature.setLngLat(mapProps.coordinates);
+  }
+});
+
+// EVENTS
+const handleDragEnd = (e: Event) => {
+  mapProps.dragEndCallback?.(e.target.getLngLat().toArray());
+};
 </script>
 
-<div class="map full-w relative flex-grow" data-testid="map" bind:this={mapContainer}></div>
+<div class="relative h-full w-full">
+  <!-- Loading Spinner -->
+  {#if !isMapLoaded}
+    <div
+      class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-300">
+      <div class="loading loading-spinner loading-lg text-primary"></div>
+    </div>
+  {/if}
+
+  <!-- Map Container -->
+  <div
+    class="map h-full w-full flex-grow rounded-lg bg-base-300"
+    class:opacity-0={!isMapLoaded}
+    class:opacity-100={isMapLoaded}
+    data-testid="map"
+    bind:this={mapContainer}>
+  </div>
+</div>
 
 <style>
 @import 'https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css';
 .maplibregl-canvas {
   outline: none;
+}
+
+.map {
+  transition: opacity 0.3s ease-in-out;
 }
 </style>
