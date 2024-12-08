@@ -167,7 +167,10 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
 
     return json({
       success: true,
-      image: { ...updatedImage, featureImage: updatedFeatureImage ?? null }
+      image: {
+        ...updatedImage,
+        ...(updatedFeatureImage ? updatedFeatureImage : {})
+      }
     });
   } catch (err) {
     console.error('Failed to update image:', err);

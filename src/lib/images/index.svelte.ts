@@ -642,10 +642,16 @@ export const imageFromCloudinaryResponse = (
   };
   // RELATED ENTITY
   if (refs.resource == 'feature') {
-    image.featureImage = {
-      featureId: refs.entity,
-      intent: intent as Intent,
-      isPublished: isPublished
+    image.featureImage = refs.imageToReplace
+      ? {
+          featureId: refs.imageToReplace.featureId,
+          intent: refs.imageToReplace.intent,
+          isPublished: refs.imageToReplace.isPublished
+        }
+      : {
+          featureId: refs.entity,
+          intent: intent as Intent,
+          isPublished: isPublished
     };
   }
   if (
