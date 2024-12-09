@@ -19,7 +19,7 @@ import type { GetImageAPI, ImageEditRefs } from '$lib/types';
 type Props = {
   image: GetImageAPI;
   idx: number;
-  actionProps: { removeMode: boolean };
+  actionProps?: { removeMode: boolean };
   refs: ImageEditRefs;
 };
 
@@ -39,9 +39,8 @@ $effect(() => {
   data-image-id={image.id}
   onmouseenter={() => selectActiveImage(image)}
   onclick={() => selectActiveImage(image)}>
-  
   <Image
-    class="mx-auto h-50 w-50 overflow-hidden rounded-lg text-neutral"
+    class="h-50 w-50 mx-auto overflow-hidden rounded-lg text-neutral"
     src={getURLfromImage({
       image,
       transformation: 'c_fill,w_200,h_200'
@@ -58,7 +57,7 @@ $effect(() => {
       imageSets.imagesLoaded[image.id] = true;
     }} />
 
-  {#if imageSets.imagesLoaded[image.id] && !actionProps.removeMode}
+  {#if imageSets.imagesLoaded[image.id] && (!actionProps || !actionProps.removeMode)}
     <IntentLabel
       intent={image.intent}
       {idx}
@@ -69,11 +68,13 @@ $effect(() => {
 
   {#if !imageSets.imagesLoaded[image.id]}
     <Loading />
-  {:else if actionProps.removeMode && imageSets.imagesLoaded[image.id] && !imageSets.imagesPendingConfirmation.has(image.id) && !imageSets.imagesToDelete.has(image.id)}
-    <Deletion {image}/>
-  {:else if imageSets.imagesPendingConfirmation.has(image.id) && !imageSets.imagesToDelete.has(image.id)}
-    <Confirmation {image} {refs}/>
-  {:else if imageSets.imagesToDelete.has(image.id)}
-    <Deleting {image} />
+  {:else if actionProps}
+    {#if actionProps.removeMode && imageSets.imagesLoaded[image.id] && !imageSets.imagesPendingConfirmation.has(image.id) && !imageSets.imagesToDelete.has(image.id)}
+      <Deletion {image} />
+    {:else if imageSets.imagesPendingConfirmation.has(image.id) && !imageSets.imagesToDelete.has(image.id)}
+      <Confirmation {image} {refs} />
+    {:else if imageSets.imagesToDelete.has(image.id)}
+      <Deleting {image} />
+    {/if}
   {/if}
 </div>

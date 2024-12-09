@@ -7,7 +7,7 @@ import type { TaskAPI } from '$lib/types';
 let { task }: { task: TaskAPI } = $props();
 </script>
 
-<aside class="w-[420px] flex flex-col gap-3 rounded-lg bg-base-200 p-6">
+<aside class="w-[420px] flex flex-col gap-3 rounded-br-lg bg-base-200 p-6">
   <h3 class="flex-grow-0 flex-shrink-0 mb-6 text-xl font-bold text-base-content">New Feature Details</h3>
 
   <div class="flex-grow-1 flex-shrink-0 stats stats-vertical w-full bg-base-200">

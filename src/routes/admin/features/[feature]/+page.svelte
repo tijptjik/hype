@@ -1,5 +1,4 @@
 <script lang="ts">
-import { get } from 'svelte/store';
 import { goto } from '$app/navigation';
 import { NEW_TITLE, NEW_REF } from '$lib';
 // Context

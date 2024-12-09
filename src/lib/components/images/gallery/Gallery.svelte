@@ -15,22 +15,31 @@ import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // TYPES
 import type {
   EntityRouter,
-  GetImageAPI,
   ImageUploadRefs,
-  ImageEditRefs,  
+  ImageEditRefs,
   Organisation,
-  Project
+  Project,
+  GetImageAPI
 } from '$lib/types';
 
 type Props = {
-  inputElement: HTMLInputElement | undefined;
-  actionProps: {
+  initialImage?: GetImageAPI;
+  inputElement?: HTMLInputElement;
+  actionProps?: {
     removeMode: boolean;
   };
+  hasDropzone?: boolean;
+  editContext?: ImageEditRefs;
 };
 
 // STATE :: PROPS
-let { inputElement = $bindable(), actionProps }: Props = $props();
+let {
+  initialImage,
+  inputElement = $bindable(),
+  actionProps,
+  hasDropzone = true,
+  editContext
+}: Props = $props();
 
 // STATE :: SCROLL ARROWS
 let showLeftArrow = $state(false);
@@ -49,12 +58,35 @@ const routerState = getRouterState() as EntityRouter;
 // CONTEXT :: RESOURCE
 const resourceState = getHierarchicalResourceState();
 
+let featureId = $derived(
+  editContext
+    ? editContext.refId
+    : routerState.resource === 'feature'
+      ? routerState.entity
+      : null
+);
+
+let refs: ImageUploadRefs = $derived({
+  resource: routerState.resource,
+  entity: resourceState.state[routerState.resource]?.id,
+  organisation: resourceState.state.organisation as Organisation,
+  project: resourceState.state.project as Project
+});
+
+let editRefs: ImageEditRefs = $derived(
+  editContext
+    ? editContext
+    : {
+        refType: refs.resource,
+        refId: refs.entity
+      }
+);
 
 // STATE :: EFFECTS
 $effect(() => {
   isLoadingImages = true;
   imageSets.imagesLoaded = {}; // Reset the loaded state when fetching new images
-  fetch(`/api/images?featureId=${routerState.entity}`)
+  fetch(`/api/images?featureId=${featureId}`)
     .then((res) => res.json())
     .then((images) => {
       imageSets.images = images;
@@ -69,22 +101,13 @@ $effect(() => {
       if (imageSets.images.length === 0) {
         updateScrollArrows();
       } else {
-        imageSets.activeImage = imageSets.images[0];
+        // TODO : Scroll to initial image if it exists
+        // Set the active image to the initial image if it exists, otherwise the first image
+        imageSets.activeImage = initialImage ?? imageSets.images[0];
       }
     });
 });
 
-let refs: ImageUploadRefs = $derived({
-  resource: routerState.resource,
-  entity: resourceState.state[routerState.resource]?.id,
-  organisation: resourceState.state.organisation as Organisation,
-  project: resourceState.state.project as Project,
-});
-
-let editRefs: ImageEditRefs = $derived({
-  refType: refs.resource,
-  refId: refs.entity,
-});
 
 // DOM
 let scrollContainer: HTMLDivElement;
@@ -163,14 +186,16 @@ const scrollTo = (direction: 'left' | 'right') => {
 {/if}
 <!-- Main scroll container -->
 <div
-  class="m-4 flex min-w-0 gap-4 overflow-x-auto scroll-smooth rounded-xl bg-base-100 p-4"
+  class="flex w-full min-w-0 gap-4 overflow-x-auto scroll-smooth rounded-xl bg-base-100 p-4"
   bind:this={scrollContainer}
   onwheel={handleWheel}
   onscroll={handleScroll}>
   <!-- Dropzone always first -->
-  <div class="h-[200px] w-[200px] flex-none">
-    <Dropzone {refs} {updateScrollArrows} bind:inputElement />
-  </div>
+  {#if hasDropzone}
+    <div class="h-[200px] w-[200px] flex-none">
+      <Dropzone {refs} {updateScrollArrows} bind:inputElement />
+    </div>
+  {/if}
 
   <!-- Upload queue with loading states and transitions -->
   {#each imageSets.uploadQueue as fileState (fileState.file)}

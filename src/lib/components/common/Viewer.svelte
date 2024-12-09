@@ -5,11 +5,9 @@ import { cubicOut } from 'svelte/easing';
 import { getHierarchicalResourceState as getResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
-import { Camera, CloudArrowDown, Photo, InformationCircle } from '@steeze-ui/heroicons';
-import { formatDate } from '$lib';
+import { Camera, Photo, InformationCircle } from '@steeze-ui/heroicons';
 import Dropzone from 'svelte-file-dropzone';
 import {
-  downloadImage,
   getURLfromImage,
   handleFilesSelect,
   imageSets,
@@ -57,17 +55,11 @@ let {
   MiddleActions,
   RightActions,
   enableDropzone = false,
-  enableReplacement = true,
   isCrossfade = true
 }: Props = $props();
 
 // STATE
 let isLoading = $state(false);
-
-$effect(() => {
-  imageSets;
-  imageSets.activeImage = image;
-});
 
 // CROSSFADE
 const [send, receive] = crossfade({
@@ -148,7 +140,7 @@ $effect(() => {
 {#snippet ViewerContent(image: GetImageAPI, isReplacing = false)}
   <!-- Background Image -->
   <div
-    class="absolute inset-0 z-10 h-full w-full rounded-b-2xl bg-neutral"
+    class="absolute inset-0 z-10 h-full w-full bg-neutral"
     class:opacity-0={activeImageState.isLoading && isReplacing}
     class:opacity-30={activeImageState.isLoading && !isReplacing}
     class:opacity-60={activeImageState.isLoaded && !isReplacing}
@@ -235,10 +227,10 @@ $effect(() => {
       on:drop={handleDrop}
       on:select={handleDrop}
       multiple={false}
-      class="group flex h-full w-full flex-col justify-center gap-2 rounded-lg bg-base-100/50 text-center align-middle transition-colors"
+      class="group flex h-full w-full flex-col justify-center gap-2 rounded-xl bg-base-100/50 text-center align-middle transition-colors"
       disableDefaultStyles={true}>
       <div
-        class="border-offset-2 pointer-events-none absolute inset-0 z-50 m-4 rounded-lg rounded-xl border-4 border-dashed border-transparent transition-colors delay-500 group-hover:border-primary">
+        class="border-offset-2 pointer-events-none absolute inset-0 z-50 m-4 rounded-xl border-4 border-dashed border-transparent transition-colors delay-500 group-hover:border-primary">
       </div>
       <!-- {#if activeImageState.preview && (!image || !activeImageState.isLoaded)} -->
       {#if image}

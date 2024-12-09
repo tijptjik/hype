@@ -1,8 +1,10 @@
 <script lang="ts">
 // CONTEXT
 import { getRouterState } from '$lib/context/router.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS :: COMMON
 import Image from '$lib/components/tasks/common/Image.svelte';
+import Gallery from '$lib/components/tasks/common/Gallery.svelte';
 // COMPONENTS :: LAYOUT
 import Task from '$lib/components/tasks/layout/EntityRoot.svelte';
 import TaskHeader from '$lib/components/tasks/layout/Header.svelte';
@@ -30,12 +32,17 @@ let { task } = pageProps.data;
 
 // STATE : CONTEXT :: ROUTER
 const routerState = getRouterState() as EntityRouter;
+const resourceState = getHierarchicalResourceState();
 
-console.log('UPDATE ROUTER STATE', task.id);
 routerState.updateWith({
   resource: 'task',
   entity: task.id,
   facet: false
+});
+
+// SYNC :: Update resource state with current entity
+$effect(() => {
+  resourceState.update('feature', task.feature);
 });
 
 // SYNC :: Await immediately resolved promise to react to value change.
@@ -45,7 +52,6 @@ let doRerender = $state(0);
 
 {#await forceUpdate(doRerender) then _}
   <!-- LAYOUT -->
-
   <div
     class="h-full overflow-y-auto bg-gradient-to-br from-rose-500 to-indigo-700 bg-fixed p-6">
     <Task {task}>
@@ -73,16 +79,18 @@ let doRerender = $state(0);
         </Info>
       </TaskHeader>
       <TaskMain {task}>
-        <Image {task} />
+        <div class="flex flex-1 flex-col">
+          <Image {task} />
+          <TaskFooter>
+            <Gallery {task} />
+          </TaskFooter>
+        </div>
         {#if task.type === 'reportedMissing'}
           <ReportedMissingControls {task} />
         {:else if task.type === 'newFeature'}
           <NewFeatureControls {task} />
         {/if}
       </TaskMain>
-      <!-- <TaskFooter>
-        <Gallery {task} />
-      </TaskFooter> -->
     </Task>
   </div>
 {/await}

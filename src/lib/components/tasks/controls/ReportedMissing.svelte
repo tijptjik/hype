@@ -30,7 +30,7 @@ let reportDate = $derived(
 );
 </script>
 
-<aside class="w-[420px] rounded-lg bg-base-200 p-6">
+<aside class="w-[420px] rounded-br-lg bg-base-200 p-6">
   <h3 class="mb-6 text-xl font-bold text-base-content">Report Details</h3>
 
   <div class="stat">

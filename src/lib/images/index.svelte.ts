@@ -33,9 +33,7 @@ import { error } from '@sveltejs/kit';
 import Coordinates from 'coordinate-parser';
 import { capitalizeFirstLetter } from '$lib';
 import type {
-  Id,
   ImageDB,
-  ResourceType,
   GetImageAPI,
   NewImageAPI,
   Intent,
@@ -201,7 +199,11 @@ export const navigateImage = (e: Event, direction: 'prev' | 'next') => {
 };
 
 // Update the updateIntent function to handle canonical images
-export const updateIntent = async (imageId: string, newIntent: Intent, refs: EditRefs) => {
+export const updateIntent = async (
+  imageId: string,
+  newIntent: Intent,
+  refs: EditRefs
+) => {
   try {
     // If trying to set as canonical, first check if another image is already canonical
     if (newIntent === 'canonical') {
@@ -323,7 +325,6 @@ const refsToPublicRouter = (refs: Refs) => {
   // - {organsation.code}/{project.code}/{image.publicId}
   // There can be multiple images per task, however, these images are used in review and will often require postprocessing. So uploads against these items are considered replacements.
   // Admins can drop images into the task viewer to replace the existing image in the Review Queue.
-
   if (refs.resource === 'organisation' && refs.organisation) {
     return {
       folder: `/${refs.organisation.code}`,
@@ -652,7 +653,7 @@ export const imageFromCloudinaryResponse = (
           featureId: refs.entity,
           intent: intent as Intent,
           isPublished: isPublished
-    };
+        };
   }
   if (
     refs.resource == 'project' ||
