@@ -1,7 +1,6 @@
 <script lang="ts">
 import Icon from '$lib/components/common/Icon.svelte';
 import { Language } from '@steeze-ui/heroicons';
-import { getTranslation } from '$lib/api/translation';
 // CONTEXT
 import { getRouterState } from '$lib/context/router.svelte';
 // Types
@@ -21,14 +20,21 @@ let { form } = barProps.form;
 // STATE : CONTEXT :: ROUTER
 const routerState = getRouterState() as EntityRouter;
 
-const languageOptions = $derived(allLanguages.filter((lang) => lang.code !== languageTag));
+const languageOptions = $derived(
+  allLanguages.filter((lang) => lang.code !== languageTag)
+);
 
-function translateFields(event: Event, sourceLang: string, targetLang: string) {
+async function translateFields(
+  event: Event,
+  sourceLang: LanguageTag,
+  targetLang: LanguageTag
+) {
   event.preventDefault();
 
   // Step 1: Initialize sourceTexts array
   const sourceTexts: string[] = [];
-  const sourceLangObj = sourceLang.toLowerCase() === 'en' ? $form : $form.translations[sourceLang];
+  const sourceLangObj =
+    sourceLang.toLowerCase() === 'en' ? $form : $form.translations[sourceLang];
 
   // Step 1: Lookup the sourceLang texts
   Object.keys(fields).forEach((key) => {
@@ -36,7 +42,18 @@ function translateFields(event: Event, sourceLang: string, targetLang: string) {
   });
 
   // Step 2: Translation API call
-  const translatedTexts = getTranslation(sourceLang, targetLang, sourceTexts);
+  const response = await fetch('/api/translation', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      sourceLang: sourceLang,
+      targetLang: targetLang,
+      texts: sourceTexts
+    })
+  });
+  const translatedTexts = await response.json();
 
   // Step 3: Update the form with translated texts
   translatedTexts.forEach((translatedText, index) => {
@@ -59,8 +76,7 @@ function translateFields(event: Event, sourceLang: string, targetLang: string) {
 </script>
 
 <div
-  class="overflow-hidden transition-opacity opacity-0 delay-300 duration-200 group-focus-within:opacity-100 group-hover:opacity-100"
->
+  class="overflow-hidden opacity-0 transition-opacity duration-200 group-focus-within:opacity-100 group-hover:opacity-100">
   <div class="flex items-center justify-between rounded-b-xl bg-base-200 px-6 py-3">
     <div class="flex items-center gap-4">
       <Icon src={Language} class="h-6 w-6 text-primary" />
@@ -70,7 +86,7 @@ function translateFields(event: Event, sourceLang: string, targetLang: string) {
       {#each languageOptions as { code, label }}
         <button
           class="text-md btn btn-circle btn-primary font-normal text-base-content"
-          onclick={(e) => translateFields(e, code, languageTag)}>
+          onclick={async (e) => await translateFields(e, code, languageTag)}>
           {label}
         </button>
       {/each}
