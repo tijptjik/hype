@@ -63,7 +63,7 @@ const handleClick = (e: Event, href: string) => {
 };
 </script>
 
-{#snippet navLink(href, label, className = '')}
+{#snippet navLink(href: string, label: string, className = '')}
   <a
     draggable="false"
     {href}
@@ -74,15 +74,18 @@ const handleClick = (e: Event, href: string) => {
   </a>
 {/snippet}
 
-{#snippet menuList(items)}
+{#snippet menuList(items: { href: string; label: string }[])}
   <ul class="menu menu-horizontal space-x-2 p-0">
     {#each items as { href, label }}
       <li>
-        {@render navLink(
-          href,
-          label,
-          'btn btn-ghost rounded-none border-b-2 hover:bg-black hover:border-b-primary'
-        )}
+        <a
+        draggable="false"
+        {href}
+        onclick={(e) => handleClick(e, href)}
+        class="select-none btn btn-ghost rounded-none border-b-2 hover:bg-black hover:border-b-primary"
+        class:btn-active={$page.url.pathname.startsWith(href)}>
+        {label}
+      </a>
       </li>
     {/each}
   </ul>
@@ -107,7 +110,11 @@ const handleClick = (e: Event, href: string) => {
         <IconicMenuButton
           href="/admin"
           iconSrc={ComputerDesktop}
-          handleClick={() => handleClick(e, href)} />
+          handleClick={(e) =>
+            routerState
+              ? goToResource(e, routerState, 'organisation')
+              : handleClick(e, '/admin/organisation')
+          } />
       </li>
     </ul>
     <div class="mx-2 hidden h-5 w-px bg-neutral-800 lg:block"></div>
