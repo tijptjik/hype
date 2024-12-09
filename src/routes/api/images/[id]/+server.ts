@@ -157,7 +157,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
         .where(eq(image.id, params[PUBLIC_IDENTIFIER] as Id))
         .returning();
     }
-    if (body.featureImage) {
+    if (body.featureImage && !!Object.keys(body.featureImage).length) {
       [updatedFeatureImage] = await db
         .update(featureImage)
         .set(body.featureImage)
