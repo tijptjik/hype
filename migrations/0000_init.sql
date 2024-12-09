@@ -14,94 +14,46 @@ CREATE TABLE `account` (
 	FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE TABLE `feature` (
+CREATE TABLE `session` (
+	`sessionToken` text PRIMARY KEY NOT NULL,
+	`userId` text NOT NULL,
+	`expires` integer NOT NULL,
+	FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE TABLE `user` (
 	`id` text PRIMARY KEY NOT NULL,
-	`geometry` text NOT NULL,
-	`title` text NOT NULL,
-	`titleGen` integer DEFAULT false NOT NULL,
-	`description` text,
-	`descriptionGen` integer DEFAULT false NOT NULL,
-	`addressProperties` text,
-	`layerId` text NOT NULL,
+	`name` text,
+	`attribution` text,
+	`email` text,
+	`emailVerified` integer,
+	`image` text,
+	`createdAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	`modifiedAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `image` (
+	`id` text PRIMARY KEY NOT NULL,
 	`contributorId` text,
-	`publisherId` text,
-	`isPublished` integer DEFAULT false NOT NULL,
-	`isIntangible` integer DEFAULT false NOT NULL,
-	`isVisitable` integer DEFAULT true NOT NULL,
-	`visitableAsOf` text DEFAULT (CURRENT_DATE),
-	`createdAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
-	`modifiedAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
-	`publishedAt` text,
-	FOREIGN KEY (`layerId`) REFERENCES `layer`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`contributorId`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null,
-	FOREIGN KEY (`publisherId`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null
-);
---> statement-breakpoint
-CREATE TABLE `featureI18n` (
-	`featureId` text NOT NULL,
-	`lang` text NOT NULL,
-	`title` text NOT NULL,
-	`titleGen` integer DEFAULT true NOT NULL,
-	`description` text,
-	`descriptionGen` integer DEFAULT true NOT NULL,
-	PRIMARY KEY(`featureId`, `lang`),
-	FOREIGN KEY (`featureId`) REFERENCES `feature`(`id`) ON UPDATE cascade ON DELETE cascade
-);
---> statement-breakpoint
-CREATE TABLE `featureProperty` (
-	`id` text PRIMARY KEY NOT NULL,
-	`featureId` text NOT NULL,
-	`propertyId` text NOT NULL,
-	`propertyValueId` text,
-	`value` text,
-	FOREIGN KEY (`featureId`) REFERENCES `feature`(`id`) ON UPDATE cascade ON DELETE cascade,
-	FOREIGN KEY (`propertyId`) REFERENCES `property`(`id`) ON UPDATE cascade ON DELETE cascade,
-	FOREIGN KEY (`propertyValueId`) REFERENCES `propertyValue`(`id`) ON UPDATE cascade ON DELETE set null
-);
---> statement-breakpoint
-CREATE TABLE `featurePropertyI18n` (
-	`featurePropertyId` text NOT NULL,
-	`lang` text NOT NULL,
-	`value` text NOT NULL,
-	PRIMARY KEY(`featurePropertyId`, `lang`),
-	FOREIGN KEY (`featurePropertyId`) REFERENCES `featureProperty`(`id`) ON UPDATE cascade ON DELETE cascade
-);
---> statement-breakpoint
-CREATE TABLE `layer` (
-	`id` text PRIMARY KEY NOT NULL,
-	`projectId` text NOT NULL,
-	`name` text NOT NULL,
-	`nameGen` integer DEFAULT false NOT NULL,
-	`nameShort` text NOT NULL,
-	`nameShortGen` integer DEFAULT false NOT NULL,
-	`description` text,
-	`descriptionGen` integer DEFAULT false NOT NULL,
+	`cdn` text DEFAULT 'cloudinary' NOT NULL,
+	`env` text DEFAULT 'dg6vtsga1' NOT NULL,
+	`cdnId` text,
+	`publicId` text NOT NULL,
+	`version` integer,
+	`originalFilename` text,
+	`originalExtension` text,
+	`originalWidth` integer,
+	`originalHeight` integer,
 	`metadata` text,
-	`isPublished` integer DEFAULT false NOT NULL,
+	`cameraModel` text,
+	`capturedAt` text,
+	`latitude` text,
+	`longitude` text,
+	`credit` text,
+	`isArchived` integer DEFAULT false NOT NULL,
 	`createdAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
 	`modifiedAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
-	FOREIGN KEY (`projectId`) REFERENCES `project`(`id`) ON UPDATE cascade ON DELETE cascade
-);
---> statement-breakpoint
-CREATE TABLE `layerI18n` (
-	`layerId` text NOT NULL,
-	`lang` text NOT NULL,
-	`name` text NOT NULL,
-	`nameGen` integer DEFAULT true NOT NULL,
-	`nameShort` text NOT NULL,
-	`nameShortGen` integer DEFAULT true NOT NULL,
-	`description` text,
-	`descriptionGen` integer DEFAULT true NOT NULL,
-	PRIMARY KEY(`layerId`, `lang`),
-	FOREIGN KEY (`layerId`) REFERENCES `layer`(`id`) ON UPDATE cascade ON DELETE cascade
-);
---> statement-breakpoint
-CREATE TABLE `layerProperty` (
-	`layerId` text NOT NULL,
-	`propertyId` text NOT NULL,
-	`isVisible` integer DEFAULT true NOT NULL,
-	FOREIGN KEY (`layerId`) REFERENCES `layer`(`id`) ON UPDATE cascade ON DELETE cascade,
-	FOREIGN KEY (`propertyId`) REFERENCES `property`(`id`) ON UPDATE cascade ON DELETE cascade
+	FOREIGN KEY (`contributorId`) REFERENCES `user`(`id`) ON UPDATE cascade ON DELETE set null
 );
 --> statement-breakpoint
 CREATE TABLE `organisation` (
@@ -114,11 +66,18 @@ CREATE TABLE `organisation` (
 	`description` text,
 	`descriptionGen` integer DEFAULT false NOT NULL,
 	`url` text,
-	`image` text DEFAULT 'https://generative-placeholders.glitch.me/image?width=720&height=720&style=triangles&gap=88',
+	`imageId` text,
+	`isPublished` integer DEFAULT true NOT NULL,
+	`isArchived` integer DEFAULT false NOT NULL,
+	`publishedAt` text,
+	`publisherId` text,
 	`createdAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
-	`modifiedAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL
+	`modifiedAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	FOREIGN KEY (`imageId`) REFERENCES `image`(`id`) ON UPDATE cascade ON DELETE set null,
+	FOREIGN KEY (`publisherId`) REFERENCES `user`(`id`) ON UPDATE cascade ON DELETE set null
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX `organisation_code_unique` ON `organisation` (`code`);--> statement-breakpoint
 CREATE TABLE `organisationI18n` (
 	`organisationId` text NOT NULL,
 	`lang` text NOT NULL,
@@ -155,13 +114,16 @@ CREATE TABLE `project` (
 	`licenseGen` integer DEFAULT false NOT NULL,
 	`attribution` text NOT NULL,
 	`attributionGen` integer DEFAULT false NOT NULL,
-	`image` text DEFAULT 'https://generative-placeholders.glitch.me/image?width=720&height=720&style=cellular-automata&cells=9',
+	`imageId` text,
 	`isPublished` integer DEFAULT false NOT NULL,
+	`isArchived` integer DEFAULT false NOT NULL,
 	`createdAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
 	`modifiedAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
-	FOREIGN KEY (`organisationId`) REFERENCES `organisation`(`id`) ON UPDATE cascade ON DELETE cascade
+	FOREIGN KEY (`organisationId`) REFERENCES `organisation`(`id`) ON UPDATE cascade ON DELETE cascade,
+	FOREIGN KEY (`imageId`) REFERENCES `image`(`id`) ON UPDATE cascade ON DELETE set null
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX `project_code_unique` ON `project` (`code`);--> statement-breakpoint
 CREATE TABLE `projectI18n` (
 	`projectId` text NOT NULL,
 	`lang` text NOT NULL,
@@ -187,6 +149,45 @@ CREATE TABLE `projectRole` (
 	FOREIGN KEY (`projectId`) REFERENCES `project`(`id`) ON UPDATE cascade ON DELETE cascade,
 	FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON UPDATE cascade ON DELETE cascade
 );
+--> statement-breakpoint
+CREATE TABLE `layer` (
+	`id` text PRIMARY KEY NOT NULL,
+	`projectId` text NOT NULL,
+	`name` text NOT NULL,
+	`nameGen` integer DEFAULT false NOT NULL,
+	`nameShort` text NOT NULL,
+	`nameShortGen` integer DEFAULT false NOT NULL,
+	`description` text,
+	`descriptionGen` integer DEFAULT false NOT NULL,
+	`metadata` text,
+	`isPublished` integer DEFAULT false NOT NULL,
+	`isArchived` integer DEFAULT false NOT NULL,
+	`createdAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	`modifiedAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	FOREIGN KEY (`projectId`) REFERENCES `project`(`id`) ON UPDATE cascade ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE TABLE `layerI18n` (
+	`layerId` text NOT NULL,
+	`lang` text NOT NULL,
+	`name` text NOT NULL,
+	`nameGen` integer DEFAULT true NOT NULL,
+	`nameShort` text NOT NULL,
+	`nameShortGen` integer DEFAULT true NOT NULL,
+	`description` text,
+	`descriptionGen` integer DEFAULT true NOT NULL,
+	PRIMARY KEY(`layerId`, `lang`),
+	FOREIGN KEY (`layerId`) REFERENCES `layer`(`id`) ON UPDATE cascade ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE TABLE `layerProperty` (
+	`layerId` text NOT NULL,
+	`propertyId` text NOT NULL,
+	`isVisible` integer DEFAULT true NOT NULL,
+	FOREIGN KEY (`layerId`) REFERENCES `layer`(`id`) ON UPDATE cascade ON DELETE cascade,
+	FOREIGN KEY (`propertyId`) REFERENCES `property`(`id`) ON UPDATE cascade ON DELETE cascade
+);
+
 --> statement-breakpoint
 CREATE TABLE `property` (
 	`id` text PRIMARY KEY NOT NULL,
@@ -233,32 +234,120 @@ CREATE TABLE `propertyValueI18n` (
 	PRIMARY KEY(`propertyValueId`, `lang`),
 	FOREIGN KEY (`propertyValueId`) REFERENCES `propertyValue`(`id`) ON UPDATE cascade ON DELETE cascade
 );
+
 --> statement-breakpoint
-CREATE TABLE `session` (
-	`sessionToken` text PRIMARY KEY NOT NULL,
-	`userId` text NOT NULL,
-	`expires` integer NOT NULL,
-	FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE TABLE `user` (
+CREATE TABLE `task` (
 	`id` text PRIMARY KEY NOT NULL,
-	`name` text,
-	`attribution` text,
-	`email` text,
-	`emailVerified` integer,
-	`image` text,
+	`organisationId` text NOT NULL,
+	`projectId` text NOT NULL,
+	`featureId` text NOT NULL,
+	`imageId` text,
+	`contributorId` text NOT NULL,
+	`reviewerId` text,
+	`type` text NOT NULL,
+	`isReviewed` integer DEFAULT false NOT NULL,
+	`reviewOutcome` text,
+	`reviewAction` text,
 	`createdAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
-	`modifiedAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL
+	`modifiedAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	FOREIGN KEY (`organisationId`) REFERENCES `organisation`(`id`) ON UPDATE cascade ON DELETE cascade,
+	FOREIGN KEY (`projectId`) REFERENCES `project`(`id`) ON UPDATE cascade ON DELETE cascade,
+	FOREIGN KEY (`featureId`) REFERENCES `feature`(`id`) ON UPDATE cascade ON DELETE cascade,
+	FOREIGN KEY (`imageId`) REFERENCES `image`(`id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`contributorId`) REFERENCES `user`(`id`) ON UPDATE cascade ON DELETE cascade,
+	FOREIGN KEY (`reviewerId`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null
 );
+
 --> statement-breakpoint
+CREATE UNIQUE INDEX `user_email_unique` ON `user` (`email`);--> statement-breakpoint
 CREATE TABLE `userActivity` (
 	`userId` text PRIMARY KEY NOT NULL,
 	`loginCount` integer DEFAULT 0,
 	`lastLogin` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
 	FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON UPDATE cascade ON DELETE cascade
 );
+
 --> statement-breakpoint
-CREATE UNIQUE INDEX `organisation_code_unique` ON `organisation` (`code`);--> statement-breakpoint
-CREATE UNIQUE INDEX `project_code_unique` ON `project` (`code`);--> statement-breakpoint
-CREATE UNIQUE INDEX `user_email_unique` ON `user` (`email`);
+CREATE TABLE `feature` (
+	`id` text PRIMARY KEY NOT NULL,
+	`geometry` text NOT NULL,
+	`title` text NOT NULL,
+	`titleGen` integer DEFAULT false NOT NULL,
+	`description` text,
+	`descriptionGen` integer DEFAULT false NOT NULL,
+	`displayAddress` text,
+	`displayAddressGen` integer DEFAULT false NOT NULL,
+	`addressProperties` text,
+	`layerId` text NOT NULL,
+	`contributorId` text,
+	`publisherId` text,
+	`isPublished` integer DEFAULT false NOT NULL,
+	`isPendingReview` integer DEFAULT false NOT NULL,
+	`isArchived` integer DEFAULT false NOT NULL,
+	`isIntangible` integer DEFAULT false NOT NULL,
+	`isVisitable` integer DEFAULT true NOT NULL,
+	`visitableAsOf` text DEFAULT (CURRENT_DATE),
+	`createdAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	`modifiedAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	`publishedAt` text,
+	FOREIGN KEY (`layerId`) REFERENCES `layer`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`contributorId`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`publisherId`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null
+);
+--> statement-breakpoint
+CREATE TABLE `featureI18n` (
+	`featureId` text NOT NULL,
+	`lang` text NOT NULL,
+	`title` text NOT NULL,
+	`titleGen` integer DEFAULT true NOT NULL,
+	`description` text,
+	`descriptionGen` integer DEFAULT true NOT NULL,
+	`displayAddress` text,
+	`displayAddressGen` integer DEFAULT false NOT NULL,
+	`addressProperties` text,
+	PRIMARY KEY(`featureId`, `lang`),
+	FOREIGN KEY (`featureId`) REFERENCES `feature`(`id`) ON UPDATE cascade ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE TABLE `featureImage` (
+	`featureId` text NOT NULL,
+	`imageId` text NOT NULL,
+	`intent` text DEFAULT 'undefined' NOT NULL,
+	`isPublished` integer DEFAULT false NOT NULL,
+	`publishedAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+	PRIMARY KEY(`featureId`, `imageId`),
+	FOREIGN KEY (`featureId`) REFERENCES `feature`(`id`) ON UPDATE cascade ON DELETE cascade,
+	FOREIGN KEY (`imageId`) REFERENCES `image`(`id`) ON UPDATE cascade ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `canonical_intent` ON `featureImage` (`featureId`) WHERE intent = 'canonical';--> statement-breakpoint
+CREATE TABLE `featureProperty` (
+	`id` text PRIMARY KEY NOT NULL,
+	`featureId` text NOT NULL,
+	`propertyId` text NOT NULL,
+	`propertyValueId` text,
+	`value` text,
+	FOREIGN KEY (`featureId`) REFERENCES `feature`(`id`) ON UPDATE cascade ON DELETE cascade,
+	FOREIGN KEY (`propertyId`) REFERENCES `property`(`id`) ON UPDATE cascade ON DELETE cascade,
+	FOREIGN KEY (`propertyValueId`) REFERENCES `propertyValue`(`id`) ON UPDATE cascade ON DELETE set null
+);
+--> statement-breakpoint
+CREATE TABLE `featurePropertyI18n` (
+	`featurePropertyId` text NOT NULL,
+	`lang` text NOT NULL,
+	`value` text NOT NULL,
+	PRIMARY KEY(`featurePropertyId`, `lang`),
+	FOREIGN KEY (`featurePropertyId`) REFERENCES `featureProperty`(`id`) ON UPDATE cascade ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE TABLE `userFeature` (
+	`userId` text NOT NULL,
+	`featureId` text NOT NULL,
+	`isVisited` integer DEFAULT false NOT NULL,
+	`isWishlisted` integer DEFAULT false NOT NULL,
+	`createdAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	`modifiedAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	PRIMARY KEY(`userId`, `featureId`),
+	FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON UPDATE cascade ON DELETE cascade,
+	FOREIGN KEY (`featureId`) REFERENCES `feature`(`id`) ON UPDATE cascade ON DELETE cascade
+);

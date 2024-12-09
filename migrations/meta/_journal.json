@@ -5,92 +5,15 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1731900801199,
+      "when": 1733754982408,
       "tag": "0000_init",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "6",
-      "when": 1731952663590,
-      "tag": "0001_add_formatted_address_to_feature",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1731954370809,
-      "tag": "0002_add_address_properties_to_i18n",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1731991543512,
-      "tag": "0003_rename_address_field",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1732031781663,
-      "tag": "0004_add_env_to_images",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1732277061174,
-      "tag": "0005_add_cloudinary_fields",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1732535988387,
-      "tag": "0006_link_to_images",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1732556810881,
-      "tag": "0007_cascade_image_deletes",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "6",
-      "when": 1732596963620,
-      "tag": "0008_make_organisations_publishable",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "6",
-      "when": 1732600924604,
-      "tag": "0009_add_organisationId_to_task",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "6",
-      "when": 1732691839632,
-      "tag": "0010_add_isArchive_to_all_resources",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "6",
-      "when": 1732710377701,
-      "tag": "0011_add_metadata_to_images",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "6",
-      "when": 1732805583235,
-      "tag": "0012_make_capturedAt_nullable",
+      "when": 1733760361871,
+      "tag": "0001_data",
       "breakpoints": true
     }
   ]

@@ -1,1 +1,0 @@
-ALTER TABLE `task` ADD `organisationId` text NOT NULL REFERENCES organisation(id) ON DELETE CASCADE ON UPDATE CASCADE;
