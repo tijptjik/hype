@@ -6,6 +6,8 @@ import { getRouterState } from '$lib/context/router.svelte';
 // COMPONENTS
 import Reject from '$lib/components/common/buttons/Reject.svelte';
 import Accept from '$lib/components/common/buttons/Accept.svelte';
+import Info from '$lib/components/forms/extra/Info.svelte';
+import NewPhotoContent from '$lib/components/tasks/info/NewPhoto.svelte';
 // TYPES
 import type { TaskAPI, EntityRouter } from '$lib/types';
 
@@ -82,4 +84,7 @@ const handleAccept = async (e: Event) => {
 <div class="flex items-center gap-4">
   <Reject onclick={handleReject} />
   <Accept onclick={handleAccept} />
+  <Info borderColor="border-info">
+    <NewPhotoContent />
+  </Info>
 </div>

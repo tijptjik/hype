@@ -6,8 +6,14 @@ import { getRouterState } from '$lib/context/router.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Trash, EyeSlash, XCircle, CubeTransparent } from '@steeze-ui/heroicons';
+import Info from '$lib/components/forms/extra/Info.svelte';
+import ReportedMissingContent from '$lib/components/tasks/info/ReportedMissing.svelte';
 // TYPES
-import type { TaskAPI, ReportedMissingAction, EntityRouter, reviewOutcomes } from '$lib/types';
+import type {
+  TaskAPI,
+  ReportedMissingAction,
+  EntityRouter,
+} from '$lib/types';
 
 // STATE :: PROPS
 let { task }: { task: TaskAPI } = $props();
@@ -86,8 +92,10 @@ const handleSet = async (e: Event, action: ReportedMissingAction) => {
     if (action === 'set-archived') {
       changeSet.isArchived = true;
       changeSet.isPublished = false;
+      changeSet.isVisitable = false;
     } else if (action === 'set-unpublished') {
       changeSet.isPublished = false;
+      changeSet.isVisitable = false;
     } else if (action === 'set-intangible') {
       changeSet.isIntangible = true;
     }
@@ -139,4 +147,7 @@ const handleSet = async (e: Event, action: ReportedMissingAction) => {
       )}
     </div>
   {/each}
+  <Info>
+    <ReportedMissingContent />
+  </Info>
 </div>
