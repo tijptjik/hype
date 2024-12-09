@@ -1,5 +1,5 @@
-import { PRIVATE_CLOUDINARY_API_SECRET } from '$env/static/private';
-import { v2 as cloudinary } from 'cloudinary';
+// import { PRIVATE_CLOUDINARY_API_SECRET } from '$env/static/private';
+// import { v2 as cloudinary } from 'cloudinary';
 import { error, json } from '@sveltejs/kit';
 
 export const POST = async ({ request }) => {
@@ -8,10 +8,11 @@ export const POST = async ({ request }) => {
   let timestamp = Date.now();
 
   try {
-    const signature = cloudinary.utils.api_sign_request(
-      { ...paramsToSign, timestamp },
-      PRIVATE_CLOUDINARY_API_SECRET
-    );
+    // const signature = cloudinary.utils.api_sign_request(
+    //   { ...paramsToSign, timestamp },
+    //   PRIVATE_CLOUDINARY_API_SECRET
+    // );
+    const signature = '1234567890';
     return json({
       signature,
       timestamp,
