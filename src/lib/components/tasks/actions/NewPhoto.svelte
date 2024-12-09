@@ -1,19 +1,27 @@
 <script lang="ts">
+// LIB
+import { goToResource } from '$lib';
+// CONTEXT
+import { getRouterState } from '$lib/context/router.svelte';
 // COMPONENTS
 import Reject from '$lib/components/common/buttons/Reject.svelte';
 import Accept from '$lib/components/common/buttons/Accept.svelte';
 // TYPES
-import type { TaskAPI, FeatureProperty } from '$lib/types';
+import type { TaskAPI, EntityRouter } from '$lib/types';
 
 let { task }: { task: TaskAPI } = $props();
 
-const handleReject = async () => {
+// CONTEXT :: ROUTER
+const routerState = getRouterState() as EntityRouter;
+
+const handleReject = async (e: Event) => {
+  e.preventDefault();
   try {
     await fetch(`/api/tasks/${task.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        reviewResult: 'rejected',
+        reviewOutcome: 'rejected',
         reviewAction: 'ignored'
       })
     });
@@ -23,22 +31,28 @@ const handleReject = async () => {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          isArchived: true
+          isArchived: true,
+          refType: 'feature',
+          refId: task.featureId
         })
       });
     }
+
+    // TODO Navigate to the next Task
+    goToResource(e, routerState, 'task');
   } catch (error) {
     console.error('Failed to reject:', error);
   }
 };
 
-const handleAccept = async () => {
+const handleAccept = async (e: Event) => {
+  e.preventDefault();
   try {
     await fetch(`/api/tasks/${task.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        reviewResult: 'accepted',
+        reviewOutcome: 'accepted',
         reviewAction: 'add-photo'
       })
     });
@@ -48,12 +62,17 @@ const handleAccept = async () => {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          refType: 'feature',
+          refId: task.featureId,
           featureImage: {
             isPublished: true
           }
         })
       });
     }
+
+    // TODO Navigate to the next Task
+    goToResource(e, routerState, 'task');
   } catch (error) {
     console.error('Failed to accept:', error);
   }
@@ -61,13 +80,6 @@ const handleAccept = async () => {
 </script>
 
 <div class="flex items-center gap-4">
-  <!-- <GradeRating
-    grade={(
-      task.feature?.properties.find(
-        (p) => p.property.key === 'grade'
-      ) as FeatureProperty
-    )?.propertyValue?.value} /> -->
-
   <Reject onclick={handleReject} />
   <Accept onclick={handleAccept} />
 </div>

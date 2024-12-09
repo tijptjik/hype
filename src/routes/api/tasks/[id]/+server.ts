@@ -1,13 +1,9 @@
 import { error } from '@sveltejs/kit';
 // API
-import {
-  getDatabaseOrError,
-  isValidQueryParamsOrError,
-  JSONResponseOrError
-} from '$lib/api';
+import { getDatabaseOrError, JSONResponseOrError } from '$lib/api';
 // DB
 import { hierarchicalEntityQuery } from '$lib/db';
-import { projectRole, task } from '$lib/db/schema';
+import { projectRole } from '$lib/db/schema';
 import { patchTask, customHierarchy } from '$lib/db/services/task';
 // TYPES
 import type { RequestHandler } from '@sveltejs/kit';
@@ -78,6 +74,9 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
 
   try {
     const data = await request.json();
+    // Infer reviewerId and isReviewed from reviewOutcome and active user
+    data.isReviewed = data.reviewOutcome ? true : false;
+    data.reviewerId = data.isReviewed ? userId : null;
     const result = await patchTask(db, params[PUBLIC_IDENTIFIER]!, data);
     return JSONResponseOrError(result);
   } catch (e) {

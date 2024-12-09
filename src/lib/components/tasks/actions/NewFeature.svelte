@@ -1,22 +1,27 @@
 <script lang="ts">
+// LIB
+import { goToResource, goToEntity } from '$lib';
 // CONTEXT
-import { goto } from '$app/navigation';
 import { getRouterState } from '$lib/context/router.svelte';
 // COMPONENTS
 import Reject from '$lib/components/common/buttons/Reject.svelte';
 import Accept from '$lib/components/common/buttons/Accept.svelte';
 // TYPES
-import type { TaskAPI } from '$lib/types';
+import type { TaskAPI, EntityRouter } from '$lib/types';
 
 let { task }: { task: TaskAPI } = $props();
 
-const handleReject = async () => {
+// CONTEXT :: ROUTER
+const routerState = getRouterState() as EntityRouter;
+
+const handleReject = async (e: Event) => {
+  e.preventDefault();
   try {
     await fetch(`/api/tasks/${task.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        reviewResult: 'rejected',
+        reviewOutcome: 'rejected',
         reviewAction: 'ignored'
       })
     });
@@ -31,18 +36,21 @@ const handleReject = async () => {
         })
       });
     }
+    // TODO Navigate to the next Task
+    goToResource(e, routerState, 'task');
   } catch (error) {
     console.error('Failed to reject:', error);
   }
 };
 
-const handleAccept = async () => {
+const handleAccept = async (e: Event) => {
+  e.preventDefault();
   try {
     await fetch(`/api/tasks/${task.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        reviewResult: 'accepted',
+        reviewOutcome: 'accepted',
         reviewAction: 'add-feature'
       })
     });
@@ -57,16 +65,7 @@ const handleAccept = async () => {
       });
     }
 
-    const routerState = getRouterState();
-
-    routerState.updateWith({
-      resource: 'feature',
-      entity: task.featureId,
-      facet: 'core'
-    })
-
-    goto(`/admin/feature/${task.featureId}`);
-    
+    goToEntity(e, routerState, 'feature', task.featureId);
   } catch (error) {
     console.error('Failed to accept:', error);
   }

@@ -1,10 +1,13 @@
 <script lang="ts">
+// LIB
+import { goToResource } from '$lib';
+// CONTEXT
+import { getRouterState } from '$lib/context/router.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Trash, EyeSlash, XCircle, CubeTransparent } from '@steeze-ui/heroicons';
-import GradeRating from '$lib/components/common/GradeRating.svelte';
 // TYPES
-import type { TaskAPI, ReportedMissingAction, FeatureProperty } from '$lib/types';
+import type { TaskAPI, ReportedMissingAction, EntityRouter, reviewOutcomes } from '$lib/types';
 
 // STATE :: PROPS
 let { task }: { task: TaskAPI } = $props();
@@ -37,8 +40,12 @@ let actions = [
   }
 ];
 
+// CONTEXT :: ROUTER
+const routerState = getRouterState() as EntityRouter;
+
 // ACTIONS
-const handleReject = async () => {
+const handleReject = async (e: Event) => {
+  e.preventDefault();
   try {
     if (task.id) {
       // Update task
@@ -46,7 +53,7 @@ const handleReject = async () => {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          reviewResult: 'rejected',
+          reviewOutcome: 'rejected',
           reviewAction: 'ignored'
         })
       });
@@ -54,19 +61,26 @@ const handleReject = async () => {
 
     // Update image
     if (task.imageId) {
-      await fetch(`/api/images/${task.imageId}`, {
+      await fetch(`/api/images/${task.imageId!}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          isArchived: true
+          isArchived: true,
+          refType: 'feature',
+          refId: task.featureId
         })
       });
     }
+
+    // TODO Navigate to the next Task
+    goToResource(e, routerState, 'task');
   } catch (error) {
     console.error('Failed to reject:', error);
   }
 };
-const handleSet = async (action: ReportedMissingAction) => {
+
+const handleSet = async (e: Event, action: ReportedMissingAction) => {
+  e.preventDefault();
   try {
     let changeSet: Record<string, unknown> = {};
     if (action === 'set-archived') {
@@ -91,10 +105,13 @@ const handleSet = async (action: ReportedMissingAction) => {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        reviewResult: 'accepted',
+        reviewOutcome: 'accepted',
         reviewAction: action
       })
     });
+
+    // TODO Navigate to the next Task
+    goToResource(e, routerState, 'task');
   } catch (error) {
     console.error('Failed to archive:', error);
   }
@@ -104,32 +121,22 @@ const handleSet = async (action: ReportedMissingAction) => {
 {#snippet button(icon, label, onHoverClass, onclick)}
   <button
     class="btn btn-ghost btn-sm hover:bg-transparent hover:{onHoverClass}"
-    {onclick}>
+    onclick={(e: Event, ...args: any[]) => onclick(e, ...args)}>
     <Icon src={icon} class="h-4 w-4" />
     {label}
   </button>
 {/snippet}
 
 <div class="flex items-center gap-4">
-  <!-- <GradeRating
-    grade={(
-      task.feature?.properties.find(
-        (p) => p.property.key === 'grade'
-      ) as FeatureProperty
-    )?.propertyValue?.value} /> -->
-
+  {#each actions.slice(3) as action}
+    {@render button(action.icon, action.label, action.onHoverClass, handleReject)}
+  {/each}
+  <div class="divider divider-horizontal"></div>
   {#each actions.slice(0, 3) as action}
     <div>
-      {@render button(action.icon, action.label, action.onHoverClass, () =>
-        handleSet(action.action as ReportedMissingAction)
+      {@render button(action.icon, action.label, action.onHoverClass, (e: Event) =>
+        handleSet(e, action.action as ReportedMissingAction)
       )}
     </div>
-  {/each}
-
-  <div class="divider divider-horizontal"></div>
-  {#each actions.slice(3) as action}
-    {@render button(action.icon, action.label, action.onHoverClass, () =>
-      handleSet(action.action as ReportedMissingAction)
-    )}
   {/each}
 </div>

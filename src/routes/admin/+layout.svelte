@@ -17,7 +17,7 @@ const hierarchicalState = setHierarchicalResourceState();
 
 let viewportContained = $derived(
   routerState.entity == false ||
-  routerState.facet == 'address' ||
+    routerState.facet == 'address' ||
     routerState.facet == 'images' ||
     (routerState.resource == 'feature' && routerState.facet == 'core') ||
     (routerState.resource == 'task' && routerState.entity)
