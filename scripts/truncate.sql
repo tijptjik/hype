@@ -1,3 +1,6 @@
+-- Defer foreign key enforcement in this transaction.
+PRAGMA defer_foreign_keys = on;
+
 DELETE FROM account;
 DELETE FROM feature;
 DELETE FROM featureI18n;

@@ -16,7 +16,7 @@
     "db:migrate:cf:preview": "wrangler d1 migrations apply --env preview ghostmapper-preview --remote",
     "db:studio:local": "LOCAL_DB_PATH=$(find .wrangler/state/v3/d1/miniflare-D1DatabaseObject -type f -name '*.sqlite' -print -quit) drizzle-kit studio",
     "db:studio:cf:preview": "source .env.drizzle && DB_ID='b7a2dc55-f43b-40f0-993a-abb36a6a5543' drizzle-kit studio",
-    "db:studio:cf:prod": "source .env.drizzle && DB_ID='15450556-924d-4640-95b2-9c33055b645' drizzle-kit studio",
+    "db:studio:cf:prod": "source .env.drizzle && DB_ID='8ff2682b-8e78-4f9e-87bd-47f409d94184' drizzle-kit studio",
     "dev": "mullvad-exclude vite dev",
     "dev:cf": "bunx wrangler pages dev",
     "dev:cf:watch": "bun run dev:cf --live-reload",

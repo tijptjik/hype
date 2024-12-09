@@ -39,7 +39,7 @@ mode = "smart"
 [[d1_databases]]
 binding = "DB"                                       # i.e. available in your Worker on env.DB
 database_name = "ghostmapper-prod"
-database_id = "15450556-924d-4640-95b2-9c33055b645"
+database_id = "8ff2682b-8e78-4f9e-87bd-47f409d94184"
 preview_database_id = "DB"
 #sqlite = " e7352547963de7050bd7d94658afc4fe78b61811b7815da12d90be8e863abf4d.sqlite"
 
@@ -98,7 +98,7 @@ PUBLIC_GOOGLEMAPS_KEY = "AIzaSyD2vy_8I1q2WKo4J0z0Ot2ZhVvteDoLntI"
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "ghostmapper-prod"
-database_id = "15450556-924d-4640-95b2-9c33055b645"
+database_id = "8ff2682b-8e78-4f9e-87bd-47f409d94184"
 preview_database_id = "DB"
 
 ######## PREVIEW environment config ########

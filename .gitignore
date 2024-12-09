@@ -32,3 +32,4 @@ Thumbs.db
 local_*.sql
 scripts/data/
 scripts/.ipynb_checkpoints/
+.data/
