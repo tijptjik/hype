@@ -31,5 +31,8 @@ placeholder = placeholder ? placeholder : inputType === 'text' ? 'Type here' : '
 />
 
 {#if (isGenAI || languageTag !== 'core') && isTranslated}
-  <Labels {isGenAI} {languageTag} />
+  <div class="absolute top-[7px] right-2">
+    <Labels {isGenAI} {languageTag} />
+  </div>
 {/if}
+

@@ -88,13 +88,14 @@ function handlePaste(e: ClipboardEvent) {
   oninput={handleInput}
   onkeydown={handleKeyDown}
   onpaste={handlePaste}
-  class="min-h-[6rem] w-full overflow-y-auto whitespace-pre-wrap break-words rounded-lg border-none bg-neutral p-4 focus:outline-none"
+  class="min-h-[6rem] w-full overflow-y-auto whitespace-pre-wrap break-words rounded-lg border-none bg-neutral p-4 py-[9px] focus:outline-none"
   data-placeholder={placeholder}
   class:placeholder-shown={!value}>
   {value}
 </div>
 
 {#if (isGenAI || languageTag !== 'core') && isTranslated}
-  <Labels {isGenAI} {languageTag} absolute={true} />
+  <div class="absolute top-[11px] right-2">
+    <Labels {isGenAI} {languageTag} absolute={true}/>
+  </div>
 {/if}
-

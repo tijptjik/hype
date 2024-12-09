@@ -53,7 +53,7 @@ let id = $derived(getId(field, fieldRoot, fieldIndex, fieldDiscriminator, fieldK
       </span>
     </div>
     <div
-      class="flex items-baseline gap-2 rounded-lg border-none bg-neutral pl-0 pr-3 outline outline-1 outline-black focus-within:outline-neutral-500">
+      class="relative rounded-lg border-none bg-neutral pl-0 pr-3 outline outline-1 outline-black focus-within:outline-neutral-500">
       <FormTextArea
         bind:value
         bind:isGenAI
@@ -61,7 +61,7 @@ let id = $derived(getId(field, fieldRoot, fieldIndex, fieldDiscriminator, fieldK
         {languageTag}
         {...field}
         onchange={() =>
-          updateForm(form, field, languageTag, fieldRoot, fieldIndex, fieldKey, value, isGenAI)} />
+          updateForm(form, field, languageTag, fieldRoot, fieldIndex, fieldKey, value, false)} />
     </div>
     <ErrorLabel {errors} {field} {languageTag} {fieldRoot} {fieldIndex} {fieldKey} />
   </label>

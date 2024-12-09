@@ -53,7 +53,7 @@ let id = $derived(
   <FieldLabel {field} {fieldRoot} {fieldIndex} {fieldKey} {constraints} />
   <!-- {/if} -->
   <div
-    class="flex items-center gap-2 rounded-lg border-1 border-transparent bg-neutral pl-2 pr-3 focus-within:outline focus-within:outline-1 focus-within:outline-neutral-500">
+    class="group relative rounded-lg border-1 border-transparent bg-neutral pl-2 pr-3 focus-within:outline focus-within:outline-1 focus-within:outline-neutral-500">
     <FormInput
       bind:value
       bind:isGenAI
@@ -69,7 +69,7 @@ let id = $derived(
           fieldIndex,
           fieldKey,
           value,
-          isGenAI
+          false
         )} />
   </div>
   <ErrorLabel {errors} {field} {languageTag} {fieldRoot} {fieldIndex} {fieldKey} />

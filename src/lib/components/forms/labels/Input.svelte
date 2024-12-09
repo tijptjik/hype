@@ -12,12 +12,12 @@ const { isGenAI, languageTag, absolute = false }: Props = $props();
 
 {#snippet label(text: string, badgeType: string = 'ghost')}
   <span
-    class="badge badge-outline badge-sm flex-shrink-0 badge-{badgeType} border-primary bg-neutral p-2.5"
+    class="opacity-70 group-focus-within:opacity-0 badge badge-outline badge-sm flex-shrink-0 badge-{badgeType} border-primary bg-neutral p-2.5"
     >{text}</span>
 {/snippet}
 
 {#if absolute}
-  <div class="flex flex-col-reverse gap-2.5 flex-shrink-0">
+  <div class="flex flex-col-reverse gap-2.5 flex-shrink-0 group-focus-within:opacity-0">
     {#if isGenAI}
       {@render label('GenAI')}
     {/if}
