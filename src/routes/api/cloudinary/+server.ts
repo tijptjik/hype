@@ -1,6 +1,6 @@
-// import { PRIVATE_CLOUDINARY_API_SECRET } from '$env/static/private';
-// import { v2 as cloudinary } from 'cloudinary';
+import { PRIVATE_CLOUDINARY_API_SECRET } from '$env/static/private';
 import { error, json } from '@sveltejs/kit';
+import crypto from 'crypto';
 
 export const POST = async ({ request }) => {
   const body = await request.json();
@@ -8,11 +8,24 @@ export const POST = async ({ request }) => {
   let timestamp = Date.now();
 
   try {
-    // const signature = cloudinary.utils.api_sign_request(
-    //   { ...paramsToSign, timestamp },
-    //   PRIVATE_CLOUDINARY_API_SECRET
-    // );
-    const signature = '1234567890';
+    // 1. Combine all parameters (except file, cloud_name, resource_type, api_key)
+    const params = { ...paramsToSign, timestamp };
+    
+    // 2. Sort parameters alphabetically and create key=value pairs
+    const sortedParams = Object.keys(params)
+      .sort()
+      .map(key => `${key}=${params[key]}`)
+      .join('&');
+
+    // 3. Append API secret
+    const stringToSign = sortedParams + PRIVATE_CLOUDINARY_API_SECRET;
+
+    // 4. Create SHA-1 hash
+    const signature = crypto
+      .createHash('sha1')
+      .update(stringToSign)
+      .digest('hex');
+
     return json({
       signature,
       timestamp,
@@ -20,6 +33,6 @@ export const POST = async ({ request }) => {
       apikey: import.meta.env.VITE_CLOUDINARY_API_KEY
     });
   } catch (e) {
-    return error(500, `${error}`);
+    error(500, `Failed to generate signature: ${e}`);
   }
 };

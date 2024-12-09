@@ -113,7 +113,7 @@ const handleClick = (e: Event, href: string) => {
           handleClick={(e) =>
             routerState
               ? goToResource(e, routerState, 'organisation')
-              : handleClick(e, '/admin/organisation')
+              : handleClick(e, '/admin/organisations')
           } />
       </li>
     </ul>
