@@ -46,18 +46,20 @@ $effect(() => {
 });
 
 // HANDLERS
-const handleClick = (e: MouseEvent, href: string, resource: boolean = false) => {
+const handleClick = (e: Event, href: string) => {
   e.preventDefault();
   e.stopPropagation();
   let url = new URL(window.location.href);
   url.pathname = href;
-  routerState.updateWith({
-    resource: resource,
-    entity: false,
-    facet: false
-  });
-  console.log('url', url.toString());
-  goto(url.toString());
+  if (routerState) {  
+    routerState.updateWith({
+      resource: false,
+      entity: false,
+      facet: false
+    });
+  }
+  // TODO handle the ability to deep-link to Tasks from outside the Admin panel.
+  window.location.href = url.toString();
 };
 </script>
 
@@ -65,7 +67,7 @@ const handleClick = (e: MouseEvent, href: string, resource: boolean = false) => 
   <a
     draggable="false"
     {href}
-    onclick={(e) => handleClick(e, href, false)}
+    onclick={(e) => handleClick(e, href)}
     class="select-none {className}"
     class:btn-active={$page.url.pathname.startsWith(href)}>
     {label}
@@ -92,7 +94,11 @@ const handleClick = (e: MouseEvent, href: string, resource: boolean = false) => 
       <li>
         <IconicMenuButton
           href="/admin/tasks"
-          handleClick={(e) => goToResource(e, routerState, 'task')}
+          handleClick={(e) =>
+            routerState
+              ? goToResource(e, routerState, 'task')
+              : handleClick(e, '/admin/tasks')
+          }
           iconSrc={InboxArrowDown}
           matchFromStart={false}
           {notificationCount} />
