@@ -40,7 +40,13 @@ $effect(() => {
   onmouseenter={() => selectActiveImage(image)}
   onclick={() => selectActiveImage(image)}>
   <Image
-    class="h-50 w-50 mx-auto overflow-hidden rounded-lg text-neutral"
+    class="h-50 w-50 mx-auto overflow-hidden rounded-lg text-neutral border-base-100 {image.isPublished
+      ? ''
+      : 'opacity-70 border-base-200/60 border-2'}
+      {image == imageSets.activeImage
+      ? ''
+      : ''}
+      "
     src={getURLfromImage({
       image,
       transformation: 'c_fill,w_200,h_200'
