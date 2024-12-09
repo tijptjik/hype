@@ -67,6 +67,13 @@ Migrate `staging` database on `cloudflare` to the latest migration
 bun run db:migrate:cf:preview
 ```
 
+## Seeding on Prod
+
+1. Export all tables from DataGrep, except for sqlite_sequence, sqlite_master and d1_migrations
+2. Replace the instructions in `migrations/0001_data.sql` with the instructions from the export
+3. Remove the latest migration from [Cloudflare D1](https://dash.cloudflare.com/a6eeace4b6d9f8e07ab307964e74d801/workers/d1) with Drizzle Studio. Use Google Chrome with the extension.
+4. Run `bun run db:migrate:cf:prod`
+
 ## Schema
 
 The schema is defined in `src/lib/db/schema.ts`.

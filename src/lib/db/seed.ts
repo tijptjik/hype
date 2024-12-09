@@ -68,12 +68,6 @@ const seedBank = {
     data: userJson,
     chunk: 0
   },
-  image: {
-    name: 'Images',
-    table: image,
-    data: imagesJson,
-    chunk: 4
-  },
   account: {
     name: 'Accounts',
     table: account,
@@ -85,6 +79,12 @@ const seedBank = {
     table: session,
     data: sessionJson,
     chunk: 0
+  },
+  image: {
+    name: 'Images',
+    table: image,
+    data: imagesJson,
+    chunk: 4
   },
   organisation: {
     name: 'Organisations',
@@ -219,12 +219,12 @@ const seedBank = {
   //   data: featurePropertyI18nJson,
   //   chunk: 16
   // }
-  featureImage: {
-    name: 'FeatureImages',
-    table: featureImage,
-    data: featureImagesJson,
-    chunk: 0
-  },
+  // featureImage: {
+  //   name: 'FeatureImages',
+  //   table: featureImage,
+  //   data: featureImagesJson,
+  //   chunk: 0
+  // },
   task: {
     name: 'Tasks',
     table: task,

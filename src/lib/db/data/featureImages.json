@@ -1,16 +1,44 @@
 [
   {
     "featureId": "-7dU5oH9HEYk",
-    "imageId": "9V_yCLhQOKYC",
+    "imageId": "Ex2lZ2augV0e",
     "intent": "undefined",
-    "isPublished": 1,
-    "publishedAt": "2024-11-26T04:03:07.748Z"
+    "isPublished": 0,
+    "publishedAt": "2024-12-09T18:34:09.350Z"
   },
   {
     "featureId": "-7dU5oH9HEYk",
-    "imageId": "_NEJZ3NNZnJU",
+    "imageId": "x8cnXvqxcCsH",
+    "intent": "context",
+    "isPublished": 1,
+    "publishedAt": "2024-12-09T18:34:09.433Z"
+  },
+  {
+    "featureId": "-7dU5oH9HEYk",
+    "imageId": "kFn6rW579mJU",
     "intent": "canonical",
     "isPublished": 1,
-    "publishedAt": "2024-11-26T04:22:45.262Z"
+    "publishedAt": "2024-12-09T18:34:09.585Z"
+  },
+  {
+    "featureId": "-CPB8EQMld2x",
+    "imageId": "xVhDfXN_x4bg",
+    "intent": "evidence",
+    "isPublished": 0,
+    "publishedAt": "2024-12-09T19:43:16.448Z"
+  },
+  {
+    "featureId": "-CPB8EQMld2x",
+    "imageId": "4IMswNmetYM5",
+    "intent": "context",
+    "isPublished": 1,
+    "publishedAt": "2024-12-09T19:43:34.438Z"
+  },
+  {
+    "featureId": "-CPB8EQMld2x",
+    "imageId": "51PJc5ZRQsX5",
+    "intent": "canonical",
+    "isPublished": 1,
+    "publishedAt": "2024-12-09T19:43:35.004Z"
   }
 ]
