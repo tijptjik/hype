@@ -13,7 +13,7 @@ import Viewer from '$lib/components/common/Viewer.svelte';
 import ScrollArrow from '$lib/components/images/gallery/ScrollArrow.svelte';
 import IconAnchor from '$lib/components/common/IconAnchor.svelte';
 // TYPES
-import type { SectionProps, GetImageAPI, ImageEditRefs } from '$lib/types';
+import type { SectionProps, GetImageAPI, ResourceType } from '$lib/types';
 
 // Props
 let { ...sectionProps }: SectionProps & { refs: ImageEditRefs } = $props();
@@ -42,8 +42,10 @@ beforeNavigate(() => {
         image={imageSets.activeImage as GetImageAPI}
         isCrossfade={false}
         enableDropzone={true}
-        resource={routerState.resource as ResourceType}
-        entityId={routerState.entity as string}
+        editContext={{
+          refType: routerState.resource as ResourceType,
+          refId: routerState.entity as string
+        }}
         >
         {#snippet RightActions()}
           {#if imageSets.activeImage}

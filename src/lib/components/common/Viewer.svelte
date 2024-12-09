@@ -24,8 +24,7 @@ import IconAnchor from '$lib/components/common/IconAnchor.svelte';
 // TYPES
 import type {
   GetImageAPI,
-  ResourceType,
-  Id,
+  ImageEditRefs,
   Organisation,
   Project,
   ImageUploadRefs as Refs
@@ -36,8 +35,7 @@ const resourceState = getResourceState();
 
 type Props = {
   image: GetImageAPI | null;
-  resource?: ResourceType;
-  entityId?: Id;
+  editContext?: ImageEditRefs;
   LeftActions?: any;
   MiddleActions?: any;
   RightActions?: any;
@@ -49,8 +47,7 @@ type Props = {
 // STATE : PROPS
 let {
   image,
-  resource,
-  entityId,
+  editContext,
   LeftActions,
   MiddleActions,
   RightActions,
@@ -78,7 +75,7 @@ const [send, receive] = crossfade({
 
 // HANDLERS :: FILE DROP
 const handleDrop = async (e: CustomEvent) => {
-  if (!enableDropzone || !resource || !entityId) return;
+  if (!enableDropzone || !editContext?.refType || !editContext?.refId) return;
 
   // Reset states at the start of new upload
   resetImageStates();
@@ -87,8 +84,8 @@ const handleDrop = async (e: CustomEvent) => {
   await handleFilesSelect(e, {
     isStandalone: true,
     refs: {
-      resource,
-      entity: entityId,
+      resource: editContext.refType,
+      entity: editContext.refId,
       organisation: resourceState.state.organisation as Organisation,
       project: resourceState.state.project as Project,
       imageToReplace: image as GetImageAPI
@@ -132,7 +129,6 @@ $effect(() => {
       class="flex flex-col items-center gap-2 rounded-lg"
       in:scale={{ duration: 200, delay: 200, start: 0.95 }}>
       <span class="loading loading-spinner loading-lg text-primary"></span>
-      <!-- <span class="text-sm">{message}</span> -->
     </div>
   </div>
 {/snippet}

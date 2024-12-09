@@ -6,7 +6,7 @@ import { getHierarchicalResourceState as getResourceState } from '$lib/context/r
 import Header from '$lib/components/forms/extra/Header.svelte';
 import Viewer from '$lib/components/common/Viewer.svelte';
 // TYPES
-import type { EntityRouter, SectionProps, GetImageAPI } from '$lib/types';
+import type { EntityRouter, SectionProps, GetImageAPI, ResourceType} from '$lib/types';
 
 let sectionProps: SectionProps & { image: GetImageAPI | null } = $props();
 
@@ -22,8 +22,10 @@ const resourceState = getResourceState();
     <div class="absolute inset-0 h-full w-full flex-none">
       <Viewer
         {...sectionProps}
-        resource={routerState.resource}
-        entityId={resourceState.state[routerState.resource]?.id}
+        editContext={{
+          refType: routerState.resource as ResourceType,
+          refId: resourceState.state[routerState.resource]?.id
+        }}
         enableDropzone={true}
         enableReplacement={true} />
     </div>

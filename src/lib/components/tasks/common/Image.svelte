@@ -13,6 +13,8 @@ let { task }: { task: TaskAPI } = $props();
   <Viewer
     image={imageSets.activeImage as GetImageAPI}
     enableDropzone={true}
-    resource="feature"
-    entityId={task.featureId} />
+    editContext={{
+      refType: 'feature',
+      refId: task.featureId
+    }} />
 </div>
