@@ -1,29 +1,16 @@
 <script lang="ts">
-// APP
-import { goto } from '$app/navigation';
-// COMPONENTS
+// NAVIGATION
+import { afterNavigate } from '$app/navigation';
+// ICONS
 import { MagnifyingGlass, XMark, Sun } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
-import { afterNavigate } from '$app/navigation';
 // CONTEXT
-import {
-  resources,
-  filteredResources,
-  filterTexts,
-  queryPrimsParams,
-  queryFilterParams
-} from '$lib/stores/resources.svelte';
-import { getRouterState } from '$lib/context/router.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // TYPES
-import type {
-  ResourceRouter,
-  ResourceType,
-  FilterableResourceToEntityId,
-  EntityWithData
-} from '$lib/types';
+import type { ResourceType, AdminFilterStates } from '$lib/types';
 
 // STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as ResourceRouter;
+const resourceState = getHierarchicalResourceState();
 
 // STATE : PROPS
 const {
@@ -40,17 +27,9 @@ const {
   showReviewedToggle?: boolean;
 } = $props();
 
-// STATE :: LOCAL
-let showUnpublishedOnly: boolean = $state(
-  queryFilterParams[routerState.resource].isPublished == false
-);
-let showUnreviewedOnly: boolean = $state(
-  queryFilterParams[routerState.resource].isReviewed == false
-);
-
 // Reset filter text after navigation if it's for the current resource
 afterNavigate(() => {
-  if (routerState.resource === resourceType && resourceType !== 'feature') {
+  if (resourceState.activeResource === resourceType && resourceType !== 'feature') {
     resetInput();
   }
 });
@@ -61,43 +40,31 @@ $effect(() => {
   }
 });
 
-// STATE : DERIVED :: FILTERED RESOURCES
-$effect(() => {
-  const type = resourceType;
-  filteredResources[type] = resources[type].filter((item) => {
-    const matchesSearch =
-      filterTexts[type] === '' ||
-      item.name.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
-      item.nameShort?.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
-      item.description?.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
-      item.address?.toLowerCase().includes(filterTexts[type].toLowerCase()) ||
-      queryPrimsParams[type as keyof FilterableResourceToEntityId]?.includes(item.id);
-
-    const matchesPublished = !showUnpublishedOnly || !item.data.isPublished;
-    const matchesReviewed = !showUnreviewedOnly || !item.data.isReviewed;
-    return matchesSearch && matchesPublished && matchesReviewed;
-  }) as EntityWithData<typeof type>[];
-});
-
 // HANDLERS : INPUTS EVENTS
 function handleUnpublishedOnlyToggle(e: Event) {
   // TODO - detach the display in the main view from the sidebar, otherwise
   // the sidebar will display will also hide the unpublished items and potentially
   // hide the pinned filters.
   e.preventDefault();
-  showUnpublishedOnly = (e.target as HTMLInputElement).checked;
-  queryFilterParams[routerState.resource].isPublished = showUnpublishedOnly
-    ? false
-    : null;
+  let showUnpublishedOnly = (e.target as HTMLInputElement).checked;
+  resourceState.state.filters[resourceType as keyof AdminFilterStates].isPublished =
+    showUnpublishedOnly ? false : null;
 }
+let showUnpublishedOnly = $derived(
+  resourceState.state.filters[resourceType as keyof AdminFilterStates].isPublished ===
+    false
+);
 
 function handleReviewedToggle(e: Event) {
   e.preventDefault();
-  showUnreviewedOnly = (e.target as HTMLInputElement).checked;
-  queryFilterParams[routerState.resource].isReviewed = showUnreviewedOnly
-    ? false
-    : null;
+  let showUnreviewedOnly = (e.target as HTMLInputElement).checked;
+  resourceState.state.filters[resourceType as keyof AdminFilterStates].isReviewed =
+    showUnreviewedOnly ? false : null;
 }
+let showUnreviewedOnly = $derived(
+  resourceState.state.filters[resourceType as keyof AdminFilterStates].isReviewed ===
+    false
+);
 
 // HANDLERS : KEYBOARD EVENTS
 function handleKeydown(event: KeyboardEvent) {
@@ -108,7 +75,13 @@ function handleKeydown(event: KeyboardEvent) {
 
 // UTILS
 function resetInput() {
-  filterTexts[resourceType] = '';
+  resourceState.state.filters[resourceType as keyof AdminFilterStates].text = '';
+}
+
+function handleInput(e: Event) {
+  const target = e.target as HTMLInputElement;
+  resourceState.state.filters[resourceType as keyof AdminFilterStates].text =
+    target.value;
 }
 </script>
 
@@ -119,7 +92,7 @@ function resetInput() {
         type="checkbox"
         id="unpublished-toggle"
         class="toggle toggle-primary toggle-sm"
-        bind:checked={showUnpublishedOnly}
+        checked={showUnpublishedOnly}
         onchange={(e) => handleUnpublishedOnlyToggle(e)}
         aria-label="Show only unpublished items" />
       <label for="unpublished-toggle" class="text-sm"> Only Unpublished </label>
@@ -131,7 +104,7 @@ function resetInput() {
         type="checkbox"
         id="reviewed-toggle"
         class="toggle toggle-primary toggle-sm"
-        bind:checked={showUnreviewedOnly}
+        checked={showUnreviewedOnly}
         onchange={(e) => handleReviewedToggle(e)}
         aria-label="Hide reviewed items" />
       <label for="reviewed-toggle" class="text-sm"> Hide Reviewed </label>
@@ -146,12 +119,15 @@ function resetInput() {
       class="input m-0 w-full bg-neutral px-6 pr-10 text-sm focus:border-none focus:outline-none {rounded
         ? 'h-10 min-w-72 rounded-xl'
         : 'rounded-none'}"
-      bind:value={filterTexts[resourceType]}
+      bind:value={
+        resourceState.state.filters[resourceType as keyof AdminFilterStates].text
+      }
+      oninput={handleInput}
       onkeydown={handleKeydown}
       tabindex="1"
       aria-label="Filter {resourceType}s" />
     <div class="absolute inset-y-0 right-2 flex items-center pr-3">
-      {#if filterTexts[resourceType]}
+      {#if resourceState.state.filters[resourceType as keyof AdminFilterStates].text}
         <button
           onclick={resetInput}
           class="focus:outline-none"

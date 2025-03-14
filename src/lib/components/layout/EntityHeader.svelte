@@ -1,17 +1,17 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
+import { i18n } from '$lib/i18n';
 import * as m from '$lib/paraglide/messages.js';
 import { slide } from 'svelte/transition';
 import { NEW_REF } from '$lib';
 // STORES
-import { navItems } from '$lib/stores/navigation.svelte';
+import { navItems } from '$lib/navigation';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Bars3 } from '@steeze-ui/heroicons';
 import MenuItem from '$lib/components/menu/MenuItem.svelte';
 import EntityActions from '$lib/components/menu/EntityActions.svelte';
 // CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // TYPES
 import type {
@@ -74,7 +74,6 @@ const menuItems: Record<ResourceType, { label: string; ref: FacetType }[]> = {
 let { title, form }: { title: string; form: SuperFormResult<Resource> } = $props();
 
 // STATE : CONTEXT
-const routerState = getRouterState() as EntityRouter;
 const resourceState = getHierarchicalResourceState();
 
 // Get parent info
@@ -88,18 +87,23 @@ function getParentHref(parentPath: string): string {
 }
 const onclick = (e: Event, url: string) => {
   e.preventDefault();
-  routerState.update(url);
-  goto(url).then(() => goto(url)).then(() => goto(url));
-}
+  const langUrl = i18n.resolveRoute(url);
+  goto(langUrl)
+    .then(() => goto(langUrl))
+    .then(() => goto(langUrl));
+};
 </script>
 
 <header
   class="navbar sticky left-0 top-0 z-20 h-17.5 w-full flex-none bg-gradient-to-r from-rose-500 to-fuchsia-800 px-12 py-4 shadow-lg">
-  <div class="@container flex-1">
+  <div class="flex-1 @container">
     <div class="flex items-center space-x-4">
-      <Icon src={navItems[routerState.resource].icon} class="h-6 w-6" />
+      <Icon
+        src={navItems[resourceState.activeResource as ResourceType].icon}
+        class="h-6 w-6" />
       <div class=" flex flex-col">
-        <div class="hidden @md:flex items-center space-x-2 text-sm font-medium text-gray-300">
+        <div
+          class="hidden items-center space-x-2 text-sm font-medium text-gray-300 @md:flex">
           {#each parents as parent, i}
             <a
               draggable="false"
@@ -107,7 +111,7 @@ const onclick = (e: Event, url: string) => {
               in:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
               href={getParentHref(parent.href)}
               onclick={(e) => onclick(e, getParentHref(parent.href))}
-              class="inline-block h-5 overflow-hidden whitespace-nowrap hover:text-white select-none">
+              class="inline-block h-5 select-none overflow-hidden whitespace-nowrap hover:text-white">
               {parent.name}
             </a>
             {#if i < resourceState.parents.length - 1}
@@ -118,14 +122,17 @@ const onclick = (e: Event, url: string) => {
             {/if}
           {/each}
         </div>
-        <h2 class="text-2xl font-semibold transition-all truncate max-w-0 @xs:max-w-[14rem] @sm:max-w-[18rem] @md:max-w-[24rem] @lg:max-w-[30rem] @xl:max-w-[34rem] @2xl:max-w-[38rem] @3xl:max-w-[42rem] @4xl:max-w-[48rem] @5xl:max-w-[56rem] @6xl:max-w-[64rem]">{title}</h2>
+        <h2
+          class="max-w-0 truncate text-2xl font-semibold transition-all @xs:max-w-[14rem] @sm:max-w-[18rem] @md:max-w-[24rem] @lg:max-w-[30rem] @xl:max-w-[34rem] @2xl:max-w-[38rem] @3xl:max-w-[42rem] @4xl:max-w-[48rem] @5xl:max-w-[56rem] @6xl:max-w-[64rem]">
+          {title}
+        </h2>
       </div>
     </div>
   </div>
   <div class="flex-none">
     <ul class="mt-1 flex flex-row space-x-2 px-2">
-      {#each menuItems[routerState.resource] as facet}
-        {#if facet.ref !== 'images' || routerState.entity !== NEW_REF}
+      {#each menuItems[resourceState.activeResource as ResourceType] as facet}
+        {#if facet.ref !== 'images' || resourceState.activeEntity !== NEW_REF}
           <MenuItem {facet} />
         {/if}
       {/each}

@@ -1,20 +1,27 @@
 <script lang="ts">
+// SVELTE
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
-import { getRouterState } from '$lib/context/router.svelte';
-import { fade } from 'svelte/transition';
-// TYPES
-import type { Resource, EntityWithData, Ref } from '$lib/types';
+// I18N
+import { i18n } from '$lib/i18n';
+// LIB
+import { ADMIN_PATH } from '$lib/index';
+import { getURLfromImage } from '$lib/images/index.svelte';
+// CONTEXT
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+// COMPONENTS
 import Image from '$lib/components/common/Image.svelte';
-
-// TYTPES
-type KeyMap = {
-  id: keyof EntityWithData<Resource>;
-  title: keyof EntityWithData<Resource>;
-  subtitle?: keyof EntityWithData<Resource>;
-  description: keyof EntityWithData<Resource>;
-  image: keyof EntityWithData<Resource>;
-  tags?: keyof EntityWithData<Resource>[];
+// ENUMS
+import { HierarchicalResource } from '$lib/types';
+// TYPES
+import type { Resource, ImageDB } from '$lib/types';
+export type KeyMap = {
+  id: 'id' | 'code';
+  title: 'name' | 'nameShort' | 'title';
+  subtitle?: 'nameShort' | 'addressProperties.neighbourhood';
+  description: 'description' | 'displayAddress';
+  image: 'image';
+  tags?: keyof Resource[];
   badges?: Array<{
     label: string;
     variant?: 'primary' | 'secondary' | 'outline' | undefined;
@@ -22,7 +29,7 @@ type KeyMap = {
 };
 
 type Props = {
-  entity: EntityWithData<Resource>;
+  entity: Resource;
   keyMap: KeyMap;
   header?: any;
   badges?: any;
@@ -32,16 +39,18 @@ type Props = {
 
 let { entity, keyMap, header, badges, content, actions }: Props = $props();
 
-const routerState = getRouterState();
-const href = $derived(`/admin/${routerState.resourcePath}/${entity.data[keyMap.id]}${$page.url.search}`);
+const resourceState = getHierarchicalResourceState();
+const href = $derived(
+  `${ADMIN_PATH}/${resourceState.getEntityPath(
+    resourceState.activeResource as HierarchicalResource,
+    entity.id
+  )}${$page.url.search}`
+);
 
-const onclick = (e: MouseEvent) => {
+const onclick = (e: MouseEvent | KeyboardEvent) => {
   e.preventDefault();
-  routerState.updateWith({
-    entity: entity[keyMap.id as keyof typeof entity] as Ref,
-    facet: 'core'
-  });
-  goto(href);
+  resourceState.setFacet('core');
+  goto(i18n.resolveRoute(href));
 };
 </script>
 
@@ -51,23 +60,21 @@ const onclick = (e: MouseEvent) => {
   {onclick}
   role="article"
   tabindex="2"
-  class="card bg-base-100 shadow-xl transition-shadow duration-800 hover:shadow-2xl hover:shadow-primary hover:scale-[.99] active:outline-none focus-visible:outline-secondary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:shadow-primary select-none"
+  class="duration-800 card select-none bg-base-100 shadow-xl transition-shadow hover:scale-[.99] hover:shadow-2xl hover:shadow-primary focus-visible:shadow-primary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-secondary active:outline-none"
   onkeydown={(e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onclick(e);
     }
-  }}
->
+  }}>
   <!-- Header Section -->
   {#if header}
     {@render header(entity)}
   {:else}
     <Image
-      src={entity[keyMap.image] as string}
-      alt={entity[keyMap.title] as string}
-      layout="cover"
-    />
+      src={getURLfromImage({ image: entity[keyMap.image] as ImageDB })}
+      alt={entity[keyMap.title as keyof typeof entity] as string}
+      layout="cover" />
   {/if}
 
   <!-- Content Section -->
@@ -76,12 +83,12 @@ const onclick = (e: MouseEvent) => {
       {@render content(entity)}
     {:else}
       <h2 class="card-title mt-0">
-        {entity.data[keyMap.title]}
+        {entity[keyMap.title]}
         {#if keyMap.subtitle}
-          <small class="text-sm text-gray-500">{entity.data[keyMap.subtitle]}</small>
+          <small class="text-sm text-gray-500">{entity[keyMap.subtitle]}</small>
         {/if}
       </h2>
-      <p class="mt-2">{@html entity.data[keyMap.description]}</p>
+      <p class="mt-2">{@html entity[keyMap.description]}</p>
     {/if}
 
     <!-- Actions Section -->
@@ -100,20 +107,6 @@ const onclick = (e: MouseEvent) => {
             {/each}
           </div>
         {/if}
-        <!-- <div class="flex flex-wrap gap-2">
-          {#if keyMap.tags}
-            {#each keyMap.tags as tag}
-              {#each entity[tag as keyof typeof entity] as entityTag}
-                <span class="badge badge-outline">{entityTag}</span>
-              {/each}
-            {/each}
-          {/if}
-        </div> -->
-        <!-- <button
-          {onclick}
-          class="btn btn-primary">
-          View Details
-        </button> -->
       {/if}
     </div>
   </div>

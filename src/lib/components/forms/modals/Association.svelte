@@ -1,32 +1,36 @@
 <script lang="ts">
+// SVELTE
 import { createEventDispatcher } from 'svelte';
-import { goto } from '$app/navigation';
-import { filteredResources, resources, appMeta } from '$lib/stores/resources.svelte';
 import { page } from '$app/stores';
-import { NEW_REF } from '$lib';
+// NAVIGATION
+import { goto } from '$app/navigation';
+// LIB
+import { NEW_REF, ADMIN_PATH } from '$lib';
+// I18N
+import { i18n } from '$lib/i18n';
 // CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Check } from '@steeze-ui/heroicons';
-import { navItems } from '$lib/stores/navigation.svelte';
+import { navItems } from '$lib/navigation';
 import FilterInput from '$lib/components/menu/FilterInput.svelte';
 // TYPES
-import type { ResourceType, ApiEntity } from '$lib/types';
+import type { ResourceType, ApiEntity, HierarchicalResource } from '$lib/types';
 
 // TYPES
 type Props = {
-  parentResourceType: ResourceType;
+  parentResourceType: HierarchicalResource;
   childResourceType: ResourceType;
 };
+
+// CONTEXT
+const resourceState = getHierarchicalResourceState();
 
 // STATE
 let selectedItem = $state<any>(null);
 let isOpen = $state(false);
 let selectedIndex = $state(-1);
-
-// STATE : CONTEXT
-const routerState = getRouterState();
 
 // PROPS
 let { parentResourceType, childResourceType }: Props = $props();
@@ -42,52 +46,54 @@ const close = () => {
 
 const handleSelect = (item: any) => {
   selectedItem = item;
-}
+};
 
-const getParentRefKey = (parentResourceType: ResourceType) => {
+const getParentRefKey = (parentResourceType: HierarchicalResource) => {
   return {
     organisation: 'code',
     project: 'code',
     layer: 'code',
-    feature: 'id'
+    feature: 'id',
+    task: 'id'
   }[parentResourceType];
 };
 
 const handleConfirm = () => {
+  // TODO Confirm this is working
   if (!selectedItem) return;
 
-  routerState.updateWith({
-        resource: routerState.resource,
-        entity: NEW_REF,
-        facet: 'core'
-    });
+  // routerState.updateWith({
+  //   resource: routerState.resource,
+  //   entity: NEW_REF,
+  //   facet: 'core'
+  // });
 
   const url = new URL(window.location.href);
-  url.pathname = `/admin/${childResourceType}s/new`;
-  appMeta.context.parentRef = selectedItem.ref;
+  url.pathname = `${ADMIN_PATH}/${childResourceType}s/new`;
+  // appMeta.context.parentRef = selectedItem.ref;
   close();
-  goto(url.toString());
+  goto(i18n.resolveRoute(url.toString()));
 };
 
 const handleKeydown = (event: KeyboardEvent) => {
-  if (!filteredResources[parentResourceType]?.length) return;
-  
-  const items = filteredResources[parentResourceType];
+  if (!resourceState.state.resources[parentResourceType]?.length) return;
+
+  const items = resourceState.state.resources[parentResourceType];
   const maxIndex = Math.min(items.length - 1, 6); // Limit to 7 items (0-6)
-  
+
   switch (event.key) {
     case 'ArrowDown':
       event.preventDefault();
       selectedIndex = selectedIndex < maxIndex ? selectedIndex + 1 : 0;
       handleSelect(items[selectedIndex]);
       break;
-      
+
     case 'ArrowUp':
       event.preventDefault();
       selectedIndex = selectedIndex > 0 ? selectedIndex - 1 : maxIndex;
       handleSelect(items[selectedIndex]);
       break;
-      
+
     case 'Tab':
       event.preventDefault();
       if (event.shiftKey) {
@@ -97,7 +103,7 @@ const handleKeydown = (event: KeyboardEvent) => {
       }
       handleSelect(items[selectedIndex]);
       break;
-      
+
     case 'Enter':
       event.preventDefault();
       if (selectedItem) {
@@ -105,14 +111,15 @@ const handleKeydown = (event: KeyboardEvent) => {
       }
       break;
   }
-}
+};
 
 // Reset selectedIndex when modal opens
 const open = () => {
-  fetchResources(parentResourceType);
+  // TODO Confirm this is working
+  // resourceState.refreshResources(parentResourceType);
   selectedIndex = -1;
   isOpen = true;
-}
+};
 
 // Make the open method available to parent components
 $effect(() => {
@@ -128,9 +135,9 @@ $effect(() => {
  *
  * @returns {URLSearchParams} A new URLSearchParams object containing the current query parameters
  */
- export const getQueryParams = (): URLSearchParams => {
-  return new URLSearchParams($page.url.searchParams.toString());
-};
+// export const getQueryParams = (): URLSearchParams => {
+//   return new URLSearchParams($page.url.searchParams.toString());
+// };
 
 // FUNCTIONS : FETCH
 
@@ -143,23 +150,23 @@ $effect(() => {
  *
  * @param {ResourceType} resourceType - The type of resource to fetch
  */
-export const fetchResources = async (resourceType: ResourceType) => {
-  if (resourceType) {
-    try {
-      const queryParams = getQueryParams();
-      const response = await fetch(
-        `/api/${navItems[resourceType as keyof typeof navItems].path}${queryParams ? `?${queryParams}` : ''}`
-      );
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const result: ApiEntity[] = await response.json();
-      resources[resourceType] = result.map(toEntity);
-    } catch (error) {
-      console.error(`Error fetching ${resourceType}:`, error);
-    }
-  }
-};
+// export const fetchResources = async (resourceType: ResourceType) => {
+//   if (resourceType) {
+//     try {
+//       const queryParams = getQueryParams();
+//       const response = await fetch(
+//         `/api/${navItems[resourceType as keyof typeof navItems].path}${queryParams ? `?${queryParams}` : ''}`
+//       );
+//       if (!response.ok) {
+//         throw new Error(`HTTP error! status: ${response.status}`);
+//       }
+//       const result: ApiEntity[] = await response.json();
+//       resourceState.state.resources[resourceType] = result.map(toEntity);
+//     } catch (error) {
+//       console.error(`Error fetching ${resourceType}:`, error);
+//     }
+//   }
+// };
 
 /**
  * Converts an API entity to a standardized entity format.
@@ -176,17 +183,17 @@ export const fetchResources = async (resourceType: ResourceType) => {
  *   - ref: A reference code for the entity (fallback to id)
  *   - data: The original API entity object
  */
-export const toEntity = (apiEntity: ApiEntity) => {
-  return {
-    id: apiEntity.id,
-    name: apiEntity.name || apiEntity.properties?.title || '',
-    nameShort: apiEntity.properties?.title || apiEntity.nameShort || apiEntity.name || '',
-    description: apiEntity.description || apiEntity.properties?.description || '',
-    ref: apiEntity.ref || apiEntity.code || apiEntity.id,
-    data: apiEntity
-  };
-};
-
+// export const toEntity = (apiEntity: ApiEntity) => {
+//   return {
+//     id: apiEntity.id,
+//     name: apiEntity.name || apiEntity.properties?.title || '',
+//     nameShort:
+//       apiEntity.properties?.title || apiEntity.nameShort || apiEntity.name || '',
+//     description: apiEntity.description || apiEntity.properties?.description || '',
+//     ref: apiEntity.ref || apiEntity.code || apiEntity.id,
+//     data: apiEntity
+//   };
+// };
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -200,9 +207,9 @@ export const toEntity = (apiEntity: ApiEntity) => {
     </div>
 
     <div class="mb-4 max-h-60 overflow-y-auto">
-      {#if filteredResources[parentResourceType]?.length > 0}
-        <ul class="menu space-y-1 bg-base-100 rounded-lg">
-          {#each filteredResources[parentResourceType].slice(0, 7) as item, i}
+      {#if resourceState.state.resources[parentResourceType]?.length > 0}
+        <ul class="menu space-y-1 rounded-lg bg-base-100">
+          {#each resourceState.state.resources[parentResourceType].slice(0, 7) as item, i}
             <li class="bg-base-200 first:rounded-t-lg last:rounded-b-lg">
               <button
                 class="flex items-center justify-between py-2 hover:bg-base-300"
@@ -211,8 +218,8 @@ export const toEntity = (apiEntity: ApiEntity) => {
                   handleSelect(item);
                 }}>
                 <span>{item.name || item.title}</span>
-                {#if selectedItem?.id === item.id }
-                  <Icon src={Check} class="w-5 h-5" />
+                {#if selectedItem?.id === item.id}
+                  <Icon src={Check} class="h-5 w-5" />
                 {/if}
               </button>
             </li>

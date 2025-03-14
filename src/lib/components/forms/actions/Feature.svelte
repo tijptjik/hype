@@ -1,17 +1,12 @@
 <script lang="ts">
 // COMPONENTS
 import Toggle from '$lib/components/forms/fields/Toggle.svelte';
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
 import type { FieldProps, ModalProps, Feature, EntityRouter } from '$lib/types';
 
 // STATE : PROPS
 let actionProps: FieldProps & ModalProps = $props();
 let { form } = actionProps.form;
-
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
 
 // UTILS
 const onChange = (key: string) => {
@@ -20,7 +15,6 @@ const onChange = (key: string) => {
     return $form;
   });
 };
-
 </script>
 
 <div class="flex flex-row items-center justify-between gap-2 align-baseline">

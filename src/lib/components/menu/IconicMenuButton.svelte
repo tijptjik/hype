@@ -1,5 +1,9 @@
 <script lang="ts">
+// SVELTE
 import { page } from '$app/stores';
+// LIB
+import { ADMIN_PATH } from '$lib/index';
+// COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 
 let {
@@ -17,11 +21,12 @@ let {
 }>();
 
 const isActive = () => {
-  if (href === '/admin/tasks') {
-    return $page.url.pathname.startsWith('/admin/tasks');
-  } else if (href === '/admin') {
+  if (href === '{ADMIN_PATH}/tasks') {
+    return $page.url.pathname.startsWith('{ADMIN_PATH}/tasks');
+  } else if (href === '{ADMIN_PATH}') {
     return (
-      $page.url.pathname.startsWith('/admin') && $page.url.pathname !== '/admin/tasks'
+      $page.url.pathname.startsWith('{ADMIN_PATH}') &&
+      $page.url.pathname !== '{ADMIN_PATH}/tasks'
     );
   }
 };

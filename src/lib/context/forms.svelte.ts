@@ -1,10 +1,17 @@
-import { zod } from 'sveltekit-superforms/adapters';
+// SVELTE
 import { getContext, setContext } from 'svelte';
-import { defaults, superForm } from 'sveltekit-superforms';
+// ZOD
+import { zod } from 'sveltekit-superforms/adapters';
+// SUPERFORMS
 import { get } from 'svelte/store';
+import { defaults, superForm } from 'sveltekit-superforms';
 import { deserialize, enhance } from '$app/forms';
+// NAVIGATION
 import { goto } from '$app/navigation';
-import { NEW_REF } from '$lib';
+// LIB
+import { NEW_REF, ADMIN_PATH } from '$lib';
+// I18N
+import { i18n } from '$lib/i18n';
 // ZOD
 import {
   OrganisationInsertAPI,
@@ -36,7 +43,12 @@ import type {
 
 class BaseForm<T extends Record<string, unknown>> {
   protected formResult: SuperFormResult<T>;
-  constructor(form: SuperValidated<T>, isNew: boolean, insertSchema: any, updateSchema: any) {
+  constructor(
+    form: SuperValidated<T>,
+    isNew: boolean,
+    insertSchema: any,
+    updateSchema: any
+  ) {
     const formOptions = {
       dataType: 'json',
       SPA: true,
@@ -98,13 +110,16 @@ class BaseForm<T extends Record<string, unknown>> {
       cancel();
       // SERVER VALIDATION
     } else {
-      const response = await fetch(this.#getFetchUrl(action), this.#getFetchConfig(action));
+      const response = await fetch(
+        this.#getFetchUrl(action),
+        this.#getFetchConfig(action)
+      );
       const result = deserialize(await response.text()) as ActionResult;
 
       if (result.type === 'redirect') {
         // CREATE SUCCESS
         this.message.set('Created successfully');
-        await goto(result.location);
+        await goto(i18n.resolveRoute(result.location));
       } else if (result.type === 'success') {
         // UPDATE SUCCESS
         this.message.set('Updated successfully');
@@ -128,7 +143,7 @@ class BaseForm<T extends Record<string, unknown>> {
 
   #getFetchUrl(action: URL) {
     const apiUrl = new URL(action.href);
-    apiUrl.pathname = apiUrl.pathname.replace('/admin/', '/api/');
+    apiUrl.pathname = apiUrl.pathname.replace('{ADMIN_PATH}/', '/api/');
     if (action.pathname.endsWith('/new')) {
       apiUrl.pathname = apiUrl.pathname.replace('/new', '');
     }
@@ -173,7 +188,9 @@ export class FeatureForm extends BaseForm<Feature> {
 }
 
 export const getContextRef = (resourceType: ResourceType, entity: Ref) => {
-  return entity === NEW_REF ? `form-${resourceType}-new` : `form-${resourceType}-${entity}`;
+  return entity === NEW_REF
+    ? `form-${resourceType}-new`
+    : `form-${resourceType}-${entity}`;
 };
 
 export function setForm<T extends Organisation | Project | Layer | Feature>(
@@ -203,14 +220,15 @@ export function setForm<T extends Organisation | Project | Layer | Feature>(
       throw new Error(`Unknown resource type: ${resourceType}`);
   }
   const instance = new FormClass(form, entity === NEW_REF);
-  return setContext(getContextRef(resourceType, entity), instance) as SuperFormResult<T>;
+  return setContext(
+    getContextRef(resourceType, entity),
+    instance
+  ) as SuperFormResult<T>;
 }
 
 export function getForm<T extends Organisation | Project | Layer | Feature>(
   resource: ResourceType,
   entity: Ref
 ): SuperFormResult<T> {
-  return getContext<SuperFormResult<T>>(
-    getContextRef(resource, entity)
-  );
+  return getContext<SuperFormResult<T>>(getContextRef(resource, entity));
 }

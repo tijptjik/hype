@@ -3,10 +3,17 @@ import { slide } from 'svelte/transition';
 import { MagnifyingGlass, XMark, ChevronRight } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 
 // TYPES
-import type { User, Project, Layer, EntityRouter, SuperFormResult, Resource } from '$lib/types';
+import type {
+  User,
+  Project,
+  Layer,
+  EntityRouter,
+  SuperFormResult,
+  Resource
+} from '$lib/types';
 
 type ResultType = User | Project | Layer;
 
@@ -19,6 +26,9 @@ type Props = {
   form: SuperFormResult<Resource>;
 };
 
+// STATE : CONTEXT :: RESOURCE
+const resourceState = getHierarchicalResourceState();
+
 // PROPS
 let {
   searchMode = $bindable<boolean>(false),
@@ -30,7 +40,8 @@ let {
       role: 'member',
       user: item
     };
-    const formId = routerState.resource === 'project' ? 'projectId' : 'organisationId';
+    const formId =
+      resourceState.activeResource === 'project' ? 'projectId' : 'organisationId';
     newItem = {
       ...newItem,
       [formId]: $form.id
@@ -40,10 +51,6 @@ let {
   itemRef = 'id',
   ...barProps
 }: Props = $props();
-
-
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
 
 // STATE : CONTEXT
 let { form } = barProps.form;
@@ -59,7 +66,10 @@ const handleInputKeydown = (event: KeyboardEvent) => {
       searchMode = !searchMode;
     }
     resetInput(event);
-  } else if ((event.key === 'Tab' || event.key === 'ArrowDown') && searchResults.length > 0) {
+  } else if (
+    (event.key === 'Tab' || event.key === 'ArrowDown') &&
+    searchResults.length > 0
+  ) {
     event.preventDefault();
     // TODO Understand why this doesn't work - input is not focusable
     document.getElementById('search-results')?.querySelector('button')?.focus();
@@ -107,7 +117,9 @@ async function search(minChars = 2) {
   const allResults: ResultType[] = await response.json();
 
   searchResults = allResults.filter((item) => {
-    return !$form[destination].some((existingItem) => existingItem[itemRef] === item[itemRef]);
+    return !$form[destination].some(
+      (existingItem) => existingItem[itemRef] === item[itemRef]
+    );
   });
 }
 
@@ -134,53 +146,53 @@ const resetResults = () => (searchResults = []);
 </script>
 
 {#if searchMode}
-<div transition:slide={{ duration: 200 }} class="relative bg-base-200">
-  <div class="form-control">
-    <div class="input-group relative">
-      <input
-        id="search"
-        data-testid="userSearchBar"
-        type="text"
-        placeholder={`Search ${apiPath}...`}
-        class="input m-0 h-12 w-full rounded-none bg-neutral px-6 pr-10 text-sm focus:border-none focus:outline-none"
-        bind:value={searchQuery}
-        onkeydown={(e) => handleInputKeydown(e)}
-        onkeyup={(e) => handleInputKeyup(e)}
-        autocomplete="off"
-        use:focusOnMount />
-      <div class="absolute inset-y-0 right-2 flex items-center pr-3">
-        {#if !searchQuery}
-          <Icon src={MagnifyingGlass} class="h-6 w-6" />
-        {:else}
-          <button onclick={(e) => resetInput(e)} class="focus:outline-none">
-            <Icon src={XMark} class="h-6 w-6" />
-          </button>
-        {/if}
+  <div transition:slide={{ duration: 200 }} class="relative bg-base-200">
+    <div class="form-control">
+      <div class="input-group relative">
+        <input
+          id="search"
+          data-testid="userSearchBar"
+          type="text"
+          placeholder={`Search ${apiPath}...`}
+          class="input m-0 h-12 w-full rounded-none bg-neutral px-6 pr-10 text-sm focus:border-none focus:outline-none"
+          bind:value={searchQuery}
+          onkeydown={(e) => handleInputKeydown(e)}
+          onkeyup={(e) => handleInputKeyup(e)}
+          autocomplete="off"
+          use:focusOnMount />
+        <div class="absolute inset-y-0 right-2 flex items-center pr-3">
+          {#if !searchQuery}
+            <Icon src={MagnifyingGlass} class="h-6 w-6" />
+          {:else}
+            <button onclick={(e) => resetInput(e)} class="focus:outline-none">
+              <Icon src={XMark} class="h-6 w-6" />
+            </button>
+          {/if}
+        </div>
       </div>
     </div>
-  </div>
-  {#if searchResults.length > 0}
-    <div class="absolute z-10 w-full" transition:slide={{ duration: 200 }}>
-      <ul
-        id="search-results"
-        class="menu max-h-64 w-full overflow-y-auto rounded-b-lg bg-base-100 shadow-lg"
-        role="listbox">
-        {#each searchResults as item, index}
-          <li>
-            <button
-              class="search-result-item"
-              data-testid={`searchResultItem_${index}`}
-              onclick={(e) => addItem(e, item)}
-              role="option"
-              tabindex="0"
-              onkeydown={(e) => handleResultKeydown(e)}>
-              <Icon src={ChevronRight} class="h-4 w-4" />
-              {item.name}
-            </button>
-          </li>
-        {/each}
-      </ul>
-    </div>
-  {/if}
+    {#if searchResults.length > 0}
+      <div class="absolute z-10 w-full" transition:slide={{ duration: 200 }}>
+        <ul
+          id="search-results"
+          class="menu max-h-64 w-full overflow-y-auto rounded-b-lg bg-base-100 shadow-lg"
+          role="listbox">
+          {#each searchResults as item, index}
+            <li>
+              <button
+                class="search-result-item"
+                data-testid={`searchResultItem_${index}`}
+                onclick={(e) => addItem(e, item)}
+                role="option"
+                tabindex="0"
+                onkeydown={(e) => handleResultKeydown(e)}>
+                <Icon src={ChevronRight} class="h-4 w-4" />
+                {item.name}
+              </button>
+            </li>
+          {/each}
+        </ul>
+      </div>
+    {/if}
   </div>
 {/if}

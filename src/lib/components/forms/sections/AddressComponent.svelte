@@ -1,7 +1,5 @@
 <script lang="ts">
 import { languageTags } from '$lib';
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 // COMPONENTS
 import Header from '$lib/components/forms/extra/Header.svelte';
 import DisplayField from '$lib/components/forms/fields/DisplayField.svelte';
@@ -33,9 +31,6 @@ const fieldRoot: Field = 'addressProperties';
 let sectionProps: SectionProps & { fields: FormField & FormFieldNested } = $props();
 let { fields } = sectionProps;
 
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
-
 // STATE : CONTEXT :: FORM
 let { form } = sectionProps.form;
 
@@ -57,10 +52,11 @@ function shouldAddGap(currentIndex: number, fields: string[]): boolean {
   class="z-10 rounded-2xl bg-gradient-to-r from-rose-500/70 to-fuchsia-800/70 p-0 @container">
   <Header {...sectionProps} title="Address Components" />
 
-  <div class="grid grid-cols-3 gap-4 p-4 rounded-xl">
+  <div class="grid grid-cols-3 gap-4 rounded-xl p-4">
     {#each languageTags as lang}
       <div class="rounded-xl" style={`background-color: ${columnColors[lang]}`}>
-        <h3 class="mb-4 text-center text-md font-medium text-base-content pt-4 uppercase">
+        <h3
+          class="text-md mb-4 pt-4 text-center font-medium uppercase text-base-content">
           {columnHeaders[lang]}
         </h3>
         <div class="flex flex-col rounded-b-xl bg-base-100 p-6">

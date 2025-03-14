@@ -1,18 +1,16 @@
 <script lang="ts">
 // CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
-import { getHierarchicalResourceState as getResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS
 import Header from '$lib/components/forms/extra/Header.svelte';
 import Viewer from '$lib/components/common/Viewer.svelte';
 // TYPES
-import type { EntityRouter, SectionProps, GetImageAPI, ResourceType} from '$lib/types';
+import type { EntityRouter, SectionProps, GetImageAPI, ResourceType } from '$lib/types';
 
 let sectionProps: SectionProps & { image: GetImageAPI | null } = $props();
 
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
-const resourceState = getResourceState();
+// STATE : CONTEXT :: RESOURCE
+const resourceState = getHierarchicalResourceState();
 </script>
 
 <div
@@ -23,8 +21,8 @@ const resourceState = getResourceState();
       <Viewer
         {...sectionProps}
         editContext={{
-          refType: routerState.resource as ResourceType,
-          refId: resourceState.state[routerState.resource]?.id
+          refType: resourceState.activeResource as ResourceType,
+          refId: resourceState.activeEntityRef
         }}
         enableDropzone={true}
         enableReplacement={true} />

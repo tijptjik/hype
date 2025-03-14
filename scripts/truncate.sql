@@ -26,3 +26,4 @@ DELETE FROM task;
 DELETE FROM userFeature;
 DELETE FROM organisation;
 DELETE FROM project;
+DELETE FROM userLayer;

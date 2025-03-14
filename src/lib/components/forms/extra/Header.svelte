@@ -5,12 +5,20 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { ChevronRight, ExclamationTriangle } from '@steeze-ui/heroicons';
 import SearchBar from './HeaderSearch.svelte';
 import Info from '$lib/components/forms/extra/Info.svelte';
-
 // CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // TYPES
 import type { Component } from 'svelte';
-import type { FieldProps, ActionProps, EntityRouter, GetImageAPI, ImageEditRefs } from '$lib/types';
+import type {
+  FieldProps,
+  ActionProps,
+  EntityRouter,
+  GetImageAPI,
+  ImageEditRefs
+} from '$lib/types';
+
+// STATE : CONTEXT :: RESOURCE
+const resourceState = getHierarchicalResourceState();
 
 // STATE : PROPS
 let {
@@ -26,10 +34,12 @@ let {
   Stats,
   fields,
   ...fieldProps
-}: FieldProps & ActionProps & { InfoContent?: Component; Stats?: Component; refs?: ImageEditRefs } = $props();
-
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
+}: FieldProps &
+  ActionProps & {
+    InfoContent?: Component;
+    Stats?: Component;
+    refs?: ImageEditRefs;
+  } = $props();
 
 // STATE : CONTEXT
 let { form, errors, posted } = fieldProps.form;
@@ -44,10 +54,12 @@ $effect(() => {
 // CONFIG
 
 let getWarningMessage = () => {
-  let msg = 'If you remove yourself as member or owner, you will lose edit or access rights respectively';
-  if (routerState.facet === 'images') {
-    msg = 'Removing images permanently deletes them from cloud storage and is irreversible.';
-  } else if (routerState.facet === 'fields') {
+  let msg =
+    'If you remove yourself as member or owner, you will lose edit or access rights respectively';
+  if (resourceState.activeFacet === 'images') {
+    msg =
+      'Removing images permanently deletes them from cloud storage and is irreversible.';
+  } else if (resourceState.activeFacet === 'fields') {
     msg = 'You are about to be VERY SAD if you accidentally remove a field. ';
   }
   return msg;
@@ -81,22 +93,22 @@ let getWarningMessage = () => {
     {/if}
     {#if Actions}
       <div class="flex items-center gap-6">
-        {#if routerState.resource == 'project' && routerState.facet === 'fields'}
+        {#if resourceState.activeResource == 'project' && resourceState.activeFacet === 'fields'}
           <Actions bind:removeMode={actionProps.removeMode} />
-        {:else if routerState.resource !== 'feature'}
+        {:else if resourceState.activeResource !== 'feature'}
           <Actions
             bind:searchMode={actionProps.searchMode}
             bind:removeMode={actionProps.removeMode} />
-        {:else if routerState.facet === 'core'}
+        {:else if resourceState.activeFacet === 'core'}
           <Actions {...fieldProps} />
-        {:else if routerState.facet === 'address'}
+        {:else if resourceState.activeFacet === 'address'}
           <Actions {...fieldProps} {actions} />
-        {:else if routerState.facet === 'images' && title === 'Gallery'}
+        {:else if resourceState.activeFacet === 'images' && title === 'Gallery'}
           <Actions
             bind:removeMode={actionProps.removeMode}
             bind:searchMode={actionProps.searchMode}
             {actions} />
-        {:else if routerState.facet === 'images' && title === 'Viewer'}
+        {:else if resourceState.activeFacet === 'images' && title === 'Viewer'}
           <Actions refs={fieldProps.refs as ImageEditRefs} />
         {/if}
         {#if InfoContent}

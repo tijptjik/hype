@@ -8,7 +8,8 @@ import {
   project,
   layer,
   organisation,
-  organisationRole
+  organisationRole,
+  taskImage
 } from '../schema';
 import { ImageInsert, ImageUpdate } from '../zod';
 import db, { updatePartial } from '$lib/db';
@@ -23,7 +24,8 @@ import type {
   NewImageAPI,
   FeatureImageDB,
   Id,
-  AccessStrategyOption
+  AccessStrategyOption,
+  NewFeatureImages
 } from '$lib/types';
 
 export type Database = DrizzleD1Database<
@@ -53,7 +55,10 @@ export const updateImage = async (db: Database, data: ImageDB, ref: string) => {
     .returning();
 
   if (!updatedImage) {
-    return error(404, `Image <code>${ref}</code> has stepped through the looking glass`);
+    return error(
+      404,
+      `Image <code>${ref}</code> has stepped through the looking glass`
+    );
   }
 
   return updatedImage;
@@ -77,6 +82,16 @@ export const createFeatureImage = async (
   return insertedFeatureImage as FeatureImageDB;
 };
 
+export const createFeatureImagesFromImageIds = async (
+  db: Database,
+  newFeatureImage: NewFeatureImages,
+  imageIds: string[]
+) => {
+  await db
+    .insert(featureImage)
+    .values(imageIds.map((imageId) => ({ ...newFeatureImage, imageId })));
+};
+
 export const updateFeatureImage = async (
   db: Database,
   modifiedFeatureImage: FeatureImage,
@@ -90,11 +105,25 @@ export const patchImage = async (db: Database, ref: string, data: Partial<ImageD
   return await updatePartial(db, image, ref, 'id', data);
 };
 
+export const createTaskImagesFromImageIds = async (
+  db: Database,
+  taskId: string,
+  imageIds: string[]
+) => {
+  await db.insert(taskImage).values(
+    imageIds.map((imageId) => ({
+      taskId,
+      imageId
+    }))
+  );
+};
+
 // UTILS
 
 export const extractEntitiesToInsert = (
   formData: NewImageAPI
 ): { baseImage: NewImageDB; relatedFeatureImage: NewFeatureImage } => {
+  console.log('formData', formData.featureImage);
   let entities: { baseImage: NewImageDB; relatedFeatureImage?: NewFeatureImage } = {
     baseImage: ImageInsert.parse(formData)
   };
@@ -177,7 +206,6 @@ export const checkProjectAccessForImage = async (
   return result;
 };
 
-
 export const checkOrganisationAccessForImage = async (
   db: Database,
   userId: Id,
@@ -192,13 +220,15 @@ export const checkOrganisationAccessForImage = async (
     .innerJoin(organisation, eq(image.id, organisation.imageId))
     .leftJoin(
       organisationRole,
-      and(eq(organisationRole.organisationId, organisation.id), eq(organisationRole.userId, userId))
+      and(
+        eq(organisationRole.organisationId, organisation.id),
+        eq(organisationRole.userId, userId)
+      )
     )
     .where(eq(image.id, imageId))
     .get();
   return result;
 };
-
 
 export const checkProjectAccessForFeature = async (
   db: Database,
@@ -256,10 +286,7 @@ export const getImagesForFeature = async (
       and(
         eq(featureImage.featureId, featureId),
         // Hide unpublished images from everyone except project maintainers and superadmins
-        or(
-          eq(featureImage.isPublished, true),
-          accessStrategy === privilegedStrategy
-        )
+        or(eq(featureImage.isPublished, true), accessStrategy === privilegedStrategy)
       )
     );
 };
@@ -279,4 +306,3 @@ export const getImageForOrganisation = async (db: Database, organisationId: Id) 
     .innerJoin(organisation, eq(image.id, organisation.imageId))
     .where(eq(organisation.id, organisationId));
 };
-

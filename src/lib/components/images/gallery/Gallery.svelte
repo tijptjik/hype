@@ -10,7 +10,6 @@ import ThumbnailsBeforeLoad from '$lib/components/images/gallery/ThumbnailsBefor
 import ScrollArrow from '$lib/components/images/gallery/ScrollArrow.svelte';
 import Dropzone from '$lib/components/images/gallery/Dropzone.svelte';
 // CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // TYPES
 import type {
@@ -52,23 +51,20 @@ let allImagesLoaded = $derived(
     imageSets.images.every((img) => imageSets.imagesLoaded[img.id])
 );
 
-// CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
-
 // CONTEXT :: RESOURCE
 const resourceState = getHierarchicalResourceState();
 
 let featureId = $derived(
   editContext
     ? editContext.refId
-    : routerState.resource === 'feature'
-      ? routerState.entity
+    : resourceState.activeResource === 'feature'
+      ? resourceState.activeEntityRef
       : null
 );
 
 let refs: ImageUploadRefs = $derived({
-  resource: routerState.resource,
-  entity: resourceState.state[routerState.resource]?.id,
+  resource: resourceState.activeResource,
+  entity: resourceState.activeEntityRef,
   organisation: resourceState.state.organisation as Organisation,
   project: resourceState.state.project as Project
 });
@@ -107,7 +103,6 @@ $effect(() => {
       }
     });
 });
-
 
 // DOM
 let scrollContainer: HTMLDivElement;

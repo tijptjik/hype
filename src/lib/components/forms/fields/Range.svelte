@@ -1,6 +1,4 @@
 <script lang="ts">
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
 import type { FieldProps, EntityRouter } from '$lib/types';
 
@@ -8,9 +6,6 @@ let { fieldRoot, fieldIndex, fieldKey, ...fieldProps }: FieldProps = $props();
 
 // STATE : FORM
 let { form } = fieldProps.form;
-
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
 </script>
 
 <!-- TODO: Make into an actual field instead of an element-->

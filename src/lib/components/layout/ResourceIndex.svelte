@@ -4,38 +4,46 @@ import { flip } from 'svelte/animate';
 import { fade, scale, fly, blur } from 'svelte/transition';
 import { onDestroy } from 'svelte';
 import { cubicOut, expoIn, sineOut } from 'svelte/easing';
+// ENUMS
+import { HierarchicalResource } from '$lib/types';
+// COMPONENTS
+import EntityCard from '$lib/components/layout/EntityCard.svelte';
 // CONTEXT
-import { filterTexts } from '$lib/stores/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // TYPES
-import type { ResourceRouter } from '$lib/types';
+import type { Resource } from '$lib/types';
 
-type Entity = { data: Record<string, any> };
-type Props = {
-  entities: Array<{ data: Record<string, any> }>;
-  children: (entity: Record<string, any>, index: number) => any;
-};
-let { entities, children }: Props = $props();
+let {
+  entities,
+  children
+}: {
+  entities: Resource[];
+  children: (entity: Resource, idx: number) => any;
+} = $props();
 
 // CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
-const routerState = getRouterState() as ResourceRouter;
+const resourceState = getHierarchicalResourceState();
 
 // STATE
-let visibleEntities: Entity[] = $state([]);
+let isInitialLoading = $state(true);
+
+// INFINITE SCROLL
+let visibleEntities: Resource[] = $state([]);
 let currentPage = $state(0);
 let isLoading = $state(false);
 let observer: IntersectionObserver | null = $state(null);
 let containerRef: HTMLDivElement;
 let loadMoreTriggerRef: HTMLDivElement | null = $state(null);
 const pageSize = 24;
-let filterText = $derived(
-  filterTexts[routerState.resource as keyof typeof filterTexts]
-);
-let lastUsedFilterText = $state('');
 let initialized = $state(false);
 let initializedDOM = $state(false);
-
 let updateTimeout: number;
+
+// FILTER TEXT
+let filterText = $derived(
+  resourceState.state.filters[resourceState.activeResource as HierarchicalResource].text
+);
+let lastUsedFilterText = $state('');
 
 // Create and manage the observer
 function setupObserver() {
@@ -75,11 +83,13 @@ $effect(() => {
       updateVisibleEntities();
       setupObserver();
       if (!initialized) {
-        untrack(() => initialized = true);
+        untrack(() => (initialized = true));
       }
+      // Set initial loading to false once we've processed entities
+      untrack(() => (isInitialLoading = false));
       tick().then(() => {
         setTimeout(() => {
-          untrack(() => initializedDOM = true);
+          untrack(() => (initializedDOM = true));
         }, 1000);
       });
     },
@@ -120,42 +130,50 @@ onDestroy(() => {
   bind:this={containerRef}
   class="h-full overflow-y-auto bg-gradient-to-bl from-rose-500 to-fuchsia-800 bg-fixed pb-16 @container/grid">
   <div
-    class="flex w-full flex-auto p-4 {entities.length === 0
+    class="flex w-full flex-auto p-4 {entities.length === 0 && !isInitialLoading
       ? 'h-full w-full items-center justify-center text-center'
       : ''}">
-    <!-- Empty State -->
-    {#if entities.length === 0}
-      <h2 class="w-full transition-opacity duration-500 delay-75 text-center text-xl text-base-content/70">No items found</h2>
+    <!-- Loading State -->
+    {#if isInitialLoading}
+      <div class="flex h-full w-full items-center justify-center">
+        <span class="loading loading-spinner loading-lg text-primary"></span>
+      </div>
+      <!-- Empty State -->
+    {:else if entities.length === 0}
+      <h2
+        class="w-full text-center text-xl text-base-content/70 transition-opacity delay-75 duration-500">
+        No items found
+      </h2>
     {/if}
 
-    <div
-      class="grid grid-cols-1 gap-4 @3xl/grid:grid-cols-2 @5xl/grid:grid-cols-3 @7xl/grid:grid-cols-4"
-      role="feed"
-      aria-busy={isLoading}
-    >
-      {#each visibleEntities as entity, idx (entity.data.id)}
-        <div
-          in:blur={{
-            delay: initializedDOM ? 0 : 50 + (idx % pageSize) * 25,
-            duration: initializedDOM ? 0 : 250,
-            easing: cubicOut
-          }}
-          animate:flip={{ delay: 0, duration: 250, easing: cubicOut }}
-        >
-          {@render children(entity, idx)}
-        </div>
-      {/each}
-      
-      <!-- Load More Trigger -->
-      {#if visibleEntities.length < entities.length}
-        <div
-          bind:this={loadMoreTriggerRef}
-          class="col-span-full flex justify-center p-4"
-          aria-hidden="true"
-        >
-          <span class="loading loading-dots loading-md"></span>
-        </div>
-      {/if}
-    </div>
+    <!-- Only show the grid if we have entities and we're not in initial loading -->
+    {#if entities.length > 0 || isInitialLoading}
+      <div
+        class="grid grid-cols-1 gap-4 @3xl/grid:grid-cols-2 @5xl/grid:grid-cols-3 @7xl/grid:grid-cols-4"
+        role="feed"
+        aria-busy={isLoading}>
+        {#each visibleEntities as entity, idx (entity.id)}
+          <div
+            in:blur={{
+              delay: initializedDOM ? 0 : 50 + (idx % pageSize) * 25,
+              duration: initializedDOM ? 0 : 250,
+              easing: cubicOut
+            }}
+            animate:flip={{ delay: 0, duration: 250, easing: cubicOut }}>
+            {@render children(entity, idx)}
+          </div>
+        {/each}
+
+        <!-- Load More Trigger -->
+        {#if visibleEntities.length < entities.length}
+          <div
+            bind:this={loadMoreTriggerRef}
+            class="col-span-full flex justify-center p-4"
+            aria-hidden="true">
+            <span class="loading loading-dots loading-md"></span>
+          </div>
+        {/if}
+      </div>
+    {/if}
   </div>
 </div>

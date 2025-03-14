@@ -13,9 +13,10 @@ import {
   checkOrganisationAccessForImage,
   checkProjectAccessForNewImage
 } from '$lib/db/services/image';
-import type { NewImage, Image, NewImageAPI } from '$lib/types';
+import type { GetImageAPI, NewImageAPI } from '$lib/types';
 import { patchProject } from '$lib/db/services/project';
 import { patchOrganisation } from '$lib/db/services/organisation';
+import { intentOrder } from '$lib/images/index.svelte';
 
 const RESOURCE_TYPE = 'image';
 const ACCESS_STRATEGY = 'ResourceFromEditableProject';
@@ -56,10 +57,29 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
         PRIVILEGED_STRATEGY
       );
     } else if (projectId) {
-      images = await getImageForProject(db, projectId);
+      images = (await getImageForProject(db, projectId)) as GetImageAPI[];
     } else if (organisationId) {
-      images = await getImageForOrganisation(db, organisationId);
+      images = (await getImageForOrganisation(db, organisationId)) as GetImageAPI[];
     }
+
+    // Sort images by publication status, intent, and creation date
+    images!.sort((a, b) => {
+      // First sort by publication status
+      if (a.isPublished !== b.isPublished) {
+        return a.isPublished ? -1 : 1;
+      }
+      // Then sort by intent order
+      const intentCompare =
+        intentOrder.indexOf(a.intent) - intentOrder.indexOf(b.intent);
+      if (intentCompare !== 0) {
+        return intentCompare;
+      }
+      // Finally, sort by creation date (newest first)
+      return (
+        new Date(b.createdAt as string).getTime() -
+        new Date(a.createdAt as string).getTime()
+      );
+    });
 
     return JSONResponseOrError(images);
   } catch (e) {
@@ -76,7 +96,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
     error(400, 'Feature, Project or Organisation -- there is no try');
   }
   try {
-    if (formData.refType === 'feature') {
+    if (formData.refType === 'feature' || formData.refType === 'task') {
       let featureId = formData.featureImage?.featureId;
       if (!featureId) {
         error(400, 'Give me FeatureId, or give me death');

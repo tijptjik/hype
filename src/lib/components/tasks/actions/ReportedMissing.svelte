@@ -1,19 +1,16 @@
 <script lang="ts">
 // LIB
-import { goToResource } from '$lib';
+import { goToResource } from '$lib/navigation';
 // CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Trash, EyeSlash, XCircle, CubeTransparent } from '@steeze-ui/heroicons';
 import Info from '$lib/components/forms/extra/Info.svelte';
 import ReportedMissingContent from '$lib/components/tasks/info/ReportedMissing.svelte';
 // TYPES
-import type {
-  TaskAPI,
-  ReportedMissingAction,
-  EntityRouter,
-} from '$lib/types';
+import type { TaskAPI, ReportedMissingAction, EntityRouter } from '$lib/types';
+import type { ComponentType } from 'svelte';
 
 // STATE :: PROPS
 let { task }: { task: TaskAPI } = $props();
@@ -47,7 +44,7 @@ let actions = [
 ];
 
 // CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
+const resourceState = getHierarchicalResourceState();
 
 // ACTIONS
 const handleReject = async (e: Event) => {
@@ -65,21 +62,25 @@ const handleReject = async (e: Event) => {
       });
     }
 
-    // Update image
-    if (task.imageId) {
-      await fetch(`/api/images/${task.imageId!}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          isArchived: true,
-          refType: 'feature',
-          refId: task.featureId
+    // Update all associated images
+    if (task.images && task.images.length > 0) {
+      const imageUpdatePromises = task.images.map((image) =>
+        fetch(`/api/images/${image.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            isArchived: true,
+            refType: 'feature',
+            refId: task.featureId
+          })
         })
-      });
+      );
+
+      await Promise.all(imageUpdatePromises);
     }
 
     // TODO Navigate to the next Task
-    goToResource(e, routerState, 'task');
+    // goToResource(e, routerState, 'task');
   } catch (error) {
     console.error('Failed to reject:', error);
   }
@@ -119,14 +120,19 @@ const handleSet = async (e: Event, action: ReportedMissingAction) => {
     });
 
     // TODO Navigate to the next Task
-    goToResource(e, routerState, 'task');
+    // goToResource(e, routerState, 'task');
   } catch (error) {
     console.error('Failed to archive:', error);
   }
 };
 </script>
 
-{#snippet button(icon, label, onHoverClass, onclick)}
+{#snippet button(
+  icon: ComponentType,
+  label: string,
+  onHoverClass: string,
+  onclick: (e: Event, ...args: any[]) => void
+)}
   <button
     class="btn btn-ghost btn-sm hover:bg-transparent hover:{onHoverClass}"
     onclick={(e: Event, ...args: any[]) => onclick(e, ...args)}>

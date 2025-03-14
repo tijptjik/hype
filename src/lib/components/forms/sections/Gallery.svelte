@@ -1,7 +1,7 @@
 <script lang="ts">
 import { SvelteSet } from 'svelte/reactivity';
 // CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS
 import Header from '$lib/components/forms/extra/Header.svelte';
 import Actions from '$lib/components/forms/actions/Gallery.svelte';
@@ -19,8 +19,8 @@ type Props = SectionProps;
 let { ...sectionProps }: Props = $props();
 let inputElement = $state<HTMLInputElement>();
 
-// CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
+// CONTEXT :: RESOURCE
+const resourceState = getHierarchicalResourceState();
 
 // ACTIONS
 let actionProps = $state({
@@ -58,8 +58,8 @@ const openFileDialog = () => {
   <main class="relative m-4 min-w-0 overflow-hidden">
     <Gallery
       editContext={{
-        refType: routerState.resource as ResourceType,
-        refId: routerState.entity
+        refType: resourceState.activeResource as ResourceType,
+        refId: resourceState.activeEntityRef
       }}
       {actionProps}
       bind:inputElement />

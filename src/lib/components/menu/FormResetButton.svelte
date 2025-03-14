@@ -3,19 +3,12 @@ import * as m from '$lib/paraglide/messages.js';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { XCircle } from '@steeze-ui/heroicons';
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
-// TYPES
-import type { EntityRouter } from '$lib/types';
-
-// STATE : CONTEXT :: ROUTER
-const { resource, entity } = getRouterState() as EntityRouter;
 
 // STATE : PROPS
 let menuProps = $props();
 
 // STATE : FORM
-let { tainted, isTainted, reset } = menuProps.form
+let { tainted, isTainted, reset } = menuProps.form;
 </script>
 
 <button

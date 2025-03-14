@@ -5,7 +5,10 @@ export default {
   content: ['./src/**/*.{html,svelte,js,ts}'],
   theme: {
     fontFamily: {
-      sans: ['IBM Plex Sans', 'sans-serif'],
+      sans: ['Geologica', 'IBM Plex Sans', 'sans-serif'],
+      hant: ['Noto Sans HK', 'sans-serif'],
+      hans: ['Noto Sans SC', 'sans-serif'],
+      admin: ['IBM Plex Sans', 'sans-serif'],
       serif: ['Merriweather', 'serif'],
       mono: ['IBM Plex Mono', 'monospace'],
     },
@@ -21,7 +24,29 @@ export default {
       },
       screens: {
         '3xl': '1800px',
-        '4xl': '2400px'
+        '4xl': '2400px',
+        'h-200': { raw: '(min-height: 800px)' },
+        'h-250': { raw: '(min-height: 1000px)' },
+        'w-64': { raw: '(min-width: 256px)' },
+        'w-80': { raw: '(min-width: 320px)' },
+        'w-84': { raw: '(min-width: 336px)' },
+        'w-88': { raw: '(min-width: 352px)' },
+        'w-92': { raw: '(min-width: 368px)' },
+        'w-96': { raw: '(min-width: 384px)' },
+        'w-100': { raw: '(min-width: 400px)' },
+        'w-104': { raw: '(min-width: 416px)' },
+        'w-108': { raw: '(min-width: 432px)' },
+        'w-112': { raw: '(min-width: 448px)' },
+        'w-116': { raw: '(min-width: 464px)' },
+        'w-128': { raw: '(min-width: 512px)' },
+        'w-160': { raw: '(min-width: 640px)' },
+        'w-192': { raw: '(min-width: 768px)' },
+        'w-256': { raw: '(min-width: 1024px)' },
+        'w-320': { raw: '(min-width: 1280px)' },
+        'w-384': { raw: '(min-width: 1536px)' },
+        'w-512': { raw: '(min-width: 2048px)' },
+        'w-640': { raw: '(min-width: 2560px)' },
+        'w-768': { raw: '(min-width: 3072px)' },
       },
       borderWidth: {
         '1': '1px',
@@ -39,7 +64,18 @@ export default {
       height: {
         '0.25': '0.0625rem',
         '17.5': '4.375rem',
-      }
+      },
+      width: {
+        '17.5': '4.375rem',
+      },
+      minHeight: {
+        '200': '50rem', // 800px
+        '250': '62.5rem', // 1000px
+      },
+      minWidth: {
+        '200': '50rem', // 800px
+        '250': '62.5rem', // 1000px
+      },
     }
   },
   // daisyUI config

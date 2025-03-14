@@ -1,5 +1,42 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
+
+  "preauth__continue_with_google": "繼續使用 Google",
+
+  "settings__title": "設定",
+  "settings__subtitle": "就像你喜欢的样子",
+  "settings__signout": "註銷",
+  "settings__language": "語言",
+
+  "filters__title": "過濾器",
+  "filters__subtitle": "過濾地圖上顯示的特徵",
+  "filters__reset": "重置過濾器",
+  "filters__reset_count": "重置 {neighbourhoods} 個社區和 {properties} 個屬性",
+  "filters__neighbourhoods": "社區",
+  "filters__categories": "類別",
+
+  "filters__all": "全部",
+  "filters__only": "只有",
+  "filters__between": "介乎",
+  "filters__and": "和",
+  "filters__stars": "星",
+
+  "maps__title": "地圖",
+  "maps__subtitle": "過濾圖層並添加到地圖",
+  "maps__organisations": "組織",
+  "maps__projects": "項目",
+  "maps__layers": "圖層",
+
+  "maps__layers_none": "未選擇任何<b class='font-mono inline-block px-2 py-2'>圖層</b>。<br><br>地圖將為空。",
+  "maps__projects_none": "未選擇任何<b class='font-mono inline-block px-2'>項目</b>過濾器。",
+  "maps__organisations_none": "未選擇任何<b class='font-mono inline-block px-2'>組織</b>過濾器。",
+  "maps__neighbourhoods_none": "未選擇任何<b class='font-mono inline-block px-2'>社區</b>過濾器。",
+
+  "stars__title": "星星",
+  "stars__subtitle": "未來訪問的收藏",
+  "stars__want_to_visit": "想去",
+  "stars__have_visited": "去過",
+
   "navbar__projects": "項目",
   "navbar__neighbourhoods": "胡德",
   "navbar__blog": "部落格",
@@ -69,5 +106,39 @@
   "feature__info_action_note": "請注意，如果一個特徵永久唔可用，而且引用呢個地點冇歷史或者無形價值，咁就應該簡單咁取消發布，將佢從所有地圖中除名。",
   "feature__info_classifition_summary": "請注意，如果一個特徵永久唔可用，而且引用呢個地點冇歷史或者無形價值，咁就應該簡單咁取消發布，將佢從所有地圖中除名。",
   "feature__info_specification_summary": "提供額外上下文同參考嘅自由格式文本字段。字段喺集合級別定義。",
-  "feature__info_map_summary": "點擊右上角嘅鎖解鎖地圖，然後拖動地圖重新定位特徵標記。"
+  "feature__info_map_summary": "點擊右上角嘅鎖解鎖地圖，然後拖動地圖重新定位特徵標記。",
+
+  "menu_maps": "地圖",
+  "menu_filters": "篩選",
+  "menu_stars": "收藏",
+  "menu_settings": "設定",
+  "menu_admin": "管理員",
+
+  "settings_contributor_title": "貢獻者署名",
+  "settings_contributor_description": "您希望以什麼名字署名您貢獻的照片和功能",
+  "settings_contributor_placeholder": "輸入您的名字",
+
+  "settings_default_map_title": "預設地圖",
+  "settings_default_map_description": "選擇預設載入的地圖",
+
+  "settings_experimental_title": "實驗功能",
+  "settings_experimental_description": "在正式發布前預覽功能",
+  "settings_experimental_contributor_mode": "貢獻者模式",
+  "settings_experimental_contributor_description": "突出顯示添加照片和功能的界面",
+
+  "report_missing__label": "缺失原因是",
+  "report_missing__placeholder": "請提供您認為內容缺失的原因",
+  "report_missing__success": "已成功提交報告",
+  "report_missing__error": "無法提交報告",
+
+  "validation__at_least_one_image_as_evidence": "請上傳至少一張照片作為證據",
+  "validation__at_least_five_characters": "請提供更多詳細資料 - 至少 5 個字元",
+
+  "omni__title_walks": "步道",
+  "omni__title_neighbourhoods": "社區",
+  "omni__title_features": "特徵",
+  "omni__title_star_walks": "我的收藏",
+  "omni__no_results": "冇結果",
+  "omni__placeholder": "搜索...",
+  "omni__search_results": "搜索結果: {searchTerm}"
 }

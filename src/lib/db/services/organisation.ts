@@ -2,8 +2,20 @@ import { error } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
-import { organisation, organisationI18n, organisationRole, user } from '../schema';
-import { OrganisationInsert, OrganisationInsertAPI, OrganisationUpdate, OrganisationUpdateAPI } from '../zod';
+import {
+  feature,
+  organisation,
+  organisationI18n,
+  organisationRole,
+  project,
+  user
+} from '../schema';
+import {
+  OrganisationInsert,
+  OrganisationInsertAPI,
+  OrganisationUpdate,
+  OrganisationUpdateAPI
+} from '../zod';
 import { toNestedTranslations, updatePartial } from '..';
 // TYPES
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
@@ -17,6 +29,7 @@ import type {
   OrganisationRole,
   NewOrganisation,
   Organisation,
+  Id
 } from '$lib/types';
 
 export type Database = DrizzleD1Database<
@@ -37,7 +50,11 @@ export const createOrganisation = async (db: Database, data: NewOrganisationDB) 
   return insertedOrganisation;
 };
 
-export const updateOrganisation = async (db: Database, data: OrganisationDB, ref: string) => {
+export const updateOrganisation = async (
+  db: Database,
+  data: OrganisationDB,
+  ref: string
+) => {
   const [updatedOrganisation] = await db
     .update(organisation)
     .set({ ...data })
@@ -45,13 +62,21 @@ export const updateOrganisation = async (db: Database, data: OrganisationDB, ref
     .returning();
 
   if (!updatedOrganisation) {
-    return error(404, `Organisation <code>${ref}</code> has stepped through the looking glass`);
+    return error(
+      404,
+      `Organisation <code>${ref}</code> has stepped through the looking glass`
+    );
   }
 
   return updatedOrganisation;
 };
 
-export const patchOrganisation = async (db: Database, ref: string, data: Partial<OrganisationDB>, refType: 'id' | 'code') => {
+export const patchOrganisation = async (
+  db: Database,
+  ref: string,
+  data: Partial<OrganisationDB>,
+  refType: 'id' | 'code'
+) => {
   return await updatePartial(db, organisation, ref, refType, data);
 };
 
@@ -60,11 +85,13 @@ export const createTranslations = async (
   translations: Record<TargetLang, NewOrganisationI18n>,
   organisationId: string
 ) => {
-  const translationsToInsert = Object.entries(translations).map(([lang, translation]) => ({
-    ...translation,
-    organisationId,
-    lang: lang as 'zh-hant' | 'zh-hans'
-  }));
+  const translationsToInsert = Object.entries(translations).map(
+    ([lang, translation]) => ({
+      ...translation,
+      organisationId,
+      lang: lang as 'zh-hant' | 'zh-hans'
+    })
+  );
 
   return await db.insert(organisationI18n).values(translationsToInsert).returning();
 };
@@ -74,7 +101,9 @@ export const updateTranslations = async (
   translations: Record<TargetLang, OrganisationI18n>,
   organisationId: string
 ) => {
-  await db.delete(organisationI18n).where(eq(organisationI18n.organisationId, organisationId));
+  await db
+    .delete(organisationI18n)
+    .where(eq(organisationI18n.organisationId, organisationId));
   return await createTranslations(db, translations, organisationId);
 };
 
@@ -110,7 +139,9 @@ export const updateUserRoles = async (
   userRoles: OrganisationRole[],
   organisationId: string
 ) => {
-  await db.delete(organisationRole).where(eq(organisationRole.organisationId, organisationId));
+  await db
+    .delete(organisationRole)
+    .where(eq(organisationRole.organisationId, organisationId));
   return await createUserRoles(db, userRoles, organisationId);
 };
 // UTILS
@@ -134,10 +165,29 @@ export const rebuildFormData = async (
   translations: OrganisationI18n[],
   userRoles: OrganisationRole[]
 ) => {
-  const formData : Organisation = {
+  const formData: Organisation = {
     ...organisation,
     translations: toNestedTranslations<OrganisationI18n>(translations),
     userRoles: userRoles
   };
   return await superValidate(formData, zod(OrganisationUpdateAPI));
+};
+
+export const getOrganisationForFeatureId = async (db: Database, featureId: Id) => {
+  const record = await db.query.feature.findFirst({
+    where: eq(feature.id, featureId),
+    with: { layer: { with: { project: { with: { organisation: true } } } } }
+  });
+  return record?.layer?.project?.organisation;
+};
+
+export const getOrganisationForProjectId = async (
+  db: Database,
+  projectId: Id
+): Promise<OrganisationDB | undefined> => {
+  const record = await db.query.project.findFirst({
+    where: eq(project.id, projectId),
+    with: { organisation: true }
+  });
+  return record?.organisation || undefined;
 };

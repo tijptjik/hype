@@ -1,5 +1,43 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
+
+  "preauth__continue_with_google": "Continue with Google",
+
+  "settings__title": "Settings",
+  "settings__subtitle": "Just as you like it",
+  "settings__signout": "Sign out",
+
+  "settings__language": "Language",
+
+  "filters__title": "Filters",
+  "filters__subtitle": "filter features shown on the map",
+  "filters__reset": "Reset filters",
+  "filters__reset_count": "Clear {neighbourhoods} neighbourhoods and {properties} properties",
+  "filters__neighbourhoods": "neighbourhoods",
+  "filters__categories": "categories",
+
+  "filters__all": "All",
+  "filters__only": "Only",
+  "filters__between": "Between",
+  "filters__and": "and",
+  "filters__stars": "Stars",
+
+  "maps__title": "Maps",
+  "maps__subtitle": "filter layers and add to map",
+  "maps__organisations": "Organisations",
+  "maps__projects": "Projects",
+  "maps__layers": "Layers",
+
+  "maps__layers_none": "No <b class='font-mono inline-block px-2 py-2'>Layers</b> selected <br><br><code>Empty map you will find</code>",
+  "maps__projects_none": "No <b class='font-mono inline-block px-2'>Project</b> filters",
+  "maps__organisations_none": "No <b class='font-mono inline-block px-2'>Organisation</b> filters",
+  "maps__neighbourhoods_none": "No <b class='font-mono inline-block px-2'>Neighbourhood</b> filters",
+
+  "stars__title": "Stars",
+  "stars__subtitle": "saved for a future visit",
+  "stars__want_to_visit": "Want to visit",
+  "stars__have_visited": "Visited",
+
   "navbar__projects": "Projects",
   "navbar__neighbourhoods": "Hoods",
   "navbar__blog": "Blog",
@@ -34,7 +72,7 @@
   "forms__save": "Save",
   "forms__saved": "Saved",
   "forms_invalid": "Invalid",
-  
+
   "organisation__core": "Main",
   "organisation__images": "Image",
 
@@ -64,11 +102,45 @@
   "feature__visibility": "Visibility",
   "feature__graphemes": "Graphemes",
   "feature__calligrapher": "Calligrapher",
-  "feature__info_action_summary" : "The toggles control the public visibility of the feature:",
-  "feature__info_intangible_feature" : "Feature is shown on the map if its layer is active. Set true if, in ordinary circumstances, the feature is accessible to the public without restrictions or permission. If the feature is temporarily inaccessible, this should be false.",
-  "feature__info_accesible" : "Feature may be shown on the map with the caveat that there is (no longer) a physical presence on site. This invites visitors to experience the feature’s practical, historic context - e.g. sites of historic events; a striking contrast with the present; or a locality that is more salient than the missing materiality of the feature.",
-  "feature__info_action_note" : "Note that is a feature is permanently unavailable AND there is no historic, intangible value to referencing the site, then it should simply to unpublished to delist it from all maps.",
-  "feature__info_classifition_summary" : "Note that is a feature is permanently unavailable AND there is no historic, intangible value to referencing the site, then it should simply to unpublished to delist it from all maps.",
-  "feature__info_specification_summary" : "Free-form text fields that provide additional context and references. Fields are defined at the Collection level.",
-  "feature__info_map_summary" : "Unlock the map by clicking on the top-right lock, then drag the map to relocate the feature marker."
+  "feature__info_action_summary": "The toggles control the public visibility of the feature:",
+  "feature__info_intangible_feature": "Feature is shown on the map if its layer is active. Set true if, in ordinary circumstances, the feature is accessible to the public without restrictions or permission. If the feature is temporarily inaccessible, this should be false.",
+  "feature__info_accesible": "Feature may be shown on the map with the caveat that there is (no longer) a physical presence on site. This invites visitors to experience the feature's practical, historic context - e.g. sites of historic events; a striking contrast with the present; or a locality that is more salient than the missing materiality of the feature.",
+  "feature__info_action_note": "Note that is a feature is permanently unavailable AND there is no historic, intangible value to referencing the site, then it should simply to unpublished to delist it from all maps.",
+  "feature__info_classifition_summary": "Note that is a feature is permanently unavailable AND there is no historic, intangible value to referencing the site, then it should simply to unpublished to delist it from all maps.",
+  "feature__info_specification_summary": "Free-form text fields that provide additional context and references. Fields are defined at the Collection level.",
+  "feature__info_map_summary": "Unlock the map by clicking on the top-right lock, then drag the map to relocate the feature marker.",
+
+  "menu_maps": "Maps",
+  "menu_filters": "Filters",
+  "menu_stars": "Stars",
+  "menu_settings": "Settings",
+  "menu_admin": "Admin",
+
+  "settings_contributor_title": "Contribution Credit",
+  "settings_contributor_description": "What name would you like to be credited for your contributed photos and features",
+  "settings_contributor_placeholder": "Enter your name",
+
+  "settings_default_map_title": "Default Maps",
+  "settings_default_map_description": "Choose which maps should load by default",
+
+  "settings_experimental_title": "Experimental",
+  "settings_experimental_description": "Preview features before release",
+  "settings_experimental_contributor_mode": "Contributor Mode",
+  "settings_experimental_contributor_description": "Prominent UI to add photos and features",
+
+  "report_missing__label": "This is missing because",
+  "report_missing__placeholder": "Please provide the reason why you believe this is missing",
+  "report_missing__success": "Succesfully submitted report",
+  "report_missing__error": "Failed to submit report",
+
+  "validation__at_least_one_image_as_evidence": "Please upload at least one photo as evidence",
+  "validation__at_least_five_characters": "Please provide more detail - at least 5 characters",
+
+  "omni__title_walks": "Walks",
+  "omni__title_neighbourhoods": "Hoods",
+  "omni__title_features": "Features",
+  "omni__title_star_walks": "My Stars",
+  "omni__no_results": "No results found",
+  "omni__placeholder": "Search...",
+  "omni__search_results": "Search Results: {searchTerm}"
 }

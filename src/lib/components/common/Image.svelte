@@ -31,7 +31,8 @@ let {
 }: Props = $props();
 </script>
 
-<figure class="relative {className ? className : 'h-64 w-full'}">
+<figure
+  class="{className.includes('absolute') ? '' : 'relative'} {className ? className : 'h-64 w-full'}">
   {#if showLoading && !loaded}
     <Loading />
   {/if}

@@ -1,33 +1,34 @@
 <script lang="ts">
-import { fade } from 'svelte/transition';
-// STORES
-import { filteredResources } from '$lib/stores/resources.svelte';
+// CONTEXT
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS
 import ResourceHeader from '$lib/components/layout/ResourceHeader.svelte';
 import ResourceIndex from '$lib/components/layout/ResourceIndex.svelte';
 import EntityCard from '$lib/components/layout/EntityCard.svelte';
 import Image from '$lib/components/common/Image.svelte';
+// TYPES
+import type { KeyMap } from '$lib/components/layout/EntityCard.svelte';
+import type { Layer } from '$lib/types';
 
 // CONFIG :: KEY MAP
-const keyMap = {
+const keyMap: KeyMap = {
   id: 'id',
   title: 'name',
   subtitle: 'nameShort',
   description: 'description',
-  image: 'name' // Using name for placeholder image
+  image: 'image'
 };
 
-// STATE :: DERIVED :: PROJECTS
-const entities = $derived(filteredResources.layer);
+// CONTEXT
+const resourceState = getHierarchicalResourceState();
 </script>
 
-<!-- LAYOUT -->
 <ResourceHeader />
-<ResourceIndex {entities}>
-  {#snippet children(entity)}
+<ResourceIndex entities={resourceState.state.resources.layer as Layer[]}>
+  {#snippet children(entity, idx)}
     <EntityCard {entity} {keyMap}>
-      {#snippet header(entity)}
-      <!-- TODO Render these placeholders with the graphemes -->
+      {#snippet header(entity: Layer)}
+        <!-- TODO Render these placeholders with the graphemes -->
         <Image
           src="https://placehold.co/600x400?text={entity.name}"
           alt={entity.name}

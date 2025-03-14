@@ -15,6 +15,27 @@
       "when": 1733760361871,
       "tag": "0001_data",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1739172460541,
+      "tag": "0002_userLayers",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1741593881320,
+      "tag": "0003_taskImages",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1741607056509,
+      "tag": "0004_addMessageToTask",
+      "breakpoints": true
     }
   ]
 }

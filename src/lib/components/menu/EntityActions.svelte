@@ -6,20 +6,19 @@ import FormResetButton from './FormResetButton.svelte';
 import FormSubmitButton from './FormSubmitButton.svelte';
 import PublishButton from './PublishButton.svelte';
 // CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // TYPES
 import type { EntityRouter } from '$lib/types';
 
 let menuProps = $props();
 
 // STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
+const resourceState = getHierarchicalResourceState();
 
-let showFormControler = $derived(
-  routerState.facet !== 'images'
-);
+let showFormControler = $derived(resourceState.state.active.facet !== 'images');
 let showPublishButton = $derived(
-  (routerState.entity !== NEW_REF && routerState.entity !== false)
+  resourceState.state.active.entity !== NEW_REF &&
+    resourceState.state.active.entity !== false
 );
 </script>
 
@@ -35,8 +34,8 @@ let showPublishButton = $derived(
 {/if}
 {#if showPublishButton}
   <div class="flex flex-row gap-2" in:slide={{ axis: 'x' }} out:slide={{ axis: 'x' }}>
-  <li>
-    <PublishButton {...menuProps} />
-  </li>
-</div>
+    <li>
+      <PublishButton {...menuProps} />
+    </li>
+  </div>
 {/if}

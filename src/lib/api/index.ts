@@ -3,13 +3,16 @@ import { actionResult } from 'sveltekit-superforms';
 import client, { toNestedTranslations, validateTableColumns } from '$lib/db';
 import { getUserRoles } from '$lib/auth/utils';
 import { superValidate } from 'sveltekit-superforms';
+// LIB
+import { ADMIN_PATH } from '$lib/index';
 // ACCESS CONTROL
 import {
   publicAccessOptions,
   hierarchicalOwnOptions,
   hierarchicalChildrenOptions,
   hierarchicalGrandChildrenOptions,
-  relationalAccessOptions
+  relationalAccessOptions,
+  genericAccessOptions
 } from '$lib/types';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
@@ -27,7 +30,6 @@ import type {
   ResourceType
 } from '$lib/types';
 import type { UserRole } from '$lib/auth/utils';
-import { appMeta } from '$lib/stores/resources.svelte';
 import { NEW_REF } from '$lib';
 import type { AccessStrategyOption, StatefulAccessOption } from '$lib/types';
 import type { GetImageAPI } from '$lib/types';
@@ -73,12 +75,12 @@ export const SuperFormResponse = <T extends Resource>(
   if (redirect) {
     // TODO : Make the redirect more robust by passing in the entityRef
     if (userLosesAccess) {
-      return actionResult('redirect', `/admin/${resourcePath}/`, {
+      return actionResult('redirect', `${ADMIN_PATH}/${resourcePath}/`, {
         status: 302
       });
     } else {
       const entityRef = validatedForm.data.code || validatedForm.data.id;
-      return actionResult('redirect', `/admin/${resourcePath}/${entityRef}`, {
+      return actionResult('redirect', `${ADMIN_PATH}/${resourcePath}/${entityRef}`, {
         status: 303
       });
     }
@@ -100,12 +102,17 @@ const checkAccessOrError = (
     project: 'organisation',
     feature: 'layer',
     image: 'project',
-    task: 'project'
+    task: 'project',
+    user: 'user'
   };
 
   // Check each strategy until we find one that grants access
   if (publicAccessOptions.includes(strategy)) {
     hasAccess = true;
+  } else if (genericAccessOptions.includes(strategy)) {
+    if (userRoles.some((role) => role.type === resourceType)) {
+      hasAccess = true;
+    }
   } else if (hierarchicalOwnOptions.includes(strategy)) {
     if (userRoles.some((role) => role.type === resourceType)) {
       hasAccess = true;
@@ -171,9 +178,17 @@ export const getDatabaseOrError = async (
   }
 
   // Check whether privileges should be escalated
-  checkAccessOrError(userRoles, accessStrategy, resourceType);
+  if (genericAccessOptions.includes(accessStrategy)) {
+    if (
+      (accessStrategy === 'GenericSelf' || accessStrategy === 'GenericOwn') &&
+      session.user.id !== refId
+    ) {
+      error(403, "Get real - you not touchin' this");
+    }
+  } else {
+    checkAccessOrError(userRoles, accessStrategy, resourceType);
+  }
 
-  // PROJECT ACCESS CHECK
   if (
     accessStrategy == 'EntityFromEditableProject' ||
     accessStrategy == 'ResourceFromEditableProject'
@@ -320,7 +335,7 @@ export async function loadFormData<T>({
       resourceConfig[resourceType];
 
     if (parentResourceType && parentRefKey) {
-      const parentRef = appMeta.context.parentRef;
+      const parentRef = resourceState.getParent();
 
       if (!parentRef) {
         throw error(
@@ -397,7 +412,7 @@ export async function loadFormData<T>({
       }
     }
   }
-  appMeta.context.parentRef = null;
+  // appMeta.context.parentRef = null;
   return {
     entity: entityRef,
     validatedForm: form,
@@ -459,21 +474,40 @@ export const PRISM_PARAMETERS = ['organisation', 'project', 'layer'];
 
 export const getQueryParamsWithoutPrism = (url: URL) => {
   // Get all query parameters except the known prism parameters
-  return Object.fromEntries(
-    Array.from(url.searchParams.entries()).filter(
-      ([key]) => !PRISM_PARAMETERS.includes(key)
-    )
+  const params = Array.from(url.searchParams.entries()).filter(
+    ([key]) => !PRISM_PARAMETERS.includes(key)
+  );
+
+  // Reduce the parameters into an object where values are arrays
+  return params.reduce(
+    (acc, [key, value]) => {
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(value);
+      return acc;
+    },
+    {} as Record<string, string[]>
   );
 };
 
 export const isValidQueryParamsOrError = (table: any, url: URL) => {
   const queryParams = getQueryParamsWithoutPrism(url);
   const queryParamsKeys = Object.keys(queryParams);
+
   if (queryParamsKeys.length > 0) {
+    // Split the keys into base and nested paths
+    const columnPaths = queryParamsKeys.map((key) => ({
+      base: key.split('.')[0],
+      full: key
+    }));
+
+    // Validate only the base columns against the table
     const { valid, invalidColumns } = validateTableColumns(
       table,
-      Object.keys(queryParams)
+      columnPaths.map((path) => path.base)
     );
+
     if (!valid) {
       return error(
         400,

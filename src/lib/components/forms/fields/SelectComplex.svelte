@@ -2,10 +2,16 @@
 import { getValues, updateForm } from '$lib/index';
 // COMPONENTS
 import Select from '$lib/components/forms/elements/Select.svelte';
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
-import type { Property, FieldPropsExtended, Id, Organisation, Project, Feature, EntityRouter } from '$lib/types';
+import type {
+  Property,
+  FieldPropsExtended,
+  Id,
+  Organisation,
+  Project,
+  Feature,
+  EntityRouter
+} from '$lib/types';
 
 // STATE : PROPS
 let {
@@ -17,9 +23,6 @@ let {
   field,
   ...fieldProps
 }: FieldPropsExtended = $props();
-
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
 
 // STATE : CONTEXT :: FORM
 let { form } = fieldProps.form;

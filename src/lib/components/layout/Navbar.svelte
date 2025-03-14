@@ -1,16 +1,22 @@
 <script lang="ts">
-import { goto } from '$app/navigation';
+// SVELTE
 import { page } from '$app/stores';
+// I18N
 import * as m from '$lib/paraglide/messages.js';
+// AUTH
 import { signIn, signOut } from '@auth/sveltekit/client';
+// UTILS
 import { hasControlPanelAccess } from '$lib/auth/utils';
-import { goToResource } from '$lib/index';
+// LIB
+import { ADMIN_PATH } from '$lib/index';
+// NAVIGATION
+import { goToResource } from '$lib/navigation';
 // COMPONENTS
 import { Bars3, ComputerDesktop, InboxArrowDown } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 import IconicMenuButton from '$lib/components/menu/IconicMenuButton.svelte';
 // CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 
 const { session } = $page.data;
 
@@ -18,7 +24,7 @@ let isMenuOpen = $state(false);
 let notificationCount = $state(0);
 
 // CONTEXT
-const routerState = getRouterState();
+const resourceState = getHierarchicalResourceState();
 
 $effect(() => {
   if (session && hasControlPanelAccess(session)) {
@@ -35,12 +41,6 @@ const toggleMenu = () => {
   isMenuOpen = !isMenuOpen;
 };
 
-const pathsMenuRight = [
-  { href: '/projects', label: m.navbar__projects() },
-  { href: '/hoods', label: m.navbar__neighbourhoods() },
-  { href: '/blog', label: m.navbar__blog() }
-];
-
 $effect(() => {
   isMenuOpen = false;
 });
@@ -51,12 +51,10 @@ const handleClick = (e: Event, href: string) => {
   e.stopPropagation();
   let url = new URL(window.location.href);
   url.pathname = href;
-  if (routerState) {  
-    routerState.updateWith({
-      resource: false,
-      entity: false,
-      facet: false
-    });
+  if (resourceState.state.active.resource) {
+    resourceState.state.active.resource = false;
+    resourceState.state.active.entity = false;
+    resourceState.state.active.facet = false;
   }
   // TODO handle the ability to deep-link to Tasks from outside the Admin panel.
   window.location.href = url.toString();
@@ -79,13 +77,13 @@ const handleClick = (e: Event, href: string) => {
     {#each items as { href, label }}
       <li>
         <a
-        draggable="false"
-        {href}
-        onclick={(e) => handleClick(e, href)}
-        class="select-none btn btn-ghost rounded-none border-b-2 hover:bg-black hover:border-b-primary"
-        class:btn-active={$page.url.pathname.startsWith(href)}>
-        {label}
-      </a>
+          draggable="false"
+          {href}
+          onclick={(e) => handleClick(e, href)}
+          class="btn btn-ghost select-none rounded-none border-b-2 hover:border-b-primary hover:bg-black"
+          class:btn-active={$page.url.pathname.startsWith(href)}>
+          {label}
+        </a>
       </li>
     {/each}
   </ul>
@@ -95,26 +93,20 @@ const handleClick = (e: Event, href: string) => {
   {#if session && hasControlPanelAccess(session)}
     <ul class="menu menu-horizontal hidden space-x-2 p-0 lg:flex">
       <li>
+        <!-- TODO Fix Code Smell in handleClick -->
         <IconicMenuButton
-          href="/admin/tasks"
-          handleClick={(e) =>
-            routerState
-              ? goToResource(e, routerState, 'task')
-              : handleClick(e, '/admin/tasks')
-          }
+          href="{ADMIN_PATH}/tasks"
+          handleClick={(e) => handleClick(e, '{ADMIN_PATH}/tasks')}
           iconSrc={InboxArrowDown}
           matchFromStart={false}
           {notificationCount} />
       </li>
       <li>
+        <!-- TODO Fix Code Smell in handleClick -->
         <IconicMenuButton
-          href="/admin"
+          href={ADMIN_PATH}
           iconSrc={ComputerDesktop}
-          handleClick={(e) =>
-            routerState
-              ? goToResource(e, routerState, 'organisation')
-              : handleClick(e, '/admin/organisations')
-          } />
+          handleClick={(e) => handleClick(e, '{ADMIN_PATH}/organisations')} />
       </li>
     </ul>
     <div class="mx-2 hidden h-5 w-px bg-neutral-800 lg:block"></div>
@@ -134,10 +126,14 @@ const handleClick = (e: Event, href: string) => {
         {#if hasControlPanelAccess(session)}
           <div class="block lg:hidden">
             <li>
-              {@render navLink('/admin', m.navbar__admin(), 'justify-between')}
+              {@render navLink('{ADMIN_PATH}', m.navbar__admin(), 'justify-between')}
             </li>
             <li>
-              {@render navLink('/admin/tasks', m.navbar__tasks(), 'justify-between')}
+              {@render navLink(
+                '{ADMIN_PATH}/tasks',
+                m.navbar__tasks(),
+                'justify-between'
+              )}
             </li>
             <div class="divider"></div>
           </div>
@@ -172,18 +168,11 @@ const handleClick = (e: Event, href: string) => {
       {#if isMenuOpen}
         <ul
           class="menu dropdown-content menu-sm z-[1] mt-3 w-52 rounded-box bg-base-100 p-2 shadow">
-          {#each pathsMenuRight as { href, label }}
-            <li>
-              {@render navLink(href, label)}
-            </li>
-          {/each}
         </ul>
       {/if}
     </div>
     <!-- Desktop Menu -->
-    <div class="hidden lg:flex">
-      {@render menuList(pathsMenuRight)}
-    </div>
+    <div class="hidden lg:flex"></div>
   </div>
 
   <div class="navbar-center">

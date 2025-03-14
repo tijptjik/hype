@@ -22,17 +22,16 @@ import {
   image,
   featureImage,
   userFeature,
-  task
+  task,
+  userLayer,
+  taskImage
 } from '$lib/db/schema';
 // TYPES
-import type {
-  AddressProperties,
-  LayerMetadata,
-  TaskType
-} from '$lib/types';
+import type { AddressProperties, LayerMetadata, TaskType } from '$lib/types';
 
 export const targetLangs = ['zh-hant', 'zh-hans'] as const;
 export const fieldDiscriminators = ['classifier', 'specifier', 'display'] as const;
+export const supportedLanguages = ['en', 'zh-hant', 'zh-hans'] as const;
 /* ----------------- */
 // CONSTRAINTS
 /* -------- */
@@ -175,8 +174,12 @@ export const OrganisationRoleUpdateExtra = OrganisationRoleUpdate.extend({
   user: UserPrivacyPreserving
 });
 
-export const OrganisationI18nInsert = OrganisationI18nUpdate.omit({ organisationId: true });
-export const OrganisationRoleInsert = OrganisationRoleUpdateExtra.omit({ organisationId: true });
+export const OrganisationI18nInsert = OrganisationI18nUpdate.omit({
+  organisationId: true
+});
+export const OrganisationRoleInsert = OrganisationRoleUpdateExtra.omit({
+  organisationId: true
+});
 
 export const OrganisationInsertAPI = OrganisationInsert.extend({
   translations: getTranslations(OrganisationI18nInsert),
@@ -206,7 +209,9 @@ export const PropertyValueUpdate = PropertyValueInsert.extend({
   id: z.string()
 });
 
-export const PropertyValueI18nInsert = PropertyValueI18nUpdate.omit({ propertyValueId: true });
+export const PropertyValueI18nInsert = PropertyValueI18nUpdate.omit({
+  propertyValueId: true
+});
 
 export const PropertyValueInsertAPI = PropertyValueInsert.extend({
   translations: getTranslations(PropertyValueI18nInsert)
@@ -282,17 +287,16 @@ export const ProjectRoleInsertExtra = ProjectRoleUpdateExtra.omit({ projectId: t
 export const ProjectInsertAPI = ProjectInsert.extend({
   translations: getTranslations(ProjectI18nInsert),
   maintainerRoles: getMaintainerRoles(ProjectRoleInsertExtra),
-  properties: z.array(PropertyInsertAPI),
+  properties: z.array(PropertyInsertAPI)
   // tasks: z.array(TaskInsert).optional()
 });
 
 export const ProjectUpdateAPI = ProjectUpdate.extend({
   translations: getTranslations(ProjectI18nUpdate),
   maintainerRoles: getMaintainerRoles(ProjectRoleUpdateExtra),
-  properties: z.array(PropertyUpdateAPI),
+  properties: z.array(PropertyUpdateAPI)
   // tasks: z.array(TaskUpdate).optional()
 });
-
 
 export const ProjectPatch = ProjectUpdate.partial();
 
@@ -301,13 +305,26 @@ export const ProjectPatch = ProjectUpdate.partial();
 /* -------- */
 
 // Schema for selecting a layer - can be used to validate API responses
-export const LayerBase = createSelectSchema(layer);
+export const LayerBase = createSelectSchema(layer).extend({
+  experimental: z
+    .object({
+      contributorMode: z.boolean()
+    })
+    .default({ contributorMode: false }),
+  language: z.enum(supportedLanguages).default('en')
+});
 export const LayerI18nBase = createSelectSchema(layerI18n);
 
 // Base schema to validate submit data
 export const LayerInsert = createInsertSchema(layer).extend({
   ...getDefaultConstraints(layer),
-  metadata: z.custom<LayerMetadata>().default({ defaultEnabled: true })
+  metadata: z.custom<LayerMetadata>().default({ defaultEnabled: true }),
+  experimental: z
+    .object({
+      contributorMode: z.boolean()
+    })
+    .default({ contributorMode: false }),
+  language: z.enum(supportedLanguages).default('en')
 });
 
 export const LayerUpdate = LayerInsert.extend({
@@ -322,9 +339,7 @@ export const LayerPropertyUpdate = createInsertSchema(layerProperty);
 export const LayerPropertyUpdateExtra = LayerPropertyUpdate.extend({
   property: PropertyInsertAPI.omit({ values: true })
 });
-export const LayerPropertyInsert = LayerPropertyUpdateExtra.omit(
-  { layerId: true }
-);
+export const LayerPropertyInsert = LayerPropertyUpdateExtra.omit({ layerId: true });
 
 export const LayerI18nInsert = LayerI18nUpdate.omit({ layerId: true });
 
@@ -336,6 +351,10 @@ export const LayerInsertAPI = LayerInsert.extend({
 export const LayerUpdateAPI = LayerUpdate.extend({
   translations: getTranslations(LayerI18nUpdate),
   properties: z.array(LayerPropertyUpdateExtra)
+});
+
+export const LayerUpdateAPIWithProject = LayerUpdateAPI.extend({
+  project: ProjectBase
 });
 
 export const LayerPatch = LayerUpdate.partial();
@@ -360,7 +379,9 @@ export const FeaturePropertyUpdateExtra = FeaturePropertyUpdate.extend({
 });
 
 export const FeaturePropertyI18nUpdate = createInsertSchema(featurePropertyI18n);
-export const FeaturePropertyI18nInsert = FeaturePropertyI18nUpdate.omit({ featurePropertyId: true });
+export const FeaturePropertyI18nInsert = FeaturePropertyI18nUpdate.omit({
+  featurePropertyId: true
+});
 
 export const FeaturePropertyInsertAPI = FeaturePropertyInsert.extend({
   translations: z.union([getTranslations(FeaturePropertyI18nInsert), z.object({})])
@@ -374,9 +395,9 @@ export const FeaturePropertyUpdateAPI = FeaturePropertyUpdateExtra.extend({
 /* -------- */
 
 const PointGeometry = z.object({
-  type: z.literal("Point"),
+  type: z.literal('Point'),
   coordinates: z.array(z.number())
-})
+});
 
 // Feature Schemas
 export const FeatureBase = createSelectSchema(feature);
@@ -403,7 +424,7 @@ export const FeatureI18nInsert = FeatureI18nUpdate.omit({ featureId: true });
 // Update existing Feature schemas to include new relations
 export const FeatureInsertAPI = FeatureInsert.extend({
   translations: getTranslations(FeatureI18nInsert),
-  properties: z.array(FeaturePropertyInsertAPI),
+  properties: z.array(FeaturePropertyInsertAPI)
   // images: z.array(FeatureImageInsert).optional(),
   // users: z.array(UserFeatureInsert).optional(),
   // tasks: z.array(TaskInsert).optional()
@@ -411,7 +432,7 @@ export const FeatureInsertAPI = FeatureInsert.extend({
 
 export const FeatureUpdateAPI = FeatureUpdate.extend({
   translations: getTranslations(FeatureI18nUpdate),
-  properties: z.array(FeaturePropertyUpdateAPI),
+  properties: z.array(FeaturePropertyUpdateAPI)
   // images: z.array(FeatureImageUpdate).optional(),
   // users: z.array(UserFeatureUpdate).optional(),
   // tasks: z.array(TaskUpdate).optional()
@@ -423,7 +444,7 @@ export const FeatureGetAPI = FeatureUpdateAPI.extend({
   layer: LayerUpdateAPI.optional(),
   project: ProjectUpdateAPI.optional(),
   organisation: OrganisationUpdateAPI.optional()
-})
+});
 
 /* ----------------- */
 // IMAGES
@@ -433,7 +454,7 @@ export const FeatureGetAPI = FeatureUpdateAPI.extend({
 export const ImageBase = createSelectSchema(image);
 export const ImageInsert = createInsertSchema(image).extend({
   id: z.string().optional(),
-  publicId: z.string().min(1, "Public ID is required"),
+  publicId: z.string().min(1, 'Public ID is required'),
   cdn: z.enum(['cloudinary']).default('cloudinary'),
   contributorId: z.string(),
   capturedAt: z.string()
@@ -447,11 +468,13 @@ export const ImageUpdate = ImageInsert.extend({
 export const FeatureImageBase = createSelectSchema(featureImage);
 export const FeatureImageInsert = createInsertSchema(featureImage).extend({
   featureId: z.string(),
-  intent: z.enum(['canonical', 'closeUp', 'context', 'general', 'evidence', 'undefined'])
-  .default('undefined'),
+  intent: z
+    .enum(['canonical', 'closeUp', 'context', 'general', 'evidence', 'undefined'])
+    .default('undefined'),
   isPublished: z.boolean().default(false),
   publishedAt: z.string().optional()
 });
+export const FeatureImageInserts = FeatureImageInsert.omit({ imageId: true });
 
 export const FeatureImageUpdate = FeatureImageInsert.extend({
   featureId: z.string(),
@@ -463,29 +486,28 @@ export const FeatureImageUpdateAPI = FeatureImageUpdate.extend({
   image: ImageBase.optional()
 });
 
-
 export const ImageInsertAPI = ImageInsert.extend({
   featureImage: FeatureImageInsert.optional(),
   // RELATED ENTITY
   refType: z.enum(['feature', 'project', 'organisation']),
-  refId: z.string(),
+  refId: z.string()
 });
 
 export const ImageUpdateAPI = ImageUpdate.extend({
   featureImage: FeatureImageUpdate.optional(),
   // RELATED ENTITY
   refType: z.enum(['feature', 'project', 'organisation']),
-  refId: z.string(),
+  refId: z.string()
 });
 
 export const ImageGetAPI = ImageUpdate.extend({
   featureId: z.string(),
-  intent: z.enum(['canonical', 'closeUp', 'context', 'general', 'evidence', 'undefined'])
-  .default('undefined'),
+  intent: z
+    .enum(['canonical', 'closeUp', 'context', 'general', 'evidence', 'undefined'])
+    .default('undefined'),
   isPublished: z.boolean().default(false),
-  publishedAt: z.coerce.date(),
+  publishedAt: z.coerce.date()
 });
-
 
 export const ImagePatch = ImageUpdate.partial();
 
@@ -511,6 +533,35 @@ export const UserFeatureUpdateAPI = UserFeatureUpdate.extend({
 });
 
 /* ----------------- */
+// USER LAYERS
+/* -------- */
+
+// Add new schemas for userLayer
+export const UserLayerBase = createSelectSchema(userLayer);
+export const UserLayerInsert = createInsertSchema(userLayer);
+export const UserLayerUpdate = UserLayerInsert.extend({
+  userId: z.string(),
+  layerId: z.string()
+});
+
+export const UserLayerUpdateAPI = UserLayerUpdate.extend({
+  user: UserBase.optional(),
+  layer: LayerBase.optional()
+});
+
+// USER EXTENDED
+
+export const UserUpdateAPI = UserBase.extend({
+  userLayers: z.array(UserLayerUpdate)
+});
+
+export const UserUpdate = UserPrivacyPreserving.extend({
+  userLayers: z.array(UserLayerUpdate)
+});
+
+export const UserPatch = UserUpdate.partial();
+
+/* ----------------- */
 // TASKS
 /* -------- */
 
@@ -521,18 +572,48 @@ export const TaskInsert = createInsertSchema(task).extend({
   type: z.enum(['reportedMissing', 'newPhoto', 'newFeature']),
   isReviewed: z.boolean().default(false),
   reviewOutcome: z.enum(['rejected', 'accepted']).optional(),
-  reviewAction: z.enum(['ignored', 'set-unpublished', 'set-intangible', 'set-archived', 'add-photo', 'add-feature']).optional()
+  reviewAction: z
+    .enum([
+      'ignored',
+      'set-unpublished',
+      'set-intangible',
+      'set-archived',
+      'add-photo',
+      'add-feature'
+    ])
+    .optional()
 });
 
 export const TaskUpdate = TaskInsert.extend({
   id: z.string()
 });
 
+/* ----------------- */
+// TASK IMAGES
+/* -------- */
+
+// Base schemas
+export const TaskImageBase = createSelectSchema(taskImage);
+export const TaskImageInsert = createInsertSchema(taskImage).extend({
+  isPrimary: z.boolean().default(false)
+});
+
+export const TaskImageUpdate = TaskImageInsert.extend({
+  taskId: z.string(),
+  imageId: z.string()
+});
+
+export const TaskImageUpdateAPI = TaskImageUpdate.extend({
+  task: TaskBase.optional(),
+  image: ImageBase.optional()
+});
+
 export const TaskInsertAPI = TaskInsert.extend({
   organisation: OrganisationBase.optional(),
   project: ProjectBase.optional(),
   feature: FeatureInsertAPI.optional(),
-  image: ImageBase.optional(),
+  images: z.array(ImageBase).optional(),
+  taskImages: z.array(TaskImageInsert).optional(),
   contributor: UserBase.optional(),
   reviewer: UserBase.optional()
 });
@@ -541,7 +622,8 @@ export const TaskUpdateAPI = TaskUpdate.extend({
   organisation: OrganisationBase.optional(),
   project: ProjectBase.optional(),
   feature: FeatureUpdateAPI.optional(),
-  image: ImageBase.optional(),
+  images: z.array(ImageBase).optional(),
+  taskImages: z.array(TaskImageUpdate).optional(),
   contributor: UserBase.optional(),
   reviewer: UserBase.optional()
 });

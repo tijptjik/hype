@@ -2,7 +2,7 @@
 import { NEW_REF } from '$lib';
 import { page } from '$app/stores';
 // CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // TYPES
 import type {
   EntityRouter,
@@ -16,7 +16,7 @@ import type {
 const { session } = $page.data;
 
 // CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
+const resourceState = getHierarchicalResourceState();
 
 // STATE : PROPS
 let menuProps: { form: SuperFormResult<Project | Layer | Feature> } = $props();
@@ -48,13 +48,18 @@ const handleClick = async (e: Event) => {
   e.preventDefault();
   e.stopPropagation();
 
-  if (isLoading || !routerState.entity || routerState.entity === NEW_REF) return;
+  if (
+    isLoading ||
+    !resourceState.activeEntity ||
+    resourceState.activeEntity === NEW_REF
+  )
+    return;
 
   isLoading = true;
 
   try {
     const response: Response = await fetch(
-      `/api/${routerState.resource}s/${routerState.entity}`,
+      `/api/${resourceState.state.active.resource}s/${resourceState.activeEntity}`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -89,7 +94,7 @@ const handleClick = async (e: Event) => {
 </script>
 
 <button
-  class="btn transition-colors duration-500 border-none disabled:bg-transparent disabled:text-opacity-60"
+  class="btn border-none transition-colors duration-500 disabled:bg-transparent disabled:text-opacity-60"
   onclick={handleClick}
   class:bg-rose-500={!isInvalid && !$form.isPublished}
   class:bg-fuchsia-900={!isInvalid && $form.isPublished}
@@ -98,8 +103,8 @@ const handleClick = async (e: Event) => {
   class:btn-error={isInvalid}
   disabled={isInvalid ||
     isLoading ||
-    !routerState.entity ||
-    routerState.entity === NEW_REF}>
+    !resourceState.activeEntity ||
+    resourceState.activeEntity === NEW_REF}>
   {#if $form.isPublished}
     Unpublish
   {:else}

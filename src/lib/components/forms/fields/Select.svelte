@@ -4,8 +4,6 @@ import { getValues, updateForm, getId } from '$lib/index';
 import Select from '$lib/components/forms/elements/Select.svelte';
 import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
 import FieldLabel from '$lib/components/forms/labels/Field.svelte';
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
 import type { FieldPropsExtended, EntityRouter, FieldDiscriminator } from '$lib/types';
 
@@ -17,14 +15,11 @@ let {
   fieldDiscriminator,
   fieldKey,
   field,
-  ...fieldProps 
+  ...fieldProps
 }: FieldPropsExtended & { fieldDiscriminator: FieldDiscriminator } = $props();
 
 // STATE : FORM
 let { form, constraints, errors } = fieldProps.form;
-
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
 
 // STATE : INTERMEDIATE
 let value = $state('');

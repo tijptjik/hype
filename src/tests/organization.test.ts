@@ -1,6 +1,8 @@
 import { eq } from 'drizzle-orm';
-import { ROUTER_STATE_KEY} from '$lib/context/router.svelte';
+import { HIERARCHICAL_RESOURCE_STATE_KEY } from '$lib/context/resources.svelte';
 import { superValidate } from 'sveltekit-superforms/client';
+// LIB
+import { ADMIN_PATH } from '$lib/index';
 // TESTING
 import { db } from '$lib/db/test';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -47,7 +49,9 @@ describe('Organization Management', () => {
 
   it('should create a new organisation', async () => {
     const newOrgData = organisationJson[0];
-    const newOrgI18nData = organisationI18nJson.filter((i18n) => i18n.organisationId === newOrgData.id);
+    const newOrgI18nData = organisationI18nJson.filter(
+      (i18n) => i18n.organisationId === newOrgData.id
+    );
     const [newOrgZHHKData] = newOrgI18nData.filter((i18n) => i18n.lang === 'zh-hant');
     const [newOrgZHSData] = newOrgI18nData.filter((i18n) => i18n.lang === 'zh-hans');
 
@@ -80,7 +84,7 @@ describe('Organization Management', () => {
       },
       context: new Map([
         [
-          ROUTER_STATE_KEY,
+          HIERARCHICAL_RESOURCE_STATE_KEY,
           {
             resource: 'organisation',
             entity: false,
@@ -90,9 +94,10 @@ describe('Organization Management', () => {
         [
           '$page',
           {
-            url: new URL('http://localhost:5173/admin/organisations/new')
+            url: new URL('http://localhost:5173{ADMIN_PATH}/organisations/new')
           }
         ]
+
       ])
     });
 
@@ -137,7 +142,7 @@ describe('Organization Management', () => {
     //   },
     //   context: new Map([
     //     [
-    //       ROUTER_STATE_KEY,
+    //       HIERARCHICAL_RESOURCE_STATE_KEY,
     //       {
     //         resource: 'organisation',
     //         entity: 'new',
@@ -147,7 +152,7 @@ describe('Organization Management', () => {
     //     [
     //       '$page',
     //       {
-    //         url: new URL('http://localhost:5173/admin/organisations/new')
+    //         url: new URL('http://localhost:5173{ADMIN_PATH}/organisations/new')
     //       }
     //     ]
     //   ])
@@ -162,7 +167,7 @@ describe('Organization Management', () => {
     const org = await db
       .select()
       .from(organisation)
-    .where(eq(organisation.code, newOrgData.code));
+      .where(eq(organisation.code, newOrgData.code));
     const orgs = await db.select().from(organisation);
     console.info(orgs);
     expect(org).toBeDefined();
@@ -174,7 +179,7 @@ describe('Organization Management', () => {
       .from(organisationI18n)
       .where(eq(organisationI18n.organisationId, org[0].id));
     expect(i18nEntries).toHaveLength(2); // One for zh-hant and one for zh-hans
-    
+
     // Verify the owner role was created
     const roles = await db
       .select()
@@ -373,8 +378,12 @@ describe('Organization Management', () => {
     ]);
 
     // Remove all but one owner
-    await db.delete(organisationRole).where(eq(organisationRole.userId, testUsers[1].id));
-    await db.delete(organisationRole).where(eq(organisationRole.userId, testUsers[2].id));
+    await db
+      .delete(organisationRole)
+      .where(eq(organisationRole.userId, testUsers[1].id));
+    await db
+      .delete(organisationRole)
+      .where(eq(organisationRole.userId, testUsers[2].id));
 
     // Verify only one owner remains
     const remainingUsers = await db

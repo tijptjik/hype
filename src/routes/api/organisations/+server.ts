@@ -1,8 +1,18 @@
 import { error } from '@sveltejs/kit';
 import { actionResult, superValidate, type SuperValidated } from 'sveltekit-superforms';
-import { getDatabaseOrError, isValidQueryParamsOrError, JSONResponseOrError, PRISM_PARAMETERS, SuperFormResponse } from '$lib/api';
+import {
+  getDatabaseOrError,
+  isValidQueryParamsOrError,
+  JSONResponseOrError,
+  PRISM_PARAMETERS,
+  SuperFormResponse
+} from '$lib/api';
 // DB
-import { hierarchicalResourceQuery, toNestedTranslations, validateTableColumns } from '$lib/db';
+import {
+  hierarchicalResourceQuery,
+  toNestedTranslations,
+  validateTableColumns
+} from '$lib/db';
 import { organisationRole, organisationI18n, organisation } from '$lib/db/schema';
 import {
   createOrganisation,
@@ -22,9 +32,14 @@ import type { NewOrganisation, Organisation, OrganisationI18n } from '$lib/types
 
 const RESOURCE_TYPE = 'organisation';
 const RESOURCE_PATH = 'organisations';
-const ACCESS_STRATEGY = 'ResourceOwn';
+let ACCESS_STRATEGY = 'ResourceOwn';
 
 export const GET: RequestHandler = async ({ url, locals, platform }) => {
+  // Features which are published are visible to all users
+  if (url.searchParams.get('isPublished') === 'true') {
+    ACCESS_STRATEGY = 'ResourceAll';
+  }
+
   // AUTH : Pass or Fail
   const { db, userId, accessStrategy } = await getDatabaseOrError(
     locals,
@@ -47,7 +62,9 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
       userId,
       organisationRole,
       organisationI18n,
-      {},
+      {
+        id: url.searchParams.getAll('id')
+      },
       1,
       queryParams
     );
@@ -81,7 +98,8 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 
     // Check if the current user will lose access on membership changes
     const userLosesAccess =
-      !Object.keys(form.data.userRoles).includes(userId) && accessStrategy !== 'SuperAdmin';
+      !Object.keys(form.data.userRoles).includes(userId) &&
+      accessStrategy !== 'SuperAdmin';
     const codeUnique = await isFieldUnique<Organisation>(
       db,
       formData as Organisation,
@@ -98,16 +116,19 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       return SuperFormResponse<Organisation>(form);
     }
 
-    const { baseOrganisation, formTranslations, formUserRoles } = extractEntitiesToInsert(
-      form.data
-    );
+    const { baseOrganisation, formTranslations, formUserRoles } =
+      extractEntitiesToInsert(form.data);
     const createdOrganisation = await createOrganisation(db, baseOrganisation);
     const createdTranslations = await createTranslations(
       db,
       formTranslations,
       createdOrganisation.id
     );
-    const createdUserRoles = await createUserRoles(db, formUserRoles, createdOrganisation.id);
+    const createdUserRoles = await createUserRoles(
+      db,
+      formUserRoles,
+      createdOrganisation.id
+    );
 
     const updatedFormData = {
       ...createdOrganisation,
@@ -115,10 +136,10 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       userRoles: createdUserRoles
     };
 
-    const updatedForm = await superValidate(
+    const updatedForm = (await superValidate(
       updatedFormData,
       zod(OrganisationUpdateAPI)
-    ) as SuperValidated<Organisation>;
+    )) as SuperValidated<Organisation>;
 
     return SuperFormResponse<Organisation>(
       updatedForm,

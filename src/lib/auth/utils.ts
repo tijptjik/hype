@@ -1,6 +1,7 @@
 import type { Session } from '@auth/core/types';
 import { eq } from 'drizzle-orm';
-import { organisationRole, projectRole, organisation, project } from '$lib/db/schema';
+import { organisationRole, projectRole, organisation, project, userLayer, layer } from '$lib/db/schema';
+import type { UserLayer } from '$lib/types';
 
 // Utility functions
 
@@ -123,6 +124,27 @@ export async function getUserRoles(db: any, userId: string): Promise<UserRole[]>
   return userRoles;
 }
 
+/**
+ * Fetches and constructs user layers from the database.
+ *
+ * @param db - The database instance to query.
+ * @param userId - The ID of the user to fetch layers for.
+ * @returns A Promise that resolves to an array of UserLayer objects.
+ *
+ * @remarks
+ * This function fetches all layers that the user has access to,
+ * including those inherited from their organisation roles.
+ * It then maps these layers into UserLayer objects and returns them.
+ */
+export async function getUserLayers(db: any, userId: string): Promise<UserLayer[]> {
+  // Fetch user layers
+  const userLayers = await db
+    .select()
+    .from(userLayer)
+    .where(eq(userLayer.userId, userId));
+
+  return userLayers;
+}
 /**
  * Checks if the user has access to the control panel based on their roles.
  *

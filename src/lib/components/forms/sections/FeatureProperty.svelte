@@ -6,8 +6,6 @@ import RangeField from '$lib/components/forms/fields/Range.svelte';
 import ToggleField from '$lib/components/forms/fields/Toggle.svelte';
 import InputField from '$lib/components/forms/fields/Input.svelte';
 import { fade } from 'svelte/transition';
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
 import type { SectionProps, Feature, FacetRouter } from '$lib/types';
 
@@ -17,9 +15,6 @@ let { fields, fieldDiscriminator } = sectionProps;
 
 // STATE : FORM
 let { form } = sectionProps.form;
-
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as FacetRouter;
 </script>
 
 <div

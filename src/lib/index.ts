@@ -1,11 +1,10 @@
-import { goto } from '$app/navigation';
-import { navItems } from '$lib/stores/navigation.svelte';
-import { getRouterState, RouterState } from '$lib/context/router.svelte';
-import type { RequestEvent } from '@sveltejs/kit';
+// SVELTE
 import { derived, type Writable } from 'svelte/store';
-import { page } from '$app/stores';
 import { browser } from '$app/environment';
+import { page } from '$app/stores';
+// UTILITIES
 import deepEquals from 'fast-deep-equal';
+// COMPONENTS
 import InputField from '$lib/components/forms/fields/Input.svelte';
 import SelectField from '$lib/components/forms/fields/Select.svelte';
 import RangeField from '$lib/components/forms/fields/Range.svelte';
@@ -14,6 +13,8 @@ import UsersField from '$lib/components/forms/fields/Users.svelte';
 import CustomField from '$lib/components/forms/fields/Properties.svelte';
 import ListField from '$lib/components/forms/fields/List.svelte';
 import ToggleField from '$lib/components/forms/fields/Toggle.svelte';
+// TYPES
+import type { RequestEvent } from '@sveltejs/kit';
 import type {
   Field,
   LanguageTag,
@@ -23,10 +24,7 @@ import type {
   FormFieldDefinition,
   FieldDiscriminator,
   FieldComponentType,
-  TargetLang,
-  ResourceType,
-  Ref,
-  FacetType
+  TargetLang
 } from './types';
 
 /**
@@ -135,7 +133,7 @@ export const getValues = (
   }
   // FIELD : GET VALUE
   const value = ref[key] as string;
-  const isGenAI = ref[genField(key)] || false as boolean;
+  const isGenAI = ref[genField(key)] || (false as boolean);
 
   return { value, isGenAI };
 };
@@ -202,52 +200,9 @@ const sourceLanguageTag = 'en';
 export const languageTags: LanguageTag[] = [sourceLanguageTag, 'zh-hant', 'zh-hans'];
 export const NEW_TITLE = 'New';
 export const NEW_REF = NEW_TITLE.toLowerCase();
+export const ADMIN_PATH = '/admin';
 
-
-// STATE : CONTEXT
-export const goToResource = (e: Event, routerState: RouterState, resourceType: ResourceType) => {
-  e.preventDefault();
-  const url = new URL(window.location.href);
-  url.pathname = `/admin/${navItems[resourceType].path}`;
-  // UPDATE ROUTER STATE
-  routerState.updateWith({
-    resource: resourceType,
-    entity: false,
-    facet: false
-  });
-  // NAVIGATE
-  navigate(url.toString());
-};
-
-export const goToEntity = (e: Event, routerState: RouterState, resourceType: ResourceType, entityPath: Ref) => {
-  e.preventDefault();
-  let facet = 'core';
-  const url = new URL(window.location.href);
-  url.pathname = `/admin/${navItems[resourceType].path}/${entityPath}`;
-  if (resourceType === routerState.resource && routerState.facet) {
-    facet = routerState.facet;
-  }
-  // url.hash = `#${facet}`;
-  // UPDATE ROUTER STATE
-  routerState.updateWith({
-    resource: resourceType,
-    entity: entityPath,
-    facet: facet as FacetType
-  });
-  // NAVIGATE
-  navigate(url.toString());
-};
-
-export const goToFacet = (e: Event, routerState: RouterState, facet: FacetType) => {
-  e.preventDefault();
-  const url = new URL(window.location.href);
-  routerState.updateWith({ facet: facet });
-  navigate(url.toString());
-};
-
-export const navigate = (url: string) => {
-  goto(url).then(() => goto(url));
-}
+export const ADMIN_MIN_WIDTH = 1200;
 
 export const capitalizeFirstLetter = (text: string | null) => {
   if (!text) return null;

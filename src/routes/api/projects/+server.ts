@@ -21,9 +21,15 @@ import type { NewProject, Project, Property } from '$lib/types';
 
 const RESOURCE_TYPE = 'project';
 const RESOURCE_PATH = 'projects';
-const ACCESS_STRATEGY = 'ResourceOwn';
+let ACCESS_STRATEGY = 'ResourceOwn';
 
 export const GET: RequestHandler = async ({ locals, platform, url }) => {
+  
+  // Projects which are published are visible to all users
+  if (url.searchParams.get('isPublished') === 'true') {
+    ACCESS_STRATEGY = 'ResourceAll';
+  }
+
   // AUTH : Pass or Fail
   const { db, userId, accessStrategy } = await getDatabaseOrError(
     locals,
@@ -42,6 +48,16 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
       {
         maintainerRoles: true,
         translations: true,
+        properties: {
+          with: {
+            translations: true,
+            values: {
+              with: {
+                translations: true
+              }
+            }
+          }
+        },
         image: true
       },
       userId,

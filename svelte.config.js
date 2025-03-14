@@ -16,7 +16,8 @@ const selectAdapter = () => {
       routes: {
         include: ['/*'],
         exclude: ['<all>']
-      }
+      },
+      precompress: true
     });
   }
 };

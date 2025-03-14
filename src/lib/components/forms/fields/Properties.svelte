@@ -1,19 +1,12 @@
 <script lang="ts">
 import { customAlphabet } from 'nanoid';
-import { getFieldComponent, isPrimaryLang, languageTags} from '$lib';
+import { getFieldComponent, isPrimaryLang, languageTags } from '$lib';
 // COMPONENTS
 import RemoveShim from '$lib/components/forms/shims/Remove.svelte';
 import ConfirmShim from '$lib/components/forms/shims/Confirm.svelte';
 import FauxInput from '$lib/components/forms/fields/FauxInput.svelte';
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
-import type {
-  FieldProps,
-  FormProps,
-  ActionProps,
-  FacetRouter
-} from '$lib/types';
+import type { FieldProps, FormProps, ActionProps, FacetRouter } from '$lib/types';
 
 // STATE : INTERMEDIATE VALUES
 type IntermediateValue = {
@@ -50,9 +43,6 @@ let { form } = fieldProps.form;
 
 // STATE : INTERMEDIATE VALUES
 let complexValues: IntermediateValue[] = $state([]);
-
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as FacetRouter;
 
 // Sync Form to Complex Values
 const syncFormToComplexValues = () => {

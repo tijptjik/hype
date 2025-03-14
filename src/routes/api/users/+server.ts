@@ -40,7 +40,17 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
       },
       {
         memberships: true,
-        projectRoles: true
+        projectRoles: true,
+        userLayers: {
+          with: {
+            layer: {
+              columns: {
+                createdAt: false,
+                modifiedAt: false
+              }
+            }
+          }
+        }
       }
     );
 
@@ -53,43 +63,3 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
     return error(500, 'Dust Accumulation Critical');
   }
 };
-
-// export const GET: RequestHandler = async ({ locals, platform }) => {
-//   // AUTH : Pass or Fail
-//   await getSessionOrError(locals);
-//   // DB : Connect to D1
-//   const db = client(platform?.env.DB);
-//   try {
-//     // DB : Build & Execute Query
-//     const result = await db.query.user.findMany({
-//       columns: {
-//         email: false,
-//         emailVerified: false,
-//         createdAt: false,
-//         modifiedAt: false
-//       },
-//       with: {
-//         memberships: {
-//           columns: {
-//             role: true
-//           },
-//           with: {
-//             organisation: {
-//               columns: {
-//                 createdAt: false,
-//                 modifiedAt: false
-//               }
-//             }
-//           }
-//         }
-//       }
-//     });
-//     // HTTP : 200 JSON or 404
-//     return JSONResponseOrError(result);
-//   } catch (e) {
-//     // DB : Query Error
-//     console.error('Database query error:', e);
-//     // HTTP : 500 Error
-//     throw error(500, 'Dust Accumulation Critical');
-//   }
-// };

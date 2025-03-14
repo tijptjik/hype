@@ -1,182 +1,625 @@
+// LIB
+import { ADMIN_PATH } from '$lib/index';
+// CONTEXT
 import { getContext, setContext } from 'svelte';
-import type { Organisation, Project, Layer, Feature, Id, ResourceType, Ref, ResourceState, ParentEntity, ResourceTypeWithParent, ResourceTypeWithChildren } from '../types';
+import { QueryClient } from '@tanstack/svelte-query';
+// NAVIGATION
+import { goto } from '$app/navigation';
+// ENUMS
+import {
+  HierarchicalResource,
+  HierarchicalResourceParent,
+  HierarchicalResourceParentRefKey,
+  HierarchicalResourcePath,
+  HierarchicalResourceRefKey
+} from '$lib/types';
+// TYPES
+import type {
+  Organisation,
+  Project,
+  Layer,
+  Feature,
+  Id,
+  ResourceState as ResourceStateType,
+  FacetType,
+  Task,
+  Code,
+  AdminFilterStates,
+  AdminFilterState,
+  Resource,
+  ResourceTypeWithChildren
+} from '../types';
+import type { Page } from '@sveltejs/kit';
+import { reversePath } from '$lib/navigation';
 
-export class HierarchicalResourceState {
-  state: ResourceState = $state({
-    organisation: null,
-    project: null,
-    layer: null,
-    feature: null
+const nullOrEquals = (a: any, b: any) => {
+  return a == null || a === b;
+};
+
+export class ResourceState {
+  // Tanstack Query Client instance
+  queryClient: QueryClient;
+  // Whether the queryClient has been initialised
+  isInitialised: boolean = $state(false);
+
+  // State
+  state: ResourceStateType = $state({
+    active: {
+      resource: false,
+      entity: false,
+      facet: false
+    },
+    prisms: { organisation: [], project: [], layer: [] },
+    resources: {
+      organisation: [],
+      project: [],
+      layer: [],
+      feature: [],
+      task: []
+    },
+    filters: {
+      organisation: { text: '', properties: {}, isPublished: null, isArchived: false },
+      project: { text: '', properties: {}, isPublished: null, isArchived: false },
+      layer: { text: '', properties: {}, isPublished: null, isArchived: false },
+      feature: { text: '', properties: {}, isPublished: null, isArchived: false },
+      task: { text: '', properties: {}, isArchived: false }
+    }
   });
 
-  parents: ParentEntity[] = $state([]);
+  // Active Helpers
+  activeResource = $derived(this.state.active.resource);
+  activeEntity = $derived(this.state.active.entity);
+  activeFacet = $derived(this.state.active.facet);
 
-  constructor() {}
+  activeEntityRefKey = $derived(
+    HierarchicalResourceRefKey[
+      this.activeResource as keyof typeof HierarchicalResourceRefKey
+    ]
+  );
 
-  // Helper to determine resource level
-  #getResourceLevel(resource: ResourceType): number {
-    const levels: Record<ResourceType, number> = {
-      organisation: 0,
-      project: 1,
-      layer: 2,
-      feature: 3
-    };
-    return levels[resource];
+  // parent = $derived(this.getParent(this.activeResource));
+
+  // parentEntity = $derived(this.state.parents[0]);
+  // parentEntityRefKey = $derived(
+  //   HierarchicalResourceRefKey[
+  //     this.parentEntity as keyof typeof HierarchicalResourceRefKey
+  //   ]
+  // );
+
+  isShowIndex = $derived(this.activeResource && this.activeEntity === null);
+
+  activeEntityHref = $derived(
+    this.activeResource && this.activeEntity
+      ? `${ADMIN_PATH}/${HierarchicalResourcePath[this.activeResource]}/${this.activeEntity}`
+      : null
+  );
+
+  // QueryKeys
+  organisationsQueryKey = [HierarchicalResourcePath.organisation];
+  projectsQueryKey = $derived([
+    HierarchicalResourcePath.project,
+    this.state.prisms.organisation
+  ]);
+  layersQueryKey = $derived([
+    HierarchicalResourcePath.layer,
+    this.state.prisms.organisation,
+    this.state.prisms.project
+  ]);
+  featuresQueryKey = $derived([
+    HierarchicalResourcePath.feature,
+    this.state.prisms.organisation,
+    this.state.prisms.project,
+    this.state.prisms.layer
+  ]);
+  tasksQueryKey = $derived([
+    HierarchicalResourcePath.task,
+    this.state.prisms.organisation,
+    this.state.prisms.project
+  ]);
+
+  // Constructor
+  constructor(queryClient: QueryClient) {
+    this.queryClient = queryClient;
+    this.initializeQueries(queryClient);
   }
 
-  // Clear all resources below the specified level
-  #clearBelow(level: number) {
-    const resources: ResourceType[] = ['organisation', 'project', 'layer', 'feature'];
-    resources.forEach((resource) => {
-      if (this.#getResourceLevel(resource) > level) {
-        this.state[resource] = null;
+  // Helper method to build API URLs with filters
+  private buildApiUrl(resource: HierarchicalResource, includeFilters = true): string {
+    const path = HierarchicalResourcePath[resource];
+    const params = new URLSearchParams();
+
+    // Add isArchived filter by default
+    params.append('isArchived', 'false');
+
+    if (includeFilters) {
+      // Add prism filters based on resource hierarchy
+      if (resource !== HierarchicalResource.organisation) {
+        this.state.prisms.organisation.forEach((org) =>
+          params.append(HierarchicalResource.organisation, org)
+        );
       }
+
+      if (
+        resource !== HierarchicalResource.organisation &&
+        resource !== HierarchicalResource.project
+      ) {
+        this.state.prisms.project.forEach((proj) =>
+          params.append(HierarchicalResource.project, proj)
+        );
+      }
+
+      if (resource === HierarchicalResource.feature) {
+        this.state.prisms.layer.forEach((layer) =>
+          params.append(HierarchicalResource.layer, layer)
+        );
+      }
+    }
+
+    return `/api/${path}?${params.toString()}`;
+  }
+
+  private async fetchOrThrow<T>(url: string): Promise<T> {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Network response was not ok');
+    return (await response.json()) as T;
+  }
+
+  organisationsQueryFn = async () => {
+    const url = this.buildApiUrl(HierarchicalResource.organisation);
+    return this.fetchOrThrow<Organisation[]>(url);
+  };
+
+  projectsQueryFn = async () => {
+    const url = this.buildApiUrl(HierarchicalResource.project);
+    return this.fetchOrThrow<Project[]>(url);
+  };
+
+  layersQueryFn = async () => {
+    const url = this.buildApiUrl(HierarchicalResource.layer);
+    return this.fetchOrThrow<Layer[]>(url);
+  };
+
+  featuresQueryFn = async () => {
+    const url = this.buildApiUrl(HierarchicalResource.feature);
+    return this.fetchOrThrow<Feature[]>(url);
+  };
+
+  tasksQueryFn = async () => {
+    const url = this.buildApiUrl(HierarchicalResource.task);
+    return this.fetchOrThrow<Task[]>(url);
+  };
+
+  // Initialize Queries
+  private async initializeQueries(queryClient: QueryClient) {
+    // Organizations query
+    this.state.resources.organisation = await queryClient.fetchQuery({
+      queryKey: this.organisationsQueryKey,
+      queryFn: this.organisationsQueryFn
+    });
+
+    // Projects query
+    this.state.resources.project = await queryClient.fetchQuery({
+      queryKey: this.projectsQueryKey,
+      queryFn: this.projectsQueryFn
+    });
+
+    // Layers query
+    this.state.resources.layer = await queryClient.fetchQuery({
+      queryKey: this.layersQueryKey,
+      queryFn: this.layersQueryFn
+    });
+
+    // Features query
+    this.state.resources.feature = await queryClient.fetchQuery({
+      queryKey: this.featuresQueryKey,
+      queryFn: this.featuresQueryFn
+    });
+
+    // Tasks query
+    this.state.resources.task = await queryClient.fetchQuery({
+      queryKey: this.tasksQueryKey,
+      queryFn: this.tasksQueryFn
+    });
+
+    this.isInitialised = true;
+  }
+
+  togglePrism = (resource: HierarchicalResource, id: Id) => {
+    const prisms = this.state.prisms[resource as ResourceTypeWithChildren];
+    const index = prisms.indexOf(id);
+    if (index === -1) {
+      prisms.push(id);
+    } else {
+      prisms.splice(index, 1);
+    }
+    this.refreshResources(resource);
+  };
+
+  refreshResources = async (resource: HierarchicalResource) => {
+    if (resource === HierarchicalResource.organisation) {
+      this.refreshProjects();
+    } else if (resource === HierarchicalResource.project) {
+      this.refreshLayers();
+    } else if (resource === HierarchicalResource.layer) {
+      this.refreshFeatures();
+    }
+  };
+
+  // Toggle methods for hierarchical filters
+  toggleOrganisation(id: Id) {
+    this.togglePrism(HierarchicalResource.organisation, id);
+  }
+
+  toggleProject(id: Id) {
+    this.togglePrism(HierarchicalResource.project, id);
+  }
+
+  toggleLayer(id: Id) {
+    this.togglePrism(HierarchicalResource.layer, id);
+  }
+
+  toggleFeature(id: Id) {
+    this.togglePrism(HierarchicalResource.feature, id);
+  }
+
+  async refreshProjects() {
+    this.state.resources.project = await this.queryClient.fetchQuery({
+      queryKey: this.projectsQueryKey,
+      queryFn: this.projectsQueryFn
+    });
+    this.syncProjectPrisms();
+    this.refreshLayers();
+  }
+
+  async refreshLayers() {
+    this.state.resources.layer = await this.queryClient.fetchQuery({
+      queryKey: this.layersQueryKey,
+      queryFn: this.layersQueryFn
+    });
+    this.syncLayerPrisms();
+    this.refreshFeatures();
+  }
+
+  async refreshFeatures() {
+    this.state.resources.feature = await this.queryClient.fetchQuery({
+      queryKey: this.featuresQueryKey,
+      queryFn: this.featuresQueryFn
     });
   }
 
-  // Fetch a entity by type and ID
-  async #fetchEntity(
-    resource: ResourceType,
-    ref: Ref
-  ): Promise<Organisation | Project | Layer | Feature | null> {
-    try {
-      // Build URL with query parameter
-      const url = new URL(`/api/${resource}s`, window.location.origin);
-      url.searchParams.set('id', ref);
+  async syncProjectPrisms() {
+    this.state.prisms.project = this.state.prisms.project.filter((project) => {
+      return this.state.resources.project.some((p) => p.id === project);
+    });
+  }
 
-      const response = await fetch(url.toString());
-      if (!response.ok) return null;
-      
-      const results = await response.json();
-      
-      // Handle array response
-      if (!Array.isArray(results)) {
-        console.error(`Expected array response for ${resource}, got:`, results);
-        return null;
+  async syncLayerPrisms() {
+    this.state.prisms.layer = this.state.prisms.layer.filter((layer) => {
+      return this.state.resources.layer.some((l) => l.id === layer);
+    });
+  }
+
+  // FILTERS
+
+  getFilteredResource = (resource: HierarchicalResource) => {
+    let filterKeys =
+      resource !== HierarchicalResource.task
+        ? ['isPublished', 'isArchived']
+        : ['isReviewed', 'isArchived'];
+    return this.state.resources[resource].filter(
+      (entity) =>
+        filterKeys.every((key) => this.booleanFilter(resource, entity, key)) &&
+        this.textFilter(resource, entity)
+    );
+  };
+
+  booleanFilter = (
+    resource: HierarchicalResource,
+    entity: Resource,
+    property: string
+  ) => {
+    const filterState = this.state.filters[resource as keyof AdminFilterStates];
+    const filterValue = filterState[property as keyof AdminFilterState];
+    return filterValue === null || filterValue === entity[property as keyof Resource];
+  };
+
+  textFilter = (resource: HierarchicalResource, entity: Resource) => {
+    let query = this.state.filters[resource as keyof AdminFilterStates].text || '';
+    return (
+      query === '' ||
+      entity.name.toLowerCase().includes(query.toLowerCase()) ||
+      entity.title.toLowerCase().includes(query.toLowerCase()) ||
+      entity.nameShort?.toLowerCase().includes(query.toLowerCase()) ||
+      entity.description?.toLowerCase().includes(query.toLowerCase()) ||
+      entity.address?.toLowerCase().includes(query.toLowerCase())
+    );
+  };
+
+  // Filtered Helpers
+  filteredOrganisations = $derived(
+    this.getFilteredResource(HierarchicalResource.organisation)
+  );
+  filteredProjects = $derived(this.getFilteredResource(HierarchicalResource.project));
+  filteredLayers = $derived(this.getFilteredResource(HierarchicalResource.layer));
+  filteredFeatures = $derived(this.getFilteredResource(HierarchicalResource.feature));
+  filteredTasks = $derived(this.getFilteredResource(HierarchicalResource.task));
+
+  toggleFilter = (
+    resource: HierarchicalResource,
+    property: 'isPublished' | 'isArchived' | 'isReviewed'
+  ) => {
+    this.state.filters[resource][property] = !this.state.filters[resource][property];
+  };
+
+  // PRISM RELATIONS
+
+  getOrganisation = (project: Project): Organisation | undefined =>
+    project
+      ? this.state.resources.organisation.find(
+          (org) => org.id === project.organisationId
+        )
+      : undefined;
+
+  getProject = (layer: Layer): Project | undefined =>
+    layer
+      ? this.state.resources.project.find((proj) => proj.id === layer.projectId)
+      : undefined;
+
+  getLayer = (feature: Feature): Layer | undefined =>
+    this.state.resources.layer.find((layer) => layer.id === feature.layerId);
+
+  getResourcePath = () => {
+    return HierarchicalResourcePath[
+      this.state.active.resource as keyof typeof HierarchicalResourcePath
+    ];
+  };
+
+  // getEntityPath
+  getEntityRef = (resource: HierarchicalResource, id: Id) => {
+    const refKey = HierarchicalResourceRefKey[resource];
+    const entity = this.state.resources[resource].find((entity) => entity.id === id);
+    if (!entity) return null;
+    return entity[refKey as keyof Resource];
+  };
+
+  getEntityPath = (resource: HierarchicalResource, id: Id) => {
+    const ref = this.getEntityRef(resource, id);
+    if (!ref) return null;
+    return `${this.getResourcePath(resource)}/${ref}`;
+  };
+
+  // Hierarchical Resource Helpers
+
+  getParent = () => {
+    // Get the Parent Resource
+    const parentResource =
+      HierarchicalResourceParent[
+        this.state.active.resource as keyof typeof HierarchicalResourceParent
+      ];
+    console.log('this.state.active.resource', this.state.active.resource);
+    console.log('parentResource', parentResource);
+    console.log(HierarchicalResourceParent);
+
+    // Get the Parent Entity
+    const parentEntity = this.state.resources[parentResource].find(
+      (entity) =>
+        entity.id ===
+        this.state.active.entity[HierarchicalResourceParentRefKey[parentResource]]
+    );
+    return parentEntity;
+  };
+
+  // // Clear all resources below the specified level
+  // #clearBelow(level: number) {
+  //   Object.values(HierarchicalResource).forEach((resource) => {
+  //     if (HierarchicalResourceSeq[resource] > level) {
+  //       this.state[resource] = null;
+  //     }
+  //   });
+  // }
+
+  // // Fetch a entity by type and ID
+  // async #fetchEntity(
+  //   resource: ResourceType,
+  //   ref: Ref
+  // ): Promise<Organisation | Project | Layer | Feature | null> {
+  //   try {
+  //     // Build URL with query parameter
+  //     const url = new URL(`/api/${resource}s`, window.location.origin);
+  //     url.searchParams.set('id', ref);
+
+  //     const response = await fetch(url.toString());
+  //     if (!response.ok) return null;
+
+  //     const results = await response.json();
+
+  //     // Handle array response
+  //     if (!Array.isArray(results)) {
+  //       console.error(`Expected array response for ${resource}, got:`, results);
+  //       return null;
+  //     }
+
+  //     // Check for multiple results
+  //     if (results.length > 1) {
+  //       console.error(`Multiple ${resource}s found for id ${ref}`);
+  //       return null;
+  //     }
+
+  //     // Return first result or null if empty
+  //     return results.length === 1 ? results[0] : null;
+  //   } catch (error) {
+  //     console.error(`Error fetching ${resource}:`, error);
+  //     return null;
+  //   }
+  // }
+
+  // // Get parent resource
+  // #getParentType(resource: ResourceTypeWithParent): ResourceTypeWithChildren | null {
+  //   const parents: Record<ResourceTypeWithParent, ResourceTypeWithChildren> = {
+  //     feature: 'layer',
+  //     layer: 'project',
+  //     project: 'organisation'
+  //   };
+  //   return parents[resource] || null;
+  // }
+
+  // // Get parent reference from resource
+  // #getParentRef(entity: Organisation | Project | Layer | Feature): string | null {
+  //   if ('layerId' in entity) return entity.layerId;
+  //   if ('projectId' in entity) return entity.projectId;
+  //   if ('organisationId' in entity) return entity.organisationId;
+  //   return null;
+  // }
+
+  // // Recursively fetch and set parent resources
+  // async #fetchParents(
+  //   resource: ResourceType,
+  //   entity: Organisation | Project | Layer | Feature
+  // ) {
+  //   const parentType = this.#getParentType(resource as ResourceTypeWithParent);
+  //   if (!parentType) return;
+
+  //   const parentRef = this.#getParentRef(entity);
+  //   if (!parentRef) return;
+
+  //   const parentEntity = await this.#fetchEntity(parentType, parentRef);
+  //   if (parentEntity) {
+  //     this.state[parentType] = parentEntity;
+  //     await this.#fetchParents(parentType, parentEntity);
+  //   }
+  // }
+
+  // // Update the state with a new resource
+  // async update(
+  //   resource: keyof ResourceState,
+  //   entity: Organisation | Project | Layer | Feature
+  // ) {
+  //   const level = this.#getResourceLevel(resource);
+
+  //   // Clear all resources below this level
+  //   this.#clearBelow(level);
+
+  //   // Set the current resource
+  //   this.state[resource] = entity;
+
+  //   // Fetch any missing parent resources
+  //   await this.#fetchParents(resource, entity);
+
+  //   this.#setEntityParents(resource as ResourceTypeWithParent);
+  // }
+
+  // // Get parent entity for current resource
+  // #getEntityParent(
+  //   resource: ResourceTypeWithParent,
+  //   entityRef: Ref
+  // ): ParentEntity | null {
+  //   const parentType = this.#getParentType(resource);
+  //   if (!parentType) return null;
+
+  //   return {
+  //     type: parentType,
+  //     name: this.#getEntityShortName(this.state[parentType]),
+  //     href: `${ADMIN_PATH}/${parentType}s/${this.state[parentType]?.[this.#getRefKey(parentType)]}`,
+  //     entity: this.state[parentType]
+  //   };
+  // }
+
+  // // Get all parent entities recursively
+  // #setEntityParents(resource: ResourceTypeWithParent): ParentEntity[] {
+  //   let newParents: ParentEntity[] = [];
+  //   let currentResource = resource;
+
+  //   while (true) {
+  //     const parent = this.#getEntityParent(currentResource as ResourceTypeWithParent);
+  //     if (!parent) break;
+
+  //     newParents.push(parent);
+  //     currentResource = parent.type;
+
+  //     // Break if we reach organisation (top level) or if parent type is not valid
+  //     if (
+  //       currentResource === 'organisation' ||
+  //       !this.#getParentType(currentResource as ResourceTypeWithParent)
+  //     )
+  //       break;
+  //   }
+
+  //   // Return parents from highest level to lowest level
+  //   this.parents = newParents.reverse();
+  // }
+
+  // // Get entity short name
+  // #getEntityShortName(entity: Organisation | Project | Layer | null): string {
+  //   if (!entity) return '';
+  //   return 'nameShort' in entity
+  //     ? (entity.nameShort as string)
+  //     : (entity.name as string);
+  // }
+
+  setActiveFromPage(page: Page) {
+    const path = page.url.pathname;
+    // TODO Only match at start of string
+    const pathParts = path.replace(ADMIN_PATH, '').split('/').filter(Boolean);
+
+    if (pathParts.length > 0) {
+      const resourcePath = pathParts[0];
+      const resourceType = reversePath.get(resourcePath) || false;
+
+      if (resourceType) {
+        this.setResource(resourceType as unknown as HierarchicalResource);
+
+        if (pathParts.length > 1) {
+          const entityRef = pathParts[1];
+          this.setEntity(entityRef, resourceType as unknown as HierarchicalResource);
+        } else {
+          this.setEntity(false);
+        }
       }
-      
-      // Check for multiple results
-      if (results.length > 1) {
-        console.error(`Multiple ${resource}s found for id ${ref}`);
-        return null;
-      }
-      
-      // Return first result or null if empty
-      return results.length === 1 ? results[0] : null;
-    } catch (error) {
-      console.error(`Error fetching ${resource}:`, error);
-      return null;
     }
   }
 
-  // Get parent resource
-  #getParentType(resource: ResourceTypeWithParent): ResourceTypeWithChildren | null {
-    const parents: Record<ResourceTypeWithParent, ResourceTypeWithChildren> = {
-      feature: 'layer',
-      layer: 'project',
-      project: 'organisation'
-    };
-    return parents[resource] || null;
+  setResource(resource: HierarchicalResource) {
+    this.state.active.resource = resource;
   }
 
-    // Get parent resource
-    #getRefKey(resource: ResourceType): string | null {
-      const parents: Partial<Record<ResourceType, string>> = {
-      organisation : 'code',
-      project: 'code',
-      layer: 'id',
-      feature: 'id'
-    };
-      return parents[resource] || null;
+  setEntity(entity: Id | Code | false, resource?: HierarchicalResource) {
+    // If the new entity is a different resource type to the current entity, update the state
+    if (resource) {
+      this.setResource(resource);
     }
-
-  // Get parent reference from resource
-  #getParentRef(entity: Organisation | Project | Layer | Feature): string | null {
-    if ('layerId' in entity) return entity.layerId;
-    if ('projectId' in entity) return entity.projectId;
-    if ('organisationId' in entity) return entity.organisationId;
-    return null;
+    this.state.active.entity = entity;
   }
 
-  // Recursively fetch and set parent resources
-  async #fetchParents(
-    resource: ResourceType,
-    entity: Organisation | Project | Layer | Feature
-  ) {
-    const parentType = this.#getParentType(resource as ResourceTypeWithParent);
-    if (!parentType) return;
-
-    const parentRef = this.#getParentRef(entity);
-    if (!parentRef) return;
-
-    const parentEntity = await this.#fetchEntity(parentType, parentRef);
-    if (parentEntity) {
-      this.state[parentType] = parentEntity;
-      await this.#fetchParents(parentType, parentEntity);
-    }
+  setFacet(facet: FacetType) {
+    this.state.active.facet = facet;
   }
 
-  // Update the state with a new resource
-  async update(resource: keyof ResourceState, entity: Organisation | Project | Layer | Feature) {
-    const level = this.#getResourceLevel(resource);
-    
-    // Clear all resources below this level
-    this.#clearBelow(level);
-    
-    // Set the current resource
-    this.state[resource] = entity;
-    
-    // Fetch any missing parent resources
-    await this.#fetchParents(resource, entity);
+  getEntities = (resource?: HierarchicalResource) => {
+    let resourceKey = resource ?? this.state.active.resource;
+    if (!resourceKey) return [];
+    return this.state.resources[resourceKey];
+  };
 
-    this.#setEntityParents(resource as ResourceTypeWithParent);
+  getEntity() {
+    let resource = this.state.active.resource;
+    let entityRef = this.state.active.entity;
+    if (!resource || !entityRef) return null;
+    let entityRefKey = HierarchicalResourceRefKey[resource];
+    return this.state.resources[resource].find(
+      (e) => e[entityRefKey as keyof Resource] === entityRef
+    );
   }
-
-
-  // Get parent entity for current resource
-  #getEntityParent(resource: ResourceTypeWithParent, entityRef: Ref): ParentEntity | null {
-    const parentType = this.#getParentType(resource);
-    if (!parentType) return null;
-
-    return {
-      type: parentType,
-      name: this.#getEntityShortName(this.state[parentType]),
-      href: `/admin/${parentType}s/${this.state[parentType]?.[this.#getRefKey(parentType)]}`,
-      entity: this.state[parentType],
-    };
-  }
-
-  // Get all parent entities recursively
-  #setEntityParents(resource: ResourceTypeWithParent): ParentEntity[] {
-    let newParents: ParentEntity[] = [];
-    let currentResource = resource;
-
-    while (true) {
-      const parent = this.#getEntityParent(currentResource as ResourceTypeWithParent);
-      if (!parent) break;
-
-      newParents.push(parent);
-      currentResource = parent.type;
-
-      // Break if we reach organisation (top level) or if parent type is not valid
-      if (currentResource === 'organisation' || !this.#getParentType(currentResource as ResourceTypeWithParent)) break;
-    }
-
-    // Return parents from highest level to lowest level
-    this.parents = newParents.reverse();
-  }
-
-  // Get entity short name
-  #getEntityShortName(entity: Organisation | Project | Layer | null): string {
-    if (!entity) return '';
-    return 'nameShort' in entity ? (entity.nameShort as string) : (entity.name as string);
-  }
+  // GENERIC UTILS
+  hasManyEntities = (resource: HierarchicalResource) => {
+    return this.getFilteredResource(resource).length > 3;
+  };
 }
 
 export const HIERARCHICAL_RESOURCE_STATE_KEY = Symbol('hierarchicalResourceState');
 
-export const setHierarchicalResourceState = () => 
-  setContext(HIERARCHICAL_RESOURCE_STATE_KEY, new HierarchicalResourceState());
+export const setHierarchicalResourceState = (queryClient: QueryClient) =>
+  setContext(HIERARCHICAL_RESOURCE_STATE_KEY, new ResourceState(queryClient));
 
-export const getHierarchicalResourceState = (): ReturnType<typeof setHierarchicalResourceState> => 
-  getContext(HIERARCHICAL_RESOURCE_STATE_KEY);
+export const getHierarchicalResourceState = (): ReturnType<
+  typeof setHierarchicalResourceState
+> => getContext(HIERARCHICAL_RESOURCE_STATE_KEY);

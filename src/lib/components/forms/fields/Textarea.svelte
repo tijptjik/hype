@@ -2,10 +2,13 @@
 import FormTextArea from '$lib/components/forms/elements/Textarea.svelte';
 import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
 import { getValues, updateForm, getId } from '$lib/index';
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
-import type { FieldPropsExtended, Resource, LanguageTag, EntityRouter } from '$lib/types';
+import type {
+  FieldPropsExtended,
+  Resource,
+  LanguageTag,
+  EntityRouter
+} from '$lib/types';
 
 // STATE : PROPS
 let {
@@ -18,9 +21,6 @@ let {
   ...fieldProps
 }: FieldPropsExtended & { fieldDiscriminator: FieldDiscriminator } = $props();
 
-// STATE : CONTEXT :: ROUTER  
-const routerState = getRouterState() as EntityRouter;
-
 // STATE : CONTEXT :: FORM
 let { form, constraints, errors } = fieldProps.form;
 
@@ -30,11 +30,20 @@ let isGenAI = $state(false);
 
 // EFFECTS
 $effect(() => {
-  ({ value, isGenAI } = getValues($form, field, languageTag, fieldRoot, fieldIndex, fieldKey));
+  ({ value, isGenAI } = getValues(
+    $form,
+    field,
+    languageTag,
+    fieldRoot,
+    fieldIndex,
+    fieldKey
+  ));
 });
 
 // STATE : DERIVED
-let id = $derived(getId(field, fieldRoot, fieldIndex, fieldDiscriminator, fieldKey, languageTag));
+let id = $derived(
+  getId(field, fieldRoot, fieldIndex, fieldDiscriminator, fieldKey, languageTag)
+);
 </script>
 
 {#if !field.isTranslated && languageTag !== 'core' && languageTag !== 'en'}
@@ -61,7 +70,16 @@ let id = $derived(getId(field, fieldRoot, fieldIndex, fieldDiscriminator, fieldK
         {languageTag}
         {...field}
         onchange={() =>
-          updateForm(form, field, languageTag, fieldRoot, fieldIndex, fieldKey, value, false)} />
+          updateForm(
+            form,
+            field,
+            languageTag,
+            fieldRoot,
+            fieldIndex,
+            fieldKey,
+            value,
+            false
+          )} />
     </div>
     <ErrorLabel {errors} {field} {languageTag} {fieldRoot} {fieldIndex} {fieldKey} />
   </label>

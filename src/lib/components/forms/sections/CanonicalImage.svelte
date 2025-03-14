@@ -1,9 +1,9 @@
 <script lang="ts">
-import { getURLfromImage }  from '$lib/images/index.svelte';
+import { getURLfromImage } from '$lib/images/index.svelte';
 // STORES
 import { page } from '$app/stores';
 // CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS
 import Image from '$lib/components/common/Image.svelte';
 import Icon from '$lib/components/common/Icon.svelte';
@@ -27,7 +27,7 @@ let canonicalImage = async () => {
 };
 
 // HANDLERS
-const routerState = getRouterState();
+const resourceState = getHierarchicalResourceState();
 
 // UTILS
 const getUrl = (facet: string) => {
@@ -39,12 +39,12 @@ const getUrl = (facet: string) => {
 // STATE : CONTEXT
 const navigateToGallery = (e: Event) => {
   e.preventDefault();
-  routerState.updateWith({ facet: 'images' });
+  resourceState.activeFacet = 'images';
 };
 </script>
 
 <!-- TODO The info panel is clipping the image, fix the stacking context -->
-<div class="h-full basis-1/3 min-h-[300px]">
+<div class="h-full min-h-[300px] basis-1/3">
   {#await canonicalImage()}
     <div class="flex h-full w-full items-center justify-center rounded-lg bg-base-300">
       <span class="text-base-content/50">Loading...</span>
@@ -77,7 +77,7 @@ const navigateToGallery = (e: Event) => {
         </div>
       {:else}
         <div
-          class="flex flex-col h-full w-full items-center justify-center gap-4 rounded-lg bg-base-300">
+          class="flex h-full w-full flex-col items-center justify-center gap-4 rounded-lg bg-base-300">
           <Icon src={Photo} class="h-8 w-8 text-base-content/50" />
           <span class="text-base-content/50">upload in gallery</span>
         </div>

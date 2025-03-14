@@ -1,19 +1,20 @@
 <script lang="ts">
+// SVELTE
 import { goto } from '$app/navigation';
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
+// I18N
+import { i18n } from '$lib/i18n';
+// LIB
+import { ADMIN_PATH } from '$lib/index';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { PencilSquare } from '@steeze-ui/heroicons';
 import Title from '$lib/components/tasks/common/Title.svelte';
+
 // TYPES
 import type { TaskAPI, ResourceRouter } from '$lib/types';
 
 // PROPS
 let { task }: { task: TaskAPI } = $props();
-
-// CONTEXT
-let routerState = getRouterState() as ResourceRouter;
 
 export const typeColors = {
   reportedMissing: 'border-error',
@@ -24,15 +25,15 @@ export const typeColors = {
 function onclick(e: Event) {
   e.preventDefault();
   const url = new URL(window.location.href);
-  url.pathname = `/admin/tasks/${task.id}`;
+  url.pathname = `${ADMIN_PATH}/tasks/${task.id}`;
   // UPDATE ROUTER STATE
-  routerState.updateWith({
-    resource: 'task',
-    entity: task.id,
-    facet: false
-  });
+  // routerState.updateWith({
+  //   resource: 'task',
+  //   entity: task.id,
+  //   facet: false
+  // });
   // NAVIGATE
-  goto(url.toString());
+  goto(i18n.resolveRoute(url.toString()));
 }
 </script>
 

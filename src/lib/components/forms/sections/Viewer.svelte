@@ -3,8 +3,7 @@ import { fade, crossfade } from 'svelte/transition';
 import { beforeNavigate } from '$app/navigation';
 import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte';
 import { imageSets, navigateImage } from '$lib/images/index.svelte';
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS
 import { InformationCircle } from '@steeze-ui/heroicons';
 import Header from '$lib/components/forms/extra/Header.svelte';
@@ -20,7 +19,8 @@ let { ...sectionProps }: SectionProps & { refs: ImageEditRefs } = $props();
 
 let showNav: boolean = $derived(imageSets.images.length > 1);
 
-let routerState = getRouterState();
+// STATE : CONTEXT :: RESOURCE
+const resourceState = getHierarchicalResourceState();
 
 // Setup crossfade
 const [send, receive] = crossfade({
@@ -43,10 +43,9 @@ beforeNavigate(() => {
         isCrossfade={false}
         enableDropzone={true}
         editContext={{
-          refType: routerState.resource as ResourceType,
-          refId: routerState.entity as string
-        }}
-        >
+          refType: resourceState.activeResource as ResourceType,
+          refId: resourceState.activeEntityRef
+        }}>
         {#snippet RightActions()}
           {#if imageSets.activeImage}
             <IconAnchor position="right" icon={InformationCircle}>

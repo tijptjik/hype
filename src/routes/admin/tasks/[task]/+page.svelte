@@ -1,6 +1,5 @@
 <script lang="ts">
 // CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS :: COMMON
 import Image from '$lib/components/tasks/common/Image.svelte';
@@ -31,14 +30,13 @@ let pageProps: PageProps<TaskAPI> = $props();
 let { task } = pageProps.data;
 
 // STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
 const resourceState = getHierarchicalResourceState();
 
-routerState.updateWith({
-  resource: 'task',
-  entity: task.id,
-  facet: false
-});
+// routerState.updateWith({
+//   resource: 'task',
+//   entity: task.id,
+//   facet: false
+// });
 
 // SYNC :: Update resource state with current entity
 $effect(() => {

@@ -1,0 +1,144 @@
+@import 'https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css';
+
+.maplibregl-canvas {
+  outline: none;
+}
+
+/* Marker styles */
+.marker-container {
+  opacity: 0;
+  cursor: pointer;
+}
+
+.marker-inner {
+  width: 24px;
+  height: 24px;
+}
+
+.marker-fade-in {
+  animation: markerFadeIn 0.3s ease-in-out forwards;
+}
+
+.marker-fade-out {
+  animation: markerFadeOut 0.3s ease-in-out forwards;
+}
+
+@keyframes markerFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes markerFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Move scale transform to inner container */
+.marker-fade-in .marker-inner {
+  animation: markerScaleIn 0.3s ease-in-out forwards;
+}
+
+.marker-fade-out .marker-inner {
+  animation: markerScaleOut 0.3s ease-in-out forwards;
+}
+
+@keyframes markerScaleIn {
+  from {
+    transform: scale(0.8);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes markerScaleOut {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(0.8);
+  }
+}
+
+/* Update hover effect to target inner container */
+.marker-container:hover .marker-inner {
+  transform: scale(1.1);
+  transition: transform 0.1s ease-in-out;
+}
+.maplibregl-user-location-accuracy-circle {
+  z-index: 5;
+  display: none;
+}
+
+.marker-container svg {
+  overflow: visible;
+  z-index: 10;
+}
+
+.marker-circle {
+  fill: #cb37c1;
+  stroke: #ffdaf3cc;
+  stroke-width: 1.5;
+  opacity: 0.6;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.highlighted .marker-circle {
+  stroke-width: 2;
+  stroke: #daffdb;
+  fill: #a4ff72;
+  transition: stroke-width 0.3s ease-in-out, fill 0.3s ease-in-out, opacity 0.3s ease-in-out;
+}
+
+.highlighted .marker-dot {
+  fill: #eeedf8;
+  transition: fill 0.2s ease-in-out;
+}
+
+.active.highlighted .marker-dot {
+  fill: none;
+  transition: fill 0.3s ease-in-out;
+}
+
+.active .marker-circle {
+  opacity: 1;
+  stroke-width: 2;
+  stroke: #ffdaf3;
+  fill: #ce3c74;
+  transition: stroke-width 0.3s ease-in-out, fill 0.3s ease-in-out, opacity 0.3s ease-in-out;
+}
+
+.marker-dot {
+  fill: #cb37c1;
+}
+
+/* Hover effects */
+.marker-container:hover .marker-circle {
+  opacity: 0.9;
+  stroke-width: 2;
+  transform: scale(1.1);
+  transform-origin: center;
+  transition: transform 0.1s ease-in-out;
+}
+
+.marker-container:hover .marker-dot {
+  fill: #d1e4f4;
+} 
+
+.maplibregl-ctrl-group {
+  background-color: #000;
+  border-radius: 12px;
+  border: 2px solid #15191E;
+}
+
+.maplibregl-ctrl-group button {
+  background-color: #000;
+}

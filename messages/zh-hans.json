@@ -1,7 +1,45 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
+
+  "preauth__continue_with_google": "继续使用 Google",
+
+  "settings__title": "设置",
+  "settings__subtitle": "就像你喜欢的样子",
+  "settings__signout": "注销",
+  "settings__language": "语言",
+
+  "filters__title": "过滤器",
+  "filters__subtitle": "地图上显示的过滤器特征",
+  "filters__reset": "重置过滤器",
+  "filters__reset_count": "重置 {neighbourhoods} 个社区和 {properties} 个属性",
+
+  "filters__neighbourhoods": "社区",
+  "filters__categories": "类别",
+
+  "filters__all": "全部",
+  "filters__only": "只有",
+  "filters__between": "介乎",
+  "filters__and": "和",
+  "filters__stars": "星",
+
+  "maps__title": "地图",
+  "maps__subtitle": "过滤图层并添加到地图",
+  "maps__organisations": "组织",
+  "maps__projects": "项目",
+  "maps__layers": "图层",
+
+  "maps__layers_none": "未选择任何<b class='font-mono inline-block px-2 py-2'>图层</b>。<br><br>地图将为空。",
+  "maps__projects_none": "未选择任何<b class='font-mono inline-block px-2'>项目</b>过滤器。",
+  "maps__organisations_none": "未选择任何<b class='font-mono inline-block px-2'>组织</b>过滤器。",
+  "maps__neighbourhoods_none": "未选择任何<b class='font-mono inline-block px-2'>社区</b>过滤器。",
+
+  "stars__title": "星星",
+  "stars__subtitle": "未来访问的收藏",
+  "stars__want_to_visit": "想去",
+  "stars__have_visited": "去过",
+
   "navbar__projects": "项目",
-  "navbar__neighbourhoods": "胡德",
+  "navbar__neighbourhoods": "社区",
   "navbar__blog": "博客",
   "navbar__about": "关于",
   "navbar__ghostmapper": "映射幽灵",
@@ -69,5 +107,39 @@
   "feature__info_action_note": "请注意，如果一个特征永久不可用，并且引用该地点没有历史或无形价值，那么应该简单地取消发布，以将其从所有地图中除名。",
   "feature__info_classifition_summary": "请注意，如果一个特征永久不可用，并且引用该地点没有历史或无形价值，那么应该简单地取消发布，以将其从所有地图中除名。",
   "feature__info_specification_summary": "提供额外上下文和参考的自由格式文本字段。字段在集合级别定义。",
-  "feature__info_map_summary": "点击右上角的锁解锁地图，然后拖动地图重新定位特征标记。"
+  "feature__info_map_summary": "点击右上角的锁解锁地图，然后拖动地图重新定位特征标记。",
+
+  "menu_maps": "地图",
+  "menu_filters": "筛选",
+  "menu_stars": "收藏",
+  "menu_settings": "设置",
+  "menu_admin": "管理员",
+
+  "settings_contributor_title": "贡献者署名",
+  "settings_contributor_description": "您希望以什么名字署名您贡献的照片和功能",
+  "settings_contributor_placeholder": "输入您的名字",
+
+  "settings_default_map_title": "默认地图",
+  "settings_default_map_description": "选择默认加载的地图",
+
+  "settings_experimental_title": "实验功能",
+  "settings_experimental_description": "在正式发布前预览功能",
+  "settings_experimental_contributor_mode": "贡献者模式",
+  "settings_experimental_contributor_description": "突出显示添加照片和功能的界面",
+
+  "report_missing__label": "缺失原因是",
+  "report_missing__placeholder": "请提供您认为该内容缺失的原因",
+  "report_missing__success": "已成功提交报告",
+  "report_missing__error": "无法提交报告",
+
+  "validation__at_least_one_image_as_evidence": "请上传至少一张照片作为证据",
+  "validation__at_least_five_characters": "请提供更多详细信息 - 至少 5 个字符",
+
+  "omni__title_walks": "步道",
+  "omni__title_neighbourhoods": "社区",
+  "omni__title_features": "特征",
+  "omni__title_star_walks": "我的收藏",
+  "omni__no_results": "没有结果",
+  "omni__placeholder": "搜索...",
+  "omni__search_results": "搜索结果: {searchTerm}"
 }

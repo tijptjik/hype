@@ -23,7 +23,8 @@ import {
   user,
   image,
   featureImage,
-  task
+  task,
+  userFeature
 } from './schema';
 // ORM
 import { count, getTableName } from 'drizzle-orm';
@@ -55,6 +56,7 @@ import featurePropertyI18nJson from './data/featurePropertyI18n.json';
 import imagesJson from './data/images.json';
 import featureImagesJson from './data/featureImages.json';
 import tasksJson from './data/tasks.json';
+import userFeaturesJson from './data/userFeatures.json';
 // TYPES
 import type { DrizzleD1Database } from 'drizzle-orm/d1/driver';
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core/table';
@@ -230,6 +232,12 @@ const seedBank = {
     table: task,
     data: tasksJson,
     chunk: 6
+  },
+  userFeature: {
+    name: 'UserFeatures',
+    table: userFeature,
+    data: userFeaturesJson,
+    chunk: 0
   }
 };
 

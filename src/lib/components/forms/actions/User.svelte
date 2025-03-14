@@ -1,21 +1,21 @@
 <script lang="ts">
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
-
-import { UserPlus, XMark } from '@steeze-ui/heroicons';
 // CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+// ICONS
+import { UserPlus, XMark } from '@steeze-ui/heroicons';
 // TYPES
 import type { FieldProps, ModalProps, EntityRouter } from '$lib/types';
+
+// STATE : CONTEXT :: RESOURCE
+const resourceState = getHierarchicalResourceState();
 
 // STATE : PROPS
 let {
   searchMode = $bindable(false),
   removeMode = $bindable(false)
 }: FieldProps & ModalProps = $props();
-
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
 
 const toggleSearch = (e: Event) => {
   e.preventDefault();
@@ -46,7 +46,7 @@ function handleKeydown(event: KeyboardEvent) {
 </script>
 
 <div>
-  {#if !searchMode && routerState.resource !== 'project'}
+  {#if !searchMode && resourceState.activeResource !== 'feature'}
     <button
       class="btn-rounded btn btn-ghost ml-auto bg-base-100"
       onclick={toggleRemoveMode}>

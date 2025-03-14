@@ -1,8 +1,8 @@
 <script lang="ts">
 // LIB
-import { goToResource, goToEntity } from '$lib';
+import { goToResource, goToEntity } from '$lib/navigation';
 // CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS
 import Reject from '$lib/components/common/buttons/Reject.svelte';
 import Accept from '$lib/components/common/buttons/Accept.svelte';
@@ -14,7 +14,7 @@ import type { TaskAPI, EntityRouter } from '$lib/types';
 let { task }: { task: TaskAPI } = $props();
 
 // CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
+const resourceState = getHierarchicalResourceState();
 
 const handleReject = async (e: Event) => {
   e.preventDefault();
@@ -39,7 +39,7 @@ const handleReject = async (e: Event) => {
       });
     }
     // TODO Navigate to the next Task
-    goToResource(e, routerState, 'task');
+    // goToResource(e, routerState, 'task');
   } catch (error) {
     console.error('Failed to reject:', error);
   }
@@ -67,7 +67,7 @@ const handleAccept = async (e: Event) => {
       });
     }
 
-    goToEntity(e, routerState, 'feature', task.featureId);
+    // goToEntity(e, routerState, 'feature', task.featureId);
   } catch (error) {
     console.error('Failed to accept:', error);
   }

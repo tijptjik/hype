@@ -1,11 +1,13 @@
 [
   {
-    "id": "f16249f5-c045-496a-a441-16ad07600ce2",
+    "id": "p6WnJ-DKl0c1",
     "name": "Mart van de Ven",
     "email": "m@type.hk",
     "emailVerified": null,
     "image": "https://lh3.googleusercontent.com/a/ACg8ocJiWWuBbf5n8GI5_0EeihmCiNbVGA8KWlVXEmwmTBqBwkEKEKBrhw=s96-c",
     "attribution": "mart",
+    "experimental": "{\"contributorMode\":true}",
+    "language": "en",
     "createdAt": "2024-08-27T04:52:16.884Z",
     "modifiedAt": "2024-08-27T04:52:16.884Z"
   },
@@ -16,6 +18,8 @@
     "email": "makampen@gmail.com",
     "emailVerified": null,
     "image": "https://lh3.googleusercontent.com/a/ACg8ocK95Jf4adp2Av4lYbijxqoaLN3TNMM2x9fNkUv47-6S9C9Cxkwq=s96-c",
+    "experimental": "{\"contributorMode\":true}",
+    "language": "en",
     "createdAt": "2024-12-09T16:58:29.910Z",
     "modifiedAt": "2024-12-09T16:58:29.910Z"
   }

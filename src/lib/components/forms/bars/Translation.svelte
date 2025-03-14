@@ -1,10 +1,8 @@
 <script lang="ts">
 import Icon from '$lib/components/common/Icon.svelte';
 import { Language } from '@steeze-ui/heroicons';
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 // Types
-import type { BarProps, EntityRouter, Resource } from '$lib/types';
+import type { BarProps, LanguageTag } from '$lib/types';
 
 // CONFIG
 const allLanguages = [
@@ -16,9 +14,6 @@ const allLanguages = [
 // STATE : PROPS
 const { fields, languageTag, ...barProps }: BarProps = $props();
 let { form } = barProps.form;
-
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
 
 const languageOptions = $derived(
   allLanguages.filter((lang) => lang.code !== languageTag)

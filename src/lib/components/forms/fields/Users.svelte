@@ -4,7 +4,7 @@ import { Trash } from '@steeze-ui/heroicons';
 import { scale } from 'svelte/transition';
 import { flip } from 'svelte/animate';
 // CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // TYPES
 import type {
   ProjectRole,
@@ -35,8 +35,8 @@ let {
     checkedValue: string;
   } = $props();
 
-// STATE : CONTEXT :: ROUTER  
-const routerState = getRouterState() as FacetRouter;
+// STATE : CONTEXT :: RESOURCE
+const resourceState = getHierarchicalResourceState();
 
 // CONTEXT
 const { form, validate } = fieldProps.form;
@@ -99,7 +99,7 @@ const removeUser = async (e: Event, userId: string) => {
         <label
           class="label flex flex-shrink-0 flex-grow-0 flex-col items-center gap-2 pb-2 text-sm"
           style="font-variant: small-caps; font-variant-caps: small-caps;">
-          {routerState.resource === 'project' ? 'Maintainer' : 'Owner'}
+          {resourceState.activeResource === 'project' ? 'Maintainer' : 'Owner'}
           <input
             type="checkbox"
             data-testid={`userCheckbox_${index}`}

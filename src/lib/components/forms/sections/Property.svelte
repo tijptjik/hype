@@ -6,8 +6,6 @@ import { flip } from 'svelte/animate';
 import Header from '$lib/components/forms/extra/Header.svelte';
 import Actions from '$lib/components/forms/actions/Custom.svelte';
 import PropertyFields from '$lib/components/forms/fields/Properties.svelte';
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 //CONFIG
 import { classifierComponentTypes, specifierComponentTypes } from '$lib/types';
 // TYPES
@@ -28,9 +26,6 @@ let { fieldDiscriminator, fields } = sectionProps;
 
 // STATE : FORM
 let { form } = sectionProps.form;
-
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as FacetRouter;
 
 // ***
 // PROPERTY FIELDS
@@ -102,8 +97,14 @@ let actionProps = $state({
 });
 </script>
 
-<div class="overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
-  <Header {...sectionProps} bind:actionProps {Actions} {actions} fields={fields[fieldRoot]} />
+<div
+  class="overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
+  <Header
+    {...sectionProps}
+    bind:actionProps
+    {Actions}
+    {actions}
+    fields={fields[fieldRoot]} />
   {#each $form[fieldRoot] as property, fieldIndex (property.id)}
     <div in:scale out:scale animate:flip={{ duration: 200 }}>
       {#if property.type === fieldDiscriminator}
@@ -113,8 +114,7 @@ let actionProps = $state({
           {actions}
           {fieldRoot}
           {fieldIndex}
-          fields={fields[fieldRoot].discriminators.specs[fieldDiscriminator]}
-        />
+          fields={fields[fieldRoot].discriminators.specs[fieldDiscriminator]} />
       {/if}
     </div>
   {/each}

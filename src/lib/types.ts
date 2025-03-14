@@ -72,7 +72,11 @@ import {
   ImageUpdateAPI,
   ImageInsertAPI,
   FeatureGetAPI,
-  ImageGetAPI
+  ImageGetAPI,
+  LayerUpdateAPIWithProject,
+  UserUpdateAPI,
+  UserUpdate,
+  FeatureImageInserts
 } from '$lib/db/zod';
 // COMPONENTS
 import CustomField from '$lib/components/forms/fields/Properties.svelte';
@@ -103,18 +107,25 @@ import type {
   LayerForm as LayerFormType,
   OrganisationForm as OrganisationFormType,
   ProjectForm as ProjectFormType,
-  FeatureForm as FeatureFormType,
+  FeatureForm as FeatureFormType
 } from './context/forms.svelte';
 import type { IconSource } from '@steeze-ui/heroicons';
 import type { Writable } from 'drizzle-orm/utils';
-import type { enhance } from '$app/forms'
-import type { RouterState } from './context/router.svelte';
+import type { enhance } from '$app/forms';
+import type { Marker } from 'maplibre-gl';
 
 // HTML
 export type InputType = 'text' | 'number' | 'email' | 'password';
 
 // BRANDED
-export type ResourceType = 'organisation' | 'project' | 'layer' | 'feature' | 'task' | 'image';
+export type ResourceType =
+  | 'organisation'
+  | 'project'
+  | 'layer'
+  | 'feature'
+  | 'task'
+  | 'image'
+  | 'userFeature';
 export type ResourceTypeWithParent = 'project' | 'layer' | 'feature' | 'task';
 export type ResourceTypeWithChildren = 'organisation' | 'project' | 'layer';
 export type ParentEntity = {
@@ -122,12 +133,17 @@ export type ParentEntity = {
   name: string;
   entity: Organisation | Project | Layer;
   href: string;
-}
+};
+type activeResource = {
+  resource: HierarchicalResource | 'task' | false;
+  entity: Ref | false;
+  facet: FacetType | false;
+};
 export type ResourceState = {
-  organisation: Organisation | null;
-  project: Project | null;
-  layer: Layer | null;
-  feature: Feature | null;
+  active: activeResource;
+  prisms: Prisms;
+  resources: AdminFilteredResources;
+  filters: AdminFilterStates;
 };
 export type FalsableResourceType = ResourceType | false;
 export type SourceLang = 'en';
@@ -182,7 +198,7 @@ export type FacetType = (typeof Facets)[number];
 export type FalsableFacetType = FacetType | false;
 export type ResourceToNavItem = Record<ResourceType, NavItem>;
 
-export type Router = RouterState & {
+export type Router = {
   resource: FalsableResourceType;
   entity: FalsableRef;
   facet: FalsableFacetType;
@@ -278,7 +294,7 @@ export type FormRelatedProperties<T> = T[];
 /* -------- */
 
 export type User = z.infer<typeof UserBase>;
-
+export type UserDB = z.infer<typeof UserUpdate>;
 /* ----------------- */
 // ORGANISATIONS
 /* -------- */
@@ -382,6 +398,10 @@ export type IntermediateValue = {
 
 // Layer with all fields, including translations
 export type Layer = z.infer<typeof LayerUpdateAPI>;
+
+// Layer with all fields, including translations and project
+export type LayerWithProject = z.infer<typeof LayerUpdateAPIWithProject>;
+
 // Like Layer, but without the layerId in translations
 export type NewLayer = z.infer<typeof LayerInsertAPI>;
 // Layer without relations, for use in updating a layer
@@ -410,6 +430,13 @@ export type LayerMetadata = {
   mlClusterMinPoints?: number; // 2
 };
 
+export type UserLayer = {
+  layerId: Id;
+  isVisibleOnLoad: boolean;
+  layer: Layer;
+};
+
+export type UserUpdate = z.infer<typeof UserUpdateAPI>;
 /* ----------------- */
 // FEATURES
 /* -------- */
@@ -459,7 +486,7 @@ export type FeaturePropertyI18n = z.infer<typeof FeaturePropertyI18nUpdate>;
 export type AddressProperties = {
   // Formatted Address
   formattedAddress?: string;
-  
+
   // Address Components
   subPremise?: string;
   premise?: string;
@@ -566,7 +593,12 @@ export type ModalProps = {
 };
 
 export type ActionProps = {
-  Actions?: typeof UserActions | typeof FeatureActions | typeof AddressActions | typeof ViewerActions | typeof GalleryActions;
+  Actions?:
+    | typeof UserActions
+    | typeof FeatureActions
+    | typeof AddressActions
+    | typeof ViewerActions
+    | typeof GalleryActions;
   // | Component<{
   //     searchMode?: boolean;
   //     removeMode?: boolean;
@@ -599,7 +631,6 @@ export type PageProps<T extends Resource> = {
     [key: string]: T;
   };
 };
-
 
 // FIELDS
 
@@ -671,6 +702,7 @@ export type GetImageAPI = z.infer<typeof ImageGetAPI>;
 
 export type FeatureImage = z.infer<typeof FeatureImageUpdate>;
 export type NewFeatureImage = z.infer<typeof FeatureImageInsert>;
+export type NewFeatureImages = z.infer<typeof FeatureImageInserts>;
 export type FeatureImageDB = z.infer<typeof FeatureImageUpdate>;
 export type NewFeatureImageDB = z.infer<typeof FeatureImageInsert>;
 export type FeatureImageAPI = z.infer<typeof FeatureImageUpdateAPI>;
@@ -685,7 +717,13 @@ export type ImageUploadState = {
   retries: number;
 };
 
-export type Intent = 'canonical' | 'closeUp' | 'context' | 'general' | 'evidence' | 'undefined';
+export type Intent =
+  | 'canonical'
+  | 'closeUp'
+  | 'context'
+  | 'general'
+  | 'evidence'
+  | 'undefined';
 
 /* ----------------- */
 // USER FEATURES
@@ -704,10 +742,22 @@ export type UserFeatureAPI = z.infer<typeof UserFeatureUpdateAPI>;
 export const taskTypes = ['reportedMissing', 'newPhoto', 'newFeature'] as const;
 export type TaskType = (typeof taskTypes)[number];
 
-export const reviewActions = ['ignored', 'set-unpublished', 'set-intangible', 'set-archived', 'add-photo', 'add-feature'] as const;
+export const reviewActions = [
+  'ignored',
+  'set-unpublished',
+  'set-intangible',
+  'set-archived',
+  'add-photo',
+  'add-feature'
+] as const;
 export type ReviewAction = (typeof reviewActions)[number];
 
-export const reportedMissingActions = ['ignored', 'set-archived', 'set-unpublished', 'set-intangible'] as const;
+export const reportedMissingActions = [
+  'ignored',
+  'set-archived',
+  'set-unpublished',
+  'set-intangible'
+] as const;
 export type ReportedMissingAction = (typeof reportedMissingActions)[number];
 
 export const newPhotoActions = ['ignored', 'add-photo'] as const;
@@ -718,7 +768,6 @@ export type NewFeatureAction = (typeof newFeatureActions)[number];
 
 export const reviewOutcomes = ['rejected', 'accepted'] as const;
 export type ReviewOutcome = (typeof reviewOutcomes)[number];
-  
 
 export type Task = z.infer<typeof TaskUpdate>;
 export type NewTask = z.infer<typeof TaskInsert>;
@@ -727,7 +776,6 @@ export type NewTaskDB = z.infer<typeof TaskInsert>;
 export type TaskAPI = z.infer<typeof TaskUpdateAPI>;
 export type NewTaskAPI = z.infer<typeof TaskInsertAPI>;
 export type TaskPatchAPI = z.infer<typeof TaskPatch>;
-
 
 /* ----------------- */
 // FORMS
@@ -740,7 +788,11 @@ export type SuperFormResult<T extends Record<string, unknown>> = {
   validate: (
     path: FormPathLeaves<T>,
     // opts?: ValidateOptions<FormPathType<T, FormPathLeaves<T>>, T, Record<string, unknown>>
-    opts?: ValidateOptions<FormPathType<T, FormPathLeaves<T>>, T, Record<string, unknown>>
+    opts?: ValidateOptions<
+      FormPathType<T, FormPathLeaves<T>>,
+      T,
+      Record<string, unknown>
+    >
   ) => Promise<string[] | undefined>;
   // validateForm!: () => Promise<SuperValidated<Record<string, unknown>, string, Form>>;
   validateForm: () => Promise<SuperValidated<T>>;
@@ -768,12 +820,10 @@ export type FeatureForm = FeatureFormType;
 // ACCESS CONTROL
 /* -------- */
 
-
 // ACCESS CONTROL - OPTIONS
 // - OPEN - No restrictions or filters, i.e. access is granted to all users
 // - ROLE - Restricted by role, i.e. access is accepted/denied based on the user's role
 // - STATE - Filtered by state, i.e. result set is filtered based on the state of the resource
-
 
 // ACCESS CONTROL - OPEN
 export const publicAccessOptions = ['Public', 'SuperAdmin', 'ResourceAll', 'EntityAny'];
@@ -813,10 +863,14 @@ export type RelationalAccessOption = (typeof relationalAccessOptions)[number];
 export const statefulAccessOptions = ['Stateful'];
 export type StatefulAccessOption = (typeof statefulAccessOptions)[number];
 
+export const genericAccessOptions = ['GenericOwn', 'GenericSelf'];
+export type GenericAccessOption = (typeof genericAccessOptions)[number];
+
 export type AccessStrategyOption =
   | PublicAccessOption
   | HierarchicalAccessOption
-  | RelationalAccessOption;
+  | RelationalAccessOption
+  | GenericAccessOption;
 
 export type AccessStrategy = AccessStrategyOption | AccessStrategyOption[];
 
@@ -838,4 +892,164 @@ export type ImageEditRefs = {
   refType: ResourceType;
   // ID of the entity which the image is associated with
   refId: Id;
+};
+
+export type OmniGroup = 'walks' | 'neighbourhoods' | 'features';
+
+export type SearchResult = {
+  name: string;
+  count: number;
+  group: OmniGroup;
+  ref: string;
+};
+
+// ENUMS
+
+export enum FeatureCardMode {
+  Display = 'display',
+  New = 'new',
+  Missing = 'missing'
+}
+
+export enum HierarchicalResource {
+  organisation = 'organisation',
+  project = 'project',
+  layer = 'layer',
+  feature = 'feature',
+  task = 'task'
+}
+
+export enum HierarchicalResourcePath {
+  organisation = 'organisations',
+  project = 'projects',
+  layer = 'layers',
+  feature = 'features',
+  task = 'tasks'
+}
+
+export enum HierarchicalResourceSeq {
+  organisation = 0,
+  project = 1,
+  layer = 2,
+  feature = 3,
+  task = 4
+}
+
+export enum HierarchicalResourceRefKey {
+  organisation = 'code',
+  project = 'code',
+  layer = 'id',
+  feature = 'id',
+  task = 'id'
+}
+
+export enum HierarchicalResourceParent {
+  project = 'organisation',
+  layer = 'project',
+  feature = 'layer',
+  task = 'feature'
+}
+
+export enum HierarchicalResourceParentRefKey {
+  project = 'organisationId',
+  layer = 'projectId',
+  feature = 'layerId',
+  task = 'featureId'
+}
+
+export enum CollectionStatistic {
+  total = 'total',
+  filtered = 'filtered',
+  selected = 'selected'
+}
+
+// USER APP
+
+// Selected Resource Constraints by code
+export type Prisms = { organisation: Code[]; project: Code[]; layer: Id[] };
+
+// Resources constrained by suncast filters
+export type FilteredResources = {
+  organisation: Organisation[];
+  project: Project[];
+  layer: Layer[];
+  feature: Feature[];
+  featuresByNeighbourhood: Feature[];
+};
+
+export type AdminFilteredResources = {
+  organisation: Organisation[];
+  project: Project[];
+  layer: Layer[];
+  feature: Feature[];
+  task: Task[];
+};
+
+export type FilterState = {
+  neighbourhoods: string[];
+  properties?: Record<string, any>;
+};
+
+export type AdminFilterState = {
+  text?: string;
+  properties?: Record<string, any>;
+  isPublished?: boolean | null;
+  isArchived?: boolean | null;
+  isReviewed?: boolean | null;
+};
+export type AdminFilterStates = Record<HierarchicalResource, AdminFilterState>;
+
+export type UserSettings = {
+  center: [number, number];
+  zoom: number;
+  bearing: number;
+  pitch: number;
+};
+
+export type ActiveCollection = {
+  id: string;
+  name: string;
+  type: 'neighbourhood' | 'walk' | 'feature' | 'search';
+  translations: Record<string, string>[];
+  items: Feature[];
+} | null;
+
+export type PanelState = {
+  filters: boolean;
+  maps: boolean;
+  stars: boolean;
+  settings: boolean;
+};
+
+export type mapContextState = {
+  // Features for Active Layers
+  // features: Record<string, Feature>;
+  // Markers
+  markers: Map<Id, Marker>;
+  active: {
+    feature: Feature | null;
+    collection: ActiveCollection | null;
+  };
+  filters: FilterState;
+  prisms: Prisms;
+  resources: FilteredResources;
+  userSettings: UserSettings;
+  userFeatures: {
+    wishlisted: Feature[];
+    visited: Feature[];
+  };
+  userLocation: {
+    coords: {
+      accuracy: number;
+      altitude: number | null;
+      altitudeAccuracy: number | null;
+      heading: number | null;
+      latitude: number;
+      longitude: number;
+      speed: number | null;
+    };
+    timestamp: number;
+  } | null;
+  distancesFromUser: Record<Id, number>;
+  panels: PanelState;
 };

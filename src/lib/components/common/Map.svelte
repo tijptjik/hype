@@ -3,8 +3,6 @@
 import SpectralStyle from '$lib/map/style.json';
 // UTILS
 import { loadScript } from '$lib';
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
 import type { EntityRouter, SectionProps } from '$lib/types';
 // ENV

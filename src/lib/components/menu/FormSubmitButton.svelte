@@ -1,16 +1,14 @@
 <script lang="ts">
+// LIB
 import * as m from '$lib/paraglide/messages.js';
+// ICONS
 import { CheckCircle } from '@steeze-ui/heroicons';
+// COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
-import type { EntityRouter, Resource, SuperFormResult } from '$lib/types';
+import type { Resource, SuperFormResult } from '$lib/types';
 
 let menuProps: { form: SuperFormResult<Resource> } = $props();
-
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
 
 // STATE : FORM
 let { tainted, isTainted, submit, errors } = menuProps.form;

@@ -339,8 +339,10 @@ const applyFilterConstraints = (
   }
 
   return [
-    inArray(getTable(slicedHierarchy, 0).id, baseQuery.where(or(...subQueryConditions)))
-  ];
+    inArray(
+      getTable(slicedHierarchy, 0).id,
+      baseQuery.where(or(...subQueryConditions))
+    )];
 };
 
 const applyQueryConstraints = (table: Table, query: string, filterFields: string[]) => {
@@ -364,7 +366,7 @@ export async function genericResourceQuery(
 ) {
   const conditions = [];
 
-  if (query) {
+  if (query && filterFields.length > 0) {
     conditions.push(applyQueryConstraints(table, query, filterFields));
   }
 
@@ -387,6 +389,24 @@ export type ResourceConfig = {
 
 export type ResourceHierarchy = ResourceConfig[];
 
+const createJsonPathCondition = (table: Table, path: string[], value: string | string[]) => {
+  const [baseColumn, ...jsonPath] = path;
+  const jsonPathStr = jsonPath.map(p => `$.${p}`).join('.');
+  
+  // Handle array of values
+  if (Array.isArray(value)) {
+    return sql`json_extract(${table[baseColumn]}, ${jsonPathStr}) IN (${sql.join(value.map(v => sql`${v}`), sql`, `)})`;
+  }
+  
+  // Handle boolean values
+  if (value === 'true' || value === 'false') {
+    return sql`json_extract(${table[baseColumn]}, ${jsonPathStr}) = ${value === 'true'}`;
+  }
+  
+  // Handle single value
+  return sql`json_extract(${table[baseColumn]}, ${jsonPathStr}) = ${value}`;
+};
+
 export async function hierarchicalResourceQuery<
   usersT extends Table,
   translationsT extends Table
@@ -399,7 +419,7 @@ export async function hierarchicalResourceQuery<
   translationTable: translationsT | boolean,
   prisms: Record<string, string[]> = {},
   depth: number = 1,
-  filters?: Record<string, string>,
+  filters?: Record<string, string | string[]>,
   hierarchy?: ResourceHierarchy
 ) {
   const resourceHierarchy = hierarchy || Object.values(resourceConfig);
@@ -413,7 +433,25 @@ export async function hierarchicalResourceQuery<
 
   if (filters) {
     const filterConditions = Object.entries(filters).map(([column, value]) => {
-      return eq(table[column], value == 'true' ? true : value == 'false' ? false : value);
+      // Check if this is a nested path
+      const path = column.split('.');
+      
+      if (path.length > 1) {
+        return createJsonPathCondition(table, path, value);
+      }
+      
+      // Handle Boolean values
+      if (Array.isArray(value) && (value[0] === 'true' || value[0] === 'false')) {
+        return eq(table[column], value[0] === 'true');
+      }
+      
+      // Handle Array values
+      if (Array.isArray(value)) {
+        return inArray(table[column], value);
+      }
+
+      // Handle non-array values
+      return eq(table[column], value);
     });
     conditions.push(...filterConditions);
   }
@@ -614,11 +652,20 @@ export async function updatePartial<T extends Table>(
   refKey: string,
   data: Partial<Record<string, unknown>>
 ) {
-  const [updated] = await db
-    .update(table)
-    .set(data)
-    .where(eq(table[refKey], ref))
-    .returning();
+  let updated: T;
+  if (Object.keys(data).length > 0){
+    [updated] = await db
+      .update(table)
+      .set(data)
+      .where(eq(table[refKey], ref))
+      .returning();
+  } else {
+    [updated] = await db
+      .select()
+      .from(table)
+      .where(eq(table[refKey], ref))
+      .limit(1) as T[];
+  }
 
   if (!updated) {
     return error(404, `Entity <code>${ref}</code> not found`);

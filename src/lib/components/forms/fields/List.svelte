@@ -6,8 +6,6 @@ import { draggable, droppable } from '@thisux/sveltednd';
 import Icon from '$lib/components/common/Icon.svelte';
 import { Plus, ExclamationTriangle, Bars3, XMark, Trash } from '@steeze-ui/heroicons';
 import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
 import type { DragDropState } from '@thisux/sveltednd';
 import type { FacetRouter, IntermediateValue, ListFieldProps } from '$lib/types';
@@ -19,9 +17,6 @@ let { languageTag, fieldRoot, fieldIndex, fieldKey, field, actions, actionProps 
 
 // STATE : FORM
 const { constraints, errors } = fieldProps.form;
-
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as FacetRouter;
 
 let isDragging = $derived(actionProps.dragMode);
 

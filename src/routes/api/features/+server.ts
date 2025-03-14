@@ -15,6 +15,8 @@ import {
   extractEntitiesToInsert,
   rebuildFormData
 } from '$lib/db/services/feature';
+// MAPS
+import subNeighbourhoods from '$lib/map/subNeighbourhoods.json';
 // ZOD
 import { FeatureInsertAPI } from '$lib/db/zod';
 // TYPES
@@ -22,9 +24,48 @@ import type { NewFeature, Feature } from '$lib/types';
 
 const RESOURCE_TYPE = 'feature';
 const RESOURCE_PATH = 'features';
-const ACCESS_STRATEGY = 'ResourceOwnGrandChildren';
+let ACCESS_STRATEGY = 'ResourceOwnGrandChildren';
+
+// TODO Remove this once neighbourhoods and places are properly implemented as
+// first-class entities.
+function withExpandedNeighbourhoods(queryParams: Record<string, string | string[]>) {
+    const params = { ...queryParams };
+    const neighbourhoodKey = 'addressProperties.neighbourhood';
+    
+    if (neighbourhoodKey in params) {
+        // Convert single value to array if necessary
+        const neighbourhoods = Array.isArray(params[neighbourhoodKey]) 
+            ? params[neighbourhoodKey] as string[]
+            : [params[neighbourhoodKey] as string];
+            
+        // Create a Set to avoid duplicates
+        const expandedNeighbourhoods = new Set<string>();
+        
+        // For each provided neighbourhood
+        neighbourhoods.forEach(hood => {
+            // Always add the original neighbourhood
+            expandedNeighbourhoods.add(hood);
+            
+            // If it's a main district, also add all its sub-districts
+            if (hood in subNeighbourhoods) {
+                subNeighbourhoods[hood as keyof typeof subNeighbourhoods].forEach(n => 
+                    expandedNeighbourhoods.add(n)
+                );
+            }
+        });
+        
+        // Update the params with expanded array
+        params[neighbourhoodKey] = Array.from(expandedNeighbourhoods);
+    }
+    return params;
+}
 
 export const GET: RequestHandler = async ({ locals, platform, url }) => {
+  
+  // Features which are published are visible to all users
+  if (url.searchParams.get('isPublished') === 'true') {
+    ACCESS_STRATEGY = 'ResourceAll';
+  }
   // AUTH : Pass or Fail
   const { db, userId, accessStrategy } = await getDatabaseOrError(
     locals,
@@ -36,12 +77,21 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
   try {
     // Validate query parameters, or return 400
     const queryParams = isValidQueryParamsOrError(feature, url);
+    
+    // Expand neighbourhoods
+    const expandedParams = withExpandedNeighbourhoods(queryParams);
 
     const result = await hierarchicalResourceQuery(
       db,
       accessStrategy,
       {
-        translations: true
+        translations: true,
+        properties: {
+          with: {
+            translations: true,
+            property: true
+          }
+        }
       },
       userId,
       projectRole,
@@ -52,7 +102,7 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
         layer: url.searchParams.getAll('layer')
       },
       4,
-      queryParams
+      expandedParams
     );
 
     // HTTP : 200 JSON or 404

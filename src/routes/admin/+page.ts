@@ -1,4 +1,13 @@
+// SVELTE
 import { redirect } from '@sveltejs/kit';
+// LIB
+import { ADMIN_PATH } from '$lib/index';
+// ENUMS
+import { HierarchicalResource, HierarchicalResourcePath } from '$lib/types';
+
+const DEFAULT_RESOURCE = HierarchicalResource.organisation;
+
 export function load() {
-  return redirect(307, '/admin/organisations');
+  const resourcePath = HierarchicalResourcePath[DEFAULT_RESOURCE];
+  return redirect(307, `${ADMIN_PATH}/${resourcePath}`);
 }

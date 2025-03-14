@@ -1,8 +1,8 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
+import { i18n } from '$lib/i18n';
 import { NEW_TITLE, NEW_REF } from '$lib';
 // Context
-import { getRouterState } from '$lib/context/router.svelte';
 import { setForm, getForm } from '$lib/context/forms.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // Components
@@ -16,6 +16,8 @@ import AddressComponentSection from '$lib/components/forms/sections/AddressCompo
 import GallerySection from '$lib/components/forms/sections/Gallery.svelte';
 import ViewerSection from '$lib/components/forms/sections/Viewer.svelte';
 import CanonicalImage from '$lib/components/forms/sections/CanonicalImage.svelte';
+// ENUMS
+import { HierarchicalResource } from '$lib/types';
 // TYPES
 import type {
   Feature,
@@ -23,13 +25,12 @@ import type {
   FormField,
   FormFieldArray,
   FormFieldNested,
-  EntityRouter,
   FormFieldConfig,
   ImageEditRefs
 } from '$lib/types';
 
 // CONFIG
-const RESOURCE = 'feature';
+const RESOURCE = HierarchicalResource.feature;
 const FIELDS: FormFieldConfig = {
   i18n: {
     title: {
@@ -114,9 +115,6 @@ const FIELDS: FormFieldConfig = {
 let pageProps: FormPageProps<Feature> = $props();
 let { validatedForm, entity } = pageProps.data;
 
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
-
 // STATE : CONTEXT :: RESOURCES
 const resourceState = getHierarchicalResourceState();
 
@@ -127,8 +125,12 @@ let isNew = $state(entity === NEW_REF);
 
 $effect(() => {
   if (isNew && title !== NEW_TITLE) {
-    form = setForm<Feature>(RESOURCE, routerState.entity, pageProps.data.validatedForm);
-    entity = routerState.entity;
+    form = setForm<Feature>(
+      RESOURCE,
+      resourceState.activeEntity as string,
+      pageProps.data.validatedForm
+    );
+    entity = resourceState.activeEntity as string;
     isNew = false;
     doRerender++;
   } else {
@@ -141,14 +143,14 @@ let title = $derived(pageProps.data.validatedForm.data.title || NEW_TITLE);
 
 // SYNC :: Update resource state with current entity
 $effect(() => {
-  resourceState.update('feature', pageProps.data.validatedForm.data);
+  resourceState.setEntity(entity, RESOURCE);
 });
 
 // SYNC :: Remove parentRef from URL if it exists
 $effect(() => {
   const url = new URL(window.location.href);
   url.searchParams.delete('parentRef');
-  goto(url.toString(), { replaceState: true });
+  goto(i18n.resolveRoute(url.toString()), { replaceState: true });
 });
 
 let refs: ImageEditRefs = $derived({
@@ -189,7 +191,7 @@ let doRerender = $state(0);
         </div>
         <div class="h-auto basis-2/3 scroll-m-10 scroll-p-12 overflow-y-scroll">
           <div class="flex h-full flex-col-reverse justify-end gap-6 pr-3">
-            {#if routerState.facet === 'core'}
+            {#if resourceState.activeFacet === 'core'}
               <div class="flex flex-row gap-6">
                 <PropertySection
                   {form}
@@ -210,7 +212,7 @@ let doRerender = $state(0);
                 title="Descriptors"
                 fields={FIELDS.i18n as FormField} />
               <!-- TODO Add support for translatable specifiers -->
-            {:else if routerState.facet === 'address'}
+            {:else if resourceState.activeFacet === 'address'}
               <AddressComponentSection
                 {form}
                 title="Address Components"
@@ -220,7 +222,7 @@ let doRerender = $state(0);
                 title="Addressing"
                 subtitle="feature is listed under this address in the app"
                 fields={FIELDS.address as FormField & FormFieldNested} />
-            {:else if routerState.facet === 'images' && !isNew}
+            {:else if resourceState.activeFacet === 'images' && !isNew}
               <ViewerSection {form} {refs} title="Viewer" />
               <GallerySection {form} title="Gallery" />
             {/if}

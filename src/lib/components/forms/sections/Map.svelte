@@ -3,8 +3,6 @@
 import SpectralStyle from '$lib/map/style.json';
 // UTILS
 import { loadScript } from '$lib';
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 // COMPONENTS
 import Map from '$lib/components/common/Map.svelte';
 // TYPES
@@ -15,9 +13,6 @@ let sectionProps: SectionProps = $props();
 
 // STATE : FORM
 let { form } = sectionProps.form;
-
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
 
 // STATE : DERIVED
 let lngLat = $derived($form.geometry?.coordinates);
@@ -32,8 +27,5 @@ const syncUpCoordinates = (lngLat: number[]) => {
 </script>
 
 <div class="relative h-full w-full flex-grow">
-  <Map 
-    coordinates={lngLat}
-    dragEndCallback={syncUpCoordinates}
-  />
+  <Map coordinates={lngLat} dragEndCallback={syncUpCoordinates} />
 </div>

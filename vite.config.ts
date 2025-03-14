@@ -35,6 +35,7 @@ export default defineConfig({
     }),
     seedDrizzle(),
     sveltekit()
+
   ],
   optimizeDeps: {
     esbuildOptions: {
@@ -43,5 +44,13 @@ export default defineConfig({
   },
   build: {
     target: 'es2020'
+  },
+  server: {
+    allowedHosts: [
+      'localhost',
+      '127.0.0.1',
+      '0.0.0.0',
+      'dove-main-tapir.ngrok-free.app '
+    ]
   }
 });

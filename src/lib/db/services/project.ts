@@ -2,9 +2,17 @@ import { error } from '@sveltejs/kit';
 import { and, eq } from 'drizzle-orm';
 import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
-import { project, projectI18n, projectRole, user, organisationRole, property } from '../schema';
+import {
+  project,
+  projectI18n,
+  projectRole,
+  user,
+  organisationRole,
+  property,
+  feature
+} from '../schema';
 import { ProjectInsert, ProjectUpdate, ProjectUpdateAPI } from '../zod';
-import { toNestedTranslations, updatePartial } from '$lib/db';
+import db, { toNestedTranslations, updatePartial } from '$lib/db';
 // TYPES
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import type {
@@ -53,7 +61,10 @@ export const updateProject = async (db: Database, data: ProjectDB, ref: string) 
     .returning();
 
   if (!updatedProject) {
-    return error(404, `Project <code>${ref}</code> has stepped through the looking glass`);
+    return error(
+      404,
+      `Project <code>${ref}</code> has stepped through the looking glass`
+    );
   }
 
   return updatedProject;
@@ -64,11 +75,13 @@ export const createTranslations = async (
   translations: Record<TargetLang, NewProjectI18n>,
   projectId: string
 ) => {
-  const translationsToInsert = Object.entries(translations).map(([lang, translation]) => ({
-    ...translation,
-    projectId,
-    lang: lang as 'zh-hant' | 'zh-hans'
-  }));
+  const translationsToInsert = Object.entries(translations).map(
+    ([lang, translation]) => ({
+      ...translation,
+      projectId,
+      lang: lang as 'zh-hant' | 'zh-hans'
+    })
+  );
 
   return await db.insert(projectI18n).values(translationsToInsert).returning();
 };
@@ -88,10 +101,12 @@ export const createMaintainerRoles = async (
   projectId: string
 ) => {
   // Filter out members -- they are handled by the organisation roles
-  const maintainerRolesToInsert = maintainerRoles.map(role => ({
-    ...role,
-    projectId,
-  })).filter(role => role.role !== 'member');
+  const maintainerRolesToInsert = maintainerRoles
+    .map((role) => ({
+      ...role,
+      projectId
+    }))
+    .filter((role) => role.role !== 'member');
 
   await db.insert(projectRole).values(maintainerRolesToInsert).returning();
 
@@ -122,15 +137,17 @@ export const updateMaintainerRoles = async (
     .from(organisationRole)
     .where(eq(organisationRole.organisationId, organisationId));
 
-  const existingOrgUserIds = orgRoles.map(role => role.userId);
+  const existingOrgUserIds = orgRoles.map((role) => role.userId);
 
   // Find users that need to be added to organization
-  const newOrgUsers = maintainerRoles.map(role => role.userId).filter(userId => !existingOrgUserIds.includes(userId));
+  const newOrgUsers = maintainerRoles
+    .map((role) => role.userId)
+    .filter((userId) => !existingOrgUserIds.includes(userId));
 
   // Add new users to organization role if needed
   if (newOrgUsers.length > 0) {
     await db.insert(organisationRole).values(
-      newOrgUsers.map(userId => ({
+      newOrgUsers.map((userId) => ({
         userId,
         organisationId,
         role: 'member' as OrganisationRole['role']
@@ -143,10 +160,14 @@ export const updateMaintainerRoles = async (
   return await createMaintainerRoles(db, maintainerRoles, projectId);
 };
 
-export const patchProject = async (db: Database, ref: string, data: Partial<ProjectDB>, refType: 'id' | 'code') => {
+export const patchProject = async (
+  db: Database,
+  ref: string,
+  data: Partial<ProjectDB>,
+  refType: 'id' | 'code'
+) => {
   return await updatePartial(db, project, ref, refType, data);
 };
-
 
 // UTILS
 
@@ -166,7 +187,10 @@ export const extractEntitiesToUpdate = (formData: Project) => {
   return { baseProject, formTranslations, formMaintainerRoles, formProperties };
 };
 
-export async function mergeOrganisationRoles(db: any, result: Project): Promise<Project> {
+export async function mergeOrganisationRoles(
+  db: any,
+  result: Project
+): Promise<Project> {
   // Get organization roles for the project's organization
   const orgRoles = await db.query.organisationRole.findMany({
     where: and(eq(organisationRole.organisationId, result.organisationId)),
@@ -184,7 +208,8 @@ export async function mergeOrganisationRoles(db: any, result: Project): Promise<
   });
 
   // Get existing maintainer user IDs
-  const existingUserIds = result.maintainerRoles.map((userRole) => userRole.userId) || [];
+  const existingUserIds =
+    result.maintainerRoles.map((userRole) => userRole.userId) || [];
 
   // Add organization users that aren't already maintainers
   orgRoles.forEach((orgRole: OrganisationRole) => {
@@ -218,4 +243,16 @@ export const rebuildFormData = async (
   const result = await mergeOrganisationRoles(db, extendedProject);
 
   return await superValidate(result, zod(ProjectUpdateAPI));
+};
+
+export const getProjectForFeatureId = async (
+  db: Database,
+  featureId: Id
+): Promise<ProjectDB | undefined> => {
+  const project = await db.query.feature.findFirst({
+    where: eq(feature.id, featureId),
+    with: { layer: { with: { project: true } } }
+  });
+
+  return project?.layer?.project || undefined;
 };

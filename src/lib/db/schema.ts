@@ -29,12 +29,20 @@ export const user = sqliteTable('user', {
     .primaryKey()
     .$defaultFn(() => nanoid(12)),
   name: text('name'),
-  attribution: text('attribution'),
   email: text('email').unique(),
   emailVerified: integer('emailVerified', { mode: 'timestamp_ms' })
     .$onUpdateFn(() => new Date())
     .$type<Date>(),
   image: text('image'),
+  language: text('language', { enum: ['en', 'zh-hant', 'zh-hans'] })
+    .notNull()
+    .default('en'),
+  attribution: text('attribution'),
+  // Experimental features
+  experimental: text('experimental', { mode: 'json' })
+    .$type<{ contributorMode: boolean }>()
+    .default(sql`'{"contributorMode":false}'`)
+    .notNull(),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -50,7 +58,8 @@ export const userRelations = relations(user, ({ many }) => ({
   contributedImages: many(image, { relationName: 'contributor' }),
   contributedTasks: many(task, { relationName: 'contributor' }),
   reviewedTasks: many(task, { relationName: 'reviewer' }),
-  userFeatures: many(userFeature)
+  userFeatures: many(userFeature),
+  userLayers: many(userLayer)
 }));
 
 export const userActivity = sqliteTable('userActivity', {
@@ -420,10 +429,14 @@ export const layer = sqliteTable('layer', {
     .notNull()
 });
 
-export const layerRelations = relations(layer, ({ many }) => ({
+export const layerRelations = relations(layer, ({ many, one }) => ({
   translations: many(layerI18n),
   properties: many(layerProperty),
-  features: many(feature)
+  features: many(feature),
+  project: one(project, {
+    fields: [layer.projectId],
+    references: [project.id]
+  })
 }));
 
 export const layerI18n = sqliteTable(
@@ -850,7 +863,8 @@ export const imageRelations = relations(image, ({ one, many }) => ({
   featureImage: one(featureImage, {
     fields: [image.id],
     references: [featureImage.imageId]
-  })
+  }),
+  taskImages: many(taskImage)
 }));
 
 export const featureImage = sqliteTable(
@@ -939,16 +953,23 @@ export const task = sqliteTable('task', {
   featureId: text('featureId')
     .notNull()
     .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  imageId: text('imageId').references(() => image.id, { onDelete: 'set null' }),
   contributorId: text('contributorId')
     .notNull()
     .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
   reviewerId: text('reviewerId').references(() => user.id, { onDelete: 'set null' }),
   type: text('type', { enum: ['reportedMissing', 'newPhoto', 'newFeature'] }).notNull(),
+  message: text('message'),
   isReviewed: integer('isReviewed', { mode: 'boolean' }).default(false).notNull(),
-  reviewOutcome: text('reviewOutcome', { enum:  ['rejected', 'accepted'] }),
+  reviewOutcome: text('reviewOutcome', { enum: ['rejected', 'accepted'] }),
   reviewAction: text('reviewAction', {
-    enum: ['ignored', 'set-unpublished', 'set-intangible', 'set-archived', 'add-photo', 'add-feature']
+    enum: [
+      'ignored',
+      'set-unpublished',
+      'set-intangible',
+      'set-archived',
+      'add-photo',
+      'add-feature'
+    ]
   }),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
@@ -959,7 +980,7 @@ export const task = sqliteTable('task', {
     .notNull()
 });
 
-export const taskRelations = relations(task, ({ one }) => ({
+export const taskRelations = relations(task, ({ one, many }) => ({
   organisation: one(organisation, {
     fields: [task.organisationId],
     references: [organisation.id]
@@ -972,10 +993,6 @@ export const taskRelations = relations(task, ({ one }) => ({
     fields: [task.featureId],
     references: [feature.id]
   }),
-  image: one(image, {
-    fields: [task.imageId],
-    references: [image.id]
-  }),
   contributor: one(user, {
     fields: [task.contributorId],
     references: [user.id]
@@ -983,5 +1000,61 @@ export const taskRelations = relations(task, ({ one }) => ({
   reviewer: one(user, {
     fields: [task.reviewerId],
     references: [user.id]
+  }),
+  images: many(taskImage)
+}));
+
+export const taskImage = sqliteTable(
+  'taskImage',
+  {
+    taskId: text('taskId')
+      .notNull()
+      .references(() => task.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    imageId: text('imageId')
+      .notNull()
+      .references(() => image.id, { onDelete: 'cascade', onUpdate: 'cascade' })
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.taskId, t.imageId] })
+  })
+);
+
+export const taskImageRelations = relations(taskImage, ({ one }) => ({
+  task: one(task, {
+    fields: [taskImage.taskId],
+    references: [task.id]
+  }),
+  image: one(image, {
+    fields: [taskImage.imageId],
+    references: [image.id]
+  })
+}));
+
+export const userLayer = sqliteTable(
+  'userLayer',
+  {
+    layerId: text('layerId')
+      .notNull()
+      .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    userId: text('userId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    isVisibleOnLoad: integer('isVisibleOnLoad', { mode: 'boolean' })
+      .notNull()
+      .default(false)
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.layerId, t.userId] })
+  })
+);
+
+export const userLayerRelations = relations(userLayer, ({ one }) => ({
+  user: one(user, {
+    fields: [userLayer.userId],
+    references: [user.id]
+  }),
+  layer: one(layer, {
+    fields: [userLayer.layerId],
+    references: [layer.id]
   })
 }));

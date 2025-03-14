@@ -2,16 +2,11 @@
 import Icon from '$lib/components/common/Icon.svelte';
 import { MapPin } from '@steeze-ui/heroicons';
 import { fade } from 'svelte/transition';
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
 import type { FeatureForm, EntityRouter } from '$lib/types';
 
 // CONFIG
 const coordinateLabels = ['Latitude', 'Longitude'];
-
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
 
 // STATE : PROPS
 let extraProps: { form: FeatureForm } = $props();
@@ -26,14 +21,13 @@ function copyCoordinates() {
 }
 </script>
 
-<div class="flex flex-row items-center gap-6 select-none">
-  <Icon 
-    src={MapPin} 
-    class="h-6 w-6 cursor-pointer hover:text-content/70 active:text-neutral-content select-none"
-    onclick={copyCoordinates}
-  />
+<div class="flex select-none flex-row items-center gap-6">
+  <Icon
+    src={MapPin}
+    class="hover:text-content/70 h-6 w-6 cursor-pointer select-none active:text-neutral-content"
+    onclick={copyCoordinates} />
   {#each coordinateLabels as label, index}
-    <div class="flex flex-row items-center gap-3 select-none">
+    <div class="flex select-none flex-row items-center gap-3">
       <p class="font-spaced text-sm">{label}</p>
       {#key $form.geometry.coordinates}
         <pre

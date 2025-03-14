@@ -27,6 +27,7 @@ drop table IF EXISTS userFeature;
 drop table IF EXISTS organisation;
 drop table IF EXISTS project;
 drop table IF EXISTS image;
+drop table IF EXISTS userLayer;
 
 UPDATE sqlite_sequence
 SET seq = 0

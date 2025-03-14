@@ -4,8 +4,6 @@ import { getValues, updateForm, getId } from '$lib/index';
 import FormInput from '../elements/Input.svelte';
 import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
 import FieldLabel from '$lib/components/forms/labels/Field.svelte';
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
 import type { FieldPropsExtended, FacetRouter, FieldDiscriminator } from '$lib/types';
 
@@ -22,9 +20,6 @@ let {
 
 // STATE : FORM
 let { form, constraints, errors } = fieldProps.form;
-
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as FacetRouter;
 
 // STATE : INTERMEDIATE
 let value = $state('');

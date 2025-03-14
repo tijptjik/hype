@@ -1,6 +1,4 @@
 <script lang="ts">
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 // COMPONENTS
 import Header from '$lib/components/forms/extra/Header.svelte';
 import Stats from '$lib/components/forms/stats/Address.svelte';
@@ -8,12 +6,7 @@ import Actions from '$lib/components/forms/actions/Address.svelte';
 import TextField from '$lib/components/forms/fields/Textarea.svelte';
 import GeocodeBar from '$lib/components/forms/bars/Geocode.svelte';
 // TYPES
-import type {
-  LanguageTag,
-  SectionProps,
-  EntityRouter,
-  Field
-} from '$lib/types';
+import type { LanguageTag, SectionProps, EntityRouter, Field } from '$lib/types';
 // DEBUG
 import SuperDebug from 'sveltekit-superforms';
 
@@ -25,9 +18,6 @@ const languageTags: LanguageTag[] = [sourceLanguageTag, 'zh-hant', 'zh-hans'];
 let sectionProps: SectionProps = $props();
 const fieldRoot: Field = 'displayAddress';
 
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as EntityRouter;
-
 const actions = {
   geocode: () => {
     console.log('geocode');
@@ -36,7 +26,7 @@ const actions = {
 </script>
 
 <div
-  class="@container z-10 rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0 select-none">
+  class="z-10 select-none rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0 @container">
   <Header {...sectionProps} {Actions} {actions} {Stats} />
   <div class="grid grid-cols-1 gap-4 p-4 @xl:grid-cols-2 @5xl:grid-cols-3">
     {#each languageTags as languageTag}

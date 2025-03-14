@@ -1,5 +1,10 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
-import { getDatabaseOrError, isValidQueryParamsOrError, JSONResponseOrError, SuperFormResponse } from '$lib/api';
+import {
+  getDatabaseOrError,
+  isValidQueryParamsOrError,
+  JSONResponseOrError,
+  SuperFormResponse
+} from '$lib/api';
 import { superValidate, type SuperValidated } from 'sveltekit-superforms';
 // DB
 import { hierarchicalResourceQuery } from '$lib/db';
@@ -20,9 +25,15 @@ import type { NewLayer, Layer } from '$lib/types';
 
 const RESOURCE_TYPE = 'layer';
 const RESOURCE_PATH = 'layers';
-const ACCESS_STRATEGY = 'ResourceOwnChildren';
+let ACCESS_STRATEGY = 'ResourceOwnChildren';
 
 export const GET: RequestHandler = async ({ locals, platform, url }) => {
+
+  // Layers which are published are visible to all users
+  if (url.searchParams.get('isPublished') === 'true') {
+    ACCESS_STRATEGY = 'ResourceAll';
+  }
+
   // AUTH : Pass or Fail
   const { db, userId, accessStrategy } = await getDatabaseOrError(
     locals,
@@ -39,14 +50,24 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
       db,
       accessStrategy,
       {
-        translations: true
+        translations: true,
+        project: true,
+        properties: {
+          with: {
+            property: {
+              with: {
+                translations: true
+              }
+            }
+          }
+        }
       },
       userId,
       projectRole,
       layerI18n,
       {
         organisation: url.searchParams.getAll('organisation'),
-        project: url.searchParams.getAll('project')
+        project: url.searchParams.getAll('project'),
       },
       3,
       queryParams
@@ -73,7 +94,10 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 
   try {
     const formData: NewLayer = await request.json();
-    const form = (await superValidate(formData, zod(LayerInsertAPI))) as SuperValidated<Layer>;
+    const form = (await superValidate(
+      formData,
+      zod(LayerInsertAPI)
+    )) as SuperValidated<Layer>;
 
     if (!form.valid) {
       return SuperFormResponse(form);
@@ -81,7 +105,11 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 
     const { baseLayer, formTranslations } = extractEntitiesToInsert(form.data);
     const createdLayer = await createLayer(db, baseLayer);
-    const createdTranslations = await createTranslations(db, formTranslations, createdLayer.id);
+    const createdTranslations = await createTranslations(
+      db,
+      formTranslations,
+      createdLayer.id
+    );
     const createdProperties = await createLayerProperties(
       db,
       createdLayer.id,

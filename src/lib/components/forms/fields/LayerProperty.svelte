@@ -1,7 +1,5 @@
 <script lang="ts">
 import { fade } from 'svelte/transition';
-// CONTEXT
-import { getRouterState } from '$lib/context/router.svelte';
 // TYPES
 import type { FieldProps, FacetRouter } from '$lib/types';
 
@@ -11,10 +9,6 @@ let { propertyJoinStateKey, fieldDiscriminator, fieldRoot } = fieldProps;
 
 // STATE : FORM
 let { form } = fieldProps.form;
-
-// STATE : CONTEXT :: ROUTER
-const routerState = getRouterState() as FacetRouter;
-
 </script>
 
 <div
@@ -35,7 +29,8 @@ const routerState = getRouterState() as FacetRouter;
               checked={item[propertyJoinStateKey]}
               onchange={() => {
                 form.update(($form) => {
-                  $form[fieldRoot][index][propertyJoinStateKey] = !item[propertyJoinStateKey];
+                  $form[fieldRoot][index][propertyJoinStateKey] =
+                    !item[propertyJoinStateKey];
                   return $form;
                 });
               }} />

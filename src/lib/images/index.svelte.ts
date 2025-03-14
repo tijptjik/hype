@@ -43,6 +43,7 @@ import type {
   UploadStatus,
   ImageEditRefs as EditRefs
 } from '$lib/types';
+import { featureImage } from '$lib/db/schema';
 
 // ═══════════════════════
 // 2. CONFIGURATION
@@ -428,8 +429,17 @@ export const handleFilesSelect = async (
 };
 
 /** Process individual file upload */
-const handleUpload = async (args: { fileState: ImageUploadState; refs: Refs }) => {
-  let { fileState, refs } = args;
+export const handleUpload = async (args: {
+  fileState: ImageUploadState;
+  refs: Refs;
+  event?: { fetch: typeof fetch };
+  featureImage?: {
+    isPublished: boolean;
+    intent: Intent;
+  };
+}) => {
+  let { fileState, refs, event, featureImage } = args;
+  const localFetch = event?.fetch ?? fetch;
   try {
     const { public_id, folder } = refsToPublicRouter(refs);
     let paramsToSign: ParamsToSign = { folder };
@@ -439,20 +449,29 @@ const handleUpload = async (args: { fileState: ImageUploadState; refs: Refs }) =
       paramsToSign.public_id = public_id;
     }
     // Prepare the image data for our database
-    const imageData = await uploadToCloudinary({
+    let imageData = await uploadToCloudinary({
       file: fileState.file,
       paramsToSign,
-      refs
+      refs,
+      event
     });
 
+    if (featureImage) {
+      imageData.featureImage = {
+        featureId: refs.entity,
+        intent: featureImage.intent,
+        isPublished: featureImage.isPublished
+      };
+    }
+
     // Set initial upload state
-    setImageUploadState(imageData.id, 'uploading');
+    setImageUploadState(imageData!.id!, 'uploading');
 
     let savedImage: GetImageAPI;
 
     // Save to database
     if (refs.imageToReplace) {
-      savedImage = await fetch(`/api/images/${refs.imageToReplace.id}`, {
+      savedImage = await localFetch(`/api/images/${refs.imageToReplace.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(imageData)
@@ -471,7 +490,7 @@ const handleUpload = async (args: { fileState: ImageUploadState; refs: Refs }) =
           throw err;
         });
     } else {
-      savedImage = await fetch('/api/images', {
+      savedImage = await localFetch('/api/images', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(imageData)
@@ -509,18 +528,22 @@ export const uploadToCloudinary = async (uploadConfig: {
   refs: Refs;
   intent?: string;
   isPublished?: boolean;
-}): Promise<any> => {
+  event?: { fetch: typeof fetch };
+}): Promise<NewImageAPI | undefined> => {
   const {
     file,
     paramsToSign,
     refs,
     intent = 'undefined',
-    isPublished = true
+    isPublished = true,
+    event
   } = uploadConfig;
   let media_metadata = 'true';
 
+  const localFetch = event?.fetch ?? fetch;
+
   try {
-    const signData = await fetch('/api/cloudinary', {
+    const signData = await localFetch('/api/cloudinary', {
       method: 'POST',
       body: JSON.stringify({
         paramsToSign: {
@@ -545,7 +568,7 @@ export const uploadToCloudinary = async (uploadConfig: {
     }
 
     // Upload to Cloudinary
-    let res = await fetch(url, {
+    let res = await localFetch(url, {
       method: 'POST',
       body: formData
     })
