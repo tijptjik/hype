@@ -74,7 +74,7 @@
     "@auth/core": "^0.37.4",
     "@auth/d1-adapter": "^1.8.0",
     "@auth/drizzle-adapter": "^1.8.0",
-    "@auth/sveltekit": "^1.8.0",
+    "@auth/sveltekit": "1.7.4",
     "@inlang/paraglide-js": "1.11.3",
     "@inlang/paraglide-sveltekit": "^0.12.1",
     "@libsql/client": "v0.15.0-pre.1",
