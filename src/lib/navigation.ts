@@ -153,16 +153,18 @@ export function goToEntityFacet(
 
 export const navigate = (url: string) => {
   const langUrl = i18n.resolveRoute(url);
-  goto(langUrl).then(() => goto(langUrl));
+  // TODO Remove this hack once we have a proper way to navigate to the language url
+  // goto(langUrl).then(() => goto(langUrl));
+  goto(langUrl);
 };
 
 // UTILS
-export const reversePath = new Map<string, HierarchicalResourcePath>();
+export const reversePath = new Map<string, HierarchicalResource>();
 
 if (HierarchicalResourcePath) {
   Object.keys(HierarchicalResourcePath).forEach((path: string) => {
     const pathValue: string =
       HierarchicalResourcePath[path as keyof typeof HierarchicalResourcePath];
-    reversePath.set(pathValue, path as HierarchicalResourcePath);
+    reversePath.set(pathValue, path as HierarchicalResource);
   });
 }
