@@ -5,22 +5,22 @@ export default {
   content: ['./src/**/*.{html,svelte,js,ts}'],
   theme: {
     fontFamily: {
-      sans: ['Geologica', 'IBM Plex Sans', 'sans-serif'],
+      sans: ['Geologica', 'sans-serif'],
       hant: ['Noto Sans HK', 'sans-serif'],
       hans: ['Noto Sans SC', 'sans-serif'],
-      admin: ['IBM Plex Sans', 'sans-serif'],
+      admin: ['Geologica', 'sans-serif'],
       serif: ['Merriweather', 'serif'],
-      mono: ['IBM Plex Mono', 'monospace'],
+      mono: ['IBM Plex Mono', 'monospace']
     },
     extend: {
       borderStyle: ['hover'],
       transitionDuration: {
-        '1500': '1500ms',
-        '2000': '2000ms'
+        1500: '1500ms',
+        2000: '2000ms'
       },
       transitionDelay: {
-        '1500': '1500ms',
-        '2000': '2000ms'
+        1500: '1500ms',
+        2000: '2000ms'
       },
       screens: {
         '3xl': '1800px',
@@ -46,36 +46,36 @@ export default {
         'w-384': { raw: '(min-width: 1536px)' },
         'w-512': { raw: '(min-width: 2048px)' },
         'w-640': { raw: '(min-width: 2560px)' },
-        'w-768': { raw: '(min-width: 3072px)' },
+        'w-768': { raw: '(min-width: 3072px)' }
       },
       borderWidth: {
-        '1': '1px',
-        '3': '3px',
+        1: '1px',
+        3: '3px'
       },
       colors: {
         'gradient-end': 'hsl(var(--fuchsia-800))', // color-variable
         'gradient-start': 'hsl(var(--rose-500))', // color-variable
-        'secondary': '#7482FF' // color-variable
+        secondary: '#7482FF' // color-variable
       },
       fontSize: {
         '2xs': '0.625rem',
         '3xs': '0.55rem'
       },
       height: {
-        '0.25': '0.0625rem',
-        '17.5': '4.375rem',
+        0.25: '0.0625rem',
+        17.5: '4.375rem'
       },
       width: {
-        '17.5': '4.375rem',
+        17.5: '4.375rem'
       },
       minHeight: {
-        '200': '50rem', // 800px
-        '250': '62.5rem', // 1000px
+        200: '50rem', // 800px
+        250: '62.5rem' // 1000px
       },
       minWidth: {
-        '200': '50rem', // 800px
-        '250': '62.5rem', // 1000px
-      },
+        200: '50rem', // 800px
+        250: '62.5rem' // 1000px
+      }
     }
   },
   // daisyUI config
@@ -117,11 +117,12 @@ export default {
           // Borders
           '--border-btn': '1px', // border width of buttons
           '--tab-border': '1px', // border width of tabs
-          '--border-focus': '2px', // border width of focus
+          '--border-focus': '2px' // border width of focus
         }
       },
       'dark',
       'emerald'
+
     ]
   },
   plugins: [
@@ -140,6 +141,7 @@ export default {
         }
       });
     })
+
   ],
   darkMode: ['class', '[data-theme="spectre"]']
 };
