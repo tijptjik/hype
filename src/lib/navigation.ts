@@ -153,8 +153,6 @@ export function goToEntityFacet(
 
 export const navigate = (url: string) => {
   const langUrl = i18n.resolveRoute(url);
-  // TODO Remove this hack once we have a proper way to navigate to the language url
-  // goto(langUrl).then(() => goto(langUrl));
   goto(langUrl);
 };
 
