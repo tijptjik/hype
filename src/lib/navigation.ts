@@ -159,8 +159,10 @@ export const navigate = (url: string) => {
 // UTILS
 export const reversePath = new Map<string, HierarchicalResourcePath>();
 
-Object.keys(HierarchicalResourcePath).forEach((path: string) => {
-  const pathValue: string =
-    HierarchicalResourcePath[path as keyof typeof HierarchicalResourcePath];
-  reversePath.set(pathValue, path as HierarchicalResourcePath);
-});
+if (HierarchicalResourcePath) {
+  Object.keys(HierarchicalResourcePath).forEach((path: string) => {
+    const pathValue: string =
+      HierarchicalResourcePath[path as keyof typeof HierarchicalResourcePath];
+    reversePath.set(pathValue, path as HierarchicalResourcePath);
+  });
+}

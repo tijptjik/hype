@@ -7,9 +7,13 @@ import {
 } from '$env/static/private';
 import client from '$lib/db';
 import { account, session, user } from '$lib/db/schema';
-import { getUserRoles, getUserLayers, type UserRole } from './utils';
+import { SvelteKitAuth } from '@auth/sveltekit';
+import { getUserRoles, getUserLayers } from './utils';
+// TYPES
+import type { UserRole } from './utils';
 import type { User as SchemaUser, UserLayer } from '$lib/types';
-import { SvelteKitAuth, type DefaultSession, type Session } from '@auth/sveltekit';
+import type { DefaultSession, Session } from '@auth/sveltekit';
+import type { Handle } from '@sveltejs/kit';
 
 declare module '@auth/sveltekit' {
   interface Session {
@@ -43,6 +47,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
           }
         }
       })
+
     ],
     secret: PRIVATE_AUTH_SECRET,
     trustHost: true,

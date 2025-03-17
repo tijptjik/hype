@@ -70,44 +70,44 @@ if (!session) {
   goto(i18n.resolveRoute('/'));
 }
 
-// NAVIGATION HANDLING -- beforeNavigate
-beforeNavigate((nav) => {
-  console.log('beforeNavigate', nav.to);
-  // Handle refresh or same-page navigation
-  if (nav.to?.route.id === ADMIN_PATH) {
-    console.log('admin');
-    return;
-  }
-  if (
-    nav.to === null ||
-    nav.to?.route.id === $page.route.id ||
-    omniContext.pageState === PageState.NoTransition
-  ) {
-    navDest = '';
-    return;
-  }
+// // NAVIGATION HANDLING -- beforeNavigate
+// beforeNavigate((nav) => {
+//   console.log('beforeNavigate', nav.to);
+//   // Handle refresh or same-page navigation
+//   if (nav.to?.route.id === ADMIN_PATH) {
+//     console.log('admin');
+//     return;
+//   }
+//   if (
+//     nav.to === null ||
+//     nav.to?.route.id === $page.route.id ||
+//     omniContext.pageState === PageState.NoTransition
+//   ) {
+//     navDest = '';
+//     return;
+//   }
 
-  // Update state for transition
-  if (omniContext.pageState === PageState.NeedTransition) {
-    omniContext.pageState = PageState.Transitioning;
-  }
+//   // Update state for transition
+//   if (omniContext.pageState === PageState.NeedTransition) {
+//     omniContext.pageState = PageState.Transitioning;
+//   }
 
-  // Cache destination and cancel navigation during transition
-  if (omniContext.pageState === PageState.Transitioning) {
-    navDest = nav.to?.route.id || '/';
-    nav.cancel();
-  }
-});
+//   // Cache destination and cancel navigation during transition
+//   if (omniContext.pageState === PageState.Transitioning) {
+//     navDest = nav.to?.route.id || '/';
+//     nav.cancel();
+//   }
+// });
 
-// NAVIGATION HANDLING -- State Change Effect
-$effect(() => {
-  if (browser && omniContext.pageState === PageState.ReadyToNav && navDest) {
-    goto(navDest.replace('(app)', '')).then(() => {
-      console.log('navDest', navDest);
-      omniContext.pageState = PageState.NoTransition;
-    });
-  }
-});
+// // NAVIGATION HANDLING -- State Change Effect
+// $effect(() => {
+//   if (browser && omniContext.pageState === PageState.ReadyToNav && navDest) {
+//     goto(navDest.replace('(app)', '')).then(() => {
+//       console.log('navDest', navDest);
+//       omniContext.pageState = PageState.NoTransition;
+//     });
+//   }
+// });
 </script>
 
 <div class="flex h-screen w-full flex-col">

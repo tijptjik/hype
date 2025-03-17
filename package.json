@@ -42,7 +42,7 @@
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.8",
-    "@tanstack/svelte-query-devtools": "^5.67.3",
+    "@tanstack/svelte-query-devtools": "^5.68.0",
     "@types/eslint": "^9.6.1",
     "@types/geojson": "^7946.0.16",
     "@types/hammerjs": "^2.0.46",
@@ -58,7 +58,7 @@
     "svelte-check": "^4.1.5",
     "typescript-eslint": "^8.26.1",
     "vite-plugin-node-polyfills": "^0.22.0",
-    "wrangler": "^3.114.1"
+    "wrangler": "4"
   },
   "type": "module",
   "trustedDependencies": [
@@ -81,11 +81,11 @@
     "@steeze-ui/heroicons": "^2.4.2",
     "@steeze-ui/svelte-icon": "^1.6.2",
     "@sveltejs/adapter-cloudflare": "^4.9.0",
-    "@sveltejs/kit": "^2.19.0",
+    "@sveltejs/kit": "^2.19.2",
     "@sveltejs/vite-plugin-svelte": "^4.0.4",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/typography": "^0.5.16",
-    "@tanstack/svelte-query": "^5.67.3",
+    "@tanstack/svelte-query": "^5.68.0",
     "@testing-library/svelte": "^5.2.7",
     "@thisux/sveltednd": "0.0.16",
     "@turf/bbox": "^7.2.0",
@@ -99,7 +99,7 @@
     "maplibre-gl": "^4.7.1",
     "postcss": "^8.5.3",
     "short-uuid": "^5.2.0",
-    "svelte": "^5.23.0",
+    "svelte": "^5.23.1",
     "svelte-fa": "^4.0.3",
     "svelte-file-dropzone": "^2.0.9",
     "svelte-range-slider-pips": "^3.2.2",

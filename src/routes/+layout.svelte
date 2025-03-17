@@ -2,7 +2,7 @@
 // STORES
 import { page } from '$app/stores';
 // NAVIGATION
-import { afterNavigate, goto } from '$app/navigation';
+import { afterNavigate } from '$app/navigation';
 // QUERY
 import { QueryClientProvider } from '@tanstack/svelte-query';
 import { SvelteQueryDevtools } from '@tanstack/svelte-query-devtools';

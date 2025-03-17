@@ -100,9 +100,11 @@ export class mapContext {
   // Constructor
   constructor(queryClient: QueryClient, userId: string, userLayers: string[]) {
     this.queryClient = queryClient;
-    this.userId = userId;
-    this.state.prisms.layer = userLayers || [];
-    this.initializeQueries(queryClient);
+    if (userId !== '') {
+      this.userId = userId;
+      this.state.prisms.layer = userLayers || [];
+      this.initializeQueries(queryClient);
+    }
   }
 
   // Helper method to build API URLs with filters

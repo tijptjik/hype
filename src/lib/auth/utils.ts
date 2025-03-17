@@ -1,7 +1,14 @@
-import type { Session } from '@auth/core/types';
 import { eq } from 'drizzle-orm';
-import { organisationRole, projectRole, organisation, project, userLayer, layer } from '$lib/db/schema';
+import {
+  organisationRole,
+  projectRole,
+  organisation,
+  project,
+  userLayer
+} from '$lib/db/schema';
+// TYPES
 import type { UserLayer } from '$lib/types';
+import type { Session } from '@auth/core/types';
 
 // Utility functions
 
@@ -161,6 +168,8 @@ export async function getUserLayers(db: any, userId: string): Promise<UserLayer[
 export function hasControlPanelAccess(session: Session | null): boolean {
   const permittedRoles = ['superadmin', 'owner', 'maintainer'];
   return (
-    session?.user?.roles?.some((role: UserRole) => permittedRoles.includes(role.role)) || false
+    session?.user?.roles?.some((role: UserRole) =>
+      permittedRoles.includes(role.role)
+    ) || false
   );
 }
