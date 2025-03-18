@@ -6,7 +6,7 @@ import RemoveShim from '$lib/components/forms/shims/Remove.svelte';
 import ConfirmShim from '$lib/components/forms/shims/Confirm.svelte';
 import FauxInput from '$lib/components/forms/fields/FauxInput.svelte';
 // TYPES
-import type { FieldProps, FormProps, ActionProps, FacetRouter } from '$lib/types';
+import type { FieldProps, FormProps, ActionProps } from '$lib/types';
 
 // STATE : INTERMEDIATE VALUES
 type IntermediateValue = {

@@ -210,9 +210,6 @@ export type ResourceRouter = Router & {
 export type EntityRouter = ResourceRouter & {
   entity: Ref;
 };
-export type FacetRouter = EntityRouter & {
-  facet: FacetType;
-};
 
 export type NavItem = {
   name: string;

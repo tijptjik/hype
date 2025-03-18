@@ -1,7 +1,7 @@
 <script lang="ts">
 import { fade } from 'svelte/transition';
 // TYPES
-import type { FieldProps, FacetRouter } from '$lib/types';
+import type { FieldProps } from '$lib/types';
 
 // STATE : PROPS
 let fieldProps: FieldProps & { propertyJoinStateKey: string } = $props();

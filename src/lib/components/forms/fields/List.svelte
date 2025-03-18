@@ -8,7 +8,7 @@ import { Plus, ExclamationTriangle, Bars3, XMark, Trash } from '@steeze-ui/heroi
 import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
 // TYPES
 import type { DragDropState } from '@thisux/sveltednd';
-import type { FacetRouter, IntermediateValue, ListFieldProps } from '$lib/types';
+import type { IntermediateValue, ListFieldProps } from '$lib/types';
 
 // STATE : PROPS
 let fieldProps: ListFieldProps = $props();

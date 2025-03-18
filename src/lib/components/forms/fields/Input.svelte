@@ -5,7 +5,7 @@ import FormInput from '../elements/Input.svelte';
 import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
 import FieldLabel from '$lib/components/forms/labels/Field.svelte';
 // TYPES
-import type { FieldPropsExtended, FacetRouter, FieldDiscriminator } from '$lib/types';
+import type { FieldPropsExtended, FieldDiscriminator } from '$lib/types';
 
 // STATE : PROPS
 let {

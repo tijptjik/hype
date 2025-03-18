@@ -7,7 +7,7 @@ import ToggleField from '$lib/components/forms/fields/Toggle.svelte';
 import InputField from '$lib/components/forms/fields/Input.svelte';
 import { fade } from 'svelte/transition';
 // TYPES
-import type { SectionProps, Feature, FacetRouter } from '$lib/types';
+import type { SectionProps, Feature } from '$lib/types';
 
 // STATE : PROPS
 let sectionProps: SectionProps = $props();

@@ -9,7 +9,7 @@ import PropertyFields from '$lib/components/forms/fields/Properties.svelte';
 //CONFIG
 import { classifierComponentTypes, specifierComponentTypes } from '$lib/types';
 // TYPES
-import type { SectionProps, NewProperty, FacetRouter } from '$lib/types';
+import type { SectionProps, NewProperty } from '$lib/types';
 
 // CONFIG
 const fieldRoot = 'properties';

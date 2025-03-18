@@ -6,15 +6,7 @@ import { flip } from 'svelte/animate';
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // TYPES
-import type {
-  ProjectRole,
-  Resource,
-  SectionProps,
-  ActionProps,
-  Organisation,
-  Project,
-  FacetRouter
-} from '$lib/types';
+import type { ProjectRole, Resource, SectionProps, ActionProps } from '$lib/types';
 
 // STATE : PROPS
 let {
@@ -42,6 +34,8 @@ const resourceState = getHierarchicalResourceState();
 const { form, validate } = fieldProps.form;
 
 const updateUserJoinState = (userId: string, isChecked: boolean) => {
+  console.log('updateUserJoinState', userId, isChecked);
+  console.log('fieldRoot', $form[fieldRoot]);
   form.update(($form) => {
     const userIndex = $form[fieldRoot].findIndex(
       (userRole: ProjectRole) => userRole.userId === userId
