@@ -21,8 +21,8 @@ import type { Layer, Project } from '$lib/types';
 const mapContext = getMapContext();
 
 // Get cached features for counting
-const layers = $derived(mapContext.state.resources.layers);
-const selectedLayers = $derived(mapContext.state.prisms.layers);
+const layers = $derived(mapContext.state.resources.layer);
+const selectedLayers = $derived(mapContext.state.prisms.layer);
 
 let searchTerm = $state('');
 

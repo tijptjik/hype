@@ -21,8 +21,8 @@ import type { Organisation } from '$lib/types';
 const mapContext = getMapContext();
 
 // Get cached features for counting
-const organisations = $derived(mapContext.state.resources.organisations);
-const selectedOrganisations = $derived(mapContext.state.prisms.organisations);
+const organisations = $derived(mapContext.state.resources.organisation);
+const selectedOrganisations = $derived(mapContext.state.prisms.organisation);
 
 let searchTerm = $state('');
 
