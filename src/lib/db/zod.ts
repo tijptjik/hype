@@ -125,6 +125,7 @@ const getUserRoles = (model: z.ZodType<any>) =>
       'Set an Owner'
     );
 
+// TODO - Test the addition / removal of maintainer roles while maintaining and / or removing the owner
 const getMaintainerRoles = (model: z.ZodType<any>) =>
   z.array(model).refine((schema) => schema.length > 0, 'Add at least 1 Maintainer');
 
@@ -142,6 +143,11 @@ export const UserPrivacyPreserving = UserBase.omit({
   emailVerified: true,
   createdAt: true,
   modifiedAt: true
+});
+export const UserBasic = UserBase.pick({
+  id: true,
+  name: true,
+  image: true
 });
 
 /* ----------------- */
@@ -278,7 +284,7 @@ export const ProjectRoleUpdate = createInsertSchema(projectRole).extend({
 });
 export const ProjectRoleUpdateExtra = ProjectRoleUpdate.extend({
   role: z.enum(['maintainer', 'member']),
-  user: UserPrivacyPreserving
+  user: UserBasic
 });
 
 export const ProjectI18nInsert = ProjectI18nUpdate.omit({ projectId: true });
