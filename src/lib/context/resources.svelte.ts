@@ -62,7 +62,7 @@ export class ResourceState {
       project: { text: '', properties: {}, isPublished: null, isArchived: false },
       layer: { text: '', properties: {}, isPublished: null, isArchived: false },
       feature: { text: '', properties: {}, isPublished: null, isArchived: false },
-      task: { text: '', properties: {}, isArchived: false }
+      task: { text: '', properties: {}, isReviewed: false }
     }
   });
 
@@ -95,24 +95,24 @@ export class ResourceState {
   );
 
   // QueryKeys
-  organisationsQueryKey = [HierarchicalResourcePath.organisation];
+  organisationsQueryKey = [HierarchicalResource.organisation];
   projectsQueryKey = $derived([
-    HierarchicalResourcePath.project,
+    HierarchicalResource.project,
     this.state.prisms.organisation
   ]);
   layersQueryKey = $derived([
-    HierarchicalResourcePath.layer,
+    HierarchicalResource.layer,
     this.state.prisms.organisation,
     this.state.prisms.project
   ]);
   featuresQueryKey = $derived([
-    HierarchicalResourcePath.feature,
+    HierarchicalResource.feature,
     this.state.prisms.organisation,
     this.state.prisms.project,
     this.state.prisms.layer
   ]);
   tasksQueryKey = $derived([
-    HierarchicalResourcePath.task,
+    HierarchicalResource.task,
     this.state.prisms.organisation,
     this.state.prisms.project
   ]);
@@ -128,8 +128,12 @@ export class ResourceState {
     const path = HierarchicalResourcePath[resource];
     const params = new URLSearchParams();
 
-    // Add isArchived filter by default
-    params.append('isArchived', 'false');
+    // Add isArchived / isReviewed filter by default
+    if (resource !== HierarchicalResource.task) {
+      params.append('isArchived', 'false');
+    } else {
+      params.append('isReviewed', 'false');
+    }
 
     if (includeFilters) {
       // Add prism filters based on resource hierarchy
@@ -232,16 +236,30 @@ export class ResourceState {
     } else {
       prisms.splice(index, 1);
     }
-    this.refreshResources(resource);
+    this.cascadeRefreshResources(resource);
   };
 
-  refreshResources = async (resource: HierarchicalResource) => {
+  cascadeRefreshResources = async (resource: HierarchicalResource) => {
     if (resource === HierarchicalResource.organisation) {
       this.refreshProjects();
     } else if (resource === HierarchicalResource.project) {
       this.refreshLayers();
     } else if (resource === HierarchicalResource.layer) {
       this.refreshFeatures();
+    }
+  };
+
+  refreshResources = async (resource: HierarchicalResource) => {
+    if (resource === HierarchicalResource.organisation) {
+      this.refreshOrganisation();
+    } else if (resource === HierarchicalResource.project) {
+      this.refreshProjects();
+    } else if (resource === HierarchicalResource.layer) {
+      this.refreshLayers();
+    } else if (resource === HierarchicalResource.feature) {
+      this.refreshFeatures();
+    } else if (resource === HierarchicalResource.task) {
+      this.refreshTasks();
     }
   };
 
@@ -260,6 +278,13 @@ export class ResourceState {
 
   toggleFeature(id: Id) {
     this.togglePrism(HierarchicalResource.feature, id);
+  }
+
+  async refreshOrganisation() {
+    this.state.resources.organisation = await this.queryClient.fetchQuery({
+      queryKey: this.organisationsQueryKey,
+      queryFn: this.organisationsQueryFn
+    });
   }
 
   async refreshProjects() {
@@ -285,6 +310,14 @@ export class ResourceState {
       queryKey: this.featuresQueryKey,
       queryFn: this.featuresQueryFn
     });
+    this.refreshTasks();
+  }
+
+  async refreshTasks() {
+    this.state.resources.task = await this.queryClient.fetchQuery({
+      queryKey: this.tasksQueryKey,
+      queryFn: this.tasksQueryFn
+    });
   }
 
   async syncProjectPrisms() {
@@ -299,18 +332,42 @@ export class ResourceState {
     });
   }
 
+  async invalidateAndRefresh(resource: HierarchicalResource) {
+    this.queryClient.invalidateQueries({
+      queryKey: [HierarchicalResource[resource]],
+      refetchType: 'all',
+      exact: false
+    });
+    this.refreshResources(resource);
+  }
+
   // FILTERS
 
   getFilteredResource = (resource: HierarchicalResource) => {
-    let filterKeys =
-      resource !== HierarchicalResource.task
-        ? ['isPublished', 'isArchived']
-        : ['isReviewed', 'isArchived'];
-    return this.state.resources[resource].filter(
+    let filterKeys = ['isPublished', 'isArchived'];
+    let query = this.state.filters[resource as keyof AdminFilterStates].text || '';
+    const result = this.state.resources[resource].filter(
       (entity) =>
         filterKeys.every((key) => this.booleanFilter(resource, entity, key)) &&
-        this.textFilter(resource, entity)
+        this.textFilter(resource, entity, query)
     );
+    return result;
+  };
+
+  getFilteredTask = () => {
+    let filterKeys = ['isReviewed', 'isArchived'];
+    let query = this.state.filters.task.text || '';
+    const result = this.state.resources.task.filter(
+      (entity) =>
+        (filterKeys.every((key) =>
+          this.booleanFilter(HierarchicalResource.task, entity, key)
+        ) &&
+          (this.textFilter(HierarchicalResource.task, entity.feature, query) ||
+            this.textFilter(HierarchicalResource.task, entity.project, query) ||
+            this.textFilter(HierarchicalResource.task, entity.organisation, query))) ||
+        entity.message?.toLowerCase().includes(query.toLowerCase())
+    );
+    return result;
   };
 
   booleanFilter = (
@@ -323,12 +380,11 @@ export class ResourceState {
     return filterValue === null || filterValue === entity[property as keyof Resource];
   };
 
-  textFilter = (resource: HierarchicalResource, entity: Resource) => {
-    let query = this.state.filters[resource as keyof AdminFilterStates].text || '';
+  textFilter = (resource: HierarchicalResource, entity: Resource, query: string) => {
     return (
       query === '' ||
-      entity.name.toLowerCase().includes(query.toLowerCase()) ||
-      entity.title.toLowerCase().includes(query.toLowerCase()) ||
+      entity.name?.toLowerCase().includes(query.toLowerCase()) ||
+      entity.title?.toLowerCase().includes(query.toLowerCase()) ||
       entity.nameShort?.toLowerCase().includes(query.toLowerCase()) ||
       entity.description?.toLowerCase().includes(query.toLowerCase()) ||
       entity.address?.toLowerCase().includes(query.toLowerCase())
@@ -342,7 +398,7 @@ export class ResourceState {
   filteredProjects = $derived(this.getFilteredResource(HierarchicalResource.project));
   filteredLayers = $derived(this.getFilteredResource(HierarchicalResource.layer));
   filteredFeatures = $derived(this.getFilteredResource(HierarchicalResource.feature));
-  filteredTasks = $derived(this.getFilteredResource(HierarchicalResource.task));
+  filteredTasks = $derived(this.getFilteredTask());
 
   toggleFilter = (
     resource: HierarchicalResource,
@@ -368,17 +424,17 @@ export class ResourceState {
   getLayer = (feature: Feature): Layer | undefined =>
     this.state.resources.layer.find((layer) => layer.id === feature.layerId);
 
-  getResourcePath = () => {
-    return HierarchicalResourcePath[
-      this.state.active.resource as keyof typeof HierarchicalResourcePath
-    ];
+  getResourcePath = (resource?: HierarchicalResource) => {
+    const resourceKey = resource ?? this.state.active.resource;
+    if (!resourceKey) return null;
+    return HierarchicalResourcePath[resourceKey];
   };
 
-  // getEntityPath
   getEntityRef = (resource: HierarchicalResource, id: Id) => {
+    if (!resource) return false;
     const refKey = HierarchicalResourceRefKey[resource];
     const entity = this.state.resources[resource].find((entity) => entity.id === id);
-    if (!entity) return null;
+    if (!entity) return false;
     return entity[refKey as keyof Resource];
   };
 
@@ -461,14 +517,6 @@ export class ResourceState {
   //     project: 'organisation'
   //   };
   //   return parents[resource] || null;
-  // }
-
-  // // Get parent reference from resource
-  // #getParentRef(entity: Organisation | Project | Layer | Feature): string | null {
-  //   if ('layerId' in entity) return entity.layerId;
-  //   if ('projectId' in entity) return entity.projectId;
-  //   if ('organisationId' in entity) return entity.organisationId;
-  //   return null;
   // }
 
   // // Recursively fetch and set parent resources
@@ -558,25 +606,31 @@ export class ResourceState {
 
   setActiveFromPage(page: Page) {
     const path = page.url.pathname;
-    // TODO Only match at start of string
-    const pathParts = path.replace(ADMIN_PATH, '').split('/').filter(Boolean);
-
-    if (pathParts.length > 0) {
-      const resourcePath = pathParts[0];
-      const resourceType = reversePath.get(resourcePath) || false;
-
-      if (resourceType) {
-        this.setResource(resourceType as unknown as HierarchicalResource);
-
-        if (pathParts.length > 1) {
-          const entityRef = pathParts[1];
-          this.setEntity(entityRef, resourceType as unknown as HierarchicalResource);
-        } else {
-          this.setEntity(false);
-        }
+    const resourceType = this.getResourceFromPath(path);
+    if (resourceType) {
+      this.setResource(resourceType);
+      this.setEntity(this.getEntityFromPath(path), resourceType);
+      if (page.url.hash) {
+        this.setFacet(this.getFacetFromHash(page.url.hash));
       }
     }
   }
+
+  getResourceFromPath = (path: string): HierarchicalResource | false => {
+    const pathParts = path.replace(ADMIN_PATH, '').split('/').filter(Boolean);
+    if (pathParts.length == 0) return false;
+    return reversePath.get(pathParts[0]) ?? false;
+  };
+
+  getEntityFromPath = (path: string): Id | Code | false => {
+    const pathParts = path.replace(ADMIN_PATH, '').split('/').filter(Boolean);
+    if (pathParts.length <= 1) return false;
+    return pathParts[1];
+  };
+
+  getFacetFromHash = (hash: string): FacetType => {
+    return hash.replace('#', '') as FacetType;
+  };
 
   setResource(resource: HierarchicalResource) {
     this.state.active.resource = resource;
@@ -590,7 +644,7 @@ export class ResourceState {
     this.state.active.entity = entity;
   }
 
-  setFacet(facet: FacetType) {
+  setFacet(facet: FacetType | false) {
     this.state.active.facet = facet;
   }
 
@@ -611,7 +665,7 @@ export class ResourceState {
   }
   // GENERIC UTILS
   hasManyEntities = (resource: HierarchicalResource) => {
-    return this.getFilteredResource(resource).length > 3;
+    return this.state.resources[resource].length > 3;
   };
 }
 
