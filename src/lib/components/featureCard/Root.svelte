@@ -1,6 +1,5 @@
 <script lang="ts">
 // SVELTE
-import { browser } from '$app/environment';
 import { goto } from '$app/navigation';
 // I18N
 import { i18n } from '$lib/i18n';
@@ -9,9 +8,6 @@ import { clickOutside } from '$lib/actions';
 // Animation
 import { fade, scale } from 'svelte/transition';
 import { cubicInOut } from 'svelte/easing';
-// Icons
-import Icon from '$lib/components/common/Icon.svelte';
-import { XMark } from '@steeze-ui/heroicons';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
 import { getOmniContext, PageState } from '$lib/context/omni.svelte';
@@ -28,6 +24,13 @@ let horizontalOffset = $derived(() => {
   const { filters, maps, stars, settings } = mapContext.state.panels;
   const leftPanelOpen = maps || stars;
   const rightPanelOpen = filters || settings;
+  return leftPanelOpen && rightPanelOpen
+    ? 0
+    : leftPanelOpen
+      ? 420 / 2
+      : rightPanelOpen
+        ? -420 / 2
+        : 0;
 });
 
 // PAGE STATE HANDLING
