@@ -9,13 +9,7 @@ import Info from '$lib/components/forms/extra/Info.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // TYPES
 import type { Component } from 'svelte';
-import type {
-  FieldProps,
-  ActionProps,
-  EntityRouter,
-  GetImageAPI,
-  ImageEditRefs
-} from '$lib/types';
+import type { FieldProps, ActionProps, GetImageAPI, ImageEditRefs } from '$lib/types';
 
 // STATE : CONTEXT :: RESOURCE
 const resourceState = getHierarchicalResourceState();

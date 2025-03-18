@@ -3,15 +3,7 @@ import { getValues, updateForm } from '$lib/index';
 // COMPONENTS
 import Select from '$lib/components/forms/elements/Select.svelte';
 // TYPES
-import type {
-  Property,
-  FieldPropsExtended,
-  Id,
-  Organisation,
-  Project,
-  Feature,
-  EntityRouter
-} from '$lib/types';
+import type { Property, FieldPropsExtended, Id } from '$lib/types';
 
 // STATE : PROPS
 let {

@@ -3,12 +3,7 @@ import FormTextArea from '$lib/components/forms/elements/Textarea.svelte';
 import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
 import { getValues, updateForm, getId } from '$lib/index';
 // TYPES
-import type {
-  FieldPropsExtended,
-  Resource,
-  LanguageTag,
-  EntityRouter
-} from '$lib/types';
+import type { FieldPropsExtended } from '$lib/types';
 
 // STATE : PROPS
 let {

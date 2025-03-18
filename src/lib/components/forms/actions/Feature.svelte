@@ -2,7 +2,7 @@
 // COMPONENTS
 import Toggle from '$lib/components/forms/fields/Toggle.svelte';
 // TYPES
-import type { FieldProps, ModalProps, Feature, EntityRouter } from '$lib/types';
+import type { FieldProps, ModalProps } from '$lib/types';
 
 // STATE : PROPS
 let actionProps: FieldProps & ModalProps = $props();

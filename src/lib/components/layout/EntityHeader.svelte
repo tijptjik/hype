@@ -14,13 +14,7 @@ import EntityActions from '$lib/components/menu/EntityActions.svelte';
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // TYPES
-import type {
-  EntityRouter,
-  Resource,
-  ResourceType,
-  FacetType,
-  SuperFormResult
-} from '$lib/types';
+import type { Resource, ResourceType, FacetType, SuperFormResult } from '$lib/types';
 
 // CONFIG
 const menuItems: Record<ResourceType, { label: string; ref: FacetType }[]> = {

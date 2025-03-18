@@ -13,7 +13,6 @@ import Dropzone from '$lib/components/images/gallery/Dropzone.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // TYPES
 import type {
-  EntityRouter,
   ImageUploadRefs,
   ImageEditRefs,
   Organisation,

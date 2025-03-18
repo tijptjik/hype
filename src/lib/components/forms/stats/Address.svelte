@@ -3,7 +3,7 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { MapPin } from '@steeze-ui/heroicons';
 import { fade } from 'svelte/transition';
 // TYPES
-import type { FeatureForm, EntityRouter } from '$lib/types';
+import type { FeatureForm } from '$lib/types';
 
 // CONFIG
 const coordinateLabels = ['Latitude', 'Longitude'];

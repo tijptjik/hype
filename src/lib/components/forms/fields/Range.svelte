@@ -1,6 +1,6 @@
 <script lang="ts">
 // TYPES
-import type { FieldProps, EntityRouter } from '$lib/types';
+import type { FieldProps } from '$lib/types';
 
 let { fieldRoot, fieldIndex, fieldKey, ...fieldProps }: FieldProps = $props();
 

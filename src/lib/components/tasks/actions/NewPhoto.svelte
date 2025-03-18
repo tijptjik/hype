@@ -7,7 +7,7 @@ import Accept from '$lib/components/common/buttons/Accept.svelte';
 import Info from '$lib/components/forms/extra/Info.svelte';
 import NewPhotoContent from '$lib/components/tasks/info/NewPhoto.svelte';
 // TYPES
-import type { TaskAPI, EntityRouter } from '$lib/types';
+import type { TaskAPI } from '$lib/types';
 
 let { task }: { task: TaskAPI } = $props();
 

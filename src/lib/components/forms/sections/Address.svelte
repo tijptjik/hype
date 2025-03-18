@@ -6,7 +6,7 @@ import Actions from '$lib/components/forms/actions/Address.svelte';
 import TextField from '$lib/components/forms/fields/Textarea.svelte';
 import GeocodeBar from '$lib/components/forms/bars/Geocode.svelte';
 // TYPES
-import type { LanguageTag, SectionProps, EntityRouter, Field } from '$lib/types';
+import type { LanguageTag, SectionProps, Field } from '$lib/types';
 // DEBUG
 import SuperDebug from 'sveltekit-superforms';
 

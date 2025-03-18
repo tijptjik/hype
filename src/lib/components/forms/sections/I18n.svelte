@@ -8,7 +8,7 @@ import Actions from '$lib/components/forms/actions/Feature.svelte';
 import InfoContent from '$lib/components/forms/info/FeatureCore.svelte';
 import TranslationBar from '$lib/components/forms/bars/Translation.svelte';
 // TYPES
-import type { SectionProps, LanguageTag, EntityRouter, FormField } from '$lib/types';
+import type { SectionProps } from '$lib/types';
 
 // STATE : CONTEXT :: RESOURCE
 const resourceState = getHierarchicalResourceState();

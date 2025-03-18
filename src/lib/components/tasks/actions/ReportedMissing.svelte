@@ -7,7 +7,7 @@ import { Trash, EyeSlash, XCircle, CubeTransparent } from '@steeze-ui/heroicons'
 import Info from '$lib/components/forms/extra/Info.svelte';
 import ReportedMissingContent from '$lib/components/tasks/info/ReportedMissing.svelte';
 // TYPES
-import type { TaskAPI, ReportedMissingAction, EntityRouter } from '$lib/types';
+import type { TaskAPI, ReportedMissingAction } from '$lib/types';
 import type { ComponentType } from 'svelte';
 
 // STATE :: PROPS

@@ -207,9 +207,6 @@ export type Router = {
 export type ResourceRouter = Router & {
   resource: ResourceType;
 };
-export type EntityRouter = ResourceRouter & {
-  entity: Ref;
-};
 
 export type NavItem = {
   name: string;

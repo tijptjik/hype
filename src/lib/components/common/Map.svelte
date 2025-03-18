@@ -4,7 +4,7 @@ import SpectralStyle from '$lib/map/style.json';
 // UTILS
 import { loadScript } from '$lib';
 // TYPES
-import type { EntityRouter, SectionProps } from '$lib/types';
+import type { SectionProps } from '$lib/types';
 // ENV
 // import { PUBLIC_MAPTILER_KEY } from '$env/static/public';
 

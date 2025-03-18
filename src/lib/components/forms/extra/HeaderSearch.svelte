@@ -6,14 +6,7 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 
 // TYPES
-import type {
-  User,
-  Project,
-  Layer,
-  EntityRouter,
-  SuperFormResult,
-  Resource
-} from '$lib/types';
+import type { User, Project, Layer, SuperFormResult, Resource } from '$lib/types';
 
 type ResultType = User | Project | Layer;
 

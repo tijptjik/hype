@@ -5,7 +5,7 @@ import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 import Header from '$lib/components/forms/extra/Header.svelte';
 import Viewer from '$lib/components/common/Viewer.svelte';
 // TYPES
-import type { EntityRouter, SectionProps, GetImageAPI, ResourceType } from '$lib/types';
+import type { SectionProps, GetImageAPI, ResourceType } from '$lib/types';
 
 let sectionProps: SectionProps & { image: GetImageAPI | null } = $props();
 

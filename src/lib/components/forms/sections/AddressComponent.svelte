@@ -10,7 +10,6 @@ import type {
   SectionProps,
   FormField,
   FormFieldNested,
-  EntityRouter,
   Field
 } from '$lib/types';
 

@@ -3,7 +3,7 @@
 import Icon from '$lib/components/common/Icon.svelte';
 import { MagnifyingGlass, GlobeAsiaAustralia } from '@steeze-ui/heroicons';
 // TYPES
-import type { EntityRouter, FeatureForm } from '$lib/types';
+import type { FeatureForm } from '$lib/types';
 
 // STATE : PROPS
 let {

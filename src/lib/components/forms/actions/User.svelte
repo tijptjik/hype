@@ -6,7 +6,7 @@ import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // ICONS
 import { UserPlus, XMark } from '@steeze-ui/heroicons';
 // TYPES
-import type { FieldProps, ModalProps, EntityRouter } from '$lib/types';
+import type { FieldProps, ModalProps } from '$lib/types';
 
 // STATE : CONTEXT :: RESOURCE
 const resourceState = getHierarchicalResourceState();

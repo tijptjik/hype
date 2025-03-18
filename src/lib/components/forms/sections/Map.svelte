@@ -6,7 +6,7 @@ import { loadScript } from '$lib';
 // COMPONENTS
 import Map from '$lib/components/common/Map.svelte';
 // TYPES
-import type { EntityRouter, SectionProps } from '$lib/types';
+import type { SectionProps } from '$lib/types';
 
 // STATE : PROPS
 let sectionProps: SectionProps = $props();
