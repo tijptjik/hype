@@ -9,7 +9,7 @@ import { deserialize, enhance } from '$app/forms';
 // NAVIGATION
 import { goto } from '$app/navigation';
 // LIB
-import { NEW_REF, ADMIN_PATH } from '$lib';
+import { ADMIN_PATH, API_PATH, NEW_REF } from '$lib';
 // I18N
 import { i18n } from '$lib/i18n';
 // ZOD
@@ -23,12 +23,12 @@ import {
   FeatureInsertAPI,
   FeatureUpdateAPI
 } from '$lib/db/zod';
+// ENUMS
+import { HierarchicalResource } from '$lib/types';
 // TYPES
-import type { Writable } from 'svelte/store';
 import type { ActionResult } from '@sveltejs/kit';
-import type Form from 'sveltekit-superforms';
-
-import type { SuperFormData, SuperValidated } from 'sveltekit-superforms/client';
+import type { ResourceState } from './resources.svelte';
+import type { SuperValidated } from 'sveltekit-superforms/client';
 import type {
   Organisation,
   Project,
@@ -37,18 +37,24 @@ import type {
   ResourceType,
   FalsableResourceType,
   Ref,
-  EntityRouter,
   SuperFormResult
 } from '$lib/types';
 
 class BaseForm<T extends Record<string, unknown>> {
   protected formResult: SuperFormResult<T>;
+  protected resourceState: ResourceState;
+  protected resourceType: FalsableResourceType;
+
   constructor(
     form: SuperValidated<T>,
     isNew: boolean,
     insertSchema: any,
-    updateSchema: any
+    updateSchema: any,
+    resourceState: ResourceState,
+    resourceType: FalsableResourceType
   ) {
+    this.resourceState = resourceState;
+    this.resourceType = resourceType;
     const formOptions = {
       dataType: 'json',
       SPA: true,
@@ -119,10 +125,18 @@ class BaseForm<T extends Record<string, unknown>> {
       if (result.type === 'redirect') {
         // CREATE SUCCESS
         this.message.set('Created successfully');
+        // Invalidate cache for the resource type; refresh resources
+        this.resourceState.invalidateAndRefresh(
+          this.resourceType as HierarchicalResource
+        );
         await goto(i18n.resolveRoute(result.location));
       } else if (result.type === 'success') {
         // UPDATE SUCCESS
         this.message.set('Updated successfully');
+        // Invalidate cache for the resource type; refresh resources
+        this.resourceState.invalidateAndRefresh(
+          this.resourceType as HierarchicalResource
+        );
         this.reset({
           data: result.data?.data,
           newState: result.data?.data
@@ -143,7 +157,7 @@ class BaseForm<T extends Record<string, unknown>> {
 
   #getFetchUrl(action: URL) {
     const apiUrl = new URL(action.href);
-    apiUrl.pathname = apiUrl.pathname.replace('{ADMIN_PATH}/', '/api/');
+    apiUrl.pathname = apiUrl.pathname.replace(`${ADMIN_PATH}/`, `${API_PATH}/`);
     if (action.pathname.endsWith('/new')) {
       apiUrl.pathname = apiUrl.pathname.replace('/new', '');
     }
@@ -164,26 +178,70 @@ class BaseForm<T extends Record<string, unknown>> {
 }
 
 export class OrganisationForm extends BaseForm<Organisation> {
-  constructor(form: SuperValidated<Organisation>, isNew: boolean) {
-    super(form, isNew, OrganisationInsertAPI, OrganisationUpdateAPI);
+  constructor(
+    form: SuperValidated<Organisation>,
+    isNew: boolean,
+    resourceState: ResourceState
+  ) {
+    super(
+      form,
+      isNew,
+      OrganisationInsertAPI,
+      OrganisationUpdateAPI,
+      resourceState,
+      HierarchicalResource.organisation
+    );
   }
 }
 
 export class ProjectForm extends BaseForm<Project> {
-  constructor(form: SuperValidated<Project>, isNew: boolean) {
-    super(form, isNew, ProjectInsertAPI, ProjectUpdateAPI);
+  constructor(
+    form: SuperValidated<Project>,
+    isNew: boolean,
+    resourceState: ResourceState
+  ) {
+    super(
+      form,
+      isNew,
+      ProjectInsertAPI,
+      ProjectUpdateAPI,
+      resourceState,
+      HierarchicalResource.project
+    );
   }
 }
 
 export class LayerForm extends BaseForm<Layer> {
-  constructor(form: SuperValidated<Layer>, isNew: boolean) {
-    super(form, isNew, LayerInsertAPI, LayerUpdateAPI);
+  constructor(
+    form: SuperValidated<Layer>,
+    isNew: boolean,
+    resourceState: ResourceState
+  ) {
+    super(
+      form,
+      isNew,
+      LayerInsertAPI,
+      LayerUpdateAPI,
+      resourceState,
+      HierarchicalResource.layer
+    );
   }
 }
 
 export class FeatureForm extends BaseForm<Feature> {
-  constructor(form: SuperValidated<Feature>, isNew: boolean) {
-    super(form, isNew, FeatureInsertAPI, FeatureUpdateAPI);
+  constructor(
+    form: SuperValidated<Feature>,
+    isNew: boolean,
+    resourceState: ResourceState
+  ) {
+    super(
+      form,
+      isNew,
+      FeatureInsertAPI,
+      FeatureUpdateAPI,
+      resourceState,
+      HierarchicalResource.feature
+    );
   }
 }
 
@@ -196,7 +254,8 @@ export const getContextRef = (resourceType: ResourceType, entity: Ref) => {
 export function setForm<T extends Organisation | Project | Layer | Feature>(
   resourceType: FalsableResourceType,
   entity: Ref,
-  form: SuperValidated<T>
+  form: SuperValidated<T>,
+  resourceState: ResourceState
 ): SuperFormResult<T> {
   if (!entity) {
     console.trace();
@@ -219,7 +278,7 @@ export function setForm<T extends Organisation | Project | Layer | Feature>(
     default:
       throw new Error(`Unknown resource type: ${resourceType}`);
   }
-  const instance = new FormClass(form, entity === NEW_REF);
+  const instance = new FormClass(form, entity === NEW_REF, resourceState);
   return setContext(
     getContextRef(resourceType, entity),
     instance
