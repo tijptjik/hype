@@ -220,7 +220,11 @@ let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
     <main class="flex h-full flex-col gap-6 overflow-y-scroll p-6">
       {#if resourceState.activeFacet === 'core' || resourceState.activeFacet === false}
         <I18nSection title="Descriptors" fields={FIELDS.i18n as FormField} {form} />
-        <I18nSection title="Credit" fields={FIELDS.credit as FormField} {form} />
+        <I18nSection
+          title="Credit"
+          subtitle="Under which licence (e.g. <code>CC-BY-SA</code> or <code>Copyrighted</code>) is this project published, and how should it be attributed?"
+          fields={FIELDS.credit as FormField}
+          {form} />
         <div class="flex flex-row gap-6">
           <UserSection
             title="Members with Edit Access"
