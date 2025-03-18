@@ -3,7 +3,7 @@ import { goto } from '$app/navigation';
 import { i18n } from '$lib/i18n';
 // I18N
 import * as m from '$lib/paraglide/messages.js';
-import { setLanguageTag, onSetLanguageTag, languageTag } from '$lib/paraglide/runtime.js';
+import { setLanguageTag, languageTag } from '$lib/paraglide/runtime.js';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Language } from '@steeze-ui/heroicons';
@@ -14,9 +14,9 @@ import { page } from '$app/stores';
 import type { LanguageTag } from '$lib/types';
 
 const languages = [
-  { name: 'English', code: 'en', "zh-hant": "英語", "zh-hans": "英语" },
-  { name: '正體字', en: 'Traditional Chinese', code: 'zh-hant', "zh-hans": "繁體字" },
-  { name: '简体字', en: 'Simplified Chinese', code: 'zh-hans', "zh-hant": "繁體字" }
+  { name: 'English', code: 'en', 'zh-hant': '英語', 'zh-hans': '英语' },
+  { name: '正體字', en: 'Traditional Chinese', code: 'zh-hant', 'zh-hans': '繁體字' },
+  { name: '简体字', en: 'Simplified Chinese', code: 'zh-hans', 'zh-hant': '繁體字' }
 ];
 
 const { session } = $page.data;
@@ -30,7 +30,7 @@ const updateLanguage = async (language: string) => {
   // Update the language immediately after the API call
   session!.user.language = language as LanguageTag;
   setLanguageTag(language as LanguageTag);
-  goto(i18n.resolveRoute(`/settings`));
+  goto(i18n.resolveRoute(`/`));
 };
 </script>
 
@@ -42,7 +42,9 @@ const updateLanguage = async (language: string) => {
           <Icon src={Language} class="h-5 w-5" />
           <p class="font-normal text-base-content">{language.name}</p>
           {#if language.code !== languageTag()}
-            <p class="text-sm text-sm text-neutral-content">{language[languageTag()]}</p>
+            <p class="text-sm text-sm text-neutral-content">
+              {language[languageTag()]}
+            </p>
           {/if}
         </div>
         <input
