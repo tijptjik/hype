@@ -42,7 +42,7 @@
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.8",
-    "@tanstack/svelte-query-devtools": "^5.68.0",
+    "@tanstack/svelte-query-devtools": "^5.69.0",
     "@types/eslint": "^9.6.1",
     "@types/geojson": "^7946.0.16",
     "@types/hammerjs": "^2.0.46",
@@ -58,7 +58,7 @@
     "svelte-check": "^4.1.5",
     "typescript-eslint": "^8.26.1",
     "vite-plugin-node-polyfills": "^0.22.0",
-    "wrangler": "4"
+    "wrangler": "^4.1.0"
   },
   "type": "module",
   "trustedDependencies": [
@@ -75,17 +75,18 @@
     "@auth/d1-adapter": "^1.8.0",
     "@auth/drizzle-adapter": "^1.8.0",
     "@auth/sveltekit": "1.7.4",
+    "@emeraldpay/hashicon": "^0.5.2",
     "@inlang/paraglide-js": "1.11.3",
     "@inlang/paraglide-sveltekit": "^0.12.1",
     "@libsql/client": "v0.15.0-pre.1",
     "@steeze-ui/heroicons": "^2.4.2",
     "@steeze-ui/svelte-icon": "^1.6.2",
     "@sveltejs/adapter-cloudflare": "^4.9.0",
-    "@sveltejs/kit": "^2.19.2",
+    "@sveltejs/kit": "^2.20.0",
     "@sveltejs/vite-plugin-svelte": "^4.0.4",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/typography": "^0.5.16",
-    "@tanstack/svelte-query": "^5.68.0",
+    "@tanstack/svelte-query": "^5.69.0",
     "@testing-library/svelte": "^5.2.7",
     "@thisux/sveltednd": "0.0.16",
     "@turf/bbox": "^7.2.0",
