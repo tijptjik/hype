@@ -918,11 +918,11 @@ export enum HierarchicalResourcePath {
 }
 
 export enum HierarchicalResourceSeq {
-  organisation = 0,
-  project = 1,
-  layer = 2,
-  feature = 3,
-  task = 4
+  organisation = 1,
+  project = 2,
+  layer = 3,
+  feature = 4,
+  task = 5
 }
 
 export enum HierarchicalResourceRefKey {
