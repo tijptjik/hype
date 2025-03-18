@@ -19,6 +19,9 @@ const languageOptions = $derived(
   allLanguages.filter((lang) => lang.code !== languageTag)
 );
 
+// Loading state tracking
+let loadingLang = $state<LanguageTag | null>(null);
+
 async function translateFields(
   event: Event,
   sourceLang: LanguageTag,
@@ -26,47 +29,53 @@ async function translateFields(
 ) {
   event.preventDefault();
 
-  // Step 1: Initialize sourceTexts array
-  const sourceTexts: string[] = [];
-  const sourceLangObj =
-    sourceLang.toLowerCase() === 'en' ? $form : $form.translations[sourceLang];
+  try {
+    loadingLang = sourceLang;
 
-  // Step 1: Lookup the sourceLang texts
-  Object.keys(fields).forEach((key) => {
-    sourceTexts.push(sourceLangObj[key]);
-  });
+    // Step 1: Initialize sourceTexts array
+    const sourceTexts: string[] = [];
+    const sourceLangObj =
+      sourceLang.toLowerCase() === 'en' ? $form : $form.translations[sourceLang];
 
-  // Step 2: Translation API call
-  const response = await fetch('/api/translation', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      sourceLang: sourceLang,
-      targetLang: targetLang,
-      texts: sourceTexts
-    })
-  });
-  const translatedTexts = await response.json();
+    // Step 1: Lookup the sourceLang texts
+    Object.keys(fields).forEach((key) => {
+      sourceTexts.push(sourceLangObj[key]);
+    });
 
-  // Step 3: Update the form with translated texts
-  translatedTexts.forEach((translatedText, index) => {
-    let field = Object.keys(fields)[index];
-    if (targetLang.toLowerCase() === 'en') {
-      form.update(($form) => {
-        $form[field] = translatedText;
-        $form[`${field}Gen`] = true;
-        return $form;
-      });
-    } else {
-      form.update(($form) => {
-        $form.translations[targetLang][field] = translatedText;
-        $form.translations[targetLang][`${field}Gen`] = true;
-        return $form;
-      });
-    }
-  });
+    // Step 2: Translation API call
+    const response = await fetch('/api/translation', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        sourceLang: sourceLang,
+        targetLang: targetLang,
+        texts: sourceTexts
+      })
+    });
+    const translatedTexts: string[] = await response.json();
+
+    // Step 3: Update the form with translated texts
+    translatedTexts.forEach((translatedText, index) => {
+      let field = Object.keys(fields)[index];
+      if (targetLang.toLowerCase() === 'en') {
+        form.update(($form) => {
+          $form[field] = translatedText;
+          $form[`${field}Gen`] = true;
+          return $form;
+        });
+      } else {
+        form.update(($form) => {
+          $form.translations[targetLang][field] = translatedText;
+          $form.translations[targetLang][`${field}Gen`] = true;
+          return $form;
+        });
+      }
+    });
+  } finally {
+    loadingLang = null;
+  }
 }
 </script>
 
@@ -81,8 +90,14 @@ async function translateFields(
       {#each languageOptions as { code, label }}
         <button
           class="text-md btn btn-circle btn-primary font-normal text-base-content"
-          onclick={async (e) => await translateFields(e, code, languageTag)}>
-          {label}
+          disabled={loadingLang !== null}
+          onclick={async (e) =>
+            await translateFields(e, code as LanguageTag, languageTag)}>
+          {#if loadingLang === code}
+            <span class="loading loading-spinner loading-sm"></span>
+          {:else}
+            {label}
+          {/if}
         </button>
       {/each}
     </div>
