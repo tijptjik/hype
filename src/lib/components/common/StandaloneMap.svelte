@@ -2,8 +2,14 @@
 // import { AttributionControl, GeolocateControl, Map, NavigationControl, ScaleControl } from 'maplibre-gl';
 // SVELTE
 import { onMount } from 'svelte';
-// NAVIGATION
-import { goto } from '$app/navigation';
+// ICONS
+import { Square3Stack3d } from '@steeze-ui/heroicons';
+import Icon from '$lib/components/common/Icon.svelte';
+// ANIMATION
+import { fade } from 'svelte/transition';
+import { cubicInOut } from 'svelte/easing';
+// I18N
+import * as m from '$lib/paraglide/messages.js';
 // LIB
 import { loadScript } from '$lib';
 import { updateMarkers, createMarkerElement } from '$lib/map/markers';
@@ -92,10 +98,11 @@ onMount(async () => {
   mapContext.map!.on('click', (e) => {
     const target = e.originalEvent.target as HTMLElement;
     if (target.dataset.type === 'marker') {
-      ('STANDALONE MAP :: MARKER HANDLER');
       const featureId = target.dataset.featureId;
       if (!featureId) return;
       omniContext.handleFeatureSelection(mapContext, featureId, { openCard: true });
+    } else if (Object.values(mapContext.state.panels).some((panel) => panel)) {
+      mapContext.closeAllPanels();
     }
   });
 
@@ -112,4 +119,23 @@ $effect(() => {
 </script>
 
 <div id="map" class="map absolute inset-0" data-testid="map" bind:this={mapContainer}>
+  {#if !mapContext.state.prisms.layer.length && !mapContext.state.panels.maps}
+    <div
+      class="pointer-events-none absolute inset-0 z-50 mx-auto flex cursor-pointer items-center justify-center bg-black/70 text-center caret-transparent"
+      in:fade={{ duration: 800, delay: 3000, easing: cubicInOut }}
+      out:fade={{ duration: 300, easing: cubicInOut }}
+      onclick={() => (mapContext.state.panels.maps = true)}>
+      <div
+        class="group pointer-events-auto flex max-w-xs flex-col items-center gap-8 rounded-lg border-2 border-[#4987E2] bg-black p-8 px-8 font-mono shadow-[0_0_15px_rgba(0,0,255,0.5)]">
+        <p class="text-lg text-base-content">{m.map__no_markers_without_layers()}</p>
+        <button
+          class="group-hover:inset-shadow-lg btn btn-outline border-[#4987E2] bg-black font-bold uppercase text-[#4987E2] ring-primary transition-all duration-300 group-hover:border-primary/70 group-hover:text-primary/70 group-hover:shadow-primary/70 group-hover:ring-2">
+          <Icon
+            src={Square3Stack3d}
+            class="transition-all duration-300 group-hover:scale-125 group-hover:text-primary" />
+          {m.map__select_layer()}
+        </button>
+      </div>
+    </div>
+  {/if}
 </div>
