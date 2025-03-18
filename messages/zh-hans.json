@@ -71,7 +71,10 @@
   "forms__reset": "重置",
   "forms__save": "保存",
   "forms__saved": "已保存",
-  "forms_invalid": "请修复",
+  "forms__invalid": "无效",
+  "forms__unpublish": "取消发布",
+  "forms__publish": "发布",
+
   "organisation__core": "核心",
   "organisation__images": "图片",
 

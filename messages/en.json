@@ -71,7 +71,9 @@
   "forms__reset": "Reset",
   "forms__save": "Save",
   "forms__saved": "Saved",
-  "forms_invalid": "Invalid",
+  "forms__invalid": "Invalid",
+  "forms__unpublish": "Unpublish",
+  "forms__publish": "Publish",
 
   "organisation__core": "Main",
   "organisation__images": "Image",
