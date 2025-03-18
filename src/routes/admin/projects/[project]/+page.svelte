@@ -14,13 +14,17 @@ import PropertySection from '$lib/components/forms/sections/Property.svelte';
 import UserSection from '$lib/components/forms/sections/User.svelte';
 // CONFIG
 import { classifierComponentTypes, specifierComponentTypes } from '$lib/types';
+// ENUMS
+import { HierarchicalResource } from '$lib/types';
 // TYPES
 import type { Project } from '$lib/types';
-// TYPES
-import type { FormPageProps, FormField, EntityRouter, GetImageAPI } from '$lib/types';
+import type { FormPageProps, FormField, FormFieldArray, GetImageAPI } from '$lib/types';
+
+// CONTEXT
+const resourceState = getHierarchicalResourceState();
 
 // CONFIG
-const RESOURCE = 'project';
+const RESOURCE = HierarchicalResource.project;
 const FIELDS: Record<string, FormField | FormFieldArray> = {
   i18n: {
     name: {
@@ -195,97 +199,61 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Project> = $props();
-let { validatedForm, entity, image } = pageProps.data;
-
-// STATE : CONTEXT :: RESOURCES
-const resourceState = getHierarchicalResourceState();
 
 // STATE : FORM
-let form = $state(setForm<Project>(RESOURCE, entity, validatedForm));
+let form = setForm<Project>(
+  RESOURCE,
+  pageProps.data.entity,
+  pageProps.data.validatedForm,
+  getHierarchicalResourceState()
+);
 let enhance = $derived(form.enhance);
-let isNew = $state(entity === NEW_REF);
-
-$effect(() => {
-  if (resourceState.activeEntity !== entity) {
-    resourceState.state.project = entity as Project;
-  }
-  if (isNew && title === NEW_TITLE) {
-    form = setForm<Project>(RESOURCE, routerState.entity, pageProps.data.validatedForm);
-    entity = routerState.entity;
-    isNew = false;
-    doRerender++;
-  } else {
-    form = getForm<Project>(RESOURCE, entity);
-  }
-});
 
 // STATE : DERIVED :: TITLE
 let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
-
-// SYNC :: Update resource state with current entity
-$effect(() => {
-  resourceState.update('project', pageProps.data.validatedForm.data);
-});
-
-// SYNC :: Remove parentRef from URL if it exists
-$effect(() => {
-  const url = new URL(window.location.href);
-  url.searchParams.delete('parentRef');
-});
-
-// SYNC :: Await immediately resolved promise to react to value change.
-const forceUpdate = async (_) => {};
-let doRerender = $state(0);
 </script>
 
-{#await forceUpdate(doRerender) then _}
-  <!-- LAYOUT -->
-  <div class="h-full bg-black">
-    <Header {title} {form} />
-    <form
-      method="POST"
-      use:enhance
-      role="form"
-      data-testid="projectForm"
-      class="h-full">
-      <main class="flex h-full flex-col gap-6 overflow-y-scroll p-6">
-        {#if routerState.facet === 'core'}
-          <I18nSection title="Descriptors" fields={FIELDS.i18n as FormField} {form} />
-          <I18nSection title="Credit" fields={FIELDS.credit as FormField} {form} />
-          <div class="flex flex-row gap-6">
-            <UserSection
-              title="Members with Edit Access"
-              subtitle="Maintainers have access to the review queue and can accept or reject feature changes"
-              fields={FIELDS.users as FormFieldArray}
-              {form} />
-            <SpecificationSection
-              title="Specification"
-              fields={FIELDS.specification as FormField}
-              {form} />
-          </div>
-        {:else if routerState.facet === 'fields'}
-          <div class="flex flex-col gap-6">
-            <PropertySection
-              title="Categorical Fields"
-              subtitle="by which features can be filtered"
-              fieldDiscriminator="classifier"
-              fields={FIELDS.config as FormFieldArray}
-              {form} />
-            <PropertySection
-              title="Freeform Fields"
-              subtitle="displayed in a feature's info panels"
-              fieldDiscriminator="specifier"
-              fields={FIELDS.config as FormFieldArray}
-              {form} />
-          </div>
-        {:else if routerState.facet === 'images'}
-          <ImageSection
-            title="Image"
-            fields={FIELDS.images}
-            {form}
-            image={pageProps.data.image as GetImageAPI} />
-        {/if}
-      </main>
-    </form>
-  </div>
-{/await}
+<!-- LAYOUT -->
+<div class="mb-12 h-full bg-black">
+  <Header {title} {form} />
+  <form method="POST" use:enhance role="form" data-testid="projectForm" class="h-full">
+    <main class="flex h-full flex-col gap-6 overflow-y-scroll p-6">
+      {#if resourceState.activeFacet === 'core' || resourceState.activeFacet === false}
+        <I18nSection title="Descriptors" fields={FIELDS.i18n as FormField} {form} />
+        <I18nSection title="Credit" fields={FIELDS.credit as FormField} {form} />
+        <div class="flex flex-row gap-6">
+          <UserSection
+            title="Members with Edit Access"
+            subtitle="Maintainers have access to the review queue and can accept or reject feature changes"
+            fields={FIELDS.users as FormFieldArray}
+            {form} />
+          <SpecificationSection
+            title="Specification"
+            fields={FIELDS.specification as FormField}
+            {form} />
+        </div>
+      {:else if resourceState.activeFacet === 'fields'}
+        <div class="flex flex-col gap-6">
+          <PropertySection
+            title="Categorical Fields"
+            subtitle="by which features can be filtered"
+            fieldDiscriminator="classifier"
+            fields={FIELDS.config as FormFieldArray}
+            {form} />
+          <PropertySection
+            title="Freeform Fields"
+            subtitle="displayed in a feature's info panels"
+            fieldDiscriminator="specifier"
+            fields={FIELDS.config as FormFieldArray}
+            {form} />
+        </div>
+      {:else if resourceState.activeFacet === 'images'}
+        <ImageSection
+          title="Image"
+          fields={FIELDS.images}
+          {form}
+          image={pageProps.data.image as GetImageAPI} />
+      {/if}
+    </main>
+  </form>
+</div>
