@@ -27,11 +27,11 @@ import type {
   AdminFilterStates,
   AdminFilterState,
   Resource,
-  ResourceTypeWithChildren
+  ResourceTypeWithChildren,
+  UserRole
 } from '../types';
 import type { Page } from '@sveltejs/kit';
 import { reversePath } from '$lib/navigation';
-
 const nullOrEquals = (a: any, b: any) => {
   return a == null || a === b;
 };
@@ -39,6 +39,8 @@ const nullOrEquals = (a: any, b: any) => {
 export class ResourceState {
   // Tanstack Query Client instance
   queryClient: QueryClient;
+  // User Roles
+  userRoles: UserRole[];
   // Whether the queryClient has been initialised
   isInitialised: boolean = $state(false);
 
@@ -77,15 +79,6 @@ export class ResourceState {
     ]
   );
 
-  // parent = $derived(this.getParent(this.activeResource));
-
-  // parentEntity = $derived(this.state.parents[0]);
-  // parentEntityRefKey = $derived(
-  //   HierarchicalResourceRefKey[
-  //     this.parentEntity as keyof typeof HierarchicalResourceRefKey
-  //   ]
-  // );
-
   isShowIndex = $derived(this.activeResource && this.activeEntity === null);
 
   activeEntityHref = $derived(
@@ -118,8 +111,9 @@ export class ResourceState {
   ]);
 
   // Constructor
-  constructor(queryClient: QueryClient) {
+  constructor(queryClient: QueryClient, userRoles: UserRole[]) {
     this.queryClient = queryClient;
+    this.userRoles = userRoles;
     this.initializeQueries(queryClient);
   }
 
@@ -346,12 +340,47 @@ export class ResourceState {
   getFilteredResource = (resource: HierarchicalResource) => {
     let filterKeys = ['isPublished', 'isArchived'];
     let query = this.state.filters[resource as keyof AdminFilterStates].text || '';
-    const result = this.state.resources[resource].filter(
+    let result = this.state.resources[resource].filter(
       (entity) =>
         filterKeys.every((key) => this.booleanFilter(resource, entity, key)) &&
         this.textFilter(resource, entity, query)
     );
+
+    if (resource === HierarchicalResource.organisation) {
+      result = result.filter((organisation) => {
+        return this.hasOrganisationRole(organisation.id as Id);
+      });
+    } else if (resource === HierarchicalResource.project) {
+      result = result.filter((project) => {
+        return this.hasProjectRole(project.id as Id);
+      });
+    } else if (resource === HierarchicalResource.layer) {
+      result = result.filter((layer) => {
+        return this.hasProjectRole(layer.projectId! as Id);
+      });
+    } else if (resource === HierarchicalResource.feature) {
+      result = result.filter((feature) => {
+        const layer = this.getLayer(feature as Feature);
+        return this.hasProjectRole(layer!.projectId as Id);
+      });
+    }
+
     return result;
+  };
+
+  hasOrganisationRole = (organisationId: Id) => {
+    return this.userRoles.some(
+      (role) =>
+        role.type === HierarchicalResource.organisation &&
+        role.resourceId === organisationId
+    );
+  };
+
+  hasProjectRole = (projectId: Id) => {
+    return this.userRoles.some(
+      (role) =>
+        role.type === HierarchicalResource.project && role.resourceId === projectId
+    );
   };
 
   getFilteredTask = () => {
@@ -452,10 +481,6 @@ export class ResourceState {
       HierarchicalResourceParent[
         this.state.active.resource as keyof typeof HierarchicalResourceParent
       ];
-    console.log('this.state.active.resource', this.state.active.resource);
-    console.log('parentResource', parentResource);
-    console.log(HierarchicalResourceParent);
-
     // Get the Parent Entity
     const parentEntity = this.state.resources[parentResource].find(
       (entity) =>
@@ -671,8 +696,14 @@ export class ResourceState {
 
 export const HIERARCHICAL_RESOURCE_STATE_KEY = Symbol('hierarchicalResourceState');
 
-export const setHierarchicalResourceState = (queryClient: QueryClient) =>
-  setContext(HIERARCHICAL_RESOURCE_STATE_KEY, new ResourceState(queryClient));
+export const setHierarchicalResourceState = (
+  queryClient: QueryClient,
+  userRoles: UserRole[]
+) =>
+  setContext(
+    HIERARCHICAL_RESOURCE_STATE_KEY,
+    new ResourceState(queryClient, userRoles)
+  );
 
 export const getHierarchicalResourceState = (): ReturnType<
   typeof setHierarchicalResourceState
