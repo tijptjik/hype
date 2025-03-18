@@ -14,12 +14,6 @@ type Props = {
   resourceType: HierarchicalResource;
 };
 
-// STATE
-// $inspect(resourceState.state.prisms);
-// $inspect(resourceState.state.resources);
-// $inspect('statistic', statistic);
-// $inspect('resourceType', resourceType);
-
 let { statistic, resourceType } = $props();
 let label = $derived(
   statistic === CollectionStatistic.total
@@ -33,7 +27,7 @@ let count = $derived(
     ? resourceState.state.resources[resourceType as HierarchicalResource].length
     : statistic === CollectionStatistic.filtered
       ? resourceState.getFilteredResource(resourceType).length
-      : statistic === CollectionStatistic.selected
+      : statistic === CollectionStatistic.selected && resourceType !== 'feature'
         ? resourceState.state.prisms[resourceType as ResourceTypeWithChildren].length
         : 0
 );

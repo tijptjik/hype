@@ -1,11 +1,5 @@
 import { getContext } from 'svelte';
-import type { QueryClient } from '@tanstack/svelte-query';
 import { setContext } from 'svelte';
-import {
-  HIERARCHICAL_RESOURCE_STATE_KEY,
-  ResourceState,
-  setHierarchicalResourceState
-} from './resources.svelte';
 // ENUM
 import { HierarchicalResource } from '$lib/types';
 
@@ -18,9 +12,9 @@ class SidebarState {
   state: SidebarStateState = $state({
     isOpen: true,
     isSectionOpen: {
-      organisation: true,
-      project: false,
-      layer: false,
+      organisation: null,
+      project: null,
+      layer: null,
       feature: true,
       task: null
     }
