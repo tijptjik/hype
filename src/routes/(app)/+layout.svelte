@@ -3,7 +3,7 @@
 import { page } from '$app/stores';
 import { browser } from '$app/environment';
 // LIB
-import { ADMIN_PATH } from '$lib/index';
+import { ADMIN_PATH, MOBILE_MAX_WIDTH } from '$lib/index';
 // I18N
 import { i18n } from '$lib/i18n';
 // NAVIGATION
@@ -58,8 +58,8 @@ let mapContainerClasses = $derived(() => {
   const rightPanelOpen = stars || settings;
 
   return {
-    'ml-[480px]': leftPanelOpen && !browser?.innerWidth < 768,
-    'mr-[480px]': rightPanelOpen && !browser?.innerWidth < 768
+    'ml-[480px]': leftPanelOpen && !browser?.innerWidth < MOBILE_MAX_WIDTH,
+    'mr-[480px]': rightPanelOpen && !browser?.innerWidth < MOBILE_MAX_WIDTH
   };
 });
 
@@ -70,40 +70,39 @@ if (!session) {
   goto(i18n.resolveRoute('/'));
 }
 
-// NAVIGATION HANDLING -- beforeNavigate
-beforeNavigate((nav) => {
-  console.log('beforeNavigate', nav.to);
-  // Handle refresh or same-page navigation
-  if (nav.to?.route.id === ADMIN_PATH) {
-    console.log('admin');
-    return;
-  }
-  if (
-    nav.to === null ||
-    nav.to?.route.id === $page.route.id ||
-    omniContext.pageState === PageState.NoTransition
-  ) {
-    navDest = '';
-    return;
-  }
+// // NAVIGATION HANDLING -- beforeNavigate
+// beforeNavigate((nav) => {
+//   console.log('beforeNavigate', nav.to);
+//   // Handle refresh or same-page navigation
+//   if (nav.to?.route.id === ADMIN_PATH) {
+//     console.log('admin');
+//     return;
+//   }
+//   if (
+//     nav.to === null ||
+//     nav.to?.route.id === $page.route.id ||
+//     omniContext.pageState === PageState.NoTransition
+//   ) {
+//     navDest = '';
+//     return;
+//   }
 
-  // Update state for transition
-  if (omniContext.pageState === PageState.NeedTransition) {
-    omniContext.pageState = PageState.Transitioning;
-  }
+//   // Update state for transition
+//   if (omniContext.pageState === PageState.NeedTransition) {
+//     omniContext.pageState = PageState.Transitioning;
+//   }
 
-  // Cache destination and cancel navigation during transition
-  if (omniContext.pageState === PageState.Transitioning) {
-    navDest = nav.to?.route.id || '/';
-    nav.cancel();
-  }
-});
+//   // Cache destination and cancel navigation during transition
+//   if (omniContext.pageState === PageState.Transitioning) {
+//     navDest = nav.to?.route.id || '/';
+//     nav.cancel();
+//   }
+// });
 
 // NAVIGATION HANDLING -- State Change Effect
 $effect(() => {
   if (browser && omniContext.pageState === PageState.ReadyToNav && navDest) {
     goto(navDest.replace('(app)', '')).then(() => {
-      console.log('navDest', navDest);
       omniContext.pageState = PageState.NoTransition;
     });
   }
