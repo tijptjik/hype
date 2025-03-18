@@ -39,7 +39,7 @@ const getUrl = (facet: string) => {
 // STATE : CONTEXT
 const navigateToGallery = (e: Event) => {
   e.preventDefault();
-  resourceState.activeFacet = 'images';
+  resourceState.setFacet('images');
 };
 </script>
 

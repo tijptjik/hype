@@ -41,7 +41,8 @@ let updateTimeout: number;
 
 // FILTER TEXT
 let filterText = $derived(
-  resourceState.state.filters[resourceState.activeResource as HierarchicalResource].text
+  resourceState.state.filters[resourceState.activeResource as HierarchicalResource]
+    ?.text
 );
 let lastUsedFilterText = $state('');
 

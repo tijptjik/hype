@@ -29,10 +29,9 @@ const menuItems = [
 
 function handleMenuClick(panel: 'filters' | 'maps' | 'stars' | 'settings' | 'admin') {
   if (panel === 'admin') {
-    goto('{ADMIN_PATH}');
+    goto(ADMIN_PATH);
   } else {
     const closeAll = window.innerWidth < 1320;
-    console.log('closeAll', closeAll);
     mapContext.togglePanel(panel as keyof PanelState, closeAll);
   }
 }

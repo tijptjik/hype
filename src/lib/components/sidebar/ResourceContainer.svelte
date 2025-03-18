@@ -1,5 +1,7 @@
 <script lang="ts">
 import { slide } from 'svelte/transition';
+// LIB
+import { navItems } from '$lib/navigation';
 // COMPONENTS
 import Entities from '$lib/components/sidebar/Entities.svelte';
 import FilterInput from '$lib/components/menu/FilterInput.svelte';
@@ -48,7 +50,7 @@ const getMaxHeightItemsContainer = (
 <!-- CONTAINER -->
 <div
   class="flex flex-col transition-[max-height] duration-300 ease-in-out"
-  class:flex-grow={isFilterable && sidebarState.isSectionOpen(resourceType)}
+  class:flex-grow={showFilters || navItems[resourceType].isAlwaysExpanded}
   style="max-height: {resourceType != 'feature'
     ? getMaxHeightItemsContainer(resourceType, isFilterable)
     : ''}">

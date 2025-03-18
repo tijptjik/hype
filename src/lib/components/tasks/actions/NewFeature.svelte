@@ -1,6 +1,4 @@
 <script lang="ts">
-// LIB
-import { goToResource, goToEntity } from '$lib/navigation';
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS
@@ -9,7 +7,7 @@ import Accept from '$lib/components/common/buttons/Accept.svelte';
 import Info from '$lib/components/forms/extra/Info.svelte';
 import NewFeatureContent from '$lib/components/tasks/info/NewFeature.svelte';
 // TYPES
-import type { TaskAPI, EntityRouter } from '$lib/types';
+import type { TaskAPI } from '$lib/types';
 
 let { task }: { task: TaskAPI } = $props();
 

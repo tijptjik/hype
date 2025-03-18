@@ -10,7 +10,7 @@ import Gallery from '$lib/components/images/gallery/Gallery.svelte';
 // LIB
 import { imageSets } from '$lib/images/index.svelte';
 // TYPES
-import type { SectionProps, EntityRouter, ResourceType } from '$lib/types';
+import type { SectionProps, ResourceType, Id } from '$lib/types';
 
 // TYPES
 type Props = SectionProps;
@@ -59,7 +59,7 @@ const openFileDialog = () => {
     <Gallery
       editContext={{
         refType: resourceState.activeResource as ResourceType,
-        refId: resourceState.activeEntityRef
+        refId: resourceState.activeEntity as Id
       }}
       {actionProps}
       bind:inputElement />

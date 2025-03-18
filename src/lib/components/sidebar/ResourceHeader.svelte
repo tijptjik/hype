@@ -3,7 +3,7 @@
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 import { getSidebarState } from '$lib/context/sidebar.svelte';
 // NAVIGATION
-import { navItems, goToResource } from '$lib/navigation';
+import { navItems, navigateOnAdmin } from '$lib/navigation';
 import { ADMIN_PATH } from '$lib/index';
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
@@ -20,7 +20,7 @@ let { resourceType }: { resourceType: HierarchicalResource } = $props();
 let onClick = (e: MouseEvent) => {
   e.preventDefault();
   sidebarState.openSection(resourceType as HierarchicalResource);
-  goToResource(resourceType as HierarchicalResource);
+  navigateOnAdmin(resourceType);
 };
 </script>
 

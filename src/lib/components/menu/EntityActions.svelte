@@ -7,8 +7,6 @@ import FormSubmitButton from './FormSubmitButton.svelte';
 import PublishButton from './PublishButton.svelte';
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
-// TYPES
-import type { EntityRouter } from '$lib/types';
 
 let menuProps = $props();
 

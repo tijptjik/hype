@@ -1,7 +1,7 @@
 <script lang="ts">
 // LIB
 import { ADMIN_PATH } from '$lib';
-import { goToEntity } from '$lib/navigation';
+import { navigateOnAdmin } from '$lib/navigation';
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS
@@ -29,7 +29,7 @@ const typeDisplay: Record<TaskType, string> = {
     {typeDisplay[task.type as TaskType]}
     <a
       href={`${ADMIN_PATH}/features/${task.feature?.id}`}
-      onclick={(e) => goToEntity(HierarchicalResource.task, task.id)}
+      onclick={(e) => navigateOnAdmin(HierarchicalResource.task, task.id)}
       class="pl-3 text-sm text-base-content/50">
       {task.feature?.title || ''}</a>
   </h3>

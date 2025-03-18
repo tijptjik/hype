@@ -1,6 +1,4 @@
 <script lang="ts">
-// LIB
-import { goToResource } from '$lib/navigation';
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS
