@@ -1,9 +1,7 @@
 <script lang="ts">
-import { goto } from '$app/navigation';
-import { i18n } from '$lib/i18n';
 import { NEW_TITLE, NEW_REF } from '$lib';
 // Context
-import { setForm, getForm } from '$lib/context/forms.svelte';
+import { setForm } from '$lib/context/forms.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // Components
 import Header from '$lib/components/layout/EntityHeader.svelte';
@@ -28,6 +26,9 @@ import type {
   FormFieldConfig,
   ImageEditRefs
 } from '$lib/types';
+
+// CONTEXT
+const resourceState = getHierarchicalResourceState();
 
 // CONFIG
 const RESOURCE = HierarchicalResource.feature;
@@ -113,68 +114,40 @@ const FIELDS: FormFieldConfig = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Feature> = $props();
-let { validatedForm, entity } = pageProps.data;
-
-// STATE : CONTEXT :: RESOURCES
-const resourceState = getHierarchicalResourceState();
 
 // STATE : FORM
-let form = $state(setForm<Feature>(RESOURCE, entity, validatedForm));
+let form = setForm<Feature>(
+  RESOURCE,
+  pageProps.data.entity,
+  pageProps.data.validatedForm,
+  getHierarchicalResourceState()
+);
 let enhance = $derived(form.enhance);
-let isNew = $state(entity === NEW_REF);
-
-$effect(() => {
-  if (isNew && title !== NEW_TITLE) {
-    form = setForm<Feature>(
-      RESOURCE,
-      resourceState.activeEntity as string,
-      pageProps.data.validatedForm
-    );
-    entity = resourceState.activeEntity as string;
-    isNew = false;
-    doRerender++;
-  } else {
-    form = getForm<Feature>(RESOURCE, entity);
-  }
-});
 
 // STATE : DERIVED :: TITLE
 let title = $derived(pageProps.data.validatedForm.data.title || NEW_TITLE);
 
-// SYNC :: Update resource state with current entity
-$effect(() => {
-  resourceState.setEntity(entity, RESOURCE);
-});
-
-// SYNC :: Remove parentRef from URL if it exists
-$effect(() => {
-  const url = new URL(window.location.href);
-  url.searchParams.delete('parentRef');
-  goto(i18n.resolveRoute(url.toString()), { replaceState: true });
-});
-
 let refs: ImageEditRefs = $derived({
   refType: RESOURCE,
-  refId: entity
+  refId: pageProps.data.entity
 });
-
-// SYNC :: Await immediately resolved promise to react to value change.
-const forceUpdate = async (_) => {};
-let doRerender = $state(0);
 </script>
 
-{#await forceUpdate(doRerender) then _}
-  <!-- LAYOUT -->
-  <div class="h-full overflow-hidden bg-black">
-    <Header {title} {form} />
+<!-- LAYOUT -->
+<div class="h-full overflow-hidden bg-black">
+  <Header {title} {form} />
+  {#if pageProps.data.validatedForm.data}
     <form
       method="POST"
       use:enhance
       role="form"
       data-testid="featureForm"
       class="h-full">
+      <!-- <main class="flex h-full flex-col gap-6 overflow-y-scroll p-6"> -->
+
       <main
-        class="flex h-[calc(100vh-148px)] flex-1 flex-row gap-6 overflow-hidden bg-black p-6 pr-3">
+        class="flex flex-1 flex-row gap-6 overflow-hidden bg-black p-6 pr-3"
+        style="height: calc(100vh - 148px) !important;">
         <div class="relative z-10 h-full flex-1 basis-1/3 overflow-hidden @container">
           <MapSection {form} />
           <div
@@ -191,7 +164,7 @@ let doRerender = $state(0);
         </div>
         <div class="h-auto basis-2/3 scroll-m-10 scroll-p-12 overflow-y-scroll">
           <div class="flex h-full flex-col-reverse justify-end gap-6 pr-3">
-            {#if resourceState.activeFacet === 'core'}
+            {#if resourceState.activeFacet === 'core' || resourceState.activeFacet === false}
               <div class="flex flex-row gap-6">
                 <PropertySection
                   {form}
@@ -222,7 +195,7 @@ let doRerender = $state(0);
                 title="Addressing"
                 subtitle="feature is listed under this address in the app"
                 fields={FIELDS.address as FormField & FormFieldNested} />
-            {:else if resourceState.activeFacet === 'images' && !isNew}
+            {:else if resourceState.activeFacet === 'images' && pageProps.data.entity !== NEW_REF}
               <ViewerSection {form} {refs} title="Viewer" />
               <GallerySection {form} title="Gallery" />
             {/if}
@@ -230,5 +203,5 @@ let doRerender = $state(0);
         </div>
       </main>
     </form>
-  </div>
-{/await}
+  {/if}
+</div>

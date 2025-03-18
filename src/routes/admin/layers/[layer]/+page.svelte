@@ -14,6 +14,9 @@ import { HierarchicalResource } from '$lib/types';
 // TYPES
 import type { Layer, FormPageProps, FormField, FormFieldArray } from '$lib/types';
 
+// CONTEXT
+const resourceState = getHierarchicalResourceState();
+
 // CONFIG
 const RESOURCE = HierarchicalResource.layer;
 const FIELDS: Record<string, FormField | FormFieldArray> = {
@@ -57,72 +60,42 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Layer> = $props();
-let { validatedForm, entity } = pageProps.data;
-
-// STATE : CONTEXT :: RESOURCES
-const resourceState = getHierarchicalResourceState();
 
 // STATE : FORM
-let form = $state(setForm<Layer>(RESOURCE, entity, validatedForm));
+let form = setForm<Layer>(
+  RESOURCE,
+  pageProps.data.entity,
+  pageProps.data.validatedForm,
+  getHierarchicalResourceState()
+);
 let enhance = $derived(form.enhance);
-let isNew = $state(entity === NEW_REF);
-
-$effect(() => {
-  if (isNew && title !== NEW_TITLE) {
-    form = setForm<Layer>(RESOURCE, entity, pageProps.data.validatedForm);
-    isNew = false;
-    doRerender++;
-  } else {
-    form = getForm<Layer>(RESOURCE, entity);
-  }
-});
 
 // STATE : DERIVED :: TITLE
 let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
-
-// SYNC :: Update resource state with current entity
-$effect(() => {
-  resourceState.setEntity(entity, RESOURCE);
-});
-
-// SYNC :: Remove parentRef from URL if it exists
-$effect(() => {
-  //Remove parentRef from URL if it exists
-  const url = new URL(window.location.href);
-  url.searchParams.delete('parentRef');
-  // shallow navigation
-  goto(i18n.resolveRoute(url.toString()), { replaceState: true });
-});
-
-// SYNC :: Await immediately resolved promise to react to value change.
-const forceUpdate = async (_) => {};
-let doRerender = $state(0);
 </script>
 
-{#await forceUpdate(doRerender) then _}
-  <!-- LAYOUT -->
-  <div class="h-full overflow-y-auto bg-black pb-16">
-    <Header {title} {form} />
-    <form method="POST" use:enhance role="form" data-testid="layerForm">
-      <main class="flex flex-col gap-6 p-6">
-        {#if resourceState.activeFacet === 'core'}
-          <I18nSection title="Descriptors" fields={FIELDS.i18n as FormField} {form} />
-          <div class="flex flex-row gap-6">
-            <LayerPropertySection
-              title="Classifiers"
-              subtitle="by which features can be filtered"
-              fieldDiscriminator="classifier"
-              fields={FIELDS.property as FormField & FormFieldArray}
-              {form} />
-            <LayerPropertySection
-              title="Specifiers"
-              subtitle="which are displayed in feature info panels"
-              fieldDiscriminator="specifier"
-              fields={FIELDS.property as FormField & FormFieldArray}
-              {form} />
-          </div>
-        {/if}
-      </main>
-    </form>
-  </div>
-{/await}
+<!-- LAYOUT -->
+<div class="mb-12 h-full bg-black">
+  <Header {title} {form} />
+  <form method="POST" use:enhance role="form" data-testid="layerForm" class="h-full">
+    <main class="flex h-full flex-col gap-6 overflow-y-scroll p-6">
+      {#if resourceState.activeFacet === 'core' || resourceState.activeFacet === false}
+        <I18nSection title="Descriptors" fields={FIELDS.i18n as FormField} {form} />
+        <div class="flex flex-row gap-6">
+          <LayerPropertySection
+            title="Classifiers"
+            subtitle="by which features can be filtered"
+            fieldDiscriminator="classifier"
+            fields={FIELDS.property as FormField & FormFieldArray}
+            {form} />
+          <LayerPropertySection
+            title="Specifiers"
+            subtitle="which are displayed in feature info panels"
+            fieldDiscriminator="specifier"
+            fields={FIELDS.property as FormField & FormFieldArray}
+            {form} />
+        </div>
+      {/if}
+    </main>
+  </form>
+</div>

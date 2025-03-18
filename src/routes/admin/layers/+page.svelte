@@ -24,8 +24,8 @@ const resourceState = getHierarchicalResourceState();
 </script>
 
 <ResourceHeader />
-<ResourceIndex entities={resourceState.state.resources.layer as Layer[]}>
-  {#snippet children(entity, idx)}
+<ResourceIndex entities={resourceState.filteredLayers}>
+  {#snippet children(entity)}
     <EntityCard {entity} {keyMap}>
       {#snippet header(entity: Layer)}
         <!-- TODO Render these placeholders with the graphemes -->
