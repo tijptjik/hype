@@ -389,20 +389,27 @@ export type ResourceConfig = {
 
 export type ResourceHierarchy = ResourceConfig[];
 
-const createJsonPathCondition = (table: Table, path: string[], value: string | string[]) => {
+const createJsonPathCondition = (
+  table: Table,
+  path: string[],
+  value: string | string[]
+) => {
   const [baseColumn, ...jsonPath] = path;
-  const jsonPathStr = jsonPath.map(p => `$.${p}`).join('.');
-  
+  const jsonPathStr = jsonPath.map((p) => `$.${p}`).join('.');
+
   // Handle array of values
   if (Array.isArray(value)) {
-    return sql`json_extract(${table[baseColumn]}, ${jsonPathStr}) IN (${sql.join(value.map(v => sql`${v}`), sql`, `)})`;
+    return sql`json_extract(${table[baseColumn]}, ${jsonPathStr}) IN (${sql.join(
+      value.map((v) => sql`${v}`),
+      sql`, `
+    )})`;
   }
-  
+
   // Handle boolean values
   if (value === 'true' || value === 'false') {
     return sql`json_extract(${table[baseColumn]}, ${jsonPathStr}) = ${value === 'true'}`;
   }
-  
+
   // Handle single value
   return sql`json_extract(${table[baseColumn]}, ${jsonPathStr}) = ${value}`;
 };
@@ -435,16 +442,16 @@ export async function hierarchicalResourceQuery<
     const filterConditions = Object.entries(filters).map(([column, value]) => {
       // Check if this is a nested path
       const path = column.split('.');
-      
+
       if (path.length > 1) {
         return createJsonPathCondition(table, path, value);
       }
-      
+
       // Handle Boolean values
       if (Array.isArray(value) && (value[0] === 'true' || value[0] === 'false')) {
         return eq(table[column], value[0] === 'true');
       }
-      
+
       // Handle Array values
       if (Array.isArray(value)) {
         return inArray(table[column], value);
@@ -653,18 +660,18 @@ export async function updatePartial<T extends Table>(
   data: Partial<Record<string, unknown>>
 ) {
   let updated: T;
-  if (Object.keys(data).length > 0){
+  if (Object.keys(data).length > 0) {
     [updated] = await db
       .update(table)
       .set(data)
       .where(eq(table[refKey], ref))
       .returning();
   } else {
-    [updated] = await db
+    [updated] = (await db
       .select()
       .from(table)
       .where(eq(table[refKey], ref))
-      .limit(1) as T[];
+      .limit(1)) as T[];
   }
 
   if (!updated) {
