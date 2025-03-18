@@ -16,7 +16,11 @@ let {
 }: InputProps & { onchange: () => unknown } = $props();
 
 // SET PLACEHOLDER
-placeholder = placeholder ? placeholder : inputType === 'text' ? 'Type here' : 'Set number';
+placeholder = placeholder
+  ? placeholder
+  : inputType === 'text'
+    ? 'Type here'
+    : 'Set number';
 </script>
 
 <input
@@ -26,13 +30,11 @@ placeholder = placeholder ? placeholder : inputType === 'text' ? 'Type here' : '
   name={id}
   bind:value
   {placeholder}
-  class="w-full rounded-md bg-neutral p-2 focus:border-none focus:outline-none"
-  oninput={onchange}
-/>
+  class="w-full rounded-md bg-neutral p-2 focus:border-none focus:outline-none focus:ring-0"
+  oninput={onchange} />
 
 {#if (isGenAI || languageTag !== 'core') && isTranslated}
-  <div class="absolute top-[7px] right-2">
+  <div class="absolute right-2 top-[7px]">
     <Labels {isGenAI} {languageTag} />
   </div>
 {/if}
-
