@@ -1025,8 +1025,8 @@ export type mapContextState = {
   resources: FilteredResources;
   userSettings: UserSettings;
   userFeatures: {
-    wishlisted: Feature[];
-    visited: Feature[];
+    wishlisted: UserFeature[];
+    visited: UserFeature[];
   };
   userLocation: {
     coords: {

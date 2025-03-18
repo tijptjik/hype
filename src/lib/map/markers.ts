@@ -1,5 +1,5 @@
 import type { Map as MapLibreMap, Marker } from 'maplibre-gl';
-import type { Feature } from 'geojson';
+import type { Feature } from '$lib/types';
 import { mapContext } from '$lib/context/map.svelte';
 
 // Track markers with their IDs

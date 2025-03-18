@@ -105,6 +105,7 @@ onMount(async () => {
 });
 
 $effect(() => {
+  // Rerender the map when the features change
   mapContext.features;
   updateMarkers(mapContext, mapContext.getVisibleFeatures(), maplibre);
 });

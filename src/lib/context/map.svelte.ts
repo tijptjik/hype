@@ -32,7 +32,7 @@ export class mapContext {
   // Tanstack Query Client instance
   queryClient: QueryClient;
   // User ID
-  userId: string;
+  userId: string | null;
   // Whether the map has been initialised
   isInitialised: boolean = $state(false);
 
@@ -104,6 +104,8 @@ export class mapContext {
       this.userId = userId;
       this.state.prisms.layer = userLayers || [];
       this.initializeQueries(queryClient);
+    } else {
+      this.userId = null;
     }
   }
 
@@ -373,7 +375,10 @@ export class mapContext {
   // FEATURE COLLECTIONS
 
   // All Features by Id, given the active layers
-  getAllFeatureIds = (): Id[] => this.state.resources.feature.map((f) => f.id);
+  getAllFeatureIds = (): Id[] =>
+    this.state.prisms.layer.length > 0
+      ? this.state.resources.feature.map((f) => f.id)
+      : [];
 
   // // Active Features by Neighbourhood
   // const activeFeaturesByNeighbourhood =
