@@ -71,10 +71,10 @@ let getWarningMessage = () => {
     class="z-10 flex h-20 flex-row items-center justify-between gap-2 rounded-t-2xl bg-base-100 px-6 @container">
     <div class=" flex h-20 items-center gap-4">
       <Icon src={ChevronRight} class="h-6 w-6" />
-      <h3 class="text-lg">
+      <h3 class="flex-shrink-1 text-lg">
         {title}
-        <small class="hidden pr-3 text-sm text-base-content/50 @sm:block"
-          >{subtitle}</small>
+        <small class="hidden select-text pr-3 text-sm text-base-content/50 @sm:block"
+          >{@html subtitle}</small>
       </h3>
       {#if $errors}
         {#each Object.entries($errors) as [fieldRoot, error]}
@@ -92,7 +92,7 @@ let getWarningMessage = () => {
       <Stats {...fieldProps} />
     {/if}
     {#if Actions}
-      <div class="flex items-center gap-6">
+      <div class="flex flex-shrink-0 items-center gap-6">
         {#if resourceState.activeResource == 'project' && resourceState.activeFacet === 'fields'}
           <Actions bind:removeMode={actionProps.removeMode} />
         {:else if resourceState.activeResource !== 'feature'}
