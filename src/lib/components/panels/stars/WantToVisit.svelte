@@ -7,14 +7,17 @@ import { i18n } from '$lib/i18n';
 import { goto } from '$app/navigation';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
+import { getOmniContext } from '$lib/context/omni.svelte';
 // COMPONENTS
 import Section from '$lib/components/panels/common/Section.svelte';
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte';
 import Icon from '$lib/components/common/Icon.svelte';
 import { Squares2x2 } from '@steeze-ui/heroicons';
 
+// CONTEXT
 const mapContext = getMapContext();
-
+const omniContext = getOmniContext();
+// STATE
 let searchTerm = $state('');
 
 // Get wishlisted features
@@ -59,13 +62,6 @@ function filterFeatures(features: typeof wishlistedFeatures, term: string) {
 }
 
 const filteredFeatures = $derived(filterFeatures(wishlistedFeatures, searchTerm));
-
-let handleFeatureSelection = (featureId: string) => {
-  mapContext.setActiveFeature(featureId);
-  mapContext.zoomToActiveFeature();
-  // Close panel
-  goto(i18n.resolveRoute('/'));
-};
 </script>
 
 <Section title={m.stars__want_to_visit()} icon="/compass.svg">
@@ -77,7 +73,8 @@ let handleFeatureSelection = (featureId: string) => {
     {#each filteredFeatures as wishlist}
       <div
         class="min-h-21 flex flex-row items-center justify-between gap-4 bg-black px-4 py-2 text-[#374151]"
-        onclick={() => handleFeatureSelection(wishlist.featureId)}>
+        onclick={() =>
+          omniContext.handleFeatureSelection(mapContext, wishlist.featureId)}>
         <Icon src={Squares2x2} class="h-5 w-5 flex-shrink-0" theme="fill" />
         <div class="flex flex-grow flex-col">
           <p class="text-xs uppercase tracking-widest">
