@@ -24,7 +24,7 @@ const onclick = (e: MouseEvent) => {
 <li class="group">
   <a
     draggable="false"
-    href={$page.url.href}
+    href={`${$page.url.href}#${facet.ref}`}
     {onclick}
     class="flex select-none flex-col items-center px-4 py-2 uppercase transition-colors duration-200 ease-in-out hover:bg-transparent"
     class:active={resourceState.state.active.facet === facet.ref}>

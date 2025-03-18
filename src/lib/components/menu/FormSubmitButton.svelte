@@ -18,6 +18,9 @@ let isInvalid = $state(false);
 
 // STATE : EFFECTS
 $effect(() => {
+  if (Object.keys($errors).length > 0) {
+    $inspect($errors);
+  }
   isInvalid = (function checkErrors(obj: Record<string, unknown>): boolean {
     if (typeof obj !== 'object' || obj === null) {
       return obj !== undefined;
@@ -45,5 +48,5 @@ $effect(() => {
   {#if false}
     <Icon src={CheckCircle} />
   {/if}
-  {isInvalid ? m.forms_invalid() : m.forms__save()}
+  {isInvalid ? m.forms__invalid() : m.forms__save()}
 </button>

@@ -10,13 +10,11 @@ let {
   href,
   iconSrc,
   handleClick,
-  matchFromStart = true,
   notificationCount = 0
 } = $props<{
   href: string;
   iconSrc: any;
   handleClick?: (e: Event, ...args: any[]) => void;
-  matchFromStart?: boolean;
   notificationCount?: number;
 }>();
 
@@ -45,7 +43,7 @@ const isActive = () => {
     </div>
   {/if}
   <div
-    class="border-b-2 border-double border-transparent py-2 transition-colors group-[.btn-active]:cursor-default group-[.btn-active]:border-primary group-[:not(.btn-active)]:group-hover:border-secondary">
+    class="border-b-2 border-double border-transparent py-2 transition-colors group-[.btn-active]:cursor-default group-[.btn-active]:border-primary group-[:not(.btn-active)]:group-hover:border-base-100">
     <Icon size="24px" src={iconSrc} />
   </div>
 </a>

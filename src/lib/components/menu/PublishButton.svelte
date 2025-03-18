@@ -1,17 +1,15 @@
 <script lang="ts">
+// LIB
 import { NEW_REF } from '$lib';
 import { page } from '$app/stores';
+// I18N
+import * as m from '$lib/paraglide/messages.js';
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+// ENUMS
+import type { HierarchicalResource } from '$lib/types';
 // TYPES
-import type {
-  EntityRouter,
-  Project,
-  Layer,
-  Feature,
-  SuperFormResult
-} from '$lib/types';
-
+import type { Project, Layer, Feature, SuperFormResult } from '$lib/types';
 // STATE : PAGE :: DATA
 const { session } = $page.data;
 
@@ -47,7 +45,6 @@ $effect(() => {
 const handleClick = async (e: Event) => {
   e.preventDefault();
   e.stopPropagation();
-
   if (
     isLoading ||
     !resourceState.activeEntity ||
@@ -75,6 +72,11 @@ const handleClick = async (e: Event) => {
 
     const result = await response.json();
     if (result && result?.success) {
+      // INVALIDE CACHE
+      resourceState.invalidateAndRefresh(
+        resourceState.activeResource as HierarchicalResource
+      );
+      // RESET FORM
       reset({
         data: result.data,
         newState: {
@@ -106,8 +108,8 @@ const handleClick = async (e: Event) => {
     !resourceState.activeEntity ||
     resourceState.activeEntity === NEW_REF}>
   {#if $form.isPublished}
-    Unpublish
+    {m.forms__unpublish()}
   {:else}
-    Publish
+    {m.forms__publish()}
   {/if}
 </button>

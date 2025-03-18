@@ -116,7 +116,7 @@ function handleInput(e: Event) {
     <input
       type="text"
       placeholder="Match name and description"
-      class="input m-0 w-full bg-neutral px-6 pr-10 text-sm focus:border-none focus:outline-none {rounded
+      class="input m-0 w-full bg-neutral px-6 pr-10 text-sm caret-white focus:border-none focus:outline-none focus:placeholder:text-transparent {rounded
         ? 'h-10 min-w-72 rounded-xl'
         : 'rounded-none'}"
       bind:value={
