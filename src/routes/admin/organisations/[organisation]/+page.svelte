@@ -2,7 +2,7 @@
 // CONFIG
 import { NEW_TITLE, NEW_REF } from '$lib';
 // CONTEXT
-import { setForm, getForm } from '$lib/context/forms.svelte';
+import { setForm } from '$lib/context/forms.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS
 import Header from '$lib/components/layout/EntityHeader.svelte';
@@ -15,7 +15,7 @@ import { HierarchicalResource } from '$lib/types';
 // TYPES
 import type { FormPageProps, FormField, Organisation, GetImageAPI } from '$lib/types';
 
-// STATE : CONTEXT :: RESOURCES
+// CONTEXT
 const resourceState = getHierarchicalResourceState();
 
 // CONFIG
@@ -81,42 +81,20 @@ const FIELDS: Record<string, FormField> = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Organisation> = $props();
-let { validatedForm, entity } = pageProps.data;
 
 // STATE : FORM
-let form = $state(setForm<Organisation>(RESOURCE, entity, validatedForm));
+let form = setForm<Organisation>(
+  RESOURCE,
+  pageProps.data.entity,
+  pageProps.data.validatedForm,
+  getHierarchicalResourceState()
+);
 let enhance = $derived(form.enhance);
-let isNew = $state(entity === NEW_REF);
-
-$effect(() => {
-  if (isNew && title !== NEW_TITLE) {
-    form = setForm<Organisation>(
-      RESOURCE,
-      resourceState.activeEntity as string,
-      pageProps.data.validatedForm
-    );
-    entity = resourceState.activeEntity as string;
-    isNew = false;
-    // doRerender++;
-  } else {
-    form = getForm<Organisation>(RESOURCE, entity);
-  }
-});
 
 // STATE : DERIVED :: TITLE
 let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
-
-// SYNC :: Update resource state with current entity
-// $effect(() => {
-// resourceState.setEntity(entity, RESOURCE);
-// });
-
-// SYNC :: Await immediately resolved promise to react to value change.
-// const forceUpdate = async (_) => {};
-// let doRerender = $state(0);
 </script>
 
-<!-- {#await forceUpdate(doRerender) then _} -->
 <!-- LAYOUT -->
 <div class="mb-12 h-full bg-black">
   <Header {title} {form} />
@@ -150,4 +128,3 @@ let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
     </main>
   </form>
 </div>
-<!-- {/await} -->

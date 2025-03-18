@@ -9,7 +9,6 @@ import ResourceIndex from '$lib/components/layout/ResourceIndex.svelte';
 import EntityCard from '$lib/components/layout/EntityCard.svelte';
 // TYPES
 import type { KeyMap } from '$lib/components/layout/EntityCard.svelte';
-import type { Organisation } from '$lib/types';
 
 // CONFIG :: KEY MAP
 const keyMap: KeyMap = {
@@ -25,7 +24,7 @@ const resourceState = getHierarchicalResourceState();
 </script>
 
 <ResourceHeader />
-<ResourceIndex entities={resourceState.state.resources.organisation as Organisation[]}>
+<ResourceIndex entities={resourceState.filteredOrganisations}>
   {#snippet children(entity, idx)}
     <EntityCard {entity} {keyMap} />
   {/snippet}
