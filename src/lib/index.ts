@@ -201,6 +201,7 @@ export const languageTags: LanguageTag[] = [sourceLanguageTag, 'zh-hant', 'zh-ha
 export const NEW_TITLE = 'New';
 export const NEW_REF = NEW_TITLE.toLowerCase();
 export const ADMIN_PATH = '/admin';
+export const API_PATH = '/api';
 
 export const ADMIN_MIN_WIDTH = 1200;
 

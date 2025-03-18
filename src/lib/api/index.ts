@@ -4,7 +4,7 @@ import client, { toNestedTranslations, validateTableColumns } from '$lib/db';
 import { getUserRoles } from '$lib/auth/utils';
 import { superValidate } from 'sveltekit-superforms';
 // LIB
-import { ADMIN_PATH } from '$lib/index';
+import { ADMIN_PATH, API_PATH } from '$lib/index';
 // ACCESS CONTROL
 import {
   publicAccessOptions,
@@ -12,7 +12,9 @@ import {
   hierarchicalChildrenOptions,
   hierarchicalGrandChildrenOptions,
   relationalAccessOptions,
-  genericAccessOptions
+  genericAccessOptions,
+  HierarchicalResource,
+  HierarchicalResourcePath
 } from '$lib/types';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
@@ -20,6 +22,7 @@ import { zod } from 'sveltekit-superforms/adapters';
 import type { SuperValidated } from 'sveltekit-superforms';
 import type {
   ApiEntity,
+  Feature,
   Id,
   Layer,
   OrganisationRole,
@@ -27,12 +30,14 @@ import type {
   Property,
   PropertyI18n,
   Resource,
-  ResourceType
+  ResourceType,
+  Task
 } from '$lib/types';
 import type { UserRole } from '$lib/auth/utils';
 import { NEW_REF } from '$lib';
 import type { AccessStrategyOption, StatefulAccessOption } from '$lib/types';
 import type { GetImageAPI } from '$lib/types';
+import type { Session } from '@auth/core/types';
 
 export const getSessionOrError = async (locals: App.Locals) => {
   const session = await locals.auth();
@@ -271,34 +276,44 @@ export async function getResponseOrError(request: Response) {
   return request.json();
 }
 
-const refToResourceType = (ref: string) => {
+const refToResourceType = (ref: string): ResourceType => {
   return {
     organisations: 'organisation',
     projects: 'project',
     layers: 'layer',
     features: 'feature'
-  }[ref];
+  }[ref] as ResourceType;
 };
+
 // Resource configuration mapping
 const resourceConfig: Record<
-  ResourceType,
-  { parentResourceType?: string; parentRefKey?: string; keyToParent?: string }
+  HierarchicalResource,
+  {
+    parentResourceType?: HierarchicalResource;
+    parentRefKey?: string;
+    keyToParent?: string;
+  }
 > = {
   organisation: {},
   project: {
-    parentResourceType: 'organisation',
+    parentResourceType: HierarchicalResource.organisation,
     parentRefKey: 'code',
     keyToParent: 'organisationId'
   },
   layer: {
-    parentResourceType: 'project',
+    parentResourceType: HierarchicalResource.project,
     parentRefKey: 'code',
     keyToParent: 'projectId'
   },
   feature: {
-    parentResourceType: 'layer',
+    parentResourceType: HierarchicalResource.layer,
     parentRefKey: 'id',
     keyToParent: 'layerId'
+  },
+  task: {
+    parentResourceType: HierarchicalResource.feature,
+    parentRefKey: 'id',
+    keyToParent: 'featureId'
   }
 };
 
@@ -308,7 +323,9 @@ type LoadFormDataOptions<T> = {
   insertSchema: any;
   updateSchema: any;
   fetch: typeof fetch;
-  session: any;
+  session?: Session;
+  parentId?: string;
+  parentRef?: string;
 };
 
 type LoadFormDataResponse<T> = Promise<{
@@ -317,30 +334,39 @@ type LoadFormDataResponse<T> = Promise<{
   image?: GetImageAPI | null;
 }>;
 
+// Get parent reference from resource
+const getParentRef = (entity: Project | Layer | Feature | Task): string | null => {
+  if ('featureId' in entity) return entity.featureId;
+  if ('layerId' in entity) return entity.layerId;
+  if ('projectId' in entity) return entity.projectId;
+  if ('organisationId' in entity) return entity.organisationId;
+  return null;
+};
+
 export async function loadFormData<T>({
   entity,
   resourcePath,
   insertSchema,
   updateSchema,
   fetch,
-  session
+  session,
+  ...options
 }: LoadFormDataOptions<T>): LoadFormDataResponse<T> {
   const entityRef = entity || NEW_REF;
-  const resourceType = refToResourceType(resourcePath) as ResourceType;
+  const resourceType = refToResourceType(resourcePath) as HierarchicalResource;
   let form;
   let image: GetImageAPI | null = null;
 
   if (entityRef === NEW_REF) {
     const { parentResourceType, parentRefKey, keyToParent } =
       resourceConfig[resourceType];
+    const { parentId, parentRef } = options;
 
-    if (parentResourceType && parentRefKey) {
-      const parentRef = resourceState.getParent();
-
+    if (parentResourceType && parentId) {
       if (!parentRef) {
         throw error(
           400,
-          `The jungle teems with the spirits of the dead. Perhaps ${parentResourceType}.${parentRefKey} has joined them?`
+          `The jungle teems with the spirits of the dead... Perhaps ${parentResourceType}.${parentRefKey} has joined them?`
         );
       }
 
@@ -355,7 +381,9 @@ export async function loadFormData<T>({
       };
 
       // Fetch and process parent data
-      const parentResponse = await fetch(`/api/${parentResourceType}s/${parentRef}`);
+      const parentResponse = await fetch(
+        `${API_PATH}/${HierarchicalResourcePath[parentResourceType]}/${parentRef}`
+      );
       if (parentResponse.ok) {
         const parentData: ApiEntity = await parentResponse.json();
 
@@ -390,7 +418,7 @@ export async function loadFormData<T>({
       }
     }
   } else {
-    const endPoint = `/api/${resourcePath}/${entityRef}`;
+    const endPoint = `${API_PATH}/${resourcePath}/${entityRef}`;
     const request = await fetch(endPoint);
 
     if (request.status >= 400) {
@@ -403,7 +431,7 @@ export async function loadFormData<T>({
     // Fetch associated image if this is an organisation or project
     if (resourceType == 'organisation' || resourceType == 'project') {
       if (formData.imageId) {
-        const imageResponse = await fetch(`/api/images/${formData.imageId}`);
+        const imageResponse = await fetch(`${API_PATH}/images/${formData.imageId}`);
         if (imageResponse.ok) {
           image = await imageResponse.json();
         } else {
@@ -412,7 +440,6 @@ export async function loadFormData<T>({
       }
     }
   }
-  // appMeta.context.parentRef = null;
   return {
     entity: entityRef,
     validatedForm: form,
