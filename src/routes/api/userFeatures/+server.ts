@@ -27,7 +27,7 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
     const userFeatures = await db
       .select()
       .from(userFeature)
-    //   .where(eq(userFeature.userId, userId));
+      .where(eq(userFeature.userId, userId));
 
     // HTTP : 200 JSON or 404
     return JSONResponseOrError(userFeatures);
