@@ -7,6 +7,7 @@ import { i18n } from '$lib/i18n';
 // LIB
 import { ADMIN_PATH } from '$lib/index';
 import { getURLfromImage } from '$lib/images/index.svelte';
+import { hashicon } from '@emeraldpay/hashicon';
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS
@@ -47,6 +48,15 @@ const href = $derived(
   )}${$page.url.search}`
 );
 
+// Generate hashicon URL for fallback
+const getHashiconUrl = (id: string) => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 400;
+  canvas.height = 400;
+  hashicon(id, { size: 400, createCanvas: () => canvas });
+  return canvas.toDataURL();
+};
+
 const onclick = (e: MouseEvent | KeyboardEvent) => {
   e.preventDefault();
   resourceState.setFacet('core');
@@ -72,7 +82,9 @@ const onclick = (e: MouseEvent | KeyboardEvent) => {
     {@render header(entity)}
   {:else}
     <Image
-      src={getURLfromImage({ image: entity[keyMap.image] as ImageDB })}
+      src={entity[keyMap.image]
+        ? getURLfromImage({ image: entity[keyMap.image] as ImageDB })
+        : getHashiconUrl(entity.id)}
       alt={entity[keyMap.title as keyof typeof entity] as string}
       layout="cover" />
   {/if}
