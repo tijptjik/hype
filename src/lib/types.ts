@@ -989,13 +989,6 @@ export type AdminFilterState = {
 };
 export type AdminFilterStates = Record<HierarchicalResource, AdminFilterState>;
 
-export type UserSettings = {
-  center: [number, number];
-  zoom: number;
-  bearing: number;
-  pitch: number;
-};
-
 export type ActiveCollection = {
   id: string;
   name: string;
@@ -1023,7 +1016,6 @@ export type mapContextState = {
   filters: FilterState;
   prisms: Prisms;
   resources: FilteredResources;
-  userSettings: UserSettings;
   userFeatures: {
     wishlisted: UserFeature[];
     visited: UserFeature[];

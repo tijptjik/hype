@@ -38,20 +38,18 @@ export class mapContext {
 
   // State
   state: mapContextState = $state({
-    // Features
-    // features: {},
-    // Markers
+    // Markers -- Which features are shown on the map
     markers: new Map(),
-    // highlighted: [],
-    // wishlisted: [],
-    // visited: []
-    // },
+    // Active -- Which feature or collection is in focus on the map
     active: {
       feature: null,
       collection: null
     },
+    // Filters -- Which neighbourhoods and properties being filtered for when showing features on the map
     filters: { neighbourhoods: [], properties: {} },
+    // Prisms -- Which organisations, projects, and layers are pre-filtered when fetching features from the database
     prisms: { organisation: [], project: [], layer: [] },
+    // Resources -- The resources fetched from the database (post prism-filtering, pre filters-filtering)
     resources: {
       organisation: [],
       project: [],
@@ -59,13 +57,17 @@ export class mapContext {
       feature: [],
       featuresByNeighbourhood: []
     },
-    userSettings: { center: [0, 0], zoom: 2, bearing: 0, pitch: 0 },
+    // User Features -- The user's wishlist and visited features
     userFeatures: {
       wishlisted: [],
       visited: []
     },
+    // User Location -- The user's location
     userLocation: null,
+    // TODO Implement distancesFromUser
+    // Distances from user -- The distances from the user to the features
     distancesFromUser: {},
+    // Panels -- The panels that are open
     panels: {
       filters: false,
       maps: false,
