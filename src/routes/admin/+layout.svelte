@@ -9,9 +9,12 @@ import MinWidth from '$lib/components/layout/MinWidth.svelte';
 import '$lib/styles/admin.css';
 import { setHierarchicalResourceState } from '$lib/context/resources.svelte';
 import { page } from '$app/stores';
+import { goto } from '$app/navigation';
 // TYPES
 import type { LayoutData } from './$types';
 import type { QueryClient } from '@tanstack/svelte-query';
+import { setSidebarState } from '$lib/context/sidebar.svelte';
+import { HierarchicalResource } from '$lib/types';
 
 // PROPS
 let { children } = $props();
@@ -21,6 +24,7 @@ const { session, queryClient } = $page.data as LayoutData & {
   queryClient: QueryClient;
 };
 const resourceState = setHierarchicalResourceState(queryClient);
+const sidebarState = setSidebarState();
 
 // STATE
 let isMounted = $state(false);
@@ -33,7 +37,7 @@ let viewportContained = $derived(
     resourceState.activeFacet == 'address' ||
     resourceState.activeFacet == 'images' ||
     (resourceState.activeResource == 'feature' &&
-      resourceState.activeFacet == 'core') ||
+      (resourceState.activeFacet == 'core' || resourceState.activeFacet == false)) ||
     (resourceState.activeResource == 'task' && resourceState.activeEntity)
 );
 
@@ -43,7 +47,21 @@ $effect(() => {
     initViewportListener();
     isMounted = true;
   }
-  resourceState.setActiveFromPage($page);
+  if (
+    resourceState.activeResource !==
+      resourceState.getResourceFromPath($page.url.pathname) ||
+    resourceState.activeEntity !== resourceState.getEntityFromPath($page.url.pathname)
+  ) {
+    resourceState.setActiveFromPage($page);
+    sidebarState.openSection(resourceState.activeResource as HierarchicalResource);
+  }
+  if (
+    resourceState.getFacetFromHash($page.url.hash) &&
+    resourceState.getFacetFromHash($page.url.hash) !== resourceState.activeFacet
+  ) {
+    resourceState.setFacet(resourceState.getFacetFromHash($page.url.hash));
+    goto($page.url.pathname, { replaceState: true });
+  }
   return () => {
     destroyViewportListener();
   };
@@ -52,8 +70,6 @@ $effect(() => {
 // UTILS :: VIEWPORT
 const handleResize = () => {
   viewportWidth = window.innerWidth;
-  $inspect('viewportWidth', viewportWidth);
-  $inspect('viewportWidth', isViewportWideEnough);
 };
 let initViewportListener = () => {
   // Set initial viewport width
