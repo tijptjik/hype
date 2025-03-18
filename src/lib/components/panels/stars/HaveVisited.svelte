@@ -22,7 +22,7 @@ let searchTerm = $state('');
 // Get visited features
 let visitedFeatures = $derived(
   mapContext.state.userFeatures.visited.map((visited) => {
-    const feature = mapContext.state.resources.features.find(
+    const feature = mapContext.state.resources.feature.find(
       (f) => f.id === visited.featureId
     );
     const layer = mapContext.getLayer(feature);
@@ -30,7 +30,7 @@ let visitedFeatures = $derived(
     const organisation = project ? mapContext.getOrganisation(project) : undefined;
 
     // Check if this project has only one layer
-    const projectLayerCount = mapContext.state.resources.layers.filter(
+    const projectLayerCount = mapContext.state.resources.layer.filter(
       (l) => l.projectId === project?.id
     ).length;
 
