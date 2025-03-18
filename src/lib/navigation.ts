@@ -13,53 +13,50 @@ import {
   Inbox as TaskIcon
 } from '@steeze-ui/heroicons';
 // ENUMS
-import {
-  HierarchicalResource,
-  HierarchicalResourcePath,
-  HierarchicalResourceSeq
-} from '$lib/types';
+import { HierarchicalResource, HierarchicalResourcePath } from '$lib/types';
 // TYPES
 import type { Code, FacetType, Id } from '$lib/types';
 
 // NAVIGATION
+// NOTE : We cannot use Enums here for path or seq as the build process only procudes them on a hard refresh.
 export const navItems = {
   organisation: {
     name: 'Organisations',
     icon: OrganisationIcon,
-    seq: HierarchicalResourceSeq.organisation,
-    path: HierarchicalResourcePath.organisation,
+    seq: 1,
+    path: 'organisations',
     isShownInSidebar: true,
     isAlwaysExpanded: false
   },
   project: {
     name: 'Projects',
     icon: ProjectIcon,
-    seq: HierarchicalResourceSeq.project,
-    path: HierarchicalResourcePath.project,
+    seq: 2,
+    path: 'projects',
     isShownInSidebar: true,
     isAlwaysExpanded: false
   },
   layer: {
     name: 'Layers',
     icon: LayerIcon,
-    seq: HierarchicalResourceSeq.layer,
-    path: HierarchicalResourcePath.layer,
+    seq: 3,
+    path: 'layers',
     isShownInSidebar: true,
     isAlwaysExpanded: false
   },
   feature: {
     name: 'Features',
     icon: FeatureIcon,
-    seq: HierarchicalResourceSeq.feature,
-    path: HierarchicalResourcePath.feature,
+    seq: 4,
+    path: 'features',
     isShownInSidebar: true,
     isAlwaysExpanded: true
   },
   task: {
     name: 'Review Queue',
     icon: TaskIcon,
-    seq: HierarchicalResourceSeq.task,
-    path: HierarchicalResourcePath.task,
+    seq: 5,
+    path: 'tasks',
     isShownInSidebar: false,
     isAlwaysExpanded: false
   }
