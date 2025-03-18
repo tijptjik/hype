@@ -54,8 +54,7 @@ export class mapContext {
       organisation: [],
       project: [],
       layer: [],
-      feature: [],
-      featuresByNeighbourhood: []
+      feature: []
     },
     // User Features -- The user's wishlist and visited features
     userFeatures: {
@@ -89,13 +88,6 @@ export class mapContext {
     this.state.prisms.organisation,
     this.state.prisms.project,
     this.state.prisms.layer
-  ]);
-  featuresByNeighbourhoodQueryKey = $derived([
-    'featuresByNeighbourhood',
-    this.state.prisms.organisation,
-    this.state.prisms.project,
-    this.state.prisms.layer,
-    this.state.filters.neighbourhoods
   ]);
   userFeaturesQueryKey = ['userFeatures'];
 
@@ -170,16 +162,6 @@ export class mapContext {
 
   featuresQueryFn = async () => {
     const url = this.buildApiUrl(HierarchicalResource.feature);
-    return this.fetchOrThrow<Feature[]>(url);
-  };
-
-  featuresByNeighbourhoodQueryFn = async () => {
-    let url = this.buildApiUrl(HierarchicalResource.feature);
-    const params = new URLSearchParams();
-    this.state.filters.neighbourhoods.forEach((neighbourhood) =>
-      params.append('addressProperties.neighbourhood', neighbourhood)
-    );
-    url = `${url}&${params}`;
     return this.fetchOrThrow<Feature[]>(url);
   };
 
@@ -285,15 +267,7 @@ export class mapContext {
       queryKey: this.featuresQueryKey,
       queryFn: this.featuresQueryFn
     });
-    // this.refreshFeaturesByNeighbourhood();
   }
-
-  // async refreshFeaturesByNeighbourhood() {
-  //   this.state.resources.featuresByNeighbourhood = await this.queryClient.fetchQuery({
-  //     queryKey: this.featuresByNeighbourhoodQueryKey,
-  //     queryFn: this.featuresByNeighbourhoodQueryFn
-  //   });
-  // }
 
   async syncProjectPrisms() {
     this.state.prisms.project = this.state.prisms.project.filter((project) => {
@@ -382,16 +356,6 @@ export class mapContext {
       ? this.state.resources.feature.map((f) => f.id)
       : [];
 
-  // // Active Features by Neighbourhood
-  // const activeFeaturesByNeighbourhood =
-  // this.state.filters.neighbourhoods.length > 0
-  //   ? activeFeatures.filter((feature) => {
-  //       return this.state.filters.neighbourhoods.includes(
-  //         feature.addressProperties?.neighbourhood || ''
-  //       );
-  //     })
-  //   : activeFeatures;
-
   // Features, given the selected Neighbourhoods (or all if none)
   getFeatureIdsForNeighbourhoods = (): Id[] => {
     if (this.state.filters.neighbourhoods.length === 0) {
@@ -442,24 +406,6 @@ export class mapContext {
       })
       .map((f) => f.id);
   };
-
-  // Features, given the selected Properties (or all if none)
-  // getFeaturesForProperties = (): Id[] => {
-  //   if (Object.keys(this.state.filters.properties || {}).length === 0) {
-  //     return this.state.featuresAll;
-  //   }
-  //   const propertyFeatures = this.state.resources.features.filter((feature) => {
-  //     return Object.entries(this.state.filters.properties || {}).every(
-  //       ([propertyKey, selectedValues]) => {
-  //         const featureValue = feature.properties?.find(
-  //           (property) => property.property.key === propertyKey
-  //         )?.value;
-  //         return selectedValues.includes(featureValue);
-  //       }
-  //     );
-  //   });
-  //   return propertyFeatures.map((f) => f.id);
-  // };
 
   // Features, given the selected Neighbourhoods and Properties
   getVisibleFeatureIds = (): Id[] => {

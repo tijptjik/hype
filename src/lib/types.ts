@@ -964,7 +964,6 @@ export type FilteredResources = {
   project: Project[];
   layer: Layer[];
   feature: Feature[];
-  featuresByNeighbourhood: Feature[];
 };
 
 export type AdminFilteredResources = {
