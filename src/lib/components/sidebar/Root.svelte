@@ -3,10 +3,9 @@
 import Header from '$lib/components/sidebar/Header.svelte';
 import Sections from '$lib/components/sidebar/Sections.svelte';
 // CONTEXT
-import { getSidebarState, setSidebarState } from '$lib/context/sidebar.svelte';
+import { getSidebarState } from '$lib/context/sidebar.svelte';
 
 // CONTEXT
-setSidebarState();
 const sidebarState = getSidebarState();
 </script>
 
