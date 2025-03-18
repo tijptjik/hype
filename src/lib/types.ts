@@ -204,10 +204,6 @@ export type Router = {
   facet: FalsableFacetType;
 };
 
-export type ResourceRouter = Router & {
-  resource: ResourceType;
-};
-
 export type NavItem = {
   name: string;
   icon: IconSource;
