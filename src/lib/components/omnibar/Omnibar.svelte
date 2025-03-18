@@ -6,6 +6,8 @@ import { getMapContext } from '$lib/context/map.svelte';
 // COMPONENTS
 import OmniSearchBar from './OmniSearchBar.svelte';
 import OmniNavigationBar from './OmniNavigationBar.svelte';
+// CONFIG
+import { MOBILE_MAX_WIDTH } from '$lib/index';
 
 // CONTEXT
 const omniContext = getOmniContext();
@@ -77,13 +79,13 @@ let horizontalOffset = $derived(() => {
   const leftPanelOpen = maps || stars;
   const rightPanelOpen = filters || settings;
 
-  if (browser && window.innerWidth < 768) return 0;
+  if (browser && window.innerWidth < MOBILE_MAX_WIDTH) return 0;
   return (leftPanelOpen ? 210 : 0) - (rightPanelOpen ? 210 : 0);
 });
 </script>
 
 <div
-  class="relative z-10 mt-4 flex-shrink-0 flex-grow-0 select-none px-6 caret-transparent md:px-9 h-200:mt-8 h-250:mt-12 duration-300"
+  class="relative z-10 mt-4 flex-shrink-0 flex-grow-0 select-none px-6 caret-transparent duration-300 md:px-9 h-200:mt-8 h-250:mt-12"
   style="transform: translateX({horizontalOffset()}px)"
   onkeydown={handleEscape}>
   <div class="relative mx-auto min-w-[320px] max-w-[480px]">

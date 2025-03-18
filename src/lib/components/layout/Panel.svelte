@@ -23,7 +23,7 @@ onMount(() => {
 
 <div
   id={`${direction}-panel`}
-  class="absolute z-50 flex h-[calc(100vh-77px)] w-full select-none flex-col bg-black shadow-xl md:w-[420px]"
+  class="absolute z-50 flex h-[calc(100vh-77px)] w-full select-none flex-col bg-black shadow-xl [@media(min-width:920px)]:w-[420px]"
   class:overflow-y-hidden={!scrollable}
   class:overflow-y-auto={scrollable}
   class:md:left-0={direction === 'left'}
@@ -31,7 +31,7 @@ onMount(() => {
   transition:fly={{
     duration: 150,
     easing: cubicInOut,
-    x: direction === 'left' ? -420 : 420,
+    x: direction === 'left' ? -420 : 420
   }}>
   <div class="h-full" class:overflow-y-auto={scrollable}>
     {@render children()}

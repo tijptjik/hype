@@ -21,6 +21,8 @@ import {
 } from '$lib/context/featureCard.svelte';
 // ENUMS
 import { FeatureCardMode } from '$lib/types';
+// CONFIG
+import { MOBILE_MAX_WIDTH } from '$lib/index';
 
 // PARAMS
 let featureId = $state($page.params.id);
@@ -58,7 +60,7 @@ let horizontalOffset = $derived(() => {
   const leftPanelOpen = maps || stars;
   const rightPanelOpen = filters || settings;
 
-  if (browser && window.innerWidth < 768) return 0;
+  if (browser && window.innerWidth < MOBILE_MAX_WIDTH) return 0;
   return (leftPanelOpen ? 210 : 0) - (rightPanelOpen ? 210 : 0);
 });
 </script>

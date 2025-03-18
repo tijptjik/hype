@@ -9,6 +9,8 @@ import { getContext, onMount } from 'svelte';
 import { getMapContext } from '$lib/context/map.svelte';
 // Types
 import type { Feature } from '$lib/types';
+// CONFIG
+import { MOBILE_MAX_WIDTH } from '$lib/index';
 
 // STATE : PROPS
 let { feature }: { feature: Feature } = $props();
@@ -18,10 +20,10 @@ const mapContext = getMapContext();
 
 let innerWidth = $state();
 
-let leftOpen = $derived(
+let rightOpen = $derived(
   mapContext.state.panels.filters || mapContext.state.panels.settings
 );
-let rightOpen = $derived(mapContext.state.panels.maps || mapContext.state.panels.stars);
+let leftOpen = $derived(mapContext.state.panels.maps || mapContext.state.panels.stars);
 
 function getOffset() {
   const boundsMap = document.getElementById('map')?.getBoundingClientRect();
@@ -40,13 +42,13 @@ function getOffset() {
       boundsPortal.left -
       boundsMap.width / 2 +
       boundsPortal.width / 2 +
-      (leftOpen ? boundsLeftPanel?.width : 0) -
-      (rightOpen ? boundsRightPanel?.width : 0),
+      (rightOpen ? boundsLeftPanel?.width : 0) -
+      (leftOpen ? boundsRightPanel?.width : 0),
     yOffset: boundsPortal.top - boundsMap.height / 2 + boundsPortal.height / 2
   };
 }
 
-function flyToFeature() {
+function flyToFeature(duration: number = 2000, delay: number = 300) {
   setTimeout(() => {
     let { xOffset, yOffset } = getOffset();
     if (feature && mapContext.map) {
@@ -57,25 +59,30 @@ function flyToFeature() {
         ],
         offset: [xOffset, yOffset],
         zoom: 16,
-        duration: 2000
+        duration
       });
     }
-  }, 300);
+  }, delay);
 }
 
+// Recenter on new feature selection
 $effect(() => {
-  innerWidth;
-  feature && flyToFeature();
+  feature;
+  flyToFeature();
 });
 
+// Recenter on window resize on non-mobile
 $effect(() => {
-  innerWidth && flyToFeature();
+  if (innerWidth && innerWidth > MOBILE_MAX_WIDTH) {
+    flyToFeature();
+  }
 });
 
+// Recenter on panel state change
 $effect(() => {
   leftOpen;
   rightOpen;
-  flyToFeature();
+  flyToFeature(300);
 });
 
 function wrapText(text: string, maxWidth: number = 170): string[] {

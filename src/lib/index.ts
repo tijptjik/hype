@@ -204,6 +204,7 @@ export const ADMIN_PATH = '/admin';
 export const API_PATH = '/api';
 
 export const ADMIN_MIN_WIDTH = 1200;
+export const MOBILE_MAX_WIDTH = 920;
 
 export const capitalizeFirstLetter = (text: string | null) => {
   if (!text) return null;
