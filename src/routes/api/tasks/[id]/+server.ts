@@ -40,7 +40,7 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
             }
           }
         },
-        image: true,
+        images: true,
         contributor: {
           columns: {
             email: false,
