@@ -31,7 +31,6 @@ $effect(() => {
   class="relative z-50 col-start-1 row-start-1 flex min-h-10 w-full items-center justify-between rounded-lg border-base-200 bg-black"
   use:clickOutside={() => {
     if (omniContext.state.isTrayOpen) {
-      console.log('closing TRAY || from SEARCH BAR || Click Outside');
       omniContext.closeTray();
     }
   }}

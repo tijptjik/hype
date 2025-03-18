@@ -558,7 +558,6 @@ export class mapContext {
   // NAVIGATION METHODS
 
   navNext() {
-    console.log(this);
     let navIndex =
       this.state.active.collection?.items.findIndex(
         (item) => item.id === this.state.active.feature?.id
@@ -621,8 +620,6 @@ export class mapContext {
       right: 50 + (this.state.panels.filters || this.state.panels.settings ? 210 : 0),
       left: 50 + (this.state.panels.maps || this.state.panels.stars ? 210 : 0)
     };
-    console.log(padding);
-
     try {
       // Convert to WGS84 and get bounds
       const bounds = bbox(featureCollection);

@@ -92,7 +92,7 @@ onMount(async () => {
   mapContext.map!.on('click', (e) => {
     const target = e.originalEvent.target as HTMLElement;
     if (target.dataset.type === 'marker') {
-      console.log('STANDALONE MAP :: MARKER HANDLER');
+      ('STANDALONE MAP :: MARKER HANDLER');
       const featureId = target.dataset.featureId;
       if (!featureId) return;
       omniContext.handleFeatureSelection(mapContext, featureId, { openCard: true });

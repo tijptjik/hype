@@ -12,7 +12,6 @@ import EntityCard from '$lib/components/layout/EntityCard.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // TYPES
 import type { Resource } from '$lib/types';
-
 let {
   entities,
   children

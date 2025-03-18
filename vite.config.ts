@@ -43,8 +43,7 @@ export default defineConfig({
     }
   },
   build: {
-    target: 'es2020',
-    sourcemap: 'inline'
+    target: 'es2020'
   },
   server: {
     allowedHosts: [

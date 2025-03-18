@@ -123,7 +123,6 @@ export const createTaskImagesFromImageIds = async (
 export const extractEntitiesToInsert = (
   formData: NewImageAPI
 ): { baseImage: NewImageDB; relatedFeatureImage: NewFeatureImage } => {
-  console.log('formData', formData.featureImage);
   let entities: { baseImage: NewImageDB; relatedFeatureImage?: NewFeatureImage } = {
     baseImage: ImageInsert.parse(formData)
   };

@@ -34,8 +34,6 @@ const resourceState = getHierarchicalResourceState();
 const { form, validate } = fieldProps.form;
 
 const updateUserJoinState = (userId: string, isChecked: boolean) => {
-  console.log('updateUserJoinState', userId, isChecked);
-  console.log('fieldRoot', $form[fieldRoot]);
   form.update(($form) => {
     const userIndex = $form[fieldRoot].findIndex(
       (userRole: ProjectRole) => userRole.userId === userId

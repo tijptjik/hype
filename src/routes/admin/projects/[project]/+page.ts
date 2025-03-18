@@ -7,7 +7,6 @@ import type { PageLoad } from './$types';
 import type { Project } from '$lib/types';
 
 export const load: PageLoad = async ({ params, fetch, url }) => {
-  console.log('params', params.project);
   return loadFormData<Project>({
     entity: params.project,
     resourcePath: HierarchicalResourcePath.project,

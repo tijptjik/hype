@@ -20,7 +20,7 @@ const fieldRoot: Field = 'displayAddress';
 
 const actions = {
   geocode: () => {
-    console.log('geocode');
+    console.info('geocode');
   }
 };
 </script>

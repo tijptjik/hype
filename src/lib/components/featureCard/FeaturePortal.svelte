@@ -18,19 +18,30 @@ const mapContext = getMapContext();
 
 let innerWidth = $state();
 
-let leftOpen = $derived(mapContext.state.panels.filters || mapContext.state.panels.settings);
+let leftOpen = $derived(
+  mapContext.state.panels.filters || mapContext.state.panels.settings
+);
 let rightOpen = $derived(mapContext.state.panels.maps || mapContext.state.panels.stars);
 
 function getOffset() {
   const boundsMap = document.getElementById('map')?.getBoundingClientRect();
-  const boundsLeftPanel = document.getElementById('leftPanel')?.getBoundingClientRect() || { width: 0 };
-  const boundsRightPanel = document.getElementById('rightPanel')?.getBoundingClientRect() || { width: 0 };
+  const boundsLeftPanel = document
+    .getElementById('leftPanel')
+    ?.getBoundingClientRect() || { width: 0 };
+  const boundsRightPanel = document
+    .getElementById('rightPanel')
+    ?.getBoundingClientRect() || { width: 0 };
   const boundsPortal = document
     .getElementById('feature-card-portal')
     ?.getBoundingClientRect();
   if (!boundsMap || !boundsPortal) return { xOffset: 0, yOffset: 0 };
   return {
-    xOffset: boundsPortal.left - boundsMap.width / 2 + boundsPortal.width / 2 + (leftOpen ? boundsLeftPanel?.width : 0) - (rightOpen ? boundsRightPanel?.width : 0),
+    xOffset:
+      boundsPortal.left -
+      boundsMap.width / 2 +
+      boundsPortal.width / 2 +
+      (leftOpen ? boundsLeftPanel?.width : 0) -
+      (rightOpen ? boundsRightPanel?.width : 0),
     yOffset: boundsPortal.top - boundsMap.height / 2 + boundsPortal.height / 2
   };
 }
@@ -69,8 +80,6 @@ $effect(() => {
 
 function wrapText(text: string, maxWidth: number = 170): string[] {
   const address = text.replace(', Hong Kong', '').replace('Hong Kong, ', '');
-  console.log(address);
-
   // Try last comma
   const lastCommaIndex = address.lastIndexOf(',');
   if (lastCommaIndex > -1) {
@@ -133,7 +142,6 @@ function wordWrap(text: string, maxWidth: number): string[] {
   }
 
   lines.push(currentLine);
-  console.log(lines);
   return lines;
 }
 
@@ -155,7 +163,9 @@ $effect(() => {
 
 <svelte:window bind:innerWidth />
 
-<div id="feature-card-portal" class="pointer-events-none relative h-[200px] w-[200px] pr-3 w-96:pr-12 mr-6">
+<div
+  id="feature-card-portal"
+  class="pointer-events-none relative mr-6 h-[200px] w-[200px] pr-3 w-96:pr-12">
   <svg
     class="absolute inset-0 h-full w-full"
     viewBox="0 0 100 100"
