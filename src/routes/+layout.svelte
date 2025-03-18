@@ -2,6 +2,7 @@
 // STORES
 import { page } from '$app/stores';
 // NAVIGATION
+import { goto } from '$app/navigation';
 import { afterNavigate } from '$app/navigation';
 // QUERY
 import { QueryClientProvider } from '@tanstack/svelte-query';
@@ -18,7 +19,7 @@ import 'tailwindcss/tailwind.css';
 import type { QueryClient } from '@tanstack/svelte-query';
 import type { LayoutData } from './$types';
 
-// Props
+// PROPS
 let { children } = $props();
 
 // CONTEXT
@@ -37,22 +38,25 @@ let socialImage = {
 };
 
 // Handle initial language setup
-// $effect(() => {
-//   const { session } = $page.data;
-//   if (session?.user?.language) {
-//     // Set the language tag first
-//     setLanguageTag(session.user.language);
+$effect(() => {
+  const { session } = $page.data;
+  if (!session) {
+    goto('/');
+  }
+  if (session?.user?.language) {
+    // Set the language tag first
+    setLanguageTag(session.user.language);
 
-//     // Only redirect if we're not already on the correct language route
-//     const currentPath = $page.url.pathname;
-//     if (
-//       session.user.language !== 'en' &&
-//       !currentPath.startsWith(`/${session.user.language}`)
-//     ) {
-//       goto(`/${session.user.language}${currentPath}`);
-//     }
-//   }
-// });
+    // Only redirect if we're not already on the correct language route
+    const currentPath = $page.url.pathname;
+    if (
+      session.user.language !== 'en' &&
+      !currentPath.startsWith(`/${session.user.language}`)
+    ) {
+      goto(`/${session.user.language}${currentPath}`);
+    }
+  }
+});
 
 afterNavigate(() => {
   title = $page.data.title;
