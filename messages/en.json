@@ -144,5 +144,8 @@
   "omni__title_star_walks": "My Stars",
   "omni__no_results": "No results found",
   "omni__placeholder": "Search...",
-  "omni__search_results": "Search Results: {searchTerm}"
+  "omni__search_results": "Search Results: {searchTerm}",
+
+  "map__no_markers_without_layers": "Without layers the world is empty",
+  "map__select_layer": "Add Layer"
 }

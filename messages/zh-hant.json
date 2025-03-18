@@ -143,5 +143,8 @@
   "omni__title_star_walks": "我的收藏",
   "omni__no_results": "冇結果",
   "omni__placeholder": "搜索...",
-  "omni__search_results": "搜索結果: {searchTerm}"
+  "omni__search_results": "搜索結果: {searchTerm}",
+
+  "map__no_markers_without_layers": "請選擇一個圖層來填滿地圖",
+  "map__select_layer": "請選擇一個圖層來填滿地圖"
 }
