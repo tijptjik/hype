@@ -13,14 +13,14 @@ import { getMapContext } from '$lib/context/map.svelte';
 // Initialize map state
 const mapContext = getMapContext();
 
-let projects = $derived(mapContext.state.resources.projects);
-let organisations = $derived(mapContext.state.resources.organisations);
-let layers = $derived(mapContext.state.resources.layers);
+let projects = $derived(mapContext.state.resources.project);
+let organisations = $derived(mapContext.state.resources.organisation);
+let layers = $derived(mapContext.state.resources.layer);
 
 // Group properties by layer and include hierarchy info
 let layerCategories = $derived(
   layers
-    .filter((l) => mapContext.state.prisms.layers.includes(l.id))
+    .filter((l) => mapContext.state.prisms.layer.includes(l.id))
     .map((layer) => {
       const project = projects.find((p) => p.id === layer.projectId);
       const organisation = organisations.find((o) => o.id === project?.organisationId);

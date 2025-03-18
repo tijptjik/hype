@@ -23,7 +23,10 @@ let { children } = $props();
 const { session, queryClient } = $page.data as LayoutData & {
   queryClient: QueryClient;
 };
-const resourceState = setHierarchicalResourceState(queryClient);
+const resourceState = setHierarchicalResourceState(
+  queryClient,
+  session?.user.roles ?? []
+);
 const sidebarState = setSidebarState();
 
 // STATE

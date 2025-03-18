@@ -12,7 +12,7 @@ const { neighbourhood, data, selectedNeighbourhoods } = $props();
 // Initialize map state
 const mapContext = getMapContext();
 
-const features = $derived(mapContext.state.resources.features);
+const features = $derived(mapContext.state.resources.feature);
 
 // UTILS
 
@@ -42,7 +42,7 @@ function getFeatureCount(neighbourhoodKey: string) {
   class:border-emerald-500={selectedNeighbourhoods.includes(neighbourhood)}
   onclick={() => mapContext.toggleNeighbourhood(neighbourhood)}>
   <div class="flex flex-grow flex-col">
-    <p class="flex space-x-2 text-xs font-mono uppercase tracking-wide">
+    <p class="flex space-x-2 font-mono text-xs uppercase tracking-wide">
       <span class="text-primary/80">{getI18nValue(data, 'region')}</span>
       <span class="mtext-base-content/60 font-sans">::</span>
       <span class="text-accent">{getI18nValue(data, 'district')}</span>

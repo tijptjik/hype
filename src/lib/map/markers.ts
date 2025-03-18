@@ -49,7 +49,11 @@ export function createMarkerElement(): HTMLDivElement {
   return container;
 }
 
-export function updateMarkers(mapContext: mapContext, features: Feature[], maplibre: any) {
+export function updateMarkers(
+  mapContext: mapContext,
+  features: Feature[],
+  maplibre: any
+) {
   if (!mapContext.map) return;
 
   // Create a set of new feature IDs
@@ -77,7 +81,7 @@ export function updateMarkers(mapContext: mapContext, features: Feature[], mapli
 
       // Create new marker
       const el = createMarkerElement();
-      
+
       // Add data attributes to all elements in the marker
       const addDataToElements = (element: Element) => {
         element.setAttribute('data-type', 'marker');
@@ -101,7 +105,6 @@ export function updateMarkers(mapContext: mapContext, features: Feature[], mapli
   // Return cleanup function
   return () => {
     // Remove all markers and their event listeners
-    console.log('Removing markers');
     for (const [_, marker] of mapContext.state.markers.entries()) {
       marker.remove(); // This also removes the event listeners
     }
@@ -109,13 +112,21 @@ export function updateMarkers(mapContext: mapContext, features: Feature[], mapli
   };
 }
 
-export function addMarkerClass(mapContext: mapContext, featureId: string, className: string = 'active') {
+export function addMarkerClass(
+  mapContext: mapContext,
+  featureId: string,
+  className: string = 'active'
+) {
   if (!mapContext.map) return;
   // Set active state to new feature
   mapContext.state.markers.get(featureId)?.getElement().classList.add(className);
 }
 
-export function removeMarkerClass(mapContext: mapContext, featureId: string, className: string = 'active') {
+export function removeMarkerClass(
+  mapContext: mapContext,
+  featureId: string,
+  className: string = 'active'
+) {
   if (!mapContext.map) return;
   mapContext.state.markers.get(featureId)?.getElement().classList.remove(className);
 }

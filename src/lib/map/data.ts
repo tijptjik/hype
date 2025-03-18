@@ -23,9 +23,13 @@ export function getWishlistedFeatures(mapContext: mapContext) {
     return {
       ...feature,
       hierarchy: {
-        organisation: getI18nValue(organisation, 'nameShort'),
-        project: getI18nValue(project, 'nameShort'),
-        layer: projectLayerCount > 1 ? getI18nValue(layer, 'nameShort') : null,
+        organisation: organisation ? getI18nValue(organisation, 'nameShort') : null,
+        project: project ? getI18nValue(project, 'nameShort') : null,
+        layer: layer
+          ? projectLayerCount > 1
+            ? getI18nValue(layer, 'nameShort')
+            : null
+          : null,
         feature: getI18nValue(feature, 'title')
       }
     };
