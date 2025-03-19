@@ -146,5 +146,9 @@
   "omni__search_results": "搜索結果: {searchTerm}",
 
   "map__no_markers_without_layers": "請選擇一個圖層來填滿地圖",
-  "map__select_layer": "請選擇一個圖層來填滿地圖"
+  "map__select_layer": "請選擇一個圖層來填滿地圖",
+
+  "admin__filter_stat_access": "訪問",
+  "admin__filter_stat_filtered": "已過濾",
+  "admin__filter_stat_selected": "已選擇"
 }

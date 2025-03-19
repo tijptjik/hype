@@ -147,5 +147,9 @@
   "omni__search_results": "搜索结果: {searchTerm}",
 
   "map__no_markers_without_layers": "请选择一个图层来填充地图",
-  "map__select_layer": "请选择一个图层来填充地图"
+  "map__select_layer": "请选择一个图层来填充地图",
+
+  "admin__filter_stat_access": "访问",
+  "admin__filter_stat_filtered": "已过滤",
+  "admin__filter_stat_selected": "已选择"
 }

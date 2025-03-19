@@ -147,5 +147,9 @@
   "omni__search_results": "Search Results: {searchTerm}",
 
   "map__no_markers_without_layers": "Without layers the world is empty",
-  "map__select_layer": "Add Layer"
+  "map__select_layer": "Add Layer",
+
+  "admin__filter_stat_access": "Access",
+  "admin__filter_stat_filtered": "Filter",
+  "admin__filter_stat_selected": "Select"
 }
