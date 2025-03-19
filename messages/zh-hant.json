@@ -150,5 +150,16 @@
 
   "admin__filter_stat_access": "訪問",
   "admin__filter_stat_filtered": "已過濾",
-  "admin__filter_stat_selected": "已選擇"
+  "admin__filter_stat_selected": "已選擇",
+
+  "admin__validation_name_is_required": "名稱為必填項",
+  "admin__validation_name_lte_128_chars": "最多 128 個字元",
+  "admin__validation_short_name_is_required": "需要簡稱",
+  "admin__validation_short_name_lte_32_chars": "最多 32 個字元",
+  "admin__validation_description_lte_1024_chars": "最多 1024 個字元",
+  "admin__validation_key_valid_characters": "必須只包含字母數字、底線和 $ 字元",
+  "admin__validation_key_gte_2_chars": "至少 2 個字元",
+  "admin__validation_url_invalid": "URL 無效 -- 您是否新增了 https://？",
+  "admin__validation_attribution_is_required": "需要歸因",
+  "admin__validation_attribution_lte_128_chars": "最多 128 個字元"
 }

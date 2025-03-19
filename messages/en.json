@@ -151,5 +151,22 @@
 
   "admin__filter_stat_access": "Access",
   "admin__filter_stat_filtered": "Filter",
-  "admin__filter_stat_selected": "Select"
+  "admin__filter_stat_selected": "Select",
+
+  "admin__validation_user_roles_at_least_one_owner": "Add an Owner",
+  "admin__validation_user_roles_at_least_one_maintainer": "Add a Maintainer",
+  "admin__validation_code_is_required": "Code is required",
+  "admin__validation_code_lte_24_chars": "Code must be 24 characters or less",
+  "admin__validation_code_valid_characters": "Must contain only alphanumerics, underscores and $ characters",
+
+  "admin__validation_name_is_required": "Name is required",
+  "admin__validation_name_lte_128_chars": "Maximum of 128 characters",
+  "admin__validation_short_name_is_required": "Short Name is required",
+  "admin__validation_short_name_lte_32_chars": "Maximum of 32 characters",
+  "admin__validation_description_lte_1024_chars": "Maximum of 1024 characters",
+  "admin__validation_key_valid_characters": "Must contain only alphanumerics, underscores and $ characters",
+  "admin__validation_key_gte_2_chars": "Minimum of 2 characters",
+  "admin__validation_url_invalid": "URL is invalid -- did you add https://?",
+  "admin__validation_attribution_is_required": "Attribution is required",
+  "admin__validation_attribution_lte_128_chars": "Maximum of 128 characters"
 }
