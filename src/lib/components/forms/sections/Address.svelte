@@ -7,8 +7,6 @@ import TextField from '$lib/components/forms/fields/Textarea.svelte';
 import GeocodeBar from '$lib/components/forms/bars/Geocode.svelte';
 // TYPES
 import type { LanguageTag, SectionProps, Field } from '$lib/types';
-// DEBUG
-import SuperDebug from 'sveltekit-superforms';
 
 // CONFIG
 const sourceLanguageTag = 'en';
@@ -49,4 +47,3 @@ const actions = {
     {/each}
   </div>
 </div>
-<!-- <SuperDebug data={$form} /> -->
