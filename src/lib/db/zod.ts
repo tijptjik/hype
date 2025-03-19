@@ -26,6 +26,8 @@ import {
   userLayer,
   taskImage
 } from '$lib/db/schema';
+// I18N
+import * as m from '$lib/paraglide/messages.js';
 // TYPES
 import type { AddressProperties, LayerMetadata, TaskType } from '$lib/types';
 
@@ -39,37 +41,41 @@ export const supportedLanguages = ['en', 'zh-hant', 'zh-hans'] as const;
 const constraints: Record<string, z.ZodType<any>> = {
   code: z
     .string()
-    .min(1, { message: 'Code is required' })
-    .max(24, { message: 'Code must be 24 characters or less' })
+    .min(1, { message: m.admin__validation_code_is_required() })
+    .max(24, { message: m.admin__validation_code_lte_24_chars() })
     .regex(/^[a-zA-Z0-9_$]*$/, {
-      message: 'Must contain only alphanumerics, underscores and $ characters'
+      message: m.admin__validation_code_valid_characters()
     }),
   name: z
     .string()
-    .min(1, { message: 'Name is required' })
-    .max(124, { message: 'Name must be 124 characters or less' }),
+    .min(1, { message: m.admin__validation_name_is_required() })
+    .max(128, { message: m.admin__validation_name_lte_128_chars() }),
   nameShort: z
     .string()
-    .min(1, { message: 'Short Name is required' })
-    .max(32, { message: 'Short Name must be 32 characters or less' }),
+    .min(1, { message: m.admin__validation_short_name_is_required() })
+    .max(32, { message: m.admin__validation_short_name_lte_32_chars() }),
   description: z
     .string()
-    .max(1024, { message: 'Description must be 1024 characters or less' })
+    .max(1024, { message: m.admin__validation_description_lte_1024_chars() })
     .optional()
     .nullish()
     .transform((x) => x ?? undefined),
   key: z
     .string()
     .regex(/^[a-zA-Z0-9_$]*$/, {
-      message: 'Must contain only alphanumerics, underscores and $ characters'
+      message: m.admin__validation_key_valid_characters()
     })
-    .min(2, { message: 'Key should have at least 2 characters' }),
+    .min(2, { message: m.admin__validation_key_gte_2_chars() }),
   url: z
     .string()
-    .url({ message: 'URL is invalid' })
+    .url({ message: m.admin__validation_url_invalid() })
     .optional()
     .nullish()
-    .transform((x) => x ?? undefined)
+    .transform((x) => x ?? undefined),
+  attribution: z
+    .string()
+    .min(1, { message: m.admin__validation_attribution_is_required() })
+    .max(128, { message: m.admin__validation_attribution_lte_128_chars() })
 };
 
 const getDefaultConstraints = (
@@ -110,6 +116,8 @@ function createRequiredObjSchema<K extends string, V extends z.ZodTypeAny>(
     );
 }
 
+// TODO - It looks like this is stripping the validation messages for the default values
+// e.g. organisaiton.name should render as m.admin__validation_name_is_required() but instead renders "required".
 const getTranslations = (model: z.ZodType<any>) =>
   createRequiredObjSchema(z.enum(targetLangs), model).default({
     'zh-hant': { lang: 'zh-hant' },
@@ -122,7 +130,7 @@ const getUserRoles = (model: z.ZodType<any>) =>
     .refine((schema) => schema.length > 0, 'Add a User')
     .refine(
       (schema) => schema.map((user) => user.role).some((role) => role === 'owner'),
-      'Set an Owner'
+      m.admin__validation_user_roles_at_least_one_owner()
     );
 
 // TODO - Test the addition / removal of maintainer roles while maintaining and / or removing the owner
@@ -132,7 +140,7 @@ const getMaintainerRoles = (model: z.ZodType<any>) =>
     .refine((schema) => schema.length > 0, 'Add at least 1 Maintainer')
     .refine(
       (schema) => schema.map((user) => user.role).some((role) => role === 'maintainer'),
-      'Set at least 1 Maintainer'
+      m.admin__validation_user_roles_at_least_one_maintainer()
     );
 
 /* ----------------- */
