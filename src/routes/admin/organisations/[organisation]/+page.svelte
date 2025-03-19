@@ -84,14 +84,14 @@ const FIELDS: Record<string, FormField> = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Organisation> = $props();
-
-// STATE : FORM
-let form = setForm<Organisation>(
-  RESOURCE,
-  pageProps.data.entity,
-  pageProps.data.validatedForm,
-  getHierarchicalResourceState(),
-  getFlash(page, { clearOnNavigate: false, clearAfterMs: 2500 })
+let form = $derived(
+  setForm<Organisation>(
+    RESOURCE,
+    pageProps.data.entity,
+    pageProps.data.validatedForm,
+    getHierarchicalResourceState(),
+    getFlash(page, { clearOnNavigate: false, clearAfterMs: 2500 })
+  )
 );
 let enhance = $derived(form.enhance);
 
