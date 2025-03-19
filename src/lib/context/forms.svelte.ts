@@ -115,12 +115,9 @@ class BaseForm<T extends Record<string, unknown>> {
     // LOCAL VALIDATION
     if (!validatedForm.valid) {
       this.errors.set(validatedForm.errors);
-      console.error(validatedForm.errors);
-      console.error(validatedForm.data);
-
       this.flash.set({ type: 'error', message: 'Validation failed' });
-
       cancel();
+      return;
       // SERVER VALIDATION
     } else {
       const response = await fetch(
@@ -130,12 +127,20 @@ class BaseForm<T extends Record<string, unknown>> {
       const result = deserialize(await response.text()) as ActionResult;
 
       if (result.type === 'redirect') {
-        this.flash.set({ type: 'success', message: 'Created successfully' });
         // Invalidate cache for the resource type; refresh resources
         this.resourceState.invalidateAndRefresh(
           this.resourceType as HierarchicalResource
         );
-        await navigate(result.location);
+        // TODO Replace with method that invalidates the user session and refetches
+        // the userRoles -- as currently the userRoles are not updated on the client
+        // side when the user is redirected to the new resource / index of resources
+        // causing it to not show up / still show up.
+        window.location.pathname = result.location;
+        this.flash.set({
+          type: 'success',
+          message: 'Created successfully',
+          options: { clearOnNavigate: false, clearAfterMs: 5000 }
+        });
       } else if (result.type === 'success') {
         this.flash.set({ type: 'success', message: 'Updated successfully' });
         // Invalidate cache for the resource type; refresh resources
@@ -151,8 +156,8 @@ class BaseForm<T extends Record<string, unknown>> {
         if (result.type === 'failure') {
           this.flash.set({ type: 'error', message: 'Submission failed' });
           console.log('failure', result.data?.errors);
+          // this.form.set(result.data?.data);
           this.errors.set(result.data?.errors);
-          this.form.set(result.data?.data);
         } else {
           this.flash.set({ type: 'error', message: 'Unexpected error' });
         }
