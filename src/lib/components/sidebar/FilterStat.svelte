@@ -32,9 +32,17 @@ let getCount = (statistic: CollectionStatistic) => {
   if (statistic === CollectionStatistic.total) {
     return resourceState.state.resources[resourceType as HierarchicalResource].length;
   } else if (statistic === CollectionStatistic.access) {
-    return resourceState.getFilteredResource(resourceType, true).length;
+    return resourceState.getFilteredResource(resourceType, {
+      text: false,
+      state: false,
+      access: true
+    }).length;
   } else if (statistic === CollectionStatistic.filtered) {
-    return resourceState.getFilteredResource(resourceType, false).length;
+    return resourceState.getFilteredResource(resourceType, {
+      text: true,
+      state: true,
+      access: true
+    }).length;
   } else if (statistic === CollectionStatistic.selected && resourceType !== 'feature') {
     return resourceState.state.prisms[resourceType as ResourceTypeWithChildren].length;
   }

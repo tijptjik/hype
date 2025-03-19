@@ -348,18 +348,19 @@ export class ResourceState {
     let query = this.state.filters[resource as keyof AdminFilterStates].text || '';
     // FULL SET
     let result = this.state.resources[resource];
-    // TEXT & STATE FILTERS
+    // STATE FILTERS
     result = result.filter((entity) =>
       filters.state
         ? filterKeys.every((key) => this.booleanFilter(resource, entity, key))
-        : true && filters.text
-          ? this.textFilter(resource, entity, query)
-          : true
+        : true
+    );
+    // TEXT FILTERS
+    result = result.filter((entity) =>
+      filters.text ? this.textFilter(resource, entity, query) : true
     );
     // ACCESS FILTERS
-    if (filters.access) {
-      result = this.accessFilter(resource, result);
-    }
+    result = filters.access ? this.accessFilter(resource, result) : result;
+
     return result;
   };
 
