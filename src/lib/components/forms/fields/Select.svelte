@@ -21,13 +21,11 @@ let {
 // STATE : FORM
 let { form, constraints, errors } = fieldProps.form;
 
-// STATE : INTERMEDIATE
-let value = $state('');
-
-// EFFECTS
-$effect(() => {
-  ({ value } = getValues($form, field, languageTag, fieldRoot, fieldIndex, fieldKey));
-});
+let fieldValues = $derived(
+  getValues($form, field, languageTag, fieldRoot, fieldIndex, fieldKey) || {
+    value: ''
+  }
+);
 
 // STATE : DERIVED
 let id = $derived(
@@ -46,7 +44,7 @@ let id = $derived(
     <div
       class="flex items-center gap-2 rounded-lg border-1 border-transparent bg-neutral pl-2 pr-3 focus-within:outline focus-within:outline-1 focus-within:outline-neutral-500">
       <Select
-        bind:value
+        bind:value={fieldValues.value as string}
         {id}
         values={field.values}
         {languageTag}
@@ -59,7 +57,7 @@ let id = $derived(
             fieldRoot,
             fieldIndex,
             fieldKey,
-            value
+            fieldValues.value as string
           )} />
     </div>
     <ErrorLabel {errors} {field} {languageTag} {fieldRoot} {fieldIndex} {fieldKey} />

@@ -132,8 +132,8 @@ export const getValues = (
     ref = ref.translations[languageTag];
   }
   // FIELD : GET VALUE
-  const value = ref[key] as string;
-  const isGenAI = ref[genField(key)] || (false as boolean);
+  const value = ref[key] ?? ('' as string);
+  const isGenAI = ref[genField(key)] ?? (false as boolean);
 
   return { value, isGenAI };
 };
@@ -146,7 +146,7 @@ export const updateForm = (
   fieldIndex: number,
   fieldKey: string,
   value: string,
-  isGenAI: boolean
+  isGenAI?: boolean
 ) => {
   form.update(($form) => {
     let ref: Record<string, string | boolean | Record<TargetLang, unknown>>;

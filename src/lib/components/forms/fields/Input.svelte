@@ -22,20 +22,12 @@ let {
 let { form, constraints, errors } = fieldProps.form;
 
 // STATE : INTERMEDIATE
-let value = $state('');
-let isGenAI = $state(false);
-
-// EFFECTS
-$effect(() => {
-  ({ value, isGenAI } = getValues(
-    $form,
-    field,
-    languageTag,
-    fieldRoot,
-    fieldIndex,
-    fieldKey
-  ));
-});
+let fieldValues = $derived(
+  getValues($form, field, languageTag, fieldRoot, fieldIndex, fieldKey) || {
+    value: '',
+    isGenAI: false
+  }
+);
 
 // STATE : DERIVED
 let id = $derived(
@@ -50,8 +42,8 @@ let id = $derived(
   <div
     class="group relative rounded-lg border-1 border-transparent bg-neutral pl-2 pr-3 focus-within:outline focus-within:outline-1 focus-within:outline-neutral-500">
     <FormInput
-      bind:value
-      bind:isGenAI
+      bind:value={fieldValues.value as string}
+      bind:isGenAI={fieldValues.isGenAI as boolean}
       {id}
       {languageTag}
       {...field}
@@ -63,7 +55,7 @@ let id = $derived(
           fieldRoot,
           fieldIndex,
           fieldKey,
-          value,
+          fieldValues.value as string,
           false
         )} />
   </div>
