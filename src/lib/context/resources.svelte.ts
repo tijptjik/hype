@@ -327,11 +327,16 @@ export class ResourceState {
   }
 
   async invalidateAndRefresh(resource: HierarchicalResource) {
+    // Invalidate the session
+    // TODO Find a way to invalidate the userRoles
+
+    // Invalidate the query
     this.queryClient.invalidateQueries({
       queryKey: [HierarchicalResource[resource]],
       refetchType: 'all',
       exact: false
     });
+    // Refresh the resources
     this.refreshResources(resource);
   }
 
