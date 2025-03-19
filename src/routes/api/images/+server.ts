@@ -170,7 +170,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
         {
           imageId: createdImage.id
         },
-        'id'
+        'code'
       );
     } else if (formData.refType === 'organisation') {
       updatedOwner = await patchOrganisation(
@@ -179,7 +179,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
         {
           imageId: createdImage.id
         },
-        'id'
+        'code'
       );
     }
     return json({ ...createdImage, owner: updatedOwner }, { status: 201 });

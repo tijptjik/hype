@@ -21,6 +21,8 @@ import Metadata from '$lib/components/common/ImageMetadata.svelte';
 import DownloadImageButton from '$lib/components/images/DownloadImageButton.svelte';
 import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte';
 import IconAnchor from '$lib/components/common/IconAnchor.svelte';
+// ENUMS
+import { HierarchicalResource } from '$lib/types';
 // TYPES
 import type {
   GetImageAPI,
@@ -86,8 +88,16 @@ const handleDrop = async (e: CustomEvent) => {
     refs: {
       resource: editContext.refType,
       entity: editContext.refId,
-      organisation: resourceState.state.organisation as Organisation,
-      project: resourceState.state.project as Project,
+      organisation: resourceState.getAscendantOrSelf(
+        resourceState.getEntity(),
+        editContext.refType as HierarchicalResource,
+        HierarchicalResource.organisation
+      ) as Organisation,
+      project: resourceState.getAscendantOrSelf(
+        resourceState.getEntity(),
+        editContext.refType as HierarchicalResource,
+        HierarchicalResource.project
+      ) as Project,
       imageToReplace: image as GetImageAPI
     },
     callback: (savedImage: GetImageAPI) => {
@@ -96,6 +106,7 @@ const handleDrop = async (e: CustomEvent) => {
       resetImageStates(savedImage.id);
       image = savedImage;
       imageSets.activeImage = savedImage;
+      resourceState.invalidateAndRefresh(editContext.refType as HierarchicalResource);
     },
     onError: () => {
       setStandaloneUploadState('error');

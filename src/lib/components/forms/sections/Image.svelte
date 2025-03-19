@@ -22,7 +22,7 @@ const resourceState = getHierarchicalResourceState();
         {...sectionProps}
         editContext={{
           refType: resourceState.activeResource as ResourceType,
-          refId: resourceState.activeEntityRef
+          refId: resourceState.activeEntity
         }}
         enableDropzone={true}
         enableReplacement={true} />
