@@ -1,8 +1,11 @@
 <script lang="ts">
 import Icon from '$lib/components/common/Icon.svelte';
 import { CloudArrowDown } from '@steeze-ui/heroicons';
-import { downloadImage } from '$lib/images/index.svelte';
+import { downloadImage, getURLfromImage } from '$lib/images/index.svelte';
 import type { GetImageAPI } from '$lib/types';
+import { getFlash } from 'sveltekit-flash-message';
+import { page } from '$app/stores';
+import { beforeNavigate } from '$app/navigation';
 
 type Props = {
   image: GetImageAPI;
@@ -14,6 +17,6 @@ let { image, class: className = '' } = $props();
 
 <button
   class="btn btn-circle opacity-70 hover:text-neutral-content hover:opacity-100 hover:shadow-sm {className}"
-  onclick={(e) => downloadImage(e, image)}>
+  onclick={(e) => downloadImage(e, image, getFlash(page))}>
   <Icon src={CloudArrowDown} class="h-6 w-6" />
 </button>

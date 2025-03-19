@@ -88,7 +88,7 @@ async function submitMissingReport() {
     // Optionally reset the feature card mode
     featureCardContext.state.mode = FeatureCardMode.Display;
   } catch (error) {
-    console.error('Error submitting missing report:', error);
+    $flash = { type: 'error', message: m.report_missing__error() };
     featureCardContext.validationError = m.report_missing__error();
   } finally {
     featureCardContext.isSubmitting = false;

@@ -1,5 +1,10 @@
 <script lang="ts">
+// FLASH
+import { getFlash } from 'sveltekit-flash-message';
+import { page } from '$app/stores';
+// EASING
 import { cubicInOut } from 'svelte/easing';
+// TRANSITIONS
 import { slide } from 'svelte/transition';
 import {
   imageSets,
@@ -18,7 +23,7 @@ let { refs }: { refs: ImageEditRefs } = $props();
 
 {#if imageSets.activeImage}
   <div
-    class="flex flex-row items-center justify-between gap-2 align-baseline flex-nowrap overflow-hidden whitespace-nowrap text-nowrap h-12"
+    class="flex h-12 flex-row flex-nowrap items-center justify-between gap-2 overflow-hidden whitespace-nowrap text-nowrap align-baseline"
     transition:slide={{ axis: 'x', duration: 500, easing: cubicInOut }}>
     <div class="text-sm font-light">Published</div>
     <Toggle
@@ -28,8 +33,8 @@ let { refs }: { refs: ImageEditRefs } = $props();
   </div>
 
   <div
-    class="flex cursor-pointer flex-row items-center justify-between gap-2 align-baseline transition-colors duration-200 hover:text-neutral-content active:text-primary flex-nowrap overflow-hidden whitespace-nowrap text-nowrap h-12"
-    onclick={downloadImage}
+    class="flex h-12 cursor-pointer flex-row flex-nowrap items-center justify-between gap-2 overflow-hidden whitespace-nowrap text-nowrap align-baseline transition-colors duration-200 hover:text-neutral-content active:text-primary"
+    onclick={(e) => downloadImage(e, imageSets.activeImage, getFlash(page))}
     transition:slide={{ axis: 'x', duration: 500, easing: cubicInOut }}>
     <Icon src={ArrowDownTray} />
   </div>

@@ -43,7 +43,7 @@ import type {
   UploadStatus,
   ImageEditRefs as EditRefs
 } from '$lib/types';
-import { featureImage } from '$lib/db/schema';
+import type { Writable } from 'svelte/store';
 
 // ═══════════════════════
 // 2. CONFIGURATION
@@ -599,7 +599,8 @@ export const retryUpload = (args: { fileState: ImageUploadState; refs: Refs }) =
 /** Download image file */
 export const downloadImage = async (
   e: Event,
-  image: GetImageAPI = imageSets.activeImage!
+  image: GetImageAPI = imageSets.activeImage!,
+  flash: Writable<App.PageData['flash']>
 ) => {
   e.preventDefault();
   e.stopPropagation();
@@ -618,17 +619,33 @@ export const downloadImage = async (
     const contentType = response.headers.get('content-type');
     const extension = contentType ? `.${contentType.split('/')[1]}` : '';
     const filename = `${image.publicId.split('/').pop()}${extension}`;
-    const blob = await response.blob();
 
+    // Create a download link with 'download' attribute
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
+    link.style.display = 'none'; // Hide the link
+    link.href = downloadUrl;
+    link.target = '_blank';
+    link.download = filename; // This triggers download instead of navigation
+
+    // Trigger download
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
+    // Flash notification that download started
+    // You'll need to implement your preferred notification system
+    // This is just a placeholder - replace with your actual notification implementation
+    flash.set({
+      type: 'success',
+      message: `Downloaded ${filename}`,
+      options: {
+        removeOnNavigate: false
+      }
+    });
   } catch (err) {
-    console.error('Failed to download image:', err);
+    flash.set({
+      type: 'error',
+      message: `Failed to download image: ${err}`
+    });
   }
 };
 
