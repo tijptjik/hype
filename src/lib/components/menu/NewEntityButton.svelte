@@ -17,9 +17,13 @@ let modalOpen: boolean = $state(false);
 
 const onclick = (e: MouseEvent) => {
   e.preventDefault();
+  // Set facet to false
+  resourceState.setFacet(false);
   if (requiresParentAssociation(resourceState.activeResource as HierarchicalResource)) {
+    // Let the user pick the parent to be associated with
     modalOpen = true;
   } else {
+    // Directly navigate to the new entity page
     navigateOnAdmin(resourceState.activeResource as HierarchicalResource, NEW_REF);
   }
 };
