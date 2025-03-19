@@ -24,7 +24,11 @@ const onclick = (e: MouseEvent) => {
     modalOpen = true;
   } else {
     // Directly navigate to the new entity page
-    navigateOnAdmin(resourceState.activeResource as HierarchicalResource, NEW_REF);
+    navigateOnAdmin(
+      resourceState.activeResource as HierarchicalResource,
+      NEW_REF,
+      'core'
+    );
   }
 };
 

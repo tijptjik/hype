@@ -2,7 +2,7 @@
 // TRANSITIONS
 import { slide } from 'svelte/transition';
 // LIB
-import { ADMIN_PATH } from '$lib/index';
+import { ADMIN_PATH, NEW_REF } from '$lib/index';
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 import { getSidebarState } from '$lib/context/sidebar.svelte';
@@ -99,7 +99,12 @@ let getDisplayName = (entity: Resource) => {
               {href}
               onclick={(e) => {
                 e.preventDefault();
-                navigateOnAdmin(resourceType, entityRef);
+                // UGLY HACK - TODO: Fix once SuperForms has proper support for Svelte 5
+                if (resourceState.activeEntity === NEW_REF) {
+                  window.location.href = href;
+                } else {
+                  navigateOnAdmin(resourceType, entityRef);
+                }
               }}
               class="flex select-none items-center border-l-3 drag-none {!sidebarState.isOpen() &&
               isActive
