@@ -70,18 +70,24 @@ let getWarningMessage = () => {
         <small class="hidden select-text pr-3 text-sm text-base-content/50 @sm:block"
           >{@html subtitle}</small>
       </h3>
-      {#if $errors}
-        {#each Object.entries($errors) as [fieldRoot, error]}
-          {#if error && fields?.[fieldRoot] && error['_errors'] && error['_errors'].length > 0}
+    </div>
+    {#if $errors}
+      {#each Object.entries($errors) as [fieldRoot, error]}
+        {#if error && fields?.[fieldRoot] && error['_errors'] && error['_errors'].length > 0}
+          <div class="flex-grow-2 flex flex-row items-center justify-center gap-2">
             {#each error['_errors'] as message}
-              <div class="badge badge-error badge-lg p-3 font-mono text-base-content">
-                {message}
+              <div
+                class="badge badge-lg flex items-center items-center justify-center gap-2 truncate border-error p-4 font-mono text-base-content">
+                <Icon
+                  src={ExclamationTriangle}
+                  class="h-4 w-4 shrink-0 stroke-current" />
+                <p class="text-sm">{message}</p>
               </div>
             {/each}
-          {/if}
-        {/each}
-      {/if}
-    </div>
+          </div>
+        {/if}
+      {/each}
+    {/if}
     {#if Stats}
       <Stats {...fieldProps} />
     {/if}
