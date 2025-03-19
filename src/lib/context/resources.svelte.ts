@@ -337,37 +337,44 @@ export class ResourceState {
 
   // FILTERS
 
-  getFilteredResource = (resource: HierarchicalResource, accessOnly = false) => {
+  getFilteredResource = (
+    resource: HierarchicalResource,
+    filters = { text: true, state: true, access: true }
+  ) => {
     let filterKeys = ['isPublished', 'isArchived'];
     let query = this.state.filters[resource as keyof AdminFilterStates].text || '';
+    // FULL SET
+    let result = this.state.resources[resource];
     // TEXT & STATE FILTERS
-    let result = this.state.resources[resource].filter((entity) =>
-      filterKeys.every((key) => this.booleanFilter(resource, entity, key)) && accessOnly
-        ? true
-        : this.textFilter(resource, entity, query)
+    result = result.filter((entity) =>
+      filters.state
+        ? filterKeys.every((key) => this.booleanFilter(resource, entity, key))
+        : true && filters.text
+          ? this.textFilter(resource, entity, query)
+          : true
     );
     // ACCESS FILTERS
+    if (filters.access) {
+      result = this.accessFilter(resource, result);
+    }
+    return result;
+  };
+
+  accessFilter = (resource: HierarchicalResource, result: Resource[]) => {
     if (resource === HierarchicalResource.organisation) {
-      result = result.filter((organisation) => {
-        return this.hasOrganisationRole(organisation.id as Id);
-      });
+      return result.filter((organisation) =>
+        this.hasOrganisationRole(organisation.id as Id)
+      );
     } else if (resource === HierarchicalResource.project) {
-      result = result.filter((project) => {
-        return this.hasProjectRole(project.id as Id);
-      });
+      return result.filter((project) => this.hasProjectRole(project.id as Id));
     } else if (resource === HierarchicalResource.layer) {
-      result = result.filter((layer) => {
-        return this.hasProjectRole(layer.projectId! as Id);
-      });
+      return result.filter((layer) => this.hasProjectRole(layer.projectId! as Id));
     } else if (resource === HierarchicalResource.feature) {
-      result = result.filter((feature) => {
+      return result.filter((feature) => {
         const layer = this.getLayer(feature as Feature);
-        if (!layer) return false;
-        return this.hasProjectRole(layer!.projectId as Id);
+        return !layer ? false : this.hasProjectRole(layer!.projectId as Id);
       });
     }
-
-    return result;
   };
 
   hasOrganisationRole = (organisationId: Id) => {
