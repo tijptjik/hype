@@ -1,5 +1,6 @@
 <script lang="ts">
 import * as m from '$lib/paraglide/messages.js';
+import { invalidateAll } from '$app/navigation';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { XCircle } from '@steeze-ui/heroicons';
@@ -8,14 +9,14 @@ import { XCircle } from '@steeze-ui/heroicons';
 let menuProps = $props();
 
 // STATE : FORM
-let { tainted, isTainted, reset } = menuProps.form;
+let { tainted, isTainted } = menuProps.form;
 </script>
 
 <button
   class="btn {!isTainted($tainted as unknown as boolean)
     ? 'btn-disabled'
     : 'btn-ghost'} pl-3 pr-4 disabled:bg-transparent disabled:text-opacity-60"
-  onclick={() => reset()}
+  onclick={() => invalidateAll()}
   disabled={!isTainted($tainted as unknown as boolean)}>
   <Icon src={XCircle} class="h-6 w-6" />
   {m.forms__reset()}
