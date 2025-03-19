@@ -4,6 +4,9 @@ import { NEW_TITLE, NEW_REF } from '$lib';
 // CONTEXT
 import { setForm } from '$lib/context/forms.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+// FLASH
+import { getFlash } from 'sveltekit-flash-message';
+import { page } from '$app/stores';
 // COMPONENTS
 import Header from '$lib/components/layout/EntityHeader.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
@@ -14,8 +17,6 @@ import UserSection from '$lib/components/forms/sections/User.svelte';
 import { HierarchicalResource } from '$lib/types';
 // TYPES
 import type { FormPageProps, FormField, Organisation, GetImageAPI } from '$lib/types';
-import { getFlash } from 'sveltekit-flash-message';
-import { page } from '$app/stores';
 
 // CONTEXT
 const resourceState = getHierarchicalResourceState();

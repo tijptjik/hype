@@ -1,9 +1,12 @@
 <script lang="ts">
 import { NEW_TITLE, NEW_REF } from '$lib';
-// Context
+// FLASH
+import { getFlash } from 'sveltekit-flash-message';
+import { page } from '$app/stores';
+// CONTEXT
 import { setForm } from '$lib/context/forms.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
-// Components
+// COMPONENTS
 import Header from '$lib/components/layout/EntityHeader.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
 import PropertySection from '$lib/components/forms/sections/FeatureProperty.svelte';
@@ -120,7 +123,8 @@ let form = setForm<Feature>(
   RESOURCE,
   pageProps.data.entity,
   pageProps.data.validatedForm,
-  getHierarchicalResourceState()
+  getHierarchicalResourceState(),
+  getFlash(page, { clearOnNavigate: false, clearAfterMs: 2500 })
 );
 let enhance = $derived(form.enhance);
 

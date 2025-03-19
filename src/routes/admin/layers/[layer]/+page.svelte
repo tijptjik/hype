@@ -1,11 +1,12 @@
 <script lang="ts">
-import { goto } from '$app/navigation';
-import { i18n } from '$lib/i18n';
-import { NEW_TITLE, NEW_REF } from '$lib';
-// Context
+import { NEW_TITLE } from '$lib';
+// CONTEXT
 import { setForm, getForm } from '$lib/context/forms.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
-// Components
+// FLASH
+import { getFlash } from 'sveltekit-flash-message';
+import { page } from '$app/stores';
+// COMPONENTS
 import Header from '$lib/components/layout/EntityHeader.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
 import LayerPropertySection from '$lib/components/forms/sections/LayerProperty.svelte';
@@ -66,7 +67,8 @@ let form = setForm<Layer>(
   RESOURCE,
   pageProps.data.entity,
   pageProps.data.validatedForm,
-  getHierarchicalResourceState()
+  getHierarchicalResourceState(),
+  getFlash(page, { clearOnNavigate: false, clearAfterMs: 2500 })
 );
 let enhance = $derived(form.enhance);
 

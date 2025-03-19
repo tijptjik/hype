@@ -5,6 +5,9 @@ import { get } from 'svelte/store';
 // CONTEXT
 import { setForm, getForm } from '$lib/context/forms.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+// FLASH
+import { getFlash } from 'sveltekit-flash-message';
+import { page } from '$app/stores';
 // COMPONENTS
 import Header from '$lib/components/layout/EntityHeader.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
@@ -205,7 +208,8 @@ let form = setForm<Project>(
   RESOURCE,
   pageProps.data.entity,
   pageProps.data.validatedForm,
-  getHierarchicalResourceState()
+  getHierarchicalResourceState(),
+  getFlash(page, { clearOnNavigate: false, clearAfterMs: 2500 })
 );
 let enhance = $derived(form.enhance);
 
