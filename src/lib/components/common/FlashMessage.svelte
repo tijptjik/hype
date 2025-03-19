@@ -1,26 +1,33 @@
 <script lang="ts">
+// Animation
+import { fade, fly } from 'svelte/transition';
+import { cubicInOut } from 'svelte/easing';
+// FLASH
 import { getFlash } from 'sveltekit-flash-message';
 import { page } from '$app/stores';
 
 const flash = getFlash(page, {
+  clearOnNavigate: false,
   clearAfterMs: 5000 // Auto-clear after 5 seconds
 });
 </script>
 
 {#if $flash}
   <div
-    class="animate-fadeIn animate-fadeOut fixed bottom-24 left-1/2 z-50 w-full max-w-md px-4"
+    class="fixed bottom-24 left-1/2 z-50 w-full max-w-md px-4"
     style="transform: translateX(-50%) !important;">
     <div
       class="alert relative border-l-2 bg-base-100 shadow-lg"
-      class:border-success={$flash.type === 'success'}
-      class:text-success={$flash.type === 'success'}
+      class:border-primary={$flash.type === 'success'}
+      class:text-primary={$flash.type === 'success'}
       class:border-error={$flash.type === 'error'}
       class:text-error={$flash.type === 'error'}
       class:border-info={$flash.type === 'info'}
       class:text-info={$flash.type === 'info'}
       class:border-warning={$flash.type === 'warning'}
-      class:text-warning={$flash.type === 'warning'}>
+      class:text-warning={$flash.type === 'warning'}
+      in:fly={{ duration: 500, y: 400, opacity: 0, easing: cubicInOut }}
+      out:fly={{ duration: 300, y: 400, opacity: 0, easing: cubicInOut }}>
       <div class="flex flex-row gap-2 pr-10">
         {#if $flash.type === 'success'}
           <svg
@@ -95,24 +102,3 @@ const flash = getFlash(page, {
     </div>
   </div>
 {/if}
-
-<style>
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out forwards;
-}
-
-.animate-fadeOut {
-  animation: fadeOut 0.3s ease-out reverse;
-}
-</style>
