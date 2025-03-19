@@ -60,7 +60,7 @@ function handleMenuClick(panel: 'filters' | 'maps' | 'stars' | 'settings' | 'adm
     </div>
     {#if session?.user?.roles?.some((role) => role.role === 'owner' || role.role === 'superadmin' || role.role === 'maintainer')}
       <!-- Admin Menu -->
-      <div class="hidden flex-row items-center gap-2 px-4 lg:flex">
+      <div class="absolute right-0 hidden flex-row items-center gap-2 px-4 lg:flex">
         {@render menuButton(ComputerDesktop, m.menu_admin(), 'admin')}
       </div>
     {/if}

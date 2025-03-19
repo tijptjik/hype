@@ -89,7 +89,9 @@ function handleClickOutside(e: MouseEvent) {
       </div>
     </div>
   </div>
-{:else}
+{/if}
+
+{#if omniContext.pageState === PageState.Transitioning}
   <div
     class="fixed inset-x-[24px] z-50"
     in:fade={{ duration: 200 }}

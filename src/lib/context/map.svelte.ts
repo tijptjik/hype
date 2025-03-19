@@ -233,6 +233,7 @@ export class mapContext {
     this.refreshLayers();
   }
 
+  // TODO Clear the Omnibar when a layer is toggled
   toggleLayer(id: Id) {
     const layers = this.state.prisms.layer;
     const index = layers.indexOf(id);
