@@ -39,7 +39,7 @@ async function translateFields(
 
     // Step 1: Lookup the sourceLang texts
     Object.keys(fields).forEach((key) => {
-      sourceTexts.push(sourceLangObj[key]);
+      sourceTexts.push(sourceLangObj[key] ?? '');
     });
 
     // Step 2: Translation API call
