@@ -949,6 +949,7 @@ export enum HierarchicalResourceParentRefKey {
 
 export enum CollectionStatistic {
   total = 'total',
+  access = 'access',
   filtered = 'filtered',
   selected = 'selected'
 }
@@ -1004,9 +1005,6 @@ export type PanelState = {
 };
 
 export type mapContextState = {
-  // Features for Active Layers
-  // features: Record<string, Feature>;
-  // Markers
   markers: Map<Id, Marker>;
   active: {
     feature: Feature | null;

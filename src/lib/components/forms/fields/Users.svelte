@@ -82,9 +82,8 @@ const removeUser = async (e: Event, userId: string) => {
         <figure class="flex-shrink-0 flex-grow-0 overflow-hidden rounded-l-xl md:block">
           <img src={userRole.user.image} alt={userRole.user.name} />
         </figure>
-        <div class="card-body flex-auto truncate">
-          <p
-            class="card-title overflow-hidden truncate text-ellipsis text-lg font-normal">
+        <div class="card-body flex-auto py-0">
+          <p class="card-title text-lg font-normal">
             {userRole.user.name}
           </p>
         </div>
