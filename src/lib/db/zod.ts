@@ -127,7 +127,13 @@ const getUserRoles = (model: z.ZodType<any>) =>
 
 // TODO - Test the addition / removal of maintainer roles while maintaining and / or removing the owner
 const getMaintainerRoles = (model: z.ZodType<any>) =>
-  z.array(model).refine((schema) => schema.length > 0, 'Add at least 1 Maintainer');
+  z
+    .array(model)
+    .refine((schema) => schema.length > 0, 'Add at least 1 Maintainer')
+    .refine(
+      (schema) => schema.map((user) => user.role).some((role) => role === 'maintainer'),
+      'Set at least 1 Maintainer'
+    );
 
 /* ----------------- */
 // ZOD SCHEMAS
@@ -147,7 +153,8 @@ export const UserPrivacyPreserving = UserBase.omit({
 export const UserBasic = UserBase.pick({
   id: true,
   name: true,
-  image: true
+  image: true,
+  attribution: true
 });
 
 /* ----------------- */

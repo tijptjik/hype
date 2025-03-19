@@ -181,6 +181,9 @@ const resetResults = () => (searchResults = []);
                 onkeydown={(e) => handleResultKeydown(e)}>
                 <Icon src={ChevronRight} class="h-4 w-4" />
                 {item.name}
+                {#if item.attribution}
+                  <span class="text-xs text-gray-500">{item.attribution}</span>
+                {/if}
               </button>
             </li>
           {/each}

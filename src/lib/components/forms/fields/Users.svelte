@@ -83,8 +83,12 @@ const removeUser = async (e: Event, userId: string) => {
           <img src={userRole.user.image} alt={userRole.user.name} />
         </figure>
         <div class="card-body flex-auto py-0">
-          <p class="card-title text-lg font-normal">
-            {userRole.user.name}
+          <p
+            class="card-title flex flex-col items-start justify-start gap-1 text-lg font-normal">
+            <span class="text-xs text-gray-500">
+              {userRole.user.attribution}
+            </span>
+            <span>{userRole.user.name}</span>
           </p>
         </div>
         <label

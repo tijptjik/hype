@@ -24,7 +24,11 @@ import { isFieldUnique, isFieldChanged } from '$lib/db';
 import { OrganisationPatch, OrganisationUpdateAPI } from '$lib/db/zod';
 // TYPES
 import type { SuperValidated } from 'sveltekit-superforms/client';
-import type { Organisation, OrganisationDB, OrganisationPartialUpdate } from '$lib/types';
+import type {
+  Organisation,
+  OrganisationDB,
+  OrganisationPartialUpdate
+} from '$lib/types';
 
 const RESOURCE_TYPE = 'organisation';
 const RESOURCE_PATH = 'organisations';
@@ -130,9 +134,8 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
       return SuperFormResponse<Organisation>(form);
     }
 
-    const { baseOrganisation, formTranslations, formUserRoles } = extractEntitiesToUpdate(
-      form.data as Organisation
-    );
+    const { baseOrganisation, formTranslations, formUserRoles } =
+      extractEntitiesToUpdate(form.data as Organisation);
     const updatedOrganisation = await updateOrganisation(
       db,
       baseOrganisation,
@@ -143,7 +146,11 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
       formTranslations,
       updatedOrganisation.id
     );
-    const updatedUserRoles = await updateUserRoles(db, formUserRoles, updatedOrganisation.id);
+    const updatedUserRoles = await updateUserRoles(
+      db,
+      formUserRoles,
+      updatedOrganisation.id
+    );
     const updatedForm = await rebuildFormData(
       updatedOrganisation,
       updatedTranslations,
@@ -154,7 +161,12 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
       redirect = true;
     }
 
-    return SuperFormResponse<Organisation>(updatedForm, redirect, userLosesAccess, RESOURCE_PATH);
+    return SuperFormResponse<Organisation>(
+      updatedForm,
+      redirect,
+      userLosesAccess,
+      RESOURCE_PATH
+    );
   } catch (err) {
     console.error(err);
     return SuperFormErrorResponse(RESOURCE_TYPE);
@@ -162,11 +174,18 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 };
 
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
-  const { db } = await getDatabaseOrError(locals, platform, ACCESS_STRATEGY, RESOURCE_TYPE);
-  
+  const { db } = await getDatabaseOrError(
+    locals,
+    platform,
+    ACCESS_STRATEGY,
+    RESOURCE_TYPE
+  );
+
   try {
     const formData: OrganisationPartialUpdate = await request.json();
-    const form = await superValidate(formData, zod(OrganisationPatch), {defaults: {}});
+    const form = await superValidate(formData, zod(OrganisationPatch), {
+      defaults: {}
+    });
 
     if (!form.valid) {
       return json(form, { status: 400 });
