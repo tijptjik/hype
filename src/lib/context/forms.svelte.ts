@@ -26,6 +26,7 @@ import {
 // ENUMS
 import { HierarchicalResource } from '$lib/types';
 // TYPES
+import type { Writable } from 'svelte/store';
 import type { ActionResult } from '@sveltejs/kit';
 import type { ResourceState } from './resources.svelte';
 import type { SuperValidated } from 'sveltekit-superforms/client';
@@ -39,11 +40,13 @@ import type {
   Ref,
   SuperFormResult
 } from '$lib/types';
+import { navigate } from '$lib/navigation';
 
 class BaseForm<T extends Record<string, unknown>> {
   protected formResult: SuperFormResult<T>;
   protected resourceState: ResourceState;
   protected resourceType: FalsableResourceType;
+  protected flash: Writable<App.PageData['flash']>;
 
   constructor(
     form: SuperValidated<T>,
@@ -51,7 +54,8 @@ class BaseForm<T extends Record<string, unknown>> {
     insertSchema: any,
     updateSchema: any,
     resourceState: ResourceState,
-    resourceType: FalsableResourceType
+    resourceType: FalsableResourceType,
+    flash: Writable<App.PageData['flash']>
   ) {
     this.resourceState = resourceState;
     this.resourceType = resourceType;
@@ -65,6 +69,7 @@ class BaseForm<T extends Record<string, unknown>> {
     };
     const schema = zod(isNew ? insertSchema : updateSchema);
     this.formResult = superForm(defaults(form.data, schema), formOptions);
+    this.flash = flash;
   }
 
   get form() {
@@ -113,6 +118,8 @@ class BaseForm<T extends Record<string, unknown>> {
       console.error(validatedForm.errors);
       console.error(validatedForm.data);
 
+      this.flash.set({ type: 'error', message: 'Validation failed' });
+
       cancel();
       // SERVER VALIDATION
     } else {
@@ -123,16 +130,14 @@ class BaseForm<T extends Record<string, unknown>> {
       const result = deserialize(await response.text()) as ActionResult;
 
       if (result.type === 'redirect') {
-        // CREATE SUCCESS
-        this.message.set('Created successfully');
+        this.flash.set({ type: 'success', message: 'Created successfully' });
         // Invalidate cache for the resource type; refresh resources
         this.resourceState.invalidateAndRefresh(
           this.resourceType as HierarchicalResource
         );
-        await goto(i18n.resolveRoute(result.location));
+        await navigate(result.location);
       } else if (result.type === 'success') {
-        // UPDATE SUCCESS
-        this.message.set('Updated successfully');
+        this.flash.set({ type: 'success', message: 'Updated successfully' });
         // Invalidate cache for the resource type; refresh resources
         this.resourceState.invalidateAndRefresh(
           this.resourceType as HierarchicalResource
@@ -144,11 +149,12 @@ class BaseForm<T extends Record<string, unknown>> {
       } else {
         // FAILURE / ERROR
         if (result.type === 'failure') {
-          this.message.set('Submission failed');
+          this.flash.set({ type: 'error', message: 'Submission failed' });
+          console.log('failure', result.data?.errors);
           this.errors.set(result.data?.errors);
           this.form.set(result.data?.data);
         } else {
-          this.message.set('Unexpected error');
+          this.flash.set({ type: 'error', message: 'Unexpected error' });
         }
         cancel();
       }
@@ -181,7 +187,8 @@ export class OrganisationForm extends BaseForm<Organisation> {
   constructor(
     form: SuperValidated<Organisation>,
     isNew: boolean,
-    resourceState: ResourceState
+    resourceState: ResourceState,
+    flash: Writable<App.PageData['flash']>
   ) {
     super(
       form,
@@ -189,7 +196,8 @@ export class OrganisationForm extends BaseForm<Organisation> {
       OrganisationInsertAPI,
       OrganisationUpdateAPI,
       resourceState,
-      HierarchicalResource.organisation
+      HierarchicalResource.organisation,
+      flash
     );
   }
 }
@@ -198,7 +206,8 @@ export class ProjectForm extends BaseForm<Project> {
   constructor(
     form: SuperValidated<Project>,
     isNew: boolean,
-    resourceState: ResourceState
+    resourceState: ResourceState,
+    flash: Writable<App.PageData['flash']>
   ) {
     super(
       form,
@@ -206,7 +215,8 @@ export class ProjectForm extends BaseForm<Project> {
       ProjectInsertAPI,
       ProjectUpdateAPI,
       resourceState,
-      HierarchicalResource.project
+      HierarchicalResource.project,
+      flash
     );
   }
 }
@@ -215,7 +225,8 @@ export class LayerForm extends BaseForm<Layer> {
   constructor(
     form: SuperValidated<Layer>,
     isNew: boolean,
-    resourceState: ResourceState
+    resourceState: ResourceState,
+    flash: Writable<App.PageData['flash']>
   ) {
     super(
       form,
@@ -223,7 +234,8 @@ export class LayerForm extends BaseForm<Layer> {
       LayerInsertAPI,
       LayerUpdateAPI,
       resourceState,
-      HierarchicalResource.layer
+      HierarchicalResource.layer,
+      flash
     );
   }
 }
@@ -232,7 +244,8 @@ export class FeatureForm extends BaseForm<Feature> {
   constructor(
     form: SuperValidated<Feature>,
     isNew: boolean,
-    resourceState: ResourceState
+    resourceState: ResourceState,
+    flash: Writable<App.PageData['flash']>
   ) {
     super(
       form,
@@ -240,7 +253,8 @@ export class FeatureForm extends BaseForm<Feature> {
       FeatureInsertAPI,
       FeatureUpdateAPI,
       resourceState,
-      HierarchicalResource.feature
+      HierarchicalResource.feature,
+      flash
     );
   }
 }
@@ -255,7 +269,8 @@ export function setForm<T extends Organisation | Project | Layer | Feature>(
   resourceType: FalsableResourceType,
   entity: Ref,
   form: SuperValidated<T>,
-  resourceState: ResourceState
+  resourceState: ResourceState,
+  flash: Writable<App.PageData['flash']>
 ): SuperFormResult<T> {
   if (!entity) {
     console.trace();
@@ -278,7 +293,7 @@ export function setForm<T extends Organisation | Project | Layer | Feature>(
     default:
       throw new Error(`Unknown resource type: ${resourceType}`);
   }
-  const instance = new FormClass(form, entity === NEW_REF, resourceState);
+  const instance = new FormClass(form, entity === NEW_REF, resourceState, flash);
   return setContext(
     getContextRef(resourceType, entity),
     instance

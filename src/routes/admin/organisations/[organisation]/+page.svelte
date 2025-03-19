@@ -14,6 +14,8 @@ import UserSection from '$lib/components/forms/sections/User.svelte';
 import { HierarchicalResource } from '$lib/types';
 // TYPES
 import type { FormPageProps, FormField, Organisation, GetImageAPI } from '$lib/types';
+import { getFlash } from 'sveltekit-flash-message';
+import { page } from '$app/stores';
 
 // CONTEXT
 const resourceState = getHierarchicalResourceState();
@@ -87,7 +89,8 @@ let form = setForm<Organisation>(
   RESOURCE,
   pageProps.data.entity,
   pageProps.data.validatedForm,
-  getHierarchicalResourceState()
+  getHierarchicalResourceState(),
+  getFlash(page, { clearOnNavigate: false, clearAfterMs: 2500 })
 );
 let enhance = $derived(form.enhance);
 
