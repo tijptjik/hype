@@ -3,8 +3,6 @@ import { ADMIN_PATH } from '$lib/index';
 // CONTEXT
 import { getContext, setContext } from 'svelte';
 import { QueryClient } from '@tanstack/svelte-query';
-// NAVIGATION
-import { goto } from '$app/navigation';
 // ENUMS
 import {
   HierarchicalResource,
@@ -27,9 +25,9 @@ import type {
   AdminFilterStates,
   AdminFilterState,
   Resource,
-  ResourceTypeWithChildren,
-  UserRole
+  ResourceTypeWithChildren
 } from '../types';
+import type { UserRole } from '$lib/auth/utils';
 import type { Page } from '@sveltejs/kit';
 import { reversePath } from '$lib/navigation';
 const nullOrEquals = (a: any, b: any) => {
@@ -488,20 +486,40 @@ export class ResourceState {
   };
 
   // Hierarchical Resource Helpers
-
-  getParent = () => {
-    // Get the Parent Resource
-    const parentResource =
-      HierarchicalResourceParent[
-        this.state.active.resource as keyof typeof HierarchicalResourceParent
-      ];
-    // Get the Parent Entity
-    const parentEntity = this.state.resources[parentResource].find(
-      (entity) =>
-        entity.id ===
-        this.state.active.entity[HierarchicalResourceParentRefKey[parentResource]]
-    );
-    return parentEntity;
+  getAscendantOrSelf = (
+    entity: Resource,
+    resource: HierarchicalResource,
+    ascendantResource: HierarchicalResource
+  ): Resource | null => {
+    // If the resource is the same as the ascendant resource, return itself
+    if (resource === ascendantResource) return entity;
+    // Organisation is the top level resource
+    if (resource === HierarchicalResource.organisation) return null;
+    // Go through the hierarchy to find the ascendant
+    let isDescendant = false;
+    if (
+      resource == HierarchicalResource.feature &&
+      ascendantResource != HierarchicalResource.feature
+    ) {
+      entity = this.getLayer(entity as Feature) as Layer;
+      isDescendant = true;
+    }
+    if (
+      (resource == HierarchicalResource.layer || isDescendant) &&
+      ascendantResource != HierarchicalResource.layer
+    ) {
+      entity = this.getProject(entity as Layer) as Project;
+      isDescendant = true;
+    }
+    if (
+      (resource == HierarchicalResource.project || isDescendant) &&
+      ascendantResource != HierarchicalResource.project
+    ) {
+      entity = this.getOrganisation(entity as Project) as Organisation;
+      isDescendant = true;
+    }
+    // Return the ascendant or null if an invalid ancestry relationship was provided
+    return isDescendant ? entity : null;
   };
 
   // // Clear all resources below the specified level
@@ -693,13 +711,14 @@ export class ResourceState {
     return this.state.resources[resourceKey];
   };
 
-  getEntity() {
-    let resource = this.state.active.resource;
-    let entityRef = this.state.active.entity;
-    if (!resource || !entityRef) return null;
-    let entityRefKey = HierarchicalResourceRefKey[resource];
-    return this.state.resources[resource].find(
-      (e) => e[entityRefKey as keyof Resource] === entityRef
+  getEntity(resource?: HierarchicalResource, entityRef?: Id | Code) {
+    let resourceKey = resource ?? this.activeResource;
+    let entityRefKey = HierarchicalResourceRefKey[resourceKey];
+    if (!entityRefKey) return null;
+    return this.state.resources[resourceKey].find(
+      (entity) =>
+        entity[entityRefKey as keyof Resource] ===
+        (entityRef ? entityRef : this.activeEntity)
     );
   }
   // GENERIC UTILS
