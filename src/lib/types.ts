@@ -954,6 +954,15 @@ export enum CollectionStatistic {
   selected = 'selected'
 }
 
+export enum GeoCoder {
+  hkgov_als = 'hkgov_als',
+  googlemaps = 'googlemaps',
+  openstreetmap = 'osm',
+  here = 'here',
+  mapbox = 'mapbox',
+  maptiler = 'maptiler'
+}
+
 // USER APP
 
 // Selected Resource Constraints by code
