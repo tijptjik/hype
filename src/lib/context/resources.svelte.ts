@@ -337,15 +337,16 @@ export class ResourceState {
 
   // FILTERS
 
-  getFilteredResource = (resource: HierarchicalResource) => {
+  getFilteredResource = (resource: HierarchicalResource, accessOnly = false) => {
     let filterKeys = ['isPublished', 'isArchived'];
     let query = this.state.filters[resource as keyof AdminFilterStates].text || '';
-    let result = this.state.resources[resource].filter(
-      (entity) =>
-        filterKeys.every((key) => this.booleanFilter(resource, entity, key)) &&
-        this.textFilter(resource, entity, query)
+    // TEXT & STATE FILTERS
+    let result = this.state.resources[resource].filter((entity) =>
+      filterKeys.every((key) => this.booleanFilter(resource, entity, key)) && accessOnly
+        ? true
+        : this.textFilter(resource, entity, query)
     );
-
+    // ACCESS FILTERS
     if (resource === HierarchicalResource.organisation) {
       result = result.filter((organisation) => {
         return this.hasOrganisationRole(organisation.id as Id);
@@ -361,6 +362,7 @@ export class ResourceState {
     } else if (resource === HierarchicalResource.feature) {
       result = result.filter((feature) => {
         const layer = this.getLayer(feature as Feature);
+        if (!layer) return false;
         return this.hasProjectRole(layer!.projectId as Id);
       });
     }

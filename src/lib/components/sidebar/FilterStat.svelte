@@ -1,11 +1,12 @@
 <script lang="ts">
+// I18N
+import * as m from '$lib/paraglide/messages';
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // ENUMS
 import { HierarchicalResource, CollectionStatistic } from '$lib/types';
 // TYPES
 import type { ResourceTypeWithChildren } from '$lib/types';
-import type { inspect } from 'util';
 
 // CONFIG
 const resourceState = getHierarchicalResourceState();
@@ -15,25 +16,33 @@ type Props = {
 };
 
 let { statistic, resourceType } = $props();
-let label = $derived(
-  statistic === CollectionStatistic.total
-    ? 'Total'
-    : statistic === CollectionStatistic.filtered
-      ? 'Filtered'
-      : 'Selected'
-);
-let count = $derived(
-  statistic === CollectionStatistic.total
-    ? resourceState.state.resources[resourceType as HierarchicalResource].length
-    : statistic === CollectionStatistic.filtered
-      ? resourceState.getFilteredResource(resourceType).length
-      : statistic === CollectionStatistic.selected && resourceType !== 'feature'
-        ? resourceState.state.prisms[resourceType as ResourceTypeWithChildren].length
-        : 0
-);
+let getLabel = (statistic: CollectionStatistic) => {
+  if (statistic === CollectionStatistic.access) {
+    return m.admin__filter_stat_access();
+  } else if (statistic === CollectionStatistic.filtered) {
+    return m.admin__filter_stat_filtered();
+  } else if (statistic === CollectionStatistic.selected) {
+    return m.admin__filter_stat_selected();
+  }
+};
+
+let label = $derived(getLabel(statistic));
+
+let getCount = (statistic: CollectionStatistic) => {
+  if (statistic === CollectionStatistic.total) {
+    return resourceState.state.resources[resourceType as HierarchicalResource].length;
+  } else if (statistic === CollectionStatistic.access) {
+    return resourceState.getFilteredResource(resourceType, true).length;
+  } else if (statistic === CollectionStatistic.filtered) {
+    return resourceState.getFilteredResource(resourceType, false).length;
+  } else if (statistic === CollectionStatistic.selected && resourceType !== 'feature') {
+    return resourceState.state.prisms[resourceType as ResourceTypeWithChildren].length;
+  }
+};
+let count = $derived(getCount(statistic));
 </script>
 
-<p class="flex-grow">
-  <span>{count || '-'}</span>
-  <span class="text-3xs">{label}</span>
-</p>
+<div class="flew-row tooltip-right flex flex-grow items-center justify-center gap-4">
+  <p class="text-3xs">{label}</p>
+  <p>{count || '-'}</p>
+</div>
