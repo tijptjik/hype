@@ -42,7 +42,7 @@ let getNormalisedRegionKey = (region: string): keyof typeof regionNormalised => 
   return region as keyof typeof regionNormalised;
 };
 
-let getNormalisedRegion = (
+export let getNormalisedRegion = (
   region: keyof typeof regionNormalised,
   lang: LanguageTag = 'en'
 ): string | null => {
@@ -140,7 +140,7 @@ let getNormalisedDistrictKey = (district: string): keyof typeof districtNormalis
   return district as keyof typeof districtNormalised;
 };
 
-let getNormalisedDistrict = (
+export let getNormalisedDistrict = (
   district: keyof typeof districtNormalised,
   lang: LanguageTag = 'en'
 ): string | null => {
@@ -210,7 +210,7 @@ export function calculateDistance(
   return R * c; // Distance in meters
 }
 
-export function parseToDisplayAddress(address: string, name?: string): string {
+export function parseToDisplayAddressEn(address: string, name?: string): string {
   let result = address;
 
   // Apply abbreviations
@@ -229,6 +229,16 @@ export function parseToDisplayAddress(address: string, name?: string): string {
   // Add name if provided
   if (name) {
     result = `${name}, ${result}`;
+  }
+
+  return result;
+}
+
+export function parseToDisplayAddressZh(address: string, name?: string): string {
+  let result = address;
+  // Add name if provided
+  if (name) {
+    result = `${result}${name}`;
   }
 
   return result;
