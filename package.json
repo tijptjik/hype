@@ -56,9 +56,9 @@
     "prettier-plugin-svelte": "^3.3.3",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "svelte-check": "^4.1.5",
-    "typescript-eslint": "^8.26.1",
+    "typescript-eslint": "^8.27.0",
     "vite-plugin-node-polyfills": "^0.22.0",
-    "wrangler": "^4.1.0"
+    "wrangler": "^4.2.0"
   },
   "type": "module",
   "trustedDependencies": [
@@ -99,6 +99,7 @@
     "hammerjs": "^2.0.8",
     "maplibre-gl": "^4.7.1",
     "postcss": "^8.5.3",
+    "proj4": "^2.15.0",
     "short-uuid": "^5.2.0",
     "svelte": "^5.23.2",
     "svelte-fa": "^4.0.3",
