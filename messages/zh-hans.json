@@ -162,5 +162,9 @@
   "admin__validation_key_gte_2_chars": "至少 2 个字符",
   "admin__validation_url_invalid": "URL 无效 -- 您是否添加了 https://？",
   "admin__validation_attribution_is_required": "需要归因",
-  "admin__validation_attribution_lte_128_chars": "最多 128 个字符"
+  "admin__validation_attribution_lte_128_chars": "最多 128 个字符",
+
+  "admin__geo_lookup_address_at_location": "取得位置位址",
+  "admin__geo_latitude": "緯度",
+  "admin__geo_longitude": "經度"
 }

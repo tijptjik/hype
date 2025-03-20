@@ -168,5 +168,9 @@
   "admin__validation_key_gte_2_chars": "Minimum of 2 characters",
   "admin__validation_url_invalid": "URL is invalid -- did you add https://?",
   "admin__validation_attribution_is_required": "Attribution is required",
-  "admin__validation_attribution_lte_128_chars": "Maximum of 128 characters"
+  "admin__validation_attribution_lte_128_chars": "Maximum of 128 characters",
+
+  "admin__geo_lookup_address_at_location": "Get location address",
+  "admin__geo_latitude": "Latitude",
+  "admin__geo_longitude": "Longitude"
 }
