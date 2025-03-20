@@ -54,7 +54,7 @@ const navigateToGallery = (e: Event) => {
       {#if image}
         <div class="relative h-full w-full overflow-hidden rounded-lg">
           <!-- Background Image -->
-          <div class="absolute inset-0 z-10 h-full w-full bg-neutral opacity-50">
+          <div class="z-1 absolute inset-0 h-full w-full bg-neutral opacity-50">
             <Image
               src={getURLfromImage({ image, transformation: 'c_fill,h_320,w_320,' })}
               alt="Background Image"
@@ -65,7 +65,7 @@ const navigateToGallery = (e: Event) => {
           </div>
 
           <!-- Main Image -->
-          <div class="absolute z-20 h-full w-full overflow-hidden p-2">
+          <div class="z-2 absolute h-full w-full overflow-hidden p-2">
             <Image
               src={getURLfromImage({ image, transformation: 'c_fit,h_320,w_320' })}
               alt="Canonical image of feature"

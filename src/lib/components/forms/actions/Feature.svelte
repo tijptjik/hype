@@ -9,7 +9,8 @@ let actionProps: FieldProps & ModalProps = $props();
 let { form } = actionProps.form;
 
 // UTILS
-const onChange = (key: string) => {
+const onChange = (e: Event, key: string) => {
+  e.preventDefault();
   form.update(($form) => {
     $form[key] = !$form[key];
     return $form;
@@ -22,10 +23,10 @@ const onChange = (key: string) => {
   <Toggle
     size="sm"
     checked={$form.isIntangible as boolean}
-    onChange={() => onChange('isIntangible')} />
+    onChange={(e) => onChange(e, 'isIntangible')} />
   <div class="text-ellipsis text-sm font-light">Publicly Accessible</div>
   <Toggle
     size="sm"
     checked={$form.isVisitable as boolean}
-    onChange={() => onChange('isVisitable')} />
+    onChange={(e) => onChange(e, 'isVisitable')} />
 </div>

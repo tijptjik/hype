@@ -62,7 +62,7 @@ let getWarningMessage = () => {
 
 <div class="relative flex flex-col rounded-t-2xl">
   <div
-    class="z-10 flex h-20 flex-row items-center justify-between gap-2 rounded-t-2xl bg-base-100 px-6 @container">
+    class="flex h-20 flex-row items-center justify-between gap-2 rounded-t-2xl bg-base-100 px-6 @container">
     <div class=" flex h-20 items-center gap-4">
       <Icon src={ChevronRight} class="h-6 w-6" />
       <h3 class="flex-shrink-1 text-lg">
