@@ -427,10 +427,21 @@ export const FeatureI18nBase = createSelectSchema(featureI18n);
 // Base schema to validate submit data
 export const FeatureInsert = createInsertSchema(feature).extend({
   ...getDefaultConstraints(feature),
-  // TODO These are NOT custom, they should just be z.object()
+  isIntangible: z.boolean().default(false),
+  isVisitable: z.boolean().default(true),
   contributorId: z.string(),
-  geometry: PointGeometry,
-  addressProperties: z.custom<AddressProperties>().optional()
+  geometry: PointGeometry.default({
+    type: 'Point',
+    coordinates: [114.1693671540923, 22.319307515052614]
+  }),
+  // TODO These are NOT custom, they should just be z.object()
+  addressProperties: z.custom<AddressProperties>().default({
+    // Metadata
+    addressForwardGeocoder: 'hkgov_als',
+    addressReverseGeocoder: 'hkgov_identify',
+    addressReverseGen: false,
+    addressForwardGen: false
+  })
 });
 
 export const FeatureUpdate = FeatureInsert.extend({
