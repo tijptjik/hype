@@ -122,16 +122,117 @@ interface ALSResult {
   }>;
 }
 
+// First, let's add a helper function to convert WGS84 to Web Mercator (EPSG:3857)
+function convertToWebMercator(lng: number, lat: number): [number, number] {
+  const x = (lng * 20037508.34) / 180;
+  const y = Math.log(Math.tan(((90 + lat) * Math.PI) / 360)) / (Math.PI / 180);
+  return [x, (y * 20037508.34) / 180];
+}
+
+// And a function to convert Web Mercator back to WGS84
+function convertFromWebMercator(x: number, y: number): [number, number] {
+  const lng = (x * 180) / 20037508.34;
+  const lat = (Math.atan(Math.exp((y * Math.PI) / 20037508.34)) * 360) / Math.PI - 90;
+  return [lng, lat];
+}
+
 export async function reverseGeocode(
   lng: number,
-  lat: number,
-  apiVersion: string = 'v1.0.0',
-  lang: LanguageTag = 'en'
-): Promise<IdentifyResult> {
-  const [easting, northing] = convertWGS84ToHK1980(lng, lat);
-  const endPoint = `https://geodata.gov.hk/gs/api/${apiVersion}/identify`;
-  const response = await fetch(`${endPoint}?x=${easting}&y=${northing}&lang=${lang}`);
-  return response.json();
+  lat: number
+): Promise<{ address: string | null; coordinates: [number, number] | null }> {
+  const [x, y] = convertToWebMercator(lng, lat);
+
+  const params = new URLSearchParams({
+    key: '6a40dd75bce8494ea735efd8d97dd820',
+    outSR: JSON.stringify({ wkid: 3857 }),
+    location: JSON.stringify({
+      x,
+      y,
+      spatialReference: { wkid: 102100, latestWkid: 3857 }
+    }),
+    distance: '500',
+    f: 'json'
+  });
+
+  const endPoint = 'https://api.hkmapservice.gov.hk/ags/gc/loc/address/reverseGeocode';
+  const response = await fetch(`${endPoint}?${params}`);
+  const result = await response.json();
+
+  console.log(result);
+
+  if (!result?.address) return { address: null, coordinates: null };
+
+  // Parse street address
+  const streetParts = result.address.Street?.split(' ') || [];
+  let buildingNumberFrom: string | undefined;
+  let buildingNumberTo: string | undefined;
+  let streetName: string | undefined;
+
+  if (streetParts.length > 1) {
+    const numbers = streetParts[0].split(/[-\/]/);
+    buildingNumberFrom = numbers[0];
+    buildingNumberTo = numbers[1];
+    streetName = streetParts.slice(1).join(' ');
+  }
+
+  // Get coordinates and calculate distance
+  const [resultLng, resultLat] = convertFromWebMercator(
+    result.location.x,
+    result.location.y
+  );
+  const distance = calculateDistance(lng, lat, resultLng, resultLat);
+
+  // Process the result
+  const processedResult = {
+    displayAddress: result.address.Match_addr,
+    displayAddressGen: true,
+    addressProperties: {
+      buildingNumberFrom,
+      buildingNumberTo,
+      streetName,
+      neighbourhood:
+        result.address.Neighborhood || result.address.City || result.address.Subregion,
+      district: getNormalisedDistrict(result.address.State, 'en'),
+      region: getNormalisedRegion(result.address.State, 'en'),
+      country: 'HKSAR',
+      longitude: resultLng,
+      latitude: resultLat,
+      distanceFromPoint: distance,
+      addressReverseGeocoder: 'hkgov_mapservice',
+      addressReverseGen: true
+    }
+  };
+
+  // Perform forward lookup using the Match_addr
+  try {
+    const forwardResult = await forwardGeocode(result.address.Match_addr);
+    if (forwardResult) {
+      const fullResult = await processForwardGeocodeResult(
+        forwardResult,
+        true,
+        lng,
+        lat
+      );
+      if (fullResult) {
+        // Merge the results, keeping reverse geocode specific fields
+        return {
+          ...fullResult,
+          addressProperties: {
+            ...fullResult.addressProperties,
+            distanceFromPoint: processedResult.addressProperties.distanceFromPoint,
+            addressReverseGeocoder:
+              processedResult.addressProperties.addressReverseGeocoder,
+            addressReverseGen: processedResult.addressProperties.addressReverseGen
+          }
+        };
+      }
+    }
+  } catch (error) {
+    console.error('Forward geocoding failed:', error);
+  }
+
+  // Return basic result if forward geocoding fails
+  return processedResult;
 }
 
 export async function forwardGeocode(
@@ -161,76 +262,6 @@ export async function geoAddressLookup(geoAddressCode: string): Promise<ALSResul
     }
   });
   return response.json();
-}
-
-export async function processReverseGeocodeResult(result: IdentifyResult) {
-  console.log('ID result', result);
-  if (!result?.results?.length) return null;
-
-  const addressResult = result.results.find((r) => r.type === 'ADDRESS');
-  if (!addressResult) return null;
-
-  const { addressInfo } = addressResult;
-  const [resultLng, resultLat] = convertHK1980ToWGS84(addressInfo.x, addressInfo.y);
-  const distance = calculateDistance(
-    addressInfo.x,
-    addressInfo.y,
-    resultLat,
-    resultLng
-  );
-
-  // Get English display address
-  const displayAddressEn = parseToDisplayAddressEn(
-    addressInfo.eaddress,
-    addressInfo.ename
-  );
-  const displayAddressZh = parseToDisplayAddressZh(
-    addressInfo.caddress,
-    addressInfo.cname
-  );
-
-  // Get translations
-  const translations: Record<
-    TargetLang,
-    { displayAddress: string; displayAddressGen: boolean }
-  > = {
-    'zh-hant': { displayAddress: displayAddressZh, displayAddressGen: true },
-    'zh-hans': { displayAddress: displayAddressEn, displayAddressGen: true }
-  };
-  try {
-    const response = await fetch('/api/translation', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sourceLang: 'zh-hant',
-        targetLang: 'zh-hans',
-        texts: [displayAddressZh]
-      })
-    });
-    const zhHansData = await response.json();
-
-    translations['zh-hans'].displayAddress = zhHansData.translations[0];
-  } catch (error) {
-    console.error('Translation failed:', error);
-    // Fallback to empty translations
-    translations['zh-hant'] = { displayAddress: '', displayAddressGen: false };
-    translations['zh-hans'] = { displayAddress: '', displayAddressGen: false };
-  }
-
-  return {
-    displayAddressEn,
-    translations,
-    addressProperties: {
-      distanceFromPoint: distance,
-      addressReverseGeocoder: 'hkgov_identify',
-      addressReverseGen: true,
-      country: 'HKSAR',
-      height: addressInfo.roofLevel,
-      amsl: addressInfo.baseLevel,
-      geoAddressCode: addressInfo.bdcsuid,
-      hkgovidentityAddressType: addressInfo.addressType
-    }
-  };
 }
 
 function parseALSResultToDisplay(
@@ -331,7 +362,9 @@ function parseALSResultToDisplay(
 
 export async function processForwardGeocodeResult(
   result: ALSResult,
-  existingDisplayAddressGen?: boolean | null
+  existingDisplayAddressGen?: boolean | null,
+  lng: number,
+  lat: number
 ) {
   if (!result.SuggestedAddress?.length) return null;
 
@@ -427,6 +460,12 @@ export async function processForwardGeocodeResult(
       country: 'HKSAR',
       longitude: pa.GeospatialInformation.Longitude,
       latitude: pa.GeospatialInformation.Latitude,
+      distanceFromPoint: calculateDistance(
+        lng,
+        lat,
+        parseFloat(pa.GeospatialInformation.Longitude),
+        parseFloat(pa.GeospatialInformation.Latitude)
+      ),
       confidenceForwardGeocoder: address.ValidationInformation.Score,
       geoAddressCode: pa.GeoAddress,
       addressForwardGeocoder: 'hkgov_als',

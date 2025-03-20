@@ -130,7 +130,7 @@ const districtCodeToName = {
 
 let getNormalisedDistrictKey = (district: string): keyof typeof districtNormalised => {
   if (!Object.keys(districtNormalised).includes(district)) {
-    let district = district.toLowerCase().replace(/ /g, '');
+    district = district.toLowerCase().replace(/ /g, '');
     Object.entries(districtIdentifiers).forEach(([key, value]) => {
       if (value.includes(district)) {
         return districtCodeToName[key];
