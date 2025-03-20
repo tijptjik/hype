@@ -7,14 +7,17 @@ import type {
   FeatureI18n,
   FeatureProperty,
   NewFeatureI18n,
-  NewFeatureProperty
+  NewFeatureProperty,
+  Layer,
+  LayerProperty,
+  PropertyI18n
 } from '$lib/types';
 import { error } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
-import { feature, featureI18n, featureProperty } from '../schema';
+import { feature, featureI18n, featureProperty, layerProperty } from '../schema';
 import {
   FeatureInsert,
   FeatureUpdate,
@@ -184,3 +187,39 @@ export const rebuildFormData = async (
     zod(FeatureUpdateAPI)
   );
 };
+
+export function mergeFeatureProperties(feature: Feature, layer: Layer): Feature {
+  // Initialize properties array if it doesn't exist
+  if (!feature.properties) {
+    feature.properties = [];
+  }
+
+  // Get existing property IDs
+  const existingPropertyIds = new Set(
+    feature.properties.map((prop) => prop.propertyId)
+  );
+
+  // Add layer properties that aren't already in the feature
+  layer.properties.forEach((layerProp) => {
+    if (!existingPropertyIds.has(layerProp.propertyId)) {
+      // Ensure property translations are in the correct format
+      if (typeof layerProp.property.translations !== 'object') {
+        layerProp.property.translations = toNestedTranslations<PropertyI18n>(
+          layerProp.property.translations
+        );
+      }
+
+      // Add new feature property following FeaturePropertyInsertAPI schema
+      feature.properties.push({
+        featureId: feature.id,
+        propertyId: layerProp.propertyId,
+        value: null,
+        translations: {},
+        property: layerProp.property,
+        propertyValue: undefined
+      });
+    }
+  });
+
+  return feature;
+}

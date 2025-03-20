@@ -620,20 +620,17 @@ export const downloadImage = async (
     const extension = contentType ? `.${contentType.split('/')[1]}` : '';
     const filename = `${image.publicId.split('/').pop()}${extension}`;
 
-    // Create a download link with 'download' attribute
     const link = document.createElement('a');
-    link.style.display = 'none'; // Hide the link
+    link.style.display = 'none';
     link.href = downloadUrl;
     link.target = '_blank';
-    link.download = filename; // This triggers download instead of navigation
+    link.download = filename;
 
     // Trigger download
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    // Flash notification that download started
-    // You'll need to implement your preferred notification system
-    // This is just a placeholder - replace with your actual notification implementation
+    // Flash notification that was successful
     flash.set({
       type: 'success',
       message: `Downloaded ${filename}`,

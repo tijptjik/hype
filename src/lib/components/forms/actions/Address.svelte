@@ -33,6 +33,8 @@ let [lng, lat] = $derived($form.geometry.coordinates);
     class="btn-rounded btn bg-fuchsia-700 text-base-content transition-colors duration-300 hover:bg-fuchsia-800"
     onclick={actions.geocode}>
     <Icon src={MagnifyingGlass} class="h-4 w-4" />
-    <span class="hidden md:block"> Geocode </span>
+    <span class="hidden md:block">
+      {m.admin__geocode_lookup_address_at_location()}
+    </span>
   </button>
 </div>

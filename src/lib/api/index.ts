@@ -38,6 +38,7 @@ import { NEW_REF } from '$lib';
 import type { AccessStrategyOption, StatefulAccessOption } from '$lib/types';
 import type { GetImageAPI } from '$lib/types';
 import type { Session } from '@auth/core/types';
+import { mergeFeatureProperties } from '$lib/db/services/feature';
 
 export const getSessionOrError = async (locals: App.Locals) => {
   const session = await locals.auth();
@@ -363,6 +364,7 @@ export async function loadFormData<T>({
     const { parentId, parentRef } = options;
 
     if (parentResourceType && parentId) {
+      // TODO Move the creation of the form to the server, and use fetch to obtain it -- this pleases Sveltekit
       if (!parentRef) {
         throw error(
           400,
@@ -400,6 +402,11 @@ export async function loadFormData<T>({
           initialData = mergeProjectProperties(
             initialData as Layer,
             parentData.properties
+          );
+        } else if (resourceType === 'feature') {
+          initialData = mergeFeatureProperties(
+            initialData as Feature,
+            parentData // This is the layer data with properties
           );
         }
 
@@ -440,6 +447,7 @@ export async function loadFormData<T>({
       }
     }
   }
+  console.log('form', entityRef, form);
   return {
     entity: entityRef,
     validatedForm: form,
