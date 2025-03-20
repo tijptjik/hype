@@ -957,11 +957,8 @@ export enum CollectionStatistic {
 
 export enum GeoCoder {
   hkgov_als = 'hkgov_als',
-  googlemaps = 'googlemaps',
-  openstreetmap = 'osm',
-  here = 'here',
-  mapbox = 'mapbox',
-  maptiler = 'maptiler'
+  hkgov_identify = 'hkgov_identify',
+  googlemaps = 'googlemaps'
 }
 
 // USER APP
