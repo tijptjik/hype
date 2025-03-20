@@ -16,7 +16,14 @@ let { form } = fieldProps.form;
   min={$form[fieldRoot][fieldIndex].property.min}
   max={$form[fieldRoot][fieldIndex].property.max}
   step="1"
-  bind:value={$form[fieldRoot][fieldIndex][fieldKey]} />
+  value={$form[fieldRoot][fieldIndex][fieldKey]}
+  onchange={(e) => {
+    e.preventDefault();
+    form.update(($form) => {
+      $form[fieldRoot][fieldIndex][fieldKey] = e.target.value;
+      return $form;
+    });
+  }} />
 <div class="flex w-full justify-between px-2 text-xs">
   <span>{$form[fieldRoot][fieldIndex].property.min}</span>
   <span>❘</span>
