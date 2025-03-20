@@ -125,7 +125,6 @@ class BaseForm<T extends Record<string, unknown>> {
         this.#getFetchConfig(action)
       );
       const result = deserialize(await response.text()) as ActionResult;
-
       if (result.type === 'redirect') {
         // Invalidate cache for the resource type; refresh resources
         this.resourceState.invalidateAndRefresh(
@@ -135,12 +134,18 @@ class BaseForm<T extends Record<string, unknown>> {
         // the userRoles -- as currently the userRoles are not updated on the client
         // side when the user is redirected to the new resource / index of resources
         // causing it to not show up / still show up.
-        window.location.pathname = result.location;
+
+        const url = new URL(window.location.href);
+        url.pathname = result.location;
+        url.searchParams.delete('parentId');
+        url.searchParams.delete('parentRef');
+        // goto(url.toString());
         this.flash.set({
           type: 'success',
           message: 'Created successfully',
           options: { clearOnNavigate: false, clearAfterMs: 5000 }
         });
+        window.location.href = url.toString();
       } else if (result.type === 'success') {
         this.flash.set({ type: 'success', message: 'Updated successfully' });
         // Invalidate cache for the resource type; refresh resources
