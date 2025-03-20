@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import * as m from '$lib/paraglide/messages.js';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { MagnifyingGlass, GlobeAsiaAustralia } from '@steeze-ui/heroicons';
@@ -34,7 +36,7 @@ let [lng, lat] = $derived($form.geometry.coordinates);
     onclick={actions.geocode}>
     <Icon src={MagnifyingGlass} class="h-4 w-4" />
     <span class="hidden md:block">
-      {m.admin__geocode_lookup_address_at_location()}
+      {m.admin__geo_lookup_address_at_location()}
     </span>
   </button>
 </div>

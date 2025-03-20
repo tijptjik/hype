@@ -170,7 +170,7 @@
   "admin__validation_attribution_is_required": "Attribution is required",
   "admin__validation_attribution_lte_128_chars": "Maximum of 128 characters",
 
-  "admin__geo_lookup_address_at_location": "Get location address",
+  "admin__geo_lookup_address_at_location": "Get address for location",
   "admin__geo_latitude": "Latitude",
   "admin__geo_longitude": "Longitude"
 }
