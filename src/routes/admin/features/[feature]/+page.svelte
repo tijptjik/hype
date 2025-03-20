@@ -29,7 +29,6 @@ import type {
   FormFieldConfig,
   ImageEditRefs
 } from '$lib/types';
-
 // CONTEXT
 const resourceState = getHierarchicalResourceState();
 
@@ -147,8 +146,6 @@ let refs: ImageEditRefs = $derived({
       role="form"
       data-testid="featureForm"
       class="h-full">
-      <!-- <main class="flex h-full flex-col gap-6 overflow-y-scroll p-6"> -->
-
       <main
         class="flex flex-1 flex-row gap-6 overflow-hidden bg-black p-6 pr-3"
         style="height: calc(100vh - 148px) !important;">
@@ -182,7 +179,9 @@ let refs: ImageEditRefs = $derived({
                   subtitle="which are displayed in feature info panels"
                   fieldDiscriminator="specifier"
                   fields={FIELDS.property as FormFieldArray} />
+                {#if pageProps.data.entity !== NEW_REF}
                 <CanonicalImage {form} />
+                {/if}
               </div>
               <I18nSection
                 {form}
