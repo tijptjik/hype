@@ -200,6 +200,10 @@ export async function reverseGeocode(
       distanceFromPoint: distance,
       addressReverseGeocoder: 'hkgov_mapservice',
       addressReverseGen: true
+    },
+    translations: {
+      'zh-hant': {},
+      'zh-hans': {}
     }
   };
 
