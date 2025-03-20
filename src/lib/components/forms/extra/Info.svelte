@@ -41,6 +41,7 @@ $effect(() => {
   <button
     class="btn-rounded btn btn-ghost btn-sm p-1"
     onclick={(e) => {
+      e.preventDefault();
       e.stopPropagation();
       showInfo = !showInfo;
     }}
