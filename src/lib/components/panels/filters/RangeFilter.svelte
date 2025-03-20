@@ -47,6 +47,7 @@ let displayText = $derived(() => {
 });
 
 // Handle range updates
+// TODO Fix the range filter
 function handleRangeChange(e: CustomEvent) {
   const [rangeMin, rangeMax] = e.detail.values;
   // selectedCategories[property.key] = {

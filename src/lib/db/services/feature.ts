@@ -95,8 +95,6 @@ export const updateProperties = async (
   properties: FeatureProperty[],
   featureId: Id
 ) => {
-  const updatedProperties: FeatureProperty[] = [];
-
   // Get existing property IDs from database
   const existingProps = await db
     .select({ id: featureProperty.id })
@@ -125,14 +123,28 @@ export const updateProperties = async (
       .where(featureProperty.id.in(idsToDelete));
   }
 
-  // Insert new properties
+  // Insert new properties, including those with null values
   for (const prop of propsToInsert) {
-    await db.insert(featureProperty).values({ ...prop, featureId });
+    const insertData = {
+      ...prop,
+      featureId,
+      value: prop.value ?? null, // Explicitly handle null values
+      propertyValueId: prop.propertyValueId ?? null // Explicitly handle null values
+    };
+    await db.insert(featureProperty).values(insertData);
   }
 
-  // Update existing properties
+  // Update existing properties, including those with null values
   for (const prop of propsToUpdate) {
-    await db.update(featureProperty).set(prop).where(eq(featureProperty.id, prop.id!));
+    const updateData = {
+      ...prop,
+      value: prop.value ?? null, // Explicitly handle null values
+      propertyValueId: prop.propertyValueId ?? null // Explicitly handle null values
+    };
+    await db
+      .update(featureProperty)
+      .set(updateData)
+      .where(eq(featureProperty.id, prop.id!));
   }
 
   // Get all updated properties with their related property data
