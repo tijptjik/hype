@@ -13,6 +13,7 @@ import { nanoid } from 'nanoid';
 import type { GeometryObject } from 'geojson';
 import type {
   AddressProperties,
+  AddressMeta,
   AddressPropertiesExtended,
   LayerMetadata
 } from '../types';
@@ -493,10 +494,18 @@ export const feature = sqliteTable('feature', {
   displayAddressGen: integer('displayAddressGen', { mode: 'boolean' })
     .notNull()
     .default(false),
-  // Remaining properties as JSON
+  // Address Components
   addressProperties: text('addressProperties', {
     mode: 'json'
-  }).$type<AddressPropertiesExtended>(),
+  })
+    .$type<AddressProperties>()
+    .default({}),
+  // Address Metadata
+  addressMeta: text('addressMeta', {
+    mode: 'json'
+  })
+    .$type<AddressMeta>()
+    .default({}),
   layerId: text('layerId')
     .notNull()
     .references(() => layer.id, { onDelete: 'cascade' }),
