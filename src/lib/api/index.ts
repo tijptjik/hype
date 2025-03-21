@@ -527,13 +527,12 @@ export async function loadFormData<T extends Record<string, unknown>>({
   const resourceType = refToResourceType(resourcePath) as HierarchicalResource;
 
   if (entityRef === NEW_REF) {
-    const { parentResourceType, keyToParent } = resourceConfig[resourceType];
     const form = await prepareNewForm<T>({
       resourceType,
       parentId: options.parentId,
       parentRef: options.parentRef,
-      parentResourceType,
-      keyToParent,
+      parentResourceType: resourceConfig[resourceType].parentResourceType,
+      keyToParent: resourceConfig[resourceType].keyToParent,
       insertSchema,
       session,
       fetch
@@ -553,7 +552,6 @@ export async function loadFormData<T extends Record<string, unknown>>({
     fetch
   });
 
-  console.log('form', entityRef, form);
   return {
     entity: entityRef,
     validatedForm: form,

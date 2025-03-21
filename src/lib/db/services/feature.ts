@@ -1,3 +1,22 @@
+// SVELTEKIT
+import { error } from '@sveltejs/kit';
+// DRIZZLE
+import { eq } from 'drizzle-orm';
+// LIB
+import { toNestedTranslations, updatePartial } from '..';
+// SUPERFORMS
+import { superValidate } from 'sveltekit-superforms';
+import { zod } from 'sveltekit-superforms/adapters';
+// SCHEMAS
+import { feature, featureI18n, featureProperty } from '../schema';
+// ZOD
+import {
+  FeatureInsert,
+  FeatureUpdate,
+  FeatureUpdateAPI,
+  FeaturePropertyUpdateExtra
+} from '../zod';
+// TYPES
 import type {
   NewFeatureDB,
   FeatureDB,
@@ -7,27 +26,11 @@ import type {
   FeatureI18n,
   FeatureProperty,
   NewFeatureI18n,
-  NewFeatureProperty,
   Layer,
-  LayerProperty,
-  PropertyI18n
+  PropertyI18n,
+  TargetLang
 } from '$lib/types';
-import { error } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
-import { superValidate } from 'sveltekit-superforms';
-import { zod } from 'sveltekit-superforms/adapters';
-import { feature, featureI18n, featureProperty, layerProperty } from '../schema';
-import {
-  FeatureInsert,
-  FeatureUpdate,
-  FeatureUpdateAPI,
-  FeatureI18nInsert,
-  FeatureI18nUpdate,
-  FeaturePropertyInsert,
-  FeaturePropertyUpdate
-} from '../zod';
-import { toNestedTranslations, updatePartial } from '..';
 
 export type Database = DrizzleD1Database<
   typeof import('/home/io/code/ghostsigns/src/lib/db/schema')
@@ -239,3 +242,47 @@ export function mergeFeatureProperties(feature: Feature, layer: Layer): Feature 
 
   return feature;
 }
+
+export const createTranslations = async (
+  db: Database,
+  translations: Record<TargetLang, NewFeatureI18n>,
+  featureId: Id
+) => {
+  const translationsToInsert = Object.entries(translations).map(
+    ([lang, translation]) => ({
+      ...translation,
+      featureId,
+      lang: lang as TargetLang
+    })
+  );
+
+  return await db.insert(featureI18n).values(translationsToInsert).returning();
+};
+
+export const createProperties = async (
+  db: Database,
+  featureId: string,
+  properties: (typeof FeaturePropertyUpdateExtra)[]
+) => {
+  await db.insert(featureProperty).values(
+    properties.map((prop) => ({
+      featureId,
+      propertyId: prop.property.id,
+      value: prop.value ?? null,
+      propertyValueId: prop.propertyValue?.id ?? null
+    }))
+  );
+
+  const insertedProperties = await db.query.featureProperty.findMany({
+    where: eq(featureProperty.featureId, featureId),
+    with: {
+      property: {
+        with: {
+          translations: true,
+          values: true
+        }
+      }
+    }
+  });
+  return insertedProperties;
+};
