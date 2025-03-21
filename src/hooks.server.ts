@@ -8,6 +8,25 @@ let handle: Handle;
 const localWranglerEnv = import.meta.env.VITE_WRANGLER_ENV === 'local';
 const translation = i18n.handle();
 
+// const handle_cors = (async ({ event, resolve }) => {
+//   const response = await resolve(event);
+//   response.headers.set('Access-Control-Allow-Origin', '*');
+//   response.headers.set(
+//     'Access-Control-Allow-Methods',
+//     'GET, POST, PUT, DELETE, OPTIONS'
+//   );
+//   response.headers.set('Access-Control-Allow-Headers', '*');
+//   return response;
+// }) satisfies Handle;
+
+// const handle_security = (async ({ event, resolve }) => {
+//   const response = await resolve(event);
+//   response.headers.set('X-Content-Type-Options', 'nosniff');
+//   response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+//   response.headers.set('X-XSS-Protection', '1; mode=block');
+//   return response;
+// }) satisfies Handle;
+
 if (localWranglerEnv) {
   // This is an ugly hack to avoid Vite loading in the wrangler dep regardless
   // of the conditional import, and throwing errors when building for CF workers
@@ -29,8 +48,15 @@ if (localWranglerEnv) {
     return resolve(event);
   }) satisfies Handle;
 
-  handle = sequence(mock_cloudflare, inject_auth, translation);
+  handle = sequence(
+    mock_cloudflare,
+    // handle_cors,
+    // handle_security,
+    inject_auth,
+    translation
+  );
 } else {
+  // handle = sequence(handle_cors, handle_security, inject_auth, translation);
   handle = sequence(inject_auth, translation);
 }
 
