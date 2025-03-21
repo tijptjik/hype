@@ -5,6 +5,8 @@ import { ADMIN_MIN_WIDTH } from '$lib';
 // STATE :: VIEWPORT
 let innerWidth = $state(0);
 let isViewportWideEnough = $derived(innerWidth >= ADMIN_MIN_WIDTH);
+
+let { children }: { children: any } = $props();
 </script>
 
 <svelte:window bind:innerWidth />
@@ -49,4 +51,6 @@ let isViewportWideEnough = $derived(innerWidth >= ADMIN_MIN_WIDTH);
       </div>
     </div>
   </div>
+{:else}
+  {@render children()}
 {/if}

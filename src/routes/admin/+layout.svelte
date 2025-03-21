@@ -4,7 +4,7 @@ import { ADMIN_MIN_WIDTH } from '$lib/index';
 // COMPONENTS
 import Sidebar from '$lib/components/sidebar/Root.svelte';
 import Navbar from '$lib/components/layout/Navbar.svelte';
-import MinWidth from '$lib/components/layout/MinWidth.svelte';
+import MinWidthProtector from '$lib/components/layout/MinWidth.svelte';
 // STYLES
 import '$lib/styles/admin.css';
 import { setHierarchicalResourceState } from '$lib/context/resources.svelte';
@@ -29,12 +29,6 @@ const resourceState = setHierarchicalResourceState(
 );
 const sidebarState = setSidebarState();
 
-// STATE
-let isMounted = $state(false);
-
-// STATE :: VIEWPORT
-let viewportWidth = $state(0);
-let isViewportWideEnough = $derived(viewportWidth >= ADMIN_MIN_WIDTH);
 let viewportContained = $derived(
   resourceState.activeEntity == false ||
     resourceState.activeFacet == 'address' ||
@@ -46,10 +40,6 @@ let viewportContained = $derived(
 
 // Initialize active resource and entity based on the current path
 $effect(() => {
-  if (!isMounted) {
-    initViewportListener();
-    isMounted = true;
-  }
   if (
     resourceState.activeResource !==
       resourceState.getResourceFromPath($page.url.pathname) ||
@@ -65,43 +55,23 @@ $effect(() => {
     resourceState.setFacet(resourceState.getFacetFromHash($page.url.hash));
     goto($page.url.pathname, { replaceState: true });
   }
-  return () => {
-    destroyViewportListener();
-  };
 });
-
-// UTILS :: VIEWPORT
-const handleResize = () => {
-  viewportWidth = window.innerWidth;
-};
-let initViewportListener = () => {
-  // Set initial viewport width
-  viewportWidth = window.innerWidth;
-  window.addEventListener('resize', handleResize);
-};
-let destroyViewportListener = () => {
-  window.removeEventListener('resize', handleResize);
-};
 </script>
 
-{#if isMounted}
-  {#if !isViewportWideEnough}
-    <MinWidth {viewportWidth} />
-  {:else}
-    <!-- LAYOUT -->
-    <Sidebar />
-    <div class="flex h-screen w-full select-none flex-col drag-none">
-      <header class="flex-none bg-black">
-        <Navbar />
-      </header>
-      <main
-        class="flex h-full flex-1 flex-col overflow-hidden"
-        class:pb-[72px]={!viewportContained}>
-        {@render children()}
-      </main>
-    </div>
-  {/if}
-{/if}
+<!-- LAYOUT -->
+<MinWidthProtector>
+  <Sidebar />
+  <div class="flex h-screen w-full select-none flex-col drag-none">
+    <header class="flex-none bg-black">
+      <Navbar />
+    </header>
+    <main
+      class="flex h-full flex-1 flex-col overflow-hidden"
+      class:pb-[72px]={!viewportContained}>
+      {@render children()}
+    </main>
+  </div>
+</MinWidthProtector>
 
 <svelte:head>
   <link rel="stylesheet" href="/src/lib/styles/admin.css" />
