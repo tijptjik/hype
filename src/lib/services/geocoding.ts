@@ -1,35 +1,55 @@
 // SERVICES
 import {
-  convertWGS84ToHK1980,
-  convertHK1980ToWGS84,
   calculateDistance,
-  parseToDisplayAddressEn,
   capitalizeFirstLetter,
   getFirstLocation,
   getNormalisedDistrict,
-  getNormalisedRegion,
-  parseToDisplayAddressZh
+  getNormalisedRegion
 } from '$lib/utils/geocoding';
+// DATA
+import neighbourhoods from '$lib/map/neighbourhoods.json';
 // TYPES
-import type { LanguageTag, TargetLang } from '$lib/types';
+import type { AddressProperties, AddressMeta } from '$lib/types';
 
 // IDENTIFY RESULT
-interface IdentifyResult {
-  results: Array<{
-    type: string;
-    addressInfo: {
-      eaddress: string;
-      ename: string;
-      caddress: string;
-      cname: string;
-      x: number;
-      y: number;
-      roofLevel: number;
-      baseLevel: number;
-      bdcsuid: string;
-      addressType: string;
+interface ParsedReverseGeocodeResult {
+  displayAddress: string | undefined;
+  displayAddressGen: boolean;
+  addressProperties: AddressProperties;
+  addressMeta: AddressMeta;
+  translations: {
+    'zh-hant': {
+      displayAddress: string | undefined;
+      displayAddressGen: boolean;
+      addressProperties: Partial<AddressProperties>;
     };
-  }>;
+    'zh-hans': {
+      displayAddress: string | undefined;
+      displayAddressGen: boolean;
+      addressProperties: Partial<AddressProperties>;
+    };
+  };
+}
+
+interface ReverseGeocodeResult {
+  address: {
+    Street: string;
+    Neighborhood: string | null;
+    City: string;
+    Subregion: string | null;
+    State: string;
+    Country: string | null;
+    Match_addr: string;
+    Loc_name: string;
+  };
+  location: {
+    x: number;
+    y: number;
+    spatialReference: {
+      wkid: number;
+      latestWkid: number;
+    };
+  };
 }
 
 // ALS RESULT
@@ -41,7 +61,7 @@ interface ALSResult {
     AddressLine: string[];
   };
   // List of suggested addresses that match the search criteria
-  SuggestedAddress: Array<{
+  SuggestedAddress?: Array<{
     Address: {
       PremisesAddress: {
         // English address components
@@ -67,6 +87,9 @@ interface ALSResult {
             StreetName: string; // English street name
             BuildingNoFrom: string; // Starting street number
             BuildingNoTo?: string; // Optional ending street number
+            EngVillage?: {
+              LocationName: string;
+            };
           };
           // District information
           EngDistrict: {
@@ -136,12 +159,12 @@ function convertFromWebMercator(x: number, y: number): [number, number] {
   return [lng, lat];
 }
 
-export async function reverseGeocode(
+async function fetchReverseGeocodeResult(
   lng: number,
   lat: number
-): Promise<{ address: string | null; coordinates: [number, number] | null }> {
+): Promise<ReverseGeocodeResult | null> {
+  const endPoint = 'https://api.hkmapservice.gov.hk/ags/gc/loc/address/reverseGeocode';
   const [x, y] = convertToWebMercator(lng, lat);
-
   const params = new URLSearchParams({
     key: '6a40dd75bce8494ea735efd8d97dd820',
     outSR: JSON.stringify({ wkid: 3857 }),
@@ -154,16 +177,30 @@ export async function reverseGeocode(
     f: 'json'
   });
 
-  const endPoint = 'https://api.hkmapservice.gov.hk/ags/gc/loc/address/reverseGeocode';
   const response = await fetch(`${endPoint}?${params}`);
   const result = await response.json();
 
-  console.log(result);
+  return result?.address ? result : null;
+}
 
-  if (!result?.address) return { address: null, coordinates: null };
+function getDistrictFromNeighbourhood(neighbourhoodRef: string | null): string | null {
+  if (!neighbourhoodRef) return null;
+  const neighbourhoodNames = Object.keys(neighbourhoods);
+  const neighbourhood = neighbourhoodNames.find(
+    (n) => n.toLowerCase() === neighbourhoodRef.toLowerCase()
+  );
+  return neighbourhood
+    ? neighbourhoods[neighbourhood as keyof typeof neighbourhoods].district
+    : null;
+}
 
+function processReverseGeocodeResult(
+  result: ReverseGeocodeResult,
+  lng: number,
+  lat: number
+): ParsedReverseGeocodeResult | null {
   // Parse street address
-  const streetParts = result.address.Street?.split(' ') || [];
+  const streetParts = result.address?.Street?.split(' ') || [];
   let buildingNumberFrom: string | undefined;
   let buildingNumberTo: string | undefined;
   let streetName: string | undefined;
@@ -183,29 +220,54 @@ export async function reverseGeocode(
   const distance = calculateDistance(lng, lat, resultLng, resultLat);
 
   // Process the result
-  const processedResult = {
-    displayAddress: result.address.Match_addr,
+  const processedResult: ParsedReverseGeocodeResult = {
+    displayAddress: result.address.Match_addr || undefined,
     displayAddressGen: true,
     addressProperties: {
-      buildingNumberFrom,
-      buildingNumberTo,
-      streetName,
+      buildingNumberFrom: buildingNumberFrom || undefined,
+      buildingNumberTo: buildingNumberTo || undefined,
+      streetName: streetName || undefined,
       neighbourhood:
-        result.address.Neighborhood || result.address.City || result.address.Subregion,
-      district: getNormalisedDistrict(result.address.State, 'en'),
+        result.address.Neighborhood ||
+        result.address.City ||
+        result.address.Subregion ||
+        undefined,
+      district: getDistrictFromNeighbourhood(result.address.Neighborhood),
       region: getNormalisedRegion(result.address.State, 'en'),
-      country: 'HKSAR',
+      country: 'HKSAR'
+    },
+    addressMeta: {
       longitude: resultLng,
       latitude: resultLat,
       distanceFromPoint: distance,
-      addressReverseGeocoder: 'hkgov_mapservice',
+      addressReverseGeocoder: 'hkgov_reverse',
       addressReverseGen: true
     },
     translations: {
-      'zh-hant': {},
-      'zh-hans': {}
+      'zh-hant': {
+        displayAddress: undefined,
+        displayAddressGen: true,
+        addressProperties: {}
+      },
+      'zh-hans': {
+        displayAddress: undefined,
+        displayAddressGen: true,
+        addressProperties: {}
+      }
     }
   };
+  return processedResult;
+}
+
+export async function reverseGeocode(
+  lng: number,
+  lat: number
+): Promise<ReverseGeocodeResult | null> {
+  const result = await fetchReverseGeocodeResult(lng, lat);
+  if (!result) return null;
+
+  // Parse the response into our canonical format
+  const processedResult = processReverseGeocodeResult(result, lng, lat);
 
   // Perform forward lookup using the Match_addr
   try {
@@ -221,12 +283,11 @@ export async function reverseGeocode(
         // Merge the results, keeping reverse geocode specific fields
         return {
           ...fullResult,
-          addressProperties: {
-            ...fullResult.addressProperties,
-            distanceFromPoint: processedResult.addressProperties.distanceFromPoint,
-            addressReverseGeocoder:
-              processedResult.addressProperties.addressReverseGeocoder,
-            addressReverseGen: processedResult.addressProperties.addressReverseGen
+          addressMeta: {
+            ...fullResult.addressMeta,
+            distanceFromPoint: processedResult.addressMeta.distanceFromPoint,
+            addressReverseGeocoder: processedResult.addressMeta.addressReverseGeocoder,
+            addressReverseGen: processedResult.addressMeta.addressReverseGen
           }
         };
       }
@@ -366,10 +427,10 @@ function parseALSResultToDisplay(
 
 export async function processForwardGeocodeResult(
   result: ALSResult,
-  existingDisplayAddressGen?: boolean | null,
+  existingDisplayAddressGen: boolean | null | undefined,
   lng: number,
   lat: number
-) {
+): Promise<ReverseGeocodeResult | null> {
   if (!result.SuggestedAddress?.length) return null;
 
   const address = result.SuggestedAddress[0];
@@ -386,7 +447,7 @@ export async function processForwardGeocodeResult(
     : undefined;
 
   // Prepare Chinese address properties
-  const zhHantAddressProps = {
+  const zhHantAddressProps: Partial<AddressProperties> = {
     buildingName: pa.ChiPremisesAddress.BuildingName,
     buildingNumberFrom: pa.ChiPremisesAddress.ChiStreet.BuildingNoFrom,
     buildingNumberTo: pa.ChiPremisesAddress.ChiStreet.BuildingNoTo,
@@ -402,7 +463,7 @@ export async function processForwardGeocodeResult(
   };
 
   // Translate Chinese properties to Simplified Chinese
-  let zhHansAddressProps = {};
+  let zhHansAddressProps: Partial<AddressProperties> = {};
   if (displayAddressZh) {
     try {
       const propsToTranslate = Object.values(zhHantAddressProps).filter(Boolean);
@@ -436,45 +497,48 @@ export async function processForwardGeocodeResult(
     }
   }
 
+  const addressProperties: AddressProperties = {
+    buildingName: capitalizeFirstLetter(pa.EngPremisesAddress.BuildingName),
+    buildingNumberFrom: pa.EngPremisesAddress.EngStreet.BuildingNoFrom,
+    buildingNumberTo: pa.EngPremisesAddress.EngStreet.BuildingNoTo,
+    blockType: capitalizeFirstLetter(pa.EngPremisesAddress.EngBlock.BlockDescriptor),
+    blockNumber: pa.EngPremisesAddress.EngBlock.BlockNo,
+    blockTypeBeforeNumber:
+      pa.EngPremisesAddress.EngBlock.BlockDescriptorPrecedenceIndicator === 'Y',
+    phaseName: pa.EngPremisesAddress.EngEstate.EngPhase?.PhaseName
+      ? capitalizeFirstLetter(pa.EngPremisesAddress.EngEstate.EngPhase.PhaseName)
+      : undefined,
+    phaseNumber: pa.EngPremisesAddress.EngEstate.EngPhase?.PhaseNo,
+    estateName: capitalizeFirstLetter(pa.EngPremisesAddress.EngEstate.EstateName),
+    streetName: capitalizeFirstLetter(pa.EngPremisesAddress.EngStreet.StreetName),
+    neighbourhood: pa.EngPremisesAddress.EngStreet.EngVillage?.LocationName
+      ? getFirstLocation(pa.EngPremisesAddress.EngStreet.EngVillage.LocationName)
+      : undefined,
+    district: getNormalisedDistrict(pa.EngPremisesAddress.EngDistrict.DcDistrict, 'en'),
+    region: getNormalisedRegion(pa.EngPremisesAddress.Region, 'en'),
+    country: 'HKSAR'
+  };
+
+  const addressMeta: AddressMeta = {
+    geoAddressCode: pa.GeoAddress,
+    distanceFromPoint: calculateDistance(
+      lng,
+      lat,
+      parseFloat(pa.GeospatialInformation.Longitude),
+      parseFloat(pa.GeospatialInformation.Latitude)
+    ),
+    longitude: parseFloat(pa.GeospatialInformation.Longitude),
+    latitude: parseFloat(pa.GeospatialInformation.Latitude),
+    confidenceForwardGeocoder: address.ValidationInformation.Score,
+    addressForwardGeocoder: 'hkgov_als',
+    addressForwardGen: true
+  };
+
   return {
     displayAddress: displayAddressEn,
     displayAddressGen: shouldGenerateDisplay,
-    addressProperties: {
-      buildingName: capitalizeFirstLetter(pa.EngPremisesAddress.BuildingName),
-      buildingNumberFrom: pa.EngPremisesAddress.EngStreet.BuildingNoFrom,
-      buildingNumberTo: pa.EngPremisesAddress.EngStreet.BuildingNoTo,
-      blockType: capitalizeFirstLetter(pa.EngPremisesAddress.EngBlock.BlockDescriptor),
-      blockNumber: pa.EngPremisesAddress.EngBlock.BlockNo,
-      blockTypeBeforeNumber:
-        pa.EngPremisesAddress.EngBlock.BlockDescriptorPrecedenceIndicator === 'Y',
-      phaseName: pa.EngPremisesAddress.EngEstate.EngPhase?.PhaseName
-        ? capitalizeFirstLetter(pa.EngPremisesAddress.EngEstate.EngPhase.PhaseName)
-        : undefined,
-      phaseNumber: pa.EngPremisesAddress.EngEstate.EngPhase?.PhaseNo,
-      estateName: capitalizeFirstLetter(pa.EngPremisesAddress.EngEstate.EstateName),
-      streetName: capitalizeFirstLetter(pa.EngPremisesAddress.EngStreet.StreetName),
-      neighbourhood: pa.EngPremisesAddress.EngStreet.EngVillage?.LocationName
-        ? getFirstLocation(pa.EngPremisesAddress.EngStreet.EngVillage.LocationName)
-        : undefined,
-      district: getNormalisedDistrict(
-        pa.EngPremisesAddress.EngDistrict.DcDistrict,
-        'en'
-      ),
-      region: getNormalisedRegion(pa.EngPremisesAddress.Region, 'en'),
-      country: 'HKSAR',
-      longitude: pa.GeospatialInformation.Longitude,
-      latitude: pa.GeospatialInformation.Latitude,
-      distanceFromPoint: calculateDistance(
-        lng,
-        lat,
-        parseFloat(pa.GeospatialInformation.Longitude),
-        parseFloat(pa.GeospatialInformation.Latitude)
-      ),
-      confidenceForwardGeocoder: address.ValidationInformation.Score,
-      geoAddressCode: pa.GeoAddress,
-      addressForwardGeocoder: 'hkgov_als',
-      addressForwardGen: true
-    },
+    addressProperties,
+    addressMeta,
     translations: {
       'zh-hant': {
         displayAddress: displayAddressZh,
