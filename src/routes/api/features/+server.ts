@@ -127,6 +127,10 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 
   try {
     const formData: NewFeature = await request.json();
+    // Add contributor ID if not provided
+    if (!formData.contributorId) {
+      formData.contributorId = userId;
+    }
     const form = (await superValidate(
       formData,
       zod(FeatureInsertAPI)
