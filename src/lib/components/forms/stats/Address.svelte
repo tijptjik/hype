@@ -1,16 +1,16 @@
 <script lang="ts">
 // I18N
 import { m } from '$lib/i18n';
-// TRANSITIONS
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
 import { MapPin } from '@steeze-ui/heroicons';
+// TRANSITIONS
 import { fade } from 'svelte/transition';
 // TYPES
 import type { FeatureForm } from '$lib/types';
 
 // CONFIG
-const coordinateLabels = ['Latitude', 'Longitude'];
+const coordinateLabels = [m.admin__geo_latitude(), m.admin__geo_longitude()];
 
 // STATE : PROPS
 let extraProps: { form: FeatureForm } = $props();
@@ -32,7 +32,7 @@ function copyCoordinates() {
     onclick={copyCoordinates} />
   {#each coordinateLabels as label, index}
     <div class="flex select-none flex-row items-center gap-3">
-      <p class="font-spaced text-sm">{label}</p>
+      <p class="font-spaced hidden text-sm xl:block">{label}</p>
       {#key $form.geometry.coordinates}
         <pre
           in:fade={{ duration: 300 }}
