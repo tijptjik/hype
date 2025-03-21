@@ -1,7 +1,5 @@
 // I18N
-import { languageTag } from '$lib/paraglide/runtime';
-import { getI18nValue } from '$lib/i18n';
-import * as m from '$lib/paraglide/messages';
+import { m, getI18nValue, languageTag } from '$lib/i18n';
 // DATA
 import neighbourhoods from './neighbourhoods.json';
 import subNeighbourhoods from './subNeighbourhoods.json';

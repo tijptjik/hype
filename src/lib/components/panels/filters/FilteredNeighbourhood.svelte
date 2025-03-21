@@ -1,7 +1,6 @@
 <script lang="ts">
 // I18N
-import { languageTag } from '$lib/paraglide/runtime';
-import { getI18nValue } from '$lib/i18n';
+import { getI18nValue, languageTag } from '$lib/i18n';
 // DATA
 import subNeighbourhoods from '$lib/map/subNeighbourhoods.json';
 // CONTEXT

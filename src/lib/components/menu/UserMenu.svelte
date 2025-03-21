@@ -5,7 +5,7 @@ import { fade } from 'svelte/transition';
 // NAVIGATION
 import { navigate } from '$lib/navigation';
 // I18N
-import * as m from '$lib/paraglide/messages.js';
+import { m } from '$lib/i18n';
 // AUTH
 import { signIn, signOut } from '@auth/sveltekit/client';
 // ICONS

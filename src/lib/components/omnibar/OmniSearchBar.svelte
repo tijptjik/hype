@@ -2,7 +2,7 @@
 // TRANSITIONS
 import { slide } from 'svelte/transition';
 // I18N
-import * as m from '$lib/paraglide/messages';
+import { m } from '$lib/i18n';
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
 import { MagnifyingGlass } from '@steeze-ui/heroicons';

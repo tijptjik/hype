@@ -1,5 +1,7 @@
 <script lang="ts">
-import * as m from '$lib/paraglide/messages.js';
+// I18N
+import { m } from '$lib/i18n';
+// LIB
 import { invalidateAll } from '$app/navigation';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';

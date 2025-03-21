@@ -9,8 +9,7 @@ import { QueryClientProvider } from '@tanstack/svelte-query';
 import { SvelteQueryDevtools } from '@tanstack/svelte-query-devtools';
 // I18N
 import { ParaglideJS } from '@inlang/paraglide-sveltekit';
-import { languageTag, setLanguageTag } from '$lib/paraglide/runtime.js';
-import { i18n } from '$lib/i18n';
+import { m, i18n, languageTag, setLanguageTag } from '$lib/i18n';
 // COMPONENTS
 import FlashMessage from '$lib/components/common/FlashMessage.svelte';
 // STYLES

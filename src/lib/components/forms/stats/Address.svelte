@@ -1,4 +1,8 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
+// TRANSITIONS
+// ICONS
 import Icon from '$lib/components/common/Icon.svelte';
 import { MapPin } from '@steeze-ui/heroicons';
 import { fade } from 'svelte/transition';

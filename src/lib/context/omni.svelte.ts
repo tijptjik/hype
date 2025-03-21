@@ -5,7 +5,7 @@ import { goto } from '$app/navigation';
 import { searchAll } from '$lib/map/data';
 // I18N
 import { getI18nValue, i18n } from '$lib/i18n';
-import * as m from '$lib/paraglide/messages';
+import { m } from '$lib/i18n';
 // NEIGHBOURHOODS
 import neighbourhoods from '$lib/map/neighbourhoods.json';
 // TYPES

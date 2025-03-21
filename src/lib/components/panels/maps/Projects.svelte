@@ -1,8 +1,6 @@
 <script lang="ts">
 // I18N
-import * as m from '$lib/paraglide/messages.js';
-import { languageTag } from '$lib/paraglide/runtime';
-import { getI18nValue } from '$lib/i18n';
+import { m, getI18nValue, languageTag } from '$lib/i18n';
 // ICONS
 import { Squares2x2 } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';

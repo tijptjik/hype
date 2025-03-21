@@ -2,12 +2,9 @@
 import { ChevronDown, ChevronUp } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // I18N
-import * as m from '$lib/paraglide/messages';
-import { languageTag } from '$lib/paraglide/runtime';
-import { getI18nValue } from '$lib/i18n';
+import { m, languageTag } from '$lib/i18n';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
-
 
 let mapContext = getMapContext();
 
@@ -37,11 +34,11 @@ let isOpen = $state(false);
 // Helper function to get translated value
 function getTranslatedValue(value: string | TranslatedValue): string {
   if (typeof value === 'string') return value;
-  
+
   const currentLang = languageTag();
   if (currentLang === 'en') return value.value;
-  
-  const translation = value.translations?.find(t => t.lang === currentLang);
+
+  const translation = value.translations?.find((t) => t.lang === currentLang);
   return translation?.value || value.value; // fallback to English if no translation
 }
 
@@ -53,7 +50,7 @@ function toggleValue(value: string | TranslatedValue) {
   } else {
     selected = selected.filter((v: string) => v !== originalValue);
   }
-  if (selected.length > 0) {  
+  if (selected.length > 0) {
     mapContext.state.filters.properties[key] = selected;
   } else {
     delete mapContext.state.filters.properties[key];
@@ -65,33 +62,37 @@ let displayText = $derived(() => {
   // Update display text whenever selected changes
   if (selected.length === 0) return m.filters__all();
   if (selected.length === 1) {
-    const selectedValue = values.find(v => 
-      (typeof v === 'string' ? v : v.value) === selected[0]
+    const selectedValue = values.find(
+      (v) => (typeof v === 'string' ? v : v.value) === selected[0]
     );
     return getTranslatedValue(selectedValue!);
   }
-  return selected
-    .map(s => {
-      const value = values.find(v => 
-        (typeof v === 'string' ? v : v.value) === s
-      );
-      return getTranslatedValue(value!);
-    })
-    .slice(0, -1)
-    .join(', ') + ' & ' + getTranslatedValue(
-      values.find(v => 
-        (typeof v === 'string' ? v : v.value) === selected[selected.length - 1]
+  return (
+    selected
+      .map((s) => {
+        const value = values.find((v) => (typeof v === 'string' ? v : v.value) === s);
+        return getTranslatedValue(value!);
+      })
+      .slice(0, -1)
+      .join(', ') +
+    ' & ' +
+    getTranslatedValue(
+      values.find(
+        (v) => (typeof v === 'string' ? v : v.value) === selected[selected.length - 1]
       )!
-    );
+    )
+  );
 });
 </script>
 
-<div class="min-h-10 w-full bg-[#0A0A0A] flex-shrink-0">
+<div class="min-h-10 w-full flex-shrink-0 bg-[#0A0A0A]">
   <button
-    class="flex w-full items-center justify-between rounded-none py-2 pl-6 pr-9 flex-shrink-0"
+    class="flex w-full flex-shrink-0 items-center justify-between rounded-none py-2 pl-6 pr-9"
     onclick={() => (isOpen = !isOpen)}>
     <div class="flex flex-col justify-start gap-0 text-left">
-      <p class="text-xs font-thin uppercase tracking-widest text-base-content/60">{label}</p>
+      <p class="text-xs font-thin uppercase tracking-widest text-base-content/60">
+        {label}
+      </p>
       <p class="font-medium">{displayText()}</p>
     </div>
     {#if isOpen}
@@ -103,7 +104,8 @@ let displayText = $derived(() => {
 
   <!-- Options -->
   {#if isOpen}
-    <div class="rounded-none bg-base-300 px-3 py-1 flex flex-col overflow-y-auto max-h-[260px]">
+    <div
+      class="flex max-h-[260px] flex-col overflow-y-auto rounded-none bg-base-300 px-3 py-1">
       {#each values as value}
         {@const displayValue = getTranslatedValue(value)}
         {@const originalValue = typeof value === 'string' ? value : value.value}

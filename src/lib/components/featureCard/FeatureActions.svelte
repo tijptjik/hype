@@ -3,7 +3,7 @@
 import Icon from '$lib/components/common/Icon.svelte';
 import { MapPin } from '@steeze-ui/heroicons';
 // I18N
-import * as m from '$lib/paraglide/messages';
+import { m } from '$lib/i18n';
 // CONTEXT
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 import { getMapContext } from '$lib/context/map.svelte';

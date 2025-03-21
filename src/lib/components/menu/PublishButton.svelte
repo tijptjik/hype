@@ -3,7 +3,7 @@
 import { NEW_REF } from '$lib';
 import { page } from '$app/stores';
 // I18N
-import * as m from '$lib/paraglide/messages.js';
+import { m } from '$lib/i18n';
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // ENUMS

@@ -4,7 +4,7 @@ import { page } from '$app/stores';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
 // I18N
-import * as m from '$lib/paraglide/messages';
+import { m } from '$lib/i18n';
 // LIB
 import { ADMIN_PATH } from '$lib/index';
 // COMPONENTS

@@ -1,10 +1,9 @@
 <script lang="ts">
 // ICONS
-import { Map, MinusCircle, PlusCircle } from '@steeze-ui/heroicons';
+import { MinusCircle, PlusCircle } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // I18N
-import { getI18nValue } from '$lib/i18n';
-import { languageTag } from '$lib/paraglide/runtime';
+import { getI18nValue, languageTag } from '$lib/i18n';
 
 const {
   layer,
@@ -23,20 +22,17 @@ const {
   onclick={onClick}>
   {#if organisation && project}
     <div class="flex flex-col items-start gap-0">
-      <p class="flex space-x-0.5 text-xs font-mono uppercase tracking-widest">
+      <p class="flex space-x-0.5 font-mono text-xs uppercase tracking-widest">
         {#if languageTag() == 'en'}
-          <span class="text-primary">{organisation.code.replaceAll('_', '').replaceAll(' ', '')}</span>
+          <span class="text-primary"
+            >{organisation.code.replaceAll('_', '').replaceAll(' ', '')}</span>
           <span class="px-0">›</span>
-          <span class="text-accent">{project.code
-            .replaceAll('_', '')
-            .replaceAll(' ', '')}</span>
+          <span class="text-accent"
+            >{project.code.replaceAll('_', '').replaceAll(' ', '')}</span>
         {:else}
           <span class="text-primary">{getI18nValue(organisation, 'nameShort')}</span>
           <span class="px-0">›</span>
-          <span class="text-accent">{getI18nValue(
-            project,
-            'nameShort'
-          )}</span>
+          <span class="text-accent">{getI18nValue(project, 'nameShort')}</span>
         {/if}
       </p>
       <p class="font-light">{getI18nValue(layer, 'name')}</p>

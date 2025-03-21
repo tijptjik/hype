@@ -27,7 +27,7 @@ import {
   taskImage
 } from '$lib/db/schema';
 // I18N
-import * as m from '$lib/paraglide/messages.js';
+import { m } from '$lib/i18n';
 // TYPES
 import type { AddressProperties, LayerMetadata, TaskType } from '$lib/types';
 

@@ -3,8 +3,8 @@
 import { Funnel, XMark } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // I18N
-import { getI18nValue } from '$lib/i18n';
-import { languageTag } from '$lib/paraglide/runtime';
+import { getI18nValue, languageTag } from '$lib/i18n';
+
 const {
   resource,
   resourceParent = undefined,
@@ -23,7 +23,8 @@ const {
     <div class="flex flex-col items-start gap-0">
       <p class="flex space-x-0.5 font-mono text-xs uppercase tracking-widest">
         {#if languageTag() == 'en'}
-          <span class="text-primary">{resourceParent.code.replaceAll('_', '').replaceAll(' ', '')}</span>
+          <span class="text-primary"
+            >{resourceParent.code.replaceAll('_', '').replaceAll(' ', '')}</span>
         {:else}
           <span class="text-primary">{getI18nValue(resourceParent, 'nameShort')}</span>
         {/if}

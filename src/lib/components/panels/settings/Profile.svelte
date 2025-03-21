@@ -1,7 +1,7 @@
 <script lang="ts">
 import { signOut } from '@auth/sveltekit/client';
 import { page } from '$app/stores';
-import * as m from '$lib/paraglide/messages';
+import { m } from '$lib/i18n';
 const { session } = $page.data;
 </script>
 
@@ -17,7 +17,7 @@ const { session } = $page.data;
     </div>
 
     <!-- User Name -->
-    <div class="rounded-full bg-black/80 px-4 py-1 -mt-6 z-20">
+    <div class="z-20 -mt-6 rounded-full bg-black/80 px-4 py-1">
       <span class="font-medium text-white">
         {session?.user?.name}
       </span>

@@ -1,7 +1,7 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
 import { i18n } from '$lib/i18n';
-import * as m from '$lib/paraglide/messages.js';
+import { m } from '$lib/i18n';
 import { slide } from 'svelte/transition';
 import { NEW_REF } from '$lib';
 // STORES

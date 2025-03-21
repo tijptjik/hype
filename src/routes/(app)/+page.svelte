@@ -1,7 +1,7 @@
 <script lang="ts">
 // QUERY
 import { page } from '$app/stores';
-import * as m from '$lib/paraglide/messages.js';
+import { m } from '$lib/i18n';
 // AUTH
 import { signIn } from '@auth/sveltekit/client';
 // CONTEXT

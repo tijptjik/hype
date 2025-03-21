@@ -1,8 +1,6 @@
 <script lang="ts">
 // I18N
-import * as m from '$lib/paraglide/messages.js';
-import { getI18nValue } from '$lib/i18n';
-import { languageTag } from '$lib/paraglide/runtime';
+import { m, languageTag, getI18nValue } from '$lib/i18n';
 // COMPONENTS
 import CategorySection from '$lib/components/panels/filters/CategorySection.svelte';
 import CategoryFilter from '$lib/components/panels/filters/CategoryFilter.svelte';

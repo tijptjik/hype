@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import * as m from '$lib/paraglide/messages';
+import { m } from '$lib/i18n';
 import { getI18nValue } from '$lib/i18n';
 import { i18n } from '$lib/i18n';
 // NAVIGATION

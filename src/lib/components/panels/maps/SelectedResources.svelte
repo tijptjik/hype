@@ -3,9 +3,7 @@
 import Icon from '$lib/components/common/Icon.svelte';
 import { XMark } from '@steeze-ui/heroicons';
 // I18N
-import * as m from '$lib/paraglide/messages';
-import { languageTag } from '$lib/paraglide/runtime';
-import { getI18nValue } from '$lib/i18n';
+import { m, getI18nValue, languageTag } from '$lib/i18n';
 // TYPES
 import type { Resource, Id } from '$lib/types';
 

@@ -9,7 +9,7 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { fade } from 'svelte/transition';
 import { cubicInOut } from 'svelte/easing';
 // I18N
-import * as m from '$lib/paraglide/messages.js';
+import { m } from '$lib/i18n';
 // LIB
 import { loadScript } from '$lib';
 import { updateMarkers, createMarkerElement } from '$lib/map/markers';

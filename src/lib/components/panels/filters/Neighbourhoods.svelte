@@ -1,8 +1,6 @@
 <script lang="ts">
 // I18N
-import * as m from '$lib/paraglide/messages.js';
-import { languageTag } from '$lib/paraglide/runtime';
-import { getI18nValue } from '$lib/i18n';
+import { m, getI18nValue, languageTag } from '$lib/i18n';
 // CONSTANTS
 import neighbourhoods from '$lib/map/neighbourhoods.json';
 // COMPONENTS

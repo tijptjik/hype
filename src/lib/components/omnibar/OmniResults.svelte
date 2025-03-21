@@ -2,7 +2,7 @@
 // TRANSITIONS
 import { slide } from 'svelte/transition';
 // I18N
-import * as m from '$lib/paraglide/messages';
+import { m } from '$lib/i18n';
 // COMPONENTS
 import OmniSection from './OmniSection.svelte';
 // CONTEXT
@@ -21,22 +21,13 @@ const omniContext = getOmniContext();
     <div class="p-4 text-center text-base-content/60">{m.omni__no_results()}</div>
   {:else}
     {#if omniContext.searchResults.features.length > 0}
-      <OmniSection
-        title={m.omni__title_features()}
-        group="features"
-      />
+      <OmniSection title={m.omni__title_features()} group="features" />
     {/if}
     {#if omniContext.searchResults.neighbourhoods.length > 0}
-      <OmniSection
-        title={m.omni__title_neighbourhoods()}
-        group="neighbourhoods"
-      />
+      <OmniSection title={m.omni__title_neighbourhoods()} group="neighbourhoods" />
     {/if}
     {#if omniContext.searchResults.walks.length > 0}
-      <OmniSection
-        title={m.omni__title_walks()}
-        group="walks"
-      />
+      <OmniSection title={m.omni__title_walks()} group="walks" />
     {/if}
   {/if}
 </div>

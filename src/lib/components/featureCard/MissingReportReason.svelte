@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import * as m from '$lib/paraglide/messages';
+import { m } from '$lib/i18n';
 // CONTEXT
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 

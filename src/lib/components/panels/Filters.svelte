@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import * as m from '$lib/paraglide/messages.js';
+import { m } from '$lib/i18n';
 // COMPONENTS
 import Panel from '$lib/components/layout/Panel.svelte';
 import Header from '$lib/components/panels/common/Header.svelte';

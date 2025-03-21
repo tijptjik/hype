@@ -1,8 +1,6 @@
 <script lang="ts">
 // I18N
-import * as m from '$lib/paraglide/messages';
-import { languageTag } from '$lib/paraglide/runtime.js';
-import { getI18nValue } from '$lib/i18n';
+import { m, getI18nValue, languageTag } from '$lib/i18n';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
 // COMPONENTS

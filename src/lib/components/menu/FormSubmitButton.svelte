@@ -1,6 +1,6 @@
 <script lang="ts">
 // LIB
-import * as m from '$lib/paraglide/messages.js';
+import { m } from '$lib/i18n';
 // ICONS
 import { CheckCircle } from '@steeze-ui/heroicons';
 // COMPONENTS
