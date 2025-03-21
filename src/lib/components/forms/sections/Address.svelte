@@ -99,13 +99,10 @@ function confirmCurrentTranslation(lang: LanguageTag) {
 const actions = {
   geocode: async (e: Event) => {
     e.preventDefault();
-    console.log('currentForm', $form);
     const [lng, lat] = $form.geometry.coordinates;
     const result = await reverseGeocode(lng, lat);
 
     if (result) {
-      console.log('result', result);
-
       // Reset missing translations state
       // We don't need english translations as the API returns the english address
       missingTranslations = {
@@ -138,16 +135,16 @@ const actions = {
       }
 
       // Update form with reverse geocode results
-      form.update(($form) => ({
-        ...$form,
-        displayAddress: result.displayAddress,
-        displayAddressGen: true,
-        addressProperties: result.addressProperties as AddressProperties,
-        addressMeta: result.addressMeta as AddressMeta,
-        translations: {
-          ...result.translations
-        }
-      }));
+      form.update(($form) => {
+        $form.displayAddress = result.displayAddress;
+        $form.displayAddressGen = true;
+        $form.addressProperties = result.addressProperties as AddressProperties;
+        $form.addressMeta = {
+          ...$form.addressMeta,
+          ...result.addressMeta
+        };
+        return $form;
+      });
     }
   }
 };
