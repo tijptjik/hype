@@ -27,7 +27,8 @@ import type {
   ResourceDB,
   ResourceType
 } from '../types';
-import { targetLanguageTags } from '$lib';
+
+export const targetLanguageTags: LanguageTag[] = ['zh-hant', 'zh-hans'];
 
 export const NEW_TITLE = 'New';
 export const NEW_REF = NEW_TITLE.toLowerCase();
