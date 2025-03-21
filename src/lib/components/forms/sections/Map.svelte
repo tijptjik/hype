@@ -27,5 +27,5 @@ const syncUpCoordinates = (lngLat: number[]) => {
 </script>
 
 <div class="relative h-full w-full flex-grow">
-  <Map coordinates={lngLat} dragEndCallback={syncUpCoordinates} />
+  <Map coordinates={lngLat} dragEndCallback={syncUpCoordinates} {...sectionProps} />
 </div>
