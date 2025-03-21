@@ -1,7 +1,7 @@
 // SVELTEKIT
 import { error } from '@sveltejs/kit';
 // DRIZZLE
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 // LIB
 import { toNestedTranslations, updatePartial } from '..';
 // SUPERFORMS
@@ -127,8 +127,12 @@ export const updateProperties = async (
   if (idsToDelete.length > 0) {
     await db
       .delete(featureProperty)
-      .where(eq(featureProperty.featureId, featureId))
-      .where(featureProperty.id.in(idsToDelete));
+      .where(
+        and(
+          eq(featureProperty.featureId, featureId),
+          inArray(featureProperty.id, idsToDelete)
+        )
+      );
   }
 
   // Insert new properties, including those with null values
