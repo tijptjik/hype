@@ -50,6 +50,7 @@ let loadMapLibre = loadScript(
     }
   });
 
+  // @ts-ignore
   map.on('load', () => {
     isMapLoaded = true;
   });
@@ -62,23 +63,27 @@ let loadMapLibre = loadScript(
     .setLngLat(mapProps.coordinates)
     .addTo(map);
 
+  // @ts-ignore
   feature.on('dragend', handleDragEnd);
 });
 
 // EFFECTS :: ON UPDATE
 $effect(() => {
   if (map) {
+    // @ts-ignore
     map.flyTo({
       center: mapProps.coordinates,
       zoom: 20
     });
+    // @ts-ignore
     feature.setLngLat(mapProps.coordinates);
   }
 });
 
 // EVENTS
 const handleDragEnd = (e: Event) => {
-  mapProps.dragEndCallback?.(e.target.getLngLat().toArray());
+  // @ts-ignore
+  mapProps.dragEndCallback?.(e.target!.getLngLat().toArray());
 };
 </script>
 

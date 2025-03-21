@@ -48,7 +48,11 @@ export const createFeature = async (db: Database, data: NewFeatureDB) => {
   return insertedFeature;
 };
 
-export const updateFeature = async (db: Database, data: FeatureDB, ref: string) => {
+export const updateFeature = async (
+  db: Database,
+  data: FeatureDB,
+  ref: string
+): Promise<FeatureDB> => {
   const [updatedFeature] = await db
     .update(feature)
     .set({ ...data })

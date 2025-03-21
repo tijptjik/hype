@@ -222,7 +222,8 @@ export const getId = (
 
 // CONFIG
 const sourceLanguageTag = 'en';
-export const languageTags: LanguageTag[] = [sourceLanguageTag, 'zh-hant', 'zh-hans'];
+export const targetLanguageTags: LanguageTag[] = ['zh-hant', 'zh-hans'];
+export const languageTags: LanguageTag[] = [sourceLanguageTag, ...targetLanguageTags];
 export const NEW_TITLE = 'New';
 export const NEW_REF = NEW_TITLE.toLowerCase();
 export const ADMIN_PATH = '/admin';

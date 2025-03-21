@@ -53,5 +53,5 @@ export const getTranslation = async (
     }
   )
     .then((response) => response.json())
-    .then((data) => data.map((item) => item.translations[0].text));
+    .then((data) => data.map((item: Record<string, any>) => item.translations[0].text));
 };

@@ -5,8 +5,7 @@ import {
   getDatabaseOrError,
   JSONResponseOrError,
   SuperFormErrorResponse,
-  SuperFormResponse,
-  type AccessStrategyOption
+  SuperFormResponse
 } from '$lib/api';
 // DB
 import { hierarchicalEntityQuery, toNestedTranslations } from '$lib/db';
@@ -22,7 +21,7 @@ import { featureI18n, projectRole } from '$lib/db/schema';
 // ZOD
 import { FeaturePatch, FeatureUpdateAPI } from '$lib/db/zod';
 // TYPES
-import type { Feature, FeaturePartialUpdate } from '$lib/types';
+import type { Feature, FeaturePartialUpdate, AccessStrategyOption } from '$lib/types';
 
 const RESOURCE_TYPE = 'feature';
 const RESOURCE_PATH = 'features';
