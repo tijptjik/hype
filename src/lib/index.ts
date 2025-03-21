@@ -28,6 +28,31 @@ import type {
 } from './types';
 
 /**
+ * Convenience functions to prevent event handlers from being called multiple times
+ */
+
+export function once(fn: (event: Event) => void) {
+  return function (event: Event) {
+    if (fn) fn.call(this, event);
+    fn = null;
+  };
+}
+
+export function preventDefault(fn: (event: Event) => void) {
+  return function (event: Event) {
+    event.preventDefault();
+    fn.call(this, event);
+  };
+}
+
+export function stopPropagation(fn: (event: Event) => void) {
+  return function (event: Event) {
+    event.stopPropagation();
+    fn.call(this, event);
+  };
+}
+
+/**
  * Check whether the code is being run by a Cloudflare worker
  */
 export const on_cloudflare = (event: RequestEvent) => {
