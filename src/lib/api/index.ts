@@ -1,11 +1,15 @@
+// SVELTE
 import { error, json } from '@sveltejs/kit';
-import { actionResult } from 'sveltekit-superforms';
-import client, { toNestedTranslations, validateTableColumns } from '$lib/db';
-import { getUserRoles } from '$lib/auth/utils';
-import { superValidate } from 'sveltekit-superforms';
+// SUPERFORMS
+import { superValidate, actionResult } from 'sveltekit-superforms';
+import { zod } from 'sveltekit-superforms/adapters';
 // LIB
-import { ADMIN_PATH, API_PATH } from '$lib/index';
-// ACCESS CONTROL
+import { ADMIN_PATH, API_PATH, NEW_REF } from '$lib';
+// DB
+import { getUserRoles } from '$lib/auth/utils';
+import client, { toNestedTranslations, validateTableColumns } from '$lib/db';
+import { mergeFeatureProperties } from '$lib/db/services/feature';
+// ENUMS
 import {
   publicAccessOptions,
   hierarchicalOwnOptions,
@@ -16,29 +20,26 @@ import {
   HierarchicalResource,
   HierarchicalResourcePath
 } from '$lib/types';
-// ZOD
-import { zod } from 'sveltekit-superforms/adapters';
-// Types
-import type { SuperValidated } from 'sveltekit-superforms';
+// TYPES
 import type {
-  ApiEntity,
+  AccessStrategyOption,
   Feature,
+  GetImageAPI,
   Id,
   Layer,
+  Organisation,
   OrganisationRole,
   Project,
   Property,
   PropertyI18n,
   Resource,
   ResourceType,
-  Task
+  StatefulAccessOption
 } from '$lib/types';
+import type { SuperValidated } from 'sveltekit-superforms';
 import type { UserRole } from '$lib/auth/utils';
-import { NEW_REF } from '$lib';
-import type { AccessStrategyOption, StatefulAccessOption } from '$lib/types';
-import type { GetImageAPI } from '$lib/types';
 import type { Session } from '@auth/core/types';
-import { mergeFeatureProperties } from '$lib/db/services/feature';
+import type { z } from 'zod';
 
 export const getSessionOrError = async (locals: App.Locals) => {
   const session = await locals.auth();
@@ -78,23 +79,64 @@ export const SuperFormResponse = <T extends Resource>(
       status: 400
     });
   }
+
   if (redirect) {
-    // TODO : Make the redirect more robust by passing in the entityRef
     if (userLosesAccess) {
       return actionResult('redirect', `${ADMIN_PATH}/${resourcePath}/`, {
         status: 302
       });
     } else {
-      const entityRef = validatedForm.data.code || validatedForm.data.id;
+      // Type-safe property lookup
+      const entityRef = getEntityRef(validatedForm.data);
       return actionResult('redirect', `${ADMIN_PATH}/${resourcePath}/${entityRef}`, {
         status: 303
       });
     }
   }
+
   return actionResult<SuperValidated<T>, 'success'>('success', validatedForm, {
     status: code
   });
 };
+
+// Helper function to get the correct reference property
+function getEntityRef<T extends Resource>(resource: T): string {
+  if (isOrganisationOrProject(resource)) {
+    return resource.code;
+  }
+  return resource.id;
+}
+
+// Type guard to narrow the type
+function isOrganisationOrProject(
+  resource: Resource
+): resource is Organisation | Project {
+  return 'code' in resource;
+}
+
+// Type guards for resource types
+function isOrganisation(resource: Resource): resource is Organisation {
+  return (
+    !('organisationId' in resource) &&
+    !('layerId' in resource) &&
+    !('featureId' in resource) &&
+    !('projectId' in resource) &&
+    'userRoles' in resource
+  );
+}
+
+// Type guards for resource types
+function isProject(resource: Resource): resource is Project {
+  return 'organisationId' in resource;
+}
+
+function isLayer(resource: Resource): resource is Layer {
+  return 'projectId' in resource;
+}
+
+function isFeature(resource: Resource): resource is Feature {
+  return 'layerId' in resource;
+}
 
 const checkAccessOrError = (
   userRoles: UserRole[],
@@ -329,22 +371,150 @@ type LoadFormDataOptions<T> = {
   parentRef?: string;
 };
 
-type LoadFormDataResponse<T> = Promise<{
+type LoadFormDataResponse<T extends Record<string, unknown>> = Promise<{
   entity: string;
   validatedForm: SuperValidated<T>;
   image?: GetImageAPI | null;
 }>;
 
-// Get parent reference from resource
-const getParentRef = (entity: Project | Layer | Feature | Task): string | null => {
-  if ('featureId' in entity) return entity.featureId;
-  if ('layerId' in entity) return entity.layerId;
-  if ('projectId' in entity) return entity.projectId;
-  if ('organisationId' in entity) return entity.organisationId;
-  return null;
+// Helper functions for data processing
+async function fetchParentResource(
+  parentType: HierarchicalResource,
+  parentRef: string,
+  fetch: typeof window.fetch
+): Promise<Resource> {
+  const response = await fetch(
+    `${API_PATH}/${HierarchicalResourcePath[parentType]}/${parentRef}`
+  );
+
+  if (!response.ok) {
+    throw error(response.status);
+  }
+
+  return response.json();
+}
+
+async function fetchImage(
+  entityId: string,
+  fetch: typeof window.fetch
+): Promise<GetImageAPI | null> {
+  try {
+    const response = await fetch(`${API_PATH}/images/${entityId}`);
+    return response.ok ? await response.json() : null;
+  } catch (err) {
+    console.error('Error fetching image:', err);
+    return null;
+  }
+}
+
+async function prepareNewForm<T extends Record<string, unknown>>({
+  resourceType,
+  parentId,
+  parentRef,
+  parentResourceType,
+  keyToParent,
+  insertSchema,
+  session,
+  fetch
+}: {
+  resourceType: HierarchicalResource;
+  parentId?: string;
+  parentRef?: string;
+  parentResourceType?: HierarchicalResource;
+  keyToParent?: string;
+  insertSchema: z.ZodSchema;
+  session?: Session;
+  fetch: typeof window.fetch;
+}): Promise<SuperValidated<T>> {
+  // Handle new resource without parent
+  if (!parentResourceType || !parentId) {
+    const form = (await superValidate(zod(insertSchema))) as SuperValidated<T>;
+
+    // Handle new organisation case
+    if (resourceType === 'organisation' && session?.user) {
+      // @ts-ignore
+      form.data.userRoles = [
+        {
+          userId: session.user.id,
+          role: 'owner',
+          user: session.user
+        }
+      ];
+    }
+
+    return form;
+  }
+
+  // Handle new resource with parent
+  if (!parentRef || !keyToParent) {
+    throw error(
+      400,
+      `The jungle teems with the spirits of the dead... Perhaps ${parentResourceType}.${keyToParent} has joined them?`
+    );
+  }
+
+  const form = (await superValidate(zod(insertSchema))) as SuperValidated<T>;
+  let initialData: Record<string, any> = {
+    ...form.data,
+    resourceType,
+    maintainerRoles: []
+  };
+
+  const parentData = await fetchParentResource(parentResourceType, parentRef, fetch);
+  initialData[keyToParent] = parentData.id;
+
+  // Process parent data based on resource type
+  if (isOrganisation(parentData)) {
+    initialData = mergeOrganisationRoles(initialData as Project, parentData.userRoles);
+  } else if (isLayer(initialData as Resource) && isProject(parentData)) {
+    initialData = mergeProjectProperties(initialData as Layer, parentData.properties);
+  } else if (isFeature(initialData as Resource) && isLayer(parentData)) {
+    initialData = mergeFeatureProperties(initialData as Feature, parentData);
+  }
+
+  form.data = initialData as T;
+  return form;
+}
+
+async function prepareExistingForm<T extends Record<string, unknown>>({
+  resourceType,
+  entityRef,
+  updateSchema,
+  fetch
+}: {
+  resourceType: HierarchicalResource;
+  entityRef: string;
+  updateSchema: z.ZodSchema;
+  fetch: typeof window.fetch;
+}): Promise<{
+  form: SuperValidated<T>;
+  image: GetImageAPI | null;
+}> {
+  const response = await fetch(
+    `${API_PATH}/${HierarchicalResourcePath[resourceType]}/${entityRef}`
+  );
+
+  if (!response.ok) {
+    throw error(response.status);
+  }
+
+  const formData: T = await response.json();
+  const form = (await superValidate(formData, zod(updateSchema))) as SuperValidated<T>;
+
+  // Fetch image for organisation or project
+  const image = await getImageIfNeeded(formData, fetch);
+
+  return { form, image };
+}
+
+let getImageIfNeeded = async (formData: any, fetch: typeof window.fetch) => {
+  const needsImage = isProject(formData) || isOrganisation(formData);
+  return needsImage && formData.imageId
+    ? await fetchImage(formData.imageId, fetch)
+    : null;
 };
 
-export async function loadFormData<T>({
+export async function loadFormData<T extends Record<string, unknown>>({
   entity,
   resourcePath,
   insertSchema,
@@ -355,104 +525,56 @@ export async function loadFormData<T>({
 }: LoadFormDataOptions<T>): LoadFormDataResponse<T> {
   const entityRef = entity || NEW_REF;
   const resourceType = refToResourceType(resourcePath) as HierarchicalResource;
-  let form;
-  let image: GetImageAPI | null = null;
 
   if (entityRef === NEW_REF) {
-    const { parentResourceType, parentRefKey, keyToParent } =
-      resourceConfig[resourceType];
-    const { parentId, parentRef } = options;
+    const { parentResourceType, keyToParent } = resourceConfig[resourceType];
+    const form = await prepareNewForm<T>({
+      resourceType,
+      parentId: options.parentId,
+      parentRef: options.parentRef,
+      parentResourceType,
+      keyToParent,
+      insertSchema,
+      session,
+      fetch
+    });
 
-    if (parentResourceType && parentId) {
-      // TODO Move the creation of the form to the server, and use fetch to obtain it -- this pleases Sveltekit
-      if (!parentRef) {
-        throw error(
-          400,
-          `The jungle teems with the spirits of the dead... Perhaps ${parentResourceType}.${parentRefKey} has joined them?`
-        );
-      }
-
-      // First create the form with the schema
-      form = (await superValidate(zod(insertSchema))) as SuperValidated<T>;
-
-      // Initialize the base data
-      let initialData: Record<string, any> = {
-        ...form.data, // Include existing form defaults
-        resourceType: resourceType,
-        maintainerRoles: []
-      };
-
-      // Fetch and process parent data
-      const parentResponse = await fetch(
-        `${API_PATH}/${HierarchicalResourcePath[parentResourceType]}/${parentRef}`
-      );
-      if (parentResponse.ok) {
-        const parentData: ApiEntity = await parentResponse.json();
-
-        // Add parent ID
-        initialData[keyToParent as string] = parentData.id;
-
-        // Merge organization roles if this is a project
-        if (resourceType === 'project') {
-          initialData = mergeOrganisationRoles(
-            initialData as Project,
-            parentData.userRoles
-          );
-        } else if (resourceType === 'layer') {
-          initialData = mergeProjectProperties(
-            initialData as Layer,
-            parentData.properties
-          );
-        } else if (resourceType === 'feature') {
-          initialData = mergeFeatureProperties(
-            initialData as Feature,
-            parentData // This is the layer data with properties
-          );
-        }
-
-        // Update the form with the complete initial data
-        form.data = initialData;
-      }
-    } else {
-      form = await superValidate(zod(insertSchema));
-      if (resourceType === 'organisation') {
-        // Merge in current user as the organisation owner
-        form.data.userRoles.push({
-          userId: session?.user.id,
-          role: 'owner',
-          user: session?.user
-        });
-      }
-    }
-  } else {
-    const endPoint = `${API_PATH}/${resourcePath}/${entityRef}`;
-    const request = await fetch(endPoint);
-
-    if (request.status >= 400) {
-      throw error(request.status);
-    }
-
-    const formData: T = await request.json();
-    form = (await superValidate(formData, zod(updateSchema))) as SuperValidated<T>;
-
-    // Fetch associated image if this is an organisation or project
-    if (resourceType == 'organisation' || resourceType == 'project') {
-      if (formData.imageId) {
-        const imageResponse = await fetch(`${API_PATH}/images/${formData.imageId}`);
-        if (imageResponse.ok) {
-          image = await imageResponse.json();
-        } else {
-          console.error('Error fetching image:', imageResponse.statusText);
-        }
-      }
-    }
+    return {
+      entity: entityRef,
+      validatedForm: form,
+      image: null
+    };
   }
+
+  const { form, image } = await prepareExistingForm<T>({
+    resourceType,
+    entityRef,
+    updateSchema,
+    fetch
+  });
+
   console.log('form', entityRef, form);
   return {
     entity: entityRef,
     validatedForm: form,
     image
   };
+}
+
+function resourceIsOrganisation(resource: Resource): resource is Organisation {
+  return 'userRoles' in resource && !('organisationId' in resource);
+}
+
+function resourceIsProject(resource: Resource): resource is Project {
+  return 'organisationId' in resource;
+}
+
+function resourceIsLayer(resource: Resource): resource is Layer {
+  return 'projectId' in resource;
+}
+
+function resourceIsFeature(resource: Resource): resource is Feature {
+  return 'layerId' in resource;
 }
 
 function mergeOrganisationRoles(
