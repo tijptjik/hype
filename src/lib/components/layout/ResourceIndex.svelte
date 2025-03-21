@@ -149,7 +149,7 @@ onDestroy(() => {
     <!-- Only show the grid if we have entities and we're not in initial loading -->
     {#if entities.length > 0 || isInitialLoading}
       <div
-        class="grid grid-cols-1 gap-4 @3xl/grid:grid-cols-2 @5xl/grid:grid-cols-3 @7xl/grid:grid-cols-4"
+        class="grid grid-cols-1 gap-4 @[58rem]/grid:grid-cols-2 @[72rem]/grid:grid-cols-3 @[96rem]/grid:grid-cols-4 @[120rem]/grid:grid-cols-5 @[144rem]/grid:grid-cols-6 @[168rem]/grid:grid-cols-7 @[192rem]/grid:grid-cols-8 @[216rem]/grid:grid-cols-9 @[240rem]/grid:grid-cols-10"
         role="feed"
         aria-busy={isLoading}>
         {#each visibleEntities as entity, idx (entity.id)}
