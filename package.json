@@ -90,6 +90,7 @@
     "@testing-library/svelte": "^5.2.7",
     "@thisux/sveltednd": "0.0.16",
     "@turf/bbox": "^7.2.0",
+    "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.21",
     "coordinate-parser": "^1.0.7",
     "daisyui": "^4.12.24",
