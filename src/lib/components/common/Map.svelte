@@ -44,7 +44,10 @@ let loadMapLibre = loadScript(
     center: mapProps.coordinates,
     zoom: 20,
     hash: false,
-    attributionControl: false
+    attributionControl: false,
+    canvasContextAttributes: {
+      antialias: true
+    }
   });
 
   map.on('load', () => {
