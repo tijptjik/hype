@@ -12,6 +12,8 @@ import { hierarchicalResourceQuery } from '$lib/db';
 import { feature, projectRole } from '$lib/db/schema';
 import {
   createFeature,
+  createTranslations,
+  updateProperties,
   extractEntitiesToInsert,
   rebuildFormData
 } from '$lib/db/services/feature';
@@ -134,10 +136,26 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       return SuperFormResponse<Feature>(form);
     }
 
-    const { baseFeature } = extractEntitiesToInsert(form.data);
+    const { baseFeature, formTranslations, formProperties } = extractEntitiesToInsert(
+      form.data
+    );
     const createdFeature = await createFeature(db, baseFeature);
+    const createdTranslations = await createTranslations(
+      db,
+      formTranslations,
+      createdFeature.id
+    );
+    const createdProperties = await updateProperties(
+      db,
+      formProperties,
+      createdFeature.id
+    );
 
-    const updatedForm = await rebuildFormData(createdFeature);
+    const updatedForm = await rebuildFormData(
+      createdFeature,
+      createdTranslations,
+      createdProperties
+    );
     return SuperFormResponse(updatedForm, true, false, RESOURCE_PATH, 201);
   } catch (err) {
     console.error(err);
