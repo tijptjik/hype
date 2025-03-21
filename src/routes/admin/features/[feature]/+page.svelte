@@ -78,40 +78,14 @@ const FIELDS: FormFieldConfig = {
       component: 'DisplayField',
       isArray: false,
       isNested: true,
-      isTranslated: true,
-      coreValues: [
-        'formattedAddress',
-        'plusCode',
-        'subPremise',
-        'premise',
-        'streetNumber',
-        'route',
-        'intersection',
-        'neighbourhood',
-        'administrativeAreaLevel1',
-        'country',
-        'googlePlaceId',
-        'distanceFromPoint',
-        'addressForwardGeocoder',
-        'addressReverseGeocoder',
-        'addressReverseGen',
-        'addressForwardGen'
-      ],
-      translatedValues: [
-        'formattedAddress',
-        'subPremise',
-        'premise',
-        'streetNumber',
-        'route',
-        'intersection',
-        'neighbourhood',
-        'administrativeAreaLevel1',
-        'country',
-        'addressForwardGeocoder',
-        'addressReverseGeocoder',
-        'addressReverseGen',
-        'addressForwardGen'
-      ]
+      isTranslated: true
+    },
+    addressMeta: {
+      label: 'Address Meta',
+      component: 'DisplayField',
+      isArray: false,
+      isNested: true,
+      isTranslated: false
     }
   }
 };
@@ -202,10 +176,10 @@ function handleMapFullscreenChange(isFullscreen: boolean) {
                 fields={FIELDS.i18n as FormField} />
               <!-- TODO Add support for translatable specifiers -->
             {:else if resourceState.activeFacet === 'address'}
-              <!-- <AddressComponentSection
+              <AddressComponentSection
                 {form}
                 title="Address Components"
-                fields={FIELDS.address as FormField & FormFieldNested} /> -->
+                fields={FIELDS.address as FormField & FormFieldNested} />
               <AddressSection
                 {form}
                 title="Addressing"
