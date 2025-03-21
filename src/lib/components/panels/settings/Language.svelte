@@ -41,7 +41,7 @@ const updateLanguage = async (language: string) => {
           <Icon src={Language} class="h-5 w-5" />
           <p class="font-normal text-base-content">{language.name}</p>
           {#if language.code !== languageTag()}
-            <p class="text-sm text-sm text-neutral-content">
+            <p class="text-sm text-neutral-content">
               {language[languageTag()]}
             </p>
           {/if}

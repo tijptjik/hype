@@ -77,7 +77,7 @@ let getWarningMessage = () => {
           <div class="flex-grow-2 flex flex-row items-center justify-center gap-2">
             {#each error['_errors'] as message}
               <div
-                class="badge badge-lg flex items-center items-center justify-center gap-2 truncate border-error p-4 font-mono text-base-content">
+                class="badge badge-lg flex items-center justify-center gap-2 truncate border-error p-4 font-mono text-base-content">
                 <Icon
                   src={ExclamationTriangle}
                   class="h-4 w-4 shrink-0 stroke-current" />
