@@ -156,7 +156,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
     );
 
     const updatedForm = await rebuildFormData(
-      createdFeature,
+      createdFeature as Feature,
       createdTranslations,
       createdProperties
     );

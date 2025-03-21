@@ -28,7 +28,8 @@ import type {
   NewFeatureI18n,
   Layer,
   PropertyI18n,
-  TargetLang
+  TargetLang,
+  NewFeatureProperty
 } from '$lib/types';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 
@@ -99,7 +100,7 @@ export const updateTranslations = async (
 
 export const updateProperties = async (
   db: Database,
-  properties: FeatureProperty[],
+  properties: NewFeatureProperty[] | FeatureProperty[],
   featureId: Id
 ) => {
   // Get existing property IDs from database
@@ -189,7 +190,7 @@ export const extractEntitiesToUpdate = (formData: Feature) => {
 };
 
 export const rebuildFormData = async (
-  feature: FeatureDB,
+  feature: FeatureDB | NewFeatureDB,
   translations: FeatureI18n[] = [],
   properties: FeatureProperty[] = []
 ) => {
