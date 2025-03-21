@@ -76,19 +76,12 @@ const handleClick = async (e: Event) => {
       resourceState.invalidateAndRefresh(
         resourceState.activeResource as HierarchicalResource
       );
-      // RESET FORM
-      reset({
-        data: {
-          ...$form,
-          isPublished: result.data.isPublished,
-          publishedAt: result.data.publishedAt,
-          publisherId: result.data.publisherId
-        },
-        newState: {
-          isPublished: result.data.isPublished,
-          publishedAt: result.data.publishedAt,
-          publisherId: result.data.publisherId
-        }
+      // UPDATE FORM
+      form.update(($form) => {
+        $form.isPublished = result.data.isPublished;
+        $form.publishedAt = result.data.publishedAt;
+        $form.publisherId = result.data.publisherId;
+        return $form;
       });
     }
   } catch (err) {
