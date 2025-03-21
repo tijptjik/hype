@@ -7,7 +7,7 @@ import { m } from '$lib/i18n';
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // ENUMS
-import type { HierarchicalResource } from '$lib/types';
+import { HierarchicalResource, HierarchicalResourcePath } from '$lib/types';
 // TYPES
 import type { Project, Layer, Feature, SuperFormResult } from '$lib/types';
 // STATE : PAGE :: DATA
@@ -56,7 +56,7 @@ const handleClick = async (e: Event) => {
 
   try {
     const response: Response = await fetch(
-      `/api/${resourceState.state.active.resource}s/${resourceState.activeEntity}`,
+      `/api/${HierarchicalResourcePath[resourceState.activeResource]}/${resourceState.activeEntity}`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -78,7 +78,12 @@ const handleClick = async (e: Event) => {
       );
       // RESET FORM
       reset({
-        data: result.data,
+        data: {
+          ...$form,
+          isPublished: result.data.isPublished,
+          publishedAt: result.data.publishedAt,
+          publisherId: result.data.publisherId
+        },
         newState: {
           isPublished: result.data.isPublished,
           publishedAt: result.data.publishedAt,
