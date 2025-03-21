@@ -29,7 +29,8 @@ import {
 // I18N
 import { m } from '$lib/i18n';
 // TYPES
-import type { AddressProperties, LayerMetadata, TaskType } from '$lib/types';
+import type { AddressMeta, AddressProperties, LayerMetadata } from '$lib/types';
+import type { GeometryObject } from 'geojson';
 
 export const targetLangs = ['zh-hant', 'zh-hans'] as const;
 export const fieldDiscriminators = ['classifier', 'specifier', 'display'] as const;
@@ -405,6 +406,7 @@ export const FeaturePropertyI18nInsert = FeaturePropertyI18nUpdate.omit({
 });
 
 export const FeaturePropertyInsertAPI = FeaturePropertyInsert.extend({
+  featureId: z.string().optional(),
   translations: z.union([getTranslations(FeaturePropertyI18nInsert), z.object({})])
 });
 export const FeaturePropertyUpdateAPI = FeaturePropertyUpdateExtra.extend({
@@ -429,19 +431,14 @@ export const FeatureInsert = createInsertSchema(feature).extend({
   ...getDefaultConstraints(feature),
   isIntangible: z.boolean().default(false),
   isVisitable: z.boolean().default(true),
-  contributorId: z.string(),
-  geometry: PointGeometry.default({
+  contributorId: z.string().optional(),
+  geometry: z.custom<GeometryObject>().default({
     type: 'Point',
     coordinates: [114.1693671540923, 22.319307515052614]
   }),
   // TODO These are NOT custom, they should just be z.object()
-  addressProperties: z.custom<AddressProperties>().default({
-    // Metadata
-    addressForwardGeocoder: 'hkgov_als',
-    addressReverseGeocoder: 'hkgov_identify',
-    addressReverseGen: false,
-    addressForwardGen: false
-  })
+  addressProperties: z.custom<AddressProperties>().default({}),
+  addressMeta: z.custom<AddressMeta>().default({})
 });
 
 export const FeatureUpdate = FeatureInsert.extend({
