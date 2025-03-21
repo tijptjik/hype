@@ -92,7 +92,8 @@ const FIELDS: FormFieldConfig = {
         'country',
         'googlePlaceId',
         'distanceFromPoint',
-        'addressGeocoder',
+        'addressForwardGeocoder',
+        'addressReverseGeocoder',
         'addressReverseGen',
         'addressForwardGen'
       ],
@@ -106,7 +107,8 @@ const FIELDS: FormFieldConfig = {
         'neighbourhood',
         'administrativeAreaLevel1',
         'country',
-        'addressGeocoder',
+        'addressForwardGeocoder',
+        'addressReverseGeocoder',
         'addressReverseGen',
         'addressForwardGen'
       ]
@@ -134,6 +136,13 @@ let refs: ImageEditRefs = $derived({
   refType: RESOURCE,
   refId: pageProps.data.entity
 });
+
+// STATE : DERIVED :: FULLSCREEN
+let isMapFullscreen = $state(false);
+
+function handleMapFullscreenChange(isFullscreen: boolean) {
+  isMapFullscreen = isFullscreen;
+}
 </script>
 
 <!-- LAYOUT -->
@@ -149,8 +158,10 @@ let refs: ImageEditRefs = $derived({
       <main
         class="flex flex-1 flex-row gap-6 overflow-hidden bg-black p-6 pr-3"
         style="height: calc(100vh - 148px) !important;">
-        <div class="relative z-10 h-full flex-1 basis-1/3 overflow-hidden @container">
-          <MapSection {form} />
+        <div
+          class="map-container relative h-full flex-1 overflow-hidden @container"
+          class:fullscreen={isMapFullscreen}>
+          <MapSection {form} toggleFullscreen={handleMapFullscreenChange} />
           <div
             class="absolute bottom-2 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex">
             <UserAttributionCard
@@ -163,7 +174,9 @@ let refs: ImageEditRefs = $derived({
               type="publisher" />
           </div>
         </div>
-        <div class="h-auto basis-2/3 scroll-m-10 scroll-p-12 overflow-y-scroll">
+        <div
+          class="content-container h-auto scroll-m-10 scroll-p-12 overflow-y-scroll"
+          class:shrink={isMapFullscreen}>
           <div class="flex h-full flex-col-reverse justify-end gap-6 pr-3">
             {#if resourceState.activeFacet === 'core' || resourceState.activeFacet === false}
               <div class="flex flex-row gap-6">
@@ -180,7 +193,7 @@ let refs: ImageEditRefs = $derived({
                   fieldDiscriminator="specifier"
                   fields={FIELDS.property as FormFieldArray} />
                 {#if pageProps.data.entity !== NEW_REF}
-                <CanonicalImage {form} />
+                  <CanonicalImage {form} />
                 {/if}
               </div>
               <I18nSection
@@ -189,10 +202,10 @@ let refs: ImageEditRefs = $derived({
                 fields={FIELDS.i18n as FormField} />
               <!-- TODO Add support for translatable specifiers -->
             {:else if resourceState.activeFacet === 'address'}
-              <AddressComponentSection
+              <!-- <AddressComponentSection
                 {form}
                 title="Address Components"
-                fields={FIELDS.address as FormField & FormFieldNested} />
+                fields={FIELDS.address as FormField & FormFieldNested} /> -->
               <AddressSection
                 {form}
                 title="Addressing"
@@ -208,3 +221,30 @@ let refs: ImageEditRefs = $derived({
     </form>
   {/if}
 </div>
+
+<style>
+.map-container {
+  flex-basis: 33% !important;
+  transition: flex-basis 0.3s ease-in-out !important;
+}
+.map-container.fullscreen {
+  flex-basis: 100% !important;
+}
+
+.content-container {
+  flex-basis: 66% !important;
+  transition:
+    flex-basis 0.3s ease-in-out,
+    opacity 0.2s ease-in-out;
+  opacity: 1 !important;
+}
+
+.content-container.shrink {
+  flex-basis: 0% !important;
+  overflow: hidden;
+  opacity: 0 !important;
+  overflow: hidden !important;
+  width: 400px !important;
+  height: 400px !important;
+}
+</style>

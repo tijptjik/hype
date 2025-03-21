@@ -1,18 +1,23 @@
 <script lang="ts">
+import { createEventDispatcher } from 'svelte';
+// LIBRARY
+import { once, preventDefault, stopPropagation } from '$lib';
 // MapLibre
 import SpectralStyle from '$lib/map/style.json';
 // UTILS
 import { loadScript } from '$lib';
-// TYPES
-import type { SectionProps } from '$lib/types';
-// ENV
-// import { PUBLIC_MAPTILER_KEY } from '$env/static/public';
+// ICONS
+import { ArrowsPointingIn, ArrowsPointingOut } from '@steeze-ui/heroicons';
+import Icon from '$lib/components/common/Icon.svelte';
 
 type MapProps = {
   coordinates: number[];
   draggable?: boolean;
+  toggleFullscreen?: (isFullscreen: boolean) => void;
   dragEndCallback?: (lngLat: number[]) => void;
 };
+
+let isFullscreen = $state(false);
 
 // STATE : PROPS
 let mapProps: MapProps = $props();
@@ -75,6 +80,23 @@ const handleDragEnd = (e: Event) => {
 </script>
 
 <div class="relative h-full w-full">
+  <div class="absolute right-4 top-4 z-10">
+    <button
+      class="btn btn-circle btn-sm bg-base-100 opacity-80 hover:opacity-100"
+      onclick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        isFullscreen = !isFullscreen;
+        console.log('isFullscreen', e, mapProps.toggleFullscreen);
+        mapProps.toggleFullscreen?.(isFullscreen);
+      }}>
+      <div class="swap">
+        <input type="checkbox" checked={isFullscreen} />
+        <Icon src={ArrowsPointingIn} class="swap-on h-5 w-5" />
+        <Icon src={ArrowsPointingOut} class="swap-off h-5 w-5" />
+      </div>
+    </button>
+  </div>
   <!-- Loading Spinner -->
   {#if !isMapLoaded}
     <div
@@ -101,5 +123,26 @@ const handleDragEnd = (e: Event) => {
 
 .map {
   transition: opacity 0.3s ease-in-out;
+}
+
+/* This will be used by the parent container */
+:global(.map-container) {
+  transition: flex-basis 0.3s ease-in-out;
+}
+
+:global(.map-container.fullscreen) {
+  flex-basis: 100% !important;
+}
+
+:global(.content-container) {
+  transition:
+    flex-basis 0.3s ease-in-out,
+    opacity 0.2s ease-in-out;
+}
+
+:global(.content-container.hidden) {
+  flex-basis: 0% !important;
+  opacity: 0;
+  overflow: hidden;
 }
 </style>
