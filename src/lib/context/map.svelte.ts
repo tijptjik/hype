@@ -371,6 +371,7 @@ export class mapContext {
   };
 
   getFeatureIdsForProperties = (): Id[] => {
+    // TODO Fix filter for properties
     if (Object.keys(this.state.filters.properties || {}).length === 0) {
       return this.featuresAll;
     }
