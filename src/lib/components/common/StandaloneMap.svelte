@@ -1,6 +1,7 @@
 <script lang="ts">
 // import { AttributionControl, GeolocateControl, Map, NavigationControl, ScaleControl } from 'maplibre-gl';
 // SVELTE
+import { page } from '$app/stores';
 import { onMount } from 'svelte';
 // ICONS
 import { Square3Stack3d } from '@steeze-ui/heroicons';
@@ -119,7 +120,7 @@ $effect(() => {
 </script>
 
 <div id="map" class="map absolute inset-0" data-testid="map" bind:this={mapContainer}>
-  {#if !mapContext.state.prisms.layer.length && !mapContext.state.panels.maps}
+  {#if $page.data.session && !mapContext.state.prisms.layer.length && !mapContext.state.panels.maps}
     <div
       class="pointer-events-none absolute inset-0 z-50 mx-auto flex cursor-pointer items-center justify-center bg-black/70 text-center caret-transparent"
       in:fade={{ duration: 800, delay: 3000, easing: cubicInOut }}
