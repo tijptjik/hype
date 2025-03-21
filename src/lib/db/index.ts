@@ -25,7 +25,8 @@ import type {
   Ref,
   Resource,
   ResourceDB,
-  ResourceType
+  ResourceType,
+  LanguageTag
 } from '../types';
 
 export const targetLanguageTags: LanguageTag[] = ['zh-hant', 'zh-hans'];

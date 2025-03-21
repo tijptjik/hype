@@ -51,6 +51,10 @@ const constraints: Record<string, z.ZodType<any>> = {
     .string()
     .min(1, { message: m.admin__validation_name_is_required() })
     .max(128, { message: m.admin__validation_name_lte_128_chars() }),
+  title: z
+    .string()
+    .min(1, { message: m.admin__validation_name_is_required() })
+    .max(128, { message: m.admin__validation_name_lte_128_chars() }),
   nameShort: z
     .string()
     .min(1, { message: m.admin__validation_short_name_is_required() })
@@ -389,9 +393,18 @@ export const FeaturePropertyBase = createSelectSchema(featureProperty);
 export const FeaturePropertyI18nBase = createSelectSchema(featurePropertyI18n);
 
 // Base schema to validate submit data
-export const FeaturePropertyInsert = createInsertSchema(featureProperty).extend({
-  value: z.string().nullable()
+export const FeaturePropertyInsert = createInsertSchema(featureProperty)
+  .extend({
+    value: z.string().nullable()
+  })
+  .omit({
+    featureId: true
+  });
+export const FeaturePropertyInsertExtra = FeaturePropertyInsert.extend({
+  property: PropertyInsertAPI.omit({ values: true }).deepPartial(),
+  propertyValue: PropertyValueInsertAPI.optional()
 });
+
 export const FeaturePropertyUpdate = FeaturePropertyInsert.extend({
   id: z.string()
 });
@@ -405,7 +418,7 @@ export const FeaturePropertyI18nInsert = FeaturePropertyI18nUpdate.omit({
   featurePropertyId: true
 });
 
-export const FeaturePropertyInsertAPI = FeaturePropertyInsert.extend({
+export const FeaturePropertyInsertAPI = FeaturePropertyInsertExtra.extend({
   translations: z.union([getTranslations(FeaturePropertyI18nInsert), z.object({})])
 });
 export const FeaturePropertyUpdateAPI = FeaturePropertyUpdateExtra.extend({
