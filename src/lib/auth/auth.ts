@@ -20,6 +20,7 @@ declare module '@auth/sveltekit' {
     user: {
       roles?: UserRole[];
       userLayers?: UserLayer[];
+      superAdmin?: boolean;
       /**
        * By default, TypeScript merges new interface properties and overwrites existing ones.
        * In this case, the default session user properties will be overwritten,
