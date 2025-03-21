@@ -25,7 +25,7 @@ import type {
   ActiveCollection
 } from '$lib/types';
 import type { Map as MaplibreMap } from 'maplibre-gl';
-import type { FeatureCollection } from 'geojson';
+import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
 export class mapContext {
   // Maplibre Map instance
   map: MaplibreMap | undefined;
@@ -517,9 +517,12 @@ export class mapContext {
         (item) => item.id === this.state.active.feature?.id
       ) ?? -1;
     if (navIndex < (this.state.active.collection?.items.length || 1) - 1) {
-      this.setActiveFeature(this.state.active.collection?.items[navIndex + 1]?.id, {
-        focus: true
-      });
+      this.setActiveFeature(
+        this.state.active.collection?.items[navIndex + 1]?.id as Id,
+        {
+          focus: true
+        }
+      );
     }
   }
 
@@ -529,15 +532,18 @@ export class mapContext {
         (item) => item.id === this.state.active.feature?.id
       ) ?? -1;
     if (navIndex > 0) {
-      this.setActiveFeature(this.state.active.collection?.items[navIndex - 1]?.id, {
-        focus: true
-      });
+      this.setActiveFeature(
+        this.state.active.collection?.items[navIndex - 1]?.id as Id,
+        {
+          focus: true
+        }
+      );
     }
   }
 
   navToIndex(index: number) {
     if (index > 0) {
-      this.setActiveFeature(this.state.active.collection?.items[index]?.id, {
+      this.setActiveFeature(this.state.active.collection?.items[index]?.id as Id, {
         focus: true
       });
     }
@@ -566,7 +572,11 @@ export class mapContext {
     // Create a FeatureCollection
     const featureCollection: FeatureCollection = {
       type: 'FeatureCollection',
-      features: featuresToZoom
+      features: featuresToZoom.map((f) => ({
+        type: 'Feature',
+        geometry: f.geometry,
+        properties: f.properties
+      })) as GeoJSONFeature[]
     };
     const padding = {
       top: 150,
