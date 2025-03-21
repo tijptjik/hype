@@ -221,7 +221,7 @@ export const getId = (
 };
 
 // CONFIG
-const sourceLanguageTag = 'en';
+export const sourceLanguageTag = 'en';
 export const targetLanguageTags: LanguageTag[] = ['zh-hant', 'zh-hans'];
 export const languageTags: LanguageTag[] = [sourceLanguageTag, ...targetLanguageTags];
 export const NEW_TITLE = 'New';
