@@ -39,7 +39,6 @@ $effect(() => {
     inputValue = formValues.value;
     isGenAI = formValues.isGenAI;
   }
-  console.log($form.properties[0].propertyValueId);
 });
 
 // STATE : DERIVED
