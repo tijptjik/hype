@@ -58,7 +58,7 @@
     "svelte-check": "^4.1.5",
     "typescript-eslint": "^8.27.0",
     "vite-plugin-node-polyfills": "^0.22.0",
-    "wrangler": "^4.2.0"
+    "wrangler": "^4.3.0"
   },
   "type": "module",
   "trustedDependencies": [
@@ -82,7 +82,7 @@
     "@steeze-ui/heroicons": "^2.4.2",
     "@steeze-ui/svelte-icon": "^1.6.2",
     "@sveltejs/adapter-cloudflare": "^4.9.0",
-    "@sveltejs/kit": "^2.20.1",
+    "@sveltejs/kit": "^2.20.2",
     "@sveltejs/vite-plugin-svelte": "^4.0.4",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/typography": "^0.5.16",
@@ -102,7 +102,7 @@
     "postcss": "^8.5.3",
     "proj4": "^2.15.0",
     "short-uuid": "^5.2.0",
-    "svelte": "^5.23.2",
+    "svelte": "^5.24.1",
     "svelte-fa": "^4.0.3",
     "svelte-file-dropzone": "^2.0.9",
     "svelte-range-slider-pips": "^3.2.2",
