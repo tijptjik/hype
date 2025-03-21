@@ -2,6 +2,7 @@ import { createI18n } from '@inlang/paraglide-sveltekit';
 // I18N
 import * as runtime from '$lib/paraglide/runtime';
 import * as m from '$lib/paraglide/messages';
+import type { LanguageTag, TargetLang } from '$lib/types';
 
 export const i18n = createI18n(runtime);
 
@@ -15,3 +16,28 @@ export function getI18nValue(obj: any, field: string): string {
 
 export { languageTag, setLanguageTag } from '$lib/paraglide/runtime';
 export { m, runtime };
+
+export interface TranslationState {
+  confirmed: boolean;
+  translated: boolean;
+}
+
+export type TranslationStates = Record<TargetLang, TranslationState>;
+
+export async function translateText(
+  sourceLang: LanguageTag,
+  targetLang: LanguageTag,
+  texts: string[]
+): Promise<string[]> {
+  const response = await fetch('/api/translation', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sourceLang,
+      targetLang,
+      texts
+    })
+  });
+  const data = await response.json();
+  return data.translations;
+}
