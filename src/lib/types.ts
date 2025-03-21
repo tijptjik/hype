@@ -110,9 +110,9 @@ import type {
   FeatureForm as FeatureFormType
 } from './context/forms.svelte';
 import type { IconSource } from '@steeze-ui/heroicons';
-import type { Writable } from 'drizzle-orm/utils';
 import type { enhance } from '$app/forms';
 import type { Marker } from 'maplibre-gl';
+import type { Writable } from 'svelte/store';
 
 // HTML
 export type InputType = 'text' | 'number' | 'email' | 'password';

@@ -457,10 +457,14 @@ export const FeatureUpdate = FeatureInsert.extend({
   id: z.string()
 });
 
-export const FeatureI18nUpdate = createInsertSchema(featureI18n).extend({
+export const FeatureI18nInsert = createInsertSchema(featureI18n)
+  .omit({ featureId: true })
+  .extend({
+    ...getDefaultConstraints(featureI18n)
+  });
+export const FeatureI18nUpdate = createSelectSchema(featureI18n).extend({
   ...getDefaultConstraints(featureI18n)
 });
-export const FeatureI18nInsert = FeatureI18nUpdate.omit({ featureId: true });
 
 // Update existing Feature schemas to include new relations
 export const FeatureInsertAPI = FeatureInsert.extend({

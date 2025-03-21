@@ -56,7 +56,7 @@ const handleClick = async (e: Event) => {
 
   try {
     const response: Response = await fetch(
-      `/api/${HierarchicalResourcePath[resourceState.activeResource]}/${resourceState.activeEntity}`,
+      `/api/${HierarchicalResourcePath[resourceState.activeResource as HierarchicalResource]}/${resourceState.activeEntity}`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
