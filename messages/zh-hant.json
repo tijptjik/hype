@@ -148,6 +148,9 @@
   "map__no_markers_without_layers": "請選擇一個圖層來填滿地圖",
   "map__select_layer": "請選擇一個圖層來填滿地圖",
 
+  "admin__desktop_only_window_too_small": "視窗太小",
+  "admin__desktop_only_window_too_small_explainer": "管理面板需要至少 1200px 的視口寬度才能正常運作。請調整瀏覽器視窗大小或使用更大的螢幕。",
+
   "admin__filter_stat_access": "訪問",
   "admin__filter_stat_filtered": "已過濾",
   "admin__filter_stat_selected": "已選擇",
@@ -162,6 +165,7 @@
   "admin__validation_url_invalid": "URL 無效 -- 您是否新增了 https://？",
   "admin__validation_attribution_is_required": "需要歸因",
   "admin__validation_attribution_lte_128_chars": "最多 128 個字元",
+
   "admin__geo_lookup_address_at_location": "取得位置位址",
   "admin__geo_latitude": "緯度",
   "admin__geo_longitude": "經度"
