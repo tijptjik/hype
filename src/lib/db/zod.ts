@@ -406,7 +406,6 @@ export const FeaturePropertyI18nInsert = FeaturePropertyI18nUpdate.omit({
 });
 
 export const FeaturePropertyInsertAPI = FeaturePropertyInsert.extend({
-  featureId: z.string().optional(),
   translations: z.union([getTranslations(FeaturePropertyI18nInsert), z.object({})])
 });
 export const FeaturePropertyUpdateAPI = FeaturePropertyUpdateExtra.extend({
