@@ -151,6 +151,7 @@
 
   "admin__desktop_only_window_too_small": "Window Too Small",
   "admin__desktop_only_window_too_small_explainer": "The admin panel requires a viewport width of at least 1200px to function properly. Please resize your browser window or use a larger screen.",
+  "admin__desktop_only_current_width": "Current Width",
 
   "admin__filter_stat_access": "Access",
   "admin__filter_stat_filtered": "Filter",

@@ -151,6 +151,7 @@
 
   "admin__desktop_only_window_too_small": "窗口太小",
   "admin__desktop_only_window_too_small_explainer": "管理面板需要至少 1200px 的视口宽度才能正常运行。请调整浏览器窗口大小或使用更大的屏幕。",
+  "admin__desktop_only_current_width": "电流宽度",
 
   "admin__filter_stat_access": "访问",
   "admin__filter_stat_filtered": "已过滤",
