@@ -122,14 +122,14 @@ export const organisation = sqliteTable('organisation', {
     onUpdate: 'cascade'
   }),
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(true),
-  // False : Organisation may be shown in the Admin Panel
-  // True : Organisation is considered deleted
-  isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
   publishedAt: text('publishedAt'),
   publisherId: text('publisherId').references(() => user.id, {
     onDelete: 'set null',
     onUpdate: 'cascade'
   }),
+  // False : Organisation may be shown in the Admin Panel
+  // True : Organisation is considered deleted
+  isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -292,6 +292,11 @@ export const project = sqliteTable('project', {
   }),
   // Accessible to the public in the app
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
+  publishedAt: text('publishedAt'),
+  publisherId: text('publisherId').references(() => user.id, {
+    onDelete: 'set null',
+    onUpdate: 'cascade'
+  }),
   // False : Project may be shown in the Admin Panel
   // True : Project is considered deleted
   isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
@@ -416,8 +421,14 @@ export const layer = sqliteTable('layer', {
     .default(false),
   // Additional Information
   metadata: text('metadata', { mode: 'json' }).$type<LayerMetadata>(),
+
   // Accessible to the public in the app
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
+  publishedAt: text('publishedAt'),
+  publisherId: text('publisherId').references(() => user.id, {
+    onDelete: 'set null',
+    onUpdate: 'cascade'
+  }),
   // False : Layer may be shown in the Admin Panel
   // True : Layer is considered deleted
   isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
@@ -512,10 +523,11 @@ export const feature = sqliteTable('feature', {
   contributorId: text('contributorId').references(() => user.id, {
     onDelete: 'set null'
   }),
-  publisherId: text('publisherId').references(() => user.id, { onDelete: 'set null' }),
   // True : Feature is shown in the User App
   // False : Feature is only shown in the Admin Panel
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
+  publisherId: text('publisherId').references(() => user.id, { onDelete: 'set null' }),
+  publishedAt: text('publishedAt'),
   // False : Feature shows up everywhere in the Admin Panel
   // True : Feature only shows up in the Review Queue
   isPendingReview: integer('isPendingReview', { mode: 'boolean' })
@@ -547,8 +559,7 @@ export const feature = sqliteTable('feature', {
   modifiedAt: text('modifiedAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .$onUpdate(() => new Date().toISOString())
-    .notNull(),
-  publishedAt: text('publishedAt')
+    .notNull()
 });
 
 export const featureRelations = relations(feature, ({ one, many }) => ({
