@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { onMount } from 'svelte';
 // LIB
 import { ADMIN_MIN_WIDTH } from '$lib/index';
 // COMPONENTS
@@ -56,21 +58,31 @@ $effect(() => {
     goto($page.url.pathname, { replaceState: true });
   }
 });
+let isMounted = $state(false);
+onMount(() => {
+  isMounted = true;
+});
 </script>
 
 <!-- LAYOUT -->
 <MinWidthProtector>
-  <Sidebar />
-  <div class="flex h-screen w-full select-none flex-col drag-none">
-    <header class="flex-none bg-black">
-      <Navbar />
-    </header>
-    <main
-      class="flex h-full flex-1 flex-col overflow-hidden"
-      class:pb-[72px]={!viewportContained}>
-      {@render children()}
-    </main>
-  </div>
+  {#if isMounted}
+    <Sidebar />
+    <div class="flex h-screen w-full select-none flex-col drag-none">
+      <header class="flex-none bg-black">
+        <Navbar />
+      </header>
+      <main
+        class="flex h-full flex-1 flex-col overflow-hidden"
+        class:pb-[72px]={!viewportContained}>
+        {@render children()}
+      </main>
+    </div>
+  {:else}
+    <div class="flex h-screen w-full items-center justify-center">
+      <div class="loading loading-spinner loading-lg"></div>
+    </div>
+  {/if}
 </MinWidthProtector>
 
 <svelte:head>
