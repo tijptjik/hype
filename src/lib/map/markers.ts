@@ -1,6 +1,8 @@
 import type { Map as MapLibreMap, Marker } from 'maplibre-gl';
 import type { Feature } from '$lib/types';
 import { mapContext } from '$lib/context/map.svelte';
+// STYLES
+import '$lib/styles/map.css';
 
 // Track markers with their IDs
 let currentMarkers: Map<string, Marker> = new Map();
@@ -129,4 +131,23 @@ export function removeMarkerClass(
 ) {
   if (!mapContext.map) return;
   mapContext.state.markers.get(featureId)?.getElement().classList.remove(className);
+}
+
+export function addAddressMarker(
+  maplibre: any,
+  mapContext: mapContext,
+  lngLat: [number, number]
+) {
+  const el = createMarkerElement();
+  el.classList.add('marker-address');
+  el.setAttribute('data-feature-property', 'geoCodeCoordinates');
+  // @ts-ignore
+  const marker = new maplibre.Marker({
+    element: el,
+    color: '#ef4444',
+    anchor: 'center'
+  })
+    .setLngLat(lngLat)
+    .addTo(mapContext.map);
+  return marker;
 }
