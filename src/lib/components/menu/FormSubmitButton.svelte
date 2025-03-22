@@ -15,13 +15,18 @@ let { tainted, isTainted, submit, errors } = menuProps.form;
 
 // STATE : UI
 let isInvalid = $state(false);
-
+let hasErrors = $state(false);
 // STATE : EFFECTS
 $effect(() => {
   if (Object.keys($errors).length > 0) {
-    $inspect($errors);
+    $inspect('SuperForm Errors', $errors);
   }
-  isInvalid = (function checkErrors(obj: Record<string, unknown>): boolean {
+  if (menuProps.form.hasClientErrors) {
+    $inspect('Clientside Errors', menuProps.form.hasClientErrors);
+  }
+
+  // Check for general validation errors
+  let hasErrors = (function checkErrors(obj: Record<string, unknown>): boolean {
     if (typeof obj !== 'object' || obj === null) {
       return obj !== undefined;
     }
@@ -31,6 +36,7 @@ $effect(() => {
         : value !== undefined
     );
   })($errors as Record<string, unknown>);
+  isInvalid = hasErrors || menuProps.form.hasClientErrors;
 });
 </script>
 
@@ -48,5 +54,5 @@ $effect(() => {
   {#if false}
     <Icon src={CheckCircle} />
   {/if}
-  {isInvalid ? m.forms__invalid() : m.forms__save()}
+  {!isInvalid ? m.forms__save() : hasErrors ? m.forms__invalid() : m.forms__pending()}
 </button>
