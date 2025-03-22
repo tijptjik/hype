@@ -6,7 +6,10 @@ import {
   getNormalisedDistrict,
   getNormalisedRegion,
   removeRegion,
-  titleCase
+  titleCase,
+  applyAddressAbbreviations,
+  getNormalisedCountry,
+  districtCodeToName
 } from '$lib/utils/geocoding';
 // DATA
 import neighbourhoods from '$lib/map/neighbourhoods.json';
@@ -211,7 +214,9 @@ function processReverseGeocodeResult(
     const numbers = streetParts[0].split(/[-\/]/);
     buildingNumberFrom = numbers[0];
     buildingNumberTo = numbers[1];
-    streetName = capitalizeFirstLetter(streetParts.slice(1).join(' '));
+    streetName = capitalizeFirstLetter(
+      applyAddressAbbreviations(streetParts.slice(1).join(' '))
+    );
   }
 
   // Get coordinates and calculate distance
@@ -223,13 +228,15 @@ function processReverseGeocodeResult(
 
   // Process the result
   const processedResult: ParsedReverseGeocodeResult = {
-    displayAddress: removeRegion(titleCase(result.address.Match_addr)) || undefined,
+    displayAddress:
+      removeRegion(titleCase(applyAddressAbbreviations(result.address.Match_addr))) ||
+      undefined,
     displayAddressGen: true,
     addressProperties: {
       formattedAddress: titleCase(result.address.Match_addr) || undefined,
-      buildingNumberFrom: buildingNumberFrom || undefined,
-      buildingNumberTo: buildingNumberTo || undefined,
-      streetName: streetName || undefined,
+      buildingNumberFrom,
+      buildingNumberTo,
+      streetName,
       neighbourhood:
         titleCase(result.address.Neighborhood) ||
         titleCase(result.address.City) ||
@@ -274,7 +281,9 @@ export async function reverseGeocode(
 
   // Perform forward lookup using the Match_addr
   try {
-    const forwardResult = await forwardGeocode(result.address.Match_addr);
+    const forwardResult = await forwardGeocode(
+      `${processedResult.addressProperties.buildingNumberFrom} ${processedResult.addressProperties.streetName}`
+    );
     if (forwardResult) {
       const fullResult = await processForwardGeocodeResult(
         forwardResult,
@@ -291,7 +300,9 @@ export async function reverseGeocode(
             distanceFromPoint: processedResult.addressMeta.distanceFromPoint,
             addressReverseGeocoder: processedResult.addressMeta.addressReverseGeocoder,
             addressReverseGen: processedResult.addressMeta.addressReverseGen
-          }
+          },
+          // The reverse geocoder result is cleaner than the forward geocoder result
+          displayAddress: processedResult.displayAddress
         };
       }
     }
@@ -310,15 +321,17 @@ export async function forwardGeocode(
 ): Promise<ALSResult> {
   const endPoint = 'https://www.als.gov.hk/lookup';
   const response = await fetch(
-    `${endPoint}?ga=${encodeURIComponent(address)}&t=${minConfidence}&n=${maxResults}`,
+    `${endPoint}?q=${encodeURIComponent(address)}&t=${minConfidence}&n=${maxResults}`,
     {
       headers: {
         Accept: 'application/json',
-        'Accept-Encoding': 'gzip'
+        'Accept-Encoding': 'gzip',
+        'Accept-Language': 'en-US,en;q=0.9,zh-HK;q=0.8,zh;q=0.7,zh-hant;q=0.7'
       }
     }
   );
-  return response.json();
+  const result = await response.json();
+  return result;
 }
 
 export async function geoAddressLookup(geoAddressCode: string): Promise<ALSResult> {
@@ -326,7 +339,8 @@ export async function geoAddressLookup(geoAddressCode: string): Promise<ALSResul
   const response = await fetch(`${endPoint}?ga=${geoAddressCode}`, {
     headers: {
       Accept: 'application/json',
-      'Accept-Encoding': 'gzip'
+      'Accept-Encoding': 'gzip',
+      'Accept-Language': 'en-US,en;q=0.9,zh-HK;q=0.8,zh;q=0.7,zh-hant;q=0.7'
     }
   });
   return response.json();
@@ -346,7 +360,7 @@ function parseALSResultToDisplay(
     if (eng.BuildingName) {
       parts.push(eng.BuildingName);
     }
-    if (eng.EngBlock.BlockNo) {
+    if (eng.EngBlock) {
       const blockPart =
         eng.EngBlock.BlockDescriptorPrecedenceIndicator === 'Y'
           ? `${eng.EngBlock.BlockDescriptor} ${eng.EngBlock.BlockNo}`
@@ -355,7 +369,7 @@ function parseALSResultToDisplay(
     }
 
     // Estate/Phase info
-    if (eng.EngEstate.EstateName) {
+    if (eng.EngEstate) {
       let estatePart = eng.EngEstate.EstateName;
       if (eng.EngEstate.EngPhase?.PhaseNo) {
         estatePart = `${estatePart} PH ${eng.EngEstate.EngPhase.PhaseNo}`;
@@ -364,20 +378,23 @@ function parseALSResultToDisplay(
     }
 
     // Street address
-    if (eng.EngStreet.BuildingNoFrom) {
-      parts.push(eng.EngStreet.BuildingNoFrom);
-    }
-    if (eng.EngStreet.StreetName) {
-      parts.push(
-        eng.EngStreet.StreetName.replace('ROAD', 'RD').replace('STREET', 'ST')
-      );
+    if (eng.EngStreet) {
+      let streetAddress = '';
+      if (eng.EngStreet.BuildingNoFrom) {
+        streetAddress = eng.EngStreet.BuildingNoFrom;
+      }
+      if (eng.EngStreet.BuildingNoTo) {
+        streetAddress = `${streetAddress}-${eng.EngStreet.BuildingNoTo}`;
+      }
+      streetAddress = `${streetAddress} ${eng.EngStreet.StreetName}`;
+      parts.push(streetAddress);
     }
 
     // Area info
     const location =
       eng.EngStreet?.LocationName ||
       eng.EngVillage?.LocationName ||
-      eng.EngDistrict.DcDistrict;
+      districtCodeToName[getNormalisedDistrict(eng.EngDistrict.DcDistrict, 'en')];
     if (location) {
       parts.push(location);
     }
@@ -385,8 +402,9 @@ function parseALSResultToDisplay(
     // Skip Region
     // parts.push(eng.Region);
 
-    return parts.join(', ');
+    return titleCase(applyAddressAbbreviations(parts.join(', ')));
   } else {
+    if (!('ChiPremisesAddress' in pa)) return null;
     const { ChiPremisesAddress: chi } = pa;
     const parts = [];
 
@@ -394,12 +412,12 @@ function parseALSResultToDisplay(
     if (chi.BuildingName) {
       parts.push(chi.BuildingName);
     }
-    if (chi.ChiBlock.BlockNo) {
+    if (chi.ChiBlock) {
       parts.push(`${chi.ChiBlock.BlockNo}${chi.ChiBlock.BlockDescriptor}`);
     }
 
     // Estate/Phase info
-    if (chi.ChiEstate.EstateName) {
+    if (chi.ChiEstate) {
       let estatePart = chi.ChiEstate.EstateName;
       if (chi.ChiEstate.ChiPhase?.PhaseNo) {
         estatePart = `${estatePart}第${chi.ChiEstate.ChiPhase.PhaseNo}期`;
@@ -408,11 +426,11 @@ function parseALSResultToDisplay(
     }
 
     // Street address
-    if (chi.ChiStreet.BuildingNoFrom) {
-      parts.push(chi.ChiStreet.BuildingNoFrom + '號');
-    }
-    if (chi.ChiStreet.StreetName) {
+    if (chi.ChiStreet) {
       parts.push(chi.ChiStreet.StreetName);
+      if (chi.ChiStreet.BuildingNoFrom) {
+        parts.push(chi.ChiStreet.BuildingNoFrom + '號');
+      }
     }
 
     // Area info
@@ -430,7 +448,7 @@ function parseALSResultToDisplay(
 
 export async function processForwardGeocodeResult(
   result: ALSResult,
-  existingDisplayAddressGen: boolean | null | undefined,
+  genDisplayAddress: boolean,
   lng: number,
   lat: number
 ): Promise<ReverseGeocodeResult | null> {
@@ -440,34 +458,36 @@ export async function processForwardGeocodeResult(
   const { PremisesAddress: pa } = address.Address;
 
   // Only generate display addresses if allowed
-  const shouldGenerateDisplay =
-    existingDisplayAddressGen === null || existingDisplayAddressGen === true;
-  const displayAddressEn = shouldGenerateDisplay
+  const displayAddressEn = genDisplayAddress
     ? parseALSResultToDisplay(address, 'en')
     : undefined;
-  const displayAddressZh = shouldGenerateDisplay
+  const displayAddressZh = genDisplayAddress
     ? parseALSResultToDisplay(address, 'zh-hant')
     : undefined;
 
   // Prepare Chinese address properties
-  const zhHantAddressProps: Partial<AddressProperties> = {
-    buildingName: pa.ChiPremisesAddress.BuildingName,
-    buildingNumberFrom: pa.ChiPremisesAddress.ChiStreet.BuildingNoFrom,
-    buildingNumberTo: pa.ChiPremisesAddress.ChiStreet.BuildingNoTo,
-    blockType: pa.ChiPremisesAddress.ChiBlock.BlockDescriptor,
-    blockNumber: pa.ChiPremisesAddress.ChiBlock.BlockNo,
-    estateName: pa.ChiPremisesAddress.ChiEstate.EstateName,
-    streetName: pa.ChiPremisesAddress.ChiStreet.StreetName,
-    district: getNormalisedDistrict(
-      pa.ChiPremisesAddress.ChiDistrict.DcDistrict,
-      'zh-hant'
-    ),
-    region: getNormalisedRegion(pa.ChiPremisesAddress.Region, 'zh-hant')
-  };
+  let zhHantAddressProps: Partial<AddressProperties> = {};
+  if ('ChiPremisesAddress' in pa) {
+    zhHantAddressProps = {
+      buildingName: pa.ChiPremisesAddress.BuildingName || undefined,
+      buildingNumberFrom: pa.ChiPremisesAddress.ChiStreet?.BuildingNoFrom || undefined,
+      buildingNumberTo: pa.ChiPremisesAddress.ChiStreet?.BuildingNoTo || undefined,
+      blockType: pa.ChiPremisesAddress.ChiBlock?.BlockDescriptor || undefined,
+      blockNumber: pa.ChiPremisesAddress.ChiBlock?.BlockNo || undefined,
+      estateName: pa.ChiPremisesAddress.ChiEstate?.EstateName || undefined,
+      streetName: pa.ChiPremisesAddress.ChiStreet?.StreetName || undefined,
+      district: getNormalisedDistrict(
+        pa.ChiPremisesAddress.ChiDistrict?.DcDistrict,
+        'zh-hant'
+      ),
+      region: getNormalisedRegion(pa.ChiPremisesAddress?.Region, 'zh-hant'),
+      country: getNormalisedCountry('Hong Kong', 'zh-hant')
+    };
+  }
 
   // Translate Chinese properties to Simplified Chinese
   let zhHansAddressProps: Partial<AddressProperties> = {};
-  if (displayAddressZh) {
+  if ('ChiPremisesAddress' in pa) {
     try {
       const propsToTranslate = Object.values(zhHantAddressProps).filter(Boolean);
       const response = await fetch('/api/translation', {
@@ -479,8 +499,7 @@ export async function processForwardGeocodeResult(
           texts: [displayAddressZh, ...propsToTranslate]
         })
       });
-      const data = await response.json();
-      const [translatedDisplay, ...translatedProps] = data.translations;
+      const [translatedDisplay, ...translatedProps] = await response.json();
 
       // Map translated properties back to their keys
       let propIndex = 0;
@@ -492,7 +511,7 @@ export async function processForwardGeocodeResult(
       );
 
       // Add the translated display address
-      if (shouldGenerateDisplay) {
+      if (genDisplayAddress) {
         zhHansAddressProps.displayAddress = translatedDisplay;
       }
     } catch (error) {
@@ -501,34 +520,41 @@ export async function processForwardGeocodeResult(
   }
 
   const addressProperties: AddressProperties = {
-    buildingName: capitalizeFirstLetter(pa.EngPremisesAddress.BuildingName),
+    buildingName: titleCase(pa.EngPremisesAddress.BuildingName),
     buildingNumberFrom: pa.EngPremisesAddress.EngStreet.BuildingNoFrom,
     buildingNumberTo: pa.EngPremisesAddress.EngStreet.BuildingNoTo,
-    blockType: capitalizeFirstLetter(pa.EngPremisesAddress.EngBlock.BlockDescriptor),
-    blockNumber: pa.EngPremisesAddress.EngBlock.BlockNo,
+    blockType: titleCase(pa.EngPremisesAddress?.EngBlock?.BlockDescriptor),
+    blockNumber: pa.EngPremisesAddress?.EngBlock?.BlockNo,
     blockTypeBeforeNumber:
-      pa.EngPremisesAddress.EngBlock.BlockDescriptorPrecedenceIndicator === 'Y',
-    phaseName: pa.EngPremisesAddress.EngEstate.EngPhase?.PhaseName
-      ? capitalizeFirstLetter(pa.EngPremisesAddress.EngEstate.EngPhase.PhaseName)
+      'EngBlock' in pa.EngPremisesAddress
+        ? pa.EngPremisesAddress?.EngBlock?.BlockDescriptorPrecedenceIndicator === 'Y'
+        : undefined,
+    phaseName: pa.EngPremisesAddress?.EngEstate?.EngPhase?.PhaseName
+      ? titleCase(pa.EngPremisesAddress.EngEstate.EngPhase.PhaseName)
       : undefined,
-    phaseNumber: pa.EngPremisesAddress.EngEstate.EngPhase?.PhaseNo,
-    estateName: capitalizeFirstLetter(pa.EngPremisesAddress.EngEstate.EstateName),
-    streetName: capitalizeFirstLetter(pa.EngPremisesAddress.EngStreet.StreetName),
-    neighbourhood: pa.EngPremisesAddress.EngStreet.EngVillage?.LocationName
-      ? getFirstLocation(pa.EngPremisesAddress.EngStreet.EngVillage.LocationName)
+    phaseNumber: pa.EngPremisesAddress?.EngEstate?.EngPhase?.PhaseNo,
+    estateName: titleCase(pa.EngPremisesAddress?.EngEstate?.EstateName),
+    streetName: titleCase(pa.EngPremisesAddress?.EngStreet?.StreetName),
+    neighbourhood: pa.EngPremisesAddress?.EngStreet?.EngVillage?.LocationName
+      ? getFirstLocation(pa.EngPremisesAddress?.EngStreet?.EngVillage?.LocationName)
       : undefined,
-    district: getNormalisedDistrict(pa.EngPremisesAddress.EngDistrict.DcDistrict, 'en'),
-    region: getNormalisedRegion(pa.EngPremisesAddress.Region, 'en'),
-    country: 'HKSAR'
+    district: getNormalisedDistrict(
+      pa.EngPremisesAddress?.EngDistrict?.DcDistrict,
+      'en'
+    ),
+    region: getNormalisedRegion(pa.EngPremisesAddress?.Region, 'en'),
+    country: getNormalisedCountry('Hong Kong', 'en')
   };
 
   const addressMeta: AddressMeta = {
     geoAddressCode: pa.GeoAddress,
-    distanceFromPoint: calculateDistance(
-      lng,
-      lat,
-      parseFloat(pa.GeospatialInformation.Longitude),
-      parseFloat(pa.GeospatialInformation.Latitude)
+    distanceFromPoint: parseInt(
+      calculateDistance(
+        lng,
+        lat,
+        parseFloat(pa.GeospatialInformation.Longitude),
+        parseFloat(pa.GeospatialInformation.Latitude)
+      )
     ),
     longitude: parseFloat(pa.GeospatialInformation.Longitude),
     latitude: parseFloat(pa.GeospatialInformation.Latitude),
@@ -539,19 +565,27 @@ export async function processForwardGeocodeResult(
 
   return {
     displayAddress: displayAddressEn,
-    displayAddressGen: shouldGenerateDisplay,
-    addressProperties,
-    addressMeta,
+    displayAddressGen: genDisplayAddress,
+    addressProperties: Object.fromEntries(
+      Object.entries(addressProperties).filter(([_, value]) => value !== undefined)
+    ),
+    addressMeta: Object.fromEntries(
+      Object.entries(addressMeta).filter(([_, value]) => value !== undefined)
+    ),
     translations: {
       'zh-hant': {
         displayAddress: displayAddressZh,
-        displayAddressGen: shouldGenerateDisplay,
-        addressProperties: zhHantAddressProps
+        displayAddressGen: genDisplayAddress,
+        addressProperties: Object.fromEntries(
+          Object.entries(zhHantAddressProps).filter(([_, value]) => value !== undefined)
+        )
       },
       'zh-hans': {
         displayAddress: zhHansAddressProps.displayAddress,
-        displayAddressGen: shouldGenerateDisplay,
-        addressProperties: zhHansAddressProps
+        displayAddressGen: genDisplayAddress,
+        addressProperties: Object.fromEntries(
+          Object.entries(zhHansAddressProps).filter(([_, value]) => value !== undefined)
+        )
       }
     }
   };
