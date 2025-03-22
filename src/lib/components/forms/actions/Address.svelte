@@ -16,8 +16,21 @@ let {
 // STATE : CONTEXT :: FORM
 let { form } = actionProps.form;
 
+// STATE : UI
+let isGeocoding = $state(false);
+
 // STATE : DERIVED :: GEOMETRY
 let [lng, lat] = $derived($form.geometry.coordinates);
+
+// Wrap the geocode action to handle loading state
+async function handleGeocode(e: Event) {
+  isGeocoding = true;
+  try {
+    await actions.geocode(e);
+  } finally {
+    isGeocoding = false;
+  }
+}
 </script>
 
 <div class="flex flex-row items-center gap-4">
@@ -33,10 +46,18 @@ let [lng, lat] = $derived($form.geometry.coordinates);
   </a>
   <button
     class="btn-rounded btn bg-fuchsia-700 text-base-content transition-colors duration-300 hover:bg-fuchsia-800"
-    onclick={actions.geocode}>
-    <Icon src={MagnifyingGlass} class="h-4 w-4" />
-    <span class="hidden md:block">
-      {m.admin__geo_lookup_address_at_location()}
-    </span>
+    class:px-6={isGeocoding}
+    onclick={handleGeocode}
+    disabled={isGeocoding}>
+    {#if isGeocoding}
+      <span class="loading loading-spinner loading-sm"></span>
+      <span class="hidden md:block"
+        >{m.admin__geo_lookup_address_at_location_loading()}</span>
+    {:else}
+      <Icon src={MagnifyingGlass} class="h-4 w-4" />
+      <span class="hidden md:block">
+        {m.admin__geo_lookup_address_at_location()}
+      </span>
+    {/if}
   </button>
 </div>
