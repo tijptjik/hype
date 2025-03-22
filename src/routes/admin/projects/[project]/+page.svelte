@@ -1,9 +1,13 @@
 <script lang="ts">
-import { goto } from '$app/navigation';
-import { NEW_TITLE, NEW_REF } from '$lib';
+// SVELTE
 import { get } from 'svelte/store';
+import { goto } from '$app/navigation';
+// LIB
+import { NEW_TITLE, NEW_REF } from '$lib';
+// I18N
+import { m } from '$lib/i18n';
 // CONTEXT
-import { setForm, getForm } from '$lib/context/forms.svelte';
+import { setForm } from '$lib/context/forms.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // FLASH
 import { getFlash } from 'sveltekit-flash-message';
@@ -15,13 +19,20 @@ import SpecificationSection from '$lib/components/forms/sections/Specification.s
 import ImageSection from '$lib/components/forms/sections/Image.svelte';
 import PropertySection from '$lib/components/forms/sections/Property.svelte';
 import UserSection from '$lib/components/forms/sections/User.svelte';
-// CONFIG
-import { classifierComponentTypes, specifierComponentTypes } from '$lib/types';
 // ENUMS
-import { HierarchicalResource } from '$lib/types';
+import {
+  HierarchicalResource,
+  classifierComponentTypes,
+  specifierComponentTypes
+} from '$lib/types';
 // TYPES
-import type { Project } from '$lib/types';
-import type { FormPageProps, FormField, FormFieldArray, GetImageAPI } from '$lib/types';
+import type {
+  Project,
+  FormPageProps,
+  FormField,
+  FormFieldArray,
+  GetImageAPI
+} from '$lib/types';
 
 // CONTEXT
 const resourceState = getHierarchicalResourceState();
@@ -31,21 +42,21 @@ const RESOURCE = HierarchicalResource.project;
 const FIELDS: Record<string, FormField | FormFieldArray> = {
   i18n: {
     name: {
-      label: 'Full Name',
+      label: m.admin__forms_common_name_full(),
       component: 'InputField',
       isArray: false,
       isTranslated: true,
       isNested: false
     },
     nameShort: {
-      label: 'Short Name',
+      label: m.admin__forms_common_name_short(),
       component: 'InputField',
       isArray: false,
       isTranslated: true,
       isNested: false
     },
     description: {
-      label: 'Description',
+      label: m.admin__forms_common_description(),
       component: 'TextareaField',
       isArray: false,
       isTranslated: true,
@@ -54,14 +65,14 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
   },
   credit: {
     license: {
-      label: 'License',
+      label: m.admin__forms_project_license(),
       component: 'InputField',
       isArray: false,
       isTranslated: true,
       isNested: false
     },
     attribution: {
-      label: 'Attribution',
+      label: m.admin__forms_project_attribution(),
       component: 'InputField',
       isArray: false,
       isTranslated: true,
@@ -70,7 +81,7 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
   },
   users: {
     maintainerRoles: {
-      label: 'Maintainers',
+      label: m.admin__forms_project_members_title(),
       isArray: true,
       isTranslated: false,
       isNested: false
@@ -78,7 +89,7 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
   },
   specification: {
     code: {
-      label: 'Code',
+      label: m.admin__forms_common_code(),
       component: 'InputField',
       isArray: false,
       isTranslated: false,
@@ -193,7 +204,7 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
   },
   images: {
     image: {
-      label: 'Banner Image',
+      label: m.admin__forms_project_image_title(),
       component: 'InputField',
       isArray: false
     }
@@ -223,41 +234,44 @@ let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
   <form method="POST" use:enhance role="form" data-testid="projectForm" class="h-full">
     <main class="flex h-full flex-col gap-6 overflow-y-scroll p-6">
       {#if resourceState.activeFacet === 'core' || resourceState.activeFacet === false}
-        <I18nSection title="Descriptors" fields={FIELDS.i18n as FormField} {form} />
         <I18nSection
-          title="Credit"
-          subtitle="Under which licence (e.g. <code>CC-BY-SA</code> or <code>Copyrighted</code>) is this project published, and how should it be attributed?"
+          title={m.admin__forms_common_descriptors()}
+          fields={FIELDS.i18n as FormField}
+          {form} />
+        <I18nSection
+          title={m.admin__forms_project_credit()}
+          subtitle={m.admin__forms_project_credit_subtitle()}
           fields={FIELDS.credit as FormField}
           {form} />
         <div class="flex flex-row gap-6">
           <UserSection
-            title="Members with Edit Access"
-            subtitle="Maintainers have access to the review queue and can accept or reject feature changes"
+            title={m.admin__forms_project_members_title()}
+            subtitle={m.admin__forms_project_members_subtitle()}
             fields={FIELDS.users as FormFieldArray}
             {form} />
           <SpecificationSection
-            title="Specification"
+            title={m.admin__forms_common_specifiers()}
             fields={FIELDS.specification as FormField}
             {form} />
         </div>
       {:else if resourceState.activeFacet === 'fields'}
         <div class="flex flex-col gap-6">
           <PropertySection
-            title="Categorical Fields"
-            subtitle="by which features can be filtered"
+            title={m.admin__forms_common_classifiers()}
+            subtitle={m.admin__forms_common_classifiers_subtitle()}
             fieldDiscriminator="classifier"
             fields={FIELDS.config as FormFieldArray}
             {form} />
           <PropertySection
-            title="Freeform Fields"
-            subtitle="displayed in a feature's info panels"
+            title={m.admin__forms_common_specifiers()}
+            subtitle={m.admin__forms_common_specifiers_subtitle()}
             fieldDiscriminator="specifier"
             fields={FIELDS.config as FormFieldArray}
             {form} />
         </div>
       {:else if resourceState.activeFacet === 'images'}
         <ImageSection
-          title="Image"
+          title={m.admin__forms_project_image_title()}
           fields={FIELDS.images}
           {form}
           image={pageProps.data.image as GetImageAPI} />

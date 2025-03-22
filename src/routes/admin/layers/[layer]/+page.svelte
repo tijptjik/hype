@@ -1,5 +1,6 @@
 <script lang="ts">
 import { NEW_TITLE } from '$lib';
+import { m } from '$lib/i18n';
 // CONTEXT
 import { setForm, getForm } from '$lib/context/forms.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
@@ -23,21 +24,21 @@ const RESOURCE = HierarchicalResource.layer;
 const FIELDS: Record<string, FormField | FormFieldArray> = {
   i18n: {
     name: {
-      label: 'Full Name',
+      label: m.admin__forms_common_name_full(),
       component: 'InputField',
       isArray: false,
       isTranslated: true,
       isNested: false
     },
     nameShort: {
-      label: 'Short Name',
+      label: m.admin__forms_common_name_short(),
       component: 'InputField',
       isArray: false,
       isTranslated: true,
       isNested: false
     },
     description: {
-      label: 'Description',
+      label: m.admin__forms_common_description(),
       component: 'TextareaField',
       isArray: false,
       isTranslated: true,
@@ -82,17 +83,20 @@ let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
   <form method="POST" use:enhance role="form" data-testid="layerForm" class="h-full">
     <main class="flex h-full flex-col gap-6 overflow-y-scroll p-6">
       {#if resourceState.activeFacet === 'core' || resourceState.activeFacet === false}
-        <I18nSection title="Descriptors" fields={FIELDS.i18n as FormField} {form} />
+        <I18nSection
+          title={m.admin__forms_common_descriptors()}
+          fields={FIELDS.i18n as FormField}
+          {form} />
         <div class="flex flex-row gap-6">
           <LayerPropertySection
-            title="Classifiers"
-            subtitle="by which features can be filtered"
+            title={m.admin__forms_common_classifiers()}
+            subtitle={m.admin__forms_common_classifiers_subtitle()}
             fieldDiscriminator="classifier"
             fields={FIELDS.property as FormField & FormFieldArray}
             {form} />
           <LayerPropertySection
-            title="Specifiers"
-            subtitle="which are displayed in feature info panels"
+            title={m.admin__forms_common_specifiers()}
+            subtitle={m.admin__forms_common_specifiers_subtitle()}
             fieldDiscriminator="specifier"
             fields={FIELDS.property as FormField & FormFieldArray}
             {form} />

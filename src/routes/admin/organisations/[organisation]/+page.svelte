@@ -1,6 +1,8 @@
 <script lang="ts">
 // CONFIG
 import { NEW_TITLE, NEW_REF } from '$lib';
+// I18N
+import { m } from '$lib/i18n';
 // CONTEXT
 import { setForm } from '$lib/context/forms.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
@@ -26,21 +28,21 @@ const RESOURCE = HierarchicalResource.organisation;
 const FIELDS: Record<string, FormField> = {
   i18n: {
     name: {
-      label: 'Full Name',
+      label: m.admin__forms_common_name_full(),
       component: 'InputField',
       isArray: false,
       isTranslated: true,
       isNested: false
     },
     nameShort: {
-      label: 'Short Name',
+      label: m.admin__forms_common_name_short(),
       component: 'InputField',
       isArray: false,
       isTranslated: true,
       isNested: false
     },
     description: {
-      label: 'Description',
+      label: m.admin__forms_common_description(),
       component: 'TextareaField',
       isArray: false,
       isTranslated: true,
@@ -49,7 +51,7 @@ const FIELDS: Record<string, FormField> = {
   },
   users: {
     userRoles: {
-      label: 'Members',
+      label: m.admin__forms_organisation_members_title(),
       isArray: true,
       isTranslated: false,
       isNested: false
@@ -57,14 +59,14 @@ const FIELDS: Record<string, FormField> = {
   },
   specification: {
     code: {
-      label: 'Code',
+      label: m.admin__forms_common_code(),
       component: 'InputField',
       isArray: false,
       isTranslated: false,
       isNested: false
     },
     url: {
-      label: 'URL',
+      label: m.admin__forms_organisation_url(),
       component: 'InputField',
       isArray: false,
       isTranslated: false,
@@ -73,7 +75,7 @@ const FIELDS: Record<string, FormField> = {
   },
   images: {
     image: {
-      label: 'Profile Image',
+      label: m.admin__forms_organisation_image_title(),
       component: 'InputField',
       isArray: false,
       isTranslated: false,
@@ -108,21 +110,24 @@ let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
     class="h-full">
     <main class="flex h-full flex-col gap-6 overflow-y-scroll p-6">
       {#if resourceState.activeFacet === 'core' || resourceState.activeFacet === false}
-        <I18nSection title="Descriptors" fields={FIELDS.i18n} {form} />
+        <I18nSection
+          title={m.admin__forms_common_descriptors()}
+          fields={FIELDS.i18n}
+          {form} />
         <div class="flex flex-row gap-6">
           <UserSection
-            title="Members"
-            subtitle="Members can be set as Project Maintainers"
+            title={m.admin__forms_organisation_members_title()}
+            subtitle={m.admin__forms_organisation_members_subtitle()}
             fields={FIELDS.users}
             {form} />
           <SpecificationSection
-            title="Specification"
+            title={m.admin__forms_common_specifiers()}
             fields={FIELDS.specification}
             {form} />
         </div>
       {:else if resourceState.activeFacet === 'images'}
         <ImageSection
-          title="Image"
+          title={m.admin__forms_organisation_image_title()}
           fields={FIELDS.images}
           {form}
           image={pageProps.data.image as GetImageAPI} />

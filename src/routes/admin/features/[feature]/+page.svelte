@@ -1,5 +1,7 @@
 <script lang="ts">
 import { NEW_TITLE, NEW_REF } from '$lib';
+// I18N
+import { m } from '$lib/i18n';
 // FLASH
 import { getFlash } from 'sveltekit-flash-message';
 import { page } from '$app/stores';
@@ -37,14 +39,14 @@ const RESOURCE = HierarchicalResource.feature;
 const FIELDS: FormFieldConfig = {
   i18n: {
     title: {
-      label: 'Title',
+      label: m.admin__forms_feature_title(),
       component: 'InputField',
       isArray: false,
       isNested: false,
       isTranslated: true
     },
     description: {
-      label: 'Description',
+      label: m.admin__forms_common_description(),
       component: 'TextareaField',
       isArray: false,
       isNested: false,
@@ -74,14 +76,14 @@ const FIELDS: FormFieldConfig = {
       isTranslated: true
     },
     addressProperties: {
-      label: 'Address Components',
+      label: m.admin__forms_feature_address_components_title(),
       component: 'DisplayField',
       isArray: false,
       isNested: true,
       isTranslated: true
     },
     addressMeta: {
-      label: 'Address Meta',
+      label: m.admin__forms_feature_addressing_title(),
       component: 'DisplayField',
       isArray: false,
       isNested: true,
@@ -156,14 +158,14 @@ function handleMapFullscreenChange(isFullscreen: boolean) {
               <div class="flex flex-row gap-6">
                 <PropertySection
                   {form}
-                  title="Classifiers"
-                  subtitle="by which features can be filtered"
+                  title={m.admin__forms_common_classifiers()}
+                  subtitle={m.admin__forms_common_classifiers_subtitle()}
                   fieldDiscriminator="classifier"
                   fields={FIELDS.property as FormFieldArray} />
                 <PropertySection
                   {form}
-                  title="Specifiers"
-                  subtitle="which are displayed in feature info panels"
+                  title={m.admin__forms_common_specifiers()}
+                  subtitle={m.admin__forms_common_specifiers_subtitle()}
                   fieldDiscriminator="specifier"
                   fields={FIELDS.property as FormFieldArray} />
                 {#if pageProps.data.entity !== NEW_REF}
@@ -172,22 +174,25 @@ function handleMapFullscreenChange(isFullscreen: boolean) {
               </div>
               <I18nSection
                 {form}
-                title="Descriptors"
+                title={m.admin__forms_common_descriptors()}
                 fields={FIELDS.i18n as FormField} />
               <!-- TODO Add support for translatable specifiers -->
             {:else if resourceState.activeFacet === 'address'}
               <AddressComponentSection
                 {form}
-                title="Address Components"
+                title={m.admin__forms_feature_address_components_title()}
                 fields={FIELDS.address as FormField & FormFieldNested} />
               <AddressSection
                 {form}
-                title="Addressing"
-                subtitle="feature is listed under this address in the app"
+                title={m.admin__forms_feature_addressing_title()}
+                subtitle={m.admin__forms_feature_addressing_subtitle()}
                 fields={FIELDS.address as FormField & FormFieldNested} />
             {:else if resourceState.activeFacet === 'images' && pageProps.data.entity !== NEW_REF}
-              <ViewerSection {form} {refs} title="Viewer" />
-              <GallerySection {form} title="Gallery" />
+              <ViewerSection
+                {form}
+                {refs}
+                title={m.admin__forms_feature_viewer_title()} />
+              <GallerySection {form} title={m.admin__forms_feature_gallery_title()} />
             {/if}
           </div>
         </div>
