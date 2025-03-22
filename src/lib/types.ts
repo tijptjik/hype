@@ -732,6 +732,7 @@ export type DisplayFieldProps = {
   label: string;
   value: any;
   justify?: 'start' | 'end';
+  gridCell?: boolean;
 };
 
 /* ----------------- */

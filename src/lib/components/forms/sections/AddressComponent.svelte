@@ -1,6 +1,7 @@
 <script lang="ts">
 import { languageTags } from '$lib';
 // COMPONENTS
+import Actions from '$lib/components/forms/actions/ForwardGeocode.svelte';
 import Header from '$lib/components/forms/extra/Header.svelte';
 import DisplayField from '$lib/components/forms/fields/DisplayField.svelte';
 // TYPES
@@ -9,10 +10,7 @@ import type {
   LanguageTag,
   SectionProps,
   FormField,
-  FormFieldNested,
-  Field,
-  AddressProperties,
-  AddressMeta
+  FormFieldNested
 } from '$lib/types';
 import type { SuperValidated } from 'sveltekit-superforms';
 
@@ -76,7 +74,6 @@ type MetaField = (typeof metaFields)[number];
 
 // STATE : PROPS
 let sectionProps: SectionProps & { fields: FormField & FormFieldNested } = $props();
-let { fields } = sectionProps;
 
 // STATE : CONTEXT :: FORM
 let { form } = sectionProps.form as { form: SuperValidated<Feature> };
@@ -86,18 +83,29 @@ function isGeocoderField(field: string): boolean {
   return field.startsWith('google') || field.startsWith('address');
 }
 
-// Helper function to should add gap before field
-function shouldAddGap(currentIndex: number, fields: string[]): boolean {
-  if (currentIndex === 0) return false;
-  const prevField = fields[currentIndex - 1];
-  const currentField = fields[currentIndex];
-  return !isGeocoderField(prevField) && isGeocoderField(currentField);
+// Helper function to safely get address property value
+function getAddressPropertyValue(
+  field: AddressField,
+  lang: LanguageTag
+): string | null {
+  if (lang == 'en') return $form?.addressProperties?.[field] ?? null;
+  return $form?.translations[lang as TargetLang].addressProperties?.[field] ?? null;
+}
+
+// Helper function to safely get meta property value
+function getMetaPropertyValue(field: MetaField): string | null {
+  return $form?.addressMeta?.[field] ?? null;
+}
+
+// Helper to check if a value exists and is not empty
+function hasValue(value: string | null): boolean {
+  return value !== null && value !== undefined && value !== '';
 }
 </script>
 
 <div
   class="z-10 rounded-2xl bg-gradient-to-r from-rose-500/70 to-fuchsia-800/70 p-0 @container">
-  <Header {...sectionProps} title="Address Components" />
+  <Header {...sectionProps} {Actions} title="Address Components" />
 
   <!-- Address Properties -->
   <div class="grid grid-cols-3 gap-4 rounded-xl p-4">
@@ -110,10 +118,9 @@ function shouldAddGap(currentIndex: number, fields: string[]): boolean {
         <div class="flex flex-col rounded-b-xl bg-base-100 p-6">
           <div class="flex flex-col gap-[2px]">
             {#each addressFields as fieldKey}
-              {#if form.addressProperties?.[fieldKey as AddressField]}
-                <DisplayField
-                  label={fieldKey}
-                  value={form.addressProperties[fieldKey as AddressField]} />
+              {@const value = getAddressPropertyValue(fieldKey, lang)}
+              {#if hasValue(value)}
+                <DisplayField label={fieldKey} {value} />
               {/if}
             {/each}
           </div>
@@ -123,14 +130,20 @@ function shouldAddGap(currentIndex: number, fields: string[]): boolean {
   </div>
 
   <!-- Address Metadata -->
-  <div class="mt-4 rounded-xl bg-base-100 p-4">
-    <h3 class="text-md mb-4 text-center font-medium uppercase text-base-content">
+  <div class="m-4 rounded-xl bg-base-100 px-6 py-4 pb-8">
+    <h3 class="text-md mb-4 py-2 text-center font-medium uppercase text-base-content">
       Address Metadata
     </h3>
-    <div class="flex flex-col gap-[2px]">
+    <div class="grid grid-cols-3 gap-4">
       {#each metaFields as fieldKey}
-        {#if form.addressMeta?.[fieldKey]}
-          <DisplayField label={fieldKey} value={form.addressMeta[fieldKey]} />
+        {@const value = getMetaPropertyValue(fieldKey)}
+        {#if hasValue(value)}
+          <DisplayField
+            label={fieldKey == 'distanceFromPoint'
+              ? 'Marker to Address Distance (m)'
+              : fieldKey}
+            {value}
+            gridCell={true} />
         {/if}
       {/each}
     </div>
