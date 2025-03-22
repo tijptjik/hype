@@ -80,7 +80,7 @@ async function translateFields(
 </script>
 
 <div
-  class="overflow-hidden opacity-0 transition-opacity duration-200 group-focus-within:opacity-100 group-hover:opacity-100">
+  class="m-0 overflow-hidden opacity-0 transition-opacity duration-200 group-focus-within:opacity-100 group-hover:opacity-100">
   <div class="flex items-center justify-between rounded-b-xl bg-base-200 px-6 py-3">
     <div class="flex items-center gap-4">
       <Icon src={Language} class="h-6 w-6 text-primary" />
@@ -89,7 +89,7 @@ async function translateFields(
     <div class="flex gap-2">
       {#each languageOptions as { code, label }}
         <button
-          class="text-md btn btn-circle btn-primary font-normal text-base-content"
+          class="text-md btn btn-circle btn-primary font-normal text-base-content focus:border-none focus:outline-1 focus:outline-neutral-content"
           disabled={loadingLang !== null}
           onclick={async (e) =>
             await translateFields(e, code as LanguageTag, languageTag)}>
