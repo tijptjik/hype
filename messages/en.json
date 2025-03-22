@@ -72,6 +72,7 @@
   "forms__save": "Save",
   "forms__saved": "Saved",
   "forms__invalid": "Invalid",
+  "forms__pending": "Pending",
   "forms__unpublish": "Unpublish",
   "forms__publish": "Publish",
 
