@@ -3,6 +3,5 @@ node_modules
 .idea
 .run
 .wrangler
-messages
 migrations
 project.inlang
