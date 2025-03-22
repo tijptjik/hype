@@ -9,7 +9,10 @@ import Navbar from '$lib/components/layout/Navbar.svelte';
 import MinWidthProtector from '$lib/components/layout/MinWidth.svelte';
 // STYLES
 import '$lib/styles/admin.css';
+// CONTEXT
 import { setHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { setMapContext } from '$lib/context/map.svelte';
+// STORES
 import { page } from '$app/stores';
 import { goto } from '$app/navigation';
 // TYPES
@@ -29,6 +32,7 @@ const resourceState = setHierarchicalResourceState(
   queryClient,
   session?.user.roles ?? []
 );
+setMapContext(queryClient, session?.user.id ?? '', session?.user.userLayers ?? []);
 const sidebarState = setSidebarState();
 
 let viewportContained = $derived(
