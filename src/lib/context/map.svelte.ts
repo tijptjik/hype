@@ -28,7 +28,7 @@ import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
 export class mapContext {
   // Maplibre Map instance
-  map: MaplibreMap | undefined;
+  map: MaplibreMap | undefined = $state();
   // Tanstack Query Client instance
   queryClient: QueryClient;
   // User ID
@@ -74,6 +74,9 @@ export class mapContext {
       settings: false
     }
   });
+
+  // Silly state to track if the map has been zoomed to a marker
+  zoomToMarkerOnly: boolean = $state(false);
 
   // QueryKeys
   organisationsQueryKey = ['organisations'];
@@ -607,6 +610,41 @@ export class mapContext {
     }
   }
 
+  zoomToCoordinates(coordinates: [number, number][]) {
+    // Create a FeatureCollection
+    const featureCollection: FeatureCollection = {
+      type: 'FeatureCollection',
+      features: coordinates.map((c) => ({
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: c
+        },
+        properties: {}
+      })) as GeoJSONFeature[]
+    };
+
+    const bounds = bbox(featureCollection);
+
+    if (!this.map) return;
+    this.map.fitBounds(
+      [
+        [bounds[0], bounds[1]], // southwestern corner
+        [bounds[2], bounds[3]] // northeastern corner
+
+      ],
+      {
+        padding: {
+          top: 150,
+          bottom: 150,
+          right: 50,
+          left: 50
+        },
+        maxZoom: 20,
+        duration: 2500
+      }
+    );
+  }
   // FILTER Utils
 
   expandToSubNeighbourhoods(neighbourhoodKey: string) {
