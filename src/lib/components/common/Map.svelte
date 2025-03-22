@@ -1,21 +1,32 @@
 <script lang="ts">
-import { createEventDispatcher } from 'svelte';
-// LIBRARY
-import { once, preventDefault, stopPropagation } from '$lib';
+// SVELTE
+import { onMount } from 'svelte';
 // MapLibre
 import SpectralStyle from '$lib/map/style.json';
+import { addAddressMarker } from '$lib/map/markers';
 // UTILS
 import { loadScript } from '$lib';
 // ICONS
 import { ArrowsPointingIn, ArrowsPointingOut } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
+// CONTEXT
+import { getMapContext } from '$lib/context/map.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+// TYPES
+import type { Marker, LngLatLike } from 'maplibre-gl';
+import type { Id } from '$lib/types';
 
 type MapProps = {
   coordinates: number[];
   draggable?: boolean;
   toggleFullscreen?: (isFullscreen: boolean) => void;
   dragEndCallback?: (lngLat: number[]) => void;
+  form: any;
 };
+
+// CONTEXT
+let mapContext = getMapContext();
+let resourceState = getHierarchicalResourceState();
 
 let isFullscreen = $state(false);
 
@@ -24,21 +35,35 @@ let mapProps: MapProps = $props();
 
 // STATE : MAP
 let mapContainer: HTMLDivElement;
-let map = $state();
+let map = $derived(mapContext.map);
 let feature = $state();
 let isMapLoaded = $state(false);
 
-// EFFECTS :: ON MOUNT
-let loadMapLibre = loadScript(
-  'https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js'
-).then(() => {
+// STATE : FORM
+let { form } = mapProps.form;
+
+// STATE : DERIVED
+let markedAddressLngLat: LngLatLike | null = $state(null);
+let addressLngLat: LngLatLike | null = $derived(
+  $form.addressMeta?.longitude && $form.addressMeta?.latitude
+    ? [$form.addressMeta?.longitude, $form.addressMeta?.latitude]
+    : null
+);
+
+// STATE : UI
+let addressMarker: Marker | null = $state(null);
+let featureMarkerId: Id | null = $state(null);
+
+onMount(async () => {
+  // EFFECTS :: ON MOUNT
+  await loadScript('https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js');
   // await loadScript('../../map/maplibre-preload.modern.js');
   // eslint-disable-next-line no-undef
   const maplibre = maplibregl;
   maplibre.prewarm();
   console.info('Built with 🗺️ MapLibre ' + maplibre?.getVersion());
 
-  map = new maplibre.Map({
+  mapContext.map = new maplibre.Map({
     container: mapContainer,
     style: SpectralStyle,
     center: mapProps.coordinates,
@@ -51,7 +76,7 @@ let loadMapLibre = loadScript(
   });
 
   // @ts-ignore
-  map.on('load', () => {
+  mapContext.map.on('load', () => {
     isMapLoaded = true;
   });
 
@@ -61,7 +86,7 @@ let loadMapLibre = loadScript(
     draggable: mapProps.draggable || true
   })
     .setLngLat(mapProps.coordinates)
-    .addTo(map);
+    .addTo(mapContext.map);
 
   // @ts-ignore
   feature.on('dragend', handleDragEnd);
@@ -70,11 +95,15 @@ let loadMapLibre = loadScript(
 // EFFECTS :: ON UPDATE
 $effect(() => {
   if (map) {
-    // @ts-ignore
-    map.flyTo({
-      center: mapProps.coordinates,
-      zoom: 20
-    });
+    if (mapProps.coordinates && addressLngLat && !mapContext.zoomToMarkerOnly) {
+      // @ts-ignore
+      mapContext.zoomToCoordinates([mapProps.coordinates, addressLngLat]);
+    } else {
+      map.flyTo({
+        center: mapProps.coordinates,
+        zoom: 20
+      });
+    }
     // @ts-ignore
     feature.setLngLat(mapProps.coordinates);
   }
@@ -84,7 +113,32 @@ $effect(() => {
 const handleDragEnd = (e: Event) => {
   // @ts-ignore
   mapProps.dragEndCallback?.(e.target!.getLngLat().toArray());
+  mapContext.zoomToMarkerOnly = true;
 };
+
+let isSameCoordinates = (lngLat1: LngLatLike, lngLat2: LngLatLike) => {
+  if (!lngLat1 || !lngLat2) return false;
+  return lngLat1[0] === lngLat2[0] && lngLat1[1] === lngLat2[1];
+};
+
+// Handle address marker updates
+$effect(() => {
+  if (map && addressLngLat && !isSameCoordinates(addressLngLat, markedAddressLngLat)) {
+    // Remove existing marker if it exists
+    if (addressMarker) {
+      addressMarker.remove();
+    }
+    // Add new marker
+    addressMarker = addAddressMarker(maplibregl, mapContext, addressLngLat);
+    markedAddressLngLat = addressLngLat;
+  }
+  if (resourceState.activeEntity && resourceState.activeEntity !== featureMarkerId) {
+    featureMarkerId = resourceState.activeEntity;
+    if (addressMarker) {
+      addressMarker.remove();
+    }
+  }
+});
 </script>
 
 <div class="relative h-full w-full">
@@ -95,7 +149,6 @@ const handleDragEnd = (e: Event) => {
         e.preventDefault();
         e.stopPropagation();
         isFullscreen = !isFullscreen;
-        console.log('isFullscreen', e, mapProps.toggleFullscreen);
         mapProps.toggleFullscreen?.(isFullscreen);
       }}>
       <div class="swap">
@@ -152,5 +205,14 @@ const handleDragEnd = (e: Event) => {
   flex-basis: 0% !important;
   opacity: 0;
   overflow: hidden;
+}
+
+.marker-address {
+  width: 124px;
+  height: 124px;
+  border-radius: 50%;
+  border: 2px solid #5769d3;
+  background-color: rgba(20, 9, 77, 0.2);
+  cursor: pointer;
 }
 </style>
