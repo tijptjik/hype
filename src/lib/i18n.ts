@@ -17,13 +17,6 @@ export function getI18nValue(obj: any, field: string): string {
 export { languageTag, setLanguageTag } from '$lib/paraglide/runtime';
 export { m, runtime };
 
-export interface TranslationState {
-  confirmed: boolean;
-  translated: boolean;
-}
-
-export type TranslationStates = Record<TargetLang, TranslationState>;
-
 export async function translateText(
   sourceLang: LanguageTag,
   targetLang: LanguageTag,

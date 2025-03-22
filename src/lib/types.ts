@@ -260,6 +260,18 @@ export type FormFieldNested = Record<Field, FormFieldNestedDefinition>;
 export type FormFieldConfig = Record<Key, FormField | FormFieldArray | FormFieldNested>;
 
 /* ----------------- */
+// I18N
+/* -------- */
+
+export interface TranslationState {
+  confirmed: boolean;
+  translated: boolean;
+  required: boolean;
+}
+
+export type TranslationStates = Record<TargetLang, TranslationState>;
+
+/* ----------------- */
 // SCHEMA TYPES
 /* -------- */
 
