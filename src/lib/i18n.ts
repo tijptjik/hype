@@ -32,5 +32,5 @@ export async function translateText(
     })
   });
   const data = await response.json();
-  return data.translations;
+  return data;
 }

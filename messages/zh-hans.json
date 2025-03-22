@@ -1,6 +1,10 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
 
+  "lang__en": "英语",
+  "lang__zh_hant": "繁体中文",
+  "lang__zh_hans": "简体中文",
+
   "preauth__continue_with_google": "继续使用 Google",
 
   "settings__title": "设置",
@@ -170,6 +174,64 @@
   "admin__validation_attribution_lte_128_chars": "最多 128 个字符",
 
   "admin__geo_lookup_address_at_location": "取得位置位址",
+  "admin__geo_lookup_address_at_location_loading": "正在查找地址...",
+  "admin__geo_source_language": "源语言",
+  "admin__geo_forward_geocode_to_enrich": "丰富地址",
+  "admin__geo_forward_geocode_to_locate": "定位地址",
+  "admin__geo_forward_geocode_loading": "正在查找地址...",
   "admin__geo_latitude": "緯度",
-  "admin__geo_longitude": "經度"
+  "admin__geo_longitude": "經度",
+
+  "admin__forms_common_descriptors": "描述符",
+  "admin__forms_common_classifiers": "分类字段",
+  "admin__forms_common_classifiers_subtitle": "用于过滤特征",
+  "admin__forms_common_specifiers": "自由格式字段",
+  "admin__forms_common_specifiers_subtitle": "在特征信息面板中显示",
+  "admin__forms_common_name_full": "全名",
+  "admin__forms_common_name_short": "简称",
+  "admin__forms_common_description": "描述",
+  "admin__forms_common_code": "代码",
+
+  "admin__forms_organisation_name": "全名",
+  "admin__forms_organisation_name_short": "简称",
+  "admin__forms_organisation_description": "描述",
+  "admin__forms_organisation_members_title": "成员",
+  "admin__forms_organisation_members_subtitle": "成员可被设置为项目维护者",
+  "admin__forms_organisation_code": "代码",
+  "admin__forms_organisation_url": "网址",
+  "admin__forms_organisation_image_title": "个人资料图片",
+
+  "admin__forms_project_credit": "署名",
+  "admin__forms_project_credit_subtitle": "该项目在什么许可证下发布（例如 <code>CC-BY-SA</code> 或 <code>Copyrighted</code>），以及应该如何署名？",
+  "admin__forms_project_license": "许可证",
+  "admin__forms_project_attribution": "署名",
+  "admin__forms_project_members_title": "具有编辑权限的成员",
+  "admin__forms_project_members_subtitle": "维护者可以访问审核队列，可以接受或拒绝特征更改",
+  "admin__forms_project_code": "代码",
+  "admin__forms_project_classifiers_title": "分类字段",
+  "admin__forms_project_classifiers_subtitle": "用于过滤特征",
+  "admin__forms_project_specifiers_title": "自由格式字段",
+  "admin__forms_project_specifiers_subtitle": "在特征信息面板中显示",
+  "admin__forms_project_image_title": "横幅图片",
+
+  "admin__forms_layer_name": "全名",
+  "admin__forms_layer_name_short": "简称",
+  "admin__forms_layer_description": "描述",
+  "admin__forms_layer_descriptors": "描述符",
+  "admin__forms_layer_classifiers_title": "分类字段",
+  "admin__forms_layer_classifiers_subtitle": "用于过滤特征",
+  "admin__forms_layer_specifiers_title": "自由格式字段",
+  "admin__forms_layer_specifiers_subtitle": "在特征信息面板中显示",
+
+  "admin__forms_feature_title": "标题",
+  "admin__forms_feature_description": "描述",
+  "admin__forms_feature_classifiers_title": "分类字段",
+  "admin__forms_feature_classifiers_subtitle": "用于过滤特征",
+  "admin__forms_feature_specifiers_title": "自由格式字段",
+  "admin__forms_feature_specifiers_subtitle": "在特征信息面板中显示",
+  "admin__forms_feature_address_components_title": "地址组件",
+  "admin__forms_feature_addressing_title": "寻址",
+  "admin__forms_feature_addressing_subtitle": "特征在应用中列在此地址下",
+  "admin__forms_feature_viewer_title": "查看器",
+  "admin__forms_feature_gallery_title": "图库"
 }

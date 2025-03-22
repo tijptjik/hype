@@ -1,6 +1,10 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
 
+  "lang__en": "English",
+  "lang__zh_hant": "Trad. Chinese",
+  "lang__zh_hans": "Simp. Chinese",
+
   "preauth__continue_with_google": "Continue with Google",
 
   "settings__title": "Settings",
@@ -72,7 +76,7 @@
   "forms__save": "Save",
   "forms__saved": "Saved",
   "forms__invalid": "Invalid",
-  "forms__pending": "Pending",
+  "forms__pending": "Action Required",
   "forms__unpublish": "Unpublish",
   "forms__publish": "Publish",
 
@@ -176,6 +180,41 @@
   "admin__validation_attribution_lte_128_chars": "Maximum of 128 characters",
 
   "admin__geo_lookup_address_at_location": "Get address for location",
+  "admin__geo_lookup_address_at_location_loading": "Looking up address...",
+  "admin__geo_source_language": "Source",
+  "admin__geo_forward_geocode_to_enrich": "Enrich Address",
+  "admin__geo_forward_geocode_to_locate": "Locate Address",
+  "admin__geo_forward_geocode_loading": "Fetching address",
   "admin__geo_latitude": "Latitude",
-  "admin__geo_longitude": "Longitude"
+  "admin__geo_longitude": "Longitude",
+
+  "admin__forms_common_descriptors": "Descriptors",
+  "admin__forms_common_classifiers": "Categorical Fields",
+  "admin__forms_common_classifiers_subtitle": "by which features can be filtered",
+  "admin__forms_common_specifiers": "Freeform Fields",
+  "admin__forms_common_specifiers_subtitle": "displayed in a feature's info panels",
+  "admin__forms_common_name_full": "Full Name",
+  "admin__forms_common_name_short": "Short Name",
+  "admin__forms_common_description": "Description",
+  "admin__forms_common_code": "Code",
+
+  "admin__forms_organisation_members_title": "Members",
+  "admin__forms_organisation_members_subtitle": "Members can be set as Project Maintainers",
+  "admin__forms_organisation_url": "URL",
+  "admin__forms_organisation_image_title": "Profile Image",
+
+  "admin__forms_project_credit": "Credit",
+  "admin__forms_project_credit_subtitle": "Under which licence (e.g. <code>CC-BY-SA</code> or <code>Copyrighted</code>) is this project published, and how should it be attributed?",
+  "admin__forms_project_license": "License",
+  "admin__forms_project_attribution": "Attribution",
+  "admin__forms_project_members_title": "Members with Edit Access",
+  "admin__forms_project_members_subtitle": "Maintainers have access to the review queue and can accept or reject feature changes",
+  "admin__forms_project_image_title": "Banner Image",
+
+  "admin__forms_feature_title": "Title",
+  "admin__forms_feature_address_components_title": "Address Components",
+  "admin__forms_feature_addressing_title": "Addressing",
+  "admin__forms_feature_addressing_subtitle": "users will see this address",
+  "admin__forms_feature_viewer_title": "Viewer",
+  "admin__forms_feature_gallery_title": "Gallery"
 }
