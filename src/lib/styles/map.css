@@ -95,7 +95,43 @@
   stroke-width: 2;
   stroke: #daffdb;
   fill: #a4ff72;
-  transition: stroke-width 0.3s ease-in-out, fill 0.3s ease-in-out, opacity 0.3s ease-in-out;
+  transition:
+    stroke-width 0.3s ease-in-out,
+    fill 0.3s ease-in-out,
+    opacity 0.3s ease-in-out;
+}
+
+.marker-address .marker-circle {
+  stroke-width: 2;
+  stroke: #ffffffee;
+  fill: #824cb8;
+  animation: pulse 3s infinite ease-in-out;
+}
+.marker-address .marker-dot {
+  fill: #eeedf8;
+}
+.marker-container.marker-address:hover .marker-dot {
+  opacity: 0.9;
+  transition: all 0.3s ease-in-out;
+  transform-origin: center;
+}
+.marker-container.marker-address:hover .marker-circle {
+  animation: none;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    transform-origin: center;
+  }
+  70% {
+    transform: scale(1.15);
+    transform-origin: center;
+  }
+  100% {
+    transform: scale(1);
+    transform-origin: center;
+  }
 }
 
 .highlighted .marker-dot {
@@ -113,7 +149,10 @@
   stroke-width: 2;
   stroke: #ffdaf3;
   fill: #ce3c74;
-  transition: stroke-width 0.3s ease-in-out, fill 0.3s ease-in-out, opacity 0.3s ease-in-out;
+  transition:
+    stroke-width 0.3s ease-in-out,
+    fill 0.3s ease-in-out,
+    opacity 0.3s ease-in-out;
 }
 
 .marker-dot {
@@ -131,12 +170,12 @@
 
 .marker-container:hover .marker-dot {
   fill: #d1e4f4;
-} 
+}
 
 .maplibregl-ctrl-group {
   background-color: #000;
   border-radius: 12px;
-  border: 2px solid #15191E;
+  border: 2px solid #15191e;
 }
 
 .maplibregl-ctrl-group button {
