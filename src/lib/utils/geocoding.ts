@@ -249,7 +249,26 @@ export function capitalizeFirstLetter(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
 
+export function titleCase(str: string): string {
+  if (!str) return str;
+  return str.split(' ').map(capitalizeFirstLetter).join(' ');
+}
+
 export function getFirstLocation(locations: string): string {
   if (!locations) return '';
   return locations.split(',')[0].trim();
+}
+
+export function removeRegion(str: string): string {
+  const parts = str.split(',');
+  let lastPart = parts.pop();
+  if (
+    lastPart &&
+    (regionIdentifiers.HK.includes(lastPart.toLowerCase().trim()) ||
+      regionIdentifiers.KL.includes(lastPart.toLowerCase().trim()) ||
+      regionIdentifiers.NT.includes(lastPart.toLowerCase().trim()))
+  ) {
+    return parts.join(',').trim();
+  }
+  return str;
 }
