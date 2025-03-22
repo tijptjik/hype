@@ -57,7 +57,7 @@ function handleKeyDown(e: KeyboardEvent) {
       const afterCursor = text.slice(start);
       const newBeforeCursor = beforeCursor.replace(/\s*\S+\s*$/, '');
       value = newBeforeCursor + afterCursor;
-      
+
       // Set cursor position
       const newRange = document.createRange();
       newRange.setStart(e.target as Node, newBeforeCursor.length);
@@ -95,7 +95,7 @@ function handlePaste(e: ClipboardEvent) {
 </div>
 
 {#if (isGenAI || languageTag !== 'core') && isTranslated}
-  <div class="absolute top-[11px] right-2">
-    <Labels {isGenAI} {languageTag} absolute={true}/>
+  <div class="absolute bottom-[11px] right-2 flex items-center gap-2">
+    <Labels {isGenAI} {languageTag} absolute={true} />
   </div>
 {/if}

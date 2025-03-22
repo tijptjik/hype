@@ -21,6 +21,13 @@ placeholder = placeholder
   : inputType === 'text'
     ? 'Type here'
     : 'Set number';
+
+function getLabelCount() {
+  let count = 0;
+  if (isGenAI) count += 1;
+  if (languageTag !== 'core') count += 1;
+  return count;
+}
 </script>
 
 <input
@@ -30,7 +37,9 @@ placeholder = placeholder
   name={id}
   bind:value
   {placeholder}
-  class="w-full rounded-md bg-neutral p-2 focus:border-none focus:outline-none focus:ring-0"
+  class="w-full truncate rounded-md bg-neutral p-2 focus:border-none focus:outline-none focus:ring-0 group-focus-within:pr-0"
+  class:padOne={getLabelCount() === 1}
+  class:padTwo={getLabelCount() === 2}
   oninput={onchange} />
 
 {#if (isGenAI || languageTag !== 'core') && isTranslated}
@@ -38,3 +47,12 @@ placeholder = placeholder
     <Labels {isGenAI} {languageTag} />
   </div>
 {/if}
+
+<style>
+.padOne {
+  @apply pr-10;
+}
+.padTwo {
+  @apply pr-20;
+}
+</style>
