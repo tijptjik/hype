@@ -43,6 +43,8 @@ class BaseForm<T extends Record<string, unknown>> {
   protected resourceType: FalsableResourceType;
   protected flash: Writable<App.PageData['flash']>;
 
+  clientErrors: Record<string, string> = $state({});
+
   constructor(
     form: SuperValidated<T>,
     isNew: boolean,
@@ -105,11 +107,15 @@ class BaseForm<T extends Record<string, unknown>> {
     return this.formResult.posted;
   }
 
+  get hasClientErrors() {
+    return Object.keys(this.clientErrors).length > 0;
+  }
+
   async handleSubmit({ action, cancel }: { action: URL; cancel: () => void }) {
     const validatedForm = await this.validateForm();
 
     // LOCAL VALIDATION
-    if (!validatedForm.valid) {
+    if (!validatedForm.valid || this.hasClientErrors) {
       this.errors.set(validatedForm.errors);
       this.flash.set({ type: 'error', message: 'Validation failed' });
       cancel();
@@ -186,6 +192,18 @@ class BaseForm<T extends Record<string, unknown>> {
       'Content-Type': 'application/json'
     };
     return { method, headers, body };
+  }
+
+  setClientError(field: string, error: string) {
+    this.clientErrors[field] = error;
+  }
+
+  clearClientError(field: string) {
+    delete this.clientErrors[field];
+  }
+
+  clearAllClientErrors() {
+    this.clientErrors = {};
   }
 }
 
