@@ -4,7 +4,9 @@ import {
   capitalizeFirstLetter,
   getFirstLocation,
   getNormalisedDistrict,
-  getNormalisedRegion
+  getNormalisedRegion,
+  removeRegion,
+  titleCase
 } from '$lib/utils/geocoding';
 // DATA
 import neighbourhoods from '$lib/map/neighbourhoods.json';
@@ -209,7 +211,7 @@ function processReverseGeocodeResult(
     const numbers = streetParts[0].split(/[-\/]/);
     buildingNumberFrom = numbers[0];
     buildingNumberTo = numbers[1];
-    streetName = streetParts.slice(1).join(' ');
+    streetName = capitalizeFirstLetter(streetParts.slice(1).join(' '));
   }
 
   // Get coordinates and calculate distance
@@ -221,16 +223,17 @@ function processReverseGeocodeResult(
 
   // Process the result
   const processedResult: ParsedReverseGeocodeResult = {
-    displayAddress: result.address.Match_addr || undefined,
+    displayAddress: removeRegion(titleCase(result.address.Match_addr)) || undefined,
     displayAddressGen: true,
     addressProperties: {
+      formattedAddress: titleCase(result.address.Match_addr) || undefined,
       buildingNumberFrom: buildingNumberFrom || undefined,
       buildingNumberTo: buildingNumberTo || undefined,
       streetName: streetName || undefined,
       neighbourhood:
-        result.address.Neighborhood ||
-        result.address.City ||
-        result.address.Subregion ||
+        titleCase(result.address.Neighborhood) ||
+        titleCase(result.address.City) ||
+        titleCase(result.address.Subregion) ||
         undefined,
       district: getDistrictFromNeighbourhood(result.address.Neighborhood),
       region: getNormalisedRegion(result.address.State, 'en'),
@@ -262,7 +265,7 @@ function processReverseGeocodeResult(
 export async function reverseGeocode(
   lng: number,
   lat: number
-): Promise<ReverseGeocodeResult | null> {
+): Promise<ParsedReverseGeocodeResult | null> {
   const result = await fetchReverseGeocodeResult(lng, lat);
   if (!result) return null;
 
