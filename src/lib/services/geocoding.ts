@@ -199,6 +199,14 @@ function getDistrictFromNeighbourhood(neighbourhoodRef: string | null): string |
     : null;
 }
 
+export function extractNeighbourhoodFromAddress(address: string): string | null {
+  const neighbourhoodNames = Object.keys(neighbourhoods);
+  const neighbourhoodMatch = neighbourhoodNames.find((n) =>
+    address.toLowerCase().includes(n.toLowerCase())
+  );
+  return neighbourhoodMatch ? neighbourhoodMatch : null;
+}
+
 function processReverseGeocodeResult(
   result: ReverseGeocodeResult,
   lng: number,
@@ -281,8 +289,10 @@ export async function reverseGeocode(
 
   // Perform forward lookup using the Match_addr
   try {
+    const streetAddress = `${processedResult.addressProperties.buildingNumberFrom} ${processedResult.addressProperties.streetName}`;
     const forwardResult = await forwardGeocode(
-      `${processedResult.addressProperties.buildingNumberFrom} ${processedResult.addressProperties.streetName}`
+      streetAddress,
+      processedResult.addressProperties.neighbourhood
     );
     if (forwardResult) {
       const fullResult = await processForwardGeocodeResult(
@@ -316,6 +326,7 @@ export async function reverseGeocode(
 
 export async function forwardGeocode(
   address: string,
+  neighbourhood: string | null = null,
   minConfidence: number = 60,
   maxResults: number = 1
 ): Promise<ALSResult> {
@@ -348,6 +359,7 @@ export async function geoAddressLookup(geoAddressCode: string): Promise<ALSResul
 
 function parseALSResultToDisplay(
   address: ALSResult['SuggestedAddress'][0],
+  neighbourhood: string | null,
   lang: 'en' | 'zh-hant' = 'en'
 ) {
   const pa = address.Address.PremisesAddress;
@@ -391,12 +403,16 @@ function parseALSResultToDisplay(
     }
 
     // Area info
-    const location =
-      eng.EngStreet?.LocationName ||
-      eng.EngVillage?.LocationName ||
-      districtCodeToName[getNormalisedDistrict(eng.EngDistrict.DcDistrict, 'en')];
-    if (location) {
-      parts.push(location);
+    if (neighbourhood) {
+      parts.push(neighbourhood);
+    } else {
+      const location =
+        eng.EngStreet?.LocationName ||
+        eng.EngVillage?.LocationName ||
+        districtCodeToName[getNormalisedDistrict(eng.EngDistrict.DcDistrict, 'en')];
+      if (location) {
+        parts.push(location);
+      }
     }
 
     // Skip Region
@@ -448,6 +464,7 @@ function parseALSResultToDisplay(
 
 export async function processForwardGeocodeResult(
   result: ALSResult,
+  neighbourhood: string | null,
   genDisplayAddress: boolean,
   lng: number,
   lat: number
@@ -457,12 +474,17 @@ export async function processForwardGeocodeResult(
   const address = result.SuggestedAddress[0];
   const { PremisesAddress: pa } = address.Address;
 
+  const zhHantNeighbourhood =
+    neighbourhoods[neighbourhood as keyof typeof neighbourhoods]?.translations.find(
+      (t) => t.lang === 'zh-hant'
+    )?.neighbourhood || null;
+
   // Only generate display addresses if allowed
   const displayAddressEn = genDisplayAddress
-    ? parseALSResultToDisplay(address, 'en')
+    ? parseALSResultToDisplay(address, neighbourhood, 'en')
     : undefined;
   const displayAddressZh = genDisplayAddress
-    ? parseALSResultToDisplay(address, 'zh-hant')
+    ? parseALSResultToDisplay(address, zhHantNeighbourhood, 'zh-hant')
     : undefined;
 
   // Prepare Chinese address properties
@@ -476,6 +498,7 @@ export async function processForwardGeocodeResult(
       blockNumber: pa.ChiPremisesAddress.ChiBlock?.BlockNo || undefined,
       estateName: pa.ChiPremisesAddress.ChiEstate?.EstateName || undefined,
       streetName: pa.ChiPremisesAddress.ChiStreet?.StreetName || undefined,
+      neighbourhood: zhHantNeighbourhood || undefined,
       district: getNormalisedDistrict(
         pa.ChiPremisesAddress.ChiDistrict?.DcDistrict,
         'zh-hant'
@@ -535,9 +558,11 @@ export async function processForwardGeocodeResult(
     phaseNumber: pa.EngPremisesAddress?.EngEstate?.EngPhase?.PhaseNo,
     estateName: titleCase(pa.EngPremisesAddress?.EngEstate?.EstateName),
     streetName: titleCase(pa.EngPremisesAddress?.EngStreet?.StreetName),
-    neighbourhood: pa.EngPremisesAddress?.EngStreet?.EngVillage?.LocationName
-      ? getFirstLocation(pa.EngPremisesAddress?.EngStreet?.EngVillage?.LocationName)
-      : undefined,
+    neighbourhood: neighbourhood
+      ? neighbourhood
+      : pa.EngPremisesAddress?.EngStreet?.EngVillage?.LocationName
+        ? getFirstLocation(pa.EngPremisesAddress?.EngStreet?.EngVillage?.LocationName)
+        : undefined,
     district: getNormalisedDistrict(
       pa.EngPremisesAddress?.EngDistrict?.DcDistrict,
       'en'

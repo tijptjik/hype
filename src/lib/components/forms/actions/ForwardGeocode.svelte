@@ -4,7 +4,11 @@ import { m } from '$lib/i18n';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
 // SERVICES
-import { forwardGeocode, processForwardGeocodeResult } from '$lib/services/geocoding';
+import {
+  forwardGeocode,
+  processForwardGeocodeResult,
+  extractNeighbourhoodFromAddress
+} from '$lib/services/geocoding';
 import { removeCountry, removeRegion, removeDistrict } from '$lib/utils/geocoding';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
@@ -35,7 +39,10 @@ let sourceLanguage: LanguageTag = $state('en');
 // STATE : DERIVED :: GEOMETRY
 let [lng, lat] = $derived($form.geometry.coordinates);
 
-function cleanAddress(address: string): string {
+function getStreetAddressAndNeighbourhood(address: string): {
+  streetAddress: string;
+  neighbourhood: string | null;
+} {
   // First remove Hong Kong SAR identifiers
   let cleaned = removeCountry(address);
   // Then remove any region identifiers
@@ -43,7 +50,13 @@ function cleanAddress(address: string): string {
   // Then remove any district identifiers
   cleaned = removeDistrict(cleaned);
 
-  return cleaned;
+  // Extract neighbourhood from address
+  const neighbourhood = extractNeighbourhoodFromAddress(cleaned);
+
+  // Remove neighbourhood from address
+  const streetAddress = cleaned.replace(neighbourhood, '').replace(/,(\s+)?$/, '');
+
+  return { streetAddress, neighbourhood };
 }
 
 // Wrap the geocode action to handle loading state
@@ -61,12 +74,14 @@ async function handleGeocode(e: Event, updateCoords: boolean = false) {
     if (!addressToLookup) return;
 
     // Clean the address before lookup
-    addressToLookup = cleanAddress(addressToLookup);
+    let { streetAddress, neighbourhood } =
+      getStreetAddressAndNeighbourhood(addressToLookup);
 
-    const result = await forwardGeocode(addressToLookup);
+    const result = await forwardGeocode(streetAddress);
     if (result) {
       const processedResult = await processForwardGeocodeResult(
         result,
+        neighbourhood,
         true, // generate display addresses
         lng,
         lat
