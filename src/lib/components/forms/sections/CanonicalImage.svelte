@@ -44,7 +44,7 @@ const navigateToGallery = (e: Event) => {
 </script>
 
 <!-- TODO The info panel is clipping the image, fix the stacking context -->
-<div class="h-full min-h-[300px] basis-1/3">
+<div class="h-full min-h-[300px] w-full basis-1/1 2xl:basis-1/3-gap-6">
   {#await canonicalImage()}
     <div class="flex h-full w-full items-center justify-center rounded-lg bg-base-300">
       <span class="text-base-content/50">Loading...</span>

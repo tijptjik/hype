@@ -20,8 +20,8 @@ let { form } = sectionProps.form;
 <div
   class="z-10 rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0 @container {fieldDiscriminator ==
   'classifier'
-    ? 'basis-1/3'
-    : 'basis-1/3'}">
+    ? 'basis-1/2-gap-6 2xl:basis-1/3-gap-6'
+    : 'basis-1/2-gap-6 2xl:basis-1/3-gap-6'}">
   <Header {...sectionProps} />
   {#each Object.entries(fields) as [fieldRoot, field]}
     <div

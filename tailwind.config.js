@@ -75,6 +75,11 @@ export default {
       minWidth: {
         200: '50rem', // 800px
         250: '62.5rem' // 1000px
+      },
+      flexBasis: {
+        '1/3-gap-6': 'calc(33.3% - 1rem)',
+        '1/2-gap-6': 'calc(50% - 1rem)',
+        '1/1': '100%'
       }
     }
   },

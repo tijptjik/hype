@@ -155,7 +155,7 @@ function handleMapFullscreenChange(isFullscreen: boolean) {
           class:shrink={isMapFullscreen}>
           <div class="flex h-full flex-col-reverse justify-end gap-6 pr-3">
             {#if resourceState.activeFacet === 'core' || resourceState.activeFacet === false}
-              <div class="flex flex-row gap-6">
+              <div class="flex flex-wrap justify-between gap-6">
                 <PropertySection
                   {form}
                   title={m.admin__forms_common_classifiers()}
