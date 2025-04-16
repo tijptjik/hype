@@ -89,15 +89,26 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 
   try {
     const formData: Layer = await request.json();
-    const form = (await superValidate(formData, zod(LayerUpdateAPI))) as SuperValidated<Layer>;
+    const form = (await superValidate(
+      formData,
+      zod(LayerUpdateAPI)
+    )) as SuperValidated<Layer>;
 
     if (!form.valid) {
       return SuperFormResponse(form);
     }
 
     const { baseLayer, formTranslations } = extractEntitiesToUpdate(form.data as Layer);
-    const updatedLayer = await updateLayer(db, baseLayer, params[PUBLIC_IDENTIFIER] as string);
-    const updatedTranslations = await updateTranslations(db, formTranslations, updatedLayer.id);
+    const updatedLayer = await updateLayer(
+      db,
+      baseLayer,
+      params[PUBLIC_IDENTIFIER] as string
+    );
+    const updatedTranslations = await updateTranslations(
+      db,
+      formTranslations,
+      updatedLayer.id
+    );
 
     const updatedLayerProperties = await updateLayerProperties(
       db,
@@ -117,12 +128,18 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
   }
 };
 
+// TODO When a layer is
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
-  const { db } = await getDatabaseOrError(locals, platform, ACCESS_STRATEGY, RESOURCE_TYPE);
-  
+  const { db } = await getDatabaseOrError(
+    locals,
+    platform,
+    ACCESS_STRATEGY,
+    RESOURCE_TYPE
+  );
+
   try {
     const formData: LayerPartialUpdate = await request.json();
-    const form = await superValidate(formData, zod(LayerPatch), {defaults: {}});
+    const form = await superValidate(formData, zod(LayerPatch), { defaults: {} });
 
     if (!form.valid) {
       return json(form, { status: 400 });

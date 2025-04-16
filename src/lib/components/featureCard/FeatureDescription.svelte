@@ -11,10 +11,12 @@ import type { Feature } from '$lib/types';
 let { feature }: { feature: Feature } = $props();
 
 // STATE : LOCAL
-let grade = $derived(feature.properties.find((p) => p.property.key === 'grade')?.value || '');
+let grade = $derived(
+  feature.properties.find((p) => p.property.key === 'grade')?.value || ''
+);
 </script>
 
-<div class="space-y-2 bg-black pb-2 pointer-events-auto">
+<div class="pointer-events-auto space-y-2 bg-black pb-2">
   <div class="flex items-center justify-between px-3 w-100:px-6">
     <h2 class="text-lg text-white">
       {getI18nValue(feature, 'title')}
@@ -25,7 +27,7 @@ let grade = $derived(feature.properties.find((p) => p.property.key === 'grade')?
     </div>
   </div>
 
-  <p class="text-gray-300 px-3 text-sm font-thin tracking-tight w-100:px-6">
+  <p class="px-3 text-sm font-thin tracking-tight text-gray-300 w-100:px-6">
     {getI18nValue(feature, 'description')}
   </p>
 </div>

@@ -57,8 +57,8 @@ export const userRelations = relations(user, ({ many }) => ({
   memberships: many(organisationRole),
   projectRoles: many(projectRole),
   contributedImages: many(image, { relationName: 'contributor' }),
-  contributedTasks: many(task, { relationName: 'contributor' }),
-  reviewedTasks: many(task, { relationName: 'reviewer' }),
+  contributedTasks: many(task, { relationName: 'contributorTasks' }),
+  reviewedTasks: many(task, { relationName: 'reviewerTasks' }),
   userFeatures: many(userFeature),
   userLayers: many(userLayer)
 }));
@@ -877,6 +877,7 @@ export const image = sqliteTable('image', {
 // Add relations
 export const imageRelations = relations(image, ({ one, many }) => ({
   contributor: one(user, {
+    relationName: 'contributor',
     fields: [image.contributorId],
     references: [user.id]
   }),
@@ -1014,10 +1015,12 @@ export const taskRelations = relations(task, ({ one, many }) => ({
     references: [feature.id]
   }),
   contributor: one(user, {
+    relationName: 'contributorTasks',
     fields: [task.contributorId],
     references: [user.id]
   }),
   reviewer: one(user, {
+    relationName: 'reviewerTasks',
     fields: [task.reviewerId],
     references: [user.id]
   }),

@@ -18,10 +18,13 @@ const PROPERTY_PRIORITY = {
 
 // FUNCTIONS
 // Sort properties by predefined priority, then alphabetically
-const sortedProperties = $derived([...feature.properties].sort((a, b) => {
+const sortedProperties = $derived(
+  [...feature.properties].sort((a, b) => {
     // Get priority values (default to Infinity for non-priority properties)
-    const priorityA = PROPERTY_PRIORITY[a.property.key as keyof typeof PROPERTY_PRIORITY] ?? Infinity;
-    const priorityB = PROPERTY_PRIORITY[b.property.key as keyof typeof PROPERTY_PRIORITY] ?? Infinity;
+    const priorityA =
+      PROPERTY_PRIORITY[a.property.key as keyof typeof PROPERTY_PRIORITY] ?? Infinity;
+    const priorityB =
+      PROPERTY_PRIORITY[b.property.key as keyof typeof PROPERTY_PRIORITY] ?? Infinity;
 
     // First sort by priority
     if (priorityA !== priorityB) {

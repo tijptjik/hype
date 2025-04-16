@@ -1,15 +1,19 @@
 // import { defineConfig } from 'drizzle-kit';
 import type { Config } from 'drizzle-kit';
-const { LOCAL_DB_PATH, CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_DATABASE_ID, CLOUDFLARE_D1_TOKEN } =
-  process.env;
+const {
+  DATABASE_URL,
+  CLOUDFLARE_ACCOUNT_ID,
+  CLOUDFLARE_DATABASE_ID,
+  CLOUDFLARE_D1_TOKEN
+} = process.env;
 
-export default LOCAL_DB_PATH
+export default DATABASE_URL
   ? ({
       schema: './src/lib/db/schema.ts',
       out: './migrations',
       dialect: 'sqlite',
       dbCredentials: {
-        url: LOCAL_DB_PATH
+        url: DATABASE_URL
       }
     } satisfies Config)
   : ({

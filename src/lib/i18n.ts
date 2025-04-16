@@ -8,6 +8,7 @@ export const i18n = createI18n(runtime);
 
 // Helper function to get translated value
 export function getI18nValue(obj: any, field: string): string {
+  if (!obj) return '-';
   const currentLang = runtime.languageTag();
   if (currentLang === 'en') return obj[field];
   const translation = obj.translations?.find((t: any) => t.lang === currentLang);

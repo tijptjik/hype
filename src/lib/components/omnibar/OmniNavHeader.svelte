@@ -28,10 +28,12 @@ let isNotFeatureMode = $derived(collectionMode !== 'feature');
 </script>
 
 <div
-  class="items-start flex w-full select-none justify-between py-2 transition-[height] {isNotFeatureMode
+  class="flex w-full select-none items-start justify-between py-2 transition-[height] {isNotFeatureMode
     ? 'pl-2 pr-2'
     : 'pl-6 pr-4'}">
-  <div class="flex flex-col items-start transition-[height]" onclick={() => omniContext.toggleCard()}>
+  <div
+    class="flex flex-col items-start transition-[height]"
+    onclick={() => omniContext.toggleCard()}>
     <div class="flex items-start gap-3">
       {#if isNotFeatureMode}
         <button
@@ -47,7 +49,8 @@ let isNotFeatureMode = $derived(collectionMode !== 'feature');
             <span>({index} of {collectionSize})</span>
           {/if}
         </span>
-        <span class="block font-medium transition-[height] duration-300 pr-3">{featureTitle}</span>
+        <span class="block pr-3 font-medium transition-[height] duration-300"
+          >{featureTitle}</span>
       </div>
     </div>
   </div>
