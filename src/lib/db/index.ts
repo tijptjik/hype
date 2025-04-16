@@ -430,43 +430,34 @@ const applyPublishedConstraints = (
 ) => {
   const conditions: SQL[] = [];
 
-  // For each level in the hierarchy up to the current depth
-  for (let i = 0; i < depth; i++) {
-    const currentTable = getTable(slicedHierarchy, i);
+  const currentTable = getTable(slicedHierarchy, 0);
+  let query = db.select({ id: currentTable.id }).from(currentTable);
 
-    if ('isPublished' in currentTable) {
-      // If this is not the base table (i > 0), we need to join with parent tables
-      if (i > 0) {
-        // Create a query that joins all tables up to the current level
-        let query = db.select({ id: currentTable.id }).from(currentTable);
+  if (depth > 1) {
+    for (let i = 0; i < depth - 1; i++) {
+      const childTable = getTable(slicedHierarchy, i);
+      const parentTable = getTable(slicedHierarchy, i + 1);
+      const fk = getForeignKey(slicedHierarchy, i);
+      query = query.innerJoin(parentTable, eq(childTable[fk], parentTable.id));
+    }
 
-        // Join with all parent tables up to the current level
-        for (let j = 1; j < depth - 1; j++) {
-          const childTable = getTable(slicedHierarchy, j);
-          const parentTable = getTable(slicedHierarchy, j + 1);
-          const fk = getForeignKey(slicedHierarchy, j);
-          query = query.innerJoin(parentTable, eq(childTable[fk], parentTable.id));
-        }
-
-        // Add condition to check isPublished for all tables in the chain
-        const publishedConditions = [];
-        for (let j = 0; j <= i; j++) {
-          const table = getTable(slicedHierarchy, j);
-          if ('isPublished' in table) {
-            publishedConditions.push(eq(table.isPublished as SQLiteColumn, true));
-          }
-        }
-
-        // Add condition to check if the current record exists in the query
-        conditions.push(
-          inArray(currentTable.id, query.where(and(...publishedConditions)))
-        );
-      } else {
-        // For the base table, just check isPublished directly
-        conditions.push(eq(currentTable.isPublished as SQLiteColumn, true));
+    // Add condition to check isPublished for all tables in the chain
+    const publishedConditions = [];
+    for (let j = 0; j < depth; j++) {
+      const table = getTable(slicedHierarchy, j);
+      if ('isPublished' in table) {
+        publishedConditions.push(eq(table.isPublished as SQLiteColumn, true));
       }
     }
+
+    // Add condition to check if the current record exists in the query
+    conditions.push(inArray(currentTable.id, query.where(and(...publishedConditions))));
+  } else {
+    conditions.push(eq(currentTable.isPublished as SQLiteColumn, true));
   }
+
+  // For each level in the hierarchy up to the current depth
+  // Join with all parent tables up to the current level
 
   return conditions;
 };
@@ -494,10 +485,8 @@ export async function hierarchicalResourceQuery<
   const conditions = [
     ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId),
     ...applyTranslationCondition(db, slicedHierarchy, translationTable),
-    ...applyFilterConstraints(db, slicedHierarchy, depth, prisms)
-    // TODO Support only returning published resources
-    // ...applyPublishedConstraints(db, slicedHierarchy, depth)
-  ];
+    ...applyFilterConstraints(db, slicedHierarchy, depth, prisms),
+    ...applyPublishedConstraints(db, slicedHierarchy, depth)];
 
   if (filters) {
     const filterConditions = Object.entries(filters).map(([column, value]) => {
