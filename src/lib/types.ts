@@ -763,6 +763,7 @@ export type ImageUploadState = {
   file: File;
   status: UploadStatus;
   retries: number;
+  imageToReplace?: GetImageAPI;
 };
 
 export type Intent =
@@ -940,6 +941,11 @@ export type ImageEditRefs = {
   refType: ResourceType;
   // ID of the entity which the image is associated with
   refId: Id;
+};
+
+export type ParamsToSign = {
+  folder: string;
+  public_id?: string | null;
 };
 
 export type OmniGroup = 'walks' | 'neighbourhoods' | 'features';

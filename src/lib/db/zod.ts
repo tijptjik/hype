@@ -519,6 +519,7 @@ export const FeatureImageInsert = createInsertSchema(featureImage).extend({
   isPublished: z.boolean().default(false),
   publishedAt: z.string().optional()
 });
+// TODO Give this the correct name
 export const FeatureImageInserts = FeatureImageInsert.omit({ imageId: true });
 
 export const FeatureImageUpdate = FeatureImageInsert.extend({
@@ -532,7 +533,7 @@ export const FeatureImageUpdateAPI = FeatureImageUpdate.extend({
 });
 
 export const ImageInsertAPI = ImageInsert.extend({
-  featureImage: FeatureImageInsert.optional(),
+  featureImage: FeatureImageInserts.optional(),
   // RELATED ENTITY
   refType: z.enum(['feature', 'project', 'organisation']),
   refId: z.string()
