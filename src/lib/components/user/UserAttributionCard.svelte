@@ -8,7 +8,7 @@ import User from '../forms/actions/User.svelte';
 
 type Props = {
   userId: string | null;
-  date: string | null;
+  date: string | undefined;
   type?: 'contributor' | 'publisher' | 'imageContributor';
   class?: string;
   friendlyDate?: boolean;
@@ -43,14 +43,15 @@ async function fetchUser(id: string | null) {
   return await res.json();
 }
 </script>
+
 <!-- <div class="opacity-0 transition-opacity duration-200 group-hover:opacity-100"> -->
 <div>
   {#if userId}
     {#await userPromise}
       <div
-      class="flex min-w-[200px] items-center gap-3 rounded-lg bg-base-200/30 p-3 backdrop-blur-sm transition-all duration-200">
-      <div class="loading loading-spinner loading-md min-h-12"></div>
-    </div>
+        class="flex min-w-[200px] items-center gap-3 rounded-lg bg-base-200/30 p-3 backdrop-blur-sm transition-all duration-200">
+        <div class="loading loading-spinner loading-md min-h-12"></div>
+      </div>
     {:then user}
       <div
         class="flex min-w-[200px] items-center gap-3 rounded-lg bg-base-200/60 p-3 backdrop-blur-sm">

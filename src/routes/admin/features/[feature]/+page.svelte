@@ -8,6 +8,8 @@ import { page } from '$app/stores';
 // CONTEXT
 import { setForm } from '$lib/context/forms.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+// PROVIDERS
+import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // COMPONENTS
 import Header from '$lib/components/layout/EntityHeader.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
@@ -29,7 +31,9 @@ import type {
   FormFieldArray,
   FormFieldNested,
   FormFieldConfig,
-  ImageEditRefs
+  ImageEditRefs,
+  OrganisationDB,
+  ProjectDB
 } from '$lib/types';
 // CONTEXT
 const resourceState = getHierarchicalResourceState();
@@ -108,11 +112,6 @@ let enhance = $derived(form.enhance);
 // STATE : DERIVED :: TITLE
 let title = $derived(pageProps.data.validatedForm.data.title || NEW_TITLE);
 
-let refs: ImageEditRefs = $derived({
-  refType: RESOURCE,
-  refId: pageProps.data.entity
-});
-
 // STATE : DERIVED :: FULLSCREEN
 let isMapFullscreen = $state(false);
 
@@ -121,85 +120,98 @@ function handleMapFullscreenChange(isFullscreen: boolean) {
 }
 </script>
 
-<!-- LAYOUT -->
-<div class="h-full overflow-hidden bg-black">
-  <Header {title} {form} />
-  {#if pageProps.data.validatedForm.data}
-    <form
-      method="POST"
-      use:enhance
-      role="form"
-      data-testid="featureForm"
-      class="h-full">
-      <main
-        class="flex flex-1 flex-row gap-6 overflow-hidden bg-black p-6 pr-3"
-        style="height: calc(100vh - 148px) !important;">
-        <div
-          class="map-container relative h-full flex-1 overflow-hidden @container"
-          class:fullscreen={isMapFullscreen}>
-          <MapSection {form} toggleFullscreen={handleMapFullscreenChange} />
+<ImageProvider
+  mode="gallery"
+  isAdminMode={true}
+  refType="feature"
+  refId={pageProps.data.entity}
+  refOrganisation={resourceState.getAscendantOrSelf(
+    resourceState.getEntity(),
+    HierarchicalResource.project,
+    HierarchicalResource.organisation
+  ) as OrganisationDB}
+  refProject={resourceState.getAscendantOrSelf(
+    resourceState.getEntity(),
+    HierarchicalResource.project,
+    HierarchicalResource.organisation
+  ) as ProjectDB}>
+  <!-- LAYOUT -->
+  <div class="h-full overflow-hidden bg-black">
+    <Header {title} {form} />
+    {#if pageProps.data.validatedForm.data}
+      <form
+        method="POST"
+        use:enhance
+        role="form"
+        data-testid="featureForm"
+        class="h-full">
+        <main
+          class="flex flex-1 flex-row gap-6 overflow-hidden bg-black p-6 pr-3"
+          style="height: calc(100vh - 148px) !important;">
           <div
-            class="absolute bottom-2 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex">
-            <UserAttributionCard
-              userId={pageProps.data.validatedForm.data.contributorId || null}
-              date={pageProps.data.validatedForm.data.createdAt || null}
-              type="contributor" />
-            <UserAttributionCard
-              userId={pageProps.data.validatedForm.data.publisherId || null}
-              date={pageProps.data.validatedForm.data.publishedAt || null}
-              type="publisher" />
+            class="map-container relative h-full flex-1 overflow-hidden @container"
+            class:fullscreen={isMapFullscreen}>
+            <MapSection {form} toggleFullscreen={handleMapFullscreenChange} />
+            <div
+              class="absolute bottom-2 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex">
+              <UserAttributionCard
+                userId={pageProps.data.validatedForm.data.contributorId || null}
+                date={pageProps.data.validatedForm.data.createdAt || null}
+                type="contributor" />
+              <UserAttributionCard
+                userId={pageProps.data.validatedForm.data.publisherId || null}
+                date={pageProps.data.validatedForm.data.publishedAt || null}
+                type="publisher" />
+            </div>
           </div>
-        </div>
-        <div
-          class="content-container h-auto scroll-m-10 scroll-p-12 overflow-y-scroll"
-          class:shrink={isMapFullscreen}>
-          <div class="flex h-full flex-col-reverse justify-end gap-6 pr-3">
-            {#if resourceState.activeFacet === 'core' || resourceState.activeFacet === false}
-              <div class="flex flex-wrap justify-between gap-6">
-                <PropertySection
+          <div
+            class="content-container h-auto scroll-m-10 scroll-p-12 overflow-y-scroll"
+            class:shrink={isMapFullscreen}>
+            <div class="flex h-full flex-col-reverse justify-end gap-6 pr-3">
+              {#if resourceState.activeFacet === 'core' || resourceState.activeFacet === false}
+                <div class="flex flex-wrap justify-between gap-6">
+                  <PropertySection
+                    {form}
+                    title={m.admin__forms_common_classifiers()}
+                    subtitle={m.admin__forms_common_classifiers_subtitle()}
+                    fieldDiscriminator="classifier"
+                    fields={FIELDS.property as FormFieldArray} />
+                  <PropertySection
+                    {form}
+                    title={m.admin__forms_common_specifiers()}
+                    subtitle={m.admin__forms_common_specifiers_subtitle()}
+                    fieldDiscriminator="specifier"
+                    fields={FIELDS.property as FormFieldArray} />
+                  {#if pageProps.data.entity !== NEW_REF}
+                    <CanonicalImage {form} />
+                  {/if}
+                </div>
+                <I18nSection
                   {form}
-                  title={m.admin__forms_common_classifiers()}
-                  subtitle={m.admin__forms_common_classifiers_subtitle()}
-                  fieldDiscriminator="classifier"
-                  fields={FIELDS.property as FormFieldArray} />
-                <PropertySection
+                  title={m.admin__forms_common_descriptors()}
+                  fields={FIELDS.i18n as FormField} />
+                <!-- TODO Add support for translatable specifiers -->
+              {:else if resourceState.activeFacet === 'address'}
+                <AddressComponentSection
                   {form}
-                  title={m.admin__forms_common_specifiers()}
-                  subtitle={m.admin__forms_common_specifiers_subtitle()}
-                  fieldDiscriminator="specifier"
-                  fields={FIELDS.property as FormFieldArray} />
-                {#if pageProps.data.entity !== NEW_REF}
-                  <CanonicalImage {form} />
-                {/if}
-              </div>
-              <I18nSection
-                {form}
-                title={m.admin__forms_common_descriptors()}
-                fields={FIELDS.i18n as FormField} />
-              <!-- TODO Add support for translatable specifiers -->
-            {:else if resourceState.activeFacet === 'address'}
-              <AddressComponentSection
-                {form}
-                title={m.admin__forms_feature_address_components_title()}
-                fields={FIELDS.address as FormField & FormFieldNested} />
-              <AddressSection
-                {form}
-                title={m.admin__forms_feature_addressing_title()}
-                subtitle={m.admin__forms_feature_addressing_subtitle()}
-                fields={FIELDS.address as FormField & FormFieldNested} />
-            {:else if resourceState.activeFacet === 'images' && pageProps.data.entity !== NEW_REF}
-              <ViewerSection
-                {form}
-                {refs}
-                title={m.admin__forms_feature_viewer_title()} />
-              <GallerySection {form} title={m.admin__forms_feature_gallery_title()} />
-            {/if}
+                  title={m.admin__forms_feature_address_components_title()}
+                  fields={FIELDS.address as FormField & FormFieldNested} />
+                <AddressSection
+                  {form}
+                  title={m.admin__forms_feature_addressing_title()}
+                  subtitle={m.admin__forms_feature_addressing_subtitle()}
+                  fields={FIELDS.address as FormField & FormFieldNested} />
+              {:else if resourceState.activeFacet === 'images' && pageProps.data.entity !== NEW_REF}
+                <ViewerSection {form} title={m.admin__forms_feature_viewer_title()} />
+                <GallerySection {form} title={m.admin__forms_feature_gallery_title()} />
+              {/if}
+            </div>
           </div>
-        </div>
-      </main>
-    </form>
-  {/if}
-</div>
+        </main>
+      </form>
+    {/if}
+  </div>
+</ImageProvider>
 
 <style>
 .map-container {

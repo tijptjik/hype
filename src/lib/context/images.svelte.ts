@@ -7,7 +7,7 @@ import Coordinates from 'coordinate-parser';
 import { capitalizeFirstLetter } from '$lib';
 // TYPES
 import type { Writable } from 'svelte/store';
-import type { QueryClient } from '@tanstack/svelte-query';
+// import type { QueryClient } from '@tanstack/svelte-query';
 import type {
   ImageDB,
   GetImageAPI,
@@ -26,13 +26,10 @@ import type {
   ImageUploadRefs,
   Organisation,
   Project,
-  ImagePatchAPI,
-  ImageAPI,
-  NewFeatureImage,
-  NewFeatureImages
+  NewFeatureImages,
+  ImageUploadState
 } from '$lib/types';
-import { image } from '$lib/db/schema';
-
+import { HierarchicalResource } from '$lib/types';
 /**
  * Image Service
  * ═══════════════════════
@@ -61,7 +58,7 @@ import { image } from '$lib/db/schema';
 // 1. CONFIGURATION
 // ═══════════════════════
 
-const intentOrder = [
+export const intentOrder = [
   'undefined',
   'canonical',
   'closeUp',
@@ -70,7 +67,7 @@ const intentOrder = [
   'evidence'
 ] as const;
 
-type ImageServiceMode = 'standalone' | 'gallery';
+export type ImageServiceMode = 'standalone' | 'gallery';
 type ImageServiceState = {
   mode: ImageServiceMode;
   refType: ResourceType | null;
@@ -78,13 +75,24 @@ type ImageServiceState = {
   refOrganisation: OrganisationDB | null;
   refProject: ProjectDB | null;
   uploadQueue: ImageUpload[];
-  imageLoadStates: Record<string, LoadStatus>;
+  imageLoadStatus: Record<string, LoadStatus>;
   activeImage: GetImageAPI | null;
   activeImagePreview: string | null;
   images: GetImageAPI[];
+  imagePreviews: Record<string, string>;
   pendingConfirmation: SvelteSet<string>;
   deletionQueue: SvelteSet<string>;
   rejected: File[];
+};
+
+type ImageServiceOptions = {
+  mode: ImageServiceMode;
+  isAdminMode: boolean;
+  refType: ResourceType;
+  refId: Id;
+  refOrganisation?: OrganisationDB;
+  refProject?: ProjectDB;
+  image?: GetImageAPI;
 };
 
 // ═══════════════════════
@@ -92,22 +100,46 @@ type ImageServiceState = {
 // ═══════════════════════
 
 export class ImageService {
-  queryClient: QueryClient;
+  //   queryClient: QueryClient;
+  isAdminMode: boolean = false;
 
   constructor(
-    queryClient: QueryClient,
+    // queryClient: QueryClient,
     mode: ImageServiceMode = 'gallery',
+    isAdminMode: boolean = false,
     refType: ResourceType,
     refId: Id,
     refOrganisation?: OrganisationDB,
-    refProject?: ProjectDB
+    refProject?: ProjectDB,
+    image?: GetImageAPI
   ) {
-    this.queryClient = queryClient;
-    this.state.mode = mode;
-    this.state.refType = refType;
-    this.state.refId = refId || null;
-    this.state.refOrganisation = refOrganisation || null;
-    this.state.refProject = refProject || null;
+    this.init({
+      mode,
+      isAdminMode,
+      refType,
+      refId,
+      refOrganisation,
+      refProject,
+      image
+    });
+  }
+
+  init(options: ImageServiceOptions) {
+    // this.queryClient = queryClient;
+    this.state.mode = options.mode;
+    this.isAdminMode = options.isAdminMode;
+    this.state.refType = options.refType;
+    this.state.refId = options.refId || null;
+    this.state.refOrganisation = options.refOrganisation || null;
+    this.state.refProject = options.refProject || null;
+
+    if (options.mode === 'standalone' && options.image) {
+      this.setImages([options.image]);
+      this.setImageLoadStatus(options.image.id, 'loaded');
+    } else if (options.mode === 'gallery') {
+      this.refreshImages();
+    }
+    this.setActiveImageToFirst();
   }
 
   // ═══════════════════════
@@ -145,8 +177,10 @@ export class ImageService {
     activeImagePreview: null as string | null,
     // Images related to the active resource (e.g. organisation, project, feature)
     images: [] as GetImageAPI[],
+    // Previews of uploaded images based on local files
+    imagePreviews: {} as Record<string, string>,
     // Load state of each image
-    imageLoadStates: {} as Record<string, LoadStatus>,
+    imageLoadStatus: {} as Record<string, LoadStatus>,
 
     // CRUD :: DELETE
 
@@ -161,16 +195,18 @@ export class ImageService {
   // ═══════════════════════
 
   // Convert to class methods that can be used in derived computations
-  private testActiveImageState(state: LoadStatus | UploadStatus) {
+  private testActiveImageStatus(status: LoadStatus | UploadStatus) {
     if (!this.state.activeImage) return false;
-    return this.state.imageLoadStates[this.state.activeImage.id] === state;
+    return this.state.imageLoadStatus[this.state.activeImage.id] === status;
   }
 
-  activeImageState = $derived({
-    isLoaded: this.testActiveImageState('loaded'),
-    isLoading: this.testActiveImageState('loading'),
-    isUploading: this.testActiveImageState('uploading')
+  activeImageStatus = $derived({
+    isLoaded: this.testActiveImageStatus('loaded'),
+    isLoading: this.testActiveImageStatus('loading'),
+    isUploading: this.testActiveImageStatus('uploading')
   });
+
+  imagesQueryKey = $derived(['images', this.state.refType, this.state.refId]);
 
   // ═══════════════════════
   // 3.C STATE ACCESSORS
@@ -208,6 +244,10 @@ export class ImageService {
 
   // IMAGE UPLOAD STATE
 
+  getUploadQueue() {
+    return this.state.uploadQueue;
+  }
+
   setUploadQueue(uploadQueue: ImageUpload[]) {
     this.state.uploadQueue = uploadQueue;
   }
@@ -219,6 +259,23 @@ export class ImageService {
           ({ file, status: 'uploading', retries: 0, imageToReplace }) as ImageUpload
       )
     );
+  }
+
+  getActiveImagePreview() {
+    return this.state.activeImagePreview;
+  }
+
+  getImagePreview(fileName: string) {
+    return this.state.imagePreviews[fileName];
+  }
+
+  addToImagePreviews(files: File[]) {
+    files.forEach((file) => {
+      this.state.imagePreviews[file.name] = URL.createObjectURL(file);
+    });
+    if (files.length > 0) {
+      this.state.activeImagePreview = URL.createObjectURL(files[0]);
+    }
   }
 
   addToRejected(files: File[]) {
@@ -245,6 +302,10 @@ export class ImageService {
     );
   }
 
+  pendingConfirmationHas(imageId: string) {
+    return this.state.pendingConfirmation.has(imageId);
+  }
+
   addToPendingConfirmation(imageId: string) {
     this.state.pendingConfirmation.add(imageId);
   }
@@ -253,8 +314,16 @@ export class ImageService {
     this.state.pendingConfirmation.delete(imageId);
   }
 
+  resetPendingConfirmation() {
+    this.state.pendingConfirmation = new SvelteSet<string>();
+  }
+
   addToDeletionQueue(imageId: string) {
     this.state.deletionQueue.add(imageId);
+  }
+
+  deletionQueueHas(imageId: string) {
+    return this.state.deletionQueue.has(imageId);
   }
 
   removeFromDeletionQueue(imageId: string) {
@@ -272,15 +341,23 @@ export class ImageService {
     this.sortImages();
   }
 
-  setImageLoadState(imageId: string, state: LoadStatus) {
-    this.state.imageLoadStates[imageId] = state;
+  setImageLoadStatus(imageId: string, status: LoadStatus) {
+    this.state.imageLoadStatus[imageId] = status;
+  }
+
+  getImageLoadStatus(imageId: string) {
+    return this.state.imageLoadStatus[imageId];
+  }
+
+  getImageLoadStatuses() {
+    return this.state.imageLoadStatus;
   }
 
   resetImageState(imageId?: string) {
     if (imageId) {
-      delete this.state.imageLoadStates[imageId];
+      delete this.state.imageLoadStatus[imageId];
     } else {
-      this.state.imageLoadStates = {};
+      this.state.imageLoadStatus = {};
     }
   }
 
@@ -296,6 +373,10 @@ export class ImageService {
 
   setActiveImage(image: GetImageAPI) {
     this.state.activeImage = image;
+  }
+
+  resetActiveImage() {
+    this.state.activeImage = null;
   }
 
   setActiveImageToFirst() {
@@ -325,10 +406,50 @@ export class ImageService {
   }
 
   // ═══════════════════════
+  // 4. QUERYING
+  // ═══════════════════════
+
+  async refreshImages() {
+    this.setImages(
+      //   await this.queryClient.fetchQuery({
+      // queryKey: this.imagesQueryKey,
+      // queryFn: () => this.imagesQueryFn
+      //   })
+      await this.imagesQueryFn()
+    );
+  }
+
+  imagesQueryFn = async () => {
+    const url = this.buildApiUrl('image');
+    return this.fetchOrThrow<GetImageAPI[]>(url);
+  };
+
+  private async fetchOrThrow<T>(url: string): Promise<T> {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Network response was not ok');
+    return (await response.json()) as T;
+  }
+
+  // Helper method to build API URLs with filters
+  private buildApiUrl(resource: string): string {
+    const path = 'images';
+    const params = new URLSearchParams();
+
+    // Add isAdminView filter by default
+    params.append('isAdminView', 'true');
+    if (this.state.refType === HierarchicalResource.feature) {
+      params.append('featureId', this.state.refId as Id);
+    }
+
+    return `/api/${path}?${params.toString()}`;
+  }
+
+  // ═══════════════════════
   // 4. NAVIGATION
   // ═══════════════════════
 
-  switchToImage(direction: 'prev' | 'next') {
+  switchToImage(e: MouseEvent, direction: 'prev' | 'next') {
+    e.preventDefault();
     if (!this.state.activeImage || !this.state.images.length) return;
 
     const currentIndex = this.state.images.findIndex(
@@ -360,7 +481,7 @@ export class ImageService {
     config: {
       onLoad?: (savedImage: GetImageAPI) => void;
       onError?: () => void;
-    },
+    } = {},
     imageToReplace?: GetImageAPI
   ) {
     if (acceptedFiles.length > 1 && imageToReplace) {
@@ -369,10 +490,8 @@ export class ImageService {
     this.addToUploadQueue(acceptedFiles, imageToReplace);
     this.addToRejected(fileRejections);
 
-    // if (this.state.mode === 'standalone' && newFiles.length > 0) {
-    //   const previewURL = URL.createObjectURL(newFiles[0].file);
-    //   this.state.activeImagePreview = previewURL;
-    // }
+    this.addToImagePreviews(acceptedFiles);
+
     await this.processUploadQueue(config);
     // Sort images after all uploads have been processed
     this.sortImages();
@@ -410,13 +529,14 @@ export class ImageService {
   async upload(args: {
     fileObject: ImageUpload;
     event?: { fetch: typeof fetch };
-    // featureImage?: {
-    //   isPublished: boolean;
-    //   intent: Intent;
-    // };
+    extended?: {
+      featureImage?: {
+        isPublished: boolean;
+        intent: Intent;
+      };
+    };
   }) {
-    // const { fileObject, event, featureImage } = args;
-    const { fileObject, event } = args;
+    const { fileObject, event, extended } = args;
     const localFetch = event?.fetch ?? fetch;
 
     try {
@@ -433,16 +553,8 @@ export class ImageService {
         event
       });
 
-      this.extendFeatureImage(imageData, refs);
+      this.extendFeatureImage(imageData, refs, extended);
       this.extendHierachicalResource(imageData, refs);
-
-      //   if (featureImage) {
-      // imageData.featureImage = {
-      //   featureId: refs.entity,
-      //   intent: featureImage.intent,
-      //   isPublished: featureImage.isPublished
-      // };
-      //   }
 
       const savedImage = await this.upsertImage(
         fileObject,
@@ -565,7 +677,7 @@ export class ImageService {
     }
   }
 
-  retryUpload(fileObject: ImageUpload) {
+  retryUpload(fileObject: ImageUploadState) {
     this.setUploadToRetry(fileObject);
     this.upload({ fileObject });
   }
@@ -661,15 +773,21 @@ export class ImageService {
   // 7. DELETION
   // ═══════════════════════
 
-  handlePreDelete(image: GetImageAPI) {
+  handlePreDelete(e: MouseEvent, image: GetImageAPI) {
+    e.stopPropagation();
+    e.preventDefault();
     this.addToPendingConfirmation(image.id);
   }
 
-  handleCancelDelete(image: GetImageAPI) {
+  handleCancelDelete(e: MouseEvent, image: GetImageAPI) {
+    e.stopPropagation();
+    e.preventDefault();
     this.removeFromPendingConfirmation(image.id);
   }
 
-  handleConfirmDelete(image: GetImageAPI) {
+  handleConfirmDelete(e: MouseEvent, image: GetImageAPI) {
+    e.stopPropagation();
+    e.preventDefault();
     this.addToDeletionQueue(image.id);
     this.processDeletionQueue();
   }
@@ -705,6 +823,7 @@ export class ImageService {
   // ═══════════════════════
 
   async downloadImage(
+    e: MouseEvent,
     image: GetImageAPI = this.state.activeImage!,
     flash: Writable<App.PageData['flash']>
   ) {
@@ -712,7 +831,7 @@ export class ImageService {
     let downloadUrl = '';
 
     if (image.cdn.toLowerCase() === 'cloudinary') {
-      downloadUrl = this.getURLfromImage({ image, raw: true });
+      downloadUrl = getURLfromImage({ image, raw: true });
     } else {
       throw new Error('Unsupported CDN');
     }
@@ -822,34 +941,6 @@ export class ImageService {
     return `https://api.cloudinary.com/v1_1/${cloudname}/auto/upload`;
   }
 
-  getURLfromImage(opts: {
-    image: ImageDB;
-    transformation?: string;
-    raw?: boolean;
-    gravity?: string;
-    quality?: string;
-    format?: string;
-  }): string {
-    const {
-      image,
-      transformation = 'c_fit,h_1000,w_1000',
-      gravity = 'auto',
-      format = 'auto',
-      quality = 'auto',
-      raw = false
-    } = opts;
-
-    const finalTransformation = `${transformation}/g_${gravity}/f_${format}/q_${quality}`;
-
-    if (image.cdn === 'cloudinary') {
-      return raw
-        ? `https://res.cloudinary.com/${image.env}/image/upload/fl_attachment/${image.publicId}`
-        : `https://res.cloudinary.com/${image.env}/image/upload/${finalTransformation}/v${image.version}/${image.publicId}`;
-    } else {
-      throw error(404, `Image CDN <code>${image.cdn}</code> not supported`);
-    }
-  }
-
   private getPublicPath(imageToReplace?: GetImageAPI): {
     folder: string;
     public_id: string | null;
@@ -902,7 +993,16 @@ export class ImageService {
     };
   }
 
-  private extendFeatureImage(image: Partial<NewImageAPI>, refs: ImageUploadRefs) {
+  private extendFeatureImage(
+    image: Partial<NewImageAPI>,
+    refs: ImageUploadRefs,
+    extended?: {
+      featureImage?: {
+        isPublished: boolean;
+        intent: Intent;
+      };
+    }
+  ) {
     if (refs.resource === 'feature') {
       image.featureImage = refs.imageToReplace
         ? {
@@ -912,8 +1012,8 @@ export class ImageService {
           }
         : ({
             featureId: refs.entity,
-            intent: 'undefined',
-            isPublished: true
+            intent: extended?.featureImage?.intent || 'undefined',
+            isPublished: extended?.featureImage?.isPublished || true
           } as NewFeatureImages);
     }
   }
@@ -932,10 +1032,6 @@ export class ImageService {
     }
   }
 
-  // ═══════════════════════
-  // 12. UTILS
-  // ═══════════════════════
-
   private sortImages() {
     this.state.images.sort((a, b) => {
       if (a.isPublished !== b.isPublished) {
@@ -952,6 +1048,49 @@ export class ImageService {
       );
     });
   }
+
+  getURLfromImage(opts: {
+    image: ImageDB;
+    transformation?: string;
+    raw?: boolean;
+    gravity?: string;
+    quality?: string;
+    format?: string;
+  }): string {
+    return getURLfromImage(opts);
+  }
+}
+
+// ═══════════════════════
+// 12. UTILS
+// ═══════════════════════
+
+export function getURLfromImage(opts: {
+  image: ImageDB;
+  transformation?: string;
+  raw?: boolean;
+  gravity?: string;
+  quality?: string;
+  format?: string;
+}): string {
+  const {
+    image,
+    transformation = 'c_fit,h_1000,w_1000',
+    gravity = 'auto',
+    format = 'auto',
+    quality = 'auto',
+    raw = false
+  } = opts;
+
+  const finalTransformation = `${transformation}/g_${gravity}/f_${format}/q_${quality}`;
+
+  if (image.cdn === 'cloudinary') {
+    return raw
+      ? `https://res.cloudinary.com/${image.env}/image/upload/fl_attachment/${image.publicId}`
+      : `https://res.cloudinary.com/${image.env}/image/upload/${finalTransformation}/v${image.version}/${image.publicId}`;
+  } else {
+    throw error(404, `Image CDN <code>${image.cdn}</code> not supported`);
+  }
 }
 
 // ═══════════════════════
@@ -961,16 +1100,25 @@ export class ImageService {
 const IMAGE_STATE_KEY = Symbol('IMAGE_STATE_KEY');
 
 export const setImageService = (
-  queryClient: QueryClient,
   mode: ImageServiceMode = 'gallery',
+  isAdminMode: boolean = false,
   refType: ResourceType,
   refId: Id,
   refOrganisation?: OrganisationDB,
-  refProject?: ProjectDB
+  refProject?: ProjectDB,
+  image?: GetImageAPI
 ) =>
   setContext(
     IMAGE_STATE_KEY,
-    new ImageService(queryClient, mode, refType, refId, refOrganisation, refProject)
+    new ImageService(
+      mode,
+      isAdminMode,
+      refType,
+      refId,
+      refOrganisation,
+      refProject,
+      image
+    )
   );
 
 export const getImageService = (): ImageService => getContext(IMAGE_STATE_KEY);

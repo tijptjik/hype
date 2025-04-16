@@ -1,26 +1,23 @@
 <script lang="ts">
-import { SvelteSet } from 'svelte/reactivity';
-// CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+// SERVICES
+import { getImageService } from '$lib/context/images.svelte';
 // COMPONENTS
 import Header from '$lib/components/forms/extra/Header.svelte';
 import Actions from '$lib/components/forms/actions/Gallery.svelte';
 import Stats from '$lib/components/forms/stats/Gallery.svelte';
 import Gallery from '$lib/components/images/gallery/Gallery.svelte';
-// LIB
-import { imageSets } from '$lib/images/index.svelte';
 // TYPES
-import type { SectionProps, ResourceType, Id } from '$lib/types';
+import type { SectionProps } from '$lib/types';
 
 // TYPES
 type Props = SectionProps;
 
+// SERVICES
+const imageService = getImageService();
+
 // STATE : PROPS
 let { ...sectionProps }: Props = $props();
 let inputElement = $state<HTMLInputElement>();
-
-// CONTEXT :: RESOURCE
-const resourceState = getHierarchicalResourceState();
 
 // ACTIONS
 let actionProps = $state({
@@ -36,9 +33,9 @@ const actions = {
   remove: (e: Event) => {
     e.preventDefault();
     e.stopPropagation();
-    if (imageSets.images.length > 0) {
+    if (imageService.getImages().length > 0) {
       actionProps.removeMode = !actionProps.removeMode;
-      imageSets.imagesPendingConfirmation = new SvelteSet();
+      imageService.resetPendingConfirmation();
     }
   }
 };
@@ -56,12 +53,6 @@ const openFileDialog = () => {
   class="z-10 rounded-2xl bg-gradient-to-r from-rose-500/70 to-fuchsia-800/70 p-0 @container">
   <Header {...sectionProps} bind:actionProps {Actions} {actions} {Stats} />
   <main class="relative m-4 min-w-0 overflow-hidden">
-    <Gallery
-      editContext={{
-        refType: resourceState.activeResource as ResourceType,
-        refId: resourceState.activeEntity as Id
-      }}
-      {actionProps}
-      bind:inputElement />
+    <Gallery {actionProps} bind:inputElement />
   </main>
 </div>

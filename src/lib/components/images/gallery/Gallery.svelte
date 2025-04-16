@@ -1,127 +1,42 @@
 <script lang="ts">
-import { fade, blur } from 'svelte/transition';
+import { fade } from 'svelte/transition';
 import { flip } from 'svelte/animate';
-// LIB
-import { sortImages, imageSets } from '$lib/images/index.svelte';
+// SERVICES
+import { getImageService } from '$lib/context/images.svelte';
 // COMPONENTS :: GALLERY
 import Thumbnail from '$lib/components/images/gallery/Thumbnail.svelte';
 import UploadThumbnail from '$lib/components/images/gallery/ThumbnailWhileUploading.svelte';
 import ThumbnailsBeforeLoad from '$lib/components/images/gallery/ThumbnailsBeforeLoad.svelte';
 import ScrollArrow from '$lib/components/images/gallery/ScrollArrow.svelte';
 import Dropzone from '$lib/components/images/gallery/Dropzone.svelte';
-// CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
-// TYPES
-import { HierarchicalResource } from '$lib/types';
-import type {
-  ImageUploadRefs,
-  ImageEditRefs,
-  Organisation,
-  Project,
-  GetImageAPI
-} from '$lib/types';
+
+// SERVICES
+const imageService = getImageService();
 
 type Props = {
-  initialImage?: GetImageAPI;
   inputElement?: HTMLInputElement;
   actionProps?: {
     removeMode: boolean;
   };
   hasDropzone?: boolean;
-  editContext?: ImageEditRefs;
 };
 
 // STATE :: PROPS
-let {
-  initialImage,
-  inputElement = $bindable(),
-  actionProps,
-  hasDropzone = true,
-  editContext
-}: Props = $props();
+let { inputElement = $bindable(), actionProps, hasDropzone = true }: Props = $props();
 
 // STATE :: SCROLL ARROWS
 let showLeftArrow = $state(false);
 let showRightArrow = $state(false);
 
 // STATE :: IMAGES
-let isLoadingImages = $state(false);
-let allImagesLoaded = $derived(
-  imageSets.images.length > 0 &&
-    imageSets.images.every((img) => imageSets.imagesLoaded[img.id])
-);
-
-// CONTEXT :: RESOURCE
-const resourceState = getHierarchicalResourceState();
-
-let featureId = $derived(
-  editContext
-    ? editContext.refId
-    : resourceState.activeResource === 'feature'
-      ? resourceState.activeEntityRef
-      : null
-);
-
-let refs: ImageUploadRefs = $derived({
-  resource: resourceState.activeResource,
-  entity: resourceState.getEntity().id,
-  organisation: resourceState.getAscendantOrSelf(
-    resourceState.getEntity(),
-    HierarchicalResource.feature,
-    HierarchicalResource.organisation
-  ),
-  project: resourceState.getAscendantOrSelf(
-    resourceState.getEntity(),
-    HierarchicalResource.feature,
-    HierarchicalResource.project
+let isLoadingImages = $derived(
+  Object.values(imageService.getImageLoadStatuses()).some(
+    (status) => status === 'loading'
   )
-});
-
-let editRefs: ImageEditRefs = $derived(
-  editContext
-    ? editContext
-    : {
-        refType: refs.resource,
-        refId: refs.entity
-      }
 );
-
-// STATE :: EFFECTS
-$effect(() => {
-  isLoadingImages = true;
-  imageSets.imagesLoaded = {}; // Reset the loaded state when fetching new images
-  fetch(`/api/images?featureId=${featureId}`)
-    .then((res) => res.json())
-    .then((images) => {
-      imageSets.images = images;
-      sortImages();
-    })
-    .catch((error) => {
-      console.error('Failed to load images:', error);
-    })
-    .finally(() => {
-      isLoadingImages = false;
-      // Only call updateScrollArrows here if there are no images
-      if (imageSets.images.length === 0) {
-        updateScrollArrows();
-      } else {
-        // TODO : Scroll to initial image if it exists
-        // Set the active image to the initial image if it exists, otherwise the first image
-        imageSets.activeImage = initialImage ?? imageSets.images[0];
-      }
-    });
-});
 
 // DOM
 let scrollContainer: HTMLDivElement;
-
-// HANDLERS :: IMAGES
-const handleImageLoad = (imageId: string) => {
-  imageSets.imagesLoaded[imageId] = true;
-  if (allImagesLoaded) {
-    updateScrollArrows();
-  }
-};
 
 // HANDLERS :: SCROLL
 const handleWheel = (event: WheelEvent) => {
@@ -196,14 +111,14 @@ const scrollTo = (direction: 'left' | 'right') => {
   <!-- Dropzone always first -->
   {#if hasDropzone}
     <div class="h-[200px] w-[200px] flex-none">
-      <Dropzone {refs} {updateScrollArrows} bind:inputElement />
+      <Dropzone {updateScrollArrows} bind:inputElement />
     </div>
   {/if}
 
   <!-- Upload queue with loading states and transitions -->
-  {#each imageSets.uploadQueue as fileState (fileState.file)}
+  {#each imageService.getUploadQueue() as fileObject (fileObject.file)}
     <div in:fade={{ duration: 200 }} class="relative h-[200px] w-[200px] flex-none">
-      <UploadThumbnail {fileState} {refs} />
+      <UploadThumbnail {fileObject} />
     </div>
   {/each}
 
@@ -211,13 +126,13 @@ const scrollTo = (direction: 'left' | 'right') => {
   {#if isLoadingImages}
     <ThumbnailsBeforeLoad />
   {:else}
-    {#each imageSets.images as image, i (image.id)}
+    {#each imageService.getImages() as image, i (image.id)}
       <div
         animate:flip={{ duration: 300 }}
         in:fade={{ duration: 200, delay: i * 100 }}
         out:fade={{ duration: 200 }}
         class="relative h-[200px] w-[200px] flex-none">
-        <Thumbnail {image} idx={i} {actionProps} refs={editRefs} />
+        <Thumbnail {image} idx={i} {actionProps} />
       </div>
     {/each}
   {/if}

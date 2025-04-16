@@ -10,21 +10,16 @@ import {
 import db, { hierarchicalResourceQuery } from '$lib/db';
 import { projectRole, task, taskImage } from '$lib/db/schema';
 import { createTask, customHierarchy } from '$lib/db/services/task';
-import {
-  createFeatureImagesFromImageIds,
-  createTaskImagesFromImageIds
-} from '$lib/db/services/image';
+import { createTaskImagesFromImageIds } from '$lib/db/services/image';
 import { getProjectForFeatureId } from '$lib/db/services/project';
 import { getOrganisationForProjectId } from '$lib/db/services/organisation';
-import { handleUpload as handleImageUpload } from '$lib/images/index.svelte';
+import { setImageService, getImageService } from '$lib/context/images.svelte';
 // TYPES
 import type { RequestHandler } from '@sveltejs/kit';
 import type {
   AccessStrategyOption,
   GetImageAPI,
-  Organisation,
   OrganisationDB,
-  Project,
   ProjectDB
 } from '$lib/types';
 
@@ -129,25 +124,32 @@ export const POST: RequestHandler = async ({ request, locals, platform, fetch })
         let organisation: OrganisationDB | undefined =
           await getOrganisationForProjectId(db, project!.id);
 
+        setImageService(
+          'gallery',
+          false,
+          'feature',
+          taskData.featureId,
+          organisation!,
+          project!
+        );
+        const imageService = getImageService();
+
         if (fileValue instanceof File) {
-          let image = await handleImageUpload({
-            fileState: {
+          let image = await imageService.upload({
+            fileObject: {
               file: fileValue,
               status: 'uploading',
               retries: 0
             },
-            refs: {
-              resource: 'feature',
-              entity: taskData.featureId,
-              project: project! as Project,
-              organisation: organisation! as Organisation
-            },
             event: { fetch },
-            featureImage: {
-              isPublished: false,
-              intent: 'evidence'
+            extended: {
+              featureImage: {
+                isPublished: false,
+                intent: 'evidence'
+              }
             }
           });
+
           if (image) {
             uploadedImages.push(image);
           }

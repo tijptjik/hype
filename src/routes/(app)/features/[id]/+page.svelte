@@ -3,6 +3,8 @@
 import { browser } from '$app/environment';
 // Stores
 import { page } from '$app/stores';
+// PROVIDERS
+import { ImageProvider } from '$lib/components/providers/ImageProvider.svelte';
 // Components
 import FeatureCard from '$lib/components/featureCard/Root.svelte';
 import FeatureGallery from '$lib/components/featureCard/FeatureGallery.svelte';
@@ -23,6 +25,8 @@ import {
 import { FeatureCardMode } from '$lib/types';
 // CONFIG
 import { MOBILE_MAX_WIDTH } from '$lib/index';
+// TYPES
+import type { Feature, Layer, Project } from '$lib/types';
 
 // PARAMS
 let featureId = $state($page.params.id);
@@ -67,32 +71,45 @@ let horizontalOffset = $derived(() => {
 
 {#if mapContext.isInitialised && mapContext.features[featureId]}
   <FeatureCard>
-    {#if mode === FeatureCardMode.Display}
-      <FeatureGallery {featureId} />
-      <div>
-        <FeatureBreadcrumbs feature={mapContext.features[featureId]} />
-        <FeatureDescription feature={mapContext.features[featureId]} />
-        <div class="flex">
-          <div class="flex-1 bg-black">
-            <FeatureProperties feature={mapContext.features[featureId]} />
+    <ImageProvider
+      {mode}
+      refType={'feature'}
+      refId={featureId}
+      refOrganisation={mapContext.getOrganisation(
+        mapContext.getProject(
+          mapContext.getLayer(mapContext.features[featureId] as Feature) as Layer
+        ) as Project
+      )}
+      refProject={mapContext.getProject(
+        mapContext.getLayer(mapContext.features[featureId] as Feature) as Layer
+      ) as Project}>
+      {#if mode === FeatureCardMode.Display}
+        <FeatureGallery {featureId} />
+        <div>
+          <FeatureBreadcrumbs feature={mapContext.features[featureId]} />
+          <FeatureDescription feature={mapContext.features[featureId]} />
+          <div class="flex">
+            <div class="flex-1 bg-black">
+              <FeatureProperties feature={mapContext.features[featureId]} />
+            </div>
+            <div class="w-48 flex-shrink-0 flex-grow-0">
+              <FeaturePortal feature={mapContext.features[featureId]} />
+            </div>
+            <div class="h-auto w-4 flex-shrink-0 flex-grow-0 bg-black"></div>
           </div>
-          <div class="w-48 flex-shrink-0 flex-grow-0">
-            <FeaturePortal feature={mapContext.features[featureId]} />
-          </div>
-          <div class="h-auto w-4 flex-shrink-0 flex-grow-0 bg-black"></div>
+          <FeatureActions feature={mapContext.features[featureId]} />
         </div>
+      {:else if mode === FeatureCardMode.New}
+        <FeatureGallery {featureId} />
+      {:else if mode === FeatureCardMode.Missing}
+        <FeatureGallery {featureId} />
+        <div>
+          <FeatureBreadcrumbs feature={mapContext.features[featureId]} />
+          <FeatureDescription feature={mapContext.features[featureId]} />
+        </div>
+        <MissingReportReason />
         <FeatureActions feature={mapContext.features[featureId]} />
-      </div>
-    {:else if mode === FeatureCardMode.New}
-      <FeatureGallery {featureId} />
-    {:else if mode === FeatureCardMode.Missing}
-      <FeatureGallery {featureId} />
-      <div>
-        <FeatureBreadcrumbs feature={mapContext.features[featureId]} />
-        <FeatureDescription feature={mapContext.features[featureId]} />
-      </div>
-      <MissingReportReason />
-      <FeatureActions feature={mapContext.features[featureId]} />
-    {/if}
+      {/if}
+    </ImageProvider>
   </FeatureCard>
 {/if}

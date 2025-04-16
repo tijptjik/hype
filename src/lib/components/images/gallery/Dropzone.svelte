@@ -1,37 +1,28 @@
 <script lang="ts">
-// LIB
-import {
-  imageSets,
-  selectActiveImage,
-  handleFilesSelect
-} from '$lib/images/index.svelte';
+// SERVICES
+import { getImageService } from '$lib/context/images.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Photo } from '@steeze-ui/heroicons';
 import Dropzone from 'svelte-file-dropzone';
 // TYPES
-import type { ImageUploadRefs as Refs, GetImageAPI } from '$lib/types';
+import type { GetImageAPI } from '$lib/types';
 
 type Props = {
-  refs: Refs;
   updateScrollArrows: () => void;
   inputElement: HTMLInputElement | undefined;
 };
 
-let { refs, updateScrollArrows, inputElement = $bindable() }: Props = $props();
+// SERVICES
+const imageService = getImageService();
+
+let { updateScrollArrows, inputElement = $bindable() }: Props = $props();
 
 const handleFiles = async (e: CustomEvent) => {
-  await handleFilesSelect(e, {
-    refs,
-    callback: (savedImage: GetImageAPI) => {
-      // Optional: handle successful upload
+  await imageService.handleFilesSelect(e.detail.files, [], {
+    onLoad: (savedImage: GetImageAPI) => {
       updateScrollArrows();
-    },
-    onError: () => {
-      // Optional: handle error state
-      console.error('Failed to upload one or more images');
-    },
-    isStandalone: false
+    }
   });
 };
 </script>

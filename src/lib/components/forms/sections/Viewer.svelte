@@ -1,9 +1,8 @@
 <script lang="ts">
-import { fade, crossfade } from 'svelte/transition';
 import { beforeNavigate } from '$app/navigation';
 import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte';
-import { imageSets, navigateImage } from '$lib/images/index.svelte';
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+// SERVICES
+import { getImageService } from '$lib/context/images.svelte';
 // COMPONENTS
 import { InformationCircle } from '@steeze-ui/heroicons';
 import Header from '$lib/components/forms/extra/Header.svelte';
@@ -12,24 +11,18 @@ import Viewer from '$lib/components/common/Viewer.svelte';
 import ScrollArrow from '$lib/components/images/gallery/ScrollArrow.svelte';
 import IconAnchor from '$lib/components/common/IconAnchor.svelte';
 // TYPES
-import type { SectionProps, GetImageAPI, ResourceType } from '$lib/types';
+import type { SectionProps } from '$lib/types';
+
+// SERVICES
+const imageService = getImageService();
 
 // Props
-let { ...sectionProps }: SectionProps & { refs: ImageEditRefs } = $props();
+let { ...sectionProps }: SectionProps = $props();
 
-let showNav: boolean = $derived(imageSets.images.length > 1);
-
-// STATE : CONTEXT :: RESOURCE
-const resourceState = getHierarchicalResourceState();
-
-// Setup crossfade
-const [send, receive] = crossfade({
-  duration: 300,
-  fallback: fade
-});
+let image = $derived(imageService.getActiveImage());
 
 beforeNavigate(() => {
-  imageSets.activeImage = null;
+  imageService.resetActiveImage();
 });
 </script>
 
@@ -37,36 +30,26 @@ beforeNavigate(() => {
   class="relative z-10 flex w-full flex-grow flex-col rounded-2xl bg-gradient-to-r from-rose-500/70 to-fuchsia-800/70 p-0">
   <Header {...sectionProps} {Actions} />
   <main class="relative flex h-full w-full flex-col rounded-b-2xl bg-base-300">
-    {#if imageSets.activeImage}
-      <Viewer
-        image={imageSets.activeImage as GetImageAPI}
-        isCrossfade={false}
-        enableDropzone={true}
-        editContext={{
-          refType: resourceState.activeResource as ResourceType,
-          refId: resourceState.activeEntityRef
-        }}>
+    {#if image}
+      <Viewer isCrossfade={false} enableDropzone={true}>
         {#snippet RightActions()}
-          {#if imageSets.activeImage}
-            <IconAnchor position="right" icon={InformationCircle}>
-              <UserAttributionCard
-                userId={imageSets.activeImage!.contributorId}
-                date={imageSets.activeImage!.createdAt}
-                type="imageContributor"
-                class="mr-4" />
-            </IconAnchor>
-          {/if}
+          <IconAnchor position="right" icon={InformationCircle}>
+            <UserAttributionCard
+              userId={image.contributorId}
+              date={image.createdAt}
+              type="imageContributor"
+              class="mr-4" />
+          </IconAnchor>
         {/snippet}
       </Viewer>
-
       <!-- Navigation Arrows -->
-      {#if showNav}
+      {#if imageService.getImages().length > 1}
         <ScrollArrow
           direction="left"
-          onClick={(e: MouseEvent) => navigateImage(e, 'prev')} />
+          onClick={(e: MouseEvent) => imageService.switchToImage(e, 'prev')} />
         <ScrollArrow
           direction="right"
-          onClick={(e: MouseEvent) => navigateImage(e, 'next')} />
+          onClick={(e: MouseEvent) => imageService.switchToImage(e, 'next')} />
       {/if}
     {/if}
   </main>

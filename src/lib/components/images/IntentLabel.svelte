@@ -1,23 +1,34 @@
 <script lang="ts">
 import { fade } from 'svelte/transition';
-import { intentOrder, updateIntent, intentContext } from '$lib/images/index.svelte';
-import type { GetImageAPI, ImageEditRefs as EditRefs } from '$lib/types';
+import { intentOrder } from '$lib/context/images.svelte';
+// SERVICES
+import { getImageService } from '$lib/context/images.svelte';
+// TYPES
+import type { Intent } from '$lib/types';
 
+// SERVICES
+const imageService = getImageService();
+
+// TYPES
 type Props = {
   intent: string;
   idx: number;
   imageId: string;
-  images: GetImageAPI[];
-  refs: EditRefs;
 };
 
-let { intent, idx, imageId, images, refs } : Props = $props();
+let { intent, idx, imageId }: Props = $props();
+
+let images = $derived(imageService.getImages());
+const intentContext = $state({
+  id: null as string | null,
+  ref: null as HTMLDivElement | null
+});
 
 // HANDLERS :: INTENT
-function handleIntentKeydown(e: KeyboardEvent, imageId: string, intent: string) {
+function handleIntentKeydown(e: KeyboardEvent, imageId: string, intent: Intent) {
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault();
-    updateIntent(imageId, intent, refs);
+    imageService.handleSetIntent(imageId, intent);
   } else if (e.key === 'Escape') {
     e.preventDefault();
     intentContext.id = null;
@@ -69,7 +80,7 @@ $effect(() => {
               : ''}"
             onclick={(e) => {
               e.stopPropagation();
-              updateIntent(imageId, option, refs);
+              imageService.handleSetIntent(imageId, option);
             }}
             onkeydown={(e) => handleIntentKeydown(e, imageId, option)}
             transition:fade={{ duration: 150, delay: 100 + idx * 100 }}

@@ -1,9 +1,10 @@
 <script lang="ts">
 // SVELTE
 import { onMount } from 'svelte';
-import { getURLfromImage } from '$lib/images/index.svelte';
 // STORES
 import { page } from '$app/stores';
+// SERVICES
+import { getImageService, getURLfromImage } from '$lib/context/images.svelte';
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS
@@ -17,7 +18,8 @@ let SectionProps = $props();
 
 let { form } = SectionProps.form;
 let loadedImage = $state();
-// CONTEXT
+// SERVICES
+const imageService = getImageService();
 
 // FETCH IMAGE
 let getImages = async () => {

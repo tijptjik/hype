@@ -7,11 +7,5 @@ let { task }: { task: TaskAPI } = $props();
 <div
   class="relative m-4 min-w-0 overflow-hidden rounded-b-xl bg-base-100 px-3 py-2 @container">
   <!-- TODO: Flatten the image for task responses -->
-  <Gallery
-    initialImage={task.image}
-    hasDropzone={false}
-    editContext={{
-      refType: 'feature',
-      refId: task.featureId
-    }} />
+  <Gallery hasDropzone={false} />
 </div>

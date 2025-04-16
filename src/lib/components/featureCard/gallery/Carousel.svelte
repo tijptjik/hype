@@ -4,10 +4,14 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { ChevronLeft, ChevronRight } from '@steeze-ui/heroicons';
 import { spring } from 'svelte/motion';
 import { onMount } from 'svelte';
+// SERVICES
+import { getImageService } from '$lib/context/images.svelte';
+// TYPES
 import type { GetImageAPI } from '$lib/types';
 
-// STATE : PROPS
-let { images }: { images: GetImageAPI[] } = $props();
+// SERVICES
+const imageService = getImageService();
+let images = $derived(imageService.getImages());
 
 // STATE : LOCAL
 let currentIndex = $state(0);

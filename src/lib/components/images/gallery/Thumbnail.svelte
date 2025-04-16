@@ -1,11 +1,7 @@
 <script lang="ts">
-import { fade } from 'svelte/transition';
-// LIB
-import {
-  getURLfromImage,
-  imageSets,
-  selectActiveImage
-} from '$lib/images/index.svelte';
+import { onMount } from 'svelte';
+// SERVICES
+import { getImageService, getURLfromImage } from '$lib/context/images.svelte';
 // COMPONENTS
 import Image from '$lib/components/common/Image.svelte';
 import IntentLabel from '$lib/components/images/IntentLabel.svelte';
@@ -14,22 +10,27 @@ import Deletion from '$lib/components/images/gallery/overlays/Delete.svelte';
 import Confirmation from '$lib/components/images/gallery/overlays/Confirmation.svelte';
 import Deleting from '$lib/components/images/gallery/overlays/Deleting.svelte';
 // TYPES
-import type { GetImageAPI, ImageEditRefs } from '$lib/types';
+import type { GetImageAPI } from '$lib/types';
+
+// SERVICES
+const imageService = getImageService();
 
 type Props = {
   image: GetImageAPI;
   idx: number;
   actionProps?: { removeMode: boolean };
-  refs: ImageEditRefs;
 };
 
-let { image, idx, actionProps, refs }: Props = $props();
+let { image, idx, actionProps }: Props = $props();
+
+let imageLoadState = $derived(imageService.getImageLoadStatus(image.id));
 
 // Initialize load state for this thumbnail
-$effect(() => {
+onMount(() => {
   // Set initial load state if not already set
-  if (imageSets.imageLoadStates[image.id] === undefined) {
-    imageSets.imageLoadStates[image.id] = 'loading';
+  if (imageLoadState === undefined) {
+    console.log('THUMBNAIL :: setting image load state to loading', image.id);
+    imageService.setImageLoadStatus(image.id, 'loading');
   }
 });
 </script>
@@ -37,15 +38,13 @@ $effect(() => {
 <div
   class="h-full w-full"
   data-image-id={image.id}
-  onmouseenter={() => selectActiveImage(image)}
-  onclick={() => selectActiveImage(image)}>
+  onmouseenter={() => imageService.setActiveImage(image)}
+  onclick={() => imageService.setActiveImage(image)}>
   <Image
-    class="h-50 w-50 mx-auto overflow-hidden rounded-lg text-neutral border-base-100 {image.isPublished
+    class="h-50 w-50 mx-auto overflow-hidden rounded-lg border-base-100 text-neutral {image.isPublished
       ? ''
-      : 'opacity-70 border-base-200/60 border-2'}
-      {image == imageSets.activeImage
-      ? ''
-      : ''}
+      : 'border-2 border-base-200/60 opacity-70'}
+      {image == imageService.getActiveImage() ? '' : ''}
       "
     src={getURLfromImage({
       image,
@@ -55,32 +54,29 @@ $effect(() => {
     layout="cover"
     showLoading={false}
     onLoad={() => {
-      imageSets.imageLoadStates[image.id] = 'loaded';
-      imageSets.imagesLoaded[image.id] = true;
+      console.log(
+        'THUMBNAIL :: IMAGE :: OnLoad :: setting image load state to loaded',
+        image.id
+      );
+      imageService.setImageLoadStatus(image.id, 'loaded');
     }}
     onError={() => {
-      imageSets.imageLoadStates[image.id] = 'error';
-      imageSets.imagesLoaded[image.id] = true;
+      imageService.setImageLoadStatus(image.id, 'error');
     }} />
 
-  {#if imageSets.imagesLoaded[image.id] && (!actionProps || !actionProps.removeMode)}
-    <IntentLabel
-      intent={image.intent}
-      {idx}
-      imageId={image.id}
-      images={imageSets.images}
-      {refs} />
+  {#if imageLoadState === 'loaded' && (!actionProps || !actionProps.removeMode)}
+    <IntentLabel intent={image.intent} {idx} imageId={image.id} />
   {/if}
 
-  {#if !imageSets.imagesLoaded[image.id]}
+  {#if imageLoadState === 'loading'}
     <Loading />
   {:else if actionProps}
-    {#if actionProps.removeMode && imageSets.imagesLoaded[image.id] && !imageSets.imagesPendingConfirmation.has(image.id) && !imageSets.imagesToDelete.has(image.id)}
+    {#if actionProps.removeMode && imageLoadState === 'loaded' && !imageService.pendingConfirmationHas(image.id) && !imageService.deletionQueueHas(image.id)}
       <Deletion {image} />
-    {:else if imageSets.imagesPendingConfirmation.has(image.id) && !imageSets.imagesToDelete.has(image.id)}
-      <Confirmation {image} {refs} />
-    {:else if imageSets.imagesToDelete.has(image.id)}
-      <Deleting {image} />
+    {:else if imageService.pendingConfirmationHas(image.id) && !imageService.deletionQueueHas(image.id)}
+      <Confirmation {image} />
+    {:else if imageService.deletionQueueHas(image.id)}
+      <Deleting />
     {/if}
   {/if}
 </div>

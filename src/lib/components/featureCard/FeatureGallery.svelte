@@ -1,11 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { onMount } from 'svelte';
-// LIB
-import { getURLfromImage } from '$lib/images/index.svelte';
 // ICONS
-import Icon from '$lib/components/common/Icon.svelte';
-import { ChevronLeft, ChevronRight, Camera } from '@steeze-ui/heroicons';
 import { spring } from 'svelte/motion';
 // ENUMS
 import { FeatureCardMode } from '$lib/types';
@@ -158,7 +154,7 @@ onMount(() => {
       <span class="loading loading-ring loading-lg"></span>
     </div>
   {:else if images.length > 0 && featureCardContext.state.mode === FeatureCardMode.Display}
-    <Carousel {images} />
+    <Carousel />
   {:else}
     <AddPhoto />
   {/if}

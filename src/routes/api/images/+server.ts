@@ -16,7 +16,7 @@ import {
 import type { GetImageAPI, NewImageAPI } from '$lib/types';
 import { patchProject } from '$lib/db/services/project';
 import { patchOrganisation } from '$lib/db/services/organisation';
-import { intentOrder } from '$lib/images/index.svelte';
+import { intentOrder } from '$lib/context/images.svelte';
 
 const RESOURCE_TYPE = 'image';
 const ACCESS_STRATEGY = 'ResourceFromEditableProject';

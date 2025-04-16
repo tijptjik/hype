@@ -4,24 +4,23 @@ import UploadError from './overlays/UploadError.svelte';
 import type { ImageUploadState } from '$lib/types';
 
 type Props = {
-  fileState: ImageUploadState;
-  refs: any;
+  fileObject: ImageUploadState;
 };
 
-let { fileState, refs }: Props = $props();
+let { fileObject }: Props = $props();
 </script>
 
 <img
-  src={URL.createObjectURL(fileState.file)}
+  src={URL.createObjectURL(fileObject.file)}
   alt=""
   class="h-full w-full rounded-lg object-cover" />
 
 <!-- Loading overlay -->
-{#if fileState.status === 'uploading'}
+{#if fileObject.status === 'uploading'}
   <Uploading />
 {/if}
 
 <!-- Error overlay -->
-{#if fileState.status === 'error'}
-  <UploadError {fileState} {refs} />
+{#if fileObject.status === 'error'}
+  <UploadError {fileObject} />
 {/if}

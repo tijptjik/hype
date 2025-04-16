@@ -1,43 +1,24 @@
 <script lang="ts">
 import { fade, crossfade, scale } from 'svelte/transition';
 import { cubicOut } from 'svelte/easing';
-// CONTEXT
-import { getHierarchicalResourceState as getResourceState } from '$lib/context/resources.svelte';
+// PROVIDERS
+import { getImageService } from '$lib/context/images.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Camera, Photo, InformationCircle } from '@steeze-ui/heroicons';
 import Dropzone from 'svelte-file-dropzone';
-import {
-  getURLfromImage,
-  handleFilesSelect,
-  imageSets,
-  getActiveImageState,
-  setImageLoadState,
-  setStandaloneUploadState,
-  resetImageStates
-} from '$lib/images/index.svelte';
 import Image from '$lib/components/common/Image.svelte';
 import Metadata from '$lib/components/common/ImageMetadata.svelte';
 import DownloadImageButton from '$lib/components/images/DownloadImageButton.svelte';
 import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte';
 import IconAnchor from '$lib/components/common/IconAnchor.svelte';
-// ENUMS
-import { HierarchicalResource } from '$lib/types';
 // TYPES
-import type {
-  GetImageAPI,
-  ImageEditRefs,
-  Organisation,
-  Project,
-  ImageUploadRefs as Refs
-} from '$lib/types';
+import type { GetImageAPI } from '$lib/types';
 
 // STATE : CONTEXT :: ROUTER
-const resourceState = getResourceState();
+const imageService = getImageService();
 
 type Props = {
-  image: GetImageAPI | null;
-  editContext?: ImageEditRefs;
   LeftActions?: any;
   MiddleActions?: any;
   RightActions?: any;
@@ -48,8 +29,6 @@ type Props = {
 
 // STATE : PROPS
 let {
-  image,
-  editContext,
   LeftActions,
   MiddleActions,
   RightActions,
@@ -57,8 +36,9 @@ let {
   isCrossfade = true
 }: Props = $props();
 
-// STATE
-let isLoading = $state(false);
+let image = $derived(imageService.getActiveImage() as GetImageAPI);
+let imagePreview = $derived(imageService.getActiveImagePreview() as string);
+let imageStatus = $derived(imageService.activeImageStatus);
 
 // CROSSFADE
 const [send, receive] = crossfade({
@@ -77,59 +57,9 @@ const [send, receive] = crossfade({
 
 // HANDLERS :: FILE DROP
 const handleDrop = async (e: CustomEvent) => {
-  if (!enableDropzone || !editContext?.refType || !editContext?.refId) return;
-
-  // Reset states at the start of new upload
-  resetImageStates();
-  setStandaloneUploadState('uploading');
-
-  await handleFilesSelect(e, {
-    isStandalone: true,
-    refs: {
-      resource: editContext.refType,
-      entity: editContext.refId,
-      organisation: resourceState.getAscendantOrSelf(
-        resourceState.getEntity(),
-        editContext.refType as HierarchicalResource,
-        HierarchicalResource.organisation
-      ) as Organisation,
-      project: resourceState.getAscendantOrSelf(
-        resourceState.getEntity(),
-        editContext.refType as HierarchicalResource,
-        HierarchicalResource.project
-      ) as Project,
-      imageToReplace: image as GetImageAPI
-    },
-    callback: (savedImage: GetImageAPI) => {
-      setStandaloneUploadState('uploaded');
-      // Reset states for new image
-      resetImageStates(savedImage.id);
-      image = savedImage;
-      imageSets.activeImage = savedImage;
-      resourceState.invalidateAndRefresh(editContext.refType as HierarchicalResource);
-    },
-    onError: () => {
-      setStandaloneUploadState('error');
-    }
-  });
+  if (!enableDropzone) return;
+  imageService.handleFilesSelect(e.detail.files, []);
 };
-
-// Handle image load events
-const handleImageLoad = (imageId: string) => {
-  setImageLoadState(imageId, 'loaded');
-};
-
-const handleImageError = (imageId: string) => {
-  setImageLoadState(imageId, 'error');
-};
-
-let activeImageState = $derived.by(getActiveImageState);
-
-$effect(() => {
-  if (image?.id) {
-    setImageLoadState(image.id, 'loading');
-  }
-});
 </script>
 
 {#snippet LoadingOverlay(message = 'Loading...')}
@@ -144,18 +74,18 @@ $effect(() => {
   </div>
 {/snippet}
 
-{#snippet ViewerContent(image: GetImageAPI, isReplacing = false)}
+{#snippet ViewerContent(isReplacing = false)}
   <!-- Background Image -->
   <div
     class="absolute inset-0 z-10 h-full w-full bg-neutral"
-    class:opacity-0={activeImageState.isLoading && isReplacing}
-    class:opacity-30={activeImageState.isLoading && !isReplacing}
-    class:opacity-60={activeImageState.isLoaded && !isReplacing}
+    class:opacity-0={imageStatus.isLoading && isReplacing}
+    class:opacity-30={imageStatus.isLoading && !isReplacing}
+    class:opacity-60={imageStatus.isLoaded && !isReplacing}
     style="transition: opacity 400ms ease-out"
-    in:receive={{ key: `bg-${image.id}` }}
-    out:send={{ key: `bg-${image.id}` }}>
+    in:receive={{ key: `bg-${image?.id}` }}
+    out:send={{ key: `bg-${image?.id}` }}>
     <Image
-      src={getURLfromImage({ image })}
+      src={imageService.getURLfromImage({ image })}
       alt="Background Image"
       class="h-full w-full rounded-b-2xl text-base-100 blur-sm"
       layout="cover"
@@ -165,26 +95,24 @@ $effect(() => {
   <!-- Main Image -->
   <div
     class="absolute z-20 h-full w-full overflow-hidden rounded-2xl p-4"
-    class:opacity-0={activeImageState.isLoading && isReplacing}
-    class:opacity-80={activeImageState.isLoading && !isReplacing}
-    class:opacity-100={activeImageState.isLoaded && !isReplacing}
+    class:opacity-0={imageStatus.isLoading && isReplacing}
+    class:opacity-80={imageStatus.isLoading && !isReplacing}
+    class:opacity-100={imageStatus.isLoaded && !isReplacing}
     style="transition: all 400ms ease-out"
-    in:receive={{ key: `main-${image.id}` }}
-    out:send={{ key: `main-${image.id}` }}>
+    in:receive={{ key: `main-${image?.id}` }}
+    out:send={{ key: `main-${image?.id}` }}>
     <Image
       class="mx-auto h-full overflow-hidden rounded-xl text-base-100"
-      src={getURLfromImage({ image })}
+      src={imageService.getURLfromImage({ image })}
       alt="Feature Image"
       layout="contain"
       showLoading={false}
-      showError={false}
-      onLoad={() => handleImageLoad(image.id)}
-      onError={() => handleImageError(image.id)} />
+      showError={false} />
   </div>
 
   <!-- Loading Overlay -->
-  {#if activeImageState.isLoading || activeImageState.isUploading}
-    {@render LoadingOverlay(activeImageState.isLoading ? 'Loading...' : 'Uploading...')}
+  {#if imageStatus.isLoading || imageStatus.isUploading}
+    {@render LoadingOverlay(imageStatus.isLoading ? 'Loading...' : 'Uploading...')}
   {/if}
 {/snippet}
 
@@ -195,7 +123,7 @@ $effect(() => {
     style="transition: all 400ms ease-out"
     in:fade={{ duration: 400 }}>
     <Image
-      src={activeImageState.preview!}
+      src={imagePreview}
       alt="Preview Background"
       class="h-full w-full rounded-b-2xl text-base-100 blur-sm"
       layout="cover"
@@ -209,7 +137,7 @@ $effect(() => {
     in:fade={{ duration: 400, delay: 100 }}>
     <Image
       class="mx-auto h-full overflow-hidden rounded-xl text-base-100"
-      src={activeImageState.preview!}
+      src={imagePreview}
       alt="Preview Image"
       layout="contain"
       showLoading={false}
@@ -241,31 +169,29 @@ $effect(() => {
       </div>
       <!-- {#if activeImageState.preview && (!image || !activeImageState.isLoaded)} -->
       {#if image}
-        {@render ViewerContent(image, activeImageState.preview ? true : false)}
-      {/if}
-      {#if activeImageState.preview && !activeImageState.isLoaded}
+        {@render ViewerContent()}
+      {:else if imageStatus.isUploading}
         {@render PreviewContent()}
-      {/if}
-      {#if !image && !activeImageState.preview}
+      {:else}
         {@render EmptyContent()}
       {/if}
     </Dropzone>
-  {:else if image}
+  {:else if imageService.getActiveImage()}
     {#if isCrossfade}
-      {#key image.id}
-        {@render ViewerContent(image)}
+      {#key image?.id}
+        {@render ViewerContent()}
       {/key}
     {:else}
-      {@render ViewerContent(image)}
+      {@render ViewerContent()}
     {/if}
   {/if}
-  {#if image}
+  {#if imageService.getActiveImage()}
     <!-- Actions -->
     <div class="absolute bottom-0 z-30 flex w-full flex-row items-end justify-between">
       <!-- Left Actions -->
       <div class="m-10 flex flex-row items-start gap-4">
         {#if LeftActions}
-          <LeftActions />
+          {@render LeftActions()}
         {:else}
           <IconAnchor position="left" icon={Camera}>
             <Metadata {image} />
@@ -275,18 +201,18 @@ $effect(() => {
       <!-- Middle Actions -->
       <div class="z-30 flex flex-row items-center gap-4">
         {#if MiddleActions}
-          <MiddleActions />
+          {@render MiddleActions()}
         {/if}
       </div>
       <!-- Right Actions -->
       <div class="z-30 m-10 flex flex-row items-end gap-4">
         {#if RightActions}
-          <RightActions />
+          {@render RightActions()}
         {:else}
           <IconAnchor position="right" icon={InformationCircle} class="mr-4">
             <UserAttributionCard
               userId={image.contributorId}
-              date={image.createdAt || null}
+              date={image.createdAt || undefined}
               type="imageContributor" />
           </IconAnchor>
           <DownloadImageButton {image} />

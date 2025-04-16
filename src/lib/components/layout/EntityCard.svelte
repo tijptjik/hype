@@ -6,7 +6,7 @@ import { page } from '$app/stores';
 import { i18n } from '$lib/i18n';
 // LIB
 import { ADMIN_PATH } from '$lib/index';
-import { getURLfromImage } from '$lib/images/index.svelte';
+import { getURLfromImage } from '$lib/context/images.svelte';
 import { hashicon } from '@emeraldpay/hashicon';
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
