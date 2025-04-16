@@ -10,6 +10,9 @@ import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 import Image from '$lib/components/common/Image.svelte';
 import Icon from '$lib/components/common/Icon.svelte';
 import { Photo } from '@steeze-ui/heroicons';
+// TYPES
+import type { ImageDB } from '$lib/types';
+
 let SectionProps = $props();
 
 let { form } = SectionProps.form;
@@ -63,7 +66,10 @@ onMount(() => {
         <!-- Background Image -->
         <div class="z-1 absolute inset-0 h-full w-full bg-neutral opacity-50">
           <Image
-            src={getURLfromImage({ image, transformation: 'c_fill,h_320,w_320,' })}
+            src={getURLfromImage({
+              image: loadedImage as ImageDB,
+              transformation: 'c_fill,h_320,w_320,q_auto'
+            })}
             alt="Background Image"
             class="h-full w-full text-base-100 blur-sm"
             layout="cover"
@@ -74,7 +80,10 @@ onMount(() => {
         <!-- Main Image -->
         <div class="z-2 absolute h-full w-full overflow-hidden p-2">
           <Image
-            src={getURLfromImage({ image, transformation: 'c_fit,h_320,w_320' })}
+            src={getURLfromImage({
+              image: loadedImage as ImageDB,
+              transformation: 'c_fit,h_320,w_320,q_auto'
+            })}
             alt="Canonical image of feature"
             class="mx-auto h-full overflow-hidden rounded-lg text-base-100"
             layout="contain"
