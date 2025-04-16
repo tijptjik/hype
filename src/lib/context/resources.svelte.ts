@@ -120,6 +120,9 @@ export class ResourceState {
     const path = HierarchicalResourcePath[resource];
     const params = new URLSearchParams();
 
+    // Add isAdminView filter by default
+    params.append('isAdminView', 'true');
+
     // Add isArchived / isReviewed filter by default
     if (resource !== HierarchicalResource.task) {
       params.append('isArchived', 'false');

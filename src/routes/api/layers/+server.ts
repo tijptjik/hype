@@ -28,9 +28,16 @@ const RESOURCE_PATH = 'layers';
 let ACCESS_STRATEGY = 'ResourceOwnChildren';
 
 export const GET: RequestHandler = async ({ locals, platform, url }) => {
-
   // Layers which are published are visible to all users
-  if (url.searchParams.get('isPublished') === 'true') {
+  if (
+    url.searchParams.get('isPublished') === 'true' &&
+    url.searchParams.get('isAdminView') !== 'true'
+  ) {
+    ACCESS_STRATEGY = 'Public';
+    // For the Admin View we use ResourceAll instead of Public so that
+    // unpublished organisations are still visible -- in applyPublishedConstraints
+    // we filter out unpublished records for the Public access strategy.
+  } else if (url.searchParams.get('isAdminView') === 'true') {
     ACCESS_STRATEGY = 'ResourceAll';
   }
 
@@ -67,7 +74,7 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
       layerI18n,
       {
         organisation: url.searchParams.getAll('organisation'),
-        project: url.searchParams.getAll('project'),
+        project: url.searchParams.getAll('project')
       },
       3,
       queryParams

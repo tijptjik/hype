@@ -422,7 +422,6 @@ const createJsonPathCondition = (
   return sql`json_extract(${table[baseColumn]}, ${jsonPathStr}) = ${value}`;
 };
 
-// TODO This doesn't generate valid SQL
 const applyPublishedConstraints = (
   db: any,
   slicedHierarchy: typeof resourceHierarchy,
@@ -456,9 +455,6 @@ const applyPublishedConstraints = (
     conditions.push(eq(currentTable.isPublished as SQLiteColumn, true));
   }
 
-  // For each level in the hierarchy up to the current depth
-  // Join with all parent tables up to the current level
-
   return conditions;
 };
 
@@ -481,12 +477,14 @@ export async function hierarchicalResourceQuery<
   const slicedHierarchy = resourceHierarchy.slice(-depth, resourceHierarchy.length);
   const table = getTable(slicedHierarchy, 0);
 
-  // TODO Check isPublished for all tables in the hierarchy
   const conditions = [
     ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId),
     ...applyTranslationCondition(db, slicedHierarchy, translationTable),
     ...applyFilterConstraints(db, slicedHierarchy, depth, prisms),
-    ...applyPublishedConstraints(db, slicedHierarchy, depth)];
+    ...(accessStrategy === 'Public'
+      ? applyPublishedConstraints(db, slicedHierarchy, depth)
+      : [])
+  ];
 
   if (filters) {
     const filterConditions = Object.entries(filters).map(([column, value]) => {

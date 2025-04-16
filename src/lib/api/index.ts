@@ -626,11 +626,12 @@ function mergeProjectProperties(layer: Layer, properties: Property[]): Layer {
 }
 
 export const PRISM_PARAMETERS = ['organisation', 'project', 'layer'];
+export const MODE_PARAMETER = 'isAdminView';
 
-export const getQueryParamsWithoutPrism = (url: URL) => {
+export const getQueryParamsWithoutPrismOrModeParams = (url: URL) => {
   // Get all query parameters except the known prism parameters
   const params = Array.from(url.searchParams.entries()).filter(
-    ([key]) => !PRISM_PARAMETERS.includes(key)
+    ([key]) => !PRISM_PARAMETERS.includes(key) && key !== MODE_PARAMETER
   );
 
   // Reduce the parameters into an object where values are arrays
@@ -647,7 +648,7 @@ export const getQueryParamsWithoutPrism = (url: URL) => {
 };
 
 export const isValidQueryParamsOrError = (table: any, url: URL) => {
-  const queryParams = getQueryParamsWithoutPrism(url);
+  const queryParams = getQueryParamsWithoutPrismOrModeParams(url);
   const queryParamsKeys = Object.keys(queryParams);
 
   if (queryParamsKeys.length > 0) {

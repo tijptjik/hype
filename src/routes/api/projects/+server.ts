@@ -1,7 +1,12 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
 import { actionResult, superValidate, type SuperValidated } from 'sveltekit-superforms';
 // DB
-import { getDatabaseOrError, isValidQueryParamsOrError, JSONResponseOrError, SuperFormResponse } from '$lib/api';
+import {
+  getDatabaseOrError,
+  isValidQueryParamsOrError,
+  JSONResponseOrError,
+  SuperFormResponse
+} from '$lib/api';
 import { hierarchicalResourceQuery } from '$lib/db';
 import { createRelatedProperties } from '$lib/db/services/property';
 import { projectRole, projectI18n, project } from '$lib/db/schema';
@@ -24,9 +29,16 @@ const RESOURCE_PATH = 'projects';
 let ACCESS_STRATEGY = 'ResourceOwn';
 
 export const GET: RequestHandler = async ({ locals, platform, url }) => {
-  
-  // Projects which are published are visible to all users
-  if (url.searchParams.get('isPublished') === 'true') {
+  // Features which are published are visible to all users
+  if (
+    url.searchParams.get('isPublished') === 'true' &&
+    url.searchParams.get('isAdminView') !== 'true'
+  ) {
+    ACCESS_STRATEGY = 'Public';
+    // For the Admin View we use ResourceAll instead of Public so that
+    // unpublished organisations are still visible -- in applyPublishedConstraints
+    // we filter out unpublished records for the Public access strategy.
+  } else if (url.searchParams.get('isAdminView') === 'true') {
     ACCESS_STRATEGY = 'ResourceAll';
   }
 
@@ -97,8 +109,15 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
     )) as SuperValidated<Project>;
 
     // Check if the current user will lose access on membership changes
-    const userLosesAccess = !Object.keys(form.data.maintainerRoles).includes(userId) && accessStrategy !== 'SuperAdmin'; 
-    const codeUnique = await isFieldUnique<Project>(db, formData as Project, RESOURCE_TYPE, 'code');
+    const userLosesAccess =
+      !Object.keys(form.data.maintainerRoles).includes(userId) &&
+      accessStrategy !== 'SuperAdmin';
+    const codeUnique = await isFieldUnique<Project>(
+      db,
+      formData as Project,
+      RESOURCE_TYPE,
+      'code'
+    );
 
     if (!codeUnique) {
       form.valid = false;
@@ -109,17 +128,24 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       return SuperFormResponse<Project>(form);
     }
 
-    const { baseProject, formTranslations, formMaintainerRoles, formProperties } = extractEntitiesToInsert(
-      form.data as NewProject
-    );
+    const { baseProject, formTranslations, formMaintainerRoles, formProperties } =
+      extractEntitiesToInsert(form.data as NewProject);
     const createdProject = await createProject(db, baseProject);
     const createdTranslations = await createTranslations(
       db,
       formTranslations,
       createdProject.id
     );
-    const createdMaintainerRoles = await createMaintainerRoles(db, formMaintainerRoles, createdProject.id);
-    const createdProperties = await createRelatedProperties(db, formProperties, createdProject.id);
+    const createdMaintainerRoles = await createMaintainerRoles(
+      db,
+      formMaintainerRoles,
+      createdProject.id
+    );
+    const createdProperties = await createRelatedProperties(
+      db,
+      formProperties,
+      createdProject.id
+    );
     const updatedForm = await rebuildFormData(
       db,
       createdProject,
@@ -127,9 +153,15 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       createdMaintainerRoles,
       createdProperties
     );
-    return SuperFormResponse<Project>(updatedForm, true, userLosesAccess, RESOURCE_PATH, 201);
+    return SuperFormResponse<Project>(
+      updatedForm,
+      true,
+      userLosesAccess,
+      RESOURCE_PATH,
+      201
+    );
   } catch (err) {
     console.error(err);
     return actionResult('error', 'Failed to create project', { status: 500 });
   }
-}
+};

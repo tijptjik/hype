@@ -20,7 +20,6 @@ import {
   createUserRoles,
   extractEntitiesToInsert
 } from '$lib/db/services/organisation';
-import { getQueryParamsWithoutPrism } from '$lib/api';
 import { isFieldUnique } from '$lib/db';
 
 // ZOD
@@ -36,7 +35,15 @@ let ACCESS_STRATEGY = 'ResourceOwn';
 
 export const GET: RequestHandler = async ({ url, locals, platform }) => {
   // Features which are published are visible to all users
-  if (url.searchParams.get('isPublished') === 'true') {
+  if (
+    url.searchParams.get('isPublished') === 'true' &&
+    url.searchParams.get('isAdminView') !== 'true'
+  ) {
+    ACCESS_STRATEGY = 'Public';
+    // For the Admin View we use ResourceAll instead of Public so that
+    // unpublished organisations are still visible -- in applyPublishedConstraints
+    // we filter out unpublished records for the Public access strategy.
+  } else if (url.searchParams.get('isAdminView') === 'true') {
     ACCESS_STRATEGY = 'ResourceAll';
   }
 

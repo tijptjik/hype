@@ -27,7 +27,6 @@ import type {
   Project,
   ProjectDB
 } from '$lib/types';
-import type { NewImage } from '$lib/types';
 
 const RESOURCE_TYPE = 'task';
 const ACCESS_STRATEGY = 'ResourceOwnChildren' as AccessStrategyOption;
