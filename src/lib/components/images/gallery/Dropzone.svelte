@@ -18,11 +18,7 @@ type Props = {
   inputElement: HTMLInputElement | undefined;
 };
 
-let {
-  refs,
-  updateScrollArrows,
-  inputElement = $bindable()
-}: Props = $props();
+let { refs, updateScrollArrows, inputElement = $bindable() }: Props = $props();
 
 const handleFiles = async (e: CustomEvent) => {
   await handleFilesSelect(e, {
@@ -38,7 +34,6 @@ const handleFiles = async (e: CustomEvent) => {
     isStandalone: false
   });
 };
-
 </script>
 
 <Dropzone

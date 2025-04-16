@@ -12,6 +12,7 @@ import Dropzone from '$lib/components/images/gallery/Dropzone.svelte';
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // TYPES
+import { HierarchicalResource } from '$lib/types';
 import type {
   ImageUploadRefs,
   ImageEditRefs,
@@ -63,9 +64,17 @@ let featureId = $derived(
 
 let refs: ImageUploadRefs = $derived({
   resource: resourceState.activeResource,
-  entity: resourceState.activeEntityRef,
-  organisation: resourceState.state.organisation as Organisation,
-  project: resourceState.state.project as Project
+  entity: resourceState.getEntity().id,
+  organisation: resourceState.getAscendantOrSelf(
+    resourceState.getEntity(),
+    HierarchicalResource.feature,
+    HierarchicalResource.organisation
+  ),
+  project: resourceState.getAscendantOrSelf(
+    resourceState.getEntity(),
+    HierarchicalResource.feature,
+    HierarchicalResource.project
+  )
 });
 
 let editRefs: ImageEditRefs = $derived(
