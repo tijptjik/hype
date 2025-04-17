@@ -757,8 +757,8 @@ export type FeatureImageAPI = z.infer<typeof FeatureImageUpdateAPI>;
 
 // Add these types for tracking upload status
 // Add new types for image states
-export type LoadStatus = 'idle' | 'loading' | 'loaded' | 'error';
-export type UploadStatus = 'idle' | 'uploading' | 'uploaded' | 'error';
+export type LoadStatus = 'initial' | 'uploaded' | 'loading' | 'loaded' | 'error';
+export type UploadStatus = 'idle' | 'uploading' | 'uploaded' | 'error' | 'invalidated';
 export type ImageUploadState = {
   file: File;
   status: UploadStatus;

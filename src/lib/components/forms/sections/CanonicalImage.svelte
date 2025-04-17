@@ -21,15 +21,9 @@ let loadedImage = $state();
 // SERVICES
 const imageService = getImageService();
 
-// FETCH IMAGE
-let getImages = async () => {
-  const response = await fetch(`/api/images?featureId=${$form.id}`);
-  return response.json();
-};
-
 let canonicalImage = async () => {
   if (loadedImage) return loadedImage;
-  const images = await getImages();
+  const images = imageService.getImages();
   const canonical = images.find((image: any) => image.intent === 'canonical');
   loadedImage = canonical || images[0] || null;
   return loadedImage;

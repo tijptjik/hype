@@ -9,7 +9,7 @@ import UploadThumbnail from '$lib/components/images/gallery/ThumbnailWhileUpload
 import ThumbnailsBeforeLoad from '$lib/components/images/gallery/ThumbnailsBeforeLoad.svelte';
 import ScrollArrow from '$lib/components/images/gallery/ScrollArrow.svelte';
 import Dropzone from '$lib/components/images/gallery/Dropzone.svelte';
-
+import type { ImageUploadState } from '$lib/types';
 // SERVICES
 const imageService = getImageService();
 
@@ -29,9 +29,7 @@ let showLeftArrow = $state(false);
 let showRightArrow = $state(false);
 
 // STATE :: IMAGES
-let isLoadingImages = $derived(
-  Object.values(imageService.getLoadStatuses()).some((status) => status === 'loading')
-);
+let isLoadingImages = $derived(imageService.isImagesLoading);
 
 // DOM
 let scrollContainer: HTMLDivElement;
@@ -115,25 +113,37 @@ const scrollTo = (direction: 'left' | 'right') => {
 
   <!-- Upload queue with loading states and transitions -->
   {#each imageService.getUploadQueue() as fileObject (fileObject.file)}
-    <div in:fade={{ duration: 200 }} class="relative h-[200px] w-[200px] flex-none">
-      <UploadThumbnail {fileObject} />
-    </div>
+    {#if !fileObject.imageToReplace}
+      <!-- Show new uploads normally -->
+      <div in:fade={{ duration: 200 }} class="relative h-[200px] w-[200px] flex-none">
+        <UploadThumbnail {fileObject} />
+      </div>
+    {/if}
   {/each}
 
   <!-- Loading placeholders -->
   {#if isLoadingImages}
     <ThumbnailsBeforeLoad />
-  {:else}
-    {#each imageService.getImages() as image, i (image.id)}
-      <div
-        animate:flip={{ duration: 300 }}
-        in:fade={{ duration: 200, delay: i * 100 }}
-        out:fade={{ duration: 200 }}
-        class="relative h-[200px] w-[200px] flex-none">
-        <Thumbnail {image} idx={i} {actionProps} />
-      </div>
-    {/each}
   {/if}
+
+  <!-- Images -->
+  {#each imageService.getImages() as image, i (image.id)}
+    <div
+      animate:flip={{ duration: 300 }}
+      in:fade={{ duration: 200, delay: i * 100 }}
+      out:fade={{ duration: 200 }}
+      class="relative h-[200px] w-[200px] flex-none">
+      {#if imageService.isImageBeingReplaced(image.id)}
+        <!-- Show upload thumbnail for replacement -->
+        <UploadThumbnail
+          fileObject={imageService.getReplacementUpload(
+            image.id
+          ) as ImageUploadState} />
+      {:else}
+        <Thumbnail {image} idx={i} {actionProps} />
+      {/if}
+    </div>
+  {/each}
 </div>
 
 <!-- Right Arrow -->

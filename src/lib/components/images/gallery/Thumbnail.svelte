@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onMount } from 'svelte';
+import { onMount, onDestroy } from 'svelte';
 // SERVICES
 import { getImageService, getURLfromImage } from '$lib/context/images.svelte';
 // COMPONENTS
@@ -23,15 +23,24 @@ type Props = {
 
 let { image, idx, actionProps }: Props = $props();
 
+// Track both main image and thumbnail load states
 let imageLoadState = $derived(imageService.getLoadStatus(image.id));
+let thumbnailLoadState = $derived(imageService.getThumbnailLoadStatus(image.id));
 
-// Initialize load state for this thumbnail
+// Initialize load states for this thumbnail
 onMount(() => {
-  // Set initial load state if not already set
-  if (imageLoadState === undefined) {
-    console.log('THUMBNAIL :: setting image load state to loading', image.id);
-    imageService.setLoadStatus(image.id, 'loading');
+  // Set initial thumbnail load state if not already set
+  if (thumbnailLoadState === undefined) {
+    console.log('THUMBNAIL :: setting thumbnail load state to loading', image.id);
+    imageService.setThumbnailLoadStatus(image.id, 'loading');
   }
+
+  // TODO Prefetch the images
+});
+
+// Cleanup on component destruction
+onDestroy(() => {
+  imageService.resetThumbnailLoadStatus(image.id);
 });
 </script>
 
@@ -41,11 +50,10 @@ onMount(() => {
   onmouseenter={() => imageService.setActiveImage(image)}
   onclick={() => imageService.setActiveImage(image)}>
   <Image
-    class="h-50 w-50 mx-auto overflow-hidden rounded-lg border-base-100 text-neutral {image.isPublished
-      ? ''
-      : 'border-2 border-base-200/60 opacity-70'}
-      {image == imageService.getActiveImage() ? '' : ''}
-      "
+    class="h-50 w-50 mx-auto overflow-hidden rounded-lg border-base-100 text-neutral 
+      {image.isPublished ? '' : 'border-2 border-base-200/60 opacity-70'}
+      {thumbnailLoadState === 'loading' ? 'opacity-0' : 'opacity-100'}"
+    style="transition: opacity 200ms ease-out"
     src={getURLfromImage({
       image,
       transformation: 'c_fill,w_200,h_200'
@@ -54,24 +62,21 @@ onMount(() => {
     layout="cover"
     showLoading={false}
     onLoad={() => {
-      console.log(
-        'THUMBNAIL :: IMAGE :: OnLoad :: setting image load state to loaded',
-        image.id
-      );
-      imageService.setLoadStatus(image.id, 'loaded');
+      console.log('THUMBNAIL :: setting thumbnail load state to loaded', image.id);
+      imageService.setThumbnailLoadStatus(image.id, 'loaded');
     }}
     onError={() => {
-      imageService.setLoadStatus(image.id, 'error');
+      imageService.setThumbnailLoadStatus(image.id, 'error');
     }} />
 
-  {#if imageLoadState === 'loaded' && (!actionProps || !actionProps.removeMode)}
+  {#if thumbnailLoadState === 'loaded' && (!actionProps || !actionProps.removeMode)}
     <IntentLabel intent={image.intent} {idx} imageId={image.id} />
   {/if}
 
-  {#if imageLoadState === 'loading'}
+  {#if thumbnailLoadState === 'loading'}
     <Loading />
   {:else if actionProps}
-    {#if actionProps.removeMode && imageLoadState === 'loaded' && !imageService.pendingConfirmationHas(image.id) && !imageService.deletionQueueHas(image.id)}
+    {#if actionProps.removeMode && thumbnailLoadState === 'loaded' && !imageService.pendingConfirmationHas(image.id) && !imageService.deletionQueueHas(image.id)}
       <Deletion {image} />
     {:else if imageService.pendingConfirmationHas(image.id) && !imageService.deletionQueueHas(image.id)}
       <Confirmation {image} />

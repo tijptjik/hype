@@ -81,6 +81,7 @@ $effect(() => {
             onclick={(e) => {
               e.stopPropagation();
               imageService.handleSetIntent(imageId, option);
+              intentContext.id = null;
             }}
             onkeydown={(e) => handleIntentKeydown(e, imageId, option)}
             transition:fade={{ duration: 150, delay: 100 + idx * 100 }}

@@ -76,12 +76,12 @@ type ImageServiceState = {
   refProject: ProjectDB | null;
   uploadQueue: ImageUpload[];
   loadStatus: Record<string, LoadStatus>;
-  activeImage: GetImageAPI | null;
-  activeImagePreview: string | null;
-  images: GetImageAPI[];
+  activeId: string | null;
+  images: (GetImageAPI & { preview?: string })[];
   pendingConfirmation: SvelteSet<string>;
   deletionQueue: SvelteSet<string>;
   rejected: File[];
+  thumbnailLoadStatus: Record<string, LoadStatus>;
 };
 
 type ImageServiceOptions = {
@@ -123,7 +123,7 @@ export class ImageService {
     });
   }
 
-  setContext(options: ImageServiceOptions) {
+  async setContext(options: ImageServiceOptions) {
     // this.queryClient = queryClient;
     this.state.mode = options.mode;
     this.isAdminMode = options.isAdminMode;
@@ -134,12 +134,12 @@ export class ImageService {
 
     if (options.mode === 'standalone' && options.image) {
       this.setImages([options.image]);
-      // this.setLoadStatus(options.image.id, 'loaded');
+      console.log('SETTING FROM SETCONTEXT', options.image.id);
+      this.setLoadStatus(options.image.id, 'loading');
     } else if (options.mode === 'standalone' && !options.image) {
       this.setImages([]);
-      this.resetActiveImage();
     } else if (options.mode === 'gallery') {
-      this.refreshImages();
+      await this.refreshImages();
     }
     this.setActiveImageToFirst();
   }
@@ -173,14 +173,14 @@ export class ImageService {
 
     // CRUD :: READ
 
-    // Image to be shown in the viewer
-    activeImage: null as GetImageAPI | null,
-    // Preview of an uploaded image based on local file
-    activeImagePreview: null as string | null,
     // Images related to the active resource (e.g. organisation, project, feature)
     images: [] as GetImageAPI[],
+    // The ID of the active image
+    activeId: null as string | null,
     // Load state of each image
     loadStatus: {} as Record<string, LoadStatus>,
+    // LoadStatus of Thumbnail
+    thumbnailLoadStatus: {} as Record<string, LoadStatus>,
 
     // CRUD :: DELETE
 
@@ -194,35 +194,71 @@ export class ImageService {
   // 3.B DERIVED STATES
   // ═══════════════════════
 
-  // Convert to class methods that can be used in derived computations
-  private testActiveImageStatus(status: LoadStatus | UploadStatus) {
-    // If we have an active image with an ID, check its load status
-    if (this.state.activeImage?.id) {
-      return this.state.loadStatus[this.state.activeImage.id] === status;
-    }
-    // If we have an active preview, check if it's in the upload queue with the given status
-    if (this.state.activeImagePreview) {
-      return this.state.uploadQueue.some(
-        (upload) =>
-          URL.createObjectURL(upload.file) === this.state.activeImagePreview &&
-          upload.status === status
-      );
-    }
+  // New derived state for activeImage
+  activeImage = $derived(
+    this.state.images.find((image) => this.state.activeId === image.id)
+  );
 
-    return false;
-  }
-
-  activeImageStatus = $derived({
-    isLoaded: this.testActiveImageStatus('loaded'),
-    isLoading: this.testActiveImageStatus('loading'),
-    isUploading: this.testActiveImageStatus('uploading')
-  });
+  activePreview = $derived(
+    this.state.uploadQueue.find((upload) => upload.status !== 'invalidated')
+  );
 
   imagesQueryKey = $derived(['images', this.state.refType, this.state.refId]);
 
-  isAllImagesLoaded = $derived(
-    this.state.images.every((image) => this.state.loadStatus[image.id] === 'loaded')
+  isImagesLoading = $derived(
+    this.state.images.length > 0 &&
+      this.state.images.every((image) => this.state.loadStatus[image.id] === 'loading')
   );
+
+  isReplacementStatus(imageId: string, status: UploadStatus) {
+    return this.state.uploadQueue.some(
+      (upload) => upload.imageToReplace?.id === imageId && upload.status === status
+    );
+  }
+
+  determineViewerState = () => {
+    console.log('[ImageService] Determining viewer state');
+    console.log('[ImageService] Active image:', this.activeImage?.id);
+    console.log('[ImageService] Load statuses:', this.state.loadStatus);
+    console.log('[ImageService] Upload queue:', this.state.uploadQueue);
+
+    if (
+      this.activeImage &&
+      this.isReplacementStatus(this.activeImage.id, 'uploading')
+    ) {
+      console.log('[ImageService] State: previewReplacement - Image being replaced');
+      return 'previewReplacement';
+    } else if (
+      this.activeImage &&
+      this.isReplacementStatus(this.activeImage.id, 'uploaded') &&
+      this.getLoadStatus(this.activeImage.id) !== 'loaded'
+    ) {
+      console.log(
+        '[ImageService] State: transition - Replacement uploaded, waiting for load'
+      );
+      return 'transition';
+    } else if (
+      this.activeImage &&
+      this.getLoadStatus(this.activeImage.id) === 'loading'
+    ) {
+      console.log('[ImageService] State: loading - Image loading');
+      return 'loading';
+    } else if (
+      this.activeImage &&
+      this.getLoadStatus(this.activeImage.id) === 'loaded'
+    ) {
+      console.log('[ImageService] State: loaded - Image loaded');
+      return 'loaded';
+    } else if (this.activePreview) {
+      console.log('[ImageService] State: previewUploading - New image uploading');
+      return 'previewUploading';
+    } else {
+      console.log('[ImageService] State: empty - No image or preview');
+      return 'empty';
+    }
+  };
+
+  viewerState = $derived.by(this.determineViewerState);
 
   // ═══════════════════════
   // 3.C STATE ACCESSORS
@@ -281,15 +317,19 @@ export class ImageService {
           }) as ImageUpload
       )
     );
-  }
-
-  getActiveImagePreview() {
-    return this.state.activeImagePreview;
-  }
-
-  resetActiveImagePreview() {
-    this.cleanupActiveImagePreview();
-    this.state.activeImagePreview = null;
+    files.forEach((file) => {
+      const replacingImage = this.state.images.find(
+        (image) => image.id === imageToReplace?.id
+      );
+      if (replacingImage) {
+        replacingImage.preview = URL.createObjectURL(file);
+        console.log(
+          '[ImageService] Added to upload queue:',
+          file.name,
+          this.state.images
+        );
+      }
+    });
   }
 
   addToRejected(files: File[]) {
@@ -350,16 +390,63 @@ export class ImageService {
     return this.state.images;
   }
 
-  setImages(images: GetImageAPI[]) {
+  getImage(imageId: string) {
+    return this.state.images.find((img) => img.id === imageId);
+  }
+
+  setImages(images: (GetImageAPI & { preview: string })[]) {
     this.state.images = images;
     this.sortImages();
   }
 
   setLoadStatus(imageId: string, status: LoadStatus) {
-    if (this.state.activeImage?.id === imageId && status === 'loaded') {
-      this.resetActiveImagePreview();
+    // Guard against redundant updates
+    if (this.state.loadStatus[imageId] === status) {
+      console.log(
+        '[ImageService] Skipping redundant status update for',
+        imageId,
+        status
+      );
+      return;
     }
+
+    console.log('[ImageService] Setting load status for', imageId, 'to', status);
+    console.log('[ImageService] Previous status:', this.state.loadStatus[imageId]);
+    console.log('[ImageService] Current upload queue:', this.state.uploadQueue);
+
+    if (status === 'loaded') {
+      console.log(
+        '[ImageService] Image',
+        imageId,
+        'marked as loaded, checking for replacement uploads'
+      );
+
+      // Only invalidate the upload queue if we're not in a replacement process
+      // or if the replacement has been completed
+      const replacementUpload = this.state.uploadQueue.find(
+        (upload) => upload.imageToReplace?.id === imageId
+      );
+
+      if (replacementUpload?.status === 'uploaded') {
+        console.log(
+          '[ImageService] Invalidating completed replacement upload for',
+          imageId
+        );
+
+        this.state.uploadQueue = this.state.uploadQueue
+          .map((upload) => {
+            if (upload.imageToReplace?.id === imageId) {
+              URL.revokeObjectURL(upload.preview);
+              return { ...upload, status: 'invalidated' as UploadStatus };
+            }
+            return upload;
+          })
+          .filter((upload) => upload.status !== 'invalidated');
+      }
+    }
+
     this.state.loadStatus[imageId] = status;
+    console.log('[ImageService] New load statuses:', this.state.loadStatus);
   }
 
   getLoadStatus(imageId: string) {
@@ -378,64 +465,76 @@ export class ImageService {
     }
   }
 
+  setThumbnailLoadStatus(imageId: string, status: LoadStatus) {
+    this.state.thumbnailLoadStatus[imageId] = status;
+  }
+
+  getThumbnailLoadStatus(imageId: string) {
+    return this.state.thumbnailLoadStatus[imageId];
+  }
+
+  resetThumbnailLoadStatus(imageId?: string) {
+    if (imageId) {
+      delete this.state.thumbnailLoadStatus[imageId];
+    } else {
+      this.state.thumbnailLoadStatus = {};
+    }
+  }
+
   removeImage(imageId: string) {
     this.state.images = this.state.images.filter((img) => img.id !== imageId);
   }
 
   // ACTIVE IMAGE
 
-  getActiveImage() {
-    return this.state.activeImage;
+  // New method to set active status
+  setActiveStatus(imageId: string) {
+    this.state.activeId = imageId;
   }
 
   setActiveImage(image: GetImageAPI) {
-    this.setLoadStatus(image.id, 'loading');
-    this.state.activeImage = image;
+    if (!image) return;
+    this.state.activeId = image.id;
   }
 
   resetActiveImage() {
-    this.state.activeImage = null;
+    this.state.activeId = null;
   }
 
   setActiveImageToFirst() {
-    // If there are no images, set the active image to null
-    if (!this.state.images.length) {
-      this.state.activeImage = null;
-    } else {
-      // Set the active image to the first image
+    if (this.state.images.length) {
       this.setActiveImage(this.state.images[0]);
-    }
-  }
-
-  setActiveImagePreviewToFirst() {
-    // Clean up the active image
-    this.resetActiveImage();
-    // If there are no upload queue items, set the active image preview to null
-    if (!this.state.uploadQueue.length) {
-      console.error('No upload queue items');
-      this.state.activeImagePreview = null;
     } else {
-      // Set the active image preview to the preview of the first upload queue item
-      this.state.activeImagePreview = this.state.uploadQueue[0].preview;
+      this.resetActiveImage();
     }
   }
 
   setForActiveImage(key: keyof GetImageAPI, value: any) {
-    const activeImageId = this.getActiveImage()!.id;
-    if (!activeImageId) return;
-    this.setForImage(activeImageId, key, value);
+    if (!this.activeImage) return;
+    this.setForImage(this.activeImage.id, key, value);
   }
 
   toggleForActiveImage(key: keyof GetImageAPI) {
-    const activeImageId = this.getActiveImage()!.id;
-    if (!activeImageId) return;
-    this.setForActiveImage(key, !this.getActiveImage()![key]);
+    if (!this.activeImage) return;
+    this.setForImage(this.activeImage.id, key, !this.activeImage[key]);
   }
 
   setForImage(imageId: string, key: keyof GetImageAPI, value: any) {
-    const image = this.getImages().find((img) => img.id === imageId);
+    const image = this.getImage(imageId);
     if (!image) return;
     image[key] = value as never;
+  }
+
+  isImageBeingReplaced(imageId: string): boolean {
+    return this.state.uploadQueue.some(
+      (upload) => upload.imageToReplace?.id === imageId
+    );
+  }
+
+  getReplacementUpload(imageId: string): ImageUpload | undefined {
+    return this.state.uploadQueue.find(
+      (upload) => upload.imageToReplace?.id === imageId
+    );
   }
 
   // ═══════════════════════
@@ -454,7 +553,7 @@ export class ImageService {
 
   imagesQueryFn = async () => {
     const url = this.buildApiUrl('image');
-    return this.fetchOrThrow<GetImageAPI[]>(url);
+    return this.fetchOrThrow<(GetImageAPI & { preview: string })[]>(url);
   };
 
   private async fetchOrThrow<T>(url: string): Promise<T> {
@@ -483,10 +582,10 @@ export class ImageService {
 
   switchToImage(e: MouseEvent, direction: 'prev' | 'next') {
     e.preventDefault();
-    if (!this.state.activeImage || !this.state.images.length) return;
+    if (!this.state.images.length) return;
 
     const currentIndex = this.state.images.findIndex(
-      (img) => img.id === this.state.activeImage?.id
+      (img) => this.state.activeId === img.id
     );
     if (currentIndex === -1) return;
 
@@ -512,7 +611,7 @@ export class ImageService {
     acceptedFiles: File[],
     fileRejections: File[],
     config: {
-      onLoad?: (savedImage: GetImageAPI) => void;
+      onSuccess?: (savedImage: GetImageAPI) => void;
       onError?: () => void;
     } = {},
     imageToReplace?: GetImageAPI
@@ -520,21 +619,26 @@ export class ImageService {
     if (acceptedFiles.length > 1 && imageToReplace) {
       throw new Error('Cannot replace multiple images');
     }
-    // Reset the active image preview
-    this.resetActiveImagePreview();
+
+    // Add to upload queue
     this.addToUploadQueue(acceptedFiles, imageToReplace);
     this.addToRejected(fileRejections);
 
-    this.setActiveImagePreviewToFirst();
+    if (imageToReplace) {
+      this.resetLoadStatus(imageToReplace.id);
+    }
 
     await this.processUploadQueue(config);
-    // Sort images after all uploads have been processed
     this.sortImages();
-    this.setActiveImageToFirst();
+
+    // Only set active image to first if we're not replacing
+    if (!imageToReplace) {
+      this.setActiveImageToFirst();
+    }
   }
 
   private async processUploadQueue(config: {
-    onLoad?: (savedImage: GetImageAPI) => void;
+    onSuccess?: (savedImage: GetImageAPI) => void;
     onError?: () => void;
   }) {
     await Promise.all(
@@ -547,8 +651,8 @@ export class ImageService {
             });
 
             if (savedImage) {
-              if (config.onLoad) {
-                config.onLoad(savedImage);
+              if (config.onSuccess) {
+                config.onSuccess(savedImage);
               }
             }
           } catch (error) {
@@ -597,8 +701,9 @@ export class ImageService {
       );
 
       if (savedImage) {
-        // Remove from upload queue after successful save
-        this.removeFromUploadQueue(fileObject.file);
+        // Instead of removing from queue, just update status
+        this.setUploadStatus(fileObject, 'uploaded');
+        this.setLoadStatus(savedImage.id, 'loading');
         return savedImage;
       }
     } catch (error) {
@@ -620,9 +725,6 @@ export class ImageService {
     } else {
       savedImage = await this.createNewImage(fileObject, imageData, localFetch);
     }
-
-    // Set initial load status for the new/updated image
-    this.setLoadStatus(savedImage.id, 'loading');
     return savedImage;
   }
 
@@ -638,10 +740,10 @@ export class ImageService {
     });
 
     const { image: updatedImage } = await response.json();
-    this.setUploadStatus(fileObject, 'uploaded');
+
     this.setImages(
       this.state.images.map((img) =>
-        img.id === fileObject.imageToReplace!.id ? updatedImage : img
+        img.id === fileObject.imageToReplace!.id ? { ...img, ...updatedImage } : img
       )
     );
     return updatedImage;
@@ -659,8 +761,8 @@ export class ImageService {
     });
 
     const savedImage = await response.json();
-    this.setUploadStatus(fileObject, 'uploaded');
     this.setImages([savedImage, ...this.state.images]);
+    this.setUploadStatus(fileObject, 'uploaded');
     return savedImage;
   }
 
@@ -757,6 +859,7 @@ export class ImageService {
       // Update the intent of the image
       await this.updateIntent(imageId, newIntent);
       this.setForImage(imageId, 'intent', newIntent);
+      this.sortImages();
     } catch (error) {
       console.error('Failed to update intent:', error);
     }
@@ -776,7 +879,7 @@ export class ImageService {
   }
 
   async handlePublishToggle() {
-    if (!this.state.activeImage) return;
+    if (!this.activeImage) return;
     const data = await this.updatePublish();
     if (data?.success) {
       this.toggleForActiveImage('isPublished');
@@ -784,15 +887,15 @@ export class ImageService {
   }
 
   private async updatePublish() {
-    if (!this.state.activeImage) return;
+    if (!this.activeImage) return;
     try {
-      const response = await fetch(`/api/images/${this.getActiveImage()!.id}`, {
+      const response = await fetch(`/api/images/${this.activeImage.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...this.getRefs(),
           featureImage: {
-            isPublished: !this.getActiveImage()!.isPublished
+            isPublished: !this.activeImage.isPublished
           }
         })
       });
@@ -849,6 +952,7 @@ export class ImageService {
       this.removeFromPendingConfirmation(imageId);
       this.removeFromDeletionQueue(imageId);
       this.resetLoadStatus(imageId);
+      this.resetThumbnailLoadStatus(imageId);
     }
   }
 
@@ -858,7 +962,7 @@ export class ImageService {
 
   async downloadImage(
     e: MouseEvent,
-    image: GetImageAPI = this.state.activeImage!,
+    image: GetImageAPI = this.activeImage!,
     flash: Writable<App.PageData['flash']>
   ) {
     if (!image) return;
@@ -1091,15 +1195,20 @@ export class ImageService {
     quality?: string;
     format?: string;
   }): string {
+    // Check if image is being replaced
+    const replacementUpload = this.state.uploadQueue.find(
+      (upload) =>
+        upload.imageToReplace?.id === opts.image.id && upload.status !== 'invalidated'
+    );
+
+    if (replacementUpload) {
+      return replacementUpload.preview;
+    }
+
     return getURLfromImage(opts);
   }
 
   // Clean up previews when component is destroyed
-  cleanupActiveImagePreview() {
-    if (this.state.activeImagePreview) {
-      URL.revokeObjectURL(this.state.activeImagePreview);
-    }
-  }
 }
 
 // ═══════════════════════

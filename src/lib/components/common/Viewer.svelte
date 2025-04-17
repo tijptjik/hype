@@ -39,22 +39,27 @@ let {
   isCrossfade = true
 }: Props = $props();
 
-let image = $derived(imageService.getActiveImage() as GetImageAPI);
-let imagePreview = $derived(imageService.getActiveImagePreview() as string);
-let imageStatus = $derived(imageService.activeImageStatus);
+let image = $derived(imageService.activeImage);
+let imagePreview = $derived(imageService.activePreview);
+let viewerState = $derived(imageService.viewerState);
 
-// Add a derived state to determine what content to show
-let viewerState: 'empty' | 'preview' | 'image' | 'transition' = $derived(
-  !image && !imagePreview
-    ? 'empty'
-    : imagePreview && imageStatus.isLoading
-      ? 'transition'
-      : imagePreview
-        ? 'preview'
-        : image
-          ? 'image'
-          : 'empty'
-);
+let isPreviewReplacement = $derived(viewerState == 'previewReplacement');
+let isPreview = $derived(viewerState == 'previewUploading');
+let isTransition = $derived(viewerState == 'transition');
+let isLoaded = $derived(viewerState == 'loaded');
+let isEmpty = $derived(viewerState == 'empty');
+let isLoading = $derived(viewerState == 'loading');
+let isReplacing = $derived(isPreviewReplacement || isTransition);
+
+let lastLoadedImageId = $state<string | null>(null);
+
+$effect(() => {
+  console.log('[Viewer] State changed:', {
+    viewerState,
+    imageId: image?.id,
+    imagePreview: imagePreview?.preview
+  });
+});
 
 // CROSSFADE
 const [send, receive] = crossfade({
@@ -73,24 +78,40 @@ const [send, receive] = crossfade({
 
 // HANDLERS :: FILE DROP
 const handleDrop = async (e: CustomEvent) => {
-  if (!enableDropzone) return;
-  imageService.handleFilesSelect(e.detail.acceptedFiles, e.detail.fileRejections, {
-    onLoad: () => {
-      resourceState.invalidateAndRefresh(
-        resourceState.activeResource as HierarchicalResource
-      );
-    },
-    onError: () => {
-      console.log('onError');
-    }
+  console.log('[Viewer] Drop event:', {
+    acceptedFiles: e.detail.acceptedFiles,
+    replacingImage: imageService.activeImage?.id
   });
+
+  if (!enableDropzone) return;
+  imageService.handleFilesSelect(
+    e.detail.acceptedFiles,
+    e.detail.fileRejections,
+    {
+      onSuccess: (savedImage) => {
+        console.log('[Viewer] Upload success:', {
+          savedImageId: savedImage.id,
+          currentState: viewerState,
+          uploadQueue: imageService.getUploadQueue()
+        });
+        resourceState.invalidateAndRefresh(
+          resourceState.activeResource as HierarchicalResource
+        );
+      },
+      onError: () => {
+        console.log('[Viewer] Upload error');
+      }
+    },
+    imageService.activeImage
+  );
 };
 </script>
 
 {#snippet LoadingOverlay(message = 'Loading...')}
   <div
     class="absolute inset-0 z-40 flex items-center justify-center"
-    in:fade={{ duration: 200, delay: 200 }}>
+    in:fade={{ duration: 200, delay: 200 }}
+    out:fade={{ duration: 200 }}>
     <div
       class="flex flex-col items-center gap-2 rounded-lg"
       in:scale={{ duration: 200, delay: 200, start: 0.95 }}>
@@ -101,78 +122,94 @@ const handleDrop = async (e: CustomEvent) => {
 
 {#snippet ViewerContent(isReplacing = false)}
   <!-- Background Image -->
-  <div
-    class="absolute inset-0 z-10 h-full w-full bg-neutral"
-    class:opacity-0={imageStatus.isLoading && isReplacing}
-    class:opacity-30={imageStatus.isLoading && !isReplacing}
-    class:opacity-60={imageStatus.isLoaded && !isReplacing}
-    style="transition: opacity 400ms ease-out"
-    in:receive={{ key: `bg-${image?.id}` }}
-    out:send={{ key: `bg-${image?.id}` }}>
-    <Image
-      src={imageService.getURLfromImage({ image })}
-      alt="Background Image"
-      class="h-full w-full rounded-b-2xl text-base-100 blur-sm"
-      layout="cover"
-      showLoading={false}
-      showError={false} />
-  </div>
-  <!-- Main Image -->
-  <div
-    class="absolute z-20 h-full w-full overflow-hidden rounded-2xl p-4"
-    class:opacity-0={imageStatus.isLoading && isReplacing}
-    class:opacity-80={imageStatus.isLoading && !isReplacing}
-    class:opacity-100={imageStatus.isLoaded && !isReplacing}
-    style="transition: all 400ms ease-out"
-    in:receive={{ key: `main-${image?.id}` }}
-    out:send={{ key: `main-${image?.id}` }}>
-    <Image
-      class="mx-auto h-full overflow-hidden rounded-xl text-base-100"
-      src={imageService.getURLfromImage({ image })}
-      alt="Feature Image"
-      layout="contain"
-      showLoading={false}
-      showError={false}
-      onLoad={() => {
-        imageService.setLoadStatus(image?.id as string, 'loaded');
-      }} />
-  </div>
+  {#if image !== null && image !== undefined}
+    <div
+      class="absolute inset-0 z-10 h-full w-full bg-neutral"
+      class:opacity-40={isPreview || isPreviewReplacement || isTransition}
+      class:opacity-60={isLoaded}
+      style="transition: opacity 400ms ease-out"
+      in:receive={{ key: `bg-${image?.id}` }}
+      out:send={{ key: `bg-${image?.id}` }}>
+      <Image
+        src={imageService.getURLfromImage({ image })}
+        alt="Background Image"
+        class="h-full w-full rounded-b-2xl text-base-100 blur-sm"
+        layout="cover"
+        showLoading={false}
+        showError={false} />
+    </div>
+    <!-- Main Image -->
+    <div
+      class="absolute z-20 h-full w-full overflow-hidden rounded-2xl p-4"
+      class:opacity-80={isPreview}
+      class:opacity-100={isLoaded}
+      style="transition: all 400ms ease-out"
+      in:receive={{ key: `main-${image?.id}` }}
+      out:send={{ key: `main-${image?.id}` }}>
+      <Image
+        src={imageService.getURLfromImage({ image })}
+        class="mx-auto h-full overflow-hidden rounded-xl text-base-100"
+        alt="Feature Image"
+        layout="contain"
+        showLoading={false}
+        showError={false}
+        onLoad={() => {
+          if (image?.id === lastLoadedImageId) {
+            console.log('[Viewer] Skipping duplicate load event for:', image.id);
+            return;
+          }
+
+          console.log('[Viewer] Image loaded:', {
+            imageId: image?.id,
+            currentState: viewerState,
+            loadStatus: imageService.getLoadStatus(image?.id)
+          });
+
+          imageService.setLoadStatus(image?.id, 'loaded');
+          imageService.setActiveStatus(image?.id);
+        }} />
+    </div>
+  {/if}
 
   <!-- Loading Overlay -->
-  {#if imageStatus.isLoading || imageStatus.isUploading}
-    {@render LoadingOverlay(imageStatus.isLoading ? 'Loading...' : 'Uploading...')}
+  {#if isPreview || isPreviewReplacement || isLoading}
+    {@render LoadingOverlay('Uploading...')}
   {/if}
 {/snippet}
 
 {#snippet PreviewContent()}
   <!-- Background Image -->
-  <div
-    class="absolute inset-0 z-10 h-full w-full rounded-b-2xl bg-neutral opacity-60"
-    style="transition: all 400ms ease-out"
-    in:fade={{ duration: 400 }}>
-    <Image
-      src={imagePreview}
-      alt="Preview Background"
-      class="h-full w-full rounded-b-2xl text-base-100 blur-sm"
-      layout="cover"
-      showLoading={false}
-      showError={false} />
-  </div>
-  <!-- Main Image -->
-  <div
-    class="absolute z-30 h-full w-full overflow-hidden rounded-2xl p-4 opacity-80"
-    style="transition: all 400ms ease-out"
-    in:fade={{ duration: 400, delay: 100 }}>
-    <Image
-      class="mx-auto h-full overflow-hidden rounded-xl text-base-100"
-      src={imagePreview}
-      alt="Preview Image"
-      layout="contain"
-      showLoading={false}
-      showError={false} />
-  </div>
+  {#if imagePreview?.preview || image?.preview}
+    <div
+      class="absolute inset-0 z-10 h-full w-full rounded-b-2xl bg-neutral opacity-60"
+      style="transition: all 400ms ease-in-out"
+      in:fade={{ duration: 400 }}>
+      <Image
+        src={imagePreview?.preview || image?.preview}
+        alt="Preview Background"
+        class="h-full w-full rounded-b-2xl text-base-100 blur-sm"
+        layout="cover"
+        showLoading={false}
+        showError={false} />
+    </div>
+    <div
+      class="absolute z-30 h-full w-full overflow-hidden rounded-2xl p-4 opacity-80"
+      style="transition: all 400ms ease-in-out"
+      in:fade={{ duration: 400, delay: 100 }}>
+      <Image
+        class="mx-auto h-full overflow-hidden rounded-xl text-base-100"
+        src={imagePreview?.preview || image?.preview}
+        alt="Preview Image"
+        layout="contain"
+        showLoading={false}
+        showError={false} />
+    </div>
+  {/if}
+
   <!-- Loading Overlay -->
-  {@render LoadingOverlay('Uploading...')}
+  {#if isPreview || isPreviewReplacement || isLoading}
+    {@render LoadingOverlay('Uploading...')}
+  {/if}
 {/snippet}
 
 {#snippet EmptyContent()}
@@ -195,25 +232,29 @@ const handleDrop = async (e: CustomEvent) => {
         class="border-offset-2 pointer-events-none absolute inset-0 z-50 m-4 rounded-xl border-4 border-dashed border-transparent transition-colors delay-500 group-hover:border-primary">
       </div>
 
-      {#if viewerState === 'image' || viewerState === 'transition'}
-        {@render ViewerContent()}
-      {:else}
-        {@render EmptyContent()}
-      {/if}
-      {#if viewerState === 'preview' || viewerState === 'transition'}
+      {#if isLoading || isLoaded}
+        {@render ViewerContent(isReplacing)}
         {@render PreviewContent()}
+      {:else if isPreview || isPreviewReplacement}
+        {@render PreviewContent()}
+      {:else if isTransition}
+        <!-- Show both during transition -->
+        {@render PreviewContent()}
+        {@render ViewerContent(isReplacing)}
+      {:else if isEmpty}
+        {@render EmptyContent()}
       {/if}
     </Dropzone>
   {:else if viewerState === 'image'}
     {#if isCrossfade}
       {#key image?.id}
-        {@render ViewerContent()}
+        {@render ViewerContent(isReplacing)}
       {/key}
     {:else}
-      {@render ViewerContent()}
+      {@render ViewerContent(isReplacing)}
     {/if}
   {/if}
-  {#if imageService.getActiveImage()}
+  {#if image}
     <!-- Actions -->
     <div class="absolute bottom-0 z-30 flex w-full flex-row items-end justify-between">
       <!-- Left Actions -->
@@ -222,7 +263,9 @@ const handleDrop = async (e: CustomEvent) => {
           {@render LeftActions()}
         {:else}
           <IconAnchor position="left" icon={Camera}>
-            <Metadata {image} />
+            {#if image}
+              <Metadata {image} />
+            {/if}
           </IconAnchor>
         {/if}
       </div>
@@ -236,7 +279,7 @@ const handleDrop = async (e: CustomEvent) => {
       <div class="z-30 m-10 flex flex-row items-end gap-4">
         {#if RightActions}
           {@render RightActions()}
-        {:else}
+        {:else if image}
           <IconAnchor position="right" icon={InformationCircle} class="mr-4">
             <UserAttributionCard
               userId={image.contributorId}
