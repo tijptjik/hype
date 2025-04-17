@@ -63,8 +63,9 @@ export const navItems = {
 };
 
 export const navigate = (url: string) => {
-  const langUrl = i18n.resolveRoute(url);
-  goto(langUrl);
+  // const langUrl = i18n.resolveRoute(url);
+  // goto(langUrl);
+  goto(url);
 };
 
 export const navigateOnAdmin = (
