@@ -9,6 +9,8 @@ import { m } from '$lib/i18n';
 // CONTEXT
 import { setForm } from '$lib/context/forms.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+// PROVIDERS
+import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // FLASH
 import { getFlash } from 'sveltekit-flash-message';
 import { page } from '$app/stores';
@@ -272,11 +274,21 @@ let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
             {form} />
         </div>
       {:else if resourceState.activeFacet === 'images'}
-        <ImageSection
-          title={m.admin__forms_project_image_title()}
-          fields={FIELDS.images}
-          {form}
-          image={pageProps.data.image as GetImageAPI} />
+        <ImageProvider
+          mode="standalone"
+          isAdminMode={true}
+          refType={RESOURCE}
+          refId={pageProps.data.entity}
+          refOrganisation={resourceState.getOrganisation(
+            resourceState.getEntity() as Project
+          )}
+          refProject={resourceState.getEntity() as Project}
+          image={pageProps.data.image as GetImageAPI}>
+          <ImageSection
+            title={m.admin__forms_project_image_title()}
+            fields={FIELDS.images}
+            {form} />
+        </ImageProvider>
       {/if}
     </main>
   </form>
