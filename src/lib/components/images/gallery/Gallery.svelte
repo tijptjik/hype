@@ -148,9 +148,9 @@ $effect(() => {
   {/each}
 
   <!-- Loading placeholders -->
-  {#if isLoadingImagesAmount > 0}
-    <ThumbnailsBeforeLoad number={1 as number} />
-  {/if}
+  <!-- {#if isLoadingImagesAmount > 0} -->
+  <!-- <ThumbnailsBeforeLoad number={1 as number} /> -->
+  <!-- {/if} -->
 
   <!-- Images -->
   {#each imageService.getImages() as image, i (image.id)}
