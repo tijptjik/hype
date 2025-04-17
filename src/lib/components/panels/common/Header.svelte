@@ -14,20 +14,18 @@ let { panel, title, subtitle } = $props<{
 
 const mapContext = getMapContext();
 
-// Handle escape key
-function handleKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape') {
-    mapContext.closePanel(panel);
-  }
-}
-
 // Setup and cleanup event listeners
-onMount(() => {
-  window.addEventListener('keydown', handleKeydown);
-});
+$effect(() => {
+  const handler = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      mapContext.closePanel(panel);
+    }
+  };
 
-onDestroy(() => {
-  window.removeEventListener('keydown', handleKeydown);
+  window.addEventListener('keydown', handler);
+  return () => {
+    window.removeEventListener('keydown', handler);
+  };
 });
 </script>
 

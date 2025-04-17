@@ -29,20 +29,19 @@ const toggleRemoveMode = (e: Event) => {
 
 // Add and remove event listener
 $effect(() => {
-  window.addEventListener('keydown', handleKeydown);
+  const handler = (event: KeyboardEvent) => {
+    if (event.key === 'Escape' && removeMode) {
+      removeMode = false;
+    } else if (event.key === 'Escape' && searchMode) {
+      searchMode = false;
+    }
+  };
+
+  window.addEventListener('keydown', handler);
   return () => {
-    window.removeEventListener('keydown', handleKeydown);
+    window.removeEventListener('keydown', handler);
   };
 });
-
-// Handle escape key
-function handleKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape' && removeMode) {
-    removeMode = false;
-  } else if (event.key === 'Escape' && searchMode) {
-    searchMode = false;
-  }
-}
 </script>
 
 <div>
