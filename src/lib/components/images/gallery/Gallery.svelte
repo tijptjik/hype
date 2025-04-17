@@ -139,7 +139,7 @@ $effect(() => {
 
   <!-- Upload queue with loading states and transitions -->
   {#each imageService.getUploadQueue() as fileObject (fileObject.file)}
-    {#if !fileObject.imageToReplace && fileObject.status === 'invalidated'}
+    {#if !fileObject.imageToReplace && fileObject.status === 'uploading'}
       <!-- Show new uploads normally -->
       <div in:fade={{ duration: 200 }} class="relative h-[200px] w-[200px] flex-none">
         <UploadThumbnail {fileObject} />
