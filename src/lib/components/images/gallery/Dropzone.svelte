@@ -19,11 +19,15 @@ const imageService = getImageService();
 let { updateScrollArrows, inputElement = $bindable() }: Props = $props();
 
 const handleFiles = async (e: CustomEvent) => {
-  await imageService.handleFilesSelect(e.detail.files, [], {
-    onSuccess: (savedImage: GetImageAPI) => {
-      updateScrollArrows();
+  await imageService.handleFilesSelect(
+    e.detail.acceptedFiles,
+    e.detail.fileRejections,
+    {
+      onSuccess: (savedImage: GetImageAPI) => {
+        updateScrollArrows();
+      }
     }
-  });
+  );
 };
 </script>
 

@@ -232,7 +232,9 @@ const handleDrop = async (e: CustomEvent) => {
         class="border-offset-2 pointer-events-none absolute inset-0 z-50 m-4 rounded-xl border-4 border-dashed border-transparent transition-colors delay-500 group-hover:border-primary">
       </div>
 
-      {#if isLoading || isLoaded}
+      {#if isLoaded}
+        {@render ViewerContent(isReplacing)}
+      {:else if isLoading || isLoaded}
         {@render ViewerContent(isReplacing)}
         {@render PreviewContent()}
       {:else if isPreview || isPreviewReplacement}

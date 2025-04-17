@@ -29,7 +29,7 @@ let showLeftArrow = $state(false);
 let showRightArrow = $state(false);
 
 // STATE :: IMAGES
-let isLoadingImages = $derived(imageService.isImagesLoading);
+let isLoadingImagesAmount = $derived(imageService.isImagesLoading);
 
 // DOM
 let scrollContainer: HTMLDivElement;
@@ -91,7 +91,17 @@ const scrollTo = (direction: 'left' | 'right') => {
     behavior: 'smooth'
   });
 };
-// TODO Add functionality to scroll image into view
+
+$effect(() => {
+  console.log('[Gallery] Active image:', imageService.activeImage);
+  // TODO Add functionality to scroll image into view
+  if (imageService.activeImage) {
+    const activeImageElement = document.getElementById(imageService.activeImage.id);
+    if (activeImageElement) {
+      activeImageElement.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+});
 </script>
 
 <!-- Left Arrow -->
@@ -113,7 +123,7 @@ const scrollTo = (direction: 'left' | 'right') => {
 
   <!-- Upload queue with loading states and transitions -->
   {#each imageService.getUploadQueue() as fileObject (fileObject.file)}
-    {#if !fileObject.imageToReplace}
+    {#if !fileObject.imageToReplace && fileObject.status === 'invalidated'}
       <!-- Show new uploads normally -->
       <div in:fade={{ duration: 200 }} class="relative h-[200px] w-[200px] flex-none">
         <UploadThumbnail {fileObject} />
@@ -122,8 +132,8 @@ const scrollTo = (direction: 'left' | 'right') => {
   {/each}
 
   <!-- Loading placeholders -->
-  {#if isLoadingImages}
-    <ThumbnailsBeforeLoad />
+  {#if isLoadingImagesAmount > 0}
+    <ThumbnailsBeforeLoad number={isLoadingImagesAmount as number} />
   {/if}
 
   <!-- Images -->

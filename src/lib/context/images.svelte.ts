@@ -30,6 +30,7 @@ import type {
   ImageUploadState
 } from '$lib/types';
 import { HierarchicalResource } from '$lib/types';
+import { count } from 'drizzle-orm';
 /**
  * Image Service
  * ═══════════════════════
@@ -124,6 +125,13 @@ export class ImageService {
   }
 
   async setContext(options: ImageServiceOptions) {
+    this.resetLoadStatus();
+    this.resetThumbnailLoadStatus();
+    this.resetPendingConfirmation();
+    this.resetDeletionQueue();
+    this.resetUploadQueue();
+    this.resetActiveImage();
+    this.resetImages();
     // this.queryClient = queryClient;
     this.state.mode = options.mode;
     this.isAdminMode = options.isAdminMode;
@@ -133,7 +141,7 @@ export class ImageService {
     this.state.refProject = options.refProject || null;
 
     if (options.mode === 'standalone' && options.image) {
-      this.setImages([options.image]);
+      this.setImages([options.image as GetImageAPI]);
       console.log('SETTING FROM SETCONTEXT', options.image.id);
       this.setLoadStatus(options.image.id, 'loading');
     } else if (options.mode === 'standalone' && !options.image) {
@@ -206,8 +214,9 @@ export class ImageService {
   imagesQueryKey = $derived(['images', this.state.refType, this.state.refId]);
 
   isImagesLoading = $derived(
-    this.state.images.length > 0 &&
-      this.state.images.every((image) => this.state.loadStatus[image.id] === 'loading')
+    this.state.images.filter(
+      (image) => this.state.thumbnailLoadStatus[image.id] === 'loading'
+    ).length
   );
 
   isReplacementStatus(imageId: string, status: UploadStatus) {
@@ -333,6 +342,7 @@ export class ImageService {
   }
 
   addToRejected(files: File[]) {
+    console.log('[ImageService] Adding to rejected:', files);
     this.state.rejected.push(...files);
   }
 
@@ -354,6 +364,10 @@ export class ImageService {
           : item
       )
     );
+  }
+
+  resetUploadQueue() {
+    this.state.uploadQueue = [];
   }
 
   pendingConfirmationHas(imageId: string) {
@@ -384,6 +398,10 @@ export class ImageService {
     this.state.deletionQueue.delete(imageId);
   }
 
+  resetDeletionQueue() {
+    this.state.deletionQueue = new SvelteSet<string>();
+  }
+
   // IMAGE LOAD STATE
 
   getImages() {
@@ -394,7 +412,7 @@ export class ImageService {
     return this.state.images.find((img) => img.id === imageId);
   }
 
-  setImages(images: (GetImageAPI & { preview: string })[]) {
+  setImages(images: (GetImageAPI & { preview?: string })[]) {
     this.state.images = images;
     this.sortImages();
   }
@@ -493,12 +511,18 @@ export class ImageService {
   }
 
   setActiveImage(image: GetImageAPI) {
+    console.log('[ImageService] Setting active image:', image.id);
     if (!image) return;
     this.state.activeId = image.id;
   }
 
   resetActiveImage() {
     this.state.activeId = null;
+  }
+
+  resetImages() {
+    this.state.activeId = null;
+    this.state.images = [];
   }
 
   setActiveImageToFirst() {
@@ -549,6 +573,9 @@ export class ImageService {
       //   })
       await this.imagesQueryFn()
     );
+    this.state.images.forEach((image) => {
+      this.setLoadStatus(image.id, 'loading');
+    });
   }
 
   imagesQueryFn = async () => {
@@ -1084,6 +1111,7 @@ export class ImageService {
     public_id: string | null;
   } {
     const refs = this.getUploadRefs(imageToReplace);
+    console.log('[ImageService] Upload refs:', refs);
     if (refs.resource === 'organisation' && refs.organisation) {
       return {
         folder: `/${refs.organisation.code}`,

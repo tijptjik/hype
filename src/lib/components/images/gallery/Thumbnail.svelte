@@ -45,6 +45,7 @@ onDestroy(() => {
 </script>
 
 <div
+  id={image.id}
   class="h-full w-full"
   data-image-id={image.id}
   onmouseenter={() => imageService.setActiveImage(image)}
@@ -53,7 +54,6 @@ onDestroy(() => {
     class="h-50 w-50 mx-auto overflow-hidden rounded-lg border-base-100 text-neutral 
       {image.isPublished ? '' : 'border-2 border-base-200/60 opacity-70'}
       {thumbnailLoadState === 'loading' ? 'opacity-0' : 'opacity-100'}"
-    style="transition: opacity 200ms ease-out"
     src={getURLfromImage({
       image,
       transformation: 'c_fill,w_200,h_200'
