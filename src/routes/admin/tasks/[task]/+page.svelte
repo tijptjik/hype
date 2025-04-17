@@ -65,7 +65,7 @@ resourceState.setFacet('core');
             <NewFeatureActions {task} />
           {/if}
         {/snippet}
-        <Info>
+        <!-- <Info>
           {#if task.type === 'reportedMissing'}
             <ReportedMissingContent />
           {:else if task.type === 'newPhoto'}
@@ -73,7 +73,7 @@ resourceState.setFacet('core');
           {:else if task.type === 'newFeature'}
             <NewFeatureContent />
           {/if}
-        </Info>
+        </Info> -->
       </TaskHeader>
       <TaskMain {task}>
         <div class="flex flex-1 flex-col">

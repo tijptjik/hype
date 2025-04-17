@@ -36,5 +36,5 @@ export const typeColors = {
       {@render Right(task)}
     </div>
   </div>
-  {@render children()}
+  {@render children?.()}
 </header>

@@ -21,8 +21,7 @@ const imageService = getImageService();
   <button
     class="btn btn-circle btn-error btn-sm"
     onclick={(e) => {
-      e.stopPropagation();
-      imageService.handlePreDelete(image);
+      imageService.handlePreDelete(e, image);
     }}>
     <Icon src={Trash} class="h-4 w-4" />
   </button>

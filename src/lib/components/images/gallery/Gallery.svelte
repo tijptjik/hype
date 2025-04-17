@@ -149,7 +149,7 @@ $effect(() => {
 
   <!-- Loading placeholders -->
   {#if isLoadingImagesAmount > 0}
-    <ThumbnailsBeforeLoad number={isLoadingImagesAmount as number} />
+    <ThumbnailsBeforeLoad number={1 as number} />
   {/if}
 
   <!-- Images -->
