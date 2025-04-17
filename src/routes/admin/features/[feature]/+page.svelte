@@ -33,7 +33,8 @@ import type {
   FormFieldConfig,
   ImageEditRefs,
   OrganisationDB,
-  ProjectDB
+  ProjectDB,
+  Resource
 } from '$lib/types';
 // CONTEXT
 const resourceState = getHierarchicalResourceState();
@@ -128,14 +129,14 @@ function handleMapFullscreenChange(isFullscreen: boolean) {
   refType="feature"
   refId={pageProps.data.entity}
   refOrganisation={resourceState.getAscendantOrSelf(
-    resourceState.getEntity(),
-    HierarchicalResource.project,
+    pageProps.data.validatedForm.data as unknown as Resource,
+    HierarchicalResource.feature,
     HierarchicalResource.organisation
   ) as OrganisationDB}
   refProject={resourceState.getAscendantOrSelf(
-    resourceState.getEntity(),
-    HierarchicalResource.project,
-    HierarchicalResource.organisation
+    pageProps.data.validatedForm.data as unknown as Resource,
+    HierarchicalResource.feature,
+    HierarchicalResource.project
   ) as ProjectDB}>
   <!-- LAYOUT -->
   <div class="h-full overflow-hidden bg-black">
