@@ -19,7 +19,7 @@ let sidebarState = getSidebarState();
 let { resourceType }: { resourceType: HierarchicalResource } = $props();
 let onClick = (e: MouseEvent) => {
   e.preventDefault();
-  sidebarState.openSection(resourceType as HierarchicalResource);
+  sidebarState.openSection(resourceType as HierarchicalResource, true);
   navigateOnAdmin(resourceState, resourceType as HierarchicalResource);
 };
 </script>
