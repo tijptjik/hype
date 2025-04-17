@@ -32,7 +32,7 @@ let showRightArrow = $state(false);
 let isLoadingImagesAmount = $derived(imageService.isImagesLoading);
 
 // DOM
-let scrollContainer: HTMLDivElement;
+let scrollContainer: HTMLElement;
 
 // HANDLERS :: SCROLL
 const handleWheel = (event: WheelEvent) => {
@@ -94,11 +94,27 @@ const scrollTo = (direction: 'left' | 'right') => {
 
 $effect(() => {
   console.log('[Gallery] Active image:', imageService.activeImage);
-  // TODO Add functionality to scroll image into view
   if (imageService.activeImage) {
     const activeImageElement = document.getElementById(imageService.activeImage.id);
-    if (activeImageElement) {
-      activeImageElement.scrollIntoView({ behavior: 'smooth' });
+    if (activeImageElement && scrollContainer) {
+      // Get container and element positions
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const elementRect = activeImageElement.getBoundingClientRect();
+
+      // Calculate if element is outside visible area
+      const isLeft = elementRect.left < containerRect.left;
+      const isRight = elementRect.right > containerRect.right;
+
+      if (isLeft || isRight) {
+        const newScrollLeft = isLeft
+          ? scrollContainer.scrollLeft + (elementRect.left - containerRect.left)
+          : scrollContainer.scrollLeft + (elementRect.right - containerRect.right);
+
+        scrollContainer.scrollTo({
+          left: newScrollLeft,
+          behavior: 'smooth'
+        });
+      }
     }
   }
 });
@@ -139,6 +155,7 @@ $effect(() => {
   <!-- Images -->
   {#each imageService.getImages() as image, i (image.id)}
     <div
+      id={image.id}
       animate:flip={{ duration: 300 }}
       in:fade={{ duration: 200, delay: i * 100 }}
       out:fade={{ duration: 200 }}

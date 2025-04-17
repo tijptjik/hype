@@ -45,7 +45,6 @@ onDestroy(() => {
 </script>
 
 <div
-  id={image.id}
   class="h-full w-full"
   data-image-id={image.id}
   onmouseenter={() => imageService.setActiveImage(image)}
