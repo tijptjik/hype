@@ -112,6 +112,6 @@
     "tailwindcss-unimportant": "^2.1.1",
     "typescript": "^5.8.3",
     "vite": "^5.4.18",
-    "zod": "^3.24.2"
+    "zod": "^3.24.3"
   }
 }
