@@ -21,7 +21,8 @@ import type {
   ResourceTypeWithChildren,
   Id,
   Code,
-  FilterableResourceType
+  FilterableResourceType,
+  FacetType
 } from '$lib/types';
 
 let resourceState = getHierarchicalResourceState();
@@ -103,7 +104,12 @@ let getDisplayName = (entity: Resource) => {
                 if (resourceState.activeEntity === NEW_REF) {
                   window.location.href = href;
                 } else {
-                  navigateOnAdmin(resourceType, entityRef);
+                  navigateOnAdmin(
+                    resourceState,
+                    resourceType as HierarchicalResource,
+                    entityRef,
+                    resourceState.activeFacet as FacetType
+                  );
                 }
               }}
               class="flex select-none items-center border-l-3 drag-none {!sidebarState.isOpen() &&

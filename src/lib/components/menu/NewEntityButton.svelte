@@ -25,6 +25,7 @@ const onclick = (e: MouseEvent) => {
   } else {
     // Directly navigate to the new entity page
     navigateOnAdmin(
+      resourceState,
       resourceState.activeResource as HierarchicalResource,
       NEW_REF,
       'core'

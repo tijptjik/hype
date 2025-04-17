@@ -52,6 +52,7 @@ const handleConfirm = () => {
   // TODO Confirm this is working
   if (!selectedItem) return;
   navigateOnAdmin(
+    resourceState,
     resourceState.activeResource as HierarchicalResource,
     NEW_REF,
     undefined,

@@ -29,7 +29,8 @@ const typeDisplay: Record<TaskType, string> = {
     {typeDisplay[task.type as TaskType]}
     <a
       href={`${ADMIN_PATH}/features/${task.feature?.id}`}
-      onclick={(e) => navigateOnAdmin(HierarchicalResource.task, task.id)}
+      onclick={(e) =>
+        navigateOnAdmin(resourceState, HierarchicalResource.feature, task.feature?.id)}
       class="pl-3 text-sm text-base-content/50">
       {task.feature?.title || ''}</a>
   </h3>

@@ -69,15 +69,31 @@ export const navigate = (url: string) => {
 };
 
 export const navigateOnAdmin = (
+  resourceState: HierarchicalResourceState,
   resource: HierarchicalResource | false,
   entityRef?: Id | Code,
   facet?: FacetType,
   queryParams?: Record<string, string>
 ) => {
   let url = `${ADMIN_PATH}`;
-  if (resource) url += `/${HierarchicalResourcePath[resource]}`;
-  if (entityRef) url += `/${entityRef}`;
-  if (facet) url += `#${facet}`;
+  if (resource) {
+    url += `/${HierarchicalResourcePath[resource]}`;
+    resourceState.setResource(resource);
+  } else {
+    resourceState.setResource(false);
+  }
+  if (entityRef) {
+    url += `/${entityRef}`;
+    resourceState.setEntity(entityRef);
+  } else {
+    resourceState.setEntity(false);
+  }
+  if (facet) {
+    url += `#${facet}`;
+    resourceState.setFacet(facet);
+  } else {
+    resourceState.setFacet(false);
+  }
   if (queryParams) url += `?${new URLSearchParams(queryParams).toString()}`;
   navigate(url);
 };
