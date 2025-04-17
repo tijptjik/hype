@@ -26,7 +26,7 @@ let lastSet: string | null = $state(null);
 
 $effect(() => {
   if (lastSet !== settings.refId) {
-    imageService.init(settings);
+    imageService.setContext(settings);
     lastSet = settings.refId;
   }
 });

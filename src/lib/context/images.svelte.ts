@@ -113,7 +113,7 @@ export class ImageService {
     refProject?: ProjectDB,
     image?: GetImageAPI
   ) {
-    this.init({
+    this.setContext({
       mode,
       isAdminMode,
       refType,
@@ -124,7 +124,7 @@ export class ImageService {
     });
   }
 
-  init(options: ImageServiceOptions) {
+  setContext(options: ImageServiceOptions) {
     // this.queryClient = queryClient;
     this.state.mode = options.mode;
     this.isAdminMode = options.isAdminMode;
@@ -136,6 +136,9 @@ export class ImageService {
     if (options.mode === 'standalone' && options.image) {
       this.setImages([options.image]);
       this.setImageLoadStatus(options.image.id, 'loaded');
+    } else if (options.mode === 'standalone' && !options.image) {
+      this.setImages([]);
+      this.resetActiveImage();
     } else if (options.mode === 'gallery') {
       this.refreshImages();
     }
