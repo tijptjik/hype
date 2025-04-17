@@ -23,14 +23,14 @@ type Props = {
 
 let { image, idx, actionProps }: Props = $props();
 
-let imageLoadState = $derived(imageService.getImageLoadStatus(image.id));
+let imageLoadState = $derived(imageService.getLoadStatus(image.id));
 
 // Initialize load state for this thumbnail
 onMount(() => {
   // Set initial load state if not already set
   if (imageLoadState === undefined) {
     console.log('THUMBNAIL :: setting image load state to loading', image.id);
-    imageService.setImageLoadStatus(image.id, 'loading');
+    imageService.setLoadStatus(image.id, 'loading');
   }
 });
 </script>
@@ -58,10 +58,10 @@ onMount(() => {
         'THUMBNAIL :: IMAGE :: OnLoad :: setting image load state to loaded',
         image.id
       );
-      imageService.setImageLoadStatus(image.id, 'loaded');
+      imageService.setLoadStatus(image.id, 'loaded');
     }}
     onError={() => {
-      imageService.setImageLoadStatus(image.id, 'error');
+      imageService.setLoadStatus(image.id, 'error');
     }} />
 
   {#if imageLoadState === 'loaded' && (!actionProps || !actionProps.removeMode)}

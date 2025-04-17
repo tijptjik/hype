@@ -764,6 +764,7 @@ export type ImageUploadState = {
   status: UploadStatus;
   retries: number;
   imageToReplace?: GetImageAPI;
+  preview: string;
 };
 
 export type Intent =

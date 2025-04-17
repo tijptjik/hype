@@ -12,11 +12,14 @@ import Metadata from '$lib/components/common/ImageMetadata.svelte';
 import DownloadImageButton from '$lib/components/images/DownloadImageButton.svelte';
 import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte';
 import IconAnchor from '$lib/components/common/IconAnchor.svelte';
-// TYPES
-import type { GetImageAPI } from '$lib/types';
-
+// CONTEXT
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // STATE : CONTEXT :: ROUTER
 const imageService = getImageService();
+const resourceState = getHierarchicalResourceState();
+// TYPES
+import type { GetImageAPI } from '$lib/types';
+import type { HierarchicalResource } from '$lib/types';
 
 type Props = {
   LeftActions?: any;
@@ -40,6 +43,19 @@ let image = $derived(imageService.getActiveImage() as GetImageAPI);
 let imagePreview = $derived(imageService.getActiveImagePreview() as string);
 let imageStatus = $derived(imageService.activeImageStatus);
 
+// Add a derived state to determine what content to show
+let viewerState: 'empty' | 'preview' | 'image' | 'transition' = $derived(
+  !image && !imagePreview
+    ? 'empty'
+    : imagePreview && imageStatus.isLoading
+      ? 'transition'
+      : imagePreview
+        ? 'preview'
+        : image
+          ? 'image'
+          : 'empty'
+);
+
 // CROSSFADE
 const [send, receive] = crossfade({
   duration: 400,
@@ -58,7 +74,16 @@ const [send, receive] = crossfade({
 // HANDLERS :: FILE DROP
 const handleDrop = async (e: CustomEvent) => {
   if (!enableDropzone) return;
-  imageService.handleFilesSelect(e.detail.files, []);
+  imageService.handleFilesSelect(e.detail.acceptedFiles, e.detail.fileRejections, {
+    onLoad: () => {
+      resourceState.invalidateAndRefresh(
+        resourceState.activeResource as HierarchicalResource
+      );
+    },
+    onError: () => {
+      console.log('onError');
+    }
+  });
 };
 </script>
 
@@ -107,7 +132,10 @@ const handleDrop = async (e: CustomEvent) => {
       alt="Feature Image"
       layout="contain"
       showLoading={false}
-      showError={false} />
+      showError={false}
+      onLoad={() => {
+        imageService.setLoadStatus(image?.id as string, 'loaded');
+      }} />
   </div>
 
   <!-- Loading Overlay -->
@@ -143,7 +171,6 @@ const handleDrop = async (e: CustomEvent) => {
       showLoading={false}
       showError={false} />
   </div>
-
   <!-- Loading Overlay -->
   {@render LoadingOverlay('Uploading...')}
 {/snippet}
@@ -167,16 +194,17 @@ const handleDrop = async (e: CustomEvent) => {
       <div
         class="border-offset-2 pointer-events-none absolute inset-0 z-50 m-4 rounded-xl border-4 border-dashed border-transparent transition-colors delay-500 group-hover:border-primary">
       </div>
-      <!-- {#if activeImageState.preview && (!image || !activeImageState.isLoaded)} -->
-      {#if image}
+
+      {#if viewerState === 'image' || viewerState === 'transition'}
         {@render ViewerContent()}
-      {:else if imageStatus.isUploading}
-        {@render PreviewContent()}
       {:else}
         {@render EmptyContent()}
       {/if}
+      {#if viewerState === 'preview' || viewerState === 'transition'}
+        {@render PreviewContent()}
+      {/if}
     </Dropzone>
-  {:else if imageService.getActiveImage()}
+  {:else if viewerState === 'image'}
     {#if isCrossfade}
       {#key image?.id}
         {@render ViewerContent()}

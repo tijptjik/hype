@@ -30,9 +30,7 @@ let showRightArrow = $state(false);
 
 // STATE :: IMAGES
 let isLoadingImages = $derived(
-  Object.values(imageService.getImageLoadStatuses()).some(
-    (status) => status === 'loading'
-  )
+  Object.values(imageService.getLoadStatuses()).some((status) => status === 'loading')
 );
 
 // DOM

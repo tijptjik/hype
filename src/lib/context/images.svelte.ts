@@ -75,11 +75,10 @@ type ImageServiceState = {
   refOrganisation: OrganisationDB | null;
   refProject: ProjectDB | null;
   uploadQueue: ImageUpload[];
-  imageLoadStatus: Record<string, LoadStatus>;
+  loadStatus: Record<string, LoadStatus>;
   activeImage: GetImageAPI | null;
   activeImagePreview: string | null;
   images: GetImageAPI[];
-  imagePreviews: Record<string, string>;
   pendingConfirmation: SvelteSet<string>;
   deletionQueue: SvelteSet<string>;
   rejected: File[];
@@ -135,7 +134,7 @@ export class ImageService {
 
     if (options.mode === 'standalone' && options.image) {
       this.setImages([options.image]);
-      this.setImageLoadStatus(options.image.id, 'loaded');
+      // this.setLoadStatus(options.image.id, 'loaded');
     } else if (options.mode === 'standalone' && !options.image) {
       this.setImages([]);
       this.resetActiveImage();
@@ -180,10 +179,8 @@ export class ImageService {
     activeImagePreview: null as string | null,
     // Images related to the active resource (e.g. organisation, project, feature)
     images: [] as GetImageAPI[],
-    // Previews of uploaded images based on local files
-    imagePreviews: {} as Record<string, string>,
     // Load state of each image
-    imageLoadStatus: {} as Record<string, LoadStatus>,
+    loadStatus: {} as Record<string, LoadStatus>,
 
     // CRUD :: DELETE
 
@@ -199,8 +196,20 @@ export class ImageService {
 
   // Convert to class methods that can be used in derived computations
   private testActiveImageStatus(status: LoadStatus | UploadStatus) {
-    if (!this.state.activeImage) return false;
-    return this.state.imageLoadStatus[this.state.activeImage.id] === status;
+    // If we have an active image with an ID, check its load status
+    if (this.state.activeImage?.id) {
+      return this.state.loadStatus[this.state.activeImage.id] === status;
+    }
+    // If we have an active preview, check if it's in the upload queue with the given status
+    if (this.state.activeImagePreview) {
+      return this.state.uploadQueue.some(
+        (upload) =>
+          URL.createObjectURL(upload.file) === this.state.activeImagePreview &&
+          upload.status === status
+      );
+    }
+
+    return false;
   }
 
   activeImageStatus = $derived({
@@ -210,6 +219,10 @@ export class ImageService {
   });
 
   imagesQueryKey = $derived(['images', this.state.refType, this.state.refId]);
+
+  isAllImagesLoaded = $derived(
+    this.state.images.every((image) => this.state.loadStatus[image.id] === 'loaded')
+  );
 
   // ═══════════════════════
   // 3.C STATE ACCESSORS
@@ -259,7 +272,13 @@ export class ImageService {
     this.state.uploadQueue.push(
       ...files.map(
         (file) =>
-          ({ file, status: 'uploading', retries: 0, imageToReplace }) as ImageUpload
+          ({
+            file,
+            status: 'uploading',
+            retries: 0,
+            imageToReplace,
+            preview: URL.createObjectURL(file)
+          }) as ImageUpload
       )
     );
   }
@@ -268,17 +287,9 @@ export class ImageService {
     return this.state.activeImagePreview;
   }
 
-  getImagePreview(fileName: string) {
-    return this.state.imagePreviews[fileName];
-  }
-
-  addToImagePreviews(files: File[]) {
-    files.forEach((file) => {
-      this.state.imagePreviews[file.name] = URL.createObjectURL(file);
-    });
-    if (files.length > 0) {
-      this.state.activeImagePreview = URL.createObjectURL(files[0]);
-    }
+  resetActiveImagePreview() {
+    this.cleanupActiveImagePreview();
+    this.state.activeImagePreview = null;
   }
 
   addToRejected(files: File[]) {
@@ -289,7 +300,7 @@ export class ImageService {
     this.setUploadQueue(this.state.uploadQueue.filter((item) => item.file !== file));
   }
 
-  setImageUploadStatus(fileObject: ImageUpload, status: UploadStatus) {
+  setUploadStatus(fileObject: ImageUpload, status: UploadStatus) {
     this.state.uploadQueue.find(
       (item) => item.file.name === fileObject.file.name
     )!.status = status;
@@ -344,23 +355,26 @@ export class ImageService {
     this.sortImages();
   }
 
-  setImageLoadStatus(imageId: string, status: LoadStatus) {
-    this.state.imageLoadStatus[imageId] = status;
+  setLoadStatus(imageId: string, status: LoadStatus) {
+    if (this.state.activeImage?.id === imageId && status === 'loaded') {
+      this.resetActiveImagePreview();
+    }
+    this.state.loadStatus[imageId] = status;
   }
 
-  getImageLoadStatus(imageId: string) {
-    return this.state.imageLoadStatus[imageId];
+  getLoadStatus(imageId: string) {
+    return this.state.loadStatus[imageId];
   }
 
-  getImageLoadStatuses() {
-    return this.state.imageLoadStatus;
+  getLoadStatuses() {
+    return this.state.loadStatus;
   }
 
-  resetImageState(imageId?: string) {
+  resetLoadStatus(imageId?: string) {
     if (imageId) {
-      delete this.state.imageLoadStatus[imageId];
+      delete this.state.loadStatus[imageId];
     } else {
-      this.state.imageLoadStatus = {};
+      this.state.loadStatus = {};
     }
   }
 
@@ -375,6 +389,7 @@ export class ImageService {
   }
 
   setActiveImage(image: GetImageAPI) {
+    this.setLoadStatus(image.id, 'loading');
     this.state.activeImage = image;
   }
 
@@ -383,10 +398,25 @@ export class ImageService {
   }
 
   setActiveImageToFirst() {
+    // If there are no images, set the active image to null
     if (!this.state.images.length) {
       this.state.activeImage = null;
     } else {
+      // Set the active image to the first image
       this.setActiveImage(this.state.images[0]);
+    }
+  }
+
+  setActiveImagePreviewToFirst() {
+    // Clean up the active image
+    this.resetActiveImage();
+    // If there are no upload queue items, set the active image preview to null
+    if (!this.state.uploadQueue.length) {
+      console.error('No upload queue items');
+      this.state.activeImagePreview = null;
+    } else {
+      // Set the active image preview to the preview of the first upload queue item
+      this.state.activeImagePreview = this.state.uploadQueue[0].preview;
     }
   }
 
@@ -490,14 +520,17 @@ export class ImageService {
     if (acceptedFiles.length > 1 && imageToReplace) {
       throw new Error('Cannot replace multiple images');
     }
+    // Reset the active image preview
+    this.resetActiveImagePreview();
     this.addToUploadQueue(acceptedFiles, imageToReplace);
     this.addToRejected(fileRejections);
 
-    this.addToImagePreviews(acceptedFiles);
+    this.setActiveImagePreviewToFirst();
 
     await this.processUploadQueue(config);
     // Sort images after all uploads have been processed
     this.sortImages();
+    this.setActiveImageToFirst();
   }
 
   private async processUploadQueue(config: {
@@ -514,8 +547,6 @@ export class ImageService {
             });
 
             if (savedImage) {
-              this.setActiveImage(savedImage);
-
               if (config.onLoad) {
                 config.onLoad(savedImage);
               }
@@ -566,12 +597,13 @@ export class ImageService {
       );
 
       if (savedImage) {
+        // Remove from upload queue after successful save
         this.removeFromUploadQueue(fileObject.file);
         return savedImage;
       }
     } catch (error) {
       console.error('Failed to process image:', error);
-      this.setImageUploadStatus(fileObject, 'error');
+      this.setUploadStatus(fileObject, 'error');
       throw error;
     }
   }
@@ -588,6 +620,9 @@ export class ImageService {
     } else {
       savedImage = await this.createNewImage(fileObject, imageData, localFetch);
     }
+
+    // Set initial load status for the new/updated image
+    this.setLoadStatus(savedImage.id, 'loading');
     return savedImage;
   }
 
@@ -596,8 +631,6 @@ export class ImageService {
     imageData: NewImageAPI,
     fetch: typeof window.fetch
   ) {
-    this.setImageUploadStatus(fileObject, 'uploading');
-
     const response = await fetch(`/api/images/${fileObject.imageToReplace!.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -605,7 +638,7 @@ export class ImageService {
     });
 
     const { image: updatedImage } = await response.json();
-    this.setImageUploadStatus(fileObject, 'uploaded');
+    this.setUploadStatus(fileObject, 'uploaded');
     this.setImages(
       this.state.images.map((img) =>
         img.id === fileObject.imageToReplace!.id ? updatedImage : img
@@ -619,8 +652,6 @@ export class ImageService {
     imageData: NewImageAPI,
     fetch: typeof window.fetch
   ) {
-    this.setImageUploadStatus(fileObject, 'uploading');
-
     const response = await fetch('/api/images', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -628,7 +659,7 @@ export class ImageService {
     });
 
     const savedImage = await response.json();
-    this.setImageUploadStatus(fileObject, 'uploaded');
+    this.setUploadStatus(fileObject, 'uploaded');
     this.setImages([savedImage, ...this.state.images]);
     return savedImage;
   }
@@ -817,7 +848,7 @@ export class ImageService {
     } finally {
       this.removeFromPendingConfirmation(imageId);
       this.removeFromDeletionQueue(imageId);
-      this.resetImageState(imageId);
+      this.resetLoadStatus(imageId);
     }
   }
 
@@ -1061,6 +1092,13 @@ export class ImageService {
     format?: string;
   }): string {
     return getURLfromImage(opts);
+  }
+
+  // Clean up previews when component is destroyed
+  cleanupActiveImagePreview() {
+    if (this.state.activeImagePreview) {
+      URL.revokeObjectURL(this.state.activeImagePreview);
+    }
   }
 }
 
