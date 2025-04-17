@@ -65,11 +65,6 @@ let mapContainerClasses = $derived(() => {
 
 // NAVIGATION
 
-// Redirect to / if user is not authenticated
-if (!session) {
-  goto(i18n.resolveRoute('/'));
-}
-
 // // NAVIGATION HANDLING -- beforeNavigate
 // beforeNavigate((nav) => {
 //   console.log('beforeNavigate', nav.to);

@@ -36,12 +36,20 @@ let socialImage = {
   height: '200'
 };
 
-// Handle initial language setup
+// Handle initial language setup and authentication
 $effect(() => {
   const { session } = $page.data;
+
+  // Handle authentication first
   if (!session) {
-    goto('/');
+    // Only redirect if we're not already on the home page
+    if ($page.url.pathname !== '/') {
+      goto('/');
+    }
+    return;
   }
+
+  // Then handle language
   if (session?.user?.language) {
     // Set the language tag first
     setLanguageTag(session.user.language);

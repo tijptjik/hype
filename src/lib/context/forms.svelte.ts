@@ -8,6 +8,7 @@ import { defaults, superForm } from 'sveltekit-superforms';
 import { deserialize } from '$app/forms';
 // LIB
 import { ADMIN_PATH, API_PATH, NEW_REF } from '$lib';
+import { goto } from '$app/navigation';
 // ZOD
 import {
   OrganisationInsertAPI,
@@ -141,13 +142,12 @@ class BaseForm<T extends Record<string, unknown>> {
         url.pathname = result.location;
         url.searchParams.delete('parentId');
         url.searchParams.delete('parentRef');
-        // goto(url.toString());
+        goto(url.toString());
         this.flash.set({
           type: 'success',
           message: 'Created successfully',
           options: { clearOnNavigate: false, clearAfterMs: 5000 }
         });
-        window.location.href = url.toString();
       } else if (result.type === 'success') {
         this.flash.set({ type: 'success', message: 'Updated successfully' });
         // Invalidate cache for the resource type; refresh resources
