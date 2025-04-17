@@ -213,6 +213,8 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Project> = $props();
+resourceState.setEntity(pageProps.data.entity, RESOURCE);
+resourceState.setFacet('core');
 
 // STATE : FORM
 let form = setForm<Project>(

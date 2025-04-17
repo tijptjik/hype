@@ -14,8 +14,8 @@ import type { HierarchicalResource } from '$lib/types';
 const resourceState = getHierarchicalResourceState();
 
 // STATE : DERIVED :: RESOURCE MODE
-let resource = $derived(resourceState.state.active.resource);
-let resourceMode = $derived(resourceState.state.active.entity === false);
+let resource = $derived(resourceState.activeResource);
+let resourceMode = $derived(resourceState.isShowIndex);
 
 // STATE : DERIVED :: TITLE
 let title = $derived(resource ? navItems[resource].name : '');

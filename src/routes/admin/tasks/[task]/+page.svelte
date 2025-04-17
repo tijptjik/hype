@@ -34,6 +34,8 @@ let { task } = pageProps.data;
 
 // CONTEXT
 const resourceState = getHierarchicalResourceState();
+resourceState.setEntity(task.id, HierarchicalResource.task);
+resourceState.setFacet('core');
 </script>
 
 <!-- LAYOUT -->

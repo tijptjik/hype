@@ -23,6 +23,8 @@ const keyMap: KeyMap = {
 // CONTEXT
 const resourceState = getHierarchicalResourceState();
 resourceState.setResource(RESOURCE);
+resourceState.setEntity(false);
+resourceState.setFacet(false);
 </script>
 
 <ResourceHeader />

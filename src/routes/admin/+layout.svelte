@@ -45,23 +45,6 @@ let viewportContained = $derived(
 );
 
 // Initialize active resource and entity based on the current path
-$effect(() => {
-  if (
-    resourceState.activeResource !==
-      resourceState.getResourceFromPath($page.url.pathname) ||
-    resourceState.activeEntity !== resourceState.getEntityFromPath($page.url.pathname)
-  ) {
-    resourceState.setActiveFromPage($page);
-    sidebarState.openSection(resourceState.activeResource as HierarchicalResource);
-  }
-  if (
-    resourceState.getFacetFromHash($page.url.hash) &&
-    resourceState.getFacetFromHash($page.url.hash) !== resourceState.activeFacet
-  ) {
-    resourceState.setFacet(resourceState.getFacetFromHash($page.url.hash));
-    goto($page.url.pathname, { replaceState: true });
-  }
-});
 let isMounted = $state(false);
 onMount(() => {
   isMounted = true;

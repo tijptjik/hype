@@ -6,8 +6,6 @@ import { QueryClient } from '@tanstack/svelte-query';
 // ENUMS
 import {
   HierarchicalResource,
-  HierarchicalResourceParent,
-  HierarchicalResourceParentRefKey,
   HierarchicalResourcePath,
   HierarchicalResourceRefKey
 } from '$lib/types';
@@ -77,7 +75,9 @@ export class ResourceState {
     ]
   );
 
-  isShowIndex = $derived(this.activeResource && this.activeEntity === null);
+  isShowIndex = $derived(
+    this.activeResource && (this.activeEntity === null || this.activeEntity === false)
+  );
 
   activeEntityHref = $derived(
     this.activeResource && this.activeEntity
@@ -526,172 +526,33 @@ export class ResourceState {
     return isDescendant ? entity : null;
   };
 
-  // // Clear all resources below the specified level
-  // #clearBelow(level: number) {
-  //   Object.values(HierarchicalResource).forEach((resource) => {
-  //     if (HierarchicalResourceSeq[resource] > level) {
-  //       this.state[resource] = null;
+  // setActiveFromPage(page: Page) {
+  //   const path = page.url.pathname;
+  //   const resourceType = this.getResourceFromPath(path);
+  //   if (resourceType) {
+  //     this.setResource(resourceType);
+  //     this.setEntity(this.getEntityFromPath(path), resourceType);
+  //     if (page.url.hash) {
+  //       this.setFacet(this.getFacetFromHash(page.url.hash));
   //     }
-  //   });
-  // }
-
-  // // Fetch a entity by type and ID
-  // async #fetchEntity(
-  //   resource: ResourceType,
-  //   ref: Ref
-  // ): Promise<Organisation | Project | Layer | Feature | null> {
-  //   try {
-  //     // Build URL with query parameter
-  //     const url = new URL(`/api/${resource}s`, window.location.origin);
-  //     url.searchParams.set('id', ref);
-
-  //     const response = await fetch(url.toString());
-  //     if (!response.ok) return null;
-
-  //     const results = await response.json();
-
-  //     // Handle array response
-  //     if (!Array.isArray(results)) {
-  //       console.error(`Expected array response for ${resource}, got:`, results);
-  //       return null;
-  //     }
-
-  //     // Check for multiple results
-  //     if (results.length > 1) {
-  //       console.error(`Multiple ${resource}s found for id ${ref}`);
-  //       return null;
-  //     }
-
-  //     // Return first result or null if empty
-  //     return results.length === 1 ? results[0] : null;
-  //   } catch (error) {
-  //     console.error(`Error fetching ${resource}:`, error);
-  //     return null;
   //   }
   // }
 
-  // // Get parent resource
-  // #getParentType(resource: ResourceTypeWithParent): ResourceTypeWithChildren | null {
-  //   const parents: Record<ResourceTypeWithParent, ResourceTypeWithChildren> = {
-  //     feature: 'layer',
-  //     layer: 'project',
-  //     project: 'organisation'
-  //   };
-  //   return parents[resource] || null;
-  // }
+  // getResourceFromPath = (path: string): HierarchicalResource | false => {
+  //   const pathParts = path.replace(ADMIN_PATH, '').split('/').filter(Boolean);
+  //   if (pathParts.length == 0) return false;
+  //   return reversePath.get(pathParts[0]) ?? false;
+  // };
 
-  // // Recursively fetch and set parent resources
-  // async #fetchParents(
-  //   resource: ResourceType,
-  //   entity: Organisation | Project | Layer | Feature
-  // ) {
-  //   const parentType = this.#getParentType(resource as ResourceTypeWithParent);
-  //   if (!parentType) return;
+  // getEntityFromPath = (path: string): Id | Code | false => {
+  //   const pathParts = path.replace(ADMIN_PATH, '').split('/').filter(Boolean);
+  //   if (pathParts.length <= 1) return false;
+  //   return pathParts[1];
+  // };
 
-  //   const parentRef = this.#getParentRef(entity);
-  //   if (!parentRef) return;
-
-  //   const parentEntity = await this.#fetchEntity(parentType, parentRef);
-  //   if (parentEntity) {
-  //     this.state[parentType] = parentEntity;
-  //     await this.#fetchParents(parentType, parentEntity);
-  //   }
-  // }
-
-  // // Update the state with a new resource
-  // async update(
-  //   resource: keyof ResourceState,
-  //   entity: Organisation | Project | Layer | Feature
-  // ) {
-  //   const level = this.#getResourceLevel(resource);
-
-  //   // Clear all resources below this level
-  //   this.#clearBelow(level);
-
-  //   // Set the current resource
-  //   this.state[resource] = entity;
-
-  //   // Fetch any missing parent resources
-  //   await this.#fetchParents(resource, entity);
-
-  //   this.#setEntityParents(resource as ResourceTypeWithParent);
-  // }
-
-  // // Get parent entity for current resource
-  // #getEntityParent(
-  //   resource: ResourceTypeWithParent,
-  //   entityRef: Ref
-  // ): ParentEntity | null {
-  //   const parentType = this.#getParentType(resource);
-  //   if (!parentType) return null;
-
-  //   return {
-  //     type: parentType,
-  //     name: this.#getEntityShortName(this.state[parentType]),
-  //     href: `${ADMIN_PATH}/${parentType}s/${this.state[parentType]?.[this.#getRefKey(parentType)]}`,
-  //     entity: this.state[parentType]
-  //   };
-  // }
-
-  // // Get all parent entities recursively
-  // #setEntityParents(resource: ResourceTypeWithParent): ParentEntity[] {
-  //   let newParents: ParentEntity[] = [];
-  //   let currentResource = resource;
-
-  //   while (true) {
-  //     const parent = this.#getEntityParent(currentResource as ResourceTypeWithParent);
-  //     if (!parent) break;
-
-  //     newParents.push(parent);
-  //     currentResource = parent.type;
-
-  //     // Break if we reach organisation (top level) or if parent type is not valid
-  //     if (
-  //       currentResource === 'organisation' ||
-  //       !this.#getParentType(currentResource as ResourceTypeWithParent)
-  //     )
-  //       break;
-  //   }
-
-  //   // Return parents from highest level to lowest level
-  //   this.parents = newParents.reverse();
-  // }
-
-  // // Get entity short name
-  // #getEntityShortName(entity: Organisation | Project | Layer | null): string {
-  //   if (!entity) return '';
-  //   return 'nameShort' in entity
-  //     ? (entity.nameShort as string)
-  //     : (entity.name as string);
-  // }
-
-  setActiveFromPage(page: Page) {
-    const path = page.url.pathname;
-    const resourceType = this.getResourceFromPath(path);
-    if (resourceType) {
-      this.setResource(resourceType);
-      this.setEntity(this.getEntityFromPath(path), resourceType);
-      if (page.url.hash) {
-        this.setFacet(this.getFacetFromHash(page.url.hash));
-      }
-    }
-  }
-
-  getResourceFromPath = (path: string): HierarchicalResource | false => {
-    const pathParts = path.replace(ADMIN_PATH, '').split('/').filter(Boolean);
-    if (pathParts.length == 0) return false;
-    return reversePath.get(pathParts[0]) ?? false;
-  };
-
-  getEntityFromPath = (path: string): Id | Code | false => {
-    const pathParts = path.replace(ADMIN_PATH, '').split('/').filter(Boolean);
-    if (pathParts.length <= 1) return false;
-    return pathParts[1];
-  };
-
-  getFacetFromHash = (hash: string): FacetType => {
-    return hash.replace('#', '') as FacetType;
-  };
+  // getFacetFromHash = (hash: string): FacetType => {
+  //   return hash.replace('#', '') as FacetType;
+  // };
 
   setResource(resource: HierarchicalResource) {
     this.state.active.resource = resource;

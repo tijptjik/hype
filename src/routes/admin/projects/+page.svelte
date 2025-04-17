@@ -5,6 +5,8 @@ import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 import ResourceHeader from '$lib/components/layout/ResourceHeader.svelte';
 import ResourceIndex from '$lib/components/layout/ResourceIndex.svelte';
 import EntityCard from '$lib/components/layout/EntityCard.svelte';
+// ENUMS
+import { HierarchicalResource } from '$lib/types';
 // TYPES
 import type { KeyMap } from '$lib/components/layout/EntityCard.svelte';
 
@@ -19,6 +21,9 @@ const keyMap: KeyMap = {
 
 // CONTEXT
 const resourceState = getHierarchicalResourceState();
+resourceState.setResource(HierarchicalResource.project);
+resourceState.setEntity(false);
+resourceState.setFacet(false);
 </script>
 
 <!-- LAYOUT -->

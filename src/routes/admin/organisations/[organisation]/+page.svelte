@@ -88,6 +88,9 @@ const FIELDS: Record<string, FormField> = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Organisation> = $props();
+resourceState.setEntity(pageProps.data.entity, RESOURCE);
+resourceState.setFacet('core');
+
 let form = setForm<Organisation>(
   RESOURCE,
   pageProps.data.entity,

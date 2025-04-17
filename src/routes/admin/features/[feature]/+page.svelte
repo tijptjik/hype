@@ -98,6 +98,8 @@ const FIELDS: FormFieldConfig = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Feature> = $props();
+resourceState.setEntity(pageProps.data.entity, RESOURCE);
+resourceState.setFacet('core');
 
 // STATE : FORM
 let form = setForm<Feature>(

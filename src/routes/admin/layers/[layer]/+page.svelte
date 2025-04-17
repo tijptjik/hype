@@ -62,6 +62,8 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Layer> = $props();
+resourceState.setEntity(pageProps.data.entity, RESOURCE);
+resourceState.setFacet('core');
 
 // STATE : FORM
 let form = setForm<Layer>(
