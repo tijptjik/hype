@@ -41,14 +41,20 @@ const filterableByQueryParams: FilterableResourceType[] = [
   HierarchicalResource.layer
 ];
 
+let isFilterable = $derived(resourceState.hasManyEntities(resourceType));
+let showFilters = $derived(
+  sidebarState.isOpen() && sidebarState.isSectionOpen(resourceType) && isFilterable
+);
+
 let isVisible = (id: Id) => {
   return (
-    navItems[resourceType as HierarchicalResource].isShownInSidebar &&
-    (resourceState.activeResource === resourceType ||
-      resourceState.state.prisms[resourceType as ResourceTypeWithChildren]?.includes(
-        id
-      ) ||
-      navItems[resourceType as HierarchicalResource].isAlwaysExpanded)
+    showFilters ||
+    (navItems[resourceType as HierarchicalResource].isShownInSidebar &&
+      (resourceState.activeResource === resourceType ||
+        resourceState.state.prisms[resourceType as ResourceTypeWithChildren]?.includes(
+          id
+        ) ||
+        navItems[resourceType as HierarchicalResource].isAlwaysExpanded))
   );
 };
 

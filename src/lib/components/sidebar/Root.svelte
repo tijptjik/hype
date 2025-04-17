@@ -11,6 +11,7 @@ const sidebarState = getSidebarState();
 
 <!-- COMPONENT -->
 <aside
+  id="sidebar"
   class="flex-shrink-1 flex h-screen flex-col bg-base-300 caret-transparent transition-all"
   style="width: {sidebarState.getWidth()}px">
   <Header />
