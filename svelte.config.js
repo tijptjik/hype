@@ -46,18 +46,6 @@ const config = {
     },
     csrf: {
       checkOrigin: false
-    },
-    csp: {
-      directives: {
-        'script-src': ['self', 'https://unpkg.com/maplibre-gl@latest/'],
-        'worker-src': ['self', 'blob:', 'https://unpkg.com/maplibre-gl@latest/']
-      },
-      // must be specified with either the `report-uri` or `report-to` directives, or both
-      reportOnly: {
-        'worker-src': ['self', 'blob:'],
-        'script-src': ['self', 'https://unpkg.com/maplibre-gl@latest/'],
-        'report-uri': ['/']
-      }
     }
   },
   vitePlugin: {
