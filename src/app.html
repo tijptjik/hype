@@ -5,16 +5,12 @@
     <link rel="icon" href="%sveltekit.assets%/favicon.png" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1" />
+      content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
     %sveltekit.head%
   </head>
-  <style>
-    /* GLOBALE STYLES */
-    ::selection {
-      color: #15191e;
-      background: #a6adbb;
-    }
-  </style>
   <body data-sveltekit-preload-data="hover">
     <div style="display: contents">%sveltekit.body%</div>
   </body>
