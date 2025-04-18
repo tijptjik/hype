@@ -104,9 +104,9 @@ $effect(() => {
 });
 </script>
 
-<div class="flex h-screen w-full flex-col">
+<div class="flex flex-col">
   {#if session}
-    <main class="relative flex w-full flex-1 flex-col gap-4 overflow-hidden">
+    <main class="fixed top-0 flex h-full w-full flex-1 flex-col gap-4 overflow-hidden">
       <!-- Panels -->
       {#if mapContext.state.panels.filters}
         <Filters />

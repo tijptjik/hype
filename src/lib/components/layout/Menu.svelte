@@ -51,7 +51,9 @@ function handleMenuClick(panel: 'filters' | 'maps' | 'stars' | 'settings' | 'adm
   </button>
 {/snippet}
 
-<nav class="border-t border-base-300 bg-black px-4 py-2 caret-transparent md:px-0">
+<nav
+  id="menu"
+  class="fixed bottom-0 w-full border-t border-base-300 bg-black px-4 py-2 caret-transparent md:px-0">
   <div class="flex w-full flex-row items-center justify-between">
     <div class="mx-auto flex max-w-[720px] flex-grow items-center justify-around">
       {#each menuItems as { icon, label, panel }}
