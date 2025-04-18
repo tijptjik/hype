@@ -16,7 +16,7 @@ let grade = $derived(
 );
 </script>
 
-<div class="pointer-events-auto space-y-2 bg-black pb-2">
+<div class="space-y-2 bg-black pb-2">
   <div class="flex items-center justify-between px-3 w-100:px-6">
     <h2 class="text-lg text-white">
       {getI18nValue(feature, 'title')}

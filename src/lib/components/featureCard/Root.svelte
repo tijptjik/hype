@@ -63,12 +63,91 @@ function handleClickOutside(e: MouseEvent) {
     goto(i18n.resolveRoute('/'));
   }
 }
+
+// src/lib/actions/preventTouchScroll.ts
+export function preventTouchScroll(node: HTMLElement) {
+  const preventDefault = (e: TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  // Note: We need to specify passive: false to allow preventDefault()
+  node.addEventListener('touchstart', preventDefault, { passive: false });
+  node.addEventListener('touchmove', preventDefault, { passive: false });
+  node.addEventListener('touchend', preventDefault, { passive: false });
+
+  return {
+    destroy() {
+      node.removeEventListener('touchstart', preventDefault);
+      node.removeEventListener('touchmove', preventDefault);
+      node.removeEventListener('touchend', preventDefault);
+    }
+  };
+}
+
+// src/lib/actions/conditionalTouchScroll.ts
+export function conditionalTouchScroll(node: HTMLElement, options = { threshold: 10 }) {
+  console.log('conditionalTouchScroll', node);
+  let startX = 0;
+  let startY = 0;
+  let isDragging = false;
+
+  const handleTouchStart = (e: TouchEvent) => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    isDragging = false;
+  };
+
+  const handleTouchMove = (e: TouchEvent) => {
+    if (!isDragging) {
+      const deltaX = e.touches[0].clientX - startX;
+      const deltaY = e.touches[0].clientY - startY;
+
+      // If movement is greater than threshold, consider it a drag
+      if (
+        Math.abs(deltaX) > options.threshold ||
+        Math.abs(deltaY) > options.threshold
+      ) {
+        isDragging = true;
+      }
+    }
+
+    if (isDragging) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  const handleTouchEnd = (e: TouchEvent) => {
+    if (isDragging) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    isDragging = false;
+  };
+
+  node.addEventListener('touchstart', handleTouchStart, { passive: true });
+  node.addEventListener('touchmove', handleTouchMove, { passive: false });
+  node.addEventListener('touchend', handleTouchEnd, { passive: false });
+
+  return {
+    destroy() {
+      node.removeEventListener('touchstart', handleTouchStart);
+      node.removeEventListener('touchmove', handleTouchMove);
+      node.removeEventListener('touchend', handleTouchEnd);
+    },
+    update(newOptions: { threshold: number }) {
+      options = newOptions;
+    }
+  };
+}
 </script>
 
 {#if omniContext.state.isCardOpen}
   <div
     class="min-h-auto pointer-events-none relative mx-auto mt-8 flex w-full max-w-[520px] flex-grow flex-col justify-center p-0 duration-300 w-92:px-6"
-    style="transform: translateX({horizontalOffset()}px); z-index: 4;">
+    style="transform: translateX({horizontalOffset()}px); z-index: 4;"
+    use:conditionalTouchScroll={{ threshold: 200 }}>
     <div
       class="flex w-full max-w-[520px] flex-grow flex-col justify-center gap-4 px-0"
       in:scale={{

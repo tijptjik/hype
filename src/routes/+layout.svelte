@@ -70,6 +70,93 @@ afterNavigate(() => {
   site_name = $page.data.site_name;
   site_description = $page.data.site_description;
 });
+
+// setTimeout(function () {
+//   let menu = document.getElementById('menu');
+//   if (menu) {
+//     menu.scrollIntoView({ behavior: 'smooth' });
+//   }
+// }, 100);
+
+function hideAddressBar() {
+  if (!window.location.hash) {
+    if (document.height < window.outerHeight) {
+      document.body.style.height = window.outerHeight + 50 + 'px';
+    }
+
+    setTimeout(function () {
+      window.scrollTo(0, 1);
+    }, 50);
+  }
+}
+
+window.addEventListener('load', function () {
+  if (!window.pageYOffset) {
+    hideAddressBar();
+  }
+});
+window.addEventListener('orientationchange', hideAddressBar);
+
+// Function to handle entering fullscreen
+function enterFullscreen() {
+  const element = document.documentElement;
+  if (element.requestFullscreen) {
+    element.requestFullscreen();
+  } else if (element.webkitRequestFullscreen) {
+    element.webkitRequestFullscreen();
+  } else if (element.msRequestFullscreen) {
+    element.msRequestFullscreen();
+  }
+}
+
+// Function to handle exiting fullscreen
+function exitFullscreen() {
+  if (document.exitFullscreen) {
+    document.exitFullscreen();
+  } else if (document.webkitExitFullscreen) {
+    document.webkitExitFullscreen();
+  } else if (document.msExitFullscreen) {
+    document.msExitFullscreen();
+  }
+}
+
+// Handle mobile devices
+if (
+  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  )
+) {
+  window.addEventListener('load', function () {
+    // Try to enter fullscreen mode
+    enterFullscreen();
+
+    // Hide the address bar on page load
+    setTimeout(function () {
+      window.scrollTo(0, 1);
+    }, 0);
+
+    // Handle orientation changes
+    window.addEventListener('orientationchange', function () {
+      setTimeout(function () {
+        window.scrollTo(0, 1);
+      }, 50);
+    });
+
+    // Handle resize events
+    window.addEventListener('resize', function () {
+      setTimeout(function () {
+        window.scrollTo(0, 1);
+      }, 50);
+    });
+  });
+
+  // Handle visibility changes
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') {
+      enterFullscreen();
+    }
+  });
+}
 </script>
 
 <svelte:head>
@@ -97,7 +184,7 @@ afterNavigate(() => {
 <QueryClientProvider client={queryClient}>
   <ParaglideJS {i18n}>
     <div
-      class="flex h-screen w-screen flex-row bg-black"
+      class="flex h-dvh w-dvw flex-row bg-black"
       class:font-hant={languageTag() === 'zh-hant'}
       class:font-hans={languageTag() === 'zh-hans'}>
       <FlashMessage />
@@ -112,6 +199,8 @@ afterNavigate(() => {
           rel="stylesheet" />
       {/if}
     </div>
-    <SvelteQueryDevtools />
+    {#if import.meta.env.VITE_SVELTE_QUERY_DEVTOOLS === 'true'}
+      <SvelteQueryDevtools />
+    {/if}
   </ParaglideJS>
 </QueryClientProvider>

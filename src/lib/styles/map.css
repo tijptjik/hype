@@ -1,5 +1,19 @@
 @import 'https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css';
 
+/* GLOBALE STYLES */
+::selection {
+  color: #15191e;
+  background: #a6adbb;
+}
+
+.no-touch-scroll {
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  overscroll-behavior: none;
+}
+
 .maplibregl-canvas {
   outline: none;
 }
