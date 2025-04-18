@@ -51,7 +51,7 @@ export default defineConfig({
       'localhost',
       '127.0.0.1',
       '0.0.0.0',
-      'dove-main-tapir.ngrok-free.app '
+      'dove-main-tapir.ngrok-free.app'
     ]
   }
 });
