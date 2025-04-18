@@ -91,9 +91,15 @@ onMount(async () => {
       geolocateControl._geolocateButton.click();
     }, 200);
 
-    navigator.geolocation.watchPosition((geoLocation) => {
-      mapContext.state.userLocation = geoLocation;
-    });
+    navigator.geolocation.watchPosition(
+      (geoLocation) => {
+        mapContext.state.userLocation = geoLocation;
+      },
+      (error) => {
+        console.error('Error getting geolocation:', error);
+      },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: Infinity }
+    );
   });
 
   mapContext.map!.on('click', (e) => {
