@@ -64,6 +64,7 @@ function handleReviewedToggle(e: Event) {
   let showUnreviewedOnly = (e.target as HTMLInputElement).checked;
   resourceState.state.filters[resourceType as keyof AdminFilterStates].isReviewed =
     showUnreviewedOnly ? false : null;
+  resourceState.refreshTasks();
 }
 
 // HANDLERS : KEYBOARD EVENTS

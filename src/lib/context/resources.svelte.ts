@@ -105,7 +105,8 @@ export class ResourceState {
   tasksQueryKey = $derived([
     HierarchicalResource.task,
     this.state.prisms.organisation,
-    this.state.prisms.project
+    this.state.prisms.project,
+    this.state.filters[HierarchicalResource.task].isReviewed
   ]);
 
   // Constructor
