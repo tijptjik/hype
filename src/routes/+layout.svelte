@@ -71,13 +71,6 @@ afterNavigate(() => {
   site_description = $page.data.site_description;
 });
 
-// setTimeout(function () {
-//   let menu = document.getElementById('menu');
-//   if (menu) {
-//     menu.scrollIntoView({ behavior: 'smooth' });
-//   }
-// }, 100);
-
 function hideAddressBar() {
   if (!window.location.hash) {
     if (document.height < window.outerHeight) {
@@ -184,7 +177,7 @@ if (
 <QueryClientProvider client={queryClient}>
   <ParaglideJS {i18n}>
     <div
-      class="flex h-dvh w-dvw flex-row bg-black"
+      class="flex h-lvh w-dvw flex-row bg-black"
       class:font-hant={languageTag() === 'zh-hant'}
       class:font-hans={languageTag() === 'zh-hans'}>
       <FlashMessage />
