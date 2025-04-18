@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ghost Mappers - Offline</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: #000;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+        text-align: center;
+      }
+      .container {
+        padding: 20px;
+      }
+      h1 {
+        margin-bottom: 1rem;
+      }
+      .retry-button {
+        background: #333;
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>You're Offline</h1>
+      <p>Ghost Mappers needs an internet connection to work properly.</p>
+      <button class="retry-button" onclick="window.location.reload()">Try Again</button>
+    </div>
+  </body>
+</html>
