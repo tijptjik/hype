@@ -4,7 +4,7 @@ import { ADMIN_PATH } from '$lib/index';
 import { navigate } from '$lib/navigation';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
-import { PencilSquare } from '@steeze-ui/heroicons';
+import { CheckCircle, PencilSquare, XCircle } from '@steeze-ui/heroicons';
 import Title from '$lib/components/tasks/common/Title.svelte';
 // TYPES
 import type { TaskAPI } from '$lib/types';
@@ -28,8 +28,19 @@ export const typeColors = {
     navigate(`${ADMIN_PATH}/tasks/${task.id}`);
   }}>
   <Title {task} />
-  <button class="btn btn-ghost btn-sm hover:bg-transparent">
-    <Icon src={PencilSquare} class="mr-2 h-4 w-4" />
-    REVIEW
+  <button
+    class="btn btn-ghost btn-sm {task.reviewOutcome
+      ? 'text-neutral-500'
+      : 'text-white'} hover:bg-transparent">
+    {#if task.reviewOutcome === 'accepted'}
+      <Icon src={CheckCircle} class="mr-2 h-4 w-4 text-success" />
+      ACCEPTED
+    {:else if task.reviewOutcome === 'rejected'}
+      <Icon src={XCircle} class="mr-2 h-4 w-4 text-error" />
+      REJECTED
+    {:else}
+      <Icon src={PencilSquare} class="mr-2 h-4 w-4" />
+      REVIEW
+    {/if}
   </button>
 </div>
