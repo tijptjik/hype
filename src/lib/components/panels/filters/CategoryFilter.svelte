@@ -111,6 +111,7 @@ let displayText = $derived(() => {
         {@const originalValue = typeof value === 'string' ? value : value.value}
         <label class="flex cursor-pointer items-center px-3 py-3 hover:bg-base-300/70">
           <input
+            name={originalValue}
             type="checkbox"
             class="checkbox checkbox-sm"
             checked={selected.includes(originalValue)}

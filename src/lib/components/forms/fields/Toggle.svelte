@@ -10,5 +10,10 @@ let { checked, size = 'lg', onChange }: Props = $props();
 
 <!-- TODO Make into a field instead of an element -->
 <label class="label cursor-pointer">
-  <input type="checkbox" class="toggle toggle-primary toggle-{size}" {checked} onchange={onChange} />
+  <input
+    {name}
+    type="checkbox"
+    class="toggle toggle-primary toggle-{size}"
+    {checked}
+    onchange={onChange} />
 </label>

@@ -33,6 +33,7 @@ const debounce = async (value: string) => {
       <div class="flex w-full flex-row items-center gap-4">
         <Icon src={Trophy} class="h-5 w-5" />
         <input
+          name="attribution"
           type="text"
           class="h-full w-full bg-base-200 outline-none"
           placeholder={m.settings_contributor_placeholder()}

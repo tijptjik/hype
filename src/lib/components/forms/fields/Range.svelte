@@ -11,6 +11,7 @@ let { form } = fieldProps.form;
 <!-- TODO: Make into an actual field instead of an element-->
 
 <input
+  name={fieldRoot}
   type="range"
   class="range range-primary"
   min={$form[fieldRoot][fieldIndex].property.min}

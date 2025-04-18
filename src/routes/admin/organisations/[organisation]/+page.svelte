@@ -108,12 +108,13 @@ let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
 <div class="mb-12 h-full bg-black">
   <Header {title} {form} />
   <form
+    id="organisationForm"
     method="POST"
     use:enhance
     role="form"
     data-testid="organisationForm"
     class="h-full">
-    <main class="flex h-full flex-col gap-6 overflow-y-scroll p-6">
+    <main class="flex h-full flex-col gap-6 overflow-y-auto p-6">
       {#if resourceState.activeFacet === 'core' || resourceState.activeFacet === false}
         <I18nSection
           title={m.admin__forms_common_descriptors()}

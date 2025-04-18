@@ -96,9 +96,9 @@ const removeUser = async (e: Event, userId: string) => {
           style="font-variant: small-caps; font-variant-caps: small-caps;">
           {resourceState.activeResource === 'project' ? 'Maintainer' : 'Owner'}
           <input
+            name={userRole.user.id}
             type="checkbox"
             data-testid={`userCheckbox_${index}`}
-            name={userRole.user.id}
             class="checkbox-primary checkbox checkbox-lg"
             checked={userRole[userJoinStateKey] === checkedValue}
             onchange={(e) =>

@@ -127,7 +127,10 @@ export class ResourceState {
     if (resource !== HierarchicalResource.task) {
       params.append('isArchived', 'false');
     } else {
-      params.append('isReviewed', 'false');
+      const isReviewed = this.state.filters[HierarchicalResource.task].isReviewed;
+      if (isReviewed !== null) {
+        params.append('isReviewed', isReviewed!.toString());
+      }
     }
 
     if (includeFilters) {

@@ -55,16 +55,16 @@ let showUnpublishedOnly = $derived(
     false
 );
 
+let showUnreviewedOnly = $derived(
+  resourceState.state.filters[resourceType as keyof AdminFilterStates].isReviewed ===
+    false
+);
 function handleReviewedToggle(e: Event) {
   e.preventDefault();
   let showUnreviewedOnly = (e.target as HTMLInputElement).checked;
   resourceState.state.filters[resourceType as keyof AdminFilterStates].isReviewed =
     showUnreviewedOnly ? false : null;
 }
-let showUnreviewedOnly = $derived(
-  resourceState.state.filters[resourceType as keyof AdminFilterStates].isReviewed ===
-    false
-);
 
 // HANDLERS : KEYBOARD EVENTS
 function handleKeydown(event: KeyboardEvent) {
@@ -89,6 +89,7 @@ function handleInput(e: Event) {
   {#if showUnpublishedToggle}
     <div class="flex items-center gap-2">
       <input
+        name="isPublished"
         type="checkbox"
         id="unpublished-toggle"
         class="toggle toggle-primary toggle-sm"
@@ -98,9 +99,11 @@ function handleInput(e: Event) {
       <label for="unpublished-toggle" class="text-sm"> Only Unpublished </label>
     </div>
   {/if}
+
   {#if showReviewedToggle}
     <div class="flex items-center gap-2">
       <input
+        name="isReviewed"
         type="checkbox"
         id="reviewed-toggle"
         class="toggle toggle-primary toggle-sm"
@@ -110,10 +113,12 @@ function handleInput(e: Event) {
       <label for="reviewed-toggle" class="text-sm"> Hide Reviewed </label>
     </div>
   {/if}
+
   <div
     class="relative {rounded ? '' : 'flex-shrink-0 border-l-3 border-base-200'}"
     role="search">
     <input
+      name="text"
       type="text"
       placeholder="Match name and description"
       class="input m-0 w-full bg-neutral px-6 pr-10 text-sm caret-white focus:border-none focus:outline-none focus:placeholder:text-transparent {rounded

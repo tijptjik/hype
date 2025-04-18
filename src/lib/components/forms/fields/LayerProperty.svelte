@@ -23,8 +23,8 @@ let { form } = fieldProps.form;
             >{item?.property?.label} <br /><small>{item?.property?.key}</small></span>
           <label class="label cursor-pointer">
             <input
-              type="checkbox"
               name={item?.property?.id}
+              type="checkbox"
               class="toggle toggle-primary toggle-lg"
               checked={item[propertyJoinStateKey]}
               onchange={() => {

@@ -79,7 +79,7 @@ resourceState.setFacet('core');
         <div class="flex flex-1 flex-col">
           <Image />
           <TaskFooter>
-            <Gallery {task} />
+            <Gallery />
           </TaskFooter>
         </div>
         {#if task.type === 'reportedMissing'}

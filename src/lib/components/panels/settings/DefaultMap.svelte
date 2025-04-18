@@ -112,6 +112,7 @@ const handleLayerSelect = (layerId: string) => {
           </div>
         </div>
         <input
+          name={layer.id}
           type="checkbox"
           class="flex-grow-1 toggle flex-shrink-0"
           checked={selectedLayers.has(layer.id)}

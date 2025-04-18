@@ -613,6 +613,7 @@ onMount(() => {
 
 <!-- ======== HIDDEN INPUTS ======== -->
 <input
+  name="photos"
   type="file"
   accept="image/*"
   multiple
@@ -621,6 +622,7 @@ onMount(() => {
   onchange={handleFileSelect} />
 
 <input
+  name="photosEnvironment"
   type="file"
   accept="image/*"
   capture="environment"

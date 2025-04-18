@@ -143,6 +143,7 @@ function handleMapFullscreenChange(isFullscreen: boolean) {
     <Header {title} {form} />
     {#if pageProps.data.validatedForm.data}
       <form
+        id="featureForm"
         method="POST"
         use:enhance
         role="form"
@@ -168,7 +169,7 @@ function handleMapFullscreenChange(isFullscreen: boolean) {
             </div>
           </div>
           <div
-            class="content-container h-auto scroll-m-10 scroll-p-12 overflow-y-scroll"
+            class="content-container h-auto scroll-m-10 scroll-p-12 overflow-y-auto"
             class:shrink={isMapFullscreen}>
             <div class="flex h-full flex-col-reverse justify-end gap-6 pr-3">
               {#if resourceState.activeFacet === 'core' || resourceState.activeFacet === false}

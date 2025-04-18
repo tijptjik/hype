@@ -1,7 +1,5 @@
 <script lang="ts">
 import Gallery from '$lib/components/images/gallery/Gallery.svelte';
-import type { TaskAPI, GetImageAPI } from '$lib/types';
-let { task }: { task: TaskAPI } = $props();
 </script>
 
 <div

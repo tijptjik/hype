@@ -152,7 +152,14 @@ $effect(() => {
         mapProps.toggleFullscreen?.(isFullscreen);
       }}>
       <div class="swap">
-        <input type="checkbox" checked={isFullscreen} />
+        <input
+          name="fullscreen"
+          type="checkbox"
+          checked={isFullscreen}
+          onchange={() => {
+            isFullscreen = !isFullscreen;
+            mapProps.toggleFullscreen?.(isFullscreen);
+          }} />
         <Icon src={ArrowsPointingIn} class="swap-on h-5 w-5" />
         <Icon src={ArrowsPointingOut} class="swap-off h-5 w-5" />
       </div>

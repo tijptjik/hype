@@ -505,11 +505,6 @@ export class ImageService {
 
   // ACTIVE IMAGE
 
-  // New method to set active status
-  setActiveStatus(imageId: string) {
-    this.state.activeId = imageId;
-  }
-
   setActiveImage(image: GetImageAPI) {
     console.log('[ImageService] Setting active image:', image.id);
     if (!image) return;

@@ -18,7 +18,6 @@ import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 const imageService = getImageService();
 const resourceState = getHierarchicalResourceState();
 // TYPES
-import type { GetImageAPI } from '$lib/types';
 import type { HierarchicalResource } from '$lib/types';
 
 type Props = {
@@ -59,21 +58,6 @@ $effect(() => {
     imageId: image?.id,
     imagePreview: imagePreview?.preview
   });
-});
-
-// CROSSFADE
-const [send, receive] = crossfade({
-  duration: 400,
-  fallback(node, params) {
-    return {
-      duration: 400,
-      easing: cubicOut,
-      css: (t) => `
-        opacity: ${t};
-        transform: scale(${0.95 + t * 0.05});
-      `
-    };
-  }
 });
 
 // HANDLERS :: FILE DROP
@@ -124,12 +108,11 @@ const handleDrop = async (e: CustomEvent) => {
   <!-- Background Image -->
   {#if image !== null && image !== undefined}
     <div
-      class="absolute inset-0 z-10 h-full w-full bg-neutral"
+      class="absolute inset-0 z-10 h-full w-full"
       class:opacity-40={isPreview || isPreviewReplacement || isTransition}
-      class:opacity-60={isLoaded}
-      style="transition: opacity 400ms ease-out"
-      in:receive={{ key: `bg-${image?.id}` }}
-      out:send={{ key: `bg-${image?.id}` }}>
+      class:opacity-60={isLoaded || isLoading}
+      in:fade={{ duration: 400 }}
+      out:fade={{ duration: 400 }}>
       <Image
         src={imageService.getURLfromImage({ image })}
         alt="Background Image"
@@ -141,11 +124,10 @@ const handleDrop = async (e: CustomEvent) => {
     <!-- Main Image -->
     <div
       class="absolute z-20 h-full w-full overflow-hidden rounded-2xl p-4"
-      class:opacity-80={isPreview}
-      class:opacity-100={isLoaded}
-      style="transition: all 400ms ease-out"
-      in:receive={{ key: `main-${image?.id}` }}
-      out:send={{ key: `main-${image?.id}` }}>
+      class:opacity-80={isPreview || isPreviewReplacement || isTransition}
+      class:opacity-100={isLoaded || isLoading}
+      in:fade={{ duration: 400 }}
+      out:fade={{ duration: 400 }}>
       <Image
         src={imageService.getURLfromImage({ image })}
         class="mx-auto h-full overflow-hidden rounded-xl text-base-100"
@@ -166,7 +148,7 @@ const handleDrop = async (e: CustomEvent) => {
           });
 
           imageService.setLoadStatus(image?.id, 'loaded');
-          imageService.setActiveStatus(image?.id);
+          imageService.setActiveImage(image);
         }} />
     </div>
   {/if}
@@ -181,9 +163,9 @@ const handleDrop = async (e: CustomEvent) => {
   <!-- Background Image -->
   {#if imagePreview?.preview || image?.preview}
     <div
-      class="absolute inset-0 z-10 h-full w-full rounded-b-2xl bg-neutral opacity-60"
-      style="transition: all 400ms ease-in-out"
-      in:fade={{ duration: 400 }}>
+      class="absolute inset-0 z-10 h-full w-full rounded-b-2xl opacity-60"
+      in:fade={{ duration: 400 }}
+      out:fade={{ duration: 400 }}>
       <Image
         src={imagePreview?.preview || image?.preview}
         alt="Preview Background"
@@ -194,8 +176,8 @@ const handleDrop = async (e: CustomEvent) => {
     </div>
     <div
       class="absolute z-30 h-full w-full overflow-hidden rounded-2xl p-4 opacity-80"
-      style="transition: all 400ms ease-in-out"
-      in:fade={{ duration: 400, delay: 100 }}>
+      in:fade={{ duration: 400 }}
+      out:fade={{ duration: 400, delay: 100 }}>
       <Image
         class="mx-auto h-full overflow-hidden rounded-xl text-base-100"
         src={imagePreview?.preview || image?.preview}
@@ -226,35 +208,22 @@ const handleDrop = async (e: CustomEvent) => {
       on:drop={handleDrop}
       on:select={handleDrop}
       multiple={false}
-      class="group flex h-full w-full flex-col justify-center gap-2 rounded-xl bg-base-100/50 text-center align-middle transition-colors"
+      class="group flex h-full w-full flex-col justify-center gap-2 rounded-xl bg-neutral text-center align-middle transition-colors"
       disableDefaultStyles={true}>
       <div
         class="border-offset-2 pointer-events-none absolute inset-0 z-50 m-4 rounded-xl border-4 border-dashed border-transparent transition-colors delay-500 group-hover:border-primary">
       </div>
 
-      {#if isLoaded}
+      {#if isLoaded || isLoading || isTransition}
         {@render ViewerContent(isReplacing)}
-      {:else if isLoading || isLoaded}
-        {@render ViewerContent(isReplacing)}
+      {/if}
+      {#if isLoading || isTransition || isPreview || isPreviewReplacement}
         {@render PreviewContent()}
-      {:else if isPreview || isPreviewReplacement}
-        {@render PreviewContent()}
-      {:else if isTransition}
-        <!-- Show both during transition -->
-        {@render PreviewContent()}
-        {@render ViewerContent(isReplacing)}
-      {:else if isEmpty}
+      {/if}
+      {#if isEmpty}
         {@render EmptyContent()}
       {/if}
     </Dropzone>
-  {:else if viewerState === 'image'}
-    {#if isCrossfade}
-      {#key image?.id}
-        {@render ViewerContent(isReplacing)}
-      {/key}
-    {:else}
-      {@render ViewerContent(isReplacing)}
-    {/if}
   {/if}
   {#if image}
     <!-- Actions -->

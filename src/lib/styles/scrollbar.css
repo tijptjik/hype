@@ -3,25 +3,19 @@
   scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
 }
 
-.scrollbar-thin::-webkit-scrollbar {
-  width: 6px;
-}
-
-.scrollbar-thin::-webkit-scrollbar-track {
+.scrollbar-thin::-webkit-scrollbar-thumb {
   background: transparent;
 }
-
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.3);
-  border-radius: 3px;
-  transition: background-color 0.3s ease;
+.scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroller:hover::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-color-thumb);
+}
+.scroller:hover::-webkit-scrollbar-track {
+  background: var(--scrollbar-color-track);
 }
 
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.5);
+.scroller:hover {
+  --fix: ; /* This custom property invalidates styles on hover, thereby enforcing a style recomputation. This is needed to work around a bug in Safari. */
 }
-
-.scrollbar-thin:not(:hover)::-webkit-scrollbar-thumb {
-  background-color: transparent;
-}
-

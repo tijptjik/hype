@@ -80,12 +80,12 @@ let getDisplayName = (entity: Resource) => {
 <!-- ENTITIES : LIST -->
 {#if resourceType}
   <ul
-    class="divide-y divide-base-300 bg-base-300
-        {isCollapsed ? 'flex-grow-0 overflow-y-auto' : 'overflow-scroll'}
+    class="scrollbar-thin divide-y divide-base-300 bg-base-300 {isCollapsed
+      ? 'flex-grow-0 overflow-y-auto'
+      : 'overflow-y-scroll'}
         {navItems[resourceType as HierarchicalResource].isAlwaysExpanded
       ? 'h-0 flex-grow'
-      : ''}
-        "
+      : ''}"
     in:slide={{ duration: 400, axis: 'y' }}
     out:slide={{ duration: 400, axis: 'y' }}>
     {#each resourceState.getFilteredResource(resourceType as HierarchicalResource) as entity}

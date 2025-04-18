@@ -66,6 +66,7 @@ const handleFeatureToggle = (code: string, value: boolean) => {
           </div>
         </div>
         <input
+          name={feature.code}
           type="checkbox"
           class="toggle"
           checked={activeFeatures[feature.code] || false}

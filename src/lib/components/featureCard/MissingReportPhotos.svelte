@@ -83,6 +83,7 @@ $effect.root(() => {
   </div>
 
   <input
+    name="photosMissingReport"
     type="file"
     accept="image/*"
     multiple
