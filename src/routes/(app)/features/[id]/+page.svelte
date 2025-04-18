@@ -4,7 +4,7 @@ import { browser } from '$app/environment';
 // Stores
 import { page } from '$app/stores';
 // PROVIDERS
-import { ImageProvider } from '$lib/components/providers/ImageProvider.svelte';
+import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // Components
 import FeatureCard from '$lib/components/featureCard/Root.svelte';
 import FeatureGallery from '$lib/components/featureCard/FeatureGallery.svelte';

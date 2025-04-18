@@ -447,10 +447,10 @@ onMount(() => {
       <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
         <!-- Capture button -->
         <button
-          class="btn btn-circle btn-lg bg-white"
+          class="btn btn-circle h-16 w-16 bg-base-300"
           onclick={capturePhoto}
           aria-label="Take photo">
-          <div class="h-12 w-12 rounded-full border-4 border-primary"></div>
+          <div class="m-0 h-12 w-12 rounded-full border-[6px] border-primary p-0"></div>
         </button>
       </div>
 

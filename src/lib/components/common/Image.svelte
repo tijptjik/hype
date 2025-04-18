@@ -33,10 +33,7 @@ let {
 }: Props = $props();
 
 onDestroy(() => {
-  if (alt == 'Feature Image') {
-    console.log('[Image] Destroying image store:', imageStore);
-    imageStore = {};
-  }
+  imageStore = {};
 });
 
 async function handleImageLoad() {

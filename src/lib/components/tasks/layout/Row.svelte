@@ -34,13 +34,13 @@ export const typeColors = {
       : 'text-white'} hover:bg-transparent">
     {#if task.reviewOutcome === 'accepted'}
       <Icon src={CheckCircle} class="mr-2 h-4 w-4 text-success" />
-      ACCEPTED
+      {task.reviewOutcome.toUpperCase()}
     {:else if task.reviewOutcome === 'rejected'}
       <Icon src={XCircle} class="mr-2 h-4 w-4 text-error" />
-      REJECTED
+      {task.reviewOutcome.toUpperCase()}
     {:else}
       <Icon src={PencilSquare} class="mr-2 h-4 w-4" />
-      REVIEW
+      {task.reviewOutcome?.toUpperCase() || 'REVIEW'}
     {/if}
   </button>
 </div>

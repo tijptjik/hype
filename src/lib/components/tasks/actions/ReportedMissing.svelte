@@ -140,17 +140,26 @@ const handleSet = async (e: Event, action: ReportedMissingAction) => {
 {/snippet}
 
 <div class="flex items-center gap-4">
-  {#each actions.slice(3) as action}
-    {@render button(action.icon, action.label, action.onHoverClass, handleReject)}
-  {/each}
-  <div class="divider divider-horizontal"></div>
-  {#each actions.slice(0, 3) as action}
-    <div>
-      {@render button(action.icon, action.label, action.onHoverClass, (e: Event) =>
-        handleSet(e, action.action as ReportedMissingAction)
-      )}
+  {#if task.reviewOutcome}
+    <div class="flex items-center gap-2 rounded-lg bg-base-200 px-3 py-2">
+      <p class="uppercase text-base-content">REVIEW ACTION</p>
+      <p class="font-mono text-sm uppercase text-neutral-content">
+        {task.reviewAction?.replace('-', ' ')}
+      </p>
     </div>
-  {/each}
+  {:else}
+    {#each actions.slice(3) as action}
+      {@render button(action.icon, action.label, action.onHoverClass, handleReject)}
+    {/each}
+    <div class="divider divider-horizontal"></div>
+    {#each actions.slice(0, 3) as action}
+      <div>
+        {@render button(action.icon, action.label, action.onHoverClass, (e: Event) =>
+          handleSet(e, action.action as ReportedMissingAction)
+        )}
+      </div>
+    {/each}
+  {/if}
   <Info>
     <ReportedMissingContent />
   </Info>
