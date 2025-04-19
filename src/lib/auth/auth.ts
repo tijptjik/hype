@@ -57,7 +57,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
       accountsTable: account,
       sessionsTable: session
     }),
-    useSecureCookies: true,
+    useSecureCookies: false,
     session: {
       strategy: 'database',
       maxAge: 30 * 24 * 60 * 60, // 30 days

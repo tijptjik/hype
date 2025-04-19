@@ -47,10 +47,17 @@ export default defineConfig({
     target: 'es2020'
   },
   server: {
+    port: 5173,
+    strictPort: true,
+    hmr: {
+      port: 5173
+    },
     allowedHosts: [
       'localhost',
       '127.0.0.1',
       '0.0.0.0',
+      '192.168.1.100',
+      '192.168.1.100.nip.io',
       'dove-main-tapir.ngrok-free.app'
     ]
   }
