@@ -68,38 +68,40 @@ onMount(async () => {
       paint: { 'line-color': '#4987E2' }
     });
 
-    // Initial marker setup
-    updateMarkers(mapContext, mapContext.getVisibleFeatures(), maplibre);
-    // TODO: Add a cleanup function to remove the markers when the component unmounts
+    if ($page.data.session) {
+      // Initial marker setup
+      updateMarkers(mapContext, mapContext.getVisibleFeatures(), maplibre);
+      // TODO: Add a cleanup function to remove the markers when the component unmounts
 
-    // Initialize and store the GeolocateControl
-    const geolocateControl = new maplibre.GeolocateControl({
-      positionOptions: {
-        timeout: 5000,
-        enableHighAccuracy: true,
-        maximumAge: Infinity
-      },
-      trackUserLocation: true
-    });
+      // Initialize and store the GeolocateControl
+      const geolocateControl = new maplibre.GeolocateControl({
+        positionOptions: {
+          timeout: 5000,
+          enableHighAccuracy: true,
+          maximumAge: Infinity
+        },
+        trackUserLocation: true
+      });
 
-    // HACK: This is a hack to prevent the geolocate control from updating the camera
-    geolocateControl._updateCamera = () => {};
+      // HACK: This is a hack to prevent the geolocate control from updating the camera
+      geolocateControl._updateCamera = () => {};
 
-    mapContext.map!.addControl(geolocateControl, 'bottom-right');
+      mapContext.map!.addControl(geolocateControl, 'bottom-right');
 
-    setTimeout(() => {
-      geolocateControl._geolocateButton.click();
-    }, 200);
+      setTimeout(() => {
+        geolocateControl._geolocateButton.click();
+      }, 200);
 
-    navigator.geolocation.watchPosition(
-      (geoLocation) => {
-        mapContext.state.userLocation = geoLocation;
-      },
-      (error) => {
-        console.error('Error getting geolocation:', error);
-      },
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: Infinity }
-    );
+      navigator.geolocation.watchPosition(
+        (geoLocation) => {
+          mapContext.state.userLocation = geoLocation;
+        },
+        (error) => {
+          console.error('Error getting geolocation:', error);
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: Infinity }
+      );
+    }
   });
 
   mapContext.map!.on('click', (e) => {
