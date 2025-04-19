@@ -101,7 +101,7 @@ $effect(() => {
     </main>
     <Menu />
   {:else}
-    <main class="relative flex w-full flex-1 flex-col gap-4 overflow-hidden">
+    <main class="fixed top-0 flex h-full w-full flex-1 flex-col gap-4 overflow-hidden">
       {@render children()}
       <Map />
     </main>
