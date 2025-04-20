@@ -19,6 +19,8 @@ import { getMapContext } from '$lib/context/map.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
 // STYLES
 import '$lib/styles/map.css';
+// MAPLIBRE
+import { monkeyPatchMapLibre } from '$lib/map/maplibre-preload';
 
 // let mapStore: MapStore = getContext(MAPSTORE_CONTEXT_KEY);
 let mapContainer: HTMLDivElement;
@@ -36,18 +38,15 @@ onMount(async () => {
   // To minimize the payload in Cloudflare, we are manually inserting mapping dependencies here as they are heavy
   // and the max worker size in the free tier is 1 MB
   await loadScript('https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js');
+  // @ts-ignore
+  globalThis.maplibregl = maplibregl;
 
-  // eslint-disable-next-line no-undef
-  maplibre = maplibregl;
-  console.info('Built with 🗺️ MapLibre ' + maplibre?.getVersion());
+  maplibre = monkeyPatchMapLibre();
 
   mapContext.map = new maplibre.Map({
     container: mapContainer,
-    // style: `https://api.maptiler.com/maps/streets/style.json?key=${PUBLIC_MAPTILER_KEY}`,
-    // style: `https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json`,
     style: { version: 8, sources: {}, layers: [] },
     center: [114.17276, 22.29191],
-    // pitch: 60,
     bearing: 17.6,
     zoom: 14,
     hash: false,
@@ -88,16 +87,18 @@ onMount(async () => {
 
       mapContext.map!.addControl(geolocateControl, 'bottom-right');
 
-      setTimeout(() => {
-        geolocateControl._geolocateButton.click();
-      }, 200);
+      // TODO Reactivate
+      // setTimeout(() => {
+      //   geolocateControl._geolocateButton.click();
+      // }, 200);
 
       navigator.geolocation.watchPosition(
         (geoLocation) => {
           mapContext.state.userLocation = geoLocation;
         },
         (error) => {
-          console.error('Error getting geolocation:', error);
+          // TODO: Add a fallback to the default location
+          // console.error('Error getting geolocation:', error);
         },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: Infinity }
       );

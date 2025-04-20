@@ -449,16 +449,16 @@ export class mapContext {
       focusFirst: false
     }
   ) {
+    this.state.active.collection = collection;
+    if (options.highlight) {
+      this.highlightActiveCollection({ focus: options.focus });
+    }
     if (options.activateFirst) {
       if (collection?.items.length && collection.items.length > 0) {
         this.setActiveFeature(collection.items[0].id, {
           focus: options.focusFirst
         });
       }
-    }
-    this.state.active.collection = collection;
-    if (options.highlight) {
-      this.highlightActiveCollection({ focus: options.focus });
     }
   }
 
@@ -592,17 +592,19 @@ export class mapContext {
       // Convert to WGS84 and get bounds
       const bounds = bbox(featureCollection);
 
-      // Fit map to bounds with padding
-      this.map.fitBounds(
+      // @ts-ignore
+      this.map.cachedFitBounds(
         [
           [bounds[0], bounds[1]], // southwestern corner
           [bounds[2], bounds[3]] // northeastern corner
 
         ],
         {
+          center: [(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2],
           padding,
           maxZoom: 18,
-          duration: 2500
+          duration: 2500,
+          run: true
         }
       );
     } catch (error) {
@@ -611,6 +613,8 @@ export class mapContext {
   }
 
   zoomToCoordinates(coordinates: [number, number][]) {
+    if (!this.map) return;
+
     // Create a FeatureCollection
     const featureCollection: FeatureCollection = {
       type: 'FeatureCollection',
@@ -626,14 +630,15 @@ export class mapContext {
 
     const bounds = bbox(featureCollection);
 
-    if (!this.map) return;
-    this.map.fitBounds(
+    // @ts-ignore
+    this.map.cachedFitBounds(
       [
         [bounds[0], bounds[1]], // southwestern corner
         [bounds[2], bounds[3]] // northeastern corner
 
       ],
       {
+        center: { lon: (bounds[0] + bounds[2]) / 2, lat: (bounds[1] + bounds[3]) / 2 },
         padding: {
           top: 150,
           bottom: 150,
@@ -641,7 +646,8 @@ export class mapContext {
           left: 50
         },
         maxZoom: 20,
-        duration: 2500
+        duration: 2500,
+        run: true
       }
     );
   }
@@ -744,13 +750,13 @@ export class mapContext {
         (radiusKm / (111.32 * Math.cos((center[1] * Math.PI) / 180))) *
           Math.sin(angleRad);
 
-      // Fly to new position
-      this.map?.flyTo({
+      this.map?.cachedFlyTo({
         center: [newLng, newLat],
         zoom: 13.5,
         speed: 0.04,
         curve: 1,
-        easing: (t) => t
+        easing: (t: number) => t,
+        run: true // This will execute the animation
       });
 
       // Increment angle

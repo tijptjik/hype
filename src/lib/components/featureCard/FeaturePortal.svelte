@@ -52,14 +52,16 @@ function flyToFeature(duration: number = 2000, delay: number = 300) {
   setTimeout(() => {
     let { xOffset, yOffset } = getOffset();
     if (feature && mapContext.map) {
-      mapContext.map.flyTo({
+      // @ts-ignore
+      mapContext.map.cachedFlyTo({
         center: [
           feature.geometry.coordinates[0],
           feature.geometry.coordinates[1]
         ],
         offset: [xOffset, yOffset],
         zoom: 16,
-        duration
+        duration,
+        run: true
       });
     }
   }, delay);

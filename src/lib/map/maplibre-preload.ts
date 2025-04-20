@@ -270,7 +270,8 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
     _lib.Map.prototype._precache = precache_run;
   }
 
-  console.log('🐒 Applying Patch :: MapLibre', _lib.getVersion());
+  console.log('Built with 🗺️ MapLibre ' + _lib.getVersion());
 
-  return _lib;
+  _lib.prewarm();
+  return _lib as ExtendedMapLibre;
 };

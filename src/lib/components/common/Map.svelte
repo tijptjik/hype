@@ -15,7 +15,10 @@ import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // TYPES
 import type { Marker, LngLatLike } from 'maplibre-gl';
 import type { Id } from '$lib/types';
-
+// Add import for preload code
+import { monkeyPatchMapLibre } from '$lib/map/maplibre-preload';
+// GLOBAL
+let maplibre: any;
 type MapProps = {
   coordinates: number[];
   draggable?: boolean;
@@ -57,11 +60,10 @@ let featureMarkerId: Id | null = $state(null);
 onMount(async () => {
   // EFFECTS :: ON MOUNT
   await loadScript('https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js');
-  // await loadScript('../../map/maplibre-preload.modern.js');
-  // eslint-disable-next-line no-undef
-  const maplibre = maplibregl;
-  maplibre.prewarm();
-  console.info('Built with 🗺️ MapLibre ' + maplibre?.getVersion());
+  // @ts-ignore
+  globalThis.maplibregl = maplibregl;
+
+  maplibre = monkeyPatchMapLibre();
 
   mapContext.map = new maplibre.Map({
     container: mapContainer,
@@ -99,9 +101,11 @@ $effect(() => {
       // @ts-ignore
       mapContext.zoomToCoordinates([mapProps.coordinates, addressLngLat]);
     } else {
-      map.flyTo({
+      // @ts-ignore
+      map.cachedFlyTo({
         center: mapProps.coordinates,
-        zoom: 20
+        zoom: 20,
+        run: true
       });
     }
     // @ts-ignore

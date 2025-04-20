@@ -87,7 +87,6 @@ export function preventTouchScroll(node: HTMLElement) {
 
 // src/lib/actions/conditionalTouchScroll.ts
 export function conditionalTouchScroll(node: HTMLElement, options = { threshold: 10 }) {
-  console.log('conditionalTouchScroll', node);
   let startX = 0;
   let startY = 0;
   let isDragging = false;
