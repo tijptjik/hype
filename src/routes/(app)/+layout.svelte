@@ -89,7 +89,6 @@ $effect(() => {
       {#if mapContext.state.panels.settings}
         <Settings />
       {/if}
-
       <!-- Map Container -->
       <div
         class="relative flex-1 transition-[margin] duration-300"

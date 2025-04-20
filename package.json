@@ -80,6 +80,8 @@
     "@inlang/paraglide-js": "1.11.3",
     "@inlang/paraglide-sveltekit": "^0.12.1",
     "@libsql/client": "v0.15.0-pre.1",
+    "@mapbox/tilebelt": "^2.0.2",
+    "@placemarkio/geo-viewport": "^1.0.2",
     "@steeze-ui/heroicons": "^2.4.2",
     "@steeze-ui/svelte-icon": "^1.6.2",
     "@sveltejs/adapter-cloudflare": "^4.9.0",

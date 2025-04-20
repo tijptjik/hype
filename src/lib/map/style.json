@@ -1553,7 +1553,7 @@
       },
       "paint": {
         "icon-opacity": 0.7,
-        "text-color":"#A6ADBB",
+        "text-color": "#A6ADBB",
         "text-halo-blur": 1,
         "text-halo-color": "rgba(0,0,0,0.7)",
         "text-halo-width": 1
@@ -2004,59 +2004,59 @@
       }
     },
     {
-        "id": "poi",
-        "type": "symbol",
-        "source": "hongkong-latest",
-        "source-layer": "poi",
-        "minzoom": 19,
-        "layout": {
-          "icon-size": 0.4,
-          "text-anchor": "left",
-          "text-field": "{name:latin}\n{name:nonlatin}",
-          "text-font": [
-            "Noto Sans Regular"
-          ],
-          "text-justify": "left",
-          "text-offset": [
-            0.5,
-            0.2
-          ],
-          "text-size": 10,
-          "text-transform": "uppercase",
-          "visibility": "visible"
-        },
-        "paint": {
-          "icon-opacity": 0.7,
-          "text-color":"#A6ADBB",
-          "text-halo-blur": 1,
-          "text-halo-color": "rgba(0,0,0,0.7)",
-          "text-halo-width": 1
+      "id": "poi",
+      "type": "symbol",
+      "source": "hongkong-latest",
+      "source-layer": "poi",
+      "minzoom": 19,
+      "layout": {
+        "icon-size": 0.4,
+        "text-anchor": "left",
+        "text-field": "{name:latin}\n{name:nonlatin}",
+        "text-font": [
+          "Noto Sans Regular"
+        ],
+        "text-justify": "left",
+        "text-offset": [
+          0.5,
+          0.2
+        ],
+        "text-size": 10,
+        "text-transform": "uppercase",
+        "visibility": "visible"
+      },
+      "paint": {
+        "icon-opacity": 0.7,
+        "text-color": "#A6ADBB",
+        "text-halo-blur": 1,
+        "text-halo-color": "rgba(0,0,0,0.7)",
+        "text-halo-width": 1
       }
     },
     {
-        "id": "housenumber",
-        "type": "symbol",
-        "source": "hongkong-latest",
-        "source-layer": "housenumber",
-        "minzoom": 19,
-        "layout": {
-          "icon-size": 0.4,
-          "text-anchor": "left",
-          "text-field": "{housenumber}",
-          "text-font": [
-            "Noto Sans Regular"
-          ],
-          "text-justify": "left",
-          "text-size": 10,
-          "text-transform": "uppercase",
-          "visibility": "visible"
-        },
-        "paint": {
-          "icon-opacity": 0.7,
-          "text-color":"#A6ADBB",
-          "text-halo-blur": 1,
-          "text-halo-color": "rgba(0,0,0,0.7)",
-          "text-halo-width": 1
+      "id": "housenumber",
+      "type": "symbol",
+      "source": "hongkong-latest",
+      "source-layer": "housenumber",
+      "minzoom": 19,
+      "layout": {
+        "icon-size": 0.4,
+        "text-anchor": "left",
+        "text-field": "{housenumber}",
+        "text-font": [
+          "Noto Sans Regular"
+        ],
+        "text-justify": "left",
+        "text-size": 10,
+        "text-transform": "uppercase",
+        "visibility": "visible"
+      },
+      "paint": {
+        "icon-opacity": 0.7,
+        "text-color": "#A6ADBB",
+        "text-halo-blur": 1,
+        "text-halo-color": "rgba(0,0,0,0.7)",
+        "text-halo-width": 1
       }
     }
   ]
