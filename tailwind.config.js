@@ -1,4 +1,5 @@
 import plugin from 'tailwindcss/plugin';
+import colors from 'tailwindcss/colors';
 
 export default {
   content: ['./src/**/*.{html,svelte,js,ts}'],
@@ -10,6 +11,18 @@ export default {
       admin: ['Geologica', 'sans-serif'],
       serif: ['Merriweather', 'serif'],
       mono: ['IBM Plex Mono', 'monospace']
+    },
+    colors: {
+      transparent: 'transparent',
+      current: 'currentColor',
+      black: colors.black,
+      white: colors.white,
+      gray: colors.gray,
+      emerald: colors.emerald,
+      indigo: colors.indigo,
+      yellow: colors.yellow,
+      'map-primary': '#cb37c1',
+      'map-base': '#4987e2'
     },
     extend: {
       borderStyle: ['hover'],
@@ -37,6 +50,7 @@ export default {
         'w-108': { raw: '(min-width: 432px)' },
         'w-112': { raw: '(min-width: 448px)' },
         'w-116': { raw: '(min-width: 464px)' },
+        'w-120': { raw: '(min-width: 480px)' },
         'w-128': { raw: '(min-width: 512px)' },
         'w-160': { raw: '(min-width: 640px)' },
         'w-192': { raw: '(min-width: 768px)' },
