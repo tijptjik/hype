@@ -6,7 +6,21 @@ import type { ParaglideLocals } from '@inlang/paraglide-sveltekit';
 // TODO Add Logging - https://jeffmcmorris.medium.com/awesome-logging-in-sveltekit-6afa29c5892c
 
 declare global {
-  let maplibregl: any;
+  let maplibregl: {
+    Map: {
+      prototype: {
+        cachedPanTo: (lnglat: maplibregl.LngLatLike, options?: any) => void;
+        cachedZoomTo: (zoom: number, options?: any) => void;
+        cachedJumpTo: (options?: any) => void;
+        cachedEaseTo: (options?: any) => void;
+        cachedFlyTo: (options?: any) => void;
+        cachedFitBounds: (
+          bounds: [[number, number], [number, number]],
+          options?: any
+        ) => void;
+      };
+    };
+  };
   namespace App {
     // interface Error {}
     interface Locals {
