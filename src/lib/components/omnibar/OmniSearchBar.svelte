@@ -28,21 +28,19 @@ $effect(() => {
 </script>
 
 <div
-  class="relative z-50 col-start-1 row-start-1 flex min-h-10 w-full items-center justify-between rounded-lg border-base-200 bg-black"
+  class="relative z-50 col-start-1 row-start-1 flex min-h-16 w-full items-center justify-between border-b-3 border-base-300 bg-black w-120:min-h-14 w-120:rounded-lg w-120:border-3 w-192:min-h-12"
   use:clickOutside={() => {
     if (omniContext.state.isTrayOpen) {
       omniContext.closeTray();
     }
-  }}
-  in:fade={{ duration: 150, delay: 150 }}
-  out:fade={{ duration: 150 }}>
+  }}>
   <input
     id="omni-search-bar"
     type="text"
     bind:value={omniContext.state.searchTerm}
     placeholder={m.omni__placeholder()}
     onfocus={() => omniContext.openTray()}
-    class="input h-12 w-full rounded-lg border-0 border-base-200 bg-black pl-6 pr-10 text-sm caret-current focus:outline-none"
+    class="input h-12 w-full rounded-lg border-0 border-base-200 bg-black bg-black pl-6 pr-10 text-sm caret-current focus:outline-none"
     use:focusOnSlash={() => void null}
     use:selectOnEnter={() => omniContext.selectFirstResult()}
     use:handleEscape={() => omniContext.clearSearchOrCloseTray()} />
@@ -53,7 +51,7 @@ $effect(() => {
 
 {#if omniContext.state.isTrayOpen}
   <div
-    class="mt-2 overflow-hidden rounded-b-lg bg-black shadow-lg"
+    class="mx-3 mt-0 overflow-hidden rounded-b-xl border-2 border-t-0 border-base-200 bg-black shadow-lg"
     transition:slide={{ duration: 200 }}>
     <OmniResults />
   </div>

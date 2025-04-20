@@ -177,7 +177,7 @@ afterNavigate(() => {
 <QueryClientProvider client={queryClient}>
   <ParaglideJS {i18n}>
     <div
-      class="flex h-lvh w-dvw flex-row bg-black"
+      class="flex h-lvh w-dvw flex-row overscroll-contain bg-black"
       class:font-hant={languageTag() === 'zh-hant'}
       class:font-hans={languageTag() === 'zh-hans'}>
       <FlashMessage />

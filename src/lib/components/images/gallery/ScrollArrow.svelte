@@ -14,7 +14,7 @@ let { direction, onClick, onScroll }: Props = $props();
 function handleClick(e: MouseEvent) {
   e.preventDefault();
   e.stopPropagation();
-  
+
   if (onClick) {
     onClick(e);
   } else if (onScroll) {
@@ -24,7 +24,9 @@ function handleClick(e: MouseEvent) {
 </script>
 
 <button
-  class="arrow absolute {direction === 'left' ? 'left-6' : 'right-6'} top-1/2 z-40 -translate-y-1/2 transform rounded-full bg-base-100/80 p-2 shadow-lg backdrop-blur-sm transition-all hover:bg-base-100 hover:shadow-xl hover:scale-110"
+  class="arrow absolute {direction === 'left'
+    ? 'left-6'
+    : 'right-6'} top-1/2 z-40 -translate-y-1/2 transform rounded-full bg-base-100/80 p-2 shadow-lg backdrop-blur-sm transition-all hover:scale-110 hover:bg-base-100 hover:shadow-xl"
   onclick={handleClick}
   in:fade={{ duration: 200 }}
   out:fade={{ duration: 200 }}>
@@ -42,4 +44,3 @@ button.arrow:hover {
   transform: translateY(-50%) scale(1.1);
 }
 </style>
-

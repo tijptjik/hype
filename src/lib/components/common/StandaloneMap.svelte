@@ -128,7 +128,11 @@ $effect(() => {
 });
 </script>
 
-<div id="map" class="map absolute inset-0" data-testid="map" bind:this={mapContainer}>
+<div
+  id="map"
+  class="map absolute inset-0 overflow-hidden rounded-2xl"
+  data-testid="map"
+  bind:this={mapContainer}>
   {#if $page.data.session && !mapContext.state.prisms.layer.length && !mapContext.state.panels.maps}
     <div
       class="pointer-events-none absolute inset-0 z-50 mx-auto flex cursor-pointer items-center justify-center bg-black/70 text-center caret-transparent"

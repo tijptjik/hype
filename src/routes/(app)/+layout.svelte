@@ -3,11 +3,9 @@
 import { page } from '$app/stores';
 import { browser } from '$app/environment';
 // LIB
-import { ADMIN_PATH, MOBILE_MAX_WIDTH } from '$lib/index';
-// I18N
-import { i18n } from '$lib/i18n';
+import { MOBILE_MAX_WIDTH } from '$lib/index';
 // NAVIGATION
-import { beforeNavigate, goto } from '$app/navigation';
+import { goto } from '$app/navigation';
 // CONTEXT
 import { getMapContext, setMapContext } from '$lib/context/map.svelte';
 import { setOmniContext, PageState, getOmniContext } from '$lib/context/omni.svelte';

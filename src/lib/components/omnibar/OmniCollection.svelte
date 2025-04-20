@@ -1,7 +1,7 @@
 <script lang="ts">
 // TRANSITIONS
 import { slide, fade } from 'svelte/transition';
-import { cubicOut } from 'svelte/easing';
+import { cubicInOut } from 'svelte/easing';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
@@ -55,7 +55,8 @@ function handleItemClick(event: Event, index: number) {
   if (mode === 'navigation') {
     omniContext.toggleTray(event);
   }
-  mapContext.navToIndex(index);
+  mapContext.navToIndex(index, { isCardOpen: omniContext.state.isCardOpen });
+  omniContext.openCard();
 }
 
 // EFFECTS
@@ -73,27 +74,15 @@ $effect(() => {
 </script>
 
 <div
-  class="absolute left-0 top-0 z-10 flex w-full select-none flex-col divide-neutral-800 rounded-b-lg border-2 border-t-0 border-base-200 bg-neutral-900 p-4"
-  transition:slide={{ duration: 200, axis: 'y', delay: 150 }}>
-  {#if mode === 'navigation'}
-    <div class="flex items-center justify-between">
-      <span class="text-xs uppercase tracking-wider text-base-content/60">
-        {omniContext.navTitle}
-      </span>
-      <Icon
-        src={XMark}
-        class="h-5 w-5"
-        onclick={(e: Event) => omniContext.toggleTray(e)} />
-    </div>
-  {/if}
-
-  <div class="mt-2 max-h-[216px] overflow-y-auto pb-1">
+  class="shadow-blue-500/100 shadow-blue-500/50 absolute left-3 right-3 top-0 z-50 flex w-auto select-none flex-col rounded-b-lg border-t-0 border-base-300 bg-base-200 p-0 shadow-xl"
+  transition:slide={{ duration: 200, axis: 'y', delay: 300, easing: cubicInOut }}>
+  <div class="max-h-[260px] overflow-y-auto px-4 pb-2 pt-1.5">
     {#if items.length === 0}
       <div class="p-4 text-center text-base-content/60">
         {m.omni__no_results()}
       </div>
     {:else}
-      <ul class="space-y-2" bind:this={listContainer}>
+      <ul class="space-y-2 overscroll-none" bind:this={listContainer}>
         {#each items as itemId, i}
           {@const isVisible =
             mode === 'navigation'
@@ -105,12 +94,7 @@ $effect(() => {
           {@const whiteOpacity = 100 - primaryOpacity}
           <li
             class="flex cursor-pointer items-center space-x-2"
-            onclick={(e) => handleItemClick(e, i)}
-            transition:slide={{
-              duration: 200,
-              axis: 'y',
-              easing: cubicOut
-            }}>
+            onclick={(e) => handleItemClick(e, i)}>
             {#if mode === 'navigation'}
               <div class="relative h-2 w-2 rounded-full">
                 <div
@@ -123,11 +107,22 @@ $effect(() => {
                 </div>
               </div>
             {/if}
-            <span class="select-none text-base-content/60"
+            <span class="select-none pl-1 font-thin text-base-content"
               >{getI18nValue(itemId, 'title')}</span>
           </li>
         {/each}
       </ul>
     {/if}
   </div>
+  {#if mode === 'navigation'}
+    <div class="flex h-12 items-center justify-between rounded-b-lg bg-black px-4">
+      <span class="text-xs uppercase tracking-wider text-base-content/60">
+        {omniContext.navTitle}
+      </span>
+      <Icon
+        src={XMark}
+        class="h-5 w-5"
+        onclick={(e: Event) => omniContext.toggleTray(e)} />
+    </div>
+  {/if}
 </div>

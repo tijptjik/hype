@@ -16,6 +16,8 @@ import type { PanelState } from '$lib/context/map.svelte';
 import { goto } from '$app/navigation';
 // CONTEXT
 const mapContext = getMapContext();
+// CONFIG
+import { MOBILE_MAX_WIDTH } from '$lib/index';
 
 // STATE
 const { session } = $page.data;
@@ -35,25 +37,33 @@ function handleMenuClick(panel: 'filters' | 'maps' | 'stars' | 'settings' | 'adm
     mapContext.togglePanel(panel as keyof PanelState, closeAll);
   }
 }
+
+// UGLY HACK TO FIX MENU POSITION
+let initialInnerHeight = $state(window.innerHeight);
+let innerHeight = $state(window.innerHeight);
+let hasViewportHeightIncreased = $derived(innerHeight > initialInnerHeight);
 </script>
 
 {#snippet menuButton(icon: IconSource, label: string, panel: string)}
   <button
-    class="flex flex-col items-center gap-1 p-2"
+    class="flex min-h-12 flex-col items-center justify-center gap-1 p-1"
     class:text-secondary={panel === 'admin'}
     onclick={() => handleMenuClick(panel as keyof PanelState)}>
     <Icon
       src={icon}
       class="h-6 w-6 {panel === 'admin' ? 'text-secondary' : 'text-primary'}" />
     <span
-      class="text-xs uppercase tracking-wider text-base-content/70"
-      class:text-secondary={panel === 'admin'}>{label}</span>
+      class="text-xs uppercase tracking-wider text-base-content/70 transition-opacity duration-300 {hasViewportHeightIncreased
+        ? 'isMozilla opacity-0'
+        : 'opacity-100'}">{label}</span>
   </button>
 {/snippet}
 
+<svelte:window bind:innerHeight />
+
 <nav
   id="menu"
-  class="fixed bottom-0 w-full border-t border-base-300 bg-black px-4 py-2 caret-transparent md:px-0">
+  class="min-h-17 fixed bottom-0 w-full border-t-3 border-base-300 bg-black px-4 py-2 caret-transparent md:px-0">
   <div class="flex w-full flex-row items-center justify-between">
     <div class="mx-auto flex max-w-[720px] flex-grow items-center justify-around">
       {#each menuItems as { icon, label, panel }}
@@ -68,3 +78,11 @@ function handleMenuClick(panel: 'filters' | 'maps' | 'stars' | 'settings' | 'adm
     {/if}
   </div>
 </nav>
+
+<style>
+@supports (-moz-appearance: none) {
+  .isMozilla {
+    display: none;
+  }
+}
+</style>

@@ -85,12 +85,12 @@ let horizontalOffset = $derived(() => {
 </script>
 
 <div
-  class="relative z-10 mt-4 flex-shrink-0 flex-grow-0 select-none px-6 caret-transparent duration-300 md:px-9 h-200:mt-8 h-250:mt-12"
+  class="relative z-40 mt-0 flex-shrink-0 flex-grow-0 select-none px-0 caret-transparent duration-300 w-120:mt-2 w-192:mt-6 w-192:px-4 w-320:mt-10 w-320:px-9"
   style="transform: translateX({horizontalOffset()}px)"
   onkeydown={handleEscape}>
-  <div class="relative mx-auto min-w-[320px] max-w-[480px]">
+  <div class="mx-auto min-w-[320px] max-w-[480px]">
     <div
-      class="grid grid-cols-1 grid-rows-1 rounded-lg border-2 border-base-200 bg-black transition-[height] duration-300">
+      class="grid grid-cols-1 grid-rows-1 rounded-none transition-[height] duration-300 w-120:rounded-lg">
       {#if showSearch}
         <OmniSearchBar />
       {:else}

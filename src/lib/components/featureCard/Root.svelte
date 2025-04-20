@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
 import { goto } from '$app/navigation';
+// CONFIG
+import { MOBILE_MAX_WIDTH } from '$lib/index';
 // I18N
 import { i18n } from '$lib/i18n';
 // ACTIONS
@@ -24,6 +26,9 @@ let horizontalOffset = $derived(() => {
   const { filters, maps, stars, settings } = mapContext.state.panels;
   const leftPanelOpen = maps || stars;
   const rightPanelOpen = filters || settings;
+  if (window.innerWidth < MOBILE_MAX_WIDTH) {
+    return 0;
+  }
   return leftPanelOpen && rightPanelOpen
     ? 0
     : leftPanelOpen
@@ -144,7 +149,7 @@ export function conditionalTouchScroll(node: HTMLElement, options = { threshold:
 
 {#if omniContext.state.isCardOpen}
   <div
-    class="min-h-auto pointer-events-none relative mx-auto mt-8 flex w-full max-w-[520px] flex-grow flex-col justify-center p-0 duration-300 w-92:px-6"
+    class="min-h-auto pointer-events-none relative z-20 mx-auto mt-4 flex w-full max-w-[520px] flex-grow flex-col justify-center p-0 duration-300 w-92:px-4"
     style="transform: translateX({horizontalOffset()}px); z-index: 4;"
     use:conditionalTouchScroll={{ threshold: 200 }}>
     <div

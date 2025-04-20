@@ -190,6 +190,22 @@ export class OmniContext {
       return;
     }
 
+    // Check if the feature is part of the active collection
+    const activeCollection = mapContext.getActiveCollection();
+    if (activeCollection) {
+      const featureIndex = activeCollection.items.findIndex(
+        (item) => item.id === featureId
+      );
+      if (featureIndex !== -1) {
+        // Feature is in the current collection, just update the active index
+        mapContext.setActiveFeature(featureId, {
+          focus: true
+        });
+        return;
+      }
+    }
+
+    // If we get here, feature wasn't in the active collection, create a new single-feature collection
     let address = getI18nValue(feature, 'displayAddress');
 
     mapContext.setActiveCollection(
@@ -275,7 +291,8 @@ export class OmniContext {
         activateFirst: true,
         focusFirst: true,
         highlight: true,
-        focus: true
+        focus: true,
+        openCard: true
       }
     );
     this.closeTray();

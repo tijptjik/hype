@@ -442,11 +442,13 @@ export class mapContext {
       focus: boolean;
       activateFirst: boolean;
       focusFirst: boolean;
+      openCard?: boolean;
     } = {
       highlight: false,
       focus: false,
       activateFirst: true,
-      focusFirst: false
+      focusFirst: false,
+      openCard: false
     }
   ) {
     this.state.active.collection = collection;
@@ -464,7 +466,13 @@ export class mapContext {
 
   getActiveFeature = (): Feature | null => this.state.active.feature;
 
-  setActiveFeature(featureId: Id, options: { focus: boolean } = { focus: false }) {
+  setActiveFeature(
+    featureId: Id,
+    options: { focus: boolean; isCardOpen?: boolean | null } = {
+      focus: false,
+      isCardOpen: null
+    }
+  ) {
     // Remove active state from previous feature
     if (this.state.active.feature) {
       removeMarkerClass(this, this.state.active.feature.id);
@@ -474,8 +482,11 @@ export class mapContext {
     // TODO Add "active" class to the feature on the map
     addMarkerClass(this, featureId);
     if (options.focus) {
-      goto(`/features/${featureId}`);
-      // this.zoomToActiveFeature();
+      if (options.isCardOpen === false) {
+        this.zoomToActiveFeature();
+      } else {
+        goto(`/features/${featureId}`);
+      }
     }
   }
 
@@ -515,7 +526,7 @@ export class mapContext {
 
   // NAVIGATION METHODS
 
-  navNext() {
+  navNext(options: { isCardOpen: boolean } = { isCardOpen: true }) {
     let navIndex =
       this.state.active.collection?.items.findIndex(
         (item) => item.id === this.state.active.feature?.id
@@ -524,13 +535,14 @@ export class mapContext {
       this.setActiveFeature(
         this.state.active.collection?.items[navIndex + 1]?.id as Id,
         {
+          ...options,
           focus: true
         }
       );
     }
   }
 
-  navPrevious() {
+  navPrevious(options: { isCardOpen: boolean } = { isCardOpen: true }) {
     let navIndex =
       this.state.active.collection?.items.findIndex(
         (item) => item.id === this.state.active.feature?.id
@@ -539,15 +551,17 @@ export class mapContext {
       this.setActiveFeature(
         this.state.active.collection?.items[navIndex - 1]?.id as Id,
         {
+          ...options,
           focus: true
         }
       );
     }
   }
 
-  navToIndex(index: number) {
+  navToIndex(index: number, options: { isCardOpen: boolean } = { isCardOpen: true }) {
     if (index > 0) {
       this.setActiveFeature(this.state.active.collection?.items[index]?.id as Id, {
+        ...options,
         focus: true
       });
     }

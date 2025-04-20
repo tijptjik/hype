@@ -13,7 +13,7 @@ const omniContext = getOmniContext();
 </script>
 
 <div
-  class="flex select-none flex-col divide-y divide-neutral-800 bg-neutral-900 caret-transparent"
+  class="flex select-none flex-col divide-y divide-neutral-800 overscroll-none bg-neutral-900 caret-transparent"
   transition:slide={{ duration: 200 }}
   role="listbox"
   tabindex="-1">
