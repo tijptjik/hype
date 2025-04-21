@@ -36,7 +36,7 @@ const sortedProperties = $derived(
 </script>
 
 <div
-  class="pointer-events-auto flex h-48 flex-wrap gap-2 overflow-y-auto overscroll-contain pl-3 pr-0 w-100:pl-6 w-120:gap-4">
+  class="pointer-events-auto flex h-48 flex-wrap items-center justify-between gap-2 overflow-y-auto overscroll-contain pl-3 pr-0 w-100:pl-6 w-120:gap-4">
   {#each sortedProperties as property}
     {#if property.property.key === 'grade' || property.property.key === 'calligrapher'}
       <!-- TODO Ignore grade property -->
