@@ -13,7 +13,7 @@ import { cubicInOut } from 'svelte/easing';
 import { m } from '$lib/i18n';
 // LIB
 import { loadScript } from '$lib';
-import { updateMarkers, createMarkerElement } from '$lib/map/markers';
+import { updateMarkers } from '$lib/map/markers';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
@@ -21,7 +21,11 @@ import { getOmniContext } from '$lib/context/omni.svelte';
 import '$lib/styles/map.css';
 // MAPLIBRE
 import { monkeyPatchMapLibre } from '$lib/map/maplibre-preload';
-
+import { Point } from 'maplibre-gl';
+// CONFIG
+import { MOBILE_MAX_WIDTH } from '$lib/index';
+// TYPES
+import type { PointLike, LatLng } from 'maplibre-gl';
 // let mapStore: MapStore = getContext(MAPSTORE_CONTEXT_KEY);
 let mapContainer: HTMLDivElement;
 
@@ -32,6 +36,7 @@ let maplibre: any;
 const mapContext = getMapContext();
 const omniContext = getOmniContext();
 
+let lastHorizontalOffset = $state(0);
 // WATCHERS
 // Watch for changes in features
 onMount(async () => {
@@ -125,6 +130,49 @@ $effect(() => {
   // Rerender the map when the features change
   mapContext.features;
   updateMarkers(mapContext, mapContext.getVisibleFeatures(), maplibre);
+});
+
+// STATE : DERIVED
+let horizontalOffset = $derived(() => {
+  const { filters, maps, stars, settings } = mapContext.state.panels;
+  const leftPanelOpen = maps || stars;
+  const rightPanelOpen = filters || settings;
+  if (window.innerWidth < MOBILE_MAX_WIDTH) {
+    return 0;
+  }
+  return leftPanelOpen && rightPanelOpen
+    ? 0
+    : leftPanelOpen
+      ? 420 / 2
+      : rightPanelOpen
+        ? -420 / 2
+        : 0;
+});
+
+// Ensure that the center of the map is in the center of the viewport,
+// even after a panel is triggered.
+$effect(() => {
+  if (horizontalOffset() !== lastHorizontalOffset) {
+    console.log('horizontalOffset', horizontalOffset());
+    if (mapContext.map) {
+      let coordinates = mapContext.map!.getCenter();
+      console.log('lng', coordinates.lng);
+      console.log('lat', coordinates.lat);
+      const centerInPx: Point = mapContext.map!.project(coordinates);
+      console.log('centerInPx', centerInPx);
+      const newPoint: PointLike = new Point(
+        centerInPx.x +
+          (horizontalOffset() === 0 ? lastHorizontalOffset : -horizontalOffset()),
+        centerInPx.y
+      );
+      const newCenter: LatLng = mapContext.map!.unproject(newPoint);
+      console.log('newCenter', newCenter);
+      mapContext.map!.easeTo({ center: newCenter });
+    } else {
+      console.log('mapContext.map is not defined');
+    }
+    lastHorizontalOffset = horizontalOffset();
+  }
 });
 </script>
 

@@ -124,60 +124,60 @@ onMount(() => {
 </script>
 
 <div class="relative h-full w-full" bind:this={container}>
-  {#if images[currentIndex].intent !== 'undefined'}
+  {#if images.filter(Boolean).length > 0}
     <!-- Image intent -->
     <div
       class="absolute bottom-2 left-2 z-10 rounded bg-black/50 px-2 py-1 font-mono text-xs text-white">
       {images[currentIndex].intent}
     </div>
-  {/if}
 
-  <!-- Image counter -->
-  <div
-    class="absolute bottom-2 right-2 z-10 rounded bg-black/50 px-2 py-1 text-xs text-white">
-    {currentIndex + 1} / {images.length}
-  </div>
-
-  <div
-    class="relative h-full w-full touch-pan-y select-none"
-    ontouchstart={handleTouchStart}
-    ontouchmove={handleTouchMove}
-    ontouchend={handleTouchEnd}
-    onclick={handleImageClick}
-    class:dragging={isDragging}
-    style="transform: translateX({$offset}px)">
-    <!-- Previous Image -->
-    <Photo image={images[getImageIndex(currentIndex - 1)]} position="previous" />
-
-    <!-- Current Image -->
-    <Photo image={images[currentIndex]} position="current" />
-
-    <!-- Next Image -->
-    <Photo image={images[getImageIndex(currentIndex + 1)]} position="next" />
-
-    <!-- Navigation buttons - hidden on mobile -->
-    <div class="hidden md:block">
-      <button
-        class="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
-        onclick={() => {
-          currentIndex = getImageIndex(currentIndex - 1);
-          offset.set(0);
-        }}
-        aria-label="Previous image">
-        <Icon src={ChevronLeft} class="h-4 w-4" />
-      </button>
-
-      <button
-        class="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
-        onclick={() => {
-          currentIndex = getImageIndex(currentIndex + 1);
-          offset.set(0);
-        }}
-        aria-label="Next image">
-        <Icon src={ChevronRight} class="h-4 w-4" />
-      </button>
+    <!-- Image counter -->
+    <div
+      class="absolute bottom-2 right-2 z-10 rounded bg-black/50 px-2 py-1 text-xs text-white">
+      {currentIndex + 1} / {images.length}
     </div>
-  </div>
+
+    <div
+      class="relative h-full w-full touch-pan-y select-none"
+      ontouchstart={handleTouchStart}
+      ontouchmove={handleTouchMove}
+      ontouchend={handleTouchEnd}
+      onclick={handleImageClick}
+      class:dragging={isDragging}
+      style="transform: translateX({$offset}px)">
+      <!-- Previous Image -->
+      <Photo image={images[getImageIndex(currentIndex - 1)]} position="previous" />
+
+      <!-- Current Image -->
+      <Photo image={images[currentIndex]} position="current" />
+
+      <!-- Next Image -->
+      <Photo image={images[getImageIndex(currentIndex + 1)]} position="next" />
+
+      <!-- Navigation buttons - hidden on mobile -->
+      <div class="hidden md:block">
+        <button
+          class="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+          onclick={() => {
+            currentIndex = getImageIndex(currentIndex - 1);
+            offset.set(0);
+          }}
+          aria-label="Previous image">
+          <Icon src={ChevronLeft} class="h-4 w-4" />
+        </button>
+
+        <button
+          class="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+          onclick={() => {
+            currentIndex = getImageIndex(currentIndex + 1);
+            offset.set(0);
+          }}
+          aria-label="Next image">
+          <Icon src={ChevronRight} class="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>

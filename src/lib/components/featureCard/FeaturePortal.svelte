@@ -163,10 +163,19 @@ function measureTextWidth(text: string): number {
   return context.measureText(text).width;
 }
 
-let addressLines = $state(wrapText(getI18nValue(feature, 'displayAddress')));
+let addressLines = $derived(wrapText(getI18nValue(feature, 'displayAddress')));
+let lastAddressLines = [];
+let lastAddressLineLengths = [];
+let displayAddressLines = $state([]);
 
 $effect(() => {
-  addressLines = wrapText(getI18nValue(feature, 'displayAddress'));
+  if (lastAddressLines[0] != addressLines[0]) {
+    lastAddressLineLengths.push(addressLines.length);
+    lastAddressLines = addressLines;
+    displayAddressLines = Array(4)
+      .fill('')
+      .map((empty, idx) => addressLines[idx] || empty);
+  }
 });
 </script>
 
@@ -174,7 +183,7 @@ $effect(() => {
 
 <div
   id="feature-card-portal"
-  class="pointer-events-none relative mr-6 h-[200px] w-[200px] pr-3 w-96:pr-12">
+  class="pointer-events-none relative h-[200px] w-[200px] overflow-visible pr-3 w-96:pr-12">
   <svg
     class="absolute inset-0 h-full w-full"
     viewBox="0 0 100 100"
@@ -191,21 +200,31 @@ $effect(() => {
     <circle cx="50" cy="50" r="48" fill="none" stroke="#4379CF" stroke-width="2"
     ></circle>
   </svg>
+  <div
+    class="absolute right-2 top-1/2 flex -translate-y-[90px] translate-x-3 flex-col items-end gap-1 overflow-visible transition-all duration-300 w-100:translate-x-5"
+    style="width: max-content;">
+    {#each displayAddressLines as line, index}
+      {#key `${feature.id}-${index}`}
+        <span
+          class="absolute inline-block origin-bottom-right whitespace-nowrap rounded-full bg-[#1D232A] {line !=
+          ''
+            ? 'px-2 py-0.5 text-sm/6'
+            : ''}"
+          style="transform: translateX(-{index * 0}px); rotate: -17deg; top: {index *
+            34}px;"
+          in:fly={{
+            duration: 300,
+            x: -100,
+            delay: (lastAddressLineLengths.at(-2) || 0) * 200 + index * 200
+          }}
+          out:fly={{ duration: 200, x: 100, delay: index * 200 }}>
+          {line}
+        </span>
+      {/key}
+    {/each}
+  </div>
 
   <div
     class="absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white">
-  </div>
-  <div
-    class="absolute right-0 top-1/2 flex -translate-y-20 rotate-[-15deg] flex-col items-end gap-1 w-92:translate-x-6"
-    style="width: max-content;">
-    {#each addressLines as line, index}
-      <span
-        class="inline-block whitespace-nowrap rounded-full bg-[#1D232A] px-2 py-0.5 text-sm/6"
-        style="transform: translateX(-{index * 10}px)"
-        in:fly={{ duration: 300, x: -100, delay: index * 100 }}
-        out:fly={{ duration: 300, x: 100, delay: index * 100 }}>
-        {line}
-      </span>
-    {/each}
   </div>
 </div>

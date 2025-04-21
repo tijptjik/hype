@@ -18,6 +18,9 @@ import { goto } from '$app/navigation';
 const mapContext = getMapContext();
 // CONFIG
 import { MOBILE_MAX_WIDTH } from '$lib/index';
+// ANIMATION
+import { cubicInOut } from 'svelte/easing';
+import { fade } from 'svelte/transition';
 
 // STATE
 const { session } = $page.data;
@@ -53,9 +56,11 @@ let hasViewportHeightIncreased = $derived(innerHeight > initialInnerHeight);
       src={icon}
       class="h-6 w-6 {panel === 'admin' ? 'text-secondary' : 'text-primary'}" />
     <span
-      class="text-xs uppercase tracking-wider text-base-content/70 transition-opacity duration-300 {hasViewportHeightIncreased
-        ? 'isMozilla opacity-0'
-        : 'opacity-100'}">{label}</span>
+      class="text-xs uppercase tracking-wider text-base-content/70 transition-opacity duration-300
+      in:fade={{ duration: 300, easing: cubicInOut }}
+      out:fade={{ duration: 300, easing: cubicInOut }}
+      {hasViewportHeightIncreased ? 'isMozilla opacity-0' : 'opacity-100'}"
+      >{label}</span>
   </button>
 {/snippet}
 
@@ -63,7 +68,7 @@ let hasViewportHeightIncreased = $derived(innerHeight > initialInnerHeight);
 
 <nav
   id="menu"
-  class="min-h-17 fixed bottom-0 w-full border-t-3 border-base-300 bg-black px-4 py-2 caret-transparent md:px-0">
+  class="min-h-17 bottom-0 w-full border-t-3 border-base-300 bg-black px-4 py-2 caret-transparent md:px-0">
   <div class="flex w-full flex-row items-center justify-between">
     <div class="mx-auto flex max-w-[720px] flex-grow items-center justify-around">
       {#each menuItems as { icon, label, panel }}

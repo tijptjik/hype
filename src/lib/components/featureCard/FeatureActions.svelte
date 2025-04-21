@@ -107,7 +107,7 @@ function getDirections() {
 </script>
 
 <div
-  class="pointer-events-auto flex flex-shrink-0 flex-grow-0 items-center justify-between rounded-b-lg bg-black px-4 py-4">
+  class="pointer-events-auto flex flex-shrink-0 basis-1/5 items-center justify-between rounded-b-lg bg-black px-2 py-2 w-100:px-4 w-100:py-4">
   {#if featureCardContext.state.mode === FeatureCardMode.Display}
     <div class="flex gap-2">
       <button class="btn btn-outline uppercase" onclick={toggleSave}>
@@ -115,7 +115,6 @@ function getDirections() {
       </button>
       <button class="btn btn-outline uppercase">Check In</button>
     </div>
-
     <button
       class="btn btn-outline btn-primary gap-2 uppercase tracking-tight"
       onclick={getDirections}>

@@ -84,26 +84,28 @@ let horizontalOffset = $derived(() => {
         mapContext.getLayer(mapContext.features[featureId] as Feature) as Layer
       ) as Project}>
       {#if mode === FeatureCardMode.Display}
-        <FeatureGallery {featureId} />
-        <div>
-          <FeatureBreadcrumbs feature={mapContext.features[featureId]} />
-          <FeatureDescription feature={mapContext.features[featureId]} />
-          <div class="flex">
-            <div class="flex-1 bg-black">
-              <FeatureProperties feature={mapContext.features[featureId]} />
+        <div class="flex h-full w-full flex-col overflow-x-visible">
+          <FeatureGallery {featureId} />
+          <div class="flex min-h-0 w-full flex-1 basis-2/5 flex-col overflow-x-visible">
+            <FeatureBreadcrumbs feature={mapContext.features[featureId]} />
+            <FeatureDescription feature={mapContext.features[featureId]} />
+            <div class="flex w-full flex-shrink-0 overflow-x-visible">
+              <div class="flex-1 overflow-y-auto bg-black">
+                <FeatureProperties feature={mapContext.features[featureId]} />
+              </div>
+              <div class="w-48 flex-shrink-0 overflow-visible">
+                <FeaturePortal feature={mapContext.features[featureId]} />
+              </div>
+              <div class="h-auto w-4 flex-shrink-0 bg-black"></div>
             </div>
-            <div class="w-48 flex-shrink-0 flex-grow-0">
-              <FeaturePortal feature={mapContext.features[featureId]} />
-            </div>
-            <div class="h-auto w-4 flex-shrink-0 flex-grow-0 bg-black"></div>
+            <FeatureActions feature={mapContext.features[featureId]} />
           </div>
-          <FeatureActions feature={mapContext.features[featureId]} />
         </div>
       {:else if mode === FeatureCardMode.New}
         <FeatureGallery {featureId} />
       {:else if mode === FeatureCardMode.Missing}
         <FeatureGallery {featureId} />
-        <div>
+        <div class="flex-shrink-1 flex flex-grow-0 flex-col">
           <FeatureBreadcrumbs feature={mapContext.features[featureId]} />
           <FeatureDescription feature={mapContext.features[featureId]} />
         </div>

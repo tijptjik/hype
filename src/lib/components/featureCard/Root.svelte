@@ -149,11 +149,12 @@ export function conditionalTouchScroll(node: HTMLElement, options = { threshold:
 
 {#if omniContext.state.isCardOpen}
   <div
-    class="min-h-auto pointer-events-none relative z-20 mx-auto mt-4 flex w-full max-w-[520px] flex-grow flex-col justify-center p-0 duration-300 w-92:px-4"
+    class="min-h-auto pointer-events-none relative z-20 mx-auto h-full w-full max-w-[520px] overflow-x-hidden overflow-y-hidden p-0 duration-300 w-92:my-4 w-92:px-4"
     style="transform: translateX({horizontalOffset()}px); z-index: 4;"
     use:conditionalTouchScroll={{ threshold: 200 }}>
     <div
-      class="flex w-full max-w-[520px] flex-grow flex-col justify-center gap-4 px-0"
+      id="feature-card"
+      class="relative flex h-full w-full flex-col overflow-x-visible px-0 shadow-xl w-92:rounded-lg"
       in:scale={{
         duration: 300,
         delay: 300,
@@ -165,11 +166,7 @@ export function conditionalTouchScroll(node: HTMLElement, options = { threshold:
       onoutrostart={handleOutroStart}
       onoutroend={handleOutroEnd}
       use:clickOutside={(e) => handleClickOutside(e)}>
-      <div
-        id="feature-card"
-        class="relative w-full overflow-visible rounded-lg shadow-xl">
-        {@render children()}
-      </div>
+      {@render children()}
     </div>
   </div>
 {/if}

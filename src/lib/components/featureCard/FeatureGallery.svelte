@@ -147,7 +147,7 @@ onMount(() => {
 </script>
 
 <div
-  class="pointer-events-auto relative flex h-64 w-full items-center justify-center overflow-hidden bg-base-content/20 backdrop-blur-sm h-200:h-72 h-250:h-96"
+  class="flex-shrink-1 flex-grow-1 pointer-events-auto relative flex min-h-52 w-full basis-[35%] items-center justify-center overflow-hidden bg-base-content/20 backdrop-blur-sm"
   bind:this={container}>
   {#if isLoading}
     <div class="flex items-center justify-center">

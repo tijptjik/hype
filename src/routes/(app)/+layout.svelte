@@ -71,9 +71,9 @@ $effect(() => {
 });
 </script>
 
-<div class="flex flex-col">
+<div class="flex h-dvh flex-col justify-around">
   {#if session}
-    <main class="fixed top-0 flex h-full w-full flex-1 flex-col gap-4 overflow-hidden">
+    <main class="top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
       <!-- Panels -->
       {#if mapContext.state.panels.filters}
         <Filters />
@@ -88,9 +88,7 @@ $effect(() => {
         <Settings />
       {/if}
       <!-- Map Container -->
-      <div
-        class="relative flex-1 transition-[margin] duration-300"
-        class:mapContainerClasses>
+      <div class="relative flex h-full flex-1 flex-col">
         <Map />
         <Omnibar />
         {@render children()}
@@ -98,7 +96,7 @@ $effect(() => {
     </main>
     <Menu />
   {:else}
-    <main class="fixed top-0 flex h-full w-full flex-1 flex-col gap-4 overflow-hidden">
+    <main class="top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
       {@render children()}
       <Map />
     </main>

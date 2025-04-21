@@ -37,7 +37,8 @@ const sortedProperties = $derived(
 );
 </script>
 
-<div class="pointer-events-auto flex flex-col gap-2 pl-3 pr-0 w-100:pl-6">
+<div
+  class="pointer-events-auto flex h-48 flex-col gap-2 overflow-y-auto pl-3 pr-0 w-100:pl-6">
   {#each sortedProperties as property}
     {#if property.property.key === 'grade' || property.property.key === 'calligrapher'}
       <!-- TODO Ignore grade property -->

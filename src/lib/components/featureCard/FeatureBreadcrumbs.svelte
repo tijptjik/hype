@@ -50,7 +50,7 @@ let organisation = mapContext.getOrganisation(project!);
 </script>
 
 <div
-  class="pointer-events-auto flex w-full items-center justify-between bg-black pl-2 w-100:pl-4">
+  class="pointer-events-auto flex w-full flex-shrink-0 items-center justify-between bg-black pl-2 w-100:pl-4">
   <div class="flex items-center gap-2 font-mono text-xs uppercase text-neutral-content">
     <Icon src={Squares2x2} class="h-6 w-6" />
     <span class="text-xs uppercase">{organisation?.code}</span>
