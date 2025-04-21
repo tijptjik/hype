@@ -111,6 +111,8 @@ onMount(async () => {
   });
 
   mapContext.map!.on('click', (e) => {
+    e.originalEvent.preventDefault();
+    e.originalEvent.stopPropagation();
     const target = e.originalEvent.target as HTMLElement;
     if (target.dataset.type === 'marker') {
       const featureId = target.dataset.featureId;
@@ -153,23 +155,18 @@ let horizontalOffset = $derived(() => {
 // even after a panel is triggered.
 $effect(() => {
   if (horizontalOffset() !== lastHorizontalOffset) {
-    console.log('horizontalOffset', horizontalOffset());
     if (mapContext.map) {
       let coordinates = mapContext.map!.getCenter();
-      console.log('lng', coordinates.lng);
-      console.log('lat', coordinates.lat);
       const centerInPx: Point = mapContext.map!.project(coordinates);
-      console.log('centerInPx', centerInPx);
       const newPoint: PointLike = new Point(
         centerInPx.x +
           (horizontalOffset() === 0 ? lastHorizontalOffset : -horizontalOffset()),
         centerInPx.y
       );
       const newCenter: LatLng = mapContext.map!.unproject(newPoint);
-      console.log('newCenter', newCenter);
       mapContext.map!.easeTo({ center: newCenter });
     } else {
-      console.log('mapContext.map is not defined');
+      console.error('mapContext.map is not defined');
     }
     lastHorizontalOffset = horizontalOffset();
   }

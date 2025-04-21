@@ -62,10 +62,10 @@ function handleClickOutside(e: MouseEvent) {
       omniContext.handleFeatureSelection(mapContext, featureId);
     }
   } else if (target.localName === 'canvas') {
-    omniContext.pageState = PageState.NeedTransition;
+    // omniContext.pageState = PageState.NeedTransition;
     omniContext.closeCard();
-    omniContext.pageState = PageState.Transitioning;
-    goto(i18n.resolveRoute('/'));
+    // omniContext.pageState = PageState.Transitioning;
+    // goto(i18n.resolveRoute('/'));
   }
 }
 

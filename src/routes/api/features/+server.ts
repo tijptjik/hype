@@ -99,7 +99,12 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
         properties: {
           with: {
             translations: true,
-            property: true
+            property: true,
+            propertyValue: {
+              with: {
+                translations: true
+              }
+            }
           }
         }
       },

@@ -51,28 +51,20 @@ $effect(() => {
   if (mapContext.getActiveCollection() == null) {
     void handleFeatureSelection();
   }
+  console.log('mapContext.feature', mapContext.features[featureId]);
 });
 
 // Helper function to handle async operations
 async function handleFeatureSelection() {
   await omniContext.handleFeatureSelection(mapContext, featureId);
 }
-
-// Calculate offset based on visible panels
-let horizontalOffset = $derived(() => {
-  const { filters, maps, stars, settings } = mapContext.state.panels;
-  const leftPanelOpen = maps || stars;
-  const rightPanelOpen = filters || settings;
-
-  if (browser && window.innerWidth < MOBILE_MAX_WIDTH) return 0;
-  return (leftPanelOpen ? 210 : 0) - (rightPanelOpen ? 210 : 0);
-});
 </script>
 
-{#if mapContext.isInitialised && mapContext.features[featureId]}
+{#if mapContext && mapContext.isInitialised && mapContext.features[featureId]}
   <FeatureCard>
     <ImageProvider
-      {mode}
+      mode="gallery"
+      isAdminMode={false}
       refType={'feature'}
       refId={featureId}
       refOrganisation={mapContext.getOrganisation(
@@ -114,4 +106,8 @@ let horizontalOffset = $derived(() => {
       {/if}
     </ImageProvider>
   </FeatureCard>
+{:else}
+  <div class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-300">
+    <div class="loading loading-spinner loading-lg text-primary"></div>
+  </div>
 {/if}

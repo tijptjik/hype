@@ -1,10 +1,8 @@
 <script lang="ts">
 // Animation
-import { fade, fly } from 'svelte/transition';
+import { fly } from 'svelte/transition';
 // I18N
 import { getI18nValue } from '$lib/i18n';
-// Svelte
-import { getContext, onMount } from 'svelte';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
 // Types

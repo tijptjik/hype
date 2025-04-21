@@ -66,7 +66,7 @@ function getExpandedDescriptionHeight() {
     style="mask-image: linear-gradient(to bottom, black, black {!hasOverflow ||
     isExpanded
       ? '100%'
-      : '80%'}, transparent);">
+      : 'calc(100% - 12px)'}, transparent);">
     <p
       bind:this={descriptionEl}
       class="scrollbar-thin pointer-events-auto overscroll-none px-3 text-sm font-thin tracking-tight text-gray-300 w-100:px-6 {isExpanded
