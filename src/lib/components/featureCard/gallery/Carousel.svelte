@@ -115,7 +115,6 @@ function handleTouchStart(event: TouchEvent) {
 
 function handleTouchMove(event: TouchEvent) {
   if (!isDragging || isTransitioning) return;
-  event.preventDefault();
 
   const currentX = event.touches[0].clientX;
   currentDelta = currentX - startX;
@@ -180,12 +179,20 @@ function cleanup() {
 }
 
 function initializePhotoComponents() {
+  // For single image, just show it without any transitions or wrapping
+  if (images.length === 1) {
+    photoComponents = [
+      {
+        id: 'photo-0-init',
+        index: 0,
+        position: 0
+      }
+    ];
+    return;
+  }
+
+  // Original initialization for multiple images
   photoComponents = [
-    {
-      id: `photo-${getImageIndex(currentIndex - 2)}-init`,
-      index: getImageIndex(currentIndex - 2),
-      position: -2
-    },
     {
       id: `photo-${getImageIndex(currentIndex - 1)}-init`,
       index: getImageIndex(currentIndex - 1),
@@ -219,28 +226,30 @@ onMount(() => {
 
 <div class="relative h-full w-full" bind:this={container}>
   {#if images.filter(Boolean).length > 0}
-    <!-- Navigation buttons -->
-    <div class="absolute z-20 hidden h-full w-full">
-      <button
-        class="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
-        onclick={(e) => {
-          e.stopPropagation();
-          snapToPosition(getImageIndex(currentIndex - 1), 'right');
-        }}
-        aria-label="Previous image">
-        <Icon src={ChevronLeft} class="h-4 w-4" />
-      </button>
+    <!-- Navigation buttons - only show if more than one image -->
+    {#if images.length > 1}
+      <div class="absolute z-20 hidden h-full w-full">
+        <button
+          class="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+          onclick={(e) => {
+            e.stopPropagation();
+            snapToPosition(getImageIndex(currentIndex - 1), 'right');
+          }}
+          aria-label="Previous image">
+          <Icon src={ChevronLeft} class="h-4 w-4" />
+        </button>
 
-      <button
-        class="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
-        onclick={(e) => {
-          e.stopPropagation();
-          snapToPosition(getImageIndex(currentIndex + 1), 'left');
-        }}
-        aria-label="Next image">
-        <Icon src={ChevronRight} class="h-4 w-4" />
-      </button>
-    </div>
+        <button
+          class="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+          onclick={(e) => {
+            e.stopPropagation();
+            snapToPosition(getImageIndex(currentIndex + 1), 'left');
+          }}
+          aria-label="Next image">
+          <Icon src={ChevronRight} class="h-4 w-4" />
+        </button>
+      </div>
+    {/if}
 
     <!-- Image intent -->
     <div
@@ -248,18 +257,20 @@ onMount(() => {
       {images[currentIndex].intent}
     </div>
 
-    <!-- Image counter -->
-    <div
-      class="absolute bottom-2 right-2 z-10 rounded bg-black/50 px-2 py-1 text-xs text-white">
-      {currentIndex + 1} / {images.length}
-    </div>
+    <!-- Image counter - only show if more than one image -->
+    {#if images.length > 1}
+      <div
+        class="absolute bottom-2 right-2 z-10 rounded bg-black/50 px-2 py-1 text-xs text-white">
+        {currentIndex + 1} / {images.length}
+      </div>
+    {/if}
 
     <div
       class="relative h-full w-full touch-pan-y select-none"
-      ontouchstart={handleTouchStart}
-      ontouchmove={handleTouchMove}
-      ontouchend={(e) => handleTouchEnd(e)}
-      onclick={handleInteraction}
+      ontouchstart={images.length > 1 ? handleTouchStart : undefined}
+      ontouchmove={images.length > 1 ? handleTouchMove : undefined}
+      ontouchend={images.length > 1 ? (e) => handleTouchEnd(e) : undefined}
+      onclick={images.length > 1 ? handleInteraction : undefined}
       class:dragging={isDragging}
       class:transitioning={isTransitioning}
       style="transform: translateX({translateX}px)"
