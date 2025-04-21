@@ -30,7 +30,6 @@ import type {
   ImageUploadState
 } from '$lib/types';
 import { HierarchicalResource } from '$lib/types';
-import { count } from 'drizzle-orm';
 /**
  * Image Service
  * ═══════════════════════
@@ -79,6 +78,7 @@ type ImageServiceState = {
   loadStatus: Record<string, LoadStatus>;
   activeId: string | null;
   images: (GetImageAPI & { preview?: string })[];
+  preloadedImages: Set<string>;
   pendingConfirmation: SvelteSet<string>;
   deletionQueue: SvelteSet<string>;
   rejected: File[];
@@ -141,11 +141,11 @@ export class ImageService {
     this.state.refProject = options.refProject || null;
 
     if (options.mode === 'standalone' && options.image) {
-      this.setImages([options.image as GetImageAPI]);
+      await this.setImages([options.image as GetImageAPI]);
       console.log('SETTING FROM SETCONTEXT', options.image.id);
       this.setLoadStatus(options.image.id, 'loading');
     } else if (options.mode === 'standalone' && !options.image) {
-      this.setImages([]);
+      await this.setImages([]);
     } else if (options.mode === 'gallery') {
       await this.refreshImages();
     }
@@ -189,6 +189,8 @@ export class ImageService {
     loadStatus: {} as Record<string, LoadStatus>,
     // LoadStatus of Thumbnail
     thumbnailLoadStatus: {} as Record<string, LoadStatus>,
+    // Preloaded images
+    preloadedImages: new Set<string>(),
 
     // CRUD :: DELETE
 
@@ -412,9 +414,10 @@ export class ImageService {
     return this.state.images.find((img) => img.id === imageId);
   }
 
-  setImages(images: (GetImageAPI & { preview?: string })[]) {
+  async setImages(images: (GetImageAPI & { preview?: string })[]) {
     this.state.images = images;
     this.sortImages();
+    await this.preloadImages();
   }
 
   setLoadStatus(imageId: string, status: LoadStatus) {
@@ -561,7 +564,7 @@ export class ImageService {
   // ═══════════════════════
 
   async refreshImages() {
-    this.setImages(
+    await this.setImages(
       //   await this.queryClient.fetchQuery({
       // queryKey: this.imagesQueryKey,
       // queryFn: () => this.imagesQueryFn
@@ -978,6 +981,40 @@ export class ImageService {
     }
   }
 
+  // Add a preloader utility
+  preloadImage = (src: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve();
+      img.onerror = reject;
+      img.src = src;
+    });
+  };
+
+  async preloadImages() {
+    const imagesToPreload = this.state.images
+      .map((image) => getURLfromImage({ image }))
+      .filter((url) => !this.state.preloadedImages.has(url));
+
+    // Preload all images concurrently
+    await Promise.all(
+      imagesToPreload.map(async (url) => {
+        try {
+          await this.preloadImage(url);
+          this.state.preloadedImages.add(url);
+        } catch (error) {
+          console.error('Failed to preload image:', url, error);
+        }
+      })
+    );
+  }
+
+  // Helper to check if an image is preloaded
+  isImagePreloaded(image: GetImageAPI): boolean {
+    const url = getURLfromImage({ image });
+    return this.state.preloadedImages.has(url);
+  }
+
   // ═══════════════════════
   // 8. DOWNLOADS
   // ═══════════════════════
@@ -1230,8 +1267,6 @@ export class ImageService {
 
     return getURLfromImage(opts);
   }
-
-  // Clean up previews when component is destroyed
 }
 
 // ═══════════════════════

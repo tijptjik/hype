@@ -20,8 +20,7 @@ let imageAlt = $derived(
 );
 </script>
 
-<div
-  class={`${position === 'current' ? 'relative inset-0 z-10' : position === 'previous' ? 'absolute left-[-100%] top-0' : 'absolute right-[-100%] top-0'} h-full w-full`}>
+<div class="h-full w-full">
   <Image
     class="z-20 h-full w-full overflow-hidden text-base-100"
     src={getURLfromImage({ image })}
