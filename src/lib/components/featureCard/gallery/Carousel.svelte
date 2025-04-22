@@ -2,7 +2,7 @@
 import Photo from './Photo.svelte';
 import Icon from '$lib/components/common/Icon.svelte';
 import { ChevronLeft, ChevronRight } from '@steeze-ui/heroicons';
-import { onMount, tick } from 'svelte';
+import { onMount } from 'svelte';
 // SERVICES
 import { getImageService } from '$lib/context/images.svelte';
 
@@ -50,7 +50,6 @@ let getPhotoComponents = (): PhotoComponent[] => {
     }
   ];
 
-  console.log('[Carousel] getPhotoComponents', components);
   return components;
 };
 
@@ -102,7 +101,6 @@ const TRANSITION_DURATION = 300;
 function snapToPosition() {
   if (isTransitioning) return;
 
-  console.log('[Carousel] snapToPosition', currentIndex, targetIndex);
   const movement = currentIndex < targetIndex ? -containerWidth : containerWidth;
 
   setState({
@@ -117,7 +115,7 @@ function snapToPosition() {
       containerOffsetX: 0,
       currentIndex: targetIndex
     });
-  }, TRANSITION_DURATION + 50);
+  }, TRANSITION_DURATION);
 }
 
 function handleTouchStart(event: TouchEvent) {
@@ -137,11 +135,6 @@ let handleTouchMove = async (event: TouchEvent) => {
   currentDelta = event.touches[0].clientX - startX;
   containerOffsetX = currentDelta;
   await checkAndHandleThresholdMet();
-
-  console.log('[Carousel] handleTouchMove', event);
-
-  // Update transform directly during drag
-  // imageContainer.style.transform = `translateX(${currentDelta}px)`;
 };
 
 function handleTouchEnd(event: TouchEvent) {
@@ -151,7 +144,9 @@ function handleTouchEnd(event: TouchEvent) {
     isDragging: false
   });
 
-  if (Math.abs(currentDelta) < DRAG_THRESHOLD) {
+  if (Math.abs(currentDelta) < 10) {
+    handleInteraction(event);
+  } else if (Math.abs(currentDelta) < DRAG_THRESHOLD) {
     setState({
       isTransitioning: true,
       containerOffsetX: 0,
@@ -188,6 +183,7 @@ function handleInteraction(event: MouseEvent | TouchEvent | PointerEvent) {
         : event?.clientX;
   const relativeX = clientX - rect.left;
   const isLeftHalf = relativeX < rect.width / 2;
+
   setState({
     targetIndex: currentIndex + (isLeftHalf ? -1 : 1)
   });
@@ -264,13 +260,14 @@ onMount(() => {
     {/if}
 
     <div
-      class="relative h-full w-full touch-pan-y select-none"
+      class="relative h-full w-full touch-pan-y select-none ease-[cubic-bezier(0.4,0,0.2,1)]"
       ontouchstart={images.length > 1 ? handleTouchStart : undefined}
       ontouchmove={images.length > 1 ? handleTouchMove : undefined}
       ontouchend={images.length > 1 ? handleTouchEnd : undefined}
       onclick={images.length > 1 ? handleInteraction : undefined}
-      class:dragging={isDragging}
-      class:transitioning={isTransitioning}
+      class:transition-none={isDragging && !isTransitioning}
+      class:transition-transform={isTransitioning}
+      class:duration-300={isTransitioning}
       style="transform: translateX({containerOffsetX}px)"
       bind:this={imageContainer}>
       {#each photoComponents as photo (photo.id)}
@@ -285,13 +282,3 @@ onMount(() => {
     </div>
   {/if}
 </div>
-
-<style>
-.transitioning {
-  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.dragging {
-  transition: none;
-}
-</style>
