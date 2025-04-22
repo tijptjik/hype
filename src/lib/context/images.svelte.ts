@@ -467,7 +467,7 @@ export class ImageService {
     }
 
     this.state.loadStatus[imageId] = status;
-    console.log('[ImageService] New load statuses:', this.state.loadStatus);
+    // console.log('[ImageService] New load statuses:', this.state.loadStatus);
   }
 
   getLoadStatus(imageId: string) {
