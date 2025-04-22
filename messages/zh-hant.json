@@ -1,46 +1,37 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-
   "preauth__continue_with_google": "繼續使用 Google",
-
   "lang__en": "英語",
   "lang__zh_hant": "繁體中文",
   "lang__zh_hans": "簡體中文",
-
   "settings__title": "設定",
   "settings__subtitle": "就像你喜欢的样子",
   "settings__signout": "註銷",
   "settings__language": "語言",
-
   "filters__title": "過濾器",
   "filters__subtitle": "過濾地圖上顯示的特徵",
   "filters__reset": "重置過濾器",
   "filters__reset_count": "重置 {neighbourhoods} 個社區和 {properties} 個屬性",
   "filters__neighbourhoods": "社區",
   "filters__categories": "類別",
-
   "filters__all": "全部",
   "filters__only": "只有",
   "filters__between": "介乎",
   "filters__and": "和",
   "filters__stars": "星",
-
   "maps__title": "地圖",
   "maps__subtitle": "過濾圖層並添加到地圖",
   "maps__organisations": "組織",
   "maps__projects": "項目",
   "maps__layers": "圖層",
-
   "maps__layers_none": "未選擇任何<b class='font-mono inline-block px-2 py-2'>圖層</b>。<br><br>地圖將為空。",
   "maps__projects_none": "未選擇任何<b class='font-mono inline-block px-2'>項目</b>過濾器。",
   "maps__organisations_none": "未選擇任何<b class='font-mono inline-block px-2'>組織</b>過濾器。",
   "maps__neighbourhoods_none": "未選擇任何<b class='font-mono inline-block px-2'>社區</b>過濾器。",
-
   "stars__title": "星星",
   "stars__subtitle": "未來訪問的收藏",
   "stars__want_to_visit": "想去",
   "stars__have_visited": "去過",
-
   "navbar__projects": "項目",
   "navbar__neighbourhoods": "胡德",
   "navbar__blog": "部落格",
@@ -53,7 +44,6 @@
   "navbar__new": "新的",
   "navbar__admin": "管理",
   "navbar__tasks": "審核隊列",
-
   "profile__registered_account": "註冊賬戶",
   "profile__member_since": "成為會員時間",
   "profile__attribution": "署名",
@@ -69,7 +59,6 @@
   "profile__role_type__maintainer": "維護者",
   "profile__role_type__member": "成員",
   "profile__role_type__contributor": "貢獻者",
-
   "forms__type_here": "喺呢度輸入",
   "forms__reset": "重設",
   "forms__save": "保存",
@@ -78,16 +67,12 @@
   "forms__pending": "無效",
   "forms__unpublish": "取消發布",
   "forms__publish": "發佈",
-
   "organisation__core": "核心",
   "organisation__images": "相片",
-
   "project__core": "核心",
   "project__images": "相片",
   "project__fields": "字段",
-
   "layer__core": "核心",
-
   "feature__core": "核心",
   "feature__address": "地址",
   "feature__images": "相片",
@@ -115,33 +100,26 @@
   "feature__info_classifition_summary": "請注意，如果一個特徵永久唔可用，而且引用呢個地點冇歷史或者無形價值，咁就應該簡單咁取消發布，將佢從所有地圖中除名。",
   "feature__info_specification_summary": "提供額外上下文同參考嘅自由格式文本字段。字段喺集合級別定義。",
   "feature__info_map_summary": "點擊右上角嘅鎖解鎖地圖，然後拖動地圖重新定位特徵標記。",
-
   "menu_maps": "地圖",
   "menu_filters": "篩選",
   "menu_stars": "收藏",
   "menu_settings": "設定",
   "menu_admin": "管理員",
-
   "settings_contributor_title": "貢獻者署名",
   "settings_contributor_description": "您希望以什麼名字署名您貢獻的照片和功能",
   "settings_contributor_placeholder": "輸入您的名字",
-
   "settings_default_map_title": "預設地圖",
   "settings_default_map_description": "選擇預設載入的地圖",
-
   "settings_experimental_title": "實驗功能",
   "settings_experimental_description": "在正式發布前預覽功能",
   "settings_experimental_contributor_mode": "貢獻者模式",
   "settings_experimental_contributor_description": "突出顯示添加照片和功能的界面",
-
   "report_missing__label": "缺失原因是",
   "report_missing__placeholder": "請提供您認為內容缺失的原因",
   "report_missing__success": "已成功提交報告",
   "report_missing__error": "無法提交報告",
-
   "validation__at_least_one_image_as_evidence": "請上傳至少一張照片作為證據",
   "validation__at_least_five_characters": "請提供更多詳細資料 - 至少 5 個字元",
-
   "omni__title_walks": "步道",
   "omni__title_neighbourhoods": "社區",
   "omni__title_features": "特徵",
@@ -149,18 +127,14 @@
   "omni__no_results": "冇結果",
   "omni__placeholder": "搜索...",
   "omni__search_results": "搜索結果: {searchTerm}",
-
   "map__no_markers_without_layers": "請選擇一個圖層來填滿地圖",
   "map__select_layer": "請選擇一個圖層來填滿地圖",
-
   "admin__desktop_only_window_too_small": "視窗太小",
   "admin__desktop_only_window_too_small_explainer": "管理面板需要至少 1200px 的視口寬度才能正常運作。請調整瀏覽器視窗大小或使用更大的螢幕。",
   "admin__desktop_only_current_width": "電流寬度",
-
   "admin__filter_stat_access": "訪問",
   "admin__filter_stat_filtered": "已過濾",
   "admin__filter_stat_selected": "已選擇",
-
   "admin__validation_name_is_required": "名稱為必填項",
   "admin__validation_name_lte_128_chars": "最多 128 個字元",
   "admin__validation_short_name_is_required": "需要簡稱",
@@ -171,7 +145,6 @@
   "admin__validation_url_invalid": "URL 無效 -- 您是否新增了 https://？",
   "admin__validation_attribution_is_required": "需要歸因",
   "admin__validation_attribution_lte_128_chars": "最多 128 個字元",
-
   "admin__geo_lookup_address_at_location": "取得位置位址",
   "admin__geo_lookup_address_at_location_loading": "正在查找地址...",
   "admin__geo_source_language": "源語言",
@@ -180,7 +153,6 @@
   "admin__geo_forward_geocode_loading": "正在查找地址...",
   "admin__geo_latitude": "緯度",
   "admin__geo_longitude": "經度",
-
   "admin__forms_common_descriptors": "描述符",
   "admin__forms_common_classifiers": "分類欄位",
   "admin__forms_common_classifiers_subtitle": "用於過濾特徵",
@@ -190,7 +162,6 @@
   "admin__forms_common_name_short": "簡稱",
   "admin__forms_common_description": "描述",
   "admin__forms_common_code": "代碼",
-
   "admin__forms_organisation_name": "全名",
   "admin__forms_organisation_name_short": "簡稱",
   "admin__forms_organisation_description": "描述",
@@ -199,7 +170,6 @@
   "admin__forms_organisation_code": "代碼",
   "admin__forms_organisation_url": "網址",
   "admin__forms_organisation_image_title": "個人資料圖片",
-
   "admin__forms_project_credit": "署名",
   "admin__forms_project_credit_subtitle": "該項目在什麼許可證下發布（例如 <code>CC-BY-SA</code> 或 <code>Copyrighted</code>），以及應該如何署名？",
   "admin__forms_project_license": "許可證",
@@ -212,7 +182,6 @@
   "admin__forms_project_specifiers_title": "自由格式欄位",
   "admin__forms_project_specifiers_subtitle": "在特徵資訊面板中顯示",
   "admin__forms_project_image_title": "橫幅圖片",
-
   "admin__forms_layer_name": "全名",
   "admin__forms_layer_name_short": "簡稱",
   "admin__forms_layer_description": "描述",
@@ -221,7 +190,6 @@
   "admin__forms_layer_classifiers_subtitle": "用於過濾特徵",
   "admin__forms_layer_specifiers_title": "自由格式欄位",
   "admin__forms_layer_specifiers_subtitle": "在特徵資訊面板中顯示",
-
   "admin__forms_feature_title": "標題",
   "admin__forms_feature_description": "描述",
   "admin__forms_feature_classifiers_title": "分類欄位",
@@ -232,5 +200,6 @@
   "admin__forms_feature_addressing_title": "尋址",
   "admin__forms_feature_addressing_subtitle": "特徵在應用中列在此地址下",
   "admin__forms_feature_viewer_title": "查看器",
-  "admin__forms_feature_gallery_title": "圖庫"
+  "admin__forms_feature_gallery_title": "圖庫",
+  "maps__projects_none_with_n_organisations": "所有 <b class='font-mono inline-block px-2'>項目</b> 有 {n} <b class='font-mono inline-block px-2'>組織</b>"
 }

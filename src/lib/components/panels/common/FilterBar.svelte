@@ -20,13 +20,13 @@ const resetInput = async (e: Event) => {
     type="text"
     bind:value={searchTerm}
     placeholder="Search..."
-    class="input m-0 h-12 w-full rounded-none bg-base-200 px-6 pr-10 text-sm focus:border-none focus:outline-none" />
-  <div class="absolute inset-y-0 right-2 flex items-center pr-3">
+    class="input m-0 h-12 w-full rounded-none bg-base-200 pl-[30px] pr-10 text-sm focus:border-none focus:outline-none" />
+  <div class="absolute inset-y-0 right-1.5 flex items-center pr-3">
     {#if !searchTerm}
-      <Icon src={MagnifyingGlass} class="h-6 w-6" />
+      <Icon src={MagnifyingGlass} class="h-6 w-6 text-base-content/60" />
     {:else}
       <button onclick={resetInput} class="focus:outline-none">
-        <Icon src={XMark} class="h-6 w-6" />
+        <Icon src={XMark} class="h-6 w-6 text-base-content/60" />
       </button>
     {/if}
   </div>

@@ -71,15 +71,21 @@ function handleToggle(id: Id) {
     {/each}
   </div>
 {:else}
-  <div class="flex flex-wrap justify-start gap-2 px-11 pt-1">
-    <p class="pb-4 text-sm text-base-content/60">
+  <div class="flex flex-wrap justify-start gap-2 px-[34px] pt-2">
+    <p class="pb-2 text-sm text-base-content/60">
       {@html props.type == 'layer'
         ? m.maps__layers_none()
-        : props.type == 'project'
+        : props.type == 'project' &&
+            props.mapContext.state.prisms.organisation.length == 0
           ? m.maps__projects_none()
-          : props.type == 'neighbourhood'
-            ? m.maps__neighbourhoods_none()
-            : m.maps__organisations_none()}
+          : props.type == 'project' &&
+              props.mapContext.state.prisms.organisation.length > 0
+            ? m.maps__projects_none_with_n_organisations({
+                n: props.mapContext.state.prisms.organisation.length.toString()
+              })
+            : props.type == 'neighbourhood'
+              ? m.maps__neighbourhoods_none()
+              : m.maps__organisations_none()}
     </p>
   </div>
 {/if}

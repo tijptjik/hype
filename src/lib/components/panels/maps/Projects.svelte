@@ -45,6 +45,7 @@ function filterProjects(projects: Project[], term: string) {
 }
 
 const filteredProjects = $derived(filterProjects(projects, searchTerm));
+let isDefaultOpen = $derived(document.body.clientHeight > 1000);
 </script>
 
 <!-- COMPONENTS -->
@@ -65,7 +66,8 @@ const filteredProjects = $derived(filterProjects(projects, searchTerm));
   icon={Squares2x2}
   iconVerticalPaddingClass="pt-2"
   iconColorClass="text-accent"
-  collapsedContent={SelectedProjects}>
+  collapsedContent={SelectedProjects}
+  defaultOpen={isDefaultOpen}>
   {#if projects.length > 4}
     <FilterBar bind:searchTerm />
   {/if}
@@ -74,7 +76,7 @@ const filteredProjects = $derived(filterProjects(projects, searchTerm));
       <FilteredResource
         {resource}
         resourceParent={mapContext.getOrganisation(resource)}
-        selectedClass="text-accent"
+        selectedClass="bg-accent"
         isSelected={selectedProjects.includes(resource.id)}
         onClick={() => mapContext.toggleProject(resource.id)} />
     {/each}

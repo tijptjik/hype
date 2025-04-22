@@ -1,47 +1,37 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-
   "lang__en": "英语",
   "lang__zh_hant": "繁体中文",
   "lang__zh_hans": "简体中文",
-
   "preauth__continue_with_google": "继续使用 Google",
-
   "settings__title": "设置",
   "settings__subtitle": "就像你喜欢的样子",
   "settings__signout": "注销",
   "settings__language": "语言",
-
   "filters__title": "过滤器",
   "filters__subtitle": "地图上显示的过滤器特征",
   "filters__reset": "重置过滤器",
   "filters__reset_count": "重置 {neighbourhoods} 个社区和 {properties} 个属性",
-
   "filters__neighbourhoods": "社区",
   "filters__categories": "类别",
-
   "filters__all": "全部",
   "filters__only": "只有",
   "filters__between": "介乎",
   "filters__and": "和",
   "filters__stars": "星",
-
   "maps__title": "地图",
   "maps__subtitle": "过滤图层并添加到地图",
   "maps__organisations": "组织",
   "maps__projects": "项目",
   "maps__layers": "图层",
-
   "maps__layers_none": "未选择任何<b class='font-mono inline-block px-2 py-2'>图层</b>。<br><br>地图将为空。",
   "maps__projects_none": "未选择任何<b class='font-mono inline-block px-2'>项目</b>过滤器。",
   "maps__organisations_none": "未选择任何<b class='font-mono inline-block px-2'>组织</b>过滤器。",
   "maps__neighbourhoods_none": "未选择任何<b class='font-mono inline-block px-2'>社区</b>过滤器。",
-
   "stars__title": "星星",
   "stars__subtitle": "未来访问的收藏",
   "stars__want_to_visit": "想去",
   "stars__have_visited": "去过",
-
   "navbar__projects": "项目",
   "navbar__neighbourhoods": "社区",
   "navbar__blog": "博客",
@@ -54,7 +44,6 @@
   "navbar__new": "新的",
   "navbar__admin": "管理",
   "navbar__tasks": "审核队列",
-
   "profile__registered_account": "注册账户",
   "profile__member_since": "成为会员时间",
   "profile__attribution": "署名",
@@ -70,7 +59,6 @@
   "profile__role_type__maintainer": "维护者",
   "profile__role_type__member": "成员",
   "profile__role_type__contributor": "贡献者",
-
   "forms__type_here": "在此输入",
   "forms__reset": "重置",
   "forms__save": "保存",
@@ -79,16 +67,12 @@
   "forms__pending": "无效",
   "forms__unpublish": "取消发布",
   "forms__publish": "发布",
-
   "organisation__core": "核心",
   "organisation__images": "图片",
-
   "project__core": "核心",
   "project__images": "图片",
   "project__fields": "字段",
-
   "layer__core": "核心",
-
   "feature__core": "核心",
   "feature__address": "地址",
   "feature__images": "照片",
@@ -116,33 +100,26 @@
   "feature__info_classifition_summary": "请注意，如果一个特征永久不可用，并且引用该地点没有历史或无形价值，那么应该简单地取消发布，以将其从所有地图中除名。",
   "feature__info_specification_summary": "提供额外上下文和参考的自由格式文本字段。字段在集合级别定义。",
   "feature__info_map_summary": "点击右上角的锁解锁地图，然后拖动地图重新定位特征标记。",
-
   "menu_maps": "地图",
   "menu_filters": "筛选",
   "menu_stars": "收藏",
   "menu_settings": "设置",
   "menu_admin": "管理员",
-
   "settings_contributor_title": "贡献者署名",
   "settings_contributor_description": "您希望以什么名字署名您贡献的照片和功能",
   "settings_contributor_placeholder": "输入您的名字",
-
   "settings_default_map_title": "默认地图",
   "settings_default_map_description": "选择默认加载的地图",
-
   "settings_experimental_title": "实验功能",
   "settings_experimental_description": "在正式发布前预览功能",
   "settings_experimental_contributor_mode": "贡献者模式",
   "settings_experimental_contributor_description": "突出显示添加照片和功能的界面",
-
   "report_missing__label": "缺失原因是",
   "report_missing__placeholder": "请提供您认为该内容缺失的原因",
   "report_missing__success": "已成功提交报告",
   "report_missing__error": "无法提交报告",
-
   "validation__at_least_one_image_as_evidence": "请上传至少一张照片作为证据",
   "validation__at_least_five_characters": "请提供更多详细信息 - 至少 5 个字符",
-
   "omni__title_walks": "步道",
   "omni__title_neighbourhoods": "社区",
   "omni__title_features": "特征",
@@ -150,18 +127,14 @@
   "omni__no_results": "没有结果",
   "omni__placeholder": "搜索...",
   "omni__search_results": "搜索结果: {searchTerm}",
-
   "map__no_markers_without_layers": "请选择一个图层来填充地图",
   "map__select_layer": "请选择一个图层来填充地图",
-
   "admin__desktop_only_window_too_small": "窗口太小",
   "admin__desktop_only_window_too_small_explainer": "管理面板需要至少 1200px 的视口宽度才能正常运行。请调整浏览器窗口大小或使用更大的屏幕。",
   "admin__desktop_only_current_width": "电流宽度",
-
   "admin__filter_stat_access": "访问",
   "admin__filter_stat_filtered": "已过滤",
   "admin__filter_stat_selected": "已选择",
-
   "admin__validation_name_is_required": "名称为必填项",
   "admin__validation_name_lte_128_chars": "最多 128 个字符",
   "admin__validation_short_name_is_required": "需要简称",
@@ -172,7 +145,6 @@
   "admin__validation_url_invalid": "URL 无效 -- 您是否添加了 https://？",
   "admin__validation_attribution_is_required": "需要归因",
   "admin__validation_attribution_lte_128_chars": "最多 128 个字符",
-
   "admin__geo_lookup_address_at_location": "取得位置位址",
   "admin__geo_lookup_address_at_location_loading": "正在查找地址...",
   "admin__geo_source_language": "源语言",
@@ -181,7 +153,6 @@
   "admin__geo_forward_geocode_loading": "正在查找地址...",
   "admin__geo_latitude": "緯度",
   "admin__geo_longitude": "經度",
-
   "admin__forms_common_descriptors": "描述符",
   "admin__forms_common_classifiers": "分类字段",
   "admin__forms_common_classifiers_subtitle": "用于过滤特征",
@@ -191,7 +162,6 @@
   "admin__forms_common_name_short": "简称",
   "admin__forms_common_description": "描述",
   "admin__forms_common_code": "代码",
-
   "admin__forms_organisation_name": "全名",
   "admin__forms_organisation_name_short": "简称",
   "admin__forms_organisation_description": "描述",
@@ -200,7 +170,6 @@
   "admin__forms_organisation_code": "代码",
   "admin__forms_organisation_url": "网址",
   "admin__forms_organisation_image_title": "个人资料图片",
-
   "admin__forms_project_credit": "署名",
   "admin__forms_project_credit_subtitle": "该项目在什么许可证下发布（例如 <code>CC-BY-SA</code> 或 <code>Copyrighted</code>），以及应该如何署名？",
   "admin__forms_project_license": "许可证",
@@ -213,7 +182,6 @@
   "admin__forms_project_specifiers_title": "自由格式字段",
   "admin__forms_project_specifiers_subtitle": "在特征信息面板中显示",
   "admin__forms_project_image_title": "横幅图片",
-
   "admin__forms_layer_name": "全名",
   "admin__forms_layer_name_short": "简称",
   "admin__forms_layer_description": "描述",
@@ -222,7 +190,6 @@
   "admin__forms_layer_classifiers_subtitle": "用于过滤特征",
   "admin__forms_layer_specifiers_title": "自由格式字段",
   "admin__forms_layer_specifiers_subtitle": "在特征信息面板中显示",
-
   "admin__forms_feature_title": "标题",
   "admin__forms_feature_description": "描述",
   "admin__forms_feature_classifiers_title": "分类字段",

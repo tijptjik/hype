@@ -44,6 +44,8 @@ function filterOrganisations(organisations: Organisation[], term: string) {
 }
 
 const filteredOrganisations = $derived(filterOrganisations(organisations, searchTerm));
+
+let isDefaultOpen = $derived(document.body.clientHeight > 1000);
 </script>
 
 <!-- COMPONENTS -->
@@ -64,7 +66,8 @@ const filteredOrganisations = $derived(filterOrganisations(organisations, search
   icon={UserGroup}
   iconVerticalPaddingClass="pt-2"
   iconColorClass="text-primary"
-  collapsedContent={SelectedOrganisations}>
+  collapsedContent={SelectedOrganisations}
+  defaultOpen={isDefaultOpen}>
   {#if organisations.length > 4}
     <FilterBar bind:searchTerm />
   {/if}
@@ -73,7 +76,7 @@ const filteredOrganisations = $derived(filterOrganisations(organisations, search
       <FilteredResource
         {resource}
         isSelected={selectedOrganisations.includes(resource.id)}
-        selectedClass="text-primary"
+        selectedClass="bg-primary"
         onClick={() => mapContext.toggleOrganisation(resource.id)} />
     {/each}
   </ResourceContainer>

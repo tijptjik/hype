@@ -4,21 +4,36 @@ import { m } from '$lib/i18n';
 // COMPONENTS
 import Panel from '$lib/components/layout/Panel.svelte';
 import Header from '$lib/components/panels/common/Header.svelte';
+import Info from '$lib/components/panels/common/Info.svelte';
 import Organisations from '$lib/components/panels/maps/Organisations.svelte';
 import Projects from '$lib/components/panels/maps/Projects.svelte';
 import Layers from '$lib/components/panels/maps/Layers.svelte';
+// STATE
+let isInfoOpen = $state(false);
+
+let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
+  e.stopPropagation();
+  isInfoOpen = !isInfoOpen;
+};
 </script>
 
-<Panel direction="left" scrollable={false}>
-  <Header panel="maps" title={m.maps__title()} subtitle={m.maps__subtitle()} />
-  <div class="flex h-[calc(100vh-134px)] flex-col">
-    <div class="flex-grow-1 flex min-h-0 flex-shrink-0 flex-col">
+<Panel direction="left" scrollable={true}>
+  <Header
+    panel="maps"
+    title={m.maps__title()}
+    subtitle={m.maps__subtitle()}
+    onToggleInfo={(e) => {
+      handleToggleInfo(e);
+    }} />
+  <Info isOpen={isInfoOpen} />
+  <div class="flex flex-col overflow-y-auto overscroll-none">
+    <div class="flex-grow-1 flex min-h-0 flex-col">
       <Organisations />
     </div>
-    <div class="flex-grow-2 flex-shrink-2 flex min-h-0 flex-col">
+    <div class="flex-grow-1 flex min-h-0 flex-col">
       <Projects />
     </div>
-    <div class="flex-grow-4 flex-shrink-1 flex min-h-0 flex-col">
+    <div class="flex-grow-4 flex min-h-0 flex-col">
       <Layers />
     </div>
   </div>

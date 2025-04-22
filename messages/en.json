@@ -1,47 +1,37 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-
   "lang__en": "English",
   "lang__zh_hant": "Trad. Chinese",
   "lang__zh_hans": "Simp. Chinese",
-
   "preauth__continue_with_google": "Continue with Google",
-
   "settings__title": "Settings",
   "settings__subtitle": "Just as you like it",
   "settings__signout": "Sign out",
-
   "settings__language": "Language",
-
   "filters__title": "Filters",
   "filters__subtitle": "filter features shown on the map",
   "filters__reset": "Reset filters",
   "filters__reset_count": "Clear {neighbourhoods} neighbourhoods and {properties} properties",
   "filters__neighbourhoods": "neighbourhoods",
   "filters__categories": "categories",
-
   "filters__all": "All",
   "filters__only": "Only",
   "filters__between": "Between",
   "filters__and": "and",
   "filters__stars": "Stars",
-
   "maps__title": "Maps",
   "maps__subtitle": "filter layers and add to map",
   "maps__organisations": "Organisations",
   "maps__projects": "Projects",
   "maps__layers": "Layers",
-
   "maps__layers_none": "No <b class='font-mono inline-block px-2 py-2'>Layers</b> selected <br><br><code>Empty map you will find</code>",
   "maps__projects_none": "No <b class='font-mono inline-block px-2'>Project</b> filters",
   "maps__organisations_none": "No <b class='font-mono inline-block px-2'>Organisation</b> filters",
   "maps__neighbourhoods_none": "No <b class='font-mono inline-block px-2'>Neighbourhood</b> filters",
-
   "stars__title": "Stars",
   "stars__subtitle": "saved for a future visit",
   "stars__want_to_visit": "Want to visit",
   "stars__have_visited": "Visited",
-
   "navbar__projects": "Projects",
   "navbar__neighbourhoods": "Hoods",
   "navbar__blog": "Blog",
@@ -54,7 +44,6 @@
   "navbar__new": "New",
   "navbar__admin": "Admin",
   "navbar__tasks": "Review Queue",
-
   "profile__registered_account": "Registered account",
   "profile__member_since": "Member since",
   "profile__attribution": "Attribution",
@@ -70,7 +59,6 @@
   "profile__role_type__maintainer": "Maintainer",
   "profile__role_type__member": "Member",
   "profile__role_type__contributor": "Contributor",
-
   "forms__type_here": "Type here",
   "forms__reset": "Reset",
   "forms__save": "Save",
@@ -79,16 +67,12 @@
   "forms__pending": "Action Required",
   "forms__unpublish": "Unpublish",
   "forms__publish": "Publish",
-
   "organisation__core": "Main",
   "organisation__images": "Image",
-
   "project__core": "Main",
   "project__images": "Image",
   "project__fields": "Fields",
-
   "layer__core": "Main",
-
   "feature__core": "Main",
   "feature__address": "Address",
   "feature__images": "Photos",
@@ -116,33 +100,26 @@
   "feature__info_classifition_summary": "Note that is a feature is permanently unavailable AND there is no historic, intangible value to referencing the site, then it should simply to unpublished to delist it from all maps.",
   "feature__info_specification_summary": "Free-form text fields that provide additional context and references. Fields are defined at the Collection level.",
   "feature__info_map_summary": "Unlock the map by clicking on the top-right lock, then drag the map to relocate the feature marker.",
-
   "menu_maps": "Maps",
   "menu_filters": "Filters",
   "menu_stars": "Stars",
   "menu_settings": "Settings",
   "menu_admin": "Admin",
-
   "settings_contributor_title": "Contribution Credit",
   "settings_contributor_description": "What name would you like to be credited for your contributed photos and features",
   "settings_contributor_placeholder": "Enter your name",
-
   "settings_default_map_title": "Default Maps",
   "settings_default_map_description": "Choose which maps should load by default",
-
   "settings_experimental_title": "Experimental",
   "settings_experimental_description": "Preview features before release",
   "settings_experimental_contributor_mode": "Contributor Mode",
   "settings_experimental_contributor_description": "Prominent UI to add photos and features",
-
   "report_missing__label": "This is missing because",
   "report_missing__placeholder": "Please provide the reason why you believe this is missing",
   "report_missing__success": "Succesfully submitted report",
   "report_missing__error": "Failed to submit report",
-
   "validation__at_least_one_image_as_evidence": "Please upload at least one photo as evidence",
   "validation__at_least_five_characters": "Please provide more detail - at least 5 characters",
-
   "omni__title_walks": "Walks",
   "omni__title_neighbourhoods": "Hoods",
   "omni__title_features": "Features",
@@ -150,24 +127,19 @@
   "omni__no_results": "No results found",
   "omni__placeholder": "Start your journey...",
   "omni__search_results": "Search Results: {searchTerm}",
-
   "map__no_markers_without_layers": "Without layers the world is empty",
   "map__select_layer": "Add Layer",
-
   "admin__desktop_only_window_too_small": "Window Too Small",
   "admin__desktop_only_window_too_small_explainer": "The admin panel requires a viewport width of at least 1200px to function properly. Please resize your browser window or use a larger screen.",
   "admin__desktop_only_current_width": "Current Width",
-
   "admin__filter_stat_access": "Access",
   "admin__filter_stat_filtered": "Filter",
   "admin__filter_stat_selected": "Select",
-
   "admin__validation_user_roles_at_least_one_owner": "Add an Owner",
   "admin__validation_user_roles_at_least_one_maintainer": "Add a Maintainer",
   "admin__validation_code_is_required": "Code is required",
   "admin__validation_code_lte_24_chars": "Code must be 24 characters or less",
   "admin__validation_code_valid_characters": "Must contain only alphanumerics, underscores and $ characters",
-
   "admin__validation_name_is_required": "Name is required",
   "admin__validation_name_lte_128_chars": "Maximum of 128 characters",
   "admin__validation_short_name_is_required": "Short Name is required",
@@ -178,7 +150,6 @@
   "admin__validation_url_invalid": "URL is invalid -- did you add https://?",
   "admin__validation_attribution_is_required": "Attribution is required",
   "admin__validation_attribution_lte_128_chars": "Maximum of 128 characters",
-
   "admin__geo_lookup_address_at_location": "Get address for location",
   "admin__geo_lookup_address_at_location_loading": "Looking up address...",
   "admin__geo_source_language": "Source",
@@ -187,7 +158,6 @@
   "admin__geo_forward_geocode_loading": "Fetching address",
   "admin__geo_latitude": "Latitude",
   "admin__geo_longitude": "Longitude",
-
   "admin__forms_common_descriptors": "Descriptors",
   "admin__forms_common_classifiers": "Categorical Fields",
   "admin__forms_common_classifiers_subtitle": "by which features can be filtered",
@@ -197,12 +167,10 @@
   "admin__forms_common_name_short": "Short Name",
   "admin__forms_common_description": "Description",
   "admin__forms_common_code": "Code",
-
   "admin__forms_organisation_members_title": "Members",
   "admin__forms_organisation_members_subtitle": "Members can be set as Project Maintainers",
   "admin__forms_organisation_url": "URL",
   "admin__forms_organisation_image_title": "Profile Image",
-
   "admin__forms_project_credit": "Credit",
   "admin__forms_project_credit_subtitle": "Under which licence (e.g. <code>CC-BY-SA</code> or <code>Copyrighted</code>) is this project published, and how should it be attributed?",
   "admin__forms_project_license": "License",
@@ -210,7 +178,6 @@
   "admin__forms_project_members_title": "Members with Edit Access",
   "admin__forms_project_members_subtitle": "Maintainers have access to the review queue and can accept or reject feature changes",
   "admin__forms_project_image_title": "Banner Image",
-
   "admin__forms_feature_title": "Title",
   "admin__forms_feature_address_components_title": "Address Components",
   "admin__forms_feature_addressing_title": "Addressing",

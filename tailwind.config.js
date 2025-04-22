@@ -22,7 +22,8 @@ export default {
       indigo: colors.indigo,
       yellow: colors.yellow,
       'map-primary': '#cb37c1',
-      'map-base': '#4987e2'
+      'map-base': '#4987e2',
+      'base-50': '#556172'
     },
     extend: {
       borderStyle: ['hover'],
@@ -111,6 +112,7 @@ export default {
           'accent-content': '#262601',
           neutral: '#2A323C',
           'neutral-content': '#A6ADBB',
+          'base-50': '#3f4752',
           'base-100': '#1D232A',
           'base-200': '#191E24',
           'base-300': '#15191E',

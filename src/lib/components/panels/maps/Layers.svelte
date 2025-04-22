@@ -76,7 +76,7 @@ const filteredLayers = $derived(filterLayers(layers, searchTerm));
         {layer}
         {project}
         {organisation}
-        selectedClass="text-secondary"
+        selectedClass="bg-secondary"
         isSelected={selectedLayers.includes(layer.id)}
         onClick={() => mapContext.toggleLayer(layer.id)} />
     {/each}
