@@ -51,7 +51,6 @@ $effect(() => {
   if (mapContext.getActiveCollection() == null) {
     void handleFeatureSelection();
   }
-  console.log('mapContext.feature', mapContext.features[featureId]);
 });
 
 // Helper function to handle async operations

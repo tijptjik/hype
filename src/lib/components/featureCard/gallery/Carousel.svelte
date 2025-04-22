@@ -2,9 +2,77 @@
 import Photo from './Photo.svelte';
 import Icon from '$lib/components/common/Icon.svelte';
 import { ChevronLeft, ChevronRight } from '@steeze-ui/heroicons';
-import { onMount } from 'svelte';
+import { onMount, tick } from 'svelte';
 // SERVICES
 import { getImageService } from '$lib/context/images.svelte';
+
+type PhotoComponent = {
+  id: string;
+  index: number;
+  position: number;
+};
+
+// UTILS
+
+let getImageIndex = (index: number): number => {
+  const length = images.length;
+  return ((index % length) + length) % length;
+};
+
+let getPhotoComponents = (): PhotoComponent[] => {
+  // For single image, just show it without any transitions or wrapping
+  if (images.length === 1) {
+    return [
+      {
+        id: 'single-photo',
+        index: 0,
+        position: 0
+      }
+    ];
+  }
+
+  // Original initialization for multiple images
+  const components = [
+    {
+      id: `photo-${getImageIndex(currentIndex - 1)}${images.length == 2 ? '-clone' : ''}`,
+      index: getImageIndex(currentIndex - 1),
+      position: -1
+    },
+    {
+      id: `photo-${getImageIndex(currentIndex)}`,
+      index: getImageIndex(currentIndex),
+      position: 0
+    },
+    {
+      id: `photo-${getImageIndex(currentIndex + 1)}`,
+      index: getImageIndex(currentIndex + 1),
+      position: 1
+    }
+  ];
+
+  console.log('[Carousel] getPhotoComponents', components);
+  return components;
+};
+
+let setState = (state: {
+  currentIndex?: number;
+  targetIndex?: number;
+  containerOffsetX?: number;
+  isDragging?: boolean;
+  isTransitioning?: boolean;
+  startX?: number;
+  currentDelta?: number;
+}) => {
+  isTransitioning = state.isTransitioning ?? isTransitioning;
+  isDragging = state.isDragging ?? isDragging;
+  // tick().then(() => {
+  currentIndex = state.currentIndex ?? currentIndex;
+  targetIndex = state.targetIndex ?? targetIndex;
+  currentDelta = state.currentDelta ?? currentDelta;
+  containerOffsetX = state.containerOffsetX ?? containerOffsetX;
+  startX = state.startX ?? startX;
+  // });
+};
 
 // SERVICES
 const imageService = getImageService();
@@ -12,143 +80,99 @@ let images = $derived(imageService.getImages());
 
 // ELEMENTS
 let container: HTMLDivElement;
-let imageContainer: HTMLDivElement;
+let imageContainer: HTMLDivElement | null = $state(null);
 
 // STATE : LOCAL
 let currentIndex = $state(0);
+let targetIndex = $state(0);
 let containerWidth = 0;
 let isTransitioning = $state(false);
-let translateX = $state(0);
-let photoComponents = $state<{ id: string; index: number; position: number }[]>([]);
+let containerOffsetX = $state(0);
+let photoComponents: PhotoComponent[] = $derived.by(getPhotoComponents);
 
 // TOUCH STATE
 let isDragging = $state(false);
 let startX = $state(0);
 let currentDelta = $state(0);
-let dragStartTranslateX = $state(0); // Add this to track initial translateX when drag starts
 
 // CONSTANTS
-const DRAG_THRESHOLD = 150;
+const DRAG_THRESHOLD = 100;
 const TRANSITION_DURATION = 300;
 
-function getImageIndex(index: number): number {
-  const length = images.length;
-  return ((index % length) + length) % length;
-}
-
-function updatePhotoComponents(direction: 'left' | 'right') {
-  const newIndex = getImageIndex(currentIndex + (direction === 'left' ? 1 : -1));
-  const existingComponents = new Set(photoComponents.map((p) => p.index));
-
-  if (direction === 'left') {
-    // Only add new photo if it doesn't exist
-    const rightmostPosition = Math.max(...photoComponents.map((p) => p.position));
-    const newPhotoIndex = getImageIndex(currentIndex + 2);
-
-    if (!existingComponents.has(newPhotoIndex)) {
-      photoComponents = [
-        ...photoComponents,
-        {
-          id: `photo-${newPhotoIndex}-${Date.now()}`,
-          index: newPhotoIndex,
-          position: rightmostPosition + 1
-        }
-      ];
-    }
-
-    // Remove leftmost photo if we have more than 4
-    if (photoComponents.length > 4) {
-      photoComponents = photoComponents.slice(1);
-    }
-  } else {
-    // Only add new photo if it doesn't exist
-    const leftmostPosition = Math.min(...photoComponents.map((p) => p.position));
-    const newPhotoIndex = getImageIndex(currentIndex - 2);
-
-    if (!existingComponents.has(newPhotoIndex)) {
-      photoComponents = [
-        {
-          id: `photo-${newPhotoIndex}-${Date.now()}`,
-          index: newPhotoIndex,
-          position: leftmostPosition - 1
-        },
-        ...photoComponents
-
-      ];
-    }
-
-    // Remove rightmost photo if we have more than 4
-    if (photoComponents.length > 4) {
-      photoComponents = photoComponents.slice(0, -1);
-    }
-  }
-}
-
-function snapToPosition(nextIndex: number, direction: 'left' | 'right') {
+function snapToPosition() {
   if (isTransitioning) return;
 
-  isTransitioning = true;
-  isDragging = false;
+  console.log('[Carousel] snapToPosition', currentIndex, targetIndex);
+  const movement = currentIndex < targetIndex ? -containerWidth : containerWidth;
 
-  // Update translateX based on direction
-  const movement = direction === 'left' ? -containerWidth : containerWidth;
-  translateX += movement;
-
-  // Add new photo component in the direction we're moving
-  updatePhotoComponents(direction);
+  setState({
+    isDragging: false,
+    isTransitioning: true,
+    containerOffsetX: movement
+  });
 
   setTimeout(() => {
-    // Update current index
-    currentIndex = nextIndex;
-    isTransitioning = false;
-  }, TRANSITION_DURATION);
+    setState({
+      isTransitioning: false,
+      containerOffsetX: 0,
+      currentIndex: targetIndex
+    });
+  }, TRANSITION_DURATION + 50);
 }
 
 function handleTouchStart(event: TouchEvent) {
   if (isTransitioning) return;
 
-  isDragging = true;
-  startX = event.touches[0].clientX;
-  currentDelta = 0;
-  dragStartTranslateX = translateX; // Store the initial translateX value
+  setState({
+    isDragging: true,
+    startX: event.touches[0].clientX,
+    currentDelta: 0,
+    containerOffsetX: 0
+  });
 }
 
-function handleTouchMove(event: TouchEvent) {
+let handleTouchMove = async (event: TouchEvent) => {
   if (!isDragging || isTransitioning) return;
 
-  const currentX = event.touches[0].clientX;
-  currentDelta = currentX - startX;
+  currentDelta = event.touches[0].clientX - startX;
+  containerOffsetX = currentDelta;
+  await checkAndHandleThresholdMet();
 
-  checkAndHandleThresholdMet();
+  console.log('[Carousel] handleTouchMove', event);
 
   // Update transform directly during drag
-  imageContainer.style.transform = `translateX(${dragStartTranslateX + currentDelta}px)`;
-}
+  // imageContainer.style.transform = `translateX(${currentDelta}px)`;
+};
 
 function handleTouchEnd(event: TouchEvent) {
   if (!isDragging || isTransitioning) return;
 
-  isDragging = false;
+  setState({
+    isDragging: false
+  });
 
-  if (Math.abs(currentDelta) < 10) {
-    handleInteraction(event);
-  } else {
-    // If we haven't dragged far enough, snap back
-    isTransitioning = true;
-    imageContainer.style.transform = `translateX(${translateX}px)`;
+  if (Math.abs(currentDelta) < DRAG_THRESHOLD) {
+    setState({
+      isTransitioning: true,
+      containerOffsetX: 0,
+      currentDelta: 0
+    });
 
     setTimeout(() => {
-      isTransitioning = false;
-      currentDelta = 0;
+      setState({
+        isTransitioning: false
+      });
     }, TRANSITION_DURATION);
   }
 }
 
-function checkAndHandleThresholdMet() {
+async function checkAndHandleThresholdMet() {
   if (Math.abs(currentDelta) >= DRAG_THRESHOLD) {
-    const direction = currentDelta > 0 ? 'right' : 'left';
-    const nextIndex = getImageIndex(currentIndex + (direction === 'left' ? 1 : -1));
-    snapToPosition(nextIndex, direction);
+    setState({
+      isDragging: false,
+      targetIndex: currentIndex + (currentDelta > 0 ? -1 : 1)
+    });
+    snapToPosition();
   }
 }
 
@@ -164,57 +188,23 @@ function handleInteraction(event: MouseEvent | TouchEvent | PointerEvent) {
         : event?.clientX;
   const relativeX = clientX - rect.left;
   const isLeftHalf = relativeX < rect.width / 2;
+  setState({
+    targetIndex: currentIndex + (isLeftHalf ? -1 : 1)
+  });
 
-  snapToPosition(
-    getImageIndex(currentIndex + (isLeftHalf ? -1 : 1)),
-    isLeftHalf ? 'right' : 'left'
-  );
+  snapToPosition();
 }
 
 function cleanup() {
   isDragging = false;
   isTransitioning = false;
   currentDelta = 0;
-  translateX = 0;
-}
-
-function initializePhotoComponents() {
-  // For single image, just show it without any transitions or wrapping
-  if (images.length === 1) {
-    photoComponents = [
-      {
-        id: 'photo-0-init',
-        index: 0,
-        position: 0
-      }
-    ];
-    return;
-  }
-
-  // Original initialization for multiple images
-  photoComponents = [
-    {
-      id: `photo-${getImageIndex(currentIndex - 1)}-init`,
-      index: getImageIndex(currentIndex - 1),
-      position: -1
-    },
-    {
-      id: `photo-${currentIndex}-init`,
-      index: currentIndex,
-      position: 0
-    },
-    {
-      id: `photo-${getImageIndex(currentIndex + 1)}-init`,
-      index: getImageIndex(currentIndex + 1),
-      position: 1
-    }
-  ];
+  containerOffsetX = 0;
 }
 
 onMount(() => {
   if (container) {
     containerWidth = container.offsetWidth;
-    initializePhotoComponents();
   }
 
   container?.addEventListener('touchcancel', cleanup);
@@ -232,8 +222,12 @@ onMount(() => {
         <button
           class="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
           onclick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
-            snapToPosition(getImageIndex(currentIndex - 1), 'right');
+            setState({
+              targetIndex: currentIndex - 1
+            });
+            snapToPosition();
           }}
           aria-label="Previous image">
           <Icon src={ChevronLeft} class="h-4 w-4" />
@@ -242,8 +236,12 @@ onMount(() => {
         <button
           class="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
           onclick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
-            snapToPosition(getImageIndex(currentIndex + 1), 'left');
+            setState({
+              targetIndex: currentIndex + 1
+            });
+            snapToPosition();
           }}
           aria-label="Next image">
           <Icon src={ChevronRight} class="h-4 w-4" />
@@ -254,14 +252,14 @@ onMount(() => {
     <!-- Image intent -->
     <div
       class="absolute bottom-2 left-2 z-10 rounded bg-black/50 px-2 py-1 font-mono text-xs text-white">
-      {images[currentIndex].intent}
+      {images[getImageIndex(currentIndex)].intent}
     </div>
 
     <!-- Image counter - only show if more than one image -->
     {#if images.length > 1}
       <div
         class="absolute bottom-2 right-2 z-10 rounded bg-black/50 px-2 py-1 text-xs text-white">
-        {currentIndex + 1} / {images.length}
+        {getImageIndex(currentIndex) + 1} / {images.length}
       </div>
     {/if}
 
@@ -269,27 +267,21 @@ onMount(() => {
       class="relative h-full w-full touch-pan-y select-none"
       ontouchstart={images.length > 1 ? handleTouchStart : undefined}
       ontouchmove={images.length > 1 ? handleTouchMove : undefined}
-      ontouchend={images.length > 1 ? (e) => handleTouchEnd(e) : undefined}
+      ontouchend={images.length > 1 ? handleTouchEnd : undefined}
       onclick={images.length > 1 ? handleInteraction : undefined}
       class:dragging={isDragging}
       class:transitioning={isTransitioning}
-      style="transform: translateX({translateX}px)"
+      style="transform: translateX({containerOffsetX}px)"
       bind:this={imageContainer}>
-      <div class="absolute inset-0">
-        {#each photoComponents as photo (photo.id)}
+      {#each photoComponents as photo (photo.id)}
+        {#key photo.id}
           <div
-            class="absolute h-full w-full"
-            style="transform: translateX({photo.position * 100}%)">
-            <Photo
-              image={images[photo.index]}
-              position={photo.position === 0
-                ? 'current'
-                : photo.position < 0
-                  ? 'previous'
-                  : 'next'} />
+            class="absolute h-full w-full overflow-hidden"
+            style="transform: translateX({photo.position * 100}%);">
+            <Photo image={images[photo.index]} />
           </div>
-        {/each}
-      </div>
+        {/key}
+      {/each}
     </div>
   {/if}
 </div>
