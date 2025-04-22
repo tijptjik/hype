@@ -23,7 +23,7 @@ onMount(() => {
 
 <div
   id={`${direction}-panel`}
-  class="fixed top-0 z-50 flex h-[calc(100vh-77px)] w-full select-none flex-col bg-black shadow-xl [@media(min-width:920px)]:w-[420px]"
+  class="absolute top-0 z-50 flex h-full w-full select-none flex-col bg-black shadow-xl [@media(min-width:920px)]:w-[420px]"
   class:overflow-y-hidden={!scrollable}
   class:overflow-y-auto={scrollable}
   class:md:left-0={direction === 'left'}

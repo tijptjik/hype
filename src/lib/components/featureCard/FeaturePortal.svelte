@@ -82,7 +82,7 @@ $effect(() => {
 $effect(() => {
   leftOpen;
   rightOpen;
-  flyToFeature(300);
+  flyToFeature(0);
 });
 
 function wrapText(text: string, maxWidth: number = 170): string[] {

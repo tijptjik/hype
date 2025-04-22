@@ -73,7 +73,8 @@ $effect(() => {
 
 <div class="flex h-dvh flex-col justify-around">
   {#if session}
-    <main class="top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
+    <main
+      class="relative top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
       <!-- Panels -->
       {#if mapContext.state.panels.filters}
         <Filters />
