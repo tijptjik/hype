@@ -548,6 +548,7 @@ export const ImageUpdateAPI = ImageUpdate.extend({
 
 export const ImageGetAPI = ImageUpdate.extend({
   featureId: z.string(),
+  attribution: z.string().optional(),
   intent: z
     .enum(['canonical', 'closeUp', 'context', 'general', 'evidence', 'undefined'])
     .default('undefined'),

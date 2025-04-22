@@ -3,8 +3,10 @@ import Photo from './Photo.svelte';
 import Icon from '$lib/components/common/Icon.svelte';
 import { ChevronLeft, ChevronRight } from '@steeze-ui/heroicons';
 import { onMount } from 'svelte';
+import { fade } from 'svelte/transition';
 // SERVICES
 import { getImageService } from '$lib/context/images.svelte';
+import { formatDate } from '$lib';
 
 type PhotoComponent = {
   id: string;
@@ -198,6 +200,12 @@ function cleanup() {
   containerOffsetX = 0;
 }
 
+let showContributor = $state(false);
+
+let toggleAttribution = () => {
+  showContributor = !showContributor;
+};
+
 onMount(() => {
   if (container) {
     containerWidth = container.offsetWidth;
@@ -245,17 +253,59 @@ onMount(() => {
       </div>
     {/if}
 
-    <!-- Image intent -->
+    <!-- Image intent and attribution -->
     <div
-      class="absolute bottom-2 left-2 z-10 rounded bg-black/50 px-2 py-1 font-mono text-xs text-white">
-      {images[getImageIndex(currentIndex)].intent}
+      class="absolute bottom-2 left-2 z-10 flex h-6 select-none flex-row gap-2 overflow-visible caret-transparent">
+      <div
+        class="absolute z-30 flex w-64 -translate-y-16 flex-col items-start justify-start gap-1.5">
+        <div
+          class="h-6 {showContributor
+            ? '-translate-y-0 opacity-100'
+            : 'translate-y-12 opacity-0'} rounded bg-black/80 px-2 py-1 font-mono text-xs text-white transition-all delay-100 duration-300">
+          <span>By </span>
+          <span class="font-bold">
+            {images[getImageIndex(currentIndex)].attribution}
+          </span>
+        </div>
+        <div
+          class="h-6 {showContributor
+            ? '-translate-y-0 opacity-100'
+            : 'translate-y-6 opacity-0'} rounded bg-black/80 px-2 py-1 font-mono text-xs text-white transition-all duration-300">
+          <span>On </span>
+          <span class="font-bold">
+            {formatDate(images[getImageIndex(currentIndex)].capturedAt)}
+          </span>
+        </div>
+      </div>
+      <div
+        class="z-40 rounded bg-black/50 px-1.5 py-1 text-xs text-white"
+        onmouseenter={toggleAttribution}
+        onmouseleave={toggleAttribution}
+        ontouchstart={toggleAttribution}
+        onkeydown={toggleAttribution}>
+        ⓘ
+      </div>
+      <div class="grid grid-cols-1 grid-rows-1">
+        {#key images[getImageIndex(currentIndex)].intent}
+          <div
+            class="grid-row-1 grid-col-1 h-6 rounded bg-black/50 px-2 py-1 font-mono text-xs text-white transition-all duration-100"
+            in:fade={{ duration: 100 }}
+            out:fade={{ duration: 100 }}>
+            {images[getImageIndex(currentIndex)].intent}
+          </div>
+        {/key}
+      </div>
     </div>
 
     <!-- Image counter - only show if more than one image -->
     {#if images.length > 1}
-      <div
-        class="absolute bottom-2 right-2 z-10 rounded bg-black/50 px-2 py-1 text-xs text-white">
-        {getImageIndex(currentIndex) + 1} / {images.length}
+      <div class="grid select-none grid-cols-1 grid-rows-1 caret-transparent">
+        {#key images[getImageIndex(currentIndex)].intent}
+          <div
+            class="absolute bottom-2 right-2 z-10 rounded bg-black/50 px-2 py-1 text-xs text-white">
+            {getImageIndex(currentIndex) + 1} / {images.length}
+          </div>
+        {/key}
       </div>
     {/if}
 

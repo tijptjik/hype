@@ -9,7 +9,8 @@ import {
   layer,
   organisation,
   organisationRole,
-  taskImage
+  taskImage,
+  user
 } from '../schema';
 import { ImageInsert, ImageUpdate } from '../zod';
 import db, { updatePartial } from '$lib/db';
@@ -277,10 +278,13 @@ export const getImagesForFeature = async (
       // Include featureImage fields
       intent: featureImage.intent,
       isPublished: featureImage.isPublished,
-      publishedAt: featureImage.publishedAt
+      publishedAt: featureImage.publishedAt,
+      // Include user fields
+      attribution: user.attribution
     })
     .from(image)
     .innerJoin(featureImage, eq(image.id, featureImage.imageId))
+    .innerJoin(user, eq(image.contributorId, user.id))
     .where(
       and(
         eq(featureImage.featureId, featureId),
