@@ -4,16 +4,30 @@ import { m } from '$lib/i18n';
 // COMPONENTS
 import Panel from '$lib/components/layout/Panel.svelte';
 import Header from '$lib/components/panels/common/Header.svelte';
+import Info from '$lib/components/panels/filters/Info.svelte';
 import Reset from '$lib/components/panels/filters/Reset.svelte';
 import Neighbourhoods from '$lib/components/panels/filters/Neighbourhoods.svelte';
 import Categories from '$lib/components/panels/filters/Categories.svelte';
+// STATE
+let isInfoOpen = $state(false);
+
+let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
+  e.stopPropagation();
+  isInfoOpen = !isInfoOpen;
+};
 </script>
 
 <Panel direction="right" scrollable={true}>
-  <Header panel="filters" title={m.filters__title()} subtitle={m.filters__subtitle()} />
+  <Header
+    panel="filters"
+    title={m.filters__title()}
+    onToggleInfo={(e) => {
+      handleToggleInfo(e);
+    }} />
   <Reset />
-  <div class="flex h-[calc(100vh-206px)] flex-col">
-    <div class="flex-grow-1 flex max-h-[calc(50vh)] min-h-0 flex-shrink-0 flex-col">
+  <Info isOpen={isInfoOpen} />
+  <div class="flex flex-col">
+    <div class="flex-grow-1 flex max-h-[40vh] min-h-0 flex-shrink-0 flex-col">
       <Neighbourhoods />
     </div>
     <div

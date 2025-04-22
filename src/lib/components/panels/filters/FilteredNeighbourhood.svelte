@@ -6,7 +6,12 @@ import subNeighbourhoods from '$lib/map/subNeighbourhoods.json';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
 
-const { neighbourhood, data, selectedNeighbourhoods } = $props();
+const {
+  neighbourhood,
+  data,
+  selectedNeighbourhoods,
+  selectedClass = 'bg-emerald-500'
+} = $props();
 
 // Initialize map state
 const mapContext = getMapContext();
@@ -35,23 +40,30 @@ function getFeatureCount(neighbourhoodKey: string) {
 }
 </script>
 
-<div
-  class="flex min-h-11 w-full cursor-pointer flex-row items-center gap-4 bg-black py-2 pl-8 pr-4 transition-colors duration-200 hover:bg-base-300"
-  class:border-l-4={selectedNeighbourhoods.includes(neighbourhood)}
-  class:border-emerald-500={selectedNeighbourhoods.includes(neighbourhood)}
-  onclick={() => mapContext.toggleNeighbourhood(neighbourhood)}>
-  <div class="flex flex-grow flex-col">
-    <p class="flex space-x-2 font-mono text-xs uppercase tracking-wide">
-      <span class="text-primary/80">{getI18nValue(data, 'region')}</span>
-      <span class="mtext-base-content/60 font-sans">::</span>
-      <span class="text-accent">{getI18nValue(data, 'district')}</span>
-    </p>
-    <p class="font-normal text-base-content">
-      {languageTag() === 'en' ? neighbourhood : getI18nValue(data, 'name')}
-    </p>
+{#if getFeatureCount(neighbourhood) > 0}
+  <div
+    class="flex cursor-pointer flex-row items-center justify-between gap-4 bg-black py-2 pl-8 pr-4 transition-colors duration-200 hover:bg-base-300"
+    onclick={() => mapContext.toggleNeighbourhood(neighbourhood)}>
+    <div class="flex -translate-x-5 flex-row items-center gap-3">
+      <div
+        class="h-2 w-2 rounded-full {selectedNeighbourhoods.includes(neighbourhood)
+          ? selectedClass
+          : ''}">
+      </div>
+      <div class="flex flex-grow flex-col">
+        <p class="flex space-x-2 font-mono text-xs uppercase tracking-wide">
+          <span class="text-primary/80">{getI18nValue(data, 'region')}</span>
+          <span class="mtext-base-content/60 font-sans">::</span>
+          <span class="text-accent">{getI18nValue(data, 'district')}</span>
+        </p>
+        <p class="font-normal text-base-content">
+          {languageTag() === 'en' ? neighbourhood : getI18nValue(data, 'name')}
+        </p>
+      </div>
+    </div>
+    <div class="text-sm text-base-content/60">
+      <span class="badge h-8 w-8 font-mono text-sm"
+        >{getFeatureCount(neighbourhood)}</span>
+    </div>
   </div>
-  <div class="text-sm text-base-content/60">
-    <span class="badge h-8 w-8 font-mono text-sm"
-      >{getFeatureCount(neighbourhood)}</span>
-  </div>
-</div>
+{/if}

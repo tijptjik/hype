@@ -4,7 +4,7 @@ import { m } from '$lib/i18n';
 // COMPONENTS
 import Panel from '$lib/components/layout/Panel.svelte';
 import Header from '$lib/components/panels/common/Header.svelte';
-import Info from '$lib/components/panels/common/Info.svelte';
+import Info from '$lib/components/panels/maps/Info.svelte';
 import Organisations from '$lib/components/panels/maps/Organisations.svelte';
 import Projects from '$lib/components/panels/maps/Projects.svelte';
 import Layers from '$lib/components/panels/maps/Layers.svelte';

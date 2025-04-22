@@ -9,7 +9,6 @@ import { getMapContext } from '$lib/context/map.svelte';
 let { panel, title, subtitle, onToggleInfo } = $props<{
   panel: string;
   title: string;
-  subtitle?: string;
   onToggleInfo?: (e: MouseEvent | TouchEvent) => void;
 }>();
 
@@ -36,9 +35,6 @@ $effect(() => {
     <h2 class="text-lg font-semibold uppercase tracking-widest text-primary">
       {title}
     </h2>
-    <!-- {#if subtitle} -->
-    <!-- <p class="text-sm text-base-50">{subtitle}</p> -->
-    <!-- {/if} -->
   </div>
   <div class="flex flex-row items-center gap-4">
     <button

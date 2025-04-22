@@ -10,30 +10,30 @@ const {
   resourceParent = undefined,
   isSelected,
   onClick,
-  selectedClass = 'text-blue-400'
+  selectedClass = 'bg-blue-400'
 } = $props();
 </script>
 
 <div
-  class="flex cursor-pointer flex-row items-center justify-between gap-4 bg-black py-2 pl-8 pr-4 transition-colors duration-200 hover:bg-base-300 {isSelected
-    ? selectedClass
-    : ''}"
+  class="flex cursor-pointer flex-row items-center justify-between gap-4 bg-black py-2 pl-8 pr-4 transition-colors duration-200 hover:bg-base-300"
   onclick={onClick}>
-  {#if resourceParent}
+  <div class="flex -translate-x-5 flex-row items-center gap-3">
+    <div class="h-2 w-2 rounded-full {isSelected ? selectedClass : ''}"></div>
     <div class="flex flex-col items-start gap-0">
-      <p class="flex space-x-0.5 font-mono text-xs uppercase tracking-widest">
-        {#if languageTag() == 'en'}
-          <span class="text-primary"
-            >{resourceParent.code.replaceAll('_', '').replaceAll(' ', '')}</span>
-        {:else}
-          <span class="text-primary">{getI18nValue(resourceParent, 'nameShort')}</span>
-        {/if}
-      </p>
+      {#if resourceParent}
+        <p class="flex space-x-0.5 font-mono text-xs uppercase tracking-widest">
+          {#if languageTag() == 'en'}
+            <span class="text-primary"
+              >{resourceParent.code.replaceAll('_', '').replaceAll(' ', '')}</span>
+          {:else}
+            <span class="text-primary"
+              >{getI18nValue(resourceParent, 'nameShort')}</span>
+          {/if}
+        </p>
+      {/if}
       <p class="font-light">{getI18nValue(resource, 'name')}</p>
     </div>
-  {:else}
-    <p class="font-light">{getI18nValue(resource, 'name')}</p>
-  {/if}
+  </div>
   <div class="text-sm text-base-content/60">
     <Icon
       src={isSelected ? XMark : Funnel}
