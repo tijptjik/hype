@@ -34,7 +34,10 @@ let displayText = $derived.by(() => {
   }
 });
 
-let values: [number, number] = $state([selectedRange.rangeMin, selectedRange.rangeMax]);
+let values: [number, number] = $derived([
+  selectedRange?.rangeMin ?? min,
+  selectedRange?.rangeMax ?? max
+]);
 
 $effect(() => {
   mapContext.setRangePropertyFilter(layerId, key, values);

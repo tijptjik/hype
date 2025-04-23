@@ -455,26 +455,39 @@ export class mapContext {
   getFilterCount(): { neighbourhoods: number; properties: number } {
     return {
       neighbourhoods: this.state.filters.neighbourhoods.length,
-      properties: Object.entries(this.state.filters.properties || {}).filter(
-        ([_, values]) =>
-          // Count arrays with values
-          (Array.isArray(values) && values.length > 0) ||
-          // Count range objects only if they differ from their global limits
-          (typeof values === 'object' &&
-            values !== null &&
-            !Array.isArray(values) &&
-            'rangeMin' in values &&
-            'rangeMax' in values &&
-            'globalMin' in values &&
-            'globalMax' in values &&
-            (values.rangeMin !== values.globalMin ||
-              values.rangeMax !== values.globalMax))
-      ).length
+      properties: Object.entries(this.state.filters.properties || {}).reduce(
+        (total, [_, layerFilters]) => {
+          // For each layer, count its active property filters
+          return (
+            total +
+            Object.entries(layerFilters).filter(
+              ([_, values]) =>
+                // Count arrays with values
+                (Array.isArray(values) && values.length > 0) ||
+                // Count range objects only if they differ from their global limits
+                (typeof values === 'object' &&
+                  values !== null &&
+                  !Array.isArray(values) &&
+                  'rangeMin' in values &&
+                  'rangeMax' in values &&
+                  'globalMin' in values &&
+                  'globalMax' in values &&
+                  (values.rangeMin !== values.globalMin ||
+                    values.rangeMax !== values.globalMax))
+            ).length
+          );
+        },
+        0
+      )
     };
   }
 
   clearFilters() {
     this.state.filters = { neighbourhoods: [], properties: {} };
+    this.state.prisms.layer.forEach((layerId) => {
+      this.initialiseCategoricalPropertyFilters(layerId);
+      this.initialiseRangePropertyFilter(layerId);
+    });
   }
 
   // PRISM RELATIONS
