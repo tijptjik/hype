@@ -88,7 +88,7 @@ const precache_function = (o: any) => {
 
   // Get the animation pan diagonal tiles
   let tiles = [...diagonaltiles(o.startCenter, o.center, o.zmin)];
-  // FIXME: Simple trick to fix eventual miscalculations of zmin for flyTo
+  // CORRECTNESS: Simple trick to fix eventual miscalculations of zmin for flyTo
   //   if (o.type == 'fly' || o.type == 'fitBounds') {
   //     tiles.push(
   //       ...diagonaltiles(o.startCenter, o.center, o.zmin - 1),
@@ -105,7 +105,7 @@ const precache_function = (o: any) => {
   // Remove duplicates
   tiles = [...new Set(tiles)];
 
-  // TODO Remove hardcoded zoom level filter
+  // CORRECTNESS : Remove hardcoded zoom level filter
   // Currently the hype.hk tile server only supports zoom levels 1-14
   // So it doesn't make sense to fetch tiles for zoom levels higher than 14
   tiles = tiles.filter((t) => t[2] <= 14);

@@ -1050,7 +1050,7 @@ export type AdminFilteredResources = {
 
 export type FilterState = {
   neighbourhoods: string[];
-  properties?: Record<string, any>;
+  properties: Record<Id, Record<string, any>>;
 };
 
 export type AdminFilterState = {

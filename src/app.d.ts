@@ -3,7 +3,7 @@ import type { ParaglideLocals } from '@inlang/paraglide-sveltekit';
 // See https://kit.svelte.dev/docs/types#app
 // for information about these interfaces
 
-// TODO Add Logging - https://jeffmcmorris.medium.com/awesome-logging-in-sveltekit-6afa29c5892c
+// ENHANCEMENT: Add Logging - https://jeffmcmorris.medium.com/awesome-logging-in-sveltekit-6afa29c5892c
 
 declare global {
   let maplibregl: {

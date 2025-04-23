@@ -92,7 +92,7 @@ onMount(async () => {
 
       mapContext.map!.addControl(geolocateControl, 'bottom-right');
 
-      // TODO Reactivate
+      // TODO : Reactivate
       // setTimeout(() => {
       //   geolocateControl._geolocateButton.click();
       // }, 200);
