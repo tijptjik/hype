@@ -1,0 +1,1 @@
+ALTER TABLE `userFeature` ADD `visitedAt` text;

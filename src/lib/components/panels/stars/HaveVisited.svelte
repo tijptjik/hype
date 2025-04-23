@@ -14,19 +14,19 @@ import { Squares2x2 } from '@steeze-ui/heroicons';
 // UTILS
 import { formatRelative } from 'date-fns';
 // TYPES
-import type { Id } from '$lib/types';
+import type { Id, UserFeatureExtended } from '$lib/types';
 
 const mapContext = getMapContext();
 
 let searchTerm = $state('');
 
 // Get visited features
-let visitedFeatures = $derived(
+let visitedFeatures: UserFeatureExtended[] = $derived(
   mapContext.state.userFeatures.visited.map((visited) => {
     const feature = mapContext.state.resources.feature.find(
       (f) => f.id === visited.featureId
     );
-    const layer = mapContext.getLayer(feature);
+    const layer = feature ? mapContext.getLayer(feature) : undefined;
     const project = layer ? mapContext.getProject(layer) : undefined;
     const organisation = project ? mapContext.getOrganisation(project) : undefined;
 
@@ -101,7 +101,9 @@ let handleFeatureSelection = (featureId: Id) => {
           </p>
         </div>
         <p class="mt-1 text-xs text-neutral-content">
-          {visited.visitedDate}
+          {visited.visitedAt
+            ? formatRelative(new Date(visited.visitedAt), new Date())
+            : '-'}
         </p>
       </div>
     {/each}

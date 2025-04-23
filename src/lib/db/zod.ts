@@ -574,6 +574,15 @@ export const UserFeatureUpdate = UserFeatureInsert.extend({
   featureId: z.string()
 });
 
+export const UserFeatureUpdateExtended = UserFeatureUpdate.extend({
+  hierarchy: z.object({
+    organisation: z.string(),
+    project: z.string(),
+    layer: z.string().nullable(),
+    feature: z.string()
+  })
+});
+
 export const UserFeatureUpdateAPI = UserFeatureUpdate.extend({
   user: UserBase.optional(),
   feature: FeatureBase.optional()

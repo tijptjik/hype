@@ -76,7 +76,8 @@ import {
   LayerUpdateAPIWithProject,
   UserUpdateAPI,
   UserUpdate,
-  FeatureImageInserts
+  FeatureImageInserts,
+  UserFeatureUpdateExtended
 } from '$lib/db/zod';
 // COMPONENTS
 import CustomField from '$lib/components/forms/fields/Properties.svelte';
@@ -780,6 +781,7 @@ export type Intent =
 /* -------- */
 
 export type UserFeature = z.infer<typeof UserFeatureUpdate>;
+export type UserFeatureExtended = z.infer<typeof UserFeatureUpdateExtended>;
 export type NewUserFeature = z.infer<typeof UserFeatureInsert>;
 export type UserFeatureDB = z.infer<typeof UserFeatureUpdate>;
 export type NewUserFeatureDB = z.infer<typeof UserFeatureInsert>;

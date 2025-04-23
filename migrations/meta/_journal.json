@@ -50,6 +50,13 @@
       "when": 1742581506673,
       "tag": "0006_add publisher meta",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1745391394512,
+      "tag": "0007_add visitedAd",
+      "breakpoints": true
     }
   ]
 }
