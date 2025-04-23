@@ -49,7 +49,7 @@ const handleSelect = (item: Resource) => {
 };
 
 const handleConfirm = () => {
-  // TODO Confirm this is working
+  // VERIFY: this works
   if (!selectedItem) return;
   navigateOnAdmin(
     resourceState,

@@ -27,14 +27,3 @@ export default DATABASE_URL
         token: CLOUDFLARE_D1_TOKEN!
       }
     } satisfies Config);
-
-// TODO Remove this basic Local Only Config is the above proves to work reliably
-//
-// export default defineConfig({
-// 	schema: './src/lib/db/schema.ts',
-// 	out: './migrations',
-// 	dialect: 'sqlite',
-// 	dbCredentials: {
-// 		url: LOCAL_DB_PATH
-// 	}
-// })

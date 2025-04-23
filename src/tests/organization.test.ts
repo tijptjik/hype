@@ -23,8 +23,6 @@ import { getContextRef, OrganisationForm } from '$lib/context/forms.svelte';
 import { writable } from 'svelte/store';
 import { superForm, defaults } from 'sveltekit-superforms';
 
-// TODO Implement tests for organisationForm
-
 describe('Organization Management', () => {
   let testUsers: any[];
   let testOrg: any;

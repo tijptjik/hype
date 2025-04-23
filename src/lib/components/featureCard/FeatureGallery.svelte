@@ -26,10 +26,3 @@ const imageService = getImageService();
     <AddPhoto />
   {/if}
 </div>
-
-<style>
-/* Smooth transitions for non-dragging state */
-div:not(.dragging) {
-  transition: transform 0.3s ease-out;
-}
-</style>
