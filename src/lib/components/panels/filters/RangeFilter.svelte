@@ -17,11 +17,12 @@ type Props = {
   min: number;
   max: number;
   layerId: Id;
+  defaultOpen: boolean;
 };
 
-let { key, label, min, max, layerId }: Props = $props();
+let { key, label, min, max, layerId, defaultOpen = false }: Props = $props();
 
-let isOpen = $state(false);
+let isOpen = $state(defaultOpen);
 
 let displayText = $derived.by(() => {
   if (min === values[0] && max === values[1]) {

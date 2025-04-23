@@ -25,14 +25,15 @@ type Props = {
   label: string;
   values: Array<string | TranslatedValue>; // Property definition values
   layerId: Id;
+  defaultOpen: boolean;
 };
 
-let { key, label, values = [], layerId }: Props = $props();
+let { key, label, values = [], layerId, defaultOpen = false }: Props = $props();
 
 // Derive selected values directly from context's propertyFilters
 let selected = $derived(mapContext.propertyFilters?.[layerId]?.[key] ?? []);
 
-let isOpen = $state(false);
+let isOpen = $state(defaultOpen);
 
 // Helper function to get translated display value
 function getTranslatedValue(value: string | TranslatedValue): string {

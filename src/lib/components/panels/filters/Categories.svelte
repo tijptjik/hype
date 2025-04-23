@@ -49,7 +49,13 @@ let layerCategories = $derived(
           })
           .filter(
             (prop, index, self) => index === self.findIndex((p) => p.key === prop.key) // Ensure uniqueness by key
-          ) || [];
+          )
+          .sort((a, b) => {
+            // Sort 'grade' properties first
+            if (a.key === 'grade') return -1;
+            if (b.key === 'grade') return 1;
+            return 0;
+          }) || [];
 
       // Determine layer name display logic
       const projectLayerCount = layers.filter((l) => l.projectId === project.id).length;
@@ -112,14 +118,16 @@ function getTranslatedValues(values: any[] = []) {
             layerId={hierarchy.layerId}
             label={getI18nValue(property, 'label') || property.key}
             min={property.min!}
-            max={property.max!} />
+            max={property.max!}
+            defaultOpen={property.key === 'grade'} />
         {:else}
           <!-- Pass necessary props directly -->
           <CategoryFilter
             key={property.key}
             layerId={hierarchy.layerId}
             label={getI18nValue(property, 'label') || property.key}
-            values={getTranslatedValues(property.values)} />
+            values={getTranslatedValues(property.values)}
+            defaultOpen={property.key === 'grade'} />
         {/if}
       {/each}
     </div>
