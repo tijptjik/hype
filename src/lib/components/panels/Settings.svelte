@@ -11,7 +11,7 @@ import DefaultMap from '$lib/components/panels/settings/DefaultMap.svelte';
 import Experimental from '$lib/components/panels/settings/Experimental.svelte';
 </script>
 
-<Panel direction="right" scrollable={true}>
+<Panel position="right" scrollable={true}>
   <Header
     panel="settings"
     title={m.settings__title()}

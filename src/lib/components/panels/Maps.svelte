@@ -17,11 +17,10 @@ let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
 };
 </script>
 
-<Panel direction="left" scrollable={true}>
+<Panel position="left" scrollable={true}>
   <Header
     panel="maps"
     title={m.maps__title()}
-    subtitle={m.maps__subtitle()}
     onToggleInfo={(e) => {
       handleToggleInfo(e);
     }} />

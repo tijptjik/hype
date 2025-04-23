@@ -8,7 +8,7 @@ import WantToVisit from '$lib/components/panels/stars/WantToVisit.svelte';
 import HaveVisited from '$lib/components/panels/stars/HaveVisited.svelte';
 </script>
 
-<Panel direction="left">
+<Panel position="left">
   <Header panel="stars" title={m.stars__title()} subtitle={m.stars__subtitle()} />
   <WantToVisit />
   <HaveVisited />

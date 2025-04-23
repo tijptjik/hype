@@ -4,12 +4,12 @@ import { cubicInOut } from 'svelte/easing';
 import { onMount } from 'svelte';
 let {
   children,
-  direction = 'right',
+  position = 'right',
   scrollable = true,
   animate = true
 } = $props<{
   children: any;
-  direction?: 'left' | 'right';
+  position?: 'left' | 'right';
   scrollable?: boolean;
   animate?: boolean;
 }>();
@@ -22,16 +22,16 @@ onMount(() => {
 </script>
 
 <div
-  id={`${direction}-panel`}
+  id={`${position}-panel`}
   class="absolute top-0 z-50 flex h-full w-full select-none flex-col bg-black shadow-xl [@media(min-width:920px)]:w-[420px]"
   class:overflow-y-hidden={!scrollable}
   class:overflow-y-auto={scrollable}
-  class:md:left-0={direction === 'left'}
-  class:md:right-0={direction === 'right'}
+  class:md:left-0={position === 'left'}
+  class:md:right-0={position === 'right'}
   transition:fly={{
     duration: 150,
     easing: cubicInOut,
-    x: direction === 'left' ? -420 : 420
+    x: position === 'left' ? -420 : 420
   }}>
   <div class="h-full" class:overflow-y-auto={scrollable}>
     {@render children()}

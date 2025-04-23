@@ -12,7 +12,8 @@ let {
   description = undefined,
   defaultOpen = true,
   children,
-  collapsedContent = undefined
+  collapsedContent = undefined,
+  position = 'left'
 } = $props<{
   title: string;
   icon: string | IconSource; // Path to SVG file
@@ -22,6 +23,7 @@ let {
   defaultOpen?: boolean;
   children?: any;
   collapsedContent?: any;
+  position?: 'left' | 'right';
 }>();
 
 let isOpen = $state(defaultOpen);
@@ -31,7 +33,11 @@ const toggle = () => {
 };
 </script>
 
-<div class="flex min-h-0 flex-col {isOpen ? 'flex-grow' : 'flex-shrink-0'} pr-4">
+<section
+  class="flex min-h-0 flex-col {isOpen ? 'flex-grow' : 'flex-shrink-0'} {position ===
+  'left'
+    ? 'pr-4'
+    : ''}">
   <button
     class="flex w-full flex-shrink-0 items-center justify-between px-4 {iconVerticalPaddingClass} bg-black"
     onclick={toggle}
@@ -73,4 +79,4 @@ const toggle = () => {
       {@render collapsedContent()}
     </div>
   {/if}
-</div>
+</section>

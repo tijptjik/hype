@@ -17,7 +17,7 @@ let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
 };
 </script>
 
-<Panel direction="right" scrollable={true}>
+<Panel position="right" scrollable={true}>
   <Header
     panel="filters"
     title={m.filters__title()}
