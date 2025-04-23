@@ -29,7 +29,9 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:watch": "vitest watch",
-    "test:browser": "vitest --workspace=vitest.workspace.ts"
+    "test:browser": "vitest --workspace=vitest.workspace.ts",
+    "i18n:translate": "bunx @inlang/cli machine translate --project project.inlang",
+    "i18n:build": "bunx @inlang/paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide"
   },
   "testDependencies": {
     "@vitest/browser": "^2.1.5",
