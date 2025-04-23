@@ -2,7 +2,7 @@
 import { defineConfig } from 'vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 // TRANSLATION
-import { paraglide } from '@inlang/paraglide-sveltekit/vite';
+import { paraglideVitePlugin } from '@inlang/paraglide-js';
 // DATA
 import seed from './src/lib/db/seed';
 // TYPES
@@ -29,12 +29,13 @@ const seedDrizzle = async (): Promise<Plugin> => {
 // CONFIG
 export default defineConfig({
   plugins: [
-    paraglide({
+    paraglideVitePlugin({
       project: './project.inlang',
       outdir: './src/lib/paraglide'
     }),
     seedDrizzle(),
     sveltekit()
+
   ],
   optimizeDeps: {
     esbuildOptions: {
