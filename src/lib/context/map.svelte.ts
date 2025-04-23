@@ -22,10 +22,12 @@ import type {
   UserFeature,
   mapContextState,
   PanelState,
-  ActiveCollection
+  ActiveCollection,
+  Property
 } from '$lib/types';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
+
 export class mapContext {
   // Maplibre Map instance
   map: MaplibreMap | undefined = $state();
@@ -63,7 +65,7 @@ export class mapContext {
     },
     // User Location -- The user's location
     userLocation: null,
-    // TODO Implement distancesFromUser
+    // ENHANCEMENT: Implement distancesFromUser
     // Distances from user -- The distances from the user to the features
     distancesFromUser: {},
     // Panels -- The panels that are open
@@ -100,10 +102,14 @@ export class mapContext {
     if (userId !== '') {
       this.userId = userId;
       this.state.prisms.layer = userLayers || [];
-      this.initializeQueries(queryClient);
     } else {
       this.userId = null;
     }
+  }
+
+  async init() {
+    await this.initializeQueries(this.queryClient);
+    this.postLayerMutation();
   }
 
   // Helper method to build API URLs with filters
@@ -236,15 +242,150 @@ export class mapContext {
     this.refreshLayers();
   }
 
-  // TODO Clear the Omnibar when a layer is toggled
+  // TODO : Clear the Omnibar when a layer is toggled
   toggleLayer(id: Id) {
     const layers = this.state.prisms.layer;
     const index = layers.indexOf(id);
     if (index === -1) {
-      layers.push(id);
+      this.addLayer(id);
     } else {
-      layers.splice(index, 1);
+      this.removeLayer(id);
     }
+  }
+
+  addLayer(id: Id) {
+    this.state.prisms.layer.push(id);
+    this.postLayerMutation();
+  }
+
+  removeLayer(id: Id) {
+    this.state.prisms.layer = this.state.prisms.layer.filter((l) => l !== id);
+    this.postLayerMutation();
+  }
+
+  setLayers(layers: Id[]) {
+    this.state.prisms.layer = layers;
+    this.postLayerMutation();
+  }
+
+  initialiseCategoricalPropertyFilters(layerId: Id) {
+    const layer = this.state.resources.layer.find((l) => l.id === layerId);
+    if (!layer) {
+      return;
+    }
+
+    const project = this.state.resources.project.find((p) => p.id === layer.projectId);
+    if (!project) {
+      return;
+    }
+
+    // Filter properties based on visibility in layer (similar logic to Categories.svelte)
+    const classifierProperties =
+      project.properties
+        ?.filter((p) => p.type === 'classifier')
+        .filter((prop) => {
+          const layerProperty = layer.properties?.find(
+            (lp) => lp.propertyId === prop.id
+          );
+          // Only consider properties visible in the layer AND not range fields
+          return layerProperty?.isVisible !== false && prop.component !== 'RangeField';
+        })
+        // Ensure uniqueness by key within the project's properties relevant to this layer
+        .filter(
+          (prop, index, self) => index === self.findIndex((p) => p.key === prop.key)
+        ) || [];
+
+    // Ensure the layer's filter object exists
+    if (!this.state.filters.properties![layerId]) {
+      this.state.filters.properties![layerId] = {};
+    }
+
+    const layerFilters = this.state.filters.properties![layerId];
+
+    // Initialize each classifier property with an empty array if not already set
+    classifierProperties.forEach((property: Property) => {
+      if (!(property.key in layerFilters)) {
+        layerFilters[property.key] = [];
+      }
+    });
+  }
+
+  initialiseRangePropertyFilter(layerId: Id) {
+    const layer = this.state.resources.layer.find((l) => l.id === layerId);
+    if (!layer) {
+      return;
+    }
+
+    const project = this.state.resources.project.find((p) => p.id === layer.projectId);
+    if (!project) {
+      return;
+    }
+
+    // Find properties that are RangeFields and visible for this layer
+    const rangeProperties =
+      project.properties
+        ?.filter((p) => p.component === 'RangeField') // Identify range properties
+        .filter((prop) => {
+          const layerProperty = layer.properties?.find(
+            (lp) => lp.propertyId === prop.id
+          );
+          // Only consider properties visible in the layer
+          return layerProperty?.isVisible !== false;
+        })
+        // Ensure uniqueness by key
+        .filter(
+          (prop, index, self) => index === self.findIndex((p) => p.key === prop.key)
+        ) || [];
+
+    // Ensure the layer's filter object exists
+    if (!this.state.filters.properties![layerId]) {
+      this.state.filters.properties![layerId] = {};
+    }
+
+    const layerFilters = this.state.filters.properties![layerId];
+
+    // Initialize each range property using its min/max if not already set
+    rangeProperties.forEach((property: Property) => {
+      // Validate that min and max exist and are numbers
+      const min = property.min;
+      const max = property.max;
+      if (
+        !(property.key in layerFilters) &&
+        typeof min === 'number' &&
+        typeof max === 'number'
+      ) {
+        layerFilters[property.key] = {
+          globalMin: min,
+          globalMax: max,
+          rangeMin: min, // Default rangeMin to globalMin
+          rangeMax: max // Default rangeMax to globalMax
+        };
+      }
+    });
+  }
+
+  postLayerMutation() {
+    const currentLayerIds = new Set(this.state.prisms.layer);
+    const existingFilterLayerIds = new Set(
+      Object.keys(this.state.filters.properties || {})
+    );
+
+    // Initialise filters for newly added layers
+    currentLayerIds.forEach((layerId) => {
+      if (!existingFilterLayerIds.has(layerId)) {
+        // Call initialization functions for the new layer
+        this.initialiseCategoricalPropertyFilters(layerId);
+        this.initialiseRangePropertyFilter(layerId);
+      }
+    });
+
+    // Remove filters for layers that are no longer active
+    existingFilterLayerIds.forEach((layerId) => {
+      if (!currentLayerIds.has(layerId)) {
+        delete this.state.filters.properties![layerId];
+      }
+    });
+
     this.refreshFeatures();
   }
 
@@ -263,6 +404,7 @@ export class mapContext {
       queryFn: this.layersQueryFn
     });
     this.syncLayerPrisms();
+    this.postLayerMutation();
     this.refreshFeatures();
   }
 
@@ -374,42 +516,79 @@ export class mapContext {
   };
 
   getFeatureIdsForProperties = (): Id[] => {
-    // TODO Fix filter for properties
-    if (Object.keys(this.state.filters.properties || {}).length === 0) {
+    // If there are no layers being filtered at all, return all features.
+    if (Object.keys(this.propertyFilters).length === 0) {
       return this.featuresAll;
     }
-    return Object.values(this.features)
+
+    const featureList = Object.values(this.features);
+
+    const filteredIds = featureList
       .filter((f: Feature) => {
-        // Check each property filter
-        return Object.entries(this.state.filters.properties || {}).every(
+        // Get filters specific to this feature's layer
+        const layerSpecificFilters = this.propertyFilters[f.layerId];
+
+        // If there are no filters defined for this feature's layer, it passes this check.
+        if (!layerSpecificFilters || Object.keys(layerSpecificFilters).length === 0) {
+          return true;
+        }
+
+        // Check if the feature matches ALL filters defined for its layer
+        const allFiltersMatch = Object.entries(layerSpecificFilters).every(
           ([propertyKey, selectedValues]) => {
-            // Get the feature's value for this property
-            const featureValue = f.properties?.find(
+            // If the filter has no values (e.g., empty array for categorical), it matches all features for this property.
+            if (Array.isArray(selectedValues) && selectedValues.length === 0) {
+              return true;
+            }
+
+            // Get the feature's property object
+            const featureProperty = f.properties.find(
               (p) => p.property.key === propertyKey
-            )?.value;
-            // If no feature value exists for this property, filter it out
+            );
+
+            // If the feature doesn't have this property defined, it cannot match the filter.
+            if (!featureProperty) {
+              return false;
+            }
+
+            // Use the propertyValue if available (typically for linked values), otherwise fallback to the direct value
+            const featureValue =
+              featureProperty.propertyValue?.value ?? featureProperty.value;
+
+            // If the feature has the property but the value is null/undefined, it also cannot match.
             if (featureValue === undefined || featureValue === null) {
               return false;
             }
-            // Check if the feature's value is included in the selected values
+
+            let match = false;
+            // Check if the feature's value matches the filter criteria
             if (Array.isArray(selectedValues)) {
-              return selectedValues.includes(featureValue);
+              // Handle categorical filters (multi-select) - Already checked for empty array above
+              match = selectedValues.includes(featureValue);
             } else if (
               typeof selectedValues === 'object' &&
+              selectedValues !== null && // Ensure selectedValues is not null
               'rangeMin' in selectedValues &&
               'rangeMax' in selectedValues
             ) {
-              return (
-                featureValue >= selectedValues.rangeMin &&
-                featureValue <= selectedValues.rangeMax
-              );
+              // Handle range filters
+              const numericFeatureValue = Number(featureValue);
+              match =
+                !isNaN(numericFeatureValue) &&
+                numericFeatureValue >= selectedValues.rangeMin &&
+                numericFeatureValue <= selectedValues.rangeMax;
             } else {
-              return selectedValues === featureValue;
+              // Should not happen with current filter setting methods
+              match = false;
             }
+            return match;
           }
         );
+        return allFiltersMatch;
       })
       .map((f) => f.id);
+
+    return filteredIds;
   };
 
   // Features, given the selected Neighbourhoods and Properties
@@ -479,7 +658,7 @@ export class mapContext {
     }
     // Set active state to new feature
     this.state.active.feature = this.features[featureId];
-    // TODO Add "active" class to the feature on the map
+    // TODO : Add "active" class to the feature on the map
     addMarkerClass(this, featureId);
     if (options.focus) {
       if (options.isCardOpen === false) {
@@ -702,17 +881,62 @@ export class mapContext {
   // FEATURE COLLECTIONS -- FeatureIds
 
   // FeatureIds for Active Layers
-  featuresAll: Id[] = $derived(this.getAllFeatureIds());
+  featuresAll: Id[] = $derived.by(this.getAllFeatureIds);
   // FeatureIds for Selected Neighbourhoods
-  featuresForNeighbourhoods: Id[] = $derived(this.getFeatureIdsForNeighbourhoods());
+  featuresForNeighbourhoods: Id[] = $derived.by(this.getFeatureIdsForNeighbourhoods);
   // FeatureIds for Selected Properties
-  featuresForProperties: Id[] = $derived(this.getFeatureIdsForProperties());
+  featuresForProperties: Id[] = $derived.by(this.getFeatureIdsForProperties);
   // Intersection of Neighbourhoods and Properties featureIds
-  featuresVisible: Id[] = $derived(this.getVisibleFeatureIds());
+  featuresVisible: Id[] = $derived.by(this.getVisibleFeatureIds);
   // FeatureIds for Wishlisted Features
-  featuresWishlisted: Id[] = $derived(this.getWishlistedFeatureIds());
+  featuresWishlisted: Id[] = $derived.by(this.getWishlistedFeatureIds);
   // FeatureIds for Visited Features
-  featuresVisited: Id[] = $derived(this.getVisitedFeatureIds());
+  featuresVisited: Id[] = $derived.by(this.getVisitedFeatureIds);
+
+  // FILTER -- ACCESSORS
+
+  // Accessor for Active Property Filters
+  propertyFilters = $derived(this.state.filters.properties);
+
+  setCategoricalPropertyFilter = (
+    layerId: Id,
+    propertyKey: string,
+    values: string[]
+  ) => {
+    this.state.filters.properties![layerId] = {
+      ...(this.state.filters.properties![layerId] || {}),
+      [propertyKey]: values
+    };
+  };
+
+  removeCategoricalPropertyFilter = (layerId: Id, propertyKey: string) => {
+    delete this.state.filters.properties![layerId]?.[propertyKey];
+  };
+
+  setRangePropertyFilter = (
+    layerId: Id,
+    propertyKey: string,
+    values: [number, number]
+  ) => {
+    // Only update if the values have actually changed to prevent unnecessary reactivity triggers
+    if (
+      this.state.filters.properties![layerId]?.[propertyKey]?.rangeMin !== values[0] ||
+      this.state.filters.properties![layerId]?.[propertyKey]?.rangeMax !== values[1]
+    ) {
+      // Ensure the layer object exists
+      if (!this.state.filters.properties![layerId]) {
+        this.state.filters.properties![layerId] = {};
+      }
+      // Ensure the property object exists and merge values
+      const existingRangeFilter =
+        this.state.filters.properties![layerId]?.[propertyKey] || {};
+      this.state.filters.properties![layerId][propertyKey] = {
+        ...existingRangeFilter, // Preserve globalMin/globalMax
+        rangeMin: values[0],
+        rangeMax: values[1]
+      };
+    }
+  };
 
   // FEATURE COLLECTIONS -- Utils
 
@@ -836,7 +1060,11 @@ export const setMapContext = (
   queryClient: QueryClient,
   userId: string,
   userLayers: string[]
-) => setContext(MAP_STATE_KEY, new mapContext(queryClient, userId, userLayers));
+) => {
+  const context = new mapContext(queryClient, userId, userLayers);
+  context.init();
+  return setContext(MAP_STATE_KEY, context);
+};
 
 export const getMapContext = (): ReturnType<typeof setMapContext> =>
   getContext(MAP_STATE_KEY);

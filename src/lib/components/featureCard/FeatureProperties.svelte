@@ -36,21 +36,16 @@ const sortedProperties = $derived(
 </script>
 
 <div
-  class="pointer-events-auto flex h-48 flex-wrap items-center justify-between gap-2 overflow-y-auto overscroll-contain pl-3 pr-0 w-100:pl-6 w-120:gap-4">
-  {#each sortedProperties as property}
-    {#if property.property.key === 'grade' || property.property.key === 'calligrapher'}
-      <!-- TODO Ignore grade property -->
-    {:else}
-      <div class="flex max-h-24 min-w-24 flex-col justify-evenly">
-        <span
-          class="font-mono text-xs font-normal uppercase tracking-wide text-gray-400">
-          {getI18nValue(property.property, 'label')}
-        </span>
-        <span class="overflow-y-auto overscroll-contain font-medium">
-          {getI18nValue(property.value ? property : property.propertyValue, 'value') ||
-            '-'}
-        </span>
-      </div>
-    {/if}
+  class="justify-flex-start pointer-events-auto flex h-48 flex-wrap items-center gap-2 overflow-y-auto overscroll-contain pl-3 pr-0 w-100:pl-6 w-120:gap-4">
+  {#each sortedProperties.filter((p) => p.property.key !== 'grade' && (p.value ? p.value : p.propertyValue?.value) !== undefined) as property}
+    <div class="flex max-h-24 min-w-24 flex-col justify-evenly">
+      <span class="font-mono text-xs font-normal uppercase tracking-wide text-gray-400">
+        {getI18nValue(property.property, 'label')}
+      </span>
+      <span class="overflow-y-auto overscroll-contain font-medium">
+        {getI18nValue(property.value ? property : property.propertyValue, 'value') ||
+          '-'}
+      </span>
+    </div>
   {/each}
 </div>

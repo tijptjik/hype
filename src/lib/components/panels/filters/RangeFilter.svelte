@@ -4,63 +4,40 @@ import Icon from '$lib/components/common/Icon.svelte';
 import RangeSlider from 'svelte-range-slider-pips';
 // I18N
 import { m } from '$lib/i18n';
-import { getI18nValue } from '$lib/i18n';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
-
+// TYPES
+import type { Id } from '$lib/types';
+import { onMount } from 'svelte';
 let mapContext = getMapContext();
 
-let { property, selectedCategories } = $props();
+type Props = {
+  key: string;
+  label: string;
+  min: number;
+  max: number;
+  layerId: Id;
+};
 
-// Initialize the range values if not already set
-$effect(() => {
-  if (!selectedCategories[property.key]) {
-    selectedCategories[property.key] = {
-      rangeMin: property.min,
-      rangeMax: property.max,
-      globalMin: property.min,
-      globalMax: property.max
-    };
-  }
-});
+let { key, label, min, max, layerId }: Props = $props();
 
 let isOpen = $state(false);
 
-let displayText = $derived(() => {
-  if (
-    selectedCategories[property.key]?.rangeMin ===
-      selectedCategories[property.key]?.globalMin &&
-    selectedCategories[property.key]?.rangeMax ===
-      selectedCategories[property.key]?.globalMax
-  ) {
+let displayText = $derived.by(() => {
+  if (min === values[0] && max === values[1]) {
     return m.filters__all();
-  } else if (
-    selectedCategories[property.key]?.rangeMin ===
-    selectedCategories[property.key]?.rangeMax
-  ) {
-    return `${m.filters__only()} ${selectedCategories[property.key]?.rangeMin ?? property.min} ${m.filters__stars()}`;
+  } else if (values[0] === values[1]) {
+    return `${m.filters__only()} ${values[0]} ${m.filters__stars()}`;
   } else {
-    return `${m.filters__between()} ${selectedCategories[property.key]?.rangeMin ?? property.min} ${m.filters__and()} ${
-      selectedCategories[property.key]?.rangeMax ?? property.max
-    } ${m.filters__stars()}`;
+    return `${m.filters__between()} ${values[0]} ${m.filters__and()} ${values[1]} ${m.filters__stars()}`;
   }
 });
 
-// Handle range updates
-// TODO Fix the range filter
-function handleRangeChange(e: CustomEvent) {
-  const [rangeMin, rangeMax] = e.detail.values;
-  // selectedCategories[property.key] = {
-  //   ...selectedCategories[property.key],
-  //   rangeMin,
-  //   rangeMax
-  // };
-  mapContext.state.filters.properties[property.key] = {
-    ...selectedCategories[property.key],
-    rangeMin,
-    rangeMax
-  };
-}
+let values: [number, number] = $state([min, max]);
+
+$effect(() => {
+  mapContext.setRangePropertyFilter(layerId, key, values);
+});
 </script>
 
 <div class="min-h-10 w-full flex-shrink-0 bg-[#0A0A0A]">
@@ -69,15 +46,11 @@ function handleRangeChange(e: CustomEvent) {
     onclick={() => (isOpen = !isOpen)}>
     <div class="flex flex-col justify-start gap-0 text-left">
       <p class="text-xs font-thin uppercase tracking-widest text-base-content/60">
-        {getI18nValue(property, 'label')}
+        {label}
       </p>
-      <p class="font-medium">{displayText()}</p>
+      <p class="font-medium">{displayText}</p>
     </div>
-    {#if isOpen}
-      <Icon src={ChevronUp} class="h-5 w-5 flex-shrink-0" />
-    {:else}
-      <Icon src={ChevronDown} class="h-5 w-5 flex-shrink-0" />
-    {/if}
+    <Icon src={isOpen ? ChevronUp : ChevronDown} class="h-5 w-5 flex-shrink-0" />
   </button>
   <!-- Options -->
   {#if isOpen}
@@ -85,20 +58,16 @@ function handleRangeChange(e: CustomEvent) {
       class="flex max-h-[260px] flex-col overflow-y-auto rounded-none bg-base-300 px-3">
       <div class="px-2 pb-4 pt-8">
         <RangeSlider
-          min={property.min}
-          max={property.max}
+          {min}
+          {max}
           step={1}
-          values={[
-            selectedCategories[property.key]?.rangeMin ?? property.min,
-            selectedCategories[property.key]?.rangeMax ?? property.max
-          ]}
-          change={handleRangeChange}
+          bind:values
           pips
           all="label"
           first="label"
           last="label"
           rest="pip"
-          pipstep={Math.ceil((property.max - property.min) / 10)}
+          pipstep={Math.ceil((max - min) / 10)}
           float />
       </div>
     </div>
