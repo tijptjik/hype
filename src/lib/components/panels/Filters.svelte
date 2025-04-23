@@ -24,7 +24,6 @@ let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
     onToggleInfo={(e) => {
       handleToggleInfo(e);
     }} />
-  <Reset />
   <Info isOpen={isInfoOpen} />
   <div class="flex flex-col">
     <div class="flex-grow-1 flex max-h-[40vh] min-h-0 flex-shrink-0 flex-col">
@@ -35,4 +34,5 @@ let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
       <Categories />
     </div>
   </div>
+  <Reset />
 </Panel>
