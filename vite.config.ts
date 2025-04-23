@@ -33,12 +33,10 @@ export default defineConfig({
       project: './project.inlang',
       outdir: './src/lib/paraglide',
       strategy: ['cookie', 'preferredLanguage', 'baseLocale'],
-      cookieName: 'lang',
-      disableAsyncLocalStorage: true
+      cookieName: 'lang'
     }),
     seedDrizzle(),
     sveltekit()
-
   ],
   optimizeDeps: {
     esbuildOptions: {
