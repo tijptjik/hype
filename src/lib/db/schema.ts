@@ -21,6 +21,8 @@ import type {
 // UTILS
 const getGenImageParam = (): number => Math.floor(Math.random() * (100 - 5 + 1)) + 5;
 
+// TODO Migrate the sqlliteTable to match the latest call signature
+
 /* ----------------- */
 // USERS
 /* -------- */
@@ -175,9 +177,9 @@ export const organisationI18n = sqliteTable(
       .notNull()
       .default(true)
   },
-  (t) => ({
-    pk: primaryKey({ columns: [t.organisationId, t.lang] })
-  })
+  (table) => [
+    primaryKey({ columns: [table.organisationId, table.lang] })
+  ]
 );
 
 export const organisationI18nRelations = relations(organisationI18n, ({ one }) => ({
@@ -200,9 +202,9 @@ export const organisationRole = sqliteTable(
       .notNull()
       .default('member')
   },
-  (t) => ({
-    pk: primaryKey({ columns: [t.organisationId, t.userId] })
-  })
+  (table) => [
+    primaryKey({ columns: [table.organisationId, table.userId] })
+  ]
 );
 
 export const organisationRoleRelations = relations(organisationRole, ({ one }) => ({
@@ -331,32 +333,25 @@ export const projectI18n = sqliteTable(
     projectId: text('projectId')
       .notNull()
       .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    // IETF BCP 47 language tag
-    // https://www.rfc-editor.org/info/bcp47
     lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
-    // Full Name in {lang}
     name: text('name').notNull(),
     nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(true),
-    // Short Name  in {lang}, used in navigation
     nameShort: text('nameShort').notNull(),
     nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(true),
-    // Description in {lang}
     description: text('description'),
     descriptionGen: integer('descriptionGen', { mode: 'boolean' })
       .notNull()
       .default(true),
-    // Licence in {lang}
     license: text('license'),
     licenseGen: integer('licenseGen', { mode: 'boolean' }).notNull().default(true),
-    // Description in {lang}
     attribution: text('attribution'),
     attributionGen: integer('attributionGen', { mode: 'boolean' })
       .notNull()
       .default(true)
   },
-  (t) => ({
-    pk: primaryKey({ columns: [t.projectId, t.lang] })
-  })
+  (table) => [
+    primaryKey({ columns: [table.projectId, table.lang] })
+  ]
 );
 
 export const projectI18nRelations = relations(projectI18n, ({ one }) => ({
@@ -379,9 +374,9 @@ export const projectRole = sqliteTable(
       .notNull()
       .default('maintainer')
   },
-  (t) => ({
-    pk: primaryKey({ columns: [t.projectId, t.userId] })
-  })
+  (table) => [
+    primaryKey({ columns: [table.projectId, table.userId] })
+  ]
 );
 
 // Define relations
@@ -457,24 +452,19 @@ export const layerI18n = sqliteTable(
     layerId: text('layerId')
       .notNull()
       .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    // IETF BCP 47 language tag
-    // https://www.rfc-editor.org/info/bcp47
     lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
-    // Full Name in {lang}
     name: text('name').notNull(),
     nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(true),
-    // Short Name in {lang}, used in controls and legends
     nameShort: text('nameShort').notNull(),
     nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(true),
-    // Description in {lang}
     description: text('description'),
     descriptionGen: integer('descriptionGen', { mode: 'boolean' })
       .notNull()
       .default(true)
   },
-  (t) => ({
-    pk: primaryKey({ columns: [t.layerId, t.lang] })
-  })
+  (table) => [
+    primaryKey({ columns: [table.layerId, table.lang] })
+  ]
 );
 
 export const layerI18nRelations = relations(layerI18n, ({ one }) => ({
@@ -595,19 +585,17 @@ export const featureI18n = sqliteTable(
     descriptionGen: integer('descriptionGen', { mode: 'boolean' })
       .notNull()
       .default(true),
-    // Display Address
     displayAddress: text('displayAddress'),
     displayAddressGen: integer('displayAddressGen', { mode: 'boolean' })
       .notNull()
       .default(false),
-    // Address Properties
     addressProperties: text('addressProperties', {
       mode: 'json'
     }).$type<AddressProperties>()
   },
-  (t) => ({
-    pk: primaryKey({ columns: [t.featureId, t.lang] })
-  })
+  (table) => [
+    primaryKey(table.featureId, table.lang)
+  ]
 );
 
 export const featureI18nRelations = relations(featureI18n, ({ one }) => ({
@@ -662,9 +650,9 @@ export const featurePropertyI18n = sqliteTable(
     lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
     value: text('value').notNull()
   },
-  (t) => ({
-    pk: primaryKey({ columns: [t.featurePropertyId, t.lang] })
-  })
+  (table) => [
+    primaryKey({ columns: [table.featurePropertyId, table.lang] })
+  ]
 );
 
 export const featurePropertyI18nRelations = relations(
@@ -781,9 +769,9 @@ export const propertyValueI18n = sqliteTable(
     value: text('value').notNull(),
     valueGen: integer('valueGen', { mode: 'boolean' }).notNull().default(true)
   },
-  (t) => ({
-    pk: primaryKey({ columns: [t.propertyValueId, t.lang] })
-  })
+  (table) => [
+    primaryKey({ columns: [table.propertyValueId, table.lang] })
+  ]
 );
 
 export const propertyValueI18nRelations = relations(propertyValueI18n, ({ one }) => ({
@@ -907,12 +895,12 @@ export const featureImage = sqliteTable(
       sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`
     )
   },
-  (t) => ({
-    pk: primaryKey({ columns: [t.featureId, t.imageId] }),
-    canonicalConstraint: uniqueIndex('canonical_intent')
-      .on(t.featureId)
+  (table) => [
+    primaryKey(table.featureId, table.imageId),
+    uniqueIndex('canonical_intent')
+      .on(table.featureId)
       .where(sql`intent = 'canonical'`)
-  })
+  ]
 );
 
 export const featureImageRelations = relations(featureImage, ({ one }) => ({
@@ -937,6 +925,7 @@ export const userFeature = sqliteTable(
       .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     isVisited: integer('isVisited', { mode: 'boolean' }).default(false).notNull(),
     isWishlisted: integer('isWishlisted', { mode: 'boolean' }).default(false).notNull(),
+    visitedAt: text('visitedAt'),
     createdAt: text('createdAt')
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
       .notNull(),
@@ -945,9 +934,9 @@ export const userFeature = sqliteTable(
       .$onUpdate(() => new Date().toISOString())
       .notNull()
   },
-  (t) => ({
-    pk: primaryKey({ columns: [t.userId, t.featureId] })
-  })
+  (table) => [
+    primaryKey({ columns: [table.userId, table.featureId] })
+  ]
 );
 
 export const userFeatureRelations = relations(userFeature, ({ one }) => ({
@@ -1037,9 +1026,9 @@ export const taskImage = sqliteTable(
       .notNull()
       .references(() => image.id, { onDelete: 'cascade', onUpdate: 'cascade' })
   },
-  (t) => ({
-    pk: primaryKey({ columns: [t.taskId, t.imageId] })
-  })
+  (table) => [
+    primaryKey({ columns: [table.taskId, table.imageId] })
+  ]
 );
 
 export const taskImageRelations = relations(taskImage, ({ one }) => ({
@@ -1066,9 +1055,9 @@ export const userLayer = sqliteTable(
       .notNull()
       .default(false)
   },
-  (t) => ({
-    pk: primaryKey({ columns: [t.layerId, t.userId] })
-  })
+  (table) => [
+    primaryKey({ columns: [table.layerId, table.userId] })
+  ]
 );
 
 export const userLayerRelations = relations(userLayer, ({ one }) => ({
