@@ -16,8 +16,26 @@ const {
 </script>
 
 <div
-  class="flex cursor-pointer flex-row items-center justify-between gap-4 bg-black py-2 pl-8 pr-4 transition-colors duration-200 hover:bg-base-300"
-  onclick={onClick}>
+  class="flex cursor-pointer flex-row items-center justify-between gap-4 bg-black py-2 pl-8 pr-4 caret-transparent transition-colors duration-200 hover:bg-base-300 focus:outline-none focus:ring-0 focus-visible:text-primary"
+  onclick={onClick}
+  onkeydown={(e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      onClick();
+    } else if (e.key === 'Escape') {
+      e.stopPropagation();
+      e.preventDefault();
+      // Find the nearest section ancestor and focus its input
+      const section = e.currentTarget.closest('section');
+      const input = section?.querySelector('input');
+      if (input) {
+        input.focus();
+      } else {
+        const button = section?.querySelector('button');
+        button?.focus();
+      }
+    }
+  }}
+  tabindex="0">
   {#if organisation && project}
     <div class="flex -translate-x-5 flex-row items-center gap-3">
       <div class="h-2 w-2 rounded-full {isSelected ? selectedClass : ''}"></div>

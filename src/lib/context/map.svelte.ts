@@ -1040,7 +1040,22 @@ export class mapContext {
       this.closePanel(panel);
     } else {
       this.openPanel(panel);
+      this.focusPanel(leftPanels.includes(panel) ? 'left' : 'right');
     }
+  }
+
+  focusPanel(position: 'left' | 'right') {
+    let panelElement = null;
+    setTimeout(() => {
+      panelElement = document.getElementById(`${position}-panel`);
+      const inputElement = panelElement?.querySelector('input');
+      console.log(panelElement, inputElement);
+      if (inputElement) {
+        inputElement.focus();
+      } else {
+        panelElement?.focus();
+      }
+    }, 250);
   }
 
   closeLeftPanel() {
@@ -1066,6 +1081,32 @@ export class mapContext {
   closePanel(panel: keyof PanelState) {
     this.state.panels[panel] = false;
   }
+  // KEYDOWN HANDLERS
+  registerKeydownHandlers() {
+    document.addEventListener('keydown', this.handleKeydown);
+  }
+
+  handleKeydown = (event: KeyboardEvent) => {
+    let keyMatched = false;
+
+    if (event.key === '1') {
+      this.togglePanel('maps');
+      keyMatched = true;
+    } else if (event.key === '2') {
+      this.togglePanel('filters');
+      keyMatched = true;
+    } else if (event.key === '3') {
+      this.togglePanel('stars');
+    } else if (event.key === '4') {
+      this.togglePanel('settings');
+      keyMatched = true;
+    }
+
+    if (keyMatched) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
 }
 export const MAP_STATE_KEY = Symbol('mapContext');
 

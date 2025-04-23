@@ -106,9 +106,9 @@ let displayText = $derived.by(() => {
 });
 </script>
 
-<div class="min-h-10 w-full flex-shrink-0 bg-[#0A0A0A]">
+<div class="ml-4 min-h-10 w-full flex-shrink-0 rounded-l-md bg-[#0a0a0a]">
   <button
-    class="flex w-full flex-shrink-0 items-center justify-between rounded-none py-2 pl-6 pr-9"
+    class="flex w-full flex-shrink-0 items-center justify-between rounded-none py-2 pl-6 pr-9 focus:outline-none focus:ring-0 focus-visible:text-primary"
     onclick={() => (isOpen = !isOpen)}>
     <div class="flex flex-col justify-start gap-0 text-left">
       <p class="text-xs font-thin uppercase tracking-widest text-base-content/60">
@@ -121,15 +121,22 @@ let displayText = $derived.by(() => {
   <!-- Options -->
   {#if isOpen}
     <div
-      class="flex max-h-[260px] flex-col overflow-y-auto rounded-none bg-base-300 px-3">
+      class="flex max-h-[260px] flex-col overflow-y-auto rounded-l-lg bg-[#121212] py-2 pr-3">
       {#each values as value (getOriginalValue(value))}
         {@const originalValue = getOriginalValue(value)}
         <label
-          class="label cursor-pointer justify-start gap-3 rounded-none px-6 py-2 hover:bg-base-100">
+          class="label cursor-pointer justify-start gap-3 rounded-none px-6 py-2 transition-all duration-300 hover:bg-base-100">
+          <div
+            class="flex h-2 w-2 items-center gap-2 rounded-full {selected.includes(
+              originalValue
+            )
+              ? 'bg-primary'
+              : 'border-1 border-base-content/60 bg-transparent'}">
+          </div>
           <input
             type="checkbox"
             checked={selected.includes(originalValue)}
-            class="checkbox checkbox-sm"
+            class="checkbox checkbox-sm hidden"
             onchange={() => toggleValue(value)} />
           <span class="label-text text-sm font-medium"
             >{getTranslatedValue(value)}</span>

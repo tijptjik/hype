@@ -74,9 +74,10 @@ $effect(() => {
   title={m.filters__neighbourhoods()}
   icon="/neighbourhood.svg"
   iconVerticalPaddingClass="pt-2"
-  collapsedContent={SelectedNeighbourhoods}>
+  collapsedContent={SelectedNeighbourhoods}
+  position="right">
   {#if Object.keys(neighbourhoods).length > 4}
-    <FilterBar bind:searchTerm />
+    <FilterBar bind:searchTerm position="right" />
   {/if}
   <ResourceContainer>
     {#each filteredNeighbourhoods as [neighbourhood, data]}

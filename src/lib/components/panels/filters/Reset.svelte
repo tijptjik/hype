@@ -14,6 +14,8 @@ const mapContext = getMapContext();
 const filterCount = $derived(mapContext.getFilterCount());
 </script>
 
+<!-- TODO : Move to the bottom of the panel as an absolute bottom element -->
+
 {#if filterCount.neighbourhoods > 0 || filterCount.properties > 0}
   <button
     class="btn btn-ghost btn-sm w-full justify-start rounded-none bg-black px-6 py-2 font-mono font-normal"

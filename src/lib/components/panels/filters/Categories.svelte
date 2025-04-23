@@ -109,7 +109,7 @@ function getTranslatedValues(values: any[] = []) {
     iconColorClass="text-blue-500"
     isOpen={index === 0}
     {hierarchy}>
-    <div class="space-y-2">
+    <div class="space-y-2 pb-4">
       {#each properties as property (property.id)}
         {#if property.component === 'RangeField'}
           <!-- Pass necessary props directly -->

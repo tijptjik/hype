@@ -34,21 +34,19 @@ const toggle = () => {
 </script>
 
 <section
-  class="flex min-h-0 flex-col {isOpen ? 'flex-grow' : 'flex-shrink-0'} {position ===
-  'left'
-    ? 'pr-4'
-    : ''}">
+  class="flex min-h-0 flex-col caret-transparent {isOpen
+    ? 'flex-grow'
+    : 'flex-shrink-0'} {position === 'left' ? 'pr-4' : ''}">
   <button
-    class="flex w-full flex-shrink-0 items-center justify-between px-4 {iconVerticalPaddingClass} bg-black"
+    class="flex w-full flex-shrink-0 items-center justify-between px-4 {iconVerticalPaddingClass} bg-black text-base-content focus:outline-none focus:ring-0 focus-visible:text-primary"
     onclick={toggle}
-    aria-expanded={isOpen}>
+    aria-expanded={isOpen}
+    tabindex="0">
     <div class="flex items-center gap-3">
       <div class="space-y-0.5">
         <div class="flex items-center gap-3">
-          <Icon
-            src={isOpen ? ChevronDown : ChevronRight}
-            class="h-[18px] w-[18px] text-base-content" />
-          <h3 class="text-sm uppercase tracking-widest text-base-content">
+          <Icon src={isOpen ? ChevronDown : ChevronRight} class="h-[18px] w-[18px]" />
+          <h3 class="text-sm uppercase tracking-widest">
             {title}
           </h3>
         </div>
@@ -70,7 +68,7 @@ const toggle = () => {
 
   {#if isOpen && children}
     <div
-      class="flex-shrink-2 flex min-h-0 flex-grow flex-col"
+      class="flex-shrink-2 flex min-h-0 flex-grow flex-col caret-white"
       transition:slide={{ duration: 200 }}>
       {@render children()}
     </div>

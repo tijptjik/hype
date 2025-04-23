@@ -30,7 +30,7 @@ $effect(() => {
 </script>
 
 <header
-  class="sticky top-0 z-10 flex h-16 flex-row items-center justify-between border-b-3 border-base-300 bg-black px-6 py-2">
+  class="sticky top-0 z-10 flex h-16 select-none flex-row items-center justify-between border-b-3 border-base-300 bg-black px-6 py-2 caret-transparent focus:outline-none">
   <div class="flex flex-row items-center gap-2">
     <h2 class="text-lg font-semibold uppercase tracking-widest text-primary">
       {title}
@@ -38,14 +38,14 @@ $effect(() => {
   </div>
   <div class="flex flex-row items-center gap-4">
     <button
-      class="m-0 h-auto flex-none p-0 hover:bg-transparent hover:text-base-content/80"
+      class="m-0 h-auto flex-none p-0 text-base-50 hover:bg-transparent hover:text-base-content/80 focus:outline-none focus:ring-0 focus-visible:text-primary"
       onclick={(e) => {
         onToggleInfo?.(e);
       }}>
-      <span class="text-xl text-base-50">?</span>
+      <span class="text-xl">?</span>
     </button>
     <button
-      class="btn btn-ghost btn-sm m-0 h-auto flex-none p-0 hover:bg-transparent hover:text-base-content/80"
+      class="btn btn-ghost btn-sm m-0 h-auto flex-none p-0 hover:bg-transparent hover:text-base-content/80 focus:outline-none focus:ring-0 focus-visible:text-primary"
       onclick={() => {
         mapContext.closePanel(panel);
       }}>

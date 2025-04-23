@@ -49,17 +49,19 @@ setOmniContext(getMapContext());
 const omniContext = getOmniContext();
 const mapContext = getMapContext();
 
-// Compute map container classes based on visible panels
-let mapContainerClasses = $derived(() => {
-  const { filters, maps, stars, settings } = mapContext.state.panels;
-  const leftPanelOpen = filters || maps;
-  const rightPanelOpen = stars || settings;
+mapContext.registerKeydownHandlers();
 
-  return {
-    'ml-[480px]': leftPanelOpen && !browser?.innerWidth < MOBILE_MAX_WIDTH,
-    'mr-[480px]': rightPanelOpen && !browser?.innerWidth < MOBILE_MAX_WIDTH
-  };
-});
+// Compute map container classes based on visible panels
+// let mapContainerClasses = $derived(() => {
+//   const { filters, maps, stars, settings } = mapContext.state.panels;
+//   const leftPanelOpen = filters || maps;
+//   const rightPanelOpen = stars || settings;
+
+//   return {
+//     'ml-[480px]': leftPanelOpen && !browser?.innerWidth < MOBILE_MAX_WIDTH,
+//     'mr-[480px]': rightPanelOpen && !browser?.innerWidth < MOBILE_MAX_WIDTH
+//   };
+// });
 
 // NAVIGATION HANDLING -- State Change Effect
 $effect(() => {

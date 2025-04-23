@@ -20,14 +20,15 @@ let {
 } = $props();
 </script>
 
-<div class="mt-4 flex min-h-0 flex-shrink-0 flex-col {isOpen ? 'flex-grow' : ''}">
+<div
+  class="mt-4 flex min-h-0 flex-shrink-0 flex-col border-t-4 border-base-300 pb-8 caret-transparent {isOpen
+    ? 'flex-grow'
+    : ''}">
   <button
-    class="flex w-full flex-shrink-0 items-center justify-between px-4 {iconVerticalPaddingClass} bg-black"
+    class="flex w-full flex-shrink-0 items-center justify-between px-4 {iconVerticalPaddingClass} bg-black pb-2 focus:outline-none focus:ring-0 focus-visible:text-primary"
     onclick={toggle}>
     <div class="flex items-center gap-3">
-      <Icon
-        src={isOpen ? ChevronDown : ChevronRight}
-        class="h-4 w-4 text-base-content/60" />
+      <Icon src={isOpen ? ChevronDown : ChevronRight} class="h-[18px] w-[18px]" />
       <!-- Hierarchy path -->
       <div class="flex flex-col space-y-1">
         <div class="flex space-x-0.5 font-mono text-xs uppercase tracking-widest">
@@ -45,16 +46,23 @@ let {
         </div>
         <!-- Title row -->
         <div class="flex items-center gap-2">
-          <h3 class="text-sm font-thin uppercase tracking-widest text-neutral-300">
+          <h3 class="text-sm uppercase tracking-widest">
             {title}
           </h3>
         </div>
       </div>
     </div>
     {#if typeof icon === 'string'}
-      <img src={icon} alt="" class="h-12 text-base-content/60" aria-hidden="true" />
+      <img
+        src={icon}
+        alt=""
+        class="h-12 -translate-x-0.5 translate-y-2 text-base-content/60"
+        aria-hidden="true" />
     {:else}
-      <Icon src={icon} class="h-12 w-8 {iconColorClass}" aria-hidden="true" />
+      <Icon
+        src={icon}
+        class="h-12 w-8 {iconColorClass} translate-y-4"
+        aria-hidden="true" />
     {/if}
   </button>
 

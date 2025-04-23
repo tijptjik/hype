@@ -2,30 +2,47 @@
 import Icon from '$lib/components/common/Icon.svelte';
 import { MagnifyingGlass, XMark } from '@steeze-ui/heroicons';
 import { slide } from 'svelte/transition';
-let { searchTerm = $bindable('') } = $props<{
+let { searchTerm = $bindable(''), position = 'left' } = $props<{
   searchTerm: string;
+  position: 'left' | 'right';
 }>();
 
 // Reset input and clear filter
 const resetInput = async (e: Event) => {
   e.preventDefault();
   searchTerm = '';
-  document.getElementById('search')?.focus();
+  document.getElementById(`filter-${type}`)?.focus();
 };
 </script>
 
-<div class="relative flex-shrink-0 flex-grow-0" transition:slide={{ duration: 200 }}>
+<div
+  class="relative flex-shrink-0 flex-grow-0 {position == 'right' ? 'pl-4' : ''} "
+  transition:slide={{ duration: 200 }}>
   <input
     id="search"
     type="text"
     bind:value={searchTerm}
+    onkeydown={(e) => {
+      if (e.key === 'Escape') {
+        if (searchTerm) {
+          resetInput(e);
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }
+    }}
     placeholder="Search..."
-    class="input m-0 h-12 w-full rounded-none bg-base-200 pl-[30px] pr-10 text-sm focus:border-none focus:outline-none" />
-  <div class="absolute inset-y-0 right-1.5 flex items-center pr-3">
+    class="input m-0 h-12 w-full rounded-none bg-base-200 {position === 'right'
+      ? 'rounded-l-md pl-[30px] pr-10'
+      : 'rounded-r-md pl-10 pr-[30px]'} text-sm focus:border-none focus:outline-none" />
+  <div
+    class="absolute inset-y-0 {position === 'left'
+      ? 'right-1.5'
+      : 'right-[22px]'} flex items-center pr-3">
     {#if !searchTerm}
       <Icon src={MagnifyingGlass} class="h-6 w-6 text-base-content/60" />
     {:else}
-      <button onclick={resetInput} class="focus:outline-none">
+      <button onclick={resetInput} class="focus:outline-none" tabindex="-1">
         <Icon src={XMark} class="h-6 w-6 text-base-content/60" />
       </button>
     {/if}

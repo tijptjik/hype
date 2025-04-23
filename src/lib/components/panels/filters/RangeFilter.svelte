@@ -38,15 +38,11 @@ let values: [number, number] = $derived([
   selectedRange?.rangeMin ?? min,
   selectedRange?.rangeMax ?? max
 ]);
-
-$effect(() => {
-  mapContext.setRangePropertyFilter(layerId, key, values);
-});
 </script>
 
-<div class="min-h-10 w-full flex-shrink-0 bg-[#0A0A0A]">
+<div class="min-h-10 w-full flex-shrink-0 bg-[#0A0A0A] pl-3">
   <button
-    class="flex w-full flex-shrink-0 items-center justify-between rounded-none py-2 pl-6 pr-9"
+    class="flex w-full flex-shrink-0 items-center justify-between rounded-none py-2 pl-6 pr-9 focus:outline-none focus:ring-0 focus-visible:text-primary"
     onclick={() => (isOpen = !isOpen)}>
     <div class="flex flex-col justify-start gap-0 text-left">
       <p class="text-xs font-thin uppercase tracking-widest text-base-content/60">
@@ -59,8 +55,8 @@ $effect(() => {
   <!-- Options -->
   {#if isOpen}
     <div
-      class="flex max-h-[260px] flex-col overflow-y-auto rounded-none bg-base-300 px-3">
-      <div class="px-2 pb-4 pt-8">
+      class="flex max-h-[260px] flex-col overflow-y-auto rounded-none rounded-l-md bg-base-300 px-3">
+      <div class="pb-4 pl-2 pr-4 pt-8">
         <RangeSlider
           {min}
           {max}
@@ -72,7 +68,9 @@ $effect(() => {
           last="label"
           rest="pip"
           pipstep={Math.ceil((max - min) / 10)}
-          float />
+          pushy
+          float
+          on:change={() => mapContext.setRangePropertyFilter(layerId, key, values)} />
       </div>
     </div>
   {/if}
@@ -104,13 +102,13 @@ $effect(() => {
   /* Pips and labels */
   --range-pip: lightslategray; /* color of the base pips */
   --range-pip-text: var(--range-pip); /* color of the base labels */
-  --range-pip-active: darkslategrey; /* active pips (when handle is on a slider-stop) */
-  --range-pip-active-text: var(
-    --range-pip-active
-  ); /* active labels (when handle is on a slider-stop) */
-  --range-pip-hover: darkslategrey; /* when a slider-stop is hovered */
+  --range-pip-active: theme(
+    colors.neutral-content
+  ); /* active pips (when handle is on a slider-stop) */
+  --range-pip-active-text: var(--range-pip-active);
+  --range-pip-hover: theme(colors.base-50); /* when a slider-stop is hovered */
   --range-pip-hover-text: var(--range-pip-hover); /* when a slider-stop is hovered */
-  --range-pip-in-range: var(--range-pip-active); /* pips inside the range */
+  --range-pip-in-range: theme(colors.base-50); /* pips inside the range */
   --range-pip-in-range-text: var(--range-pip-active-text); /* labels inside the range */
 
   /* Additional customizations */
@@ -118,5 +116,9 @@ $effect(() => {
 
   /* Vertical spacing adjustments */
   margin: 2rem 0.5rem;
+  font-size: 0.8rem; /* default size */
+}
+:global(.rangeSlider > .rangeHandle:focus) {
+  outline: none;
 }
 </style>

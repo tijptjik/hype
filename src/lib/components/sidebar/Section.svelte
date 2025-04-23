@@ -1,13 +1,9 @@
 <script lang="ts">
-// CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS
 import ResourceHeader from '$lib/components/sidebar/ResourceHeader.svelte';
 import ResourceContainer from '$lib/components/sidebar/ResourceContainer.svelte';
 // ENUMS
 import { HierarchicalResource } from '$lib/types';
-// TYPES
-import type { FilterableResourceType } from '$lib/types';
 
 // PROPS
 let { resourceType }: { resourceType: HierarchicalResource } = $props();
