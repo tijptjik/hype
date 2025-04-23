@@ -1,6 +1,6 @@
 {
   "$schema": "https://inlang.com/schema/project-settings",
-  "strategy": ["globalVariable", "cookie"],
+  "strategy": ["globalVariable", "cookie", "baseLocale"],
   "baseLocale": "en",
   "locales": ["en", "zh-hans", "zh-hant"],
   "modules": [

@@ -2,8 +2,6 @@
 // SVELTE
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
-// I18N
-import { i18n } from '$lib/i18n';
 // LIB
 import { ADMIN_PATH } from '$lib/index';
 import { getURLfromImage } from '$lib/context/images.svelte';
@@ -60,7 +58,7 @@ const getHashiconUrl = (id: string) => {
 const onclick = (e: MouseEvent | KeyboardEvent) => {
   e.preventDefault();
   resourceState.setFacet('core');
-  goto(i18n.resolveRoute(href));
+  goto(href);
 };
 </script>
 

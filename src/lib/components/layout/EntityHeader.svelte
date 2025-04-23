@@ -1,6 +1,4 @@
 <script lang="ts">
-import { goto } from '$app/navigation';
-import { i18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
 import { slide } from 'svelte/transition';
 import { NEW_REF } from '$lib';
@@ -71,6 +69,7 @@ let { title, form }: { title: string; form: SuperFormResult<Resource> } = $props
 const resourceState = getHierarchicalResourceState();
 
 // Get parent info
+// TODO Investigate if this is needed
 const parents = $derived(resourceState.parents);
 
 // Helper function to get href while preserving query params
@@ -79,13 +78,6 @@ function getParentHref(parentPath: string): string {
   url.pathname = parentPath;
   return url.toString();
 }
-const onclick = (e: Event, url: string) => {
-  e.preventDefault();
-  const langUrl = i18n.resolveRoute(url);
-  goto(langUrl)
-    .then(() => goto(langUrl))
-    .then(() => goto(langUrl));
-};
 </script>
 
 <header
@@ -104,7 +96,6 @@ const onclick = (e: Event, url: string) => {
               out:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
               in:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
               href={getParentHref(parent.href)}
-              onclick={(e) => onclick(e, getParentHref(parent.href))}
               class="inline-block h-5 select-none overflow-hidden whitespace-nowrap hover:text-white">
               {parent.name}
             </a>

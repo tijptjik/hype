@@ -2,9 +2,6 @@
 // I18N
 import { m } from '$lib/i18n';
 import { getI18nValue } from '$lib/i18n';
-import { i18n } from '$lib/i18n';
-// NAVIGATION
-import { goto } from '$app/navigation';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';

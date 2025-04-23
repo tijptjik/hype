@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import { m, getI18nValue } from '$lib/i18n';
+import { m, getI18nValue, getLocale } from '$lib/i18n';
 // COMPONENTS
 import CategorySection from '$lib/components/panels/filters/CategorySection.svelte';
 import CategoryFilter from '$lib/components/panels/filters/CategoryFilter.svelte';

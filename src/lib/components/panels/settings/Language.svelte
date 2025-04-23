@@ -1,6 +1,5 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
-import { i18n } from '$lib/i18n';
 // I18N
 import { m, setLocale, getLocale } from '$lib/i18n';
 // COMPONENTS
@@ -29,7 +28,6 @@ const updateLanguage = async (language: string) => {
   // Update the language immediately after the API call
   session!.user.language = language as LanguageTag;
   setLocale(language as LanguageTag);
-  goto(i18n.resolveRoute(`/`));
 };
 </script>
 

@@ -2,7 +2,6 @@
 // I18N
 import { m } from '$lib/i18n';
 import { getI18nValue } from '$lib/i18n';
-import { i18n } from '$lib/i18n';
 // NAVIGATION
 import { goto } from '$app/navigation';
 // CONTEXT
@@ -14,6 +13,8 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { Squares2x2 } from '@steeze-ui/heroicons';
 // UTILS
 import { formatRelative } from 'date-fns';
+// TYPES
+import type { Id } from '$lib/types';
 
 const mapContext = getMapContext();
 
@@ -62,11 +63,11 @@ function filterFeatures(features: typeof visitedFeatures, term: string) {
 
 const filteredFeatures = $derived(filterFeatures(visitedFeatures, searchTerm));
 
-let handleFeatureSelection = (featureId: string) => {
+let handleFeatureSelection = (featureId: Id) => {
   mapContext.setActiveFeature(featureId);
   mapContext.zoomToActiveFeature();
   // Close panel
-  goto(i18n.resolveRoute('/'));
+  goto('/');
 };
 </script>
 
@@ -79,7 +80,7 @@ let handleFeatureSelection = (featureId: string) => {
     {#each filteredFeatures as visited}
       <div
         class="min-h-21 flex flex-row items-center justify-between gap-4 bg-black px-4 py-2 text-[#374151]"
-        onclick={() => handleFeatureSelection(visited.featureId)}>
+        onclick={() => handleFeatureSelection(visited.featureId as Id)}>
         <Icon src={Squares2x2} class="h-5 w-5 flex-shrink-0" theme="fill" />
         <div class="flex flex-grow flex-col">
           <p class="text-xs uppercase tracking-widest">

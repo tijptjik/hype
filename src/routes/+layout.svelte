@@ -8,8 +8,7 @@ import { afterNavigate } from '$app/navigation';
 import { QueryClientProvider } from '@tanstack/svelte-query';
 import { SvelteQueryDevtools } from '@tanstack/svelte-query-devtools';
 // I18N
-import { ParaglideJS } from '@inlang/paraglide-sveltekit';
-import { m, i18n, getLocale, setLocale } from '$lib/i18n';
+import { getLocale, setLocale } from '$lib/i18n';
 // COMPONENTS
 import FlashMessage from '$lib/components/common/FlashMessage.svelte';
 // STYLES
@@ -17,6 +16,7 @@ import 'tailwindcss/tailwind.css';
 // TYPES
 import type { QueryClient } from '@tanstack/svelte-query';
 import type { LayoutData } from './$types';
+import type { LanguageTag } from '$lib/types';
 
 // PROPS
 let { children } = $props();
@@ -52,7 +52,7 @@ $effect(() => {
   // Then handle language
   if (session?.user?.language) {
     // Set the language tag first
-    setLocale(session.user.language);
+    setLocale(session.user.language as LanguageTag);
 
     // Only redirect if we're not already on the correct language route
     const currentPath = $page.url.pathname;
@@ -88,32 +88,30 @@ afterNavigate(() => {
   <meta name="twitter:image" content={socialImage.image} />
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
   <link
     href="https://fonts.googleapis.com/css2?family=Geologica:wght@100..900&display=swap"
     rel="stylesheet" />
 </svelte:head>
 
 <QueryClientProvider client={queryClient}>
-  <ParaglideJS {i18n}>
-    <div
-      class="flex h-lvh w-dvw flex-row overscroll-contain bg-black"
-      class:font-hant={getLocale() === 'zh-hant'}
-      class:font-hans={getLocale() === 'zh-hans'}>
-      <FlashMessage />
-      {@render children()}
-      {#if getLocale() === 'zh-hant'}
-        <link
-          href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@100..900&display=swap"
-          rel="stylesheet" />
-      {:else if getLocale() === 'zh-hans'}
-        <link
-          href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@100..900&display=swap"
-          rel="stylesheet" />
-      {/if}
-    </div>
-    {#if import.meta.env.VITE_SVELTE_QUERY_DEVTOOLS === 'true'}
-      <SvelteQueryDevtools />
+  <div
+    class="flex h-lvh w-dvw flex-row overscroll-contain bg-black"
+    class:font-hant={getLocale() === 'zh-hant'}
+    class:font-hans={getLocale() === 'zh-hans'}>
+    <FlashMessage />
+    {@render children()}
+    {#if getLocale() === 'zh-hant'}
+      <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@100..900&display=swap"
+        rel="stylesheet" />
+    {:else if getLocale() === 'zh-hans'}
+      <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@100..900&display=swap"
+        rel="stylesheet" />
     {/if}
-  </ParaglideJS>
+  </div>
+  {#if import.meta.env.VITE_SVELTE_QUERY_DEVTOOLS === 'true'}
+    <SvelteQueryDevtools />
+  {/if}
 </QueryClientProvider>

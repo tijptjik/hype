@@ -1,10 +1,7 @@
-import { createI18n } from '@inlang/paraglide-sveltekit';
 // I18N
 import * as runtime from '$lib/paraglide/runtime';
 import * as m from '$lib/paraglide/messages';
 import type { LanguageTag } from '$lib/types';
-
-export const i18n = createI18n(runtime);
 
 // Helper function to get translated value
 export function getI18nValue(obj: any, field: string): string {

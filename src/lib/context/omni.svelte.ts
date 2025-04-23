@@ -4,7 +4,7 @@ import { goto } from '$app/navigation';
 // LIB
 import { searchAll } from '$lib/map/data';
 // I18N
-import { getI18nValue, i18n } from '$lib/i18n';
+import { getI18nValue } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // NEIGHBOURHOODS
 import neighbourhoods from '$lib/map/neighbourhoods.json';
@@ -49,7 +49,7 @@ export class OmniContext {
     focusedIndex: -1
   });
 
-  mapContext: mapContext;
+  mapContext!: mapContext;
   pageState: PageState = $state(PageState.NoTransition);
 
   // Constructor with mapContext
@@ -140,14 +140,14 @@ export class OmniContext {
     } else if (this.state.mode === 'navigation') {
       this.clearSearch();
       this.setMode('search');
-      goto(i18n.resolveRoute('/'));
+      goto('/');
 
       // If we are in feature, without a card, reset the search
     } else if (this.state.mode === 'feature') {
       this.clearSearch();
       this.setMode('search');
       this.focusSearchBar();
-      goto(i18n.resolveRoute('/'));
+      goto('/');
 
       // If we are in search mode, close the card
     } else if (this.state.mode === 'search' && this.state.isTrayOpen) {
@@ -334,7 +334,7 @@ export class OmniContext {
   navNext() {
     if (this.navIndex < this.mapContext.state.active.collection!.items.length - 1) {
       this.mapContext.setActiveFeature(
-        this.mapContext.state.active.collection!.items[this.navIndex + 1],
+        this.mapContext.state.active.collection!.items[this.navIndex + 1].id,
         { focus: true }
       );
     }
@@ -343,7 +343,7 @@ export class OmniContext {
   navPrevious() {
     if (this.navIndex > 0) {
       this.mapContext.setActiveFeature(
-        this.mapContext.state.active.collection!.items[this.navIndex - 1],
+        this.mapContext.state.active.collection!.items[this.navIndex - 1].id,
         { focus: true }
       );
     }

@@ -31,7 +31,10 @@ export default defineConfig({
   plugins: [
     paraglideVitePlugin({
       project: './project.inlang',
-      outdir: './src/lib/paraglide'
+      outdir: './src/lib/paraglide',
+      strategy: ['cookie', 'preferredLanguage', 'baseLocale'],
+      cookieName: 'lang',
+      disableAsyncLocalStorage: true
     }),
     seedDrizzle(),
     sveltekit()

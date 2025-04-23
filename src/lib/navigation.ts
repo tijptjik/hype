@@ -1,7 +1,5 @@
 // SVELTE
 import { goto } from '$app/navigation';
-// I18N
-import { i18n } from '$lib/i18n';
 // LIB
 import { ADMIN_PATH } from '$lib/index';
 // ICONS

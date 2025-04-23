@@ -1,10 +1,6 @@
 <script lang="ts">
-// SVELTE
-import { goto } from '$app/navigation';
 // CONFIG
 import { MOBILE_MAX_WIDTH } from '$lib/index';
-// I18N
-import { i18n } from '$lib/i18n';
 // ACTIONS
 import { clickOutside } from '$lib/actions';
 // Animation

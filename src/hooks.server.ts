@@ -2,11 +2,21 @@
 import { handle as inject_auth } from '$lib/auth';
 import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle } from '@sveltejs/kit';
-import { i18n } from '$lib/i18n';
+import { paraglideMiddleware } from '$lib/paraglide/server';
 
 let handle: Handle;
 const localWranglerEnv = import.meta.env.VITE_WRANGLER_ENV === 'local';
-const translation = i18n.handle();
+
+// creating a handle to use the paraglide middleware
+const translation: Handle = ({ event, resolve }) =>
+  paraglideMiddleware(event.request, ({ request: localizedRequest, locale }) => {
+    event.request = localizedRequest;
+    return resolve(event, {
+      transformPageChunk: ({ html }) => {
+        return html.replace('%lang%', locale);
+      }
+    });
+  });
 
 // const handle_cors = (async ({ event, resolve }) => {
 //   const response = await resolve(event);
