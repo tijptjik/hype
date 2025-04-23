@@ -8,7 +8,6 @@ import { m } from '$lib/i18n';
 import { getMapContext } from '$lib/context/map.svelte';
 // TYPES
 import type { Id } from '$lib/types';
-import { onMount } from 'svelte';
 let mapContext = getMapContext();
 
 type Props = {
@@ -23,6 +22,7 @@ type Props = {
 let { key, label, min, max, layerId, defaultOpen = false }: Props = $props();
 
 let isOpen = $state(defaultOpen);
+let selectedRange = $derived(mapContext.propertyFilters?.[layerId]?.[key]);
 
 let displayText = $derived.by(() => {
   if (min === values[0] && max === values[1]) {
@@ -34,7 +34,7 @@ let displayText = $derived.by(() => {
   }
 });
 
-let values: [number, number] = $state([min, max]);
+let values: [number, number] = $state([selectedRange.rangeMin, selectedRange.rangeMax]);
 
 $effect(() => {
   mapContext.setRangePropertyFilter(layerId, key, values);
