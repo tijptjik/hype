@@ -201,5 +201,11 @@
   "admin__forms_feature_addressing_subtitle": "特徵在應用中列在此地址下",
   "admin__forms_feature_viewer_title": "查看器",
   "admin__forms_feature_gallery_title": "圖庫",
-  "maps__projects_none_with_n_organisations": "所有 <b class='font-mono inline-block px-2'>項目</b> 有 {n} <b class='font-mono inline-block px-2'>組織</b>"
+  "maps__projects_none_with_n_organisations": "所有 <b class='font-mono inline-block px-2'>項目</b> 有 {n} <b class='font-mono inline-block px-2'>組織</b>",
+  "admin__validation_user_roles_at_least_one_owner": "添加所有者",
+  "admin__validation_user_roles_at_least_one_maintainer": "新增維護者",
+  "admin__validation_code_is_required": "需要程式碼",
+  "admin__validation_code_lte_24_chars": "代碼必須不超過 24 個字符",
+  "admin__validation_code_valid_characters": "必須只包含字母數字、底線和 $ 字符",
+  "agent_cozy_yak_empower": "已選擇{count}"
 }

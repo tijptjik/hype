@@ -183,5 +183,6 @@
   "admin__forms_feature_addressing_title": "Addressing",
   "admin__forms_feature_addressing_subtitle": "users will see this address",
   "admin__forms_feature_viewer_title": "Viewer",
-  "admin__forms_feature_gallery_title": "Gallery"
+  "admin__forms_feature_gallery_title": "Gallery",
+  "agent_cozy_yak_empower": "{count} selected"
 }

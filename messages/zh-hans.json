@@ -200,5 +200,11 @@
   "admin__forms_feature_addressing_title": "寻址",
   "admin__forms_feature_addressing_subtitle": "特征在应用中列在此地址下",
   "admin__forms_feature_viewer_title": "查看器",
-  "admin__forms_feature_gallery_title": "图库"
+  "admin__forms_feature_gallery_title": "图库",
+  "admin__validation_user_roles_at_least_one_owner": "添加所有者",
+  "admin__validation_user_roles_at_least_one_maintainer": "添加维护者",
+  "admin__validation_code_is_required": "需要代码",
+  "admin__validation_code_lte_24_chars": "代码必须不超过 24 个字符",
+  "admin__validation_code_valid_characters": "必须仅包含字母数字、下划线和 $ 字符",
+  "agent_cozy_yak_empower": "已选择{count}"
 }
