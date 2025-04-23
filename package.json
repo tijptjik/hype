@@ -77,7 +77,6 @@
     "@auth/sveltekit": "1.7.4",
     "@emeraldpay/hashicon": "^0.5.2",
     "@inlang/paraglide-js": "^2.0.12",
-    "@inlang/paraglide-sveltekit": "^0.16.1",
     "@libsql/client": "0.15.4",
     "@mapbox/tilebelt": "^2.0.2",
     "@placemarkio/geo-viewport": "^1.0.2",
