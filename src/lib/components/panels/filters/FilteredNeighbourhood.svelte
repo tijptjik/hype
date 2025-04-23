@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import { getI18nValue, languageTag } from '$lib/i18n';
+import { getI18nValue, getLocale } from '$lib/i18n';
 // DATA
 import subNeighbourhoods from '$lib/map/subNeighbourhoods.json';
 // CONTEXT
@@ -57,7 +57,7 @@ function getFeatureCount(neighbourhoodKey: string) {
           <span class="text-accent">{getI18nValue(data, 'district')}</span>
         </p>
         <p class="font-normal text-base-content">
-          {languageTag() === 'en' ? neighbourhood : getI18nValue(data, 'name')}
+          {getLocale() === 'en' ? neighbourhood : getI18nValue(data, 'name')}
         </p>
       </div>
     </div>

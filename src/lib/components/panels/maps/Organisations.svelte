@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import { m, getI18nValue, languageTag } from '$lib/i18n';
+import { m, getI18nValue, getLocale } from '$lib/i18n';
 // ICONS
 import { UserGroup, Funnel, XMark } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
@@ -34,7 +34,7 @@ function filterOrganisations(organisations: Organisation[], term: string) {
 
   const searchLower = term.toLowerCase();
   return organisations.filter((organisation) => {
-    return languageTag() == 'en'
+    return getLocale() == 'en'
       ? organisation.name.toLowerCase().includes(searchLower) ||
           (organisation.description &&
             organisation.description.toLowerCase().includes(searchLower))

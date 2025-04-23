@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import { m, getI18nValue, languageTag } from '$lib/i18n';
+import { m, getI18nValue, getLocale } from '$lib/i18n';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
 // COMPONENTS
@@ -33,7 +33,7 @@ const cachedData = $state(
 let layers = $state([]);
 
 $effect(() => {
-  languageTag;
+  getLocale;
   layers = cachedData.map((layer: Layer) => ({
     ...layer,
     project: mapContext.getProject(layer),

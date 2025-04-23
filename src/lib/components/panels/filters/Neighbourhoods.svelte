@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import { m, getI18nValue, languageTag } from '$lib/i18n';
+import { m, getI18nValue, getLocale } from '$lib/i18n';
 // CONSTANTS
 import neighbourhoods from '$lib/map/neighbourhoods.json';
 // COMPONENTS
@@ -31,7 +31,7 @@ function filterNeighbourhoods(
   if (!term) return Object.entries(neighbourhoods);
   const searchLower = term.toLowerCase();
   return Object.entries(neighbourhoods).filter(([key, data]) =>
-    languageTag() == 'en'
+    getLocale() == 'en'
       ? key.toLowerCase().includes(searchLower) ||
         data.district.toLowerCase().includes(searchLower) ||
         data.region.toLowerCase().includes(searchLower)

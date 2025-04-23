@@ -3,7 +3,7 @@
 import { MinusCircle, PlusCircle } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // I18N
-import { getI18nValue, languageTag } from '$lib/i18n';
+import { getI18nValue, getLocale } from '$lib/i18n';
 
 const {
   layer,
@@ -23,7 +23,7 @@ const {
       <div class="h-2 w-2 rounded-full {isSelected ? selectedClass : ''}"></div>
       <div class="flex flex-col items-start gap-0">
         <p class="flex space-x-0.5 font-mono text-xs uppercase tracking-widest">
-          {#if languageTag() == 'en'}
+          {#if getLocale() == 'en'}
             <span class="text-primary"
               >{organisation.code.replaceAll('_', '').replaceAll(' ', '')}</span>
             <span class="px-0">›</span>

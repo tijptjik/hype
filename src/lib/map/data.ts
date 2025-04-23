@@ -1,5 +1,5 @@
 // I18N
-import { m, getI18nValue, languageTag } from '$lib/i18n';
+import { m, getI18nValue, getLocale } from '$lib/i18n';
 // DATA
 import neighbourhoods from './neighbourhoods.json';
 import subNeighbourhoods from './subNeighbourhoods.json';
@@ -38,7 +38,7 @@ export function filterNeighbourhoods(term: string) {
   if (!term) return Object.entries(neighbourhoods);
   const searchLower = term.toLowerCase();
   return Object.entries(neighbourhoods).filter(([key, data]) =>
-    languageTag() == 'en'
+    getLocale() == 'en'
       ? key.toLowerCase().includes(searchLower) ||
         data.district.toLowerCase().includes(searchLower) ||
         data.region.toLowerCase().includes(searchLower)
@@ -90,7 +90,7 @@ export function searchAll(term: string, mapContext: mapContext): SearchResult[] 
   const neighbourhoodResults = filterNeighbourhoods(term);
   neighbourhoodResults.forEach(([neighbourhood, data]) => {
     results.push({
-      name: languageTag() === 'en' ? neighbourhood : getI18nValue(data, 'name'),
+      name: getLocale() === 'en' ? neighbourhood : getI18nValue(data, 'name'),
       count: getNeighbourhoodFeatureCount(
         neighbourhood,
         mapContext.state.resources.feature
@@ -145,7 +145,7 @@ export function searchNearest(mapContext: mapContext): SearchResult[] {
   const neighbourhoodResults = filterNeighbourhoods('');
   neighbourhoodResults.forEach(([neighbourhood, data]) => {
     results.push({
-      name: languageTag() === 'en' ? neighbourhood : getI18nValue(data, 'name'),
+      name: getLocale() === 'en' ? neighbourhood : getI18nValue(data, 'name'),
       count: getNeighbourhoodFeatureCount(
         neighbourhood,
         mapContext.state.resources.feature

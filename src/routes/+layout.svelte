@@ -9,7 +9,7 @@ import { QueryClientProvider } from '@tanstack/svelte-query';
 import { SvelteQueryDevtools } from '@tanstack/svelte-query-devtools';
 // I18N
 import { ParaglideJS } from '@inlang/paraglide-sveltekit';
-import { m, i18n, languageTag, setLanguageTag } from '$lib/i18n';
+import { m, i18n, getLocale, setLocale } from '$lib/i18n';
 // COMPONENTS
 import FlashMessage from '$lib/components/common/FlashMessage.svelte';
 // STYLES
@@ -52,7 +52,7 @@ $effect(() => {
   // Then handle language
   if (session?.user?.language) {
     // Set the language tag first
-    setLanguageTag(session.user.language);
+    setLocale(session.user.language);
 
     // Only redirect if we're not already on the correct language route
     const currentPath = $page.url.pathname;
@@ -178,15 +178,15 @@ afterNavigate(() => {
   <ParaglideJS {i18n}>
     <div
       class="flex h-lvh w-dvw flex-row overscroll-contain bg-black"
-      class:font-hant={languageTag() === 'zh-hant'}
-      class:font-hans={languageTag() === 'zh-hans'}>
+      class:font-hant={getLocale() === 'zh-hant'}
+      class:font-hans={getLocale() === 'zh-hans'}>
       <FlashMessage />
       {@render children()}
-      {#if languageTag() === 'zh-hant'}
+      {#if getLocale() === 'zh-hant'}
         <link
           href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@100..900&display=swap"
           rel="stylesheet" />
-      {:else if languageTag() === 'zh-hans'}
+      {:else if getLocale() === 'zh-hans'}
         <link
           href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@100..900&display=swap"
           rel="stylesheet" />

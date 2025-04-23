@@ -2,7 +2,7 @@
 import { goto } from '$app/navigation';
 import { i18n } from '$lib/i18n';
 // I18N
-import { m, setLanguageTag, languageTag } from '$lib/i18n';
+import { m, setLocale, getLocale } from '$lib/i18n';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Language } from '@steeze-ui/heroicons';
@@ -28,7 +28,7 @@ const updateLanguage = async (language: string) => {
 
   // Update the language immediately after the API call
   session!.user.language = language as LanguageTag;
-  setLanguageTag(language as LanguageTag);
+  setLocale(language as LanguageTag);
   goto(i18n.resolveRoute(`/`));
 };
 </script>
@@ -40,9 +40,9 @@ const updateLanguage = async (language: string) => {
         <div class="flex flex-row items-center gap-4">
           <Icon src={Language} class="h-5 w-5" />
           <p class="font-normal text-base-content">{language.name}</p>
-          {#if language.code !== languageTag()}
+          {#if language.code !== getLocale()}
             <p class="text-sm text-neutral-content">
-              {language[languageTag()]}
+              {language[getLocale()]}
             </p>
           {/if}
         </div>
@@ -51,7 +51,7 @@ const updateLanguage = async (language: string) => {
           name="language"
           value={language.code}
           class="radio-primary radio mr-4 h-5 w-5 cursor-pointer"
-          checked={languageTag() === language.code}
+          checked={getLocale() === language.code}
           onclick={() => updateLanguage(language.code)} />
       </div>
     {/each}

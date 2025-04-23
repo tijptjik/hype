@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import { m, getI18nValue, languageTag } from '$lib/i18n';
+import { m, getI18nValue, getLocale } from '$lib/i18n';
 // ICONS
 import { Square3Stack3d } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
@@ -35,7 +35,7 @@ function filterLayers(layers: Layer[], term: string) {
 
   const searchLower = term.toLowerCase();
   return layers.filter((layer) => {
-    return languageTag() == 'en'
+    return getLocale() == 'en'
       ? layer.name.toLowerCase().includes(searchLower) ||
           (layer.description && layer.description.toLowerCase().includes(searchLower))
       : getI18nValue(layer, 'nameShort').toLowerCase().includes(searchLower) ||

@@ -3,7 +3,7 @@
 import Icon from '$lib/components/common/Icon.svelte';
 import { XMark } from '@steeze-ui/heroicons';
 // I18N
-import { m, getI18nValue, languageTag } from '$lib/i18n';
+import { m, getI18nValue, getLocale } from '$lib/i18n';
 // TYPES
 import type { Resource, Id } from '$lib/types';
 
@@ -58,7 +58,7 @@ function handleToggle(id: Id) {
             e.stopPropagation();
             handleToggle(id);
           }}>
-          {#if languageTag() === 'en'}
+          {#if getLocale() === 'en'}
             {props.type === 'neighbourhood'
               ? resource.id
               : resource.nameShort || resource.name}

@@ -2,7 +2,7 @@
 import { ChevronDown, ChevronUp } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // I18N
-import { m, languageTag } from '$lib/i18n';
+import { m, getLocale } from '$lib/i18n';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
 
@@ -35,7 +35,7 @@ let isOpen = $state(false);
 function getTranslatedValue(value: string | TranslatedValue): string {
   if (typeof value === 'string') return value;
 
-  const currentLang = languageTag();
+  const currentLang = getLocale();
   if (currentLang === 'en') return value.value;
 
   const translation = value.translations?.find((t) => t.lang === currentLang);
