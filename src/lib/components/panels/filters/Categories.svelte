@@ -85,13 +85,12 @@ function getTranslatedValues(values: any[]) {
     translations: v.translations || []
   }));
 }
+
+$effect(() => {
+  $inspect(layerCategories);
+  $inspect(selectedCategories);
+});
 </script>
-
-<!-- COMPONENTS -->
-
-{#snippet SelectedCategories()}
-  <div></div>
-{/snippet}
 
 <!-- LAYOUT -->
 

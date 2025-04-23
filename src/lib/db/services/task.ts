@@ -9,7 +9,9 @@ import type { ResourceHierarchy } from '$lib/db';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import type { NewTaskDB, TaskDB } from '$lib/types';
 
-export type Database = DrizzleD1Database<typeof import('/home/io/code/ghostsigns/src/lib/db/schema')>;
+export type Database = DrizzleD1Database<
+  typeof import('/home/io/code/ghostsigns/src/lib/db/schema')
+>;
 
 export const createTask = async (db: Database, data: NewTaskDB) => {
   const [insertedTask] = await db
@@ -41,7 +43,6 @@ export const updateTask = async (db: Database, data: TaskDB, id: string) => {
 export const patchTask = async (db: Database, id: string, data: Partial<TaskDB>) => {
   return await updatePartial(db, task, id, 'id', data);
 };
-
 
 export const customHierarchy: ResourceHierarchy = [
   {

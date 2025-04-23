@@ -8,9 +8,9 @@
       <span class="font-semibold">REJECT</span> - The feature will no longer appear anywhere.
     </li>
     <li>
-      <span class="font-semibold">ACCEPT</span> - You will be redirected to the feature detail
-      page where you can edit the user-submitted information, add translations, and further
-      polish the Feature <i>before</i> it is published on the public map.
+      <span class="font-semibold">ACCEPT</span> - You will be redirected to the feature
+      detail page where you can edit the user-submitted information, add translations,
+      and further polish the Feature <i>before</i> it is published on the public map.
     </li>
   </ul>
 </section>

@@ -611,7 +611,6 @@ export class mapContext {
         [
           [bounds[0], bounds[1]], // southwestern corner
           [bounds[2], bounds[3]] // northeastern corner
-
         ],
         {
           center: [(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2],
@@ -649,7 +648,6 @@ export class mapContext {
       [
         [bounds[0], bounds[1]], // southwestern corner
         [bounds[2], bounds[3]] // northeastern corner
-
       ],
       {
         center: { lon: (bounds[0] + bounds[2]) / 2, lat: (bounds[1] + bounds[3]) / 2 },

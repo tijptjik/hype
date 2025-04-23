@@ -20,7 +20,7 @@ let {
 } = $props();
 </script>
 
-<div class="flex min-h-0 mt-4 flex-col flex-shrink-0 {isOpen ? 'flex-grow' : ''}">
+<div class="mt-4 flex min-h-0 flex-shrink-0 flex-col {isOpen ? 'flex-grow' : ''}">
   <button
     class="flex w-full flex-shrink-0 items-center justify-between px-4 {iconVerticalPaddingClass} bg-black"
     onclick={toggle}>
@@ -59,7 +59,7 @@ let {
   </button>
 
   {#if isOpen}
-      {@render children()}
+    {@render children()}
   {:else}
     {@render collapsedContent()}
   {/if}

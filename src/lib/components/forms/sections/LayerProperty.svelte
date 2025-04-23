@@ -8,18 +8,16 @@ import type { FormFieldArray, SectionProps } from '$lib/types';
 // STATE : PROPS
 let sectionProps: SectionProps & { fields: FormFieldArray } = $props();
 let { fields } = sectionProps;
-
 </script>
 
 <div
-  class="basis-2/3 overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
+  class="from-rose-500 to-fuchsia-800 basis-2/3 overflow-hidden rounded-2xl bg-gradient-to-r p-0">
   <Header {...sectionProps} />
   {#each Object.entries(fields) as [fieldRoot, field]}
     <LayerPropertyField
       {fieldRoot}
       {field}
       propertyJoinStateKey="isVisible"
-      {...sectionProps}
-      />
+      {...sectionProps} />
   {/each}
 </div>

@@ -1,4 +1,9 @@
-export function calculateDistance(lat1: number, long1: number, lat2: number, long2: number) {
+export function calculateDistance(
+  lat1: number,
+  long1: number,
+  lat2: number,
+  long2: number
+) {
   //radians
   lat1 = (lat1 * 2.0 * Math.PI) / 60.0 / 360.0;
   long1 = (long1 * 2.0 * Math.PI) / 60.0 / 360.0;

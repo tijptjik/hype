@@ -19,7 +19,7 @@ let { fields, form } = sectionProps;
 </script>
 
 <div
-  class="z-10 rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0 @container">
+  class="from-rose-500 to-fuchsia-800 z-10 rounded-2xl bg-gradient-to-r p-0 @container">
   {#if resourceState.activeResource === 'feature' && (resourceState.activeFacet === 'core' || resourceState.activeFacet === false)}
     <Header {...sectionProps} {Actions} {InfoContent} />
   {:else}

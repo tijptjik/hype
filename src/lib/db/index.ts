@@ -221,7 +221,8 @@ const applyTranslationCondition = (
         .select({ id: translationTable[reverseFK0] })
         .from(translationTable)
         .where(eq(translationTable[reverseFK0], table0.id))
-    )];
+    )
+  ];
 };
 
 const createLevelQuery = (
@@ -347,10 +348,8 @@ const applyFilterConstraints = (
   }
 
   return [
-    inArray(
-      getTable(slicedHierarchy, 0).id,
-      baseQuery.where(or(...subQueryConditions))
-    )];
+    inArray(getTable(slicedHierarchy, 0).id, baseQuery.where(or(...subQueryConditions)))
+  ];
 };
 
 const applyQueryConstraints = (table: Table, query: string, filterFields: string[]) => {
@@ -552,7 +551,8 @@ export async function genericEntityQuery<usersT extends Table>(
   }
   const conditions = [
     eq(table[publicIdentifier], ref),
-    ...applyGenericAccessStrategy(db, accessStrategy, userTable, userId)];
+    ...applyGenericAccessStrategy(db, accessStrategy, userTable, userId)
+  ];
 
   let queryOpts = {
     where: and(...conditions),
@@ -611,7 +611,8 @@ export async function hierarchicalEntityQuery<
   const slicedHierarchy = resourceHierarchy.slice(-depth, resourceHierarchy.length);
   const conditions = [
     eq(getTable(slicedHierarchy, 0)[publicIdentifier], ref),
-    ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId)];
+    ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId)
+  ];
 
   if (translationTable) {
     conditions.push(

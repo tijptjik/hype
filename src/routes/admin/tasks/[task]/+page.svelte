@@ -50,7 +50,7 @@ resourceState.setFacet('core');
   )}
   refProject={resourceState.getEntity(HierarchicalResource.project, task.projectId)}>
   <div
-    class="h-full overflow-y-auto bg-gradient-to-br from-rose-500 to-indigo-700 bg-fixed p-6">
+    class="from-rose-500 h-full overflow-y-auto bg-gradient-to-br to-indigo-700 bg-fixed p-6">
     <Task {task}>
       <TaskHeader {task} isRoundedBottom={false}>
         {#snippet Left()}

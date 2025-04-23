@@ -1,4 +1,3 @@
-
 import { error } from '@sveltejs/kit';
 import { and, eq, inArray } from 'drizzle-orm';
 import { superValidate } from 'sveltekit-superforms';
@@ -8,11 +7,11 @@ import { PropertyInsert, PropertyUpdate, PropertyUpdateAPI } from '../zod';
 import { toNestedTranslations } from '$lib/db';
 // TYPES
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
-import type { 
-  NewPropertyDB, 
-  PropertyDB, 
-  TargetLang, 
-  NewPropertyI18n, 
+import type {
+  NewPropertyDB,
+  PropertyDB,
+  TargetLang,
+  NewPropertyI18n,
   PropertyI18n,
   Id,
   NewProperty,
@@ -22,10 +21,11 @@ import type {
   PropertyValueI18n,
   PropertyValueDB,
   FormRelatedProperties
-  
 } from '$lib/types';
 
-export type Database = DrizzleD1Database<typeof import('/home/io/code/ghostsigns/src/lib/db/schema')>;
+export type Database = DrizzleD1Database<
+  typeof import('/home/io/code/ghostsigns/src/lib/db/schema')
+>;
 
 // CREATE / UPDATE
 
@@ -42,7 +42,11 @@ export const createProperty = async (db: Database, data: NewPropertyDB) => {
   return insertedProperty;
 };
 
-export const updateProperty = async (db: Database, data: PropertyDB, propertyId: string) => {
+export const updateProperty = async (
+  db: Database,
+  data: PropertyDB,
+  propertyId: string
+) => {
   const [updatedProperty] = await db
     .update(property)
     .set({ ...data })
@@ -61,11 +65,13 @@ export const createTranslations = async (
   translations: Record<TargetLang, NewPropertyI18n>,
   propertyId: string
 ) => {
-  const translationsToInsert = Object.entries(translations).map(([lang, translation]) => ({
-    ...translation,
-    propertyId,
-    lang: lang as 'zh-hant' | 'zh-hans'
-  }));
+  const translationsToInsert = Object.entries(translations).map(
+    ([lang, translation]) => ({
+      ...translation,
+      propertyId,
+      lang: lang as 'zh-hant' | 'zh-hans'
+    })
+  );
 
   return await db.insert(propertyI18n).values(translationsToInsert).returning();
 };
@@ -105,13 +111,13 @@ export const updatePropertyValues = async (
     .where(eq(propertyValue.propertyId, propertyId));
 
   // Create sets for comparison
-  const existingIds = new Set(existingValues.map(v => v.id));
+  const existingIds = new Set(existingValues.map((v) => v.id));
   const newIds = new Set(Object.keys(values));
 
   // Determine which records to add, update, and remove
-  const idsToAdd = [...newIds].filter(id => !existingIds.has(id));
-  const idsToUpdate = [...newIds].filter(id => existingIds.has(id));
-  const idsToRemove = [...existingIds].filter(id => !newIds.has(id));
+  const idsToAdd = [...newIds].filter((id) => !existingIds.has(id));
+  const idsToUpdate = [...newIds].filter((id) => existingIds.has(id));
+  const idsToRemove = [...existingIds].filter((id) => !newIds.has(id));
 
   // Remove records that are no longer present
   if (idsToRemove.length > 0) {
@@ -127,7 +133,7 @@ export const updatePropertyValues = async (
 
   // Add new records
   if (idsToAdd.length > 0) {
-    const valuesToInsert = idsToAdd.map(id => ({
+    const valuesToInsert = idsToAdd.map((id) => ({
       ...values[id],
       propertyId,
       id
@@ -160,7 +166,7 @@ export const createPropertyValueTranslations = async (
   translations: Record<string, Record<TargetLang, PropertyValueI18n>>,
   propertyValueIds: string[]
 ) => {
-  const translationsToInsert = propertyValueIds.flatMap(valueId => 
+  const translationsToInsert = propertyValueIds.flatMap((valueId) =>
     Object.entries(translations[valueId] || {}).map(([lang, translation]) => ({
       ...translation,
       propertyValueId: valueId,
@@ -179,7 +185,8 @@ export const updatePropertyValueTranslations = async (
   translations: Record<string, Record<TargetLang, PropertyValueI18n>>,
   propertyValueIds: string[]
 ) => {
-  await db.delete(propertyValueI18n)
+  await db
+    .delete(propertyValueI18n)
     .where(eq(propertyValueI18n.propertyValueId, propertyValueIds[0]));
   return await createPropertyValueTranslations(db, translations, propertyValueIds);
 };
@@ -190,9 +197,10 @@ export const extractEntitiesToInsert = (formData: NewProperty) => {
   const baseProperty = PropertyInsert.parse(formData);
   const formTranslations: Record<TargetLang, NewPropertyI18n> = formData.translations;
   const formValues: NewPropertyValue[] = formData.values;
-  const formValueTranslations: PropertyValueI18n[] = 
-    formData.values.map(value => Object.values(value.translations)).flat();
-  
+  const formValueTranslations: PropertyValueI18n[] = formData.values
+    .map((value) => Object.values(value.translations))
+    .flat();
+
   return { baseProperty, formTranslations, formValues, formValueTranslations };
 };
 
@@ -200,9 +208,10 @@ export const extractEntitiesToUpdate = (formData: Property) => {
   const baseProperty = PropertyUpdate.parse(formData);
   const formTranslations: Record<TargetLang, PropertyI18n> = formData.translations;
   const formValues: PropertyValue[] = formData.values;
-  const formValueTranslations: PropertyValueI18n[] = 
-  formData.values.map(value => Object.values(value.translations)).flat();
-  
+  const formValueTranslations: PropertyValueI18n[] = formData.values
+    .map((value) => Object.values(value.translations))
+    .flat();
+
   return { baseProperty, formTranslations, formValues, formValueTranslations };
 };
 
@@ -236,10 +245,10 @@ const getExistingProperties = async (db: Database, projectId: string) => {
     }
   });
 
-  return result.map(prop => ({
+  return result.map((prop) => ({
     ...prop,
     translations: toNestedTranslations<PropertyI18n>(prop.translations),
-    values: prop.values.map(val => ({
+    values: prop.values.map((val) => ({
       ...val,
       translations: toNestedTranslations<PropertyValueI18n>(val.translations)
     }))
@@ -247,34 +256,40 @@ const getExistingProperties = async (db: Database, projectId: string) => {
 };
 
 const compareAndGroupProperties = (existing: Property[], incoming: Property[]) => {
-  const existingIds = new Set(existing.map(p => p.id));
-  const incomingIds = new Set(incoming.map(p => p.id));
+  const existingIds = new Set(existing.map((p) => p.id));
+  const incomingIds = new Set(incoming.map((p) => p.id));
 
   return {
-    toDelete: existing.filter(p => !incomingIds.has(p.id)),
-    toCreate: incoming.filter(p => !p.id || !existingIds.has(p.id)),
-    toUpdate: incoming.filter(p => p.id && existingIds.has(p.id))
+    toDelete: existing.filter((p) => !incomingIds.has(p.id)),
+    toCreate: incoming.filter((p) => !p.id || !existingIds.has(p.id)),
+    toUpdate: incoming.filter((p) => p.id && existingIds.has(p.id))
   };
 };
 
 export const upsertRelatedProperties = async (
-  db: Database, 
-  properties: Property[]|NewProperty[], 
+  db: Database,
+  properties: Property[] | NewProperty[],
   projectId: string
 ): Promise<Property[]> => {
   // Get all existing properties with their relations
   const existingProperties = await getExistingProperties(db, projectId);
   // Group properties by operation needed
-  const { toDelete, toCreate, toUpdate } = compareAndGroupProperties(existingProperties, properties);
+  const { toDelete, toCreate, toUpdate } = compareAndGroupProperties(
+    existingProperties,
+    properties
+  );
 
   // Delete removed properties (cascades to related tables)
   if (toDelete.length > 0) {
-    await db
-      .delete(property)
-      .where(and(
+    await db.delete(property).where(
+      and(
         eq(property.projectId, projectId),
-        inArray(property.id, toDelete.map(p => p.id))
-      ));
+        inArray(
+          property.id,
+          toDelete.map((p) => p.id)
+        )
+      )
+    );
   }
 
   // Create new properties
@@ -290,21 +305,23 @@ export const upsertRelatedProperties = async (
       const translations = await createTranslations(db, prop.translations, newProp.id);
 
       // Create values and their translations
-      const values = await Promise.all(prop.values.map(async (val) => {
-        const newValue = await db
-          .insert(propertyValue)
-          .values({ ...val, propertyId: newProp.id })
-          .returning()
-          .then(([v]) => v);
+      const values = await Promise.all(
+        prop.values.map(async (val) => {
+          const newValue = await db
+            .insert(propertyValue)
+            .values({ ...val, propertyId: newProp.id })
+            .returning()
+            .then(([v]) => v);
 
-        const valueTranslations = await createPropertyValueTranslations(
-          db,
-          { [newValue.id]: val.translations },
-          [newValue.id]
-        );
+          const valueTranslations = await createPropertyValueTranslations(
+            db,
+            { [newValue.id]: val.translations },
+            [newValue.id]
+          );
 
-        return { ...newValue, translations: toNestedTranslations(valueTranslations) };
-      }));
+          return { ...newValue, translations: toNestedTranslations(valueTranslations) };
+        })
+      );
 
       return {
         ...newProp,
@@ -324,15 +341,16 @@ export const upsertRelatedProperties = async (
       const translations = await updateTranslations(db, prop.translations, prop.id);
 
       // Update values and their translations
-      const values = await updatePropertyValues(db, 
-        prop.values.reduce((acc, val) => ({ ...acc, [val.id]: val }), {}), 
+      const values = await updatePropertyValues(
+        db,
+        prop.values.reduce((acc, val) => ({ ...acc, [val.id]: val }), {}),
         prop.id
       );
 
       // Update value translations
       const valueTranslations = await Promise.all(
         values.map(async (val) => {
-          const matchingValue = prop.values.find(v => v.id === val.id);
+          const matchingValue = prop.values.find((v) => v.id === val.id);
           if (matchingValue) {
             return await updatePropertyValueTranslations(
               db,
@@ -360,10 +378,18 @@ export const upsertRelatedProperties = async (
 };
 
 // Replace the existing implementations with calls to upsertRelatedProperties
-export const createRelatedProperties = (db: Database, properties: NewProperty[], projectId: string) => {
+export const createRelatedProperties = (
+  db: Database,
+  properties: NewProperty[],
+  projectId: string
+) => {
   return upsertRelatedProperties(db, properties, projectId);
 };
 
-export const updateRelatedProperties = (db: Database, properties: Property[], projectId: string) => {
+export const updateRelatedProperties = (
+  db: Database,
+  properties: Property[],
+  projectId: string
+) => {
   return upsertRelatedProperties(db, properties, projectId);
 };

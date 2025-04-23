@@ -37,4 +37,4 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
     console.error('Database query error:', e);
     return error(500, 'Dust Accumulation Critical');
   }
-}; 
+};

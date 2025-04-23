@@ -97,7 +97,6 @@ describe('Organization Management', () => {
             url: new URL('http://localhost:5173{ADMIN_PATH}/organisations/new')
           }
         ]
-
       ])
     });
 

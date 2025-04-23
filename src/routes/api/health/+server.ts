@@ -22,7 +22,8 @@ function maskPrivateValues(obj: Record<string, string>): Record<string, string> 
 // @ts-ignore
 export const GET: RequestHandler = async ({ locals, platform: { env } }) => {
   // HTTP : 200 JSON or 404
-  const vars = import.meta.env.VITE_WRANGLER_ENV === 'local' ? process.env : import.meta.env;
+  const vars =
+    import.meta.env.VITE_WRANGLER_ENV === 'local' ? process.env : import.meta.env;
   try {
     // HTTP : 200 JSON or 404
     return JSONResponseOrError({

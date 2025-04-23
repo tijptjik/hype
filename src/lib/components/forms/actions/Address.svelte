@@ -45,7 +45,7 @@ async function handleGeocode(e: Event) {
       class="transition-size h-[2rem] w-[2rem] duration-300 hover:rotate-6 group-hover:scale-110" />
   </a>
   <button
-    class="btn-rounded btn bg-fuchsia-700 text-base-content transition-colors duration-300 hover:bg-fuchsia-800"
+    class="btn-rounded bg-fuchsia-700 hover:bg-fuchsia-800 btn text-base-content transition-colors duration-300"
     class:px-6={isGeocoding}
     onclick={handleGeocode}
     disabled={isGeocoding}>

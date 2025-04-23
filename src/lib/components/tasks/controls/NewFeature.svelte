@@ -7,10 +7,12 @@ import type { TaskAPI } from '$lib/types';
 let { task }: { task: TaskAPI } = $props();
 </script>
 
-<aside class="w-[420px] flex flex-col gap-3 rounded-br-lg bg-base-200 p-6">
-  <h3 class="flex-grow-0 flex-shrink-0 mb-6 text-xl font-bold text-base-content">New Feature Details</h3>
+<aside class="flex w-[420px] flex-col gap-3 rounded-br-lg bg-base-200 p-6">
+  <h3 class="mb-6 flex-shrink-0 flex-grow-0 text-xl font-bold text-base-content">
+    New Feature Details
+  </h3>
 
-  <div class="flex-grow-1 flex-shrink-0 stats stats-vertical w-full bg-base-200">
+  <div class="flex-grow-1 stats stats-vertical w-full flex-shrink-0 bg-base-200">
     <div class="stat">
       <div class="stat-title">Title</div>
       <div class="stat-value text-lg">{task.feature?.title || '-'}</div>
@@ -32,14 +34,13 @@ let { task }: { task: TaskAPI } = $props();
   </div>
 
   {#if task.image?.longitude && task.image?.latitude}
-    <div class="flex-grow mt-6 h-full">
+    <div class="mt-6 h-full flex-grow">
       <Map
         coordinates={[
           parseFloat(task.image?.longitude),
           parseFloat(task.image?.latitude)
         ]}
-        draggable={false}
-      />
+        draggable={false} />
     </div>
   {:else}
     <div class="mt-6 text-sm text-base-content/50">No GPS data captured</div>

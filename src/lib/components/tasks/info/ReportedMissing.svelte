@@ -19,8 +19,9 @@
       <span class="font-semibold">UNLIST</span> - Feature will no longer be shown on the
       public map, <b>BUT</b> will still be visible in the Admin panel. Take this action,
       either becayse (1) visiting this feature is (temporarily) not possible; or (2) the
-      maintainer wishes to keep the feature in the collection, but remove it from the public
-      map. In effect, this sets the feature as <i>inaccessible</i> and <i>unpublished</i>.
+      maintainer wishes to keep the feature in the collection, but remove it from the
+      public map. In effect, this sets the feature as <i>inaccessible</i> and
+      <i>unpublished</i>.
     </li>
     <li>
       <span class="font-semibold">INTANGIBILIZE</span> - Feature should be

@@ -6,7 +6,7 @@ import { XCircle } from '@steeze-ui/heroicons';
 let { onclick } = $props();
 </script>
 
-<button class="btn btn-ghost btn-sm hover:bg-transparent hover:text-rose-300" {onclick}>
+<button class="hover:text-rose-300 btn btn-ghost btn-sm hover:bg-transparent" {onclick}>
   <Icon src={XCircle} class="h-4 w-4" />
   Reject
 </button>

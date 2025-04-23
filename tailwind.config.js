@@ -142,7 +142,6 @@ export default {
       },
       'dark',
       'emerald'
-
     ]
   },
   plugins: [
@@ -161,7 +160,6 @@ export default {
         }
       });
     })
-
   ],
   darkMode: ['class', '[data-theme="spectre"]']
 };

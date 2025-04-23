@@ -10,21 +10,18 @@ export const POST = async ({ request }) => {
   try {
     // 1. Combine all parameters (except file, cloud_name, resource_type, api_key)
     const params = { ...paramsToSign, timestamp };
-    
+
     // 2. Sort parameters alphabetically and create key=value pairs
     const sortedParams = Object.keys(params)
       .sort()
-      .map(key => `${key}=${params[key]}`)
+      .map((key) => `${key}=${params[key]}`)
       .join('&');
 
     // 3. Append API secret
     const stringToSign = sortedParams + PRIVATE_CLOUDINARY_API_SECRET;
 
     // 4. Create SHA-1 hash
-    const signature = crypto
-      .createHash('sha1')
-      .update(stringToSign)
-      .digest('hex');
+    const signature = crypto.createHash('sha1').update(stringToSign).digest('hex');
 
     return json({
       signature,

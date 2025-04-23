@@ -42,10 +42,7 @@ export const updateUserLayers = async (
   }
 
   // Insert new layer preferences
-  return await db
-    .insert(userLayer)
-    .values(userLayers)
-    .returning();
+  return await db.insert(userLayer).values(userLayers).returning();
 };
 
 // PATCH HANDLER

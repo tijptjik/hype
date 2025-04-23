@@ -48,7 +48,6 @@ export const { handle, signIn, signOut } = SvelteKitAuth(async (event) => {
           }
         }
       })
-
     ],
     secret: PRIVATE_AUTH_SECRET,
     trustHost: true,

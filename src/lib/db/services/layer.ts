@@ -50,7 +50,10 @@ export const updateLayer = async (db: Database, data: LayerDB, ref: string) => {
     .returning();
 
   if (!updatedLayer) {
-    return error(404, `Layer <code>${ref}</code> has stepped through the looking glass`);
+    return error(
+      404,
+      `Layer <code>${ref}</code> has stepped through the looking glass`
+    );
   }
 
   return updatedLayer;
@@ -61,11 +64,13 @@ export const createTranslations = async (
   translations: Record<TargetLang, NewLayerI18n>,
   layerId: string
 ) => {
-  const translationsToInsert = Object.entries(translations).map(([lang, translation]) => ({
-    ...translation,
-    layerId,
-    lang: lang as 'zh-hant' | 'zh-hans'
-  }));
+  const translationsToInsert = Object.entries(translations).map(
+    ([lang, translation]) => ({
+      ...translation,
+      layerId,
+      lang: lang as 'zh-hant' | 'zh-hans'
+    })
+  );
 
   return await db.insert(layerI18n).values(translationsToInsert).returning();
 };
@@ -97,13 +102,19 @@ export const extractEntitiesToUpdate = (formData: Layer) => {
   return { baseLayer, formTranslations };
 };
 
-export const rebuildFormData = async (layer: LayerDB, translations: LayerI18n[], properties: LayerPropertyUpdateExtra[]) => {
-  const formTranslations =  toNestedTranslations<LayerI18n>(translations);
+export const rebuildFormData = async (
+  layer: LayerDB,
+  translations: LayerI18n[],
+  properties: LayerPropertyUpdateExtra[]
+) => {
+  const formTranslations = toNestedTranslations<LayerI18n>(translations);
   const formProperties = properties.map((layerProp) => {
-    layerProp.property.translations = toNestedTranslations<PropertyI18n>(layerProp.property.translations);
+    layerProp.property.translations = toNestedTranslations<PropertyI18n>(
+      layerProp.property.translations
+    );
     return layerProp;
   });
-  
+
   return await superValidate<Layer>(
     {
       ...layer,
@@ -114,14 +125,18 @@ export const rebuildFormData = async (layer: LayerDB, translations: LayerI18n[],
   );
 };
 
-export async function createLayerProperties(db: Database, layerId: string, properties: LayerPropertyUpdateExtra[]) {
+export async function createLayerProperties(
+  db: Database,
+  layerId: string,
+  properties: LayerPropertyUpdateExtra[]
+) {
   await db.insert(layerProperty).values(
     properties.map((prop) => ({
       layerId,
       propertyId: prop.property.id,
       isVisible: prop.isVisible
     }))
-  )
+  );
   const insertedProperties = await db.query.layerProperty.findMany({
     where: eq(layerProperty.layerId, layerId),
     with: {
@@ -136,7 +151,11 @@ export async function createLayerProperties(db: Database, layerId: string, prope
   return insertedProperties;
 }
 
-export async function updateLayerProperties(db: Database, layerId: string, properties: LayerPropertyUpdateExtra[]) {
+export async function updateLayerProperties(
+  db: Database,
+  layerId: string,
+  properties: LayerPropertyUpdateExtra[]
+) {
   // First delete existing properties
   await db.delete(layerProperty).where(eq(layerProperty.layerId, layerId));
 
@@ -144,7 +163,10 @@ export async function updateLayerProperties(db: Database, layerId: string, prope
   return await createLayerProperties(db, layerId, properties);
 }
 
-export async function mergeProjectProperties(db: Database, result: Layer): Promise<Layer> {
+export async function mergeProjectProperties(
+  db: Database,
+  result: Layer
+): Promise<Layer> {
   // Get all properties for the layer's project
   const projectProps = await db.query.property.findMany({
     where: eq(property.projectId, result.projectId),
@@ -164,7 +186,9 @@ export async function mergeProjectProperties(db: Database, result: Layer): Promi
   // Add project properties that aren't already in the layer
   projectProps.forEach((projectProp: Property) => {
     if (!existingPropertyIds.includes(projectProp.id)) {
-      projectProp.translations = toNestedTranslations<PropertyI18n>(projectProp.translations);
+      projectProp.translations = toNestedTranslations<PropertyI18n>(
+        projectProp.translations
+      );
       result.properties.push({
         layerId: result.id,
         propertyId: projectProp.id,

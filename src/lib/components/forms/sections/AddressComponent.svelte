@@ -104,7 +104,7 @@ function hasValue(value: string | null): boolean {
 </script>
 
 <div
-  class="z-10 rounded-2xl bg-gradient-to-r from-rose-500/70 to-fuchsia-800/70 p-0 @container">
+  class="from-rose-500/70 to-fuchsia-800/70 z-10 rounded-2xl bg-gradient-to-r p-0 @container">
   <Header {...sectionProps} {Actions} title="Address Components" />
 
   <!-- Address Properties -->

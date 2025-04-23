@@ -1,6 +1,6 @@
 <script lang="ts">
-  // CONTEXT
-  import { getOmniContext } from '$lib/context/omni.svelte';
+// CONTEXT
+import { getOmniContext } from '$lib/context/omni.svelte';
 // COMPONENTS
 import OmniEntry from './OmniEntry.svelte';
 // TYPES
@@ -23,7 +23,7 @@ let limit: number = $derived(omniContext.limits[group]);
 let onSelection: (ref: string) => void = $derived(omniContext.searchHandlers[group]);
 </script>
 
-<div class="flex flex-shrink-0 flex-col select-none" role="group">
+<div class="flex flex-shrink-0 select-none flex-col" role="group">
   {#each results.slice(0, limit) as result, idx}
     <OmniEntry {result} {onSelection} />
   {/each}

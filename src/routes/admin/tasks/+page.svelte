@@ -16,6 +16,6 @@ resourceState.setFacet(false);
 
 <ResourceHeader />
 <div
-  class="h-full overflow-y-auto bg-gradient-to-br from-rose-500 to-indigo-700 bg-fixed pb-6">
+  class="from-rose-500 h-full overflow-y-auto bg-gradient-to-br to-indigo-700 bg-fixed pb-6">
   <TaskIndex />
 </div>

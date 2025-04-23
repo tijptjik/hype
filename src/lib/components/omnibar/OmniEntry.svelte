@@ -30,14 +30,15 @@ let handleKeyDown = (e: KeyboardEvent) => {
 </script>
 
 <div
-  class="flex items-center gap-2 px-4 pr-3 py-2 text-sm hover:bg-base-200 flex-shrink-0 outline-none focus:bg-base-200 select-none cursor-pointer"
+  class="flex flex-shrink-0 cursor-pointer select-none items-center gap-2 px-4 py-2 pr-3 text-sm outline-none hover:bg-base-200 focus:bg-base-200"
   tabindex="0"
   role="option"
   onclick={handleClick}
   onkeydown={handleKeyDown}>
-  <div class="h-1.5 w-1.5 rounded-full bg-base-content/60 select-none "></div>
+  <div class="h-1.5 w-1.5 select-none rounded-full bg-base-content/60"></div>
   <span class="flex-grow">{result.name}</span>
   {#if result.count > 0 && result.group !== 'features'}
-    <span class="text-base-content/60 font-mono w-6 text-center select-none">{result.count}</span>
+    <span class="w-6 select-none text-center font-mono text-base-content/60"
+      >{result.count}</span>
   {/if}
 </div>

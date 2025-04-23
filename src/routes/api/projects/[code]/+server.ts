@@ -7,7 +7,7 @@ import {
   getDatabaseOrError,
   JSONResponseOrError,
   SuperFormResponse,
-  SuperFormErrorResponse,
+  SuperFormErrorResponse
 } from '$lib/api';
 import { hierarchicalEntityQuery } from '$lib/db';
 // DB
@@ -26,7 +26,12 @@ import { isFieldUnique, isFieldChanged } from '$lib/db';
 import { ProjectPatch, ProjectUpdateAPI } from '$lib/db/zod';
 // TYPES
 import type { SuperValidated } from 'sveltekit-superforms/client';
-import type { AccessStrategyOption, Project, ProjectDB, ProjectPartialUpdate } from '$lib/types';
+import type {
+  AccessStrategyOption,
+  Project,
+  ProjectDB,
+  ProjectPartialUpdate
+} from '$lib/types';
 
 const RESOURCE_TYPE = 'project';
 const RESOURCE_PATH = 'projects';

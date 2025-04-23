@@ -128,7 +128,7 @@ onDestroy(() => {
 
 <div
   bind:this={containerRef}
-  class="h-full overflow-y-auto bg-gradient-to-bl from-rose-500 to-fuchsia-800 bg-fixed pb-16 @container/grid">
+  class="from-rose-500 to-fuchsia-800 h-full overflow-y-auto bg-gradient-to-bl bg-fixed pb-16 @container/grid">
   <div
     class="flex w-full flex-auto p-4 {entities.length === 0 && !isInitialLoading
       ? 'h-full w-full items-center justify-center text-center'

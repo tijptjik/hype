@@ -147,7 +147,7 @@ let handleGeocodeToLocate = (e: Event) => {
   label: string
 )}
   <button
-    class="btn-rounded btn bg-fuchsia-700 text-base-content transition-colors duration-300 hover:bg-fuchsia-800"
+    class="btn-rounded bg-fuchsia-700 hover:bg-fuchsia-800 btn text-base-content transition-colors duration-300"
     class:px-6={isGeocoding}
     {onclick}
     disabled={isGeocoding}>

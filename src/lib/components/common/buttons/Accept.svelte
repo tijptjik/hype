@@ -7,8 +7,8 @@ let { onclick } = $props();
 </script>
 
 <button
-class="btn btn-ghost btn-sm hover:bg-transparent hover:text-green-300"
-{onclick}>
-<Icon src={XCircle} class="h-4 w-4" />
-Accept
+  class="hover:text-green-300 btn btn-ghost btn-sm hover:bg-transparent"
+  {onclick}>
+  <Icon src={XCircle} class="h-4 w-4" />
+  Accept
 </button>

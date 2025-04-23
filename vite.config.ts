@@ -35,7 +35,6 @@ export default defineConfig({
     }),
     seedDrizzle(),
     sveltekit()
-
   ],
   optimizeDeps: {
     esbuildOptions: {

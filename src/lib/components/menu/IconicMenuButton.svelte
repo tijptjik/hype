@@ -34,7 +34,7 @@ const isActive = () => {
   draggable="false"
   onclick={handleClick}
   {href}
-  class="group btn btn-circle btn-ghost select-none bg-inherit hover:bg-transparent {isActive()
+  class="bg-inherit group btn btn-circle btn-ghost select-none hover:bg-transparent {isActive()
     ? 'btn-active'
     : ''}">
   {#if notificationCount > 0}

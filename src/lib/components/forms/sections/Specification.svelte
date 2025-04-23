@@ -11,7 +11,7 @@ let { fields } = sectionProps;
 </script>
 
 <div
-  class="basis-1/3 overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0"
+  class="from-rose-500 to-fuchsia-800 basis-1/3 overflow-hidden rounded-2xl bg-gradient-to-r p-0"
   style="transition: none;">
   <Header {...sectionProps} />
   <div class="flex flex-wrap items-baseline gap-4 p-4">

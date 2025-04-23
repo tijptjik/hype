@@ -92,7 +92,7 @@ function handleRangeChange(e: CustomEvent) {
             selectedCategories[property.key]?.rangeMin ?? property.min,
             selectedCategories[property.key]?.rangeMax ?? property.max
           ]}
-          onchange={handleRangeChange}
+          change={handleRangeChange}
           pips
           all="label"
           first="label"

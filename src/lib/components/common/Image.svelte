@@ -50,7 +50,6 @@ async function handleImageLoad() {
           img.onload = resolve;
         }),
         img.decode()
-
       ]);
       imageStore[src] = img;
       console.debug('[Image] Successfully loaded:', src);

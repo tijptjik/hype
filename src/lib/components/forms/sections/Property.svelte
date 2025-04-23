@@ -98,7 +98,7 @@ let actionProps = $state({
 </script>
 
 <div
-  class="overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
+  class="from-rose-500 to-fuchsia-800 overflow-hidden rounded-2xl bg-gradient-to-r p-0">
   <Header
     {...sectionProps}
     bind:actionProps

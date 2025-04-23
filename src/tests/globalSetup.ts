@@ -3,15 +3,15 @@ import { db } from '$lib/db/test';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
 export const setup = async () => {
-    // Run migrations on the test database
-    console.info('Running migrations');
-    await migrate(db, {
-        migrationsFolder: './migrations'
-    }) ;
+  // Run migrations on the test database
+  console.info('Running migrations');
+  await migrate(db, {
+    migrationsFolder: './migrations'
+  });
 };
 
 export const teardown = async () => {
-    // Close the database connection
-    // await fs.unlink(getDbPath());
-    console.info('Closing database connection');
+  // Close the database connection
+  // await fs.unlink(getDbPath());
+  console.info('Closing database connection');
 };

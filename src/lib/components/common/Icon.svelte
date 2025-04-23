@@ -19,9 +19,4 @@ let {
 }: IconProps = $props();
 </script>
 
-<SteezeIcon
-  {src}
-  {size}
-  {theme}
-  {title}
-  {...restProps} />
+<SteezeIcon {src} {size} {theme} {title} {...restProps} />

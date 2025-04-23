@@ -11,7 +11,6 @@ let {
   isComplex = false,
   onchange
 }: SelectProps & { onchange: (e: Event) => unknown } = $props();
-
 </script>
 
 <select

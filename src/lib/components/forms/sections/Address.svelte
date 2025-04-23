@@ -145,7 +145,7 @@ let isPointGeometry = (geometry: Geometry): geometry is Point => {
 </script>
 
 <div
-  class="select-none rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0 @container">
+  class="from-rose-500 to-fuchsia-800 select-none rounded-2xl bg-gradient-to-r p-0 @container">
   <Header {...sectionProps} {Actions} {actions} {Stats} />
   <div class="grid grid-cols-1 gap-4 p-4 @xl:grid-cols-2 @5xl:grid-cols-3">
     {#each languageTags as languageTag}

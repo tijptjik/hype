@@ -185,7 +185,11 @@
     },
     {
       "type": "Feature",
-      "properties": { "Name": "柯達快速彩色", "description": "電", "gx_media_links": null },
+      "properties": {
+        "Name": "柯達快速彩色",
+        "description": "電",
+        "gx_media_links": null
+      },
       "geometry": { "type": "Point", "coordinates": [114.2240625, 22.3151875] }
     },
     {
@@ -253,7 +257,11 @@
     },
     {
       "type": "Feature",
-      "properties": { "Name": "143 Wuhu St", "description": "大", "gx_media_links": null },
+      "properties": {
+        "Name": "143 Wuhu St",
+        "description": "大",
+        "gx_media_links": null
+      },
       "geometry": { "type": "Point", "coordinates": [114.1846361, 22.3079266] }
     },
     {
@@ -312,7 +320,11 @@
     },
     {
       "type": "Feature",
-      "properties": { "Name": "131 Pei Ho St", "description": "堂生", "gx_media_links": null },
+      "properties": {
+        "Name": "131 Pei Ho St",
+        "description": "堂生",
+        "gx_media_links": null
+      },
       "geometry": { "type": "Point", "coordinates": [114.1621472, 22.3298554] }
     },
     {
@@ -326,7 +338,11 @@
     },
     {
       "type": "Feature",
-      "properties": { "Name": "154 Apliu St", "description": "順", "gx_media_links": null },
+      "properties": {
+        "Name": "154 Apliu St",
+        "description": "順",
+        "gx_media_links": null
+      },
       "geometry": { "type": "Point", "coordinates": [114.163046, 22.329552] }
     },
     {
@@ -349,7 +365,11 @@
     },
     {
       "type": "Feature",
-      "properties": { "Name": "204 Tai Nan St", "description": "中發", "gx_media_links": null },
+      "properties": {
+        "Name": "204 Tai Nan St",
+        "description": "中發",
+        "gx_media_links": null
+      },
       "geometry": { "type": "Point", "coordinates": [114.1632339, 22.3274078] }
     },
     {
@@ -552,7 +572,11 @@
     },
     {
       "type": "Feature",
-      "properties": { "Name": "嘉碧疋頭公司", "description": "麥松記布行", "gx_media_links": null },
+      "properties": {
+        "Name": "嘉碧疋頭公司",
+        "description": "麥松記布行",
+        "gx_media_links": null
+      },
       "geometry": { "type": "Point", "coordinates": [114.163887, 22.327255] }
     },
     {
@@ -602,7 +626,11 @@
     },
     {
       "type": "Feature",
-      "properties": { "Name": "312 Nathan Rd", "description": "泰蔣寶館", "gx_media_links": null },
+      "properties": {
+        "Name": "312 Nathan Rd",
+        "description": "泰蔣寶館",
+        "gx_media_links": null
+      },
       "geometry": { "type": "Point", "coordinates": [114.1717844, 22.3060468] }
     },
     {
@@ -625,7 +653,11 @@
     },
     {
       "type": "Feature",
-      "properties": { "Name": "白鶴派許濤中醫館", "description": "中醫", "gx_media_links": null },
+      "properties": {
+        "Name": "白鶴派許濤中醫館",
+        "description": "中醫",
+        "gx_media_links": null
+      },
       "geometry": { "type": "Point", "coordinates": [114.1686473, 22.3047607] }
     },
     {
@@ -635,7 +667,11 @@
     },
     {
       "type": "Feature",
-      "properties": { "Name": "112 Shanghai St", "description": "文官", "gx_media_links": null },
+      "properties": {
+        "Name": "112 Shanghai St",
+        "description": "文官",
+        "gx_media_links": null
+      },
       "geometry": { "type": "Point", "coordinates": [114.1694812, 22.3058493] }
     },
     {
@@ -982,7 +1018,11 @@
     },
     {
       "type": "Feature",
-      "properties": { "Name": "李潮跌打", "description": "科專瘺痔志吳", "gx_media_links": null },
+      "properties": {
+        "Name": "李潮跌打",
+        "description": "科專瘺痔志吳",
+        "gx_media_links": null
+      },
       "geometry": { "type": "Point", "coordinates": [114.169871, 22.310943] }
     },
     {
@@ -996,7 +1036,11 @@
     },
     {
       "type": "Feature",
-      "properties": { "Name": "新洪興", "description": "濟生堂", "gx_media_links": null },
+      "properties": {
+        "Name": "新洪興",
+        "description": "濟生堂",
+        "gx_media_links": null
+      },
       "geometry": { "type": "Point", "coordinates": [114.169448, 22.312124] }
     },
     {
@@ -1010,7 +1054,11 @@
     },
     {
       "type": "Feature",
-      "properties": { "Name": "525 Nathan Rd", "description": "黎醒民", "gx_media_links": null },
+      "properties": {
+        "Name": "525 Nathan Rd",
+        "description": "黎醒民",
+        "gx_media_links": null
+      },
       "geometry": { "type": "Point", "coordinates": [114.1703319, 22.31343] }
     },
     {
@@ -1042,7 +1090,11 @@
     },
     {
       "type": "Feature",
-      "properties": { "Name": "328 Queen's Rd W", "description": "業蛇", "gx_media_links": null },
+      "properties": {
+        "Name": "328 Queen's Rd W",
+        "description": "業蛇",
+        "gx_media_links": null
+      },
       "geometry": { "type": "Point", "coordinates": [114.1414922, 22.2868847] }
     },
     {

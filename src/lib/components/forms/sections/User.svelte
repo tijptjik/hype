@@ -23,7 +23,7 @@ let actionProps = $state({
 </script>
 
 <div
-  class="basis-2/3 overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
+  class="from-rose-500 to-fuchsia-800 basis-2/3 overflow-hidden rounded-2xl bg-gradient-to-r p-0">
   <Header {...sectionProps} bind:actionProps {Actions} />
   {#each Object.entries(fields) as [fieldRoot, field], index}
     <UserField
