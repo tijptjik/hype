@@ -13,7 +13,7 @@ export const countryNormalised: Record<string, Record<LanguageTag, string>> = {
   'Hong Kong': { en: 'HKSAR', 'zh-hant': '香港特區', 'zh-hans': '香港特区' }
 };
 
-export let getNormalisedCountry = (
+export const getNormalisedCountry = (
   country: keyof typeof countryNormalised,
   lang: LanguageTag = 'en'
 ): string | null => {
@@ -40,7 +40,7 @@ const regionIdentifiers = {
   NT: ['nt', 'ntr', 'newterritories', '新界']
 };
 
-let getNormalisedRegionKey = (region: string): keyof typeof regionNormalised => {
+const getNormalisedRegionKey = (region: string): keyof typeof regionNormalised => {
   if (!Object.keys(regionNormalised).includes(region)) {
     region = region.toLowerCase().replace(/ /g, '');
     if (regionIdentifiers.HK.includes(region)) {
@@ -54,7 +54,7 @@ let getNormalisedRegionKey = (region: string): keyof typeof regionNormalised => 
   return region as keyof typeof regionNormalised;
 };
 
-export let getNormalisedRegion = (
+export const getNormalisedRegion = (
   region: keyof typeof regionNormalised,
   lang: LanguageTag = 'en'
 ): string | null => {
@@ -140,12 +140,12 @@ export const districtCodeToName = {
   YL: 'Yuen Long'
 };
 
-let getNormalisedDistrictKey = (district: string): keyof typeof districtNormalised => {
+const getNormalisedDistrictKey = (district: string): keyof typeof districtNormalised => {
   if (!Object.keys(districtNormalised).includes(district)) {
     district = district.toLowerCase().replace(/ /g, '');
     Object.entries(districtIdentifiers).forEach(([key, values]) => {
       if (values.includes(district)) {
-        let dCode = districtCodeToName[key as keyof typeof districtCodeToName];
+        const dCode = districtCodeToName[key as keyof typeof districtCodeToName];
         district = dCode;
       }
     });
@@ -153,12 +153,12 @@ let getNormalisedDistrictKey = (district: string): keyof typeof districtNormalis
   return district as keyof typeof districtNormalised;
 };
 
-export let getNormalisedDistrict = (
+export const getNormalisedDistrict = (
   district: keyof typeof districtNormalised,
   lang: LanguageTag = 'en'
 ): string | null => {
   const normalisedDistrictKey = getNormalisedDistrictKey(district);
-  let normalisedDistrict = districtNormalised[normalisedDistrictKey]?.[lang] || null;
+  const normalisedDistrict = districtNormalised[normalisedDistrictKey]?.[lang] || null;
   return normalisedDistrict;
 };
 
@@ -281,7 +281,7 @@ export function getFirstLocation(locations: string): string {
 
 export function removeCountry(str: string): string {
   const parts = str.split(',');
-  let lastPart = parts.pop();
+  const lastPart = parts.pop();
   if (lastPart && countryNormalised[lastPart.toLowerCase().trim()]) {
     return parts.join(',').trim();
   }
@@ -290,7 +290,7 @@ export function removeCountry(str: string): string {
 
 export function removeRegion(str: string): string {
   const parts = str.split(',');
-  let lastPart = parts.pop();
+  const lastPart = parts.pop();
   if (
     lastPart &&
     (regionIdentifiers.HK.includes(lastPart.toLowerCase().trim()) ||
@@ -304,7 +304,7 @@ export function removeRegion(str: string): string {
 
 export function removeDistrict(str: string): string {
   const parts = str.split(',');
-  let lastPart = parts[parts.length - 1]?.trim().toLowerCase();
+  const lastPart = parts[parts.length - 1]?.trim().toLowerCase();
   // Check if the last part is a district identifier
   if (
     lastPart &&

@@ -172,18 +172,18 @@ export const patchProject = async (
 // UTILS
 
 export const extractEntitiesToInsert = (formData: NewProject) => {
-  let baseProject = ProjectInsert.parse(formData);
-  let formTranslations: FormTranslations<NewProjectI18n> = formData.translations;
-  let formMaintainerRoles: FormRelatedUsers<NewProjectRole> = formData.maintainerRoles;
-  let formProperties: FormRelatedProperties<NewProperty> = formData.properties;
+  const baseProject = ProjectInsert.parse(formData);
+  const formTranslations: FormTranslations<NewProjectI18n> = formData.translations;
+  const formMaintainerRoles: FormRelatedUsers<NewProjectRole> = formData.maintainerRoles;
+  const formProperties: FormRelatedProperties<NewProperty> = formData.properties;
   return { baseProject, formTranslations, formMaintainerRoles, formProperties };
 };
 
 export const extractEntitiesToUpdate = (formData: Project) => {
-  let baseProject = ProjectUpdate.parse(formData);
-  let formTranslations: FormTranslations<ProjectI18n> = formData.translations;
-  let formMaintainerRoles: FormRelatedUsers<ProjectRole> = formData.maintainerRoles;
-  let formProperties: FormRelatedProperties<Property> = formData.properties;
+  const baseProject = ProjectUpdate.parse(formData);
+  const formTranslations: FormTranslations<ProjectI18n> = formData.translations;
+  const formMaintainerRoles: FormRelatedUsers<ProjectRole> = formData.maintainerRoles;
+  const formProperties: FormRelatedProperties<Property> = formData.properties;
   return { baseProject, formTranslations, formMaintainerRoles, formProperties };
 };
 
@@ -233,7 +233,7 @@ export const rebuildFormData = async (
   maintainerRoles: ProjectRole[],
   properties: PropertyDB[]
 ) => {
-  let extendedProject = {
+  const extendedProject = {
     ...project,
     maintainerRoles,
     translations: toNestedTranslations<ProjectI18n>(translations),

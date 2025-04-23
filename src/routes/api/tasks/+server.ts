@@ -117,11 +117,11 @@ export const POST: RequestHandler = async ({ request, locals, platform, fetch })
       const uploadedImages: GetImageAPI[] = [];
 
       for (const [_, fileValue] of photoEntries) {
-        let project: ProjectDB | undefined = await getProjectForFeatureId(
+        const project: ProjectDB | undefined = await getProjectForFeatureId(
           db,
           taskData.featureId
         );
-        let organisation: OrganisationDB | undefined =
+        const organisation: OrganisationDB | undefined =
           await getOrganisationForProjectId(db, project!.id);
 
         setImageService(
@@ -135,7 +135,7 @@ export const POST: RequestHandler = async ({ request, locals, platform, fetch })
         const imageService = getImageService();
 
         if (fileValue instanceof File) {
-          let image = await imageService.upload({
+          const image = await imageService.upload({
             fileObject: {
               file: fileValue,
               status: 'uploading',

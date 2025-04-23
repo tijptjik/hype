@@ -5,7 +5,7 @@ import { mapContext } from '$lib/context/map.svelte';
 import '$lib/styles/map.css';
 
 // Track markers with their IDs
-let currentMarkers: Map<string, Marker> = new Map();
+const currentMarkers: Map<string, Marker> = new Map();
 
 // Function to create SVG marker element with fade-in animation
 export function createMarkerElement(): HTMLDivElement {

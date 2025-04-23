@@ -180,16 +180,16 @@ export const patchFeature = async (
 // UTILS
 
 export const extractEntitiesToInsert = (formData: NewFeature) => {
-  let baseFeature = FeatureInsert.parse(formData);
-  let formTranslations = formData.translations;
-  let formProperties = formData.properties;
+  const baseFeature = FeatureInsert.parse(formData);
+  const formTranslations = formData.translations;
+  const formProperties = formData.properties;
   return { baseFeature, formTranslations, formProperties };
 };
 
 export const extractEntitiesToUpdate = (formData: Feature) => {
-  let baseFeature = FeatureUpdate.parse(formData);
-  let formTranslations = formData.translations;
-  let formProperties = formData.properties;
+  const baseFeature = FeatureUpdate.parse(formData);
+  const formTranslations = formData.translations;
+  const formProperties = formData.properties;
   return { baseFeature, formTranslations, formProperties };
 };
 

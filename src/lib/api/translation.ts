@@ -34,7 +34,7 @@ export const getTranslation = async (
   targetLang: LanguageTag,
   texts: string[]
 ): Promise<string[]> => {
-  let { source, target } = languageTagToApiLanguageTag(sourceLang, targetLang);
+  const { source, target } = languageTagToApiLanguageTag(sourceLang, targetLang);
   return await fetch(
     `${ENDPOINT}/translate?api-version=3.0&from=${source}&to=${target}`,
     {

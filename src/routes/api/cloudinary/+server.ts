@@ -5,7 +5,7 @@ import crypto from 'crypto';
 export const POST = async ({ request }) => {
   const body = await request.json();
   const { paramsToSign } = body;
-  let timestamp = Date.now();
+  const timestamp = Date.now();
 
   try {
     // 1. Combine all parameters (except file, cloud_name, resource_type, api_key)

@@ -48,13 +48,13 @@ let { form } = sectionProps.form;
                     {fieldRoot}
                     {field}
                     fieldIndex={index}
-                    fieldKey={'propertyValueId'} />
+                    fieldKey="propertyValueId" />
                 {:else if item?.property?.component === 'RangeField'}
                   <RangeField
                     {...sectionProps}
                     {fieldRoot}
                     fieldIndex={index}
-                    fieldKey={'value'}
+                    fieldKey="value"
                     min={item.property.min}
                     max={item.property.max}
                     step="1"
@@ -73,7 +73,7 @@ let { form } = sectionProps.form;
                     {...sectionProps}
                     {fieldRoot}
                     fieldIndex={index}
-                    fieldKey={'value'}
+                    fieldKey="value"
                     {field} />
                 {/if}
               </div>

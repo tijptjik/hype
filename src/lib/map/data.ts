@@ -8,7 +8,7 @@ import type { mapContext } from '$lib/context/map.svelte';
 import type { SearchResult } from '$lib/types';
 
 export function getWishlistedFeatures(mapContext: mapContext) {
-  let wishlistedFeatures = mapContext.getWishlistedFeatures();
+  const wishlistedFeatures = mapContext.getWishlistedFeatures();
   return wishlistedFeatures.map((feature) => {
     const layer = mapContext.getLayer(feature);
     const project = layer ? mapContext.getProject(layer) : undefined;

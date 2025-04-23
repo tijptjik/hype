@@ -124,7 +124,7 @@ export const createTaskImagesFromImageIds = async (
 export const extractEntitiesToInsert = (
   formData: NewImageAPI
 ): { baseImage: NewImageDB; relatedFeatureImage: NewFeatureImage } => {
-  let entities: { baseImage: NewImageDB; relatedFeatureImage?: NewFeatureImage } = {
+  const entities: { baseImage: NewImageDB; relatedFeatureImage?: NewFeatureImage } = {
     baseImage: ImageInsert.parse(formData)
   };
   if (formData.featureImage) {
@@ -136,8 +136,8 @@ export const extractEntitiesToInsert = (
 export const extractEntitiesToUpdate = (
   formData: ImageAPI
 ): { baseImage: ImageDB; relatedFeatureImage: FeatureImage } => {
-  let baseImage = ImageUpdate.parse(formData);
-  let relatedFeatureImage = formData.featureImage as FeatureImage;
+  const baseImage = ImageUpdate.parse(formData);
+  const relatedFeatureImage = formData.featureImage as FeatureImage;
   return { baseImage, relatedFeatureImage };
 };
 
@@ -146,7 +146,7 @@ export const checkFeatureAccessForImage = async (
   userId: Id,
   imageId: Id
 ): Promise<{ projectId: Id; role: string | null } | undefined> => {
-  let result = await db
+  const result = await db
     .select({
       featureId: feature.id,
       projectId: project.id,
@@ -171,7 +171,7 @@ export const checkProjectAccessForNewImage = async (
   userId: Id,
   projectId: Id
 ): Promise<{ projectId: Id; role: string | null } | undefined> => {
-  let result = await db
+  const result = await db
     .select({
       projectId: project.id,
       role: projectRole.role
@@ -190,7 +190,7 @@ export const checkProjectAccessForImage = async (
   userId: Id,
   imageId: Id
 ): Promise<{ projectId: Id; role: string | null } | undefined> => {
-  let result = await db
+  const result = await db
     .select({
       projectId: project.id,
       role: projectRole.role
@@ -211,7 +211,7 @@ export const checkOrganisationAccessForImage = async (
   userId: Id,
   imageId: Id
 ): Promise<{ organisationId: Id; role: string | null } | undefined> => {
-  let result = await db
+  const result = await db
     .select({
       organisationId: organisation.id,
       role: organisationRole.role
@@ -251,7 +251,7 @@ export const checkProjectAccessForFeature = async (
     .get();
 };
 
-let imageSelect = {
+const imageSelect = {
   id: image.id,
   publicId: image.publicId,
   env: image.env,

@@ -86,7 +86,7 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
       );
 
       // Process result to include organization roles
-      let processedResult = await mergeOrganisationRoles(db, result);
+      const processedResult = await mergeOrganisationRoles(db, result);
       processedResult.properties.reverse();
 
       // HTTP : 200 JSON or 404

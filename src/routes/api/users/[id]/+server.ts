@@ -7,7 +7,7 @@ import { UserUpdateAPI } from '$lib/db/zod';
 import { patchUser } from '$lib/db/services/user';
 
 const RESOURCE_TYPE = 'user';
-let ACCESS_STRATEGY = 'EntityAny';
+const ACCESS_STRATEGY = 'EntityAny';
 const PUBLIC_IDENTIFIER = 'id';
 
 export const GET: RequestHandler = async ({ params, locals, platform }) => {
@@ -49,7 +49,7 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
   const body = await request.json();
 
-  let ACCESS_STRATEGY = 'GenericSelf';
+  const ACCESS_STRATEGY = 'GenericSelf';
 
   // Only allow users to update their own profile
   const { db, userId } = await getDatabaseOrError(

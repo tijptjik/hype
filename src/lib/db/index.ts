@@ -319,9 +319,9 @@ const applyFilterConstraints = (
 ) => {
   if (!Object.values(prisms).some((arr) => arr.length > 0)) return [];
 
-  let subQueries = [];
+  const subQueries = [];
   for (let levelUp = 1; levelUp < depth; levelUp++) {
-    let baseLevelQuery = db.$with(`level_min_${levelUp}`);
+    const baseLevelQuery = db.$with(`level_min_${levelUp}`);
     subQueries.push(
       baseLevelQuery.as(createLevelQuery(db, slicedHierarchy, levelUp, prisms))
     );
@@ -332,7 +332,7 @@ const applyFilterConstraints = (
     .select({ id: getTable(slicedHierarchy, 0).id })
     .from(getTable(slicedHierarchy, 0));
 
-  let subQueryConditions = [];
+  const subQueryConditions = [];
 
   for (let i = 1; i < depth; i++) {
     baseQuery = baseQuery.innerJoin(
@@ -554,7 +554,7 @@ export async function genericEntityQuery<usersT extends Table>(
     ...applyGenericAccessStrategy(db, accessStrategy, userTable, userId)
   ];
 
-  let queryOpts = {
+  const queryOpts = {
     where: and(...conditions),
     with: selectTableRelations
   };

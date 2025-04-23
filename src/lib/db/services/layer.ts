@@ -91,14 +91,14 @@ export const patchLayer = async (db: Database, ref: string, data: Partial<LayerD
 // UTILS
 
 export const extractEntitiesToInsert = (formData: NewLayer) => {
-  let baseLayer = LayerInsert.parse(formData);
-  let formTranslations: Record<TargetLang, NewLayerI18n> = formData.translations;
+  const baseLayer = LayerInsert.parse(formData);
+  const formTranslations: Record<TargetLang, NewLayerI18n> = formData.translations;
   return { baseLayer, formTranslations };
 };
 
 export const extractEntitiesToUpdate = (formData: Layer) => {
-  let baseLayer = LayerUpdate.parse(formData);
-  let formTranslations: Record<TargetLang, LayerI18n> = formData.translations;
+  const baseLayer = LayerUpdate.parse(formData);
+  const formTranslations: Record<TargetLang, LayerI18n> = formData.translations;
   return { baseLayer, formTranslations };
 };
 

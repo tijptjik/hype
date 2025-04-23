@@ -97,7 +97,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
   }
   try {
     if (formData.refType === 'feature' || formData.refType === 'task') {
-      let featureId = formData.featureImage?.featureId;
+      const featureId = formData.featureImage?.featureId;
       if (!featureId) {
         error(400, 'Give me FeatureId, or give me death');
       }

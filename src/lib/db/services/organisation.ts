@@ -147,16 +147,16 @@ export const updateUserRoles = async (
 // UTILS
 
 export const extractEntitiesToInsert = (formData: NewOrganisation) => {
-  let baseOrganisation = OrganisationInsert.parse(formData);
-  let formTranslations: Record<TargetLang, NewOrganisationI18n> = formData.translations;
-  let formUserRoles: NewOrganisationRole[] = formData.userRoles;
+  const baseOrganisation = OrganisationInsert.parse(formData);
+  const formTranslations: Record<TargetLang, NewOrganisationI18n> = formData.translations;
+  const formUserRoles: NewOrganisationRole[] = formData.userRoles;
   return { baseOrganisation, formTranslations, formUserRoles };
 };
 
 export const extractEntitiesToUpdate = (formData: Organisation) => {
-  let baseOrganisation = OrganisationUpdate.parse(formData);
-  let formTranslations: Record<TargetLang, OrganisationI18n> = formData.translations;
-  let formUserRoles: OrganisationRole[] = formData.userRoles;
+  const baseOrganisation = OrganisationUpdate.parse(formData);
+  const formTranslations: Record<TargetLang, OrganisationI18n> = formData.translations;
+  const formUserRoles: OrganisationRole[] = formData.userRoles;
   return { baseOrganisation, formTranslations, formUserRoles };
 };
 

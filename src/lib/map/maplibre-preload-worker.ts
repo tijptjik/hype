@@ -66,10 +66,10 @@ const precache_function = (o: any) => {
     const [sx, sy] = [x0 < x1 ? 1 : -1, y0 < y1 ? 1 : -1];
     let err = (dx > dy ? dx : -dy) / 2;
     let [x, y] = [x0, y0];
-    let tt = [];
+    const tt = [];
     while (x !== x1 || y !== y1) {
       tt.push([x, y, zoom], ...tilebelt.getSiblings([x, y, zoom]));
-      let e2 = err;
+      const e2 = err;
       if (e2 > -dx) {
         err -= dy;
         x += sx;
@@ -125,8 +125,8 @@ const precache_function = (o: any) => {
   // Fetch all
   Promise.all(urls.map((u) => fetch(u, { signal })))
     .then((d) => {
-      if (!!o.debug) console.log(`Estimated gain: ${Math.round((900 * tz) / 6)}ms`);
-      if (!!o.debug)
+      if (o.debug) console.log(`Estimated gain: ${Math.round((900 * tz) / 6)}ms`);
+      if (o.debug)
         console.log(
           `Prefetched ${urls.length} tiles at zoom levels [${o.zmin} - ${o.zoom}]`
         );

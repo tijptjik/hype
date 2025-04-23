@@ -507,7 +507,7 @@ async function prepareExistingForm<T extends Record<string, unknown>>({
   return { form, image };
 }
 
-let getImageIfNeeded = async (formData: any, fetch: typeof window.fetch) => {
+const getImageIfNeeded = async (formData: any, fetch: typeof window.fetch) => {
   const needsImage = isProject(formData) || isOrganisation(formData);
   return needsImage && formData.imageId
     ? await fetchImage(formData.imageId, fetch)

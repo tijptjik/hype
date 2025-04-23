@@ -55,7 +55,7 @@ export const patchUser = async (
   // Extract userLayers from data
   const { userLayers, ...userUpdate } = data;
 
-  let updatedUser = await updatePartial(db, user, ref, refType, userUpdate);
+  const updatedUser = await updatePartial(db, user, ref, refType, userUpdate);
 
   // Update layer preferences if provided
   if (userLayers) {

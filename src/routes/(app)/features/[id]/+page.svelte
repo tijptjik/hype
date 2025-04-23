@@ -64,7 +64,7 @@ async function handleFeatureSelection() {
     <ImageProvider
       mode="gallery"
       isAdminMode={false}
-      refType={'feature'}
+      refType="feature"
       refId={featureId}
       refOrganisation={mapContext.getOrganisation(
         mapContext.getProject(
