@@ -235,10 +235,27 @@
         "propertiesPlural"
       ],
       "match": {
-        "propertiesPlural=one": "1个类别",
+        "propertiesPlural=one": "1 个类别",
         "propertiesPlural=other": "{properties}类别"
       }
     }
   ],
-  "filters__clear": "清除"
+  "filters__clear": "清除",
+  "arable_pretty_dingo_amaze": "如何",
+  "aware_red_lobster_spark": "在地图上显示点",
+  "slow_lower_wallaby_offer": "点在<i>图层</i>中分组。您可以在<inlang-LineFeed>这<inlang-LineFeed>下面的<code class=\"text-primary\">Layers</code>部分。",
+  "free_loud_meerkat_thrive": "关注你的兴趣",
+  "alert_suave_moth_glow": "<inlang-LineFeed>每个层都是一个<i>项目</i>的一部分，由一个<i>组织</i>提供。如果<inlang-LineFeed>如果您对特定产品感兴趣，请在<inlang-LineFeed><code class=\"text-primary\">Organisations</code><inlang-LineFeed>和<code class=\"text-primary\">Projects</code>部分。图层将被过滤<inlang-LineFeed>因此。",
+  "slow_quiet_dolphin_seek": "图层名称上方的面包屑导航会显示该图层属于哪个项目和组织<inlang-LineFeed>属于。",
+  "these_helpful_moose_bend": "帮助",
+  "bad_honest_pigeon_borrow": "使用过滤器<b>仅</b>显示您感兴趣的点。选择<inlang-LineFeed><code class=\"text-primary\">Neighbourhoods</code>或按以下任何一项进行筛选<inlang-LineFeed>图层中可用的<code class=\"text-primary\">Categories</code> 。",
+  "still_raw_tadpole_arise": "社区",
+  "watery_cuddly_niklas_harbor": "您可以搜索地区、行政区或街区名称。我们还显示<inlang-LineFeed>您的活动图层中每个邻域可用的点数。",
+  "busy_agent_poodle_bloom": "与层的区别",
+  "arable_mild_snake_pick": "图层将点集合添加到地图中。过滤器从这些点中选择点<inlang-LineFeed>图层，并隐藏其余部分。",
+  "dizzy_ornate_ocelot_peel": "与搜索的区别",
+  "drab_many_gibbon_fulfill": "如果您从搜索中选择一个社区，这<i>将突出显示</i><inlang-LineFeed>并<i>聚焦</i>于邻域内的点。过滤器仅<i>移除</i>以下点<inlang-LineFeed>不符合您的筛选条件。",
+  "legal_silly_mammoth_link": "星星",
+  "weird_short_orangutan_kiss": "消除",
+  "noble_fine_ibex_pinch": "报到"
 }
