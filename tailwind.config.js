@@ -13,14 +13,7 @@ export default {
       mono: ['IBM Plex Mono', 'monospace']
     },
     colors: {
-      transparent: 'transparent',
-      current: 'currentColor',
-      black: colors.black,
-      white: colors.white,
-      gray: colors.gray,
-      emerald: colors.emerald,
-      indigo: colors.indigo,
-      yellow: colors.yellow,
+      ...colors,
       'map-primary': '#cb37c1',
       'map-base': '#4987e2',
       'base-50': '#556172'

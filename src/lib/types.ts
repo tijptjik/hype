@@ -1105,3 +1105,18 @@ export type mapContextState = {
   distancesFromUser: Record<Id, number>;
   panels: PanelState;
 };
+
+export type TranslatedValue = {
+  value: string;
+  translations?: {
+    lang: string;
+    value: string;
+  }[];
+};
+
+export type RangeFilterValue = {
+  globalMin: number;
+  globalMax: number;
+  rangeMin: number;
+  rangeMax: number;
+};

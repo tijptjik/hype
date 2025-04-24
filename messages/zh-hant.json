@@ -207,5 +207,38 @@
   "admin__validation_code_is_required": "需要程式碼",
   "admin__validation_code_lte_24_chars": "代碼必須不超過 24 個字符",
   "admin__validation_code_valid_characters": "必須只包含字母數字、底線和 $ 字符",
-  "agent_cozy_yak_empower": "已選擇{count}"
+  "agent_cozy_yak_empower": "已選擇{count}",
+  "filters__none": "無<b class='font-mono inline-block px-2'>分類</b>濾網",
+  "filters__filtering_for": "過濾{properties}",
+  "filters__reset_count_neighbourhoods": [
+    {
+      "declarations": [
+        "input neighbourhoods",
+        "local neighbourhoodsPlural = neighbourhoods: plural"
+      ],
+      "selectors": [
+        "neighbourhoodsPlural"
+      ],
+      "match": {
+        "neighbourhoodsPlural=one": "1個街區",
+        "neighbourhoodsPlural=other": "{neighbourhoods}"
+      }
+    }
+  ],
+  "filters__reset_count_properties": [
+    {
+      "declarations": [
+        "input properties",
+        "local propertiesPlural = properties: plural"
+      ],
+      "selectors": [
+        "propertiesPlural"
+      ],
+      "match": {
+        "propertiesPlural=one": "1 個類別",
+        "propertiesPlural=other": "{properties}類別"
+      }
+    }
+  ],
+  "filters__clear": "清除"
 }

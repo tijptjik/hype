@@ -206,5 +206,39 @@
   "admin__validation_code_is_required": "需要代码",
   "admin__validation_code_lte_24_chars": "代码必须不超过 24 个字符",
   "admin__validation_code_valid_characters": "必须仅包含字母数字、下划线和 $ 字符",
-  "agent_cozy_yak_empower": "已选择{count}"
+  "agent_cozy_yak_empower": "已选择{count}",
+  "filters__none": "无<b class='font-mono inline-block px-2'>分类</b>过滤器",
+  "filters__filtering_for": "过滤{properties}",
+  "maps__projects_none_with_n_organisations": "<b class='font-mono inline-block px-2'>{n}组织的</b>所有<b class='font-mono inline-block px-2'>项目</b>",
+  "filters__reset_count_neighbourhoods": [
+    {
+      "declarations": [
+        "input neighbourhoods",
+        "local neighbourhoodsPlural = neighbourhoods: plural"
+      ],
+      "selectors": [
+        "neighbourhoodsPlural"
+      ],
+      "match": {
+        "neighbourhoodsPlural=one": "1个街区",
+        "neighbourhoodsPlural=other": "{neighbourhoods}邻里"
+      }
+    }
+  ],
+  "filters__reset_count_properties": [
+    {
+      "declarations": [
+        "input properties",
+        "local propertiesPlural = properties: plural"
+      ],
+      "selectors": [
+        "propertiesPlural"
+      ],
+      "match": {
+        "propertiesPlural=one": "1个类别",
+        "propertiesPlural=other": "{properties}类别"
+      }
+    }
+  ],
+  "filters__clear": "清除"
 }

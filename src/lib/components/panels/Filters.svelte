@@ -25,12 +25,12 @@ let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
       handleToggleInfo(e);
     }} />
   <Info isOpen={isInfoOpen} />
-  <div class="flex flex-col">
+  <div class="flex flex-col pb-12">
     <div class="flex-grow-1 flex max-h-[40vh] min-h-0 flex-shrink-0 flex-col">
       <Neighbourhoods />
     </div>
     <div
-      class="flex-grow-1 flex max-h-[calc(100vh-206px)] min-h-0 flex-shrink-0 flex-col">
+      class="flex-grow-1 flex max-h-[calc(100vh-206px)] min-h-0 flex-shrink-0 flex-col pb-8">
       <Categories />
     </div>
   </div>

@@ -184,5 +184,39 @@
   "admin__forms_feature_addressing_subtitle": "users will see this address",
   "admin__forms_feature_viewer_title": "Viewer",
   "admin__forms_feature_gallery_title": "Gallery",
-  "agent_cozy_yak_empower": "{count} selected"
+  "agent_cozy_yak_empower": "{count} selected",
+  "filters__none": "No <b class='font-mono inline-block px-2'>Categorical</b> filters",
+  "filters__filtering_for": "Filtering for {properties}",
+  "maps__projects_none_with_n_organisations": "All <b class='font-mono inline-block px-2'>projects</b> for <b class='font-mono inline-block px-2'>{n}   organisations</b>",
+  "filters__reset_count_neighbourhoods": [
+    {
+      "declarations": [
+        "input neighbourhoods",
+        "local neighbourhoodsPlural = neighbourhoods: plural"
+      ],
+      "selectors": [
+        "neighbourhoodsPlural"
+      ],
+      "match": {
+        "neighbourhoodsPlural=one": "1 neighbourhood",
+        "neighbourhoodsPlural=other": "{neighbourhoods} neighbourhoods"
+      }
+    }
+  ],
+  "filters__reset_count_properties": [
+    {
+      "declarations": [
+        "input properties",
+        "local propertiesPlural = properties: plural"
+      ],
+      "selectors": [
+        "propertiesPlural"
+      ],
+      "match": {
+        "propertiesPlural=one": "1 category",
+        "propertiesPlural=other": "{properties} categories"
+      }
+    }
+  ],
+  "filters__clear": "Clear"
 }

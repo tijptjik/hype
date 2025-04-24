@@ -40,7 +40,7 @@ let values: [number, number] = $derived([
 ]);
 </script>
 
-<div class="min-h-10 w-full flex-shrink-0 bg-[#0A0A0A] pl-3">
+<div class="ml-4 min-h-10 flex-shrink-0 rounded-l-md bg-[#0A0A0A] bg-[#0a0a0a]">
   <button
     class="flex w-full flex-shrink-0 items-center justify-between rounded-none py-2 pl-6 pr-9 focus:outline-none focus:ring-0 focus-visible:text-primary"
     onclick={() => (isOpen = !isOpen)}>
@@ -55,7 +55,7 @@ let values: [number, number] = $derived([
   <!-- Options -->
   {#if isOpen}
     <div
-      class="flex max-h-[260px] flex-col overflow-y-auto rounded-none rounded-l-md bg-base-300 px-3">
+      class="flex max-h-[260px] flex-col overflow-y-auto overscroll-contain rounded-l-md bg-base-300 px-3">
       <div class="pb-4 pl-2 pr-4 pt-8">
         <RangeSlider
           {min}
@@ -81,8 +81,8 @@ let values: [number, number] = $derived([
   /* Slider main elements */
   --range-slider: theme(colors.base-100);
   --range-handle-inactive: theme(colors.base-content / 0.3);
-  --range-handle: theme(colors.primary);
-  --range-handle-focus: theme(colors.primary);
+  --range-handle: theme(colors.sky.600);
+  --range-handle-focus: theme(colors.sky.600);
   --range-handle-border: var(--range-handle);
   --range-range-inactive: var(--range-handle-inactive);
   --range-range: var(--range-handle-focus);
@@ -93,8 +93,8 @@ let values: [number, number] = $derived([
 
   /* Float elements */
   --range-float-inactive: var(--range-handle-inactive);
-  --range-float: var(--range-handle-focus);
-  --range-float-text: theme(colors.base-content);
+  --range-float: theme(colors.sky.600);
+  --range-float-text: theme(colors.white);
   --range-float-background: theme(colors.base-content);
   --range-float-border: theme(colors.base-300);
   --range-float-width: 32px;

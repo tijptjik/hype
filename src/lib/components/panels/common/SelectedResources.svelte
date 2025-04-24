@@ -48,7 +48,7 @@ function handleToggle(id: Id) {
 </script>
 
 {#if props.selectedIds.length > 0}
-  <div class="flex flex-wrap gap-2 p-4 px-8 pt-1">
+  <div class="flex flex-wrap gap-2 p-4 px-8 pt-2">
     {#each props.selectedIds as id}
       {@const resource = props.resources.find((r) => r.id === id)}
       {#if resource}
@@ -81,7 +81,8 @@ function handleToggle(id: Id) {
           : props.type == 'project' &&
               props.mapContext.state.prisms.organisation.length > 0
             ? m.maps__projects_none_with_n_organisations({
-                n: props.mapContext.state.prisms.organisation.length.toString()
+                organisations:
+                  props.mapContext.state.prisms.organisation.length.toString()
               })
             : props.type == 'neighbourhood'
               ? m.maps__neighbourhoods_none()

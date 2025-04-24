@@ -27,6 +27,7 @@ import type {
 } from '$lib/types';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
+import { MOBILE_MAX_WIDTH } from '$lib';
 
 export class mapContext {
   // Maplibre Map instance
@@ -482,7 +483,7 @@ export class mapContext {
     };
   }
 
-  clearFilters() {
+  resetFilters() {
     this.state.filters = { neighbourhoods: [], properties: {} };
     this.state.prisms.layer.forEach((layerId) => {
       this.initialiseCategoricalPropertyFilters(layerId);
@@ -1040,7 +1041,9 @@ export class mapContext {
       this.closePanel(panel);
     } else {
       this.openPanel(panel);
-      this.focusPanel(leftPanels.includes(panel) ? 'left' : 'right');
+      if (window.innerWidth > MOBILE_MAX_WIDTH) {
+        this.focusPanel(leftPanels.includes(panel) ? 'left' : 'right');
+      }
     }
   }
 

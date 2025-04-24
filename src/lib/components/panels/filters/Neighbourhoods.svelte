@@ -7,8 +7,8 @@ import neighbourhoods from '$lib/map/neighbourhoods.json';
 import Section from '$lib/components/panels/common/Section.svelte';
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte';
 import FilteredNeighbourhood from '$lib/components/panels/filters/FilteredNeighbourhood.svelte';
-import ResourceContainer from '$lib/components/panels/maps/ResourceContainer.svelte';
-import SelectedResources from '$lib/components/panels/maps/SelectedResources.svelte';
+import ResourceContainer from '$lib/components/panels/common/ResourceContainer.svelte';
+import SelectedResources from '$lib/components/panels/common/SelectedResources.svelte';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
 
@@ -65,7 +65,7 @@ $effect(() => {
       id
     }))}
     selectedIds={selectedNeighbourhoods}
-    colorClass="text-emerald-500" />
+    colorClass="text-emerald-600" />
 {/snippet}
 
 <!-- LAYOUT -->

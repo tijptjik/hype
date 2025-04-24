@@ -33,8 +33,8 @@ const resetInput = async (e: Event) => {
     }}
     placeholder="Search..."
     class="input m-0 h-12 w-full rounded-none bg-base-200 {position === 'right'
-      ? 'rounded-l-md pl-[30px] pr-10'
-      : 'rounded-r-md pl-10 pr-[30px]'} text-sm focus:border-none focus:outline-none" />
+      ? 'rounded-l-md pl-[26px] pr-10'
+      : 'rounded-r-md pl-10 pr-[26px]'} text-sm focus:border-none focus:outline-none" />
   <div
     class="absolute inset-y-0 {position === 'left'
       ? 'right-1.5'

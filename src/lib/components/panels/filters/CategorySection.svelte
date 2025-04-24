@@ -8,20 +8,33 @@ const toggle = () => {
   isOpen = !isOpen;
 };
 
+type Props = {
+  children: any;
+  title: string;
+  icon: string;
+  iconVerticalPaddingClass: string;
+  iconColorClass: string;
+  collapsedContent: any;
+  isOpen: boolean;
+  hierarchy: any;
+  properties: any;
+};
+
 let {
   children,
   title,
   icon,
   iconVerticalPaddingClass,
   iconColorClass,
-  hierarchy,
   collapsedContent = () => null,
-  isOpen = false
-} = $props();
+  isOpen = false,
+  hierarchy,
+  properties
+}: Props = $props();
 </script>
 
 <div
-  class="mt-4 flex min-h-0 flex-shrink-0 flex-col border-t-4 border-base-300 pb-8 caret-transparent {isOpen
+  class="mt-4 flex min-h-0 flex-shrink-0 flex-col border-t-4 border-base-300 caret-transparent {isOpen
     ? 'flex-grow'
     : ''}">
   <button
@@ -69,6 +82,6 @@ let {
   {#if isOpen}
     {@render children()}
   {:else}
-    {@render collapsedContent()}
+    {@render collapsedContent(hierarchy.layerId, properties)}
   {/if}
 </div>

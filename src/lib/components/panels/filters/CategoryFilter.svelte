@@ -1,24 +1,19 @@
 <script lang="ts">
+// ICONS
 import { ChevronDown, ChevronUp } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
-// I18N
-import { getLocale } from '$lib/i18n';
-import * as m from '$lib/paraglide/messages';
+// UTILS
+import {
+  getOriginalValue,
+  getTranslatedValue,
+  displaySelectedProperties
+} from '$lib/utils/formatting';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
 // TYPES
-import type { Id } from '$lib/types';
+import type { Id, TranslatedValue } from '$lib/types';
 
 let mapContext = getMapContext();
-
-// Add this to your existing types
-export type TranslatedValue = {
-  value: string;
-  translations?: {
-    lang: string;
-    value: string;
-  }[];
-};
 
 type Props = {
   key: string;
@@ -35,23 +30,8 @@ let selected = $derived(mapContext.propertyFilters?.[layerId]?.[key] ?? []);
 
 let isOpen = $state(defaultOpen);
 
-// Helper function to get translated display value
-function getTranslatedValue(value: string | TranslatedValue): string {
-  if (typeof value === 'string') return value;
-  const currentLang = getLocale();
-  if (currentLang === 'en') return value.value;
-  const translation = value.translations?.find((t) => t.lang === currentLang);
-  return translation?.value || value.value; // fallback to English if no translation
-}
-
-// Get the original (non-translated) value for storing in state
-function getOriginalValue(value: string | TranslatedValue): string {
-  return typeof value === 'string' ? value : value.value;
-}
-
 function toggleValue(value: string | TranslatedValue) {
   const originalValue = getOriginalValue(value);
-  // Read the current selection *directly* from the context state for accuracy
   const currentSelection = mapContext.propertyFilters?.[layerId]?.[key] ?? [];
   const index = currentSelection.indexOf(originalValue);
   let newSelection: string[];
@@ -69,44 +49,12 @@ function toggleValue(value: string | TranslatedValue) {
     // If selection becomes empty, remove the key from the filter object for this layer
     mapContext.removeCategoricalPropertyFilter(layerId, key);
   }
-  console.info(
-    `[FilterDebug] CategoryFilter ${layerId}/${key} updated context with:`,
-    newSelection
-  );
 }
 
-// Determine display text based on the derived selection from context
-let displayText = $derived.by(() => {
-  if (!selected) return '-';
-  // Use the derived 'selected' state which reads from context
-  if (selected.length === 0) {
-    return m.filters__all();
-  } else if (selected.length === 1) {
-    // Find the corresponding value object to get potential translation
-    const valueObject = values.find((v) => getOriginalValue(v) === selected[0]);
-    return valueObject ? getTranslatedValue(valueObject) : selected[0];
-  } else {
-    // Use count from the derived 'selected' state
-    return (
-      selected
-        .map((s) => {
-          const value = values.find((v) => (typeof v === 'string' ? v : v.value) === s);
-          return getTranslatedValue(value!);
-        })
-        .slice(0, -1)
-        .join(', ') +
-      ' & ' +
-      getTranslatedValue(
-        values.find(
-          (v) => (typeof v === 'string' ? v : v.value) === selected[selected.length - 1]
-        )!
-      )
-    );
-  }
-});
+let displayText = $derived(displaySelectedProperties(selected, values));
 </script>
 
-<div class="ml-4 min-h-10 w-full flex-shrink-0 rounded-l-md bg-[#0a0a0a]">
+<div class="ml-4 min-h-10 flex-shrink-0 rounded-l-md bg-[#0a0a0a]">
   <button
     class="flex w-full flex-shrink-0 items-center justify-between rounded-none py-2 pl-6 pr-9 focus:outline-none focus:ring-0 focus-visible:text-primary"
     onclick={() => (isOpen = !isOpen)}>
@@ -121,16 +69,16 @@ let displayText = $derived.by(() => {
   <!-- Options -->
   {#if isOpen}
     <div
-      class="flex max-h-[260px] flex-col overflow-y-auto rounded-l-lg bg-[#121212] py-2 pr-3">
+      class="flex max-h-[260px] flex-col overflow-y-auto overscroll-contain rounded-l-md bg-base-300">
       {#each values as value (getOriginalValue(value))}
         {@const originalValue = getOriginalValue(value)}
         <label
-          class="label cursor-pointer justify-start gap-3 rounded-none px-6 py-2 transition-all duration-300 hover:bg-base-100">
+          class="label cursor-pointer justify-start gap-3 px-6 pr-2 transition-all duration-300 first:pt-3 last:pb-3 hover:bg-base-100">
           <div
             class="flex h-2 w-2 items-center gap-2 rounded-full {selected.includes(
               originalValue
             )
-              ? 'bg-primary'
+              ? 'bg-sky-600'
               : 'border-1 border-base-content/60 bg-transparent'}">
           </div>
           <input

@@ -8,8 +8,8 @@ import Icon from '$lib/components/common/Icon.svelte';
 import Section from '$lib/components/panels/common/Section.svelte';
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte';
 import FilteredLayer from '$lib/components/panels/maps/FilteredLayer.svelte';
-import ResourceContainer from '$lib/components/panels/maps/ResourceContainer.svelte';
-import SelectedResources from './SelectedResources.svelte';
+import ResourceContainer from '$lib/components/panels/common/ResourceContainer.svelte';
+import SelectedResources from '../common/SelectedResources.svelte';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
 // TYPES

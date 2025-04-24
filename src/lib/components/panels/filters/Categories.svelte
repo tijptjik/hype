@@ -1,14 +1,17 @@
 <script lang="ts">
 // I18N
 import { m, getI18nValue, getLocale } from '$lib/i18n';
+// UTILS
+import { getTranslatedValues } from '$lib/utils/formatting';
 // COMPONENTS
 import CategorySection from '$lib/components/panels/filters/CategorySection.svelte';
 import CategoryFilter from '$lib/components/panels/filters/CategoryFilter.svelte';
 import RangeFilter from '$lib/components/panels/filters/RangeFilter.svelte';
+import SelectedFilters from '$lib/components/panels/filters/SelectedFilters.svelte';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
 // TYPES
-import type { Property } from '$lib/types'; // Ensure Property type is imported
+import type { Id, Property } from '$lib/types'; // Ensure Property type is imported
 
 // Initialize map state
 const mapContext = getMapContext();
@@ -88,16 +91,11 @@ let layerCategories = $derived(
         group !== null && group.properties.length > 0
     ) // Filter out nulls and empty groups
 );
-
-// Helper function to get translated values for CategoryFilter
-function getTranslatedValues(values: any[] = []) {
-  // Add default empty array
-  return values.map((v) => ({
-    value: v.value,
-    translations: v.translations || []
-  }));
-}
 </script>
+
+{#snippet SelectedCategories(layerId: Id, properties: Property[])}
+  <SelectedFilters {layerId} {mapContext} {properties} />
+{/snippet}
 
 <!-- LAYOUT -->
 
@@ -108,8 +106,10 @@ function getTranslatedValues(values: any[] = []) {
     iconVerticalPaddingClass="pt-2"
     iconColorClass="text-blue-500"
     isOpen={index === 0}
+    collapsedContent={SelectedCategories}
+    {properties}
     {hierarchy}>
-    <div class="space-y-2 pb-4">
+    <div class="space-y-2">
       {#each properties as property (property.id)}
         {#if property.component === 'RangeField'}
           <!-- Pass necessary props directly -->
