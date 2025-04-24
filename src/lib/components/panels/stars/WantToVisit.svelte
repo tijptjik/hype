@@ -2,6 +2,8 @@
 // I18N
 import { m } from '$lib/i18n';
 import { getI18nValue } from '$lib/i18n';
+// ANIMATIONS
+import { flip } from 'svelte/animate';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
@@ -19,7 +21,7 @@ let searchTerm = $state('');
 
 // Get wishlisted features
 let wishlistedFeatures = $derived(
-  mapContext.state.userFeatures.wishlisted.map((wishlist) => {
+  mapContext.state.userFeatures.wishlisted?.map((wishlist) => {
     const feature = mapContext.state.resources.feature.find(
       (f) => f.id === wishlist.featureId
     );
@@ -42,7 +44,7 @@ let wishlistedFeatures = $derived(
         feature: getI18nValue(feature, 'title')
       }
     };
-  })
+  }) ?? []
 );
 
 // Filter function
@@ -65,33 +67,43 @@ const filteredFeatures = $derived(filterFeatures(wishlistedFeatures, searchTerm)
   {#if wishlistedFeatures.length > 5}
     <FilterBar bind:searchTerm />
   {/if}
-  <div
-    class="scrollbar-thin flex min-h-0 flex-col gap-[1px] overflow-y-auto bg-base-200">
-    {#each filteredFeatures as wishlist}
-      <div
-        class="min-h-21 flex flex-row items-center justify-between gap-4 bg-black px-4 py-2 text-[#374151]"
-        onclick={() =>
-          omniContext.handleFeatureSelection(mapContext, wishlist.featureId)}>
-        <Icon src={Squares2x2} class="h-5 w-5 flex-shrink-0" theme="fill" />
-        <div class="flex flex-grow flex-col">
-          <p class="text-xs uppercase tracking-widest">
-            <span class="text-primary">{wishlist.hierarchy.organisation}</span>
-            <span class="mx-1 text-secondary">›</span>
-            <span class="text-secondary"
-              >{wishlist.hierarchy.project
-                .replaceAll('_', '')
-                .replaceAll(' ', '')}</span>
-            {#if wishlist.hierarchy.layer}
-              <span class="mx-1 text-secondary">›</span>
-              <span class="text-secondary"
-                >{wishlist.hierarchy.layer.replaceAll(' ', '')}</span>
-            {/if}
-          </p>
-          <p class="font-normal text-neutral-300">
-            {wishlist.hierarchy.feature}
-          </p>
-        </div>
+  <div class="flex min-h-0 flex-col">
+    {#if filteredFeatures.length === 0}
+      <div class="flex flex-wrap justify-start gap-2 px-[34px] pt-2">
+        <p class="text-sm text-base-content/60">{m.short_watery_marten_race()}</p>
       </div>
-    {/each}
+    {:else}
+      <div class="scrollbar-thin flex-1 overflow-y-auto">
+        {#each filteredFeatures as wishlist (wishlist.featureId)}
+          <div
+            class="min-h-21 flex flex-row items-center justify-between gap-4 bg-black px-4 py-2 text-[#374151]"
+            animate:flip={{ duration: 200 }}
+            onclick={() =>
+              omniContext.handleFeatureSelection(mapContext, wishlist.featureId, {
+                openCard: true
+              })}>
+            <Icon src={Squares2x2} class="h-5 w-5 flex-shrink-0" theme="fill" />
+            <div class="flex flex-grow flex-col">
+              <p class="text-xs uppercase tracking-widest">
+                <span class="text-primary">{wishlist.hierarchy.organisation}</span>
+                <span class="mx-1 text-secondary">›</span>
+                <span class="text-secondary"
+                  >{wishlist.hierarchy.project
+                    .replaceAll('_', '')
+                    .replaceAll(' ', '')}</span>
+                {#if wishlist.hierarchy.layer}
+                  <span class="mx-1 text-secondary">›</span>
+                  <span class="text-secondary"
+                    >{wishlist.hierarchy.layer.replaceAll(' ', '')}</span>
+                {/if}
+              </p>
+              <p class="font-normal text-neutral-300">
+                {wishlist.hierarchy.feature}
+              </p>
+            </div>
+          </div>
+        {/each}
+      </div>
+    {/if}
   </div>
 </Section>

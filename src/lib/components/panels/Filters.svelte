@@ -17,6 +17,13 @@ let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
 };
 </script>
 
+<!-- TODO : There's a bug where the map doesn't update when the filters are changed. To reproduce:
+1. Open the filters
+2. aggressively play around with the range slider
+3. after a while the features will no longer reflect the filters
+even selecting a neighbourhood will not correctly affect the features shown on the map
+-->
+
 <Panel position="right" scrollable={true}>
   <Header
     panel="filters"

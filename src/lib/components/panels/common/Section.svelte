@@ -34,8 +34,8 @@ const toggle = () => {
 </script>
 
 <section
-  class="flex min-h-0 flex-col caret-transparent {isOpen
-    ? 'flex-grow'
+  class="flex min-h-0 flex-col overflow-hidden bg-black caret-transparent {isOpen
+    ? 'flex-grow-0'
     : 'flex-shrink-0'} {position === 'left' ? 'pr-4' : ''}">
   <button
     class="flex w-full flex-shrink-0 items-center justify-between px-4 {iconVerticalPaddingClass} bg-black text-base-content focus:outline-none focus:ring-0 focus-visible:text-primary"
@@ -68,7 +68,7 @@ const toggle = () => {
 
   {#if isOpen && children}
     <div
-      class="flex-shrink-2 flex min-h-0 flex-grow flex-col caret-white"
+      class="flex min-h-0 flex-grow flex-col bg-black caret-white"
       transition:slide={{ duration: 200 }}>
       {@render children()}
     </div>

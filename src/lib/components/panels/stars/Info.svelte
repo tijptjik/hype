@@ -1,5 +1,5 @@
 <script lang="ts">
-import { m } from '$lib/i18n';
+import * as m from '$lib/paraglide/messages';
 import { slide } from 'svelte/transition';
 let { isOpen = false } = $props<{
   isOpen?: boolean;
@@ -9,14 +9,16 @@ let { isOpen = false } = $props<{
 {#if isOpen}
   <div class="flex flex-col gap-4 px-6 py-3" transition:slide>
     <h2 class="text-xl font-bold text-base-content">{m.arable_pretty_dingo_amaze()}</h2>
-    <h3 class="text-lg text-base-content">{m.aware_red_lobster_spark()}</h3>
     <p class="text-neutral-content">
-      {m.slow_lower_wallaby_offer()}
+      {@html m.such_tense_samuel_smile()}
     </p>
-    <h3 class="text-lg text-base-content">{m.free_loud_meerkat_thrive()}</h3>
-    <p class="text-neutral-content">{m.alert_suave_moth_glow()}</p>
+    <h3 class="text-lg text-base-content">{m.alive_top_pelican_snap()}</h3>
     <p class="text-neutral-content">
-      {m.slow_quiet_dolphin_seek()}
+      {@html m.neat_watery_wasp_buy()}
+    </p>
+    <h3 class="text-lg text-base-content">{m.free_day_stork_dine()}</h3>
+    <p class="text-neutral-content">
+      {@html m.same_lower_orangutan_enchant()}
     </p>
   </div>
 {/if}

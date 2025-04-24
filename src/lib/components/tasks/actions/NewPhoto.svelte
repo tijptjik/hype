@@ -14,7 +14,7 @@ let { task }: { task: TaskAPI } = $props();
 // CONTEXT :: ROUTER
 const resourceState = getHierarchicalResourceState();
 
-// TODO Support multiple images
+// ENHANCEMENT : Support multiple images
 const handleReject = async (e: Event) => {
   e.preventDefault();
   try {

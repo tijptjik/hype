@@ -235,7 +235,7 @@
         "propertiesPlural"
       ],
       "match": {
-        "propertiesPlural=one": "1個類別",
+        "propertiesPlural=one": "1 個類別",
         "propertiesPlural=other": "{properties}類別"
       }
     }
@@ -245,7 +245,7 @@
   "aware_red_lobster_spark": "在地圖上顯示點",
   "slow_lower_wallaby_offer": "點被分組到<i>圖層</i>。您可以在<inlang-LineFeed>這<inlang-LineFeed>下面的<code class=\"text-primary\">Layers</code>部分。",
   "free_loud_meerkat_thrive": "關注你的興趣",
-  "alert_suave_moth_glow": "<inlang-LineFeed>每一層都是一個<i>專案</i>的一部分，由一個<i>組織</i>提供。如果<inlang-LineFeed>您對特定產品感興趣，請在<inlang-LineFeed><code class=\"text-primary\">Organisations</code><inlang-LineFeed>和下面的<code class=\"text-primary\">Projects</code>部分。圖層將會被過濾<inlang-LineFeed>因此。",
+  "alert_suave_moth_glow": "<inlang-LineFeed>每一層都是一個<i>專案</i>的一部分，由一個<i>組織</i>提供。如果<inlang-LineFeed>如果您對特定產品感興趣，請在<inlang-LineFeed><code class=\"text-primary\">Organisations</code><inlang-LineFeed>和下面的<code class=\"text-primary\">Projects</code>部分。圖層將會被過濾<inlang-LineFeed>因此。",
   "slow_quiet_dolphin_seek": "圖層名稱上方的麵包屑導覽會顯示該圖層屬於哪個項目和組織<inlang-LineFeed>屬於。",
   "these_helpful_moose_bend": "幫助",
   "bad_honest_pigeon_borrow": "使用過濾器<b>僅</b>顯示您感興趣的點。選擇<inlang-LineFeed><code class=\"text-primary\">Neighbourhoods</code>或按以下任何一項進行篩選<inlang-LineFeed>圖層中可用的<code class=\"text-primary\">Categories</code> 。",
@@ -256,6 +256,15 @@
   "dizzy_ornate_ocelot_peel": "與搜尋的區別",
   "drab_many_gibbon_fulfill": "如果您從搜尋中選擇一個社區，這<i>將突出顯示</i><inlang-LineFeed>並<i>專注</i>於週邊地區。過濾器僅<i>刪除</i><inlang-LineFeed>不符合您的篩選條件。",
   "legal_silly_mammoth_link": "星星",
-  "weird_short_orangutan_kiss": "消除",
-  "noble_fine_ibex_pinch": "報到"
+  "weird_short_orangutan_kiss": "取消星標",
+  "noble_fine_ibex_pinch": "報到",
+  "alive_large_hawk_hunt": "到達那裡",
+  "white_dizzy_clownfish_quiz": "上次訪問",
+  "due_mad_whale_attend": "未去過任何地點",
+  "short_watery_marten_race": "沒有標有星號的地點",
+  "such_tense_samuel_smile": "使用<code class=\"text-primary\">Stars</code>追蹤你想去的地方，<inlang-LineFeed>已經訪問過。",
+  "alive_top_pelican_snap": "新增到您的訪問列表",
+  "neat_watery_wasp_buy": "點擊任意位置卡左下角的<i>☆星號</i>即可將其新增至清單。<inlang-LineFeed>再次點擊即可移除。",
+  "free_day_stork_dine": "新增到您的訪問列表",
+  "same_lower_orangutan_enchant": "點選任何座位卡左下角的<i>✓簽到</i>即可記錄您的造訪。"
 }

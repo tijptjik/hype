@@ -120,6 +120,8 @@ onMount(async () => {
       omniContext.handleFeatureSelection(mapContext, featureId, { openCard: true });
     } else if (Object.values(mapContext.state.panels).some((panel) => panel)) {
       mapContext.closeAllPanels();
+    } else {
+      omniContext.close();
     }
   });
 

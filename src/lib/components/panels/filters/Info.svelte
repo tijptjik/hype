@@ -8,27 +8,21 @@ let { isOpen = false } = $props<{
 
 {#if isOpen}
   <div class="flex flex-col gap-4 px-6 py-3" transition:slide>
-    <h2 class="text-xl font-bold text-base-content">Help</h2>
+    <h2 class="text-xl font-bold text-base-content">{m.these_helpful_moose_bend()}</h2>
     <p class="text-neutral-content">
-      Use filters to <b>only</b> show points you are interested in. Select
-      <code class="text-primary">Neighbourhoods</code> or filter by any of the
-      <code class="text-primary">Categories</code> available in the layers.
+      {@html m.bad_honest_pigeon_borrow()}
     </p>
-    <h3 class="text-lg text-base-content">Neighbourhoods</h3>
+    <h3 class="text-lg text-base-content">{m.still_raw_tadpole_arise()}</h3>
     <p class="text-neutral-content">
-      You can search for region, district, or neighbourhood name. We also show the
-      number of points available per neighbourhood for your active layers.
+      {m.watery_cuddly_niklas_harbor()}
     </p>
-    <h3 class="text-lg text-base-content">Difference from layers</h3>
+    <h3 class="text-lg text-base-content">{m.busy_agent_poodle_bloom()}</h3>
     <p class="text-neutral-content">
-      Layers add collections of points to the map. Filters select points from those
-      layers, and hide the rest.
+      {m.arable_mild_snake_pick()}
     </p>
-    <h3 class="text-lg text-base-content">Difference from search</h3>
+    <h3 class="text-lg text-base-content">{m.dizzy_ornate_ocelot_peel()}</h3>
     <p class="text-neutral-content">
-      If you select a neighbourhood from search, this <i>highlights</i>
-      and <i>focuses</i> points in the neighbourhood. Filters only <i>remove</i> points that
-      don't match your filters.
+      {@html m.drab_many_gibbon_fulfill()}
     </p>
   </div>
 {/if}

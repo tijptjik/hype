@@ -4,7 +4,7 @@ import { MagnifyingGlass, XMark } from '@steeze-ui/heroicons';
 import { slide } from 'svelte/transition';
 let { searchTerm = $bindable(''), position = 'left' } = $props<{
   searchTerm: string;
-  position: 'left' | 'right';
+  position?: 'left' | 'right';
 }>();
 
 // Reset input and clear filter

@@ -235,7 +235,7 @@
         "propertiesPlural"
       ],
       "match": {
-        "propertiesPlural=one": "1 个类别",
+        "propertiesPlural=one": "1个类别",
         "propertiesPlural=other": "{properties}类别"
       }
     }
@@ -256,6 +256,15 @@
   "dizzy_ornate_ocelot_peel": "与搜索的区别",
   "drab_many_gibbon_fulfill": "如果您从搜索中选择一个社区，这<i>将突出显示</i><inlang-LineFeed>并<i>聚焦</i>于邻域内的点。过滤器仅<i>移除</i>以下点<inlang-LineFeed>不符合您的筛选条件。",
   "legal_silly_mammoth_link": "星星",
-  "weird_short_orangutan_kiss": "消除",
-  "noble_fine_ibex_pinch": "报到"
+  "weird_short_orangutan_kiss": "取消星标",
+  "noble_fine_ibex_pinch": "报到",
+  "alive_large_hawk_hunt": "到达那里",
+  "white_dizzy_clownfish_quiz": "上次访问",
+  "due_mad_whale_attend": "沒有去过任何地点",
+  "short_watery_marten_race": "没有标有星号的地点",
+  "such_tense_samuel_smile": "使用<code class=\"text-primary\">Stars</code>来追踪你想去的地方，<inlang-LineFeed>已经访问过。",
+  "alive_top_pelican_snap": "添加到您的访问列表",
+  "neat_watery_wasp_buy": "点击任意位置卡左下角的<i>☆星号</i>即可将其添加到列表中。<inlang-LineFeed>再次点击即可将其移除。",
+  "free_day_stork_dine": "添加到您的访问列表",
+  "same_lower_orangutan_enchant": "点击任意座位卡左下角的<i>✓签到</i>即可记录您的访问。"
 }

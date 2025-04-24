@@ -11,6 +11,7 @@ import neighbourhoods from '$lib/map/neighbourhoods.json';
 // TYPES
 import type { SearchResult, Id } from '$lib/types';
 import type { mapContext } from '$lib/context/map.svelte';
+import { MOBILE_MAX_WIDTH } from '$lib';
 
 // TYPES
 type OmniMode = 'search' | 'navigation' | 'feature';
@@ -176,6 +177,12 @@ export class OmniContext {
       openCard: boolean;
     } = { openCard: false }
   ) {
+    // If we are on mobile, close all panels
+    // otherwise the selected feature will be hidden behind the panel
+    if (window.innerWidth < MOBILE_MAX_WIDTH) {
+      mapContext.closeAllPanels();
+    }
+
     // Wait for features to be loaded if they haven't been yet
     if (mapContext.state.resources.feature.length === 0) {
       await mapContext.queryClient.fetchQuery({

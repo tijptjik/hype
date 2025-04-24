@@ -181,6 +181,29 @@ export class mapContext {
     return await response.json();
   };
 
+  async invalidateAndRefresh(resource: HierarchicalResource | 'userFeatures') {
+    // Invalidate the query
+    this.queryClient.invalidateQueries({
+      queryKey:
+        resource === 'userFeatures'
+          ? this.userFeaturesQueryKey
+          : [HierarchicalResource[resource]],
+      refetchType: 'all',
+      exact: false
+    });
+
+    // Refresh the resources
+    if (resource === 'project') {
+      this.refreshProjects();
+    } else if (resource === 'layer') {
+      this.refreshLayers();
+    } else if (resource === 'feature') {
+      this.refreshFeatures();
+    } else if (resource === 'userFeatures') {
+      this.refreshUserFeatures();
+    }
+  }
+
   private async initializeQueries(queryClient: QueryClient) {
     // Organizations query
     this.state.resources.organisation = await queryClient.fetchQuery({
@@ -416,6 +439,18 @@ export class mapContext {
     });
   }
 
+  async refreshUserFeatures() {
+    this.state.userFeatures = await this.queryClient
+      .fetchQuery({
+        queryKey: this.userFeaturesQueryKey,
+        queryFn: this.userFeaturesQueryFn
+      })
+      .then((uf) => ({
+        wishlisted: uf.filter((f: UserFeature) => f.isWishlisted),
+        visited: uf.filter((f: UserFeature) => f.isVisited)
+      }));
+  }
+
   async syncProjectPrisms() {
     this.state.prisms.project = this.state.prisms.project.filter((project) => {
       return this.state.resources.project.some((p) => p.id === project);
@@ -622,6 +657,14 @@ export class mapContext {
   // Features (for Active Layers) that the user has visited
   getVisitedFeatureIds = (): Id[] => {
     return this.state.userFeatures.visited.map((wl) => wl.featureId);
+  };
+
+  getWishlistUserFeatures = (): UserFeature[] => {
+    return this.state.userFeatures.wishlisted || [];
+  };
+
+  getVisitedUserFeatures = (): UserFeature[] => {
+    return this.state.userFeatures.visited || [];
   };
 
   // Features Collection -- Subsets
@@ -1100,6 +1143,7 @@ export class mapContext {
       keyMatched = true;
     } else if (event.key === '3') {
       this.togglePanel('stars');
+      keyMatched = true;
     } else if (event.key === '4') {
       this.togglePanel('settings');
       keyMatched = true;

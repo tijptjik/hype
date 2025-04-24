@@ -53,7 +53,7 @@ let {
             <span class="text-accent">{hierarchy.project.replaceAll('_', '')}</span>
           {/if}
           {#if hierarchy && hierarchy.layer}
-            <span class="text-primary">›</span>
+            <span class="px-0">›</span>
             <span class="text-secondary">{hierarchy.layer.replaceAll(' ', '')}</span>
           {/if}
         </div>

@@ -16,7 +16,8 @@ export default {
       ...colors,
       'map-primary': '#cb37c1',
       'map-base': '#4987e2',
-      'base-50': '#556172'
+      'base-50': '#556172',
+      'base-400': '#101214'
     },
     extend: {
       borderStyle: ['hover'],

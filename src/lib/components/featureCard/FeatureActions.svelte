@@ -1,9 +1,12 @@
 <script lang="ts">
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
-import { MapPin } from '@steeze-ui/heroicons';
+import { Star, Check, Map } from '@steeze-ui/heroicons';
 // I18N
-import { m } from '$lib/i18n';
+import { m, getLocale } from '$lib/i18n';
+// UTILS
+import { formatDistanceToNow } from 'date-fns';
+import { enGB, zhCN, zhHK } from 'date-fns/locale';
 // CONTEXT
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 import { getMapContext } from '$lib/context/map.svelte';
@@ -20,13 +23,83 @@ import { page } from '$app/stores';
 let { feature }: { feature: Feature } = $props();
 
 // STATE : LOCAL
-let isStarred = false; // This should be fetched from API
 let featureCardContext = getFeatureCardContext();
 let mapContext = getMapContext();
 const flash = getFlash(page);
 
-function toggleSave() {
-  // TODO: Implement
+// STATE : DERIVED
+let isSubmittingWishlist = $state(false);
+let isSubmittingVisit = $state(false);
+
+let wishlistedFeature = $derived(
+  mapContext.getWishlistUserFeatures().find((uf) => uf.featureId === feature.id)
+);
+let isWishlisted = $derived(!!wishlistedFeature);
+let visitedFeature = $derived(
+  mapContext.getVisitedUserFeatures().find((uf) => uf.featureId === feature.id)
+);
+let isVisited = $derived(!!visitedFeature);
+
+async function toggleWishlisted() {
+  if (isSubmittingWishlist) return;
+  isSubmittingWishlist = true;
+
+  try {
+    const data = {
+      userId: mapContext.userId,
+      featureId: feature.id,
+      isWishlisted: !isWishlisted,
+      isVisited: visitedFeature?.isVisited || false,
+      visitedAt: visitedFeature?.visitedAt || null
+    };
+
+    const response = await fetch('/api/userFeatures', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    if (!response.ok) throw new Error('Failed to update wishlist status');
+
+    // Optimistically update the UI
+    await mapContext.invalidateAndRefresh('userFeatures');
+  } catch (error) {
+    console.error('Error updating wishlist status:', error);
+    $flash = { type: 'error', message: 'Failed to update wishlist status' };
+  } finally {
+    isSubmittingWishlist = false;
+  }
+}
+
+async function toggleVisited() {
+  if (isSubmittingVisit) return;
+  isSubmittingVisit = true;
+
+  try {
+    const data = {
+      userId: mapContext.userId,
+      featureId: feature.id,
+      isVisited: !isVisited,
+      isWishlisted: false, // Always set wishlist to false when marking as visited
+      visitedAt: !isVisited ? new Date().toISOString() : null
+    };
+
+    const response = await fetch('/api/userFeatures', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    if (!response.ok) throw new Error('Failed to update visited status');
+
+    // Optimistically update the UI
+    await mapContext.invalidateAndRefresh('userFeatures');
+  } catch (error) {
+    console.error('Error updating visited status:', error);
+    $flash = { type: 'error', message: 'Failed to update visited status' };
+  } finally {
+    isSubmittingVisit = false;
+  }
 }
 
 async function submitMissingReport() {
@@ -107,19 +180,70 @@ function getDirections() {
 </script>
 
 <div
-  class="pointer-events-auto flex flex-shrink-0 basis-1/5 items-center justify-between rounded-b-lg bg-black px-2 py-2 w-100:px-4 w-100:py-4">
+  class="pointer-events-auto flex flex-shrink-0 items-center justify-between rounded-b-lg bg-black px-2 py-2 caret-transparent w-100:px-4 w-100:py-4">
   {#if featureCardContext.state.mode === FeatureCardMode.Display}
     <div class="flex gap-2">
-      <button class="btn btn-outline uppercase" onclick={toggleSave}>
-        {isStarred ? 'Remove' : 'Save'}
+      <button
+        class="bg-base-400 btn h-12 w-12 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300 w-64:h-auto w-64:w-auto"
+        onclick={toggleWishlisted}
+        disabled={isSubmittingWishlist}>
+        {#if isSubmittingWishlist}
+          <span class="loading loading-ring loading-md"></span>
+        {:else}
+          <Icon
+            src={Star}
+            class="h-6 w-6 transition-colors duration-300 {isWishlisted
+              ? 'text-primary'
+              : 'text-neutral-content'}"
+            theme="solid" />
+        {/if}
+        <span class="hidden w-120:block">
+          {isWishlisted ? m.weird_short_orangutan_kiss() : m.legal_silly_mammoth_link()}
+        </span>
       </button>
-      <button class="btn btn-outline uppercase">Check In</button>
+      {#if isVisited}
+        <div
+          class="flex h-full flex-col items-start justify-center pl-2 text-sm text-neutral-content">
+          <p class="text-xs uppercase">{m.white_dizzy_clownfish_quiz()}</p>
+          <p class="font-mono text-white">
+            {formatDistanceToNow(new Date(visitedFeature!.visitedAt), {
+              addSuffix: true,
+              locale:
+                getLocale() === 'zh-hant'
+                  ? zhHK
+                  : getLocale() === 'zh-hans'
+                    ? zhCN
+                    : enGB
+            }).replace('minute', 'min')}
+          </p>
+        </div>
+      {:else}
+        <button
+          class="bg-base-400 btn h-12 w-12 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300 w-64:h-auto w-64:w-auto"
+          onclick={toggleVisited}
+          disabled={isSubmittingVisit}>
+          {#if isSubmittingVisit}
+            <span class="loading loading-ring loading-md"></span>
+          {:else}
+            <Icon
+              src={Check}
+              class="h-6 w-6 font-bold transition-colors duration-300 {isVisited
+                ? 'text-primary'
+                : 'text-neutral-content'}" />
+            <span class="hidden w-120:block">
+              {isVisited ? 'Forget' : m.noble_fine_ibex_pinch()}
+            </span>
+          {/if}
+        </button>
+      {/if}
     </div>
     <button
-      class="btn btn-outline btn-primary gap-2 uppercase tracking-tight"
+      class="bg-base-400 btn h-12 w-12 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300 w-64:h-auto w-64:w-auto"
       onclick={getDirections}>
-      <Icon src={MapPin} class="min-[400px]:block hidden h-4 w-4" />
-      Get There
+      <Icon
+        src={Map}
+        class="h-6 w-6 stroke-2 font-bold text-primary w-64:hidden w-100:inline-block" />
+      <span class="hidden w-64:inline-block">{m.alive_large_hawk_hunt()}</span>
     </button>
   {:else if featureCardContext.state.mode === FeatureCardMode.Missing}
     <div class="flex w-full flex-col">
