@@ -17,7 +17,6 @@ import type {
   Project,
   Layer,
   Organisation,
-  Code,
   Id,
   UserFeature,
   mapContextState,
@@ -832,12 +831,21 @@ export class mapContext {
         properties: f.properties
       })) as GeoJSONFeature[]
     };
-    const padding = {
-      top: 150,
-      bottom: 50,
-      right: 50 + (this.state.panels.filters || this.state.panels.settings ? 210 : 0),
-      left: 50 + (this.state.panels.maps || this.state.panels.stars ? 210 : 0)
-    };
+    const padding =
+      window.innerWidth <= MOBILE_MAX_WIDTH
+        ? {
+            top: 48,
+            bottom: 50,
+            right: 50,
+            left: 50
+          }
+        : {
+            top: 150,
+            bottom: 50,
+            right:
+              50 + (this.state.panels.filters || this.state.panels.settings ? 210 : 0),
+            left: 50 + (this.state.panels.maps || this.state.panels.stars ? 210 : 0)
+          };
     try {
       // Convert to WGS84 and get bounds
       const bounds = bbox(featureCollection);
@@ -1127,6 +1135,15 @@ export class mapContext {
   closePanel(panel: keyof PanelState) {
     this.state.panels[panel] = false;
   }
+
+  // Refocus map on currently visible features
+  zoomToAllVisibleFeatures() {
+    const visibleFeatures = this.getVisibleFeatures();
+    if (visibleFeatures.length > 0) {
+      this.zoomToFeatures(visibleFeatures);
+    }
+  }
+
   // KEYDOWN HANDLERS
   registerKeydownHandlers() {
     document.addEventListener('keydown', this.handleKeydown);

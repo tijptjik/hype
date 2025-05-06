@@ -70,7 +70,10 @@ let values: [number, number] = $derived([
           pipstep={Math.ceil((max - min) / 10)}
           pushy
           float
-          on:change={() => mapContext.setRangePropertyFilter(layerId, key, values)} />
+          on:change={() => {
+            mapContext.setRangePropertyFilter(layerId, key, values);
+            mapContext.zoomToAllVisibleFeatures();
+          }} />
       </div>
     </div>
   {/if}

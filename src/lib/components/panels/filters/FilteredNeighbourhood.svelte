@@ -43,10 +43,14 @@ function getFeatureCount(neighbourhoodKey: string) {
 {#if getFeatureCount(neighbourhood) > 0}
   <div
     class="focus:-ring-offset-2 ml-4 flex cursor-pointer flex-row items-center justify-between gap-4 overflow-visible rounded-l-md bg-black py-2 pl-4 pr-[30px] caret-transparent transition-colors duration-200 hover:bg-base-300 focus:bg-base-300 focus:outline-none focus:ring-0"
-    onclick={() => mapContext.toggleNeighbourhood(neighbourhood)}
+    onclick={() => {
+      mapContext.toggleNeighbourhood(neighbourhood);
+      mapContext.zoomToAllVisibleFeatures();
+    }}
     onkeydown={(e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         mapContext.toggleNeighbourhood(neighbourhood);
+        mapContext.zoomToAllVisibleFeatures();
         e.preventDefault();
       } else if (e.key === 'Escape') {
         e.preventDefault();

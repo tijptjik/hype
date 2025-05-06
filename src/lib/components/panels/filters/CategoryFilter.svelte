@@ -49,6 +49,8 @@ function toggleValue(value: string | TranslatedValue) {
     // If selection becomes empty, remove the key from the filter object for this layer
     mapContext.removeCategoricalPropertyFilter(layerId, key);
   }
+
+  mapContext.zoomToAllVisibleFeatures();
 }
 
 let displayText = $derived(displaySelectedProperties(selected, values));
