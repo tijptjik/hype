@@ -31,10 +31,15 @@ const updateLanguage = async (language: string) => {
 };
 </script>
 
-<Section title={m.settings__language()} icon="/language.svg">
-  <div class="flex flex-col gap-2 bg-base-200">
+<Section
+  title={m.settings__language()}
+  icon="/language.svg"
+  position="right"
+  iconVerticalPaddingClass="py-3 pr-4.5">
+  <div class="flex flex-col gap-2 caret-transparent">
     {#each languages as language}
-      <div class="flex h-11 w-full flex-row items-center justify-between gap-4 px-4">
+      <div
+        class="flex h-11 w-full flex-row items-center justify-between gap-4 pl-8 pr-[19px] caret-transparent">
         <div class="flex flex-row items-center gap-4">
           <Icon src={Language} class="h-5 w-5" />
           <p class="font-normal text-base-content">{language.name}</p>
@@ -48,7 +53,7 @@ const updateLanguage = async (language: string) => {
           type="radio"
           name="language"
           value={language.code}
-          class="radio-primary radio mr-4 h-5 w-5 cursor-pointer"
+          class="radio-primary radio radio-sm mr-4 h-5 w-5 cursor-pointer"
           checked={getLocale() === language.code}
           onclick={() => updateLanguage(language.code)} />
       </div>

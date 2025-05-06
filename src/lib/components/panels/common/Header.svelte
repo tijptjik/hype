@@ -30,7 +30,7 @@ $effect(() => {
 </script>
 
 <header
-  class="sticky top-0 z-10 flex h-16 select-none flex-row items-center justify-between border-b-3 border-base-300 bg-black px-6 py-2 caret-transparent focus:outline-none">
+  class="sticky top-0 z-30 flex h-16 select-none flex-row items-center justify-between border-b-3 border-base-300 bg-black px-6 py-2 caret-transparent focus:outline-none">
   <div class="flex flex-row items-center gap-2">
     <h2 class="text-lg font-semibold uppercase tracking-widest text-primary">
       {title}

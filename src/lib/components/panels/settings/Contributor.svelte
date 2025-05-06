@@ -26,20 +26,19 @@ const debounce = async (value: string) => {
 
 <Section
   title={m.settings_contributor_title()}
-  description={m.settings_contributor_description()}
-  icon="/contributor.svg">
-  <div class="flex flex-col gap-2 bg-base-200">
-    <div class="flex h-11 flex-row items-center justify-between gap-4 px-4">
-      <div class="flex w-full flex-row items-center gap-4">
-        <Icon src={Trophy} class="h-5 w-5" />
-        <input
-          name="attribution"
-          type="text"
-          class="h-full w-full bg-base-200 outline-none"
-          placeholder={m.settings_contributor_placeholder()}
-          bind:value={contributorName}
-          oninput={({ target }) => debounce((target as HTMLInputElement).value)} />
-      </div>
+  icon="/contributor.svg"
+  position="right">
+  <div
+    class="my-2 ml-5 flex flex-row items-center gap-2 rounded-l-md rounded-r-none bg-base-200">
+    <input
+      name="attribution"
+      type="text"
+      class="input m-0 h-12 w-full rounded-l-md rounded-r-none border-0 bg-base-200 pl-[26px] pr-10 text-sm placeholder:text-base-content/40 focus:border-none focus:outline-none"
+      placeholder={m.settings_contributor_placeholder()}
+      bind:value={contributorName}
+      oninput={({ target }) => debounce((target as HTMLInputElement).value)} />
+    <div class="mr-8">
+      <Icon src={Trophy} class="h-6 w-6 stroke-1 text-base-content/60" />
     </div>
   </div>
 </Section>

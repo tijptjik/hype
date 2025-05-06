@@ -7,7 +7,7 @@ let { isOpen = false } = $props<{
 </script>
 
 {#if isOpen}
-  <div class="flex flex-col gap-4 px-6 py-3" transition:slide>
+  <div class="flex flex-col gap-4 px-6 py-3 pb-8" transition:slide>
     <h2 class="text-xl font-bold text-base-content">{m.these_helpful_moose_bend()}</h2>
     <h3 class="text-lg text-base-content">{m.topical_alive_dolphin_pinch()}</h3>
     <p class="text-neutral-content">

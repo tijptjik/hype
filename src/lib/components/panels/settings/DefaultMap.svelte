@@ -79,42 +79,45 @@ const handleLayerSelect = (layerId: string) => {
 };
 </script>
 
-<Section
-  title={m.settings_default_map_title()}
-  icon="/globe.svg"
-  description={m.settings_default_map_description()}>
+<Section title={m.settings_default_map_title()} icon="/globe.svg" position="right">
   <div
-    class="scrollbar-thin flex min-h-0 flex-col gap-2 overflow-y-auto rounded-lg bg-base-200">
+    class="scrollbar-thin flex min-h-0 flex-col gap-2 overflow-y-auto rounded-lg pl-4">
     {#each layers as layer}
-      <div class="min-h-21 flex flex-row items-center justify-between gap-4 px-4 py-2">
-        <Icon src={Map} class="flex-grow-1 my-6 h-5 w-5 flex-shrink-0" />
-        <div class="flex flex-grow flex-col">
-          {#if layer.organisation && layer.project}
-            <p class="text-sm">
-              <span class="text-primary">
-                {getI18nValue(layer.organisation, 'nameShort')}
-              </span>
-              <span class="mx-1 text-secondary">></span>
-              <span class="text-secondary">
-                {getI18nValue(layer.project, 'nameShort')}
-              </span>
+      {@const organisation = layer.organisation}
+      {@const project = layer.project}
+      <div
+        class="min-h-21 flex w-full flex-row items-center justify-between gap-4 px-4 py-2 pr-[27px]">
+        <!-- <Icon src={Map} class="flex-grow-1 my-6 h-5 w-5 flex-shrink-0" /> -->
+        <div class="flex flex-grow flex-col gap-0.5">
+          {#if organisation && project}
+            <p class="flex space-x-0.5 font-mono text-xs uppercase tracking-widest">
+              {#if getLocale() == 'en'}
+                <span class="text-primary"
+                  >{organisation.code.replaceAll('_', '').replaceAll(' ', '')}</span>
+                <span class="px-0">›</span>
+                <span class="text-accent"
+                  >{project.code.replaceAll('_', '').replaceAll(' ', '')}</span>
+              {:else}
+                <span class="text-primary"
+                  >{getI18nValue(organisation, 'nameShort')}</span>
+                <span class="px-0">›</span>
+                <span class="text-accent">{getI18nValue(project, 'nameShort')}</span>
+              {/if}
             </p>
           {/if}
           <p class="font-normal text-base-content">
             {getI18nValue(layer, 'name')}
-          </p>
-          <div class="flex flex-col gap-0.5">
             {#if layer.description}
-              <p class="text-sm text-neutral-content">
+              <span class="pl-1.5 text-sm text-neutral-content">
                 {getI18nValue(layer, 'description')}
-              </p>
+              </span>
             {/if}
-          </div>
+          </p>
         </div>
         <input
           name={layer.id}
           type="checkbox"
-          class="flex-grow-1 toggle flex-shrink-0"
+          class="flex-grow-1 toggle toggle-primary toggle-sm flex-shrink-0"
           checked={selectedLayers.has(layer.id)}
           onchange={() => handleLayerSelect(layer.id)} />
       </div>
