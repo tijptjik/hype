@@ -106,12 +106,9 @@
   "menu_settings": "Settings",
   "menu_admin": "Admin",
   "settings_contributor_title": "Contribution Credit",
-  "settings_contributor_description": "What name would you like to be credited for your contributed photos and features",
   "settings_contributor_placeholder": "Enter your name",
   "settings_default_map_title": "Default Maps",
-  "settings_default_map_description": "Choose which maps should load by default",
   "settings_experimental_title": "Experimental",
-  "settings_experimental_description": "Preview features before release",
   "settings_experimental_contributor_mode": "Contributor Mode",
   "settings_experimental_contributor_description": "Prominent UI to add photos and features",
   "report_missing__label": "This is missing because",
@@ -254,5 +251,8 @@
   "fair_sound_goat_enchant": "Default Maps",
   "trite_key_insect_tickle": "When you open the app, the map will load with these default Layers enabled.",
   "jumpy_dark_dog_nudge": "Experimental",
-  "big_awake_grebe_seek": "Preview new features before they are released."
+  "big_awake_grebe_seek": "Preview new features before they are released.",
+  "settings_default_map_description": "Choose which maps should load by default",
+  "settings_contributor_description": "What name would you like to be credited for your contributed photos and features",
+  "settings_experimental_description": "Preview features before release"
 }
