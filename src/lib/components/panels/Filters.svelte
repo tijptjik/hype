@@ -32,12 +32,12 @@ even selecting a neighbourhood will not correctly affect the features shown on t
       handleToggleInfo(e);
     }} />
   <Info isOpen={isInfoOpen} />
-  <div class="flex flex-col pb-12">
+  <div class="flex flex-col">
     <div class="flex-grow-1 flex max-h-[40vh] min-h-0 flex-shrink-0 flex-col">
       <Neighbourhoods />
     </div>
     <div
-      class="flex-grow-1 flex max-h-[calc(100vh-206px)] min-h-0 flex-shrink-0 flex-col pb-8">
+      class="flex-grow-1 flex max-h-[calc(100vh-206px)] min-h-0 flex-shrink-0 flex-col">
       <Categories />
     </div>
   </div>

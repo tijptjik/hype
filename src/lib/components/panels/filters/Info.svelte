@@ -18,7 +18,7 @@ let { isOpen = false } = $props<{
     </p>
     <h3 class="text-lg text-base-content">{m.busy_agent_poodle_bloom()}</h3>
     <p class="text-neutral-content">
-      {m.arable_mild_snake_pick()}
+      {@html m.arable_mild_snake_pick()}
     </p>
     <h3 class="text-lg text-base-content">{m.dizzy_ornate_ocelot_peel()}</h3>
     <p class="text-neutral-content">

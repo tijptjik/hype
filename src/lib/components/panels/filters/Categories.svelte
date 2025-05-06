@@ -133,3 +133,4 @@ let layerCategories = $derived(
     </div>
   </CategorySection>
 {/each}
+<div class="flex-grow-1 h-[84px] w-full flex-shrink-0"></div>

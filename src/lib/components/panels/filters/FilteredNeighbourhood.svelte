@@ -70,7 +70,8 @@ function getFeatureCount(neighbourhoodKey: string) {
       </div>
       <div class="flex flex-grow flex-col">
         <p class="flex space-x-2 font-mono text-xs uppercase tracking-wide">
-          <span class="text-primary/80">{getI18nValue(data, 'region')}</span>
+          <span class="text-primary/80"
+            >{getI18nValue(data, 'region').replace('Hong Kong', 'HK')}</span>
           <span class="mtext-base-content/60 font-sans">::</span>
           <span class="text-accent">{getI18nValue(data, 'district')}</span>
         </p>
