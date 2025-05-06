@@ -10,10 +10,16 @@ import WantToVisit from '$lib/components/panels/stars/WantToVisit.svelte';
 import HaveVisited from '$lib/components/panels/stars/HaveVisited.svelte';
 // STATE
 let isInfoOpen = $state(false);
+let panelContainer: HTMLDivElement;
 
 let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
   e.stopPropagation();
   isInfoOpen = !isInfoOpen;
+  if (isInfoOpen) {
+    setTimeout(() => {
+      panelContainer?.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 300);
+  }
 };
 
 let isVisitedOpen = $state(false);
@@ -29,7 +35,7 @@ let handleToggleWantToVisit = (e: MouseEvent | TouchEvent) => {
 };
 </script>
 
-<Panel position="left" scrollable={false}>
+<Panel position="left" scrollable={false} bind:panelContainer>
   <Header
     panel="stars"
     title={m.stars__title()}

@@ -10,14 +10,20 @@ import Projects from '$lib/components/panels/maps/Projects.svelte';
 import Layers from '$lib/components/panels/maps/Layers.svelte';
 // STATE
 let isInfoOpen = $state(false);
+let panelContainer: HTMLDivElement;
 
 let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
   e.stopPropagation();
   isInfoOpen = !isInfoOpen;
+  if (isInfoOpen) {
+    setTimeout(() => {
+      panelContainer?.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 300);
+  }
 };
 </script>
 
-<Panel position="left" scrollable={true}>
+<Panel position="left" scrollable={true} bind:panelContainer>
   <Header
     panel="maps"
     title={m.maps__title()}

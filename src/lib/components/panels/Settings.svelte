@@ -12,14 +12,20 @@ import DefaultMap from '$lib/components/panels/settings/DefaultMap.svelte';
 import Experimental from '$lib/components/panels/settings/Experimental.svelte';
 // STATE
 let isInfoOpen = $state(false);
+let panelContainer: HTMLDivElement;
 
 let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
   e.stopPropagation();
   isInfoOpen = !isInfoOpen;
+  if (isInfoOpen) {
+    setTimeout(() => {
+      panelContainer?.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 300);
+  }
 };
 </script>
 
-<Panel position="right" scrollable={true}>
+<Panel position="right" scrollable={true} bind:panelContainer>
   <Header
     panel="settings"
     title={m.settings__title()}
