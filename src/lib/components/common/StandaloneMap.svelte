@@ -850,6 +850,7 @@ onMount(async () => {
         layout: {
           'symbol-sort-key': ['get', 'min_zoom'],
           'symbol-placement': 'line',
+          'symbol-spacing': 1000,
           'text-font': ['Noto Sans Regular'],
           'text-field': [
             'case',
@@ -1140,12 +1141,11 @@ onMount(async () => {
           'text-justify': 'center',
           'text-rotation-alignment': 'map',
           'text-allow-overlap': false,
-          'symbol-spacing': 250,
           'symbol-avoid-edges': true
         },
         paint: {
-          'text-color': '#FFFFFF',
-          'text-halo-color': '#4987E2',
+          'text-color': 'rgba(255,255,255,0.9)',
+          'text-halo-color': 'rgb(73, 135, 226, 0.6)',
           'text-halo-width': 1,
           'text-translate-anchor': 'map'
         }
