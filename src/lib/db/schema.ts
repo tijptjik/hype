@@ -43,8 +43,8 @@ export const user = sqliteTable('user', {
   attribution: text('attribution'),
   // Experimental features
   experimental: text('experimental', { mode: 'json' })
-    .$type<{ contributorMode: boolean }>()
-    .default(sql`'{"contributorMode":false}'`)
+    .$type<{ contributorMode: boolean; noLabelsMode: boolean }>()
+    .default(sql`'{"contributorMode":false, "noLabelsMode":false}'`)
     .notNull(),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)

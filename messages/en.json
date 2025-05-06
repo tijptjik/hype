@@ -254,5 +254,7 @@
   "big_awake_grebe_seek": "Preview new features before they are released.",
   "settings_default_map_description": "Choose which maps should load by default",
   "settings_contributor_description": "What name would you like to be credited for your contributed photos and features",
-  "settings_experimental_description": "Preview features before release"
+  "settings_experimental_description": "Preview features before release",
+  "settings_experimental_no_labels_mode": "Minimal Map",
+  "settings_experimental_no_labels_description": "Hide all map labels"
 }

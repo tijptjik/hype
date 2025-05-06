@@ -18,6 +18,11 @@ const experimentalFeatures = [
     name: m.settings_experimental_contributor_mode(),
     description: m.settings_experimental_contributor_description(),
     code: 'contributorMode'
+  },
+  {
+    name: m.settings_experimental_no_labels_mode(),
+    description: m.settings_experimental_no_labels_description(),
+    code: 'noLabelsMode'
   }
 ];
 
