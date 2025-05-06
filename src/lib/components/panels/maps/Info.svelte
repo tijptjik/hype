@@ -11,12 +11,12 @@ let { isOpen = false } = $props<{
     <h2 class="text-xl font-bold text-base-content">{m.arable_pretty_dingo_amaze()}</h2>
     <h3 class="text-lg text-base-content">{m.aware_red_lobster_spark()}</h3>
     <p class="text-neutral-content">
-      {m.slow_lower_wallaby_offer()}
+      {@html m.slow_lower_wallaby_offer()}
     </p>
-    <h3 class="text-lg text-base-content">{m.free_loud_meerkat_thrive()}</h3>
-    <p class="text-neutral-content">{m.alert_suave_moth_glow()}</p>
+    <h3 class="text-lg text-base-content">{@html m.free_loud_meerkat_thrive()}</h3>
+    <p class="text-neutral-content">{@html m.alert_suave_moth_glow()}</p>
     <p class="text-neutral-content">
-      {m.slow_quiet_dolphin_seek()}
+      {@html m.slow_quiet_dolphin_seek()}
     </p>
   </div>
 {/if}
