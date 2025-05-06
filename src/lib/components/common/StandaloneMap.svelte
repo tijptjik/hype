@@ -61,13 +61,13 @@ onMount(async () => {
   mapContext.map!.on('load', () => {
     mapContext.map!.addSource('hongkong-latest', {
       type: 'vector',
-      url: 'https://tiles.hype.hk/hongkong-latest.json'
+      url: 'https://tiles.hype.hk/basemap/hongkong-latest.json'
     });
 
     mapContext.map!.addLayer({
-      id: 'hk-transportation',
+      id: 'hk-roads',
       source: 'hongkong-latest',
-      'source-layer': 'transportation',
+      'source-layer': 'roads',
       type: 'line',
       paint: { 'line-color': '#4987E2' }
     });

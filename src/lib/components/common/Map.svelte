@@ -2,7 +2,7 @@
 // SVELTE
 import { onMount } from 'svelte';
 // MapLibre
-import SpectralStyle from '$lib/map/style.json';
+import SpectralStyle from '$lib/map/style-protomaps.json';
 import { addAddressMarker } from '$lib/map/markers';
 // UTILS
 import { loadScript } from '$lib';
