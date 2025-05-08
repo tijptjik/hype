@@ -30,6 +30,8 @@ let showPublishButton = $derived(
     </li>
   </div>
 {/if}
+<!-- TODO: Add a delete button -- this should only be shown if the feature isArchived == false. -->
+<!-- TODO: Add an undelete button -- this should only be shown if the feature isArchived == true. -->
 {#if showPublishButton}
   <div class="flex flex-row gap-2" in:slide={{ axis: 'x' }} out:slide={{ axis: 'x' }}>
     <li>
