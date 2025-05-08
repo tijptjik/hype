@@ -604,8 +604,6 @@ export class ResourceState {
     );
     const taskCount = this.filteredTasks.length;
 
-    console.log('NAVIGATING TO NEXT TASK', currentIndex, taskCount);
-
     if (currentIndex !== -1) {
       if (currentIndex < taskCount - 1) {
         nextIndex = currentIndex + 1;

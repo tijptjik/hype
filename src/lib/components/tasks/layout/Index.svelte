@@ -30,8 +30,8 @@ let groupedTasks: Record<Id, TaskAPI[]> = $derived(
 );
 </script>
 
-<div class="flex flex-col overflow-x-clip">
-  {#if groupedTasks}
+<div class="flex h-full flex-col overflow-x-clip">
+  {#if Object.keys(groupedTasks).length > 0}
     {#each Object.entries(groupedTasks) as [projectId, projectTasks]}
       <TaskHeader
         project={projectTasks[0].project as Project}
@@ -57,6 +57,20 @@ let groupedTasks: Record<Id, TaskAPI[]> = $derived(
       </div>
     {/each}
   {:else}
-    <div>No tasks found</div>
+    <div class="flex h-full items-center justify-center">
+      <div class="monospace text-3xl text-base-content/75">
+        <pre>
+_________/\\\________________________________________________        
+ ________\/\\\________________________________________________       
+  ________\/\\\________________________________________________      
+   ________\/\\\_______/\\\\\______/\\/\\\\\\________/\\\\\\\\__     
+    ___/\\\\\\\\\_____/\\\///\\\___\/\\\////\\\_____/\\\/////\\\_    
+     __/\\\////\\\____/\\\__\//\\\__\/\\\__\//\\\___/\\\\\\\\\\\__   
+      _\/\\\__\/\\\___\//\\\__/\\\___\/\\\___\/\\\__\//\\///////___  
+       _\//\\\\\\\/\\___\///\\\\\/____\/\\\___\/\\\___\//\\\\\\\\\\_ 
+        __\///////\//______\/////______\///____\///_____\//////////__
+      </pre>
+      </div>
+    </div>
   {/if}
 </div>
