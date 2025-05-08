@@ -1,43 +1,26 @@
 // SVELTE
 import { getContext, setContext } from 'svelte';
 import { SvelteSet } from 'svelte/reactivity';
-import { error } from '@sveltejs/kit';
 // SERVICES
 import {
-  getCloudinaryUploadEndpoint,
-  getCoordinatesFromMetadata,
-  getCapturedAtFromMetadata,
-  getCameraFromMetadata,
-  getCreditFromMetadata,
-  getImageFromCloudinaryResponse,
-  getCloudinarySignature,
-  createCloudinaryImage,
-  createImage,
-  updateImage,
-  extendFeatureImage,
-  extendImageWithResource,
-  getPublicPathCloudinaryImage,
   uploadAndProcessImage,
   updateImageIntent,
   updateImageIsPublished,
   deleteImage,
   getImages,
-  getURLfromImage
+  getURLfromImage,
+  sortImages
 } from '$lib/services/images.svelte';
 // TYPES
 import type { Writable } from 'svelte/store';
 // import type { QueryClient } from '@tanstack/svelte-query';
 import type {
-  ImageDB,
   GetImageAPI,
-  NewImageAPI,
   Intent,
-  ImageUploadRefs as Refs,
   ImageUploadState as ImageUpload,
   LoadStatus,
   UploadStatus,
   ImageEditRefs,
-  ParamsToSign,
   ResourceType,
   Id,
   OrganisationDB,
@@ -45,78 +28,32 @@ import type {
   ImageUploadRefs,
   Organisation,
   Project,
-  NewFeatureImages,
-  ImageUploadState
+  ImageUploadState,
+  ImageCtxMode,
+  ImageCtxState,
+  ImageCtxOptions
 } from '$lib/types';
-import { HierarchicalResource } from '$lib/types';
 /**
  * Image Service
  * ═══════════════════════
  *
  * Table of Contents
  * ────────────────
- * 1. Configuration
- * 2. Service
- * 3. State Management
+ * 1. State Management
  *   - States
  *   - Derived
  *   - Accessors
- * 4. Navigation
- * 5. Uploads
- * 6. Patching
- * 7. Deletion
- * 8. Downloads
- * 9. Metadata Handling
- * 10. Paths
- * 11. Data Casting
- * 12. Utils
- * 13. Context Setup
+ * 2. Navigation
+ * 3. Uploads
+ * 4. Patching
+ * 5. Deletion
+ * 6. Downloads
+ * 7. Metadata Handling
+ * 8. Paths
+ * 9. Data Casting
+ * 10. Utils
+ * 11. Context Setup
  */
-
-// ═══════════════════════
-// 1. CONFIGURATION
-// ═══════════════════════
-
-export const intentOrder = [
-  'undefined',
-  'canonical',
-  'closeUp',
-  'context',
-  'general',
-  'evidence'
-] as const;
-
-export type ImageServiceMode = 'standalone' | 'gallery';
-type ImageServiceState = {
-  mode: ImageServiceMode;
-  refType: ResourceType | null;
-  refId: Id | null;
-  refOrganisation: OrganisationDB | null;
-  refProject: ProjectDB | null;
-  uploadQueue: ImageUpload[];
-  loadStatus: Record<string, LoadStatus>;
-  activeId: string | null;
-  images: (GetImageAPI & { preview?: string })[];
-  preloadedImages: Set<string>;
-  pendingConfirmation: SvelteSet<string>;
-  deletionQueue: SvelteSet<string>;
-  rejected: File[];
-  thumbnailLoadStatus: Record<string, LoadStatus>;
-};
-
-type ImageServiceOptions = {
-  mode: ImageServiceMode;
-  isAdminMode: boolean;
-  refType: ResourceType;
-  refId: Id;
-  refOrganisation?: OrganisationDB;
-  refProject?: ProjectDB;
-  image?: GetImageAPI;
-};
-
-// ═══════════════════════
-// 2. SERVICE
-// ═══════════════════════
 
 export class ImageService {
   //   queryClient: QueryClient;
@@ -124,7 +61,7 @@ export class ImageService {
 
   constructor(
     // queryClient: QueryClient,
-    mode: ImageServiceMode = 'gallery',
+    mode: ImageCtxMode = 'gallery',
     isAdminMode: boolean = false,
     refType: ResourceType,
     refId: Id,
@@ -143,7 +80,7 @@ export class ImageService {
     });
   }
 
-  async setContext(options: ImageServiceOptions) {
+  async setContext(options: ImageCtxOptions) {
     this.resetLoadStatus();
     this.resetThumbnailLoadStatus();
     this.resetPendingConfirmation();
@@ -161,7 +98,6 @@ export class ImageService {
 
     if (options.mode === 'standalone' && options.image) {
       await this.setImages([options.image as GetImageAPI]);
-      console.log('SETTING FROM SETCONTEXT', options.image.id);
       this.setLoadStatus(options.image.id, 'loading');
     } else if (options.mode === 'standalone' && !options.image) {
       await this.setImages([]);
@@ -179,7 +115,7 @@ export class ImageService {
   // 3.A STATES
   // ═══════════════════════
 
-  state: ImageServiceState = $state({
+  state: ImageCtxState = $state({
     // Mode of the image service
     mode: 'gallery',
     // The type of resource the image is associated with
@@ -247,43 +183,30 @@ export class ImageService {
   }
 
   determineViewerState = () => {
-    console.log('[ImageService] Determining viewer state');
-    console.log('[ImageService] Active image:', this.activeImage?.id);
-    console.log('[ImageService] Load statuses:', this.state.loadStatus);
-    console.log('[ImageService] Upload queue:', this.state.uploadQueue);
-
     if (
       this.activeImage &&
       this.isReplacementStatus(this.activeImage.id, 'uploading')
     ) {
-      console.log('[ImageService] State: previewReplacement - Image being replaced');
       return 'previewReplacement';
     } else if (
       this.activeImage &&
       this.isReplacementStatus(this.activeImage.id, 'uploaded') &&
       this.getLoadStatus(this.activeImage.id) !== 'loaded'
     ) {
-      console.log(
-        '[ImageService] State: transition - Replacement uploaded, waiting for load'
-      );
       return 'transition';
     } else if (
       this.activeImage &&
       this.getLoadStatus(this.activeImage.id) === 'loading'
     ) {
-      console.log('[ImageService] State: loading - Image loading');
       return 'loading';
     } else if (
       this.activeImage &&
       this.getLoadStatus(this.activeImage.id) === 'loaded'
     ) {
-      console.log('[ImageService] State: loaded - Image loaded');
       return 'loaded';
     } else if (this.activePreview) {
-      console.log('[ImageService] State: previewUploading - New image uploading');
       return 'previewUploading';
     } else {
-      console.log('[ImageService] State: empty - No image or preview');
       return 'empty';
     }
   };
@@ -434,33 +357,17 @@ export class ImageService {
   }
 
   async setImages(images: (GetImageAPI & { preview?: string })[]) {
-    this.state.images = images;
-    this.sortImages();
+    this.state.images = sortImages(images);
     await this.preloadImages();
   }
 
   setLoadStatus(imageId: string, status: LoadStatus) {
     // Guard against redundant updates
     if (this.state.loadStatus[imageId] === status) {
-      console.log(
-        '[ImageService] Skipping redundant status update for',
-        imageId,
-        status
-      );
       return;
     }
 
-    console.log('[ImageService] Setting load status for', imageId, 'to', status);
-    console.log('[ImageService] Previous status:', this.state.loadStatus[imageId]);
-    console.log('[ImageService] Current upload queue:', this.state.uploadQueue);
-
     if (status === 'loaded') {
-      console.log(
-        '[ImageService] Image',
-        imageId,
-        'marked as loaded, checking for replacement uploads'
-      );
-
       // Only invalidate the upload queue if we're not in a replacement process
       // or if the replacement has been completed
       const replacementUpload = this.state.uploadQueue.find(
@@ -468,15 +375,10 @@ export class ImageService {
       );
 
       if (replacementUpload?.status === 'uploaded') {
-        console.log(
-          '[ImageService] Invalidating completed replacement upload for',
-          imageId
-        );
-
         this.state.uploadQueue = this.state.uploadQueue
           .map((upload) => {
             if (upload.imageToReplace?.id === imageId) {
-              URL.revokeObjectURL(upload.preview);
+              URL.revokeObjectURL(upload.preview ?? '');
               return { ...upload, status: 'invalidated' as UploadStatus };
             }
             return upload;
@@ -528,7 +430,6 @@ export class ImageService {
   // ACTIVE IMAGE
 
   setActiveImage(image: GetImageAPI) {
-    console.log('[ImageService] Setting active image:', image.id);
     if (!image) return;
     this.state.activeId = image.id;
   }
@@ -700,7 +601,7 @@ export class ImageService {
       const savedImage = await uploadAndProcessImage(
         fileObject.file,
         uploadRefs,
-        extended?.featureImage, // Pass the nested featureImage object directly
+        extended?.featureImage,
         localFetch
       );
 
@@ -924,35 +825,22 @@ export class ImageService {
   }
 
   // ═══════════════════════
-  // 11. DATA CASTING
+  // 9. DATA CASTING
   // ═══════════════════════
 
   private sortImages() {
-    this.state.images.sort((a, b) => {
-      if (a.isPublished !== b.isPublished) {
-        return a.isPublished ? -1 : 1;
-      }
-      const intentCompare =
-        intentOrder.indexOf(a.intent) - intentOrder.indexOf(b.intent);
-      if (intentCompare !== 0) {
-        return intentCompare;
-      }
-      return (
-        new Date(b.createdAt as string).getTime() -
-        new Date(a.createdAt as string).getTime()
-      );
-    });
+    this.state.images = sortImages(this.state.images);
   }
 }
 
 // ═══════════════════════
-// 13. SERVICE SETUP
+// 11. SERVICE SETUP
 // ═══════════════════════
 
 const IMAGE_STATE_KEY = Symbol('IMAGE_STATE_KEY');
 
 export const setImageContext = (
-  mode: ImageServiceMode = 'gallery',
+  mode: ImageCtxMode = 'gallery',
   isAdminMode: boolean = false,
   refType: ResourceType,
   refId: Id,

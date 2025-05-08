@@ -114,6 +114,7 @@ import type { IconSource } from '@steeze-ui/heroicons';
 import type { enhance } from '$app/forms';
 import type { Marker } from 'maplibre-gl';
 import type { Writable } from 'svelte/store';
+import type { SvelteSet } from 'svelte/reactivity';
 
 // HTML
 export type InputType = 'text' | 'number' | 'email' | 'password';
@@ -1119,4 +1120,32 @@ export type RangeFilterValue = {
   globalMax: number;
   rangeMin: number;
   rangeMax: number;
+};
+
+export type ImageCtxMode = 'standalone' | 'gallery';
+export type ImageCtxState = {
+  mode: ImageCtxMode;
+  refType: ResourceType | null;
+  refId: Id | null;
+  refOrganisation: OrganisationDB | null;
+  refProject: ProjectDB | null;
+  uploadQueue: ImageUploadState[];
+  loadStatus: Record<string, LoadStatus>;
+  activeId: string | null;
+  images: (GetImageAPI & { preview?: string })[];
+  preloadedImages: Set<string>;
+  pendingConfirmation: SvelteSet<string>;
+  deletionQueue: SvelteSet<string>;
+  rejected: File[];
+  thumbnailLoadStatus: Record<string, LoadStatus>;
+};
+
+export type ImageCtxOptions = {
+  mode: ImageCtxMode;
+  isAdminMode: boolean;
+  refType: ResourceType;
+  refId: Id;
+  refOrganisation?: OrganisationDB;
+  refProject?: ProjectDB;
+  image?: GetImageAPI;
 };

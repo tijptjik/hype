@@ -15,10 +15,10 @@ import type {
   Organisation,
   Project,
   Intent,
-  ImageUploadState,
   ImageEditRefs,
   ImageDB
 } from '$lib/types';
+import { error } from '@sveltejs/kit';
 
 type LngLat = {
   latitude?: string;
@@ -52,7 +52,7 @@ export function getCoordinatesFromMetadata(metadata: Metadata): LngLat {
       longitude: coordinates.getLongitude().toString()
     };
   } catch (error) {
-    console.warn('Failed to parse coordinates with coordinate-parser:', error);
+    console.warn('Failed to parse coordinates with coordinate-parser');
     // Fallback or simplified parsing if direct fields are available
     if (metadata.GPSLatitude && metadata.GPSLongitude) {
       return {
@@ -627,4 +627,40 @@ export async function uploadAndProcessImage(
   }
 
   return savedImage;
+}
+
+// ═══════════════════════
+// X. UTILS
+// ═══════════════════════
+
+export const intentOrder = [
+  'undefined',
+  'canonical',
+  'closeUp',
+  'context',
+  'general',
+  'evidence'
+] as const;
+
+/**
+ *
+ * @param image
+ * @returns
+ */
+
+export function sortImages(images: GetImageAPI[]) {
+  const sortedImages = images.sort((a, b) => {
+    if (a.isPublished !== b.isPublished) {
+      return a.isPublished ? -1 : 1;
+    }
+    const intentCompare = intentOrder.indexOf(a.intent) - intentOrder.indexOf(b.intent);
+    if (intentCompare !== 0) {
+      return intentCompare;
+    }
+    return (
+      new Date(b.createdAt as string).getTime() -
+      new Date(a.createdAt as string).getTime()
+    );
+  });
+  return sortedImages;
 }
