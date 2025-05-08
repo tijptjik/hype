@@ -22,6 +22,7 @@ import type {
   OrganisationDB,
   ProjectDB
 } from '$lib/types';
+import { uploadAndProcessImage } from '$lib/services/images.svelte';
 
 const RESOURCE_TYPE = 'task';
 const ACCESS_STRATEGY = 'ResourceOwnChildren' as AccessStrategyOption;
@@ -124,31 +125,21 @@ export const POST: RequestHandler = async ({ request, locals, platform, fetch })
         const organisation: OrganisationDB | undefined =
           await getOrganisationForProjectId(db, project!.id);
 
-        setImageContext(
-          'gallery',
-          false,
-          'feature',
-          taskData.featureId,
-          organisation!,
-          project!
-        );
-        const imageService = getImageContext();
-
         if (fileValue instanceof File) {
-          const image = await imageService.upload({
-            fileObject: {
-              file: fileValue,
-              status: 'uploading',
-              retries: 0
+          const image = await uploadAndProcessImage(
+            fileValue,
+            {
+              resource: 'feature',
+              entity: taskData.featureId,
+              organisation,
+              project
             },
-            event: { fetch },
-            extended: {
-              featureImage: {
-                isPublished: false,
-                intent: 'evidence'
-              }
-            }
-          });
+            {
+              isPublished: false,
+              intent: 'evidence'
+            },
+            fetch
+          );
 
           if (image) {
             uploadedImages.push(image);
@@ -157,18 +148,6 @@ export const POST: RequestHandler = async ({ request, locals, platform, fetch })
       }
 
       const imageIds = uploadedImages.map((image) => image.id);
-
-      // // Link the image to the feature as evidence
-      // await createFeatureImagesFromImageIds(
-      //   db,
-      //   {
-      //     featureId: taskData.featureId,
-      //     intent: 'evidence',
-      //     isPublished: false
-      //   },
-      //   imageIds
-      // );
-
       // Link the image to the task as evidence
       await createTaskImagesFromImageIds(db, createdTask.id, imageIds);
 

@@ -1,6 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import { getDatabaseOrError, JSONResponseOrError } from '$lib/api';
-import type { RequestHandler } from '@sveltejs/kit';
+// SERVICES
 import {
   createImage,
   extractEntitiesToInsert,
@@ -13,11 +13,14 @@ import {
   checkOrganisationAccessForImage,
   checkProjectAccessForNewImage
 } from '$lib/db/services/image';
-import type { GetImageAPI, NewImageAPI } from '$lib/types';
 import { patchProject } from '$lib/db/services/project';
 import { patchOrganisation } from '$lib/db/services/organisation';
-import { intentOrder } from '$lib/context/images.svelte';
+import { intentOrder } from '$lib/services/images.svelte';
+// TYPES
+import type { RequestHandler } from '@sveltejs/kit';
+import type { GetImageAPI, NewImageAPI } from '$lib/types';
 
+// CONSTANTS
 const RESOURCE_TYPE = 'image';
 const ACCESS_STRATEGY = 'ResourceFromEditableProject';
 const PRIVILEGED_STRATEGY = 'ResourceAll';

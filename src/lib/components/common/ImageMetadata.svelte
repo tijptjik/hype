@@ -17,7 +17,7 @@ let { image }: { image: GetImageAPI } = $props();
 </script>
 
 {#snippet MetadataRow(icon: IconSource, label: string, value: string)}
-  <div class="flex items-center gap-2 text-sm text-base-content/80">
+  <div class="flex flex-wrap items-center gap-2 text-sm text-base-content/80">
     <Icon src={icon} class="h-4 w-4 flex-grow-0" />
     <p class="font-medium">{label}:</p>
     <span>{value}</span>

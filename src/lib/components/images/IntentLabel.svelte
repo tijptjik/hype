@@ -1,7 +1,8 @@
 <script lang="ts">
 import { fade } from 'svelte/transition';
-import { intentOrder } from '$lib/context/images.svelte';
 // SERVICES
+import { intentOrder } from '$lib/services/images.svelte';
+// CONTEXT
 import { getImageContext } from '$lib/context/images.svelte';
 // TYPES
 import type { Intent } from '$lib/types';

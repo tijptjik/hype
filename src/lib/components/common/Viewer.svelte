@@ -229,39 +229,40 @@ const handleDrop = async (e: CustomEvent) => {
   {/if}
   {#if image}
     <!-- Actions -->
-    <div class="absolute bottom-0 z-30 flex w-full flex-row items-end justify-between">
-      <!-- Left Actions -->
-      <div class="m-10 flex flex-row items-start gap-4">
-        {#if LeftActions}
-          {@render LeftActions()}
-        {:else}
-          <IconAnchor position="left" icon={Camera}>
-            {#if image}
-              <Metadata {image} />
-            {/if}
-          </IconAnchor>
-        {/if}
-      </div>
-      <!-- Middle Actions -->
-      <div class="z-30 flex flex-row items-center gap-4">
-        {#if MiddleActions}
-          {@render MiddleActions()}
-        {/if}
-      </div>
-      <!-- Right Actions -->
-      <div class="z-30 m-10 flex flex-row items-end gap-4">
-        {#if RightActions}
-          {@render RightActions()}
-        {:else if image}
-          <IconAnchor position="right" icon={InformationCircle} class="mr-4">
-            <UserAttributionCard
-              userId={image.contributorId}
-              date={image.createdAt || undefined}
-              type="imageContributor" />
-          </IconAnchor>
-          <DownloadImageButton {image} />
-        {/if}
-      </div>
+    <!-- Left Actions -->
+    <div
+      class="absolute bottom-0 left-0 z-30 m-10 flex flex-row items-start gap-4 overflow-visible">
+      {#if LeftActions}
+        {@render LeftActions()}
+      {:else}
+        <IconAnchor position="left" icon={Camera}>
+          {#if image}
+            <Metadata {image} />
+          {/if}
+        </IconAnchor>
+      {/if}
+    </div>
+    <!-- Middle Actions -->
+    <div
+      class="absolute bottom-0 left-0 z-30 m-10 flex flex-row items-center gap-4 overflow-visible">
+      {#if MiddleActions}
+        {@render MiddleActions()}
+      {/if}
+    </div>
+    <!-- Right Actions -->
+    <div
+      class="absolute bottom-0 right-0 z-30 m-10 flex flex-row items-end gap-4 overflow-visible">
+      {#if RightActions}
+        {@render RightActions()}
+      {:else if image}
+        <IconAnchor position="right" icon={InformationCircle} class="mr-4">
+          <UserAttributionCard
+            userId={image.contributorId}
+            date={image.createdAt || undefined}
+            type="imageContributor" />
+        </IconAnchor>
+        <DownloadImageButton {image} />
+      {/if}
     </div>
   {/if}
 </div>

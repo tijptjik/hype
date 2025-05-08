@@ -6,13 +6,13 @@ import type {
   ResourceType,
   OrganisationDB,
   ProjectDB,
-  GetImageAPI
+  GetImageAPI,
+  ImageCtxMode
 } from '$lib/types';
-import type { ImageServiceMode } from '$lib/context/images.svelte';
 
 type Props = {
   children: any;
-  mode: ImageServiceMode;
+  mode: ImageCtxMode;
   isAdminMode: boolean;
   refType: ResourceType;
   refId: Id;
