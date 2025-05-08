@@ -1,16 +1,22 @@
 <script lang="ts">
 // LIB
-import { ADMIN_PATH } from '$lib/index';
-import { navigate } from '$lib/navigation';
+import { navigateOnAdmin } from '$lib/navigation';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { CheckCircle, PencilSquare, XCircle } from '@steeze-ui/heroicons';
 import Title from '$lib/components/tasks/common/Title.svelte';
+// CONTEXT
+import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+// ENUMS
+import { HierarchicalResource } from '$lib/types';
 // TYPES
 import type { TaskAPI } from '$lib/types';
 
 // PROPS
 let { task }: { task: TaskAPI } = $props();
+
+// CONTEXT
+const resourceState = getHierarchicalResourceState();
 
 export const typeColors = {
   reportedMissing: 'border-error',
@@ -25,7 +31,7 @@ export const typeColors = {
   ]} cursor-pointer transition-colors duration-300 hover:bg-base-200"
   onclick={(e) => {
     e.preventDefault();
-    navigate(`${ADMIN_PATH}/tasks/${task.id}`);
+    navigateOnAdmin(resourceState, HierarchicalResource.task, task.id);
   }}>
   <Title {task} />
   <button

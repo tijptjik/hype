@@ -3,7 +3,7 @@
 import { page } from '$app/stores';
 import { fade } from 'svelte/transition';
 // NAVIGATION
-import { navigate } from '$lib/navigation';
+import { goto } from '$app/navigation';
 // I18N
 import { m } from '$lib/i18n';
 // AUTH
@@ -29,7 +29,7 @@ let showPower = $state(false);
           class="m-0 flex h-10 w-10 items-center justify-center rounded-full bg-neutral-800 p-0"
           onclick={() => {
             signOut();
-            navigate('/');
+            goto('/');
           }}>
           <Icon src={Power} class="h-5 w-5 stroke-2 text-primary" />
         </button>

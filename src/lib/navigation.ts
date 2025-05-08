@@ -60,12 +60,6 @@ export const navItems = {
   }
 };
 
-export const navigate = (url: string) => {
-  // const langUrl = i18n.resolveRoute(url);
-  // goto(langUrl);
-  goto(url);
-};
-
 export const navigateOnAdmin = (
   resourceState: HierarchicalResourceState,
   resource: HierarchicalResource | false,
@@ -93,7 +87,7 @@ export const navigateOnAdmin = (
     resourceState.setFacet(false);
   }
   if (queryParams) url += `?${new URLSearchParams(queryParams).toString()}`;
-  navigate(url);
+  goto(url);
 };
 
 // UTILS

@@ -6,9 +6,11 @@ import { ADMIN_PATH } from '$lib/index';
 // AUTH
 import { hasControlPanelAccess } from '$lib/auth/utils';
 // NAVIGATION
-import { navigate } from '$lib/navigation';
+import { navigateOnAdmin } from '$lib/navigation';
 // COMPONENTS
 import IconicMenuButton from '$lib/components/menu/IconicMenuButton.svelte';
+// ENUMS
+import { HierarchicalResource } from '$lib/types';
 // ICONS
 import { InboxArrowDown, Map } from '@steeze-ui/heroicons';
 // CONTEXT
@@ -27,11 +29,11 @@ let notificationCount = $derived(resourceState.filteredTasks.length);
       <IconicMenuButton
         href={`${ADMIN_PATH}/tasks`}
         iconSrc={InboxArrowDown}
-        handleClick={(e) => navigate(`${ADMIN_PATH}/tasks`)}
+        handleClick={(e) => navigateOnAdmin(resourceState, HierarchicalResource.task)}
         {notificationCount} />
     </li>
     <li>
-      <IconicMenuButton href="/" iconSrc={Map} handleClick={(e) => navigate('/')} />
+      <IconicMenuButton href="/" iconSrc={Map} />
     </li>
   </ul>
 {/if}
