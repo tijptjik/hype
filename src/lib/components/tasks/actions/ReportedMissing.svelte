@@ -144,7 +144,7 @@ const handleSet = async (e: Event, action: ReportedMissingAction) => {
 <div class="flex items-center gap-4">
   {#if task.reviewOutcome}
     <div class="flex items-center gap-2 rounded-lg bg-base-200 px-3 py-2">
-      <p class="uppercase text-base-content">REVIEW ACTION</p>
+      <p class="uppercase text-base-content">{m.mad_fresh_swan_trip()}</p>
       <p class="font-mono text-sm uppercase text-neutral-content">
         {task.reviewAction?.replace('-', ' ')}
       </p>
