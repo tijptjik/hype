@@ -1,6 +1,8 @@
 <script lang="ts">
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+// I18N
+import { m } from '$lib/i18n';
 // COMPONENTS
 import Reject from '$lib/components/common/buttons/Reject.svelte';
 import Accept from '$lib/components/common/buttons/Accept.svelte';

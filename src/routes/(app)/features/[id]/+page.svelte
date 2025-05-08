@@ -16,20 +16,18 @@ import FeatureActions from '$lib/components/featureCard/FeatureActions.svelte';
 import MissingReportReason from '$lib/components/featureCard/MissingReportReason.svelte';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
-import { getOmniContext, PageState } from '$lib/context/omni.svelte';
+import { getOmniContext } from '$lib/context/omni.svelte';
 import {
   setFeatureCardContext,
   getFeatureCardContext
 } from '$lib/context/featureCard.svelte';
 // ENUMS
 import { FeatureCardMode } from '$lib/types';
-// CONFIG
-import { MOBILE_MAX_WIDTH } from '$lib/index';
 // TYPES
 import type { Feature, Layer, Project } from '$lib/types';
 
 // PARAMS
-let featureId = $state($page.params.id);
+let featureId: string = $state($page.params.id);
 
 // CONTEXT
 const mapContext = getMapContext();
@@ -78,7 +76,7 @@ async function handleFeatureSelection() {
       ) as Project}>
       {#if mode === FeatureCardMode.Display}
         <div class="flex h-full w-full flex-col overflow-x-visible">
-          <FeatureGallery {featureId} />
+          <FeatureGallery />
           <div class="flex min-h-0 w-full flex-1 basis-2/5 flex-col overflow-x-visible">
             <FeatureBreadcrumbs feature={mapContext.features[featureId]} />
             <FeatureDescription feature={mapContext.features[featureId]} />
@@ -95,9 +93,9 @@ async function handleFeatureSelection() {
           </div>
         </div>
       {:else if mode === FeatureCardMode.New}
-        <FeatureGallery {featureId} />
+        <FeatureGallery />
       {:else if mode === FeatureCardMode.Missing}
-        <FeatureGallery {featureId} />
+        <FeatureGallery />
         <div class="flex-shrink-1 flex flex-grow-0 flex-col">
           <FeatureBreadcrumbs feature={mapContext.features[featureId]} />
           <FeatureDescription

@@ -79,8 +79,7 @@ const handleReject = async (e: Event) => {
       await Promise.all(imageUpdatePromises);
     }
 
-    // TODO Navigate to the next Task
-    // goToResource(e, routerState, 'task');
+    resourceState.goToNextTask();
   } catch (error) {
     console.error('Failed to reject:', error);
   }
@@ -119,8 +118,7 @@ const handleSet = async (e: Event, action: ReportedMissingAction) => {
       })
     });
 
-    // TODO Navigate to the next Task
-    // goToResource(e, routerState, 'task');
+    resourceState.goToNextTask();
   } catch (error) {
     console.error('Failed to archive:', error);
   }

@@ -27,7 +27,7 @@ import type {
 } from '../types';
 import type { UserRole } from '$lib/auth/utils';
 import type { Page } from '@sveltejs/kit';
-import { reversePath } from '$lib/navigation';
+import { navigateOnAdmin } from '$lib/navigation';
 const nullOrEquals = (a: any, b: any) => {
   return a == null || a === b;
 };
@@ -590,6 +590,37 @@ export class ResourceState {
         (entityRef ? entityRef : this.activeEntity)
     );
   }
+  // ═══════════════════════
+  // NAVIGATION
+  // ═══════════════════════
+
+  /**
+   * Navigates to the next task. If the current task is the last task, it will navigate to the previous task. If no tasks are available, it will navigate to the overview.
+   */
+  goToNextTask = () => {
+    let nextIndex;
+    const currentIndex = this.filteredTasks.findIndex(
+      (task) => task.id === this.activeEntity
+    );
+    const taskCount = this.filteredTasks.length;
+
+    console.log('NAVIGATING TO NEXT TASK', currentIndex, taskCount);
+
+    if (currentIndex !== -1) {
+      if (currentIndex < taskCount - 1) {
+        nextIndex = currentIndex + 1;
+      } else if (currentIndex === taskCount - 1 && taskCount > 1) {
+        nextIndex = currentIndex - 1;
+      } else {
+        nextIndex = undefined;
+      }
+    }
+    const nextTaskId =
+      nextIndex !== undefined ? this.filteredTasks[nextIndex].id : undefined;
+    this.invalidateAndRefresh(HierarchicalResource.task);
+    navigateOnAdmin(this, HierarchicalResource.task, nextTaskId);
+  };
+
   // GENERIC UTILS
   hasManyEntities = (resource: HierarchicalResource) => {
     return this.state.resources[resource].length > 3;

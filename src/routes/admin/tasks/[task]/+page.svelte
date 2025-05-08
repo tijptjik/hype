@@ -30,7 +30,7 @@ import { HierarchicalResource } from '$lib/types';
 import type { TaskAPI, PageProps } from '$lib/types';
 
 let pageProps: PageProps<TaskAPI> = $props();
-let { task } = pageProps.data;
+let task = $derived(pageProps.data.task);
 
 // CONTEXT
 const resourceState = getHierarchicalResourceState();
@@ -50,7 +50,7 @@ resourceState.setFacet('core');
   )}
   refProject={resourceState.getEntity(HierarchicalResource.project, task.projectId)}>
   <div
-    class="from-rose-500 h-full overflow-y-auto bg-gradient-to-br to-indigo-700 bg-fixed p-6">
+    class="h-full overflow-y-auto bg-gradient-to-br from-rose-500 to-indigo-700 bg-fixed p-6">
     <Task {task}>
       <TaskHeader {task} isRoundedBottom={false}>
         {#snippet Left()}
