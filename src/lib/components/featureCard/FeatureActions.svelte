@@ -18,6 +18,9 @@ import { FeatureCardMode } from '$lib/types';
 import ValidationError from './ValidationError.svelte';
 import { getFlash } from 'sveltekit-flash-message';
 import { page } from '$app/stores';
+import { session } from '$lib/db/schema';
+
+let attribution = $derived($page.data.session?.user?.attribution || '');
 
 // STATE : PROPS
 let { feature }: { feature: Feature } = $props();
@@ -172,6 +175,72 @@ async function submitNewFeature() {
   // TODO: Implement
 }
 
+async function submitNewPhotos() {
+  // Validate inputs
+  if (featureCardContext.userData.photos.length === 0) {
+    featureCardContext.setError(m.validation__at_least_one_image());
+    return;
+  }
+
+  if (
+    (attribution.trim().length || 0) < 1 &&
+    featureCardContext.getAttribution().trim().length < 1
+  ) {
+    featureCardContext.setError(m.validation__attribution_required());
+    return;
+  }
+
+  try {
+    featureCardContext.isSubmitting = true;
+
+    // Create FormData for file uploads
+    const formData = new FormData();
+
+    const layer = mapContext.getLayer(feature)!;
+    const project = mapContext.getProject(layer)!;
+    const organisation = mapContext.getOrganisation(project)!;
+
+    // Add task data
+    const taskData = {
+      type: 'newPhoto',
+      featureId: feature.id,
+      layerId: layer?.id,
+      projectId: project?.id,
+      organisationId: organisation?.id
+    };
+
+    formData.append('taskData', JSON.stringify(taskData));
+
+    // Add photos
+    featureCardContext.userData.photos.forEach((photo, index) => {
+      formData.append(`photo_${index}`, photo.file);
+    });
+
+    // Submit the form
+    const response = await fetch('/api/tasks', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to submit report');
+    }
+    // Reset form and show success message
+    featureCardContext.userData.photos = [];
+
+    // Set flash message instead of alert
+    $flash = { type: 'success', message: m.add_photos__success() };
+
+    // reset the feature card mode
+    featureCardContext.state.mode = FeatureCardMode.Display;
+  } catch (error) {
+    $flash = { type: 'error', message: m.add_photos__error() };
+    featureCardContext.validationError = m.add_photos__error();
+  } finally {
+    featureCardContext.isSubmitting = false;
+  }
+}
+
 // Utils
 function getDirections() {
   const url = `https://www.google.com/maps/dir/?api=1&destination=${feature.geometry.coordinates[1]},${feature.geometry.coordinates[0]}`;
@@ -279,6 +348,35 @@ function getDirections() {
             Submit
           {/if}
         </button>
+      </div>
+    </div>
+  {:else if featureCardContext.state.mode === FeatureCardMode.AddPhoto}
+    <div class="flex w-full flex-col">
+      <ValidationError />
+      <div class="mt-4 flex items-center justify-between">
+        <h3 class="text-lg font-bold uppercase text-primary">
+          {@html featureCardContext.userData.photos.length > 0
+            ? `Contribute <span class="text-white px-2">${featureCardContext.userData.photos.length}</span> Photos`
+            : 'Photo Contribution'}
+        </h3>
+        <div class="flex gap-3">
+          <button
+            class="btn btn-outline border-base-100 uppercase hover:bg-base-200 hover:text-base-content"
+            onclick={() => (featureCardContext.state.mode = FeatureCardMode.Display)}>
+            {m.safe_tidy_skunk_arrive()}
+          </button>
+          <button
+            class="btn btn-outline btn-primary uppercase"
+            onclick={submitNewPhotos}
+            disabled={featureCardContext.isSubmitting}>
+            {#if featureCardContext.isSubmitting}
+              <span class="loading loading-ring loading-md"></span>
+              {m.fun_fuzzy_shrike_compose()}
+            {:else}
+              {m.proof_active_eagle_urge()}
+            {/if}
+          </button>
+        </div>
       </div>
     </div>
   {/if}

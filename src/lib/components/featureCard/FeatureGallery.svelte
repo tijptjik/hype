@@ -12,6 +12,8 @@ import { getImageContext } from '$lib/context/images.svelte';
 const featureCardContext = getFeatureCardContext();
 
 const imageCtx = getImageContext();
+
+const { isCameraActive = false } = $props();
 </script>
 
 <div
@@ -23,6 +25,6 @@ const imageCtx = getImageContext();
   {:else if imageCtx.getImages().length > 0 && featureCardContext.state.mode === FeatureCardMode.Display}
     <Carousel />
   {:else}
-    <AddPhoto />
+    <AddPhoto {isCameraActive} />
   {/if}
 </div>

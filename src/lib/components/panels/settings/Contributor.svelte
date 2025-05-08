@@ -10,7 +10,7 @@ import { page } from '$app/stores';
 const { session } = $page.data;
 
 let contributorName = $state(session?.user?.attribution);
-let timer: number;
+let timer: ReturnType<typeof setTimeout>;
 
 const debounce = async (value: string) => {
   clearTimeout(timer);

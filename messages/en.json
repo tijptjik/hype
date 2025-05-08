@@ -262,5 +262,20 @@
   "loose_knotty_cow_propel": "Unlist",
   "awful_this_dingo_glow": "Intangibilize",
   "quiet_late_worm_startle": "Reject Report",
-  "mad_fresh_swan_trip": "REVIEW ACTION"
+  "mad_fresh_swan_trip": "REVIEW ACTION",
+  "validation__attribution_required": "Please provide name to be credited.",
+  "validation__at_least_one_image": "Please add at least one photo to be uploaded.",
+  "add_photos__preface": "Thanks for adding photos to the map! A curator will review your photos and take the appropriate action.",
+  "photo_credit_initial_instruction": "All photos you add are credited to you.",
+  "photo_credit_ensure_right_to_share": "Only upload photos you have the right to share.",
+  "photo_credit_curatorial_review": "Curators review photos before they are published.",
+  "photo_credit_prompt_for_name": "Enter the name for photo credit:",
+  "photo_credit_input_placeholder": "Your name or attribution",
+  "photo_credit_credited_as": "Photos will be credited to:",
+  "photo_credit_edit_button": "Edit Credit",
+  "add_photos__success": "Photos submitted",
+  "add_photos__error": "Submission failed",
+  "proof_active_eagle_urge": "Submit",
+  "fun_fuzzy_shrike_compose": "Sending",
+  "safe_tidy_skunk_arrive": "Cancel"
 }

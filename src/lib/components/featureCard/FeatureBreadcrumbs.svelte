@@ -84,7 +84,8 @@ let organisation = mapContext.getOrganisation(project!);
           Report Missing
         </button>
         <button
-          class="btn btn-ghost btn-sm h-auto w-full justify-start gap-2 rounded-t-none rounded-br-none p-2 pl-3 font-mono font-thin text-neutral-content hover:bg-base-300 active:scale-100 active:bg-base-200">
+          class="btn btn-ghost btn-sm h-auto w-full justify-start gap-2 rounded-t-none rounded-br-none p-2 pl-3 font-mono font-thin text-neutral-content hover:bg-base-300 active:scale-100 active:bg-base-200"
+          onclick={() => (featureCardContext.state.mode = FeatureCardMode.AddPhoto)}>
           <Icon src={Camera} class="h-5 w-5 text-primary" theme="solid" />
           Add Photo
         </button>

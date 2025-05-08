@@ -966,7 +966,8 @@ export type SearchResult = {
 export enum FeatureCardMode {
   Display = 'display',
   New = 'new',
-  Missing = 'missing'
+  Missing = 'missing',
+  AddPhoto = 'addPhoto'
 }
 
 export enum HierarchicalResource {

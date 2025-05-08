@@ -2,6 +2,8 @@
 import { setContext, getContext } from 'svelte';
 // ENUMS
 import { FeatureCardMode } from '$lib/types';
+// I18N
+import { m } from '$lib/i18n';
 
 // TYPES
 type UploadedPhoto = {
@@ -16,7 +18,8 @@ export class FeatureCardContext {
   });
   userData = $state({
     missingReason: '',
-    photos: [] as UploadedPhoto[]
+    photos: [] as UploadedPhoto[],
+    attribution: ''
   });
   validationError = $state('');
   isSubmitting = $state(false);
@@ -43,6 +46,9 @@ export class FeatureCardContext {
    * Adds a photo to the feature card context
    */
   addPhoto(photo: UploadedPhoto) {
+    if (this.getError() === m.validation__at_least_one_image()) {
+      this.resetError();
+    }
     this.userData.photos.push(photo);
   }
 
@@ -77,6 +83,26 @@ export class FeatureCardContext {
       URL.revokeObjectURL(photo.previewUrl);
     });
     this.userData.photos = [];
+  }
+
+  setError(error: string) {
+    this.validationError = error;
+  }
+
+  getError() {
+    return this.validationError;
+  }
+
+  resetError() {
+    this.validationError = '';
+  }
+
+  setAttribution(attribution: string) {
+    this.userData.attribution = attribution;
+  }
+
+  getAttribution() {
+    return this.userData.attribution;
   }
 }
 

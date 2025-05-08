@@ -14,6 +14,7 @@ import FeatureProperties from '$lib/components/featureCard/FeatureProperties.sve
 import FeaturePortal from '$lib/components/featureCard/FeaturePortal.svelte';
 import FeatureActions from '$lib/components/featureCard/FeatureActions.svelte';
 import MissingReportReason from '$lib/components/featureCard/MissingReportReason.svelte';
+import PhotoCredit from '$lib/components/featureCard/PhotoCredit.svelte';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
@@ -103,6 +104,16 @@ async function handleFeatureSelection() {
             hideDescription={true} />
         </div>
         <MissingReportReason />
+        <FeatureActions feature={mapContext.features[featureId]} />
+      {:else if mode === FeatureCardMode.AddPhoto}
+        <FeatureGallery isCameraActive={true} />
+        <div class="flex-shrink-1 flex flex-grow-0 flex-col">
+          <FeatureBreadcrumbs feature={mapContext.features[featureId]} />
+          <FeatureDescription
+            feature={mapContext.features[featureId]}
+            hideDescription={true} />
+        </div>
+        <PhotoCredit />
         <FeatureActions feature={mapContext.features[featureId]} />
       {/if}
     </ImageProvider>

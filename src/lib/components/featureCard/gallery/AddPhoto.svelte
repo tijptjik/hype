@@ -4,6 +4,8 @@ import { onMount, tick } from 'svelte';
 // MOTION
 import { fade } from 'svelte/transition';
 import { spring } from 'svelte/motion';
+// ENUMS
+import { FeatureCardMode } from '$lib/types';
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
 import {
@@ -31,6 +33,7 @@ type CameraPermissionStatus = 'unknown' | 'prompt' | 'granted' | 'denied';
 const featureCardContext = getFeatureCardContext();
 
 // PROPS
+const { isCameraActive = false } = $props();
 
 // STATE
 // Photo gallery state
@@ -63,6 +66,12 @@ let offset = spring(0, {
 
 // CONSTANTS
 const SWIPE_THRESHOLD = 0.3; // 30% of container width
+
+// INITIALIZE CAMERA IF NEEDED
+if (isCameraActive) {
+  console.log('isCameraActive', isCameraActive);
+  openCamera();
+}
 
 // PHOTO MANAGEMENT FUNCTIONS
 /**
@@ -251,6 +260,8 @@ function closeCameraInterface() {
  */
 async function openCamera() {
   // First check the current permission status
+  featureCardContext.setMode(FeatureCardMode.AddPhoto);
+
   isLoadingCamera = true;
   cameraPermissionStatus = await checkCameraPermission();
 

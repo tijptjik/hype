@@ -12,9 +12,6 @@ const featureCardContext = getFeatureCardContext();
   {m.report_missing__preface()}
 </p>
 <div class="pointer-events-auto bg-black px-3 pt-4 w-100:px-6">
-  <!-- <label for="missing-reason" class="mb-2 block font-medium text-white"> -->
-  <!-- {m.report_missing__label()} -->
-  <!-- </label> -->
   <textarea
     id="missing-reason"
     bind:value={featureCardContext.userData.missingReason}
