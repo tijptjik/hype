@@ -112,7 +112,7 @@
   "settings_experimental_contributor_mode": "Contributor Mode",
   "settings_experimental_contributor_description": "Prominent UI to add photos and features",
   "report_missing__label": "This is missing because",
-  "report_missing__placeholder": "Please provide the reason why you believe this is missing",
+  "report_missing__placeholder": "I believe this place is missing because...",
   "report_missing__success": "Succesfully submitted report",
   "report_missing__error": "Failed to submit report",
   "validation__at_least_one_image_as_evidence": "Please upload at least one photo as evidence",
@@ -256,5 +256,6 @@
   "settings_contributor_description": "What name would you like to be credited for your contributed photos and features",
   "settings_experimental_description": "Preview features before release",
   "settings_experimental_no_labels_mode": "Minimal Map",
-  "settings_experimental_no_labels_description": "Hide all map labels"
+  "settings_experimental_no_labels_description": "Hide all map labels",
+  "report_missing__preface": "Thanks for helping keep the map fresh! A curator will review your report and take the appropriate action. Please let them know why you think it's missing, and add a photo to help verify your report."
 }
