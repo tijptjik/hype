@@ -1,11 +1,11 @@
 <script lang="ts">
 import { fade } from 'svelte/transition';
-// SERVICES
-import { getImageService } from '$lib/context/images.svelte';
+// CONTEXT
+import { getImageContext } from '$lib/context/images.svelte';
 // TYPES
 import type { GetImageAPI } from '$lib/types';
 
-const imageService = getImageService();
+const imageCtx = getImageContext();
 
 type Props = {
   image: GetImageAPI;
@@ -22,14 +22,14 @@ let { image }: Props = $props();
     <button
       class="btn btn-error btn-sm"
       onclick={(e) => {
-        imageService.handleConfirmDelete(e, image);
+        imageCtx.handleConfirmDelete(e, image);
       }}>
       Delete
     </button>
     <button
       class="btn btn-ghost btn-sm"
       onclick={(e) => {
-        imageService.handleCancelDelete(e, image);
+        imageCtx.handleCancelDelete(e, image);
       }}>
       Cancel
     </button>

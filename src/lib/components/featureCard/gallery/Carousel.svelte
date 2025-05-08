@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight } from '@steeze-ui/heroicons';
 import { onMount } from 'svelte';
 import { fade } from 'svelte/transition';
 // SERVICES
-import { getImageService } from '$lib/context/images.svelte';
+import { getImageContext } from '$lib/context/images.svelte';
 import { formatDate } from '$lib';
 
 type PhotoComponent = {
@@ -76,8 +76,8 @@ let setState = (state: {
 };
 
 // SERVICES
-const imageService = getImageService();
-let images = $derived(imageService.getImages());
+const imageCtx = getImageContext();
+let images = $derived(imageCtx.getImages());
 
 // ELEMENTS
 let container: HTMLDivElement;

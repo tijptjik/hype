@@ -13,7 +13,7 @@ import { createTask, customHierarchy } from '$lib/db/services/task';
 import { createTaskImagesFromImageIds } from '$lib/db/services/image';
 import { getProjectForFeatureId } from '$lib/db/services/project';
 import { getOrganisationForProjectId } from '$lib/db/services/organisation';
-import { setImageService, getImageService } from '$lib/context/images.svelte';
+import { setImageContext, getImageContext } from '$lib/context/images.svelte';
 // TYPES
 import type { RequestHandler } from '@sveltejs/kit';
 import type {
@@ -124,7 +124,7 @@ export const POST: RequestHandler = async ({ request, locals, platform, fetch })
         const organisation: OrganisationDB | undefined =
           await getOrganisationForProjectId(db, project!.id);
 
-        setImageService(
+        setImageContext(
           'gallery',
           false,
           'feature',
@@ -132,7 +132,7 @@ export const POST: RequestHandler = async ({ request, locals, platform, fetch })
           organisation!,
           project!
         );
-        const imageService = getImageService();
+        const imageService = getImageContext();
 
         if (fileValue instanceof File) {
           const image = await imageService.upload({

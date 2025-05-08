@@ -2,7 +2,9 @@
 import { fade, crossfade, scale } from 'svelte/transition';
 import { cubicOut } from 'svelte/easing';
 // PROVIDERS
-import { getImageService } from '$lib/context/images.svelte';
+import { getImageContext } from '$lib/context/images.svelte';
+// SERVICES
+import { getURLfromImage } from '$lib/services/images.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Camera, Photo, InformationCircle } from '@steeze-ui/heroicons';
@@ -15,7 +17,7 @@ import IconAnchor from '$lib/components/common/IconAnchor.svelte';
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // STATE : CONTEXT :: ROUTER
-const imageService = getImageService();
+const imageCtx = getImageContext();
 const resourceState = getHierarchicalResourceState();
 // TYPES
 import type { HierarchicalResource } from '$lib/types';
@@ -38,9 +40,9 @@ let {
   isCrossfade = true
 }: Props = $props();
 
-let image = $derived(imageService.activeImage);
-let imagePreview = $derived(imageService.activePreview);
-let viewerState = $derived(imageService.viewerState);
+let image = $derived(imageCtx.activeImage);
+let imagePreview = $derived(imageCtx.activePreview);
+let viewerState = $derived(imageCtx.viewerState);
 
 let isPreviewReplacement = $derived(viewerState == 'previewReplacement');
 let isPreview = $derived(viewerState == 'previewUploading');
@@ -64,11 +66,11 @@ $effect(() => {
 const handleDrop = async (e: CustomEvent) => {
   console.log('[Viewer] Drop event:', {
     acceptedFiles: e.detail.acceptedFiles,
-    replacingImage: imageService.activeImage?.id
+    replacingImage: imageCtx.activeImage?.id
   });
 
   if (!enableDropzone) return;
-  imageService.handleFilesSelect(
+  imageCtx.handleFilesSelect(
     e.detail.acceptedFiles,
     e.detail.fileRejections,
     {
@@ -76,7 +78,7 @@ const handleDrop = async (e: CustomEvent) => {
         console.log('[Viewer] Upload success:', {
           savedImageId: savedImage.id,
           currentState: viewerState,
-          uploadQueue: imageService.getUploadQueue()
+          uploadQueue: imageCtx.getUploadQueue()
         });
         resourceState.invalidateAndRefresh(
           resourceState.activeResource as HierarchicalResource
@@ -86,7 +88,7 @@ const handleDrop = async (e: CustomEvent) => {
         console.log('[Viewer] Upload error');
       }
     },
-    imageService.activeImage
+    imageCtx.activeImage
   );
 };
 </script>
@@ -114,7 +116,7 @@ const handleDrop = async (e: CustomEvent) => {
       in:fade={{ duration: 400 }}
       out:fade={{ duration: 400 }}>
       <Image
-        src={imageService.getURLfromImage({ image })}
+        src={getURLfromImage({ image })}
         alt="Background Image"
         class="h-full w-full rounded-b-2xl text-base-100 blur-sm"
         layout="cover"
@@ -129,7 +131,7 @@ const handleDrop = async (e: CustomEvent) => {
       in:fade={{ duration: 400 }}
       out:fade={{ duration: 400 }}>
       <Image
-        src={imageService.getURLfromImage({ image })}
+        src={getURLfromImage({ image })}
         class="mx-auto h-full overflow-hidden rounded-xl text-base-100"
         alt="Feature Image"
         layout="contain"
@@ -144,11 +146,11 @@ const handleDrop = async (e: CustomEvent) => {
           console.log('[Viewer] Image loaded:', {
             imageId: image?.id,
             currentState: viewerState,
-            loadStatus: imageService.getLoadStatus(image?.id)
+            loadStatus: imageCtx.getLoadStatus(image?.id)
           });
 
-          imageService.setLoadStatus(image?.id, 'loaded');
-          imageService.setActiveImage(image);
+          imageCtx.setLoadStatus(image?.id, 'loaded');
+          imageCtx.setActiveImage(image);
         }} />
     </div>
   {/if}

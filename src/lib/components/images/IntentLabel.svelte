@@ -2,12 +2,12 @@
 import { fade } from 'svelte/transition';
 import { intentOrder } from '$lib/context/images.svelte';
 // SERVICES
-import { getImageService } from '$lib/context/images.svelte';
+import { getImageContext } from '$lib/context/images.svelte';
 // TYPES
 import type { Intent } from '$lib/types';
 
 // SERVICES
-const imageService = getImageService();
+const imageCtx = getImageContext();
 
 // TYPES
 type Props = {
@@ -18,7 +18,7 @@ type Props = {
 
 let { intent, idx, imageId }: Props = $props();
 
-let images = $derived(imageService.getImages());
+let images = $derived(imageCtx.getImages());
 const intentContext = $state({
   id: null as string | null,
   ref: null as HTMLDivElement | null
@@ -28,7 +28,7 @@ const intentContext = $state({
 function handleIntentKeydown(e: KeyboardEvent, imageId: string, intent: Intent) {
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault();
-    imageService.handleSetIntent(imageId, intent);
+    imageCtx.handleSetIntent(imageId, intent);
   } else if (e.key === 'Escape') {
     e.preventDefault();
     intentContext.id = null;
@@ -80,7 +80,7 @@ $effect(() => {
               : ''}"
             onclick={(e) => {
               e.stopPropagation();
-              imageService.handleSetIntent(imageId, option);
+              imageCtx.handleSetIntent(imageId, option);
               intentContext.id = null;
             }}
             onkeydown={(e) => handleIntentKeydown(e, imageId, option)}

@@ -2,7 +2,7 @@
 import { fade } from 'svelte/transition';
 import { flip } from 'svelte/animate';
 // SERVICES
-import { getImageService } from '$lib/context/images.svelte';
+import { getImageContext } from '$lib/context/images.svelte';
 // COMPONENTS :: GALLERY
 import Thumbnail from '$lib/components/images/gallery/Thumbnail.svelte';
 import UploadThumbnail from '$lib/components/images/gallery/ThumbnailWhileUploading.svelte';
@@ -11,7 +11,7 @@ import ScrollArrow from '$lib/components/images/gallery/ScrollArrow.svelte';
 import Dropzone from '$lib/components/images/gallery/Dropzone.svelte';
 import type { ImageUploadState } from '$lib/types';
 // SERVICES
-const imageService = getImageService();
+const imageCtx = getImageContext();
 
 type Props = {
   inputElement?: HTMLInputElement;
@@ -29,7 +29,7 @@ let showLeftArrow = $state(false);
 let showRightArrow = $state(false);
 
 // STATE :: IMAGES
-let isLoadingImagesAmount = $derived(imageService.isImagesLoading);
+let isLoadingImagesAmount = $derived(imageCtx.isImagesLoading);
 
 // DOM
 let scrollContainer: HTMLElement;
@@ -93,9 +93,8 @@ const scrollTo = (direction: 'left' | 'right') => {
 };
 
 $effect(() => {
-  console.log('[Gallery] Active image:', imageService.activeImage);
-  if (imageService.activeImage) {
-    const activeImageElement = document.getElementById(imageService.activeImage.id);
+  if (imageCtx.activeImage) {
+    const activeImageElement = document.getElementById(imageCtx.activeImage.id);
     if (activeImageElement && scrollContainer) {
       // Get container and element positions
       const containerRect = scrollContainer.getBoundingClientRect();
@@ -138,7 +137,7 @@ $effect(() => {
   {/if}
 
   <!-- Upload queue with loading states and transitions -->
-  {#each imageService.getUploadQueue() as fileObject (fileObject.file)}
+  {#each imageCtx.getUploadQueue() as fileObject (fileObject.file)}
     {#if !fileObject.imageToReplace && fileObject.status === 'uploading'}
       <!-- Show new uploads normally -->
       <div in:fade={{ duration: 200 }} class="relative h-[200px] w-[200px] flex-none">
@@ -153,19 +152,17 @@ $effect(() => {
   <!-- {/if} -->
 
   <!-- Images -->
-  {#each imageService.getImages() as image, i (image.id)}
+  {#each imageCtx.getImages() as image, i (image.id)}
     <div
       id={image.id}
       animate:flip={{ duration: 300 }}
       in:fade={{ duration: 200, delay: i * 100 }}
       out:fade={{ duration: 200 }}
       class="relative h-[200px] w-[200px] flex-none">
-      {#if imageService.isImageBeingReplaced(image.id)}
+      {#if imageCtx.isImageBeingReplaced(image.id)}
         <!-- Show upload thumbnail for replacement -->
         <UploadThumbnail
-          fileObject={imageService.getReplacementUpload(
-            image.id
-          ) as ImageUploadState} />
+          fileObject={imageCtx.getReplacementUpload(image.id) as ImageUploadState} />
       {:else}
         <Thumbnail {image} idx={i} {actionProps} />
       {/if}

@@ -180,11 +180,11 @@ function getDirections() {
 </script>
 
 <div
-  class="pointer-events-auto flex flex-shrink-0 items-center justify-between rounded-b-lg bg-black px-2 py-2 caret-transparent w-100:px-4 w-100:py-4">
+  class="pointer-events-auto flex flex-shrink-0 items-center justify-between rounded-b-lg bg-black px-3 py-2 caret-transparent w-100:px-4 w-100:py-4">
   {#if featureCardContext.state.mode === FeatureCardMode.Display}
     <div class="flex gap-2">
       <button
-        class="bg-base-400 btn h-12 w-12 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300 w-64:h-auto w-64:w-auto"
+        class="btn h-12 w-12 bg-base-400 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300 w-64:h-auto w-64:w-auto"
         onclick={toggleWishlisted}
         disabled={isSubmittingWishlist}>
         {#if isSubmittingWishlist}
@@ -219,7 +219,7 @@ function getDirections() {
         </div>
       {:else}
         <button
-          class="bg-base-400 btn h-12 w-12 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300 w-64:h-auto w-64:w-auto"
+          class="btn h-12 w-12 bg-base-400 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300 w-64:h-auto w-64:w-auto"
           onclick={toggleVisited}
           disabled={isSubmittingVisit}>
           {#if isSubmittingVisit}
@@ -238,7 +238,7 @@ function getDirections() {
       {/if}
     </div>
     <button
-      class="bg-base-400 btn h-12 w-12 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300 w-64:h-auto w-64:w-auto"
+      class="btn h-12 w-12 bg-base-400 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300 w-64:h-auto w-64:w-auto"
       onclick={getDirections}>
       <Icon
         src={Map}

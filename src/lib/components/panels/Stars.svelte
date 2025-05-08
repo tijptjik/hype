@@ -10,6 +10,7 @@ import WantToVisit from '$lib/components/panels/stars/WantToVisit.svelte';
 import HaveVisited from '$lib/components/panels/stars/HaveVisited.svelte';
 // STATE
 let isInfoOpen = $state(false);
+// svelte-ignore non_reactive_update
 let panelContainer: HTMLDivElement;
 
 let handleToggleInfo = (e: MouseEvent | TouchEvent) => {

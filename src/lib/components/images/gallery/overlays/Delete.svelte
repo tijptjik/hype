@@ -4,7 +4,7 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { Trash } from '@steeze-ui/heroicons';
 import type { GetImageAPI } from '$lib/types';
 // SERVICES
-import { getImageService } from '$lib/context/images.svelte';
+import { getImageContext } from '$lib/context/images.svelte';
 
 type Props = {
   image: GetImageAPI;
@@ -12,7 +12,7 @@ type Props = {
 
 let { image }: Props = $props();
 
-const imageService = getImageService();
+const imageCtx = getImageContext();
 </script>
 
 <div
@@ -21,7 +21,7 @@ const imageService = getImageService();
   <button
     class="btn btn-circle btn-error btn-sm"
     onclick={(e) => {
-      imageService.handlePreDelete(e, image);
+      imageCtx.handlePreDelete(e, image);
     }}>
     <Icon src={Trash} class="h-4 w-4" />
   </button>

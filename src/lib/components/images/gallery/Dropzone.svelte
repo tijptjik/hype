@@ -1,6 +1,6 @@
 <script lang="ts">
 // SERVICES
-import { getImageService } from '$lib/context/images.svelte';
+import { getImageContext } from '$lib/context/images.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Photo } from '@steeze-ui/heroicons';
@@ -14,20 +14,16 @@ type Props = {
 };
 
 // SERVICES
-const imageService = getImageService();
+const imageCtx = getImageContext();
 
 let { updateScrollArrows, inputElement = $bindable() }: Props = $props();
 
 const handleFiles = async (e: CustomEvent) => {
-  await imageService.handleFilesSelect(
-    e.detail.acceptedFiles,
-    e.detail.fileRejections,
-    {
-      onSuccess: (savedImage: GetImageAPI) => {
-        updateScrollArrows();
-      }
+  await imageCtx.handleFilesSelect(e.detail.acceptedFiles, e.detail.fileRejections, {
+    onSuccess: (savedImage: GetImageAPI) => {
+      updateScrollArrows();
     }
-  );
+  });
 };
 </script>
 

@@ -12,6 +12,7 @@ import DefaultMap from '$lib/components/panels/settings/DefaultMap.svelte';
 import Experimental from '$lib/components/panels/settings/Experimental.svelte';
 // STATE
 let isInfoOpen = $state(false);
+// svelte-ignore non_reactive_update
 let panelContainer: HTMLDivElement;
 
 let handleToggleInfo = (e: MouseEvent | TouchEvent) => {

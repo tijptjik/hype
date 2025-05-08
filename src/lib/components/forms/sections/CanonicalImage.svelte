@@ -4,8 +4,9 @@ import { onMount } from 'svelte';
 // STORES
 import { page } from '$app/stores';
 // SERVICES
-import { getImageService, getURLfromImage } from '$lib/context/images.svelte';
+import { getURLfromImage } from '$lib/services/images.svelte';
 // CONTEXT
+import { getImageContext } from '$lib/context/images.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS
 import Image from '$lib/components/common/Image.svelte';
@@ -19,11 +20,11 @@ let SectionProps = $props();
 let { form } = SectionProps.form;
 let loadedImage = $state();
 // SERVICES
-const imageService = getImageService();
+const imageCtx = getImageContext();
 
 let canonicalImage = async () => {
   if (loadedImage) return loadedImage;
-  const images = imageService.getImages();
+  const images = imageCtx.getImages();
   const canonical = images.find((image: any) => image.intent === 'canonical');
   loadedImage = canonical || images[0] || null;
   return loadedImage;

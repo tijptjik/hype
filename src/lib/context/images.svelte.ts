@@ -2,9 +2,28 @@
 import { getContext, setContext } from 'svelte';
 import { SvelteSet } from 'svelte/reactivity';
 import { error } from '@sveltejs/kit';
-// UTILS
-import Coordinates from 'coordinate-parser';
-import { capitalizeFirstLetter } from '$lib';
+// SERVICES
+import {
+  getCloudinaryUploadEndpoint,
+  getCoordinatesFromMetadata,
+  getCapturedAtFromMetadata,
+  getCameraFromMetadata,
+  getCreditFromMetadata,
+  getImageFromCloudinaryResponse,
+  getCloudinarySignature,
+  createCloudinaryImage,
+  createImage,
+  updateImage,
+  extendFeatureImage,
+  extendImageWithResource,
+  getPublicPathCloudinaryImage,
+  uploadAndProcessImage,
+  updateImageIntent,
+  updateImageIsPublished,
+  deleteImage,
+  getImages,
+  getURLfromImage
+} from '$lib/services/images.svelte';
 // TYPES
 import type { Writable } from 'svelte/store';
 // import type { QueryClient } from '@tanstack/svelte-query';
@@ -564,41 +583,14 @@ export class ImageService {
   // ═══════════════════════
 
   async refreshImages() {
-    await this.setImages(
-      //   await this.queryClient.fetchQuery({
-      // queryKey: this.imagesQueryKey,
-      // queryFn: () => this.imagesQueryFn
-      //   })
-      await this.imagesQueryFn()
-    );
+    await this.setImages(await this.imagesQueryFn());
     this.state.images.forEach((image) => {
       this.setLoadStatus(image.id, 'loading');
     });
   }
 
-  imagesQueryFn = async () => {
-    const url = this.buildApiUrl('image');
-    return this.fetchOrThrow<(GetImageAPI & { preview: string })[]>(url);
-  };
-
-  private async fetchOrThrow<T>(url: string): Promise<T> {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Network response was not ok');
-    return (await response.json()) as T;
-  }
-
-  // Helper method to build API URLs with filters
-  private buildApiUrl(resource: string): string {
-    const path = 'images';
-    const params = new URLSearchParams();
-
-    // Add isAdminView filter by default
-    params.append('isAdminView', 'true');
-    if (this.state.refType === HierarchicalResource.feature) {
-      params.append('featureId', this.state.refId as Id);
-    }
-
-    return `/api/${path}?${params.toString()}`;
+  async imagesQueryFn() {
+    return getImages(this.state.refType, this.state.refId, this.isAdminMode);
   }
 
   // ═══════════════════════
@@ -690,7 +682,7 @@ export class ImageService {
   }
 
   async upload(args: {
-    fileObject: ImageUpload;
+    fileObject: ImageUploadState;
     event?: { fetch: typeof fetch };
     extended?: {
       featureImage?: {
@@ -703,138 +695,34 @@ export class ImageService {
     const localFetch = event?.fetch ?? fetch;
 
     try {
-      const { public_id, folder } = this.getPublicPath(fileObject.imageToReplace);
-      const paramsToSign: ParamsToSign = fileObject.imageToReplace
-        ? { folder, public_id }
-        : { folder };
-      const refs = this.getUploadRefs(fileObject.imageToReplace);
+      const uploadRefs = this.getUploadRefs(fileObject.imageToReplace);
 
-      let imageData = await this.uploadToCloudinary({
-        file: fileObject.file,
-        paramsToSign,
-        refs,
-        event
-      });
-
-      this.extendFeatureImage(imageData, refs, extended);
-      this.extendHierachicalResource(imageData, refs);
-
-      const savedImage = await this.upsertImage(
-        fileObject,
-        imageData as NewImageAPI,
+      const savedImage = await uploadAndProcessImage(
+        fileObject.file,
+        uploadRefs,
+        extended?.featureImage, // Pass the nested featureImage object directly
         localFetch
       );
 
+      // Handle state updates after successful upload and processing
       if (savedImage) {
-        // Instead of removing from queue, just update status
+        if (uploadRefs.imageToReplace) {
+          this.setImages(
+            this.state.images.map((img) =>
+              img.id === uploadRefs.imageToReplace!.id ? { ...img, ...savedImage } : img
+            )
+          );
+        } else {
+          this.setImages([savedImage, ...this.state.images]);
+        }
         this.setUploadStatus(fileObject, 'uploaded');
         this.setLoadStatus(savedImage.id, 'loading');
         return savedImage;
       }
     } catch (error) {
-      console.error('Failed to process image:', error);
+      console.error('Failed to process image (ImageService.upload):', error);
       this.setUploadStatus(fileObject, 'error');
-      throw error;
-    }
-  }
-
-  private async upsertImage(
-    fileObject: ImageUpload,
-    imageData: NewImageAPI,
-    localFetch: typeof window.fetch
-  ) {
-    let savedImage: GetImageAPI;
-
-    if (fileObject.imageToReplace) {
-      savedImage = await this.updateExistingImage(fileObject, imageData, localFetch);
-    } else {
-      savedImage = await this.createNewImage(fileObject, imageData, localFetch);
-    }
-    return savedImage;
-  }
-
-  private async updateExistingImage(
-    fileObject: ImageUpload,
-    imageData: NewImageAPI,
-    fetch: typeof window.fetch
-  ) {
-    const response = await fetch(`/api/images/${fileObject.imageToReplace!.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(imageData)
-    });
-
-    const { image: updatedImage } = await response.json();
-
-    this.setImages(
-      this.state.images.map((img) =>
-        img.id === fileObject.imageToReplace!.id ? { ...img, ...updatedImage } : img
-      )
-    );
-    return updatedImage;
-  }
-
-  private async createNewImage(
-    fileObject: ImageUpload,
-    imageData: NewImageAPI,
-    fetch: typeof window.fetch
-  ) {
-    const response = await fetch('/api/images', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(imageData)
-    });
-
-    const savedImage = await response.json();
-    this.setImages([savedImage, ...this.state.images]);
-    this.setUploadStatus(fileObject, 'uploaded');
-    return savedImage;
-  }
-
-  async uploadToCloudinary(uploadConfig: {
-    file: File;
-    paramsToSign: ParamsToSign;
-    refs: Refs;
-    event?: { fetch: typeof fetch };
-  }): Promise<Partial<NewImageAPI>> {
-    const { file, paramsToSign, refs, event } = uploadConfig;
-    const localFetch = event?.fetch ?? fetch;
-
-    try {
-      const signData = await localFetch('/api/cloudinary', {
-        method: 'POST',
-        body: JSON.stringify({
-          paramsToSign: {
-            ...paramsToSign,
-            media_metadata: 'true'
-          }
-        })
-      }).then((res) => res.json());
-
-      const url = this.getUploadURL(signData.cloudname);
-      const formData = new FormData();
-
-      formData.append('file', file);
-      formData.append('folder', paramsToSign.folder);
-      formData.append('api_key', signData.apikey);
-      formData.append('timestamp', signData.timestamp);
-      formData.append('signature', signData.signature);
-      formData.append('media_metadata', 'true');
-
-      if (paramsToSign.public_id) {
-        formData.append('public_id', paramsToSign.public_id);
-      }
-
-      const response = await localFetch(url, {
-        method: 'POST',
-        body: formData
-      });
-
-      const cloudinaryResponse = await response.json();
-      return this.imageFromCloudinaryResponse(cloudinaryResponse);
-    } catch (error) {
-      console.error('Failed to upload image to Cloudinary:', error);
-      throw error;
+      throw error; // Re-throw to allow calling code to handle
     }
   }
 
@@ -876,13 +764,13 @@ export class ImageService {
 
         // If another image is already canonical, update its intent to undefined
         if (currentCanonical) {
-          await this.updateIntent(currentCanonical.id, 'undefined');
+          await updateImageIntent(currentCanonical.id, 'undefined', this.getRefs());
           this.setForImage(currentCanonical.id, 'intent', 'undefined');
         }
       }
 
       // Update the intent of the image
-      await this.updateIntent(imageId, newIntent);
+      await updateImageIntent(imageId, newIntent, this.getRefs());
       this.setForImage(imageId, 'intent', newIntent);
       this.sortImages();
     } catch (error) {
@@ -890,44 +778,16 @@ export class ImageService {
     }
   }
 
-  private async updateIntent(imageId: string, intent: Intent) {
-    const response = await fetch(`/api/images/${imageId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...this.getRefs(),
-        featureImage: { intent }
-      })
-    });
-
-    if (!response.ok) throw new Error('Failed to update intent');
-  }
-
   async handlePublishToggle() {
     if (!this.activeImage) return;
-    const data = await this.updatePublish();
+
+    const data = await updateImageIsPublished(
+      this.activeImage.id,
+      !this.activeImage.isPublished,
+      this.getRefs()
+    );
     if (data?.success) {
       this.toggleForActiveImage('isPublished');
-    }
-  }
-
-  private async updatePublish() {
-    if (!this.activeImage) return;
-    try {
-      const response = await fetch(`/api/images/${this.activeImage.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...this.getRefs(),
-          featureImage: {
-            isPublished: !this.activeImage.isPublished
-          }
-        })
-      });
-      return await response.json();
-    } catch (err) {
-      console.error('Failed to update publication:', err);
-      return null;
     }
   }
 
@@ -964,16 +824,17 @@ export class ImageService {
 
   async delete(imageId: string, refs: ImageEditRefs) {
     try {
-      await fetch(`/api/images/${imageId}`, {
-        method: 'DELETE',
-        body: JSON.stringify(refs)
-      }).then((res) => res.json());
+      // Call the service function for the API call
+      await deleteImage(imageId, refs);
 
+      // State updates remain in the class method
       this.removeImage(imageId);
-      this.setActiveImageToFirst();
+      this.setActiveImageToFirst(); // Ensure this is desired after any deletion
     } catch (error) {
-      console.error('Failed to delete image:', error);
+      console.error('Failed to delete image (ImageService.delete context):', error);
+      // Potentially re-throw or handle error state in UI
     } finally {
+      // These state updates should always run
       this.removeFromPendingConfirmation(imageId);
       this.removeFromDeletionQueue(imageId);
       this.resetLoadStatus(imageId);
@@ -1063,172 +924,8 @@ export class ImageService {
   }
 
   // ═══════════════════════
-  // 9. METADATA HANDLING
-  // ═══════════════════════
-
-  toCoordinates(metadata: any): { latitude?: string; longitude?: string } {
-    try {
-      const coordinates = new Coordinates(
-        `${metadata.GPSLatitude.replace(' deg', '°')} ${metadata.GPSLongitude.replace(' deg', '°')}`
-      );
-      return {
-        latitude: coordinates.getLatitude().toString(),
-        longitude: coordinates.getLongitude().toString()
-      };
-    } catch (error) {
-      return { latitude: undefined, longitude: undefined };
-    }
-  }
-
-  toCapturedAt(metadata: Record<string, string>): string {
-    const parseExifDate = (dateStr: string): string => {
-      const normalized = dateStr.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3');
-      return new Date(normalized).toISOString();
-    };
-
-    const possibleFields = ['DateTimeOriginal', 'CreateDate', 'ModifyDate'];
-    for (const field of possibleFields) {
-      if (metadata[field]) {
-        try {
-          return parseExifDate(metadata[field]);
-        } catch (e) {
-          console.warn(`Failed to parse ${field}:`, metadata[field]);
-          continue;
-        }
-      }
-    }
-
-    if (metadata.DateCreated && metadata.TimeCreated) {
-      try {
-        return parseExifDate(`${metadata.DateCreated} ${metadata.TimeCreated}`);
-      } catch (e) {
-        console.warn(
-          'Failed to parse DateCreated/TimeCreated:',
-          metadata.DateCreated,
-          metadata.TimeCreated
-        );
-      }
-    }
-
-    return new Date().toISOString();
-  }
-
-  toCameraModel(metadata: Record<string, string>): string | undefined {
-    const make = capitalizeFirstLetter(metadata.Make) ?? '';
-    const model = capitalizeFirstLetter(metadata.Model) ?? '';
-    const hasCamera = model.includes(make);
-    return hasCamera ? model.trim() : `${make} ${model}`.trim() || undefined;
-  }
-
-  toCredit(metadata: Record<string, string>): string | undefined {
-    const possibleFields = ['CopyrightNotice', 'Credit', 'By-line'];
-    for (const field of possibleFields) {
-      if (metadata[field]) {
-        return metadata[field];
-      }
-    }
-    return undefined;
-  }
-
-  // ═══════════════════════
-  // 10. PATHS
-  // ═══════════════════════
-
-  getUploadURL(cloudname: string): string {
-    return `https://api.cloudinary.com/v1_1/${cloudname}/auto/upload`;
-  }
-
-  private getPublicPath(imageToReplace?: GetImageAPI): {
-    folder: string;
-    public_id: string | null;
-  } {
-    const refs = this.getUploadRefs(imageToReplace);
-    console.log('[ImageService] Upload refs:', refs);
-    if (refs.resource === 'organisation' && refs.organisation) {
-      return {
-        folder: `/${refs.organisation.code}`,
-        public_id: refs.entity
-      };
-    } else if (refs.resource === 'project' && refs.project) {
-      return {
-        folder: `/${refs.organisation!.code}/${refs.project!.code}`,
-        public_id: refs.entity
-      };
-    } else if (refs.resource === 'feature' && refs.project && refs.imageToReplace) {
-      return {
-        folder: `/${refs.organisation!.code}/${refs.project!.code}`,
-        public_id: refs.imageToReplace.publicId.split('/').pop()!
-      };
-    } else if (refs.resource === 'feature' && refs.project) {
-      return {
-        folder: `/${refs.organisation!.code}/${refs.project!.code}`,
-        public_id: null
-      };
-    }
-    throw new Error('Invalid refs');
-  }
-
-  // ═══════════════════════
   // 11. DATA CASTING
   // ═══════════════════════
-
-  private imageFromCloudinaryResponse(response: any): Partial<NewImageAPI> {
-    return {
-      cdn: 'cloudinary' as const,
-      env: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME,
-      cdnId: response.asset_id,
-      publicId: response.public_id,
-      version: response.version,
-      originalFilename: response.original_filename,
-      originalExtension: response.format,
-      originalWidth: response.width,
-      originalHeight: response.height,
-      metadata: response.image_metadata,
-      cameraModel: this.toCameraModel(response.image_metadata),
-      capturedAt: this.toCapturedAt(response.image_metadata),
-      credit: this.toCredit(response.image_metadata),
-      ...this.toCoordinates(response.image_metadata)
-    };
-  }
-
-  private extendFeatureImage(
-    image: Partial<NewImageAPI>,
-    refs: ImageUploadRefs,
-    extended?: {
-      featureImage?: {
-        isPublished: boolean;
-        intent: Intent;
-      };
-    }
-  ) {
-    if (refs.resource === 'feature') {
-      image.featureImage = refs.imageToReplace
-        ? {
-            featureId: refs.imageToReplace.featureId,
-            intent: refs.imageToReplace.intent,
-            isPublished: refs.imageToReplace.isPublished
-          }
-        : ({
-            featureId: refs.entity,
-            intent: extended?.featureImage?.intent || 'undefined',
-            isPublished: extended?.featureImage?.isPublished || true
-          } as NewFeatureImages);
-    }
-  }
-
-  private extendHierachicalResource(
-    image: Partial<NewImageAPI>,
-    refs: ImageUploadRefs
-  ) {
-    if (
-      refs.resource === 'project' ||
-      refs.resource === 'organisation' ||
-      refs.resource === 'feature'
-    ) {
-      image.refType = refs.resource;
-      image.refId = refs.entity;
-    }
-  }
 
   private sortImages() {
     this.state.images.sort((a, b) => {
@@ -1246,59 +943,6 @@ export class ImageService {
       );
     });
   }
-
-  getURLfromImage(opts: {
-    image: ImageDB;
-    transformation?: string;
-    raw?: boolean;
-    gravity?: string;
-    quality?: string;
-    format?: string;
-  }): string {
-    // Check if image is being replaced
-    const replacementUpload = this.state.uploadQueue.find(
-      (upload) =>
-        upload.imageToReplace?.id === opts.image.id && upload.status !== 'invalidated'
-    );
-
-    if (replacementUpload) {
-      return replacementUpload.preview;
-    }
-
-    return getURLfromImage(opts);
-  }
-}
-
-// ═══════════════════════
-// 12. UTILS
-// ═══════════════════════
-
-export function getURLfromImage(opts: {
-  image: ImageDB;
-  transformation?: string;
-  raw?: boolean;
-  gravity?: string;
-  quality?: string;
-  format?: string;
-}): string {
-  const {
-    image,
-    transformation = 'c_fit,h_1000,w_1000',
-    gravity = 'auto',
-    format = 'auto',
-    quality = 'auto',
-    raw = false
-  } = opts;
-
-  const finalTransformation = `${transformation}/g_${gravity}/f_${format}/q_${quality}`;
-
-  if (image.cdn === 'cloudinary') {
-    return raw
-      ? `https://res.cloudinary.com/${image.env}/image/upload/fl_attachment/${image.publicId}`
-      : `https://res.cloudinary.com/${image.env}/image/upload/${finalTransformation}/v${image.version}/${image.publicId}`;
-  } else {
-    throw error(404, `Image CDN <code>${image.cdn}</code> not supported`);
-  }
 }
 
 // ═══════════════════════
@@ -1307,7 +951,7 @@ export function getURLfromImage(opts: {
 
 const IMAGE_STATE_KEY = Symbol('IMAGE_STATE_KEY');
 
-export const setImageService = (
+export const setImageContext = (
   mode: ImageServiceMode = 'gallery',
   isAdminMode: boolean = false,
   refType: ResourceType,
@@ -1329,4 +973,4 @@ export const setImageService = (
     )
   );
 
-export const getImageService = (): ImageService => getContext(IMAGE_STATE_KEY);
+export const getImageContext = (): ImageService => getContext(IMAGE_STATE_KEY);

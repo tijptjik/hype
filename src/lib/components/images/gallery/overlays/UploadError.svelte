@@ -3,7 +3,7 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { ExclamationCircle } from '@steeze-ui/heroicons';
 import { fade } from 'svelte/transition';
 // SERVICES
-import { getImageService } from '$lib/context/images.svelte';
+import { getImageContext } from '$lib/context/images.svelte';
 // TYPES
 import type { ImageUploadState } from '$lib/types';
 
@@ -13,7 +13,7 @@ type Props = {
 
 let { fileObject }: Props = $props();
 
-const imageService = getImageService();
+const imageCtx = getImageContext();
 </script>
 
 <div
@@ -22,7 +22,7 @@ const imageService = getImageService();
   <Icon src={ExclamationCircle} class="h-8 w-8 text-error" />
   <button
     class="btn btn-error btn-sm mt-2"
-    onclick={() => imageService.retryUpload(fileObject)}>
+    onclick={() => imageCtx.retryUpload(fileObject)}>
     Retry
   </button>
 </div>

@@ -1,6 +1,6 @@
 <script lang="ts">
 // SERVICES
-import { getImageService } from '$lib/context/images.svelte';
+import { getImageContext } from '$lib/context/images.svelte';
 // COMPONENTS
 import Header from '$lib/components/forms/extra/Header.svelte';
 import Actions from '$lib/components/forms/actions/Gallery.svelte';
@@ -13,7 +13,7 @@ import type { SectionProps } from '$lib/types';
 type Props = SectionProps;
 
 // SERVICES
-const imageService = getImageService();
+const imageCtx = getImageContext();
 
 // STATE : PROPS
 let { ...sectionProps }: Props = $props();
@@ -33,9 +33,9 @@ const actions = {
   remove: (e: Event) => {
     e.preventDefault();
     e.stopPropagation();
-    if (imageService.getImages().length > 0) {
+    if (imageCtx.getImages().length > 0) {
       actionProps.removeMode = !actionProps.removeMode;
-      imageService.resetPendingConfirmation();
+      imageCtx.resetPendingConfirmation();
     }
   }
 };
@@ -50,7 +50,7 @@ const openFileDialog = () => {
 </script>
 
 <div
-  class="from-rose-500/70 to-fuchsia-800/70 z-10 rounded-2xl bg-gradient-to-r p-0 @container">
+  class="z-10 rounded-2xl bg-gradient-to-r from-rose-500/70 to-fuchsia-800/70 p-0 @container">
   <Header {...sectionProps} bind:actionProps {Actions} {actions} {Stats} />
   <main class="relative m-4 min-w-0 overflow-hidden">
     <Gallery {actionProps} bind:inputElement />

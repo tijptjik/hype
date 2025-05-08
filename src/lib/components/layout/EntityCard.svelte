@@ -4,8 +4,9 @@ import { goto } from '$app/navigation';
 import { page } from '$app/stores';
 // LIB
 import { ADMIN_PATH } from '$lib/index';
-import { getURLfromImage } from '$lib/context/images.svelte';
 import { hashicon } from '@emeraldpay/hashicon';
+// SERVICES
+import { getURLfromImage } from '$lib/services/images.svelte';
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // COMPONENTS

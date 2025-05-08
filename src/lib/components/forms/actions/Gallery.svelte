@@ -4,12 +4,12 @@ import { cubicInOut } from 'svelte/easing';
 import Icon from '$lib/components/common/Icon.svelte';
 import { Photo, XMark, Trash } from '@steeze-ui/heroicons';
 // SERVICES
-import { getImageService } from '$lib/context/images.svelte';
+import { getImageContext } from '$lib/context/images.svelte';
 // TYPES
 import type { FieldProps, ModalProps } from '$lib/types';
 
 // SERVICES
-const imageService = getImageService();
+const imageCtx = getImageContext();
 
 // STATE : PROPS
 let {
@@ -33,7 +33,7 @@ $effect(() => {
 });
 
 $effect(() => {
-  if (imageService.getImages().length == 0) {
+  if (imageCtx.getImages().length == 0) {
     removeMode = false;
   }
 });
@@ -49,7 +49,7 @@ $effect(() => {
       <span class="hidden md:block">Add</span>
     </button>
   {/if}
-  {#if imageService.getImages().length > 0}
+  {#if imageCtx.getImages().length > 0}
     <button
       class="btn-rounded btn btn-ghost ml-auto h-12 flex-nowrap overflow-hidden whitespace-nowrap text-nowrap bg-base-100"
       onclick={(e) => actions?.remove(e)}

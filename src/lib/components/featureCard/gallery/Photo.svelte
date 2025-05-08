@@ -1,7 +1,7 @@
 <script lang="ts">
 import Image from '$lib/components/common/Image.svelte';
 // SERVICES
-import { getURLfromImage } from '$lib/context/images.svelte';
+import { getURLfromImage } from '$lib/services/images.svelte';
 
 // STATE : PROPS
 let {

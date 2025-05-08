@@ -10,6 +10,7 @@ import Neighbourhoods from '$lib/components/panels/filters/Neighbourhoods.svelte
 import Categories from '$lib/components/panels/filters/Categories.svelte';
 // STATE
 let isInfoOpen = $state(false);
+// svelte-ignore non_reactive_update
 let panelContainer: HTMLDivElement;
 
 let handleToggleInfo = (e: MouseEvent | TouchEvent) => {

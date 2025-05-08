@@ -8,14 +8,19 @@ import { getI18nValue } from '$lib/i18n';
 import type { Feature } from '$lib/types';
 
 // STATE : PROPS
-let { feature }: { feature: Feature } = $props();
+let {
+  feature,
+  hideDescription = false
+}: { feature: Feature; hideDescription?: boolean } = $props();
 
 // STATE : LOCAL
 let grade = $derived(
   feature.properties.find((p) => p.property.key === 'grade')?.value || ''
 );
 let isExpanded = $state(false);
+// svelte-ignore non_reactive_update
 let descriptionEl: HTMLParagraphElement;
+// svelte-ignore non_reactive_update
 let descriptionContainer: HTMLDivElement;
 let hasOverflow = $state(false);
 let initialHeight = $state(0);
@@ -28,9 +33,11 @@ function checkOverflow() {
 }
 
 $effect(() => {
-  checkOverflow();
-  if (!isExpanded) {
-    initialHeight = descriptionContainer.clientHeight;
+  if (!hideDescription) {
+    checkOverflow();
+    if (!isExpanded) {
+      initialHeight = descriptionContainer.clientHeight;
+    }
   }
 });
 
@@ -58,32 +65,34 @@ function getExpandedDescriptionHeight() {
     </div>
   </div>
 
-  <div
-    class="flex-shrink-1 relative z-10 mt-0 bg-black {isExpanded
-      ? 'overflow-clip'
-      : 'overflow-y-auto rounded-b-xl'}"
-    bind:this={descriptionContainer}
-    style="mask-image: linear-gradient(to bottom, black, black {!hasOverflow ||
-    isExpanded
-      ? '100%'
-      : 'calc(100% - 12px)'}, transparent);">
-    <p
-      bind:this={descriptionEl}
-      class="scrollbar-thin pointer-events-auto overscroll-none px-3 text-sm font-thin tracking-tight text-gray-300 w-100:px-6 {isExpanded
-        ? 'overflow-y-auto'
-        : 'overflow-clip pr-10'} transition-[max-height] duration-300 ease-in-out"
-      style="max-height: {isExpanded ? getExpandedDescriptionHeight() : 'none'};">
-      {@html getI18nValue(feature, 'description')}
-    </p>
+  {#if !hideDescription}
+    <div
+      class="flex-shrink-1 relative z-10 mt-0 bg-black {isExpanded
+        ? 'overflow-clip'
+        : 'overflow-y-auto rounded-b-xl'}"
+      bind:this={descriptionContainer}
+      style="mask-image: linear-gradient(to bottom, black, black {!hasOverflow ||
+      isExpanded
+        ? '100%'
+        : 'calc(100% - 12px)'}, transparent);">
+      <p
+        bind:this={descriptionEl}
+        class="scrollbar-thin pointer-events-auto overscroll-none px-3 text-sm font-thin tracking-tight text-gray-300 w-100:px-6 {isExpanded
+          ? 'overflow-y-auto'
+          : 'overflow-clip pr-10'} transition-[max-height] duration-300 ease-in-out"
+        style="max-height: {isExpanded ? getExpandedDescriptionHeight() : 'none'};">
+        {@html getI18nValue(feature, 'description')}
+      </p>
 
-    {#if hasOverflow || isExpanded}
-      <button
-        class="pointer-events-auto sticky bottom-0 right-3 z-10 float-right flex h-7 w-7 -translate-y-1 items-center justify-center rounded-full bg-base-300 text-white backdrop-blur-sm transition-all duration-200 hover:bg-black/90"
-        onclick={toggleExpand}>
-        <Icon
-          src={isExpanded ? XMark : ChevronDown}
-          class="h-5 w-5 transition-transform duration-200" />
-      </button>
-    {/if}
-  </div>
+      {#if hasOverflow || isExpanded}
+        <button
+          class="pointer-events-auto sticky bottom-0 right-3 z-10 float-right flex h-7 w-7 -translate-y-1 items-center justify-center rounded-full bg-base-300 text-white backdrop-blur-sm transition-all duration-200 hover:bg-black/90"
+          onclick={toggleExpand}>
+          <Icon
+            src={isExpanded ? XMark : ChevronDown}
+            class="h-5 w-5 transition-transform duration-200" />
+        </button>
+      {/if}
+    </div>
+  {/if}
 </div>

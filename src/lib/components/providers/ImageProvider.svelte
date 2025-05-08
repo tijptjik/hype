@@ -1,5 +1,5 @@
 <script lang="ts">
-import { getImageService, setImageService } from '$lib/context/images.svelte';
+import { getImageContext, setImageContext } from '$lib/context/images.svelte';
 // TYPES
 import type {
   Id,
@@ -21,17 +21,14 @@ type Props = {
   image?: GetImageAPI;
 };
 
-let { children, ...settings }: Props = $props();
+// STATE
 let lastSet: string | null = $state(null);
 
-$effect(() => {
-  if (lastSet !== settings.refId) {
-    imageService.setContext(settings);
-    lastSet = settings.refId;
-  }
-});
+// PROPS
+let { children, ...settings }: Props = $props();
 
-setImageService(
+// CONTEXT
+setImageContext(
   settings.mode,
   settings.isAdminMode,
   settings.refType,
@@ -41,7 +38,15 @@ setImageService(
   settings.image
 );
 
-let imageService = getImageService();
+let imageCtx = getImageContext();
+
+// EFFECTS
+$effect(() => {
+  if (lastSet !== settings.refId) {
+    imageCtx.setContext(settings);
+    lastSet = settings.refId;
+  }
+});
 </script>
 
 {@render children()}

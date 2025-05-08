@@ -10,6 +10,7 @@ import Projects from '$lib/components/panels/maps/Projects.svelte';
 import Layers from '$lib/components/panels/maps/Layers.svelte';
 // STATE
 let isInfoOpen = $state(false);
+// svelte-ignore non_reactive_update
 let panelContainer: HTMLDivElement;
 
 let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
