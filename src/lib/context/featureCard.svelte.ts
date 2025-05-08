@@ -21,6 +21,23 @@ export class FeatureCardContext {
   validationError = $state('');
   isSubmitting = $state(false);
 
+  setMode(mode: FeatureCardMode) {
+    this.state.mode = mode;
+  }
+
+  getMode() {
+    return this.state.mode;
+  }
+
+  isDisplayMode = $derived(this.state.mode === FeatureCardMode.Display);
+
+  setMissingReason(reason: string) {
+    this.userData.missingReason = reason;
+  }
+
+  getMissingReason() {
+    return this.userData.missingReason;
+  }
   // UTILS
   /**
    * Adds a photo to the feature card context

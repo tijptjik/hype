@@ -39,6 +39,8 @@ const omniContext = getOmniContext();
 setFeatureCardContext();
 const featureCardContext = getFeatureCardContext();
 
+omniContext.setFeatureCardContext(featureCardContext);
+
 // STATE
 let mode = $derived(featureCardContext.state.mode);
 
@@ -98,7 +100,9 @@ async function handleFeatureSelection() {
         <FeatureGallery {featureId} />
         <div class="flex-shrink-1 flex flex-grow-0 flex-col">
           <FeatureBreadcrumbs feature={mapContext.features[featureId]} />
-          <FeatureDescription feature={mapContext.features[featureId]} />
+          <FeatureDescription
+            feature={mapContext.features[featureId]}
+            hideDescription={true} />
         </div>
         <MissingReportReason />
         <FeatureActions feature={mapContext.features[featureId]} />

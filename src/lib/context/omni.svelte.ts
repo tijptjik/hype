@@ -2,18 +2,20 @@
 import { getContext, setContext } from 'svelte';
 import { goto } from '$app/navigation';
 // LIB
+import { MOBILE_MAX_WIDTH } from '$lib';
 import { searchAll } from '$lib/map/data';
 // I18N
 import { getI18nValue } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // NEIGHBOURHOODS
 import neighbourhoods from '$lib/map/neighbourhoods.json';
+// ENUMS
+import { FeatureCardMode } from '$lib/types';
 // TYPES
 import type { SearchResult, Id } from '$lib/types';
 import type { mapContext } from '$lib/context/map.svelte';
-import { MOBILE_MAX_WIDTH } from '$lib';
-
 // TYPES
+import type { FeatureCardContext } from './featureCard.svelte';
 type OmniMode = 'search' | 'navigation' | 'feature';
 
 type OmniState = {
@@ -49,6 +51,8 @@ export class OmniContext {
     searchTerm: '',
     focusedIndex: -1
   });
+
+  featureCardContext: FeatureCardContext | null = null;
 
   mapContext!: mapContext;
   pageState: PageState = $state(PageState.NoTransition);
@@ -133,7 +137,12 @@ export class OmniContext {
   close() {
     // If the card is open, close it
     if (this.state.isCardOpen) {
-      this.closeCard();
+      // If the card is in missing mode, turn it into display mode
+      if (!this.featureCardContext?.isDisplayMode) {
+        this.featureCardContext?.setMode(FeatureCardMode.Display);
+      } else {
+        this.closeCard();
+      }
       // If there is no card, but the tray is open, close the tray
     } else if (this.state.mode === 'navigation' && this.state.isTrayOpen) {
       this.closeTray();
@@ -401,6 +410,10 @@ export class OmniContext {
 
   toggleCard() {
     this.state.isCardOpen = !this.state.isCardOpen;
+  }
+
+  setFeatureCardContext(featureCardContext: FeatureCardContext) {
+    this.featureCardContext = featureCardContext;
   }
 }
 
