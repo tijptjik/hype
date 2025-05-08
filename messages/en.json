@@ -257,5 +257,9 @@
   "settings_experimental_description": "Preview features before release",
   "settings_experimental_no_labels_mode": "Minimal Map",
   "settings_experimental_no_labels_description": "Hide all map labels",
-  "report_missing__preface": "Thanks for helping keep the map fresh! A curator will review your report and take the appropriate action. Please let them know why you think it's missing, and add a photo to help verify your report."
+  "report_missing__preface": "Thanks for helping keep the map fresh! A curator will review your report and take the appropriate action. Please let them know why you think it's missing, and add a photo to help verify your report.",
+  "white_cozy_goldfish_heal": "Delete",
+  "loose_knotty_cow_propel": "Unlist",
+  "awful_this_dingo_glow": "Intangibilize",
+  "quiet_late_worm_startle": "Reject Report"
 }

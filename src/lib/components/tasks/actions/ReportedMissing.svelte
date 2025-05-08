@@ -1,6 +1,8 @@
 <script lang="ts">
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+// i18n
+import { m } from '$lib/i18n';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Trash, EyeSlash, XCircle, CubeTransparent } from '@steeze-ui/heroicons';
@@ -16,25 +18,25 @@ let { task }: { task: TaskAPI } = $props();
 // CONFIG
 let actions = [
   {
-    label: 'Delete ',
+    label: m.white_cozy_goldfish_heal(),
     icon: Trash,
     action: 'set-archived',
     onHoverClass: 'text-rose-300'
   },
   {
-    label: 'Unlist',
+    label: m.loose_knotty_cow_propel(),
     icon: EyeSlash,
     action: 'set-unpublished',
     onHoverClass: 'text-rose-300'
   },
   {
-    label: 'Intangibilize',
+    label: m.awful_this_dingo_glow(),
     icon: CubeTransparent,
     action: 'set-intangible',
     onHoverClass: 'text-rose-300'
   },
   {
-    label: 'Reject Report',
+    label: m.quiet_late_worm_startle(),
     icon: XCircle,
     action: 'rejected',
     onHoverClass: 'text-rose-300'
