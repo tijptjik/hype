@@ -14,10 +14,10 @@ const flash = getFlash(page, {
 
 {#if $flash}
   <div
-    class="fixed bottom-24 left-1/2 z-50 w-full max-w-md px-4 md:bottom-12"
+    class="fixed bottom-24 left-1/2 z-50 w-full max-w-md px-4"
     style="transform: translateX(-50%) !important;">
     <div
-      class="alert relative border-l-2 bg-base-100 shadow-lg"
+      class="alert relative rounded-none border-l-2 bg-black shadow-lg"
       class:border-primary={$flash.type === 'success'}
       class:text-primary={$flash.type === 'success'}
       class:border-error={$flash.type === 'error'}
