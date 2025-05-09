@@ -1257,7 +1257,7 @@ $effect(() => {
 
 <div
   id="map"
-  class="map absolute inset-0 overflow-hidden rounded-2xl"
+  class="map absolute inset-0 overflow-hidden rounded-2xl caret-transparent"
   data-testid="map"
   bind:this={mapContainer}>
   {#if $page.data.session && !mapContext.state.prisms.layer.length && !mapContext.state.panels.maps}

@@ -266,7 +266,6 @@
   "validation__attribution_required": "Please provide name to be credited.",
   "validation__at_least_one_image": "Please add at least one photo to be uploaded.",
   "add_photos__preface": "Thanks for adding photos to the map! A curator will review your photos and take the appropriate action.",
-  "add_photos__thank_you": "❤️ You - Sharing your snaps",
   "photo_credit_initial_instruction": "All photos you add are credited to you.",
   "photo_credit_ensure_right_to_share": "Only upload photos you have the right to share.",
   "photo_credit_curatorial_review": "Curators review photos before they are published.",
@@ -281,5 +280,7 @@
   "safe_tidy_skunk_arrive": "Cancel",
   "report_missing__curatorial_review": "A curactor will review your report",
   "report_missing__initial_instruction": "Let them know why it's missing",
-  "report_missing__add_photo_instructions": "Add a photo to help verify your report"
+  "report_missing__add_photo_instructions": "Add a photo to help verify your report",
+  "direct_nimble_buzzard_reside": "Accept",
+  "alive_north_albatross_lead": "Reject"
 }
