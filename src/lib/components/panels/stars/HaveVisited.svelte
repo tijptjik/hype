@@ -29,10 +29,14 @@ let searchTerm = $state('');
 
 // Get visited features
 let visitedFeatures: UserFeatureExtended[] = $derived(
-  mapContext.state.userFeatures.visited?.map((visited) => {
+  mapContext.state.userFeatures.visited?.flatMap((visited) => {
     const feature = mapContext.state.resources.feature.find(
       (f) => f.id === visited.featureId
     );
+
+    // Skip if feature doesn't exist
+    if (!feature) return [];
+
     const layer = feature ? mapContext.getLayer(feature) : undefined;
     const project = layer ? mapContext.getProject(layer) : undefined;
     const organisation = project ? mapContext.getOrganisation(project) : undefined;
@@ -42,16 +46,18 @@ let visitedFeatures: UserFeatureExtended[] = $derived(
       (l) => l.projectId === project?.id
     ).length;
 
-    return {
-      ...visited,
-      hierarchy: {
-        organisation: getI18nValue(organisation, 'nameShort'),
-        project: getI18nValue(project, 'nameShort'),
-        // Only include layer name if project has multiple layers
-        layer: projectLayerCount > 1 ? getI18nValue(layer, 'nameShort') : null,
-        feature: getI18nValue(feature, 'title')
+    return [
+      {
+        ...visited,
+        hierarchy: {
+          organisation: getI18nValue(organisation, 'nameShort'),
+          project: getI18nValue(project, 'nameShort'),
+          // Only include layer name if project has multiple layers
+          layer: projectLayerCount > 1 ? getI18nValue(layer, 'nameShort') : null,
+          feature: getI18nValue(feature, 'title')
+        }
       }
-    };
+    ];
   }) ?? []
 );
 

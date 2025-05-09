@@ -9,12 +9,14 @@ import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 import FeatureCard from '$lib/components/featureCard/Root.svelte';
 import FeatureGallery from '$lib/components/featureCard/FeatureGallery.svelte';
 import FeatureBreadcrumbs from '$lib/components/featureCard/FeatureBreadcrumbs.svelte';
+import FeatureTitle from '$lib/components/featureCard/FeatureTitle.svelte';
 import FeatureDescription from '$lib/components/featureCard/FeatureDescription.svelte';
 import FeatureProperties from '$lib/components/featureCard/FeatureProperties.svelte';
 import FeaturePortal from '$lib/components/featureCard/FeaturePortal.svelte';
 import FeatureActions from '$lib/components/featureCard/FeatureActions.svelte';
 import MissingReportReason from '$lib/components/featureCard/MissingReportReason.svelte';
 import PhotoCredit from '$lib/components/featureCard/PhotoCredit.svelte';
+import Spacer from '$lib/components/featureCard/Spacer.svelte';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
@@ -76,12 +78,15 @@ async function handleFeatureSelection() {
         mapContext.getLayer(mapContext.features[featureId] as Feature) as Layer
       ) as Project}>
       {#if mode === FeatureCardMode.Display}
-        <div class="flex h-full w-full flex-col overflow-x-visible">
+        <div
+          class="flex-shink-0 flex h-full w-full flex-col overflow-y-auto overflow-x-visible">
           <FeatureGallery />
-          <div class="flex min-h-0 w-full flex-1 basis-2/5 flex-col overflow-x-visible">
-            <FeatureBreadcrumbs feature={mapContext.features[featureId]} />
-            <FeatureDescription feature={mapContext.features[featureId]} />
-            <div class="flex w-full flex-shrink-0 overflow-x-visible">
+          <FeatureBreadcrumbs feature={mapContext.features[featureId]} />
+          <FeatureTitle feature={mapContext.features[featureId]} />
+          <FeatureDescription feature={mapContext.features[featureId]} />
+          <Spacer />
+          <div class="flex min-h-8 w-full flex-shrink-0 flex-col overflow-x-visible">
+            <div class="flex-grow-1 min-h-50 flex w-full flex-shrink-0 overflow-hidden">
               <div class="flex-1 overflow-y-auto bg-black">
                 <FeatureProperties feature={mapContext.features[featureId]} />
               </div>
@@ -90,32 +95,19 @@ async function handleFeatureSelection() {
               </div>
               <div class="h-auto w-4 flex-shrink-0 bg-black"></div>
             </div>
-            <FeatureActions feature={mapContext.features[featureId]} />
           </div>
+          <Spacer />
         </div>
       {:else if mode === FeatureCardMode.New}
         <FeatureGallery />
       {:else if mode === FeatureCardMode.Missing}
-        <FeatureGallery />
-        <div class="flex-shrink-1 flex flex-grow-0 flex-col">
-          <FeatureBreadcrumbs feature={mapContext.features[featureId]} />
-          <FeatureDescription
-            feature={mapContext.features[featureId]}
-            hideDescription={true} />
-        </div>
+        <FeatureGallery isSingleImage={true} />
         <MissingReportReason />
-        <FeatureActions feature={mapContext.features[featureId]} />
       {:else if mode === FeatureCardMode.AddPhoto}
         <FeatureGallery isCameraActive={true} />
-        <div class="flex-shrink-1 flex flex-grow-0 flex-col">
-          <FeatureBreadcrumbs feature={mapContext.features[featureId]} />
-          <FeatureDescription
-            feature={mapContext.features[featureId]}
-            hideDescription={true} />
-        </div>
         <PhotoCredit />
-        <FeatureActions feature={mapContext.features[featureId]} />
       {/if}
+      <FeatureActions feature={mapContext.features[featureId]} />
     </ImageProvider>
   </FeatureCard>
 {:else}

@@ -21,10 +21,14 @@ let searchTerm = $state('');
 
 // Get wishlisted features
 let wishlistedFeatures = $derived(
-  mapContext.state.userFeatures.wishlisted?.map((wishlist) => {
+  mapContext.state.userFeatures.wishlisted?.flatMap((wishlist) => {
     const feature = mapContext.state.resources.feature.find(
       (f) => f.id === wishlist.featureId
     );
+
+    // Skip if feature doesn't exist
+    if (!feature) return [];
+
     const layer = mapContext.getLayer(feature);
     const project = layer ? mapContext.getProject(layer) : undefined;
     const organisation = project ? mapContext.getOrganisation(project) : undefined;
@@ -34,16 +38,18 @@ let wishlistedFeatures = $derived(
       (l) => l.projectId === project?.id
     ).length;
 
-    return {
-      ...wishlist,
-      hierarchy: {
-        organisation: getI18nValue(organisation, 'nameShort'),
-        project: getI18nValue(project, 'nameShort'),
-        // Only include layer name if project has multiple layers
-        layer: projectLayerCount > 1 ? getI18nValue(layer, 'nameShort') : null,
-        feature: getI18nValue(feature, 'title')
+    return [
+      {
+        ...wishlist,
+        hierarchy: {
+          organisation: getI18nValue(organisation, 'nameShort'),
+          project: getI18nValue(project, 'nameShort'),
+          // Only include layer name if project has multiple layers
+          layer: projectLayerCount > 1 ? getI18nValue(layer, 'nameShort') : null,
+          feature: getI18nValue(feature, 'title')
+        }
       }
-    };
+    ];
   }) ?? []
 );
 

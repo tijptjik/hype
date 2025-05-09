@@ -218,7 +218,7 @@ onMount(() => {
 });
 </script>
 
-<div class="relative h-full w-full" bind:this={container}>
+<div class="relative h-full w-full transition-all duration-300" bind:this={container}>
   {#if images.filter(Boolean).length > 0}
     <!-- Navigation buttons - only show if more than one image -->
     {#if images.length > 1}

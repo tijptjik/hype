@@ -46,7 +46,10 @@ export class FeatureCardContext {
    * Adds a photo to the feature card context
    */
   addPhoto(photo: UploadedPhoto) {
-    if (this.getError() === m.validation__at_least_one_image()) {
+    if (
+      this.getError() === m.validation__at_least_one_image() ||
+      this.getError() === m.validation__at_least_one_image_as_evidence()
+    ) {
       this.resetError();
     }
     this.userData.photos.push(photo);

@@ -73,7 +73,7 @@ $effect(() => {
 });
 </script>
 
-<div class="flex h-dvh flex-col justify-around">
+<div class="flex h-dvh flex-col justify-around overflow-hidden">
   {#if session}
     <main
       class="relative top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">

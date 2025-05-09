@@ -249,7 +249,7 @@ function getDirections() {
 </script>
 
 <div
-  class="pointer-events-auto flex flex-shrink-0 items-center justify-between rounded-b-lg bg-black px-3 py-2 caret-transparent w-100:px-4 w-100:py-4">
+  class="pointer-events-auto flex min-h-12 flex-shrink-0 items-center justify-between rounded-b-lg bg-black px-3 py-2 caret-transparent w-100:px-4 w-100:py-4">
   {#if featureCardContext.state.mode === FeatureCardMode.Display}
     <div class="flex gap-2">
       <button
@@ -325,9 +325,9 @@ function getDirections() {
           disabled={featureCardContext.isSubmitting}>
           {#if featureCardContext.isSubmitting}
             <span class="loading loading-ring loading-md"></span>
-            Submitting...
+            {m.fun_fuzzy_shrike_compose()}
           {:else}
-            Submit
+            {m.proof_active_eagle_urge()}
           {/if}
         </button>
       </div>
@@ -343,9 +343,9 @@ function getDirections() {
           disabled={featureCardContext.isSubmitting}>
           {#if featureCardContext.isSubmitting}
             <span class="loading loading-ring loading-md"></span>
-            Submitting...
+            {m.fun_fuzzy_shrike_compose()}
           {:else}
-            Submit
+            {m.proof_active_eagle_urge()}
           {/if}
         </button>
       </div>
@@ -356,8 +356,8 @@ function getDirections() {
       <div class="mt-4 flex items-center justify-between">
         <h3 class="text-lg font-bold uppercase text-primary">
           {@html featureCardContext.userData.photos.length > 0
-            ? `Contribute <span class="text-white px-2">${featureCardContext.userData.photos.length}</span> Photos`
-            : 'Photo Contribution'}
+            ? `<span class="text-white px-2">${featureCardContext.userData.photos.length}</span> ${featureCardContext.userData.photos.length == 1 ? 'Photo' : 'Photos'}`
+            : 'Add Photos'}
         </h3>
         <div class="flex gap-3">
           <button

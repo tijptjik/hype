@@ -59,6 +59,11 @@ $effect(() => {
 });
 </script>
 
+<p
+  class="bg-black px-3 pt-4 text-center font-bold uppercase tracking-wider text-neutral-400 w-100:px-6">
+  {m.add_photos__thank_you()}
+</p>
+
 <ul
   class="line-height w-full list-inside list-disc gap-2 bg-black px-3 py-2 text-base-content md:px-6">
   <li class="px-3">

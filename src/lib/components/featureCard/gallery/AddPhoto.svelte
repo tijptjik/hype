@@ -33,7 +33,7 @@ type CameraPermissionStatus = 'unknown' | 'prompt' | 'granted' | 'denied';
 const featureCardContext = getFeatureCardContext();
 
 // PROPS
-const { isCameraActive = false } = $props();
+const { isCameraActive = false, isSingleImage = false } = $props();
 
 // STATE
 // Photo gallery state
@@ -259,9 +259,11 @@ function closeCameraInterface() {
  * Opens the camera or file input based on permission status
  */
 async function openCamera() {
-  // First check the current permission status
-  featureCardContext.setMode(FeatureCardMode.AddPhoto);
+  if (featureCardContext.getMode() === FeatureCardMode.Display) {
+    featureCardContext.setMode(FeatureCardMode.AddPhoto);
+  }
 
+  // First check the current permission status
   isLoadingCamera = true;
   cameraPermissionStatus = await checkCameraPermission();
 
@@ -490,10 +492,12 @@ onMount(() => {
       class="relative h-full w-full caret-transparent"
       bind:this={container}>
       <!-- Image counter -->
-      <div
-        class="absolute bottom-2 left-2 z-10 rounded bg-black/50 px-2 py-1 text-xs text-white">
-        {currentIndex + 1} / {featureCardContext.userData.photos.length}
-      </div>
+      {#if !isSingleImage}
+        <div
+          class="absolute bottom-2 left-2 z-10 rounded bg-black/50 px-2 py-1 text-xs text-white">
+          {currentIndex + 1} / {featureCardContext.userData.photos.length}
+        </div>
+      {/if}
 
       <!-- Remove current photo button -->
       <button
@@ -539,41 +543,45 @@ onMount(() => {
               class="h-full w-full object-contain" />
           </div>
 
-          <!-- Navigation buttons - hidden on mobile -->
-          <div class="hidden md:block">
-            <button
-              class="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
-              onclick={() => {
-                currentIndex = getImageIndex(currentIndex - 1);
-                offset.set(0);
-              }}
-              aria-label="Previous image">
-              <Icon src={ChevronLeft} class="h-4 w-4" />
-            </button>
+          {#if !isSingleImage}
+            <!-- Navigation buttons - hidden on mobile -->
+            <div class="hidden md:block">
+              <button
+                class="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+                onclick={() => {
+                  currentIndex = getImageIndex(currentIndex - 1);
+                  offset.set(0);
+                }}
+                aria-label="Previous image">
+                <Icon src={ChevronLeft} class="h-4 w-4" />
+              </button>
 
-            <button
-              class="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
-              onclick={() => {
-                currentIndex = getImageIndex(currentIndex + 1);
-                offset.set(0);
-              }}
-              aria-label="Next image">
-              <Icon src={ChevronRight} class="h-4 w-4" />
-            </button>
-          </div>
+              <button
+                class="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+                onclick={() => {
+                  currentIndex = getImageIndex(currentIndex + 1);
+                  offset.set(0);
+                }}
+                aria-label="Next image">
+                <Icon src={ChevronRight} class="h-4 w-4" />
+              </button>
+            </div>
+          {/if}
         {/if}
       </div>
 
       <!-- Add another photo button - moved to bottom center and restyled -->
-      <div class="absolute bottom-4 left-0 right-0 flex justify-center">
-        <button
-          class="btn btn-ghost gap-2 rounded-full bg-base-100 text-white"
-          onclick={openCamera}
-          aria-label="Add another photo">
-          <Icon src={Camera} class="h-6 w-6 text-primary" theme="solid" />
-          Add photo
-        </button>
-      </div>
+      {#if !isSingleImage}
+        <div class="absolute bottom-4 left-0 right-0 flex justify-center">
+          <button
+            class="btn btn-ghost gap-2 rounded-full bg-base-100 text-white"
+            onclick={openCamera}
+            aria-label="Add another photo">
+            <Icon src={Camera} class="h-6 w-6 text-primary" theme="solid" />
+            Add photo
+          </button>
+        </div>
+      {/if}
     </div>
   {/if}
 

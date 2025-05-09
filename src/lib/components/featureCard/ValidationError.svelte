@@ -7,7 +7,7 @@ const featureCardContext = getFeatureCardContext();
 </script>
 
 {#if featureCardContext.validationError}
-  <div class="mt-2 text-sm font-medium text-error">
+  <div class="mt-2 text-sm font-medium text-error w-100:px-2">
     <span class="flex items-center gap-1">
       <svg
         xmlns="http://www.w3.org/2000/svg"
