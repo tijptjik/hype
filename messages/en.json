@@ -116,7 +116,7 @@
   "report_missing__success": "Report successful",
   "report_missing__error": "Submission failed",
   "validation__at_least_one_image_as_evidence": "Please upload at least one photo as evidence",
-  "validation__at_least_five_characters": "Please provide more detail - at least 5 characters",
+  "validation__at_least_five_characters": "Please provide more detail",
   "omni__title_walks": "Walks",
   "omni__title_neighbourhoods": "Hoods",
   "omni__title_features": "Features",
@@ -257,7 +257,7 @@
   "settings_experimental_description": "Preview features before release",
   "settings_experimental_no_labels_mode": "Minimal Map",
   "settings_experimental_no_labels_description": "Hide all map labels",
-  "report_missing__preface": "Thanks for helping keep the map fresh! A curator will review your report and take the appropriate action. Please let them know why you think it's missing, and add a photo to help verify your report.",
+  "report_missing__preface": "❤️ You - Keep the map fresh",
   "white_cozy_goldfish_heal": "Delete",
   "loose_knotty_cow_propel": "Unlist",
   "awful_this_dingo_glow": "Intangibilize",
@@ -277,5 +277,8 @@
   "add_photos__error": "Submission failed",
   "proof_active_eagle_urge": "Submit",
   "fun_fuzzy_shrike_compose": "Sending",
-  "safe_tidy_skunk_arrive": "Cancel"
+  "safe_tidy_skunk_arrive": "Cancel",
+  "report_missing__curatorial_review": "A curactor will review your report",
+  "report_missing__initial_instruction": "Let them know why it's missing",
+  "report_missing__add_photo_instructions": "Add a photo to help verify your report"
 }
