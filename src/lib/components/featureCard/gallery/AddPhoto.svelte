@@ -20,15 +20,8 @@ import {
 } from '@steeze-ui/heroicons';
 // CONTEXT
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
-
 // TYPES
-type UploadedPhoto = {
-  file: File;
-  previewUrl: string;
-};
-
-type CameraPermissionStatus = 'unknown' | 'prompt' | 'granted' | 'denied';
-
+import type { UploadedPhoto, CameraPermissionStatus } from '$lib/types';
 // CONTEXT
 const featureCardContext = getFeatureCardContext();
 
@@ -69,13 +62,14 @@ const SWIPE_THRESHOLD = 0.3; // 30% of container width
 
 // INITIALIZE CAMERA IF NEEDED
 if (isCameraActive) {
-  console.log('isCameraActive', isCameraActive);
   openCamera();
 }
 
 // PHOTO MANAGEMENT FUNCTIONS
 /**
- * Handles file selection from the file input
+ * Handles file selection from the file input.
+ * Adds selected files to the photo gallery via the feature card context.
+ * @param {Event} event - The file input change event, where `event.target` is an HTMLInputElement.
  */
 function handleFileSelect(event: Event) {
   const input = event.target as HTMLInputElement;
@@ -90,7 +84,9 @@ function handleFileSelect(event: Event) {
 }
 
 /**
- * Removes a photo at the specified index
+ * Removes a specified photo from the gallery.
+ * Updates the current index if necessary.
+ * @param {UploadedPhoto} photo - The photo object to remove.
  */
 function removePhoto(photo: UploadedPhoto) {
   // Remove the photo from the context
@@ -104,7 +100,9 @@ function removePhoto(photo: UploadedPhoto) {
 
 // ======== CAMERA FUNCTIONALITY ========
 /**
- * Checks the current camera permission status
+ * Checks the current camera permission status using the Permissions API.
+ * @returns {Promise<CameraPermissionStatus>} A promise that resolves to the current permission status:
+ * 'granted', 'denied', 'prompt', or 'unknown' if the API is not fully supported.
  */
 async function checkCameraPermission(): Promise<CameraPermissionStatus> {
   // Check if the browser supports the permissions API
@@ -125,7 +123,8 @@ async function checkCameraPermission(): Promise<CameraPermissionStatus> {
 }
 
 /**
- * Requests camera access and initializes the camera stream
+ * Requests camera access from the user and initializes the camera stream.
+ * Sets the camera permission status and handles UI updates based on success or failure.
  */
 async function requestCameraAccess() {
   try {
@@ -165,7 +164,10 @@ async function requestCameraAccess() {
 }
 
 /**
- * Captures a photo from the camera stream
+ * Captures a photo from the live camera stream.
+ * The image is cropped to match the video container's aspect ratio,
+ * converted to a WEBP File object, and then added to the photo gallery.
+ * The camera interface is closed after capture.
  */
 function capturePhoto() {
   if (!videoElement || !canvasElement || !cameraStream || !videoContainer) return;
@@ -245,7 +247,7 @@ function capturePhoto() {
 }
 
 /**
- * Closes the camera interface and stops the stream
+ * Closes the camera interface and stops all tracks of the active media stream.
  */
 function closeCameraInterface() {
   if (cameraStream) {
@@ -256,7 +258,11 @@ function closeCameraInterface() {
 }
 
 /**
- * Opens the camera or file input based on permission status
+ * Initiates the process of opening the camera.
+ * It checks permissions and then either:
+ * - Requests camera access if permission is 'granted' or 'prompt'.
+ * - Shows a permission denied message and falls back to file input if 'denied'.
+ * If the feature card is in `Display` mode, it switches to `AddPhoto` mode.
  */
 async function openCamera() {
   if (featureCardContext.getMode() === FeatureCardMode.Display) {
@@ -290,7 +296,8 @@ async function openCamera() {
 }
 
 /**
- * Falls back to file input when camera is not available
+ * Triggers a click on the hidden file input element.
+ * This serves as a fallback mechanism when camera access is not available or has been denied.
  */
 function useFileInput() {
   showPermissionDialog = false;
@@ -299,7 +306,9 @@ function useFileInput() {
 
 // ======== CAROUSEL FUNCTIONALITY ========
 /**
- * Gets the wrapped index for infinite scrolling
+ * Calculates a wrapped index for an array, enabling "infinite" carousel scrolling.
+ * @param {number} index - The raw index, which can be negative or exceed array bounds.
+ * @returns {number} The wrapped index within the bounds of the `featureCardContext.userData.photos` array. Returns 0 if the array is empty.
  */
 function getImageIndex(index: number): number {
   if (featureCardContext.userData.photos.length === 0) return 0;
@@ -308,19 +317,28 @@ function getImageIndex(index: number): number {
   return ((index % length) + length) % length;
 }
 
+/**
+ * Retrieves a photo from the gallery at a given raw index, which is wrapped internally.
+ * @param {number} index - The raw index from which to retrieve the photo.
+ * @returns {UploadedPhoto} The photo object at the calculated wrapped index.
+ */
 function getPhotoAtIndex(index: number): UploadedPhoto {
   return featureCardContext.userData.photos[getImageIndex(index)];
 }
 
 /**
- * Updates the offset for carousel animation
+ * Updates the carousel's horizontal offset, typically driven by touch gestures.
+ * Uses a Svelte spring store for smooth animation.
+ * @param {number} x - The new horizontal offset value in pixels.
  */
 function updateOffset(x: number) {
   offset.set(x);
 }
 
 /**
- * Snaps to the nearest image after dragging
+ * Snaps the carousel to the nearest image based on the current drag offset and swipe velocity.
+ * Updates `currentIndex` and resets the visual offset.
+ * @param {number} [velocity=0] - The velocity of the swipe, used to help determine swipe intent and direction.
  */
 function snapToImage(velocity = 0) {
   const currentOffset = $offset;
@@ -342,7 +360,9 @@ function snapToImage(velocity = 0) {
 
 // ======== TOUCH INTERACTION HANDLERS ========
 /**
- * Handles the start of a touch event
+ * Handles the start of a touch interaction (touchstart event) on the carousel.
+ * Initializes dragging state, records the starting touch position, and adjusts spring stiffness.
+ * @param {TouchEvent} event - The touchstart event object.
  */
 function handleTouchStart(event: TouchEvent) {
   isDragging = true;
@@ -354,7 +374,9 @@ function handleTouchStart(event: TouchEvent) {
 }
 
 /**
- * Handles touch movement for carousel swiping
+ * Handles touch movement (touchmove event) during a swipe interaction on the carousel.
+ * Updates the carousel's visual offset based on the drag delta.
+ * @param {TouchEvent} event - The touchmove event object.
  */
 function handleTouchMove(event: TouchEvent) {
   if (!isDragging) return;
@@ -366,7 +388,9 @@ function handleTouchMove(event: TouchEvent) {
 }
 
 /**
- * Handles the end of a touch event
+ * Handles the end of a touch interaction (touchend event) on the carousel.
+ * Finalizes the swipe action, calculates swipe velocity, and snaps the carousel to the appropriate image.
+ * @param {TouchEvent} event - The touchend event object.
  */
 function handleTouchEnd(event: TouchEvent) {
   if (!isDragging) return;
@@ -387,7 +411,8 @@ function handleTouchEnd(event: TouchEvent) {
 }
 
 /**
- * Cleans up touch state
+ * Resets touch interaction state variables (dragging state, positions, and offset).
+ * Typically called on `touchcancel` or when the component is unmounted to prevent lingering states.
  */
 function cleanup() {
   isDragging = false;
