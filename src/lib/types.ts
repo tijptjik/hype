@@ -1150,3 +1150,10 @@ export type ImageCtxOptions = {
   refProject?: ProjectDB;
   image?: GetImageAPI;
 };
+
+export type UploadedPhoto = {
+  file: File;
+  previewUrl: string;
+};
+
+export type CameraPermissionStatus = 'unknown' | 'prompt' | 'granted' | 'denied';
