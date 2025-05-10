@@ -25,7 +25,6 @@
     "lint": "prettier --check . && eslint .",
     "prepare": "svelte-kit sync",
     "preview": "vite preview",
-    "test:db": "$HOME/.turso/sqld",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:watch": "vitest watch",
@@ -73,9 +72,9 @@
     "workerd"
   ],
   "dependencies": {
-    "@auth/core": "^0.39.0",
-    "@auth/d1-adapter": "^1.9.0",
-    "@auth/drizzle-adapter": "^1.9.0",
+    "@auth/core": "^0.39.1",
+    "@auth/d1-adapter": "^1.9.1",
+    "@auth/drizzle-adapter": "^1.9.1",
     "@auth/sveltekit": "1.7.4",
     "@emeraldpay/hashicon": "^0.5.2",
     "@inlang/paraglide-js": "^2.0.12",

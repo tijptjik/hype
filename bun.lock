@@ -20,7 +20,7 @@
         "@sveltejs/vite-plugin-svelte": "^5.0.3",
         "@tailwindcss/container-queries": "^0.1.1",
         "@tailwindcss/typography": "^0.5.16",
-        "@tanstack/svelte-query": "^5.75.5",
+        "@tanstack/svelte-query": "^5.75.7",
         "@testing-library/svelte": "^5.2.7",
         "@thisux/sveltednd": "0.0.20",
         "@turf/bbox": "^7.2.0",
@@ -49,7 +49,7 @@
       },
       "devDependencies": {
         "@sveltejs/adapter-static": "^3.0.8",
-        "@tanstack/svelte-query-devtools": "^5.75.5",
+        "@tanstack/svelte-query-devtools": "^5.75.7",
         "@types/eslint": "^9.6.1",
         "@types/geojson": "^7946.0.16",
         "drizzle-kit": "^0.31.1",
@@ -89,11 +89,11 @@
 
     "@augment-vir/core": ["@augment-vir/core@31.14.1", "", { "dependencies": { "@date-vir/duration": "^7.3.1", "browser-or-node": "^3.0.0", "json5": "^2.2.3", "type-fest": "^4.40.0" } }, "sha512-DpRhU/P7y43hyqx+63a/4kXCjU4jQleebxXWbqL011O3OYlki0C2xH2//DAzzTcrrRW9PSSt4O3Ye9kcv0DkOw=="],
 
-    "@auth/core": ["@auth/core@0.39.0", "", { "dependencies": { "@panva/hkdf": "^1.2.1", "jose": "^6.0.6", "oauth4webapi": "^3.3.0", "preact": "10.24.3", "preact-render-to-string": "6.5.11" }, "peerDependencies": { "@simplewebauthn/browser": "^9.0.1", "@simplewebauthn/server": "^9.0.2", "nodemailer": "^6.8.0" }, "optionalPeers": ["@simplewebauthn/browser", "@simplewebauthn/server", "nodemailer"] }, "sha512-jusviw/sUSfAh6S/wjY5tRmJOq0Itd3ImF+c/b4HB9DfmfChtcfVJTNJeqCeExeCG8oh4PBKRsMQJsn2W6NhFQ=="],
+    "@auth/core": ["@auth/core@0.39.1", "", { "dependencies": { "@panva/hkdf": "^1.2.1", "jose": "^6.0.6", "oauth4webapi": "^3.3.0", "preact": "10.24.3", "preact-render-to-string": "6.5.11" }, "peerDependencies": { "@simplewebauthn/browser": "^9.0.1", "@simplewebauthn/server": "^9.0.2", "nodemailer": "^6.8.0" }, "optionalPeers": ["@simplewebauthn/browser", "@simplewebauthn/server", "nodemailer"] }, "sha512-McD8slui0oOA1pjR5sPjLPl5Zm//nLP/8T3kr8hxIsvNLvsiudYvPHhDFPjh1KcZ2nFxCkZmP6bRxaaPd/AnLA=="],
 
-    "@auth/d1-adapter": ["@auth/d1-adapter@1.9.0", "", { "dependencies": { "@auth/core": "0.39.0" } }, "sha512-qcR1lexhy8lq88R6zYzntMN8cTum1wcCFLfGzfPschYiZz3SRdwxZIYTkU5hSwQr6YzUigTUtigH/dUudgT5xg=="],
+    "@auth/d1-adapter": ["@auth/d1-adapter@1.9.1", "", { "dependencies": { "@auth/core": "0.39.1" } }, "sha512-QgLXiffIV2pBpHf8hS/eIajUKEcNwhMKAjABiX3yN3YOg+WNNK1RDUkVXJZ0VNmKMqb4f+XrjNP9KEUNEcAZ6w=="],
 
-    "@auth/drizzle-adapter": ["@auth/drizzle-adapter@1.9.0", "", { "dependencies": { "@auth/core": "0.39.0" } }, "sha512-uRQjT9b66vOvkS5vgzK2ZFT3Ubg0JhcYPzOZtrNdwrsfQZ7hmnh+6rZntkl1s2TrKxwxHVTIfndON7+CgsHRkw=="],
+    "@auth/drizzle-adapter": ["@auth/drizzle-adapter@1.9.1", "", { "dependencies": { "@auth/core": "0.39.1" } }, "sha512-WQ4vtDxpo3jAPfSLJbrjFx++/lMO1HJbV7ZwzCUBEkhqYMTrqQBJhLb+vcusDu95wiekVOUCPe1y6QSNbMeeYA=="],
 
     "@auth/sveltekit": ["@auth/sveltekit@1.7.4", "", { "dependencies": { "@auth/core": "0.37.4", "set-cookie-parser": "^2.7.0" }, "peerDependencies": { "@simplewebauthn/browser": "^9.0.1", "@simplewebauthn/server": "^9.0.3", "@sveltejs/kit": "^1.0.0 || ^2.0.0", "nodemailer": "^6.6.5", "svelte": "^3.54.0 || ^4.0.0 || ^5.0.0-0" }, "optionalPeers": ["@simplewebauthn/browser", "@simplewebauthn/server", "nodemailer"] }, "sha512-jerujN2T6txrVGcblhWrB75sBbtub3v2U1DM9+8W3MOOSfhFdlCLEW+Uow8qAGZzsnTE2WmvcMkXeGd7r2jl5A=="],
 
