@@ -19,15 +19,10 @@ import NewFeatureActions from '$lib/components/tasks/actions/NewFeature.svelte';
 // COMPONENTS :: CONTROLS
 import ReportedMissingControls from '$lib/components/tasks/controls/ReportedMissing.svelte';
 import NewFeatureControls from '$lib/components/tasks/controls/NewFeature.svelte';
-// COMPONENTS :: INFO
-import Info from '$lib/components/forms/extra/Info.svelte';
-import ReportedMissingContent from '$lib/components/tasks/info/ReportedMissing.svelte';
-import NewPhotoContent from '$lib/components/tasks/info/NewPhoto.svelte';
-import NewFeatureContent from '$lib/components/tasks/info/NewFeature.svelte';
 // ENUMS
 import { HierarchicalResource } from '$lib/types';
 // TYPES
-import type { TaskAPI, PageProps } from '$lib/types';
+import type { TaskAPI, PageProps, Organisation, Project } from '$lib/types';
 
 let pageProps: PageProps<TaskAPI> = $props();
 let task = $derived(pageProps.data.task);
@@ -46,9 +41,17 @@ resourceState.setFacet('core');
   refId={task.featureId}
   refOrganisation={resourceState.getEntity(
     HierarchicalResource.organisation,
-    task.organisationId
-  )}
-  refProject={resourceState.getEntity(HierarchicalResource.project, task.projectId)}>
+    task.organisationId,
+    true
+  ) as Organisation}
+  refProject={resourceState.getEntity(
+    HierarchicalResource.project,
+    task.projectId,
+    true
+  ) as Project}
+  extendedRefType="task"
+  extendedRefId={task.id}
+  highlightedIds={task.images?.map((taskImage) => taskImage.imageId) || []}>
   <div
     class="h-full overflow-y-auto bg-gradient-to-br from-rose-500 to-indigo-700 bg-fixed p-6">
     <Task {task}>
@@ -65,19 +68,10 @@ resourceState.setFacet('core');
             <NewFeatureActions {task} />
           {/if}
         {/snippet}
-        <!-- <Info>
-          {#if task.type === 'reportedMissing'}
-            <ReportedMissingContent />
-          {:else if task.type === 'newPhoto'}
-            <NewPhotoContent />
-          {:else if task.type === 'newFeature'}
-            <NewFeatureContent />
-          {/if}
-        </Info> -->
       </TaskHeader>
       <TaskMain {task}>
         <div class="flex flex-1 flex-col">
-          <Image />
+          <Image isDropzone={!task.isReviewed} />
           <TaskFooter>
             <Gallery />
           </TaskFooter>
