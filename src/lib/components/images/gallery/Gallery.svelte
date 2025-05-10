@@ -164,7 +164,11 @@ $effect(() => {
         <UploadThumbnail
           fileObject={imageCtx.getReplacementUpload(image.id) as ImageUploadState} />
       {:else}
-        <Thumbnail {image} idx={i} {actionProps} />
+        <Thumbnail
+          {image}
+          idx={i}
+          {actionProps}
+          isHighlighted={imageCtx.isImageHighlighted(image.id)} />
       {/if}
     </div>
   {/each}

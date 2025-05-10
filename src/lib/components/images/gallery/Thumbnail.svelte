@@ -21,9 +21,10 @@ type Props = {
   image: GetImageAPI;
   idx: number;
   actionProps?: { removeMode: boolean };
+  isHighlighted?: boolean;
 };
 
-let { image, idx, actionProps }: Props = $props();
+let { image, idx, actionProps, isHighlighted = false }: Props = $props();
 
 // Track both main image and thumbnail load states
 let imageLoadState = $derived(imageCtx.getLoadStatus(image.id));
@@ -33,7 +34,6 @@ let thumbnailLoadState = $derived(imageCtx.getThumbnailLoadStatus(image.id));
 onMount(() => {
   // Set initial thumbnail load state if not already set
   if (thumbnailLoadState === undefined) {
-    console.log('THUMBNAIL :: setting thumbnail load state to loading', image.id);
     imageCtx.setThumbnailLoadStatus(image.id, 'loading');
   }
 
@@ -47,7 +47,7 @@ onDestroy(() => {
 </script>
 
 <div
-  class="h-full w-full"
+  class="relative h-full w-full"
   data-image-id={image.id}
   onmouseenter={() => imageCtx.setActiveImage(image)}
   onclick={() => imageCtx.setActiveImage(image)}>
@@ -63,14 +63,19 @@ onDestroy(() => {
     layout="cover"
     showLoading={false}
     onLoad={() => {
-      console.log('THUMBNAIL :: setting thumbnail load state to loaded', image.id);
       imageCtx.setThumbnailLoadStatus(image.id, 'loaded');
     }}
     onError={() => {
       imageCtx.setThumbnailLoadStatus(image.id, 'error');
     }} />
 
-  {#if thumbnailLoadState === 'loaded' && (!actionProps || !actionProps.removeMode)}
+  {#if isHighlighted}
+    <div
+      class="absolute bottom-0 right-0 h-0 w-0 border-b-[20px] border-l-[20px] border-b-primary border-l-transparent">
+    </div>
+  {/if}
+
+  {#if thumbnailLoadState === 'loaded' && (!actionProps || !actionProps.removeMode) && image.intent}
     <IntentLabel intent={image.intent} {idx} imageId={image.id} />
   {/if}
 
