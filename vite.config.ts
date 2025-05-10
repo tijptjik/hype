@@ -1,5 +1,5 @@
 // VITE
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 // TRANSLATION
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
@@ -8,9 +8,14 @@ import seed from './src/lib/db/seed';
 // TYPES
 import type { Plugin } from 'vite';
 
+// Load env file based on `mode` in the current working directory.
+// Set the third parameter to '' to load all env regardless of the
+// `VITE_` prefix.
+const env = loadEnv('development', process.cwd());
+
 // PLUGIN :: SEED DRIZZLE
 const seedDrizzle = async (): Promise<Plugin> => {
-  if (process.env.VITE_WRANGLER_ENV !== 'local') {
+  if (env.VITE_WRANGLER_ENV !== 'local') {
     return {
       name: 'no-seed-on-prod',
       apply: 'build'
@@ -20,7 +25,7 @@ const seedDrizzle = async (): Promise<Plugin> => {
       name: 'seed-drizzle',
       apply: 'serve',
       buildStart() {
-        seed();
+        seed(env);
       }
     } satisfies Plugin;
   }
