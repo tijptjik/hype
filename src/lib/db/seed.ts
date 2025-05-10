@@ -290,7 +290,10 @@ async function isEmpty(db: DrizzleD1Database, table: SQLiteTable) {
   return result.count === 0;
 }
 
-export default async function seed(printData: boolean = false) {
+export default async function seed(
+  env: Record<string, string>,
+  printData: boolean = false
+) {
   if (printData) {
     Object.values(seedBank).map((val) => console.info(val.data));
   }
@@ -319,7 +322,7 @@ export default async function seed(printData: boolean = false) {
     {} as Record<string, (typeof seedBank)[keyof typeof seedBank]>
   );
 
-  if (process.env.VITE_WRANGLER_ENV === 'local') {
+  if (env.VITE_WRANGLER_ENV === 'local') {
     // This is an ugly hack to avoid Vite loading in the wrangler dep regardless
     // of the conditional import, and throwing errors when building for CF workers
     // as wrangler itself has node requirements :doh:
