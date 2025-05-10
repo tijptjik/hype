@@ -580,9 +580,9 @@ export class ResourceState {
     return this.state.resources[resourceKey];
   };
 
-  getEntity(resource?: HierarchicalResource, entityRef?: Id | Code) {
-    let resourceKey = resource ?? this.activeResource;
-    let entityRefKey = HierarchicalResourceRefKey[resourceKey];
+  getEntity(resource?: HierarchicalResource, entityRef?: Id | Code, byId = false) {
+    let resourceKey = resource ?? (this.activeResource as HierarchicalResource);
+    let entityRefKey = byId ? 'id' : HierarchicalResourceRefKey[resourceKey];
     if (!entityRefKey) return null;
     return this.state.resources[resourceKey].find(
       (entity) =>
