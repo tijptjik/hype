@@ -416,7 +416,10 @@ export const layer = sqliteTable('layer', {
     .default(false),
   // Additional Information
   metadata: text('metadata', { mode: 'json' }).$type<LayerMetadata>(),
-
+  // Is this layer enabled for new users by default?
+  isDefaultVisible: integer('isDefaultVisible', { mode: 'boolean' })
+    .notNull()
+    .default(false),
   // Accessible to the public in the app
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
   publishedAt: text('publishedAt'),
