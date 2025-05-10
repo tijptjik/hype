@@ -26,6 +26,7 @@ import { uploadAndProcessImage } from '$lib/services/images.svelte';
 
 const RESOURCE_TYPE = 'task';
 const ACCESS_STRATEGY = 'ResourceOwnChildren' as AccessStrategyOption;
+const CREATE_STRATEGY = 'Public' as AccessStrategyOption;
 
 export const GET: RequestHandler = async ({ url, locals, platform }) => {
   const { db, userId, accessStrategy } = await getDatabaseOrError(
@@ -80,7 +81,7 @@ export const POST: RequestHandler = async ({ request, locals, platform, fetch })
   const { db, userId } = await getDatabaseOrError(
     locals,
     platform,
-    ACCESS_STRATEGY,
+    CREATE_STRATEGY,
     RESOURCE_TYPE
   );
 
@@ -136,7 +137,7 @@ export const POST: RequestHandler = async ({ request, locals, platform, fetch })
             },
             {
               isPublished: false,
-              intent: 'evidence'
+              intent: taskData.type === 'reportedMissing' ? 'evidence' : 'undefined'
             },
             fetch
           );
@@ -148,7 +149,7 @@ export const POST: RequestHandler = async ({ request, locals, platform, fetch })
       }
 
       const imageIds = uploadedImages.map((image) => image.id);
-      // Link the image to the task as evidence
+      // Link the image to the task as evidence or new photos
       await createTaskImagesFromImageIds(db, createdTask.id, imageIds);
 
       return JSONResponseOrError({
