@@ -10,7 +10,8 @@ import {
   organisation,
   organisationRole,
   taskImage,
-  user
+  user,
+  task
 } from '../schema';
 import { ImageInsert, ImageUpdate } from '../zod';
 import db, { updatePartial } from '$lib/db';
@@ -308,4 +309,12 @@ export const getImageForOrganisation = async (db: Database, organisationId: Id) 
     .from(image)
     .innerJoin(organisation, eq(image.id, organisation.imageId))
     .where(eq(organisation.id, organisationId));
+};
+
+export const getImagesForTask = async (db: Database, taskId: Id) => {
+  return await db
+    .select(imageSelect)
+    .from(image)
+    .innerJoin(taskImage, eq(image.id, taskImage.imageId))
+    .where(eq(taskImage.taskId, taskId));
 };
