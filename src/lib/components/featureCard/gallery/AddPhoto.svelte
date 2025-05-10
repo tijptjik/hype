@@ -488,7 +488,13 @@ onMount(() => {
           class="btn btn-circle h-16 w-16 bg-base-300"
           onclick={capturePhoto}
           aria-label="Take photo">
-          <div class="m-0 h-12 w-12 rounded-full border-[6px] border-primary p-0"></div>
+          <div class="m-0 h-12 w-12 rounded-full border-[5px] border-[#4987E2] p-0">
+            <div class="flex h-full flex-col items-center justify-center gap-[2px]">
+              <div class="h-[2px] w-4 bg-[#4987E2]/40"></div>
+              <div class="h-[2px] w-4 bg-[#4987E2]/40"></div>
+              <div class="h-[2px] w-4 bg-[#4987E2]/40"></div>
+            </div>
+          </div>
         </button>
       </div>
 
