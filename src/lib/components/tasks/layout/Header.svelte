@@ -10,7 +10,7 @@ let {
   Left,
   isRoundedBottom = true
 }: {
-  children: any;
+  children?: any;
   task: TaskAPI;
   Right: any;
   Left: any;
