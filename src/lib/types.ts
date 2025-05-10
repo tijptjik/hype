@@ -1135,6 +1135,9 @@ export type ImageCtxState = {
   refId: Id | null;
   refOrganisation: OrganisationDB | null;
   refProject: ProjectDB | null;
+  extendedRefType: ResourceType | null;
+  extendedRefId: Id | null;
+  highlightedIds: Id[];
   uploadQueue: ImageUploadState[];
   loadStatus: Record<string, LoadStatus>;
   activeId: string | null;
@@ -1154,6 +1157,9 @@ export type ImageCtxOptions = {
   refOrganisation?: OrganisationDB;
   refProject?: ProjectDB;
   image?: GetImageAPI;
+  extendedRefType?: ResourceType;
+  extendedRefId?: Id;
+  highlightedIds?: Id[];
 };
 
 export type UploadedPhoto = {

@@ -67,7 +67,10 @@ export class ImageService {
     refId: Id,
     refOrganisation?: OrganisationDB,
     refProject?: ProjectDB,
-    image?: GetImageAPI
+    image?: GetImageAPI,
+    extendedRefType?: ResourceType,
+    extendedRefId?: Id,
+    highlightedIds?: Id[]
   ) {
     this.setContext({
       mode,
@@ -76,7 +79,10 @@ export class ImageService {
       refId,
       refOrganisation,
       refProject,
-      image
+      image,
+      extendedRefType,
+      extendedRefId,
+      highlightedIds
     });
   }
 
@@ -95,6 +101,9 @@ export class ImageService {
     this.state.refId = options.refId || null;
     this.state.refOrganisation = options.refOrganisation || null;
     this.state.refProject = options.refProject || null;
+    this.state.extendedRefType = options.extendedRefType || null;
+    this.state.extendedRefId = options.extendedRefId || null;
+    this.state.highlightedIds = options.highlightedIds || [];
 
     if (options.mode === 'standalone' && options.image) {
       await this.setImages([options.image as GetImageAPI]);
@@ -126,6 +135,12 @@ export class ImageService {
     refOrganisation: null,
     // The project the image is ultimately associated with
     refProject: null,
+    // The secondary type of resource the image is associated with (e.g. task)
+    extendedRefType: null,
+    // The secondary ID of the resource the image is associated with (e.g. taskId)
+    extendedRefId: null,
+    // The IDs of the images to be highlighted
+    highlightedIds: [] as Id[],
 
     // CRUD :: CREATE
 
@@ -276,17 +291,11 @@ export class ImageService {
       );
       if (replacingImage) {
         replacingImage.preview = URL.createObjectURL(file);
-        console.log(
-          '[ImageService] Added to upload queue:',
-          file.name,
-          this.state.images
-        );
       }
     });
   }
 
   addToRejected(files: File[]) {
-    console.log('[ImageService] Adding to rejected:', files);
     this.state.rejected.push(...files);
   }
 
@@ -479,12 +488,30 @@ export class ImageService {
     );
   }
 
+  isImageHighlighted(imageId: string): boolean {
+    return this.state.highlightedIds.includes(imageId);
+  }
+
   // ═══════════════════════
   // 4. QUERYING
   // ═══════════════════════
 
   async refreshImages() {
-    await this.setImages(await this.imagesQueryFn());
+    // Get the images for the primary resource
+    const images = await this.imagesQueryFn();
+    const imageIds = images.map((image) => image.id);
+    // Get the images for the secondary resource
+    if (this.state.extendedRefType) {
+      const extendedImages = await this.extendedImagesQueryFn();
+      // Typically there will be an overlap of images between the primary and secondary resources, so we only add the images that are not already in the primary resource,
+      // A scenario where this is not true is when the secondary resource is a task and the images have been rejected (i.e. deleted from the primary resource). We would still want to show the rejected images in the task viewer. To give context for the decision.
+      extendedImages.forEach((image) => {
+        if (!imageIds.includes(image.id)) {
+          images.push(image);
+        }
+      });
+    }
+    await this.setImages(images);
     this.state.images.forEach((image) => {
       this.setLoadStatus(image.id, 'loading');
     });
@@ -492,6 +519,14 @@ export class ImageService {
 
   async imagesQueryFn() {
     return getImages(this.state.refType, this.state.refId, this.isAdminMode);
+  }
+
+  async extendedImagesQueryFn() {
+    return getImages(
+      this.state.extendedRefType as ResourceType,
+      this.state.extendedRefId as Id,
+      this.isAdminMode
+    );
   }
 
   // ═══════════════════════
@@ -597,7 +632,6 @@ export class ImageService {
 
     try {
       const uploadRefs = this.getUploadRefs(fileObject.imageToReplace);
-
       const savedImage = await uploadAndProcessImage(
         fileObject.file,
         uploadRefs,
@@ -846,7 +880,10 @@ export const setImageContext = (
   refId: Id,
   refOrganisation?: OrganisationDB,
   refProject?: ProjectDB,
-  image?: GetImageAPI
+  image?: GetImageAPI,
+  extendedRefType?: ResourceType,
+  extendedRefId?: Id,
+  highlightedIds?: Id[]
 ) =>
   setContext(
     IMAGE_STATE_KEY,
@@ -857,7 +894,10 @@ export const setImageContext = (
       refId,
       refOrganisation,
       refProject,
-      image
+      image,
+      extendedRefType,
+      extendedRefId,
+      highlightedIds
     )
   );
 

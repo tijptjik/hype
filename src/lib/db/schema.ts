@@ -899,7 +899,7 @@ export const featureImage = sqliteTable(
     )
   },
   (table) => [
-    primaryKey(table.featureId, table.imageId),
+    primaryKey({ columns: [table.featureId, table.imageId] }),
     uniqueIndex('canonical_intent')
       .on(table.featureId)
       .where(sql`intent = 'canonical'`)
@@ -980,7 +980,8 @@ export const task = sqliteTable('task', {
       'set-unpublished',
       'set-intangible',
       'set-archived',
-      'add-photo',
+      'add-all-photos',
+      'add-all-photos-with-intent',
       'add-feature'
     ]
   }),
