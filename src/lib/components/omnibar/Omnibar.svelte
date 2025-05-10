@@ -13,59 +13,7 @@ import { MOBILE_MAX_WIDTH } from '$lib/index';
 const omniContext = getOmniContext();
 const mapContext = getMapContext();
 
-// STATE
-// let hasFocus = $state(false);
-// let omnibarRef = $state<HTMLDivElement | null>(null);
-
-// $effect(() => {
-//   if (hasFocus === false && omniContext.state.searchTerm !== '') {
-//     focusSearchBar();
-//   }
-// });
-
-// // HANDLERS
-// function onFocus() {
-//   hasFocus = true;
-// }
-
-// function handleClickOutside(event: MouseEvent) {
-//   if (omnibarRef && !omnibarRef.contains(event.target as Node)) {
-//     omniContext.close();
-//   }
-// }
-
-// function handleCloseOmnibar() {
-//   hasFocus = false;
-//   searchTerm = '';
-//   const searchInput = document.querySelector(
-//     'input[id="omni-search-bar"]'
-//   ) as HTMLElement;
-//   searchInput?.blur();
-// }
-
-// function focusSearchBar() {
-//   hasFocus = true;
-//   const searchInput = document.querySelector(
-//     'input[id="omni-search-bar"]'
-//   ) as HTMLElement;
-//   searchInput?.focus();
-// }
-
-// Calculate total number of visible results
-// const totalResults = $derived(
-//   (limits.walks || 0) + (limits.neighbourhoods || 0) + (limits.features || 0)
-// );
-
 let showSearch = $derived(omniContext.state.mode === 'search');
-
-// Setup and cleanup event listeners
-// onMount(() => {
-//   document.addEventListener('mousedown', handleClickOutside);
-// });
-
-// onDestroy(() => {
-//   document.removeEventListener('mousedown', handleClickOutside);
-// });
 
 function handleEscape(event: KeyboardEvent) {
   if (event.key === 'Escape') {
