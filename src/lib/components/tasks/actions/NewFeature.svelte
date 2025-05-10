@@ -79,7 +79,7 @@ const handleAccept = async (e: Event) => {
     <div class="flex items-center gap-2 rounded-lg bg-base-200 px-3 py-2">
       <p class="uppercase text-base-content">{m.mad_fresh_swan_trip()}</p>
       <p class="font-mono text-sm uppercase text-neutral-content">
-        {task.reviewAction?.replace('-', ' ')}
+        {task.reviewAction?.replaceAll('-', ' ')}
       </p>
     </div>
   {:else}
