@@ -800,7 +800,8 @@ export const reviewActions = [
   'set-unpublished',
   'set-intangible',
   'set-archived',
-  'add-photo',
+  'add-all-photo',
+  'add-all-photo-with-intent',
   'add-feature'
 ] as const;
 export type ReviewAction = (typeof reviewActions)[number];
@@ -813,7 +814,11 @@ export const reportedMissingActions = [
 ] as const;
 export type ReportedMissingAction = (typeof reportedMissingActions)[number];
 
-export const newPhotoActions = ['ignored', 'add-photo'] as const;
+export const newPhotoActions = [
+  'ignored',
+  'add-all-photos',
+  'add-all-photos-with-intent'
+] as const;
 export type NewPhotoAction = (typeof newPhotoActions)[number];
 
 export const newFeatureActions = ['ignored', 'add-feature'] as const;
