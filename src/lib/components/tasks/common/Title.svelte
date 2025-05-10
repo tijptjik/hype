@@ -4,6 +4,8 @@ import { ADMIN_PATH } from '$lib';
 import { navigateOnAdmin } from '$lib/navigation';
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+// I18N
+import { m } from '$lib/i18n';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { ChevronRight } from '@steeze-ui/heroicons';
@@ -17,9 +19,9 @@ let { task }: { task: TaskAPI } = $props();
 const resourceState = getHierarchicalResourceState();
 
 const typeDisplay: Record<TaskType, string> = {
-  reportedMissing: 'Reported Missing',
-  newPhoto: 'New Photo',
-  newFeature: 'New Feature'
+  reportedMissing: m.noble_zany_crow_dance(),
+  newPhoto: m.aware_sea_goose_nail(),
+  newFeature: m.smart_crazy_cuckoo_play()
 };
 </script>
 
