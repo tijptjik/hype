@@ -48,7 +48,7 @@ export const relationalAccessOptions = [
 const client = (database: D1Database) => {
   return drizzle(database, {
     schema,
-    logger: import.meta.env.VITE_DRIZZLE_LOGGER === 'true'
+    logger: import.meta.env?.VITE_DRIZZLE_LOGGER === 'true' || false
   });
 };
 

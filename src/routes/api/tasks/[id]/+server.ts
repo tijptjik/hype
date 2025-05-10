@@ -4,7 +4,12 @@ import { getDatabaseOrError, JSONResponseOrError } from '$lib/api';
 // DB
 import { hierarchicalEntityQuery } from '$lib/db';
 import { projectRole } from '$lib/db/schema';
-import { patchTask, customHierarchy } from '$lib/db/services/task';
+import {
+  patchTask,
+  customHierarchy,
+  archiveImages,
+  publishImages
+} from '$lib/db/services/task';
 // TYPES
 import type { RequestHandler } from '@sveltejs/kit';
 import type { AccessStrategyOption } from '$lib/types';
@@ -74,10 +79,35 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
 
   try {
     const data = await request.json();
+    const taskId = params[PUBLIC_IDENTIFIER]!;
+
     // Infer reviewerId and isReviewed from reviewOutcome and active user
     data.isReviewed = data.reviewOutcome ? true : false;
     data.reviewerId = data.isReviewed ? userId : null;
-    const result = await patchTask(db, params[PUBLIC_IDENTIFIER]!, data);
+
+    // Handle image operations based on reviewAction
+    if (
+      (data.type === 'newPhoto' || data.type === 'reportedMissing') &&
+      data.reviewAction
+    ) {
+      switch (data.reviewAction) {
+        case 'ignored':
+          // Archive all images
+          await archiveImages(db, taskId, false);
+          break;
+        case 'add-all-photos':
+          // Publish all images
+          await publishImages(db, taskId, false);
+          break;
+        case 'add-all-photos-with-intent':
+          // Archive undefined images and publish defined ones
+          await publishImages(db, taskId, true);
+          await archiveImages(db, taskId, true);
+          break;
+      }
+    }
+
+    const result = await patchTask(db, taskId, data);
     return JSONResponseOrError(result);
   } catch (e) {
     console.error('Database error:', e);
