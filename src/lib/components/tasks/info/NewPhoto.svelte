@@ -6,12 +6,18 @@
   </p>
   <ul class="ml-6 mt-2 list-disc space-y-2">
     <li>
-      <span class="font-semibold">REJECT</span> - The photo will no longer appear anywhere.
+      <span class="font-semibold">REJECT</span> - None of the submitted photos will appear
+      anywhere.
     </li>
     <li>
-      <span class="font-semibold">ACCEPT</span> - The photo will become publicly visible
-      as part of the Feature's gallery. It will be sorted by photographic intent (Canonical,
-      CloseUp, Context, General, Evidence, Undefined), then by date added.
+      <span class="font-semibold">ACCEPT ALL</span> - The photos will all become publicly
+      visible as part of the Feature's gallery. It will be sorted by photographic intent
+      (Canonical, CloseUp, Context, General, Evidence, Undefined), then by date added.
+    </li>
+    <li>
+      <span class="font-semibold">ACCEPT CLASSIFIED</span> - Only the photos which have been
+      asigned a photographic intent other than "undefined" will become publicly visible as
+      part of the Feature's gallery. The rest will not appear anywhere.
     </li>
   </ul>
 </section>
