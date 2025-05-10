@@ -101,7 +101,7 @@
     "drizzle-zod": "^0.7.1",
     "maplibre-gl": "^5.5.0",
     "postcss": "^8.5.3",
-    "proj4": "^2.15.0",
+    "proj4": "^2.16.2",
     "short-uuid": "^5.2.0",
     "svelte": "^5.28.2",
     "svelte-fa": "^4.0.4",
