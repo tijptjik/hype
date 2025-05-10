@@ -9,6 +9,7 @@ import {
   getImagesForFeature,
   getImageForProject,
   getImageForOrganisation,
+  getImagesForTask,
   checkFeatureAccessForImage,
   checkOrganisationAccessForImage,
   checkProjectAccessForNewImage
@@ -22,7 +23,7 @@ import type { GetImageAPI, NewImageAPI } from '$lib/types';
 
 // CONSTANTS
 const RESOURCE_TYPE = 'image';
-const ACCESS_STRATEGY = 'ResourceFromEditableProject';
+const ACCESS_STRATEGY = 'Public';
 const PRIVILEGED_STRATEGY = 'ResourceAll';
 
 export const GET: RequestHandler = async ({ url, locals, platform }) => {
@@ -30,9 +31,14 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
     const organisationId = url.searchParams.get('organisationId');
     const projectId = url.searchParams.get('projectId');
     const featureId = url.searchParams.get('featureId');
+    const taskId = url.searchParams.get('taskId');
+    const isAdminView = url.searchParams.get('isAdminView');
 
-    if (!featureId && !organisationId && !projectId) {
-      error(400, 'Loosey goosey! A featureId, organisationId or projectId is required');
+    if (!featureId && !organisationId && !projectId && !taskId) {
+      error(
+        400,
+        'Loosey goosey! A featureId, organisationId, projectId or taskId is required'
+      );
     }
 
     // AUTH : Pass or Fail - now includes feature access check
@@ -40,7 +46,7 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
       ? await getDatabaseOrError(
           locals,
           platform,
-          PRIVILEGED_STRATEGY,
+          ACCESS_STRATEGY,
           RESOURCE_TYPE,
           featureId,
           checkFeatureAccessForImage,
@@ -56,13 +62,15 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
       images = await getImagesForFeature(
         db,
         featureId,
-        accessStrategy,
+        isAdminView ? PRIVILEGED_STRATEGY : accessStrategy,
         PRIVILEGED_STRATEGY
       );
     } else if (projectId) {
       images = (await getImageForProject(db, projectId)) as GetImageAPI[];
     } else if (organisationId) {
       images = (await getImageForOrganisation(db, organisationId)) as GetImageAPI[];
+    } else if (taskId) {
+      images = (await getImagesForTask(db, taskId)) as GetImageAPI[];
     }
 
     // Sort images by publication status, intent, and creation date
