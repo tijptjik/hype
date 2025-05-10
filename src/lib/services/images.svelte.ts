@@ -146,7 +146,7 @@ export function extendFeatureImage(
   extended?: {
     featureImage?: {
       isPublished: boolean;
-      intent: string; // Assuming Intent is a string type from $lib/types
+      intent: string;
     };
   }
 ) {
@@ -160,7 +160,7 @@ export function extendFeatureImage(
       : ({
           featureId: refs.entity,
           intent: extended?.featureImage?.intent || 'undefined',
-          isPublished: extended?.featureImage?.isPublished || true
+          isPublished: extended?.featureImage?.isPublished
         } as any); // Cast as any to match NewFeatureImages if necessary
   }
 }
@@ -421,17 +421,15 @@ export async function getImages(
     params.append('isAdminView', 'true');
   }
 
-  // Assuming HierarchicalResource might be relevant here as in original buildApiUrl
-  // For simplicity, directly using refType and refId as per original logic in buildApiUrl
   if (refType === 'feature' && refId) {
-    // Using string literal 'feature' as HierarchicalResource.feature would need enum import
     params.append('featureId', refId);
   } else if (refType === 'project' && refId) {
-    params.append('projectId', refId); // Example: Add if your API supports this
+    params.append('projectId', refId);
   } else if (refType === 'organisation' && refId) {
-    params.append('organisationId', refId); // Example: Add if your API supports this
+    params.append('organisationId', refId);
+  } else if (refType === 'task' && refId) {
+    params.append('taskId', refId);
   }
-  // Add other refType conditions as needed based on your API capabilities
 
   const apiUrl = `${basePath}?${params.toString()}`;
 
