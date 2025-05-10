@@ -10,7 +10,7 @@ import Info from '$lib/components/forms/extra/Info.svelte';
 import ReportedMissingContent from '$lib/components/tasks/info/ReportedMissing.svelte';
 // TYPES
 import type { TaskAPI, ReportedMissingAction } from '$lib/types';
-import type { ComponentType } from 'svelte';
+import type { IconSource } from '@steeze-ui/svelte-icon';
 
 // STATE :: PROPS
 let { task }: { task: TaskAPI } = $props();
@@ -19,25 +19,25 @@ let { task }: { task: TaskAPI } = $props();
 let actions = [
   {
     label: m.white_cozy_goldfish_heal(),
-    icon: Trash,
+    icon: Trash as IconSource,
     action: 'set-archived',
     onHoverClass: 'text-rose-300'
   },
   {
     label: m.loose_knotty_cow_propel(),
-    icon: EyeSlash,
+    icon: EyeSlash as IconSource,
     action: 'set-unpublished',
     onHoverClass: 'text-rose-300'
   },
   {
     label: m.awful_this_dingo_glow(),
-    icon: CubeTransparent,
+    icon: CubeTransparent as IconSource,
     action: 'set-intangible',
     onHoverClass: 'text-rose-300'
   },
   {
     label: m.quiet_late_worm_startle(),
-    icon: XCircle,
+    icon: XCircle as IconSource,
     action: 'rejected',
     onHoverClass: 'text-rose-300'
   }
@@ -50,33 +50,18 @@ const resourceState = getHierarchicalResourceState();
 const handleReject = async (e: Event) => {
   e.preventDefault();
   try {
+    console.log('Rejecting task:', task.id);
     if (task.id) {
-      // Update task
+      // Update task - image handling is done in the PATCH endpoint
       await fetch(`/api/tasks/${task.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          type: 'reportedMissing',
           reviewOutcome: 'rejected',
           reviewAction: 'ignored'
         })
       });
-    }
-
-    // Update all associated images
-    if (task.images && task.images.length > 0) {
-      const imageUpdatePromises = task.images.map((image) =>
-        fetch(`/api/images/${image.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            isArchived: true,
-            refType: 'feature',
-            refId: task.featureId
-          })
-        })
-      );
-
-      await Promise.all(imageUpdatePromises);
     }
 
     resourceState.goToNextTask();
@@ -88,17 +73,23 @@ const handleReject = async (e: Event) => {
 const handleSet = async (e: Event, action: ReportedMissingAction) => {
   e.preventDefault();
   try {
+    console.log('Setting task action:', task.id, action);
     let changeSet: Record<string, unknown> = {};
-    if (action === 'set-archived') {
-      changeSet.isArchived = true;
-      changeSet.isPublished = false;
-      changeSet.isVisitable = false;
-    } else if (action === 'set-unpublished') {
-      changeSet.isPublished = false;
-      changeSet.isVisitable = false;
-    } else if (action === 'set-intangible') {
-      changeSet.isIntangible = true;
+    switch (action) {
+      case 'set-archived':
+        changeSet.isArchived = true;
+        changeSet.isPublished = false;
+        changeSet.isVisitable = false;
+        break;
+      case 'set-unpublished':
+        changeSet.isPublished = false;
+        changeSet.isVisitable = false;
+        break;
+      case 'set-intangible':
+        changeSet.isIntangible = true;
+        break;
     }
+
     // Update feature
     if (task.feature?.id) {
       await fetch(`/api/features/${task.feature.id}`, {
@@ -108,11 +99,12 @@ const handleSet = async (e: Event, action: ReportedMissingAction) => {
       });
     }
 
-    // Update task
+    // Update task - image handling is done in the PATCH endpoint
     await fetch(`/api/tasks/${task.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        type: 'reportedMissing',
         reviewOutcome: 'accepted',
         reviewAction: action
       })
@@ -120,13 +112,13 @@ const handleSet = async (e: Event, action: ReportedMissingAction) => {
 
     resourceState.goToNextTask();
   } catch (error) {
-    console.error('Failed to archive:', error);
+    console.error('Failed to set task state:', error);
   }
 };
 </script>
 
 {#snippet button(
-  icon: ComponentType,
+  icon: IconSource,
   label: string,
   onHoverClass: string,
   onclick: (e: Event, ...args: any[]) => void
@@ -144,7 +136,7 @@ const handleSet = async (e: Event, action: ReportedMissingAction) => {
     <div class="flex items-center gap-2 rounded-lg bg-base-200 px-3 py-2">
       <p class="uppercase text-base-content">{m.mad_fresh_swan_trip()}</p>
       <p class="font-mono text-sm uppercase text-neutral-content">
-        {task.reviewAction?.replace('-', ' ')}
+        {task.reviewAction?.replaceAll('-', ' ')}
       </p>
     </div>
   {:else}
