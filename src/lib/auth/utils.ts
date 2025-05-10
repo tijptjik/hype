@@ -4,10 +4,11 @@ import {
   projectRole,
   organisation,
   project,
-  userLayer
+  userLayer,
+  layer
 } from '$lib/db/schema';
 // TYPES
-import type { UserLayer } from '$lib/types';
+import type { UserLayer, Layer } from '$lib/types';
 import type { Session } from '@auth/core/types';
 
 // Utility functions
@@ -145,10 +146,38 @@ export async function getUserRoles(db: any, userId: string): Promise<UserRole[]>
  */
 export async function getUserLayers(db: any, userId: string): Promise<UserLayer[]> {
   // Fetch user layers
-  const userLayers = await db
+  let userLayers = await db
     .select()
     .from(userLayer)
     .where(eq(userLayer.userId, userId));
+
+  // If no layers exist, create default layer
+  if (userLayers.length === 0) {
+    // First, get the layer data
+    const defaultLayers = (await db
+      .select()
+      .from(layer)
+      .where(eq(layer.isDefaultVisible, true))
+      .all()) as Layer[];
+
+    if (!defaultLayers) {
+      console.error('Default layers not found');
+      return [];
+    }
+
+    for (const layer of defaultLayers) {
+      // Create the user layer
+      const defaultUserLayer = {
+        layerId: layer.id,
+        userId: userId,
+        isVisibleOnLoad: true
+      };
+      await db.insert(userLayer).values(defaultUserLayer);
+    }
+
+    // Return the newly created layer with the layer data
+    userLayers = await db.select().from(userLayer).where(eq(userLayer.userId, userId));
+  }
 
   return userLayers;
 }
