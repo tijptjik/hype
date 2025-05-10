@@ -26,7 +26,7 @@ let image = $derived(imageCtx.activeImage);
   class="relative z-10 flex w-full flex-grow flex-col rounded-2xl bg-gradient-to-r from-rose-500/70 to-fuchsia-800/70 p-0">
   <Header {...sectionProps} {Actions} />
   <main class="relative flex h-full w-full flex-col rounded-b-2xl bg-base-300">
-    <Viewer isCrossfade={false} enableDropzone={true}>
+    <Viewer isCrossfade={false} isDropzone={true}>
       {#snippet RightActions()}
         <IconAnchor position="right" icon={InformationCircle}>
           {#if image}

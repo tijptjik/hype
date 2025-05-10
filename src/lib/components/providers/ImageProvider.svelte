@@ -19,6 +19,9 @@ type Props = {
   refOrganisation?: OrganisationDB;
   refProject?: ProjectDB;
   image?: GetImageAPI;
+  extendedRefType?: ResourceType;
+  extendedRefId?: Id;
+  highlightedIds?: Id[];
 };
 
 // STATE
@@ -35,7 +38,10 @@ setImageContext(
   settings.refId,
   settings.refOrganisation,
   settings.refProject,
-  settings.image
+  settings.image,
+  settings.extendedRefType,
+  settings.extendedRefId,
+  settings.highlightedIds
 );
 
 let imageCtx = getImageContext();

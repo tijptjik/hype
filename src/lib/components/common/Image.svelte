@@ -38,10 +38,7 @@ onDestroy(() => {
 
 async function handleImageLoad() {
   try {
-    if (src in imageStore) {
-      console.debug('[Image] Using cached image:', src);
-    } else {
-      console.debug('[Image] Starting load for:', src);
+    if (!imageStore[src]) {
       let img = new Image();
       img.src = src;
       // Wait for both loading and decoding to complete
@@ -52,7 +49,6 @@ async function handleImageLoad() {
         img.decode()
       ]);
       imageStore[src] = img;
-      console.debug('[Image] Successfully loaded:', src);
     }
     imgElement.src = imageStore[src].src;
     loaded = true;

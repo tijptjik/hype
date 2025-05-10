@@ -26,7 +26,7 @@ type Props = {
   LeftActions?: any;
   MiddleActions?: any;
   RightActions?: any;
-  enableDropzone?: boolean;
+  isDropzone?: boolean;
   enableReplacement?: boolean;
   isCrossfade?: boolean;
 };
@@ -36,7 +36,7 @@ let {
   LeftActions,
   MiddleActions,
   RightActions,
-  enableDropzone = false,
+  isDropzone = false,
   isCrossfade = true
 }: Props = $props();
 
@@ -53,39 +53,20 @@ let isLoading = $derived(viewerState == 'loading');
 let isReplacing = $derived(isPreviewReplacement || isTransition);
 
 let lastLoadedImageId = $state<string | null>(null);
-
-$effect(() => {
-  console.log('[Viewer] State changed:', {
-    viewerState,
-    imageId: image?.id,
-    imagePreview: imagePreview?.preview
-  });
-});
-
 // HANDLERS :: FILE DROP
 const handleDrop = async (e: CustomEvent) => {
-  console.log('[Viewer] Drop event:', {
-    acceptedFiles: e.detail.acceptedFiles,
-    replacingImage: imageCtx.activeImage?.id
-  });
-
-  if (!enableDropzone) return;
+  if (!isDropzone) return;
   imageCtx.handleFilesSelect(
     e.detail.acceptedFiles,
     e.detail.fileRejections,
     {
       onSuccess: (savedImage) => {
-        console.log('[Viewer] Upload success:', {
-          savedImageId: savedImage.id,
-          currentState: viewerState,
-          uploadQueue: imageCtx.getUploadQueue()
-        });
         resourceState.invalidateAndRefresh(
           resourceState.activeResource as HierarchicalResource
         );
       },
       onError: () => {
-        console.log('[Viewer] Upload error');
+        console.error('[Viewer] Upload error');
       }
     },
     imageCtx.activeImage
@@ -139,15 +120,8 @@ const handleDrop = async (e: CustomEvent) => {
         showError={false}
         onLoad={() => {
           if (image?.id === lastLoadedImageId) {
-            console.log('[Viewer] Skipping duplicate load event for:', image.id);
             return;
           }
-
-          console.log('[Viewer] Image loaded:', {
-            imageId: image?.id,
-            currentState: viewerState,
-            loadStatus: imageCtx.getLoadStatus(image?.id)
-          });
 
           imageCtx.setLoadStatus(image?.id, 'loaded');
           imageCtx.setActiveImage(image);
@@ -202,9 +176,9 @@ const handleDrop = async (e: CustomEvent) => {
 {/snippet}
 
 <div
-  class="relative flex h-full w-full flex-col {enableDropzone ? 'group' : ''}"
+  class="relative flex h-full w-full flex-col {isDropzone ? 'group' : ''}"
   style="transition: outline-color 150ms ease-out">
-  {#if enableDropzone}
+  {#if isDropzone}
     <Dropzone
       accept={['image/*']}
       on:drop={handleDrop}
@@ -215,7 +189,6 @@ const handleDrop = async (e: CustomEvent) => {
       <div
         class="border-offset-2 pointer-events-none absolute inset-0 z-50 m-4 rounded-xl border-4 border-dashed border-transparent transition-colors delay-500 group-hover:border-primary">
       </div>
-
       {#if isLoaded || isLoading || isTransition}
         {@render ViewerContent(isReplacing)}
       {/if}
@@ -226,6 +199,16 @@ const handleDrop = async (e: CustomEvent) => {
         {@render EmptyContent()}
       {/if}
     </Dropzone>
+  {:else}
+    {#if isLoaded || isLoading || isTransition}
+      {@render ViewerContent(isReplacing)}
+    {/if}
+    {#if isLoading || isTransition || isPreview || isPreviewReplacement}
+      {@render PreviewContent()}
+    {/if}
+    {#if isEmpty}
+      {@render EmptyContent()}
+    {/if}
   {/if}
   {#if image}
     <!-- Actions -->
