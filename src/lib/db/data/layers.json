@@ -8,7 +8,8 @@
     "name": "Ghost Signs",
     "nameShort": "Ghost Signs",
     "description": "Public record of Ghost Signs in Hong Kong",
-    "isPublished": true
+    "isPublished": true,
+    "isDefaultVisible": true
   },
   {
     "id": "Qw3Er5TyUi",
@@ -19,7 +20,8 @@
     "name": "Building Age",
     "nameShort": "Building Age",
     "description": "Visualizing the age of buildings across Hong Kong",
-    "isPublished": false
+    "isPublished": false,
+    "isDefaultVisible": false
   },
   {
     "id": "mN9Kp4WxLs2",
@@ -30,7 +32,8 @@
     "name": "People",
     "nameShort": "People",
     "description": "Explore the people behind Hong Kong street names",
-    "isPublished": true
+    "isPublished": true,
+    "isDefaultVisible": false
   },
   {
     "id": "hT5Ry7BvNm4",
@@ -41,7 +44,8 @@
     "name": "Religion",
     "nameShort": "Religion",
     "description": "Explore the religion inspiration behind Hong Kong street names",
-    "isPublished": true
+    "isPublished": true,
+    "isDefaultVisible": false
   },
   {
     "id": "pL6Wj9QkMx5",
@@ -52,7 +56,8 @@
     "name": "Places",
     "nameShort": "Places",
     "description": "Explore the places behind Hong Kong street names",
-    "isPublished": true
+    "isPublished": true,
+    "isDefaultVisible": false
   },
   {
     "id": "gD6Yp98kNm4Z",
@@ -63,6 +68,7 @@
     "name": "Industry",
     "nameShort": "Industry",
     "description": "Explore the industry and companies behind Hong Kong street names",
-    "isPublished": true
+    "isPublished": true,
+    "isDefaultVisible": false
   }
 ]
