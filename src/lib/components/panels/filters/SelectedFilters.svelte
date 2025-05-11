@@ -6,14 +6,14 @@ import type { Id, Property } from '$lib/types';
 
 type Props = {
   layerId: Id;
-  mapContext: any;
+  mapCtx: any;
   properties: Property[];
 };
 
-let { layerId, mapContext, properties }: Props = $props();
+let { layerId, mapCtx, properties }: Props = $props();
 
 let displayText = $derived(
-  displaySelectedFilters(mapContext.propertyFilters?.[layerId], properties)
+  displaySelectedFilters(mapCtx.propertyFilters?.[layerId], properties)
 );
 </script>
 

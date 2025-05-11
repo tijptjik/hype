@@ -12,13 +12,13 @@ let { panel, title, subtitle, onToggleInfo } = $props<{
   onToggleInfo?: (e: MouseEvent | TouchEvent) => void;
 }>();
 
-const mapContext = getMapContext();
+const mapCtx = getMapContext();
 
 // Setup and cleanup event listeners
 $effect(() => {
   const handler = (event: KeyboardEvent) => {
     if (event.key === 'Escape') {
-      mapContext.closePanel(panel);
+      mapCtx.closePanel(panel);
     }
   };
 
@@ -47,7 +47,7 @@ $effect(() => {
     <button
       class="btn btn-ghost btn-sm m-0 h-auto flex-none p-0 hover:bg-transparent hover:text-base-content/80 focus:outline-none focus:ring-0 focus-visible:text-primary"
       onclick={() => {
-        mapContext.closePanel(panel);
+        mapCtx.closePanel(panel);
       }}>
       <Icon src={XCircle} class="h-10 w-10 transition-transform duration-300" />
     </button>

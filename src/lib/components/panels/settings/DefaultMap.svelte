@@ -12,7 +12,7 @@ import { page } from '$app/stores';
 // TYPES
 import type { Layer } from '$lib/types';
 
-const mapContext = getMapContext();
+const mapCtx = getMapContext();
 const { session } = $page.data;
 
 const userId = $state(session?.user?.id);
@@ -22,7 +22,7 @@ let selectedLayers = $state(
 let timer: number;
 
 const cachedData = $state(
-  mapContext.queryClient.getQueryData([
+  mapCtx.queryClient.getQueryData([
     'layers',
     [],
     []
@@ -36,9 +36,9 @@ $effect(() => {
   getLocale;
   layers = cachedData.map((layer: Layer) => ({
     ...layer,
-    project: mapContext.getProject(layer),
-    organisation: mapContext.getProject(layer)
-      ? mapContext.getOrganisation(mapContext.getProject(layer)!)
+    project: mapCtx.getProject(layer),
+    organisation: mapCtx.getProject(layer)
+      ? mapCtx.getOrganisation(mapCtx.getProject(layer)!)
       : undefined
   }));
 });

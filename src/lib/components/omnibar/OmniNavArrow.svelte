@@ -8,7 +8,7 @@ import { getMapContext } from '$lib/context/map.svelte';
 
 // CONTEXT
 const omniCtx = getOmniContext();
-const mapContext = getMapContext();
+const mapCtx = getMapContext();
 
 // PROPS
 type Props = {
@@ -17,8 +17,8 @@ type Props = {
 
 let { direction }: Props = $props();
 let currentIndex = $derived(
-  mapContext.state.active.collection?.items.findIndex(
-    (item) => item.id === mapContext.state.active.feature?.id
+  mapCtx.state.active.collection?.items.findIndex(
+    (item) => item.id === mapCtx.state.active.feature?.id
   ) || -1
 );
 </script>
@@ -29,17 +29,17 @@ let currentIndex = $derived(
     {direction === 'right' ? 'w-140:rounded-r-md ml-1.5' : 'w-140:rounded-l-md mr-1.5'}"
   disabled={direction === 'left'
     ? currentIndex <= 0
-    : mapContext.state.active.collection!.items.length - 1 <= currentIndex}
+    : mapCtx.state.active.collection!.items.length - 1 <= currentIndex}
   onclick={() =>
     direction === 'left'
-      ? mapContext.navPrevious({ isCardOpen: omniCtx.state.isCardOpen })
-      : mapContext.navNext({ isCardOpen: omniCtx.state.isCardOpen })}>
+      ? mapCtx.navPrevious({ isCardOpen: omniCtx.state.isCardOpen })
+      : mapCtx.navNext({ isCardOpen: omniCtx.state.isCardOpen })}>
   <Icon
     src={direction === 'left' ? ChevronLeft : ChevronRight}
     class="h-5 w-5 group-hover:text-neutral-content {(
       direction === 'left'
         ? currentIndex <= 0
-        : mapContext.state.active.collection!.items.length - 1 <= currentIndex
+        : mapCtx.state.active.collection!.items.length - 1 <= currentIndex
     )
       ? 'opacity-50'
       : ''} transition-opacity duration-200" />

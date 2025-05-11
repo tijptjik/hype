@@ -14,27 +14,27 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { Squares2x2 } from '@steeze-ui/heroicons';
 
 // CONTEXT
-const mapContext = getMapContext();
+const mapCtx = getMapContext();
 const omniCtx = getOmniContext();
 // STATE
 let searchTerm = $state('');
 
 // Get wishlisted features
 let wishlistedFeatures = $derived(
-  mapContext.state.userFeatures.wishlisted?.flatMap((wishlist) => {
-    const feature = mapContext.state.resources.feature.find(
+  mapCtx.state.userFeatures.wishlisted?.flatMap((wishlist) => {
+    const feature = mapCtx.state.resources.feature.find(
       (f) => f.id === wishlist.featureId
     );
 
     // Skip if feature doesn't exist
     if (!feature) return [];
 
-    const layer = mapContext.getLayer(feature);
-    const project = layer ? mapContext.getProject(layer) : undefined;
-    const organisation = project ? mapContext.getOrganisation(project) : undefined;
+    const layer = mapCtx.getLayer(feature);
+    const project = layer ? mapCtx.getProject(layer) : undefined;
+    const organisation = project ? mapCtx.getOrganisation(project) : undefined;
 
     // Check if this project has only one layer
-    const projectLayerCount = mapContext.state.resources.layer.filter(
+    const projectLayerCount = mapCtx.state.resources.layer.filter(
       (l) => l.projectId === project?.id
     ).length;
 
@@ -85,7 +85,7 @@ const filteredFeatures = $derived(filterFeatures(wishlistedFeatures, searchTerm)
             class="min-h-21 flex flex-row items-center justify-between gap-4 bg-black px-4 py-2 text-[#374151]"
             animate:flip={{ duration: 200 }}
             onclick={() =>
-              omniCtx.handleFeatureSelection(mapContext, wishlist.featureId, {
+              omniCtx.handleFeatureSelection(mapCtx, wishlist.featureId, {
                 openCard: true
               })}>
             <Icon src={Squares2x2} class="h-5 w-5 flex-shrink-0" theme="fill" />

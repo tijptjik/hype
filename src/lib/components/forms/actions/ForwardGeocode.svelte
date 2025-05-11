@@ -18,7 +18,7 @@ import type { LanguageTag } from '$lib/types';
 import type { FeatureForm } from '$lib/context/forms.svelte';
 
 // CONTEXT
-let mapContext = getMapContext();
+let mapCtx = getMapContext();
 
 // STATE : PROPS
 let {
@@ -63,7 +63,7 @@ function getStreetAddressAndNeighbourhood(address: string): {
 async function handleGeocode(e: Event, updateCoords: boolean = false) {
   e.preventDefault();
 
-  mapContext.zoomToMarkerOnly = false;
+  mapCtx.zoomToMarkerOnly = false;
 
   try {
     let addressToLookup =
@@ -147,7 +147,7 @@ let handleGeocodeToLocate = (e: Event) => {
   label: string
 )}
   <button
-    class="btn-rounded bg-fuchsia-700 hover:bg-fuchsia-800 btn text-base-content transition-colors duration-300"
+    class="btn-rounded btn bg-fuchsia-700 text-base-content transition-colors duration-300 hover:bg-fuchsia-800"
     class:px-6={isGeocoding}
     {onclick}
     disabled={isGeocoding}>

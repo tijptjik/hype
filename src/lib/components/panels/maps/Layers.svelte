@@ -16,11 +16,11 @@ import { getMapContext } from '$lib/context/map.svelte';
 import type { Layer, Project } from '$lib/types';
 
 // Initialize query client and map state
-const mapContext = getMapContext();
+const mapCtx = getMapContext();
 
 // Get cached features for counting
-const layers = $derived(mapContext.state.resources.layer);
-const selectedLayers = $derived(mapContext.state.prisms.layer);
+const layers = $derived(mapCtx.state.resources.layer);
+const selectedLayers = $derived(mapCtx.state.prisms.layer);
 
 let searchTerm = $state('');
 
@@ -50,7 +50,7 @@ const filteredLayers = $derived(filterLayers(layers, searchTerm));
 
 {#snippet SelectedLayers()}
   <SelectedResources
-    {mapContext}
+    {mapCtx}
     type="layer"
     resources={layers}
     selectedIds={selectedLayers}
@@ -70,15 +70,15 @@ const filteredLayers = $derived(filterLayers(layers, searchTerm));
   {/if}
   <ResourceContainer>
     {#each filteredLayers as layer}
-      {@const project = mapContext.getProject(layer)}
-      {@const organisation = mapContext.getOrganisation(project)}
+      {@const project = mapCtx.getProject(layer)}
+      {@const organisation = mapCtx.getOrganisation(project)}
       <FilteredLayer
         {layer}
         {project}
         {organisation}
         selectedClass="bg-secondary"
         isSelected={selectedLayers.includes(layer.id)}
-        onClick={() => mapContext.toggleLayer(layer.id)} />
+        onClick={() => mapCtx.toggleLayer(layer.id)} />
     {/each}
   </ResourceContainer>
 </Section>

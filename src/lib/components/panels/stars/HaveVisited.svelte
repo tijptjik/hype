@@ -22,27 +22,27 @@ import { enGB, zhCN, zhHK } from 'date-fns/locale';
 import type { UserFeatureExtended } from '$lib/types';
 
 // CONTEXT
-const mapContext = getMapContext();
+const mapCtx = getMapContext();
 const omniCtx = getOmniContext();
 
 let searchTerm = $state('');
 
 // Get visited features
 let visitedFeatures: UserFeatureExtended[] = $derived(
-  mapContext.state.userFeatures.visited?.flatMap((visited) => {
-    const feature = mapContext.state.resources.feature.find(
+  mapCtx.state.userFeatures.visited?.flatMap((visited) => {
+    const feature = mapCtx.state.resources.feature.find(
       (f) => f.id === visited.featureId
     );
 
     // Skip if feature doesn't exist
     if (!feature) return [];
 
-    const layer = feature ? mapContext.getLayer(feature) : undefined;
-    const project = layer ? mapContext.getProject(layer) : undefined;
-    const organisation = project ? mapContext.getOrganisation(project) : undefined;
+    const layer = feature ? mapCtx.getLayer(feature) : undefined;
+    const project = layer ? mapCtx.getProject(layer) : undefined;
+    const organisation = project ? mapCtx.getOrganisation(project) : undefined;
 
     // Check if this project has only one layer
-    const projectLayerCount = mapContext.state.resources.layer.filter(
+    const projectLayerCount = mapCtx.state.resources.layer.filter(
       (l) => l.projectId === project?.id
     ).length;
 
@@ -93,7 +93,7 @@ const filteredFeatures = $derived(filterFeatures(visitedFeatures, searchTerm));
             class="min-h-21 flex flex-row items-start justify-between gap-4 bg-black px-4 py-2 text-[#374151]"
             animate:flip={{ duration: 200 }}
             onclick={() =>
-              omniCtx.handleFeatureSelection(mapContext, visited.featureId, {
+              omniCtx.handleFeatureSelection(mapCtx, visited.featureId, {
                 openCard: true
               })}>
             <Icon src={Squares2x2} class="h-5 w-5 flex-shrink-0" theme="fill" />

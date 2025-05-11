@@ -34,7 +34,7 @@ let maplibre: any;
 let session = $page.data.session;
 
 // CONTEXT
-const mapContext = getMapContext();
+const mapCtx = getMapContext();
 const omniCtx = getOmniContext();
 
 let lastHorizontalOffset = $state(0);
@@ -49,7 +49,7 @@ onMount(async () => {
 
   maplibre = monkeyPatchMapLibre();
 
-  mapContext.map = new maplibre.Map({
+  mapCtx.map = new maplibre.Map({
     container: mapContainer,
     style: {
       version: 8,
@@ -66,8 +66,8 @@ onMount(async () => {
     attributionControl: false
   });
 
-  mapContext.map!.on('load', () => {
-    mapContext.map!.addSource('hongkong-latest', {
+  mapCtx.map!.on('load', () => {
+    mapCtx.map!.addSource('hongkong-latest', {
       type: 'vector',
       url: 'https://tiles.hype.hk/basemap/hongkong-latest.json'
     });
@@ -75,7 +75,7 @@ onMount(async () => {
     console.log(session?.user?.experimental);
 
     if (!session?.user?.experimental.noLabelsMode) {
-      mapContext.map!.addLayer({
+      mapCtx.map!.addLayer({
         id: 'earth',
         type: 'fill',
         source: 'hongkong-latest',
@@ -89,7 +89,7 @@ onMount(async () => {
       });
     }
 
-    mapContext.map!.addLayer({
+    mapCtx.map!.addLayer({
       id: 'roads',
       source: 'hongkong-latest',
       'source-layer': 'roads',
@@ -98,7 +98,7 @@ onMount(async () => {
       paint: { 'line-color': '#4987E2' }
     });
 
-    mapContext.map!.addLayer({
+    mapCtx.map!.addLayer({
       id: 'buildings',
       source: 'hongkong-latest',
       'source-layer': 'buildings',
@@ -116,7 +116,7 @@ onMount(async () => {
       }
     });
 
-    mapContext.map!.addLayer({
+    mapCtx.map!.addLayer({
       id: 'address_label',
       type: 'symbol',
       source: 'hongkong-latest',
@@ -143,7 +143,7 @@ onMount(async () => {
     });
 
     if (!session?.user?.experimental.noLabelsMode) {
-      mapContext.map!.addLayer({
+      mapCtx.map!.addLayer({
         id: 'places_locality',
         type: 'symbol',
         source: 'hongkong-latest',
@@ -550,7 +550,7 @@ onMount(async () => {
         }
       });
 
-      mapContext.map!.addLayer({
+      mapCtx.map!.addLayer({
         id: 'places_subplace',
         type: 'symbol',
         source: 'hongkong-latest',
@@ -884,7 +884,7 @@ onMount(async () => {
         }
       });
 
-      mapContext.map!.addLayer({
+      mapCtx.map!.addLayer({
         id: 'roads_labels_minor',
         type: 'symbol',
         source: 'hongkong-latest',
@@ -1198,7 +1198,7 @@ onMount(async () => {
 
     if ($page.data.session) {
       // Initial marker setup
-      updateMarkers(mapContext, mapContext.getVisibleFeatures(), maplibre);
+      updateMarkers(mapCtx, mapCtx.getVisibleFeatures(), maplibre);
       // TODO: Add a cleanup function to remove the markers when the component unmounts
 
       // Initialize and store the GeolocateControl
@@ -1214,7 +1214,7 @@ onMount(async () => {
       // HACK: This is a hack to prevent the geolocate control from updating the camera
       geolocateControl._updateCamera = () => {};
 
-      mapContext.map!.addControl(geolocateControl, 'bottom-right');
+      mapCtx.map!.addControl(geolocateControl, 'bottom-right');
 
       // TODO : Reactivate
       // setTimeout(() => {
@@ -1223,7 +1223,7 @@ onMount(async () => {
 
       navigator.geolocation.watchPosition(
         (geoLocation) => {
-          mapContext.state.userLocation = geoLocation;
+          mapCtx.state.userLocation = geoLocation;
         },
         (error) => {
           // TODO: Add a fallback to the default location
@@ -1234,35 +1234,35 @@ onMount(async () => {
     }
   });
 
-  mapContext.map!.on('click', (e) => {
+  mapCtx.map!.on('click', (e) => {
     e.originalEvent.preventDefault();
     e.originalEvent.stopPropagation();
     const target = e.originalEvent.target as HTMLElement;
     if (target.dataset.type === 'marker') {
       const featureId = target.dataset.featureId;
       if (!featureId) return;
-      omniCtx.handleFeatureSelection(mapContext, featureId, { openCard: true });
-    } else if (Object.values(mapContext.state.panels).some((panel) => panel)) {
-      mapContext.closeAllPanels();
+      omniCtx.handleFeatureSelection(mapCtx, featureId, { openCard: true });
+    } else if (Object.values(mapCtx.state.panels).some((panel) => panel)) {
+      mapCtx.closeAllPanels();
     } else {
       omniCtx.close();
     }
   });
 
-  // mapContext.map!.addControl(new NavigationControl({}), 'bottom-right');
-  // mapContext.map!.addControl(new ScaleControl({ maxWidth: 80, unit: 'metric' }), 'bottom-left');
-  // mapContext.map!.addControl(new AttributionControl({ compact: true }), 'bottom-right');
+  // mapCtx.map!.addControl(new NavigationControl({}), 'bottom-right');
+  // mapCtx.map!.addControl(new ScaleControl({ maxWidth: 80, unit: 'metric' }), 'bottom-left');
+  // mapCtx.map!.addControl(new AttributionControl({ compact: true }), 'bottom-right');
 });
 
 $effect(() => {
   // Rerender the map when the features change
-  mapContext.features;
-  updateMarkers(mapContext, mapContext.getVisibleFeatures(), maplibre);
+  mapCtx.features;
+  updateMarkers(mapCtx, mapCtx.getVisibleFeatures(), maplibre);
 });
 
 // STATE : DERIVED
 let horizontalOffset = $derived(() => {
-  const { filters, maps, stars, settings } = mapContext.state.panels;
+  const { filters, maps, stars, settings } = mapCtx.state.panels;
   const leftPanelOpen = maps || stars;
   const rightPanelOpen = filters || settings;
   if (window.innerWidth < MOBILE_MAX_WIDTH) {
@@ -1281,18 +1281,18 @@ let horizontalOffset = $derived(() => {
 // even after a panel is triggered.
 $effect(() => {
   if (horizontalOffset() !== lastHorizontalOffset) {
-    if (mapContext.map) {
-      let coordinates = mapContext.map!.getCenter();
-      const centerInPx: Point = mapContext.map!.project(coordinates);
+    if (mapCtx.map) {
+      let coordinates = mapCtx.map!.getCenter();
+      const centerInPx: Point = mapCtx.map!.project(coordinates);
       const newPoint: PointLike = new Point(
         centerInPx.x +
           (horizontalOffset() === 0 ? lastHorizontalOffset : -horizontalOffset()),
         centerInPx.y
       );
-      const newCenter: LatLng = mapContext.map!.unproject(newPoint);
-      mapContext.map!.easeTo({ center: newCenter });
+      const newCenter: LatLng = mapCtx.map!.unproject(newPoint);
+      mapCtx.map!.easeTo({ center: newCenter });
     } else {
-      console.error('mapContext.map is not defined');
+      console.error('mapCtx.map is not defined');
     }
     lastHorizontalOffset = horizontalOffset();
   }
@@ -1304,12 +1304,12 @@ $effect(() => {
   class="map absolute inset-0 overflow-hidden rounded-2xl caret-transparent"
   data-testid="map"
   bind:this={mapContainer}>
-  {#if $page.data.session && !mapContext.state.prisms.layer.length && !mapContext.state.panels.maps}
+  {#if $page.data.session && !mapCtx.state.prisms.layer.length && !mapCtx.state.panels.maps}
     <div
       class="pointer-events-none absolute inset-0 z-50 mx-auto flex cursor-pointer items-center justify-center bg-black/70 text-center caret-transparent"
       in:fade={{ duration: 800, delay: 3000, easing: cubicInOut }}
       out:fade={{ duration: 300, easing: cubicInOut }}
-      onclick={() => (mapContext.state.panels.maps = true)}>
+      onclick={() => (mapCtx.state.panels.maps = true)}>
       <div
         class="group pointer-events-auto flex max-w-xs flex-col items-center gap-8 rounded-lg border-2 border-[#4987E2] bg-black p-8 px-8 font-mono shadow-[0_0_15px_rgba(0,0,255,0.5)]">
         <p class="text-lg text-base-content">{m.map__no_markers_without_layers()}</p>

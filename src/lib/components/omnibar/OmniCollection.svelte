@@ -28,12 +28,12 @@ let {
 
 // CONTEXT
 const omniCtx = getOmniContext();
-const mapContext = getMapContext();
+const mapCtx = getMapContext();
 
 // STATE
 let currentIndex = $derived(
-  mapContext.state.active.collection?.items.findIndex(
-    (item) => item.id === mapContext.state.active.feature?.id
+  mapCtx.state.active.collection?.items.findIndex(
+    (item) => item.id === mapCtx.state.active.feature?.id
   ) || -1
 );
 let listContainer: HTMLUListElement | null = $state(null);
@@ -55,7 +55,7 @@ function handleItemClick(event: Event, index: number) {
   if (mode === 'navigation') {
     omniCtx.toggleTray(event);
   }
-  mapContext.navToIndex(index, { isCardOpen: omniCtx.state.isCardOpen });
+  mapCtx.navToIndex(index, { isCardOpen: omniCtx.state.isCardOpen });
   omniCtx.openCard();
 }
 

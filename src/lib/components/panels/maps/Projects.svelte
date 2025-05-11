@@ -16,11 +16,11 @@ import { getMapContext } from '$lib/context/map.svelte';
 import type { Project } from '$lib/types';
 
 // Initialize query client and map state
-const mapContext = getMapContext();
+const mapCtx = getMapContext();
 
 // Get cached features for counting
-const projects = $derived(mapContext.state.resources.project);
-const selectedProjects = $derived(mapContext.state.prisms.project);
+const projects = $derived(mapCtx.state.resources.project);
+const selectedProjects = $derived(mapCtx.state.prisms.project);
 
 let searchTerm = $state('');
 
@@ -52,7 +52,7 @@ let isDefaultOpen = $derived(document.body.clientHeight > 1000);
 
 {#snippet SelectedProjects()}
   <SelectedResources
-    {mapContext}
+    {mapCtx}
     type="project"
     resources={projects}
     selectedIds={selectedProjects}
@@ -75,10 +75,10 @@ let isDefaultOpen = $derived(document.body.clientHeight > 1000);
     {#each filteredProjects as resource}
       <FilteredResource
         {resource}
-        resourceParent={mapContext.getOrganisation(resource)}
+        resourceParent={mapCtx.getOrganisation(resource)}
         selectedClass="bg-accent"
         isSelected={selectedProjects.includes(resource.id)}
-        onClick={() => mapContext.toggleProject(resource.id)} />
+        onClick={() => mapCtx.toggleProject(resource.id)} />
     {/each}
   </ResourceContainer>
 </Section>

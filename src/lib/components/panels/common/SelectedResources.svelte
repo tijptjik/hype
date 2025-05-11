@@ -18,7 +18,7 @@ type Neighbourhood = {
 
 // First, get the props without destructuring
 let props = $props<{
-  mapContext: any;
+  mapCtx: any;
   type: 'organisation' | 'project' | 'layer' | 'neighbourhood';
   resources: Resource[] | Neighbourhood[];
   selectedIds: Id[] | string[];
@@ -32,16 +32,16 @@ let colorClass = $derived(props.colorClass ?? 'text-blue-400');
 function handleToggle(id: Id) {
   switch (props.type) {
     case 'organisation':
-      props.mapContext.toggleOrganisation(id);
+      props.mapCtx.toggleOrganisation(id);
       break;
     case 'project':
-      props.mapContext.toggleProject(id);
+      props.mapCtx.toggleProject(id);
       break;
     case 'layer':
-      props.mapContext.toggleLayer(id);
+      props.mapCtx.toggleLayer(id);
       break;
     case 'neighbourhood':
-      props.mapContext.toggleNeighbourhood(id);
+      props.mapCtx.toggleNeighbourhood(id);
       break;
   }
 }
@@ -75,14 +75,11 @@ function handleToggle(id: Id) {
     <p class="pb-2 text-sm text-base-content/60">
       {@html props.type == 'layer'
         ? m.maps__layers_none()
-        : props.type == 'project' &&
-            props.mapContext.state.prisms.organisation.length == 0
+        : props.type == 'project' && props.mapCtx.state.prisms.organisation.length == 0
           ? m.maps__projects_none()
-          : props.type == 'project' &&
-              props.mapContext.state.prisms.organisation.length > 0
+          : props.type == 'project' && props.mapCtx.state.prisms.organisation.length > 0
             ? m.maps__projects_none_with_n_organisations({
-                organisations:
-                  props.mapContext.state.prisms.organisation.length.toString()
+                organisations: props.mapCtx.state.prisms.organisation.length.toString()
               })
             : props.type == 'neighbourhood'
               ? m.maps__neighbourhoods_none()

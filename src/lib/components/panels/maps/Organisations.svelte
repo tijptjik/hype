@@ -16,11 +16,11 @@ import { getMapContext } from '$lib/context/map.svelte';
 import type { Organisation } from '$lib/types';
 
 // Initialize query client and map state
-const mapContext = getMapContext();
+const mapCtx = getMapContext();
 
 // Get cached features for counting
-const organisations = $derived(mapContext.state.resources.organisation);
-const selectedOrganisations = $derived(mapContext.state.prisms.organisation);
+const organisations = $derived(mapCtx.state.resources.organisation);
+const selectedOrganisations = $derived(mapCtx.state.prisms.organisation);
 
 let searchTerm = $state('');
 
@@ -52,7 +52,7 @@ let isDefaultOpen = $derived(document.body.clientHeight > 1000);
 
 {#snippet SelectedOrganisations()}
   <SelectedResources
-    {mapContext}
+    {mapCtx}
     type="organisation"
     resources={organisations}
     selectedIds={selectedOrganisations}
@@ -77,7 +77,7 @@ let isDefaultOpen = $derived(document.body.clientHeight > 1000);
         {resource}
         isSelected={selectedOrganisations.includes(resource.id)}
         selectedClass="bg-primary"
-        onClick={() => mapContext.toggleOrganisation(resource.id)} />
+        onClick={() => mapCtx.toggleOrganisation(resource.id)} />
     {/each}
   </ResourceContainer>
 </Section>

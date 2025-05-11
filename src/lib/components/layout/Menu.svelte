@@ -15,7 +15,7 @@ import type { IconSource } from '@steeze-ui/svelte-icon';
 import type { PanelState } from '$lib/context/map.svelte';
 import { goto } from '$app/navigation';
 // CONTEXT
-const mapContext = getMapContext();
+const mapCtx = getMapContext();
 // CONFIG
 import { MOBILE_MAX_WIDTH } from '$lib/index';
 // ANIMATION
@@ -37,7 +37,7 @@ function handleMenuClick(panel: 'filters' | 'maps' | 'stars' | 'settings' | 'adm
     goto(ADMIN_PATH);
   } else {
     const closeAll = window.innerWidth < 1320;
-    mapContext.togglePanel(panel as keyof PanelState, closeAll);
+    mapCtx.togglePanel(panel as keyof PanelState, closeAll);
   }
 }
 

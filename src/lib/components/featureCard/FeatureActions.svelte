@@ -27,7 +27,7 @@ let { feature }: { feature: Feature } = $props();
 
 // STATE : LOCAL
 let featureCardContext = getFeatureCardContext();
-let mapContext = getMapContext();
+let mapCtx = getMapContext();
 const flash = getFlash(page);
 
 // STATE : DERIVED
@@ -35,11 +35,11 @@ let isSubmittingWishlist = $state(false);
 let isSubmittingVisit = $state(false);
 
 let wishlistedFeature = $derived(
-  mapContext.getWishlistUserFeatures().find((uf) => uf.featureId === feature.id)
+  mapCtx.getWishlistUserFeatures().find((uf) => uf.featureId === feature.id)
 );
 let isWishlisted = $derived(!!wishlistedFeature);
 let visitedFeature = $derived(
-  mapContext.getVisitedUserFeatures().find((uf) => uf.featureId === feature.id)
+  mapCtx.getVisitedUserFeatures().find((uf) => uf.featureId === feature.id)
 );
 let isVisited = $derived(!!visitedFeature);
 
@@ -49,7 +49,7 @@ async function toggleWishlisted() {
 
   try {
     const data = {
-      userId: mapContext.userId,
+      userId: mapCtx.userId,
       featureId: feature.id,
       isWishlisted: !isWishlisted,
       isVisited: visitedFeature?.isVisited || false,
@@ -65,7 +65,7 @@ async function toggleWishlisted() {
     if (!response.ok) throw new Error('Failed to update wishlist status');
 
     // Optimistically update the UI
-    await mapContext.invalidateAndRefresh('userFeatures');
+    await mapCtx.invalidateAndRefresh('userFeatures');
   } catch (error) {
     console.error('Error updating wishlist status:', error);
     $flash = { type: 'error', message: 'Failed to update wishlist status' };
@@ -80,7 +80,7 @@ async function toggleVisited() {
 
   try {
     const data = {
-      userId: mapContext.userId,
+      userId: mapCtx.userId,
       featureId: feature.id,
       isVisited: !isVisited,
       isWishlisted: false, // Always set wishlist to false when marking as visited
@@ -96,7 +96,7 @@ async function toggleVisited() {
     if (!response.ok) throw new Error('Failed to update visited status');
 
     // Optimistically update the UI
-    await mapContext.invalidateAndRefresh('userFeatures');
+    await mapCtx.invalidateAndRefresh('userFeatures');
   } catch (error) {
     console.error('Error updating visited status:', error);
     $flash = { type: 'error', message: 'Failed to update visited status' };
@@ -123,9 +123,9 @@ async function submitMissingReport() {
     // Create FormData for file uploads
     const formData = new FormData();
 
-    const layer = mapContext.getLayer(feature)!;
-    const project = mapContext.getProject(layer)!;
-    const organisation = mapContext.getOrganisation(project)!;
+    const layer = mapCtx.getLayer(feature)!;
+    const project = mapCtx.getProject(layer)!;
+    const organisation = mapCtx.getOrganisation(project)!;
 
     // Add task data
     const taskData = {
@@ -196,9 +196,9 @@ async function submitNewPhotos() {
     // Create FormData for file uploads
     const formData = new FormData();
 
-    const layer = mapContext.getLayer(feature)!;
-    const project = mapContext.getProject(layer)!;
-    const organisation = mapContext.getOrganisation(project)!;
+    const layer = mapCtx.getLayer(feature)!;
+    const project = mapCtx.getProject(layer)!;
+    const organisation = mapCtx.getOrganisation(project)!;
 
     // Add task data
     const taskData = {

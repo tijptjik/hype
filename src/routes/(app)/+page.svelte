@@ -10,9 +10,9 @@ import { getMapContext } from '$lib/context/map.svelte';
 // CONTEXT
 const { session } = $page.data;
 
-const mapContext = getMapContext();
+const mapCtx = getMapContext();
 if (!session) {
-  mapContext.startCircularFlight([114.157, 22.319304]);
+  mapCtx.startCircularFlight([114.157, 22.319304]);
 }
 </script>
 

@@ -11,7 +11,7 @@ import { getMapContext } from '$lib/context/map.svelte';
 import { getOmniContext, PageState } from '$lib/context/omni.svelte';
 
 // CONTEXT
-let mapContext = getMapContext();
+let mapCtx = getMapContext();
 let omniCtx = getOmniContext();
 
 // STATE : PROPS
@@ -19,7 +19,7 @@ let { children }: { children: any } = $props();
 
 // STATE : DERIVED
 let horizontalOffset = $derived(() => {
-  const { filters, maps, stars, settings } = mapContext.state.panels;
+  const { filters, maps, stars, settings } = mapCtx.state.panels;
   const leftPanelOpen = maps || stars;
   const rightPanelOpen = filters || settings;
   if (window.innerWidth < MOBILE_MAX_WIDTH) {
@@ -55,7 +55,7 @@ function handleClickOutside(e: MouseEvent) {
   if (target?.dataset?.type === 'marker') {
     const featureId = target.dataset.featureId;
     if (featureId) {
-      omniCtx.handleFeatureSelection(mapContext, featureId);
+      omniCtx.handleFeatureSelection(mapCtx, featureId);
     }
   } else if (target.localName === 'canvas') {
     // omniCtx.pageState = PageState.NeedTransition;

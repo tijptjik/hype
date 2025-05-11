@@ -14,12 +14,12 @@ import { getMapContext } from '$lib/context/map.svelte';
 import type { Id, Property } from '$lib/types'; // Ensure Property type is imported
 
 // Initialize map state
-const mapContext = getMapContext();
+const mapCtx = getMapContext();
 
-let organisations = $derived(mapContext.state.resources.organisation);
-let projects = $derived(mapContext.state.resources.project);
-let layers = $derived(mapContext.state.resources.layer);
-let activeLayerIds = $derived(new Set(mapContext.state.prisms.layer));
+let organisations = $derived(mapCtx.state.resources.organisation);
+let projects = $derived(mapCtx.state.resources.project);
+let layers = $derived(mapCtx.state.resources.layer);
+let activeLayerIds = $derived(new Set(mapCtx.state.prisms.layer));
 
 // Helper function to find layer and project details
 function getLayerDetails(layerId: string) {
@@ -94,7 +94,7 @@ let layerCategories = $derived(
 </script>
 
 {#snippet SelectedCategories(layerId: Id, properties: Property[])}
-  <SelectedFilters {layerId} {mapContext} {properties} />
+  <SelectedFilters {layerId} {mapCtx} {properties} />
 {/snippet}
 
 <!-- LAYOUT -->

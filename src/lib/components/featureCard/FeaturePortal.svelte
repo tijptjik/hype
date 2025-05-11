@@ -14,14 +14,12 @@ import { MOBILE_MAX_WIDTH } from '$lib/index';
 let { feature }: { feature: Feature } = $props();
 
 // STATE : CONTEXT
-const mapContext = getMapContext();
+const mapCtx = getMapContext();
 
 let innerWidth = $state();
 
-let rightOpen = $derived(
-  mapContext.state.panels.filters || mapContext.state.panels.settings
-);
-let leftOpen = $derived(mapContext.state.panels.maps || mapContext.state.panels.stars);
+let rightOpen = $derived(mapCtx.state.panels.filters || mapCtx.state.panels.settings);
+let leftOpen = $derived(mapCtx.state.panels.maps || mapCtx.state.panels.stars);
 
 function getOffset() {
   const boundsMap = document.getElementById('map')?.getBoundingClientRect();
@@ -49,9 +47,9 @@ function getOffset() {
 function flyToFeature(duration: number = 2000, delay: number = 300) {
   setTimeout(() => {
     let { xOffset, yOffset } = getOffset();
-    if (feature && mapContext.map) {
+    if (feature && mapCtx.map) {
       // @ts-ignore
-      mapContext.map.cachedFlyTo({
+      mapCtx.map.cachedFlyTo({
         center: [
           feature.geometry.coordinates[0],
           feature.geometry.coordinates[1]

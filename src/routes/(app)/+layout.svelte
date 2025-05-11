@@ -49,13 +49,13 @@ setOmniContext(getMapContext());
 
 // CONTEXT - Get Map & Omni Context
 const omniCtx = getOmniContext();
-const mapContext = getMapContext();
+const mapCtx = getMapContext();
 
-mapContext.registerKeydownHandlers();
+mapCtx.registerKeydownHandlers();
 
 // Compute map container classes based on visible panels
 // let mapContainerClasses = $derived(() => {
-//   const { filters, maps, stars, settings } = mapContext.state.panels;
+//   const { filters, maps, stars, settings } = mapCtx.state.panels;
 //   const leftPanelOpen = filters || maps;
 //   const rightPanelOpen = stars || settings;
 
@@ -80,16 +80,16 @@ $effect(() => {
     <main
       class="relative top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
       <!-- Panels -->
-      {#if mapContext.state.panels.filters}
+      {#if mapCtx.state.panels.filters}
         <Filters />
       {/if}
-      {#if mapContext.state.panels.maps}
+      {#if mapCtx.state.panels.maps}
         <Maps />
       {/if}
-      {#if mapContext.state.panels.stars}
+      {#if mapCtx.state.panels.stars}
         <Stars />
       {/if}
-      {#if mapContext.state.panels.settings}
+      {#if mapCtx.state.panels.settings}
         <Settings />
       {/if}
       <!-- Map Container -->

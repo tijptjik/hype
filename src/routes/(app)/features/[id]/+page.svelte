@@ -33,7 +33,7 @@ import type { Feature, Layer, Project } from '$lib/types';
 let featureId: string = $state($page.params.id);
 
 // CONTEXT
-const mapContext = getMapContext();
+const mapCtx = getMapContext();
 const omniCtx = getOmniContext();
 
 // CONTEXT :: FEATURE CARD
@@ -47,51 +47,51 @@ let mode = $derived(featureCardContext.state.mode);
 
 // EFFECTS
 $effect(() => {
-  if (!mapContext.isInitialised) {
+  if (!mapCtx.isInitialised) {
     return;
   }
   featureId = $page.params.id;
-  if (mapContext.getActiveCollection() == null) {
+  if (mapCtx.getActiveCollection() == null) {
     void handleFeatureSelection();
   }
 });
 
 // Helper function to handle async operations
 async function handleFeatureSelection() {
-  await omniCtx.handleFeatureSelection(mapContext, featureId);
+  await omniCtx.handleFeatureSelection(mapCtx, featureId);
 }
 </script>
 
-{#if mapContext && mapContext.isInitialised && mapContext.features[featureId]}
+{#if mapCtx && mapCtx.isInitialised && mapCtx.features[featureId]}
   <FeatureCard>
     <ImageProvider
       mode="gallery"
       isAdminMode={false}
       refType="feature"
       refId={featureId}
-      refOrganisation={mapContext.getOrganisation(
-        mapContext.getProject(
-          mapContext.getLayer(mapContext.features[featureId] as Feature) as Layer
+      refOrganisation={mapCtx.getOrganisation(
+        mapCtx.getProject(
+          mapCtx.getLayer(mapCtx.features[featureId] as Feature) as Layer
         ) as Project
       )}
-      refProject={mapContext.getProject(
-        mapContext.getLayer(mapContext.features[featureId] as Feature) as Layer
+      refProject={mapCtx.getProject(
+        mapCtx.getLayer(mapCtx.features[featureId] as Feature) as Layer
       ) as Project}>
       {#if mode === FeatureCardMode.Display}
         <div
           class="flex-shink-0 flex h-full w-full flex-col overflow-y-auto overflow-x-visible">
           <FeatureGallery />
-          <FeatureBreadcrumbs feature={mapContext.features[featureId]} />
-          <FeatureTitle feature={mapContext.features[featureId]} />
-          <FeatureDescription feature={mapContext.features[featureId]} />
+          <FeatureBreadcrumbs feature={mapCtx.features[featureId]} />
+          <FeatureTitle feature={mapCtx.features[featureId]} />
+          <FeatureDescription feature={mapCtx.features[featureId]} />
           <Spacer />
           <div class="flex min-h-8 w-full flex-shrink-0 flex-col overflow-x-visible">
             <div class="flex-grow-1 min-h-50 flex w-full flex-shrink-0 overflow-hidden">
               <div class="flex-1 overflow-y-auto bg-black">
-                <FeatureProperties feature={mapContext.features[featureId]} />
+                <FeatureProperties feature={mapCtx.features[featureId]} />
               </div>
               <div class="w-48 flex-shrink-0 overflow-visible">
-                <FeaturePortal feature={mapContext.features[featureId]} />
+                <FeaturePortal feature={mapCtx.features[featureId]} />
               </div>
               <div class="h-auto w-4 flex-shrink-0 bg-black"></div>
             </div>
@@ -107,7 +107,7 @@ async function handleFeatureSelection() {
         <FeatureGallery isCameraActive={true} />
         <PhotoCredit />
       {/if}
-      <FeatureActions feature={mapContext.features[featureId]} />
+      <FeatureActions feature={mapCtx.features[featureId]} />
     </ImageProvider>
   </FeatureCard>
 {:else}

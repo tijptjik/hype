@@ -28,7 +28,7 @@ type MapProps = {
 };
 
 // CONTEXT
-let mapContext = getMapContext();
+let mapCtx = getMapContext();
 let resourceState = getHierarchicalResourceState();
 
 let isFullscreen = $state(false);
@@ -38,7 +38,7 @@ let mapProps: MapProps = $props();
 
 // STATE : MAP
 let mapContainer: HTMLDivElement;
-let map = $derived(mapContext.map);
+let map = $derived(mapCtx.map);
 let feature = $state();
 let isMapLoaded = $state(false);
 
@@ -65,7 +65,7 @@ onMount(async () => {
 
   maplibre = monkeyPatchMapLibre();
 
-  mapContext.map = new maplibre.Map({
+  mapCtx.map = new maplibre.Map({
     container: mapContainer,
     style: SpectralStyle,
     center: mapProps.coordinates,
@@ -78,7 +78,7 @@ onMount(async () => {
   });
 
   // @ts-ignore
-  mapContext.map.on('load', () => {
+  mapCtx.map.on('load', () => {
     isMapLoaded = true;
   });
 
@@ -88,7 +88,7 @@ onMount(async () => {
     draggable: mapProps.draggable || true
   })
     .setLngLat(mapProps.coordinates)
-    .addTo(mapContext.map);
+    .addTo(mapCtx.map);
 
   // @ts-ignore
   feature.on('dragend', handleDragEnd);
@@ -97,9 +97,9 @@ onMount(async () => {
 // EFFECTS :: ON UPDATE
 $effect(() => {
   if (map) {
-    if (mapProps.coordinates && addressLngLat && !mapContext.zoomToMarkerOnly) {
+    if (mapProps.coordinates && addressLngLat && !mapCtx.zoomToMarkerOnly) {
       // @ts-ignore
-      mapContext.zoomToCoordinates([mapProps.coordinates, addressLngLat]);
+      mapCtx.zoomToCoordinates([mapProps.coordinates, addressLngLat]);
     } else {
       // @ts-ignore
       map.cachedFlyTo({
@@ -117,7 +117,7 @@ $effect(() => {
 const handleDragEnd = (e: Event) => {
   // @ts-ignore
   mapProps.dragEndCallback?.(e.target!.getLngLat().toArray());
-  mapContext.zoomToMarkerOnly = true;
+  mapCtx.zoomToMarkerOnly = true;
 };
 
 let isSameCoordinates = (lngLat1: LngLatLike, lngLat2: LngLatLike) => {
@@ -133,7 +133,7 @@ $effect(() => {
       addressMarker.remove();
     }
     // Add new marker
-    addressMarker = addAddressMarker(maplibregl, mapContext, addressLngLat);
+    addressMarker = addAddressMarker(maplibregl, mapCtx, addressLngLat);
     markedAddressLngLat = addressLngLat;
   }
   if (resourceState.activeEntity && resourceState.activeEntity !== featureMarkerId) {

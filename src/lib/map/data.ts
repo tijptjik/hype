@@ -4,17 +4,17 @@ import { m, getI18nValue, getLocale } from '$lib/i18n';
 import neighbourhoods from './neighbourhoods.json';
 import subNeighbourhoods from './subNeighbourhoods.json';
 // TYPES
-import type { mapContext } from '$lib/context/map.svelte';
+import type { mapCtx } from '$lib/context/map.svelte';
 import type { SearchResult } from '$lib/types';
 
-export function getWishlistedFeatures(mapContext: mapContext) {
-  const wishlistedFeatures = mapContext.getWishlistedFeatures();
+export function getWishlistedFeatures(mapCtx: mapCtx) {
+  const wishlistedFeatures = mapCtx.getWishlistedFeatures();
   return wishlistedFeatures.map((feature) => {
-    const layer = mapContext.getLayer(feature);
-    const project = layer ? mapContext.getProject(layer) : undefined;
-    const organisation = project ? mapContext.getOrganisation(project) : undefined;
+    const layer = mapCtx.getLayer(feature);
+    const project = layer ? mapCtx.getProject(layer) : undefined;
+    const organisation = project ? mapCtx.getOrganisation(project) : undefined;
 
-    const projectLayerCount = mapContext.state.resources.layer.filter(
+    const projectLayerCount = mapCtx.state.resources.layer.filter(
       (l) => l.projectId === project?.id
     ).length;
 
@@ -69,11 +69,11 @@ export function getNeighbourhoodFeatureCount(
   return count;
 }
 
-export function searchAll(term: string, mapContext: mapContext): SearchResult[] {
+export function searchAll(term: string, mapCtx: mapCtx): SearchResult[] {
   const results: SearchResult[] = [];
 
   // Source 1 - Walks
-  const wishlistResults = getWishlistedFeatures(mapContext);
+  const wishlistResults = getWishlistedFeatures(mapCtx);
   const filteredWishlistResults = wishlistResults.filter((feature) =>
     feature?.hierarchy.feature?.toLowerCase().includes(term.toLowerCase())
   );
@@ -93,7 +93,7 @@ export function searchAll(term: string, mapContext: mapContext): SearchResult[] 
       name: getLocale() === 'en' ? neighbourhood : getI18nValue(data, 'name'),
       count: getNeighbourhoodFeatureCount(
         neighbourhood,
-        mapContext.state.resources.feature
+        mapCtx.state.resources.feature
       ),
       group: 'neighbourhoods',
       ref: neighbourhood
@@ -101,7 +101,7 @@ export function searchAll(term: string, mapContext: mapContext): SearchResult[] 
   });
 
   // Source 3 - Features
-  mapContext.state.resources.feature
+  mapCtx.state.resources.feature
     .filter(
       (feature) =>
         getI18nValue(feature, 'title')?.toLowerCase().includes(term.toLowerCase()) ||
@@ -124,15 +124,15 @@ export function searchAll(term: string, mapContext: mapContext): SearchResult[] 
   return results;
 }
 
-export function searchNearest(mapContext: mapContext): SearchResult[] {
-  if (!mapContext.state.userLocation) return [];
+export function searchNearest(mapCtx: mapCtx): SearchResult[] {
+  if (!mapCtx.state.userLocation) return [];
 
-  const userLocation = mapContext.state.userLocation
+  const userLocation = mapCtx.state.userLocation
     ? {
-        lat: mapContext.state.userLocation?.coords.latitude,
-        lng: mapContext.state.userLocation?.coords.longitude
+        lat: mapCtx.state.userLocation?.coords.latitude,
+        lng: mapCtx.state.userLocation?.coords.longitude
       }
-    : mapContext.map?.getCenter();
+    : mapCtx.map?.getCenter();
 
   const results: SearchResult[] = [];
 
@@ -148,7 +148,7 @@ export function searchNearest(mapContext: mapContext): SearchResult[] {
       name: getLocale() === 'en' ? neighbourhood : getI18nValue(data, 'name'),
       count: getNeighbourhoodFeatureCount(
         neighbourhood,
-        mapContext.state.resources.feature
+        mapCtx.state.resources.feature
       ),
       group: 'neighbourhoods',
       ref: neighbourhood
@@ -158,7 +158,7 @@ export function searchNearest(mapContext: mapContext): SearchResult[] {
   // Source 3 - Features
 
   // Calculate distance to each feature, and sort by distance
-  mapContext.state.resources.feature
+  mapCtx.state.resources.feature
     .filter(
       (feature) =>
         getI18nValue(feature, 'title')?.toLowerCase().includes('') ||

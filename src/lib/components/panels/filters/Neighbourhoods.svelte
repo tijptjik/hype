@@ -13,10 +13,10 @@ import SelectedResources from '$lib/components/panels/common/SelectedResources.s
 import { getMapContext } from '$lib/context/map.svelte';
 
 // Initialize map state
-const mapContext = getMapContext();
+const mapCtx = getMapContext();
 
 // Get cached features for counting
-const selectedNeighbourhoods = $derived(mapContext.state.filters.neighbourhoods);
+const selectedNeighbourhoods = $derived(mapCtx.state.filters.neighbourhoods);
 
 let searchTerm = $state('');
 
@@ -50,7 +50,7 @@ const filteredNeighbourhoods = $derived(
 // Update query when selection changes
 $effect(() => {
   selectedNeighbourhoods; // track changes
-  mapContext.refreshFeatures();
+  mapCtx.refreshFeatures();
 });
 </script>
 
@@ -58,7 +58,7 @@ $effect(() => {
 
 {#snippet SelectedNeighbourhoods()}
   <SelectedResources
-    {mapContext}
+    {mapCtx}
     type="neighbourhood"
     resources={Object.entries(neighbourhoods).map(([id, data]) => ({
       ...data,

@@ -27,7 +27,7 @@ let { feature }: { feature: Feature } = $props();
 let menuOpen = $state(false);
 
 // CONTEXT
-const mapContext = getMapContext();
+const mapCtx = getMapContext();
 
 // FUNCTIONS
 function toggleMenu(e: Event) {
@@ -44,9 +44,9 @@ function closeMenu(e: Event) {
   e.stopPropagation();
   menuOpen = false;
 }
-let layer = mapContext.getLayer(feature);
-let project = mapContext.getProject(layer!);
-let organisation = mapContext.getOrganisation(project!);
+let layer = mapCtx.getLayer(feature);
+let project = mapCtx.getProject(layer!);
+let organisation = mapCtx.getOrganisation(project!);
 </script>
 
 <div

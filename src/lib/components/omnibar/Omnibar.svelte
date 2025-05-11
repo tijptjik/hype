@@ -11,7 +11,7 @@ import { MOBILE_MAX_WIDTH } from '$lib/index';
 
 // CONTEXT
 const omniCtx = getOmniContext();
-const mapContext = getMapContext();
+const mapCtx = getMapContext();
 
 let showSearch = $derived(omniCtx.state.mode === 'search');
 
@@ -23,7 +23,7 @@ function handleEscape(event: KeyboardEvent) {
 
 // Calculate offset based on visible panels
 let horizontalOffset = $derived(() => {
-  const { filters, maps, stars, settings } = mapContext.state.panels;
+  const { filters, maps, stars, settings } = mapCtx.state.panels;
   const leftPanelOpen = maps || stars;
   const rightPanelOpen = filters || settings;
 

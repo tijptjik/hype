@@ -1,6 +1,6 @@
 import type { Map as MapLibreMap, Marker } from 'maplibre-gl';
 import type { Feature } from '$lib/types';
-import { mapContext } from '$lib/context/map.svelte';
+import { mapCtx } from '$lib/context/map.svelte';
 // STYLES
 import '$lib/styles/map.css';
 
@@ -51,24 +51,20 @@ export function createMarkerElement(): HTMLDivElement {
   return container;
 }
 
-export function updateMarkers(
-  mapContext: mapContext,
-  features: Feature[],
-  maplibre: any
-) {
-  if (!mapContext.map) return;
+export function updateMarkers(mapCtx: mapCtx, features: Feature[], maplibre: any) {
+  if (!mapCtx.map) return;
 
   // Create a set of new feature IDs
   const newFeatureIds = new Set(features.map((f) => f.id as string));
 
   // Remove markers that are no longer present
-  for (const [id, marker] of mapContext.state.markers.entries()) {
+  for (const [id, marker] of mapCtx.state.markers.entries()) {
     if (!newFeatureIds.has(id)) {
       marker.getElement().classList.add('marker-fade-out');
       // Remove marker after animation completes
       setTimeout(() => {
         marker.remove();
-        mapContext.state.markers.delete(id);
+        mapCtx.state.markers.delete(id);
       }, 300); // Match this with CSS transition duration
     }
   }
@@ -79,7 +75,7 @@ export function updateMarkers(
       const [lng, lat] = feature.geometry.coordinates;
 
       // Skip if marker already exists
-      if (mapContext.state.markers.has(feature.id)) return;
+      if (mapCtx.state.markers.has(feature.id)) return;
 
       // Create new marker
       const el = createMarkerElement();
@@ -97,45 +93,45 @@ export function updateMarkers(
         anchor: 'center'
       })
         .setLngLat([lng, lat])
-        .addTo(mapContext.map);
+        .addTo(mapCtx.map);
 
-      // Add marker to mapContext
-      mapContext.state.markers.set(feature.id, marker);
+      // Add marker to mapCtx
+      mapCtx.state.markers.set(feature.id, marker);
     }
   });
 
   // Return cleanup function
   return () => {
     // Remove all markers and their event listeners
-    for (const [_, marker] of mapContext.state.markers.entries()) {
+    for (const [_, marker] of mapCtx.state.markers.entries()) {
       marker.remove(); // This also removes the event listeners
     }
-    mapContext.state.markers.clear();
+    mapCtx.state.markers.clear();
   };
 }
 
 export function addMarkerClass(
-  mapContext: mapContext,
+  mapCtx: mapCtx,
   featureId: string,
   className: string = 'active'
 ) {
-  if (!mapContext.map) return;
+  if (!mapCtx.map) return;
   // Set active state to new feature
-  mapContext.state.markers.get(featureId)?.getElement().classList.add(className);
+  mapCtx.state.markers.get(featureId)?.getElement().classList.add(className);
 }
 
 export function removeMarkerClass(
-  mapContext: mapContext,
+  mapCtx: mapCtx,
   featureId: string,
   className: string = 'active'
 ) {
-  if (!mapContext.map) return;
-  mapContext.state.markers.get(featureId)?.getElement().classList.remove(className);
+  if (!mapCtx.map) return;
+  mapCtx.state.markers.get(featureId)?.getElement().classList.remove(className);
 }
 
 export function addAddressMarker(
   maplibre: any,
-  mapContext: mapContext,
+  mapCtx: mapCtx,
   lngLat: [number, number]
 ) {
   const el = createMarkerElement();
@@ -148,6 +144,6 @@ export function addAddressMarker(
     anchor: 'center'
   })
     .setLngLat(lngLat)
-    .addTo(mapContext.map);
+    .addTo(mapCtx.map);
   return marker;
 }
