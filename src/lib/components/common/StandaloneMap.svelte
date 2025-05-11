@@ -90,12 +90,56 @@ onMount(async () => {
     }
 
     mapContext.map!.addLayer({
-      id: 'hk-roads',
+      id: 'roads',
       source: 'hongkong-latest',
       'source-layer': 'roads',
       type: 'line',
       filter: ['in', 'kind', 'major_road', 'minor_road'],
       paint: { 'line-color': '#4987E2' }
+    });
+
+    mapContext.map!.addLayer({
+      id: 'buildings',
+      source: 'hongkong-latest',
+      'source-layer': 'buildings',
+      type: 'fill',
+      filter: ['in', 'kind', 'building', 'building_part'],
+      paint: {
+        'fill-color': 'rgba(15, 14, 14, 1)',
+        'fill-opacity': 0.5,
+        'fill-outline-color': {
+          stops: [
+            [17, 'rgba(13, 13, 13, 1)'],
+            [20, 'rgba(240, 77, 127, 0.66)']
+          ]
+        }
+      }
+    });
+
+    mapContext.map!.addLayer({
+      id: 'address_label',
+      type: 'symbol',
+      source: 'hongkong-latest',
+      'source-layer': 'buildings',
+      minzoom: 19,
+      filter: ['==', 'kind', 'address'],
+      layout: {
+        'symbol-placement': 'point',
+        'text-font': ['Noto Sans Italic'],
+        'text-field': ['get', 'addr_housenumber'],
+        'text-size': 12
+      },
+      paint: {
+        'text-color': 'rgba(240, 77, 127, 0.86)',
+        'text-halo-color': '#141414',
+        'text-halo-width': 1,
+        'text-opacity': {
+          stops: [
+            [18.5, 0],
+            [20, 1]
+          ]
+        }
+      }
     });
 
     if (!session?.user?.experimental.noLabelsMode) {
