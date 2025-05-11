@@ -1,30 +1,34 @@
 <script lang="ts">
 // SVELTE
 import { onDestroy } from 'svelte';
+// I18n
+import { m, getI18nValue } from '$lib/i18n';
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
 import { XCircle, QueueList } from '@steeze-ui/heroicons';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
-// I18N
-import { getI18nValue } from '$lib/i18n';
 
 // CONTEXT
-const mapContext = getMapContext();
-const omniContext = getOmniContext();
+const mapCtx = getMapContext();
+const omniCtx = getOmniContext();
 
 // DERIVED -- Titles
-let collectionTitle = $derived(getI18nValue(mapContext.getActiveCollection(), 'name'));
-let featureTitle = $derived(getI18nValue(mapContext.getActiveFeature(), 'title'));
+let collectionTitle = $derived(getI18nValue(mapCtx.getActiveCollection(), 'name'));
+let featureTitle = $derived(getI18nValue(mapCtx.getActiveFeature(), 'title'));
+let newFeatureTitle = $derived(
+  getI18nValue(mapCtx.getNewFeature(), 'title', m.day_chunky_okapi_cherish())
+);
 
 // DERIVED -- Collection Index and Size
-let index = $derived(omniContext.navIndex + 1);
-let collectionSize = $derived(mapContext.getActiveCollection()?.items.length);
+let index = $derived(omniCtx.navIndex + 1);
+let collectionSize = $derived(mapCtx.getActiveCollection()?.items.length);
 
 // DERIVED -- Mode
-let collectionMode = $derived(omniContext.state.mode);
+let collectionMode = $derived(omniCtx.state.mode);
 let isNotFeatureMode = $derived(collectionMode !== 'feature');
+let isNewFeatureMode = $derived(collectionMode === 'new-feature');
 
 // SCROLL STATE
 type ScrollState = {
@@ -147,21 +151,22 @@ onDestroy(() => {
 </script>
 
 <div
-  class="flex w-full select-none justify-between gap-1 overflow-hidden py-0 transition-[height] {isNotFeatureMode
+  class="flex w-full select-none justify-between gap-1 overflow-hidden py-0 transition-[height] {isNotFeatureMode &&
+  !isNewFeatureMode
     ? 'px-0'
     : 'px-6'}">
   <div
     class="min-w-0 flex-1 overflow-hidden transition-[height]"
-    onclick={() => omniContext.toggleCard()}>
+    onclick={() => omniCtx.toggleCard()}>
     <div class="flex items-start gap-3">
-      {#if isNotFeatureMode}
+      {#if isNotFeatureMode && !isNewFeatureMode}
         <button
           class="btn btn-ghost btn-sm m-0 h-auto p-0 pt-2 hover:bg-transparent hover:text-base-content/80 focus:outline-none"
           onclick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            omniContext.closeCard();
-            omniContext.toggleTray(e);
+            omniCtx.closeCard();
+            omniCtx.toggleTray(e);
           }}>
           <Icon src={QueueList} class="h-6 w-6 stroke-2" />
         </button>
@@ -176,9 +181,13 @@ onDestroy(() => {
           <span
             class="inline-block pr-3 text-xs text-base-content/60"
             bind:this={collectionScroll.content}>
-            {collectionTitle}
-            {#if isNotFeatureMode}
-              <span>({index} of {collectionSize})</span>
+            {#if isNewFeatureMode}
+              {m.early_watery_cobra_dance()}
+            {:else}
+              {collectionTitle}
+              {#if isNotFeatureMode}
+                <span>({index} of {collectionSize})</span>
+              {/if}
             {/if}
           </span>
         </div>
@@ -188,7 +197,7 @@ onDestroy(() => {
             : 'overflow-visible'} whitespace-nowrap"
           bind:this={featureScroll.container}>
           <span class="inline-block pr-2 font-medium" bind:this={featureScroll.content}>
-            {featureTitle}
+            {isNewFeatureMode ? newFeatureTitle : featureTitle}
           </span>
         </div>
       </div>
@@ -200,11 +209,11 @@ onDestroy(() => {
     onclick={(e) => {
       e.preventDefault();
       e.stopPropagation();
-      omniContext.close();
+      omniCtx.close();
     }}>
     <Icon
       src={XCircle}
-      class="h-10 w-10 transition-transform duration-300 {omniContext.state.isCardOpen
+      class="h-10 w-10 transition-transform duration-300 {omniCtx.state.isCardOpen
         ? 'rotate-90'
         : 'rotate-0'}" />
   </button>

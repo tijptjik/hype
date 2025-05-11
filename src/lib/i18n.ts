@@ -7,7 +7,7 @@ import type { LanguageTag } from '$lib/types';
 export function getI18nValue(obj: any, field: string, fallback: string = '-'): string {
   if (!obj) return fallback;
   const currentLang = runtime.getLocale();
-  if (currentLang === 'en') return obj[field];
+  if (currentLang === 'en') return obj[field] || fallback;
   const translation = obj.translations?.find((t: any) => t.lang === currentLang);
   return translation?.[field] || obj[field] || fallback;
 }

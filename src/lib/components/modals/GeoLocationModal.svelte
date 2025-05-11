@@ -7,9 +7,18 @@ import { m } from '$lib/i18n';
 import { MOBILE_MAX_WIDTH } from '$lib/index';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
+import { getOmniContext } from '$lib/context/omni.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
-import { XMark, PencilSquare, Check } from '@steeze-ui/heroicons';
+import {
+  XMark,
+  PencilSquare,
+  Check,
+  UserGroup,
+  Squares2x2,
+  Square3Stack3d,
+  ChevronDown
+} from '@steeze-ui/heroicons';
 // SERVICES
 import { reverseGeocode } from '$lib/services/geocoding';
 // TYPES
@@ -17,6 +26,7 @@ import type { UserContributedFeature } from '$lib/types';
 
 // CONTEXT
 const mapCtx = getMapContext();
+const omniCtx = getOmniContext();
 
 // STATE
 let isOpen = $state(false);
@@ -57,15 +67,7 @@ const handleShowModal = () => {
   // Get the center of the map
 };
 
-// EVENT HANDLERS
-onMount(() => {
-  window.addEventListener('showGeoLocationModal', handleShowModal);
-  return () => {
-    window.removeEventListener('showGeoLocationModal', handleShowModal);
-  };
-});
-
-function close() {
+function handleCloseModal() {
   isEditingAddress = false;
   displayAddress = '';
   mapCtx.setNewFeature({
@@ -85,6 +87,8 @@ function close() {
     }
   });
   isOpen = false;
+  omniCtx.setMode('search');
+  omniCtx.focusSearchBar();
 }
 
 async function handleSetLocation() {
@@ -149,16 +153,49 @@ function handleKeydown(e: KeyboardEvent) {
     if (isEditingAddress) {
       isEditingAddress = false;
     } else {
-      close();
+      handleCloseModal();
+    }
+  } else if (e.key === '/') {
+    e.preventDefault();
+    // If editing, focus the address input; if not, enter edit mode and focus
+    if (!isEditingAddress && isValid) {
+      isEditingAddress = true;
+      setTimeout(() => {
+        const input = document.querySelector(
+          '.modal-box input[type="text"]'
+        ) as HTMLInputElement | null;
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      }, 0);
+    } else if (isEditingAddress) {
+      const input = document.querySelector(
+        '.modal-box input[type="text"]'
+      ) as HTMLInputElement | null;
+      if (input) {
+        input.focus();
+        input.select();
+      }
     }
   }
 }
+
+// EVENT HANDLERS
+onMount(() => {
+  window.addEventListener('showGeoLocationModal', handleShowModal);
+  window.addEventListener('closeGeoLocationModal', handleCloseModal);
+  return () => {
+    window.removeEventListener('showGeoLocationModal', handleShowModal);
+    window.removeEventListener('closeGeoLocationModal', handleCloseModal);
+  };
+});
 </script>
 
 {#if isOpen}
   <dialog
-    class="modal pointer-events-none bg-transparent"
-    style="background: none !important;"
+    class="modal pointer-events-none z-10 bg-transparent"
+    style="background: none;"
     class:modal-open={isOpen}
     onkeydown={handleKeydown}>
     <div
@@ -166,7 +203,7 @@ function handleKeydown(e: KeyboardEvent) {
       style="transform: translateX(${horizontalOffset}px)">
       <div
         class="group pointer-events-auto relative my-4 flex cursor-pointer items-center justify-between caret-transparent"
-        onclick={close}>
+        onclick={handleCloseModal}>
         <h3
           id="modal-title"
           class="text-shadow-lg/30 w-full rounded-xl bg-black/80 px-3 py-1 text-center text-xl font-bold uppercase tracking-wide group-hover:rounded-r-none group-focus:border-none group-focus:outline-none"
@@ -247,13 +284,12 @@ function handleKeydown(e: KeyboardEvent) {
         {:else}
           <button
             class="btn bg-base-400 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300"
-            onclick={close}
+            onclick={handleCloseModal}
             disabled={!isValid}>
             {m.close_shy_jurgen_cook()}
           </button>
         {/if}
       </div>
     </div>
-    <div class="modal-backdrop" onclick={close}></div>
   </dialog>
 {/if}

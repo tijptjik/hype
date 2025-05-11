@@ -13,7 +13,7 @@ const mapCtx = getMapContext();
 let handleClick = (e: Event) => {
   e.preventDefault();
   e.stopPropagation();
-  omniCtx.closeTray();
+  omniCtx.setMode('new-feature');
   // Determine whether there is only a single layer active
   const activeLayers = mapCtx.state.prisms.layer;
   if (activeLayers.length === 1) {

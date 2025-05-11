@@ -87,6 +87,7 @@ export class OmniContext {
 
   // DERIVED
   isFeatureMode = $derived(this.state.mode === 'feature');
+  isNewFeatureMode = $derived(this.state.mode === 'new-feature');
   isSearchMode = $derived(this.state.mode === 'search');
   isNavigationMode = $derived(this.state.mode === 'navigation');
 
@@ -130,6 +131,8 @@ export class OmniContext {
     } else if (mode === 'feature') {
       this.closeTray();
       this.openCard();
+    } else if (mode === 'new-feature') {
+      this.closeTray();
     }
   }
 
@@ -155,6 +158,17 @@ export class OmniContext {
       // If we are in feature, without a card, reset the search
     } else if (this.state.mode === 'feature') {
       this.clearSearch();
+      this.setMode('search');
+      this.focusSearchBar();
+      goto('/');
+
+      // If we are in new-feature mode, close the modal
+    } else if (this.state.mode === 'new-feature') {
+      const closeLayerEvent = new CustomEvent('closeLayerSelectionModal');
+      window.dispatchEvent(closeLayerEvent);
+      const closeLocationEvent = new CustomEvent('closeGeoLocationModal');
+      window.dispatchEvent(closeLocationEvent);
+
       this.setMode('search');
       this.focusSearchBar();
       goto('/');

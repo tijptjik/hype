@@ -6,9 +6,16 @@ import { slide, fade } from 'svelte/transition';
 import { m, getI18nValue } from '$lib/i18n';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
+import { getOmniContext } from '$lib/context/omni.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
-import { XMark, UserGroup, Squares2x2, Square3Stack3d } from '@steeze-ui/heroicons';
+import {
+  XMark,
+  UserGroup,
+  Squares2x2,
+  Square3Stack3d,
+  ChevronDown
+} from '@steeze-ui/heroicons';
 // TYPES
 import type { Organisation, Project, Layer, UserContributedFeature } from '$lib/types';
 // UTILS
@@ -16,7 +23,7 @@ import { MOBILE_MAX_WIDTH } from '$lib/index';
 
 // CONTEXT
 const mapCtx = getMapContext();
-
+const omniCtx = getOmniContext();
 // STATE
 let isOpen = $state(false);
 let isValid = $state(false);
@@ -116,27 +123,27 @@ const handleShowModal = () => {
   }, 0);
 };
 
-// EVENT HANDLERS
-onMount(() => {
-  window.addEventListener('showLayerSelectionModal', handleShowModal);
-  return () => {
-    window.removeEventListener('showLayerSelectionModal', handleShowModal);
-  };
-});
-
-function close() {
-  isOpen = false;
-  searchQuery = '';
-  isValid = false;
-  resetSelections();
-  // Trigger the GeoLocation modal
-  const event = new CustomEvent('showGeoLocationModal');
-  window.dispatchEvent(event);
+function handleCloseModal() {
+  handleResetSelections();
 }
 
-function resetSelections() {
-  mapCtx.resetNewFeature();
+function handleResetSelections() {
   searchQuery = '';
+  isValid = false;
+  isOpen = false;
+}
+
+function handleCancel() {
+  handleResetSelections();
+  omniCtx.setMode('search');
+  omniCtx.focusSearchBar();
+}
+
+function handleAccept() {
+  // Trigger the GeoLocation modal
+  handleCloseModal();
+  const event = new CustomEvent('showGeoLocationModal');
+  window.dispatchEvent(event);
 }
 
 function handleOrganisationSelect(org: Organisation, e: Event) {
@@ -214,19 +221,39 @@ function handleKeydown(e: KeyboardEvent) {
       searchQuery = '';
     } else {
       // If no selections, close the modal
-      close();
+      handleCancel();
+    }
+  } else if (e.key === '/') {
+    e.preventDefault();
+    // Focus the search input if present
+    const input = document.querySelector(
+      '.modal-box input[type="text"]'
+    ) as HTMLInputElement | null;
+    if (input) {
+      input.focus();
+      input.select();
     }
   }
 }
+
+// EVENT HANDLERS
+onMount(() => {
+  window.addEventListener('showLayerSelectionModal', handleShowModal);
+  window.addEventListener('closeLayerSelectionModal', handleCloseModal);
+  return () => {
+    window.removeEventListener('showLayerSelectionModal', handleShowModal);
+    window.removeEventListener('closeLayerSelectionModal', handleCloseModal);
+  };
+});
 </script>
 
 {#if isOpen}
   <dialog
-    class="modal pointer-events-auto"
+    class="modal pointer-events-auto z-10"
     class:modal-open={isOpen}
     onkeydown={handleKeydown}>
     <div
-      class="modal-box max-w-xl border-2 border-[#4987E2] bg-black shadow-[0_0_15px_rgba(0,0,255,0.5)]"
+      class="modal-box flex max-h-[calc(100vh-10rem)] max-w-xl flex-col border-2 border-[#4987E2] bg-black shadow-[0_0_15px_rgba(0,0,255,0.5)]"
       style={`transform: translateX(${horizontalOffset}px)`}>
       <div class="mb-4 flex items-center justify-between caret-transparent">
         <h3
@@ -235,16 +262,18 @@ function handleKeydown(e: KeyboardEvent) {
           tabindex="-1">
           {m.each_gray_felix_catch()}
         </h3>
-        <button class="btn btn-ghost btn-sm absolute right-6 top-6" onclick={close}>
+        <button
+          class="btn btn-ghost btn-sm absolute right-6 top-6"
+          onclick={handleCancel}>
           <Icon src={XMark} class="h-5 w-5" />
         </button>
       </div>
 
       <!-- Results Section -->
       <div
-        class="mx-auto flex w-full items-center justify-center gap-2 text-sm uppercase tracking-widest caret-transparent transition-[margin] duration-300 {isValid
+        class="mx-auto flex w-full items-center justify-center gap-1 text-sm uppercase tracking-widest caret-transparent transition-[margin] duration-300 {isValid
           ? 'mt-8'
-          : 'my-8'}">
+          : 'my-8'} flex-col w-116:flex-row">
         <button
           class="group flex items-center gap-1 focus:border-none focus:outline-none"
           onclick={clearOrganisation}
@@ -263,7 +292,13 @@ function handleKeydown(e: KeyboardEvent) {
             {getI18nValue(selectedOrganisation, 'nameShort', m.any_small_midge_aim())}
           </span>
         </button>
-        <span class="text-base-content/60">›</span>
+        <!-- Chevron: show down chevron on mobile, › on desktop -->
+        <span class="flex h-4 items-center justify-center sm:hidden">
+          <Icon src={ChevronDown} class="h-4 w-4 text-base-content/60" />
+        </span>
+        <span
+          class="hidden h-4 items-center justify-center text-base-content/60 sm:flex"
+          >›</span>
         <button
           class="group flex items-center gap-1 focus:border-none focus:outline-none"
           onclick={clearProject}
@@ -280,7 +315,12 @@ function handleKeydown(e: KeyboardEvent) {
             {getI18nValue(selectedProject, 'nameShort', m.deft_mealy_ant_vent())}
           </span>
         </button>
-        <span class="text-base-content/60">›</span>
+        <span class="flex h-4 items-center justify-center sm:hidden">
+          <Icon src={ChevronDown} class="h-4 w-4 text-base-content/60" />
+        </span>
+        <span
+          class="hidden h-4 items-center justify-center text-base-content/60 sm:flex"
+          >›</span>
         <button
           class="group flex items-center gap-1 focus:border-none focus:outline-none"
           onclick={clearLayer}
@@ -314,7 +354,7 @@ function handleKeydown(e: KeyboardEvent) {
 
       <!-- Results List -->
       <div
-        class="max-h-60 overflow-y-auto rounded-lg caret-transparent"
+        class="max-h-48 overflow-y-auto rounded-lg caret-transparent"
         tabindex="-1"
         in:fade={{ duration: 200 }}
         out:fade={{ duration: 200 }}>
@@ -361,11 +401,11 @@ function handleKeydown(e: KeyboardEvent) {
           class="btn transition-all duration-300 {isValid
             ? 'bg-base-400 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300'
             : 'btn-disabled'}"
-          onclick={close}>
+          onclick={handleAccept}>
           {m.main_east_boar_jump()}
         </button>
       </div>
     </div>
-    <div class="modal-backdrop" onclick={close}></div>
+    <div class="modal-backdrop" onclick={handleCancel}></div>
   </dialog>
 {/if}
