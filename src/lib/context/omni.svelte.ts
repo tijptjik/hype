@@ -16,7 +16,7 @@ import type { SearchResult, Id, NewFeature } from '$lib/types';
 import type { mapContext } from '$lib/context/map.svelte';
 // TYPES
 import type { FeatureCardContext } from './featureCard.svelte';
-type OmniMode = 'search' | 'navigation' | 'feature';
+type OmniMode = 'search' | 'navigation' | 'feature' | 'new-feature';
 
 type OmniState = {
   // Mode -- search, navigation, or feature
