@@ -1178,6 +1178,9 @@ export type UserContributedFeature = {
   title?: string;
   description?: string;
   displayAddress?: string;
-  translations: Record<TargetLang, { title: string; description: string }>;
+  translations: Record<
+    TargetLang,
+    { title: string; description: string; displayAddress: string }
+  >;
   properties: FeatureProperty[];
 };
