@@ -272,6 +272,7 @@
   "photo_credit_prompt_for_name": "Enter the name for photo credit:",
   "photo_credit_input_placeholder": "Your name or attribution",
   "photo_credit_credited_as": "Photos will be credited to:",
+  "add_feature__credit_prompt": "Your contribution will be credited to:",
   "photo_credit_edit_button": "Edit Credit",
   "add_photos__success": "Photos submitted",
   "add_photos__error": "Submission failed",
@@ -289,6 +290,7 @@
   "each_funny_cow_radiate": "Accept All",
   "shy_sunny_hare_revive": "Accept Classified",
   "add_photos__thank_you": "❤️ You - Sharing your snaps",
+  "new_feature__thank_you": "❤️ You - Beautifying the map",
   "whole_house_cougar_hurl": "Add new place",
   "main_east_boar_jump": "OK",
   "each_gray_felix_catch": "Select Map",
@@ -300,5 +302,9 @@
   "active_bold_cobra_grin": "Layer",
   "deft_mealy_ant_vent": "Project",
   "day_chunky_okapi_cherish": "Unnamed",
-  "early_watery_cobra_dance": "New Feature"
+  "early_watery_cobra_dance": "New Feature",
+  "validation__title_required": "Please provide a title",
+  "validation__description_required": "Please provide a description",
+  "new_feature__success": "Feature submitted",
+  "new_feature__error": "Submission failed"
 }

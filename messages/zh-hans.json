@@ -321,5 +321,12 @@
   "any_small_midge_aim": "组织",
   "active_bold_cobra_grin": "层",
   "deft_mealy_ant_vent": " '项目'",
-  "day_chunky_okapi_cherish": "未命名"
+  "day_chunky_okapi_cherish": "未命名",
+  "add_feature__credit_prompt": "您的贡献将记入：",
+  "new_feature__thank_you": "❤️ 你——美化地图",
+  "early_watery_cobra_dance": "新功能",
+  "validation__title_required": "请提供标题",
+  "validation__description_required": "请提供描述",
+  "new_feature__success": "已提交功能",
+  "new_feature__error": "提交失败"
 }
