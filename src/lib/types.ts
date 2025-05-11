@@ -115,6 +115,7 @@ import type { enhance } from '$app/forms';
 import type { Marker } from 'maplibre-gl';
 import type { Writable } from 'svelte/store';
 import type { SvelteSet } from 'svelte/reactivity';
+import type { Geometry, GeometryObject } from 'geojson';
 
 // HTML
 export type InputType = 'text' | 'number' | 'email' | 'password';
@@ -1168,3 +1169,15 @@ export type UploadedPhoto = {
 };
 
 export type CameraPermissionStatus = 'unknown' | 'prompt' | 'granted' | 'denied';
+
+export type UserContributedFeature = {
+  organisationId: string;
+  projectId: string;
+  layerId: string;
+  geometry: Geometry;
+  title?: string;
+  description?: string;
+  displayAddress?: string;
+  translations: Record<TargetLang, { title: string; description: string }>;
+  properties: FeatureProperty[];
+};
