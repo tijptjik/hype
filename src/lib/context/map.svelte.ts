@@ -30,7 +30,7 @@ import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
 import { MOBILE_MAX_WIDTH } from '$lib';
 
-export class mapContext {
+export class MapContext {
   // Maplibre Map instance
   map: MaplibreMap | undefined = $state();
   // Tanstack Query Client instance
@@ -1201,7 +1201,7 @@ export const setMapContext = (
   userId: string,
   userLayers: string[]
 ) => {
-  const context = new mapContext(queryClient, userId, userLayers);
+  const context = new MapContext(queryClient, userId, userLayers);
   context.init();
   return setContext(MAP_STATE_KEY, context);
 };

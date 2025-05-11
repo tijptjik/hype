@@ -199,8 +199,12 @@ onMount(() => {
     class:modal-open={isOpen}
     onkeydown={handleKeydown}>
     <div
-      class="modal-box m-0 flex h-full w-full flex-col items-center justify-center bg-transparent p-0"
-      style="transform: translateX(${horizontalOffset}px)">
+      class="modal-box m-0 flex h-full w-full flex-col items-center justify-center bg-transparent p-0 {horizontalOffset ==
+      -210
+        ? '-translate-x-[210px]'
+        : horizontalOffset == 210
+          ? 'translate-x-[210px]'
+          : 'translate-x-0'}">
       <div
         class="group pointer-events-auto relative my-4 flex cursor-pointer items-center justify-between caret-transparent"
         onclick={handleCloseModal}>

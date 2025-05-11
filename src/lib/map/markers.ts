@@ -1,6 +1,6 @@
 import type { Map as MapLibreMap, Marker } from 'maplibre-gl';
 import type { Feature } from '$lib/types';
-import { mapCtx } from '$lib/context/map.svelte';
+import { MapContext } from '$lib/context/map.svelte';
 // STYLES
 import '$lib/styles/map.css';
 
@@ -51,7 +51,7 @@ export function createMarkerElement(): HTMLDivElement {
   return container;
 }
 
-export function updateMarkers(mapCtx: mapCtx, features: Feature[], maplibre: any) {
+export function updateMarkers(mapCtx: MapContext, features: Feature[], maplibre: any) {
   if (!mapCtx.map) return;
 
   // Create a set of new feature IDs
@@ -111,7 +111,7 @@ export function updateMarkers(mapCtx: mapCtx, features: Feature[], maplibre: any
 }
 
 export function addMarkerClass(
-  mapCtx: mapCtx,
+  mapCtx: MapContext,
   featureId: string,
   className: string = 'active'
 ) {
@@ -121,7 +121,7 @@ export function addMarkerClass(
 }
 
 export function removeMarkerClass(
-  mapCtx: mapCtx,
+  mapCtx: MapContext,
   featureId: string,
   className: string = 'active'
 ) {
@@ -131,7 +131,7 @@ export function removeMarkerClass(
 
 export function addAddressMarker(
   maplibre: any,
-  mapCtx: mapCtx,
+  mapCtx: MapContext,
   lngLat: [number, number]
 ) {
   const el = createMarkerElement();
