@@ -3,7 +3,7 @@
 import { onMount } from 'svelte';
 import { slide, fade } from 'svelte/transition';
 // I18N
-import { m } from '$lib/i18n';
+import { m, getI18nValue } from '$lib/i18n';
 // CONTEXT
 import { getMapContext } from '$lib/context/map.svelte';
 // COMPONENTS
@@ -260,7 +260,7 @@ function handleKeydown(e: KeyboardEvent) {
             class="uppercase {selectedOrganisation
               ? 'text-primary'
               : 'text-base-content'}">
-            {selectedOrganisation?.nameShort || m.any_small_midge_aim()}
+            {getI18nValue(selectedOrganisation, 'nameShort', m.any_small_midge_aim())}
           </span>
         </button>
         <span class="text-base-content/60">›</span>
@@ -277,7 +277,7 @@ function handleKeydown(e: KeyboardEvent) {
           {/if}
           <span
             class="uppercase {selectedProject ? 'text-accent' : 'text-base-content'}">
-            {selectedProject?.nameShort || m.deft_mealy_ant_vent()}
+            {getI18nValue(selectedProject, 'nameShort', m.deft_mealy_ant_vent())}
           </span>
         </button>
         <span class="text-base-content/60">›</span>
@@ -294,7 +294,7 @@ function handleKeydown(e: KeyboardEvent) {
           {/if}
           <span
             class="uppercase {selectedLayer ? 'text-secondary' : 'text-base-content'}">
-            {selectedLayer?.nameShort || m.active_bold_cobra_grin()}
+            {getI18nValue(selectedLayer, 'nameShort', m.active_bold_cobra_grin())}
           </span>
         </button>
       </div>
@@ -326,7 +326,7 @@ function handleKeydown(e: KeyboardEvent) {
               in:slide={{ duration: 200, axis: 'y', delay: 200 }}
               out:slide={{ duration: 200, axis: 'y' }}>
               <Icon src={UserGroup} class="h-4 w-4" />
-              {org.name}
+              {getI18nValue(org, 'name')}
             </button>
           {/each}
         {/if}
@@ -338,7 +338,7 @@ function handleKeydown(e: KeyboardEvent) {
               in:slide={{ duration: 200, axis: 'y', delay: 200 }}
               out:slide={{ duration: 200, axis: 'y' }}>
               <Icon src={Squares2x2} class="h-4 w-4" />
-              {project.name}
+              {getI18nValue(project, 'name')}
             </button>
           {/each}
         {/if}
@@ -350,7 +350,7 @@ function handleKeydown(e: KeyboardEvent) {
               in:slide={{ duration: 200, axis: 'y', delay: 200 }}
               out:slide={{ duration: 200, axis: 'y' }}>
               <Icon src={Square3Stack3d} class="h-4 w-4" />
-              {layer.name}
+              {getI18nValue(layer, 'name')}
             </button>
           {/each}
         {/if}

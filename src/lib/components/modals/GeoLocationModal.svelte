@@ -75,11 +75,11 @@ function close() {
     translations: {
       ...(newFeature?.translations || {}),
       'zh-hant': {
-        ...(newFeature?.translations['zh-hant'] || {}),
+        ...(newFeature?.translations?.['zh-hant'] || {}),
         displayAddress: undefined
       },
       'zh-hans': {
-        ...(newFeature?.translations['zh-hans'] || {}),
+        ...(newFeature?.translations?.['zh-hans'] || {}),
         displayAddress: undefined
       }
     }
@@ -165,16 +165,16 @@ function handleKeydown(e: KeyboardEvent) {
       class="modal-box m-0 flex h-full w-full flex-col items-center justify-center bg-transparent p-0"
       style="transform: translateX(${horizontalOffset}px)">
       <div
-        class="pointer-events-auto relative my-4 flex items-center justify-between caret-transparent">
+        class="group pointer-events-auto relative my-4 flex cursor-pointer items-center justify-between caret-transparent"
+        onclick={close}>
         <h3
           id="modal-title"
-          class="text-shadow-lg/30 w-full rounded-xl bg-black/80 px-3 py-1 text-center text-xl font-bold uppercase tracking-wide focus:border-none focus:outline-none"
+          class="text-shadow-lg/30 w-full rounded-xl bg-black/80 px-3 py-1 text-center text-xl font-bold uppercase tracking-wide group-hover:rounded-r-none group-focus:border-none group-focus:outline-none"
           tabindex="-1">
           {m.lazy_round_falcon_shine()}
         </h3>
         <button
-          class="btn btn-ghost btn-sm absolute right-0 translate-x-8"
-          onclick={close}>
+          class="group-hover:font-bolder btn btn-ghost btn-sm absolute right-0 mt-[2px] h-9 w-8 -translate-y-[1px] translate-x-[32px] rounded-l-none p-0 py-[7px] transition-all duration-300 focus:outline-none group-hover:bg-black/80 group-hover:text-white">
           <Icon src={XMark} class="h-5 w-5" />
         </button>
       </div>
