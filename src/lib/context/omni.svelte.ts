@@ -13,7 +13,7 @@ import neighbourhoods from '$lib/map/neighbourhoods.json';
 import { FeatureCardMode } from '$lib/types';
 // TYPES
 import type { SearchResult, Id, NewFeature } from '$lib/types';
-import type { mapCtx } from '$lib/context/map.svelte';
+import type { MapContext } from '$lib/context/map.svelte';
 // TYPES
 import type { FeatureCardContext } from './featureCard.svelte';
 type OmniMode = 'search' | 'navigation' | 'feature' | 'new-feature';
@@ -52,9 +52,9 @@ export class OmniContext {
     focusedIndex: -1
   });
 
-  featureCardContext: FeatureCardContext | null = null;
+  cardCtx: FeatureCardContext | null = null;
 
-  mapCtx!: mapCtx;
+  mapCtx!: MapContext;
   pageState: PageState = $state(PageState.NoTransition);
 
   // Constructor with mapCtx
@@ -140,8 +140,8 @@ export class OmniContext {
     // If the card is open, close it
     if (this.state.isCardOpen) {
       // If the card is in missing mode, turn it into display mode
-      if (!this.featureCardContext?.isDisplayMode) {
-        this.featureCardContext?.setMode(FeatureCardMode.Display);
+      if (!this.cardCtx?.isDisplayMode) {
+        this.cardCtx?.setMode(FeatureCardMode.Display);
       } else {
         this.closeCard();
       }
@@ -424,8 +424,8 @@ export class OmniContext {
     this.state.isCardOpen = !this.state.isCardOpen;
   }
 
-  setFeatureCardContext(featureCardContext: FeatureCardContext) {
-    this.featureCardContext = featureCardContext;
+  setFeatureCardContext(cardCtx: FeatureCardContext) {
+    this.cardCtx = cardCtx;
   }
 }
 

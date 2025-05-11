@@ -26,7 +26,7 @@ let attribution = $derived($page.data.session?.user?.attribution || '');
 let { feature }: { feature: Feature } = $props();
 
 // STATE : LOCAL
-let featureCardContext = getFeatureCardContext();
+let cardCtx = getFeatureCardContext();
 let mapCtx = getMapContext();
 const flash = getFlash(page);
 
@@ -107,18 +107,18 @@ async function toggleVisited() {
 
 async function submitMissingReport() {
   // Validate inputs
-  if (featureCardContext.userData.photos.length === 0) {
-    featureCardContext.validationError = m.validation__at_least_one_image_as_evidence();
+  if (cardCtx.userData.photos.length === 0) {
+    cardCtx.validationError = m.validation__at_least_one_image_as_evidence();
     return;
   }
 
-  if (featureCardContext.userData.missingReason.trim().length < 5) {
-    featureCardContext.validationError = m.validation__at_least_five_characters();
+  if (cardCtx.userData.missingReason.trim().length < 5) {
+    cardCtx.validationError = m.validation__at_least_five_characters();
     return;
   }
 
   try {
-    featureCardContext.isSubmitting = true;
+    cardCtx.isSubmitting = true;
 
     // Create FormData for file uploads
     const formData = new FormData();
@@ -134,13 +134,13 @@ async function submitMissingReport() {
       layerId: layer?.id,
       projectId: project?.id,
       organisationId: organisation?.id,
-      message: featureCardContext.userData.missingReason
+      message: cardCtx.userData.missingReason
     };
 
     formData.append('taskData', JSON.stringify(taskData));
 
     // Add photos
-    featureCardContext.userData.photos.forEach((photo, index) => {
+    cardCtx.userData.photos.forEach((photo, index) => {
       formData.append(`photo_${index}`, photo.file);
     });
 
@@ -155,19 +155,19 @@ async function submitMissingReport() {
     }
 
     // Reset form and show success message
-    featureCardContext.userData.missingReason = '';
-    featureCardContext.userData.photos = [];
+    cardCtx.userData.missingReason = '';
+    cardCtx.userData.photos = [];
 
     // Set flash message instead of alert
     $flash = { type: 'success', message: m.report_missing__success() };
 
     // Optionally reset the feature card mode
-    featureCardContext.state.mode = FeatureCardMode.Display;
+    cardCtx.state.mode = FeatureCardMode.Display;
   } catch (error) {
     $flash = { type: 'error', message: m.report_missing__error() };
-    featureCardContext.validationError = m.report_missing__error();
+    cardCtx.validationError = m.report_missing__error();
   } finally {
-    featureCardContext.isSubmitting = false;
+    cardCtx.isSubmitting = false;
   }
 }
 
@@ -177,21 +177,21 @@ async function submitNewFeature() {
 
 async function submitNewPhotos() {
   // Validate inputs
-  if (featureCardContext.userData.photos.length === 0) {
-    featureCardContext.setError(m.validation__at_least_one_image());
+  if (cardCtx.userData.photos.length === 0) {
+    cardCtx.setError(m.validation__at_least_one_image());
     return;
   }
 
   if (
     (attribution.trim().length || 0) < 1 &&
-    featureCardContext.getAttribution().trim().length < 1
+    cardCtx.getAttribution().trim().length < 1
   ) {
-    featureCardContext.setError(m.validation__attribution_required());
+    cardCtx.setError(m.validation__attribution_required());
     return;
   }
 
   try {
-    featureCardContext.isSubmitting = true;
+    cardCtx.isSubmitting = true;
 
     // Create FormData for file uploads
     const formData = new FormData();
@@ -212,7 +212,7 @@ async function submitNewPhotos() {
     formData.append('taskData', JSON.stringify(taskData));
 
     // Add photos
-    featureCardContext.userData.photos.forEach((photo, index) => {
+    cardCtx.userData.photos.forEach((photo, index) => {
       formData.append(`photo_${index}`, photo.file);
     });
 
@@ -226,18 +226,18 @@ async function submitNewPhotos() {
       throw new Error('Failed to submit report');
     }
     // Reset form and show success message
-    featureCardContext.userData.photos = [];
+    cardCtx.userData.photos = [];
 
     // Set flash message instead of alert
     $flash = { type: 'success', message: m.add_photos__success() };
 
     // reset the feature card mode
-    featureCardContext.state.mode = FeatureCardMode.Display;
+    cardCtx.state.mode = FeatureCardMode.Display;
   } catch (error) {
     $flash = { type: 'error', message: m.add_photos__error() };
-    featureCardContext.validationError = m.add_photos__error();
+    cardCtx.validationError = m.add_photos__error();
   } finally {
-    featureCardContext.isSubmitting = false;
+    cardCtx.isSubmitting = false;
   }
 }
 
@@ -250,7 +250,7 @@ function getDirections() {
 
 <div
   class="pointer-events-auto flex min-h-12 flex-shrink-0 items-center justify-between rounded-b-lg bg-black px-3 py-2 caret-transparent w-100:px-4 w-100:py-4">
-  {#if featureCardContext.state.mode === FeatureCardMode.Display}
+  {#if cardCtx.state.mode === FeatureCardMode.Display}
     <div class="flex gap-2">
       <button
         class="btn h-12 w-12 bg-base-400 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300 w-64:h-auto w-64:w-auto"
@@ -314,7 +314,7 @@ function getDirections() {
         class="h-6 w-6 stroke-2 font-bold text-primary w-64:hidden w-100:inline-block" />
       <span class="hidden w-64:inline-block">{m.alive_large_hawk_hunt()}</span>
     </button>
-  {:else if featureCardContext.state.mode === FeatureCardMode.Missing}
+  {:else if cardCtx.state.mode === FeatureCardMode.Missing}
     <div class="flex w-full flex-col">
       <ValidationError />
       <div class="mt-4 flex items-center justify-between">
@@ -322,8 +322,8 @@ function getDirections() {
         <button
           class="btn btn-outline btn-error uppercase"
           onclick={submitMissingReport}
-          disabled={featureCardContext.isSubmitting}>
-          {#if featureCardContext.isSubmitting}
+          disabled={cardCtx.isSubmitting}>
+          {#if cardCtx.isSubmitting}
             <span class="loading loading-ring loading-md"></span>
             {m.fun_fuzzy_shrike_compose()}
           {:else}
@@ -332,7 +332,7 @@ function getDirections() {
         </button>
       </div>
     </div>
-  {:else if featureCardContext.state.mode === FeatureCardMode.New}
+  {:else if cardCtx.state.mode === FeatureCardMode.New}
     <div class="flex w-full flex-col">
       <ValidationError />
       <div class="mt-4 flex items-center justify-between">
@@ -340,8 +340,8 @@ function getDirections() {
         <button
           class="btn btn-outline btn-error uppercase"
           onclick={submitNewFeature}
-          disabled={featureCardContext.isSubmitting}>
-          {#if featureCardContext.isSubmitting}
+          disabled={cardCtx.isSubmitting}>
+          {#if cardCtx.isSubmitting}
             <span class="loading loading-ring loading-md"></span>
             {m.fun_fuzzy_shrike_compose()}
           {:else}
@@ -350,26 +350,26 @@ function getDirections() {
         </button>
       </div>
     </div>
-  {:else if featureCardContext.state.mode === FeatureCardMode.AddPhoto}
+  {:else if cardCtx.state.mode === FeatureCardMode.AddPhoto}
     <div class="flex w-full flex-col">
       <ValidationError />
       <div class="mt-4 flex items-center justify-between">
         <h3 class="text-lg font-bold uppercase text-primary">
-          {@html featureCardContext.userData.photos.length > 0
-            ? `<span class="text-white px-2">${featureCardContext.userData.photos.length}</span> ${featureCardContext.userData.photos.length == 1 ? 'Photo' : 'Photos'}`
+          {@html cardCtx.userData.photos.length > 0
+            ? `<span class="text-white px-2">${cardCtx.userData.photos.length}</span> ${cardCtx.userData.photos.length == 1 ? 'Photo' : 'Photos'}`
             : 'Add Photos'}
         </h3>
         <div class="flex gap-3">
           <button
             class="btn btn-outline border-base-100 uppercase hover:bg-base-200 hover:text-base-content"
-            onclick={() => (featureCardContext.state.mode = FeatureCardMode.Display)}>
+            onclick={() => (cardCtx.state.mode = FeatureCardMode.Display)}>
             {m.safe_tidy_skunk_arrive()}
           </button>
           <button
             class="btn btn-outline btn-primary uppercase"
             onclick={submitNewPhotos}
-            disabled={featureCardContext.isSubmitting}>
-            {#if featureCardContext.isSubmitting}
+            disabled={cardCtx.isSubmitting}>
+            {#if cardCtx.isSubmitting}
               <span class="loading loading-ring loading-md"></span>
               {m.fun_fuzzy_shrike_compose()}
             {:else}

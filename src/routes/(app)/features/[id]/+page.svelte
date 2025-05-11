@@ -38,12 +38,12 @@ const omniCtx = getOmniContext();
 
 // CONTEXT :: FEATURE CARD
 setFeatureCardContext();
-const featureCardContext = getFeatureCardContext();
+const cardCtx = getFeatureCardContext();
 
-omniCtx.setFeatureCardContext(featureCardContext);
+omniCtx.setFeatureCardContext(cardCtx);
 
 // STATE
-let mode = $derived(featureCardContext.state.mode);
+let mode = $derived(cardCtx.state.mode);
 
 // EFFECTS
 $effect(() => {

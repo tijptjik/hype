@@ -18,7 +18,7 @@ import type { Feature } from '$lib/types';
 import { FeatureCardMode } from '$lib/types';
 
 // CONTEXT
-const featureCardContext = getFeatureCardContext();
+const cardCtx = getFeatureCardContext();
 
 // STATE : PROPS
 let { feature }: { feature: Feature } = $props();
@@ -79,13 +79,13 @@ let organisation = mapCtx.getOrganisation(project!);
         use:clickOutside={(e) => closeMenu(e)}>
         <button
           class="btn btn-ghost btn-sm h-auto w-full justify-start gap-2 rounded-b-none p-2 pl-3 font-mono font-thin text-neutral-content hover:bg-base-300 active:scale-100 active:bg-base-200"
-          onclick={() => (featureCardContext.state.mode = FeatureCardMode.Missing)}>
+          onclick={() => (cardCtx.state.mode = FeatureCardMode.Missing)}>
           <Icon src={ExclamationCircle} class="h-5 w-5 text-primary" theme="solid" />
           Report Missing
         </button>
         <button
           class="btn btn-ghost btn-sm h-auto w-full justify-start gap-2 rounded-t-none rounded-br-none p-2 pl-3 font-mono font-thin text-neutral-content hover:bg-base-300 active:scale-100 active:bg-base-200"
-          onclick={() => (featureCardContext.state.mode = FeatureCardMode.AddPhoto)}>
+          onclick={() => (cardCtx.state.mode = FeatureCardMode.AddPhoto)}>
           <Icon src={Camera} class="h-5 w-5 text-primary" theme="solid" />
           Add Photo
         </button>

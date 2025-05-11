@@ -23,14 +23,14 @@ import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 // TYPES
 import type { UploadedPhoto, CameraPermissionStatus } from '$lib/types';
 // CONTEXT
-const featureCardContext = getFeatureCardContext();
+const cardCtx = getFeatureCardContext();
 
 // PROPS
 const { isCameraActive = false, isSingleImage = false } = $props();
 
 // STATE
 // Photo gallery state
-let showCarousel = $derived(featureCardContext.userData.photos.length > 0);
+let showCarousel = $derived(cardCtx.userData.photos.length > 0);
 let currentIndex = $state(0);
 
 // DOM references
@@ -77,7 +77,7 @@ function handleFileSelect(event: Event) {
 
   const newFiles = Array.from(input.files);
 
-  featureCardContext.addPhotosFromFiles(newFiles);
+  cardCtx.addPhotosFromFiles(newFiles);
 
   // Reset the input to allow selecting the same file again
   input.value = '';
@@ -90,11 +90,11 @@ function handleFileSelect(event: Event) {
  */
 function removePhoto(photo: UploadedPhoto) {
   // Remove the photo from the context
-  featureCardContext.removePhoto(photo);
+  cardCtx.removePhoto(photo);
 
   // Reset current index if we removed the last photo
-  if (currentIndex >= featureCardContext.userData.photos.length) {
-    currentIndex = Math.max(0, featureCardContext.userData.photos.length - 1);
+  if (currentIndex >= cardCtx.userData.photos.length) {
+    currentIndex = Math.max(0, cardCtx.userData.photos.length - 1);
   }
 }
 
@@ -233,10 +233,10 @@ function capturePhoto() {
       const previewUrl = URL.createObjectURL(blob);
 
       // Add to photos array
-      featureCardContext.addPhoto({ file, previewUrl });
+      cardCtx.addPhoto({ file, previewUrl });
 
       // Update currentIndex to show the latest photo
-      currentIndex = featureCardContext.userData.photos.length - 1;
+      currentIndex = cardCtx.userData.photos.length - 1;
 
       // Close camera interface
       closeCameraInterface();
@@ -265,8 +265,8 @@ function closeCameraInterface() {
  * If the feature card is in `Display` mode, it switches to `AddPhoto` mode.
  */
 async function openCamera() {
-  if (featureCardContext.getMode() === FeatureCardMode.Display) {
-    featureCardContext.setMode(FeatureCardMode.AddPhoto);
+  if (cardCtx.getMode() === FeatureCardMode.Display) {
+    cardCtx.setMode(FeatureCardMode.AddPhoto);
   }
 
   // First check the current permission status
@@ -308,12 +308,12 @@ function useFileInput() {
 /**
  * Calculates a wrapped index for an array, enabling "infinite" carousel scrolling.
  * @param {number} index - The raw index, which can be negative or exceed array bounds.
- * @returns {number} The wrapped index within the bounds of the `featureCardContext.userData.photos` array. Returns 0 if the array is empty.
+ * @returns {number} The wrapped index within the bounds of the `cardCtx.userData.photos` array. Returns 0 if the array is empty.
  */
 function getImageIndex(index: number): number {
-  if (featureCardContext.userData.photos.length === 0) return 0;
+  if (cardCtx.userData.photos.length === 0) return 0;
   // Handle wrapping for infinite scroll
-  const length = featureCardContext.userData.photos.length;
+  const length = cardCtx.userData.photos.length;
   return ((index % length) + length) % length;
 }
 
@@ -323,7 +323,7 @@ function getImageIndex(index: number): number {
  * @returns {UploadedPhoto} The photo object at the calculated wrapped index.
  */
 function getPhotoAtIndex(index: number): UploadedPhoto {
-  return featureCardContext.userData.photos[getImageIndex(index)];
+  return cardCtx.userData.photos[getImageIndex(index)];
 }
 
 /**
@@ -440,7 +440,7 @@ onMount(() => {
     container?.removeEventListener('touchcancel', cleanup);
 
     // Clean up object URLs
-    featureCardContext.clearPhotos();
+    cardCtx.clearPhotos();
 
     // Stop camera stream if active
     if (cameraStream) {
@@ -526,7 +526,7 @@ onMount(() => {
       {#if !isSingleImage}
         <div
           class="absolute bottom-2 left-2 z-10 rounded bg-black/50 px-2 py-1 text-xs text-white">
-          {currentIndex + 1} / {featureCardContext.userData.photos.length}
+          {currentIndex + 1} / {cardCtx.userData.photos.length}
         </div>
       {/if}
 
@@ -547,7 +547,7 @@ onMount(() => {
         ontouchend={handleTouchEnd}
         class:dragging={isDragging}
         style="transform: translateX({$offset}px)">
-        {#if featureCardContext.userData.photos.length > 1}
+        {#if cardCtx.userData.photos.length > 1}
           <!-- Previous Image -->
           <div class="absolute left-0 top-0 h-full w-full opacity-0">
             <img
@@ -565,7 +565,7 @@ onMount(() => {
             class="h-full w-full object-contain" />
         </div>
 
-        {#if featureCardContext.userData.photos.length > 1}
+        {#if cardCtx.userData.photos.length > 1}
           <!-- Next Image -->
           <div class="absolute left-0 top-0 h-full w-full opacity-0">
             <img

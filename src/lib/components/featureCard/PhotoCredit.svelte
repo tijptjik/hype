@@ -10,7 +10,7 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 
 const { session } = $page.data;
-const featureCardContext = getFeatureCardContext();
+const cardCtx = getFeatureCardContext();
 
 let editedAttribution = $state(session?.user?.attribution || '');
 let editing = $state(!(session?.user?.attribution || '').trim());
@@ -19,8 +19,8 @@ let timer: ReturnType<typeof setTimeout>;
 // CONTEXT
 const debounceAndUpdateAttribution = (value: string) => {
   clearTimeout(timer);
-  if (featureCardContext.getError() === m.validation__attribution_required()) {
-    featureCardContext.resetError();
+  if (cardCtx.getError() === m.validation__attribution_required()) {
+    cardCtx.resetError();
   }
   editedAttribution = value; // Keep UI responsive
 
@@ -38,7 +38,7 @@ const debounceAndUpdateAttribution = (value: string) => {
       if (response.ok) {
         if (session.user) {
           session.user.attribution = value;
-          featureCardContext.setAttribution(value);
+          cardCtx.setAttribution(value);
         }
       } else {
         console.error('Failed to update attribution:', await response.text());

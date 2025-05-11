@@ -9,7 +9,7 @@ import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 // SERVICES
 import { getImageContext } from '$lib/context/images.svelte';
 // CONTEXT
-const featureCardContext = getFeatureCardContext();
+const cardCtx = getFeatureCardContext();
 
 const imageCtx = getImageContext();
 
@@ -22,7 +22,7 @@ const { isCameraActive = false, isSingleImage = false } = $props();
     <div class="flex items-center justify-center">
       <span class="loading loading-ring loading-lg"></span>
     </div>
-  {:else if imageCtx.getImages().length > 0 && featureCardContext.state.mode === FeatureCardMode.Display}
+  {:else if imageCtx.getImages().length > 0 && cardCtx.state.mode === FeatureCardMode.Display}
     <Carousel />
   {:else}
     <AddPhoto {isCameraActive} {isSingleImage} />

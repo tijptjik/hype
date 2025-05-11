@@ -5,7 +5,7 @@ import { m } from '$lib/i18n';
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 
 // CONTEXT
-const featureCardContext = getFeatureCardContext();
+const cardCtx = getFeatureCardContext();
 </script>
 
 <div
@@ -30,7 +30,7 @@ const featureCardContext = getFeatureCardContext();
   <div class="pointer-events-auto bg-black px-3 pt-4 w-100:px-6">
     <textarea
       id="missing-reason"
-      bind:value={featureCardContext.userData.missingReason}
+      bind:value={cardCtx.userData.missingReason}
       class="w-full rounded-md bg-gray-800 p-3 text-white focus:outline-none"
       rows="3"
       placeholder={m.report_missing__placeholder()}></textarea>
