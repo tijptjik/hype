@@ -9,7 +9,7 @@ import OmniEntries from './OmniSectionEntries.svelte';
 import type { OmniGroup } from '$lib/types';
 
 // CONTEXT
-const omniContext = getOmniContext();
+const omniCtx = getOmniContext();
 
 // PROPS
 type Props = {

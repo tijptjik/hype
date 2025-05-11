@@ -7,7 +7,7 @@ import { getOmniContext } from '$lib/context/omni.svelte';
 import { getMapContext } from '$lib/context/map.svelte';
 
 // CONTEXT
-const omniContext = getOmniContext();
+const omniCtx = getOmniContext();
 const mapContext = getMapContext();
 
 // PROPS
@@ -32,8 +32,8 @@ let currentIndex = $derived(
     : mapContext.state.active.collection!.items.length - 1 <= currentIndex}
   onclick={() =>
     direction === 'left'
-      ? mapContext.navPrevious({ isCardOpen: omniContext.state.isCardOpen })
-      : mapContext.navNext({ isCardOpen: omniContext.state.isCardOpen })}>
+      ? mapContext.navPrevious({ isCardOpen: omniCtx.state.isCardOpen })
+      : mapContext.navNext({ isCardOpen: omniCtx.state.isCardOpen })}>
   <Icon
     src={direction === 'left' ? ChevronLeft : ChevronRight}
     class="h-5 w-5 group-hover:text-neutral-content {(

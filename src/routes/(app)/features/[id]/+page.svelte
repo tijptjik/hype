@@ -34,13 +34,13 @@ let featureId: string = $state($page.params.id);
 
 // CONTEXT
 const mapContext = getMapContext();
-const omniContext = getOmniContext();
+const omniCtx = getOmniContext();
 
 // CONTEXT :: FEATURE CARD
 setFeatureCardContext();
 const featureCardContext = getFeatureCardContext();
 
-omniContext.setFeatureCardContext(featureCardContext);
+omniCtx.setFeatureCardContext(featureCardContext);
 
 // STATE
 let mode = $derived(featureCardContext.state.mode);
@@ -58,7 +58,7 @@ $effect(() => {
 
 // Helper function to handle async operations
 async function handleFeatureSelection() {
-  await omniContext.handleFeatureSelection(mapContext, featureId);
+  await omniCtx.handleFeatureSelection(mapContext, featureId);
 }
 </script>
 

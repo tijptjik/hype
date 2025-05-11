@@ -35,7 +35,7 @@ let session = $page.data.session;
 
 // CONTEXT
 const mapContext = getMapContext();
-const omniContext = getOmniContext();
+const omniCtx = getOmniContext();
 
 let lastHorizontalOffset = $state(0);
 // WATCHERS
@@ -1241,11 +1241,11 @@ onMount(async () => {
     if (target.dataset.type === 'marker') {
       const featureId = target.dataset.featureId;
       if (!featureId) return;
-      omniContext.handleFeatureSelection(mapContext, featureId, { openCard: true });
+      omniCtx.handleFeatureSelection(mapContext, featureId, { openCard: true });
     } else if (Object.values(mapContext.state.panels).some((panel) => panel)) {
       mapContext.closeAllPanels();
     } else {
-      omniContext.close();
+      omniCtx.close();
     }
   });
 

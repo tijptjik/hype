@@ -12,7 +12,7 @@ import { getOmniContext, PageState } from '$lib/context/omni.svelte';
 
 // CONTEXT
 let mapContext = getMapContext();
-let omniContext = getOmniContext();
+let omniCtx = getOmniContext();
 
 // STATE : PROPS
 let { children }: { children: any } = $props();
@@ -36,17 +36,17 @@ let horizontalOffset = $derived(() => {
 
 // PAGE STATE HANDLING
 function handleOutroStart() {
-  if (omniContext.pageState === PageState.NeedTransition) {
-    omniContext.pageState = PageState.Transitioning;
+  if (omniCtx.pageState === PageState.NeedTransition) {
+    omniCtx.pageState = PageState.Transitioning;
   }
 }
 
 function handleOutroEnd() {
-  if (omniContext.pageState === PageState.Transitioning) {
-    omniContext.pageState = PageState.ReadyToNav;
-    omniContext.clearSearch();
-    omniContext.setMode('search');
-    omniContext.focusSearchBar();
+  if (omniCtx.pageState === PageState.Transitioning) {
+    omniCtx.pageState = PageState.ReadyToNav;
+    omniCtx.clearSearch();
+    omniCtx.setMode('search');
+    omniCtx.focusSearchBar();
   }
 }
 
@@ -55,12 +55,12 @@ function handleClickOutside(e: MouseEvent) {
   if (target?.dataset?.type === 'marker') {
     const featureId = target.dataset.featureId;
     if (featureId) {
-      omniContext.handleFeatureSelection(mapContext, featureId);
+      omniCtx.handleFeatureSelection(mapContext, featureId);
     }
   } else if (target.localName === 'canvas') {
-    // omniContext.pageState = PageState.NeedTransition;
-    omniContext.closeCard();
-    // omniContext.pageState = PageState.Transitioning;
+    // omniCtx.pageState = PageState.NeedTransition;
+    omniCtx.closeCard();
+    // omniCtx.pageState = PageState.Transitioning;
     // goto(i18n.resolveRoute('/'));
   }
 }
@@ -143,7 +143,7 @@ export function conditionalTouchScroll(node: HTMLElement, options = { threshold:
 }
 </script>
 
-{#if omniContext.state.isCardOpen}
+{#if omniCtx.state.isCardOpen}
   <div
     class="pointer-events-none relative z-20 mx-auto h-full w-full max-w-[520px] overflow-x-auto overflow-y-hidden p-0 duration-300 w-92:my-4 w-92:h-auto w-92:px-4"
     style="transform: translateX({horizontalOffset()}px); z-index: 4;"
@@ -167,7 +167,7 @@ export function conditionalTouchScroll(node: HTMLElement, options = { threshold:
   </div>
 {/if}
 
-{#if omniContext.pageState === PageState.Transitioning}
+{#if omniCtx.pageState === PageState.Transitioning}
   <div
     class="fixed inset-x-[24px] z-50"
     in:fade={{ duration: 200 }}

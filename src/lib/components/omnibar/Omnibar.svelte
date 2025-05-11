@@ -10,14 +10,14 @@ import OmniNavigationBar from './OmniNavigationBar.svelte';
 import { MOBILE_MAX_WIDTH } from '$lib/index';
 
 // CONTEXT
-const omniContext = getOmniContext();
+const omniCtx = getOmniContext();
 const mapContext = getMapContext();
 
-let showSearch = $derived(omniContext.state.mode === 'search');
+let showSearch = $derived(omniCtx.state.mode === 'search');
 
 function handleEscape(event: KeyboardEvent) {
   if (event.key === 'Escape') {
-    omniContext.close();
+    omniCtx.close();
   }
 }
 

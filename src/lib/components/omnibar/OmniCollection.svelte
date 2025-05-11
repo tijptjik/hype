@@ -27,7 +27,7 @@ let {
 }: OmniCollectionProps = $props();
 
 // CONTEXT
-const omniContext = getOmniContext();
+const omniCtx = getOmniContext();
 const mapContext = getMapContext();
 
 // STATE
@@ -53,10 +53,10 @@ let listContainer: HTMLUListElement | null = $state(null);
 
 function handleItemClick(event: Event, index: number) {
   if (mode === 'navigation') {
-    omniContext.toggleTray(event);
+    omniCtx.toggleTray(event);
   }
-  mapContext.navToIndex(index, { isCardOpen: omniContext.state.isCardOpen });
-  omniContext.openCard();
+  mapContext.navToIndex(index, { isCardOpen: omniCtx.state.isCardOpen });
+  omniCtx.openCard();
 }
 
 // EFFECTS
@@ -74,7 +74,7 @@ $effect(() => {
 </script>
 
 <div
-  class="shadow-blue-500/100 shadow-blue-500/50 absolute left-3 right-3 top-0 z-50 flex w-auto select-none flex-col rounded-b-lg border-t-0 border-base-300 bg-base-200 p-0 shadow-xl"
+  class="absolute left-3 right-3 top-0 z-50 flex w-auto select-none flex-col rounded-b-lg border-t-0 border-base-300 bg-base-200 p-0 shadow-xl shadow-blue-500/100 shadow-blue-500/50"
   transition:slide={{ duration: 200, axis: 'y', delay: 300, easing: cubicInOut }}>
   <div class="max-h-[260px] overflow-y-auto px-4 pb-2 pt-1.5">
     {#if items.length === 0}
@@ -117,12 +117,9 @@ $effect(() => {
   {#if mode === 'navigation'}
     <div class="flex h-12 items-center justify-between rounded-b-lg bg-black px-4">
       <span class="text-xs uppercase tracking-wider text-base-content/60">
-        {omniContext.navTitle}
+        {omniCtx.navTitle}
       </span>
-      <Icon
-        src={XMark}
-        class="h-5 w-5"
-        onclick={(e: Event) => omniContext.toggleTray(e)} />
+      <Icon src={XMark} class="h-5 w-5" onclick={(e: Event) => omniCtx.toggleTray(e)} />
     </div>
   {/if}
 </div>

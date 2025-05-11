@@ -9,7 +9,7 @@ import OmniSection from './OmniSection.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
 
 // CONTEXT
-const omniContext = getOmniContext();
+const omniCtx = getOmniContext();
 </script>
 
 <div
@@ -17,16 +17,16 @@ const omniContext = getOmniContext();
   transition:slide={{ duration: 200 }}
   role="listbox"
   tabindex="-1">
-  {#if Object.values(omniContext.searchResults).every((group) => group.length === 0)}
+  {#if Object.values(omniCtx.searchResults).every((group) => group.length === 0)}
     <div class="p-4 text-center text-base-content/60">{m.omni__no_results()}</div>
   {:else}
-    {#if omniContext.searchResults.features.length > 0}
+    {#if omniCtx.searchResults.features.length > 0}
       <OmniSection title={m.omni__title_features()} group="features" />
     {/if}
-    {#if omniContext.searchResults.neighbourhoods.length > 0}
+    {#if omniCtx.searchResults.neighbourhoods.length > 0}
       <OmniSection title={m.omni__title_neighbourhoods()} group="neighbourhoods" />
     {/if}
-    {#if omniContext.searchResults.walks.length > 0}
+    {#if omniCtx.searchResults.walks.length > 0}
       <OmniSection title={m.omni__title_walks()} group="walks" />
     {/if}
   {/if}

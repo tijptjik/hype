@@ -15,7 +15,7 @@ import { Squares2x2 } from '@steeze-ui/heroicons';
 
 // CONTEXT
 const mapContext = getMapContext();
-const omniContext = getOmniContext();
+const omniCtx = getOmniContext();
 // STATE
 let searchTerm = $state('');
 
@@ -85,7 +85,7 @@ const filteredFeatures = $derived(filterFeatures(wishlistedFeatures, searchTerm)
             class="min-h-21 flex flex-row items-center justify-between gap-4 bg-black px-4 py-2 text-[#374151]"
             animate:flip={{ duration: 200 }}
             onclick={() =>
-              omniContext.handleFeatureSelection(mapContext, wishlist.featureId, {
+              omniCtx.handleFeatureSelection(mapContext, wishlist.featureId, {
                 openCard: true
               })}>
             <Icon src={Squares2x2} class="h-5 w-5 flex-shrink-0" theme="fill" />

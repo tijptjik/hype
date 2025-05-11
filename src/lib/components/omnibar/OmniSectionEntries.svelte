@@ -12,15 +12,15 @@ type Props = {
 };
 
 // CONTEXT
-const omniContext = getOmniContext();
+const omniCtx = getOmniContext();
 
 // PROPS
 let { group }: Props = $props();
 
 // DERIVED
-let results: SearchResult[] = $derived(omniContext.searchResults[group]);
-let limit: number = $derived(omniContext.limits[group]);
-let onSelection: (ref: string) => void = $derived(omniContext.searchHandlers[group]);
+let results: SearchResult[] = $derived(omniCtx.searchResults[group]);
+let limit: number = $derived(omniCtx.limits[group]);
+let onSelection: (ref: string) => void = $derived(omniCtx.searchHandlers[group]);
 </script>
 
 <div class="flex flex-shrink-0 select-none flex-col" role="group">

@@ -48,7 +48,7 @@ setMapContext(
 setOmniContext(getMapContext());
 
 // CONTEXT - Get Map & Omni Context
-const omniContext = getOmniContext();
+const omniCtx = getOmniContext();
 const mapContext = getMapContext();
 
 mapContext.registerKeydownHandlers();
@@ -67,9 +67,9 @@ mapContext.registerKeydownHandlers();
 
 // NAVIGATION HANDLING -- State Change Effect
 $effect(() => {
-  if (browser && omniContext.pageState === PageState.ReadyToNav && navDest) {
+  if (browser && omniCtx.pageState === PageState.ReadyToNav && navDest) {
     goto(navDest.replace('(app)', '')).then(() => {
-      omniContext.pageState = PageState.NoTransition;
+      omniCtx.pageState = PageState.NoTransition;
     });
   }
 });
