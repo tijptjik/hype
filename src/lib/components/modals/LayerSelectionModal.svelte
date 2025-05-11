@@ -260,7 +260,7 @@ function handleKeydown(e: KeyboardEvent) {
             class="uppercase {selectedOrganisation
               ? 'text-primary'
               : 'text-base-content'}">
-            {selectedOrganisation?.nameShort || 'Organisation'}
+            {selectedOrganisation?.nameShort || m.any_small_midge_aim()}
           </span>
         </button>
         <span class="text-base-content/60">›</span>
@@ -277,7 +277,7 @@ function handleKeydown(e: KeyboardEvent) {
           {/if}
           <span
             class="uppercase {selectedProject ? 'text-accent' : 'text-base-content'}">
-            {selectedProject?.nameShort || 'Project'}
+            {selectedProject?.nameShort || m.deft_mealy_ant_vent()}
           </span>
         </button>
         <span class="text-base-content/60">›</span>
@@ -294,7 +294,7 @@ function handleKeydown(e: KeyboardEvent) {
           {/if}
           <span
             class="uppercase {selectedLayer ? 'text-secondary' : 'text-base-content'}">
-            {selectedLayer?.nameShort || 'Layer'}
+            {selectedLayer?.nameShort || m.active_bold_cobra_grin()}
           </span>
         </button>
       </div>
