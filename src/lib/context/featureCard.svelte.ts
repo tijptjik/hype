@@ -2,14 +2,10 @@
 import { setContext, getContext } from 'svelte';
 // ENUMS
 import { FeatureCardMode } from '$lib/types';
+// TYPES
+import type { UploadedPhoto } from '$lib/types';
 // I18N
 import { m } from '$lib/i18n';
-
-// TYPES
-type UploadedPhoto = {
-  file: File;
-  previewUrl: string;
-};
 
 export class FeatureCardContext {
   // STATE must be initialized first

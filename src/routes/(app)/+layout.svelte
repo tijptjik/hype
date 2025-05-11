@@ -17,6 +17,8 @@ import Filters from '$lib/components/panels/Filters.svelte';
 import Maps from '$lib/components/panels/Maps.svelte';
 import Stars from '$lib/components/panels/Stars.svelte';
 import Settings from '$lib/components/panels/Settings.svelte';
+import LayerSelectionModal from '$lib/components/modals/LayerSelectionModal.svelte';
+import GeoLocationModal from '$lib/components/modals/GeoLocationModal.svelte';
 // TYPES
 import type { LayoutData } from '../(app)/$types';
 import type { QueryClient } from '@tanstack/svelte-query';
@@ -105,3 +107,6 @@ $effect(() => {
     </main>
   {/if}
 </div>
+
+<LayerSelectionModal />
+<GeoLocationModal />

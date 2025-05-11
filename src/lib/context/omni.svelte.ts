@@ -12,7 +12,7 @@ import neighbourhoods from '$lib/map/neighbourhoods.json';
 // ENUMS
 import { FeatureCardMode } from '$lib/types';
 // TYPES
-import type { SearchResult, Id } from '$lib/types';
+import type { SearchResult, Id, NewFeature } from '$lib/types';
 import type { mapContext } from '$lib/context/map.svelte';
 // TYPES
 import type { FeatureCardContext } from './featureCard.svelte';
@@ -178,7 +178,6 @@ export class OmniContext {
     }
   }
 
-  // SEARCH METHODS
   async handleFeatureSelection(
     mapContext: mapContext,
     featureId: Id,
