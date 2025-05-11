@@ -233,7 +233,7 @@ function handleKeydown(e: KeyboardEvent) {
           id="modal-title"
           class="w-full text-center text-lg font-bold focus:border-none focus:outline-none"
           tabindex="-1">
-          Select Map
+          {m.each_gray_felix_catch()}
         </h3>
         <button class="btn btn-ghost btn-sm absolute right-6 top-6" onclick={close}>
           <Icon src={XMark} class="h-5 w-5" />
@@ -362,7 +362,7 @@ function handleKeydown(e: KeyboardEvent) {
             ? 'bg-base-400 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300'
             : 'btn-disabled'}"
           onclick={close}>
-          OK
+          {m.main_east_boar_jump()}
         </button>
       </div>
     </div>

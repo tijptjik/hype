@@ -73,13 +73,13 @@ function close() {
     geometry: undefined,
     displayAddress: undefined,
     translations: {
-      ...newFeature?.translations,
+      ...(newFeature?.translations || {}),
       'zh-hant': {
-        ...newFeature?.translations['zh-hant'],
+        ...(newFeature?.translations['zh-hant'] || {}),
         displayAddress: undefined
       },
       'zh-hans': {
-        ...newFeature?.translations['zh-hans'],
+        ...(newFeature?.translations['zh-hans'] || {}),
         displayAddress: undefined
       }
     }
@@ -170,7 +170,7 @@ function handleKeydown(e: KeyboardEvent) {
           id="modal-title"
           class="text-shadow-lg/30 w-full rounded-xl bg-black/80 px-3 py-1 text-center text-xl font-bold uppercase tracking-wide focus:border-none focus:outline-none"
           tabindex="-1">
-          Pinpoint Location
+          {m.lazy_round_falcon_shine()}
         </h3>
         <button
           class="btn btn-ghost btn-sm absolute right-0 translate-x-8"
@@ -239,9 +239,9 @@ function handleKeydown(e: KeyboardEvent) {
             disabled={isLoading}>
             {#if isLoading}
               <span class="loading loading-spinner loading-sm"></span>
-              Getting Address
+              {m.full_calm_monkey_engage()}
             {:else}
-              Set Location
+              {m.cool_ago_jackdaw_pop()}
             {/if}
           </button>
         {:else}
@@ -249,7 +249,7 @@ function handleKeydown(e: KeyboardEvent) {
             class="btn bg-base-400 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300"
             onclick={close}
             disabled={!isValid}>
-            Use Location
+            {m.close_shy_jurgen_cook()}
           </button>
         {/if}
       </div>
