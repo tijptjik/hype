@@ -13,7 +13,7 @@ import { getOmniContext } from '$lib/context/omni.svelte';
 import { clickOutside, focusOnSlash, handleEscape, selectOnEnter } from '$lib/actions';
 // COMPONENTS
 import OmniResults from '$lib/components/omnibar/OmniResults.svelte';
-
+import OmniNewFeature from '$lib/components/omnibar/OmniNewFeature.svelte';
 // CONTEXT
 const omniContext = getOmniContext();
 
@@ -54,5 +54,6 @@ $effect(() => {
     class="mx-3 mt-0 overflow-hidden rounded-b-xl border-2 border-t-0 border-base-200 bg-black shadow-lg"
     transition:slide={{ duration: 200 }}>
     <OmniResults />
+    <OmniNewFeature />
   </div>
 {/if}
