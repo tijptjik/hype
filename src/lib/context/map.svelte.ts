@@ -22,7 +22,9 @@ import type {
   mapContextState,
   PanelState,
   ActiveCollection,
-  Property
+  Property,
+  NewFeature,
+  UserContributedFeature
 } from '$lib/types';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
@@ -76,6 +78,9 @@ export class mapContext {
       settings: false
     }
   });
+
+  // New Feature -- The new feature to be created
+  newFeature: UserContributedFeature | null = $state(null);
 
   // Silly state to track if the map has been zoomed to a marker
   zoomToMarkerOnly: boolean = $state(false);
@@ -528,19 +533,22 @@ export class mapContext {
   // PRISM RELATIONS
 
   getOrganisation = (project: Project): Organisation | undefined =>
-    project
-      ? this.state.resources.organisation.find(
-          (org) => org.id === project.organisationId
-        )
-      : undefined;
+    this.getOrganisationById(project.organisationId);
+
+  getOrganisationById = (id: Id): Organisation | undefined =>
+    this.state.resources.organisation.find((org) => org.id === id);
 
   getProject = (layer: Layer): Project | undefined =>
-    layer
-      ? this.state.resources.project.find((proj) => proj.id === layer.projectId)
-      : undefined;
+    this.getProjectById(layer.projectId);
+
+  getProjectById = (id: Id): Project | undefined =>
+    this.state.resources.project.find((proj) => proj.id === id);
 
   getLayer = (feature: Feature): Layer | undefined =>
-    this.state.resources.layer.find((layer) => layer.id === feature.layerId);
+    this.getLayerById(feature.layerId);
+
+  getLayerById = (id: Id): Layer | undefined =>
+    this.state.resources.layer.find((layer) => layer.id === id);
 
   // FEATURE COLLECTIONS
 
@@ -1170,6 +1178,20 @@ export class mapContext {
       event.preventDefault();
       event.stopPropagation();
     }
+  };
+
+  // NEW FEATURE
+
+  setNewFeature = (feature: Partial<UserContributedFeature>) => {
+    this.newFeature = { ...this.newFeature, ...feature } as UserContributedFeature;
+  };
+
+  getNewFeature = (): UserContributedFeature | null => {
+    return this.newFeature;
+  };
+
+  resetNewFeature = () => {
+    this.newFeature = null;
   };
 }
 export const MAP_STATE_KEY = Symbol('mapContext');
