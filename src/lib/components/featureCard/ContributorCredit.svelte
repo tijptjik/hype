@@ -1,0 +1,101 @@
+<script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
+// STORES
+import { page } from '$app/stores';
+// ICONS
+import { PencilSquare } from '@steeze-ui/heroicons';
+import Icon from '$lib/components/common/Icon.svelte';
+// CONTEXT
+import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
+
+const { session } = $page.data;
+const cardCtx = getFeatureCardContext();
+
+let editedAttribution = $state(session?.user?.attribution || '');
+let editing = $state(!(session?.user?.attribution || '').trim());
+let timer: ReturnType<typeof setTimeout>;
+
+// CONTEXT
+const debounceAndUpdateAttribution = (value: string) => {
+  clearTimeout(timer);
+  if (cardCtx.getError() === m.validation__attribution_required()) {
+    cardCtx.resetError();
+  }
+  editedAttribution = value; // Keep UI responsive
+
+  timer = setTimeout(async () => {
+    if (!session?.user?.id) {
+      console.warn('User session not found. Cannot update attribution.');
+      return;
+    }
+    try {
+      const response = await fetch(`/api/users/${session.user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attribution: value })
+      });
+      if (response.ok) {
+        if (session.user) {
+          session.user.attribution = value;
+          cardCtx.setAttribution(value);
+        }
+      } else {
+        console.error('Failed to update attribution:', await response.text());
+      }
+    } catch (error) {
+      console.error('Error updating attribution:', error);
+    }
+  }, 500);
+};
+
+// Ensure editing state is re-evaluated if session changes (e.g. login/logout)
+$effect(() => {
+  const currentAttr = session?.user?.attribution || '';
+  editedAttribution = currentAttr;
+  editing = !currentAttr.trim();
+});
+</script>
+
+<p
+  class="bg-black px-3 pt-4 text-center font-bold uppercase tracking-wider text-neutral-400 w-100:px-6">
+  {m.new_feature__thank_you()}
+</p>
+
+<div class="pointer-events-auto w-full bg-black px-3 pt-2 md:px-6">
+  {#if !editedAttribution.trim() || editing}
+    <div class="mb-2 px-12">
+      <label
+        for="attribution-input"
+        class="text mb-3 block text-center text-base-content">
+        {m.add_feature__credit_prompt()}
+      </label>
+      <input
+        type="text"
+        id="attribution-input"
+        class="input input-bordered w-full bg-gray-800 text-white placeholder:text-gray-400"
+        placeholder={m.photo_credit_input_placeholder()}
+        bind:value={editedAttribution}
+        oninput={({ target }) =>
+          debounceAndUpdateAttribution((target as HTMLInputElement).value)} />
+    </div>
+  {:else}
+    <p class="text-center text-base-content">
+      {m.add_feature__credit_prompt()}
+    </p>
+    <div class="flex w-full items-center justify-center gap-2 pt-2 text-center">
+      <p class="text-center text-xl font-semibold text-white">{editedAttribution}</p>
+      <button
+        class="btn btn-ghost btn-sm h-8 w-8 p-0"
+        onclick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          editing = true;
+        }}>
+        <Icon
+          src={PencilSquare}
+          class="h-5 w-5 stroke-1 text-base-content/80 hover:text-base-content" />
+      </button>
+    </div>
+  {/if}
+</div>
