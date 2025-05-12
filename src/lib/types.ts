@@ -1170,6 +1170,13 @@ export type UploadedPhoto = {
 
 export type CameraPermissionStatus = 'unknown' | 'prompt' | 'granted' | 'denied';
 
+export type UserContributedFeatureProperty = {
+  propertyId: Id;
+  propertyValueId: Id | null;
+  value: string;
+  translations?: Record<TargetLang, { value: string }>;
+};
+
 export type UserContributedFeature = {
   organisationId: string;
   projectId: string;
@@ -1182,5 +1189,5 @@ export type UserContributedFeature = {
     TargetLang,
     { title: string; description: string; displayAddress: string }
   >;
-  properties: FeatureProperty[];
+  properties: UserContributedFeatureProperty[];
 };
