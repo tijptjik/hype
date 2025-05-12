@@ -19,6 +19,7 @@ import Stars from '$lib/components/panels/Stars.svelte';
 import Settings from '$lib/components/panels/Settings.svelte';
 import LayerSelectionModal from '$lib/components/modals/LayerSelectionModal.svelte';
 import GeoLocationModal from '$lib/components/modals/GeoLocationModal.svelte';
+import NewFeatureCard from '$lib/components/modals/NewFeatureCard.svelte';
 // TYPES
 import type { LayoutData } from '../(app)/$types';
 import type { QueryClient } from '@tanstack/svelte-query';
@@ -97,6 +98,9 @@ $effect(() => {
         <Map />
         <Omnibar />
         {@render children()}
+        <LayerSelectionModal />
+        <GeoLocationModal />
+        <NewFeatureCard />
       </div>
     </main>
     <Menu />
@@ -107,6 +111,3 @@ $effect(() => {
     </main>
   {/if}
 </div>
-
-<LayerSelectionModal />
-<GeoLocationModal />
