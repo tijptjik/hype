@@ -8,7 +8,6 @@ import type { UploadedPhoto } from '$lib/types';
 import { m } from '$lib/i18n';
 
 export class FeatureCardContext {
-  // STATE must be initialized first
   state = $state({
     mode: FeatureCardMode.Display
   });
@@ -29,6 +28,9 @@ export class FeatureCardContext {
   }
 
   isDisplayMode = $derived(this.state.mode === FeatureCardMode.Display);
+  isNewMode = $derived(this.state.mode === FeatureCardMode.New);
+  isMissingMode = $derived(this.state.mode === FeatureCardMode.Missing);
+  isAddPhotoMode = $derived(this.state.mode === FeatureCardMode.AddPhoto);
 
   setMissingReason(reason: string) {
     this.userData.missingReason = reason;
