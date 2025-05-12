@@ -139,12 +139,21 @@ export class OmniContext {
   close() {
     // If the card is open, close it
     if (this.state.isCardOpen) {
-      // If the card is in missing mode, turn it into display mode
-      if (!this.cardCtx?.isDisplayMode) {
+      // If the card is in new-feature mode, reset the new feature
+      if (this.cardCtx?.isNewMode) {
+        this.mapCtx.resetNewFeature();
+        this.closeCard();
+        this.clearSearch();
+        this.setMode('search');
+        goto('/');
+        this.focusSearchBar();
+      } else if (!this.cardCtx?.isDisplayMode) {
+        // If the card is in missing mode, turn it into display mode
         this.cardCtx?.setMode(FeatureCardMode.Display);
       } else {
         this.closeCard();
       }
+
       // If there is no card, but the tray is open, close the tray
     } else if (this.state.mode === 'navigation' && this.state.isTrayOpen) {
       this.closeTray();
