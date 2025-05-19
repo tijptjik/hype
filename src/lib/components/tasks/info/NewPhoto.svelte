@@ -1,45 +1,40 @@
+<script lang="ts">
+import { m } from '$lib/i18n';
+</script>
+
 <section>
-  <h3 class="mb-2 font-bold">Actions</h3>
+  <h3 class="mb-2 font-bold">{m.antsy_patient_moth_taste()}</h3>
   <p>
-    Would you like to <i>accept</i> or <i>reject</i> this user-submitted photo to the Feature's
-    gallery?
+    {m.few_sunny_wren_push()}
   </p>
   <ul class="ml-6 mt-2 list-disc space-y-2">
     <li>
-      <span class="font-semibold">REJECT</span> - None of the submitted photos will appear
-      anywhere.
+      <span class="font-semibold">{m.dull_mushy_dachshund_dare()}</span> - {m.great_loose_gull_assure()}
     </li>
     <li>
-      <span class="font-semibold">ACCEPT ALL</span> - The photos will all become publicly
-      visible as part of the Feature's gallery. It will be sorted by photographic intent
-      (Canonical, CloseUp, Context, General, Evidence, Undefined), then by date added.
+      <span class="font-semibold">{m.close_cute_ostrich_feel()}</span> - {m.mild_deft_larva_absorb()}
     </li>
     <li>
-      <span class="font-semibold">ACCEPT CLASSIFIED</span> - Only the photos which have been
-      asigned a photographic intent other than "undefined" will become publicly visible as
-      part of the Feature's gallery. The rest will not appear anywhere.
+      <span class="font-semibold">{m.trite_ok_salmon_empower()}</span> - {m.blue_novel_owl_stab()}
     </li>
   </ul>
 </section>
 
 <section>
-  <h3 class="mb-2 font-bold">Viewer</h3>
+  <h3 class="mb-2 font-bold">{m.short_formal_hound_splash()}</h3>
   <p>
-    Reworked images can be dropped into the viewer to replace the user-submitted image.
-    The icon row in the bottom provides:
+    {m.happy_acidic_donkey_seek()}
   </p>
   <ul class="ml-6 mt-2 list-disc space-y-2">
-    <li>Camera, Image and File metadata</li>
-    <li>Contributor's name and date added</li>
-    <li>Download option for the photo</li>
+    <li>{m.proof_keen_swan_dart()}</li>
+    <li>{m.arable_clear_coyote_sing()}</li>
+    <li>{m.zesty_same_cat_clip()}</li>
   </ul>
 </section>
 
 <section>
-  <h3 class="mb-2 font-bold">Thumbnail Gallery</h3>
+  <h3 class="mb-2 font-bold">{m.cute_solid_gorilla_reap()}</h3>
   <p>
-    The thumbnail gallery is a list of all images in the Feature's gallery. The
-    photographic intent (e.g. Canonical, Context, etc) can be clicked to set another
-    intent.
+    {m.calm_away_panther_propel()}
   </p>
 </section>
