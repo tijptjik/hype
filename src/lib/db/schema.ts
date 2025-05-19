@@ -980,11 +980,12 @@ export const task = sqliteTable('task', {
       'set-unpublished',
       'set-intangible',
       'set-archived',
-      'add-all-photos',
-      'add-all-photos-with-intent',
-      'add-feature'
+      'added-all-photos',
+      'added-all-photos-with-intent',
+      'added-feature'
     ]
   }),
+  reviewReason: text('reviewReason'),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),

@@ -634,9 +634,9 @@ export const TaskInsert = createInsertSchema(task).extend({
       'set-unpublished',
       'set-intangible',
       'set-archived',
-      'add-all-photos',
-      'add-all-photos-with-intent',
-      'add-feature'
+      'added-all-photos',
+      'added-all-photos-with-intent',
+      'added-feature'
     ])
     .optional()
 });

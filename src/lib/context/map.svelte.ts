@@ -544,7 +544,7 @@ export class MapContext {
   getProjectById = (id: Id): Project | undefined =>
     this.state.resources.project.find((proj) => proj.id === id);
 
-  getLayer = (feature: Feature): Layer | undefined =>
+  getLayer = (feature: Feature | UserContributedFeature): Layer | undefined =>
     this.getLayerById(feature.layerId);
 
   getLayerById = (id: Id): Layer | undefined =>

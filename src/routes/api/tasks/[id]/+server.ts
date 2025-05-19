@@ -95,7 +95,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
           // Archive all images
           await archiveImages(db, taskId, false);
           break;
-        case 'add-all-photos':
+        case 'added-all-photos':
           // Publish all images
           await publishImages(db, taskId, false);
           break;
