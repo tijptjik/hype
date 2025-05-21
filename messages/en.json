@@ -263,7 +263,6 @@
   "awful_this_dingo_glow": "Intangibilize",
   "quiet_late_worm_startle": "Reject Report",
   "mad_fresh_swan_trip": "ACTION",
-  "mad_fresh_swan_trap": "REASON",
   "validation__attribution_required": "Please provide name to be credited.",
   "validation__at_least_one_image": "Please add at least one photo to be uploaded.",
   "add_photos__preface": "Thanks for adding photos to the map! A curator will review your photos and take the appropriate action.",
@@ -335,5 +334,9 @@
   "arable_clear_coyote_sing": "Contributor's name and date added",
   "zesty_same_cat_clip": "Download option for the photo",
   "cute_solid_gorilla_reap": "Thumbnail Gallery",
-  "calm_away_panther_propel": "The thumbnail gallery is a list of all images in the Feature's gallery. The\n    photographic intent (e.g. Canonical, Context, etc) can be clicked to set another\n    intent."
+  "calm_away_panther_propel": "The thumbnail gallery is a list of all images in the Feature's gallery. The\n    photographic intent (e.g. Canonical, Context, etc) can be clicked to set another\n    intent.",
+  "aloof_stale_jaguar_wave": "Hide Reviewed",
+  "calm_short_leopard_jolt": "Only Unpublished",
+  "livid_just_eel_hope": "Required translations are missing",
+  "mad_fresh_swan_trap": "REASON"
 }
