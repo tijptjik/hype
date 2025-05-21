@@ -149,10 +149,10 @@ export type ResourceState = {
   filters: AdminFilterStates;
 };
 export type FalsableResourceType = ResourceType | false;
-export type SourceLang = 'en';
-export type TargetLang = 'zh-hant' | 'zh-hans';
-export type LanguageTag = SourceLang | TargetLang;
-export type LanguageTagExtended = LanguageTag | 'core';
+export type SourceLocale = 'en';
+export type TargetLocale = 'zh-hant' | 'zh-hans';
+export type Locale = SourceLocale | TargetLocale;
+export type LocaleExtended = Locale | 'core';
 export type ResourceToEntity = {
   organisation: EntityWithData<Organisation>[];
   project: EntityWithData<Project>[];
@@ -272,7 +272,7 @@ export interface TranslationState {
   required: boolean;
 }
 
-export type TranslationStates = Record<TargetLang, TranslationState>;
+export type TranslationStates = Record<Locale, TranslationState>;
 
 /* ----------------- */
 // SCHEMA TYPES
@@ -614,7 +614,7 @@ export type SectionProps = {
 export type FormProps = OrganisationForm | ProjectForm | LayerForm | FeatureForm;
 
 export type FieldProps = SectionProps & {
-  languageTag?: LanguageTagExtended;
+  languageTag?: LocaleExtended;
   fieldRoot?: keyof Resource;
   field?: FormFieldDefinition;
   fieldIndex?: number;
@@ -624,7 +624,7 @@ export type FieldProps = SectionProps & {
 };
 
 export type FieldPropsExtended = FieldProps & {
-  languageTag: LanguageTagExtended;
+  languageTag: LocaleExtended;
   field: FormFieldExtendedDefinition;
   fieldRoot: keyof Resource;
   fieldIndex: number;
@@ -632,7 +632,7 @@ export type FieldPropsExtended = FieldProps & {
 };
 
 export type BarProps = SectionProps & {
-  languageTag: LanguageTag;
+  languageTag: Locale;
   form: SuperFormResult<Resource>;
   fields: FormField;
 };
@@ -662,7 +662,7 @@ export type ActionProps = {
 
 export type ErrorParams = {
   field: FormFieldExtendedDefinition;
-  languageTag: LanguageTag;
+  languageTag: Locale;
   fieldRoot: Field;
   fieldIndex: number;
   fieldKey: Key;
@@ -711,7 +711,7 @@ export type InputProps = {
   value: string;
   isGenAI: boolean;
   placeholder?: string;
-  languageTag: LanguageTagExtended;
+  languageTag: LocaleExtended;
   isTranslated?: boolean;
   inputType?: 'text' | 'number' | 'email';
   onchange: Function;
@@ -778,6 +778,19 @@ export type Intent =
   | 'evidence'
   | 'undefined';
 
+export type EXIF = {
+  CopyrightNotice: string;
+  Credit: string;
+  DateTimeOriginal: string;
+  CreateDate: string;
+  ModifyDate: string;
+  GPSLatitude: string;
+  GPSLongitude: string;
+  'By-line': string;
+  [key: string]: string;
+};
+
+
 /* ----------------- */
 // USER FEATURES
 /* -------- */
@@ -803,7 +816,7 @@ export const reviewActions = [
   'set-archived',
   'add-all-photo',
   'add-all-photo-with-intent',
-  'add-feature'
+  'added-feature'
 ] as const;
 export type ReviewAction = (typeof reviewActions)[number];
 
@@ -817,12 +830,12 @@ export type ReportedMissingAction = (typeof reportedMissingActions)[number];
 
 export const newPhotoActions = [
   'ignored',
-  'add-all-photos',
-  'add-all-photos-with-intent'
+  'added-all-photos',
+  'added-all-photos-with-intent'
 ] as const;
 export type NewPhotoAction = (typeof newPhotoActions)[number];
 
-export const newFeatureActions = ['ignored', 'add-feature'] as const;
+export const newFeatureActions = ['ignored', 'added-feature'] as const;
 export type NewFeatureAction = (typeof newFeatureActions)[number];
 
 export const reviewOutcomes = ['rejected', 'accepted'] as const;
@@ -939,9 +952,9 @@ export type ImageUploadRefs = {
   // ID of the entity which the image is associated with
   entity: Id;
   // Parent Organisation
-  organisation: Organisation;
+  organisation: OrganisationDB;
   // Parent Project
-  project?: Project;
+  project?: ProjectDB;
   // Image to replace is used to determine the image being replaced
   imageToReplace?: GetImageAPI;
 };
@@ -1074,7 +1087,7 @@ export type ActiveCollection = {
   id: string;
   name: string;
   type: 'neighbourhood' | 'walk' | 'feature' | 'search';
-  translations: Record<string, string>[];
+  i18n: Record<string, string>[];
   items: Feature[];
 } | null;
 
@@ -1114,6 +1127,7 @@ export type mapContextState = {
   panels: PanelState;
 };
 
+// TODO move all translations to i18n
 export type TranslatedValue = {
   value: string;
   translations?: {
@@ -1170,24 +1184,33 @@ export type UploadedPhoto = {
 
 export type CameraPermissionStatus = 'unknown' | 'prompt' | 'granted' | 'denied';
 
+// TODO move all translations to i18n
 export type UserContributedFeatureProperty = {
   propertyId: Id;
   propertyValueId: Id | null;
-  value: string;
-  translations?: Record<TargetLang, { value: string }>;
+  i18n: Record<TargetLocale, { value: string }>;
 };
 
+// TODO move all translations to i18n
 export type UserContributedFeature = {
   organisationId: string;
   projectId: string;
   layerId: string;
   geometry: Geometry;
-  title?: string;
-  description?: string;
-  displayAddress?: string;
-  translations: Record<
-    TargetLang,
+  i18n: Record<
+    TargetLocale,
     { title: string; description: string; displayAddress: string }
   >;
   properties: UserContributedFeatureProperty[];
+  contributorId?: Id;
+};
+
+export type NewFeatureTaskAPI = {
+  type: 'newFeature';
+  layerId: Id;
+  organisationId: Id;
+  projectId: Id;
+  contributorId: Id;
+  feature: UserContributedFeature;
+  featureId?: Id;
 };
