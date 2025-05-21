@@ -137,7 +137,7 @@ Object.entries(neighborhoods).forEach(
     string,
     any
   ]) => {
-    value.translations = [
+    value.i18n = [
       {
         lang: 'zh-hant',
         name: translations['zh-hant'].neighborhoods[key] || key,
