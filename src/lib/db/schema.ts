@@ -9,7 +9,7 @@ import type { AdapterAccountType } from '@auth/core/adapters';
 import { relations, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 // ENUM
-import { supportedLocales } from './zod';
+import { supportedLocales } from '../enums';
 // TYPES
 import type { GeometryObject } from 'geojson';
 import type { AddressProperties, AddressMeta, LayerMetadata, Locale, EXIF } from '../types';
