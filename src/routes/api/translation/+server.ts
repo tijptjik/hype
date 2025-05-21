@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 // LIB
 import { getTranslation } from '$lib/api/translation';
 // TYPES
-import type { LanguageTag } from '$lib/types';
+import type { Locale } from '$lib/types';
 
 export async function POST({ request }) {
   try {
@@ -21,8 +21,8 @@ export async function POST({ request }) {
     }
 
     const translations = await getTranslation(
-      sourceLang as LanguageTag,
-      targetLang as LanguageTag,
+      sourceLang as Locale,
+      targetLang as Locale,
       texts
     );
 

@@ -16,10 +16,9 @@ import {
   hierarchicalChildrenOptions,
   hierarchicalGrandChildrenOptions,
   relationalAccessOptions,
-  genericAccessOptions,
   HierarchicalResource,
   HierarchicalResourcePath
-} from '$lib/types';
+} from '$lib/enums';
 // TYPES
 import type {
   AccessStrategyOption,

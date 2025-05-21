@@ -3,7 +3,9 @@ import * as runtime from '$lib/paraglide/runtime';
 import * as m from '$lib/paraglide/messages';
 import type { Locale } from '$lib/types';
 import { getLocale } from '$lib/paraglide/runtime';
-import { supportedLocales } from './db/zod';
+// ENUMS
+import { supportedLocales } from '$lib/enums';
+
 
 // Helper function to get translated value
 // TODO I18N Refactor to handle fallbacks to other languages, and request user preferences for human-translated values

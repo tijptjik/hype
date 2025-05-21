@@ -11,7 +11,7 @@ import {
   Inbox as TaskIcon
 } from '@steeze-ui/heroicons';
 // ENUMS
-import { HierarchicalResource, HierarchicalResourcePath } from '$lib/types';
+import { HierarchicalResource, HierarchicalResourcePath } from '$lib/enums';
 // TYPES
 import type { Code, FacetType, Id } from '$lib/types';
 
