@@ -46,6 +46,14 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
           }
         },
         images: true,
+        reviewer: {
+          columns: {
+            email: false,
+            emailVerified: false,
+            createdAt: false,
+            modifiedAt: false
+          }
+        },
         contributor: {
           columns: {
             email: false,
@@ -99,7 +107,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
           // Publish all images
           await publishImages(db, taskId, false);
           break;
-        case 'add-all-photos-with-intent':
+        case 'added-all-photos-with-intent':
           // Archive undefined images and publish defined ones
           await publishImages(db, taskId, true);
           await archiveImages(db, taskId, true);
