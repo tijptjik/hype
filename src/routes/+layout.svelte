@@ -16,7 +16,7 @@ import 'tailwindcss/tailwind.css';
 // TYPES
 import type { QueryClient } from '@tanstack/svelte-query';
 import type { LayoutData } from './$types';
-import type { LanguageTag } from '$lib/types';
+import type { Locale } from '$lib/types';
 
 // PROPS
 let { children } = $props();
@@ -50,18 +50,9 @@ $effect(() => {
   }
 
   // Then handle language
-  if (session?.user?.language) {
+  if (session?.user?.locale) {
     // Set the language tag first
-    setLocale(session.user.language as LanguageTag);
-
-    // Only redirect if we're not already on the correct language route
-    const currentPath = $page.url.pathname;
-    if (
-      session.user.language !== 'en' &&
-      !currentPath.startsWith(`/${session.user.language}`)
-    ) {
-      goto(`/${session.user.language}${currentPath}`);
-    }
+    setLocale(session.user.locale as Locale);
   }
 });
 
