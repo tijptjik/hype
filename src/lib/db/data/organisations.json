@@ -16,41 +16,5 @@
     "publisherId": "p6WnJ-DKl0c1",
     "createdAt": "2024-11-25T17:48:56.888Z",
     "modifiedAt": "2024-12-09T18:06:58.518Z"
-  },
-  {
-    "id": "iLszdNS3w208",
-    "code": "hkstreetnames",
-    "name": "Hong Kong Street Names",
-    "nameGen": 0,
-    "nameShort": "HK Street Names",
-    "nameShortGen": 0,
-    "description": "Hong Kong Street Names is a project that explores the history and evolution of Hong Kong's street names.",
-    "descriptionGen": 0,
-    "url": "https://dianapang.net",
-    "imageId": "rnzmq8gnoT46",
-    "isPublished": 1,
-    "isArchived": 0,
-    "publishedAt": "2024-11-25T17:48:56.888Z",
-    "publisherId": "p6WnJ-DKl0c1",
-    "createdAt": "2024-11-25T17:48:56.888Z",
-    "modifiedAt": "2024-12-09T18:08:33.508Z"
-  },
-  {
-    "id": "oZTVNE4brR7m",
-    "code": "hkdl",
-    "name": "Hong Kong Data Layer",
-    "nameGen": 0,
-    "nameShort": "HKDL",
-    "nameShortGen": 0,
-    "description": "A Useful, Beautiful Hong Kong",
-    "descriptionGen": 0,
-    "url": "https://hype.hk",
-    "imageId": "gwKxauY8pWeJ",
-    "isPublished": 0,
-    "isArchived": 0,
-    "publishedAt": "2024-11-25T17:48:56.888Z",
-    "publisherId": "p6WnJ-DKl0c1",
-    "createdAt": "2024-11-25T17:48:56.888Z",
-    "modifiedAt": "2024-12-09T18:08:59.996Z"
   }
 ]

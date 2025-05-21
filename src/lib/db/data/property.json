@@ -78,57 +78,5 @@
     "component": "InputField",
     "createdAt": "2024-08-27T08:06:26.087Z",
     "modifiedAt": "2024-08-27T08:06:26.087Z"
-  },
-  {
-    "id": "kL9mN21Q5rS4",
-    "projectId": "bN3Kw7MqPx5Y",
-    "type": "classifier",
-    "key": "peopleType",
-    "label": "Type of Person",
-    "labelGen": false,
-    "placeholder": "Select type",
-    "placeholderGen": false,
-    "component": "SelectField",
-    "createdAt": "2024-10-11T10:15:30.000Z",
-    "modifiedAt": "2024-10-11T10:15:30.000Z"
-  },
-  {
-    "id": "bC7dF2gH2jK5",
-    "projectId": "bN3Kw7MqPx5Y",
-    "type": "classifier",
-    "key": "gender",
-    "label": "Gender",
-    "labelGen": false,
-    "placeholder": "Select gender",
-    "placeholderGen": false,
-    "component": "SelectField",
-    "createdAt": "2024-10-11T10:15:30.000Z",
-    "modifiedAt": "2024-10-11T10:15:30.000Z"
-  },
-  {
-    "id": "kL9mN2pS5rS4",
-    "projectId": "bN3Kw7MqPx5Y",
-    "type": "classifier",
-    "key": "nationality",
-    "label": "Nationality",
-    "labelGen": false,
-    "placeholder": "Select nationality",
-    "placeholderGen": false,
-    "component": "SelectField",
-    "createdAt": "2024-10-11T10:15:30.000Z",
-    "modifiedAt": "2024-10-11T10:15:30.000Z"
-  },
-  {
-    "id": "kL9m22pQ5rS1",
-    "projectId": "bN3Kw7MqPx5Y",
-    "type": "specifier",
-    "key": "name",
-    "label": "Name",
-    "labelGen": false,
-    "placeholder": "Person's name",
-    "placeholderGen": false,
-    "component": "InputField",
-    "createdAt": "2024-10-11T10:15:30.000Z",
-    "modifiedAt": "2024-10-11T10:15:30.000Z"
   }
 ]
