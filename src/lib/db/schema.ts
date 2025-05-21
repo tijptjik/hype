@@ -8,25 +8,25 @@ import {
 import type { AdapterAccountType } from '@auth/core/adapters';
 import { relations, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
-
+// ENUM
+import { supportedLocales } from './zod';
 // TYPES
 import type { GeometryObject } from 'geojson';
-import type {
-  AddressProperties,
-  AddressMeta,
-  AddressPropertiesExtended,
-  LayerMetadata
-} from '../types';
+import type { AddressProperties, AddressMeta, LayerMetadata, Locale, EXIF } from '../types';
 
-// UTILS
-const getGenImageParam = (): number => Math.floor(Math.random() * (100 - 5 + 1)) + 5;
+/* ============================================================================
+ * USER MANAGEMENT
+ * ============================================================================
+ * Tables related to user accounts, authentication, and user preferences
+ */
 
-// TODO Migrate the sqlliteTable to match the latest call signature
-
-/* ----------------- */
-// USERS
-/* -------- */
-
+/**
+ * Core user table storing user account information and preferences. Created by Auth.
+ * @remarks
+ * - Stores basic user information (name, email, etc.)
+ * - Contains user preferences for language and experimental features
+ * - Links to user activity and roles in organizations/projects
+ */
 export const user = sqliteTable('user', {
   id: text('id')
     .primaryKey()
@@ -37,14 +37,30 @@ export const user = sqliteTable('user', {
     .$onUpdateFn(() => new Date())
     .$type<Date>(),
   image: text('image'),
-  language: text('language', { enum: ['en', 'zh-hant', 'zh-hans'] })
-    .notNull()
-    .default('en'),
+  locale: text('locale', { enum: supportedLocales }).notNull().default('en'),
   attribution: text('attribution'),
+  // Language features
+  preferences: text('preferences', { mode: 'json' })
+    .$type<{
+      fallbackLocales: Locale[];
+      allowMachineTranslation: boolean;
+      isTranslateButtonVisible: boolean;
+    }>()
+    .default(
+      sql`'{"fallbackLocales":[], "allowMachineTranslation":false, "isTranslateButtonVisible":true}'`
+    )
+    .notNull(),
   // Experimental features
   experimental: text('experimental', { mode: 'json' })
-    .$type<{ contributorMode: boolean; noLabelsMode: boolean }>()
-    .default(sql`'{"contributorMode":false, "noLabelsMode":false}'`)
+    .$type<{
+      contributorMode: boolean;
+      noLabelsMode: boolean;
+      fallbackLocales: Locale[];
+      isMachineTranslation: boolean;
+    }>()
+    .default(
+      sql`'{"contributorMode":false, "noLabelsMode":false, "fallbackLocales":[]}'`
+    )
     .notNull(),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
@@ -55,6 +71,11 @@ export const user = sqliteTable('user', {
     .notNull()
 });
 
+/**
+ * User relations
+ * @remarks
+ * Links user to their memberships, roles, contributions, and preferences
+ */
 export const userRelations = relations(user, ({ many }) => ({
   memberships: many(organisationRole),
   projectRoles: many(projectRole),
@@ -65,6 +86,11 @@ export const userRelations = relations(user, ({ many }) => ({
   userLayers: many(userLayer)
 }));
 
+/**
+ * User activity tracking
+ * @remarks
+ * Tracks user activity metrics such as login count and last login timestamp
+ */
 export const userActivity = sqliteTable('userActivity', {
   userId: text('userId')
     .primaryKey()
@@ -77,151 +103,18 @@ export const userActivity = sqliteTable('userActivity', {
     .$onUpdate(() => new Date().toISOString())
 });
 
-/* ----------------- */
-// ORGANISATIONS
-/* -------- */
 
-/* Organisations, have
- * - NONE, ONE, or MANY `GeoProjects` that they own.
- * - ONE or MANY `Owners`; associated users with the `OrganisationOwner` role
- * - ONE or MANY `Members`; associated users with the `OrganisationMember` role
- *
- * Ownership does not imply membership, they both need to be defined.
- *
- * Users, have
- * - NONE or ONE SuperAdmin role. Provides full rights in the app. Ben, Billy, Mart.
- * - NONE, ONE, or MANY `OrganisationOwner` roles. Provides organisational admin rights.
- * - NONE, ONE, or MANY `OrganisationMember` roles. Defines membership of `Organisation`(s).
- * - NONE, ONE, or MANY `GeoProjectMaintainer` roles. Provides project edit rights.
- *
- * GeoProjects, have
- * - ONE or MANY `Maintainers`; associated users with the `GeoProjectMaintainer` role.
- *
- * Only the Members of the Organisation which owns a GeoProject can be selected as its maintainer.
- *  */
+/* ============================================================================
+ * AUTHENTICATION
+ * ============================================================================
+ * Tables for managing user authentication and sessions
+ */
 
-export const organisation = sqliteTable('organisation', {
-  // Database identifier
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => nanoid(12)),
-  // Public identifier
-  code: text('code').unique().notNull(),
-  // Full Name in English
-  name: text('name').notNull(),
-  nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(false),
-  // Short Name in English, used in navigation
-  nameShort: text('nameShort').notNull(),
-  nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(false),
-  // Description in English
-  description: text('description'),
-  descriptionGen: integer('descriptionGen', { mode: 'boolean' })
-    .notNull()
-    .default(false),
-  url: text('url'),
-  imageId: text('imageId').references(() => image.id, {
-    onDelete: 'set null',
-    onUpdate: 'cascade'
-  }),
-  isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(true),
-  publishedAt: text('publishedAt'),
-  publisherId: text('publisherId').references(() => user.id, {
-    onDelete: 'set null',
-    onUpdate: 'cascade'
-  }),
-  // False : Organisation may be shown in the Admin Panel
-  // True : Organisation is considered deleted
-  isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
-  createdAt: text('createdAt')
-    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .notNull(),
-  modifiedAt: text('modifiedAt')
-    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .$onUpdate(() => new Date().toISOString())
-    .notNull()
-});
-
-export const organisationRelations = relations(organisation, ({ one, many }) => ({
-  translations: many(organisationI18n),
-  userRoles: many(organisationRole),
-  image: one(image, {
-    fields: [organisation.imageId],
-    references: [image.id]
-  }),
-  publisher: one(user, {
-    fields: [organisation.publisherId],
-    references: [user.id]
-  }),
-  projects: many(project),
-  tasks: many(task)
-}));
-
-export const organisationI18n = sqliteTable(
-  'organisationI18n',
-  {
-    organisationId: text('organisationId')
-      .notNull()
-      .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    // IETF BCP 47 language tag
-    // https://www.rfc-editor.org/info/bcp47
-    lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
-    // Full Name in {lang}
-    name: text('name').notNull(),
-    nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(true),
-    // Short Name  in {lang}, used in navigation
-    nameShort: text('nameShort').notNull(),
-    nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(true),
-    // Description in {lang}
-    description: text('description'),
-    descriptionGen: integer('descriptionGen', { mode: 'boolean' })
-      .notNull()
-      .default(true)
-  },
-  (table) => [
-    primaryKey({ columns: [table.organisationId, table.lang] })
-  ]
-);
-
-export const organisationI18nRelations = relations(organisationI18n, ({ one }) => ({
-  organisation: one(organisation, {
-    fields: [organisationI18n.organisationId],
-    references: [organisation.id]
-  })
-}));
-
-export const organisationRole = sqliteTable(
-  'organisationRole',
-  {
-    organisationId: text('organisationId')
-      .notNull()
-      .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    userId: text('userId')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    role: text('role', { enum: ['member', 'owner'] })
-      .notNull()
-      .default('member')
-  },
-  (table) => [
-    primaryKey({ columns: [table.organisationId, table.userId] })
-  ]
-);
-
-export const organisationRoleRelations = relations(organisationRole, ({ one }) => ({
-  user: one(user, {
-    fields: [organisationRole.userId],
-    references: [user.id]
-  }),
-  organisation: one(organisation, {
-    fields: [organisationRole.organisationId],
-    references: [organisation.id]
-  })
-}));
-
-/* ----------------- */
-// AUTH
-/* -------- */
-
+/**
+ * External authentication provider accounts. Provided by the auth.js library.
+ * @remarks
+ * Links external authentication providers to user accounts
+ */
 export const account = sqliteTable(
   'account',
   {
@@ -246,6 +139,11 @@ export const account = sqliteTable(
   })
 );
 
+/**
+ * User sessions
+ * @remarks
+ * Manages active user sessions and their expiration
+ */
 export const session = sqliteTable('session', {
   sessionToken: text('sessionToken').primaryKey(),
   userId: text('userId')
@@ -257,9 +155,181 @@ export const session = sqliteTable('session', {
     .$type<Date>()
 });
 
-/* ----------------- */
-// PROJECTS
-/* -------- */
+/* ============================================================================
+ * ORGANIZATION MANAGEMENT
+ * ============================================================================
+ * Tables for managing organizations, their members, and roles
+ * 
+ * Organizations have:
+ * - NONE, ONE, or MANY GeoProjects that they own
+ * - ONE or MANY Owners (users with OrganisationOwner role)
+ * - ONE or MANY Members (users with OrganisationMember role)
+ * 
+ * Users have:
+ * - NONE or ONE SuperAdmin role (full app rights)
+ * - NONE, ONE, or MANY OrganisationOwner roles (org admin rights)
+ * - NONE, ONE, or MANY OrganisationMember roles (org membership)
+ * - NONE, ONE, or MANY GeoProjectMaintainer roles (project edit rights)
+ * 
+ * GeoProjects have:
+ * - ONE or MANY Maintainers (users with GeoProjectMaintainer role)
+ * 
+ * Note: Only Members of the Organization which owns a GeoProject can be selected as its maintainer
+ */
+
+/**
+ * Core organisation table
+ * @remarks
+ * Stores organisation information and metadata
+ * - Basic info (code, URL, image)
+ * - Publication status
+ * - Publisher reference
+ * - Archive status
+ */
+export const organisation = sqliteTable('organisation', {
+  // Database identifier
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => nanoid(12)),
+  // Public identifier
+  code: text('code').unique().notNull(),
+  url: text('url'),
+  imageId: text('imageId').references(() => image.id, {
+    onDelete: 'set null',
+    onUpdate: 'cascade'
+  }),
+  isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(true),
+  publishedAt: text('publishedAt'),
+  publisherId: text('publisherId').references(() => user.id, {
+    onDelete: 'set null',
+    onUpdate: 'cascade'
+  }),
+  // False : Organisation may be shown in the Admin Panel
+  // True : Organisation is considered deleted
+  isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
+  createdAt: text('createdAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .notNull(),
+  modifiedAt: text('modifiedAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .$onUpdate(() => new Date().toISOString())
+    .notNull()
+});
+
+/**
+ * Organization relations
+ * @remarks
+ * Links organization to its translations, members, projects, and metadata
+ */
+export const organisationRelations = relations(organisation, ({ one, many }) => ({
+  i18n: many(organisationI18n),
+  userRoles: many(organisationRole),
+  image: one(image, {
+    fields: [organisation.imageId],
+    references: [image.id]
+  }),
+  publisher: one(user, {
+    fields: [organisation.publisherId],
+    references: [user.id]
+  }),
+  projects: many(project),
+  tasks: many(task)
+}));
+
+/**
+ * Organization translations
+ * @remarks
+ * Stores multilingual content for organizations
+ */
+export const organisationI18n = sqliteTable(
+  'organisationI18n',
+  {
+    organisationId: text('organisationId')
+      .notNull()
+      .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    // IETF BCP 47 language tag
+    // https://www.rfc-editor.org/info/bcp47
+    locale: text('locale', { enum: supportedLocales }).notNull(),
+    // Full Name in {locale}
+    name: text('name').notNull(),
+    nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(true),
+    // Short Name  in {locale}, used in navigation
+    nameShort: text('nameShort').notNull(),
+    nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(true),
+    // Description in {locale}
+    description: text('description'),
+    descriptionGen: integer('descriptionGen', { mode: 'boolean' })
+      .notNull()
+      .default(true)
+  },
+  (table) => [
+    primaryKey({ columns: [table.organisationId, table.locale] })
+  ]
+);
+
+/**
+ * Organization translation relations
+ */
+export const organisationI18nRelations = relations(organisationI18n, ({ one }) => ({
+  organisation: one(organisation, {
+    fields: [organisationI18n.organisationId],
+    references: [organisation.id]
+  })
+}));
+
+/**
+ * Organization role assignments
+ * @remarks
+ * Links users to organizations with specific roles (member/owner)
+ */
+export const organisationRole = sqliteTable(
+  'organisationRole',
+  {
+    organisationId: text('organisationId')
+      .notNull()
+      .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    userId: text('userId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    role: text('role', { enum: ['member', 'owner'] })
+      .notNull()
+      .default('member')
+  },
+  (table) => [
+    primaryKey({ columns: [table.organisationId, table.userId] })
+  ]
+);
+
+/**
+ * Organization role relations
+ */
+export const organisationRoleRelations = relations(organisationRole, ({ one }) => ({
+  user: one(user, {
+    fields: [organisationRole.userId],
+    references: [user.id]
+  }),
+  organisation: one(organisation, {
+    fields: [organisationRole.organisationId],
+    references: [organisation.id]
+  })
+}));
+
+
+/* ============================================================================
+ * PROJECT MANAGEMENT
+ * ============================================================================
+ * Tables for managing projects, their properties, and maintainers
+ */
+
+/**
+ * Core project table
+ * @remarks
+ * Stores project information and metadata
+ * - Basic info (code, image)
+ * - Organization reference
+ * - Publication status
+ * - Archive status
+ */
 export const project = sqliteTable('project', {
   id: text('id')
     .primaryKey()
@@ -269,25 +339,6 @@ export const project = sqliteTable('project', {
     .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
   // Public identifier
   code: text('code').unique().notNull(),
-  // Full Name in English
-  name: text('name').notNull(),
-  nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(false),
-  // Short Name in English, used in navigation
-  nameShort: text('nameShort').notNull(),
-  nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(false),
-  // Description in English
-  description: text('description'),
-  descriptionGen: integer('descriptionGen', { mode: 'boolean' })
-    .notNull()
-    .default(false),
-  // License under which the dataset is made public
-  license: text('license').default('Copyright').notNull(),
-  licenseGen: integer('licenseGen', { mode: 'boolean' }).notNull().default(false),
-  // Attribution for the dataset
-  attribution: text('attribution').notNull(),
-  attributionGen: integer('attributionGen', { mode: 'boolean' })
-    .notNull()
-    .default(false),
   imageId: text('imageId').references(() => image.id, {
     onDelete: 'set null',
     onUpdate: 'cascade'
@@ -311,12 +362,17 @@ export const project = sqliteTable('project', {
     .notNull()
 });
 
+/**
+ * Project relations
+ * @remarks
+ * Links project to its translations, maintainers, properties, and metadata
+ */
 export const projectRelations = relations(project, ({ one, many }) => ({
   organisation: one(organisation, {
     fields: [project.organisationId],
     references: [organisation.id]
   }),
-  translations: many(projectI18n),
+  i18n: many(projectI18n),
   maintainerRoles: many(projectRole),
   properties: many(property),
   layers: many(layer),
@@ -327,33 +383,46 @@ export const projectRelations = relations(project, ({ one, many }) => ({
   })
 }));
 
+/**
+ * Project translations
+ * @remarks
+ * Stores multilingual content for projects
+ */
 export const projectI18n = sqliteTable(
   'projectI18n',
   {
     projectId: text('projectId')
       .notNull()
       .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
+    locale: text('locale', { enum: supportedLocales }).notNull(),
+    // Full Name in {locale}
     name: text('name').notNull(),
     nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(true),
+    // Short Name  in {locale}, used in navigation
     nameShort: text('nameShort').notNull(),
     nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(true),
+    // Description in {locale}
     description: text('description'),
     descriptionGen: integer('descriptionGen', { mode: 'boolean' })
       .notNull()
       .default(true),
-    license: text('license'),
+    // License in {locale}
+    license: text('license').default('Copyright').notNull(),
     licenseGen: integer('licenseGen', { mode: 'boolean' }).notNull().default(true),
-    attribution: text('attribution'),
+    // Attribution in {locale}
+    attribution: text('attribution').notNull(),
     attributionGen: integer('attributionGen', { mode: 'boolean' })
       .notNull()
       .default(true)
   },
   (table) => [
-    primaryKey({ columns: [table.projectId, table.lang] })
+    primaryKey({ columns: [table.projectId, table.locale] })
   ]
 );
 
+/**
+ * Project translation relations
+ */
 export const projectI18nRelations = relations(projectI18n, ({ one }) => ({
   project: one(project, {
     fields: [projectI18n.projectId],
@@ -361,6 +430,11 @@ export const projectI18nRelations = relations(projectI18n, ({ one }) => ({
   })
 }));
 
+/**
+ * Project role assignments
+ * @remarks
+ * Links users to projects with maintainer roles
+ */
 export const projectRole = sqliteTable(
   'projectRole',
   {
@@ -379,7 +453,9 @@ export const projectRole = sqliteTable(
   ]
 );
 
-// Define relations
+/**
+ * Project role relations
+ */
 export const projectRoleRelations = relations(projectRole, ({ one }) => ({
   project: one(project, {
     fields: [projectRole.projectId],
@@ -391,11 +467,21 @@ export const projectRoleRelations = relations(projectRole, ({ one }) => ({
   })
 }));
 
-/* ----------------- */
-// LAYERS
-/* -------- */
+/* ============================================================================
+ * LAYER MANAGEMENT
+ * ============================================================================
+ * Tables for managing map layers and their properties
+ */
 
-/* @geojson/GeometryCollection */
+/**
+ * Core layer table
+ * @remarks
+ * Stores layer information and metadata
+ * - Basic info (name, description, etc.)
+ * - Project reference
+ * - Publication status
+ * - Default visibility settings
+ */
 export const layer = sqliteTable('layer', {
   id: text('id')
     .primaryKey()
@@ -403,17 +489,6 @@ export const layer = sqliteTable('layer', {
   projectId: text('projectId')
     .notNull()
     .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  // Full Name in English
-  name: text('name').notNull(),
-  nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(false),
-  // Short Name in English, used in controls and legends
-  nameShort: text('nameShort').notNull(),
-  nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(false),
-  // Description in English
-  description: text('description'),
-  descriptionGen: integer('descriptionGen', { mode: 'boolean' })
-    .notNull()
-    .default(false),
   // Additional Information
   metadata: text('metadata', { mode: 'json' }).$type<LayerMetadata>(),
   // Is this layer enabled for new users by default?
@@ -439,8 +514,13 @@ export const layer = sqliteTable('layer', {
     .notNull()
 });
 
+/**
+ * Layer relations
+ * @remarks
+ * Links layer to its translations, properties, features, and project
+ */
 export const layerRelations = relations(layer, ({ many, one }) => ({
-  translations: many(layerI18n),
+  i18n: many(layerI18n),
   properties: many(layerProperty),
   features: many(feature),
   project: one(project, {
@@ -449,27 +529,38 @@ export const layerRelations = relations(layer, ({ many, one }) => ({
   })
 }));
 
+/**
+ * Layer translations
+ * @remarks
+ * Stores multilingual content for layers
+ */
 export const layerI18n = sqliteTable(
   'layerI18n',
   {
     layerId: text('layerId')
       .notNull()
       .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
+    locale: text('locale', { enum: supportedLocales }).notNull(),
+    // Full Name in {locale}
     name: text('name').notNull(),
     nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(true),
+    // Short Name  in {locale}, used in navigation
     nameShort: text('nameShort').notNull(),
     nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(true),
+    // Description in {locale}
     description: text('description'),
     descriptionGen: integer('descriptionGen', { mode: 'boolean' })
       .notNull()
       .default(true)
   },
   (table) => [
-    primaryKey({ columns: [table.layerId, table.lang] })
+    primaryKey({ columns: [table.layerId, table.locale] })
   ]
 );
 
+/**
+ * Layer translation relations
+ */
 export const layerI18nRelations = relations(layerI18n, ({ one }) => ({
   layer: one(layer, {
     fields: [layerI18n.layerId],
@@ -477,33 +568,40 @@ export const layerI18nRelations = relations(layerI18n, ({ one }) => ({
   })
 }));
 
-/* ----------------- */
-// FEATURES
-/* -------- */
+/* ============================================================================
+ * FEATURE MANAGEMENT
+ * ============================================================================
+ * Tables for managing map features, their properties, and images
+ */
 
-/* @geojson/Feature */
+/**
+ * Core feature table
+ * @remarks
+ * Stores feature information and metadata
+ * - Geometry and location data
+ * - Publication status
+ * - Layer and contributor references
+ * - Visitability status
+ * 
+ * Feature States:
+ * 
+ * PUBLISHED:
+ * - Visitable + Tangible: Listing (default)
+ * - Visitable + NOT Tangible: Intangible Listing
+ * - NOT Visitable + Tangible: Unavailable
+ * - NOT Visitable + NOT Tangible: Inaccessible
+ * 
+ * NOT PUBLISHED:
+ * - Visitable + Tangible: Draft
+ * - Visitable + NOT Tangible: Draft Intangible
+ * - NOT Visitable + Tangible: Delisted
+ * - NOT Visitable + NOT Tangible: Delisted
+ */
 export const feature = sqliteTable('feature', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => nanoid(12)),
   geometry: text('geometry', { mode: 'json' }).notNull().$type<GeometryObject>(),
-  title: text('title').notNull(),
-  titleGen: integer('titleGen', { mode: 'boolean' }).notNull().default(false),
-  description: text('description'),
-  descriptionGen: integer('descriptionGen', { mode: 'boolean' })
-    .notNull()
-    .default(false),
-  // Display Address
-  displayAddress: text('displayAddress'),
-  displayAddressGen: integer('displayAddressGen', { mode: 'boolean' })
-    .notNull()
-    .default(false),
-  // Address Components
-  addressProperties: text('addressProperties', {
-    mode: 'json'
-  })
-    .$type<AddressProperties>()
-    .default({}),
   // Address Metadata
   addressMeta: text('addressMeta', {
     mode: 'json'
@@ -529,19 +627,6 @@ export const feature = sqliteTable('feature', {
   // False : Feature may be shown in the Admin Panel
   // True : Feature is considered deleted
   isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
-
-  // PUBLISHED
-  // Visitable + Tangible            : Listing - Feature has a physical presence and can be visited - the default
-  // Visitable + NOT Tangible        : Intangible Listing - Feature lacks physical presence, BUT the site itself holds historic value
-  // NOT Visitable + Tangible        : Unavailable - Feature is extant, but is (temporarily) not visitable due to obstruction / access rights
-  // NOT Visitable + NOT Tangible    : Inaccessible - Feature has intangible value, BUT the site is (temporarily) not accessible.
-
-  // NOT PUBLISHED
-  // Visitable + Tangible           : Draft - Unpublished Tangible Listing
-  // Visitable + NOT Tangible       : Draft - Unpublished Intangible Listing
-  // NOT Visitable + Tangible       : Delisted - Feature destroyed / removed / otherwise erased, and should no longer be shown on public maps.
-  // NOT Visitable + NOT Tangible   : Delisted - Feature no longer offers any significance to the collection and should not be shown on public maps.
-
   isIntangible: integer('isIntangible', { mode: 'boolean' }).notNull().default(false),
   isVisitable: integer('isVisitable', { mode: 'boolean' }).notNull().default(true),
   visitableAsOf: text('visitableAsOf').default(sql`(CURRENT_DATE)`),
@@ -555,6 +640,11 @@ export const feature = sqliteTable('feature', {
     .notNull()
 });
 
+/**
+ * Feature relations
+ * @remarks
+ * Links feature to its translations, properties, images, and metadata
+ */
 export const featureRelations = relations(feature, ({ one, many }) => ({
   layer: one(layer, {
     fields: [feature.layerId],
@@ -568,39 +658,51 @@ export const featureRelations = relations(feature, ({ one, many }) => ({
     fields: [feature.publisherId],
     references: [user.id]
   }),
-  translations: many(featureI18n),
+  i18n: many(featureI18n),
   properties: many(featureProperty),
   images: many(featureImage),
   users: many(userFeature),
   tasks: many(task)
 }));
 
+/**
+ * Feature translations
+ * @remarks
+ * Stores multilingual content for features
+ */
 export const featureI18n = sqliteTable(
   'featureI18n',
   {
     featureId: text('featureId')
       .notNull()
       .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
+    locale: text('locale', { enum: supportedLocales }).notNull(),
+    // Full Name in {locale}
     title: text('title').notNull(),
     titleGen: integer('titleGen', { mode: 'boolean' }).notNull().default(true),
+    // Description in {locale}
     description: text('description'),
     descriptionGen: integer('descriptionGen', { mode: 'boolean' })
       .notNull()
       .default(true),
+    // Display Address in {locale}
     displayAddress: text('displayAddress'),
     displayAddressGen: integer('displayAddressGen', { mode: 'boolean' })
       .notNull()
-      .default(false),
+      .default(true),
+    // Address Properties in {locale}
     addressProperties: text('addressProperties', {
       mode: 'json'
     }).$type<AddressProperties>()
   },
   (table) => [
-    primaryKey(table.featureId, table.lang)
+    primaryKey({ columns: [table.featureId, table.locale] })
   ]
 );
 
+/**
+ * Feature translation relations
+ */
 export const featureI18nRelations = relations(featureI18n, ({ one }) => ({
   feature: one(feature, {
     fields: [featureI18n.featureId],
@@ -608,6 +710,11 @@ export const featureI18nRelations = relations(featureI18n, ({ one }) => ({
   })
 }));
 
+/**
+ * Feature property assignments
+ * @remarks
+ * Links features to their properties and values
+ */
 export const featureProperty = sqliteTable('featureProperty', {
   id: text('id')
     .primaryKey()
@@ -622,9 +729,13 @@ export const featureProperty = sqliteTable('featureProperty', {
     onDelete: 'set null',
     onUpdate: 'cascade'
   }),
-  value: text('value')
 });
 
+/**
+ * Feature property relations
+ * @remarks
+ * Links feature properties to their translations and values
+ */
 export const featurePropertyRelations = relations(featureProperty, ({ one, many }) => ({
   feature: one(feature, {
     fields: [featureProperty.featureId],
@@ -638,9 +749,14 @@ export const featurePropertyRelations = relations(featureProperty, ({ one, many 
     fields: [featureProperty.propertyValueId],
     references: [propertyValue.id]
   }),
-  translations: many(featurePropertyI18n)
+  i18n: many(featurePropertyI18n)
 }));
 
+/**
+ * Feature property translations
+ * @remarks
+ * Stores multilingual content for feature properties
+ */
 export const featurePropertyI18n = sqliteTable(
   'featurePropertyI18n',
   {
@@ -650,14 +766,19 @@ export const featurePropertyI18n = sqliteTable(
         onDelete: 'cascade',
         onUpdate: 'cascade'
       }),
-    lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
-    value: text('value').notNull()
+    locale: text('locale', { enum: supportedLocales }).notNull(),
+    // Value in {locale}
+    value: text('value'),
+    valueGen: integer('valueGen', { mode: 'boolean' })
   },
   (table) => [
-    primaryKey({ columns: [table.featurePropertyId, table.lang] })
+    primaryKey({ columns: [table.featurePropertyId, table.locale] })
   ]
 );
 
+/**
+ * Feature property translation relations
+ */
 export const featurePropertyI18nRelations = relations(
   featurePropertyI18n,
   ({ one }) => ({
@@ -668,15 +789,20 @@ export const featurePropertyI18nRelations = relations(
   })
 );
 
-// TODO Add visit table linking Users with GeoFeatures for a given date
-// TODO When a new visit is created for a GeoFeature, update its "visitableAsOf" field to that date.
-// TODO Add a checkinType of values "visit" and "reportMissing"
-// TODO Add a isHandled to indicate that follow up action was taken (e.g. report missing was dealt with)
+/* ============================================================================
+ * PROPERTY MANAGEMENT
+ * ============================================================================
+ * Tables for managing properties and their values
+ */
 
-/* ----------------- */
-// PROPERTIES
-/* -------- */
-
+/**
+ * Core property table
+ * @remarks
+ * Stores property definitions and metadata
+ * - Property type (classifier/specifier/display)
+ * - Component type for UI rendering
+ * - Min/max values for numeric properties
+ */
 export const property = sqliteTable('property', {
   id: text('id')
     .primaryKey()
@@ -688,12 +814,6 @@ export const property = sqliteTable('property', {
     .notNull()
     .default('classifier'),
   key: text('key').notNull(),
-  label: text('label').notNull(),
-  labelGen: integer('labelGen', { mode: 'boolean' }).notNull().default(true),
-  placeholder: text('placeholder').default('Type here'),
-  placeholderGen: integer('placeholderGen', { mode: 'boolean' })
-    .notNull()
-    .default(true),
   component: text('component', {
     enum: ['SelectField', 'RangeField', 'InputField', 'TextareaField']
   })
@@ -701,9 +821,6 @@ export const property = sqliteTable('property', {
     .default('SelectField'),
   min: integer('min'),
   max: integer('max'),
-  isTranslatable: integer('isTranslatable', { mode: 'boolean' })
-    .notNull()
-    .default(true),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -713,27 +830,42 @@ export const property = sqliteTable('property', {
     .notNull()
 });
 
+/**
+ * Property relations
+ * @remarks
+ * Links property to its translations, values, and layer assignments
+ */
 export const propertyRelations = relations(property, ({ one, many }) => ({
   project: one(project, {
     fields: [property.projectId],
     references: [project.id]
   }),
   values: many(propertyValue),
-  translations: many(propertyI18n),
+  i18n: many(propertyI18n),
   layerProperties: many(layerProperty)
 }));
 
+/**
+ * Property translations
+ * @remarks
+ * Stores multilingual content for properties
+ */
 export const propertyI18n = sqliteTable('propertyI18n', {
   propertyId: text('propertyId')
     .notNull()
     .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
+  locale: text('locale', { enum: supportedLocales }).notNull(),
+  // Label in {locale}
   label: text('label').notNull(),
   labelGen: integer('labelGen', { mode: 'boolean' }).notNull().default(true),
+  // Placeholder in {locale}
   placeholder: text('placeholder').default('Type here'),
   placeholderGen: integer('placeholderGen', { mode: 'boolean' }).notNull().default(true)
 });
 
+/**
+ * Property translation relations
+ */
 export const propertyI18nRelations = relations(propertyI18n, ({ one }) => ({
   property: one(property, {
     fields: [propertyI18n.propertyId],
@@ -741,6 +873,11 @@ export const propertyI18nRelations = relations(propertyI18n, ({ one }) => ({
   })
 }));
 
+/**
+ * Property value definitions
+ * @remarks
+ * Stores possible values for properties
+ */
 export const propertyValue = sqliteTable('propertyValue', {
   id: text('id')
     .primaryKey()
@@ -748,35 +885,47 @@ export const propertyValue = sqliteTable('propertyValue', {
   propertyId: text('propertyId')
     .notNull()
     .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  value: text('value').notNull(),
-  valueGen: integer('valueGen', { mode: 'boolean' }).notNull().default(true),
   // Priority in the rank order of the property values - lower numbers are shown first
   rank: integer('rank').notNull().default(0)
 });
 
+/**
+ * Property value relations
+ * @remarks
+ * Links property values to their translations
+ */
 export const propertyValueRelations = relations(propertyValue, ({ one, many }) => ({
   property: one(property, {
     fields: [propertyValue.propertyId],
     references: [property.id]
   }),
-  translations: many(propertyValueI18n)
+  i18n: many(propertyValueI18n)
 }));
 
+/**
+ * Property value translations
+ * @remarks
+ * Stores multilingual content for property values
+ */
 export const propertyValueI18n = sqliteTable(
   'propertyValueI18n',
   {
     propertyValueId: text('propertyValueId')
       .notNull()
       .references(() => propertyValue.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    lang: text('lang', { enum: ['zh-hant', 'zh-hans'] }).notNull(),
-    value: text('value').notNull(),
-    valueGen: integer('valueGen', { mode: 'boolean' }).notNull().default(true)
+    locale: text('locale', { enum: supportedLocales }).notNull(),
+    // Value in {locale}
+    value: text('value'),
+    valueGen: integer('valueGen', { mode: 'boolean' })
   },
   (table) => [
-    primaryKey({ columns: [table.propertyValueId, table.lang] })
+    primaryKey({ columns: [table.propertyValueId, table.locale] })
   ]
 );
 
+/**
+ * Property value translation relations
+ */
 export const propertyValueI18nRelations = relations(propertyValueI18n, ({ one }) => ({
   propertyValue: one(propertyValue, {
     fields: [propertyValueI18n.propertyValueId],
@@ -784,6 +933,11 @@ export const propertyValueI18nRelations = relations(propertyValueI18n, ({ one })
   })
 }));
 
+/**
+ * Layer property assignments
+ * @remarks
+ * Links properties to layers with visibility settings
+ */
 export const layerProperty = sqliteTable('layerProperty', {
   layerId: text('layerId')
     .notNull()
@@ -794,6 +948,9 @@ export const layerProperty = sqliteTable('layerProperty', {
   isVisible: integer('isVisible', { mode: 'boolean' }).notNull().default(true)
 });
 
+/**
+ * Layer property relations
+ */
 export const layerPropertyRelations = relations(layerProperty, ({ one, many }) => ({
   layer: one(layer, {
     fields: [layerProperty.layerId],
@@ -805,18 +962,22 @@ export const layerPropertyRelations = relations(layerProperty, ({ one, many }) =
   })
 }));
 
-type EXIF = {
-  CopyrightNotice: string;
-  Credit: string;
-  DateTimeOriginal: string;
-  CreateDate: string;
-  ModifyDate: string;
-  GPSLatitude: string;
-  GPSLongitude: string;
-  'By-line': string;
-  [key: string]: string;
-};
 
+/* ============================================================================
+ * IMAGE MANAGEMENT
+ * ============================================================================
+ * Tables for managing images and their metadata
+ */
+
+/**
+ * Core image table
+ * @remarks
+ * Stores image information and metadata
+ * - CDN and file information
+ * - EXIF metadata
+ * - Contributor reference
+ * - Archive status
+ */
 export const image = sqliteTable('image', {
   id: text('id')
     .primaryKey()
@@ -865,7 +1026,11 @@ export const image = sqliteTable('image', {
     .notNull()
 });
 
-// Add relations
+/**
+ * Image relations
+ * @remarks
+ * Links image to its contributor and feature/task assignments
+ */
 export const imageRelations = relations(image, ({ one, many }) => ({
   contributor: one(user, {
     relationName: 'contributor',
@@ -879,6 +1044,11 @@ export const imageRelations = relations(image, ({ one, many }) => ({
   taskImages: many(taskImage)
 }));
 
+/**
+ * Feature image assignments
+ * @remarks
+ * Links images to features with intent and publication status
+ */
 export const featureImage = sqliteTable(
   'featureImage',
   {
@@ -906,6 +1076,9 @@ export const featureImage = sqliteTable(
   ]
 );
 
+/**
+ * Feature image relations
+ */
 export const featureImageRelations = relations(featureImage, ({ one }) => ({
   feature: one(feature, {
     fields: [featureImage.featureId],
@@ -917,6 +1090,17 @@ export const featureImageRelations = relations(featureImage, ({ one }) => ({
   })
 }));
 
+/* ============================================================================
+ * USER INTERACTION
+ * ============================================================================
+ * Tables for managing user interactions with features and layers
+ */
+
+/**
+ * User feature interactions
+ * @remarks
+ * Tracks user interactions with features (visits, wishlist)
+ */
 export const userFeature = sqliteTable(
   'userFeature',
   {
@@ -942,6 +1126,9 @@ export const userFeature = sqliteTable(
   ]
 );
 
+/**
+ * User feature relations
+ */
 export const userFeatureRelations = relations(userFeature, ({ one }) => ({
   user: one(user, {
     fields: [userFeature.userId],
@@ -953,6 +1140,58 @@ export const userFeatureRelations = relations(userFeature, ({ one }) => ({
   })
 }));
 
+/**
+ * User layer preferences
+ * @remarks
+ * Stores user preferences for layer visibility
+ */
+export const userLayer = sqliteTable(
+  'userLayer',
+  {
+    layerId: text('layerId')
+      .notNull()
+      .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    userId: text('userId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    isVisibleOnLoad: integer('isVisibleOnLoad', { mode: 'boolean' })
+      .notNull()
+      .default(false)
+  },
+  (table) => [
+    primaryKey({ columns: [table.layerId, table.userId] })
+  ]
+);
+
+/**
+ * User layer relations
+ */
+export const userLayerRelations = relations(userLayer, ({ one }) => ({
+  user: one(user, {
+    fields: [userLayer.userId],
+    references: [user.id]
+  }),
+  layer: one(layer, {
+    fields: [userLayer.layerId],
+    references: [layer.id]
+  })
+}));
+
+/* ============================================================================
+ * TASK MANAGEMENT
+ * ============================================================================
+ * Tables for managing tasks and their associated images
+ */
+
+/**
+ * Core task table
+ * @remarks
+ * Stores task information and metadata
+ * - Task type (reportedMissing, newPhoto, newFeature)
+ * - Organization, project, and feature references
+ * - Contributor and reviewer references
+ * - Review status and outcome
+ */
 export const task = sqliteTable('task', {
   id: text('id')
     .primaryKey()
@@ -995,6 +1234,11 @@ export const task = sqliteTable('task', {
     .notNull()
 });
 
+/**
+ * Task relations
+ * @remarks
+ * Links task to its organization, project, feature, and images
+ */
 export const taskRelations = relations(task, ({ one, many }) => ({
   organisation: one(organisation, {
     fields: [task.organisationId],
@@ -1021,6 +1265,11 @@ export const taskRelations = relations(task, ({ one, many }) => ({
   images: many(taskImage)
 }));
 
+/**
+ * Task image assignments
+ * @remarks
+ * Links images to tasks
+ */
 export const taskImage = sqliteTable(
   'taskImage',
   {
@@ -1036,6 +1285,9 @@ export const taskImage = sqliteTable(
   ]
 );
 
+/**
+ * Task image relations
+ */
 export const taskImageRelations = relations(taskImage, ({ one }) => ({
   task: one(task, {
     fields: [taskImage.taskId],
@@ -1044,34 +1296,5 @@ export const taskImageRelations = relations(taskImage, ({ one }) => ({
   image: one(image, {
     fields: [taskImage.imageId],
     references: [image.id]
-  })
-}));
-
-export const userLayer = sqliteTable(
-  'userLayer',
-  {
-    layerId: text('layerId')
-      .notNull()
-      .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    userId: text('userId')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    isVisibleOnLoad: integer('isVisibleOnLoad', { mode: 'boolean' })
-      .notNull()
-      .default(false)
-  },
-  (table) => [
-    primaryKey({ columns: [table.layerId, table.userId] })
-  ]
-);
-
-export const userLayerRelations = relations(userLayer, ({ one }) => ({
-  user: one(user, {
-    fields: [userLayer.userId],
-    references: [user.id]
-  }),
-  layer: one(layer, {
-    fields: [userLayer.layerId],
-    references: [layer.id]
   })
 }));
