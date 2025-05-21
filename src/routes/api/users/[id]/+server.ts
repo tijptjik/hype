@@ -1,10 +1,8 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
 import { getDatabaseOrError, JSONResponseOrError } from '$lib/api';
 import { genericEntityQuery } from '$lib/db';
-import { user, userLayer } from '$lib/db/schema';
-import { and, eq } from 'drizzle-orm';
-import { UserUpdateAPI } from '$lib/db/zod';
-import { patchUser } from '$lib/db/services/user';
+import { user } from '$lib/db/schema';
+import { updateUser } from '$lib/db/services/user';
 
 const RESOURCE_TYPE = 'user';
 const ACCESS_STRATEGY = 'EntityAny';
@@ -47,7 +45,7 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
 };
 
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
-  const body = await request.json();
+  const data = await request.json();
 
   const ACCESS_STRATEGY = 'GenericSelf';
 
@@ -62,7 +60,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
 
   try {
     // Update user and their preferences
-    const updatedUser = await patchUser(db, userId, body, 'id');
+    const updatedUser = await updateUser(db, data, userId!);
 
     return JSONResponseOrError(updatedUser);
   } catch (e) {

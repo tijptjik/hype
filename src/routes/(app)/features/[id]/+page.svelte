@@ -25,7 +25,7 @@ import {
   getFeatureCardContext
 } from '$lib/context/featureCard.svelte';
 // ENUMS
-import { FeatureCardMode } from '$lib/types';
+import { FeatureCardMode } from '$lib/enums';
 // TYPES
 import type { Feature, Layer, Project } from '$lib/types';
 

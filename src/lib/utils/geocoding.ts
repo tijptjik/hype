@@ -1,5 +1,5 @@
 import proj from 'proj4';
-import type { LanguageTag } from '$lib/types';
+import type { Locale } from '$lib/types';
 
 // Coordinate system definitions
 proj.defs('EPSG:4326', '+proj=longlat +datum=WGS84 +no_defs');
@@ -9,19 +9,19 @@ proj.defs(
 );
 
 // Country mappings
-export const countryNormalised: Record<string, Record<LanguageTag, string>> = {
+export const countryNormalised: Record<string, Record<Locale, string>> = {
   'Hong Kong': { en: 'HKSAR', 'zh-hant': '香港特區', 'zh-hans': '香港特区' }
 };
 
 export const getNormalisedCountry = (
   country: keyof typeof countryNormalised,
-  lang: LanguageTag = 'en'
+  locale: Locale = 'en'
 ): string | null => {
-  return countryNormalised[country]?.[lang] || null;
+  return countryNormalised[country]?.[locale] || null;
 };
 
 // Region mappings
-const regionNormalised: Record<string, Record<LanguageTag, string>> = {
+const regionNormalised: Record<string, Record<Locale, string>> = {
   'Hong Kong Island': { en: 'HK', 'zh-hant': '香港島', 'zh-hans': '香港岛' },
   Kowloon: { en: 'KL', 'zh-hant': '九龍', 'zh-hans': '九龙' },
   'New Territories': { en: 'NT', 'zh-hant': '新界', 'zh-hans': '新界' }
@@ -56,13 +56,13 @@ const getNormalisedRegionKey = (region: string): keyof typeof regionNormalised =
 
 export const getNormalisedRegion = (
   region: keyof typeof regionNormalised,
-  lang: LanguageTag = 'en'
+  locale: Locale = 'en'
 ): string | null => {
-  return regionNormalised[getNormalisedRegionKey(region)]?.[lang] || null;
+  return regionNormalised[getNormalisedRegionKey(region)]?.[locale] || null;
 };
 
 // District mappings
-const districtNormalised: Record<string, Record<LanguageTag, string>> = {
+const districtNormalised: Record<string, Record<Locale, string>> = {
   'Central & Western': { en: 'CW', 'zh-hant': '中西區', 'zh-hans': '中西区' },
   Eastern: { en: 'EST', 'zh-hant': '東區', 'zh-hans': '东区' },
   Islands: { en: 'ILD', 'zh-hant': '離島區', 'zh-hans': '离岛区' },
@@ -155,10 +155,10 @@ const getNormalisedDistrictKey = (district: string): keyof typeof districtNormal
 
 export const getNormalisedDistrict = (
   district: keyof typeof districtNormalised,
-  lang: LanguageTag = 'en'
+  locale: Locale = 'en'
 ): string | null => {
   const normalisedDistrictKey = getNormalisedDistrictKey(district);
-  const normalisedDistrict = districtNormalised[normalisedDistrictKey]?.[lang] || null;
+  const normalisedDistrict = districtNormalised[normalisedDistrictKey]?.[locale] || null;
   return normalisedDistrict;
 };
 

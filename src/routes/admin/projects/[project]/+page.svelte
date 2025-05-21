@@ -191,14 +191,6 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
               isNested: true,
               isTranslated: false
             }
-            // TODO: Add support for translatable specifiers
-            // isTranslatable: {
-            //   label: 'Translatable',
-            //   component: 'ToggleField',
-            //   isArray: false,
-            //   isNested: true,
-            //   isTranslated: false
-            // }
           }
         }
       }

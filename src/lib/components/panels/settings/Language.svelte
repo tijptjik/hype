@@ -9,7 +9,7 @@ import Section from '$lib/components/panels/common/Section.svelte';
 // STORES
 import { page } from '$app/stores';
 // TYPES
-import type { LanguageTag } from '$lib/types';
+import type { Locale } from '$lib/types';
 
 const languages = [
   { name: 'English', code: 'en', 'zh-hant': '英語', 'zh-hans': '英语' },
@@ -26,9 +26,10 @@ const updateLanguage = async (language: string) => {
   });
 
   // Update the language immediately after the API call
-  session!.user.language = language as LanguageTag;
-  setLocale(language as LanguageTag);
+  session!.user.locale = language as Locale;
+  setLocale(language as Locale);
 };
+// TODO Add a section on how to handle missing translations - (1) Automatically translate to preferred language, (2) Show original language contribution, (3) Show Original Language, but offer to Translate.
 </script>
 
 <Section

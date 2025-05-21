@@ -1,4 +1,4 @@
-import type { LanguageTag } from '$lib/types';
+import type { Locale } from '$lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { PRIVATE_AZURE_TRANSLATION_KEY } from '$env/static/private';
 import { PUBLIC_AZURE_TRANSLATION_REGION } from '$env/static/public';
@@ -9,8 +9,8 @@ const REGION = PUBLIC_AZURE_TRANSLATION_REGION;
 const KEY = PRIVATE_AZURE_TRANSLATION_KEY;
 
 const languageTagToApiLanguageTag = (
-  sourceLang: LanguageTag,
-  targetLang: LanguageTag
+  sourceLang: Locale,
+  targetLang: Locale
 ): { source: string; target: string } => {
   const sourceMaps = {
     en: 'en',
@@ -30,8 +30,8 @@ const languageTagToApiLanguageTag = (
 
 // TODO: Implement the actual translation API call
 export const getTranslation = async (
-  sourceLang: LanguageTag,
-  targetLang: LanguageTag,
+  sourceLang: Locale,
+  targetLang: Locale,
   texts: string[]
 ): Promise<string[]> => {
   const { source, target } = languageTagToApiLanguageTag(sourceLang, targetLang);
@@ -53,5 +53,5 @@ export const getTranslation = async (
     }
   )
     .then((response) => response.json())
-    .then((data) => data.map((item: Record<string, any>) => item.translations[0].text));
+    .then((data) => data.map((item: Record<string, any>) => item.i18n[0].text));
 };

@@ -3,7 +3,7 @@ import { redirect } from '@sveltejs/kit';
 // LIB
 import { ADMIN_PATH } from '$lib/index';
 // ENUMS
-import { HierarchicalResource, HierarchicalResourcePath } from '$lib/types';
+import { HierarchicalResource, HierarchicalResourcePath } from '$lib/enums';
 
 const DEFAULT_RESOURCE = HierarchicalResource.organisation;
 

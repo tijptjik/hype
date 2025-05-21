@@ -157,6 +157,8 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       );
     }
 
+    // If not feature or task, then it must be project or organisation
+
     // AUTH : Pass or Fail
     const { db, userId, accessStrategy } = await getDatabaseOrError(
       locals,

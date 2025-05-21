@@ -14,7 +14,7 @@ import { removeCountry, removeRegion, removeDistrict } from '$lib/utils/geocodin
 import Icon from '$lib/components/common/Icon.svelte';
 import { Language, MagnifyingGlass, MapPin } from '@steeze-ui/heroicons';
 // TYPES
-import type { LanguageTag } from '$lib/types';
+import type { Locale } from '$lib/types';
 import type { FeatureForm } from '$lib/context/forms.svelte';
 
 // CONTEXT
@@ -34,7 +34,7 @@ let isGeocodingToEnrich = $state(false);
 let isGeocodingToLocate = $state(false);
 let isGeocoding = $derived(isGeocodingToEnrich || isGeocodingToLocate);
 
-let sourceLanguage: LanguageTag = $state('en');
+let sourceLanguage: Locale = $state('en');
 
 // STATE : DERIVED :: GEOMETRY
 let [lng, lat] = $derived($form.geometry.coordinates);
@@ -69,7 +69,7 @@ async function handleGeocode(e: Event, updateCoords: boolean = false) {
     let addressToLookup =
       sourceLanguage === 'en'
         ? $form.displayAddress
-        : $form.translations[sourceLanguage]?.displayAddress;
+        : $form.i18n[sourceLanguage]?.displayAddress;
 
     if (!addressToLookup) return;
 
@@ -109,12 +109,12 @@ async function handleGeocode(e: Event, updateCoords: boolean = false) {
           }
 
           // Update translations
-          Object.entries(processedResult.translations).forEach(([lang, data]) => {
-            $form.translations[lang as LanguageTag].displayAddress =
+          Object.entries(processedResult.i18n).forEach(([lang, data]) => {
+            $form.i18n[lang as Locale].displayAddress =
               data.displayAddress;
-            $form.translations[lang as LanguageTag].displayAddressGen =
+            $form.i18n[lang as Locale].displayAddressGen =
               data.displayAddressGen;
-            $form.translations[lang as LanguageTag].addressProperties =
+            $form.i18n[lang as Locale].addressProperties =
               data.addressProperties;
           });
 

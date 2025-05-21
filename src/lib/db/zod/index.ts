@@ -38,7 +38,6 @@ export * from './schemas/property';
 /* -------- */
 export * from './schemas/task';
 
-
 /* ----------------- */
 // IMAGE SCHEMAS
 /* -------- */
