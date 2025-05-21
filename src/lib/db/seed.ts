@@ -40,7 +40,6 @@ import organisationI18nJson from './data/organisationsI18n.json';
 import organisationRoleJson from './data/organisationRoles.json';
 import layerJson from './data/layers.json';
 import layerI18nJson from './data/layersI18n.json';
-import featureStreetnamesJson from './data/features-streetnames.json';
 import featureHKGhostsignsJson from './data/features-hkghostsigns.json';
 import propertyJson from './data/property.json';
 import propertyI18nJson from './data/propertyI18n.json';
@@ -50,7 +49,6 @@ import propertyValueI18nSizeJson from './data/propertyValuesI18n-kL9mN2pQ5rS4.js
 import propertyValueI18nMaterialJson from './data/propertyValuesI18n-vX7yZ1wA3bC6.json';
 import propertyValueI18nVisibilityJson from './data/propertyValuesI18n-hJ4kL7mN9pQ2.json';
 import featureI18nJson from './data/featureI18n.json';
-import featureI18nStreetnamesJson from './data/featureI18n-streetnames.json';
 import featurePropertyJson from './data/featureProperty.json';
 import featurePropertyI18nJson from './data/featurePropertyI18n.json';
 import imagesJson from './data/images.json';
@@ -136,13 +134,6 @@ const seedBank = {
     data: layerI18nJson,
     chunk: 0
   },
-  featureStreetnames: {
-    name: 'Features::StreetNames',
-    table: feature,
-    data: featureStreetnamesJson,
-    chunk: 2,
-    partial: true
-  },
   featureHKGhostsigns: {
     name: 'Features::HKGhostSigns',
     table: feature,
@@ -199,13 +190,6 @@ const seedBank = {
     name: 'FeatureI18n::HKGhostSigns',
     table: featureI18n,
     data: featureI18nJson,
-    chunk: 4,
-    partial: true
-  },
-  featureI18nStreetnames: {
-    name: 'FeatureI18n::StreetNames',
-    table: featureI18n,
-    data: featureI18nStreetnamesJson,
     chunk: 4,
     partial: true
   },
