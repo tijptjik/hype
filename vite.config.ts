@@ -25,7 +25,7 @@ const seedDrizzle = async (): Promise<Plugin> => {
       name: 'seed-drizzle',
       apply: 'serve',
       buildStart() {
-        seed(env);
+        seed(env, true);
       }
     } satisfies Plugin;
   }
