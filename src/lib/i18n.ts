@@ -2,12 +2,32 @@
 import * as runtime from '$lib/paraglide/runtime';
 import * as m from '$lib/paraglide/messages';
 import type { Locale } from '$lib/types';
-import { getLocale } from '$lib/paraglide/runtime';
 // ENUMS
 import { supportedLocales } from '$lib/enums';
 
+/**
+ * Get the current locale with Paraglide. Wrapping for type safety.
+ * @returns The current locale.
+ */
+export function getLocale() : Locale {
+  return runtime.getLocale() as Locale;
+}
 
-// Helper function to get translated value
+/**
+ * Set the current locale. Wrapping for type safety.
+ * @param locale - The locale to set.
+ */
+export function setLocale(locale: Locale) {
+  runtime.setLocale(locale);
+}
+
+/**
+ * Get the translated value of a field from an object.
+ * @param obj - The object to get the translated value from.
+ * @param field - The field to get the translated value from.
+ * @param fallback - The fallback value if no translation is available.
+ * @returns The translated value of the field.
+ */
 // TODO I18N Refactor to handle fallbacks to other languages, and request user preferences for human-translated values
 export function getI18nValue(obj: any, field: string, fallback: string = '-'): string {
   if (!obj) return fallback;
@@ -87,7 +107,6 @@ export async function getI18n<T>(
 }
 
 // EXPORT PARAGLIDE
-export { getLocale, setLocale } from '$lib/paraglide/runtime';
 export { m, runtime };
 
 // EXPORT CUSTOM FUNCTIONS
