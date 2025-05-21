@@ -2,73 +2,19 @@
   {
     "id": "7akti7OImSFg",
     "projectId": "YuSFnia9VOtG",
-    "metadata": "{\\\"defaultEnabled\\\" : true,\\\"mlCluster\\\" : false,\\\"mlClusterRadius\\\" : 50,\\\"mlClusterMaxZoom\\\" : 14,\\\"mlClusterMinPoints\\\" : 2}",
+    "metadata": {
+      "defaultEnabled": true,
+      "mlCluster": false,
+      "mlClusterRadius": 50,
+      "mlClusterMaxZoom": 14,
+      "mlClusterMinPoints": 2
+    },
+    "isDefaultVisible": true,
+    "isPublished": true,
+    "publishedAt": "2024-08-28T18:55:30.371Z",
+    "publisherId": "p6WnJ-DKl0c1",
+    "isArchived": false,
     "createdAt": "2024-08-28T18:55:30.371Z",
     "modifiedAt": "2024-08-28T18:55:30.371Z",
-    "name": "Ghost Signs",
-    "nameShort": "Ghost Signs",
-    "description": "Public record of Ghost Signs in Hong Kong",
-    "isPublished": true,
-    "isDefaultVisible": true
-  },
-  {
-    "id": "Qw3Er5TyUi",
-    "projectId": "Xk9Lm2PqRs3T",
-    "metadata": "{\\\"defaultEnabled\\\" : true,\\\"mlCluster\\\" : false,\\\"mlClusterRadius\\\" : 50,\\\"mlClusterMaxZoom\\\" : 14,\\\"mlClusterMinPoints\\\" : 2}",
-    "createdAt": "2024-10-14T12:30:00.000Z",
-    "modifiedAt": "2024-10-14T12:30:00.000Z",
-    "name": "Building Age",
-    "nameShort": "Building Age",
-    "description": "Visualizing the age of buildings across Hong Kong",
-    "isPublished": false,
-    "isDefaultVisible": false
-  },
-  {
-    "id": "mN9Kp4WxLs2",
-    "projectId": "bN3Kw7MqPx5Y",
-    "metadata": "{\\\"defaultEnabled\\\" : true,\\\"mlCluster\\\" : false,\\\"mlClusterRadius\\\" : 50,\\\"mlClusterMaxZoom\\\" : 14,\\\"mlClusterMinPoints\\\" : 2}",
-    "createdAt": "2024-08-28T18:55:30.371Z",
-    "modifiedAt": "2024-08-28T18:55:30.371Z",
-    "name": "People",
-    "nameShort": "People",
-    "description": "Explore the people behind Hong Kong street names",
-    "isPublished": true,
-    "isDefaultVisible": false
-  },
-  {
-    "id": "hT5Ry7BvNm4",
-    "projectId": "bN3Kw7MqPx5Y",
-    "metadata": "{\\\"defaultEnabled\\\" : true,\\\"mlCluster\\\" : false,\\\"mlClusterRadius\\\" : 50,\\\"mlClusterMaxZoom\\\" : 14,\\\"mlClusterMinPoints\\\" : 2}",
-    "createdAt": "2024-08-28T18:55:30.371Z",
-    "modifiedAt": "2024-08-28T18:55:30.371Z",
-    "name": "Religion",
-    "nameShort": "Religion",
-    "description": "Explore the religion inspiration behind Hong Kong street names",
-    "isPublished": true,
-    "isDefaultVisible": false
-  },
-  {
-    "id": "pL6Wj9QkMx5",
-    "projectId": "bN3Kw7MqPx5Y",
-    "metadata": "{\\\"defaultEnabled\\\" : true,\\\"mlCluster\\\" : false,\\\"mlClusterRadius\\\" : 50,\\\"mlClusterMaxZoom\\\" : 14,\\\"mlClusterMinPoints\\\" : 2}",
-    "createdAt": "2024-08-28T18:55:30.371Z",
-    "modifiedAt": "2024-08-28T18:55:30.371Z",
-    "name": "Places",
-    "nameShort": "Places",
-    "description": "Explore the places behind Hong Kong street names",
-    "isPublished": true,
-    "isDefaultVisible": false
-  },
-  {
-    "id": "gD6Yp98kNm4Z",
-    "projectId": "bN3Kw7MqPx5Y",
-    "metadata": "{\\\"defaultEnabled\\\" : true,\\\"mlCluster\\\" : false,\\\"mlClusterRadius\\\" : 50,\\\"mlClusterMaxZoom\\\" : 14,\\\"mlClusterMinPoints\\\" : 2}",
-    "createdAt": "2024-08-28T18:55:30.371Z",
-    "modifiedAt": "2024-08-28T18:55:30.371Z",
-    "name": "Industry",
-    "nameShort": "Industry",
-    "description": "Explore the industry and companies behind Hong Kong street names",
-    "isPublished": true,
-    "isDefaultVisible": false
   }
 ]

@@ -2,48 +2,54 @@
   {
     "userId": "p6WnJ-DKl0c1",
     "featureId": "58MOsJp8Y5s2",
-    "isWishlisted": 1,
-    "isVisited": 0,
+    "isWishlisted": true,
+    "isVisited": false,
+    "visitedAt": null,
     "createdAt": "2024-01-01T00:00:00Z",
     "modifiedAt": "2024-01-01T00:00:00Z"
   },
   {
     "userId": "p6WnJ-DKl0c1",
     "featureId": "wYIPOKn5QkGL",
-    "isWishlisted": 1,
-    "isVisited": 0,
+    "isWishlisted": true,
+    "isVisited": false,
+    "visitedAt": null,
     "createdAt": "2024-01-01T00:00:00Z",
     "modifiedAt": "2024-01-01T00:00:00Z"
   },
   {
     "userId": "p6WnJ-DKl0c1",
     "featureId": "3ELqYDbL6IJc",
-    "isWishlisted": 1,
-    "isVisited": 0,
+    "isWishlisted": true,
+    "isVisited": false,
+    "visitedAt": null,
     "createdAt": "2024-01-01T00:00:00Z",
     "modifiedAt": "2024-01-01T00:00:00Z"
   },
   {
     "userId": "p6WnJ-DKl0c1",
     "featureId": "HYaFwJ62HT8Q",
-    "isWishlisted": 1,
-    "isVisited": 0,
+    "isWishlisted": true,
+    "isVisited": false,
+    "visitedAt": null,
     "createdAt": "2024-01-01T00:00:00Z",
     "modifiedAt": "2024-01-01T00:00:00Z"
   },
   {
     "userId": "p6WnJ-DKl0c1",
     "featureId": "FofJCGqmqmJi",
-    "isWishlisted": 1,
-    "isVisited": 0,
+    "isWishlisted": true,
+    "isVisited": false,
+    "visitedAt": null,
     "createdAt": "2024-01-01T00:00:00Z",
     "modifiedAt": "2024-01-01T00:00:00Z"
   },
   {
     "userId": "p6WnJ-DKl0c1",
     "featureId": "xyoHweaunggf",
-    "isWishlisted": 1,
-    "isVisited": 0,
+    "isWishlisted": true,
+    "isVisited": false,
+    "visitedAt": null,
     "createdAt": "2024-01-01T00:00:00Z",
     "modifiedAt": "2024-01-01T00:00:00Z"
   }
