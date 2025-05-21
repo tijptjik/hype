@@ -23,6 +23,7 @@ drop table IF EXISTS user;
 drop table IF EXISTS userActivity;
 drop table IF EXISTS featureImage;
 drop table IF EXISTS task;
+drop table IF EXISTS taskImage;
 drop table IF EXISTS userFeature;
 drop table IF EXISTS organisation;
 drop table IF EXISTS project;
