@@ -5,71 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1733754982408,
-      "tag": "0000_init",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1733760361871,
-      "tag": "0001_data",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1739172460541,
-      "tag": "0002_userLayers",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1741593881320,
-      "tag": "0003_taskImages",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1741607056509,
-      "tag": "0004_addMessageToTask",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1742544515276,
-      "tag": "0005_add AddressMeta",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1742581506673,
-      "tag": "0006_add publisher meta",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1745391394512,
-      "tag": "0007_add visitedAd",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "6",
-      "when": 1746863023961,
-      "tag": "0008_add isDefaultVisible",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "6",
-      "when": 1747657973647,
-      "tag": "0009_add reviewReason",
+      "when": 1747849917140,
+      "tag": "0000_Initial",
       "breakpoints": true
     }
   ]
