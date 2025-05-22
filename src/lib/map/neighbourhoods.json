@@ -5,14 +5,14 @@
     "region": "Hong Kong Island",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "香港仔",
         "neighbourhood": "香港仔",
         "district": "南區",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "香港仔",
         "neighbourhood": "香港仔",
         "district": "南区",
@@ -27,14 +27,14 @@
     "translation": "Bowrington",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "寶靈頓",
         "neighbourhood": "銅鑼灣",
         "district": "灣仔",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "寶靈頓",
         "neighbourhood": "銅锣湾",
         "district": "湾仔",
@@ -48,14 +48,14 @@
     "region": "Hong Kong Island",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "加路連山",
         "neighbourhood": "加路連山",
         "district": "灣仔",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "加路連山",
         "neighbourhood": "加路連山",
         "district": "湾仔",
@@ -69,14 +69,14 @@
     "region": "Hong Kong Island",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "銅鑼灣",
         "neighbourhood": "銅鑼灣",
         "district": "灣仔",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "銅锣湾",
         "neighbourhood": "銅锣湾",
         "district": "湾仔",
@@ -90,14 +90,14 @@
     "region": "Hong Kong Island",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "中環",
         "neighbourhood": "中環",
         "district": "中西區",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "中环",
         "neighbourhood": "中环",
         "district": "中西区",
@@ -111,14 +111,14 @@
     "region": "New Territories",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "長洲",
         "neighbourhood": "長洲",
         "district": "離島區",
         "region": "新界"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "長洲",
         "neighbourhood": "長洲",
         "district": "離岛区",
@@ -132,14 +132,14 @@
     "region": "Kowloon",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "長沙灣",
         "neighbourhood": "長沙灣",
         "district": "深水埗",
         "region": "九龍"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "長沙湾",
         "neighbourhood": "長沙湾",
         "district": "深水埗",
@@ -153,14 +153,14 @@
     "region": "New Territories",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "清水灣",
         "neighbourhood": "清水灣",
         "district": "西貢",
         "region": "新界"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "清水湾",
         "neighbourhood": "清水湾",
         "district": "西貢",
@@ -174,14 +174,14 @@
     "region": "Hong Kong Island",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "跑馬地",
         "neighbourhood": "跑馬地",
         "district": "灣仔",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "跑馬地",
         "neighbourhood": "跑馬地",
         "district": "湾仔",
@@ -195,14 +195,14 @@
     "region": "Kowloon",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "紅磡",
         "neighbourhood": "紅磡",
         "district": "九龍城",
         "region": "九龍"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "紅磡",
         "neighbourhood": "紅磡",
         "district": "九龙城",
@@ -216,14 +216,14 @@
     "region": "Kowloon",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "佐敦",
         "neighbourhood": "油麻地",
         "district": "油尖旺",
         "region": "九龍"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "佐敦",
         "neighbourhood": "油麻地",
         "district": "油尖旺",
@@ -237,14 +237,14 @@
     "region": "Hong Kong Island",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "堅尼地城",
         "neighbourhood": "堅尼地城",
         "district": "中西區",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "堅尼地城",
         "neighbourhood": "堅尼地城",
         "district": "中西区",
@@ -258,14 +258,14 @@
     "region": "Kowloon",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "九龍城",
         "neighbourhood": "九龍城",
         "district": "九龍城",
         "region": "九龍"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "九龙城",
         "neighbourhood": "九龙城",
         "district": "九龙城",
@@ -279,14 +279,14 @@
     "region": "New Territories",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "葵涌",
         "neighbourhood": "葵涌",
         "district": "葵青",
         "region": "新界"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "葵涌",
         "neighbourhood": "葵涌",
         "district": "葵青",
@@ -300,14 +300,14 @@
     "region": "Kowloon",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "官涌",
         "neighbourhood": "油麻地",
         "district": "油尖旺",
         "region": "九龍"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "官涌",
         "neighbourhood": "油麻地",
         "district": "油尖旺",
@@ -321,14 +321,14 @@
     "region": "Kowloon",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "觀塘",
         "neighbourhood": "觀塘",
         "district": "觀塘",
         "region": "九龍"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "觀塘",
         "neighbourhood": "觀塘",
         "district": "觀塘",
@@ -342,14 +342,14 @@
     "region": "Kowloon",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "勞龍坑",
         "neighbourhood": "紅磡",
         "district": "九龍城",
         "region": "九龍"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "勞龙坑",
         "neighbourhood": "紅磡",
         "district": "九龙城",
@@ -363,14 +363,14 @@
     "region": "Kowloon",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "馬頭涌",
         "neighbourhood": "馬頭涌",
         "district": "九龍城",
         "region": "九龍"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "馬頭涌",
         "neighbourhood": "馬頭涌",
         "district": "九龙城",
@@ -384,14 +384,14 @@
     "region": "Kowloon",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "旺角",
         "neighbourhood": "旺角",
         "district": "油尖旺",
         "region": "九龍"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "旺角",
         "neighbourhood": "旺角",
         "district": "油尖旺",
@@ -405,14 +405,14 @@
     "region": "Kowloon",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "牛頭角",
         "neighbourhood": "牛頭角",
         "district": "觀塘",
         "region": "九龍"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "牛頭角",
         "neighbourhood": "牛頭角",
         "district": "觀塘",
@@ -426,14 +426,14 @@
     "region": "Hong Kong Island",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "北角",
         "neighbourhood": "北角",
         "district": "東區",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "北角",
         "neighbourhood": "北角",
         "district": "東区",
@@ -447,14 +447,14 @@
     "region": "Kowloon",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "屏山",
         "neighbourhood": "屏山",
         "district": "觀塘",
         "region": "九龍"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "屏山",
         "neighbourhood": "屏山",
         "district": "觀塘",
@@ -468,14 +468,14 @@
     "region": "Kowloon",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "太子",
         "neighbourhood": "旺角",
         "district": "油尖旺",
         "region": "九龍"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "太子",
         "neighbourhood": "旺角",
         "district": "油尖旺",
@@ -489,14 +489,14 @@
     "region": "Hong Kong Island",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "鰂魚涌",
         "neighbourhood": "鰂魚涌",
         "district": "東區",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "鲗魚涌",
         "neighbourhood": "鲗魚涌",
         "district": "東区",
@@ -510,14 +510,14 @@
     "region": "New Territories",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "西貢",
         "neighbourhood": "西貢",
         "district": "西貢",
         "region": "新界"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "西貢",
         "neighbourhood": "西貢",
         "district": "西貢",
@@ -531,14 +531,14 @@
     "region": "Hong Kong Island",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "西環",
         "neighbourhood": "西環",
         "district": "中西區",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "西环",
         "neighbourhood": "西环",
         "district": "中西区",
@@ -552,14 +552,14 @@
     "region": "Hong Kong Island",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "西灣河",
         "neighbourhood": "西灣河",
         "district": "東區",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "西湾河",
         "neighbourhood": "西湾河",
         "district": "東区",
@@ -573,14 +573,14 @@
     "region": "Hong Kong Island",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "西營盤",
         "neighbourhood": "西營盤",
         "district": "中西區",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "西營盤",
         "neighbourhood": "西營盤",
         "district": "中西区",
@@ -594,14 +594,14 @@
     "region": "Kowloon",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "新蒲崗",
         "neighbourhood": "新蒲崗",
         "district": "黃大仙",
         "region": "九龍"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "新蒲岗",
         "neighbourhood": "新蒲岗",
         "district": "黃大仙",
@@ -615,14 +615,14 @@
     "region": "Kowloon",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "深水埗",
         "neighbourhood": "深水埗",
         "district": "深水埗",
         "region": "九龍"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "深水埗",
         "neighbourhood": "深水埗",
         "district": "深水埗",
@@ -636,14 +636,14 @@
     "region": "Hong Kong Island",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "深灣",
         "neighbourhood": "Wang Tau Hom",
         "district": "南區",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "深湾",
         "neighbourhood": "Wang Tau Hom",
         "district": "南区",
@@ -657,14 +657,14 @@
     "region": "New Territories",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "十八鄉",
         "neighbourhood": "元朗",
         "district": "元朗",
         "region": "新界"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "十八乡",
         "neighbourhood": "元朗",
         "district": "元朗",
@@ -678,14 +678,14 @@
     "region": "Hong Kong Island",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "筲箕灣",
         "neighbourhood": "筲箕灣",
         "district": "東區",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "筲箕湾",
         "neighbourhood": "筲箕湾",
         "district": "東区",
@@ -699,14 +699,14 @@
     "region": "Hong Kong Island",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "石塘咀",
         "neighbourhood": "石塘咀",
         "district": "中西區",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "石塘咀",
         "neighbourhood": "石塘咀",
         "district": "中西区",
@@ -720,14 +720,14 @@
     "region": "Hong Kong Island",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "上環",
         "neighbourhood": "上環",
         "district": "中西區",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "上环",
         "neighbourhood": "上环",
         "district": "中西区",
@@ -741,14 +741,14 @@
     "region": "Kowloon",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "大角咀",
         "neighbourhood": "大角咀",
         "district": "油尖旺",
         "region": "九龍"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "大角咀",
         "neighbourhood": "大角咀",
         "district": "油尖旺",
@@ -762,14 +762,14 @@
     "region": "Hong Kong Island",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "太平山",
         "neighbourhood": "上環",
         "district": "中西區",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "太平山",
         "neighbourhood": "上环",
         "district": "中西区",
@@ -783,14 +783,14 @@
     "region": "New Territories",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "大圍",
         "neighbourhood": "大圍",
         "district": "沙田",
         "region": "新界"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "大圍",
         "neighbourhood": "大圍",
         "district": "沙田",
@@ -804,14 +804,14 @@
     "region": "Hong Kong Island",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "天后",
         "neighbourhood": "天后",
         "district": "東區",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "天后",
         "neighbourhood": "天后",
         "district": "東区",
@@ -825,14 +825,14 @@
     "region": "Hong Kong Island",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "田灣",
         "neighbourhood": "田灣",
         "district": "南區",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "田湾",
         "neighbourhood": "田湾",
         "district": "南区",
@@ -846,14 +846,14 @@
     "region": "Kowloon",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "土瓜灣",
         "neighbourhood": "土瓜灣",
         "district": "九龍城",
         "region": "九龍"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "土瓜湾",
         "neighbourhood": "土瓜湾",
         "district": "九龙城",
@@ -867,14 +867,14 @@
     "region": "Kowloon",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "塘尾",
         "neighbourhood": "深水埗",
         "district": "深水埗",
         "region": "九龍"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "塘尾",
         "neighbourhood": "深水埗",
         "district": "深水埗",
@@ -888,14 +888,14 @@
     "region": "Kowloon",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "尖沙咀",
         "neighbourhood": "尖沙咀",
         "district": "油尖旺",
         "region": "九龍"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "尖沙咀",
         "neighbourhood": "尖沙咀",
         "district": "油尖旺",
@@ -909,14 +909,14 @@
     "region": "New Territories",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "荃灣",
         "neighbourhood": "荃灣",
         "district": "荃灣",
         "region": "新界"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "荃湾",
         "neighbourhood": "荃湾",
         "district": "荃湾",
@@ -930,14 +930,14 @@
     "region": "Kowloon",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "元州",
         "neighbourhood": "深水埗",
         "district": "深水埗",
         "region": "九龍"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "元州",
         "neighbourhood": "深水埗",
         "district": "深水埗",
@@ -951,14 +951,14 @@
     "region": "Hong Kong Island",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "灣仔",
         "neighbourhood": "灣仔",
         "district": "灣仔",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "湾仔",
         "neighbourhood": "湾仔",
         "district": "湾仔",
@@ -972,14 +972,14 @@
     "region": "Hong Kong Island",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "瀑布灣",
         "neighbourhood": "瀑布灣",
         "district": "南區",
         "region": "香港島"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "瀑布湾",
         "neighbourhood": "瀑布湾",
         "district": "南区",
@@ -993,14 +993,14 @@
     "region": "Kowloon",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "油麻地",
         "neighbourhood": "油麻地",
         "district": "油尖旺",
         "region": "九龍"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "油麻地",
         "neighbourhood": "油麻地",
         "district": "油尖旺",
@@ -1014,14 +1014,14 @@
     "region": "New Territories",
     "translations": [
       {
-        "lang": "zh-hant",
+        "locale": "zh-hant",
         "name": "元朗",
         "neighbourhood": "元朗",
         "district": "元朗",
         "region": "新界"
       },
       {
-        "lang": "zh-hans",
+        "locale": "zh-hans",
         "name": "元朗",
         "neighbourhood": "元朗",
         "district": "元朗",
