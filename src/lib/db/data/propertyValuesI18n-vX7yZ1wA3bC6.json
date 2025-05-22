@@ -1,146 +1,218 @@
 [
   {
     "propertyValueId": "vX7yZ1wA3bC6",
-    "lang": "zh-hant",
+    "locale": "zh-hant",
     "value": "油漆在水泥上",
     "valueGen": true
   },
   {
     "propertyValueId": "vX7yZ1wA3bC6",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "value": "油漆在水泥上",
     "valueGen": true
   },
   {
     "propertyValueId": "tU5vW8xY1zA4",
-    "lang": "zh-hant",
+    "locale": "zh-hant",
     "value": "油漆在金屬上",
     "valueGen": true
   },
   {
     "propertyValueId": "tU5vW8xY1zA4",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "value": "油漆在金属上",
     "valueGen": true
   },
   {
     "propertyValueId": "bC7dF9gH2jK5",
-    "lang": "zh-hant",
+    "locale": "zh-hant",
     "value": "油漆在磚上",
     "valueGen": true
   },
   {
     "propertyValueId": "bC7dF9gH2jK5",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "value": "油漆在砖上",
     "valueGen": true
   },
   {
     "propertyValueId": "nQ1rS4tU7vW0",
-    "lang": "zh-hant",
+    "locale": "zh-hant",
     "value": "油漆在瓷磚上",
     "valueGen": true
   },
   {
     "propertyValueId": "nQ1rS4tU7vW0",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "value": "油漆在瓷砖上",
     "valueGen": true
   },
   {
     "propertyValueId": "xY1zA4bC7dF9",
-    "lang": "zh-hant",
+    "locale": "zh-hant",
     "value": "重疊",
     "valueGen": true
   },
   {
     "propertyValueId": "xY1zA4bC7dF9",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "value": "重叠",
     "valueGen": true
   },
   {
     "propertyValueId": "pQ5rS8tU2vW9",
-    "lang": "zh-hant",
+    "locale": "zh-hant",
     "value": "丙烯",
     "valueGen": true
   },
   {
     "propertyValueId": "pQ5rS8tU2vW9",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "value": "丙烯",
     "valueGen": true
   },
   {
     "propertyValueId": "rS4tU7vW0xY3",
-    "lang": "zh-hant",
+    "locale": "zh-hant",
     "value": "金屬",
     "valueGen": true
   },
   {
     "propertyValueId": "rS4tU7vW0xY3",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "value": "金属",
     "valueGen": true
   },
   {
     "propertyValueId": "zA4bC7dF9gH2",
-    "lang": "zh-hant",
+    "locale": "zh-hant",
     "value": "木",
     "valueGen": true
   },
   {
     "propertyValueId": "zA4bC7dF9gH2",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "value": "木",
     "valueGen": true
   },
   {
     "propertyValueId": "kL8mN1pQ4rS7",
-    "lang": "zh-hant",
+    "locale": "zh-hant",
     "value": "水磨石",
     "valueGen": true
   },
   {
     "propertyValueId": "kL8mN1pQ4rS7",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "value": "水磨石",
     "valueGen": true
   },
   {
     "propertyValueId": "tU7vW0xY3zA6",
-    "lang": "zh-hant",
+    "locale": "zh-hant",
     "value": "石",
     "valueGen": true
   },
   {
     "propertyValueId": "tU7vW0xY3zA6",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "value": "石",
     "valueGen": true
   },
   {
     "propertyValueId": "dF9gH2jK5mN8",
-    "lang": "zh-hant",
+    "locale": "zh-hant",
     "value": "模製水泥",
     "valueGen": true
   },
   {
     "propertyValueId": "dF9gH2jK5mN8",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "value": "模制水泥",
     "valueGen": true
   },
   {
     "propertyValueId": "wA3bC6dF9gH2",
-    "lang": "zh-hant",
+    "locale": "zh-hant",
     "value": "鋅板印刷",
     "valueGen": true
   },
   {
     "propertyValueId": "wA3bC6dF9gH2",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "value": "锌板印刷",
     "valueGen": true
+  },
+  {
+    "propertyValueId": "vX7yZ1wA3bC6",
+    "locale": "en",
+    "value": "Painted on Cement",
+    "valueGen": false
+  },
+  {
+    "propertyValueId": "tU5vW8xY1zA4",
+    "locale": "en",
+    "value": "Painted on Metal",
+    "valueGen": false
+  },
+  {
+    "propertyValueId": "bC7dF9gH2jK5",
+    "locale": "en",
+    "value": "Painted on Brick",
+    "valueGen": false
+  },
+  {
+    "propertyValueId": "nQ1rS4tU7vW0",
+    "locale": "en",
+    "value": "Painted on Tile",
+    "valueGen": false
+  },
+  {
+    "propertyValueId": "xY1zA4bC7dF9",
+    "locale": "en",
+    "value": "Painted over",
+    "valueGen": false
+  },
+  {
+    "propertyValueId": "pQ5rS8tU2vW9",
+    "locale": "en",
+    "value": "Acrylic",
+    "valueGen": false
+  },
+  {
+    "propertyValueId": "rS4tU7vW0xY3",
+    "locale": "en",
+    "value": "Metal",
+    "valueGen": false
+  },
+  {
+    "propertyValueId": "zA4bC7dF9gH2",
+    "locale": "en",
+    "value": "Wood",
+    "valueGen": false
+  },
+  {
+    "propertyValueId": "kL8mN1pQ4rS7",
+    "locale": "en",
+    "value": "Terrazzo",
+    "valueGen": false
+  },
+  {
+    "propertyValueId": "tU7vW0xY3zA6",
+    "locale": "en",
+    "value": "Stone",
+    "valueGen": false
+  },
+  {
+    "propertyValueId": "dF9gH2jK5mN8",
+    "locale": "en",
+    "value": "Molded Cement",
+    "valueGen": false
+  },
+  {
+    "propertyValueId": "wA3bC6dF9gH2",
+    "locale": "en",
+    "value": "Zinc Stenciled",
+    "valueGen": false
   }
 ]

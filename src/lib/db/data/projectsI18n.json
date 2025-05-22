@@ -1,7 +1,15 @@
-[
+[ {
+    "projectId": "YuSFnia9VOtG",
+    "locale": "en",
+    "name": "Hong Kong Ghost Signs",
+    "nameShort": "HK Ghost Signs",
+    "description": "Summoning characters from our city's past. Documenting defunct & faded signs of Hong Kong's cityscape. A project by <a href='https://www.instagram.com/handsome.co/'>Billy Potts</a> and <a href='https://www.instagram.com/benmaransphotography/'>Ben Marans</a>",
+    "license": "Copyright - Contact for License",
+    "attribution": "© Hong Kong Ghost Signs"
+  },
   {
     "projectId": "YuSFnia9VOtG",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "name": "香港鬼招牌",
     "nameShort": "鬼招牌",
     "description": "召唤我们城市过去的字符。记录香港城市景观中已停用和褪色的招牌。这是由Billy Potts和Ben Marans发起的项目",
@@ -10,7 +18,7 @@
   },
   {
     "projectId": "YuSFnia9VOtG",
-    "lang": "zh-hant",
+    "locale": "zh-hant",
     "name": "香港鬼招牌",
     "nameShort": "鬼招牌",
     "description": "召喚我們城市過去的字符。記錄香港城市景觀中已停用和褪色的招牌。這是由Billy Potts和Ben Marans發起的項目",

@@ -1,14 +1,21 @@
 [
   {
     "layerId": "7akti7OImSFg",
-    "lang": "zh-hant",
+    "locale": "en",
+    "name": "HK Ghost Signs",
+    "nameShort": "HKGS",
+    "description": "Public records of Hong Kong ghost signs"
+  },
+  {
+    "layerId": "7akti7OImSFg",
+    "locale": "zh-hant",
     "name": "鬼招牌",
     "nameShort": "鬼招",
     "description": "香港鬼招牌的公開記錄"
   },
   {
     "layerId": "7akti7OImSFg",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "name": "鬼招牌",
     "nameShort": "鬼招",
     "description": "香港鬼招牌的公开记录"

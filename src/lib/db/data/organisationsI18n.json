@@ -1,14 +1,21 @@
 [
   {
     "organisationId": "4Jsk5LngvFZq",
-    "lang": "zh-hans",
+    "locale": "en",
+    "name": "Ghostmappers",
+    "nameShort": "Ghostmappers",
+    "description": "Summoning characters from our city's past. Documenting defunct & faded signs of Hong Kong's cityscape."
+  },
+  {
+    "organisationId": "4Jsk5LngvFZq",
+    "locale": "zh-hans",
     "name": "香港鬼招牌",
     "nameShort": "香港鬼招牌",
     "description": "召唤我们城市过去的人物。记录香港城市景观中已失效和褪色的标志。"
   },
   {
     "organisationId": "4Jsk5LngvFZq",
-    "lang": "zh-hant",
+    "locale": "zh-hant",
     "name": "香港鬼招牌",
     "nameShort": "香港鬼招牌",
     "description": "召喚我們城市過去的人物。記錄香港城市景觀中已失效和褪色的標誌。"

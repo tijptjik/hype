@@ -1,37 +1,55 @@
 [
   {
     "propertyValueId": "mN2pQ5rS8tU4",
-    "lang": "zh-hant",
+    "locale": "en",
+    "value": "Small",
+    "valueGen": false
+  },
+  {
+    "propertyValueId": "wA3bC6dF9gH3",
+    "locale": "en",
+    "value": "Medium",
+    "valueGen": false
+  },
+  {
+    "propertyValueId": "jK5mN8pQ1rS4",
+    "locale": "en",
+    "value": "Large",
+    "valueGen": false
+  },
+  {
+    "propertyValueId": "mN2pQ5rS8tU4",
+    "locale": "zh-hant",
     "value": "小",
     "valueGen": true
   },
   {
     "propertyValueId": "mN2pQ5rS8tU4",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "value": "小",
     "valueGen": true
   },
   {
     "propertyValueId": "wA3bC6dF9gH3",
-    "lang": "zh-hant",
+    "locale": "zh-hant",
     "value": "中",
     "valueGen": true
   },
   {
     "propertyValueId": "wA3bC6dF9gH3",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "value": "中",
     "valueGen": true
   },
   {
     "propertyValueId": "jK5mN8pQ1rS4",
-    "lang": "zh-hant",
+    "locale": "zh-hant",
     "value": "大",
     "valueGen": true
   },
   {
     "propertyValueId": "jK5mN8pQ1rS4",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "value": "大",
     "valueGen": true
   }

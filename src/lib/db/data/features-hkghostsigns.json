@@ -8,19 +8,6 @@
         22.328725
       ]
     },
-    "title": "Undefined",
-    "titleGen": true,
-    "description": null,
-    "descriptionGen": true,
-    "displayAddress": "31 Nga Tsin Long Rd, Kowloon City, Hong Kong",
-    "displayAddressGen": true,
-    "addressProperties": {
-      "buildingNumberFrom": "31",
-      "streetName": "Nga Tsin Long Road",
-      "neighbourhood": "Kowloon City",
-      "region": "Kowloon",
-      "country": "Hong Kong"
-    },
     "addressMeta": {
       "googlePlaceId": "EiwzMSBOZ2EgVHNpbiBMb25nIFJkLCBLb3dsb29uIENpdHksIEhvbmcgS29uZyIwEi4KFAoSCdNGfM0qBwQ0Ee1semEh-gn6EB8qFAoSCatCrsQqBwQ0ERcuGWMNRjHb",
       "distanceFromPoint": 0,

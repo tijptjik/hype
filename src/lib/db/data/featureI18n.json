@@ -1,7 +1,21 @@
 [
   {
     "featureId": "rMMIBGHfa88V",
-    "lang": "zh-hant",
+    "locale": "en",
+    "title": "Undefined",
+    "description": null,
+    "displayAddress": "31 Nga Tsin Long Rd, Kowloon City, Hong Kong",
+    "addressProperties": {
+      "buildingNumberFrom": "31",
+      "streetName": "Nga Tsin Long Road",
+      "neighbourhood": "Kowloon City",
+      "region": "Kowloon",
+      "country": "Hong Kong"
+    }
+  },
+  {
+    "featureId": "rMMIBGHfa88V",
+    "locale": "zh-hant",
     "title": "Undefined",
     "titleGen": false,
     "description": null,
@@ -18,7 +32,7 @@
   },
   {
     "featureId": "rMMIBGHfa88V",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "title": "Undefined",
     "titleGen": true,
     "description": null,

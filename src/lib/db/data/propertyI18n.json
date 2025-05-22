@@ -1,7 +1,15 @@
 [
   {
     "propertyId": "kL9mN2pQ5rS4",
-    "lang": "zh-hant",
+    "locale": "en",
+    "label": "Size",
+    "labelGen": false,
+    "placeholder": "Select size",
+    "placeholderGen": false
+  },
+  {
+    "propertyId": "kL9mN2pQ5rS4",
+    "locale": "zh-hant",
     "label": "大小",
     "labelGen": true,
     "placeholder": "選擇大小",
@@ -9,7 +17,7 @@
   },
   {
     "propertyId": "kL9mN2pQ5rS4",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "label": "大小",
     "labelGen": true,
     "placeholder": "选择大小",
@@ -17,7 +25,15 @@
   },
   {
     "propertyId": "vX7yZ1wA3bC6",
-    "lang": "zh-hant",
+    "locale": "en",
+    "label": "Material",
+    "labelGen": false,
+    "placeholder": "Select material",
+    "placeholderGen": false
+  },
+  {
+    "propertyId": "vX7yZ1wA3bC6",
+    "locale": "zh-hant",
     "label": "材料",
     "labelGen": true,
     "placeholder": "選擇材料",
@@ -25,7 +41,7 @@
   },
   {
     "propertyId": "vX7yZ1wA3bC6",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "label": "材料",
     "labelGen": true,
     "placeholder": "选择材料",
@@ -33,7 +49,15 @@
   },
   {
     "propertyId": "hJ4kL7mN9pQ2",
-    "lang": "zh-hant",
+    "locale": "en",
+    "label": "Visibility",
+    "labelGen": false,
+    "placeholder": "Select visibility",
+    "placeholderGen": false
+  },
+  {
+    "propertyId": "hJ4kL7mN9pQ2",
+    "locale": "zh-hant",
     "label": "可見度",
     "labelGen": true,
     "placeholder": "選擇可見度",
@@ -41,7 +65,7 @@
   },
   {
     "propertyId": "hJ4kL7mN9pQ2",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "label": "可见度",
     "labelGen": true,
     "placeholder": "选择可见度",
@@ -49,7 +73,15 @@
   },
   {
     "propertyId": "hJ4kL9mN9pQ2",
-    "lang": "zh-hant",
+    "locale": "en",
+    "label": "Grade",
+    "labelGen": false,
+    "placeholder": "Select grade",
+    "placeholderGen": false
+  },
+  {
+    "propertyId": "hJ4kL9mN9pQ2",
+    "locale": "zh-hant",
     "label": "等级",
     "labelGen": true,
     "placeholder": "选择等级",
@@ -57,7 +89,7 @@
   },
   {
     "propertyId": "hJ4kL9mN9pQ2",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "label": "等级",
     "labelGen": true,
     "placeholder": "选择等级",
@@ -65,7 +97,15 @@
   },
   {
     "propertyId": "tU5vW8xY1zA4",
-    "lang": "zh-hant",
+    "locale": "en",
+    "label": "Graphemes",
+    "labelGen": false,
+    "placeholder": "Enter graphemes",
+    "placeholderGen": false
+  },
+  {
+    "propertyId": "tU5vW8xY1zA4",
+    "locale": "zh-hant",
     "label": "字形",
     "labelGen": true,
     "placeholder": "輸入字形",
@@ -73,7 +113,7 @@
   },
   {
     "propertyId": "tU5vW8xY1zA4",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "label": "字形",
     "labelGen": true,
     "placeholder": "输入字形",
@@ -81,7 +121,15 @@
   },
   {
     "propertyId": "bC7dF9gH2jK5",
-    "lang": "zh-hant",
+    "locale": "en",
+    "label": "Calligrapher",
+    "labelGen": false,
+    "placeholder": "Enter calligrapher",
+    "placeholderGen": false
+  },
+  {
+    "propertyId": "bC7dF9gH2jK5",
+    "locale": "zh-hant",
     "label": "書法家",
     "labelGen": true,
     "placeholder": "輸入書法家",
@@ -89,7 +137,7 @@
   },
   {
     "propertyId": "bC7dF9gH2jK5",
-    "lang": "zh-hans",
+    "locale": "zh-hans",
     "label": "书法家",
     "labelGen": true,
     "placeholder": "输入书法家",
