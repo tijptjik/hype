@@ -189,6 +189,7 @@ export const session = sqliteTable('session', {
  * @remarks
  * Stores organisation information and metadata
  * - Basic info (code, URL, image)
+ * - Hub assignment and exclusivity
  * - Publication status
  * - Publisher reference
  * - Archive status
@@ -205,6 +206,13 @@ export const organisation = sqliteTable('organisation', {
     onDelete: 'set null',
     onUpdate: 'cascade'
   }),
+  // Hub assignment
+  hubId: text('hubId').references(() => hub.id, {
+    onDelete: 'set null',
+    onUpdate: 'cascade'
+  }),
+  // If true, organisation and all its resources are exclusive to the hub
+  isHubExclusive: integer('isHubExclusive', { mode: 'boolean' }).notNull().default(false),
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(true),
   publishedAt: text('publishedAt'),
   publisherId: text('publisherId').references(() => user.id, {
@@ -226,7 +234,7 @@ export const organisation = sqliteTable('organisation', {
 /**
  * Organization relations
  * @remarks
- * Links organization to its translations, members, projects, and metadata
+ * Links organization to its translations, members, projects, hub, and metadata
  */
 export const organisationRelations = relations(organisation, ({ one, many }) => ({
   i18n: many(organisationI18n),
@@ -238,6 +246,10 @@ export const organisationRelations = relations(organisation, ({ one, many }) => 
   publisher: one(user, {
     fields: [organisation.publisherId],
     references: [user.id]
+  }),
+  hub: one(hub, {
+    fields: [organisation.hubId],
+    references: [hub.id]
   }),
   projects: many(project),
   tasks: many(task)
@@ -1321,4 +1333,42 @@ export const taskImageRelations = relations(taskImage, ({ one }) => ({
     fields: [taskImage.imageId],
     references: [image.id]
   })
+}));
+
+/* ============================================================================
+ * HUB MANAGEMENT
+ * ============================================================================
+ * Tables for managing hubs
+ */
+
+/**
+ * Multi-tenant hub table
+ * @remarks
+ * Stores hub information and metadata
+ * - Basic info (code, domain, name)
+ * - Core hub identification
+ * - Active status
+ */
+export const hub = sqliteTable('hub', {
+  id: text('id').primaryKey().$defaultFn(() => nanoid(12)),
+  code: text('code').unique().notNull(), // 'core', 'hkghostsigns', etc.
+  domain: text('domain').unique().notNull(), // 'hype.hk', 'hkghostsigns.hype.hk', 'hkghostsigns.com'
+  isCore: integer('isCore', { mode: 'boolean' }).notNull().default(false),
+  isActive: integer('isActive', { mode: 'boolean' }).notNull().default(true),
+  createdAt: text('createdAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .notNull(),
+  modifiedAt: text('modifiedAt')
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .$onUpdate(() => new Date().toISOString())
+    .notNull()
+});
+
+/**
+ * Hub relations
+ * @remarks
+ * Links hub to its organizations
+ */
+export const hubRelations = relations(hub, ({ many }) => ({
+  organisations: many(organisation)
 }));
