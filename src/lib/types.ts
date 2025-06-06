@@ -44,6 +44,15 @@ import {
   FeatureRaw,
   FeatureUpdate,
   FeatureUpdateAPI,
+  HubAPI,
+  HubBase,
+  HubBasic,
+  HubCollectionAPI,
+  HubInsert,
+  HubInsertAPI,
+  HubRaw,
+  HubUpdate,
+  HubUpdateAPI,
   ImageAPI,
   ImageBase,
   ImageBaseRaw,
@@ -955,7 +964,10 @@ export type AddressPropertiesExtended = AddressProperties & AddressMeta;
 
 export type NewFeatureWithLocationAndParents = PartialExcept<
   NewFeatureTask & {
-    feature: PartialExcept<UserContributedFeature, 'layerId' | 'geometry' | 'properties'> & {
+    feature: PartialExcept<
+      UserContributedFeature,
+      'layerId' | 'geometry' | 'properties'
+    > & {
       geometry: Geometry;
       properties: UserContributedFeatureProperty[];
     };
@@ -966,7 +978,7 @@ export type NewFeatureWithLocationAndParents = PartialExcept<
 export type UserContributedFeatureProperty = {
   property: Property;
   propertyId: Id;
-  propertyValueId?: Id; // Categorical 
+  propertyValueId?: Id; // Categorical
   value?: string; // Universal specifier OR range value
   i18n?: Record<Locale, { locale: Locale; value: string; valueGen: boolean }>; // I18n Specifier
 };
@@ -1618,6 +1630,22 @@ export type NeighbourhoodMap = Record<
 export type ALSSuggestedAddressItem = NonNullable<
   ALSResult['SuggestedAddress']
 >[number];
+
+/* ----------------- */
+// HUB TYPES
+/* -------- */
+
+export type Hub = z.infer<typeof HubBase>;
+export type HubBasic = z.infer<typeof HubBasic>;
+export type HubInsert = z.infer<typeof HubInsert>;
+export type HubUpdate = z.infer<typeof HubUpdate>;
+
+export type HubAPI = z.infer<typeof HubAPI>;
+export type HubCollectionAPI = z.infer<typeof HubCollectionAPI>;
+export type HubInsertAPI = z.infer<typeof HubInsertAPI>;
+export type HubUpdateAPI = z.infer<typeof HubUpdateAPI>;
+
+export type HubRaw = z.infer<typeof HubRaw>;
 
 /* ----------------- */
 // TYPESCRIPT UTILITIES
