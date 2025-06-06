@@ -2,6 +2,8 @@
 // I18N
 import { getI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
+// RUNED
+import { watch } from 'runed';
 // CONSTANTS
 import neighbourhoods from '$lib/map/neighbourhoods.json';
 // COMPONENTS
@@ -24,17 +26,20 @@ const selectedNeighbourhoods = $derived(mapCtx.state.filters.neighbourhoods);
 let searchTerm = $state('');
 
 // Filter function for FilterBar
-function filterNeighbourhoods(
-  neighbourhoods: NeighbourhoodMap,
-  term: string
-) {
+function filterNeighbourhoods(neighbourhoods: NeighbourhoodMap, term: string) {
   if (!term) return Object.entries(neighbourhoods);
   const searchLower = term.toLowerCase();
   return Object.entries(neighbourhoods).filter(([key, data]) => {
     return (
-      getI18n(data, 'name', mapCtx.getUserPreferences()).toLowerCase().includes(searchLower) ||
-      getI18n(data, 'district', mapCtx.getUserPreferences()).toLowerCase().includes(searchLower) ||
-      getI18n(data, 'region', mapCtx.getUserPreferences()).toLowerCase().includes(searchLower)
+      getI18n(data, 'name', mapCtx.getUserPreferences())
+        .toLowerCase()
+        .includes(searchLower) ||
+      getI18n(data, 'district', mapCtx.getUserPreferences())
+        .toLowerCase()
+        .includes(searchLower) ||
+      getI18n(data, 'region', mapCtx.getUserPreferences())
+        .toLowerCase()
+        .includes(searchLower)
     );
   });
 }
@@ -44,13 +49,12 @@ const filteredNeighbourhoods = $derived(
 );
 
 // EFFECTS
-
-// Update query when selection changes
-// TODO use runed watch instead
-$effect(() => {
-  selectedNeighbourhoods; // track changes
-  mapCtx.refreshFeatures();
-});
+watch(
+  () => selectedNeighbourhoods,
+  () => {
+    mapCtx.refreshFeatures();
+  }
+);
 </script>
 
 <!-- COMPONENTS -->
