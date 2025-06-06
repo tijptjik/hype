@@ -44,6 +44,11 @@ export * from './schemas/task';
 export * from './schemas/image';
 
 /* ----------------- */
+// HUB SCHEMAS
+/* -------- */
+export * from './schemas/hub';
+
+/* ----------------- */
 // USER API SCHEMAS - AVOID CIRCULAR DEPENDENCIES
 /* -------- */
 

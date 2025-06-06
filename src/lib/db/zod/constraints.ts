@@ -3,14 +3,15 @@ import { m } from '$lib/i18n';
 import { supportedLocales } from '$lib/enums';
 import type {
   feature,
-  layerI18n,
-  layer,
-  property,
-  organisation,
-  project,
-  organisationI18n,
-  projectI18n,
   featureI18n,
+  hub,
+  layer,
+  layerI18n,
+  organisation,
+  organisationI18n,
+  project,
+  projectI18n,
+  property,
   propertyI18n
 } from '../schema';
 
@@ -78,6 +79,7 @@ export const getDefaultConstraints = (
     | typeof propertyI18n
     | typeof feature
     | typeof featureI18n
+    | typeof hub
 ) => {
   return Object.keys(table).reduce(
     (acc: Record<string, any>, key) => {

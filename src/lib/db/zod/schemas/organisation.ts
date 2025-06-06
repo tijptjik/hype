@@ -12,6 +12,7 @@ import { organisation, organisationI18n, organisationRole } from '$lib/db/schema
 import { getDefaultConstraints, getLocales, getUserRoles } from '../constraints';
 import { UserBasic } from './user';
 import { ImageBasic, ImageBase } from './image';
+import { HubBasic } from './hub';
 
 /* ----------------- */
 // ORGANISATION CORE SCHEMAS
@@ -71,14 +72,16 @@ export const OrganisationRoleAPI = OrganisationRoleBase.extend({
 
 export const OrganisationCollectionAPI = OrganisationBase.extend({
   i18n: getLocales(OrganisationI18nBase),
-  image: ImageBasic.nullish()
+  image: ImageBasic.nullish(),
+  hub: HubBasic.nullish()
 });
 
 export const OrganisationAPI = OrganisationBase.extend({
   i18n: getLocales(OrganisationI18nBase),
   userRoles: getUserRoles(OrganisationRoleWithUser),
   image: ImageBase.nullish(),
-  publisher: UserBasic.nullish()
+  publisher: UserBasic.nullish(),
+  hub: HubBasic.nullish()
 });
 
 export const OrganisationInsertAPI = OrganisationInsert.extend({
