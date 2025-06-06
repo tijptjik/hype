@@ -5,15 +5,15 @@ import { goto } from '$app/navigation';
 import { MOBILE_MAX_WIDTH } from '$lib';
 import { searchAll } from '$lib/map/data';
 // I18N
-import { getI18nValue } from '$lib/i18n';
+import { getI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // NEIGHBOURHOODS
 import neighbourhoods from '$lib/map/neighbourhoods.json';
 // ENUMS
-import { FeatureCardMode } from '$lib/types';
+import { FeatureCardMode } from '$lib/enums';
 // TYPES
-import type { SearchResult, Id, NewFeature } from '$lib/types';
-import type { MapContext } from '$lib/context/map.svelte';
+import type { SearchResult, Id } from '$lib/types';
+import type { MapCtx } from '$lib/context/map.svelte';
 // TYPES
 import type { FeatureCardContext } from './featureCard.svelte';
 type OmniMode = 'search' | 'navigation' | 'feature' | 'new-feature';
@@ -54,11 +54,12 @@ export class OmniContext {
 
   cardCtx: FeatureCardContext | null = null;
 
-  mapCtx!: MapContext;
+  mapCtx!: MapCtx;
   pageState: PageState = $state(PageState.NoTransition);
+  isIntentionallyClosing: boolean = $state(false);
 
   // Constructor with mapCtx
-  constructor(mapCtx: mapCtx) {
+  constructor(mapCtx: MapCtx) {
     this.mapCtx = mapCtx;
   }
 
@@ -135,18 +136,40 @@ export class OmniContext {
     }
   }
 
+  resetMode() {
+    this.state.mode = 'search';
+  }
+
+  // Cancel new-feature mode with full reset
+  cancelNewFeature() {
+    this.resetMode();
+    this.clearSearch();
+    this.mapCtx.resetNewFeature();
+    this.mapCtx.resetActiveCollection();
+    goto('/');
+  }
+
   // CLOSE METHODS
   close() {
     // If the card is open, close it
     if (this.state.isCardOpen) {
       // If the card is in new-feature mode, reset the new feature
       if (this.cardCtx?.isNewMode) {
-        this.mapCtx.resetNewFeature();
         this.closeCard();
-        this.clearSearch();
         this.setMode('search');
+        this.clearSearch();
         goto('/');
-        this.focusSearchBar();
+        // Delay the reset to allow the DOM to update and remove the card component
+        setTimeout(() => {
+          this.isIntentionallyClosing = true;
+          this.mapCtx.resetNewFeature();
+          this.mapCtx.resetActiveCollection();
+          this.focusSearchBar();
+          // Reset the flag after reactive effects have had a chance to run
+          setTimeout(() => {
+            this.isIntentionallyClosing = false;
+          }, 0);
+        }, 50); // Small delay to allow DOM cleanup
       } else if (!this.cardCtx?.isDisplayMode) {
         // If the card is in missing mode, turn it into display mode
         this.cardCtx?.setMode(FeatureCardMode.Display);
@@ -170,17 +193,13 @@ export class OmniContext {
       this.focusSearchBar();
       goto('/');
 
-      // If we are in new-feature mode, close the modal
+    // We can be in new-feature mode if we are still pre-FeatureCard,
+    // i.e. if we are showing the LayerSelctionModal or GeoLocationModal.
     } else if (this.state.mode === 'new-feature') {
       const closeLayerEvent = new CustomEvent('closeLayerSelectionModal');
       window.dispatchEvent(closeLayerEvent);
       const closeLocationEvent = new CustomEvent('closeGeoLocationModal');
       window.dispatchEvent(closeLocationEvent);
-
-      this.setMode('search');
-      this.focusSearchBar();
-      goto('/');
-
       // If we are in search mode, close the card
     } else if (this.state.mode === 'search' && this.state.isTrayOpen) {
       this.closeTray();
@@ -201,7 +220,7 @@ export class OmniContext {
   }
 
   async handleFeatureSelection(
-    mapCtx: mapCtx,
+    mapCtx: MapCtx,
     featureId: Id,
     options: {
       openCard: boolean;
@@ -243,17 +262,17 @@ export class OmniContext {
     }
 
     // If we get here, feature wasn't in the active collection, create a new single-feature collection
-    let address = getI18nValue(feature, 'displayAddress');
+    let address = getI18n(feature, 'displayAddress', mapCtx.getUserPreferences());
 
     mapCtx.setActiveCollection(
       {
-        type: 'feature',
-        name: address.replace(', Hong Kong', '').replace(', Hong Kong Island', ''),
         id: featureId,
-        translations: [
-          { lang: 'zh-hant', name: address },
-          { lang: 'zh-hans', name: address }
-        ],
+        type: 'feature',
+        i18n: {
+          en: { name: address.replace(', Hong Kong', '').replace(', Hong Kong Island', '') },
+          'zh-hant': { name: address },
+          'zh-hans': { name: address }
+        },
         items: [feature]
       },
       {
@@ -270,17 +289,17 @@ export class OmniContext {
     }
   }
 
-  handleWalkSelection(mapCtx: mapCtx, walkId: string) {
+  handleWalkSelection(mapCtx: MapCtx, walkId: string) {
     if (walkId === 'stars') {
       mapCtx.setActiveCollection(
         {
           type: 'walk',
-          name: m.omni__title_star_walks(),
           id: 'stars',
-          translations: [
-            { lang: 'zh-hant', name: '我的最愛' },
-            { lang: 'zh-hans', name: '我的最爱' }
-          ],
+          i18n: {
+            en: { name: m.omni__title_star_walks() },
+            'zh-hant': { name: '我的最愛' },
+            'zh-hans': { name: '我的最爱' }
+          },
           items: mapCtx.getWishlistedFeatures()
         },
         {
@@ -300,28 +319,18 @@ export class OmniContext {
     }, 3000);
   }
 
-  handleNeighbourhoodSelection(mapCtx: mapCtx, neighbourhood: string) {
+  handleNeighbourhoodSelection(mapCtx: MapCtx, neighbourhood: string) {
     const selectedNeighbourhood =
       neighbourhoods[neighbourhood as keyof typeof neighbourhoods];
     mapCtx.setActiveCollection(
       {
-        type: 'neighbourhood',
-        name: neighbourhood,
         id: neighbourhood,
-        translations: [
-          {
-            lang: 'zh-hant',
-            name:
-              selectedNeighbourhood.translations.find((t) => t.lang === 'zh-hant')
-                ?.name || ''
-          },
-          {
-            lang: 'zh-hans',
-            name:
-              selectedNeighbourhood.translations.find((t) => t.lang === 'zh-hans')
-                ?.name || ''
-          }
-        ],
+        type: 'neighbourhood',
+        i18n: {
+          en: { name: neighbourhood },
+          'zh-hant': { name: selectedNeighbourhood.i18n['zh-hant'].name },
+          'zh-hans': { name: selectedNeighbourhood.i18n['zh-hans'].name }
+        },
         items: mapCtx.getNeighbourhoodFeatures(neighbourhood)
       },
       {
@@ -390,7 +399,7 @@ export class OmniContext {
   navTitle = $derived(
     this.state.mode === 'search'
       ? `Search Results: ${this.state.searchTerm}`
-      : getI18nValue(this.mapCtx.state.active.collection!, 'name')
+      : getI18n(this.mapCtx.state.active.collection!, 'name', this.mapCtx.getUserPreferences())
   );
 
   // OPEN/CLOSE METHODS
@@ -440,7 +449,7 @@ export class OmniContext {
 
 export const OMNI_CONTEXT_KEY = Symbol('omniContext');
 
-export const setOmniContext = (mapCtx: mapCtx) =>
+export const setOmniContext = (mapCtx: MapCtx) =>
   setContext(OMNI_CONTEXT_KEY, new OmniContext(mapCtx));
 
 export const getOmniContext = (): OmniContext => getContext(OMNI_CONTEXT_KEY);

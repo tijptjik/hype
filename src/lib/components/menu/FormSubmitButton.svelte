@@ -6,9 +6,9 @@ import { CheckCircle } from '@steeze-ui/heroicons';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 // TYPES
-import type { Resource, SuperFormResult } from '$lib/types';
+import type { Form } from '$lib/types';
 
-let menuProps: { form: SuperFormResult<Resource> } = $props();
+let menuProps: { form: Form } = $props();
 
 // STATE : FORM
 let { tainted, isTainted, submit, errors } = menuProps.form;
@@ -16,6 +16,7 @@ let { tainted, isTainted, submit, errors } = menuProps.form;
 // STATE : UI
 let isInvalid = $state(false);
 let hasErrors = $state(false);
+let buttonElement: HTMLButtonElement = $state()!;
 // STATE : EFFECTS
 $effect(() => {
   if (Object.keys($errors).length > 0) {
@@ -38,9 +39,31 @@ $effect(() => {
   })($errors as Record<string, unknown>);
   isInvalid = hasErrors || menuProps.form.hasClientErrors;
 });
+
+// Global keyboard shortcut for Ctrl+S / Cmd+S
+$effect(() => {
+  function handleKeyDown(e: KeyboardEvent) {
+    // Check for Ctrl+S (Windows/Linux) or Cmd+S (Mac)
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault(); // Prevent browser's default save dialog
+      if (buttonElement) {
+        buttonElement.click(); // Simulate button click (respects disabled state)
+      }
+    }
+  }
+
+  // Add global event listener
+  document.addEventListener('keydown', handleKeyDown);
+
+  // Cleanup function
+  return () => {
+    document.removeEventListener('keydown', handleKeyDown);
+  };
+});
 </script>
 
 <button
+  bind:this={buttonElement}
   class="btn transition-all duration-500 disabled:bg-transparent disabled:text-opacity-60"
   role="button"
   data-testid="formSubmitButton"
@@ -54,5 +77,11 @@ $effect(() => {
   {#if false}
     <Icon src={CheckCircle} />
   {/if}
-  {!isInvalid ? m.forms__save() : hasErrors ? m.forms__invalid() : m.forms__pending()}
+  {#if !isInvalid}
+    {m.forms__save()}
+  {:else if hasErrors}
+    {m.forms__invalid()}
+  {:else}
+    {m.forms__pending()}
+  {/if}
 </button>

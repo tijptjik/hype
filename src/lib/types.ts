@@ -1,86 +1,7 @@
 // ZOD SCHEMAS
 import { z } from 'zod';
-import {
-  FeatureI18nInsert,
-  FeatureI18nUpdate,
-  FeatureInsert,
-  FeatureInsertAPI,
-  FeaturePropertyUpdateAPI,
-  FeaturePropertyInsertAPI,
-  FeaturePropertyUpdate,
-  FeaturePropertyInsert,
-  FeaturePropertyI18nInsert,
-  FeaturePropertyI18nUpdate,
-  FeatureUpdate,
-  FeatureUpdateAPI,
-  fieldDiscriminators,
-  LayerI18nInsert,
-  LayerI18nUpdate,
-  LayerInsert,
-  LayerInsertAPI,
-  LayerPatch,
-  LayerPropertyInsert,
-  LayerPropertyUpdate,
-  LayerUpdate,
-  LayerUpdateAPI,
-  OrganisationI18nInsert,
-  OrganisationI18nUpdate,
-  OrganisationInsert,
-  OrganisationInsertAPI,
-  OrganisationPatch,
-  OrganisationRoleInsert,
-  OrganisationRoleUpdateExtra,
-  OrganisationUpdate,
-  OrganisationUpdateAPI,
-  ProjectI18nInsert,
-  ProjectI18nUpdate,
-  ProjectInsert,
-  ProjectInsertAPI,
-  ProjectPatch,
-  ProjectRoleInsertExtra,
-  ProjectRoleUpdateExtra,
-  ProjectUpdate,
-  ProjectUpdateAPI,
-  PropertyI18nInsert,
-  PropertyI18nUpdate,
-  PropertyInsert,
-  PropertyInsertAPI,
-  PropertyUpdate,
-  PropertyUpdateAPI,
-  PropertyValueI18nInsert,
-  PropertyValueI18nUpdate,
-  PropertyValueInsert,
-  PropertyValueInsertAPI,
-  PropertyValueUpdate,
-  PropertyValueUpdateAPI,
-  UserBase,
-  FeaturePatch,
-  ImageInsert,
-  ImageUpdate,
-  FeatureImageInsert,
-  FeatureImageUpdate,
-  UserFeatureInsert,
-  UserFeatureUpdate,
-  TaskInsert,
-  TaskUpdate,
-  UserFeatureUpdateAPI,
-  FeatureImageUpdateAPI,
-  ImagePatch,
-  TaskInsertAPI,
-  TaskUpdateAPI,
-  TaskPatch,
-  ImageUpdateAPI,
-  ImageInsertAPI,
-  FeatureGetAPI,
-  ImageGetAPI,
-  LayerUpdateAPIWithProject,
-  UserUpdateAPI,
-  UserUpdate,
-  FeatureImageInserts,
-  UserFeatureUpdateExtended
-} from '$lib/db/zod';
 // COMPONENTS
-import CustomField from '$lib/components/forms/fields/Properties.svelte';
+import CustomField from '$lib/components/forms/fields/Property.svelte';
 import InputField from '$lib/components/forms/fields/Input.svelte';
 import TextareaField from '$lib/components/forms/fields/Textarea.svelte';
 import SelectField from '$lib/components/forms/fields/Select.svelte';
@@ -88,11 +9,144 @@ import RangeField from '$lib/components/forms/fields/Range.svelte';
 import UsersField from '$lib/components/forms/fields/Users.svelte';
 import ListField from '$lib/components/forms/fields/List.svelte';
 import ToggleField from '$lib/components/forms/fields/Toggle.svelte';
-import AddressActions from '$lib/components/forms/actions/Address.svelte';
-import FeatureActions from '$lib/components/forms/actions/Feature.svelte';
-import UserActions from '$lib/components/forms/actions/User.svelte';
-import ViewerActions from '$lib/components/forms/actions/Viewer.svelte';
-import GalleryActions from '$lib/components/forms/actions/Gallery.svelte';
+import DisplayField from '$lib/components/forms/fields/Display.svelte';
+// ENUMS
+import {
+  HierarchicalResource,
+  ImageContextResource,
+  ImageContextResourceExtended,
+  fieldDiscriminators,
+  supportedLocales
+} from './enums';
+// ZOD SCHEMAS
+import {
+  FeatureAPI,
+  FeatureBase,
+  FeatureClientExt,
+  FeatureI18nBase,
+  FeatureI18nInsert,
+  FeatureI18nUpdate,
+  FeatureImageBase,
+  FeatureImageInsert,
+  FeatureImageUpdate,
+  FeatureInsert,
+  FeatureInsertAPI,
+  FeaturePropertyAPI,
+  FeaturePropertyBase,
+  FeaturePropertyI18nBase,
+  FeaturePropertyI18nInsert,
+  FeaturePropertyI18nUpdate,
+  FeaturePropertyInsert,
+  FeaturePropertyInsertAPI,
+  FeaturePropertyToMerge,
+  FeaturePropertyUpdate,
+  FeaturePropertyUpdateAPI,
+  FeatureRaw,
+  FeatureUpdate,
+  FeatureUpdateAPI,
+  ImageAPI,
+  ImageBase,
+  ImageBaseRaw,
+  ImageFlat,
+  ImageFlatUpdate,
+  ImageInsert,
+  ImageInsertAPI,
+  ImageInsertWithFeatureAPI,
+  ImageInsertWithProjectOrOrganisationAPI,
+  ImageUpdate,
+  ImageUpdateAPI,
+  LayerAPI,
+  LayerBase,
+  LayerI18nBase,
+  LayerI18nInsert,
+  LayerI18nUpdate,
+  LayerInsert,
+  LayerInsertAPI,
+  LayerPropertyBase,
+  LayerPropertyInsert,
+  LayerPropertyRaw,
+  LayerPropertyUpdate,
+  LayerPropertyUpdateExtra,
+  LayerRaw,
+  LayerUpdate,
+  LayerUpdateAPI,
+  OrganisationAPI,
+  OrganisationBase,
+  OrganisationI18nBase,
+  OrganisationI18nInsert,
+  OrganisationI18nUpdate,
+  OrganisationInsert,
+  OrganisationInsertAPI,
+  OrganisationRoleAPI,
+  OrganisationRoleBase,
+  OrganisationRoleInsert,
+  OrganisationRoleUpdate,
+  OrganisationRoleUpdateExtra,
+  OrganisationRoleWithUser,
+  OrganisationUpdate,
+  OrganisationUpdateAPI,
+  ProjectAPI,
+  ProjectBase,
+  ProjectDBRaw,
+  ProjectI18nBase,
+  ProjectI18nInsert,
+  ProjectI18nUpdate,
+  ProjectInsert,
+  ProjectInsertAPI,
+  ProjectRoleAPI,
+  ProjectRoleBase,
+  ProjectRoleInsert,
+  ProjectRoleUpdate,
+  ProjectRoleUpdateExtra,
+  ProjectRoleWithUser,
+  ProjectUpdate,
+  ProjectUpdateAPI,
+  PropertyAPI,
+  PropertyBase,
+  PropertyBaseRaw,
+  PropertyI18nBase,
+  PropertyI18nInsert,
+  PropertyI18nUpdate,
+  PropertyInsert,
+  PropertyInsertAPI,
+  PropertyUpdate,
+  PropertyUpdateAPI,
+  PropertyValueAPI,
+  PropertyValueBase,
+  PropertyValueI18nBase,
+  PropertyValueI18nInsert,
+  PropertyValueI18nUpdate,
+  PropertyValueInsert,
+  PropertyValueInsertAPI,
+  PropertyValueUpdate,
+  PropertyValueUpdateAPI,
+  TaskAPI,
+  TaskBase,
+  TaskBaseRaw,
+  TaskCollectionAPI,
+  TaskInsert,
+  TaskInsertAPI,
+  TaskUpdate,
+  TaskUpdateAPI,
+  UserAPI,
+  UserBase,
+  UserBaseRaw,
+  UserCollectionAPI,
+  UserCurrentAPI,
+  UserFeatureAPI,
+  UserFeatureBase,
+  UserFeatureInsert,
+  UserFeatureInsertAPI,
+  UserFeatureUpdate,
+  UserFeatureUpdateAPI,
+  UserLayerAPI,
+  UserLayerBase,
+  UserLayerInsert,
+  UserLayerUpdate,
+  UserLayerUpdateAPI,
+  UserUpdate,
+  UserUpdateAPI
+} from './db/zod';
 // TYPES
 import type {
   FormPath,
@@ -109,18 +163,93 @@ import type {
   OrganisationForm as OrganisationFormType,
   ProjectForm as ProjectFormType,
   FeatureForm as FeatureFormType
-} from './context/forms.svelte';
-import type { IconSource } from '@steeze-ui/heroicons';
+} from './context/form.svelte';
 import type { enhance } from '$app/forms';
 import type { Marker } from 'maplibre-gl';
 import type { Writable } from 'svelte/store';
 import type { SvelteSet } from 'svelte/reactivity';
-import type { Geometry, GeometryObject } from 'geojson';
+import type { Geometry } from 'geojson';
+import type { DrizzleD1Database } from 'drizzle-orm/d1';
+import type { DefaultSession } from '@auth/core/types';
+import type { SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core';
 
-// HTML
-export type InputType = 'text' | 'number' | 'email' | 'password';
+/* ----------------- */
+// NAMING CONVENTIONS
+//
+// ModelBase : SelectSchema(Model)
+// ModelInsert : InsertSchema(Model)
+// ModelUpdate : UpdateSchema(Model)
+//
+// ModelI18nBase : SelectSchema(ModelI18n)
+// ModelI18nInsert : InsertSchema(ModelI18n)
+// ModelI18nUpdate : UpdateSchema(ModelI18n)
+// ModelI18nByLocale : ModelI18nBase.map()
+// ModelI18nInsertByLocale : ModelI18nInsert.map()
+// ModelI18nUpdateByLocale : ModelI18nUpdate.map()
+//
+// ModelAPI : ModelBase.extend({
+//   i18n : ModelI18nByLocale,
+//   roles : ModelRole[],
+//   ...
+// })
+//
+// ModelInsertAPI : ModelInsert.extend({
+//   i18n : ModelI18nInsertByLocale,
+//   roles : ModelRoleInsert[],
+//   ...
+// })
+//
+// ModelUpdateAPI : ModelUpdate.extend({
+//   i18n : ModelI18nUpdateByLocale,
+//   roles : ModelRoleUpdate[],
+//   ...
+// })
+//
+// The types inferred from the schemas above are as follows:
+//
+// ModelDB : ModelBase
+// ModelDBNew : ModelInsert
+// ModelDBPartial : ModelUpdate
+//
+// ModelI18nDB : ModelI18nBase
+// ModelI18nNew : ModelI18nInsert
+// ModelI18nPartial : ModelI18nUpdate
+// ModelByLocale : ModelI18nByLocale
+// ModelInsertByLocale : ModelI18nInsertByLocale
+// ModelUpdateByLocale : ModelI18nUpdateByLocale
+//
+// Model : ModelAPI
+// ModelNew : ModelInsertAPI
+// ModelPartial : ModelUpdateAPI
 
-// BRANDED
+/* ----------------- */
+// DATABASE
+/* -------- */
+
+// Drizzle Database
+export type Database = DrizzleD1Database<typeof import('$lib/db/schema')>;
+
+// Drizzle withRelations
+export type NestedRelations = {
+  [key: string]: boolean | { columns: NestedRelations } | { with: NestedRelations };
+};
+
+/* ----------------- */
+// RESOURCES
+/* -------- */
+
+export type ResourceConfig = {
+  name: string;
+  table: SQLiteTableWithColumns<any>;
+  parentName: string | null;
+  parentTable: SQLiteTableWithColumns<any> | null;
+  keyToParent: string | null;
+  keyToSelf: string;
+  depth: number;
+};
+
+export type ResourceHierarchy = ResourceConfig[];
+
 export type ResourceType =
   | 'organisation'
   | 'project'
@@ -128,69 +257,92 @@ export type ResourceType =
   | 'feature'
   | 'task'
   | 'image'
+  | 'user'
   | 'userFeature';
-export type ResourceTypeWithParent = 'project' | 'layer' | 'feature' | 'task';
-export type ResourceTypeWithChildren = 'organisation' | 'project' | 'layer';
-export type ParentEntity = {
-  type: ResourceTypeWithChildren;
-  name: string;
-  entity: Organisation | Project | Layer;
-  href: string;
-};
+
+export type FalsableResourceType = ResourceType | false;
+
+export type HierarchicalResourceType =
+  | 'organisation'
+  | 'project'
+  | 'layer'
+  | 'feature'
+  | 'task';
+
+export type ResourceTypeWithParent = Exclude<HierarchicalResourceType, 'organisation'>;
+
+export type ResourceTypeWithChildren = Exclude<
+  HierarchicalResourceType,
+  'feature' | 'task'
+>;
+
+/* ----------------- */
+// NAVIGATION :: ADMIN :: ACTIVE RESOURCE
+/* -------- */
+
 type activeResource = {
   resource: HierarchicalResource | 'task' | false;
   entity: Ref | false;
   facet: FacetType | false;
 };
-export type ResourceState = {
-  active: activeResource;
-  prisms: Prisms;
-  resources: AdminFilteredResources;
-  filters: AdminFilterStates;
+
+/* ----------------- */
+// FILTERS :: APP
+/* -------- */
+
+// Resources constrained by suncast filters
+export type FilteredResources = {
+  organisation: Organisation[];
+  project: Project[];
+  layer: Layer[];
+  feature: Feature[];
 };
-export type FalsableResourceType = ResourceType | false;
-export type SourceLocale = 'en';
-export type TargetLocale = 'zh-hant' | 'zh-hans';
-export type Locale = SourceLocale | TargetLocale;
-export type LocaleExtended = Locale | 'core';
-export type ResourceToEntity = {
-  organisation: EntityWithData<Organisation>[];
-  project: EntityWithData<Project>[];
-  layer: EntityWithData<Layer>[];
-  feature: EntityWithData<Feature>[];
-  task: EntityWithData<Task>[];
+
+export type AdminFilteredResources = {
+  organisation: Organisation[];
+  project: Project[];
+  layer: Layer[];
+  feature: Feature[];
+  task: Task[];
 };
-export type ResourceToRecord = Record<ResourceType, Record<string, boolean | null>>;
-export type ResourceToText = Record<ResourceType, string>;
-export type FilterableResourceType = Exclude<ResourceType, 'feature' | 'task'>;
-export type FilterableResourceToEntityId = Record<FilterableResourceType, string[]>;
-// (Nano) unique identifier
-export type Id = string;
-// Human-readable unique identifier
-export type Code = string;
-// How the object is publicly addressed
-export type Ref = Id | Code;
-// Property name in API or Database
-export type Key = string;
-export type FalsableRef = Ref | false;
-export type Entity = {
-  id: Id;
-  ref: Ref;
-  name: string;
-  nameShort: string;
-  description: string;
-  address?: string;
-  image?: GetImageAPI;
+
+export type FilterState = {
+  neighbourhoods: string[];
+  properties: Record<Id, Record<string, any>>;
 };
-export type ApiEntity = Entity & {
-  code?: Code;
-  title?: string;
-  displayAddress?: string;
+
+export type AdminFilterState = {
+  text?: string;
+  properties?: Record<string, any>;
+  isPublished?: boolean | null;
+  isArchived?: boolean | null;
+  isReviewed?: boolean | null;
 };
-export type EntityWithData<T extends Resource> = Entity & {
-  data: T;
-  image?: string;
-};
+export type AdminFilterStates = Record<HierarchicalResource, AdminFilterState>;
+
+export type ActiveCollection = {
+  id: string;
+  type: 'neighbourhood' | 'walk' | 'feature' | 'search';
+  i18n: Record<Locale, { name: string }>;
+  items: Feature[];
+} | null;
+
+/* ----------------- */
+// URL
+/* -------- */
+
+export type QueryParams = Record<string, string | string[]>;
+
+/* ----------------- */
+// NAVIGATION :: PRISMS
+/* -------- */
+
+export type Prisms = { organisation: Code[]; project: Code[]; layer: Id[] };
+
+/* ----------------- */
+// NAVIGATION :: FACETS
+/* -------- */
+
 export const Facets = [
   'core',
   'address',
@@ -198,36 +350,120 @@ export const Facets = [
   'fields'
 ] as const;
 export type FacetType = (typeof Facets)[number];
-export type FalsableFacetType = FacetType | false;
-export type ResourceToNavItem = Record<ResourceType, NavItem>;
 
-export type Router = {
-  resource: FalsableResourceType;
-  entity: FalsableRef;
-  facet: FalsableFacetType;
+/* ----------------- */
+// I18N
+/* -------- */
+
+export type Locale = (typeof supportedLocales)[number];
+export type LocaleExtended = Locale | 'core';
+
+export type TranslatedValue = {
+  value: string;
+  i18n?: {
+    locale: string;
+    value: string;
+  }[];
 };
 
-export type NavItem = {
-  name: string;
-  icon: IconSource;
-  seq: number;
-  path: string;
-  isShownInSidebar: boolean;
-  isAlwaysExpanded: boolean;
+// Define the shape of a translation object
+export interface LocaleBundle {
+  locale: Locale;
+  [key: string]: unknown;
+}
+
+/* ----------------- */
+// HTML
+/* -------- */
+
+export type InputType = 'text' | 'number' | 'email' | 'password';
+
+/* ----------------- */
+// SESSION
+/* -------- */
+
+export type SessionUser = {
+  superAdmin?: boolean;
+  roles?: UserRoleDisco[];
+} & DefaultSession['user'] &
+  CurrentUser;
+
+export type Session = DefaultSession & {
+  user: SessionUser;
 };
 
-export type NestedRelations = {
-  [key: string]: boolean | { columns: NestedRelations } | { with: NestedRelations };
+declare module '@auth/sveltekit' {
+  interface Session {
+    user: {
+      superAdmin?: boolean;
+      roles?: UserRoleDisco[];
+      /**
+       * By default, TypeScript merges new interface properties and overwrites existing ones.
+       * In this case, the default session user properties will be overwritten,
+       * with the new ones defined above. To keep the default session user properties,
+       * you need to add them back into the newly declared interface.
+       */
+    } & DefaultSession['user'] &
+      CurrentUser;
+  }
+}
+
+/* ----------------- */
+// I18N
+/* -------- */
+
+export interface TranslationState {
+  confirmed: boolean;
+  translated: boolean;
+  required: boolean;
+}
+
+export type TranslationStates = Record<Locale, TranslationState>;
+
+/* ----------------- */
+// FORMS
+/* -------- */
+
+export type SuperFormResult<T extends Record<string, unknown>> = {
+  form: Writable<T>;
+  enhance: typeof enhance;
+  constraints: Writable<InputConstraints<T>>;
+  validate: (
+    path: FormPathLeaves<T>,
+    // opts?: ValidateOptions<FormPathType<T, FormPathLeaves<T>>, T, Record<string, unknown>>
+    opts?: ValidateOptions<
+      FormPathType<T, FormPathLeaves<T>>,
+      T,
+      Record<string, unknown>
+    >
+  ) => Promise<string[] | undefined>;
+  // validateForm!: () => Promise<SuperValidated<Record<string, unknown>, string, Form>>;
+  validateForm: () => Promise<SuperValidated<T>>;
+  tainted: Writable<TaintedFields<T> | undefined>;
+  // isTainted!: (path?: FormPath<T> | Record<string, unknown> | boolean | undefined) => boolean;
+  isTainted: (path?: FormPath<T> | boolean | undefined) => boolean;
+  submit: (event: Event) => void;
+  reset: (options?: {
+    keepMessage?: boolean;
+    data?: Partial<T>;
+    newState?: Partial<T>;
+    id?: string;
+  }) => void;
+  errors: Writable<ValidationErrors<T>>;
+  message: Writable<string | undefined>;
+  posted: Writable<boolean>;
 };
 
-export const jsonFieldKeys = [
-  'config',
-  'geometry',
-  'properties',
-  'addressProperties',
-  'metadata'
-] as const;
-export type JSONFieldKey = (typeof jsonFieldKeys)[number];
+export type LayerForm = LayerFormType;
+export type OrganisationForm = OrganisationFormType;
+export type ProjectForm = ProjectFormType;
+export type FeatureForm = FeatureFormType;
+export type Form = LayerForm | OrganisationForm | ProjectForm | FeatureForm;
+
+/* ----------------- */
+// FORM FIELDS
+/* -------- */
+
 export type FormFieldDefinition = {
   label?: string;
   placeholder?: string;
@@ -263,94 +499,202 @@ export type FormFieldNested = Record<Field, FormFieldNestedDefinition>;
 export type FormFieldConfig = Record<Key, FormField | FormFieldArray | FormFieldNested>;
 
 /* ----------------- */
-// I18N
+// RESOURCE :: COMMON
 /* -------- */
 
-export interface TranslationState {
-  confirmed: boolean;
-  translated: boolean;
-  required: boolean;
-}
+// (Nano) unique identifier
+export type Id = string;
+// Human-readable unique identifier
+export type Code = string;
+// How the object is publicly addressed
+export type Ref = Id | Code;
+// Property name in API or Database
+export type Key = string;
 
-export type TranslationStates = Record<Locale, TranslationState>;
+/* ----------------- */
+// RESOURCE :: STATE
+/* -------- */
+
+export type ResourceState = {
+  active: activeResource;
+  prisms: Prisms;
+  resources: AdminFilteredResources;
+  filters: AdminFilterStates;
+};
+export type FilterableResourceType = Exclude<ResourceType, 'feature' | 'task'>;
 
 /* ----------------- */
 // SCHEMA TYPES
 /* -------- */
 
-export type OrganisationField = keyof Organisation;
-export type ProjectField = keyof Project;
-export type LayerField = keyof Layer;
-export type FeatureField = keyof Feature;
+export type OrganisationField = keyof Organisation | keyof OrganisationI18nDB;
+export type ProjectField = keyof Project | keyof ProjectI18nDB;
+export type LayerField = keyof Layer | keyof LayerI18nDB;
+export type FeatureField = keyof Feature | keyof FeatureI18nDB;
 export type Field = OrganisationField | ProjectField | LayerField | FeatureField;
 export type Resource = Organisation | Project | Layer | Feature | Task;
 export type ResourceDB = OrganisationDB | ProjectDB | LayerDB | FeatureDB | TaskDB;
 
 // RELATED TYPES
-export type FormTranslations<T> = {
-  'zh-hant': T;
-  'zh-hans': T;
-};
-export type FormRelatedUsers<T> = T[];
-export type FormRelatedProperties<T> = T[];
+export type FormI18n<T> = Record<Locale, T>;
 
 /* ----------------- */
 // USERS
 /* -------- */
 
-export type User = z.infer<typeof UserBase>;
-export type UserDB = z.infer<typeof UserUpdate>;
+/* ----------------- */
+// USERS :: DB
+/* -------- */
+
+export type UserDB = z.infer<typeof UserBase>;
+export type UserDBPartial = z.infer<typeof UserUpdate>;
+export type UserRaw = z.infer<typeof UserBaseRaw>;
+
+export type UserLayerDB = z.infer<typeof UserLayerBase>;
+export type UserLayerDBPartial = z.infer<typeof UserLayerUpdate>;
+
+/* ----------------- */
+// USERS :: API
+/* -------- */
+
+export type User = z.infer<typeof UserAPI>;
+export type CurrentUser = z.infer<typeof UserCurrentAPI>;
+export type UserCollection = z.infer<typeof UserCollectionAPI>;
+export type UserPartial = z.infer<typeof UserUpdateAPI>;
+
+export type UserLayer = z.infer<typeof UserLayerAPI>;
+export type UserLayerNew = z.infer<typeof UserLayerInsert>;
+export type UserLayerPartial = z.infer<typeof UserLayerUpdateAPI>;
+
+/* ----------------- */
+// USERS :: JOIN
+/* -------- */
+
+// Used to distriminate between Organisation and Project roles
+export type UserJoinConfig = {
+  discriminator: 'role';
+  checkedValue: 'owner' | 'maintainer';
+  uncheckedValue: 'member';
+};
+
+/* ----------------- */
+// USERS :: JSON TYPE OBJECTS
+/* -------- */
+
+// JSON type objects for user preferences and experimental features
+
+export type UserPreferences = {
+  fallbackLocales: Locale[];
+  allowMachineTranslation: boolean;
+  preferFallbackInCurrentLocale: boolean;
+  isTranslateButtonVisible: boolean;
+};
+
+export type UserExperimental = {
+  contributorMode: boolean;
+  noLabelsMode: boolean;
+};
+
+export type ExperimentalFeatureConfig = {
+  name: string;
+  description: string;
+  code: keyof UserExperimental;
+};
+
 /* ----------------- */
 // ORGANISATIONS
 /* -------- */
 
-// Organisation with all fields, including userRoles & translations, and User
-export type Organisation = z.infer<typeof OrganisationUpdateAPI>;
-// Like Organisation, but without the organisationId in userRoles and translations
-export type NewOrganisation = z.infer<typeof OrganisationInsertAPI>;
-// Organisation without relations, for use in updating an organisation
-export type OrganisationDB = z.infer<typeof OrganisationUpdate>;
+/* ----------------- */
+// ORGANISATIONS :: DB
+/* -------- */
+
+// Organisation with all its own fields.
+export type OrganisationDB = z.infer<typeof OrganisationBase>;
 // Organisation without relations, for use in inserting a new organisation
-export type NewOrganisationDB = z.infer<typeof OrganisationInsert>;
+export type OrganisationDBNew = z.infer<typeof OrganisationInsert>;
+// Organisation without relations, for use in partiall updating a organisation
+export type OrganisationDBPartial = z.infer<typeof OrganisationUpdate>;
 
+/* ----------------- */
+// ORGANISATIONS :: API
+/* -------- */
+
+// Organisation with all fields, including userRoles & translations, and User
+export type Organisation = z.infer<typeof OrganisationAPI>;
+// Like Organisation, but without the organisationId in userRoles and translations
+export type OrganisationNew = z.infer<typeof OrganisationInsertAPI>;
+// Like Organisation, but with all fields optional
+export type OrganisationPartial = z.infer<typeof OrganisationUpdateAPI>;
+
+/* ----------------- */
+// ORGANISATIONS :: RELATIONAL
+/* -------- */
+
+// organisationI18n, but with the organisationId - for use in DB seeding & selects
+export type OrganisationI18nDB = z.infer<typeof OrganisationI18nBase>;
 // organisationI18n, but without organisationId - for use in API insertions
-export type NewOrganisationI18n = z.infer<typeof OrganisationI18nInsert>;
-// Same as NewOrganisationI18n, but with the organisationId - for use in API updates
-export type OrganisationI18n = z.infer<typeof OrganisationI18nUpdate>;
+export type OrganisationI18nNew = z.infer<typeof OrganisationI18nInsert>;
+// Same as OrganisationI18nNew, but all fields are optional
+export type OrganisationI18nPartial = z.infer<typeof OrganisationI18nUpdate>;
 
+export type OrganisationRole = z.infer<typeof OrganisationRoleAPI>;
+export type OrganisationRoleUser = z.infer<typeof OrganisationRoleWithUser>;
+
+// organisationRole, but with the organisationId - for use in DB seeding & selects
+export type OrganisationRoleDB = z.infer<typeof OrganisationRoleBase>;
 // organisationRole, but without organisationId - for use in API insertions
-export type NewOrganisationRole = z.infer<typeof OrganisationRoleInsert>;
-// Same as NewOrganisationRole, but with the organisationId - for use in API updates
-export type OrganisationRole = z.infer<typeof OrganisationRoleUpdateExtra>;
-
-// Organisation where all fields are optional, no relations
-export type OrganisationPartialUpdate = z.infer<typeof OrganisationPatch>;
+export type OrganisationRoleNew = z.infer<typeof OrganisationRoleInsert>;
+// Same as OrganisationRoleNew, but all fields are optional
+export type OrganisationRolePartial = z.infer<typeof OrganisationRoleUpdate>;
+export type OrganisationRolePartialExtra = z.infer<typeof OrganisationRoleUpdateExtra>;
 
 /* ----------------- */
 // PROJECTS
 /* -------- */
 
-// Project with all fields, including maintainerRoles & translations, and User
-export type Project = z.infer<typeof ProjectUpdateAPI>;
-// Like Project, but without the projectId in maintainerRoles and translations
-export type NewProject = z.infer<typeof ProjectInsertAPI>;
-// Project without relations, for use in updating a project
-export type ProjectDB = z.infer<typeof ProjectUpdate>;
+/* ----------------- */
+// PROJECTS :: DB
+/* -------- */
+
+// Project with all its own fields.
+export type ProjectDB = z.infer<typeof ProjectBase>;
 // Project without relations, for use in inserting a new project
-export type NewProjectDB = z.infer<typeof ProjectInsert>;
+export type ProjectDBNew = z.infer<typeof ProjectInsert>;
+// Project without relations, for use in partiall updating a project
+export type ProjectDBPartial = z.infer<typeof ProjectUpdate>;
 
-// projectI18n, but without projectId and lang - for use in API insertions
-export type NewProjectI18n = z.infer<typeof ProjectI18nInsert>;
-// Same as NewProjectI18n, but with the projectId - for use in API updates
-export type ProjectI18n = z.infer<typeof ProjectI18nUpdate>;
+/* ----------------- */
+// PROJECTS :: API
+/* -------- */
 
-// projectRole, but without projectId and userId - for use in API insertions
-export type NewProjectRole = z.infer<typeof ProjectRoleInsertExtra>;
-// Same as NewProjectRole, but with the projectId - for use in API updates
-export type ProjectRole = z.infer<typeof ProjectRoleUpdateExtra>;
+// Project with all fields, including maintainerRoles & translations, and User
+export type Project = z.infer<typeof ProjectAPI>;
+// Like Project, but without the projectId in maintainerRoles and translations
+export type ProjectNew = z.infer<typeof ProjectInsertAPI>;
+// Like Project, but with all fields optional
+export type ProjectPartial = z.infer<typeof ProjectUpdateAPI>;
 
-// Project where all fields are optional, no relations
-export type ProjectPartialUpdate = z.infer<typeof ProjectPatch>;
+/* ----------------- */
+// PROJECTS :: RELATIONAL
+/* -------- */
+
+// projectI18n, but with the projectId - for use in DB seeding & selects
+export type ProjectI18nDB = z.infer<typeof ProjectI18nBase>;
+// projectI18n, but without projectId - for use in API insertions
+export type ProjectI18nNew = z.infer<typeof ProjectI18nInsert>;
+// Same as ProjectI18nNew, but all fields are optional
+export type ProjectI18nPartial = z.infer<typeof ProjectI18nUpdate>;
+
+// projectRole, but with the projectId - for use in DB seeding & selects
+export type ProjectRole = z.infer<typeof ProjectRoleAPI>;
+export type ProjectRoleUser = z.infer<typeof ProjectRoleWithUser>;
+export type ProjectRoleDB = z.infer<typeof ProjectRoleBase>;
+// projectRole, but without projectId - for use in API insertions
+export type ProjectRoleNew = z.infer<typeof ProjectRoleInsert>;
+// Same as ProjectRoleNew, but all fields are optional
+export type ProjectRolePartial = z.infer<typeof ProjectRoleUpdate>;
+export type ProjectRolePartialExtra = z.infer<typeof ProjectRoleUpdateExtra>;
 
 /* ----------------- */
 // PROJECTS : FIELDS
@@ -366,7 +710,8 @@ export const fieldComponentTypes = [
   'UsersField',
   'CustomField',
   'ListField',
-  'ToggleField'
+  'ToggleField',
+  'DisplayField'
 ] as const;
 export const classifierComponentTypes = ['SelectField', 'RangeField'] as const;
 export const specifierComponentTypes = ['InputField', 'TextareaField'] as const;
@@ -380,11 +725,22 @@ export type FieldComponent =
   | typeof UsersField
   | typeof CustomField
   | typeof ListField
-  | typeof ToggleField;
+  | typeof ToggleField
+  | typeof DisplayField;
+
+export type RangeFilterValue = {
+  globalMin: number;
+  globalMax: number;
+  rangeMin: number;
+  rangeMax: number;
+};
 
 /* ----------------- */
 // PROJECTS : FIELDS : INTERMEDIATE VALUE
 /* -------- */
+
+// Project, with relations in DB form - used as an intermediate type for DB operations
+export type ProjectRaw = z.infer<typeof ProjectDBRaw>;
 
 export type IntermediateValue = {
   id: string;
@@ -397,92 +753,123 @@ export type IntermediateValue = {
   'zh-hantGen': boolean;
 };
 
+export type UserRole = OrganisationRole | ProjectRole;
+export type UserRoleDisco =
+  | (OrganisationRole & { type: 'organisation' })
+  | (ProjectRole & { type: 'project' });
+
 /* ----------------- */
 // LAYERS
 /* -------- */
 
-// Layer with all fields, including translations
-export type Layer = z.infer<typeof LayerUpdateAPI>;
+/* ----------------- */
+// LAYERS :: DB
+/* -------- */
 
-// Layer with all fields, including translations and project
-export type LayerWithProject = z.infer<typeof LayerUpdateAPIWithProject>;
-
-// Like Layer, but without the layerId in translations
-export type NewLayer = z.infer<typeof LayerInsertAPI>;
-// Layer without relations, for use in updating a layer
-export type LayerDB = z.infer<typeof LayerUpdate>;
+// Layer with all its own fields.
+export type LayerDB = z.infer<typeof LayerBase>;
 // Layer without relations, for use in inserting a new layer
-export type NewLayerDB = z.infer<typeof LayerInsert>;
+export type LayerDBNew = z.infer<typeof LayerInsert>;
+// Layer without relations, for use in partially updating a layer
+export type LayerDBPartial = z.infer<typeof LayerUpdate>;
+// Layer, with relations in DB form - used as an intermediate type for DB operations
+export type LayerDBRaw = z.infer<typeof LayerRaw>;
 
-// layerI18n, but without layerId and langCode - for use in API insertions
-export type NewLayerI18n = z.infer<typeof LayerI18nInsert>;
-// Same as NewLayerI18n, but with the layerId - for use in API updates
-export type LayerI18n = z.infer<typeof LayerI18nUpdate>;
+/* ----------------- */
+// LAYERS :: API
+/* -------- */
 
-// layerProperty, but without layerId and propertyId - for use in API insertions
-export type NewLayerProperty = z.infer<typeof LayerPropertyInsert>;
-// Same as NewLayerProperty, but with the layerId - for use in API updates
-export type LayerProperty = z.infer<typeof LayerPropertyUpdate>;
+// Layer with all fields, including translations and properties
+export type Layer = z.infer<typeof LayerAPI>;
+// Like Layer, but without the layerId in translations and properties
+export type LayerNew = z.infer<typeof LayerInsertAPI>;
+// Like Layer, but with all fields optional
+export type LayerPartial = z.infer<typeof LayerUpdateAPI>;
 
-// Layer where all fields are optional, no relations
-export type LayerPartialUpdate = z.infer<typeof LayerPatch>;
+/* ----------------- */
+// LAYERS :: RELATIONAL
+/* -------- */
 
-export type LayerMetadata = {
-  defaultEnabled: boolean; // true
-  mlCluster?: boolean; // false
-  mlClusterRadius?: number; // 50
-  mlClusterMaxZoom?: number; // 14
-  mlClusterMinPoints?: number; // 2
-};
+// layerI18n, but with the layerId - for use in DB seeding & selects
+export type LayerI18nDB = z.infer<typeof LayerI18nBase>;
+// layerI18n, but without layerId - for use in API insertions
+export type LayerI18nNew = z.infer<typeof LayerI18nInsert>;
+// Same as LayerI18nNew, but all fields are optional
+export type LayerI18nPartial = z.infer<typeof LayerI18nUpdate>;
 
-export type UserLayer = {
-  layerId: Id;
-  isVisibleOnLoad: boolean;
-  layer: Layer;
-};
+// layerProperty, but with the layerId - for use in DB seeding & selects
+export type LayerPropertyDB = z.infer<typeof LayerPropertyBase>;
+// layerProperty, but with relations in DB form - used as an intermediate type for DB operations
+export type LayerPropertyDBRaw = z.infer<typeof LayerPropertyRaw>;
+// layerProperty, but without layerId - for use in API insertions
+export type LayerPropertyNew = z.infer<typeof LayerPropertyInsert>;
+// Same as LayerPropertyNew, but all fields are optional
+export type LayerPropertyPartial = z.infer<typeof LayerPropertyUpdate>;
+export type LayerPropertyPartialExtra = z.infer<typeof LayerPropertyUpdateExtra>;
 
-export type UserUpdate = z.infer<typeof UserUpdateAPI>;
+export type LayerMetadata = {};
+
 /* ----------------- */
 // FEATURES
 /* -------- */
 
-// Feature with all fields
-export type Feature = z.infer<typeof FeatureUpdateAPI>;
-// Like Feature, but for inserting a new feature
-export type NewFeature = z.infer<typeof FeatureInsertAPI>;
-// Feature without relations, for use in updating a feature
-export type FeatureDB = z.infer<typeof FeatureUpdate>;
-// Feature without relations, for use in inserting a new feature
-export type NewFeatureDB = z.infer<typeof FeatureInsert>;
-
-// featureI18n, but without featureId - for use in API insertions
-export type NewFeatureI18n = z.infer<typeof FeatureI18nInsert>;
-// Same as NewFeatureI18n, but with the featureId - for use in API updates
-export type FeatureI18n = z.infer<typeof FeatureI18nUpdate>;
-
-// Feature where all fields are optional, no relations
-export type FeaturePartialUpdate = z.infer<typeof FeaturePatch>;
-
-// Feature with all relations
-export type FeatureResponse = z.infer<typeof FeatureGetAPI>;
-
 /* ----------------- */
-// FEATURES : PROPERTIES
+// FEATURES :: DB
 /* -------- */
 
-// FeatureProperty with all fields, including translations
-export type FeatureProperty = z.infer<typeof FeaturePropertyUpdateAPI>;
-// Like FeatureProperty, but for inserting a new feature property
-export type NewFeatureProperty = z.infer<typeof FeaturePropertyInsertAPI>;
-// FeatureProperty without relations, for use in updating a feature property
-export type FeaturePropertyDB = z.infer<typeof FeaturePropertyUpdate>;
-// FeatureProperty without relations, for use in inserting a new feature property
-export type NewFeaturePropertyDB = z.infer<typeof FeaturePropertyInsert>;
+// Feature with all its own fields.
+export type FeatureDB = z.infer<typeof FeatureBase>;
+// Feature without relations, for use in inserting a new feature
+export type FeatureDBNew = z.infer<typeof FeatureInsert>;
+// Feature without relations, for use in partially updating a feature
+export type FeatureDBPartial = z.infer<typeof FeatureUpdate>;
+// Feature, with relations in DB form - used as an intermediate type for DB operations
+export type FeatureDBRaw = z.infer<typeof FeatureRaw>;
 
+/* ----------------- */
+// FEATURES :: API
+/* -------- */
+
+// Feature with all fields, including translations and properties
+export type Feature = z.infer<typeof FeatureAPI>;
+// Like Feature, but without the featureId in translations and properties
+export type FeatureNew = z.infer<typeof FeatureInsertAPI>;
+// Like Feature, but with all fields optional
+export type FeaturePartial = z.infer<typeof FeatureUpdateAPI>;
+
+/* ----------------- */
+// FEATURES :: RELATIONAL
+/* -------- */
+
+// featureI18n, but with the featureId - for use in DB seeding & selects
+export type FeatureI18nDB = z.infer<typeof FeatureI18nBase>;
+// featureI18n, but without featureId - for use in API insertions
+export type FeatureI18nNew = z.infer<typeof FeatureI18nInsert>;
+// Same as FeatureI18nNew, but all fields are optional
+export type FeatureI18nPartial = z.infer<typeof FeatureI18nUpdate>;
+
+// featureProperty, but with the featureId - for use in DB seeding & selects
+export type FeaturePropertyDB = z.infer<typeof FeaturePropertyBase>;
+// featureProperty, but without featureId - for use in API insertions
+export type FeaturePropertyNew = z.infer<typeof FeaturePropertyInsert>;
+// Same as FeaturePropertyNew, but all fields are optional
+export type FeaturePropertyPartial = z.infer<typeof FeaturePropertyUpdate>;
+// featureProperty, but without featurePropertyId - for use in API insertions
+export type FeaturePropertyMerge = z.infer<typeof FeaturePropertyToMerge>;
+
+// featureProperty, but with feature, i18n, and propertyValue - for use in API
+export type FeatureProperty = z.infer<typeof FeaturePropertyAPI>;
+// featureProperty, but without featurePropertyId - for use in API insertions
+export type NewFeatureProperty = z.infer<typeof FeaturePropertyInsertAPI>;
+// Same as NewFeatureProperty, but all fields are optional
+export type PartialFeatureProperty = z.infer<typeof FeaturePropertyUpdateAPI>;
+
+// featurePropertyI18n, but with the featurePropertyId - for use in DB seeding & selects
+export type FeaturePropertyI18nDB = z.infer<typeof FeaturePropertyI18nBase>;
 // featurePropertyI18n, but without featurePropertyId - for use in API insertions
-export type NewFeaturePropertyI18n = z.infer<typeof FeaturePropertyI18nInsert>;
-// Same as NewFeaturePropertyI18n, but with the featurePropertyId - for use in API updates
-export type FeaturePropertyI18n = z.infer<typeof FeaturePropertyI18nUpdate>;
+export type FeaturePropertyI18nNew = z.infer<typeof FeaturePropertyI18nInsert>;
+// Same as FeaturePropertyI18nNew, but all fields are optional
+export type FeaturePropertyI18nPartial = z.infer<typeof FeaturePropertyI18nUpdate>;
 
 /* ----------------- */
 // FEATURES : ADDRESS
@@ -563,212 +950,163 @@ export type AddressMeta = {
 export type AddressPropertiesExtended = AddressProperties & AddressMeta;
 
 /* ----------------- */
+// FEATURES : USER CONTRIBUTED
+/* -------- */
+
+export type NewFeatureWithLocationAndParents = PartialExcept<
+  NewFeatureTask & {
+    feature: PartialExcept<UserContributedFeature, 'layerId' | 'geometry' | 'properties'> & {
+      geometry: Geometry;
+      properties: UserContributedFeatureProperty[];
+    };
+  },
+  'organisationId' | 'projectId' | 'layerId'
+>;
+
+export type UserContributedFeatureProperty = {
+  property: Property;
+  propertyId: Id;
+  propertyValueId?: Id; // Categorical 
+  value?: string; // Universal specifier OR range value
+  i18n?: Record<Locale, { locale: Locale; value: string; valueGen: boolean }>; // I18n Specifier
+};
+
+export type UserContributedFeature = {
+  layerId: string;
+  geometry: Geometry;
+  i18n: Partial<
+    Record<
+      Locale,
+      {
+        title?: string;
+        description?: string;
+        displayAddress: string;
+        displayAddressGen: boolean;
+      }
+    >
+  >;
+  properties: UserContributedFeatureProperty[];
+  contributorId?: Id;
+};
+
+// Base task creation data
+type BaseTaskData = {
+  layerId: Id;
+  organisationId: Id;
+  projectId: Id;
+  contributorId: Id;
+};
+
+export type NewFeatureTask = BaseTaskData & {
+  type: 'newFeature';
+  feature: UserContributedFeature;
+  featureId?: Id;
+};
+
+// Specific task types
+export type ReportedMissingTask = BaseTaskData & {
+  type: 'reportedMissing';
+  featureId: Id;
+  message?: string;
+};
+
+export type NewPhotoTask = BaseTaskData & {
+  type: 'newPhoto';
+  featureId: Id;
+};
+
+// Union type for all task creation APIs
+export type TaskCreation = NewFeatureTask | ReportedMissingTask | NewPhotoTask;
+
+/* ----------------- */
 // PROPERTIES
 /* -------- */
 
-// Property with all fields, including translations and values
-export type Property = z.infer<typeof PropertyUpdateAPI>;
-// Like Property, but without the propertyId in translations and values
-export type NewProperty = z.infer<typeof PropertyInsertAPI>;
-// Property without relations, for use in updating a property
-export type PropertyDB = z.infer<typeof PropertyUpdate>;
+/* ----------------- */
+// PROPERTIES :: DB
+/* -------- */
+
+// Property with all its own fields.
+export type PropertyDB = z.infer<typeof PropertyBase>;
 // Property without relations, for use in inserting a new property
-export type NewPropertyDB = z.infer<typeof PropertyInsert>;
-
-// PropertyI18n, but without propertyId and langCode - for use in API insertions
-export type NewPropertyI18n = z.infer<typeof PropertyI18nInsert>;
-// Same as NewPropertyI18n, but with the propertyId - for use in API updates
-export type PropertyI18n = z.infer<typeof PropertyI18nUpdate>;
-
-/* ----------------- */
-// PROPERTY VALUES
-/* -------- */
-
-// PropertyValue with all fields, including translations
-export type PropertyValue = z.infer<typeof PropertyValueUpdateAPI>;
-// Like PropertyValue, but for inserting a new property value
-export type NewPropertyValue = z.infer<typeof PropertyValueInsertAPI>;
-// PropertyValue without relations, for use in updating a property value
-export type PropertyValueDB = z.infer<typeof PropertyValueUpdate>;
-// PropertyValue without relations, for use in inserting a new property value
-export type NewPropertyValueDB = z.infer<typeof PropertyValueInsert>;
-
-// PropertyValueI18n, but without propertyValueId and langCode - for use in API insertions
-export type NewPropertyValueI18n = z.infer<typeof PropertyValueI18nInsert>;
-// Same as NewPropertyValueI18n, but with the propertyValueId - for use in API updates
-export type PropertyValueI18n = z.infer<typeof PropertyValueI18nUpdate>;
+export type PropertyDBNew = z.infer<typeof PropertyInsert>;
+// Property without relations, for use in partially updating a property
+export type PropertyDBPartial = z.infer<typeof PropertyUpdate>;
+// Property, with relations in DB form - used as an intermediate type for DB operations
+export type PropertyRaw = z.infer<typeof PropertyBaseRaw>;
 
 /* ----------------- */
-// SVELTE : PROPS
+// PROPERTIES :: API
 /* -------- */
 
-export type SectionProps = {
-  fields: FormField;
-  form: SuperFormResult<Resource>;
-  fieldDiscriminator?: FieldDiscriminator;
-  title?: string;
-  subtitle?: string;
-};
+// Property with all fields, including translations and values
+export type Property = z.infer<typeof PropertyAPI>;
+// Like Property, but without the propertyId in translations and values
+export type PropertyNew = z.infer<typeof PropertyInsertAPI>;
+// Like Property, but with all fields optional
+export type PropertyPartial = z.infer<typeof PropertyUpdateAPI>;
 
-// Update FormProps to use the new type
-export type FormProps = OrganisationForm | ProjectForm | LayerForm | FeatureForm;
+/* ----------------- */
+// PROPERTIES :: RELATIONAL
+/* -------- */
 
-export type FieldProps = SectionProps & {
-  languageTag?: LocaleExtended;
-  fieldRoot?: keyof Resource;
-  field?: FormFieldDefinition;
-  fieldIndex?: number;
-  fieldKey?: Key;
-  values?: string[];
-  actions?: Record<string, (...args: any[]) => void>;
-};
+// propertyI18n, but with the propertyId - for use in DB seeding & selects
+export type PropertyI18nDB = z.infer<typeof PropertyI18nBase>;
+// propertyI18n, but without propertyId - for use in API insertions
+export type PropertyI18nNew = z.infer<typeof PropertyI18nInsert>;
+// Same as PropertyI18nNew, but all fields are optional
+export type PropertyI18nPartial = z.infer<typeof PropertyI18nUpdate>;
 
-export type FieldPropsExtended = FieldProps & {
-  languageTag: LocaleExtended;
-  field: FormFieldExtendedDefinition;
-  fieldRoot: keyof Resource;
-  fieldIndex: number;
-  fieldKey: Key;
-};
+// propertyValue, but with the propertyId - for use in DB seeding & selects
+export type PropertyValueDB = z.infer<typeof PropertyValueBase>;
+// propertyValue, but without propertyId - for use in API insertions
+export type PropertyValueNewDB = z.infer<typeof PropertyValueInsert>;
+// Same as PropertyValueNew, but all fields are optional
+export type PropertyValuePartialDB = z.infer<typeof PropertyValueUpdate>;
 
-export type BarProps = SectionProps & {
-  languageTag: Locale;
-  form: SuperFormResult<Resource>;
-  fields: FormField;
-};
+export type PropertyValueI18nDB = z.infer<typeof PropertyValueI18nBase>;
+// propertyValueI18n, but without propertyValueId - for use in API insertions
+export type PropertyValueI18nNew = z.infer<typeof PropertyValueI18nInsert>;
+// Same as PropertyValueI18nNew, but all fields are optional
+export type PropertyValueI18nPartial = z.infer<typeof PropertyValueI18nUpdate>;
 
-export type ModalProps = {
-  searchMode?: boolean;
-  removeMode?: boolean;
-};
-
-export type ActionProps = {
-  Actions?:
-    | typeof UserActions
-    | typeof FeatureActions
-    | typeof AddressActions
-    | typeof ViewerActions
-    | typeof GalleryActions;
-  // | Component<{
-  //     searchMode?: boolean;
-  //     removeMode?: boolean;
-  //     actions?: Record<string, (...args: any[]) => void>;
-  //     entity: Ref;
-  //     resource: ResourceType;
-  //   }>
-  actions?: Record<string, (...args: any[]) => void>;
-  actionProps?: Record<string, any>;
-};
-
-export type ErrorParams = {
-  field: FormFieldExtendedDefinition;
-  languageTag: Locale;
-  fieldRoot: Field;
-  fieldIndex: number;
-  fieldKey: Key;
-};
-
-export type FormPageProps<T extends Resource> = {
-  data: {
-    validatedForm: SuperValidated<T>;
-    entity: Ref;
-    image?: GetImageAPI | null;
-  };
-};
-
-export type PageProps<T extends Resource> = {
-  data: {
-    [key: string]: T;
-  };
-};
-
-// FIELDS
-
-export type ListFieldProps = FieldProps & {
-  field: FormFieldExtendedDefinition;
-  fieldRoot: keyof Resource;
-  fieldIndex: number;
-  fieldKey: Key;
-  values: IntermediateValue[];
-  actions: {
-    add: () => void;
-    remove: (e: Event, valueId: string) => void;
-    update: (valueId: string, languageTag: string, e: Event) => void;
-    syncUp: () => void;
-  };
-  actionProps: {
-    dragMode: boolean;
-    removeMode: boolean;
-    removeModeLang?: string;
-    confirmingId?: string;
-  };
-};
-
-// ELEMENTS
-
-export type InputProps = {
-  id: Id;
-  value: string;
-  isGenAI: boolean;
-  placeholder?: string;
-  languageTag: LocaleExtended;
-  isTranslated?: boolean;
-  inputType?: 'text' | 'number' | 'email';
-  onchange: Function;
-};
-
-export type SelectProps = {
-  id: Id;
-  value: string;
-  values: string[] | { value: string; id: string }[];
-  isComplex?: boolean;
-};
-
-export type ResourceTypeMap = {
-  organisation: Organisation;
-  project: Project;
-  layer: Layer;
-  feature: Feature;
-};
-
-export type DisplayFieldProps = {
-  label: string;
-  value: any;
-  justify?: 'start' | 'end';
-  gridCell?: boolean;
-};
+// PropertyValue, but with i18n, for use in API
+export type PropertyValue = z.infer<typeof PropertyValueAPI>;
+// Like PropertyValue, but without the propertyValueId in translations
+export type PropertyValueNew = z.infer<typeof PropertyValueInsertAPI>;
+// Like PropertyValue, but with all fields optional
+export type PropertyValuePartial = z.infer<typeof PropertyValueUpdateAPI>;
 
 /* ----------------- */
 // IMAGES
 /* -------- */
 
-export type Image = z.infer<typeof ImageUpdate>;
-export type NewImage = z.infer<typeof ImageInsert>;
-export type ImageDB = z.infer<typeof ImageUpdate>;
-export type NewImageDB = z.infer<typeof ImageInsert>;
-export type ImageAPI = z.infer<typeof ImageUpdateAPI>;
-export type NewImageAPI = z.infer<typeof ImageInsertAPI>;
-export type ImagePatchAPI = z.infer<typeof ImagePatch>;
-export type GetImageAPI = z.infer<typeof ImageGetAPI>;
+export type ImageDB = z.infer<typeof ImageBase>;
+export type ImageDBNew = z.infer<typeof ImageInsert>;
+export type ImageDBPartial = z.infer<typeof ImageUpdate>;
+export type ImageDBFlat = z.infer<typeof ImageFlat>;
+export type ImageDBFlatUpdate = z.infer<typeof ImageFlatUpdate>;
+export type ImageRaw = z.infer<typeof ImageBaseRaw>;
 
-export type FeatureImage = z.infer<typeof FeatureImageUpdate>;
-export type NewFeatureImage = z.infer<typeof FeatureImageInsert>;
-export type NewFeatureImages = z.infer<typeof FeatureImageInserts>;
-export type FeatureImageDB = z.infer<typeof FeatureImageUpdate>;
-export type NewFeatureImageDB = z.infer<typeof FeatureImageInsert>;
-export type FeatureImageAPI = z.infer<typeof FeatureImageUpdateAPI>;
+export type Image = z.infer<typeof ImageAPI>;
+export type ImageNew = z.infer<typeof ImageInsertAPI>;
+export type ImageNewWithFeature = z.infer<typeof ImageInsertWithFeatureAPI>;
+export type ImageNewWithProjectOrOrganisation = z.infer<
+  typeof ImageInsertWithProjectOrOrganisationAPI
+>;
+export type ImagePartial = z.infer<typeof ImageUpdateAPI>;
 
-// Add these types for tracking upload status
-// Add new types for image states
-export type LoadStatus = 'initial' | 'uploaded' | 'loading' | 'loaded' | 'error';
-export type UploadStatus = 'idle' | 'uploading' | 'uploaded' | 'error' | 'invalidated';
-export type ImageUploadState = {
-  file: File;
-  status: UploadStatus;
-  retries: number;
-  imageToReplace?: GetImageAPI;
-  preview?: string;
-};
+export type FeatureImageDB = z.infer<typeof FeatureImageBase>;
+export type FeatureImageDBNew = z.infer<typeof FeatureImageInsert>;
+export type FeatureImageDBPartial = z.infer<typeof FeatureImageUpdate>;
+
+export type FeatureImage = z.infer<typeof FeatureImageBase>;
+export type FeatureImageNew = z.infer<typeof FeatureImageInsert>;
+export type FeatureImagePartial = z.infer<typeof FeatureImageUpdate>;
+
+/* ----------------- */
+// IMAGES :: METADATA
+/* -------- */
 
 export type Intent =
   | 'canonical'
@@ -790,17 +1128,83 @@ export type EXIF = {
   [key: string]: string;
 };
 
+export type LngLat = {
+  latitude?: string;
+  longitude?: string;
+};
+
+export type Metadata = Record<string, string>;
+
+/* ----------------- */
+// IMAGES :: UPLOAD
+/* -------- */
+
+export type LoadStatus = 'initial' | 'uploaded' | 'loading' | 'loaded' | 'error';
+export type UploadStatus = 'idle' | 'uploading' | 'uploaded' | 'error' | 'invalidated';
+export type ImageUploadState = {
+  file: File;
+  status: UploadStatus;
+  retries: number;
+  imageToReplace?: Image;
+  preview?: string;
+};
+
+export type UploadedPhoto = {
+  file: File;
+  previewUrl: string;
+};
+
+export type ImageUploadCtx = {
+  // ResourceType which the image is associated with
+  ctxType: ImageContextResource;
+  // ID of the entity which the image is associated with
+  ctxId: Id;
+  // Parent Organisation
+  organisation: OrganisationDB;
+  // Parent Project
+  project?: ProjectDB;
+  // Image to replace is used to determine the image being replaced
+  imageToReplace?: Image;
+};
+
+export type ImageEditCtx = {
+  // ResourceType which the image is associated with
+  ctxType: ImageContextResource;
+  // ID of the entity which the image is associated with
+  ctxId: Id;
+};
+
+export type SignData = {
+  cloudname: string;
+  apikey: string;
+  timestamp: string;
+  signature: string;
+};
+
+export type ParamsToSign = {
+  folder: string;
+  public_id?: string | null;
+};
+
+export type DeleteParamsToSign = {
+  public_id: string | null;
+};
+
+export type CameraPermissionStatus = 'unknown' | 'prompt' | 'granted' | 'denied';
 
 /* ----------------- */
 // USER FEATURES
 /* -------- */
 
-export type UserFeature = z.infer<typeof UserFeatureUpdate>;
-export type UserFeatureExtended = z.infer<typeof UserFeatureUpdateExtended>;
-export type NewUserFeature = z.infer<typeof UserFeatureInsert>;
-export type UserFeatureDB = z.infer<typeof UserFeatureUpdate>;
-export type NewUserFeatureDB = z.infer<typeof UserFeatureInsert>;
-export type UserFeatureAPI = z.infer<typeof UserFeatureUpdateAPI>;
+export type UserFeatureDB = z.infer<typeof UserFeatureBase>;
+export type UserFeatureDBNew = z.infer<typeof UserFeatureInsert>;
+export type UserFeatureDBPartial = z.infer<typeof UserFeatureUpdate>;
+
+export type UserFeature = z.infer<typeof UserFeatureAPI>;
+export type UserFeatureNew = z.infer<typeof UserFeatureInsertAPI>;
+export type UserFeaturePartial = z.infer<typeof UserFeatureUpdateAPI>;
+// Extended on the client side to include hierarchy information
+export type FeatureExtended = z.infer<typeof FeatureClientExt>;
 
 /* ----------------- */
 // TASKS
@@ -841,135 +1245,151 @@ export type NewFeatureAction = (typeof newFeatureActions)[number];
 export const reviewOutcomes = ['rejected', 'accepted'] as const;
 export type ReviewOutcome = (typeof reviewOutcomes)[number];
 
-export type Task = z.infer<typeof TaskUpdate>;
-export type NewTask = z.infer<typeof TaskInsert>;
-export type TaskDB = z.infer<typeof TaskUpdate>;
-export type NewTaskDB = z.infer<typeof TaskInsert>;
-export type TaskAPI = z.infer<typeof TaskUpdateAPI>;
-export type NewTaskAPI = z.infer<typeof TaskInsertAPI>;
-export type TaskPatchAPI = z.infer<typeof TaskPatch>;
-
 /* ----------------- */
-// FORMS
+// TASKS :: DB
 /* -------- */
 
-export type SuperFormResult<T extends Record<string, unknown>> = {
-  form: Writable<T>;
-  enhance: typeof enhance;
-  constraints: Writable<InputConstraints<T>>;
-  validate: (
-    path: FormPathLeaves<T>,
-    // opts?: ValidateOptions<FormPathType<T, FormPathLeaves<T>>, T, Record<string, unknown>>
-    opts?: ValidateOptions<
-      FormPathType<T, FormPathLeaves<T>>,
-      T,
-      Record<string, unknown>
-    >
-  ) => Promise<string[] | undefined>;
-  // validateForm!: () => Promise<SuperValidated<Record<string, unknown>, string, Form>>;
-  validateForm: () => Promise<SuperValidated<T>>;
-  tainted: Writable<TaintedFields<T> | undefined>;
-  // isTainted!: (path?: FormPath<T> | Record<string, unknown> | boolean | undefined) => boolean;
-  isTainted: (path?: FormPath<T> | boolean | undefined) => boolean;
-  submit: (event: Event) => void;
-  reset: (options?: {
-    keepMessage?: boolean;
-    data?: Partial<T>;
-    newState?: Partial<T>;
-    id?: string;
-  }) => void;
-  errors: Writable<ValidationErrors<T>>;
-  message: Writable<string | undefined>;
-  posted: Writable<boolean>;
+export type TaskDB = z.infer<typeof TaskBase>;
+export type TaskRaw = z.infer<typeof TaskBaseRaw>;
+export type TaskDBNew = z.infer<typeof TaskInsert>;
+export type TaskDBPartial = z.infer<typeof TaskUpdate>;
+
+export type Task = z.infer<typeof TaskAPI>;
+export type TaskCollection = z.infer<typeof TaskCollectionAPI>;
+export type TaskNew = z.infer<typeof TaskInsertAPI>;
+export type TaskPartial = z.infer<typeof TaskUpdateAPI>;
+
+/* ----------------- */
+// SVELTE : PROPS
+/* -------- */
+
+export type FormProps = OrganisationForm | ProjectForm | LayerForm | FeatureForm;
+
+export type PageProps<T extends Resource> = {
+  data: {
+    [key: string]: T;
+  };
 };
 
-export type LayerForm = LayerFormType;
-export type OrganisationForm = OrganisationFormType;
-export type ProjectForm = ProjectFormType;
-export type FeatureForm = FeatureFormType;
+export type FormPageProps<T extends Resource> = {
+  data: {
+    validatedForm: SuperValidated<T>;
+    entity: Ref;
+    image?: Image | null;
+  };
+};
 
-/* ----------------- */
-// ACCESS CONTROL
-/* -------- */
+export type SectionProps = {
+  form: Form;
+  fields: FormField | FormFieldArray;
+  fieldDiscriminator?: FieldDiscriminator;
+  title?: string;
+  subtitle?: string;
+  cols?: number;
+};
 
-// ACCESS CONTROL - OPTIONS
-// - OPEN - No restrictions or filters, i.e. access is granted to all users
-// - ROLE - Restricted by role, i.e. access is accepted/denied based on the user's role
-// - STATE - Filtered by state, i.e. result set is filtered based on the state of the resource
+export type ExtendedParams = {
+  locale?: LocaleExtended;
+  field: FormFieldExtendedDefinition;
+  fieldRoot: Field;
+  fieldIndex: number;
+  fieldKey: Field | 'value';
+};
 
-// ACCESS CONTROL - OPEN
-export const publicAccessOptions = ['Public', 'SuperAdmin', 'ResourceAll', 'EntityAny'];
-export type PublicAccessOption = (typeof publicAccessOptions)[number];
+// FIELDS
 
-// ACCESS CONTROL - RESTRICED BY ROLE - Note : Also used in hierarchicalResourceQuery() and hierarchicalEntityQuery()
-export const hierarchicalOwnOptions = ['ResourceOwn', 'EntityOwn'];
-export type HierarchicalOwnOption = (typeof hierarchicalOwnOptions)[number];
+export type FieldProps = SectionProps &
+  ExtendedParams & {
+    values?: string[];
+    actions?: Record<string, (...args: any[]) => void>;
+  };
 
-export const hierarchicalChildrenOptions = ['ResourceOwnChildren', 'EntityOwnChild'];
-export type HierarchicalChildrenOption = (typeof hierarchicalChildrenOptions)[number];
+export type UserFieldProps = SectionProps & {
+  fieldRoot: Field;
+  joinConfig: {
+    discriminator: string; // e.g. 'role'
+    uncheckedValue: string; // e.g. 'member'
+    checkedValue: string; // e.g. 'owner'
+  };
+  searchMode: boolean;
+  removeMode: boolean;
+};
 
-export const hierarchicalGrandChildrenOptions = [
-  'ResourceOwnGrandChildren',
-  'EntityOwnGrandChild'
-];
-export type HierarchicalGrandChildrenOption =
-  (typeof hierarchicalGrandChildrenOptions)[number];
+export type FieldPropsExtended = FieldProps & ExtendedParams;
 
-export const hierarchicalAccessOptions = [
-  ...hierarchicalOwnOptions,
-  ...hierarchicalChildrenOptions,
-  ...hierarchicalGrandChildrenOptions
-];
-export type HierarchicalAccessOption = (typeof hierarchicalAccessOptions)[number];
+export type ListFieldProps = FieldPropsExtended & {
+  values: IntermediateValue[];
+  actions: {
+    add: (e: Event) => void;
+    remove: (e: Event, valueId: Id) => void;
+    update: (e: Event, valueId: Id, locale: Locale) => void;
+    syncUp: () => void;
+  };
+  actionProps: {
+    dragMode: boolean;
+    removeMode: boolean;
+    removeModeLocale?: string;
+    confirmingId?: string;
+  };
+};
 
-// ACCESS CONTROL - RESTRICED BY ROLE - Note : Also used in genericResourceQuery() and genericEntityQuery()
-export const relationalAccessOptions = [
-  'EntityFromEditableProject',
-  'EntityFromEditableOrganisation',
-  'ResourceFromEditableProject',
-  'ResourceFromEditableOrganisation'
-];
-export type RelationalAccessOption = (typeof relationalAccessOptions)[number];
+// PROVIDERS
 
-// ACCESS CONTROL - FILTERED BY STATE
-export const statefulAccessOptions = ['Stateful'];
-export type StatefulAccessOption = (typeof statefulAccessOptions)[number];
-
-export const genericAccessOptions = ['GenericOwn', 'GenericSelf'];
-export type GenericAccessOption = (typeof genericAccessOptions)[number];
-
-export type AccessStrategyOption =
-  | PublicAccessOption
-  | HierarchicalAccessOption
-  | RelationalAccessOption
-  | GenericAccessOption;
-
-export type AccessStrategy = AccessStrategyOption | AccessStrategyOption[];
-
-export type ImageUploadRefs = {
-  // ResourceType which the image is associated with
-  resource: ResourceType;
-  // ID of the entity which the image is associated with
-  entity: Id;
-  // Parent Organisation
-  organisation: OrganisationDB;
-  // Parent Project
+export type ImageProviderProps = {
+  children: any;
+  mode: ImageCtxMode;
+  isAdminMode: boolean;
+  ctxType: ImageContextResource;
+  ctxId: Id;
+  organisation?: OrganisationDB;
   project?: ProjectDB;
-  // Image to replace is used to determine the image being replaced
-  imageToReplace?: GetImageAPI;
+  image?: Image;
+  ctxTypeSecondary?: ImageContextResourceExtended;
+  ctxIdSecondary?: Id;
+  highlightedIds?: Id[];
 };
 
-export type ImageEditRefs = {
-  // ResourceType which the image is associated with
-  refType: ResourceType;
-  // ID of the entity which the image is associated with
-  refId: Id;
+// ELEMENTS
+
+export type InputProps = {
+  id: Id;
+  value: string;
+  isGenAI: boolean;
+  placeholder?: string;
+  locale: LocaleExtended;
+  isTranslated?: boolean;
+  inputType?: 'text' | 'number' | 'email';
+  onchange: Function;
 };
 
-export type ParamsToSign = {
-  folder: string;
-  public_id?: string | null;
+export type SelectProps = {
+  id: Id;
+  value: string;
+  values: readonly string[] | { readonly value: string; readonly id: string }[];
+  isComplex?: boolean;
 };
+
+export type DisplayFieldProps = {
+  label: string;
+  value: any;
+  justify?: 'start' | 'end';
+  gridCell?: boolean;
+};
+
+/* ----------------- */
+// PANELS :: APP
+/* -------- */
+
+export type PanelState = {
+  filters: boolean;
+  maps: boolean;
+  stars: boolean;
+  settings: boolean;
+};
+
+/* ----------------- */
+// APP :: OMNIBAR
+/* -------- */
 
 export type OmniGroup = 'walks' | 'neighbourhoods' | 'features';
 
@@ -980,125 +1400,11 @@ export type SearchResult = {
   ref: string;
 };
 
-// ENUMS
+/* ----------------- */
+// CTX STATE :: APP
+/* -------- */
 
-export enum FeatureCardMode {
-  Display = 'display',
-  New = 'new',
-  Missing = 'missing',
-  AddPhoto = 'addPhoto'
-}
-
-export enum HierarchicalResource {
-  organisation = 'organisation',
-  project = 'project',
-  layer = 'layer',
-  feature = 'feature',
-  task = 'task'
-}
-
-export enum HierarchicalResourcePath {
-  organisation = 'organisations',
-  project = 'projects',
-  layer = 'layers',
-  feature = 'features',
-  task = 'tasks'
-}
-
-export enum HierarchicalResourceSeq {
-  organisation = 1,
-  project = 2,
-  layer = 3,
-  feature = 4,
-  task = 5
-}
-
-export enum HierarchicalResourceRefKey {
-  organisation = 'code',
-  project = 'code',
-  layer = 'id',
-  feature = 'id',
-  task = 'id'
-}
-
-export enum HierarchicalResourceParent {
-  project = 'organisation',
-  layer = 'project',
-  feature = 'layer',
-  task = 'feature'
-}
-
-export enum HierarchicalResourceParentRefKey {
-  project = 'organisationId',
-  layer = 'projectId',
-  feature = 'layerId',
-  task = 'featureId'
-}
-
-export enum CollectionStatistic {
-  total = 'total',
-  access = 'access',
-  filtered = 'filtered',
-  selected = 'selected'
-}
-
-export enum GeoCoder {
-  hkgov_als = 'hkgov_als',
-  hkgov_identify = 'hkgov_identify',
-  googlemaps = 'googlemaps'
-}
-
-// USER APP
-
-// Selected Resource Constraints by code
-export type Prisms = { organisation: Code[]; project: Code[]; layer: Id[] };
-
-// Resources constrained by suncast filters
-export type FilteredResources = {
-  organisation: Organisation[];
-  project: Project[];
-  layer: Layer[];
-  feature: Feature[];
-};
-
-export type AdminFilteredResources = {
-  organisation: Organisation[];
-  project: Project[];
-  layer: Layer[];
-  feature: Feature[];
-  task: Task[];
-};
-
-export type FilterState = {
-  neighbourhoods: string[];
-  properties: Record<Id, Record<string, any>>;
-};
-
-export type AdminFilterState = {
-  text?: string;
-  properties?: Record<string, any>;
-  isPublished?: boolean | null;
-  isArchived?: boolean | null;
-  isReviewed?: boolean | null;
-};
-export type AdminFilterStates = Record<HierarchicalResource, AdminFilterState>;
-
-export type ActiveCollection = {
-  id: string;
-  name: string;
-  type: 'neighbourhood' | 'walk' | 'feature' | 'search';
-  i18n: Record<string, string>[];
-  items: Feature[];
-} | null;
-
-export type PanelState = {
-  filters: boolean;
-  maps: boolean;
-  stars: boolean;
-  settings: boolean;
-};
-
-export type mapContextState = {
+export type MapContextState = {
   markers: Map<Id, Marker>;
   active: {
     feature: Feature | null;
@@ -1127,36 +1433,23 @@ export type mapContextState = {
   panels: PanelState;
 };
 
-// TODO move all translations to i18n
-export type TranslatedValue = {
-  value: string;
-  translations?: {
-    lang: string;
-    value: string;
-  }[];
-};
-
-export type RangeFilterValue = {
-  globalMin: number;
-  globalMax: number;
-  rangeMin: number;
-  rangeMax: number;
-};
-
 export type ImageCtxMode = 'standalone' | 'gallery';
 export type ImageCtxState = {
   mode: ImageCtxMode;
-  refType: ResourceType | null;
-  refId: Id | null;
-  refOrganisation: OrganisationDB | null;
-  refProject: ProjectDB | null;
-  extendedRefType: ResourceType | null;
-  extendedRefId: Id | null;
+
+  ctxType: ImageContextResource | null;
+  ctxTypeSecondary: ImageContextResourceExtended | null;
+  ctxId: Id | null;
+  ctxIdSecondary: Id | null;
+
+  organisation: OrganisationDB | null;
+  project: ProjectDB | null;
+
   highlightedIds: Id[];
   uploadQueue: ImageUploadState[];
   loadStatus: Record<string, LoadStatus>;
   activeId: string | null;
-  images: (GetImageAPI & { preview?: string })[];
+  images: (Image & { preview?: string })[];
   preloadedImages: Set<string>;
   pendingConfirmation: SvelteSet<string>;
   deletionQueue: SvelteSet<string>;
@@ -1167,50 +1460,178 @@ export type ImageCtxState = {
 export type ImageCtxOptions = {
   mode: ImageCtxMode;
   isAdminMode: boolean;
-  refType: ResourceType;
-  refId: Id;
-  refOrganisation?: OrganisationDB;
-  refProject?: ProjectDB;
-  image?: GetImageAPI;
-  extendedRefType?: ResourceType;
-  extendedRefId?: Id;
+  ctxType: ImageContextResource;
+  ctxId: Id;
+  organisation?: OrganisationDB;
+  project?: ProjectDB;
+  image?: Image;
+  ctxTypeSecondary?: ImageContextResourceExtended;
+  ctxIdSecondary?: Id;
   highlightedIds?: Id[];
 };
 
-export type UploadedPhoto = {
-  file: File;
-  previewUrl: string;
+/* ----------------- */
+// GEOCODING
+/* -------- */
+
+export type ParsedReverseGeocodeResultI18n = {
+  displayAddress: string | undefined | null;
+  displayAddressGen: boolean;
+  addressProperties: Partial<AddressProperties>;
 };
 
-export type CameraPermissionStatus = 'unknown' | 'prompt' | 'granted' | 'denied';
+// IDENTIFY RESULT
+export interface ParsedReverseGeocodeResult {
+  addressMeta: AddressMeta;
+  i18n: Record<Locale, ParsedReverseGeocodeResultI18n>;
+}
 
-// TODO move all translations to i18n
-export type UserContributedFeatureProperty = {
-  propertyId: Id;
-  propertyValueId: Id | null;
-  i18n: Record<TargetLocale, { value: string }>;
-};
+export interface ReverseGeocodeResult {
+  address: {
+    Street: string;
+    Neighborhood: string | null;
+    City: string;
+    Subregion: string | null;
+    State: string;
+    Country: string | null;
+    Match_addr: string;
+    Loc_name: string;
+  };
+  location: {
+    x: number;
+    y: number;
+    spatialReference: {
+      wkid: number;
+      latestWkid: number;
+    };
+  };
+}
 
-// TODO move all translations to i18n
-export type UserContributedFeature = {
-  organisationId: string;
-  projectId: string;
-  layerId: string;
-  geometry: Geometry;
-  i18n: Record<
-    TargetLocale,
-    { title: string; description: string; displayAddress: string }
-  >;
-  properties: UserContributedFeatureProperty[];
-  contributorId?: Id;
-};
+// ALS RESULT
+// Data Dictionary is available at:
+// https://www.als.gov.hk/docs/Data_Dictionary_for_ALS_EN-v3.2.pdf
+export interface ALSResult {
+  // Input address information provided in the search request
+  RequestAddress: {
+    AddressLine: string[];
+  };
+  // List of suggested addresses that match the search criteria
+  SuggestedAddress?: Array<{
+    Address: {
+      PremisesAddress: {
+        // English address components
+        EngPremisesAddress: {
+          // Building/Block information
+          EngBlock: {
+            BlockDescriptor: string; // Block type (e.g., "BLK", "TOWER")
+            BlockNo: string; // Block number
+            BlockDescriptorPrecedenceIndicator: string; // Whether BlockDescriptor appears before BlockNo
+          };
+          BuildingName: string; // English name of the building
+          // Estate information
+          EngEstate: {
+            EstateName: string; // English name of the estate
+            EngPhase?: {
+              // Optional phase information
+              PhaseName?: string;
+              PhaseNo?: string;
+            };
+          };
+          // Street information
+          EngStreet: {
+            StreetName: string; // English street name
+            BuildingNoFrom: string; // Starting street number
+            BuildingNoTo?: string; // Optional ending street number
+            EngVillage?: {
+              LocationName: string;
+            };
+          };
+          // District information
+          EngDistrict: {
+            DcDistrict: string; // English district name
+          };
+          Region: string; // Region code (HK/KLN/NT)
+        };
+        // Chinese address components
+        ChiPremisesAddress: {
+          // Building/Block information
+          ChiBlock: {
+            BlockDescriptor: string; // Block type in Chinese (e.g., "座", "樓")
+            BlockNo: string; // Block number
+            BlockDescriptorPrecedenceIndicator?: string;
+          };
+          BuildingName: string; // Chinese name of the building
+          // Estate information
+          ChiEstate: {
+            EstateName: string; // Chinese name of the estate
+            ChiPhase?: {
+              // Optional phase information
+              PhaseName?: string;
+              PhaseNo?: string;
+            };
+          };
+          // Street information
+          ChiStreet: {
+            StreetName: string; // Chinese street name
+            BuildingNoFrom: string; // Starting street number
+            BuildingNoTo?: string; // Optional ending street number
+          };
+          // District information
+          ChiDistrict: {
+            DcDistrict: string; // Chinese district name
+          };
+          Region: string; // Region in Chinese (香港/九龍/新界)
+        };
+        // Unique identifier for the address
+        GeoAddress: string; // Unique address reference number
+        // Spatial coordinates
+        GeospatialInformation: {
+          Northing: string; // HK1980 Grid Northing
+          Easting: string; // HK1980 Grid Easting
+          Latitude: string; // WGS84 latitude
+          Longitude: string; // WGS84 longitude
+        };
+      };
+    };
+    // Address matching confidence
+    ValidationInformation: {
+      Score: number; // Confidence score (0-100)
+    };
+  }>;
+}
 
-export type NewFeatureTaskAPI = {
-  type: 'newFeature';
-  layerId: Id;
-  organisationId: Id;
-  projectId: Id;
-  contributorId: Id;
-  feature: UserContributedFeature;
-  featureId?: Id;
-};
+export type NeighbourhoodMap = Record<
+  string,
+  {
+    i18n: Record<
+      Locale,
+      {
+        name: string;
+        neighbourhood: string;
+        district: string;
+        region: string;
+      }
+    >;
+  }
+>;
+
+export type ALSSuggestedAddressItem = NonNullable<
+  ALSResult['SuggestedAddress']
+>[number];
+
+/* ----------------- */
+// TYPESCRIPT UTILITIES
+/* -------- */
+
+// RECURSIVE PARTIAL
+export type DeepPartial<T> = T extends object
+  ? {
+      [P in keyof T]?: DeepPartial<T[P]>;
+    }
+  : T;
+
+// Only make some keys optional
+export type PickPartial<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+
+// Make all keys optional except for the ones in K
+export type PartialExcept<T, K extends keyof T> = Pick<T, K> & Partial<Omit<T, K>>;

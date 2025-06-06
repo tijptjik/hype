@@ -3,7 +3,7 @@
 import ResourceHeader from '$lib/components/sidebar/ResourceHeader.svelte';
 import ResourceContainer from '$lib/components/sidebar/ResourceContainer.svelte';
 // ENUMS
-import { HierarchicalResource } from '$lib/types';
+import { HierarchicalResource } from '$lib/enums';
 
 // PROPS
 let { resourceType }: { resourceType: HierarchicalResource } = $props();

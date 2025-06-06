@@ -2,11 +2,10 @@
 import { fade } from 'svelte/transition';
 import { flip } from 'svelte/animate';
 // SERVICES
-import { getImageContext } from '$lib/context/images.svelte';
+import { getImageContext } from '$lib/context/image.svelte';
 // COMPONENTS :: GALLERY
 import Thumbnail from '$lib/components/images/gallery/Thumbnail.svelte';
 import UploadThumbnail from '$lib/components/images/gallery/ThumbnailWhileUploading.svelte';
-import ThumbnailsBeforeLoad from '$lib/components/images/gallery/ThumbnailsBeforeLoad.svelte';
 import ScrollArrow from '$lib/components/images/gallery/ScrollArrow.svelte';
 import Dropzone from '$lib/components/images/gallery/Dropzone.svelte';
 import type { ImageUploadState } from '$lib/types';
@@ -27,9 +26,6 @@ let { inputElement = $bindable(), actionProps, hasDropzone = true }: Props = $pr
 // STATE :: SCROLL ARROWS
 let showLeftArrow = $state(false);
 let showRightArrow = $state(false);
-
-// STATE :: IMAGES
-let isLoadingImagesAmount = $derived(imageCtx.isImagesLoading);
 
 // DOM
 let scrollContainer: HTMLElement;
@@ -145,11 +141,6 @@ $effect(() => {
       </div>
     {/if}
   {/each}
-
-  <!-- Loading placeholders -->
-  <!-- {#if isLoadingImagesAmount > 0} -->
-  <!-- <ThumbnailsBeforeLoad number={1 as number} /> -->
-  <!-- {/if} -->
 
   <!-- Images -->
   {#each imageCtx.getImages() as image, i (image.id)}

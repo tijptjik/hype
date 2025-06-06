@@ -1,16 +1,17 @@
 <script lang="ts">
 // CONFIG
-import { NEW_TITLE, NEW_REF } from '$lib';
+import { NEW_TITLE } from '$lib';
 // I18N
+import { getLocale } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // CONTEXT
-import { setForm } from '$lib/context/forms.svelte';
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { setForm } from '$lib/context/form.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // PROVIDERS
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // FLASH
 import { getFlash } from 'sveltekit-flash-message';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 // COMPONENTS
 import Header from '$lib/components/layout/EntityHeader.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
@@ -18,9 +19,9 @@ import SpecificationSection from '$lib/components/forms/sections/Specification.s
 import ImageSection from '$lib/components/forms/sections/Image.svelte';
 import UserSection from '$lib/components/forms/sections/User.svelte';
 // ENUMS
-import { HierarchicalResource } from '$lib/types';
+import { HierarchicalResource, ImageContextResource } from '$lib/enums';
 // TYPES
-import type { FormPageProps, FormField, Organisation, GetImageAPI } from '$lib/types';
+import type { FormPageProps, FormField, Organisation, Image, OrganisationNew } from '$lib/types';
 
 // CONTEXT
 const resourceState = getHierarchicalResourceState();
@@ -50,7 +51,7 @@ const FIELDS: Record<string, FormField> = {
       isTranslated: true,
       isNested: false
     }
-  },
+  } as FormField,
   users: {
     userRoles: {
       label: m.admin__forms_organisation_members_title(),
@@ -58,7 +59,7 @@ const FIELDS: Record<string, FormField> = {
       isTranslated: false,
       isNested: false
     }
-  },
+  } as FormField,
   specification: {
     code: {
       label: m.admin__forms_common_code(),
@@ -74,7 +75,7 @@ const FIELDS: Record<string, FormField> = {
       isTranslated: false,
       isNested: false
     }
-  },
+  } as FormField,
   images: {
     image: {
       label: m.admin__forms_organisation_image_title(),
@@ -83,7 +84,7 @@ const FIELDS: Record<string, FormField> = {
       isTranslated: false,
       isNested: false
     }
-  }
+  } as FormField,
 };
 
 // STATE : PROPS
@@ -91,7 +92,7 @@ let pageProps: FormPageProps<Organisation> = $props();
 resourceState.setEntity(pageProps.data.entity, RESOURCE);
 resourceState.setFacet('core');
 
-let form = setForm<Organisation>(
+let form = setForm(
   RESOURCE,
   pageProps.data.entity,
   pageProps.data.validatedForm,
@@ -101,7 +102,7 @@ let form = setForm<Organisation>(
 let enhance = $derived(form.enhance);
 
 // STATE : DERIVED :: TITLE
-let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
+let title = $derived(pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE);
 </script>
 
 <!-- LAYOUT -->
@@ -125,7 +126,12 @@ let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
             title={m.admin__forms_organisation_members_title()}
             subtitle={m.admin__forms_organisation_members_subtitle()}
             fields={FIELDS.users}
-            {form} />
+            {form}
+            joinConfig={{
+              discriminator: 'role',
+              checkedValue: 'owner',
+              uncheckedValue: 'member'
+            }} />
           <SpecificationSection
             title={m.admin__forms_common_specifiers()}
             fields={FIELDS.specification}
@@ -135,13 +141,14 @@ let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
         <ImageProvider
           mode="standalone"
           isAdminMode={true}
-          refType={RESOURCE}
-          refId={pageProps.data.entity}
-          refOrganisation={resourceState.getEntity() as Organisation}
-          image={pageProps.data.image as GetImageAPI}>
+          ctxType={ImageContextResource.organisation}
+          ctxId={pageProps.data.entity}
+          organisation={resourceState.getEntity() as Organisation}
+          image={pageProps.data.image as Image}>
           <ImageSection
             title={m.admin__forms_organisation_image_title()}
             fields={FIELDS.images}
+            image={pageProps.data.image as Image}
             {form} />
         </ImageProvider>
       {/if}

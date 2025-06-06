@@ -1,6 +1,6 @@
 import { loadData } from '$lib/api';
 // ENUMS
-import { HierarchicalResourcePath } from '$lib/types';
+import { HierarchicalResourcePath } from '$lib/enums';
 // TYPES
 import type { PageLoad } from './$types';
 import type { Task } from '$lib/types';

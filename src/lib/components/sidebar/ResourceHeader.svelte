@@ -1,6 +1,6 @@
 <script lang="ts">
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 import { getSidebarState } from '$lib/context/sidebar.svelte';
 // NAVIGATION
 import { navItems, navigateOnAdmin } from '$lib/navigation';
@@ -8,9 +8,9 @@ import { ADMIN_PATH } from '$lib/index';
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
 // ENUMS
-import { HierarchicalResourcePath } from '$lib/types';
+import { HierarchicalResourcePath } from '$lib/enums';
 // TYPES
-import type { HierarchicalResource } from '$lib/types';
+import type { HierarchicalResource } from '$lib/enums';
 
 // CONTEXT
 let resourceState = getHierarchicalResourceState();

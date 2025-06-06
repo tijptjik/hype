@@ -4,19 +4,18 @@ import { cubicInOut } from 'svelte/easing';
 import Icon from '$lib/components/common/Icon.svelte';
 import { Photo, XMark, Trash } from '@steeze-ui/heroicons';
 // SERVICES
-import { getImageContext } from '$lib/context/images.svelte';
-// TYPES
-import type { FieldProps, ModalProps } from '$lib/types';
+import { getImageContext } from '$lib/context/image.svelte';
 
 // SERVICES
 const imageCtx = getImageContext();
 
+type GalleryActionsProps = {
+  removeMode: boolean;
+  actions: Record<'add' | 'remove', (...args: any[]) => void>;
+};
+
 // STATE : PROPS
-let {
-  searchMode = $bindable(false),
-  removeMode = $bindable(false),
-  actions
-}: FieldProps & ModalProps = $props();
+let { removeMode = $bindable(false), actions }: GalleryActionsProps = $props();
 
 // Add and remove event listener
 $effect(() => {

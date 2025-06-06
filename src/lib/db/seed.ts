@@ -48,6 +48,7 @@ import propertyValueJson from './data/propertyValues.json';
 import propertyValueI18nSizeJson from './data/propertyValuesI18n-kL9mN2pQ5rS4.json';
 import propertyValueI18nMaterialJson from './data/propertyValuesI18n-vX7yZ1wA3bC6.json';
 import propertyValueI18nVisibilityJson from './data/propertyValuesI18n-hJ4kL7mN9pQ2.json';
+import propertyValueI18nCollectionJson from './data/propertyValuesI18n-hJ4kA9mN9283.json';
 import featureI18nJson from './data/featureI18n.json';
 import featurePropertyJson from './data/featureProperty.json';
 import featurePropertyI18nJson from './data/featurePropertyI18n.json';
@@ -60,8 +61,16 @@ import type { DrizzleD1Database } from 'drizzle-orm/d1/driver';
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core/table';
 import type { SQLiteInsertValue } from 'drizzle-orm/sqlite-core';
 
+type SeedBank = {
+  name: string;
+  table: SQLiteTable;
+  data: SQLiteInsertValue<SQLiteTable>[];
+  chunk: number;
+  partial?: boolean;
+};
+
 // Mapping between JSON files and Tables
-const seedBank = {
+const seedBank: Record<string, SeedBank> = {
   user: {
     name: 'Users',
     table: user,
@@ -183,6 +192,13 @@ const seedBank = {
     name: 'PropertyValueI18n::Visibility',
     table: propertyValueI18n,
     data: propertyValueI18nVisibilityJson,
+    chunk: 0,
+    partial: true
+  },
+  propertyValueI18nCollection: {
+    name: 'PropertyValueI18n::Collection',
+    table: propertyValueI18n,
+    data: propertyValueI18nCollectionJson,
     chunk: 0,
     partial: true
   },

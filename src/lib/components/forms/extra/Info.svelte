@@ -37,30 +37,32 @@ $effect(() => {
 });
 </script>
 
-<div class="relative">
-  <button
-    class="btn-rounded btn btn-ghost btn-sm p-1"
-    onclick={(e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      showInfo = !showInfo;
-    }}
-    aria-label="Toggle form information">
-    <Icon src={InformationCircle} class="h-4 w-4" />
-  </button>
+<div class="flex items-center gap-6">
+  <div class="relative">
+    <button
+      class="btn-rounded btn btn-ghost btn-sm p-1"
+      onclick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        showInfo = !showInfo;
+      }}
+      aria-label="Toggle form information">
+      <Icon src={InformationCircle} class="h-4 w-4" />
+    </button>
 
-  {#if showInfo}
-    <div
-      bind:this={panel}
-      transition:slide={{ duration: 250 }}
-      class="absolute right-1 top-14 z-50 w-[34rem] rounded-b-xl border-4 border-t-0 {borderColor} bg-base-100 p-6 shadow-lg">
+    {#if showInfo}
       <div
-        class="pointer-events-none absolute inset-x-0 top-0 h-4 bg-gradient-to-b from-black/10 to-transparent"
-        aria-hidden="true">
+        bind:this={panel}
+        transition:slide={{ duration: 250 }}
+        class="absolute right-1 top-[68px] z-50 w-[34rem] rounded-b-xl border-4 border-t-0 {borderColor} bg-base-100 p-6 shadow-lg">
+        <div
+          class="pointer-events-none absolute inset-x-0 top-0 h-4 bg-gradient-to-b from-black/10 to-transparent"
+          aria-hidden="true">
+        </div>
+        <div class="relative space-y-4">
+          {@render children()}
+        </div>
       </div>
-      <div class="relative space-y-4">
-        {@render children()}
-      </div>
-    </div>
-  {/if}
+    {/if}
+  </div>
 </div>

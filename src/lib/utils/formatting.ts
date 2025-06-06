@@ -1,6 +1,7 @@
-import { getLocale, getI18nValue } from '$lib/i18n';
+import type { MapCtx } from '$lib/context/map.svelte';
+import { getLocale, getI18n } from '$lib/i18n';
 import * as m from '$lib/paraglide/messages';
-import type { Property, TranslatedValue, RangeFilterValue } from '$lib/types';
+import type { Property, TranslatedValue, RangeFilterValue, Locale } from '$lib/types';
 
 /**
  * Gets the original (non-translated) value from a potentially translated value object.
@@ -14,23 +15,23 @@ export function getOriginalValue(value: string | TranslatedValue): string {
  * Gets the translated display value based on the current locale.
  * Falls back to the original value if no translation is found.
  */
-export function getTranslatedValue(value: string | TranslatedValue): string {
+export function getPropValueInCurrentLocale(value: string | TranslatedValue): string {
   if (typeof value === 'string') return value;
-  const currentLang = getLocale();
+  const currentLocale = getLocale();
   // Fallback to original value for 'en' or if translations are missing
-  if (currentLang === 'en' || !value.translations) return value.value;
+  if (!value.i18n) return value.value;
   // Add type annotation for 't'
-  const translation = value.translations.find(
-    (t: { lang: string; value: string }) => t.lang === currentLang
+  const translation = value.i18n.find(
+    (t: { locale: Locale; value: string }) => t.locale === currentLocale
   );
   return translation?.value || value.value; // Fallback to original value
 }
 
-export function getTranslatedValues(values: any[] = []) {
+export function getTranslatedValues(values: TranslatedValue[] = []) {
   // Add default empty array
   return values.map((v) => ({
     value: v.value,
-    translations: v.translations || []
+    i18n: v.i18n || {}
   }));
 }
 
@@ -52,7 +53,7 @@ export function displaySelectedProperties(
       (v) => getOriginalValue(v) === selectedValue
     );
     // If somehow the value object isn't found (shouldn't happen), fallback to the raw value
-    return valueObject ? getTranslatedValue(valueObject) : selectedValue;
+    return valueObject ? getPropValueInCurrentLocale(valueObject) : selectedValue;
   });
 
   if (translatedSelectedValues.length === 1) {
@@ -72,10 +73,10 @@ export function displaySelectedProperties(
  */
 export function displaySelectedFilters(
   layerFilters: Record<string, string[] | RangeFilterValue> | undefined, // Filters for the specific layer
-  properties: Property[] | undefined // Property definitions for the layer's project
+  properties: Property[] | undefined, // Property definitions for the layer's project
+  mapCtx: MapCtx
 ): string {
   if (!layerFilters || !properties) {
-    console.log('[displaySelectedFilters] No layer filters or project properties');
     return m.filters__none();
   }
 
@@ -104,15 +105,14 @@ export function displaySelectedFilters(
     .map(([key]) => key); // Get the keys of active filters
 
   if (activeFilterKeys.length === 0) {
-    console.log('[displaySelectedFilters] No active filters');
     return m.filters__none();
   }
 
   // Get translated labels for active filters
   const activeFilterLabels = activeFilterKeys.map((key) => {
     const propertyDefinition = properties.find((p) => p.key === key);
-    // Use getI18nValue for the property label, fallback to key if not found
-    return propertyDefinition ? getI18nValue(propertyDefinition, 'label') || key : key;
+    // Use getI18n for the property label, fallback to key if not found
+    return propertyDefinition ? getI18n(propertyDefinition, 'label', mapCtx.getUserPreferences()) || key : key;
   });
 
   // Format the summary string based on the count

@@ -1,4 +1,7 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
+// COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { ExclamationTriangle } from '@steeze-ui/heroicons';
 
@@ -12,17 +15,16 @@ let { onCancel, onAccept } = $props();
     src={ExclamationTriangle}
     class="shrink-10 h-12 w-12 stroke-current opacity-100" />
   <p class="w-1/3 text-center text-xl font-bold text-error">
-    This is a destructive action.
+    {m.red_formal_jackal_mix()}
   </p>
   <p class="w-1/3 text-center text-xl text-neutral-content">
-    Deleting this field eliminates the associated filter control and entries in the info
-    panel.
+    {m.warm_calm_badger_bask()}
   </p>
   <p class="w-1/3 text-center text-xl text-neutral-content">
-    This action is irreversible.
+    {m.hour_solid_goat_aim()}
   </p>
   <div class="flex gap-4">
-    <button class="btn btn-outline" onclick={onCancel}>Cancel</button>
-    <button class="btn btn-error" onclick={onAccept}>DESTROY</button>
+    <button class="btn btn-outline" onclick={onCancel}>{m.green_short_pelican_fall()}</button>
+    <button class="btn btn-error" onclick={onAccept}>{m.best_swift_opossum_inspire()}</button>
   </div>
 </div>

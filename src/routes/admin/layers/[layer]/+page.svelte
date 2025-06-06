@@ -1,20 +1,21 @@
 <script lang="ts">
 import { NEW_TITLE } from '$lib';
+import { getLocale } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // CONTEXT
-import { setForm, getForm } from '$lib/context/forms.svelte';
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { setForm, getForm } from '$lib/context/form.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // FLASH
 import { getFlash } from 'sveltekit-flash-message';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 // COMPONENTS
 import Header from '$lib/components/layout/EntityHeader.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
 import LayerPropertySection from '$lib/components/forms/sections/LayerProperty.svelte';
 // ENUMS
-import { HierarchicalResource } from '$lib/types';
+import { HierarchicalResource } from '$lib/enums';
 // TYPES
-import type { Layer, FormPageProps, FormField, FormFieldArray } from '$lib/types';
+import type { Layer, FormPageProps, FormField, FormFieldArray, FormFieldArrayDefinition } from '$lib/types';
 
 // CONTEXT
 const resourceState = getHierarchicalResourceState();
@@ -44,7 +45,7 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
       isTranslated: true,
       isNested: false
     }
-  },
+  } as FormField,
   property: {
     properties: {
       isArray: true,
@@ -56,8 +57,8 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
           specifier: {}
         }
       }
-    }
-  }
+    } as FormFieldArrayDefinition
+  } as FormFieldArray
 };
 
 // STATE : PROPS
@@ -66,7 +67,7 @@ resourceState.setEntity(pageProps.data.entity, RESOURCE);
 resourceState.setFacet('core');
 
 // STATE : FORM
-let form = setForm<Layer>(
+let form = setForm(
   RESOURCE,
   pageProps.data.entity,
   pageProps.data.validatedForm,
@@ -76,7 +77,9 @@ let form = setForm<Layer>(
 let enhance = $derived(form.enhance);
 
 // STATE : DERIVED :: TITLE
-let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
+let title = $derived(
+  pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE
+);
 </script>
 
 <!-- LAYOUT -->

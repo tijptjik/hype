@@ -5,7 +5,7 @@
   "sources": {
     "hongkong-latest": {
       "type": "vector",
-      "url": "https://tiles.hype.hk/basemap/hongkong-latest.json",
+      "url": "/api/tiles/basemap/hongkong-latest.json",
       "attribution": "<a href=\"https://protomaps.com\">Protomaps</a> © <a href=\"https://openstreetmap.org\">OpenStreetMap</a>"
     }
   },

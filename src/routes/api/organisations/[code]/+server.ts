@@ -1,200 +1,202 @@
+// SVELTE
+import { json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
+// I18N
+import { m } from '$lib/i18n';
+// DRIZZLE
+import { eq } from 'drizzle-orm';
+// FORMS
 import { superValidate } from 'sveltekit-superforms';
+// ZOD
 import { zod } from 'sveltekit-superforms/adapters';
-import { error, json, type RequestHandler } from '@sveltejs/kit';
-import { organisationRole, organisationI18n } from '$lib/db/schema';
-import { NEW_REF } from '$lib';
-import {
-  getDatabaseOrError,
-  JSONResponseOrError,
-  SuperFormResponse,
-  SuperFormErrorResponse,
-  type AccessStrategyOption
-} from '$lib/api';
-import { hierarchicalEntityQuery } from '$lib/db';
+import { OrganisationInsertAPI } from '$lib/db/zod';
+// SCHEMA
+import { organisation } from '$lib/db/schema';
 // DB
 import {
+  getOrganisation,
+  toFormShape,
   updateOrganisation,
-  updateTranslations,
-  updateUserRoles,
-  rebuildFormData,
-  extractEntitiesToUpdate
+  updateOrganisationWithRelated,
+  toResponseShape,
 } from '$lib/db/services/organisation';
-import { isFieldUnique, isFieldChanged } from '$lib/db';
-// ZOD
-import { OrganisationPatch, OrganisationUpdateAPI } from '$lib/db/zod';
+// API
+import {
+  getDatabase,
+  JSONResponseOrError,
+  SuperFormErrorResponse,
+  SuperFormResponse
+} from '$lib/api';
+import {
+  assertPermissionsToUpdateOrganisation,
+  getOrganisationQueryContext,
+  isAccessLostUponSuccess,
+  organisationWithRelations,
+  assertCodeUnique
+} from '$lib/api/services/organisation';
 // TYPES
+import type { RequestHandler } from '@sveltejs/kit';
 import type { SuperValidated } from 'sveltekit-superforms/client';
-import type {
-  Organisation,
-  OrganisationDB,
-  OrganisationPartialUpdate
-} from '$lib/types';
+import type { Organisation, OrganisationDB, OrganisationPartial } from '$lib/types';
+
+/********************
+ *  COMMON
+ ************/
 
 const RESOURCE_TYPE = 'organisation';
 const RESOURCE_PATH = 'organisations';
-const ACCESS_STRATEGY = 'EntityOwn' as AccessStrategyOption;
-const PUBLIC_IDENTIFIER = 'code';
 
-export const GET: RequestHandler = async ({ params, locals, platform }) => {
-  // AUTH : Pass or Fail
-  const { db, userId, accessStrategy } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE
-  );
-  if (params.code !== NEW_REF) {
-    try {
-      // DB : Build & Execute Query
-      const result = await hierarchicalEntityQuery(
-        db,
-        params[PUBLIC_IDENTIFIER] as string,
-        PUBLIC_IDENTIFIER,
-        accessStrategy,
-        {
-          userRoles: {
-            with: {
-              user: {
-                columns: {
-                  email: false,
-                  emailVerified: false,
-                  createdAt: false,
-                  modifiedAt: false
-                }
-              }
-            }
-          },
-          translations: true,
-          image: true
-        },
-        userId,
-        organisationRole,
-        organisationI18n,
-        1
-      );
+/********************
+ *  READ
+ ************/
 
-      // HTTP : 200 JSON or 404
-      return JSONResponseOrError(result);
-    } catch (e) {
-      // DB : Query Error
-      console.error('Database query error:', e);
-      // HTTP : 500 Error
-      return error(500, 'Dust Accumulation Critical');
+/**
+ * Reads an organisation
+ */
+export const GET: RequestHandler = async ({ params, locals, platform, request }) => {
+  // ASSERT : User Logged in
+  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
+
+  try {
+    // GET : Context for organisation query
+    let { params: queryParams, conditions } = getOrganisationQueryContext(
+      session,
+      request,
+      {},
+      userRoles
+    );
+
+    // EXTEND : Add GET identifier (code)
+    if (params.code) {
+      conditions.push(eq(organisation.code, params.code));
     }
-  } else {
-    return error(500, 'The Old Shall Never Be New Again');
+
+    const result = await getOrganisation(db, organisationWithRelations, conditions);
+
+    if (!result) {
+      return error(404, m.brief_jumpy_firefox_bump({ key: 'Organisation' }));
+    }
+
+    // RESPONSE : Build the response shape
+    const data = await toResponseShape(result, result.i18n, result.userRoles);
+
+    // HTTP : 200 JSON or 404
+    return JSONResponseOrError(data);
+  } catch (e) {
+    // DB : Query Error
+    console.error('Database query error:', e);
+    // HTTP : 500 Error
+    return error(500, 'Dust Accumulation Critical');
   }
 };
 
+/********************
+ *  UPDATE :: PUT
+ ************/
+
+/**
+ * Replaces an organisation
+ */
 export const PUT: RequestHandler = async ({ params, request, locals, platform }) => {
-  // AUTH : Pass or Fail
-  // TODO : If a user is NOT the owner, they should not be able to PUT updates to the organisation
-  const { db, userId, accessStrategy } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE
-  );
-  let redirect = false;
+  // ASSERT : User logged in
+  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
 
   try {
+    // ASSERT : Valid form
     const formData: Organisation = await request.json();
-    const form = (await superValidate(
+    // @ts-ignore - FORM : Fix type error
+    let form = (await superValidate(
       formData,
-      zod(OrganisationUpdateAPI)
+      // @ts-ignore - FORM : Fix type error
+      zod(OrganisationInsertAPI)
     )) as SuperValidated<Organisation>;
 
-    // Check if the current user will lose access on membership changes
-    const userLosesAccess =
-      !form.data.userRoles.map((role) => role.userId).includes(userId) &&
-      accessStrategy !== 'SuperAdmin';
-    const codeChanged = await isFieldChanged<OrganisationDB>(
-      db,
-      formData.id as string,
-      formData.code as string,
-      RESOURCE_TYPE,
-      PUBLIC_IDENTIFIER
-    );
-
-    if (codeChanged) {
-      const codeUnique = await isFieldUnique<Organisation>(
-        db,
-        formData,
-        RESOURCE_TYPE,
-        PUBLIC_IDENTIFIER
-      );
-      if (!codeUnique) {
-        form.valid = false;
-        form.errors.code = ['Code already exists'];
-      }
+    // ASSERT : Code has (1) not changed, or (2) changed to another unique value
+    // Use URL param code for lookup, form code for comparison
+    if (params.code !== formData.code) {
+      // @ts-ignore - FORM : Fix form type error
+      form = await assertCodeUnique(db, form, formData);
     }
 
-    if (!form.valid) {
-      // If validation fails, return form with the errors
-      return SuperFormResponse<Organisation>(form);
-    }
+    // RETURN : early if the form is not valid
+    // @ts-ignore - FORM : Fix SuperForm type error
+    if (!form.valid) return SuperFormResponse<Organisation>(form);
 
-    const { baseOrganisation, formTranslations, formUserRoles } =
-      extractEntitiesToUpdate(form.data as Organisation);
-    const updatedOrganisation = await updateOrganisation(
+    // ASSERT : Permissions to update organisation
+    assertPermissionsToUpdateOrganisation(session, request, formData, userRoles);
+
+    // STATE : Will the current user lose access on membership changes.
+    const isAccessLost = isAccessLostUponSuccess(session, formData, userRoles);
+
+    // DB : Update the organisation and related data using URL param code for lookup
+    const updatedOrganisation = await updateOrganisationWithRelated(
       db,
-      baseOrganisation,
-      params[PUBLIC_IDENTIFIER] as string
+      form.data,
+      params.code
     );
-    const updatedTranslations = await updateTranslations(
-      db,
-      formTranslations,
-      updatedOrganisation.id
-    );
-    const updatedUserRoles = await updateUserRoles(
-      db,
-      formUserRoles,
-      updatedOrganisation.id
-    );
-    const updatedForm = await rebuildFormData(
+
+    // FORM : Rebuild the form data
+    const updatedForm = await toFormShape(
       updatedOrganisation,
-      updatedTranslations,
-      updatedUserRoles
+      updatedOrganisation.i18n,
+      updatedOrganisation.userRoles
     );
 
-    if (userLosesAccess || codeChanged) {
-      redirect = true;
-    }
+    // STATE : Determine if redirect is needed (only when code changes or access is lost)
+    const shouldRedirect = isAccessLost || params.code !== formData.code;
 
+    // HTTP : 200 JSON or 400
+    // @ts-ignore - FORM : Fix SuperForm type error
     return SuperFormResponse<Organisation>(
       updatedForm,
-      redirect,
-      userLosesAccess,
+      shouldRedirect,
+      isAccessLost,
       RESOURCE_PATH
     );
   } catch (err) {
-    console.error(err);
-    return SuperFormErrorResponse(RESOURCE_TYPE);
+    // DB : Query Error
+    console.error('Database query error:', err);
+    // HTTP : 500 Error
+    return SuperFormErrorResponse(RESOURCE_TYPE, 'update');
   }
 };
 
+/********************
+ *  UPDATE :: PATCH
+ ************/
+
+/**
+ * Partially updates an organisation - only the fields that are provided in the request body.
+ * This endpoint is used for updating fields that don't require a full form submission,
+ * such as the organisation publish or archive status.
+ */
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
-  const { db } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE
-  );
-
+  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
   try {
-    const formData: OrganisationPartialUpdate = await request.json();
-    const form = await superValidate(formData, zod(OrganisationPatch), {
-      defaults: {}
-    });
+    // ASSERT : Valid form data
+    const newData: OrganisationPartial = await request.json();
 
-    if (!form.valid) {
-      return json(form, { status: 400 });
+    // Get the existing organisation to verify access
+    const existing = await getOrganisation(db, {}, [
+      eq(organisation.code, params.code as string)
+    ]) as OrganisationDB;
+
+    if (!existing) {
+      return error(404, 'Organisation not found');
     }
 
-    const updated = await updateOrganisation(db, form.data, params.code as string);
-    return json({ success: true, data: updated });
+    // Use assertion functions for access control
+    assertPermissionsToUpdateOrganisation(session, request, existing, userRoles);
+
+    // DB : Update only the basic organisation fields (no relations for PATCH)
+    const updated = await updateOrganisation(db, newData, params.code as string);
+
+    // Return the updated organisation in the format expected by components
+    return json({ type: 'success', data: updated });
   } catch (err) {
-    console.error(err);
-    return json({ success: false, error: 'Failed to update layer' }, { status: 500 });
+    // DB : Query Error
+    console.error('Database query error:', err);
+    // HTTP : 500 Error
+    return SuperFormErrorResponse(RESOURCE_TYPE, 'patch');
   }
 };

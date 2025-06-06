@@ -6,9 +6,9 @@ import { XMark } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 import { slide } from 'svelte/transition';
-const mapCtx = getMapContext();
+const mapCtx = getMapCtx();
 
 // Get reactive filter count
 const filterCount = $derived(mapCtx.getFilterCount());

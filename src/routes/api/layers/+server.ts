@@ -1,137 +1,126 @@
-import { error, type RequestHandler } from '@sveltejs/kit';
-import {
-  getDatabaseOrError,
-  isValidQueryParamsOrError,
-  JSONResponseOrError,
-  SuperFormResponse
-} from '$lib/api';
-import { superValidate, type SuperValidated } from 'sveltekit-superforms';
-// DB
-import { hierarchicalResourceQuery } from '$lib/db';
-import { projectRole, layerI18n, layer } from '$lib/db/schema';
-import {
-  createLayer,
-  createTranslations,
-  extractEntitiesToInsert,
-  rebuildFormData,
-  createLayerProperties
-} from '$lib/db/services/layer';
-import { isFieldUnique } from '$lib/db';
+// SVELTE
+import { error } from '@sveltejs/kit';
+// FORMS
+import { superValidate } from 'sveltekit-superforms';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
-import { LayerInsertAPI, LayerUpdateAPI } from '$lib/db/zod';
+import { LayerInsertAPI } from '$lib/db/zod';
+// API
+import {
+  getDatabase,
+  isValidQueryParamsOrError,
+  getPrisms,
+  logZodError,
+  SuperFormResponse,
+  SuperFormErrorResponse,
+  JSONResponseOrError
+} from '$lib/api';
+import {
+  assertPermissionsToCreateLayer,
+  getLayerQueryContext,
+  layerCollectionWithRelations
+} from '$lib/api/services/layer';
+// DB
+import { layer } from '$lib/db/schema';
+import {
+  listLayers,
+  createLayerWithRelated,
+  toResponseShape,
+  toFormShape
+} from '$lib/db/services/layer';
 // TYPES
-import type { NewLayer, Layer } from '$lib/types';
+import type { RequestHandler } from '@sveltejs/kit';
+import type { SuperValidated } from 'sveltekit-superforms';
+import type { Layer, LayerNew } from '$lib/types';
 
+/********************
+ *  COMMON
+ ************/
 const RESOURCE_TYPE = 'layer';
 const RESOURCE_PATH = 'layers';
-let ACCESS_STRATEGY = 'ResourceOwnChildren';
 
-export const GET: RequestHandler = async ({ locals, platform, url }) => {
-  // Layers which are published are visible to all users
-  if (
-    url.searchParams.get('isPublished') === 'true' &&
-    url.searchParams.get('isAdminView') !== 'true'
-  ) {
-    ACCESS_STRATEGY = 'Public';
-    // For the Admin View we use ResourceAll instead of Public so that
-    // unpublished organisations are still visible -- in applyPublishedConstraints
-    // we filter out unpublished records for the Public access strategy.
-  } else if (url.searchParams.get('isAdminView') === 'true') {
-    ACCESS_STRATEGY = 'ResourceAll';
-  }
+/********************
+ *  LIST
+ ************/
 
-  // AUTH : Pass or Fail
-  const { db, userId, accessStrategy } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE
+/**
+ * Lists layers
+ */
+export const GET: RequestHandler = async ({ locals, platform, url, request }) => {
+  // ASSERT : User Logged in
+  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
+
+  // ASSERT : Valid query parameters
+  // Validate query parameters, or return 400
+  let queryParams = isValidQueryParamsOrError(layer, url) as Record<
+    string,
+    string | string[]
+  >;
+
+  // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
+  let { conditions } = getLayerQueryContext(
+    db,
+    session,
+    request,
+    queryParams,
+    userRoles,
+    getPrisms(url)
   );
 
   try {
-    // Validate query parameters, or return 400
-    const queryParams = isValidQueryParamsOrError(layer, url);
+    // DB : Execute query with access control
+    const result = await listLayers(db, layerCollectionWithRelations, conditions);
 
-    const result = await hierarchicalResourceQuery(
-      db,
-      accessStrategy,
-      {
-        translations: true,
-        project: true,
-        properties: {
-          with: {
-            property: {
-              with: {
-                translations: true
-              }
-            }
-          }
-        }
-      },
-      userId,
-      projectRole,
-      layerI18n,
-      {
-        organisation: url.searchParams.getAll('organisation'),
-        project: url.searchParams.getAll('project')
-      },
-      3,
-      queryParams
+    // RESPONSE : Build the response shape
+    const data = await Promise.all(
+      result.map(async (layer) => {
+        return await toResponseShape(layer, layer.i18n, layer.properties || []);
+      })
     );
 
     // HTTP : 200 JSON or 404
-    return JSONResponseOrError(result);
+    return JSONResponseOrError(data);
   } catch (e) {
     // DB : Query Error
-    console.error('Database query error:', e);
-    // HTTP : 500 Error
+    logZodError(e, 'Zod list error:');
     return error(500, 'Dust Accumulation Critical');
   }
 };
 
 export const POST: RequestHandler = async ({ request, locals, platform }) => {
-  // AUTH : Pass or Fail
-  const { db, userId, accessStrategy } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE
-  );
+  // ASSERT : User logged in
+  const { db, session, userRoles } = await getDatabase(locals, platform);
 
   try {
-    const formData: NewLayer = await request.json();
+    // VALIDATION : Parse and validate form data
+    const formData: LayerNew = await request.json();
     const form = (await superValidate(
       formData,
+      // @ts-ignore - FORM : Fix type error
       zod(LayerInsertAPI)
-    )) as SuperValidated<Layer>;
+    )) as SuperValidated<LayerNew>;
 
     if (!form.valid) {
-      return SuperFormResponse(form);
+      return SuperFormResponse<Layer>(form);
     }
 
-    const { baseLayer, formTranslations } = extractEntitiesToInsert(form.data);
-    const createdLayer = await createLayer(db, baseLayer);
-    const createdTranslations = await createTranslations(
-      db,
-      formTranslations,
-      createdLayer.id
-    );
-    const createdProperties = await createLayerProperties(
-      db,
-      createdLayer.id,
-      form.data.properties
+    // ACCESS CONTROL : Check permissions
+    assertPermissionsToCreateLayer(session, request, formData, userRoles);
+
+    // DB : Create layer with related data
+    const createdLayer = await createLayerWithRelated(db, form.data);
+
+    // RESPONSE : Convert to form shape and return
+    const updatedForm = await toFormShape(
+      createdLayer.layer,
+      createdLayer.i18n,
+      createdLayer.properties,
+      createdLayer.project
     );
 
-    const updatedForm = await rebuildFormData(
-      createdLayer,
-      createdTranslations,
-      createdProperties
-    );
-
-    return SuperFormResponse(updatedForm, true, false, RESOURCE_PATH, 201);
+    return SuperFormResponse<Layer>(updatedForm, true, false, RESOURCE_PATH, 201);
   } catch (err) {
-    console.error(err);
-    return error(500, 'Failed to create layer');
+    logZodError(err, 'Zod create error:');
+    return SuperFormErrorResponse(RESOURCE_TYPE, 'create');
   }
 };

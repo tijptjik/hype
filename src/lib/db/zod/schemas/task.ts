@@ -5,37 +5,39 @@ import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'driz
 // SCHEMA
 import { task, taskImage } from '$lib/db/schema';
 // ZOD SCHEMAS
-import { UserBase } from './user';
+import { UserBase, UserBasic } from './user';
 import { ImageBase } from './image';
+import { FeatureAPI, FeatureBase, FeatureI18nBase, FeaturePropertyAPI } from './feature';
+import { ProjectBase, ProjectI18nBase } from './project';
+import { OrganisationBase, OrganisationI18nBase } from './organisation';
+import { PropertyBase, PropertyI18nBase, PropertyValueBase, PropertyValueI18nBase } from './property';
+// ENUMS
+import { TaskType, TaskReviewOutcome, TaskReviewAction, supportedLocales } from '$lib/enums';
+import { getLocales } from '..';
 
 /* ----------------- */
-// TASK SCHEMAS
+// TASK CORE
 /* -------- */
 
-export const TaskBase = createSelectSchema(task);
-export const TaskInsert = createInsertSchema(task).extend({
-  // TODO - Confirm these are necessary
-  type: z.enum(['reportedMissing', 'newPhoto', 'newFeature']),
-  isReviewed: z.boolean().default(false),
-  reviewOutcome: z.enum(['rejected', 'accepted']).optional(),
-  reviewAction: z
-    .enum([
-      'ignored',
-      'set-unpublished',
-      'set-intangible',
-      'set-archived',
-      'added-all-photos',
-      'added-all-photos-with-intent',
-      'added-feature'
-    ])
-    .optional()
+export const TaskBase = createSelectSchema(task).extend({
+  type: z.enum(Object.values(TaskType) as [string, ...string[]]),
 });
-
-export const TaskUpdate = createUpdateSchema(task);
+export const TaskInsert = createInsertSchema(task).extend({
+  type: z.enum(Object.values(TaskType) as [string, ...string[]]),
+  isReviewed: z.boolean().default(false),
+  reviewOutcome: z.enum(Object.values(TaskReviewOutcome) as [string, ...string[]]).optional(),
+  reviewAction: z.enum(Object.values(TaskReviewAction) as [string, ...string[]]).optional()
+});
+export const TaskUpdate = createUpdateSchema(task).extend({
+  type: z.enum(Object.values(TaskType) as [string, ...string[]]).optional(),
+  reviewOutcome: z.enum(Object.values(TaskReviewOutcome) as [string, ...string[]]).optional(),
+  reviewAction: z.enum(Object.values(TaskReviewAction) as [string, ...string[]]).optional()
+});
 
 /* ----------------- */
 // TASK RELATIONAL SCHEMAS :: IMAGES 
 /* -------- */
+
 export const TaskImageBase = createSelectSchema(taskImage);
 export const TaskImageInsert = createInsertSchema(taskImage);
 export const TaskImageUpdate = createUpdateSchema(taskImage);
@@ -43,117 +45,105 @@ export const TaskImageUpdate = createUpdateSchema(taskImage);
 /* ----------------- */
 // TASK API SCHEMAS
 /* -------- */
-export const TaskAPI = TaskBase.extend({
-  organisation: z.any().optional(),
-  project: z.any().optional(),
-  feature: z.any().optional(),
-  // TODO confirm whether it's images or taskImages
-  images: z.array(ImageBase).optional(),
-  taskImages: z.array(TaskImageInsert).optional(),
-  contributor: UserBase.optional(),
-  reviewer: UserBase.optional()
+
+export const TaskBaseRaw = TaskBase.extend({
+  organisation: OrganisationBase.extend({
+    i18n: z.array(OrganisationI18nBase)
+  }),
+  project: ProjectBase.extend({
+    i18n: z.array(ProjectI18nBase)
+  }),
+  feature: FeatureBase.extend({
+    i18n: z.array(FeatureI18nBase),
+    properties: z.array(FeaturePropertyAPI.extend({
+      property: PropertyBase.extend({
+        i18n: z.array(PropertyI18nBase)
+      }),
+      propertyValue: PropertyValueBase.extend({
+        i18n: z.array(PropertyValueI18nBase)
+      }).optional().nullable()
+    }))
+  }),
+  images: z.array(TaskImageBase.extend({
+    image: ImageBase
+  })).optional(),
+  contributor: UserBasic.optional().nullable(),
+  reviewer: UserBasic.optional().nullable()
 });
 
-export const TaskInsertAPI = TaskInsert.extend({
-  // TODO confirm whether these are necessary
-  organisation: z.any().optional(),
-  project: z.any().optional(),
-  feature: z.any().optional(),
-  images: z.array(ImageBase).optional(),
-  taskImages: z.array(TaskImageInsert).optional(),
-  contributor: UserBase.optional(),
-  reviewer: UserBase.optional()
+export const TaskCollectionAPI = TaskBase.extend({
+  organisation: OrganisationBase.extend({
+    i18n: getLocales(OrganisationI18nBase)
+  }),
+  project: ProjectBase.extend({
+    i18n: getLocales(ProjectI18nBase)
+  }),
+  feature: FeatureBase.extend({
+    i18n: getLocales(FeatureI18nBase)
+  }),
+  images: z.array(TaskImageBase.extend({
+    image: ImageBase
+  })).optional(),
+  contributor: UserBasic.optional().nullable(),
+  reviewer: UserBasic.optional().nullable()
 });
+
+export const TaskAPI = TaskBase.extend({
+  organisation: OrganisationBase.extend({
+    i18n: getLocales(OrganisationI18nBase)
+  }),
+  project: ProjectBase.extend({
+    i18n: getLocales(ProjectI18nBase)
+  }),
+  feature: FeatureBase.extend({
+    i18n: getLocales(FeatureI18nBase),
+    properties: z.array(FeaturePropertyAPI.extend({
+      property: PropertyBase.extend({
+        i18n: getLocales(PropertyI18nBase)
+      }),
+      propertyValue: PropertyValueBase.extend({
+        i18n: getLocales(PropertyValueI18nBase)
+      }).optional().nullable()
+    }))
+  }),
+  images: z.array(TaskImageBase.extend({
+    image: ImageBase
+  })).optional(),
+  contributor: UserBasic.optional().nullable(),
+  reviewer: UserBasic.optional().nullable()
+});
+
+export const TaskInsertAPI = z.discriminatedUnion('type', [
+  // newFeature tasks can have any raw feature data - validation happens during feature creation
+  TaskInsert.extend({
+    type: z.literal('newFeature'),
+    feature: z.any().optional(), // Accept any feature data without validation
+    organisation: OrganisationBase.optional(),
+    project: ProjectBase.optional(),
+    images: z.array(TaskImageInsert).optional(),
+    contributor: UserBasic.optional(),
+  }),
+  // Other task types need a featureId and can have complete FeatureAPI
+  TaskInsert.extend({
+    type: z.enum(['reportedMissing', 'newPhoto']),
+    feature: FeatureAPI.optional(),
+    organisation: OrganisationBase.optional(),
+    project: ProjectBase.optional(),
+    images: z.array(TaskImageInsert).optional(),
+    contributor: UserBasic.optional(),
+  })
+]);
 
 export const TaskUpdateAPI = TaskUpdate.extend({
-  // TODO confirm whether these are necessary
-  organisation: z.any().optional(),
-  project: z.any().optional(),
-  feature: z.any().optional(),
-  images: z.array(ImageBase).optional(),
-  taskImages: z.array(TaskImageUpdate).optional(),
-  contributor: UserBase.optional(),
-  reviewer: UserBase.optional()
+  organisation: OrganisationBase.optional(),
+  project: ProjectBase.optional(),
+  feature: FeatureAPI.optional(),
+  images: z.array(TaskImageUpdate).optional(),
+  contributor: UserBasic.optional(),
+  reviewer: UserBasic.optional()
 });
 
 export const TaskImageUpdateAPI = TaskImageUpdate.extend({
-  task: z.any().optional(),
+  task: TaskBase.optional(),
   image: ImageBase.optional()
 });
-
-// TODO Remove once we've migrated to the new schemas
-
-/* ----------------- */
-// DEPRECATED TASK SCHEMAS
-/* -------- */
-
-
-/* ----------------- */
-// TASKS
-// /* -------- */
-
-// // Base schemas
-// export const TaskBase = createSelectSchema(task);
-// export const TaskInsert = createInsertSchema(task).extend({
-//   id: z.string().optional(),
-//   type: z.enum(['reportedMissing', 'newPhoto', 'newFeature']),
-//   isReviewed: z.boolean().default(false),
-//   reviewOutcome: z.enum(['rejected', 'accepted']).optional(),
-//   reviewAction: z
-//     .enum([
-//       'ignored',
-//       'set-unpublished',
-//       'set-intangible',
-//       'set-archived',
-//       'added-all-photos',
-//       'added-all-photos-with-intent',
-//       'added-feature'
-//     ])
-//     .optional()
-// });
-
-// export const TaskUpdate = TaskInsert.extend({
-//   id: z.string()
-// });
-
-/* ----------------- */
-// TASK IMAGES
-/* -------- */
-
-// // Base schemas
-// export const TaskImageBase = createSelectSchema(taskImage);
-// export const TaskImageInsert = createInsertSchema(taskImage).extend({
-//   isPrimary: z.boolean().default(false)
-// });
-
-// export const TaskImageUpdate = TaskImageInsert.extend({
-//   taskId: z.string(),
-//   imageId: z.string()
-// });
-
-// export const TaskImageUpdateAPI = TaskImageUpdate.extend({
-//   task: TaskBase.optional(),
-//   image: ImageBase.optional()
-// });
-
-// export const TaskInsertAPI = TaskInsert.extend({
-//   organisation: OrganisationBase.optional(),
-//   project: ProjectBase.optional(),
-//   feature: FeatureInsertAPI.optional(),
-//   images: z.array(ImageBase).optional(),
-//   taskImages: z.array(TaskImageInsert).optional(),
-//   contributor: UserBase.optional(),
-//   reviewer: UserBase.optional()
-// });
-
-// export const TaskUpdateAPI = TaskUpdate.extend({
-//   organisation: OrganisationBase.optional(),
-//   project: ProjectBase.optional(),
-//   feature: FeatureUpdateAPI.optional(),
-//   images: z.array(ImageBase).optional(),
-//   taskImages: z.array(TaskImageUpdate).optional(),
-//   contributor: UserBase.optional(),
-//   reviewer: UserBase.optional()
-// });
-
-// export const TaskPatch = TaskUpdate.partial();

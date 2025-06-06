@@ -9,7 +9,7 @@ import type { FieldPropsExtended, FieldDiscriminator } from '$lib/types';
 
 // STATE : PROPS
 let {
-  languageTag,
+  locale,
   fieldRoot,
   fieldIndex,
   fieldDiscriminator,
@@ -22,18 +22,18 @@ let {
 let { form, constraints, errors } = fieldProps.form;
 
 let fieldValues = $derived(
-  getValues($form, field, languageTag, fieldRoot, fieldIndex, fieldKey) || {
+  getValues($form, field, locale, fieldRoot, fieldIndex, fieldKey) || {
     value: ''
   }
 );
 
 // STATE : DERIVED
 let id = $derived(
-  getId(field, fieldRoot, fieldIndex, fieldDiscriminator, fieldKey, languageTag)
+  getId(field, fieldRoot, fieldIndex, fieldDiscriminator, fieldKey, locale)
 );
 </script>
 
-{#if !field.isTranslated && languageTag !== 'core' && languageTag !== 'en'}
+{#if !field.isTranslated && locale !== 'core' && locale !== 'en'}
   <!-- SPACER -->
   <div class="h-[74px] w-full rounded-lg bg-neutral bg-opacity-10"></div>
 {:else}
@@ -47,19 +47,20 @@ let id = $derived(
         bind:value={fieldValues.value as string}
         {id}
         values={field.values}
-        {languageTag}
+        {locale}
         {...field}
         onchange={() =>
           updateForm(
             form,
             field,
-            languageTag,
+            locale,
             fieldRoot,
             fieldIndex,
             fieldKey,
-            fieldValues.value as string
+            fieldValues.value as string,
+            false // Set to false when human edits the field
           )} />
     </div>
-    <ErrorLabel {errors} {field} {languageTag} {fieldRoot} {fieldIndex} {fieldKey} />
+    <ErrorLabel {errors} {field} {locale} {fieldRoot} {fieldIndex} {fieldKey} />
   </label>
 {/if}

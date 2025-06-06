@@ -40,10 +40,8 @@ export const constraints: Record<string, z.ZodType<any>> = {
     .max(32, { message: m.admin__validation_short_name_lte_32_chars() }),
   description: z
     .string()
-    .max(1024, { message: m.admin__validation_description_lte_1024_chars() })
-    .optional()
-    .nullish()
-    .transform((x) => x ?? undefined),
+    .max(8192, { message: m.admin__validation_description_lte_1024_chars() })
+    .nullish(),
   key: z
     .string()
     .regex(/^[a-zA-Z0-9_$]*$/, {
@@ -53,13 +51,19 @@ export const constraints: Record<string, z.ZodType<any>> = {
   url: z
     .string()
     .url({ message: m.admin__validation_url_invalid() })
-    .optional()
-    .nullish()
-    .transform((x) => x ?? undefined),
+    .nullish(),
   attribution: z
     .string()
     .min(1, { message: m.admin__validation_attribution_is_required() })
+    .max(128, { message: m.admin__validation_attribution_lte_128_chars() }),
+  label: z
+    .string()
+    .min(1, { message: 'Label is required' })
+    .max(32, { message: m.admin__validation_short_name_lte_32_chars() }),
+  placeholder: z
+    .string()
     .max(128, { message: m.admin__validation_attribution_lte_128_chars() })
+    .nullish()
 };
 
 export const getDefaultConstraints = (
@@ -76,13 +80,13 @@ export const getDefaultConstraints = (
     | typeof featureI18n
 ) => {
   return Object.keys(table).reduce(
-    (acc, key) => {
+    (acc: Record<string, any>, key) => {
       if (key in constraints) {
         acc[key] = constraints[key as keyof typeof constraints];
       }
       return acc;
     },
-    {} as Record<string, z.ZodType<any>>
+    {}
   );
 };
 
@@ -103,12 +107,42 @@ export function createRequiredObjSchema<K extends string, V extends z.ZodTypeAny
 
 // TODO - It looks like this is stripping the validation messages for the default values
 // e.g. organisaiton.name should render as m.admin__validation_name_is_required() but instead renders "required".
-export const getLocales = (model: z.ZodType<any>) =>
-  createRequiredObjSchema(z.enum(supportedLocales), model).default({
-    en: { locale: 'en' },
-    'zh-hant': { locale: 'zh-hant' },
-    'zh-hans': { locale: 'zh-hans' }
-  });
+export const getLocales = (model: z.ZodType<any>, requiredStringKeys: string[] = [
+    'value',
+    'label'
+  ]) =>
+  z.record(z.enum(supportedLocales), model)
+    .optional()
+    .nullable()
+    .refine(
+      (i18nObject) => {
+        // If i18n is null or undefined, that's valid
+        if (!i18nObject) {
+          return true;
+        }
+
+        // If i18n exists, validate only the locales that are present
+        return Object.entries(i18nObject).every(([locale, localeSpecificObject]) => {
+          if (!localeSpecificObject) {
+            return true;
+          }
+
+          return requiredStringKeys.every((key) => {
+            if (!(key in localeSpecificObject)) {
+              return true;
+            }
+            const value = localeSpecificObject[key];
+            if (typeof value === 'string') {
+              return value.trim() !== '';
+            }
+            return true;
+          });
+        });
+      },
+      {
+        message: m.civil_stale_jurgen_link() // Assuming you have a suitable message key
+      }
+    );
 
 export const getUserRoles = (model: z.ZodType<any>) =>
   z

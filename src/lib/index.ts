@@ -1,7 +1,7 @@
 // SVELTE
 import { derived, type Writable } from 'svelte/store';
 import { browser } from '$app/environment';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 // UTILITIES
 import deepEquals from 'fast-deep-equal';
 // COMPONENTS
@@ -10,43 +10,49 @@ import SelectField from '$lib/components/forms/fields/Select.svelte';
 import RangeField from '$lib/components/forms/fields/Range.svelte';
 import TextareaField from '$lib/components/forms/fields/Textarea.svelte';
 import UsersField from '$lib/components/forms/fields/Users.svelte';
-import CustomField from '$lib/components/forms/fields/Properties.svelte';
+import CustomField from '$lib/components/forms/fields/Property.svelte';
 import ListField from '$lib/components/forms/fields/List.svelte';
 import ToggleField from '$lib/components/forms/fields/Toggle.svelte';
+import DisplayField from '$lib/components/forms/fields/Display.svelte';
 // TYPES
 import type { RequestEvent } from '@sveltejs/kit';
 import type {
   Field,
-  LanguageTag,
-  LanguageTagExtended,
+  Locale,
+  LocaleExtended,
   Resource,
   FormField,
   FormFieldDefinition,
   FieldDiscriminator,
   FieldComponentType,
-  TargetLang
+  Form,
+  FeatureForm
 } from './types';
+import type { Task } from 'maplibre-gl';
 
 /**
  * Convenience functions to prevent event handlers from being called multiple times
  */
 
 export function once(fn: (event: Event) => void) {
-  return function (event: Event) {
-    if (fn) fn.call(this, event);
-    fn = null;
+  let handler: ((event: Event) => void) | undefined = fn;
+  return function (this: unknown, event: Event) {
+    if (handler) {
+      handler.call(this, event);
+      handler = undefined;
+    }
   };
 }
 
 export function preventDefault(fn: (event: Event) => void) {
-  return function (event: Event) {
+  return function (this: unknown, event: Event) {
     event.preventDefault();
     fn.call(this, event);
   };
 }
 
 export function stopPropagation(fn: (event: Event) => void) {
-  return function (event: Event) {
+  return function (this: unknown, event: Event) {
     event.stopPropagation();
     fn.call(this, event);
   };
@@ -58,23 +64,6 @@ export function stopPropagation(fn: (event: Event) => void) {
 export const on_cloudflare = (event: RequestEvent) => {
   return event.platform?.env.CF_PAGES === 'true';
 };
-
-let oldState: App.PageState = {};
-
-export const pageState = derived<typeof page, App.PageState>(
-  page,
-  (_, set) => {
-    if (!browser) return;
-    setTimeout(() => {
-      const newState = history.state['sveltekit:states'] ?? {};
-      if (!deepEquals(oldState, newState)) {
-        oldState = newState;
-        set(newState);
-      }
-    });
-  },
-  {}
-);
 
 export function toTitleCase(str: string) {
   return str.replace(
@@ -93,7 +82,8 @@ export const getFieldComponent = (componentType?: FieldComponentType) => {
     UsersField: UsersField,
     CustomField: CustomField,
     ListField: ListField,
-    ToggleField: ToggleField
+    ToggleField: ToggleField,
+    DisplayField: DisplayField
   }[componentType];
 };
 
@@ -101,9 +91,7 @@ export function loadScript(src: string) {
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = src;
-
     document.body.appendChild(script);
-
     script.addEventListener('load', () => resolve(script));
     script.addEventListener('error', () => reject(script));
   });
@@ -117,56 +105,98 @@ export function formatDate(dateString: string): string {
   });
 }
 
-export const isPrimaryLang = (languageTag: LanguageTagExtended) => {
-  return languageTag === 'core' || languageTag === 'en' || languageTag == undefined;
+export const isNotLocale = (maybeLocale: LocaleExtended) => {
+  return maybeLocale === 'core' || maybeLocale == undefined;
 };
 
-export const genField = (fieldRoot: string) => `${fieldRoot}Gen` as keyof Resource;
+export const genField = (fieldRoot: Field) => `${fieldRoot}Gen` as Field;
 
 export const getValues = (
-  form: Writable<Resource>,
-  field: FormField,
-  languageTag: LanguageTagExtended,
-  fieldRoot: string,
+  form: Form['form'],
+  field: FormFieldDefinition,
+  locale: LocaleExtended,
+  fieldRoot: Field,
   fieldIndex: number,
-  fieldKey: string
+  fieldKey: Field
 ) => {
-  // Default languageTag to core if field is not translated
-  if (!field.isTranslated) {
-    languageTag = 'core';
-  }
   // Get reference to the field
-  let ref: Record<string, string | boolean>;
-  let key: string;
-  // FIELD : ROOT | NESTED
-  // if (!field.isNested && fieldDiscriminator !== 'specifier') {
-  if (!field.isArray && !field.isNested) {
+  let ref: any;
+  let key: Field;
+
+  if (!field.isArray && !field.isNested && !field.isTranslated) {
     ref = form;
     key = fieldRoot;
   } else if (field.isArray && !field.isNested) {
-    ref = form[fieldRoot][fieldIndex];
+    ref = (form as any)[fieldRoot][fieldIndex];
     key = fieldKey;
-  } else if (field.isNested) {
-    ref = form[fieldRoot][fieldIndex];
+  } else if (field.isNested && !field.isTranslated) {
+    ref = (form as any)[fieldRoot][fieldIndex];
     key = fieldKey;
+  } else if (field.isNested && field.isTranslated) {
+    const baseRef = (form as any)[fieldRoot][fieldIndex];
+    // Initialize i18n structure if it doesn't exist
+    if (!baseRef.i18n) {
+      baseRef.i18n = {};
+    }
+    if (!baseRef.i18n[locale as Locale]) {
+      baseRef.i18n[locale as Locale] = {};
+    }
+    ref = baseRef.i18n[locale as Locale];
+    key = fieldKey;
+  } else if (field.isTranslated) {
+    // Initialize i18n structure if it doesn't exist
+    if (!(form as any).i18n) {
+      (form as any).i18n = {};
+    }
+    if (!(form as any).i18n[locale as Locale]) {
+      (form as any).i18n[locale as Locale] = {};
+    }
+    ref = (form as any).i18n[locale as Locale];
+    key = fieldRoot;
   } else {
     console.error('NO FIELD REFERENCE FOUND', field);
   }
-  // FIELD : PRIMARY | TRANSLATED
-  if (!isPrimaryLang(languageTag)) {
-    ref = ref.translations[languageTag];
-  }
   // FIELD : GET VALUE
-  const value = ref[key] ?? ('' as string);
-  const isGenAI = ref[genField(key)] ?? (false as boolean);
+  if (!ref) {
+    console.error('NO FIELD REFERENCE FOUND', field);
+  }
+  if (key!) {
+    const value = ref?.[key] ?? ('' as string);
+    const isGenAI = ref?.[genField(key)] ?? (false as boolean);
+    return { value, isGenAI };
+  }
+};
 
-  return { value, isGenAI };
+export const updateFeaturePropertyValue = (
+  form: FeatureForm['form'],
+  fieldRoot: Field,
+  fieldIndex: number,
+  value: string | null,
+  fieldKey: string = 'value'
+) => {
+  form.update(($form: any) => {
+    $form[fieldRoot][fieldIndex][fieldKey] = value;
+    return $form;
+  });
+};
+
+export const getFeaturePropertyComplexValue = (
+  form: FeatureForm['form'],
+  fieldRoot: Field,
+  fieldIndex: number,
+  value: string | null,
+  fieldKey: string = 'value'
+) => {
+  form.update(($form: any) => {
+    $form[fieldRoot][fieldIndex][fieldKey] = value;
+    return $form;
+  });
 };
 
 export const updateForm = (
-  form: Writable<Resource>,
-  field: FormField,
-  languageTag: LanguageTag,
+  form: Writable<Exclude<Resource, Task>>,
+  field: FormFieldDefinition,
+  locale: Locale,
   fieldRoot: string,
   fieldIndex: number,
   fieldKey: string,
@@ -174,31 +204,53 @@ export const updateForm = (
   isGenAI?: boolean
 ) => {
   form.update(($form) => {
-    let ref: Record<string, string | boolean | Record<TargetLang, unknown>>;
-    let key: string;
-    // FIELD : ROOT | NESTED
-    // if (!field.isNested && fieldDiscriminator !== 'specifier') {
+    let baseObject: any;
+    let propertyKey: string;
+
     if (!field.isArray && !field.isNested) {
-      ref = $form;
-      key = fieldRoot;
-    } else if (field.isArray && !field.isNested) {
-      ref = $form[fieldRoot][fieldIndex];
-      key = fieldKey;
-    } else if (field.isNested) {
-      ref = $form[fieldRoot][fieldIndex];
-      key = fieldKey;
+      baseObject = $form;
+      propertyKey = fieldRoot;
+    } else if (field.isArray || field.isNested) {
+      const array = ($form as any)[fieldRoot] as any[];
+      if (!array || array[fieldIndex] === undefined) {
+        return $form;
+      }
+      baseObject = array[fieldIndex];
+      propertyKey = fieldKey;
     } else {
-      console.error('NO FIELD REFERENCE FOUND', field);
+      return $form;
     }
-    // FIELD : PRIMARY | TRANSLATED
-    if (!isPrimaryLang(languageTag)) {
-      ref = ref.translations[languageTag as TargetLang];
+
+    if (baseObject === undefined) {
+      return $form;
     }
-    // FIELD : SET VALUE
-    ref[key] = value;
+
+    let targetObject: any;
+    if (field.isTranslated) {
+      if (isNotLocale(locale)) {
+        return $form;
+      }
+
+      if (!baseObject.i18n) {
+        baseObject.i18n = {};
+      }
+      if (!baseObject.i18n[locale as Locale]) {
+        baseObject.i18n[locale as Locale] = {};
+      }
+      targetObject = baseObject.i18n[locale as Locale];
+    } else {
+      targetObject = baseObject;
+    }
+
+    if (targetObject === undefined) {
+      return $form;
+    }
+
+    targetObject[propertyKey] = value;
     if (isGenAI !== undefined) {
-      ref[genField(key)] = isGenAI;
+      targetObject[genField(propertyKey as Field)] = isGenAI;
     }
+
     return $form;
   });
 };
@@ -209,21 +261,19 @@ export const getId = (
   fieldIndex: number,
   fieldDiscriminator: FieldDiscriminator,
   fieldKey: string,
-  languageTag: LanguageTagExtended
+  maybeLocale: LocaleExtended
 ) => {
   if (field.isNested) {
-    return `${fieldRoot}_${fieldDiscriminator}_${fieldIndex}_${fieldKey}_${languageTag}`;
+    return `${fieldRoot}_${fieldDiscriminator}_${fieldIndex}_${fieldKey}_${maybeLocale}`;
   } else if (fieldDiscriminator === 'specifier') {
-    return `${fieldRoot}_${fieldIndex}_${fieldKey}_${languageTag}`;
+    return `${fieldRoot}_${fieldIndex}_${fieldKey}_${maybeLocale}`;
   } else {
-    return `${fieldRoot}_${languageTag}`;
+    return `${fieldRoot}_${maybeLocale}`;
   }
 };
 
 // CONFIG
-export const sourceLanguageTag = 'en';
-export const targetLanguageTags: LanguageTag[] = ['zh-hant', 'zh-hans'];
-export const languageTags: LanguageTag[] = [sourceLanguageTag, ...targetLanguageTags];
+export const targetLanguageTags: Locale[] = ['zh-hant', 'zh-hans'];
 export const NEW_TITLE = 'New';
 export const NEW_REF = NEW_TITLE.toLowerCase();
 export const ADMIN_PATH = '/admin';

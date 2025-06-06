@@ -1,44 +1,72 @@
+// SVELTE
 import { error, json } from '@sveltejs/kit';
-import { getDatabaseOrError, JSONResponseOrError } from '$lib/api';
-import { image, featureImage } from '$lib/db/schema';
+// DRIZZLE
 import { eq } from 'drizzle-orm';
-import type { RequestHandler } from '@sveltejs/kit';
+// DB
+import { image, featureImage, session } from '$lib/db/schema';
+import { getUserById } from '$lib/db/services/user';
 import {
-  checkProjectAccessForImage,
-  checkOrganisationAccessForImage,
-  checkFeatureAccessForImage
+  getImageById,
+  updateFeatureImage,
+  toResponseShape,
+  updateImage
 } from '$lib/db/services/image';
-import { genericEntityQuery } from '$lib/db';
-import type { AccessStrategyOption, Id, StatefulAccessOption } from '$lib/types';
-import type { ResourceType } from '$lib/types';
+// ZOD
+import { ImageFlatUpdate, ImageUpdate } from '$lib/db/zod/schemas/image';
+// API
+import { delFromCloudinary, getDatabase, getSignedRequest, isValidQueryParamsOrError, JSONResponseOrError } from '$lib/api';
+import { assertPermissionsToDeleteImage, assertPermissionsToUpdateImage, getCtxFromUrl, getImageEntityQueryContext } from '$lib/api/services/image';
+// TYPES
+import type { RequestHandler } from '@sveltejs/kit';
+import type {
+  Id,
+  ImageDBFlat,
+  QueryParams,
+  FeatureImageDB,
+} from '$lib/types';
 
-const RESOURCE_TYPE: ResourceType = 'image';
+/********************
+ *  COMMON
+ ************/
+
+const RESOURCE_TYPE = 'image';
 const RESOURCE_PATH = 'images';
-const ACCESS_STRATEGY: AccessStrategyOption = 'EntityFromEditableProject';
-const PRIVILEGED_STRATEGY: StatefulAccessOption = 'EntityAny';
-const PUBLIC_IDENTIFIER = 'id';
 
-export const GET: RequestHandler = async ({ params, locals, platform }) => {
-  const { db, userId, accessStrategy } = await getDatabaseOrError(
-    locals,
-    platform,
-    'EntityAny',
-    RESOURCE_TYPE
+/********************
+ *  READ
+ ************/
+
+/**
+ * Reads an image
+ */
+export const GET: RequestHandler = async ({
+  params,
+  url,
+  locals,
+  platform,
+  request
+}) => {
+  // ASSERT : User logged in
+  const { db, session, userRoles } = await getDatabase(locals, platform);
+
+  // ASSERT : Valid query parameters
+  // Validate query parameters, or return 400
+  const contextParams = ['organisationId', 'projectId', 'featureId', 'taskId'];
+  let queryParams = isValidQueryParamsOrError(image, url, contextParams);
+
+  // CONTEXT : Get the query context
+  let { conditions } = getImageEntityQueryContext(
+    db,
+    session,
+    request,
+    queryParams as QueryParams
   );
 
   try {
-    const result = await genericEntityQuery(
-      db,
-      params[PUBLIC_IDENTIFIER] as string,
-      image,
-      PUBLIC_IDENTIFIER,
-      accessStrategy,
-      {
-        featureImage: true,
-        contributor: true
-      },
-      userId
-    );
+    // Add condition for specific image ID
+    conditions.push(eq(image.id, params.id!));
+    // DB : Get the image
+    const result = (await getImageById(db, conditions)) as ImageDBFlat;
 
     return JSONResponseOrError(result);
   } catch (e) {
@@ -47,133 +75,120 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
   }
 };
 
-export const DELETE: RequestHandler = async ({
-  params,
-  request,
-  locals,
-  platform,
-  fetch: eventFetch
-}) => {
-  const body = await request.json();
-
-  const { db, userId, accessStrategy } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE,
-    params.id,
-    checkFeatureAccessForImage,
-    checkProjectAccessForImage,
-    checkOrganisationAccessForImage,
-    PRIVILEGED_STRATEGY,
-    body.refType
-  );
-
-  // Get image details first
-  const [imageToDelete] = await db
-    .select({
-      id: image.id,
-      publicId: image.publicId,
-      featureId: featureImage.featureId
-    })
-    .from(image)
-    .innerJoin(featureImage, eq(image.id, featureImage.imageId))
-    .where(eq(image.id, params[PUBLIC_IDENTIFIER] as Id))
-    .limit(1);
-
-  if (!imageToDelete) {
-    error(404, 'Image not found');
-  }
+/**
+ * Updates an image. Requires a valid context to be provided in the URL.
+ * 
+ * PATCH /api/images/[id]?organisationId=...
+ * PATCH /api/images/[id]?projectId=...
+ * PATCH /api/images/[id]?featureId=...
+ * PATCH /api/images/[id]?taskId=...
+ */
+export const PATCH: RequestHandler = async ({ params, request, locals, platform, url }) => {
+  // ASSERT : User logged in
+  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
+  const user = await getUserById(db, userId);
+  const {ctxId, ctxType} = getCtxFromUrl(url);
 
   try {
-    // Delete from Cloudinary first
-    const signResponse = await eventFetch('/api/cloudinary', {
-      method: 'POST',
-      body: JSON.stringify({
-        paramsToSign: {
-          public_id: imageToDelete.publicId
-        }
-      })
-    });
-    const signData = await signResponse.json();
+    // ASSERT : Valid submitted data
+    const data: ImageDBFlat = await request.json();
 
-    // Convert parameters to URLSearchParams
-    const cloudinaryParams = new URLSearchParams({
-      public_id: imageToDelete.publicId,
-      api_key: signData.apikey,
-      timestamp: signData.timestamp.toString(),
-      signature: signData.signature
-    });
-
-    const destroyResponse = await eventFetch(
-      `https://api.cloudinary.com/v1_1/${signData.cloudname}/image/destroy?${cloudinaryParams.toString()}`,
-      {
-        method: 'GET'
-        // No body needed for GET request
-      }
+    // ASSERT : Access to context
+    await assertPermissionsToUpdateImage(
+      db,
+      session,
+      request,
+      params as QueryParams,
+      userRoles,
+      ctxId, 
+      ctxType
     );
 
-    if (!destroyResponse.ok) {
-      error(
-        500,
-        `Failed to delete image from Cloudinary: ${await destroyResponse.text()}`
+    const imageToUpdate = ImageUpdate.parse(data);
+    let updatedImage: ImageDBFlat | undefined;
+    if (Object.keys(imageToUpdate).length > 0) {
+      updatedImage = await updateImage(db, imageToUpdate, params.id as Id);
+    } else {
+      const existingImage = await getImageById(db, [eq(image.id, params.id as Id)]);
+      if (existingImage) {
+        updatedImage = existingImage;
+      } else {
+        return error(404, 'Image not found');
+      }
+    }
+    let updatedFeatureImage: FeatureImageDB | undefined;
+
+    const parseResult = ImageFlatUpdate.safeParse(data);
+    if (parseResult.success) {
+      updatedFeatureImage = await updateFeatureImage(
+        db,
+        parseResult.data,
+        params.id as Id
       );
     }
-
-    // Then delete from database
-    // await db.delete(featureImage).where(eq(featureImage.imageId, params.id));
-    await db.delete(image).where(eq(image.id, params[PUBLIC_IDENTIFIER] as Id));
-
-    return json({ success: true });
-  } catch (err) {
-    console.error('Failed to delete image:', err);
-    return error(500, 'Failed to delete image');
+    const responseData = await toResponseShape(
+      updatedImage,
+      updatedFeatureImage,
+      user?.attribution ?? undefined
+    );
+    // DB : Return the created
+    return json({ type: 'success', data: responseData });
+  } catch (e) {
+    console.error('Database query error:', e);
+    return error(500, 'Dust Accumulation Critical');
   }
 };
 
-export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
-  const body = await request.json();
-  const { db, userId, accessStrategy } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE,
-    params.id,
-    checkFeatureAccessForImage,
-    checkProjectAccessForImage,
-    checkOrganisationAccessForImage,
-    PRIVILEGED_STRATEGY,
-    body.refType
-  );
-
-  let updatedImage;
-  let updatedFeatureImage;
-
+/**
+ * Deletes an image. Requires a valid context to be provided in the URL.
+ * 
+ * DELETE /api/images/[id]?organisationId=...
+ * DELETE /api/images/[id]?projectId=...
+ * DELETE /api/images/[id]?featureId=...
+ */
+export const DELETE: RequestHandler = async ({ params, request, locals, platform, url, fetch: eventFetch }) => {
+  // ASSERT : User logged in
+  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
+  const {ctxId, ctxType} = getCtxFromUrl(url);
+  
   try {
-    if (body) {
-      [updatedImage] = await db
-        .update(image)
-        .set(body)
-        .where(eq(image.id, params[PUBLIC_IDENTIFIER] as Id))
-        .returning();
-    }
-    if (body.featureImage && !!Object.keys(body.featureImage).length) {
-      [updatedFeatureImage] = await db
-        .update(featureImage)
-        .set(body.featureImage)
-        .where(eq(featureImage.imageId, params[PUBLIC_IDENTIFIER] as Id))
-        .returning();
+    // ASSERT : Access to context
+    await assertPermissionsToDeleteImage(
+      db,
+      session,
+      request,
+      params as QueryParams,
+      userRoles,
+      ctxId, 
+      ctxType
+    );
+    
+    // 1. Fetch image details to get publicId
+    const conditions = [eq(image.id, params.id as Id)];
+    const imageToDelete = await getImageById(db, conditions);
+    
+    if (!imageToDelete) {
+      return error(404, 'Image not found');
     }
 
-    return json({
-      success: true,
-      image: {
-        ...updatedImage,
-        ...(updatedFeatureImage ? updatedFeatureImage : {})
-      }
-    });
-  } catch (err) {
-    console.error('Failed to update image:', err);
-    return error(500, 'Failed to update image');
+    // 2. Delete from Cloudinary
+    if (imageToDelete.publicId) {
+      // Fetch signature for deletion
+      const signData = await getSignedRequest(eventFetch, {public_id: imageToDelete.publicId});
+      await delFromCloudinary(eventFetch, signData, imageToDelete.publicId);
+    }
+
+    // 3. Delete from database
+    await db.delete(image).where(eq(image.id, params.id as Id));
+    // Feature Image is deleted by cascade
+
+    return json({ type: 'success', message: 'Image deleted successfully' });
+  } catch (e: any) {
+    console.error('Failed to delete image:', e);
+    // Check if it's a SvelteKit error object
+    if (e && typeof e.status === 'number' && typeof e.body === 'object') {
+        return error(e.status, e.body.message || 'Failed to delete image');
+    }
+    return error(500, 'Failed to delete image');
   }
 };

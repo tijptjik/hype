@@ -28,7 +28,8 @@ let {
 
 let isOpen = $state(defaultOpen);
 
-const toggle = () => {
+const toggle = (e: MouseEvent) => {
+  e.stopPropagation();
   isOpen = !isOpen;
 };
 </script>
@@ -38,7 +39,8 @@ const toggle = () => {
     ? 'flex-grow-0'
     : 'flex-shrink-0'} {position === 'left' ? 'pr-4' : ''}">
   <button
-    class="flex w-full flex-shrink-0 items-center justify-between px-4 {iconVerticalPaddingClass} bg-black text-base-content focus:outline-none focus:ring-0 focus-visible:text-primary"
+    class="flex w-full flex-shrink-0 items-center justify-between px-4 {iconVerticalPaddingClass} bg-black text-base-content focus:outline-none focus:ring-0 {
+    iconColorClass == 'text-secondary' ? "focus-visible:text-secondary" : iconColorClass == 'text-accent' ? "focus-visible:text-accent" : "focus-visible:text-primary"}"
     onclick={toggle}
     aria-expanded={isOpen}
     tabindex="0">
@@ -73,6 +75,7 @@ const toggle = () => {
       {@render children()}
     </div>
   {:else if collapsedContent}
+    {@debug isOpen}
     <div class="flex min-h-6 flex-shrink-0 flex-grow flex-col">
       {@render collapsedContent()}
     </div>

@@ -1,33 +1,48 @@
 <script lang="ts">
+// SVELTE
+import { fade } from 'svelte/transition';
+// I18N
+import { m } from '$lib/i18n';
 // Icons
 import Icon from '$lib/components/common/Icon.svelte';
 import {
   Squares2x2,
   EllipsisVertical,
+  PencilSquare,
   ExclamationCircle,
   Camera
 } from '@steeze-ui/heroicons';
 // Svelte
 import { clickOutside } from '$lib/actions';
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
-// TYPES
-import type { Feature } from '$lib/types';
+import { getOmniContext } from '$lib/context/omni.svelte';
 // ENUMS
-import { FeatureCardMode } from '$lib/types';
+import { FeatureCardMode } from '$lib/enums';
+// TYPES
+import type { Feature, UserContributedFeature } from '$lib/types';
 
 // CONTEXT
 const cardCtx = getFeatureCardContext();
+const omniCtx = getOmniContext();
+const mapCtx = getMapCtx();
 
 // STATE : PROPS
-let { feature }: { feature: Feature } = $props();
+let { feature }: { feature: Feature | UserContributedFeature } = $props();
 
 // STATE : LOCAL
 let menuOpen = $state(false);
 
-// CONTEXT
-const mapCtx = getMapContext();
+// DERIVED : Get hierarchy for current feature
+let layer = mapCtx.getLayerById(feature.layerId);
+let project = layer ? mapCtx.getProject(layer) : null;
+let organisation = project ? mapCtx.getOrganisation(project) : null;
+
+// DERIVED : Get contextual names
+let organisationName = $derived(mapCtx.getContextualOrganisationName(organisation!, false)); // Always show
+let projectName = $derived(mapCtx.getContextualProjectName(project!)); // Always show  
+let layerName = $derived(mapCtx.getContextualLayerName(layer!)); // Hide if only one layer
 
 // FUNCTIONS
 function toggleMenu(e: Event) {
@@ -44,52 +59,66 @@ function closeMenu(e: Event) {
   e.stopPropagation();
   menuOpen = false;
 }
-let layer = mapCtx.getLayer(feature);
-let project = mapCtx.getProject(layer!);
-let organisation = mapCtx.getOrganisation(project!);
+
+function showLayerSelectionModal() {
+  omniCtx.closeCard();
+  window.dispatchEvent(new CustomEvent('showLayerSelectionModal'));
+}
 </script>
 
 <div
   class="pointer-events-auto flex w-full flex-shrink-0 items-center justify-between bg-black pl-2 w-100:pl-4">
   <div class="flex items-center gap-2 font-mono text-xs uppercase text-neutral-content">
     <Icon src={Squares2x2} class="h-6 w-6" />
-    <span class="text-xs uppercase">{organisation?.code}</span>
-    <span class="text-gray-400">›</span>
-    <span class="text-xs uppercase">{project?.code}</span>
-    <!-- Only show if the layer if there are multiple layers active for the same project -->
-    {#if layer}
-      <div class="hidden md:block">
+    <span class="text-xs uppercase">{organisationName}</span>
+    {#if projectName}
+    <div transition:fade={{duration: 300}}>
+      <span class="text-gray-400">›</span>
+      <span class="text-xs uppercase">{projectName}</span>
+    </div>
+    {/if}
+    <!-- Only show layer name if project has multiple layers -->
+    {#if layerName}
+      <div class="hidden md:block" transition:fade={{duration: 300}}>
         <span class="text-gray-400">›</span>
-        <span>{layer.name}</span>
+        <span>{layerName}</span>
       </div>
     {/if}
   </div>
 
-  <div class="relative">
-    <button
-      class="btn btn-ghost btn-sm rounded-none rounded-bl-lg p-1 hover:bg-base-300 active:scale-100 active:bg-base-200"
-      onclick={(e) => toggleMenu(e)}>
-      <Icon src={EllipsisVertical} class="h-6 w-6 -translate-y-[1px]" />
-    </button>
+  <div class="relative caret-transparent">
+    {#if cardCtx.isNewMode}
+      <button
+        class="btn btn-ghost btn-sm rounded-none rounded-bl-lg py-1 px-3 hover:bg-base-300 focus:text-primary focus:outline-none active:scale-100 active:bg-base-200"
+        onclick={showLayerSelectionModal}>
+        <Icon src={PencilSquare} class="h-5 w-5 -translate-y-[1px]" />
+      </button>
+    {:else}
+      <button
+        class="btn btn-ghost btn-sm rounded-none rounded-bl-lg p-1 hover:bg-base-300 focus:text-primary focus:outline-none active:scale-100 active:bg-base-200"
+        onclick={(e) => toggleMenu(e)}>
+        <Icon src={EllipsisVertical} class="h-6 w-6 -translate-y-[1px]" />
+      </button>
 
-    {#if menuOpen}
-      <div
-        id="feature-card-menu"
-        class="absolute -top-[90px] right-1.5 mt-1 w-48 rounded-lg rounded-br-none bg-black p-0 caret-transparent shadow-xl"
-        use:clickOutside={(e) => closeMenu(e)}>
-        <button
-          class="btn btn-ghost btn-sm h-auto w-full justify-start gap-2 rounded-b-none p-2 pl-3 font-mono font-thin text-neutral-content hover:bg-base-300 active:scale-100 active:bg-base-200"
-          onclick={() => (cardCtx.state.mode = FeatureCardMode.Missing)}>
-          <Icon src={ExclamationCircle} class="h-5 w-5 text-primary" theme="solid" />
-          Report Missing
-        </button>
-        <button
-          class="btn btn-ghost btn-sm h-auto w-full justify-start gap-2 rounded-t-none rounded-br-none p-2 pl-3 font-mono font-thin text-neutral-content hover:bg-base-300 active:scale-100 active:bg-base-200"
-          onclick={() => (cardCtx.state.mode = FeatureCardMode.AddPhoto)}>
-          <Icon src={Camera} class="h-5 w-5 text-primary" theme="solid" />
-          Add Photo
-        </button>
-      </div>
+      {#if menuOpen}
+        <div
+          id="feature-card-menu"
+          class="absolute -top-[90px] right-1.5 mt-1 w-48 rounded-lg rounded-br-none bg-black p-0 caret-transparent shadow-xl"
+          use:clickOutside={(e) => closeMenu(e)}>
+          <button
+            class="btn btn-ghost btn-sm h-auto w-full justify-start gap-2 rounded-b-none p-2 pl-3 font-mono font-thin text-neutral-content hover:bg-base-300 active:scale-100 active:bg-base-200"
+            onclick={() => (cardCtx.state.mode = FeatureCardMode.Missing)}>
+            <Icon src={ExclamationCircle} class="h-5 w-5 text-primary" theme="solid" />
+            {m.such_that_rabbit_pull()}
+          </button>
+          <button
+            class="btn btn-ghost btn-sm h-auto w-full justify-start gap-2 rounded-t-none rounded-br-none p-2 pl-3 font-mono font-thin text-neutral-content hover:bg-base-300 active:scale-100 active:bg-base-200"
+            onclick={() => (cardCtx.state.mode = FeatureCardMode.AddPhoto)}>
+            <Icon src={Camera} class="h-5 w-5 text-primary" theme="solid" />
+            {m.mushy_level_slug_pray()}
+          </button>
+        </div>
+      {/if}
     {/if}
   </div>
 </div>

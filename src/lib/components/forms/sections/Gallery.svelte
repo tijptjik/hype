@@ -1,10 +1,10 @@
 <script lang="ts">
 // SERVICES
-import { getImageContext } from '$lib/context/images.svelte';
+import { getImageContext } from '$lib/context/image.svelte';
 // COMPONENTS
 import Header from '$lib/components/forms/extra/Header.svelte';
-import Actions from '$lib/components/forms/actions/Gallery.svelte';
-import Stats from '$lib/components/forms/stats/Gallery.svelte';
+import GalleryActions from '$lib/components/forms/actions/Gallery.svelte';
+import GalleryStats from '$lib/components/forms/stats/Gallery.svelte';
 import Gallery from '$lib/components/images/gallery/Gallery.svelte';
 // TYPES
 import type { SectionProps } from '$lib/types';
@@ -20,12 +20,15 @@ let { ...sectionProps }: Props = $props();
 let inputElement = $state<HTMLInputElement>();
 
 // ACTIONS
-let actionProps = $state({
+let actionProps: {
+  searchMode: boolean;
+  removeMode: boolean;
+} = $state({
   searchMode: false,
   removeMode: false
 });
 
-const actions = {
+const actions: Record<'add' | 'remove', (...args: any[]) => void> = {
   add: () => {
     actionProps.removeMode = false;
     openFileDialog();
@@ -51,7 +54,12 @@ const openFileDialog = () => {
 
 <div
   class="z-10 rounded-2xl bg-gradient-to-r from-rose-500/70 to-fuchsia-800/70 p-0 @container">
-  <Header {...sectionProps} bind:actionProps {Actions} {actions} {Stats} />
+  <Header {...sectionProps} >
+    <GalleryStats />
+    {#snippet actionContent()}
+      <GalleryActions {actions} bind:removeMode={actionProps.removeMode} />
+    {/snippet}
+  </Header>
   <main class="relative m-4 min-w-0 overflow-hidden">
     <Gallery {actionProps} bind:inputElement />
   </main>

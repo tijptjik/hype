@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Cursor
+Comment=AI-powered code editor
+GenericName=Text Editor
+Exec=sh -c 'exec "$(ls -t /opt/cursor/*.AppImage 2>/dev/null | head -n1)" "%u"'
+Icon=cursor
+StartupNotify=true
+NoDisplay=false
+MimeType=x-scheme-handler/cursor;
+Categories=Development;IDE;
+StartupWMClass=Cursor 

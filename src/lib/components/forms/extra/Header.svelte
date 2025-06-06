@@ -1,64 +1,47 @@
 <script lang="ts">
-import { slide } from 'svelte/transition';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { ChevronRight, ExclamationTriangle } from '@steeze-ui/heroicons';
-import SearchBar from './HeaderSearch.svelte';
 import Info from '$lib/components/forms/extra/Info.svelte';
-// CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
 // TYPES
-import type { Component } from 'svelte';
-import type { FieldProps, ActionProps, GetImageAPI, ImageEditRefs } from '$lib/types';
+import type { Snippet } from 'svelte';
+import type { FormField, FormFieldArray, Form } from '$lib/types';
 
-// STATE : CONTEXT :: RESOURCE
-const resourceState = getHierarchicalResourceState();
+type HeaderProps = {
+  title?: string;
+  subtitle?: string;
+  form: unknown;
+  fields: FormField | FormFieldArray;
+  children?: Snippet;
+  actionContent?: Snippet;
+  infoContent?: Snippet;
+};
 
 // STATE : PROPS
 let {
   title,
   subtitle,
-  Actions,
-  actionProps = $bindable({
-    searchMode: false,
-    removeMode: false
-  }),
-  actions,
-  InfoContent,
-  Stats,
+  form,
   fields,
-  ...fieldProps
-}: FieldProps &
-  ActionProps & {
-    InfoContent?: Component;
-    Stats?: Component;
-    refs?: ImageEditRefs;
-  } = $props();
+  children,
+  actionContent,
+  infoContent
+}: HeaderProps = $props();
 
-// STATE : CONTEXT
-let { form, errors, posted } = fieldProps.form;
-
-$effect(() => {
-  if ($posted) {
-    actionProps.searchMode = false;
-    actionProps.removeMode = false;
-  }
-});
-
-// CONFIG
-
-let getWarningMessage = () => {
-  let msg =
-    'If you remove yourself as member or owner, you will lose edit or access rights respectively';
-  if (resourceState.activeFacet === 'images') {
-    msg =
-      'Removing images permanently deletes them from cloud storage and is irreversible.';
-  } else if (resourceState.activeFacet === 'fields') {
-    msg = 'You are about to be VERY SAD if you accidentally remove a field. ';
-  }
-  return msg;
-};
+const { errors } = form as Form;
 </script>
+
+{#snippet renderErrorMessages(messages: string[])}
+  <div class="flex-grow-2 flex flex-row items-center justify-center gap-2">
+    {#each messages as message}
+      <div
+        class="badge badge-lg flex items-center justify-center gap-2 truncate border-error p-4 font-mono text-base-content">
+        <Icon src={ExclamationTriangle} class="h-4 w-4 shrink-0 stroke-current" />
+        <p class="text-sm">{message}</p>
+      </div>
+    {/each}
+  </div>
+{/snippet}
 
 <div class="relative flex flex-col rounded-t-2xl">
   <div
@@ -72,70 +55,33 @@ let getWarningMessage = () => {
       </h3>
     </div>
     {#if $errors}
-      {#each Object.entries($errors) as [fieldRoot, error]}
-        {#if error && fields?.[fieldRoot] && error['_errors'] && error['_errors'].length > 0}
-          <div class="flex-grow-2 flex flex-row items-center justify-center gap-2">
-            {#each error['_errors'] as message}
-              <div
-                class="badge badge-lg flex items-center justify-center gap-2 truncate border-error p-4 font-mono text-base-content">
-                <Icon
-                  src={ExclamationTriangle}
-                  class="h-4 w-4 shrink-0 stroke-current" />
-                <p class="text-sm">{message}</p>
-              </div>
-            {/each}
-          </div>
+      {#each Object.entries($errors) as [key, messagesContainer]}
+        {#if messagesContainer}
+          {#if key === '_errors' && Array.isArray(messagesContainer) && messagesContainer.length > 0}
+            {@render renderErrorMessages(messagesContainer)}
+          {:else if key in fields && Array.isArray(messagesContainer) && messagesContainer.length > 0}
+            {@render renderErrorMessages(messagesContainer)}
+          {:else if key in fields && typeof messagesContainer === 'object' && messagesContainer !== null}
+            <!-- Handle nested field errors like userRoles._errors -->
+            {#if '_errors' in messagesContainer && Array.isArray(messagesContainer._errors) && messagesContainer._errors.length > 0}
+              {@render renderErrorMessages(messagesContainer._errors)}
+            {/if}
+          {/if}
         {/if}
       {/each}
     {/if}
-    {#if Stats}
-      <Stats {...fieldProps} />
-    {/if}
-    {#if Actions}
-      <div class="flex flex-shrink-0 items-center gap-6">
-        {#if resourceState.activeResource == 'project' && resourceState.activeFacet === 'fields'}
-          <Actions bind:removeMode={actionProps.removeMode} />
-        {:else if resourceState.activeResource !== 'feature'}
-          <Actions
-            bind:searchMode={actionProps.searchMode}
-            bind:removeMode={actionProps.removeMode} />
-        {:else if resourceState.activeFacet === 'core'}
-          <Actions {...fieldProps} />
-        {:else if resourceState.activeFacet === 'address'}
-          <Actions {...fieldProps} {actions} />
-        {:else if resourceState.activeFacet === 'images' && title === 'Gallery'}
-          <Actions
-            bind:removeMode={actionProps.removeMode}
-            bind:searchMode={actionProps.searchMode}
-            {actions} />
-        {:else if resourceState.activeFacet === 'images' && title === 'Viewer'}
-          <Actions refs={fieldProps.refs as ImageEditRefs} />
+    {@render children?.()}
+    {#if actionContent || infoContent}
+      <div class="flex flex-row items-center justify-between gap-4">
+        {#if actionContent}
+          {@render actionContent?.()}
         {/if}
-        {#if InfoContent}
-          <div class="flex items-center gap-6">
-            <Info>
-              <InfoContent />
-            </Info>
-          </div>
+        {#if infoContent}
+          <Info>
+            {@render infoContent?.()}
+          </Info>
         {/if}
       </div>
     {/if}
   </div>
-  {#if actionProps.searchMode}
-    <SearchBar
-      {...fieldProps}
-      bind:searchMode={actionProps.searchMode}
-      apiPath="users"
-      destination={Object.keys(fields ?? {})[0]} />
-  {/if}
-  {#if actionProps.removeMode}
-    <div
-      transition:slide={{ duration: 200 }}
-      class="alert w-full rounded-none border-0 border-b-4 border-warning">
-      <Icon src={ExclamationTriangle} class="h-6 w-6 shrink-0 stroke-current" />
-      <span
-        ><span class="font-bold text-warning">Warning:</span>
-        {getWarningMessage()}</span>
-    </div>
-  {/if}
 </div>

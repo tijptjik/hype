@@ -6,7 +6,7 @@
   "sources": {
     "hongkong-latest": {
       "type": "vector",
-      "url": "https://tiles.hype.hk/hongkong-latest.json"
+      "url": "/api/tiles/hongkong-latest.json"
     }
   },
   "sprite": "https://openmaptiles.github.io/dark-matter-gl-style/sprite",

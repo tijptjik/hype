@@ -3,11 +3,11 @@
 import { slide, fade } from 'svelte/transition';
 import { cubicInOut } from 'svelte/easing';
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
 // I18N
+import { getI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
-import { getI18nValue } from '$lib/i18n';
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
 import { XMark } from '@steeze-ui/heroicons';
@@ -28,7 +28,8 @@ let {
 
 // CONTEXT
 const omniCtx = getOmniContext();
-const mapCtx = getMapContext();
+const mapCtx = getMapCtx();
+const userPreferences = $derived(mapCtx.getUserPreferences());
 
 // STATE
 let currentIndex = $derived(
@@ -108,7 +109,7 @@ $effect(() => {
               </div>
             {/if}
             <span class="select-none pl-1 font-thin text-base-content"
-              >{getI18nValue(itemId, 'title')}</span>
+              >{getI18n(itemId, 'title', userPreferences)}</span>
           </li>
         {/each}
       </ul>

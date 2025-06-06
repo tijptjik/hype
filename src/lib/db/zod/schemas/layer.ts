@@ -6,13 +6,20 @@ import {
   createInsertSchema,
   createUpdateSchema
 } from 'drizzle-zod';
-import { layer, layerI18n, layerProperty } from '$lib/db/schema';
+import { layer, layerI18n, layerProperty, userLayer } from '$lib/db/schema';
 // CONSTRAINTS
 import { getDefaultConstraints, getLocales } from '../constraints';
+// ZOD SCHEMAS
+import {
+  PropertyBase,
+  PropertyI18nBase,
+  PropertyInsertAPI,
+  PropertyValueBase,
+  PropertyValueI18nBase
+} from './property';
+import { UserBasic } from './user';
 // TYPES
 import type { LayerMetadata } from '$lib/types';
-// ZOD SCHEMAS
-import { PropertyInsertAPI } from './property';
 
 /* ----------------- */
 // LAYER CORESCHEMAS
@@ -21,9 +28,7 @@ import { PropertyInsertAPI } from './property';
 export const LayerBase = createSelectSchema(layer);
 export const LayerInsert = createInsertSchema(layer).extend({
   ...getDefaultConstraints(layer),
-  metadata: z.custom<LayerMetadata>().default({ defaultEnabled: false }),
-  // TODO - Why is this here? Check if this can be deleted.
-  id: z.string().optional()
+  metadata: z.custom<LayerMetadata>().default({})
 });
 export const LayerUpdate = createUpdateSchema(layer).extend({
   ...getDefaultConstraints(layer)
@@ -34,25 +39,40 @@ export const LayerUpdate = createUpdateSchema(layer).extend({
 /* -------- */
 
 export const LayerI18nBase = createSelectSchema(layerI18n);
-export const LayerI18nInsert = createInsertSchema(layerI18n).extend({
-  ...getDefaultConstraints(layerI18n)
-});
+export const LayerI18nInsert = createInsertSchema(layerI18n)
+  .extend({
+    ...getDefaultConstraints(layerI18n)
+  })
+  .omit({
+    layerId: true
+  });
 export const LayerI18nUpdate = createUpdateSchema(layerI18n).extend({
   ...getDefaultConstraints(layerI18n)
 });
 
 export const LayerPropertyBase = createSelectSchema(layerProperty);
-export const LayerPropertyInsert = createInsertSchema(layerProperty);
-// TODO Confirm if this is correct
+export const LayerPropertyInsert = createInsertSchema(layerProperty).omit({
+  layerId: true
+});
 export const LayerPropertyInsertExtra = LayerPropertyInsert.extend({
-  property: PropertyInsertAPI.omit({ values: true })
+  property: PropertyInsertAPI.optional()
 });
 
 export const LayerPropertyUpdate = createUpdateSchema(layerProperty);
-// TODO Confirm if this is correct
+// Make property optional so it validates whether nested data is present or not
 export const LayerPropertyUpdateExtra = LayerPropertyUpdate.extend({
-  property: PropertyInsertAPI.omit({ values: true })
+  property: PropertyInsertAPI.optional()
 });
+
+/* ----------------- */
+// USER RELATIONAL SCHEMAS
+/* -------- */
+
+export const UserLayerBase = createSelectSchema(userLayer);
+export const UserLayerInsert = createInsertSchema(userLayer).extend({
+  isVisibleOnLoad: z.boolean()
+});
+export const UserLayerUpdate = createUpdateSchema(userLayer);
 
 /* ----------------- */
 // LAYER API SCHEMAS
@@ -60,76 +80,40 @@ export const LayerPropertyUpdateExtra = LayerPropertyUpdate.extend({
 
 export const LayerAPI = LayerBase.extend({
   i18n: getLocales(LayerI18nBase),
-  properties: z.array(LayerPropertyBase)
+  properties: z.array(LayerPropertyUpdateExtra),
+  publisher: UserBasic.nullish()
 });
 
 export const LayerInsertAPI = LayerInsert.extend({
   i18n: getLocales(LayerI18nInsert),
-  properties: z.array(LayerPropertyInsert)
+  properties: z.array(LayerPropertyInsertExtra),
+  publisher: UserBasic.nullish()
 });
 
 export const LayerUpdateAPI = LayerUpdate.extend({
   i18n: getLocales(LayerI18nUpdate),
-  properties: z.array(LayerPropertyUpdateExtra)
+  properties: z.array(LayerPropertyUpdateExtra),
+  publisher: UserBasic.nullish()
 });
 
-
-// TODO Remove once we've migrated to the new schemas
 /* ----------------- */
-// DEPRECATED LAYERS
+// LAYER RAW SCHEMAS
 /* -------- */
 
-// // Schema for selecting a layer - can be used to validate API responses
-// export const LayerBase = createSelectSchema(layer).extend({
-//   experimental: z
-//     .object({
-//       contributorMode: z.boolean()
-//     })
-//     .default({ contributorMode: false }),
-//   language: z.enum(supportedLocales).default('en')
-// });
-// export const LayerI18nBase = createSelectSchema(layerI18n);
+export const LayerPropertyRaw = LayerPropertyBase.extend({
+      property: PropertyBase.extend({
+        i18n: z.array(PropertyI18nBase),
+        values: z
+          .array(
+            PropertyValueBase.extend({
+              i18n: z.array(PropertyValueI18nBase).optional()
+            })
+          ).nullish()
+          .nullish()
+      }).nullish()
+    })
 
-// // Base schema to validate submit data
-// export const LayerInsert = createInsertSchema(layer).extend({
-//   ...getDefaultConstraints(layer),
-//   metadata: z.custom<LayerMetadata>().default({ defaultEnabled: true }),
-//   experimental: z
-//     .object({
-//       contributorMode: z.boolean()
-//     })
-//     .default({ contributorMode: false }),
-//   language: z.enum(supportedLocales).default('en')
-// });
-
-// export const LayerUpdate = LayerInsert.extend({
-//   id: z.string()
-// });
-
-// export const LayerI18nUpdate = createInsertSchema(layerI18n).extend({
-//   ...getDefaultConstraints(layerI18n)
-// });
-
-// export const LayerPropertyUpdate = createInsertSchema(layerProperty);
-// export const LayerPropertyUpdateExtra = LayerPropertyUpdate.extend({
-//   property: PropertyInsertAPI.omit({ values: true })
-// });
-// export const LayerPropertyInsert = LayerPropertyUpdateExtra.omit({ layerId: true });
-
-// export const LayerI18nInsert = LayerI18nUpdate.omit({ layerId: true });
-
-// export const LayerInsertAPI = LayerInsert.extend({
-//   i18n: getLocales(LayerI18nInsert),
-//   properties: z.array(LayerPropertyInsert)
-// });
-
-// export const LayerUpdateAPI = LayerUpdate.extend({
-//   i18n: getLocales(LayerI18nUpdate),
-//   properties: z.array(LayerPropertyUpdateExtra)
-// });
-
-// export const LayerUpdateAPIWithProject = LayerUpdateAPI.extend({
-//   project: ProjectBase
-// });
-
-// export const LayerPatch = LayerUpdate.partial();
+export const LayerRaw = LayerBase.extend({
+  i18n: z.array(LayerI18nBase),
+  properties: z.array(LayerPropertyRaw)
+});

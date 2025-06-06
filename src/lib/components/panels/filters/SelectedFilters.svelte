@@ -4,6 +4,7 @@ import { displaySelectedFilters } from '$lib/utils/formatting';
 // TYPES
 import type { Id, Property } from '$lib/types';
 
+
 type Props = {
   layerId: Id;
   mapCtx: any;
@@ -13,7 +14,7 @@ type Props = {
 let { layerId, mapCtx, properties }: Props = $props();
 
 let displayText = $derived(
-  displaySelectedFilters(mapCtx.propertyFilters?.[layerId], properties)
+  displaySelectedFilters(mapCtx.propertyFilters?.[layerId], properties, mapCtx)
 );
 </script>
 

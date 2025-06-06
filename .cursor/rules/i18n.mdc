@@ -1,0 +1,9 @@
+---
+description: Translation and i18n
+globs: 
+alwaysApply: false
+---
+- Use Paraglide to manage all language and translation files.
+- Support English (en), Chinese (zh-hans), and Chinese (zh-hant).
+- The messages should be written in the [Message Syntax](https://inlang.com/docs/message-syntax).
+- The messages are defined in the `messages` directory.

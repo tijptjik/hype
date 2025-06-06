@@ -2,14 +2,14 @@
 import Icon from '$lib/components/common/Icon.svelte';
 import { CloudArrowDown } from '@steeze-ui/heroicons';
 import { getFlash } from 'sveltekit-flash-message';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 // SERVICES
-import { getImageContext } from '$lib/context/images.svelte';
+import { getImageContext } from '$lib/context/image.svelte';
 // TYPES
-import type { GetImageAPI } from '$lib/types';
+import type { Image } from '$lib/types';
 
 type Props = {
-  image: GetImageAPI;
+  image: Image;
   class?: string;
 };
 

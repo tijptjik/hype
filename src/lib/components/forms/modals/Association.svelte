@@ -1,23 +1,25 @@
 <script lang="ts">
 // SVELTE
-import { page } from '$app/stores';
+import { page } from '$app/state';
 import { NEW_REF } from '$lib';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // NAVIGATION
 import { navigateOnAdmin } from '$lib/navigation';
+// I18N
+import { getLocale, getI18n } from '$lib/i18n';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Check } from '@steeze-ui/heroicons';
 import FilterInput from '$lib/components/menu/FilterInput.svelte';
 // ENUMS
-import { HierarchicalResourceParent, HierarchicalResourceRefKey } from '$lib/types';
-// TYPES
-import type {
-  Resource,
+import {
   HierarchicalResource,
-  ResourceTypeWithChildren
-} from '$lib/types';
+  HierarchicalResourceParent,
+  HierarchicalResourceRefKey
+} from '$lib/enums';
+// TYPES
+import type { Resource, ResourceTypeWithChildren } from '$lib/types';
 
 // CONTEXT
 const resourceState = getHierarchicalResourceState();
@@ -131,7 +133,8 @@ const open = () => {
                   selectedIndex = i;
                   handleSelect(item);
                 }}>
-                <span>{item.name || item.title}</span>
+                <span
+                  >{item.i18n[getLocale()].name || item.i18n[getLocale()].title}</span>
                 {#if selectedItem?.id === item.id}
                   <Icon src={Check} class="h-5 w-5" />
                 {/if}

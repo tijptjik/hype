@@ -2,47 +2,48 @@
 // SVELTE
 import { onMount } from 'svelte';
 // I18N
+import { getLocale } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // CONSTANTS
 import { MOBILE_MAX_WIDTH } from '$lib/index';
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
-import {
-  XMark,
-  PencilSquare,
-  Check,
-  UserGroup,
-  Squares2x2,
-  Square3Stack3d,
-  ChevronDown
-} from '@steeze-ui/heroicons';
+import { XMark, PencilSquare, Check } from '@steeze-ui/heroicons';
 // SERVICES
-import { reverseGeocode } from '$lib/services/geocoding';
+import { reverseGeocode } from '$lib/api/external/geocoding';
 // TYPES
-import type { UserContributedFeature } from '$lib/types';
+import type { Locale } from '$lib/types';
+import type { Point } from 'geojson';
 
 // CONTEXT
-const mapCtx = getMapContext();
+const mapCtx = getMapCtx();
 const omniCtx = getOmniContext();
 
 // STATE
 let isOpen = $state(false);
-let displayAddress = $state('');
+let displayAddress = $state<Record<Locale, string>>({
+  en: '',
+  'zh-hant': '',
+  'zh-hans': ''
+});
+let isDisplayAddressGen = $state(true);
 let isEditingAddress = $state(false);
 let isLoading = $state(false);
 
-let newFeature: UserContributedFeature | null = $derived(mapCtx.getNewFeature());
+// STATE : DERIVED
+let newFeature = $derived(mapCtx.getNewFeature());
 
 let isValid = $derived(
-  newFeature?.geometry?.coordinates &&
-    (newFeature?.displayAddress?.length > 0 ||
-      (newFeature?.translations &&
-        Object.values(newFeature.translations).some(
-          (t) => t.displayAddress?.length > 0
-        )))
+  ((newFeature?.feature?.geometry as Point)?.coordinates &&
+    newFeature?.feature?.i18n?.en?.displayAddress?.length &&
+    newFeature.feature.i18n.en.displayAddress.length > 0) ||
+    (newFeature?.feature?.i18n &&
+      Object.values(newFeature.feature.i18n).some(
+        (t) => t?.displayAddress?.length && t?.displayAddress?.length > 0
+      ))
 );
 
 // PANEL STATE
@@ -63,54 +64,66 @@ let horizontalOffset = $derived.by(() => {
 });
 
 const handleShowModal = () => {
+  // Sync with current newFeature state when opening
+  // const currentFeature = mapCtx.getNewFeature()?.feature;
+  // if (currentFeature?.geometry) {
+  // Already has geometry, keep current address
+  // const currentDisplayAddress = currentFeature.i18n?.[getLocale()]?.displayAddress || '';
+  // if (currentDisplayAddress) {
+  // displayAddress[getLocale()] = currentDisplayAddress;
+  // }
+  // } else {
+  // No geometry, reset everything
+  reset();
+  // }
   isOpen = true;
-  // Get the center of the map
+  isValid = false;
 };
 
-function handleCloseModal() {
+function reset() {
   isEditingAddress = false;
-  displayAddress = '';
-  mapCtx.setNewFeature({
-    ...newFeature,
-    geometry: undefined,
-    displayAddress: undefined,
-    translations: {
-      ...(newFeature?.translations || {}),
-      'zh-hant': {
-        ...(newFeature?.translations?.['zh-hant'] || {}),
-        displayAddress: undefined
-      },
-      'zh-hans': {
-        ...(newFeature?.translations?.['zh-hans'] || {}),
-        displayAddress: undefined
-      }
-    }
-  });
+  displayAddress = {
+    en: '',
+    'zh-hant': '',
+    'zh-hans': ''
+  };
+  isDisplayAddressGen = true;
+}
+
+function handleCloseModal() {
+  reset();
   isOpen = false;
-  omniCtx.setMode('search');
-  omniCtx.focusSearchBar();
+  omniCtx.cancelNewFeature();
+}
+
+function handleAccept() {
+  reset();
+  isOpen = false;
+  window.dispatchEvent(new CustomEvent('showNewFeatureCard'));
 }
 
 async function handleSetLocation() {
   const center = mapCtx.map?.getCenter();
   if (center) {
-    mapCtx.setNewFeature({
-      ...newFeature,
-      geometry: {
-        type: 'Point',
-        coordinates: [center.lng, center.lat]
-      }
+    mapCtx.updateNewFeatureValue('geometry', {
+      type: 'Point',
+      coordinates: [center.lng, center.lat]
     });
   }
-  if (!newFeature?.geometry?.coordinates!) return;
+  if (!(newFeature?.feature?.geometry as Point)?.coordinates) return;
 
   isLoading = true;
   try {
-    const [lng, lat] = newFeature.geometry.coordinates;
+    const [lng, lat] = (newFeature?.feature?.geometry as Point)?.coordinates;
     const result = await reverseGeocode(lng, lat);
 
     if (result) {
-      displayAddress = result.displayAddress || '';
+      displayAddress = {
+        en: result.i18n?.en?.displayAddress || '',
+        'zh-hant': result.i18n?.['zh-hant']?.displayAddress || '',
+        'zh-hans': result.i18n?.['zh-hans']?.displayAddress || ''
+      };
+      handleAddressSave();
       isValid = true;
     }
   } finally {
@@ -124,25 +137,11 @@ function handleAddressEdit() {
 
 function handleAddressSave() {
   if (!newFeature) return;
+  isDisplayAddressGen = false;
 
-  const locale = document.documentElement.lang;
-  if (locale === 'en') {
-    mapCtx.setNewFeature({
-      ...newFeature,
-      displayAddress
-    });
-  } else {
-    mapCtx.setNewFeature({
-      ...newFeature,
-      translations: {
-        ...newFeature.translations,
-        [locale]: {
-          ...newFeature.translations?.[locale],
-          displayAddress
-        }
-      }
-    });
-  }
+  const locale = getLocale();
+  mapCtx.updateNewFeatureValueI18n('displayAddress', displayAddress[locale]);
+  mapCtx.updateNewFeatureValueI18n('displayAddressGen', isDisplayAddressGen);
 
   isEditingAddress = false;
 }
@@ -206,16 +205,16 @@ onMount(() => {
           ? 'translate-x-[210px]'
           : 'translate-x-0'}">
       <div
-        class="group pointer-events-auto relative my-4 flex cursor-pointer items-center justify-between caret-transparent"
+        class="group pointer-events-auto relative my-4 flex translate-x-[16px] cursor-pointer items-center justify-between caret-transparent"
         onclick={handleCloseModal}>
         <h3
           id="modal-title"
-          class="text-shadow-lg/30 w-full rounded-xl bg-black/80 px-3 py-1 text-center text-xl font-bold uppercase tracking-wide group-hover:rounded-r-none group-focus:border-none group-focus:outline-none"
+          class="text-shadow-lg/30 pointer-events-none w-full rounded-xl bg-black/80 px-3 py-1 text-center text-xl font-bold uppercase tracking-wide group-hover:rounded-r-none group-focus:border-none group-focus:outline-none"
           tabindex="-1">
           {m.lazy_round_falcon_shine()}
         </h3>
         <button
-          class="group-hover:font-bolder btn btn-ghost btn-sm absolute right-0 mt-[2px] h-9 w-8 -translate-y-[1px] translate-x-[32px] rounded-l-none p-0 py-[7px] transition-all duration-300 focus:outline-none group-hover:bg-black/80 group-hover:text-white">
+          class="group-hover:font-bolder btn btn-ghost btn-sm pointer-events-none mt-[2px] h-9 w-8 -translate-y-[1px] rounded-l-none p-0 py-[7px] transition-all duration-300 focus:outline-none group-hover:bg-black/80 group-hover:text-white">
           <Icon src={XMark} class="h-5 w-5" />
         </button>
       </div>
@@ -244,7 +243,7 @@ onMount(() => {
                     handleAddressSave();
                   }
                 }}
-                bind:value={displayAddress}
+                bind:value={displayAddress[getLocale()]}
                 placeholder="Enter address" />
               <button
                 class="btn btn-square btn-ghost absolute right-0 focus:text-primary focus:outline-none"
@@ -255,7 +254,7 @@ onMount(() => {
           {:else}
             <div class="relative flex h-12 items-center justify-center gap-2">
               <p class="max-w-[280px] flex-1 bg-black px-2 py-1 text-left">
-                {displayAddress || 'No address found'}
+                {displayAddress[getLocale()] || 'No address found'}
               </p>
               <button
                 class="btn btn-square btn-ghost absolute -right-10 focus:text-primary focus:outline-none"
@@ -288,7 +287,7 @@ onMount(() => {
         {:else}
           <button
             class="btn bg-base-400 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300"
-            onclick={handleCloseModal}
+            onclick={handleAccept}
             disabled={!isValid}>
             {m.close_shy_jurgen_cook()}
           </button>

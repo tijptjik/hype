@@ -2,23 +2,43 @@
 // SVELTE
 import { onDestroy } from 'svelte';
 // I18n
-import { m, getI18nValue } from '$lib/i18n';
+import { getI18n } from '$lib/i18n';
+import { m } from '$lib/i18n';
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
 import { XCircle, QueueList } from '@steeze-ui/heroicons';
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
 
 // CONTEXT
-const mapCtx = getMapContext();
+const mapCtx = getMapCtx();
 const omniCtx = getOmniContext();
 
 // DERIVED -- Titles
-let collectionTitle = $derived(getI18nValue(mapCtx.getActiveCollection(), 'name'));
-let featureTitle = $derived(getI18nValue(mapCtx.getActiveFeature(), 'title'));
+let collectionTitle = $derived(
+  omniCtx.isFeatureMode
+    ? getI18n(mapCtx.getActiveFeature()!, 'displayAddress', {
+        ...mapCtx.getUserPreferences(),
+        allowMachineTranslation: true
+      })
+    : getI18n(
+        mapCtx.getActiveCollection()!,
+        'name',
+        mapCtx.getUserPreferences(),
+        m.place()
+      )
+);
+let featureTitle = $derived(
+  getI18n(mapCtx.getActiveFeature()!, 'title', mapCtx.getUserPreferences())
+);
 let newFeatureTitle = $derived(
-  getI18nValue(mapCtx.getNewFeature(), 'title', m.day_chunky_okapi_cherish())
+  getI18n(
+    mapCtx.getNewFeature()!,
+    'title',
+    mapCtx.getUserPreferences(),
+    m.day_chunky_okapi_cherish()
+  )
 );
 
 // DERIVED -- Collection Index and Size
@@ -182,7 +202,7 @@ onDestroy(() => {
             class="inline-block pr-3 text-xs text-base-content/60"
             bind:this={collectionScroll.content}>
             {#if isNewFeatureMode}
-              {m.early_watery_cobra_dance()}
+              {m.smart_crazy_cuckoo_play()}
             {:else}
               {collectionTitle}
               {#if isNotFeatureMode}

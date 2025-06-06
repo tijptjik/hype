@@ -19,7 +19,7 @@ let { fields } = sectionProps;
       {#each Object.entries(fields) as [fieldRoot, field]}
         {@const Field = getFieldComponent(field.component)}
         <div class="rounded-xl bg-base-100 px-6 py-2 pb-6 pt-4">
-          <Field {fieldRoot} {field} languageTag="core" {...sectionProps} />
+          <Field {fieldRoot} {field} locale="core" {...sectionProps} />
         </div>
       {/each}
     </div>

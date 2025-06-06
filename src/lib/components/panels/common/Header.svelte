@@ -4,7 +4,7 @@ import { onMount, onDestroy } from 'svelte';
 import Icon from '$lib/components/common/Icon.svelte';
 import { QuestionMarkCircle, XCircle } from '@steeze-ui/heroicons';
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 
 let { panel, title, subtitle, onToggleInfo } = $props<{
   panel: string;
@@ -12,7 +12,7 @@ let { panel, title, subtitle, onToggleInfo } = $props<{
   onToggleInfo?: (e: MouseEvent | TouchEvent) => void;
 }>();
 
-const mapCtx = getMapContext();
+const mapCtx = getMapCtx();
 
 // Setup and cleanup event listeners
 $effect(() => {

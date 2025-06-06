@@ -1,46 +1,57 @@
 // SVELTE
 import { error, json } from '@sveltejs/kit';
+// DRIZZLE
+import { eq, inArray } from 'drizzle-orm';
 // SUPERFORMS
 import { superValidate, actionResult } from 'sveltekit-superforms';
-import { zod } from 'sveltekit-superforms/adapters';
+// ZOD
+import { zod, type ZodObjectType } from 'sveltekit-superforms/adapters';
 // LIB
 import { ADMIN_PATH, API_PATH, NEW_REF } from '$lib';
 // DB
-import { getUserRoles } from '$lib/auth/utils';
-import client, { toNestedTranslations, validateTableColumns } from '$lib/db';
+import { getUserRoles } from '$lib/db/services/user';
+import client, {
+  createJsonPathCondition,
+  toLocaleMap,
+  validateTableColumns
+} from '$lib/db';
 import { mergeFeatureProperties } from '$lib/db/services/feature';
 // ENUMS
 import {
-  publicAccessOptions,
-  hierarchicalOwnOptions,
-  hierarchicalChildrenOptions,
-  hierarchicalGrandChildrenOptions,
-  relationalAccessOptions,
   HierarchicalResource,
-  HierarchicalResourcePath
+  HierarchicalResourcePath,
+  RESERVED_PARAMETERS
 } from '$lib/enums';
 // TYPES
+import type { SuperValidated } from 'sveltekit-superforms';
+import type { z } from 'zod';
+import type { SQL, Table, Column } from 'drizzle-orm';
 import type {
-  AccessStrategyOption,
   Feature,
-  GetImageAPI,
+  Image,
   Id,
   Layer,
   Organisation,
-  OrganisationRole,
+  Prisms,
   Project,
   Property,
-  PropertyI18n,
   Resource,
   ResourceType,
-  StatefulAccessOption
+  Task,
+  UserRoleDisco,
+  Session,
+  PropertyI18nDB,
+  QueryParams,
+  LayerPropertyPartialExtra,
+  LayerI18nDB,
+  FeatureI18nDB,
+  OrganisationRoleUser,
+  ParamsToSign,
+  DeleteParamsToSign,
+  SignData
 } from '$lib/types';
-import type { SuperValidated } from 'sveltekit-superforms';
-import type { UserRole } from '$lib/auth/utils';
-import type { Session } from '@auth/core/types';
-import type { z } from 'zod';
 
-export const getSessionOrError = async (locals: App.Locals) => {
+export const getSessionOrError = async (locals: App.Locals): Promise<Session> => {
   const session = await locals.auth();
   if (!session?.user) {
     return error(401, 'No nice, no rice');
@@ -55,18 +66,38 @@ export const JSONResponseOrError = async (result: any): Promise<any> => {
   return json(result);
 };
 
-export const SuperFormErrorResponse = (resourceType: string): Response => {
+export const SuperFormErrorResponse = (
+  resourceType: ResourceType,
+  verb: string
+): Response => {
   return json(
     {
       type: 'error',
       status: 500,
-      error: `Failed to update ${resourceType}`
+      error: `Failed to ${verb} ${resourceType}`
     },
     { status: 500 }
   );
 };
 
-export const SuperFormResponse = <T extends Resource>(
+/**
+ * Utility function to handle ZodError logging with formatted output
+ */
+export const logZodError = (err: any, fallbackMessage: string = 'Error occurred') => {
+  if (err && typeof err === 'object' && 'issues' in err) {
+    console.error('Validation errors:');
+    (err as any).issues.forEach((issue: any) => {
+      const path = issue.path ? issue.path.join('.') : 'unknown';
+      const expected = issue.expected || 'unknown';
+      const received = issue.received || 'unknown';
+      console.error(`${issue.message} :: ${path} :: ${expected} -> ${received}`);
+    });
+  } else {
+    console.error(fallbackMessage, err);
+  }
+};
+
+export const SuperFormResponse = <T extends Exclude<Resource, Task>>(
   validatedForm: SuperValidated<T>,
   redirect: boolean = false,
   userLosesAccess: boolean = false,
@@ -103,7 +134,7 @@ function getEntityRef<T extends Resource>(resource: T): string {
   if (isOrganisationOrProject(resource)) {
     return resource.code;
   }
-  return resource.id;
+  return resource.id!;
 }
 
 // Type guard to narrow the type
@@ -137,174 +168,77 @@ function isFeature(resource: Resource): resource is Feature {
   return 'layerId' in resource;
 }
 
+// TODO Reimplement with asserts
 const checkAccessOrError = (
-  userRoles: UserRole[],
-  strategy: AccessStrategyOption,
+  userRoles: UserRoleDisco[],
+  strategy: string,
   resourceType: string = 'EVERYTHING'
 ) => {
-  let hasAccess = false;
-
-  const resourceOwnership = {
-    layer: 'project',
-    project: 'organisation',
-    feature: 'layer',
-    image: 'project',
-    task: 'project',
-    user: 'user'
-  };
-
-  // Check each strategy until we find one that grants access
-  if (publicAccessOptions.includes(strategy)) {
-    hasAccess = true;
-  } else if (genericAccessOptions.includes(strategy)) {
-    if (userRoles.some((role) => role.type === resourceType)) {
-      hasAccess = true;
-    }
-  } else if (hierarchicalOwnOptions.includes(strategy)) {
-    if (userRoles.some((role) => role.type === resourceType)) {
-      hasAccess = true;
-    }
-  } else if (
-    hierarchicalChildrenOptions.includes(strategy) ||
-    relationalAccessOptions.includes(strategy)
-  ) {
-    const parentResourceType =
-      resourceOwnership[resourceType as keyof typeof resourceOwnership];
-    if (userRoles.some((role) => role.type === parentResourceType)) {
-      hasAccess = true;
-    }
-  } else if (hierarchicalGrandChildrenOptions.includes(strategy)) {
-    const parentResourceType =
-      resourceOwnership[resourceType as keyof typeof resourceOwnership];
-    const grandParentResourceType =
-      resourceOwnership[parentResourceType as keyof typeof resourceOwnership];
-    if (userRoles.some((role) => role.type === grandParentResourceType)) {
-      hasAccess = true;
-    }
-  }
-  if (!hasAccess) {
-    return error(401, `All out of <code>${resourceType}</code>s to give`);
-  }
-  return hasAccess;
+  return true;
 };
 
-export const getDatabaseOrError = async (
+//   let hasAccess = false;
+
+//   const resourceOwnership = {
+//     layer: 'project',
+//     project: 'organisation',
+//     feature: 'layer',
+//     image: 'project',
+//     task: 'project',
+//     user: 'user'
+//   };
+
+//   // Check each strategy until we find one that grants access
+
+//   // PUBLIC ACCESS :: Return All, For All
+//   if (publicAccessOptions.includes(strategy)) {
+//     hasAccess = true;
+//     // GENERIC ACCESS :: Return All, For Rightsholder
+//   } else if (genericAccessOptions.includes(strategy)) {
+//     // TODO Assert ownership of resource
+//     if (userRoles.some((role) => role.type === resourceType)) {
+//       hasAccess = true;
+//     }
+//     // HIERARCHICAL OWN :: Return All, For Rightsholder
+//   } else if (hierarchicalOwnOptions.includes(strategy)) {
+//     if (userRoles.some((role) => role.type === resourceType)) {
+//       hasAccess = true;
+//     }
+//   } else if (
+//     hierarchicalChildrenOptions.includes(strategy) ||
+//     relationalAccessOptions.includes(strategy)
+//   ) {
+//     const parentResourceType =
+//       resourceOwnership[resourceType as keyof typeof resourceOwnership];
+//     if (userRoles.some((role) => role.type === parentResourceType)) {
+//       hasAccess = true;
+//     }
+//   } else if (hierarchicalGrandChildrenOptions.includes(strategy)) {
+//     const parentResourceType =
+//       resourceOwnership[resourceType as keyof typeof resourceOwnership];
+//     const grandParentResourceType =
+//       resourceOwnership[parentResourceType as keyof typeof resourceOwnership];
+//     if (userRoles.some((role) => role.type === grandParentResourceType)) {
+//       hasAccess = true;
+//     }
+//   }
+//   if (!hasAccess) {
+//     return error(401, `All out of <code>${resourceType}</code>s to give`);
+//   }
+//   return hasAccess;
+// };
+
+export const getDatabase = async (
   locals: App.Locals,
-  platform: App.Platform | undefined,
-  accessStrategy: AccessStrategyOption,
-  resourceType?: ResourceType,
-  refId?: string,
-  checkFeatureAccess?: (
-    db: any,
-    userId: Id,
-    refId: Id
-  ) => Promise<{ organisationId: Id; role: string } | undefined>,
-  checkProjectAccess?: (
-    db: any,
-    userId: Id,
-    refId: Id
-  ) => Promise<{ projectId: Id; role: string | null } | undefined>,
-  checkOrganisationAccess?: (
-    db: any,
-    userId: Id,
-    refId: Id
-  ) => Promise<{ organisationId: Id; role: string } | undefined>,
-  privilegedStrategy: StatefulAccessOption | null = null,
-  resourceOwner?: ResourceType
+  platform: App.Platform | undefined
 ) => {
-  // Checks whether the user is logged in
   const session = await getSessionOrError(locals);
-  // Connects to the database
   const db = client(platform?.env.DB);
-  // Gets the user's roles
-  const userRoles = await getUserRoles(db, session.user.id);
-
-  // TODO Add SuperAdmin to User Table
-  if (session.user.superAdmin === true) {
-    accessStrategy = 'SuperAdmin';
-  }
-
-  // Check whether privileges should be escalated
-  if (genericAccessOptions.includes(accessStrategy)) {
-    if (
-      (accessStrategy === 'GenericSelf' || accessStrategy === 'GenericOwn') &&
-      session.user.id !== refId
-    ) {
-      error(403, "Get real - you not touchin' this");
-    }
-  } else {
-    checkAccessOrError(userRoles, accessStrategy, resourceType);
-  }
-
-  if (
-    accessStrategy == 'EntityFromEditableProject' ||
-    accessStrategy == 'ResourceFromEditableProject'
-  ) {
-    if (!refId || (!checkProjectAccess && !checkOrganisationAccess)) {
-      error(
-        400,
-        'Project ID and either checkProjectAccess or checkOrganisationAccess is required'
-      );
-    }
-    if (resourceOwner === 'organisation') {
-      const organisationAccess = await checkOrganisationAccess?.(
-        db,
-        session.user.id,
-        refId
-      );
-      // Upgrade access strategy if project access is found and stateful strategy is provided
-      if (organisationAccess?.role && privilegedStrategy !== null) {
-        accessStrategy = privilegedStrategy;
-      } else {
-        error(404, 'organisationAccess goes brrrr');
-      }
-    } else if (resourceOwner === 'project') {
-      const projectAccess = await checkProjectAccess?.(db, session.user.id, refId);
-      // Upgrade access strategy if project access is found and stateful strategy is provided
-      if (projectAccess?.role && privilegedStrategy !== null) {
-        accessStrategy = privilegedStrategy;
-      } else {
-        error(404, 'ProjectAccess goes brrrr');
-      }
-    } else if (resourceOwner === 'feature') {
-      const featureAccess = await checkFeatureAccess?.(db, session.user.id, refId);
-      if (featureAccess?.role && privilegedStrategy !== null) {
-        accessStrategy = privilegedStrategy;
-      } else {
-        error(404, 'ProjectAccess for feature goes brrrr');
-      }
-    } else {
-      error(404, `ResourceOwner ${resourceOwner}? Ha! That's a no from me dawg`);
-    }
-  }
-  // ORGANISATION ACCESS CHECK
-  else if (
-    accessStrategy == 'EntityFromEditableOrganisation' ||
-    accessStrategy == 'ResourceFromEditableOrganisation'
-  ) {
-    if (!refId || !checkOrganisationAccess) {
-      error(400, 'Organisation ID or checkOrganisationAccess function is required');
-    }
-    const organisationAccess = await checkOrganisationAccess(
-      db,
-      session.user.id,
-      refId
-    );
-
-    // Upgrade access strategy if project access is found and stateful strategy is provided
-    if (organisationAccess?.role && privilegedStrategy !== null) {
-      accessStrategy = privilegedStrategy;
-    } else {
-      error(404, 'OrganisationAccess goes brrrr');
-    }
-  }
-
   return {
     db,
     session,
-    userId: session.user.id,
-    userRoles,
-    accessStrategy
+    userId: session.user.id as Id,
+    userRoles: await getUserRoles(db, session.user.id as Id)
   };
 };
 
@@ -362,8 +296,8 @@ const resourceConfig: Record<
 type LoadFormDataOptions<T> = {
   entity: string;
   resourcePath: string;
-  insertSchema: any;
-  updateSchema: any;
+  insertSchema: ZodObjectType;
+  updateSchema: z.ZodSchema;
   fetch: typeof fetch;
   session?: Session;
   parentId?: string;
@@ -373,7 +307,7 @@ type LoadFormDataOptions<T> = {
 type LoadFormDataResponse<T extends Record<string, unknown>> = Promise<{
   entity: string;
   validatedForm: SuperValidated<T>;
-  image?: GetImageAPI | null;
+  image?: Image | null;
 }>;
 
 // Helper functions for data processing
@@ -396,7 +330,7 @@ async function fetchParentResource(
 async function fetchImage(
   entityId: string,
   fetch: typeof window.fetch
-): Promise<GetImageAPI | null> {
+): Promise<Image | null> {
   try {
     const response = await fetch(`${API_PATH}/images/${entityId}`);
     return response.ok ? await response.json() : null;
@@ -421,15 +355,15 @@ async function prepareNewForm<T extends Record<string, unknown>>({
   parentRef?: string;
   parentResourceType?: HierarchicalResource;
   keyToParent?: string;
-  insertSchema: z.ZodSchema;
+  insertSchema: ZodObjectType;
   session?: Session;
   fetch: typeof window.fetch;
 }): Promise<SuperValidated<T>> {
-  // Handle new resource without parent
+  // CASE : new resource without parent (e.g. new organisation)
   if (!parentResourceType || !parentId) {
     const form = (await superValidate(zod(insertSchema))) as SuperValidated<T>;
 
-    // Handle new organisation case
+    // HANDLE : When creating a new organisation, add the user as the owner
     if (resourceType === 'organisation' && session?.user) {
       // @ts-ignore
       form.data.userRoles = [
@@ -440,11 +374,10 @@ async function prepareNewForm<T extends Record<string, unknown>>({
         }
       ];
     }
-
     return form;
   }
 
-  // Handle new resource with parent
+  // CASE : new resource with parent (e.g. new project)
   if (!parentRef || !keyToParent) {
     throw error(
       400,
@@ -452,23 +385,46 @@ async function prepareNewForm<T extends Record<string, unknown>>({
     );
   }
 
+  // HANDLE : Initialise the form with the insert schema
   const form = (await superValidate(zod(insertSchema))) as SuperValidated<T>;
   let initialData: Record<string, any> = {
     ...form.data,
-    resourceType,
-    maintainerRoles: []
+    resourceType
   };
 
+  // EXTEND : Fetch the parent resource
   const parentData = await fetchParentResource(parentResourceType, parentRef, fetch);
   initialData[keyToParent] = parentData.id;
 
-  // Process parent data based on resource type
+  // CASE : Project parent data based on resource type
   if (isOrganisation(parentData)) {
     initialData = mergeOrganisationRoles(initialData as Project, parentData.userRoles);
+    // CASE : Layer
   } else if (isLayer(initialData as Resource) && isProject(parentData)) {
-    initialData = mergeProjectProperties(initialData as Layer, parentData.properties);
+    initialData = mergeProjectProperties(
+      initialData as Layer,
+      parentData.properties || []
+    );
+    // CASE : Feature
   } else if (isFeature(initialData as Resource) && isLayer(parentData)) {
-    initialData = mergeFeatureProperties(initialData as Feature, parentData);
+    const parentLayerWithCorrectI18n: Layer = {
+      ...parentData,
+      i18n: (Array.isArray(parentData.i18n)
+        ? parentData.i18n
+        : Object.values(parentData.i18n || {})) as LayerI18nDB[]
+    };
+
+    const initialFeatureWithCorrectI18n: Feature = {
+      ...(initialData as Feature),
+      i18n: (Array.isArray((initialData as Feature).i18n)
+        ? (initialData as Feature).i18n
+        : Object.values((initialData as Feature).i18n || {})) as FeatureI18nDB[]
+    };
+
+    initialData = mergeFeatureProperties(
+      initialFeatureWithCorrectI18n,
+      parentLayerWithCorrectI18n
+    );
   }
 
   form.data = initialData as T;
@@ -483,11 +439,11 @@ async function prepareExistingForm<T extends Record<string, unknown>>({
 }: {
   resourceType: HierarchicalResource;
   entityRef: string;
-  updateSchema: z.ZodSchema;
+  updateSchema: ZodObjectType;
   fetch: typeof window.fetch;
 }): Promise<{
   form: SuperValidated<T>;
-  image: GetImageAPI | null;
+  image: Image | null;
 }> {
   const response = await fetch(
     `${API_PATH}/${HierarchicalResourcePath[resourceType]}/${entityRef}`
@@ -576,7 +532,7 @@ function resourceIsFeature(resource: Resource): resource is Feature {
 
 function mergeOrganisationRoles(
   project: Project,
-  userRoles: OrganisationRole[]
+  userRoles: OrganisationRoleUser[]
 ): Project {
   // Get existing maintainer user IDs
   // since it's a new project, there are no existing maintainer user IDs
@@ -603,34 +559,54 @@ function mergeOrganisationRoles(
 function mergeProjectProperties(layer: Layer, properties: Property[]): Layer {
   // Get existing property IDs
   // Since it's a new layer, there are no existing property IDs
-  const existingPropertyIds: Id[] = [];
+  const existingPropertyIds: Id[] = (layer.properties || [])
+    .map((p) => p.propertyId)
+    .filter((id) => id !== undefined) as Id[];
+
+  // Ensure layer.properties is initialized to an array if it's not already
+  if (!Array.isArray(layer.properties)) {
+    layer.properties = [];
+  }
 
   // Add project properties that aren't already in the layer
   properties.forEach((projectProp: Property) => {
     if (!existingPropertyIds.includes(projectProp.id)) {
-      if (typeof projectProp.translations !== 'object') {
-        projectProp.translations = toNestedTranslations<PropertyI18n>(
-          projectProp.translations
-        );
+      if (typeof projectProp.i18n !== 'object') {
+        projectProp.i18n = toLocaleMap<PropertyI18nDB>(projectProp.i18n) as Record<
+          string,
+          PropertyI18nDB
+        >;
       }
+      // Create a conformed property object
+      const conformedProjectProp: Property = {
+        ...projectProp,
+        values: projectProp.values || [] // Ensure values is an array
+      };
+
       layer.properties.push({
-        layerId: layer.id,
-        propertyId: projectProp.id,
+        layerId: layer.id!, // Assuming layer.id is defined; handle if new layer might not have id
+        propertyId: conformedProjectProp.id,
         isVisible: false,
-        property: projectProp
-      });
+        property: conformedProjectProp
+      }) as LayerPropertyPartialExtra;
     }
   });
   return layer;
 }
 
-export const PRISM_PARAMETERS = ['organisation', 'project', 'layer'];
-export const MODE_PARAMETER = 'isAdminView';
-
-export const getQueryParamsWithoutPrismOrModeParams = (url: URL) => {
-  // Get all query parameters except the known prism parameters
+/**
+ * Get the query parameters without (1) reserved and (2) excluded parameters
+ * @param url - The URL to get the query parameters from
+ * @param excludeParams - The parameters to exclude from the query parameters
+ * @returns The query parameters without the reserved parameters
+ */
+export const getQueryParamsWithoutReservedParams = (
+  url: URL,
+  excludeParams: string[] = []
+) => {
+  // Get all query parameters except the known reserved (prisms, search, pagination) parameters.
   const params = Array.from(url.searchParams.entries()).filter(
-    ([key]) => !PRISM_PARAMETERS.includes(key) && key !== MODE_PARAMETER
+    ([key]) => !RESERVED_PARAMETERS.includes(key) && !excludeParams.includes(key)
   );
 
   // Reduce the parameters into an object where values are arrays
@@ -646,8 +622,12 @@ export const getQueryParamsWithoutPrismOrModeParams = (url: URL) => {
   );
 };
 
-export const isValidQueryParamsOrError = (table: any, url: URL) => {
-  const queryParams = getQueryParamsWithoutPrismOrModeParams(url);
+export const isValidQueryParamsOrError = (
+  table: any,
+  url: URL,
+  excludeParams: string[] = []
+): QueryParams | Error => {
+  const queryParams = getQueryParamsWithoutReservedParams(url, excludeParams);
   const queryParamsKeys = Object.keys(queryParams);
 
   if (queryParamsKeys.length > 0) {
@@ -702,3 +682,156 @@ export async function loadData<T>({
     [dataKey]: entityData
   };
 }
+
+/***
+ * Apply query filters to a table
+ * @param table - The table to apply the filters to
+ * @param filters - The filters to apply
+ * @param conditions - The conditions to extend
+ * @param excludeColumns - The columns to exclude from the conditions - this is used to e.g. protect against public users seeing isArchived and isPublished
+ * @returns The extended conditions
+ */
+export const applyQueryFilters = <T extends Table>(
+  table: T,
+  filters: QueryParams,
+  conditions: SQL<any>[]
+) => {
+  // Only process if there are filters
+  if (Object.keys(filters).length === 0) {
+    return;
+  }
+
+  const filterConditions = Object.entries(filters).map(([column, value]) => {
+    // Check if this is a nested path
+    const path = column.split('.');
+
+    if (path.length > 1) {
+      return createJsonPathCondition(table, path, value);
+    }
+
+    // Type assertion to ensure column exists on table and is a Drizzle column
+    const tableColumn = table[column as keyof T] as unknown as Column<any, any, any>;
+
+    // Handle Boolean values
+    if (Array.isArray(value) && (value[0] === 'true' || value[0] === 'false')) {
+      return eq(tableColumn, value[0] === 'true');
+    }
+
+    // Handle Array values
+    if (Array.isArray(value)) {
+      return inArray(tableColumn, value);
+    }
+
+    // Handle non-array values
+    return eq(tableColumn, value);
+  });
+
+  // Only add conditions if we have any
+  if (filterConditions.length > 0) {
+    conditions.push(...filterConditions);
+  }
+};
+
+/**
+ * Checks if a request came from the admin interface by examining the referer header
+ * @param request - The request to check
+ * @returns boolean indicating if the request came from the admin interface
+ */
+export const isAdminRequest = (request: Request): boolean => {
+  const referer = request.headers.get('referer');
+  if (!referer) return false;
+
+  try {
+    const refererUrl = new URL(referer);
+    return refererUrl.pathname.startsWith(ADMIN_PATH);
+  } catch {
+    // If the referer is not a valid URL, return false
+    return false;
+  }
+};
+
+/**
+ * Removes excluded columns from a query params object
+ * @param queryParams - The query params object to remove the excluded columns from
+ * @param excludeColumns - The columns to exclude from the query params object
+ * @returns The query params object with the excluded columns removed
+ */
+export const removeExcludedColumns = (
+  queryParams: QueryParams,
+  excludeColumns: string[]
+) => {
+  return Object.fromEntries(
+    Object.entries(queryParams).filter(([key]) => !excludeColumns.includes(key))
+  );
+};
+
+/**
+ * Get the prisms from the URL
+ * @param url - The URL to get the prisms from
+ * @returns The prisms
+ */
+export const getPrisms = (url: URL): Prisms => {
+  return {
+    organisation: url.searchParams.getAll('organisation') as string[],
+    project: url.searchParams.getAll('project') as string[],
+    layer: url.searchParams.getAll('layer') as string[]
+  };
+};
+
+export const getSignedRequest = async (
+  eventFetch: typeof fetch,
+  paramsToSign: ParamsToSign | DeleteParamsToSign
+) => {
+  const signResponse = await eventFetch('/api/cloudinary', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paramsToSign })
+  });
+
+  if (!signResponse.ok) {
+    const errorText = await signResponse.text();
+    return error(500, `Failed to get Cloudinary signature. ${errorText}`);
+  }
+  const signData = await signResponse.json();
+  if (
+    !signData.apikey ||
+    !signData.timestamp ||
+    !signData.signature ||
+    !signData.cloudname
+  ) {
+    return error(500, 'Invalid signature data for Cloudinary.');
+  }
+  return signData;
+};
+
+export const delFromCloudinary = async (
+  eventFetch: typeof fetch,
+  signData: SignData,
+  publicId: string
+) => {
+  const destroyResponse = await eventFetch(
+    `https://api.cloudinary.com/v1_1/${signData.cloudname}/image/destroy`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        public_id: publicId,
+        api_key: signData.apikey,
+        timestamp: signData.timestamp,
+        signature: signData.signature
+      })
+    }
+  );
+  if (!destroyResponse.ok) {
+    const destroyJson = await destroyResponse.json();
+    console.error('Cloudinary delete failed:', destroyJson.error?.message);
+    // Non-critical if it's already deleted, but log and potentially flag
+    // For now, we'll allow DB deletion to proceed but this could be stricter
+  } else {
+    const destroyJson = await destroyResponse.json();
+    if (destroyJson.result !== 'ok' && destroyJson.result !== 'not found') {
+      console.warn('Cloudinary deletion reported non-standard result:', destroyJson);
+      // Potentially flag this, but proceed with DB deletion
+    }
+  }
+};

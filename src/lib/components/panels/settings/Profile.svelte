@@ -1,8 +1,12 @@
 <script lang="ts">
+// AUTH
+// @ts-expect-error
 import { signOut } from '@auth/sveltekit/client';
-import { page } from '$app/stores';
 import { m } from '$lib/i18n';
-const { session } = $page.data;
+// CONTEXT
+import { getMapCtx } from '$lib/context/map.svelte';
+
+const mapCtx = getMapCtx();
 </script>
 
 <div
@@ -12,14 +16,14 @@ const { session } = $page.data;
     <!-- Avatar -->
     <div class="avatar">
       <div class="w-32 rounded-full ring ring-black/40">
-        <img alt="Avatar" src={session?.user?.image} referrerpolicy="no-referrer" />
+        <img alt="Avatar" src={mapCtx.getUser().image} referrerpolicy="no-referrer" />
       </div>
     </div>
 
     <!-- User Name -->
     <div class="z-20 -mt-6 rounded-full bg-black/80 px-4 py-1">
       <span class="font-medium text-white">
-        {session?.user?.name}
+        {mapCtx.getUser().name}
       </span>
     </div>
 

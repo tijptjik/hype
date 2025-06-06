@@ -6,9 +6,9 @@ import NewEntityButton from '$lib/components/menu/NewEntityButton.svelte';
 // CONFIG
 import { navItems } from '$lib/navigation';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // TYPES
-import type { HierarchicalResource } from '$lib/types';
+import type { HierarchicalResource } from '$lib/enums';
 
 // STATE : CONTEXT :: ROUTER
 const resourceState = getHierarchicalResourceState();

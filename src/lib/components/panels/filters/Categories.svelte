@@ -1,20 +1,28 @@
 <script lang="ts">
 // I18N
-import { m, getI18nValue, getLocale } from '$lib/i18n';
-// UTILS
-import { getTranslatedValues } from '$lib/utils/formatting';
+import { getI18n, getLocale } from '$lib/i18n';
+import { m } from '$lib/i18n';
+// SERVICES
+import { sortProperties } from '$lib/client/services/property';
 // COMPONENTS
 import CategorySection from '$lib/components/panels/filters/CategorySection.svelte';
 import CategoryFilter from '$lib/components/panels/filters/CategoryFilter.svelte';
 import RangeFilter from '$lib/components/panels/filters/RangeFilter.svelte';
 import SelectedFilters from '$lib/components/panels/filters/SelectedFilters.svelte';
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 // TYPES
-import type { Id, Property } from '$lib/types'; // Ensure Property type is imported
+import type {
+  Id,
+  Organisation,
+  Property,
+  Project,
+  Layer,
+  PropertyValue
+} from '$lib/types'; // Ensure Property type is imported
 
 // Initialize map state
-const mapCtx = getMapContext();
+const mapCtx = getMapCtx();
 
 let organisations = $derived(mapCtx.state.resources.organisation);
 let projects = $derived(mapCtx.state.resources.project);
@@ -22,12 +30,15 @@ let layers = $derived(mapCtx.state.resources.layer);
 let activeLayerIds = $derived(new Set(mapCtx.state.prisms.layer));
 
 // Helper function to find layer and project details
-function getLayerDetails(layerId: string) {
+function getLayerDetails(
+  layerId: string
+): { layer: Layer; project: Project; organisation: Organisation } | null {
   const layer = layers.find((l) => l.id === layerId);
   if (!layer) return null;
   const project = projects.find((p) => p.id === layer.projectId);
   if (!project) return null;
   const organisation = organisations.find((o) => o.id === project.organisationId);
+  if (!organisation) return null;
   return { layer, project, organisation };
 }
 
@@ -42,48 +53,30 @@ let layerCategories = $derived(
 
       // Filter properties based on visibility in layer
       const properties: Property[] =
-        project.properties
-          ?.filter((p) => p.type === 'classifier') // Only classifier types for filtering here
-          .filter((prop) => {
-            const layerProperty = layer.properties?.find(
-              (lp) => lp.propertyId === prop.id
-            );
-            return layerProperty?.isVisible !== false; // Check visibility
-          })
+        layer.properties
+          ?.filter((lp) => lp.property && lp.property.type === 'classifier') // Only classifier types for filtering here
+          .filter((lp) => lp.isVisible !== false) // Check visibility on the layer property
+          .map((lp) => lp.property!) // Extract the nested property
           .filter(
             (prop, index, self) => index === self.findIndex((p) => p.key === prop.key) // Ensure uniqueness by key
-          )
-          .sort((a, b) => {
-            // Sort 'grade' properties first
-            if (a.key === 'grade') return -1;
-            if (b.key === 'grade') return 1;
-            return 0;
-          }) || [];
+          ) || [];
 
-      // Determine layer name display logic
-      const projectLayerCount = layers.filter((l) => l.projectId === project.id).length;
-      const layerName = projectLayerCount === 1 ? null : layer.nameShort || layer.name;
+      // Sort properties by type (classifiers first) then rank
+      const sortedProperties = sortProperties(
+        properties.map((p) => ({ property: p }))
+      ).map((item) => item.property!);
 
       // Construct hierarchy info
-      const hierarchy =
-        getLocale() === 'en'
-          ? {
-              organisation:
-                organisation?.code || organisation?.nameShort || organisation?.name,
-              project: project?.code || project?.nameShort || project?.name,
-              layer: layerName,
-              layerId: layer.id // Pass layerId for direct filter access
-            }
-          : {
-              organisation: getI18nValue(organisation, 'name'),
-              project: getI18nValue(project, 'name'),
-              layer: getI18nValue(layer, 'name'),
-              layerId: layer.id // Pass layerId for direct filter access
-            };
+      const hierarchy = {
+        organisation: mapCtx.getContextualOrganisationName(organisation),
+        project: mapCtx.getContextualProjectName(project),
+        layer: mapCtx.getContextualLayerName(layer),
+        layerId: layer.id // Pass layerId for direct filter access
+      };
 
       return {
         hierarchy,
-        properties
+        properties: sortedProperties
       };
     })
     .filter(
@@ -116,7 +109,8 @@ let layerCategories = $derived(
           <RangeFilter
             key={property.key}
             layerId={hierarchy.layerId}
-            label={getI18nValue(property, 'label') || property.key}
+            label={getI18n(property, 'label', mapCtx.getUserPreferences()) ||
+              property.key}
             min={property.min!}
             max={property.max!}
             defaultOpen={property.key === 'grade'} />
@@ -125,8 +119,11 @@ let layerCategories = $derived(
           <CategoryFilter
             key={property.key}
             layerId={hierarchy.layerId}
-            label={getI18nValue(property, 'label') || property.key}
-            values={getTranslatedValues(property.values)}
+            label={getI18n(property, 'label', mapCtx.getUserPreferences()) ||
+              property.key}
+            values={(property.values as PropertyValue[])?.map(
+              (v) => v.i18n?.[getLocale()]?.value
+            ) || []}
             defaultOpen={property.key === 'grade'} />
         {/if}
       {/each}

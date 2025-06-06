@@ -10,29 +10,25 @@ import MinWidthProtector from '$lib/components/layout/MinWidth.svelte';
 // STYLES
 import '$lib/styles/admin.css';
 // CONTEXT
-import { setHierarchicalResourceState } from '$lib/context/resources.svelte';
-import { setMapContext } from '$lib/context/map.svelte';
-// STORES
-import { page } from '$app/stores';
-import { goto } from '$app/navigation';
-// TYPES
-import type { LayoutData } from './$types';
-import type { QueryClient } from '@tanstack/svelte-query';
+import { setHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { setMapCtx } from '$lib/context/map.svelte';
 import { setSidebarState } from '$lib/context/sidebar.svelte';
-import { HierarchicalResource } from '$lib/types';
+// TYPES
+import type { LayoutProps, LayoutData } from './$types';
+import type { QueryClient } from '@tanstack/svelte-query';
 
 // PROPS
-let { children } = $props();
-
-// CONTEXT
-const { session, queryClient } = $page.data as LayoutData & {
+let { children, data }: LayoutProps = $props();
+const { session, queryClient } = data as LayoutData & {
   queryClient: QueryClient;
 };
+
+// CONTEXT
 const resourceState = setHierarchicalResourceState(
   queryClient,
   session?.user.roles ?? []
 );
-setMapContext(queryClient, session?.user.id ?? '', session?.user.userLayers ?? []);
+setMapCtx(queryClient, session.user);
 const sidebarState = setSidebarState();
 
 let viewportContained = $derived(

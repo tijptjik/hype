@@ -47,6 +47,15 @@ function generateNonOverlappingPoints(
   return points;
 }
 
+// Simple seedable random number generator (Linear Congruential Generator)
+function createSeededRandom(seed: number) {
+  let state = seed;
+  return function seededRandom() {
+    state = (state * 1664525 + 1013904223) % (2 ** 32);
+    return state / (2 ** 32);
+  };
+}
+
 // Generate points based on key
 function generatePointsForKey(key: string) {
   // Use key to seed random number generation
@@ -54,16 +63,44 @@ function generatePointsForKey(key: string) {
     return char.charCodeAt(0) + ((acc << 5) - acc);
   }, 0);
 
-  Math.seed = hash;
+  const seededRandom = createSeededRandom(Math.abs(hash));
 
-  const startPoints = generateNonOverlappingPoints(
+  // Helper function to generate non-overlapping random points with seeded random
+  function generateSeededNonOverlappingPoints(
+    rangeStart: number,
+    rangeEnd: number,
+    count: number,
+    offset: number
+  ) {
+    const points: number[] = [];
+    let attempts = 0;
+    const maxAttempts = 1000; // Prevent infinite loops
+
+    while (points.length < count && attempts < maxAttempts) {
+      attempts++;
+      const point = seededRandom() * (rangeEnd - rangeStart) + rangeStart;
+      if (points.every((p) => Math.abs(p - point) > offset)) {
+        points.push(point);
+      }
+    }
+
+    // If we couldn't generate enough points, space them evenly
+    if (points.length < count) {
+      const spacing = (rangeEnd - rangeStart) / (count - 1);
+      return Array.from({ length: count }, (_, i) => rangeStart + spacing * i);
+    }
+
+    return points;
+  }
+
+  const startPoints = generateSeededNonOverlappingPoints(
     0,
     100,
     Math.min(NUMBER_OF_LINES, 10),
     NO_OVERLAP_OFFSET
   );
   const endPoints = startPoints.map((start) => {
-    const deviation = (Math.random() * 2 - 1) * MAX_DEVIATION;
+    const deviation = (seededRandom() * 2 - 1) * MAX_DEVIATION;
     let endX = start + deviation;
 
     // If we exceed bounds, reflect the excess back in the opposite direction

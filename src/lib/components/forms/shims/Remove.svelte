@@ -6,9 +6,9 @@ let { onclick } = $props();
 </script>
 
 <div
-  class="group absolute right-0 top-0 flex h-full w-full flex-col items-center justify-center rounded-lg bg-base-200/50 hover:bg-base-200/70"
+  class="group absolute right-0 top-0 flex h-full w-full flex-col items-center justify-center rounded-lg bg-base-200/50 hover:bg-base-200/70 z-10"
   {onclick}>
   <Icon
     src={Trash}
-    class="m-auto w-12 shrink-0 stroke-current text-error opacity-100 transition-transform group-hover:scale-105" />
+    class="m-auto w-16 h-16 shrink-0 stroke-current text-error opacity-100 transition-transform group-hover:scale-105" />
 </div>

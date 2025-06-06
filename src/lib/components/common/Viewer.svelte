@@ -1,10 +1,9 @@
 <script lang="ts">
-import { fade, crossfade, scale } from 'svelte/transition';
-import { cubicOut } from 'svelte/easing';
+import { fade, scale } from 'svelte/transition';
 // PROVIDERS
-import { getImageContext } from '$lib/context/images.svelte';
+import { getImageContext } from '$lib/context/image.svelte';
 // SERVICES
-import { getURLfromImage } from '$lib/services/images.svelte';
+import { getURLfromImage } from '$lib/client/services/image';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Camera, Photo, InformationCircle } from '@steeze-ui/heroicons';
@@ -15,12 +14,12 @@ import DownloadImageButton from '$lib/components/images/DownloadImageButton.svel
 import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte';
 import IconAnchor from '$lib/components/common/IconAnchor.svelte';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // STATE : CONTEXT :: ROUTER
 const imageCtx = getImageContext();
 const resourceState = getHierarchicalResourceState();
 // TYPES
-import type { HierarchicalResource } from '$lib/types';
+import type { HierarchicalResource } from '$lib/enums';
 
 type Props = {
   LeftActions?: any;
@@ -143,7 +142,7 @@ const handleDrop = async (e: CustomEvent) => {
       in:fade={{ duration: 400 }}
       out:fade={{ duration: 400 }}>
       <Image
-        src={imagePreview?.preview || image?.preview}
+        src={imagePreview?.preview || image?.preview || ''}
         alt="Preview Background"
         class="h-full w-full rounded-b-2xl text-base-100 blur-sm"
         layout="cover"
@@ -156,7 +155,7 @@ const handleDrop = async (e: CustomEvent) => {
       out:fade={{ duration: 400, delay: 100 }}>
       <Image
         class="mx-auto h-full overflow-hidden rounded-xl text-base-100"
-        src={imagePreview?.preview || image?.preview}
+        src={imagePreview?.preview || image?.preview || ''}
         alt="Preview Image"
         layout="contain"
         showLoading={false}

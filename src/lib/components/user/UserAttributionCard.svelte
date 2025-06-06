@@ -6,6 +6,14 @@ import { formatDistanceToNow } from 'date-fns';
 import Image from '../common/Image.svelte';
 import User from '../forms/actions/User.svelte';
 
+// TYPES
+interface UserData {
+  id: string;
+  name: string | null;
+  image: string | null;
+  [key: string]: any;
+}
+
 type Props = {
   userId: string | null;
   date: string | undefined;
@@ -33,10 +41,10 @@ let formattedDate = $derived(
 );
 
 // STATE : PROMISE
-let userPromise: Promise<User> = $derived(fetchUser(userId));
+let userPromise: Promise<UserData> = $derived(fetchUser(userId));
 
 // FETCH USER
-async function fetchUser(id: string | null) {
+async function fetchUser(id: string | null): Promise<UserData> {
   if (!id) throw new Error('Invalid user ID');
   const res = await fetch(`/api/users/${id}`);
   if (!res.ok) throw new Error('Failed to fetch user');
@@ -56,8 +64,8 @@ async function fetchUser(id: string | null) {
       <div
         class="flex min-w-[200px] items-center gap-3 rounded-lg bg-base-200/60 p-3 backdrop-blur-sm">
         <Image
-          src={user.image}
-          alt={user.name}
+          src={user.image || ''}
+          alt={user.name || 'Unknown User'}
           class="h-12 w-12 rounded-full object-cover" />
         <div class="flex flex-col">
           <span class="font-medium">{user.name ?? 'Unknown User'}</span>

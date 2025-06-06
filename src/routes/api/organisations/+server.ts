@@ -1,162 +1,146 @@
+// SVELTE
 import { error } from '@sveltejs/kit';
-import { actionResult, superValidate, type SuperValidated } from 'sveltekit-superforms';
+// FORMS
+import { superValidate, type SuperValidated } from 'sveltekit-superforms';
 import {
-  getDatabaseOrError,
+  getDatabase,
   isValidQueryParamsOrError,
   JSONResponseOrError,
-  PRISM_PARAMETERS,
-  SuperFormResponse
+  SuperFormResponse,
+  SuperFormErrorResponse
 } from '$lib/api';
-// DB
+// SERVICES
+import { organisation } from '$lib/db/schema';
 import {
-  hierarchicalResourceQuery,
-  toNestedTranslations,
-  validateTableColumns
-} from '$lib/db';
-import { organisationRole, organisationI18n, organisation } from '$lib/db/schema';
-import {
-  createOrganisation,
-  createTranslations,
-  createUserRoles,
-  extractEntitiesToInsert
+  createOrganisationWithRelated,
+  listOrganisations,
+  toFormShape,
+  toResponseShape
 } from '$lib/db/services/organisation';
-import { isFieldUnique } from '$lib/db';
-
+import {
+  getOrganisationQueryContext,
+  assertPermissionsToCreateOrganisation,
+  organisationWithRelations,
+  assertCodeUnique
+} from '$lib/api/services/organisation';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
-import { OrganisationInsertAPI, OrganisationUpdateAPI } from '$lib/db/zod';
+import { OrganisationInsertAPI } from '$lib/db/zod';
 // TYPES
 import type { RequestHandler } from '@sveltejs/kit';
-import type { NewOrganisation, Organisation, OrganisationI18n } from '$lib/types';
+import type { OrganisationNew, Organisation } from '$lib/types';
+
+
+/********************
+ *  COMMON
+ ************/
 
 const RESOURCE_TYPE = 'organisation';
 const RESOURCE_PATH = 'organisations';
-let ACCESS_STRATEGY = 'ResourceOwn';
 
-export const GET: RequestHandler = async ({ url, locals, platform }) => {
-  // Features which are published are visible to all users
-  if (
-    url.searchParams.get('isPublished') === 'true' &&
-    url.searchParams.get('isAdminView') !== 'true'
-  ) {
-    ACCESS_STRATEGY = 'Public';
-    // For the Admin View we use ResourceAll instead of Public so that
-    // unpublished organisations are still visible -- in applyPublishedConstraints
-    // we filter out unpublished records for the Public access strategy.
-  } else if (url.searchParams.get('isAdminView') === 'true') {
-    ACCESS_STRATEGY = 'ResourceAll';
-  }
+/********************
+ *  LIST
+ ************/
 
-  // AUTH : Pass or Fail
-  const { db, userId, accessStrategy } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE
+/**
+ * Lists organisations
+ */
+export const GET: RequestHandler = async ({ url, locals, platform, request }) => {
+  // ASSERT : User Logged in
+  const { db, session, userRoles } = await getDatabase(locals, platform);
+
+  // ASSERT : Valid query parameters
+  // Validate query parameters, or return 400
+  let queryParams = isValidQueryParamsOrError(organisation, url) as Record<
+    string,
+    string | string[]
+  >;
+
+  // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
+  let { conditions } = getOrganisationQueryContext(
+    session,
+    request,
+    queryParams,
+    userRoles
   );
 
   try {
-    // Validate query parameters, or return 400
-    const queryParams = isValidQueryParamsOrError(organisation, url);
+    // DB : List the organisations
+    const result = await listOrganisations(db, organisationWithRelations, conditions);
 
-    const result = await hierarchicalResourceQuery(
-      db,
-      accessStrategy,
-      {
-        translations: true,
-        image: true
-      },
-      userId,
-      organisationRole,
-      organisationI18n,
-      {
-        id: url.searchParams.getAll('id')
-      },
-      1,
-      queryParams
+    // RESPONSE : Build the response shape
+    const data = await Promise.all(
+      result.map(async (organisation) => {
+        return await toResponseShape(
+          organisation,
+          organisation.i18n,
+          [],
+          true
+        );
+      })
     );
 
     // HTTP : 200 JSON or 404
-    return JSONResponseOrError(result);
+    return JSONResponseOrError(data);
   } catch (e) {
     // DB : Query Error
     console.error('Database query error:', e);
-    // HTTP : 500 Error
     return error(500, 'Dust Accumulation Critical');
   }
 };
 
+/********************
+ *  CREATE
+ ************/
+
+/**
+ * Creates a new organisation
+ */
 export const POST: RequestHandler = async ({ request, locals, platform }) => {
-  // AUTH : Pass or Fail
-  const { db, userId, accessStrategy } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE
-  );
+  // ASSERT : User logged in
+  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
 
   try {
-    const formData: NewOrganisation = await request.json();
-
-    const form = (await superValidate(
+    // ASSERT : Valid form
+    const formData: OrganisationNew = await request.json();
+    let form = (await superValidate(
       formData,
+      // @ts-ignore - FORM : Fix type error
       zod(OrganisationInsertAPI)
-    )) as SuperValidated<NewOrganisation>;
+    )) as SuperValidated<OrganisationNew>;
 
-    // Check if the current user will lose access on membership changes
-    const userLosesAccess =
-      !Object.keys(form.data.userRoles).includes(userId) &&
-      accessStrategy !== 'SuperAdmin';
-    const codeUnique = await isFieldUnique<Organisation>(
-      db,
-      formData as Organisation,
-      RESOURCE_TYPE,
-      'code'
-    );
+    // ASSERT : Code is unique
+    form = await assertCodeUnique(db, form, formData);
 
-    if (!codeUnique) {
-      form.valid = false;
-      form.errors.code = ['Code already exists'];
-    }
-
+    // RETURN : early if the form is not valid
     if (!form.valid) {
+      // @ts-ignore - FORM : Fix type error
       return SuperFormResponse<Organisation>(form);
     }
 
-    const { baseOrganisation, formTranslations, formUserRoles } =
-      extractEntitiesToInsert(form.data);
-    const createdOrganisation = await createOrganisation(db, baseOrganisation);
-    const createdTranslations = await createTranslations(
-      db,
-      formTranslations,
-      createdOrganisation.id
+    // ASSERT : Permissions to update organisation
+    assertPermissionsToCreateOrganisation(session, request, formData, userRoles);
+
+    // DB : Create the organisation
+    const createdOrganisation = await createOrganisationWithRelated(db, form.data as OrganisationNew);
+
+    // FORM : Rebuild the form data
+    const updatedForm = await toFormShape(
+      createdOrganisation,
+      createdOrganisation.i18n,
+      createdOrganisation.userRoles
     );
-    const createdUserRoles = await createUserRoles(
-      db,
-      formUserRoles,
-      createdOrganisation.id
-    );
 
-    const updatedFormData = {
-      ...createdOrganisation,
-      translations: toNestedTranslations<OrganisationI18n>(createdTranslations),
-      userRoles: createdUserRoles
-    };
-
-    const updatedForm = (await superValidate(
-      updatedFormData,
-      zod(OrganisationUpdateAPI)
-    )) as SuperValidated<Organisation>;
-
+    // HTTP : 201 JSON or 400
+    // @ts-ignore - FORM : Fix SuperForm type error
     return SuperFormResponse<Organisation>(
       updatedForm,
       true,
-      userLosesAccess,
+      false, // Should always be false as only superAdmins can create organisations
       RESOURCE_PATH,
       201
     );
   } catch (err) {
-    console.error(err);
-    return actionResult('error', 'Failed to create organisation', { status: 500 });
+    return SuperFormErrorResponse(RESOURCE_TYPE, 'create');
   }
 };

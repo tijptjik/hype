@@ -1,6 +1,6 @@
 <script lang="ts">
 import FilterStat from '$lib/components/sidebar/FilterStat.svelte';
-import { CollectionStatistic } from '$lib/types';
+import { CollectionStatistic } from '$lib/enums';
 
 let { resourceType } = $props();
 </script>

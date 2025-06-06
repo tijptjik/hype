@@ -1,16 +1,18 @@
 <script lang="ts">
-// QUERY
-import { page } from '$app/stores';
+// I18N
 import { m } from '$lib/i18n';
 // AUTH
+// @ts-ignore
 import { signIn } from '@auth/sveltekit/client';
+// STORES
+import { page } from '$app/state';
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 
 // CONTEXT
-const { session } = $page.data;
+const { session } = page.data;
 
-const mapCtx = getMapContext();
+const mapCtx = getMapCtx();
 if (!session) {
   mapCtx.startCircularFlight([114.157, 22.319304]);
 }

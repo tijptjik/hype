@@ -7,11 +7,11 @@ import { clickOutside } from '$lib/actions';
 import { fade, scale } from 'svelte/transition';
 import { cubicInOut } from 'svelte/easing';
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 import { getOmniContext, PageState } from '$lib/context/omni.svelte';
 
 // CONTEXT
-let mapCtx = getMapContext();
+let mapCtx = getMapCtx();
 let omniCtx = getOmniContext();
 
 // STATE : PROPS
@@ -33,6 +33,8 @@ let horizontalOffset = $derived(() => {
         ? -420 / 2
         : 0;
 });
+
+
 
 // PAGE STATE HANDLING
 function handleOutroStart() {
@@ -145,12 +147,12 @@ export function conditionalTouchScroll(node: HTMLElement, options = { threshold:
 
 {#if omniCtx.state.isCardOpen}
   <div
-    class="pointer-events-none relative z-20 mx-auto h-full w-full max-w-[520px] overflow-x-auto overflow-y-hidden p-0 duration-300 w-92:my-4 w-92:h-auto w-92:px-4"
+    class="flex flex-grow-1 pointer-events-none relative z-20 mx-auto h-full w-full max-w-[520px] overflow-x-auto overflow-y-hidden p-0 duration-300 w-92:my-4 w-92:h-auto w-92:px-4"
     style="transform: translateX({horizontalOffset()}px); z-index: 4;"
     use:conditionalTouchScroll={{ threshold: 200 }}>
     <div
       id="feature-card"
-      class="relative flex h-full w-full flex-col justify-between overflow-x-visible px-0 shadow-xl w-92:justify-start w-92:rounded-lg"
+      class="relative flex h-full w-full flex-col overflow-x-visible px-0 shadow-xl w-92:h-auto w-92:max-h-[calc(100svh-162px)] w-92:rounded-lg"
       in:scale={{
         duration: 300,
         delay: 300,

@@ -3,7 +3,8 @@
 import Icon from '$lib/components/common/Icon.svelte';
 import { XMark } from '@steeze-ui/heroicons';
 // I18N
-import { m, getI18nValue, getLocale } from '$lib/i18n';
+import { getI18n } from '$lib/i18n';
+import { m } from '$lib/i18n';
 // TYPES
 import type { Resource, Id } from '$lib/types';
 
@@ -50,7 +51,9 @@ function handleToggle(id: Id) {
 {#if props.selectedIds.length > 0}
   <div class="flex flex-wrap gap-2 p-4 px-8 pt-2">
     {#each props.selectedIds as id}
-      {@const resource = props.resources.find((r) => r.id === id)}
+      {@const resource = props.resources.find((r: Resource) => r.id === id)}
+      {@const key = 'name'}
+      {@const name = getI18n(resource, key, props.mapCtx.getUserPreferences())}
       {#if resource}
         <span
           class="badge badge-outline cursor-pointer px-3 py-3 {colorClass}"
@@ -58,13 +61,7 @@ function handleToggle(id: Id) {
             e.stopPropagation();
             handleToggle(id);
           }}>
-          {#if getLocale() === 'en'}
-            {props.type === 'neighbourhood'
-              ? resource.id
-              : resource.nameShort || resource.name}
-          {:else}
-            {getI18nValue(resource, 'name')}
-          {/if}
+          {name}
           <Icon src={XMark} class="ml-1 h-3 w-3" />
         </span>
       {/if}
@@ -79,7 +76,7 @@ function handleToggle(id: Id) {
           ? m.maps__projects_none()
           : props.type == 'project' && props.mapCtx.state.prisms.organisation.length > 0
             ? m.maps__projects_none_with_n_organisations({
-                organisations: props.mapCtx.state.prisms.organisation.length.toString()
+                n: props.mapCtx.state.prisms.organisation.length.toString()
               })
             : props.type == 'neighbourhood'
               ? m.maps__neighbourhoods_none()

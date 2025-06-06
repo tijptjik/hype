@@ -3,20 +3,21 @@ import { slide } from 'svelte/transition';
 import { MagnifyingGlass, XMark, ChevronRight } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 
 // TYPES
-import type { User, Project, Layer, SuperFormResult, Resource } from '$lib/types';
+import type { Field, UserCollection, Project, Layer, Form, User } from '$lib/types';
 
 type ResultType = User | Project | Layer;
 
 type Props = {
   searchMode: boolean;
   apiPath: string;
-  destination: string;
+  fieldRoot: Field;
+  isExistingCheck?: (item: ResultType) => boolean;
   toItem?: (item: ResultType) => object;
   itemRef?: 'id' | 'code';
-  form: SuperFormResult<Resource>;
+  form: Form;
 };
 
 // STATE : CONTEXT :: RESOURCE
@@ -26,27 +27,27 @@ const resourceState = getHierarchicalResourceState();
 let {
   searchMode = $bindable<boolean>(false),
   apiPath = 'users',
-  destination = 'userRoles',
+  fieldRoot: rootField = 'userRoles',
+  isExistingCheck,
   toItem = (item: ResultType) => {
-    let newItem = {
-      userId: item.id,
-      role: 'member',
-      user: item
-    };
     const formId =
       resourceState.activeResource === 'project' ? 'projectId' : 'organisationId';
-    newItem = {
-      ...newItem,
-      [formId]: $form.id
+    const disco =
+      resourceState.activeResource === 'project' ? 'project' : 'organisation';
+    return {
+      type: disco as 'project' | 'organisation',
+      userId: item.id,
+      role: 'member',
+      user: item,
+      [formId]: $formInstance.id
     };
-    return newItem;
   },
   itemRef = 'id',
   ...barProps
 }: Props = $props();
 
-// STATE : CONTEXT
-let { form } = barProps.form;
+// STATE : CONTEXT :: FORM
+let formInstance: Form['form'] = $derived(barProps.form.form);
 
 // STATE
 let searchQuery = $state('');
@@ -69,7 +70,7 @@ const handleInputKeydown = (event: KeyboardEvent) => {
   }
 };
 
-const handleInputKeyup = () => {
+const handleInputKeyup = (event: KeyboardEvent) => {
   if (searchQuery) {
     search();
   }
@@ -105,22 +106,20 @@ async function search(minChars = 2) {
   // Minimum 2 characters
   if (searchQuery.length < minChars) return;
 
-  // TODO Add the projectId to the query when used for projects
   const response = await fetch(`/api/${apiPath}?q=${encodeURIComponent(searchQuery)}`);
   const allResults: ResultType[] = await response.json();
 
   searchResults = allResults.filter((item) => {
-    return !$form[destination].some(
-      (existingItem) => existingItem[itemRef] === item[itemRef]
-    );
+    return isExistingCheck ? isExistingCheck(item) : true;
   });
+  return searchResults;
 }
 
 const addItem = (e: Event, item: ResultType) => {
   e.preventDefault();
-  form.update(($form) => {
-    const newItem = toItem(item);
-    $form[destination] = [...$form[destination], newItem];
+  formInstance.update(($form) => {
+    const newItem = $state.snapshot(toItem(item));
+    $form[rootField] = [...$form[rootField], newItem];
     return $form;
   });
 
@@ -170,19 +169,22 @@ const resetResults = () => (searchResults = []);
           id="search-results"
           class="menu max-h-64 w-full overflow-y-auto rounded-b-lg bg-base-100 shadow-lg"
           role="listbox">
-          {#each searchResults as item, index}
+          {#each searchResults as result, index}
+            {@const item = result as UserCollection}
             <li>
               <button
                 class="search-result-item"
                 data-testid={`searchResultItem_${index}`}
-                onclick={(e) => addItem(e, item)}
+                onclick={(e) => addItem(e, item as User)}
                 role="option"
                 tabindex="0"
                 onkeydown={(e) => handleResultKeydown(e)}>
                 <Icon src={ChevronRight} class="h-4 w-4" />
                 {item.name}
-                {#if item.attribution}
+                {#if item.attribution && item.attribution !== ''}
                   <span class="text-xs text-gray-500">{item.attribution}</span>
+                {:else if item.email && item.email !== ''}
+                  <span class="text-xs text-gray-500">{item.email}</span>
                 {/if}
               </button>
             </li>

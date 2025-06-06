@@ -54,7 +54,7 @@ export const PropertyValueAPI = PropertyValueBase.extend({
 
 export const PropertyValueInsertAPI = PropertyValueInsert.extend({
   i18n: getLocales(PropertyValueI18nInsert)
-});
+})
 
 export const PropertyValueUpdateAPI = PropertyValueUpdate.extend({
   i18n: getLocales(PropertyValueI18nUpdate)
@@ -63,7 +63,7 @@ export const PropertyValueUpdateAPI = PropertyValueUpdate.extend({
 
 export const PropertyAPI = PropertyBase.extend({
   i18n: getLocales(PropertyI18nBase),
-  values: z.array(PropertyValueAPI)
+  values: z.array(PropertyValueAPI).nullish()
 });
 
 export const PropertyInsertAPI = PropertyInsert.extend({
@@ -75,6 +75,17 @@ export const PropertyUpdateAPI = PropertyUpdate.extend({
   i18n: getLocales(PropertyI18nUpdate),
   values: z.array(PropertyValueUpdateAPI)
 }); 
+
+// INTERMEDIATE
+
+export const PropertyBaseRaw = PropertyBase.extend({
+  i18n: z.array(PropertyI18nBase),
+  values: z.array(
+    PropertyValueBase.extend({
+      i18n: z.array(PropertyValueI18nBase).nullish()
+    })
+  )
+});
 
 // TODO Remove once we've migrated to the new schemas
 

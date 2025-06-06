@@ -1,0 +1,12 @@
+---
+description: Database operations
+globs: 
+alwaysApply: false
+---
+- Import Drizzle functions from `drizzle-orm`
+- Use `sqlite`
+- Use imported `eq`, `and`, `or` for query conditions
+- Implement relations with `relations` object in schema definitions
+- Use `insert()`, `select()`, `update()`, `delete()` for CRUD operations
+- Implement migrations using Drizzle Kit
+

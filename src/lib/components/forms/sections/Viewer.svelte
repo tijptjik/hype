@@ -2,11 +2,11 @@
 import { beforeNavigate } from '$app/navigation';
 import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte';
 // SERVICES
-import { getImageContext } from '$lib/context/images.svelte';
+import { getImageContext } from '$lib/context/image.svelte';
 // COMPONENTS
 import { InformationCircle } from '@steeze-ui/heroicons';
 import Header from '$lib/components/forms/extra/Header.svelte';
-import Actions from '$lib/components/forms/actions/Viewer.svelte';
+import ViewerActions from '$lib/components/forms/actions/Viewer.svelte';
 import Viewer from '$lib/components/common/Viewer.svelte';
 import ScrollArrow from '$lib/components/images/gallery/ScrollArrow.svelte';
 import IconAnchor from '$lib/components/common/IconAnchor.svelte';
@@ -24,7 +24,11 @@ let image = $derived(imageCtx.activeImage);
 
 <div
   class="relative z-10 flex w-full flex-grow flex-col rounded-2xl bg-gradient-to-r from-rose-500/70 to-fuchsia-800/70 p-0">
-  <Header {...sectionProps} {Actions} />
+  <Header {...sectionProps} >
+    {#snippet actionContent()}
+      <ViewerActions />
+    {/snippet}
+  </Header>
   <main class="relative flex h-full w-full flex-col rounded-b-2xl bg-base-300">
     <Viewer isCrossfade={false} isDropzone={true}>
       {#snippet RightActions()}

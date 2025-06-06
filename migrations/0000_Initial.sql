@@ -54,7 +54,7 @@ CREATE TABLE `featureImage` (
 	`imageId` text NOT NULL,
 	`intent` text DEFAULT 'undefined' NOT NULL,
 	`isPublished` integer DEFAULT false NOT NULL,
-	`publishedAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+	`publishedAt` text,
 	PRIMARY KEY(`featureId`, `imageId`),
 	FOREIGN KEY (`featureId`) REFERENCES `feature`(`id`) ON UPDATE cascade ON DELETE cascade,
 	FOREIGN KEY (`imageId`) REFERENCES `image`(`id`) ON UPDATE cascade ON DELETE cascade
@@ -62,22 +62,26 @@ CREATE TABLE `featureImage` (
 --> statement-breakpoint
 CREATE UNIQUE INDEX `canonical_intent` ON `featureImage` (`featureId`) WHERE intent = 'canonical';--> statement-breakpoint
 CREATE TABLE `featureProperty` (
-	`id` text PRIMARY KEY NOT NULL,
 	`featureId` text NOT NULL,
 	`propertyId` text NOT NULL,
 	`propertyValueId` text,
+	`value` text,
+	PRIMARY KEY(`featureId`, `propertyId`),
 	FOREIGN KEY (`featureId`) REFERENCES `feature`(`id`) ON UPDATE cascade ON DELETE cascade,
 	FOREIGN KEY (`propertyId`) REFERENCES `property`(`id`) ON UPDATE cascade ON DELETE cascade,
 	FOREIGN KEY (`propertyValueId`) REFERENCES `propertyValue`(`id`) ON UPDATE cascade ON DELETE set null
 );
 --> statement-breakpoint
 CREATE TABLE `featurePropertyI18n` (
-	`featurePropertyId` text NOT NULL,
+	`featureId` text NOT NULL,
+	`propertyId` text NOT NULL,
 	`locale` text NOT NULL,
 	`value` text,
 	`valueGen` integer,
-	PRIMARY KEY(`featurePropertyId`, `locale`),
-	FOREIGN KEY (`featurePropertyId`) REFERENCES `featureProperty`(`id`) ON UPDATE cascade ON DELETE cascade
+	PRIMARY KEY(`featureId`, `propertyId`, `locale`),
+	FOREIGN KEY (`featureId`) REFERENCES `feature`(`id`) ON UPDATE cascade ON DELETE cascade,
+	FOREIGN KEY (`propertyId`) REFERENCES `property`(`id`) ON UPDATE cascade ON DELETE cascade,
+	FOREIGN KEY (`featureId`,`propertyId`) REFERENCES `featureProperty`(`featureId`,`propertyId`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE TABLE `image` (
@@ -225,7 +229,9 @@ CREATE TABLE `property` (
 	`id` text PRIMARY KEY NOT NULL,
 	`projectId` text NOT NULL,
 	`type` text DEFAULT 'classifier' NOT NULL,
+	`isTranslatable` integer DEFAULT true NOT NULL,
 	`key` text NOT NULL,
+	`rank` integer DEFAULT 0 NOT NULL,
 	`component` text DEFAULT 'SelectField' NOT NULL,
 	`min` integer,
 	`max` integer,
@@ -254,8 +260,8 @@ CREATE TABLE `propertyValue` (
 CREATE TABLE `propertyValueI18n` (
 	`propertyValueId` text NOT NULL,
 	`locale` text NOT NULL,
-	`value` text,
-	`valueGen` integer,
+	`value` text NOT NULL,
+	`valueGen` integer DEFAULT false NOT NULL,
 	PRIMARY KEY(`propertyValueId`, `locale`),
 	FOREIGN KEY (`propertyValueId`) REFERENCES `propertyValue`(`id`) ON UPDATE cascade ON DELETE cascade
 );
@@ -305,8 +311,9 @@ CREATE TABLE `user` (
 	`image` text,
 	`locale` text DEFAULT 'en' NOT NULL,
 	`attribution` text,
-	`preferences` text DEFAULT '{"fallbackLocales":[], "allowMachineTranslation":false, "isTranslateButtonVisible":true}' NOT NULL,
-	`experimental` text DEFAULT '{"contributorMode":false, "noLabelsMode":false, "fallbackLocales":[]}' NOT NULL,
+	`isArchived` integer DEFAULT false NOT NULL,
+	`preferences` text DEFAULT '{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}' NOT NULL,
+	`experimental` text DEFAULT '{"contributorMode":false, "noLabelsMode":false}' NOT NULL,
 	`createdAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
 	`modifiedAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL
 );

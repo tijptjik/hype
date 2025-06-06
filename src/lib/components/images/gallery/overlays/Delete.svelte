@@ -2,12 +2,12 @@
 import { fade } from 'svelte/transition';
 import Icon from '$lib/components/common/Icon.svelte';
 import { Trash } from '@steeze-ui/heroicons';
-import type { GetImageAPI } from '$lib/types';
+import type { Image } from '$lib/types';
 // SERVICES
-import { getImageContext } from '$lib/context/images.svelte';
+import { getImageContext } from '$lib/context/image.svelte';
 
 type Props = {
-  image: GetImageAPI;
+  image: Image;
 };
 
 let { image }: Props = $props();

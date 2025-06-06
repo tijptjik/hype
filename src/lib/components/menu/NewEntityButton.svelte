@@ -6,9 +6,9 @@ import { NEW_REF } from '$lib/index';
 // COMPONENTS
 import AssociationModal from '$lib/components/forms/modals/Association.svelte';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // ENUMS
-import { HierarchicalResource } from '$lib/types';
+import { HierarchicalResource } from '$lib/enums';
 
 // STATE : CONTEXT
 const resourceState = getHierarchicalResourceState();

@@ -2,7 +2,7 @@
 import { browser } from '$app/environment';
 // CONTEXT
 import { getOmniContext } from '$lib/context/omni.svelte';
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 // COMPONENTS
 import OmniSearchBar from './OmniSearchBar.svelte';
 import OmniNavigationBar from './OmniNavigationBar.svelte';
@@ -11,7 +11,7 @@ import { MOBILE_MAX_WIDTH } from '$lib/index';
 
 // CONTEXT
 const omniCtx = getOmniContext();
-const mapCtx = getMapContext();
+const mapCtx = getMapCtx();
 
 let showSearch = $derived(omniCtx.state.mode === 'search');
 

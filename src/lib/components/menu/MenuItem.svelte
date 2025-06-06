@@ -1,7 +1,7 @@
 <script lang="ts">
-import { page } from '$app/stores';
+import { page } from '$app/state';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // TYPES
 import type { FacetType } from '$lib/types';
 
@@ -24,7 +24,7 @@ const onclick = (e: MouseEvent) => {
 <li class="group">
   <a
     draggable="false"
-    href={`${$page.url.href}#${facet.ref}`}
+    href={`${page.url.href}#${facet.ref}`}
     {onclick}
     class="flex select-none flex-col items-center px-4 py-2 uppercase transition-colors duration-200 ease-in-out hover:bg-transparent"
     class:active={resourceState.state.active.facet === facet.ref}>

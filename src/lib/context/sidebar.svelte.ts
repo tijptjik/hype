@@ -1,7 +1,7 @@
 import { getContext } from 'svelte';
 import { setContext } from 'svelte';
 // ENUM
-import { HierarchicalResource } from '$lib/types';
+import { HierarchicalResource } from '$lib/enums';
 
 type SidebarStateState = {
   isOpen: boolean;

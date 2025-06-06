@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight } from '@steeze-ui/heroicons';
 import { onMount } from 'svelte';
 import { fade } from 'svelte/transition';
 // SERVICES
-import { getImageContext } from '$lib/context/images.svelte';
+import { getImageContext } from '$lib/context/image.svelte';
 import { formatDate } from '$lib';
 
 type PhotoComponent = {
@@ -273,7 +273,7 @@ onMount(() => {
             : 'translate-y-6 opacity-0'} rounded bg-black/80 px-2 py-1 font-mono text-xs text-white transition-all duration-300">
           <span>On </span>
           <span class="font-bold">
-            {formatDate(images[getImageIndex(currentIndex)].capturedAt)}
+            {formatDate(images[getImageIndex(currentIndex)].capturedAt ?? '')}
           </span>
         </div>
       </div>

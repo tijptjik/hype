@@ -1,154 +1,188 @@
-import { error, type RequestHandler, json } from '@sveltejs/kit';
-import { superValidate, type SuperValidated } from 'sveltekit-superforms';
+// SVELTE
+import { error, json } from '@sveltejs/kit';
+// I18N
+import { m } from '$lib/i18n';
+// FORMS
+import { superValidate } from 'sveltekit-superforms';
+// DRIZZLE
+import { eq, SQL } from 'drizzle-orm';
+// ZOD
 import { zod } from 'sveltekit-superforms/adapters';
+import { LayerUpdateAPI } from '$lib/db/zod';
+// API
 import {
-  getDatabaseOrError,
   JSONResponseOrError,
   SuperFormErrorResponse,
+  getDatabase,
+  getPrisms,
   SuperFormResponse,
-  type AccessStrategyOption
+  logZodError
 } from '$lib/api';
-// DB
-import { hierarchicalEntityQuery } from '$lib/db';
 import {
-  updateLayer,
-  updateTranslations,
-  extractEntitiesToUpdate,
-  rebuildFormData,
-  updateLayerProperties,
-  mergeProjectProperties,
-  patchLayer
+  assertPermissionsToUpdateLayer,
+  getLayerQueryContext,
+  layerEntityWithRelations
+} from '$lib/api/services/layer';
+// DB
+import { layer } from '$lib/db/schema';
+import {
+  getLayer,
+  updateLayerWithRelated,
+  toFormShape,
+  toResponseShape,
+  updateLayer
 } from '$lib/db/services/layer';
-import { projectRole, layerI18n } from '$lib/db/schema';
-// ZOD
-import { LayerUpdateAPI, LayerPatch } from '$lib/db/zod';
 // TYPES
-import type { Layer, LayerPartialUpdate } from '$lib/types';
+import type { RequestHandler } from '@sveltejs/kit';
+import type {
+  Layer,
+  LayerDB,
+  LayerI18nDB,
+  LayerPartial,
+  LayerPropertyPartial
+} from '$lib/types';
+
+import type { SuperValidated } from 'sveltekit-superforms';
+
+
+/********************
+ *  COMMON
+ ************/
 
 const RESOURCE_TYPE = 'layer';
 const RESOURCE_PATH = 'layers';
-const ACCESS_STRATEGY = 'EntityOwnChild' as AccessStrategyOption;
-const PUBLIC_IDENTIFIER = 'id';
 
-export const GET: RequestHandler = async ({ params, locals, platform }) => {
-  // AUTH : Pass or Fail
-  const { db, userId, accessStrategy } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE
+/********************
+ *  READ
+ ************/
+
+/**
+ * Reads a project
+ */
+export const GET: RequestHandler = async ({
+  params,
+  url,
+  locals,
+  platform,
+  request
+}) => {
+  // ASSERT : User logged in
+  const { db, session, userRoles } = await getDatabase(locals, platform);
+
+  // CONTEXT : Get the query context
+  let { conditions } = getLayerQueryContext(
+    db,
+    session,
+    request,
+    {},
+    userRoles,
+    getPrisms(url)
   );
-  try {
-    // DB : Build & Execute Query
-    let result = await hierarchicalEntityQuery(
-      db,
-      params[PUBLIC_IDENTIFIER] as string,
-      PUBLIC_IDENTIFIER,
-      accessStrategy,
-      {
-        translations: true,
-        properties: {
-          with: {
-            property: {
-              with: {
-                translations: true
-              }
-            }
-          }
-        }
-      },
-      userId,
-      projectRole,
-      layerI18n,
-      3
-    );
 
-    // Merge in all available project properties
-    if (result) {
-      result = await mergeProjectProperties(db, result);
+  try {
+    // Add condition for specific layer id code
+    conditions.push(eq(layer.id, params.id as string));
+
+    // DB : Get the layer
+    const result = await getLayer(db, layerEntityWithRelations, conditions);
+
+    if (!result) {
+      return error(404, 'Project not found');
     }
 
+    // RESPONSE : Build the response shape
+    const data = await toResponseShape(
+      result as LayerDB,
+      (result as any).i18n || [],
+      (result as any).properties || []
+    );
+
     // HTTP : 200 JSON or 404
-    return JSONResponseOrError(result);
+    return JSONResponseOrError(data);
   } catch (e) {
     // DB : Query Error
-    console.error('Database query error:', e);
-    // HTTP : 500 Error
+    console.error('ERROR', e);
+    logZodError(e, 'Zod read error:');
     return error(500, 'Dust Accumulation Critical');
   }
 };
 
+/********************
+ *  UPDATE :: PUT
+ ************/
+
+/**
+ * Updates a layer
+ */
 export const PUT: RequestHandler = async ({ params, request, locals, platform }) => {
-  // AUTH : Pass or Fail
-  const { db, userId, accessStrategy } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE
-  );
+  // ASSERT : User logged in
+  const { db, session, userRoles } = await getDatabase(locals, platform);
 
   try {
+    // ASSERT : Valid form
     const formData: Layer = await request.json();
     const form = (await superValidate(
       formData,
+      // @ts-ignore - FORM : Fix type error
       zod(LayerUpdateAPI)
     )) as SuperValidated<Layer>;
 
-    if (!form.valid) {
-      return SuperFormResponse(form);
-    }
+    // RETURN : early if the form is not valid
+    if (!form.valid) return SuperFormResponse<Layer>(form);
 
-    const { baseLayer, formTranslations } = extractEntitiesToUpdate(form.data as Layer);
-    const updatedLayer = await updateLayer(
-      db,
-      baseLayer,
-      params[PUBLIC_IDENTIFIER] as string
-    );
-    const updatedTranslations = await updateTranslations(
-      db,
-      formTranslations,
-      updatedLayer.id
-    );
+    // ACCESS CONTROL : Check permissions
+    assertPermissionsToUpdateLayer(session, request, formData, userRoles);
 
-    const updatedLayerProperties = await updateLayerProperties(
-      db,
-      updatedLayer.id,
-      formData.properties
-    );
+    // DB : Update the layer
+    const updatedLayer = await updateLayerWithRelated(db, form.data, params.id);
 
-    const updatedForm = await rebuildFormData(
+    // RESPONSE : Convert to form shape and return
+    const updatedForm = await toFormShape(
       updatedLayer,
-      updatedTranslations,
-      updatedLayerProperties
+      updatedLayer.i18n,
+      updatedLayer.properties,
+      updatedLayer.project
     );
-    return SuperFormResponse(updatedForm, false, false, RESOURCE_PATH, 200);
+
+    // HTTP : 200 JSON or 400
+    return SuperFormResponse<Layer>(updatedForm, false, false, RESOURCE_PATH);
   } catch (err) {
-    console.error(err);
-    return SuperFormErrorResponse(RESOURCE_TYPE);
+    logZodError(err, 'Update error:');
+    return SuperFormErrorResponse(RESOURCE_TYPE, 'update');
   }
 };
 
-// TODO When a layer is
+/********************
+ *  UPDATE :: PATCH
+ ************/
+
+/**
+ * Partially updates a layer - only the fields that are provided in the request body. This endpoint is used for updating fields that don't require a full form submission, such as the layer publish or archive status.
+ */
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
-  const { db } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE
-  );
-
+  if (!params.id) return error(400, m.deft_sleek_wasp_dine());
+  const { db, session, userRoles } = await getDatabase(locals, platform);
   try {
-    const formData: LayerPartialUpdate = await request.json();
-    const form = await superValidate(formData, zod(LayerPatch), { defaults: {} });
+    // ASSERT : Valid form data
+    const newData: LayerPartial = await request.json();
 
-    if (!form.valid) {
-      return json(form, { status: 400 });
-    }
+    // Get the existing layer to verify access
+    const existing = (await getLayer(db, {}, [
+      eq(layer.id, params.id as string)
+    ])) as LayerDB;
 
-    const updated = await patchLayer(db, params.id as string, form.data);
-    return json({ success: true, data: updated });
+    if (!existing) return error(404, m.quiet_soft_mole_animate());
+
+    // Use assertion functions for access control
+    assertPermissionsToUpdateLayer(session, request, existing, userRoles);
+
+    // DB : Update only the basic layer fields (no relations for PATCH)
+    const updated = await updateLayer(db, newData, params.id);
+
+    // Return the updated layer in the format expected by components
+    return json({ type: 'success', data: updated });
   } catch (err) {
-    console.error(err);
-    return json({ success: false, error: 'Failed to update layer' }, { status: 500 });
+    logZodError(err, 'Update error:');
+    return SuperFormErrorResponse(RESOURCE_TYPE, 'patch');
   }
 };

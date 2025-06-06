@@ -1,61 +1,56 @@
+// SVELTEKIT
 import { error, type RequestHandler } from '@sveltejs/kit';
-import {
-  getDatabaseOrError,
-  getSessionOrError,
-  JSONResponseOrError,
-  type AccessStrategyOption
-} from '$lib/api';
-import client, { genericResourceQuery } from '$lib/db';
-import { organisationRole, user } from '$lib/db/schema';
-import * as schema from '$lib/db/schema';
+// DB
+import { user } from '$lib/db/schema';
+import { searchUsers, toResponseShape } from '$lib/db/services/user';
+// API
+import { JSONResponseOrError, getDatabase, isValidQueryParamsOrError } from '$lib/api';
+import { getUserQueryContext, userCollectionWithRelations } from '$lib/api/services/user';
+import type { UserRaw } from '$lib/types';
 
-const RESOURCE_TYPE = 'user';
-const TABLE = user;
+/********************
+ *  LIST
+ ************/
+
 // TODO: Restrict access to Organisation / Project Owners
-const ACCESS_STRATEGY = 'ResourceAll' as AccessStrategyOption;
-const PUBLIC_IDENTIFIER = 'id';
 
-export const GET: RequestHandler = async ({ url, locals, platform }) => {
+/**
+ * Lists users
+ */
+export const GET: RequestHandler = async ({ url, locals, platform, request }) => {
   // AUTH : Pass or Fail
-  const { db, userId, accessStrategy } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE
-  );
+  // ASSERT : User Logged in
+  const { db, session, userRoles } = await getDatabase(locals, platform);
+
+  // ASSERT : Valid query parameters
+  // Validate query parameters, or return 400
+  let queryParams = isValidQueryParamsOrError(user, url) as Record<
+    string,
+    string | string[]
+  >;
+  const searchParam = url.searchParams.get('q') as string;
+
+  // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
+  let { conditions } = getUserQueryContext(session, request, queryParams, userRoles);
 
   try {
-    // DB : Build & Execute Query
-    const result = await genericResourceQuery(
+    // DB : List the organisations
+    const result = await searchUsers(
       db,
-      user,
-      url.searchParams.get('q') as string,
-      ['name', 'email'],
-      accessStrategy,
-      {
-        email: false,
-        emailVerified: false,
-        createdAt: false,
-        modifiedAt: false
-      },
-      {
-        memberships: true,
-        projectRoles: true,
-        userLayers: {
-          with: {
-            layer: {
-              columns: {
-                createdAt: false,
-                modifiedAt: false
-              }
-            }
-          }
-        }
-      }
+      userCollectionWithRelations,
+      conditions,
+      searchParam
+    );
+
+    // RESPONSE : Build the response shape
+    const data = await Promise.all(
+      result.map(async (user) => {
+        return await toResponseShape(user, [], [], true);
+      })
     );
 
     // HTTP : 200 JSON or 404
-    return JSONResponseOrError(result);
+    return JSONResponseOrError(data);
   } catch (e) {
     // DB : Query Error
     console.error('Database query error:', e);

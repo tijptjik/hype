@@ -1,18 +1,21 @@
 <script lang="ts">
+// SVELTE
 import { flip } from 'svelte/animate';
 import { fade } from 'svelte/transition';
 import { draggable, droppable } from '@thisux/sveltednd';
+// I18N
+import { m } from '$lib/i18n';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
-import { Plus, ExclamationTriangle, Bars3, XMark, Trash } from '@steeze-ui/heroicons';
+import { Plus, Bars3, XMark, Trash } from '@steeze-ui/heroicons';
 import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
 // TYPES
 import type { DragDropState } from '@thisux/sveltednd';
-import type { IntermediateValue, ListFieldProps } from '$lib/types';
+import type { IntermediateValue, ListFieldProps, Locale } from '$lib/types';
 
 // STATE : PROPS
 let fieldProps: ListFieldProps = $props();
-let { languageTag, fieldRoot, fieldIndex, fieldKey, field, actions, actionProps } =
+let { locale, fieldRoot, fieldIndex, fieldKey, field, actions, actionProps } =
   fieldProps;
 
 // STATE : FORM
@@ -41,7 +44,7 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
 }
 </script>
 
-<div class="form-control flex w-full flex-col gap-2">
+<div class="form-control flex w-full flex-col gap-2 caret-transparent">
   {#if field.label}
     <div class="label">
       <span class="label-text text-xs font-bold">{field.label}</span>
@@ -56,21 +59,28 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
   {/if}
 
   <div class="flex flex-row justify-center gap-2 divide-x">
-    <button class="btn btn-ghost btn-sm" onclick={actions.add}>
+    <button
+      class="btn btn-ghost btn-sm"
+      onclick={actions.add}
+      disabled={actionProps.removeMode}>
       <Icon src={Plus} class="h-4 w-4" />
-      Add
+      {m.wacky_home_sawfish_accept()}
     </button>
     <button
       class="btn btn-ghost btn-sm {actionProps.removeMode ? 'btn-error' : ''}"
-      onclick={() => {
+      onclick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
         actionProps.removeMode = !actionProps.removeMode;
-        actionProps.removeModeLang = languageTag;
+        actionProps.removeModeLocale = locale;
       }}>
       <Icon src={XMark} class="h-4 w-4" />
-      {actionProps.removeMode ? 'Cancel' : 'Remove'}
+      {actionProps.removeMode
+        ? m.green_short_pelican_fall()
+        : m.watery_trite_shrimp_clip()}
     </button>
   </div>
-  {#key `${fieldRoot}-${fieldIndex}-${fieldKey}-${languageTag}`}
+  {#key `${fieldRoot}-${fieldIndex}-${fieldKey}-${locale}`}
     {#each fieldProps.values as property, index (property.id)}
       <div
         use:draggable={{
@@ -95,13 +105,15 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
         in:fade={{ duration: 150 }}
         out:fade={{ duration: 150 }}
         class="svelte-dnd-touch-feedback relative mt-1 flex h-14 cursor-move items-center gap-4 rounded-lg border-1 border-transparent bg-base-200 p-2 font-light text-white transition-all duration-200 focus-within:border-primary">
-        {#if actionProps.removeMode && actionProps.confirmingId === property.id && actionProps.removeModeLang === languageTag}
+        {#if actionProps.removeMode && actionProps.confirmingId === property.id && actionProps.removeModeLocale === locale}
           <div
             class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-200 bg-opacity-80">
             <div class="flex flex-col items-center gap-4 p-4">
               <div class="flex items-center gap-2">
                 <!-- <Icon src={ExclamationTriangle} class="h-8 w-8 text-error" /> -->
-                <p class="text-center font-bold text-error">Are you sure?</p>
+                <p class="text-center font-bold text-error">
+                  {m.curly_bland_crab_arrive()}
+                </p>
                 <button
                   class="btn btn-ghost btn-sm"
                   onclick={(e) => {
@@ -109,7 +121,7 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
                     e.stopPropagation();
                     actionProps.confirmingId = undefined;
                   }}>
-                  Cancel
+                  {m.green_short_pelican_fall()}
                 </button>
                 <button
                   class="btn btn-error btn-sm"
@@ -118,9 +130,8 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
                     e.stopPropagation();
                     actions.remove(e, property.id);
                     actionProps.confirmingId = undefined;
-                    actionProps.removeModeLang = undefined;
                   }}>
-                  Delete
+                  {m.whole_deft_penguin_enchant()}
                 </button>
               </div>
             </div>
@@ -131,20 +142,22 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
           <Icon src={Bars3} class="h-4 w-4" />
         </div>
         <div
-          class="font-regular text-md flex-1 border-none text-white focus:border-none focus:outline-none"
+          class="font-regular text-md flex-1 border-none text-white focus:border-none focus:outline-none caret-white"
           contenteditable={!isDragging && !actionProps.removeMode}
           tabindex="0"
           data-value-id={property.id}
-          data-lang={languageTag}
-          onblur={(e) => actions.update(property.id, languageTag, e)}>
-          {property[languageTag]}
+          data-lang={locale}
+          onblur={(e) => actions.update(e, property.id, locale as Locale)}>
+          {property[locale]}
         </div>
-        {#if actionProps.removeMode && actionProps.removeModeLang === languageTag}
+        {#if actionProps.removeMode && actionProps.removeModeLocale === locale}
           <button
             class="btn btn-ghost btn-sm text-error"
-            onclick={() => {
+            onclick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
               actionProps.confirmingId = property.id;
-              actionProps.removeModeLang = languageTag;
+              actionProps.removeModeLocale = locale as Locale;
             }}>
             <Icon src={Trash} class="h-4 w-4" />
           </button>
@@ -152,11 +165,11 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
       </div>
     {/each}
   {/key}
-  <ErrorLabel {errors} {field} {languageTag} {fieldRoot} {fieldIndex} {fieldKey} />
+  <ErrorLabel {errors} {field} {locale} {fieldRoot} {fieldIndex} {fieldKey} />
 </div>
 
 <style>
 :global(.dragging) {
-  @apply opacity-80 shadow-lg ring-2 ring-secondary;
+  @apply opacity-80 shadow-lg ring-2 ring-accent;
 }
 </style>

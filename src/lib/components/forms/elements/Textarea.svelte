@@ -8,7 +8,7 @@ let {
   value = $bindable(),
   isGenAI = $bindable(),
   id,
-  languageTag = 'core',
+  locale = 'core',
   placeholder,
   isTranslated = false,
   onchange
@@ -94,8 +94,8 @@ function handlePaste(e: ClipboardEvent) {
   {value}
 </div>
 
-{#if (isGenAI || languageTag !== 'core') && isTranslated}
+{#if (isGenAI || locale !== 'core') && isTranslated}
   <div class="absolute bottom-[11px] right-2 flex items-center gap-2">
-    <Labels {isGenAI} {languageTag} absolute={true} />
+    <Labels {isGenAI} {locale} absolute={true} />
   </div>
 {/if}

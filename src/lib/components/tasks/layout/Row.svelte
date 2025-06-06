@@ -6,29 +6,23 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { CheckCircle, PencilSquare, XCircle } from '@steeze-ui/heroicons';
 import Title from '$lib/components/tasks/common/Title.svelte';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // ENUMS
-import { HierarchicalResource } from '$lib/types';
+import { HierarchicalResource, TaskTypeColor, TaskType } from '$lib/enums';
 // TYPES
-import type { TaskAPI } from '$lib/types';
+import type { Task } from '$lib/types';
 
 // PROPS
-let { task }: { task: TaskAPI } = $props();
+let { task }: { task: Task } = $props();
 
 // CONTEXT
 const resourceState = getHierarchicalResourceState();
 
-export const typeColors = {
-  reportedMissing: 'border-error',
-  newPhoto: 'border-info',
-  newFeature: 'border-success'
-};
+
 </script>
 
 <div
-  class="mx-auto flex w-full flex-row items-center justify-between rounded-lg border-b-4 bg-base-100 px-6 py-6 {typeColors[
-    task.type
-  ]} cursor-pointer transition-colors duration-300 hover:bg-base-200"
+  class="mx-auto flex w-full flex-row items-center justify-between rounded-lg border-b-4 bg-base-100 px-6 py-6 {TaskTypeColor[task.type as TaskType]} cursor-pointer transition-colors duration-300 hover:bg-base-200"
   onclick={(e) => {
     e.preventDefault();
     navigateOnAdmin(resourceState, HierarchicalResource.task, task.id);

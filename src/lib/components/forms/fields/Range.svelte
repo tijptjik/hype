@@ -1,11 +1,18 @@
 <script lang="ts">
+// LIB
+import { updateFeaturePropertyValue } from '$lib';
 // TYPES
-import type { FieldProps } from '$lib/types';
+import type { FieldPropsExtended, FeatureForm } from '$lib/types';
 
-let { fieldRoot, fieldIndex, fieldKey, ...fieldProps }: FieldProps = $props();
+let { fieldRoot, fieldIndex, fieldKey, ...fieldProps }: FieldPropsExtended = $props();
 
 // STATE : FORM
-let { form } = fieldProps.form;
+let { form } = fieldProps.form as unknown as FeatureForm;
+
+// STATE : DERIVED
+let currentItem = $derived(($form as any)[fieldRoot]?.[fieldIndex]);
+let property = $derived(currentItem?.property);
+let currentValue = $derived(currentItem?.[fieldKey] || property?.min || 0);
 </script>
 
 <!-- TODO: Make into an actual field instead of an element-->
@@ -14,22 +21,21 @@ let { form } = fieldProps.form;
   name={fieldRoot}
   type="range"
   class="range range-primary"
-  min={$form[fieldRoot][fieldIndex].property.min}
-  max={$form[fieldRoot][fieldIndex].property.max}
+  min={property?.min || 0}
+  max={property?.max || 100}
   step="1"
-  value={$form[fieldRoot][fieldIndex][fieldKey]}
-  onchange={(e) => {
+  value={currentValue}
+  onchange={(e: Event) => {
     e.preventDefault();
-    form.update(($form) => {
-      $form[fieldRoot][fieldIndex][fieldKey] = e.target.value;
-      return $form;
-    });
+    const target = e.target as HTMLInputElement;
+    const newValue = target.value;
+    updateFeaturePropertyValue(form, fieldRoot, fieldIndex, newValue, fieldKey);
   }} />
 <div class="flex w-full justify-between px-2 text-xs">
-  <span>{$form[fieldRoot][fieldIndex].property.min}</span>
+  <span>{property?.min || 0}</span>
   <span>❘</span>
   <span>|</span>
   <span>❘</span>
-  <span>{$form[fieldRoot][fieldIndex].property.max}</span>
+  <span>{property?.max || 100}</span>
 </div>
-<!-- <ErrorLabel errors={$errors} {field} {languageTag} {fieldRoot} {fieldIndex} {fieldKey} /> -->
+<!-- <ErrorLabel errors={$errors} {field} {locale} {fieldRoot} {fieldIndex} {fieldKey} /> -->

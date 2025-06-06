@@ -4,16 +4,23 @@ import { m } from '$lib/i18n';
 import Icon from '$lib/components/common/Icon.svelte';
 import { Beaker } from '@steeze-ui/heroicons';
 import Section from '$lib/components/panels/common/Section.svelte';
-// STORES
-import { page } from '$app/stores';
+// CONTEXT
+import { getMapCtx } from '$lib/context/map.svelte';
+// TYPES
+import type { ExperimentalFeatureConfig, UserExperimental } from '$lib/types';
 
-const { session } = $page.data;
-const userId = $state(session?.user?.id);
-let activeFeatures = $state(session?.user?.experimental || {});
-let timer: number;
+const mapCtx = getMapCtx();
 
-// Experimental features
-const experimentalFeatures = [
+// Get experimental features from mapCtx
+const experimentalFeatures = $derived(mapCtx.getUser().experimental || {});
+
+// Helper function to safely get feature state
+const getFeatureState = (code: keyof UserExperimental): boolean => {
+  return (experimentalFeatures as UserExperimental)[code] || false;
+};
+
+// Experimental features configuration
+const featuresConfig: ExperimentalFeatureConfig[] = [
   {
     name: m.settings_experimental_contributor_mode(),
     description: m.settings_experimental_contributor_description(),
@@ -25,32 +32,6 @@ const experimentalFeatures = [
     code: 'noLabelsMode'
   }
 ];
-
-const handleFeatureToggle = (code: string, value: boolean) => {
-  // Update local state
-  activeFeatures = {
-    ...activeFeatures,
-    [code]: value
-  };
-
-  // Debounce the API call
-  clearTimeout(timer);
-  timer = setTimeout(async () => {
-    try {
-      const response = await fetch(`/api/users/${userId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          experimental: activeFeatures
-        })
-      });
-      const updatedUser = await response.json();
-      session.user.experimental = updatedUser.experimental;
-    } catch (error) {
-      console.error('Failed to update experimental features:', error);
-    }
-  }, 500);
-};
 </script>
 
 <Section
@@ -61,7 +42,7 @@ const handleFeatureToggle = (code: string, value: boolean) => {
   position="right">
   <div
     class="scrollbar-thin flex min-h-0 w-full flex-col gap-2 overflow-y-auto pb-16 pl-4">
-    {#each experimentalFeatures as feature}
+    {#each featuresConfig as feature}
       <div
         class="min-h-18 flex w-full flex-row items-center justify-between gap-4 px-4 py-2 pr-[27px]">
         <div class="flex flex-col">
@@ -77,9 +58,9 @@ const handleFeatureToggle = (code: string, value: boolean) => {
           name={feature.code}
           type="checkbox"
           class="flex-grow-1 toggle toggle-primary toggle-sm flex-shrink-0"
-          checked={activeFeatures[feature.code] || false}
+          checked={getFeatureState(feature.code)}
           onchange={(e) =>
-            handleFeatureToggle(feature.code, e.currentTarget.checked)} />
+            mapCtx.setExperimental(feature.code, e.currentTarget.checked)} />
       </div>
     {/each}
   </div>

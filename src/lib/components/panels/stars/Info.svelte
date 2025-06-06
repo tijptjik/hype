@@ -12,11 +12,11 @@ let { isOpen = false } = $props<{
     <p class="text-neutral-content">
       {@html m.such_tense_samuel_smile()}
     </p>
-    <h3 class="text-lg text-base-content">{m.alive_top_pelican_snap()}</h3>
+    <h3 class="text-lg text-base-content" style="will-change: height; contain: layout;">{m.alive_top_pelican_snap()}</h3>
     <p class="text-neutral-content">
       {@html m.neat_watery_wasp_buy()}
     </p>
-    <h3 class="text-lg text-base-content">{m.free_day_stork_dine()}</h3>
+    <h3 class="text-lg text-base-content" style="will-change: height; contain: layout;">{m.free_day_stork_dine()}</h3>
     <p class="text-neutral-content">
       {@html m.same_lower_orangutan_enchant()}
     </p>

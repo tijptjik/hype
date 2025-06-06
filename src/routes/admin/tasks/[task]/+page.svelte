@@ -1,13 +1,13 @@
 <script lang="ts">
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // PROVIDERS
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // COMPONENTS :: COMMON
 import Image from '$lib/components/tasks/common/Image.svelte';
 import Gallery from '$lib/components/tasks/common/Gallery.svelte';
 // COMPONENTS :: LAYOUT
-import Task from '$lib/components/tasks/layout/EntityRoot.svelte';
+import TaskRoot from '$lib/components/tasks/layout/EntityRoot.svelte';
 import TaskHeader from '$lib/components/tasks/layout/Header.svelte';
 import TaskMain from '$lib/components/tasks/layout/Main.svelte';
 import TaskFooter from '$lib/components/tasks/layout/Footer.svelte';
@@ -20,16 +20,16 @@ import NewFeatureActions from '$lib/components/tasks/actions/NewFeature.svelte';
 import ReportedMissingControls from '$lib/components/tasks/controls/ReportedMissing.svelte';
 import NewFeatureControls from '$lib/components/tasks/controls/NewFeature.svelte';
 // ENUMS
-import { HierarchicalResource } from '$lib/types';
+import { HierarchicalResource, ImageContextResource, ImageContextResourceExtended } from '$lib/enums';
 // TYPES
-import type { TaskAPI, PageProps, Organisation, Project } from '$lib/types';
+import type { Task, PageProps, Organisation, Project, Id } from '$lib/types';
 
-let pageProps: PageProps<TaskAPI> = $props();
+let pageProps: PageProps<Task> = $props();
 let task = $derived(pageProps.data.task);
 
 // CONTEXT
 const resourceState = getHierarchicalResourceState();
-resourceState.setEntity(task.id, HierarchicalResource.task);
+resourceState.setEntity(pageProps.data.task.id, HierarchicalResource.task);
 resourceState.setFacet('core');
 </script>
 
@@ -37,24 +37,24 @@ resourceState.setFacet('core');
 <ImageProvider
   mode="gallery"
   isAdminMode={true}
-  refType="feature"
-  refId={task.featureId}
-  refOrganisation={resourceState.getEntity(
+  ctxType={ImageContextResource.feature}
+  ctxId={task.featureId as Id}
+  organisation={resourceState.getEntity(
     HierarchicalResource.organisation,
     task.organisationId,
     true
   ) as Organisation}
-  refProject={resourceState.getEntity(
+  project={resourceState.getEntity(
     HierarchicalResource.project,
     task.projectId,
     true
   ) as Project}
-  extendedRefType="task"
-  extendedRefId={task.id}
-  highlightedIds={task.images?.map((taskImage) => taskImage.imageId) || []}>
+  ctxTypeSecondary={ImageContextResourceExtended.task}
+  ctxIdSecondary={task.id}
+  highlightedIds={task.images?.map((taskImage) => taskImage.imageId as Id) || []}>
   <div
     class="h-full overflow-y-auto bg-gradient-to-br from-rose-500 to-indigo-700 bg-fixed p-6">
-    <Task {task}>
+    <TaskRoot {task}>
       <TaskHeader {task} isRoundedBottom={false}>
         {#snippet Left()}
           <Title {task} />
@@ -82,6 +82,6 @@ resourceState.setFacet('core');
           <NewFeatureControls {task} />
         {/if}
       </TaskMain>
-    </Task>
+    </TaskRoot>
   </div>
 </ImageProvider>

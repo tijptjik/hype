@@ -1,96 +1,78 @@
+// SVELTE
 import { error, json } from '@sveltejs/kit';
-import { getDatabaseOrError, JSONResponseOrError } from '$lib/api';
-// SERVICES
+// DB SCHEMA
+import { image } from '$lib/db/schema';
+// DB SERVICES
+import { updateOrganisation } from '$lib/db/services/organisation';
+import { updateProject } from '$lib/db/services/project';
 import {
   createImage,
-  extractEntitiesToInsert,
   createFeatureImage,
-  checkProjectAccessForFeature,
-  getImagesForFeature,
-  getImageForProject,
-  getImageForOrganisation,
-  getImagesForTask,
-  checkFeatureAccessForImage,
-  checkOrganisationAccessForImage,
-  checkProjectAccessForNewImage
+  getImageForContextType,
+  toResponseShape,
+  toResponseShapeProjectOrOrganisation
 } from '$lib/db/services/image';
-import { patchProject } from '$lib/db/services/project';
-import { patchOrganisation } from '$lib/db/services/organisation';
-import { intentOrder } from '$lib/services/images.svelte';
+import { getUserById } from '$lib/db/services/user';
+// API SERVICES
+import { JSONResponseOrError, isValidQueryParamsOrError, getDatabase } from '$lib/api';
+import {
+  getImageQueryContext,
+  getCtxFromUrl,
+  assertPermissionsToCreateImage
+} from '$lib/api/services/image';
+// ENUMS
+import { ImageContextResource } from '$lib/enums';
 // TYPES
+import {
+  ImageInsertWithFeatureAPI,
+  ImageInsertWithProjectOrOrganisationAPI
+} from '$lib/db/zod';
 import type { RequestHandler } from '@sveltejs/kit';
-import type { GetImageAPI, NewImageAPI } from '$lib/types';
+import type { ImageNew, Id, QueryParams, FeatureImage } from '$lib/types';
 
-// CONSTANTS
-const RESOURCE_TYPE = 'image';
-const ACCESS_STRATEGY = 'Public';
-const PRIVILEGED_STRATEGY = 'ResourceAll';
+/********************
+ *  LIST
+ ************/
 
-export const GET: RequestHandler = async ({ url, locals, platform }) => {
+/**
+ * Lists images
+/* Images are a second-class resources. This means that they are always addressedin the context of a first-class resource : organisation, project, feature, or task.
+
+This means that the API for images is a bit different from the API for other resources.
+
+Example requests to the image API are:
+
+ * GET /api/images?organisationId=...
+ * GET /api/images?projectId=... 
+ * GET /api/images?featureId=...
+ * GET /api/images?taskId=...
+ */
+export const GET: RequestHandler = async ({ url, locals, platform, request }) => {
+  // ASSERT : User Logged in
+  const { db, session, userRoles } = await getDatabase(locals, platform);
+
+  // ASSERT : Valid query parameters
+  // Validate query parameters, or return 400
+  const contextParams = ['organisationId', 'projectId', 'featureId', 'taskId'];
+  let queryParams = isValidQueryParamsOrError(image, url, contextParams);
+
+  // ASSERT : Valid context parameters
+  // Get the context from the URL, or return 400
+  const { ctxId, ctxType } = getCtxFromUrl(url);
+
+  // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
+  let { conditions } = getImageQueryContext(
+    db,
+    session,
+    request,
+    queryParams as QueryParams,
+    userRoles,
+    ctxId,
+    ctxType
+  );
   try {
-    const organisationId = url.searchParams.get('organisationId');
-    const projectId = url.searchParams.get('projectId');
-    const featureId = url.searchParams.get('featureId');
-    const taskId = url.searchParams.get('taskId');
-    const isAdminView = url.searchParams.get('isAdminView');
-
-    if (!featureId && !organisationId && !projectId && !taskId) {
-      error(
-        400,
-        'Loosey goosey! A featureId, organisationId, projectId or taskId is required'
-      );
-    }
-
-    // AUTH : Pass or Fail - now includes feature access check
-    const { db, userId, accessStrategy } = featureId
-      ? await getDatabaseOrError(
-          locals,
-          platform,
-          ACCESS_STRATEGY,
-          RESOURCE_TYPE,
-          featureId,
-          checkFeatureAccessForImage,
-          checkProjectAccessForFeature,
-          checkOrganisationAccessForImage,
-          PRIVILEGED_STRATEGY
-        )
-      : await getDatabaseOrError(locals, platform, PRIVILEGED_STRATEGY, RESOURCE_TYPE);
-
-    let images;
-    if (featureId) {
-      // Query images with publication status filter based on access
-      images = await getImagesForFeature(
-        db,
-        featureId,
-        isAdminView ? PRIVILEGED_STRATEGY : accessStrategy,
-        PRIVILEGED_STRATEGY
-      );
-    } else if (projectId) {
-      images = (await getImageForProject(db, projectId)) as GetImageAPI[];
-    } else if (organisationId) {
-      images = (await getImageForOrganisation(db, organisationId)) as GetImageAPI[];
-    } else if (taskId) {
-      images = (await getImagesForTask(db, taskId)) as GetImageAPI[];
-    }
-
-    // Sort images by publication status, intent, and creation date
-    images!.sort((a, b) => {
-      // First sort by publication status
-      if (a.isPublished !== b.isPublished) {
-        return a.isPublished ? -1 : 1;
-      }
-      // Then sort by intent order
-      const intentCompare =
-        intentOrder.indexOf(a.intent) - intentOrder.indexOf(b.intent);
-      if (intentCompare !== 0) {
-        return intentCompare;
-      }
-      // Finally, sort by creation date (newest first)
-      return (
-        new Date(b.createdAt as string).getTime() -
-        new Date(a.createdAt as string).getTime()
-      );
-    });
+    // DB : Get the images for the context
+    const images = await getImageForContextType(db, ctxType, conditions);
 
     return JSONResponseOrError(images);
   } catch (e) {
@@ -101,101 +83,118 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
   }
 };
 
+/********************
+ *  CREATE
+ ************/
+
+/**
+ * Creates a new image
+ * @remarks
+ * Images are a second-class resources. This means that they are always addressed in the context of a first-class resource : organisation, project, or feature. This means that the API for images is a bit different from the API for other resources. Also note that tasks indirectly create images; this end-point is not used for tasks.
+ *
+ * Example requests to the image API are:
+ *
+ * POST /api/images
+ * POST /api/images?organisationId=...
+ * POST /api/images?projectId=...
+ * POST /api/images?featureId=...
+ */
 export const POST: RequestHandler = async ({ request, locals, platform }) => {
-  const formData: NewImageAPI = await request.json();
-  if (!formData.refType || !formData.refId) {
-    error(400, 'Feature, Project or Organisation -- there is no try');
-  }
+  // ASSERT : User logged in
+  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
+  const user = await getUserById(db, userId);
+
   try {
-    if (formData.refType === 'feature' || formData.refType === 'task') {
-      const featureId = formData.featureImage?.featureId;
-      if (!featureId) {
-        error(400, 'Give me FeatureId, or give me death');
-      }
+    // ASSERT : Valid submitted data
+    const data: ImageNew = await request.json();
 
-      // AUTH : Pass or Fail
-      const { db, userId, accessStrategy } = await getDatabaseOrError(
-        locals,
-        platform,
-        PRIVILEGED_STRATEGY,
-        RESOURCE_TYPE,
-        featureId,
-        checkFeatureAccessForImage,
-        checkProjectAccessForNewImage,
-        checkOrganisationAccessForImage,
-        PRIVILEGED_STRATEGY,
-        formData.refType
+    // ASSERT : Contributor ID is set if not provided
+    if (!data.contributorId && userId) {
+      data.contributorId = userId;
+    }
+    // ASSERT : Context type is set
+    if (!data.ctxType || !data.ctxId) {
+      error(400, 'Feature, Project or Organisation -- there is no try');
+    }
+    if (
+      !Object.values(ImageContextResource).includes(
+        data.ctxType as ImageContextResource
+      )
+    ) {
+      error(
+        400,
+        `Invalid context type. Was ${data.ctxType} should be one of ${Object.values(ImageContextResource).join(', ')}`
       );
-
-      // Add contributor ID if not provided
-      if (!formData.contributorId) {
-        formData.contributorId = userId;
-      }
-
-      if (accessStrategy !== PRIVILEGED_STRATEGY) {
-        // Public user uploads should use the /api/tasks endpoint
-        error(403, 'Fat cat says no');
-      }
-
-      const { baseImage, relatedFeatureImage } = extractEntitiesToInsert(formData);
-
-      const createdImage = await createImage(db, baseImage);
+    }
+    // ASSERT : Feature Image is set if context type is feature
+    if (data.ctxType === ImageContextResource.feature && !data.featureImage) {
+      error(400, 'Feature Image is required when ctxType is feature');
+    }
+    // ASSERT : Feature Image is valid if context type is feature
+    if (
+      data.ctxType === ImageContextResource.feature &&
+      !data.featureImage?.featureId
+    ) {
+      error(400, 'Feature Image must have a featureId when ctxType is feature');
+    }
+    // ASSERT : Access to context
+    await assertPermissionsToCreateImage(
+      db,
+      session,
+      request,
+      data,
+      userRoles,
+      data.ctxType as ImageContextResource,
+      data.ctxId as Id
+    );
+    // SWITCH : Feature Image
+    if (data.ctxType === ImageContextResource.feature) {
+      const validatedData = ImageInsertWithFeatureAPI.parse(data);
+      // DB : Create the image
+      const createdImage = await createImage(db, validatedData);
+      // DB : Create the feature image
+      const featureImage = {
+        ...validatedData.featureImage,
+        imageId: createdImage.id,
+        featureId: data.ctxId
+      } as FeatureImage;
       const createdFeatureImage = await createFeatureImage(
         db,
-        relatedFeatureImage,
+        featureImage,
         createdImage.id
       );
-
-      return json(
-        {
-          ...createdImage,
-          intent: createdFeatureImage.intent,
-          isPublished: createdFeatureImage.isPublished,
-          publishedAt: createdFeatureImage.publishedAt
-        },
-        { status: 201 }
+      const responseData = await toResponseShape(
+        createdImage,
+        createdFeatureImage,
+        user?.attribution ?? undefined
       );
+      // DB : Return the created
+      return JSONResponseOrError(responseData);
     }
 
-    // If not feature or task, then it must be project or organisation
+    // SWITCH : Organisation or Project Image
+    if (
+      data.ctxType === ImageContextResource.project ||
+      data.ctxType === ImageContextResource.organisation
+    ) {
+      const validatedData = ImageInsertWithProjectOrOrganisationAPI.parse(data);
+      // DB : Create the image
+      const createdImage = await createImage(db, validatedData);
+      // DB : Update the Project or Organisation
+      const payload = { imageId: createdImage.id };
+      if (validatedData.ctxType === ImageContextResource.project) {
+        await updateProject(db, payload, validatedData.ctxId);
+      } else if (validatedData.ctxType === ImageContextResource.organisation) {
+        await updateOrganisation(db, payload, validatedData.ctxId);
+      }
 
-    // AUTH : Pass or Fail
-    const { db, userId, accessStrategy } = await getDatabaseOrError(
-      locals,
-      platform,
-      PRIVILEGED_STRATEGY,
-      RESOURCE_TYPE
-    );
-
-    // Add contributor ID if not provided
-    if (!formData.contributorId) {
-      formData.contributorId = userId;
-    }
-
-    const { baseImage } = extractEntitiesToInsert(formData);
-    const createdImage = await createImage(db, baseImage);
-    let updatedOwner;
-
-    if (formData.refType === 'project') {
-      updatedOwner = await patchProject(
-        db,
-        formData.refId,
-        {
-          imageId: createdImage.id
-        },
-        'code'
+      const responseData = await toResponseShapeProjectOrOrganisation(
+        createdImage,
+        user?.attribution ?? undefined
       );
-    } else if (formData.refType === 'organisation') {
-      updatedOwner = await patchOrganisation(
-        db,
-        formData.refId,
-        {
-          imageId: createdImage.id
-        },
-        'code'
-      );
+      // DB : Return the created
+      return JSONResponseOrError(responseData);
     }
-    return json({ ...createdImage, owner: updatedOwner }, { status: 201 });
   } catch (err) {
     console.error('Failed to create image:', err);
     return error(500, 'Failed to create image');

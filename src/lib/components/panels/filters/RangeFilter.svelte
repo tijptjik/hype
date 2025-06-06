@@ -5,10 +5,10 @@ import RangeSlider from 'svelte-range-slider-pips';
 // I18N
 import { m } from '$lib/i18n';
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 // TYPES
 import type { Id } from '$lib/types';
-let mapCtx = getMapContext();
+let mapCtx = getMapCtx();
 
 type Props = {
   key: string;
@@ -40,7 +40,7 @@ let values: [number, number] = $derived([
 ]);
 </script>
 
-<div class="ml-4 min-h-10 flex-shrink-0 rounded-l-md bg-[#0A0A0A] bg-[#0a0a0a]">
+<div class="ml-4 min-h-10 flex-shrink-0 rounded-l-md bg-[#0a0a0a]">
   <button
     class="flex w-full flex-shrink-0 items-center justify-between rounded-none py-2 pl-6 pr-9 focus:outline-none focus:ring-0 focus-visible:text-primary"
     onclick={() => (isOpen = !isOpen)}>
@@ -73,7 +73,8 @@ let values: [number, number] = $derived([
           on:change={() => {
             mapCtx.setRangePropertyFilter(layerId, key, values);
             mapCtx.zoomToAllVisibleFeatures();
-          }} />
+          }}
+          />
       </div>
     </div>
   {/if}
@@ -105,9 +106,7 @@ let values: [number, number] = $derived([
   /* Pips and labels */
   --range-pip: lightslategray; /* color of the base pips */
   --range-pip-text: var(--range-pip); /* color of the base labels */
-  --range-pip-active: theme(
-    colors.neutral-content
-  ); /* active pips (when handle is on a slider-stop) */
+  --range-pip-active: #a1a1aa; /* active pips (when handle is on a slider-stop) */
   --range-pip-active-text: var(--range-pip-active);
   --range-pip-hover: theme(colors.base-50); /* when a slider-stop is hovered */
   --range-pip-hover-text: var(--range-pip-hover); /* when a slider-stop is hovered */

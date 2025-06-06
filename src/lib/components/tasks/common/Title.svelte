@@ -3,18 +3,26 @@
 import { ADMIN_PATH } from '$lib';
 import { navigateOnAdmin } from '$lib/navigation';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // I18N
+import { getI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
+// CONTEXT
+import { getMapCtx } from '$lib/context/map.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { ChevronRight } from '@steeze-ui/heroicons';
 // ENUMS
-import { HierarchicalResource } from '$lib/types';
+import { HierarchicalResource } from '$lib/enums';
 // TYPES
-import type { TaskAPI, TaskType } from '$lib/types';
+import type { Task, TaskType, Feature } from '$lib/types';
 
-let { task }: { task: TaskAPI } = $props();
+
+// CONTEXT
+const mapCtx = getMapCtx();
+
+// PROPS
+let { task }: { task: Task } = $props();
 
 const resourceState = getHierarchicalResourceState();
 
@@ -34,6 +42,6 @@ const typeDisplay: Record<TaskType, string> = {
       onclick={(e) =>
         navigateOnAdmin(resourceState, HierarchicalResource.feature, task.feature?.id)}
       class="pl-3 text-sm text-base-content/50">
-      {task.feature?.title || ''}</a>
+      {getI18n(task.feature as Feature, 'title', mapCtx.getUserPreferences())}</a>
   </h3>
 </div>

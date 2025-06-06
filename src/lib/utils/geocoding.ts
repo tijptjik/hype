@@ -269,8 +269,8 @@ export function capitalizeFirstLetter(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
 
-export function titleCase(str: string): string {
-  if (!str) return str;
+export function titleCase(str: string | null | undefined): string {
+  if (!str) return '';
   return str.split(' ').map(capitalizeFirstLetter).join(' ');
 }
 
@@ -290,15 +290,21 @@ export function removeCountry(str: string): string {
 
 export function removeRegion(str: string): string {
   const parts = str.split(',');
-  const lastPart = parts.pop();
-  if (
-    lastPart &&
-    (regionIdentifiers.HK.includes(lastPart.toLowerCase().trim()) ||
-      regionIdentifiers.KL.includes(lastPart.toLowerCase().trim()) ||
-      regionIdentifiers.NT.includes(lastPart.toLowerCase().trim()))
-  ) {
-    return parts.join(',').trim();
+  const lastPart = parts.pop()?.trim();
+  
+  if (lastPart) {
+    const lastPartLower = lastPart.toLowerCase().replace(/\s+/g, '');
+    
+    // Check against region identifiers (removing spaces for comparison)
+    if (
+      regionIdentifiers.HK.includes(lastPartLower) ||
+      regionIdentifiers.KL.includes(lastPartLower) ||
+      regionIdentifiers.NT.includes(lastPartLower)
+    ) {
+      return parts.join(',').trim();
+    }
   }
+  
   return str;
 }
 

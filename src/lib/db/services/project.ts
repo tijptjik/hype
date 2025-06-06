@@ -1,135 +1,190 @@
-import { error } from '@sveltejs/kit';
-import { and, eq } from 'drizzle-orm';
-import { superValidate } from 'sveltekit-superforms';
-import { zod } from 'sveltekit-superforms/adapters';
+// DRIZZLE
+import { and, eq, SQL } from 'drizzle-orm';
+// FORMS
+import { superValidate, type SuperValidated } from 'sveltekit-superforms';
+// SCHEMA
 import {
   project,
   projectI18n,
   projectRole,
-  user,
   organisationRole,
-  property,
   feature
 } from '../schema';
-import { ProjectInsert, ProjectUpdate, ProjectUpdateAPI } from '../zod';
-import db, { toNestedTranslations, updatePartial } from '$lib/db';
+// AUTH
+import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
+// DB
+import { isFieldUnique, toLocaleMap, toRelatedRecords } from '..';
+import { insert, update, insertManyRelated, replaceManyRelated } from '../crud';
+// ZOD
+import { zod } from 'sveltekit-superforms/adapters';
+import { ProjectAPI, ProjectCollectionAPI } from '../zod';
+// ENUMS
+import { HierarchicalResource } from '$lib/enums';
+// SERVICES
+import { createPropertiesWithRelated, updatePropertiesWithRelated } from './property';
 // TYPES
-import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import type {
-  NewProjectDB,
+  ProjectDBNew,
   ProjectDB,
-  TargetLang,
-  NewProjectI18n,
-  ProjectI18n,
+  ProjectI18nDB,
+  ProjectI18nNew,
+  ProjectI18nPartial,
   Id,
-  NewProjectRole,
-  ProjectRole,
-  NewProject,
-  FormTranslations,
-  FormRelatedUsers,
+  ProjectRoleNew,
   Project,
-  OrganisationRole,
-  FormRelatedProperties,
-  NewProperty,
   Property,
-  PropertyDB
+  PropertyNew,
+  Database,
+  Locale,
+  ProjectNew,
+  ProjectDBPartial,
+  OrganisationRolePartialExtra,
+  PropertyValueI18nNew,
+  PropertyI18nNew,
+  ProjectRaw,
+  ProjectRoleDB,
+  PropertyRaw
 } from '$lib/types';
 
-export type Database = DrizzleD1Database<
-  typeof import('/home/io/code/ghostsigns/src/lib/db/schema')
->;
-// CREATE / UPDATE
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. CRUD :: CORE OPERATIONS
+//    - listProjects
+//    - getProject
+//    - createProject
+//    - updateProject
+//
+// 2. CRUD :: RELATIONAL OPERATIONS
+//    - createI18n
+//    - updateI18n
+//    - ensureOrganisationMembership
+//    - createMaintainerRoles
+//    - updateMaintainerRoles
+//
+// 3. CRUD :: ORCHESTRATION
+//    - createProjectWithRelated
+//    - updateProjectWithRelated
+//
+// 4. ROLES
+//    - listMaintainerRoles
+//    - mergeOrganisationRoles
+//
+// 5. UTILS :: SHAPING
+//    - toFormShape
+//    - toResponseShape
+//
+// 6. UTILS :: LOOKUPS
+//    - getProjectForFeatureId
+//
 
-export const createProject = async (db: Database, data: NewProjectDB) => {
-  const [insertedProject] = await db
-    .insert(project)
-    .values({ ...data })
-    .returning();
+// ═══════════════════════
+// 1. CRUD :: CORE OPERATIONS
+// ═══════════════════════
 
-  if (!insertedProject) {
-    return error(404, 'Project has stepped through the looking glass');
-  }
-
-  return insertedProject;
-};
-
-export const updateProject = async (db: Database, data: ProjectDB, ref: string) => {
-  const [updatedProject] = await db
-    .update(project)
-    .set({ ...data })
-    .where(eq(project.code, ref))
-    .returning();
-
-  if (!updatedProject) {
-    return error(
-      404,
-      `Project <code>${ref}</code> has stepped through the looking glass`
-    );
-  }
-
-  return updatedProject;
-};
-
-export const createTranslations = async (
+export const listProjects = async (
   db: Database,
-  translations: Record<TargetLang, NewProjectI18n>,
+  withRelations: Record<string, boolean | object> = {},
+  conditions: SQL<unknown>[] = []
+) =>
+  await db.query.project.findMany({
+    with: withRelations,
+    where: conditions.length > 0 ? and(...conditions) : undefined
+  });
+
+export const getProject = async (
+  db: Database,
+  withRelations: Record<string, boolean | object> = {},
+  conditions: SQL<unknown>[] = []
+): Promise<ProjectRaw | undefined> =>
+  await db.query.project.findFirst({
+    with: withRelations,
+    where: and(...conditions)
+  });
+
+/**
+ * Creates a new project in the database
+ * @param db - The database instance
+ * @param data - The project data to insert
+ * @returns The newly created project
+ * @throws {Error} If the project creation fails
+ */
+export const createProject = async (
+  db: Database,
+  data: ProjectDBNew
+): Promise<ProjectDB> => await insert(db, project, data);
+
+/**
+ * Updates an existing project in the database
+ * @param db - The database instance
+ * @param data - The updated project data
+ * @param ref - The project code reference
+ * @returns The updated project
+ * @throws {Error} If the project update fails or project is not found
+ */
+export const updateProject = async (
+  db: Database,
+  data: ProjectDBPartial,
+  ref: string
+): Promise<ProjectDB> => await update(db, project, data, project.code, ref);
+
+/********************
+ *  2. CRUD :: RELATIONAL OPERATIONS
+ ************/
+
+/**
+ * Creates relational i18n records for a project
+ * @param db - The database instance
+ * @param i18n - Record of translations for each target locale
+ * @param projectId - The ID of the project
+ * @returns The created translations
+ */
+export const createI18n = async (
+  db: Database,
+  i18n: Record<Locale, ProjectI18nNew>,
   projectId: string
-) => {
-  const translationsToInsert = Object.entries(translations).map(
-    ([lang, translation]) => ({
-      ...translation,
-      projectId,
-      lang: lang as 'zh-hant' | 'zh-hans'
-    })
+): Promise<ProjectI18nDB[]> => {
+  return await insertManyRelated(
+    db,
+    projectI18n,
+    toRelatedRecords(i18n, 'projectId', projectId, 'locale') as any,
+    'projectId',
+    projectId
   );
-
-  return await db.insert(projectI18n).values(translationsToInsert).returning();
 };
 
-export const updateTranslations = async (
+/**
+ * Updates translations for a project by deleting existing ones and creating new ones
+ * @param db - The database instance
+ * @param i18n - Record of translations for each target locale
+ * @param projectId - The ID of the project
+ * @returns The updated translations
+ */
+export const updateI18n = async (
   db: Database,
-  translations: Record<TargetLang, ProjectI18n>,
+  i18n: Record<Locale, ProjectI18nPartial>,
   projectId: string
-) => {
-  await db.delete(projectI18n).where(eq(projectI18n.projectId, projectId));
-  return await createTranslations(db, translations, projectId);
+): Promise<ProjectI18nDB[]> => {
+  return await replaceManyRelated(
+    db,
+    projectI18n,
+    toRelatedRecords(i18n, 'projectId', projectId, 'locale') as any,
+    projectI18n.projectId,
+    projectId
+  );
 };
 
-export const createMaintainerRoles = async (
+/**
+ * Ensures users are added as members to the organisation if they're not already
+ * @param db - The database instance
+ * @param maintainerRoles - Array of maintainer roles
+ * @param organisationId - The ID of the organisation
+ */
+const ensureOrganisationMembership = async (
   db: Database,
-  maintainerRoles: NewProjectRole[],
-  projectId: string
-) => {
-  // Filter out members -- they are handled by the organisation roles
-  const maintainerRolesToInsert = maintainerRoles
-    .map((role) => ({
-      ...role,
-      projectId
-    }))
-    .filter((role) => role.role !== 'member');
-
-  await db.insert(projectRole).values(maintainerRolesToInsert).returning();
-
-  const rolesWithUsers = await db
-    .select({
-      role: projectRole,
-      user: user
-    })
-    .from(projectRole)
-    .innerJoin(user, eq(projectRole.userId, user.id))
-    .where(eq(projectRole.projectId, projectId));
-
-  return Object.values(rolesWithUsers).map((role) => ({
-    ...role.role,
-    user: role.user
-  }));
-};
-
-export const updateMaintainerRoles = async (
-  db: Database,
-  maintainerRoles: ProjectRole[],
-  projectId: Id,
-  organisationId: Id
+  maintainerRoles: ProjectRoleNew[],
+  organisationId: string
 ) => {
   // Get existing organization roles
   const orgRoles = await db
@@ -150,42 +205,263 @@ export const updateMaintainerRoles = async (
       newOrgUsers.map((userId) => ({
         userId,
         organisationId,
-        role: 'member' as OrganisationRole['role']
+        role: 'member' as const
       }))
     );
   }
+};
+
+/**
+ * Creates maintainer roles for a project
+ * Also ensures that new maintainers are added as members to the parent organisation
+ * @param db - The database instance
+ * @param maintainerRoles - Array of new maintainer roles to create
+ * @param projectId - The ID of the project
+ * @param organisationId - The ID of the parent organisation
+ * @returns Array of created maintainer roles with associated user information
+ */
+export const createMaintainerRoles = async (
+  db: Database,
+  maintainerRoles: ProjectRoleNew[],
+  projectId: string,
+  organisationId: string
+): Promise<ProjectRoleNew[]> => {
+  // Ensure users are members of the organisation
+  await ensureOrganisationMembership(db, maintainerRoles, organisationId);
+
+  return await insertManyRelated(
+    db,
+    projectRole,
+    maintainerRoles as ProjectRoleDB[],
+    'projectId',
+    projectId
+  );
+};
+
+/**
+ * Updates maintainer roles for a project by deleting existing ones and creating new ones
+ * Also ensures that new maintainers are added as members to the parent organisation
+ * @param db - The database instance
+ * @param maintainerRoles - Array of maintainer roles to update
+ * @param projectId - The ID of the project
+ * @param organisationId - The ID of the parent organisation
+ * @returns Array of updated maintainer roles with associated user information
+ */
+export const updateMaintainerRoles = async (
+  db: Database,
+  maintainerRoles: ProjectRoleNew[],
+  projectId: Id,
+  organisationId: Id
+) => {
+  // Ensure users are members of the organisation
+  await ensureOrganisationMembership(db, maintainerRoles, organisationId);
 
   // Now proceed with updating project roles
-  await db.delete(projectRole).where(eq(projectRole.projectId, projectId));
-  return await createMaintainerRoles(db, maintainerRoles, projectId);
+  return await replaceManyRelated(
+    db,
+    projectRole,
+    maintainerRoles as ProjectRoleDB[],
+    projectRole.projectId,
+    projectId
+  );
 };
 
-export const patchProject = async (
+// ═══════════════════════
+// 3. CRUD :: ORCHESTRATION
+// ═══════════════════════
+
+/**
+ * Creates a new project with translations, maintainer roles, and properties
+ * @param db - The database instance
+ * @param data - The project data to insert
+ * @returns The newly created project with related data
+ */
+export const createProjectWithRelated = async (db: Database, data: ProjectNew) => {
+  const project = await createProject(db, data);
+  const i18n = await createI18n(
+    db,
+    data.i18n as Record<Locale, ProjectI18nNew>,
+    project.id
+  );
+  await createMaintainerRoles(
+    db,
+    data.maintainerRoles as ProjectRoleDB[],
+    project.id,
+    project.organisationId
+  );
+  const maintainerRoles = await listMaintainerRoles(db, project.id);
+
+  let properties: Property[] = [];
+  if (data.properties && Array.isArray(data.properties) && data.properties.length > 0) {
+    properties = await createPropertiesWithRelated(
+      db,
+      data.properties as PropertyNew[],
+      project.id
+    );
+  }
+
+  return { ...project, i18n, maintainerRoles, properties };
+};
+
+/**
+ * Updates a project with translations, maintainer roles, and properties
+ * @param db - The database instance
+ * @param data - The project data to update
+ * @param lookupCode - Optional code to lookup the project (defaults to data.code)
+ * @returns The updated project with related data
+ */
+export const updateProjectWithRelated = async (
   db: Database,
-  ref: string,
-  data: Partial<ProjectDB>,
-  refType: 'id' | 'code'
+  data: Project,
+  lookupCode?: string
 ) => {
-  return await updatePartial(db, project, ref, refType, data);
+  const codeToUse = lookupCode || data.code;
+  const project = await updateProject(db, data, codeToUse);
+  const i18n = await updateI18n(db, data.i18n, project.id);
+  await updateMaintainerRoles(
+    db,
+    data.maintainerRoles,
+    project.id,
+    project.organisationId
+  );
+  const maintainerRoles = await listMaintainerRoles(db, project.id);
+
+  let properties: Property[] = [];
+  // properties can be null in an update if none are sent, or empty array to delete all
+  if (data.properties) {
+    properties = await updatePropertiesWithRelated(db, data.properties, project.id);
+  }
+
+  return { ...project, i18n, maintainerRoles, properties };
 };
 
-// UTILS
-
-export const extractEntitiesToInsert = (formData: NewProject) => {
-  const baseProject = ProjectInsert.parse(formData);
-  const formTranslations: FormTranslations<NewProjectI18n> = formData.translations;
-  const formMaintainerRoles: FormRelatedUsers<NewProjectRole> = formData.maintainerRoles;
-  const formProperties: FormRelatedProperties<NewProperty> = formData.properties;
-  return { baseProject, formTranslations, formMaintainerRoles, formProperties };
+/**
+ * Reads maintainer roles for a project
+ * @param db - The database instance
+ * @param projectId - The ID of the project
+ * @returns Array of maintainer roles with associated user information
+ */
+export const listMaintainerRoles = async (db: Database, projectId: string) => {
+  return await db.query.projectRole.findMany({
+    with: {
+      user: true
+    },
+    where: eq(projectRole.projectId, projectId)
+  });
 };
 
-export const extractEntitiesToUpdate = (formData: Project) => {
-  const baseProject = ProjectUpdate.parse(formData);
-  const formTranslations: FormTranslations<ProjectI18n> = formData.translations;
-  const formMaintainerRoles: FormRelatedUsers<ProjectRole> = formData.maintainerRoles;
-  const formProperties: FormRelatedProperties<Property> = formData.properties;
-  return { baseProject, formTranslations, formMaintainerRoles, formProperties };
+// ═══════════════════════
+// 4. ROLES
+// ═══════════════════════
+
+/**
+ * Rebuilds form data from database entities
+ * @param project - The project database entity
+ * @param translations - Array of project translations
+ * @param maintainerRoles - Array of project maintainer roles
+ * @param properties - Array of project properties
+ * @returns Validated form data
+ */
+export const toFormShape = async (
+  project: ProjectDB,
+  i18n: ProjectI18nNew[],
+  maintainerRoles: ProjectRoleNew[],
+  properties: PropertyNew[]
+): Promise<SuperValidated<Project>> => {
+  const formData: Project = {
+    ...project,
+    i18n: toLocaleMap<ProjectI18nNew>(i18n) as any,
+    maintainerRoles,
+    properties: properties
+      .sort((a, b) => {
+        // Primary sort: 'classifier' before 'specifier'
+        if (a.type === 'classifier' && b.type === 'specifier') {
+          return -1;
+        }
+        if (a.type === 'specifier' && b.type === 'classifier') {
+          return 1;
+        }
+        // Secondary sort: by rank (existing logic)
+        return (a.rank ?? 0) - (b.rank ?? 0);
+      })
+      .map((property) => ({
+        ...property,
+        i18n: toLocaleMap<PropertyI18nNew>(property.i18n) as any,
+        values: property.values.map((value) => ({
+          ...value,
+          i18n: toLocaleMap<PropertyValueI18nNew>(value.i18n) as any
+        }))
+      })) as Property[]
+  };
+  // @ts-ignore TODO - Fix Zod type error
+  const form = await superValidate(formData, zod(ProjectAPI) as any);
+  return form as SuperValidated<Project>;
 };
+
+/**
+ * Builds response data from database entities
+ * @param project - The project database entity
+ * @param translations - Array of project translations
+ * @param maintainerRoles - Array of project maintainer roles
+ * @param properties - Array of project properties
+ * @returns A parsed response shape
+ */
+export const toResponseShape = async (
+  project: ProjectDB,
+  i18n: ProjectI18nNew[],
+  maintainerRoles: ProjectRoleNew[],
+  properties: PropertyRaw[],
+  isCollection: boolean = false
+) => {
+  const data: any = {
+    ...project,
+    i18n: toLocaleMap<ProjectI18n>(i18n) as any,
+    maintainerRoles,
+    properties: properties.map((property: PropertyRaw) => ({
+      ...property,
+      // Only transform i18n if it has actual data, otherwise set to null
+      i18n: (Array.isArray(property.i18n) && property.i18n.length > 0) 
+        ? toLocaleMap<PropertyI18nNew>(property.i18n) as any 
+        : (Array.isArray(property.i18n) ? undefined : property.i18n),
+      values: property.values?.map((value) => ({
+        ...value,
+        // Only transform i18n if it has actual data, otherwise set to null  
+        i18n: (Array.isArray(value.i18n) && value.i18n.length > 0)
+          ? toLocaleMap<PropertyValueI18nNew>(value.i18n) as any
+          : (Array.isArray(value.i18n) ? undefined : value.i18n)
+      }))
+    })) as PropertyNew[]
+  };
+  return isCollection
+    ? (ProjectCollectionAPI.parse(data) as Project)
+    : (ProjectAPI.parse(data) as Project);
+};
+
+// ═══════════════════════
+// 5. UTILS :: LOOKUPS
+// ═══════════════════════
+
+/**
+ * Retrieves the project associated with a feature ID
+ * @param db - The database instance
+ * @param featureId - The ID of the feature
+ * @returns The associated project or undefined if not found
+ */
+export const getProjectForFeatureId = async (
+  db: Database,
+  featureId: Id
+): Promise<ProjectDB | undefined> => {
+  const record = await db.query.feature.findFirst({
+    where: eq(feature.id, featureId),
+    with: { layer: { with: { project: true } } }
+  });
+
+  return record?.layer?.project || undefined;
+};
+
+// ═══════════════════════
+// 6. UTILS :: MERGE
+// ═══════════════════════
 
 export async function mergeOrganisationRoles(
   db: any,
@@ -196,13 +472,7 @@ export async function mergeOrganisationRoles(
     where: and(eq(organisationRole.organisationId, result.organisationId)),
     with: {
       user: {
-        columns: {
-          // exclude sensitive fields
-          email: false,
-          emailVerified: false,
-          createdAt: false,
-          modifiedAt: false
-        }
+        columns: userColumnsWithPrivacyProtected
       }
     }
   });
@@ -212,7 +482,7 @@ export async function mergeOrganisationRoles(
     result.maintainerRoles.map((userRole) => userRole.userId) || [];
 
   // Add organization users that aren't already maintainers
-  orgRoles.forEach((orgRole: OrganisationRole) => {
+  orgRoles.forEach((orgRole: OrganisationRolePartialExtra) => {
     if (!existingUserIds.includes(orgRole.userId)) {
       result.maintainerRoles.push({
         projectId: result.id,
@@ -225,34 +495,3 @@ export async function mergeOrganisationRoles(
 
   return result;
 }
-
-export const rebuildFormData = async (
-  db: Database,
-  project: ProjectDB,
-  translations: ProjectI18n[],
-  maintainerRoles: ProjectRole[],
-  properties: PropertyDB[]
-) => {
-  const extendedProject = {
-    ...project,
-    maintainerRoles,
-    translations: toNestedTranslations<ProjectI18n>(translations),
-    properties
-  } as Project;
-
-  const result = await mergeOrganisationRoles(db, extendedProject);
-
-  return await superValidate(result, zod(ProjectUpdateAPI));
-};
-
-export const getProjectForFeatureId = async (
-  db: Database,
-  featureId: Id
-): Promise<ProjectDB | undefined> => {
-  const project = await db.query.feature.findFirst({
-    where: eq(feature.id, featureId),
-    with: { layer: { with: { project: true } } }
-  });
-
-  return project?.layer?.project || undefined;
-};

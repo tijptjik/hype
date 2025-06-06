@@ -1,63 +1,147 @@
 <script lang="ts">
-import { goto } from '$app/navigation';
 // I18N
-import { m, setLocale, getLocale } from '$lib/i18n';
+import { getLocale } from '$lib/i18n';
+import { m } from '$lib/i18n';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
-import { Language } from '@steeze-ui/heroicons';
+import { Language, ChevronDown, ChevronUp } from '@steeze-ui/heroicons';
 import Section from '$lib/components/panels/common/Section.svelte';
-// STORES
-import { page } from '$app/stores';
+// CONTEXT
+import { getMapCtx } from '$lib/context/map.svelte';
+// ENUMS
+import { supportedLocales, localeNames } from '$lib/enums';
 // TYPES
-import type { Locale } from '$lib/types';
+import type { UserPreferences } from '$lib/types';
 
-const languages = [
-  { name: 'English', code: 'en', 'zh-hant': '英語', 'zh-hans': '英语' },
-  { name: '正體字', en: 'Traditional Chinese', code: 'zh-hant', 'zh-hans': '繁體字' },
-  { name: '简体字', en: 'Simplified Chinese', code: 'zh-hans', 'zh-hant': '繁體字' }
-];
+// CONTEXT
+const mapCtx = getMapCtx();
 
-const { session } = $page.data;
+// Ensure user preferences object exists and is reactive
+const userPreferences: UserPreferences = $derived(mapCtx.getUserPreferences());
 
-const updateLanguage = async (language: string) => {
-  await fetch(`/api/users/${session?.user?.id}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ language })
-  });
+// Advanced section features
+const advancedSettings = $derived([
+  {
+    name: m.settings_language_auto_translate(),
+    description: m.settings_language_auto_translate_description(),
+    code: 'allowMachineTranslation',
+    currentValue: userPreferences.allowMachineTranslation
+  },
+  {
+    name: m.settings_language_show_translate_button(),
+    description: m.settings_language_show_translate_button_description(),
+    code: 'isTranslateButtonVisible',
+    currentValue: userPreferences.isTranslateButtonVisible
+  },
+  {
+    name: m.settings_language_prefer_placeholders(),
+    description: m.settings_language_prefer_placeholders_description(),
+    code: 'preferFallbackInCurrentLocale',
+    currentValue: userPreferences.preferFallbackInCurrentLocale
+  }
+]);
 
-  // Update the language immediately after the API call
-  session!.user.locale = language as Locale;
-  setLocale(language as Locale);
-};
-// TODO Add a section on how to handle missing translations - (1) Automatically translate to preferred language, (2) Show original language contribution, (3) Show Original Language, but offer to Translate.
+// For collapsible sections
+let preferredOpen = $state(true);
+let additionalOpen = $state(true);
+let advancedOpen = $state(false);
 </script>
+
+{#snippet summary(title: string, isOpen: boolean)}
+  <summary class="flex cursor-pointer list-none items-center justify-between py-2 pr-3">
+    <h2 class="pl-0.5 text-base-content">
+      {title}
+    </h2>
+    <Icon src={isOpen ? ChevronUp : ChevronDown} class="h-5 w-5 text-base-content" />
+  </summary>
+{/snippet}
 
 <Section
   title={m.settings__language()}
   icon="/language.svg"
   position="right"
   iconVerticalPaddingClass="py-3 pr-4.5">
-  <div class="flex flex-col gap-2 caret-transparent">
-    {#each languages as language}
-      <div
-        class="flex h-11 w-full flex-row items-center justify-between gap-4 pl-8 pr-[19px] caret-transparent">
-        <div class="flex flex-row items-center gap-4">
-          <Icon src={Language} class="h-5 w-5" />
-          <p class="font-normal text-base-content">{language.name}</p>
-          {#if language.code !== getLocale()}
-            <p class="text-sm text-neutral-content">
-              {language[getLocale()]}
-            </p>
-          {/if}
-        </div>
-        <input
-          type="radio"
-          name="language"
-          value={language.code}
-          class="radio-primary radio radio-sm mr-4 h-5 w-5 cursor-pointer"
-          checked={getLocale() === language.code}
-          onclick={() => updateLanguage(language.code)} />
+  <div class="flex flex-col gap-4 px-4 caret-transparent">
+    <!-- Primary Language Section -->
+    <details bind:open={preferredOpen}>
+      {@render summary(m.settings_language_preferred(), preferredOpen)}
+      <div class="ml-4 flex flex-col gap-2 pt-2">
+        {#each supportedLocales as locale}
+          <div class="flex h-12 flex-row items-center justify-between gap-4">
+            <div class="flex flex-row items-center gap-4">
+              <Icon src={Language} class="h-5 w-5" />
+              <p class="font-normal text-base-content">{localeNames[locale][locale]}</p>
+              {#if locale !== getLocale() && localeNames[getLocale()][locale]}
+                <p class="text-sm text-neutral-content">
+                  ({localeNames[getLocale()][locale]})
+                </p>
+              {/if}
+            </div>
+            <input
+              type="radio"
+              name="language"
+              value={locale}
+              class="radio-primary radio radio-sm mr-4 h-5 w-5 cursor-pointer"
+              checked={getLocale() === locale}
+              onclick={async () => await mapCtx.setLocale(locale)} />
+          </div>
+        {/each}
       </div>
-    {/each}
+    </details>
+
+    <!-- Additional Languages Section -->
+    <details class="mt-2" bind:open={additionalOpen}>
+      {@render summary(m.settings_language_additional(), additionalOpen)}
+      <div class="ml-4 flex flex-col gap-2 pt-2">
+        {#each supportedLocales.filter((locale) => locale !== getLocale()) as locale (locale)}
+          <div
+            class="flex w-full flex-row items-center justify-between gap-4 py-1 pr-1.5">
+            <label for={`fallback-${locale}`} class="flex cursor-pointer flex-col">
+              <span class="font-normal text-base-content"
+                >{localeNames[locale][locale]}</span>
+              {#if localeNames[getLocale()][locale]}
+                <span class="text-sm text-neutral-content"
+                  >({localeNames[getLocale()][locale]})</span>
+              {/if}
+            </label>
+            <input
+              type="checkbox"
+              id={`fallback-${locale}`}
+              class="toggle toggle-primary toggle-sm flex-shrink-0"
+              checked={userPreferences.fallbackLocales?.includes(locale) || false}
+              onchange={(e) =>
+                mapCtx.setFallbackLocales(locale, e.currentTarget.checked)} />
+          </div>
+        {/each}
+      </div>
+    </details>
+
+    <!-- Advanced Settings Section -->
+    <details class="mt-2" bind:open={advancedOpen}>
+      {@render summary(m.settings_language_advanced(), advancedOpen)}
+      <div class="ml-4 flex flex-col gap-2 pt-2">
+        {#each advancedSettings as setting (setting.code)}
+          <div
+            class="min-h-18 flex w-full flex-row items-center justify-between gap-4 py-2 pr-1.5">
+            <div class="flex flex-col">
+              <p class="font-normal text-base-content">
+                <span class="pr-1.5">{setting.name}</span>
+                {#if setting.description}
+                  <span class="text-sm text-neutral-content"
+                    >{setting.description}</span>
+                {/if}
+              </p>
+            </div>
+            <input
+              name={setting.code}
+              type="checkbox"
+              class="toggle toggle-primary toggle-sm flex-shrink-0"
+              checked={setting.currentValue}
+              onchange={(e) =>
+                mapCtx.setAdvancedFeature(setting.code as keyof UserPreferences, e.currentTarget.checked)} />
+          </div>
+        {/each}
+      </div>
+    </details>
   </div>
 </Section>

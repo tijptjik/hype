@@ -1,57 +1,77 @@
 <script lang="ts">
 // I18N
 import { m } from '$lib/i18n';
-// STORES
-import { page } from '$app/stores';
+// SERVICES
+import { debouncedUpdateUserAttribution } from '$lib/client/services/user';
 // ICONS
 import { PencilSquare } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
-
-const { session } = $page.data;
-const cardCtx = getFeatureCardContext();
-
-let editedAttribution = $state(session?.user?.attribution || '');
-let editing = $state(!(session?.user?.attribution || '').trim());
-let timer: ReturnType<typeof setTimeout>;
+import { getMapCtx } from '$lib/context/map.svelte';
 
 // CONTEXT
-const debounceAndUpdateAttribution = (value: string) => {
-  clearTimeout(timer);
+const cardCtx = getFeatureCardContext();
+const mapCtx = getMapCtx();
+
+// STATE
+let inputElement: HTMLInputElement | null = $state(null);
+let editedAttribution = $state(
+  mapCtx.getUser().attribution || m.tidy_level_hawk_belong()
+);
+let originalAttribution = $state('');
+let editing = $state(!(mapCtx.getUser().attribution || '').trim());
+
+// HANDLERS
+function handleEditMode(e: Event) {
+  e.preventDefault();
+  e.stopPropagation();
+  originalAttribution = editedAttribution;
+  // Clear attribution if it's the placeholder value
+  if (editedAttribution === m.tidy_level_hawk_belong()) {
+    editedAttribution = '';
+  }
+  editing = true;
+  setTimeout(() => {
+    inputElement?.focus();
+  }, 0);
+}
+
+async function handleAttributionSubmit() {
+  if (editedAttribution.trim()) {
+    editing = false;
+    await handleAttributionUpdate(editedAttribution);
+  }
+}
+
+function handleAttributionCancel() {
+  editedAttribution = originalAttribution;
+  editing = false;
+}
+
+const handleAttributionUpdate = async (value: string) => {
   if (cardCtx.getError() === m.validation__attribution_required()) {
     cardCtx.resetError();
   }
-  editedAttribution = value; // Keep UI responsive
 
-  timer = setTimeout(async () => {
-    if (!session?.user?.id) {
-      console.warn('User session not found. Cannot update attribution.');
-      return;
-    }
-    try {
-      const response = await fetch(`/api/users/${session.user.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attribution: value })
-      });
-      if (response.ok) {
-        if (session.user) {
-          session.user.attribution = value;
-          cardCtx.setAttribution(value);
-        }
-      } else {
-        console.error('Failed to update attribution:', await response.text());
-      }
-    } catch (error) {
+  await debouncedUpdateUserAttribution(
+    mapCtx.user.id,
+    value,
+    // onSuccess
+    (attribution) => {
+      mapCtx.getUser().attribution = attribution;
+      cardCtx.setAttribution(attribution);
+    },
+    // onError
+    (error) => {
       console.error('Error updating attribution:', error);
     }
-  }, 500);
+  );
 };
 
 // Ensure editing state is re-evaluated if session changes (e.g. login/logout)
 $effect(() => {
-  const currentAttr = session?.user?.attribution || '';
+  const currentAttr = mapCtx.getUser().attribution || '';
   editedAttribution = currentAttr;
   editing = !currentAttr.trim();
 });
@@ -62,7 +82,7 @@ $effect(() => {
   {m.new_feature__thank_you()}
 </p>
 
-<div class="pointer-events-auto w-full bg-black px-3 pt-2 md:px-6">
+<div class="pointer-events-auto w-full bg-black px-3 pt-2 md:px-6 caret-transparent">
   {#if !editedAttribution.trim() || editing}
     <div class="mb-2 px-12">
       <label
@@ -73,28 +93,33 @@ $effect(() => {
       <input
         type="text"
         id="attribution-input"
-        class="input input-bordered w-full bg-gray-800 text-white placeholder:text-gray-400"
+        bind:this={inputElement}
+        class="input input-bordered w-full bg-black text-center font-bold caret-white focus:outline-none"
         placeholder={m.photo_credit_input_placeholder()}
         bind:value={editedAttribution}
-        oninput={({ target }) =>
-          debounceAndUpdateAttribution((target as HTMLInputElement).value)} />
+        onkeydown={(e) => {
+          e.stopPropagation();
+          if (e.key === 'Enter' || e.key === 'Tab') {
+            handleAttributionSubmit();
+          } else if (e.key === 'Escape') {
+            handleAttributionCancel();
+          }
+        }}
+        onblur={handleAttributionSubmit} />
     </div>
   {:else}
     <p class="text-center text-base-content">
       {m.add_feature__credit_prompt()}
     </p>
-    <div class="flex w-full items-center justify-center gap-2 pt-2 text-center">
+    <div
+      class="group flex min-h-14 w-full items-center justify-center gap-2 pt-2 text-center cursor-pointer caret-transparent"
+      onclick={handleEditMode}>
       <p class="text-center text-xl font-semibold text-white">{editedAttribution}</p>
       <button
-        class="btn btn-ghost btn-sm h-8 w-8 p-0"
-        onclick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          editing = true;
-        }}>
+        class="btn btn-ghost btn-sm flex h-8 items-center justify-center rounded-lg group-hover:bg-base-300 group-focus:text-primary group-focus:outline-none group-active:bg-base-200 focus:outline-none">
         <Icon
           src={PencilSquare}
-          class="h-5 w-5 stroke-1 text-base-content/80 hover:text-base-content" />
+          class="h-5 w-5 stroke-1 text-base-content/80 group-hover:text-base-content" />
       </button>
     </div>
   {/if}

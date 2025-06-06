@@ -1,15 +1,18 @@
 <script lang="ts">
+// I18N
+import { getI18n } from '$lib/i18n';
 // TRANSITIONS
 import { slide } from 'svelte/transition';
 // LIB
 import { ADMIN_PATH, NEW_REF } from '$lib/index';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 import { getSidebarState } from '$lib/context/sidebar.svelte';
 // COMPONENTS
 import FilterToggle from '$lib/components/sidebar/FilterButton.svelte';
 // ENUMS
-import { HierarchicalResource } from '$lib/types';
+import { HierarchicalResource } from '$lib/enums';
 // NAVIGATION
 import { navItems, navigateOnAdmin } from '$lib/navigation';
 // ICONS
@@ -22,8 +25,13 @@ import type {
   Id,
   Code,
   FilterableResourceType,
-  FacetType
+  FacetType,
+  Task
 } from '$lib/types';
+import { MapCtx } from '$lib/context/map.svelte';
+
+// CONTEXT
+let mapCtx = getMapCtx();
 
 let resourceState = getHierarchicalResourceState();
 let sidebarState = getSidebarState();
@@ -33,6 +41,10 @@ let isCollapsed = $derived(
   resourceState.hasManyEntities(resourceType) &&
     !sidebarState.isSectionOpen(resourceType)
 );
+
+let entities = $derived.by(() => {
+  return resourceState.getFilteredResource(resourceType as HierarchicalResource);
+});
 
 // CONFIG
 const filterableByQueryParams: FilterableResourceType[] = [
@@ -61,19 +73,18 @@ let isVisible = (id: Id) => {
 let isPrism = (id: Id) =>
   resourceState.state.prisms[resourceType as ResourceTypeWithChildren]?.includes(id);
 
-let getDisplayName = (entity: Resource) => {
-  if (resourceType === HierarchicalResource.organisation) {
-    return entity.nameShort || entity.name || entity.id || 'UNKNOWN';
-  }
-  if (resourceType === HierarchicalResource.project) {
-    return entity.nameShort || entity.name || entity.id || 'UNKNOWN';
-  }
-  if (resourceType === HierarchicalResource.layer) {
-    return entity.name || entity.id || 'UNKNOWN';
-  }
-  if (resourceType === HierarchicalResource.feature) {
-    return entity.title || entity.id || 'UNKNOWN';
-  }
+let getDisplayName = (entity: Exclude<Resource, Task>) => {
+  return getI18n(
+    entity,
+    {
+      [HierarchicalResource.task]: 'title',
+      [HierarchicalResource.organisation]: 'name',
+      [HierarchicalResource.project]: 'name',
+      [HierarchicalResource.layer]: 'name',
+      [HierarchicalResource.feature]: 'title'
+    }[resourceType as HierarchicalResource],
+    mapCtx.getUserPreferences()
+  );
 };
 </script>
 
@@ -88,17 +99,17 @@ let getDisplayName = (entity: Resource) => {
       : ''}"
     in:slide={{ duration: 400, axis: 'y' }}
     out:slide={{ duration: 400, axis: 'y' }}>
-    {#each resourceState.getFilteredResource(resourceType as HierarchicalResource) as entity}
+    {#each entities as entity}
       {@const entityRef: Id | Code = resourceState.getEntityRef(
       resourceType as HierarchicalResource,
-      entity.id
+      entity.id as Id
     ) as Id | Code}
       {@const isActive = resourceState.activeEntity === entityRef}
       {@const href = `${ADMIN_PATH}/${resourceState.getEntityPath(
         resourceType as HierarchicalResource,
-        entity.id
+        entity.id as Id
       )}`}
-      {#if isVisible(entity.id)}
+      {#if isVisible(entity.id as Id)}
         <li class="group relative bg-base-100 drag-none">
           <div class="relative drag-none">
             <a
@@ -123,23 +134,26 @@ let getDisplayName = (entity: Resource) => {
                 ? 'h-[52px] px-4'
                 : 'h-[52px] px-6'}"
               class:border-primary={isActive}
-              class:border-secondary={!isActive && isPrism(entity.id)}
-              class:border-base-300={!isActive && !isPrism(entity.id)}>
+              class:border-secondary={!isActive && isPrism(entity.id as Id)}
+              class:border-base-300={!isActive && !isPrism(entity.id as Id)}>
               {#if sidebarState.isOpen() || !isActive}
                 <span class="ml-[6px] h-4 w-4 text-xs text-white/80"> ●</span>
               {:else if isActive}
                 <p class="ml-[3px]">
-                  <FilterToggle {resourceType} id={entity.id} onHoverOnly={false} />
+                  <FilterToggle
+                    {resourceType}
+                    id={entity.id as Id}
+                    onHoverOnly={false} />
                 </p>
               {/if}
               {#if sidebarState.isOpen()}
                 <span class="ml-3 text-sm font-light">
-                  {getDisplayName(entity)}
+                  {getDisplayName(entity as Exclude<Resource, Task>)}
                 </span>
               {/if}
             </a>
             {#if sidebarState.isOpen() && filterableByQueryParams.includes(resourceType)}
-              <FilterToggle {resourceType} id={entity.id} />
+              <FilterToggle {resourceType} id={entity.id as Id} />
             {/if}
           </div>
         </li>

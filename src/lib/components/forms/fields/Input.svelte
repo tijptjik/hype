@@ -5,11 +5,11 @@ import FormInput from '../elements/Input.svelte';
 import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
 import FieldLabel from '$lib/components/forms/labels/Field.svelte';
 // TYPES
-import type { FieldPropsExtended, FieldDiscriminator } from '$lib/types';
+import type { FieldPropsExtended, FieldDiscriminator, Locale, LocaleExtended } from '$lib/types';
 
 // STATE : PROPS
 let {
-  languageTag,
+  locale,
   fieldRoot,
   fieldIndex,
   fieldDiscriminator,
@@ -26,24 +26,13 @@ let inputValue = $state('');
 let isGenAI = $state(false);
 
 // EFFECT : SYNC WITH FORM
-$effect(() => {
-  const formValues = getValues(
-    $form,
-    field,
-    languageTag,
-    fieldRoot,
-    fieldIndex,
-    fieldKey
-  );
-  if (formValues) {
-    inputValue = formValues.value;
-    isGenAI = formValues.isGenAI;
-  }
-});
+let fieldValues = $derived(
+  getValues($form as any, field, locale as LocaleExtended, fieldRoot, fieldIndex, fieldKey)
+);
 
 // STATE : DERIVED
 let id = $derived(
-  getId(field, fieldRoot, fieldIndex, fieldDiscriminator, fieldKey, languageTag)
+  getId(field, fieldRoot, fieldIndex, fieldDiscriminator, fieldKey, locale as LocaleExtended)
 );
 
 // HANDLERS
@@ -51,29 +40,27 @@ function handleChange() {
   updateForm(
     form,
     field,
-    languageTag,
+    locale as Locale,
     fieldRoot,
     fieldIndex,
     fieldKey,
-    inputValue,
-    isGenAI
+    fieldValues.value as string,
+    false // Set to false when human edits the field
   );
 }
 </script>
 
 <label class="form-control w-full" for={id} aria-label={field.label}>
-  <!-- {#if fieldDiscriminator !== 'specifier'} -->
   <FieldLabel {field} {fieldRoot} {fieldIndex} {fieldKey} {constraints} />
-  <!-- {/if} -->
   <div
-    class="group relative rounded-lg border-1 border-transparent bg-neutral pl-2 pr-3 focus-within:outline focus-within:outline-1 focus-within:outline-neutral-500">
+    class="group relative rounded-lg bg-neutral pl-2 pr-3">
     <FormInput
-      bind:value={inputValue}
-      bind:isGenAI
+      bind:value={fieldValues.value as string}
+      bind:isGenAI={fieldValues.isGenAI as boolean}
       {id}
-      {languageTag}
+      locale={locale as Locale}
       {...field}
       onchange={handleChange} />
   </div>
-  <ErrorLabel {errors} {field} {languageTag} {fieldRoot} {fieldIndex} {fieldKey} />
+  <ErrorLabel {errors} {field} {locale} {fieldRoot} {fieldIndex} {fieldKey} />
 </label>

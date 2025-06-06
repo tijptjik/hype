@@ -1,68 +1,79 @@
 <script lang="ts">
+// SVELTE
+import { page } from '$app/state';
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Star, Check, Map } from '@steeze-ui/heroicons';
 // I18N
-import { m, getLocale } from '$lib/i18n';
+import { getLocale } from '$lib/i18n';
+import { m } from '$lib/i18n';
 // UTILS
 import { formatDistanceToNow } from 'date-fns';
 import { enGB, zhCN, zhHK } from 'date-fns/locale';
 // CONTEXT
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
-import { getMapContext } from '$lib/context/map.svelte';
-// TYPES
-import type { Feature } from '$lib/types';
+import { getMapCtx } from '$lib/context/map.svelte';
+import { getOmniContext } from '$lib/context/omni.svelte';
+// SERVICES
+import {
+  submitMissingReport as submitMissingReportAPI,
+  submitNewFeature as submitNewFeatureAPI,
+  submitNewPhotos as submitNewPhotosAPI
+} from '$lib/client/services/task';
+import {
+  toggleWishlistStatus,
+  toggleVisitedStatus
+} from '$lib/client/services/userFeatures';
 // ENUMS
-import { FeatureCardMode } from '$lib/types';
+import { FeatureCardMode } from '$lib/enums';
 // COMPONENTS
 import ValidationError from './ValidationError.svelte';
 import { getFlash } from 'sveltekit-flash-message';
-import { page } from '$app/stores';
-import { session } from '$lib/db/schema';
+// TYPES
+import type { Feature, NewFeatureTask, UserContributedFeature } from '$lib/types';
+import type { Point } from 'geojson';
 
-let attribution = $derived($page.data.session?.user?.attribution || '');
+// CONTEXT
+const mapCtx = getMapCtx();
+let cardCtx = getFeatureCardContext();
+let omniCtx = getOmniContext();
+const flash = getFlash(page);
+
+// STATE : SESSION
+let attribution = $derived(mapCtx.getUser().attribution || '');
 
 // STATE : PROPS
-let { feature }: { feature: Feature } = $props();
-
-// STATE : LOCAL
-let cardCtx = getFeatureCardContext();
-let mapCtx = getMapContext();
-const flash = getFlash(page);
+let { feature }: { feature: Feature | UserContributedFeature } = $props();
 
 // STATE : DERIVED
 let isSubmittingWishlist = $state(false);
 let isSubmittingVisit = $state(false);
 
 let wishlistedFeature = $derived(
-  mapCtx.getWishlistUserFeatures().find((uf) => uf.featureId === feature.id)
+  'id' in feature
+    ? mapCtx.getWishlistUserFeatures().find((uf) => uf.featureId === feature.id)
+    : undefined
 );
 let isWishlisted = $derived(!!wishlistedFeature);
 let visitedFeature = $derived(
-  mapCtx.getVisitedUserFeatures().find((uf) => uf.featureId === feature.id)
+  'id' in feature
+    ? mapCtx.getVisitedUserFeatures().find((uf) => uf.featureId === feature.id)
+    : undefined
 );
 let isVisited = $derived(!!visitedFeature);
 
 async function toggleWishlisted() {
-  if (isSubmittingWishlist) return;
+  if (isSubmittingWishlist || !('id' in feature)) return;
   isSubmittingWishlist = true;
 
   try {
-    const data = {
-      userId: mapCtx.userId,
-      featureId: feature.id,
-      isWishlisted: !isWishlisted,
-      isVisited: visitedFeature?.isVisited || false,
-      visitedAt: visitedFeature?.visitedAt || null
-    };
-
-    const response = await fetch('/api/userFeatures', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-
-    if (!response.ok) throw new Error('Failed to update wishlist status');
+    await toggleWishlistStatus(
+      mapCtx.user.id,
+      feature.id,
+      isWishlisted,
+      visitedFeature?.isVisited || false,
+      visitedFeature?.visitedAt || null
+    );
 
     // Optimistically update the UI
     await mapCtx.invalidateAndRefresh('userFeatures');
@@ -75,25 +86,16 @@ async function toggleWishlisted() {
 }
 
 async function toggleVisited() {
-  if (isSubmittingVisit) return;
+  if (isSubmittingVisit || !('id' in feature)) return;
   isSubmittingVisit = true;
 
   try {
-    const data = {
-      userId: mapCtx.userId,
-      featureId: feature.id,
-      isVisited: !isVisited,
-      isWishlisted: false, // Always set wishlist to false when marking as visited
-      visitedAt: !isVisited ? new Date().toISOString() : null
-    };
-
-    const response = await fetch('/api/userFeatures', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-
-    if (!response.ok) throw new Error('Failed to update visited status');
+    await toggleVisitedStatus(
+      mapCtx.user.id,
+      feature.id,
+      isVisited,
+      wishlistedFeature?.isWishlisted || false
+    );
 
     // Optimistically update the UI
     await mapCtx.invalidateAndRefresh('userFeatures');
@@ -120,39 +122,20 @@ async function submitMissingReport() {
   try {
     cardCtx.isSubmitting = true;
 
-    // Create FormData for file uploads
-    const formData = new FormData();
-
-    const layer = mapCtx.getLayer(feature)!;
+    const layer = mapCtx.getLayer(feature as Feature)!;
     const project = mapCtx.getProject(layer)!;
     const organisation = mapCtx.getOrganisation(project)!;
 
-    // Add task data
-    const taskData = {
-      type: 'reportedMissing',
-      featureId: feature.id,
-      layerId: layer?.id,
-      projectId: project?.id,
-      organisationId: organisation?.id,
-      message: cardCtx.userData.missingReason
-    };
-
-    formData.append('taskData', JSON.stringify(taskData));
-
-    // Add photos
-    cardCtx.userData.photos.forEach((photo, index) => {
-      formData.append(`photo_${index}`, photo.file);
-    });
-
-    // Submit the form
-    const response = await fetch('/api/tasks', {
-      method: 'POST',
-      body: formData
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to submit report');
-    }
+    // Submit using client service
+    await submitMissingReportAPI(
+      feature as Feature,
+      layer,
+      project,
+      organisation,
+      cardCtx.userData.missingReason,
+      cardCtx.userData.photos,
+      mapCtx.user.id
+    );
 
     // Reset form and show success message
     cardCtx.userData.missingReason = '';
@@ -163,7 +146,9 @@ async function submitMissingReport() {
 
     // Optionally reset the feature card mode
     cardCtx.state.mode = FeatureCardMode.Display;
+    cardCtx.validationError = '';
   } catch (error) {
+    console.error('Error submitting missing report:', error);
     $flash = { type: 'error', message: m.report_missing__error() };
     cardCtx.validationError = m.report_missing__error();
   } finally {
@@ -172,7 +157,44 @@ async function submitMissingReport() {
 }
 
 async function submitNewFeature() {
-  // TODO: Implement
+  const newFeature = mapCtx.getNewFeature() as NewFeatureTask;
+
+  // Validate inputs
+  if (cardCtx.userData.photos.length === 0) {
+    cardCtx.validationError = m.validation__at_least_one_image();
+    return;
+  }
+
+  if (!newFeature?.feature?.i18n?.[getLocale()]?.title) {
+    cardCtx.validationError = m.validation__title_required();
+    return;
+  }
+
+  try {
+    cardCtx.isSubmitting = true;
+
+    if (!newFeature) return;
+
+    // Submit using client service
+    await submitNewFeatureAPI(newFeature, cardCtx.userData.photos);
+
+    // Set flash message
+    $flash = { type: 'success', message: m.new_feature__success() };
+
+    // Close the feature card
+    omniCtx.close();
+    cardCtx.setMode(FeatureCardMode.Display);
+    // Reset form and show success message
+    cardCtx.userData.photos = [];
+    mapCtx.resetNewFeature();
+    cardCtx.validationError = '';
+  } catch (error) {
+    console.error('Error submitting new feature:', error);
+    $flash = { type: 'error', message: m.new_feature__error() };
+    cardCtx.validationError = m.new_feature__error();
+  } finally {
+    cardCtx.isSubmitting = false;
+  }
 }
 
 async function submitNewPhotos() {
@@ -193,38 +215,20 @@ async function submitNewPhotos() {
   try {
     cardCtx.isSubmitting = true;
 
-    // Create FormData for file uploads
-    const formData = new FormData();
-
-    const layer = mapCtx.getLayer(feature)!;
+    const layer = mapCtx.getLayer(feature as Feature)!;
     const project = mapCtx.getProject(layer)!;
     const organisation = mapCtx.getOrganisation(project)!;
 
-    // Add task data
-    const taskData = {
-      type: 'newPhoto',
-      featureId: feature.id,
-      layerId: layer?.id,
-      projectId: project?.id,
-      organisationId: organisation?.id
-    };
+    // Submit using client service
+    await submitNewPhotosAPI(
+      feature as Feature,
+      layer,
+      project,
+      organisation,
+      cardCtx.userData.photos,
+      mapCtx.user.id
+    );
 
-    formData.append('taskData', JSON.stringify(taskData));
-
-    // Add photos
-    cardCtx.userData.photos.forEach((photo, index) => {
-      formData.append(`photo_${index}`, photo.file);
-    });
-
-    // Submit the form
-    const response = await fetch('/api/tasks', {
-      method: 'POST',
-      body: formData
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to submit report');
-    }
     // Reset form and show success message
     cardCtx.userData.photos = [];
 
@@ -233,7 +237,9 @@ async function submitNewPhotos() {
 
     // reset the feature card mode
     cardCtx.state.mode = FeatureCardMode.Display;
+    cardCtx.validationError = '';
   } catch (error) {
+    console.error('Error submitting new photos:', error);
     $flash = { type: 'error', message: m.add_photos__error() };
     cardCtx.validationError = m.add_photos__error();
   } finally {
@@ -243,14 +249,14 @@ async function submitNewPhotos() {
 
 // Utils
 function getDirections() {
-  const url = `https://www.google.com/maps/dir/?api=1&destination=${feature.geometry.coordinates[1]},${feature.geometry.coordinates[0]}`;
+  const url = `https://www.google.com/maps/dir/?api=1&destination=${(feature.geometry as Point).coordinates[1]},${(feature.geometry as Point).coordinates[0]}`;
   window.open(url, '_blank');
 }
 </script>
 
 <div
-  class="pointer-events-auto flex min-h-12 flex-shrink-0 items-center justify-between rounded-b-lg bg-black px-3 py-2 caret-transparent w-100:px-4 w-100:py-4">
-  {#if cardCtx.state.mode === FeatureCardMode.Display}
+  class="pointer-events-auto flex flex-row min-h-16 flex-shrink-0 items-center justify-between rounded-b-lg bg-black px-3 caret-transparent w-100:px-4 py-2 w-100:py-4">
+  {#if cardCtx.isDisplayMode}
     <div class="flex gap-2">
       <button
         class="btn h-12 w-12 bg-base-400 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300 w-64:h-auto w-64:w-auto"
@@ -275,7 +281,8 @@ function getDirections() {
           class="flex h-full flex-col items-start justify-center pl-2 text-sm text-neutral-content">
           <p class="text-xs uppercase">{m.white_dizzy_clownfish_quiz()}</p>
           <p class="font-mono text-white">
-            {formatDistanceToNow(new Date(visitedFeature!.visitedAt), {
+            <!-- TODO Use a map for Proper locale handling -->
+            {formatDistanceToNow(new Date(visitedFeature!.visitedAt!), {
               addSuffix: true,
               locale:
                 getLocale() === 'zh-hant'
@@ -314,32 +321,36 @@ function getDirections() {
         class="h-6 w-6 stroke-2 font-bold text-primary w-64:hidden w-100:inline-block" />
       <span class="hidden w-64:inline-block">{m.alive_large_hawk_hunt()}</span>
     </button>
+  {:else if cardCtx.state.mode === FeatureCardMode.New}
+    <div class="flex w-full flex-col min-h-12">
+      <ValidationError />
+      <div class="flex flex-row items-baseline justify-between">
+        <h3 class="text-lg font-bold uppercase text-primary">
+          {m.small_mellow_cod_boost()}
+        </h3>
+          <button
+            class="btn btn-outline btn-primary uppercase"
+            onclick={submitNewFeature}
+            disabled={cardCtx.isSubmitting}>
+            {#if cardCtx.isSubmitting}
+              <span class="loading loading-ring loading-md"></span>
+              {m.fun_fuzzy_shrike_compose()}
+            {:else}
+              {m.proof_active_eagle_urge()}
+            {/if}
+          </button>
+      </div>
+    </div>
   {:else if cardCtx.state.mode === FeatureCardMode.Missing}
     <div class="flex w-full flex-col">
       <ValidationError />
       <div class="mt-4 flex items-center justify-between">
-        <h3 class="text-lg font-bold uppercase text-error">Missing Report</h3>
+        <h3 class="text-lg font-bold uppercase text-error">
+          {m.sour_minor_lamb_cry()}
+        </h3>
         <button
           class="btn btn-outline btn-error uppercase"
           onclick={submitMissingReport}
-          disabled={cardCtx.isSubmitting}>
-          {#if cardCtx.isSubmitting}
-            <span class="loading loading-ring loading-md"></span>
-            {m.fun_fuzzy_shrike_compose()}
-          {:else}
-            {m.proof_active_eagle_urge()}
-          {/if}
-        </button>
-      </div>
-    </div>
-  {:else if cardCtx.state.mode === FeatureCardMode.New}
-    <div class="flex w-full flex-col">
-      <ValidationError />
-      <div class="mt-4 flex items-center justify-between">
-        <h3 class="text-lg font-bold uppercase text-error">New Feature</h3>
-        <button
-          class="btn btn-outline btn-error uppercase"
-          onclick={submitNewFeature}
           disabled={cardCtx.isSubmitting}>
           {#if cardCtx.isSubmitting}
             <span class="loading loading-ring loading-md"></span>

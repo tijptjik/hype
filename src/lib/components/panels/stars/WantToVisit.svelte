@@ -1,11 +1,11 @@
 <script lang="ts">
 // I18N
+import { getI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
-import { getI18nValue } from '$lib/i18n';
 // ANIMATIONS
 import { flip } from 'svelte/animate';
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
 // COMPONENTS
 import Section from '$lib/components/panels/common/Section.svelte';
@@ -14,7 +14,7 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { Squares2x2 } from '@steeze-ui/heroicons';
 
 // CONTEXT
-const mapCtx = getMapContext();
+const mapCtx = getMapCtx();
 const omniCtx = getOmniContext();
 // STATE
 let searchTerm = $state('');
@@ -33,20 +33,14 @@ let wishlistedFeatures = $derived(
     const project = layer ? mapCtx.getProject(layer) : undefined;
     const organisation = project ? mapCtx.getOrganisation(project) : undefined;
 
-    // Check if this project has only one layer
-    const projectLayerCount = mapCtx.state.resources.layer.filter(
-      (l) => l.projectId === project?.id
-    ).length;
-
     return [
       {
         ...wishlist,
         hierarchy: {
-          organisation: getI18nValue(organisation, 'nameShort'),
-          project: getI18nValue(project, 'nameShort'),
-          // Only include layer name if project has multiple layers
-          layer: projectLayerCount > 1 ? getI18nValue(layer, 'nameShort') : null,
-          feature: getI18nValue(feature, 'title')
+          organisation: getI18n(organisation!, 'nameShort', mapCtx.getUserPreferences()),
+          project: mapCtx.getContextualProjectName(project!),
+          layer: mapCtx.getContextualLayerName(layer!),
+          feature: getI18n(feature, 'title', mapCtx.getUserPreferences())
         }
       }
     ];
@@ -60,7 +54,7 @@ function filterFeatures(features: typeof wishlistedFeatures, term: string) {
   return features.filter(
     (feature) =>
       feature.hierarchy.organisation.toLowerCase().includes(searchLower) ||
-      feature.hierarchy.project.toLowerCase().includes(searchLower) ||
+      (feature.hierarchy.project?.toLowerCase().includes(searchLower) ?? false) ||
       (feature.hierarchy.layer?.toLowerCase().includes(searchLower) ?? false) ||
       feature.hierarchy.feature.toLowerCase().includes(searchLower)
   );
@@ -82,7 +76,7 @@ const filteredFeatures = $derived(filterFeatures(wishlistedFeatures, searchTerm)
       <div class="scrollbar-thin flex-1 overflow-y-auto">
         {#each filteredFeatures as wishlist (wishlist.featureId)}
           <div
-            class="min-h-21 flex flex-row items-center justify-between gap-4 bg-black px-4 py-2 text-[#374151]"
+            class="min-h-21 flex cursor-pointer flex-row items-center justify-between gap-4 bg-black px-4 py-2 text-[#374151]"
             animate:flip={{ duration: 200 }}
             onclick={() =>
               omniCtx.handleFeatureSelection(mapCtx, wishlist.featureId, {
@@ -92,15 +86,15 @@ const filteredFeatures = $derived(filterFeatures(wishlistedFeatures, searchTerm)
             <div class="flex flex-grow flex-col">
               <p class="text-xs uppercase tracking-widest">
                 <span class="text-primary">{wishlist.hierarchy.organisation}</span>
-                <span class="mx-1 text-secondary">›</span>
-                <span class="text-secondary"
-                  >{wishlist.hierarchy.project
-                    .replaceAll('_', '')
-                    .replaceAll(' ', '')}</span>
+                {#if wishlist.hierarchy.project}
+                  <span class="mx-1 text-secondary">›</span>
+                  <span class="text-secondary"
+                  >{wishlist.hierarchy.project}</span>
+                {/if}
                 {#if wishlist.hierarchy.layer}
                   <span class="mx-1 text-secondary">›</span>
                   <span class="text-secondary"
-                    >{wishlist.hierarchy.layer.replaceAll(' ', '')}</span>
+                    >{wishlist.hierarchy.layer}</span>
                 {/if}
               </p>
               <p class="font-normal text-neutral-300">

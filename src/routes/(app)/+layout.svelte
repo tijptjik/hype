@@ -1,13 +1,10 @@
 <script lang="ts">
 // SVELTE
-import { page } from '$app/stores';
 import { browser } from '$app/environment';
-// LIB
-import { MOBILE_MAX_WIDTH } from '$lib/index';
 // NAVIGATION
 import { goto } from '$app/navigation';
 // CONTEXT
-import { getMapContext, setMapContext } from '$lib/context/map.svelte';
+import { getMapCtx, setMapCtx } from '$lib/context/map.svelte';
 import { setOmniContext, PageState, getOmniContext } from '$lib/context/omni.svelte';
 // COMPONENTS
 import Menu from '$lib/components/layout/Menu.svelte';
@@ -23,34 +20,36 @@ import NewFeatureCard from '$lib/components/modals/NewFeatureCard.svelte';
 // TYPES
 import type { LayoutData } from '../(app)/$types';
 import type { QueryClient } from '@tanstack/svelte-query';
+import type { UserLayer } from '$lib/types';
 // STYLES
 import '$lib/styles/scrollbar.css';
 
 // NAVIGATION STATE
-let pageState = $state(PageState.NoTransition);
 let navDest = $state('');
 
 // PROPS
-let { children } = $props();
+let { children, data } = $props();
 
-// CONTEXT
-const { session, queryClient } = $page.data as LayoutData & {
+// Extract session data from layout data
+const { session, queryClient } = data as LayoutData & {
   queryClient: QueryClient;
 };
 
 // CONTEXT - Set Map Context
-setMapContext(
+setMapCtx(
   queryClient,
-  session?.user?.id ?? '',
-  session?.user?.userLayers?.map((layer) => layer.layerId) ?? []
+  session?.user
 );
 
 // CONTEXT - Set Omni Context
-setOmniContext(getMapContext());
+setOmniContext(getMapCtx());
 
 // CONTEXT - Get Map & Omni Context
 const omniCtx = getOmniContext();
-const mapCtx = getMapContext();
+const mapCtx = getMapCtx();
+
+// Set user data in map context to make it reactive
+mapCtx.setUser(session?.user ?? null);
 
 mapCtx.registerKeydownHandlers();
 

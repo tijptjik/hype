@@ -1,8 +1,9 @@
 <script lang="ts">
 // Svelte
 import { browser } from '$app/environment';
+import { untrack } from 'svelte';
 // Stores
-import { page } from '$app/stores';
+import { page } from '$app/state';
 // PROVIDERS
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // Components
@@ -16,24 +17,26 @@ import FeaturePortal from '$lib/components/featureCard/FeaturePortal.svelte';
 import FeatureActions from '$lib/components/featureCard/FeatureActions.svelte';
 import MissingReportReason from '$lib/components/featureCard/MissingReportReason.svelte';
 import PhotoCredit from '$lib/components/featureCard/PhotoCredit.svelte';
-import Spacer from '$lib/components/featureCard/Spacer.svelte';
+import Spacer from '$lib/components/featureCard/layout/Spacer.svelte';
+import Container from '$lib/components/featureCard/layout/Container.svelte';
+import FeaturePortalSection from '$lib/components/featureCard/layout/FeaturePortalSection.svelte';
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
 import {
   setFeatureCardContext,
   getFeatureCardContext
 } from '$lib/context/featureCard.svelte';
 // ENUMS
-import { FeatureCardMode } from '$lib/enums';
+import { FeatureCardMode, ImageContextResource } from '$lib/enums';
 // TYPES
 import type { Feature, Layer, Project } from '$lib/types';
 
 // PARAMS
-let featureId: string = $state($page.params.id);
+let featureId: string = $state(page.params.id);
 
 // CONTEXT
-const mapCtx = getMapContext();
+const mapCtx = getMapCtx();
 const omniCtx = getOmniContext();
 
 // CONTEXT :: FEATURE CARD
@@ -50,9 +53,19 @@ $effect(() => {
   if (!mapCtx.isInitialised) {
     return;
   }
-  featureId = $page.params.id;
+  featureId = page.params.id;
+  
+  // Only react to activeCollection changes, not flag changes
   if (mapCtx.getActiveCollection() == null) {
-    void handleFeatureSelection();
+    // Check the flag without making the effect reactive to it
+    const isClosing = untrack(() => omniCtx.isIntentionallyClosing);
+    
+    if (!isClosing) {
+      console.log('🔴 PAGE: Active collection is null and not intentionally closing, calling handleFeatureSelection');
+      void handleFeatureSelection();
+    } else {
+      console.log('🔴 PAGE: Active collection is null but intentionally closing, NOT calling handleFeatureSelection');
+    }
   }
 });
 
@@ -67,37 +80,33 @@ async function handleFeatureSelection() {
     <ImageProvider
       mode="gallery"
       isAdminMode={false}
-      refType="feature"
-      refId={featureId}
-      refOrganisation={mapCtx.getOrganisation(
+      ctxType={ImageContextResource.feature}
+      ctxId={featureId}
+      organisation={mapCtx.getOrganisation(
         mapCtx.getProject(
           mapCtx.getLayer(mapCtx.features[featureId] as Feature) as Layer
         ) as Project
       )}
-      refProject={mapCtx.getProject(
+      project={mapCtx.getProject(
         mapCtx.getLayer(mapCtx.features[featureId] as Feature) as Layer
       ) as Project}>
       {#if mode === FeatureCardMode.Display}
-        <div
-          class="flex-shink-0 flex h-full w-full flex-col overflow-y-auto overflow-x-visible">
+        <Container>
           <FeatureGallery />
           <FeatureBreadcrumbs feature={mapCtx.features[featureId]} />
           <FeatureTitle feature={mapCtx.features[featureId]} />
           <FeatureDescription feature={mapCtx.features[featureId]} />
           <Spacer />
-          <div class="flex min-h-8 w-full flex-shrink-0 flex-col overflow-x-visible">
-            <div class="flex-grow-1 min-h-50 flex w-full flex-shrink-0 overflow-hidden">
-              <div class="flex-1 overflow-y-auto bg-black">
-                <FeatureProperties feature={mapCtx.features[featureId]} />
-              </div>
-              <div class="w-48 flex-shrink-0 overflow-visible">
-                <FeaturePortal feature={mapCtx.features[featureId]} />
-              </div>
-              <div class="h-auto w-4 flex-shrink-0 bg-black"></div>
-            </div>
-          </div>
+          <FeaturePortalSection>
+            {#snippet left()}
+              <FeatureProperties feature={mapCtx.features[featureId]} />
+            {/snippet}
+            {#snippet right()}
+              <FeaturePortal feature={mapCtx.features[featureId]} />
+            {/snippet}
+          </FeaturePortalSection>
           <Spacer />
-        </div>
+        </Container>
       {:else if mode === FeatureCardMode.New}
         <FeatureGallery />
       {:else if mode === FeatureCardMode.Missing}

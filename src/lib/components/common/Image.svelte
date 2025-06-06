@@ -61,11 +61,11 @@ async function handleImageLoad() {
 }
 
 // Reset loaded state and start loading when src changes
-$effect(async () => {
+$effect(() => {
   if (src !== lastSrc) {
     lastSrc = src;
     loaded = false;
-    await handleImageLoad();
+    handleImageLoad();
   }
 });
 </script>
@@ -73,7 +73,7 @@ $effect(async () => {
 <figure
   class="{className.includes('absolute') ? '' : 'relative'} {className
     ? className
-    : 'h-64 w-full'}">
+    : 'h-64 w-full'} bg-transparent">
   {#if showLoading && !loaded}
     <Loading />
   {/if}
@@ -83,13 +83,13 @@ $effect(async () => {
   <img
     bind:this={imgElement}
     {alt}
-    class="{className ? className : ''} {layout === 'cover'
+    class="{loaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300 {className ? className : ''} {layout === 'cover'
       ? 'h-full w-full object-cover'
       : layout === 'fill'
         ? 'object-fill'
         : layout === 'fit'
           ? 'object-fit'
-          : 'object-contain'}"
+          : 'object-contain'} bg-transparent"
     onerror={() => {
       error = true;
       loaded = true;

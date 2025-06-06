@@ -1,0 +1,38 @@
+[
+  {
+    "propertyValueId": "tU5v28xY1zA4",
+    "locale": "en",
+    "value": "Official",
+    "valueGen": false
+  },
+  {
+    "propertyValueId": "XC7dF9gH2jK5",
+    "locale": "en",
+    "value": "Public",
+    "valueGen": false
+  },
+    {
+    "propertyValueId": "tU5v28xY1zA4",
+    "locale": "zh-hant",
+    "value": "官方合集",
+    "valueGen": true
+  },
+  {
+    "propertyValueId": "XC7dF9gH2jK5",
+    "locale": "zh-hant",
+    "value": "用戶貢獻內容",
+    "valueGen": true
+  },
+    {
+    "propertyValueId": "tU5v28xY1zA4",
+    "locale": "zh-hans",
+    "value": "官方合集",
+    "valueGen": true
+  },
+  {
+    "propertyValueId": "XC7dF9gH2jK5",
+    "locale": "zh-hans",
+    "value": "用户贡献内容",
+    "valueGen": true
+  }
+]

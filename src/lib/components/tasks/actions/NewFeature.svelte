@@ -1,91 +1,91 @@
 <script lang="ts">
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // I18N
 import { m } from '$lib/i18n';
 // COMPONENTS
-import Reject from '$lib/components/common/buttons/Reject.svelte';
-import Accept from '$lib/components/common/buttons/Accept.svelte';
+import { XCircle, CheckCircle } from '@steeze-ui/heroicons';
 import Info from '$lib/components/forms/extra/Info.svelte';
 import NewFeatureContent from '$lib/components/tasks/info/NewFeature.svelte';
+import Actions from '$lib/components/tasks/common/Actions.svelte';
+// SERVICES
+import { updateTaskReview, updateFeatureFromTask } from '$lib/client/services/task';
+import { navigateOnAdmin } from '$lib/navigation';
+// ENUMS
+import { HierarchicalResource } from '$lib/enums';
 // TYPES
-import type { TaskAPI } from '$lib/types';
+import type { Task } from '$lib/types';
+import type { IconSource } from '@steeze-ui/svelte-icon';
 
-let { task }: { task: TaskAPI } = $props();
+let { task }: { task: Task } = $props();
+
+// CONFIG
+let rejectActions = [
+  {
+    label: m.quiet_late_worm_startle(),
+    icon: XCircle as IconSource,
+    action: 'reject',
+    onHoverClass: 'text-rose-300'
+  }
+];
+
+let acceptActions = [
+  {
+    label: m.quiet_late_worm_startle_accept(),
+    icon: CheckCircle as IconSource,
+    action: 'accept',
+    onHoverClass: 'text-success'
+  }
+];
 
 // CONTEXT :: ROUTER
 const resourceState = getHierarchicalResourceState();
 
-const handleReject = async (e: Event) => {
+// ACTIONS
+const handleAction = async (action: string, e: Event, reviewReason?: string) => {
   e.preventDefault();
   try {
-    await fetch(`/api/tasks/${task.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        reviewOutcome: 'rejected',
-        reviewAction: 'ignored'
-      })
-    });
+    let reviewOutcome: string;
+    let reviewAction: string;
 
-    if (task.featureId) {
-      await fetch(`/api/features/${task.featureId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          isPendingReview: false,
-          isArchived: true
-        })
-      });
+    switch (action) {
+      case 'reject':
+        reviewOutcome = 'rejected';
+        reviewAction = 'ignored';
+        break;
+      case 'accept':
+        reviewOutcome = 'accepted';
+        reviewAction = 'added-feature';
+        break;
+      default:
+        throw new Error(`Unknown action: ${action}`);
     }
-    // TODO Navigate to the next Task
-    // goToResource(e, routerState, 'task');
-  } catch (error) {
-    console.error('Failed to reject:', error);
-  }
-};
 
-const handleAccept = async (e: Event) => {
-  e.preventDefault();
-  try {
-    await fetch(`/api/tasks/${task.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        reviewOutcome: 'accepted',
-        reviewAction: 'add-feature'
-      })
-    });
-
+    // Update the associated feature first if it exists
     if (task.featureId) {
-      await fetch(`/api/features/${task.featureId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          isPendingReview: false
-        })
+      await updateFeatureFromTask(task.featureId, {
+        isPendingReview: false,
+        isArchived: action === 'reject'
       });
     }
 
-    // goToEntity(e, routerState, 'feature', task.featureId);
+    // Then update the task
+    await updateTaskReview(task.id, {
+      type: 'newFeature',
+      reviewOutcome,
+      reviewAction,
+      reviewReason
+    });
+
+    navigateOnAdmin(resourceState, HierarchicalResource.feature, task.featureId);
   } catch (error) {
-    console.error('Failed to accept:', error);
+    console.error(`Failed to ${action} task:`, error);
   }
 };
 </script>
 
 <div class="flex items-center gap-4">
-  {#if task.reviewOutcome}
-    <div class="flex items-center gap-2 rounded-lg bg-base-200 px-3 py-2">
-      <p class="uppercase text-base-content">{m.mad_fresh_swan_trip()}</p>
-      <p class="font-mono text-sm uppercase text-neutral-content">
-        {task.reviewAction?.replaceAll('-', ' ')}
-      </p>
-    </div>
-  {:else}
-    <Reject onclick={handleReject} />
-    <Accept onclick={handleAccept} />
-  {/if}
+  <Actions {task} {rejectActions} {acceptActions} onAction={handleAction} />
   <Info borderColor="border-success">
     <NewFeatureContent />
   </Info>

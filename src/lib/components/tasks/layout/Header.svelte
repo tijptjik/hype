@@ -1,6 +1,5 @@
 <script lang="ts">
-import Title from '$lib/components/tasks/common/Title.svelte';
-import type { TaskAPI } from '$lib/types';
+import type { Task } from '$lib/types';
 
 // PROPS
 let {
@@ -11,7 +10,7 @@ let {
   isRoundedBottom = true
 }: {
   children?: any;
-  task: TaskAPI;
+  task: Task;
   Right: any;
   Left: any;
   isRoundedBottom: boolean;
@@ -26,13 +25,13 @@ export const typeColors = {
 
 <header
   class="mx-auto flex w-full flex-row items-center justify-between rounded-lg border-b-4 bg-base-100 px-6 py-6 {typeColors[
-    task.type
+    task.type as keyof typeof typeColors
   ]} {isRoundedBottom ? '' : 'rounded-b-none'}">
   <div class="flex w-full items-center justify-between">
-    <div class="items-left flex w-full justify-start">
+    <div class="items-left flex justify-start">
       {@render Left(task)}
     </div>
-    <div class="items-right flex w-full justify-end">
+    <div class="items-right flex justify-end">
       {@render Right(task)}
     </div>
   </div>

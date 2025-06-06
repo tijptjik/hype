@@ -1,182 +1,137 @@
-import { error, type RequestHandler } from '@sveltejs/kit';
-import { superValidate, type SuperValidated } from 'sveltekit-superforms';
-import { zod } from 'sveltekit-superforms/adapters';
-import {
-  getDatabaseOrError,
-  isValidQueryParamsOrError,
-  JSONResponseOrError,
-  SuperFormResponse
-} from '$lib/api';
-// DB
-import { hierarchicalResourceQuery } from '$lib/db';
-import { feature, projectRole } from '$lib/db/schema';
-import {
-  createFeature,
-  createTranslations,
-  updateProperties,
-  extractEntitiesToInsert,
-  rebuildFormData
-} from '$lib/db/services/feature';
-// MAPS
-import subNeighbourhoods from '$lib/map/subNeighbourhoods.json';
+// SVELTE
+import { error } from '@sveltejs/kit';
+// FORMS
+import { superValidate } from 'sveltekit-superforms';
 // ZOD
+import { zod } from 'sveltekit-superforms/adapters';
 import { FeatureInsertAPI } from '$lib/db/zod';
+// API
+import {
+  getDatabase,
+  isValidQueryParamsOrError,
+  getPrisms,
+  logZodError,
+  SuperFormResponse,
+  SuperFormErrorResponse,
+  JSONResponseOrError
+} from '$lib/api';
+import {
+  getFeatureQueryContext,
+  featureCollectionWithRelations,
+  withExpandedNeighbourhoods,
+  assertPermissionsToCreateFeature
+} from '$lib/api/services/feature';
+// SCHEMA
+import { feature } from '$lib/db/schema';
+// SERVICES
+import {
+  listFeaturesWithImage,
+  createFeatureWithRelated,
+  toFormShape,
+  buildCollectionResponseShape
+} from '$lib/db/services/feature';
+
 // TYPES
-import type { NewFeature, Feature } from '$lib/types';
+import type { RequestHandler } from '@sveltejs/kit';
+import type { SuperValidated } from 'sveltekit-superforms';
+import type { FeatureNew, Feature, QueryParams } from '$lib/types';
+
+/********************
+ *  COMMON
+ ************/
 
 const RESOURCE_TYPE = 'feature';
 const RESOURCE_PATH = 'features';
-let ACCESS_STRATEGY = 'ResourceOwnGrandChildren';
 
-// TODO Remove this once neighbourhoods and places are properly implemented as
-// first-class entities.
-function withExpandedNeighbourhoods(queryParams: Record<string, string | string[]>) {
-  const params = { ...queryParams };
-  const neighbourhoodKey = 'addressProperties.neighbourhood';
+/********************
+ *  LIST
+ ************/
 
-  if (neighbourhoodKey in params) {
-    // Convert single value to array if necessary
-    const neighbourhoods = Array.isArray(params[neighbourhoodKey])
-      ? (params[neighbourhoodKey] as string[])
-      : [params[neighbourhoodKey] as string];
+/**
+ * Lists features
+ */
+export const GET: RequestHandler = async ({ locals, platform, url, request }) => {
+  // ASSERT : User Logged in
+  const { db, session, userRoles } = await getDatabase(locals, platform);
 
-    // Create a Set to avoid duplicates
-    const expandedNeighbourhoods = new Set<string>();
+  // ASSERT : Valid query parameters
+  // Validate query parameters, or return 400
+  let queryParams = isValidQueryParamsOrError(feature, url);
 
-    // For each provided neighbourhood
-    neighbourhoods.forEach((hood) => {
-      // Always add the original neighbourhood
-      expandedNeighbourhoods.add(hood);
-
-      // If it's a main district, also add all its sub-districts
-      if (hood in subNeighbourhoods) {
-        subNeighbourhoods[hood as keyof typeof subNeighbourhoods].forEach((n) =>
-          expandedNeighbourhoods.add(n)
-        );
-      }
-    });
-
-    // Update the params with expanded array
-    params[neighbourhoodKey] = Array.from(expandedNeighbourhoods);
-  }
-  return params;
-}
-
-export const GET: RequestHandler = async ({ locals, platform, url }) => {
-  // Features which are published are visible to all users
-  if (
-    url.searchParams.get('isPublished') === 'true' &&
-    url.searchParams.get('isAdminView') !== 'true'
-  ) {
-    ACCESS_STRATEGY = 'Public';
-    // For the Admin View we use ResourceAll instead of Public so that
-    // unpublished organisations are still visible -- in applyPublishedConstraints
-    // we filter out unpublished records for the Public access strategy.
-  } else if (url.searchParams.get('isAdminView') === 'true') {
-    ACCESS_STRATEGY = 'ResourceAll';
-  }
-
-  // AUTH : Pass or Fail
-  const { db, userId, accessStrategy } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE
+  // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
+  let { conditions } = getFeatureQueryContext(
+    db,
+    session,
+    request,
+    withExpandedNeighbourhoods(queryParams as QueryParams),
+    userRoles,
+    getPrisms(url)
   );
 
   try {
-    // Validate query parameters, or return 400
-    const queryParams = isValidQueryParamsOrError(feature, url);
+    // DB : List the features
+    const result = await listFeaturesWithImage(db, featureCollectionWithRelations, conditions);
 
-    // Expand neighbourhoods
-    const expandedParams = withExpandedNeighbourhoods(queryParams);
-
-    const result = await hierarchicalResourceQuery(
-      db,
-      accessStrategy,
-      {
-        translations: true,
-        properties: {
-          with: {
-            translations: true,
-            property: true,
-            propertyValue: {
-              with: {
-                translations: true
-              }
-            }
-          }
-        }
-      },
-      userId,
-      projectRole,
-      false,
-      {
-        organisation: url.searchParams.getAll('organisation'),
-        project: url.searchParams.getAll('project'),
-        layer: url.searchParams.getAll('layer')
-      },
-      4,
-      expandedParams
-    );
+    // RESPONSE : Build the response shape with merged properties
+    const data = await buildCollectionResponseShape(db, result);
 
     // HTTP : 200 JSON or 404
-    return JSONResponseOrError(result);
+    return JSONResponseOrError(data);
   } catch (e) {
     // DB : Query Error
-    console.error('Database query error:', e);
-    // HTTP : 500 Error
+    logZodError(e, 'Zod list error:');
     return error(500, 'Dust Accumulation Critical');
   }
 };
 
+/********************
+ *  CREATE
+ ************/
+
+/**
+ * Creates a new feature
+ */
 export const POST: RequestHandler = async ({ request, locals, platform }) => {
-  // AUTH : Pass or Fail
-  const { db, userId, accessStrategy } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE
-  );
+  // ASSERT : User logged in
+  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
 
   try {
-    const formData: NewFeature = await request.json();
-    // Add contributor ID if not provided
-    if (!formData.contributorId) {
+    // ASSERT : Valid form
+    const formData: FeatureNew = await request.json();
+    // ASSERT : Contributor ID is set if not provided
+    if (!formData.contributorId && userId) {
       formData.contributorId = userId;
     }
+
     const form = (await superValidate(
       formData,
+      // @ts-ignore - FORM : Fix type error
       zod(FeatureInsertAPI)
-    )) as SuperValidated<Feature>;
+    )) as SuperValidated<FeatureNew>;
 
     if (!form.valid) {
-      return SuperFormResponse<Feature>(form);
+      return SuperFormResponse<any>(form);
     }
 
-    const { baseFeature, formTranslations, formProperties } = extractEntitiesToInsert(
-      form.data
-    );
-    const createdFeature = await createFeature(db, baseFeature);
-    const createdTranslations = await createTranslations(
+    await assertPermissionsToCreateFeature(
       db,
-      formTranslations,
-      createdFeature.id
-    );
-    const createdProperties = await updateProperties(
-      db,
-      formProperties,
-      createdFeature.id
+      session,
+      request,
+      form.data as any,
+      userRoles
     );
 
-    const updatedForm = await rebuildFormData(
-      createdFeature as Feature,
-      createdTranslations,
-      createdProperties
+    const created = await createFeatureWithRelated(db, form.data as FeatureNew);
+
+    const responseForm = await toFormShape(
+      created,
+      created.i18n,
+      created.properties
     );
-    return SuperFormResponse(updatedForm, true, false, RESOURCE_PATH, 201);
+
+    return SuperFormResponse<Feature>(responseForm, true, false, RESOURCE_PATH, 201);
   } catch (err) {
-    console.error(err);
-    return error(500, 'Failed to create feature');
+    logZodError(err, 'Feature create error:');
+    return SuperFormErrorResponse(RESOURCE_TYPE, 'create');
   }
 };

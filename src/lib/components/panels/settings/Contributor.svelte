@@ -1,26 +1,48 @@
 <script lang="ts">
+// SVELTE
+import { fade } from 'svelte/transition';
+// I18N
 import { m } from '$lib/i18n';
+// CONTEXT
+import { getMapCtx } from '$lib/context/map.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
-import { Trophy } from '@steeze-ui/heroicons';
+import { Trophy, CheckCircle } from '@steeze-ui/heroicons';
 import Section from '$lib/components/panels/common/Section.svelte';
-// STORES
-import { page } from '$app/stores';
 
-const { session } = $page.data;
+// CONTEXT
+const mapCtx = getMapCtx();
 
-let contributorName = $state(session?.user?.attribution);
-let timer: ReturnType<typeof setTimeout>;
+// STATE
+let showSuccessIndicator = $state(false);
+let successTimer: ReturnType<typeof setTimeout>;
 
-const debounce = async (value: string) => {
-  clearTimeout(timer);
-  timer = setTimeout(async () => {
-    await fetch(`/api/users/${session?.user?.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ attribution: value })
-    });
-  }, 500);
-  session!.user.attribution = value;
+// HANDLERS
+const handleAttributionChange = (target: HTMLInputElement) => {
+  const value = target.value;
+  
+  mapCtx.setUserAttribution(
+    value,
+    // onSuccess
+    () => {
+      showSuccessIndicator = true;
+      clearTimeout(successTimer);
+      successTimer = setTimeout(() => {
+        showSuccessIndicator = false;
+      }, 2500);
+    },
+    // onError
+    (error) => {
+      console.error('Failed to save attribution:', error);
+      showSuccessIndicator = false;
+    }
+  );
+};
+
+const handleKeydown = () => {
+  // Immediately hide success indicator when user starts typing
+  showSuccessIndicator = false;
+  clearTimeout(successTimer);
 };
 </script>
 
@@ -35,10 +57,19 @@ const debounce = async (value: string) => {
       type="text"
       class="input m-0 h-12 w-full rounded-l-md rounded-r-none border-0 bg-base-200 pl-[26px] pr-10 text-sm placeholder:text-base-content/40 focus:border-none focus:outline-none"
       placeholder={m.settings_contributor_placeholder()}
-      bind:value={contributorName}
-      oninput={({ target }) => debounce((target as HTMLInputElement).value)} />
-    <div class="mr-8">
-      <Icon src={Trophy} class="h-6 w-6 stroke-1 text-base-content/60" />
+      value={mapCtx.getUser().attribution}
+      oninput={({ target }) => handleAttributionChange(target as HTMLInputElement)}
+      onkeydown={handleKeydown} />
+    <div class="mr-8 relative">
+      <!-- Success indicator -->
+        <label class="swap swap-rotate right-0 -translate-y-1/2 absolute h-6 w-6 stroke-1 text-base-content/60 {showSuccessIndicator ? 'swap-active' : ''}">
+          <div transition:fade={{ duration: 800 }} class="swap-off">
+            <Icon src={Trophy} class="h-6 w-6" />
+          </div>
+          <div transition:fade={{ duration: 300 }} class="swap-on">
+            <Icon src={CheckCircle} class="h-6 w-6" />
+          </div>
+        </label>
     </div>
   </div>
 </Section>

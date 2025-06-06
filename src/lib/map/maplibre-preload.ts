@@ -13,6 +13,13 @@ type MaplibreOptions = {
   [key: string]: any;
 };
 
+interface MapSource {
+  type: string;
+  url?: string;
+  tiles?: string[];
+  [key: string]: any;
+}
+
 type mapCtx = {
   sources: string[] | null;
   dimensions: [number, number];
@@ -22,7 +29,7 @@ type mapCtx = {
   zmin: number;
 };
 
-type MapLibre = typeof globalThis.maplibregl;
+type MapLibre = any; // typeof globalThis.maplibregl when available
 type ExtendedMapLibre = MapLibre & {
   _context: (options: MaplibreOptions) => mapCtx;
   _get_sources_from_style: () => string[] | null;
@@ -30,7 +37,7 @@ type ExtendedMapLibre = MapLibre & {
 };
 
 export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => {
-  const _lib = maplibregl || globalThis.maplibregl;
+  const _lib = maplibregl || (globalThis as any).maplibregl;
   // run only in the main thread
   if (_lib !== undefined) {
     /*
@@ -47,9 +54,9 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
         {},
         options,
         { type: 'pan', center: lnglat },
-        this._context(options)
+        (this as any)._context(options)
       );
-      this._precache(o);
+      (this as any)._precache(o);
       if (options.run) return this.panTo(lnglat, options);
     };
     _lib.Map.prototype.cachedPanTo = cachedpanto;
@@ -95,7 +102,7 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
       options: MaplibreOptions = {}
     ) {
       options.type = 'fly';
-      options.debug = true;
+      options.debug = false;
       const o = Object.assign({}, options, { type: 'fly' }, this._context(options));
       this._precache(o);
       if (options.run) return this.flyTo(options);
@@ -109,7 +116,7 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
     ) {
       options.type = 'fitBounds';
       options.bounds = bounds;
-      options.debug = true;
+      options.debug = false;
       const o = Object.assign(
         {},
         options,
@@ -146,12 +153,13 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
         .filter(([_, source]) => {
           if (!source) return false;
 
+          const typedSource = source as MapSource;
+          
           // Type guard for source types
-          const isVectorOrRaster = source.type === 'vector' || source.type === 'raster';
+          const isVectorOrRaster = typedSource.type === 'vector' || typedSource.type === 'raster';
 
           // Check for either url or tiles property
-          const hasTileSource =
-            'url' in source || ('tiles' in source && Array.isArray(source.tiles));
+          const hasTileSource = typedSource.url || (typedSource.tiles && Array.isArray(typedSource.tiles));
 
           return isVectorOrRaster && hasTileSource;
         })
@@ -238,12 +246,9 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
           new URL('./maplibre-preload-worker.ts', import.meta.url),
           { type: 'module' }
         );
-        this.precache_worker.onmessage = (e) => {
+        this.precache_worker.onmessage = (e: MessageEvent) => {
           this.precache_worker.time1 = e.data.t;
           if (o.debug) {
-            console.log(
-              `Precaching time: ${this.precache_worker.time1 - this.precache_worker.time0}ms`
-            );
           }
         };
       }

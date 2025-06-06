@@ -1,29 +1,27 @@
 <script lang="ts">
 // SVELTE
-import { page } from '$app/stores';
-// CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
+import { page } from '$app/state';
+import { cubicInOut } from 'svelte/easing';
+import { fade } from 'svelte/transition';
 // I18N
 import { m } from '$lib/i18n';
+// CONTEXT
+import { getMapCtx } from '$lib/context/map.svelte';
 // LIB
 import { ADMIN_PATH } from '$lib/index';
+import { goto } from '$app/navigation';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Map, Funnel, Star, Cog6Tooth, ComputerDesktop } from '@steeze-ui/heroicons';
 // TYPES
 import type { IconSource } from '@steeze-ui/svelte-icon';
-import type { PanelState } from '$lib/context/map.svelte';
-import { goto } from '$app/navigation';
+import type { PanelState } from '$lib/types';
+
 // CONTEXT
-const mapCtx = getMapContext();
-// CONFIG
-import { MOBILE_MAX_WIDTH } from '$lib/index';
-// ANIMATION
-import { cubicInOut } from 'svelte/easing';
-import { fade } from 'svelte/transition';
+const mapCtx = getMapCtx();
 
 // STATE
-const { session } = $page.data;
+const { session } = page.data;
 
 const menuItems = [
   { icon: Map, label: m.menu_maps(), panel: 'maps' },
@@ -34,7 +32,14 @@ const menuItems = [
 
 function handleMenuClick(panel: 'filters' | 'maps' | 'stars' | 'settings' | 'admin') {
   if (panel === 'admin') {
-    goto(ADMIN_PATH);
+    const currentPath = page.url.pathname;
+    if (currentPath.startsWith('/features/')) {
+      // Navigate to corresponding admin page for the current feature
+      goto(`${ADMIN_PATH}${currentPath}`);
+    } else {
+      // Navigate to admin homepage
+      goto(ADMIN_PATH);
+    }
   } else {
     const closeAll = window.innerWidth < 1320;
     mapCtx.togglePanel(panel as keyof PanelState, closeAll);

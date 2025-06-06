@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "d4f3086b-9cad-4aa1-af90-5d5874871186",
+  "id": "26efc5d1-b1a9-48b9-abf8-0a62d99bcb8a",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account": {
@@ -413,8 +413,7 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false,
-          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -470,13 +469,6 @@
     "featureProperty": {
       "name": "featureProperty",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
         "featureId": {
           "name": "featureId",
           "type": "text",
@@ -493,6 +485,13 @@
         },
         "propertyValueId": {
           "name": "propertyValueId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -541,15 +540,30 @@
           "onUpdate": "cascade"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "featureProperty_featureId_propertyId_pk": {
+          "columns": [
+            "featureId",
+            "propertyId"
+          ],
+          "name": "featureProperty_featureId_propertyId_pk"
+        }
+      },
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
     "featurePropertyI18n": {
       "name": "featurePropertyI18n",
       "columns": {
-        "featurePropertyId": {
-          "name": "featurePropertyId",
+        "featureId": {
+          "name": "featureId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "propertyId": {
+          "name": "propertyId",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -579,27 +593,56 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "featurePropertyI18n_featurePropertyId_featureProperty_id_fk": {
-          "name": "featurePropertyI18n_featurePropertyId_featureProperty_id_fk",
+        "featurePropertyI18n_featureId_feature_id_fk": {
+          "name": "featurePropertyI18n_featureId_feature_id_fk",
           "tableFrom": "featurePropertyI18n",
-          "tableTo": "featureProperty",
+          "tableTo": "feature",
           "columnsFrom": [
-            "featurePropertyId"
+            "featureId"
           ],
           "columnsTo": [
             "id"
           ],
           "onDelete": "cascade",
           "onUpdate": "cascade"
+        },
+        "featurePropertyI18n_propertyId_property_id_fk": {
+          "name": "featurePropertyI18n_propertyId_property_id_fk",
+          "tableFrom": "featurePropertyI18n",
+          "tableTo": "property",
+          "columnsFrom": [
+            "propertyId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "featurePropertyI18n_featureProperty_fk": {
+          "name": "featurePropertyI18n_featureProperty_fk",
+          "tableFrom": "featurePropertyI18n",
+          "tableTo": "featureProperty",
+          "columnsFrom": [
+            "featureId",
+            "propertyId"
+          ],
+          "columnsTo": [
+            "featureId",
+            "propertyId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
-        "featurePropertyI18n_featurePropertyId_locale_pk": {
+        "featurePropertyI18n_featureId_propertyId_locale_pk": {
           "columns": [
-            "featurePropertyId",
+            "featureId",
+            "propertyId",
             "locale"
           ],
-          "name": "featurePropertyI18n_featurePropertyId_locale_pk"
+          "name": "featurePropertyI18n_featureId_propertyId_locale_pk"
         }
       },
       "uniqueConstraints": {},
@@ -1659,12 +1702,28 @@
           "autoincrement": false,
           "default": "'classifier'"
         },
+        "isTranslatable": {
+          "name": "isTranslatable",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
         "key": {
           "name": "key",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "rank": {
+          "name": "rank",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
         },
         "component": {
           "name": "component",
@@ -1861,15 +1920,16 @@
           "name": "value",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "valueGen": {
           "name": "valueGen",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         }
       },
       "indexes": {},
@@ -2234,13 +2294,21 @@
           "notNull": false,
           "autoincrement": false
         },
+        "isArchived": {
+          "name": "isArchived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
         "preferences": {
           "name": "preferences",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'{\"fallbackLocales\":[], \"allowMachineTranslation\":false, \"isTranslateButtonVisible\":true}'"
+          "default": "'{\"fallbackLocales\":[], \"allowMachineTranslation\":false, \"preferFallbackInCurrentLocale\":false, \"isTranslateButtonVisible\":true}'"
         },
         "experimental": {
           "name": "experimental",
@@ -2248,7 +2316,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'{\"contributorMode\":false, \"noLabelsMode\":false, \"fallbackLocales\":[]}'"
+          "default": "'{\"contributorMode\":false, \"noLabelsMode\":false}'"
         },
         "createdAt": {
           "name": "createdAt",

@@ -1,26 +1,26 @@
 <script lang="ts">
 // LIB
 import { NEW_REF } from '$lib';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 // I18N
 import { m } from '$lib/i18n';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // ENUMS
-import { HierarchicalResource, HierarchicalResourcePath } from '$lib/types';
+import { HierarchicalResource, HierarchicalResourcePath } from '$lib/enums';
 // TYPES
-import type { Project, Layer, Feature, SuperFormResult } from '$lib/types';
+import type { Form } from '$lib/types';
 // STATE : PAGE :: DATA
-const { session } = $page.data;
+const { session } = page.data;
 
 // CONTEXT :: ROUTER
 const resourceState = getHierarchicalResourceState();
 
 // STATE : PROPS
-let menuProps: { form: SuperFormResult<Project | Layer | Feature> } = $props();
+let menuProps: { form: Form } = $props();
 
 // STATE : FORM
-let { form, errors, reset } = menuProps.form;
+let { form, errors, reset, submit, tainted, isTainted } = menuProps.form;
 
 // STATE : UI
 let isInvalid = $state(false);
@@ -55,6 +55,12 @@ const handleClick = async (e: Event) => {
   isLoading = true;
 
   try {
+    // If form is dirty, submit it first
+    if (isTainted($tainted)) {
+      submit(e);
+      // Note: We proceed regardless of submit result since publish is a separate action
+    }
+
     const response: Response = await fetch(
       `/api/${HierarchicalResourcePath[resourceState.activeResource as HierarchicalResource]}/${resourceState.activeEntity}`,
       {
@@ -71,17 +77,27 @@ const handleClick = async (e: Event) => {
     if (!response.ok) throw new Error('Failed to update publication state');
 
     const result = await response.json();
-    if (result && result?.success) {
+
+    if (result && result.type === 'success') {
       // INVALIDE CACHE
       resourceState.invalidateAndRefresh(
         resourceState.activeResource as HierarchicalResource
       );
-      // UPDATE FORM
-      form.update(($form) => {
-        $form.isPublished = result.data.isPublished;
-        $form.publishedAt = result.data.publishedAt;
-        $form.publisherId = result.data.publisherId;
-        return $form;
+      // UPDATE FORM - Reset with new data to avoid dirtying the form
+      reset({
+        keepMessage: true,
+        data: {
+          ...$form,
+          isPublished: result.data.isPublished,
+          publishedAt: result.data.publishedAt,
+          publisherId: result.data.publisherId
+        },
+        newState: {
+          ...$form,
+          isPublished: result.data.isPublished,
+          publishedAt: result.data.publishedAt,
+          publisherId: result.data.publisherId
+        }
       });
     }
   } catch (err) {

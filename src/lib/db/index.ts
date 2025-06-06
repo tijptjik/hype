@@ -2,7 +2,6 @@ import { error } from '@sveltejs/kit';
 // ORM
 import { drizzle } from 'drizzle-orm/d1';
 import {
-  Table,
   getTableName,
   and,
   sql,
@@ -11,49 +10,50 @@ import {
   or,
   not,
   exists,
-  ilike,
-  SQL
+  SQL,
+  Table,
+  isNull,
+  isNotNull
 } from 'drizzle-orm';
 // SCHEMA
 import * as schema from './schema';
+// ENUMS
+import {
+  supportedLocales,
+  HierarchicalResource,
+  ImageContextResourceExtended,
+  ImageContextResource
+} from '../enums';
 // TYPES
 import type { D1Database } from '@auth/d1-adapter';
-import type { Database } from './services/organisation';
 import type {
-  TargetLang,
   Field,
   NestedRelations,
-  Ref,
   Resource,
   ResourceDB,
   ResourceType,
-  LanguageTag
+  Locale,
+  Database,
+  ResourceConfig,
+  ResourceHierarchy,
+  Id,
+  LocaleBundle
 } from '../types';
-import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
+import type { SQLiteColumn, SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core';
+import type { InferSelectModel } from 'drizzle-orm';
 
-export const targetLanguageTags: LanguageTag[] = ['zh-hant', 'zh-hans'];
+/**********
+ * CONFIG :: NEW ENTITY
+ **********/
+// Duplicate here to avoid import from $lib
+const NEW_TITLE = 'New';
+const NEW_REF = NEW_TITLE.toLowerCase();
 
-export const NEW_TITLE = 'New';
-export const NEW_REF = NEW_TITLE.toLowerCase();
+/**********
+ * CONFIG :: RESOURCE HIERARCHY
+ **********/
 
-// ACCESS CONTROL
-export const publicAccessOptions = ['Public', 'SuperAdmin', 'ResourceAll', 'EntityAny'];
-export const relationalAccessOptions = [
-  'EntityFromEditableProject',
-  'EntityFromEditableOrganisation',
-  'ResourceFromEditableProject',
-  'ResourceFromEditableOrganisation'
-];
-
-const client = (database: D1Database) => {
-  return drizzle(database, {
-    schema,
-    logger: import.meta.env?.VITE_DRIZZLE_LOGGER === 'true' || false
-  });
-};
-
-// CONFIG
-export const resourceConfig = {
+export const resourceConfig: Record<HierarchicalResource, ResourceConfig> = {
   feature: {
     name: 'feature',
     table: schema.feature,
@@ -62,6 +62,15 @@ export const resourceConfig = {
     keyToParent: 'layerId',
     keyToSelf: 'featureId',
     depth: 3
+  },
+  task: {
+    name: 'task',
+    table: schema.task,
+    parentName: 'project',
+    parentTable: schema.project,
+    keyToParent: 'projectId',
+    keyToSelf: 'taskId',
+    depth: 2
   },
   layer: {
     name: 'layer',
@@ -92,142 +101,96 @@ export const resourceConfig = {
   }
 };
 
-const resourceHierarchy = Object.values(resourceConfig);
+/**********
+ * HELPER :: GET SLICED HIERARCHY
+ **********/
 
-// UTILITY
-const getTable = (slicedHierarchy: typeof resourceHierarchy, index: number) =>
-  slicedHierarchy[index].table;
-const getForeignKey = (slicedHierarchy: typeof resourceHierarchy, index: number) =>
-  slicedHierarchy[index].keyToParent as string;
-const getReverseForeignKey = (
-  slicedHierarchy: typeof resourceHierarchy,
-  index: number
-) => slicedHierarchy[index].keyToSelf;
-
-const applyGenericAccessStrategy = (
-  db: any,
-  accessStrategy: string,
-  userTable?: Table,
-  userId?: string
-) => {
-  if (publicAccessOptions.includes(accessStrategy)) {
-    return [];
-  }
-  // TODO restricting access by project maintainer / organisation admin
-  if (relationalAccessOptions.includes(accessStrategy)) {
-    return [];
-  }
-  throw new Error('Invalid access strategy');
-};
-
-const applyAccessStrategy = (
-  db: any,
-  accessStrategy: string,
-  slicedHierarchy: typeof resourceHierarchy,
-  userTable?: Table,
-  userId?: string
-) => {
-  if (publicAccessOptions.includes(accessStrategy)) {
-    return [];
-  }
-  if (!userTable || !userId) {
-    throw new Error('User table or user ID is required');
+/**
+ * Get the sliced hierarchy for a given resource.
+ * @param resource - The hierarchical resource.
+ * @returns The sliced resource hierarchy.
+ */
+export const getSlicedHierarchy = (
+  resource: HierarchicalResource
+): ResourceHierarchy => {
+  const config = resourceConfig[resource];
+  if (!config) {
+    throw new Error(`Unknown resource: ${resource}`);
   }
 
-  const conditions = [];
-  const table0 = getTable(slicedHierarchy, 0);
-  const reverseFK0 = getReverseForeignKey(slicedHierarchy, 0);
-
-  switch (accessStrategy) {
-    case 'ResourceOwn':
-    case 'EntityOwn':
-      conditions.push(
-        inArray(
-          table0.id,
-          db
-            .select({ id: userTable[reverseFK0] })
-            .from(userTable)
-            .where(
-              and(eq(userTable[reverseFK0], table0.id), eq(userTable.userId, userId))
-            )
-        )
-      );
-      break;
-    case 'ResourceOwnChildren':
-    case 'EntityOwnChild':
-      conditions.push(
-        inArray(
-          table0[getForeignKey(slicedHierarchy, 0)],
-          db
-            .select({ id: getTable(slicedHierarchy, 1).id })
-            .from(getTable(slicedHierarchy, 1))
-            .innerJoin(
-              userTable,
-              eq(
-                userTable[getReverseForeignKey(slicedHierarchy, 1)],
-                getTable(slicedHierarchy, 1).id
-              )
-            )
-            .where(eq(userTable.userId, userId))
-        )
-      );
-      break;
-    case 'ResourceOwnGrandChildren':
-    case 'EntityOwnGrandChild':
-      conditions.push(
-        inArray(
-          table0[getForeignKey(slicedHierarchy, 0)],
-          db
-            .select({ id: getTable(slicedHierarchy, 1).id })
-            .from(getTable(slicedHierarchy, 1))
-            .innerJoin(
-              getTable(slicedHierarchy, 2),
-              eq(
-                getTable(slicedHierarchy, 1)[getForeignKey(slicedHierarchy, 1)],
-                getTable(slicedHierarchy, 2).id
-              )
-            )
-            .innerJoin(
-              userTable,
-              eq(
-                userTable[getReverseForeignKey(slicedHierarchy, 2)],
-                getTable(slicedHierarchy, 2).id
-              )
-            )
-            .where(eq(userTable.userId, userId))
-        )
-      );
-      break;
-    default:
-      throw new Error('Invalid access strategy');
-  }
-  return conditions;
-};
-
-const applyTranslationCondition = (
-  db: any,
-  slicedHierarchy: typeof resourceHierarchy,
-  translationTable: Table | boolean
-) => {
-  if (!translationTable || typeof translationTable === 'boolean') return [];
-
-  const table0 = getTable(slicedHierarchy, 0);
-  const reverseFK0 = getReverseForeignKey(slicedHierarchy, 0);
-
-  return [
-    inArray(
-      table0.id,
-      db
-        .select({ id: translationTable[reverseFK0] })
-        .from(translationTable)
-        .where(eq(translationTable[reverseFK0], table0.id))
-    )
+  const resourceHierarchyDefault: ResourceHierarchy = [
+    resourceConfig.feature,
+    resourceConfig.layer,
+    resourceConfig.project,
+    resourceConfig.organisation
   ];
+
+  const resourceHierarchyTask: ResourceHierarchy = [
+    resourceConfig.task,
+    resourceConfig.project,
+    resourceConfig.organisation
+  ];
+
+  // Custom hierarchy for tasks as per src/lib/db/services/task.ts
+  if (resource === HierarchicalResource.task) {
+    return resourceHierarchyTask;
+  }
+  // Default slicing for other resources.
+  // The slice should be from the end of the default hierarchy array,
+  // taking 'depth + 1' elements to include the current resource and its parents.
+  return resourceHierarchyDefault.slice(
+    resourceHierarchyDefault.length - (config.depth + 1)
+  );
 };
 
+/**********
+ * DATABASE CLIENT
+ **********/
+
+const client = (database: D1Database) => {
+  return drizzle(database, {
+    schema,
+    logger: import.meta.env?.VITE_DRIZZLE_LOGGER === 'true' || false
+  });
+};
+
+/**********
+ * UTILITY
+ **********/
+
+// Update getTable function
+const getTable = <T extends SQLiteTableWithColumns<any>>(
+  slicedHierarchy: ResourceConfig[],
+  index: number
+): T => slicedHierarchy[index].table as T;
+
+// Update getForeignKey function
+const getForeignKey = (slicedHierarchy: ResourceConfig[], index: number): string =>
+  slicedHierarchy[index].keyToParent as string;
+
+// Update getReverseForeignKey function
+const getReverseForeignKey = (
+  slicedHierarchy: ResourceConfig[],
+  index: number
+): string => slicedHierarchy[index].keyToSelf;
+
+/**********
+ * QUERY :: APPLY PRISM CONSTRAINTS
+ **********/
+
+/**
+ * Creates a subquery for a specific level in the resource hierarchy,
+ * considering prism constraints.
+ *
+ * @param db - The Drizzle instance.
+ * @param slicedHierarchy - The portion of the resource hierarchy relevant to the current query.
+ * @param levelUp - The current level in the hierarchy being processed (0 is the target resource).
+ * @param prisms - An object containing prism filters, where keys are resource names and values are arrays of IDs/codes.
+ * @returns A Drizzle subquery.
+ */
 const createLevelQuery = (
   db: any,
-  slicedHierarchy: typeof resourceHierarchy,
+  slicedHierarchy: ResourceHierarchy,
   levelUp: number,
   prisms: any
 ) => {
@@ -311,13 +274,27 @@ const createLevelQuery = (
   return baseQuery.where(and(...conditions));
 };
 
-const applyFilterConstraints = (
+/**
+ * Applies prism constraints to a database query based on the resource hierarchy.
+ * This function constructs conditions to filter results based on predefined "prisms"
+ * which restrict access to certain parts of the hierarchical data.
+ *
+ * @param db - The Drizzle instance.
+ * @param resource - The target hierarchical resource (e.g., Project, Layer).
+ * @param prisms - An object containing prism filters.
+ *                 Example: `{ organisation: ['orgCode1'], project: ['projectCode1'] }`
+ * @returns An array of SQL conditions to be applied to the main query. Returns an empty array if no prisms are applicable or provided.
+ */
+export const applyPrismConstraints = (
   db: any,
-  slicedHierarchy: typeof resourceHierarchy,
-  depth: number,
+  resource: HierarchicalResource,
   prisms: any
 ) => {
-  if (!Object.values(prisms).some((arr) => arr.length > 0)) return [];
+  if (!Object.values(prisms).some((arr) => Array.isArray(arr) && arr.length > 0))
+    return [];
+
+  const slicedHierarchy = getSlicedHierarchy(resource);
+  const depth = slicedHierarchy.length;
 
   const subQueries = [];
   for (let levelUp = 1; levelUp < depth; levelUp++) {
@@ -352,51 +329,22 @@ const applyFilterConstraints = (
   ];
 };
 
-const applyQueryConstraints = (table: Table, query: string, filterFields: string[]) => {
-  if (!query) return [];
-  const results = or(
-    ...filterFields.map(
-      (field) => sql`${table[field]} LIKE ${'%' + query.replace('%', '') + '%'}`
-    )
-  );
-  return results;
+export const applyResourceContextConstraints = (
+  ctxType: ImageContextResource | ImageContextResourceExtended,
+  ctxId: Id,
+  conditions: SQL<unknown>[]
+) => {
+  return conditions;
 };
 
-export async function genericResourceQuery(
-  db: any,
-  table: Table,
-  query: string,
-  filterFields: string[] = ['name'],
-  accessStrategy: string = 'ResourceAll',
-  columns: Record<string, boolean> = {},
-  selectTableRelations: Record<string, boolean | object> = {}
-) {
-  const conditions = [];
-
-  if (query && filterFields.length > 0) {
-    conditions.push(applyQueryConstraints(table, query, filterFields));
-  }
-
-  return await db.query[getTableName(table)].findMany({
-    where: and(...conditions),
-    columns: columns,
-    with: selectTableRelations
-  });
-}
-
-export type ResourceConfig = {
-  name: string;
-  table: Table;
-  parentName: string | null;
-  parentTable: Table | null;
-  keyToParent: string | null;
-  keyToSelf: string;
-  depth: number;
-};
-
-export type ResourceHierarchy = ResourceConfig[];
-
-const createJsonPathCondition = (
+/*
+ * Create the path for a JSON column in a table
+ * @param table - The table to apply the condition to
+ * @param path - The path to the column to apply the condition to
+ * @param value - The value to apply the condition to
+ * @returns The condition
+ */
+export const createJsonPathCondition = (
   table: Table,
   path: string[],
   value: string | string[]
@@ -406,7 +354,7 @@ const createJsonPathCondition = (
 
   // Handle array of values
   if (Array.isArray(value)) {
-    return sql`json_extract(${table[baseColumn]}, ${jsonPathStr}) IN (${sql.join(
+    return sql`json_extract(${table[baseColumn as keyof typeof table]}, ${jsonPathStr}) IN (${sql.join(
       value.map((v) => sql`${v}`),
       sql`, `
     )})`;
@@ -414,178 +362,72 @@ const createJsonPathCondition = (
 
   // Handle boolean values
   if (value === 'true' || value === 'false') {
-    return sql`json_extract(${table[baseColumn]}, ${jsonPathStr}) = ${value === 'true'}`;
+    return sql`json_extract(${table[baseColumn as keyof typeof table]}, ${jsonPathStr}) = ${value === 'true'}`;
   }
 
   // Handle single value
-  return sql`json_extract(${table[baseColumn]}, ${jsonPathStr}) = ${value}`;
+  return sql`json_extract(${table[baseColumn as keyof typeof table]}, ${jsonPathStr}) = ${value}`;
 };
 
-const applyPublishedConstraints = (
-  db: any,
-  slicedHierarchy: typeof resourceHierarchy,
-  depth: number
-) => {
-  const conditions: SQL[] = [];
-
-  const currentTable = getTable(slicedHierarchy, 0);
-  let query = db.select({ id: currentTable.id }).from(currentTable);
-
-  if (depth > 1) {
-    for (let i = 0; i < depth - 1; i++) {
-      const childTable = getTable(slicedHierarchy, i);
-      const parentTable = getTable(slicedHierarchy, i + 1);
-      const fk = getForeignKey(slicedHierarchy, i);
-      query = query.innerJoin(parentTable, eq(childTable[fk], parentTable.id));
-    }
-
-    // Add condition to check isPublished for all tables in the chain
-    const publishedConditions = [];
-    for (let j = 0; j < depth; j++) {
-      const table = getTable(slicedHierarchy, j);
-      if ('isPublished' in table) {
-        publishedConditions.push(eq(table.isPublished as SQLiteColumn, true));
-      }
-    }
-
-    // Add condition to check if the current record exists in the query
-    conditions.push(inArray(currentTable.id, query.where(and(...publishedConditions))));
-  } else {
-    conditions.push(eq(currentTable.isPublished as SQLiteColumn, true));
+// Helper function to check if an object is already a transformed locale map
+const isTransformedLocaleMap = <T extends LocaleBundle>(
+  value: any
+): value is Record<Locale, T> => {
+  // Check if it's an object (not array or null)
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
   }
 
-  return conditions;
+  // Check if all keys are supported locales
+  const keys = Object.keys(value);
+  const allKeysAreLocales = keys.every((key) =>
+    supportedLocales.includes(key as Locale)
+  );
+  if (!allKeysAreLocales) return false;
+
+  // Check if all values have a 'locale' property matching their key
+  return keys.every(
+    (key) => value[key] && typeof value[key] === 'object' && value[key].locale === key
+  );
 };
-
-export async function hierarchicalResourceQuery<
-  usersT extends Table,
-  translationsT extends Table
->(
-  db: any,
-  accessStrategy: string = 'ResourceOwn',
-  selectTableRelations: Record<string, boolean | object> = {},
-  userId: string,
-  userTable: usersT,
-  translationTable: translationsT | boolean,
-  prisms: Record<string, string[]> = {},
-  depth: number = 1,
-  filters?: Record<string, string | string[]>,
-  hierarchy?: ResourceHierarchy
-) {
-  const resourceHierarchy = hierarchy || Object.values(resourceConfig);
-  const slicedHierarchy = resourceHierarchy.slice(-depth, resourceHierarchy.length);
-  const table = getTable(slicedHierarchy, 0);
-
-  const conditions = [
-    ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId),
-    ...applyTranslationCondition(db, slicedHierarchy, translationTable),
-    ...applyFilterConstraints(db, slicedHierarchy, depth, prisms),
-    ...(accessStrategy === 'Public'
-      ? applyPublishedConstraints(db, slicedHierarchy, depth)
-      : [])
-  ];
-
-  if (filters) {
-    const filterConditions = Object.entries(filters).map(([column, value]) => {
-      // Check if this is a nested path
-      const path = column.split('.');
-
-      if (path.length > 1) {
-        return createJsonPathCondition(table, path, value);
-      }
-
-      // Handle Boolean values
-      if (Array.isArray(value) && (value[0] === 'true' || value[0] === 'false')) {
-        return eq(table[column], value[0] === 'true');
-      }
-
-      // Handle Array values
-      if (Array.isArray(value)) {
-        return inArray(table[column], value);
-      }
-
-      // Handle non-array values
-      return eq(table[column], value);
-    });
-    conditions.push(...filterConditions);
-  }
-
-  return await db.query[getTableName(table)].findMany({
-    where: and(...conditions),
-    with: selectTableRelations
-  });
-}
-
-function findUserJoinTables(relations: NestedRelations): string[] {
-  const userJoinTables: string[] = [];
-
-  function traverse(obj: NestedRelations, path: string[] = []) {
-    for (const [key, value] of Object.entries(obj)) {
-      if (typeof value === 'object' && 'with' in value) {
-        if ('user' in value.with) {
-          userJoinTables.push(key);
-        }
-        traverse(value.with, [...path, key]);
-      }
-    }
-  }
-
-  traverse(relations);
-  return userJoinTables;
-}
-
-export async function genericEntityQuery<usersT extends Table>(
-  db: any,
-  ref: string,
-  table: Table,
-  publicIdentifier: string = 'id',
-  accessStrategy: string = 'EntityOwn',
-  selectTableRelations: NestedRelations,
-  userId?: string,
-  userTable?: usersT,
-  columns?: Record<string, boolean>
-) {
-  // NEW is a reserved keyword for new entities
-  if (ref == NEW_REF) {
-    throw new Error('The old shall never be new again');
-  }
-  const conditions = [
-    eq(table[publicIdentifier], ref),
-    ...applyGenericAccessStrategy(db, accessStrategy, userTable, userId)
-  ];
-
-  const queryOpts = {
-    where: and(...conditions),
-    with: selectTableRelations
-  };
-  if (columns) {
-    queryOpts.columns = columns;
-  }
-  return await db.query[getTableName(table)].findFirst(queryOpts);
-}
-
-// Define the shape of a translation object
-interface Translation {
-  lang: TargetLang;
-  [key: string]: unknown;
-}
 
 // T extends Translation ensures the generic type has the required lang property
-export const toNestedTranslations = <T extends Translation>(
-  translations: T[]
-): Record<TargetLang, T> => {
-  if (translations.length === 0) {
-    return Object.fromEntries(
-      targetLanguageTags.map((lang) => [lang, {} as T])
-    ) as Record<TargetLang, T>;
+export const toLocaleMap = <T extends LocaleBundle>(
+  i18n: T[] | Record<Locale, T> | null
+): Record<Locale, T> | null => {
+  // If there are no translations, return null
+  if (!i18n) {
+    return null;
   }
-  return translations.reduce(
-    (acc: Record<TargetLang, T>, translation: T) => {
-      acc[translation.lang] = translation;
-      return acc;
-    },
-    {} as Record<TargetLang, T>
-  );
+
+  // Test whether i18n is already transformed - if so, return as-is
+  if (isTransformedLocaleMap<T>(i18n)) {
+    // TODO FIgure out where the unnecessary toLocalMap call is coming from.
+    // console.log('I18N already transformed:', i18n); // Removed console.log
+    return i18n;
+  }
+
+  // If it's an array, proceed with transformation
+  if (Array.isArray(i18n)) {
+    if (i18n.length === 0) {
+      return Object.fromEntries(
+        supportedLocales.map((locale) => [locale, {} as T])
+      ) as Record<Locale, T>;
+    }
+    return i18n.reduce(
+      (acc: Record<Locale, T>, bundle: T) => {
+        acc[bundle.locale] = bundle;
+        return acc;
+      },
+      {} as Record<Locale, T>
+    );
+  }
+
+  // Fallback for unexpected input
+  console.warn('Unexpected i18n format:', i18n);
+  return Object.fromEntries(
+    supportedLocales.map((locale) => [locale, {} as T])
+  ) as Record<Locale, T>;
 };
 
 export async function hierarchicalEntityQuery<
@@ -610,15 +452,15 @@ export async function hierarchicalEntityQuery<
   const resourceHierarchy = hierarchy || Object.values(resourceConfig);
   const slicedHierarchy = resourceHierarchy.slice(-depth, resourceHierarchy.length);
   const conditions = [
-    eq(getTable(slicedHierarchy, 0)[publicIdentifier], ref),
-    ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId)
+    eq(getTable(slicedHierarchy, 0)[publicIdentifier], ref)
+    // ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId)
   ];
 
-  if (translationTable) {
-    conditions.push(
-      ...applyTranslationCondition(db, slicedHierarchy, translationTable)
-    );
-  }
+  // if (translationTable) {
+  //   conditions.push(
+  //     ...applyTranslationCondition(db, slicedHierarchy, translationTable)
+  //   );
+  // }
 
   let result = await db.query[getTableName(getTable(slicedHierarchy, 0))].findFirst({
     where: and(...conditions),
@@ -629,12 +471,12 @@ export async function hierarchicalEntityQuery<
     return error(401, "Doors have ears, but they haven't ever heard of this.");
   }
 
-  result = processTranslations<Translation>(result, selectTableRelations);
+  result = processTranslations<LocaleBundle>(result, selectTableRelations);
 
   return result;
 }
 
-function processTranslations<T extends Translation>(
+function processTranslations<T extends LocaleBundle>(
   data: Record<string, any>,
   relations: NestedRelations
 ): Record<string, any> {
@@ -643,8 +485,8 @@ function processTranslations<T extends Translation>(
   const result = { ...data };
 
   // Process current level translations if they exist
-  if (relations.translations === true && Array.isArray(result.translations)) {
-    result.translations = toNestedTranslations<T>(result.translations);
+  if (relations.i18n === true && Array.isArray(result.i18n)) {
+    result.i18n = toLocaleMap<T>(result.i18n);
   }
 
   // Process nested relations
@@ -674,11 +516,26 @@ export const isFieldUnique = async <T extends Resource>(
   field: Field = 'code'
 ): Promise<boolean> => {
   // Check whether the organisation code already exists
-  const table = resourceConfig[resourceType].table;
+  const currentResourceConfig = resourceConfig[resourceType as HierarchicalResource]; // Cast to HierarchicalResource
+  if (!currentResourceConfig) {
+    throw new Error(`Invalid resource type: ${resourceType}`);
+  }
+  const table = currentResourceConfig.table;
+  const tableField = table[field];
+  const dataValue = data[field as keyof T];
+
+  if (tableField === undefined || dataValue === undefined) {
+    // Or handle this case as an error, depending on expected behavior
+    console.warn(
+      `Field ${String(field)} or its value is undefined for resource ${resourceType}`
+    );
+    return false;
+  }
+
   const [existingEntity] = await db
     .select()
     .from(table)
-    .where(eq(table[field], data[field]))
+    .where(eq(tableField, dataValue))
     .limit(1);
   return existingEntity ? false : true;
 };
@@ -691,48 +548,88 @@ export const isFieldChanged = async <T extends ResourceDB>(
   field: Field = 'code'
 ): Promise<boolean> => {
   // Check whether the provided code is different from the one in the database
-  const table = resourceConfig[resourceType].table;
-  const [existingEntity]: T[] = await db
+  const currentResourceConfig = resourceConfig[resourceType as HierarchicalResource]; // Cast to HierarchicalResource
+  if (!currentResourceConfig) {
+    throw new Error(`Invalid resource type: ${resourceType}`);
+  }
+  const table = currentResourceConfig.table;
+  const tableIdField = table.id;
+  const tableField = table[field];
+
+  if (tableIdField === undefined || tableField === undefined) {
+    // Or handle this case as an error
+    console.warn(
+      `Field id or ${String(field)} is undefined for resource ${resourceType}`
+    );
+    return false;
+  }
+
+  const [existingEntity] = await db
     .select()
     .from(table)
-    .where(eq(table.id, id))
+    .where(eq(tableIdField, id))
     .limit(1);
 
   if (!existingEntity) {
     return false; // Organisation not found
   }
 
-  return existingEntity[field] !== value;
+  const existingValue = existingEntity[field as keyof T];
+  if (existingValue === undefined) {
+    console.warn(
+      `Field ${String(field)} is undefined in existing entity for resource ${resourceType}`
+    );
+    return false;
+  }
+
+  return existingValue !== value;
 };
 
-export async function updatePartial<T extends Table>(
-  db: Database,
-  table: T,
-  ref: Ref,
-  refKey: string,
-  data: Partial<Record<string, unknown>>
-) {
-  let updated: T;
-  if (Object.keys(data).length > 0) {
-    [updated] = await db
-      .update(table)
-      .set(data)
-      .where(eq(table[refKey], ref))
-      .returning();
-  } else {
-    [updated] = (await db
-      .select()
-      .from(table)
-      .where(eq(table[refKey], ref))
-      .limit(1)) as T[];
-  }
+/**
+ * Transforms a record of data into an array of related records
+ * @param data Record mapping IDs to data objects
+ * @param foreignKeyName Name of the foreign key field to add
+ * @param foreignKeyValue Value of the foreign key to set
+ * @param keyName Optional name of the key field to add (defaults to 'id')
+ * @returns Array of objects with the original data plus foreign key and optional key
+ */
+export const toRelatedRecords = <
+  T extends Record<string, unknown>,
+  K extends string = 'id',
+  F extends string = 'id'
+>(
+  data: Record<string, T>,
+  foreignKeyName: F,
+  foreignKeyValue: string,
+  keyName: K = 'id' as K
+): Array<T & Record<K, string> & Record<F, string>> => {
+  return Object.entries(data).map(([key, value]) => ({
+    ...value,
+    [keyName]: key,
+    [foreignKeyName]: foreignKeyValue
+  }));
+};
 
-  if (!updated) {
-    return error(404, `Entity <code>${ref}</code> not found`);
-  }
-
-  return updated;
-}
+/**
+ * Adds a foreign key to a record
+ * @param data Record to add the foreign key to
+ * @param foreignKeyName Name of the foreign key field to add
+ * @param foreignKeyValue Value of the foreign key to set
+ * @returns Record with the foreign key added
+ */
+export const keyWithForeignKey = <
+  T extends Record<string, unknown>,
+  F extends string = 'id'
+>(
+  data: T,
+  foreignKeyName: F,
+  foreignKeyValue: string
+): T => {
+  return {
+    ...data,
+    [foreignKeyName]: foreignKeyValue
+  };
+};
 
 // EXPORTS
 

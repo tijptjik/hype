@@ -1,46 +1,25 @@
 <script lang="ts">
-import { getImageContext, setImageContext } from '$lib/context/images.svelte';
+import { getImageContext, setImageContext } from '$lib/context/image.svelte';
 // TYPES
-import type {
-  Id,
-  ResourceType,
-  OrganisationDB,
-  ProjectDB,
-  GetImageAPI,
-  ImageCtxMode
-} from '$lib/types';
-
-type Props = {
-  children: any;
-  mode: ImageCtxMode;
-  isAdminMode: boolean;
-  refType: ResourceType;
-  refId: Id;
-  refOrganisation?: OrganisationDB;
-  refProject?: ProjectDB;
-  image?: GetImageAPI;
-  extendedRefType?: ResourceType;
-  extendedRefId?: Id;
-  highlightedIds?: Id[];
-};
+import type { ImageProviderProps } from '$lib/types';
 
 // STATE
 let lastSet: string | null = $state(null);
 
 // PROPS
-let { children, ...settings }: Props = $props();
+let { children, ...settings }: ImageProviderProps = $props();
 
 // CONTEXT
 setImageContext(
   settings.mode,
   settings.isAdminMode,
-  settings.refType,
-  settings.refId,
-  settings.refOrganisation,
-  settings.refProject,
+  settings.ctxType,
+  settings.ctxId,
+  settings.organisation,
+  settings.project,
   settings.image,
-  settings.extendedRefType,
-  settings.extendedRefId,
+  settings.ctxTypeSecondary,
+  settings.ctxIdSecondary,
   settings.highlightedIds
 );
 
@@ -48,9 +27,9 @@ let imageCtx = getImageContext();
 
 // EFFECTS
 $effect(() => {
-  if (lastSet !== settings.refId) {
+  if (lastSet !== settings.ctxId) {
     imageCtx.setContext(settings);
-    lastSet = settings.refId;
+    lastSet = settings.ctxId;
   }
 });
 </script>

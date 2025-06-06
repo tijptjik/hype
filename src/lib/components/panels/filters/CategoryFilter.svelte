@@ -5,15 +5,15 @@ import Icon from '$lib/components/common/Icon.svelte';
 // UTILS
 import {
   getOriginalValue,
-  getTranslatedValue,
+  getPropValueInCurrentLocale,
   displaySelectedProperties
 } from '$lib/utils/formatting';
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 // TYPES
 import type { Id, TranslatedValue } from '$lib/types';
 
-let mapCtx = getMapContext();
+let mapCtx = getMapCtx();
 
 type Props = {
   key: string;
@@ -58,7 +58,7 @@ let displayText = $derived(displaySelectedProperties(selected, values));
 
 <div class="ml-4 min-h-10 flex-shrink-0 rounded-l-md bg-[#0a0a0a]">
   <button
-    class="flex w-full flex-shrink-0 items-center justify-between rounded-none py-2 pl-6 pr-9 focus:outline-none focus:ring-0 focus-visible:text-primary"
+    class="flex w-full flex-shrink-0 items-center justify-between rounded-none py-2 pl-6 pr-9 focus:outline-none focus:ring-0 focus-visible:text-sky-600"
     onclick={() => (isOpen = !isOpen)}>
     <div class="flex flex-col justify-start gap-0 text-left">
       <p class="text-xs font-thin uppercase tracking-widest text-base-content/60">
@@ -71,25 +71,35 @@ let displayText = $derived(displaySelectedProperties(selected, values));
   <!-- Options -->
   {#if isOpen}
     <div
-      class="flex max-h-[260px] flex-col overflow-y-auto overscroll-contain rounded-l-md bg-base-300">
+      class="flex max-h-[260px] flex-col overflow-y-auto overscroll-contain rounded-l-md bg-base-300"
+      tabindex="-1">
       {#each values as value (getOriginalValue(value))}
         {@const originalValue = getOriginalValue(value)}
         <label
-          class="label cursor-pointer justify-start gap-3 px-6 pr-2 transition-all duration-300 first:pt-3 last:pb-3 hover:bg-base-100">
+          class="group label cursor-pointer justify-start gap-3 px-6 pr-2 first:pt-4 last:pb-4 focus:outline-none focus:ring-0"
+          tabindex="0"
+          onkeydown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              toggleValue(value);
+            }
+          }}
+          >
           <div
-            class="flex h-2 w-2 items-center gap-2 rounded-full {selected.includes(
+            class="flex h-2 w-2 items-center gap-2 rounded-full group-focus:outline-none group-focus:ring-0 group-hover:bg-base-content/60 group-focus-visible:bg-base-content/60 {selected.includes(
               originalValue
             )
-              ? 'bg-sky-600'
+              ? 'bg-sky-600 group-hover:bg-sky-600/60 group-focus-visible:bg-sky-600/60'
               : 'border-1 border-base-content/60 bg-transparent'}">
           </div>
           <input
             type="checkbox"
             checked={selected.includes(originalValue)}
             class="checkbox checkbox-sm hidden"
-            onchange={() => toggleValue(value)} />
+            onchange={() => toggleValue(value)} 
+            />
           <span class="label-text text-sm font-medium"
-            >{getTranslatedValue(value)}</span>
+            >{getPropValueInCurrentLocale(value)}</span>
         </label>
       {/each}
     </div>

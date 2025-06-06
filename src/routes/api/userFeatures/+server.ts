@@ -1,111 +1,94 @@
-import { userFeature, feature, user } from '$lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+// SVELTE
 import { error } from '@sveltejs/kit';
+// API
+import {
+  JSONResponseOrError,
+  getDatabase,
+  logZodError
+} from '$lib/api';
+import {
+  assertPermissionsToListUserFeature,
+  assertPermissionsToUpdateUserFeature,
+  toResponseShape
+} from '$lib/api/services/userFeature';
+// DB
+import { UserFeatureUpdateAPI } from '$lib/db/zod';
+import { listUserFeatures, upsertUserFeature } from '$lib/db/services/userFeature';
 // TYPES
 import type { RequestHandler } from '@sveltejs/kit';
-import type { AccessStrategyOption } from '$lib/types';
-import { getDatabaseOrError, JSONResponseOrError } from '$lib/api';
-import { UserFeatureUpdate, UserFeatureUpdateExtended } from '$lib/db/zod';
 
-const RESOURCE_TYPE = 'userFeature';
-const ACCESS_STRATEGY = 'GenericOwn' as AccessStrategyOption;
+/********************
+ *  LIST
+ ************/
 
+/**
+ * Lists projects
+ */
 export const GET: RequestHandler = async ({ url, locals, platform }) => {
-  if (!url.searchParams.get('userId')) {
-    return new Response('User ID is required', { status: 400 });
+  // ASSERT : User ID is provided in the query parameters
+  const userIdFromParams = url.searchParams.get('userId');
+  if (!userIdFromParams) {
+    return error(400, 'User ID is required in query parameters');
   }
-
-  const { db, userId, accessStrategy } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE,
-    url.searchParams.get('userId') || undefined
-  );
+  // ASSERT : User Logged in
+  const { session, db } = await getDatabase(locals, platform);
+  // ASSERT : Permissions to update project
+  assertPermissionsToListUserFeature(session, userIdFromParams);
 
   try {
-    // DB : Build & Execute Query
-    const userFeatures = await db
-      .select()
-      .from(userFeature)
-      .where(eq(userFeature.userId, userId));
+    // DB : List the user features
+    // Note : unlike other API end-points we are ignoring conditions here, as
+    // the userId == userFeature.userId constraint is enforced in listUserFeatures
+    const result = await listUserFeatures(db, userIdFromParams);
 
-    // HTTP : 200 JSON or 404
-    return JSONResponseOrError(userFeatures);
+    // RESPONSE : Build the response shape
+    const data = toResponseShape(result);
+
+    // HTTP: 200 JSON or 404
+    return JSONResponseOrError(data);
   } catch (e) {
-    // DB : Query Error
-    console.error('Database query error:', e);
-    // HTTP : 500 Error
-    return error(500, 'Dust Accumulation Critical');
+    // DB: Query Error
+    console.error('Database query error retrieving user features:', e);
+    // HTTP: 500 Error
+    return error(500, 'Failed to retrieve user features');
   }
 };
 
+/********************
+ *  UPSERT
+ ************/
+
+/**
+ * Upsert a user feature
+ */
 export const PUT: RequestHandler = async ({ request, locals, platform }) => {
+  // ASSERT : User logged in
+  const { db, userId, session } = await getDatabase(locals, platform);
+
   try {
-    // Parse and validate request body
+    // VALIDATION: Parse and validate request body
     const body = await request.json();
-    const validatedData = UserFeatureUpdate.parse(body);
+    const validatedData = UserFeatureUpdateAPI.parse(body);
 
-    const { db, userId } = await getDatabaseOrError(
-      locals,
-      platform,
-      ACCESS_STRATEGY,
-      RESOURCE_TYPE,
-      validatedData.userId
-    );
-
-    console.log('userId', userId);
-    console.log('featureId', validatedData.featureId);
-    // Check if record exists
-    const existingRecord = await db
-      .select()
-      .from(userFeature)
-      .where(
-        and(
-          eq(userFeature.userId, userId),
-          eq(userFeature.featureId, validatedData.featureId)
-        )
-      )
-      .limit(1);
-
-    console.log('existingRecord', existingRecord);
-
-    let result;
-    if (existingRecord.length > 0) {
-      // Update existing record
-      result = await db
-        .update(userFeature)
-        .set({
-          isVisited: validatedData.isVisited,
-          isWishlisted: validatedData.isWishlisted,
-          visitedAt: validatedData.visitedAt
-        })
-        .where(
-          and(
-            eq(userFeature.userId, userId),
-            eq(userFeature.featureId, validatedData.featureId)
-          )
-        )
-        .returning();
-    } else {
-      // Create new record
-      result = await db
-        .insert(userFeature)
-        .values({
-          userId,
-          featureId: validatedData.featureId,
-          isVisited: validatedData.isVisited,
-          isWishlisted: validatedData.isWishlisted,
-          visitedAt: validatedData.visitedAt
-        })
-        .returning();
+    if (!validatedData.userId) {
+      return error(400, 'Target User ID is required in request body');
     }
 
-    console.log('result', result);
+    // ASSERT : Permissions to update user feature
+    assertPermissionsToUpdateUserFeature(session, validatedData.userId);
 
-    return JSONResponseOrError(result[0]);
-  } catch (e) {
-    console.error('Database query error:', e);
+    // DB: Upsert user feature
+    const result = await upsertUserFeature(
+      db,
+      userId, 
+      validatedData
+    );
+
+    // HTTP: 200 JSON or error
+    return JSONResponseOrError(result);
+  } catch (e: any) {
+    logZodError(e, 'User feature update error:');
+    // HTTP: 500 Error
     return error(500, 'Failed to update user feature');
   }
 };

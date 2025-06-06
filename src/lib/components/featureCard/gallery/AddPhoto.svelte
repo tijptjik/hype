@@ -3,14 +3,13 @@
 import { onMount, tick } from 'svelte';
 // MOTION
 import { fade } from 'svelte/transition';
-import { spring } from 'svelte/motion';
+import { Spring } from 'svelte/motion';
 // ENUMS
-import { FeatureCardMode } from '$lib/types';
+import { FeatureCardMode } from '$lib/enums';
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
 import {
   Camera,
-  PlusCircle,
   XCircle,
   ChevronLeft,
   ChevronRight,
@@ -52,10 +51,13 @@ let isLoadingCamera = $state(false);
 let isDragging = $state(false);
 let startX = $state(0);
 let currentX = $state(0);
-let offset = spring(0, {
+let offset = new Spring(0, {
   stiffness: 0.2,
   damping: 0.8
 });
+
+// Component visibility state
+let showComponent = $state(false);
 
 // CONSTANTS
 const SWIPE_THRESHOLD = 0.3; // 30% of container width
@@ -332,7 +334,7 @@ function getPhotoAtIndex(index: number): UploadedPhoto {
  * @param {number} x - The new horizontal offset value in pixels.
  */
 function updateOffset(x: number) {
-  offset.set(x);
+  offset.set(x, { hard: false });
 }
 
 /**
@@ -423,6 +425,11 @@ function cleanup() {
 
 // ======== LIFECYCLE HOOKS ========
 onMount(() => {
+  // Delay component visibility by 500ms
+  setTimeout(() => {
+    showComponent = true;
+  }, 500);
+
   if (container) {
     containerWidth = container.offsetWidth;
   }
@@ -452,7 +459,9 @@ onMount(() => {
 
 <div class="relative grid h-full w-full grid-cols-1 grid-rows-1">
   <!-- ======== MAIN COMPONENT LAYOUT ======== -->
-  {#if isLoadingCamera}
+  {#if showComponent}
+    <div in:fade={{ duration: 300 }}>
+      {#if isLoadingCamera}
     <!-- Loading Camera State -->
     <div
       id="camera-loading"
@@ -485,7 +494,7 @@ onMount(() => {
       <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
         <!-- Capture button -->
         <button
-          class="btn btn-circle h-16 w-16 bg-base-300"
+          class="btn btn-circle h-16 w-16 bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary"
           onclick={capturePhoto}
           aria-label="Take photo">
           <div class="m-0 h-12 w-12 rounded-full border-[5px] border-[#4987E2] p-0">
@@ -509,7 +518,7 @@ onMount(() => {
     <!-- Add Photo Button (Initial State) -->
     <div id="add-photo-card" class="flex h-full w-full items-center justify-center">
       <button
-        class="btn btn-ghost gap-2 rounded-full bg-base-100 text-white"
+        class="btn btn-ghost gap-2 rounded-full bg-base-100 text-white focus:outline-none focus:ring-2 focus:ring-primary"
         onclick={openCamera}
         aria-label="Add photo">
         <Icon src={Camera} class="h-6 w-6 text-primary" theme="solid" />
@@ -546,7 +555,7 @@ onMount(() => {
         ontouchmove={handleTouchMove}
         ontouchend={handleTouchEnd}
         class:dragging={isDragging}
-        style="transform: translateX({$offset}px)">
+        style="transform: translateX({offset}px)">
         {#if cardCtx.userData.photos.length > 1}
           <!-- Previous Image -->
           <div class="absolute left-0 top-0 h-full w-full opacity-0">
@@ -613,6 +622,8 @@ onMount(() => {
           </button>
         </div>
       {/if}
+    </div>
+  {/if}
     </div>
   {/if}
 

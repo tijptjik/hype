@@ -2,16 +2,18 @@
 import Icon from '$lib/components/common/Icon.svelte';
 import { MagnifyingGlass, XMark } from '@steeze-ui/heroicons';
 import { slide } from 'svelte/transition';
-let { searchTerm = $bindable(''), position = 'left' } = $props<{
+import { m } from '$lib/i18n';
+let { searchTerm = $bindable(''), position = 'left', onReset }: {
   searchTerm: string;
   position?: 'left' | 'right';
-}>();
+  onReset?: () => void;
+} = $props();
 
 // Reset input and clear filter
 const resetInput = async (e: Event) => {
   e.preventDefault();
   searchTerm = '';
-  document.getElementById(`filter-${type}`)?.focus();
+  document.getElementById(`search`)?.focus();
 };
 </script>
 
@@ -24,14 +26,17 @@ const resetInput = async (e: Event) => {
     bind:value={searchTerm}
     onkeydown={(e) => {
       if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
         if (searchTerm) {
           resetInput(e);
-          e.preventDefault();
-          e.stopPropagation();
+        } else {
+          // Clear selection
+          onReset?.();
         }
       }
     }}
-    placeholder="Search..."
+    placeholder={m.legal_clear_panther_soar()}
     class="input m-0 h-12 w-full rounded-none bg-base-200 {position === 'right'
       ? 'rounded-l-md pl-[26px] pr-10'
       : 'rounded-r-md pl-10 pr-[26px]'} text-sm focus:border-none focus:outline-none" />

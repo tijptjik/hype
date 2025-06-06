@@ -2,9 +2,9 @@
 // I18N
 import { m } from '$lib/i18n';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // ENUMS
-import { HierarchicalResource, CollectionStatistic } from '$lib/types';
+import { HierarchicalResource, CollectionStatistic } from '$lib/enums';
 // TYPES
 import type { ResourceTypeWithChildren } from '$lib/types';
 

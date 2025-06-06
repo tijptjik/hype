@@ -1,13 +1,13 @@
 <script lang="ts">
 // FLASH
 import { getFlash } from 'sveltekit-flash-message';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 // EASING
 import { cubicInOut } from 'svelte/easing';
 // TRANSITIONS
 import { slide } from 'svelte/transition';
 // SERVICES
-import { getImageContext } from '$lib/context/images.svelte';
+import { getImageContext } from '$lib/context/image.svelte';
 // COMPONENTS
 import { ArrowDownTray } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
@@ -21,11 +21,12 @@ const imageCtx = getImageContext();
   <div
     class="flex h-12 flex-row flex-nowrap items-center justify-between gap-2 overflow-hidden whitespace-nowrap text-nowrap align-baseline"
     transition:slide={{ axis: 'x', duration: 500, easing: cubicInOut }}>
-    <div class="text-sm font-light">Published</div>
     <Toggle
+      label="Published"
       size="sm"
       checked={imageCtx.activeImage?.isPublished ?? false}
-      onChange={() => imageCtx.handlePublishToggle()} />
+      onChange={() => imageCtx.handlePublishToggle()}
+      isSolid={false} />
   </div>
 
   <div

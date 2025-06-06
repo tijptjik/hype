@@ -1,6 +1,7 @@
 <script lang="ts">
 // I18N
-import { m, getI18nValue, getLocale } from '$lib/i18n';
+import { getI18n } from '$lib/i18n';
+import { m } from '$lib/i18n';
 // CONSTANTS
 import neighbourhoods from '$lib/map/neighbourhoods.json';
 // COMPONENTS
@@ -10,10 +11,12 @@ import FilteredNeighbourhood from '$lib/components/panels/filters/FilteredNeighb
 import ResourceContainer from '$lib/components/panels/common/ResourceContainer.svelte';
 import SelectedResources from '$lib/components/panels/common/SelectedResources.svelte';
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
+// TYPE
+import type { NeighbourhoodMap } from '$lib/types';
 
 // Initialize map state
-const mapCtx = getMapContext();
+const mapCtx = getMapCtx();
 
 // Get cached features for counting
 const selectedNeighbourhoods = $derived(mapCtx.state.filters.neighbourhoods);
@@ -22,23 +25,18 @@ let searchTerm = $state('');
 
 // Filter function for FilterBar
 function filterNeighbourhoods(
-  neighbourhoods: Record<
-    string,
-    { neighbourhood: string; district: string; region: string }
-  >,
+  neighbourhoods: NeighbourhoodMap,
   term: string
 ) {
   if (!term) return Object.entries(neighbourhoods);
   const searchLower = term.toLowerCase();
-  return Object.entries(neighbourhoods).filter(([key, data]) =>
-    getLocale() == 'en'
-      ? key.toLowerCase().includes(searchLower) ||
-        data.district.toLowerCase().includes(searchLower) ||
-        data.region.toLowerCase().includes(searchLower)
-      : getI18nValue(data, 'name').toLowerCase().includes(searchLower) ||
-        getI18nValue(data, 'district').toLowerCase().includes(searchLower) ||
-        getI18nValue(data, 'region').toLowerCase().includes(searchLower)
-  );
+  return Object.entries(neighbourhoods).filter(([key, data]) => {
+    return (
+      getI18n(data, 'name', mapCtx.getUserPreferences()).toLowerCase().includes(searchLower) ||
+      getI18n(data, 'district', mapCtx.getUserPreferences()).toLowerCase().includes(searchLower) ||
+      getI18n(data, 'region', mapCtx.getUserPreferences()).toLowerCase().includes(searchLower)
+    );
+  });
 }
 
 const filteredNeighbourhoods = $derived(
@@ -48,6 +46,7 @@ const filteredNeighbourhoods = $derived(
 // EFFECTS
 
 // Update query when selection changes
+// TODO use runed watch instead
 $effect(() => {
   selectedNeighbourhoods; // track changes
   mapCtx.refreshFeatures();
@@ -77,7 +76,7 @@ $effect(() => {
   collapsedContent={SelectedNeighbourhoods}
   position="right">
   {#if Object.keys(neighbourhoods).length > 4}
-    <FilterBar bind:searchTerm position="right" />
+    <FilterBar bind:searchTerm position="right" onReset={mapCtx.resetNeighbourhoods} />
   {/if}
   <ResourceContainer>
     {#each filteredNeighbourhoods as [neighbourhood, data]}

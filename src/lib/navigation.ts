@@ -1,5 +1,7 @@
 // SVELTE
 import { goto } from '$app/navigation';
+// I18N
+import { m } from '$lib/i18n';
 // LIB
 import { ADMIN_PATH } from '$lib/index';
 // ICONS
@@ -13,13 +15,14 @@ import {
 // ENUMS
 import { HierarchicalResource, HierarchicalResourcePath } from '$lib/enums';
 // TYPES
+import type { ResourceState } from '$lib/context/resource.svelte';
 import type { Code, FacetType, Id } from '$lib/types';
 
 // NAVIGATION
 // NOTE : We cannot use Enums here for path or seq as the build process only procudes them on a hard refresh.
 export const navItems = {
   organisation: {
-    name: 'Organisations',
+    name: m.maps__organisations(),
     icon: OrganisationIcon,
     seq: 1,
     path: 'organisations',
@@ -27,7 +30,7 @@ export const navItems = {
     isAlwaysExpanded: false
   },
   project: {
-    name: 'Projects',
+    name: m.maps__projects(),
     icon: ProjectIcon,
     seq: 2,
     path: 'projects',
@@ -35,7 +38,7 @@ export const navItems = {
     isAlwaysExpanded: false
   },
   layer: {
-    name: 'Layers',
+    name: m.maps__layers(),
     icon: LayerIcon,
     seq: 3,
     path: 'layers',
@@ -43,7 +46,7 @@ export const navItems = {
     isAlwaysExpanded: false
   },
   feature: {
-    name: 'Features',
+    name: m.omni__title_features(),
     icon: FeatureIcon,
     seq: 4,
     path: 'features',
@@ -51,7 +54,7 @@ export const navItems = {
     isAlwaysExpanded: true
   },
   task: {
-    name: 'Review Queue',
+    name: m.navbar__tasks(),
     icon: TaskIcon,
     seq: 5,
     path: 'tasks',
@@ -61,7 +64,7 @@ export const navItems = {
 };
 
 export const navigateOnAdmin = (
-  resourceState: HierarchicalResourceState,
+  resourceState: ResourceState,
   resource: HierarchicalResource | false,
   entityRef?: Id | Code,
   facet?: FacetType,

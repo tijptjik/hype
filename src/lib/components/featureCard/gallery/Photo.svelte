@@ -1,7 +1,7 @@
 <script lang="ts">
 import Image from '$lib/components/common/Image.svelte';
 // SERVICES
-import { getURLfromImage } from '$lib/services/images.svelte';
+import { getURLfromImage } from '$lib/client/services/image';
 
 // STATE : PROPS
 let {
@@ -13,18 +13,18 @@ let {
 } = $props();
 </script>
 
-<div class="h-full w-full">
+<div class="h-full w-full overflow-hidden">
   <Image
-    class="z-20 h-full w-full overflow-hidden text-base-100"
+    class="absolute inset-0 z-20 h-full w-full overflow-hidden text-base-100"
     src={getURLfromImage({ image })}
-    alt="image"
+    alt=""
     layout="contain"
     showLoading={false}
     showError={false} />
   <Image
-    class="absolute top-0 z-10 h-full w-full bg-neutral blur-sm"
+    class="absolute inset-0 z-10 h-full w-full overflow-hidden blur-sm"
     src={getURLfromImage({ image })}
-    alt="image"
+    alt=""
     layout="cover"
     showLoading={false}
     showError={false} />

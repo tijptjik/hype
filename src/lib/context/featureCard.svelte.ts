@@ -1,7 +1,7 @@
 // SVELTE
 import { setContext, getContext } from 'svelte';
 // ENUMS
-import { FeatureCardMode } from '$lib/types';
+import { FeatureCardMode } from '$lib/enums';
 // TYPES
 import type { UploadedPhoto } from '$lib/types';
 // I18N

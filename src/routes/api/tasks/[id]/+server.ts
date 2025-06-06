@@ -1,101 +1,139 @@
-import { error } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
+// DRIZZLE
+import { eq } from 'drizzle-orm';
+// ZOD
+import { TaskUpdate } from '$lib/db/zod/schemas/task';
 // API
-import { getDatabaseOrError, JSONResponseOrError } from '$lib/api';
-// DB
-import { hierarchicalEntityQuery } from '$lib/db';
-import { projectRole } from '$lib/db/schema';
 import {
-  patchTask,
-  customHierarchy,
+  getDatabase,
+  isValidQueryParamsOrError,
+  JSONResponseOrError,
+  logZodError,
+  SuperFormErrorResponse
+} from '$lib/api';
+// SERVICES
+import {
+  toResponseShape,
+  getTaskEntityQueryContext,
+  taskEntityWithRelations,
+  assertPermissionsToUpdateTask,
+  assertPermissionsToDeleteTask
+} from '$lib/api/services/task';
+// SCHEMA
+import { task } from '$lib/db/schema';
+// SERVICES
+import {
+  getTask,
+  updateTask,
   archiveImages,
-  publishImages
+  publishImages,
+  deleteTask
 } from '$lib/db/services/task';
 // TYPES
 import type { RequestHandler } from '@sveltejs/kit';
-import type { AccessStrategyOption } from '$lib/types';
+import type { Id, QueryParams, TaskDBPartial, TaskRaw } from '$lib/types';
+
+/********************
+ *  COMMON
+ ************/
 
 const RESOURCE_TYPE = 'task';
-const ACCESS_STRATEGY = 'EntityOwnChild' as AccessStrategyOption;
-const PUBLIC_IDENTIFIER = 'id';
 
-export const GET: RequestHandler = async ({ params, locals, platform }) => {
-  const { db, userId, accessStrategy } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE
+/********************
+ *  READ
+ ************/
+
+/**
+ * Reads a single task
+ * Tasks are second-class resources with restricted access based on project roles.
+ */
+export const GET: RequestHandler = async ({
+  params,
+  url,
+  locals,
+  platform,
+  request
+}) => {
+  // ASSERT : User logged in
+  const { db, session, userRoles } = await getDatabase(locals, platform);
+
+  // ASSERT : Valid query parameters
+  let queryParams = isValidQueryParamsOrError(task, url);
+
+  // CONTEXT : Get the query context
+  let { conditions } = getTaskEntityQueryContext(
+    db,
+    session,
+    request,
+    queryParams as QueryParams,
+    userRoles
   );
 
+  // Add condition for specific task ID
+  conditions.push(eq(task.id, params.id!));
+
   try {
-    const result = await hierarchicalEntityQuery(
-      db,
-      params[PUBLIC_IDENTIFIER]!,
-      PUBLIC_IDENTIFIER,
-      accessStrategy,
-      {
-        organisation: true,
-        project: true,
-        feature: {
-          with: {
-            properties: {
-              with: {
-                propertyValue: true,
-                property: true
-              }
-            }
-          }
-        },
-        images: true,
-        reviewer: {
-          columns: {
-            email: false,
-            emailVerified: false,
-            createdAt: false,
-            modifiedAt: false
-          }
-        },
-        contributor: {
-          columns: {
-            email: false,
-            emailVerified: false,
-            createdAt: false,
-            modifiedAt: false
-          }
-        }
-      },
-      userId,
-      projectRole,
-      false,
-      3,
-      customHierarchy
-    );
+
+    // DB : Get the task with full relations
+    const data = await getTask(db, taskEntityWithRelations, conditions) as TaskRaw;
+
+    if (!data) {
+      return error(404, 'Task not found');
+    }
+
+    const result = await toResponseShape(data, false);
 
     return JSONResponseOrError(result);
   } catch (e) {
-    console.error('Database query error:', e);
-    return error(500, 'Database Error');
+    logZodError(e, 'Task read error:');
+    return error(500, 'Dust Accumulation Critical');
   }
 };
 
+/********************
+ *  UPDATE
+ ************/
+
+/**
+ * Updates a task, including special handling for review actions that affect images.
+ * Tasks have complex business logic for image operations based on review outcomes.
+ */
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
-  const { db, userId } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE
-  );
+  // ASSERT : User logged in
+  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
 
   try {
-    const data = await request.json();
-    const taskId = params[PUBLIC_IDENTIFIER]!;
+    // ASSERT : Valid submitted data
+    const data: TaskDBPartial = await request.json();
 
-    // Infer reviewerId and isReviewed from reviewOutcome and active user
-    data.isReviewed = data.reviewOutcome ? true : false;
-    data.reviewerId = data.isReviewed ? userId : null;
+    // Get existing task data for permission checks
+    const existingTask = await getTask(db, {}, [eq(task.id, params.id!)]);
+    if (!existingTask) {
+      return error(404, 'Task not found');
+    }
 
-    // Handle image operations based on reviewAction
+    // ASSERT : User has permission to update task
+    await assertPermissionsToUpdateTask(
+      db,
+      session,
+      request,
+      params as QueryParams,
+      userRoles,
+      existingTask
+    );
+
+    // BUSINESS LOGIC : Set review metadata
+    if (data.reviewOutcome) {
+      data.isReviewed = true;
+      data.reviewerId = userId;
+    } else if (data.isReviewed === false) {
+      data.reviewerId = null;
+    }
+
+    // BUSINESS LOGIC : Handle image operations based on review actions
+    const taskId = params.id!;
     if (
-      (data.type === 'newPhoto' || data.type === 'reportedMissing') &&
+      (existingTask.type === 'newPhoto' || existingTask.type === 'reportedMissing') &&
       data.reviewAction
     ) {
       switch (data.reviewAction) {
@@ -115,10 +153,54 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
       }
     }
 
-    const result = await patchTask(db, taskId, data);
-    return JSONResponseOrError(result);
-  } catch (e) {
-    console.error('Database error:', e);
-    return error(500, 'Database Error');
+    // VALIDATION : Validate update data
+    const validatedData = TaskUpdate.parse(data);
+
+    // DB : Update the task
+    const updatedTask = await updateTask(db, validatedData, params.id as Id);
+
+    return JSONResponseOrError(updatedTask);
+  } catch (err) {
+    logZodError(err, 'Task update error:');
+    return SuperFormErrorResponse(RESOURCE_TYPE, 'update');
+  }
+};
+
+/********************
+ *  DELETE
+ ************/
+
+/**
+ * Deletes a task
+ * Note: Task deletion should be rare and may have implications for associated images and features.
+ */
+export const DELETE: RequestHandler = async ({ params, request, locals, platform }) => {
+  // ASSERT : User logged in
+  const { db, session, userRoles } = await getDatabase(locals, platform);
+
+  try {
+    // Get existing task data for permission checks
+    const existingTask = await getTask(db, {}, [eq(task.id, params.id!)]);
+    if (!existingTask) {
+      return error(404, 'Task not found');
+    }
+
+    // ASSERT : User has permission to delete task
+    await assertPermissionsToDeleteTask(
+      db,
+      session,
+      request,
+      params as QueryParams,
+      userRoles,
+      existingTask
+    );
+
+    // DB : Delete the task (cascading deletes will handle relations)
+    await deleteTask(db, params.id as Id);
+
+    return json({ type: 'success', message: 'Task deleted successfully' });
+  } catch (err) {
+    logZodError(err, 'Task delete error:');
+    return SuperFormErrorResponse(RESOURCE_TYPE, 'delete');
   }
 };

@@ -1,24 +1,27 @@
 <script lang="ts">
 import { onMount, onDestroy } from 'svelte';
 // SERVICES
-import { getURLfromImage } from '$lib/services/images.svelte';
+import { getURLfromImage } from '$lib/client/services/image';
 // CONTEXT
-import { getImageContext } from '$lib/context/images.svelte';
+import { getImageContext } from '$lib/context/image.svelte';
 // COMPONENTS
-import Image from '$lib/components/common/Image.svelte';
+import Img from '$lib/components/common/Image.svelte';
 import IntentLabel from '$lib/components/images/IntentLabel.svelte';
 import Loading from '$lib/components/images/gallery/overlays/Loading.svelte';
 import Deletion from '$lib/components/images/gallery/overlays/Delete.svelte';
 import Confirmation from '$lib/components/images/gallery/overlays/Confirmation.svelte';
 import Deleting from '$lib/components/images/gallery/overlays/Deleting.svelte';
 // TYPES
-import type { GetImageAPI } from '$lib/types';
+import type { Image } from '$lib/types';
 
 // SERVICES
 const imageCtx = getImageContext();
 
+// HTML
+let thumbnailRef = $state<HTMLDivElement>();
+
 type Props = {
-  image: GetImageAPI;
+  image: Image;
   idx: number;
   actionProps?: { removeMode: boolean };
   isHighlighted?: boolean;
@@ -29,6 +32,7 @@ let { image, idx, actionProps, isHighlighted = false }: Props = $props();
 // Track both main image and thumbnail load states
 let imageLoadState = $derived(imageCtx.getLoadStatus(image.id));
 let thumbnailLoadState = $derived(imageCtx.getThumbnailLoadStatus(image.id));
+let isPublished = $derived(imageCtx.getImageIsPublished(image.id));
 
 // Initialize load states for this thumbnail
 onMount(() => {
@@ -44,16 +48,19 @@ onMount(() => {
 onDestroy(() => {
   imageCtx.resetThumbnailLoadStatus(image.id);
 });
+
 </script>
 
 <div
   class="relative h-full w-full"
   data-image-id={image.id}
   onmouseenter={() => imageCtx.setActiveImage(image)}
-  onclick={() => imageCtx.setActiveImage(image)}>
-  <Image
-    class="h-50 w-50 mx-auto overflow-hidden rounded-lg border-base-100 text-neutral 
-      {image.isPublished ? '' : 'border-2 border-base-200/60 opacity-70'}
+  onclick={() => imageCtx.setActiveImage(image)}
+  bind:this={thumbnailRef}
+  >
+  <Img
+    class="h-50 w-50 mx-auto overflow-hidden rounded-lg border-base-100 text-neutral transition-opacity duration-300 
+      {isPublished ? '' : 'border-2 border-base-200/60 opacity-70'}
       {thumbnailLoadState === 'loading' ? 'opacity-0' : 'opacity-100'}"
     src={getURLfromImage({
       image,
@@ -76,7 +83,7 @@ onDestroy(() => {
   {/if}
 
   {#if thumbnailLoadState === 'loaded' && (!actionProps || !actionProps.removeMode) && image.intent}
-    <IntentLabel intent={image.intent} {idx} imageId={image.id} />
+    <IntentLabel container={thumbnailRef} intent={image.intent} {idx} imageId={image.id} />
   {/if}
 
   {#if thumbnailLoadState === 'loading'}

@@ -1,21 +1,19 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // ICONS
 import { UserPlus, XMark } from '@steeze-ui/heroicons';
 // TYPES
-import type { FieldProps, ModalProps } from '$lib/types';
 
 // STATE : CONTEXT :: RESOURCE
 const resourceState = getHierarchicalResourceState();
 
 // STATE : PROPS
-let {
-  searchMode = $bindable(false),
-  removeMode = $bindable(false)
-}: FieldProps & ModalProps = $props();
+let { searchMode = $bindable(false), removeMode = $bindable(false) } = $props();
 
 const toggleSearch = (e: Event) => {
   e.preventDefault();
@@ -51,10 +49,10 @@ $effect(() => {
       onclick={toggleRemoveMode}>
       {#if !removeMode}
         <Icon src={UserPlus} class="mr-2 h-4 w-4" />
-        <span class="hidden md:block"> Remove User </span>
+        <span class="hidden md:block"> {m.hour_polite_ocelot_kiss()} </span>
       {:else}
         <Icon src={XMark} class="h-4 w-4" />
-        <span class="hidden md:block"> Stop Removing </span>
+        <span class="hidden md:block"> {m.moving_each_orangutan_care()} </span>
       {/if}
     </button>
   {/if}
@@ -65,10 +63,10 @@ $effect(() => {
       data-testid="addUserButton">
       {#if !searchMode}
         <Icon src={UserPlus} class="mr-2 h-4 w-4" />
-        <span class="hidden md:block"> Add User </span>
+        <span class="hidden md:block"> {m.kind_active_haddock_ascend()} </span>
       {:else}
         <Icon src={XMark} class="h-4 w-4" /><span class="hidden md:block">
-          Stop Adding
+          {m.keen_antsy_bulldog_zoom()}
         </span>
       {/if}
     </button>

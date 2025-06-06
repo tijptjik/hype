@@ -1,4 +1,5 @@
 import {
+  foreignKey,
   integer,
   primaryKey,
   sqliteTable,
@@ -9,10 +10,23 @@ import type { AdapterAccountType } from '@auth/core/adapters';
 import { relations, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 // ENUM
-import { supportedLocales } from '../enums';
+import {
+  ImageCDN,
+  SupportedLocales,
+  supportedLocales,
+  FieldDiscriminator,
+  PropertyComponentType,
+  OrganisationRoleType,
+  ProjectRoleType,
+  ImageEnv,
+  TaskType,
+  TaskReviewOutcome,
+  TaskReviewAction,
+  ImageIntent
+} from '../enums';
 // TYPES
 import type { GeometryObject } from 'geojson';
-import type { AddressProperties, AddressMeta, LayerMetadata, Locale, EXIF } from '../types';
+import type { AddressProperties, AddressMeta, LayerMetadata, Locale, EXIF, UserExperimental, UserPreferences } from '../types';
 
 /* ============================================================================
  * USER MANAGEMENT
@@ -37,29 +51,22 @@ export const user = sqliteTable('user', {
     .$onUpdateFn(() => new Date())
     .$type<Date>(),
   image: text('image'),
-  locale: text('locale', { enum: supportedLocales }).notNull().default('en'),
+  locale: text('locale', { enum: supportedLocales }).notNull().default(SupportedLocales.en),
   attribution: text('attribution'),
+  // If a user is archived, their account is effectively disabled, and they are not allowed to login
+  isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
   // Language features
   preferences: text('preferences', { mode: 'json' })
-    .$type<{
-      fallbackLocales: Locale[];
-      allowMachineTranslation: boolean;
-      isTranslateButtonVisible: boolean;
-    }>()
+    .$type<UserPreferences>()
     .default(
-      sql`'{"fallbackLocales":[], "allowMachineTranslation":false, "isTranslateButtonVisible":true}'`
+      sql`'{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}'`
     )
     .notNull(),
   // Experimental features
   experimental: text('experimental', { mode: 'json' })
-    .$type<{
-      contributorMode: boolean;
-      noLabelsMode: boolean;
-      fallbackLocales: Locale[];
-      isMachineTranslation: boolean;
-    }>()
+    .$type<UserExperimental>()
     .default(
-      sql`'{"contributorMode":false, "noLabelsMode":false, "fallbackLocales":[]}'`
+      sql`'{"contributorMode":false, "noLabelsMode":false}'`
     )
     .notNull(),
   createdAt: text('createdAt')
@@ -291,9 +298,9 @@ export const organisationRole = sqliteTable(
     userId: text('userId')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    role: text('role', { enum: ['member', 'owner'] })
+    role: text('role', { enum: Object.values(OrganisationRoleType) as [string, ...string[]] })
       .notNull()
-      .default('member')
+      .default(OrganisationRoleType.member)
   },
   (table) => [
     primaryKey({ columns: [table.organisationId, table.userId] })
@@ -380,6 +387,10 @@ export const projectRelations = relations(project, ({ one, many }) => ({
   image: one(image, {
     fields: [project.imageId],
     references: [image.id]
+  }),
+  publisher: one(user, {
+    fields: [project.publisherId],
+    references: [user.id]
   })
 }));
 
@@ -444,9 +455,9 @@ export const projectRole = sqliteTable(
     userId: text('userId')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    role: text('role', { enum: ['maintainer'] })
+    role: text('role', { enum: Object.values(ProjectRoleType) as [string, ...string[]] })
       .notNull()
-      .default('maintainer')
+      .default(ProjectRoleType.maintainer)
   },
   (table) => [
     primaryKey({ columns: [table.projectId, table.userId] })
@@ -523,6 +534,10 @@ export const layerRelations = relations(layer, ({ many, one }) => ({
   i18n: many(layerI18n),
   properties: many(layerProperty),
   features: many(feature),
+  publisher: one(user, {
+    fields: [layer.publisherId],
+    references: [user.id]
+  }),
   project: one(project, {
     fields: [layer.projectId],
     references: [project.id]
@@ -716,9 +731,6 @@ export const featureI18nRelations = relations(featureI18n, ({ one }) => ({
  * Links features to their properties and values
  */
 export const featureProperty = sqliteTable('featureProperty', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => nanoid(12)),
   featureId: text('featureId')
     .notNull()
     .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
@@ -729,7 +741,16 @@ export const featureProperty = sqliteTable('featureProperty', {
     onDelete: 'set null',
     onUpdate: 'cascade'
   }),
-});
+  // If the property value is non-categorical AND it does not translate, e.g. a number, a date, a boolean, etc.
+  // The value is set directly on the featureProperty table. In this case, the propertyValueId is null, and there 
+  // are no i18n records for this property. The inverse is also true, i.e. if the property value is non-categorical, 
+  // but it does translate, this value is null, and there are i18n records for this property. Finally, if the property value is 
+  // categorical, there will be no value set, and there will be no i18n records for this property. Instead the i18n records will be 
+  // set on the propertyValue table.
+  value: text('value')
+}, (table) => [
+  primaryKey({ columns: [table.featureId, table.propertyId] })
+]);
 
 /**
  * Feature property relations
@@ -760,9 +781,15 @@ export const featurePropertyRelations = relations(featureProperty, ({ one, many 
 export const featurePropertyI18n = sqliteTable(
   'featurePropertyI18n',
   {
-    featurePropertyId: text('featurePropertyId')
+    featureId: text('featureId')
       .notNull()
-      .references(() => featureProperty.id, {
+      .references(() => feature.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      }),
+    propertyId: text('propertyId')
+      .notNull()
+      .references(() => property.id, {
         onDelete: 'cascade',
         onUpdate: 'cascade'
       }),
@@ -772,7 +799,12 @@ export const featurePropertyI18n = sqliteTable(
     valueGen: integer('valueGen', { mode: 'boolean' })
   },
   (table) => [
-    primaryKey({ columns: [table.featurePropertyId, table.locale] })
+    primaryKey({ columns: [table.featureId, table.propertyId, table.locale] }),
+    foreignKey({
+      columns: [table.featureId, table.propertyId],
+      foreignColumns: [featureProperty.featureId, featureProperty.propertyId],
+      name: 'featurePropertyI18n_featureProperty_fk'
+    })
   ]
 );
 
@@ -783,8 +815,8 @@ export const featurePropertyI18nRelations = relations(
   featurePropertyI18n,
   ({ one }) => ({
     featureProperty: one(featureProperty, {
-      fields: [featurePropertyI18n.featurePropertyId],
-      references: [featureProperty.id]
+      fields: [featurePropertyI18n.featureId, featurePropertyI18n.propertyId],
+      references: [featureProperty.featureId, featureProperty.propertyId]
     })
   })
 );
@@ -810,15 +842,17 @@ export const property = sqliteTable('property', {
   projectId: text('projectId')
     .notNull()
     .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  type: text('type', { enum: ['classifier', 'specifier', 'display'] })
+  type: text('type', { enum: Object.values(FieldDiscriminator) as [string, ...string[]] })
     .notNull()
-    .default('classifier'),
+    .default(FieldDiscriminator.classifier),
+  isTranslatable: integer('isTranslatable', { mode: 'boolean' }).notNull().default(true),
   key: text('key').notNull(),
+  rank: integer('rank').notNull().default(0),
   component: text('component', {
-    enum: ['SelectField', 'RangeField', 'InputField', 'TextareaField']
+    enum: Object.values(PropertyComponentType) as [string, ...string[]]
   })
     .notNull()
-    .default('SelectField'),
+    .default(PropertyComponentType.SelectField),
   min: integer('min'),
   max: integer('max'),
   createdAt: text('createdAt')
@@ -915,8 +949,8 @@ export const propertyValueI18n = sqliteTable(
       .references(() => propertyValue.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     locale: text('locale', { enum: supportedLocales }).notNull(),
     // Value in {locale}
-    value: text('value'),
-    valueGen: integer('valueGen', { mode: 'boolean' })
+    value: text('value').notNull(),
+    valueGen: integer('valueGen', { mode: 'boolean' }).notNull().default(false)
   },
   (table) => [
     primaryKey({ columns: [table.propertyValueId, table.locale] })
@@ -987,12 +1021,12 @@ export const image = sqliteTable('image', {
     onUpdate: 'cascade'
   }),
   // CDN
-  cdn: text('cdn', { enum: ['cloudinary'] })
-    .default('cloudinary')
+  cdn: text('cdn', { enum: Object.values(ImageCDN) as [string, ...string[]] })
+    .default(ImageCDN.cloudinary)
     .notNull(),
   // Cloudinary Cloud Name
-  env: text('env', { enum: ['dg6vtsga1'] })
-    .default('dg6vtsga1')
+  env: text('env', { enum: Object.values(ImageEnv) as [string, ...string[]] })
+    .default(ImageEnv.dg6vtsga1)
     .notNull(),
   // Cloudinary Asset ID
   cdnId: text('cdnId'),
@@ -1059,14 +1093,12 @@ export const featureImage = sqliteTable(
       .notNull()
       .references(() => image.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     intent: text('intent', {
-      enum: ['canonical', 'closeUp', 'context', 'general', 'evidence', 'undefined']
+      enum: Object.values(ImageIntent) as [string, ...string[]]
     })
-      .default('undefined')
+      .default(ImageIntent.undefined)
       .notNull(),
     isPublished: integer('isPublished', { mode: 'boolean' }).default(false).notNull(),
-    publishedAt: text('publishedAt').default(
-      sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`
-    )
+    publishedAt: text('publishedAt')
   },
   (table) => [
     primaryKey({ columns: [table.featureId, table.imageId] }),
@@ -1209,20 +1241,12 @@ export const task = sqliteTable('task', {
     .notNull()
     .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
   reviewerId: text('reviewerId').references(() => user.id, { onDelete: 'set null' }),
-  type: text('type', { enum: ['reportedMissing', 'newPhoto', 'newFeature'] }).notNull(),
+  type: text('type', { enum: Object.values(TaskType) as [string, ...string[]] }).notNull(),
   message: text('message'),
   isReviewed: integer('isReviewed', { mode: 'boolean' }).default(false).notNull(),
-  reviewOutcome: text('reviewOutcome', { enum: ['rejected', 'accepted'] }),
+  reviewOutcome: text('reviewOutcome', { enum: Object.values(TaskReviewOutcome) as [string, ...string[]] }),
   reviewAction: text('reviewAction', {
-    enum: [
-      'ignored',
-      'set-unpublished',
-      'set-intangible',
-      'set-archived',
-      'added-all-photos',
-      'added-all-photos-with-intent',
-      'added-feature'
-    ]
+    enum: Object.values(TaskReviewAction) as [string, ...string[]]
   }),
   reviewReason: text('reviewReason'),
   createdAt: text('createdAt')

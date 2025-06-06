@@ -6,21 +6,23 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { MagnifyingGlass, GlobeAsiaAustralia } from '@steeze-ui/heroicons';
 // TYPES
 import type { FeatureForm } from '$lib/types';
+import type { Point } from 'geojson';
 
+type AddressActionsProps = {
+  form: FeatureForm;
+  actions: Record<string, (...args: any[]) => Promise<void>>;
+};
 // STATE : PROPS
-let {
-  actions,
-  ...actionProps
-}: { form: FeatureForm; actions: Record<string, (...args: any[]) => void> } = $props();
+let { actions, form }: AddressActionsProps = $props();
 
 // STATE : CONTEXT :: FORM
-let { form } = actionProps.form;
+let featureForm: FeatureForm['form'] = $derived(form.form);
 
 // STATE : UI
 let isGeocoding = $state(false);
 
 // STATE : DERIVED :: GEOMETRY
-let [lng, lat] = $derived($form.geometry.coordinates);
+let [lng, lat] = $derived(($featureForm.geometry as Point).coordinates);
 
 // Wrap the geocode action to handle loading state
 async function handleGeocode(e: Event) {

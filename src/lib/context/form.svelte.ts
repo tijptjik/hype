@@ -1,3 +1,5 @@
+// MESSAGES
+import { m } from '$lib/i18n';
 // SVELTE
 import { getContext, setContext } from 'svelte';
 // ZOD
@@ -21,21 +23,26 @@ import {
   FeatureUpdateAPI
 } from '$lib/db/zod';
 // ENUMS
-import { HierarchicalResource } from '$lib/types';
+import { HierarchicalResource } from '$lib/enums';
 // TYPES
 import type { Writable } from 'svelte/store';
 import type { ActionResult } from '@sveltejs/kit';
-import type { ResourceState } from './resources.svelte';
+import type { ResourceState } from './resource.svelte';
 import type { SuperValidated } from 'sveltekit-superforms/client';
 import type {
-  Organisation,
+  OrganisationNew,
   Project,
   Layer,
   Feature,
   ResourceType,
   FalsableResourceType,
   Ref,
-  SuperFormResult
+  SuperFormResult,
+  Id,
+  Code,
+  ProjectNew,
+  Organisation,
+  Form
 } from '$lib/types';
 
 class BaseForm<T extends Record<string, unknown>> {
@@ -57,6 +64,7 @@ class BaseForm<T extends Record<string, unknown>> {
   ) {
     this.resourceState = resourceState;
     this.resourceType = resourceType;
+    
     const formOptions = {
       dataType: 'json',
       SPA: true,
@@ -66,8 +74,24 @@ class BaseForm<T extends Record<string, unknown>> {
       onSubmit: this.handleSubmit.bind(this)
     };
     const schema = zod(isNew ? insertSchema : updateSchema);
+    
+    // // Check if we have nested data that defaults() might strip out
+    // const hasNestedProperties = (form.data as any).properties?.some?.((prop: any) => prop.property);
+    
+    // let formData;
+    // if (hasNestedProperties) {
+    //   // Skip defaults() if we have nested property data to preserve it
+    //   formData = form.data;
+    // } else {
+    //   // Apply defaults for new forms or forms without nested data
+    //   formData = defaults(form.data, schema);
+    // }
+    
     // @ts-ignore
     this.formResult = superForm(defaults(form.data, schema), formOptions);
+
+    // this.formResult = superForm(formData, formOptions);
+    
     this.flash = flash;
   }
 
@@ -128,32 +152,41 @@ class BaseForm<T extends Record<string, unknown>> {
         this.#getFetchConfig(action)
       );
       const result = deserialize(await response.text()) as ActionResult;
+
+      // Determine if this is a create or update operation
+      const isCreateOperation = action.pathname.endsWith('/new');
+
       if (result.type === 'redirect') {
-        // Invalidate cache for the resource type; refresh resources
-        this.resourceState.invalidateAndRefresh(
+        // Wait for cache invalidation to complete before navigating
+        await this.resourceState.invalidateAndRefresh(
           this.resourceType as HierarchicalResource
         );
-        // TODO Replace with method that invalidates the user session and refetches
-        // the userRoles -- as currently the userRoles are not updated on the client
-        // side when the user is redirected to the new resource / index of resources
-        // causing it to not show up / still show up.
+
+        // Refresh session to update user roles for the new resource
+        await this.refreshSession();
 
         const url = new URL(window.location.href);
         url.pathname = result.location;
         url.searchParams.delete('parentId');
         url.searchParams.delete('parentRef');
-        goto(url.toString());
+
+        const flashMessage = isCreateOperation ? m.gaudy_heavy_puma_adore() : m.tidy_game_jellyfish_pop();
         this.flash.set({
           type: 'success',
-          message: 'Created successfully',
+          message: flashMessage,
           options: { clearOnNavigate: false, clearAfterMs: 5000 }
         });
+
+        this.resourceState.setEntity(result.location.split('/').pop() as Id | Code);
+
+        await goto(url.toString());
       } else if (result.type === 'success') {
-        this.flash.set({ type: 'success', message: 'Updated successfully' });
+        this.flash.set({ type: 'success', message: m.tidy_game_jellyfish_pop() });
         // Invalidate cache for the resource type; refresh resources
         this.resourceState.invalidateAndRefresh(
           this.resourceType as HierarchicalResource
         );
+        
         this.reset({
           data: result.data?.data,
           newState: result.data?.data
@@ -161,12 +194,12 @@ class BaseForm<T extends Record<string, unknown>> {
       } else {
         // FAILURE / ERROR
         if (result.type === 'failure') {
-          this.flash.set({ type: 'error', message: 'Submission failed' });
-          console.log('failure', result.data?.errors);
+          this.flash.set({ type: 'error', message: m.long_crazy_peacock_care() });
+          console.error('[FORM CONTEXT]', result.data?.errors);
           // this.form.set(result.data?.data);
           this.errors.set(result.data?.errors);
         } else {
-          this.flash.set({ type: 'error', message: 'Unexpected error' });
+          this.flash.set({ type: 'error', message: m.round_pretty_lark_drip() });
         }
         cancel();
       }
@@ -204,6 +237,20 @@ class BaseForm<T extends Record<string, unknown>> {
 
   clearAllClientErrors() {
     this.clientErrors = {};
+  }
+
+  // Refresh session to update user roles after creating new resources
+  async refreshSession() {
+    try {
+      // First refresh the resource data
+      await this.resourceState.invalidateAndRefresh(
+        this.resourceType as HierarchicalResource
+      );
+      // Then refresh user roles from the database
+      await this.resourceState.refreshUserRoles();
+    } catch (error) {
+      console.warn('Failed to refresh user roles:', error);
+    }
   }
 }
 
@@ -289,50 +336,117 @@ export const getContextRef = (resourceType: ResourceType, entity: Ref) => {
     : `form-${resourceType}-${entity}`;
 };
 
-export function setForm<T extends Organisation | Project | Layer | Feature>(
+export function setForm(
+  resourceType: 'organisation',
+  entity: Ref,
+  form: SuperValidated<OrganisationNew | Organisation>,
+  resourceState: ResourceState,
+  flash: Writable<App.PageData['flash']>
+): OrganisationForm;
+
+export function setForm(
+  resourceType: 'project',
+  entity: Ref,
+  form: SuperValidated<ProjectNew | Project>,
+  resourceState: ResourceState,
+  flash: Writable<App.PageData['flash']>
+): ProjectForm;
+
+export function setForm(
+  resourceType: 'layer',
+  entity: Ref,
+  form: SuperValidated<Layer>,
+  resourceState: ResourceState,
+  flash: Writable<App.PageData['flash']>
+): LayerForm;
+
+export function setForm(
+  resourceType: 'feature',
+  entity: Ref,
+  form: SuperValidated<Feature>,
+  resourceState: ResourceState,
+  flash: Writable<App.PageData['flash']>
+): FeatureForm;
+
+export function setForm<T extends OrganisationNew | Project | Layer | Feature>(
   resourceType: FalsableResourceType,
   entity: Ref,
   form: SuperValidated<T>,
   resourceState: ResourceState,
   flash: Writable<App.PageData['flash']>
-): SuperFormResult<T> {
+): OrganisationForm | ProjectForm | LayerForm | FeatureForm {
   if (!entity) {
     console.trace();
     throw new Error('Entity is required');
   }
-  let FormClass;
+  
   switch (resourceType) {
-    case 'organisation':
-      FormClass = OrganisationForm;
-      break;
-    case 'project':
-      FormClass = ProjectForm;
-      break;
-    case 'layer':
-      FormClass = LayerForm;
-      break;
-    case 'feature':
-      FormClass = FeatureForm;
-      break;
+    case 'organisation': {
+      const instance = new OrganisationForm(
+        form as SuperValidated<Organisation>, 
+        entity === NEW_REF, 
+        resourceState, 
+        flash
+      );
+      return setContext(getContextRef(resourceType, entity), instance);
+    }
+    case 'project': {
+      const instance = new ProjectForm(
+        form as SuperValidated<Project>, 
+        entity === NEW_REF, 
+        resourceState, 
+        flash
+      );
+      return setContext(getContextRef(resourceType, entity), instance);
+    }
+    case 'layer': {
+      const instance = new LayerForm(
+        form as SuperValidated<Layer>, 
+        entity === NEW_REF, 
+        resourceState, 
+        flash
+      );
+      return setContext(getContextRef(resourceType, entity), instance);
+    }
+    case 'feature': {
+      const instance = new FeatureForm(
+        form as SuperValidated<Feature>, 
+        entity === NEW_REF, 
+        resourceState, 
+        flash
+      );
+      return setContext(getContextRef(resourceType, entity), instance);
+    }
     default:
       throw new Error(`Unknown resource type: ${resourceType}`);
   }
-
-  // Use type assertion to handle the form type compatibility
-  // @ts-ignore
-  const instance = new FormClass(form, entity === NEW_REF, resourceState, flash);
-
-  // Cast the instance to the expected return type
-  // @ts-ignore
-  return setContext(
-    getContextRef(resourceType, entity),
-    instance
-  ) as SuperFormResult<T>;
 }
 
-export function getForm<T extends Organisation | Project | Layer | Feature>(
+export function getForm(
+  resource: 'organisation',
+  entity: Ref
+): OrganisationForm;
+
+export function getForm(
+  resource: 'project',
+  entity: Ref
+): ProjectForm;
+
+export function getForm(
+  resource: 'layer',
+  entity: Ref
+): LayerForm;
+
+export function getForm(
+  resource: 'feature',
+  entity: Ref
+): FeatureForm;
+
+export function getForm<T extends OrganisationNew | Project | Layer | Feature>(
   resource: ResourceType,
   entity: Ref
-): SuperFormResult<T> {
-  return getContext<SuperFormResult<T>>(getContextRef(resource, entity));
+): OrganisationForm | ProjectForm | LayerForm | FeatureForm {
+  return getContext<OrganisationForm | ProjectForm | LayerForm | FeatureForm>(
+    getContextRef(resource, entity)
+  );
 }

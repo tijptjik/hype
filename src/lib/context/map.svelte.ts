@@ -5,12 +5,22 @@ import { QueryClient } from '@tanstack/svelte-query';
 import { goto } from '$app/navigation';
 // GEO
 import { bbox } from '@turf/bbox';
+// I18N
+import { getFPI18n, getFallbackLocales, getLocale, setLocale, getI18n } from '$lib/i18n';
+// SERVICES
+import {
+  debouncedUpdateUserAttribution,
+  debouncedUpdateUserExperimental,
+  debouncedUpdateUserLayers,
+  debouncedUpdateUserPreferences,
+  updateLocale
+} from '$lib/client/services/user';
 // CONTEXT
 import { getContext, setContext } from 'svelte';
 // MARKERS
 import { removeMarkerClass, addMarkerClass } from '$lib/map/markers';
 // ENUMS
-import { HierarchicalResource, HierarchicalResourcePath } from '$lib/types';
+import { HierarchicalResource, HierarchicalResourcePath } from '$lib/enums';
 // TYPES
 import type {
   Feature,
@@ -19,29 +29,41 @@ import type {
   Organisation,
   Id,
   UserFeature,
-  mapContextState,
+  MapContextState,
   PanelState,
   ActiveCollection,
   Property,
-  NewFeature,
-  UserContributedFeature
+  UserContributedFeature,
+  Session,
+  UserLayer,
+  FeatureExtended,
+  CurrentUser,
+  SessionUser,
+  UserPreferences,
+  UserRoleDisco,
+  Locale,
+  UserExperimental,
+  DeepPartial,
+  NewFeatureTask,
+  FeatureProperty,
+  FeaturePropertyI18nDB
 } from '$lib/types';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
-import { MOBILE_MAX_WIDTH } from '$lib';
+import { MOBILE_MAX_WIDTH } from '$lib/index';
 
-export class MapContext {
+export class MapCtx {
   // Maplibre Map instance
-  map: MaplibreMap | undefined = $state();
+  map: MaplibreMap = $state()!;
   // Tanstack Query Client instance
   queryClient: QueryClient;
-  // User ID
-  userId: string | null;
+  // User data (reactive)
+  user: SessionUser = $state()!;
   // Whether the map has been initialised
   isInitialised: boolean = $state(false);
 
   // State
-  state: mapContextState = $state({
+  state: MapContextState = $state({
     // Markers -- Which features are shown on the map
     markers: new Map(),
     // Active -- Which feature or collection is in focus on the map
@@ -80,7 +102,7 @@ export class MapContext {
   });
 
   // New Feature -- The new feature to be created
-  newFeature: UserContributedFeature | null = $state(null);
+  newFeature: DeepPartial<NewFeatureTask> | null = $state(null);
 
   // Silly state to track if the map has been zoomed to a marker
   zoomToMarkerOnly: boolean = $state(false);
@@ -102,23 +124,28 @@ export class MapContext {
   userFeaturesQueryKey = ['userFeatures'];
 
   // Constructor
-  constructor(queryClient: QueryClient, userId: string, userLayers: string[]) {
+  constructor(queryClient: QueryClient, user: CurrentUser) {
     this.queryClient = queryClient;
-    if (userId !== '') {
-      this.userId = userId;
-      this.state.prisms.layer = userLayers || [];
+    if (user && user.id) {
+      const defaultLayers =
+        user?.userLayers?.map((layer: UserLayer) => layer.layerId) ?? [];
+      this.state.prisms.layer = defaultLayers;
+      this.setUser(user);
     } else {
-      this.userId = null;
+      this.resetUser();
     }
   }
 
-  async init() {
+  init = async () => {
     await this.initializeQueries(this.queryClient);
     this.postLayerMutation();
-  }
+  };
 
   // Helper method to build API URLs with filters
-  private buildApiUrl(resource: HierarchicalResource, includeFilters = true): string {
+  private buildApiUrl = (
+    resource: HierarchicalResource,
+    includeFilters = true
+  ): string => {
     const path = HierarchicalResourcePath[resource];
     const params = new URLSearchParams();
 
@@ -151,13 +178,13 @@ export class MapContext {
     }
 
     return `/api/${path}?${params.toString()}`;
-  }
+  };
 
-  private async fetchOrThrow<T>(url: string): Promise<T> {
+  private fetchOrThrow = async <T>(url: string): Promise<T> => {
     const response = await fetch(url);
     if (!response.ok) throw new Error('Network response was not ok');
     return (await response.json()) as T;
-  }
+  };
 
   organisationsQueryFn = async () => {
     const url = this.buildApiUrl(HierarchicalResource.organisation);
@@ -180,12 +207,14 @@ export class MapContext {
   };
 
   userFeaturesQueryFn = async () => {
-    const response = await fetch(`/api/userFeatures?userId=${this.userId}`);
+    const response = await fetch(`/api/userFeatures?userId=${this.user.id}`);
     if (!response.ok) throw new Error('Network response was not ok');
-    return await response.json();
+    const data = await response.json();
+    // Ensure we always return an array, even if API returns null/undefined
+    return Array.isArray(data) ? data : [];
   };
 
-  async invalidateAndRefresh(resource: HierarchicalResource | 'userFeatures') {
+  invalidateAndRefresh = async (resource: HierarchicalResource | 'userFeatures') => {
     // Invalidate the query
     this.queryClient.invalidateQueries({
       queryKey:
@@ -206,9 +235,9 @@ export class MapContext {
     } else if (resource === 'userFeatures') {
       this.refreshUserFeatures();
     }
-  }
+  };
 
-  private async initializeQueries(queryClient: QueryClient) {
+  private initializeQueries = async (queryClient: QueryClient) => {
     // Organizations query
     this.state.resources.organisation = await queryClient.fetchQuery({
       queryKey: this.organisationsQueryKey,
@@ -240,15 +269,15 @@ export class MapContext {
         queryFn: this.userFeaturesQueryFn
       })
       .then((uf) => ({
-        wishlisted: uf.filter((f: UserFeature) => f.isWishlisted),
-        visited: uf.filter((f: UserFeature) => f.isVisited)
+        wishlisted: (uf || []).filter((f: UserFeature) => f.isWishlisted),
+        visited: (uf || []).filter((f: UserFeature) => f.isVisited)
       }));
 
     this.isInitialised = true;
-  }
+  };
 
   // Toggle methods for hierarchical filters
-  toggleOrganisation(id: Id) {
+  toggleOrganisation = (id: Id) => {
     const orgs = this.state.prisms.organisation;
     const index = orgs.indexOf(id);
     if (index === -1) {
@@ -257,9 +286,14 @@ export class MapContext {
       orgs.splice(index, 1);
     }
     this.refreshProjects();
-  }
+  };
 
-  toggleProject(id: Id) {
+  resetOrganisations = () => {
+    this.state.prisms.organisation = [];
+    this.refreshProjects();
+  };
+
+  toggleProject = (id: Id) => {
     const projs = this.state.prisms.project;
     const index = projs.indexOf(id);
     if (index === -1) {
@@ -268,10 +302,15 @@ export class MapContext {
       projs.splice(index, 1);
     }
     this.refreshLayers();
-  }
+  };
+
+  resetProjects = () => {
+    this.state.prisms.project = [];
+    this.refreshLayers();
+  };
 
   // TODO : Clear the Omnibar when a layer is toggled
-  toggleLayer(id: Id) {
+  toggleLayer = (id: Id) => {
     const layers = this.state.prisms.layer;
     const index = layers.indexOf(id);
     if (index === -1) {
@@ -279,24 +318,29 @@ export class MapContext {
     } else {
       this.removeLayer(id);
     }
-  }
+  };
 
-  addLayer(id: Id) {
+  addLayer = (id: Id) => {
     this.state.prisms.layer.push(id);
     this.postLayerMutation();
-  }
+  };
 
-  removeLayer(id: Id) {
+  removeLayer = (id: Id) => {
     this.state.prisms.layer = this.state.prisms.layer.filter((l) => l !== id);
     this.postLayerMutation();
-  }
+  };
 
-  setLayers(layers: Id[]) {
+  setLayers = (layers: Id[]) => {
     this.state.prisms.layer = layers;
     this.postLayerMutation();
-  }
+  };
 
-  initialiseCategoricalPropertyFilters(layerId: Id) {
+  resetLayers = () => {
+    this.state.prisms.layer = [];
+    this.postLayerMutation();
+  };
+
+  initialiseCategoricalPropertyFilters = (layerId: Id) => {
     const layer = this.state.resources.layer.find((l) => l.id === layerId);
     if (!layer) {
       return;
@@ -336,9 +380,9 @@ export class MapContext {
         layerFilters[property.key] = [];
       }
     });
-  }
+  };
 
-  initialiseRangePropertyFilter(layerId: Id) {
+  initialiseRangePropertyFilter = (layerId: Id) => {
     const layer = this.state.resources.layer.find((l) => l.id === layerId);
     if (!layer) {
       return;
@@ -377,22 +421,25 @@ export class MapContext {
       // Validate that min and max exist and are numbers
       const min = property.min;
       const max = property.max;
+
       if (
         !(property.key in layerFilters) &&
         typeof min === 'number' &&
         typeof max === 'number'
       ) {
-        layerFilters[property.key] = {
+        const filterConfig = {
           globalMin: min,
           globalMax: max,
           rangeMin: min, // Default rangeMin to globalMin
           rangeMax: max // Default rangeMax to globalMax
         };
+
+        layerFilters[property.key] = filterConfig;
       }
     });
-  }
+  };
 
-  postLayerMutation() {
+  postLayerMutation = () => {
     const currentLayerIds = new Set(this.state.prisms.layer);
     const existingFilterLayerIds = new Set(
       Object.keys(this.state.filters.properties || {})
@@ -415,18 +462,18 @@ export class MapContext {
     });
 
     this.refreshFeatures();
-  }
+  };
 
-  async refreshProjects() {
+  refreshProjects = async () => {
     this.state.resources.project = await this.queryClient.fetchQuery({
       queryKey: this.projectsQueryKey,
       queryFn: this.projectsQueryFn
     });
     this.syncProjectPrisms();
     this.refreshLayers();
-  }
+  };
 
-  async refreshLayers() {
+  refreshLayers = async () => {
     this.state.resources.layer = await this.queryClient.fetchQuery({
       queryKey: this.layersQueryKey,
       queryFn: this.layersQueryFn
@@ -434,53 +481,53 @@ export class MapContext {
     this.syncLayerPrisms();
     this.postLayerMutation();
     this.refreshFeatures();
-  }
+  };
 
-  async refreshFeatures() {
+  refreshFeatures = async () => {
     this.state.resources.feature = await this.queryClient.fetchQuery({
       queryKey: this.featuresQueryKey,
       queryFn: this.featuresQueryFn
     });
-  }
+  };
 
-  async refreshUserFeatures() {
+  refreshUserFeatures = async () => {
     this.state.userFeatures = await this.queryClient
       .fetchQuery({
         queryKey: this.userFeaturesQueryKey,
         queryFn: this.userFeaturesQueryFn
       })
       .then((uf) => ({
-        wishlisted: uf.filter((f: UserFeature) => f.isWishlisted),
-        visited: uf.filter((f: UserFeature) => f.isVisited)
+        wishlisted: (uf || []).filter((f: UserFeature) => f.isWishlisted),
+        visited: (uf || []).filter((f: UserFeature) => f.isVisited)
       }));
-  }
+  };
 
-  async syncProjectPrisms() {
+  syncProjectPrisms = async () => {
     this.state.prisms.project = this.state.prisms.project.filter((project) => {
       return this.state.resources.project.some((p) => p.id === project);
     });
-  }
+  };
 
-  async syncLayerPrisms() {
+  syncLayerPrisms = async () => {
     this.state.prisms.layer = this.state.prisms.layer.filter((layer) => {
       return this.state.resources.layer.some((l) => l.id === layer);
     });
-  }
+  };
 
   // FILTERS
 
   // FILTERS - NEIGHBOURHOODS
 
-  toggleNeighbourhood(name: string) {
+  toggleNeighbourhood = (name: string) => {
     const current = this.state.filters.neighbourhoods;
     this.state.filters.neighbourhoods = current.includes(name)
       ? current.filter((n) => n !== name).sort()
       : [...current, name].sort();
-  }
+  };
 
-  clearNeighbourhoods() {
+  resetNeighbourhoods = () => {
     this.state.filters.neighbourhoods = [];
-  }
+  };
 
   // getNeighbourhoodParams(): URLSearchParams {
   //   const params = new URLSearchParams();
@@ -492,7 +539,7 @@ export class MapContext {
 
   // FILTERS - GENERIC
 
-  getFilterCount(): { neighbourhoods: number; properties: number } {
+  getFilterCount = (): { neighbourhoods: number; properties: number } => {
     return {
       neighbourhoods: this.state.filters.neighbourhoods.length,
       properties: Object.entries(this.state.filters.properties || {}).reduce(
@@ -520,15 +567,15 @@ export class MapContext {
         0
       )
     };
-  }
+  };
 
-  resetFilters() {
+  resetFilters = () => {
     this.state.filters = { neighbourhoods: [], properties: {} };
     this.state.prisms.layer.forEach((layerId) => {
       this.initialiseCategoricalPropertyFilters(layerId);
       this.initialiseRangePropertyFilter(layerId);
     });
-  }
+  };
 
   // PRISM RELATIONS
 
@@ -544,11 +591,45 @@ export class MapContext {
   getProjectById = (id: Id): Project | undefined =>
     this.state.resources.project.find((proj) => proj.id === id);
 
-  getLayer = (feature: Feature | UserContributedFeature): Layer | undefined =>
+  getLayer = (feature: Feature | FeatureExtended): Layer | undefined =>
     this.getLayerById(feature.layerId);
 
   getLayerById = (id: Id): Layer | undefined =>
     this.state.resources.layer.find((layer) => layer.id === id);
+
+  // COUNT METHODS
+  getOrganisationProjectCount = (organisationId: Id): number =>
+    this.state.resources.project.filter((p) => p.organisationId === organisationId).length;
+
+  getProjectLayerCount = (projectId: Id): number =>
+    this.state.resources.layer.filter((l) => l.projectId === projectId).length;
+
+  // CONTEXTUAL NAME METHODS
+  getContextualOrganisationName = (organisation: Organisation, hideIfOnly: boolean = true): string | null => {
+    const projectCount = this.getOrganisationProjectCount(organisation.id);
+    if (hideIfOnly && projectCount === 1) {
+      return null;
+    }
+    return getI18n(organisation, 'nameShort', this.getUserPreferences());
+  };
+
+  getContextualProjectName = (project: Project, hideIfOnly: boolean = true): string | null => {
+    const organisationProjectCount = this.getOrganisationProjectCount(project.organisationId);
+    if (hideIfOnly && organisationProjectCount === 1) {
+      return null;
+    }
+    return getI18n(project, 'nameShort', this.getUserPreferences()) || 
+           getI18n(project, 'name', this.getUserPreferences());
+  };
+
+  getContextualLayerName = (layer: Layer, hideIfOnly: boolean = true): string | null => {
+    const projectLayerCount = this.getProjectLayerCount(layer.projectId);
+    if (hideIfOnly && projectLayerCount === 1) {
+      return null;
+    }
+    return getI18n(layer, 'nameShort', this.getUserPreferences()) || 
+           getI18n(layer, 'name', this.getUserPreferences());
+  };
 
   // FEATURE COLLECTIONS
 
@@ -599,7 +680,7 @@ export class MapContext {
 
             // Get the feature's property object
             const featureProperty = f.properties.find(
-              (p) => p.property.key === propertyKey
+              (p) => p.property?.key === propertyKey
             );
 
             // If the feature doesn't have this property defined, it cannot match the filter.
@@ -608,11 +689,23 @@ export class MapContext {
             }
 
             // Use the propertyValue if available (typically for linked values), otherwise fallback to the direct value
-            const featureValue =
-              featureProperty.propertyValue?.value ?? featureProperty.value;
+            const featureValue = getFPI18n(featureProperty, this.getUserPreferences());
+
+            // Let's also try getting the raw value without i18n
+            const rawValue = featureProperty.value;
 
             // If the feature has the property but the value is null/undefined, it also cannot match.
             if (featureValue === undefined || featureValue === null) {
+              return false;
+            }
+
+            // Special handling for "Unset" values - they should not match range filters
+            if (
+              featureValue === 'Unset' ||
+              featureValue === '' ||
+              rawValue === null ||
+              rawValue === undefined
+            ) {
               return false;
             }
 
@@ -640,6 +733,7 @@ export class MapContext {
             return match;
           }
         );
+
         return allFiltersMatch;
       })
       .map((f) => f.id);
@@ -658,27 +752,27 @@ export class MapContext {
 
   // Features (for Active Layers) that are on the user's wishlist
   getWishlistedFeatureIds = (): Id[] => {
-    return this.state.userFeatures.wishlisted.map((wl) => wl.featureId);
+    return this.state.userFeatures?.wishlisted?.map((wl) => wl.featureId!) || [];
   };
 
   // Features (for Active Layers) that the user has visited
   getVisitedFeatureIds = (): Id[] => {
-    return this.state.userFeatures.visited.map((wl) => wl.featureId);
+    return this.state.userFeatures?.visited?.map((wl) => wl.featureId!) || [];
   };
 
   getWishlistUserFeatures = (): UserFeature[] => {
-    return this.state.userFeatures.wishlisted || [];
+    return this.state.userFeatures?.wishlisted || [];
   };
 
   getVisitedUserFeatures = (): UserFeature[] => {
-    return this.state.userFeatures.visited || [];
+    return this.state.userFeatures?.visited || [];
   };
 
   // Features Collection -- Subsets
 
-  getActiveCollection = (): ActiveCollection | null => this.state.active.collection;
+  getActiveCollection = (): ActiveCollection => this.state.active.collection;
 
-  setActiveCollection(
+  setActiveCollection = (
     collection: ActiveCollection,
     options: {
       highlight: boolean;
@@ -693,7 +787,7 @@ export class MapContext {
       focusFirst: false,
       openCard: false
     }
-  ) {
+  ) => {
     this.state.active.collection = collection;
     if (options.highlight) {
       this.highlightActiveCollection({ focus: options.focus });
@@ -705,17 +799,17 @@ export class MapContext {
         });
       }
     }
-  }
+  };
 
   getActiveFeature = (): Feature | null => this.state.active.feature;
 
-  setActiveFeature(
+  setActiveFeature = (
     featureId: Id,
     options: { focus: boolean; isCardOpen?: boolean | null } = {
       focus: false,
       isCardOpen: null
     }
-  ) {
+  ) => {
     // Remove active state from previous feature
     if (this.state.active.feature) {
       removeMarkerClass(this, this.state.active.feature.id);
@@ -731,9 +825,9 @@ export class MapContext {
         goto(`/features/${featureId}`);
       }
     }
-  }
+  };
 
-  highlightActiveCollection(options: { focus: boolean } = { focus: false }) {
+  highlightActiveCollection = (options: { focus: boolean } = { focus: false }) => {
     // Remove "highlighted" class from all features
     this.unhighlightAllFeatures();
     // Add "highlighted" class to all features in the active collection
@@ -746,16 +840,16 @@ export class MapContext {
     if (options.focus) {
       this.zoomToActiveCollection();
     }
-  }
+  };
 
-  unhighlightAllFeatures() {
+  unhighlightAllFeatures = () => {
     // Remove "highlighted" class from all features
     this.state.resources.feature.forEach((f) => {
       removeMarkerClass(this, f.id, 'highlighted');
     });
-  }
+  };
 
-  resetActiveCollection() {
+  resetActiveCollection = () => {
     // Remove "highlighted" class from all features
     this.unhighlightAllFeatures();
     // Reset active collection
@@ -765,11 +859,11 @@ export class MapContext {
       removeMarkerClass(this, this.state.active.feature.id);
     // Reset active feature
     this.state.active.feature = null;
-  }
+  };
 
   // NAVIGATION METHODS
 
-  navNext(options: { isCardOpen: boolean } = { isCardOpen: true }) {
+  navNext = (options: { isCardOpen: boolean } = { isCardOpen: true }) => {
     let navIndex =
       this.state.active.collection?.items.findIndex(
         (item) => item.id === this.state.active.feature?.id
@@ -783,9 +877,9 @@ export class MapContext {
         }
       );
     }
-  }
+  };
 
-  navPrevious(options: { isCardOpen: boolean } = { isCardOpen: true }) {
+  navPrevious = (options: { isCardOpen: boolean } = { isCardOpen: true }) => {
     let navIndex =
       this.state.active.collection?.items.findIndex(
         (item) => item.id === this.state.active.feature?.id
@@ -799,31 +893,34 @@ export class MapContext {
         }
       );
     }
-  }
+  };
 
-  navToIndex(index: number, options: { isCardOpen: boolean } = { isCardOpen: true }) {
+  navToIndex = (
+    index: number,
+    options: { isCardOpen: boolean } = { isCardOpen: true }
+  ) => {
     if (index > 0) {
       this.setActiveFeature(this.state.active.collection?.items[index]?.id as Id, {
         ...options,
         focus: true
       });
     }
-  }
+  };
 
   // MAP OPERATIONS -- REBOUNDING
 
-  zoomToActiveCollection() {
+  zoomToActiveCollection = () => {
     const features = this.getActiveCollection()?.items || [];
     this.zoomToFeatures(features);
-  }
+  };
 
-  zoomToActiveFeature() {
+  zoomToActiveFeature = () => {
     const feature = this.getActiveFeature();
     if (!feature) return;
     this.zoomToFeatures([feature]);
-  }
+  };
 
-  zoomToFeatures(features?: Feature[]) {
+  zoomToFeatures = (features?: Feature[]) => {
     if (!this.map) return;
 
     // Use provided features or current state features
@@ -875,9 +972,9 @@ export class MapContext {
     } catch (error) {
       console.error('Error zooming to features:', error);
     }
-  }
+  };
 
-  zoomToCoordinates(coordinates: [number, number][]) {
+  zoomToCoordinates = (coordinates: [number, number][]) => {
     if (!this.map) return;
 
     // Create a FeatureCollection
@@ -914,17 +1011,21 @@ export class MapContext {
         run: true
       }
     );
-  }
+  };
+
   // FILTER Utils
 
-  expandToSubNeighbourhoods(neighbourhoodKey: string) {
+  expandToSubNeighbourhoods = (neighbourhoodKey: string) => {
     let neighbourhoodFeatures = [];
     if (neighbourhoodKey in subNeighbourhoods) {
       subNeighbourhoods[neighbourhoodKey as keyof typeof subNeighbourhoods].forEach(
         (n) => {
           neighbourhoodFeatures.push(
             ...this.state.resources.feature.filter(
-              (feature) => n === feature.addressProperties?.neighbourhood
+              (feature) =>
+                n ===
+                (feature as FeatureExtended).i18n?.[getLocale()]?.addressProperties
+                  ?.neighbourhood
             )
           );
         }
@@ -932,12 +1033,56 @@ export class MapContext {
     } else {
       neighbourhoodFeatures.push(
         ...this.state.resources.feature.filter(
-          (feature) => neighbourhoodKey === feature.addressProperties?.neighbourhood
+          (feature) =>
+            neighbourhoodKey ===
+            (feature as FeatureExtended).i18n?.[getLocale()]?.addressProperties
+              ?.neighbourhood
         )
       );
     }
     return neighbourhoodFeatures;
-  }
+  };
+
+  startCircularFlight = (center: [number, number], radiusKm: number = 5) => {
+    if (!this.map) return;
+
+    const STEPS = 360; // One step per degree
+    const STEP_DURATION = 500; // milliseconds per step
+    let currentAngle = 0;
+
+    const animate = () => {
+      // Convert angle to radians
+      const angleRad = (currentAngle * Math.PI) / 180;
+
+      // Calculate new position
+      const newLng = center[0] + (radiusKm / 111.32) * Math.cos(angleRad);
+      const newLat =
+        center[1] +
+        (radiusKm / (111.32 * Math.cos((center[1] * Math.PI) / 180))) *
+          Math.sin(angleRad);
+
+      // @ts-ignore
+      this.map?.cachedFlyTo({
+        center: [newLng, newLat],
+        zoom: 13.5,
+        speed: 0.04,
+        curve: 1,
+        easing: (t: number) => t,
+        run: true // This will execute the animation
+      });
+
+      // Increment angle
+      currentAngle = (currentAngle + 1) % 360;
+
+      // Schedule next frame
+      setTimeout(() => {
+        requestAnimationFrame(animate);
+      }, STEP_DURATION);
+    };
+
+    // Start animation
+    animate();
+  };
 
   // FEATURE COLLECTIONS -- Features
 
@@ -1000,11 +1145,39 @@ export class MapContext {
       if (!this.state.filters.properties![layerId]) {
         this.state.filters.properties![layerId] = {};
       }
-      // Ensure the property object exists and merge values
+
+      // Get the existing range filter or find the property definition to get global min/max
       const existingRangeFilter =
         this.state.filters.properties![layerId]?.[propertyKey] || {};
+
+      // If globalMin/globalMax are missing, find them from the property definition
+      let globalMin = existingRangeFilter.globalMin;
+      let globalMax = existingRangeFilter.globalMax;
+
+      if (globalMin === undefined || globalMax === undefined) {
+        // Find the property definition to get the global min/max
+        const layer = this.state.resources.layer.find((l) => l.id === layerId);
+        if (layer) {
+          const project = this.state.resources.project.find(
+            (p) => p.id === layer.projectId
+          );
+          if (project) {
+            const property = project.properties?.find((p) => p.key === propertyKey);
+            if (
+              property &&
+              typeof property.min === 'number' &&
+              typeof property.max === 'number'
+            ) {
+              globalMin = property.min;
+              globalMax = property.max;
+            }
+          }
+        }
+      }
+
       this.state.filters.properties![layerId][propertyKey] = {
-        ...existingRangeFilter, // Preserve globalMin/globalMax
+        globalMin,
+        globalMax,
         rangeMin: values[0],
         rangeMax: values[1]
       };
@@ -1041,49 +1214,8 @@ export class MapContext {
     return this.expandToSubNeighbourhoods(neighbourhood);
   };
 
-  startCircularFlight(center: [number, number], radiusKm: number = 5) {
-    if (!this.map) return;
-
-    const STEPS = 360; // One step per degree
-    const STEP_DURATION = 500; // milliseconds per step
-    let currentAngle = 0;
-
-    const animate = () => {
-      // Convert angle to radians
-      const angleRad = (currentAngle * Math.PI) / 180;
-
-      // Calculate new position
-      const newLng = center[0] + (radiusKm / 111.32) * Math.cos(angleRad);
-      const newLat =
-        center[1] +
-        (radiusKm / (111.32 * Math.cos((center[1] * Math.PI) / 180))) *
-          Math.sin(angleRad);
-
-      // @ts-ignore
-      this.map?.cachedFlyTo({
-        center: [newLng, newLat],
-        zoom: 13.5,
-        speed: 0.04,
-        curve: 1,
-        easing: (t: number) => t,
-        run: true // This will execute the animation
-      });
-
-      // Increment angle
-      currentAngle = (currentAngle + 1) % 360;
-
-      // Schedule next frame
-      setTimeout(() => {
-        requestAnimationFrame(animate);
-      }, STEP_DURATION);
-    };
-
-    // Start animation
-    animate();
-  }
-
   // Panel methods
-  togglePanel(panel: keyof PanelState, closeAll: boolean = false) {
+  togglePanel = (panel: keyof PanelState, closeAll: boolean = false) => {
     const leftPanels = ['maps', 'stars'];
     const rightPanels = ['filters', 'settings'];
     const currentState = this.state.panels[panel];
@@ -1104,58 +1236,57 @@ export class MapContext {
         this.focusPanel(leftPanels.includes(panel) ? 'left' : 'right');
       }
     }
-  }
+  };
 
-  focusPanel(position: 'left' | 'right') {
+  focusPanel = (position: 'left' | 'right') => {
     let panelElement = null;
     setTimeout(() => {
       panelElement = document.getElementById(`${position}-panel`);
       const inputElement = panelElement?.querySelector('input');
-      console.log(panelElement, inputElement);
       if (inputElement) {
         inputElement.focus();
       } else {
         panelElement?.focus();
       }
     }, 250);
-  }
+  };
 
-  closeLeftPanel() {
+  closeLeftPanel = () => {
     this.state.panels.filters = false;
     this.state.panels.maps = false;
-  }
+  };
 
-  closeRightPanel() {
+  closeRightPanel = () => {
     this.state.panels.stars = false;
     this.state.panels.settings = false;
-  }
+  };
 
-  closeAllPanels() {
+  closeAllPanels = () => {
     Object.keys(this.state.panels).forEach((panel) => {
       this.state.panels[panel as keyof PanelState] = false;
     });
-  }
+  };
 
-  openPanel(panel: keyof PanelState) {
+  openPanel = (panel: keyof PanelState) => {
     this.state.panels[panel] = true;
-  }
+  };
 
-  closePanel(panel: keyof PanelState) {
+  closePanel = (panel: keyof PanelState) => {
     this.state.panels[panel] = false;
-  }
+  };
 
   // Refocus map on currently visible features
-  zoomToAllVisibleFeatures() {
+  zoomToAllVisibleFeatures = () => {
     const visibleFeatures = this.getVisibleFeatures();
     if (visibleFeatures.length > 0) {
       this.zoomToFeatures(visibleFeatures);
     }
-  }
+  };
 
   // KEYDOWN HANDLERS
-  registerKeydownHandlers() {
+  registerKeydownHandlers = () => {
     document.addEventListener('keydown', this.handleKeydown);
-  }
+  };
 
   handleKeydown = (event: KeyboardEvent) => {
     let keyMatched = false;
@@ -1182,29 +1313,273 @@ export class MapContext {
 
   // NEW FEATURE
 
-  setNewFeature = (feature: Partial<UserContributedFeature>) => {
-    this.newFeature = { ...this.newFeature, ...feature } as UserContributedFeature;
+  setNewFeature = (newFeature: DeepPartial<NewFeatureTask>) => {
+    // Initialize with proper locale structure for all required locales
+    if (newFeature.feature && !newFeature.feature.i18n) {
+      const requiredLocales = ['en', 'zh-hant', 'zh-hans'];
+      const currentLocale = getLocale();
+      
+      newFeature.feature.i18n = {};
+              requiredLocales.forEach(locale => {
+          newFeature.feature!.i18n![locale] = {
+            ...newFeature.feature!.i18n![locale],
+            locale: locale,
+            title: undefined,
+            description: undefined
+          } as any;
+        });
+    }
+    this.newFeature = newFeature;
   };
 
-  getNewFeature = (): UserContributedFeature | null => {
+  updateNewFeature = (newFeature: DeepPartial<NewFeatureTask>) => {
+    this.newFeature = { 
+      ...this.newFeature, 
+      ...newFeature,
+      feature: {
+        ...this.newFeature?.feature,
+        ...newFeature.feature
+      }
+    };
+  };
+
+  updateNewFeatureValue = (key: keyof NewFeatureTask['feature'], value: any) => {
+    this.newFeature = {
+      ...this.newFeature,
+      feature: { ...this.newFeature?.feature, [key]: value }
+    };
+  };
+
+  updateNewFeatureValueI18n = (
+    key: keyof NewFeatureTask['feature']['i18n'],
+    value: any,
+    locale: Locale = getLocale()
+  ) => {
+    this.newFeature = {
+      ...this.newFeature,
+      feature: {
+        ...this.newFeature?.feature,
+        i18n: { 
+          ...this.newFeature?.feature?.i18n, 
+          [locale]: { 
+            ...this.newFeature?.feature?.i18n?.[locale], 
+            [key]: value 
+          } 
+        } as any
+      }
+    };
+  };
+
+  updateNewFeatureProperty = (propertyId: Id, object: Partial<FeatureProperty>) => {
+    console.log('🟡 MapCtx: updateNewFeatureProperty called:', {
+      propertyId,
+      object,
+      currentNewFeature: this.newFeature
+    });
+    
+    if (!this.newFeature?.feature) {
+      console.log('🔴 MapCtx: no newFeature.feature, returning');
+      return;
+    }
+    
+    // Initialize properties array if it doesn't exist
+    if (!this.newFeature.feature.properties) {
+      this.newFeature.feature.properties = [];
+      console.log('🟡 MapCtx: initialized empty properties array');
+    }
+    
+    const propIndex = this.newFeature.feature.properties.findIndex(
+      (p) => p!.propertyId === propertyId
+    );
+
+    console.log('🟡 MapCtx: found property at index:', propIndex);
+
+    let updatedProperties: any[];
+    
+    if (propIndex >= 0) {
+      // Update existing property
+      console.log('🟡 MapCtx: updating existing property at index', propIndex);
+      updatedProperties = [...this.newFeature.feature.properties];
+      updatedProperties[propIndex] = {
+        ...updatedProperties[propIndex]!,
+        ...object
+      };
+      console.log('🟡 MapCtx: updated existing property:', updatedProperties[propIndex]);
+    } else {
+      // Create new property
+      console.log('🟡 MapCtx: creating new property');
+      const newProperty = {
+        id: '', // Will be set when saved
+        propertyId,
+        featureId: '', // Will be set when feature is created
+        value: '',
+        ...object
+      };
+      
+      // Only add i18n if it's provided in the object
+      if (object.i18n) {
+        newProperty.i18n = object.i18n;
+      }
+      
+      updatedProperties = [...this.newFeature.feature.properties, newProperty];
+      console.log('🟡 MapCtx: created new property:', newProperty);
+    }
+    
+    // Create a new newFeature object to ensure reactivity
+    const oldNewFeature = this.newFeature;
+    this.newFeature = {
+      ...this.newFeature,
+      feature: {
+        ...this.newFeature.feature,
+        properties: updatedProperties
+      }
+    };
+    
+    console.log('🟡 MapCtx: updated newFeature:', {
+      oldNewFeature,
+      newNewFeature: this.newFeature,
+      updatedProperties
+    });
+  };
+
+  updateNewFeatureI18nProperty = (propertyId: Id, object: Partial<FeaturePropertyI18nDB>, locale: Locale = getLocale()) => {
+    const propIndex = this.newFeature?.feature?.properties?.findIndex(
+      (p) => p!.propertyId === propertyId
+    );
+
+    if (propIndex !== undefined && propIndex >= 0 && this.newFeature?.feature?.properties?.[propIndex]?.i18n) {
+      this.newFeature.feature.properties[propIndex].i18n![locale] = {
+        ...this.newFeature.feature.properties[propIndex].i18n![locale]!,
+        ...object
+      };
+    }
+  };
+
+  getNewFeature = (): DeepPartial<NewFeatureTask> | null => {
     return this.newFeature;
   };
 
   resetNewFeature = () => {
     this.newFeature = null;
   };
+
+  // USER DATA
+
+  setUser = (user: SessionUser) => {
+    this.user = user;
+  };
+
+  getUser = (): SessionUser => {
+    return this.user;
+  };
+
+  resetUser = () => {
+    this.user = {} as SessionUser;
+  };
+
+  getUserPreferences = (withDefaults: boolean = true): UserPreferences => {
+    return withDefaults
+      ? {
+          fallbackLocales:
+            this.user.preferences.fallbackLocales ?? getFallbackLocales(getLocale()),
+          allowMachineTranslation:
+            this.user.preferences.allowMachineTranslation ?? false,
+          preferFallbackInCurrentLocale:
+            this.user.preferences.preferFallbackInCurrentLocale ?? false,
+          isTranslateButtonVisible:
+            this.user.preferences.isTranslateButtonVisible ?? true
+        }
+      : this.user.preferences;
+  };
+
+  updateUserPreferences = (preferences: UserPreferences) => {
+    this.user.preferences = {
+      ...this.user.preferences,
+      ...preferences
+    };
+  };
+
+  setLocale = async (locale: Locale) => {
+    this.user.locale = locale;
+    await updateLocale(this.user.id, locale);
+    // I18N : Update Paraglide's locale, triggers a page reload
+    setLocale(locale);
+  };
+
+  setFallbackLocales = (localeCode: Locale, checked: boolean) => {
+    const currentFallbacks = this.user.preferences.fallbackLocales || [];
+    if (checked) {
+      if (!currentFallbacks.includes(localeCode)) {
+        this.user.preferences.fallbackLocales = [...currentFallbacks, localeCode];
+      }
+    } else {
+      this.user.preferences.fallbackLocales = currentFallbacks.filter(
+        (lc) => lc !== localeCode
+      );
+    }
+    debouncedUpdateUserPreferences(this.user.id, this.user.preferences);
+  };
+
+  setAdvancedFeature = (code: keyof UserPreferences, value: boolean) => {
+    (this.user.preferences[code] as boolean) = value;
+    debouncedUpdateUserPreferences(this.user.id, this.user.preferences);
+  };
+
+  setUserAttribution = async (
+    attribution: string,
+    onSuccess?: (attribution: string) => void,
+    onError?: (error: any) => void
+  ) => {
+    this.user.attribution = attribution;
+    await debouncedUpdateUserAttribution(this.user.id, attribution, onSuccess, onError);
+  };
+
+  getUserLayers = (): UserLayer[] => {
+    return this.user.userLayers;
+  };
+
+  getUserLayerIds = (): string[] => {
+    return this.user.userLayers.map((layer: UserLayer) => layer.layerId);
+  };
+
+  setUserLayer = (layerId: string, checked: boolean) => {
+    const currentUserLayers = this.user.userLayers || [];
+    if (checked) {
+      if (!currentUserLayers.some((ul) => ul.layerId === layerId)) {
+        this.user.userLayers = [
+          ...currentUserLayers,
+          {
+            userId: this.user.id,
+            layerId,
+            isVisibleOnLoad: true
+          }
+        ];
+      }
+    } else {
+      this.user.userLayers = currentUserLayers.filter((ul) => ul.layerId !== layerId);
+    }
+    debouncedUpdateUserLayers(this.user.id, this.user.userLayers);
+  };
+
+  setExperimental = (featureCode: keyof UserExperimental, checked: boolean) => {
+    const currentExperimental = this.user.experimental || {};
+    this.user.experimental = {
+      ...currentExperimental,
+      [featureCode]: checked
+    };
+    debouncedUpdateUserExperimental(this.user.id, this.user.experimental);
+  };
+
+  getUserRoles = (): UserRoleDisco[] => {
+    return this.user.roles ?? [];
+  };
 }
 export const MAP_STATE_KEY = Symbol('mapContext');
 
-export const setMapContext = (
-  queryClient: QueryClient,
-  userId: string,
-  userLayers: string[]
-) => {
-  const context = new MapContext(queryClient, userId, userLayers);
+export const setMapCtx = (queryClient: QueryClient, user: SessionUser) => {
+  const context = new MapCtx(queryClient, user);
   context.init();
   return setContext(MAP_STATE_KEY, context);
 };
 
-export const getMapContext = (): ReturnType<typeof setMapContext> =>
-  getContext(MAP_STATE_KEY);
+export const getMapCtx = (): ReturnType<typeof setMapCtx> => getContext(MAP_STATE_KEY);

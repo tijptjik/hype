@@ -1,16 +1,13 @@
 import { json } from '@sveltejs/kit';
 // LIB
-import { getTranslation } from '$lib/api/translation';
-// TYPES
-import type { Locale } from '$lib/types';
+import { getTranslation } from '$lib/api/external/translation';
 
 export async function POST({ request }) {
   try {
-    const body = await request.json();
-    const { sourceLang, targetLang, texts } = body;
+    const { source, target, texts } = await request.json();
 
-    // Validate inputs
-    if (!sourceLang || !targetLang || !Array.isArray(texts)) {
+    // ASSERT :: Validate inputs
+    if (!source || !target || !Array.isArray(texts)) {
       return json(
         {
           error:
@@ -21,8 +18,8 @@ export async function POST({ request }) {
     }
 
     const translations = await getTranslation(
-      sourceLang as Locale,
-      targetLang as Locale,
+      source,
+      target,
       texts
     );
 

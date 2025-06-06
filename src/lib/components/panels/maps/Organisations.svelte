@@ -1,6 +1,7 @@
 <script lang="ts">
 // I18N
-import { m, getI18nValue, getLocale } from '$lib/i18n';
+import { getI18n, getLocale } from '$lib/i18n';
+import { m } from '$lib/i18n';
 // ICONS
 import { UserGroup, Funnel, XMark } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
@@ -11,12 +12,12 @@ import FilteredResource from '$lib/components/panels/common/FilteredResource.sve
 import ResourceContainer from '$lib/components/panels/common/ResourceContainer.svelte';
 import SelectedResources from '../common/SelectedResources.svelte';
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 // TYPES
 import type { Organisation } from '$lib/types';
 
 // Initialize query client and map state
-const mapCtx = getMapContext();
+const mapCtx = getMapCtx();
 
 // Get cached features for counting
 const organisations = $derived(mapCtx.state.resources.organisation);
@@ -34,18 +35,32 @@ function filterOrganisations(organisations: Organisation[], term: string) {
 
   const searchLower = term.toLowerCase();
   return organisations.filter((organisation) => {
-    return getLocale() == 'en'
-      ? organisation.name.toLowerCase().includes(searchLower) ||
-          (organisation.description &&
-            organisation.description.toLowerCase().includes(searchLower))
-      : getI18nValue(organisation, 'nameShort').toLowerCase().includes(searchLower) ||
-          getI18nValue(organisation, 'description').toLowerCase().includes(searchLower);
+    return (
+      getI18n(organisation, 'nameShort', mapCtx.getUserPreferences())
+        .toLowerCase()
+        .includes(searchLower) ||
+      getI18n(organisation, 'name', mapCtx.getUserPreferences())
+        .toLowerCase()
+        .includes(searchLower) ||
+      getI18n(organisation, 'description', mapCtx.getUserPreferences())
+        .toLowerCase()
+        .includes(searchLower)
+    );
   });
 }
 
 const filteredOrganisations = $derived(filterOrganisations(organisations, searchTerm));
 
 let isDefaultOpen = $derived(document.body.clientHeight > 1000);
+
+
+let handleReset = () => {
+  if (selectedOrganisations.length == 0) {
+    mapCtx.closePanel('maps')
+  } else {
+    mapCtx.resetOrganisations()
+  }
+}
 </script>
 
 <!-- COMPONENTS -->
@@ -69,7 +84,7 @@ let isDefaultOpen = $derived(document.body.clientHeight > 1000);
   collapsedContent={SelectedOrganisations}
   defaultOpen={isDefaultOpen}>
   {#if organisations.length > 4}
-    <FilterBar bind:searchTerm />
+    <FilterBar bind:searchTerm onReset={handleReset} />
   {/if}
   <ResourceContainer>
     {#each filteredOrganisations as resource}

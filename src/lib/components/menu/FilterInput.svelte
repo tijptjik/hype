@@ -1,11 +1,13 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
 // NAVIGATION
 import { afterNavigate } from '$app/navigation';
 // ICONS
 import { MagnifyingGlass, XMark, Sun } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // TYPES
 import type { ResourceType, AdminFilterStates } from '$lib/types';
 
@@ -97,7 +99,9 @@ function handleInput(e: Event) {
         checked={showUnpublishedOnly}
         onchange={(e) => handleUnpublishedOnlyToggle(e)}
         aria-label="Show only unpublished items" />
-      <label for="unpublished-toggle" class="text-sm"> Only Unpublished </label>
+      <label for="unpublished-toggle" class="text-sm">
+        {m.calm_short_leopard_jolt()}
+      </label>
     </div>
   {/if}
 
@@ -111,7 +115,9 @@ function handleInput(e: Event) {
         checked={showUnreviewedOnly}
         onchange={(e) => handleReviewedToggle(e)}
         aria-label="Hide reviewed items" />
-      <label for="reviewed-toggle" class="text-sm"> Hide Reviewed </label>
+      <label for="reviewed-toggle" class="text-sm">
+        {m.aloof_stale_jaguar_wave()}
+      </label>
     </div>
   {/if}
 

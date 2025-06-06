@@ -1,218 +1,193 @@
+// SVELTE
+import { error, json } from '@sveltejs/kit';
+// DRIZZLE
+import { eq } from 'drizzle-orm';
+// FORMS
 import { superValidate } from 'sveltekit-superforms';
+// ZOD
 import { zod } from 'sveltekit-superforms/adapters';
-import { error, json, type RequestHandler } from '@sveltejs/kit';
-import { projectRole, projectI18n, organisationRole } from '$lib/db/schema';
-import { NEW_REF } from '$lib';
-import {
-  getDatabaseOrError,
-  JSONResponseOrError,
-  SuperFormResponse,
-  SuperFormErrorResponse
-} from '$lib/api';
-import { hierarchicalEntityQuery } from '$lib/db';
+import { ProjectAPI, ProjectUpdateAPI } from '$lib/db/zod';
+// SCHEMA
+import { project } from '$lib/db/schema';
 // DB
 import {
+  getProject,
   updateProject,
-  updateTranslations,
-  updateMaintainerRoles,
-  rebuildFormData,
-  extractEntitiesToUpdate,
-  mergeOrganisationRoles,
-  patchProject
+  updateProjectWithRelated,
+  toFormShape,
+  toResponseShape
 } from '$lib/db/services/project';
-import { updateRelatedProperties } from '$lib/db/services/property';
-import { isFieldUnique, isFieldChanged } from '$lib/db';
-// ZOD
-import { ProjectPatch, ProjectUpdateAPI } from '$lib/db/zod';
+// API
+import {
+  getDatabase,
+  JSONResponseOrError,
+  SuperFormResponse,
+  SuperFormErrorResponse,
+  getPrisms,
+  logZodError
+} from '$lib/api';
+import {
+  getProjectQueryContext,
+  assertPermissionsToUpdateProject,
+  projectEntityWithRelations,
+  assertCodeUnique
+} from '$lib/api/services/project';
 // TYPES
+import type { RequestHandler } from '@sveltejs/kit';
 import type { SuperValidated } from 'sveltekit-superforms/client';
 import type {
-  AccessStrategyOption,
   Project,
   ProjectDB,
-  ProjectPartialUpdate
+  ProjectI18nDB,
+  ProjectPartial,
+  ProjectRoleDB,
+  PropertyDB,
+  ProjectRaw
 } from '$lib/types';
+
+/********************
+ *  COMMON
+ ************/
 
 const RESOURCE_TYPE = 'project';
 const RESOURCE_PATH = 'projects';
-const ACCESS_STRATEGY = 'EntityOwn' as AccessStrategyOption;
-const PUBLIC_IDENTIFIER = 'code';
 
-export const GET: RequestHandler = async ({ params, locals, platform }) => {
-  const { db, userId, accessStrategy } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE
+/********************
+ *  READ
+ ************/
+
+/**
+ * Reads a project
+ */
+export const GET: RequestHandler = async ({
+  params,
+  url,
+  locals,
+  platform,
+  request
+}) => {
+  // ASSERT : User logged in
+  const { db, session, userRoles } = await getDatabase(locals, platform);
+
+  // CONTEXT : Get the query context
+  let { conditions } = getProjectQueryContext(
+    db,
+    session,
+    request,
+    {},
+    userRoles,
+    getPrisms(url)
   );
-  if (params.code !== NEW_REF) {
-    try {
-      // DB : Build & Execute Query
-      const result = await hierarchicalEntityQuery(
-        db,
-        params[PUBLIC_IDENTIFIER] as string,
-        PUBLIC_IDENTIFIER,
-        accessStrategy,
-        {
-          maintainerRoles: {
-            with: {
-              user: {
-                columns: {
-                  email: false,
-                  emailVerified: false,
-                  createdAt: false,
-                  modifiedAt: false
-                }
-              }
-            }
-          },
-          translations: true,
-          properties: {
-            with: {
-              translations: true,
-              values: {
-                with: {
-                  translations: true
-                }
-              }
-            }
-          },
-          image: true
-        },
-        userId,
-        projectRole,
-        projectI18n,
-        2
-      );
 
-      // Process result to include organization roles
-      const processedResult = await mergeOrganisationRoles(db, result);
-      processedResult.properties.reverse();
+  try {
+    // Add condition for specific project code
+    conditions.push(eq(project.code, params.code!));
 
-      // HTTP : 200 JSON or 404
-      return JSONResponseOrError(processedResult);
-    } catch (e) {
-      // DB : Query Error
-      console.error('Database query error:', e);
-      // HTTP : 500 Error
-      return error(500, 'Dust Accumulation Critical');
+    // DB : Get the project
+    const result = await getProject(db, projectEntityWithRelations, conditions);
+
+    if (!result) {
+      return error(404, 'Project not found');
     }
-  } else {
-    return error(500, 'The Old Shall Never Be New Again');
+
+    // RESPONSE : Build the response shape
+    const data = await toResponseShape(
+      result,
+      result.i18n as unknown as ProjectI18nDB[],
+      result.maintainerRoles as unknown as ProjectRoleDB[],
+      result.properties as unknown as PropertyRaw[]
+    );
+
+    // HTTP : 200 JSON or 404
+    return JSONResponseOrError(data);
+  } catch (e) {
+    // DB : Query Error
+    logZodError(e, 'Zod read error:');
+    return error(500, 'Dust Accumulation Critical');
   }
 };
 
 export const PUT: RequestHandler = async ({ params, request, locals, platform }) => {
-  // AUTH : Pass or Fail
-  const { db, userId, accessStrategy } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE
-  );
-  let redirect = false;
+  // ASSERT : User logged in
+  const { db, session, userRoles } = await getDatabase(locals, platform);
 
   try {
+    // ASSERT : Valid form
     const formData: Project = await request.json();
-    const form = (await superValidate(
+    let form = (await superValidate(
       formData,
+      // @ts-ignore - FORM : Fix type error
       zod(ProjectUpdateAPI)
     )) as SuperValidated<Project>;
 
-    // Check if the current user will lose access on membership changes
-    const userLosesAccess =
-      !form.data.maintainerRoles.map((userRole) => userRole.userId).includes(userId) &&
-      accessStrategy !== 'SuperAdmin';
-    const codeChanged = await isFieldChanged<ProjectDB>(
-      db,
-      formData.id as string,
-      formData.code as string,
-      RESOURCE_TYPE,
-      'code'
-    );
-
-    if (codeChanged) {
-      const codeUnique = await isFieldUnique<Project>(
-        db,
-        formData,
-        RESOURCE_TYPE,
-        'code'
-      );
-      if (!codeUnique) {
-        form.valid = false;
-        form.errors.code = ['Code already exists'];
-      }
+    // ASSERT : Code is unique (if changed)
+    if (formData.code !== params.code) {
+      form = (await assertCodeUnique(db, form, formData)) as any;
     }
 
-    if (!form.valid) {
-      // If validation fails, return form with the errors
-      return SuperFormResponse<Project>(form);
-    }
+    // RETURN : early if the form is not valid
+    if (!form.valid) return SuperFormResponse<Project>(form);
 
-    const { baseProject, formTranslations, formMaintainerRoles, formProperties } =
-      extractEntitiesToUpdate(form.data as Project);
-    const updatedProject = await updateProject(db, baseProject, params.code as string);
-    const updatedTranslations = await updateTranslations(
-      db,
-      formTranslations,
-      updatedProject.id
-    );
-    const updatedMaintainerRoles = await updateMaintainerRoles(
-      db,
-      formMaintainerRoles,
-      updatedProject.id,
-      updatedProject.organisationId
-    );
-    const updatedProperties = await updateRelatedProperties(
-      db,
-      formProperties,
-      updatedProject.id
-    );
+    // ASSERT : Permissions to update project
+    assertPermissionsToUpdateProject(session, request, formData, userRoles);
 
-    const updatedForm = await rebuildFormData(
-      db,
+    // DB : Update the project
+    const updatedProject = await updateProjectWithRelated(db, form.data, params.code);
+
+    // RESPONSE : Convert to form shape and return
+    const updatedForm = await toFormShape(
       updatedProject,
-      updatedTranslations,
-      updatedMaintainerRoles,
-      updatedProperties
+      updatedProject.i18n,
+      updatedProject.maintainerRoles,
+      updatedProject.properties || []
     );
 
-    if (userLosesAccess || codeChanged) {
-      redirect = true;
-    }
+    // STATE : Determine if redirect is needed (only when code changes)
+    const shouldRedirect = formData.code !== params.code;
 
+    // HTTP : 200 JSON or 400
     return SuperFormResponse<Project>(
       updatedForm,
-      redirect,
-      userLosesAccess,
+      shouldRedirect,
+      false, // Should always be false as only org members can update projects
       RESOURCE_PATH
     );
   } catch (err) {
-    console.error(err);
-    return SuperFormErrorResponse(RESOURCE_TYPE);
+    logZodError(err, 'Update error:');
+    return SuperFormErrorResponse(RESOURCE_TYPE, 'update');
   }
 };
 
+/********************
+ *  UPDATE :: PATCH
+ ************/
+
+/**
+ * Partially updates a project - only the fields that are provided in the request body. This endpoint is used for updating fields that don't require a full form submission, such as the project publish or archive status.
+ */
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
-  const { db } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE
-  );
-
+  const { db, session, userRoles } = await getDatabase(locals, platform);
   try {
-    const formData: ProjectPartialUpdate = await request.json();
-    const form = await superValidate(formData, zod(ProjectPatch), { defaults: {} });
+    // ASSERT : Valid form data
+    const newData: ProjectPartial = await request.json();
 
-    if (!form.valid) {
-      return json(form, { status: 400 });
-    }
+    // Get the existing project to verify access
+    const existing = (await getProject(db, {}, [
+      eq(project.code, params.code as string)
+    ])) as ProjectDB;
 
-    const updated = await patchProject(db, params.code as string, form.data, 'code');
-    return json({ success: true, data: updated });
+    if (!existing) return error(404, 'Project not found');
+
+    // Use assertion functions for access control
+    assertPermissionsToUpdateProject(session, request, existing, userRoles);
+
+    // DB : Update only the basic project fields (no relations for PATCH)
+    const updated = await updateProject(db, newData, params.code as string);
+
+    // Return the updated project in the format expected by components
+    return json({ type: 'success', data: updated });
   } catch (err) {
-    console.error(err);
-    return json({ success: false, error: 'Failed to update project' }, { status: 500 });
+    logZodError(err, 'Update error:');
+    return SuperFormErrorResponse(RESOURCE_TYPE, 'patch');
   }
 };

@@ -13,7 +13,7 @@ let { fields } = sectionProps;
 <div
   class="from-rose-500 to-fuchsia-800 basis-2/3 overflow-hidden rounded-2xl bg-gradient-to-r p-0">
   <Header {...sectionProps} />
-  {#each Object.entries(fields) as [fieldRoot, field]}
+  {#each Object.entries(fields) as [fieldRoot, field]: [Field, FormFieldExtendedDefinition]}
     <LayerPropertyField
       {fieldRoot}
       {field}

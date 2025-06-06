@@ -2,7 +2,7 @@
 // TRANSITIONS
 import { fade, slide } from 'svelte/transition';
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 // COMPONENTS
 import OmniNavHeader from './OmniNavHeader.svelte';
 import OmniNavArrow from './OmniNavArrow.svelte';
@@ -12,7 +12,7 @@ import { getOmniContext } from '$lib/context/omni.svelte';
 
 // CONTEXT
 const omniCtx = getOmniContext();
-const mapCtx = getMapContext();
+const mapCtx = getMapCtx();
 
 let collectionMode = $derived(omniCtx.state.mode);
 let isNotFeatureMode = $derived(collectionMode !== 'feature');

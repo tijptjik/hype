@@ -4,11 +4,11 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { ChevronLeft, ChevronRight } from '@steeze-ui/heroicons';
 // CONTEXT
 import { getOmniContext } from '$lib/context/omni.svelte';
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 
 // CONTEXT
 const omniCtx = getOmniContext();
-const mapCtx = getMapContext();
+const mapCtx = getMapCtx();
 
 // PROPS
 type Props = {

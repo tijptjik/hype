@@ -1,167 +1,153 @@
-import { error, type RequestHandler } from '@sveltejs/kit';
-import { actionResult, superValidate, type SuperValidated } from 'sveltekit-superforms';
-// DB
+// SVELTE
+import { error } from '@sveltejs/kit';
+// FORMS
+import { superValidate } from 'sveltekit-superforms';
 import {
-  getDatabaseOrError,
+  getDatabase,
   isValidQueryParamsOrError,
   JSONResponseOrError,
-  SuperFormResponse
+  SuperFormResponse,
+  SuperFormErrorResponse,
+  getPrisms,
+  logZodError
 } from '$lib/api';
-import { hierarchicalResourceQuery } from '$lib/db';
-import { createRelatedProperties } from '$lib/db/services/property';
-import { projectRole, projectI18n, project } from '$lib/db/schema';
+// SERVICES
+import { project } from '$lib/db/schema';
+// DB
 import {
-  createProject,
-  createTranslations,
-  createMaintainerRoles,
-  rebuildFormData,
-  extractEntitiesToInsert
+  createProjectWithRelated,
+  listProjects,
+  toFormShape,
+  toResponseShape
 } from '$lib/db/services/project';
-import { isFieldUnique } from '$lib/db';
+// API
+import {
+  getProjectQueryContext,
+  assertPermissionsToCreateProject,
+  projectCollectionWithRelations,
+  assertCodeUnique
+} from '$lib/api/services/project';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
 import { ProjectInsertAPI } from '$lib/db/zod';
 // TYPES
-import type { NewProject, Project, Property } from '$lib/types';
+import type { RequestHandler } from '@sveltejs/kit';
+import type { SuperValidated } from 'sveltekit-superforms';
+import type { ProjectNew, Project } from '$lib/types';
+
+/********************
+ *  COMMON
+ ************/
 
 const RESOURCE_TYPE = 'project';
 const RESOURCE_PATH = 'projects';
-let ACCESS_STRATEGY = 'ResourceOwn';
 
-export const GET: RequestHandler = async ({ locals, platform, url }) => {
-  // Features which are published are visible to all users
-  if (
-    url.searchParams.get('isPublished') === 'true' &&
-    url.searchParams.get('isAdminView') !== 'true'
-  ) {
-    ACCESS_STRATEGY = 'Public';
-    // For the Admin View we use ResourceAll instead of Public so that
-    // unpublished organisations are still visible -- in applyPublishedConstraints
-    // we filter out unpublished records for the Public access strategy.
-  } else if (url.searchParams.get('isAdminView') === 'true') {
-    ACCESS_STRATEGY = 'ResourceAll';
-  }
+/********************
+ *  LIST
+ ************/
 
-  // AUTH : Pass or Fail
-  const { db, userId, accessStrategy } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE
+/**
+ * Lists projects
+ */
+export const GET: RequestHandler = async ({ url, locals, platform, request }) => {
+  // ASSERT : User Logged in
+  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
+
+  // ASSERT : Valid query parameters
+  // Validate query parameters, or return 400
+  let queryParams = isValidQueryParamsOrError(project, url) as Record<
+    string,
+    string | string[]
+  >;
+
+  // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
+  let { conditions } = getProjectQueryContext(
+    db,
+    session,
+    request,
+    queryParams,
+    userRoles,
+    getPrisms(url)
   );
 
   try {
-    // Validate query parameters, or return 400
-    const queryParams = isValidQueryParamsOrError(project, url);
+    // DB : List the projects
+    const result = await listProjects(db, projectCollectionWithRelations, conditions);
 
-    const result = await hierarchicalResourceQuery(
-      db,
-      accessStrategy,
-      {
-        maintainerRoles: true,
-        translations: true,
-        properties: {
-          with: {
-            translations: true,
-            values: {
-              with: {
-                translations: true
-              }
-            }
-          }
-        },
-        image: true
-      },
-      userId,
-      projectRole,
-      projectI18n,
-      {
-        organisation: url.searchParams.getAll('organisation')
-      },
-      2,
-      queryParams
+    // RESPONSE : Build the response shape
+    const data = await Promise.all(
+      result.map(async (project) => {
+        return await toResponseShape(
+          project,
+          project.i18n,
+          [],
+          [],
+          true
+        );
+      })
     );
 
     // HTTP : 200 JSON or 404
-    return JSONResponseOrError(result);
+    return JSONResponseOrError(data);
   } catch (e) {
     // DB : Query Error
-    console.error('Database query error:', e);
-    // HTTP : 500 Error
+    logZodError(e, 'Zod list error:');
     return error(500, 'Dust Accumulation Critical');
   }
 };
 
+/********************
+ *  CREATE
+ ************/
+
+/**
+ * Creates a new project
+ */
 export const POST: RequestHandler = async ({ request, locals, platform }) => {
-  // AUTH : Pass or Fail
-  const { db, userId, accessStrategy } = await getDatabaseOrError(
-    locals,
-    platform,
-    ACCESS_STRATEGY,
-    RESOURCE_TYPE
-  );
+  // ASSERT : User logged in
+  const { db, session, userRoles } = await getDatabase(locals, platform);
 
   try {
-    const formData: NewProject = await request.json();
-    const form = (await superValidate(
+    // ASSERT : Valid form
+    const formData: ProjectNew = await request.json();
+    let form = (await superValidate(
       formData,
+      // @ts-ignore - FORM : Fix type error
       zod(ProjectInsertAPI)
-    )) as SuperValidated<Project>;
+    )) as SuperValidated<ProjectNew>;
 
-    // Check if the current user will lose access on membership changes
-    const userLosesAccess =
-      !Object.keys(form.data.maintainerRoles).includes(userId) &&
-      accessStrategy !== 'SuperAdmin';
-    const codeUnique = await isFieldUnique<Project>(
-      db,
-      formData as Project,
-      RESOURCE_TYPE,
-      'code'
-    );
+    // ASSERT : Code is unique
+    form = await assertCodeUnique(db, form, formData);
 
-    if (!codeUnique) {
-      form.valid = false;
-      form.errors.code = ['Code already exists'];
-    }
-
+    // RETURN : early if the form is not valid
     if (!form.valid) {
       return SuperFormResponse<Project>(form);
     }
 
-    const { baseProject, formTranslations, formMaintainerRoles, formProperties } =
-      extractEntitiesToInsert(form.data as NewProject);
-    const createdProject = await createProject(db, baseProject);
-    const createdTranslations = await createTranslations(
-      db,
-      formTranslations,
-      createdProject.id
-    );
-    const createdMaintainerRoles = await createMaintainerRoles(
-      db,
-      formMaintainerRoles,
-      createdProject.id
-    );
-    const createdProperties = await createRelatedProperties(
-      db,
-      formProperties,
-      createdProject.id
-    );
-    const updatedForm = await rebuildFormData(
-      db,
+    // ASSERT : Permissions to update project
+    assertPermissionsToCreateProject(session, request, formData, userRoles);
+
+    // DB : Create the project
+    const createdProject = await createProjectWithRelated(db, form.data);
+
+    // FORM : Rebuild the form data
+    const updatedForm = await toFormShape(
       createdProject,
-      createdTranslations,
-      createdMaintainerRoles,
-      createdProperties
+      createdProject.i18n,
+      createdProject.maintainerRoles,
+      createdProject.properties || []
     );
+
+    // HTTP : 201 JSON or 400
     return SuperFormResponse<Project>(
       updatedForm,
       true,
-      userLosesAccess,
+      false, // Should always be false as only org members can create projects
       RESOURCE_PATH,
       201
     );
   } catch (err) {
-    console.error(err);
-    return actionResult('error', 'Failed to create project', { status: 500 });
+    logZodError(err, 'Zod create error:');
+    return SuperFormErrorResponse(RESOURCE_TYPE, 'create');
   }
 };

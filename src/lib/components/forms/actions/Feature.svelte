@@ -1,32 +1,36 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
 // COMPONENTS
 import Toggle from '$lib/components/forms/fields/Toggle.svelte';
 // TYPES
-import type { FieldProps, ModalProps } from '$lib/types';
+import type { FeatureForm } from '$lib/types';
 
 // STATE : PROPS
-let actionProps: FieldProps & ModalProps = $props();
-let { form } = actionProps.form;
+let { form }: { form: FeatureForm } = $props();
+
+// STATE : CONTEXT :: FORM
+let featureForm: FeatureForm['form'] = $derived(form.form);
 
 // UTILS
-const onChange = (e: Event, key: string) => {
+const onChange = (e: Event, key: 'isIntangible' | 'isVisitable'): void => {
   e.preventDefault();
-  form.update(($form) => {
+  featureForm.update(($form) => {
     $form[key] = !$form[key];
     return $form;
   });
 };
 </script>
 
-<div class="flex flex-row items-center justify-between gap-2 align-baseline">
-  <div class="text-sm font-light">Intangible</div>
+<div class="flex flex-row items-center justify-between gap-4 align-baseline">
   <Toggle
+    label={m.teary_fit_maggot_heart()}
     size="sm"
-    checked={$form.isIntangible as boolean}
+    checked={$featureForm.isIntangible as boolean}
     onChange={(e) => onChange(e, 'isIntangible')} />
-  <div class="text-ellipsis text-sm font-light">Publicly Accessible</div>
   <Toggle
+    label={m.even_sunny_lizard_dare()}
     size="sm"
-    checked={$form.isVisitable as boolean}
+    checked={$featureForm.isVisitable as boolean}
     onChange={(e) => onChange(e, 'isVisitable')} />
 </div>

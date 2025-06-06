@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { page } from '$app/stores';
+import { page } from '$app/state';
 // LIB
 import { ADMIN_PATH } from '$lib/index';
 // COMPONENTS
@@ -19,12 +19,12 @@ let {
 }>();
 
 const isActive = () => {
-  if (href === '{ADMIN_PATH}/tasks') {
-    return $page.url.pathname.startsWith('{ADMIN_PATH}/tasks');
-  } else if (href === '{ADMIN_PATH}') {
+  if (href === `${ADMIN_PATH}/tasks`) {
+    return page.url.pathname.startsWith(`${ADMIN_PATH}/tasks`);
+  } else if (href === `${ADMIN_PATH}`) {
     return (
-      $page.url.pathname.startsWith('{ADMIN_PATH}') &&
-      $page.url.pathname !== '{ADMIN_PATH}/tasks'
+      page.url.pathname.startsWith(`${ADMIN_PATH}`) &&
+      page.url.pathname !== '{ADMIN_PATH}/tasks'
     );
   }
 };

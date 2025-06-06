@@ -1,7 +1,7 @@
 import { loadFormData } from '$lib/api';
 import { ProjectInsertAPI, ProjectUpdateAPI } from '$lib/db/zod';
 // ENUMS
-import { HierarchicalResourcePath } from '$lib/types';
+import { HierarchicalResourcePath } from '$lib/enums';
 // TYPES
 import type { PageLoad } from './$types';
 import type { Project } from '$lib/types';

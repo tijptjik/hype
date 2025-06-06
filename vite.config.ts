@@ -55,9 +55,10 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
-    hmr: {
-      port: 5173
-    },
+    // hmr: {
+      // port: 5173
+    // },
+    hmr: false,
     allowedHosts: [
       'localhost',
       '127.0.0.1',

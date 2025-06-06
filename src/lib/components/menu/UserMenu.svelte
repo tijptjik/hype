@@ -1,18 +1,19 @@
 <script lang="ts">
 // SVELTE
-import { page } from '$app/stores';
+import { page } from '$app/state';
 import { fade } from 'svelte/transition';
 // NAVIGATION
 import { goto } from '$app/navigation';
 // I18N
 import { m } from '$lib/i18n';
 // AUTH
+// @ts-ignore
 import { signIn, signOut } from '@auth/sveltekit/client';
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Power } from '@steeze-ui/heroicons';
 
-const { session } = $page.data;
+const { session } = page.data;
 let showPower = $state(false);
 </script>
 

@@ -8,6 +8,7 @@ import { MapPin } from '@steeze-ui/heroicons';
 import { fade } from 'svelte/transition';
 // TYPES
 import type { FeatureForm } from '$lib/types';
+import type { Point } from 'geojson';
 
 // CONFIG
 const coordinateLabels = [m.admin__geo_latitude(), m.admin__geo_longitude()];
@@ -20,7 +21,7 @@ let { form } = extraProps.form;
 
 // HANDLERS
 function copyCoordinates() {
-  const coords = $form.geometry.coordinates.join(',');
+  const coords = ($form.geometry as Point).coordinates.join(',');
   navigator.clipboard.writeText(coords);
 }
 </script>
@@ -33,10 +34,10 @@ function copyCoordinates() {
   {#each coordinateLabels as label, index}
     <div class="flex select-none flex-row items-center gap-3">
       <p class="font-spaced hidden text-sm xl:block">{label}</p>
-      {#key $form.geometry.coordinates}
+      {#key ($form.geometry as Point).coordinates}
         <pre
           in:fade={{ duration: 300 }}
-          class="font-mono text-lg font-light text-base-content/50">{$form.geometry.coordinates[
+          class="font-mono text-lg font-light text-base-content/50">{($form.geometry as Point).coordinates[ 
             index
           ].toFixed(5)}</pre>
       {/key}

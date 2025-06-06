@@ -1,7 +1,7 @@
 <script lang="ts">
 // STORES
-import { page } from '$app/stores';
-// NAVIGATION
+import { page } from '$app/state';
+ // NAVIGATION
 import { goto } from '$app/navigation';
 import { afterNavigate } from '$app/navigation';
 // QUERY
@@ -15,21 +15,21 @@ import FlashMessage from '$lib/components/common/FlashMessage.svelte';
 import 'tailwindcss/tailwind.css';
 // TYPES
 import type { QueryClient } from '@tanstack/svelte-query';
-import type { LayoutData } from './$types';
 import type { Locale } from '$lib/types';
+import type { LayoutData, LayoutProps } from './$types';
 
 // PROPS
-let { children } = $props();
+let { children, data }: LayoutProps = $props();
 
 // CONTEXT
-const { queryClient } = $page.data as LayoutData & {
+const { queryClient } = data as LayoutData & {
   queryClient: QueryClient;
 };
 
 // Set Page Metadata
-let title = $state($page.data.title);
-let site_name = $state($page.data.site_name);
-let site_description = $state($page.data.site_description);
+let title = $state(page.data.title);
+let site_name = $state(page.data.site_name);
+let site_description = $state(page.data.site_description);
 let socialImage = {
   image: '/favicon.png',
   width: '200',
@@ -38,12 +38,12 @@ let socialImage = {
 
 // Handle initial language setup and authentication
 $effect(() => {
-  const { session } = $page.data;
+  const { session } = page.data;
 
   // Handle authentication first
   if (!session) {
     // Only redirect if we're not already on the home page
-    if ($page.url.pathname !== '/') {
+    if (page.url.pathname !== '/') {
       goto('/');
     }
     return;
@@ -51,15 +51,15 @@ $effect(() => {
 
   // Then handle language
   if (session?.user?.locale) {
-    // Set the language tag first
+    // Set the locale first
     setLocale(session.user.locale as Locale);
   }
 });
 
 afterNavigate(() => {
-  title = $page.data.title;
-  site_name = $page.data.site_name;
-  site_description = $page.data.site_description;
+  title = page.data.title;
+  site_name = page.data.site_name;
+  site_description = page.data.site_description;
 });
 </script>
 

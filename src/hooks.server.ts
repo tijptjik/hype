@@ -18,16 +18,20 @@ const translation: Handle = ({ event, resolve }) =>
     });
   });
 
-// const handle_cors = (async ({ event, resolve }) => {
-//   const response = await resolve(event);
-//   response.headers.set('Access-Control-Allow-Origin', '*');
-//   response.headers.set(
-//     'Access-Control-Allow-Methods',
-//     'GET, POST, PUT, DELETE, OPTIONS'
-//   );
-//   response.headers.set('Access-Control-Allow-Headers', '*');
-//   return response;
-// }) satisfies Handle;
+const handle_cors = (async ({ event, resolve }) => {
+  // Only add CORS headers in development mode
+  if (import.meta.env.DEV || localWranglerEnv) {
+    const response = await resolve(event);
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set(
+      'Access-Control-Allow-Methods',
+      'GET, POST, PUT, DELETE, OPTIONS'
+    );
+    response.headers.set('Access-Control-Allow-Headers', '*');
+    return response;
+  }
+  return resolve(event);
+}) satisfies Handle;
 
 // const handle_security = (async ({ event, resolve }) => {
 //   const response = await resolve(event);
@@ -60,7 +64,7 @@ if (localWranglerEnv) {
 
   handle = sequence(
     mock_cloudflare,
-    // handle_cors,
+    handle_cors,
     // handle_security,
     inject_auth,
     translation

@@ -3,12 +3,12 @@
 import { m } from '$lib/i18n';
 // CONTEXT
 import { getOmniContext } from '$lib/context/omni.svelte';
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 // TYPES
 import type { Layer, Project } from '$lib/types';
 // CONTEXT
 const omniCtx = getOmniContext();
-const mapCtx = getMapContext();
+const mapCtx = getMapCtx();
 
 let handleClick = (e: Event) => {
   e.preventDefault();
@@ -24,7 +24,10 @@ let handleClick = (e: Event) => {
     mapCtx.setNewFeature({
       layerId: layer?.id,
       projectId: project?.id,
-      organisationId: organisation?.id
+      organisationId: organisation?.id,
+      feature: {
+        layerId: layer?.id
+      }
     });
     // Trigger the GeoLocation modal directly
     const event = new CustomEvent('showGeoLocationModal');

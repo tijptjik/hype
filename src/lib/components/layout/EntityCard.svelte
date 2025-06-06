@@ -1,20 +1,22 @@
 <script lang="ts">
 // SVELTE
 import { goto } from '$app/navigation';
-import { page } from '$app/stores';
+import { page } from '$app/state';
+// I18N
+import { getLocale } from '$lib/i18n';
 // LIB
 import { ADMIN_PATH } from '$lib/index';
 import { hashicon } from '@emeraldpay/hashicon';
 // SERVICES
-import { getURLfromImage } from '$lib/services/images.svelte';
+import { getURLfromImage } from '$lib/client/services/image';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // COMPONENTS
 import Image from '$lib/components/common/Image.svelte';
 // ENUMS
-import { HierarchicalResource } from '$lib/types';
+import { HierarchicalResource } from '$lib/enums';
 // TYPES
-import type { Resource, ImageDB } from '$lib/types';
+import type { Resource, ImageDB, Task } from '$lib/types';
 export type KeyMap = {
   id: 'id' | 'code';
   title: 'name' | 'nameShort' | 'title';
@@ -29,7 +31,7 @@ export type KeyMap = {
 };
 
 type Props = {
-  entity: Resource;
+  entity: Exclude<Resource, Task>;
   keyMap: KeyMap;
   header?: any;
   badges?: any;
@@ -38,13 +40,15 @@ type Props = {
 };
 
 let { entity, keyMap, header, badges, content, actions }: Props = $props();
+let locale = $derived(getLocale());
+let textObject = $derived(entity.i18n[locale] || {});
 
 const resourceState = getHierarchicalResourceState();
 const href = $derived(
   `${ADMIN_PATH}/${resourceState.getEntityPath(
     resourceState.activeResource as HierarchicalResource,
     entity.id
-  )}${$page.url.search}`
+  )}${page.url.search}`
 );
 
 // Generate hashicon URL for fallback
@@ -80,30 +84,31 @@ const onclick = (e: MouseEvent | KeyboardEvent) => {
   {#if header}
     {@render header(entity)}
   {:else}
+    {@debug entity}
     <Image
-      src={entity[keyMap.image]
-        ? getURLfromImage({ image: entity[keyMap.image] as ImageDB })
+      src={entity[keyMap.image as keyof typeof entity]
+        ? getURLfromImage({ image: entity[keyMap.image as keyof typeof entity] as ImageDB })
         : getHashiconUrl(entity.id)}
       alt={entity[keyMap.title as keyof typeof entity] as string}
       layout="cover" />
   {/if}
 
   <!-- Content Section -->
-  <div class="card-body">
+  <div class="card-body w-full pb-6">
     {#if content}
       {@render content(entity)}
     {:else}
       <h2 class="card-title mt-0">
-        {entity[keyMap.title]}
+        {textObject[keyMap.title]}
         {#if keyMap.subtitle}
-          <small class="text-sm text-gray-500">{entity[keyMap.subtitle]}</small>
+          <small class="text-sm text-gray-500">{textObject[keyMap.subtitle]}</small>
         {/if}
       </h2>
-      <p class="mt-2">{@html entity[keyMap.description]}</p>
+      <p class="mt-2">{@html textObject[keyMap.description]}</p>
     {/if}
 
     <!-- Actions Section -->
-    <div class="mt-4 flex flex-row items-center justify-between">
+    <div class="mt-2 flex flex-row items-center justify-between w-full">
       {#if actions}
         {@render actions(entity)}
       {:else}

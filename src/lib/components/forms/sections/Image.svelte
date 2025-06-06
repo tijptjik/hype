@@ -3,9 +3,9 @@
 import Header from '$lib/components/forms/extra/Header.svelte';
 import Viewer from '$lib/components/common/Viewer.svelte';
 // TYPES
-import type { SectionProps, GetImageAPI } from '$lib/types';
+import type { SectionProps, Image } from '$lib/types';
 
-let sectionProps: SectionProps & { image: GetImageAPI | null } = $props();
+let sectionProps: SectionProps & { image: Image | null } = $props();
 </script>
 
 <div

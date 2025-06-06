@@ -4,7 +4,7 @@ import { fade, fly } from 'svelte/transition';
 import { cubicInOut } from 'svelte/easing';
 // FLASH
 import { getFlash } from 'sveltekit-flash-message';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 
 const flash = getFlash(page, {
   clearOnNavigate: false,

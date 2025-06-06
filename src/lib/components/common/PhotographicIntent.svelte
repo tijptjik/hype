@@ -23,6 +23,6 @@ const updateIntent = async (newIntent: string) => {
 
 <div
   class="cursor-pointer rounded-full bg-base-300 px-3 py-1 text-sm font-medium"
-  on:click={() => updateIntent(intent === 'context' ? 'general' : 'context')}>
+  onclick={() => updateIntent(intent === 'context' ? 'general' : 'context')}>
   {intent}
 </div>

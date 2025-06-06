@@ -1,19 +1,18 @@
 <script lang="ts">
 // I18N
 import { m } from '$lib/i18n';
-// STORES
-import { page } from '$app/stores';
 // ICONS
 import { PencilSquare } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 
-const { session } = $page.data;
 const cardCtx = getFeatureCardContext();
+const mapCtx = getMapCtx()
 
-let editedAttribution = $state(session?.user?.attribution || '');
-let editing = $state(!(session?.user?.attribution || '').trim());
+let editedAttribution = $state(mapCtx.getUser().attribution || '');
+let editing = $state(!(mapCtx.getUser().attribution || '').trim());
 let timer: ReturnType<typeof setTimeout>;
 
 // CONTEXT
@@ -25,19 +24,19 @@ const debounceAndUpdateAttribution = (value: string) => {
   editedAttribution = value; // Keep UI responsive
 
   timer = setTimeout(async () => {
-    if (!session?.user?.id) {
+    if (!mapCtx.user?.id) {
       console.warn('User session not found. Cannot update attribution.');
       return;
     }
     try {
-      const response = await fetch(`/api/users/${session.user.id}`, {
+      const response = await fetch(`/api/users/${mapCtx.user.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ attribution: value })
       });
       if (response.ok) {
-        if (session.user) {
-          session.user.attribution = value;
+        if (mapCtx.user) {
+          mapCtx.user.attribution = value;
           cardCtx.setAttribution(value);
         }
       } else {
@@ -53,7 +52,7 @@ const debounceAndUpdateAttribution = (value: string) => {
 
 // Ensure editing state is re-evaluated if session changes (e.g. login/logout)
 $effect(() => {
-  const currentAttr = session?.user?.attribution || '';
+  const currentAttr = mapCtx.user?.attribution || '';
   editedAttribution = currentAttr;
   editing = !currentAttr.trim();
 });

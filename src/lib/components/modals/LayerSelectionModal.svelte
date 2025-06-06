@@ -3,9 +3,10 @@
 import { onMount } from 'svelte';
 import { slide, fade } from 'svelte/transition';
 // I18N
-import { m, getI18nValue } from '$lib/i18n';
+import { getI18n, getLocale } from '$lib/i18n';
+import { m } from '$lib/i18n';
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
@@ -17,20 +18,29 @@ import {
   ChevronDown
 } from '@steeze-ui/heroicons';
 // TYPES
-import type { Organisation, Project, Layer, UserContributedFeature } from '$lib/types';
+import type {
+  Organisation,
+  Project,
+  Layer,
+  NewFeatureTask,
+  DeepPartial
+} from '$lib/types';
 // UTILS
 import { MOBILE_MAX_WIDTH } from '$lib/index';
 
 // CONTEXT
-const mapCtx = getMapContext();
+const mapCtx = getMapCtx();
 const omniCtx = getOmniContext();
+
+// STATE : SESSION
+const userPreferences = $derived(mapCtx.getUserPreferences());
 // STATE
 let isOpen = $state(false);
 let isValid = $state(false);
 
 let searchQuery = $state('');
 
-let newFeature: UserContributedFeature | null = $derived.by(mapCtx.getNewFeature);
+let newFeature: DeepPartial<NewFeatureTask> | null = $derived.by(mapCtx.getNewFeature);
 
 // DERIVED STATE
 let selectedOrganisation = $derived(
@@ -60,7 +70,7 @@ let horizontalOffset = $derived.by(() => {
 let filteredOrganisations: Organisation[] = $derived(
   searchQuery
     ? mapCtx.state.resources.organisation.filter((org) =>
-        org.name.toLowerCase().includes(searchQuery.toLowerCase())
+        org.i18n[getLocale()].name.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : mapCtx.state.resources.organisation
 );
@@ -73,7 +83,9 @@ let filteredProjects: Project[] = $derived(
         : true
     )
     .filter((p) =>
-      searchQuery ? p.name.toLowerCase().includes(searchQuery.toLowerCase()) : true
+      searchQuery
+        ? p.i18n[getLocale()].name.toLowerCase().includes(searchQuery.toLowerCase())
+        : true
     )
 );
 
@@ -83,7 +95,9 @@ let filteredLayers: Layer[] = $derived(
       newFeature?.projectId ? l.projectId === newFeature?.projectId : true
     )
     .filter((l) =>
-      searchQuery ? l.name.toLowerCase().includes(searchQuery.toLowerCase()) : true
+      searchQuery
+        ? l.i18n?.[getLocale()]?.name.toLowerCase().includes(searchQuery.toLowerCase())
+        : true
     )
 );
 
@@ -110,11 +124,12 @@ const handleShowModal = () => {
       (layer) => layer.projectId === firstLayer.projectId
     );
 
-    mapCtx.setNewFeature({
+    mapCtx.updateNewFeature({
       organisationId: allSameOrg && organisation ? organisation.id : undefined,
       projectId: allSameProject && project ? project.id : undefined,
       layerId: undefined
     });
+    mapCtx.updateNewFeatureValue('layerId', undefined);
   }
   // Focus the title heading after a short delay to ensure the modal is rendered
   setTimeout(() => {
@@ -123,91 +138,78 @@ const handleShowModal = () => {
   }, 0);
 };
 
-function handleCloseModal() {
-  handleResetSelections();
-}
-
-function handleResetSelections() {
+function reset() {
   searchQuery = '';
   isValid = false;
-  isOpen = false;
 }
 
-function handleCancel() {
-  handleResetSelections();
-  omniCtx.setMode('search');
-  omniCtx.focusSearchBar();
+function handleCloseModal() {
+  reset();
+  isOpen = false;
+  omniCtx.cancelNewFeature();
 }
 
 function handleAccept() {
-  // Trigger the GeoLocation modal
-  handleCloseModal();
-  const event = new CustomEvent('showGeoLocationModal');
-  window.dispatchEvent(event);
+  reset();
+  isOpen = false;
+  window.dispatchEvent(new CustomEvent('showGeoLocationModal'));
 }
 
-function handleOrganisationSelect(org: Organisation, e: Event) {
+function handleResourceSelect(resource: Organisation | Project | Layer, e: Event) {
   e.preventDefault();
   e.stopPropagation();
-  mapCtx.setNewFeature({
-    organisationId: org.id,
-    projectId: undefined,
-    layerId: undefined
-  });
+  
+  if ('organisationId' in resource) {
+    // This is a Project
+    mapCtx.updateNewFeature({
+      organisationId: resource.organisationId,
+      projectId: resource.id,
+      layerId: undefined,
+      feature: {
+        layerId: undefined
+      }
+    });
+  } else if ('projectId' in resource) {
+    // This is a Layer
+    mapCtx.updateNewFeature({
+      organisationId: mapCtx.getProject(resource)?.organisationId,
+      projectId: resource.projectId,
+      layerId: resource.id,
+      feature: {
+        layerId: resource.id
+      }
+    });
+    isValid = true;
+  } else {
+    // This is an Organisation
+    mapCtx.updateNewFeature({
+      organisationId: resource.id,
+      projectId: undefined,
+      layerId: undefined,
+      feature: {
+        layerId: undefined
+      }
+    });
+  }
   searchQuery = '';
 }
 
-function handleProjectSelect(project: Project, e: Event) {
+function clearResource(level: 'organisation' | 'project' | 'layer', e: Event) {
   e.preventDefault();
   e.stopPropagation();
-  mapCtx.setNewFeature({
-    organisationId: project.organisationId,
-    projectId: project.id,
-    layerId: undefined
-  });
-  searchQuery = '';
-}
+ 
+  const hierarchy = ['organisationId', 'projectId', 'layerId'] as const;
 
-function handleLayerSelect(layer: Layer, e: Event) {
-  e.preventDefault();
-  e.stopPropagation();
-  mapCtx.setNewFeature({
-    organisationId: mapCtx.getProject(layer)?.organisationId,
-    projectId: layer.projectId,
-    layerId: layer.id
-  });
-  isValid = true;
-}
-
-function clearOrganisation(e: Event) {
-  e.preventDefault();
-  e.stopPropagation();
-  mapCtx.setNewFeature({
-    organisationId: undefined,
-    projectId: undefined,
-    layerId: undefined
-  });
-  searchQuery = '';
-  isValid = false;
-}
-
-function clearProject(e: Event) {
-  e.preventDefault();
-  e.stopPropagation();
-  mapCtx.setNewFeature({
-    projectId: undefined,
-    layerId: undefined
-  });
-  searchQuery = '';
-  isValid = false;
-}
-
-function clearLayer(e: Event) {
-  e.preventDefault();
-  e.stopPropagation();
-  mapCtx.setNewFeature({
-    layerId: undefined
-  });
+  const levelIndex = hierarchy.indexOf(level + 'Id' as any);
+  const updates: any = { feature: {} };
+  
+  // Clear from this level onwards
+  for (let i = levelIndex; i < hierarchy.length; i++) {
+    updates[hierarchy[i]] = undefined;
+    if (hierarchy[i] === 'layerId') updates.feature.layerId = undefined;
+  }
+  
+  mapCtx.updateNewFeature(updates);
   searchQuery = '';
   isValid = false;
 }
@@ -221,7 +223,7 @@ function handleKeydown(e: KeyboardEvent) {
       searchQuery = '';
     } else {
       // If no selections, close the modal
-      handleCancel();
+      handleCloseModal();
     }
   } else if (e.key === '/') {
     e.preventDefault();
@@ -264,7 +266,7 @@ onMount(() => {
         </h3>
         <button
           class="btn btn-ghost btn-sm absolute right-6 top-6"
-          onclick={handleCancel}>
+          onclick={handleCloseModal}>
           <Icon src={XMark} class="h-5 w-5" />
         </button>
       </div>
@@ -272,11 +274,11 @@ onMount(() => {
       <!-- Results Section -->
       <div
         class="mx-auto flex w-full items-center justify-center gap-1 text-sm uppercase tracking-widest caret-transparent transition-[margin] duration-300 {isValid
-          ? 'mt-8'
-          : 'my-8'} flex-col w-116:flex-row">
+          ? 'mt-2 w-116:mt-8'
+          : 'mb-6 mt-4 w-116:my-8'} flex-col w-116:flex-row">
         <button
           class="group flex items-center gap-1 focus:border-none focus:outline-none"
-          onclick={clearOrganisation}
+          onclick={(e) => clearResource('organisation', e)}
           tabindex={selectedOrganisation ? 0 : -1}>
           {#if selectedOrganisation}
             <Icon
@@ -289,7 +291,12 @@ onMount(() => {
             class="uppercase {selectedOrganisation
               ? 'text-primary'
               : 'text-base-content'}">
-            {getI18nValue(selectedOrganisation, 'nameShort', m.any_small_midge_aim())}
+            {getI18n(
+              selectedOrganisation!,
+              'nameShort',
+              userPreferences,
+              m.any_small_midge_aim()
+            )}
           </span>
         </button>
         <!-- Chevron: show down chevron on mobile, › on desktop -->
@@ -301,7 +308,7 @@ onMount(() => {
           >›</span>
         <button
           class="group flex items-center gap-1 focus:border-none focus:outline-none"
-          onclick={clearProject}
+          onclick={(e) => clearResource('project', e)}
           tabindex={selectedProject ? 0 : -1}>
           {#if selectedProject}
             <Icon
@@ -312,7 +319,12 @@ onMount(() => {
           {/if}
           <span
             class="uppercase {selectedProject ? 'text-accent' : 'text-base-content'}">
-            {getI18nValue(selectedProject, 'nameShort', m.deft_mealy_ant_vent())}
+            {getI18n(
+              selectedProject!,
+              'nameShort',
+              userPreferences,
+              m.deft_mealy_ant_vent()
+            )}
           </span>
         </button>
         <span class="flex h-4 items-center justify-center sm:hidden">
@@ -323,7 +335,7 @@ onMount(() => {
           >›</span>
         <button
           class="group flex items-center gap-1 focus:border-none focus:outline-none"
-          onclick={clearLayer}
+          onclick={(e) => clearResource('layer', e)}
           tabindex={selectedLayer ? 0 : -1}>
           {#if selectedLayer}
             <Icon
@@ -334,7 +346,12 @@ onMount(() => {
           {/if}
           <span
             class="uppercase {selectedLayer ? 'text-secondary' : 'text-base-content'}">
-            {getI18nValue(selectedLayer, 'nameShort', m.active_bold_cobra_grin())}
+            {getI18n(
+              selectedLayer!,
+              'nameShort',
+              userPreferences,
+              m.active_bold_cobra_grin()
+            )}
           </span>
         </button>
       </div>
@@ -362,11 +379,11 @@ onMount(() => {
           {#each filteredOrganisations as org (org.id)}
             <button
               class="btn btn-ghost w-full justify-start gap-2 rounded-none focus:border-none focus:outline-none focus-visible:bg-base-200"
-              onclick={(e) => handleOrganisationSelect(org as Organisation, e)}
+              onclick={(e) => handleResourceSelect(org as Organisation, e)}
               in:slide={{ duration: 200, axis: 'y', delay: 200 }}
               out:slide={{ duration: 200, axis: 'y' }}>
               <Icon src={UserGroup} class="h-4 w-4" />
-              {getI18nValue(org, 'name')}
+              {getI18n(org, 'name', userPreferences)}
             </button>
           {/each}
         {/if}
@@ -374,11 +391,11 @@ onMount(() => {
           {#each filteredProjects as project (project.id)}
             <button
               class="btn btn-ghost w-full justify-start gap-2 rounded-none focus:border-none focus:outline-none focus-visible:bg-base-200"
-              onclick={(e) => handleProjectSelect(project as Project, e)}
+              onclick={(e) => handleResourceSelect(project as Project, e)}
               in:slide={{ duration: 200, axis: 'y', delay: 200 }}
               out:slide={{ duration: 200, axis: 'y' }}>
               <Icon src={Squares2x2} class="h-4 w-4" />
-              {getI18nValue(project, 'name')}
+              {getI18n(project, 'name', userPreferences)}
             </button>
           {/each}
         {/if}
@@ -386,11 +403,11 @@ onMount(() => {
           {#each filteredLayers as layer (layer.id)}
             <button
               class="btn btn-ghost w-full justify-start gap-2 rounded-none focus:border-none focus:outline-none focus-visible:bg-base-200"
-              onclick={(e) => handleLayerSelect(layer as Layer, e)}
+              onclick={(e) => handleResourceSelect(layer as Layer, e)}
               in:slide={{ duration: 200, axis: 'y', delay: 200 }}
               out:slide={{ duration: 200, axis: 'y' }}>
               <Icon src={Square3Stack3d} class="h-4 w-4" />
-              {getI18nValue(layer, 'name')}
+              {getI18n(layer, 'name', userPreferences)}
             </button>
           {/each}
         {/if}
@@ -406,6 +423,6 @@ onMount(() => {
         </button>
       </div>
     </div>
-    <div class="modal-backdrop" onclick={handleCancel}></div>
+    <div class="modal-backdrop" onclick={handleCloseModal}></div>
   </dialog>
 {/if}

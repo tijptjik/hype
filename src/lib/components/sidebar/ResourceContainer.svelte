@@ -1,5 +1,4 @@
 <script lang="ts">
-import { slide } from 'svelte/transition';
 // LIB
 import { navItems } from '$lib/navigation';
 // COMPONENTS
@@ -7,10 +6,10 @@ import Entities from '$lib/components/sidebar/Entities.svelte';
 import FilterInput from '$lib/components/menu/FilterInput.svelte';
 import StatBar from '$lib/components/sidebar/StatBar.svelte';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 import { getSidebarState } from '$lib/context/sidebar.svelte';
 // ENUMS
-import { HierarchicalResource } from '$lib/types';
+import { HierarchicalResource } from '$lib/enums';
 
 let resourceState = getHierarchicalResourceState();
 let sidebarState = getSidebarState();

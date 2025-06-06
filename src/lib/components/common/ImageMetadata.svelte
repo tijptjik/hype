@@ -10,10 +10,10 @@ import {
 } from '@steeze-ui/heroicons';
 import { formatDate } from '$lib';
 // TYPES
-import type { GetImageAPI, ImageUploadRefs as Refs } from '$lib/types';
+import type { Image, ImageUploadCtx as Refs } from '$lib/types';
 import type { IconSource } from '@steeze-ui/svelte-icon';
 
-let { image }: { image: GetImageAPI } = $props();
+let { image }: { image: Image } = $props();
 </script>
 
 {#snippet MetadataRow(icon: IconSource, label: string, value: string)}

@@ -3,43 +3,61 @@
 import Icon from '$lib/components/common/Icon.svelte';
 import { Language, CheckCircle } from '@steeze-ui/heroicons';
 // LIB
-import { sourceLanguageTag } from '$lib';
 import { translateText } from '$lib/i18n';
+import { supportedLocales } from '$lib/enums';
 // TYPES
-import type { LanguageTag, Resource } from '$lib/types';
-import type { SuperForm } from 'sveltekit-superforms';
-import type { AnyZodObject } from 'zod';
-import type { Writable } from 'svelte/store';
+import type { Locale, Resource, Form } from '$lib/types';
 
 interface Props {
-  form: Writable<SuperForm<Resource, AnyZodObject>>;
-  languageTag: LanguageTag;
+  form: Form;
+  locale: Locale;
   fieldRoot: string;
   onConfirm: (event: Event) => void;
   onTranslate: (event: Event) => void;
 }
 
 // PROPS
-let { form, languageTag, fieldRoot, onConfirm, onTranslate }: Props = $props();
+let { form, locale, fieldRoot, onConfirm, onTranslate }: Props = $props();
 
 // STATE
 let loadingTranslation = $state(false);
 
 // FUNCTIONS
+// TODO Correct this to use the new i18n model
 async function handleTranslate(event: Event) {
   event.preventDefault();
   try {
     loadingTranslation = true;
-    const translations = await translateText(sourceLanguageTag, languageTag, [
-      $form[fieldRoot]
-    ]);
-
-    form.update(($form) => {
-      if (!$form.translations[languageTag]) {
-        $form.translations[languageTag] = {};
+    
+    // Find the first non-empty value from supported locales
+    let sourceValue = '';
+    let sourceLocale: Locale = 'en';
+    
+    for (const locale of supportedLocales) {
+      // @ts-ignore - waiting for runes version of superform
+      const value = $form.i18n?.[locale as Locale]?.[fieldRoot];
+      if (value) {
+        sourceValue = value;
+        sourceLocale = locale;
+        break;
       }
-      $form.translations[languageTag][fieldRoot] = translations[0];
-      $form.translations[languageTag][`${fieldRoot}Gen`] = true;
+    }
+    
+    if (!sourceValue) {
+      throw new Error('No source value found for translation');
+    }
+
+    const translations = await translateText(sourceLocale, locale, [sourceValue]);
+
+    form.form.update(($form: any) => {
+      if (!$form.i18n) {
+        $form.i18n = {};
+      }
+      if (!$form.i18n[locale]) {
+        $form.i18n[locale] = {};
+      }
+      $form.i18n[locale][fieldRoot] = translations[0];
+      $form.i18n[locale][`${fieldRoot}Gen`] = true;
       return $form;
     });
 

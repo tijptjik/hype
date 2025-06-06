@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { page } from '$app/stores';
+import { page } from '$app/state';
 // LIB
 import { ADMIN_PATH } from '$lib/index';
 // AUTH
@@ -10,20 +10,19 @@ import { navigateOnAdmin } from '$lib/navigation';
 // COMPONENTS
 import IconicMenuButton from '$lib/components/menu/IconicMenuButton.svelte';
 // ENUMS
-import { HierarchicalResource } from '$lib/types';
+import { HierarchicalResource } from '$lib/enums';
 // ICONS
-import { InboxArrowDown, Map } from '@steeze-ui/heroicons';
+import { InboxArrowDown, Map, CloudArrowUp } from '@steeze-ui/heroicons';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 
 // CONTEXT
 const resourceState = getHierarchicalResourceState();
 
-const { session } = $page.data;
 let notificationCount = $derived(resourceState.filteredTasks.length);
 </script>
 
-{#if session && hasControlPanelAccess(session)}
+{#if page.data.session && hasControlPanelAccess(page.data.session)}
   <ul class="menu menu-horizontal m-0 space-x-2 p-0">
     <li>
       <IconicMenuButton
@@ -33,7 +32,16 @@ let notificationCount = $derived(resourceState.filteredTasks.length);
         {notificationCount} />
     </li>
     <li>
-      <IconicMenuButton href="/" iconSrc={Map} />
+      <IconicMenuButton
+        href={`${ADMIN_PATH}/images/batch`}
+        iconSrc={CloudArrowUp} />
+    </li>
+    <li>
+      <IconicMenuButton 
+        href={resourceState.activeResource === 'feature' && resourceState.activeEntity 
+          ? `/features/${resourceState.activeEntity}` 
+          : "/"} 
+        iconSrc={Map} />
     </li>
   </ul>
 {/if}

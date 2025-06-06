@@ -1,0 +1,360 @@
+// DRIZZLE
+import { eq, inArray, SQL, sql } from 'drizzle-orm';
+// LIB
+import { isAdminRequest } from '../index';
+// API
+import { applyQueryFilters } from '$lib/api';
+// AUTH
+import {
+  assertUserLoggedIn,
+  assertAdminRequest,
+  assertId,
+  runAssertions,
+  assertProjectMaintainerOrMemberOrSuperAdmin
+} from '$lib/auth/asserts';
+// DB
+import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
+import { getProjectIdforRoles, isSuperAdmin } from '$lib/auth/utils';
+// SCHEMA
+import { task, taskImage } from '$lib/db/schema';
+// DB
+import { applyPrismConstraints, toLocaleMap } from '$lib/db';
+// ZOD
+import { TaskAPI, TaskCollectionAPI } from '$lib/db/zod/schemas/task';
+// ENUMS
+import { HierarchicalResource } from '$lib/enums';
+// TYPES
+import type {
+  UserRoleDisco,
+  Prisms,
+  Session,
+  Database,
+  Id,
+  QueryParams,
+  TaskDB,
+  TaskDBNew,
+  TaskCollection,
+  FeatureI18nDB,
+  Task,
+  ProjectI18nDB,
+  OrganisationI18nDB,
+  TaskRaw
+} from '$lib/types';
+
+
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. COMMON
+//    - taskCollectionWithRelations (const)
+//    - taskEntityWithRelations (const)
+//
+// 2. QUERY CONTEXT
+//    - getTaskQueryContext
+//    - getTaskEntityQueryContext
+//
+// 3. ASSERTIONS
+//    - assertPermissionsToCreateTask
+//    - assertPermissionsToUpdateTask
+//    - assertPermissionsToDeleteTask
+//
+
+// ═══════════════════════
+// 1. COMMON
+// ═══════════════════════
+
+export const taskCollectionWithRelations = {
+  organisation: {
+    with: {
+      i18n: true
+    }
+  },
+  project: {
+    with: {
+      i18n: true
+    }
+  },
+  feature: {
+    with: {
+      i18n: true
+    }
+  },
+  images: {
+    with: {
+      image: true
+    }
+  },
+  contributor: {
+    columns: userColumnsWithPrivacyProtected
+  },
+  reviewer: {
+    columns: userColumnsWithPrivacyProtected
+  }
+};
+
+export const taskEntityWithRelations = {
+  ...taskCollectionWithRelations,
+  feature: {
+    with: {
+      i18n: true,
+      properties: {
+        with: {
+          propertyValue: {
+            with: {
+              i18n: true
+            }
+          },
+          property: {
+            with: {
+              i18n: true
+            }
+          }
+        }
+      },
+      layer: {
+        with: {
+          i18n: true,
+          project: {
+            with: {
+              i18n: true,
+              organisation: {
+                with: {
+                  i18n: true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+};
+
+// ═══════════════════════
+// 2. QUERY CONTEXT
+// ═══════════════════════
+
+/**
+ * Get the query context for the task resource.
+ * Tasks are second-class resources associated with features, so access is controlled
+ * by project membership. Filters the query based on user roles, prisms, and query parameters.
+ */
+export const getTaskQueryContext = (
+  db: Database,
+  session: Session,
+  request: Request,
+  params: QueryParams,
+  userRoles: UserRoleDisco[],
+  prisms?: Prisms
+) => {
+  // SETUP : By default, only show non-archived tasks,
+  // and disable isArchived filters from the query for non-superadmins.
+  let conditions: SQL<unknown>[] = [];
+  let excludeColumns = ['isArchived'];
+
+  // NON-SUPERADMIN : Hide tasks which are archived
+  if (!isSuperAdmin(session)) {
+    // Tasks don't have isArchived, but their associated features might
+    // We'll handle this at the feature level if needed
+  }
+
+  // FILTER : Apply prism conditions for organisation, project filtering
+  if (prisms && db) {
+    conditions.push(...applyPrismConstraints(db, HierarchicalResource.task, prisms));
+  }
+
+  // PUBLIC : Tasks are admin-only resources, so public access is not allowed
+  if (!isAdminRequest(request)) {
+    // Tasks should only be accessible from admin interface
+    conditions.push(sql`false`); // Block all public access
+  } else if (!isSuperAdmin(session)) {
+    // ADMIN : List tasks where the user has a role in the task's project
+    const projectIds = getProjectIdforRoles(userRoles);
+    if (projectIds.length > 0) {
+      conditions.push(inArray(task.projectId, projectIds as Id[]));
+    } else {
+      conditions.push(sql`false`); // No access if no project roles
+    }
+  } else {
+    // SUPERADMIN : See all tasks
+    if (!(prisms && db)) {
+      conditions = []; // List all tasks without default filters
+    }
+  }
+
+  // Apply general query filters from params
+  if (Object.keys(params).length > 0) {
+    applyQueryFilters(task, params, conditions);
+  }
+
+  return { params, conditions, excludeColumns };
+};
+
+/**
+ * Get the query context for a single task.
+ * Tasks are admin-only resources, so public access is not allowed.
+ */
+export const getTaskEntityQueryContext = (
+  db: Database,
+  session: Session,
+  request: Request,
+  params: QueryParams,
+  userRoles: UserRoleDisco[]
+) => {
+  let conditions: SQL<unknown>[] = [];
+  let excludeColumns = ['isArchived'];
+
+  // PUBLIC : Tasks are admin-only resources
+  if (!isAdminRequest(request)) {
+    conditions.push(sql`false`); // Block all public access
+  } else if (!isSuperAdmin(session)) {
+    // ADMIN : Access tasks where user has project role
+    const projectIds = getProjectIdforRoles(userRoles);
+    if (projectIds.length > 0) {
+      conditions.push(inArray(task.projectId, projectIds as Id[]));
+    } else {
+      conditions.push(sql`false`);
+    }
+  }
+  // SUPERADMIN : No additional restrictions
+
+  // Apply general query filters from params
+  if (Object.keys(params).length > 0) {
+    applyQueryFilters(task, params, conditions);
+  }
+
+  return { params, conditions, excludeColumns };
+};
+
+// ═══════════════════════
+// 3. ASSERTIONS
+// ═══════════════════════
+
+/**
+ * Asserts permissions to create a task.
+ * Any logged in user can create a task.
+ */
+export const assertPermissionsToCreateTask = async (
+  db: Database,
+  session: Session,
+  request: Request,
+  data: TaskDBNew,
+  userRoles: UserRoleDisco[]
+) => {
+  const commonAssertions = [
+    () => assertUserLoggedIn(session as any)
+  ];
+
+  const assertionError = runAssertions(...commonAssertions);
+  if (assertionError) return assertionError;
+};
+
+/**
+ * Asserts permissions to update a task.
+ * Tasks can be updated by project maintainers or members who have access to the associated project.
+ */
+export const assertPermissionsToUpdateTask = async (
+  db: Database,
+  session: Session,
+  request: Request,
+  params: QueryParams,
+  userRoles: UserRoleDisco[],
+  taskData?: TaskDB
+) => {
+  const commonAssertions = [
+    () => assertUserLoggedIn(session as any),
+    () => assertAdminRequest(request),
+    () => assertId({ ...params })
+  ];
+
+  // Get project ID from task data if available, otherwise fetch it
+  let projectId: Id;
+  if (taskData?.projectId) {
+    projectId = taskData.projectId;
+  } else {
+    // Would need to fetch task first to get projectId
+    const taskRecord = await db.query.task.findFirst({
+      where: eq(task.id, params.id as Id),
+      columns: { projectId: true }
+    });
+    if (!taskRecord) {
+      throw new Error('Task not found');
+    }
+    projectId = taskRecord.projectId;
+  }
+
+  const contextAssertion = () =>
+    assertProjectMaintainerOrMemberOrSuperAdmin(session, userRoles, projectId);
+
+  const assertionError = runAssertions(...commonAssertions, contextAssertion);
+  if (assertionError) return assertionError;
+};
+
+/**
+ * Asserts permissions to delete a task.
+ * Uses same permissions as update - project maintainers or members.
+ */
+export const assertPermissionsToDeleteTask = async (
+  db: Database,
+  session: Session,
+  request: Request,
+  params: QueryParams,
+  userRoles: UserRoleDisco[],
+  taskData?: TaskDB
+) => {
+  return assertPermissionsToUpdateTask(
+    db,
+    session,
+    request,
+    params,
+    userRoles,
+    taskData
+  );
+};
+
+// ═══════════════════════
+// 4. UTILS :: RESPONSE SHAPING
+// ═══════════════════════
+
+/**
+ * Transform raw task data from database to API response format
+ * Converts i18n arrays to locale maps for proper API structure
+ */
+export const toResponseShape = async (
+  data: TaskRaw,
+  isCollection: boolean = false
+): Promise<Task | TaskCollection> => {
+  // Transform feature properties if they exist
+  const transformedFeature = data.feature ? {
+    ...data.feature,
+    i18n: data.feature.i18n ? toLocaleMap(data.feature.i18n) : {},
+    properties: data.feature.properties?.map(prop => ({
+      ...prop,
+      property: {
+        ...prop.property,
+        i18n: prop.property.i18n ? toLocaleMap(prop.property.i18n) : {}
+      },
+      propertyValue: prop.propertyValue ? {
+        ...prop.propertyValue,
+        i18n: prop.propertyValue.i18n ? toLocaleMap(prop.propertyValue.i18n) : {}
+      } : null
+    })) || []
+  } : null;
+
+  // Transform the complete data structure
+  const transformedData = {
+    ...data,
+    organisation: data.organisation ? {
+      ...data.organisation,
+      i18n: data.organisation.i18n ? toLocaleMap(data.organisation.i18n) : {}
+    } : null,
+    project: data.project ? {
+      ...data.project,
+      i18n: data.project.i18n ? toLocaleMap(data.project.i18n) : {}
+    } : null,
+    feature: transformedFeature
+  };
+
+  return (isCollection ? TaskCollectionAPI : TaskAPI).parse(transformedData);
+};

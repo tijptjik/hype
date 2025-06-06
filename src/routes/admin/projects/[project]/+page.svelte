@@ -1,39 +1,34 @@
 <script lang="ts">
-// SVELTE
-import { get } from 'svelte/store';
-import { goto } from '$app/navigation';
 // LIB
-import { NEW_TITLE, NEW_REF } from '$lib';
+import { NEW_TITLE } from '$lib';
 // I18N
+import { getLocale } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // CONTEXT
-import { setForm } from '$lib/context/forms.svelte';
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { setForm } from '$lib/context/form.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // PROVIDERS
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // FLASH
 import { getFlash } from 'sveltekit-flash-message';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 // COMPONENTS
 import Header from '$lib/components/layout/EntityHeader.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
 import SpecificationSection from '$lib/components/forms/sections/Specification.svelte';
 import ImageSection from '$lib/components/forms/sections/Image.svelte';
-import PropertySection from '$lib/components/forms/sections/Property.svelte';
+import PropertySection from '$lib/components/forms/sections/PropertyType.svelte';
 import UserSection from '$lib/components/forms/sections/User.svelte';
 // ENUMS
-import {
-  HierarchicalResource,
-  classifierComponentTypes,
-  specifierComponentTypes
-} from '$lib/types';
+import { HierarchicalResource, classifierComponentTypes, specifierComponentTypes, ImageContextResource } from '$lib/enums';
 // TYPES
 import type {
   Project,
   FormPageProps,
   FormField,
   FormFieldArray,
-  GetImageAPI
+  FormFieldArrayDefinition,
+  Image
 } from '$lib/types';
 
 // CONTEXT
@@ -64,7 +59,7 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
       isTranslated: true,
       isNested: false
     }
-  },
+  } as FormField,
   credit: {
     license: {
       label: m.admin__forms_project_license(),
@@ -80,7 +75,7 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
       isTranslated: true,
       isNested: false
     }
-  },
+  } as FormField,
   users: {
     maintainerRoles: {
       label: m.admin__forms_project_members_title(),
@@ -88,7 +83,7 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
       isTranslated: false,
       isNested: false
     }
-  },
+  } as FormField,
   specification: {
     code: {
       label: m.admin__forms_common_code(),
@@ -97,7 +92,7 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
       isTranslated: false,
       isNested: false
     }
-  },
+  } as FormField,
   config: {
     properties: {
       isArray: true,
@@ -194,15 +189,15 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
           }
         }
       }
-    }
-  },
+    } as FormFieldArrayDefinition,
+  } as FormFieldArray,
   images: {
     image: {
       label: m.admin__forms_project_image_title(),
       component: 'InputField',
       isArray: false
     }
-  }
+  } as FormField,
 };
 
 // STATE : PROPS
@@ -211,7 +206,7 @@ resourceState.setEntity(pageProps.data.entity, RESOURCE);
 resourceState.setFacet('core');
 
 // STATE : FORM
-let form = setForm<Project>(
+let form = setForm(
   RESOURCE,
   pageProps.data.entity,
   pageProps.data.validatedForm,
@@ -221,7 +216,7 @@ let form = setForm<Project>(
 let enhance = $derived(form.enhance);
 
 // STATE : DERIVED :: TITLE
-let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
+let title = $derived(pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE);
 </script>
 
 <!-- LAYOUT -->
@@ -249,8 +244,14 @@ let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
           <UserSection
             title={m.admin__forms_project_members_title()}
             subtitle={m.admin__forms_project_members_subtitle()}
-            fields={FIELDS.users as FormFieldArray}
-            {form} />
+            fields={FIELDS.users}
+            {form}
+            joinConfig={{
+              discriminator: 'role',
+              checkedValue: 'maintainer',
+              uncheckedValue: 'member'
+            }}
+             />
           <SpecificationSection
             title={m.admin__forms_common_specifiers()}
             fields={FIELDS.specification as FormField}
@@ -275,16 +276,17 @@ let title = $derived(pageProps.data.validatedForm.data.name || NEW_TITLE);
         <ImageProvider
           mode="standalone"
           isAdminMode={true}
-          refType={RESOURCE}
-          refId={pageProps.data.entity}
-          refOrganisation={resourceState.getOrganisation(
+          ctxType={ImageContextResource.project}
+          ctxId={pageProps.data.entity}
+          organisation={resourceState.getOrganisation(
             resourceState.getEntity() as Project
           )}
-          refProject={resourceState.getEntity() as Project}
-          image={pageProps.data.image as GetImageAPI}>
+          project={resourceState.getEntity() as Project}
+          image={pageProps.data.image as Image}>
           <ImageSection
             title={m.admin__forms_project_image_title()}
-            fields={FIELDS.images}
+            fields={FIELDS.images as FormField}
+            image={pageProps.data.image ?? null}
             {form} />
         </ImageProvider>
       {/if}

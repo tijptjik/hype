@@ -1,6 +1,7 @@
 <script lang="ts">
 // I18N
-import { m, getI18nValue, getLocale } from '$lib/i18n';
+import { getI18n } from '$lib/i18n';
+import { m } from '$lib/i18n';
 // ICONS
 import { Squares2x2 } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
@@ -11,12 +12,12 @@ import FilteredResource from '$lib/components/panels/common/FilteredResource.sve
 import ResourceContainer from '$lib/components/panels/common/ResourceContainer.svelte';
 import SelectedResources from '../common/SelectedResources.svelte';
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 // TYPES
 import type { Project } from '$lib/types';
 
 // Initialize query client and map state
-const mapCtx = getMapContext();
+const mapCtx = getMapCtx();
 
 // Get cached features for counting
 const projects = $derived(mapCtx.state.resources.project);
@@ -35,17 +36,28 @@ function filterProjects(projects: Project[], term: string) {
 
   const searchLower = term.toLowerCase();
   return projects.filter((project) => {
-    return getLocale() == 'en'
-      ? project.name.toLowerCase().includes(searchLower) ||
-          (project.description &&
-            project.description.toLowerCase().includes(searchLower))
-      : getI18nValue(project, 'nameShort').toLowerCase().includes(searchLower) ||
-          getI18nValue(project, 'description').toLowerCase().includes(searchLower);
+    return (
+      getI18n(project, 'name', mapCtx.getUserPreferences())
+        .toLowerCase()
+        .includes(searchLower) ||
+      getI18n(project, 'description', mapCtx.getUserPreferences())
+        .toLowerCase()
+        .includes(searchLower)
+    );
   });
 }
 
 const filteredProjects = $derived(filterProjects(projects, searchTerm));
 let isDefaultOpen = $derived(document.body.clientHeight > 1000);
+
+
+let handleReset = () => {
+  if (selectedProjects.length == 0) {
+    mapCtx.closePanel('maps')
+  } else {
+    mapCtx.resetProjects()
+  }
+}
 </script>
 
 <!-- COMPONENTS -->
@@ -69,7 +81,7 @@ let isDefaultOpen = $derived(document.body.clientHeight > 1000);
   collapsedContent={SelectedProjects}
   defaultOpen={isDefaultOpen}>
   {#if projects.length > 4}
-    <FilterBar bind:searchTerm />
+    <FilterBar bind:searchTerm onReset={handleReset} />
   {/if}
   <ResourceContainer>
     {#each filteredProjects as resource}

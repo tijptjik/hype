@@ -1,23 +1,23 @@
-<script lang="ts">
+<script lang="ts" generics="T extends Resource">
 import { tick, untrack } from 'svelte';
 import { flip } from 'svelte/animate';
 import { fade, scale, fly, blur } from 'svelte/transition';
 import { onDestroy } from 'svelte';
 import { cubicOut, expoIn, sineOut } from 'svelte/easing';
 // ENUMS
-import { HierarchicalResource } from '$lib/types';
+import { HierarchicalResource } from '$lib/enums';
 // COMPONENTS
 import EntityCard from '$lib/components/layout/EntityCard.svelte';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // TYPES
 import type { Resource } from '$lib/types';
 let {
   entities,
   children
 }: {
-  entities: Resource[];
-  children: (entity: Resource, idx: number) => any;
+  entities: T[];
+  children: (entity: T, idx: number) => any;
 } = $props();
 
 // CONTEXT
@@ -27,7 +27,7 @@ const resourceState = getHierarchicalResourceState();
 let isInitialLoading = $state(true);
 
 // INFINITE SCROLL
-let visibleEntities: Resource[] = $state([]);
+let visibleEntities: T[] = $state([]);
 let currentPage = $state(0);
 let isLoading = $state(false);
 let observer: IntersectionObserver | null = $state(null);

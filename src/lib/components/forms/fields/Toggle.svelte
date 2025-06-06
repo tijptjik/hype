@@ -1,19 +1,21 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
+// COMPONENTS
+import Toggle from '$lib/components/forms/elements/Toggle.svelte';
+
 type Props = {
+  label: string;
   checked: boolean;
   size?: 'sm' | 'md' | 'lg';
-  onChange: () => void;
+  onChange: (e : Event) => void;
+  isSolid?: boolean
 };
 
-let { checked, size = 'lg', onChange }: Props = $props();
+let {isSolid = true, ...toggleProps} : Props = $props();
 </script>
 
-<!-- TODO Make into a field instead of an element -->
-<label class="label cursor-pointer">
-  <input
-    {name}
-    type="checkbox"
-    class="toggle toggle-primary toggle-{size}"
-    {checked}
-    onchange={onChange} />
-</label>
+<div
+  class="flex flex-row items-center justify-between gap-4 {isSolid ? 'rounded-full bg-base-200' : 'bg-base-100'} px-4 py-1 align-baseline">
+  <Toggle {...toggleProps} />
+</div>

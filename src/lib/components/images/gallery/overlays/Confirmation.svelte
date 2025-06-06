@@ -1,14 +1,14 @@
 <script lang="ts">
 import { fade } from 'svelte/transition';
 // CONTEXT
-import { getImageContext } from '$lib/context/images.svelte';
+import { getImageContext } from '$lib/context/image.svelte';
 // TYPES
-import type { GetImageAPI } from '$lib/types';
+import type { Image } from '$lib/types';
 
 const imageCtx = getImageContext();
 
 type Props = {
-  image: GetImageAPI;
+  image: Image;
 };
 
 let { image }: Props = $props();

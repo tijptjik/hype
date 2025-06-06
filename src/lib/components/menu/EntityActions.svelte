@@ -6,7 +6,7 @@ import FormResetButton from './FormResetButton.svelte';
 import FormSubmitButton from './FormSubmitButton.svelte';
 import PublishButton from './PublishButton.svelte';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 
 let menuProps = $props();
 

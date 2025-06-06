@@ -2,12 +2,12 @@
 // SVELTE
 import { onMount } from 'svelte';
 // STORES
-import { page } from '$app/stores';
+import { page } from '$app/state';
 // SERVICES
-import { getURLfromImage } from '$lib/services/images.svelte';
+import { getURLfromImage } from '$lib/client/services/image';
 // CONTEXT
-import { getImageContext } from '$lib/context/images.svelte';
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getImageContext } from '$lib/context/image.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // COMPONENTS
 import Image from '$lib/components/common/Image.svelte';
 import Icon from '$lib/components/common/Icon.svelte';
@@ -22,20 +22,12 @@ let loadedImage = $state();
 // SERVICES
 const imageCtx = getImageContext();
 
-let canonicalImage = async () => {
-  if (loadedImage) return loadedImage;
-  const images = imageCtx.getImages();
-  const canonical = images.find((image: any) => image.intent === 'canonical');
-  loadedImage = canonical || images[0] || null;
-  return loadedImage;
-};
-
 // HANDLERS
 const resourceState = getHierarchicalResourceState();
 
 // UTILS
 const getUrl = (facet: string) => {
-  const url = new URL($page.url.href);
+  const url = new URL(page.url.href);
   url.hash = `#${facet}`;
   return url.toString();
 };
@@ -46,25 +38,17 @@ const navigateToGallery = (e: Event) => {
   resourceState.setFacet('images');
 };
 
-onMount(() => {
-  canonicalImage();
-});
 </script>
 
-<!-- TODO The info panel is clipping the image, fix the stacking context -->
 <div class="h-full min-h-[300px] w-full basis-1/1 2xl:basis-1/3-gap-6">
-  {#if loadedImage === undefined}
-    <div class="flex h-full w-full items-center justify-center rounded-lg bg-base-300">
-      <span class="text-base-content/50">Loading...</span>
-    </div>
-  {:else if loadedImage}
+  {#if $form.image}
     <a href={getUrl('images')} onclick={navigateToGallery}>
       <div class="relative h-full w-full overflow-hidden rounded-lg">
         <!-- Background Image -->
         <div class="z-1 absolute inset-0 h-full w-full bg-neutral opacity-50">
           <Image
             src={getURLfromImage({
-              image: loadedImage as ImageDB,
+              image: $form.image as ImageDB,
               transformation: 'c_fill,h_320,w_320,q_auto'
             })}
             alt="Background Image"
@@ -78,7 +62,7 @@ onMount(() => {
         <div class="z-2 absolute h-full w-full overflow-hidden p-2">
           <Image
             src={getURLfromImage({
-              image: loadedImage as ImageDB,
+              image: $form.image as ImageDB,
               transformation: 'c_fit,h_320,w_320,q_auto'
             })}
             alt="Canonical image of feature"

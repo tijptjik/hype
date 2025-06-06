@@ -4,31 +4,32 @@ import { onMount } from 'svelte';
 // MapLibre
 import SpectralStyle from '$lib/map/style-protomaps.json';
 import { addAddressMarker } from '$lib/map/markers';
+import { getCoordinates } from '$lib/map/data';
 // UTILS
 import { loadScript } from '$lib';
 // ICONS
 import { ArrowsPointingIn, ArrowsPointingOut } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // TYPES
 import type { Marker, LngLatLike } from 'maplibre-gl';
-import type { Id } from '$lib/types';
+import type { Id, AddressMeta } from '$lib/types';
 // Add import for preload code
 import { monkeyPatchMapLibre } from '$lib/map/maplibre-preload';
 // GLOBAL
 let maplibre: any;
 type MapProps = {
   coordinates: number[];
+  addressMeta: AddressMeta | null;
   draggable?: boolean;
   toggleFullscreen?: (isFullscreen: boolean) => void;
   dragEndCallback?: (lngLat: number[]) => void;
-  form: any;
 };
 
 // CONTEXT
-let mapCtx = getMapContext();
+let mapCtx = getMapCtx();
 let resourceState = getHierarchicalResourceState();
 
 let isFullscreen = $state(false);
@@ -42,16 +43,12 @@ let map = $derived(mapCtx.map);
 let feature = $state();
 let isMapLoaded = $state(false);
 
-// STATE : FORM
-let { form } = mapProps.form;
-
 // STATE : DERIVED
-let markedAddressLngLat: LngLatLike | null = $state(null);
-let addressLngLat: LngLatLike | null = $derived(
-  $form.addressMeta?.longitude && $form.addressMeta?.latitude
-    ? [$form.addressMeta?.longitude, $form.addressMeta?.latitude]
-    : null
+let markedAddressLngLat: [number, number] | null = $state(null);
+let addressLngLat: [number, number] | null = $derived(
+  getCoordinates(mapProps.addressMeta as LngLatLike)
 );
+
 
 // STATE : UI
 let addressMarker: Marker | null = $state(null);
@@ -96,7 +93,8 @@ onMount(async () => {
 
 // EFFECTS :: ON UPDATE
 $effect(() => {
-  if (map) {
+  if (map && mapProps.coordinates && feature) {
+    mapCtx.zoomToMarkerOnly = true;
     if (mapProps.coordinates && addressLngLat && !mapCtx.zoomToMarkerOnly) {
       // @ts-ignore
       mapCtx.zoomToCoordinates([mapProps.coordinates, addressLngLat]);
@@ -120,9 +118,17 @@ const handleDragEnd = (e: Event) => {
   mapCtx.zoomToMarkerOnly = true;
 };
 
-let isSameCoordinates = (lngLat1: LngLatLike, lngLat2: LngLatLike) => {
+let isSameCoordinates = (lngLat1: LngLatLike | null, lngLat2: LngLatLike | null) => {
   if (!lngLat1 || !lngLat2) return false;
-  return lngLat1[0] === lngLat2[0] && lngLat1[1] === lngLat2[1];
+  if (Array.isArray(lngLat1) && Array.isArray(lngLat2)) {
+    return lngLat1[0] === lngLat2[0] && lngLat1[1] === lngLat2[1];
+  }
+  if ('lon' in lngLat1 && 'lon' in lngLat2) {
+    return lngLat1.lon === lngLat2.lon && lngLat1.lat === lngLat2.lat;
+  } else if ('lng' in lngLat1 && 'lng' in lngLat2) {
+    return lngLat1.lng === lngLat2.lng && lngLat1.lat === lngLat2.lat;
+  }
+  return false;
 };
 
 // Handle address marker updates
@@ -145,6 +151,8 @@ $effect(() => {
 });
 </script>
 
+<!-- ENHANCEMENT - show the canonical image on top of the marker, so that we 
+ can remove the canonical image box and leave more space for the properties -->
 <div class="relative h-full w-full">
   <div class="absolute right-4 top-4 z-10">
     <button

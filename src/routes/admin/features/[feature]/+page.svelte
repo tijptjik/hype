@@ -1,13 +1,14 @@
 <script lang="ts">
 import { NEW_TITLE, NEW_REF } from '$lib';
 // I18N
+import { getLocale } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // FLASH
 import { getFlash } from 'sveltekit-flash-message';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 // CONTEXT
-import { setForm } from '$lib/context/forms.svelte';
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { setForm } from '$lib/context/form.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // PROVIDERS
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // COMPONENTS
@@ -22,16 +23,16 @@ import GallerySection from '$lib/components/forms/sections/Gallery.svelte';
 import ViewerSection from '$lib/components/forms/sections/Viewer.svelte';
 import CanonicalImage from '$lib/components/forms/sections/CanonicalImage.svelte';
 // ENUMS
-import { HierarchicalResource } from '$lib/types';
+import { HierarchicalResource, ImageContextResource } from '$lib/enums';
 // TYPES
 import type {
   Feature,
   FormPageProps,
   FormField,
   FormFieldArray,
+  FormFieldArrayDefinition,
   FormFieldNested,
   FormFieldConfig,
-  ImageEditRefs,
   OrganisationDB,
   ProjectDB,
   Resource
@@ -57,7 +58,7 @@ const FIELDS: FormFieldConfig = {
       isNested: false,
       isTranslated: true
     }
-  },
+  } as FormField,
   property: {
     properties: {
       isArray: true,
@@ -69,11 +70,11 @@ const FIELDS: FormFieldConfig = {
           specifier: {}
         }
       }
-    }
-  },
+    } as FormFieldArrayDefinition,
+  } as FormFieldArray,
   address: {
     displayAddress: {
-      label: 'Display Address',
+      label: m.giant_deft_kangaroo_feel(),
       placeholder: 'As shown to users',
       component: 'TextareaField',
       isArray: false,
@@ -94,8 +95,9 @@ const FIELDS: FormFieldConfig = {
       isNested: true,
       isTranslated: false
     }
-  }
+  } as FormFieldNested,
 };
+
 
 // STATE : PROPS
 let pageProps: FormPageProps<Feature> = $props();
@@ -103,7 +105,7 @@ resourceState.setEntity(pageProps.data.entity, RESOURCE);
 resourceState.setFacet('core');
 
 // STATE : FORM
-let form = setForm<Feature>(
+let form = setForm(
   RESOURCE,
   pageProps.data.entity,
   pageProps.data.validatedForm,
@@ -112,28 +114,29 @@ let form = setForm<Feature>(
 );
 let enhance = $derived(form.enhance);
 
-// STATE : DERIVED :: TITLE
-let title = $derived(pageProps.data.validatedForm.data.title || NEW_TITLE);
-
 // STATE : DERIVED :: FULLSCREEN
 let isMapFullscreen = $state(false);
 
-function handleMapFullscreenChange(isFullscreen: boolean) {
+// STATE : DERIVED :: TITLE
+let title = $derived(pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.title || NEW_TITLE);
+
+// UTILS
+function handleMapFullscreenChange(isFullscreen: boolean) : void {
   isMapFullscreen = isFullscreen;
-}
+};
 </script>
 
 <ImageProvider
   mode="gallery"
   isAdminMode={true}
-  refType="feature"
-  refId={pageProps.data.entity}
-  refOrganisation={resourceState.getAscendantOrSelf(
+  ctxType={ImageContextResource.feature}
+  ctxId={pageProps.data.entity}
+  organisation={resourceState.getAscendantOrSelf(
     pageProps.data.validatedForm.data as unknown as Resource,
     HierarchicalResource.feature,
     HierarchicalResource.organisation
   ) as OrganisationDB}
-  refProject={resourceState.getAscendantOrSelf(
+  project={resourceState.getAscendantOrSelf(
     pageProps.data.validatedForm.data as unknown as Resource,
     HierarchicalResource.feature,
     HierarchicalResource.project
@@ -155,16 +158,16 @@ function handleMapFullscreenChange(isFullscreen: boolean) {
           <div
             class="map-container relative h-full flex-1 overflow-hidden @container"
             class:fullscreen={isMapFullscreen}>
-            <MapSection {form} toggleFullscreen={handleMapFullscreenChange} />
+            <MapSection {form} fields={FIELDS.map} toggleFullscreen={handleMapFullscreenChange} />
             <div
               class="absolute bottom-2 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex">
               <UserAttributionCard
-                userId={pageProps.data.validatedForm.data.contributorId || null}
-                date={pageProps.data.validatedForm.data.createdAt || null}
+                userId={pageProps.data.validatedForm.data.contributorId}
+                date={pageProps.data.validatedForm.data.createdAt ?? undefined}
                 type="contributor" />
               <UserAttributionCard
-                userId={pageProps.data.validatedForm.data.publisherId || null}
-                date={pageProps.data.validatedForm.data.publishedAt || null}
+                userId={pageProps.data.validatedForm.data.publisherId}
+                date={pageProps.data.validatedForm.data.publishedAt ?? undefined}
                 type="publisher" />
             </div>
           </div>
@@ -179,13 +182,16 @@ function handleMapFullscreenChange(isFullscreen: boolean) {
                     title={m.admin__forms_common_classifiers()}
                     subtitle={m.admin__forms_common_classifiers_subtitle()}
                     fieldDiscriminator="classifier"
-                    fields={FIELDS.property as FormFieldArray} />
-                  <PropertySection
+                    fields={FIELDS.property as FormFieldArray}
+                    cols={pageProps.data.entity == NEW_REF ? 2 : 3}
+                    />
+                    <PropertySection
                     {form}
                     title={m.admin__forms_common_specifiers()}
                     subtitle={m.admin__forms_common_specifiers_subtitle()}
                     fieldDiscriminator="specifier"
-                    fields={FIELDS.property as FormFieldArray} />
+                    fields={FIELDS.property as FormFieldArray}
+                    cols={pageProps.data.entity == NEW_REF ? 2 : 3} />
                   {#if pageProps.data.entity !== NEW_REF}
                     <CanonicalImage {form} />
                   {/if}
@@ -206,8 +212,8 @@ function handleMapFullscreenChange(isFullscreen: boolean) {
                   subtitle={m.admin__forms_feature_addressing_subtitle()}
                   fields={FIELDS.address as FormField & FormFieldNested} />
               {:else if resourceState.activeFacet === 'images' && pageProps.data.entity !== NEW_REF}
-                <ViewerSection {form} title={m.admin__forms_feature_viewer_title()} />
-                <GallerySection {form} title={m.admin__forms_feature_gallery_title()} />
+                <ViewerSection {form} title={m.admin__forms_feature_viewer_title()} fields={FIELDS.viewer as FormFieldNested} />
+                <GallerySection {form} title={m.admin__forms_feature_gallery_title()} fields={FIELDS.gallery as FormFieldNested} />
               {/if}
             </div>
           </div>

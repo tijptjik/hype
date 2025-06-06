@@ -1,7 +1,7 @@
 <script lang="ts">
 // import { AttributionControl, GeolocateControl, Map, NavigationControl, ScaleControl } from 'maplibre-gl';
 // SVELTE
-import { page } from '$app/stores';
+import { page } from '$app/state';
 import { onMount } from 'svelte';
 // ICONS
 import { Square3Stack3d } from '@steeze-ui/heroicons';
@@ -15,7 +15,7 @@ import { m } from '$lib/i18n';
 import { loadScript } from '$lib';
 import { updateMarkers } from '$lib/map/markers';
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
+import { getMapCtx } from '$lib/context/map.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
 // STYLES
 import '$lib/styles/map.css';
@@ -25,19 +25,18 @@ import { Point } from 'maplibre-gl';
 // CONFIG
 import { MOBILE_MAX_WIDTH } from '$lib/index';
 // TYPES
-import type { PointLike, LatLng } from 'maplibre-gl';
+import type { PointLike, LngLatLike } from 'maplibre-gl';
 // let mapStore: MapStore = getContext(MAPSTORE_CONTEXT_KEY);
 let mapContainer: HTMLDivElement;
 
 // GLOBAL
 let maplibre: any;
-let session = $page.data.session;
-
 // CONTEXT
-const mapCtx = getMapContext();
+const mapCtx = getMapCtx();
 const omniCtx = getOmniContext();
 
 let lastHorizontalOffset = $state(0);
+let isAnimating = $state(false);
 // WATCHERS
 // Watch for changes in features
 onMount(async () => {
@@ -63,18 +62,19 @@ onMount(async () => {
     bearing: 17.6,
     zoom: 14,
     hash: false,
-    attributionControl: false
+    pitch: 45,
+    attributionControl: false,
   });
+
+  // mapCtx.map.transform.setFov(0);
 
   mapCtx.map!.on('load', () => {
     mapCtx.map!.addSource('hongkong-latest', {
       type: 'vector',
-      url: 'https://tiles.hype.hk/basemap/hongkong-latest.json'
+              url: '/api/tiles/basemap/hongkong-latest.json'
     });
 
-    console.log(session?.user?.experimental);
-
-    if (!session?.user?.experimental.noLabelsMode) {
+    if (!mapCtx.user?.experimental?.noLabelsMode) {
       mapCtx.map!.addLayer({
         id: 'earth',
         type: 'fill',
@@ -107,12 +107,15 @@ onMount(async () => {
       paint: {
         'fill-color': 'rgba(15, 14, 14, 1)',
         'fill-opacity': 0.5,
-        'fill-outline-color': {
-          stops: [
-            [17, 'rgba(13, 13, 13, 1)'],
-            [20, 'rgba(240, 77, 127, 0.66)']
-          ]
-        }
+        'fill-outline-color': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          17,
+          'rgba(13, 13, 13, 1)',
+          20,
+          'rgba(240, 77, 127, 0.66)'
+        ]
       }
     });
 
@@ -133,16 +136,19 @@ onMount(async () => {
         'text-color': 'rgba(240, 77, 127, 0.86)',
         'text-halo-color': '#141414',
         'text-halo-width': 1,
-        'text-opacity': {
-          stops: [
-            [18.5, 0],
-            [20, 1]
-          ]
-        }
+        'text-opacity': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          18.5,
+          0,
+          20,
+          1
+        ]
       }
     });
 
-    if (!session?.user?.experimental.noLabelsMode) {
+    if (!mapCtx.user?.experimental?.noLabelsMode) {
       mapCtx.map!.addLayer({
         id: 'places_locality',
         type: 'symbol',
@@ -1196,7 +1202,7 @@ onMount(async () => {
       });
     }
 
-    if ($page.data.session) {
+    if (mapCtx.user) {
       // Initial marker setup
       updateMarkers(mapCtx, mapCtx.getVisibleFeatures(), maplibre);
       // TODO: Add a cleanup function to remove the markers when the component unmounts
@@ -1242,10 +1248,15 @@ onMount(async () => {
       const featureId = target.dataset.featureId;
       if (!featureId) return;
       omniCtx.handleFeatureSelection(mapCtx, featureId, { openCard: true });
-    } else if (Object.values(mapCtx.state.panels).some((panel) => panel)) {
-      mapCtx.closeAllPanels();
     } else {
-      omniCtx.close();
+      // Priority 1: Close feature card if open
+      if (omniCtx.state.isCardOpen) {
+        omniCtx.close();
+      }
+      // Priority 2: Close panels if open
+      else if (Object.values(mapCtx.state.panels).some((panel) => panel)) {
+        mapCtx.closeAllPanels();
+      }
     }
   });
 
@@ -1256,8 +1267,10 @@ onMount(async () => {
 
 $effect(() => {
   // Rerender the map when the features change
-  mapCtx.features;
-  updateMarkers(mapCtx, mapCtx.getVisibleFeatures(), maplibre);
+  if (!isAnimating) {
+    mapCtx.features;
+    updateMarkers(mapCtx, mapCtx.getVisibleFeatures(), maplibre);
+  }
 });
 
 // STATE : DERIVED
@@ -1280,21 +1293,37 @@ let horizontalOffset = $derived(() => {
 // Ensure that the center of the map is in the center of the viewport,
 // even after a panel is triggered.
 $effect(() => {
-  if (horizontalOffset() !== lastHorizontalOffset) {
-    if (mapCtx.map) {
-      let coordinates = mapCtx.map!.getCenter();
-      const centerInPx: Point = mapCtx.map!.project(coordinates);
-      const newPoint: PointLike = new Point(
-        centerInPx.x +
-          (horizontalOffset() === 0 ? lastHorizontalOffset : -horizontalOffset()),
-        centerInPx.y
-      );
-      const newCenter: LatLng = mapCtx.map!.unproject(newPoint);
-      mapCtx.map!.easeTo({ center: newCenter });
-    } else {
-      console.error('mapCtx.map is not defined');
-    }
+  if (horizontalOffset() !== lastHorizontalOffset && mapCtx.map && !isAnimating) {
+    isAnimating = true;
+    let coordinates = mapCtx.map!.getCenter();
+    const centerInPx: Point = mapCtx.map!.project(coordinates);
+    const newPoint: PointLike = new Point(
+      centerInPx.x +
+        (horizontalOffset() === 0 ? lastHorizontalOffset : -horizontalOffset()),
+      centerInPx.y
+    );
+    const newCenter: LngLatLike = mapCtx.map!.unproject(newPoint);
+    
     lastHorizontalOffset = horizontalOffset();
+    
+    // Set up one-time event listener for when animation completes
+    const onMoveEnd = () => {
+      isAnimating = false;
+      mapCtx.map?.off('moveend', onMoveEnd);
+    };
+    mapCtx.map!.on('moveend', onMoveEnd);
+    
+    // Start the animation
+    mapCtx.map!.easeTo({ 
+      center: newCenter,
+      duration: 300
+    });
+    
+    // Fallback timeout in case moveend doesn't fire
+    setTimeout(() => {
+      isAnimating = false;
+      mapCtx.map?.off('moveend', onMoveEnd);
+    }, 500);
   }
 });
 </script>
@@ -1304,7 +1333,7 @@ $effect(() => {
   class="map absolute inset-0 overflow-hidden rounded-2xl caret-transparent"
   data-testid="map"
   bind:this={mapContainer}>
-  {#if $page.data.session && !mapCtx.state.prisms.layer.length && !mapCtx.state.panels.maps}
+  {#if mapCtx.user && !mapCtx.state.prisms.layer.length && !mapCtx.state.panels.maps}
     <div
       class="pointer-events-none absolute inset-0 z-50 mx-auto flex cursor-pointer items-center justify-center bg-black/70 text-center caret-transparent"
       in:fade={{ duration: 800, delay: 3000, easing: cubicInOut }}

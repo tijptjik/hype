@@ -2,21 +2,43 @@
 // Animation
 import { fly } from 'svelte/transition';
 // I18N
-import { getI18nValue } from '$lib/i18n';
+import { getI18n } from '$lib/i18n';
 // CONTEXT
-import { getMapContext } from '$lib/context/map.svelte';
-// Types
-import type { Feature } from '$lib/types';
+import { getMapCtx } from '$lib/context/map.svelte';
 // CONFIG
-import { MOBILE_MAX_WIDTH } from '$lib/index';
+import { MOBILE_MAX_WIDTH, NEW_REF } from '$lib/index';
+// Types
+import type { Feature, NewFeatureWithLocationAndParents } from '$lib/types';
+import type { Point } from 'geojson';
 
 // STATE : PROPS
-let { feature }: { feature: Feature } = $props();
+let { feature }: { feature: Feature | NewFeatureWithLocationAndParents } = $props();
 
 // STATE : CONTEXT
-const mapCtx = getMapContext();
+const mapCtx = getMapCtx();
 
-let innerWidth = $state();
+// STATE : SESSION
+const userPreferences = $derived({...mapCtx.getUserPreferences(), allowMachineTranslation: true});
+
+let innerWidth = $state<number>()!;
+let featureCardEl: HTMLElement = $state()!;
+let portalEl: HTMLElement = $state()!;
+
+// Add ResizeObserver to watch feature card dimensions
+$effect(() => {
+  if (!featureCardEl) {
+    featureCardEl = document.getElementById('feature-card')!;
+  }
+
+  if (featureCardEl) {
+    const observer = new ResizeObserver(() => {
+      flyToFeature();
+    });
+
+    observer.observe(featureCardEl);
+    return () => observer.disconnect();
+  }
+});
 
 let rightOpen = $derived(mapCtx.state.panels.filters || mapCtx.state.panels.settings);
 let leftOpen = $derived(mapCtx.state.panels.maps || mapCtx.state.panels.stars);
@@ -47,12 +69,12 @@ function getOffset() {
 function flyToFeature(duration: number = 2000, delay: number = 300) {
   setTimeout(() => {
     let { xOffset, yOffset } = getOffset();
-    if (feature && mapCtx.map) {
+    if (feature && mapCtx.map && 'geometry' in feature) {
       // @ts-ignore
       mapCtx.map.cachedFlyTo({
         center: [
-          feature.geometry.coordinates[0],
-          feature.geometry.coordinates[1]
+          (feature.geometry as Point).coordinates[0],
+          (feature.geometry as Point).coordinates[1]
         ],
         offset: [xOffset, yOffset],
         zoom: 16,
@@ -159,10 +181,10 @@ function measureTextWidth(text: string): number {
   return context.measureText(text).width;
 }
 
-let addressLines = $derived(wrapText(getI18nValue(feature, 'displayAddress')));
-let lastAddressLines = [];
-let lastAddressLineLengths = [];
-let displayAddressLines = $state([]);
+let addressLines = $derived(wrapText(getI18n(feature, 'displayAddress', userPreferences)));
+let lastAddressLines: string[] = [];
+let lastAddressLineLengths: number[] = [];
+let displayAddressLines = $state<string[]>([]);
 
 $effect(() => {
   if (lastAddressLines[0] != addressLines[0]) {
@@ -179,6 +201,7 @@ $effect(() => {
 
 <div
   id="feature-card-portal"
+  bind:this={portalEl}
   class="pointer-events-none relative h-[200px] w-[200px] overflow-visible pr-3 w-96:pr-12">
   <svg
     class="absolute inset-0 h-full w-full"
@@ -200,7 +223,7 @@ $effect(() => {
     class="absolute right-2 top-1/2 flex -translate-y-[90px] translate-x-3 flex-col items-end gap-1 overflow-visible transition-all duration-300 w-100:translate-x-5"
     style="width: max-content;">
     {#each displayAddressLines as line, index}
-      {#key `${feature.id}-${index}`}
+      {#key `${'id' in feature ? feature.id : NEW_REF}-${index}`}
         <span
           class="absolute inline-block origin-bottom-right whitespace-nowrap rounded-full bg-[#1D232A] {line !=
           ''

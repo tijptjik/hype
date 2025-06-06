@@ -1,106 +1,109 @@
 <script lang="ts">
-// Icons
-import Icon from '$lib/components/common/Icon.svelte';
-import { ChevronDown, XMark } from '@steeze-ui/heroicons';
+// SVELTE
+import { fade } from 'svelte/transition';
 // I18N
-import { getI18nValue } from '$lib/i18n';
-// Types
-import type { Feature } from '$lib/types';
+import { getI18n } from '$lib/i18n';
+import { m } from '$lib/i18n';
+// CONTEXT
+import { getMapCtx } from '$lib/context/map.svelte';
+// TYPES
+import type { Feature, UserContributedFeature } from '$lib/types';
 
 // STATE : PROPS
-let { feature }: { feature: Feature } = $props();
+let { feature }: { feature: Feature | UserContributedFeature } = $props();
+
+// CONTEXT
+const mapCtx = getMapCtx();
+
+// STATE : SESSION
+const userPreferences = $derived(mapCtx.getUserPreferences());
 
 // STATE : LOCAL
-let isExpanded = $state(false);
-let isTransitioning = $state(false); // New state for managing animation phase
-// svelte-ignore non_reactive_update
-let descriptionEl: HTMLParagraphElement;
-let hasOverflow = $state(false);
+let description = $derived(
+  getI18n(feature, 'description', userPreferences, m.zany_merry_seahorse_treasure())
+);
+let hasMoreBelow = $state(false);
+let scrollContainer: HTMLElement = $state()!;
 
-// Constants for heights
-const collapsedHeight = '3rem'; // Equivalent to h-10, for ~2 lines of text-sm
-const expandedHeight = 'auto'; // Fixed expanded height
-const transitionDuration = 300; // ms, matches duration-300
+// ═══════════════════════
+// 2.1 SCROLL :: DETECTION
+// ═══════════════════════
 
-function updateOverflowState() {
-  if (descriptionEl && descriptionEl.parentElement) {
-    if (!isExpanded && !isTransitioning) {
-      // Only check overflow when fully collapsed
-      const textAreaClientHeight = descriptionEl.parentElement.clientHeight;
-      hasOverflow = descriptionEl.scrollHeight > textAreaClientHeight;
+// Action to detect if there's more content below the current scroll position
+function smartScroll(node: HTMLElement) {
+  function updateScrollState() {
+    // Wait for next frame to ensure accurate measurements
+    requestAnimationFrame(() => {
+      const scrollTop = node.scrollTop;
+      const clientHeight = node.clientHeight;
+      const scrollHeight = node.scrollHeight;
+      
+      // Check if content is scrollable at all
+      const isScrollable = scrollHeight > clientHeight;
+      
+      // More generous tolerance for bottom detection (accounts for sub-pixel rendering)
+      const scrollBottom = scrollTop + clientHeight;
+      const isAtBottom = scrollBottom >= scrollHeight - 5; // 5px tolerance
+      
+      // Only show gradient if content is scrollable AND we're not at the bottom
+      hasMoreBelow = isScrollable && !isAtBottom;
+    });
+  }
+
+  // Check immediately and whenever content changes
+  updateScrollState();
+
+  // Listen to scroll events to update the gradient visibility
+  node.addEventListener('scroll', updateScrollState, { passive: true });
+
+  // Use ResizeObserver to detect content changes
+  const resizeObserver = new ResizeObserver(updateScrollState);
+  resizeObserver.observe(node);
+
+  // Also check when the node's children change
+  const mutationObserver = new MutationObserver(updateScrollState);
+  mutationObserver.observe(node, {
+    childList: true,
+    subtree: true,
+    characterData: true
+  });
+
+  return {
+    destroy() {
+      node.removeEventListener('scroll', updateScrollState);
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
     }
-  } else {
-    hasOverflow = false;
-  }
+  };
 }
 
+// Reset scroll position when description changes (new feature loaded)
 $effect(() => {
-  const rafId = requestAnimationFrame(updateOverflowState);
-  return () => cancelAnimationFrame(rafId);
-});
-
-function toggleExpand() {
-  if (isExpanded) {
-    // Start collapsing
-    isExpanded = false;
-    isTransitioning = true;
-    setTimeout(() => {
-      isTransitioning = false;
-      if (descriptionEl) {
-        descriptionEl.scrollTo(0, 0); // Scroll to top after collapse animation
-      }
-      // No need to call updateOverflowState here as $effect will catch isTransitioning change
-    }, transitionDuration);
-  } else {
-    // Start expanding
-    isTransitioning = false; // Ensure this is false if toggled rapidly
-    isExpanded = true;
+  description; // track changes
+  if (scrollContainer) {
+    scrollContainer.scrollTop = 0;
   }
-}
+});
 </script>
 
-<svelte:window on:resize={updateOverflowState} />
-
-{#if (getI18nValue(feature, 'description')?.length ?? 0) > 0}
-  <div
-    class="flex-grow-1 relative z-10 my-0 flex min-h-12 basis-auto flex-col bg-black caret-transparent {isExpanded ||
-    isTransitioning
-      ? 'flex-shrink-0'
-      : 'flex-shrink-1'}">
+{#if description !== m.zany_merry_seahorse_treasure() && description.length > 0 && description !== '-'}
+  <div class="relative z-10 my-0 flex-shrink-3 flex min-h-12 flex-col bg-black caret-transparent">
     <div
-      class="flex-grow-1 flex-shrink-1 relative min-h-0
-        bg-black px-3 py-2 transition-all
-        ease-in-out w-100:px-6
-        {isExpanded || isTransitioning
-        ? 'flex-shrink-0 rounded-b-lg pb-4 shadow-lg' // Absolute positioning during expansion and transition
-        : 'flex-shrink-1 h-auto overflow-hidden'}
-      "
-      style="padding-right: {hasOverflow || isExpanded || isTransitioning
-        ? '3rem'
-        : '0.75rem'}; /* pr-12 if button visible, else pr-3 */
-             mask-image: {!isExpanded && !isTransitioning && hasOverflow
-        ? 'linear-gradient(to bottom, black 70%, transparent 100%)'
-        : 'none'};
-             transition-duration: {transitionDuration}ms;
-            ">
-      <p
-        bind:this={descriptionEl}
-        class="scrollbar-thin pointer-events-auto h-auto overscroll-none bg-black text-sm font-thin tracking-tight text-gray-300
-               {isExpanded || isTransitioning ? 'overflow-y-auto' : 'overflow-hidden'}">
-        {@html getI18nValue(feature, 'description')}
-      </p>
+      class="overflow-y-auto"
+      bind:this={scrollContainer}
+      use:smartScroll>
+      <div class="h-auto min-h-8 w-100:pl-2">
+        <p
+          class="m-0 overflow-visible p-0 text-sm font-thin leading-tight tracking-tight text-gray-300">
+          {@html description.replaceAll('\n', '<br />')}
+        </p>
+      </div>
     </div>
-
-    {#if hasOverflow || isExpanded || isTransitioning}
-      <button
-        class="pointer-events-auto absolute right-3 top-2 z-30 flex h-7 w-7 items-center justify-center rounded-full bg-base-300/80 text-white backdrop-blur-sm transition-all duration-200 hover:bg-black/90"
-        onclick={toggleExpand}
-        aria-expanded={isExpanded}
-        aria-label={isExpanded ? 'Collapse description' : 'Expand description'}>
-        <Icon
-          src={isExpanded ? XMark : ChevronDown}
-          class="h-5 w-5 transition-transform duration-200" />
-      </button>
+    {#if hasMoreBelow}
+      <div
+        class="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-black to-transparent"
+        transition:fade={{ duration: 200 }}>
+      </div>
     {/if}
   </div>
 {/if}

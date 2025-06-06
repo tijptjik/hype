@@ -1,12 +1,12 @@
 <script lang="ts">
 // SERVICES
-import { getImageContext } from '$lib/context/images.svelte';
+import { getImageContext } from '$lib/context/image.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Photo } from '@steeze-ui/heroicons';
 import Dropzone from 'svelte-file-dropzone';
 // TYPES
-import type { GetImageAPI } from '$lib/types';
+import type { Image } from '$lib/types';
 
 type Props = {
   updateScrollArrows: () => void;
@@ -20,7 +20,7 @@ let { updateScrollArrows, inputElement = $bindable() }: Props = $props();
 
 const handleFiles = async (e: CustomEvent) => {
   await imageCtx.handleFilesSelect(e.detail.acceptedFiles, e.detail.fileRejections, {
-    onSuccess: (savedImage: GetImageAPI) => {
+    onSuccess: (savedImage: Image) => {
       updateScrollArrows();
     }
   });

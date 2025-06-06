@@ -1,6 +1,6 @@
 <script lang="ts">
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resources.svelte';
+import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Minus, Plus } from '@steeze-ui/heroicons';
