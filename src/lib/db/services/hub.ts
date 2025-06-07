@@ -273,3 +273,24 @@ export const getHub = async (
     with: withRelations,
     where: and(...conditions)
   });
+
+export const createHub = async (
+  db: Database,
+  data: any
+): Promise<HubDBRaw> => {
+  const [created] = await db.insert(hub).values(data).returning();
+  return created;
+};
+
+export const updateHub = async (
+  db: Database,
+  data: any,
+  code: string
+): Promise<HubDBRaw> => {
+  const [updated] = await db
+    .update(hub)
+    .set(data)
+    .where(eq(hub.code, code))
+    .returning();
+  return updated;
+};
