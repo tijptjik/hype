@@ -38,7 +38,7 @@ import type {
   Task,
   ProjectI18nDB,
   OrganisationI18nDB,
-  TaskRaw
+  TaskDBRaw
 } from '$lib/types';
 
 
@@ -322,7 +322,7 @@ export const assertPermissionsToDeleteTask = async (
  * Converts i18n arrays to locale maps for proper API structure
  */
 export const toResponseShape = async (
-  data: TaskRaw,
+  data: TaskDBRaw,
   isCollection: boolean = false
 ): Promise<Task | TaskCollection> => {
   // Transform feature properties if they exist

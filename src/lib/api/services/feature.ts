@@ -5,7 +5,7 @@ import { eq, inArray, SQL, sql } from 'drizzle-orm';
 // LIB
 import { isAdminRequest } from '../index';
 // API
-import { applyQueryFilters, removeExcludedColumns, logZodError } from '$lib/api';
+import { applyQueryFilters, removeExcludedColumns } from '$lib/api';
 // AUTH
 import {
   assertUserLoggedIn,
@@ -21,8 +21,16 @@ import { getProjectIdforRoles, isSuperAdmin } from '$lib/auth/utils';
 import { feature, layer } from '$lib/db/schema';
 // DB
 import { applyPrismConstraints, toLocaleMap } from '$lib/db';
-import { getLayer } from '$lib/db/services/layer';
 import { HierarchicalResource } from '$lib/enums';
+import { getProjectIdForFeature } from '$lib/db/services/feature';
+// TRANSLATION
+import { getTranslation } from '$lib/api/external/translation';
+// FEATURE DB SERVICES
+import { createFeatureWithRelated } from '$lib/db/services/feature';
+// ZOD
+import { FeatureInsertAPI } from '$lib/db/zod/schemas/feature';
+// ENUMS
+import { supportedLocales } from '$lib/enums';
 // TYPES
 import type {
   UserRoleDisco,
@@ -38,15 +46,6 @@ import type {
   Locale,
   FeatureI18nDB
 } from '$lib/types';
-import { getProjectIdForFeature } from '$lib/db/services/feature';
-// TRANSLATION
-import { getTranslation } from '$lib/api/external/translation';
-// FEATURE DB SERVICES  
-import { createFeatureWithRelated } from '$lib/db/services/feature';
-// ZOD
-import { FeatureInsertAPI, FeaturePropertyInsertAPI } from '$lib/db/zod/schemas/feature';
-// ENUMS
-import { supportedLocales } from '$lib/enums';
 
 /********************
  *  COMMON
@@ -230,10 +229,11 @@ export const assertPermissionsToCreateFeature = async (
   db: Database,
   session: Session,
   request: Request,
+  locals: App.Locals,
   formData: FeatureDBNew,
   userRoles: UserRoleDisco[]
 ) => {
-  const projectId = await getProjectIdForFeature(db, formData);
+  const projectId = await getProjectIdForFeature(db, formData, locals.hub);
 
   const assertionError = runAssertions(
     () => assertUserLoggedIn(session as any),
@@ -257,10 +257,11 @@ export const assertPermissionsToUpdateFeature = async (
   db: Database,
   session: Session,
   request: Request,
+  locals: App.Locals,
   formData: FeatureNew,
   userRoles: UserRoleDisco[]
 ) => {
-  const projectId = await getProjectIdForFeature(db, formData);
+  const projectId = await getProjectIdForFeature(db, formData, locals.hub);
 
   const assertionError = runAssertions(
     () => assertUserLoggedIn(session as any),
@@ -282,62 +283,83 @@ export const assertPermissionsToUpdateFeature = async (
  * @param newFeature - The user-contributed feature data
  * @returns The newly created feature with related data
  */
-export const createUserContributedFeature = async (db: Database, newFeature: UserContributedFeature) => {
+export const createUserContributedFeature = async (
+  db: Database,
+  newFeature: UserContributedFeature
+) => {
   // Step 1: Get the source locale (first locale with content)
   const providedLocales = Object.keys(newFeature.i18n) as Locale[];
-  
+
   if (providedLocales.length === 0) {
     throw new Error('At least one locale must have content');
   }
-  
+
   const sourceLocale = providedLocales[0];
   const sourceTextObj = newFeature.i18n[sourceLocale];
-  
+
   if (!sourceTextObj?.title) {
     throw new Error('Source locale must have a title');
   }
 
   // Step 2: Create enriched i18n textObject with all locales
   const enrichedI18n: Record<Locale, any> = {};
-  
+
   for (const locale of supportedLocales) {
     const textObj = newFeature.i18n[locale];
-    
+
     // Determine which fields need translation (missing in textObj but available in source)
     const needsTitle = !textObj?.title && sourceTextObj.title;
     const needsDescription = !textObj?.description && sourceTextObj.description;
-    const needsDisplayAddress = !textObj?.displayAddress && sourceTextObj.displayAddress;
-    
+    const needsDisplayAddress =
+      !textObj?.displayAddress && sourceTextObj.displayAddress;
+
     // Collect fields that need translation (non-empty source values only)
     const fieldsToTranslate: string[] = [];
     if (needsTitle) fieldsToTranslate.push(sourceTextObj.title);
     if (needsDescription) fieldsToTranslate.push(sourceTextObj.description!);
     if (needsDisplayAddress) fieldsToTranslate.push(sourceTextObj.displayAddress!);
-    
+
     let translatedValues: string[] = [];
-    
+
     // Only call translation API if we have fields to translate
     if (fieldsToTranslate.length > 0) {
       try {
-        translatedValues = await getTranslation(sourceLocale, locale, fieldsToTranslate);
+        translatedValues = await getTranslation(
+          sourceLocale,
+          locale,
+          fieldsToTranslate
+        );
       } catch (error) {
         // translatedValues remains empty array, will fall back to source content
       }
     }
-    
+
     // Build the enriched object with proper field-level tracking
     let translationIndex = 0;
-    
+
     // Extract translated values in order
-    const translatedTitle = needsTitle && translationIndex < translatedValues.length ? translatedValues[translationIndex++] : null;
-    const translatedDescription = needsDescription && translationIndex < translatedValues.length ? translatedValues[translationIndex++] : null;
-    const translatedDisplayAddress = needsDisplayAddress && translationIndex < translatedValues.length ? translatedValues[translationIndex++] : null;
-    
+    const translatedTitle =
+      needsTitle && translationIndex < translatedValues.length
+        ? translatedValues[translationIndex++]
+        : null;
+    const translatedDescription =
+      needsDescription && translationIndex < translatedValues.length
+        ? translatedValues[translationIndex++]
+        : null;
+    const translatedDisplayAddress =
+      needsDisplayAddress && translationIndex < translatedValues.length
+        ? translatedValues[translationIndex++]
+        : null;
+
     enrichedI18n[locale] = {
       locale: locale, // Include the locale field that toLocaleMap expects
       title: textObj?.title || translatedTitle || sourceTextObj.title,
-      description: textObj?.description || translatedDescription || sourceTextObj.description,
-      displayAddress: textObj?.displayAddress || translatedDisplayAddress || sourceTextObj.displayAddress,
+      description:
+        textObj?.description || translatedDescription || sourceTextObj.description,
+      displayAddress:
+        textObj?.displayAddress ||
+        translatedDisplayAddress ||
+        sourceTextObj.displayAddress,
       titleGen: Boolean(!textObj?.title && translatedTitle), // Only true if field was actually translated
       descriptionGen: Boolean(!textObj?.description && translatedDescription),
       displayAddressGen: Boolean(!textObj?.displayAddress && translatedDisplayAddress),
@@ -346,57 +368,61 @@ export const createUserContributedFeature = async (db: Database, newFeature: Use
   }
 
   // Step 3: Process translatable properties
-  const enrichedProperties = await Promise.all((newFeature.properties || []).map(async (prop) => {
-    // If property has i18n content, enrich it like we do for feature-level fields
-    if (prop.i18n) {
-      const propProvidedLocales = Object.keys(prop.i18n) as Locale[];
-      if (propProvidedLocales.length === 0) {
-        return prop; // No i18n content, return as-is
-      }
-      
-      const propSourceLocale = propProvidedLocales[0];
-      const propSourceTextObj = prop.i18n[propSourceLocale];
-      
-      if (!propSourceTextObj?.value) {
-        return prop; // No source value, return as-is
-      }
-      
-      // Create enriched property i18n
-      const enrichedPropertyI18n: Record<Locale, any> = {};
-      
-      for (const locale of supportedLocales) {
-        const propTextObj = prop.i18n[locale];
-        
-        // Check if this locale needs translation
-        const needsValue = !propTextObj?.value && propSourceTextObj.value;
-        
-        let translatedValue: string | null = null;
-        
-        // Only translate if needed
-        if (needsValue) {
-          try {
-            const translatedValues = await getTranslation(propSourceLocale, locale, [propSourceTextObj.value]);
-            translatedValue = translatedValues[0] || null;
-          } catch (error) {
-            // Translation failed, translatedValue remains null
-          }
+  const enrichedProperties = await Promise.all(
+    (newFeature.properties || []).map(async (prop) => {
+      // If property has i18n content, enrich it like we do for feature-level fields
+      if (prop.i18n) {
+        const propProvidedLocales = Object.keys(prop.i18n) as Locale[];
+        if (propProvidedLocales.length === 0) {
+          return prop; // No i18n content, return as-is
         }
-        
-        enrichedPropertyI18n[locale] = {
-          locale: locale,
-          value: propTextObj?.value || translatedValue || propSourceTextObj.value,
-          valueGen: Boolean(!propTextObj?.value && translatedValue)
+
+        const propSourceLocale = propProvidedLocales[0];
+        const propSourceTextObj = prop.i18n[propSourceLocale];
+
+        if (!propSourceTextObj?.value) {
+          return prop; // No source value, return as-is
+        }
+
+        // Create enriched property i18n
+        const enrichedPropertyI18n: Record<Locale, any> = {};
+
+        for (const locale of supportedLocales) {
+          const propTextObj = prop.i18n[locale];
+
+          // Check if this locale needs translation
+          const needsValue = !propTextObj?.value && propSourceTextObj.value;
+
+          let translatedValue: string | null = null;
+
+          // Only translate if needed
+          if (needsValue) {
+            try {
+              const translatedValues = await getTranslation(propSourceLocale, locale, [
+                propSourceTextObj.value
+              ]);
+              translatedValue = translatedValues[0] || null;
+            } catch (error) {
+              // Translation failed, translatedValue remains null
+            }
+          }
+
+          enrichedPropertyI18n[locale] = {
+            locale: locale,
+            value: propTextObj?.value || translatedValue || propSourceTextObj.value,
+            valueGen: Boolean(!propTextObj?.value && translatedValue)
+          };
+        }
+
+        return {
+          ...prop,
+          i18n: toLocaleMap(enrichedPropertyI18n)
         };
       }
-      
-      return {
-        ...prop,
-        i18n: toLocaleMap(enrichedPropertyI18n)
-      };
-    }
-    
-    return prop; // Non-translatable property, return as-is
-  }));
+
+      return prop; // Non-translatable property, return as-is
+    })
+  );
 
   // Step 4: Create the enriched feature object
   const enrichedFeature = {
@@ -407,7 +433,7 @@ export const createUserContributedFeature = async (db: Database, newFeature: Use
 
   // Step 5: Use Zod to parse and apply all defaults
   const validatedFeature = FeatureInsertAPI.parse(enrichedFeature);
-  
+
   // Step 6: Create the feature with all related data
   const result = await createFeatureWithRelated(db, validatedFeature);
   return result;

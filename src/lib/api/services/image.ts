@@ -12,13 +12,13 @@ import {
   runAssertions,
   assertProjectMaintainerOrSuperAdmin,
   assertOrganisationOwnerOrSuperAdmin,
-  assertProjectMaintainerOrMemberOrSuperAdmin,
+  assertProjectMaintainerOrMemberOrSuperAdmin
 } from '$lib/auth/asserts';
 // DB
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
 import { isSuperAdmin } from '$lib/auth/utils';
 // SCHEMA
-import { image, featureImage, project, organisation, feature } from '$lib/db/schema';
+import { image, featureImage, project, organisation } from '$lib/db/schema';
 // TYPES
 import type {
   UserRoleDisco,
@@ -28,13 +28,12 @@ import type {
   QueryParams,
   ImageNew,
   ImageDBFlat,
-  ImageDB
+  ImageDB,
+  HubOpts
 } from '$lib/types';
 import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums';
 import { error } from '@sveltejs/kit';
-import { 
-  applyResourceContextConstraints
-} from '$lib/db/services/image';
+import { applyResourceContextConstraints } from '$lib/db/services/image';
 import { getProjectIdForFeatureId } from '$lib/db/services/feature';
 
 // ═══════════════════════
@@ -77,7 +76,6 @@ export const intentOrder = [
   'general',
   'evidence'
 ] as const;
-
 
 // ═══════════════════════
 // 2. COMMON
@@ -125,27 +123,27 @@ export const getImageQueryContext = (
   if (!isAdminRequest(request)) {
     params = removeExcludedColumns(params, excludeColumns);
     // For public, typically show images that are marked as published, or if their associated resource is published.
-    if(ctxType === ImageContextResource.feature) {
-      conditions.push(eq(featureImage.isPublished, true)); 
+    if (ctxType === ImageContextResource.feature) {
+      conditions.push(eq(featureImage.isPublished, true));
     } else if (ctxType === ImageContextResource.project) {
-      conditions.push(eq(project.isPublished, true)); 
+      conditions.push(eq(project.isPublished, true));
     } else if (ctxType === ImageContextResource.organisation) {
-      conditions.push(eq(organisation.isPublished, true)); 
+      conditions.push(eq(organisation.isPublished, true));
     } else if (ctxType === ImageContextResourceExtended.task) {
-      // NO further restrictions on task images, as they are only accessible 
+      // NO further restrictions on task images, as they are only accessible
       // from the Admin view
     }
   } else {
     // Admin view: allow filtering by isPublished if not a superadmin
     // TODO SECURITY : Technically, currently we allow maintainers to see unpublished feature images, from ANY project if they know the featureId.
-    if(!isSuperAdmin(session)) {
-        params = removeExcludedColumns(params, ['isArchived']); // Keep isPublished filterable
+    if (!isSuperAdmin(session)) {
+      params = removeExcludedColumns(params, ['isArchived']); // Keep isPublished filterable
     } else {
-        conditions = []; // Superadmin sees all
+      conditions = []; // Superadmin sees all
     }
   }
 
-    // Filter by context (e.g., images for a specific feature)
+  // Filter by context (e.g., images for a specific feature)
   applyResourceContextConstraints(ctxType, ctxId, conditions);
 
   // Apply general query filters from params
@@ -156,7 +154,6 @@ export const getImageQueryContext = (
   return { params, conditions, excludeColumns };
 };
 
-
 /**
  * Get the query context for a single image.
  * All images can be queried if their ID is known, except for images which have isArchived.
@@ -166,7 +163,7 @@ export const getImageEntityQueryContext = (
   db: Database,
   session: Session,
   request: Request,
-  params: QueryParams,
+  params: QueryParams
 ) => {
   // SETUP : By default, only show non-archived images,
   // and disable isArchived and isPublished filters from the query.
@@ -180,13 +177,13 @@ export const getImageEntityQueryContext = (
 
   // PUBLIC : List all images which are isPublished, and not isArchived,
   if (!isAdminRequest(request)) {
-    params = removeExcludedColumns(params, excludeColumns); 
+    params = removeExcludedColumns(params, excludeColumns);
   } else {
     // Admin view: allow filtering by isPublished if not a superadmin
-    if(!isSuperAdmin(session)) {
-        params = removeExcludedColumns(params, ['isArchived']); // Keep isPublished filterable
+    if (!isSuperAdmin(session)) {
+      params = removeExcludedColumns(params, ['isArchived']); // Keep isPublished filterable
     } else {
-        conditions = []; // Superadmin sees all
+      conditions = []; // Superadmin sees all
     }
   }
 
@@ -209,28 +206,32 @@ export const assertPermissionsToCreateImage = async (
   db: Database,
   session: Session,
   request: Request,
-  data: ImageNew, 
+  hubOpts: HubOpts,
+  data: ImageNew,
   userRoles: UserRoleDisco[],
   ctxType: ImageContextResource,
-  ctxId: Id,
+  ctxId: Id
 ) => {
   const commonAssertions = [
     () => assertUserLoggedIn(session as any),
-    () => assertAdminRequest(request),
+    () => assertAdminRequest(request)
   ];
 
   let contextAssertion = () => {}; // Placeholder for context-specific assertion
 
   switch (ctxType) {
     case ImageContextResource.feature:
-      const projectId = await getProjectIdForFeatureId(db, ctxId as Id);
-      contextAssertion = () => assertProjectMaintainerOrMemberOrSuperAdmin(session, userRoles, projectId);
+      const projectId = await getProjectIdForFeatureId(db, ctxId as Id, hubOpts);
+      contextAssertion = () =>
+        assertProjectMaintainerOrMemberOrSuperAdmin(session, userRoles, projectId);
       break;
     case ImageContextResource.project:
-      contextAssertion = () => assertProjectMaintainerOrSuperAdmin(session, userRoles, ctxId);
+      contextAssertion = () =>
+        assertProjectMaintainerOrSuperAdmin(session, userRoles, ctxId);
       break;
     case ImageContextResource.organisation:
-      contextAssertion = () => assertOrganisationOwnerOrSuperAdmin(session, userRoles, ctxId);
+      contextAssertion = () =>
+        assertOrganisationOwnerOrSuperAdmin(session, userRoles, ctxId);
       break;
   }
 
@@ -246,16 +247,16 @@ export const assertPermissionsToUpdateImage = async (
   db: Database,
   session: Session,
   request: Request,
+  hubOpts: HubOpts,
   params: QueryParams,
   userRoles: UserRoleDisco[],
-  ctxId: Id, 
+  ctxId: Id,
   ctxType: ImageContextResource | ImageContextResourceExtended
 ) => {
-
   const commonAssertions = [
     () => assertUserLoggedIn(session as any),
     () => assertAdminRequest(request),
-    () => assertId({...params}),
+    () => assertId({ ...params })
   ];
 
   // Implement logic to determine who can update/delete.
@@ -265,14 +266,17 @@ export const assertPermissionsToUpdateImage = async (
 
   switch (ctxType) {
     case ImageContextResource.feature:
-      const projectId = await getProjectIdForFeatureId(db, ctxId as Id);
-      contextAssertion = () => assertProjectMaintainerOrMemberOrSuperAdmin(session, userRoles, projectId);
+      const projectId = await getProjectIdForFeatureId(db, ctxId as Id, hubOpts);
+      contextAssertion = () =>
+        assertProjectMaintainerOrMemberOrSuperAdmin(session, userRoles, projectId);
       break;
     case ImageContextResource.project:
-      contextAssertion = () => assertProjectMaintainerOrSuperAdmin(session, userRoles, ctxId);
+      contextAssertion = () =>
+        assertProjectMaintainerOrSuperAdmin(session, userRoles, ctxId);
       break;
     case ImageContextResource.organisation:
-      contextAssertion = () => assertOrganisationOwnerOrSuperAdmin(session, userRoles, ctxId);
+      contextAssertion = () =>
+        assertOrganisationOwnerOrSuperAdmin(session, userRoles, ctxId);
       break;
   }
 
@@ -284,13 +288,23 @@ export const assertPermissionsToDeleteImage = async (
   db: Database,
   session: Session,
   request: Request,
+  hubOpts: HubOpts,
   params: QueryParams,
   userRoles: UserRoleDisco[],
-  ctxId: Id, 
+  ctxId: Id,
   ctxType: ImageContextResource | ImageContextResourceExtended
 ) => {
-  return assertPermissionsToUpdateImage(db, session, request, params, userRoles, ctxId, ctxType);
-}
+  return assertPermissionsToUpdateImage(
+    db,
+    session,
+    request,
+    hubOpts,
+    params,
+    userRoles,
+    ctxId,
+    ctxType
+  );
+};
 
 // ═══════════════════════
 // 5. UTILS
@@ -304,7 +318,7 @@ export const getCtxFromUrl = (url: URL) => {
 
   let ctxId: Id | null = null;
   let ctxType: ImageContextResource | ImageContextResourceExtended | null = null;
-  
+
   if (featureId) {
     ctxId = featureId;
     ctxType = ImageContextResource.feature;
@@ -321,8 +335,8 @@ export const getCtxFromUrl = (url: URL) => {
     return error(400, 'A featureId, organisationId, projectId, or taskId is required');
   }
 
-  return { ctxId, ctxType}
-}
+  return { ctxId, ctxType };
+};
 
 /**
  * Sort images by publication status, intent, and creation date
@@ -330,30 +344,30 @@ export const getCtxFromUrl = (url: URL) => {
  * @returns The sorted images
  */
 export const sortImages = (images: ImageDBFlat[] | ImageDB[]) => {
-    // Sort images by publication status, intent, and creation date
-    images!.sort((a: any, b: any) => {
-      // First sort by publication status (only if both are feature images)
-      if (
-        a.featureImage &&
-        b.featureImage &&
-        a.featureImage.isPublished !== b.featureImage.isPublished
-      ) {
-        return a.featureImage.isPublished ? -1 : 1;
+  // Sort images by publication status, intent, and creation date
+  images!.sort((a: any, b: any) => {
+    // First sort by publication status (only if both are feature images)
+    if (
+      a.featureImage &&
+      b.featureImage &&
+      a.featureImage.isPublished !== b.featureImage.isPublished
+    ) {
+      return a.featureImage.isPublished ? -1 : 1;
+    }
+    // Then sort by intent order (only if both are feature images)
+    if (a.featureImage && b.featureImage) {
+      const intentCompare =
+        intentOrder.indexOf(a.featureImage.intent) -
+        intentOrder.indexOf(b.featureImage.intent);
+      if (intentCompare !== 0) {
+        return intentCompare;
       }
-      // Then sort by intent order (only if both are feature images)
-      if (a.featureImage && b.featureImage) {
-        const intentCompare =
-          intentOrder.indexOf(a.featureImage.intent) -
-          intentOrder.indexOf(b.featureImage.intent);
-        if (intentCompare !== 0) {
-          return intentCompare;
-        }
-      }
-      // Finally, sort by creation date (newest first)
-      return (
-        new Date(b.createdAt as string).getTime() -
-        new Date(a.createdAt as string).getTime()
-      );
-    });
-    return images;
+    }
+    // Finally, sort by creation date (newest first)
+    return (
+      new Date(b.createdAt as string).getTime() -
+      new Date(a.createdAt as string).getTime()
+    );
+  });
+  return images;
 };
