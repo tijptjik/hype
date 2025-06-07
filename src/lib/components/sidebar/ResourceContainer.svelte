@@ -9,7 +9,7 @@ import StatBar from '$lib/components/sidebar/StatBar.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 import { getSidebarState } from '$lib/context/sidebar.svelte';
 // ENUMS
-import { HierarchicalResource } from '$lib/enums';
+import { FirstClassResource, HierarchicalResource } from '$lib/enums';
 
 let resourceState = getHierarchicalResourceState();
 let sidebarState = getSidebarState();
@@ -36,7 +36,7 @@ const getMaxHeightItemsContainer = (
   resource: HierarchicalResource,
   isFilterable: boolean = false
 ): string => {
-  const count = resourceState.getFilteredResource(resource).length;
+  const count = resourceState.getFilteredResource(resource as unknown as FirstClassResource).length;
   let height = count * 54; // 54px is the height of an entity
   if (isFilterable) {
     height += 54; // Add 54px for the filter

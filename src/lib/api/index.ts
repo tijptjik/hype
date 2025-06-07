@@ -5,7 +5,8 @@ import { eq, inArray } from 'drizzle-orm';
 // SUPERFORMS
 import { superValidate, actionResult } from 'sveltekit-superforms';
 // ZOD
-import { zod, type ZodObjectType } from 'sveltekit-superforms/adapters';
+import { zod } from 'sveltekit-superforms/adapters';
+import type { z } from 'zod';
 // LIB
 import { ADMIN_PATH, API_PATH, NEW_REF } from '$lib';
 // DB
@@ -24,7 +25,6 @@ import {
 } from '$lib/enums';
 // TYPES
 import type { SuperValidated } from 'sveltekit-superforms';
-import type { z } from 'zod';
 import type { SQL, Table, Column } from 'drizzle-orm';
 import type {
   Feature,
@@ -50,6 +50,7 @@ import type {
   DeleteParamsToSign,
   SignData
 } from '$lib/types';
+
 
 export const getSessionOrError = async (locals: App.Locals): Promise<Session> => {
   const session = await locals.auth();
@@ -293,11 +294,11 @@ const resourceConfig: Record<
   }
 };
 
-type LoadFormDataOptions<T> = {
+type LoadFormDataOptions<T extends Record<string, unknown>> = {
   entity: string;
   resourcePath: string;
-  insertSchema: ZodObjectType;
-  updateSchema: z.ZodSchema;
+  insertSchema: z.AnyZodObject;
+  updateSchema: z.AnyZodObject;
   fetch: typeof fetch;
   session?: Session;
   parentId?: string;
@@ -355,17 +356,17 @@ async function prepareNewForm<T extends Record<string, unknown>>({
   parentRef?: string;
   parentResourceType?: HierarchicalResource;
   keyToParent?: string;
-  insertSchema: ZodObjectType;
+  insertSchema: z.AnyZodObject;
   session?: Session;
   fetch: typeof window.fetch;
 }): Promise<SuperValidated<T>> {
   // CASE : new resource without parent (e.g. new organisation)
   if (!parentResourceType || !parentId) {
-    const form = (await superValidate(zod(insertSchema))) as SuperValidated<T>;
+    const form = await superValidate(zod(insertSchema));
 
     // HANDLE : When creating a new organisation, add the user as the owner
     if (resourceType === 'organisation' && session?.user) {
-      // @ts-ignore
+      // @ts-ignore - Complex type handling for organisation user roles
       form.data.userRoles = [
         {
           userId: session.user.id,
@@ -374,7 +375,7 @@ async function prepareNewForm<T extends Record<string, unknown>>({
         }
       ];
     }
-    return form;
+    return form as SuperValidated<T>;
   }
 
   // CASE : new resource with parent (e.g. new project)
@@ -386,7 +387,7 @@ async function prepareNewForm<T extends Record<string, unknown>>({
   }
 
   // HANDLE : Initialise the form with the insert schema
-  const form = (await superValidate(zod(insertSchema))) as SuperValidated<T>;
+  const form = await superValidate<T>(zod(insertSchema));
   let initialData: Record<string, any> = {
     ...form.data,
     resourceType
@@ -439,7 +440,7 @@ async function prepareExistingForm<T extends Record<string, unknown>>({
 }: {
   resourceType: HierarchicalResource;
   entityRef: string;
-  updateSchema: ZodObjectType;
+  updateSchema: z.AnyZodObject;
   fetch: typeof window.fetch;
 }): Promise<{
   form: SuperValidated<T>;
@@ -453,8 +454,8 @@ async function prepareExistingForm<T extends Record<string, unknown>>({
     throw error(response.status);
   }
 
-  const formData: T = await response.json();
-  const form = (await superValidate(formData, zod(updateSchema))) as SuperValidated<T>;
+  const formData = await response.json();
+  const form = await superValidate<T>(formData, zod(updateSchema));
 
   // Fetch image for organisation or project
   const image = await getImageIfNeeded(formData, fetch);

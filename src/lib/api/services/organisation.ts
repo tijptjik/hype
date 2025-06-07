@@ -6,12 +6,10 @@ import { isAdminRequest, applyQueryFilters, removeExcludedColumns } from '$lib/a
 import {
   assertUserLoggedIn,
   assertAdminRequest,
-  assertId,
   assertSuperAdmin,
   runAssertions,
   assertOrganisationOwnerOrSuperAdmin,
-  assertIsCoreInclusiveModifiedBySuperAdmin,
-  assertParamIdentifierEqualsFormIdentifier as assertrefIdEqualsFormRefId
+  assertIsCoreInclusiveModifiedBySuperAdmin
 } from '$lib/auth/asserts';
 // DB
 import { isFieldUnique } from '$lib/db';

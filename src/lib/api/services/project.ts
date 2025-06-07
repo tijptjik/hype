@@ -6,7 +6,6 @@ import {isAdminRequest, applyQueryFilters, removeExcludedColumns } from '$lib/ap
 import {
   assertUserLoggedIn,
   assertAdminRequest,
-  assertId,
   runAssertions,
   assertOrganisationOwnerOrSuperAdmin,
   assertParamIdentifierEqualsFormIdentifier

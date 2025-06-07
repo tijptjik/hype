@@ -1,22 +1,17 @@
 // API
-import { applyQueryFilters } from "$lib/api";
+import { applyQueryFilters } from '$lib/api';
 // AUTH
-import { 
-  assertUserLoggedIn,
-  assertParamIdentifierEqualsFormIdentifier,
-  assertSuperAdmin,
-  runAssertions 
-} from "$lib/auth/asserts";
+import { assertUserLoggedIn, assertSuperAdmin, runAssertions } from '$lib/auth/asserts';
 // SCHEMA
-import { hub } from "$lib/db/schema";
+import { hub } from '$lib/db/schema';
 // ZOD
-import { HubAPI, HubCollectionAPI } from "$lib/db/zod/schemas/hub";
-import { superValidate } from "sveltekit-superforms";
-import { zod } from "sveltekit-superforms/adapters";
+import { HubAPI, HubCollectionAPI } from '$lib/db/zod/schemas/hub';
+import { superValidate } from 'sveltekit-superforms';
+import { zod } from 'sveltekit-superforms/adapters';
 // TYPES
-import type { SQL } from "drizzle-orm";
-import type { Hub, QueryParams, HubOpts, HubDB, Session, Code } from "$lib/types";
-import type { SuperValidated } from "sveltekit-superforms";
+import type { SQL } from 'drizzle-orm';
+import type { Hub, QueryParams, HubOpts, HubDB, Session, Code } from '$lib/types';
+import type { SuperValidated } from 'sveltekit-superforms';
 
 // ═══════════════════════
 // WITH RELATIONS
@@ -24,7 +19,7 @@ import type { SuperValidated } from "sveltekit-superforms";
 
 // Simple relations for hub collection
 export const hubCollectionWithRelations = {
-  organisation: {
+  organisations: {
     with: {
       i18n: true
     }
@@ -72,14 +67,12 @@ export function getHubFromDomain(host: string | null): HubOpts {
   // subdomain.hype.hk -> use subdomain as hub code
   if (domain.endsWith('.hype.hk')) {
     const subdomain = domain.replace('.hype.hk', '');
-    return { code : subdomain, isCore: false };
+    return { code: subdomain, isCore: false };
   }
 
   // custom domain -> use full domain as hub domain
   return { domain, isCore: false };
 }
-
-
 
 /**
  * Get the query context for the organisation resource - filters the query based on the user's roles, and the query parameters.
@@ -88,9 +81,7 @@ export function getHubFromDomain(host: string | null): HubOpts {
  * @param params - The query parameters
  * @param userRoles - The user roles
  */
-export const getHubQueryContext = (
-  params: QueryParams
-) => {
+export const getHubQueryContext = (params: QueryParams) => {
   // SETUP : Only superadmins can query hubs, so we
   // don't need to filter by anything other than the query params.
   let conditions: SQL<unknown>[] = [];
@@ -112,24 +103,18 @@ export const getHubQueryContext = (
  * @param hub - The hub database entity
  * @returns Validated form data
  */
-export const toFormShape = async (
-  hub: HubDB,
-): Promise<SuperValidated<Hub>> => {
+export const toFormShape = async (hub: HubDB): Promise<SuperValidated<Hub>> => {
   // @ts-ignore TODO - Fix Zod type error
   const form = await superValidate(hub, zod(HubAPI) as any);
   return form as SuperValidated<Hub>;
 };
-
 
 /**
  * Builds response data from database entities
  * @param hub - The hub database entity (can be partial from queries)
  * @returns A parsed response shape
  */
-export const toResponseShape = async (
-  hub: HubDB,
-  isCollection: boolean = false
-) => {
+export const toResponseShape = async (hub: HubDB, isCollection: boolean = false) => {
   return isCollection
     ? (HubCollectionAPI.parse(hub) as Hub)
     : (HubAPI.parse(hub) as Hub);
@@ -147,9 +132,7 @@ export const toResponseShape = async (
  * @remarks We don't need to assert code in params equals code in form,
  * as we want to allow the users to change the code of the hub.
  */
-export const assertPermissionsToUpdateHub = (
-  session: Session
-) => {
+export const assertPermissionsToUpdateHub = (session: Session) => {
   // Run all access control assertions
   const assertionError = runAssertions(
     () => assertUserLoggedIn(session as any),

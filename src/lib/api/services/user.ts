@@ -5,7 +5,6 @@ import { isAdminRequest, applyQueryFilters, removeExcludedColumns } from '$lib/a
 // AUTH
 import {
   assertUserLoggedIn,
-  assertId,
   runAssertions,
   assertUserIsSelf,
   assertParamIdentifierEqualsFormIdentifier
