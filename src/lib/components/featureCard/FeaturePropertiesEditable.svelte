@@ -19,7 +19,7 @@ import type {
   Key,
   Id,
   PropertyI18nDB,
-  PropertyRaw,
+  PropertyDBRaw,
   PropertyValue
 } from '$lib/types';
 
@@ -117,7 +117,7 @@ function getPropertyValues(
   }
 
   // Return values with SelectComplex structure: value is display text, id is stored value
-  const result = (layerProperty.property as PropertyRaw).values
+  const result = (layerProperty.property as PropertyDBRaw).values
     ?.filter((v: PropertyValue) => v.id) // Filter out any values without IDs
     ?.map((v: PropertyValue) => ({
       value: getI18n(v, 'value', userPreferences), // Display text for user

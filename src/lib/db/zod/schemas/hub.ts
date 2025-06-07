@@ -7,11 +7,10 @@ import {
   createUpdateSchema
 } from 'drizzle-zod';
 // DRIZZLE SCHEMA
-import { hub } from '$lib/db/schema';
-// ZOD SCHEMAS
-import { OrganisationForHubAPI } from './organisation';
+import { hub, organisation, organisationI18n } from '$lib/db/schema';
 // ZOD SCHEMAS
 import { getDefaultConstraints } from '../constraints';
+import { getLocales } from '../constraints';
 
 /* ----------------- */
 // HUB CORE SCHEMAS
@@ -26,7 +25,7 @@ export const HubBasic = HubBase.pick({
 } as const);
 
 export const HubInsert = createInsertSchema(hub).extend({
-  ...getDefaultConstraints(hub),
+  ...getDefaultConstraints(hub)
 });
 export const HubUpdate = createUpdateSchema(hub).extend({
   ...getDefaultConstraints(hub)
@@ -39,7 +38,9 @@ export const HubUpdate = createUpdateSchema(hub).extend({
 export const HubCollectionAPI = HubBase;
 
 export const HubAPI = HubBase.extend({
-  organisation: OrganisationForHubAPI
+  organisation: createSelectSchema(organisation).extend({
+    i18n: getLocales(createSelectSchema(organisationI18n))
+  })
 });
 
 export const HubInsertAPI = HubInsert;

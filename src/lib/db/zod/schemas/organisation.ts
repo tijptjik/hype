@@ -84,10 +84,6 @@ export const OrganisationAPI = OrganisationBase.extend({
   hub: HubBasic.nullish()
 });
 
-export const OrganisationForHubAPI = OrganisationBase.extend({
-  i18n: getLocales(OrganisationI18nBase),
-});
-
 export const OrganisationInsertAPI = OrganisationInsert.extend({
   i18n: getLocales(OrganisationI18nInsert),
   userRoles: getUserRoles(OrganisationRoleInsertExtra)
