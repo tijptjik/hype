@@ -211,8 +211,10 @@ export const organisation = sqliteTable('organisation', {
     onDelete: 'set null',
     onUpdate: 'cascade'
   }),
-  // If true, organisation and all its resources are exclusive to the hub
+  // If true, organisation and all its resources are exclusive to the hub, and not served on core.
   isHubExclusive: integer('isHubExclusive', { mode: 'boolean' }).notNull().default(false),
+  // If true, organisation and all its resources will be served as part of the core hub.
+  isCoreInclusive: integer('isCoreInclusive', { mode: 'boolean' }).notNull().default(true),
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(true),
   publishedAt: text('publishedAt'),
   publisherId: text('publisherId').references(() => user.id, {
@@ -1351,10 +1353,9 @@ export const taskImageRelations = relations(taskImage, ({ one }) => ({
  */
 export const hub = sqliteTable('hub', {
   id: text('id').primaryKey().$defaultFn(() => nanoid(12)),
-  code: text('code').unique().notNull(), // 'core', 'hkghostsigns', etc.
-  domain: text('domain').unique().notNull(), // 'hype.hk', 'hkghostsigns.hype.hk', 'hkghostsigns.com'
-  isCore: integer('isCore', { mode: 'boolean' }).notNull().default(false),
-  isActive: integer('isActive', { mode: 'boolean' }).notNull().default(true),
+  code: text('code').unique().notNull(),
+  domain: text('domain').unique().notNull(),
+  isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
