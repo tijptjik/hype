@@ -12,7 +12,12 @@ import IconicMenuButton from '$lib/components/menu/IconicMenuButton.svelte';
 // ENUMS
 import { HierarchicalResource } from '$lib/enums';
 // ICONS
-import { InboxArrowDown, Map, CloudArrowUp } from '@steeze-ui/heroicons';
+import {
+  InboxArrowDown,
+  Map,
+  CloudArrowUp,
+  BuildingLibrary
+} from '@steeze-ui/heroicons';
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 
@@ -31,16 +36,19 @@ let notificationCount = $derived(resourceState.filteredTasks.length);
         handleClick={(e) => navigateOnAdmin(resourceState, HierarchicalResource.task)}
         {notificationCount} />
     </li>
+    {#if page.data.session?.user?.superAdmin}
+      <li>
+        <IconicMenuButton href={`${ADMIN_PATH}/images/batch`} iconSrc={CloudArrowUp} />
+      </li>
+      <li>
+        <IconicMenuButton href={`${ADMIN_PATH}/hubs`} iconSrc={BuildingLibrary} />
+      </li>
+    {/if}
     <li>
       <IconicMenuButton
-        href={`${ADMIN_PATH}/images/batch`}
-        iconSrc={CloudArrowUp} />
-    </li>
-    <li>
-      <IconicMenuButton 
-        href={resourceState.activeResource === 'feature' && resourceState.activeEntity 
-          ? `/features/${resourceState.activeEntity}` 
-          : "/"} 
+        href={resourceState.activeResource === 'feature' && resourceState.activeEntity
+          ? `/features/${resourceState.activeEntity}`
+          : '/'}
         iconSrc={Map} />
     </li>
   </ul>
