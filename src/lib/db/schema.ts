@@ -1354,7 +1354,7 @@ export const taskImageRelations = relations(taskImage, ({ one }) => ({
 export const hub = sqliteTable('hub', {
   id: text('id').primaryKey().$defaultFn(() => nanoid(12)),
   code: text('code').unique().notNull(),
-  domain: text('domain').unique().notNull(),
+  domain: text('domain').unique(),
   isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
