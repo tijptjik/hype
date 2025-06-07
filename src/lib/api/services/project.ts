@@ -157,19 +157,19 @@ export const assertPermissionsToCreateProject = (
  * @param userRoles - The user roles
  * @param refId - The code from the URL parameter
  * @returns Object containing validation and access control context
+ * @remarks We don't need to assert code in params equals code in form,
+ * as we want to allow the users to change the code of the project.
  */
 export const assertPermissionsToUpdateProject = (
   session: Session,
   request: Request,
   formData: ProjectDB,
   userRoles: UserRoleDisco[],
-  refId: Code
 ) => {
   // Run all access control assertions
   const assertionError = runAssertions(
     () => assertUserLoggedIn(session as any),
     () => assertAdminRequest(request),
-    () => assertParamIdentifierEqualsFormIdentifier(formData, refId, 'code'),
     () =>
       assertOrganisationOwnerOrSuperAdmin(session, userRoles, formData.organisationId!) // Only allow org owners to update projects
   );

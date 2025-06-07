@@ -144,16 +144,15 @@ export const toResponseShape = async (
  * @param formData - The form data
  * @param refId - The code from the URL parameter
  * @returns Object containing validation and access control context
+ * @remarks We don't need to assert code in params equals code in form,
+ * as we want to allow the users to change the code of the hub.
  */
 export const assertPermissionsToUpdateHub = (
-  session: Session,
-  formData: HubDB,
-  refId: Code
+  session: Session
 ) => {
   // Run all access control assertions
   const assertionError = runAssertions(
     () => assertUserLoggedIn(session as any),
-    () => assertParamIdentifierEqualsFormIdentifier(formData, refId, 'code'),
     () => assertSuperAdmin(session)
   );
 

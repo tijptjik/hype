@@ -125,8 +125,9 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
       zod(ProjectUpdateAPI)
     )) as SuperValidated<Project>;
 
-    // ASSERT : Code is unique (if changed)
-    if (formData.code !== params.code) {
+    // ASSERT : Code has (1) not changed, or (2) changed to another unique value
+    // Use URL param code for lookup, form code for comparison
+    if ('code' in formData && formData.code !== params.code) {
       form = (await assertCodeUnique(db, form, formData)) as any;
     }
 
@@ -138,8 +139,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
       session,
       request,
       formData,
-      userRoles,
-      params.code as Code
+      userRoles
     );
 
     // DB : Update the project
@@ -188,13 +188,19 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
 
     if (!existing) return error(404, 'Project not found');
 
+    // ASSERT : Code has (1) not changed, or (2) changed to another unique value
+    // Use URL param code for lookup, form code for comparison
+    if ('code' in newData && params.code !== newData.code) {
+      // @ts-ignore - FORM : Fix form type error
+      form = await assertCodeUnique(db, form, newData);
+    }
+
     // Use assertion functions for access control
     assertPermissionsToUpdateProject(
       session,
       request,
       existing,
-      userRoles,
-      params.code as Code
+      userRoles
     );
 
     // DB : Update only the basic project fields (no relations for PATCH)

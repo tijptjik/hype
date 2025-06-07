@@ -109,7 +109,7 @@ export const GET: RequestHandler = async ({ params, locals, platform, request })
  */
 export const PUT: RequestHandler = async ({ params, request, locals, platform }) => {
   // ASSERT : User logged in
-  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
+  const { db, session, userRoles } = await getDatabase(locals, platform);
 
   try {
     // ASSERT : Valid form
@@ -137,8 +137,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
       session,
       request,
       formData,
-      userRoles,
-      params.code as Code
+      userRoles
     );
 
     // STATE : Will the current user lose access on membership changes.
@@ -187,7 +186,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
  * such as the organisation publish or archive status.
  */
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
-  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
+  const { db, session, userRoles } = await getDatabase(locals, platform);
   try {
     // ASSERT : Valid form data
     const newData: OrganisationPartial = await request.json();
@@ -206,13 +205,19 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
       return error(404, 'Organisation not found');
     }
 
+    // ASSERT : Code has (1) not changed, or (2) changed to another unique value
+    // Use URL param code for lookup, form code for comparison
+    if ('code' in newData && params.code !== newData.code) {
+      // @ts-ignore - FORM : Fix form type error
+      form = await assertCodeUnique(db, form, newData);
+    }
+
     // Use assertion functions for access control
     assertPermissionsToUpdateOrganisation(
       session,
       request,
       existing,
-      userRoles,
-      params.code as Code
+      userRoles
     );
 
     // DB : Update only the basic organisation fields (no relations for PATCH)

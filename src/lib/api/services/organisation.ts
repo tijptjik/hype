@@ -130,22 +130,20 @@ export const assertPermissionsToCreateOrganisation = (
  * @param request - The request object
  * @param formData - The form data
  * @param userRoles - The user roles
- * @param refId - The code from the URL parameter
- * @param newData - The new data (for partial updates)
  * @returns Object containing validation and access control context
+ * @remarks We don't need to assert code in params equals code in form,
+ * as we want to allow the users to change the code of the organisation.
  */
 export const assertPermissionsToUpdateOrganisation = (
   session: Session,
   request: Request,
   formData: OrganisationDB,
   userRoles: UserRoleDisco[],
-  refId: Code,
 ) => {
   // Run all access control assertions
   const assertionError = runAssertions(
     () => assertUserLoggedIn(session as any),
     () => assertAdminRequest(request),
-    () => assertrefIdEqualsFormRefId(formData, refId, 'code'),
     () => assertOrganisationOwnerOrSuperAdmin(session, userRoles, formData.id!),
     () => assertIsCoreInclusiveModifiedBySuperAdmin(session, formData)
   );

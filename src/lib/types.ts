@@ -268,6 +268,7 @@ export type ResourceType =
   | 'task'
   | 'image'
   | 'user'
+  | 'hub'
   | 'userFeature';
 
 export type FalsableResourceType = ResourceType | false;
@@ -1053,7 +1054,7 @@ export type PropertyDBNew = z.infer<typeof PropertyInsert>;
 // Property without relations, for use in partially updating a property
 export type PropertyDBPartial = z.infer<typeof PropertyUpdate>;
 // Property, with relations in DB form - used as an intermediate type for DB operations
-export type PropertyRaw = z.infer<typeof PropertyBaseRaw>;
+export type PropertyDBRaw = z.infer<typeof PropertyBaseRaw>;
 
 /* ----------------- */
 // PROPERTIES :: API
