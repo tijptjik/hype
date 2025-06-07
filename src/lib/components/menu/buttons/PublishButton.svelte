@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { slide } from 'svelte/transition';
 // LIB
 import { NEW_REF } from '$lib';
 import { page } from '$app/state';
@@ -8,6 +10,10 @@ import { m } from '$lib/i18n';
 import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // ENUMS
 import { HierarchicalResource, ResourcePath } from '$lib/enums';
+// ICONS
+import { EyeSlash } from '@steeze-ui/heroicons';
+import { Eye } from '@steeze-ui/heroicons';
+import Icon from '$lib/components/common/Icon.svelte';
 // TYPES
 import type { Form } from '$lib/types';
 // STATE : PAGE :: DATA
@@ -27,6 +33,7 @@ let isInvalid = $state(false);
 let isLoading = $state(false);
 
 // STATE : EFFECTS
+// TODO Replace by runed watch
 $effect(() => {
   isInvalid = (function checkErrors(obj: Record<string, unknown>): boolean {
     if (typeof obj !== 'object' || obj === null) {
@@ -39,8 +46,6 @@ $effect(() => {
     );
   })($errors as Record<string, unknown>);
 });
-
-// onMount(async () => await tick());
 
 const handleClick = async (e: Event) => {
   e.preventDefault();
@@ -62,7 +67,7 @@ const handleClick = async (e: Event) => {
     }
 
     const response: Response = await fetch(
-      `/api/${ResourcePath[resourceState.activeResource as HierarchicalResource]}/${resourceState.activeEntity}`,
+      `/api/${ResourcePath[resourceState.activeResource as FirstClassResource]}/${resourceState.activeEntity}`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -80,9 +85,9 @@ const handleClick = async (e: Event) => {
 
     if (result && result.type === 'success') {
       // INVALIDE CACHE
-      resourceState.invalidateAndRefresh(
-        resourceState.activeResource as HierarchicalResource
-      );
+      if (resourceState.activeResource) {
+        resourceState.invalidateAndRefresh(resourceState.activeResource);
+      }
       // UPDATE FORM - Reset with new data to avoid dirtying the form
       reset({
         keepMessage: true,
@@ -110,20 +115,18 @@ const handleClick = async (e: Event) => {
 </script>
 
 <button
-  class="btn border-none transition-colors duration-500 disabled:bg-transparent disabled:text-opacity-60"
+  transition:slide={{ axis: 'x' }}
+  class="btn btn-ghost join-item gap-1 transition-colors duration-500 disabled:bg-transparent disabled:text-opacity-60"
   onclick={handleClick}
-  class:bg-rose-500={!isInvalid && !$form.isPublished}
-  class:bg-fuchsia-900={!isInvalid && $form.isPublished}
-  class:text-white={!isInvalid && $form.isPublished}
-  class:btn-outline={isInvalid}
-  class:btn-error={isInvalid}
   disabled={isInvalid ||
     isLoading ||
     !resourceState.activeEntity ||
     resourceState.activeEntity === NEW_REF}>
   {#if $form.isPublished}
+    <Icon src={EyeSlash} class="h-5 w-5" />
     {m.forms__unpublish()}
   {:else}
+    <Icon src={Eye} class="h-5 w-5" />
     {m.forms__publish()}
   {/if}
 </button>

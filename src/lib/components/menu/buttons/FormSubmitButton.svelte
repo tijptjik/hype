@@ -1,8 +1,9 @@
 <script lang="ts">
 // LIB
 import { m } from '$lib/i18n';
+import { slide } from 'svelte/transition';
 // ICONS
-import { CheckCircle } from '@steeze-ui/heroicons';
+import { CheckCircle, ExclamationCircle } from '@steeze-ui/heroicons';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 // TYPES
@@ -64,24 +65,30 @@ $effect(() => {
 
 <button
   bind:this={buttonElement}
-  class="btn transition-all duration-500 disabled:bg-transparent disabled:text-opacity-60"
+    transition:slide={{ axis: 'x' }}
+
+  class="btn btn-ghost join-item gap-1 transition-colors duration-500 disabled:bg-transparent disabled:text-opacity-60
+  {!isInvalid ? 'text-white' : 'text-black text-opacity-100'}"
   role="button"
   data-testid="formSubmitButton"
   onclick={(e) => submit(e)}
-  class:btn-primary={isTainted($tainted) && !isInvalid}
-  class:bg-rose-500={isTainted($tainted) && !isInvalid}
-  class:btn-outline={!isTainted($tainted) || isInvalid}
-  class:btn-error={isInvalid}
   disabled={!isTainted($tainted) || isInvalid}>
   <!-- TODO: add saved state -->
-  {#if false}
-    <Icon src={CheckCircle} />
-  {/if}
+  {#if false}{/if}
   {#if !isInvalid}
-    {m.forms__save()}
+    <Icon src={CheckCircle} />
+    <span>
+      {m.forms__save()}
+    </span>
   {:else if hasErrors}
-    {m.forms__invalid()}
+    <Icon src={ExclamationCircle} />
+    <span>
+      {m.forms__invalid()}
+    </span>
   {:else}
-    {m.forms__pending()}
+    <Icon src={ExclamationCircle} />
+    <span>
+      {m.forms__pending()}
+    </span>
   {/if}
 </button>
