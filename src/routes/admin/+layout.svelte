@@ -26,10 +26,11 @@ const { session, queryClient } = data as LayoutData & {
 // CONTEXT
 const resourceState = setHierarchicalResourceState(
   queryClient,
+  session,
   session?.user.roles ?? []
 );
 setMapCtx(queryClient, session.user);
-const sidebarState = setSidebarState();
+setSidebarState();
 
 let viewportContained = $derived(
   resourceState.activeEntity == false ||

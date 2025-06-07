@@ -1,6 +1,6 @@
 import { loadData } from '$lib/api';
 // ENUMS
-import { HierarchicalResourcePath } from '$lib/enums';
+import { ResourcePath } from '$lib/enums';
 // TYPES
 import type { PageLoad } from './$types';
 import type { Task } from '$lib/types';
@@ -8,7 +8,7 @@ import type { Task } from '$lib/types';
 export const load: PageLoad = async ({ params, fetch }) => {
   return loadData<Task>({
     entity: params.task,
-    resourcePath: HierarchicalResourcePath.task,
+    resourcePath: ResourcePath.task,
     fetch,
     dataKey: 'task'
   });

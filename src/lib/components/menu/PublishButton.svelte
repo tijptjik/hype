@@ -7,7 +7,7 @@ import { m } from '$lib/i18n';
 // CONTEXT
 import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // ENUMS
-import { HierarchicalResource, HierarchicalResourcePath } from '$lib/enums';
+import { HierarchicalResource, ResourcePath } from '$lib/enums';
 // TYPES
 import type { Form } from '$lib/types';
 // STATE : PAGE :: DATA
@@ -62,7 +62,7 @@ const handleClick = async (e: Event) => {
     }
 
     const response: Response = await fetch(
-      `/api/${HierarchicalResourcePath[resourceState.activeResource as HierarchicalResource]}/${resourceState.activeEntity}`,
+      `/api/${ResourcePath[resourceState.activeResource as HierarchicalResource]}/${resourceState.activeEntity}`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },

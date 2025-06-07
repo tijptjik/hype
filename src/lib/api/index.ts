@@ -19,7 +19,7 @@ import { mergeFeatureProperties } from '$lib/db/services/feature';
 // ENUMS
 import {
   HierarchicalResource,
-  HierarchicalResourcePath,
+  ResourcePath,
   RESERVED_PARAMETERS
 } from '$lib/enums';
 // TYPES
@@ -317,7 +317,7 @@ async function fetchParentResource(
   fetch: typeof window.fetch
 ): Promise<Resource> {
   const response = await fetch(
-    `${API_PATH}/${HierarchicalResourcePath[parentType]}/${parentRef}`
+    `${API_PATH}/${ResourcePath[parentType]}/${parentRef}`
   );
 
   if (!response.ok) {
@@ -446,7 +446,7 @@ async function prepareExistingForm<T extends Record<string, unknown>>({
   image: Image | null;
 }> {
   const response = await fetch(
-    `${API_PATH}/${HierarchicalResourcePath[resourceType]}/${entityRef}`
+    `${API_PATH}/${ResourcePath[resourceType]}/${entityRef}`
   );
 
   if (!response.ok) {

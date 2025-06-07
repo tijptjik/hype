@@ -21,7 +21,7 @@ export type KeyMap = {
   id: 'id' | 'code';
   title: 'name' | 'nameShort' | 'title';
   subtitle?: 'nameShort' | 'addressProperties.neighbourhood';
-  description: 'description' | 'displayAddress';
+  description?: 'description' | 'displayAddress';
   image: 'image';
   tags?: keyof Resource[];
   badges?: Array<{

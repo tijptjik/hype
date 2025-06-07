@@ -13,7 +13,7 @@ import {
   Inbox as TaskIcon
 } from '@steeze-ui/heroicons';
 // ENUMS
-import { HierarchicalResource, HierarchicalResourcePath } from '$lib/enums';
+import { HierarchicalResource, ResourcePath } from '$lib/enums';
 // TYPES
 import type { ResourceState } from '$lib/context/resource.svelte';
 import type { Code, FacetType, Id } from '$lib/types';
@@ -72,7 +72,7 @@ export const navigateOnAdmin = (
 ) => {
   let url = `${ADMIN_PATH}`;
   if (resource) {
-    url += `/${HierarchicalResourcePath[resource]}`;
+    url += `/${ResourcePath[resource]}`;
     resourceState.setResource(resource);
   } else {
     resourceState.setResource(false);
@@ -96,10 +96,10 @@ export const navigateOnAdmin = (
 // UTILS
 export const reversePath = new Map<string, HierarchicalResource>();
 
-if (HierarchicalResourcePath) {
-  Object.keys(HierarchicalResourcePath).forEach((path: string) => {
+if (ResourcePath) {
+  Object.keys(ResourcePath).forEach((path: string) => {
     const pathValue: string =
-      HierarchicalResourcePath[path as keyof typeof HierarchicalResourcePath];
+      ResourcePath[path as keyof typeof ResourcePath];
     reversePath.set(pathValue, path as HierarchicalResource);
   });
 }

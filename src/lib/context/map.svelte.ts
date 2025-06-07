@@ -20,7 +20,7 @@ import { getContext, setContext } from 'svelte';
 // MARKERS
 import { removeMarkerClass, addMarkerClass } from '$lib/map/markers';
 // ENUMS
-import { HierarchicalResource, HierarchicalResourcePath } from '$lib/enums';
+import { HierarchicalResource, ResourcePath } from '$lib/enums';
 // TYPES
 import type {
   Feature,
@@ -146,7 +146,7 @@ export class MapCtx {
     resource: HierarchicalResource,
     includeFilters = true
   ): string => {
-    const path = HierarchicalResourcePath[resource];
+    const path = ResourcePath[resource];
     const params = new URLSearchParams();
 
     // Add isArchived filter by default

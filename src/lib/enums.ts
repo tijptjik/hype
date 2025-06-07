@@ -41,20 +41,22 @@ export const localeNames: Record<Locale, Record<Locale, string>> = {
 /* ----------------- */
 // HIERARCHICAL RESOURCES
 /* -------- */
+
+export enum ResourcePath {
+  organisation = 'organisations',
+  project = 'projects',
+  layer = 'layers',
+  feature = 'features',
+  task = 'tasks',
+  hub = 'hubs'
+}
+
 export enum HierarchicalResource {
   organisation = 'organisation',
   project = 'project',
   layer = 'layer',
   feature = 'feature',
   task = 'task'
-}
-
-export enum HierarchicalResourcePath {
-  organisation = 'organisations',
-  project = 'projects',
-  layer = 'layers',
-  feature = 'features',
-  task = 'tasks'
 }
 
 export enum HierarchicalResourceSeq {

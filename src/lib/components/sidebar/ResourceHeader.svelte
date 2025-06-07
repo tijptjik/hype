@@ -8,7 +8,7 @@ import { ADMIN_PATH } from '$lib/index';
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
 // ENUMS
-import { HierarchicalResourcePath } from '$lib/enums';
+import { ResourcePath } from '$lib/enums';
 // TYPES
 import type { HierarchicalResource } from '$lib/enums';
 
@@ -27,7 +27,7 @@ let onClick = (e: MouseEvent) => {
 <div class="flex-shrink-0">
   <a
     draggable="false"
-    href="{ADMIN_PATH}/{HierarchicalResourcePath[resourceType]}"
+    href="{ADMIN_PATH}/{ResourcePath[resourceType]}"
     onclick={(e) => onClick(e)}
     class="flex select-none items-center border-l-3 p-6 {resourceState.activeResource ===
       resourceType && !resourceState.activeEntity
