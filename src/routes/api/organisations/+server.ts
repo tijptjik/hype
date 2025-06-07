@@ -14,6 +14,7 @@ import { organisation } from '$lib/db/schema';
 import {
   createOrganisationWithRelated,
   listOrganisations,
+  searchOrganisations,
   toFormShape,
   toResponseShape
 } from '$lib/db/services/organisation';
@@ -54,6 +55,7 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
     string,
     string | string[]
   >;
+  const searchParam = url.searchParams.get('q') as string;
 
   // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
   let { conditions } = getOrganisationQueryContext(
@@ -64,13 +66,21 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
   );
 
   try {
-    // DB : List the organisations
-    const result = await listOrganisations(
-      db,
-      organisationWithRelations,
-      conditions,
-      locals.hub
-    );
+    // DB : List or search the organisations
+    const result = searchParam
+      ? await searchOrganisations(
+          db,
+          organisationWithRelations,
+          conditions,
+          searchParam,
+          locals.hub
+        )
+      : await listOrganisations(
+          db,
+          organisationWithRelations,
+          conditions,
+          locals.hub
+        );
 
     // RESPONSE : Build the response shape
     const data = await Promise.all(
