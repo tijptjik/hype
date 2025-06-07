@@ -79,7 +79,8 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
     const result = (await listTasks(
       db,
       taskCollectionWithRelations,
-      conditions
+      conditions,
+      locals.hub
     )) as TaskDBRaw[];
 
         // RESPONSE : Build the response shape

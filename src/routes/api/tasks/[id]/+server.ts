@@ -75,7 +75,7 @@ export const GET: RequestHandler = async ({
   try {
 
     // DB : Get the task with full relations
-    const data = await getTask(db, taskEntityWithRelations, conditions) as TaskDBRaw;
+    const data = await getTask(db, taskEntityWithRelations, conditions, locals.hub) as TaskDBRaw;
 
     if (!data) {
       return error(404, 'Task not found');
@@ -107,7 +107,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     const data: TaskDBPartial = await request.json();
 
     // Get existing task data for permission checks
-    const existingTask = await getTask(db, {}, [eq(task.id, params.id!)]);
+    const existingTask = await getTask(db, {}, [eq(task.id, params.id!)], locals.hub);
     if (!existingTask) {
       return error(404, 'Task not found');
     }
@@ -180,7 +180,7 @@ export const DELETE: RequestHandler = async ({ params, request, locals, platform
 
   try {
     // Get existing task data for permission checks
-    const existingTask = await getTask(db, {}, [eq(task.id, params.id!)]);
+    const existingTask = await getTask(db, {}, [eq(task.id, params.id!)], locals.hub);
     if (!existingTask) {
       return error(404, 'Task not found');
     }
