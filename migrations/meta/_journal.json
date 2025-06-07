@@ -8,6 +8,13 @@
       "when": 1749067213988,
       "tag": "0000_Initial",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1749259892903,
+      "tag": "0001_hub-multi-tenancy",
+      "breakpoints": true
     }
   ]
 }
