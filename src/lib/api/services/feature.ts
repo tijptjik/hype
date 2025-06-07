@@ -162,7 +162,13 @@ export const getFeatureQueryContext = (
   }
 
   if (Object.keys(params).length > 0) {
-    applyQueryFilters(feature, params, conditions);
+    // For superAdmins, remove isArchived and isPublished from params so they can see all content
+    if (isSuperAdmin(session)) {
+      const { isArchived, isPublished, ...filteredParams } = params;
+      applyQueryFilters(feature, filteredParams, conditions);
+    } else {
+      applyQueryFilters(feature, params, conditions);
+    }
   }
 
   return { params, conditions, excludeColumns };

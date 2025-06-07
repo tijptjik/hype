@@ -20,7 +20,24 @@ const keyMap: KeyMap = {
   title: 'i18n.name',
   subtitle: 'i18n.nameShort',
   description: 'i18n.description',
-  image: 'image'
+  image: 'image',
+  badges: [
+    { 
+      label: 'isPublished', 
+      variant: 'primary',
+      type: 'boolean',
+      trueText: 'Published',
+      falseText: 'Draft'
+    },
+    { 
+      label: 'isArchived', 
+      variant: 'outline',
+      type: 'boolean',
+      trueText: 'Dead',
+      falseText: 'Alive',
+      superAdminOnly: true
+    }
+  ]
 };
 
 // CONTEXT

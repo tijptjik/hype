@@ -28,6 +28,10 @@ export type KeyMap = {
   badges?: Array<{
     label: string;
     variant?: 'primary' | 'secondary' | 'outline' | undefined;
+    type?: 'boolean';
+    trueText?: string;
+    falseText?: string;
+    superAdminOnly?: boolean;
   }>;
 };
 
@@ -36,11 +40,12 @@ type Props = {
   keyMap: KeyMap;
   header?: any;
   badges?: any;
+  badgesExtra?: any;
   content?: any;
   actions?: any;
 };
 
-let { entity, keyMap, header, badges, content, actions }: Props = $props();
+let { entity, keyMap, header, badges, badgesExtra, content, actions }: Props = $props();
 let locale = $derived(getLocale());
 
 // Utility function to get nested property values using dot notation
@@ -175,10 +180,23 @@ const onclick = (e: MouseEvent | KeyboardEvent) => {
           {@render badges(entity)}
         {:else if keyMap.badges?.length}
           <div class="flex flex-row flex-wrap justify-center gap-2 py-2 align-middle">
-            {#each keyMap.badges as badge}
-              <span class="badge badge-{badge.variant || 'outline'}"
-                >{getNestedValue(entity, badge.label)}</span>
+            {#each keyMap.badges.filter((badge) => !badge.superAdminOnly || resourceState.session?.user?.superAdmin === true) as badge}
+              {#if badge.type === 'boolean'}
+                {@const boolValue = getNestedValue(entity, badge.label)}
+                <span
+                  class="badge badge-{badge.variant ||
+                    'outline'} my-0.5 h-8 bg-base-300">
+                  {boolValue ? badge.trueText || 'True' : badge.falseText || 'False'}
+                </span>
+              {:else}
+                <span class="badge badge-{badge.variant || 'outline'}"
+                  >{getNestedValue(entity, badge.label)}</span>
+              {/if}
             {/each}
+            <!-- Extra Badges Section -->
+            {#if badgesExtra}
+              {@render badgesExtra(entity)}
+            {/if}
           </div>
         {/if}
       {/if}

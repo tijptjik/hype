@@ -92,7 +92,13 @@ export const getOrganisationQueryContext = (
 
   // CONTEXT : Apply query filters to the conditions
   if (Object.keys(params).length > 0) {
-    applyQueryFilters(organisation, params, conditions);
+    // For superAdmins, remove isArchived and isPublished from params so they can see all content
+    if (isSuperAdmin(session)) {
+      const { isArchived, isPublished, ...filteredParams } = params;
+      applyQueryFilters(organisation, filteredParams, conditions);
+    } else {
+      applyQueryFilters(organisation, params, conditions);
+    }
   }
 
   return { params, conditions, excludeColumns };

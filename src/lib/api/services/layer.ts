@@ -132,7 +132,13 @@ export const getLayerQueryContext = (
 
   // CONTEXT : Apply query filters to the conditions
   if (Object.keys(params).length > 0) {
-    applyQueryFilters(layer, params, conditions);
+    // For superAdmins, remove isArchived and isPublished from params so they can see all content
+    if (isSuperAdmin(session)) {
+      const { isArchived, isPublished, ...filteredParams } = params;
+      applyQueryFilters(layer, filteredParams, conditions);
+    } else {
+      applyQueryFilters(layer, params, conditions);
+    }
   }
 
   return { params, conditions, excludeColumns };

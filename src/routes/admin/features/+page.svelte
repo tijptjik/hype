@@ -23,13 +23,33 @@ resourceState.setFacet(false);
 // CONFIG :: KEY MAP
 const keyMap: KeyMap = {
   id: 'id',
-  title: 'title',
+  title: 'i18n.title',
   subtitle: 'addressProperties.neighbourhood',
-  description: 'displayAddress',
+  description: 'i18n.displayAddress',
   image: 'image',
   badges: [
-    { label: 'isPublished', variant: 'primary' },
-    { label: 'isVisitable', variant: 'outline' }
+    {
+      label: 'isPublished',
+      variant: 'primary',
+      type: 'boolean',
+      trueText: 'Published',
+      falseText: 'Draft'
+    },
+    {
+      label: 'isVisitable',
+      variant: 'outline',
+      type: 'boolean',
+      trueText: 'Visitable',
+      falseText: 'Not Visitable'
+    },
+    {
+      label: 'isArchived',
+      variant: 'outline',
+      type: 'boolean',
+      trueText: 'Dead',
+      falseText: 'Alive',
+      superAdminOnly: true
+    }
   ]
 };
 let entities = $derived(resourceState.filteredFeatures);
@@ -38,31 +58,24 @@ let entities = $derived(resourceState.filteredFeatures);
 <!-- LAYOUT -->
 <ResourceHeader />
 <ResourceIndex {entities}>
-  {#snippet children(entity: Feature, idx: number)}
+  {#snippet children(entity)}
     <EntityCard {entity} {keyMap}>
-      {#snippet badges(entity: Feature)}
-        <div>
-          <span class="badge badge-primary  my-0.5 h-8 bg-base-300"
-            >{entity.isPublished ? 'Published' : 'Draft'}</span>
-          <span class="badge badge-outline my-0.5 h-8 bg-base-300">
-            {entity.isVisitable ? 'Visitable' : 'Not Visitable'}
-          </span>
-          {#each entity.properties.filter((p) => p.propertyValueId) as property}
-            <span class="bage-primary badge my-0.5 h-8 bg-base-300">
-              <div class="flex h-8 flex-row items-center justify-center gap-2">
-                <div
-                  class="block bg-base-100 font-mono text-xs uppercase text-neutral-content">
-                  {property.property?.i18n?.[getLocale()]?.label}
-                </div>
-                <div class="font-normal">
-                  {property.property?.values?.find(
-                    (v) => v.id === property.propertyValueId
-                  )?.i18n?.[getLocale()]?.value}
-                </div>
+      {#snippet badgesExtra(entity: Feature)}
+        {#each entity.properties.filter((p) => p.propertyValueId) as property}
+          <span class="badge my-0.5 h-8 bg-base-300">
+            <div class="flex h-8 flex-row items-center justify-center gap-2">
+              <div
+                class="block bg-base-100 font-mono text-xs uppercase text-neutral-content">
+                {property.property?.i18n?.[getLocale()]?.label}
               </div>
-            </span>
-          {/each}
-        </div>
+              <div class="font-normal">
+                {property.property?.values?.find(
+                  (v) => v.id === property.propertyValueId
+                )?.i18n?.[getLocale()]?.value}
+              </div>
+            </div>
+          </span>
+        {/each}
       {/snippet}
     </EntityCard>
   {/snippet}

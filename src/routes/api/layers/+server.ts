@@ -48,7 +48,7 @@ const RESOURCE_PATH = 'layers';
  */
 export const GET: RequestHandler = async ({ locals, platform, url, request }) => {
   // ASSERT : User Logged in
-  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
+  const { db, session, userRoles } = await getDatabase(locals, platform);
 
   // ASSERT : Valid query parameters
   // Validate query parameters, or return 400

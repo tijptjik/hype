@@ -117,7 +117,13 @@ export const getProjectQueryContext = (
 
   // CONTEXT : Apply query filters to the conditions
   if (Object.keys(params).length > 0) {
-    applyQueryFilters(project, params, conditions);
+    // For superAdmins, remove isArchived and isPublished from params so they can see all content
+    if (isSuperAdmin(session)) {
+      const { isArchived, isPublished, ...filteredParams } = params;
+      applyQueryFilters(project, filteredParams, conditions);
+    } else {
+      applyQueryFilters(project, params, conditions);
+    }
   }
 
   return { params, conditions, excludeColumns };
