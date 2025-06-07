@@ -1,5 +1,5 @@
 // DRIZZLE
-import { eq, inArray, SQL, sql } from 'drizzle-orm';
+import { eq, inArray, SQL, sql, exists, and } from 'drizzle-orm';
 // LIB
 import { isAdminRequest } from '../index';
 // API
@@ -12,11 +12,12 @@ import {
   runAssertions,
   assertProjectMaintainerOrMemberOrSuperAdmin
 } from '$lib/auth/asserts';
+
 // DB
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
 import { getProjectIdforRoles, isSuperAdmin } from '$lib/auth/utils';
 // SCHEMA
-import { task, taskImage } from '$lib/db/schema';
+import { task, feature, layer } from '$lib/db/schema';
 // DB
 import { applyPrismConstraints, toLocaleMap } from '$lib/db';
 // ZOD
@@ -34,13 +35,10 @@ import type {
   TaskDB,
   TaskDBNew,
   TaskCollection,
-  FeatureI18nDB,
   Task,
-  ProjectI18nDB,
-  OrganisationI18nDB,
-  TaskDBRaw
+  TaskDBRaw,
+  HubOpts
 } from '$lib/types';
-
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -137,8 +135,8 @@ export const taskEntityWithRelations = {
 
 /**
  * Get the query context for the task resource.
- * Tasks are second-class resources associated with features, so access is controlled
- * by project membership. Filters the query based on user roles, prisms, and query parameters.
+ * Tasks are first-class resources that inherit filtering through features → layers → projects → organisations.
+ * Filters the query based on user roles, prisms, hub context, and query parameters.
  */
 export const getTaskQueryContext = (
   db: Database,
@@ -169,7 +167,8 @@ export const getTaskQueryContext = (
     // Tasks should only be accessible from admin interface
     conditions.push(sql`false`); // Block all public access
   } else if (!isSuperAdmin(session)) {
-    // ADMIN : List tasks where the user has a role in the task's project
+    // ADMIN : List tasks where the user has a role in the task's associated project
+    // Note: Tasks are linked to projects through feature → layer → project hierarchy
     const projectIds = getProjectIdforRoles(userRoles);
     if (projectIds.length > 0) {
       conditions.push(inArray(task.projectId, projectIds as Id[]));
@@ -209,7 +208,7 @@ export const getTaskEntityQueryContext = (
   if (!isAdminRequest(request)) {
     conditions.push(sql`false`); // Block all public access
   } else if (!isSuperAdmin(session)) {
-    // ADMIN : Access tasks where user has project role
+    // ADMIN : Access tasks where user has project role through feature hierarchy
     const projectIds = getProjectIdforRoles(userRoles);
     if (projectIds.length > 0) {
       conditions.push(inArray(task.projectId, projectIds as Id[]));
@@ -268,12 +267,12 @@ export const assertPermissionsToUpdateTask = async (
     () => assertId({ ...params })
   ];
 
-  // Get project ID from task data if available, otherwise fetch it
+  // Get project ID through feature hierarchy
   let projectId: Id;
   if (taskData?.projectId) {
     projectId = taskData.projectId;
   } else {
-    // Would need to fetch task first to get projectId
+    // Fetch task first to get featureId, then get projectId
     const taskRecord = await db.query.task.findFirst({
       where: eq(task.id, params.id as Id),
       columns: { projectId: true }
@@ -326,33 +325,44 @@ export const toResponseShape = async (
   isCollection: boolean = false
 ): Promise<Task | TaskCollection> => {
   // Transform feature properties if they exist
-  const transformedFeature = data.feature ? {
-    ...data.feature,
-    i18n: data.feature.i18n ? toLocaleMap(data.feature.i18n) : {},
-    properties: data.feature.properties?.map(prop => ({
-      ...prop,
-      property: {
-        ...prop.property,
-        i18n: prop.property.i18n ? toLocaleMap(prop.property.i18n) : {}
-      },
-      propertyValue: prop.propertyValue ? {
-        ...prop.propertyValue,
-        i18n: prop.propertyValue.i18n ? toLocaleMap(prop.propertyValue.i18n) : {}
-      } : null
-    })) || []
-  } : null;
+  const transformedFeature = data.feature
+    ? {
+        ...data.feature,
+        i18n: data.feature.i18n ? toLocaleMap(data.feature.i18n) : {},
+        properties:
+          data.feature.properties?.map((prop) => ({
+            ...prop,
+            property: {
+              ...prop.property,
+              i18n: prop.property.i18n ? toLocaleMap(prop.property.i18n) : {}
+            },
+            propertyValue: prop.propertyValue
+              ? {
+                  ...prop.propertyValue,
+                  i18n: prop.propertyValue.i18n
+                    ? toLocaleMap(prop.propertyValue.i18n)
+                    : {}
+                }
+              : null
+          })) || []
+      }
+    : null;
 
   // Transform the complete data structure
   const transformedData = {
     ...data,
-    organisation: data.organisation ? {
-      ...data.organisation,
-      i18n: data.organisation.i18n ? toLocaleMap(data.organisation.i18n) : {}
-    } : null,
-    project: data.project ? {
-      ...data.project,
-      i18n: data.project.i18n ? toLocaleMap(data.project.i18n) : {}
-    } : null,
+    organisation: data.organisation
+      ? {
+          ...data.organisation,
+          i18n: data.organisation.i18n ? toLocaleMap(data.organisation.i18n) : {}
+        }
+      : null,
+    project: data.project
+      ? {
+          ...data.project,
+          i18n: data.project.i18n ? toLocaleMap(data.project.i18n) : {}
+        }
+      : null,
     feature: transformedFeature
   };
 

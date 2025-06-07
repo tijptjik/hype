@@ -10,6 +10,7 @@ import { insert, update, del } from '../crud';
 // SERVICES
 import { getProjectForFeatureId } from './project';
 import { getOrganisationForProjectId } from './organisation';
+import { getTaskHubFilter } from './hub';
 import { uploadAndProcessImage } from '$lib/client/services/image';
 import {
   createTaskImagesFromImageIds,
@@ -29,8 +30,8 @@ import {
 import { ImageContextResource } from '$lib/enums';
 // TYPES
 import type {
-  TaskDB,
   TaskNew,
+  TaskDB,
   TaskDBPartial,
   Image,
   TaskCreation,
@@ -38,8 +39,9 @@ import type {
   Id,
   ResourceHierarchy,
   Database,
-  TaskDBNew,
-  UserContributedFeature
+  UserContributedFeature,
+  HubOpts,
+  TaskDBRaw
 } from '$lib/types';
 // API SERVICES
 import { createUserContributedFeature } from '$lib/api/services/feature';
@@ -100,34 +102,52 @@ export const customHierarchy: ResourceHierarchy = [
  * @param db - The database instance
  * @param withRelations - Relations to include
  * @param conditions - Query conditions
+ * @param opts - Hub filtering options
  * @returns Array of tasks
  */
 export const listTasks = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = []
-): Promise<TaskDB[]> =>
-  await db.query.task.findMany({
+  conditions: SQL<unknown>[] = [],
+  opts: HubOpts
+): Promise<TaskDBRaw[]> => {
+  // Apply hub filtering if opts is provided
+  const hubFilter = getTaskHubFilter(db, opts);
+  if (hubFilter) {
+    conditions.push(hubFilter);
+  }
+
+  return await db.query.task.findMany({
     with: withRelations,
     where: conditions.length > 0 ? and(...conditions) : undefined
   });
+};
 
 /**
  * Gets a single task from the database
  * @param db - The database instance
  * @param withRelations - Relations to include
  * @param conditions - Query conditions
+ * @param opts - Hub filtering options
  * @returns Single task or undefined
  */
 export const getTask = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = []
-): Promise<TaskDB | undefined> =>
-  await db.query.task.findFirst({
+  conditions: SQL<unknown>[] = [],
+  opts: HubOpts
+): Promise<TaskDBRaw | undefined> => {
+  // Apply hub filtering if opts is provided
+  const hubFilter = getTaskHubFilter(db, opts);
+  if (hubFilter) {
+    conditions.push(hubFilter);
+  }
+
+  return await db.query.task.findFirst({
     with: withRelations,
     where: conditions.length > 0 ? and(...conditions) : undefined
   });
+};
 
 /**
  * Creates a new task in the database
