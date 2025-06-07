@@ -20,29 +20,33 @@ import {
   LayerInsertAPI,
   LayerUpdateAPI,
   FeatureInsertAPI,
-  FeatureUpdateAPI
+  FeatureUpdateAPI,
+  HubInsertAPI,
+  HubUpdateAPI,
 } from '$lib/db/zod';
 // ENUMS
-import { HierarchicalResource } from '$lib/enums';
+import { FirstClassResource, HierarchicalResource } from '$lib/enums';
 // TYPES
 import type { Writable } from 'svelte/store';
 import type { ActionResult } from '@sveltejs/kit';
 import type { ResourceState } from './resource.svelte';
 import type { SuperValidated } from 'sveltekit-superforms/client';
 import type {
+  Code,
+  FalsableResourceType,
+  Feature,
+  Hub,
+  HubNew,
+  Id,
+  Layer,
+  LayerNew,
+  Organisation,
   OrganisationNew,
   Project,
-  Layer,
-  Feature,
-  ResourceType,
-  FalsableResourceType,
-  Ref,
-  SuperFormResult,
-  Id,
-  Code,
   ProjectNew,
-  Organisation,
-  Form
+  Ref,
+  ResourceType,
+  SuperFormResult,
 } from '$lib/types';
 
 class BaseForm<T extends Record<string, unknown>> {
@@ -267,7 +271,7 @@ export class OrganisationForm extends BaseForm<Organisation> {
       OrganisationInsertAPI,
       OrganisationUpdateAPI,
       resourceState,
-      HierarchicalResource.organisation,
+      FirstClassResource.organisation,
       flash
     );
   }
@@ -286,7 +290,7 @@ export class ProjectForm extends BaseForm<Project> {
       ProjectInsertAPI,
       ProjectUpdateAPI,
       resourceState,
-      HierarchicalResource.project,
+      FirstClassResource.project,
       flash
     );
   }
@@ -305,7 +309,7 @@ export class LayerForm extends BaseForm<Layer> {
       LayerInsertAPI,
       LayerUpdateAPI,
       resourceState,
-      HierarchicalResource.layer,
+      FirstClassResource.layer,
       flash
     );
   }
@@ -324,7 +328,26 @@ export class FeatureForm extends BaseForm<Feature> {
       FeatureInsertAPI,
       FeatureUpdateAPI,
       resourceState,
-      HierarchicalResource.feature,
+      FirstClassResource.feature,
+      flash
+    );
+  }
+}
+
+export class HubForm extends BaseForm<Hub> {
+  constructor(
+    form: SuperValidated<Hub>,
+    isNew: boolean,
+    resourceState: ResourceState,
+    flash: Writable<App.PageData['flash']>
+  ) {
+    super(
+      form,
+      isNew,
+      HubInsertAPI,
+      HubUpdateAPI,
+      resourceState,
+      FirstClassResource.hub,
       flash
     );
   }
@@ -355,7 +378,7 @@ export function setForm(
 export function setForm(
   resourceType: 'layer',
   entity: Ref,
-  form: SuperValidated<Layer>,
+  form: SuperValidated<LayerNew | Layer>,
   resourceState: ResourceState,
   flash: Writable<App.PageData['flash']>
 ): LayerForm;
@@ -368,13 +391,21 @@ export function setForm(
   flash: Writable<App.PageData['flash']>
 ): FeatureForm;
 
-export function setForm<T extends OrganisationNew | Project | Layer | Feature>(
+export function setForm(
+  resourceType: 'hub',
+  entity: Ref,
+  form: SuperValidated<HubNew | Hub>,
+  resourceState: ResourceState,
+  flash: Writable<App.PageData['flash']>
+): HubForm;
+
+export function setForm<T extends OrganisationNew | Project | Layer | Feature | Hub>(
   resourceType: FalsableResourceType,
   entity: Ref,
   form: SuperValidated<T>,
   resourceState: ResourceState,
   flash: Writable<App.PageData['flash']>
-): OrganisationForm | ProjectForm | LayerForm | FeatureForm {
+): OrganisationForm | ProjectForm | LayerForm | FeatureForm | HubForm {
   if (!entity) {
     console.trace();
     throw new Error('Entity is required');
@@ -417,6 +448,15 @@ export function setForm<T extends OrganisationNew | Project | Layer | Feature>(
       );
       return setContext(getContextRef(resourceType, entity), instance);
     }
+    case 'hub': {
+      const instance = new HubForm(
+        form as SuperValidated<Hub>, 
+        entity === NEW_REF, 
+        resourceState, 
+        flash
+      );
+      return setContext(getContextRef(resourceType, entity), instance);
+    }
     default:
       throw new Error(`Unknown resource type: ${resourceType}`);
   }
@@ -442,11 +482,16 @@ export function getForm(
   entity: Ref
 ): FeatureForm;
 
-export function getForm<T extends OrganisationNew | Project | Layer | Feature>(
+export function getForm(
+  resource: 'hub',
+  entity: Ref
+): HubForm;
+
+export function getForm<T extends OrganisationNew | Project | Layer | Feature | Hub>(
   resource: ResourceType,
   entity: Ref
-): OrganisationForm | ProjectForm | LayerForm | FeatureForm {
-  return getContext<OrganisationForm | ProjectForm | LayerForm | FeatureForm>(
+): OrganisationForm | ProjectForm | LayerForm | FeatureForm | HubForm {
+  return getContext<OrganisationForm | ProjectForm | LayerForm | FeatureForm | HubForm>(
     getContextRef(resource, entity)
   );
 }

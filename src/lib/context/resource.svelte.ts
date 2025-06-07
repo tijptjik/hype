@@ -159,7 +159,10 @@ export class ResourceState {
 
     // Add isArchived / isReviewed filter by default
     if (resource !== FirstClassResource.task) {
-      params.append('isArchived', 'false');
+      // SuperAdmin users should see all archived resources, so don't force isArchived=false
+      if (!this.isSuperAdmin()) {
+        params.append('isArchived', 'false');
+      }
     } else {
       const isReviewed = this.state.filters[FirstClassResource.task].isReviewed;
       if (isReviewed !== null) {
@@ -295,18 +298,18 @@ export class ResourceState {
     }
   };
 
-  refreshResources = async (resource: HierarchicalResource | 'hub') => {
-    if (resource === HierarchicalResource.organisation) {
+  refreshResources = async (resource: FirstClassResource) => {
+    if (resource === FirstClassResource.organisation) {
       this.refreshOrganisation();
-    } else if (resource === HierarchicalResource.project) {
+    } else if (resource === FirstClassResource.project) {
       this.refreshProjects();
-    } else if (resource === HierarchicalResource.layer) {
+    } else if (resource === FirstClassResource.layer) {
       this.refreshLayers();
-    } else if (resource === HierarchicalResource.feature) {
+    } else if (resource === FirstClassResource.feature) {
       this.refreshFeatures();
-    } else if (resource === HierarchicalResource.task) {
+    } else if (resource === FirstClassResource.task) {
       this.refreshTasks();
-    } else if (resource === 'hub') {
+    } else if (resource === FirstClassResource.hub) {
       this.refreshHubs();
     }
   };
@@ -388,10 +391,10 @@ export class ResourceState {
     });
   }
 
-  async invalidateAndRefresh(resource: HierarchicalResource) {
+  async invalidateAndRefresh(resource: FirstClassResource) {
     // Invalidate the query
     this.queryClient.invalidateQueries({
-      queryKey: [HierarchicalResource[resource]],
+      queryKey: [FirstClassResource[resource]],
       refetchType: 'all',
       exact: false
     });
@@ -552,9 +555,9 @@ export class ResourceState {
         (entity) =>
           entity.code?.toLowerCase().includes(query.toLowerCase()) ||
           entity.domain?.toLowerCase().includes(query.toLowerCase()) ||
-          entity.organisation?.i18n?.[getLocale()]?.name
-            ?.toLowerCase()
-            .includes(query.toLowerCase())
+          entity.organisations?.some((org) =>
+            org.i18n?.[getLocale()]?.name?.toLowerCase().includes(query.toLowerCase())
+          )
       );
     }
 
@@ -788,8 +791,8 @@ export class ResourceState {
     }
     const nextTaskId =
       nextIndex !== undefined ? this.filteredTasks[nextIndex].id : undefined;
-    this.invalidateAndRefresh(HierarchicalResource.task);
-    navigateOnAdmin(this, HierarchicalResource.task, nextTaskId);
+    this.invalidateAndRefresh(FirstClassResource.task);
+    navigateOnAdmin(this, HierarchicalResource.task!, nextTaskId);
   };
 
   // GENERIC UTILS
