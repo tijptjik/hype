@@ -14,6 +14,8 @@ import { getFlash } from 'sveltekit-flash-message';
 import { page } from '$app/state';
 // COMPONENTS
 import Header from '$lib/components/layout/EntityHeader.svelte';
+import HeaderButton from '$lib/components/layout/HeaderButton.svelte';
+import EntityActions from '$lib/components/menu/EntityActions.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
 import SpecificationSection from '$lib/components/forms/sections/Specification.svelte';
 import ImageSection from '$lib/components/forms/sections/Image.svelte';
@@ -221,7 +223,25 @@ let title = $derived(pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.na
 
 <!-- LAYOUT -->
 <div class="mb-12 h-full bg-black">
-  <Header {title} {form} />
+  <Header {title}>
+    {#snippet menuItems()}
+      <HeaderButton 
+        facet={{ label: m.project__core(), ref: 'core' }} 
+        isActive={resourceState.activeFacet === 'core' || resourceState.activeFacet === false} />
+      <HeaderButton 
+        facet={{ label: m.project__fields(), ref: 'fields' }} 
+        isActive={resourceState.activeFacet === 'fields'} />
+      {#if resourceState.activeEntity !== 'new'}
+        <HeaderButton 
+          facet={{ label: m.project__images(), ref: 'images' }} 
+          isActive={resourceState.activeFacet === 'images'} />
+      {/if}
+    {/snippet}
+    
+    {#snippet actions()}
+      <EntityActions {form} />
+    {/snippet}
+  </Header>
   <form
     id="projectForm"
     method="POST"

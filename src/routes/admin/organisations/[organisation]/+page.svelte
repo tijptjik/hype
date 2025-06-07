@@ -12,8 +12,11 @@ import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // FLASH
 import { getFlash } from 'sveltekit-flash-message';
 import { page } from '$app/state';
+import { get } from 'svelte/store';
 // COMPONENTS
 import Header from '$lib/components/layout/EntityHeader.svelte';
+import HeaderButton from '$lib/components/layout/HeaderButton.svelte';
+import EntityActions from '$lib/components/menu/EntityActions.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
 import SpecificationSection from '$lib/components/forms/sections/Specification.svelte';
 import ImageSection from '$lib/components/forms/sections/Image.svelte';
@@ -103,11 +106,88 @@ let enhance = $derived(form.enhance);
 
 // STATE : DERIVED :: TITLE
 let title = $derived(pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE);
+
+// STATE : HUB ACTIONS
+let isHubExclusiveLoading = $state(false);
+let isCoreInclusiveLoading = $state(false);
+
+// DERIVED : HUB STATUS
+let hasHub = $derived(!!pageProps.data.validatedForm?.data?.hubId);
+let isSuperAdmin = $derived(page.data.session?.user?.superAdmin);
+let showHubExclusive = $derived(hasHub);
+let showCoreInclusive = $derived(hasHub && isSuperAdmin);
+
+// ACTIONS : HUB PATCHES
+const updateHubSetting = async (field: string, value: boolean, setLoading: (loading: boolean) => void) => {
+  const organisationCode = pageProps.data.entity;
+  if (!organisationCode) return;
+
+  setLoading(true);
+  try {
+    const response = await fetch(`/api/organisations/${organisationCode}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: value })
+    });
+
+    if (!response.ok) throw new Error(`Failed to update ${field}`);
+
+    const result = await response.json();
+    if (result && result.type === 'success') {
+      // Update form data
+      const currentFormData = get(form.form);
+      form.reset({
+        keepMessage: true,
+        data: {
+          ...currentFormData,
+          [field]: result.data[field]
+        },
+        newState: {
+          ...currentFormData,
+          [field]: result.data[field]
+        }
+      });
+    }
+  } catch (err) {
+    console.error(`Failed to update ${field}:`, err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const toggleHubExclusive = () => {
+  const currentValue = pageProps.data.validatedForm?.data?.isHubExclusive;
+  updateHubSetting('isHubExclusive', !currentValue, (loading) => {
+    isHubExclusiveLoading = loading;
+  });
+};
+
+const toggleCoreInclusive = () => {
+  const currentValue = pageProps.data.validatedForm?.data?.isCoreInclusive;
+  updateHubSetting('isCoreInclusive', !currentValue, (loading) => {
+    isCoreInclusiveLoading = loading;
+  });
+};
 </script>
 
 <!-- LAYOUT -->
 <div class="mb-12 h-full bg-black">
-  <Header {title} {form} />
+  <Header {title}>
+    {#snippet menuItems()}
+      <HeaderButton 
+        facet={{ label: m.organisation__core(), ref: 'core' }} 
+        isActive={resourceState.activeFacet === 'core' || resourceState.activeFacet === false} />
+      {#if resourceState.activeEntity !== 'new'}
+        <HeaderButton 
+          facet={{ label: m.organisation__images(), ref: 'images' }} 
+          isActive={resourceState.activeFacet === 'images'} />
+      {/if}
+    {/snippet}
+    
+    {#snippet actions()}
+      <EntityActions {form} />
+    {/snippet}
+  </Header>
   <form
     id="organisationForm"
     method="POST"
@@ -136,6 +216,43 @@ let title = $derived(pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.na
             title={m.admin__forms_common_specifiers()}
             fields={FIELDS.specification}
             {form} />
+          {#if showHubExclusive || showCoreInclusive}
+            <div class="flex flex-col gap-4">
+              <h3 class="text-lg font-medium">Hub Settings</h3>
+              {#if showHubExclusive}
+                <button
+                  type="button"
+                  class="btn border-none transition-colors duration-500"
+                  class:bg-orange-500={!pageProps.data.validatedForm?.data?.isHubExclusive}
+                  class:bg-orange-900={pageProps.data.validatedForm?.data?.isHubExclusive}
+                  class:text-white={pageProps.data.validatedForm?.data?.isHubExclusive}
+                  onclick={toggleHubExclusive}
+                  disabled={isHubExclusiveLoading}>
+                  {#if isHubExclusiveLoading}
+                    <span class="loading loading-ring loading-sm"></span>
+                  {:else}
+                    {pageProps.data.validatedForm?.data?.isHubExclusive ? 'Hub Shared' : 'Hub Exclusive'}
+                  {/if}
+                </button>
+              {/if}
+              {#if showCoreInclusive}
+                <button
+                  type="button"
+                  class="btn border-none transition-colors duration-500"
+                  class:bg-blue-500={!pageProps.data.validatedForm?.data?.isCoreInclusive}
+                  class:bg-blue-900={pageProps.data.validatedForm?.data?.isCoreInclusive}
+                  class:text-white={pageProps.data.validatedForm?.data?.isCoreInclusive}
+                  onclick={toggleCoreInclusive}
+                  disabled={isCoreInclusiveLoading}>
+                  {#if isCoreInclusiveLoading}
+                    <span class="loading loading-ring loading-sm"></span>
+                  {:else}
+                    {pageProps.data.validatedForm?.data?.isCoreInclusive ? 'Core Visible' : 'Core Hidden'}
+                  {/if}
+                </button>
+              {/if}
+            </div>
+          {/if}
         </div>
       {:else if resourceState.activeFacet === 'images'}
         <ImageProvider

@@ -13,6 +13,8 @@ import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // COMPONENTS
 import Header from '$lib/components/layout/EntityHeader.svelte';
+import HeaderButton from '$lib/components/layout/HeaderButton.svelte';
+import EntityActions from '$lib/components/menu/EntityActions.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
 import PropertySection from '$lib/components/forms/sections/FeatureProperty.svelte';
 import MapSection from '$lib/components/forms/sections/Map.svelte';
@@ -143,7 +145,25 @@ function handleMapFullscreenChange(isFullscreen: boolean) : void {
   ) as ProjectDB}>
   <!-- LAYOUT -->
   <div class="h-full overflow-hidden bg-black">
-    <Header {title} {form} />
+    <Header {title}>
+      {#snippet menuItems()}
+        <HeaderButton 
+          facet={{ label: m.feature__core(), ref: 'core' }} 
+          isActive={resourceState.activeFacet === 'core' || resourceState.activeFacet === false} />
+        <HeaderButton 
+          facet={{ label: m.feature__address(), ref: 'address' }} 
+          isActive={resourceState.activeFacet === 'address'} />
+        {#if resourceState.activeEntity !== 'new'}
+          <HeaderButton 
+            facet={{ label: m.feature__images(), ref: 'images' }} 
+            isActive={resourceState.activeFacet === 'images'} />
+        {/if}
+      {/snippet}
+      
+      {#snippet actions()}
+        <EntityActions {form} />
+      {/snippet}
+    </Header>
     {#if pageProps.data.validatedForm.data}
       <form
         id="featureForm"

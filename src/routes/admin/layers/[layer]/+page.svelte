@@ -3,13 +3,15 @@ import { NEW_TITLE } from '$lib';
 import { getLocale } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // CONTEXT
-import { setForm, getForm } from '$lib/context/form.svelte';
+import { setForm } from '$lib/context/form.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // FLASH
 import { getFlash } from 'sveltekit-flash-message';
 import { page } from '$app/state';
 // COMPONENTS
 import Header from '$lib/components/layout/EntityHeader.svelte';
+import HeaderButton from '$lib/components/layout/HeaderButton.svelte';
+import EntityActions from '$lib/components/menu/EntityActions.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
 import LayerPropertySection from '$lib/components/forms/sections/LayerProperty.svelte';
 // ENUMS
@@ -84,7 +86,17 @@ let title = $derived(
 
 <!-- LAYOUT -->
 <div class="mb-12 h-full bg-black">
-  <Header {title} {form} />
+  <Header {title}>
+    {#snippet menuItems()}
+      <HeaderButton 
+        facet={{ label: m.layer__core(), ref: 'core' }} 
+        isActive={resourceState.activeFacet === 'core' || resourceState.activeFacet === false} />
+    {/snippet}
+    
+    {#snippet actions()}
+      <EntityActions {form} />
+    {/snippet}
+  </Header>
   <form
     id="layerForm"
     method="POST"
