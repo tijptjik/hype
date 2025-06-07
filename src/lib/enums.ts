@@ -76,7 +76,8 @@ export enum HierarchicalResourceSeq {
   task = 5
 }
 
-export enum HierarchicalResourceRefKey {
+export enum ResourceRefKey {
+  hub = 'code',
   organisation = 'code',
   project = 'code',
   layer = 'id',

@@ -10,7 +10,8 @@ import {
   Squares2x2 as ProjectIcon,
   Square3Stack3d as LayerIcon,
   MapPin as FeatureIcon,
-  Inbox as TaskIcon
+  Inbox as TaskIcon,
+  BuildingLibrary as HubIcon
 } from '@steeze-ui/heroicons';
 // ENUMS
 import { HierarchicalResource, ResourcePath } from '$lib/enums';
@@ -58,6 +59,14 @@ export const navItems = {
     icon: TaskIcon,
     seq: 5,
     path: 'tasks',
+    isShownInSidebar: false,
+    isAlwaysExpanded: false
+  },
+  hub: {
+    name: 'Hubs',
+    icon: HubIcon,
+    seq: 6,
+    path: 'hubs',
     isShownInSidebar: false,
     isAlwaysExpanded: false
   }

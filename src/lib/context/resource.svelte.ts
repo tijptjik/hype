@@ -10,7 +10,7 @@ import { QueryClient } from '@tanstack/svelte-query';
 import {
   HierarchicalResource,
   ResourcePath,
-  HierarchicalResourceRefKey,
+  ResourceRefKey as ResourceRefKey,
   FirstClassResource
 } from '$lib/enums';
 // TYPES
@@ -75,9 +75,7 @@ export class ResourceState {
   activeFacet = $derived(this.state.active.facet);
 
   activeEntityRefKey = $derived(
-    HierarchicalResourceRefKey[
-      this.activeResource as keyof typeof HierarchicalResourceRefKey
-    ]
+    ResourceRefKey[this.activeResource as keyof typeof ResourceRefKey]
   );
 
   isShowIndex = $derived(
@@ -155,15 +153,15 @@ export class ResourceState {
   }
 
   // Helper method to build API URLs with filters
-  private buildApiUrl(resource: HierarchicalResource, includeFilters = true): string {
+  private buildApiUrl(resource: FirstClassResource, includeFilters = true): string {
     const path = ResourcePath[resource];
     const params = new URLSearchParams();
 
     // Add isArchived / isReviewed filter by default
-    if (resource !== HierarchicalResource.task) {
+    if (resource !== FirstClassResource.task) {
       params.append('isArchived', 'false');
     } else {
-      const isReviewed = this.state.filters[HierarchicalResource.task].isReviewed;
+      const isReviewed = this.state.filters[FirstClassResource.task].isReviewed;
       if (isReviewed !== null) {
         params.append('isReviewed', isReviewed!.toString());
       }
@@ -171,22 +169,22 @@ export class ResourceState {
 
     if (includeFilters) {
       // Add prism filters based on resource hierarchy
-      if (resource !== HierarchicalResource.organisation) {
+      if (resource !== FirstClassResource.organisation) {
         this.state.prisms.organisation.forEach((org) =>
-          params.append(HierarchicalResource.organisation, org)
+          params.append(FirstClassResource.organisation, org)
         );
       }
 
       if (
-        resource !== HierarchicalResource.organisation &&
-        resource !== HierarchicalResource.project
+        resource !== FirstClassResource.organisation &&
+        resource !== FirstClassResource.project
       ) {
         this.state.prisms.project.forEach((proj) =>
-          params.append(HierarchicalResource.project, proj)
+          params.append(FirstClassResource.project, proj)
         );
       }
 
-      if (resource === HierarchicalResource.feature) {
+      if (resource === FirstClassResource.feature) {
         this.state.prisms.layer.forEach((layer) =>
           params.append(HierarchicalResource.layer, layer)
         );
@@ -203,33 +201,33 @@ export class ResourceState {
   }
 
   organisationsQueryFn = async () => {
-    const url = this.buildApiUrl(HierarchicalResource.organisation);
+    const url = this.buildApiUrl(FirstClassResource.organisation);
     return this.fetchOrThrow<Organisation[]>(url);
   };
 
   projectsQueryFn = async () => {
-    const url = this.buildApiUrl(HierarchicalResource.project);
+    const url = this.buildApiUrl(FirstClassResource.project);
     return this.fetchOrThrow<Project[]>(url);
   };
 
   layersQueryFn = async () => {
-    const url = this.buildApiUrl(HierarchicalResource.layer);
+    const url = this.buildApiUrl(FirstClassResource.layer);
     return this.fetchOrThrow<Layer[]>(url);
   };
 
   featuresQueryFn = async () => {
-    const url = this.buildApiUrl(HierarchicalResource.feature);
+    const url = this.buildApiUrl(FirstClassResource.feature);
     return this.fetchOrThrow<Feature[]>(url);
   };
 
   tasksQueryFn = async () => {
-    const url = this.buildApiUrl(HierarchicalResource.task);
+    const url = this.buildApiUrl(FirstClassResource.task);
     return this.fetchOrThrow<Task[]>(url);
   };
 
   hubsQueryFn = async () => {
     if (!this.isSuperAdmin()) return [];
-    const url = this.buildApiUrl('hub' as any);
+    const url = this.buildApiUrl(FirstClassResource.hub);
     return this.fetchOrThrow<Hub[]>(url);
   };
 
@@ -648,21 +646,21 @@ export class ResourceState {
   getLayer = (feature: Feature): Layer | undefined =>
     this.state.resources.layer.find((layer) => layer.id === feature.layerId);
 
-  getResourcePath = (resource?: HierarchicalResource) => {
+  getResourcePath = (resource?: FirstClassResource) => {
     const resourceKey = resource ?? this.state.active.resource;
     if (!resourceKey) return null;
     return ResourcePath[resourceKey];
   };
 
-  getEntityRef = (resource: HierarchicalResource, id: Id) => {
+  getEntityRef = (resource: FirstClassResource, id: Id) => {
     if (!resource) return false;
-    const refKey = HierarchicalResourceRefKey[resource];
+    const refKey = ResourceRefKey[resource];
     const entity = this.state.resources[resource].find((entity) => entity.id === id);
     if (!entity) return false;
     return entity[refKey as keyof Resource];
   };
 
-  getEntityPath = (resource: HierarchicalResource, id: Id) => {
+  getEntityPath = (resource: FirstClassResource, id: Id) => {
     const ref = this.getEntityRef(resource, id);
     if (!ref) return null;
     return `${this.getResourcePath(resource)}/${ref}`;
@@ -733,11 +731,11 @@ export class ResourceState {
   //   return hash.replace('#', '') as FacetType;
   // };
 
-  setResource(resource: HierarchicalResource | false) {
+  setResource(resource: FirstClassResource | false) {
     this.state.active.resource = resource;
   }
 
-  setEntity(entity: Id | Code | false, resource?: HierarchicalResource) {
+  setEntity(entity: Id | Code | false, resource?: FirstClassResource) {
     // If the new entity is a different resource type to the current entity, update the state
     if (resource) {
       this.setResource(resource);
@@ -749,16 +747,16 @@ export class ResourceState {
     this.state.active.facet = facet;
   }
 
-  getEntities = (resource?: HierarchicalResource) => {
+  getEntities = (resource?: FirstClassResource) => {
     let resourceKey = resource ?? this.state.active.resource;
     if (!resourceKey) return [];
     return this.state.resources[resourceKey];
   };
 
-  getEntity(resource?: HierarchicalResource, entityRef?: Id | Code, byId = false) {
-    let resourceKey = resource ?? (this.activeResource as HierarchicalResource);
-    let entityRefKey = byId ? 'id' : HierarchicalResourceRefKey[resourceKey];
-    if (!entityRefKey) return null;
+  getEntity(resource?: FirstClassResource, entityRef?: Id | Code, byId = false) {
+    let resourceKey = resource ?? this.activeResource;
+    let entityRefKey = byId ? 'id' : resourceKey ? ResourceRefKey[resourceKey] : null;
+    if (!entityRefKey || !resourceKey) return null;
     return this.state.resources[resourceKey].find(
       (entity) =>
         entity[entityRefKey as keyof Resource] ===

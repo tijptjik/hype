@@ -193,6 +193,7 @@ export const DELETE: RequestHandler = async ({ params, request, locals, platform
       request,
       params as QueryParams,
       userRoles,
+      existingTask.id as Id,
       existingTask
     );
 

@@ -21,7 +21,8 @@ import { mergeFeatureProperties } from '$lib/db/services/feature';
 import {
   HierarchicalResource,
   ResourcePath,
-  RESERVED_PARAMETERS
+  RESERVED_PARAMETERS,
+  FirstClassResource
 } from '$lib/enums';
 // TYPES
 import type { SuperValidated } from 'sveltekit-superforms';

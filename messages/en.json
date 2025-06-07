@@ -427,5 +427,6 @@
   "loose_grassy_snake_hug": "Location",
   "witty_tangy_vole_dash": "Translatable",
   "clean_light_ray_tap": "Properties",
-  "not_superadmin": "Not a superadmin, so, seems cannot."
+  "not_superadmin": "Not a superadmin, so, seems cannot.",
+  "hub__title": "Hubs"
 }

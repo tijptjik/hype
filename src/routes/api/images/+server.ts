@@ -142,6 +142,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       db,
       session,
       request,
+      locals.hub,
       data,
       userRoles,
       data.ctxType as ImageContextResource,

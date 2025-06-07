@@ -39,7 +39,8 @@ import type {
   LayerDB,
   LayerI18nDB,
   LayerPartial,
-  LayerPropertyPartial
+  LayerPropertyPartial,
+  Id
 } from '$lib/types';
 
 import type { SuperValidated } from 'sveltekit-superforms';
@@ -183,7 +184,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
       request,
       existing,
       userRoles,
-      params.id  as Id
+      params.id as Id
     );
 
     // DB : Update only the basic layer fields (no relations for PATCH)

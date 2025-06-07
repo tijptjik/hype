@@ -293,7 +293,7 @@ export type ResourceTypeWithChildren = Exclude<
 /* -------- */
 
 type activeResource = {
-  resource: HierarchicalResource | 'task' | false;
+  resource: FirstClassResource | false;
   entity: Ref | false;
   facet: FacetType | false;
 };

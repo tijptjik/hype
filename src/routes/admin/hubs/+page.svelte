@@ -9,28 +9,30 @@ import EntityCard from '$lib/components/layout/EntityCard.svelte';
 import { FirstClassResource } from '$lib/enums';
 // TYPES
 import type { KeyMap } from '$lib/components/layout/EntityCard.svelte';
-import type { Organisation } from '$lib/types';
 
 // CONFIG :: KEY MAP
-const RESOURCE = FirstClassResource.organisation;
 const keyMap: KeyMap = {
   id: 'code',
-  title: 'i18n.name',
-  subtitle: 'i18n.nameShort',
-  description: 'i18n.description',
-  image: 'image'
+  title: 'organisations.i18n.name',
+  subtitle: 'domain',
+  description: 'organisations.i18n.description',
+  image: 'organisations.image'
 };
 
 // CONTEXT
 const resourceState = getHierarchicalResourceState();
-resourceState.setResource(RESOURCE);
+resourceState.setResource(FirstClassResource.hub);
 resourceState.setEntity(false);
 resourceState.setFacet(false);
+
+// Use filteredHubs from resource state (requires superadmin access)
+let entities = $derived(resourceState.filteredHubs);
 </script>
 
+<!-- LAYOUT -->
 <ResourceHeader />
-<ResourceIndex entities={resourceState.filteredOrganisations}>
-  {#snippet children(entity, idx)}
+<ResourceIndex {entities}>
+  {#snippet children(entity)}
     <EntityCard {entity} {keyMap} />
   {/snippet}
-</ResourceIndex>
+</ResourceIndex> 

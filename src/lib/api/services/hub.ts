@@ -4,13 +4,16 @@ import { applyQueryFilters } from '$lib/api';
 import { assertUserLoggedIn, assertSuperAdmin, runAssertions } from '$lib/auth/asserts';
 // SCHEMA
 import { hub } from '$lib/db/schema';
+// DB
+import { toLocaleMap } from '$lib/db';
 // ZOD
+import { getLocales } from '$lib/db/zod/constraints';
 import { HubAPI, HubCollectionAPI } from '$lib/db/zod/schemas/hub';
 import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 // TYPES
 import type { SQL } from 'drizzle-orm';
-import type { Hub, QueryParams, HubOpts, HubDB, Session, Code } from '$lib/types';
+import type { Hub, QueryParams, HubOpts, HubDB, Session, Code, HubDBRaw, OrganisationDBRaw, OrganisationI18nDB } from '$lib/types';
 import type { SuperValidated } from 'sveltekit-superforms';
 
 // ═══════════════════════
@@ -21,7 +24,8 @@ import type { SuperValidated } from 'sveltekit-superforms';
 export const hubCollectionWithRelations = {
   organisations: {
     with: {
-      i18n: true
+      i18n: {},
+      image: {}
     }
   }
 };
@@ -114,10 +118,23 @@ export const toFormShape = async (hub: HubDB): Promise<SuperValidated<Hub>> => {
  * @param hub - The hub database entity (can be partial from queries)
  * @returns A parsed response shape
  */
-export const toResponseShape = async (hub: HubDB, isCollection: boolean = false) => {
+export const toResponseShape = async (hub: HubDBRaw, isCollection: boolean = false) => {
+  // Transform the hub data structure
+  const transformedHub = {
+    ...hub,
+    organisations: hub.organisations?.map((organisation: OrganisationDBRaw) => {
+      return {
+        ...organisation,
+        i18n: toLocaleMap<OrganisationI18nDB>(organisation.i18n as OrganisationI18nDB[]),
+        // Image is already a full object from the relation, no transformation needed
+        image: organisation.image || null
+      };
+    }) || null
+  };
+
   return isCollection
-    ? (HubCollectionAPI.parse(hub) as Hub)
-    : (HubAPI.parse(hub) as Hub);
+    ? (HubCollectionAPI.parse(transformedHub) as Hub)
+    : (HubAPI.parse(transformedHub) as Hub);
 };
 
 /********************

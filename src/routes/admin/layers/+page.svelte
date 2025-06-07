@@ -9,7 +9,7 @@ import ResourceIndex from '$lib/components/layout/ResourceIndex.svelte';
 import EntityCard from '$lib/components/layout/EntityCard.svelte';
 import Image from '$lib/components/common/Image.svelte';
 // ENUMS
-import { HierarchicalResource } from '$lib/enums';
+import { FirstClassResource } from '$lib/enums';
 // TYPES
 import type { KeyMap } from '$lib/components/layout/EntityCard.svelte';
 import type { Layer } from '$lib/types';
@@ -17,15 +17,15 @@ import type { Layer } from '$lib/types';
 // CONFIG :: KEY MAP
 const keyMap: KeyMap = {
   id: 'id',
-  title: 'name',
-  subtitle: 'nameShort',
-  description: 'description',
+  title: 'i18n.name',
+  subtitle: 'i18n.nameShort',
+  description: 'i18n.description',
   image: 'image'
 };
 
 // CONTEXT
 const resourceState = getHierarchicalResourceState();
-resourceState.setResource(HierarchicalResource.layer);
+resourceState.setResource(FirstClassResource.layer);
 let entities = $derived(resourceState.filteredLayers);
 </script>
 
@@ -38,8 +38,8 @@ let entities = $derived(resourceState.filteredLayers);
           src="https://placehold.co/600x400/000000/CB37C1?font=source-sans-pro&text={entity
             .i18n?.[getLocale()]?.name}"
           alt={entity.i18n?.[getLocale()]?.name || ''}
-          layout="cover" /> 
-      {/snippet}  
+          layout="cover" />
+      {/snippet}
     </EntityCard>
   {/snippet}
 </ResourceIndex>

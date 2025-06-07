@@ -7,7 +7,7 @@ import {
   createUpdateSchema
 } from 'drizzle-zod';
 // DRIZZLE SCHEMA
-import { hub, organisation, organisationI18n } from '$lib/db/schema';
+import { hub, organisation, organisationI18n, image } from '$lib/db/schema';
 // ZOD SCHEMAS
 import { getDefaultConstraints } from '../constraints';
 import { getLocales } from '../constraints';
@@ -35,13 +35,16 @@ export const HubUpdate = createUpdateSchema(hub).extend({
 // HUB API
 /* -------- */
 
-export const HubCollectionAPI = HubBase;
-
-export const HubAPI = HubBase.extend({
-  organisation: createSelectSchema(organisation).extend({
-    i18n: getLocales(createSelectSchema(organisationI18n))
-  })
+export const HubCollectionAPI = HubBase.extend({
+  organisations: z.array(
+    createSelectSchema(organisation).extend({
+      i18n: getLocales(createSelectSchema(organisationI18n)),
+      image: createSelectSchema(image).nullish()
+    })
+  ).nullish()
 });
+
+export const HubAPI = HubCollectionAPI;
 
 export const HubInsertAPI = HubInsert;
 
@@ -51,4 +54,11 @@ export const HubUpdateAPI = HubUpdate;
 // HUB RAW SCHEMAS
 /* -------- */
 
-export const HubRaw = HubBase;
+export const HubRaw = HubBase.extend({
+  organisations: z.array(
+    createSelectSchema(organisation).extend({
+      i18n: z.array(createSelectSchema(organisationI18n)),
+      image: createSelectSchema(image).nullish()
+    })
+  ).nullish()
+});

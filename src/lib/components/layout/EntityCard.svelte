@@ -14,16 +14,17 @@ import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // COMPONENTS
 import Image from '$lib/components/common/Image.svelte';
 // ENUMS
-import { HierarchicalResource } from '$lib/enums';
+import { ResourcePath } from '$lib/enums';
 // TYPES
 import type { Resource, ImageDB, Task } from '$lib/types';
+
 export type KeyMap = {
-  id: 'id' | 'code';
-  title: 'name' | 'nameShort' | 'title';
-  subtitle?: 'nameShort' | 'addressProperties.neighbourhood';
-  description?: 'description' | 'displayAddress';
-  image: 'image';
-  tags?: keyof Resource[];
+  id: 'id' | 'code' | string;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  image: string;
+  tags?: string[];
   badges?: Array<{
     label: string;
     variant?: 'primary' | 'secondary' | 'outline' | undefined;
@@ -41,14 +42,73 @@ type Props = {
 
 let { entity, keyMap, header, badges, content, actions }: Props = $props();
 let locale = $derived(getLocale());
-let textObject = $derived(entity.i18n[locale] || {});
+
+console.log('EntityCard debug:', { entity, keyMap, locale });
+
+// Utility function to get nested property values using dot notation
+const getNestedValue = (obj: any, path: string): any => {
+  return path.split('.').reduce((current, key) => {
+    if (!current || current[key] === undefined) {
+      return undefined;
+    }
+    
+    let value = current[key];
+    
+    // If the value is an array, take the first element
+    if (Array.isArray(value) && value.length > 0) {
+      value = value[0];
+    }
+    
+    return value;
+  }, obj);
+};
+
+// Get i18n object - support nested paths like 'hub.organisation.i18n'
+const getI18nObject = (entity: any, locale: string, fieldPath?: string) => {
+  // Use the specific field path if provided, otherwise fall back to title path
+  const pathToCheck = fieldPath || keyMap.title;
+  console.log('getI18nObject:', { pathToCheck, locale, entity });
+  
+  // Check if this is a nested i18n path (has something before .i18n)
+  if (pathToCheck.includes('.i18n.') && !pathToCheck.startsWith('i18n.')) {
+    // Extract the base path before .i18n (e.g., 'organisations' from 'organisations.i18n.name')
+    const basePath = pathToCheck.substring(0, pathToCheck.indexOf('.i18n'));
+    const baseObject = getNestedValue(entity, basePath);
+    console.log('nested i18n path:', { basePath, baseObject });
+    return baseObject?.i18n?.[locale] || {};
+  }
+  // Default behavior - use entity's direct i18n (for paths like 'i18n.name')
+  console.log('direct i18n path:', { entityI18n: entity.i18n, result: entity.i18n?.[locale] });
+  return entity.i18n?.[locale] || {};
+};
+
+// Helper function to get the actual property value from keyMap
+const getPropertyValue = (entity: any, keyPath: string, useI18n = true): any => {
+  console.log('getPropertyValue called:', { keyPath, useI18n, entity });
+  
+  if (useI18n && (keyPath.includes('.i18n.') || keyPath.startsWith('i18n.'))) {
+    // Get the i18n object for this specific field path
+    const fieldI18nObject = getI18nObject(entity, locale, keyPath);
+    // Extract the property name after .i18n
+    const propertyName = keyPath.includes('.i18n.') 
+      ? keyPath.split('.i18n.')[1] 
+      : keyPath.split('i18n.')[1]; // Handle 'i18n.name' format
+    console.log('i18n property lookup:', { fieldI18nObject, propertyName, result: fieldI18nObject[propertyName] });
+    return propertyName ? fieldI18nObject[propertyName] : '';
+  }
+  const result = getNestedValue(entity, keyPath);
+  console.log('direct property lookup:', { keyPath, result });
+  return result;
+};
 
 const resourceState = getHierarchicalResourceState();
 const href = $derived(
-  `${ADMIN_PATH}/${resourceState.getEntityPath(
-    resourceState.activeResource as HierarchicalResource,
-    entity.id
-  )}${page.url.search}`
+  resourceState.activeResource
+    ? `${ADMIN_PATH}/${ResourcePath[resourceState.activeResource]}/${resourceState.getEntityPath(
+        resourceState.activeResource,
+        entity.id
+      )}${page.url.search}`
+    : null
 );
 
 // Generate hashicon URL for fallback
@@ -62,14 +122,16 @@ const getHashiconUrl = (id: string) => {
 
 const onclick = (e: MouseEvent | KeyboardEvent) => {
   e.preventDefault();
-  resourceState.setFacet('core');
-  goto(href);
+  if (href) {
+    resourceState.setFacet('core');
+    goto(href);
+  }
 };
 </script>
 
 <a
   draggable="false"
-  {href}
+  href={href || '#'}
   {onclick}
   role="article"
   tabindex="2"
@@ -84,12 +146,13 @@ const onclick = (e: MouseEvent | KeyboardEvent) => {
   {#if header}
     {@render header(entity)}
   {:else}
-    {@debug entity}
     <Image
-      src={entity[keyMap.image as keyof typeof entity]
-        ? getURLfromImage({ image: entity[keyMap.image as keyof typeof entity] as ImageDB })
+      src={getNestedValue(entity, keyMap.image)
+        ? getURLfromImage({
+            image: getNestedValue(entity, keyMap.image) as ImageDB
+          })
         : getHashiconUrl(entity.id)}
-      alt={entity[keyMap.title as keyof typeof entity] as string}
+      alt={getPropertyValue(entity, keyMap.title)}
       layout="cover" />
   {/if}
 
@@ -99,16 +162,18 @@ const onclick = (e: MouseEvent | KeyboardEvent) => {
       {@render content(entity)}
     {:else}
       <h2 class="card-title mt-0">
-        {textObject[keyMap.title]}
+        {getPropertyValue(entity, keyMap.title)}
         {#if keyMap.subtitle}
-          <small class="text-sm text-gray-500">{textObject[keyMap.subtitle]}</small>
+          <small class="text-sm text-gray-500">{getPropertyValue(entity, keyMap.subtitle)}</small>
         {/if}
       </h2>
-      <p class="mt-2">{@html textObject[keyMap.description]}</p>
+      {#if keyMap.description}
+        <p class="mt-2">{@html getPropertyValue(entity, keyMap.description)}</p>
+      {/if}
     {/if}
 
     <!-- Actions Section -->
-    <div class="mt-2 flex flex-row items-center justify-between w-full">
+    <div class="mt-2 flex w-full flex-row items-center justify-between">
       {#if actions}
         {@render actions(entity)}
       {:else}
@@ -119,7 +184,7 @@ const onclick = (e: MouseEvent | KeyboardEvent) => {
           <div class="flex flex-row flex-wrap justify-center gap-2 py-2 align-middle">
             {#each keyMap.badges as badge}
               <span class="badge badge-{badge.variant || 'outline'}"
-                >{entity[badge.label as keyof typeof entity] as string}</span>
+                >{getNestedValue(entity, badge.label)}</span>
             {/each}
           </div>
         {/if}
