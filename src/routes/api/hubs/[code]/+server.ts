@@ -11,6 +11,7 @@ import { HubUpdateAPI } from '$lib/db/zod';
 import { hub } from '$lib/db/schema';
 // DB
 import { getHub, updateHub } from '$lib/db/services/hub';
+import { updateOrganisation } from '$lib/db/services/organisation';
 // API
 import {
   getDatabase,
@@ -124,8 +125,29 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     // DB : Update the hub
     const updatedHub = await updateHub(db, form.data, params.code!);
 
-    // RESPONSE : Convert to form shape and return
-    const updatedForm = await toFormShape(updatedHub);
+    // DB : Update organisation relationships if provided
+    if (formData.organisations) {
+      // First, clear existing hub assignments for this hub
+      const existingHub = await getHub(db, hubEntityWithRelations, [eq(hub.id, updatedHub.id)]);
+      if (existingHub?.organisations) {
+        for (const org of existingHub.organisations) {
+          await updateOrganisation(db, { hubId: null, isCoreInclusive: true, isHubExclusive: false }, org.code);
+        }
+      }
+
+      // Then, assign new organisations to this hub
+      for (const organisation of formData.organisations) {
+        await updateOrganisation(db, { 
+          hubId: updatedHub.id, 
+          isCoreInclusive: organisation.isCoreInclusive || true,
+          isHubExclusive: organisation.isHubExclusive || false 
+        }, organisation.code);
+      }
+    }
+
+    // RESPONSE : Get updated hub with organisations and convert to form shape
+    const hubWithOrganisations = await getHub(db, hubEntityWithRelations, [eq(hub.code, params.code!)]);
+    const updatedForm = await toFormShape(hubWithOrganisations!);
 
     // STATE : Determine if redirect is needed (only when code changes)
     const shouldRedirect = formData.code !== params.code;
