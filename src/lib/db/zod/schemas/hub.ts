@@ -11,6 +11,7 @@ import { hub, organisation, organisationI18n, image } from '$lib/db/schema';
 // ZOD SCHEMAS
 import { getDefaultConstraints } from '../constraints';
 import { getLocales } from '../constraints';
+import { ImageBasic } from './image';
 
 /* ----------------- */
 // HUB CORE SCHEMAS
@@ -39,7 +40,7 @@ export const HubCollectionAPI = HubBase.extend({
   organisations: z.array(
     createSelectSchema(organisation).extend({
       i18n: getLocales(createSelectSchema(organisationI18n)),
-      image: createSelectSchema(image).nullish()
+      image: ImageBasic.nullish()
     })
   ).nullish()
 });
@@ -52,7 +53,7 @@ export const HubUpdateAPI = HubUpdate.extend({
   organisations: z.array(
     createSelectSchema(organisation).extend({
       i18n: getLocales(createSelectSchema(organisationI18n)),
-      image: createSelectSchema(image).nullish(),
+      image: ImageBasic.nullish(),
       hubId: z.string().nullish(),
       isCoreInclusive: z.boolean().optional(),
       isHubExclusive : z.boolean().optional()
@@ -68,7 +69,7 @@ export const HubRaw = HubBase.extend({
   organisations: z.array(
     createSelectSchema(organisation).extend({
       i18n: z.array(createSelectSchema(organisationI18n)),
-      image: createSelectSchema(image).nullish(),
+      image: ImageBasic.nullish(),
       isCoreInclusive: z.boolean().nullish()
     })
   ).nullish()
