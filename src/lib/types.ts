@@ -12,7 +12,6 @@ import ToggleField from '$lib/components/forms/fields/Toggle.svelte';
 import DisplayField from '$lib/components/forms/fields/Display.svelte';
 // ENUMS
 import {
-  HierarchicalResource,
   ImageContextResource,
   ImageContextResourceExtended,
   fieldDiscriminators,
@@ -173,7 +172,8 @@ import type {
   LayerForm as LayerFormType,
   OrganisationForm as OrganisationFormType,
   ProjectForm as ProjectFormType,
-  FeatureForm as FeatureFormType
+  FeatureForm as FeatureFormType,
+  HubForm as HubFormType
 } from './context/form.svelte';
 import type { enhance } from '$app/forms';
 import type { Marker } from 'maplibre-gl';
@@ -471,7 +471,8 @@ export type LayerForm = LayerFormType;
 export type OrganisationForm = OrganisationFormType;
 export type ProjectForm = ProjectFormType;
 export type FeatureForm = FeatureFormType;
-export type Form = LayerForm | OrganisationForm | ProjectForm | FeatureForm;
+export type HubForm = HubFormType;
+export type Form = LayerForm | OrganisationForm | ProjectForm | FeatureForm | HubForm;
 
 /* ----------------- */
 // FORM FIELDS
@@ -589,6 +590,13 @@ export type UserJoinConfig = {
   discriminator: 'role';
   checkedValue: 'owner' | 'maintainer';
   uncheckedValue: 'member';
+};
+
+// Used to manage organisation core inclusion in hubs
+export type OrganisationJoinConfig = {
+  discriminator: 'isCoreInclusive';
+  checkedValue: true;
+  uncheckedValue: false;
 };
 
 /* ----------------- */
