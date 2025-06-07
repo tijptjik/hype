@@ -32,7 +32,7 @@ const { errors } = form as Form;
 </script>
 
 {#snippet renderErrorMessages(messages: string[])}
-  <div class="flex-grow-2 flex flex-row items-center justify-center gap-2">
+  <div class="flex-grow-2 flex flex-row items-center justify-center gap-2 caret-transparent">
     {#each messages as message}
       <div
         class="badge badge-lg flex items-center justify-center gap-2 truncate border-error p-4 font-mono text-base-content">

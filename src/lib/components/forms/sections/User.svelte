@@ -25,7 +25,7 @@ let fieldRoot = $derived(Object.keys(fields)[0] as keyof Resource);
 </script>
 
 <div
-  class="basis-2/3 overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
+  class="basis-2/3 min-h-60 overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0 caret-transparent">
   <Header {...sectionProps}>
     {#snippet actionContent()}
       <UserActions bind:removeMode bind:searchMode />
@@ -39,13 +39,13 @@ let fieldRoot = $derived(Object.keys(fields)[0] as keyof Resource);
       {fieldRoot}
       isExistingCheck={(r) =>
         !($formStore[fieldRoot] as unknown as UserRoleDisco[]).some(
-          (userRole) => userRole.user.id === r.id
+          (userRole) => userRole.userId === r.id
         )} />
   {/if}
   {#if removeMode}
     <div
       transition:slide={{ duration: 200 }}
-      class="alert w-full rounded-none border-0 border-b-4 border-warning">
+      class="alert w-full rounded-none border-0 border-b-4 border-warning caret-transparent">
       <Icon src={ExclamationTriangle} class="h-6 w-6 shrink-0 stroke-current" />
       <span
         ><span class="font-bold text-warning">{m.funny_bright_lynx_grin()}:</span>
