@@ -11,15 +11,22 @@ import { logZodError } from '$lib/api';
 import { superValidate, type SuperValidated } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 // SCHEMAS
-import { feature, featureI18n, featureProperty, featurePropertyI18n, layer } from '../schema';
+import {
+  feature,
+  featureI18n,
+  featureProperty,
+  featurePropertyI18n,
+  layer
+} from '../schema';
+// SERVICES
+import { getLayer } from './layer';
+import { getFeatureHubFilter } from './hub';
 // ZOD
 import {
-  FeatureAPI,
-  FeatureInsertAPI,
   FeatureUpdateAPI,
   FeatureCollectionAPI,
   FeaturePropertyCollectionAPI,
-  FeaturePropertyAPI,
+  FeaturePropertyAPI
 } from '../zod';
 // ENUMS
 import { ImageIntent } from '$lib/enums';
@@ -47,9 +54,9 @@ import type {
   NewFeatureProperty,
   PropertyI18nDB,
   PropertyValueI18nDB,
-  ImageDB
+  ImageDB,
+  HubOpts
 } from '$lib/types';
-import { getLayer } from './layer';
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -93,13 +100,20 @@ import { getLayer } from './layer';
 export const listFeatures = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = []
-): Promise<FeatureDB[]> =>
-  await db.query.feature.findMany({
+  conditions: SQL<unknown>[] = [],
+  opts: HubOpts
+): Promise<FeatureDB[]> => {
+  // Apply hub filtering if opts is provided
+  const hubFilter = getFeatureHubFilter(db, opts);
+  if (hubFilter) {
+    conditions.push(hubFilter);
+  }
+
+  return await db.query.feature.findMany({
     with: withRelations,
     where: conditions.length > 0 ? and(...conditions) : undefined
   });
-
+};
 
 /**
  * Lists features and includes a canonical or first image for each.
@@ -111,15 +125,22 @@ export const listFeaturesWithImage = async (
   db: Database,
   // Allows specifying other relations to be included alongside the feature and its image
   withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = []
+  conditions: SQL<unknown>[] = [],
+  opts: HubOpts
 ): Promise<(FeatureDB & { image: ImageDB | null })[]> => {
+  // Apply hub filtering if opts is provided
+  const hubFilter = getFeatureHubFilter(db, opts);
+  if (hubFilter) {
+    conditions.push(hubFilter);
+  }
   // Define the relations needed to fetch featureImages and their nested images
   const relationsForImageFetch = {
     ...withRelations,
-    images: { // Relation from feature to featureImage table (feature.images)
+    images: {
+      // Relation from feature to featureImage table (feature.images)
       with: {
         image: { with: {} } // Relation from featureImage to image table (featureImage.image)
-      },
+      }
     }
   };
 
@@ -129,7 +150,7 @@ export const listFeaturesWithImage = async (
   });
 
   // Post-process to select the canonical or first image
-  const featuresWithSelectedImage = featuresRaw.map(feature => {
+  const featuresWithSelectedImage = featuresRaw.map((feature) => {
     const selectedImage = selectCanonicalOrFirstImage((feature as any).images);
     const { images, ...restOfFeature } = feature as any; // Remove the raw images array
     return { ...restOfFeature, image: selectedImage };
@@ -141,12 +162,21 @@ export const listFeaturesWithImage = async (
 export const getFeature = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = []
-): Promise<FeatureDB | undefined> =>
-  await db.query.feature.findFirst({
+  conditions: SQL<unknown>[] = [],
+  opts: HubOpts
+): Promise<FeatureDB | undefined> => {
+  const allConditions = [...conditions];
+  // Apply hub filtering if opts is provided
+  const hubFilter = getFeatureHubFilter(db, opts);
+  if (hubFilter) {
+    allConditions.push(hubFilter);
+  }
+
+  return await db.query.feature.findFirst({
     with: withRelations,
     where: conditions.length > 0 ? and(...conditions) : undefined
   });
+};
 
 /**
  * Gets a single feature and includes its canonical or first image.
@@ -158,15 +188,22 @@ export const getFeatureWithImage = async (
   db: Database,
   // Allows specifying other relations to be included alongside the feature and its image
   withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = []
+  conditions: SQL<unknown>[] = [],
+  opts: HubOpts
 ): Promise<(FeatureDB & { image: ImageDB | null }) | undefined> => {
+  // Apply hub filtering if opts is provided
+  const hubFilter = getFeatureHubFilter(db, opts);
+  if (hubFilter) {
+    conditions.push(hubFilter);
+  }
   // Define the relations needed to fetch featureImages and their nested images
   const relationsForImageFetch = {
     ...withRelations,
-    images: { // Relation from feature to featureImage table (feature.images)
+    images: {
+      // Relation from feature to featureImage table (feature.images)
       with: {
         image: { with: {} } // Relation from featureImage to image table (featureImage.image)
-      },
+      }
     }
   };
 
@@ -282,13 +319,20 @@ const createFeaturePropertyI18n = async (
 
   // Use upsert behavior for composite key
   for (const record of i18nRecords) {
-    await db.insert(featurePropertyI18n).values(record).onConflictDoUpdate({
-      target: [featurePropertyI18n.featureId, featurePropertyI18n.propertyId, featurePropertyI18n.locale],
-      set: {
-        value: record.value,
-        valueGen: record.valueGen
-      }
-    });
+    await db
+      .insert(featurePropertyI18n)
+      .values(record)
+      .onConflictDoUpdate({
+        target: [
+          featurePropertyI18n.featureId,
+          featurePropertyI18n.propertyId,
+          featurePropertyI18n.locale
+        ],
+        set: {
+          value: record.value,
+          valueGen: record.valueGen
+        }
+      });
   }
 
   return await db.query.featurePropertyI18n.findMany({
@@ -314,22 +358,28 @@ export const createProperties = async (
   if (properties && properties.length > 0) {
     for (const prop of properties) {
       const { i18n, ...propData } = prop;
-      
+
       // Upsert the base property using composite key
       const propertyToInsert = {
         featureId,
         propertyId: prop.propertyId,
         value: prop.value ?? null,
-        propertyValueId: prop.propertyValueId && prop.propertyValueId !== '' ? prop.propertyValueId : null
+        propertyValueId:
+          prop.propertyValueId && prop.propertyValueId !== ''
+            ? prop.propertyValueId
+            : null
       };
 
-      await db.insert(featureProperty).values(propertyToInsert).onConflictDoUpdate({
-        target: [featureProperty.featureId, featureProperty.propertyId],
-        set: {
-          value: propertyToInsert.value,
-          propertyValueId: propertyToInsert.propertyValueId
-        }
-      });
+      await db
+        .insert(featureProperty)
+        .values(propertyToInsert)
+        .onConflictDoUpdate({
+          target: [featureProperty.featureId, featureProperty.propertyId],
+          set: {
+            value: propertyToInsert.value,
+            propertyValueId: propertyToInsert.propertyValueId
+          }
+        });
 
       // Create i18n records if they exist
       if (prop.i18n) {
@@ -377,7 +427,9 @@ export const updateProperties = async (
   const incomingPropertyIds = new Set(properties.map((p) => p.propertyId));
 
   // Find properties to delete (in DB but not in incoming properties)
-  const propertyIdsToDelete = [...existingPropertyIds].filter((propertyId) => !incomingPropertyIds.has(propertyId));
+  const propertyIdsToDelete = [...existingPropertyIds].filter(
+    (propertyId) => !incomingPropertyIds.has(propertyId)
+  );
 
   // Delete removed properties
   if (propertyIdsToDelete.length > 0) {
@@ -394,21 +446,27 @@ export const updateProperties = async (
   // Upsert all incoming properties
   for (const prop of properties) {
     const { i18n, ...propData } = prop;
-    
+
     const propertyToUpsert = {
       featureId,
       propertyId: prop.propertyId,
       value: prop.value ?? null,
-      propertyValueId: prop.propertyValueId && prop.propertyValueId !== '' ? prop.propertyValueId : null
+      propertyValueId:
+        prop.propertyValueId && prop.propertyValueId !== ''
+          ? prop.propertyValueId
+          : null
     };
 
-    await db.insert(featureProperty).values(propertyToUpsert).onConflictDoUpdate({
-      target: [featureProperty.featureId, featureProperty.propertyId],
-      set: {
-        value: propertyToUpsert.value,
-        propertyValueId: propertyToUpsert.propertyValueId
-      }
-    });
+    await db
+      .insert(featureProperty)
+      .values(propertyToUpsert)
+      .onConflictDoUpdate({
+        target: [featureProperty.featureId, featureProperty.propertyId],
+        set: {
+          value: propertyToUpsert.value,
+          propertyValueId: propertyToUpsert.propertyValueId
+        }
+      });
 
     // Handle i18n records if they exist
     if (prop.i18n) {
@@ -469,10 +527,10 @@ export const updateFeatureWithRelated = async (
   featureId: Id
 ) => {
   const idToUse = (data.id as string) || featureId;
-  
+
   // Remove the id from the data to prevent UNIQUE constraint violation
   const { id, ...updateData } = data;
-  
+
   const feature = await updateFeature(db, updateData, idToUse);
   const i18n = await updateI18n(db, data.i18n, feature.id);
   const properties = await updateProperties(
@@ -512,14 +570,28 @@ export const updateFeatureWithRelated = async (
  * @param formData - The form data
  * @returns The project ID
  */
-export const getProjectIdForFeature = async (db: Database, featureData: FeatureDBNew | FeatureNew) => {
+export const getProjectIdForFeature = async (
+  db: Database,
+  featureData: FeatureDBNew | FeatureNew,
+  hubOpts: HubOpts
+) => {
   const layerId = featureData.layerId;
+  const conditions = [eq(layer.id, layerId)];
   if (!layerId) return undefined;
-  return await getLayer(db, {}, [eq(layer.id, layerId)]).then((layer) => layer!.projectId);
+  return await getLayer(db, {}, conditions, hubOpts).then((layer) => layer!.projectId);
 };
 
-export const getProjectIdForFeatureId = async (db: Database, featureId: Id) => {
-  const featureData = await getFeature(db, { layer: true }, [eq(feature.id, featureId)]) as any;
+export const getProjectIdForFeatureId = async (
+  db: Database,
+  featureId: Id,
+  hubOpts: HubOpts
+) => {
+  const featureData = (await getFeature(
+    db,
+    { layer: true },
+    [eq(feature.id, featureId)],
+    hubOpts
+  )) as any;
   return (featureData?.layer as LayerDB).projectId;
 };
 
@@ -531,10 +603,10 @@ const toPropertyShape = (data: FeatureProperty[], isCollection: boolean = false)
   return data.map((fp) => {
     const propertyDef = fp.property;
     const propertyVal = fp.propertyValue;
-    
+
     // Check if this property actually has i18n data and ensure it's in array format
     const hasI18nData = fp.i18n && Array.isArray(fp.i18n) && fp.i18n.length > 0;
-    
+
     // Transform the data first, then validate
     const transformedProperty = {
       ...fp,
@@ -545,15 +617,15 @@ const toPropertyShape = (data: FeatureProperty[], isCollection: boolean = false)
         ? {
             ...propertyDef,
             // Check if property i18n is already transformed or needs transformation
-            i18n: Array.isArray(propertyDef.i18n) 
+            i18n: Array.isArray(propertyDef.i18n)
               ? toLocaleMap<PropertyI18nDB>(propertyDef.i18n)
               : (propertyDef.i18n as any),
             values: (propertyDef.values || []).map((val: any) => ({
               ...val,
-                              // Check if value i18n is already transformed or needs transformation
-                i18n: Array.isArray(val.i18n)
-                  ? toLocaleMap<PropertyValueI18nDB>(val.i18n)
-                  : (val.i18n as any)
+              // Check if value i18n is already transformed or needs transformation
+              i18n: Array.isArray(val.i18n)
+                ? toLocaleMap<PropertyValueI18nDB>(val.i18n)
+                : (val.i18n as any)
             }))
           }
         : undefined,
@@ -567,7 +639,7 @@ const toPropertyShape = (data: FeatureProperty[], isCollection: boolean = false)
           }
         : undefined
     };
-    
+
     // Use the correct schema based on context
     const schema = isCollection ? FeaturePropertyCollectionAPI : FeaturePropertyAPI;
     return schema.parse(transformedProperty);
@@ -613,7 +685,7 @@ export const toFormShape = async (
     };
   });
 
-  return await superValidate(
+  return (await superValidate(
     {
       ...data,
       i18n: toLocaleMap(i18n),
@@ -621,7 +693,7 @@ export const toFormShape = async (
     },
     // @ts-ignore TODO - Fix Zod type error
     zod(FeatureUpdateAPI)
-  ) as SuperValidated<Feature>
+  )) as SuperValidated<Feature>;
 };
 
 /**
@@ -637,7 +709,7 @@ export const toResponseShape = async (
   properties: FeatureProperty[],
   isCollection: boolean = false
 ) => {
-  const propertiesData = toPropertyShape(properties, isCollection)
+  const propertiesData = toPropertyShape(properties, isCollection);
   return (isCollection ? FeatureCollectionAPI : FeatureUpdateAPI).parse({
     ...data,
     i18n: toLocaleMap(i18n),
@@ -705,30 +777,31 @@ export function mergeFeatureProperties(
  */
 export const buildCollectionResponseShape = async (
   db: Database,
-  features: FeatureDBRaw[]
+  features: FeatureDBRaw[],
+  hubOpts: HubOpts
 ) => {
   // Get unique layer IDs from the features
-  const uniqueLayerIds = [...new Set(features.map(feature => feature.layerId))];
-  
+  const uniqueLayerIds = [...new Set(features.map((feature) => feature.layerId))];
+
   // Fetch layer data with properties for all unique layers
   const { getLayerMap } = await import('./layer');
-  const layersMap = await getLayerMap(db, uniqueLayerIds);
+  const layersMap = await getLayerMap(db, uniqueLayerIds, hubOpts);
 
   // Build the response shape with merged properties
   const data = await Promise.all(
     features.map(async (feature) => {
       const layerData = layersMap.get(feature.layerId);
       let processedFeature = feature as any;
-      
+
       // Merge properties if layer data is available
       if (layerData) {
         processedFeature = mergeFeatureProperties(processedFeature, layerData);
       }
-      
+
       return await toResponseShape(
-        processedFeature, 
-        processedFeature.i18n || [], 
-        processedFeature.properties || [], 
+        processedFeature,
+        processedFeature.i18n || [],
+        processedFeature.properties || [],
         true
       );
     })
@@ -745,16 +818,22 @@ export const buildCollectionResponseShape = async (
  */
 export const buildResponseShape = async (
   db: Database,
-  feature: FeatureDBRaw
+  feature: FeatureDBRaw,
+  hubOpts: HubOpts
 ) => {
-  
   // Fetch layer data with properties to merge visible properties
   const { getLayer } = await import('./layer');
   const { layerEntityWithRelations } = await import('$lib/api/services/layer');
-  const layerData = await getLayer(db, layerEntityWithRelations, [eq(layer.id, feature.layerId)]) as LayerDBRaw;
-  
+  const conditions = [eq(layer.id, feature.layerId)];
+  const layerData = (await getLayer(
+    db,
+    layerEntityWithRelations,
+    conditions,
+    hubOpts
+  )) as LayerDBRaw;
+
   let processedFeature = feature as any;
-  
+
   // Merge properties if layer data is available
   if (layerData) {
     processedFeature = mergeFeatureProperties(processedFeature, layerData);
@@ -762,13 +841,12 @@ export const buildResponseShape = async (
 
   try {
     const data = await toResponseShape(
-      processedFeature, 
-      processedFeature.i18n || [], 
+      processedFeature,
+      processedFeature.i18n || [],
       processedFeature.properties || []
     );
     return data;
   } catch (error) {
-    console.error('[buildResponseShape] Error in toResponseShape:', error);
     logZodError(error, '[buildResponseShape] Validation error:');
     throw error;
   }
@@ -784,12 +862,17 @@ export const buildResponseShape = async (
  * @returns The selected ImageDB record or null if no suitable image is found.
  */
 const selectCanonicalOrFirstImage = (
-  featureImages?: (NonNullable<unknown> & { intent: string | null, image: ImageDB | null })[]
+  featureImages?: (NonNullable<unknown> & {
+    intent: string | null;
+    image: ImageDB | null;
+  })[]
 ): ImageDB | null => {
   let selectedImage: ImageDB | null = null;
 
   if (featureImages && featureImages.length > 0) {
-    const canonicalFeatureImage = featureImages.find(fi => fi.intent === ImageIntent.canonical);
+    const canonicalFeatureImage = featureImages.find(
+      (fi) => fi.intent === ImageIntent.canonical
+    );
 
     if (canonicalFeatureImage && canonicalFeatureImage.image) {
       selectedImage = canonicalFeatureImage.image;

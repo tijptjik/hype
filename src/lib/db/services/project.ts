@@ -13,19 +13,19 @@ import {
 // AUTH
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
 // DB
-import { isFieldUnique, toLocaleMap, toRelatedRecords } from '..';
+import { toLocaleMap, toRelatedRecords } from '..';
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
 import { ProjectAPI, ProjectCollectionAPI } from '../zod';
-// ENUMS
-import { HierarchicalResource } from '$lib/enums';
 // SERVICES
 import { createPropertiesWithRelated, updatePropertiesWithRelated } from './property';
+import { getProjectHubFilter } from './hub';
 // TYPES
 import type {
   ProjectDBNew,
   ProjectDB,
+  ProjectI18n,
   ProjectI18nDB,
   ProjectI18nNew,
   ProjectI18nPartial,
@@ -41,9 +41,10 @@ import type {
   OrganisationRolePartialExtra,
   PropertyValueI18nNew,
   PropertyI18nNew,
-  ProjectRaw,
+  ProjectDBRaw,
   ProjectRoleDB,
-  PropertyRaw
+  PropertyRaw,
+  HubOpts
 } from '$lib/types';
 
 // ═══════════════════════
@@ -86,22 +87,38 @@ import type {
 export const listProjects = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = []
-) =>
-  await db.query.project.findMany({
+  conditions: SQL<unknown>[] = [],
+  opts: HubOpts
+) : Promise<ProjectDBRaw[]> => {
+  // Apply hub filtering if opts is provided
+  const hubFilter = getProjectHubFilter(db, opts);
+  if (hubFilter) {
+    conditions.push(hubFilter);
+  }
+
+  return await db.query.project.findMany({
     with: withRelations,
     where: conditions.length > 0 ? and(...conditions) : undefined
   });
+};
 
 export const getProject = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = []
-): Promise<ProjectRaw | undefined> =>
-  await db.query.project.findFirst({
+  conditions: SQL<unknown>[] = [],
+  opts: HubOpts
+): Promise<ProjectDBRaw | undefined> => {
+  // Apply hub filtering if opts is provided
+  const hubFilter = getProjectHubFilter(db, opts);
+  if (hubFilter) {
+    conditions.push(hubFilter);
+  }
+
+  return await db.query.project.findFirst({
     with: withRelations,
-    where: and(...conditions)
+    where: conditions.length > 0 ? and(...conditions) : undefined
   });
+};
 
 /**
  * Creates a new project in the database
@@ -370,7 +387,7 @@ export const toFormShape = async (
 ): Promise<SuperValidated<Project>> => {
   const formData: Project = {
     ...project,
-    i18n: toLocaleMap<ProjectI18nNew>(i18n) as any,
+    i18n: toLocaleMap<ProjectI18n>(i18n) as any,
     maintainerRoles,
     properties: properties
       .sort((a, b) => {
@@ -386,7 +403,7 @@ export const toFormShape = async (
       })
       .map((property) => ({
         ...property,
-        i18n: toLocaleMap<PropertyI18nNew>(property.i18n) as any,
+        i18n: toLocaleMap<PropertyI18n>(property.i18n) as any,
         values: property.values.map((value) => ({
           ...value,
           i18n: toLocaleMap<PropertyValueI18nNew>(value.i18n) as any
@@ -420,15 +437,21 @@ export const toResponseShape = async (
     properties: properties.map((property: PropertyRaw) => ({
       ...property,
       // Only transform i18n if it has actual data, otherwise set to null
-      i18n: (Array.isArray(property.i18n) && property.i18n.length > 0) 
-        ? toLocaleMap<PropertyI18nNew>(property.i18n) as any 
-        : (Array.isArray(property.i18n) ? undefined : property.i18n),
+      i18n:
+        Array.isArray(property.i18n) && property.i18n.length > 0
+          ? (toLocaleMap<PropertyI18n>(property.i18n) as any)
+          : Array.isArray(property.i18n)
+            ? undefined
+            : property.i18n,
       values: property.values?.map((value) => ({
         ...value,
-        // Only transform i18n if it has actual data, otherwise set to null  
-        i18n: (Array.isArray(value.i18n) && value.i18n.length > 0)
-          ? toLocaleMap<PropertyValueI18nNew>(value.i18n) as any
-          : (Array.isArray(value.i18n) ? undefined : value.i18n)
+        // Only transform i18n if it has actual data, otherwise set to null
+        i18n:
+          Array.isArray(value.i18n) && value.i18n.length > 0
+            ? (toLocaleMap<PropertyValueI18nNew>(value.i18n) as any)
+            : Array.isArray(value.i18n)
+              ? undefined
+              : value.i18n
       }))
     })) as PropertyNew[]
   };

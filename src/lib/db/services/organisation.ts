@@ -1,7 +1,7 @@
-// DRIZZLE
-import { and, eq, SQL } from 'drizzle-orm';
 // SVELTEKIT
 import { superValidate, type SuperValidated } from 'sveltekit-superforms';
+// DRIZZLE
+import { and, eq, SQL } from 'drizzle-orm';
 // SCHEMA
 import {
   feature,
@@ -12,10 +12,11 @@ import {
 } from '../schema';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
-import { OrganisationAPI, OrganisationCollectionAPI, OrganisationUpdate } from '../zod';
+import { OrganisationAPI, OrganisationCollectionAPI } from '../zod';
 // SERVICES
-import { isFieldUnique, toLocaleMap, toRelatedRecords } from '..';
+import { toLocaleMap, toRelatedRecords } from '..';
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud';
+import { getOrganisationHubFilter } from './hub';
 // TYPES
 import type {
   OrganisationDB,
@@ -28,9 +29,12 @@ import type {
   OrganisationI18nNew,
   OrganisationI18nPartial,
   OrganisationRoleNew,
-  OrganisationDBPartial
+  OrganisationDBPartial,
+  OrganisationDBRaw,
+  OrganisationI18nDB,
+  OrganisationRoleDB,
+  HubOpts
 } from '$lib/types';
-import { HierarchicalResource } from '$lib/enums';
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -71,22 +75,38 @@ import { HierarchicalResource } from '$lib/enums';
 export const listOrganisations = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = []
-) =>
-  await db.query.organisation.findMany({
+  conditions: SQL<unknown>[] = [],
+  opts: HubOpts
+): Promise<OrganisationDBRaw[]> => {
+  // Core or non-core hub filtering
+  const hubFilter = getOrganisationHubFilter(db, opts);
+  if (hubFilter) {
+    conditions.push(hubFilter);
+  }
+
+  return await db.query.organisation.findMany({
     with: withRelations,
-    where: and(...conditions)
+    where: conditions.length > 0 ? and(...conditions) : undefined
   });
+};
 
 export const getOrganisation = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = []
-) =>
-  await db.query.organisation.findFirst({
+  conditions: SQL<unknown>[] = [],
+  opts: HubOpts
+): Promise<OrganisationDBRaw | undefined> => {
+  // Core or non-core hub filtering
+  const hubFilter = getOrganisationHubFilter(db, opts);
+  if (hubFilter) {
+    conditions.push(hubFilter);
+  }
+
+  return await db.query.organisation.findFirst({
     with: withRelations,
-    where: and(...conditions)
+    where: conditions.length > 0 ? and(...conditions) : undefined
   });
+};
 
 /**
  * Creates a new organisation in the database
@@ -95,8 +115,10 @@ export const getOrganisation = async (
  * @returns The newly created organisation
  * @throws {Error} If the organisation creation fails
  */
-export const createOrganisation = async (db: Database, data: OrganisationDBNew) =>
-  await insert(db, organisation, data);
+export const createOrganisation = async (
+  db: Database,
+  data: OrganisationDBNew
+): Promise<OrganisationDB> => await insert(db, organisation, data);
 
 /**
  * Updates an existing organisation in the database
@@ -110,7 +132,8 @@ export const updateOrganisation = async (
   db: Database,
   data: OrganisationDBPartial,
   ref: string
-) => await update(db, organisation, data, organisation.code, ref);
+): Promise<OrganisationDB> =>
+  await update(db, organisation, data, organisation.code, ref);
 
 // ═══════════════════════
 // 2. CRUD :: RELATIONAL OPERATIONS (OrganisationI18n)
@@ -127,7 +150,7 @@ export const createI18n = async (
   db: Database,
   i18n: Record<Locale, OrganisationI18nNew>,
   organisationId: string
-) => {
+): Promise<OrganisationI18nDB[]> => {
   return await insertManyRelated(
     db,
     organisationI18n,
@@ -148,7 +171,7 @@ export const updateI18n = async (
   db: Database,
   i18n: Record<Locale, OrganisationI18nPartial>,
   organisationId: string
-) => {
+): Promise<OrganisationI18nDB[]> => {
   return await replaceManyRelated(
     db,
     organisationI18n,
@@ -163,6 +186,24 @@ export const updateI18n = async (
 // ═══════════════════════
 
 /**
+ * Reads user roles for an organisation
+ * @param db - The database instance
+ * @param organisationId - The ID of the organisation
+ * @returns Array of user roles with associated user information
+ */
+export const listUserRoles = async (
+  db: Database,
+  organisationId: string
+): Promise<OrganisationRoleDB[]> => {
+  return await db.query.organisationRole.findMany({
+    with: {
+      user: true
+    },
+    where: eq(organisationRole.organisationId, organisationId)
+  });
+};
+
+/**
  * Creates user roles for an organisation
  * @param db - The database instance
  * @param userRoles - Array of new user roles to create
@@ -173,7 +214,7 @@ export const createUserRoles = async (
   db: Database,
   userRoles: OrganisationRoleNew[],
   organisationId: string
-) => {
+): Promise<OrganisationRoleDB[]> => {
   return await insertManyRelated(
     db,
     organisationRole,
@@ -194,7 +235,7 @@ export const updateUserRoles = async (
   db: Database,
   userRoles: OrganisationRoleNew[],
   organisationId: string
-) => {
+): Promise<OrganisationRoleDB[]> => {
   return await replaceManyRelated(
     db,
     organisationRole,
@@ -202,21 +243,6 @@ export const updateUserRoles = async (
     organisationRole.organisationId,
     organisationId
   );
-};
-
-/**
- * Reads user roles for an organisation
- * @param db - The database instance
- * @param organisationId - The ID of the organisation
- * @returns Array of user roles with associated user information
- */
-export const listUserRoles = async (db: Database, organisationId: string) => {
-  return await db.query.organisationRole.findMany({
-    with: {
-      user: true
-    },
-    where: eq(organisationRole.organisationId, organisationId)
-  });
 };
 
 // ═══════════════════════
@@ -302,8 +328,8 @@ export const toResponseShape = async (
     userRoles
   };
   return isCollection
-    ? OrganisationCollectionAPI.parse(data) as Organisation
-    : OrganisationAPI.parse(data) as Organisation;
+    ? OrganisationCollectionAPI.parse(data)
+    : OrganisationAPI.parse(data);
 };
 
 // ═══════════════════════
@@ -343,5 +369,3 @@ export const getOrganisationForProjectId = async (
   });
   return record?.organisation || undefined;
 };
-
-

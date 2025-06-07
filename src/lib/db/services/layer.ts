@@ -3,9 +3,17 @@ import { and, eq, SQL, inArray } from 'drizzle-orm';
 // FORMS
 import { superValidate } from 'sveltekit-superforms';
 // SCHEMA
-import { layer, layerI18n, layerProperty, property as propertySchema, project } from '../schema';
+import {
+  layer,
+  layerI18n,
+  layerProperty,
+  property as propertySchema,
+  project
+} from '../schema';
 // API
 import { layerMergeWithRelations } from '$lib/api/services/layer';
+// SERVICES
+import { getLayerHubFilter } from './hub';
 // DB
 import { toLocaleMap, toRelatedRecords } from '..';
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud';
@@ -29,12 +37,13 @@ import type {
   LayerI18nNew,
   OrganisationI18nDB,
   ProjectI18nDB,
-  ProjectRaw,
+  ProjectDBRaw,
   LayerPartial,
   LayerPropertyDBRaw,
   Property,
   LayerPropertyNew,
   Id,
+  HubOpts
 } from '$lib/types';
 
 // ═══════════════════════
@@ -82,21 +91,36 @@ import type {
 export const listLayers = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = []
-) =>
-  await db.query.layer.findMany({
+  conditions: SQL<unknown>[] = [],
+  opts: HubOpts
+): Promise<LayerDBRaw[]> => {
+  // Apply hub filtering if opts is provided
+  const hubFilter = getLayerHubFilter(db, opts);
+  if (hubFilter) {
+    conditions.push(hubFilter);
+  }
+
+  return await db.query.layer.findMany({
     with: withRelations,
     where: conditions.length > 0 ? and(...conditions) : undefined
   });
+};
 
 export const getLayer = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = []
-): Promise<LayerDB | undefined> => {
+  conditions: SQL<unknown>[] = [],
+  opts: HubOpts
+): Promise<LayerDBRaw | undefined> => {
+  // Apply hub filtering if opts is provided
+  const hubFilter = getLayerHubFilter(db, opts);
+  if (hubFilter) {
+    conditions.push(hubFilter);
+  }
+
   const result = await db.query.layer.findFirst({
     with: withRelations,
-    where: and(...conditions)
+    where: conditions.length > 0 ? and(...conditions) : undefined
   });
   return result;
 };
@@ -344,7 +368,7 @@ export const syncLayerProperties = async (
 
   // Prepare the property links structure that upsertLayerProperties expects
   // This will be the same list of target properties for every layer in the project.
-  const targetPropertyLinks = newProjectProperties.map(prop => ({
+  const targetPropertyLinks = newProjectProperties.map((prop) => ({
     propertyId: prop.id,
     isVisible: false // Default to not visible for new properties
   }));
@@ -369,7 +393,7 @@ export const createLayerWithRelated = async (db: Database, data: LayerNew) => {
   const layer = await createLayer(db, data);
   const i18n = await createI18n(db, data.i18n, layer.id);
   const properties = await createLayerProperties(db, layer.id, data.properties || []);
-  
+
   // Get project with relations using proper function signature
   const projectNested = await db.query.project.findFirst({
     where: eq(project.id, layer.projectId),
@@ -382,7 +406,7 @@ export const createLayerWithRelated = async (db: Database, data: LayerNew) => {
       }
     }
   });
-  
+
   return {
     ...layer,
     i18n,
@@ -406,7 +430,11 @@ export const updateLayerWithRelated = async (
   const IdToUse = layerId || (data.id as string);
   const layer = await updateLayer(db, data, IdToUse);
   const i18n = await updateI18n(db, data.i18n, IdToUse);
-  const properties = await updateLayerProperties(db, IdToUse, (data.properties || []) as LayerPropertyNew[]);
+  const properties = await updateLayerProperties(
+    db,
+    IdToUse,
+    (data.properties || []) as LayerPropertyNew[]
+  );
   // Get project with relations using proper function signature
   const projectData = await db.query.project.findFirst({
     where: eq(project.id, layer.projectId),
@@ -443,14 +471,16 @@ export const toFormShape = async (
   data: LayerDBRaw, // Use any since this may come with relations loaded
   i18n: LayerI18nDB[],
   properties: LayerPropertyDBRaw[],
-  project: ProjectRaw
+  project: ProjectDBRaw
 ) => {
   const formI18n = toLocaleMap<LayerI18nDB>(i18n);
-  const formProperties : LayerPropertyNew[] = properties.map((layerProp) => {
+  const formProperties: LayerPropertyNew[] = properties.map((layerProp) => {
     // Handle case where property includes nested property data from database relations
     if (layerProp.property && layerProp.property.i18n) {
-      layerProp.property.i18n = toLocaleMap<PropertyI18nDB>(layerProp.property.i18n as PropertyI18nDB[]);
-      
+      layerProp.property.i18n = toLocaleMap<PropertyI18nDB>(
+        layerProp.property.i18n as PropertyI18nDB[]
+      );
+
       // Handle nested property values if they exist
       if (layerProp.property.values) {
         layerProp.property.values = layerProp.property.values.map((value: any) => {
@@ -468,15 +498,21 @@ export const toFormShape = async (
     {
       ...data,
       i18n: formI18n,
-      project: project ? {
-        ...project,
-        i18n: toLocaleMap<ProjectI18nDB>(project.i18n as any),
-        organisation: project.organisation ? {
-          ...project.organisation,
-          i18n: toLocaleMap<OrganisationI18nDB>(project.organisation.i18n as any)
-        } : undefined,
-        publisher: project.publisher ? project.publisher : undefined
-      } : undefined,
+      project: project
+        ? {
+            ...project,
+            i18n: toLocaleMap<ProjectI18nDB>(project.i18n as any),
+            organisation: project.organisation
+              ? {
+                  ...project.organisation,
+                  i18n: toLocaleMap<OrganisationI18nDB>(
+                    project.organisation.i18n as any
+                  )
+                }
+              : undefined,
+            publisher: project.publisher ? project.publisher : undefined
+          }
+        : undefined,
       properties: formProperties
     },
     // @ts-expect-error - TODO Fix Zod type error
@@ -499,24 +535,30 @@ export const toResponseShape = async (
   const data: any = {
     ...layer,
     i18n: toLocaleMap<LayerI18nDB>(i18n) as any,
-    project: layer.project ? {
-      ...layer.project,
-      i18n: toLocaleMap<ProjectI18nDB>(layer.project.i18n as any),
-      organisation: {
-        ...layer.project.organisation,
-        i18n: toLocaleMap<OrganisationI18nDB>(layer.project.organisation.i18n as any)
-      }
-    } : undefined,
+    project: layer.project
+      ? {
+          ...layer.project,
+          i18n: toLocaleMap<ProjectI18nDB>(layer.project.i18n as any),
+          organisation: {
+            ...layer.project.organisation,
+            i18n: toLocaleMap<OrganisationI18nDB>(
+              layer.project.organisation.i18n as any
+            )
+          }
+        }
+      : undefined,
     properties: properties.map((prop) => ({
       ...prop,
       property: {
         ...prop.property,
         i18n: toLocaleMap<PropertyI18nDB>(prop.property.i18n as any),
         // Handle property values if they exist
-        values: prop.property.values ? prop.property.values.map((value: any) => ({
-          ...value,
-          i18n: toLocaleMap(value.i18n as any)
-        })) : []
+        values: prop.property.values
+          ? prop.property.values.map((value: any) => ({
+              ...value,
+              i18n: toLocaleMap(value.i18n as any)
+            }))
+          : []
       }
     }))
   };
@@ -578,7 +620,6 @@ export const mergeProjectProperties = async (
   return result;
 };
 
-
 // ═══════════════════════
 // 6. UTILS :: LOOKUPS
 // ═══════════════════════
@@ -591,16 +632,23 @@ export const mergeProjectProperties = async (
  */
 export const getLayerMap = async (
   db: Database,
-  layerIds: Id[]
+  layerIds: Id[],
+  opts: HubOpts
 ): Promise<Map<Id, LayerDBRaw>> => {
   const layersMap = new Map<Id, LayerDBRaw>();
-  
+
   for (const layerId of layerIds) {
-    const layerData = await getLayer(db, layerMergeWithRelations, [eq(layer.id, layerId)]) as LayerDBRaw;
+    const conditions = [eq(layer.id, layerId)];
+    const layerData = (await getLayer(
+      db,
+      layerMergeWithRelations,
+      conditions,
+      opts
+    ));
     if (layerData) {
       layersMap.set(layerId, layerData);
     }
   }
-  
+
   return layersMap;
 };
