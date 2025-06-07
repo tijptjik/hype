@@ -1,7 +1,7 @@
 // DRIZZLE
 import { and, eq, exists, isNull, or, SQL } from 'drizzle-orm';
 // SCHEMA
-import { organisation, project, layer, feature, hub } from '$lib/db/schema';
+import { organisation, project, layer, feature, hub, task } from '$lib/db/schema';
 // TYPES
 import type { Database, HubOpts, HubDBRaw } from '$lib/types';
 
@@ -190,6 +190,59 @@ export function getFeatureHubFilter(
         .where(
           and(
             eq(layer.id, feature.layerId),
+            hubConditions.length === 1 ? hubConditions[0] : or(...hubConditions)
+          )
+        )
+    );
+  }
+}
+
+/**
+ * Tasks inherit filtering from feature → layer → project → organisation
+ */
+export function getTaskHubFilter(
+  db: Database,
+  opts: { hubCode?: string; hubDomain?: string; isCore: boolean }
+): SQL<unknown> | undefined {
+  if (opts.isCore) {
+    // Core: task's feature's layer's project's org has no hub OR org is not hub-exclusive
+    return exists(
+      db
+        .select()
+        .from(feature)
+        .innerJoin(layer, eq(layer.id, feature.layerId))
+        .innerJoin(project, eq(project.id, layer.projectId))
+        .innerJoin(organisation, eq(organisation.id, project.organisationId))
+        .where(
+          and(
+            eq(feature.id, task.featureId),
+            or(isNull(organisation.hubId), eq(organisation.isHubExclusive, false))
+          )
+        )
+    );
+  } else {
+    // Specific hub: task's feature's layer's project's org belongs to this hub
+    const hubConditions: SQL<unknown>[] = [];
+
+    if (opts.hubCode) {
+      hubConditions.push(eq(hub.code, opts.hubCode));
+    }
+
+    if (opts.hubDomain) {
+      hubConditions.push(eq(hub.domain, opts.hubDomain));
+    }
+
+    return exists(
+      db
+        .select()
+        .from(feature)
+        .innerJoin(layer, eq(layer.id, feature.layerId))
+        .innerJoin(project, eq(project.id, layer.projectId))
+        .innerJoin(organisation, eq(organisation.id, project.organisationId))
+        .innerJoin(hub, eq(organisation.hubId, hub.id))
+        .where(
+          and(
+            eq(feature.id, task.featureId),
             hubConditions.length === 1 ? hubConditions[0] : or(...hubConditions)
           )
         )
