@@ -139,7 +139,9 @@ export const getValues = (
       baseRef.i18n = {};
     }
     if (!baseRef.i18n[locale as Locale]) {
-      baseRef.i18n[locale as Locale] = {};
+      baseRef.i18n[locale as Locale] = {
+        locale: locale as Locale // Ensure locale field is set
+      };
     }
     ref = baseRef.i18n[locale as Locale];
     key = fieldKey;
@@ -149,7 +151,9 @@ export const getValues = (
       (form as any).i18n = {};
     }
     if (!(form as any).i18n[locale as Locale]) {
-      (form as any).i18n[locale as Locale] = {};
+      (form as any).i18n[locale as Locale] = {
+        locale: locale as Locale // Ensure locale field is set
+      };
     }
     ref = (form as any).i18n[locale as Locale];
     key = fieldRoot;
@@ -235,7 +239,9 @@ export const updateForm = (
         baseObject.i18n = {};
       }
       if (!baseObject.i18n[locale as Locale]) {
-        baseObject.i18n[locale as Locale] = {};
+        baseObject.i18n[locale as Locale] = {
+          locale: locale as Locale // Ensure locale field is set
+        };
       }
       targetObject = baseObject.i18n[locale as Locale];
     } else {

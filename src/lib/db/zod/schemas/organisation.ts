@@ -67,16 +67,16 @@ export const OrganisationRoleAPI = OrganisationRoleBase.extend({
 
 
 /* ----------------- */
-// ORGANISATION API
+// ORGANISATION SUPERADMIN API (Full Access)
 /* -------- */
 
-export const OrganisationCollectionAPI = OrganisationBase.extend({
+export const OrganisationCollectionSuperAdminAPI = OrganisationBase.extend({
   i18n: getLocales(OrganisationI18nBase),
   image: ImageBasic.nullish(),
   hub: HubBasic.nullish()
 });
 
-export const OrganisationAPI = OrganisationBase.extend({
+export const OrganisationSuperAdminAPI = OrganisationBase.extend({
   i18n: getLocales(OrganisationI18nBase),
   userRoles: getUserRoles(OrganisationRoleWithUser),
   image: ImageBase.nullish(),
@@ -84,14 +84,34 @@ export const OrganisationAPI = OrganisationBase.extend({
   hub: HubBasic.nullish()
 });
 
-export const OrganisationInsertAPI = OrganisationInsert.extend({
+export const OrganisationInsertSuperAdminAPI = OrganisationInsert.extend({
   i18n: getLocales(OrganisationI18nInsert),
   userRoles: getUserRoles(OrganisationRoleInsertExtra)
 });
 
-export const OrganisationUpdateAPI = OrganisationUpdate.extend({
+export const OrganisationUpdateSuperAdminAPI = OrganisationUpdate.extend({
   i18n: getLocales(OrganisationI18nUpdate),
   userRoles: getUserRoles(OrganisationRoleUpdateExtra)
+});
+
+/* ----------------- */
+// ORGANISATION API (Regular Users - Omit SuperAdmin Fields)
+/* -------- */
+
+export const OrganisationCollectionAPI = OrganisationCollectionSuperAdminAPI.omit({
+  isCoreInclusive: true // Only SuperAdmins can see this field
+});
+
+export const OrganisationAPI = OrganisationSuperAdminAPI.omit({
+  isCoreInclusive: true // Only SuperAdmins can see this field
+});
+
+export const OrganisationInsertAPI = OrganisationInsertSuperAdminAPI.omit({
+  isCoreInclusive: true // Only SuperAdmins can set this field
+});
+
+export const OrganisationUpdateAPI = OrganisationUpdateSuperAdminAPI.omit({
+  isCoreInclusive: true // Only SuperAdmins can update this field
 });
 
 /* ----------------- */

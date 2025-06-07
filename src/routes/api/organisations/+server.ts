@@ -7,7 +7,8 @@ import {
   isValidQueryParamsOrError,
   JSONResponseOrError,
   SuperFormResponse,
-  SuperFormErrorResponse
+  SuperFormErrorResponse,
+  logZodError
 } from '$lib/api';
 // SERVICES
 import { organisation } from '$lib/db/schema';
@@ -26,7 +27,10 @@ import {
 } from '$lib/api/services/organisation';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
-import { OrganisationInsertAPI } from '$lib/db/zod';
+import { 
+  OrganisationInsertAPI, 
+  OrganisationInsertSuperAdminAPI 
+} from '$lib/db/zod';
 // TYPES
 import type { RequestHandler } from '@sveltejs/kit';
 import type { OrganisationNew, Organisation } from '$lib/types';
@@ -85,7 +89,13 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
     // RESPONSE : Build the response shape
     const data = await Promise.all(
       result.map(async (organisation) => {
-        return await toResponseShape(organisation, organisation.i18n, [], true);
+        return await toResponseShape(
+          organisation, 
+          organisation.i18n, 
+          [], 
+          true, // isCollection
+          session.user.superAdmin || false // isSuperAdmin
+        );
       })
     );
 
@@ -112,10 +122,16 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
   try {
     // ASSERT : Valid form
     const formData: OrganisationNew = await request.json();
+    
+    // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
+    const insertSchema = session.user.superAdmin 
+      ? OrganisationInsertSuperAdminAPI 
+      : OrganisationInsertAPI;
+    
     let form = (await superValidate(
       formData,
       // @ts-ignore - FORM : Fix type error
-      zod(OrganisationInsertAPI)
+      zod(insertSchema)
     )) as SuperValidated<OrganisationNew>;
 
     // ASSERT : Code is unique
@@ -140,7 +156,8 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
     const updatedForm = await toFormShape(
       createdOrganisation,
       createdOrganisation.i18n,
-      createdOrganisation.userRoles
+      createdOrganisation.userRoles,
+      session.user.superAdmin || false
     );
 
     // HTTP : 201 JSON or 400
@@ -153,6 +170,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       201
     );
   } catch (err) {
+    logZodError(err, 'Organisation creation error:');
     return SuperFormErrorResponse(RESOURCE_TYPE, 'create');
   }
 };

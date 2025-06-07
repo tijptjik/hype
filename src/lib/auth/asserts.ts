@@ -159,7 +159,7 @@ export const assertIsCoreInclusiveModifiedBySuperAdmin = (
     isSuperAdmin = true;
   } catch {}
   // Only error if not  SUPERADMIN and newData is not undefined
-  if (isSuperAdmin && newData && 'isCoreInclusive' in newData) {
+  if (!isSuperAdmin && newData && 'isCoreInclusive' in newData) {
     return error(401, m.not_superadmin());
   }
 };

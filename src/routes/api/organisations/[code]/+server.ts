@@ -9,7 +9,10 @@ import { eq } from 'drizzle-orm';
 import { superValidate } from 'sveltekit-superforms';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
-import { OrganisationInsertAPI } from '$lib/db/zod';
+import { 
+  OrganisationInsertAPI, 
+  OrganisationInsertSuperAdminAPI 
+} from '$lib/db/zod';
 // SCHEMA
 import { organisation } from '$lib/db/schema';
 // DB
@@ -88,7 +91,13 @@ export const GET: RequestHandler = async ({ params, locals, platform, request })
     }
 
     // RESPONSE : Build the response shape
-    const data = await toResponseShape(result, result.i18n, result.userRoles);
+    const data = await toResponseShape(
+      result, 
+      result.i18n, 
+      result.userRoles, 
+      false, // isCollection
+      session.user.superAdmin || false // isSuperAdmin
+    );
 
     // HTTP : 200 JSON or 404
     return JSONResponseOrError(data);
@@ -114,11 +123,17 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
   try {
     // ASSERT : Valid form
     const formData: Organisation = await request.json();
+    
+    // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
+    const updateSchema = session.user.superAdmin 
+      ? OrganisationInsertSuperAdminAPI 
+      : OrganisationInsertAPI;
+    
     // @ts-ignore - FORM : Fix type error
     let form = (await superValidate(
       formData,
       // @ts-ignore - FORM : Fix type error
-      zod(OrganisationInsertAPI)
+      zod(updateSchema)
     )) as SuperValidated<Organisation>;
 
     // ASSERT : Code has (1) not changed, or (2) changed to another unique value
@@ -154,7 +169,8 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     const updatedForm = await toFormShape(
       updatedOrganisation,
       updatedOrganisation.i18n,
-      updatedOrganisation.userRoles
+      updatedOrganisation.userRoles,
+      session.user.superAdmin || false
     );
 
     // STATE : Determine if redirect is needed (only when code changes or access is lost)

@@ -12,7 +12,12 @@ import {
 } from '../schema';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
-import { OrganisationAPI, OrganisationCollectionAPI } from '../zod';
+import { 
+  OrganisationAPI, 
+  OrganisationCollectionAPI,
+  OrganisationSuperAdminAPI,
+  OrganisationCollectionSuperAdminAPI
+} from '../zod';
 // SERVICES
 import { toLocaleMap, toRelatedRecords } from '..';
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud';
@@ -380,7 +385,8 @@ export const updateOrganisationWithRelated = async (
 export const toFormShape = async (
   organisation: OrganisationDB,
   i18n: OrganisationI18nNew[],
-  userRoles: OrganisationRoleNew[]
+  userRoles: OrganisationRoleNew[],
+  isSuperAdmin: boolean = false
 ): Promise<SuperValidated<Organisation>> => {
   const formData: Organisation = {
     ...organisation,
@@ -388,8 +394,12 @@ export const toFormShape = async (
     i18n: toLocaleMap<OrganisationI18nNew>(i18n),
     userRoles
   };
+  
+  // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
+  const schema = isSuperAdmin ? OrganisationSuperAdminAPI : OrganisationAPI;
+  
   // @ts-ignore - FORM : Fix Zod type error
-  const form = await superValidate(formData, zod(OrganisationAPI));
+  const form = await superValidate(formData, zod(schema));
   return form as SuperValidated<Organisation>;
 };
 
@@ -397,7 +407,8 @@ export const toResponseShape = async (
   organisation: OrganisationDB,
   i18n: OrganisationI18nNew[],
   userRoles: OrganisationRoleNew[],
-  isCollection: boolean = false
+  isCollection: boolean = false,
+  isSuperAdmin: boolean = false
 ) => {
   const data: Organisation = {
     ...organisation,
@@ -405,9 +416,17 @@ export const toResponseShape = async (
     i18n: toLocaleMap<OrganisationI18nNew>(i18n),
     userRoles
   };
-  return isCollection
-    ? OrganisationCollectionAPI.parse(data)
-    : OrganisationAPI.parse(data);
+  
+  // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
+  if (isCollection) {
+    return isSuperAdmin 
+      ? OrganisationCollectionSuperAdminAPI.parse(data)
+      : OrganisationCollectionAPI.parse(data);
+  } else {
+    return isSuperAdmin 
+      ? OrganisationSuperAdminAPI.parse(data)
+      : OrganisationAPI.parse(data);
+  }
 };
 
 // ═══════════════════════

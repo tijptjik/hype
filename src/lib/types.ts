@@ -155,7 +155,10 @@ import {
   UserLayerUpdate,
   UserLayerUpdateAPI,
   UserUpdate,
-  UserUpdateAPI
+  UserUpdateAPI,
+  OrganisationSuperAdminAPI,
+  OrganisationInsertSuperAdminAPI,
+  OrganisationUpdateSuperAdminAPI
 } from './db/zod';
 // TYPES
 import type {
@@ -648,6 +651,18 @@ export type Organisation = z.infer<typeof OrganisationAPI>;
 export type OrganisationNew = z.infer<typeof OrganisationInsertAPI>;
 // Like Organisation, but with all fields optional
 export type OrganisationPartial = z.infer<typeof OrganisationUpdateAPI>;
+
+/* ----------------- */
+// ORGANISATIONS :: SUPER ADMIN API
+/* -------- */
+
+// Organisation with all fields, including userRoles & translations, and User
+export type OrganisationSuperAdmin = z.infer<typeof OrganisationSuperAdminAPI>;
+// Like Organisation, but without the organisationId in userRoles and translations
+export type OrganisationSuperAdminNew = z.infer<typeof OrganisationInsertSuperAdminAPI>;
+// Like Organisation, but with all fields optional
+export type OrganisationSuperAdminPartial = z.infer<typeof OrganisationUpdateSuperAdminAPI>;
+
 
 /* ----------------- */
 // ORGANISATIONS :: RELATIONAL
