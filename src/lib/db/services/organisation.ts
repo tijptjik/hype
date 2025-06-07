@@ -1,7 +1,7 @@
 // SVELTEKIT
 import { superValidate, type SuperValidated } from 'sveltekit-superforms';
 // DRIZZLE
-import { and, eq, SQL } from 'drizzle-orm';
+import { and, eq, SQL, like, sql, or } from 'drizzle-orm';
 // SCHEMA
 import {
   feature,
@@ -103,6 +103,84 @@ export const getOrganisation = async (
   }
 
   return await db.query.organisation.findFirst({
+    with: withRelations,
+    where: conditions.length > 0 ? and(...conditions) : undefined
+  });
+};
+
+export const searchOrganisations = async (
+  db: Database,
+  withRelations: Record<string, boolean | object> = {},
+  conditions: SQL<unknown>[] = [],
+  search: string,
+  opts: HubOpts,
+  searchColumns: string[] = ['code', 'name', 'description']
+): Promise<OrganisationDBRaw[]> => {
+  // Ignore hubfilter, cause this is primarily used to configure hub settings
+  // const hubFilter = getOrganisationHubFilter(db, opts);
+  // if (hubFilter) {
+  //   conditions.push(hubFilter);
+  // }
+
+  // Add search conditions if search term provided
+  if (search) {
+    const searchConditions: SQL<unknown>[] = [];
+
+    // Search in base organisation table columns
+    const baseColumns = searchColumns.filter((col) => col === 'code');
+    for (const column of baseColumns) {
+      const orgColumn = organisation[column as keyof typeof organisation];
+      if (orgColumn) {
+        searchConditions.push(
+          like(sql`lower(${orgColumn})`, `%${search.toLowerCase()}%`)
+        );
+      }
+    }
+
+    // Search in i18n table columns (name, description)
+    const i18nColumns = searchColumns.filter((col) =>
+      ['name', 'description'].includes(col)
+    );
+    if (i18nColumns.length > 0) {
+      // Create a subquery to check if any i18n record matches the search
+      const i18nSearchConditions: SQL<unknown>[] = [];
+      for (const column of i18nColumns) {
+        if (column === 'name') {
+          i18nSearchConditions.push(
+            like(sql`lower(${organisationI18n.name})`, `%${search.toLowerCase()}%`)
+          );
+        } else if (column === 'description') {
+          // Handle nullable description field
+          i18nSearchConditions.push(
+            and(
+              sql`${organisationI18n.description} IS NOT NULL`,
+              like(
+                sql`lower(${organisationI18n.description})`,
+                `%${search.toLowerCase()}%`
+              )
+            )!
+          );
+        }
+      }
+
+      if (i18nSearchConditions.length > 0) {
+        // Add condition that checks if organisation has any matching i18n records
+        searchConditions.push(
+          sql`EXISTS (
+            SELECT 1 FROM ${organisationI18n} 
+            WHERE ${organisationI18n.organisationId} = ${organisation.id} 
+            AND (${or(...i18nSearchConditions)})
+          )`
+        );
+      }
+    }
+
+    if (searchConditions && searchConditions.length > 0) {
+      conditions.push(or(...searchConditions));
+    }
+  }
+
+  return await db.query.organisation.findMany({
     with: withRelations,
     where: conditions.length > 0 ? and(...conditions) : undefined
   });
