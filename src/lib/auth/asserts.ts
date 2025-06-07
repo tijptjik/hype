@@ -3,7 +3,7 @@ import { isAdminRequest } from '$lib/api';
 // I18N
 import { m } from '$lib/i18n';
 // TYPES
-import type { Session, UserRoleDisco } from '$lib/types';
+import type { OrganisationPartial, Session, UserRoleDisco } from '$lib/types';
 import { error } from '@sveltejs/kit';
 
 /**
@@ -146,6 +146,21 @@ export const assertOrganisationOwnerOrSuperAdmin = (
   // Only error if BOTH checks failed
   if (!isOrgOwner && !isSuperAdmin) {
     return error(401, m.neat_noble_okapi_blunt());
+  }
+};
+
+export const assertIsCoreInclusiveModifiedBySuperAdmin = (
+  session: Session,
+  newData?: OrganisationPartial
+): void | Response => {
+  let isSuperAdmin = false;
+  try {
+    assertSuperAdmin(session);
+    isSuperAdmin = true;
+  } catch {}
+  // Only error if not  SUPERADMIN and newData is not undefined
+  if (isSuperAdmin && newData && 'isCoreInclusive' in newData) {
+    return error(401, m.not_superadmin());
   }
 };
 

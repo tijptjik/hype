@@ -426,5 +426,6 @@
   "bland_sad_goat_gasp": "No properties provided",
   "loose_grassy_snake_hug": "Location",
   "witty_tangy_vole_dash": "Translatable",
-  "clean_light_ray_tap": "Properties"
+  "clean_light_ray_tap": "Properties",
+  "not_superadmin": "Not a superadmin, so, seems cannot."
 }

@@ -128,7 +128,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     if (!form.valid) return SuperFormResponse<Organisation>(form);
 
     // ASSERT : Permissions to update organisation
-    assertPermissionsToUpdateOrganisation(session, request, formData, userRoles);
+    assertPermissionsToUpdateOrganisation(session, request, formData, userRoles, form.data);
 
     // STATE : Will the current user lose access on membership changes.
     const isAccessLost = isAccessLostUponSuccess(session, formData, userRoles);
@@ -191,7 +191,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     }
 
     // Use assertion functions for access control
-    assertPermissionsToUpdateOrganisation(session, request, existing, userRoles);
+    assertPermissionsToUpdateOrganisation(session, request, existing, userRoles, newData);
 
     // DB : Update only the basic organisation fields (no relations for PATCH)
     const updated = await updateOrganisation(db, newData, params.code as string);

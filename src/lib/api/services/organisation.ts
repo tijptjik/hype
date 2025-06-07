@@ -6,10 +6,11 @@ import { isAdminRequest, applyQueryFilters, removeExcludedColumns } from '$lib/a
 import {
   assertUserLoggedIn,
   assertAdminRequest,
-  assertOrganisationOwner,
   assertId,
   assertSuperAdmin,
-  runAssertions
+  runAssertions,
+  assertOrganisationOwnerOrSuperAdmin,
+  assertIsCoreInclusiveModifiedBySuperAdmin
 } from '$lib/auth/asserts';
 // DB
 import { isFieldUnique } from '$lib/db';
@@ -25,6 +26,7 @@ import type {
   UserRoleDisco,
   OrganisationNew,
   OrganisationDB,
+  OrganisationPartial,
   Session,
   QueryParams,
   Database,
@@ -133,14 +135,16 @@ export const assertPermissionsToUpdateOrganisation = (
   session: Session,
   request: Request,
   formData: OrganisationDB,
-  userRoles: UserRoleDisco[]
+  userRoles: UserRoleDisco[],
+  newData?: OrganisationPartial
 ) => {
   // Run all access control assertions
   const assertionError = runAssertions(
     () => assertUserLoggedIn(session as any),
     () => assertAdminRequest(request),
     () => assertId(formData),
-    () => assertOrganisationOwner(userRoles, formData.id!)
+    () => assertOrganisationOwnerOrSuperAdmin(session, userRoles, formData.id!),
+    () => assertIsCoreInclusiveModifiedBySuperAdmin(session, newData)
   );
 
   if (assertionError) return assertionError;
@@ -180,7 +184,7 @@ export const isAccessLostUponSuccess = (
   userRoles?: UserRoleDisco[]
 ) => {
   const userRolesToCheck = userRoles || formData.userRoles;
-  return !userRolesToCheck.some(
+  return !(userRolesToCheck as UserRoleDisco[]).some(
     (role) =>
       role.type === 'organisation' &&
       role.organisationId === formData.id &&

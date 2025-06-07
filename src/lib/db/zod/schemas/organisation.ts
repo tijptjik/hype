@@ -99,5 +99,6 @@ export const OrganisationUpdateAPI = OrganisationUpdate.extend({
 /* -------- */
 
 export const OrganisationRaw = OrganisationBase.extend({
-  i18n: z.array(OrganisationI18nBase)
+  i18n: z.array(OrganisationI18nBase),
+  userRoles: z.array(OrganisationRoleBase)
 });
