@@ -48,25 +48,25 @@ export const TaskImageUpdate = createUpdateSchema(taskImage);
 
 export const TaskBaseRaw = TaskBase.extend({
   organisation: OrganisationBase.extend({
-    i18n: z.array(OrganisationI18nBase)
+    i18n: z.array(OrganisationI18nBase).optional().nullable()
   }),
   project: ProjectBase.extend({
-    i18n: z.array(ProjectI18nBase)
+    i18n: z.array(ProjectI18nBase).optional().nullable()
   }),
   feature: FeatureBase.extend({
-    i18n: z.array(FeatureI18nBase),
+    i18n: z.array(FeatureI18nBase).optional().nullable(),
     properties: z.array(FeaturePropertyAPI.extend({
       property: PropertyBase.extend({
-        i18n: z.array(PropertyI18nBase)
+        i18n: z.array(PropertyI18nBase).optional().nullable()
       }),
       propertyValue: PropertyValueBase.extend({
-        i18n: z.array(PropertyValueI18nBase)
+        i18n: z.array(PropertyValueI18nBase).optional().nullable()
       }).optional().nullable()
-    }))
+    })).optional().nullable()
   }),
   images: z.array(TaskImageBase.extend({
-    image: ImageBase
-  })).optional(),
+    image: ImageBase.optional().nullable()
+  })).optional().nullable(),
   contributor: UserBasic.optional().nullable(),
   reviewer: UserBasic.optional().nullable()
 });
@@ -107,7 +107,7 @@ export const TaskAPI = TaskBase.extend({
     }))
   }),
   images: z.array(TaskImageBase.extend({
-    image: ImageBase
+    image: ImageBase.optional().nullable()
   })).optional(),
   contributor: UserBasic.optional().nullable(),
   reviewer: UserBasic.optional().nullable()

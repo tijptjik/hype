@@ -167,8 +167,7 @@ export const getTaskQueryContext = (
     // Tasks should only be accessible from admin interface
     conditions.push(sql`false`); // Block all public access
   } else if (!isSuperAdmin(session)) {
-    // ADMIN : List tasks where the user has a role in the task's associated project
-    // Note: Tasks are linked to projects through feature → layer → project hierarchy
+    // ADMIN : List tasks where the user has a role in the task's project
     const projectIds = getProjectIdforRoles(userRoles);
     if (projectIds.length > 0) {
       conditions.push(inArray(task.projectId, projectIds as Id[]));
@@ -208,7 +207,7 @@ export const getTaskEntityQueryContext = (
   if (!isAdminRequest(request)) {
     conditions.push(sql`false`); // Block all public access
   } else if (!isSuperAdmin(session)) {
-    // ADMIN : Access tasks where user has project role through feature hierarchy
+    // ADMIN : Access tasks where user has project role (direct relationship)
     const projectIds = getProjectIdforRoles(userRoles);
     if (projectIds.length > 0) {
       conditions.push(inArray(task.projectId, projectIds as Id[]));
