@@ -152,29 +152,27 @@ export const searchOrganisations = async (
       for (const column of i18nColumns) {
         if (column === 'name') {
           i18nSearchConditions.push(
-            like(sql`lower(${organisationI18n.name})`, `%${search.toLowerCase()}%`)
+            sql`lower("organisationI18n"."name") like ${`%${search.toLowerCase()}%`}`
           );
         } else if (column === 'description') {
           // Handle nullable description field
           i18nSearchConditions.push(
-            and(
-              sql`${organisationI18n.description} IS NOT NULL`,
-              like(
-                sql`lower(${organisationI18n.description})`,
-                `%${search.toLowerCase()}%`
-              )
-            )!
+            sql`("organisationI18n"."description" IS NOT NULL AND lower("organisationI18n"."description") like ${`%${search.toLowerCase()}%`})`
           );
         }
       }
 
       if (i18nSearchConditions.length > 0) {
         // Add condition that checks if organisation has any matching i18n records
+        const combinedConditions = i18nSearchConditions.length === 1 
+          ? i18nSearchConditions[0]
+          : sql`(${sql.join(i18nSearchConditions, sql` OR `)})`;
+        
         searchConditions.push(
           sql`EXISTS (
-            SELECT 1 FROM ${organisationI18n} 
-            WHERE ${organisationI18n.organisationId} = ${organisation.id} 
-            AND (${or(...i18nSearchConditions)})
+            SELECT 1 FROM "organisationI18n" 
+            WHERE "organisationI18n"."organisationId" = ${organisation.id} 
+            AND ${combinedConditions}
           )`
         );
       }
