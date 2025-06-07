@@ -77,13 +77,13 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
           organisationWithRelations,
           conditions,
           searchParam,
-          locals.hub
+          { ...locals.hub, isSuperAdmin: session.user.superAdmin || false }
         )
       : await listOrganisations(
           db,
           organisationWithRelations,
           conditions,
-          locals.hub
+          { ...locals.hub, isSuperAdmin: session.user.superAdmin || false }
         );
 
     // RESPONSE : Build the response shape

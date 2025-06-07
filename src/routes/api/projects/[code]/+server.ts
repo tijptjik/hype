@@ -88,7 +88,7 @@ export const GET: RequestHandler = async ({
       db,
       projectEntityWithRelations,
       conditions,
-      locals.hub
+      { ...locals.hub, isSuperAdmin: session.user.superAdmin || false }
     );
 
     if (!result) {
@@ -184,7 +184,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
 
     // Get the existing project to verify access
     const conditions = [eq(project.code, params.code as string)];
-    const existing = (await getProject(db, {}, conditions, locals.hub)) as ProjectDB;
+    const existing = (await getProject(db, {}, conditions, { ...locals.hub, isSuperAdmin: session.user.superAdmin || false })) as ProjectDB;
 
     if (!existing) return error(404, 'Project not found');
 

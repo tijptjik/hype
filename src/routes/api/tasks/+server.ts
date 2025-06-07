@@ -80,7 +80,7 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
       db,
       taskCollectionWithRelations,
       conditions,
-      locals.hub
+      { ...locals.hub, isSuperAdmin: session.user.superAdmin || false }
     )) as TaskDBRaw[];
 
         // RESPONSE : Build the response shape

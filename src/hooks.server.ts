@@ -64,13 +64,32 @@ const handle_cors = (async ({ event, resolve }) => {
 const handle_hub: Handle = async ({ event, resolve }) => {
   // Get host from headers
   const host = event.request.headers.get('host');
-  
+
   // Parse hub info from domain without DB lookup
   const { getHubFromDomain } = await import('$lib/api/services/hub');
-  
+
   // Store hub info in locals for use throughout the app
   event.locals.hub = getHubFromDomain(host);
-  
+
+  return resolve(event);
+};
+
+// ═══════════════════════
+// HUB ENRICHMENT HOOK
+// ═══════════════════════
+/**
+ * This hook enriches the hub info with session data after auth runs.
+ * It adds the superAdmin status to the hub options.
+ */
+const handle_hub_enrichment: Handle = async ({ event, resolve }) => {
+  // Get session from locals (set by auth hook)
+  const session = await event.locals.auth?.();
+
+  // Enrich hub options with superAdmin status
+  if (event.locals.hub) {
+    event.locals.hub.isSuperAdmin = session?.user?.superAdmin || false;
+  }
+
   return resolve(event);
 };
 
@@ -107,11 +126,12 @@ if (localWranglerEnv) {
     // handle_security,
     handle_hub,
     inject_auth,
+    handle_hub_enrichment,
     translation
   );
-} else {
-  // handle = sequence(handle_cors, handle_security, inject_auth, translation);
-  handle = sequence(handle_hub, inject_auth, translation);
-}
+  } else {
+    // handle = sequence(handle_cors, handle_security, inject_auth, translation);
+    handle = sequence(handle_hub, inject_auth, handle_hub_enrichment, translation);
+  }
 
 export { handle };

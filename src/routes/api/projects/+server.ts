@@ -76,7 +76,7 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
       db,
       projectCollectionWithRelations,
       conditions,
-      locals.hub
+      { ...locals.hub, isSuperAdmin: session.user.superAdmin || false }
     );
 
     // RESPONSE : Build the response shape
