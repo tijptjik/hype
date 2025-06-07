@@ -7,7 +7,13 @@ import { paraglideMiddleware } from '$lib/paraglide/server';
 let handle: Handle;
 const localWranglerEnv = import.meta.env.VITE_WRANGLER_ENV === 'local';
 
-// creating a handle to use the paraglide middleware
+// ═══════════════════════
+// TRANSLATION HOOK
+// ═══════════════════════
+/**
+ * This hook is used to add the paraglide middleware to the request.
+ * It is used to translate the request to the correct locale.
+ */
 const translation: Handle = ({ event, resolve }) =>
   paraglideMiddleware(event.request, ({ request: localizedRequest, locale }) => {
     event.request = localizedRequest;
@@ -18,6 +24,13 @@ const translation: Handle = ({ event, resolve }) =>
     });
   });
 
+// ═══════════════════════
+// CORS HOOK
+// ═══════════════════════
+/**
+ * This hook is used to add CORS headers to the response.
+ * It is used to allow requests from other domains.
+ */
 const handle_cors = (async ({ event, resolve }) => {
   // Only add CORS headers in development mode
   if (import.meta.env.DEV || localWranglerEnv) {
@@ -41,6 +54,32 @@ const handle_cors = (async ({ event, resolve }) => {
 //   return response;
 // }) satisfies Handle;
 
+// ═══════════════════════
+// HUB HOOK
+// ═══════════════════════
+/**
+ * This hook is used to set the hub info in the locals object.
+ * It is used to filter the data in the database.
+ */
+const handle_hub: Handle = async ({ event, resolve }) => {
+  // Get host from headers
+  const host = event.request.headers.get('host');
+  
+  // Parse hub info from domain without DB lookup
+  const { getHubFromDomain } = await import('$lib/api/services/hub');
+  
+  // Store hub info in locals for use throughout the app
+  event.locals.hub = getHubFromDomain(host);
+  
+  return resolve(event);
+};
+
+// ═══════════════════════
+// MAIN HOOK
+// ═══════════════════════
+/**
+ * This is the main hook that is used to sequence the other hooks.
+ */
 if (localWranglerEnv) {
   // This is an ugly hack to avoid Vite loading in the wrangler dep regardless
   // of the conditional import, and throwing errors when building for CF workers
@@ -66,12 +105,13 @@ if (localWranglerEnv) {
     mock_cloudflare,
     handle_cors,
     // handle_security,
+    handle_hub,
     inject_auth,
     translation
   );
 } else {
   // handle = sequence(handle_cors, handle_security, inject_auth, translation);
-  handle = sequence(inject_auth, translation);
+  handle = sequence(handle_hub, inject_auth, translation);
 }
 
 export { handle };
