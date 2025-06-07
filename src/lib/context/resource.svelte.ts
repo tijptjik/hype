@@ -1,13 +1,17 @@
+// I18N
+import { getLocale } from '$lib/i18n';
 // LIB
 import { ADMIN_PATH } from '$lib/index';
+import { navigateOnAdmin } from '$lib/navigation';
 // CONTEXT
 import { getContext, setContext } from 'svelte';
 import { QueryClient } from '@tanstack/svelte-query';
 // ENUMS
 import {
   HierarchicalResource,
-  HierarchicalResourcePath,
-  HierarchicalResourceRefKey
+  ResourcePath,
+  HierarchicalResourceRefKey,
+  FirstClassResource
 } from '$lib/enums';
 // TYPES
 import type {
@@ -24,20 +28,18 @@ import type {
   AdminFilterState,
   Resource,
   ResourceTypeWithChildren,
+  Hub,
+  UserRoleDisco
 } from '../types';
-import type { UserRoleDisco } from '$lib/types';
-import type { Page } from '@sveltejs/kit';
-import { navigateOnAdmin } from '$lib/navigation';
-import { getLocale } from '$lib/i18n';
-const nullOrEquals = (a: any, b: any) => {
-  return a == null || a === b;
-};
+import type { Session } from '@auth/sveltekit';
 
 export class ResourceState {
   // Tanstack Query Client instance
   queryClient: QueryClient;
   // User Roles
   userRoles: UserRoleDisco[];
+  // Session for superAdmin check
+  session: Session | null;
   // Whether the queryClient has been initialised
   isInitialised: boolean = $state(false);
 
@@ -54,14 +56,16 @@ export class ResourceState {
       project: [],
       layer: [],
       feature: [],
-      task: []
+      task: [],
+      hub: []
     },
     filters: {
       organisation: { text: '', properties: {}, isPublished: null, isArchived: false },
       project: { text: '', properties: {}, isPublished: null, isArchived: false },
       layer: { text: '', properties: {}, isPublished: null, isArchived: false },
       feature: { text: '', properties: {}, isPublished: null, isArchived: false },
-      task: { text: '', properties: {}, isReviewed: false }
+      task: { text: '', properties: {}, isReviewed: false },
+      hub: { text: '', properties: {}, isArchived: false }
     }
   });
 
@@ -82,7 +86,7 @@ export class ResourceState {
 
   activeEntityHref = $derived(
     this.activeResource && this.activeEntity
-      ? `${ADMIN_PATH}/${HierarchicalResourcePath[this.activeResource]}/${this.activeEntity}`
+      ? `${ADMIN_PATH}/${ResourcePath[this.activeResource]}/${this.activeEntity}`
       : null
   );
 
@@ -109,10 +113,21 @@ export class ResourceState {
     this.state.prisms.project,
     this.state.filters[HierarchicalResource.task].isReviewed
   ]);
+  hubsQueryKey = ['hub'];
+
+  // METHOD : SuperAdmin check
+  private isSuperAdmin(): boolean {
+    return this.session?.user?.superAdmin === true;
+  }
 
   // Constructor
-  constructor(queryClient: QueryClient, userRoles: UserRoleDisco[]) {
+  constructor(
+    queryClient: QueryClient,
+    session: Session | null = null,
+    userRoles: UserRoleDisco[]
+  ) {
     this.queryClient = queryClient;
+    this.session = session;
     this.userRoles = userRoles;
     this.initializeQueries(queryClient);
   }
@@ -141,7 +156,7 @@ export class ResourceState {
 
   // Helper method to build API URLs with filters
   private buildApiUrl(resource: HierarchicalResource, includeFilters = true): string {
-    const path = HierarchicalResourcePath[resource];
+    const path = ResourcePath[resource];
     const params = new URLSearchParams();
 
     // Add isArchived / isReviewed filter by default
@@ -212,6 +227,12 @@ export class ResourceState {
     return this.fetchOrThrow<Task[]>(url);
   };
 
+  hubsQueryFn = async () => {
+    if (!this.isSuperAdmin()) return [];
+    const url = this.buildApiUrl('hub' as any);
+    return this.fetchOrThrow<Hub[]>(url);
+  };
+
   // Initialize Queries
   private async initializeQueries(queryClient: QueryClient) {
     // Organizations query
@@ -244,6 +265,14 @@ export class ResourceState {
       queryFn: this.tasksQueryFn
     });
 
+    // Hubs query (SuperAdmin only)
+    if (this.isSuperAdmin()) {
+      this.state.resources.hub = await queryClient.fetchQuery({
+        queryKey: this.hubsQueryKey,
+        queryFn: this.hubsQueryFn
+      });
+    }
+
     this.isInitialised = true;
   }
 
@@ -268,7 +297,7 @@ export class ResourceState {
     }
   };
 
-  refreshResources = async (resource: HierarchicalResource) => {
+  refreshResources = async (resource: HierarchicalResource | 'hub') => {
     if (resource === HierarchicalResource.organisation) {
       this.refreshOrganisation();
     } else if (resource === HierarchicalResource.project) {
@@ -279,6 +308,8 @@ export class ResourceState {
       this.refreshFeatures();
     } else if (resource === HierarchicalResource.task) {
       this.refreshTasks();
+    } else if (resource === 'hub') {
+      this.refreshHubs();
     }
   };
 
@@ -339,6 +370,14 @@ export class ResourceState {
     });
   }
 
+  async refreshHubs() {
+    if (!this.isSuperAdmin()) return;
+    this.state.resources.hub = await this.queryClient.fetchQuery({
+      queryKey: this.hubsQueryKey,
+      queryFn: this.hubsQueryFn
+    });
+  }
+
   async syncProjectPrisms() {
     this.state.prisms.project = this.state.prisms.project.filter((project) => {
       return this.state.resources.project.some((p) => p.id === project);
@@ -363,76 +402,86 @@ export class ResourceState {
   }
 
   // TYPE GUARDS
-  private isOrganisation = (entity: any): entity is Organisation => 
+  private isOrganisation = (entity: any): entity is Organisation =>
     'code' in entity && 'url' in entity;
-  
-  private isProject = (entity: any): entity is Project => 
+
+  private isProject = (entity: any): entity is Project =>
     'organisationId' in entity && 'code' in entity;
-  
-  private isLayer = (entity: any): entity is Layer => 
+
+  private isLayer = (entity: any): entity is Layer =>
     'projectId' in entity && 'metadata' in entity;
-  
-  private isFeature = (entity: any): entity is Feature => 
+
+  private isFeature = (entity: any): entity is Feature =>
     'layerId' in entity && 'geometry' in entity;
+
+  private isHub = (entity: any): entity is Hub =>
+    'organisation' in entity && 'domain' in entity;
 
   // FILTERS
 
-  getFilteredResource = <T extends Organisation | Project | Layer | Feature>(
-    resource: HierarchicalResource,
-    filters = { text: true, state: true, access: true }
+  getFilteredResource = <T extends Organisation | Project | Layer | Feature | Hub>(
+    resource: FirstClassResource,
+    // filters = { text: true, state: true, access: true }
+    filters = { text: true, state: true }
   ): T[] => {
     let filterKeys = ['isPublished', 'isArchived'];
     let query = this.state.filters[resource as keyof AdminFilterStates].text || '';
     // FULL SET
     let result = this.state.resources[resource] as T[];
-    // Log current filter state
-    const filterState = this.state.filters[resource as keyof AdminFilterStates];
     // STATE FILTERS
     if (filters.state) {
       result = result.filter((entity) =>
         filterKeys.every((key) => this.booleanFilter(resource, entity, key))
       );
-      // Log which specific state filters are active
-      filterKeys.forEach(key => {
-        const filterValue = filterState[key as keyof AdminFilterState];
-      });
     }
     // TEXT FILTERS
-    if (filters.text) {
-      result = result.filter((entity: T) =>
-        this.textFilter(resource, entity, query)
-      );
+    if (filters.text && resource !== FirstClassResource.hub) {
+      result = result.filter((entity: T) => {
+        if (!this.isHub(entity)) {
+          return this.textFilter(
+            resource as Omit<FirstClassResource, 'hub'> as HierarchicalResource,
+            entity,
+            query
+          );
+        }
+      });
     }
     // ACCESS FILTERS
-    if (filters.access) {
-      const accessResult = this.accessFilter(resource, result) as T[];
-      result = accessResult || result;
-    }
+    // if (filters.access) {
+    // const accessResult = this.accessFilter(resource, result) as T[];
+    // result = accessResult || result;
+    // }
     return result;
   };
 
-  accessFilter = <T extends Organisation | Project | Layer | Feature>(resource: HierarchicalResource, result: T[]) => {
-    if (resource === HierarchicalResource.organisation) {
-      return result.filter((entity) => 
-        this.isOrganisation(entity) && this.hasOrganisationRole(entity.id as Id)
-      );
-    } else if (resource === HierarchicalResource.project) {
-      return result.filter((entity) => 
-        this.isProject(entity) && this.hasProjectRole(entity.id as Id)
-      );
-    } else if (resource === HierarchicalResource.layer) {
-      return result.filter((entity) => 
-        this.isLayer(entity) && this.hasProjectRole(entity.projectId as Id)
-      );
-    } else if (resource === HierarchicalResource.feature) {
-      return result.filter((entity) => {
-        if (!this.isFeature(entity)) return false;
-        const layer = this.getLayer(entity);
-        return layer ? this.hasProjectRole(layer.projectId as Id) : false;
-      });
-    }
-    return result;
-  };
+  // TODO REMOVE this once it's confirmed that it's not necessary.
+  // Access is enforced on the server, so this would be redundant.
+  // accessFilter = <T extends Organisation | Project | Layer | Feature>(
+  //   resource: HierarchicalResource,
+  //   result: T[]
+  // ) => {
+  //   if (resource === HierarchicalResource.organisation) {
+  //     return result.filter(
+  //       (entity) =>
+  //         this.isOrganisation(entity) && this.hasOrganisationRole(entity.id as Id)
+  //     );
+  //   } else if (resource === HierarchicalResource.project) {
+  //     return result.filter(
+  //       (entity) => this.isProject(entity) && this.hasProjectRole(entity.id as Id)
+  //     );
+  //   } else if (resource === HierarchicalResource.layer) {
+  //     return result.filter(
+  //       (entity) => this.isLayer(entity) && this.hasProjectRole(entity.projectId as Id)
+  //     );
+  //   } else if (resource === HierarchicalResource.feature) {
+  //     return result.filter((entity) => {
+  //       if (!this.isFeature(entity)) return false;
+  //       const layer = this.getLayer(entity);
+  //       return layer ? this.hasProjectRole(layer.projectId as Id) : false;
+  //     });
+  //   }
+  //   return result;
+  // };
 
   hasOrganisationRole = (organisationId: Id) => {
     return this.userRoles.some(
@@ -453,34 +502,69 @@ export class ResourceState {
     let query = this.state.filters.task.text || '';
     // FULL SET
     let result: Task[] = this.state.resources.task;
-    
+
     // STATE FILTERS - isReviewed filter
     if (this.state.filters.task.isReviewed !== null) {
       result = result.filter((entity) =>
-        this.booleanFilter(HierarchicalResource.task, entity, 'isReviewed')
+        this.booleanFilter(FirstClassResource.task, entity, 'isReviewed')
       );
     }
-    
+
     // TEXT FILTER
     if (query) {
       result = result.filter((entity) => {
         // Get related entities using IDs
-        const feature = this.state.resources.feature.find(f => f.id === entity.featureId);
-        const project = this.state.resources.project.find(p => p.id === entity.projectId);  
-        const organisation = this.state.resources.organisation.find(o => o.id === entity.organisationId);
-        
-        return (feature && this.textFilter(HierarchicalResource.feature, feature, query)) ||
-               (project && this.textFilter(HierarchicalResource.project, project, query)) ||
-               (organisation && this.textFilter(HierarchicalResource.organisation, organisation, query)) ||
-               entity.message?.toLowerCase().includes(query.toLowerCase());
+        const feature = this.state.resources.feature.find(
+          (f) => f.id === entity.featureId
+        );
+        const project = this.state.resources.project.find(
+          (p) => p.id === entity.projectId
+        );
+        const organisation = this.state.resources.organisation.find(
+          (o) => o.id === entity.organisationId
+        );
+
+        return (
+          (feature && this.textFilter(HierarchicalResource.feature, feature, query)) ||
+          (project && this.textFilter(HierarchicalResource.project, project, query)) ||
+          (organisation &&
+            this.textFilter(HierarchicalResource.organisation, organisation, query)) ||
+          entity.message?.toLowerCase().includes(query.toLowerCase())
+        );
       });
     }
-    
+
+    return result;
+  };
+
+  getFilteredHub = () => {
+    if (!this.isSuperAdmin()) return [];
+    let query = this.state.filters.hub.text || '';
+    // FULL SET
+    let result: Hub[] = this.state.resources.hub;
+
+    // STATE FILTERS
+    result = result.filter((entity) =>
+      ['isArchived'].every((key) => this.booleanFilter('hub' as any, entity, key))
+    );
+
+    // TEXT FILTER - Simple text search on code and domain
+    if (query) {
+      result = result.filter(
+        (entity) =>
+          entity.code?.toLowerCase().includes(query.toLowerCase()) ||
+          entity.domain?.toLowerCase().includes(query.toLowerCase()) ||
+          entity.organisation?.i18n?.[getLocale()]?.name
+            ?.toLowerCase()
+            .includes(query.toLowerCase())
+      );
+    }
+
     return result;
   };
 
   booleanFilter = (
-    resource: HierarchicalResource,
+    resource: FirstClassResource,
     entity: Resource,
     property: string
   ) => {
@@ -489,8 +573,13 @@ export class ResourceState {
     return filterValue === null || filterValue === entity[property as keyof Resource];
   };
 
-  textFilter = <T extends Organisation | Project | Layer | Feature>(resource: HierarchicalResource, entity: T, query: string) => {
-    const textObject = entity.i18n[getLocale()];
+  textFilter = <T extends Organisation | Project | Layer | Feature>(
+    resource: HierarchicalResource,
+    entity: T,
+    query: string
+  ) => {
+    const textObject = entity.i18n?.[getLocale()];
+    if (!textObject) return false;
     return (
       query === '' ||
       textObject.name?.toLowerCase().includes(query.toLowerCase()) ||
@@ -506,27 +595,33 @@ export class ResourceState {
     // Explicitly access reactive dependencies so Svelte tracks them
     this.state.resources.organisation;
     this.state.filters.organisation;
-    return this.getFilteredResource<Organisation>(HierarchicalResource.organisation);
+    return this.getFilteredResource<Organisation>(FirstClassResource.organisation);
   });
   filteredProjects = $derived.by(() => {
     this.state.resources.project;
     this.state.filters.project;
-    return this.getFilteredResource<Project>(HierarchicalResource.project);
+    return this.getFilteredResource<Project>(FirstClassResource.project);
   });
   filteredLayers = $derived.by(() => {
     this.state.resources.layer;
     this.state.filters.layer;
-    return this.getFilteredResource<Layer>(HierarchicalResource.layer);
+    return this.getFilteredResource<Layer>(FirstClassResource.layer);
   }) as Layer[];
   filteredFeatures = $derived.by(() => {
     this.state.resources.feature;
     this.state.filters.feature;
-    return this.getFilteredResource<Feature>(HierarchicalResource.feature);
+    return this.getFilteredResource<Feature>(FirstClassResource.feature);
   });
   filteredTasks = $derived.by(() => {
     this.state.resources.task;
     this.state.filters.task;
     return this.getFilteredTask();
+  });
+  filteredHubs = $derived.by(() => {
+    if (!this.isSuperAdmin()) return [];
+    this.state.resources.hub;
+    this.state.filters.hub;
+    return this.getFilteredHub();
   });
 
   toggleFilter = (
@@ -556,7 +651,7 @@ export class ResourceState {
   getResourcePath = (resource?: HierarchicalResource) => {
     const resourceKey = resource ?? this.state.active.resource;
     if (!resourceKey) return null;
-    return HierarchicalResourcePath[resourceKey];
+    return ResourcePath[resourceKey];
   };
 
   getEntityRef = (resource: HierarchicalResource, id: Id) => {
@@ -709,11 +804,12 @@ export const HIERARCHICAL_RESOURCE_STATE_KEY = Symbol('hierarchicalResourceState
 
 export const setHierarchicalResourceState = (
   queryClient: QueryClient,
+  session: Session | null = null,
   userRoles: UserRoleDisco[]
 ) =>
   setContext(
     HIERARCHICAL_RESOURCE_STATE_KEY,
-    new ResourceState(queryClient, userRoles)
+    new ResourceState(queryClient, session, userRoles)
   );
 
 export const getHierarchicalResourceState = (): ReturnType<

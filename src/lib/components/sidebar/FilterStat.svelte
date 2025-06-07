@@ -34,14 +34,12 @@ let getCount = (statistic: CollectionStatistic) => {
   } else if (statistic === CollectionStatistic.access) {
     return resourceState.getFilteredResource(resourceType, {
       text: false,
-      state: false,
-      access: true
+      state: false
     }).length;
   } else if (statistic === CollectionStatistic.filtered) {
     return resourceState.getFilteredResource(resourceType, {
       text: true,
-      state: true,
-      access: true
+      state: true
     }).length;
   } else if (statistic === CollectionStatistic.selected && resourceType !== 'feature') {
     return resourceState.state.prisms[resourceType as ResourceTypeWithChildren].length;

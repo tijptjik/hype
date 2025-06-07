@@ -16,7 +16,8 @@ import {
   ImageContextResource,
   ImageContextResourceExtended,
   fieldDiscriminators,
-  supportedLocales
+  supportedLocales,
+  FirstClassResource
 } from './enums';
 // ZOD SCHEMAS
 import {
@@ -330,9 +331,7 @@ export type AdminFilterState = {
   isArchived?: boolean | null;
   isReviewed?: boolean | null;
 };
-export type AdminFilterStates = Record<HierarchicalResource, AdminFilterState> & {
-  hub: AdminFilterState;
-};
+export type AdminFilterStates = Record<FirstClassResource, AdminFilterState>
 
 export type ActiveCollection = {
   id: string;
@@ -545,9 +544,10 @@ export type OrganisationField = keyof Organisation | keyof OrganisationI18nDB;
 export type ProjectField = keyof Project | keyof ProjectI18nDB;
 export type LayerField = keyof Layer | keyof LayerI18nDB;
 export type FeatureField = keyof Feature | keyof FeatureI18nDB;
-export type Field = OrganisationField | ProjectField | LayerField | FeatureField;
-export type Resource = Organisation | Project | Layer | Feature | Task;
-export type ResourceDB = OrganisationDB | ProjectDB | LayerDB | FeatureDB | TaskDB;
+export type HubField = keyof Hub;
+export type Field = OrganisationField | ProjectField | LayerField | FeatureField | HubField;
+export type Resource = Organisation | Project | Layer | Feature | Task | Hub;
+export type ResourceDB = OrganisationDB | ProjectDB | LayerDB | FeatureDB | TaskDB | HubDB;
 
 // RELATED TYPES
 export type FormI18n<T> = Record<Locale, T>;
@@ -702,7 +702,7 @@ export type ProjectI18nNew = z.infer<typeof ProjectI18nInsert>;
 // Same as ProjectI18nNew, but all fields are optional
 export type ProjectI18nPartial = z.infer<typeof ProjectI18nUpdate>;
 
-export type ProjectI18n = z.infer<typeof ProjectI18nAPI>;
+export type ProjectI18n = z.infer<typeof ProjectI18nBase>;
 
 // projectRole, but with the projectId - for use in DB seeding & selects
 export type ProjectRole = z.infer<typeof ProjectRoleAPI>;

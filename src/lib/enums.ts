@@ -51,6 +51,15 @@ export enum ResourcePath {
   hub = 'hubs'
 }
 
+export enum FirstClassResource {
+  organisation = 'organisation',
+  project = 'project',
+  layer = 'layer',
+  feature = 'feature',
+  task = 'task',
+  hub = 'hub'
+}
+
 export enum HierarchicalResource {
   organisation = 'organisation',
   project = 'project',
