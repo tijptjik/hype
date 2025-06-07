@@ -434,5 +434,6 @@
   "quiet_safe_otter_strive": "No organisations assigned to this hub",
   "awake_jumpy_niklas_coax": "Click \"Add\" to search and add organisations",
   "acidic_maroon_buzzard_swim": "Show in Core",
-  "long_fit_vole_flow": "Hub Exclusive"
+  "long_fit_vole_flow": "Hub Exclusive",
+  "hub_organisations_empty_warning": "If you remove all organisations for a hub, the map will be empty"
 }

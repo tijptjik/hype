@@ -449,5 +449,6 @@
   "bland_sad_goat_gasp": "未提供任何属性",
   "loose_grassy_snake_hug": "地点",
   "witty_tangy_vole_dash": "可翻译",
-  "clean_light_ray_tap": "特性"
+  "clean_light_ray_tap": "特性",
+  "hub_organisations_empty_warning": "如果移除 hub 的所有组织，地图将为空"
 }
