@@ -13,11 +13,17 @@ import type { Database, HubOpts, HubDBRaw, HubDB, HubDBPartial, Code } from '$li
  * Core filtering logic for organisations
  * - Core hub: shows orgs with no hubId OR orgs that are not hub-exclusive
  * - Specific hub: shows orgs assigned to this hub (via code OR domain match)
+ * - SuperAdmins: bypass filtering entirely (return undefined)
  */
 export function getOrganisationHubFilter(
   db: Database,
-  opts: { hubCode?: string; hubDomain?: string; isCore: boolean }
+  opts: { hubCode?: string; hubDomain?: string; isCore: boolean; isSuperAdmin?: boolean }
 ): SQL<unknown> | undefined {
+  // SuperAdmins bypass all hub filtering
+  if (opts.isSuperAdmin) {
+    return undefined;
+  }
+
   if (opts.isCore) {
     // Core shows: no hub assignment OR non-exclusive hub assignments
     return and(
@@ -55,8 +61,12 @@ export function getOrganisationHubFilter(
  */
 export function getProjectHubFilter(
   db: Database,
-  opts: { hubCode?: string; hubDomain?: string; isCore: boolean }
+  opts: { hubCode?: string; hubDomain?: string; isCore: boolean; isSuperAdmin?: boolean }
 ): SQL<unknown> | undefined {
+  // SuperAdmins bypass all hub filtering
+  if (opts.isSuperAdmin) {
+    return undefined;
+  }
   if (opts.isCore) {
     // Core: project's org has no hub OR org is not hub-exclusive
     return exists(
@@ -104,6 +114,10 @@ export function getLayerHubFilter(
   db: Database,
   opts: HubOpts
 ): SQL<unknown> | undefined {
+  // SuperAdmins bypass all hub filtering
+  if (opts.isSuperAdmin) {
+    return undefined;
+  }
   if (opts.isCore) {
     // Core: layer's project's org has no hub OR org is not hub-exclusive
     return exists(
@@ -151,8 +165,12 @@ export function getLayerHubFilter(
  */
 export function getFeatureHubFilter(
   db: Database,
-  opts: { hubCode?: string; hubDomain?: string; isCore: boolean }
+  opts: { hubCode?: string; hubDomain?: string; isCore: boolean; isSuperAdmin?: boolean }
 ): SQL<unknown> | undefined {
+  // SuperAdmins bypass all hub filtering
+  if (opts.isSuperAdmin) {
+    return undefined;
+  }
   if (opts.isCore) {
     // Core: feature's layer's project's org has no hub OR org is not hub-exclusive
     return exists(
@@ -202,8 +220,12 @@ export function getFeatureHubFilter(
  */
 export function getTaskHubFilter(
   db: Database,
-  opts: { hubCode?: string; hubDomain?: string; isCore: boolean }
+  opts: { hubCode?: string; hubDomain?: string; isCore: boolean; isSuperAdmin?: boolean }
 ): SQL<unknown> | undefined {
+  // SuperAdmins bypass all hub filtering
+  if (opts.isSuperAdmin) {
+    return undefined;
+  }
   if (opts.isCore) {
     // Core: task's feature's layer's project's org has no hub OR org is not hub-exclusive
     return exists(
@@ -293,4 +315,100 @@ export const updateHub = async (
     .where(eq(hub.code, code))
     .returning();
   return updated;
+};
+
+// ═══════════════════════
+// HUB CODE UTILITIES
+// ═══════════════════════
+
+/**
+ * Get hub code for an organisation by organisation ID
+ */
+export const getHubCodeForOrganisation = async (
+  db: Database,
+  organisationId: string
+): Promise<string | null> => {
+  const result = await db
+    .select({ hubCode: hub.code })
+    .from(organisation)
+    .leftJoin(hub, eq(organisation.hubId, hub.id))
+    .where(eq(organisation.id, organisationId))
+    .limit(1);
+  
+  return result[0]?.hubCode || null;
+};
+
+/**
+ * Get hub code for a project through its organisation
+ */
+export const getHubCodeForProject = async (
+  db: Database,
+  projectId: string
+): Promise<string | null> => {
+  const result = await db
+    .select({ hubCode: hub.code })
+    .from(project)
+    .innerJoin(organisation, eq(project.organisationId, organisation.id))
+    .leftJoin(hub, eq(organisation.hubId, hub.id))
+    .where(eq(project.id, projectId))
+    .limit(1);
+  
+  return result[0]?.hubCode || null;
+};
+
+/**
+ * Get hub code for a layer through project → organisation
+ */
+export const getHubCodeForLayer = async (
+  db: Database,
+  layerId: string
+): Promise<string | null> => {
+  const result = await db
+    .select({ hubCode: hub.code })
+    .from(layer)
+    .innerJoin(project, eq(layer.projectId, project.id))
+    .innerJoin(organisation, eq(project.organisationId, organisation.id))
+    .leftJoin(hub, eq(organisation.hubId, hub.id))
+    .where(eq(layer.id, layerId))
+    .limit(1);
+  
+  return result[0]?.hubCode || null;
+};
+
+/**
+ * Get hub code for a feature through layer → project → organisation
+ */
+export const getHubCodeForFeature = async (
+  db: Database,
+  featureId: string
+): Promise<string | null> => {
+  const result = await db
+    .select({ hubCode: hub.code })
+    .from(feature)
+    .innerJoin(layer, eq(feature.layerId, layer.id))
+    .innerJoin(project, eq(layer.projectId, project.id))
+    .innerJoin(organisation, eq(project.organisationId, organisation.id))
+    .leftJoin(hub, eq(organisation.hubId, hub.id))
+    .where(eq(feature.id, featureId))
+    .limit(1);
+  
+  return result[0]?.hubCode || null;
+};
+
+/**
+ * Get hub code for a task through its organisation (direct relationship)
+ */
+export const getHubCodeForTask = async (
+  db: Database,
+  taskId: string
+): Promise<string | null> => {
+  const result = await db
+    .select({ hubCode: hub.code })
+    .from(task)
+    .innerJoin(organisation, eq(task.organisationId, organisation.id))
+    .leftJoin(hub, eq(organisation.hubId, hub.id))
+    .where(eq(task.id, taskId))
+    .limit(1);
+  
+  return result[0]?.hubCode || null;
 };
