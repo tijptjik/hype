@@ -314,6 +314,7 @@ export type AdminFilteredResources = {
   layer: Layer[];
   feature: Feature[];
   task: Task[];
+  hub: Hub[];
 };
 
 export type FilterState = {
@@ -328,7 +329,9 @@ export type AdminFilterState = {
   isArchived?: boolean | null;
   isReviewed?: boolean | null;
 };
-export type AdminFilterStates = Record<HierarchicalResource, AdminFilterState>;
+export type AdminFilterStates = Record<HierarchicalResource, AdminFilterState> & {
+  hub: AdminFilterState;
+};
 
 export type ActiveCollection = {
   id: string;
@@ -1642,13 +1645,13 @@ export type ALSSuggestedAddressItem = NonNullable<
 
 export type HubDB = z.infer<typeof HubBase>;
 export type HubDBBasic = z.infer<typeof HubBasic>;
-export type HubDBInsert = z.infer<typeof HubInsert>;
-export type HubDBUpdate = z.infer<typeof HubUpdate>;
+export type HubDBNew = z.infer<typeof HubInsert>;
+export type HubDBPartial = z.infer<typeof HubUpdate>;
 
 export type Hub = z.infer<typeof HubAPI>;
 export type HubCollection = z.infer<typeof HubCollectionAPI>;
-export type HubInsert = z.infer<typeof HubInsertAPI>;
-export type HubUpdate = z.infer<typeof HubUpdateAPI>;
+export type HubNew = z.infer<typeof HubInsertAPI>;
+export type HubPartial = z.infer<typeof HubUpdateAPI>;
 
 export type HubDBRaw = z.infer<typeof HubRaw>;
 

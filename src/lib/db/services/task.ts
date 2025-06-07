@@ -111,10 +111,10 @@ export const listTasks = async (
   conditions: SQL<unknown>[] = [],
   opts: HubOpts
 ): Promise<TaskDBRaw[]> => {
-  // Apply hub filtering if opts is provided
+  // Apply hub filtering - always needed as some resources are hub-exclusive
   const hubFilter = getTaskHubFilter(db, opts);
   if (hubFilter) {
-    conditions.push(hubFilter);
+    conditions = [...conditions, hubFilter];
   }
 
   return await db.query.task.findMany({
@@ -137,10 +137,10 @@ export const getTask = async (
   conditions: SQL<unknown>[] = [],
   opts: HubOpts
 ): Promise<TaskDBRaw | undefined> => {
-  // Apply hub filtering if opts is provided
+  // Apply hub filtering - always needed as some resources are hub-exclusive
   const hubFilter = getTaskHubFilter(db, opts);
   if (hubFilter) {
-    conditions.push(hubFilter);
+    conditions = [...conditions, hubFilter];
   }
 
   return await db.query.task.findFirst({
