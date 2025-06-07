@@ -19,6 +19,68 @@ let resourceMode = $derived(resourceState.isShowIndex);
 
 // STATE : DERIVED :: TITLE
 let title = $derived(resource ? navItems[resource].name : '');
+
+// ═══════════════════════
+// PERMISSION CHECKING
+// ═══════════════════════
+
+/**
+ * Check if the user can create new entities for the given resource type
+ * @param resource - The resource type to check permissions for
+ * @returns boolean indicating if new buttons should be shown
+ */
+const canCreateEntity = (resource: FirstClassResource): boolean => {
+  if (!resource || !resourceState.session) return false;
+
+  const { session, userRoles } = resourceState;
+  const isSuperAdmin = session.user?.superAdmin === true;
+
+  // SuperAdmin can create anything
+  if (isSuperAdmin) return true;
+
+  switch (resource) {
+    case 'organisation':
+      // Only superAdmin can create organisations
+      return false;
+
+    case 'project': {
+      // Only owners of organisation or superAdmin
+      return userRoles.some(
+        (role) => role.type === 'organisation' && role.role === 'owner'
+      );
+    }
+
+    case 'layer': {
+      // Only maintainers of projects or superAdmin
+      return userRoles.some(
+        (role) => role.type === 'project' && role.role === 'maintainer'
+      );
+    }
+
+    case 'feature': {
+      // Any role in the project or superAdmin
+      return userRoles.some(
+        (role) =>
+          role.type === 'project' &&
+          (role.role === 'maintainer' || role.role === 'member')
+      );
+    }
+
+    case 'task':
+      // Tasks cannot be created manually
+      return false;
+
+    case 'hub':
+      // Only superAdmin can create hubs
+      return false;
+
+    default:
+      return false;
+  }
+};
+
+// STATE : DERIVED :: SHOW NEW BUTTON
+let showNewButton = $derived(resource && canCreateEntity(resource));
 </script>
 
 {#if resource}
@@ -35,7 +97,7 @@ let title = $derived(resource ? navItems[resource].name : '');
       </div>
     </div>
     <div class="flex flex-none items-center space-x-5">
-      {#if resource !== 'task'}
+      {#if showNewButton}
         <NewEntityButton />
         <div class="divider divider-horizontal"></div>
       {/if}
