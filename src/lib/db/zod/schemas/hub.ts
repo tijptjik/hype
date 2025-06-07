@@ -48,7 +48,17 @@ export const HubAPI = HubCollectionAPI;
 
 export const HubInsertAPI = HubInsert;
 
-export const HubUpdateAPI = HubUpdate;
+export const HubUpdateAPI = HubUpdate.extend({
+  organisations: z.array(
+    createSelectSchema(organisation).extend({
+      i18n: getLocales(createSelectSchema(organisationI18n)),
+      image: createSelectSchema(image).nullish(),
+      hubId: z.string().nullish(),
+      isCoreInclusive: z.boolean().optional(),
+      isHubExclusive : z.boolean().optional()
+    })
+  ).optional()
+});
 
 /* ----------------- */
 // HUB RAW SCHEMAS

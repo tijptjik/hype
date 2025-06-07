@@ -16,7 +16,7 @@ import FilterInput from '$lib/components/menu/FilterInput.svelte';
 import {
   HierarchicalResource,
   HierarchicalResourceParent,
-  HierarchicalResourceRefKey
+  ResourceRefKey
 } from '$lib/enums';
 // TYPES
 import type { Resource, ResourceTypeWithChildren } from '$lib/types';
@@ -60,7 +60,7 @@ const handleConfirm = () => {
     undefined,
     {
       parentId: selectedItem.id,
-      parentRef: selectedItem[HierarchicalResourceRefKey[parentResourceType]]
+      parentRef: selectedItem[ResourceRefKey[parentResourceType]]
     }
   );
   close();

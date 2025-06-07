@@ -22,7 +22,7 @@ import SpecificationSection from '$lib/components/forms/sections/Specification.s
 import ImageSection from '$lib/components/forms/sections/Image.svelte';
 import UserSection from '$lib/components/forms/sections/User.svelte';
 // ENUMS
-import { HierarchicalResource, ImageContextResource } from '$lib/enums';
+import { FirstClassResource, HierarchicalResource, ImageContextResource } from '$lib/enums';
 // TYPES
 import type { FormPageProps, FormField, Organisation, Image, OrganisationNew } from '$lib/types';
 
@@ -92,7 +92,7 @@ const FIELDS: Record<string, FormField> = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Organisation> = $props();
-resourceState.setEntity(pageProps.data.entity, RESOURCE);
+resourceState.setEntity(pageProps.data.entity, FirstClassResource.organisation);
 resourceState.setFacet('core');
 
 let form = setForm(

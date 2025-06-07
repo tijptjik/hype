@@ -254,18 +254,20 @@ export async function getResponseOrError(request: Response) {
   return request.json();
 }
 
-const refToResourceType = (ref: string): ResourceType => {
+const refToResourceType = (ref: string): FirstClassResource => {
   return {
     organisations: 'organisation',
     projects: 'project',
     layers: 'layer',
-    features: 'feature'
-  }[ref] as ResourceType;
+    features: 'feature',
+    tasks: 'task',
+    hubs: 'hub'
+  }[ref] as FirstClassResource;
 };
 
 // Resource configuration mapping
 const resourceConfig: Record<
-  HierarchicalResource,
+  HierarchicalResource | 'hub',
   {
     parentResourceType?: HierarchicalResource;
     parentRefKey?: string;
@@ -292,7 +294,8 @@ const resourceConfig: Record<
     parentResourceType: HierarchicalResource.feature,
     parentRefKey: 'id',
     keyToParent: 'featureId'
-  }
+  },
+  hub: {}
 };
 
 type LoadFormDataOptions<T extends Record<string, unknown>> = {
@@ -352,7 +355,7 @@ async function prepareNewForm<T extends Record<string, unknown>>({
   session,
   fetch
 }: {
-  resourceType: HierarchicalResource;
+  resourceType: FirstClassResource;
   parentId?: string;
   parentRef?: string;
   parentResourceType?: HierarchicalResource;
@@ -363,6 +366,7 @@ async function prepareNewForm<T extends Record<string, unknown>>({
 }): Promise<SuperValidated<T>> {
   // CASE : new resource without parent (e.g. new organisation)
   if (!parentResourceType || !parentId) {
+    // @ts-ignore - Complex type handling for organisation user roles
     const form = await superValidate(zod(insertSchema));
 
     // HANDLE : When creating a new organisation, add the user as the owner
@@ -388,6 +392,7 @@ async function prepareNewForm<T extends Record<string, unknown>>({
   }
 
   // HANDLE : Initialise the form with the insert schema
+  // @ts-ignore - Complex type handling for organisation user roles
   const form = await superValidate<T>(zod(insertSchema));
   let initialData: Record<string, any> = {
     ...form.data,
@@ -439,7 +444,7 @@ async function prepareExistingForm<T extends Record<string, unknown>>({
   updateSchema,
   fetch
 }: {
-  resourceType: HierarchicalResource;
+  resourceType: FirstClassResource;
   entityRef: string;
   updateSchema: z.AnyZodObject;
   fetch: typeof window.fetch;
@@ -447,6 +452,7 @@ async function prepareExistingForm<T extends Record<string, unknown>>({
   form: SuperValidated<T>;
   image: Image | null;
 }> {
+  console.log('prepareExistingForm', { resourceType, entityRef });
   const response = await fetch(
     `${API_PATH}/${ResourcePath[resourceType]}/${entityRef}`
   );
@@ -456,6 +462,7 @@ async function prepareExistingForm<T extends Record<string, unknown>>({
   }
 
   const formData = await response.json();
+  // @ts-ignore - Complex type handling for organisation user roles
   const form = await superValidate<T>(formData, zod(updateSchema));
 
   // Fetch image for organisation or project
@@ -481,15 +488,15 @@ export async function loadFormData<T extends Record<string, unknown>>({
   ...options
 }: LoadFormDataOptions<T>): LoadFormDataResponse<T> {
   const entityRef = entity || NEW_REF;
-  const resourceType = refToResourceType(resourcePath) as HierarchicalResource;
+  const resourceType = refToResourceType(resourcePath) as FirstClassResource;
 
   if (entityRef === NEW_REF) {
     const form = await prepareNewForm<T>({
       resourceType,
       parentId: options.parentId,
       parentRef: options.parentRef,
-      parentResourceType: resourceConfig[resourceType].parentResourceType,
-      keyToParent: resourceConfig[resourceType].keyToParent,
+      parentResourceType: resourceConfig[resourceType]?.parentResourceType,
+      keyToParent: resourceConfig[resourceType]?.keyToParent,
       insertSchema,
       session,
       fetch
@@ -573,7 +580,7 @@ function mergeProjectProperties(layer: Layer, properties: Property[]): Layer {
   // Add project properties that aren't already in the layer
   properties.forEach((projectProp: Property) => {
     if (!existingPropertyIds.includes(projectProp.id)) {
-      if (typeof projectProp.i18n !== 'object') {
+      if (typeof projectProp.i18n !== 'object' && projectProp.i18n) {
         projectProp.i18n = toLocaleMap<PropertyI18nDB>(projectProp.i18n) as Record<
           string,
           PropertyI18nDB
