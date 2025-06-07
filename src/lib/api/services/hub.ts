@@ -1,10 +1,22 @@
 // API
 import { applyQueryFilters } from "$lib/api";
+// AUTH
+import { 
+  assertUserLoggedIn,
+  assertParamIdentifierEqualsFormIdentifier,
+  assertSuperAdmin,
+  runAssertions 
+} from "$lib/auth/asserts";
 // SCHEMA
 import { hub } from "$lib/db/schema";
+// ZOD
+import { HubAPI, HubCollectionAPI } from "$lib/db/zod/schemas/hub";
+import { superValidate } from "sveltekit-superforms";
+import { zod } from "sveltekit-superforms/adapters";
 // TYPES
 import type { SQL } from "drizzle-orm";
-import type { Hub, QueryParams, HubOpts } from "$lib/types";
+import type { Hub, QueryParams, HubOpts, HubDB, Session, Code } from "$lib/types";
+import type { SuperValidated } from "sveltekit-superforms";
 
 // ═══════════════════════
 // WITH RELATIONS
@@ -89,4 +101,61 @@ export const getHubQueryContext = (
   }
 
   return { params, conditions, excludeColumns };
+};
+
+/********************
+ *  5. UTILS :: SHAPING
+ ************/
+
+/**
+ * Rebuilds form data from database entities
+ * @param hub - The hub database entity
+ * @returns Validated form data
+ */
+export const toFormShape = async (
+  hub: HubDB,
+): Promise<SuperValidated<Hub>> => {
+  // @ts-ignore TODO - Fix Zod type error
+  const form = await superValidate(hub, zod(HubAPI) as any);
+  return form as SuperValidated<Hub>;
+};
+
+
+/**
+ * Builds response data from database entities
+ * @param hub - The hub database entity (can be partial from queries)
+ * @returns A parsed response shape
+ */
+export const toResponseShape = async (
+  hub: HubDB,
+  isCollection: boolean = false
+) => {
+  return isCollection
+    ? (HubCollectionAPI.parse(hub) as Hub)
+    : (HubAPI.parse(hub) as Hub);
+};
+
+/********************
+ *  ACCESS CONTROL
+ ************/
+/**
+ * Get the context for updating a hub
+ * @param session - The session object
+ * @param formData - The form data
+ * @param refId - The code from the URL parameter
+ * @returns Object containing validation and access control context
+ */
+export const assertPermissionsToUpdateHub = (
+  session: Session,
+  formData: HubDB,
+  refId: Code
+) => {
+  // Run all access control assertions
+  const assertionError = runAssertions(
+    () => assertUserLoggedIn(session as any),
+    () => assertParamIdentifierEqualsFormIdentifier(formData, refId, 'code'),
+    () => assertSuperAdmin(session)
+  );
+
+  if (assertionError) return assertionError;
 };
