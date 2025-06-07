@@ -68,7 +68,8 @@ export const HubRaw = HubBase.extend({
   organisations: z.array(
     createSelectSchema(organisation).extend({
       i18n: z.array(createSelectSchema(organisationI18n)),
-      image: createSelectSchema(image).nullish()
+      image: createSelectSchema(image).nullish(),
+      isCoreInclusive: z.boolean().nullish()
     })
   ).nullish()
 });

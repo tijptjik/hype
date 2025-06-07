@@ -16,6 +16,8 @@ import Header from '$lib/components/layout/EntityHeader.svelte';
 import HeaderButton from '$lib/components/layout/HeaderButton.svelte';
 import EntityActions from '$lib/components/menu/EntityActions.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
+import FeatureActions from '$lib/components/forms/actions/Feature.svelte';
+import InfoContent from '$lib/components/forms/info/FeatureCore.svelte';
 import PropertySection from '$lib/components/forms/sections/FeatureProperty.svelte';
 import MapSection from '$lib/components/forms/sections/Map.svelte';
 import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte';
@@ -25,7 +27,11 @@ import GallerySection from '$lib/components/forms/sections/Gallery.svelte';
 import ViewerSection from '$lib/components/forms/sections/Viewer.svelte';
 import CanonicalImage from '$lib/components/forms/sections/CanonicalImage.svelte';
 // ENUMS
-import { HierarchicalResource, ImageContextResource } from '$lib/enums';
+import {
+  FirstClassResource,
+  HierarchicalResource,
+  ImageContextResource
+} from '$lib/enums';
 // TYPES
 import type {
   Feature,
@@ -72,7 +78,7 @@ const FIELDS: FormFieldConfig = {
           specifier: {}
         }
       }
-    } as FormFieldArrayDefinition,
+    } as FormFieldArrayDefinition
   } as FormFieldArray,
   address: {
     displayAddress: {
@@ -97,13 +103,12 @@ const FIELDS: FormFieldConfig = {
       isNested: true,
       isTranslated: false
     }
-  } as FormFieldNested,
+  } as FormFieldNested
 };
-
 
 // STATE : PROPS
 let pageProps: FormPageProps<Feature> = $props();
-resourceState.setEntity(pageProps.data.entity, RESOURCE);
+resourceState.setEntity(pageProps.data.entity, FirstClassResource.organisation);
 resourceState.setFacet('core');
 
 // STATE : FORM
@@ -120,13 +125,23 @@ let enhance = $derived(form.enhance);
 let isMapFullscreen = $state(false);
 
 // STATE : DERIVED :: TITLE
-let title = $derived(pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.title || NEW_TITLE);
+let title = $derived(
+  pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.title || NEW_TITLE
+);
 
 // UTILS
-function handleMapFullscreenChange(isFullscreen: boolean) : void {
+function handleMapFullscreenChange(isFullscreen: boolean): void {
   isMapFullscreen = isFullscreen;
-};
+}
 </script>
+
+{#snippet featureInfoSnippet()}
+  <InfoContent />
+{/snippet}
+
+{#snippet featureActionSnippet()}
+  <FeatureActions {form} />
+{/snippet}
 
 <ImageProvider
   mode="gallery"
@@ -137,7 +152,7 @@ function handleMapFullscreenChange(isFullscreen: boolean) : void {
     pageProps.data.validatedForm.data as unknown as Resource,
     HierarchicalResource.feature,
     HierarchicalResource.organisation
-  ) as OrganisationDB}
+  ) as Omit<OrganisationDB, 'isCoreInclusive'>}
   project={resourceState.getAscendantOrSelf(
     pageProps.data.validatedForm.data as unknown as Resource,
     HierarchicalResource.feature,
@@ -147,19 +162,20 @@ function handleMapFullscreenChange(isFullscreen: boolean) : void {
   <div class="h-full overflow-hidden bg-black">
     <Header {title}>
       {#snippet menuItems()}
-        <HeaderButton 
-          facet={{ label: m.feature__core(), ref: 'core' }} 
-          isActive={resourceState.activeFacet === 'core' || resourceState.activeFacet === false} />
-        <HeaderButton 
-          facet={{ label: m.feature__address(), ref: 'address' }} 
+        <HeaderButton
+          facet={{ label: m.feature__core(), ref: 'core' }}
+          isActive={resourceState.activeFacet === 'core' ||
+            resourceState.activeFacet === false} />
+        <HeaderButton
+          facet={{ label: m.feature__address(), ref: 'address' }}
           isActive={resourceState.activeFacet === 'address'} />
         {#if resourceState.activeEntity !== 'new'}
-          <HeaderButton 
-            facet={{ label: m.feature__images(), ref: 'images' }} 
+          <HeaderButton
+            facet={{ label: m.feature__images(), ref: 'images' }}
             isActive={resourceState.activeFacet === 'images'} />
         {/if}
       {/snippet}
-      
+
       {#snippet actions()}
         <EntityActions {form} />
       {/snippet}
@@ -178,7 +194,10 @@ function handleMapFullscreenChange(isFullscreen: boolean) : void {
           <div
             class="map-container relative h-full flex-1 overflow-hidden @container"
             class:fullscreen={isMapFullscreen}>
-            <MapSection {form} fields={FIELDS.map} toggleFullscreen={handleMapFullscreenChange} />
+            <MapSection
+              {form}
+              fields={FIELDS.map}
+              toggleFullscreen={handleMapFullscreenChange} />
             <div
               class="absolute bottom-2 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex">
               <UserAttributionCard
@@ -203,9 +222,8 @@ function handleMapFullscreenChange(isFullscreen: boolean) : void {
                     subtitle={m.admin__forms_common_classifiers_subtitle()}
                     fieldDiscriminator="classifier"
                     fields={FIELDS.property as FormFieldArray}
-                    cols={pageProps.data.entity == NEW_REF ? 2 : 3}
-                    />
-                    <PropertySection
+                    cols={pageProps.data.entity == NEW_REF ? 2 : 3} />
+                  <PropertySection
                     {form}
                     title={m.admin__forms_common_specifiers()}
                     subtitle={m.admin__forms_common_specifiers_subtitle()}
@@ -219,7 +237,9 @@ function handleMapFullscreenChange(isFullscreen: boolean) : void {
                 <I18nSection
                   {form}
                   title={m.admin__forms_common_descriptors()}
-                  fields={FIELDS.i18n as FormField} />
+                  fields={FIELDS.i18n as FormField}
+                  headerActions={featureActionSnippet}
+                  infoContent={featureInfoSnippet} />
                 <!-- TODO Add support for translatable specifiers -->
               {:else if resourceState.activeFacet === 'address'}
                 <AddressComponentSection
@@ -232,8 +252,14 @@ function handleMapFullscreenChange(isFullscreen: boolean) : void {
                   subtitle={m.admin__forms_feature_addressing_subtitle()}
                   fields={FIELDS.address as FormField & FormFieldNested} />
               {:else if resourceState.activeFacet === 'images' && pageProps.data.entity !== NEW_REF}
-                <ViewerSection {form} title={m.admin__forms_feature_viewer_title()} fields={FIELDS.viewer as FormFieldNested} />
-                <GallerySection {form} title={m.admin__forms_feature_gallery_title()} fields={FIELDS.gallery as FormFieldNested} />
+                <ViewerSection
+                  {form}
+                  title={m.admin__forms_feature_viewer_title()}
+                  fields={FIELDS.viewer as FormFieldNested} />
+                <GallerySection
+                  {form}
+                  title={m.admin__forms_feature_gallery_title()}
+                  fields={FIELDS.gallery as FormFieldNested} />
               {/if}
             </div>
           </div>

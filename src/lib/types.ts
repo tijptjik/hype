@@ -1385,7 +1385,7 @@ export type ImageProviderProps = {
   isAdminMode: boolean;
   ctxType: ImageContextResource;
   ctxId: Id;
-  organisation?: OrganisationDB;
+  organisation?: Omit<OrganisationDB, 'isCoreInclusive'>;
   project?: ProjectDB;
   image?: Image;
   ctxTypeSecondary?: ImageContextResourceExtended;
@@ -1683,6 +1683,7 @@ export interface HubOpts {
   code?: string;
   domain?: string;
   isCore: boolean;
+  isSuperAdmin?: boolean;
 };
 
 /* ----------------- */
