@@ -430,5 +430,7 @@
   "not_superadmin": "Not a superadmin, so, seems cannot.",
   "hub__title": "Hubs",
   "antsy_formal_badger_arise": "Unarchive",
-  "neat_awake_panda_grip": "Archive"
+  "neat_awake_panda_grip": "Archive",
+  "quiet_safe_otter_strive": "No organisations assigned to this hub",
+  "awake_jumpy_niklas_coax": "Click \"Add\" to search and add organisations"
 }
