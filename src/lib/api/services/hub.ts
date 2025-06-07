@@ -109,7 +109,19 @@ export const getHubQueryContext = (params: QueryParams) => {
  */
 export const toFormShape = async (hub: HubDB): Promise<SuperValidated<Hub>> => {
   // @ts-ignore TODO - Fix Zod type error
-  const form = await superValidate(hub, zod(HubAPI) as any);
+    // Transform the hub data structure
+  const transformedHub = {
+    ...hub,
+    organisations: hub.organisations?.map((organisation: OrganisationDBRaw) => {
+      return {
+        ...organisation,
+        i18n: toLocaleMap<OrganisationI18nDB>(organisation.i18n as OrganisationI18nDB[]),
+        // Image is already a full object from the relation, no transformation needed
+        image: organisation.image || null
+      };
+    }) || null
+  };
+  const form = await superValidate(transformedHub, zod(HubAPI) as any);
   return form as SuperValidated<Hub>;
 };
 
