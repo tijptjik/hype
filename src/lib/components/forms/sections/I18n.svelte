@@ -1,44 +1,26 @@
 <script lang="ts">
 import { getFieldComponent } from '$lib';
 import { supportedLocales } from '$lib/enums';
-// CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
 // COMPONENTS
 import Header from '$lib/components/forms/extra/Header.svelte';
-import FeatureActions from '$lib/components/forms/actions/Feature.svelte';
-import InfoContent from '$lib/components/forms/info/FeatureCore.svelte';
 import TranslationBar from '$lib/components/forms/bars/Translation.svelte';
 // TYPES
-import type { SectionProps, FeatureForm, Form } from '$lib/types';
-
-// STATE : CONTEXT :: RESOURCE
-const resourceState = getHierarchicalResourceState();
+import type { SectionProps, Form } from '$lib/types';
 
 // STATE : PROPS
-let sectionProps: SectionProps = $props();
-let { fields, form } = sectionProps;
-
-// DERIVED
-let isFeatureResource = $derived(resourceState.activeResource === 'feature');
-let isCoreFacet = $derived(
-  resourceState.activeFacet === 'core' || resourceState.activeFacet === false
-);
-let isFeatureCore = $derived(isFeatureResource && isCoreFacet);
+let sectionProps: SectionProps & { 
+  headerActions?: any; 
+  infoContent?: any; 
+} = $props();
+let { fields, form, headerActions, infoContent } = sectionProps;
 </script>
-
-{#snippet conditionalInfoSnippet()}
-  <InfoContent />
-{/snippet}
-{#snippet conditionalActionSnippet()}
-  <FeatureActions form={sectionProps.form as unknown as FeatureForm} />
-{/snippet}
 
 <div
   class="z-10 rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0 @container">
   <Header
     {...sectionProps}
-    infoContent={isFeatureCore ? conditionalInfoSnippet : undefined}
-    actionContent={isFeatureResource && isCoreFacet ? conditionalActionSnippet : undefined}>
+    infoContent={infoContent}
+    actionContent={headerActions}>
   </Header>
   <div class="grid grid-cols-1 gap-4 p-4 @xl:grid-cols-2 @5xl:grid-cols-3">
     {#each supportedLocales as locale}
