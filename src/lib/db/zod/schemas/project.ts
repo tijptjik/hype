@@ -113,9 +113,9 @@ export const ProjectUpdateAPI = ProjectUpdate.extend({
 // PROJECT INTERMEDIATE SCHEMAS
 /* -------- */
 
-export const ProjectDBRaw = ProjectBase.extend({
+export const ProjectRaw = ProjectBase.extend({
   i18n: z.array(ProjectI18nBase),
-  maintainerRoles: z.array(ProjectRoleBaseExtra),
+  maintainerRoles: z.array(ProjectRoleWithUser),
   properties: z.array(PropertyAPI),
   image: ImageBase.nullish(),
   publisher: UserBasic.nullish()

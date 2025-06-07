@@ -95,9 +95,9 @@ export const OrganisationUpdateAPI = OrganisationUpdate.extend({
 });
 
 /* ----------------- */
-// ORGANISATION RAW SCHEMAS
+// ORGANISATION INTERMEDIATE SCHEMAS
 /* -------- */
 
 export const OrganisationRaw = OrganisationBase.extend({
-  i18n: getLocales(OrganisationI18nBase)
+  i18n: z.array(OrganisationI18nBase)
 });

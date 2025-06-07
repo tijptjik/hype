@@ -20,8 +20,7 @@ export const HubBasic = HubBase.pick({
   id: true,
   code: true,
   domain: true,
-  isCore: true,
-  isActive: true
+  isArchived: true
 } as const);
 
 export const HubInsert = createInsertSchema(hub).extend({

@@ -86,6 +86,7 @@ import {
   OrganisationI18nUpdate,
   OrganisationInsert,
   OrganisationInsertAPI,
+  OrganisationRaw,
   OrganisationRoleAPI,
   OrganisationRoleBase,
   OrganisationRoleInsert,
@@ -96,7 +97,7 @@ import {
   OrganisationUpdateAPI,
   ProjectAPI,
   ProjectBase,
-  ProjectDBRaw,
+  ProjectRaw,
   ProjectI18nBase,
   ProjectI18nInsert,
   ProjectI18nUpdate,
@@ -658,6 +659,8 @@ export type OrganisationRoleNew = z.infer<typeof OrganisationRoleInsert>;
 export type OrganisationRolePartial = z.infer<typeof OrganisationRoleUpdate>;
 export type OrganisationRolePartialExtra = z.infer<typeof OrganisationRoleUpdateExtra>;
 
+export type OrganisationDBRaw = z.infer<typeof OrganisationRaw>;
+
 /* ----------------- */
 // PROJECTS
 /* -------- */
@@ -694,6 +697,8 @@ export type ProjectI18nDB = z.infer<typeof ProjectI18nBase>;
 export type ProjectI18nNew = z.infer<typeof ProjectI18nInsert>;
 // Same as ProjectI18nNew, but all fields are optional
 export type ProjectI18nPartial = z.infer<typeof ProjectI18nUpdate>;
+
+export type ProjectI18n = z.infer<typeof ProjectI18nAPI>;
 
 // projectRole, but with the projectId - for use in DB seeding & selects
 export type ProjectRole = z.infer<typeof ProjectRoleAPI>;
@@ -749,7 +754,7 @@ export type RangeFilterValue = {
 /* -------- */
 
 // Project, with relations in DB form - used as an intermediate type for DB operations
-export type ProjectRaw = z.infer<typeof ProjectDBRaw>;
+export type ProjectDBRaw = z.infer<typeof ProjectRaw>;
 
 export type IntermediateValue = {
   id: string;
@@ -1098,7 +1103,7 @@ export type ImageDBNew = z.infer<typeof ImageInsert>;
 export type ImageDBPartial = z.infer<typeof ImageUpdate>;
 export type ImageDBFlat = z.infer<typeof ImageFlat>;
 export type ImageDBFlatUpdate = z.infer<typeof ImageFlatUpdate>;
-export type ImageRaw = z.infer<typeof ImageBaseRaw>;
+export type ImageDBRaw = z.infer<typeof ImageBaseRaw>;
 
 export type Image = z.infer<typeof ImageAPI>;
 export type ImageNew = z.infer<typeof ImageInsertAPI>;
@@ -1262,7 +1267,7 @@ export type ReviewOutcome = (typeof reviewOutcomes)[number];
 /* -------- */
 
 export type TaskDB = z.infer<typeof TaskBase>;
-export type TaskRaw = z.infer<typeof TaskBaseRaw>;
+export type TaskDBRaw = z.infer<typeof TaskBaseRaw>;
 export type TaskDBNew = z.infer<typeof TaskInsert>;
 export type TaskDBPartial = z.infer<typeof TaskUpdate>;
 
@@ -1635,17 +1640,23 @@ export type ALSSuggestedAddressItem = NonNullable<
 // HUB TYPES
 /* -------- */
 
-export type Hub = z.infer<typeof HubBase>;
-export type HubBasic = z.infer<typeof HubBasic>;
-export type HubInsert = z.infer<typeof HubInsert>;
-export type HubUpdate = z.infer<typeof HubUpdate>;
+export type HubDB = z.infer<typeof HubBase>;
+export type HubDBBasic = z.infer<typeof HubBasic>;
+export type HubDBInsert = z.infer<typeof HubInsert>;
+export type HubDBUpdate = z.infer<typeof HubUpdate>;
 
-export type HubAPI = z.infer<typeof HubAPI>;
-export type HubCollectionAPI = z.infer<typeof HubCollectionAPI>;
-export type HubInsertAPI = z.infer<typeof HubInsertAPI>;
-export type HubUpdateAPI = z.infer<typeof HubUpdateAPI>;
+export type Hub = z.infer<typeof HubAPI>;
+export type HubCollection = z.infer<typeof HubCollectionAPI>;
+export type HubInsert = z.infer<typeof HubInsertAPI>;
+export type HubUpdate = z.infer<typeof HubUpdateAPI>;
 
-export type HubRaw = z.infer<typeof HubRaw>;
+export type HubDBRaw = z.infer<typeof HubRaw>;
+
+export interface HubOpts {
+  code?: string;
+  domain?: string;
+  isCore: boolean;
+};
 
 /* ----------------- */
 // TYPESCRIPT UTILITIES
