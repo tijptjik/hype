@@ -9,6 +9,8 @@ import {
 // DRIZZLE SCHEMA
 import { hub } from '$lib/db/schema';
 // ZOD SCHEMAS
+import { OrganisationForHubAPI } from './organisation';
+// ZOD SCHEMAS
 import { getDefaultConstraints } from '../constraints';
 
 /* ----------------- */
@@ -36,7 +38,9 @@ export const HubUpdate = createUpdateSchema(hub).extend({
 
 export const HubCollectionAPI = HubBase;
 
-export const HubAPI = HubBase;
+export const HubAPI = HubBase.extend({
+  organisation: OrganisationForHubAPI
+});
 
 export const HubInsertAPI = HubInsert;
 
