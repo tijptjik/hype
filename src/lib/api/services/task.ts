@@ -1,5 +1,5 @@
 // DRIZZLE
-import { eq, inArray, SQL, sql, exists, and } from 'drizzle-orm';
+import { eq, inArray, SQL, sql } from 'drizzle-orm';
 // LIB
 import { isAdminRequest } from '../index';
 // API
@@ -8,9 +8,9 @@ import { applyQueryFilters } from '$lib/api';
 import {
   assertUserLoggedIn,
   assertAdminRequest,
-  assertId,
   runAssertions,
-  assertProjectMaintainerOrMemberOrSuperAdmin
+  assertProjectMaintainerOrMemberOrSuperAdmin,
+  assertParamIdentifierEqualsFormIdentifier
 } from '$lib/auth/asserts';
 
 // DB
@@ -258,12 +258,13 @@ export const assertPermissionsToUpdateTask = async (
   request: Request,
   params: QueryParams,
   userRoles: UserRoleDisco[],
+  refId: Id,
   taskData?: TaskDB
 ) => {
   const commonAssertions = [
     () => assertUserLoggedIn(session as any),
     () => assertAdminRequest(request),
-    () => assertId({ ...params })
+    () => assertParamIdentifierEqualsFormIdentifier({ id: params.id }, refId, 'id')
   ];
 
   // Get project ID through feature hierarchy
@@ -299,6 +300,7 @@ export const assertPermissionsToDeleteTask = async (
   request: Request,
   params: QueryParams,
   userRoles: UserRoleDisco[],
+  refId: Id,
   taskData?: TaskDB
 ) => {
   return assertPermissionsToUpdateTask(
@@ -307,6 +309,7 @@ export const assertPermissionsToDeleteTask = async (
     request,
     params,
     userRoles,
+    refId,
     taskData
   );
 };

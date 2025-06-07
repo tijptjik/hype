@@ -10,7 +10,8 @@ import {
   assertSuperAdmin,
   runAssertions,
   assertOrganisationOwnerOrSuperAdmin,
-  assertIsCoreInclusiveModifiedBySuperAdmin
+  assertIsCoreInclusiveModifiedBySuperAdmin,
+  assertParamIdentifierEqualsFormIdentifier as assertrefIdEqualsFormRefId
 } from '$lib/auth/asserts';
 // DB
 import { isFieldUnique } from '$lib/db';
@@ -26,11 +27,11 @@ import type {
   UserRoleDisco,
   OrganisationNew,
   OrganisationDB,
-  OrganisationPartial,
   Session,
   QueryParams,
   Database,
-  Organisation
+  Organisation,
+  Code
 } from '$lib/types';
 import type { SuperValidated } from 'sveltekit-superforms';
 
@@ -129,6 +130,8 @@ export const assertPermissionsToCreateOrganisation = (
  * @param request - The request object
  * @param formData - The form data
  * @param userRoles - The user roles
+ * @param refId - The code from the URL parameter
+ * @param newData - The new data (for partial updates)
  * @returns Object containing validation and access control context
  */
 export const assertPermissionsToUpdateOrganisation = (
@@ -136,15 +139,15 @@ export const assertPermissionsToUpdateOrganisation = (
   request: Request,
   formData: OrganisationDB,
   userRoles: UserRoleDisco[],
-  newData?: OrganisationPartial
+  refId: Code,
 ) => {
   // Run all access control assertions
   const assertionError = runAssertions(
     () => assertUserLoggedIn(session as any),
     () => assertAdminRequest(request),
-    () => assertId(formData),
+    () => assertrefIdEqualsFormRefId(formData, refId, 'code'),
     () => assertOrganisationOwnerOrSuperAdmin(session, userRoles, formData.id!),
-    () => assertIsCoreInclusiveModifiedBySuperAdmin(session, newData)
+    () => assertIsCoreInclusiveModifiedBySuperAdmin(session, formData)
   );
 
   if (assertionError) return assertionError;

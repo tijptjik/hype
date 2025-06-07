@@ -35,7 +35,7 @@ import type {
   Database,
   PropertyI18nPartial,
   PropertyValueI18nNew,
-  PropertyRaw
+  PropertyDBRaw
 } from '$lib/types';
 import { syncLayerProperties } from './layer';
 
@@ -82,7 +82,7 @@ export const listProperties = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = []
-): Promise<PropertyRaw[]> =>
+): Promise<PropertyDBRaw[]> =>
   await db.query.property.findMany({
     with: withRelations,
     where: conditions.length > 0 ? and(...conditions) : undefined
@@ -92,7 +92,7 @@ export const getProperty = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = []
-): Promise<PropertyRaw | undefined> => {
+): Promise<PropertyDBRaw | undefined> => {
   const result = await db.query.property.findFirst({
     with: withRelations,
     where: and(...conditions)
@@ -559,7 +559,7 @@ export const toFormShape = async (
  * @returns A Property object.
  */
 export const toResponseShape = (
-  data: PropertyRaw,
+  data: PropertyDBRaw,
   i18n: PropertyI18nDB[],
   valuesData: PropertyValueDB[],
   valuesI18nData: PropertyValueI18nDB[]

@@ -119,6 +119,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
       request,
       params as QueryParams,
       userRoles,
+      params.id as Id,
       existingTask
     );
 

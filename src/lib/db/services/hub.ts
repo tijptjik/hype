@@ -3,7 +3,7 @@ import { and, eq, exists, isNull, or, SQL } from 'drizzle-orm';
 // SCHEMA
 import { organisation, project, layer, feature, hub, task } from '$lib/db/schema';
 // TYPES
-import type { Database, HubOpts, HubDBRaw } from '$lib/types';
+import type { Database, HubOpts, HubDBRaw, HubDB, HubDBPartial, Code } from '$lib/types';
 
 // ═══════════════════════
 // HUB FILTERING FUNCTIONS
@@ -284,8 +284,8 @@ export const createHub = async (
 
 export const updateHub = async (
   db: Database,
-  data: any,
-  code: string
+  data: HubDBPartial,
+  code: Code
 ): Promise<HubDBRaw> => {
   const [updated] = await db
     .update(hub)

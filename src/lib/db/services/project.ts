@@ -43,7 +43,7 @@ import type {
   PropertyI18nNew,
   ProjectDBRaw,
   ProjectRoleDB,
-  PropertyRaw,
+  PropertyDBRaw,
   HubOpts
 } from '$lib/types';
 
@@ -427,14 +427,14 @@ export const toResponseShape = async (
   project: ProjectDB,
   i18n: ProjectI18nNew[],
   maintainerRoles: ProjectRoleNew[],
-  properties: PropertyRaw[],
+  properties: PropertyDBRaw[],
   isCollection: boolean = false
 ) => {
   const data: any = {
     ...project,
     i18n: toLocaleMap<ProjectI18n>(i18n) as any,
     maintainerRoles,
-    properties: properties.map((property: PropertyRaw) => ({
+    properties: properties.map((property: PropertyDBRaw) => ({
       ...property,
       // Only transform i18n if it has actual data, otherwise set to null
       i18n:

@@ -38,7 +38,14 @@ import {
 // TYPES
 import type { RequestHandler } from '@sveltejs/kit';
 import type { SuperValidated } from 'sveltekit-superforms';
-import type { Feature, FeatureDB, FeatureDBRaw, FeatureNew, FeaturePartial, Id } from '$lib/types';
+import type {
+  Feature,
+  FeatureDB,
+  FeatureDBRaw,
+  FeatureNew,
+  FeaturePartial,
+  Id
+} from '$lib/types';
 
 /********************
  *  COMMON
@@ -122,10 +129,22 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     if (!form.valid) return SuperFormResponse<Feature>(form);
 
     // ACCESS CONTROL : Check permissions
-    await assertPermissionsToUpdateFeature(db, session, request, locals, form.data as FeatureNew, userRoles);
+    await assertPermissionsToUpdateFeature(
+      db,
+      session,
+      request,
+      locals,
+      form.data as FeatureNew,
+      userRoles,
+      params.id as Id
+    );
 
     // DB : Update the feature
-    const updatedFeature = await updateFeatureWithRelated(db, form.data as FeaturePartial, params.id as Id);
+    const updatedFeature = await updateFeatureWithRelated(
+      db,
+      form.data as FeaturePartial,
+      params.id as Id
+    );
 
     const responseForm = await toFormShape(
       updatedFeature,
@@ -161,7 +180,15 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     if (!existing) return error(404, m.quiet_soft_mole_animate_feature());
 
     // ASSERT : Use assertion functions for access control
-    assertPermissionsToUpdateFeature(db, session, request, locals, existing as FeatureNew, userRoles);
+    await assertPermissionsToUpdateFeature(
+      db,
+      session,
+      request,
+      locals,
+      existing as FeatureNew,
+      userRoles,
+      params.id as Id
+    );
 
     // DB : Update only the basic feature fields (no relations for PATCH)
     const updated = await updateFeature(db, newData, params.id);

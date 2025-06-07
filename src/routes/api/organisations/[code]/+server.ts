@@ -37,7 +37,12 @@ import {
 // TYPES
 import type { RequestHandler } from '@sveltejs/kit';
 import type { SuperValidated } from 'sveltekit-superforms/client';
-import type { Organisation, OrganisationDB, OrganisationPartial } from '$lib/types';
+import type {
+  Organisation,
+  OrganisationDB,
+  OrganisationPartial,
+  Code
+} from '$lib/types';
 
 /********************
  *  COMMON
@@ -128,7 +133,13 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     if (!form.valid) return SuperFormResponse<Organisation>(form);
 
     // ASSERT : Permissions to update organisation
-    assertPermissionsToUpdateOrganisation(session, request, formData, userRoles, form.data);
+    assertPermissionsToUpdateOrganisation(
+      session,
+      request,
+      formData,
+      userRoles,
+      params.code as Code
+    );
 
     // STATE : Will the current user lose access on membership changes.
     const isAccessLost = isAccessLostUponSuccess(session, formData, userRoles);
@@ -182,16 +193,27 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     const newData: OrganisationPartial = await request.json();
 
     // Get the existing organisation to verify access
-    const existing = (await getOrganisation(db, {}, [
-      eq(organisation.code, params.code as string)
-    ], locals.hub)) as OrganisationDB;
+    const existing = (await getOrganisation(
+      db,
+      {},
+      [
+        eq(organisation.code, params.code as string)
+      ],
+      locals.hub
+    )) as OrganisationDB;
 
     if (!existing) {
       return error(404, 'Organisation not found');
     }
 
     // Use assertion functions for access control
-    assertPermissionsToUpdateOrganisation(session, request, existing, userRoles, newData);
+    assertPermissionsToUpdateOrganisation(
+      session,
+      request,
+      existing,
+      userRoles,
+      params.code as Code
+    );
 
     // DB : Update only the basic organisation fields (no relations for PATCH)
     const updated = await updateOrganisation(db, newData, params.code as string);

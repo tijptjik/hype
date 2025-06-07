@@ -10,9 +10,9 @@ import { applyQueryFilters, removeExcludedColumns } from '$lib/api';
 import {
   assertUserLoggedIn,
   assertAdminRequest,
-  assertId,
   runAssertions,
-  assertProjectMaintainerOrSuperAdmin
+  assertProjectMaintainerOrSuperAdmin,
+  assertParamIdentifierEqualsFormIdentifier
 } from '$lib/auth/asserts';
 // DB
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
@@ -249,8 +249,10 @@ export const assertPermissionsToCreateFeature = async (
  * @param db - The Drizzle instance
  * @param session - The session object
  * @param request - The request object
+ * @param locals - The app locals
  * @param formData - The form data
  * @param userRoles - The user roles
+ * @param refId - The id from the URL parameter
  * @returns An error object if the permissions are not met, otherwise undefined
  */
 export const assertPermissionsToUpdateFeature = async (
@@ -259,14 +261,15 @@ export const assertPermissionsToUpdateFeature = async (
   request: Request,
   locals: App.Locals,
   formData: FeatureNew,
-  userRoles: UserRoleDisco[]
+  userRoles: UserRoleDisco[],
+  refId: Id
 ) => {
   const projectId = await getProjectIdForFeature(db, formData, locals.hub);
 
   const assertionError = runAssertions(
     () => assertUserLoggedIn(session as any),
     () => assertAdminRequest(request),
-    () => assertId(formData as FeatureDB),
+    () => assertParamIdentifierEqualsFormIdentifier(formData, refId, 'id'),
     () => assertProjectMaintainerOrSuperAdmin(session, userRoles, projectId!)
   );
 

@@ -9,9 +9,13 @@ import type { Prisms, QueryParams } from '$lib/types';
 import { applyQueryFilters, removeExcludedColumns } from '..';
 
 import { userFeature } from '$lib/db/schema';
-import { assertUserIsSelf, assertUserLoggedIn } from '$lib/auth/asserts';
+import { 
+  assertUserIsSelf, 
+  assertUserLoggedIn, 
+  runAssertions,
+  assertParamIdentifierEqualsFormIdentifier 
+} from '$lib/auth/asserts';
 import { UserFeatureAPI } from '../../db/zod/schemas/feature';
-import { runAssertions } from '$lib/auth/asserts';
 import { toLocaleMap } from '$lib/db';
 
 /**
@@ -45,7 +49,7 @@ export const getUserFeatureQueryContext = (
 };
 
 /**
- * Get the context for updating a project
+ * Get the context for listing user features
  * @param session - The session object
  * @param userId - The user id
  * @returns Object containing validation and access control context
@@ -64,11 +68,20 @@ export const assertPermissionsToListUserFeature = (session: Session, userId: Id)
  * Get the context for updating a project
  * @param session - The session object
  * @param userId - The user id
+ * @param refId - The id from the URL parameter
  * @returns Object containing validation and access control context
  */
-export const assertPermissionsToUpdateUserFeature = (session: Session, userId: Id) => {
+export const assertPermissionsToUpdateUserFeature = (
+  session: Session, 
+  userId: Id,
+) => {
   // Run all access control assertions
-  return assertPermissionsToListUserFeature(session, userId);
+  const assertionError = runAssertions(
+    () => assertUserLoggedIn(session),
+    () => assertUserIsSelf(session, userId)
+  );
+
+  if (assertionError) return assertionError;
 };
 
 /**

@@ -7,13 +7,14 @@ import {
   assertUserLoggedIn,
   assertId,
   runAssertions,
-  assertUserIsSelf
+  assertUserIsSelf,
+  assertParamIdentifierEqualsFormIdentifier
 } from '$lib/auth/asserts';
 import { isSuperAdmin } from '$lib/auth/utils';
 // SCHEMA
 import { user } from '$lib/db/schema';
 // TYPES
-import type { UserRoleDisco, UserDB, Session, QueryParams } from '$lib/types';
+import type { UserRoleDisco, UserDB, Session, QueryParams, Id } from '$lib/types';
 
 /********************
  *  COMMON
@@ -116,19 +117,19 @@ export const getUserQueryContext = (
 /**
  * Get the context for updating a user
  * @param session - The session object
- * @param request - The request object
  * @param formData - The form data
- * @param userRoles - The user roles
+ * @param refId - The id from the URL parameter
  * @returns Object containing validation and access control context
  */
 export const assertPermissionsToUpdateUser = (
   session: Session,
-  formData: UserDB
+  formData: UserDB,
+  refId: Id
 ) => {
   // Run all access control assertions
   const assertionError = runAssertions(
     () => assertUserLoggedIn(session as any),
-    () => assertId(formData),
+    () => assertParamIdentifierEqualsFormIdentifier(formData, refId, 'id'),
     () => assertUserIsSelf(session, formData.id!)
   );
 

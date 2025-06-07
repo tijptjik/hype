@@ -45,6 +45,9 @@ export const ProjectI18nUpdate = createUpdateSchema(projectI18n).extend({
   ...getDefaultConstraints(projectI18n)
 });
 
+
+export const ProjectI18nAPI = ProjectI18nBase;
+
 export const ProjectRoleBase = createSelectSchema(projectRole);
 export const ProjectRoleBaseExtra = ProjectRoleBase.extend({
   i18n: z.array(ProjectI18nBase).nullish(),

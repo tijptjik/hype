@@ -44,7 +44,6 @@ import type {
 
 import type { SuperValidated } from 'sveltekit-superforms';
 
-
 /********************
  *  COMMON
  ************/
@@ -131,7 +130,13 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     if (!form.valid) return SuperFormResponse<Layer>(form);
 
     // ACCESS CONTROL : Check permissions
-    assertPermissionsToUpdateLayer(session, request, formData, userRoles);
+    assertPermissionsToUpdateLayer(
+      session,
+      request,
+      formData,
+      userRoles,
+      params.id as Id
+    );
 
     // DB : Update the layer
     const updatedLayer = await updateLayerWithRelated(db, form.data, params.id);
@@ -173,7 +178,13 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     if (!existing) return error(404, m.quiet_soft_mole_animate());
 
     // Use assertion functions for access control
-    assertPermissionsToUpdateLayer(session, request, existing, userRoles);
+    assertPermissionsToUpdateLayer(
+      session,
+      request,
+      existing,
+      userRoles,
+      params.id  as Id
+    );
 
     // DB : Update only the basic layer fields (no relations for PATCH)
     const updated = await updateLayer(db, newData, params.id);

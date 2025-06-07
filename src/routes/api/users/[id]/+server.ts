@@ -4,7 +4,13 @@ import { error, type RequestHandler } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 // DB
 import { user } from '$lib/db/schema';
-import { getUser, updateUser, toResponseShape, updateUserFeatures, updateUserLayers } from '$lib/db/services/user';
+import {
+  getUser,
+  updateUser,
+  toResponseShape,
+  updateUserFeatures,
+  updateUserLayers
+} from '$lib/db/services/user';
 // API
 import { JSONResponseOrError, getDatabase, logZodError } from '$lib/api';
 import {
@@ -13,7 +19,7 @@ import {
   assertPermissionsToUpdateUser
 } from '$lib/api/services/user';
 // TYPES
-import type { UserPartial, UserDB, UserRaw } from '$lib/types';
+import type { UserPartial, UserDB, UserRaw, Id } from '$lib/types';
 
 /********************
  *  READ
@@ -79,7 +85,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     if (!existing) return error(404, 'User not found');
 
     // ASSERT : Permissions to update user
-    assertPermissionsToUpdateUser(session, existing);
+    assertPermissionsToUpdateUser(session, existing, params.id as Id);
 
     // DB : Update the userBase (no relations for PATCH)
     const updated = await updateUser(db, newData, params.id as string);

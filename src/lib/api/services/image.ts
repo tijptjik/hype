@@ -12,7 +12,8 @@ import {
   runAssertions,
   assertProjectMaintainerOrSuperAdmin,
   assertOrganisationOwnerOrSuperAdmin,
-  assertProjectMaintainerOrMemberOrSuperAdmin
+  assertProjectMaintainerOrMemberOrSuperAdmin,
+  assertParamIdentifierEqualsFormIdentifier
 } from '$lib/auth/asserts';
 // DB
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
@@ -29,6 +30,7 @@ import type {
   ImageNew,
   ImageDBFlat,
   ImageDB,
+  ImagePartial,
   HubOpts
 } from '$lib/types';
 import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums';
@@ -249,14 +251,16 @@ export const assertPermissionsToUpdateImage = async (
   request: Request,
   hubOpts: HubOpts,
   params: QueryParams,
+  data: ImageDBFlat,
   userRoles: UserRoleDisco[],
+  refId: Id,
   ctxId: Id,
   ctxType: ImageContextResource | ImageContextResourceExtended
 ) => {
   const commonAssertions = [
     () => assertUserLoggedIn(session as any),
     () => assertAdminRequest(request),
-    () => assertId({ ...params })
+    () => assertParamIdentifierEqualsFormIdentifier(data, refId, 'id')
   ];
 
   // Implement logic to determine who can update/delete.
@@ -291,6 +295,7 @@ export const assertPermissionsToDeleteImage = async (
   hubOpts: HubOpts,
   params: QueryParams,
   userRoles: UserRoleDisco[],
+  refId: Id,
   ctxId: Id,
   ctxType: ImageContextResource | ImageContextResourceExtended
 ) => {
@@ -300,7 +305,9 @@ export const assertPermissionsToDeleteImage = async (
     request,
     hubOpts,
     params,
+    { id: refId } as ImageDBFlat,
     userRoles,
+    refId,
     ctxId,
     ctxType
   );

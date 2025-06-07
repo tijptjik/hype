@@ -100,7 +100,9 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform,
       request,
       locals.hub,
       params as QueryParams,
+      data,
       userRoles,
+      params.id as Id,
       ctxId, 
       ctxType
     );
@@ -161,6 +163,7 @@ export const DELETE: RequestHandler = async ({ params, request, locals, platform
       locals.hub,
       params as QueryParams,
       userRoles,
+      params.id as Id,
       ctxId, 
       ctxType
     );

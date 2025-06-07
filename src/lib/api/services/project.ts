@@ -8,7 +8,8 @@ import {
   assertAdminRequest,
   assertId,
   runAssertions,
-  assertOrganisationOwnerOrSuperAdmin
+  assertOrganisationOwnerOrSuperAdmin,
+  assertParamIdentifierEqualsFormIdentifier
 } from '$lib/auth/asserts';
 // DB
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
@@ -28,7 +29,8 @@ import type {
   Session,
   Id,
   QueryParams,
-  Project
+  Project,
+  Code
 } from '$lib/types';
 import type { SuperValidated } from 'sveltekit-superforms';
 
@@ -153,19 +155,21 @@ export const assertPermissionsToCreateProject = (
  * @param request - The request object
  * @param formData - The form data
  * @param userRoles - The user roles
+ * @param refId - The code from the URL parameter
  * @returns Object containing validation and access control context
  */
 export const assertPermissionsToUpdateProject = (
   session: Session,
   request: Request,
   formData: ProjectDB,
-  userRoles: UserRoleDisco[]
+  userRoles: UserRoleDisco[],
+  refId: Code
 ) => {
   // Run all access control assertions
   const assertionError = runAssertions(
     () => assertUserLoggedIn(session as any),
     () => assertAdminRequest(request),
-    () => assertId(formData),
+    () => assertParamIdentifierEqualsFormIdentifier(formData, refId, 'code'),
     () =>
       assertOrganisationOwnerOrSuperAdmin(session, userRoles, formData.organisationId!) // Only allow org owners to update projects
   );

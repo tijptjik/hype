@@ -41,8 +41,8 @@ import type {
   ProjectI18nDB,
   ProjectPartial,
   ProjectRoleDB,
-  PropertyDB,
-  ProjectDBRaw
+  PropertyDBRaw,
+  Code
 } from '$lib/types';
 
 /********************
@@ -100,7 +100,7 @@ export const GET: RequestHandler = async ({
       result,
       result.i18n as unknown as ProjectI18nDB[],
       result.maintainerRoles as unknown as ProjectRoleDB[],
-      result.properties as unknown as PropertyRaw[]
+      result.properties as unknown as PropertyDBRaw[]
     );
 
     // HTTP : 200 JSON or 404
@@ -134,7 +134,13 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     if (!form.valid) return SuperFormResponse<Project>(form);
 
     // ASSERT : Permissions to update project
-    assertPermissionsToUpdateProject(session, request, formData, userRoles);
+    assertPermissionsToUpdateProject(
+      session,
+      request,
+      formData,
+      userRoles,
+      params.code as Code
+    );
 
     // DB : Update the project
     const updatedProject = await updateProjectWithRelated(db, form.data, params.code);
@@ -178,17 +184,18 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
 
     // Get the existing project to verify access
     const conditions = [eq(project.code, params.code as string)];
-    const existing = (await getProject(
-      db,
-      {},
-      conditions,
-      locals.hub
-    )) as ProjectDB;
+    const existing = (await getProject(db, {}, conditions, locals.hub)) as ProjectDB;
 
     if (!existing) return error(404, 'Project not found');
 
     // Use assertion functions for access control
-    assertPermissionsToUpdateProject(session, request, existing, userRoles);
+    assertPermissionsToUpdateProject(
+      session,
+      request,
+      existing,
+      userRoles,
+      params.code as Code
+    );
 
     // DB : Update only the basic project fields (no relations for PATCH)
     const updated = await updateProject(db, newData, params.code as string);

@@ -3,7 +3,7 @@ import { isAdminRequest } from '$lib/api';
 // I18N
 import { m } from '$lib/i18n';
 // TYPES
-import type { OrganisationPartial, Session, UserRoleDisco } from '$lib/types';
+import type { Code, Id, OrganisationPartial, Session, UserRoleDisco } from '$lib/types';
 import { error } from '@sveltejs/kit';
 
 /**
@@ -220,5 +220,23 @@ export const assertProjectMaintainerOrMemberOrSuperAdmin = (
 export const assertId = (formData: any, key: string = 'Id'): void | Response => {
   if (!formData.id) {
     return error(401, m.brief_jumpy_firefox_bump({ key }));
+  }
+};
+
+/**
+ * Assert that the parameter identifier matches the form data identifier
+ * @param formData - The form data object containing the identifier
+ * @param refId - The identifier from the URL parameter
+ * @param refType - The type of identifier ('id' or 'code')
+ * @throws {Response} 400 error if identifiers don't match
+ */
+export const assertParamIdentifierEqualsFormIdentifier = (
+  formData: any,
+  refId: Id | Code,
+  refType: 'id' | 'code'
+): void | Response => {
+  const formIdentifier = formData[refType];
+  if (formIdentifier && formIdentifier !== refId) {
+    return error(400, `${refType.charAt(0).toUpperCase() + refType.slice(1)} mismatch: URL parameter ${refType} (${refId}) does not match form data ${refType} (${formIdentifier})`);
   }
 };

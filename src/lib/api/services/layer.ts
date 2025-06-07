@@ -10,7 +10,8 @@ import {
   assertAdminRequest,
   assertId,
   runAssertions,
-  assertProjectMaintainerOrSuperAdmin
+  assertProjectMaintainerOrSuperAdmin,
+  assertParamIdentifierEqualsFormIdentifier
 } from '$lib/auth/asserts';
 // DB
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
@@ -167,19 +168,21 @@ export const assertPermissionsToCreateLayer = (
  * @param request - The request object
  * @param formData - The form data
  * @param userRoles - The user roles
+ * @param refId - The id from the URL parameter
  * @returns Object containing validation and access control context
  */
 export const assertPermissionsToUpdateLayer = (
   session: Session,
   request: Request,
   formData: LayerDB,
-  userRoles: UserRoleDisco[]
+  userRoles: UserRoleDisco[],
+  refId: Id
 ) => {
   // Run all access control assertions
   const assertionError = runAssertions(
     () => assertUserLoggedIn(session as any),
     () => assertAdminRequest(request),
-    () => assertId(formData),
+    () => assertParamIdentifierEqualsFormIdentifier(formData, refId, 'id'),
     () => assertProjectMaintainerOrSuperAdmin(session, userRoles, formData.projectId!)
   );
 
