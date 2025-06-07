@@ -69,7 +69,12 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
 
   try {
     // DB : Execute query with access control
-    const result = await listLayers(db, layerCollectionWithRelations, conditions);
+    const result = await listLayers(
+      db,
+      layerCollectionWithRelations,
+      conditions,
+      locals.hub
+    );
 
     // RESPONSE : Build the response shape
     const data = await Promise.all(

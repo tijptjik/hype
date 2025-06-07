@@ -18,7 +18,7 @@ import {
   toFormShape,
   updateOrganisation,
   updateOrganisationWithRelated,
-  toResponseShape,
+  toResponseShape
 } from '$lib/db/services/organisation';
 // API
 import {
@@ -71,7 +71,12 @@ export const GET: RequestHandler = async ({ params, locals, platform, request })
       conditions.push(eq(organisation.code, params.code));
     }
 
-    const result = await getOrganisation(db, organisationWithRelations, conditions);
+    const result = await getOrganisation(
+      db,
+      organisationWithRelations,
+      conditions,
+      locals.hub
+    );
 
     if (!result) {
       return error(404, m.brief_jumpy_firefox_bump({ key: 'Organisation' }));
@@ -177,9 +182,9 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     const newData: OrganisationPartial = await request.json();
 
     // Get the existing organisation to verify access
-    const existing = await getOrganisation(db, {}, [
+    const existing = (await getOrganisation(db, {}, [
       eq(organisation.code, params.code as string)
-    ]) as OrganisationDB;
+    ], locals.hub)) as OrganisationDB;
 
     if (!existing) {
       return error(404, 'Organisation not found');

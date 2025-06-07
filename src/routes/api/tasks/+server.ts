@@ -36,7 +36,7 @@ import type {
   TaskNew,
   QueryParams,
   TaskCreation,
-  TaskRaw,
+  TaskDBRaw,
   TaskCollection,
   Task
 } from '$lib/types';
@@ -80,7 +80,7 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
       db,
       taskCollectionWithRelations,
       conditions
-    )) as TaskRaw[];
+    )) as TaskDBRaw[];
 
         // RESPONSE : Build the response shape
     const data = await Promise.all(

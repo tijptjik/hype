@@ -72,18 +72,17 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
 
   try {
     // DB : List the projects
-    const result = await listProjects(db, projectCollectionWithRelations, conditions);
+    const result = await listProjects(
+      db,
+      projectCollectionWithRelations,
+      conditions,
+      locals.hub
+    );
 
     // RESPONSE : Build the response shape
     const data = await Promise.all(
       result.map(async (project) => {
-        return await toResponseShape(
-          project,
-          project.i18n,
-          [],
-          [],
-          true
-        );
+        return await toResponseShape(project, project.i18n, [], [], true);
       })
     );
 

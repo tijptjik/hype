@@ -84,7 +84,7 @@ export const GET: RequestHandler = async ({
     conditions.push(eq(layer.id, params.id as string));
 
     // DB : Get the layer
-    const result = await getLayer(db, layerEntityWithRelations, conditions);
+    const result = await getLayer(db, layerEntityWithRelations, conditions, locals.hub);
 
     if (!result) {
       return error(404, 'Project not found');
@@ -167,9 +167,8 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     const newData: LayerPartial = await request.json();
 
     // Get the existing layer to verify access
-    const existing = (await getLayer(db, {}, [
-      eq(layer.id, params.id as string)
-    ])) as LayerDB;
+    const conditions = [eq(layer.id, params.id as string)];
+    const existing = (await getLayer(db, {}, conditions, locals.hub)) as LayerDB;
 
     if (!existing) return error(404, m.quiet_soft_mole_animate());
 

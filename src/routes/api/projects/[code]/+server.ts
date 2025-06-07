@@ -42,7 +42,7 @@ import type {
   ProjectPartial,
   ProjectRoleDB,
   PropertyDB,
-  ProjectRaw
+  ProjectDBRaw
 } from '$lib/types';
 
 /********************
@@ -84,7 +84,12 @@ export const GET: RequestHandler = async ({
     conditions.push(eq(project.code, params.code!));
 
     // DB : Get the project
-    const result = await getProject(db, projectEntityWithRelations, conditions);
+    const result = await getProject(
+      db,
+      projectEntityWithRelations,
+      conditions,
+      locals.hub
+    );
 
     if (!result) {
       return error(404, 'Project not found');
@@ -172,9 +177,13 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     const newData: ProjectPartial = await request.json();
 
     // Get the existing project to verify access
-    const existing = (await getProject(db, {}, [
-      eq(project.code, params.code as string)
-    ])) as ProjectDB;
+    const conditions = [eq(project.code, params.code as string)];
+    const existing = (await getProject(
+      db,
+      {},
+      conditions,
+      locals.hub
+    )) as ProjectDB;
 
     if (!existing) return error(404, 'Project not found');
 

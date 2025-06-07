@@ -70,10 +70,10 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
 
   try {
     // DB : List the features
-    const result = await listFeaturesWithImage(db, featureCollectionWithRelations, conditions);
+    const result = await listFeaturesWithImage(db, featureCollectionWithRelations, conditions, locals.hub);
 
     // RESPONSE : Build the response shape with merged properties
-    const data = await buildCollectionResponseShape(db, result);
+    const data = await buildCollectionResponseShape(db, result, locals.hub);
 
     // HTTP : 200 JSON or 404
     return JSONResponseOrError(data);
@@ -117,6 +117,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       db,
       session,
       request,
+      locals,
       form.data as any,
       userRoles
     );

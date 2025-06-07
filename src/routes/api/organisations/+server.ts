@@ -30,7 +30,6 @@ import { OrganisationInsertAPI } from '$lib/db/zod';
 import type { RequestHandler } from '@sveltejs/kit';
 import type { OrganisationNew, Organisation } from '$lib/types';
 
-
 /********************
  *  COMMON
  ************/
@@ -66,17 +65,17 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
 
   try {
     // DB : List the organisations
-    const result = await listOrganisations(db, organisationWithRelations, conditions);
+    const result = await listOrganisations(
+      db,
+      organisationWithRelations,
+      conditions,
+      locals.hub
+    );
 
     // RESPONSE : Build the response shape
     const data = await Promise.all(
       result.map(async (organisation) => {
-        return await toResponseShape(
-          organisation,
-          organisation.i18n,
-          [],
-          true
-        );
+        return await toResponseShape(organisation, organisation.i18n, [], true);
       })
     );
 
@@ -98,7 +97,7 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
  */
 export const POST: RequestHandler = async ({ request, locals, platform }) => {
   // ASSERT : User logged in
-  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
+  const { db, session, userRoles } = await getDatabase(locals, platform);
 
   try {
     // ASSERT : Valid form
@@ -122,7 +121,10 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
     assertPermissionsToCreateOrganisation(session, request, formData, userRoles);
 
     // DB : Create the organisation
-    const createdOrganisation = await createOrganisationWithRelated(db, form.data as OrganisationNew);
+    const createdOrganisation = await createOrganisationWithRelated(
+      db,
+      form.data as OrganisationNew
+    );
 
     // FORM : Rebuild the form data
     const updatedForm = await toFormShape(

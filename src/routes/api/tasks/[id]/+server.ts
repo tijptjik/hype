@@ -31,7 +31,7 @@ import {
 } from '$lib/db/services/task';
 // TYPES
 import type { RequestHandler } from '@sveltejs/kit';
-import type { Id, QueryParams, TaskDBPartial, TaskRaw } from '$lib/types';
+import type { Id, QueryParams, TaskDBPartial, TaskDBRaw } from '$lib/types';
 
 /********************
  *  COMMON
@@ -75,7 +75,7 @@ export const GET: RequestHandler = async ({
   try {
 
     // DB : Get the task with full relations
-    const data = await getTask(db, taskEntityWithRelations, conditions) as TaskRaw;
+    const data = await getTask(db, taskEntityWithRelations, conditions) as TaskDBRaw;
 
     if (!data) {
       return error(404, 'Task not found');

@@ -81,7 +81,8 @@ export const GET: RequestHandler = async ({
     const result = (await getFeatureWithImage(
       db,
       featureEntityWithRelations,
-      conditions
+      conditions,
+      locals.hub
     )) as FeatureDBRaw;
 
     if (!result) {
@@ -89,7 +90,7 @@ export const GET: RequestHandler = async ({
     }
 
     // RESPONSE : Build the response shape with merged properties
-    const data = await buildResponseShape(db, result);
+    const data = await buildResponseShape(db, result, locals.hub);
     return JSONResponseOrError(data);
   } catch (e) {
     logZodError(e, 'Feature read error:');
@@ -121,7 +122,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     if (!form.valid) return SuperFormResponse<Feature>(form);
 
     // ACCESS CONTROL : Check permissions
-    await assertPermissionsToUpdateFeature(db, session, request, form.data as FeatureNew, userRoles);
+    await assertPermissionsToUpdateFeature(db, session, request, locals, form.data as FeatureNew, userRoles);
 
     // DB : Update the feature
     const updatedFeature = await updateFeatureWithRelated(db, form.data as FeaturePartial, params.id as Id);
@@ -154,14 +155,13 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     const newData: FeaturePartial = await request.json();
 
     // STATE : Get the existing feature to verify access
-    const existing = (await getFeature(db, {}, [
-      eq(feature.id, params.id as string)
-    ])) as FeatureDB;
+    const conditions = [eq(feature.id, params.id as string)];
+    const existing = (await getFeature(db, {}, conditions, locals.hub)) as FeatureDB;
 
     if (!existing) return error(404, m.quiet_soft_mole_animate_feature());
 
     // ASSERT : Use assertion functions for access control
-    assertPermissionsToUpdateFeature(db, session, request, existing as FeatureNew, userRoles);
+    assertPermissionsToUpdateFeature(db, session, request, locals, existing as FeatureNew, userRoles);
 
     // DB : Update only the basic feature fields (no relations for PATCH)
     const updated = await updateFeature(db, newData, params.id);
