@@ -1,4 +1,7 @@
 <script lang="ts">
+// SVELTE
+import { watch } from 'runed';
+// LIB
 import { NEW_TITLE, NEW_REF } from '$lib';
 // I18N
 import { getLocale } from '$lib/i18n';
@@ -49,7 +52,6 @@ import type {
 const resourceState = getHierarchicalResourceState();
 
 // CONFIG
-const RESOURCE = HierarchicalResource.feature;
 const FIELDS: FormFieldConfig = {
   i18n: {
     title: {
@@ -108,23 +110,30 @@ const FIELDS: FormFieldConfig = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Feature> = $props();
-resourceState.setEntity(pageProps.data.entity, FirstClassResource.organisation);
+resourceState.setEntity(pageProps.data.entity, FirstClassResource.feature);
 resourceState.setFacet('core');
 
 // STATE : FORM
 let form = setForm(
-  RESOURCE,
+  FirstClassResource.feature,
   pageProps.data.entity,
   pageProps.data.validatedForm,
   getHierarchicalResourceState(),
   getFlash(page, { clearOnNavigate: false, clearAfterMs: 2500 })
 );
+
+// REACTIVE: Update form when pageProps change (for reset functionality)
+watch(
+  () => pageProps.data.validatedForm.data,
+  (newData) => {form.form.set(newData as unknown as Feature)},
+  {
+    lazy: true
+  }
+);
+
+// STATE : DERIVED
 let enhance = $derived(form.enhance);
-
-// STATE : DERIVED :: FULLSCREEN
 let isMapFullscreen = $state(false);
-
-// STATE : DERIVED :: TITLE
 let title = $derived(
   pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.title || NEW_TITLE
 );

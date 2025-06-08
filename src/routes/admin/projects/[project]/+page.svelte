@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { watch } from 'runed';
 // LIB
 import { NEW_TITLE } from '$lib';
 // I18N
@@ -22,7 +24,13 @@ import ImageSection from '$lib/components/forms/sections/Image.svelte';
 import PropertySection from '$lib/components/forms/sections/PropertyType.svelte';
 import UserSection from '$lib/components/forms/sections/User.svelte';
 // ENUMS
-import { HierarchicalResource, classifierComponentTypes, specifierComponentTypes, ImageContextResource } from '$lib/enums';
+import {
+  HierarchicalResource,
+  classifierComponentTypes,
+  specifierComponentTypes,
+  ImageContextResource,
+  FirstClassResource
+} from '$lib/enums';
 // TYPES
 import type {
   Project,
@@ -191,7 +199,7 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
           }
         }
       }
-    } as FormFieldArrayDefinition,
+    } as FormFieldArrayDefinition
   } as FormFieldArray,
   images: {
     image: {
@@ -199,12 +207,12 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
       component: 'InputField',
       isArray: false
     }
-  } as FormField,
+  } as FormField
 };
 
 // STATE : PROPS
 let pageProps: FormPageProps<Project> = $props();
-resourceState.setEntity(pageProps.data.entity, RESOURCE);
+resourceState.setEntity(pageProps.data.entity, FirstClassResource.project);
 resourceState.setFacet('core');
 
 // STATE : FORM
@@ -215,29 +223,43 @@ let form = setForm(
   getHierarchicalResourceState(),
   getFlash(page, { clearOnNavigate: false, clearAfterMs: 2500 })
 );
-let enhance = $derived(form.enhance);
 
-// STATE : DERIVED :: TITLE
-let title = $derived(pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE);
+// REACTIVE: Update form when pageProps change (for reset functionality)
+watch(
+  () => pageProps.data.validatedForm.data,
+  (newData) => {
+    form.form.set(newData as unknown as Project);
+  },
+  {
+    lazy: true
+  }
+);
+
+// STATE : DERIVED
+let enhance = $derived(form.enhance);
+let title = $derived(
+  pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE
+);
 </script>
 
 <!-- LAYOUT -->
 <div class="mb-12 h-full bg-black">
   <Header {title}>
     {#snippet menuItems()}
-      <HeaderButton 
-        facet={{ label: m.project__core(), ref: 'core' }} 
-        isActive={resourceState.activeFacet === 'core' || resourceState.activeFacet === false} />
-      <HeaderButton 
-        facet={{ label: m.project__fields(), ref: 'fields' }} 
+      <HeaderButton
+        facet={{ label: m.project__core(), ref: 'core' }}
+        isActive={resourceState.activeFacet === 'core' ||
+          resourceState.activeFacet === false} />
+      <HeaderButton
+        facet={{ label: m.project__fields(), ref: 'fields' }}
         isActive={resourceState.activeFacet === 'fields'} />
       {#if resourceState.activeEntity !== 'new'}
-        <HeaderButton 
-          facet={{ label: m.project__images(), ref: 'images' }} 
+        <HeaderButton
+          facet={{ label: m.project__images(), ref: 'images' }}
           isActive={resourceState.activeFacet === 'images'} />
       {/if}
     {/snippet}
-    
+
     {#snippet actions()}
       <EntityActions {form} />
     {/snippet}
@@ -253,12 +275,12 @@ let title = $derived(pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.na
       {#if resourceState.activeFacet === 'core' || resourceState.activeFacet === false}
         <I18nSection
           title={m.admin__forms_common_descriptors()}
-          fields={FIELDS.i18n as FormField}
+          fields={FIELDS.i18n}
           {form} />
         <I18nSection
           title={m.admin__forms_project_credit()}
           subtitle={m.admin__forms_project_credit_subtitle()}
-          fields={FIELDS.credit as FormField}
+          fields={FIELDS.credit}
           {form} />
         <div class="flex flex-row gap-6">
           <UserSection
@@ -270,8 +292,7 @@ let title = $derived(pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.na
               discriminator: 'role',
               checkedValue: 'maintainer',
               uncheckedValue: 'member'
-            }}
-             />
+            }} />
           <SpecificationSection
             title={m.admin__forms_common_specifiers()}
             fields={FIELDS.specification as FormField}

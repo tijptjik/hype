@@ -1,7 +1,11 @@
 <script lang="ts">
+// SVELTE
+import { watch } from 'runed';
+// LIB
 import { NEW_TITLE } from '$lib';
-import { getLocale } from '$lib/i18n';
+// I18N
 import { m } from '$lib/i18n';
+import { getLocale } from '$lib/i18n';
 // CONTEXT
 import { setForm } from '$lib/context/form.svelte';
 import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
@@ -15,15 +19,20 @@ import EntityActions from '$lib/components/menu/EntityActions.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
 import LayerPropertySection from '$lib/components/forms/sections/LayerProperty.svelte';
 // ENUMS
-import { HierarchicalResource } from '$lib/enums';
+import { HierarchicalResource, FirstClassResource } from '$lib/enums';
 // TYPES
-import type { Layer, FormPageProps, FormField, FormFieldArray, FormFieldArrayDefinition } from '$lib/types';
+import type {
+  Layer,
+  FormPageProps,
+  FormField,
+  FormFieldArray,
+  FormFieldArrayDefinition
+} from '$lib/types';
 
 // CONTEXT
 const resourceState = getHierarchicalResourceState();
 
 // CONFIG
-const RESOURCE = HierarchicalResource.layer;
 const FIELDS: Record<string, FormField | FormFieldArray> = {
   i18n: {
     name: {
@@ -65,20 +74,31 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Layer> = $props();
-resourceState.setEntity(pageProps.data.entity, RESOURCE);
+resourceState.setEntity(pageProps.data.entity, FirstClassResource.layer);
 resourceState.setFacet('core');
 
 // STATE : FORM
 let form = setForm(
-  RESOURCE,
+  FirstClassResource.layer,
   pageProps.data.entity,
   pageProps.data.validatedForm,
   getHierarchicalResourceState(),
   getFlash(page, { clearOnNavigate: false, clearAfterMs: 2500 })
 );
-let enhance = $derived(form.enhance);
+
+// REACTIVE: Update form when pageProps change (for reset functionality)
+watch(
+  () => pageProps.data.validatedForm.data,
+  (newData) => {
+    form.form.set(newData as unknown as Layer);
+  },
+  {
+    lazy: true
+  }
+);
 
 // STATE : DERIVED :: TITLE
+let enhance = $derived(form.enhance);
 let title = $derived(
   pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE
 );
@@ -88,11 +108,12 @@ let title = $derived(
 <div class="mb-12 h-full bg-black">
   <Header {title}>
     {#snippet menuItems()}
-      <HeaderButton 
-        facet={{ label: m.layer__core(), ref: 'core' }} 
-        isActive={resourceState.activeFacet === 'core' || resourceState.activeFacet === false} />
+      <HeaderButton
+        facet={{ label: m.layer__core(), ref: 'core' }}
+        isActive={resourceState.activeFacet === 'core' ||
+          resourceState.activeFacet === false} />
     {/snippet}
-    
+
     {#snippet actions()}
       <EntityActions {form} />
     {/snippet}

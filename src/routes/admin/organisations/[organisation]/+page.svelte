@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { watch } from 'runed';
 // CONFIG
 import { NEW_TITLE } from '$lib';
 // I18N
@@ -113,14 +115,23 @@ let form = setForm(
   getHierarchicalResourceState(),
   getFlash(page, { clearOnNavigate: false, clearAfterMs: 2500 })
 );
-let enhance = $derived(form.enhance);
 
-// STATE : DERIVED :: TITLE
+// REACTIVE: Update form when pageProps change (for reset functionality)
+watch(
+  () => pageProps.data.validatedForm.data,
+  (newData) => {
+    form.form.set(newData as unknown as Organisation);
+  },
+  {
+    lazy: true
+  }
+);
+
+// STATE : DERIVED
+let enhance = $derived(form.enhance);
 let title = $derived(
   pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE
 );
-
-// DERIVED : CONDITIONS
 let hasHub = $derived(!!pageProps.data.validatedForm?.data?.hubId);
 </script>
 

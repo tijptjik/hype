@@ -19,8 +19,10 @@ let { tainted, isTainted } = menuProps.form;
   transition:slide={{ axis: 'x' }}
 
   class="btn btn-ghost join-item gap-1 transition-colors duration-500 disabled:bg-transparent disabled:text-opacity-60 overflow-hidden flex-row items-center"
-  onclick={() => invalidateAll()}
-  disabled={!isTainted($tainted as unknown as boolean)}>
+  onclick={() => {
+    invalidateAll();
+  }}
+  disabled={!isTainted($tainted)}>
   <Icon src={XCircle} class="h-6 w-6" />
   {m.forms__reset()}
 </button>
