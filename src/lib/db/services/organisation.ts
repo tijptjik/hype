@@ -377,13 +377,13 @@ export const updateOrganisationWithRelated = async (
  * Rebuilds form data from database entities
  * @param organisation - The organisation database entity
  * @param translations - Array of organisation translations
- * @param userRoles - Array of organisation user roles
+ * @param userRoles - Array of organisation user roles with nested user objects
  * @returns Validated form data
  */
 export const toFormShape = async (
   organisation: OrganisationDB,
   i18n: OrganisationI18nNew[],
-  userRoles: OrganisationRoleNew[],
+  userRoles: OrganisationRoleDB[],
   isSuperAdmin: boolean = false
 ): Promise<SuperValidated<Organisation>> => {
   const formData: Organisation = {
@@ -404,7 +404,7 @@ export const toFormShape = async (
 export const toResponseShape = async (
   organisation: OrganisationDB,
   i18n: OrganisationI18nNew[],
-  userRoles: OrganisationRoleNew[],
+  userRoles: OrganisationRoleDB[],
   isCollection: boolean = false,
   isSuperAdmin: boolean = false
 ) => {
