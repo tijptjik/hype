@@ -115,17 +115,22 @@ async function search(minChars = 2) {
   // Minimum 2 characters
   if (searchQuery.length < minChars) return;
 
+
   const response = await fetch(`/api/${apiPath}?q=${encodeURIComponent(searchQuery)}`);
   const allResults: ResultType[] = await response.json();
 
   searchResults = allResults.filter((item) => {
-    return isExistingCheck ? isExistingCheck(item) : true;
+    const shouldInclude = isExistingCheck ? isExistingCheck(item) : true;
+
+    return shouldInclude;
   });
+  
   return searchResults;
 }
 
 const addItem = (e: Event, item: ResultType) => {
   e.preventDefault();
+  e.stopPropagation();
   
   // Check if item already exists to prevent duplicates
   if (isExistingCheck && !isExistingCheck(item)) {
@@ -180,12 +185,12 @@ const resetResults = () => (searchResults = []);
       </div>
     </div>
     {#if searchResults.length > 0}
-      <div class="absolute z-10 w-full caret-transparent" transition:slide={{ duration: 200 }}>
+      <div class="absolute z-50 w-full caret-transparent" transition:slide={{ duration: 200 }}>
         <ul
           id="search-results"
           class="max-h-64 w-full overflow-y-auto rounded-b-lg bg-base-100 shadow-lg"
           role="listbox">
-          {#each searchResults as result, index}
+          {#each searchResults as result, index ((result as any).id)}
             {@const item = result as any}
             {@const isUser = 'email' in item}
             {@const isOrganisation = 'code' in item && !('email' in item)}
@@ -193,6 +198,7 @@ const resetResults = () => (searchResults = []);
               <button
                 class="flex w-full items-center justify-between text-left hover:bg-base-200 focus:bg-base-200 focus:outline-none first:rounded-t-lg last:rounded-b-lg px-4 py-3"
                 data-testid={`searchResultItem_${index}`}
+                data-item-id={(item as any).id}
                 onclick={(e) => addItem(e, item)}
                 role="option"
                 tabindex="0"
