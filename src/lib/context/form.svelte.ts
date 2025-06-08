@@ -79,28 +79,35 @@ class BaseForm<T extends Record<string, unknown>> {
     };
     const schema = zod(isNew ? insertSchema : updateSchema);
     
-    // // Check if we have nested data that defaults() might strip out
-    // const hasNestedProperties = (form.data as any).properties?.some?.((prop: any) => prop.property);
+    // Check if we have nested data that defaults() might strip out
+    const hasNestedProperties = (form.data as any).properties?.some?.((prop: any) => prop.property);
+    const hasUserRoles = (form.data as any).userRoles?.length > 0;
+    const hasMaintainerRoles = (form.data as any).maintainerRoles?.length > 0;
+    const hasOrganisations = (form.data as any).organisations?.length > 0;
     
-    // let formData;
-    // if (hasNestedProperties) {
-    //   // Skip defaults() if we have nested property data to preserve it
-    //   formData = form.data;
-    // } else {
-    //   // Apply defaults for new forms or forms without nested data
-    //   formData = defaults(form.data, schema);
-    // }
+    let formData;
+    if (hasNestedProperties || hasUserRoles || hasMaintainerRoles || hasOrganisations) {
+      // Skip defaults() if we have nested data to preserve it
+      formData = form.data;
+    } else {
+      // Apply defaults for new forms or forms without nested data
+      formData = defaults(form.data, schema);
+    }
     
     // @ts-ignore
-    this.formResult = superForm(defaults(form.data, schema), formOptions);
-
-    // this.formResult = superForm(formData, formOptions);
+    this.formResult = superForm(formData, formOptions);
     
     this.flash = flash;
   }
 
   get form() {
-    return this.formResult.form;
+    const formValue = this.formResult.form;
+    const formSnapshot = $state.snapshot(formValue);
+    
+    // Check correct field based on resource type
+    const userField = this.resourceType === 'organisation' ? 'userRoles' : 'maintainerRoles';
+    
+    return formValue;
   }
   get enhance() {
     return this.formResult.enhance;
@@ -399,7 +406,7 @@ export function setForm(
   flash: Writable<App.PageData['flash']>
 ): HubForm;
 
-export function setForm<T extends OrganisationNew | Project | Layer | Feature | Hub>(
+export function setForm<T extends Organisation | Project | Layer | Feature | Hub>(
   resourceType: FalsableResourceType,
   entity: Ref,
   form: SuperValidated<T>,
@@ -487,7 +494,7 @@ export function getForm(
   entity: Ref
 ): HubForm;
 
-export function getForm<T extends OrganisationNew | Project | Layer | Feature | Hub>(
+export function getForm<T extends Organisation | Project | Layer | Feature | Hub>(
   resource: ResourceType,
   entity: Ref
 ): OrganisationForm | ProjectForm | LayerForm | FeatureForm | HubForm {
