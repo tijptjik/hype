@@ -29,6 +29,27 @@
       "when": 1749278910995,
       "tag": "0003_hub-multi-tenancy-redux-final",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1749397295125,
+      "tag": "0004_better-auth",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1749398874309,
+      "tag": "0005_better-auth-migration",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1749399313439,
+      "tag": "0006_better-auth-timestamp-fix",
+      "breakpoints": true
     }
   ]
 }
