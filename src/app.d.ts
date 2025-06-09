@@ -1,5 +1,6 @@
 import type { AvailableLanguageTag } from '../../lib/paraglide/runtime';
 import type { ParaglideLocals } from '@inlang/paraglide-sveltekit';
+import type { Auth, SessionSession, SessionUser } from '$lib/auth';
 // See https://kit.svelte.dev/docs/types#app
 // for information about these interfaces
 
@@ -27,6 +28,10 @@ declare global {
       paraglide: ParaglideLocals<AvailableLanguageTag>;
       db: DrizzleD1Database<typeof import('$lib/db/schema')>;
       hub: HubOpts;
+      // Auth properties are only available for /api routes
+      auth: Auth;
+      session: SessionSession;
+      user: SessionUser;
     }
     // interface PageData {}
     // interface PageState {}
