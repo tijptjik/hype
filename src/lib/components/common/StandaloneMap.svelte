@@ -63,7 +63,7 @@ onMount(async () => {
     zoom: 14,
     hash: false,
     pitch: 45,
-    attributionControl: false,
+    attributionControl: false
   });
 
   // mapCtx.map.transform.setFov(0);
@@ -71,7 +71,7 @@ onMount(async () => {
   mapCtx.map!.on('load', () => {
     mapCtx.map!.addSource('hongkong-latest', {
       type: 'vector',
-              url: '/api/tiles/basemap/hongkong-latest.json'
+      url: 'https://tiles.hype.hk/basemap/hongkong-latest.json'
     });
 
     if (!mapCtx.user?.experimental?.noLabelsMode) {
@@ -1303,22 +1303,22 @@ $effect(() => {
       centerInPx.y
     );
     const newCenter: LngLatLike = mapCtx.map!.unproject(newPoint);
-    
+
     lastHorizontalOffset = horizontalOffset();
-    
+
     // Set up one-time event listener for when animation completes
     const onMoveEnd = () => {
       isAnimating = false;
       mapCtx.map?.off('moveend', onMoveEnd);
     };
     mapCtx.map!.on('moveend', onMoveEnd);
-    
+
     // Start the animation
-    mapCtx.map!.easeTo({ 
+    mapCtx.map!.easeTo({
       center: newCenter,
       duration: 300
     });
-    
+
     // Fallback timeout in case moveend doesn't fire
     setTimeout(() => {
       isAnimating = false;
