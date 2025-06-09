@@ -1,8 +1,16 @@
-// /src/hooks.server.ts
-import { handle as inject_auth } from '$lib/auth';
+// SVELTE
 import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle } from '@sveltejs/kit';
+// DB
+import { drizzle } from 'drizzle-orm/d1';
+import * as schema from '$lib/db/schema';
+// AUTH
+import { svelteKitHandler } from 'better-auth/svelte-kit';
+import { createAuth } from '$lib/auth';
+// I18N
 import { paraglideMiddleware } from '$lib/paraglide/server';
+// TYPES
+import type { Session, User } from '$lib/types';
 
 let handle: Handle;
 const localWranglerEnv = import.meta.env.VITE_WRANGLER_ENV === 'local';
@@ -46,14 +54,6 @@ const handle_cors = (async ({ event, resolve }) => {
   return resolve(event);
 }) satisfies Handle;
 
-// const handle_security = (async ({ event, resolve }) => {
-//   const response = await resolve(event);
-//   response.headers.set('X-Content-Type-Options', 'nosniff');
-//   response.headers.set('X-Frame-Options', 'SAMEORIGIN');
-//   response.headers.set('X-XSS-Protection', '1; mode=block');
-//   return response;
-// }) satisfies Handle;
-
 // ═══════════════════════
 // HUB HOOK
 // ═══════════════════════
@@ -75,21 +75,77 @@ const handle_hub: Handle = async ({ event, resolve }) => {
 };
 
 // ═══════════════════════
+// BETTER-AUTH HOOK
+// ═══════════════════════
+/**
+ * This hook sets up Better-Auth with the database connection
+ * Only runs for /api routes since only API routes need protection
+ */
+const handle_auth: Handle = async ({ event, resolve }) => {
+  // Only run auth for API routes
+  if (!event.url.pathname.startsWith('/api')) {
+    return resolve(event);
+  }
+
+  try {
+    if (!event.platform?.env?.DB) {
+      console.error('🔴 Auth: No DB available');
+      return resolve(event);
+    }
+
+    // DB
+    const db = drizzle(event.platform.env.DB, { schema });
+
+    // AUTH
+    const auth = createAuth(db);
+
+    // SET LOCALS
+    event.locals.auth = auth;
+
+    return svelteKitHandler({ event, resolve, auth });
+  } catch (error) {
+    console.error('🔴 Auth setup error:', error);
+    return resolve(event);
+  }
+};
+
+/**
+ * Workaround to set session and user locals
+ * Only runs for API routes since only API routes need protection
+ */
+const handle_session_auth: Handle = async ({ event, resolve }) => {
+  // Only run auth for API routes
+  if (!event.url.pathname.startsWith('/api') || !event.locals.auth) {
+    return resolve(event);
+  }
+
+  // LOCALS
+  const session = await event.locals.auth.api.getSession({
+    headers: event.request.headers
+  });
+  event.locals.session = session?.session;
+  event.locals.user = session?.user;
+
+  return resolve(event);
+};
+
+// ═══════════════════════
 // HUB ENRICHMENT HOOK
 // ═══════════════════════
 /**
  * This hook enriches the hub info with session data after auth runs.
  * It adds the superAdmin status to the hub options.
+ * Only runs for API routes since only API routes need protection
  */
 const handle_hub_enrichment: Handle = async ({ event, resolve }) => {
-  // Get session from locals (set by auth hook)
-  const session = await event.locals.auth?.();
-
-  // Enrich hub options with superAdmin status
-  if (event.locals.hub) {
-    event.locals.hub.isSuperAdmin = session?.user?.superAdmin || false;
+  // Only run for API routes where auth is available
+  if (!event.url.pathname.startsWith('/api') || !event.locals.user) {
+    return resolve(event);
   }
-
+  // LOCALS
+  if (event.locals.hub) {
+    event.locals.hub.isSuperAdmin = event.locals.user?.superAdmin || false;
+  }
   return resolve(event);
 };
 
@@ -99,6 +155,15 @@ const handle_hub_enrichment: Handle = async ({ event, resolve }) => {
 /**
  * This is the main hook that is used to sequence the other hooks.
  */
+
+const common_handle_sequence = [
+  handle_cors,
+  handle_hub,
+  handle_auth,
+  handle_session_auth,
+  handle_hub_enrichment,
+  translation
+];
 if (localWranglerEnv) {
   // This is an ugly hack to avoid Vite loading in the wrangler dep regardless
   // of the conditional import, and throwing errors when building for CF workers
@@ -120,18 +185,9 @@ if (localWranglerEnv) {
     return resolve(event);
   }) satisfies Handle;
 
-  handle = sequence(
-    mock_cloudflare,
-    handle_cors,
-    // handle_security,
-    handle_hub,
-    inject_auth,
-    handle_hub_enrichment,
-    translation
-  );
-  } else {
-    // handle = sequence(handle_cors, handle_security, inject_auth, translation);
-    handle = sequence(handle_hub, inject_auth, handle_hub_enrichment, translation);
-  }
+  handle = sequence(mock_cloudflare, ...common_handle_sequence);
+} else {
+  handle = sequence(...common_handle_sequence);
+}
 
 export { handle };
