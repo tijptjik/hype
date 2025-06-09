@@ -649,8 +649,8 @@ interface FeaturePropertyRecord {
 
 // Constants
 const LAYER_ID = '7akti7OImSFg';
-const CONTRIBUTOR_ID = 'p6WnJ-DKl0c1';
-const PUBLISHER_ID = 'p6WnJ-DKl0c1';
+const CONTRIBUTOR_ID = 'qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM';
+const PUBLISHER_ID = 'qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM';
 
 async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
