@@ -50,6 +50,13 @@
       "when": 1749399313439,
       "tag": "0006_better-auth-timestamp-fix",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1749470117489,
+      "tag": "0007_isUserContributable",
+      "breakpoints": true
     }
   ]
 }
