@@ -1,8 +1,9 @@
 <script lang="ts">
 // SVELTE
 import { onMount } from 'svelte';
-// LIB
-import { ADMIN_MIN_WIDTH } from '$lib/index';
+import { watch } from 'runed';
+// AUTH
+import { useSession } from '$lib/auth/client';
 // COMPONENTS
 import Sidebar from '$lib/components/sidebar/Root.svelte';
 import Navbar from '$lib/components/layout/Navbar.svelte';
@@ -10,38 +11,61 @@ import MinWidthProtector from '$lib/components/layout/MinWidth.svelte';
 // STYLES
 import '$lib/styles/admin.css';
 // CONTEXT
-import { setHierarchicalResourceState } from '$lib/context/resource.svelte';
-import { setMapCtx } from '$lib/context/map.svelte';
+import { setAdminCtx } from '$lib/context/admin.svelte';
+import { setAppCtx } from '$lib/context/app.svelte';
 import { setSidebarState } from '$lib/context/sidebar.svelte';
 // TYPES
 import type { LayoutProps, LayoutData } from './$types';
 import type { QueryClient } from '@tanstack/svelte-query';
+import type { SessionUser } from '$lib/types';
 
-// PROPS
-let { children, data }: LayoutProps = $props();
-const { session, queryClient } = data as LayoutData & {
-  queryClient: QueryClient;
+type AdminRootProps = LayoutProps & {
+  children: any;
+  data: LayoutData & {
+    queryClient: QueryClient;
+  };
 };
 
-// CONTEXT
-const resourceState = setHierarchicalResourceState(
+// PROPS
+let { children, data }: AdminRootProps = $props();
+const { queryClient } = data;
+
+// AUTH
+const session = useSession();
+
+// CONTEXT - Initialize with client session
+
+// Always set up map context, but only fetch data when authenticated
+// CONTEXT :: APP
+const appCtx = setAppCtx(
   queryClient,
-  session,
-  session?.user.roles ?? []
+  $session.data?.user as SessionUser | null
 );
-setMapCtx(queryClient, session.user);
+// CONTEXT :: ADMIN
+const adminCtx = setAdminCtx(
+  queryClient,
+  appCtx
+);
+
+// CONTEXT :: SIDEBAR
 setSidebarState();
 
-let viewportContained = $derived(
-  resourceState.activeEntity == false ||
-    resourceState.activeFacet == 'address' ||
-    resourceState.activeFacet == 'images' ||
-    (resourceState.activeResource == 'feature' &&
-      (resourceState.activeFacet == 'core' || resourceState.activeFacet == false)) ||
-    (resourceState.activeResource == 'task' && resourceState.activeEntity)
+// Re-initialize data when user becomes authenticated
+watch(
+  () => $session.data?.user,
+  () => {
+    if ($session.data?.user) {
+      appCtx.setUser($session.data.user as SessionUser);
+      appCtx.reinitializeWithAuth();
+      appCtx.registerKeydownHandlers();
+    } else if (!$session.data?.user && appCtx.user?.id) {
+      appCtx.setUser(null);
+    }
+  }
 );
 
 // Initialize active resource and entity based on the current path
+// TODO Replace with the correct check 
 let isMounted = $state(false);
 onMount(() => {
   isMounted = true;
@@ -58,7 +82,7 @@ onMount(() => {
       </header>
       <main
         class="flex h-full flex-1 flex-col overflow-hidden"
-        class:pb-[72px]={!viewportContained}>
+        class:pb-[72px]={!adminCtx.isViewportContained}>
         {@render children()}
       </main>
     </div>

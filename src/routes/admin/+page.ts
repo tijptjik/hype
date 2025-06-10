@@ -3,9 +3,9 @@ import { redirect } from '@sveltejs/kit';
 // LIB
 import { ADMIN_PATH } from '$lib/index';
 // ENUMS
-import { HierarchicalResource, ResourcePath } from '$lib/enums';
+import { FirstClassResource, ResourcePath } from '$lib/enums';
 
-const DEFAULT_RESOURCE = HierarchicalResource.organisation;
+const DEFAULT_RESOURCE = FirstClassResource.organisation;
 
 export function load() {
   const resourcePath = ResourcePath[DEFAULT_RESOURCE];
