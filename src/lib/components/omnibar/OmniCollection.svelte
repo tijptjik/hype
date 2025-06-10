@@ -75,7 +75,7 @@ $effect(() => {
 </script>
 
 <div
-  class="absolute left-3 right-3 top-0 z-50 flex w-auto select-none flex-col rounded-b-lg border-t-0 border-base-300 bg-base-200 p-0 shadow-xl shadow-blue-500/100 shadow-blue-500/50"
+  class="absolute left-3 right-3 top-0 z-50 flex w-auto select-none flex-col rounded-b-lg border-t-0 border-base-300 bg-base-200 p-0 shadow-xl shadow-blue-500/50"
   transition:slide={{ duration: 200, axis: 'y', delay: 300, easing: cubicInOut }}>
   <div class="max-h-[260px] overflow-y-auto px-4 pb-2 pt-1.5">
     {#if items.length === 0}

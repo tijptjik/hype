@@ -82,7 +82,7 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
     // RESPONSE : Build the response shape
     const data = await Promise.all(
       result.map(async (project) => {
-        return await toResponseShape(project, project.i18n, [], [], true);
+        return await toResponseShape(project, project.i18n!, [], [], true);
       })
     );
 

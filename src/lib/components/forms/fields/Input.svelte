@@ -27,7 +27,7 @@ let isGenAI = $state(false);
 
 // EFFECT : SYNC WITH FORM
 let fieldValues = $derived(
-  getValues($form as any, field as unknown as Field, locale as LocaleExtended, fieldRoot, fieldIndex, fieldKey)
+  getValues($form as any, field, locale as LocaleExtended, fieldRoot, fieldIndex, fieldKey)
 )!;
 
 // STATE : DERIVED

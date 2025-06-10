@@ -123,7 +123,7 @@ export const toFormShape = async (hub: HubDBRaw): Promise<SuperValidated<Hub>> =
     ...hub,
     i18n: transformI18nSafely(hub.i18n),
     organisations:
-      hub.organisations?.map((organisation: OrganisationDBRaw) => {
+      hub.organisations?.map((organisation) => {
         return {
           ...organisation,
           i18n: transformI18nSafely(organisation.i18n),
@@ -132,6 +132,7 @@ export const toFormShape = async (hub: HubDBRaw): Promise<SuperValidated<Hub>> =
         };
       }) || null
   };
+  // @ts-ignore TODO - Fix Zod type error
   const form = await superValidate(transformedHub, zod(HubAPI));
   return form as SuperValidated<Hub>;
 };
@@ -147,7 +148,7 @@ export const toResponseShape = async (hub: HubDBRaw, isCollection: boolean = fal
     ...hub,
     i18n: transformI18nSafely(hub.i18n),
     organisations:
-      hub.organisations?.map((organisation: OrganisationDBRaw) => {
+      hub.organisations?.map((organisation) => {
         return {
           ...organisation,
           i18n: transformI18nSafely(organisation.i18n),

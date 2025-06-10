@@ -91,7 +91,7 @@ export const organisationI18n = sqliteTable(
       .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     // IETF BCP 47 language tag
     // https://www.rfc-editor.org/info/bcp47
-    locale: text('locale', { enum: supportedLocales }).notNull(),
+    locale: text('locale', { enum: supportedLocales as [string, ...string[]] }).notNull(),
     // Full Name in {locale}
     name: text('name').notNull(),
     nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(true),

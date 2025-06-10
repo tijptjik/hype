@@ -70,7 +70,7 @@ export const propertyI18n = sqliteTable('propertyI18n', {
   propertyId: text('propertyId')
     .notNull()
     .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  locale: text('locale', { enum: supportedLocales }).notNull(),
+  locale: text('locale', { enum: supportedLocales as [string, ...string[]] }).notNull(),
   // Label in {locale}
   label: text('label').notNull(),
   labelGen: integer('labelGen', { mode: 'boolean' }).notNull().default(true),
@@ -106,7 +106,7 @@ export const propertyValueI18n = sqliteTable(
     propertyValueId: text('propertyValueId')
       .notNull()
       .references(() => propertyValue.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    locale: text('locale', { enum: supportedLocales }).notNull(),
+    locale: text('locale', { enum: supportedLocales as [string, ...string[]] }).notNull(),
     // Value in {locale}
     value: text('value').notNull(),
     valueGen: integer('valueGen', { mode: 'boolean' }).notNull().default(false)

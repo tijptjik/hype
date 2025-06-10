@@ -62,7 +62,7 @@ export const projectI18n = sqliteTable(
     projectId: text('projectId')
       .notNull()
       .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    locale: text('locale', { enum: supportedLocales }).notNull(),
+    locale: text('locale', { enum: supportedLocales as [string, ...string[]] }).notNull(),
     // Full Name in {locale}
     name: text('name').notNull(),
     nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(true),

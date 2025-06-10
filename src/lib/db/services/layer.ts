@@ -2,6 +2,8 @@
 import { and, eq, SQL, inArray } from 'drizzle-orm';
 // FORMS
 import { superValidate } from 'sveltekit-superforms';
+import { zod } from 'sveltekit-superforms/adapters';
+import type { SuperValidated } from 'sveltekit-superforms';
 // SCHEMA
 import {
   layer,
@@ -17,28 +19,19 @@ import { getLayerHubFilter } from './hub';
 // DB
 import { toRelatedRecords, transformI18nSafely } from '..';
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud';
-// ZOD
-import { zod } from 'sveltekit-superforms/adapters';
-import { LayerAPI } from '../zod';
 // TYPES
 import type { SQLiteInsertValue } from 'drizzle-orm/sqlite-core';
-import { ProjectRaw } from '../zod/schema/project';
 import type {
-  LayerDB,
   Layer,
   LayerNew,
   LayerDBRaw,
   LayerI18nDB,
-  PropertyI18nDB,
   Locale,
-  LocaleBundle,
   Database,
   LayerDBNew,
   LayerDBPartial,
   LayerI18nPartial,
   LayerI18nNew,
-  OrganisationI18nDB,
-  ProjectI18nDB,
   ProjectDBRaw,
   LayerPartial,
   LayerPropertyDBRaw,
@@ -47,6 +40,8 @@ import type {
   Id,
   HubOpts
 } from '$lib/types';
+// ZOD
+import { LayerAPI } from '../zod';
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -464,6 +459,28 @@ export const updateLayerWithRelated = async (
 // 4. UTILS :: SHAPING
 // ═══════════════════════
 
+// Helper function to transform layer property i18n with deep nesting
+const transformLayerPropertyI18n = (layerProp: any): any => {
+  if (!layerProp.property) return layerProp;
+  
+  const transformedProp = {
+    ...layerProp,
+    property: {
+      ...layerProp.property,
+      // Transform property-level i18n (always expect array from DB, convert to locale map)
+      i18n: transformI18nSafely(layerProp.property.i18n, {}),
+      // Transform property values if they exist
+      values: layerProp.property.values?.map((value: any) => ({
+        ...value,
+        // Transform value-level i18n (always expect array from DB, convert to locale map)
+        i18n: transformI18nSafely(value.i18n, {})
+      })) || []
+    }
+  };
+  
+  return transformedProp;
+};
+
 /**
  * Convert layer data to form shape for validation
  * @param data - The layer database entity
@@ -478,46 +495,18 @@ export const toFormShape = async (
   properties: LayerPropertyDBRaw[],
   project: ProjectDBRaw
 ) => {
-  const formI18n = transformI18nSafely(i18n);
-  const formProperties: LayerPropertyNew[] = properties.map((layerProp) => {
-    // Handle case where property includes nested property data from database relations
-    if (layerProp.property && layerProp.property.i18n) {
-      layerProp.property.i18n = transformI18nSafely(layerProp.property.i18n);
+  const formI18n = transformI18nSafely(i18n, {});
+  const formProperties: LayerPropertyNew[] = properties.map(transformLayerPropertyI18n);
 
-      // Handle nested property values if they exist
-      if (layerProp.property.values) {
-        layerProp.property.values = layerProp.property.values.map((value: any) => {
-          if (value.i18n) {
-            value.i18n = transformI18nSafely(value.i18n);
-          }
-          return value;
-        });
-      }
-    }
-    return layerProp;
-  });
+  const formData = {
+    ...data,
+    i18n: formI18n,
+    properties: formProperties
+  };
 
-  return await superValidate<Layer>(
-    {
-      ...data,
-      i18n: formI18n,
-      project: project
-        ? {
-            ...project,
-            i18n: transformI18nSafely(project.i18n),
-            organisation: project.organisation
-              ? {
-                  ...project.organisation,
-                  i18n: transformI18nSafely(project.organisation.i18n)
-                }
-              : undefined,
-            publisher: project.publisher ? project.publisher : undefined
-          }
-        : undefined,
-      properties: formProperties
-    },
-    zod(LayerAPI)
-  );
+  // @ts-ignore TODO - Fix Zod type error
+  const form = await superValidate(formData, zod(LayerAPI) as any);
+  return form as SuperValidated<Layer>;
 };
 
 /**
@@ -534,31 +523,8 @@ export const toResponseShape = async (
 ) => {
   const data = {
     ...layer,
-    i18n: transformI18nSafely(i18n),
-    project: layer.project
-      ? {
-          ...layer.project,
-          i18n: transformI18nSafely(layer.project.i18n),
-          organisation: {
-            ...layer.project.organisation,
-            i18n: transformI18nSafely(layer.project.organisation.i18n)
-          }
-        }
-      : undefined,
-    properties: properties.map((prop) => ({
-      ...prop,
-      property: {
-        ...prop.property,
-        i18n: transformI18nSafely(prop.property.i18n),
-        // Handle property values if they exist
-        values: prop.property.values
-          ? prop.property.values.map((value: any) => ({
-              ...value,
-              i18n: transformI18nSafely(value.i18n)
-            }))
-          : []
-      }
-    }))
+    i18n: transformI18nSafely(i18n, {}),
+    properties: properties.map(transformLayerPropertyI18n)
   };
   return LayerAPI.parse(data);
 };
@@ -598,12 +564,12 @@ export const mergeProjectProperties = async (
   // Add project properties that aren't already in the layer
   projectProps.forEach((projectProp: any) => {
     if (!existingPropertyIds.includes(projectProp.id)) {
-      projectProp.i18n = transformI18nSafely(projectProp.i18n);
+      projectProp.i18n = transformI18nSafely(projectProp.i18n, {});
       // Handle property values
       if (projectProp.values) {
         projectProp.values = projectProp.values.map((value: any) => ({
           ...value,
-          i18n: transformI18nSafely(value.i18n)
+          i18n: transformI18nSafely(value.i18n, {})
         }));
       }
       result.properties.push({

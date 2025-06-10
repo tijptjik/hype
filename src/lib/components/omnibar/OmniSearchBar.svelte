@@ -40,7 +40,7 @@ $effect(() => {
     bind:value={omniCtx.state.searchTerm}
     placeholder={m.omni__placeholder()}
     onfocus={() => omniCtx.openTray()}
-    class="input h-12 w-full rounded-lg border-0 border-base-200 bg-black bg-black pl-6 pr-10 text-sm caret-current focus:outline-none"
+    class="input h-12 w-full rounded-lg border-0 border-base-200 bg-black pl-6 pr-10 text-sm caret-current focus:outline-none"
     use:focusOnSlash={() => void null}
     use:selectOnEnter={() => omniCtx.selectFirstResult()}
     use:handleEscape={() => omniCtx.clearSearchOrCloseTray()} />

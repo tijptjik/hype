@@ -61,6 +61,8 @@ $effect(() => {
     document.removeEventListener('keydown', handleKeyDown);
   };
 });
+// @ts-ignore - TODO: Fix SuperForm issue
+let isDisabled = $derived(!isTainted($tainted) || isInvalid);
 </script>
 
 <button
@@ -72,7 +74,7 @@ $effect(() => {
   role="button"
   data-testid="formSubmitButton"
   onclick={(e) => submit(e)}
-  disabled={!isTainted($tainted) || isInvalid}>
+  disabled={isDisabled}>
   <!-- TODO: add saved state -->
   {#if false}{/if}
   {#if !isInvalid}

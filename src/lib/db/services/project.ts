@@ -42,9 +42,9 @@ import type {
   ProjectRoleDB,
   PropertyDBRaw,
   HubOpts,
-  PropertyValueDB,
   PropertyI18nDB,
-  PropertyValueI18nDB
+  PropertyValueI18nDB,
+  PropertyValueDBRaw
 } from '$lib/types';
 
 // ═══════════════════════

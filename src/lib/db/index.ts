@@ -16,6 +16,7 @@ import * as schema from './schema';
 // ENUMS
 import {
   supportedLocales,
+  SupportedLocales,
   HierarchicalResource
 } from '../enums';
 // TYPES
@@ -394,12 +395,13 @@ export const createJsonPathCondition = (
 
 // Helper function to safely transform i18n data
 export const transformI18nSafely = (
-  i18n: any[] | Record<string, any> | null | undefined
+  i18n: any[] | Record<string, any> | null | undefined,
+  fallback: any = null
 ): Record<string, any> | null => {
-  if (!i18n) return null;
+  if (!i18n) return fallback;
   
   if (Array.isArray(i18n)) {
-    return i18n.length > 0 ? toLocaleMap(i18n) : null;
+    return i18n.length > 0 ? toLocaleMap(i18n) : fallback;
   }
   
   // Already transformed or is a Record
@@ -418,7 +420,7 @@ const isTransformedLocaleMap = <T extends LocaleBundle>(
   // Check if all keys are supported locales
   const keys = Object.keys(value);
   const allKeysAreLocales = keys.every((key) =>
-    supportedLocales.includes(key as Locale)
+    supportedLocales.includes(key as SupportedLocales)
   );
   if (!allKeysAreLocales) return false;
 

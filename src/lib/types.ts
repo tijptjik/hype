@@ -102,7 +102,7 @@ import {
   OrganisationSuperAdminAPI,
   OrganisationUpdate,
   OrganisationUpdateAPI,
-  OrganisationUpdateSuperAdminAPI
+  OrganisationUpdateSuperAdminAPI,
   ProjectAPI,
   ProjectBase,
   ProjectI18nBase,

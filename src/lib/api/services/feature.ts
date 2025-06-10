@@ -20,8 +20,8 @@ import { getProjectIdforRoles, isSuperAdmin } from '$lib/auth/utils';
 // SCHEMA
 import { feature, layer } from '$lib/db/schema/index';
 // DB
-import { applyPrismConstraints } from '$lib/db';
-import { FirstClassResource, HierarchicalResource } from '$lib/enums';
+import { applyPrismConstraints, transformI18nSafely } from '$lib/db';
+import { HierarchicalResource } from '$lib/enums';
 import { getProjectIdForFeature } from '$lib/db/services/feature';
 // TRANSLATION
 import { getTranslation } from '$lib/api/external/translation';

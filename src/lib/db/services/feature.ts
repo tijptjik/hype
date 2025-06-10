@@ -530,7 +530,7 @@ export const updateFeatureWithRelated = async (
   const { id, ...updateData } = data;
 
   const feature = await updateFeature(db, updateData, idToUse);
-  const i18n = await updateI18n(db, data.i18n!, feature.id);
+  const i18n = await updateI18n(db, data.i18n, feature.id);
   const properties = await updateProperties(
     db,
     data.properties as FeatureProperty[],
@@ -662,10 +662,12 @@ export const toFormShape = async (
         ? {
             ...propertyDef,
             i18n: transformI18nSafely(propertyDef.i18n),
-            values: propertyDef.values.map((val: any) => ({
-              ...val,
-              i18n: transformI18nSafely(val.i18n)
-            }))
+            values: propertyDef.values
+              ? propertyDef.values.map((val: any) => ({
+                  ...val,
+                  i18n: transformI18nSafely(val.i18n)
+                }))
+              : null
           }
         : [],
       propertyValue: propertyVal

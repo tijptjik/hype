@@ -395,7 +395,8 @@ export const toFormShape = async (
   
   // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
   const schema = isSuperAdmin ? OrganisationSuperAdminAPI : OrganisationAPI;
-  
+ 
+  // @ts-ignore TODO - Fix Zod type error
   const form = await superValidate(formData, zod(schema));
   return form as SuperValidated<Organisation>;
 };
