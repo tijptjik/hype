@@ -14,14 +14,14 @@ import {
   BuildingLibrary as HubIcon
 } from '@steeze-ui/heroicons';
 // ENUMS
-import { HierarchicalResource, ResourcePath } from '$lib/enums';
+import { FirstClassResource, ResourcePath } from '$lib/enums';
 // TYPES
-import type { ResourceState } from '$lib/context/resource.svelte';
-import type { Code, FacetType, Id } from '$lib/types';
+import type { AdminCtx } from '$lib/context/admin.svelte';
+import type { Code, FacetType, Id, NavItem } from '$lib/types';
 
 // NAVIGATION
 // NOTE : We cannot use Enums here for path or seq as the build process only procudes them on a hard refresh.
-export const navItems = {
+export const navItems : Record<FirstClassResource, NavItem> = {
   organisation: {
     name: m.maps__organisations(),
     icon: OrganisationIcon,
@@ -73,8 +73,8 @@ export const navItems = {
 };
 
 export const navigateOnAdmin = (
-  resourceState: ResourceState,
-  resource: HierarchicalResource | false,
+  adminCtx: AdminCtx,
+  resource: FirstClassResource | false,
   entityRef?: Id | Code,
   facet?: FacetType,
   queryParams?: Record<string, string>
@@ -82,33 +82,33 @@ export const navigateOnAdmin = (
   let url = `${ADMIN_PATH}`;
   if (resource) {
     url += `/${ResourcePath[resource]}`;
-    resourceState.setResource(resource);
+    adminCtx.setResource(resource);
   } else {
-    resourceState.setResource(false);
+    adminCtx.setResource(false);
   }
   if (entityRef) {
     url += `/${entityRef}`;
-    resourceState.setEntity(entityRef);
+    adminCtx.setEntity(entityRef);
   } else {
-    resourceState.setEntity(false);
+    adminCtx.setEntity(false);
   }
   if (facet) {
     url += `#${facet}`;
-    resourceState.setFacet(facet);
+    adminCtx.setFacet(facet);
   } else {
-    resourceState.setFacet(false);
+    adminCtx.setFacet(false);
   }
   if (queryParams) url += `?${new URLSearchParams(queryParams).toString()}`;
   goto(url);
 };
 
 // UTILS
-export const reversePath = new Map<string, HierarchicalResource>();
+export const reversePath = new Map<string, FirstClassResource>();
 
 if (ResourcePath) {
   Object.keys(ResourcePath).forEach((path: string) => {
     const pathValue: string =
       ResourcePath[path as keyof typeof ResourcePath];
-    reversePath.set(pathValue, path as HierarchicalResource);
+    reversePath.set(pathValue, path as FirstClassResource);
   });
 }
