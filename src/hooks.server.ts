@@ -10,7 +10,7 @@ import { createAuth } from '$lib/auth';
 // I18N
 import { paraglideMiddleware } from '$lib/paraglide/server';
 // TYPES
-import type { Session, User } from '$lib/types';
+import type { Session, SessionUser } from '$lib/types';
 
 let handle: Handle;
 const localWranglerEnv = import.meta.env.VITE_WRANGLER_ENV === 'local';
@@ -79,17 +79,13 @@ const handle_hub: Handle = async ({ event, resolve }) => {
 // ═══════════════════════
 /**
  * This hook sets up Better-Auth with the database connection
- * Only runs for /api routes since only API routes need protection
+ * Better Auth's svelteKitHandler automatically handles /api/auth/* endpoints
  */
 const handle_auth: Handle = async ({ event, resolve }) => {
-  // Only run auth for API routes
-  if (!event.url.pathname.startsWith('/api')) {
-    return resolve(event);
-  }
 
   try {
     if (!event.platform?.env?.DB) {
-      console.error('🔴 Auth: No DB available');
+      console.error('🔴 Auth: No DB available for:', event.url.pathname);
       return resolve(event);
     }
 
@@ -111,20 +107,27 @@ const handle_auth: Handle = async ({ event, resolve }) => {
 
 /**
  * Workaround to set session and user locals
- * Only runs for API routes since only API routes need protection
  */
 const handle_session_auth: Handle = async ({ event, resolve }) => {
-  // Only run auth for API routes
-  if (!event.url.pathname.startsWith('/api') || !event.locals.auth) {
-    return resolve(event);
-  }
 
-  // LOCALS
-  const session = await event.locals.auth.api.getSession({
-    headers: event.request.headers
-  });
-  event.locals.session = session?.session;
-  event.locals.user = session?.user;
+  try {
+    // LOCALS
+    const sessionData = await event.locals.auth.api.getSession({
+      headers: event.request.headers
+    });
+    
+    // Safely assign session and user data
+    if (sessionData && sessionData.session && sessionData.user){
+      event.locals.session = sessionData.session as Session;
+      event.locals.user = sessionData.user as SessionUser;
+    }
+    
+  } catch (error) {
+    console.error('🔴 Session auth error:', error);
+    // Don't fail the request, just leave session/user undefined
+    event.locals.session = undefined;
+    event.locals.user = undefined;
+  }
 
   return resolve(event);
 };
@@ -139,12 +142,11 @@ const handle_session_auth: Handle = async ({ event, resolve }) => {
  */
 const handle_hub_enrichment: Handle = async ({ event, resolve }) => {
   // Only run for API routes where auth is available
-  if (!event.url.pathname.startsWith('/api') || !event.locals.user) {
-    return resolve(event);
-  }
   // LOCALS
   if (event.locals.hub) {
-    event.locals.hub.isSuperAdmin = event.locals.user?.superAdmin || false;
+    // Cast user to SessionUser to access superAdmin property from custom session
+    const sessionUser = event.locals.user as SessionUser;
+    event.locals.hub.isSuperAdmin = sessionUser?.superAdmin || false;
   }
   return resolve(event);
 };
