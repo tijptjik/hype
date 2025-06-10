@@ -1,10 +1,7 @@
 // DRIZZLE
 import { eq, and, SQL } from 'drizzle-orm';
-// DB
-import { resourceConfig } from '$lib/db';
 // SCHEMA
-import { task, taskImage, image, featureImage, feature } from '$lib/db/schema';
-import * as schema from '$lib/db/schema';
+import { task, taskImage, image, featureImage, feature } from '$lib/db/schema/index';
 // CRUD
 import { insert, update, del } from '../crud';
 // SERVICES
@@ -37,7 +34,6 @@ import type {
   TaskCreation,
   ImageUploadCtx,
   Id,
-  ResourceHierarchy,
   Database,
   UserContributedFeature,
   HubOpts,
@@ -50,51 +46,27 @@ import { createUserContributedFeature } from '$lib/api/services/feature';
 // TABLE OF CONTENTS
 // ═══════════════════════
 //
-// 1. CONFIG
-//    - customHierarchy (const)
-//
-// 2. CRUD :: CORE OPERATIONS
+// 1. CRUD :: CORE OPERATIONS
 //    - listTasks
 //    - getTask
 //    - createTask
 //    - updateTask
 //
-// 3. CRUD :: IMAGE HANDLING
+// 2. CRUD :: IMAGE HANDLING
 //    - archiveImages
 //    - publishImages
 //
-// 4. CRUD :: ORCHESTRATION
+// 3. CRUD :: ORCHESTRATION
 //    - createTaskWithDependencies
 //    - processTaskImages
 //
-// 5. UTILS :: HELPERS
+// 4. UTILS :: HELPERS
 //    - addContributorId
 //    - getImagesFromFormData
 //
 
 // ═══════════════════════
-// 1. CONFIG
-// ═══════════════════════
-
-/**
- * Resource hierarchy configuration for tasks
- */
-export const customHierarchy: ResourceHierarchy = [
-  {
-    name: 'task',
-    table: schema.task,
-    parentName: 'project',
-    parentTable: schema.project,
-    keyToParent: 'projectId',
-    keyToSelf: 'taskId',
-    depth: 2
-  },
-  resourceConfig.project,
-  resourceConfig.organisation
-];
-
-// ═══════════════════════
-// 2. CRUD :: CORE OPERATIONS
+// 1. CRUD :: CORE OPERATIONS
 // ═══════════════════════
 
 /**
@@ -184,7 +156,7 @@ export const deleteTask = async (db: Database, ref: Id): Promise<TaskDB> =>
   await del(db, task, task.id, ref);
 
 // ═══════════════════════
-// 3. CRUD :: IMAGE HANDLING
+// 2. CRUD :: IMAGE HANDLING
 // ═══════════════════════
 
 /**
@@ -243,7 +215,8 @@ export const archiveImages = async (
 export const publishImages = async (
   db: Database,
   taskId: string,
-  skipUndefined: boolean = false
+  skipUndefined: boolean = false,
+  publisherId: Id
 ): Promise<{ success: boolean; processedCount: number }> => {
   try {
     // Get all task images for this task
@@ -277,11 +250,13 @@ export const publishImages = async (
           imageId: ti.imageId,
           featureId: ti.featureId,
           intent: 'undefined',
-          isPublished: true
+          isPublished: true,
+          publisherId,
+          publishedAt: new Date().toISOString()
         })
         .onConflictDoUpdate({
           target: [featureImage.imageId, featureImage.featureId],
-          set: { isPublished: true }
+          set: { isPublished: true, publisherId, publishedAt: new Date().toISOString() }
         });
     }
 
@@ -293,7 +268,7 @@ export const publishImages = async (
 };
 
 // ═══════════════════════
-// 4. CRUD :: ORCHESTRATION
+// 3. CRUD :: ORCHESTRATION
 // ═══════════════════════
 
 /**
@@ -507,7 +482,7 @@ export const processTaskImagesDB = async (
 };
 
 // ═══════════════════════
-// 5. UTILS :: HELPERS
+// 4. UTILS :: HELPERS
 // ═══════════════════════
 
 /**

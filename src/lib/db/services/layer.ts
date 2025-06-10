@@ -22,6 +22,7 @@ import { zod } from 'sveltekit-superforms/adapters';
 import { LayerAPI } from '../zod';
 // TYPES
 import type { SQLiteInsertValue } from 'drizzle-orm/sqlite-core';
+import { ProjectRaw } from '../zod/schema/project';
 import type {
   LayerDB,
   Layer,
@@ -208,8 +209,7 @@ export const createLayerProperties = async (
     await db.insert(layerProperty).values(
       properties.map((prop) => ({
         layerId,
-        propertyId: prop.propertyId,
-        isVisible: prop.isVisible
+        ...prop
       }))
     );
   }
@@ -391,7 +391,7 @@ export const syncLayerProperties = async (
  */
 export const createLayerWithRelated = async (db: Database, data: LayerNew) => {
   const layer = await createLayer(db, data);
-  const i18n = await createI18n(db, data.i18n, layer.id);
+  const i18n = await createI18n(db, data.i18n!, layer.id);
   const properties = await createLayerProperties(db, layer.id, data.properties || []);
 
   // Get project with relations using proper function signature
@@ -429,7 +429,11 @@ export const updateLayerWithRelated = async (
 ) => {
   const IdToUse = layerId || (data.id as string);
   const layer = await updateLayer(db, data, IdToUse);
-  const i18n = await updateI18n(db, data.i18n, IdToUse);
+  const i18n = await updateI18n(
+    db,
+    data.i18n as Record<Locale, LayerI18nPartial>,
+    IdToUse
+  );
   const properties = await updateLayerProperties(
     db,
     IdToUse,
@@ -473,13 +477,11 @@ export const toFormShape = async (
   properties: LayerPropertyDBRaw[],
   project: ProjectDBRaw
 ) => {
-  const formI18n = toLocaleMap<LayerI18nDB>(i18n);
+  const formI18n = toLocaleMap(i18n);
   const formProperties: LayerPropertyNew[] = properties.map((layerProp) => {
     // Handle case where property includes nested property data from database relations
     if (layerProp.property && layerProp.property.i18n) {
-      layerProp.property.i18n = toLocaleMap<PropertyI18nDB>(
-        layerProp.property.i18n as PropertyI18nDB[]
-      );
+      layerProp.property.i18n = toLocaleMap(layerProp.property.i18n!);
 
       // Handle nested property values if they exist
       if (layerProp.property.values) {
@@ -639,12 +641,7 @@ export const getLayerMap = async (
 
   for (const layerId of layerIds) {
     const conditions = [eq(layer.id, layerId)];
-    const layerData = (await getLayer(
-      db,
-      layerMergeWithRelations,
-      conditions,
-      opts
-    ));
+    const layerData = await getLayer(db, layerMergeWithRelations, conditions, opts);
     if (layerData) {
       layersMap.set(layerId, layerData);
     }
