@@ -21,7 +21,7 @@ import {
   layerCollectionWithRelations
 } from '$lib/api/services/layer';
 // DB
-import { layer } from '$lib/db/schema';
+import { layer } from '$lib/db/schema/index';
 import {
   listLayers,
   createLayerWithRelated,
@@ -48,7 +48,7 @@ const RESOURCE_PATH = 'layers';
  */
 export const GET: RequestHandler = async ({ locals, platform, url, request }) => {
   // ASSERT : User Logged in
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
 
   // ASSERT : Valid query parameters
   // Validate query parameters, or return 400
@@ -60,7 +60,7 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
   // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
   let { conditions } = getLayerQueryContext(
     db,
-    session,
+    user,
     request,
     queryParams,
     userRoles,
@@ -94,7 +94,7 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
 
 export const POST: RequestHandler = async ({ request, locals, platform }) => {
   // ASSERT : User logged in
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
 
   try {
     // VALIDATION : Parse and validate form data
@@ -106,18 +106,18 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
     )) as SuperValidated<LayerNew>;
 
     if (!form.valid) {
-      return SuperFormResponse<Layer>(form);
+      return SuperFormResponse<LayerNew>(form);
     }
 
     // ACCESS CONTROL : Check permissions
-    assertPermissionsToCreateLayer(session, request, formData, userRoles);
+    assertPermissionsToCreateLayer(user, request, formData, userRoles);
 
     // DB : Create layer with related data
     const createdLayer = await createLayerWithRelated(db, form.data);
 
     // RESPONSE : Convert to form shape and return
     const updatedForm = await toFormShape(
-      createdLayer.layer,
+      createdLayer,
       createdLayer.i18n,
       createdLayer.properties,
       createdLayer.project

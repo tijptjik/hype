@@ -12,7 +12,7 @@ import {
   logZodError
 } from '$lib/api';
 // SERVICES
-import { project } from '$lib/db/schema';
+import { project } from '$lib/db/schema/index';
 // DB
 import {
   createProjectWithRelated,
@@ -51,7 +51,7 @@ const RESOURCE_PATH = 'projects';
  */
 export const GET: RequestHandler = async ({ url, locals, platform, request }) => {
   // ASSERT : User Logged in
-  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
 
   // ASSERT : Valid query parameters
   // Validate query parameters, or return 400
@@ -63,7 +63,7 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
   // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
   let { conditions } = getProjectQueryContext(
     db,
-    session,
+    user,
     request,
     queryParams,
     userRoles,
@@ -76,7 +76,7 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
       db,
       projectCollectionWithRelations,
       conditions,
-      { ...locals.hub, isSuperAdmin: session.user.superAdmin || false }
+      { ...locals.hub, isSuperAdmin: user.superAdmin || false }
     );
 
     // RESPONSE : Build the response shape
@@ -104,7 +104,7 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
  */
 export const POST: RequestHandler = async ({ request, locals, platform }) => {
   // ASSERT : User logged in
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
 
   try {
     // ASSERT : Valid form
@@ -120,11 +120,11 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 
     // RETURN : early if the form is not valid
     if (!form.valid) {
-      return SuperFormResponse<Project>(form);
+      return SuperFormResponse<ProjectNew>(form);
     }
 
     // ASSERT : Permissions to update project
-    assertPermissionsToCreateProject(session, request, formData, userRoles);
+    assertPermissionsToCreateProject(user, request, formData, userRoles);
 
     // DB : Create the project
     const createdProject = await createProjectWithRelated(db, form.data);

@@ -31,9 +31,9 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
     return error(400, 'User ID is required in query parameters');
   }
   // ASSERT : User Logged in
-  const { session, db } = await getDatabase(locals, platform);
+  const { user, db } = await getDatabase(locals, platform);
   // ASSERT : Permissions to update project
-  assertPermissionsToListUserFeature(session, userIdFromParams);
+  assertPermissionsToListUserFeature(user, userIdFromParams);
 
   try {
     // DB : List the user features
@@ -63,7 +63,7 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
  */
 export const PUT: RequestHandler = async ({ request, locals, platform }) => {
   // ASSERT : User logged in
-  const { db, userId, session } = await getDatabase(locals, platform);
+  const { db, userId, user } = await getDatabase(locals, platform);
 
   try {
     // VALIDATION: Parse and validate request body
@@ -75,7 +75,7 @@ export const PUT: RequestHandler = async ({ request, locals, platform }) => {
     }
 
     // ASSERT : Permissions to update user feature
-    assertPermissionsToUpdateUserFeature(session, validatedData.userId);
+    assertPermissionsToUpdateUserFeature(user, validatedData.userId);
 
     // DB: Upsert user feature
     const result = await upsertUserFeature(

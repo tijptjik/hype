@@ -11,7 +11,7 @@ import {
   logZodError
 } from '$lib/api';
 // SERVICES
-import { organisation } from '$lib/db/schema';
+import { organisation } from '$lib/db/schema/index';
 import {
   createOrganisationWithRelated,
   listOrganisations,
@@ -51,7 +51,7 @@ const RESOURCE_PATH = 'organisations';
  */
 export const GET: RequestHandler = async ({ url, locals, platform, request }) => {
   // ASSERT : User Logged in
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, session, user, userRoles } = await getDatabase(locals, platform);
 
   // ASSERT : Valid query parameters
   // Validate query parameters, or return 400
@@ -63,7 +63,7 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
 
   // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
   let { conditions } = getOrganisationQueryContext(
-    session,
+    user,
     request,
     queryParams,
     userRoles
@@ -94,7 +94,7 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
           organisation.i18n, 
           [], 
           true, // isCollection
-          session.user.superAdmin || false // isSuperAdmin
+          user?.superAdmin || false // isSuperAdmin
         );
       })
     );
@@ -117,14 +117,14 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
  */
 export const POST: RequestHandler = async ({ request, locals, platform }) => {
   // ASSERT : User logged in
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, session, user, userRoles } = await getDatabase(locals, platform);
 
   try {
     // ASSERT : Valid form
     const formData: OrganisationNew = await request.json();
     
     // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
-    const insertSchema = session.user.superAdmin 
+    const insertSchema = user.superAdmin 
       ? OrganisationInsertSuperAdminAPI 
       : OrganisationInsertAPI;
     
@@ -139,12 +139,11 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 
     // RETURN : early if the form is not valid
     if (!form.valid) {
-      // @ts-ignore - FORM : Fix type error
-      return SuperFormResponse<Organisation>(form);
+      return SuperFormResponse<OrganisationNew>(form);
     }
 
     // ASSERT : Permissions to update organisation
-    assertPermissionsToCreateOrganisation(session, request, formData, userRoles);
+    assertPermissionsToCreateOrganisation(user, request);
 
     // DB : Create the organisation
     const createdOrganisation = await createOrganisationWithRelated(
@@ -157,11 +156,10 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       createdOrganisation,
       createdOrganisation.i18n,
       createdOrganisation.userRoles,
-      session.user.superAdmin || false
+      user.superAdmin || false
     );
 
     // HTTP : 201 JSON or 400
-    // @ts-ignore - FORM : Fix SuperForm type error
     return SuperFormResponse<Organisation>(
       updatedForm,
       true,

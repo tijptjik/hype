@@ -22,7 +22,7 @@ import {
   assertPermissionsToCreateTask
 } from '$lib/api/services/task';
 // SCHEMA
-import { task } from '$lib/db/schema';
+import { task } from '$lib/db/schema/index';
 // SERVICES
 import {
   listTasks,
@@ -36,9 +36,7 @@ import type {
   TaskNew,
   QueryParams,
   TaskCreation,
-  TaskDBRaw,
-  TaskCollection,
-  Task
+  TaskDBRaw
 } from '$lib/types';
 
 /********************
@@ -58,7 +56,7 @@ const RESOURCE_TYPE = 'task';
  */
 export const GET: RequestHandler = async ({ locals, platform, url, request }) => {
   // ASSERT : User Logged in
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
 
   // ASSERT : Valid query parameters
   // Validate query parameters, or return 400
@@ -67,7 +65,7 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
   // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
   let { conditions } = getTaskQueryContext(
     db,
-    session,
+    user,
     request,
     queryParams as QueryParams,
     userRoles,
@@ -80,7 +78,7 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
       db,
       taskCollectionWithRelations,
       conditions,
-      { ...locals.hub, isSuperAdmin: session.user.superAdmin || false }
+      { ...locals.hub, isSuperAdmin: user.superAdmin || false }
     )) as TaskDBRaw[];
 
         // RESPONSE : Build the response shape
@@ -113,7 +111,7 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
  */
 export const POST: RequestHandler = async ({ request, locals, platform, fetch }) => {
   // ASSERT : User logged in
-  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
+  const { db, session, user,  userId, userRoles } = await getDatabase(locals, platform);
 
   // CONTEXT : Content type and extract data accordingly
   const contentType = request.headers.get('content-type') || '';
@@ -150,13 +148,13 @@ export const POST: RequestHandler = async ({ request, locals, platform, fetch })
 
     if (!form.valid) {
       logZodError(form.errors, '[TASK CREATE] Validation failed:');
-      return SuperFormResponse<any>(form);
+      return SuperFormResponse<TaskNew>(form);
     }
 
     // ASSERT : User has permission to create task
     await assertPermissionsToCreateTask(
       db,
-      session,
+      user,
       request,
       form.data as TaskNew,
       userRoles
