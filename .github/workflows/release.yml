@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  DO_NOT_TRACK: 1
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'GIT :: Checkout Repo'
+        uses: actions/checkout@v4
+
+      - name: 'INSTALL :: Node.js'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.2'
+
+      - name: 'INSTALL :: Bun'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.15
+
+      - name: 'INSTALL :: Dependencies'
+        continue-on-error: true
+        run: bun install
+
+      - name: 'RELEASE :: Create Release PR'
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          publish: bun run cs:release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
