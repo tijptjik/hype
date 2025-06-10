@@ -41,7 +41,11 @@ declare global {
     interface Platform {
       env: {
         DB: D1Database;
-        CF_PAGES: string;
+        // Auth secrets
+        PRIVATE_AUTH_SECRET: string;
+        PRIVATE_AUTH_GOOGLE_ID: string;
+        PRIVATE_AUTH_GOOGLE_SECRET: string;
+        PRIVATE_SUPERADMIN_USERID: string;
       };
       context: {
         waitUntil(promise: Promise<any>): void;

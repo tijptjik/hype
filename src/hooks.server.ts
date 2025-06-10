@@ -92,7 +92,12 @@ const handle_auth: Handle = async ({ event, resolve }) => {
     const db = drizzle(event.platform.env.DB, { schema });
 
     // AUTH
-    const auth = createAuth(db);
+    const auth = createAuth(db, {
+      PRIVATE_AUTH_SECRET: event.platform.env.PRIVATE_AUTH_SECRET,
+      PRIVATE_AUTH_GOOGLE_ID: event.platform.env.PRIVATE_AUTH_GOOGLE_ID,
+      PRIVATE_AUTH_GOOGLE_SECRET: event.platform.env.PRIVATE_AUTH_GOOGLE_SECRET,
+      PRIVATE_SUPERADMIN_USERID: event.platform.env.PRIVATE_SUPERADMIN_USERID
+    });
 
     // SET LOCALS
     event.locals.auth = auth;

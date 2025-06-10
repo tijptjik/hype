@@ -56,13 +56,6 @@ export function stopPropagation(fn: (event: Event) => void) {
   };
 }
 
-/**
- * Check whether the code is being run by a Cloudflare worker
- */
-export const on_cloudflare = (event: RequestEvent) => {
-  return event.platform?.env.CF_PAGES === 'true';
-};
-
 export function toTitleCase(str: string) {
   return str.replace(
     /\w\S*/g,
