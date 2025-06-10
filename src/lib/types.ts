@@ -1013,7 +1013,7 @@ export type UserContributedFeatureProperty = {
   propertyId: Id;
   propertyValueId?: Id; // Categorical
   value?: string; // Universal specifier OR range value
-  i18n?: Record<Locale, { locale: Locale; value: string; valueGen: boolean }>; // I18n Specifier
+  i18n?: Partial<Record<Locale, { locale: Locale; value: string; valueGen: boolean }>>; // I18n Specifier
 };
 
 export type UserContributedFeature = {
@@ -1660,6 +1660,15 @@ export type NeighbourhoodMap = Record<
   }
 >;
 
+export type Neighbourhood = {
+  neighbourhood: string;
+  data: {
+    neighbourhood: string;
+    region: string;
+    district: string;
+  };
+};
+
 export type ALSSuggestedAddressItem = NonNullable<
   ALSResult['SuggestedAddress']
 >[number];
@@ -1752,3 +1761,9 @@ export function isFeature(resource: Resource): resource is Feature {
 export function isHub(resource: Resource): resource is Hub {
   return 'organisation' in resource && 'domain' in resource;
 }
+
+// FEATURE TYPES
+export type {
+  FeatureClientExt,
+  FeatureI18nFieldKeys
+} from './db/zod/schema/feature';
