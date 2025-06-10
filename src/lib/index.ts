@@ -3,7 +3,6 @@ import { derived, type Writable } from 'svelte/store';
 import { browser } from '$app/environment';
 import { page } from '$app/state';
 // UTILITIES
-import deepEquals from 'fast-deep-equal';
 // COMPONENTS
 import InputField from '$lib/components/forms/fields/Input.svelte';
 import SelectField from '$lib/components/forms/fields/Select.svelte';
@@ -21,7 +20,6 @@ import type {
   Locale,
   LocaleExtended,
   Resource,
-  FormField,
   FormFieldDefinition,
   FieldDiscriminator,
   FieldComponentType,
