@@ -189,3 +189,12 @@ https://dash.cloudflare.com/a6eeace4b6d9f8e07ab307964e74d801/workers/services/vi
 ## Bind D1 to worker
 
 https://dash.cloudflare.com/a6eeace4b6d9f8e07ab307964e74d801/workers/services/view/hype-preview/production/bindings
+
+## Upload Secrets
+
+For all the secrets defined in .env, upload them manually with wrangler
+
+```bash
+# Replace <KEY> with the Env Variable you want to set
+npx wrangler secret put <KEY>
+```
