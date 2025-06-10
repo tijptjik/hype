@@ -1,36 +1,42 @@
 {
-  "name": "ghostmapper",
+  "name": "hype",
   "version": "0.0.1",
   "private": true,
   "scripts": {
+    "dev": "mullvad-exclude vite dev",
+    "dev:local": "VITE_WRANGLER_ENV=local VITE_USER_NODE_ENV=development vite -d dev",
+    "dev:cf": "bun wrangler dev",
+    "dev:cf:watch": "bun wrangler dev --live-reload",
+    
     "build": "vite build",
     "build:cf": "VITE_WRANGLER_ENV=cf VITE_USER_NODE_ENV=production vite build",
     "build:cf:watch": "bun run build:cf --watch",
     "build:local": "VITE_WRANGLER_ENV=local VITE_USER_NODE_ENV=development vite build",
+    "build:preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "ts": "tsc",
-    "ts:watch": "tsc -w",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    
+    "cs:add": "changeset",
+    "cs:version": "changeset version",
+    "cs:release": "vite build && changeset publish",
+
     "db:dump": "sqlite3 $(find .wrangler/state/v3/d1/miniflare-D1DatabaseObject -type f -name '*.sqlite' -print -quit) '.dump' > local_$(date +'%s').sql",
-    "db:generate": "drizzle-kit generate --name",
-    "db:migrate:local": "wrangler d1 migrations apply ghostmapper-prod --local",
-    "db:migrate:cf:prod": "wrangler d1 migrations apply ghostmapper-prod --remote",
-    "db:migrate:cf:preview": "wrangler d1 migrations apply --env preview ghostmapper-preview --remote",
+    "db:migration:new": "drizzle-kit generate --name",
+    "db:migration:run:local": "wrangler d1 migrations apply hype-db-prod --local",
+    "db:migration:run:cf:prod": "wrangler d1 migrations apply hype-db-prod --remote",
+    "db:migration:run:cf:preview": "wrangler d1 migrations apply --env preview hype-db-preview --remote",
     "db:studio:local": "LOCAL_DB_PATH=$(find .wrangler/state/v3/d1/miniflare-D1DatabaseObject -type f -name '*.sqlite' -print -quit) drizzle-kit studio",
-    "db:studio:cf:preview": "source .env.drizzle && DB_ID='b7a2dc55-f43b-40f0-993a-abb36a6a5543' drizzle-kit studio",
-    "db:studio:cf:prod": "source .env.drizzle && DB_ID='8ff2682b-8e78-4f9e-87bd-47f409d94184' drizzle-kit studio",
-    "dev": "mullvad-exclude vite dev",
-    "dev:cf": "bunx wrangler pages dev",
-    "dev:cf:watch": "bun run dev:cf --live-reload",
-    "dev:local": "VITE_WRANGLER_ENV=local VITE_USER_NODE_ENV=development mullvad-exclude vite -d dev",
-    "format": "prettier --write .",
+    "db:studio:cf:prod": "source .env.drizzle && DB_ID='REPLACEME' drizzle-kit studio",
+    "db:studio:cf:preview": "source .env.drizzle && DB_ID='REPLACEME' drizzle-kit studio",
+    
     "lint": "prettier --check . && eslint .",
+    "format": "prettier --write .",
     "prepare": "svelte-kit sync",
-    "preview": "vite preview",
+    
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:watch": "vitest watch",
-    "test:browser": "vitest --workspace=vitest.workspace.ts",
+
     "i18n:translate": "bunx @inlang/cli machine translate --project project.inlang",
     "i18n:build": "bunx @inlang/paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide"
   },
@@ -44,6 +50,7 @@
     "webdriverio": "^9.3.0"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.29.4",
     "@sveltejs/adapter-static": "^3.0.8",
     "@tanstack/svelte-query-devtools": "^5.80.6",
     "@types/eslint": "^9.6.1",
