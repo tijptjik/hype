@@ -11,7 +11,7 @@ import {
   logZodError
 } from '$lib/api';
 // SCHEMA
-import { hub } from '$lib/db/schema';
+import { hub } from '$lib/db/schema/index';
 // DB
 import { createHub, listHubs } from '$lib/db/services/hub';
 // ZOD

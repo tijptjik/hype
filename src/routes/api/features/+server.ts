@@ -22,7 +22,7 @@ import {
   assertPermissionsToCreateFeature
 } from '$lib/api/services/feature';
 // SCHEMA
-import { feature } from '$lib/db/schema';
+import { feature } from '$lib/db/schema/index';
 // SERVICES
 import {
   listFeaturesWithImage,
@@ -52,7 +52,7 @@ const RESOURCE_PATH = 'features';
  */
 export const GET: RequestHandler = async ({ locals, platform, url, request }) => {
   // ASSERT : User Logged in
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
 
   // ASSERT : Valid query parameters
   // Validate query parameters, or return 400
@@ -61,7 +61,7 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
   // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
   let { conditions } = getFeatureQueryContext(
     db,
-    session,
+    user,
     request,
     withExpandedNeighbourhoods(queryParams as QueryParams),
     userRoles,
@@ -93,7 +93,7 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
  */
 export const POST: RequestHandler = async ({ request, locals, platform }) => {
   // ASSERT : User logged in
-  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userId, userRoles } = await getDatabase(locals, platform);
 
   try {
     // ASSERT : Valid form
@@ -115,7 +115,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 
     await assertPermissionsToCreateFeature(
       db,
-      session,
+      user,
       request,
       locals,
       form.data as any,

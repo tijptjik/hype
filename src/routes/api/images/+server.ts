@@ -1,7 +1,7 @@
 // SVELTE
 import { error, json } from '@sveltejs/kit';
 // DB SCHEMA
-import { image } from '$lib/db/schema';
+import { image } from '$lib/db/schema/index';
 // DB SERVICES
 import { updateOrganisation } from '$lib/db/services/organisation';
 import { updateProject } from '$lib/db/services/project';
@@ -49,7 +49,7 @@ Example requests to the image API are:
  */
 export const GET: RequestHandler = async ({ url, locals, platform, request }) => {
   // ASSERT : User Logged in
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
 
   // ASSERT : Valid query parameters
   // Validate query parameters, or return 400
@@ -63,7 +63,7 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
   // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
   let { conditions } = getImageQueryContext(
     db,
-    session,
+    user,
     request,
     queryParams as QueryParams,
     userRoles,
@@ -101,8 +101,8 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
  */
 export const POST: RequestHandler = async ({ request, locals, platform }) => {
   // ASSERT : User logged in
-  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
-  const user = await getUserById(db, userId);
+  const { db, user, userId, userRoles } = await getDatabase(locals, platform);
+  const userWithAttribution = await getUserById(db, userId);
 
   try {
     // ASSERT : Valid submitted data
@@ -140,7 +140,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
     // ASSERT : Access to context
     await assertPermissionsToCreateImage(
       db,
-      session,
+      user,
       request,
       locals.hub,
       data,
@@ -167,7 +167,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       const responseData = await toResponseShape(
         createdImage,
         createdFeatureImage,
-        user?.attribution ?? undefined
+        userWithAttribution?.attribution ?? undefined
       );
       // DB : Return the created
       return JSONResponseOrError(responseData);
@@ -191,7 +191,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 
       const responseData = await toResponseShapeProjectOrOrganisation(
         createdImage,
-        user?.attribution ?? undefined
+        userWithAttribution?.attribution ?? undefined
       );
       // DB : Return the created
       return JSONResponseOrError(responseData);
