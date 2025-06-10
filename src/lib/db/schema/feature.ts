@@ -97,7 +97,7 @@ export const featureI18n = sqliteTable(
     featureId: text('featureId')
       .notNull()
       .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    locale: text('locale', { enum: supportedLocales }).notNull(),
+    locale: text('locale', { enum: supportedLocales as [string, ...string[]] }).notNull(),
     // Full Name in {locale}
     title: text('title').notNull(),
     titleGen: integer('titleGen', { mode: 'boolean' }).notNull().default(true),
@@ -162,7 +162,7 @@ export const featurePropertyI18n = sqliteTable(
         onUpdate: 'cascade'
       }),
     propertyId: text('propertyId').notNull(),
-    locale: text('locale', { enum: supportedLocales }).notNull(),
+    locale: text('locale', { enum: supportedLocales as [string, ...string[]] }).notNull(),
     // Value in {locale}
     value: text('value'),
     valueGen: integer('valueGen', { mode: 'boolean' })
