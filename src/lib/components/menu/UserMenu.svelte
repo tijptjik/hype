@@ -1,23 +1,21 @@
 <script lang="ts">
 // SVELTE
-import { page } from '$app/state';
 import { fade } from 'svelte/transition';
 // NAVIGATION
 import { goto } from '$app/navigation';
 // I18N
 import { m } from '$lib/i18n';
 // AUTH
-// @ts-ignore
-import { signIn, signOut } from '@auth/sveltekit/client';
+import { signIn, signOut, useSession } from '$lib/auth/client';
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Power } from '@steeze-ui/heroicons';
 
-const { session } = page.data;
+const session = useSession();
 let showPower = $state(false);
 </script>
 
-{#if session}
+{#if $session.data?.user}
   <div
     class="grid h-10 w-12 overflow-hidden px-2"
     onmouseenter={() => (showPower = true)}
@@ -28,9 +26,14 @@ let showPower = $state(false);
         class="col-start-1 col-end-2 row-start-1 row-end-2 h-10 w-10">
         <button
           class="m-0 flex h-10 w-10 items-center justify-center rounded-full bg-neutral-800 p-0"
-          onclick={() => {
-            signOut();
-            goto('/');
+          onclick={async () => {
+            await signOut({
+              fetchOptions: {
+                onSuccess: () => {
+                  goto('/'); // redirect to login page
+                }
+              }
+            });
           }}>
           <Icon src={Power} class="h-5 w-5 stroke-2 text-primary" />
         </button>
@@ -41,14 +44,17 @@ let showPower = $state(false);
         class="col-start-1 col-end-2 row-start-1 row-end-2">
         <div class="avatar">
           <div class="w-10 rounded-full">
-            <img alt="Avatar" src={session.user?.image} referrerpolicy="no-referrer" />
+            <img alt="Avatar" src={$session.data?.user?.image} referrerpolicy="no-referrer" />
           </div>
         </div>
       </div>
     {/if}
   </div>
 {:else}
-  <a draggable="false" class="btn btn-primary" onclick={() => signIn('google')}>
+  <a
+    draggable="false"
+    class="btn btn-primary"
+    onclick={() => signIn.social({ provider: 'google', callbackURL: '/' })}>
     {m.navbar__signin()}
   </a>
 {/if}
