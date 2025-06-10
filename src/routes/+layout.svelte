@@ -1,12 +1,16 @@
 <script lang="ts">
+// SVELTE
+import { watch } from 'runed';
 // STORES
 import { page } from '$app/state';
- // NAVIGATION
+// NAVIGATION
 import { goto } from '$app/navigation';
 import { afterNavigate } from '$app/navigation';
 // QUERY
 import { QueryClientProvider } from '@tanstack/svelte-query';
 import { SvelteQueryDevtools } from '@tanstack/svelte-query-devtools';
+// AUTH
+import { useSession } from '$lib/auth/client';
 // I18N
 import { getLocale, setLocale } from '$lib/i18n';
 // COMPONENTS
@@ -15,8 +19,8 @@ import FlashMessage from '$lib/components/common/FlashMessage.svelte';
 import 'tailwindcss/tailwind.css';
 // TYPES
 import type { QueryClient } from '@tanstack/svelte-query';
-import type { Locale } from '$lib/types';
 import type { LayoutData, LayoutProps } from './$types';
+import type { Locale } from '$lib/types';
 
 // PROPS
 let { children, data }: LayoutProps = $props();
@@ -25,6 +29,8 @@ let { children, data }: LayoutProps = $props();
 const { queryClient } = data as LayoutData & {
   queryClient: QueryClient;
 };
+
+const session = useSession();
 
 // Set Page Metadata
 let title = $state(page.data.title);
@@ -36,25 +42,18 @@ let socialImage = {
   height: '200'
 };
 
-// Handle initial language setup and authentication
-$effect(() => {
-  const { session } = page.data;
-
-  // Handle authentication first
-  if (!session) {
-    // Only redirect if we're not already on the home page
-    if (page.url.pathname !== '/') {
-      goto('/');
+// Handle language setup from client-side session
+watch(
+  // Set locale from client session if available
+  () => $session.data?.user?.locale,
+  () => {
+    const locale = getLocale();
+    const userLocale = $session.data?.user?.locale;
+    if (userLocale && locale !== userLocale) {
+      setLocale(userLocale as Locale)
     }
-    return;
   }
-
-  // Then handle language
-  if (session?.user?.locale) {
-    // Set the locale first
-    setLocale(session.user.locale as Locale);
-  }
-});
+);
 
 afterNavigate(() => {
   title = page.data.title;
