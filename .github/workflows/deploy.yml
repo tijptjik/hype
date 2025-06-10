@@ -8,75 +8,67 @@ on:
 
 jobs:
   deploy-to-prod:
+    name: Deploy to Cloudflare [Production]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
-    name: Deploy to Cloudflare [Production]
-    
     steps:
-      - name: GIT :: Checkout
+      - name: "GIT :: Checkout"
         uses: actions/checkout@v4
-        
-      - name: INSTALL :: Bun
+
+      - name: "INSTALL :: Bun"
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: '1.2.15'
-          
-      - name: INSTALL :: Dependencies
+
+      - name: "INSTALL :: Dependencies"
         run: bun install --frozen-lockfile
-          
-      - name: BUILD :: Application
+
+      - name: "BUILD :: Application"
         run: bun run build
         env:
           VITE_WRANGLER_ENV: cf
           VITE_USER_NODE_ENV: ${{ vars.ENVIRONMENT }}
-          
-      - name: DB :: Apply migrations
+
+      - name: "DB :: Apply migrations"
         run: bun wrangler d1 migrations apply hype-db-prod --remote
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          
-      - name: DEPLOY :: Cloudflare Worker
+
+      - name: "DEPLOY :: Cloudflare Worker"
         run: bun wrangler deploy --name hype-prod
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
   deploy-to-preview:
+    name: Deploy to Cloudflare [Preview]
     if: github.ref == 'refs/heads/preview'
     runs-on: ubuntu-latest
-    environment: preview
-    name: Deploy to Cloudflare [Preview]
-    
+    environment: preview-1
     steps:
-      - name: GIT :: Checkout
+      - name: "GIT :: Checkout"
         uses: actions/checkout@v4
-        
-      - name: INSTALL :: Bun
+
+      - name: "INSTALL :: Bun"
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: '1.2.15'
-          
-      - name: INSTALL :: Dependencies
+
+      - name: "INSTALL :: Dependencies"
         run: bun install --frozen-lockfile
-        
-      - name: SETUP :: Environment variables
-        run: |
-          echo "ENVIRONMENT=preview" >> $GITHUB_ENV
-          echo "WRANGLER_ENV=preview" >> $GITHUB_ENV
-          echo "PROJECT_NAME=hype-preview" >> $GITHUB_ENV
-          
-      - name: BUILD :: Application
+
+      - name: "BUILD :: Application"
         run: bun run build
         env:
           VITE_WRANGLER_ENV: cf
           VITE_USER_NODE_ENV: ${{ vars.ENVIRONMENT }}
-          
-      - name: DB :: Apply migrations
+
+      - name: "DB :: Apply migrations"
         run: bun wrangler d1 migrations apply hype-db-preview --remote --env preview
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          
-      - name: DEPLOY :: Cloudflare Worker
+
+      - name: "DEPLOY :: Cloudflare Worker"
         run: bun wrangler deploy --name hype-preview
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
