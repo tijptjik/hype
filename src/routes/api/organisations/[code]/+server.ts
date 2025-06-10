@@ -14,7 +14,7 @@ import {
   OrganisationInsertSuperAdminAPI 
 } from '$lib/db/zod';
 // SCHEMA
-import { organisation } from '$lib/db/schema';
+import { organisation } from '$lib/db/schema/index';
 // DB
 import {
   getOrganisation,
@@ -63,12 +63,12 @@ const RESOURCE_PATH = 'organisations';
  */
 export const GET: RequestHandler = async ({ params, locals, platform, request }) => {
   // ASSERT : User Logged in
-  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
 
   try {
     // GET : Context for organisation query
     let { params: queryParams, conditions } = getOrganisationQueryContext(
-      session,
+      user!,
       request,
       {},
       userRoles
@@ -96,7 +96,7 @@ export const GET: RequestHandler = async ({ params, locals, platform, request })
       result.i18n, 
       result.userRoles, 
       false, // isCollection
-      session.user.superAdmin || false // isSuperAdmin
+      user.superAdmin || false // isSuperAdmin
     );
 
     // HTTP : 200 JSON or 404
@@ -118,14 +118,14 @@ export const GET: RequestHandler = async ({ params, locals, platform, request })
  */
 export const PUT: RequestHandler = async ({ params, request, locals, platform }) => {
   // ASSERT : User logged in
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
 
   try {
     // ASSERT : Valid form
     const formData: Organisation = await request.json();
     
     // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
-    const updateSchema = session.user.superAdmin 
+    const updateSchema = user.superAdmin 
       ? OrganisationInsertSuperAdminAPI 
       : OrganisationInsertAPI;
     
@@ -149,14 +149,14 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 
     // ASSERT : Permissions to update organisation
     assertPermissionsToUpdateOrganisation(
-      session,
+      user,
       request,
       formData,
       userRoles
     );
 
     // STATE : Will the current user lose access on membership changes.
-    const isAccessLost = isAccessLostUponSuccess(session, formData, userRoles);
+    const isAccessLost = isAccessLostUponSuccess(user, formData, userRoles);
 
     // DB : Update the organisation and related data using URL param code for lookup
     const updatedOrganisation = await updateOrganisationWithRelated(
@@ -170,7 +170,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
       updatedOrganisation,
       updatedOrganisation.i18n,
       updatedOrganisation.userRoles,
-      session.user.superAdmin || false
+      user.superAdmin || false
     );
 
     // STATE : Determine if redirect is needed (only when code changes or access is lost)
@@ -202,7 +202,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
  * such as the organisation publish or archive status.
  */
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
   try {
     // ASSERT : Valid form data
     const newData: OrganisationPartial = await request.json();
@@ -230,7 +230,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
 
     // Use assertion functions for access control
     assertPermissionsToUpdateOrganisation(
-      session,
+      user,
       request,
       existing,
       userRoles
@@ -239,8 +239,28 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     // DB : Update only the basic organisation fields (no relations for PATCH)
     const updated = await updateOrganisation(db, newData, params.code as string);
 
-    // Return the updated organisation in the format expected by components
-    return json({ type: 'success', data: updated });
+    // DB : Get the updated organisation with all relations for response
+    const updatedWithRelations = await getOrganisation(
+      db,
+      organisationWithRelations,
+      [eq(organisation.code, params.code as string)],
+      locals.hub
+    );
+
+    if (!updatedWithRelations) {
+      return error(500, 'Failed to retrieve updated organisation');
+    }
+
+    // RESPONSE : Build the response shape
+    const data = await toResponseShape(
+      updatedWithRelations, 
+      updatedWithRelations.i18n, 
+      updatedWithRelations.userRoles, 
+      false, // isCollection
+      user!.superAdmin || false // isSuperAdmin
+    );
+
+    return json({ type: 'success', data });
   } catch (err) {
     // DB : Query Error
     console.error('Database query error:', err);

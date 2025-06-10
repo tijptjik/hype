@@ -8,7 +8,7 @@ import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { ProjectAPI, ProjectUpdateAPI } from '$lib/db/zod';
 // SCHEMA
-import { project } from '$lib/db/schema';
+import { project } from '$lib/db/schema/index';
 // DB
 import {
   getProject,
@@ -67,12 +67,12 @@ export const GET: RequestHandler = async ({
   request
 }) => {
   // ASSERT : User logged in
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
 
   // CONTEXT : Get the query context
   let { conditions } = getProjectQueryContext(
     db,
-    session,
+    user,
     request,
     {},
     userRoles,
@@ -88,7 +88,7 @@ export const GET: RequestHandler = async ({
       db,
       projectEntityWithRelations,
       conditions,
-      { ...locals.hub, isSuperAdmin: session.user.superAdmin || false }
+      { ...locals.hub, isSuperAdmin: user.superAdmin || false }
     );
 
     if (!result) {
@@ -114,7 +114,7 @@ export const GET: RequestHandler = async ({
 
 export const PUT: RequestHandler = async ({ params, request, locals, platform }) => {
   // ASSERT : User logged in
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
 
   try {
     // ASSERT : Valid form
@@ -136,7 +136,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 
     // ASSERT : Permissions to update project
     assertPermissionsToUpdateProject(
-      session,
+      user,
       request,
       formData,
       userRoles
@@ -177,14 +177,14 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
  * Partially updates a project - only the fields that are provided in the request body. This endpoint is used for updating fields that don't require a full form submission, such as the project publish or archive status.
  */
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
   try {
     // ASSERT : Valid form data
     const newData: ProjectPartial = await request.json();
 
     // Get the existing project to verify access
     const conditions = [eq(project.code, params.code as string)];
-    const existing = (await getProject(db, {}, conditions, { ...locals.hub, isSuperAdmin: session.user.superAdmin || false })) as ProjectDB;
+    const existing = (await getProject(db, {}, conditions, { ...locals.hub, isSuperAdmin: user!.superAdmin || false })) as ProjectDB;
 
     if (!existing) return error(404, 'Project not found');
 
@@ -197,17 +197,36 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
 
     // Use assertion functions for access control
     assertPermissionsToUpdateProject(
-      session,
+      user,
       request,
       existing,
       userRoles
     );
 
     // DB : Update only the basic project fields (no relations for PATCH)
-    const updated = await updateProject(db, newData, params.code as string);
+    await updateProject(db, newData, params.code as string);
 
-    // Return the updated project in the format expected by components
-    return json({ type: 'success', data: updated });
+    // DB : Get the updated project with all relations for response
+    const updatedWithRelations = await getProject(
+      db,
+      projectEntityWithRelations,
+      [eq(project.code, params.code as string)],
+      { ...locals.hub, isSuperAdmin: user.superAdmin || false }
+    );
+
+    if (!updatedWithRelations) {
+      return error(500, 'Failed to retrieve updated project');
+    }
+
+    // RESPONSE : Build the response shape
+    const data = await toResponseShape(
+      updatedWithRelations,
+      updatedWithRelations.i18n as unknown as ProjectI18nDB[],
+      updatedWithRelations.maintainerRoles as unknown as ProjectRoleDB[],
+      updatedWithRelations.properties as unknown as PropertyDBRaw[]
+    );
+
+    return json({ type: 'success', data });
   } catch (err) {
     logZodError(err, 'Update error:');
     return SuperFormErrorResponse(RESOURCE_TYPE, 'patch');

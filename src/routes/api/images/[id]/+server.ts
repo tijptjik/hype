@@ -3,7 +3,7 @@ import { error, json } from '@sveltejs/kit';
 // DRIZZLE
 import { eq } from 'drizzle-orm';
 // DB
-import { image, featureImage, session } from '$lib/db/schema';
+import { image } from '$lib/db/schema/index';
 import { getUserById } from '$lib/db/services/user';
 import {
   getImageById,
@@ -12,7 +12,7 @@ import {
   updateImage
 } from '$lib/db/services/image';
 // ZOD
-import { ImageFlatUpdate, ImageUpdate } from '$lib/db/zod/schemas/image';
+import { ImageFlatUpdate, ImageUpdate } from '$lib/db/zod/schema/image';
 // API
 import { delFromCloudinary, getDatabase, getSignedRequest, isValidQueryParamsOrError, JSONResponseOrError } from '$lib/api';
 import { assertPermissionsToDeleteImage, assertPermissionsToUpdateImage, getCtxFromUrl, getImageEntityQueryContext } from '$lib/api/services/image';
@@ -24,13 +24,6 @@ import type {
   QueryParams,
   FeatureImageDB,
 } from '$lib/types';
-
-/********************
- *  COMMON
- ************/
-
-const RESOURCE_TYPE = 'image';
-const RESOURCE_PATH = 'images';
 
 /********************
  *  READ

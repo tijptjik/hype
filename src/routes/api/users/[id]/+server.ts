@@ -3,7 +3,7 @@ import { error, type RequestHandler } from '@sveltejs/kit';
 // DRIZZLE
 import { eq } from 'drizzle-orm';
 // DB
-import { user } from '$lib/db/schema';
+import { user } from '$lib/db/schema/index';
 import {
   getUser,
   updateUser,
@@ -19,7 +19,7 @@ import {
   assertPermissionsToUpdateUser
 } from '$lib/api/services/user';
 // TYPES
-import type { UserPartial, UserDB, UserRaw, Id } from '$lib/types';
+import type { UserPartial, UserDB, UserRaw, Id, UserFeatureDB, UserLayerDB } from '$lib/types';
 
 /********************
  *  READ
@@ -30,10 +30,10 @@ import type { UserPartial, UserDB, UserRaw, Id } from '$lib/types';
  */
 export const GET: RequestHandler = async ({ params, locals, platform, request }) => {
   // ASSERT : User logged in
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user : sessionUser, userRoles } = await getDatabase(locals, platform);
 
   // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
-  let { conditions } = getUserQueryContext(session, request, {}, userRoles);
+  let { conditions } = getUserQueryContext(sessionUser!, request, {}, userRoles);
 
   try {
     // Add condition for specific user ID
@@ -50,7 +50,9 @@ export const GET: RequestHandler = async ({ params, locals, platform, request })
     const data = await toResponseShape(
       result,
       result.userLayers || [],
-      result.userFeatures || []
+      result.userFeatures || [],
+      false,
+      sessionUser!.superAdmin
     );
 
     // HTTP : 200 JSON or 404
@@ -71,7 +73,7 @@ export const GET: RequestHandler = async ({ params, locals, platform, request })
  */
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
   // ASSERT : User logged in
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user : sessionUser } = await getDatabase(locals, platform);
 
   try {
     // ASSERT : Valid form data
@@ -85,23 +87,40 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     if (!existing) return error(404, 'User not found');
 
     // ASSERT : Permissions to update user
-    assertPermissionsToUpdateUser(session, existing, params.id as Id);
+    assertPermissionsToUpdateUser(sessionUser!, existing, params.id as Id);
 
     // DB : Update the userBase (no relations for PATCH)
     const updated = await updateUser(db, newData, params.id as string);
-
+    let updatedFeatures: UserFeatureDB[] = [];
+    let updatedLayers: UserLayerDB[] = [];
+    
     // DB : Update the userFeatures
     if (newData.userFeatures) {
-      await updateUserFeatures(db, newData.userFeatures, params.id as string);
+      updatedFeatures = await updateUserFeatures(db, newData.userFeatures, params.id as string);
     }
 
     // DB : Update the userLayers
     if (newData.userLayers) {
-      await updateUserLayers(db, newData.userLayers, params.id as string);
+      updatedLayers = await updateUserLayers(db, newData.userLayers, params.id as string);
+    }
+
+    // DB : Get the updated user with all relations for response
+    const updatedWithRelations = (await getUser(db, userEntityWithRelations, [
+      eq(user.id, params.id as string)
+    ])) as UserRaw;
+
+    if (!updatedWithRelations) {
+      return error(500, 'Failed to retrieve updated user');
     }
 
     // RESPONSE : Build the response shape
-    const data = await toResponseShape(updated);
+    const data = await toResponseShape(
+      updatedWithRelations,
+      updatedWithRelations.userLayers || updatedLayers,
+      updatedWithRelations.userFeatures || updatedFeatures,
+      false,
+      sessionUser!.superAdmin
+    );
 
     // HTTP : 200 JSON or 400
     return JSONResponseOrError(data);

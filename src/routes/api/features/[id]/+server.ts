@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 import { superValidate } from 'sveltekit-superforms';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
-import { FeatureUpdateAPI } from '$lib/db/zod/schemas/feature';
+import { FeatureUpdateAPI } from '$lib/db/zod/schema/feature';
 // I18N
 import { m } from '$lib/i18n';
 // API
@@ -24,7 +24,7 @@ import {
   featureEntityWithRelations
 } from '$lib/api/services/feature';
 // SCHEMA
-import { feature } from '$lib/db/schema';
+import { feature } from '$lib/db/schema/index';
 // DB
 import {
   getFeature,
@@ -193,8 +193,22 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     // DB : Update only the basic feature fields (no relations for PATCH)
     const updated = await updateFeature(db, newData, params.id);
 
-    // RESPONSE : Return the updated feature
-    return json({ type: 'success', data: updated });
+    // DB : Get the updated feature with all relations for response
+    const updatedWithRelations = (await getFeatureWithImage(
+      db,
+      featureEntityWithRelations,
+      [eq(feature.id, params.id as string)],
+      locals.hub
+    )) as FeatureDBRaw;
+
+    if (!updatedWithRelations) {
+      return error(500, 'Failed to retrieve updated feature');
+    }
+
+    // RESPONSE : Build the response shape with merged properties
+    const data = await buildResponseShape(db, updatedWithRelations, locals.hub);
+    
+    return json({ type: 'success', data });
   } catch (err) {
     logZodError(err, 'Update error:');
     return SuperFormErrorResponse(RESOURCE_TYPE, 'patch');

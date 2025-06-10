@@ -9,20 +9,17 @@ import { getDatabase, JSONResponseOrError } from '$lib/api';
 import { getPropertyQueryContext, propertyEntityWithRelations } from '$lib/api/services/property';
 import { getProperty, toResponseShape } from '$lib/db/services/property';
 // SCHEMA
-import { property } from '$lib/db/schema';
+import { property } from '$lib/db/schema/index';
 // TYPES
 import type { PropertyValueI18nDB } from '$lib/types';
 
-const RESOURCE_TYPE = 'property';
-const PUBLIC_IDENTIFIER = 'id';
-
 export const GET: RequestHandler = async ({ params, locals, platform, request }) => {
   // ASSERT : User Logged in
-  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
   try {
     // GET : Context for property query
     let { params: queryParams, conditions } = getPropertyQueryContext(
-      session,
+      user,
       request,
       {},
       userRoles

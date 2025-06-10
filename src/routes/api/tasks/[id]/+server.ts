@@ -2,7 +2,7 @@ import { error, json } from '@sveltejs/kit';
 // DRIZZLE
 import { eq } from 'drizzle-orm';
 // ZOD
-import { TaskUpdate } from '$lib/db/zod/schemas/task';
+import { TaskUpdate } from '$lib/db/zod/schema/task';
 // API
 import {
   getDatabase,
@@ -20,7 +20,7 @@ import {
   assertPermissionsToDeleteTask
 } from '$lib/api/services/task';
 // SCHEMA
-import { task } from '$lib/db/schema';
+import { task } from '$lib/db/schema/index';
 // SERVICES
 import {
   getTask,
@@ -55,7 +55,7 @@ export const GET: RequestHandler = async ({
   request
 }) => {
   // ASSERT : User logged in
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
 
   // ASSERT : Valid query parameters
   let queryParams = isValidQueryParamsOrError(task, url);
@@ -63,7 +63,7 @@ export const GET: RequestHandler = async ({
   // CONTEXT : Get the query context
   let { conditions } = getTaskEntityQueryContext(
     db,
-    session,
+    user,
     request,
     queryParams as QueryParams,
     userRoles
@@ -75,7 +75,7 @@ export const GET: RequestHandler = async ({
   try {
 
     // DB : Get the task with full relations
-    const data = await getTask(db, taskEntityWithRelations, conditions, { ...locals.hub, isSuperAdmin: session.user.superAdmin || false }) as TaskDBRaw;
+    const data = await getTask(db, taskEntityWithRelations, conditions, { ...locals.hub, isSuperAdmin: user.superAdmin || false }) as TaskDBRaw;
 
     if (!data) {
       return error(404, 'Task not found');
@@ -100,14 +100,14 @@ export const GET: RequestHandler = async ({
  */
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
   // ASSERT : User logged in
-  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userId, userRoles } = await getDatabase(locals, platform);
 
   try {
     // ASSERT : Valid submitted data
     const data: TaskDBPartial = await request.json();
 
     // Get existing task data for permission checks
-    const existingTask = await getTask(db, {}, [eq(task.id, params.id!)], { ...locals.hub, isSuperAdmin: session.user.superAdmin || false });
+    const existingTask = await getTask(db, {}, [eq(task.id, params.id!)], { ...locals.hub, isSuperAdmin: user.superAdmin || false });
     if (!existingTask) {
       return error(404, 'Task not found');
     }
@@ -115,7 +115,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     // ASSERT : User has permission to update task
     await assertPermissionsToUpdateTask(
       db,
-      session,
+      user,
       request,
       params as QueryParams,
       userRoles,
@@ -144,11 +144,11 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
           break;
         case 'added-all-photos':
           // Publish all images
-          await publishImages(db, taskId, false);
+          await publishImages(db, taskId, false, userId);
           break;
         case 'added-all-photos-with-intent':
           // Archive undefined images and publish defined ones
-          await publishImages(db, taskId, true);
+          await publishImages(db, taskId, true, userId);
           await archiveImages(db, taskId, true);
           break;
       }
@@ -177,11 +177,11 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
  */
 export const DELETE: RequestHandler = async ({ params, request, locals, platform }) => {
   // ASSERT : User logged in
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
 
   try {
     // Get existing task data for permission checks
-    const existingTask = await getTask(db, {}, [eq(task.id, params.id!)], { ...locals.hub, isSuperAdmin: session.user.superAdmin || false });
+    const existingTask = await getTask(db, {}, [eq(task.id, params.id!)], { ...locals.hub, isSuperAdmin: user.superAdmin || false });
     if (!existingTask) {
       return error(404, 'Task not found');
     }
@@ -189,7 +189,7 @@ export const DELETE: RequestHandler = async ({ params, request, locals, platform
     // ASSERT : User has permission to delete task
     await assertPermissionsToDeleteTask(
       db,
-      session,
+      user,
       request,
       params as QueryParams,
       userRoles,

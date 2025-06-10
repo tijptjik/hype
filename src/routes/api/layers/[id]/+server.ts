@@ -16,7 +16,8 @@ import {
   getDatabase,
   getPrisms,
   SuperFormResponse,
-  logZodError
+  logZodError,
+  isAdminRequest
 } from '$lib/api';
 import {
   assertPermissionsToUpdateLayer,
@@ -24,7 +25,7 @@ import {
   layerEntityWithRelations
 } from '$lib/api/services/layer';
 // DB
-import { layer } from '$lib/db/schema';
+import { layer } from '$lib/db/schema/index';
 import {
   getLayer,
   updateLayerWithRelated,
@@ -57,7 +58,7 @@ const RESOURCE_PATH = 'layers';
  ************/
 
 /**
- * Reads a project
+ * Reads a layer
  */
 export const GET: RequestHandler = async ({
   params,
@@ -67,12 +68,12 @@ export const GET: RequestHandler = async ({
   request
 }) => {
   // ASSERT : User logged in
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
 
   // CONTEXT : Get the query context
   let { conditions } = getLayerQueryContext(
     db,
-    session,
+    user,
     request,
     {},
     userRoles,
@@ -87,7 +88,7 @@ export const GET: RequestHandler = async ({
     const result = await getLayer(db, layerEntityWithRelations, conditions, locals.hub);
 
     if (!result) {
-      return error(404, 'Project not found');
+      return error(404, 'Layer not found');
     }
 
     // RESPONSE : Build the response shape
@@ -116,7 +117,7 @@ export const GET: RequestHandler = async ({
  */
 export const PUT: RequestHandler = async ({ params, request, locals, platform }) => {
   // ASSERT : User logged in
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
 
   try {
     // ASSERT : Valid form
@@ -132,7 +133,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 
     // ACCESS CONTROL : Check permissions
     assertPermissionsToUpdateLayer(
-      session,
+      user,
       request,
       formData,
       userRoles,
@@ -167,7 +168,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
  */
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
   if (!params.id) return error(400, m.deft_sleek_wasp_dine());
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
   try {
     // ASSERT : Valid form data
     const newData: LayerPartial = await request.json();
@@ -180,7 +181,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
 
     // Use assertion functions for access control
     assertPermissionsToUpdateLayer(
-      session,
+      user,
       request,
       existing,
       userRoles,
@@ -190,8 +191,23 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     // DB : Update only the basic layer fields (no relations for PATCH)
     const updated = await updateLayer(db, newData, params.id);
 
-    // Return the updated layer in the format expected by components
-    return json({ type: 'success', data: updated });
+    // DB : Get the updated layer with all relations for response
+    const updatedWithRelations = await getLayer(db, layerEntityWithRelations, [
+      eq(layer.id, params.id as string)
+    ], locals.hub);
+
+    if (!updatedWithRelations) {
+      return error(500, 'Failed to retrieve updated layer');
+    }
+
+    // RESPONSE : Build the response shape
+    const data = await toResponseShape(
+      updatedWithRelations as LayerDB,
+      (updatedWithRelations as any).i18n || [],
+      (updatedWithRelations as any).properties || []
+    );
+
+    return json({ type: 'success', data });
   } catch (err) {
     logZodError(err, 'Update error:');
     return SuperFormErrorResponse(RESOURCE_TYPE, 'patch');

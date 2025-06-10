@@ -8,9 +8,9 @@ import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { HubUpdateAPI } from '$lib/db/zod';
 // SCHEMA
-import { hub } from '$lib/db/schema';
+import { hub } from '$lib/db/schema/index';
 // DB
-import { getHub, updateHub } from '$lib/db/services/hub';
+import { getHub, updateHub, updateI18n, updateHubWithRelated } from '$lib/db/services/hub';
 import { updateOrganisation } from '$lib/db/services/organisation';
 // API
 import {
@@ -97,10 +97,10 @@ export const GET: RequestHandler = async ({ params, locals, platform, url }) => 
  */
 export const PUT: RequestHandler = async ({ params, request, locals, platform }) => {
   // ASSERT : User logged in
-  const { db, session } = await getDatabase(locals, platform);
+  const { db, user } = await getDatabase(locals, platform);
 
   // ASSERT : SuperAdmin only for hub management
-  if (!session?.user?.superAdmin) {
+  if (!user?.superAdmin) {
     return error(403, 'SuperAdmin access required');
   }
 
@@ -120,10 +120,10 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     }
 
     // ASSERT : Permissions to update hub
-    assertPermissionsToUpdateHub(session);
+    assertPermissionsToUpdateHub(user);
 
-    // DB : Update the hub
-    const updatedHub = await updateHub(db, form.data, params.code!);
+    // DB : Update the hub with related data
+    const updatedHub = await updateHubWithRelated(db, formData, params.code!);
 
     // DB : Update organisation relationships if provided
     if (formData.organisations) {
@@ -168,10 +168,10 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
  * Partially updates a hub - SuperAdmin only
  */
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
-  const { db, session } = await getDatabase(locals, platform);
+  const { db, user } = await getDatabase(locals, platform);
 
   // ASSERT : SuperAdmin only for hub management
-  if (!session?.user?.superAdmin) {
+  if (!user?.superAdmin) {
     return error(403, 'SuperAdmin access required');
   }
 
@@ -193,13 +193,24 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     }
 
     // ASSERT : Permissions to update hub
-    assertPermissionsToUpdateHub(session);
+    assertPermissionsToUpdateHub(user);
 
     // DB : Update only the basic hub fields
-    const updated = await updateHub(db, newData, params.code as string);
+    await updateHub(db, newData, params.code as string);
 
-    // Return the updated hub
-    return json({ type: 'success', data: updated });
+    // DB : Get the updated hub with all relations for response
+    const updatedWithRelations = await getHub(db, hubEntityWithRelations, [
+      eq(hub.code, params.code as string)
+    ]);
+
+    if (!updatedWithRelations) {
+      return error(500, 'Failed to retrieve updated hub');
+    }
+
+    // RESPONSE : Build the response shape
+    const data = await toResponseShape(updatedWithRelations);
+
+    return json({ type: 'success', data });
   } catch (err) {
     logZodError(err, 'Hub patch error:');
     return SuperFormErrorResponse(RESOURCE_TYPE, 'patch');
