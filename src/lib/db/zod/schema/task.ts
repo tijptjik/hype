@@ -3,7 +3,7 @@ import { z } from 'zod';
 // DRIZZLE
 import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'drizzle-zod';
 // SCHEMA
-import { task, taskImage } from '$lib/db/schema';
+import { task, taskImage } from '$lib/db/schema/index';
 // ZOD SCHEMAS
 import { UserBase, UserBasic } from './user';
 import { ImageBase } from './image';
@@ -49,10 +49,10 @@ export const TaskImageUpdate = createUpdateSchema(taskImage);
 export const TaskBaseRaw = TaskBase.extend({
   organisation: OrganisationBase.extend({
     i18n: z.array(OrganisationI18nBase).optional().nullable()
-  }),
+  }).nullish(),
   project: ProjectBase.extend({
     i18n: z.array(ProjectI18nBase).optional().nullable()
-  }),
+  }).nullish(),
   feature: FeatureBase.extend({
     i18n: z.array(FeatureI18nBase).optional().nullable(),
     properties: z.array(FeaturePropertyAPI.extend({
@@ -63,7 +63,7 @@ export const TaskBaseRaw = TaskBase.extend({
         i18n: z.array(PropertyValueI18nBase).optional().nullable()
       }).optional().nullable()
     })).optional().nullable()
-  }),
+  }).nullish(),
   images: z.array(TaskImageBase.extend({
     image: ImageBase.optional().nullable()
   })).optional().nullable(),

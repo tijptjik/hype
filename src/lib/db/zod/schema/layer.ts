@@ -6,7 +6,7 @@ import {
   createInsertSchema,
   createUpdateSchema
 } from 'drizzle-zod';
-import { layer, layerI18n, layerProperty, userLayer } from '$lib/db/schema';
+import { layer, layerI18n, layerProperty, userLayer } from '$lib/db/schema/index';
 // CONSTRAINTS
 import { getDefaultConstraints, getLocales } from '../constraints';
 // ZOD SCHEMAS

@@ -14,7 +14,7 @@ import {
   featurePropertyI18n,
   image,
   userFeature
-} from '$lib/db/schema';
+} from '$lib/db/schema/index';
 // CONSTRAINTS
 import { getDefaultConstraints, getLocales } from '../constraints';
 // ZOD SCHEMAS
@@ -33,9 +33,10 @@ import {
 import { UserBasic } from './user';
 import { FeatureImageAPI } from './image';
 // TYPES
-import type { AddressMeta, AddressProperties } from '$lib/types';
+import type { AddressMeta, AddressProperties, Locale} from '$lib/types';
 import type { GeometryObject } from 'geojson';
 import { LayerAPI } from './layer';
+import { supportedLocales } from '$lib/enums';
 
 /* ----------------- */
 // FEATURE CORE
@@ -62,7 +63,8 @@ export const FeatureUpdate = createUpdateSchema(feature).extend({
 
 export const FeatureI18nBase = createSelectSchema(featureI18n).extend({
   ...getDefaultConstraints(featureI18n),
-  addressProperties: z.custom<AddressProperties>().default({}).nullish()
+  addressProperties: z.custom<AddressProperties>().default({}).nullish(),
+  locale: z.enum(Object.values(supportedLocales) as [string, ...string[]]).nullish()
 });
 
 export const FeatureI18nInsert = createInsertSchema(featureI18n)

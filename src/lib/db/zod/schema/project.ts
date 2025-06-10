@@ -7,7 +7,7 @@ import {
   createUpdateSchema
 } from 'drizzle-zod';
 // DRIZZLE SCHEMA
-import { project, projectI18n, projectRole } from '$lib/db/schema';
+import { project, projectI18n, projectRole } from '$lib/db/schema/index';
 // CONSTRAINTS
 import { getDefaultConstraints, getLocales, getMaintainerRoles } from '../constraints';
 // ZOD SCHEMAS

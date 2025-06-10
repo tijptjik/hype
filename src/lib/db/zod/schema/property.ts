@@ -3,7 +3,7 @@ import { z } from 'zod';
 // DRIZZLE
 import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'drizzle-zod';
 // DRIZZLE SCHEMA
-import { property, propertyI18n, propertyValue, propertyValueI18n } from '$lib/db/schema';
+import { property, propertyI18n, propertyValue, propertyValueI18n } from '$lib/db/schema/index';
 // CONSTRAINTS
 import { getDefaultConstraints, getLocales } from '../constraints';
 

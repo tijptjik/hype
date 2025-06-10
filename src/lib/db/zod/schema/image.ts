@@ -7,7 +7,7 @@ import {
   createUpdateSchema
 } from 'drizzle-zod';
 // DRIZZLE SCHEMA
-import { image, featureImage } from '$lib/db/schema';
+import { image, featureImage } from '$lib/db/schema/index';
 // ZOD SCHEMAS
 import { FeatureBase } from './feature';
 import { ImageCDN, ImageContextResource, ImageIntent } from '$lib/enums';

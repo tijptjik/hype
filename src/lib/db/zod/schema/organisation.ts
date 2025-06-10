@@ -7,7 +7,7 @@ import {
   createUpdateSchema
 } from 'drizzle-zod';
 // DRIZZLE SCHEMA
-import { organisation, organisationI18n, organisationRole } from '$lib/db/schema';
+import { organisation, organisationI18n, organisationRole } from '$lib/db/schema/index';
 // ZOD SCHEMAS
 import { getDefaultConstraints, getLocales, getUserRoles } from '../constraints';
 import { UserBasic } from './user';
