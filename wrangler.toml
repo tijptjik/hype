@@ -1,23 +1,27 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "hype-prod"
-account_id = "a6eeace4b6d9f8e07ab307964e74d801"
-compatibility_date = "2025-04-02"
-compatibility_flags = ["nodejs_compat_v2"]
-send_metrics = false
 main = ".svelte-kit/cloudflare/_worker.js"
 
-[assets]
-directory = "./dist"
-binding = "ASSETS"
+# Whether Wrangler should send usage data to Cloudflare for this project.
+send_metrics = false
 
-[env.preview]
-name = "hype-preview"
+########
+# INHERITED KEYS
+###
 
-[env.production.observability]
-enabled = true
+# The account ID to use for this project.
+account_id = "a6eeace4b6d9f8e07ab307964e74d801"
+# A date in the form yyyy-mm-dd, which will be used to determine which version of the Workers runtime is used.
+compatibility_date = "2025-04-02"
+# A list of flags that enable features from upcoming features of the Workers runtime
+compatibility_flags = ["nodejs_compat_v2"]
+# Enables use of *.workers.dev subdomain to deploy your Worker. 
+workers_dev = false
+#Enables use of Preview URLs to test your Worker. 
+preview_urls = false
+# Whether Wrangler should keep variables configured in the dashboard on deploy. 
+keep_vars = false
 
-[env.preview.observability]
-enabled = true
 
 # Automatically place your workloads in an optimal location to minimize latency.
 # If you are running back-end logic in a Pages Function, running it closer to your back-end infrastructure
@@ -26,12 +30,82 @@ enabled = true
 [placement]
 mode = "smart"
 
-# Variable bindings. These are arbitrary, plaintext strings (similar to environment variables)
-# Docs:
-# - https://developers.cloudflare.com/pages/functions/bindings/#environment-variables
-# Note: Use secrets to store sensitive data.
-# - https://developers.cloudflare.com/pages/functions/bindings/#secrets
-#[vars]
+# Configures automatic observability settings for telemetry data emitted from your Worker. 
+[observability]
+enabled = true
+
+# Configures static assets that will be served.
+# Docs : https://developers.cloudflare.com/workers/static-assets/binding/
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+
+########
+# PRODUCTION ENVIRONMENT
+###
+
+[env.production.route]
+pattern = "hype.hk"
+custom_domain = true
+
+[env.production.observability]
+enabled = true
+
+[env.production.vars]
+ENVIRONMENT = "production"
+NODE_ENV = "production"
+NODE_VERSION = "24.2"
+BUN_VERSION = "1.2.15"
+
+VITE_USER_NODE_ENV = "production"
+VITE_CLOUDINARY_CLOUD_NAME = "dg6vtsga1"
+VITE_CLOUDINARY_API_KEY = "226917649845399"
+VITE_CLOUDINARY_UPLOAD_PRESET = "ml_default"
+
+PUBLIC_AZURE_TRANSLATION_REGION = "eastasia"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "hype-db-prod"
+database_id = "7786af0e-3782-47f8-b70d-de645ba836ad"
+
+########
+# PREVIEW ENVIRONMENT
+###
+
+[env.preview]
+name = "hype-preview"
+
+[env.preview.route]
+pattern = "preview.hype.hk"
+custom_domain = true
+
+[env.preview.vars]
+ENVIRONMENT = "staging"
+NODE_ENV = "staging"
+NODE_VERSION = "24.2"
+BUN_VERSION = "1.2.15"
+
+VITE_USER_NODE_ENV = "staging"
+VITE_CLOUDINARY_CLOUD_NAME = "dg6vtsga1"
+VITE_CLOUDINARY_API_KEY = "226917649845399"
+VITE_CLOUDINARY_UPLOAD_PRESET = "ml_default"
+
+PUBLIC_AZURE_TRANSLATION_REGION = "eastasia"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "hype-db-preview"
+database_id = "f6bae0f9-c072-4ef0-9b75-efcc792d40fb"
+
+########
+# DEVELOPMENT ENVIRONMENT
+###
+
+[dev]
+ip = "localhost"
+port = 5173
+local_protocol = "http"
 
 # Bind the Workers AI model catalog. Run machine learning models, powered by serverless GPUs, on Cloudflare’s global network
 # Docs: https://developers.cloudflare.com/pages/functions/bindings/#workers-ai
@@ -40,11 +114,7 @@ mode = "smart"
 
 # Bind a D1 database. D1 is Cloudflare’s native serverless SQL database.
 # Docs: https://developers.cloudflare.com/pages/functions/bindings/#d1-databases
-[[d1_databases]]
-binding = "DB"                                       # i.e. available in your Worker on env.DB
-database_name = "hype-db-prod"
-database_id = "7786af0e-3782-47f8-b70d-de645ba836ad"
-preview_database_id = "DB"
+
 
 # Bind a Durable Object. Durable objects are a scale-to-zero compute primitive based on the actor model.
 # Durable Objects can live for as long as needed. Use these when you need a long-running "server", such as in realtime apps.
@@ -81,48 +151,3 @@ preview_database_id = "DB"
 # To use different bindings for preview and production environments, follow the examples below.
 # When using environment-specific overrides for bindings, ALL bindings must be specified on a per-environment basis.
 # Docs: https://developers.cloudflare.com/pages/functions/wrangler-configuration#environment-specific-overrides
-
-######## PRODUCTION environment config ########
-
-[env.production.vars]
-ENVIRONMENT = "production"
-NODE_ENV = "production"
-NODE_VERSION = "24.2"
-BUN_VERSION = "1.2.15"
-
-VITE_USER_NODE_ENV = "production"
-VITE_CLOUDINARY_CLOUD_NAME = "dg6vtsga1"
-VITE_CLOUDINARY_API_KEY = "226917649845399"
-VITE_CLOUDINARY_UPLOAD_PRESET = "ml_default"
-
-PUBLIC_AZURE_TRANSLATION_REGION = "eastasia"
-
-[[env.production.d1_databases]]
-binding = "DB"
-database_name = "hype-db-prod"
-database_id = "7786af0e-3782-47f8-b70d-de645ba836ad"
-
-######## PREVIEW environment config ########
-
-[env.preview.vars]
-ENVIRONMENT = "staging"
-NODE_ENV = "staging"
-NODE_VERSION = "24.2"
-BUN_VERSION = "1.2.15"
-
-VITE_USER_NODE_ENV = "staging"
-VITE_CLOUDINARY_CLOUD_NAME = "dg6vtsga1"
-VITE_CLOUDINARY_API_KEY = "226917649845399"
-VITE_CLOUDINARY_UPLOAD_PRESET = "ml_default"
-
-PUBLIC_AZURE_TRANSLATION_REGION = "eastasia"
-
-[[env.preview.d1_databases]]
-binding = "DB"
-database_name = "hype-db-preview"
-database_id = "f6bae0f9-c072-4ef0-9b75-efcc792d40fb"
-
-[dev]
-ip = "localhost"
-port = 5173
-local_protocol = "http"
