@@ -1,44 +1,58 @@
 [
   {
-    "id": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM",
+    "id": "4OwiIqe9ZkuA",
     "name": "Mart van de Ven",
-    "email": "m@type.hk",
-    "emailVerified": null,
-    "image": "https://lh3.googleusercontent.com/a/ACg8ocJiWWuBbf5n8GI5_0EeihmCiNbVGA8KWlVXEmwmTBqBwkEKEKBrhw=s96-c",
-    "attribution": "mart",
+    "email": "tijptjik@gmail.com",
+    "emailVerified": 0,
+    "image": "https://lh3.googleusercontent.com/a/ACg8ocKhi50rWqWkFMgG0RFZQiAfswUrVUkvCq6jrVFnLLF9CVLbxuM=s96-c",
     "locale": "en",
-    "preferences": {
-      "fallbackLocales": [],
-      "allowMachineTranslation": false,
-      "isTranslateButtonVisible": true
-    },
-    "experimental": {
-      "contributorMode": true,
-      "noLabelsMode": false,
-      "fallbackLocales": []
-    },
-    "createdAt": "2024-08-27T04:52:16.884Z",
-    "modifiedAt": "2024-08-27T04:52:16.884Z"
+    "attribution": "@7ijp7jik",
+    "isArchived": 0,
+    "preferences": "{\"fallbackLocales\":[],\"allowMachineTranslation\":false,\"preferFallbackInCurrentLocale\":false,\"isTranslateButtonVisible\":true}",
+    "experimental": "{\"contributorMode\":false, \"noLabelsMode\":false}",
+    "createdAt": 1749199410862,
+    "updatedAt": 1749199410862
+  },
+  {
+    "id": "QQrveSvG10G2",
+    "name": "Billy Potts",
+    "email": "bp@handsomeco.com",
+    "emailVerified": 0,
+    "image": "https://lh3.googleusercontent.com/a/ACg8ocIUlBt7j_AKWxFjHNwhdzJnxTAGZn_gC4hu5BijPnLtonQuSHcg=s96-c",
+    "locale": "en",
+    "attribution": "Billy Potts",
+    "isArchived": 0,
+    "preferences": "{\"fallbackLocales\":[],\"allowMachineTranslation\":false,\"preferFallbackInCurrentLocale\":false,\"isTranslateButtonVisible\":true}",
+    "experimental": "{\"contributorMode\":false,\"noLabelsMode\":false}",
+    "createdAt": 1749197688788,
+    "updatedAt": 1749197688788
   },
   {
     "id": "p6WnJ-DKl0c2",
     "name": "Mirian van Kampen",
-    "attribution": null,
     "email": "makampen@gmail.com",
-    "emailVerified": null,
+    "emailVerified": 0,
     "image": "https://lh3.googleusercontent.com/a/ACg8ocK95Jf4adp2Av4lYbijxqoaLN3TNMM2x9fNkUv47-6S9C9Cxkwq=s96-c",
     "locale": "en",
-    "preferences": {
-      "fallbackLocales": [],
-      "allowMachineTranslation": false,
-      "isTranslateButtonVisible": true
-    },
-    "experimental": {
-      "contributorMode": true,
-      "noLabelsMode": false,
-      "fallbackLocales": []
-    },
-    "createdAt": "2024-12-09T16:58:29.910Z",
-    "modifiedAt": "2024-12-09T16:58:29.910Z"
+    "attribution": "Chief Mommy Officer",
+    "isArchived": 0,
+    "preferences": "{\"fallbackLocales\":[\"zh-hans\",\"zh-hant\",\"en\"],\"allowMachineTranslation\":true,\"preferFallbackInCurrentLocale\":true,\"isTranslateButtonVisible\":true}",
+    "experimental": "{\"contributorMode\":true,\"noLabelsMode\":false}",
+    "createdAt": 1733763509910,
+    "updatedAt": 1749531383670
+  },
+  {
+    "id": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM",
+    "name": "Mart van de Ven",
+    "email": "m@type.hk",
+    "emailVerified": 1,
+    "image": "https://lh3.googleusercontent.com/a/ACg8ocJiWWuBbf5n8GI5_0EeihmCiNbVGA8KWlVXEmwmTBqBwkEKEKBrhw=s96-c",
+    "locale": "en",
+    "attribution": "tijptjik",
+    "isArchived": 0,
+    "preferences": "{\"fallbackLocales\":[],\"allowMachineTranslation\":false,\"preferFallbackInCurrentLocale\":false,\"isTranslateButtonVisible\":true}",
+    "experimental": "{\"contributorMode\":false,\"noLabelsMode\":false}",
+    "createdAt": 1749400826092,
+    "updatedAt": 1749468182738
   }
 ]

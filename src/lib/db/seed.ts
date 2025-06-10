@@ -19,7 +19,6 @@ import {
   organisation,
   organisationI18n,
   organisationRole,
-  session,
   user,
   image,
   featureImage,
@@ -32,7 +31,6 @@ import { count, getTableName } from 'drizzle-orm';
 // DATA
 import userJson from './data/users.json';
 import accountJson from './data/accounts.json';
-import sessionJson from './data/sessions.json';
 import projectJson from './data/projects.json';
 import projectI18nJson from './data/projectsI18n.json';
 import projectRoleJson from './data/projectRoles.json';
@@ -83,12 +81,6 @@ const seedBank: Record<string, SeedBank> = {
     name: 'Accounts',
     table: account,
     data: accountJson,
-    chunk: 0
-  },
-  session: {
-    name: 'Sessions',
-    table: session,
-    data: sessionJson,
     chunk: 0
   },
   image: {
@@ -217,18 +209,18 @@ const seedBank: Record<string, SeedBank> = {
     data: featurePropertyJson,
     chunk: 16
   },
-  // featurePropertyI18n: {
-  //   name: 'FeaturePropertyI18n',
-  //   table: featurePropertyI18n,
-  //   data: featurePropertyI18nJson,
-  //   chunk: 16
-  // }
-  // featureImage: {
-  //   name: 'FeatureImages',
-  //   table: featureImage,
-  //   data: featureImagesJson,
-  //   chunk: 0
-  // },
+  featurePropertyI18n: {
+    name: 'FeaturePropertyI18n',
+    table: featurePropertyI18n,
+    data: featurePropertyI18nJson,
+    chunk: 16
+  },
+  featureImage: {
+    name: 'FeatureImages',
+    table: featureImage,
+    data: featureImagesJson,
+    chunk: 0
+  },
   task: {
     name: 'Tasks',
     table: task,
