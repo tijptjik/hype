@@ -1,6 +1,6 @@
 import type { AvailableLanguageTag } from '../../lib/paraglide/runtime';
 import type { ParaglideLocals } from '@inlang/paraglide-sveltekit';
-import type { Auth, Session } from '$lib/auth';
+import type { Auth, SessionSession, SessionUser } from '$lib/auth';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import type { HubOpts } from '$lib/types';
 // See https://kit.svelte.dev/docs/types#app
@@ -31,8 +31,8 @@ declare global {
       db: DrizzleD1Database<typeof import('$lib/db/schema')>;
       hub: HubOpts;
       auth: Auth;
-      session: Session['session'];
-      user: Session['user'];
+      session?: SessionSession;
+      user?: SessionUser;
     }
     // interface PageData {}
     // interface PageState {}
