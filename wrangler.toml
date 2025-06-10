@@ -1,8 +1,11 @@
 #:schema node_modules/wrangler/config-schema.json
-name = "ghostsigns"
+name = "hype-prod"
 compatibility_date = "2025-04-02"
 pages_build_output_dir = ".svelte-kit/cloudflare"
 compatibility_flags = ["nodejs_compat_v2"]
+
+[env.preview]
+name = "hype-preview"
 
 [dev]
 ip = "localhost"
@@ -38,10 +41,9 @@ mode = "smart"
 # Docs: https://developers.cloudflare.com/pages/functions/bindings/#d1-databases
 [[d1_databases]]
 binding = "DB"                                       # i.e. available in your Worker on env.DB
-database_name = "ghostmapper-prod"
-database_id = "8ff2682b-8e78-4f9e-87bd-47f409d94184"
+database_name = "hype-db-prod"
+database_id = "7786af0e-3782-47f8-b70d-de645ba836ad"
 preview_database_id = "DB"
-#sqlite = " e7352547963de7050bd7d94658afc4fe78b61811b7815da12d90be8e863abf4d.sqlite"
 
 # Bind a Durable Object. Durable objects are a scale-to-zero compute primitive based on the actor model.
 # Durable Objects can live for as long as needed. Use these when you need a long-running "server", such as in realtime apps.
@@ -84,8 +86,8 @@ preview_database_id = "DB"
 [env.production.vars]
 ENVIRONMENT = "production"
 NODE_ENV = "production"
-NODE_VERSION = "23.10"
-BUN_VERSION = "1.1.29"
+NODE_VERSION = "24.2"
+BUN_VERSION = "1.2.15"
 
 VITE_USER_NODE_ENV = "production"
 VITE_CLOUDINARY_CLOUD_NAME = "dg6vtsga1"
@@ -94,23 +96,18 @@ VITE_CLOUDINARY_UPLOAD_PRESET = "ml_default"
 
 PUBLIC_AZURE_TRANSLATION_REGION = "eastasia"
 
-PUBLIC_MAPTILER_KEY = "SMf0v0mZlsqfCMBgZdy1"
-PUBLIC_MAPBOX_KEY = "pk.eyJ1IjoidGlqcHRqaWsiLCJhIjoiY20wb3Rrb2J6MGMyNjJqcXkyazFvYmc3ZiJ9.jEmTmlD2aXjiGzgo7gjBPA"
-PUBLIC_GOOGLEMAPS_KEY = "AIzaSyD2vy_8I1q2WKo4J0z0Ot2ZhVvteDoLntI"
-
 [[env.production.d1_databases]]
 binding = "DB"
-database_name = "ghostmapper-prod"
-database_id = "8ff2682b-8e78-4f9e-87bd-47f409d94184"
-preview_database_id = "DB"
+database_name = "hype-db-prod"
+database_id = "7786af0e-3782-47f8-b70d-de645ba836ad"
 
 ######## PREVIEW environment config ########
 
 [env.preview.vars]
 ENVIRONMENT = "staging"
 NODE_ENV = "staging"
-NODE_VERSION = "23.10"
-BUN_VERSION = "1.1.29"
+NODE_VERSION = "24.2"
+BUN_VERSION = "1.2.15"
 
 VITE_USER_NODE_ENV = "staging"
 VITE_CLOUDINARY_CLOUD_NAME = "dg6vtsga1"
@@ -119,11 +116,7 @@ VITE_CLOUDINARY_UPLOAD_PRESET = "ml_default"
 
 PUBLIC_AZURE_TRANSLATION_REGION = "eastasia"
 
-PUBLIC_MAPTILER_KEY = "SMf0v0mZlsqfCMBgZdy1"
-PUBLIC_MAPBOX_KEY = "pk.eyJ1IjoidGlqcHRqaWsiLCJhIjoiY20wb3Rrb2J6MGMyNjJqcXkyazFvYmc3ZiJ9.jEmTmlD2aXjiGzgo7gjBPA"
-PUBLIC_GOOGLEMAPS_KEY = "AIzaSyD2vy_8I1q2WKo4J0z0Ot2ZhVvteDoLntI"
-
 [[env.preview.d1_databases]]
 binding = "DB"
-database_name = "ghostmapper-preview"
-database_id = "b7a2dc55-f43b-40f0-993a-abb36a6a5543"
+database_name = "hype-db-preview"
+database_id = "f6bae0f9-c072-4ef0-9b75-efcc792d40fb"
