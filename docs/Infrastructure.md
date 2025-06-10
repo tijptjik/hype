@@ -182,19 +182,18 @@ This setup ensures isolated environments, automated deployments, and a clear pat
 
 ## One-time Infrastructure Setup
 
-## Add Domain 
-
-https://dash.cloudflare.com/a6eeace4b6d9f8e07ab307964e74d801/workers/services/view/hype-prod/production/settings
-
-## Bind D1 to worker
-
-https://dash.cloudflare.com/a6eeace4b6d9f8e07ab307964e74d801/workers/services/view/hype-preview/production/bindings
+Configure your wrangler.toml as that is used is binding assets, defining variables and setting up your roots. After that you just need to set your secrets and ensure Google OAUTH is setup to allow requests from the domains
 
 ## Upload Secrets
 
-For all the secrets defined in .env, upload them manually with wrangler
+For all the secrets defined in .env, upload them manually with wrangler. To both production and preview environment:
+
+```bash
+# PROD: Replace <KEY> with the Env Variable you want to set 
+npx wrangler secret put <KEY>
+```
 
 ```bash
 # Replace <KEY> with the Env Variable you want to set
-npx wrangler secret put <KEY>
+npx wrangler secret put --env preview <KEY>
 ```
