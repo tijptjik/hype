@@ -57,6 +57,13 @@
       "when": 1749470117489,
       "tag": "0007_isUserContributable",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1749527164282,
+      "tag": "0008_i18nForHubs",
+      "breakpoints": true
     }
   ]
 }
