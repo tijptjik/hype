@@ -3,7 +3,7 @@ import { isAdminRequest } from '$lib/api';
 // I18N
 import { m } from '$lib/i18n';
 // TYPES
-import type { Code, Id, OrganisationPartial, Session, UserRoleDisco } from '$lib/types';
+import type { Code, Id, OrganisationPartial, Session, SessionUser, UserRoleDisco } from '$lib/types';
 import { error } from '@sveltejs/kit';
 
 /**
@@ -27,11 +27,11 @@ export const runAssertions = (
 
 /**
  * Assert that the user is logged in
- * @param session - The session object
+ * @param user - The session user object
  * @throws {Response} 401 error if user is not logged in
  */
-export const assertUserLoggedIn = (session: Session): void | Response => {
-  if (!session.user) {
+export const assertUserLoggedIn = (user: SessionUser): void | Response => {
+  if (!user) {
     return error(401, m.last_front_toucan_type());
   }
 };
@@ -101,9 +101,7 @@ export const assertProjectMember = (
 ): void | Response => {
   const hasRole = userRoles.some(
     (role) =>
-      role.type === 'project' &&
-      role.projectId === projectId &&
-      role.role === 'member'
+      role.type === 'project' && role.projectId === projectId && role.role === 'member'
   );
   if (!hasRole) {
     return error(401, m.neat_noble_okapi_blink());
@@ -115,21 +113,21 @@ export const assertProjectMember = (
  * @throws {Response} 401 error if user is not a super admin
  */
 export const assertSuperAdmin = (
-  session: Session & { user: { superAdmin?: boolean } }
+  user: SessionUser
 ): void | Response => {
-  if (!session.user?.superAdmin) {
+  if (!user?.superAdmin) {
     return error(401, m.neat_noble_okapi_edit());
   }
 };
 
-export const assertUserIsSelf = (session: Session, userId: string): void | Response => {
-  if (session.user.id !== userId) {
+export const assertUserIsSelf = (user: SessionUser, userId: string): void | Response => {
+  if (user.id !== userId) {
     return error(401, m.swift_weary_mule_persist());
   }
 };
 
 export const assertOrganisationOwnerOrSuperAdmin = (
-  session: Session,
+  user: SessionUser,
   userRoles: UserRoleDisco[],
   organisationId: string
 ): void | Response => {
@@ -140,7 +138,7 @@ export const assertOrganisationOwnerOrSuperAdmin = (
     isOrgOwner = true;
   } catch {}
   try {
-    assertSuperAdmin(session);
+    assertSuperAdmin(user);
     isSuperAdmin = true;
   } catch {}
   // Only error if BOTH checks failed
@@ -150,12 +148,12 @@ export const assertOrganisationOwnerOrSuperAdmin = (
 };
 
 export const assertIsCoreInclusiveModifiedBySuperAdmin = (
-  session: Session,
+  user: SessionUser,
   newData?: OrganisationPartial
 ): void | Response => {
   let isSuperAdmin = false;
   try {
-    assertSuperAdmin(session);
+    assertSuperAdmin(user);
     isSuperAdmin = true;
   } catch {}
   // Only error if not  SUPERADMIN and newData is not undefined
@@ -165,7 +163,7 @@ export const assertIsCoreInclusiveModifiedBySuperAdmin = (
 };
 
 export const assertProjectMaintainerOrSuperAdmin = (
-  session: Session,
+  user: SessionUser,
   userRoles: UserRoleDisco[],
   projectId: string
 ): void | Response => {
@@ -176,7 +174,7 @@ export const assertProjectMaintainerOrSuperAdmin = (
     isProjectMaintainer = true;
   } catch {}
   try {
-    assertSuperAdmin(session);
+    assertSuperAdmin(user);
     isSuperAdmin = true;
   } catch {}
   // Only error if BOTH checks failed
@@ -186,7 +184,7 @@ export const assertProjectMaintainerOrSuperAdmin = (
 };
 
 export const assertProjectMaintainerOrMemberOrSuperAdmin = (
-  session: Session,
+  user: SessionUser,
   userRoles: UserRoleDisco[],
   projectId: string
 ): void | Response => {
@@ -202,7 +200,7 @@ export const assertProjectMaintainerOrMemberOrSuperAdmin = (
     isProjectMember = true;
   } catch {}
   try {
-    assertSuperAdmin(session);
+    assertSuperAdmin(user);
     isSuperAdmin = true;
   } catch {}
   // Only error if ALL checks failed
@@ -237,6 +235,9 @@ export const assertParamIdentifierEqualsFormIdentifier = (
 ): void | Response => {
   const formIdentifier = formData[refType];
   if (formIdentifier && formIdentifier !== refId) {
-    return error(400, `${refType.charAt(0).toUpperCase() + refType.slice(1)} mismatch: URL parameter ${refType} (${refId}) does not match form data ${refType} (${formIdentifier})`);
+    return error(
+      400,
+      `${refType.charAt(0).toUpperCase() + refType.slice(1)} mismatch: URL parameter ${refType} (${refId}) does not match form data ${refType} (${formIdentifier})`
+    );
   }
 };

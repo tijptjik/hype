@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
-import { userLayer, layer } from '$lib/db/schema';
+import { userLayer, layer } from '$lib/db/schema/index';
 // TYPES
-import type { UserLayer, Layer, UserRoleDisco, Session } from '$lib/types';
+import type { UserLayer, Layer, UserRoleDisco, SessionUser } from '$lib/types';
 
 /**
  * Fetches and constructs user layers from the database.
@@ -65,17 +65,17 @@ export async function getUserLayers(db: any, userId: string): Promise<UserLayer[
  *
  * If the session is null or the user has no roles, it returns false.
  */
-export function hasControlPanelAccess(session: Session | null): boolean {
+export function hasControlPanelAccess(user: SessionUser | null): boolean {
   const permittedRoles = ['superadmin', 'owner', 'maintainer'];
   return (
-    session?.user?.roles?.some((role: UserRoleDisco) =>
+    user?.roles?.some((role: UserRoleDisco) =>
       permittedRoles.includes(role.role)
     ) || false
   );
 }
 
-export function isSuperAdmin(session: Session): boolean {
-  return session?.user?.superAdmin || false;
+export function isSuperAdmin(user: SessionUser): boolean {
+  return user.superAdmin || false;
 }
 
 export const getOrganisationIdforRoles = (userRoles: UserRoleDisco[]) => {
