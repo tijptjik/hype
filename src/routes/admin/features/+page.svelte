@@ -2,7 +2,7 @@
 // LOCALE
 import { getLocale } from '$lib/i18n';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
 import ResourceHeader from '$lib/components/layout/ResourceHeader.svelte';
 import ResourceIndex from '$lib/components/layout/ResourceIndex.svelte';
@@ -15,10 +15,10 @@ import type { KeyMap } from '$lib/components/layout/EntityCard.svelte';
 import type { Resource, Feature } from '$lib/types';
 
 // CONTEXT
-const resourceState = getHierarchicalResourceState();
-resourceState.setResource(FirstClassResource.feature);
-resourceState.setEntity(false);
-resourceState.setFacet(false);
+const adminCtx = getAdminCtx();
+adminCtx.setResource(FirstClassResource.feature);
+adminCtx.setEntity(false);
+adminCtx.setFacet(false);
 
 // CONFIG :: KEY MAP
 const keyMap: KeyMap = {
@@ -52,7 +52,7 @@ const keyMap: KeyMap = {
     }
   ]
 };
-let entities = $derived(resourceState.filteredFeatures);
+let entities = $derived(adminCtx.filteredFeatures);
 </script>
 
 <!-- LAYOUT -->

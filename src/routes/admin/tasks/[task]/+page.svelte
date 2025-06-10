@@ -1,6 +1,6 @@
 <script lang="ts">
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // PROVIDERS
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // COMPONENTS :: COMMON
@@ -20,7 +20,7 @@ import NewFeatureActions from '$lib/components/tasks/actions/NewFeature.svelte';
 import ReportedMissingControls from '$lib/components/tasks/controls/ReportedMissing.svelte';
 import NewFeatureControls from '$lib/components/tasks/controls/NewFeature.svelte';
 // ENUMS
-import { HierarchicalResource, ImageContextResource, ImageContextResourceExtended } from '$lib/enums';
+import { FirstClassResource, ImageContextResource, ImageContextResourceExtended } from '$lib/enums';
 // TYPES
 import type { Task, PageProps, Organisation, Project, Id } from '$lib/types';
 
@@ -28,9 +28,9 @@ let pageProps: PageProps<Task> = $props();
 let task = $derived(pageProps.data.task);
 
 // CONTEXT
-const resourceState = getHierarchicalResourceState();
-resourceState.setEntity(pageProps.data.task.id, HierarchicalResource.task);
-resourceState.setFacet('core');
+const adminCtx = getAdminCtx();
+adminCtx.setEntity(pageProps.data.task.id, FirstClassResource.task);
+adminCtx.setFacet('core');
 </script>
 
 <!-- LAYOUT -->
@@ -39,13 +39,13 @@ resourceState.setFacet('core');
   isAdminMode={true}
   ctxType={ImageContextResource.feature}
   ctxId={task.featureId as Id}
-  organisation={resourceState.getEntity(
-    HierarchicalResource.organisation,
+  organisation={adminCtx.getEntity(
+    FirstClassResource.organisation,
     task.organisationId,
     true
   ) as Organisation}
-  project={resourceState.getEntity(
-    HierarchicalResource.project,
+  project={adminCtx.getEntity(
+    FirstClassResource.project,
     task.projectId,
     true
   ) as Project}

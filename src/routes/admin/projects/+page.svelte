@@ -1,6 +1,6 @@
 <script lang="ts">
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
 import ResourceHeader from '$lib/components/layout/ResourceHeader.svelte';
 import ResourceIndex from '$lib/components/layout/ResourceIndex.svelte';
@@ -37,12 +37,12 @@ const keyMap: KeyMap = {
 };
 
 // CONTEXT
-const resourceState = getHierarchicalResourceState();
-resourceState.setResource(FirstClassResource.project);
-resourceState.setEntity(false);
-resourceState.setFacet(false);
+const adminCtx = getAdminCtx();
+adminCtx.setResource(FirstClassResource.project);
+adminCtx.setEntity(false);
+adminCtx.setFacet(false);
 
-let entities = $derived(resourceState.filteredProjects);
+let entities = $derived(adminCtx.filteredProjects);
 </script>
 
 <!-- LAYOUT -->

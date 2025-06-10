@@ -1,6 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { watch } from 'runed';
+import { fade } from 'svelte/transition';
 // LIB
 import { NEW_TITLE } from '$lib';
 // I18N
@@ -8,7 +9,7 @@ import { m } from '$lib/i18n';
 import { getLocale } from '$lib/i18n';
 // CONTEXT
 import { setForm } from '$lib/context/form.svelte';
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // FLASH
 import { getFlash } from 'sveltekit-flash-message';
 import { page } from '$app/state';
@@ -19,7 +20,7 @@ import EntityActions from '$lib/components/menu/EntityActions.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
 import LayerPropertySection from '$lib/components/forms/sections/LayerProperty.svelte';
 // ENUMS
-import { HierarchicalResource, FirstClassResource } from '$lib/enums';
+import { FirstClassResource } from '$lib/enums';
 // TYPES
 import type {
   Layer,
@@ -30,7 +31,7 @@ import type {
 } from '$lib/types';
 
 // CONTEXT
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
 // CONFIG
 const FIELDS: Record<string, FormField | FormFieldArray> = {
@@ -74,15 +75,15 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Layer> = $props();
-resourceState.setEntity(pageProps.data.entity, FirstClassResource.layer);
-resourceState.setFacet('core');
+adminCtx.setEntity(pageProps.data.entity, FirstClassResource.layer);
+adminCtx.setFacet('core');
 
 // STATE : FORM
 let form = setForm(
   FirstClassResource.layer,
   pageProps.data.entity,
   pageProps.data.validatedForm,
-  getHierarchicalResourceState(),
+  getAdminCtx(),
   getFlash(page, { clearOnNavigate: false, clearAfterMs: 2500 })
 );
 
@@ -110,42 +111,44 @@ let title = $derived(
     {#snippet menuItems()}
       <HeaderButton
         facet={{ label: m.layer__core(), ref: 'core' }}
-        isActive={resourceState.activeFacet === 'core' ||
-          resourceState.activeFacet === false} />
+        isActive={adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false} />
     {/snippet}
 
     {#snippet actions()}
       <EntityActions {form} />
     {/snippet}
   </Header>
-  <form
-    id="layerForm"
-    method="POST"
-    use:enhance
-    role="form"
-    data-testid="layerForm"
-    class="h-full">
-    <main class="flex h-full flex-col gap-6 overflow-y-auto p-6">
-      {#if resourceState.activeFacet === 'core' || resourceState.activeFacet === false}
-        <I18nSection
-          title={m.admin__forms_common_descriptors()}
-          fields={FIELDS.i18n as FormField}
-          {form} />
-        <div class="flex flex-row gap-6">
-          <LayerPropertySection
-            title={m.admin__forms_common_classifiers()}
-            subtitle={m.admin__forms_common_classifiers_subtitle()}
-            fieldDiscriminator="classifier"
-            fields={FIELDS.property as FormField & FormFieldArray}
+  {#if adminCtx.appCtx.isInitialised}
+    <form
+      id="layerForm"
+      method="POST"
+      use:enhance
+      role="form"
+      data-testid="layerForm"
+      transition:fade
+      class="h-full">
+      <main class="flex h-full flex-col gap-6 overflow-y-auto p-6">
+        {#if adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false}
+          <I18nSection
+            title={m.admin__forms_common_descriptors()}
+            fields={FIELDS.i18n as FormField}
             {form} />
-          <LayerPropertySection
-            title={m.admin__forms_common_specifiers()}
-            subtitle={m.admin__forms_common_specifiers_subtitle()}
-            fieldDiscriminator="specifier"
-            fields={FIELDS.property as FormField & FormFieldArray}
-            {form} />
-        </div>
-      {/if}
-    </main>
-  </form>
+          <div class="flex flex-row gap-6">
+            <LayerPropertySection
+              title={m.admin__forms_common_classifiers()}
+              subtitle={m.admin__forms_common_classifiers_subtitle()}
+              fieldDiscriminator="classifier"
+              fields={FIELDS.property as FormField & FormFieldArray}
+              {form} />
+            <LayerPropertySection
+              title={m.admin__forms_common_specifiers()}
+              subtitle={m.admin__forms_common_specifiers_subtitle()}
+              fieldDiscriminator="specifier"
+              fields={FIELDS.property as FormField & FormFieldArray}
+              {form} />
+          </div>
+        {/if}
+      </main>
+    </form>
+  {/if}
 </div>

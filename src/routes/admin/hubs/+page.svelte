@@ -1,6 +1,6 @@
 <script lang="ts">
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
 import ResourceHeader from '$lib/components/layout/ResourceHeader.svelte';
 import ResourceIndex from '$lib/components/layout/ResourceIndex.svelte';
@@ -13,20 +13,20 @@ import type { KeyMap } from '$lib/components/layout/EntityCard.svelte';
 // CONFIG :: KEY MAP
 const keyMap: KeyMap = {
   id: 'code',
-  title: 'organisations.i18n.name',
+  title: 'i18n.name',
   subtitle: 'domain',
-  description: 'organisations.i18n.description',
+  description: 'i18n.description',
   image: 'organisations.image'
 };
 
 // CONTEXT
-const resourceState = getHierarchicalResourceState();
-resourceState.setResource(FirstClassResource.hub);
-resourceState.setEntity(false);
-resourceState.setFacet(false);
+const adminCtx = getAdminCtx();
+adminCtx.setResource(FirstClassResource.hub);
+adminCtx.setEntity(false);
+adminCtx.setFacet(false);
 
 // Use filteredHubs from resource state (requires superadmin access)
-let entities = $derived(resourceState.filteredHubs);
+let entities = $derived(adminCtx.filteredHubs);
 </script>
 
 <!-- LAYOUT -->

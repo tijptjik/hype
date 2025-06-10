@@ -2,7 +2,7 @@
 // I18N
 import { getLocale } from '$lib/i18n';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
 import ResourceHeader from '$lib/components/layout/ResourceHeader.svelte';
 import ResourceIndex from '$lib/components/layout/ResourceIndex.svelte';
@@ -41,9 +41,9 @@ const keyMap: KeyMap = {
 };
 
 // CONTEXT
-const resourceState = getHierarchicalResourceState();
-resourceState.setResource(FirstClassResource.layer);
-let entities = $derived(resourceState.filteredLayers);
+const adminCtx = getAdminCtx();
+adminCtx.setResource(FirstClassResource.layer);
+let entities = $derived(adminCtx.filteredLayers);
 </script>
 
 <ResourceHeader />

@@ -1,6 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { watch } from 'runed';
+import { fade } from 'svelte/transition';
 // LIB
 import { NEW_TITLE, NEW_REF } from '$lib';
 // I18N
@@ -11,7 +12,7 @@ import { getFlash } from 'sveltekit-flash-message';
 import { page } from '$app/state';
 // CONTEXT
 import { setForm } from '$lib/context/form.svelte';
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // PROVIDERS
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // COMPONENTS
@@ -30,11 +31,7 @@ import GallerySection from '$lib/components/forms/sections/Gallery.svelte';
 import ViewerSection from '$lib/components/forms/sections/Viewer.svelte';
 import CanonicalImage from '$lib/components/forms/sections/CanonicalImage.svelte';
 // ENUMS
-import {
-  FirstClassResource,
-  HierarchicalResource,
-  ImageContextResource
-} from '$lib/enums';
+import { FirstClassResource, ImageContextResource } from '$lib/enums';
 // TYPES
 import type {
   Feature,
@@ -49,7 +46,7 @@ import type {
   Resource
 } from '$lib/types';
 // CONTEXT
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
 // CONFIG
 const FIELDS: FormFieldConfig = {
@@ -110,22 +107,24 @@ const FIELDS: FormFieldConfig = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Feature> = $props();
-resourceState.setEntity(pageProps.data.entity, FirstClassResource.feature);
-resourceState.setFacet('core');
+adminCtx.setEntity(pageProps.data.entity, FirstClassResource.feature);
+adminCtx.setFacet('core');
 
 // STATE : FORM
 let form = setForm(
   FirstClassResource.feature,
   pageProps.data.entity,
   pageProps.data.validatedForm,
-  getHierarchicalResourceState(),
+  getAdminCtx(),
   getFlash(page, { clearOnNavigate: false, clearAfterMs: 2500 })
 );
 
 // REACTIVE: Update form when pageProps change (for reset functionality)
 watch(
   () => pageProps.data.validatedForm.data,
-  (newData) => {form.form.set(newData as unknown as Feature)},
+  (newData) => {
+    form.form.set(newData as unknown as Feature);
+  },
   {
     lazy: true
   }
@@ -152,49 +151,49 @@ function handleMapFullscreenChange(isFullscreen: boolean): void {
   <FeatureActions {form} />
 {/snippet}
 
-<ImageProvider
-  mode="gallery"
-  isAdminMode={true}
-  ctxType={ImageContextResource.feature}
-  ctxId={pageProps.data.entity}
-  organisation={resourceState.getAscendantOrSelf(
-    pageProps.data.validatedForm.data as unknown as Resource,
-    HierarchicalResource.feature,
-    HierarchicalResource.organisation
-  ) as Omit<OrganisationDB, 'isCoreInclusive'>}
-  project={resourceState.getAscendantOrSelf(
-    pageProps.data.validatedForm.data as unknown as Resource,
-    HierarchicalResource.feature,
-    HierarchicalResource.project
-  ) as ProjectDB}>
-  <!-- LAYOUT -->
-  <div class="h-full overflow-hidden bg-black">
-    <Header {title}>
-      {#snippet menuItems()}
+<!-- LAYOUT -->
+<div class="h-full overflow-hidden bg-black">
+  <Header {title}>
+    {#snippet menuItems()}
+      <HeaderButton
+        facet={{ label: m.feature__core(), ref: 'core' }}
+        isActive={adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false} />
+      <HeaderButton
+        facet={{ label: m.feature__address(), ref: 'address' }}
+        isActive={adminCtx.activeFacet === 'address'} />
+      {#if adminCtx.activeEntity !== 'new'}
         <HeaderButton
-          facet={{ label: m.feature__core(), ref: 'core' }}
-          isActive={resourceState.activeFacet === 'core' ||
-            resourceState.activeFacet === false} />
-        <HeaderButton
-          facet={{ label: m.feature__address(), ref: 'address' }}
-          isActive={resourceState.activeFacet === 'address'} />
-        {#if resourceState.activeEntity !== 'new'}
-          <HeaderButton
-            facet={{ label: m.feature__images(), ref: 'images' }}
-            isActive={resourceState.activeFacet === 'images'} />
-        {/if}
-      {/snippet}
+          facet={{ label: m.feature__images(), ref: 'images' }}
+          isActive={adminCtx.activeFacet === 'images'} />
+      {/if}
+    {/snippet}
 
-      {#snippet actions()}
-        <EntityActions {form} />
-      {/snippet}
-    </Header>
-    {#if pageProps.data.validatedForm.data}
+    {#snippet actions()}
+      <EntityActions {form} />
+    {/snippet}
+  </Header>
+  {#if adminCtx.appCtx.isInitialised}
+    <ImageProvider
+      mode="gallery"
+      isAdminMode={true}
+      ctxType={ImageContextResource.feature}
+      ctxId={pageProps.data.entity}
+      organisation={adminCtx.getAscendantOrSelf(
+        pageProps.data.validatedForm.data as unknown as Resource,
+        FirstClassResource.feature,
+        FirstClassResource.organisation
+      ) as Omit<OrganisationDB, 'isCoreInclusive'>}
+      project={adminCtx.getAscendantOrSelf(
+        pageProps.data.validatedForm.data as unknown as Resource,
+        FirstClassResource.feature,
+        FirstClassResource.project
+      ) as ProjectDB}>
       <form
         id="featureForm"
         method="POST"
         use:enhance
         role="form"
+        transition:fade
         data-testid="featureForm"
         class="h-full">
         <main
@@ -223,7 +222,7 @@ function handleMapFullscreenChange(isFullscreen: boolean): void {
             class="content-container h-auto scroll-m-10 scroll-p-12 overflow-y-auto"
             class:shrink={isMapFullscreen}>
             <div class="flex h-full flex-col-reverse justify-end gap-6 pr-3">
-              {#if resourceState.activeFacet === 'core' || resourceState.activeFacet === false}
+              {#if adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false}
                 <div class="flex flex-wrap justify-between gap-6">
                   <PropertySection
                     {form}
@@ -250,7 +249,7 @@ function handleMapFullscreenChange(isFullscreen: boolean): void {
                   headerActions={featureActionSnippet}
                   infoContent={featureInfoSnippet} />
                 <!-- TODO Add support for translatable specifiers -->
-              {:else if resourceState.activeFacet === 'address'}
+              {:else if adminCtx.activeFacet === 'address'}
                 <AddressComponentSection
                   {form}
                   title={m.admin__forms_feature_address_components_title()}
@@ -260,7 +259,7 @@ function handleMapFullscreenChange(isFullscreen: boolean): void {
                   title={m.admin__forms_feature_addressing_title()}
                   subtitle={m.admin__forms_feature_addressing_subtitle()}
                   fields={FIELDS.address as FormField & FormFieldNested} />
-              {:else if resourceState.activeFacet === 'images' && pageProps.data.entity !== NEW_REF}
+              {:else if adminCtx.activeFacet === 'images' && pageProps.data.entity !== NEW_REF}
                 <ViewerSection
                   {form}
                   title={m.admin__forms_feature_viewer_title()}
@@ -274,9 +273,9 @@ function handleMapFullscreenChange(isFullscreen: boolean): void {
           </div>
         </main>
       </form>
-    {/if}
-  </div>
-</ImageProvider>
+    </ImageProvider>
+  {/if}
+</div>
 
 <style>
 .map-container {

@@ -1,17 +1,17 @@
 <script lang="ts">
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
 import TaskHeader from '$lib/components/layout/TaskHeader.svelte';
 import TaskIndex from '$lib/components/tasks/layout/Index.svelte';
 // ENUMS
-import { HierarchicalResource } from '$lib/enums';
+import { FirstClassResource } from '$lib/enums';
 
 // CONTEXT
-const resourceState = getHierarchicalResourceState();
-resourceState.setResource(HierarchicalResource.task);
-resourceState.setEntity(false);
-resourceState.setFacet(false);
+const adminCtx = getAdminCtx();
+adminCtx.setResource(FirstClassResource.task);
+adminCtx.setEntity(false);
+adminCtx.setFacet(false);
 </script>
 
 <TaskHeader />
