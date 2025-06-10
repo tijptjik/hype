@@ -24,7 +24,7 @@
     "db:migration:new": "drizzle-kit generate --name",
     "db:migration:run:local": "wrangler d1 migrations apply hype-db-prod --local",
     "db:migration:run:cf:prod": "wrangler d1 migrations apply hype-db-prod --remote",
-    "db:migration:run:cf:preview": "wrangler d1 migrations apply --env preview hype-db-preview --remote",
+    "db:migration:run:cf:preview": "wrangler d1 migrations apply hype-db-preview --remote --env preview",
     "db:studio:local": "LOCAL_DB_PATH=$(find .wrangler/state/v3/d1/miniflare-D1DatabaseObject -type f -name '*.sqlite' -print -quit) drizzle-kit studio",
     "db:studio:cf:prod": "source .env.drizzle && DB_ID='7786af0e-3782-47f8-b70d-de645ba836ad' drizzle-kit studio",
     "db:studio:cf:preview": "source .env.drizzle && DB_ID='f6bae0f9-c072-4ef0-9b75-efcc792d40fb' drizzle-kit studio",
