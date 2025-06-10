@@ -5,64 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1749067213988,
-      "tag": "0000_Initial",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1749259892903,
-      "tag": "0001_hub-multi-tenancy",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1749272849931,
-      "tag": "0002_hub-multi-tenancy-redux",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1749278910995,
-      "tag": "0003_hub-multi-tenancy-redux-final",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1749397295125,
-      "tag": "0004_better-auth",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1749398874309,
-      "tag": "0005_better-auth-migration",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1749399313439,
-      "tag": "0006_better-auth-timestamp-fix",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1749470117489,
-      "tag": "0007_isUserContributable",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "6",
-      "when": 1749527164282,
-      "tag": "0008_i18nForHubs",
+      "when": 1749560230565,
+      "tag": "0000_init",
       "breakpoints": true
     }
   ]
