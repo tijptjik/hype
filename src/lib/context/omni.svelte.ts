@@ -13,7 +13,7 @@ import neighbourhoods from '$lib/map/neighbourhoods.json';
 import { FeatureCardMode } from '$lib/enums';
 // TYPES
 import type { SearchResult, Id } from '$lib/types';
-import type { MapCtx } from '$lib/context/map.svelte';
+import type { AppCtx } from '$lib/context/app.svelte';
 // TYPES
 import type { FeatureCardContext } from './featureCard.svelte';
 type OmniMode = 'search' | 'navigation' | 'feature' | 'new-feature';
@@ -54,26 +54,26 @@ export class OmniContext {
 
   cardCtx: FeatureCardContext | null = null;
 
-  mapCtx!: MapCtx;
+  appCtx!: AppCtx;
   pageState: PageState = $state(PageState.NoTransition);
   isIntentionallyClosing: boolean = $state(false);
 
-  // Constructor with mapCtx
-  constructor(mapCtx: MapCtx) {
-    this.mapCtx = mapCtx;
+  // Constructor with appCtx
+  constructor(appCtx: AppCtx) {
+    this.appCtx = appCtx;
   }
 
   // DERIVED values after state and constructor
   searchResults: Record<string, SearchResult[]> = $derived(
-    this.toGroups(searchAll(this.state.searchTerm, this.mapCtx))
+    this.toGroups(searchAll(this.state.searchTerm, this.appCtx))
   );
 
   // MAPS
   searchHandlers = {
-    features: (featureId: Id) => this.handleFeatureSelection(this.mapCtx, featureId),
+    features: (featureId: Id) => this.handleFeatureSelection(this.appCtx, featureId),
     neighbourhoods: (neighbourhood: string) =>
-      this.handleNeighbourhoodSelection(this.mapCtx, neighbourhood),
-    walks: (walkId: string) => this.handleWalkSelection(this.mapCtx, walkId)
+      this.handleNeighbourhoodSelection(this.appCtx, neighbourhood),
+    walks: (walkId: string) => this.handleWalkSelection(this.appCtx, walkId)
   };
 
   // DERIVED
@@ -100,8 +100,8 @@ export class OmniContext {
 
   // DERIVED
   navIndex = $derived(
-    this.mapCtx.state.active.collection?.items.findIndex(
-      (item) => item.id === this.mapCtx.state.active.feature?.id
+    this.appCtx.state.active.collection?.items.findIndex(
+      (item) => item.id === this.appCtx.state.active.feature?.id
     ) ?? -1
   );
 
@@ -144,8 +144,8 @@ export class OmniContext {
   cancelNewFeature() {
     this.resetMode();
     this.clearSearch();
-    this.mapCtx.resetNewFeature();
-    this.mapCtx.resetActiveCollection();
+    this.appCtx.resetNewFeature();
+    this.appCtx.resetActiveCollection();
     goto('/');
   }
 
@@ -162,8 +162,8 @@ export class OmniContext {
         // Delay the reset to allow the DOM to update and remove the card component
         setTimeout(() => {
           this.isIntentionallyClosing = true;
-          this.mapCtx.resetNewFeature();
-          this.mapCtx.resetActiveCollection();
+          this.appCtx.resetNewFeature();
+          this.appCtx.resetActiveCollection();
           this.focusSearchBar();
           // Reset the flag after reactive effects have had a chance to run
           setTimeout(() => {
@@ -208,19 +208,19 @@ export class OmniContext {
 
   selectFirstResult() {
     if (this.searchResults.features.length > 0) {
-      this.handleFeatureSelection(this.mapCtx, this.searchResults.features[0].ref);
+      this.handleFeatureSelection(this.appCtx, this.searchResults.features[0].ref);
     } else if (this.searchResults.neighbourhoods.length > 0) {
       this.handleNeighbourhoodSelection(
-        this.mapCtx,
+        this.appCtx,
         this.searchResults.neighbourhoods[0].ref
       );
     } else if (this.searchResults.walks.length > 0) {
-      this.handleWalkSelection(this.mapCtx, this.searchResults.walks[0].ref);
+      this.handleWalkSelection(this.appCtx, this.searchResults.walks[0].ref);
     }
   }
 
   async handleFeatureSelection(
-    mapCtx: MapCtx,
+    appCtx: AppCtx,
     featureId: Id,
     options: {
       openCard: boolean;
@@ -229,32 +229,32 @@ export class OmniContext {
     // If we are on mobile, close all panels
     // otherwise the selected feature will be hidden behind the panel
     if (window.innerWidth < MOBILE_MAX_WIDTH) {
-      mapCtx.closeAllPanels();
+      appCtx.closeAllPanels();
     }
 
     // Wait for features to be loaded if they haven't been yet
-    if (mapCtx.state.resources.feature.length === 0) {
-      await mapCtx.queryClient.fetchQuery({
-        queryKey: mapCtx.featuresQueryKey,
-        queryFn: mapCtx.featuresQueryFn
+    if (appCtx.state.resources.feature.length === 0) {
+      await appCtx.queryClient.fetchQuery({
+        queryKey: appCtx.featuresQueryKey,
+        queryFn: appCtx.featuresQueryFn
       });
     }
 
-    let feature = mapCtx.getFeatureById(featureId);
+    let feature = appCtx.getFeatureById(featureId);
     if (feature == null) {
       console.error('Feature not found:', featureId);
       return;
     }
 
     // Check if the feature is part of the active collection
-    const activeCollection = mapCtx.getActiveCollection();
+    const activeCollection = appCtx.getActiveCollection();
     if (activeCollection) {
       const featureIndex = activeCollection.items.findIndex(
         (item) => item.id === featureId
       );
       if (featureIndex !== -1) {
         // Feature is in the current collection, just update the active index
-        mapCtx.setActiveFeature(featureId, {
+        appCtx.setActiveFeature(featureId, {
           focus: true
         });
         return;
@@ -262,9 +262,9 @@ export class OmniContext {
     }
 
     // If we get here, feature wasn't in the active collection, create a new single-feature collection
-    let address = getI18n(feature, 'displayAddress', mapCtx.getUserPreferences());
+    let address = getI18n(feature.i18n!, 'displayAddress', appCtx.getUserPreferences());
 
-    mapCtx.setActiveCollection(
+    appCtx.setActiveCollection(
       {
         id: featureId,
         type: 'feature',
@@ -289,9 +289,9 @@ export class OmniContext {
     }
   }
 
-  handleWalkSelection(mapCtx: MapCtx, walkId: string) {
+  handleWalkSelection(appCtx: AppCtx, walkId: string) {
     if (walkId === 'stars') {
-      mapCtx.setActiveCollection(
+      appCtx.setActiveCollection(
         {
           type: 'walk',
           id: 'stars',
@@ -300,7 +300,7 @@ export class OmniContext {
             'zh-hant': { name: '我的最愛' },
             'zh-hans': { name: '我的最爱' }
           },
-          items: mapCtx.getWishlistedFeatures()
+          items: appCtx.getWishlistedFeatures()
         },
         {
           activateFirst: true,
@@ -319,10 +319,10 @@ export class OmniContext {
     }, 3000);
   }
 
-  handleNeighbourhoodSelection(mapCtx: MapCtx, neighbourhood: string) {
+  handleNeighbourhoodSelection(appCtx: AppCtx, neighbourhood: string) {
     const selectedNeighbourhood =
       neighbourhoods[neighbourhood as keyof typeof neighbourhoods];
-    mapCtx.setActiveCollection(
+    appCtx.setActiveCollection(
       {
         id: neighbourhood,
         type: 'neighbourhood',
@@ -331,7 +331,7 @@ export class OmniContext {
           'zh-hant': { name: selectedNeighbourhood.i18n['zh-hant'].name },
           'zh-hans': { name: selectedNeighbourhood.i18n['zh-hans'].name }
         },
-        items: mapCtx.getNeighbourhoodFeatures(neighbourhood)
+        items: appCtx.getNeighbourhoodFeatures(neighbourhood)
       },
       {
         activateFirst: true,
@@ -378,9 +378,9 @@ export class OmniContext {
   // NAVIGATION METHODS
 
   navNext() {
-    if (this.navIndex < this.mapCtx.state.active.collection!.items.length - 1) {
-      this.mapCtx.setActiveFeature(
-        this.mapCtx.state.active.collection!.items[this.navIndex + 1].id,
+    if (this.navIndex < this.appCtx.state.active.collection!.items.length - 1) {
+      this.appCtx.setActiveFeature(
+        this.appCtx.state.active.collection!.items[this.navIndex + 1].id,
         { focus: true }
       );
     }
@@ -388,8 +388,8 @@ export class OmniContext {
 
   navPrevious() {
     if (this.navIndex > 0) {
-      this.mapCtx.setActiveFeature(
-        this.mapCtx.state.active.collection!.items[this.navIndex - 1].id,
+      this.appCtx.setActiveFeature(
+        this.appCtx.state.active.collection!.items[this.navIndex - 1].id,
         { focus: true }
       );
     }
@@ -399,7 +399,7 @@ export class OmniContext {
   navTitle = $derived(
     this.state.mode === 'search'
       ? `Search Results: ${this.state.searchTerm}`
-      : getI18n(this.mapCtx.state.active.collection!, 'name', this.mapCtx.getUserPreferences())
+      : getI18n(this.appCtx.state.active.collection!, 'name', this.appCtx.getUserPreferences())
   );
 
   // OPEN/CLOSE METHODS
@@ -449,7 +449,7 @@ export class OmniContext {
 
 export const OMNI_CONTEXT_KEY = Symbol('omniContext');
 
-export const setOmniContext = (mapCtx: MapCtx) =>
-  setContext(OMNI_CONTEXT_KEY, new OmniContext(mapCtx));
+export const setOmniContext = (appCtx: AppCtx) =>
+  setContext(OMNI_CONTEXT_KEY, new OmniContext(appCtx));
 
 export const getOmniContext = (): OmniContext => getContext(OMNI_CONTEXT_KEY);
