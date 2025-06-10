@@ -35,8 +35,8 @@ export const getPropertyQueryContext = (
 ) => {
   // SETUP : By default, only show non-archived organisations,
   // and exclude isArchived and isPublished filters from the query.
-  let conditions: SQL<unknown>[] = [];
-  let excludeColumns: string[] = [];
+  const conditions: SQL<unknown>[] = [];
+  const excludeColumns: string[] = [];
 
   // PUBLIC : List all properties
   // ADMIN : List all properties

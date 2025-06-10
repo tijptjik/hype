@@ -112,7 +112,7 @@ export const getImageQueryContext = (
   // SETUP : By default, only show non-archived images,
   // and disable isArchived and isPublished filters from the query.
   let conditions: SQL<unknown>[] = [];
-  let excludeColumns = ['isArchived', 'isPublished'];
+  const excludeColumns = ['isArchived', 'isPublished'];
 
   // NON-SUPERADMIN : Hide images which are archived
   if (!isSuperAdmin(user)) {
@@ -168,7 +168,7 @@ export const getImageEntityQueryContext = (
   // SETUP : By default, only show non-archived images,
   // and disable isArchived and isPublished filters from the query.
   let conditions: SQL<unknown>[] = [];
-  let excludeColumns = ['isArchived', 'isPublished'];
+  const excludeColumns = ['isArchived', 'isPublished'];
 
   // NON-SUPERADMIN : Hide images which are archived
   if (!isSuperAdmin(user)) {

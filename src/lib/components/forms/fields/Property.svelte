@@ -533,11 +533,11 @@ const allI18nErrorsForPropertyValues = $derived.by(() => {
         <label
           for="isTranslatable"
           class="flex items-center gap-3"
-          title={'Toggle translatability'}
+          title="Toggle translatability"
           onclick={(e) => {
             e.stopPropagation();
           }}>
-          <span class="text-xs text-neutral-content">{'i18n'}</span>
+          <span class="text-xs text-neutral-content">i18n</span>
           <input
             type="checkbox"
             class="toggle toggle-primary toggle-xs"

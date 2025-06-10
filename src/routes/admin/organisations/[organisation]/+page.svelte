@@ -125,7 +125,7 @@ let title = $derived(
 let { form: organisationForm } = form;
 
 let headerActions = $derived(
-  !!$organisationForm.hubId ? organisationHubActionSnippet : undefined
+  $organisationForm.hubId ? organisationHubActionSnippet : undefined
 );
 </script>
 

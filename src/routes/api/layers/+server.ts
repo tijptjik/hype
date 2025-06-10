@@ -52,13 +52,13 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
 
   // ASSERT : Valid query parameters
   // Validate query parameters, or return 400
-  let queryParams = isValidQueryParamsOrError(layer, url) as Record<
+  const queryParams = isValidQueryParamsOrError(layer, url) as Record<
     string,
     string | string[]
   >;
 
   // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
-  let { conditions } = getLayerQueryContext(
+  const { conditions } = getLayerQueryContext(
     db,
     user,
     request,

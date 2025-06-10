@@ -58,10 +58,10 @@ export const GET: RequestHandler = async ({
   const { db, user, userRoles } = await getDatabase(locals, platform);
 
   // ASSERT : Valid query parameters
-  let queryParams = isValidQueryParamsOrError(task, url);
+  const queryParams = isValidQueryParamsOrError(task, url);
 
   // CONTEXT : Get the query context
-  let { conditions } = getTaskEntityQueryContext(
+  const { conditions } = getTaskEntityQueryContext(
     db,
     user,
     request,

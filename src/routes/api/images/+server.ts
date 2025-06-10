@@ -54,14 +54,14 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
   // ASSERT : Valid query parameters
   // Validate query parameters, or return 400
   const contextParams = ['organisationId', 'projectId', 'featureId', 'taskId'];
-  let queryParams = isValidQueryParamsOrError(image, url, contextParams);
+  const queryParams = isValidQueryParamsOrError(image, url, contextParams);
 
   // ASSERT : Valid context parameters
   // Get the context from the URL, or return 400
   const { ctxId, ctxType } = getCtxFromUrl(url);
 
   // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
-  let { conditions } = getImageQueryContext(
+  const { conditions } = getImageQueryContext(
     db,
     user,
     request,

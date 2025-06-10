@@ -63,13 +63,13 @@ export const GET: RequestHandler = async ({ params, locals, platform, url }) => 
   }
 
   // ASSERT : Valid query parameters
-  let queryParams = isValidQueryParamsOrError(hub, url) as Record<
+  const queryParams = isValidQueryParamsOrError(hub, url) as Record<
     string,
     string | string[]
   >;
 
   // CONTEXT : Get the query context
-  let { conditions } = getHubQueryContext(queryParams);
+  const { conditions } = getHubQueryContext(queryParams);
 
   try {
     // Add condition for specific hub code
@@ -112,7 +112,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
   try {
     // ASSERT : Valid form
     const formData: Hub = await request.json();
-    let form = (await superValidate(
+    const form = (await superValidate(
       formData,
       // @ts-ignore - ZOD : Fix SuperForm type error
       zod(HubUpdateAPI)

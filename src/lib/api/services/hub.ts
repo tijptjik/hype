@@ -98,8 +98,8 @@ export function getHubFromDomain(host: string | null): HubOpts {
 export const getHubQueryContext = (params: QueryParams) => {
   // SETUP : Only superadmins can query hubs, so we
   // don't need to filter by anything other than the query params.
-  let conditions: SQL<unknown>[] = [];
-  let excludeColumns: string[] = [];
+  const conditions: SQL<unknown>[] = [];
+  const excludeColumns: string[] = [];
 
   if (Object.keys(params).length > 0) {
     applyQueryFilters(hub, params, conditions);

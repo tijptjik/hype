@@ -62,7 +62,7 @@ export const getUserQueryContext = (
   // SETUP : By default, exclude isArchived filters from the query, so
   // users cannot see disabled users
   let conditions: SQL<unknown>[] = [];
-  let excludeColumns = ['isArchived'];
+  const excludeColumns = ['isArchived'];
 
   // NON-SUPERADMIN : Hide users which are archived
   if (!isSuperAdmin(currentUser)) {

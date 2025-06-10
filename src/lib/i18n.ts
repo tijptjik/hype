@@ -85,7 +85,7 @@ export function getI18n<T>(
   const locale = getLocale() as Locale;
 
   // Set options based on user preferences
-  let opts = {
+  const opts = {
     fallback: fallback || defaultFallback,
     fallbackLocales: userPreferences.fallbackLocales,
     allowMachineTranslation: userPreferences.allowMachineTranslation,

@@ -82,7 +82,7 @@ export const getProjectQueryContext = (
   // SETUP : By default, only show non-archived projects,
   // and exclude isArchived and isPublished filters from the query.
   let conditions: SQL<unknown>[] = [];
-  let excludeColumns = ['isArchived', 'isPublished'];
+  const excludeColumns = ['isArchived', 'isPublished'];
 
   // NON-SUPERADMIN : Hide projects which are archived
   if (!isSuperAdmin(user)) {

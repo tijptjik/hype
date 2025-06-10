@@ -66,7 +66,7 @@ export const getOrganisationQueryContext = (
   // SETUP : By default, only show non-archived organisations,
   // and exclude isArchived and isPublished filters from the query.
   let conditions: SQL<unknown>[] = [];
-  let excludeColumns = ['isArchived', 'isPublished'];
+  const excludeColumns = ['isArchived', 'isPublished'];
 
   // NON-SUPERADMIN : Hide organisations which are archived
   if (!isSuperAdmin(user)) {

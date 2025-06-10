@@ -72,7 +72,7 @@ export const GET: RequestHandler = async ({
   const { db, user, userRoles } = await getDatabase(locals, platform);
 
   // CONTEXT : Get the query context
-  let { conditions } = getFeatureQueryContext(
+  const { conditions } = getFeatureQueryContext(
     db,
     user,
     request,

@@ -124,7 +124,7 @@ export const getFeatureQueryContext = (
   // SETUP : By default, only show non-archived features,
   // and disable isArchived and isPublished filters from the query.
   let conditions: SQL<unknown>[] = [];
-  let excludeColumns = ['isArchived', 'isPublished'];
+  const excludeColumns = ['isArchived', 'isPublished'];
 
   // NON-SUPERADMIN : Hide features which are archived
   if (!isSuperAdmin(user)) {

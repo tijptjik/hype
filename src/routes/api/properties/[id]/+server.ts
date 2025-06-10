@@ -21,7 +21,7 @@ export const GET: RequestHandler = async ({ params, locals, platform, request })
   const { db, user, userRoles } = await getDatabase(locals, platform);
   try {
     // GET : Context for property query
-    let { params: queryParams, conditions } = getPropertyQueryContext(
+    const { params: queryParams, conditions } = getPropertyQueryContext(
       user,
       request,
       {},

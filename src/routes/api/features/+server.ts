@@ -56,10 +56,10 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
 
   // ASSERT : Valid query parameters
   // Validate query parameters, or return 400
-  let queryParams = isValidQueryParamsOrError(feature, url);
+  const queryParams = isValidQueryParamsOrError(feature, url);
 
   // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
-  let { conditions } = getFeatureQueryContext(
+  const { conditions } = getFeatureQueryContext(
     db,
     user,
     request,

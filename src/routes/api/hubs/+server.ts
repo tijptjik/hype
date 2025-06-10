@@ -53,13 +53,13 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
   }
 
   // ASSERT : Valid query parameters
-  let queryParams = isValidQueryParamsOrError(hub, url) as Record<
+  const queryParams = isValidQueryParamsOrError(hub, url) as Record<
     string,
     string | string[]
   >;
 
   try {
-    let { conditions } = getHubQueryContext(queryParams);
+    const { conditions } = getHubQueryContext(queryParams);
 
     // DB : List all hubs
     const result = await listHubs(db, hubCollectionWithRelations, conditions);
@@ -99,7 +99,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
   try {
     // ASSERT : Valid form
     const formData: HubNew = await request.json();
-    let form = (await superValidate(
+    const form = (await superValidate(
       formData,
       // @ts-ignore - ZOD : Fix SuperForm type error
       zod(HubInsertAPI)

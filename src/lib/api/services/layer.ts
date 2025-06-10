@@ -107,7 +107,7 @@ export const getLayerQueryContext = (
   // SETUP : By default, only show non-archived layers,
   // and disable isArchived and isPublished filters from the query.
   let conditions: SQL<unknown>[] = [];
-  let excludeColumns = ['isArchived', 'isPublished'];
+  const excludeColumns = ['isArchived', 'isPublished'];
 
   // NON-SUPERADMIN : Hide layers which are archived
   if (!isSuperAdmin(user)) {

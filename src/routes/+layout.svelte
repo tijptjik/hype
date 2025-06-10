@@ -102,6 +102,6 @@ afterNavigate(() => {
     {/if}
   </div>
   {#if import.meta.env.VITE_SVELTE_QUERY_DEVTOOLS === 'true'}
-    <SvelteQueryDevtools />
+    <!-- <SvelteQueryDevtools /> -->
   {/if}
 </QueryClientProvider>

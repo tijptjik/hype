@@ -150,7 +150,7 @@ export const getTaskQueryContext = (
   // SETUP : By default, only show non-archived tasks,
   // and disable isArchived filters from the query for non-superadmins.
   let conditions: SQL<unknown>[] = [];
-  let excludeColumns = ['isArchived'];
+  const excludeColumns = ['isArchived'];
 
   // NON-SUPERADMIN : Hide tasks which are archived
   if (!isSuperAdmin(user)) {
@@ -201,8 +201,8 @@ export const getTaskEntityQueryContext = (
   params: QueryParams,
   userRoles: UserRoleDisco[]
 ) => {
-  let conditions: SQL<unknown>[] = [];
-  let excludeColumns = ['isArchived'];
+  const conditions: SQL<unknown>[] = [];
+  const excludeColumns = ['isArchived'];
 
   // PUBLIC : Tasks are admin-only resources
   if (!isAdminRequest(request)) {

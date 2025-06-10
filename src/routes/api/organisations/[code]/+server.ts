@@ -64,7 +64,7 @@ export const GET: RequestHandler = async ({ params, locals, platform, request })
 
   try {
     // GET : Context for organisation query
-    let { params: queryParams, conditions } = getOrganisationQueryContext(
+    const { params: queryParams, conditions } = getOrganisationQueryContext(
       user!,
       request,
       {},

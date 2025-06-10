@@ -23,8 +23,8 @@ import { assertUserIsSelf, assertUserLoggedIn, runAssertions } from '$lib/auth/a
 export const getUserFeatureQueryContext = (params: QueryParams, userId: Id) => {
   // SETUP : By default, only show non-archived projects,
   // and exclude isArchived and isPublished filters from the query.
-  let conditions: SQL<unknown>[] = [];
-  let excludeColumns = ['userId'];
+  const conditions: SQL<unknown>[] = [];
+  const excludeColumns = ['userId'];
   params = removeExcludedColumns(params, excludeColumns);
 
   // USER : Only show features for the user

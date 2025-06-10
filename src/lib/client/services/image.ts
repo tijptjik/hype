@@ -106,7 +106,7 @@ export async function uploadAndProcessImage(
   );
 
   // 4. Process Cloudinary response into our image format
-  let imageData = getImageFromCloudinaryResponse(cloudinaryResponse);
+  const imageData = getImageFromCloudinaryResponse(cloudinaryResponse);
 
   // 5. Extend image data with feature/hierarchical info
   extendFeatureImage(
