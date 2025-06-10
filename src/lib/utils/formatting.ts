@@ -1,4 +1,4 @@
-import type { MapCtx } from '$lib/context/map.svelte';
+import type { AppCtx } from '$lib/context/app.svelte';
 import { getLocale, getI18n } from '$lib/i18n';
 import * as m from '$lib/paraglide/messages';
 import type { Property, TranslatedValue, RangeFilterValue, Locale } from '$lib/types';
@@ -17,12 +17,12 @@ export function getOriginalValue(value: string | TranslatedValue): string {
  */
 export function getPropValueInCurrentLocale(value: string | TranslatedValue): string {
   if (typeof value === 'string') return value;
-  const currentLocale = getLocale();
+  const currentLocale = getLocale() as Locale;
   // Fallback to original value for 'en' or if translations are missing
   if (!value.i18n) return value.value;
   // Add type annotation for 't'
   const translation = value.i18n.find(
-    (t: { locale: Locale; value: string }) => t.locale === currentLocale
+    (t: { locale: string; value: string }) => t.locale === currentLocale
   );
   return translation?.value || value.value; // Fallback to original value
 }
@@ -74,7 +74,7 @@ export function displaySelectedProperties(
 export function displaySelectedFilters(
   layerFilters: Record<string, string[] | RangeFilterValue> | undefined, // Filters for the specific layer
   properties: Property[] | undefined, // Property definitions for the layer's project
-  mapCtx: MapCtx
+  appCtx: AppCtx
 ): string {
   if (!layerFilters || !properties) {
     return m.filters__none();
@@ -112,7 +112,7 @@ export function displaySelectedFilters(
   const activeFilterLabels = activeFilterKeys.map((key) => {
     const propertyDefinition = properties.find((p) => p.key === key);
     // Use getI18n for the property label, fallback to key if not found
-    return propertyDefinition ? getI18n(propertyDefinition, 'label', mapCtx.getUserPreferences()) || key : key;
+    return propertyDefinition?.i18n ? getI18n(propertyDefinition.i18n as Record<string, any>, 'label', appCtx.getUserPreferences()) || key : key;
   });
 
   // Format the summary string based on the count
