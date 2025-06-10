@@ -2,16 +2,57 @@
 import { error } from '@sveltejs/kit';
 import { getTableName, and, inArray, eq, getTableColumns, sql} from 'drizzle-orm';
 // TYPES
-import type { Database, Id } from '../types';
-import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
+import type { Database, DbTable, Id } from '../types';
+import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import type { InferSelectModel, InferInsertModel, SQL } from 'drizzle-orm';
-import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
 
-/**********
- * COMMON CRUD
- **********/
 
-type DbTable = SQLiteTable<any>;
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 2. CRUD :: CREATE
+//    - insert
+//    - insertMany
+//
+// 6. CRUD :: READ
+//    - read
+//    - readMany
+//
+// 3. CRUD :: UPDATE
+//    - update
+//    - updateMany
+//
+// 4. CRUD :: UPSERT
+//    - upsert
+//    - upsertMany
+//    - conflictUpdateAllExcept
+//
+// 5. CRUD :: DELETE
+//    - del
+//    - delMany
+//
+// 7. RELATIONAL :: CREATE
+//    - insertRelated
+//    - insertManyRelated
+//
+// 10. RELATIONAL :: READ
+//     - readRelated
+//     - readManyRelated
+//
+// 8. RELATIONAL :: UPDATE
+//    - updateRelated
+//    - updateManyRelated
+//    - replaceManyRelated
+//
+// 9. RELATIONAL :: DELETE
+//    - delRelated
+//    - delManyRelated
+//
+
+// ═══════════════════════
+// 2. CRUD :: CREATE
+// ═══════════════════════
 
 /**
  * Inserts a new record into the specified table
@@ -67,6 +108,10 @@ export const insertMany = async <T extends DbTable>(
 
   return insertedEntities as InferSelectModel<T>[];
 };
+
+// ═══════════════════════
+// 3. CRUD :: UPDATE
+// ═══════════════════════
 
 /**
  * Updates a single record in the specified table matching the where clause
@@ -140,23 +185,29 @@ export const updateMany = async <T extends DbTable>(
   return updatedEntities as InferSelectModel<T>[];
 };
 
-  export function conflictUpdateAllExcept<
-    T extends SQLiteTable,
-    E extends (keyof T['$inferInsert'])[]
-  >(table: T, except: E) {
-    const columns = getTableColumns(table);
-    const updateColumns = Object.entries(columns).filter(
-      ([col]) => !except.includes(col as keyof typeof table.$inferInsert)
-    );
 
-    return updateColumns.reduce(
-      (acc, [colName, table]) => ({
-        ...acc,
-        [colName]: sql.raw(`excluded.${table.name}`)
-      }),
-      {}
-    ) as Omit<Record<keyof typeof table.$inferInsert, SQL>, E[number]>;
-  }
+
+// ═══════════════════════
+// 4. CRUD :: UPSERT
+// ═══════════════════════
+
+export function conflictUpdateAllExcept<
+  T extends SQLiteTable,
+  E extends (keyof T['$inferInsert'])[]
+>(table: T, except: E) {
+  const columns = getTableColumns(table);
+  const updateColumns = Object.entries(columns).filter(
+    ([col]) => !except.includes(col as keyof typeof table.$inferInsert)
+  );
+
+  return updateColumns.reduce(
+    (acc, [colName, table]) => ({
+      ...acc,
+      [colName]: sql.raw(`excluded.${table.name}`)
+    }),
+    {}
+  ) as Omit<Record<keyof typeof table.$inferInsert, SQL>, E[number]>;
+}
 
 /**
  * Upserts a single record into the specified table
@@ -233,6 +284,10 @@ export const upsertMany = async <T extends DbTable>(
   return upsertedEntities as InferSelectModel<T>[];
 };
 
+// ═══════════════════════
+// 5. CRUD :: DELETE
+// ═══════════════════════
+
 /**
  * Deletes a single record from the specified table matching the where clause
  * @param db Database instance
@@ -284,6 +339,10 @@ export const delMany = async <T extends DbTable>(
 
   return deletedEntities as InferSelectModel<T>[];
 };
+
+// ═══════════════════════
+// 6. CRUD :: READ
+// ═══════════════════════
 
 /**
  * Reads a single record from the specified table matching the where clause
@@ -338,9 +397,9 @@ export const readMany = async <T extends DbTable>(
   return entities as InferSelectModel<T>[];
 };
 
-/**********
- * RELATIONAL CRUD
- **********/
+// ═══════════════════════
+// 7. RELATIONAL :: CREATE
+// ═══════════════════════
 
 /**
  * Inserts a related record into the specified table with a foreign key reference
@@ -416,6 +475,10 @@ export const insertManyRelated = async <T extends DbTable>(
 
   return insertedEntities as InferSelectModel<T>[];
 };
+
+// ═══════════════════════
+// 8. RELATIONAL :: UPDATE
+// ═══════════════════════
 
 /**
  * Updates a related record in the specified table matching both the where clause and foreign key
@@ -500,6 +563,34 @@ export const updateManyRelated = async <T extends DbTable>(
 };
 
 /**
+ * Deletes existing related records and inserts new ones in the specified table matching both the where clause and foreign key
+ * @param db Database instance
+ * @param table Table to update
+ * @param data Array of data to update
+ * @param foreignKeyColumn Foreign key column to check
+ * @param foreignKeyValue Foreign key value to check
+ * @returns Array of updated records
+ */
+export const replaceManyRelated = async <T extends DbTable>(
+  db: Database,
+  table: T,
+  data: InferInsertModel<T>[],
+  foreignKeyColumn: SQLiteColumn<any>,
+  foreignKeyValue: Id
+): Promise<InferSelectModel<T>[]> => {
+  // First delete all existing records matching the foreign key
+  await delManyRelated(db, table, foreignKeyColumn, foreignKeyValue);
+
+  // Then insert all new records using the column name
+  const columnName = foreignKeyColumn.name as keyof InferInsertModel<T>;
+  return await insertManyRelated(db, table, data, columnName, foreignKeyValue);
+};
+
+// ═══════════════════════
+// 9. RELATIONAL :: DELETE
+// ═══════════════════════
+
+/**
  * Deletes a related record from the specified table matching both the where clause and foreign key
  * @param db Database instance
  * @param table Table to delete from
@@ -566,6 +657,10 @@ export const delManyRelated = async <T extends DbTable>(
   return deletedEntities as InferSelectModel<T>[];
 };
 
+// ═══════════════════════
+// 10. RELATIONAL :: READ
+// ═══════════════════════
+
 /**
  * Reads a related record from the specified table matching both the where clause and foreign key
  * @param db Database instance
@@ -627,28 +722,4 @@ export const readManyRelated = async <T extends DbTable>(
   }
 
   return entities as InferSelectModel<T>[];
-};
-
-/**
- * Deletes existing related records and inserts new ones in the specified table matching both the where clause and foreign key
- * @param db Database instance
- * @param table Table to update
- * @param data Array of data to update
- * @param foreignKeyColumn Foreign key column to check
- * @param foreignKeyValue Foreign key value to check
- * @returns Array of updated records
- */
-export const replaceManyRelated = async <T extends DbTable>(
-  db: Database,
-  table: T,
-  data: InferInsertModel<T>[],
-  foreignKeyColumn: SQLiteColumn<any>,
-  foreignKeyValue: Id
-): Promise<InferSelectModel<T>[]> => {
-  // First delete all existing records matching the foreign key
-  await delManyRelated(db, table, foreignKeyColumn, foreignKeyValue);
-
-  // Then insert all new records using the column name
-  const columnName = foreignKeyColumn.name as keyof InferInsertModel<T>;
-  return await insertManyRelated(db, table, data, columnName, foreignKeyValue);
 };
