@@ -7,9 +7,45 @@ on:
       - preview
 
 jobs:
-  deploy:
+  deploy-to-prod:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    name: Deploy to Cloudflare
+    environment: production
+    name: Deploy to Cloudflare [Production]
+    
+    steps:
+      - name: GIT :: Checkout
+        uses: actions/checkout@v4
+        
+      - name: INSTALL :: Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.2.15'
+          
+      - name: INSTALL :: Dependencies
+        run: bun install --frozen-lockfile
+          
+      - name: BUILD :: Application
+        run: bun run build
+        env:
+          VITE_WRANGLER_ENV: cf
+          VITE_USER_NODE_ENV: ${{ vars.ENVIRONMENT }}
+          
+      - name: DB :: Apply migrations
+        run: bun wrangler d1 migrations apply hype-db-prod --remote
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          
+      - name: DEPLOY :: Cloudflare Worker
+        run: bun wrangler deploy --name hype-prod
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+  deploy-to-preview:
+    if: github.ref == 'refs/heads/preview'
+    runs-on: ubuntu-latest
+    environment: preview
+    name: Deploy to Cloudflare [Preview]
     
     steps:
       - name: GIT :: Checkout
@@ -25,38 +61,22 @@ jobs:
         
       - name: SETUP :: Environment variables
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "ENVIRONMENT=production" >> $GITHUB_ENV
-            echo "WRANGLER_ENV=production" >> $GITHUB_ENV
-            echo "PROJECT_NAME=hype-prod" >> $GITHUB_ENV
-          elif [ "${{ github.ref }}" = "refs/heads/preview" ]; then
-            echo "ENVIRONMENT=preview" >> $GITHUB_ENV
-            echo "WRANGLER_ENV=preview" >> $GITHUB_ENV
-            echo "PROJECT_NAME=hype-preview" >> $GITHUB_ENV
-          fi
+          echo "ENVIRONMENT=preview" >> $GITHUB_ENV
+          echo "WRANGLER_ENV=preview" >> $GITHUB_ENV
+          echo "PROJECT_NAME=hype-preview" >> $GITHUB_ENV
           
       - name: BUILD :: Application
-        run: |
-          export VITE_WRANGLER_ENV=cf
-          export VITE_USER_NODE_ENV=${{ env.ENVIRONMENT }}
-          bun run build
+        run: bun run build
+        env:
+          VITE_WRANGLER_ENV: cf
+          VITE_USER_NODE_ENV: ${{ vars.ENVIRONMENT }}
           
-      - name: DB ::  Apply migrations
-        run: |
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            bun wrangler d1 migrations apply hype-db-prod --remote
-          elif [ "${{ github.ref }}" = "refs/heads/preview" ]; then
-            bun wrangler d1 migrations apply hype-db-preview --remote --env preview
-          fi
+      - name: DB :: Apply migrations
+        run: bun wrangler d1 migrations apply hype-db-preview --remote --env preview
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           
       - name: DEPLOY :: Cloudflare Worker
-        run: |
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            bun wrangler deploy --name hype-prod
-          elif [ "${{ github.ref }}" = "refs/heads/preview" ]; then
-            bun wrangler deploy --name hype-preview
-          fi
+        run: bun wrangler deploy --name hype-preview
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
