@@ -18,17 +18,17 @@ import {
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
 import { getProjectIdforRoles, isSuperAdmin } from '$lib/auth/utils';
 // SCHEMA
-import { feature, layer } from '$lib/db/schema';
+import { feature, layer } from '$lib/db/schema/index';
 // DB
 import { applyPrismConstraints, toLocaleMap } from '$lib/db';
-import { HierarchicalResource } from '$lib/enums';
+import { FirstClassResource, HierarchicalResource } from '$lib/enums';
 import { getProjectIdForFeature } from '$lib/db/services/feature';
 // TRANSLATION
 import { getTranslation } from '$lib/api/external/translation';
 // FEATURE DB SERVICES
 import { createFeatureWithRelated } from '$lib/db/services/feature';
 // ZOD
-import { FeatureInsertAPI } from '$lib/db/zod/schemas/feature';
+import { FeatureInsertAPI } from '$lib/db/zod/schema/feature';
 // ENUMS
 import { supportedLocales } from '$lib/enums';
 // TYPES
@@ -39,7 +39,7 @@ import type {
   Session,
   Database,
   Id,
-  FeatureDB,
+  SessionUser,
   FeatureNew,
   QueryParams,
   UserContributedFeature,
@@ -107,7 +107,7 @@ export const featureEntityWithRelations = {
  * Get the query context for the feature resource.
  * Filters the query based on user roles, prisms, and query parameters.
  * @param db - The Drizzle instance
- * @param session - The session object
+ * @param user - The user object
  * @param request - The request object
  * @param params - The query parameters
  * @param userRoles - The user roles
@@ -115,7 +115,7 @@ export const featureEntityWithRelations = {
  */
 export const getFeatureQueryContext = (
   db: Database,
-  session: Session,
+  user: SessionUser,
   request: Request,
   params: QueryParams,
   userRoles: UserRoleDisco[],
@@ -127,7 +127,7 @@ export const getFeatureQueryContext = (
   let excludeColumns = ['isArchived', 'isPublished'];
 
   // NON-SUPERADMIN : Hide features which are archived
-  if (!isSuperAdmin(session)) {
+  if (!isSuperAdmin(user)) {
     conditions.push(eq(feature.isArchived, false));
   }
 
@@ -142,7 +142,7 @@ export const getFeatureQueryContext = (
     conditions.push(eq(feature.isPublished, true));
 
     // ADMIN : List all features, where the user has a role in the feature's layer's project
-  } else if (!isSuperAdmin(session)) {
+  } else if (!isSuperAdmin(user)) {
     params = removeExcludedColumns(params, ['isArchived']); // Keep isPublished filterable for admins
     const projectIds = getProjectIdforRoles(userRoles);
     if (projectIds.length > 0) {
@@ -163,7 +163,7 @@ export const getFeatureQueryContext = (
 
   if (Object.keys(params).length > 0) {
     // For superAdmins, remove isArchived and isPublished from params so they can see all content
-    if (isSuperAdmin(session)) {
+    if (isSuperAdmin(user)) {
       const { isArchived, isPublished, ...filteredParams } = params;
       applyQueryFilters(feature, filteredParams, conditions);
     } else {
@@ -225,7 +225,7 @@ export function withExpandedNeighbourhoods(queryParams: QueryParams) {
 /**
  * Asserts permissions to create a feature.
  * @param db - The Drizzle instance
- * @param session - The session object
+ * @param user - The user object
  * @param request - The request object
  * @param formData - The form data
  * @param userRoles - The user roles
@@ -233,7 +233,7 @@ export function withExpandedNeighbourhoods(queryParams: QueryParams) {
  */
 export const assertPermissionsToCreateFeature = async (
   db: Database,
-  session: Session,
+  user: SessionUser,
   request: Request,
   locals: App.Locals,
   formData: FeatureDBNew,
@@ -242,9 +242,9 @@ export const assertPermissionsToCreateFeature = async (
   const projectId = await getProjectIdForFeature(db, formData, locals.hub);
 
   const assertionError = runAssertions(
-    () => assertUserLoggedIn(session as any),
+    () => assertUserLoggedIn(user as any),
     () => assertAdminRequest(request),
-    () => assertProjectMaintainerOrSuperAdmin(session, userRoles, projectId!)
+    () => assertProjectMaintainerOrSuperAdmin(user, userRoles, projectId!)
   );
 
   if (assertionError) return assertionError;
@@ -263,7 +263,7 @@ export const assertPermissionsToCreateFeature = async (
  */
 export const assertPermissionsToUpdateFeature = async (
   db: Database,
-  session: Session,
+  user: SessionUser,
   request: Request,
   locals: App.Locals,
   formData: FeatureNew,
@@ -273,10 +273,10 @@ export const assertPermissionsToUpdateFeature = async (
   const projectId = await getProjectIdForFeature(db, formData, locals.hub);
 
   const assertionError = runAssertions(
-    () => assertUserLoggedIn(session as any),
+    () => assertUserLoggedIn(user as any),
     () => assertAdminRequest(request),
     () => assertParamIdentifierEqualsFormIdentifier(formData, refId, 'id'),
-    () => assertProjectMaintainerOrSuperAdmin(session, userRoles, projectId!)
+    () => assertProjectMaintainerOrSuperAdmin(user, userRoles, projectId!)
   );
 
   if (assertionError) return assertionError;
@@ -311,7 +311,7 @@ export const createUserContributedFeature = async (
   }
 
   // Step 2: Create enriched i18n textObject with all locales
-  const enrichedI18n: Record<Locale, any> = {};
+  const enrichedI18n: Partial<Record<Locale, any>> = {};
 
   for (const locale of supportedLocales) {
     const textObj = newFeature.i18n[locale];
@@ -360,7 +360,7 @@ export const createUserContributedFeature = async (
         ? translatedValues[translationIndex++]
         : null;
 
-    enrichedI18n[locale] = {
+    enrichedI18n[locale as Locale] = {
       locale: locale, // Include the locale field that toLocaleMap expects
       title: textObj?.title || translatedTitle || sourceTextObj.title,
       description:
@@ -394,7 +394,7 @@ export const createUserContributedFeature = async (
         }
 
         // Create enriched property i18n
-        const enrichedPropertyI18n: Record<Locale, any> = {};
+        const enrichedPropertyI18n: Partial<Record<Locale, any>> = {};
 
         for (const locale of supportedLocales) {
           const propTextObj = prop.i18n[locale];
@@ -425,7 +425,7 @@ export const createUserContributedFeature = async (
 
         return {
           ...prop,
-          i18n: toLocaleMap(enrichedPropertyI18n)
+          i18n: toLocaleMap(enrichedPropertyI18n as Record<Locale, any>)
         };
       }
 
@@ -436,7 +436,7 @@ export const createUserContributedFeature = async (
   // Step 4: Create the enriched feature object
   const enrichedFeature = {
     ...newFeature,
-    i18n: toLocaleMap<FeatureI18nDB>(enrichedI18n),
+    i18n: toLocaleMap(enrichedI18n as Record<Locale, any>),
     properties: enrichedProperties
   };
 
