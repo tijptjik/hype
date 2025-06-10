@@ -334,7 +334,7 @@ export const updateProjectWithRelated = async (
 ) => {
   const codeToUse = lookupCode || data.code;
   const project = await updateProject(db, data, codeToUse);
-  const i18n = await updateI18n(db, data.i18n, project.id);
+  const i18n = await updateI18n(db, data.i18n!, project.id);
   await updateMaintainerRoles(
     db,
     data.maintainerRoles,
@@ -387,7 +387,7 @@ export const toFormShape = async (
 ): Promise<SuperValidated<Project>> => {
   const formData: Project = {
     ...project,
-    i18n: toLocaleMap<ProjectI18n>(i18n) as any,
+    i18n: toLocaleMap(i18n) as any,
     maintainerRoles,
     properties: properties
       .sort((a, b) => {
@@ -403,10 +403,10 @@ export const toFormShape = async (
       })
       .map((property) => ({
         ...property,
-        i18n: toLocaleMap<PropertyI18n>(property.i18n) as any,
+        i18n: toLocaleMap(property.i18n) as any,
         values: property.values.map((value) => ({
           ...value,
-          i18n: toLocaleMap<PropertyValueI18nNew>(value.i18n) as any
+          i18n: toLocaleMap(value.i18n!) as any
         }))
       })) as Property[]
   };
@@ -439,7 +439,7 @@ export const toResponseShape = async (
       // Only transform i18n if it has actual data, otherwise set to null
       i18n:
         Array.isArray(property.i18n) && property.i18n.length > 0
-          ? (toLocaleMap<PropertyI18n>(property.i18n) as any)
+          ? (toLocaleMap(property.i18n!) as any)
           : Array.isArray(property.i18n)
             ? undefined
             : property.i18n,
@@ -448,7 +448,7 @@ export const toResponseShape = async (
         // Only transform i18n if it has actual data, otherwise set to null
         i18n:
           Array.isArray(value.i18n) && value.i18n.length > 0
-            ? (toLocaleMap<PropertyValueI18nNew>(value.i18n) as any)
+            ? (toLocaleMap(value.i18n!) as any)
             : Array.isArray(value.i18n)
               ? undefined
               : value.i18n

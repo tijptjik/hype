@@ -10,7 +10,7 @@ import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
 import type { FirstClassResource } from '$lib/enums';
 import { useSession } from '$lib/auth/client';
-import type { SessionUser } from '$lib/types';
+import type { SessionUser, UserRoleDisco } from '$lib/types';
 
 let session = useSession();
 let user = $session.data?.user as SessionUser;
@@ -35,9 +35,9 @@ let title = $derived(resource ? navItems[resource].name : '');
  * @returns boolean indicating if new buttons should be shown
  */
 const canCreateEntity = (user: SessionUser, resource: FirstClassResource): boolean => {
-  if (!resource || !adminCtx.user) return false;
+  if (!resource || !adminCtx.appCtx.user) return false;
 
-  const { userRoles } = adminCtx;
+  const { roles } = adminCtx.appCtx.user as SessionUser;
   const isSuperAdmin = user?.superAdmin === true;
 
   // SuperAdmin can create anything
@@ -50,22 +50,22 @@ const canCreateEntity = (user: SessionUser, resource: FirstClassResource): boole
 
     case 'project': {
       // Only owners of organisation or superAdmin
-      return userRoles.some(
+      return roles.some(
         (role) => role.type === 'organisation' && role.role === 'owner'
       );
     }
 
     case 'layer': {
       // Only maintainers of projects or superAdmin
-      return userRoles.some(
+      return roles.some(
         (role) => role.type === 'project' && role.role === 'maintainer'
       );
     }
 
     case 'feature': {
       // Any role in the project or superAdmin
-      return userRoles.some(
-        (role) =>
+      return roles.some(
+        (role: UserRoleDisco) =>
           role.type === 'project' &&
           (role.role === 'maintainer' || role.role === 'member')
       );

@@ -10,6 +10,8 @@ import { XCircle, QueueList } from '@steeze-ui/heroicons';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
+// TYPES
+import type { Feature } from '$lib/types';
 
 // CONTEXT
 const appCtx = getAppCtx();
@@ -34,7 +36,7 @@ let featureTitle = $derived(
 );
 let newFeatureTitle = $derived(
   getI18n(
-    appCtx.getNewFeature()!,
+    appCtx.getNewFeature() as Feature,
     'title',
     appCtx.getUserPreferences(),
     m.day_chunky_okapi_cherish()

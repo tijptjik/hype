@@ -573,8 +573,9 @@ export class AppCtx {
     project?: Project,
     hideIfOnly: boolean = true
   ): string | null => {
+    if (!project?.organisationId) return null;
     const organisationProjectCount = this.getOrganisationProjectCount(
-      project?.organisationId
+      project.organisationId
     );
     if (hideIfOnly && organisationProjectCount === 1) {
       return null;
@@ -1405,7 +1406,7 @@ export class AppCtx {
     ) {
       this.newFeature.feature.properties[propIndex].i18n![locale] = {
         ...this.newFeature.feature.properties[propIndex].i18n![locale as Locale]!,
-        ...object
+        ...(object as { locale: Locale; value: string; valueGen: boolean })
       };
     }
   };

@@ -18,7 +18,6 @@ interface Props {
 
 // PROPS
 let { form, locale, fieldRoot, onConfirm, onTranslate }: Props = $props();
-
 // STATE
 let loadingTranslation = $state(false);
 

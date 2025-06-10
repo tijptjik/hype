@@ -55,17 +55,17 @@ $effect(() => {
 
 let enIsGenAI = $derived(
   currentFormIsFeature
-    ? (($formStore as Feature).i18n['en']?.displayAddressGen ?? false)
+    ? (($formStore as Feature).i18n!['en']?.displayAddressGen ?? false)
     : false
 );
 let zhHantIsGenAI = $derived(
   currentFormIsFeature
-    ? (($formStore as Feature).i18n['zh-hant']?.displayAddressGen ?? false)
+    ? (($formStore as Feature).i18n!['zh-hant']?.displayAddressGen ?? false)
     : false
 );
 let zhHansIsGenAI = $derived(
   currentFormIsFeature
-    ? (($formStore as Feature).i18n['zh-hans']?.displayAddressGen ?? false)
+    ? (($formStore as Feature).i18n!['zh-hans']?.displayAddressGen ?? false)
     : false
 );
 
@@ -144,9 +144,9 @@ const actions: Record<'geocode', (...args: any[]) => void> = {
           };
           Object.entries(result.i18n || {}).forEach(([localeStr, data]) => {
             const locale = localeStr as Locale;
-            featureData.i18n[locale].displayAddress = data.displayAddress;
-            featureData.i18n[locale].displayAddressGen = data.displayAddressGen;
-            featureData.i18n[locale].addressProperties = data.addressProperties;
+            featureData.i18n![locale].displayAddress = data.displayAddress;
+            featureData.i18n![locale].displayAddressGen = data.displayAddressGen;
+            featureData.i18n![locale].addressProperties = data.addressProperties;
           });
           return featureData;
         });
@@ -170,7 +170,7 @@ const actions: Record<'geocode', (...args: any[]) => void> = {
         <div
           class="flex flex-col content-start items-start gap-4 px-6 py-2 pb-2 pt-4"
           class:pb-0={currentFormIsFeature &&
-            !(($formStore as Feature).i18n[locale]?.displayAddressGen ?? false)}>
+            !(($formStore as Feature).i18n![locale]?.displayAddressGen ?? false)}>
           <TextField
             {...sectionProps}
             {locale}
@@ -178,7 +178,7 @@ const actions: Record<'geocode', (...args: any[]) => void> = {
             field={sectionProps.fields[fieldRootProp] as FormFieldDefinition} />
         </div>
         <div>
-          {#if currentFormIsFeature && ($formStore as Feature).i18n[locale]?.displayAddress && missingTranslations[locale].required}
+          {#if currentFormIsFeature && ($formStore as Feature).i18n![locale]?.displayAddress && missingTranslations[locale]?.required}
             <ConfirmationBar
               {...sectionProps}
               {locale}

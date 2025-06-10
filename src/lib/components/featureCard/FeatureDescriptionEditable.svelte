@@ -26,7 +26,7 @@ const userPreferences = $derived(appCtx.getUserPreferences());
 // STATE : LOCAL
 let isEditing = $state(false);
 let description = $derived(
-  getI18n(feature, 'description', userPreferences, m.zany_merry_seahorse_treasure())
+  getI18n(feature as Feature, 'description', userPreferences, m.zany_merry_seahorse_treasure())
 );
 let originalDescription = $state('');
 let textAreaEl: HTMLTextAreaElement = $state()!;

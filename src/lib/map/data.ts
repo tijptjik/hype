@@ -74,14 +74,14 @@ export function getNeighbourhoodFeatureCount(
       (n) => {
         count += features.filter(
           (feature: Feature) =>
-            n === feature.i18n[getLocale()]?.addressProperties?.neighbourhood
+            n === feature.i18n![getLocale()]?.addressProperties?.neighbourhood
         ).length;
       }
     );
   } else {
     count = features.filter(
       (feature: Feature) =>
-        neighbourhoodKey === feature.i18n[getLocale()]?.addressProperties?.neighbourhood
+        neighbourhoodKey === feature.i18n![getLocale()]?.addressProperties?.neighbourhood
     ).length;
   }
   return count;

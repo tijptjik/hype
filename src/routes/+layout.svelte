@@ -20,7 +20,7 @@ import 'tailwindcss/tailwind.css';
 // TYPES
 import type { QueryClient } from '@tanstack/svelte-query';
 import type { LayoutData, LayoutProps } from './$types';
-import type { Locale } from '$lib/types';
+import type { Locale, SessionUser } from '$lib/types';
 
 // PROPS
 let { children, data }: LayoutProps = $props();
@@ -45,10 +45,10 @@ let socialImage = {
 // Handle language setup from client-side session
 watch(
   // Set locale from client session if available
-  () => $session.data?.user?.locale,
+  () => ($session.data?.user as SessionUser).locale,
   () => {
     const locale = getLocale();
-    const userLocale = $session.data?.user?.locale;
+    const userLocale = ($session.data?.user as SessionUser).locale;
     if (userLocale && locale !== userLocale) {
       setLocale(userLocale as Locale)
     }

@@ -180,7 +180,7 @@ const onclick = (e: MouseEvent | KeyboardEvent) => {
           {@render badges(entity)}
         {:else if keyMap.badges?.length}
           <div class="flex flex-row flex-wrap justify-center gap-2 py-2 align-middle">
-            {#each keyMap.badges.filter((badge) => !badge.superAdminOnly || adminCtx.session?.user?.superAdmin === true) as badge}
+            {#each keyMap.badges.filter((badge) => !badge.superAdminOnly || adminCtx.appCtx.user?.superAdmin === true) as badge}
               {#if badge.type === 'boolean'}
                 {@const boolValue = getNestedValue(entity, badge.label)}
                 <span

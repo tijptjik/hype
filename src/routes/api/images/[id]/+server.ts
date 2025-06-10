@@ -40,7 +40,7 @@ export const GET: RequestHandler = async ({
   request
 }) => {
   // ASSERT : User logged in
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
 
   // ASSERT : Valid query parameters
   // Validate query parameters, or return 400
@@ -50,7 +50,7 @@ export const GET: RequestHandler = async ({
   // CONTEXT : Get the query context
   let { conditions } = getImageEntityQueryContext(
     db,
-    session,
+    user,
     request,
     queryParams as QueryParams
   );
@@ -78,7 +78,7 @@ export const GET: RequestHandler = async ({
  */
 export const PATCH: RequestHandler = async ({ params, request, locals, platform, url }) => {
   // ASSERT : User logged in
-  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
+  const { db, user : sessionUser, userId, userRoles } = await getDatabase(locals, platform);
   const user = await getUserById(db, userId);
   const {ctxId, ctxType} = getCtxFromUrl(url);
 
@@ -89,7 +89,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform,
     // ASSERT : Access to context
     await assertPermissionsToUpdateImage(
       db,
-      session,
+      sessionUser,
       request,
       locals.hub,
       params as QueryParams,
@@ -144,14 +144,14 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform,
  */
 export const DELETE: RequestHandler = async ({ params, request, locals, platform, url, fetch: eventFetch }) => {
   // ASSERT : User logged in
-  const { db, session, userId, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userId, userRoles } = await getDatabase(locals, platform);
   const {ctxId, ctxType} = getCtxFromUrl(url);
   
   try {
     // ASSERT : Access to context
     await assertPermissionsToDeleteImage(
       db,
-      session,
+      user,
       request,
       locals.hub,
       params as QueryParams,

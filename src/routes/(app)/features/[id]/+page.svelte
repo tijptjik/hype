@@ -29,7 +29,7 @@ import {
 // ENUMS
 import { FeatureCardMode, ImageContextResource } from '$lib/enums';
 // TYPES
-import type { Feature, Layer, Project } from '$lib/types';
+import type { Feature, Layer, Project, Organisation } from '$lib/types';
 
 // PARAMS
 let featureId: string = $state(page.params.id);

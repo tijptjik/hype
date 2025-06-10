@@ -35,7 +35,7 @@ declare global {
       user?: SessionUser;
     }
     interface PageData {
-      flash: Flash;
+      flash?: Flash;
     }
     // interface PageState {}
     interface Platform {

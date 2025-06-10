@@ -50,10 +50,10 @@ const RESOURCE_PATH = 'hubs';
  */
 export const GET: RequestHandler = async ({ params, locals, platform, url }) => {
   // ASSERT : User logged in
-  const { db, session } = await getDatabase(locals, platform);
+  const { db, user } = await getDatabase(locals, platform);
 
   // ASSERT : SuperAdmin only for hub management
-  if (!session?.user?.superAdmin) {
+  if (!user?.superAdmin) {
     return error(403, 'SuperAdmin access required');
   }
 

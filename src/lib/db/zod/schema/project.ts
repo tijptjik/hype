@@ -1,3 +1,6 @@
+// I18N
+import { m } from '$lib/i18n';
+
 // ZOD
 import { z } from 'zod';
 // DRIZZLE
@@ -24,7 +27,8 @@ import { OrganisationBase } from './organisation';
 export const ProjectBase = createSelectSchema(project);
 export const ProjectInsert = createInsertSchema(project).extend({
   ...getDefaultConstraints(project),
-});
+  code : z.string().min(1, { message: m.admin__validation_short_name_lte_32_chars() }),
+})
 export const ProjectUpdate = createUpdateSchema(project).extend({
   ...getDefaultConstraints(project)
 });
@@ -76,7 +80,7 @@ export const ProjectRoleAPI = ProjectRoleBase.extend({
 });
 
 export const ProjectRoleWithUser = ProjectRoleBase.extend({
-  user: UserBasic
+  user: UserBasic.nullish()
 });
 
 /* ----------------- */
@@ -117,9 +121,9 @@ export const ProjectUpdateAPI = ProjectUpdate.extend({
 /* -------- */
 
 export const ProjectRaw = ProjectBase.extend({
-  i18n: z.array(ProjectI18nBase),
-  maintainerRoles: z.array(ProjectRoleWithUser),
-  properties: z.array(PropertyAPI),
+  i18n: z.array(ProjectI18nBase).nullish(),
+  maintainerRoles: z.array(ProjectRoleWithUser).nullish(),
+  properties: z.array(PropertyAPI).nullish(),
   image: ImageBase.nullish(),
   publisher: UserBasic.nullish()
 });

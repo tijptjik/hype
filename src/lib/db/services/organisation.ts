@@ -179,7 +179,7 @@ export const searchOrganisations = async (
     }
 
     if (searchConditions && searchConditions.length > 0) {
-      conditions.push(or(...searchConditions));
+      conditions.push(or(...searchConditions)!);
     }
   }
 
@@ -341,7 +341,7 @@ export const createOrganisationWithRelated = async (
   data: OrganisationNew
 ) => {
   const organisation = await createOrganisation(db, data);
-  const i18n = await createI18n(db, data.i18n, organisation.id);
+  const i18n = await createI18n(db, data.i18n!, organisation.id);
   await createUserRoles(db, data.userRoles, organisation.id);
   const userRoles = await listUserRoles(db, organisation.id);
   // organisation.image is null upon creation
@@ -363,7 +363,7 @@ export const updateOrganisationWithRelated = async (
 ) => {
   const codeToUse = lookupCode || data.code;
   const organisation = await updateOrganisation(db, data, codeToUse);
-  const i18n = await updateI18n(db, data.i18n, organisation.id);
+  const i18n = await updateI18n(db, data.i18n!, organisation.id);
   await updateUserRoles(db, data.userRoles, organisation.id);
   const userRoles = await listUserRoles(db, organisation.id);
   return { ...organisation, i18n, userRoles };

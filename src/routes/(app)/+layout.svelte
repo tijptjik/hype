@@ -63,7 +63,7 @@ watch(
   () => $session.data?.user,
   () => {
     if ($session.data?.user) {
-      appCtx.setUser($session.data.user);
+      appCtx.setUser($session.data.user as unknown as SessionUser);
       appCtx.reinitializeWithAuth();
       appCtx.registerKeydownHandlers();
     } else if (!$session.data?.user && appCtx.user?.id) {

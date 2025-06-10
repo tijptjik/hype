@@ -69,12 +69,12 @@ export const GET: RequestHandler = async ({
   request
 }) => {
   // ASSERT : User logged in
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
 
   // CONTEXT : Get the query context
   let { conditions } = getFeatureQueryContext(
     db,
-    session,
+    user,
     request,
     {},
     userRoles,
@@ -114,7 +114,7 @@ export const GET: RequestHandler = async ({
  */
 export const PUT: RequestHandler = async ({ params, request, locals, platform }) => {
   // ASSERT : User logged in
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
 
   try {
     // ASSERT : Valid form
@@ -131,7 +131,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     // ACCESS CONTROL : Check permissions
     await assertPermissionsToUpdateFeature(
       db,
-      session,
+      user,
       request,
       locals,
       form.data as FeatureNew,
@@ -168,7 +168,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
  */
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
   if (!params.id) return error(400, m.deft_sleek_wasp_dine_feature());
-  const { db, session, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform);
   try {
     // ASSERT : Valid form data
     const newData: FeaturePartial = await request.json();
@@ -182,7 +182,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     // ASSERT : Use assertion functions for access control
     await assertPermissionsToUpdateFeature(
       db,
-      session,
+      user,
       request,
       locals,
       existing as FeatureNew,
@@ -191,7 +191,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     );
 
     // DB : Update only the basic feature fields (no relations for PATCH)
-    const updated = await updateFeature(db, newData, params.id);
+    await updateFeature(db, newData, params.id);
 
     // DB : Get the updated feature with all relations for response
     const updatedWithRelations = (await getFeatureWithImage(
@@ -207,7 +207,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
 
     // RESPONSE : Build the response shape with merged properties
     const data = await buildResponseShape(db, updatedWithRelations, locals.hub);
-    
+
     return json({ type: 'success', data });
   } catch (err) {
     logZodError(err, 'Update error:');
