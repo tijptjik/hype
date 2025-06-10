@@ -9,10 +9,10 @@ export enum SupportedLocales {
   'zh-hant' = 'zh-hant',
   'zh-hans' = 'zh-hans'
 }
-export const supportedLocales = Object.values(SupportedLocales) as [
-  string,
-  ...string[]
-];
+export const supportedLocales = Object.values(SupportedLocales);
+
+// The Locale type is already defined in ./types and inferred from SupportedLocales values
+// This creates the union type: 'en' | 'zh-hant' | 'zh-hans'
 
 export enum LocaleNamesEn {
   en = 'English',
@@ -183,10 +183,7 @@ export enum FieldDiscriminator {
   specifier = 'specifier',
   display = 'display'
 }
-export const fieldDiscriminators = Object.values(FieldDiscriminator) as [
-  string,
-  ...string[]
-];
+export const fieldDiscriminators = Object.values(FieldDiscriminator);
 
 /* ----------------- */
 // COMPONENT TYPES
@@ -197,10 +194,7 @@ export enum PropertyComponentType {
   InputField = 'InputField',
   TextareaField = 'TextareaField'
 }
-export const propertyComponentTypes = Object.values(PropertyComponentType) as [
-  string,
-  ...string[]
-];
+export const propertyComponentTypes = Object.values(PropertyComponentType);
 export const classifierComponentTypes = ['SelectField', 'RangeField'] as const;
 export const specifierComponentTypes = ['InputField', 'TextareaField'] as const;
 

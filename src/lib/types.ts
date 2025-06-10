@@ -14,9 +14,11 @@ import DisplayField from '$lib/components/forms/fields/Display.svelte';
 import {
   ImageContextResource,
   ImageContextResourceExtended,
-  fieldDiscriminators,
-  supportedLocales,
-  FirstClassResource
+  FirstClassResource,
+  SupportedLocales,
+  FieldDiscriminator as FieldDiscriminatorEnum,
+  TaskType as TaskTypeEnum,
+  TaskReviewOutcome
 } from './enums';
 // ZOD SCHEMAS
 import {
@@ -48,6 +50,9 @@ import {
   HubBase,
   HubBasic,
   HubCollectionAPI,
+  HubI18nBase,
+  HubI18nInsert,
+  HubI18nUpdate,
   HubInsert,
   HubInsertAPI,
   HubRaw,
@@ -184,8 +189,8 @@ import type { Writable } from 'svelte/store';
 import type { SvelteSet } from 'svelte/reactivity';
 import type { Geometry } from 'geojson';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
-import type { DefaultSession } from '@auth/core/types';
-import type { SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core';
+import type { SQLiteTable, SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core';
+import type { SessionSession as BetterAuthSessionSession, SessionUser as BetterAuthSessionUser } from './auth';
 
 /* ----------------- */
 // NAMING CONVENTIONS
@@ -242,6 +247,8 @@ import type { SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core';
 
 // Drizzle Database
 export type Database = DrizzleD1Database<typeof import('$lib/db/schema')>;
+
+export type DbTable = SQLiteTable<any>;
 
 // Drizzle withRelations
 export type NestedRelations = {
@@ -301,19 +308,21 @@ type activeResource = {
   facet: FacetType | false;
 };
 
+export type NavItem = {
+  name: string;
+  icon: any;
+  seq: number;
+  path: string;
+  isShownInSidebar: boolean;
+  isAlwaysExpanded: boolean;
+};
+
 /* ----------------- */
 // FILTERS :: APP
 /* -------- */
 
 // Resources constrained by suncast filters
 export type FilteredResources = {
-  organisation: Organisation[];
-  project: Project[];
-  layer: Layer[];
-  feature: Feature[];
-};
-
-export type AdminFilteredResources = {
   organisation: Organisation[];
   project: Project[];
   layer: Layer[];
@@ -334,7 +343,7 @@ export type AdminFilterState = {
   isArchived?: boolean | null;
   isReviewed?: boolean | null;
 };
-export type AdminFilterStates = Record<FirstClassResource, AdminFilterState>
+export type AdminFilterStates = Record<FirstClassResource, AdminFilterState>;
 
 export type ActiveCollection = {
   id: string;
@@ -371,7 +380,7 @@ export type FacetType = (typeof Facets)[number];
 // I18N
 /* -------- */
 
-export type Locale = (typeof supportedLocales)[number];
+export type Locale = `${SupportedLocales}`;
 export type LocaleExtended = Locale | 'core';
 
 export type TranslatedValue = {
@@ -398,31 +407,8 @@ export type InputType = 'text' | 'number' | 'email' | 'password';
 // SESSION
 /* -------- */
 
-export type SessionUser = {
-  superAdmin?: boolean;
-  roles?: UserRoleDisco[];
-} & DefaultSession['user'] &
-  CurrentUser;
-
-export type Session = DefaultSession & {
-  user: SessionUser;
-};
-
-declare module '@auth/sveltekit' {
-  interface Session {
-    user: {
-      superAdmin?: boolean;
-      roles?: UserRoleDisco[];
-      /**
-       * By default, TypeScript merges new interface properties and overwrites existing ones.
-       * In this case, the default session user properties will be overwritten,
-       * with the new ones defined above. To keep the default session user properties,
-       * you need to add them back into the newly declared interface.
-       */
-    } & DefaultSession['user'] &
-      CurrentUser;
-  }
-}
+export type Session = BetterAuthSessionSession;
+export type SessionUser = BetterAuthSessionUser;
 
 /* ----------------- */
 // I18N
@@ -505,7 +491,7 @@ export type FormFieldArrayDefinition = {
     key: string;
     values: readonly string[];
     specs: Record<
-      Exclude<FieldDiscriminator, 'display'>,
+      Exclude<FieldDiscriminatorEnum, 'display'>,
       Record<Key, FormFieldExtendedDefinition>
     >;
   };
@@ -535,7 +521,7 @@ export type Key = string;
 export type ResourceState = {
   active: activeResource;
   prisms: Prisms;
-  resources: AdminFilteredResources;
+  resources: FilteredResources;
   filters: AdminFilterStates;
 };
 export type FilterableResourceType = Exclude<ResourceType, 'feature' | 'task'>;
@@ -549,9 +535,21 @@ export type ProjectField = keyof Project | keyof ProjectI18nDB;
 export type LayerField = keyof Layer | keyof LayerI18nDB;
 export type FeatureField = keyof Feature | keyof FeatureI18nDB;
 export type HubField = keyof Hub;
-export type Field = OrganisationField | ProjectField | LayerField | FeatureField | HubField;
+export type Field =
+  | OrganisationField
+  | ProjectField
+  | LayerField
+  | FeatureField
+  | HubField;
 export type Resource = Organisation | Project | Layer | Feature | Task | Hub;
-export type ResourceDB = OrganisationDB | ProjectDB | LayerDB | FeatureDB | TaskDB | HubDB;
+export type ResourceNew = OrganisationNew | ProjectNew | LayerNew | FeatureNew | TaskNew | HubNew;
+export type ResourceDB =
+  | OrganisationDB
+  | ProjectDB
+  | LayerDB
+  | FeatureDB
+  | TaskDB
+  | HubDB;
 
 // RELATED TYPES
 export type FormI18n<T> = Record<Locale, T>;
@@ -583,6 +581,7 @@ export type UserPartial = z.infer<typeof UserUpdateAPI>;
 export type UserLayer = z.infer<typeof UserLayerAPI>;
 export type UserLayerNew = z.infer<typeof UserLayerInsert>;
 export type UserLayerPartial = z.infer<typeof UserLayerUpdateAPI>;
+
 
 /* ----------------- */
 // USERS :: JOIN
@@ -635,7 +634,8 @@ export type ExperimentalFeatureConfig = {
 /* -------- */
 
 // Organisation with all its own fields.
-export type OrganisationDB = z.infer<typeof OrganisationBase>;
+export type OrganisationDB = Omit<z.infer<typeof OrganisationBase>, 'isCoreInclusive'>;
+export type OrganisationDBSuperAdmin = z.infer<typeof OrganisationBase>;
 // Organisation without relations, for use in inserting a new organisation
 export type OrganisationDBNew = z.infer<typeof OrganisationInsert>;
 // Organisation without relations, for use in partiall updating a organisation
@@ -661,8 +661,9 @@ export type OrganisationSuperAdmin = z.infer<typeof OrganisationSuperAdminAPI>;
 // Like Organisation, but without the organisationId in userRoles and translations
 export type OrganisationSuperAdminNew = z.infer<typeof OrganisationInsertSuperAdminAPI>;
 // Like Organisation, but with all fields optional
-export type OrganisationSuperAdminPartial = z.infer<typeof OrganisationUpdateSuperAdminAPI>;
-
+export type OrganisationSuperAdminPartial = z.infer<
+  typeof OrganisationUpdateSuperAdminAPI
+>;
 
 /* ----------------- */
 // ORGANISATIONS :: RELATIONAL
@@ -741,7 +742,7 @@ export type ProjectRolePartialExtra = z.infer<typeof ProjectRoleUpdateExtra>;
 // PROJECTS : FIELDS
 /* -------- */
 
-export type FieldDiscriminator = (typeof fieldDiscriminators)[number];
+export type FieldDiscriminator = `${FieldDiscriminatorEnum}`;
 
 export const fieldComponentTypes = [
   'InputField',
@@ -1254,8 +1255,8 @@ export type FeatureExtended = z.infer<typeof FeatureClientExt>;
 // TASKS
 /* -------- */
 
-export const taskTypes = ['reportedMissing', 'newPhoto', 'newFeature'] as const;
-export type TaskType = (typeof taskTypes)[number];
+export const taskTypes = Object.values(TaskTypeEnum);
+export type TaskType = `${TaskTypeEnum}`;
 
 export const reviewActions = [
   'ignored',
@@ -1286,8 +1287,8 @@ export type NewPhotoAction = (typeof newPhotoActions)[number];
 export const newFeatureActions = ['ignored', 'added-feature'] as const;
 export type NewFeatureAction = (typeof newFeatureActions)[number];
 
-export const reviewOutcomes = ['rejected', 'accepted'] as const;
-export type ReviewOutcome = (typeof reviewOutcomes)[number];
+export const reviewOutcomes = Object.values(TaskReviewOutcome);
+export type ReviewOutcome = `${TaskReviewOutcome}`;
 
 /* ----------------- */
 // TASKS :: DB
@@ -1448,7 +1449,7 @@ export type SearchResult = {
 // CTX STATE :: APP
 /* -------- */
 
-export type MapContextState = {
+export type AppContextState = {
   markers: Map<Id, Marker>;
   active: {
     feature: Feature | null;
@@ -1679,12 +1680,23 @@ export type HubPartial = z.infer<typeof HubUpdateAPI>;
 
 export type HubDBRaw = z.infer<typeof HubRaw>;
 
+/* ----------------- */
+// HUBS :: RELATIONAL
+/* -------- */
+
+// hubI18n, but with the hubId - for use in DB seeding & selects
+export type HubI18nDB = z.infer<typeof HubI18nBase>;
+// hubI18n, but without hubId - for use in API insertions
+export type HubI18nNew = z.infer<typeof HubI18nInsert>;
+// Same as HubI18nNew, but all fields are optional
+export type HubI18nPartial = z.infer<typeof HubI18nUpdate>;
+
 export interface HubOpts {
   code?: string;
   domain?: string;
   isCore: boolean;
   isSuperAdmin?: boolean;
-};
+}
 
 /* ----------------- */
 // TYPESCRIPT UTILITIES
@@ -1702,3 +1714,41 @@ export type PickPartial<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>
 
 // Make all keys optional except for the ones in K
 export type PartialExcept<T, K extends keyof T> = Pick<T, K> & Partial<Omit<T, K>>;
+
+/* ----------------- */
+// GUARDS
+/* -------- */
+
+// Type guard to narrow the type
+export function isOrganisationOrProject(
+  resource: Resource
+): resource is Organisation | Project {
+  return 'code' in resource;
+}
+
+// Type guards for resource types
+export function isOrganisation(resource: Resource): resource is Organisation {
+  return (
+    !('organisationId' in resource) &&
+    !('layerId' in resource) &&
+    !('featureId' in resource) &&
+    !('projectId' in resource) &&
+    'userRoles' in resource
+  );
+}
+
+export function isProject(resource: Resource): resource is Project {
+  return 'organisationId' in resource;
+}
+
+export function isLayer(resource: Resource): resource is Layer {
+  return 'projectId' in resource;
+}
+
+export function isFeature(resource: Resource): resource is Feature {
+  return 'layerId' in resource;
+}
+
+export function isHub(resource: Resource): resource is Hub {
+  return 'organisation' in resource && 'domain' in resource;
+}
