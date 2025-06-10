@@ -179,3 +179,13 @@ bun wrangler tail --name=hype-prod
 5. **Production Release**: Merge `preview` to `main` → deploys to `hype-prod`
 
 This setup ensures isolated environments, automated deployments, and a clear path from development to production.
+
+## One-time Infrastructure Setup
+
+## Add Domain 
+
+https://dash.cloudflare.com/a6eeace4b6d9f8e07ab307964e74d801/workers/services/view/hype-prod/production/settings
+
+## Bind D1 to worker
+
+https://dash.cloudflare.com/a6eeace4b6d9f8e07ab307964e74d801/workers/services/view/hype-preview/production/bindings
