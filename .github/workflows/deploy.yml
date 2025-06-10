@@ -13,18 +13,18 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: "GIT :: Checkout"
+      - name: 'GIT :: Checkout'
         uses: actions/checkout@v4
 
-      - name: "INSTALL :: Bun"
+      - name: 'INSTALL :: Bun'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: '1.2.15'
 
-      - name: "INSTALL :: Dependencies"
+      - name: 'INSTALL :: Dependencies'
         run: bun install --frozen-lockfile
 
-      - name: "BUILD :: Application"
+      - name: 'BUILD :: Application'
         run: bun run build
         env:
           VITE_WRANGLER_ENV: cf
@@ -33,7 +33,7 @@ jobs:
           BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
           PRIVATE_AUTH_GOOGLE_ID: ${{ secrets.PRIVATE_AUTH_GOOGLE_ID }}
           PRIVATE_AUTH_GOOGLE_SECRET: ${{ secrets.PRIVATE_AUTH_GOOGLE_SECRET }}
-          PRIVATE_AUTH_GITHUB_ID: ${{ secrets.PRIVATE_AUTH_GITHUB_ID }}
+          PRIVATE_AUTH_SECRET: ${{ secrets.PRIVATE_AUTH_SECRET }}
           VITE_CLOUDINARY_CLOUD_NAME: ${{ vars.VITE_CLOUDINARY_CLOUD_NAME }}
           VITE_CLOUDINARY_API_KEY: ${{ vars.VITE_CLOUDINARY_API_KEY }}
           VITE_CLOUDINARY_UPLOAD_PRESET: ${{ vars.VITE_CLOUDINARY_UPLOAD_PRESET }}
@@ -42,12 +42,12 @@ jobs:
           PUBLIC_AZURE_TRANSLATION_REGION: ${{ vars.PUBLIC_AZURE_TRANSLATION_REGION }}
           PUBLIC_GIPHY_KEY: ${{ vars.PUBLIC_GIPHY_KEY }}
 
-      - name: "DB :: Apply migrations"
+      - name: 'DB :: Apply migrations'
         run: bun wrangler d1 migrations apply hype-db-prod --remote
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
-      - name: "DEPLOY :: Cloudflare Worker"
+      - name: 'DEPLOY :: Cloudflare Worker'
         run: bun wrangler deploy --name hype-prod
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -58,18 +58,18 @@ jobs:
     runs-on: ubuntu-latest
     environment: preview-1
     steps:
-      - name: "GIT :: Checkout"
+      - name: 'GIT :: Checkout'
         uses: actions/checkout@v4
 
-      - name: "INSTALL :: Bun"
+      - name: 'INSTALL :: Bun'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: '1.2.15'
 
-      - name: "INSTALL :: Dependencies"
+      - name: 'INSTALL :: Dependencies'
         run: bun install --frozen-lockfile
 
-      - name: "BUILD :: Application"
+      - name: 'BUILD :: Application'
         run: bun run build
         env:
           VITE_WRANGLER_ENV: cf
@@ -78,7 +78,7 @@ jobs:
           BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
           PRIVATE_AUTH_GOOGLE_ID: ${{ secrets.PRIVATE_AUTH_GOOGLE_ID }}
           PRIVATE_AUTH_GOOGLE_SECRET: ${{ secrets.PRIVATE_AUTH_GOOGLE_SECRET }}
-          PRIVATE_AUTH_GITHUB_ID: ${{ secrets.PRIVATE_AUTH_GITHUB_ID }}
+          PRIVATE_AUTH_SECRET: ${{ secrets.PRIVATE_AUTH_SECRET }}
           VITE_CLOUDINARY_CLOUD_NAME: ${{ vars.VITE_CLOUDINARY_CLOUD_NAME }}
           VITE_CLOUDINARY_API_KEY: ${{ vars.VITE_CLOUDINARY_API_KEY }}
           VITE_CLOUDINARY_UPLOAD_PRESET: ${{ vars.VITE_CLOUDINARY_UPLOAD_PRESET }}
@@ -87,12 +87,12 @@ jobs:
           PUBLIC_AZURE_TRANSLATION_REGION: ${{ vars.PUBLIC_AZURE_TRANSLATION_REGION }}
           PUBLIC_GIPHY_KEY: ${{ vars.PUBLIC_GIPHY_KEY }}
 
-      - name: "DB :: Apply migrations"
+      - name: 'DB :: Apply migrations'
         run: bun wrangler d1 migrations apply hype-db-preview --remote --env preview
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
-      - name: "DEPLOY :: Cloudflare Worker"
+      - name: 'DEPLOY :: Cloudflare Worker'
         run: bun wrangler deploy --name hype-preview
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
