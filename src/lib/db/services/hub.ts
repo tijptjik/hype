@@ -1,9 +1,12 @@
 // DRIZZLE
 import { and, eq, exists, isNull, or, SQL } from 'drizzle-orm';
 // SCHEMA
-import { organisation, project, layer, feature, hub, task } from '$lib/db/schema';
+import { organisation, project, layer, feature, hub, hubI18n, task } from '$lib/db/schema/index';
+// DB
+import { toRelatedRecords } from '..';
+import { insertManyRelated, replaceManyRelated } from '../crud';
 // TYPES
-import type { Database, HubOpts, HubDBRaw, HubDB, HubDBPartial, Code } from '$lib/types';
+import type { Database, HubOpts, HubDBRaw, HubDB, HubDBPartial, Code, Locale, HubI18nNew, HubI18nDB, HubI18nPartial } from '$lib/types';
 
 // ═══════════════════════
 // HUB FILTERING FUNCTIONS
@@ -299,7 +302,7 @@ export const getHub = async (
 export const createHub = async (
   db: Database,
   data: any
-): Promise<HubDBRaw> => {
+): Promise<HubDB> => {
   const [created] = await db.insert(hub).values(data).returning();
   return created;
 };
@@ -315,6 +318,79 @@ export const updateHub = async (
     .where(eq(hub.code, code))
     .returning();
   return updated;
+};
+
+// ═══════════════════════
+// HUB I18N OPERATIONS
+// ═══════════════════════
+
+/**
+ * Creates relational i18n records for a hub
+ * @param db - The database instance
+ * @param i18n - Record of translations for each target locale
+ * @param hubId - The ID of the hub
+ * @returns The created translations
+ */
+export const createI18n = async (
+  db: Database,
+  i18n: Record<Locale, HubI18nNew>,
+  hubId: string
+): Promise<HubI18nDB[]> => {
+  return await insertManyRelated(
+    db,
+    hubI18n,
+    toRelatedRecords(i18n, 'hubId', hubId, 'locale') as any,
+    'hubId',
+    hubId
+  );
+};
+
+/**
+ * Updates translations for a hub by deleting existing ones and creating new ones
+ * @param db - The database instance
+ * @param i18n - Record of translations for each target locale
+ * @param hubId - The ID of the hub
+ * @returns The updated translations
+ */
+export const updateI18n = async (
+  db: Database,
+  i18n: Record<Locale, HubI18nPartial>,
+  hubId: string
+): Promise<HubI18nDB[]> => {
+  return await replaceManyRelated(
+    db,
+    hubI18n,
+    toRelatedRecords(i18n, 'hubId', hubId, 'locale') as any,
+    hubI18n.hubId,
+    hubId
+  );
+};
+
+// ═══════════════════════
+// HUB ORCHESTRATION
+// ═══════════════════════
+
+/**
+ * Updates a hub with translations
+ * @param db - The database instance
+ * @param data - The hub data to update
+ * @param lookupCode - Optional code to lookup the hub (defaults to data.code)
+ * @returns The updated hub with related data
+ */
+export const updateHubWithRelated = async (
+  db: Database,
+  data: any, // Using any to avoid complex type issues
+  lookupCode?: string
+) => {
+  const codeToUse = lookupCode || data.code;
+  const hub = await updateHub(db, data, codeToUse);
+  
+  // Update i18n if provided
+  if (data.i18n) {
+    await updateI18n(db, data.i18n, hub.id);
+  }
+  
+  return hub;
 };
 
 // ═══════════════════════
