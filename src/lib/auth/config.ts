@@ -19,8 +19,10 @@ export const authConfig = {
   // SECURITY
   // Which origins can make auth requests?
   trustedOrigins: [
-    // CORE
+    // CORE :: PRODUCTION
     'https://hype.hk',
+    // CORE :: PREVIEW
+    'https://preview.hype.hk',
     // HUBS
     'https://hkghostsigns.com',
     // DEV

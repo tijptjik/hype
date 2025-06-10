@@ -73,8 +73,8 @@ export function getHubFromDomain(host: string | null): HubOpts {
     return { isCore: true };
   }
 
-  // hype.hk -> core
-  if (domain === 'hype.hk') {
+  // hype.hk -> core || preview.hype.hk -> core (preview)
+  if (domain === 'hype.hk' || domain === 'preview.hype.hk') {
     return { isCore: true };
   }
 
