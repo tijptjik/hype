@@ -25,11 +25,11 @@ import {
   HubUpdateAPI,
 } from '$lib/db/zod';
 // ENUMS
-import { FirstClassResource, HierarchicalResource } from '$lib/enums';
+import { FirstClassResource } from '$lib/enums';
 // TYPES
 import type { Writable } from 'svelte/store';
 import type { ActionResult } from '@sveltejs/kit';
-import type { ResourceState } from './resource.svelte';
+import type { AdminCtx } from './admin.svelte';
 import type { SuperValidated } from 'sveltekit-superforms/client';
 import type {
   Code,
@@ -51,7 +51,7 @@ import type {
 
 class BaseForm<T extends Record<string, unknown>> {
   protected formResult: SuperFormResult<T>;
-  protected resourceState: ResourceState;
+  protected adminCtx: AdminCtx;
   protected resourceType: FalsableResourceType;
   protected flash: Writable<App.PageData['flash']>;
 
@@ -62,11 +62,11 @@ class BaseForm<T extends Record<string, unknown>> {
     isNew: boolean,
     insertSchema: any,
     updateSchema: any,
-    resourceState: ResourceState,
+    adminCtx: AdminCtx,
     resourceType: FalsableResourceType,
     flash: Writable<App.PageData['flash']>
   ) {
-    this.resourceState = resourceState;
+    this.adminCtx = adminCtx;
     this.resourceType = resourceType;
     
     const formOptions = {
@@ -169,12 +169,9 @@ class BaseForm<T extends Record<string, unknown>> {
 
       if (result.type === 'redirect') {
         // Wait for cache invalidation to complete before navigating
-        await this.resourceState.invalidateAndRefresh(
-          this.resourceType as HierarchicalResource
+        await this.adminCtx.invalidateAndRefresh(
+          this.resourceType as FirstClassResource
         );
-
-        // Refresh session to update user roles for the new resource
-        await this.refreshSession();
 
         const url = new URL(window.location.href);
         url.pathname = result.location;
@@ -188,14 +185,14 @@ class BaseForm<T extends Record<string, unknown>> {
           options: { clearOnNavigate: false, clearAfterMs: 5000 }
         });
 
-        this.resourceState.setEntity(result.location.split('/').pop() as Id | Code);
+        this.adminCtx.setEntity(result.location.split('/').pop() as Id | Code);
 
         await goto(url.toString());
       } else if (result.type === 'success') {
         this.flash.set({ type: 'success', message: m.tidy_game_jellyfish_pop() });
         // Invalidate cache for the resource type; refresh resources
-        this.resourceState.invalidateAndRefresh(
-          this.resourceType as HierarchicalResource
+        this.adminCtx.invalidateAndRefresh(
+          this.resourceType as FirstClassResource
         );
         
         this.reset({
@@ -249,27 +246,13 @@ class BaseForm<T extends Record<string, unknown>> {
   clearAllClientErrors() {
     this.clientErrors = {};
   }
-
-  // Refresh session to update user roles after creating new resources
-  async refreshSession() {
-    try {
-      // First refresh the resource data
-      await this.resourceState.invalidateAndRefresh(
-        this.resourceType as HierarchicalResource
-      );
-      // Then refresh user roles from the database
-      await this.resourceState.refreshUserRoles();
-    } catch (error) {
-      console.warn('Failed to refresh user roles:', error);
-    }
-  }
 }
 
 export class OrganisationForm extends BaseForm<Organisation> {
   constructor(
     form: SuperValidated<Organisation>,
     isNew: boolean,
-    resourceState: ResourceState,
+    adminCtx: AdminCtx,
     flash: Writable<App.PageData['flash']>
   ) {
     super(
@@ -277,7 +260,7 @@ export class OrganisationForm extends BaseForm<Organisation> {
       isNew,
       OrganisationInsertAPI,
       OrganisationUpdateAPI,
-      resourceState,
+      adminCtx,
       FirstClassResource.organisation,
       flash
     );
@@ -288,7 +271,7 @@ export class ProjectForm extends BaseForm<Project> {
   constructor(
     form: SuperValidated<Project>,
     isNew: boolean,
-    resourceState: ResourceState,
+    adminCtx: AdminCtx,
     flash: Writable<App.PageData['flash']>
   ) {
     super(
@@ -296,7 +279,7 @@ export class ProjectForm extends BaseForm<Project> {
       isNew,
       ProjectInsertAPI,
       ProjectUpdateAPI,
-      resourceState,
+      adminCtx,
       FirstClassResource.project,
       flash
     );
@@ -307,7 +290,7 @@ export class LayerForm extends BaseForm<Layer> {
   constructor(
     form: SuperValidated<Layer>,
     isNew: boolean,
-    resourceState: ResourceState,
+    adminCtx: AdminCtx,
     flash: Writable<App.PageData['flash']>
   ) {
     super(
@@ -315,7 +298,7 @@ export class LayerForm extends BaseForm<Layer> {
       isNew,
       LayerInsertAPI,
       LayerUpdateAPI,
-      resourceState,
+      adminCtx,
       FirstClassResource.layer,
       flash
     );
@@ -326,7 +309,7 @@ export class FeatureForm extends BaseForm<Feature> {
   constructor(
     form: SuperValidated<Feature>,
     isNew: boolean,
-    resourceState: ResourceState,
+    adminCtx: AdminCtx,
     flash: Writable<App.PageData['flash']>
   ) {
     super(
@@ -334,7 +317,7 @@ export class FeatureForm extends BaseForm<Feature> {
       isNew,
       FeatureInsertAPI,
       FeatureUpdateAPI,
-      resourceState,
+      adminCtx,
       FirstClassResource.feature,
       flash
     );
@@ -345,7 +328,7 @@ export class HubForm extends BaseForm<Hub> {
   constructor(
     form: SuperValidated<Hub>,
     isNew: boolean,
-    resourceState: ResourceState,
+    adminCtx: AdminCtx,
     flash: Writable<App.PageData['flash']>
   ) {
     super(
@@ -353,7 +336,7 @@ export class HubForm extends BaseForm<Hub> {
       isNew,
       HubInsertAPI,
       HubUpdateAPI,
-      resourceState,
+      adminCtx,
       FirstClassResource.hub,
       flash
     );
@@ -370,7 +353,7 @@ export function setForm(
   resourceType: 'organisation',
   entity: Ref,
   form: SuperValidated<OrganisationNew | Organisation>,
-  resourceState: ResourceState,
+  adminCtx: AdminCtx,
   flash: Writable<App.PageData['flash']>
 ): OrganisationForm;
 
@@ -378,7 +361,7 @@ export function setForm(
   resourceType: 'project',
   entity: Ref,
   form: SuperValidated<ProjectNew | Project>,
-  resourceState: ResourceState,
+  adminCtx: AdminCtx,
   flash: Writable<App.PageData['flash']>
 ): ProjectForm;
 
@@ -386,7 +369,7 @@ export function setForm(
   resourceType: 'layer',
   entity: Ref,
   form: SuperValidated<LayerNew | Layer>,
-  resourceState: ResourceState,
+  adminCtx: AdminCtx,
   flash: Writable<App.PageData['flash']>
 ): LayerForm;
 
@@ -394,7 +377,7 @@ export function setForm(
   resourceType: 'feature',
   entity: Ref,
   form: SuperValidated<Feature>,
-  resourceState: ResourceState,
+  adminCtx: AdminCtx,
   flash: Writable<App.PageData['flash']>
 ): FeatureForm;
 
@@ -402,7 +385,7 @@ export function setForm(
   resourceType: 'hub',
   entity: Ref,
   form: SuperValidated<HubNew | Hub>,
-  resourceState: ResourceState,
+  adminCtx: AdminCtx,
   flash: Writable<App.PageData['flash']>
 ): HubForm;
 
@@ -410,7 +393,7 @@ export function setForm<T extends Organisation | Project | Layer | Feature | Hub
   resourceType: FalsableResourceType,
   entity: Ref,
   form: SuperValidated<T>,
-  resourceState: ResourceState,
+  adminCtx: AdminCtx,
   flash: Writable<App.PageData['flash']>
 ): OrganisationForm | ProjectForm | LayerForm | FeatureForm | HubForm {
   if (!entity) {
@@ -423,7 +406,7 @@ export function setForm<T extends Organisation | Project | Layer | Feature | Hub
       const instance = new OrganisationForm(
         form as SuperValidated<Organisation>, 
         entity === NEW_REF, 
-        resourceState, 
+        adminCtx, 
         flash
       );
       return setContext(getContextRef(resourceType, entity), instance);
@@ -432,7 +415,7 @@ export function setForm<T extends Organisation | Project | Layer | Feature | Hub
       const instance = new ProjectForm(
         form as SuperValidated<Project>, 
         entity === NEW_REF, 
-        resourceState, 
+        adminCtx, 
         flash
       );
       return setContext(getContextRef(resourceType, entity), instance);
@@ -441,7 +424,7 @@ export function setForm<T extends Organisation | Project | Layer | Feature | Hub
       const instance = new LayerForm(
         form as SuperValidated<Layer>, 
         entity === NEW_REF, 
-        resourceState, 
+        adminCtx, 
         flash
       );
       return setContext(getContextRef(resourceType, entity), instance);
@@ -450,7 +433,7 @@ export function setForm<T extends Organisation | Project | Layer | Feature | Hub
       const instance = new FeatureForm(
         form as SuperValidated<Feature>, 
         entity === NEW_REF, 
-        resourceState, 
+        adminCtx, 
         flash
       );
       return setContext(getContextRef(resourceType, entity), instance);
@@ -459,7 +442,7 @@ export function setForm<T extends Organisation | Project | Layer | Feature | Hub
       const instance = new HubForm(
         form as SuperValidated<Hub>, 
         entity === NEW_REF, 
-        resourceState, 
+        adminCtx, 
         flash
       );
       return setContext(getContextRef(resourceType, entity), instance);
