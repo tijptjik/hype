@@ -40,6 +40,17 @@ enabled = true
 directory = "./dist"
 binding = "ASSETS"
 
+# These are defined to support migrations
+[[d1_databases]]
+binding = "DB"
+database_name = "hype-db-prod"
+database_id = "7786af0e-3782-47f8-b70d-de645ba836ad"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hype-db-preview"
+database_id = "f6bae0f9-c072-4ef0-9b75-efcc792d40fb"
+
 ########
 # PRODUCTION ENVIRONMENT
 ###
