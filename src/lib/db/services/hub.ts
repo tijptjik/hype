@@ -1,12 +1,31 @@
 // DRIZZLE
 import { and, eq, exists, isNull, or, SQL } from 'drizzle-orm';
 // SCHEMA
-import { organisation, project, layer, feature, hub, hubI18n, task } from '$lib/db/schema/index';
+import {
+  organisation,
+  project,
+  layer,
+  feature,
+  hub,
+  hubI18n,
+  task
+} from '$lib/db/schema/index';
 // DB
 import { toRelatedRecords } from '..';
 import { insertManyRelated, replaceManyRelated } from '../crud';
 // TYPES
-import type { Database, HubOpts, HubDBRaw, HubDB, HubDBPartial, Code, Locale, HubI18nNew, HubI18nDB, HubI18nPartial } from '$lib/types';
+import type {
+  Database,
+  HubOpts,
+  HubDBRaw,
+  HubDB,
+  HubDBPartial,
+  Code,
+  Locale,
+  HubI18nNew,
+  HubI18nDB,
+  HubI18nPartial
+} from '$lib/types';
 
 // ═══════════════════════
 // HUB FILTERING FUNCTIONS
@@ -20,7 +39,12 @@ import type { Database, HubOpts, HubDBRaw, HubDB, HubDBPartial, Code, Locale, Hu
  */
 export function getOrganisationHubFilter(
   db: Database,
-  opts: { hubCode?: string; hubDomain?: string; isCore: boolean; isSuperAdmin?: boolean }
+  opts: {
+    hubCode?: string;
+    hubDomain?: string;
+    isCore: boolean;
+    isSuperAdmin?: boolean;
+  }
 ): SQL<unknown> | undefined {
   // SuperAdmins bypass all hub filtering
   if (opts.isSuperAdmin) {
@@ -64,7 +88,12 @@ export function getOrganisationHubFilter(
  */
 export function getProjectHubFilter(
   db: Database,
-  opts: { hubCode?: string; hubDomain?: string; isCore: boolean; isSuperAdmin?: boolean }
+  opts: {
+    hubCode?: string;
+    hubDomain?: string;
+    isCore: boolean;
+    isSuperAdmin?: boolean;
+  }
 ): SQL<unknown> | undefined {
   // SuperAdmins bypass all hub filtering
   if (opts.isSuperAdmin) {
@@ -168,7 +197,12 @@ export function getLayerHubFilter(
  */
 export function getFeatureHubFilter(
   db: Database,
-  opts: { hubCode?: string; hubDomain?: string; isCore: boolean; isSuperAdmin?: boolean }
+  opts: {
+    hubCode?: string;
+    hubDomain?: string;
+    isCore: boolean;
+    isSuperAdmin?: boolean;
+  }
 ): SQL<unknown> | undefined {
   // SuperAdmins bypass all hub filtering
   if (opts.isSuperAdmin) {
@@ -223,7 +257,12 @@ export function getFeatureHubFilter(
  */
 export function getTaskHubFilter(
   db: Database,
-  opts: { hubCode?: string; hubDomain?: string; isCore: boolean; isSuperAdmin?: boolean }
+  opts: {
+    hubCode?: string;
+    hubDomain?: string;
+    isCore: boolean;
+    isSuperAdmin?: boolean;
+  }
 ): SQL<unknown> | undefined {
   // SuperAdmins bypass all hub filtering
   if (opts.isSuperAdmin) {
@@ -299,10 +338,7 @@ export const getHub = async (
     where: and(...conditions)
   });
 
-export const createHub = async (
-  db: Database,
-  data: any
-): Promise<HubDB> => {
+export const createHub = async (db: Database, data: any): Promise<HubDB> => {
   const [created] = await db.insert(hub).values(data).returning();
   return created;
 };
@@ -384,12 +420,12 @@ export const updateHubWithRelated = async (
 ) => {
   const codeToUse = lookupCode || data.code;
   const hub = await updateHub(db, data, codeToUse);
-  
+
   // Update i18n if provided
   if (data.i18n) {
     await updateI18n(db, data.i18n, hub.id);
   }
-  
+
   return hub;
 };
 
@@ -410,7 +446,7 @@ export const getHubCodeForOrganisation = async (
     .leftJoin(hub, eq(organisation.hubId, hub.id))
     .where(eq(organisation.id, organisationId))
     .limit(1);
-  
+
   return result[0]?.hubCode || null;
 };
 
@@ -428,7 +464,7 @@ export const getHubCodeForProject = async (
     .leftJoin(hub, eq(organisation.hubId, hub.id))
     .where(eq(project.id, projectId))
     .limit(1);
-  
+
   return result[0]?.hubCode || null;
 };
 
@@ -447,7 +483,7 @@ export const getHubCodeForLayer = async (
     .leftJoin(hub, eq(organisation.hubId, hub.id))
     .where(eq(layer.id, layerId))
     .limit(1);
-  
+
   return result[0]?.hubCode || null;
 };
 
@@ -467,7 +503,7 @@ export const getHubCodeForFeature = async (
     .leftJoin(hub, eq(organisation.hubId, hub.id))
     .where(eq(feature.id, featureId))
     .limit(1);
-  
+
   return result[0]?.hubCode || null;
 };
 
@@ -485,6 +521,6 @@ export const getHubCodeForTask = async (
     .leftJoin(hub, eq(organisation.hubId, hub.id))
     .where(eq(task.id, taskId))
     .limit(1);
-  
+
   return result[0]?.hubCode || null;
 };

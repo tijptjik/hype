@@ -1,24 +1,11 @@
 import { error } from '@sveltejs/kit';
 // ORM
 import { drizzle } from 'drizzle-orm/d1';
-import {
-  and,
-  sql,
-  inArray,
-  eq,
-  or,
-  not,
-  exists,
-  Table
-} from 'drizzle-orm';
+import { and, sql, inArray, eq, or, not, exists, Table } from 'drizzle-orm';
 // SCHEMA
 import * as schema from './schema';
 // ENUMS
-import {
-  supportedLocales,
-  SupportedLocales,
-  HierarchicalResource
-} from '../enums';
+import { supportedLocales, SupportedLocales, HierarchicalResource } from '../enums';
 // TYPES
 import type {
   Field,
@@ -180,7 +167,6 @@ export const getSlicedHierarchy = (
     resourceHierarchyDefault.length - (config.depth + 1)
   );
 };
-
 
 // ═══════════════════════
 // 4. UTILS :: TABLE RELATIONS
@@ -399,11 +385,11 @@ export const transformI18nSafely = (
   fallback: any = null
 ): Record<string, any> | null => {
   if (!i18n) return fallback;
-  
+
   if (Array.isArray(i18n)) {
     return i18n.length > 0 ? toLocaleMap(i18n) : fallback;
   }
-  
+
   // Already transformed or is a Record
   return i18n;
 };

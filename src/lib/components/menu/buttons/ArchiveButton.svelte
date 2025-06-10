@@ -30,12 +30,7 @@ let isLoading = $state(false);
 const handleClick = async (e: Event) => {
   e.preventDefault();
   e.stopPropagation();
-  if (
-    isLoading ||
-    !adminCtx.activeEntity ||
-    adminCtx.activeEntity === NEW_REF
-  )
-    return;
+  if (isLoading || !adminCtx.activeEntity || adminCtx.activeEntity === NEW_REF) return;
 
   isLoading = true;
 
@@ -86,7 +81,7 @@ const handleClick = async (e: Event) => {
   type="button"
   class="btn btn-ghost join-item gap-1 transition-colors duration-500 disabled:bg-transparent disabled:text-opacity-60"
   onclick={handleClick}>
-  <Icon src={$form.isArchived ? ReceiptRefund : Trash } class="h-5 w-5" />
+  <Icon src={$form.isArchived ? ReceiptRefund : Trash} class="h-5 w-5" />
   <span
     >{$form.isArchived
       ? m.antsy_formal_badger_arise()

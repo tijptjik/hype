@@ -7,7 +7,7 @@ import { getAppCtx } from '$lib/context/app.svelte';
 // COMPONENTS
 import Map from '$lib/components/common/Map.svelte';
 // TYPES
-import type {Task } from '$lib/types';
+import type { Task } from '$lib/types';
 import type { Point } from 'geojson';
 
 // CONTEXT
@@ -42,16 +42,16 @@ let { task }: { task: Task } = $props();
       </div>
     </div>
   </div>
-    <h3 class="flex-shrink-0 flex-grow-0 text-xl font-bold text-base-content">
+  <h3 class="flex-shrink-0 flex-grow-0 text-xl font-bold text-base-content">
     {m.clean_light_ray_tap()}
   </h3>
 
   {#if task.feature?.properties && task.feature.properties.length > 0}
-    <div class="flex-grow-1 w-full flex-shrink-0 mb-4 max-h-96 overflow-y-auto">
+    <div class="flex-grow-1 mb-4 max-h-96 w-full flex-shrink-0 overflow-y-auto">
       <div class="grid grid-cols-2 gap-2">
         {#each task.feature.properties as property (property.propertyId)}
           {#if property.property}
-            <div class="stat bg-base-200 rounded-lg p-3">
+            <div class="stat rounded-lg bg-base-200 p-3">
               <div class="stat-title text-xs">
                 {getI18n(property.property, 'label', appCtx.getUserPreferences())}
               </div>
@@ -71,7 +71,7 @@ let { task }: { task: Task } = $props();
     {m.loose_grassy_snake_hug()}
   </h3>
 
-  {#if (task.feature?.geometry as Point)?.coordinates }
+  {#if (task.feature?.geometry as Point)?.coordinates}
     <div class="mt-2 h-full flex-grow">
       <Map
         coordinates={(task.feature?.geometry as Point)?.coordinates}

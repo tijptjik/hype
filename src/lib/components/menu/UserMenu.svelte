@@ -44,7 +44,10 @@ let showPower = $state(false);
         class="col-start-1 col-end-2 row-start-1 row-end-2">
         <div class="avatar">
           <div class="w-10 rounded-full">
-            <img alt="Avatar" src={$session.data?.user?.image} referrerpolicy="no-referrer" />
+            <img
+              alt="Avatar"
+              src={$session.data?.user?.image}
+              referrerpolicy="no-referrer" />
           </div>
         </div>
       </div>

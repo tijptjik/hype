@@ -5,7 +5,10 @@ import { user } from '$lib/db/schema/index';
 import { searchUsers, toResponseShape } from '$lib/db/services/user';
 // API
 import { JSONResponseOrError, getDatabase, isValidQueryParamsOrError } from '$lib/api';
-import { getUserQueryContext, userCollectionWithRelations } from '$lib/api/services/user';
+import {
+  getUserQueryContext,
+  userCollectionWithRelations
+} from '$lib/api/services/user';
 import type { UserRaw } from '$lib/types';
 
 /********************
@@ -20,7 +23,12 @@ import type { UserRaw } from '$lib/types';
 export const GET: RequestHandler = async ({ url, locals, platform, request }) => {
   // AUTH : Pass or Fail
   // ASSERT : User Logged in
-  const { db, session, user : sessionUser, userRoles } = await getDatabase(locals, platform);
+  const {
+    db,
+    session,
+    user: sessionUser,
+    userRoles
+  } = await getDatabase(locals, platform);
 
   // ASSERT : Valid query parameters
   // Validate query parameters, or return 400
@@ -31,7 +39,12 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
   const searchParam = url.searchParams.get('q') as string;
 
   // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
-  let { conditions } = getUserQueryContext(sessionUser, request, queryParams, userRoles);
+  let { conditions } = getUserQueryContext(
+    sessionUser,
+    request,
+    queryParams,
+    userRoles
+  );
 
   try {
     // DB : List the organisations

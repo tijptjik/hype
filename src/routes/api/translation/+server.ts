@@ -17,11 +17,7 @@ export async function POST({ request }) {
       );
     }
 
-    const translations = await getTranslation(
-      source,
-      target,
-      texts
-    );
+    const translations = await getTranslation(source, target, texts);
 
     return json(translations);
   } catch (error) {

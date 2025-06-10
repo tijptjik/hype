@@ -1,12 +1,7 @@
 // DB
 import { nanoid } from 'nanoid';
 // ORM
-import {
-  integer,
-  sqliteTable,
-  primaryKey,
-  text
-} from 'drizzle-orm/sqlite-core';
+import { integer, sqliteTable, primaryKey, text } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 // ENUMS
 import { supportedLocales } from '../../enums';
@@ -31,7 +26,7 @@ export const hub = sqliteTable('hub', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => nanoid(12)),
- // Subdomain
+  // Subdomain
   code: text('code').unique().notNull(),
   domain: text('domain').unique(),
   isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
@@ -42,7 +37,7 @@ export const hub = sqliteTable('hub', {
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .$onUpdate(() => new Date().toISOString())
     .notNull()
-}); 
+});
 
 /**
  * Hub translations
@@ -56,7 +51,9 @@ export const hubI18n = sqliteTable(
       .notNull()
       .references(() => hub.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     // IETF BCP 47 language tag
-    locale: text('locale', { enum: supportedLocales as [string, ...string[]] }).notNull(),
+    locale: text('locale', {
+      enum: supportedLocales as [string, ...string[]]
+    }).notNull(),
     // Full Name in {locale}
     name: text('name').notNull(),
     nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(true),

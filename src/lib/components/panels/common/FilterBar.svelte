@@ -3,7 +3,11 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { MagnifyingGlass, XMark } from '@steeze-ui/heroicons';
 import { slide } from 'svelte/transition';
 import { m } from '$lib/i18n';
-let { searchTerm = $bindable(''), position = 'left', onReset }: {
+let {
+  searchTerm = $bindable(''),
+  position = 'left',
+  onReset
+}: {
   searchTerm: string;
   position?: 'left' | 'right';
   onReset?: () => void;

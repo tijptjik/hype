@@ -39,8 +39,12 @@ const toggle = (e: MouseEvent) => {
     ? 'flex-grow-0'
     : 'flex-shrink-0'} {position === 'left' ? 'pr-4' : ''}">
   <button
-    class="flex w-full flex-shrink-0 items-center justify-between px-4 {iconVerticalPaddingClass} bg-black text-base-content focus:outline-none focus:ring-0 {
-    iconColorClass == 'text-secondary' ? "focus-visible:text-secondary" : iconColorClass == 'text-accent' ? "focus-visible:text-accent" : "focus-visible:text-primary"}"
+    class="flex w-full flex-shrink-0 items-center justify-between px-4 {iconVerticalPaddingClass} bg-black text-base-content focus:outline-none focus:ring-0 {iconColorClass ==
+    'text-secondary'
+      ? 'focus-visible:text-secondary'
+      : iconColorClass == 'text-accent'
+        ? 'focus-visible:text-accent'
+        : 'focus-visible:text-primary'}"
     onclick={toggle}
     aria-expanded={isOpen}
     tabindex="0">

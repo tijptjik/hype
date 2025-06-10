@@ -2,11 +2,7 @@
 import { eq, SQL } from 'drizzle-orm';
 // API
 
-import type {
-  Id,
-  SessionUser,
-  UserFeature
-} from '$lib/types';
+import type { Id, SessionUser, UserFeature } from '$lib/types';
 
 import type { QueryParams } from '$lib/types';
 

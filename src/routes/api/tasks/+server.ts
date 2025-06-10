@@ -32,12 +32,7 @@ import {
 // TYPES
 import type { RequestHandler } from '@sveltejs/kit';
 import type { SuperValidated } from 'sveltekit-superforms';
-import type {
-  TaskNew,
-  QueryParams,
-  TaskCreation,
-  TaskDBRaw
-} from '$lib/types';
+import type { TaskNew, QueryParams, TaskCreation, TaskDBRaw } from '$lib/types';
 
 /********************
  *  COMMON
@@ -74,20 +69,15 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
 
   try {
     // DB : List the tasks
-    const result = (await listTasks(
-      db,
-      taskCollectionWithRelations,
-      conditions,
-      { ...locals.hub, isSuperAdmin: user.superAdmin || false }
-    )) as TaskDBRaw[];
+    const result = (await listTasks(db, taskCollectionWithRelations, conditions, {
+      ...locals.hub,
+      isSuperAdmin: user.superAdmin || false
+    })) as TaskDBRaw[];
 
-        // RESPONSE : Build the response shape
+    // RESPONSE : Build the response shape
     const data = await Promise.all(
       result.map(async (task) => {
-        return await toResponseShape(
-          task,
-          true
-        );
+        return await toResponseShape(task, true);
       })
     );
 
@@ -111,7 +101,7 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
  */
 export const POST: RequestHandler = async ({ request, locals, platform, fetch }) => {
   // ASSERT : User logged in
-  const { db, session, user,  userId, userRoles } = await getDatabase(locals, platform);
+  const { db, session, user, userId, userRoles } = await getDatabase(locals, platform);
 
   // CONTEXT : Content type and extract data accordingly
   const contentType = request.headers.get('content-type') || '';
@@ -123,7 +113,7 @@ export const POST: RequestHandler = async ({ request, locals, platform, fetch })
     if (contentType.includes('multipart/form-data')) {
       // Handle multipart form data (with images)
       const formData = await request.formData();
-      
+
       // Extract task data from form data
       const taskDataJson = formData.get('taskData');
       if (!taskDataJson || typeof taskDataJson !== 'string') {

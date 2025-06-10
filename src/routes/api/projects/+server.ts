@@ -72,12 +72,10 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
 
   try {
     // DB : List the projects
-    const result = await listProjects(
-      db,
-      projectCollectionWithRelations,
-      conditions,
-      { ...locals.hub, isSuperAdmin: user.superAdmin || false }
-    );
+    const result = await listProjects(db, projectCollectionWithRelations, conditions, {
+      ...locals.hub,
+      isSuperAdmin: user.superAdmin || false
+    });
 
     // RESPONSE : Build the response shape
     const data = await Promise.all(

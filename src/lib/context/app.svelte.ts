@@ -1436,8 +1436,8 @@ export class AppCtx {
     return withDefaults
       ? {
           fallbackLocales:
-            (this.user as CurrentUser).preferences.fallbackLocales as Locale[] ??
-            getFallbackLocales(getLocale()) as Locale[],
+            ((this.user as CurrentUser).preferences.fallbackLocales as Locale[]) ??
+            (getFallbackLocales(getLocale()) as Locale[]),
           allowMachineTranslation:
             (this.user as CurrentUser).preferences.allowMachineTranslation ?? false,
           preferFallbackInCurrentLocale:
@@ -1446,7 +1446,7 @@ export class AppCtx {
           isTranslateButtonVisible:
             (this.user as CurrentUser).preferences.isTranslateButtonVisible ?? true
         }
-      : (this.user as CurrentUser).preferences as UserPreferences;
+      : ((this.user as CurrentUser).preferences as UserPreferences);
   };
 
   updateUserPreferences = (preferences: UserPreferences) => {

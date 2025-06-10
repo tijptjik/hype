@@ -112,7 +112,9 @@ export function displaySelectedFilters(
   const activeFilterLabels = activeFilterKeys.map((key) => {
     const propertyDefinition = properties.find((p) => p.key === key);
     // Use getI18n for the property label, fallback to key if not found
-    return propertyDefinition ? getI18n(propertyDefinition, 'label', appCtx.getUserPreferences()) || key : key;
+    return propertyDefinition
+      ? getI18n(propertyDefinition, 'label', appCtx.getUserPreferences()) || key
+      : key;
   });
 
   // Format the summary string based on the count

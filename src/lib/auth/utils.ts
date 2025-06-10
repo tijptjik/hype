@@ -68,9 +68,8 @@ export async function getUserLayers(db: any, userId: string): Promise<UserLayer[
 export function hasControlPanelAccess(user: SessionUser | null): boolean {
   const permittedRoles = ['superadmin', 'owner', 'maintainer'];
   return (
-    user?.roles?.some((role: UserRoleDisco) =>
-      permittedRoles.includes(role.role)
-    ) || false
+    user?.roles?.some((role: UserRoleDisco) => permittedRoles.includes(role.role)) ||
+    false
   );
 }
 

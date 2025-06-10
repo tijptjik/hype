@@ -67,7 +67,7 @@ const handleAction = async (action: string, e: Event, reviewReason?: string) => 
       // Accept with specific action - update feature first, then task
       let changeSet: Record<string, unknown> = {};
       let reviewAction: string;
-      
+
       switch (action) {
         case 'setArchived':
           changeSet.isArchived = true;

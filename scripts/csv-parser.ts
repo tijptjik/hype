@@ -10,17 +10,20 @@ function loadEnvVars() {
   if (fs.existsSync(envPath)) {
     const envContent = fs.readFileSync(envPath, 'utf8');
     const envVars: Record<string, string> = {};
-    
-    envContent.split('\n').forEach(line => {
+
+    envContent.split('\n').forEach((line) => {
       const trimmed = line.trim();
       if (trimmed && !trimmed.startsWith('#')) {
         const [key, ...valueParts] = trimmed.split('=');
         if (key && valueParts.length > 0) {
-          envVars[key.trim()] = valueParts.join('=').trim().replace(/^["']|["']$/g, '');
+          envVars[key.trim()] = valueParts
+            .join('=')
+            .trim()
+            .replace(/^["']|["']$/g, '');
         }
       }
     });
-    
+
     return envVars;
   }
   return {};
@@ -179,14 +182,17 @@ function processReverseGeocodeResult(
   const distance = calculateDistance(lng, lat, resultLng, resultLat);
 
   // Get district from neighborhood (handle null neighborhood)
-  const neighborhood = result.address.Neighborhood || result.address.City || result.address.Subregion;
-  const district = neighborhood ? getDistrictFromNeighbourhood(neighborhood, 'en') : null;
+  const neighborhood =
+    result.address.Neighborhood || result.address.City || result.address.Subregion;
+  const district = neighborhood
+    ? getDistrictFromNeighbourhood(neighborhood, 'en')
+    : null;
 
   // Create display address - ensure it exists
   const rawDisplayAddress = result.address.Match_addr;
-  const processedDisplayAddress = rawDisplayAddress ? 
-    removeRegion(titleCase(applyAddressAbbreviations(rawDisplayAddress))) : 
-    undefined;
+  const processedDisplayAddress = rawDisplayAddress
+    ? removeRegion(titleCase(applyAddressAbbreviations(rawDisplayAddress)))
+    : undefined;
 
   // Process the result
   const processedResult: ParsedReverseGeocodeResult = {
@@ -224,7 +230,7 @@ function processReverseGeocodeResult(
       }
     }
   };
-  
+
   return processedResult;
 }
 
@@ -280,7 +286,10 @@ async function processForwardGeocodeResult(
     try {
       const propsToTranslate = Object.values(addressPropsZhHant).filter(Boolean);
       if (displayAddressZhHant && propsToTranslate.length > 0) {
-        const translations = await getTranslation('zh-hant', 'zh-hans', [displayAddressZhHant, ...propsToTranslate]);
+        const translations = await getTranslation('zh-hant', 'zh-hans', [
+          displayAddressZhHant,
+          ...propsToTranslate
+        ]);
         displayAddressZhHans = translations[0];
 
         // Map translated properties back to their keys
@@ -298,10 +307,14 @@ async function processForwardGeocodeResult(
   }
 
   const addressPropertiesEn: AddressProperties = {
-    buildingName: pa.EngPremisesAddress.BuildingName ? titleCase(pa.EngPremisesAddress.BuildingName) : undefined,
+    buildingName: pa.EngPremisesAddress.BuildingName
+      ? titleCase(pa.EngPremisesAddress.BuildingName)
+      : undefined,
     buildingNumberFrom: pa.EngPremisesAddress.EngStreet.BuildingNoFrom,
     buildingNumberTo: pa.EngPremisesAddress.EngStreet.BuildingNoTo,
-    blockType: pa.EngPremisesAddress?.EngBlock?.BlockDescriptor ? titleCase(pa.EngPremisesAddress.EngBlock.BlockDescriptor) : undefined,
+    blockType: pa.EngPremisesAddress?.EngBlock?.BlockDescriptor
+      ? titleCase(pa.EngPremisesAddress.EngBlock.BlockDescriptor)
+      : undefined,
     blockNumber: pa.EngPremisesAddress?.EngBlock?.BlockNo,
     blockTypeBeforeNumber:
       'EngBlock' in pa.EngPremisesAddress
@@ -311,18 +324,23 @@ async function processForwardGeocodeResult(
       ? titleCase(pa.EngPremisesAddress.EngEstate.EngPhase.PhaseName)
       : undefined,
     phaseNumber: pa.EngPremisesAddress?.EngEstate?.EngPhase?.PhaseNo,
-    estateName: pa.EngPremisesAddress?.EngEstate?.EstateName ? titleCase(pa.EngPremisesAddress.EngEstate.EstateName) : undefined,
-    streetName: pa.EngPremisesAddress?.EngStreet?.StreetName ? titleCase(pa.EngPremisesAddress.EngStreet.StreetName) : undefined,
+    estateName: pa.EngPremisesAddress?.EngEstate?.EstateName
+      ? titleCase(pa.EngPremisesAddress.EngEstate.EstateName)
+      : undefined,
+    streetName: pa.EngPremisesAddress?.EngStreet?.StreetName
+      ? titleCase(pa.EngPremisesAddress.EngStreet.StreetName)
+      : undefined,
     neighbourhood: neighbourhood
       ? neighbourhood
       : pa.EngPremisesAddress?.EngStreet?.EngVillage?.LocationName
         ? getFirstLocation(pa.EngPremisesAddress?.EngStreet?.EngVillage?.LocationName)
         : undefined,
-    district: pa.EngPremisesAddress?.EngDistrict?.DcDistrict ? getNormalisedDistrict(
-      pa.EngPremisesAddress.EngDistrict.DcDistrict,
-      'en'
-    ) : undefined,
-    region: pa.EngPremisesAddress?.Region ? getNormalisedRegion(pa.EngPremisesAddress.Region, 'en') : undefined,
+    district: pa.EngPremisesAddress?.EngDistrict?.DcDistrict
+      ? getNormalisedDistrict(pa.EngPremisesAddress.EngDistrict.DcDistrict, 'en')
+      : undefined,
+    region: pa.EngPremisesAddress?.Region
+      ? getNormalisedRegion(pa.EngPremisesAddress.Region, 'en')
+      : undefined,
     country: getNormalisedCountry('Hong Kong', 'en')
   };
 
@@ -487,7 +505,7 @@ async function reverseGeocode(
 
   // Parse the response into our canonical format
   const processedResult = processReverseGeocodeResult(result, lng, lat);
-  
+
   if (!processedResult) {
     return null;
   }
@@ -497,12 +515,12 @@ async function reverseGeocode(
     // Use English address properties to perform forward geocoding
     const addressProperties = processedResult?.i18n.en.addressProperties;
     const streetAddress = `${addressProperties?.buildingNumberFrom} ${addressProperties?.streetName}`;
-    
+
     const forwardResult = await fetchForwardGeocodeALSResult(
       streetAddress,
       addressProperties?.neighbourhood
     );
-    
+
     if (forwardResult) {
       const fullResult = await processForwardGeocodeResult(
         forwardResult,
@@ -546,10 +564,19 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Locale } from '../src/lib/types.js';
 
 const TRANSLATION_ENDPOINT = 'https://api.cognitive.microsofttranslator.com';
-const TRANSLATION_REGION = envVars.PUBLIC_AZURE_TRANSLATION_REGION || process.env.PUBLIC_AZURE_TRANSLATION_REGION || '';
-const TRANSLATION_KEY = envVars.PRIVATE_AZURE_TRANSLATION_KEY || process.env.PRIVATE_AZURE_TRANSLATION_KEY || '';
+const TRANSLATION_REGION =
+  envVars.PUBLIC_AZURE_TRANSLATION_REGION ||
+  process.env.PUBLIC_AZURE_TRANSLATION_REGION ||
+  '';
+const TRANSLATION_KEY =
+  envVars.PRIVATE_AZURE_TRANSLATION_KEY ||
+  process.env.PRIVATE_AZURE_TRANSLATION_KEY ||
+  '';
 
-const languageTagToApiLanguageTag = (source: Locale, target: Locale): { sourceLocale: string; targetLocale: string } => {
+const languageTagToApiLanguageTag = (
+  source: Locale,
+  target: Locale
+): { sourceLocale: string; targetLocale: string } => {
   const sourceMaps = {
     en: 'en',
     'zh-hant': 'yue',
@@ -653,17 +680,23 @@ const CONTRIBUTOR_ID = 'qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM';
 const PUBLISHER_ID = 'qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM';
 
 async function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function parseCSV(filePath: string, testMode: boolean = true, fixupMode: boolean = false): Promise<void> {
+async function parseCSV(
+  filePath: string,
+  testMode: boolean = true,
+  fixupMode: boolean = false
+): Promise<void> {
   console.log('🔄 Starting CSV parsing...');
-  
+
   // Warn about conflicting modes
   if (testMode && fixupMode) {
-    console.log('⚠️  Running in both test mode and fixup mode - will process only 5 random rows that need fixing');
+    console.log(
+      '⚠️  Running in both test mode and fixup mode - will process only 5 random rows that need fixing'
+    );
   }
-  
+
   // Check if we have required environment variables
   if (!TRANSLATION_KEY || !TRANSLATION_REGION) {
     console.error('❌ Missing required environment variables:');
@@ -675,12 +708,22 @@ async function parseCSV(filePath: string, testMode: boolean = true, fixupMode: b
   // Load existing features if in fixup mode
   let existingFeatureIds: Set<string> = new Set();
   if (fixupMode) {
-    const existingFeaturesPath = path.join(process.cwd(), 'scripts', 'data', 'export', 'features-hkghostsigns.json');
+    const existingFeaturesPath = path.join(
+      process.cwd(),
+      'scripts',
+      'data',
+      'export',
+      'features-hkghostsigns.json'
+    );
     if (fs.existsSync(existingFeaturesPath)) {
       try {
-        const existingFeatures = JSON.parse(fs.readFileSync(existingFeaturesPath, 'utf8'));
+        const existingFeatures = JSON.parse(
+          fs.readFileSync(existingFeaturesPath, 'utf8')
+        );
         existingFeatureIds = new Set(existingFeatures.map((f: FeatureRecord) => f.id));
-        console.log(`📋 Loaded ${existingFeatureIds.size} existing feature IDs for fixup mode`);
+        console.log(
+          `📋 Loaded ${existingFeatureIds.size} existing feature IDs for fixup mode`
+        );
       } catch (error) {
         console.error('❌ Failed to load existing features:', error);
         process.exit(1);
@@ -689,7 +732,7 @@ async function parseCSV(filePath: string, testMode: boolean = true, fixupMode: b
       console.log('📋 No existing features file found, will process all rows');
     }
   }
-  
+
   // Read CSV file
   const csvContent = fs.readFileSync(filePath, 'utf8');
   const parsed = Papa.parse<CSVRow>(csvContent, {
@@ -702,10 +745,16 @@ async function parseCSV(filePath: string, testMode: boolean = true, fixupMode: b
     // Select 5 random rows for testing
     const shuffled = [...parsed.data].sort(() => 0.5 - Math.random());
     rows = shuffled.slice(0, 5);
-    console.log(`📊 Processing 5 random rows from ${parsed.data.length} total (test mode: ${testMode}, fixup mode: ${fixupMode})`);
-    console.log(`🎲 Selected row indices: ${rows.map(row => parsed.data.indexOf(row) + 1).join(', ')}`);
+    console.log(
+      `📊 Processing 5 random rows from ${parsed.data.length} total (test mode: ${testMode}, fixup mode: ${fixupMode})`
+    );
+    console.log(
+      `🎲 Selected row indices: ${rows.map((row) => parsed.data.indexOf(row) + 1).join(', ')}`
+    );
   } else {
-    console.log(`📊 Processing ${rows.length} rows (test mode: ${testMode}, fixup mode: ${fixupMode})`);
+    console.log(
+      `📊 Processing ${rows.length} rows (test mode: ${testMode}, fixup mode: ${fixupMode})`
+    );
   }
 
   const features: FeatureRecord[] = [];
@@ -714,7 +763,7 @@ async function parseCSV(filePath: string, testMode: boolean = true, fixupMode: b
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    
+
     // Skip if missing title
     if (!row['i18n.en.title']) {
       console.log(`⏭️  Skipping row ${i + 1}: missing English title`);
@@ -753,7 +802,7 @@ async function parseCSV(filePath: string, testMode: boolean = true, fixupMode: b
     // Call reverse geocoding
     console.log('🌐 Calling reverse geocoding...');
     const geocodeResult = await reverseGeocode(longitude, latitude);
-    
+
     if (!geocodeResult) {
       console.log('❌ Reverse geocoding failed, skipping this row');
       continue;
@@ -782,7 +831,7 @@ async function parseCSV(filePath: string, testMode: boolean = true, fixupMode: b
     // Create i18n records for each locale
     for (const locale of supportedLocales) {
       console.log(`🌍 Processing locale: ${locale}`);
-      
+
       let title = '';
       let titleGen = false;
       let description: string | null = null;
@@ -841,7 +890,7 @@ async function parseCSV(filePath: string, testMode: boolean = true, fixupMode: b
 
     // Create property records for all properties
     const propertyKeys: string[] = [];
-    
+
     // Handle each property from property.json
     for (const property of properties) {
       if (property.type === 'classifier') {
@@ -862,7 +911,7 @@ async function parseCSV(filePath: string, testMode: boolean = true, fixupMode: b
             value: graphemeValue
           };
           featureProperties.push(featureProperty);
-          
+
           if (graphemeValue) {
             propertyKeys.push(`${property.key}="${graphemeValue}"`);
           } else {
@@ -880,7 +929,7 @@ async function parseCSV(filePath: string, testMode: boolean = true, fixupMode: b
         }
       }
     }
-    
+
     console.log(`📝 Added properties: ${propertyKeys.join(', ')}`);
 
     // Wait 1 second between requests
@@ -892,7 +941,7 @@ async function parseCSV(filePath: string, testMode: boolean = true, fixupMode: b
 
   // Write output files
   console.log('\n📝 Writing output files...');
-  
+
   const outputDir = path.join(process.cwd(), 'scripts', 'data', 'export');
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
@@ -904,26 +953,40 @@ async function parseCSV(filePath: string, testMode: boolean = true, fixupMode: b
   // Write features file
   const featuresPath = path.join(outputDir, `features-hkghostsigns${suffix}.json`);
   fs.writeFileSync(featuresPath, JSON.stringify(features, null, 2));
-  console.log(`✅ Created ${featuresPath.split('/').pop()} with ${features.length} features`);
+  console.log(
+    `✅ Created ${featuresPath.split('/').pop()} with ${features.length} features`
+  );
 
   // Write feature i18n file
   const featureI18nPath = path.join(outputDir, `featureI18n${suffix}.json`);
   fs.writeFileSync(featureI18nPath, JSON.stringify(featureI18n, null, 2));
-  console.log(`✅ Created ${featureI18nPath.split('/').pop()} with ${featureI18n.length} records`);
+  console.log(
+    `✅ Created ${featureI18nPath.split('/').pop()} with ${featureI18n.length} records`
+  );
 
   // Write feature properties file (if any)
   if (featureProperties.length > 0) {
     const propertiesPath = path.join(outputDir, `featureProperties${suffix}.json`);
     fs.writeFileSync(propertiesPath, JSON.stringify(featureProperties, null, 2));
-    console.log(`✅ Created ${propertiesPath.split('/').pop()} with ${featureProperties.length} properties`);
+    console.log(
+      `✅ Created ${propertiesPath.split('/').pop()} with ${featureProperties.length} properties`
+    );
   }
 
   console.log('\n🎉 Parsing complete!');
-  console.log(`📊 Summary: ${features.length} features, ${featureI18n.length} i18n records, ${featureProperties.length} properties`);
+  console.log(
+    `📊 Summary: ${features.length} features, ${featureI18n.length} i18n records, ${featureProperties.length} properties`
+  );
 }
 
 // Main execution
-const csvPath = path.join(process.cwd(), 'scripts', 'data', 'source', 'GhostSigns - Master - Database Ingestion - 20250605.csv');
+const csvPath = path.join(
+  process.cwd(),
+  'scripts',
+  'data',
+  'source',
+  'GhostSigns - Master - Database Ingestion - 20250605.csv'
+);
 const testMode = process.argv.includes('--full') ? false : true;
 const fixupMode = process.argv.includes('--fixup');
 
@@ -935,4 +998,4 @@ parseCSV(csvPath, testMode, fixupMode)
   .catch((error) => {
     console.error('❌ Script failed:', error);
     process.exit(1);
-  }); 
+  });

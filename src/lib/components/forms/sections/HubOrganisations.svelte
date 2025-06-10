@@ -9,7 +9,13 @@ import HeaderSearch from '$lib/components/forms/extra/HeaderSearch.svelte';
 import Icon from '$lib/components/common/Icon.svelte';
 import { ExclamationTriangle } from '@steeze-ui/heroicons';
 // TYPES
-import type { Resource, SectionProps, OrganisationJoinConfig, HubForm, Organisation } from '$lib/types';
+import type {
+  Resource,
+  SectionProps,
+  OrganisationJoinConfig,
+  HubForm,
+  Organisation
+} from '$lib/types';
 import { m } from '$lib/i18n';
 
 // STATE : PROPS
@@ -29,7 +35,7 @@ const transformOrganisationForHub = (organisation: Organisation, hubId: string) 
   const ensureI18nRecordFormat = (i18nData: any) => {
     if (!i18nData) return null;
     if (!Array.isArray(i18nData)) return i18nData; // Already in Record format
-    
+
     return i18nData.reduce((acc: any, bundle: any) => {
       acc[bundle.locale] = bundle;
       return acc;
@@ -67,23 +73,25 @@ const isOrganisationNotAlreadyAdded = (item: any) => {
   if (!item || !item.id) {
     return false;
   }
-  
+
   // Check if this organisation ID is already in the form
   const isAlreadyAdded = currentOrganisations.some((org: any) => {
     return org && org.id && org.id === item.id;
   });
-  
-  
+
   return !isAlreadyAdded;
 };
 
 const toOrganisationItem = (item: any) => {
-  return transformOrganisationForHub(item as Organisation, ($formStore as any).id || null);
+  return transformOrganisationForHub(
+    item as Organisation,
+    ($formStore as any).id || null
+  );
 };
 </script>
 
 <div
-  class="basis-2/3 min-h-60 overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
+  class="min-h-60 basis-2/3 overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
   <Header {...sectionProps}>
     {#snippet actionContent()}
       <OrganisationActions bind:removeMode bind:searchMode />

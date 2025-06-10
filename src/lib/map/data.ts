@@ -39,8 +39,12 @@ export function getWishlistedFeatures(appCtx: AppCtx): FeatureExtended[] {
     return {
       ...feature,
       hierarchy: {
-        organisation: organisation ? getI18n(organisation, 'nameShort', appCtx.getUserPreferences()) : null,
-        project: project ? getI18n(project, 'nameShort', appCtx.getUserPreferences()) : null,
+        organisation: organisation
+          ? getI18n(organisation, 'nameShort', appCtx.getUserPreferences())
+          : null,
+        project: project
+          ? getI18n(project, 'nameShort', appCtx.getUserPreferences())
+          : null,
         layer: layer
           ? projectLayerCount > 1
             ? getI18n(layer, 'nameShort', appCtx.getUserPreferences())
@@ -57,9 +61,15 @@ export function filterNeighbourhoods(appCtx: AppCtx, term: string) {
   const searchLower = term.toLowerCase();
   return Object.entries(neighbourhoods).filter(([key, data]) => {
     return (
-      getI18n(data, 'name', appCtx.getUserPreferences()).toLowerCase().includes(searchLower) ||
-      getI18n(data, 'district', appCtx.getUserPreferences()).toLowerCase().includes(searchLower) ||
-      getI18n(data, 'region', appCtx.getUserPreferences()).toLowerCase().includes(searchLower)
+      getI18n(data, 'name', appCtx.getUserPreferences())
+        .toLowerCase()
+        .includes(searchLower) ||
+      getI18n(data, 'district', appCtx.getUserPreferences())
+        .toLowerCase()
+        .includes(searchLower) ||
+      getI18n(data, 'region', appCtx.getUserPreferences())
+        .toLowerCase()
+        .includes(searchLower)
     );
   });
 }
@@ -81,7 +91,8 @@ export function getNeighbourhoodFeatureCount(
   } else {
     count = features.filter(
       (feature: Feature) =>
-        neighbourhoodKey === feature.i18n![getLocale()]?.addressProperties?.neighbourhood
+        neighbourhoodKey ===
+        feature.i18n![getLocale()]?.addressProperties?.neighbourhood
     ).length;
   }
   return count;
@@ -92,9 +103,8 @@ export function searchAll(term: string, appCtx: AppCtx): SearchResult[] {
 
   // Source 1 - Walks
   const wishlistResults = getWishlistedFeatures(appCtx);
-  const filteredWishlistResults = wishlistResults.filter(
-    (feature: FeatureExtended) =>
-      feature?.hierarchy.feature?.toLowerCase().includes(term.toLowerCase())
+  const filteredWishlistResults = wishlistResults.filter((feature: FeatureExtended) =>
+    feature?.hierarchy.feature?.toLowerCase().includes(term.toLowerCase())
   );
   if (filteredWishlistResults.length > 0) {
     results.push({
@@ -109,7 +119,10 @@ export function searchAll(term: string, appCtx: AppCtx): SearchResult[] {
   const neighbourhoodResults = filterNeighbourhoods(appCtx, term);
   neighbourhoodResults.forEach(([neighbourhood, data]) => {
     results.push({
-      name: getLocale() === 'en' ? neighbourhood : getI18n(data, 'name', appCtx.getUserPreferences()),
+      name:
+        getLocale() === 'en'
+          ? neighbourhood
+          : getI18n(data, 'name', appCtx.getUserPreferences()),
       count: getNeighbourhoodFeatureCount(
         neighbourhood,
         appCtx.state.resources.feature
@@ -123,9 +136,15 @@ export function searchAll(term: string, appCtx: AppCtx): SearchResult[] {
   appCtx.state.resources.feature
     .filter(
       (feature: Feature) =>
-        getI18n(feature, 'title', appCtx.getUserPreferences())?.toLowerCase().includes(term.toLowerCase()) ||
-        getI18n(feature, 'description', appCtx.getUserPreferences())?.toLowerCase().includes(term.toLowerCase()) ||
-        getI18n(feature, 'displayAddress', appCtx.getUserPreferences())?.toLowerCase().includes(term.toLowerCase())
+        getI18n(feature, 'title', appCtx.getUserPreferences())
+          ?.toLowerCase()
+          .includes(term.toLowerCase()) ||
+        getI18n(feature, 'description', appCtx.getUserPreferences())
+          ?.toLowerCase()
+          .includes(term.toLowerCase()) ||
+        getI18n(feature, 'displayAddress', appCtx.getUserPreferences())
+          ?.toLowerCase()
+          .includes(term.toLowerCase())
     )
     .forEach((feature) => {
       results.push({
@@ -176,9 +195,15 @@ export function searchNearest(appCtx: AppCtx): SearchResult[] {
   appCtx.state.resources.feature
     .filter(
       (feature: Feature) =>
-        getI18n(feature, 'title', appCtx.getUserPreferences())?.toLowerCase().includes('') ||
-        getI18n(feature, 'description', appCtx.getUserPreferences())?.toLowerCase().includes('') ||
-        getI18n(feature, 'displayAddress', appCtx.getUserPreferences())?.toLowerCase().includes('')
+        getI18n(feature, 'title', appCtx.getUserPreferences())
+          ?.toLowerCase()
+          .includes('') ||
+        getI18n(feature, 'description', appCtx.getUserPreferences())
+          ?.toLowerCase()
+          .includes('') ||
+        getI18n(feature, 'displayAddress', appCtx.getUserPreferences())
+          ?.toLowerCase()
+          .includes('')
     )
     .forEach((feature) => {
       results.push({
@@ -192,7 +217,6 @@ export function searchNearest(appCtx: AppCtx): SearchResult[] {
   return results;
 }
 
-
 export function getCoordinates(lngLat: LngLatLike | null): [number, number] | null {
   if (!lngLat) return null;
   if (Array.isArray(lngLat)) {
@@ -204,4 +228,4 @@ export function getCoordinates(lngLat: LngLatLike | null): [number, number] | nu
     return [lngLat.lng, lngLat.lat];
   }
   return null;
-};
+}

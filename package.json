@@ -9,7 +9,7 @@
     "build:local": "VITE_WRANGLER_ENV=local VITE_USER_NODE_ENV=development vite build",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "ts": "tsc",
-    "ts:watch" : "tsc -w",
+    "ts:watch": "tsc -w",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "db:dump": "sqlite3 $(find .wrangler/state/v3/d1/miniflare-D1DatabaseObject -type f -name '*.sqlite' -print -quit) '.dump' > local_$(date +'%s').sql",
     "db:generate": "drizzle-kit generate --name",

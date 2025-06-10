@@ -20,15 +20,15 @@ const keyMap: KeyMap = {
   description: 'i18n.description',
   image: 'image',
   badges: [
-    { 
-      label: 'isPublished', 
+    {
+      label: 'isPublished',
       variant: 'primary',
       type: 'boolean',
       trueText: 'Published',
       falseText: 'Draft'
     },
-    { 
-      label: 'isArchived', 
+    {
+      label: 'isArchived',
       variant: 'outline',
       type: 'boolean',
       trueText: 'Dead',

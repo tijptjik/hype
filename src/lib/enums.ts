@@ -1,7 +1,7 @@
 /* ----------------- */
 // I18N
 
-import type { Locale } from "./types";
+import type { Locale } from './types';
 
 /* -------- */
 export enum SupportedLocales {

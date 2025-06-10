@@ -101,17 +101,18 @@ export const LayerUpdateAPI = LayerUpdate.extend({
 /* -------- */
 
 export const LayerPropertyRaw = LayerPropertyBase.extend({
-      property: PropertyBase.extend({
-        i18n: z.array(PropertyI18nBase),
-        values: z
-          .array(
-            PropertyValueBase.extend({
-              i18n: z.array(PropertyValueI18nBase).optional()
-            })
-          ).nullish()
-          .nullish()
-      }).nullish()
-    })
+  property: PropertyBase.extend({
+    i18n: z.array(PropertyI18nBase),
+    values: z
+      .array(
+        PropertyValueBase.extend({
+          i18n: z.array(PropertyValueI18nBase).optional()
+        })
+      )
+      .nullish()
+      .nullish()
+  }).nullish()
+});
 
 export const LayerRaw = LayerBase.extend({
   i18n: z.array(LayerI18nBase),

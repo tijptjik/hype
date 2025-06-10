@@ -140,7 +140,9 @@ export const districtCodeToName = {
   YL: 'Yuen Long'
 };
 
-const getNormalisedDistrictKey = (district: string): keyof typeof districtNormalised => {
+const getNormalisedDistrictKey = (
+  district: string
+): keyof typeof districtNormalised => {
   if (!Object.keys(districtNormalised).includes(district)) {
     district = district.toLowerCase().replace(/ /g, '');
     Object.entries(districtIdentifiers).forEach(([key, values]) => {
@@ -158,7 +160,8 @@ export const getNormalisedDistrict = (
   locale: Locale = 'en'
 ): string | null => {
   const normalisedDistrictKey = getNormalisedDistrictKey(district);
-  const normalisedDistrict = districtNormalised[normalisedDistrictKey]?.[locale] || null;
+  const normalisedDistrict =
+    districtNormalised[normalisedDistrictKey]?.[locale] || null;
   return normalisedDistrict;
 };
 
@@ -291,10 +294,10 @@ export function removeCountry(str: string): string {
 export function removeRegion(str: string): string {
   const parts = str.split(',');
   const lastPart = parts.pop()?.trim();
-  
+
   if (lastPart) {
     const lastPartLower = lastPart.toLowerCase().replace(/\s+/g, '');
-    
+
     // Check against region identifiers (removing spaces for comparison)
     if (
       regionIdentifiers.HK.includes(lastPartLower) ||
@@ -304,7 +307,7 @@ export function removeRegion(str: string): string {
       return parts.join(',').trim();
     }
   }
-  
+
   return str;
 }
 

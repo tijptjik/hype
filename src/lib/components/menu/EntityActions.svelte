@@ -18,36 +18,35 @@ const adminCtx = getAdminCtx();
 
 let showFormControler = $derived(adminCtx.state.active.facet !== 'images');
 let showActionButton = $derived(
-  adminCtx.state.active.entity !== NEW_REF &&
-    adminCtx.state.active.entity !== false
+  adminCtx.state.active.entity !== NEW_REF && adminCtx.state.active.entity !== false
 );
 
 // Resources that can be archived (all resources have isArchived)
 const archiveableResources = [
-  FirstClassResource.organisation, 
-  FirstClassResource.project, 
-  FirstClassResource.layer, 
+  FirstClassResource.organisation,
+  FirstClassResource.project,
+  FirstClassResource.layer,
   FirstClassResource.feature,
   FirstClassResource.hub
 ];
 
 // Resources that can be published (but only when not SuperAdmin)
 const publishableResources = [
-  FirstClassResource.organisation, 
-  FirstClassResource.project, 
-  FirstClassResource.layer, 
+  FirstClassResource.organisation,
+  FirstClassResource.project,
+  FirstClassResource.layer,
   FirstClassResource.feature
 ];
 
 let showArchiveButton = $derived(
-  showActionButton && 
-  archiveableResources.includes(adminCtx.activeResource as FirstClassResource) &&
-  adminCtx.appCtx?.user?.superAdmin === true
+  showActionButton &&
+    archiveableResources.includes(adminCtx.activeResource as FirstClassResource) &&
+    adminCtx.appCtx?.user?.superAdmin === true
 );
 
 let showPublishButton = $derived(
-  showActionButton && 
-  publishableResources.includes(adminCtx.activeResource as FirstClassResource)
+  showActionButton &&
+    publishableResources.includes(adminCtx.activeResource as FirstClassResource)
 );
 </script>
 

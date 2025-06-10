@@ -62,7 +62,7 @@ const debouncedUpdateUser = async (
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      
+
       if (response.ok) {
         onSuccess?.(data);
       } else {
@@ -88,10 +88,14 @@ export const debouncedUpdateUserPreferences = (
   // ASSERT : We have userPreferences
   if (!userPreferences) return;
 
-  debouncedUpdateUser(userId, { preferences: userPreferences }, {
-    delay: 750,
-    timerKey: 'preferences'
-  });
+  debouncedUpdateUser(
+    userId,
+    { preferences: userPreferences },
+    {
+      delay: 750,
+      timerKey: 'preferences'
+    }
+  );
 };
 
 export const debouncedUpdateUserAttribution = async (
@@ -100,36 +104,49 @@ export const debouncedUpdateUserAttribution = async (
   onSuccess?: (attribution: string) => void,
   onError?: (error: any) => void
 ) => {
-  await debouncedUpdateUser(userId, { attribution }, {
-    delay: 800,
-    timerKey: 'attribution',
-    onSuccess: () => onSuccess?.(attribution),
-    onError
-  });
+  await debouncedUpdateUser(
+    userId,
+    { attribution },
+    {
+      delay: 800,
+      timerKey: 'attribution',
+      onSuccess: () => onSuccess?.(attribution),
+      onError
+    }
+  );
 };
 
-export const debouncedUpdateUserLayers = (
-  userId: Id,
-  userLayers: UserLayer[]
-) => {
+export const debouncedUpdateUserLayers = (userId: Id, userLayers: UserLayer[]) => {
   // ASSERT : We have userLayers
   if (!userLayers) return;
 
-  debouncedUpdateUser(userId, { userLayers }, {
-    delay: 750,
-    timerKey: 'userLayers'
-  });
+  debouncedUpdateUser(
+    userId,
+    { userLayers },
+    {
+      delay: 750,
+      timerKey: 'userLayers'
+    }
+  );
 };
 
 export const debouncedUpdateUserExperimental = (
   userId: Id,
-  experimental: { contributorMode?: boolean; noLabelsMode?: boolean; [key: string]: boolean | undefined }
+  experimental: {
+    contributorMode?: boolean;
+    noLabelsMode?: boolean;
+    [key: string]: boolean | undefined;
+  }
 ) => {
   // ASSERT : We have experimental features
   if (!experimental) return;
 
-  debouncedUpdateUser(userId, { experimental }, {
-    delay: 750,
-    timerKey: 'experimental'
-  });
+  debouncedUpdateUser(
+    userId,
+    { experimental },
+    {
+      delay: 750,
+      timerKey: 'experimental'
+    }
+  );
 };

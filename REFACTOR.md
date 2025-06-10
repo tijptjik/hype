@@ -1,16 +1,20 @@
 # Refactor
 
 ## Svelte
+
 - [ ] use [@attach](https://svelte.dev/docs/svelte/@attach) to replace Svelte Actions.
 - [ ] use [<svelte:boundary>](https://svelte.dev/docs/svelte/svelte-boundary)
 - [x] debug with [@debug](https://svelte.dev/docs/svelte/@debug)
 
 ### BitsUI
+
 - [ ] Replace the existing components in favour of [BitsUI](https://bits-ui.com/docs/introduction)
 - [ ] Drop DaisyUI.
 
 ### Runed
-Use the `runed` library - [runed.dev](https://runed.dev/) 
+
+Use the `runed` library - [runed.dev](https://runed.dev/)
+
 - [ ] use [useGeolocation](https://runed.dev/docs/utilities/use-geolocation)
 - [ ] use [onClickOutside](https://runed.dev/docs/utilities/on-click-outside)
 - [ ] use [TextareaAutosize](https://runed.dev/docs/utilities/textarea-autosize)
@@ -22,8 +26,8 @@ Use the `runed` library - [runed.dev](https://runed.dev/)
 ## Typescript
 
 ### Documentation
-- use [@component](https://svelte.dev/docs/svelte/faq#How-do-I-document-my-components) to document components
 
+- use [@component](https://svelte.dev/docs/svelte/faq#How-do-I-document-my-components) to document components
 
 ## i18n
 
@@ -78,6 +82,6 @@ Use the `runed` library - [runed.dev](https://runed.dev/)
 - [x] applyQueryConstraints
 - [x] genericResourceQuery
 - [x] hierarchicalResourceQuery
-- [x] genericEntityQuery 
+- [x] genericEntityQuery
 - [x] getDatabaseOrError
 - [x] isAdminView

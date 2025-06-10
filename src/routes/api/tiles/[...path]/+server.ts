@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ params, fetch, url, request }) => {
   const tilePath = params.path;
-  
+
   if (!tilePath) {
     return new Response('Invalid tile path', { status: 400 });
   }
@@ -19,10 +19,10 @@ export const GET: RequestHandler = async ({ params, fetch, url, request }) => {
   try {
     // Use global fetch to ensure we're not using SvelteKit's enhanced fetch
     const response = await globalThis.fetch(targetUrl);
-    
+
     if (!response.ok) {
-      return new Response(`Tile not found: ${response.statusText}`, { 
-        status: response.status 
+      return new Response(`Tile not found: ${response.statusText}`, {
+        status: response.status
       });
     }
 
@@ -34,18 +34,19 @@ export const GET: RequestHandler = async ({ params, fetch, url, request }) => {
 
     // Handle different content types
     const contentType = response.headers.get('content-type');
-    
+
     if (contentType?.includes('application/json')) {
       // Handle JSON responses (like tile metadata)
       const data = await response.json();
-      
+
       // Get the protocol and host from the current request
       // Check headers for the original protocol (common with proxies like ngrok)
       const host = url.host;
       const isNgrok = host.includes('ngrok');
-      const forwardedProto = request.headers.get('x-forwarded-proto') || 
-                            request.headers.get('x-forwarded-protocol');
-      
+      const forwardedProto =
+        request.headers.get('x-forwarded-proto') ||
+        request.headers.get('x-forwarded-protocol');
+
       // Determine the correct protocol
       let protocol: string;
       if (forwardedProto) {
@@ -55,9 +56,9 @@ export const GET: RequestHandler = async ({ params, fetch, url, request }) => {
       } else {
         protocol = url.protocol.replace(':', '');
       }
-      
+
       const baseUrl = `${protocol}://${host}`;
-      
+
       // Function to recursively rewrite URLs in the JSON object
       const rewriteUrls = (obj: any): any => {
         if (typeof obj === 'string') {
@@ -73,12 +74,14 @@ export const GET: RequestHandler = async ({ params, fetch, url, request }) => {
         }
         return obj;
       };
-      
+
       const rewrittenData = rewriteUrls(data);
-      
+
       return json(rewrittenData, { headers: corsHeaders });
-    } 
-    else if (contentType?.includes('application/x-protobuf') || tilePath.endsWith('.mvt')) {
+    } else if (
+      contentType?.includes('application/x-protobuf') ||
+      tilePath.endsWith('.mvt')
+    ) {
       // Handle MVT (Mapbox Vector Tile) files
       const arrayBuffer = await response.arrayBuffer();
       return new Response(arrayBuffer, {
@@ -87,8 +90,7 @@ export const GET: RequestHandler = async ({ params, fetch, url, request }) => {
           'Content-Type': 'application/x-protobuf'
         }
       });
-    }
-    else {
+    } else {
       // Handle other content types
       const buffer = await response.arrayBuffer();
       return new Response(buffer, {
@@ -112,4 +114,4 @@ export const OPTIONS: RequestHandler = async () => {
       'Access-Control-Allow-Headers': '*'
     }
   });
-}; 
+};

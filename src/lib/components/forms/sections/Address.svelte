@@ -107,7 +107,10 @@ let resetMissingTranslations = () => {
   missingTranslations = defaultMissingTranslations;
 };
 
-let setMissingTranslations = (result: ParsedReverseGeocodeResult, sourceLocale: Locale) => {
+let setMissingTranslations = (
+  result: ParsedReverseGeocodeResult,
+  sourceLocale: Locale
+) => {
   Object.entries(result.i18n || {}).forEach(([locale, data]) => {
     if (locale === sourceLocale) return;
     if (

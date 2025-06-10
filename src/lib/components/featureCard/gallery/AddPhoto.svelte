@@ -462,168 +462,168 @@ onMount(() => {
   {#if showComponent}
     <div in:fade={{ duration: 300 }}>
       {#if isLoadingCamera}
-    <!-- Loading Camera State -->
-    <div
-      id="camera-loading"
-      class="absolute inset-0 z-50 flex h-full w-full items-center justify-center bg-black/70"
-      out:fade={{ duration: 300 }}>
-      <div class="flex flex-col items-center gap-4">
-        <div class="loading loading-spinner loading-lg text-primary"></div>
-      </div>
-    </div>
-  {:else if showCameraInterface}
-    <!-- Camera Interface -->
-    <div
-      id="camera-interface"
-      class="absolute inset-0 z-50 h-full w-full bg-black caret-transparent"
-      in:fade={{ duration: 300 }}
-      out:fade={{ duration: 300 }}
-      bind:this={videoContainer}>
-      <!-- Video stream -->
-      <video
-        bind:this={videoElement}
-        class="h-full w-full object-cover"
-        autoplay
-        playsinline
-        muted></video>
-
-      <!-- Hidden canvas for capturing -->
-      <canvas bind:this={canvasElement} class="hidden"></canvas>
-
-      <!-- Camera controls -->
-      <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
-        <!-- Capture button -->
-        <button
-          class="btn btn-circle h-16 w-16 bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary"
-          onclick={capturePhoto}
-          aria-label="Take photo">
-          <div class="m-0 h-12 w-12 rounded-full border-[5px] border-[#4987E2] p-0">
-            <div class="flex h-full flex-col items-center justify-center gap-[2px]">
-              <div class="h-[2px] w-4 bg-[#4987E2]/40"></div>
-              <div class="h-[2px] w-4 bg-[#4987E2]/40"></div>
-              <div class="h-[2px] w-4 bg-[#4987E2]/40"></div>
-            </div>
-          </div>
-        </button>
-      </div>
-
-      <button
-        class="absolute right-4 top-4 p-2 text-white"
-        onclick={closeCameraInterface}
-        aria-label="Close camera">
-        <Icon src={XCircle} class="h-6 w-6" />
-      </button>
-    </div>
-  {:else if !showCarousel}
-    <!-- Add Photo Button (Initial State) -->
-    <div id="add-photo-card" class="flex h-full w-full items-center justify-center">
-      <button
-        class="btn btn-ghost gap-2 rounded-full bg-base-100 text-white focus:outline-none focus:ring-2 focus:ring-primary"
-        onclick={openCamera}
-        aria-label="Add photo">
-        <Icon src={Camera} class="h-6 w-6 text-primary" theme="solid" />
-        Add photo
-      </button>
-    </div>
-  {:else}
-    <!-- Photo Carousel -->
-    <div
-      id="photo-carousel"
-      class="relative h-full w-full caret-transparent"
-      bind:this={container}>
-      <!-- Image counter -->
-      {#if !isSingleImage}
+        <!-- Loading Camera State -->
         <div
-          class="absolute bottom-2 left-2 z-10 rounded bg-black/50 px-2 py-1 text-xs text-white">
-          {currentIndex + 1} / {cardCtx.userData.photos.length}
-        </div>
-      {/if}
-
-      <!-- Remove current photo button -->
-      <button
-        type="button"
-        class="btn btn-circle btn-sm absolute bottom-2 right-2 z-10 h-10 w-10 bg-base-100"
-        onclick={() => removePhoto(getPhotoAtIndex(currentIndex))}
-        aria-label="Remove photo">
-        <Icon src={Trash} class="h-6 w-6 text-error" />
-      </button>
-
-      <!-- Carousel container with touch handling -->
-      <div
-        class="relative h-full w-full touch-pan-y select-none"
-        ontouchstart={handleTouchStart}
-        ontouchmove={handleTouchMove}
-        ontouchend={handleTouchEnd}
-        class:dragging={isDragging}
-        style="transform: translateX({offset}px)">
-        {#if cardCtx.userData.photos.length > 1}
-          <!-- Previous Image -->
-          <div class="absolute left-0 top-0 h-full w-full opacity-0">
-            <img
-              src={getPhotoAtIndex(currentIndex - 1).previewUrl}
-              alt="Previous evidence"
-              class="h-full w-full object-contain" />
+          id="camera-loading"
+          class="absolute inset-0 z-50 flex h-full w-full items-center justify-center bg-black/70"
+          out:fade={{ duration: 300 }}>
+          <div class="flex flex-col items-center gap-4">
+            <div class="loading loading-spinner loading-lg text-primary"></div>
           </div>
-        {/if}
-
-        <!-- Current Image -->
-        <div class="absolute left-0 top-0 h-full w-full">
-          <img
-            src={getPhotoAtIndex(currentIndex).previewUrl}
-            alt="Evidence"
-            class="h-full w-full object-contain" />
         </div>
+      {:else if showCameraInterface}
+        <!-- Camera Interface -->
+        <div
+          id="camera-interface"
+          class="absolute inset-0 z-50 h-full w-full bg-black caret-transparent"
+          in:fade={{ duration: 300 }}
+          out:fade={{ duration: 300 }}
+          bind:this={videoContainer}>
+          <!-- Video stream -->
+          <video
+            bind:this={videoElement}
+            class="h-full w-full object-cover"
+            autoplay
+            playsinline
+            muted></video>
 
-        {#if cardCtx.userData.photos.length > 1}
-          <!-- Next Image -->
-          <div class="absolute left-0 top-0 h-full w-full opacity-0">
-            <img
-              src={getPhotoAtIndex(currentIndex + 1).previewUrl}
-              alt="Next evidence"
-              class="h-full w-full object-contain" />
+          <!-- Hidden canvas for capturing -->
+          <canvas bind:this={canvasElement} class="hidden"></canvas>
+
+          <!-- Camera controls -->
+          <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
+            <!-- Capture button -->
+            <button
+              class="btn btn-circle h-16 w-16 bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary"
+              onclick={capturePhoto}
+              aria-label="Take photo">
+              <div class="m-0 h-12 w-12 rounded-full border-[5px] border-[#4987E2] p-0">
+                <div class="flex h-full flex-col items-center justify-center gap-[2px]">
+                  <div class="h-[2px] w-4 bg-[#4987E2]/40"></div>
+                  <div class="h-[2px] w-4 bg-[#4987E2]/40"></div>
+                  <div class="h-[2px] w-4 bg-[#4987E2]/40"></div>
+                </div>
+              </div>
+            </button>
           </div>
 
-          {#if !isSingleImage}
-            <!-- Navigation buttons - hidden on mobile -->
-            <div class="hidden md:block">
-              <button
-                class="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
-                onclick={() => {
-                  currentIndex = getImageIndex(currentIndex - 1);
-                  offset.set(0);
-                }}
-                aria-label="Previous image">
-                <Icon src={ChevronLeft} class="h-4 w-4" />
-              </button>
-
-              <button
-                class="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
-                onclick={() => {
-                  currentIndex = getImageIndex(currentIndex + 1);
-                  offset.set(0);
-                }}
-                aria-label="Next image">
-                <Icon src={ChevronRight} class="h-4 w-4" />
-              </button>
-            </div>
-          {/if}
-        {/if}
-      </div>
-
-      <!-- Add another photo button - moved to bottom center and restyled -->
-      {#if !isSingleImage}
-        <div class="absolute bottom-4 left-0 right-0 flex justify-center">
           <button
-            class="btn btn-ghost gap-2 rounded-full bg-base-100 text-white"
+            class="absolute right-4 top-4 p-2 text-white"
+            onclick={closeCameraInterface}
+            aria-label="Close camera">
+            <Icon src={XCircle} class="h-6 w-6" />
+          </button>
+        </div>
+      {:else if !showCarousel}
+        <!-- Add Photo Button (Initial State) -->
+        <div id="add-photo-card" class="flex h-full w-full items-center justify-center">
+          <button
+            class="btn btn-ghost gap-2 rounded-full bg-base-100 text-white focus:outline-none focus:ring-2 focus:ring-primary"
             onclick={openCamera}
-            aria-label="Add another photo">
+            aria-label="Add photo">
             <Icon src={Camera} class="h-6 w-6 text-primary" theme="solid" />
             Add photo
           </button>
         </div>
+      {:else}
+        <!-- Photo Carousel -->
+        <div
+          id="photo-carousel"
+          class="relative h-full w-full caret-transparent"
+          bind:this={container}>
+          <!-- Image counter -->
+          {#if !isSingleImage}
+            <div
+              class="absolute bottom-2 left-2 z-10 rounded bg-black/50 px-2 py-1 text-xs text-white">
+              {currentIndex + 1} / {cardCtx.userData.photos.length}
+            </div>
+          {/if}
+
+          <!-- Remove current photo button -->
+          <button
+            type="button"
+            class="btn btn-circle btn-sm absolute bottom-2 right-2 z-10 h-10 w-10 bg-base-100"
+            onclick={() => removePhoto(getPhotoAtIndex(currentIndex))}
+            aria-label="Remove photo">
+            <Icon src={Trash} class="h-6 w-6 text-error" />
+          </button>
+
+          <!-- Carousel container with touch handling -->
+          <div
+            class="relative h-full w-full touch-pan-y select-none"
+            ontouchstart={handleTouchStart}
+            ontouchmove={handleTouchMove}
+            ontouchend={handleTouchEnd}
+            class:dragging={isDragging}
+            style="transform: translateX({offset}px)">
+            {#if cardCtx.userData.photos.length > 1}
+              <!-- Previous Image -->
+              <div class="absolute left-0 top-0 h-full w-full opacity-0">
+                <img
+                  src={getPhotoAtIndex(currentIndex - 1).previewUrl}
+                  alt="Previous evidence"
+                  class="h-full w-full object-contain" />
+              </div>
+            {/if}
+
+            <!-- Current Image -->
+            <div class="absolute left-0 top-0 h-full w-full">
+              <img
+                src={getPhotoAtIndex(currentIndex).previewUrl}
+                alt="Evidence"
+                class="h-full w-full object-contain" />
+            </div>
+
+            {#if cardCtx.userData.photos.length > 1}
+              <!-- Next Image -->
+              <div class="absolute left-0 top-0 h-full w-full opacity-0">
+                <img
+                  src={getPhotoAtIndex(currentIndex + 1).previewUrl}
+                  alt="Next evidence"
+                  class="h-full w-full object-contain" />
+              </div>
+
+              {#if !isSingleImage}
+                <!-- Navigation buttons - hidden on mobile -->
+                <div class="hidden md:block">
+                  <button
+                    class="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+                    onclick={() => {
+                      currentIndex = getImageIndex(currentIndex - 1);
+                      offset.set(0);
+                    }}
+                    aria-label="Previous image">
+                    <Icon src={ChevronLeft} class="h-4 w-4" />
+                  </button>
+
+                  <button
+                    class="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+                    onclick={() => {
+                      currentIndex = getImageIndex(currentIndex + 1);
+                      offset.set(0);
+                    }}
+                    aria-label="Next image">
+                    <Icon src={ChevronRight} class="h-4 w-4" />
+                  </button>
+                </div>
+              {/if}
+            {/if}
+          </div>
+
+          <!-- Add another photo button - moved to bottom center and restyled -->
+          {#if !isSingleImage}
+            <div class="absolute bottom-4 left-0 right-0 flex justify-center">
+              <button
+                class="btn btn-ghost gap-2 rounded-full bg-base-100 text-white"
+                onclick={openCamera}
+                aria-label="Add another photo">
+                <Icon src={Camera} class="h-6 w-6 text-primary" theme="solid" />
+                Add photo
+              </button>
+            </div>
+          {/if}
+        </div>
       {/if}
-    </div>
-  {/if}
     </div>
   {/if}
 

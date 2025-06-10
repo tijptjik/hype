@@ -27,7 +27,6 @@ let {
   form: any;
 } = $props();
 
-
 // STATE : CONTEXT :: FORM
 let hubForm = $derived(fieldProps.form.form);
 
@@ -35,7 +34,7 @@ let hubForm = $derived(fieldProps.form.form);
 const ensureI18nRecordFormat = (i18nData: any) => {
   if (!i18nData) return null;
   if (!Array.isArray(i18nData)) return i18nData; // Already in Record format
-  
+
   return i18nData.reduce((acc: any, bundle: any) => {
     acc[bundle.locale] = bundle;
     return acc;
@@ -55,32 +54,30 @@ const updateOrganisationCoreInclusive = (
         isCoreInclusive
       };
     }
-    
+
     // Ensure all organisations have i18n in Record format
-    const normalizedOrganisations = organisations.map(org => ({
+    const normalizedOrganisations = organisations.map((org) => ({
       ...org,
       i18n: ensureI18nRecordFormat(org.i18n)
     }));
-    
+
     return { ...$form, organisations: normalizedOrganisations };
   });
 };
 
 const removeOrganisation = async (e: Event, organisationId: string) => {
   e.preventDefault();
-  
+
   hubForm.update(($form: any) => {
     const organisations = [...($form.organisations || [])];
-    
-    const updatedOrganisations = organisations.filter(
-      (org: any) => {
-        if (!org || !org.id) {
-          return false; // Remove invalid entries
-        }
-        return org.id !== organisationId;
+
+    const updatedOrganisations = organisations.filter((org: any) => {
+      if (!org || !org.id) {
+        return false; // Remove invalid entries
       }
-    );
-    
+      return org.id !== organisationId;
+    });
+
     // Ensure all remaining organisations have i18n in Record format and are valid
     const normalizedOrganisations = updatedOrganisations
       .filter((org: any) => org && org.id) // Extra safety check
@@ -90,7 +87,7 @@ const removeOrganisation = async (e: Event, organisationId: string) => {
       }));
 
     $form.organisations = normalizedOrganisations;
-    
+
     return $form;
   });
 
@@ -103,8 +100,6 @@ const removeOrganisation = async (e: Event, organisationId: string) => {
 
 // Access form value directly
 let organisations = $derived(($hubForm as any).organisations || ([] as Organisation[]));
-
-
 
 // Update modes based on organisations length
 $effect(() => {

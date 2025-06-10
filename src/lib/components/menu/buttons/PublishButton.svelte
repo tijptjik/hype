@@ -23,7 +23,7 @@ const { session } = page.data;
 const adminCtx = getAdminCtx();
 
 // STATE : PROPS
-let menuProps: { form: Exclude<Form, HubForm>} = $props();
+let menuProps: { form: Exclude<Form, HubForm> } = $props();
 
 // STATE : FORM
 let { form, errors, reset, submit, tainted, isTainted } = menuProps.form;
@@ -50,12 +50,7 @@ $effect(() => {
 const handleClick = async (e: Event) => {
   e.preventDefault();
   e.stopPropagation();
-  if (
-    isLoading ||
-    !adminCtx.activeEntity ||
-    adminCtx.activeEntity === NEW_REF
-  )
-    return;
+  if (isLoading || !adminCtx.activeEntity || adminCtx.activeEntity === NEW_REF) return;
 
   isLoading = true;
 

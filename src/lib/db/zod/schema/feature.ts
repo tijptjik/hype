@@ -33,7 +33,7 @@ import {
 import { UserBasic } from './user';
 import { FeatureImageAPI } from './image';
 // TYPES
-import type { AddressMeta, AddressProperties, Locale} from '$lib/types';
+import type { AddressMeta, AddressProperties, Locale } from '$lib/types';
 import type { GeometryObject } from 'geojson';
 import { LayerAPI } from './layer';
 import { supportedLocales } from '$lib/enums';

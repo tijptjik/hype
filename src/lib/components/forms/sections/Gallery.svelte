@@ -54,7 +54,7 @@ const openFileDialog = () => {
 
 <div
   class="z-10 rounded-2xl bg-gradient-to-r from-rose-500/70 to-fuchsia-800/70 p-0 @container">
-  <Header {...sectionProps} >
+  <Header {...sectionProps}>
     <GalleryStats />
     {#snippet actionContent()}
       <GalleryActions {actions} bind:removeMode={actionProps.removeMode} />

@@ -154,12 +154,14 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
           if (!source) return false;
 
           const typedSource = source as MapSource;
-          
+
           // Type guard for source types
-          const isVectorOrRaster = typedSource.type === 'vector' || typedSource.type === 'raster';
+          const isVectorOrRaster =
+            typedSource.type === 'vector' || typedSource.type === 'raster';
 
           // Check for either url or tiles property
-          const hasTileSource = typedSource.url || (typedSource.tiles && Array.isArray(typedSource.tiles));
+          const hasTileSource =
+            typedSource.url || (typedSource.tiles && Array.isArray(typedSource.tiles));
 
           return isVectorOrRaster && hasTileSource;
         })

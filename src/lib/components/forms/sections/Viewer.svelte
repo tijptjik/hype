@@ -24,7 +24,7 @@ let image = $derived(imageCtx.activeImage);
 
 <div
   class="relative z-10 flex w-full flex-grow flex-col rounded-2xl bg-gradient-to-r from-rose-500/70 to-fuchsia-800/70 p-0">
-  <Header {...sectionProps} >
+  <Header {...sectionProps}>
     {#snippet actionContent()}
       <ViewerActions />
     {/snippet}

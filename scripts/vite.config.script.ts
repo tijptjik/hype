@@ -13,9 +13,11 @@ export default defineConfig({
   resolve: {
     alias: {
       // Ensure proper alias resolution
-      '$lib': new URL('../src/lib', import.meta.url).pathname,
-      '$env/static/private': new URL('../.svelte-kit/ambient.d.ts', import.meta.url).pathname,
-      '$env/static/public': new URL('../.svelte-kit/ambient.d.ts', import.meta.url).pathname,
+      $lib: new URL('../src/lib', import.meta.url).pathname,
+      '$env/static/private': new URL('../.svelte-kit/ambient.d.ts', import.meta.url)
+        .pathname,
+      '$env/static/public': new URL('../.svelte-kit/ambient.d.ts', import.meta.url)
+        .pathname
     }
   }
-}); 
+});

@@ -38,7 +38,7 @@ import type {
   TaskDBRaw,
   HubOpts,
   SessionUser,
-  Locale,
+  Locale
 } from '$lib/types';
 
 // ═══════════════════════

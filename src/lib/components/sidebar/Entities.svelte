@@ -33,7 +33,8 @@ let sidebarState = getSidebarState();
 let { resourceType }: { resourceType: FirstClassResource } = $props();
 
 let isCollapsed = $derived(
-  adminCtx.hasManyEntities(resourceType) && !sidebarState.isSectionOpen(resourceType as unknown as HierarchicalResource)
+  adminCtx.hasManyEntities(resourceType) &&
+    !sidebarState.isSectionOpen(resourceType as unknown as HierarchicalResource)
 );
 
 let entities = $derived.by(() => {
@@ -49,7 +50,9 @@ const filterableByQueryParams: FilterableResourceType[] = [
 
 let isFilterable = $derived(adminCtx.hasManyEntities(resourceType));
 let showFilters = $derived(
-  sidebarState.isOpen() && sidebarState.isSectionOpen(resourceType as unknown as HierarchicalResource) && isFilterable
+  sidebarState.isOpen() &&
+    sidebarState.isSectionOpen(resourceType as unknown as HierarchicalResource) &&
+    isFilterable
 );
 
 let isVisible = (id: Id) => {

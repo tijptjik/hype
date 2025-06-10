@@ -4,7 +4,6 @@ import { displaySelectedFilters } from '$lib/utils/formatting';
 // TYPES
 import type { Id, Property } from '$lib/types';
 
-
 type Props = {
   layerId: Id;
   appCtx: any;

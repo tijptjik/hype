@@ -70,7 +70,12 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
 
   try {
     // DB : List the features
-    const result = await listFeaturesWithImage(db, featureCollectionWithRelations, conditions, locals.hub);
+    const result = await listFeaturesWithImage(
+      db,
+      featureCollectionWithRelations,
+      conditions,
+      locals.hub
+    );
 
     // RESPONSE : Build the response shape with merged properties
     const data = await buildCollectionResponseShape(db, result, locals.hub);
@@ -124,11 +129,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 
     const created = await createFeatureWithRelated(db, form.data as FeatureNew);
 
-    const responseForm = await toFormShape(
-      created,
-      created.i18n,
-      created.properties
-    );
+    const responseForm = await toFormShape(created, created.i18n, created.properties);
 
     return SuperFormResponse<Feature>(responseForm, true, false, RESOURCE_PATH, 201);
   } catch (err) {

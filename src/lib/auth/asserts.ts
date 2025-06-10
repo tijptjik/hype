@@ -3,7 +3,14 @@ import { isAdminRequest } from '$lib/api';
 // I18N
 import { m } from '$lib/i18n';
 // TYPES
-import type { Code, Id, OrganisationPartial, Session, SessionUser, UserRoleDisco } from '$lib/types';
+import type {
+  Code,
+  Id,
+  OrganisationPartial,
+  Session,
+  SessionUser,
+  UserRoleDisco
+} from '$lib/types';
 import { error } from '@sveltejs/kit';
 
 /**
@@ -112,15 +119,16 @@ export const assertProjectMember = (
  * @param session - The session object
  * @throws {Response} 401 error if user is not a super admin
  */
-export const assertSuperAdmin = (
-  user: SessionUser
-): void | Response => {
+export const assertSuperAdmin = (user: SessionUser): void | Response => {
   if (!user?.superAdmin) {
     return error(401, m.neat_noble_okapi_edit());
   }
 };
 
-export const assertUserIsSelf = (user: SessionUser, userId: string): void | Response => {
+export const assertUserIsSelf = (
+  user: SessionUser,
+  userId: string
+): void | Response => {
   if (user.id !== userId) {
     return error(401, m.swift_weary_mule_persist());
   }

@@ -412,4 +412,4 @@ export const hubI18nRelations = relations(hubI18n, ({ one }) => ({
     fields: [hubI18n.hubId],
     references: [hub.id]
   })
-})); 
+}));

@@ -115,7 +115,7 @@ const removeAction = (e: Event, propertyId: Id) => {
   e.preventDefault();
   e.stopPropagation();
   form.update(($form) => {
-    const propIndex = $form[fieldRoot]?.findIndex(p => p.id === propertyId);
+    const propIndex = $form[fieldRoot]?.findIndex((p) => p.id === propertyId);
     const currentProperties = $form[fieldRoot];
     if (currentProperties) {
       currentProperties.splice(propIndex as number, 1);
@@ -240,7 +240,7 @@ const actions = {
           fields={(fields[fieldRoot] as FormFieldArrayDefinition).discriminators.specs[
             fieldDiscriminator as 'classifier' | 'specifier'
           ]}
-          fieldIndex={$form[fieldRoot].findIndex(p => p.id === property.id)}
+          fieldIndex={$form[fieldRoot].findIndex((p) => p.id === property.id)}
           {actions}
           totalItemsOfThisType={propsInSection.length}
           bind:searchMode

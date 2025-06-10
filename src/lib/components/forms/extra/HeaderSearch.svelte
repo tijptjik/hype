@@ -1,5 +1,5 @@
 <script lang="ts">
-  // I18N
+// I18N
 import { getLocale } from '$lib/i18n';
 import { slide } from 'svelte/transition';
 import { MagnifyingGlass, XMark, ChevronRight } from '@steeze-ui/heroicons';
@@ -36,8 +36,7 @@ let {
   toItem = (item: ResultType) => {
     const formId =
       adminCtx.activeResource === 'project' ? 'projectId' : 'organisationId';
-    const disco =
-      adminCtx.activeResource === 'project' ? 'project' : 'organisation';
+    const disco = adminCtx.activeResource === 'project' ? 'project' : 'organisation';
     return {
       type: disco as 'project' | 'organisation',
       userId: item.id,
@@ -115,7 +114,6 @@ async function search(minChars = 2) {
   // Minimum 2 characters
   if (searchQuery.length < minChars) return;
 
-
   const response = await fetch(`/api/${apiPath}?q=${encodeURIComponent(searchQuery)}`);
   const allResults: ResultType[] = await response.json();
 
@@ -124,20 +122,20 @@ async function search(minChars = 2) {
 
     return shouldInclude;
   });
-  
+
   return searchResults;
 }
 
 const addItem = (e: Event, item: ResultType) => {
   e.preventDefault();
   e.stopPropagation();
-  
+
   // Check if item already exists to prevent duplicates
   if (isExistingCheck && !isExistingCheck(item)) {
     resetInput(e);
     return;
   }
-  
+
   formInstance.update(($form: any) => {
     const newItem = $state.snapshot(toItem(item));
     $form[rootField] = [...($form[rootField] || []), newItem];
@@ -167,7 +165,7 @@ const resetResults = () => (searchResults = []);
           data-testid="userSearchBar"
           type="text"
           placeholder={`Search ${apiPath}...`}
-          class="input m-0 h-12 w-full rounded-none bg-neutral px-6 pr-10 text-sm focus:border-none focus:outline-none caret-white"
+          class="input m-0 h-12 w-full rounded-none bg-neutral px-6 pr-10 text-sm caret-white focus:border-none focus:outline-none"
           bind:value={searchQuery}
           onkeydown={(e) => handleInputKeydown(e)}
           onkeyup={(e) => handleInputKeyup(e)}
@@ -185,7 +183,9 @@ const resetResults = () => (searchResults = []);
       </div>
     </div>
     {#if searchResults.length > 0}
-      <div class="absolute z-50 w-full caret-transparent" transition:slide={{ duration: 200 }}>
+      <div
+        class="absolute z-50 w-full caret-transparent"
+        transition:slide={{ duration: 200 }}>
         <ul
           id="search-results"
           class="max-h-64 w-full overflow-y-auto rounded-b-lg bg-base-100 shadow-lg"
@@ -196,37 +196,39 @@ const resetResults = () => (searchResults = []);
             {@const isOrganisation = 'code' in item && !('email' in item)}
             <li class="search-result-item">
               <button
-                class="flex w-full items-center justify-between text-left hover:bg-base-200 focus:bg-base-200 focus:outline-none first:rounded-t-lg last:rounded-b-lg px-4 py-3"
+                class="flex w-full items-center justify-between px-4 py-3 text-left first:rounded-t-lg last:rounded-b-lg hover:bg-base-200 focus:bg-base-200 focus:outline-none"
                 data-testid={`searchResultItem_${index}`}
                 data-item-id={(item as any).id}
                 onclick={(e) => addItem(e, item)}
                 role="option"
                 tabindex="0"
                 onkeydown={(e) => handleResultKeydown(e)}>
-                
                 <!-- Left: Avatar/Image and content -->
-                <div class="flex items-center gap-3 flex-1 min-w-0">
+                <div class="flex min-w-0 flex-1 items-center gap-3">
                   <div class="flex-shrink-0">
                     {#if isUser}
                       <!-- User avatar -->
                       {#if item.image && typeof item.image === 'string'}
                         <div class="relative h-10 w-10">
-                          <div class="absolute inset-0 rounded-full bg-base-300 animate-pulse"></div>
-                          <img 
-                            src={item.image} 
+                          <div
+                            class="absolute inset-0 animate-pulse rounded-full bg-base-300">
+                          </div>
+                          <img
+                            src={item.image}
                             class="relative h-10 w-10 rounded-full object-cover opacity-0 transition-opacity duration-200"
                             onload={(e) => {
                               (e.currentTarget as HTMLImageElement).style.opacity = '1';
                               e.currentTarget.previousElementSibling?.remove();
                             }}
                             onerror={(e) => {
-                              (e.currentTarget as HTMLImageElement).style.display = 'none';
+                              (e.currentTarget as HTMLImageElement).style.display =
+                                'none';
                               e.currentTarget.previousElementSibling?.remove();
-                            }}
-                          />
+                            }} />
                         </div>
                       {:else}
-                        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-content text-sm font-medium">
+                        <div
+                          class="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-content">
                           {item.name?.charAt(0)?.toUpperCase() || '?'}
                         </div>
                       {/if}
@@ -234,8 +236,10 @@ const resetResults = () => (searchResults = []);
                       <!-- Organisation image -->
                       {#if item.image}
                         <div class="relative h-10 w-10">
-                          <div class="absolute inset-0 rounded bg-base-300 animate-pulse"></div>
-                          <img 
+                          <div
+                            class="absolute inset-0 animate-pulse rounded bg-base-300">
+                          </div>
+                          <img
                             src={getURLfromImage({
                               image: item.image,
                               transformation: 'c_fill,w_40,h_40,q_auto'
@@ -246,27 +250,31 @@ const resetResults = () => (searchResults = []);
                               e.currentTarget.previousElementSibling?.remove();
                             }}
                             onerror={(e) => {
-                              (e.currentTarget as HTMLImageElement).style.display = 'none';
+                              (e.currentTarget as HTMLImageElement).style.display =
+                                'none';
                               e.currentTarget.previousElementSibling?.remove();
-                            }}
-                          />
+                            }} />
                         </div>
                       {:else}
-                        <div class="flex h-10 w-10 items-center justify-center rounded bg-accent text-accent-content text-sm font-medium">
-                          {item.i18n?.en?.name?.charAt(0)?.toUpperCase() || item.code?.charAt(0)?.toUpperCase() || '?'}
+                        <div
+                          class="flex h-10 w-10 items-center justify-center rounded bg-accent text-sm font-medium text-accent-content">
+                          {item.i18n?.en?.name?.charAt(0)?.toUpperCase() ||
+                            item.code?.charAt(0)?.toUpperCase() ||
+                            '?'}
                         </div>
                       {/if}
                     {:else}
                       <!-- Fallback for other types -->
-                      <div class="flex h-10 w-10 items-center justify-center rounded bg-neutral text-neutral-content text-sm font-medium">
+                      <div
+                        class="flex h-10 w-10 items-center justify-center rounded bg-neutral text-sm font-medium text-neutral-content">
                         {item.name?.charAt(0)?.toUpperCase() || '?'}
                       </div>
                     {/if}
                   </div>
 
                   <!-- Content -->
-                  <div class="flex-1 min-w-0">
-                    <div class="font-medium text-base-content truncate">
+                  <div class="min-w-0 flex-1">
+                    <div class="truncate font-medium text-base-content">
                       {#if isOrganisation}
                         {item.i18n?.[getLocale()]?.name || item.code || '-'}
                       {:else}
@@ -274,7 +282,7 @@ const resetResults = () => (searchResults = []);
                       {/if}
                     </div>
                     {#if isUser && item.attribution}
-                      <div class="text-sm text-base-content/70 truncate">
+                      <div class="truncate text-sm text-base-content/70">
                         {item.attribution}
                       </div>
                     {/if}
@@ -282,9 +290,9 @@ const resetResults = () => (searchResults = []);
                 </div>
 
                 <!-- Right: Code/Email and chevron -->
-                <div class="flex items-center gap-2 flex-shrink-0">
+                <div class="flex flex-shrink-0 items-center gap-2">
                   {#if isOrganisation && item.code}
-                    <div class="text-sm font-mono text-base-content/60">
+                    <div class="font-mono text-sm text-base-content/60">
                       {item.code}
                     </div>
                   {:else if isUser && item.email}

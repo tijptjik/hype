@@ -27,10 +27,7 @@ import {
 } from '$lib/api/services/organisation';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
-import { 
-  OrganisationInsertAPI, 
-  OrganisationInsertSuperAdminAPI 
-} from '$lib/db/zod';
+import { OrganisationInsertAPI, OrganisationInsertSuperAdminAPI } from '$lib/db/zod';
 // TYPES
 import type { RequestHandler } from '@sveltejs/kit';
 import type { OrganisationNew, Organisation } from '$lib/types';
@@ -79,20 +76,15 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
           searchParam,
           locals.hub
         )
-      : await listOrganisations(
-          db,
-          organisationWithRelations,
-          conditions,
-          locals.hub
-        );
+      : await listOrganisations(db, organisationWithRelations, conditions, locals.hub);
 
     // RESPONSE : Build the response shape
     const data = await Promise.all(
       result.map(async (organisation) => {
         return await toResponseShape(
-          organisation, 
-          organisation.i18n, 
-          [], 
+          organisation,
+          organisation.i18n,
+          [],
           true, // isCollection
           user?.superAdmin || false // isSuperAdmin
         );
@@ -122,12 +114,12 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
   try {
     // ASSERT : Valid form
     const formData: OrganisationNew = await request.json();
-    
+
     // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
-    const insertSchema = user.superAdmin 
-      ? OrganisationInsertSuperAdminAPI 
+    const insertSchema = user.superAdmin
+      ? OrganisationInsertSuperAdminAPI
       : OrganisationInsertAPI;
-    
+
     let form = (await superValidate(
       formData,
       // @ts-ignore - FORM : Fix type error

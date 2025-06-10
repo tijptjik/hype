@@ -293,15 +293,14 @@ export const createTaskWithDependencies = async (
 
   // Step 2: Create feature if needed for newFeature tasks
   if (taskData.type === 'newFeature') {
-    
     // Pass the raw UserContributedFeature data to the API service
     // The API service will handle enrichment, translation, and defaults
     const createdFeature = await createUserContributedFeature(
-      db, 
+      db,
       taskData.feature as UserContributedFeature
     );
     taskData.featureId = createdFeature.id;
-    
+
     // Remove the feature object from taskData since we now have featureId
     // and task validation doesn't need the full feature object
     delete (taskData as any).feature;
@@ -499,7 +498,6 @@ export function getImagesFromFormData(formData: FormData): File[] {
  * Adds contributorId to taskData if not present.
  */
 function setContributorId(taskData: TaskCreation, userId: string): TaskCreation {
-
   // Set the user as the contributor of the task
   // Always takes the userId from the session, so we don't need to trust
   // the user provided contributorId.

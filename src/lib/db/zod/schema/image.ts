@@ -42,7 +42,7 @@ export const ImageUpdate = createUpdateSchema(image);
 // IMAGE RELATIONAL SCHEMAS : FEATURE
 /* -------- */
 
-export const FeatureImageBase = createSelectSchema(featureImage)
+export const FeatureImageBase = createSelectSchema(featureImage);
 export const FeatureImageInsert = createInsertSchema(featureImage).extend({
   featureId: z.string(),
   intent: z
@@ -52,7 +52,7 @@ export const FeatureImageInsert = createInsertSchema(featureImage).extend({
   publishedAt: z.string().optional()
 });
 
-export const FeatureImageUpdate = createUpdateSchema(featureImage)
+export const FeatureImageUpdate = createUpdateSchema(featureImage);
 
 /* ----------------- */
 // IMAGE API SCHEMAS
@@ -109,9 +109,7 @@ export const FeatureImageUpdateAPI = FeatureImageUpdate.extend({
 export const ImageFlat = ImageBase.extend({
   featureId: z.string().optional(),
   attribution: z.string().nullish(),
-  intent: z
-    .enum(Object.values(ImageIntent) as [string, ...string[]])
-    .optional(),
+  intent: z.enum(Object.values(ImageIntent) as [string, ...string[]]).optional(),
   isPublished: z.boolean().optional(),
   publishedAt: z.string().optional()
 });
@@ -120,9 +118,7 @@ export const ImageFlatUpdate = ImageUpdate.extend({
   featureId: z.string(),
   imageId: z.string(),
   attribution: z.string().optional(),
-  intent: z
-    .enum(Object.values(ImageIntent) as [string, ...string[]])
-    .optional(),
+  intent: z.enum(Object.values(ImageIntent) as [string, ...string[]]).optional(),
   isPublished: z.boolean().optional(),
   publishedAt: z.string().optional()
 });

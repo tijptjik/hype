@@ -34,8 +34,6 @@ let horizontalOffset = $derived(() => {
         : 0;
 });
 
-
-
 // PAGE STATE HANDLING
 function handleOutroStart() {
   if (omniCtx.pageState === PageState.NeedTransition) {
@@ -147,7 +145,7 @@ export function conditionalTouchScroll(node: HTMLElement, options = { threshold:
 
 {#if omniCtx.state.isCardOpen}
   <div
-    class="flex flex-grow-1 pointer-events-none relative z-20 mx-auto h-full w-full max-w-[520px] overflow-x-auto overflow-y-hidden p-0 duration-300 w-92:my-4 w-92:h-auto w-92:px-4"
+    class="flex-grow-1 pointer-events-none relative z-20 mx-auto flex h-full w-full max-w-[520px] overflow-x-auto overflow-y-hidden p-0 duration-300 w-92:my-4 w-92:h-auto w-92:px-4"
     style="transform: translateX({horizontalOffset()}px); z-index: 4;"
     use:conditionalTouchScroll={{ threshold: 200 }}>
     <div

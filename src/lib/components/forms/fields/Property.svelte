@@ -253,17 +253,16 @@ const isVisible = (field: FormFieldExtendedDefinition) => {
 let loadingLocale = $state<Locale | null>(null);
 let isClearAllVisible = $state(true);
 
-
 let isTranslationDisabled = $derived.by(() => {
   // Explicitly reference reactive dependencies to ensure recalculation
   const _currentProperty = currentProperty;
   const _complexValues = complexValues;
-  
+
   return {
     en: isTranslationDisabledForLocale('en'),
     'zh-hans': isTranslationDisabledForLocale('zh-hans'),
     'zh-hant': isTranslationDisabledForLocale('zh-hant')
-  }
+  };
 });
 
 // Derived state to check if translation is possible for a given target locale
@@ -412,7 +411,8 @@ async function translatePropertyAndValues(
         labelOrigin &&
         labelOrigin.originalIndex !== undefined &&
         translatedTexts[labelOrigin.originalIndex] !== undefined &&
-        propToUpdate.i18n && propToUpdate.i18n[targetLocale]
+        propToUpdate.i18n &&
+        propToUpdate.i18n[targetLocale]
       ) {
         propToUpdate.i18n[targetLocale]!.label =
           translatedTexts[labelOrigin.originalIndex];
@@ -424,7 +424,8 @@ async function translatePropertyAndValues(
         placeholderOrigin &&
         placeholderOrigin.originalIndex !== undefined &&
         translatedTexts[placeholderOrigin.originalIndex] !== undefined &&
-        propToUpdate.i18n && propToUpdate.i18n[targetLocale]
+        propToUpdate.i18n &&
+        propToUpdate.i18n[targetLocale]
       ) {
         propToUpdate.i18n[targetLocale]!.placeholder =
           translatedTexts[placeholderOrigin.originalIndex];
@@ -598,7 +599,10 @@ const allI18nErrorsForPropertyValues = $derived.by(() => {
             {#each Object.entries(fields) as [fieldKey, fieldDef], propIndex (fieldKey)}
               {@const FieldComponent = getFieldComponent(fieldDef.component)}
               {@const isListField = fieldDef.component === 'ListField'}
-              {@const shouldShowField = fieldDef.isTranslated || isNotLocale(locale) || (!fieldDef.isTranslated && colIndex === 0)}
+              {@const shouldShowField =
+                fieldDef.isTranslated ||
+                isNotLocale(locale) ||
+                (!fieldDef.isTranslated && colIndex === 0)}
               {#if FieldComponent && isVisible(fieldDef) && shouldShowField}
                 <FieldComponent
                   {...{

@@ -51,8 +51,8 @@ function generateNonOverlappingPoints(
 function createSeededRandom(seed: number) {
   let state = seed;
   return function seededRandom() {
-    state = (state * 1664525 + 1013904223) % (2 ** 32);
-    return state / (2 ** 32);
+    state = (state * 1664525 + 1013904223) % 2 ** 32;
+    return state / 2 ** 32;
   };
 }
 

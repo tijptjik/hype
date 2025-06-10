@@ -164,7 +164,7 @@ import {
   UserLayerUpdate,
   UserLayerUpdateAPI,
   UserUpdate,
-  UserUpdateAPI,
+  UserUpdateAPI
 } from './db/zod';
 // TYPES
 import type {
@@ -191,7 +191,10 @@ import type { SvelteSet } from 'svelte/reactivity';
 import type { Geometry } from 'geojson';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import type { SQLiteTable, SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core';
-import type { SessionSession as BetterAuthSessionSession, SessionUser as BetterAuthSessionUser } from './auth';
+import type {
+  SessionSession as BetterAuthSessionSession,
+  SessionUser as BetterAuthSessionUser
+} from './auth';
 
 /* ----------------- */
 // NAMING CONVENTIONS
@@ -543,7 +546,13 @@ export type Field =
   | FeatureField
   | HubField;
 export type Resource = Organisation | Project | Layer | Feature | Task | Hub;
-export type ResourceNew = OrganisationNew | ProjectNew | LayerNew | FeatureNew | TaskNew | HubNew;
+export type ResourceNew =
+  | OrganisationNew
+  | ProjectNew
+  | LayerNew
+  | FeatureNew
+  | TaskNew
+  | HubNew;
 export type ResourceDB =
   | OrganisationDB
   | ProjectDB
@@ -582,7 +591,6 @@ export type UserPartial = z.infer<typeof UserUpdateAPI>;
 export type UserLayer = z.infer<typeof UserLayerAPI>;
 export type UserLayerNew = z.infer<typeof UserLayerInsert>;
 export type UserLayerPartial = z.infer<typeof UserLayerUpdateAPI>;
-
 
 /* ----------------- */
 // USERS :: JOIN
@@ -1766,7 +1774,4 @@ export function isHub(resource: Resource): resource is Hub {
 }
 
 // FEATURE TYPES
-export type {
-  FeatureClientExt,
-  FeatureI18nFieldKeys
-} from './db/zod/schema/feature';
+export type { FeatureClientExt, FeatureI18nFieldKeys } from './db/zod/schema/feature';

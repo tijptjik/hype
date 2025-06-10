@@ -27,14 +27,16 @@ function getFeatureCount(neighbourhoodKey: string) {
     subNeighbourhoods[neighbourhoodKey as keyof typeof subNeighbourhoods].forEach(
       (n) => {
         count += features.filter(
-          (feature) => n === feature.i18n?.[getLocale()]?.addressProperties?.neighbourhood
+          (feature) =>
+            n === feature.i18n?.[getLocale()]?.addressProperties?.neighbourhood
         ).length;
       }
     );
   } else {
     count = features.filter(
       (feature) =>
-        neighbourhoodKey === feature.i18n?.[getLocale()]?.addressProperties?.neighbourhood
+        neighbourhoodKey ===
+        feature.i18n?.[getLocale()]?.addressProperties?.neighbourhood
     ).length;
   }
   return count;
@@ -43,7 +45,7 @@ function getFeatureCount(neighbourhoodKey: string) {
 
 {#if getFeatureCount(neighbourhood) > 0}
   <div
-    class="group focus:-ring-offset-2 ml-4 flex cursor-pointer flex-row items-center justify-between gap-4 overflow-visible rounded-l-md bg-black py-2 pl-4 pr-[30px] caret-transparent transition-colors duration-200 focus:outline-none focus:ring-0"
+    class="focus:-ring-offset-2 group ml-4 flex cursor-pointer flex-row items-center justify-between gap-4 overflow-visible rounded-l-md bg-black py-2 pl-4 pr-[30px] caret-transparent transition-colors duration-200 focus:outline-none focus:ring-0"
     onclick={() => {
       appCtx.toggleNeighbourhood(neighbourhood);
       appCtx.zoomToAllVisibleFeatures();
@@ -65,7 +67,9 @@ function getFeatureCount(neighbourhoodKey: string) {
     tabindex="0">
     <div class="flex -translate-x-5 flex-row items-center gap-3">
       <div
-        class="h-2 w-2 rounded-full group-hover:bg-base-content/30 group-focus-visible:bg-base-content/30 {selectedNeighbourhoods.includes(neighbourhood)
+        class="h-2 w-2 rounded-full group-hover:bg-base-content/30 group-focus-visible:bg-base-content/30 {selectedNeighbourhoods.includes(
+          neighbourhood
+        )
           ? selectedClass
           : ''}
         {selectedNeighbourhoods.includes(neighbourhood)
@@ -75,13 +79,22 @@ function getFeatureCount(neighbourhoodKey: string) {
       <div class="flex flex-grow flex-col">
         <p class="flex space-x-2 font-mono text-xs uppercase tracking-wide">
           <span class="text-primary/80"
-            >{getI18n(data, 'region', appCtx.getUserPreferences(), undefined, true).replace(
-              'Hong Kong',
-              'HK'
-            )}</span>
+            >{getI18n(
+              data,
+              'region',
+              appCtx.getUserPreferences(),
+              undefined,
+              true
+            ).replace('Hong Kong', 'HK')}</span>
           <span class="mtext-base-content/60 font-sans">::</span>
           <span class="text-accent"
-            >{getI18n(data, 'district', appCtx.getUserPreferences(), undefined, true)}</span>
+            >{getI18n(
+              data,
+              'district',
+              appCtx.getUserPreferences(),
+              undefined,
+              true
+            )}</span>
         </p>
         <p class="font-normal text-base-content">
           {getI18n(data, 'name', appCtx.getUserPreferences(), undefined, true)}

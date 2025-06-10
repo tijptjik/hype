@@ -24,7 +24,7 @@ export async function listUserFeatures(
     .select()
     .from(userFeature)
     .where(eq(userFeature.userId, userId));
-    
+
   return userFeatures as UserFeature[];
 }
 

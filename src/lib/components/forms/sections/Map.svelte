@@ -16,7 +16,9 @@ let sectionProps: SectionProps & {
 } = $props();
 
 // STATE : CONTEXT :: FORM
-let featureForm: FeatureForm['form'] = $derived((sectionProps.form as FeatureForm).form);
+let featureForm: FeatureForm['form'] = $derived(
+  (sectionProps.form as FeatureForm).form
+);
 
 // STATE : DERIVED
 let lngLat = $derived(

@@ -6,7 +6,10 @@ import { m } from '$lib/i18n';
 import { eq } from 'drizzle-orm';
 // LIB
 import { getDatabase, JSONResponseOrError } from '$lib/api';
-import { getPropertyQueryContext, propertyEntityWithRelations } from '$lib/api/services/property';
+import {
+  getPropertyQueryContext,
+  propertyEntityWithRelations
+} from '$lib/api/services/property';
 import { getProperty, toResponseShape } from '$lib/db/services/property';
 // SCHEMA
 import { property } from '$lib/db/schema/index';
@@ -42,7 +45,9 @@ export const GET: RequestHandler = async ({ params, locals, platform, request })
       result,
       result.i18n,
       result.values,
-      result.values?.flatMap((v) => v.i18n || []).filter((item): item is PropertyValueI18nDB => item != null) || []
+      result.values
+        ?.flatMap((v) => v.i18n || [])
+        .filter((item): item is PropertyValueI18nDB => item != null) || []
     );
 
     return JSONResponseOrError(data);

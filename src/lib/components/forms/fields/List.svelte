@@ -142,7 +142,7 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
           <Icon src={Bars3} class="h-4 w-4" />
         </div>
         <div
-          class="font-regular text-md flex-1 border-none text-white focus:border-none focus:outline-none caret-white"
+          class="font-regular text-md flex-1 border-none text-white caret-white focus:border-none focus:outline-none"
           contenteditable={!isDragging && !actionProps.removeMode}
           tabindex="0"
           data-value-id={property.id}
@@ -170,6 +170,7 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
 
 <style>
 :global(.dragging) {
+  /* @ts-ignore */
   @apply opacity-80 shadow-lg ring-2 ring-accent;
 }
 </style>

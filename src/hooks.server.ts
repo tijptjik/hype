@@ -82,7 +82,6 @@ const handle_hub: Handle = async ({ event, resolve }) => {
  * Better Auth's svelteKitHandler automatically handles /api/auth/* endpoints
  */
 const handle_auth: Handle = async ({ event, resolve }) => {
-
   try {
     if (!event.platform?.env?.DB) {
       console.error('🔴 Auth: No DB available for:', event.url.pathname);
@@ -109,19 +108,17 @@ const handle_auth: Handle = async ({ event, resolve }) => {
  * Workaround to set session and user locals
  */
 const handle_session_auth: Handle = async ({ event, resolve }) => {
-
   try {
     // LOCALS
     const sessionData = await event.locals.auth.api.getSession({
       headers: event.request.headers
     });
-    
+
     // Safely assign session and user data
-    if (sessionData && sessionData.session && sessionData.user){
+    if (sessionData && sessionData.session && sessionData.user) {
       event.locals.session = sessionData.session as Session;
       event.locals.user = sessionData.user as SessionUser;
     }
-    
   } catch (error) {
     console.error('🔴 Session auth error:', error);
     // Don't fail the request, just leave session/user undefined

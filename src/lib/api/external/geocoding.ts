@@ -205,14 +205,17 @@ function processReverseGeocodeResult(
   const distance = calculateDistance(lng, lat, resultLng, resultLat);
 
   // Get district from neighborhood (handle null neighborhood)
-  const neighborhood = result.address.Neighborhood || result.address.City || result.address.Subregion;
-  const district = neighborhood ? getDistrictFromNeighbourhood(neighborhood, 'en') : null;
+  const neighborhood =
+    result.address.Neighborhood || result.address.City || result.address.Subregion;
+  const district = neighborhood
+    ? getDistrictFromNeighbourhood(neighborhood, 'en')
+    : null;
 
   // Create display address - ensure it exists
   const rawDisplayAddress = result.address.Match_addr;
-  const processedDisplayAddress = rawDisplayAddress ? 
-    removeRegion(titleCase(applyAddressAbbreviations(rawDisplayAddress))) : 
-    undefined;
+  const processedDisplayAddress = rawDisplayAddress
+    ? removeRegion(titleCase(applyAddressAbbreviations(rawDisplayAddress)))
+    : undefined;
 
   // Process the result
   const processedResult: ParsedReverseGeocodeResult = {
@@ -250,7 +253,7 @@ function processReverseGeocodeResult(
       }
     }
   };
-  
+
   return processedResult;
 }
 
@@ -542,7 +545,7 @@ export async function reverseGeocode(
 
   // Parse the response into our canonical format
   const processedResult = processReverseGeocodeResult(result, lng, lat);
-  
+
   if (!processedResult) {
     return null;
   }
@@ -552,12 +555,12 @@ export async function reverseGeocode(
     // Use English address properties to perform forward geocoding
     const addressProperties = processedResult?.i18n.en.addressProperties;
     const streetAddress = `${addressProperties?.buildingNumberFrom} ${addressProperties?.streetName}`;
-    
+
     const forwardResult = await fetchForwardGeocodeALSResult(
       streetAddress,
       addressProperties?.neighbourhood
     );
-    
+
     if (forwardResult) {
       const fullResult = await processForwardGeocodeResult(
         forwardResult,

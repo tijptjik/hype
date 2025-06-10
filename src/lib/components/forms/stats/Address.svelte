@@ -37,9 +37,9 @@ function copyCoordinates() {
       {#key ($form.geometry as Point).coordinates}
         <pre
           in:fade={{ duration: 300 }}
-          class="font-mono text-lg font-light text-base-content/50">{($form.geometry as Point).coordinates[ 
-            index
-          ].toFixed(5)}</pre>
+          class="font-mono text-lg font-light text-base-content/50">{(
+            $form.geometry as Point
+          ).coordinates[index].toFixed(5)}</pre>
       {/key}
     </div>
   {/each}

@@ -18,5 +18,8 @@ let displayLabel = $derived(
     style="font-variant: all-small-caps;">
     {displayLabel}
   </label>
-  <p class="px-3 pb-3 text-base font-normal text-base-content text-ellipsis overflow-hidden">{value ?? '-'}</p>
+  <p
+    class="overflow-hidden text-ellipsis px-3 pb-3 text-base font-normal text-base-content">
+    {value ?? '-'}
+  </p>
 </div>

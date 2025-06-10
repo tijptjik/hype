@@ -39,7 +39,8 @@ let { form } = fieldProps.form;
           <!-- Published Toggle -->
           <div class="text-md flex flex-col gap-2 rounded-r-lg bg-base-300 p-3">
             <label class="flex cursor-pointer items-center justify-between gap-2">
-              <span class="flex flex-row items-center gap-2 font-mono text-sm font-light tracking-tighter">
+              <span
+                class="flex flex-row items-center gap-2 font-mono text-sm font-light tracking-tighter">
                 <Icon src={Eye} class="size-4" />Published
               </span>
               <input
@@ -73,7 +74,8 @@ let { form } = fieldProps.form;
 
             <!-- User Contributable Toggle -->
             <label class="flex cursor-pointer items-center justify-between gap-2">
-              <span class="flex flex-row items-center gap-2 font-mono text-sm font-light tracking-tighter">
+              <span
+                class="flex flex-row items-center gap-2 font-mono text-sm font-light tracking-tighter">
                 <Icon src={Pencil} class="size-4" /> Admin Only
               </span>
               <input

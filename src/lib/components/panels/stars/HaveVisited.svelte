@@ -44,8 +44,8 @@ let visitedFeatures = $derived(
       {
         ...visited,
         hierarchy: {
-                  organisation: getI18n(organisation, 'nameShort', appCtx.getUserPreferences()),
-        project: getI18n(project, 'nameShort', appCtx.getUserPreferences()),
+          organisation: getI18n(organisation, 'nameShort', appCtx.getUserPreferences()),
+          project: getI18n(project, 'nameShort', appCtx.getUserPreferences()),
           layer: appCtx.getContextualLayerName(layer!),
           feature: getI18n(feature, 'title', appCtx.getUserPreferences())
         }

@@ -40,7 +40,7 @@ let id = $derived(
   <label class="form-control w-full">
     <FieldLabel {field} {fieldRoot} {fieldIndex} {fieldKey} {constraints} />
     <div
-      class="relative rounded-lg border-none bg-neutral pl-0 pr-3  focus-within:outline-neutral-500">
+      class="relative rounded-lg border-none bg-neutral pl-0 pr-3 focus-within:outline-neutral-500">
       <FormTextArea
         bind:value={fieldValues.value as string}
         bind:isGenAI={fieldValues.isGenAI as boolean}

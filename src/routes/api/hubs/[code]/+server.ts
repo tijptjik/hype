@@ -10,7 +10,12 @@ import { HubUpdateAPI } from '$lib/db/zod';
 // SCHEMA
 import { hub } from '$lib/db/schema/index';
 // DB
-import { getHub, updateHub, updateI18n, updateHubWithRelated } from '$lib/db/services/hub';
+import {
+  getHub,
+  updateHub,
+  updateI18n,
+  updateHubWithRelated
+} from '$lib/db/services/hub';
 import { updateOrganisation } from '$lib/db/services/organisation';
 // API
 import {
@@ -128,25 +133,37 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     // DB : Update organisation relationships if provided
     if (formData.organisations) {
       // First, clear existing hub assignments for this hub
-      const existingHub = await getHub(db, hubEntityWithRelations, [eq(hub.id, updatedHub.id)]);
+      const existingHub = await getHub(db, hubEntityWithRelations, [
+        eq(hub.id, updatedHub.id)
+      ]);
       if (existingHub?.organisations) {
         for (const org of existingHub.organisations) {
-          await updateOrganisation(db, { hubId: null, isCoreInclusive: true, isHubExclusive: false }, org.code);
+          await updateOrganisation(
+            db,
+            { hubId: null, isCoreInclusive: true, isHubExclusive: false },
+            org.code
+          );
         }
       }
 
       // Then, assign new organisations to this hub
       for (const organisation of formData.organisations) {
-        await updateOrganisation(db, { 
-          hubId: updatedHub.id, 
-          isCoreInclusive: organisation.isCoreInclusive || true,
-          isHubExclusive: organisation.isHubExclusive || false 
-        }, organisation.code);
+        await updateOrganisation(
+          db,
+          {
+            hubId: updatedHub.id,
+            isCoreInclusive: organisation.isCoreInclusive || true,
+            isHubExclusive: organisation.isHubExclusive || false
+          },
+          organisation.code
+        );
       }
     }
 
     // RESPONSE : Get updated hub with organisations and convert to form shape
-    const hubWithOrganisations = await getHub(db, hubEntityWithRelations, [eq(hub.code, params.code!)]);
+    const hubWithOrganisations = await getHub(db, hubEntityWithRelations, [
+      eq(hub.code, params.code!)
+    ]);
     const updatedForm = await toFormShape(hubWithOrganisations!);
 
     // STATE : Determine if redirect is needed (only when code changes)

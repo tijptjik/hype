@@ -10,17 +10,24 @@ import { Bars3 } from '@steeze-ui/heroicons';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
-import type { Resource, ResourceType, Organisation, Project, Layer, Feature } from '$lib/types';
+import type {
+  Resource,
+  ResourceType,
+  Organisation,
+  Project,
+  Layer,
+  Feature
+} from '$lib/types';
 import type { Snippet } from 'svelte';
 
 // STATE : PROPS
-let { 
+let {
   title,
   icon,
   breadcrumbs = $bindable([]),
   menuItems,
   actions
-}: { 
+}: {
   title: string;
   icon?: any;
   breadcrumbs?: { name: string; href: string }[];
@@ -52,11 +59,21 @@ const autoBreadcrumbs = $derived(() => {
 });
 
 // Simplified parent chain builder
-function buildParentChain(entity: Resource, resourceType: ResourceType, parents: { name: string; href: string }[]) {
+function buildParentChain(
+  entity: Resource,
+  resourceType: ResourceType,
+  parents: { name: string; href: string }[]
+) {
   const parentMap = {
     feature: { getter: adminCtx.appCtx.getLayer, parentType: 'layer' as ResourceType },
-    layer: { getter: adminCtx.appCtx.getProject, parentType: 'project' as ResourceType },
-    project: { getter: adminCtx.appCtx.getOrganisation, parentType: 'organisation' as ResourceType }
+    layer: {
+      getter: adminCtx.appCtx.getProject,
+      parentType: 'project' as ResourceType
+    },
+    project: {
+      getter: adminCtx.appCtx.getOrganisation,
+      parentType: 'organisation' as ResourceType
+    }
   };
 
   const parentInfo = parentMap[resourceType as keyof typeof parentMap];
@@ -69,20 +86,28 @@ function buildParentChain(entity: Resource, resourceType: ResourceType, parents:
   }
 }
 
-function addParentToChain(parents: { name: string; href: string }[], parentEntity: Resource, resourceType: ResourceType) {
-  const parentRef = adminCtx.getEntityRef(resourceType as any, parentEntity.id as string);
+function addParentToChain(
+  parents: { name: string; href: string }[],
+  parentEntity: Resource,
+  resourceType: ResourceType
+) {
+  const parentRef = adminCtx.getEntityRef(
+    resourceType as any,
+    parentEntity.id as string
+  );
   if (parentRef) {
     const parentPath = `${ADMIN_PATH}/${resourceType}s/${parentRef}`;
-    
+
     let parentName = 'Unknown';
     const typedParent = parentEntity as Organisation | Project | Layer | Feature;
     const currentLocale = getLocale();
     if (typedParent.i18n?.[currentLocale]) {
-      parentName = typedParent.i18n[currentLocale].name || 
-                  typedParent.i18n[currentLocale].nameShort || 
-                  typedParent.i18n[currentLocale].title || 
-                  parentEntity.id ||
-                  'Unknown';
+      parentName =
+        typedParent.i18n[currentLocale].name ||
+        typedParent.i18n[currentLocale].nameShort ||
+        typedParent.i18n[currentLocale].title ||
+        parentEntity.id ||
+        'Unknown';
     } else {
       parentName = parentEntity.id || 'Unknown';
     }
@@ -106,17 +131,19 @@ const displayIcon = $derived(
 );
 </script>
 
-<header class="navbar sticky left-0 top-0 z-20 h-17.5 w-full flex-none bg-gradient-to-r from-rose-500 to-fuchsia-800 px-12 py-4 shadow-lg">
+<header
+  class="navbar sticky left-0 top-0 z-20 h-17.5 w-full flex-none bg-gradient-to-r from-rose-500 to-fuchsia-800 px-12 py-4 shadow-lg">
   <div class="flex-1 @container">
     <div class="flex items-center space-x-4">
       {#if displayIcon}
         <Icon src={displayIcon} class="h-6 w-6" />
       {/if}
-      
+
       <div class="flex flex-col">
         <!-- Breadcrumbs -->
         {#if autoBreadcrumbs().length > 0}
-          <div class="hidden items-center space-x-2 text-sm font-medium text-gray-300 @md:flex">
+          <div
+            class="hidden items-center space-x-2 text-sm font-medium text-gray-300 @md:flex">
             {#each autoBreadcrumbs() as parent, i}
               <a
                 draggable="false"
@@ -135,15 +162,16 @@ const displayIcon = $derived(
             {/each}
           </div>
         {/if}
-        
+
         <!-- Title -->
-        <h2 class="max-w-0 truncate text-2xl font-semibold transition-all @xs:max-w-[14rem] @sm:max-w-[18rem] @md:max-w-[24rem] @lg:max-w-[30rem] @xl:max-w-[34rem] @2xl:max-w-[38rem] @3xl:max-w-[42rem] @4xl:max-w-[48rem] @5xl:max-w-[56rem] @6xl:max-w-[64rem]">
+        <h2
+          class="max-w-0 truncate text-2xl font-semibold transition-all @xs:max-w-[14rem] @sm:max-w-[18rem] @md:max-w-[24rem] @lg:max-w-[30rem] @xl:max-w-[34rem] @2xl:max-w-[38rem] @3xl:max-w-[42rem] @4xl:max-w-[48rem] @5xl:max-w-[56rem] @6xl:max-w-[64rem]">
           {title}
         </h2>
       </div>
     </div>
   </div>
-  
+
   <div class="flex-none">
     <!-- Custom Menu Items -->
     {#if menuItems}
@@ -151,9 +179,9 @@ const displayIcon = $derived(
         {@render menuItems()}
       </ul>
     {/if}
-    
+
     <Icon src={Bars3} class="mx-2 h-6 w-6 text-black" />
-    
+
     <!-- Custom Actions -->
     {#if actions}
       <ul class="menu menu-horizontal space-x-2">

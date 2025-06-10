@@ -50,7 +50,7 @@ watch(
     const locale = getLocale();
     const userLocale = ($session.data?.user as SessionUser).locale;
     if (userLocale && locale !== userLocale) {
-      setLocale(userLocale as Locale)
+      setLocale(userLocale as Locale);
     }
   }
 );

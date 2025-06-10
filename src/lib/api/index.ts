@@ -331,16 +331,13 @@ async function prepareNewForm<T extends Record<string, unknown>>({
   } else if (isFeature(initialData as Resource) && isLayer(parentData)) {
     const parentLayerWithCorrectI18n: Layer = {
       ...parentData,
-      i18n: (Array.isArray(parentData.i18n)
-        ? parentData.i18n
-        : Object.values(parentData.i18n || {})) as LayerI18nDB[]
+      i18n: transformI18nSafely(parentData.i18n),
+      properties: parentData.properties || [] // Ensure properties exist
     };
 
     const initialFeatureWithCorrectI18n: Feature = {
       ...(initialData as Feature),
-      i18n: (Array.isArray((initialData as Feature).i18n)
-        ? (initialData as Feature).i18n
-        : Object.values((initialData as Feature).i18n || {})) as FeatureI18nDB[]
+      i18n: transformI18nSafely((initialData as Feature).i18n, {})
     };
 
     initialData = mergeFeatureProperties(
@@ -479,7 +476,7 @@ function mergeProjectProperties(layer: Layer, properties: Property[]): Layer {
   properties.forEach((projectProp: Property) => {
     if (!existingPropertyIds.includes(projectProp.id)) {
       if (typeof projectProp.i18n !== 'object' && projectProp.i18n) {
-        projectProp.i18n = transformI18nSafely(projectProp.i18n)
+        projectProp.i18n = transformI18nSafely(projectProp.i18n);
       }
       // Create a conformed property object
       const conformedProjectProp: Property = {

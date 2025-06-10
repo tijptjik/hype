@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import { getLocale} from '$lib/i18n';
+import { getLocale } from '$lib/i18n';
 // LIB
 import { getValues, updateFeaturePropertyValue } from '$lib/index';
 // COMPONENTS

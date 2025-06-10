@@ -158,7 +158,7 @@ function handleAccept() {
 function handleResourceSelect(resource: Organisation | Project | Layer, e: Event) {
   e.preventDefault();
   e.stopPropagation();
-  
+
   if ('organisationId' in resource) {
     // This is a Project
     appCtx.updateNewFeature({
@@ -197,18 +197,18 @@ function handleResourceSelect(resource: Organisation | Project | Layer, e: Event
 function clearResource(level: 'organisation' | 'project' | 'layer', e: Event) {
   e.preventDefault();
   e.stopPropagation();
- 
+
   const hierarchy = ['organisationId', 'projectId', 'layerId'] as const;
 
-  const levelIndex = hierarchy.indexOf(level + 'Id' as any);
+  const levelIndex = hierarchy.indexOf((level + 'Id') as any);
   const updates: any = { feature: {} };
-  
+
   // Clear from this level onwards
   for (let i = levelIndex; i < hierarchy.length; i++) {
     updates[hierarchy[i]] = undefined;
     if (hierarchy[i] === 'layerId') updates.feature.layerId = undefined;
   }
-  
+
   appCtx.updateNewFeature(updates);
   searchQuery = '';
   isValid = false;

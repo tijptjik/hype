@@ -9,7 +9,13 @@ import SearchBar from '$lib/components/forms/extra/HeaderSearch.svelte';
 import Icon from '$lib/components/common/Icon.svelte';
 import { ExclamationTriangle } from '@steeze-ui/heroicons';
 // TYPES
-import type { Resource, SectionProps, UserJoinConfig, UserRoleDisco, Form } from '$lib/types';
+import type {
+  Resource,
+  SectionProps,
+  UserJoinConfig,
+  UserRoleDisco,
+  Form
+} from '$lib/types';
 import { m } from '$lib/i18n';
 
 // STATE : PROPS
@@ -25,7 +31,7 @@ let fieldRoot = $derived(Object.keys(fields)[0] as keyof Resource);
 </script>
 
 <div
-  class="basis-2/3 min-h-60 overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0 caret-transparent">
+  class="min-h-60 basis-2/3 overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0 caret-transparent">
   <Header {...sectionProps}>
     {#snippet actionContent()}
       <UserActions bind:removeMode bind:searchMode />

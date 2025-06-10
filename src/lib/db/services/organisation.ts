@@ -12,8 +12,8 @@ import {
 } from '../schema';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
-import { 
-  OrganisationAPI, 
+import {
+  OrganisationAPI,
   OrganisationCollectionAPI,
   OrganisationSuperAdminAPI,
   OrganisationCollectionSuperAdminAPI
@@ -165,10 +165,11 @@ export const searchOrganisations = async (
 
       if (i18nSearchConditions.length > 0) {
         // Add condition that checks if organisation has any matching i18n records
-        const combinedConditions = i18nSearchConditions.length === 1 
-          ? i18nSearchConditions[0]
-          : sql`(${sql.join(i18nSearchConditions, sql` OR `)})`;
-        
+        const combinedConditions =
+          i18nSearchConditions.length === 1
+            ? i18nSearchConditions[0]
+            : sql`(${sql.join(i18nSearchConditions, sql` OR `)})`;
+
         searchConditions.push(
           sql`EXISTS (
             SELECT 1 FROM "organisationI18n" 
@@ -392,10 +393,10 @@ export const toFormShape = async (
     i18n: transformI18nSafely(i18n) as Record<Locale, OrganisationI18nNew>,
     userRoles
   };
-  
+
   // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
   const schema = isSuperAdmin ? OrganisationSuperAdminAPI : OrganisationAPI;
- 
+
   // @ts-ignore TODO - Fix Zod type error
   const form = await superValidate(formData, zod(schema));
   return form as SuperValidated<Organisation>;
@@ -413,14 +414,14 @@ export const toResponseShape = async (
     i18n: transformI18nSafely(i18n),
     userRoles
   };
-  
+
   // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
   if (isCollection) {
-    return isSuperAdmin 
+    return isSuperAdmin
       ? OrganisationCollectionSuperAdminAPI.parse(data)
       : OrganisationCollectionAPI.parse(data);
   } else {
-    return isSuperAdmin 
+    return isSuperAdmin
       ? OrganisationSuperAdminAPI.parse(data)
       : OrganisationAPI.parse(data);
   }

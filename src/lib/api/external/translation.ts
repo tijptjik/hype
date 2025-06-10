@@ -9,7 +9,10 @@ const ENDPOINT = 'https://api.cognitive.microsofttranslator.com';
 const REGION = PUBLIC_AZURE_TRANSLATION_REGION;
 const KEY = PRIVATE_AZURE_TRANSLATION_KEY;
 
-const languageTagToApiLanguageTag = (source: Locale, target: Locale): { sourceLocale: string; targetLocale: string } => {
+const languageTagToApiLanguageTag = (
+  source: Locale,
+  target: Locale
+): { sourceLocale: string; targetLocale: string } => {
   const sourceMaps = {
     en: 'en',
     'zh-hant': 'yue',

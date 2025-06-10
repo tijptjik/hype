@@ -8,7 +8,7 @@ import {
   ChevronUp,
   ExclamationCircle,
   CheckCircle,
-  XCircle,
+  XCircle
 } from '@steeze-ui/heroicons';
 // TYPES
 import type { Task } from '$lib/types';
@@ -74,21 +74,26 @@ function closeExpand(e: MouseEvent) {
 <div class="flex items-center gap-4" onclick={closeExpand}>
   {#if isReviewed}
     <div class="flex flex-col gap-2 px-3 py-2">
-      <div class="flex items-center gap-4 shrink-0">
+      <div class="flex shrink-0 items-center gap-4">
         {#if reviewerName}
           <div class="flex items-center gap-2 rounded-lg bg-base-200">
             <img src={task.reviewer?.image} class="h-8 w-8 rounded-full" />
-            <p class="rounded-xl bg-base-200 pl-1 pr-2 text-sm text-base-content">{reviewerName}</p>
+            <p class="rounded-xl bg-base-200 pl-1 pr-2 text-sm text-base-content">
+              {reviewerName}
+            </p>
           </div>
         {/if}
         {#if task.reviewReason}
-          <div class="relative flex items-center rounded-lg bg-base-200 h-8 shrink-2"
-          onmouseenter={() => isExpanded = true}
-          onmouseleave={() => isExpanded = false}
-          >
+          <div
+            class="shrink-2 relative flex h-8 items-center rounded-lg bg-base-200"
+            onmouseenter={() => (isExpanded = true)}
+            onmouseleave={() => (isExpanded = false)}>
             <Icon src={ExclamationCircle} class="h-8 w-8 text-base-content" />
-            <p class="uppercase text-base-content p-2">{m.mad_fresh_swan_trap()}</p>
-            <p class="text-sm/8 text-base-content max-w-[200px] line-clamp-1 {isExpanded ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300 p-2 uppercase font-mono overflow-clip">
+            <p class="p-2 uppercase text-base-content">{m.mad_fresh_swan_trap()}</p>
+            <p
+              class="line-clamp-1 max-w-[200px] text-sm/8 text-base-content {isExpanded
+                ? 'opacity-0'
+                : 'opacity-100'} overflow-clip p-2 font-mono uppercase transition-opacity duration-300">
               {task.reviewReason}
             </p>
             {#if hasLongReason}
@@ -102,22 +107,25 @@ function closeExpand(e: MouseEvent) {
               </button>
             {/if}
             {#if isExpanded}
-              <div class="absolute left-0 top-full mt-2 w-full bg-base-200 rounded-lg shadow-lg p-2 z-30" in:fade={{ duration: 300 }} out:fade={{ duration: 300 }}>
-                <p class="text-sm text-base-content whitespace-pre-wrap p-2 leading-8">
+              <div
+                class="absolute left-0 top-full z-30 mt-2 w-full rounded-lg bg-base-200 p-2 shadow-lg"
+                in:fade={{ duration: 300 }}
+                out:fade={{ duration: 300 }}>
+                <p class="whitespace-pre-wrap p-2 text-sm leading-8 text-base-content">
                   {task.reviewReason}
                 </p>
               </div>
             {/if}
           </div>
         {/if}
-        <div class="flex items-center rounded-lg bg-base-200 h-8 shrink-0">
+        <div class="flex h-8 shrink-0 items-center rounded-lg bg-base-200">
           <Icon
             src={reviewIcon}
             class="h-8 w-8 {task.reviewOutcome === 'accepted'
               ? 'text-success'
               : 'text-error'}" />
-          <p class="uppercase text-base-content p-2">{m.mad_fresh_swan_trip()}</p>
-          <p class="font-mono text-sm uppercase text-neutral-content p-2">
+          <p class="p-2 uppercase text-base-content">{m.mad_fresh_swan_trip()}</p>
+          <p class="p-2 font-mono text-sm uppercase text-neutral-content">
             {task.reviewAction?.replaceAll('-', ' ')}
           </p>
         </div>
@@ -148,8 +156,9 @@ function closeExpand(e: MouseEvent) {
 
 {#if showReasonModal}
   <div class="modal modal-open">
-    <div class="modal-box border-2 border-[#4987E2] bg-black shadow-[0_0_15px_rgba(0,0,255,0.5)]">
-      <h3 class="mb-4 text-lg font-bold text-center pb-2">Reason for rejection</h3>
+    <div
+      class="modal-box border-2 border-[#4987E2] bg-black shadow-[0_0_15px_rgba(0,0,255,0.5)]">
+      <h3 class="mb-4 pb-2 text-center text-lg font-bold">Reason for rejection</h3>
       <div class="form-control">
         <textarea
           class="textarea textarea-bordered h-24 bg-black text-white focus:outline-none focus:ring-0"
@@ -158,8 +167,12 @@ function closeExpand(e: MouseEvent) {
         </textarea>
       </div>
       <div class="modal-action">
-        <button class="btn btn-ghost hover:bg-transparent hover:text-error" onclick={() => (showReasonModal = false)}>Cancel</button>
-        <button class="btn transition-all duration-300 bg-base-400 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300" onclick={handleReject}>Reject</button>
+        <button
+          class="btn btn-ghost hover:bg-transparent hover:text-error"
+          onclick={() => (showReasonModal = false)}>Cancel</button>
+        <button
+          class="btn bg-base-400 uppercase transition-all duration-300 hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300"
+          onclick={handleReject}>Reject</button>
       </div>
     </div>
   </div>

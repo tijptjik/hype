@@ -23,9 +23,7 @@ let { resourceType, id, onHoverOnly = true } = $props();
     : 'Add item to filters'}
   onclick={() => appCtx.togglePrism(resourceType, id)}>
   <Icon
-    src={appCtx.state.prisms[
-      resourceType as ResourceTypeWithChildren
-    ]?.includes(id)
+    src={appCtx.state.prisms[resourceType as ResourceTypeWithChildren]?.includes(id)
       ? Minus
       : Plus}
     class="h-4 w-4" />

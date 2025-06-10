@@ -94,8 +94,7 @@ let title = $derived(
     {#snippet menuItems()}
       <HeaderButton
         facet={{ label: m.organisation__core(), ref: 'core' }}
-        isActive={adminCtx.activeFacet === 'core' ||
-          adminCtx.activeFacet === false} />
+        isActive={adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false} />
     {/snippet}
 
     {#snippet actions()}
@@ -118,7 +117,15 @@ let title = $derived(
         <HubOrganisationsSection
           title="Hub Organisations"
           subtitle="Manage which organisations belong to this hub"
-          fields={{ organisations: { label: 'Hub Organisations', component: 'InputField', isArray: false, isTranslated: false, isNested: false } } as FormField}
+          fields={{
+            organisations: {
+              label: 'Hub Organisations',
+              component: 'InputField',
+              isArray: false,
+              isTranslated: false,
+              isNested: false
+            }
+          } as FormField}
           {form}
           joinConfig={{
             discriminator: 'isCoreInclusive',

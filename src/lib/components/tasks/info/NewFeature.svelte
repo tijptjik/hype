@@ -5,7 +5,7 @@ import { m } from '$lib/i18n';
 <section>
   <h3 class="mb-2 font-bold">{m.antsy_patient_moth_taste()}</h3>
   <p>
-   {m.strong_next_zebra_quiz()}
+    {m.strong_next_zebra_quiz()}
   </p>
   <ul class="ml-6 mt-2 list-disc space-y-2">
     <li>

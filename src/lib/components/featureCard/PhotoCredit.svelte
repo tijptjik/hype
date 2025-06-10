@@ -9,7 +9,7 @@ import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 import { getAppCtx } from '$lib/context/app.svelte';
 
 const cardCtx = getFeatureCardContext();
-const appCtx = getAppCtx()
+const appCtx = getAppCtx();
 
 let editedAttribution = $state(appCtx.getUser()!.attribution || '');
 let editing = $state(!(appCtx.getUser()!.attribution || '').trim());

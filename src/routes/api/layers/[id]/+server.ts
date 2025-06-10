@@ -132,13 +132,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     if (!form.valid) return SuperFormResponse<Layer>(form);
 
     // ACCESS CONTROL : Check permissions
-    assertPermissionsToUpdateLayer(
-      user,
-      request,
-      formData,
-      userRoles,
-      params.id as Id
-    );
+    assertPermissionsToUpdateLayer(user, request, formData, userRoles, params.id as Id);
 
     // DB : Update the layer
     const updatedLayer = await updateLayerWithRelated(db, form.data, params.id);
@@ -147,8 +141,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     const updatedForm = await toFormShape(
       updatedLayer,
       updatedLayer.i18n,
-      updatedLayer.properties,
-      updatedLayer.project
+      updatedLayer.properties
     );
 
     // HTTP : 200 JSON or 400
@@ -180,21 +173,20 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     if (!existing) return error(404, m.quiet_soft_mole_animate());
 
     // Use assertion functions for access control
-    assertPermissionsToUpdateLayer(
-      user,
-      request,
-      existing,
-      userRoles,
-      params.id as Id
-    );
+    assertPermissionsToUpdateLayer(user, request, existing, userRoles, params.id as Id);
 
     // DB : Update only the basic layer fields (no relations for PATCH)
     const updated = await updateLayer(db, newData, params.id);
 
     // DB : Get the updated layer with all relations for response
-    const updatedWithRelations = await getLayer(db, layerEntityWithRelations, [
-      eq(layer.id, params.id as string)
-    ], locals.hub);
+    const updatedWithRelations = await getLayer(
+      db,
+      layerEntityWithRelations,
+      [
+        eq(layer.id, params.id as string)
+      ],
+      locals.hub
+    );
 
     if (!updatedWithRelations) {
       return error(500, 'Failed to retrieve updated layer');

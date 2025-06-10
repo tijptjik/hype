@@ -11,9 +11,7 @@ import BackgroundLines from '../../layout/BackgroundLines.svelte';
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
 import type { Id, Task, Project, Organisation } from '$lib/types';
-import {
-  PUBLIC_GIPHY_KEY
-} from '$env/static/public';
+import { PUBLIC_GIPHY_KEY } from '$env/static/public';
 // STATE
 const adminCtx = getAdminCtx();
 // Group tasks by projectId
@@ -35,7 +33,9 @@ let groupedTasks: Record<Id, Task[]> = $derived(
 // Function to get random GIF from Giphy API
 async function getRandomGif(topic = 'zero') {
   try {
-    const response = await fetch(`https://api.giphy.com/v1/gifs/random?api_key=${PUBLIC_GIPHY_KEY}&tag=${encodeURIComponent(topic)}`);
+    const response = await fetch(
+      `https://api.giphy.com/v1/gifs/random?api_key=${PUBLIC_GIPHY_KEY}&tag=${encodeURIComponent(topic)}`
+    );
     const data = await response.json();
     return data.data.images.original.webp;
   } catch (error) {
@@ -72,11 +72,11 @@ async function getRandomGif(topic = 'zero') {
     {/each}
   {:else}
     {#await getRandomGif('cyperpunk art')}
-    <div class="spinner"></div>
-      {:then randomGifUrl} 
-    <div class="flex h-full items-center justify-center">
-      <img src={randomGifUrl} alt="Zero" class="cover scale-150" />
-    </div>
+      <div class="spinner"></div>
+    {:then randomGifUrl}
+      <div class="flex h-full items-center justify-center">
+        <img src={randomGifUrl} alt="Zero" class="cover scale-150" />
+      </div>
     {/await}
   {/if}
 </div>

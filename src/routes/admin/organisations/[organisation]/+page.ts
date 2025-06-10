@@ -1,9 +1,9 @@
 import { loadFormData } from '$lib/api';
-import { 
-  OrganisationInsertAPI, 
+import {
+  OrganisationInsertAPI,
   OrganisationUpdateAPI,
   OrganisationInsertSuperAdminAPI,
-  OrganisationUpdateSuperAdminAPI 
+  OrganisationUpdateSuperAdminAPI
 } from '$lib/db/zod';
 // ENUMS
 import { ResourcePath } from '$lib/enums';
@@ -13,12 +13,16 @@ import type { Organisation } from '$lib/types';
 
 export const load: PageLoad = async ({ params, fetch, data }) => {
   const isSuperAdmin = data?.user?.superAdmin || false;
-  
+
   return await loadFormData<Organisation>({
     entity: params.organisation,
-    resourcePath:  ResourcePath.organisation,
-    insertSchema: isSuperAdmin ? OrganisationInsertSuperAdminAPI : OrganisationInsertAPI,
-    updateSchema: isSuperAdmin ? OrganisationUpdateSuperAdminAPI : OrganisationUpdateAPI,
+    resourcePath: ResourcePath.organisation,
+    insertSchema: isSuperAdmin
+      ? OrganisationInsertSuperAdminAPI
+      : OrganisationInsertAPI,
+    updateSchema: isSuperAdmin
+      ? OrganisationUpdateSuperAdminAPI
+      : OrganisationUpdateAPI,
     fetch
   });
 };

@@ -19,7 +19,11 @@ const onclick = (e: MouseEvent) => {
   e.preventDefault();
   // Set facet to false
   adminCtx.setFacet(false);
-  if (requiresParentAssociation(adminCtx.activeResource as unknown as HierarchicalResource)) {
+  if (
+    requiresParentAssociation(
+      adminCtx.activeResource as unknown as HierarchicalResource
+    )
+  ) {
     // Let the user pick the parent to be associated with
     modalOpen = true;
   } else {

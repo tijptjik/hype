@@ -32,7 +32,6 @@ import type {
   ImageCtxOptions
 } from '$lib/types';
 
-
 // ═══════════════════════
 // TABLE OF CONTENTS :: ImageCtx Class
 // ═══════════════════════
@@ -315,7 +314,6 @@ export class ImageCtx {
 
   viewerState = $derived.by(this.determineViewerState);
 
-
   // ═══════════════════════
   // 3. STATE MANAGEMENT
   // ═══════════════════════
@@ -591,7 +589,9 @@ export class ImageCtx {
   }
 
   getImageIsPublished(imageId: string): boolean {
-    return this.state.images.find((image) => image.id === imageId)?.isPublished ?? false;
+    return (
+      this.state.images.find((image) => image.id === imageId)?.isPublished ?? false
+    );
   }
 
   isImageBeingReplaced(imageId: string): boolean {
@@ -800,7 +800,6 @@ export class ImageCtx {
   // - {organsation.code}/{project.code}/{image.publicId}
   // There can be multiple images per task, however, these images are used in review and will often require postprocessing. So uploads against these items are considered replacements.
   // Admins can drop images into the task viewer to replace the existing image in the Review Queue.
-
 
   // ═══════════════════════
   // 7. Image Attribute Updates (Patching)

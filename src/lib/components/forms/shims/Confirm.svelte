@@ -24,7 +24,9 @@ let { onCancel, onAccept } = $props();
     {m.hour_solid_goat_aim()}
   </p>
   <div class="flex gap-4">
-    <button class="btn btn-outline" onclick={onCancel}>{m.green_short_pelican_fall()}</button>
-    <button class="btn btn-error" onclick={onAccept}>{m.best_swift_opossum_inspire()}</button>
+    <button class="btn btn-outline" onclick={onCancel}
+      >{m.green_short_pelican_fall()}</button>
+    <button class="btn btn-error" onclick={onAccept}
+      >{m.best_swift_opossum_inspire()}</button>
   </div>
 </div>

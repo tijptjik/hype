@@ -49,7 +49,6 @@ let addressLngLat: [number, number] | null = $derived(
   getCoordinates(mapProps.addressMeta as LngLatLike)
 );
 
-
 // STATE : UI
 let addressMarker: Marker | null = $state(null);
 let featureMarkerId: Id | null = $state(null);

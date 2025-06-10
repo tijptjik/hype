@@ -462,7 +462,7 @@ export const updateLayerWithRelated = async (
 // Helper function to transform layer property i18n with deep nesting
 const transformLayerPropertyI18n = (layerProp: any): any => {
   if (!layerProp.property) return layerProp;
-  
+
   const transformedProp = {
     ...layerProp,
     property: {
@@ -470,14 +470,15 @@ const transformLayerPropertyI18n = (layerProp: any): any => {
       // Transform property-level i18n (always expect array from DB, convert to locale map)
       i18n: transformI18nSafely(layerProp.property.i18n, {}),
       // Transform property values if they exist
-      values: layerProp.property.values?.map((value: any) => ({
-        ...value,
-        // Transform value-level i18n (always expect array from DB, convert to locale map)
-        i18n: transformI18nSafely(value.i18n, {})
-      })) || []
+      values:
+        layerProp.property.values?.map((value: any) => ({
+          ...value,
+          // Transform value-level i18n (always expect array from DB, convert to locale map)
+          i18n: transformI18nSafely(value.i18n, {})
+        })) || []
     }
   };
-  
+
   return transformedProp;
 };
 
@@ -486,14 +487,12 @@ const transformLayerPropertyI18n = (layerProp: any): any => {
  * @param data - The layer database entity
  * @param i18n - Array of layer translations
  * @param properties - Array of layer properties
- * @param project - The project database entity
  * @returns Validated form data
  */
 export const toFormShape = async (
   data: LayerDBRaw, // Use any since this may come with relations loaded
   i18n: LayerI18nDB[],
-  properties: LayerPropertyDBRaw[],
-  project: ProjectDBRaw
+  properties: LayerPropertyDBRaw[]
 ) => {
   const formI18n = transformI18nSafely(i18n, {});
   const formProperties: LayerPropertyNew[] = properties.map(transformLayerPropertyI18n);

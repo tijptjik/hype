@@ -1,5 +1,5 @@
 <script lang="ts">
- // I18N
+// I18N
 import { localeLabels } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // COMPONENTS
@@ -36,7 +36,9 @@ let {
 
 // STATE : CONTEXT :: FORM
 let resourceForm: Form['form'] = $derived(form.form);
-const sourceLocales = $derived(supportedLocales.filter((locale) => locale !== targetLocale));
+const sourceLocales = $derived(
+  supportedLocales.filter((locale) => locale !== targetLocale)
+);
 
 /**
  * Translate the fields from the source locale to the target locale.
@@ -56,7 +58,9 @@ async function translateFields(event: Event, source: Locale, target: Locale) {
 
     // Step 1: Initialize sourceTexts array
     const sourceTexts: string[] = [];
-    const sourceObj = ($resourceForm.i18n as Record<Locale, Record<string, string>>)[source]  ;
+    const sourceObj = ($resourceForm.i18n as Record<Locale, Record<string, string>>)[
+      source
+    ];
 
     // Step 2: Lookup the source texts from the `fields` prop
     // This internal logic assumes `fields` is a flat record for direct i18n properties
@@ -83,8 +87,10 @@ async function translateFields(event: Event, source: Locale, target: Locale) {
       let field = Object.keys(fields)[index];
       // @ts-expect-error - TODO: TYPE narrow the form to the correct type
       resourceForm.update(($form) => {
-        ($form.i18n as Record<Locale, Record<string, string>>)[target][field] = translatedText;
-        ($form.i18n as Record<Locale, Record<string, boolean>>)[target][`${field}Gen`] = true;
+        ($form.i18n as Record<Locale, Record<string, string>>)[target][field] =
+          translatedText;
+        ($form.i18n as Record<Locale, Record<string, boolean>>)[target][`${field}Gen`] =
+          true;
         return $form;
       });
     });
@@ -99,7 +105,10 @@ async function translateFields(event: Event, source: Locale, target: Locale) {
   <div class="flex items-center justify-between rounded-b-xl bg-base-200 px-6 py-3">
     <div class="flex items-center gap-4">
       <Icon src={Language} class="h-6 w-6 text-primary" />
-      <span class="text-sm text-base-content">{isClearAllVisible ? m.novel_real_gadfly_savor_missing() : m.novel_real_gadfly_savor()}</span>
+      <span class="text-sm text-base-content"
+        >{isClearAllVisible
+          ? m.novel_real_gadfly_savor_missing()
+          : m.novel_real_gadfly_savor()}</span>
     </div>
     <div class="flex items-center gap-2">
       {#if isClearAllVisible && onClear}
@@ -120,7 +129,9 @@ async function translateFields(event: Event, source: Locale, target: Locale) {
           class="text-md btn btn-circle btn-primary font-normal text-base-content focus:border-none focus:outline-1 focus:outline-neutral-content"
           disabled={loadingLocale !== null || isTranslationDisabled}
           onclick={async (e) => {
-            onTranslate ? await onTranslate(e, sourceLocale) : await translateFields(e, sourceLocale, targetLocale);
+            onTranslate
+              ? await onTranslate(e, sourceLocale)
+              : await translateFields(e, sourceLocale, targetLocale);
           }}>
           {#if loadingLocale === sourceLocale}
             <span class="loading loading-spinner loading-sm"></span>

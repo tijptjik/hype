@@ -86,7 +86,7 @@ export const listProperties = async (
   await db.query.property.findMany({
     with: withRelations,
     where: conditions.length > 0 ? and(...conditions) : undefined
-  })
+  });
 
 export const getProperty = async (
   db: Database,
@@ -437,18 +437,27 @@ export const upsertProjectProperties = async (
       propData.id!
     );
 
-    const updatedTranslations = await updateI18n(db, i18nData, propData.id!);
+    const updatedTranslations = await updateI18n(
+      db,
+      i18nData || ({} as Record<Locale, PropertyI18nPartial>),
+      propData.id!
+    );
 
     const syncedValues = valuesData
       ? await syncPropertyValues(db, valuesData, propData.id!)
       : [];
-    
+
     const updatedPropValuesWithTranslations: PropertyValue[] = [];
-    for (const syncedVal of syncedValues) { // syncedVal is PropertyValueDB
+    for (const syncedVal of syncedValues) {
+      // syncedVal is PropertyValueDB
       const incomingValData = valuesData?.find((v) => v.id === syncedVal.id); // incomingValData is PropertyValue from input
-      
+
       let valTranslations: PropertyValueI18nDB[] = [];
-      if (incomingValData && incomingValData.i18n && Object.keys(incomingValData.i18n).length > 0) {
+      if (
+        incomingValData &&
+        incomingValData.i18n &&
+        Object.keys(incomingValData.i18n).length > 0
+      ) {
         try {
           valTranslations = await updatePropertyValueI18n(
             db,
@@ -564,8 +573,10 @@ export const toResponseShape = (
   valuesData: PropertyValueDB[],
   valuesI18nData: PropertyValueI18nDB[]
 ): Property => {
-  const valuesWithI18n = valuesData.map(val => {
-    const i18nForThisValue = valuesI18nData?.filter(vt => vt.propertyValueId === val.id);
+  const valuesWithI18n = valuesData.map((val) => {
+    const i18nForThisValue = valuesI18nData?.filter(
+      (vt) => vt.propertyValueId === val.id
+    );
     return {
       ...val,
       i18n: transformI18nSafely(i18nForThisValue)
@@ -577,8 +588,6 @@ export const toResponseShape = (
     i18n: transformI18nSafely(i18n),
     values: valuesWithI18n
   };
-  
-  return PropertyAPI.parse(responseData); 
+
+  return PropertyAPI.parse(responseData);
 };
-
-

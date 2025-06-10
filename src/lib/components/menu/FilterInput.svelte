@@ -53,13 +53,11 @@ function handleUnpublishedOnlyToggle(e: Event) {
     showUnpublishedOnly ? false : null;
 }
 let showUnpublishedOnly = $derived(
-  adminCtx.state.filters[resourceType as keyof AdminFilterStates].isPublished ===
-    false
+  adminCtx.state.filters[resourceType as keyof AdminFilterStates].isPublished === false
 );
 
 let showUnreviewedOnly = $derived(
-  adminCtx.state.filters[resourceType as keyof AdminFilterStates].isReviewed ===
-    false
+  adminCtx.state.filters[resourceType as keyof AdminFilterStates].isReviewed === false
 );
 function handleReviewedToggle(e: Event) {
   e.preventDefault();
@@ -83,8 +81,7 @@ function resetInput() {
 
 function handleInput(e: Event) {
   const target = e.target as HTMLInputElement;
-  adminCtx.state.filters[resourceType as keyof AdminFilterStates].text =
-    target.value;
+  adminCtx.state.filters[resourceType as keyof AdminFilterStates].text = target.value;
 }
 </script>
 
@@ -131,9 +128,7 @@ function handleInput(e: Event) {
       class="input m-0 w-full bg-neutral px-6 pr-10 text-sm caret-white focus:border-none focus:outline-none focus:placeholder:text-transparent {rounded
         ? 'h-10 min-w-72 rounded-xl'
         : 'rounded-none'}"
-      bind:value={
-        adminCtx.state.filters[resourceType as keyof AdminFilterStates].text
-      }
+      bind:value={adminCtx.state.filters[resourceType as keyof AdminFilterStates].text}
       oninput={handleInput}
       onkeydown={handleKeydown}
       tabindex="1"

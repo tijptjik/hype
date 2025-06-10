@@ -19,7 +19,13 @@ import { authConfig } from './auth/config';
 import * as schema from '$lib/db/schema/index';
 // TYPES
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
-import type { UserRoleDisco, UserLayer, UserPreferences, UserExperimental, Locale } from '$lib/types';
+import type {
+  UserRoleDisco,
+  UserLayer,
+  UserPreferences,
+  UserExperimental,
+  Locale
+} from '$lib/types';
 
 // Create auth instance with the D1 database
 export const createAuth = (db: DrizzleD1Database<typeof schema>) => {
@@ -70,13 +76,13 @@ export const createAuth = (db: DrizzleD1Database<typeof schema>) => {
 export type Auth = ReturnType<typeof createAuth>;
 export type Session = Auth['$Infer']['Session'];
 export type SessionUser = Session['user'] & {
-  locale: Locale
-  attribution: string
-  isArchived: boolean
-  preferences: UserPreferences
-  experimental: UserExperimental
-  superAdmin: boolean
-  roles: UserRoleDisco[]
-  userLayers: UserLayer[]
-}
-export type SessionSession = Session['session'] 
+  locale: Locale;
+  attribution: string;
+  isArchived: boolean;
+  preferences: UserPreferences;
+  experimental: UserExperimental;
+  superAdmin: boolean;
+  roles: UserRoleDisco[];
+  userLayers: UserLayer[];
+};
+export type SessionSession = Session['session'];

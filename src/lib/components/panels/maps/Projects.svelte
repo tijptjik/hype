@@ -50,14 +50,13 @@ function filterProjects(projects: Project[], term: string) {
 const filteredProjects = $derived(filterProjects(projects, searchTerm));
 let isDefaultOpen = $derived(document.body.clientHeight > 1000);
 
-
 let handleReset = () => {
   if (selectedProjects.length == 0) {
-    appCtx.closePanel('maps')
+    appCtx.closePanel('maps');
   } else {
-    appCtx.resetProjects()
+    appCtx.resetProjects();
   }
-}
+};
 </script>
 
 <!-- COMPONENTS -->

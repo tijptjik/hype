@@ -83,7 +83,7 @@ export const toggleVisitedStatus = async (
   currentWishlistStatus: boolean = false
 ): Promise<UserFeature> => {
   const visitedAt = !currentVisitedStatus ? new Date().toISOString() : null;
-  
+
   return updateUserFeature(
     userId,
     featureId,
@@ -128,13 +128,7 @@ export const addToWishlist = async (
   currentVisitedStatus: boolean = false,
   visitedAt?: string | null
 ): Promise<UserFeature> => {
-  return updateUserFeature(
-    userId,
-    featureId,
-    true,
-    currentVisitedStatus,
-    visitedAt
-  );
+  return updateUserFeature(userId, featureId, true, currentVisitedStatus, visitedAt);
 };
 
 /**
@@ -151,11 +145,5 @@ export const removeFromWishlist = async (
   currentVisitedStatus: boolean = false,
   visitedAt?: string | null
 ): Promise<UserFeature> => {
-  return updateUserFeature(
-    userId,
-    featureId,
-    false,
-    currentVisitedStatus,
-    visitedAt
-  );
-}; 
+  return updateUserFeature(userId, featureId, false, currentVisitedStatus, visitedAt);
+};

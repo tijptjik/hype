@@ -37,7 +37,7 @@ type AppRootProps = LayoutProps & {
 };
 
 // PROPS
-let { children, data } : AppRootProps = $props();
+let { children, data }: AppRootProps = $props();
 const { queryClient } = data;
 
 // AUTH
@@ -50,10 +50,7 @@ let navDest = $state('');
 
 // CONTEXT :: APP
 // Always set up map context, but only fetch data when authenticated
-const appCtx = setAppCtx(
-  queryClient,
-  $session.data?.user as SessionUser | null
-);
+const appCtx = setAppCtx(queryClient, $session.data?.user as SessionUser | null);
 
 // CONTEXT :: OMNI
 const omniCtx = setOmniContext(appCtx);
@@ -68,8 +65,9 @@ watch(
       appCtx.registerKeydownHandlers();
     } else if (!$session.data?.user && appCtx.user?.id) {
       appCtx.setUser(null);
+    }
   }
-});
+);
 
 // NAVIGATION HANDLING -- State Change Effect
 $effect(() => {

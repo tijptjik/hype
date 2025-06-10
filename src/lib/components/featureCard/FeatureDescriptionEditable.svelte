@@ -26,7 +26,12 @@ const userPreferences = $derived(appCtx.getUserPreferences());
 // STATE : LOCAL
 let isEditing = $state(false);
 let description = $derived(
-  getI18n(feature as Feature, 'description', userPreferences, m.zany_merry_seahorse_treasure())
+  getI18n(
+    feature as Feature,
+    'description',
+    userPreferences,
+    m.zany_merry_seahorse_treasure()
+  )
 );
 let originalDescription = $state('');
 let textAreaEl: HTMLTextAreaElement = $state()!;
@@ -63,7 +68,7 @@ function handleDescriptionCancel() {
 </script>
 
 <div
-  class="flex-shrink-0 relative z-10 my-0 flex min-h-12 flex-col bg-black caret-transparent">
+  class="relative z-10 my-0 flex min-h-12 flex-shrink-0 flex-col bg-black caret-transparent">
   <div class="overflow-y-auto">
     <div class="mb-2 bg-black py-0 pl-2">
       {#if isEditing}

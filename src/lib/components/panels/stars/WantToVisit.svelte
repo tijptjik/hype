@@ -88,13 +88,11 @@ const filteredFeatures = $derived(filterFeatures(wishlistedFeatures, searchTerm)
                 <span class="text-primary">{wishlist.hierarchy.organisation}</span>
                 {#if wishlist.hierarchy.project}
                   <span class="mx-1 text-secondary">›</span>
-                  <span class="text-secondary"
-                  >{wishlist.hierarchy.project}</span>
+                  <span class="text-secondary">{wishlist.hierarchy.project}</span>
                 {/if}
                 {#if wishlist.hierarchy.layer}
                   <span class="mx-1 text-secondary">›</span>
-                  <span class="text-secondary"
-                    >{wishlist.hierarchy.layer}</span>
+                  <span class="text-secondary">{wishlist.hierarchy.layer}</span>
                 {/if}
               </p>
               <p class="font-normal text-neutral-300">

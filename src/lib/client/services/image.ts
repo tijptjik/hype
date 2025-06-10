@@ -271,7 +271,8 @@ export async function updateImageIsPublished(
   isPublished: boolean,
   ctx: ImageEditCtx,
   fetchFn: typeof fetch = fetch
-): Promise<Image> { // Expecting the updated image back
+): Promise<Image> {
+  // Expecting the updated image back
   const apiUrl = addCtxToUrl(`/api/images/${imageId}`, ctx);
   const response = await fetchFn(apiUrl, {
     method: 'PATCH',
@@ -302,7 +303,8 @@ export async function deleteImage(
   imageId: string,
   ctx: ImageEditCtx,
   fetchFn: typeof fetch = fetch
-): Promise<any> { // DELETE might not return the image, just a success message
+): Promise<any> {
+  // DELETE might not return the image, just a success message
   const apiUrl = addCtxToUrl(`/api/images/${imageId}`, ctx);
   const response = await fetchFn(apiUrl, {
     method: 'DELETE'

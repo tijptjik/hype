@@ -22,7 +22,7 @@ import {
   FeatureInsertAPI,
   FeatureUpdateAPI,
   HubInsertAPI,
-  HubUpdateAPI,
+  HubUpdateAPI
 } from '$lib/db/zod';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
@@ -46,7 +46,7 @@ import type {
   ProjectNew,
   Ref,
   ResourceType,
-  SuperFormResult,
+  SuperFormResult
 } from '$lib/types';
 
 class BaseForm<T extends Record<string, unknown>> {
@@ -68,7 +68,7 @@ class BaseForm<T extends Record<string, unknown>> {
   ) {
     this.adminCtx = adminCtx;
     this.resourceType = resourceType;
-    
+
     const formOptions = {
       dataType: 'json',
       SPA: true,
@@ -78,13 +78,15 @@ class BaseForm<T extends Record<string, unknown>> {
       onSubmit: this.handleSubmit.bind(this)
     };
     const schema = zod(isNew ? insertSchema : updateSchema);
-    
+
     // Check if we have nested data that defaults() might strip out
-    const hasNestedProperties = (form.data as any).properties?.some?.((prop: any) => prop.property);
+    const hasNestedProperties = (form.data as any).properties?.some?.(
+      (prop: any) => prop.property
+    );
     const hasUserRoles = (form.data as any).userRoles?.length > 0;
     const hasMaintainerRoles = (form.data as any).maintainerRoles?.length > 0;
     const hasOrganisations = (form.data as any).organisations?.length > 0;
-    
+
     let formData;
     if (hasNestedProperties || hasUserRoles || hasMaintainerRoles || hasOrganisations) {
       // Skip defaults() if we have nested data to preserve it
@@ -93,20 +95,21 @@ class BaseForm<T extends Record<string, unknown>> {
       // Apply defaults for new forms or forms without nested data
       formData = defaults(form.data, schema);
     }
-    
+
     // @ts-ignore
     this.formResult = superForm(formData, formOptions);
-    
+
     this.flash = flash;
   }
 
   get form() {
     const formValue = this.formResult.form;
     const formSnapshot = $state.snapshot(formValue);
-    
+
     // Check correct field based on resource type
-    const userField = this.resourceType === 'organisation' ? 'userRoles' : 'maintainerRoles';
-    
+    const userField =
+      this.resourceType === 'organisation' ? 'userRoles' : 'maintainerRoles';
+
     return formValue;
   }
   get enhance() {
@@ -178,7 +181,9 @@ class BaseForm<T extends Record<string, unknown>> {
         url.searchParams.delete('parentId');
         url.searchParams.delete('parentRef');
 
-        const flashMessage = isCreateOperation ? m.gaudy_heavy_puma_adore() : m.tidy_game_jellyfish_pop();
+        const flashMessage = isCreateOperation
+          ? m.gaudy_heavy_puma_adore()
+          : m.tidy_game_jellyfish_pop();
         this.flash.set({
           type: 'success',
           message: flashMessage,
@@ -191,10 +196,8 @@ class BaseForm<T extends Record<string, unknown>> {
       } else if (result.type === 'success') {
         this.flash.set({ type: 'success', message: m.tidy_game_jellyfish_pop() });
         // Invalidate cache for the resource type; refresh resources
-        this.adminCtx.invalidateAndRefresh(
-          this.resourceType as FirstClassResource
-        );
-        
+        this.adminCtx.invalidateAndRefresh(this.resourceType as FirstClassResource);
+
         this.reset({
           data: result.data?.data,
           newState: result.data?.data
@@ -400,49 +403,49 @@ export function setForm<T extends Organisation | Project | Layer | Feature | Hub
     console.trace();
     throw new Error('Entity is required');
   }
-  
+
   switch (resourceType) {
     case 'organisation': {
       const instance = new OrganisationForm(
-        form as SuperValidated<Organisation>, 
-        entity === NEW_REF, 
-        adminCtx, 
+        form as SuperValidated<Organisation>,
+        entity === NEW_REF,
+        adminCtx,
         flash
       );
       return setContext(getContextRef(resourceType, entity), instance);
     }
     case 'project': {
       const instance = new ProjectForm(
-        form as SuperValidated<Project>, 
-        entity === NEW_REF, 
-        adminCtx, 
+        form as SuperValidated<Project>,
+        entity === NEW_REF,
+        adminCtx,
         flash
       );
       return setContext(getContextRef(resourceType, entity), instance);
     }
     case 'layer': {
       const instance = new LayerForm(
-        form as SuperValidated<Layer>, 
-        entity === NEW_REF, 
-        adminCtx, 
+        form as SuperValidated<Layer>,
+        entity === NEW_REF,
+        adminCtx,
         flash
       );
       return setContext(getContextRef(resourceType, entity), instance);
     }
     case 'feature': {
       const instance = new FeatureForm(
-        form as SuperValidated<Feature>, 
-        entity === NEW_REF, 
-        adminCtx, 
+        form as SuperValidated<Feature>,
+        entity === NEW_REF,
+        adminCtx,
         flash
       );
       return setContext(getContextRef(resourceType, entity), instance);
     }
     case 'hub': {
       const instance = new HubForm(
-        form as SuperValidated<Hub>, 
-        entity === NEW_REF, 
-        adminCtx, 
+        form as SuperValidated<Hub>,
+        entity === NEW_REF,
+        adminCtx,
         flash
       );
       return setContext(getContextRef(resourceType, entity), instance);
@@ -452,30 +455,15 @@ export function setForm<T extends Organisation | Project | Layer | Feature | Hub
   }
 }
 
-export function getForm(
-  resource: 'organisation',
-  entity: Ref
-): OrganisationForm;
+export function getForm(resource: 'organisation', entity: Ref): OrganisationForm;
 
-export function getForm(
-  resource: 'project',
-  entity: Ref
-): ProjectForm;
+export function getForm(resource: 'project', entity: Ref): ProjectForm;
 
-export function getForm(
-  resource: 'layer',
-  entity: Ref
-): LayerForm;
+export function getForm(resource: 'layer', entity: Ref): LayerForm;
 
-export function getForm(
-  resource: 'feature',
-  entity: Ref
-): FeatureForm;
+export function getForm(resource: 'feature', entity: Ref): FeatureForm;
 
-export function getForm(
-  resource: 'hub',
-  entity: Ref
-): HubForm;
+export function getForm(resource: 'hub', entity: Ref): HubForm;
 
 export function getForm<T extends Organisation | Project | Layer | Feature | Hub>(
   resource: ResourceType,

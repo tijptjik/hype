@@ -119,8 +119,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
     const updatedForm = await toFormShape(
       createdLayer,
       createdLayer.i18n,
-      createdLayer.properties,
-      createdLayer.project
+      createdLayer.properties
     );
 
     return SuperFormResponse<Layer>(updatedForm, true, false, RESOURCE_PATH, 201);

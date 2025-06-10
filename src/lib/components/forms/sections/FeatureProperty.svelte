@@ -40,7 +40,9 @@ const getFormField = (fieldRoot: string) => {
 
 // Type guard for property items
 const isPropertyItem = (item: unknown): item is { property: any; id: string } => {
-  return typeof item === 'object' && item !== null && 'property' in item && 'id' in item;
+  return (
+    typeof item === 'object' && item !== null && 'property' in item && 'id' in item
+  );
 };
 </script>
 
@@ -82,7 +84,7 @@ const isPropertyItem = (item: unknown): item is { property: any; id: string } =>
                         fieldRoot={fieldRoot_ as Field}
                         {field}
                         fieldIndex={index}
-                        fieldKey={"propertyValueId" as Field} />
+                        fieldKey={'propertyValueId' as Field} />
                     {:else if item?.property?.component === 'RangeField'}
                       <RangeField
                         {...sectionProps}
@@ -97,7 +99,10 @@ const isPropertyItem = (item: unknown): item is { property: any; id: string } =>
                         onChange={(e) => {
                           e.preventDefault();
                           form.update(($form: any) => {
-                            if (Array.isArray($form[fieldRoot_]) && $form[fieldRoot_][index]) {
+                            if (
+                              Array.isArray($form[fieldRoot_]) &&
+                              $form[fieldRoot_][index]
+                            ) {
                               $form[fieldRoot_][index]['value'] = !getPropertyValue(
                                 item,
                                 'value'

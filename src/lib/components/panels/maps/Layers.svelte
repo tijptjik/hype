@@ -52,12 +52,11 @@ let isDefaultOpen = $derived(document.body.clientHeight > 1000);
 
 let handleReset = () => {
   if (selectedLayers.length == 0) {
-    appCtx.closePanel('maps')
+    appCtx.closePanel('maps');
   } else {
-    appCtx.resetLayers()
+    appCtx.resetLayers();
   }
-}
-
+};
 </script>
 
 <!-- COMPONENTS -->

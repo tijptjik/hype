@@ -1,11 +1,7 @@
 // SVELTE
 import { error } from '@sveltejs/kit';
 // API
-import {
-  JSONResponseOrError,
-  getDatabase,
-  logZodError
-} from '$lib/api';
+import { JSONResponseOrError, getDatabase, logZodError } from '$lib/api';
 import {
   assertPermissionsToListUserFeature,
   assertPermissionsToUpdateUserFeature,
@@ -78,11 +74,7 @@ export const PUT: RequestHandler = async ({ request, locals, platform }) => {
     assertPermissionsToUpdateUserFeature(user, validatedData.userId);
 
     // DB: Upsert user feature
-    const result = await upsertUserFeature(
-      db,
-      userId, 
-      validatedData
-    );
+    const result = await upsertUserFeature(db, userId, validatedData);
 
     // HTTP: 200 JSON or error
     return JSONResponseOrError(result);

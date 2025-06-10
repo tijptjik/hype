@@ -17,7 +17,10 @@ const { isCameraActive = false, isSingleImage = false } = $props();
 </script>
 
 <div
-  class="flex-grow pointer-events-auto relative flex w-full aspect-square items-center justify-center overflow-hidden bg-base-content/20 caret-transparent backdrop-blur-sm transition-all duration-300 {cardCtx.state.mode === FeatureCardMode.Display ? 'min-h-56 flex-shrink' : 'min-h-64 flex-shrink-0'}">
+  class="pointer-events-auto relative flex aspect-square w-full flex-grow items-center justify-center overflow-hidden bg-base-content/20 caret-transparent backdrop-blur-sm transition-all duration-300 {cardCtx
+    .state.mode === FeatureCardMode.Display
+    ? 'min-h-56 flex-shrink'
+    : 'min-h-64 flex-shrink-0'}">
   {#if imageCtx.isImagesLoading}
     <div class="flex items-center justify-center">
       <span class="loading loading-ring loading-lg"></span>

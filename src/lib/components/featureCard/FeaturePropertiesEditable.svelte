@@ -112,7 +112,7 @@ function getPropertyValues(
       value: getI18n(v, 'value', userPreferences), // Display text for user
       id: v.id! // Actual value to store
     }));
-  
+
   return result;
 }
 
@@ -201,8 +201,8 @@ function handleSpecifierChange(
   } else {
     // Find the property definition to check if it's translatable
     const availableProps = getAvailableProperties();
-    const propDef = availableProps.find(p => p.propertyId === propertyKey);
-    
+    const propDef = availableProps.find((p) => p.propertyId === propertyKey);
+
     // Property doesn't exist yet, create it using map context
     if (propDef?.property?.isTranslatable && locale !== 'core') {
       // Translatable property - include i18n structure with locale field
@@ -225,7 +225,7 @@ function getCurrentValue(propertyId: string, prop: any): string {
   const i18nValue = getI18nSpecifierValue(propertyId, getLocale());
   const universalValue = getUniversalSpecifierValue(propertyId);
   const result = translatable ? i18nValue || '' : universalValue || '';
-  
+
   return result;
 }
 
@@ -287,7 +287,8 @@ function handleEditCancel(propertyId: string) {
               component: prop.component,
               type: prop.type,
               hasPropertyValues: propertyValues.length > 0,
-              shouldRenderSelect: prop.component === 'SelectField' && propertyValues.length > 0
+              shouldRenderSelect:
+                prop.component === 'SelectField' && propertyValues.length > 0
             }}
             <div class="dir-ltr flex flex-col justify-evenly gap-1">
               <span
@@ -299,11 +300,12 @@ function handleEditCancel(propertyId: string) {
               {#if prop.component === 'SelectField' && propertyValues.length > 0}
                 <!-- SelectField Component: Dropdown -->
                 <select
-                  class="select select-sm border-none w-full focus:outline-none focus:ring-0 active:outline-none active:ring-0 focus-visible:outline-none focus-visible:ring-0 bg-black focus:border-none pl-0"
+                  class="select select-sm w-full border-none bg-black pl-0 focus:border-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 active:outline-none active:ring-0"
                   value={getCategoricalValueId(propertyId)}
                   onchange={(e) =>
                     handleCategoricalChange(propertyId, e.currentTarget.value)}>
-                  <option value="">{getI18n(prop, 'placeholder', userPreferences)}</option>
+                  <option value=""
+                    >{getI18n(prop, 'placeholder', userPreferences)}</option>
                   {#each propertyValues as option}
                     <option value={option.id}>{option.value}</option>
                   {/each}
@@ -312,12 +314,12 @@ function handleEditCancel(propertyId: string) {
                 <!-- TextareaField Component: Textarea with click-to-edit -->
                 {@const displayValue = getCurrentValue(propertyId, prop)}
                 {#if editingStates[propertyId]}
-                  <div class="flex gap-1 items-center">
+                  <div class="flex items-center gap-1">
                     <div
                       class="
+                        text-md
                         grid
                         w-full
-                        text-md
                         after:invisible
                         after:whitespace-pre-wrap
                         after:border
@@ -332,10 +334,10 @@ function handleEditCancel(propertyId: string) {
                         [&>textarea]:[grid-area:1/1/2/2]
                     ">
                       <textarea
-                        class="textarea textarea-bordered text-md w-full rounded-lg bg-black px-3.5 py-2.5 caret-white outline-none resize-y mt-1.5 -ml-3"
+                        class="text-md textarea textarea-bordered -ml-3 mt-1.5 w-full resize-y rounded-lg bg-black px-3.5 py-2.5 caret-white outline-none"
                         bind:this={textareaElements[propertyId]}
                         bind:value={currentValues[propertyId]}
-                        placeholder="{getI18n(prop, 'placeholder', userPreferences)}"
+                        placeholder={getI18n(prop, 'placeholder', userPreferences)}
                         rows="1"
                         onkeydown={(e) => {
                           e.stopPropagation();
@@ -360,10 +362,11 @@ function handleEditCancel(propertyId: string) {
                             parent.dataset.clonedVal = e.currentTarget.value;
                           }
                         }}
-                        onblur={() => handleTextareaSubmit(propertyId, prop)}></textarea>
+                        onblur={() => handleTextareaSubmit(propertyId, prop)}
+                      ></textarea>
                     </div>
                     <button
-                      class="btn btn-ghost btn-sm rounded-none rounded-l-lg px-3 py-1 hover:bg-base-300 active:scale-100 active:bg-base-200 -mr-1"
+                      class="btn btn-ghost btn-sm -mr-1 rounded-none rounded-l-lg px-3 py-1 hover:bg-base-300 active:scale-100 active:bg-base-200"
                       onclick={() => handleTextareaSubmit(propertyId, prop)}
                       disabled={!(currentValues[propertyId] || '').trim()}>
                       <Icon src={Check} class="h-5 w-5" />
@@ -371,11 +374,11 @@ function handleEditCancel(propertyId: string) {
                   </div>
                 {:else}
                   <div
-                    class="pointer-events-auto flex items-center justify-between cursor-pointer hover:bg-base-100/5 rounded py-1 min-h-14"
+                    class="pointer-events-auto flex min-h-14 cursor-pointer items-center justify-between rounded py-1 hover:bg-base-100/5"
                     onclick={() => handleTextareaEditMode(propertyId, prop)}>
-                    <p
-                      class="text-sm flex-1">
-                      {displayValue || `Enter ${getI18n(prop, 'label', userPreferences)}`}
+                    <p class="flex-1 text-sm">
+                      {displayValue ||
+                        `Enter ${getI18n(prop, 'label', userPreferences)}`}
                     </p>
                     <button
                       class="btn btn-ghost btn-sm rounded-none rounded-l-lg px-2 py-1 hover:bg-base-300 focus:text-primary focus:outline-none active:bg-base-200">
@@ -387,13 +390,13 @@ function handleEditCancel(propertyId: string) {
                 <!-- InputField Component: Input with click-to-edit -->
                 {@const displayValue = getCurrentValue(propertyId, prop)}
                 {#if editingStates[propertyId]}
-                  <div class="flex items-center gap-1 -ml-3">
+                  <div class="-ml-3 flex items-center gap-1">
                     <input
                       type="text"
-                      class="input input-bordered w-full bg-black caret-white focus:outline-none max-h-8 mt-1.5"
+                      class="input input-bordered mt-1.5 max-h-8 w-full bg-black caret-white focus:outline-none"
                       bind:value={currentValues[propertyId]}
                       bind:this={inputElements[propertyId]}
-                      placeholder="{getI18n(prop, 'placeholder', userPreferences)}"
+                      placeholder={getI18n(prop, 'placeholder', userPreferences)}
                       onkeydown={(e) => {
                         e.stopPropagation();
                         if (e.key === 'Enter') {
@@ -406,7 +409,7 @@ function handleEditCancel(propertyId: string) {
                       }}
                       onblur={() => handleInputSubmit(propertyId, prop)} />
                     <button
-                      class="btn btn-ghost btn-sm rounded-none rounded-l-lg px-3 py-1 hover:bg-base-300 active:scale-100 active:bg-base-200 -mr-1"
+                      class="btn btn-ghost btn-sm -mr-1 rounded-none rounded-l-lg px-3 py-1 hover:bg-base-300 active:scale-100 active:bg-base-200"
                       onclick={() => handleInputSubmit(propertyId, prop)}
                       disabled={!(currentValues[propertyId] || '').trim()}>
                       <Icon src={Check} class="h-5 w-5" />
@@ -414,11 +417,11 @@ function handleEditCancel(propertyId: string) {
                   </div>
                 {:else}
                   <div
-                    class="pointer-events-auto flex items-center justify-between cursor-pointer hover:bg-base-100/5 rounded py-1"
+                    class="pointer-events-auto flex cursor-pointer items-center justify-between rounded py-1 hover:bg-base-100/5"
                     onclick={() => handleInputEditMode(propertyId, prop)}>
-                    <span
-                      class="text-sm text-white flex-1">
-                      {displayValue || `Enter ${getI18n(prop, 'label', userPreferences)}`}
+                    <span class="flex-1 text-sm text-white">
+                      {displayValue ||
+                        `Enter ${getI18n(prop, 'label', userPreferences)}`}
                     </span>
                     <button
                       class="btn btn-ghost btn-sm rounded-none rounded-l-lg px-2 py-1 hover:bg-base-300 focus:text-primary focus:outline-none active:scale-100 active:bg-base-200">

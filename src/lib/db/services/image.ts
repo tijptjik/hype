@@ -1,21 +1,11 @@
 // DRIZZLE
 import { and, eq, getTableColumns, SQL } from 'drizzle-orm';
 // SCHEMA
-import {
-  featureImage,
-  image,
-  organisation,
-  project,
-  taskImage,
-  user
-} from '../schema';
+import { featureImage, image, organisation, project, taskImage, user } from '../schema';
 // CRUD
 import { insert, insertRelated, update, updateRelated } from '../crud';
 // ENUMS
-import {
-  ImageContextResource,
-  ImageContextResourceExtended,
-} from '$lib/enums';
+import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums';
 // TYPES
 import type {
   FeatureImage,
@@ -294,12 +284,14 @@ export const toResponseShape = async (
   return {
     ...image,
     attribution,
-    ...(featureImage ? {
-      featureId: featureImage.featureId as Id ?? undefined,
-      intent: featureImage.intent ?? undefined,
-      isPublished: featureImage.isPublished ?? undefined,
-      publishedAt: featureImage.publishedAt ?? undefined
-    } : {})
+    ...(featureImage
+      ? {
+          featureId: (featureImage.featureId as Id) ?? undefined,
+          intent: featureImage.intent ?? undefined,
+          isPublished: featureImage.isPublished ?? undefined,
+          publishedAt: featureImage.publishedAt ?? undefined
+        }
+      : {})
   };
 };
 

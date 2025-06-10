@@ -27,12 +27,7 @@ import OrganisationHubActions from '$lib/components/forms/actions/OrganisationHu
 // ENUMS
 import { FirstClassResource, ImageContextResource } from '$lib/enums';
 // TYPES
-import type {
-  FormPageProps,
-  FormField,
-  Organisation,
-  Image
-} from '$lib/types';
+import type { FormPageProps, FormField, Organisation, Image } from '$lib/types';
 
 // CONTEXT
 const adminCtx = getAdminCtx();
@@ -127,9 +122,11 @@ let enhance = $derived(form.enhance);
 let title = $derived(
   pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE
 );
-let {form : organisationForm} = form;
+let { form: organisationForm } = form;
 
-let headerActions = $derived(!!$organisationForm.hubId ? organisationHubActionSnippet : undefined);
+let headerActions = $derived(
+  !!$organisationForm.hubId ? organisationHubActionSnippet : undefined
+);
 </script>
 
 {#snippet organisationHubActionSnippet()}

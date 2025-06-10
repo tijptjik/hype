@@ -95,7 +95,11 @@ function handleGlobeClick(e: Event) {
             handleAddressSubmit();
             // Focus pencil button after DOM update
             setTimeout(() => {
-              const pencilButton = (e.target as HTMLElement)?.closest('.flex')?.parentElement?.querySelector('button:last-child') as HTMLButtonElement;
+              const pencilButton = (e.target as HTMLElement)
+                ?.closest('.flex')
+                ?.parentElement?.querySelector(
+                  'button:last-child'
+                ) as HTMLButtonElement;
               pencilButton?.focus();
             }, 0);
           }
@@ -110,7 +114,7 @@ function handleGlobeClick(e: Event) {
     </div>
   {:else}
     <div
-      class="flex h-12 w-full items-center caret-transparent transition-all pl-1.5 w-100:pl-2"
+      class="flex h-12 w-full items-center pl-1.5 caret-transparent transition-all w-100:pl-2"
       onclick={handleEditMode}>
       <p
         class="w-full overflow-visible text-sm text-white"

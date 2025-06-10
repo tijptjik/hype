@@ -52,8 +52,7 @@ container.addEventListener('mouseleave', () => {
 
 <div
   class="absolute bottom-0 left-0 right-0 flex justify-center p-2"
-  transition:fade={{ duration: 200, delay: 150 + idx * 50 }}
-  >
+  transition:fade={{ duration: 200, delay: 150 + idx * 50 }}>
   <div class="relative">
     <button
       class="rounded-lg px-3 py-[6px] text-sm font-medium backdrop-blur-sm transition-all duration-200
@@ -75,8 +74,7 @@ container.addEventListener('mouseleave', () => {
       <div
         class="absolute bottom-[34px] left-[-20px] mb-1 w-32 overflow-hidden rounded-lg bg-base-100 shadow-lg"
         bind:this={intentContext.ref}
-        transition:fade={{ duration: 150 }}
-        >
+        transition:fade={{ duration: 150 }}>
         {#each intentOrder.filter((option) => option !== intent) as option, idx}
           <button
             class="w-full px-2 py-[5px] text-center text-sm hover:bg-primary focus:bg-primary focus:outline-none

@@ -48,7 +48,6 @@ onMount(() => {
 onDestroy(() => {
   imageCtx.resetThumbnailLoadStatus(image.id);
 });
-
 </script>
 
 <div
@@ -56,8 +55,7 @@ onDestroy(() => {
   data-image-id={image.id}
   onmouseenter={() => imageCtx.setActiveImage(image)}
   onclick={() => imageCtx.setActiveImage(image)}
-  bind:this={thumbnailRef}
-  >
+  bind:this={thumbnailRef}>
   <Img
     class="h-50 w-50 mx-auto overflow-hidden rounded-lg border-base-100 text-neutral transition-opacity duration-300 
       {isPublished ? '' : 'border-2 border-base-200/60 opacity-70'}
@@ -83,7 +81,11 @@ onDestroy(() => {
   {/if}
 
   {#if thumbnailLoadState === 'loaded' && (!actionProps || !actionProps.removeMode) && image.intent}
-    <IntentLabel container={thumbnailRef} intent={image.intent} {idx} imageId={image.id} />
+    <IntentLabel
+      container={thumbnailRef}
+      intent={image.intent}
+      {idx}
+      imageId={image.id} />
   {/if}
 
   {#if thumbnailLoadState === 'loading'}

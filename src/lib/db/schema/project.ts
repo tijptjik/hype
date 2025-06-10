@@ -1,16 +1,8 @@
-import {
-  integer,
-  primaryKey,
-  sqliteTable,
-  text
-} from 'drizzle-orm/sqlite-core';
+import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 // ENUM
-import {
-  ProjectRoleType,
-  supportedLocales
-} from '../../enums';
+import { ProjectRoleType, supportedLocales } from '../../enums';
 
 /* ============================================================================
  * PROJECT MANAGEMENT
@@ -62,7 +54,9 @@ export const projectI18n = sqliteTable(
     projectId: text('projectId')
       .notNull()
       .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    locale: text('locale', { enum: supportedLocales as [string, ...string[]] }).notNull(),
+    locale: text('locale', {
+      enum: supportedLocales as [string, ...string[]]
+    }).notNull(),
     // Full Name in {locale}
     name: text('name').notNull(),
     nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(true),
@@ -109,4 +103,4 @@ export const projectRole = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.projectId, table.userId] })
   ]
-); 
+);

@@ -9,7 +9,7 @@ type Props = {
 let { label, checked, size = 'lg', onChange }: Props = $props();
 </script>
 
-<label class="label cursor-pointer flex gap-3">
+<label class="label flex cursor-pointer gap-3">
   <p class="text-sm font-light">{label}</p>
   <input
     type="checkbox"

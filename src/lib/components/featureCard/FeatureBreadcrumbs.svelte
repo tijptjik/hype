@@ -40,8 +40,10 @@ let project = layer ? appCtx.getProject(layer) : null;
 let organisation = project ? appCtx.getOrganisation(project) : null;
 
 // DERIVED : Get contextual names
-let organisationName = $derived(appCtx.getContextualOrganisationName(organisation!, false)); // Always show
-let projectName = $derived(appCtx.getContextualProjectName(project!)); // Always show  
+let organisationName = $derived(
+  appCtx.getContextualOrganisationName(organisation!, false)
+); // Always show
+let projectName = $derived(appCtx.getContextualProjectName(project!)); // Always show
 let layerName = $derived(appCtx.getContextualLayerName(layer!)); // Hide if only one layer
 
 // FUNCTIONS
@@ -72,14 +74,14 @@ function showLayerSelectionModal() {
     <Icon src={Squares2x2} class="h-6 w-6" />
     <span class="text-xs uppercase">{organisationName}</span>
     {#if projectName}
-    <div transition:fade={{duration: 300}}>
-      <span class="text-gray-400">›</span>
-      <span class="text-xs uppercase">{projectName}</span>
-    </div>
+      <div transition:fade={{ duration: 300 }}>
+        <span class="text-gray-400">›</span>
+        <span class="text-xs uppercase">{projectName}</span>
+      </div>
     {/if}
     <!-- Only show layer name if project has multiple layers -->
     {#if layerName}
-      <div class="hidden md:block" transition:fade={{duration: 300}}>
+      <div class="hidden md:block" transition:fade={{ duration: 300 }}>
         <span class="text-gray-400">›</span>
         <span>{layerName}</span>
       </div>
@@ -89,7 +91,7 @@ function showLayerSelectionModal() {
   <div class="relative caret-transparent">
     {#if cardCtx.isNewMode}
       <button
-        class="btn btn-ghost btn-sm rounded-none rounded-bl-lg py-1 px-3 hover:bg-base-300 focus:text-primary focus:outline-none active:scale-100 active:bg-base-200"
+        class="btn btn-ghost btn-sm rounded-none rounded-bl-lg px-3 py-1 hover:bg-base-300 focus:text-primary focus:outline-none active:scale-100 active:bg-base-200"
         onclick={showLayerSelectionModal}>
         <Icon src={PencilSquare} class="h-5 w-5 -translate-y-[1px]" />
       </button>

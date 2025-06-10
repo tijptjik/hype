@@ -17,7 +17,6 @@ import { FirstClassResource } from '$lib/enums';
 // TYPES
 import type { Task, TaskType } from '$lib/types';
 
-
 // CONTEXT
 const appCtx = getAppCtx();
 

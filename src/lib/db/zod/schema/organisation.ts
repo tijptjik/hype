@@ -23,12 +23,11 @@ import { HubBasic } from './hub';
 export const OrganisationBase = createSelectSchema(organisation);
 export const OrganisationInsert = createInsertSchema(organisation).extend({
   ...getDefaultConstraints(organisation),
-  code : z.string().min(1, { message: m.admin__validation_short_name_lte_32_chars() }),
+  code: z.string().min(1, { message: m.admin__validation_short_name_lte_32_chars() })
 });
 export const OrganisationUpdate = createUpdateSchema(organisation).extend({
   ...getDefaultConstraints(organisation)
 });
-
 
 /* ----------------- */
 // ORGANISATION RELATIONAL SCHEMAS
@@ -66,8 +65,6 @@ export const OrganisationRoleAPI = OrganisationRoleBase.extend({
     i18n: getLocales(OrganisationI18nBase)
   })
 });
-
-
 
 /* ----------------- */
 // ORGANISATION SUPERADMIN API (Full Access)

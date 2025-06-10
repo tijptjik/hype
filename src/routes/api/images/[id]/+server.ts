@@ -14,16 +14,22 @@ import {
 // ZOD
 import { ImageFlatUpdate, ImageUpdate } from '$lib/db/zod/schema/image';
 // API
-import { delFromCloudinary, getDatabase, getSignedRequest, isValidQueryParamsOrError, JSONResponseOrError } from '$lib/api';
-import { assertPermissionsToDeleteImage, assertPermissionsToUpdateImage, getCtxFromUrl, getImageEntityQueryContext } from '$lib/api/services/image';
+import {
+  delFromCloudinary,
+  getDatabase,
+  getSignedRequest,
+  isValidQueryParamsOrError,
+  JSONResponseOrError
+} from '$lib/api';
+import {
+  assertPermissionsToDeleteImage,
+  assertPermissionsToUpdateImage,
+  getCtxFromUrl,
+  getImageEntityQueryContext
+} from '$lib/api/services/image';
 // TYPES
 import type { RequestHandler } from '@sveltejs/kit';
-import type {
-  Id,
-  ImageDBFlat,
-  QueryParams,
-  FeatureImageDB,
-} from '$lib/types';
+import type { Id, ImageDBFlat, QueryParams, FeatureImageDB } from '$lib/types';
 
 /********************
  *  READ
@@ -70,17 +76,28 @@ export const GET: RequestHandler = async ({
 
 /**
  * Updates an image. Requires a valid context to be provided in the URL.
- * 
+ *
  * PATCH /api/images/[id]?organisationId=...
  * PATCH /api/images/[id]?projectId=...
  * PATCH /api/images/[id]?featureId=...
  * PATCH /api/images/[id]?taskId=...
  */
-export const PATCH: RequestHandler = async ({ params, request, locals, platform, url }) => {
+export const PATCH: RequestHandler = async ({
+  params,
+  request,
+  locals,
+  platform,
+  url
+}) => {
   // ASSERT : User logged in
-  const { db, user : sessionUser, userId, userRoles } = await getDatabase(locals, platform);
+  const {
+    db,
+    user: sessionUser,
+    userId,
+    userRoles
+  } = await getDatabase(locals, platform);
   const user = await getUserById(db, userId);
-  const {ctxId, ctxType} = getCtxFromUrl(url);
+  const { ctxId, ctxType } = getCtxFromUrl(url);
 
   try {
     // ASSERT : Valid submitted data
@@ -96,7 +113,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform,
       data,
       userRoles,
       params.id as Id,
-      ctxId, 
+      ctxId,
       ctxType
     );
 
@@ -137,16 +154,23 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform,
 
 /**
  * Deletes an image. Requires a valid context to be provided in the URL.
- * 
+ *
  * DELETE /api/images/[id]?organisationId=...
  * DELETE /api/images/[id]?projectId=...
  * DELETE /api/images/[id]?featureId=...
  */
-export const DELETE: RequestHandler = async ({ params, request, locals, platform, url, fetch: eventFetch }) => {
+export const DELETE: RequestHandler = async ({
+  params,
+  request,
+  locals,
+  platform,
+  url,
+  fetch: eventFetch
+}) => {
   // ASSERT : User logged in
   const { db, user, userId, userRoles } = await getDatabase(locals, platform);
-  const {ctxId, ctxType} = getCtxFromUrl(url);
-  
+  const { ctxId, ctxType } = getCtxFromUrl(url);
+
   try {
     // ASSERT : Access to context
     await assertPermissionsToDeleteImage(
@@ -157,14 +181,14 @@ export const DELETE: RequestHandler = async ({ params, request, locals, platform
       params as QueryParams,
       userRoles,
       params.id as Id,
-      ctxId, 
+      ctxId,
       ctxType
     );
-    
+
     // 1. Fetch image details to get publicId
     const conditions = [eq(image.id, params.id as Id)];
     const imageToDelete = await getImageById(db, conditions);
-    
+
     if (!imageToDelete) {
       return error(404, 'Image not found');
     }
@@ -172,7 +196,9 @@ export const DELETE: RequestHandler = async ({ params, request, locals, platform
     // 2. Delete from Cloudinary
     if (imageToDelete.publicId) {
       // Fetch signature for deletion
-      const signData = await getSignedRequest(eventFetch, {public_id: imageToDelete.publicId});
+      const signData = await getSignedRequest(eventFetch, {
+        public_id: imageToDelete.publicId
+      });
       await delFromCloudinary(eventFetch, signData, imageToDelete.publicId);
     }
 
@@ -185,7 +211,7 @@ export const DELETE: RequestHandler = async ({ params, request, locals, platform
     console.error('Failed to delete image:', e);
     // Check if it's a SvelteKit error object
     if (e && typeof e.status === 'number' && typeof e.body === 'object') {
-        return error(e.status, e.body.message || 'Failed to delete image');
+      return error(e.status, e.body.message || 'Failed to delete image');
     }
     return error(500, 'Failed to delete image');
   }

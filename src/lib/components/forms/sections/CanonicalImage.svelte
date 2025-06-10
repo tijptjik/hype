@@ -37,7 +37,6 @@ const navigateToGallery = (e: Event) => {
   e.preventDefault();
   adminCtx.setFacet('images');
 };
-
 </script>
 
 <div class="h-full min-h-[300px] w-full basis-1/1 2xl:basis-1/3-gap-6">

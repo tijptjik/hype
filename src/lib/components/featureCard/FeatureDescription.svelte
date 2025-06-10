@@ -20,7 +20,12 @@ const userPreferences = $derived(appCtx.getUserPreferences());
 
 // STATE : LOCAL
 let description = $derived(
-  getI18n(feature as Feature, 'description', userPreferences, m.zany_merry_seahorse_treasure())
+  getI18n(
+    feature as Feature,
+    'description',
+    userPreferences,
+    m.zany_merry_seahorse_treasure()
+  )
 );
 let hasMoreBelow = $state(false);
 let scrollContainer: HTMLElement = $state()!;
@@ -37,14 +42,14 @@ function smartScroll(node: HTMLElement) {
       const scrollTop = node.scrollTop;
       const clientHeight = node.clientHeight;
       const scrollHeight = node.scrollHeight;
-      
+
       // Check if content is scrollable at all
       const isScrollable = scrollHeight > clientHeight;
-      
+
       // More generous tolerance for bottom detection (accounts for sub-pixel rendering)
       const scrollBottom = scrollTop + clientHeight;
       const isAtBottom = scrollBottom >= scrollHeight - 5; // 5px tolerance
-      
+
       // Only show gradient if content is scrollable AND we're not at the bottom
       hasMoreBelow = isScrollable && !isAtBottom;
     });
@@ -87,11 +92,9 @@ $effect(() => {
 </script>
 
 {#if description !== m.zany_merry_seahorse_treasure() && description.length > 0 && description !== '-'}
-  <div class="relative z-10 my-0 flex-shrink-3 flex min-h-12 flex-col bg-black caret-transparent">
-    <div
-      class="overflow-y-auto"
-      bind:this={scrollContainer}
-      use:smartScroll>
+  <div
+    class="flex-shrink-3 relative z-10 my-0 flex min-h-12 flex-col bg-black caret-transparent">
+    <div class="overflow-y-auto" bind:this={scrollContainer} use:smartScroll>
       <div class="h-auto min-h-8 w-100:pl-2">
         <p
           class="m-0 overflow-visible p-0 text-sm font-thin leading-tight tracking-tight text-gray-300">

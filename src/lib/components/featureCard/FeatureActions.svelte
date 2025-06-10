@@ -40,7 +40,9 @@ let omniCtx = getOmniContext();
 const flash = getFlash(page);
 
 // STATE : SESSION
-let attribution = $derived(appCtx.getUser()!.attribution || m.misty_awake_haddock_tap());
+let attribution = $derived(
+  appCtx.getUser()!.attribution || m.misty_awake_haddock_tap()
+);
 
 // STATE : PROPS
 let { feature }: { feature: Feature | UserContributedFeature } = $props();
@@ -255,7 +257,7 @@ function getDirections() {
 </script>
 
 <div
-  class="pointer-events-auto flex flex-row min-h-16 flex-shrink-0 items-center justify-between rounded-b-lg bg-black px-3 caret-transparent w-100:px-4 py-2 w-100:py-4">
+  class="pointer-events-auto flex min-h-16 flex-shrink-0 flex-row items-center justify-between rounded-b-lg bg-black px-3 py-2 caret-transparent w-100:px-4 w-100:py-4">
   {#if cardCtx.isDisplayMode}
     <div class="flex gap-2">
       <button
@@ -322,23 +324,23 @@ function getDirections() {
       <span class="hidden w-64:inline-block">{m.alive_large_hawk_hunt()}</span>
     </button>
   {:else if cardCtx.state.mode === FeatureCardMode.New}
-    <div class="flex w-full flex-col min-h-12">
+    <div class="flex min-h-12 w-full flex-col">
       <ValidationError />
       <div class="flex flex-row items-baseline justify-between">
         <h3 class="text-lg font-bold uppercase text-primary">
           {m.small_mellow_cod_boost()}
         </h3>
-          <button
-            class="btn btn-outline btn-primary uppercase"
-            onclick={submitNewFeature}
-            disabled={cardCtx.isSubmitting}>
-            {#if cardCtx.isSubmitting}
-              <span class="loading loading-ring loading-md"></span>
-              {m.fun_fuzzy_shrike_compose()}
-            {:else}
-              {m.proof_active_eagle_urge()}
-            {/if}
-          </button>
+        <button
+          class="btn btn-outline btn-primary uppercase"
+          onclick={submitNewFeature}
+          disabled={cardCtx.isSubmitting}>
+          {#if cardCtx.isSubmitting}
+            <span class="loading loading-ring loading-md"></span>
+            {m.fun_fuzzy_shrike_compose()}
+          {:else}
+            {m.proof_active_eagle_urge()}
+          {/if}
+        </button>
       </div>
     </div>
   {:else if cardCtx.state.mode === FeatureCardMode.Missing}

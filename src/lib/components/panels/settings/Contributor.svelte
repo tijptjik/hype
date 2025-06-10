@@ -20,7 +20,7 @@ let successTimer: ReturnType<typeof setTimeout>;
 // HANDLERS
 const handleAttributionChange = (target: HTMLInputElement) => {
   const value = target.value;
-  
+
   appCtx.setUserAttribution(
     value,
     // onSuccess
@@ -60,16 +60,19 @@ const handleKeydown = () => {
       value={appCtx.getUser()?.attribution}
       oninput={({ target }) => handleAttributionChange(target as HTMLInputElement)}
       onkeydown={handleKeydown} />
-    <div class="mr-8 relative">
+    <div class="relative mr-8">
       <!-- Success indicator -->
-        <label class="swap swap-rotate right-0 -translate-y-1/2 absolute h-6 w-6 stroke-1 text-base-content/60 {showSuccessIndicator ? 'swap-active' : ''}">
-          <div transition:fade={{ duration: 800 }} class="swap-off">
-            <Icon src={Trophy} class="h-6 w-6" />
-          </div>
-          <div transition:fade={{ duration: 300 }} class="swap-on">
-            <Icon src={CheckCircle} class="h-6 w-6" />
-          </div>
-        </label>
+      <label
+        class="swap swap-rotate absolute right-0 h-6 w-6 -translate-y-1/2 stroke-1 text-base-content/60 {showSuccessIndicator
+          ? 'swap-active'
+          : ''}">
+        <div transition:fade={{ duration: 800 }} class="swap-off">
+          <Icon src={Trophy} class="h-6 w-6" />
+        </div>
+        <div transition:fade={{ duration: 300 }} class="swap-on">
+          <Icon src={CheckCircle} class="h-6 w-6" />
+        </div>
+      </label>
     </div>
   </div>
 </Section>

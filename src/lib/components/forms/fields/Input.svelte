@@ -5,7 +5,13 @@ import FormInput from '../elements/Input.svelte';
 import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
 import FieldLabel from '$lib/components/forms/labels/Field.svelte';
 // TYPES
-import type { FieldPropsExtended, FieldDiscriminator, Locale, LocaleExtended, Field } from '$lib/types';
+import type {
+  FieldPropsExtended,
+  FieldDiscriminator,
+  Locale,
+  LocaleExtended,
+  Field
+} from '$lib/types';
 
 // STATE : PROPS
 let {
@@ -27,12 +33,26 @@ let isGenAI = $state(false);
 
 // EFFECT : SYNC WITH FORM
 let fieldValues = $derived(
-  getValues($form as any, field, locale as LocaleExtended, fieldRoot, fieldIndex, fieldKey)
+  getValues(
+    $form as any,
+    field,
+    locale as LocaleExtended,
+    fieldRoot,
+    fieldIndex,
+    fieldKey
+  )
 )!;
 
 // STATE : DERIVED
 let id = $derived(
-  getId(field, fieldRoot, fieldIndex, fieldDiscriminator, fieldKey, locale as LocaleExtended)
+  getId(
+    field,
+    fieldRoot,
+    fieldIndex,
+    fieldDiscriminator,
+    fieldKey,
+    locale as LocaleExtended
+  )
 );
 
 // HANDLERS
@@ -52,8 +72,7 @@ function handleChange() {
 
 <label class="form-control w-full" for={id} aria-label={field.label}>
   <FieldLabel {field} {fieldRoot} {fieldIndex} {fieldKey} {constraints} />
-  <div
-    class="group relative rounded-lg bg-neutral pl-2 pr-3">
+  <div class="group relative rounded-lg bg-neutral pl-2 pr-3">
     <FormInput
       bind:value={fieldValues.value as string}
       bind:isGenAI={fieldValues.isGenAI as boolean}

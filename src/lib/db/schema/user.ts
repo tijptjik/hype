@@ -1,21 +1,10 @@
-import {
-  integer,
-  primaryKey,
-  sqliteTable,
-  text
-} from 'drizzle-orm/sqlite-core';
+import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 // ENUM
-import {
-  SupportedLocales,
-  supportedLocales
-} from '../../enums';
+import { SupportedLocales, supportedLocales } from '../../enums';
 // TYPES
-import type {
-  UserExperimental,
-  UserPreferences
-} from '../../types';
+import type { UserExperimental, UserPreferences } from '../../types';
 
 /* ============================================================================
  * USER MANAGEMENT
@@ -183,8 +172,7 @@ export const userFeature = sqliteTable(
     userId: text('userId')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    featureId: text('featureId')
-      .notNull(),
+    featureId: text('featureId').notNull(),
     isVisited: integer('isVisited', { mode: 'boolean' }).default(false).notNull(),
     isWishlisted: integer('isWishlisted', { mode: 'boolean' }).default(false).notNull(),
     visitedAt: text('visitedAt'),
@@ -209,8 +197,7 @@ export const userFeature = sqliteTable(
 export const userLayer = sqliteTable(
   'userLayer',
   {
-    layerId: text('layerId')
-      .notNull(),
+    layerId: text('layerId').notNull(),
     userId: text('userId')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
@@ -221,4 +208,4 @@ export const userLayer = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.layerId, table.userId] })
   ]
-); 
+);

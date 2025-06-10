@@ -18,7 +18,10 @@ let { feature }: { feature: Feature | NewFeatureWithLocationAndParents } = $prop
 const appCtx = getAppCtx();
 
 // STATE : SESSION
-const userPreferences = $derived({...appCtx.getUserPreferences(), allowMachineTranslation: true});
+const userPreferences = $derived({
+  ...appCtx.getUserPreferences(),
+  allowMachineTranslation: true
+});
 
 let innerWidth = $state<number>()!;
 let featureCardEl: HTMLElement = $state()!;
@@ -181,7 +184,9 @@ function measureTextWidth(text: string): number {
   return context.measureText(text).width;
 }
 
-let addressLines = $derived(wrapText(getI18n(feature as Feature, 'displayAddress', userPreferences)));
+let addressLines = $derived(
+  wrapText(getI18n(feature as Feature, 'displayAddress', userPreferences))
+);
 let lastAddressLines: string[] = [];
 let lastAddressLineLengths: number[] = [];
 let displayAddressLines = $state<string[]>([]);

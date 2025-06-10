@@ -1,5 +1,5 @@
 <script lang="ts">
-  // TRANSITIONS
+// TRANSITIONS
 import { slide } from 'svelte/transition';
 import { ChevronDown, ChevronRight } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
@@ -37,7 +37,7 @@ let {
   class="mt-4 flex min-h-0 flex-shrink-0 flex-col border-t-4 border-base-300 caret-transparent {isOpen
     ? 'flex-grow'
     : ''}"
-    transition:slide>
+  transition:slide>
   <button
     class="flex w-full flex-shrink-0 items-center justify-between px-4 {iconVerticalPaddingClass} bg-black pb-2 focus:outline-none focus:ring-0 focus-visible:text-primary"
     onclick={toggle}>

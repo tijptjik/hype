@@ -50,10 +50,7 @@ export const constraints: Record<string, z.ZodType<any>> = {
       message: m.admin__validation_key_valid_characters()
     })
     .min(2, { message: m.admin__validation_key_gte_2_chars() }),
-  url: z
-    .string()
-    .url({ message: m.admin__validation_url_invalid() })
-    .nullish(),
+  url: z.string().url({ message: m.admin__validation_url_invalid() }).nullish(),
   attribution: z
     .string()
     .min(1, { message: m.admin__validation_attribution_is_required() })
@@ -83,15 +80,12 @@ export const getDefaultConstraints = (
     | typeof hub
     | typeof hubI18n
 ) => {
-  return Object.keys(table).reduce(
-    (acc: Record<string, any>, key) => {
-      if (key in constraints) {
-        acc[key] = constraints[key as keyof typeof constraints];
-      }
-      return acc;
-    },
-    {}
-  );
+  return Object.keys(table).reduce((acc: Record<string, any>, key) => {
+    if (key in constraints) {
+      acc[key] = constraints[key as keyof typeof constraints];
+    }
+    return acc;
+  }, {});
 };
 
 /* ----------------- */
@@ -115,7 +109,8 @@ export const getLocales = (model: z.ZodType<any>, requiredStringKeys: string[] =
     'value',
     'label'
   ]) =>
-  z.record(z.enum(supportedLocales as [string, ...string[]]), model)
+  z
+    .record(z.enum(supportedLocales as [string, ...string[]]), model)
     .optional()
     .nullable()
     .refine(

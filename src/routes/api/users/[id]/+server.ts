@@ -19,7 +19,14 @@ import {
   assertPermissionsToUpdateUser
 } from '$lib/api/services/user';
 // TYPES
-import type { UserPartial, UserDB, UserRaw, Id, UserFeatureDB, UserLayerDB } from '$lib/types';
+import type {
+  UserPartial,
+  UserDB,
+  UserRaw,
+  Id,
+  UserFeatureDB,
+  UserLayerDB
+} from '$lib/types';
 
 /********************
  *  READ
@@ -30,7 +37,7 @@ import type { UserPartial, UserDB, UserRaw, Id, UserFeatureDB, UserLayerDB } fro
  */
 export const GET: RequestHandler = async ({ params, locals, platform, request }) => {
   // ASSERT : User logged in
-  const { db, user : sessionUser, userRoles } = await getDatabase(locals, platform);
+  const { db, user: sessionUser, userRoles } = await getDatabase(locals, platform);
 
   // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
   let { conditions } = getUserQueryContext(sessionUser!, request, {}, userRoles);
@@ -73,7 +80,7 @@ export const GET: RequestHandler = async ({ params, locals, platform, request })
  */
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
   // ASSERT : User logged in
-  const { db, user : sessionUser } = await getDatabase(locals, platform);
+  const { db, user: sessionUser } = await getDatabase(locals, platform);
 
   try {
     // ASSERT : Valid form data
@@ -93,15 +100,23 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     const updated = await updateUser(db, newData, params.id as string);
     let updatedFeatures: UserFeatureDB[] = [];
     let updatedLayers: UserLayerDB[] = [];
-    
+
     // DB : Update the userFeatures
     if (newData.userFeatures) {
-      updatedFeatures = await updateUserFeatures(db, newData.userFeatures, params.id as string);
+      updatedFeatures = await updateUserFeatures(
+        db,
+        newData.userFeatures,
+        params.id as string
+      );
     }
 
     // DB : Update the userLayers
     if (newData.userLayers) {
-      updatedLayers = await updateUserLayers(db, newData.userLayers, params.id as string);
+      updatedLayers = await updateUserLayers(
+        db,
+        newData.userLayers,
+        params.id as string
+      );
     }
 
     // DB : Get the updated user with all relations for response

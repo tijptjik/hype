@@ -83,10 +83,9 @@ let displayText = $derived(displaySelectedProperties(selected, values));
               e.preventDefault();
               toggleValue(value);
             }
-          }}
-          >
+          }}>
           <div
-            class="flex h-2 w-2 items-center gap-2 rounded-full group-focus:outline-none group-focus:ring-0 group-hover:bg-base-content/60 group-focus-visible:bg-base-content/60 {selected.includes(
+            class="flex h-2 w-2 items-center gap-2 rounded-full group-hover:bg-base-content/60 group-focus:outline-none group-focus:ring-0 group-focus-visible:bg-base-content/60 {selected.includes(
               originalValue
             )
               ? 'bg-sky-600 group-hover:bg-sky-600/60 group-focus-visible:bg-sky-600/60'
@@ -96,8 +95,7 @@ let displayText = $derived(displaySelectedProperties(selected, values));
             type="checkbox"
             checked={selected.includes(originalValue)}
             class="checkbox checkbox-sm hidden"
-            onchange={() => toggleValue(value)} 
-            />
+            onchange={() => toggleValue(value)} />
           <span class="label-text text-sm font-medium"
             >{getPropValueInCurrentLocale(value)}</span>
         </label>

@@ -37,15 +37,9 @@ const session = useSession();
 
 // Always set up map context, but only fetch data when authenticated
 // CONTEXT :: APP
-const appCtx = setAppCtx(
-  queryClient,
-  $session.data?.user as SessionUser | null
-);
+const appCtx = setAppCtx(queryClient, $session.data?.user as SessionUser | null);
 // CONTEXT :: ADMIN
-const adminCtx = setAdminCtx(
-  queryClient,
-  appCtx
-);
+const adminCtx = setAdminCtx(queryClient, appCtx);
 
 // CONTEXT :: SIDEBAR
 setSidebarState();
@@ -65,7 +59,7 @@ watch(
 );
 
 // Initialize active resource and entity based on the current path
-// TODO Replace with the correct check 
+// TODO Replace with the correct check
 let isMounted = $state(false);
 onMount(() => {
   isMounted = true;

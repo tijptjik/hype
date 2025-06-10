@@ -193,8 +193,8 @@ export class OmniContext {
       this.focusSearchBar();
       goto('/');
 
-    // We can be in new-feature mode if we are still pre-FeatureCard,
-    // i.e. if we are showing the LayerSelctionModal or GeoLocationModal.
+      // We can be in new-feature mode if we are still pre-FeatureCard,
+      // i.e. if we are showing the LayerSelctionModal or GeoLocationModal.
     } else if (this.state.mode === 'new-feature') {
       const closeLayerEvent = new CustomEvent('closeLayerSelectionModal');
       window.dispatchEvent(closeLayerEvent);
@@ -269,7 +269,9 @@ export class OmniContext {
         id: featureId,
         type: 'feature',
         i18n: {
-          en: { name: address.replace(', Hong Kong', '').replace(', Hong Kong Island', '') },
+          en: {
+            name: address.replace(', Hong Kong', '').replace(', Hong Kong Island', '')
+          },
           'zh-hant': { name: address },
           'zh-hans': { name: address }
         },
@@ -399,7 +401,11 @@ export class OmniContext {
   navTitle = $derived(
     this.state.mode === 'search'
       ? `Search Results: ${this.state.searchTerm}`
-      : getI18n(this.appCtx.state.active.collection!, 'name', this.appCtx.getUserPreferences())
+      : getI18n(
+          this.appCtx.state.active.collection!,
+          'name',
+          this.appCtx.getUserPreferences()
+        )
   );
 
   // OPEN/CLOSE METHODS

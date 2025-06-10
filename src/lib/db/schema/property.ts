@@ -1,9 +1,4 @@
-import {
-  integer,
-  primaryKey,
-  sqliteTable,
-  text
-} from 'drizzle-orm/sqlite-core';
+import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 // ENUM
@@ -106,7 +101,9 @@ export const propertyValueI18n = sqliteTable(
     propertyValueId: text('propertyValueId')
       .notNull()
       .references(() => propertyValue.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    locale: text('locale', { enum: supportedLocales as [string, ...string[]] }).notNull(),
+    locale: text('locale', {
+      enum: supportedLocales as [string, ...string[]]
+    }).notNull(),
     // Value in {locale}
     value: text('value').notNull(),
     valueGen: integer('valueGen', { mode: 'boolean' }).notNull().default(false)
@@ -114,4 +111,4 @@ export const propertyValueI18n = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.propertyValueId, table.locale] })
   ]
-); 
+);

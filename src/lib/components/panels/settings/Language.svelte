@@ -138,7 +138,10 @@ let advancedOpen = $state(false);
               class="toggle toggle-primary toggle-sm flex-shrink-0"
               checked={setting.currentValue}
               onchange={(e) =>
-                appCtx.setAdvancedFeature(setting.code as keyof UserPreferences, e.currentTarget.checked)} />
+                appCtx.setAdvancedFeature(
+                  setting.code as keyof UserPreferences,
+                  e.currentTarget.checked
+                )} />
           </div>
         {/each}
       </div>

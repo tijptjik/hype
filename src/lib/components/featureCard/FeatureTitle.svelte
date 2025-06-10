@@ -9,12 +9,7 @@ import { m } from '$lib/i18n';
 import { getAppCtx } from '$lib/context/app.svelte';
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 // Types
-import type {
-  Id,
-  Feature,
-  UserContributedFeature,
-  FeatureProperty,
-} from '$lib/types';
+import type { Id, Feature, UserContributedFeature, FeatureProperty } from '$lib/types';
 
 // HTML ELEMENTS
 let titleInput: HTMLInputElement = $state()!;
@@ -118,7 +113,9 @@ function handleGradeSelect(newGrade: number) {
               handleTitleSubmit();
               // Focus pencil button after DOM update
               setTimeout(() => {
-                const pencilButton = (e.target as HTMLElement)?.closest('.flex')?.querySelector('button') as HTMLButtonElement;
+                const pencilButton = (e.target as HTMLElement)
+                  ?.closest('.flex')
+                  ?.querySelector('button') as HTMLButtonElement;
                 pencilButton?.focus();
               }, 0);
             }
@@ -154,7 +151,7 @@ function handleGradeSelect(newGrade: number) {
   {/if}
   <div class="m-0 flex items-center gap-1 caret-transparent">
     {#if cardCtx.isNewMode}
-      <div class="flex gap-1 mt-1">
+      <div class="mt-1 flex gap-1">
         {#each Array(5) as _, i}
           <button
             class="group btn btn-ghost btn-sm p-1 focus:text-primary focus:outline-none"
@@ -170,14 +167,13 @@ function handleGradeSelect(newGrade: number) {
           </button>
         {/each}
       </div>
-    {:else}
-    {#if grade}
+    {:else if grade}
       <Icon src={Star} class="h-6 w-6" theme="solid" />
       <span>{grade}/5</span>
-      {:else}
-      <span class="translate-x-[28px] text-[8px] text-white rounded-full bg-black">unrated</span>
+    {:else}
+      <span class="translate-x-[28px] rounded-full bg-black text-[8px] text-white"
+        >unrated</span>
       <Icon src={Star} class="h-6 w-6" theme="solid" />
-      {/if}
     {/if}
   </div>
 </div>

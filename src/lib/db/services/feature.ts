@@ -530,7 +530,11 @@ export const updateFeatureWithRelated = async (
   const { id, ...updateData } = data;
 
   const feature = await updateFeature(db, updateData, idToUse);
-  const i18n = await updateI18n(db, data.i18n, feature.id);
+  const i18n = await updateI18n(
+    db,
+    (data.i18n || {}) as Record<Locale, FeatureI18nPartial>,
+    feature.id
+  );
   const properties = await updateProperties(
     db,
     data.properties as FeatureProperty[],

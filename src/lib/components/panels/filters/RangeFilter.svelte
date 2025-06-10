@@ -73,8 +73,7 @@ let values: [number, number] = $derived([
           on:change={() => {
             appCtx.setRangePropertyFilter(layerId, key, values);
             appCtx.zoomToAllVisibleFeatures();
-          }}
-          />
+          }} />
       </div>
     </div>
   {/if}

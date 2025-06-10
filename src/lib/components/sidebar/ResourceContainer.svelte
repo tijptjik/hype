@@ -16,11 +16,11 @@ let sidebarState = getSidebarState();
 
 let { resourceType }: { resourceType: FirstClassResource } = $props();
 
-let isFilterable = $derived(
-  adminCtx.hasManyEntities(resourceType)
-);
+let isFilterable = $derived(adminCtx.hasManyEntities(resourceType));
 let showFilters = $derived(
-  sidebarState.isOpen() && sidebarState.isSectionOpen(resourceType as unknown as HierarchicalResource) && isFilterable
+  sidebarState.isOpen() &&
+    sidebarState.isSectionOpen(resourceType as unknown as HierarchicalResource) &&
+    isFilterable
 );
 
 /**
@@ -55,7 +55,10 @@ const getMaxHeightItemsContainer = (
   class="flex flex-col transition-[max-height] duration-300 ease-in-out"
   class:flex-grow={showFilters || navItems[resourceType].isAlwaysExpanded}
   style="max-height: {resourceType != 'feature'
-    ? getMaxHeightItemsContainer(resourceType as unknown as FirstClassResource, isFilterable)
+    ? getMaxHeightItemsContainer(
+        resourceType as unknown as FirstClassResource,
+        isFilterable
+      )
     : ''}">
   <!-- FILTER -->
   {#if showFilters}

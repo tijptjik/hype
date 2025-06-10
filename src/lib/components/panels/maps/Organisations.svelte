@@ -53,14 +53,13 @@ const filteredOrganisations = $derived(filterOrganisations(organisations, search
 
 let isDefaultOpen = $derived(document.body.clientHeight > 1000);
 
-
 let handleReset = () => {
   if (selectedOrganisations.length == 0) {
-    appCtx.closePanel('maps')
+    appCtx.closePanel('maps');
   } else {
-    appCtx.resetOrganisations()
+    appCtx.resetOrganisations();
   }
-}
+};
 </script>
 
 <!-- COMPONENTS -->

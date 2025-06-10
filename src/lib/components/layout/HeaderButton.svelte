@@ -15,7 +15,6 @@ let {
   isActive?: boolean;
 } = $props();
 
-
 // UTILS
 const onclick = (e: MouseEvent) => {
   e.preventDefault();

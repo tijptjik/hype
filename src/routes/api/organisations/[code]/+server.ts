@@ -9,10 +9,7 @@ import { eq } from 'drizzle-orm';
 import { superValidate } from 'sveltekit-superforms';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
-import { 
-  OrganisationInsertAPI, 
-  OrganisationInsertSuperAdminAPI 
-} from '$lib/db/zod';
+import { OrganisationInsertAPI, OrganisationInsertSuperAdminAPI } from '$lib/db/zod';
 // SCHEMA
 import { organisation } from '$lib/db/schema/index';
 // DB
@@ -92,9 +89,9 @@ export const GET: RequestHandler = async ({ params, locals, platform, request })
 
     // RESPONSE : Build the response shape
     const data = await toResponseShape(
-      result, 
-      result.i18n, 
-      result.userRoles, 
+      result,
+      result.i18n,
+      result.userRoles,
       false, // isCollection
       user.superAdmin || false // isSuperAdmin
     );
@@ -123,12 +120,12 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
   try {
     // ASSERT : Valid form
     const formData: Organisation = await request.json();
-    
+
     // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
-    const updateSchema = user.superAdmin 
-      ? OrganisationInsertSuperAdminAPI 
+    const updateSchema = user.superAdmin
+      ? OrganisationInsertSuperAdminAPI
       : OrganisationInsertAPI;
-    
+
     // @ts-ignore - FORM : Fix type error
     let form = (await superValidate(
       formData,
@@ -148,12 +145,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     if (!form.valid) return SuperFormResponse<Organisation>(form);
 
     // ASSERT : Permissions to update organisation
-    assertPermissionsToUpdateOrganisation(
-      user,
-      request,
-      formData,
-      userRoles
-    );
+    assertPermissionsToUpdateOrganisation(user, request, formData, userRoles);
 
     // STATE : Will the current user lose access on membership changes.
     const isAccessLost = isAccessLostUponSuccess(user, formData, userRoles);
@@ -229,12 +221,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     }
 
     // Use assertion functions for access control
-    assertPermissionsToUpdateOrganisation(
-      user,
-      request,
-      existing,
-      userRoles
-    );
+    assertPermissionsToUpdateOrganisation(user, request, existing, userRoles);
 
     // DB : Update only the basic organisation fields (no relations for PATCH)
     const updated = await updateOrganisation(db, newData, params.code as string);
@@ -253,9 +240,9 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
 
     // RESPONSE : Build the response shape
     const data = await toResponseShape(
-      updatedWithRelations, 
-      updatedWithRelations.i18n, 
-      updatedWithRelations.userRoles, 
+      updatedWithRelations,
+      updatedWithRelations.i18n,
+      updatedWithRelations.userRoles,
       false, // isCollection
       user!.superAdmin || false // isSuperAdmin
     );

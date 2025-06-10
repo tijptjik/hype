@@ -8,15 +8,9 @@ import {
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 // ENUM
-import {
-  ImageCDN,
-  ImageEnv,
-  ImageIntent
-} from '../../enums';
+import { ImageCDN, ImageEnv, ImageIntent } from '../../enums';
 // TYPES
-import type {
-  EXIF
-} from '../../types';
+import type { EXIF } from '../../types';
 
 /* ============================================================================
  * IMAGE MANAGEMENT
@@ -105,4 +99,4 @@ export const featureImage = sqliteTable(
       .on(table.featureId)
       .where(sql`intent = 'canonical'`)
   ]
-); 
+);

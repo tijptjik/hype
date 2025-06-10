@@ -42,7 +42,8 @@ let getCount = (statistic: CollectionStatistic) => {
       state: true
     }).length;
   } else if (statistic === CollectionStatistic.selected && resourceType !== 'feature') {
-    return adminCtx.appCtx.state.prisms[resourceType as ResourceTypeWithChildren].length;
+    return adminCtx.appCtx.state.prisms[resourceType as ResourceTypeWithChildren]
+      .length;
   }
 };
 let count = $derived(getCount(statistic));

@@ -106,7 +106,7 @@ export const submitNewFeature = async (
   // TASK DATA : Structure for newFeature task
   const taskData: NewFeatureTask = {
     ...newFeature,
-    type: 'newFeature',
+    type: 'newFeature'
   };
 
   formData.append('taskData', JSON.stringify(taskData));

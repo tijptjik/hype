@@ -1,19 +1,10 @@
-import {
-  integer,
-  primaryKey,
-  sqliteTable,
-  text
-} from 'drizzle-orm/sqlite-core';
+import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 // ENUM
-import {
-  supportedLocales
-} from '../../enums';
+import { supportedLocales } from '../../enums';
 // TYPES
-import type {
-  LayerMetadata
-} from '../../types';
+import type { LayerMetadata } from '../../types';
 
 /* ============================================================================
  * LAYER MANAGEMENT
@@ -68,7 +59,9 @@ export const layerI18n = sqliteTable(
     layerId: text('layerId')
       .notNull()
       .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    locale: text('locale', { enum: supportedLocales as [string, ...string[]] }).notNull(),
+    locale: text('locale', {
+      enum: supportedLocales as [string, ...string[]]
+    }).notNull(),
     // Full Name in {locale}
     name: text('name').notNull(),
     nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(true),
@@ -98,4 +91,4 @@ export const layerProperty = sqliteTable('layerProperty', {
   isUserContributed: integer('isUserContributed', { mode: 'boolean' })
     .notNull()
     .default(true)
-}); 
+});

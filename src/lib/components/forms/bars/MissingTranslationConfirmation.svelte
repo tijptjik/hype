@@ -27,11 +27,11 @@ async function handleTranslate(event: Event) {
   event.preventDefault();
   try {
     loadingTranslation = true;
-    
+
     // Find the first non-empty value from supported locales
     let sourceValue = '';
     let sourceLocale: Locale = 'en';
-    
+
     for (const locale of supportedLocales) {
       // @ts-ignore - waiting for runes version of superform
       const value = $form.i18n?.[locale as Locale]?.[fieldRoot];
@@ -41,7 +41,7 @@ async function handleTranslate(event: Event) {
         break;
       }
     }
-    
+
     if (!sourceValue) {
       throw new Error('No source value found for translation');
     }

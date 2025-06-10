@@ -53,12 +53,12 @@ $effect(() => {
     return;
   }
   featureId = page.params.id;
-  
+
   // Only react to activeCollection changes, not flag changes
   if (appCtx.getActiveCollection() == null) {
     // Check the flag without making the effect reactive to it
     const isClosing = untrack(() => omniCtx.isIntentionallyClosing);
-    
+
     if (!isClosing) {
       void handleFeatureSelection();
     }
@@ -80,41 +80,41 @@ async function handleFeatureSelection() {
 {#if appCtx && appCtx.features[featureId]}
   <FeatureCard>
     {#if appCtx.isInitialised}
-    <ImageProvider
-      mode="gallery"
-      isAdminMode={false}
-      ctxType={ImageContextResource.feature}
-      ctxId={featureId}
-      {organisation}
-      {project}>
-      {#if mode === FeatureCardMode.Display}
-        <Container>
+      <ImageProvider
+        mode="gallery"
+        isAdminMode={false}
+        ctxType={ImageContextResource.feature}
+        ctxId={featureId}
+        {organisation}
+        {project}>
+        {#if mode === FeatureCardMode.Display}
+          <Container>
+            <FeatureGallery />
+            <FeatureBreadcrumbs {feature} />
+            <FeatureTitle {feature} />
+            <FeatureDescription {feature} />
+            <Spacer />
+            <FeaturePortalSection>
+              {#snippet left()}
+                <FeatureProperties {feature} />
+              {/snippet}
+              {#snippet right()}
+                <FeaturePortal {feature} />
+              {/snippet}
+            </FeaturePortalSection>
+            <Spacer />
+          </Container>
+        {:else if mode === FeatureCardMode.New}
           <FeatureGallery />
-          <FeatureBreadcrumbs {feature} />
-          <FeatureTitle {feature} />
-          <FeatureDescription {feature} />
-          <Spacer />
-          <FeaturePortalSection>
-            {#snippet left()}
-              <FeatureProperties {feature} />
-            {/snippet}
-            {#snippet right()}
-              <FeaturePortal {feature} />
-            {/snippet}
-          </FeaturePortalSection>
-          <Spacer />
-        </Container>
-      {:else if mode === FeatureCardMode.New}
-        <FeatureGallery />
-      {:else if mode === FeatureCardMode.Missing}
-        <FeatureGallery isSingleImage={true} />
-        <MissingReportReason />
-      {:else if mode === FeatureCardMode.AddPhoto}
-        <FeatureGallery isCameraActive={true} />
-        <PhotoCredit />
-      {/if}
-      <FeatureActions {feature} />
-    </ImageProvider>
+        {:else if mode === FeatureCardMode.Missing}
+          <FeatureGallery isSingleImage={true} />
+          <MissingReportReason />
+        {:else if mode === FeatureCardMode.AddPhoto}
+          <FeatureGallery isCameraActive={true} />
+          <PhotoCredit />
+        {/if}
+        <FeatureActions {feature} />
+      </ImageProvider>
     {/if}
   </FeatureCard>
 {:else}

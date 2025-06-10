@@ -20,7 +20,11 @@ import NewFeatureActions from '$lib/components/tasks/actions/NewFeature.svelte';
 import ReportedMissingControls from '$lib/components/tasks/controls/ReportedMissing.svelte';
 import NewFeatureControls from '$lib/components/tasks/controls/NewFeature.svelte';
 // ENUMS
-import { FirstClassResource, ImageContextResource, ImageContextResourceExtended } from '$lib/enums';
+import {
+  FirstClassResource,
+  ImageContextResource,
+  ImageContextResourceExtended
+} from '$lib/enums';
 // TYPES
 import type { Task, PageProps, Organisation, Project, Id } from '$lib/types';
 

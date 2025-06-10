@@ -1,5 +1,5 @@
 <script lang="ts">
-// ICONS  
+// ICONS
 import { UserGroup, Plus, XMark } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // I18N
@@ -57,4 +57,4 @@ const toggleRemoveMode = () => {
       {/if}
     </button>
   {/if}
-</div> 
+</div>

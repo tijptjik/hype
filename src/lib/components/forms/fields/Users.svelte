@@ -7,7 +7,13 @@ import { flip } from 'svelte/animate';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
-import type { ProjectRole, UserFieldProps, OrganisationForm, OrganisationRole, ProjectForm } from '$lib/types';
+import type {
+  ProjectRole,
+  UserFieldProps,
+  OrganisationForm,
+  OrganisationRole,
+  ProjectForm
+} from '$lib/types';
 
 // STATE : PROPS
 let {
@@ -25,10 +31,12 @@ const { discriminator: userJoinStateKey, checkedValue, uncheckedValue } = joinCo
 const adminCtx = getAdminCtx();
 
 // STATE : CONTEXT :: FORM
-let userForm: (OrganisationForm | ProjectForm)['form'] = $derived((fieldProps.form as OrganisationForm | ProjectForm).form);
+let userForm: (OrganisationForm | ProjectForm)['form'] = $derived(
+  (fieldProps.form as OrganisationForm | ProjectForm).form
+);
 
 const updateUserJoinState = (userId: string, isChecked: boolean) => {
-  // @ts-ignore - Debugging purposes  
+  // @ts-ignore - Debugging purposes
   userForm.update(($form) => {
     const userRoles = [...($form[fieldRoot] || [])];
     const userIndex = userRoles.findIndex(
@@ -54,16 +62,20 @@ const removeUser = async (e: Event, userId: string) => {
     );
     return { ...$form, [fieldRoot]: updatedUsers };
   });
-  
+
   try {
-    await (fieldProps.form as OrganisationForm | ProjectForm).validate(fieldRoot as any);
+    await (fieldProps.form as OrganisationForm | ProjectForm).validate(
+      fieldRoot as any
+    );
   } catch (error) {
     console.warn('Validation error:', error);
   }
 };
 
 // Access form value directly
-let userRoles = $derived(($userForm as any)[fieldRoot] || [] as OrganisationRole[] | ProjectRole[]);
+let userRoles = $derived(
+  ($userForm as any)[fieldRoot] || ([] as OrganisationRole[] | ProjectRole[])
+);
 
 // Update modes based on user roles length
 $effect(() => {
@@ -76,7 +88,7 @@ $effect(() => {
 
 <div class="grid grid-cols-1 gap-4 p-4 2xl:grid-cols-2">
   {#each userRoles.sort((a: OrganisationRole | ProjectRole, b: OrganisationRole | ProjectRole) => a.user.name?.localeCompare(b.user.name ?? '') ?? 0) as userRole, index (userRole.user.id)}
-  <div class="grid-span-1 group" in:scale out:scale animate:flip={{ duration: 200 }}>
+    <div class="grid-span-1 group" in:scale out:scale animate:flip={{ duration: 200 }}>
       <div
         class="card card-side relative h-full flex-row items-center overflow-hidden rounded-l-xl bg-base-100 pr-6 shadow-xl">
         {#if removeMode}

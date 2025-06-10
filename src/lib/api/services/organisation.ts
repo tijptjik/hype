@@ -50,7 +50,6 @@ export const organisationWithRelations = {
   }
 };
 
-
 /**
  * Get the query context for the organisation resource - filters the query based on the user's roles, and the query parameters.
  * @param user - The user object
@@ -71,20 +70,20 @@ export const getOrganisationQueryContext = (
 
   // NON-SUPERADMIN : Hide organisations which are archived
   if (!isSuperAdmin(user)) {
-    conditions.push(eq(organisation.isArchived, false))
-  } 
+    conditions.push(eq(organisation.isArchived, false));
+  }
 
   // PUBLIC : List all organisations which are isPublished, and not isArchived,
   if (!isAdminRequest(request)) {
     params = removeExcludedColumns(params, excludeColumns);
     conditions.push(eq(organisation.isPublished, true));
 
-  // ADMIN : List all organisations, where the user has a role in the organisation
+    // ADMIN : List all organisations, where the user has a role in the organisation
   } else if (!isSuperAdmin(user)) {
     params = removeExcludedColumns(params, ['isArchived']);
     const organisationIds = getOrganisationIdforRoles(userRoles);
     conditions.push(inArray(organisation.id, organisationIds as Id[]));
-  // SUPERADMIN : List all organisations regardless of isPublished or isArchived
+    // SUPERADMIN : List all organisations regardless of isPublished or isArchived
   } else {
     conditions = [];
   }
@@ -139,7 +138,7 @@ export const assertPermissionsToUpdateOrganisation = (
   user: SessionUser,
   request: Request,
   formData: OrganisationDB,
-  userRoles: UserRoleDisco[],
+  userRoles: UserRoleDisco[]
 ) => {
   // Run all access control assertions
   const assertionError = runAssertions(
@@ -172,10 +171,9 @@ export const assertCodeUnique = async (
   return form;
 };
 
-
 /**
  * Check if the current user will lose access upon success, superAdmins are exempt.
- * @param formData - The form data  
+ * @param formData - The form data
  * @param userRoles - The user roles
  * @param user - The user
  * @returns True if the current user will lose access upon success, false otherwise
@@ -186,10 +184,12 @@ export const isAccessLostUponSuccess = (
   userRoles?: UserRoleDisco[]
 ) => {
   const userRolesToCheck = userRoles || formData.userRoles;
-  return !(userRolesToCheck as UserRoleDisco[]).some(
-    (role) =>
-      role.type === 'organisation' &&
-      role.organisationId === formData.id &&
-      role.userId === user.id
-  ) && !user.superAdmin;
+  return (
+    !(userRolesToCheck as UserRoleDisco[]).some(
+      (role) =>
+        role.type === 'organisation' &&
+        role.organisationId === formData.id &&
+        role.userId === user.id
+    ) && !user.superAdmin
+  );
 };

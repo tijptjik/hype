@@ -8,15 +8,10 @@ import {
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 // ENUM
-import {
-  supportedLocales
-} from '../../enums';
+import { supportedLocales } from '../../enums';
 // TYPES
 import type { GeometryObject } from 'geojson';
-import type {
-  AddressProperties,
-  AddressMeta
-} from '../../types';
+import type { AddressProperties, AddressMeta } from '../../types';
 
 /* ============================================================================
  * FEATURE MANAGEMENT
@@ -97,7 +92,9 @@ export const featureI18n = sqliteTable(
     featureId: text('featureId')
       .notNull()
       .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    locale: text('locale', { enum: supportedLocales as [string, ...string[]] }).notNull(),
+    locale: text('locale', {
+      enum: supportedLocales as [string, ...string[]]
+    }).notNull(),
     // Full Name in {locale}
     title: text('title').notNull(),
     titleGen: integer('titleGen', { mode: 'boolean' }).notNull().default(true),
@@ -162,7 +159,9 @@ export const featurePropertyI18n = sqliteTable(
         onUpdate: 'cascade'
       }),
     propertyId: text('propertyId').notNull(),
-    locale: text('locale', { enum: supportedLocales as [string, ...string[]] }).notNull(),
+    locale: text('locale', {
+      enum: supportedLocales as [string, ...string[]]
+    }).notNull(),
     // Value in {locale}
     value: text('value'),
     valueGen: integer('valueGen', { mode: 'boolean' })
@@ -175,4 +174,4 @@ export const featurePropertyI18n = sqliteTable(
       name: 'featurePropertyI18n_featureProperty_fk'
     })
   ]
-); 
+);

@@ -18,9 +18,9 @@ type Props = {
 // PROPS
 let { project, organisation }: Props = $props();
 
-  let projectName = $derived(getI18n(project, 'name', appCtx.getUserPreferences()));
-  let organisationName = $derived(
-    getI18n(organisation, 'name', appCtx.getUserPreferences())
+let projectName = $derived(getI18n(project, 'name', appCtx.getUserPreferences()));
+let organisationName = $derived(
+  getI18n(organisation, 'name', appCtx.getUserPreferences())
 );
 </script>
 

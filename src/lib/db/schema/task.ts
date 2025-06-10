@@ -1,17 +1,8 @@
-import {
-  integer,
-  primaryKey,
-  sqliteTable,
-  text
-} from 'drizzle-orm/sqlite-core';
+import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 // ENUM
-import {
-  TaskType,
-  TaskReviewOutcome,
-  TaskReviewAction
-} from '../../enums';
+import { TaskType, TaskReviewOutcome, TaskReviewAction } from '../../enums';
 
 /* ============================================================================
  * TASK MANAGEMENT
@@ -74,4 +65,4 @@ export const taskImage = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.taskId, table.imageId] })
   ]
-); 
+);

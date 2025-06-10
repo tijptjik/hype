@@ -27,8 +27,8 @@ import { OrganisationBase } from './organisation';
 export const ProjectBase = createSelectSchema(project);
 export const ProjectInsert = createInsertSchema(project).extend({
   ...getDefaultConstraints(project),
-  code : z.string().min(1, { message: m.admin__validation_short_name_lte_32_chars() }),
-})
+  code: z.string().min(1, { message: m.admin__validation_short_name_lte_32_chars() })
+});
 export const ProjectUpdate = createUpdateSchema(project).extend({
   ...getDefaultConstraints(project)
 });
@@ -48,7 +48,6 @@ export const ProjectI18nInsert = createInsertSchema(projectI18n)
 export const ProjectI18nUpdate = createUpdateSchema(projectI18n).extend({
   ...getDefaultConstraints(projectI18n)
 });
-
 
 export const ProjectI18nAPI = ProjectI18nBase;
 
@@ -97,7 +96,7 @@ export const ProjectAPI = ProjectBase.extend({
   maintainerRoles: getMaintainerRoles(ProjectRoleBaseExtra),
   properties: z.array(PropertyAPI).nullish(),
   image: ImageBase.nullish(),
-  publisher: UserBasic.nullish(),
+  publisher: UserBasic.nullish()
 });
 
 export const ProjectInsertAPI = ProjectInsert.extend({

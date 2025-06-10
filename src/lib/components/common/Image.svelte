@@ -83,7 +83,11 @@ $effect(() => {
   <img
     bind:this={imgElement}
     {alt}
-    class="{loaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300 {className ? className : ''} {layout === 'cover'
+    class="{loaded
+      ? 'opacity-100'
+      : 'opacity-0'} transition-opacity duration-300 {className
+      ? className
+      : ''} {layout === 'cover'
       ? 'h-full w-full object-cover'
       : layout === 'fill'
         ? 'object-fill'

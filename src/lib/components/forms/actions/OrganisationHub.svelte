@@ -27,5 +27,5 @@ const onChange = (e: Event): void => {
     label={m.long_fit_vole_flow()}
     size="sm"
     checked={$organisationForm.isHubExclusive as boolean}
-    onChange={onChange} />
-</div> 
+    {onChange} />
+</div>

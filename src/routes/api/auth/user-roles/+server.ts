@@ -24,4 +24,4 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
     console.error('Error fetching user roles:', err);
     return error(500, 'Failed to fetch user roles');
   }
-}; 
+};

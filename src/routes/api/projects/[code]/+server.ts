@@ -84,12 +84,10 @@ export const GET: RequestHandler = async ({
     conditions.push(eq(project.code, params.code!));
 
     // DB : Get the project
-    const result = await getProject(
-      db,
-      projectEntityWithRelations,
-      conditions,
-      { ...locals.hub, isSuperAdmin: user.superAdmin || false }
-    );
+    const result = await getProject(db, projectEntityWithRelations, conditions, {
+      ...locals.hub,
+      isSuperAdmin: user.superAdmin || false
+    });
 
     if (!result) {
       return error(404, 'Project not found');
@@ -135,12 +133,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     if (!form.valid) return SuperFormResponse<Project>(form);
 
     // ASSERT : Permissions to update project
-    assertPermissionsToUpdateProject(
-      user,
-      request,
-      formData,
-      userRoles
-    );
+    assertPermissionsToUpdateProject(user, request, formData, userRoles);
 
     // DB : Update the project
     const updatedProject = await updateProjectWithRelated(db, form.data, params.code);
@@ -184,7 +177,10 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
 
     // Get the existing project to verify access
     const conditions = [eq(project.code, params.code as string)];
-    const existing = (await getProject(db, {}, conditions, { ...locals.hub, isSuperAdmin: user!.superAdmin || false })) as ProjectDB;
+    const existing = (await getProject(db, {}, conditions, {
+      ...locals.hub,
+      isSuperAdmin: user!.superAdmin || false
+    })) as ProjectDB;
 
     if (!existing) return error(404, 'Project not found');
 
@@ -196,12 +192,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     }
 
     // Use assertion functions for access control
-    assertPermissionsToUpdateProject(
-      user,
-      request,
-      existing,
-      userRoles
-    );
+    assertPermissionsToUpdateProject(user, request, existing, userRoles);
 
     // DB : Update only the basic project fields (no relations for PATCH)
     await updateProject(db, newData, params.code as string);

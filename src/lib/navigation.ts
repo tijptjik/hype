@@ -21,7 +21,7 @@ import type { Code, FacetType, Id, NavItem } from '$lib/types';
 
 // NAVIGATION
 // NOTE : We cannot use Enums here for path or seq as the build process only procudes them on a hard refresh.
-export const navItems : Record<FirstClassResource, NavItem> = {
+export const navItems: Record<FirstClassResource, NavItem> = {
   organisation: {
     name: m.maps__organisations(),
     icon: OrganisationIcon,
@@ -107,8 +107,7 @@ export const reversePath = new Map<string, FirstClassResource>();
 
 if (ResourcePath) {
   Object.keys(ResourcePath).forEach((path: string) => {
-    const pathValue: string =
-      ResourcePath[path as keyof typeof ResourcePath];
+    const pathValue: string = ResourcePath[path as keyof typeof ResourcePath];
     reversePath.set(pathValue, path as FirstClassResource);
   });
 }

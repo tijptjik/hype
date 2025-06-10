@@ -1,11 +1,10 @@
 // SVELTEKIT
 import { error } from '@sveltejs/kit';
-import { getTableName, and, inArray, eq, getTableColumns, sql} from 'drizzle-orm';
+import { getTableName, and, inArray, eq, getTableColumns, sql } from 'drizzle-orm';
 // TYPES
 import type { Database, DbTable, Id } from '../types';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import type { InferSelectModel, InferInsertModel, SQL } from 'drizzle-orm';
-
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -185,8 +184,6 @@ export const updateMany = async <T extends DbTable>(
   return updatedEntities as InferSelectModel<T>[];
 };
 
-
-
 // ═══════════════════════
 // 4. CRUD :: UPSERT
 // ═══════════════════════
@@ -233,7 +230,7 @@ export const upsert = async <T extends DbTable>(
     .values(data)
     .onConflictDoUpdate({
       target: conflictColumns as any,
-      set: conflictUpdateAllExcept(table, conflictUpdateAllExceptColumns)
+      set: conflictUpdateAllExcept(table, conflictUpdateAllExceptColumns) as any
     })
     .returning();
 

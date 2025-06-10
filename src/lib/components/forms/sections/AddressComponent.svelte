@@ -117,12 +117,14 @@ function hasValue(value: string | null): boolean {
   <!-- Address Properties -->
   <div class="grid grid-cols-3 gap-4 rounded-xl p-4">
     {#each supportedLocales as locale}
-      <div class="rounded-xl overflow-hidden" style={`background-color: ${columnColors[locale]}`}>
+      <div
+        class="overflow-hidden rounded-xl"
+        style={`background-color: ${columnColors[locale]}`}>
         <h3
           class="text-md mb-4 pt-4 text-center font-medium uppercase text-base-content">
           {columnHeaders[locale]}
         </h3>
-        <div class="flex flex-col rounded-b-xl bg-base-100 p-6 h-full">
+        <div class="flex h-full flex-col rounded-b-xl bg-base-100 p-6">
           <div class="flex flex-col gap-[2px]">
             {#each addressFields as fieldKey}
               {@const value = getAddressPropertyValue(fieldKey, locale)}
