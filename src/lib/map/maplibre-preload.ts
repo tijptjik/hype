@@ -20,7 +20,7 @@ interface MapSource {
   [key: string]: any;
 }
 
-type mapCtx = {
+type appCtx = {
   sources: string[] | null;
   dimensions: [number, number];
   tilesize: number;
@@ -31,7 +31,7 @@ type mapCtx = {
 
 type MapLibre = any; // typeof globalThis.maplibregl when available
 type ExtendedMapLibre = MapLibre & {
-  _context: (options: MaplibreOptions) => mapCtx;
+  _context: (options: MaplibreOptions) => appCtx;
   _get_sources_from_style: () => string[] | null;
   _precache: (o: MaplibreOptions) => void;
 };
@@ -184,7 +184,7 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
     const _context = function (
       this: typeof _lib.Map,
       options: MaplibreOptions
-    ): mapCtx {
+    ): appCtx {
       const _sources = this._get_sources_from_style();
       const _dimensions: [number, number] = [
         this.getCanvas().width,

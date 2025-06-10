@@ -5,7 +5,7 @@ import { m } from '$lib/i18n';
 import neighbourhoods from './neighbourhoods.json';
 import subNeighbourhoods from './subNeighbourhoods.json';
 // TYPES
-import type { MapCtx } from '$lib/context/map.svelte';
+import type { AppCtx } from '$lib/context/app.svelte';
 import type {
   Feature,
   FeatureExtended,
@@ -25,41 +25,41 @@ function convertI18nArrayToRecord(i18nArray: any[]) {
   return record;
 }
 
-export function getWishlistedFeatures(mapCtx: MapCtx): FeatureExtended[] {
-  const wishlistedFeatures = mapCtx.getWishlistedFeatures();
+export function getWishlistedFeatures(appCtx: AppCtx): FeatureExtended[] {
+  const wishlistedFeatures = appCtx.getWishlistedFeatures();
   return wishlistedFeatures.map((feature) => {
-    const layer = mapCtx.getLayer(feature);
-    const project = layer ? mapCtx.getProject(layer) : undefined;
-    const organisation = project ? mapCtx.getOrganisation(project) : undefined;
+    const layer = appCtx.getLayer(feature);
+    const project = layer ? appCtx.getProject(layer) : undefined;
+    const organisation = project ? appCtx.getOrganisation(project) : undefined;
 
-    const projectLayerCount = mapCtx.state.resources.layer.filter(
+    const projectLayerCount = appCtx.state.resources.layer.filter(
       (l: Layer) => l.projectId === project?.id
     ).length;
 
     return {
       ...feature,
       hierarchy: {
-        organisation: organisation ? getI18n(organisation, 'nameShort', mapCtx.getUserPreferences()) : null,
-        project: project ? getI18n(project, 'nameShort', mapCtx.getUserPreferences()) : null,
+        organisation: organisation ? getI18n(organisation, 'nameShort', appCtx.getUserPreferences()) : null,
+        project: project ? getI18n(project, 'nameShort', appCtx.getUserPreferences()) : null,
         layer: layer
           ? projectLayerCount > 1
-            ? getI18n(layer, 'nameShort', mapCtx.getUserPreferences())
+            ? getI18n(layer, 'nameShort', appCtx.getUserPreferences())
             : null
           : null,
-        feature: getI18n(feature, 'title', mapCtx.getUserPreferences())
+        feature: getI18n(feature, 'title', appCtx.getUserPreferences())
       }
     };
   });
 }
 
-export function filterNeighbourhoods(mapCtx: MapCtx, term: string) {
+export function filterNeighbourhoods(appCtx: AppCtx, term: string) {
   if (!term) return Object.entries(neighbourhoods);
   const searchLower = term.toLowerCase();
   return Object.entries(neighbourhoods).filter(([key, data]) => {
     return (
-      getI18n(data, 'name', mapCtx.getUserPreferences()).toLowerCase().includes(searchLower) ||
-      getI18n(data, 'district', mapCtx.getUserPreferences()).toLowerCase().includes(searchLower) ||
-      getI18n(data, 'region', mapCtx.getUserPreferences()).toLowerCase().includes(searchLower)
+      getI18n(data, 'name', appCtx.getUserPreferences()).toLowerCase().includes(searchLower) ||
+      getI18n(data, 'district', appCtx.getUserPreferences()).toLowerCase().includes(searchLower) ||
+      getI18n(data, 'region', appCtx.getUserPreferences()).toLowerCase().includes(searchLower)
     );
   });
 }
@@ -87,11 +87,11 @@ export function getNeighbourhoodFeatureCount(
   return count;
 }
 
-export function searchAll(term: string, mapCtx: MapCtx): SearchResult[] {
+export function searchAll(term: string, appCtx: AppCtx): SearchResult[] {
   const results: SearchResult[] = [];
 
   // Source 1 - Walks
-  const wishlistResults = getWishlistedFeatures(mapCtx);
+  const wishlistResults = getWishlistedFeatures(appCtx);
   const filteredWishlistResults = wishlistResults.filter(
     (feature: FeatureExtended) =>
       feature?.hierarchy.feature?.toLowerCase().includes(term.toLowerCase())
@@ -106,13 +106,13 @@ export function searchAll(term: string, mapCtx: MapCtx): SearchResult[] {
   }
 
   // Source 2 - Neighbourhoods
-  const neighbourhoodResults = filterNeighbourhoods(mapCtx, term);
+  const neighbourhoodResults = filterNeighbourhoods(appCtx, term);
   neighbourhoodResults.forEach(([neighbourhood, data]) => {
     results.push({
-      name: getLocale() === 'en' ? neighbourhood : getI18n(data, 'name', mapCtx.getUserPreferences()),
+      name: getLocale() === 'en' ? neighbourhood : getI18n(data, 'name', appCtx.getUserPreferences()),
       count: getNeighbourhoodFeatureCount(
         neighbourhood,
-        mapCtx.state.resources.feature
+        appCtx.state.resources.feature
       ),
       group: 'neighbourhoods',
       ref: neighbourhood
@@ -120,16 +120,16 @@ export function searchAll(term: string, mapCtx: MapCtx): SearchResult[] {
   });
 
   // Source 3 - Features
-  mapCtx.state.resources.feature
+  appCtx.state.resources.feature
     .filter(
       (feature: Feature) =>
-        getI18n(feature, 'title', mapCtx.getUserPreferences())?.toLowerCase().includes(term.toLowerCase()) ||
-        getI18n(feature, 'description', mapCtx.getUserPreferences())?.toLowerCase().includes(term.toLowerCase()) ||
-        getI18n(feature, 'displayAddress', mapCtx.getUserPreferences())?.toLowerCase().includes(term.toLowerCase())
+        getI18n(feature, 'title', appCtx.getUserPreferences())?.toLowerCase().includes(term.toLowerCase()) ||
+        getI18n(feature, 'description', appCtx.getUserPreferences())?.toLowerCase().includes(term.toLowerCase()) ||
+        getI18n(feature, 'displayAddress', appCtx.getUserPreferences())?.toLowerCase().includes(term.toLowerCase())
     )
     .forEach((feature) => {
       results.push({
-        name: getI18n(feature, 'title', mapCtx.getUserPreferences()),
+        name: getI18n(feature, 'title', appCtx.getUserPreferences()),
         count: 1,
         group: 'features',
         ref: feature.id
@@ -139,15 +139,15 @@ export function searchAll(term: string, mapCtx: MapCtx): SearchResult[] {
   return results;
 }
 
-export function searchNearest(mapCtx: MapCtx): SearchResult[] {
-  if (!mapCtx.state.userLocation) return [];
+export function searchNearest(appCtx: AppCtx): SearchResult[] {
+  if (!appCtx.state.userLocation) return [];
 
-  const userLocation = mapCtx.state.userLocation
+  const userLocation = appCtx.state.userLocation
     ? {
-        lat: mapCtx.state.userLocation?.coords.latitude,
-        lng: mapCtx.state.userLocation?.coords.longitude
+        lat: appCtx.state.userLocation?.coords.latitude,
+        lng: appCtx.state.userLocation?.coords.longitude
       }
-    : mapCtx.map?.getCenter();
+    : appCtx.map?.getCenter();
 
   const results: SearchResult[] = [];
 
@@ -157,13 +157,13 @@ export function searchNearest(mapCtx: MapCtx): SearchResult[] {
   // Source 2 - Neighbourhoods
 
   // Calculate distance to each centroid of neighbourhoods
-  const neighbourhoodResults = filterNeighbourhoods(mapCtx, '');
+  const neighbourhoodResults = filterNeighbourhoods(appCtx, '');
   neighbourhoodResults.forEach(([neighbourhood, data]) => {
     results.push({
-      name: getI18n(data, 'name', mapCtx.getUserPreferences()),
+      name: getI18n(data, 'name', appCtx.getUserPreferences()),
       count: getNeighbourhoodFeatureCount(
         neighbourhood,
-        mapCtx.state.resources.feature
+        appCtx.state.resources.feature
       ),
       group: 'neighbourhoods',
       ref: neighbourhood
@@ -173,16 +173,16 @@ export function searchNearest(mapCtx: MapCtx): SearchResult[] {
   // Source 3 - Features
 
   // Calculate distance to each centroid of neighbourhoods
-  mapCtx.state.resources.feature
+  appCtx.state.resources.feature
     .filter(
       (feature: Feature) =>
-        getI18n(feature, 'title', mapCtx.getUserPreferences())?.toLowerCase().includes('') ||
-        getI18n(feature, 'description', mapCtx.getUserPreferences())?.toLowerCase().includes('') ||
-        getI18n(feature, 'displayAddress', mapCtx.getUserPreferences())?.toLowerCase().includes('')
+        getI18n(feature, 'title', appCtx.getUserPreferences())?.toLowerCase().includes('') ||
+        getI18n(feature, 'description', appCtx.getUserPreferences())?.toLowerCase().includes('') ||
+        getI18n(feature, 'displayAddress', appCtx.getUserPreferences())?.toLowerCase().includes('')
     )
     .forEach((feature) => {
       results.push({
-        name: getI18n(feature, 'title', mapCtx.getUserPreferences()),
+        name: getI18n(feature, 'title', appCtx.getUserPreferences()),
         count: 1,
         group: 'features',
         ref: feature.id
