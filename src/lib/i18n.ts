@@ -60,7 +60,7 @@ function getUserPreferencesWithDefaults(userPreferences?: Partial<UserPreference
  * @returns The translated value of the field.
  */
 export function getI18n<T>(
-  obj: Record<'i18n', Record<Locale, T>> | Record<Locale, T>,
+  obj: { i18n?: Record<Locale, T> | null } | Record<Locale, T> | undefined,
   field: string,
   userPreferences: UserPreferences,
   fallback?: string,
@@ -70,8 +70,11 @@ export function getI18n<T>(
   if (!obj) return fallback || defaultFallback;
 
   // ASSERT : Text Object provided - else use the (default) fallback.
-  if ('i18n' in obj) {
-    obj = obj.i18n as Record<Locale, T>;
+  let i18nObj: Record<Locale, T>;
+  if ('i18n' in obj && obj.i18n) {
+    i18nObj = obj.i18n as Record<Locale, T>;
+  } else {
+    i18nObj = obj as Record<Locale, T>;
   }
   
   // CONFIG : Locale, Options and Keys
@@ -90,14 +93,14 @@ export function getI18n<T>(
 
   // SWITCH : BEST CASE : The field is available in the preferred locale as
   //  a human-provided value
-  const translation = obj[locale]?.[field as keyof T] as string;
-  if (translation && (!obj[locale]?.[genField as keyof T] || skipGenFieldCheck)) return translation;
+  const translation = i18nObj[locale]?.[field as keyof T] as string;
+  if (translation && (!i18nObj[locale]?.[genField as keyof T] || skipGenFieldCheck)) return translation;
 
   // SWITCH : FALLBACK LOCALE CASE - The field is available in a secondary
   //   locale accepted by the user, and is a human-provided value.
   for (const fallbackLocale of opts.fallbackLocales) {
-    const translation = obj[fallbackLocale]?.[field as keyof T] as string;
-    if (translation && (!obj[fallbackLocale]?.[genField as keyof T] || skipGenFieldCheck)) return translation;
+    const translation = i18nObj[fallbackLocale]?.[field as keyof T] as string;
+    if (translation && (!i18nObj[fallbackLocale]?.[genField as keyof T] || skipGenFieldCheck)) return translation;
   }
 
   // SWITCH : FALLBACK VALUE CASE : If configured to prefer a generic fallback over any machine-translated values (and no human ones were found yet), return the generic fallback.
@@ -111,7 +114,7 @@ export function getI18n<T>(
   //   locale accepted by the user, is a machine-translated value, but the user
   //   accepts machine translations.
   for (const fallbackLocale of opts.fallbackLocales) {
-    const translation = obj[fallbackLocale]?.[field as keyof T] as string;
+    const translation = i18nObj[fallbackLocale]?.[field as keyof T] as string;
     if (translation && opts.allowMachineTranslation) return translation;
   }
 
