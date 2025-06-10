@@ -3,6 +3,7 @@
 import Icon from '$lib/components/common/Icon.svelte';
 import { ChevronRight, ExclamationTriangle } from '@steeze-ui/heroicons';
 import Info from '$lib/components/forms/extra/Info.svelte';
+import { fade } from 'svelte/transition';
 // TYPES
 import type { Snippet } from 'svelte';
 import type { FormField, FormFieldArray, Form } from '$lib/types';
@@ -72,7 +73,7 @@ const { errors } = form as Form;
     {/if}
     {@render children?.()}
     {#if actionContent || infoContent}
-      <div class="flex flex-row items-center justify-between gap-4">
+      <div class="flex flex-row items-center justify-between gap-4" transition:fade>
         {#if actionContent}
           {@render actionContent?.()}
         {/if}
