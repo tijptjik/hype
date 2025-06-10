@@ -1,6 +1,5 @@
 <script lang="ts">
 // Svelte
-import { browser } from '$app/environment';
 import { untrack } from 'svelte';
 // Stores
 import { page } from '$app/state';
@@ -21,7 +20,7 @@ import Spacer from '$lib/components/featureCard/layout/Spacer.svelte';
 import Container from '$lib/components/featureCard/layout/Container.svelte';
 import FeaturePortalSection from '$lib/components/featureCard/layout/FeaturePortalSection.svelte';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
 import {
   setFeatureCardContext,
@@ -36,7 +35,7 @@ import type { Feature, Layer, Project } from '$lib/types';
 let featureId: string = $state(page.params.id);
 
 // CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 const omniCtx = getOmniContext();
 
 // CONTEXT :: FEATURE CARD
@@ -50,59 +49,57 @@ let mode = $derived(cardCtx.state.mode);
 
 // EFFECTS
 $effect(() => {
-  if (!mapCtx.isInitialised) {
+  if (!appCtx.isInitialised) {
     return;
   }
   featureId = page.params.id;
   
   // Only react to activeCollection changes, not flag changes
-  if (mapCtx.getActiveCollection() == null) {
+  if (appCtx.getActiveCollection() == null) {
     // Check the flag without making the effect reactive to it
     const isClosing = untrack(() => omniCtx.isIntentionallyClosing);
     
     if (!isClosing) {
-      console.log('🔴 PAGE: Active collection is null and not intentionally closing, calling handleFeatureSelection');
       void handleFeatureSelection();
-    } else {
-      console.log('🔴 PAGE: Active collection is null but intentionally closing, NOT calling handleFeatureSelection');
     }
   }
 });
 
+// RESOURCE HIERARCHY
+const feature = $derived(appCtx.getFeatureById(featureId)) as Feature;
+const layer = $derived(appCtx.getLayer(feature)) as Layer;
+const project = $derived(appCtx.getProject(layer)) as Project;
+const organisation = $derived(appCtx.getOrganisation(project)) as Organisation;
+
 // Helper function to handle async operations
 async function handleFeatureSelection() {
-  await omniCtx.handleFeatureSelection(mapCtx, featureId);
+  await omniCtx.handleFeatureSelection(appCtx, featureId);
 }
 </script>
 
-{#if mapCtx && mapCtx.isInitialised && mapCtx.features[featureId]}
+{#if appCtx && appCtx.features[featureId]}
   <FeatureCard>
+    {#if appCtx.isInitialised}
     <ImageProvider
       mode="gallery"
       isAdminMode={false}
       ctxType={ImageContextResource.feature}
       ctxId={featureId}
-      organisation={mapCtx.getOrganisation(
-        mapCtx.getProject(
-          mapCtx.getLayer(mapCtx.features[featureId] as Feature) as Layer
-        ) as Project
-      )}
-      project={mapCtx.getProject(
-        mapCtx.getLayer(mapCtx.features[featureId] as Feature) as Layer
-      ) as Project}>
+      {organisation}
+      {project}>
       {#if mode === FeatureCardMode.Display}
         <Container>
           <FeatureGallery />
-          <FeatureBreadcrumbs feature={mapCtx.features[featureId]} />
-          <FeatureTitle feature={mapCtx.features[featureId]} />
-          <FeatureDescription feature={mapCtx.features[featureId]} />
+          <FeatureBreadcrumbs {feature} />
+          <FeatureTitle {feature} />
+          <FeatureDescription {feature} />
           <Spacer />
           <FeaturePortalSection>
             {#snippet left()}
-              <FeatureProperties feature={mapCtx.features[featureId]} />
+              <FeatureProperties {feature} />
             {/snippet}
             {#snippet right()}
-              <FeaturePortal feature={mapCtx.features[featureId]} />
+              <FeaturePortal {feature} />
             {/snippet}
           </FeaturePortalSection>
           <Spacer />
@@ -116,8 +113,9 @@ async function handleFeatureSelection() {
         <FeatureGallery isCameraActive={true} />
         <PhotoCredit />
       {/if}
-      <FeatureActions feature={mapCtx.features[featureId]} />
+      <FeatureActions {feature} />
     </ImageProvider>
+    {/if}
   </FeatureCard>
 {:else}
   <div class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-300">
