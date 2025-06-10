@@ -2,7 +2,6 @@ import { error } from '@sveltejs/kit';
 // ORM
 import { drizzle } from 'drizzle-orm/d1';
 import {
-  getTableName,
   and,
   sql,
   inArray,
@@ -10,25 +9,18 @@ import {
   or,
   not,
   exists,
-  SQL,
-  Table,
-  isNull,
-  isNotNull
+  Table
 } from 'drizzle-orm';
 // SCHEMA
 import * as schema from './schema';
 // ENUMS
 import {
   supportedLocales,
-  HierarchicalResource,
-  ImageContextResourceExtended,
-  ImageContextResource
+  HierarchicalResource
 } from '../enums';
 // TYPES
-import type { D1Database } from '@auth/d1-adapter';
 import type {
   Field,
-  NestedRelations,
   Resource,
   ResourceDB,
   ResourceType,
@@ -36,22 +28,55 @@ import type {
   Database,
   ResourceConfig,
   ResourceHierarchy,
-  Id,
   LocaleBundle
 } from '../types';
-import type { SQLiteColumn, SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core';
-import type { InferSelectModel } from 'drizzle-orm';
+import type { SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core';
 
-/**********
- * CONFIG :: NEW ENTITY
- **********/
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. CONFIG
+//    - resourceConfig (hierarchy configuration)
+//
+// 2. DATABASE :: CLIENT
+//    - client
+//
+// 3. UTILS :: HIERARCHY
+//    - getSlicedHierarchy
+//
+// 4. UTILS :: TABLE RELATIONS
+//    - getTable
+//    - getForeignKey
+//    - getReverseForeignKey
+//
+// 5. SUBQUERIES
+//    - applyPrismConstraints
+//    - createLevelQuery
+//    - createJsonPathCondition
+//
+// 6. TRANSFORMATIONS :: LOCALE
+//    - toLocaleMap
+//    - isTransformedLocaleMap
+//
+// 7. TRANSFORMATIONS :: RECORDS
+//    - toRelatedRecords
+//
+// 8. VALIDATION :: FIELDS
+//    - isFieldUnique
+//    - isFieldChanged
+//
+// 9. VALIDATION :: TABLES
+//     - validateTableColumns
+//
+
+// ═══════════════════════
+// 1. CONFIG
+// ═══════════════════════
+
 // Duplicate here to avoid import from $lib
 const NEW_TITLE = 'New';
 const NEW_REF = NEW_TITLE.toLowerCase();
-
-/**********
- * CONFIG :: RESOURCE HIERARCHY
- **********/
 
 export const resourceConfig: Record<HierarchicalResource, ResourceConfig> = {
   feature: {
@@ -101,9 +126,20 @@ export const resourceConfig: Record<HierarchicalResource, ResourceConfig> = {
   }
 };
 
-/**********
- * HELPER :: GET SLICED HIERARCHY
- **********/
+// ═══════════════════════
+// 2. DATABASE :: CLIENT
+// ═══════════════════════
+
+const client = (database: Database) => {
+  return drizzle(database, {
+    schema,
+    logger: import.meta.env?.VITE_DRIZZLE_LOGGER === 'true' || false
+  });
+};
+
+// ═══════════════════════
+// 3. UTILS :: HIERARCHY
+// ═══════════════════════
 
 /**
  * Get the sliced hierarchy for a given resource.
@@ -143,20 +179,10 @@ export const getSlicedHierarchy = (
   );
 };
 
-/**********
- * DATABASE CLIENT
- **********/
 
-const client = (database: D1Database) => {
-  return drizzle(database, {
-    schema,
-    logger: import.meta.env?.VITE_DRIZZLE_LOGGER === 'true' || false
-  });
-};
-
-/**********
- * UTILITY
- **********/
+// ═══════════════════════
+// 4. UTILS :: TABLE RELATIONS
+// ═══════════════════════
 
 // Update getTable function
 const getTable = <T extends SQLiteTableWithColumns<any>>(
@@ -174,9 +200,9 @@ const getReverseForeignKey = (
   index: number
 ): string => slicedHierarchy[index].keyToSelf;
 
-/**********
- * QUERY :: APPLY PRISM CONSTRAINTS
- **********/
+// ═══════════════════════
+// 5. SUBQUERIES
+// ═══════════════════════
 
 /**
  * Creates a subquery for a specific level in the resource hierarchy,
@@ -329,14 +355,6 @@ export const applyPrismConstraints = (
   ];
 };
 
-export const applyResourceContextConstraints = (
-  ctxType: ImageContextResource | ImageContextResourceExtended,
-  ctxId: Id,
-  conditions: SQL<unknown>[]
-) => {
-  return conditions;
-};
-
 /*
  * Create the path for a JSON column in a table
  * @param table - The table to apply the condition to
@@ -368,6 +386,10 @@ export const createJsonPathCondition = (
   // Handle single value
   return sql`json_extract(${table[baseColumn as keyof typeof table]}, ${jsonPathStr}) = ${value}`;
 };
+
+// ═══════════════════════
+// 6. TRANSFORMATIONS :: LOCALE
+// ═══════════════════════
 
 // Helper function to check if an object is already a transformed locale map
 const isTransformedLocaleMap = <T extends LocaleBundle>(
@@ -402,8 +424,8 @@ export const toLocaleMap = <T extends LocaleBundle>(
 
   // Test whether i18n is already transformed - if so, return as-is
   if (isTransformedLocaleMap<T>(i18n)) {
-    // TODO FIgure out where the unnecessary toLocalMap call is coming from.
-    // console.log('I18N already transformed:', i18n); // Removed console.log
+    // TODO : Figure out where the unnecessary toLocalMap call is coming from.
+    console.log('I18N already transformed:', i18n);
     return i18n;
   }
 
@@ -430,84 +452,9 @@ export const toLocaleMap = <T extends LocaleBundle>(
   ) as Record<Locale, T>;
 };
 
-export async function hierarchicalEntityQuery<
-  usersT extends Table,
-  translationsT extends Table
->(
-  db: any,
-  ref: string,
-  publicIdentifier: string = 'id',
-  accessStrategy: string = 'EntityOwn',
-  selectTableRelations: NestedRelations,
-  userId: string | undefined,
-  userTable: usersT | undefined,
-  translationTable: translationsT | boolean,
-  depth: number = 1,
-  hierarchy?: ResourceHierarchy
-) {
-  // NEW is a reserved keyword for new entities
-  if (ref == NEW_REF) {
-    throw new Error('The old shall never be new again');
-  }
-  const resourceHierarchy = hierarchy || Object.values(resourceConfig);
-  const slicedHierarchy = resourceHierarchy.slice(-depth, resourceHierarchy.length);
-  const conditions = [
-    eq(getTable(slicedHierarchy, 0)[publicIdentifier], ref)
-    // ...applyAccessStrategy(db, accessStrategy, slicedHierarchy, userTable, userId)
-  ];
-
-  // if (translationTable) {
-  //   conditions.push(
-  //     ...applyTranslationCondition(db, slicedHierarchy, translationTable)
-  //   );
-  // }
-
-  let result = await db.query[getTableName(getTable(slicedHierarchy, 0))].findFirst({
-    where: and(...conditions),
-    with: selectTableRelations
-  });
-
-  if (!result) {
-    return error(401, "Doors have ears, but they haven't ever heard of this.");
-  }
-
-  result = processTranslations<LocaleBundle>(result, selectTableRelations);
-
-  return result;
-}
-
-function processTranslations<T extends LocaleBundle>(
-  data: Record<string, any>,
-  relations: NestedRelations
-): Record<string, any> {
-  if (!data) return data;
-
-  const result = { ...data };
-
-  // Process current level translations if they exist
-  if (relations.i18n === true && Array.isArray(result.i18n)) {
-    result.i18n = toLocaleMap<T>(result.i18n);
-  }
-
-  // Process nested relations
-  for (const [key, value] of Object.entries(relations)) {
-    if (value && typeof value === 'object' && 'with' in value) {
-      if (Array.isArray(result[key])) {
-        // Handle array of nested objects
-        result[key] = result[key].map((item: Record<string, any>) =>
-          processTranslations(item, value.with)
-        );
-      } else if (result[key] && typeof result[key] === 'object') {
-        // Handle single nested object
-        result[key] = processTranslations(result[key], value.with);
-      }
-    }
-  }
-
-  return result;
-}
-
-// Testing Functions
+// ═══════════════════════
+// 8. VALIDATION :: FIELDS
+// ═══════════════════════
 
 export const isFieldUnique = async <T extends Resource>(
   db: Database,
@@ -516,7 +463,7 @@ export const isFieldUnique = async <T extends Resource>(
   field: Field = 'code'
 ): Promise<boolean> => {
   // Check whether the organisation code already exists
-  const currentResourceConfig = resourceConfig[resourceType as HierarchicalResource]; // Cast to HierarchicalResource
+  const currentResourceConfig = resourceConfig[resourceType as HierarchicalResource]; // Cast to FirstClassResource
   if (!currentResourceConfig) {
     throw new Error(`Invalid resource type: ${resourceType}`);
   }
@@ -548,7 +495,7 @@ export const isFieldChanged = async <T extends ResourceDB>(
   field: Field = 'code'
 ): Promise<boolean> => {
   // Check whether the provided code is different from the one in the database
-  const currentResourceConfig = resourceConfig[resourceType as HierarchicalResource]; // Cast to HierarchicalResource
+  const currentResourceConfig = resourceConfig[resourceType as HierarchicalResource]; // Cast to FirstClassResource
   if (!currentResourceConfig) {
     throw new Error(`Invalid resource type: ${resourceType}`);
   }
@@ -585,6 +532,10 @@ export const isFieldChanged = async <T extends ResourceDB>(
   return existingValue !== value;
 };
 
+// ═══════════════════════
+// 7. TRANSFORMATIONS :: RECORDS
+// ═══════════════════════
+
 /**
  * Transforms a record of data into an array of related records
  * @param data Record mapping IDs to data objects
@@ -610,30 +561,9 @@ export const toRelatedRecords = <
   }));
 };
 
-/**
- * Adds a foreign key to a record
- * @param data Record to add the foreign key to
- * @param foreignKeyName Name of the foreign key field to add
- * @param foreignKeyValue Value of the foreign key to set
- * @returns Record with the foreign key added
- */
-export const keyWithForeignKey = <
-  T extends Record<string, unknown>,
-  F extends string = 'id'
->(
-  data: T,
-  foreignKeyName: F,
-  foreignKeyValue: string
-): T => {
-  return {
-    ...data,
-    [foreignKeyName]: foreignKeyValue
-  };
-};
-
-// EXPORTS
-
-export default client;
+// ═══════════════════════
+// 9. VALIDATION :: TABLES
+// ═══════════════════════
 
 // Helper function to validate column names against a table
 export function validateTableColumns(
@@ -650,3 +580,5 @@ export function validateTableColumns(
     invalidColumns
   };
 }
+
+export default client;
