@@ -91,6 +91,7 @@ import {
   OrganisationI18nUpdate,
   OrganisationInsert,
   OrganisationInsertAPI,
+  OrganisationInsertSuperAdminAPI,
   OrganisationRaw,
   OrganisationRoleAPI,
   OrganisationRoleBase,
@@ -98,16 +99,18 @@ import {
   OrganisationRoleUpdate,
   OrganisationRoleUpdateExtra,
   OrganisationRoleWithUser,
+  OrganisationSuperAdminAPI,
   OrganisationUpdate,
   OrganisationUpdateAPI,
+  OrganisationUpdateSuperAdminAPI
   ProjectAPI,
   ProjectBase,
-  ProjectRaw,
   ProjectI18nBase,
   ProjectI18nInsert,
   ProjectI18nUpdate,
   ProjectInsert,
   ProjectInsertAPI,
+  ProjectRaw,
   ProjectRoleAPI,
   ProjectRoleBase,
   ProjectRoleInsert,
@@ -133,6 +136,7 @@ import {
   PropertyValueI18nUpdate,
   PropertyValueInsert,
   PropertyValueInsertAPI,
+  PropertyValueRaw,
   PropertyValueUpdate,
   PropertyValueUpdateAPI,
   TaskAPI,
@@ -161,9 +165,6 @@ import {
   UserLayerUpdateAPI,
   UserUpdate,
   UserUpdateAPI,
-  OrganisationSuperAdminAPI,
-  OrganisationInsertSuperAdminAPI,
-  OrganisationUpdateSuperAdminAPI
 } from './db/zod';
 // TYPES
 import type {
@@ -1104,6 +1105,8 @@ export type PropertyI18nPartial = z.infer<typeof PropertyI18nUpdate>;
 
 // propertyValue, but with the propertyId - for use in DB seeding & selects
 export type PropertyValueDB = z.infer<typeof PropertyValueBase>;
+export type PropertyValueDBRaw = z.infer<typeof PropertyValueRaw>;
+
 // propertyValue, but without propertyId - for use in API insertions
 export type PropertyValueNewDB = z.infer<typeof PropertyValueInsert>;
 // Same as PropertyValueNew, but all fields are optional

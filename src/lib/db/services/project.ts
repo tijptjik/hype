@@ -13,7 +13,7 @@ import {
 // AUTH
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
 // DB
-import { toLocaleMap, toRelatedRecords } from '..';
+import { toRelatedRecords, transformI18nSafely } from '..';
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
@@ -25,7 +25,6 @@ import { getProjectHubFilter } from './hub';
 import type {
   ProjectDBNew,
   ProjectDB,
-  ProjectI18n,
   ProjectI18nDB,
   ProjectI18nNew,
   ProjectI18nPartial,
@@ -39,12 +38,13 @@ import type {
   ProjectNew,
   ProjectDBPartial,
   OrganisationRolePartialExtra,
-  PropertyValueI18nNew,
-  PropertyI18nNew,
   ProjectDBRaw,
   ProjectRoleDB,
   PropertyDBRaw,
-  HubOpts
+  HubOpts,
+  PropertyValueDB,
+  PropertyI18nDB,
+  PropertyValueI18nDB
 } from '$lib/types';
 
 // ═══════════════════════
@@ -89,7 +89,7 @@ export const listProjects = async (
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOpts
-) : Promise<ProjectDBRaw[]> => {
+): Promise<ProjectDBRaw[]> => {
   // Apply hub filtering if opts is provided
   const hubFilter = getProjectHubFilter(db, opts);
   if (hubFilter) {
@@ -387,7 +387,7 @@ export const toFormShape = async (
 ): Promise<SuperValidated<Project>> => {
   const formData: Project = {
     ...project,
-    i18n: toLocaleMap(i18n) as any,
+    i18n: transformI18nSafely(i18n) as any,
     maintainerRoles,
     properties: properties
       .sort((a, b) => {
@@ -403,10 +403,10 @@ export const toFormShape = async (
       })
       .map((property) => ({
         ...property,
-        i18n: toLocaleMap(property.i18n) as any,
-        values: property.values.map((value) => ({
+        i18n: transformI18nSafely(property.i18n as PropertyI18nDB[]) as any,
+        values: (property.values as PropertyValueDBRaw[]).map((value) => ({
           ...value,
-          i18n: toLocaleMap(value.i18n!) as any
+          i18n: transformI18nSafely(value.i18n as PropertyValueI18nDB[]) as any
         }))
       })) as Property[]
   };
@@ -430,34 +430,22 @@ export const toResponseShape = async (
   properties: PropertyDBRaw[],
   isCollection: boolean = false
 ) => {
-  const data: any = {
+  const data = {
     ...project,
-    i18n: toLocaleMap<ProjectI18n>(i18n) as any,
+    i18n: transformI18nSafely(i18n),
     maintainerRoles,
     properties: properties.map((property: PropertyDBRaw) => ({
       ...property,
-      // Only transform i18n if it has actual data, otherwise set to null
-      i18n:
-        Array.isArray(property.i18n) && property.i18n.length > 0
-          ? (toLocaleMap(property.i18n!) as any)
-          : Array.isArray(property.i18n)
-            ? undefined
-            : property.i18n,
-      values: property.values?.map((value) => ({
-        ...value,
-        // Only transform i18n if it has actual data, otherwise set to null
-        i18n:
-          Array.isArray(value.i18n) && value.i18n.length > 0
-            ? (toLocaleMap(value.i18n!) as any)
-            : Array.isArray(value.i18n)
-              ? undefined
-              : value.i18n
-      }))
-    })) as PropertyNew[]
+      i18n: transformI18nSafely(property.i18n),
+      values:
+        property.values?.map((value) => ({
+          ...value,
+          i18n: transformI18nSafely(value.i18n)
+        })) || []
+    }))
   };
-  return isCollection
-    ? (ProjectCollectionAPI.parse(data) as Project)
-    : (ProjectAPI.parse(data) as Project);
+
+  return isCollection ? ProjectCollectionAPI.parse(data) : ProjectAPI.parse(data);
 };
 
 // ═══════════════════════

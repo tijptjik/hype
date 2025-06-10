@@ -1,3 +1,5 @@
+// I18N
+import { m } from '$lib/i18n';
 // ZOD
 import { z } from 'zod';
 // DRIZZLE

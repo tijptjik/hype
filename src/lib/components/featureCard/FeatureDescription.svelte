@@ -20,7 +20,7 @@ const userPreferences = $derived(appCtx.getUserPreferences());
 
 // STATE : LOCAL
 let description = $derived(
-  getI18n(feature, 'description', userPreferences, m.zany_merry_seahorse_treasure())
+  getI18n(feature as Feature, 'description', userPreferences, m.zany_merry_seahorse_treasure())
 );
 let hasMoreBelow = $state(false);
 let scrollContainer: HTMLElement = $state()!;

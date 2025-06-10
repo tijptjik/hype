@@ -20,7 +20,7 @@ import { getProjectIdforRoles, isSuperAdmin } from '$lib/auth/utils';
 // SCHEMA
 import { feature, layer } from '$lib/db/schema/index';
 // DB
-import { applyPrismConstraints, toLocaleMap } from '$lib/db';
+import { applyPrismConstraints } from '$lib/db';
 import { FirstClassResource, HierarchicalResource } from '$lib/enums';
 import { getProjectIdForFeature } from '$lib/db/services/feature';
 // TRANSLATION
@@ -361,7 +361,7 @@ export const createUserContributedFeature = async (
         : null;
 
     enrichedI18n[locale as Locale] = {
-      locale: locale, // Include the locale field that toLocaleMap expects
+      locale: locale, // Include the locale field that transformI18nSafely / toLocaleMap expects
       title: textObj?.title || translatedTitle || sourceTextObj.title,
       description:
         textObj?.description || translatedDescription || sourceTextObj.description,
@@ -425,7 +425,7 @@ export const createUserContributedFeature = async (
 
         return {
           ...prop,
-          i18n: toLocaleMap(enrichedPropertyI18n as Record<Locale, any>)
+          i18n: transformI18nSafely(enrichedPropertyI18n)
         };
       }
 
@@ -436,7 +436,7 @@ export const createUserContributedFeature = async (
   // Step 4: Create the enriched feature object
   const enrichedFeature = {
     ...newFeature,
-    i18n: toLocaleMap(enrichedI18n as Record<Locale, any>),
+    i18n: transformI18nSafely(enrichedI18n as Record<Locale, any>),
     properties: enrichedProperties
   };
 

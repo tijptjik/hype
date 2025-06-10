@@ -3,7 +3,7 @@ import { nanoid } from 'nanoid';
 // DRIZZLE
 import { and, eq, inArray, SQL, type InferInsertModel } from 'drizzle-orm';
 // LIB
-import { toLocaleMap, toRelatedRecords } from '..';
+import { toRelatedRecords, transformI18nSafely } from '..';
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud';
 // API
 import { logZodError } from '$lib/api';
@@ -45,14 +45,12 @@ import type {
   FeaturePartial,
   FeatureProperty,
   FeaturePropertyDB,
-  FeaturePropertyI18nDB,
   FeaturePropertyMerge,
   Id,
   LayerDB,
   LayerDBRaw,
   Locale,
   NewFeatureProperty,
-  PropertyI18nDB,
   PropertyValueI18nDB,
   ImageDB,
   HubOpts
@@ -504,7 +502,7 @@ export const updateProperties = async (
  */
 export const createFeatureWithRelated = async (db: Database, data: FeatureNew) => {
   const feature = await createFeature(db, data as FeatureDBNew);
-  const i18n = await createI18n(db, data.i18n, feature.id);
+  const i18n = await createI18n(db, data.i18n!, feature.id);
   const properties = await createProperties(db, feature.id, data.properties || []);
 
   return {
@@ -532,7 +530,7 @@ export const updateFeatureWithRelated = async (
   const { id, ...updateData } = data;
 
   const feature = await updateFeature(db, updateData, idToUse);
-  const i18n = await updateI18n(db, data.i18n, feature.id);
+  const i18n = await updateI18n(db, data.i18n!, feature.id);
   const properties = await updateProperties(
     db,
     data.properties as FeatureProperty[],
@@ -612,20 +610,16 @@ const toPropertyShape = (data: FeatureProperty[], isCollection: boolean = false)
       ...fp,
       // Handle the feature property's own i18n data (for translatable property values)
       // Set to null if no i18n data exists (this should make validation pass since i18n is nullable)
-      i18n: hasI18nData ? toLocaleMap<FeaturePropertyI18nDB>(fp.i18n || []) : null,
+      i18n: hasI18nData ? transformI18nSafely(fp.i18n) : null,
       property: propertyDef
         ? {
             ...propertyDef,
             // Check if property i18n is already transformed or needs transformation
-            i18n: Array.isArray(propertyDef.i18n)
-              ? toLocaleMap<PropertyI18nDB>(propertyDef.i18n)
-              : (propertyDef.i18n as any),
+            i18n: transformI18nSafely(propertyDef.i18n),
             values: (propertyDef.values || []).map((val: any) => ({
               ...val,
               // Check if value i18n is already transformed or needs transformation
-              i18n: Array.isArray(val.i18n)
-                ? toLocaleMap<PropertyValueI18nDB>(val.i18n)
-                : (val.i18n as any)
+              i18n: transformI18nSafely(val.i18n)
             }))
           }
         : undefined,
@@ -633,9 +627,7 @@ const toPropertyShape = (data: FeatureProperty[], isCollection: boolean = false)
         ? {
             ...propertyVal,
             // Check if propertyValue i18n is already transformed or needs transformation
-            i18n: Array.isArray(propertyVal.i18n)
-              ? toLocaleMap<PropertyValueI18nDB>(propertyVal.i18n)
-              : (propertyVal.i18n as any)
+            i18n: transformI18nSafely(propertyVal.i18n)
           }
         : undefined
     };
@@ -665,21 +657,21 @@ export const toFormShape = async (
 
     return {
       ...fp,
-      i18n: toLocaleMap<FeaturePropertyI18nDB>(fp.i18n || []) || null,
+      i18n: transformI18nSafely(fp.i18n),
       property: propertyDef
         ? {
             ...propertyDef,
-            i18n: toLocaleMap<PropertyI18nDB>(propertyDef.i18n),
-            values: (propertyDef.values || []).map((val: any) => ({
+            i18n: transformI18nSafely(propertyDef.i18n),
+            values: propertyDef.values.map((val: any) => ({
               ...val,
-              i18n: toLocaleMap<PropertyValueI18nDB>(val.i18n)
+              i18n: transformI18nSafely(val.i18n)
             }))
           }
         : [],
       propertyValue: propertyVal
         ? {
             ...propertyVal,
-            i18n: toLocaleMap<PropertyValueI18nDB>(propertyVal.i18n)
+            i18n: transformI18nSafely(propertyVal.i18n)
           }
         : undefined
     };
@@ -688,7 +680,7 @@ export const toFormShape = async (
   return (await superValidate(
     {
       ...data,
-      i18n: toLocaleMap(i18n),
+      i18n: transformI18nSafely(i18n),
       properties: transformedProperties
     },
     // @ts-ignore TODO - Fix Zod type error
@@ -712,7 +704,7 @@ export const toResponseShape = async (
   const propertiesData = toPropertyShape(properties, isCollection);
   return (isCollection ? FeatureCollectionAPI : FeatureUpdateAPI).parse({
     ...data,
-    i18n: toLocaleMap(i18n),
+    i18n: transformI18nSafely(i18n),
     properties: propertiesData
   });
 };
@@ -751,7 +743,7 @@ export function mergeFeatureProperties(
     if (!existingPropertyIds.has(propertyId)) {
       const propDefinition = layerProp.property;
       if (propDefinition && typeof propDefinition.i18n !== 'object') {
-        propDefinition.i18n = toLocaleMap(propDefinition.i18n || []) as any;
+        propDefinition.i18n = transformI18nSafely(propDefinition.i18n);
       }
 
       featureData.properties.push({

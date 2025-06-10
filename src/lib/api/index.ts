@@ -13,7 +13,7 @@ import { isOrganisationOrProject } from '$lib/types';
 // DB
 import client, {
   createJsonPathCondition,
-  toLocaleMap,
+  transformI18nSafely,
   validateTableColumns
 } from '$lib/db';
 import { mergeFeatureProperties } from '$lib/db/services/feature';
@@ -122,7 +122,7 @@ export const SuperFormResponse = <
       });
     } else {
       // Type-safe property lookup
-      const entityRef = getEntityRef(validatedForm.data);
+      const entityRef = getEntityRef(validatedForm.data as Resource);
       return actionResult('redirect', `${ADMIN_PATH}/${resourcePath}/${entityRef}`, {
         status: 303
       });
@@ -479,10 +479,7 @@ function mergeProjectProperties(layer: Layer, properties: Property[]): Layer {
   properties.forEach((projectProp: Property) => {
     if (!existingPropertyIds.includes(projectProp.id)) {
       if (typeof projectProp.i18n !== 'object' && projectProp.i18n) {
-        projectProp.i18n = toLocaleMap<PropertyI18nDB>(projectProp.i18n) as Record<
-          string,
-          PropertyI18nDB
-        >;
+        projectProp.i18n = transformI18nSafely(projectProp.i18n)
       }
       // Create a conformed property object
       const conformedProjectProp: Property = {

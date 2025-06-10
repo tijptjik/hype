@@ -19,7 +19,7 @@ import {
   OrganisationCollectionSuperAdminAPI
 } from '../zod';
 // SERVICES
-import { toLocaleMap, toRelatedRecords } from '..';
+import { toRelatedRecords, transformI18nSafely } from '..';
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud';
 import { getOrganisationHubFilter } from './hub';
 // TYPES
@@ -38,7 +38,8 @@ import type {
   OrganisationDBRaw,
   OrganisationI18nDB,
   OrganisationRoleDB,
-  HubOpts
+  HubOpts,
+  LocaleBundle
 } from '$lib/types';
 
 // ═══════════════════════
@@ -388,15 +389,13 @@ export const toFormShape = async (
 ): Promise<SuperValidated<Organisation>> => {
   const formData: Organisation = {
     ...organisation,
-    // @ts-ignore - FORM : Fix Zod type error
-    i18n: toLocaleMap<OrganisationI18nNew>(i18n),
+    i18n: transformI18nSafely(i18n) as Record<Locale, OrganisationI18nNew>,
     userRoles
   };
   
   // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
   const schema = isSuperAdmin ? OrganisationSuperAdminAPI : OrganisationAPI;
   
-  // @ts-ignore - FORM : Fix Zod type error
   const form = await superValidate(formData, zod(schema));
   return form as SuperValidated<Organisation>;
 };
@@ -410,8 +409,7 @@ export const toResponseShape = async (
 ) => {
   const data: Organisation = {
     ...organisation,
-    // @ts-ignore - FORM : Fix Zod type error
-    i18n: toLocaleMap<OrganisationI18nNew>(i18n),
+    i18n: transformI18nSafely(i18n),
     userRoles
   };
   

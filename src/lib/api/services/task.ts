@@ -19,7 +19,7 @@ import { getProjectIdforRoles, isSuperAdmin } from '$lib/auth/utils';
 // SCHEMA
 import { task, feature, layer } from '$lib/db/schema/index';
 // DB
-import { applyPrismConstraints, toLocaleMap } from '$lib/db';
+import { applyPrismConstraints, transformI18nSafely } from '$lib/db';
 // ZOD
 import { TaskAPI, TaskCollectionAPI } from '$lib/db/zod/schema/task';
 // ENUMS
@@ -332,20 +332,18 @@ export const toResponseShape = async (
   const transformedFeature = data.feature
     ? {
         ...data.feature,
-        i18n: data.feature.i18n ? toLocaleMap(data.feature.i18n) : {},
+        i18n: transformI18nSafely(data.feature.i18n),
         properties:
           data.feature.properties?.map((prop) => ({
             ...prop,
             property: {
               ...prop.property,
-              i18n: prop.property.i18n ? toLocaleMap(prop.property.i18n) : {}
+              i18n: transformI18nSafely(prop.property.i18n)
             },
             propertyValue: prop.propertyValue
               ? {
                   ...prop.propertyValue,
-                  i18n: prop.propertyValue.i18n
-                    ? toLocaleMap(prop.propertyValue.i18n)
-                    : {}
+                  i18n: transformI18nSafely(prop.propertyValue.i18n)
                 }
               : null
           })) || []
@@ -358,13 +356,13 @@ export const toResponseShape = async (
     organisation: data.organisation
       ? {
           ...data.organisation,
-          i18n: data.organisation.i18n ? toLocaleMap(data.organisation.i18n) : {}
+          i18n: transformI18nSafely(data.organisation.i18n)
         }
       : null,
     project: data.project
       ? {
           ...data.project,
-          i18n: data.project.i18n ? toLocaleMap(data.project.i18n) : {}
+          i18n: transformI18nSafely(data.project.i18n)
         }
       : null,
     feature: transformedFeature

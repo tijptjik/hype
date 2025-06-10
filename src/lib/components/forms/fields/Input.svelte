@@ -5,7 +5,7 @@ import FormInput from '../elements/Input.svelte';
 import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
 import FieldLabel from '$lib/components/forms/labels/Field.svelte';
 // TYPES
-import type { FieldPropsExtended, FieldDiscriminator, Locale, LocaleExtended } from '$lib/types';
+import type { FieldPropsExtended, FieldDiscriminator, Locale, LocaleExtended, Field } from '$lib/types';
 
 // STATE : PROPS
 let {
@@ -27,8 +27,8 @@ let isGenAI = $state(false);
 
 // EFFECT : SYNC WITH FORM
 let fieldValues = $derived(
-  getValues($form as any, field, locale as LocaleExtended, fieldRoot, fieldIndex, fieldKey)
-);
+  getValues($form as any, field as unknown as Field, locale as LocaleExtended, fieldRoot, fieldIndex, fieldKey)
+)!;
 
 // STATE : DERIVED
 let id = $derived(

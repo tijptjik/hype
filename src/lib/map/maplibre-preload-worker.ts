@@ -1,3 +1,4 @@
+// @ts-ignore - TODO Fix Maplibre types
 import * as tilebelt from '@mapbox/tilebelt';
 import { bounds } from '@placemarkio/geo-viewport';
 import type { BBox } from 'geojson';

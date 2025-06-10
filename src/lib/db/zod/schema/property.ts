@@ -1,9 +1,18 @@
 // ZOD
 import { z } from 'zod';
 // DRIZZLE
-import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'drizzle-zod';
+import {
+  createSelectSchema,
+  createInsertSchema,
+  createUpdateSchema
+} from 'drizzle-zod';
 // DRIZZLE SCHEMA
-import { property, propertyI18n, propertyValue, propertyValueI18n } from '$lib/db/schema/index';
+import {
+  property,
+  propertyI18n,
+  propertyValue,
+  propertyValueI18n
+} from '$lib/db/schema/index';
 // CONSTRAINTS
 import { getDefaultConstraints, getLocales } from '../constraints';
 
@@ -13,10 +22,10 @@ import { getDefaultConstraints, getLocales } from '../constraints';
 
 export const PropertyBase = createSelectSchema(property);
 export const PropertyInsert = createInsertSchema(property).extend({
-    ...getDefaultConstraints(property)
+  ...getDefaultConstraints(property)
 });
 export const PropertyUpdate = createUpdateSchema(property).extend({
-    ...getDefaultConstraints(property)
+  ...getDefaultConstraints(property)
 });
 
 /* ----------------- */
@@ -27,17 +36,16 @@ export const PropertyValueBase = createSelectSchema(propertyValue);
 export const PropertyValueInsert = createInsertSchema(propertyValue);
 export const PropertyValueUpdate = createUpdateSchema(propertyValue);
 
-
 /* ----------------- */
 // PROPERTY RELATIONAL SCHEMAS
 /* -------- */
 
 export const PropertyI18nBase = createSelectSchema(propertyI18n);
 export const PropertyI18nInsert = createInsertSchema(propertyI18n).extend({
-    ...getDefaultConstraints(propertyI18n)
+  ...getDefaultConstraints(propertyI18n)
 });
 export const PropertyI18nUpdate = createUpdateSchema(propertyI18n).extend({
-    ...getDefaultConstraints(propertyI18n)
+  ...getDefaultConstraints(propertyI18n)
 });
 
 export const PropertyValueI18nBase = createSelectSchema(propertyValueI18n);
@@ -54,12 +62,11 @@ export const PropertyValueAPI = PropertyValueBase.extend({
 
 export const PropertyValueInsertAPI = PropertyValueInsert.extend({
   i18n: getLocales(PropertyValueI18nInsert)
-})
+});
 
 export const PropertyValueUpdateAPI = PropertyValueUpdate.extend({
   i18n: getLocales(PropertyValueI18nUpdate)
 });
-
 
 export const PropertyAPI = PropertyBase.extend({
   i18n: getLocales(PropertyI18nBase),
@@ -74,17 +81,17 @@ export const PropertyInsertAPI = PropertyInsert.extend({
 export const PropertyUpdateAPI = PropertyUpdate.extend({
   i18n: getLocales(PropertyI18nUpdate),
   values: z.array(PropertyValueUpdateAPI)
-}); 
+});
 
 // INTERMEDIATE
 
+export const PropertyValueRaw = PropertyValueBase.extend({
+  i18n: z.array(PropertyValueI18nBase).nullish()
+});
+
 export const PropertyBaseRaw = PropertyBase.extend({
   i18n: z.array(PropertyI18nBase),
-  values: z.array(
-    PropertyValueBase.extend({
-      i18n: z.array(PropertyValueI18nBase).nullish()
-    })
-  )
+  values: z.array(PropertyValueRaw)
 });
 
 // TODO Remove once we've migrated to the new schemas

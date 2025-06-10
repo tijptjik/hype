@@ -15,7 +15,7 @@ import { layerMergeWithRelations } from '$lib/api/services/layer';
 // SERVICES
 import { getLayerHubFilter } from './hub';
 // DB
-import { toLocaleMap, toRelatedRecords } from '..';
+import { toRelatedRecords, transformI18nSafely } from '..';
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
@@ -31,6 +31,7 @@ import type {
   LayerI18nDB,
   PropertyI18nDB,
   Locale,
+  LocaleBundle,
   Database,
   LayerDBNew,
   LayerDBPartial,
@@ -477,17 +478,17 @@ export const toFormShape = async (
   properties: LayerPropertyDBRaw[],
   project: ProjectDBRaw
 ) => {
-  const formI18n = toLocaleMap(i18n);
+  const formI18n = transformI18nSafely(i18n);
   const formProperties: LayerPropertyNew[] = properties.map((layerProp) => {
     // Handle case where property includes nested property data from database relations
     if (layerProp.property && layerProp.property.i18n) {
-      layerProp.property.i18n = toLocaleMap(layerProp.property.i18n!);
+      layerProp.property.i18n = transformI18nSafely(layerProp.property.i18n);
 
       // Handle nested property values if they exist
       if (layerProp.property.values) {
         layerProp.property.values = layerProp.property.values.map((value: any) => {
           if (value.i18n) {
-            value.i18n = toLocaleMap(value.i18n);
+            value.i18n = transformI18nSafely(value.i18n);
           }
           return value;
         });
@@ -503,13 +504,11 @@ export const toFormShape = async (
       project: project
         ? {
             ...project,
-            i18n: toLocaleMap<ProjectI18nDB>(project.i18n as any),
+            i18n: transformI18nSafely(project.i18n),
             organisation: project.organisation
               ? {
                   ...project.organisation,
-                  i18n: toLocaleMap<OrganisationI18nDB>(
-                    project.organisation.i18n as any
-                  )
+                  i18n: transformI18nSafely(project.organisation.i18n)
                 }
               : undefined,
             publisher: project.publisher ? project.publisher : undefined
@@ -517,7 +516,6 @@ export const toFormShape = async (
         : undefined,
       properties: formProperties
     },
-    // @ts-expect-error - TODO Fix Zod type error
     zod(LayerAPI)
   );
 };
@@ -534,18 +532,16 @@ export const toResponseShape = async (
   i18n: LayerI18nDB[],
   properties: any[] // Use any for the complex nested structure from DB relations
 ) => {
-  const data: any = {
+  const data = {
     ...layer,
-    i18n: toLocaleMap<LayerI18nDB>(i18n) as any,
+    i18n: transformI18nSafely(i18n),
     project: layer.project
       ? {
           ...layer.project,
-          i18n: toLocaleMap<ProjectI18nDB>(layer.project.i18n as any),
+          i18n: transformI18nSafely(layer.project.i18n),
           organisation: {
             ...layer.project.organisation,
-            i18n: toLocaleMap<OrganisationI18nDB>(
-              layer.project.organisation.i18n as any
-            )
+            i18n: transformI18nSafely(layer.project.organisation.i18n)
           }
         }
       : undefined,
@@ -553,18 +549,18 @@ export const toResponseShape = async (
       ...prop,
       property: {
         ...prop.property,
-        i18n: toLocaleMap<PropertyI18nDB>(prop.property.i18n as any),
+        i18n: transformI18nSafely(prop.property.i18n),
         // Handle property values if they exist
         values: prop.property.values
           ? prop.property.values.map((value: any) => ({
               ...value,
-              i18n: toLocaleMap(value.i18n as any)
+              i18n: transformI18nSafely(value.i18n)
             }))
           : []
       }
     }))
   };
-  return LayerAPI.parse(data) as Layer;
+  return LayerAPI.parse(data);
 };
 
 // ═══════════════════════
@@ -602,12 +598,12 @@ export const mergeProjectProperties = async (
   // Add project properties that aren't already in the layer
   projectProps.forEach((projectProp: any) => {
     if (!existingPropertyIds.includes(projectProp.id)) {
-      projectProp.i18n = toLocaleMap<PropertyI18nDB>(projectProp.i18n as any);
+      projectProp.i18n = transformI18nSafely(projectProp.i18n);
       // Handle property values
       if (projectProp.values) {
         projectProp.values = projectProp.values.map((value: any) => ({
           ...value,
-          i18n: toLocaleMap(value.i18n as any)
+          i18n: transformI18nSafely(value.i18n)
         }));
       }
       result.properties.push({

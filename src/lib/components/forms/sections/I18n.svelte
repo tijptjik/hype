@@ -5,7 +5,7 @@ import { supportedLocales } from '$lib/enums';
 import Header from '$lib/components/forms/extra/Header.svelte';
 import TranslationBar from '$lib/components/forms/bars/Translation.svelte';
 // TYPES
-import type { SectionProps, Form } from '$lib/types';
+import type { SectionProps, Form, ProjectForm } from '$lib/types';
 
 // STATE : PROPS
 let sectionProps: SectionProps & { 
@@ -29,7 +29,14 @@ let { fields, form, infoContent } = sectionProps;
           <div class="flex flex-col content-start items-start gap-4 px-6 pb-2 pt-4">
             {#each Object.entries(fields) as [fieldRoot, field]}
               {@const Field = getFieldComponent(field.component)}
-              <Field {locale} {fieldRoot} {field} {form} />
+              <Field 
+                {locale} 
+                fieldRoot={fieldRoot as "properties"} 
+                {field} 
+                form={form as Form & ProjectForm}
+                fieldIndex={0}
+                fieldKey="value"
+                fieldDiscriminator="display" />
             {/each}
           </div>
         </div>

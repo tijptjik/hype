@@ -22,7 +22,8 @@ import type {
   ParsedReverseGeocodeResult,
   FeatureForm,
   FieldProps,
-  FormFieldDefinition
+  FormFieldDefinition,
+  FormField
 } from '$lib/types';
 import type { Geometry, Point } from 'geojson';
 
@@ -123,7 +124,7 @@ let setMissingTranslations = (result: ParsedReverseGeocodeResult, sourceLocale: 
   });
 };
 
-const actions: Record<'geocode', (...args: any[]) => void> = {
+const actions: Record<'geocode', (...args: any[]) => Promise<void>> = {
   geocode: async (e: Event) => {
     e.preventDefault();
     if (currentFormIsFeature && currentGeometryIsPoint && currentGeometry) {
@@ -175,6 +176,9 @@ const actions: Record<'geocode', (...args: any[]) => void> = {
             {...sectionProps}
             {locale}
             fieldRoot={fieldRootProp}
+            fieldIndex={0}
+            fieldKey="value"
+            fieldDiscriminator="display"
             field={sectionProps.fields[fieldRootProp] as FormFieldDefinition} />
         </div>
         <div>
@@ -192,8 +196,8 @@ const actions: Record<'geocode', (...args: any[]) => void> = {
                 [fieldRootProp]: sectionProps.fields[
                   fieldRootProp
                 ] as FormFieldDefinition
-              }}
-              targetLocales={locale} />
+              } as FormField}
+              targetLocale={locale} />
           {/if}
         </div>
       </div>

@@ -1,7 +1,7 @@
 // DRIZZLE
 import { and, eq } from 'drizzle-orm';
 // DB
-import { toLocaleMap, toRelatedRecords } from '$lib/db';
+import { transformI18nSafely, toRelatedRecords } from '$lib/db';
 import {
   insert,
   update,
@@ -415,13 +415,13 @@ export const upsertProjectProperties = async (
         );
         newPropValuesWithTranslations.push({
           ...newPropVal,
-          i18n: toLocaleMap(newValTranslations)
+          i18n: transformI18nSafely(newValTranslations)
         } as PropertyValue);
       }
     }
     createdResults.push({
       ...newBaseProp,
-      i18n: toLocaleMap(newTranslations),
+      i18n: transformI18nSafely(newTranslations),
       values: newPropValuesWithTranslations
     } as Property);
   }
@@ -469,13 +469,13 @@ export const upsertProjectProperties = async (
       }
       updatedPropValuesWithTranslations.push({
         ...syncedVal,
-        i18n: toLocaleMap(valTranslations)
+        i18n: transformI18nSafely(valTranslations)
       } as PropertyValue);
     }
 
     updatedResults.push({
       ...updatedBaseProp,
-      i18n: toLocaleMap(updatedTranslations),
+      i18n: transformI18nSafely(updatedTranslations),
       values: updatedPropValuesWithTranslations
     } as Property);
   }
@@ -535,13 +535,13 @@ export const toFormShape = async (
     );
     return {
       ...val,
-      i18n: toLocaleMap(i18nForThisValue)
+      i18n: transformI18nSafely(i18nForThisValue)
     };
   });
 
   const formCompatibleData = {
     ...data,
-    i18n: toLocaleMap(i18n),
+    i18n: transformI18nSafely(i18n),
     values: valuesWithI18n
   };
 
@@ -568,13 +568,13 @@ export const toResponseShape = (
     const i18nForThisValue = valuesI18nData?.filter(vt => vt.propertyValueId === val.id);
     return {
       ...val,
-      i18n: toLocaleMap(i18nForThisValue ?? [])
+      i18n: transformI18nSafely(i18nForThisValue)
     };
   });
 
   const responseData: Property = {
     ...(data as any),
-    i18n: toLocaleMap(i18n),
+    i18n: transformI18nSafely(i18n),
     values: valuesWithI18n
   };
   

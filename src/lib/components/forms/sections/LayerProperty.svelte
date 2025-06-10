@@ -1,11 +1,9 @@
 <script lang="ts">
-// SVELTE
-import { fade } from 'svelte/transition';
 // Components
 import Header from '$lib/components/forms/extra/Header.svelte';
 import LayerPropertyField from '$lib/components/forms/fields/LayerProperty.svelte';
 // TYPES
-import type { FormFieldArray, SectionProps } from '$lib/types';
+import type { FormFieldArray, SectionProps, Field, FormFieldExtendedDefinition } from '$lib/types';
 import { getAdminCtx } from '$lib/context/admin.svelte';
 
 // CONTEXT
@@ -22,9 +20,11 @@ let { fields } = sectionProps;
   {#if !adminCtx.appCtx.isInitialised}{:else}
     {#each Object.entries(fields) as [fieldRoot, field]: [Field, FormFieldExtendedDefinition]}
       <LayerPropertyField
-        {fieldRoot}
-        {field}
-        propertyJoinStateKey="isVisible"
+        fieldRoot={fieldRoot as Field}
+        field={field as unknown as FormFieldExtendedDefinition}
+        fieldIndex={0}
+        fieldKey="value"
+        fieldDiscriminator={sectionProps.fieldDiscriminator!}
         {...sectionProps} />
     {/each}
   {/if}

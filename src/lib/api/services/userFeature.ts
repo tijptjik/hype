@@ -5,9 +5,7 @@ import { eq, SQL } from 'drizzle-orm';
 import type {
   Id,
   SessionUser,
-  UserFeature,
-  UserFeaturePartial,
-  UserRoleDisco
+  UserFeature
 } from '$lib/types';
 
 import type { QueryParams } from '$lib/types';
@@ -16,8 +14,6 @@ import { applyQueryFilters, removeExcludedColumns } from '..';
 
 import { userFeature } from '$lib/db/schema/index';
 import { assertUserIsSelf, assertUserLoggedIn, runAssertions } from '$lib/auth/asserts';
-import { UserFeatureAPI } from '../../db/zod/schema/feature';
-import { toLocaleMap } from '$lib/db';
 
 /**
  * Get the query context for the userFeature resource - filters the query based on the user's Id -- they should only ever obtain their own features, along with any other query parameters to filter on.

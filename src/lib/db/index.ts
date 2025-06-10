@@ -58,6 +58,7 @@ import type { SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core';
 // 6. TRANSFORMATIONS :: LOCALE
 //    - toLocaleMap
 //    - isTransformedLocaleMap
+//    - transformI18nSafely
 //
 // 7. TRANSFORMATIONS :: RECORDS
 //    - toRelatedRecords
@@ -390,6 +391,20 @@ export const createJsonPathCondition = (
 // ═══════════════════════
 // 6. TRANSFORMATIONS :: LOCALE
 // ═══════════════════════
+
+// Helper function to safely transform i18n data
+export const transformI18nSafely = (
+  i18n: any[] | Record<string, any> | null | undefined
+): Record<string, any> | null => {
+  if (!i18n) return null;
+  
+  if (Array.isArray(i18n)) {
+    return i18n.length > 0 ? toLocaleMap(i18n) : null;
+  }
+  
+  // Already transformed or is a Record
+  return i18n;
+};
 
 // Helper function to check if an object is already a transformed locale map
 const isTransformedLocaleMap = <T extends LocaleBundle>(

@@ -88,7 +88,7 @@ function isGeocoderField(field: string): boolean {
 
 // Helper function to safely get address property value
 function getAddressPropertyValue(field: AddressField, locale: Locale): string | null {
-  return $formStore?.i18n[locale]?.addressProperties?.[field] ?? null;
+  return $formStore?.i18n?.[locale]?.addressProperties?.[field] ?? null;
 }
 
 // Helper function to safely get meta property value

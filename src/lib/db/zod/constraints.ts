@@ -115,7 +115,7 @@ export const getLocales = (model: z.ZodType<any>, requiredStringKeys: string[] =
     'value',
     'label'
   ]) =>
-  z.record(z.enum(supportedLocales), model)
+  z.record(z.enum(supportedLocales as [string, ...string[]]), model)
     .optional()
     .nullable()
     .refine(

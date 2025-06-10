@@ -5,7 +5,7 @@ import { assertUserLoggedIn, assertSuperAdmin, runAssertions } from '$lib/auth/a
 // SCHEMA
 import { hub } from '$lib/db/schema/index';
 // DB
-import { toLocaleMap } from '$lib/db';
+import { transformI18nSafely } from '$lib/db';
 // ZOD
 import { HubAPI, HubCollectionAPI } from '$lib/db/zod/schema/hub';
 import { superValidate } from 'sveltekit-superforms';
@@ -118,23 +118,21 @@ export const getHubQueryContext = (params: QueryParams) => {
  * @returns Validated form data
  */
 export const toFormShape = async (hub: HubDBRaw): Promise<SuperValidated<Hub>> => {
-  // @ts-ignore TODO - Fix Zod type error
   // Transform the hub data structure
   const transformedHub = {
     ...hub,
-    i18n: hub.i18n ? toLocaleMap(hub.i18n) : {},
+    i18n: transformI18nSafely(hub.i18n),
     organisations:
       hub.organisations?.map((organisation: OrganisationDBRaw) => {
         return {
           ...organisation,
-          i18n: toLocaleMap(organisation.i18n),
+          i18n: transformI18nSafely(organisation.i18n),
           // Image is already a full object from the relation, no transformation needed
           image: organisation.image || null
         };
       }) || null
   };
-  // @ts-ignore Fix ZOD Type Error
-  const form = await superValidate(transformedHub, zod(HubAPI) as any);
+  const form = await superValidate(transformedHub, zod(HubAPI));
   return form as SuperValidated<Hub>;
 };
 
@@ -147,12 +145,12 @@ export const toResponseShape = async (hub: HubDBRaw, isCollection: boolean = fal
   // Transform the hub data structure
   const transformedHub = {
     ...hub,
-    i18n: toLocaleMap<HubI18nDB>(hub.i18n as HubI18nDB[]),
+    i18n: transformI18nSafely(hub.i18n),
     organisations:
       hub.organisations?.map((organisation: OrganisationDBRaw) => {
         return {
           ...organisation,
-          i18n: toLocaleMap(organisation.i18n),
+          i18n: transformI18nSafely(organisation.i18n),
           // Image is already a full object from the relation, no transformation needed
           image: organisation.image || null
         };
@@ -160,8 +158,8 @@ export const toResponseShape = async (hub: HubDBRaw, isCollection: boolean = fal
   };
 
   return isCollection
-    ? (HubCollectionAPI.parse(transformedHub) as Hub)
-    : (HubAPI.parse(transformedHub) as Hub);
+    ? HubCollectionAPI.parse(transformedHub)
+    : HubAPI.parse(transformedHub);
 };
 
 /********************
