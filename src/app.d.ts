@@ -34,7 +34,9 @@ declare global {
       session?: SessionSession;
       user?: SessionUser;
     }
-    // interface PageData {}
+    interface PageData {
+      flash: Flash;
+    }
     // interface PageState {}
     interface Platform {
       env: {
