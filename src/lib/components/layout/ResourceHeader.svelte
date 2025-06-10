@@ -6,16 +6,21 @@ import NewEntityButton from '$lib/components/menu/NewEntityButton.svelte';
 // CONFIG
 import { navItems } from '$lib/navigation';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
-import type { FirstClassResource, HierarchicalResource } from '$lib/enums';
+import type { FirstClassResource } from '$lib/enums';
+import { useSession } from '$lib/auth/client';
+import type { SessionUser } from '$lib/types';
+
+let session = useSession();
+let user = $session.data?.user as SessionUser;
 
 // STATE : CONTEXT :: ROUTER
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
 // STATE : DERIVED :: RESOURCE MODE
-let resource = $derived(resourceState.activeResource);
-let resourceMode = $derived(resourceState.isShowIndex);
+let resource = $derived(adminCtx.activeResource);
+let resourceMode = $derived(adminCtx.isShowIndex);
 
 // STATE : DERIVED :: TITLE
 let title = $derived(resource ? navItems[resource].name : '');
@@ -29,11 +34,11 @@ let title = $derived(resource ? navItems[resource].name : '');
  * @param resource - The resource type to check permissions for
  * @returns boolean indicating if new buttons should be shown
  */
-const canCreateEntity = (resource: FirstClassResource): boolean => {
-  if (!resource || !resourceState.session) return false;
+const canCreateEntity = (user: SessionUser, resource: FirstClassResource): boolean => {
+  if (!resource || !adminCtx.user) return false;
 
-  const { session, userRoles } = resourceState;
-  const isSuperAdmin = session.user?.superAdmin === true;
+  const { userRoles } = adminCtx;
+  const isSuperAdmin = user?.superAdmin === true;
 
   // SuperAdmin can create anything
   if (isSuperAdmin) return true;
@@ -80,7 +85,7 @@ const canCreateEntity = (resource: FirstClassResource): boolean => {
 };
 
 // STATE : DERIVED :: SHOW NEW BUTTON
-let showNewButton = $derived(resource && canCreateEntity(resource));
+let showNewButton = $derived(user && resource && canCreateEntity(user, resource));
 </script>
 
 {#if resource}

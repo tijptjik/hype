@@ -52,7 +52,8 @@ import type {
   NewFeatureTask,
   FeatureProperty,
   FeaturePropertyI18nDB,
-  ResourceTypeWithChildren
+  ResourceTypeWithChildren,
+  FeatureI18nFieldKeys
 } from '$lib/types';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
@@ -565,22 +566,22 @@ export class AppCtx {
     if (hideIfOnly && projectCount === 1) {
       return null;
     }
-    return getI18n(organisation.i18n!, 'nameShort', this.getUserPreferences());
+    return getI18n(organisation, 'nameShort', this.getUserPreferences());
   };
 
   getContextualProjectName = (
-    project: Project,
+    project?: Project,
     hideIfOnly: boolean = true
   ): string | null => {
     const organisationProjectCount = this.getOrganisationProjectCount(
-      project.organisationId
+      project?.organisationId
     );
     if (hideIfOnly && organisationProjectCount === 1) {
       return null;
     }
     return (
-      getI18n(project.i18n!, 'nameShort', this.getUserPreferences()) ||
-      getI18n(project.i18n!, 'name', this.getUserPreferences())
+      getI18n(project, 'nameShort', this.getUserPreferences()) ||
+      getI18n(project, 'name', this.getUserPreferences())
     );
   };
 
@@ -593,8 +594,8 @@ export class AppCtx {
       return null;
     }
     return (
-      getI18n(layer.i18n!, 'nameShort', this.getUserPreferences()) ||
-      getI18n(layer.i18n!, 'name', this.getUserPreferences())
+      getI18n(layer, 'nameShort', this.getUserPreferences()) ||
+      getI18n(layer, 'name', this.getUserPreferences())
     );
   };
 
@@ -1318,7 +1319,7 @@ export class AppCtx {
   };
 
   updateNewFeatureValueI18n = (
-    key: keyof NewFeatureTask['feature']['i18n'],
+    key: FeatureI18nFieldKeys,
     value: any,
     locale: Locale = getLocale()
   ) => {
@@ -1402,7 +1403,7 @@ export class AppCtx {
       propIndex >= 0 &&
       this.newFeature?.feature?.properties?.[propIndex]?.i18n
     ) {
-      this.newFeature.feature.properties[propIndex].i18n![locale as Locale] = {
+      this.newFeature.feature.properties[propIndex].i18n![locale] = {
         ...this.newFeature.feature.properties[propIndex].i18n![locale as Locale]!,
         ...object
       };
@@ -1478,7 +1479,7 @@ export class AppCtx {
     }
     debouncedUpdateUserPreferences(
       (this.user as CurrentUser).id,
-      (this.user as CurrentUser).preferences
+      (this.user as CurrentUser).preferences as UserPreferences
     );
   };
 

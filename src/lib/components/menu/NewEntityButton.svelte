@@ -6,27 +6,27 @@ import { NEW_REF } from '$lib/index';
 // COMPONENTS
 import AssociationModal from '$lib/components/forms/modals/Association.svelte';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // ENUMS
-import { HierarchicalResource } from '$lib/enums';
+import { FirstClassResource, HierarchicalResource } from '$lib/enums';
 
 // STATE : CONTEXT
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
 let modalOpen: boolean = $state(false);
 
 const onclick = (e: MouseEvent) => {
   e.preventDefault();
   // Set facet to false
-  resourceState.setFacet(false);
-  if (requiresParentAssociation(resourceState.activeResource as HierarchicalResource)) {
+  adminCtx.setFacet(false);
+  if (requiresParentAssociation(adminCtx.activeResource as unknown as HierarchicalResource)) {
     // Let the user pick the parent to be associated with
     modalOpen = true;
   } else {
     // Directly navigate to the new entity page
     navigateOnAdmin(
-      resourceState,
-      resourceState.activeResource as HierarchicalResource,
+      adminCtx,
+      adminCtx.activeResource as FirstClassResource,
       NEW_REF,
       'core'
     );

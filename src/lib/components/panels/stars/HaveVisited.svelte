@@ -6,7 +6,7 @@ import { m } from '$lib/i18n';
 // ANIMATIONS
 import { flip } from 'svelte/animate';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
 // COMPONENTS
 import Section from '$lib/components/panels/common/Section.svelte';
@@ -21,33 +21,33 @@ import { enGB, zhCN, zhHK } from 'date-fns/locale';
 import type { UserFeature } from '$lib/types';
 
 // CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 const omniCtx = getOmniContext();
 
 let searchTerm = $state('');
 
 // Get visited features
 let visitedFeatures = $derived(
-  mapCtx.state.userFeatures.visited?.flatMap((visited) => {
-    const feature = mapCtx.state.resources.feature.find(
+  appCtx.state.userFeatures.visited?.flatMap((visited) => {
+    const feature = appCtx.state.resources.feature.find(
       (f) => f.id === visited.featureId
     );
 
     // Skip if feature doesn't exist
     if (!feature) return [];
 
-    const layer = feature ? mapCtx.getLayer(feature) : undefined;
-    const project = layer ? mapCtx.getProject(layer) : undefined;
-    const organisation = project ? mapCtx.getOrganisation(project) : undefined;
+    const layer = feature ? appCtx.getLayer(feature) : undefined;
+    const project = layer ? appCtx.getProject(layer) : undefined;
+    const organisation = project ? appCtx.getOrganisation(project) : undefined;
 
     return [
       {
         ...visited,
         hierarchy: {
-          organisation: getI18n(organisation!, 'nameShort', mapCtx.getUserPreferences()),
-          project: getI18n(project!, 'nameShort', mapCtx.getUserPreferences()),
-          layer: mapCtx.getContextualLayerName(layer!),
-          feature: getI18n(feature, 'title', mapCtx.getUserPreferences())
+                  organisation: getI18n(organisation, 'nameShort', appCtx.getUserPreferences()),
+        project: getI18n(project, 'nameShort', appCtx.getUserPreferences()),
+          layer: appCtx.getContextualLayerName(layer!),
+          feature: getI18n(feature, 'title', appCtx.getUserPreferences())
         }
       }
     ];
@@ -86,7 +86,7 @@ const filteredFeatures = $derived(filterFeatures(visitedFeatures, searchTerm));
             class="min-h-21 flex cursor-pointer flex-row items-start justify-between gap-4 bg-black px-4 py-2 text-[#374151]"
             animate:flip={{ duration: 200 }}
             onclick={() =>
-              omniCtx.handleFeatureSelection(mapCtx, visited.featureId, {
+              omniCtx.handleFeatureSelection(appCtx, visited.featureId, {
                 openCard: true
               })}>
             <Icon src={Squares2x2} class="h-5 w-5 flex-shrink-0" theme="fill" />

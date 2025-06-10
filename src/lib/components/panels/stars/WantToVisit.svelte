@@ -5,7 +5,7 @@ import { m } from '$lib/i18n';
 // ANIMATIONS
 import { flip } from 'svelte/animate';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
 // COMPONENTS
 import Section from '$lib/components/panels/common/Section.svelte';
@@ -14,33 +14,33 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { Squares2x2 } from '@steeze-ui/heroicons';
 
 // CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 const omniCtx = getOmniContext();
 // STATE
 let searchTerm = $state('');
 
 // Get wishlisted features
 let wishlistedFeatures = $derived(
-  mapCtx.state.userFeatures.wishlisted?.flatMap((wishlist) => {
-    const feature = mapCtx.state.resources.feature.find(
+  appCtx.state.userFeatures.wishlisted?.flatMap((wishlist) => {
+    const feature = appCtx.state.resources.feature.find(
       (f) => f.id === wishlist.featureId
     );
 
     // Skip if feature doesn't exist
     if (!feature) return [];
 
-    const layer = mapCtx.getLayer(feature);
-    const project = layer ? mapCtx.getProject(layer) : undefined;
-    const organisation = project ? mapCtx.getOrganisation(project) : undefined;
+    const layer = appCtx.getLayer(feature);
+    const project = layer ? appCtx.getProject(layer) : undefined;
+    const organisation = project ? appCtx.getOrganisation(project) : undefined;
 
     return [
       {
         ...wishlist,
         hierarchy: {
-          organisation: getI18n(organisation!, 'nameShort', mapCtx.getUserPreferences()),
-          project: mapCtx.getContextualProjectName(project!),
-          layer: mapCtx.getContextualLayerName(layer!),
-          feature: getI18n(feature, 'title', mapCtx.getUserPreferences())
+          organisation: getI18n(organisation, 'nameShort', appCtx.getUserPreferences()),
+          project: appCtx.getContextualProjectName(project!),
+          layer: appCtx.getContextualLayerName(layer!),
+          feature: getI18n(feature, 'title', appCtx.getUserPreferences())
         }
       }
     ];
@@ -79,7 +79,7 @@ const filteredFeatures = $derived(filterFeatures(wishlistedFeatures, searchTerm)
             class="min-h-21 flex cursor-pointer flex-row items-center justify-between gap-4 bg-black px-4 py-2 text-[#374151]"
             animate:flip={{ duration: 200 }}
             onclick={() =>
-              omniCtx.handleFeatureSelection(mapCtx, wishlist.featureId, {
+              omniCtx.handleFeatureSelection(appCtx, wishlist.featureId, {
                 openCard: true
               })}>
             <Icon src={Squares2x2} class="h-5 w-5 flex-shrink-0" theme="fill" />

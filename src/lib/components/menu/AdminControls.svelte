@@ -10,7 +10,7 @@ import { navigateOnAdmin } from '$lib/navigation';
 // COMPONENTS
 import IconicMenuButton from '$lib/components/menu/IconicMenuButton.svelte';
 // ENUMS
-import { HierarchicalResource } from '$lib/enums';
+import { FirstClassResource } from '$lib/enums';
 // ICONS
 import {
   InboxArrowDown,
@@ -19,24 +19,26 @@ import {
   BuildingLibrary
 } from '@steeze-ui/heroicons';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
+// TYPES
+import type { SessionUser } from '$lib/types';
 
 // CONTEXT
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
-let notificationCount = $derived(resourceState.filteredTasks.length);
+let notificationCount = $derived(adminCtx.filteredTasks.length);
 </script>
 
-{#if page.data.session && hasControlPanelAccess(page.data.session)}
+{#if adminCtx.appCtx.user && hasControlPanelAccess(adminCtx.appCtx.user as SessionUser)}
   <ul class="menu menu-horizontal m-0 space-x-2 p-0">
     <li>
       <IconicMenuButton
         href={`${ADMIN_PATH}/tasks`}
         iconSrc={InboxArrowDown}
-        handleClick={(e) => navigateOnAdmin(resourceState, HierarchicalResource.task)}
+        handleClick={(e) => navigateOnAdmin(adminCtx, FirstClassResource.task)}
         {notificationCount} />
     </li>
-    {#if page.data.session?.user?.superAdmin}
+    {#if adminCtx.appCtx.isSuperAdmin()}
       <li>
         <IconicMenuButton href={`${ADMIN_PATH}/images/batch`} iconSrc={CloudArrowUp} />
       </li>
@@ -46,8 +48,8 @@ let notificationCount = $derived(resourceState.filteredTasks.length);
     {/if}
     <li>
       <IconicMenuButton
-        href={resourceState.activeResource === 'feature' && resourceState.activeEntity
-          ? `/features/${resourceState.activeEntity}`
+        href={adminCtx.activeResource === 'feature' && adminCtx.activeEntity
+          ? `/features/${adminCtx.activeEntity}`
           : '/'}
         iconSrc={Map} />
     </li>

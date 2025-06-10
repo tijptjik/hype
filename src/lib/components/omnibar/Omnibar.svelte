@@ -2,7 +2,7 @@
 import { browser } from '$app/environment';
 // CONTEXT
 import { getOmniContext } from '$lib/context/omni.svelte';
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // COMPONENTS
 import OmniSearchBar from './OmniSearchBar.svelte';
 import OmniNavigationBar from './OmniNavigationBar.svelte';
@@ -11,7 +11,7 @@ import { MOBILE_MAX_WIDTH } from '$lib/index';
 
 // CONTEXT
 const omniCtx = getOmniContext();
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 let showSearch = $derived(omniCtx.state.mode === 'search');
 
@@ -23,7 +23,7 @@ function handleEscape(event: KeyboardEvent) {
 
 // Calculate offset based on visible panels
 let horizontalOffset = $derived(() => {
-  const { filters, maps, stars, settings } = mapCtx.state.panels;
+  const { filters, maps, stars, settings } = appCtx.state.panels;
   const leftPanelOpen = maps || stars;
   const rightPanelOpen = filters || settings;
 

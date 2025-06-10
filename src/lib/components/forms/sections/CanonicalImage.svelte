@@ -7,7 +7,7 @@ import { page } from '$app/state';
 import { getURLfromImage } from '$lib/client/services/image';
 // CONTEXT
 import { getImageContext } from '$lib/context/image.svelte';
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
 import Image from '$lib/components/common/Image.svelte';
 import Icon from '$lib/components/common/Icon.svelte';
@@ -23,7 +23,7 @@ let loadedImage = $state();
 const imageCtx = getImageContext();
 
 // HANDLERS
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
 // UTILS
 const getUrl = (facet: string) => {
@@ -35,7 +35,7 @@ const getUrl = (facet: string) => {
 // STATE : CONTEXT
 const navigateToGallery = (e: Event) => {
   e.preventDefault();
-  resourceState.setFacet('images');
+  adminCtx.setFacet('images');
 };
 
 </script>

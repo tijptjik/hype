@@ -7,11 +7,11 @@ import { clickOutside } from '$lib/actions';
 import { fade, scale } from 'svelte/transition';
 import { cubicInOut } from 'svelte/easing';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 import { getOmniContext, PageState } from '$lib/context/omni.svelte';
 
 // CONTEXT
-let mapCtx = getMapCtx();
+let appCtx = getAppCtx();
 let omniCtx = getOmniContext();
 
 // STATE : PROPS
@@ -19,7 +19,7 @@ let { children }: { children: any } = $props();
 
 // STATE : DERIVED
 let horizontalOffset = $derived(() => {
-  const { filters, maps, stars, settings } = mapCtx.state.panels;
+  const { filters, maps, stars, settings } = appCtx.state.panels;
   const leftPanelOpen = maps || stars;
   const rightPanelOpen = filters || settings;
   if (window.innerWidth < MOBILE_MAX_WIDTH) {
@@ -57,7 +57,7 @@ function handleClickOutside(e: MouseEvent) {
   if (target?.dataset?.type === 'marker') {
     const featureId = target.dataset.featureId;
     if (featureId) {
-      omniCtx.handleFeatureSelection(mapCtx, featureId);
+      omniCtx.handleFeatureSelection(appCtx, featureId);
     }
   } else if (target.localName === 'canvas') {
     // omniCtx.pageState = PageState.NeedTransition;

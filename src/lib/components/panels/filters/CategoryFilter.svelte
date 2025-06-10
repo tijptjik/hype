@@ -9,11 +9,11 @@ import {
   displaySelectedProperties
 } from '$lib/utils/formatting';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
 import type { Id, TranslatedValue } from '$lib/types';
 
-let mapCtx = getMapCtx();
+let appCtx = getAppCtx();
 
 type Props = {
   key: string;
@@ -26,13 +26,13 @@ type Props = {
 let { key, label, values = [], layerId, defaultOpen = false }: Props = $props();
 
 // Derive selected values directly from context's propertyFilters
-let selected = $derived(mapCtx.propertyFilters?.[layerId]?.[key] ?? []);
+let selected = $derived(appCtx.propertyFilters?.[layerId]?.[key] ?? []);
 
 let isOpen = $state(defaultOpen);
 
 function toggleValue(value: string | TranslatedValue) {
   const originalValue = getOriginalValue(value);
-  const currentSelection = mapCtx.propertyFilters?.[layerId]?.[key] ?? [];
+  const currentSelection = appCtx.propertyFilters?.[layerId]?.[key] ?? [];
   const index = currentSelection.indexOf(originalValue);
   let newSelection: string[];
 
@@ -44,13 +44,13 @@ function toggleValue(value: string | TranslatedValue) {
 
   // Update context using the dedicated methods
   if (newSelection.length > 0) {
-    mapCtx.setCategoricalPropertyFilter(layerId, key, newSelection);
+    appCtx.setCategoricalPropertyFilter(layerId, key, newSelection);
   } else {
     // If selection becomes empty, remove the key from the filter object for this layer
-    mapCtx.removeCategoricalPropertyFilter(layerId, key);
+    appCtx.removeCategoricalPropertyFilter(layerId, key);
   }
 
-  mapCtx.zoomToAllVisibleFeatures();
+  appCtx.zoomToAllVisibleFeatures();
 }
 
 let displayText = $derived(displaySelectedProperties(selected, values));

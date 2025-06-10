@@ -5,10 +5,10 @@ import Icon from '$lib/components/common/Icon.svelte';
 // I18N
 import { getI18n, getLocale } from '$lib/i18n';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 
 // CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 // PROPS
 const {
@@ -21,10 +21,10 @@ const {
 } = $props();
 
 let organisationName = $derived(
-  getI18n(organisation, 'nameShort', mapCtx.getUserPreferences())
+  getI18n(organisation, 'nameShort', appCtx.getUserPreferences())
 );
 
-let projectName = $derived(mapCtx.getContextualProjectName(project, false));
+let projectName = $derived(appCtx.getContextualProjectName(project, false));
 </script>
 
 <div
@@ -68,7 +68,7 @@ let projectName = $derived(mapCtx.getContextualProjectName(project, false));
           {/if}
         </p>
         <p class="font-light">
-          {getI18n(layer, 'nameShort', mapCtx.getUserPreferences())}
+          {getI18n(layer, 'nameShort', appCtx.getUserPreferences())}
         </p>
       </div>
     </div>
@@ -81,7 +81,7 @@ let projectName = $derived(mapCtx.getContextualProjectName(project, false));
           ? 'group-hover:bg-secondary/75 group-focus-visible:bg-secondary/75'
           : ''}">
       </div>
-      <p class="font-light">{getI18n(layer, 'name', mapCtx.getUserPreferences())}</p>
+      <p class="font-light">{getI18n(layer, 'name', appCtx.getUserPreferences())}</p>
     </div>
   {/if}
   <div

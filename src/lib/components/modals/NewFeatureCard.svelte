@@ -18,7 +18,7 @@ import Spacer from '$lib/components/featureCard/layout/Spacer.svelte';
 import Container from '$lib/components/featureCard/layout/Container.svelte';
 import ContributorCredit from '$lib/components/featureCard/ContributorCredit.svelte';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
 import {
   setFeatureCardContext,
@@ -33,7 +33,7 @@ import type {
 } from '$lib/types';
 
 // CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 const omniCtx = getOmniContext();
 
 // CONTEXT :: FEATURE CARD
@@ -45,10 +45,10 @@ omniCtx.setFeatureCardContext(cardCtx);
 // STATE
 let isOpen = $state(false);
 // STATE : DERIVED
-let newFeature = $derived(mapCtx.getNewFeature()) as NewFeatureWithLocationAndParents;
-let feature = $derived(mapCtx.getNewFeature()?.feature as UserContributedFeature);
-let organisation = $derived(mapCtx.getOrganisationById(newFeature?.organisationId!));
-let project = $derived(mapCtx.getProjectById(newFeature?.projectId!));
+let newFeature = $derived(appCtx.getNewFeature()) as NewFeatureWithLocationAndParents;
+let feature = $derived(appCtx.getNewFeature()?.feature as UserContributedFeature);
+let organisation = $derived(appCtx.getOrganisationById(newFeature?.organisationId!));
+let project = $derived(appCtx.getProjectById(newFeature?.projectId!));
 
 // EVENT HANDLERS
 function handleShowModal() {
@@ -56,10 +56,8 @@ function handleShowModal() {
   isOpen = true;
 }
 function handleCloseModal() {
-  console.log('🔴 NewFeatureCard handleCloseModal() called');
   omniCtx.closeCard();
   isOpen = false;
-  console.log('🔴 NewFeatureCard isOpen set to false');
 }
 
 onMount(() => {

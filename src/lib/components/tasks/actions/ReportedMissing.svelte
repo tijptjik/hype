@@ -1,6 +1,6 @@
 <script lang="ts">
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // i18n
 import { m } from '$lib/i18n';
 // COMPONENTS
@@ -49,7 +49,7 @@ let acceptActions = [
 ];
 
 // CONTEXT :: ROUTER
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
 // ACTIONS
 const handleAction = async (action: string, e: Event, reviewReason?: string) => {
@@ -102,7 +102,7 @@ const handleAction = async (action: string, e: Event, reviewReason?: string) => 
       });
     }
 
-    resourceState.goToNextTask();
+    adminCtx.goToNextTask();
   } catch (error) {
     console.error('Failed to set task state:', error);
   }

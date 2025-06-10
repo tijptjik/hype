@@ -7,19 +7,19 @@ import FormSubmitButton from './buttons/FormSubmitButton.svelte';
 import PublishButton from './buttons/PublishButton.svelte';
 import ArchiveButton from './buttons/ArchiveButton.svelte';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
 
 let menuProps = $props();
 
 // STATE : CONTEXT :: ROUTER
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
-let showFormControler = $derived(resourceState.state.active.facet !== 'images');
+let showFormControler = $derived(adminCtx.state.active.facet !== 'images');
 let showActionButton = $derived(
-  resourceState.state.active.entity !== NEW_REF &&
-    resourceState.state.active.entity !== false
+  adminCtx.state.active.entity !== NEW_REF &&
+    adminCtx.state.active.entity !== false
 );
 
 // Resources that can be archived (all resources have isArchived)
@@ -41,13 +41,13 @@ const publishableResources = [
 
 let showArchiveButton = $derived(
   showActionButton && 
-  archiveableResources.includes(resourceState.activeResource as FirstClassResource) &&
-  resourceState.session?.user?.superAdmin === true
+  archiveableResources.includes(adminCtx.activeResource as FirstClassResource) &&
+  adminCtx.appCtx?.user?.superAdmin === true
 );
 
 let showPublishButton = $derived(
   showActionButton && 
-  publishableResources.includes(resourceState.activeResource as FirstClassResource)
+  publishableResources.includes(adminCtx.activeResource as FirstClassResource)
 );
 </script>
 

@@ -1,6 +1,6 @@
 <script lang="ts">
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // I18N
 import { m } from '$lib/i18n';
 // COMPONENTS
@@ -12,7 +12,7 @@ import Actions from '$lib/components/tasks/common/Actions.svelte';
 import { updateTaskReview, updateFeatureFromTask } from '$lib/client/services/task';
 import { navigateOnAdmin } from '$lib/navigation';
 // ENUMS
-import { HierarchicalResource } from '$lib/enums';
+import { FirstClassResource } from '$lib/enums';
 // TYPES
 import type { Task } from '$lib/types';
 import type { IconSource } from '@steeze-ui/svelte-icon';
@@ -39,7 +39,7 @@ let acceptActions = [
 ];
 
 // CONTEXT :: ROUTER
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
 // ACTIONS
 const handleAction = async (action: string, e: Event, reviewReason?: string) => {
@@ -77,7 +77,7 @@ const handleAction = async (action: string, e: Event, reviewReason?: string) => 
       reviewReason
     });
 
-    navigateOnAdmin(resourceState, HierarchicalResource.feature, task.featureId);
+    navigateOnAdmin(adminCtx, FirstClassResource.feature, task.featureId);
   } catch (error) {
     console.error(`Failed to ${action} task:`, error);
   }

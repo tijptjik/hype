@@ -8,19 +8,19 @@ import { PencilSquare } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 
 // CONTEXT
 const cardCtx = getFeatureCardContext();
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 // STATE
 let inputElement: HTMLInputElement | null = $state(null);
 let editedAttribution = $state(
-  mapCtx.getUser().attribution || m.tidy_level_hawk_belong()
+  appCtx.getUser()?.attribution || m.tidy_level_hawk_belong()
 );
 let originalAttribution = $state('');
-let editing = $state(!(mapCtx.getUser().attribution || '').trim());
+let editing = $state(!(appCtx.getUser()?.attribution || '').trim());
 
 // HANDLERS
 function handleEditMode(e: Event) {
@@ -55,11 +55,11 @@ const handleAttributionUpdate = async (value: string) => {
   }
 
   await debouncedUpdateUserAttribution(
-    mapCtx.user.id,
+    appCtx.user!.id,
     value,
     // onSuccess
     (attribution) => {
-      mapCtx.getUser().attribution = attribution;
+      appCtx.getUser()!.attribution = attribution;
       cardCtx.setAttribution(attribution);
     },
     // onError
@@ -71,7 +71,7 @@ const handleAttributionUpdate = async (value: string) => {
 
 // Ensure editing state is re-evaluated if session changes (e.g. login/logout)
 $effect(() => {
-  const currentAttr = mapCtx.getUser().attribution || '';
+  const currentAttr = appCtx.getUser()?.attribution || '';
   editedAttribution = currentAttr;
   editing = !currentAttr.trim();
 });
@@ -82,7 +82,7 @@ $effect(() => {
   {m.new_feature__thank_you()}
 </p>
 
-<div class="pointer-events-auto w-full bg-black px-3 pt-2 md:px-6 caret-transparent">
+<div class="pointer-events-auto w-full bg-black px-3 pt-2 caret-transparent md:px-6">
   {#if !editedAttribution.trim() || editing}
     <div class="mb-2 px-12">
       <label
@@ -112,11 +112,11 @@ $effect(() => {
       {m.add_feature__credit_prompt()}
     </p>
     <div
-      class="group flex min-h-14 w-full items-center justify-center gap-2 pt-2 text-center cursor-pointer caret-transparent"
+      class="group flex min-h-14 w-full cursor-pointer items-center justify-center gap-2 pt-2 text-center caret-transparent"
       onclick={handleEditMode}>
       <p class="text-center text-xl font-semibold text-white">{editedAttribution}</p>
       <button
-        class="btn btn-ghost btn-sm flex h-8 items-center justify-center rounded-lg group-hover:bg-base-300 group-focus:text-primary group-focus:outline-none group-active:bg-base-200 focus:outline-none">
+        class="btn btn-ghost btn-sm flex h-8 items-center justify-center rounded-lg focus:outline-none group-hover:bg-base-300 group-focus:text-primary group-focus:outline-none group-active:bg-base-200">
         <Icon
           src={PencilSquare}
           class="h-5 w-5 stroke-1 text-base-content/80 group-hover:text-base-content" />

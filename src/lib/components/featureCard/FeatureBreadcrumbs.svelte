@@ -15,7 +15,7 @@ import {
 // Svelte
 import { clickOutside } from '$lib/actions';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
 // ENUMS
@@ -26,7 +26,7 @@ import type { Feature, UserContributedFeature } from '$lib/types';
 // CONTEXT
 const cardCtx = getFeatureCardContext();
 const omniCtx = getOmniContext();
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 // STATE : PROPS
 let { feature }: { feature: Feature | UserContributedFeature } = $props();
@@ -35,14 +35,14 @@ let { feature }: { feature: Feature | UserContributedFeature } = $props();
 let menuOpen = $state(false);
 
 // DERIVED : Get hierarchy for current feature
-let layer = mapCtx.getLayerById(feature.layerId);
-let project = layer ? mapCtx.getProject(layer) : null;
-let organisation = project ? mapCtx.getOrganisation(project) : null;
+let layer = appCtx.getLayerById(feature.layerId);
+let project = layer ? appCtx.getProject(layer) : null;
+let organisation = project ? appCtx.getOrganisation(project) : null;
 
 // DERIVED : Get contextual names
-let organisationName = $derived(mapCtx.getContextualOrganisationName(organisation!, false)); // Always show
-let projectName = $derived(mapCtx.getContextualProjectName(project!)); // Always show  
-let layerName = $derived(mapCtx.getContextualLayerName(layer!)); // Hide if only one layer
+let organisationName = $derived(appCtx.getContextualOrganisationName(organisation!, false)); // Always show
+let projectName = $derived(appCtx.getContextualProjectName(project!)); // Always show  
+let layerName = $derived(appCtx.getContextualLayerName(layer!)); // Hide if only one layer
 
 // FUNCTIONS
 function toggleMenu(e: Event) {

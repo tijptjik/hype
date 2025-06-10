@@ -6,19 +6,21 @@ import Entities from '$lib/components/sidebar/Entities.svelte';
 import FilterInput from '$lib/components/menu/FilterInput.svelte';
 import StatBar from '$lib/components/sidebar/StatBar.svelte';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 import { getSidebarState } from '$lib/context/sidebar.svelte';
 // ENUMS
 import { FirstClassResource, HierarchicalResource } from '$lib/enums';
 
-let resourceState = getHierarchicalResourceState();
+let adminCtx = getAdminCtx();
 let sidebarState = getSidebarState();
 
-let { resourceType }: { resourceType: HierarchicalResource } = $props();
+let { resourceType }: { resourceType: FirstClassResource } = $props();
 
-let isFilterable = $derived(resourceState.hasManyEntities(resourceType));
+let isFilterable = $derived(
+  adminCtx.hasManyEntities(resourceType)
+);
 let showFilters = $derived(
-  sidebarState.isOpen() && sidebarState.isSectionOpen(resourceType) && isFilterable
+  sidebarState.isOpen() && sidebarState.isSectionOpen(resourceType as unknown as HierarchicalResource) && isFilterable
 );
 
 /**
@@ -29,14 +31,16 @@ let showFilters = $derived(
  * of filtered resources and applies a limit to ensure the container doesn't
  * grow too large.
  *
- * @param {HierarchicalResource} resource - The type of resource to calculate the max height for
+ * @param {FirstClassResource} resource - The type of resource to calculate the max height for
  * @returns {string} A Tailwind CSS class string for the max-height
  */
 const getMaxHeightItemsContainer = (
-  resource: HierarchicalResource,
+  resource: FirstClassResource,
   isFilterable: boolean = false
 ): string => {
-  const count = resourceState.getFilteredResource(resource as unknown as FirstClassResource).length;
+  const count = adminCtx.getFilteredResource(
+    resource as unknown as FirstClassResource
+  ).length;
   let height = count * 54; // 54px is the height of an entity
   if (isFilterable) {
     height += 54; // Add 54px for the filter
@@ -51,7 +55,7 @@ const getMaxHeightItemsContainer = (
   class="flex flex-col transition-[max-height] duration-300 ease-in-out"
   class:flex-grow={showFilters || navItems[resourceType].isAlwaysExpanded}
   style="max-height: {resourceType != 'feature'
-    ? getMaxHeightItemsContainer(resourceType, isFilterable)
+    ? getMaxHeightItemsContainer(resourceType as unknown as FirstClassResource, isFilterable)
     : ''}">
   <!-- FILTER -->
   {#if showFilters}

@@ -10,7 +10,7 @@ import { hashicon } from '@emeraldpay/hashicon';
 // SERVICES
 import { getURLfromImage } from '$lib/client/services/image';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
 import Image from '$lib/components/common/Image.svelte';
 // ENUMS
@@ -97,12 +97,12 @@ const getPropertyValue = (entity: any, keyPath: string, useI18n = true): any => 
   return result;
 };
 
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
 const href = $derived(
-  resourceState.activeResource
-    ? `${ADMIN_PATH}/${resourceState.getEntityPath(
-        resourceState.activeResource,
+  adminCtx.activeResource
+    ? `${ADMIN_PATH}/${adminCtx.getEntityPath(
+        adminCtx.activeResource,
         entity.id
       )}${page.url.search}`
     : null
@@ -120,7 +120,7 @@ const getHashiconUrl = (id: string) => {
 const onclick = (e: MouseEvent | KeyboardEvent) => {
   e.preventDefault();
   if (href) {
-    resourceState.setFacet('core');
+    adminCtx.setFacet('core');
     goto(href);
   }
 };
@@ -180,7 +180,7 @@ const onclick = (e: MouseEvent | KeyboardEvent) => {
           {@render badges(entity)}
         {:else if keyMap.badges?.length}
           <div class="flex flex-row flex-wrap justify-center gap-2 py-2 align-middle">
-            {#each keyMap.badges.filter((badge) => !badge.superAdminOnly || resourceState.session?.user?.superAdmin === true) as badge}
+            {#each keyMap.badges.filter((badge) => !badge.superAdminOnly || adminCtx.session?.user?.superAdmin === true) as badge}
               {#if badge.type === 'boolean'}
                 {@const boolValue = getNestedValue(entity, badge.label)}
                 <span

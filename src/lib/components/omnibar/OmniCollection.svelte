@@ -3,7 +3,7 @@
 import { slide, fade } from 'svelte/transition';
 import { cubicInOut } from 'svelte/easing';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
 // I18N
 import { getI18n } from '$lib/i18n';
@@ -28,13 +28,13 @@ let {
 
 // CONTEXT
 const omniCtx = getOmniContext();
-const mapCtx = getMapCtx();
-const userPreferences = $derived(mapCtx.getUserPreferences());
+const appCtx = getAppCtx();
+const userPreferences = $derived(appCtx.getUserPreferences());
 
 // STATE
 let currentIndex = $derived(
-  mapCtx.state.active.collection?.items.findIndex(
-    (item) => item.id === mapCtx.state.active.feature?.id
+  appCtx.state.active.collection?.items.findIndex(
+    (item) => item.id === appCtx.state.active.feature?.id
   ) || -1
 );
 let listContainer: HTMLUListElement | null = $state(null);
@@ -56,7 +56,7 @@ function handleItemClick(event: Event, index: number) {
   if (mode === 'navigation') {
     omniCtx.toggleTray(event);
   }
-  mapCtx.navToIndex(index, { isCardOpen: omniCtx.state.isCardOpen });
+  appCtx.navToIndex(index, { isCardOpen: omniCtx.state.isCardOpen });
   omniCtx.openCard();
 }
 

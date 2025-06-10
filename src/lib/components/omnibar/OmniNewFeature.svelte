@@ -3,25 +3,25 @@
 import { m } from '$lib/i18n';
 // CONTEXT
 import { getOmniContext } from '$lib/context/omni.svelte';
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
 import type { Layer, Project } from '$lib/types';
 // CONTEXT
 const omniCtx = getOmniContext();
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 let handleClick = (e: Event) => {
   e.preventDefault();
   e.stopPropagation();
   omniCtx.setMode('new-feature');
   // Determine whether there is only a single layer active
-  const activeLayers = mapCtx.state.prisms.layer;
+  const activeLayers = appCtx.state.prisms.layer;
   if (activeLayers.length === 1) {
     // If only one layer is active, proceed with that layer
-    const layer = mapCtx.getLayerById(activeLayers[0]);
-    const project = mapCtx.getProject(layer as Layer);
-    const organisation = mapCtx.getOrganisation(project as Project);
-    mapCtx.setNewFeature({
+    const layer = appCtx.getLayerById(activeLayers[0]);
+    const project = appCtx.getProject(layer as Layer);
+    const organisation = appCtx.getOrganisation(project as Project);
+    appCtx.setNewFeature({
       layerId: layer?.id,
       projectId: project?.id,
       organisationId: organisation?.id,

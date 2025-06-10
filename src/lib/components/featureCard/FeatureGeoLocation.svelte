@@ -5,7 +5,7 @@ import { GlobeAlt, Check, PencilSquare } from '@steeze-ui/heroicons';
 // I18N
 import { getI18n } from '$lib/i18n';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 // TYPES
 import type { Feature, UserContributedFeature } from '$lib/types';
@@ -20,11 +20,11 @@ type Props = {
 let { feature }: Props = $props();
 
 // CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 const cardCtx = getFeatureCardContext();
 
 // STATE : SESSION
-const userPreferences = $derived(mapCtx.getUserPreferences());
+const userPreferences = $derived(appCtx.getUserPreferences());
 
 // STATE : LOCAL
 let isEditingAddress = $state(false);
@@ -56,7 +56,7 @@ function handleAddressSubmit() {
   if (currentAddress.trim()) {
     isEditingAddress = false;
     if (cardCtx.isNewMode) {
-      mapCtx.updateNewFeatureValueI18n('displayAddress', currentAddress);
+      appCtx.updateNewFeatureValueI18n('displayAddress', currentAddress);
     }
   }
 }

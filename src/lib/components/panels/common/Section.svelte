@@ -75,7 +75,6 @@ const toggle = (e: MouseEvent) => {
       {@render children()}
     </div>
   {:else if collapsedContent}
-    {@debug isOpen}
     <div class="flex min-h-6 flex-shrink-0 flex-grow flex-col">
       {@render collapsedContent()}
     </div>

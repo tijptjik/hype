@@ -5,7 +5,7 @@ import { m } from '$lib/i18n';
 // SERVICES
 import { sortProperties } from '$lib/client/services/property';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // Types
 import type { Feature } from '$lib/types';
 
@@ -13,10 +13,10 @@ import type { Feature } from '$lib/types';
 let { feature }: { feature: Feature } = $props();
 
 // STATE : CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 // STATE : SESSION
-const userPreferences = $derived(mapCtx.getUserPreferences());
+const userPreferences = $derived(appCtx.getUserPreferences());
 
 // FUNCTIONS
 // Sort properties by type (classifiers first) then rank

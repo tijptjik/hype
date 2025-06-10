@@ -6,12 +6,12 @@ import { XMark } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 import { slide } from 'svelte/transition';
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 // Get reactive filter count
-const filterCount = $derived(mapCtx.getFilterCount());
+const filterCount = $derived(appCtx.getFilterCount());
 </script>
 
 <!-- TODO : Move to the bottom of the panel as an absolute bottom element -->
@@ -21,7 +21,7 @@ const filterCount = $derived(mapCtx.getFilterCount());
     <button
       class="btn btn-ghost btn-sm ml-4 h-auto w-[calc(100%-1rem)] items-center justify-start rounded-none rounded-l-lg border-3 border-base-300 bg-black px-4 py-4 font-mono font-normal hover:text-white"
       disabled={filterCount.neighbourhoods === 0 && filterCount.properties === 0}
-      onclick={() => mapCtx.resetFilters()}
+      onclick={() => appCtx.resetFilters()}
       transition:slide={{ duration: 200 }}>
       {#if filterCount.neighbourhoods === 0 && filterCount.properties === 0}
         {m.filters__reset()}

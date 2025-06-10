@@ -7,17 +7,17 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { Language, ChevronDown, ChevronUp } from '@steeze-ui/heroicons';
 import Section from '$lib/components/panels/common/Section.svelte';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // ENUMS
 import { supportedLocales, localeNames } from '$lib/enums';
 // TYPES
 import type { UserPreferences } from '$lib/types';
 
 // CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 // Ensure user preferences object exists and is reactive
-const userPreferences: UserPreferences = $derived(mapCtx.getUserPreferences());
+const userPreferences: UserPreferences = $derived(appCtx.getUserPreferences());
 
 // Advanced section features
 const advancedSettings = $derived([
@@ -83,7 +83,7 @@ let advancedOpen = $state(false);
               value={locale}
               class="radio-primary radio radio-sm mr-4 h-5 w-5 cursor-pointer"
               checked={getLocale() === locale}
-              onclick={async () => await mapCtx.setLocale(locale)} />
+              onclick={async () => await appCtx.setLocale(locale)} />
           </div>
         {/each}
       </div>
@@ -110,7 +110,7 @@ let advancedOpen = $state(false);
               class="toggle toggle-primary toggle-sm flex-shrink-0"
               checked={userPreferences.fallbackLocales?.includes(locale) || false}
               onchange={(e) =>
-                mapCtx.setFallbackLocales(locale, e.currentTarget.checked)} />
+                appCtx.setFallbackLocales(locale, e.currentTarget.checked)} />
           </div>
         {/each}
       </div>
@@ -138,7 +138,7 @@ let advancedOpen = $state(false);
               class="toggle toggle-primary toggle-sm flex-shrink-0"
               checked={setting.currentValue}
               onchange={(e) =>
-                mapCtx.setAdvancedFeature(setting.code as keyof UserPreferences, e.currentTarget.checked)} />
+                appCtx.setAdvancedFeature(setting.code as keyof UserPreferences, e.currentTarget.checked)} />
           </div>
         {/each}
       </div>

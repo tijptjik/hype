@@ -11,7 +11,9 @@ let { children }: { children: any } = $props();
 
 <svelte:window bind:innerWidth />
 
-{#if !isViewportWideEnough}
+{#if isViewportWideEnough}
+  {@render children()}
+{:else}
   <div
     class="fixed z-[100] flex h-screen w-full items-center justify-center bg-base-100 p-4 caret-transparent">
     <div class="card w-full max-w-md border border-base-300 bg-base-200 shadow-xl">
@@ -51,6 +53,4 @@ let { children }: { children: any } = $props();
       </div>
     </div>
   </div>
-{:else}
-  {@render children()}
 {/if}

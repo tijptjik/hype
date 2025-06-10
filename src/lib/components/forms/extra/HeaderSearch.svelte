@@ -5,7 +5,7 @@ import { slide } from 'svelte/transition';
 import { MagnifyingGlass, XMark, ChevronRight } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // SERVICES
 import { getURLfromImage } from '$lib/client/services/image';
 
@@ -25,7 +25,7 @@ type Props = {
 };
 
 // STATE : CONTEXT :: RESOURCE
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
 // PROPS
 let {
@@ -35,9 +35,9 @@ let {
   isExistingCheck,
   toItem = (item: ResultType) => {
     const formId =
-      resourceState.activeResource === 'project' ? 'projectId' : 'organisationId';
+      adminCtx.activeResource === 'project' ? 'projectId' : 'organisationId';
     const disco =
-      resourceState.activeResource === 'project' ? 'project' : 'organisation';
+      adminCtx.activeResource === 'project' ? 'project' : 'organisation';
     return {
       type: disco as 'project' | 'organisation',
       userId: item.id,

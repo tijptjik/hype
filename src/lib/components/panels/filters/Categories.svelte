@@ -10,7 +10,7 @@ import CategoryFilter from '$lib/components/panels/filters/CategoryFilter.svelte
 import RangeFilter from '$lib/components/panels/filters/RangeFilter.svelte';
 import SelectedFilters from '$lib/components/panels/filters/SelectedFilters.svelte';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
 import type {
   Id,
@@ -22,12 +22,12 @@ import type {
 } from '$lib/types'; // Ensure Property type is imported
 
 // Initialize map state
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
-let organisations = $derived(mapCtx.state.resources.organisation);
-let projects = $derived(mapCtx.state.resources.project);
-let layers = $derived(mapCtx.state.resources.layer);
-let activeLayerIds = $derived(new Set(mapCtx.state.prisms.layer));
+let organisations = $derived(appCtx.state.resources.organisation);
+let projects = $derived(appCtx.state.resources.project);
+let layers = $derived(appCtx.state.resources.layer);
+let activeLayerIds = $derived(new Set(appCtx.state.prisms.layer));
 
 // Helper function to find layer and project details
 function getLayerDetails(
@@ -68,9 +68,9 @@ let layerCategories = $derived(
 
       // Construct hierarchy info
       const hierarchy = {
-        organisation: mapCtx.getContextualOrganisationName(organisation),
-        project: mapCtx.getContextualProjectName(project),
-        layer: mapCtx.getContextualLayerName(layer),
+        organisation: appCtx.getContextualOrganisationName(organisation),
+        project: appCtx.getContextualProjectName(project),
+        layer: appCtx.getContextualLayerName(layer),
         layerId: layer.id // Pass layerId for direct filter access
       };
 
@@ -87,7 +87,7 @@ let layerCategories = $derived(
 </script>
 
 {#snippet SelectedCategories(layerId: Id, properties: Property[])}
-  <SelectedFilters {layerId} {mapCtx} {properties} />
+  <SelectedFilters {layerId} {appCtx} {properties} />
 {/snippet}
 
 <!-- LAYOUT -->
@@ -109,7 +109,7 @@ let layerCategories = $derived(
           <RangeFilter
             key={property.key}
             layerId={hierarchy.layerId}
-            label={getI18n(property, 'label', mapCtx.getUserPreferences()) ||
+            label={getI18n(property, 'label', appCtx.getUserPreferences()) ||
               property.key}
             min={property.min!}
             max={property.max!}
@@ -119,7 +119,7 @@ let layerCategories = $derived(
           <CategoryFilter
             key={property.key}
             layerId={hierarchy.layerId}
-            label={getI18n(property, 'label', mapCtx.getUserPreferences()) ||
+            label={getI18n(property, 'label', appCtx.getUserPreferences()) ||
               property.key}
             values={(property.values as PropertyValue[])?.map(
               (v) => v.i18n?.[getLocale()]?.value

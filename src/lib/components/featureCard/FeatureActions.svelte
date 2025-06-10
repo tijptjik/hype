@@ -12,7 +12,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { enGB, zhCN, zhHK } from 'date-fns/locale';
 // CONTEXT
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
 // SERVICES
 import {
@@ -34,13 +34,13 @@ import type { Feature, NewFeatureTask, UserContributedFeature } from '$lib/types
 import type { Point } from 'geojson';
 
 // CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 let cardCtx = getFeatureCardContext();
 let omniCtx = getOmniContext();
 const flash = getFlash(page);
 
 // STATE : SESSION
-let attribution = $derived(mapCtx.getUser().attribution || '');
+let attribution = $derived(appCtx.getUser()!.attribution || m.misty_awake_haddock_tap());
 
 // STATE : PROPS
 let { feature }: { feature: Feature | UserContributedFeature } = $props();
@@ -51,13 +51,13 @@ let isSubmittingVisit = $state(false);
 
 let wishlistedFeature = $derived(
   'id' in feature
-    ? mapCtx.getWishlistUserFeatures().find((uf) => uf.featureId === feature.id)
+    ? appCtx.getWishlistUserFeatures().find((uf) => uf.featureId === feature.id)
     : undefined
 );
 let isWishlisted = $derived(!!wishlistedFeature);
 let visitedFeature = $derived(
   'id' in feature
-    ? mapCtx.getVisitedUserFeatures().find((uf) => uf.featureId === feature.id)
+    ? appCtx.getVisitedUserFeatures().find((uf) => uf.featureId === feature.id)
     : undefined
 );
 let isVisited = $derived(!!visitedFeature);
@@ -68,7 +68,7 @@ async function toggleWishlisted() {
 
   try {
     await toggleWishlistStatus(
-      mapCtx.user.id,
+      appCtx.user!.id,
       feature.id,
       isWishlisted,
       visitedFeature?.isVisited || false,
@@ -76,7 +76,7 @@ async function toggleWishlisted() {
     );
 
     // Optimistically update the UI
-    await mapCtx.invalidateAndRefresh('userFeatures');
+    await appCtx.invalidateAndRefresh('userFeatures');
   } catch (error) {
     console.error('Error updating wishlist status:', error);
     $flash = { type: 'error', message: 'Failed to update wishlist status' };
@@ -91,14 +91,14 @@ async function toggleVisited() {
 
   try {
     await toggleVisitedStatus(
-      mapCtx.user.id,
+      appCtx.user!.id,
       feature.id,
       isVisited,
       wishlistedFeature?.isWishlisted || false
     );
 
     // Optimistically update the UI
-    await mapCtx.invalidateAndRefresh('userFeatures');
+    await appCtx.invalidateAndRefresh('userFeatures');
   } catch (error) {
     console.error('Error updating visited status:', error);
     $flash = { type: 'error', message: 'Failed to update visited status' };
@@ -122,9 +122,9 @@ async function submitMissingReport() {
   try {
     cardCtx.isSubmitting = true;
 
-    const layer = mapCtx.getLayer(feature as Feature)!;
-    const project = mapCtx.getProject(layer)!;
-    const organisation = mapCtx.getOrganisation(project)!;
+    const layer = appCtx.getLayer(feature as Feature)!;
+    const project = appCtx.getProject(layer)!;
+    const organisation = appCtx.getOrganisation(project)!;
 
     // Submit using client service
     await submitMissingReportAPI(
@@ -134,7 +134,7 @@ async function submitMissingReport() {
       organisation,
       cardCtx.userData.missingReason,
       cardCtx.userData.photos,
-      mapCtx.user.id
+      appCtx.user!.id
     );
 
     // Reset form and show success message
@@ -157,7 +157,7 @@ async function submitMissingReport() {
 }
 
 async function submitNewFeature() {
-  const newFeature = mapCtx.getNewFeature() as NewFeatureTask;
+  const newFeature = appCtx.getNewFeature() as NewFeatureTask;
 
   // Validate inputs
   if (cardCtx.userData.photos.length === 0) {
@@ -186,7 +186,7 @@ async function submitNewFeature() {
     cardCtx.setMode(FeatureCardMode.Display);
     // Reset form and show success message
     cardCtx.userData.photos = [];
-    mapCtx.resetNewFeature();
+    appCtx.resetNewFeature();
     cardCtx.validationError = '';
   } catch (error) {
     console.error('Error submitting new feature:', error);
@@ -215,9 +215,9 @@ async function submitNewPhotos() {
   try {
     cardCtx.isSubmitting = true;
 
-    const layer = mapCtx.getLayer(feature as Feature)!;
-    const project = mapCtx.getProject(layer)!;
-    const organisation = mapCtx.getOrganisation(project)!;
+    const layer = appCtx.getLayer(feature as Feature)!;
+    const project = appCtx.getProject(layer)!;
+    const organisation = appCtx.getOrganisation(project)!;
 
     // Submit using client service
     await submitNewPhotosAPI(
@@ -226,7 +226,7 @@ async function submitNewPhotos() {
       project,
       organisation,
       cardCtx.userData.photos,
-      mapCtx.user.id
+      appCtx.user!.id
     );
 
     // Reset form and show success message

@@ -13,15 +13,15 @@ import FilteredNeighbourhood from '$lib/components/panels/filters/FilteredNeighb
 import ResourceContainer from '$lib/components/panels/common/ResourceContainer.svelte';
 import SelectedResources from '$lib/components/panels/common/SelectedResources.svelte';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // TYPE
-import type { NeighbourhoodMap } from '$lib/types';
+import type { NeighbourhoodMap, Neighbourhood } from '$lib/types';
 
 // Initialize map state
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 // Get cached features for counting
-const selectedNeighbourhoods = $derived(mapCtx.state.filters.neighbourhoods);
+const selectedNeighbourhoods = $derived(appCtx.state.filters.neighbourhoods);
 
 let searchTerm = $state('');
 
@@ -31,13 +31,13 @@ function filterNeighbourhoods(neighbourhoods: NeighbourhoodMap, term: string) {
   const searchLower = term.toLowerCase();
   return Object.entries(neighbourhoods).filter(([key, data]) => {
     return (
-      getI18n(data, 'name', mapCtx.getUserPreferences())
+      getI18n(data, 'name', appCtx.getUserPreferences())
         .toLowerCase()
         .includes(searchLower) ||
-      getI18n(data, 'district', mapCtx.getUserPreferences())
+      getI18n(data, 'district', appCtx.getUserPreferences())
         .toLowerCase()
         .includes(searchLower) ||
-      getI18n(data, 'region', mapCtx.getUserPreferences())
+      getI18n(data, 'region', appCtx.getUserPreferences())
         .toLowerCase()
         .includes(searchLower)
     );
@@ -52,7 +52,7 @@ const filteredNeighbourhoods = $derived(
 watch(
   () => selectedNeighbourhoods,
   () => {
-    mapCtx.refreshFeatures();
+    appCtx.refreshFeatures();
   }
 );
 </script>
@@ -61,12 +61,12 @@ watch(
 
 {#snippet SelectedNeighbourhoods()}
   <SelectedResources
-    {mapCtx}
+    {appCtx}
     type="neighbourhood"
     resources={Object.entries(neighbourhoods).map(([id, data]) => ({
       ...data,
       id
-    }))}
+    })) as unknown as Neighbourhood[]}
     selectedIds={selectedNeighbourhoods}
     colorClass="text-emerald-600" />
 {/snippet}
@@ -80,7 +80,7 @@ watch(
   collapsedContent={SelectedNeighbourhoods}
   position="right">
   {#if Object.keys(neighbourhoods).length > 4}
-    <FilterBar bind:searchTerm position="right" onReset={mapCtx.resetNeighbourhoods} />
+    <FilterBar bind:searchTerm position="right" onReset={appCtx.resetNeighbourhoods} />
   {/if}
   <ResourceContainer>
     {#each filteredNeighbourhoods as [neighbourhood, data]}

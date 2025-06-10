@@ -5,10 +5,10 @@ import Icon from '$lib/components/common/Icon.svelte';
 // I18N
 import { getI18n, getLocale } from '$lib/i18n';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 
 // CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 // PROPS
 const {
@@ -52,11 +52,11 @@ const {
       {#if resourceParent}
         <p class="flex space-x-0.5 font-mono text-xs uppercase tracking-widest">
           <span class="text-primary"
-            >{getI18n(resourceParent, 'nameShort', mapCtx.getUserPreferences())}
+            >{getI18n(resourceParent, 'nameShort', appCtx.getUserPreferences())}
           </span>
         </p>
       {/if}
-      <p class="font-light">{getI18n(resource, 'name', mapCtx.getUserPreferences())}</p>
+      <p class="font-light">{getI18n(resource, 'name', appCtx.getUserPreferences())}</p>
     </div>
   </div>
   <div

@@ -3,7 +3,7 @@
 import { getI18n, getFPI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // COMPONENTS
 import Map from '$lib/components/common/Map.svelte';
 // TYPES
@@ -11,7 +11,7 @@ import type {Task } from '$lib/types';
 import type { Point } from 'geojson';
 
 // CONTEXT
-let mapCtx = getMapCtx();
+let appCtx = getAppCtx();
 
 let { task }: { task: Task } = $props();
 </script>
@@ -24,21 +24,21 @@ let { task }: { task: Task } = $props();
     <div class="stat">
       <div class="stat-title">{m.feature__title()}</div>
       <div class="stat-value text-lg">
-        {getI18n(task.feature, 'title', mapCtx.getUserPreferences())}
+        {getI18n(task.feature, 'title', appCtx.getUserPreferences())}
       </div>
     </div>
 
     <div class="stat">
       <div class="stat-title">{m.feature__description()}</div>
       <div class="stat-value text-wrap text-lg">
-        {getI18n(task.feature, 'description', mapCtx.getUserPreferences())}
+        {getI18n(task.feature, 'description', appCtx.getUserPreferences())}
       </div>
     </div>
 
     <div class="stat">
       <div class="stat-title">{m.feature__address()}</div>
       <div class="stat-value text-wrap text-lg">
-        {getI18n(task.feature, 'displayAddress', mapCtx.getUserPreferences())}
+        {getI18n(task.feature, 'displayAddress', appCtx.getUserPreferences())}
       </div>
     </div>
   </div>
@@ -53,10 +53,10 @@ let { task }: { task: Task } = $props();
           {#if property.property}
             <div class="stat bg-base-200 rounded-lg p-3">
               <div class="stat-title text-xs">
-                {getI18n(property.property, 'label', mapCtx.getUserPreferences())}
+                {getI18n(property.property, 'label', appCtx.getUserPreferences())}
               </div>
               <div class="stat-value text-wrap text-sm font-medium">
-                {getFPI18n(property, mapCtx.getUserPreferences())}
+                {getFPI18n(property, appCtx.getUserPreferences())}
               </div>
             </div>
           {/if}

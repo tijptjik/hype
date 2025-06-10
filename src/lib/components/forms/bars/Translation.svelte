@@ -17,7 +17,7 @@ type TranslationBarProps = {
   form: Form;
   loadingLocale?: Locale | null;
   isClearAllVisible?: boolean;
-  isTranslationDisabled: boolean;
+  isTranslationDisabled?: boolean;
   onTranslate?: (event: Event, sourceLocale: Locale) => Promise<void>;
   onClear?: (event: Event) => void;
 };

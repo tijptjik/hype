@@ -7,12 +7,12 @@ import { afterNavigate } from '$app/navigation';
 import { MagnifyingGlass, XMark, Sun } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
 import type { ResourceType, AdminFilterStates } from '$lib/types';
 
 // STATE : CONTEXT :: ROUTER
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
 // STATE : PROPS
 const {
@@ -31,7 +31,7 @@ const {
 
 // Reset filter text after navigation if it's for the current resource
 afterNavigate(() => {
-  if (resourceState.activeResource === resourceType && resourceType !== 'feature') {
+  if (adminCtx.activeResource === resourceType && resourceType !== 'feature') {
     resetInput();
   }
 });
@@ -49,24 +49,24 @@ function handleUnpublishedOnlyToggle(e: Event) {
   // hide the pinned filters.
   e.preventDefault();
   let showUnpublishedOnly = (e.target as HTMLInputElement).checked;
-  resourceState.state.filters[resourceType as keyof AdminFilterStates].isPublished =
+  adminCtx.state.filters[resourceType as keyof AdminFilterStates].isPublished =
     showUnpublishedOnly ? false : null;
 }
 let showUnpublishedOnly = $derived(
-  resourceState.state.filters[resourceType as keyof AdminFilterStates].isPublished ===
+  adminCtx.state.filters[resourceType as keyof AdminFilterStates].isPublished ===
     false
 );
 
 let showUnreviewedOnly = $derived(
-  resourceState.state.filters[resourceType as keyof AdminFilterStates].isReviewed ===
+  adminCtx.state.filters[resourceType as keyof AdminFilterStates].isReviewed ===
     false
 );
 function handleReviewedToggle(e: Event) {
   e.preventDefault();
   let showUnreviewedOnly = (e.target as HTMLInputElement).checked;
-  resourceState.state.filters[resourceType as keyof AdminFilterStates].isReviewed =
+  adminCtx.state.filters[resourceType as keyof AdminFilterStates].isReviewed =
     showUnreviewedOnly ? false : null;
-  resourceState.refreshTasks();
+  adminCtx.refreshTasks();
 }
 
 // HANDLERS : KEYBOARD EVENTS
@@ -78,12 +78,12 @@ function handleKeydown(event: KeyboardEvent) {
 
 // UTILS
 function resetInput() {
-  resourceState.state.filters[resourceType as keyof AdminFilterStates].text = '';
+  adminCtx.state.filters[resourceType as keyof AdminFilterStates].text = '';
 }
 
 function handleInput(e: Event) {
   const target = e.target as HTMLInputElement;
-  resourceState.state.filters[resourceType as keyof AdminFilterStates].text =
+  adminCtx.state.filters[resourceType as keyof AdminFilterStates].text =
     target.value;
 }
 </script>
@@ -132,14 +132,14 @@ function handleInput(e: Event) {
         ? 'h-10 min-w-72 rounded-xl'
         : 'rounded-none'}"
       bind:value={
-        resourceState.state.filters[resourceType as keyof AdminFilterStates].text
+        adminCtx.state.filters[resourceType as keyof AdminFilterStates].text
       }
       oninput={handleInput}
       onkeydown={handleKeydown}
       tabindex="1"
       aria-label="Filter {resourceType}s" />
     <div class="absolute inset-y-0 right-2 flex items-center pr-3">
-      {#if resourceState.state.filters[resourceType as keyof AdminFilterStates].text}
+      {#if adminCtx.state.filters[resourceType as keyof AdminFilterStates].text}
         <button
           onclick={resetInput}
           class="focus:outline-none"

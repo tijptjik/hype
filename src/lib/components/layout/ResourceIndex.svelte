@@ -5,11 +5,11 @@ import { fade, scale, fly, blur } from 'svelte/transition';
 import { onDestroy } from 'svelte';
 import { cubicOut, expoIn, sineOut } from 'svelte/easing';
 // ENUMS
-import { HierarchicalResource } from '$lib/enums';
+import { FirstClassResource } from '$lib/enums';
 // COMPONENTS
 import EntityCard from '$lib/components/layout/EntityCard.svelte';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
 import type { Resource } from '$lib/types';
 let {
@@ -21,7 +21,7 @@ let {
 } = $props();
 
 // CONTEXT
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
 // STATE
 let isInitialLoading = $state(true);
@@ -40,7 +40,7 @@ let updateTimeout: number;
 
 // FILTER TEXT
 let filterText = $derived(
-  resourceState.state.filters[resourceState.activeResource as HierarchicalResource]
+  adminCtx.state.filters[adminCtx.activeResource as FirstClassResource]
     ?.text
 );
 let lastUsedFilterText = $state('');

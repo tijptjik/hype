@@ -5,14 +5,14 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { Beaker } from '@steeze-ui/heroicons';
 import Section from '$lib/components/panels/common/Section.svelte';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
 import type { ExperimentalFeatureConfig, UserExperimental } from '$lib/types';
 
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
-// Get experimental features from mapCtx
-const experimentalFeatures = $derived(mapCtx.getUser().experimental || {});
+// Get experimental features from appCtx
+const experimentalFeatures = $derived(appCtx.getUser()?.experimental || {});
 
 // Helper function to safely get feature state
 const getFeatureState = (code: keyof UserExperimental): boolean => {
@@ -60,7 +60,7 @@ const featuresConfig: ExperimentalFeatureConfig[] = [
           class="flex-grow-1 toggle toggle-primary toggle-sm flex-shrink-0"
           checked={getFeatureState(feature.code)}
           onchange={(e) =>
-            mapCtx.setExperimental(feature.code, e.currentTarget.checked)} />
+            appCtx.setExperimental(feature.code, e.currentTarget.checked)} />
       </div>
     {/each}
   </div>

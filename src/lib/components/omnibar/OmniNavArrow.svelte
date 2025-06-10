@@ -4,11 +4,11 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { ChevronLeft, ChevronRight } from '@steeze-ui/heroicons';
 // CONTEXT
 import { getOmniContext } from '$lib/context/omni.svelte';
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 
 // CONTEXT
 const omniCtx = getOmniContext();
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 // PROPS
 type Props = {
@@ -17,8 +17,8 @@ type Props = {
 
 let { direction }: Props = $props();
 let currentIndex = $derived(
-  mapCtx.state.active.collection?.items.findIndex(
-    (item) => item.id === mapCtx.state.active.feature?.id
+  appCtx.state.active.collection?.items.findIndex(
+    (item) => item.id === appCtx.state.active.feature?.id
   ) || -1
 );
 </script>
@@ -29,17 +29,17 @@ let currentIndex = $derived(
     {direction === 'right' ? 'w-140:rounded-r-md ml-1.5' : 'w-140:rounded-l-md mr-1.5'}"
   disabled={direction === 'left'
     ? currentIndex <= 0
-    : mapCtx.state.active.collection!.items.length - 1 <= currentIndex}
+    : appCtx.state.active.collection!.items.length - 1 <= currentIndex}
   onclick={() =>
     direction === 'left'
-      ? mapCtx.navPrevious({ isCardOpen: omniCtx.state.isCardOpen })
-      : mapCtx.navNext({ isCardOpen: omniCtx.state.isCardOpen })}>
+      ? appCtx.navPrevious({ isCardOpen: omniCtx.state.isCardOpen })
+      : appCtx.navNext({ isCardOpen: omniCtx.state.isCardOpen })}>
   <Icon
     src={direction === 'left' ? ChevronLeft : ChevronRight}
     class="h-5 w-5 group-hover:text-neutral-content {(
       direction === 'left'
         ? currentIndex <= 0
-        : mapCtx.state.active.collection!.items.length - 1 <= currentIndex
+        : appCtx.state.active.collection!.items.length - 1 <= currentIndex
     )
       ? 'opacity-50'
       : ''} transition-opacity duration-200" />

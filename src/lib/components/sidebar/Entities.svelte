@@ -6,84 +6,79 @@ import { slide } from 'svelte/transition';
 // LIB
 import { ADMIN_PATH, NEW_REF } from '$lib/index';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 import { getSidebarState } from '$lib/context/sidebar.svelte';
 // COMPONENTS
 import FilterToggle from '$lib/components/sidebar/FilterButton.svelte';
 // ENUMS
-import { HierarchicalResource } from '$lib/enums';
+import { FirstClassResource, HierarchicalResource } from '$lib/enums';
 // NAVIGATION
 import { navItems, navigateOnAdmin } from '$lib/navigation';
-// ICONS
-import Icon from '$lib/components/common/Icon.svelte';
-import { ChevronRight } from '@steeze-ui/heroicons';
 // TYPES
 import type {
   Resource,
-  ResourceTypeWithChildren,
   Id,
   Code,
   FilterableResourceType,
   FacetType,
   Task
 } from '$lib/types';
-import { MapCtx } from '$lib/context/map.svelte';
 
 // CONTEXT
-let mapCtx = getMapCtx();
+let appCtx = getAppCtx();
 
-let resourceState = getHierarchicalResourceState();
+let adminCtx = getAdminCtx();
 let sidebarState = getSidebarState();
-let { resourceType } = $props();
+let { resourceType }: { resourceType: FirstClassResource } = $props();
 
 let isCollapsed = $derived(
-  resourceState.hasManyEntities(resourceType) &&
-    !sidebarState.isSectionOpen(resourceType)
+  adminCtx.hasManyEntities(resourceType) && !sidebarState.isSectionOpen(resourceType as unknown as HierarchicalResource)
 );
 
 let entities = $derived.by(() => {
-  return resourceState.getFilteredResource(resourceType as HierarchicalResource);
+  return adminCtx.getFilteredResource(resourceType);
 });
 
 // CONFIG
 const filterableByQueryParams: FilterableResourceType[] = [
-  HierarchicalResource.organisation,
-  HierarchicalResource.project,
-  HierarchicalResource.layer
+  FirstClassResource.organisation,
+  FirstClassResource.project,
+  FirstClassResource.layer
 ];
 
-let isFilterable = $derived(resourceState.hasManyEntities(resourceType));
+let isFilterable = $derived(adminCtx.hasManyEntities(resourceType));
 let showFilters = $derived(
-  sidebarState.isOpen() && sidebarState.isSectionOpen(resourceType) && isFilterable
+  sidebarState.isOpen() && sidebarState.isSectionOpen(resourceType as unknown as HierarchicalResource) && isFilterable
 );
 
 let isVisible = (id: Id) => {
-  return (
-    showFilters ||
-    (navItems[resourceType as HierarchicalResource].isShownInSidebar &&
-      (resourceState.activeResource === resourceType ||
-        resourceState.state.prisms[resourceType as ResourceTypeWithChildren]?.includes(
-          id
-        ) ||
-        navItems[resourceType as HierarchicalResource].isAlwaysExpanded))
-  );
+  let isVisible = false;
+  if (showFilters) {
+    isVisible = true;
+  } else if (navItems[resourceType].isShownInSidebar) {
+    if (adminCtx.activeResource === resourceType) {
+      isVisible = true;
+    } else if (adminCtx.appCtx.isPrism(resourceType, id)) {
+      isVisible = true;
+    } else if (navItems[resourceType].isAlwaysExpanded) {
+      isVisible = true;
+    }
+  }
+  return isVisible;
 };
-
-let isPrism = (id: Id) =>
-  resourceState.state.prisms[resourceType as ResourceTypeWithChildren]?.includes(id);
 
 let getDisplayName = (entity: Exclude<Resource, Task>) => {
   return getI18n(
-    entity,
+    entity.i18n!,
     {
       [HierarchicalResource.task]: 'title',
       [HierarchicalResource.organisation]: 'name',
       [HierarchicalResource.project]: 'name',
       [HierarchicalResource.layer]: 'name',
       [HierarchicalResource.feature]: 'title'
-    }[resourceType as HierarchicalResource],
-    mapCtx.getUserPreferences()
+    }[resourceType as unknown as HierarchicalResource],
+    appCtx.getUserPreferences() || {}
   );
 };
 </script>
@@ -94,19 +89,19 @@ let getDisplayName = (entity: Exclude<Resource, Task>) => {
     class="scrollbar-thin divide-y divide-base-300 bg-base-300 {isCollapsed
       ? 'flex-grow-0 overflow-y-auto'
       : 'overflow-y-scroll'}
-        {navItems[resourceType as HierarchicalResource].isAlwaysExpanded
+        {navItems[resourceType as FirstClassResource].isAlwaysExpanded
       ? 'h-0 flex-grow'
       : ''}"
     in:slide={{ duration: 400, axis: 'y' }}
     out:slide={{ duration: 400, axis: 'y' }}>
     {#each entities as entity}
-      {@const entityRef: Id | Code = resourceState.getEntityRef(
-      resourceType as HierarchicalResource,
+      {@const entityRef: Id | Code = adminCtx.getEntityRef(
+      resourceType as FirstClassResource,
       entity.id as Id
     ) as Id | Code}
-      {@const isActive = resourceState.activeEntity === entityRef}
-      {@const href = `${ADMIN_PATH}/${resourceState.getEntityPath(
-        resourceType as HierarchicalResource,
+      {@const isActive = adminCtx.activeEntity === entityRef}
+      {@const href = `${ADMIN_PATH}/${adminCtx.getEntityPath(
+        resourceType as FirstClassResource,
         entity.id as Id
       )}`}
       {#if isVisible(entity.id as Id)}
@@ -118,14 +113,14 @@ let getDisplayName = (entity: Exclude<Resource, Task>) => {
               onclick={(e) => {
                 e.preventDefault();
                 // UGLY HACK - TODO: Fix once SuperForms has proper support for Svelte 5
-                if (resourceState.activeEntity === NEW_REF) {
+                if (adminCtx.activeEntity === NEW_REF) {
                   window.location.href = href;
                 } else {
                   navigateOnAdmin(
-                    resourceState,
-                    resourceType as HierarchicalResource,
+                    adminCtx,
+                    resourceType as FirstClassResource,
                     entityRef,
-                    resourceState.activeFacet as FacetType
+                    adminCtx.activeFacet as FacetType
                   );
                 }
               }}
@@ -134,8 +129,10 @@ let getDisplayName = (entity: Exclude<Resource, Task>) => {
                 ? 'h-[52px] px-4'
                 : 'h-[52px] px-6'}"
               class:border-primary={isActive}
-              class:border-secondary={!isActive && isPrism(entity.id as Id)}
-              class:border-base-300={!isActive && !isPrism(entity.id as Id)}>
+              class:border-secondary={!isActive &&
+                appCtx.isPrism(resourceType, entity.id as Id)}
+              class:border-base-300={!isActive &&
+                !appCtx.isPrism(resourceType, entity.id as Id)}>
               {#if sidebarState.isOpen() || !isActive}
                 <span class="ml-[6px] h-4 w-4 text-xs text-white/80"> ●</span>
               {:else if isActive}
@@ -152,7 +149,7 @@ let getDisplayName = (entity: Exclude<Resource, Task>) => {
                 </span>
               {/if}
             </a>
-            {#if sidebarState.isOpen() && filterableByQueryParams.includes(resourceType)}
+            {#if sidebarState.isOpen() && filterableByQueryParams.includes(resourceType as FilterableResourceType)}
               <FilterToggle {resourceType} id={entity.id as Id} />
             {/if}
           </div>

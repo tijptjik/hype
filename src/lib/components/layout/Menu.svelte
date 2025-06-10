@@ -6,7 +6,7 @@ import { fade } from 'svelte/transition';
 // I18N
 import { m } from '$lib/i18n';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // LIB
 import { ADMIN_PATH } from '$lib/index';
 import { goto } from '$app/navigation';
@@ -15,13 +15,24 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { Map, Funnel, Star, Cog6Tooth, ComputerDesktop } from '@steeze-ui/heroicons';
 // TYPES
 import type { IconSource } from '@steeze-ui/svelte-icon';
-import type { PanelState } from '$lib/types';
+import type { PanelState, UserRoleDisco } from '$lib/types';
+import { useSession } from '$lib/auth/client';
 
 // CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 // STATE
-const { session } = page.data;
+const session = useSession();
+
+let showAdminMenu = $derived(
+  $session?.data?.user?.superAdmin ||
+    $session?.data?.user?.roles?.some(
+      (role: UserRoleDisco) =>
+        role.role === 'owner' ||
+        role.role === 'superadmin' ||
+        role.role === 'maintainer'
+    )
+);
 
 const menuItems = [
   { icon: Map, label: m.menu_maps(), panel: 'maps' },
@@ -42,7 +53,7 @@ function handleMenuClick(panel: 'filters' | 'maps' | 'stars' | 'settings' | 'adm
     }
   } else {
     const closeAll = window.innerWidth < 1320;
-    mapCtx.togglePanel(panel as keyof PanelState, closeAll);
+    appCtx.togglePanel(panel as keyof PanelState, closeAll);
   }
 }
 
@@ -80,7 +91,7 @@ let hasViewportHeightIncreased = $derived(innerHeight > initialInnerHeight);
         {@render menuButton(icon, label, panel as keyof PanelState)}
       {/each}
     </div>
-    {#if session?.user?.roles?.some((role) => role.role === 'owner' || role.role === 'superadmin' || role.role === 'maintainer')}
+    {#if showAdminMenu}
       <!-- Admin Menu -->
       <div class="absolute right-0 hidden flex-row items-center gap-2 px-4 lg:flex">
         {@render menuButton(ComputerDesktop, m.menu_admin(), 'admin')}

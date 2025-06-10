@@ -6,13 +6,13 @@ import { PencilSquare } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 
 const cardCtx = getFeatureCardContext();
-const mapCtx = getMapCtx()
+const appCtx = getAppCtx()
 
-let editedAttribution = $state(mapCtx.getUser().attribution || '');
-let editing = $state(!(mapCtx.getUser().attribution || '').trim());
+let editedAttribution = $state(appCtx.getUser()!.attribution || '');
+let editing = $state(!(appCtx.getUser()!.attribution || '').trim());
 let timer: ReturnType<typeof setTimeout>;
 
 // CONTEXT
@@ -24,19 +24,19 @@ const debounceAndUpdateAttribution = (value: string) => {
   editedAttribution = value; // Keep UI responsive
 
   timer = setTimeout(async () => {
-    if (!mapCtx.user?.id) {
+    if (!appCtx.user?.id) {
       console.warn('User session not found. Cannot update attribution.');
       return;
     }
     try {
-      const response = await fetch(`/api/users/${mapCtx.user.id}`, {
+      const response = await fetch(`/api/users/${appCtx.user.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ attribution: value })
       });
       if (response.ok) {
-        if (mapCtx.user) {
-          mapCtx.user.attribution = value;
+        if (appCtx.user) {
+          appCtx.user.attribution = value;
           cardCtx.setAttribution(value);
         }
       } else {
@@ -52,7 +52,7 @@ const debounceAndUpdateAttribution = (value: string) => {
 
 // Ensure editing state is re-evaluated if session changes (e.g. login/logout)
 $effect(() => {
-  const currentAttr = mapCtx.user?.attribution || '';
+  const currentAttr = appCtx.user?.attribution || '';
   editedAttribution = currentAttr;
   editing = !currentAttr.trim();
 });

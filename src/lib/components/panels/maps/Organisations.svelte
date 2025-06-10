@@ -12,16 +12,16 @@ import FilteredResource from '$lib/components/panels/common/FilteredResource.sve
 import ResourceContainer from '$lib/components/panels/common/ResourceContainer.svelte';
 import SelectedResources from '../common/SelectedResources.svelte';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
 import type { Organisation } from '$lib/types';
 
 // Initialize query client and map state
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 // Get cached features for counting
-const organisations = $derived(mapCtx.state.resources.organisation);
-const selectedOrganisations = $derived(mapCtx.state.prisms.organisation);
+const organisations = $derived(appCtx.state.resources.organisation);
+const selectedOrganisations = $derived(appCtx.state.prisms.organisation);
 
 let searchTerm = $state('');
 
@@ -36,13 +36,13 @@ function filterOrganisations(organisations: Organisation[], term: string) {
   const searchLower = term.toLowerCase();
   return organisations.filter((organisation) => {
     return (
-      getI18n(organisation, 'nameShort', mapCtx.getUserPreferences())
+      getI18n(organisation, 'nameShort', appCtx.getUserPreferences())
         .toLowerCase()
         .includes(searchLower) ||
-      getI18n(organisation, 'name', mapCtx.getUserPreferences())
+      getI18n(organisation, 'name', appCtx.getUserPreferences())
         .toLowerCase()
         .includes(searchLower) ||
-      getI18n(organisation, 'description', mapCtx.getUserPreferences())
+      getI18n(organisation, 'description', appCtx.getUserPreferences())
         .toLowerCase()
         .includes(searchLower)
     );
@@ -56,9 +56,9 @@ let isDefaultOpen = $derived(document.body.clientHeight > 1000);
 
 let handleReset = () => {
   if (selectedOrganisations.length == 0) {
-    mapCtx.closePanel('maps')
+    appCtx.closePanel('maps')
   } else {
-    mapCtx.resetOrganisations()
+    appCtx.resetOrganisations()
   }
 }
 </script>
@@ -67,7 +67,7 @@ let handleReset = () => {
 
 {#snippet SelectedOrganisations()}
   <SelectedResources
-    {mapCtx}
+    {appCtx}
     type="organisation"
     resources={organisations}
     selectedIds={selectedOrganisations}
@@ -92,7 +92,7 @@ let handleReset = () => {
         {resource}
         isSelected={selectedOrganisations.includes(resource.id)}
         selectedClass="bg-primary"
-        onClick={() => mapCtx.toggleOrganisation(resource.id)} />
+        onClick={() => appCtx.toggleOrganisation(resource.id)} />
     {/each}
   </ResourceContainer>
 </Section>

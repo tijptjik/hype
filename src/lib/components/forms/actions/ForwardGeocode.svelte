@@ -2,7 +2,7 @@
 // I18N
 import { m } from '$lib/i18n';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // SERVICES
 import {
   fetchForwardGeocodeALSResult,
@@ -20,7 +20,7 @@ import type { IconSource } from '@steeze-ui/heroicons';
 import type { Locale } from '$lib/types';
 
 // CONTEXT
-let mapCtx = getMapCtx();
+let appCtx = getAppCtx();
 
 // STATE : PROPS
 let { form }: { form: FeatureForm } = $props();
@@ -62,7 +62,7 @@ function getStreetAddressAndNeighbourhood(address: string): {
 async function handleGeocode(e: Event, updateCoords: boolean = false) {
   e.preventDefault();
 
-  mapCtx.zoomToMarkerOnly = false;
+  appCtx.zoomToMarkerOnly = false;
 
   try {
     let addressToLookup = $featureForm.i18n?.[sourceLocale]?.displayAddress;

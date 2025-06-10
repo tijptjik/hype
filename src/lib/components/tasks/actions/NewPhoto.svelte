@@ -1,6 +1,6 @@
 <script lang="ts">
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
 import { XCircle, CheckCircle, CheckBadge } from '@steeze-ui/heroicons';
 import Info from '$lib/components/forms/extra/Info.svelte';
@@ -42,7 +42,7 @@ let acceptActions = [
 ];
 
 // CONTEXT :: ROUTER
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
 // ACTIONS
 const handleAction = async (action: string, e: Event, reviewReason?: string) => {
@@ -75,7 +75,7 @@ const handleAction = async (action: string, e: Event, reviewReason?: string) => 
       reviewReason
     });
 
-    resourceState.goToNextTask();
+    adminCtx.goToNextTask();
   } catch (error) {
     console.error(`Failed to ${action} task:`, error);
   }

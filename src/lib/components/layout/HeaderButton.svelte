@@ -1,11 +1,11 @@
 <script lang="ts">
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
 import type { FacetType } from '$lib/types';
 
 // STATE : CONTEXT
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
 let {
   facet,
@@ -19,7 +19,7 @@ let {
 // UTILS
 const onclick = (e: MouseEvent) => {
   e.preventDefault();
-  resourceState.setFacet(facet.ref);
+  adminCtx.setFacet(facet.ref);
 };
 </script>
 

@@ -8,42 +8,42 @@ import { m } from '$lib/i18n';
 import Icon from '$lib/components/common/Icon.svelte';
 import { XCircle, QueueList } from '@steeze-ui/heroicons';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
 
 // CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 const omniCtx = getOmniContext();
 
 // DERIVED -- Titles
 let collectionTitle = $derived(
   omniCtx.isFeatureMode
-    ? getI18n(mapCtx.getActiveFeature()!, 'displayAddress', {
-        ...mapCtx.getUserPreferences(),
+    ? getI18n(appCtx.getActiveFeature()!, 'displayAddress', {
+        ...appCtx.getUserPreferences(),
         allowMachineTranslation: true
       })
     : getI18n(
-        mapCtx.getActiveCollection()!,
+        appCtx.getActiveCollection()!,
         'name',
-        mapCtx.getUserPreferences(),
+        appCtx.getUserPreferences(),
         m.place()
       )
 );
 let featureTitle = $derived(
-  getI18n(mapCtx.getActiveFeature()!, 'title', mapCtx.getUserPreferences())
+  getI18n(appCtx.getActiveFeature()!, 'title', appCtx.getUserPreferences())
 );
 let newFeatureTitle = $derived(
   getI18n(
-    mapCtx.getNewFeature()!,
+    appCtx.getNewFeature()!,
     'title',
-    mapCtx.getUserPreferences(),
+    appCtx.getUserPreferences(),
     m.day_chunky_okapi_cherish()
   )
 );
 
 // DERIVED -- Collection Index and Size
 let index = $derived(omniCtx.navIndex + 1);
-let collectionSize = $derived(mapCtx.getActiveCollection()?.items.length);
+let collectionSize = $derived(appCtx.getActiveCollection()?.items.length);
 
 // DERIVED -- Mode
 let collectionMode = $derived(omniCtx.state.mode);

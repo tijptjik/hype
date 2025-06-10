@@ -12,7 +12,8 @@ import { AppCtx } from '$lib/context/app.svelte';
 import {
   ResourcePath,
   ResourceRefKey as ResourceRefKey,
-  FirstClassResource
+  FirstClassResource,
+  HierarchicalResource
 } from '$lib/enums';
 // GUARDS
 import { isHub } from '$lib/types';
@@ -387,7 +388,7 @@ export class AdminCtx {
   // ═══════════════════════
 
   getFilteredResource = <T extends Organisation | Project | Layer | Feature | Hub>(
-    resource: FirstClassResource,
+    resource: FirstClassResource | HierarchicalResource,
     filters = { text: true, state: true }
   ): T[] => {
     let filterKeys = ['isPublished', 'isArchived'];
@@ -481,7 +482,7 @@ export class AdminCtx {
   };
 
   booleanFilter = (
-    resource: FirstClassResource,
+    resource: FirstClassResource | HierarchicalResource,
     entity: Resource,
     property: string
   ) => {
@@ -655,7 +656,7 @@ export class AdminCtx {
   // UTILS :: LAYOUT
   // ═══════════════════════
 
-  hasManyEntities = (resource: FirstClassResource) => {
+  hasManyEntities = (resource: FirstClassResource | HierarchicalResource) => {
     return this.appCtx.state.resources[resource].length > 3;
   };
 

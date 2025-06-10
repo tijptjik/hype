@@ -6,7 +6,7 @@ import { slide, fade } from 'svelte/transition';
 import { getI18n, getLocale } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
@@ -29,29 +29,29 @@ import type {
 import { MOBILE_MAX_WIDTH } from '$lib/index';
 
 // CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 const omniCtx = getOmniContext();
 
 // STATE : SESSION
-const userPreferences = $derived(mapCtx.getUserPreferences());
+const userPreferences = $derived(appCtx.getUserPreferences());
 // STATE
 let isOpen = $state(false);
 let isValid = $state(false);
 
 let searchQuery = $state('');
 
-let newFeature: DeepPartial<NewFeatureTask> | null = $derived.by(mapCtx.getNewFeature);
+let newFeature: DeepPartial<NewFeatureTask> | null = $derived.by(appCtx.getNewFeature);
 
 // DERIVED STATE
 let selectedOrganisation = $derived(
-  mapCtx.getOrganisationById(newFeature?.organisationId!)
+  appCtx.getOrganisationById(newFeature?.organisationId!)
 );
-let selectedProject = $derived(mapCtx.getProjectById(newFeature?.projectId!));
-let selectedLayer = $derived(mapCtx.getLayerById(newFeature?.layerId!));
+let selectedProject = $derived(appCtx.getProjectById(newFeature?.projectId!));
+let selectedLayer = $derived(appCtx.getLayerById(newFeature?.layerId!));
 
 // PANEL STATE
 let horizontalOffset = $derived.by(() => {
-  const { filters, maps, stars, settings } = mapCtx.state.panels;
+  const { filters, maps, stars, settings } = appCtx.state.panels;
   const leftPanelOpen = maps || stars;
   const rightPanelOpen = filters || settings;
   if (window.innerWidth < MOBILE_MAX_WIDTH) {
@@ -69,14 +69,14 @@ let horizontalOffset = $derived.by(() => {
 // FILTERED STATE
 let filteredOrganisations: Organisation[] = $derived(
   searchQuery
-    ? mapCtx.state.resources.organisation.filter((org) =>
-        org.i18n[getLocale()].name.toLowerCase().includes(searchQuery.toLowerCase())
+    ? appCtx.state.resources.organisation.filter((org) =>
+        org.i18n?.[getLocale()]?.name.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : mapCtx.state.resources.organisation
+    : appCtx.state.resources.organisation
 );
 
 let filteredProjects: Project[] = $derived(
-  mapCtx.state.resources.project
+  appCtx.state.resources.project
     .filter((p) =>
       newFeature?.organisationId
         ? p.organisationId === newFeature?.organisationId
@@ -84,13 +84,13 @@ let filteredProjects: Project[] = $derived(
     )
     .filter((p) =>
       searchQuery
-        ? p.i18n[getLocale()].name.toLowerCase().includes(searchQuery.toLowerCase())
+        ? p.i18n?.[getLocale()]?.name.toLowerCase().includes(searchQuery.toLowerCase())
         : true
     )
 );
 
 let filteredLayers: Layer[] = $derived(
-  mapCtx.state.resources.layer
+  appCtx.state.resources.layer
     .filter((l) =>
       newFeature?.projectId ? l.projectId === newFeature?.projectId : true
     )
@@ -104,18 +104,18 @@ let filteredLayers: Layer[] = $derived(
 const handleShowModal = () => {
   isOpen = true;
   // Set default selections based on active layers
-  const activeLayers = mapCtx.state.resources.layer.filter((l) =>
-    mapCtx.state.prisms.layer.includes(l.id)
+  const activeLayers = appCtx.state.resources.layer.filter((l) =>
+    appCtx.state.prisms.layer.includes(l.id)
   );
   if (activeLayers.length > 0) {
     const firstLayer = activeLayers[0];
-    const project = mapCtx.getProject(firstLayer);
-    const organisation = project ? mapCtx.getOrganisation(project) : null;
+    const project = appCtx.getProject(firstLayer);
+    const organisation = project ? appCtx.getOrganisation(project) : null;
 
     // Check if all layers share the same organisation
     const allSameOrg = activeLayers.every((layer) => {
-      const layerProject = mapCtx.getProject(layer);
-      const layerOrg = layerProject ? mapCtx.getOrganisation(layerProject) : null;
+      const layerProject = appCtx.getProject(layer);
+      const layerOrg = layerProject ? appCtx.getOrganisation(layerProject) : null;
       return layerOrg?.id === organisation?.id;
     });
 
@@ -124,12 +124,12 @@ const handleShowModal = () => {
       (layer) => layer.projectId === firstLayer.projectId
     );
 
-    mapCtx.updateNewFeature({
+    appCtx.updateNewFeature({
       organisationId: allSameOrg && organisation ? organisation.id : undefined,
       projectId: allSameProject && project ? project.id : undefined,
       layerId: undefined
     });
-    mapCtx.updateNewFeatureValue('layerId', undefined);
+    appCtx.updateNewFeatureValue('layerId', undefined);
   }
   // Focus the title heading after a short delay to ensure the modal is rendered
   setTimeout(() => {
@@ -161,7 +161,7 @@ function handleResourceSelect(resource: Organisation | Project | Layer, e: Event
   
   if ('organisationId' in resource) {
     // This is a Project
-    mapCtx.updateNewFeature({
+    appCtx.updateNewFeature({
       organisationId: resource.organisationId,
       projectId: resource.id,
       layerId: undefined,
@@ -171,8 +171,8 @@ function handleResourceSelect(resource: Organisation | Project | Layer, e: Event
     });
   } else if ('projectId' in resource) {
     // This is a Layer
-    mapCtx.updateNewFeature({
-      organisationId: mapCtx.getProject(resource)?.organisationId,
+    appCtx.updateNewFeature({
+      organisationId: appCtx.getProject(resource)?.organisationId,
       projectId: resource.projectId,
       layerId: resource.id,
       feature: {
@@ -182,7 +182,7 @@ function handleResourceSelect(resource: Organisation | Project | Layer, e: Event
     isValid = true;
   } else {
     // This is an Organisation
-    mapCtx.updateNewFeature({
+    appCtx.updateNewFeature({
       organisationId: resource.id,
       projectId: undefined,
       layerId: undefined,
@@ -209,7 +209,7 @@ function clearResource(level: 'organisation' | 'project' | 'layer', e: Event) {
     if (hierarchy[i] === 'layerId') updates.feature.layerId = undefined;
   }
   
-  mapCtx.updateNewFeature(updates);
+  appCtx.updateNewFeature(updates);
   searchQuery = '';
   isValid = false;
 }
@@ -219,7 +219,7 @@ function handleKeydown(e: KeyboardEvent) {
     e.preventDefault();
     if (newFeature?.organisationId || newFeature?.projectId || newFeature?.layerId) {
       // If any selection exists, reset them
-      mapCtx.resetNewFeature();
+      appCtx.resetNewFeature();
       searchQuery = '';
     } else {
       // If no selections, close the modal

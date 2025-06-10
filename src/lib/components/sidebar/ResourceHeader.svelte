@@ -1,6 +1,6 @@
 <script lang="ts">
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 import { getSidebarState } from '$lib/context/sidebar.svelte';
 // NAVIGATION
 import { navItems, navigateOnAdmin } from '$lib/navigation';
@@ -10,27 +10,28 @@ import Icon from '$lib/components/common/Icon.svelte';
 // ENUMS
 import { ResourcePath } from '$lib/enums';
 // TYPES
-import type { HierarchicalResource } from '$lib/enums';
+import type { FirstClassResource, HierarchicalResource } from '$lib/enums';
 
 // CONTEXT
-let resourceState = getHierarchicalResourceState();
+let adminCtx = getAdminCtx();
 let sidebarState = getSidebarState();
 
-let { resourceType }: { resourceType: HierarchicalResource } = $props();
+let { resourceType }: { resourceType: FirstClassResource } = $props();
 let onClick = (e: MouseEvent) => {
   e.preventDefault();
-  sidebarState.openSection(resourceType as HierarchicalResource, true);
-  navigateOnAdmin(resourceState, resourceType as HierarchicalResource);
+  sidebarState.openSection(resourceType as unknown as HierarchicalResource, true);
+  navigateOnAdmin(adminCtx, resourceType as FirstClassResource);
 };
 </script>
 
 <div class="flex-shrink-0">
+  <!-- TODO AUTH - Clicking on this link should refresh the cookie cache to ensure the latest roles are being respected https://www.better-auth.com/docs/concepts/session-management#session-caching -->
   <a
     draggable="false"
     href="{ADMIN_PATH}/{ResourcePath[resourceType]}"
     onclick={(e) => onClick(e)}
-    class="flex select-none items-center border-l-3 p-6 {resourceState.activeResource ===
-      resourceType && !resourceState.activeEntity
+    class="flex select-none items-center border-l-3 p-6 {adminCtx.activeResource ===
+      resourceType && !adminCtx.activeEntity
       ? 'border-primary'
       : 'border-base-300'} rounded-none">
     <Icon src={navItems[resourceType].icon} class="h-6 w-6" />

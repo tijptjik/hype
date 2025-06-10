@@ -5,7 +5,7 @@ import { fade } from 'svelte/transition';
 import { getI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
 import type { Feature, UserContributedFeature } from '$lib/types';
 
@@ -13,10 +13,10 @@ import type { Feature, UserContributedFeature } from '$lib/types';
 let { feature }: { feature: Feature | UserContributedFeature } = $props();
 
 // CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 // STATE : SESSION
-const userPreferences = $derived(mapCtx.getUserPreferences());
+const userPreferences = $derived(appCtx.getUserPreferences());
 
 // STATE : LOCAL
 let description = $derived(

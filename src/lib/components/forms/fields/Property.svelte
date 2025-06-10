@@ -95,12 +95,12 @@ const syncFormToComplexValues = () => {
           id: v.id,
           rank: v.rank,
           originalIndex,
-          en: v.i18n.en?.value || '',
-          enGen: v.i18n.en?.valueGen || false,
-          'zh-hans': v.i18n['zh-hans']?.value || '',
-          'zh-hansGen': v.i18n['zh-hans']?.valueGen || false,
-          'zh-hant': v.i18n['zh-hant']?.value || '',
-          'zh-hantGen': v.i18n['zh-hant']?.valueGen || false
+          en: v.i18n?.en?.value || '',
+          enGen: v.i18n?.en?.valueGen || false,
+          'zh-hans': v.i18n?.['zh-hans']?.value || '',
+          'zh-hansGen': v.i18n?.['zh-hans']?.valueGen || false,
+          'zh-hant': v.i18n?.['zh-hant']?.value || '',
+          'zh-hantGen': v.i18n?.['zh-hant']?.valueGen || false
         };
       })
       .sort((a: IntermediateValue, b: IntermediateValue) => a.rank - b.rank);
@@ -404,14 +404,15 @@ async function translatePropertyAndValues(
       const propToUpdate = $form[fieldRoot]?.find((p) => p.id === propertyId);
       if (!propToUpdate) return $form;
       if (!propToUpdate.i18n) propToUpdate.i18n = {} as any;
-      if (!propToUpdate.i18n[targetLocale])
-        propToUpdate.i18n[targetLocale] = { locale: targetLocale } as any;
+      if (propToUpdate.i18n && !propToUpdate.i18n?.[targetLocale as Locale])
+        propToUpdate.i18n[targetLocale as Locale] = { locale: targetLocale } as any;
 
       const labelOrigin = textOrigins.find((o) => o.type === 'label');
       if (
         labelOrigin &&
         labelOrigin.originalIndex !== undefined &&
-        translatedTexts[labelOrigin.originalIndex] !== undefined
+        translatedTexts[labelOrigin.originalIndex] !== undefined &&
+        propToUpdate.i18n && propToUpdate.i18n[targetLocale]
       ) {
         propToUpdate.i18n[targetLocale]!.label =
           translatedTexts[labelOrigin.originalIndex];
@@ -422,7 +423,8 @@ async function translatePropertyAndValues(
       if (
         placeholderOrigin &&
         placeholderOrigin.originalIndex !== undefined &&
-        translatedTexts[placeholderOrigin.originalIndex] !== undefined
+        translatedTexts[placeholderOrigin.originalIndex] !== undefined &&
+        propToUpdate.i18n && propToUpdate.i18n[targetLocale]
       ) {
         propToUpdate.i18n[targetLocale]!.placeholder =
           translatedTexts[placeholderOrigin.originalIndex];
@@ -524,7 +526,7 @@ const allI18nErrorsForPropertyValues = $derived.by(() => {
       class="flex cursor-pointer items-center justify-between gap-3 rounded-lg bg-base-100 p-2 py-2 pl-4 text-center text-xl font-bold"
       onclick={() => (collapsed = !collapsed)}>
       <span>
-        {currentProperty?.i18n[getLocale()]?.label || 'Untitled Property'}
+        {currentProperty?.i18n?.[getLocale() as Locale]?.label || 'Untitled Property'}
       </span>
       {#if isSpecifier}
         <label

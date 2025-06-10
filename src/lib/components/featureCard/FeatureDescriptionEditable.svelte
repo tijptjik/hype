@@ -9,7 +9,7 @@ import { getI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // CONTEXT
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
 import type { Feature, UserContributedFeature } from '$lib/types';
 
@@ -18,10 +18,10 @@ let { feature }: { feature: Feature | UserContributedFeature } = $props();
 
 // CONTEXT
 const cardCtx = getFeatureCardContext();
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 // STATE : SESSION
-const userPreferences = $derived(mapCtx.getUserPreferences());
+const userPreferences = $derived(appCtx.getUserPreferences());
 
 // STATE : LOCAL
 let isEditing = $state(false);
@@ -53,7 +53,7 @@ function handleEditMode(e: Event) {
 function handleDescriptionSubmit() {
   isEditing = false;
   // Update the feature description in the context
-  mapCtx.updateNewFeatureValueI18n('description', description);
+  appCtx.updateNewFeatureValueI18n('description', description);
 }
 
 function handleDescriptionCancel() {

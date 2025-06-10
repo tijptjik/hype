@@ -262,7 +262,7 @@ export class OmniContext {
     }
 
     // If we get here, feature wasn't in the active collection, create a new single-feature collection
-    let address = getI18n(feature.i18n!, 'displayAddress', appCtx.getUserPreferences());
+    let address = getI18n(feature, 'displayAddress', appCtx.getUserPreferences());
 
     appCtx.setActiveCollection(
       {

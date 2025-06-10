@@ -1,9 +1,8 @@
 <script lang="ts">
 // SVELTE
-import { page } from '$app/state';
 import { NEW_REF } from '$lib';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // NAVIGATION
 import { navigateOnAdmin } from '$lib/navigation';
 // I18N
@@ -14,7 +13,7 @@ import { Check } from '@steeze-ui/heroicons';
 import FilterInput from '$lib/components/menu/FilterInput.svelte';
 // ENUMS
 import {
-  HierarchicalResource,
+  FirstClassResource,
   HierarchicalResourceParent,
   ResourceRefKey
 } from '$lib/enums';
@@ -22,7 +21,7 @@ import {
 import type { Resource, ResourceTypeWithChildren } from '$lib/types';
 
 // CONTEXT
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
 // PROPS
 let {
@@ -33,7 +32,7 @@ let {
 
 // RESOURCES
 const parentResourceType = HierarchicalResourceParent[
-  resourceState.activeResource as keyof typeof HierarchicalResourceParent
+  adminCtx.activeResource as keyof typeof HierarchicalResourceParent
 ] as ResourceTypeWithChildren;
 
 // STATE
@@ -51,25 +50,27 @@ const handleSelect = (item: Resource) => {
 };
 
 const handleConfirm = () => {
-  // VERIFY: This works
   if (!selectedItem) return;
-  navigateOnAdmin(
-    resourceState,
-    resourceState.activeResource as HierarchicalResource,
-    NEW_REF,
-    undefined,
-    {
-      parentId: selectedItem.id,
-      parentRef: selectedItem[ResourceRefKey[parentResourceType]]
-    }
-  );
+  navigateOnAdmin(adminCtx, adminCtx.activeResource, NEW_REF, undefined, {
+    parentId: selectedItem.id,
+    parentRef:
+      selectedItem[
+        ResourceRefKey[
+          parentResourceType as keyof typeof ResourceRefKey
+        ] as keyof Resource
+      ]
+  });
   close();
 };
 
 const handleKeydown = (event: KeyboardEvent) => {
-  if (!resourceState.state.resources[parentResourceType]?.length) return;
+  if (
+    !adminCtx.appCtx.state.resources[parentResourceType as FirstClassResource]?.length
+  )
+    return;
 
-  const items = resourceState.state.resources[parentResourceType];
+  const items =
+    adminCtx.appCtx.state.resources[parentResourceType as FirstClassResource];
   const maxIndex = Math.min(items.length - 1, 6); // Limit to 7 items (0-6)
 
   switch (event.key) {
@@ -121,10 +122,10 @@ const open = () => {
     </div>
 
     <div class="mb-4 max-h-60 overflow-y-auto">
-      {#if resourceState.getFilteredResource(parentResourceType as HierarchicalResource)?.length > 0}
+      {#if adminCtx.getFilteredResource(parentResourceType as FirstClassResource)?.length > 0}
         <ul class="menu space-y-1 rounded-lg bg-base-100">
-          {#each resourceState
-            .getFilteredResource(parentResourceType as HierarchicalResource)
+          {#each adminCtx
+            .getFilteredResource(parentResourceType as FirstClassResource)
             .slice(0, 7) as item, i}
             <li class="bg-base-200 first:rounded-t-lg last:rounded-b-lg">
               <button
@@ -134,7 +135,8 @@ const open = () => {
                   handleSelect(item);
                 }}>
                 <span
-                  >{item.i18n[getLocale()].name || item.i18n[getLocale()].title}</span>
+                  >{getI18n(item, 'name', adminCtx.appCtx.getUserPreferences()) ||
+                    getI18n(item, 'title', adminCtx.appCtx.getUserPreferences())}</span>
                 {#if selectedItem?.id === item.id}
                   <Icon src={Check} class="h-5 w-5" />
                 {/if}

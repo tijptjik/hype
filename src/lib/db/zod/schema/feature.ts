@@ -81,6 +81,9 @@ export const FeatureI18nUpdate = createUpdateSchema(featureI18n).extend({
   addressProperties: z.custom<AddressProperties>().nullish()
 });
 
+// TYPE HELPER: Extract the available i18n field keys
+export type FeatureI18nFieldKeys = keyof z.infer<typeof FeatureI18nInsert>;
+
 /* ----------------- */
 // FEATURE RELATIONAL SCHEMAS :: PROPERTY CORE SCHEMAS
 /* -------- */

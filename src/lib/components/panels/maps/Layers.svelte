@@ -11,16 +11,16 @@ import FilteredLayer from '$lib/components/panels/maps/FilteredLayer.svelte';
 import ResourceContainer from '$lib/components/panels/common/ResourceContainer.svelte';
 import SelectedResources from '../common/SelectedResources.svelte';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
 import type { Layer } from '$lib/types';
 
 // Initialize query client and map state
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 // Get cached features for counting
-const layers = $derived(mapCtx.state.resources.layer);
-const selectedLayers = $derived(mapCtx.state.prisms.layer);
+const layers = $derived(appCtx.state.resources.layer);
+const selectedLayers = $derived(appCtx.state.prisms.layer);
 
 let searchTerm = $state('');
 
@@ -36,10 +36,10 @@ function filterLayers(layers: Layer[], term: string) {
   const searchLower = term.toLowerCase();
   return layers.filter((layer) => {
     return (
-      getI18n(layer, 'name', mapCtx.getUserPreferences())
+      getI18n(layer, 'name', appCtx.getUserPreferences())
         .toLowerCase()
         .includes(searchLower) ||
-      getI18n(layer, 'description', mapCtx.getUserPreferences())
+      getI18n(layer, 'description', appCtx.getUserPreferences())
         .toLowerCase()
         .includes(searchLower)
     );
@@ -52,9 +52,9 @@ let isDefaultOpen = $derived(document.body.clientHeight > 1000);
 
 let handleReset = () => {
   if (selectedLayers.length == 0) {
-    mapCtx.closePanel('maps')
+    appCtx.closePanel('maps')
   } else {
-    mapCtx.resetLayers()
+    appCtx.resetLayers()
   }
 }
 
@@ -64,7 +64,7 @@ let handleReset = () => {
 
 {#snippet SelectedLayers()}
   <SelectedResources
-    {mapCtx}
+    {appCtx}
     type="layer"
     resources={layers}
     selectedIds={selectedLayers}
@@ -85,15 +85,15 @@ let handleReset = () => {
   {/if}
   <ResourceContainer>
     {#each filteredLayers as layer}
-      {@const project = mapCtx.getProject(layer)}
-      {@const organisation = mapCtx.getOrganisation(project!)}
+      {@const project = appCtx.getProject(layer)}
+      {@const organisation = appCtx.getOrganisation(project!)}
       <FilteredLayer
         {layer}
         {project}
         {organisation}
         selectedClass="bg-secondary"
         isSelected={selectedLayers.includes(layer.id)}
-        onClick={() => mapCtx.toggleLayer(layer.id)} />
+        onClick={() => appCtx.toggleLayer(layer.id)} />
     {/each}
   </ResourceContainer>
 </Section>

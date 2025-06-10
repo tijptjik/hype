@@ -6,7 +6,7 @@ import { Star, Check, PencilSquare } from '@steeze-ui/heroicons';
 import { getI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 // Types
 import type {
@@ -28,16 +28,16 @@ let {
 } = $props();
 
 // CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 const cardCtx = getFeatureCardContext();
 
 // STATE : SESSION
-const userPreferences = $derived(mapCtx.getUserPreferences());
+const userPreferences = $derived(appCtx.getUserPreferences());
 
 // STATE : LOCAL
 let gradePropertyId: Id = $derived(
   cardCtx.isNewMode
-    ? mapCtx
+    ? appCtx
         .getLayerById(feature.layerId)
         ?.properties?.find((p) => p.property?.key === 'grade')?.propertyId
     : (feature.properties as FeatureProperty[])?.find(
@@ -76,7 +76,7 @@ function handleTitleSubmit() {
   if (title.trim()) {
     isEditing = false;
     if (cardCtx.isNewMode) {
-      mapCtx.updateNewFeatureValueI18n('title', title);
+      appCtx.updateNewFeatureValueI18n('title', title);
     }
   }
 }
@@ -87,7 +87,7 @@ function handleTitleCancel() {
 }
 
 function handleGradeSelect(newGrade: number) {
-  mapCtx.updateNewFeatureProperty(gradePropertyId, {
+  appCtx.updateNewFeatureProperty(gradePropertyId, {
     value: newGrade.toString()
   });
 }

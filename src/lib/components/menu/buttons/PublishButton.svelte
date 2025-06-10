@@ -7,23 +7,23 @@ import { page } from '$app/state';
 // I18N
 import { m } from '$lib/i18n';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // ENUMS
-import { HierarchicalResource, ResourcePath } from '$lib/enums';
+import { FirstClassResource, ResourcePath } from '$lib/enums';
 // ICONS
 import { EyeSlash } from '@steeze-ui/heroicons';
 import { Eye } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // TYPES
-import type { Form } from '$lib/types';
+import type { Form, HubForm } from '$lib/types';
 // STATE : PAGE :: DATA
 const { session } = page.data;
 
 // CONTEXT :: ROUTER
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
 // STATE : PROPS
-let menuProps: { form: Form } = $props();
+let menuProps: { form: Exclude<Form, HubForm>} = $props();
 
 // STATE : FORM
 let { form, errors, reset, submit, tainted, isTainted } = menuProps.form;
@@ -52,8 +52,8 @@ const handleClick = async (e: Event) => {
   e.stopPropagation();
   if (
     isLoading ||
-    !resourceState.activeEntity ||
-    resourceState.activeEntity === NEW_REF
+    !adminCtx.activeEntity ||
+    adminCtx.activeEntity === NEW_REF
   )
     return;
 
@@ -61,13 +61,14 @@ const handleClick = async (e: Event) => {
 
   try {
     // If form is dirty, submit it first
+    // @ts-ignore TODO Superform replace
     if (isTainted($tainted)) {
       submit(e);
       // Note: We proceed regardless of submit result since publish is a separate action
     }
 
     const response: Response = await fetch(
-      `/api/${ResourcePath[resourceState.activeResource as FirstClassResource]}/${resourceState.activeEntity}`,
+      `/api/${ResourcePath[adminCtx.activeResource as FirstClassResource]}/${adminCtx.activeEntity}`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -85,8 +86,8 @@ const handleClick = async (e: Event) => {
 
     if (result && result.type === 'success') {
       // INVALIDE CACHE
-      if (resourceState.activeResource) {
-        resourceState.invalidateAndRefresh(resourceState.activeResource);
+      if (adminCtx.activeResource) {
+        adminCtx.invalidateAndRefresh(adminCtx.activeResource);
       }
       // UPDATE FORM - Reset with new data to avoid dirtying the form
       reset({
@@ -120,8 +121,8 @@ const handleClick = async (e: Event) => {
   onclick={handleClick}
   disabled={isInvalid ||
     isLoading ||
-    !resourceState.activeEntity ||
-    resourceState.activeEntity === NEW_REF}>
+    !adminCtx.activeEntity ||
+    adminCtx.activeEntity === NEW_REF}>
   {#if $form.isPublished}
     <Icon src={EyeSlash} class="h-5 w-5" />
     {m.forms__unpublish()}

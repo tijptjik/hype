@@ -6,9 +6,9 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { CheckCircle, PencilSquare, XCircle } from '@steeze-ui/heroicons';
 import Title from '$lib/components/tasks/common/Title.svelte';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // ENUMS
-import { HierarchicalResource, TaskTypeColor, TaskType } from '$lib/enums';
+import { FirstClassResource, TaskTypeColor, TaskType } from '$lib/enums';
 // TYPES
 import type { Task } from '$lib/types';
 
@@ -16,7 +16,7 @@ import type { Task } from '$lib/types';
 let { task }: { task: Task } = $props();
 
 // CONTEXT
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
 
 </script>
@@ -25,7 +25,7 @@ const resourceState = getHierarchicalResourceState();
   class="mx-auto flex w-full flex-row items-center justify-between rounded-lg border-b-4 bg-base-100 px-6 py-6 {TaskTypeColor[task.type as TaskType]} cursor-pointer transition-colors duration-300 hover:bg-base-200"
   onclick={(e) => {
     e.preventDefault();
-    navigateOnAdmin(resourceState, HierarchicalResource.task, task.id);
+    navigateOnAdmin(adminCtx, FirstClassResource.task, task.id);
   }}>
   <Title {task} />
   <button

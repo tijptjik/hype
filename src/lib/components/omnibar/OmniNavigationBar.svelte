@@ -2,7 +2,7 @@
 // TRANSITIONS
 import { fade, slide } from 'svelte/transition';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // COMPONENTS
 import OmniNavHeader from './OmniNavHeader.svelte';
 import OmniNavArrow from './OmniNavArrow.svelte';
@@ -12,7 +12,7 @@ import { getOmniContext } from '$lib/context/omni.svelte';
 
 // CONTEXT
 const omniCtx = getOmniContext();
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 let collectionMode = $derived(omniCtx.state.mode);
 let isNotFeatureMode = $derived(collectionMode !== 'feature');
@@ -47,7 +47,7 @@ let isNewFeature = $derived(omniCtx.isNewFeatureMode);
     transition:slide={{ duration: 200 }}>
     <OmniCollection
       mode="navigation"
-      items={mapCtx.state.active.collection?.items || []} />
+      items={appCtx.state.active.collection?.items || []} />
   </div>
   <div
     class="fixed inset-0 z-[6] h-[calc(100dvh*3)] w-full -translate-y-1/2 bg-black/30"

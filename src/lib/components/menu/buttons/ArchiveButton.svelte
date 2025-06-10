@@ -6,7 +6,7 @@ import { NEW_REF } from '$lib';
 // I18N
 import { m } from '$lib/i18n';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // ENUMS
 import { ResourcePath, FirstClassResource } from '$lib/enums';
 // ICONS
@@ -18,7 +18,7 @@ import type { Form } from '$lib/types';
 let menuProps: { form: Form } = $props();
 
 // STATE
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
 // STATE : FORM
 let { form, errors, reset, submit, tainted, isTainted } = menuProps.form;
@@ -32,8 +32,8 @@ const handleClick = async (e: Event) => {
   e.stopPropagation();
   if (
     isLoading ||
-    !resourceState.activeEntity ||
-    resourceState.activeEntity === NEW_REF
+    !adminCtx.activeEntity ||
+    adminCtx.activeEntity === NEW_REF
   )
     return;
 
@@ -41,7 +41,7 @@ const handleClick = async (e: Event) => {
 
   try {
     const response = await fetch(
-      `/api/${ResourcePath[resourceState.activeResource as FirstClassResource]}/${resourceState.activeEntity}`,
+      `/api/${ResourcePath[adminCtx.activeResource as FirstClassResource]}/${adminCtx.activeEntity}`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -55,8 +55,8 @@ const handleClick = async (e: Event) => {
 
     if (result && result.type === 'success') {
       // INVALIDE CACHE
-      if (resourceState.activeResource) {
-        resourceState.invalidateAndRefresh(resourceState.activeResource);
+      if (adminCtx.activeResource) {
+        adminCtx.invalidateAndRefresh(adminCtx.activeResource);
       }
 
       // UPDATE FORM - Reset with new data to avoid dirtying the form

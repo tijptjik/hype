@@ -2,17 +2,17 @@
 // I18N
 import { m } from '$lib/i18n';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // ENUMS
-import { HierarchicalResource, CollectionStatistic } from '$lib/enums';
+import { FirstClassResource, CollectionStatistic } from '$lib/enums';
 // TYPES
 import type { ResourceTypeWithChildren } from '$lib/types';
 
 // CONFIG
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 type Props = {
   statistic: CollectionStatistic;
-  resourceType: HierarchicalResource;
+  resourceType: FirstClassResource;
 };
 
 let { statistic, resourceType } = $props();
@@ -30,19 +30,19 @@ let label = $derived(getLabel(statistic));
 
 let getCount = (statistic: CollectionStatistic) => {
   if (statistic === CollectionStatistic.total) {
-    return resourceState.state.resources[resourceType as HierarchicalResource].length;
+    return adminCtx.appCtx.state.resources[resourceType as FirstClassResource].length;
   } else if (statistic === CollectionStatistic.access) {
-    return resourceState.getFilteredResource(resourceType, {
+    return adminCtx.getFilteredResource(resourceType, {
       text: false,
       state: false
     }).length;
   } else if (statistic === CollectionStatistic.filtered) {
-    return resourceState.getFilteredResource(resourceType, {
+    return adminCtx.getFilteredResource(resourceType, {
       text: true,
       state: true
     }).length;
   } else if (statistic === CollectionStatistic.selected && resourceType !== 'feature') {
-    return resourceState.state.prisms[resourceType as ResourceTypeWithChildren].length;
+    return adminCtx.appCtx.state.prisms[resourceType as ResourceTypeWithChildren].length;
   }
 };
 let count = $derived(getCount(statistic));

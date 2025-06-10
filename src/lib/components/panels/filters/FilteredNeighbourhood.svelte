@@ -4,7 +4,7 @@ import { getI18n, getLocale } from '$lib/i18n';
 // DATA
 import subNeighbourhoods from '$lib/map/subNeighbourhoods.json';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 
 const {
   neighbourhood,
@@ -14,9 +14,9 @@ const {
 } = $props();
 
 // Initialize map state
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
-const features = $derived(mapCtx.state.resources.feature);
+const features = $derived(appCtx.state.resources.feature);
 
 // UTILS
 
@@ -45,13 +45,13 @@ function getFeatureCount(neighbourhoodKey: string) {
   <div
     class="group focus:-ring-offset-2 ml-4 flex cursor-pointer flex-row items-center justify-between gap-4 overflow-visible rounded-l-md bg-black py-2 pl-4 pr-[30px] caret-transparent transition-colors duration-200 focus:outline-none focus:ring-0"
     onclick={() => {
-      mapCtx.toggleNeighbourhood(neighbourhood);
-      mapCtx.zoomToAllVisibleFeatures();
+      appCtx.toggleNeighbourhood(neighbourhood);
+      appCtx.zoomToAllVisibleFeatures();
     }}
     onkeydown={(e) => {
       if (e.key === 'Enter' || e.key === ' ') {
-        mapCtx.toggleNeighbourhood(neighbourhood);
-        mapCtx.zoomToAllVisibleFeatures();
+        appCtx.toggleNeighbourhood(neighbourhood);
+        appCtx.zoomToAllVisibleFeatures();
         e.preventDefault();
       } else if (e.key === 'Escape') {
         e.preventDefault();
@@ -75,16 +75,16 @@ function getFeatureCount(neighbourhoodKey: string) {
       <div class="flex flex-grow flex-col">
         <p class="flex space-x-2 font-mono text-xs uppercase tracking-wide">
           <span class="text-primary/80"
-            >{getI18n(data, 'region', mapCtx.getUserPreferences(), undefined, true).replace(
+            >{getI18n(data, 'region', appCtx.getUserPreferences(), undefined, true).replace(
               'Hong Kong',
               'HK'
             )}</span>
           <span class="mtext-base-content/60 font-sans">::</span>
           <span class="text-accent"
-            >{getI18n(data, 'district', mapCtx.getUserPreferences(), undefined, true)}</span>
+            >{getI18n(data, 'district', appCtx.getUserPreferences(), undefined, true)}</span>
         </p>
         <p class="font-normal text-base-content">
-          {getI18n(data, 'name', mapCtx.getUserPreferences(), undefined, true)}
+          {getI18n(data, 'name', appCtx.getUserPreferences(), undefined, true)}
         </p>
       </div>
     </div>

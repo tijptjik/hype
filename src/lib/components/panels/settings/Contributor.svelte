@@ -4,14 +4,14 @@ import { fade } from 'svelte/transition';
 // I18N
 import { m } from '$lib/i18n';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Trophy, CheckCircle } from '@steeze-ui/heroicons';
 import Section from '$lib/components/panels/common/Section.svelte';
 
 // CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 // STATE
 let showSuccessIndicator = $state(false);
@@ -21,7 +21,7 @@ let successTimer: ReturnType<typeof setTimeout>;
 const handleAttributionChange = (target: HTMLInputElement) => {
   const value = target.value;
   
-  mapCtx.setUserAttribution(
+  appCtx.setUserAttribution(
     value,
     // onSuccess
     () => {
@@ -57,7 +57,7 @@ const handleKeydown = () => {
       type="text"
       class="input m-0 h-12 w-full rounded-l-md rounded-r-none border-0 bg-base-200 pl-[26px] pr-10 text-sm placeholder:text-base-content/40 focus:border-none focus:outline-none"
       placeholder={m.settings_contributor_placeholder()}
-      value={mapCtx.getUser().attribution}
+      value={appCtx.getUser()?.attribution}
       oninput={({ target }) => handleAttributionChange(target as HTMLInputElement)}
       onkeydown={handleKeydown} />
     <div class="mr-8 relative">

@@ -4,13 +4,13 @@ import { m } from '$lib/i18n';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // ICONS
 import { UserPlus, XMark } from '@steeze-ui/heroicons';
 // TYPES
 
 // STATE : CONTEXT :: RESOURCE
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
 // STATE : PROPS
 let { searchMode = $bindable(false), removeMode = $bindable(false) } = $props();
@@ -43,7 +43,7 @@ $effect(() => {
 </script>
 
 <div>
-  {#if !searchMode && resourceState.activeResource !== 'feature'}
+  {#if !searchMode && adminCtx.activeResource !== 'feature'}
     <button
       class="btn-rounded btn btn-ghost ml-auto bg-base-100"
       onclick={toggleRemoveMode}>

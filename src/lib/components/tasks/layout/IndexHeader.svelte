@@ -1,16 +1,13 @@
 <script lang="ts">
 // I18N
 import { getI18n } from '$lib/i18n';
-// COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
-import { ChevronRight } from '@steeze-ui/heroicons';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
 import type { Project, Organisation } from '$lib/types';
 
 // CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 // PROPS
 type Props = {
@@ -21,13 +18,9 @@ type Props = {
 // PROPS
 let { project, organisation }: Props = $props();
 
-$effect(() => {
-  console.log(project);
-  console.log(organisation);
-});
-let projectName = $derived(getI18n(project, 'name', mapCtx.getUserPreferences()));
-let organisationName = $derived(
-  getI18n(organisation, 'name', mapCtx.getUserPreferences())
+  let projectName = $derived(getI18n(project, 'name', appCtx.getUserPreferences()));
+  let organisationName = $derived(
+    getI18n(organisation, 'name', appCtx.getUserPreferences())
 );
 </script>
 

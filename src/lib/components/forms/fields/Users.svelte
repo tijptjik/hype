@@ -5,7 +5,7 @@ import { Trash } from '@steeze-ui/heroicons';
 import { scale } from 'svelte/transition';
 import { flip } from 'svelte/animate';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
 import type { ProjectRole, UserFieldProps, OrganisationForm, OrganisationRole, ProjectForm } from '$lib/types';
 
@@ -22,7 +22,7 @@ let {
 const { discriminator: userJoinStateKey, checkedValue, uncheckedValue } = joinConfig;
 
 // STATE : CONTEXT :: RESOURCE
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
 // STATE : CONTEXT :: FORM
 let userForm: (OrganisationForm | ProjectForm)['form'] = $derived((fieldProps.form as OrganisationForm | ProjectForm).form);
@@ -104,7 +104,7 @@ $effect(() => {
         <label
           class="label flex flex-shrink-0 flex-grow-0 flex-col items-center gap-2 pb-2 text-sm"
           style="font-variant: small-caps; font-variant-caps: small-caps;">
-          {resourceState.activeResource === 'project' ? 'Maintainer' : 'Owner'}
+          {adminCtx.activeResource === 'project' ? 'Maintainer' : 'Owner'}
           <input
             name={userRole.user.id}
             type="checkbox"

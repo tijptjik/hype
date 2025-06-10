@@ -8,17 +8,17 @@ import TaskHeader from '$lib/components/tasks/layout/IndexHeader.svelte';
 import TaskRow from '$lib/components/tasks/layout/Row.svelte';
 import BackgroundLines from '../../layout/BackgroundLines.svelte';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
 import type { Id, Task, Project, Organisation } from '$lib/types';
 import {
   PUBLIC_GIPHY_KEY
 } from '$env/static/public';
 // STATE
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 // Group tasks by projectId
 let groupedTasks: Record<Id, Task[]> = $derived(
-  resourceState.filteredTasks.reduce(
+  adminCtx.filteredTasks.reduce(
     (acc, task) => {
       const projectId = task.projectId;
       if (!projectId) return acc;
@@ -49,8 +49,8 @@ async function getRandomGif(topic = 'zero') {
   {#if Object.keys(groupedTasks).length > 0}
     {#each Object.entries(groupedTasks) as [projectId, projectTasks]}
       <TaskHeader
-        project={projectTasks[0].project as Project}
-        organisation={projectTasks[0].organisation as Organisation} />
+        project={projectTasks[0].project as unknown as Project}
+        organisation={projectTasks[0].organisation as unknown as Organisation} />
       <div class="relative" transition:fade={{ duration: 250, easing: cubicOut }}>
         <BackgroundLines numberOfTasks={projectTasks.length} key={projectId} />
         <div class="relative py-4">

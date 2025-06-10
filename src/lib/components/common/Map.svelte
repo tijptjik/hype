@@ -11,8 +11,8 @@ import { loadScript } from '$lib';
 import { ArrowsPointingIn, ArrowsPointingOut } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
 import type { Marker, LngLatLike } from 'maplibre-gl';
 import type { Id, AddressMeta } from '$lib/types';
@@ -29,8 +29,8 @@ type MapProps = {
 };
 
 // CONTEXT
-let mapCtx = getMapCtx();
-let resourceState = getHierarchicalResourceState();
+let appCtx = getAppCtx();
+let adminCtx = getAdminCtx();
 
 let isFullscreen = $state(false);
 
@@ -39,7 +39,7 @@ let mapProps: MapProps = $props();
 
 // STATE : MAP
 let mapContainer: HTMLDivElement;
-let map = $derived(mapCtx.map);
+let map = $derived(appCtx.map);
 let feature = $state();
 let isMapLoaded = $state(false);
 
@@ -62,7 +62,7 @@ onMount(async () => {
 
   maplibre = monkeyPatchMapLibre();
 
-  mapCtx.map = new maplibre.Map({
+  appCtx.map = new maplibre.Map({
     container: mapContainer,
     style: SpectralStyle,
     center: mapProps.coordinates,
@@ -75,7 +75,7 @@ onMount(async () => {
   });
 
   // @ts-ignore
-  mapCtx.map.on('load', () => {
+  appCtx.map.on('load', () => {
     isMapLoaded = true;
   });
 
@@ -85,7 +85,7 @@ onMount(async () => {
     draggable: mapProps.draggable || true
   })
     .setLngLat(mapProps.coordinates)
-    .addTo(mapCtx.map);
+    .addTo(appCtx.map);
 
   // @ts-ignore
   feature.on('dragend', handleDragEnd);
@@ -94,10 +94,10 @@ onMount(async () => {
 // EFFECTS :: ON UPDATE
 $effect(() => {
   if (map && mapProps.coordinates && feature) {
-    mapCtx.zoomToMarkerOnly = true;
-    if (mapProps.coordinates && addressLngLat && !mapCtx.zoomToMarkerOnly) {
+    appCtx.zoomToMarkerOnly = true;
+    if (mapProps.coordinates && addressLngLat && !appCtx.zoomToMarkerOnly) {
       // @ts-ignore
-      mapCtx.zoomToCoordinates([mapProps.coordinates, addressLngLat]);
+      appCtx.zoomToCoordinates([mapProps.coordinates, addressLngLat]);
     } else {
       // @ts-ignore
       map.cachedFlyTo({
@@ -115,7 +115,7 @@ $effect(() => {
 const handleDragEnd = (e: Event) => {
   // @ts-ignore
   mapProps.dragEndCallback?.(e.target!.getLngLat().toArray());
-  mapCtx.zoomToMarkerOnly = true;
+  appCtx.zoomToMarkerOnly = true;
 };
 
 let isSameCoordinates = (lngLat1: LngLatLike | null, lngLat2: LngLatLike | null) => {
@@ -139,11 +139,11 @@ $effect(() => {
       addressMarker.remove();
     }
     // Add new marker
-    addressMarker = addAddressMarker(maplibregl, mapCtx, addressLngLat);
+    addressMarker = addAddressMarker(maplibregl, appCtx, addressLngLat);
     markedAddressLngLat = addressLngLat;
   }
-  if (resourceState.activeEntity && resourceState.activeEntity !== featureMarkerId) {
-    featureMarkerId = resourceState.activeEntity;
+  if (adminCtx.activeEntity && adminCtx.activeEntity !== featureMarkerId) {
+    featureMarkerId = adminCtx.activeEntity;
     if (addressMarker) {
       addressMarker.remove();
     }

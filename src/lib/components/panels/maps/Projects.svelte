@@ -12,16 +12,16 @@ import FilteredResource from '$lib/components/panels/common/FilteredResource.sve
 import ResourceContainer from '$lib/components/panels/common/ResourceContainer.svelte';
 import SelectedResources from '../common/SelectedResources.svelte';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
 import type { Project } from '$lib/types';
 
 // Initialize query client and map state
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 // Get cached features for counting
-const projects = $derived(mapCtx.state.resources.project);
-const selectedProjects = $derived(mapCtx.state.prisms.project);
+const projects = $derived(appCtx.state.resources.project);
+const selectedProjects = $derived(appCtx.state.prisms.project);
 
 let searchTerm = $state('');
 
@@ -37,10 +37,10 @@ function filterProjects(projects: Project[], term: string) {
   const searchLower = term.toLowerCase();
   return projects.filter((project) => {
     return (
-      getI18n(project, 'name', mapCtx.getUserPreferences())
+      getI18n(project, 'name', appCtx.getUserPreferences())
         .toLowerCase()
         .includes(searchLower) ||
-      getI18n(project, 'description', mapCtx.getUserPreferences())
+      getI18n(project, 'description', appCtx.getUserPreferences())
         .toLowerCase()
         .includes(searchLower)
     );
@@ -53,9 +53,9 @@ let isDefaultOpen = $derived(document.body.clientHeight > 1000);
 
 let handleReset = () => {
   if (selectedProjects.length == 0) {
-    mapCtx.closePanel('maps')
+    appCtx.closePanel('maps')
   } else {
-    mapCtx.resetProjects()
+    appCtx.resetProjects()
   }
 }
 </script>
@@ -64,7 +64,7 @@ let handleReset = () => {
 
 {#snippet SelectedProjects()}
   <SelectedResources
-    {mapCtx}
+    {appCtx}
     type="project"
     resources={projects}
     selectedIds={selectedProjects}
@@ -87,10 +87,10 @@ let handleReset = () => {
     {#each filteredProjects as resource}
       <FilteredResource
         {resource}
-        resourceParent={mapCtx.getOrganisation(resource)}
+        resourceParent={appCtx.getOrganisation(resource)}
         selectedClass="bg-accent"
         isSelected={selectedProjects.includes(resource.id)}
-        onClick={() => mapCtx.toggleProject(resource.id)} />
+        onClick={() => appCtx.toggleProject(resource.id)} />
     {/each}
   </ResourceContainer>
 </Section>

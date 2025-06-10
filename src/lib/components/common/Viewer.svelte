@@ -14,12 +14,12 @@ import DownloadImageButton from '$lib/components/images/DownloadImageButton.svel
 import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte';
 import IconAnchor from '$lib/components/common/IconAnchor.svelte';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // STATE : CONTEXT :: ROUTER
 const imageCtx = getImageContext();
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 // TYPES
-import type { HierarchicalResource } from '$lib/enums';
+import type { FirstClassResource } from '$lib/enums';
 
 type Props = {
   LeftActions?: any;
@@ -60,8 +60,8 @@ const handleDrop = async (e: CustomEvent) => {
     e.detail.fileRejections,
     {
       onSuccess: (savedImage) => {
-        resourceState.invalidateAndRefresh(
-          resourceState.activeResource as HierarchicalResource
+        adminCtx.invalidateAndRefresh(
+          adminCtx.activeResource as FirstClassResource
         );
       },
       onError: () => {

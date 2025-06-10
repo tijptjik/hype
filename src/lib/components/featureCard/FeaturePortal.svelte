@@ -4,7 +4,7 @@ import { fly } from 'svelte/transition';
 // I18N
 import { getI18n } from '$lib/i18n';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // CONFIG
 import { MOBILE_MAX_WIDTH, NEW_REF } from '$lib/index';
 // Types
@@ -15,10 +15,10 @@ import type { Point } from 'geojson';
 let { feature }: { feature: Feature | NewFeatureWithLocationAndParents } = $props();
 
 // STATE : CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 // STATE : SESSION
-const userPreferences = $derived({...mapCtx.getUserPreferences(), allowMachineTranslation: true});
+const userPreferences = $derived({...appCtx.getUserPreferences(), allowMachineTranslation: true});
 
 let innerWidth = $state<number>()!;
 let featureCardEl: HTMLElement = $state()!;
@@ -40,8 +40,8 @@ $effect(() => {
   }
 });
 
-let rightOpen = $derived(mapCtx.state.panels.filters || mapCtx.state.panels.settings);
-let leftOpen = $derived(mapCtx.state.panels.maps || mapCtx.state.panels.stars);
+let rightOpen = $derived(appCtx.state.panels.filters || appCtx.state.panels.settings);
+let leftOpen = $derived(appCtx.state.panels.maps || appCtx.state.panels.stars);
 
 function getOffset() {
   const boundsMap = document.getElementById('map')?.getBoundingClientRect();
@@ -69,9 +69,9 @@ function getOffset() {
 function flyToFeature(duration: number = 2000, delay: number = 300) {
   setTimeout(() => {
     let { xOffset, yOffset } = getOffset();
-    if (feature && mapCtx.map && 'geometry' in feature) {
+    if (feature && appCtx.map && 'geometry' in feature) {
       // @ts-ignore
-      mapCtx.map.cachedFlyTo({
+      appCtx.map.cachedFlyTo({
         center: [
           (feature.geometry as Point).coordinates[0],
           (feature.geometry as Point).coordinates[1]
@@ -181,7 +181,7 @@ function measureTextWidth(text: string): number {
   return context.measureText(text).width;
 }
 
-let addressLines = $derived(wrapText(getI18n(feature, 'displayAddress', userPreferences)));
+let addressLines = $derived(wrapText(getI18n(feature as Feature, 'displayAddress', userPreferences)));
 let lastAddressLines: string[] = [];
 let lastAddressLineLengths: number[] = [];
 let displayAddressLines = $state<string[]>([]);

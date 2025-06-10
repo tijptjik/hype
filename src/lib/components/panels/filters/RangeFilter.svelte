@@ -5,10 +5,10 @@ import RangeSlider from 'svelte-range-slider-pips';
 // I18N
 import { m } from '$lib/i18n';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
 import type { Id } from '$lib/types';
-let mapCtx = getMapCtx();
+let appCtx = getAppCtx();
 
 type Props = {
   key: string;
@@ -22,7 +22,7 @@ type Props = {
 let { key, label, min, max, layerId, defaultOpen = false }: Props = $props();
 
 let isOpen = $state(defaultOpen);
-let selectedRange = $derived(mapCtx.propertyFilters?.[layerId]?.[key]);
+let selectedRange = $derived(appCtx.propertyFilters?.[layerId]?.[key]);
 
 let displayText = $derived.by(() => {
   if (min === values[0] && max === values[1]) {
@@ -71,8 +71,8 @@ let values: [number, number] = $derived([
           pushy
           float
           on:change={() => {
-            mapCtx.setRangePropertyFilter(layerId, key, values);
-            mapCtx.zoomToAllVisibleFeatures();
+            appCtx.setRangePropertyFilter(layerId, key, values);
+            appCtx.zoomToAllVisibleFeatures();
           }}
           />
       </div>

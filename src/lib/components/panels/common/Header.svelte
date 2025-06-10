@@ -4,7 +4,7 @@ import { onMount, onDestroy } from 'svelte';
 import Icon from '$lib/components/common/Icon.svelte';
 import { QuestionMarkCircle, XCircle } from '@steeze-ui/heroicons';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 
 let { panel, title, subtitle, onToggleInfo } = $props<{
   panel: string;
@@ -12,13 +12,13 @@ let { panel, title, subtitle, onToggleInfo } = $props<{
   onToggleInfo?: (e: MouseEvent | TouchEvent) => void;
 }>();
 
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 // Setup and cleanup event listeners
 $effect(() => {
   const handler = (event: KeyboardEvent) => {
     if (event.key === 'Escape') {
-      mapCtx.closePanel(panel);
+      appCtx.closePanel(panel);
     }
   };
 
@@ -47,7 +47,7 @@ $effect(() => {
     <button
       class="btn btn-ghost btn-sm m-0 h-auto flex-none p-0 hover:bg-transparent hover:text-base-content/80 focus:outline-none focus:ring-0 focus-visible:text-primary"
       onclick={() => {
-        mapCtx.closePanel(panel);
+        appCtx.closePanel(panel);
       }}>
       <Icon src={XCircle} class="h-10 w-10 transition-transform duration-300" />
     </button>

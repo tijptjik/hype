@@ -12,7 +12,7 @@ let sectionProps: SectionProps & {
   headerActions?: any; 
   infoContent?: any; 
 } = $props();
-let { fields, form, headerActions, infoContent } = sectionProps;
+let { fields, form, infoContent } = sectionProps;
 </script>
 
 <div
@@ -20,7 +20,7 @@ let { fields, form, headerActions, infoContent } = sectionProps;
   <Header
     {...sectionProps}
     infoContent={infoContent}
-    actionContent={headerActions}>
+    actionContent={sectionProps.headerActions}>
   </Header>
   <div class="grid grid-cols-1 gap-4 p-4 @xl:grid-cols-2 @5xl:grid-cols-3">
     {#each supportedLocales as locale}

@@ -2,18 +2,22 @@
 // SVELTE
 import { fade } from 'svelte/transition';
 // I18N
+import { m } from '$lib/i18n';
 import { getI18n } from '$lib/i18n';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
 import type { FieldProps } from '$lib/types';
+// ICON
+import { Eye, Pencil } from '@steeze-ui/heroicons';
+import Icon from '$lib/components/common/Icon.svelte';
 
 // CONTEXT
-let mapCtx = getMapCtx();
+let appCtx = getAppCtx();
 
 // STATE : PROPS
-let fieldProps: FieldProps & { propertyJoinStateKey: string } = $props();
-let { propertyJoinStateKey, fieldDiscriminator, fieldRoot } = fieldProps;
+let fieldProps: FieldProps = $props();
+let { fieldDiscriminator, fieldRoot } = fieldProps;
 
 // STATE : FORM
 let { form } = fieldProps.form;
@@ -26,48 +30,87 @@ let { form } = fieldProps.form;
       {#if item?.property?.type === fieldDiscriminator}
         <div
           transition:fade
-          class="flex items-center justify-between rounded-lg bg-base-100 p-4 shadow-lg">
-          <span class="text-md">
-            {#await getI18n(item.property.i18n, 'label', mapCtx.getUserPreferences()) then label}
-              {label} <br /><small>{item?.property?.key}</small>
-            {/await}
-          </span>
-          <label class="label cursor-pointer">
-            <input
-              name={item?.property?.id}
-              type="checkbox"
-              class="toggle toggle-primary toggle-lg"
-              checked={item?.[propertyJoinStateKey]}
-              onchange={() => {
-                form.update(($form : any) => {
-                  if (
-                    ($form as any)[fieldRoot] &&
-                    Array.isArray(($form as any)[fieldRoot])
-                  ) {
-                    // Preserve the existing property structure while updating isVisible
-                    const currentProperty = ($form as any)[fieldRoot][index] as any;
-                    const updatedProperty = {
-                      ...currentProperty,
-                      [propertyJoinStateKey]: !item?.[propertyJoinStateKey]
-                    };
+          class="flex flex-row items-stretch justify-between gap-3 rounded-lg bg-base-100 shadow-lg">
+          <div class="text-md flex flex-col p-4 pr-0">
+            {getI18n(item.property, 'label', appCtx.getUserPreferences())}
+            <br /><small>{item?.property?.key}</small>
+          </div>
 
-                    // If the original item had a nested property object, preserve it
-                    if (item?.property) {
-                      updatedProperty.property = item.property;
+          <!-- Published Toggle -->
+          <div class="text-md flex flex-col gap-2 rounded-r-lg bg-base-300 p-3">
+            <label class="flex cursor-pointer items-center justify-between gap-2">
+              <span class="flex flex-row items-center gap-2 font-mono text-sm font-light tracking-tighter">
+                <Icon src={Eye} class="size-4" />Published
+              </span>
+              <input
+                name={`${item?.property?.id}_isVisible`}
+                type="checkbox"
+                class="toggle toggle-primary toggle-sm"
+                checked={item?.isVisible}
+                onchange={() => {
+                  form.update(($form: any) => {
+                    if (
+                      ($form as any)[fieldRoot] &&
+                      Array.isArray(($form as any)[fieldRoot])
+                    ) {
+                      const currentProperty = ($form as any)[fieldRoot][index] as any;
+                      const updatedProperty = {
+                        ...currentProperty,
+                        isVisible: !item?.isVisible
+                      };
+
+                      // Preserve the existing property structure
+                      if (item?.property) {
+                        updatedProperty.property = item.property;
+                      }
+
+                      (($form as any)[fieldRoot][index] as any) = updatedProperty;
                     }
+                    return $form;
+                  });
+                }} />
+            </label>
 
-                    (($form as any)[fieldRoot][index] as any) = updatedProperty;
-                  }
-                  return $form;
-                });
-              }} />
-          </label>
+            <!-- User Contributable Toggle -->
+            <label class="flex cursor-pointer items-center justify-between gap-2">
+              <span class="flex flex-row items-center gap-2 font-mono text-sm font-light tracking-tighter">
+                <Icon src={Pencil} class="size-4" /> Admin Only
+              </span>
+              <input
+                name={`${item?.property?.id}_isUserContributed`}
+                type="checkbox"
+                class="toggle toggle-primary toggle-sm"
+                checked={!item?.isUserContributed}
+                onchange={() => {
+                  form.update(($form: any) => {
+                    if (
+                      ($form as any)[fieldRoot] &&
+                      Array.isArray(($form as any)[fieldRoot])
+                    ) {
+                      const currentProperty = ($form as any)[fieldRoot][index] as any;
+                      const updatedProperty = {
+                        ...currentProperty,
+                        isUserContributed: !item?.isUserContributed
+                      };
+
+                      // Preserve the existing property structure
+                      if (item?.property) {
+                        updatedProperty.property = item.property;
+                      }
+
+                      (($form as any)[fieldRoot][index] as any) = updatedProperty;
+                    }
+                    return $form;
+                  });
+                }} />
+            </label>
+          </div>
         </div>
       {/if}
     {/each}
   {:else}
     <div class="p-4 text-gray-500">
-      No properties found or properties is not an array
+      {m.bland_sad_goat_gasp()}
     </div>
   {/if}
 </div>

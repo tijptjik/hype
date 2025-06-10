@@ -6,20 +6,11 @@ import { XMark } from '@steeze-ui/heroicons';
 import { getI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // TYPES
-import type { Resource, Id } from '$lib/types';
-
-type Neighbourhood = {
-  neighbourhood: string;
-  data: {
-    neighbourhood: string;
-    region: string;
-    district: string;
-  };
-};
+import type { Resource, Id, Neighbourhood } from '$lib/types';
 
 // First, get the props without destructuring
 let props = $props<{
-  mapCtx: any;
+  appCtx: any;
   type: 'organisation' | 'project' | 'layer' | 'neighbourhood';
   resources: Resource[] | Neighbourhood[];
   selectedIds: Id[] | string[];
@@ -33,16 +24,16 @@ let colorClass = $derived(props.colorClass ?? 'text-blue-400');
 function handleToggle(id: Id) {
   switch (props.type) {
     case 'organisation':
-      props.mapCtx.toggleOrganisation(id);
+      props.appCtx.toggleOrganisation(id);
       break;
     case 'project':
-      props.mapCtx.toggleProject(id);
+      props.appCtx.toggleProject(id);
       break;
     case 'layer':
-      props.mapCtx.toggleLayer(id);
+      props.appCtx.toggleLayer(id);
       break;
     case 'neighbourhood':
-      props.mapCtx.toggleNeighbourhood(id);
+      props.appCtx.toggleNeighbourhood(id);
       break;
   }
 }
@@ -53,7 +44,7 @@ function handleToggle(id: Id) {
     {#each props.selectedIds as id}
       {@const resource = props.resources.find((r: Resource) => r.id === id)}
       {@const key = 'name'}
-      {@const name = getI18n(resource, key, props.mapCtx.getUserPreferences())}
+      {@const name = getI18n(resource, key, props.appCtx.getUserPreferences())}
       {#if resource}
         <span
           class="badge badge-outline cursor-pointer px-3 py-3 {colorClass}"
@@ -72,11 +63,11 @@ function handleToggle(id: Id) {
     <p class="pb-2 text-sm text-base-content/60">
       {@html props.type == 'layer'
         ? m.maps__layers_none()
-        : props.type == 'project' && props.mapCtx.state.prisms.organisation.length == 0
+        : props.type == 'project' && props.appCtx.state.prisms.organisation.length == 0
           ? m.maps__projects_none()
-          : props.type == 'project' && props.mapCtx.state.prisms.organisation.length > 0
+          : props.type == 'project' && props.appCtx.state.prisms.organisation.length > 0
             ? m.maps__projects_none_with_n_organisations({
-                n: props.mapCtx.state.prisms.organisation.length.toString()
+                n: props.appCtx.state.prisms.organisation.length.toString()
               })
             : props.type == 'neighbourhood'
               ? m.maps__neighbourhoods_none()

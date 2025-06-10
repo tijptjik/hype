@@ -1,12 +1,14 @@
 <script lang="ts">
+// SVELTE
+import { goto } from '$app/navigation';
+
 // AUTH
-// @ts-expect-error
-import { signOut } from '@auth/sveltekit/client';
+import { signOut } from '$lib/auth/client';
 import { m } from '$lib/i18n';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 </script>
 
 <div
@@ -16,19 +18,28 @@ const mapCtx = getMapCtx();
     <!-- Avatar -->
     <div class="avatar">
       <div class="w-32 rounded-full ring ring-black/40">
-        <img alt="Avatar" src={mapCtx.getUser().image} referrerpolicy="no-referrer" />
+        <img alt="Avatar" src={appCtx.getUser()?.image} referrerpolicy="no-referrer" />
       </div>
     </div>
 
     <!-- User Name -->
     <div class="z-20 -mt-6 rounded-full bg-black/80 px-4 py-1">
       <span class="font-medium text-white">
-        {mapCtx.getUser().name}
+        {appCtx.getUser()?.name}
       </span>
     </div>
 
     <!-- Sign Out Button -->
-    <button class="btn btn-sm uppercase" onclick={() => signOut()}>
+    <button
+      class="btn btn-sm uppercase"
+      onclick={async () =>
+        await signOut({
+          fetchOptions: {
+            onSuccess: () => {
+              goto('/'); // redirect to login page
+            }
+          }
+        })}>
       {m.navbar__signout()}
     </button>
   </div>

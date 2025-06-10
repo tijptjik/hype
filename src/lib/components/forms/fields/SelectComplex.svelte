@@ -25,7 +25,7 @@ let { form } = fieldProps.form;
 // STATE : INTERMEDIATE
 let values: { readonly value: string; readonly id: string }[] = $derived(
   ($form as any)[fieldRoot][fieldIndex]['property']?.values.map((v: PropertyValue) => ({
-    value: v.i18n[getLocale()].value,
+    value: v.i18n?.[getLocale()]?.value || '',
     id: v.id
   })) || []
 );

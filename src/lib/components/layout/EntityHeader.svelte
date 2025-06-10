@@ -8,7 +8,7 @@ import { navItems } from '$lib/navigation';
 import Icon from '$lib/components/common/Icon.svelte';
 import { Bars3 } from '@steeze-ui/heroicons';
 // CONTEXT
-import { getHierarchicalResourceState } from '$lib/context/resource.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
 import type { Resource, ResourceType, Organisation, Project, Layer, Feature } from '$lib/types';
 import type { Snippet } from 'svelte';
@@ -29,7 +29,7 @@ let {
 } = $props();
 
 // STATE : CONTEXT
-const resourceState = getHierarchicalResourceState();
+const adminCtx = getAdminCtx();
 
 // Auto-generate breadcrumbs if not provided
 const autoBreadcrumbs = $derived(() => {
@@ -37,26 +37,26 @@ const autoBreadcrumbs = $derived(() => {
     return breadcrumbs;
   }
 
-  if (!resourceState.activeResource || !resourceState.activeEntity) {
+  if (!adminCtx.activeResource || !adminCtx.activeEntity) {
     return [];
   }
 
-  const currentEntity = resourceState.getEntity();
+  const currentEntity = adminCtx.getEntity();
   if (!currentEntity) {
     return [];
   }
 
   const parents: { name: string; href: string }[] = [];
-  buildParentChain(currentEntity, resourceState.activeResource, parents);
+  buildParentChain(currentEntity, adminCtx.activeResource, parents);
   return parents;
 });
 
 // Simplified parent chain builder
 function buildParentChain(entity: Resource, resourceType: ResourceType, parents: { name: string; href: string }[]) {
   const parentMap = {
-    feature: { getter: resourceState.getLayer, parentType: 'layer' as ResourceType },
-    layer: { getter: resourceState.getProject, parentType: 'project' as ResourceType },
-    project: { getter: resourceState.getOrganisation, parentType: 'organisation' as ResourceType }
+    feature: { getter: adminCtx.appCtx.getLayer, parentType: 'layer' as ResourceType },
+    layer: { getter: adminCtx.appCtx.getProject, parentType: 'project' as ResourceType },
+    project: { getter: adminCtx.appCtx.getOrganisation, parentType: 'organisation' as ResourceType }
   };
 
   const parentInfo = parentMap[resourceType as keyof typeof parentMap];
@@ -70,7 +70,7 @@ function buildParentChain(entity: Resource, resourceType: ResourceType, parents:
 }
 
 function addParentToChain(parents: { name: string; href: string }[], parentEntity: Resource, resourceType: ResourceType) {
-  const parentRef = resourceState.getEntityRef(resourceType as any, parentEntity.id as string);
+  const parentRef = adminCtx.getEntityRef(resourceType as any, parentEntity.id as string);
   if (parentRef) {
     const parentPath = `${ADMIN_PATH}/${resourceType}s/${parentRef}`;
     
@@ -102,7 +102,7 @@ function getParentHref(parentPath: string): string {
 
 // Default icon from navigation if not provided
 const displayIcon = $derived(
-  icon || navItems[resourceState.activeResource as keyof typeof navItems]?.icon
+  icon || navItems[adminCtx.activeResource as keyof typeof navItems]?.icon
 );
 </script>
 

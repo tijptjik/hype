@@ -6,13 +6,13 @@ import { m } from '$lib/i18n';
 import { calculateDistance } from '$lib/map';
 import { formatDistanceToNow } from 'date-fns';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
 import type { Task } from '$lib/types';
 import type { Point } from 'geojson';
 
 // CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 
 let { task }: { task: Task } = $props();
 
@@ -67,7 +67,7 @@ let reportDate = $derived(
     <div class="stat">
       <div class="stat-title">{m.male_silly_jannes_feel()}</div>
       <div class="stat-value text-wrap text-lg">
-        {getI18n(task.feature, 'displayAddress', mapCtx.getUserPreferences())}
+        {getI18n(task.feature, 'displayAddress', appCtx.getUserPreferences())}
       </div>
     </div>
   </div>

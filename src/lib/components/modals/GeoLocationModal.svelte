@@ -7,7 +7,7 @@ import { m } from '$lib/i18n';
 // CONSTANTS
 import { MOBILE_MAX_WIDTH } from '$lib/index';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
@@ -19,7 +19,7 @@ import type { Locale } from '$lib/types';
 import type { Point } from 'geojson';
 
 // CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 const omniCtx = getOmniContext();
 
 // STATE
@@ -34,7 +34,7 @@ let isEditingAddress = $state(false);
 let isLoading = $state(false);
 
 // STATE : DERIVED
-let newFeature = $derived(mapCtx.getNewFeature());
+let newFeature = $derived(appCtx.getNewFeature());
 
 let isValid = $derived(
   ((newFeature?.feature?.geometry as Point)?.coordinates &&
@@ -48,7 +48,7 @@ let isValid = $derived(
 
 // PANEL STATE
 let horizontalOffset = $derived.by(() => {
-  const { filters, maps, stars, settings } = mapCtx.state.panels;
+  const { filters, maps, stars, settings } = appCtx.state.panels;
   const leftPanelOpen = maps || stars;
   const rightPanelOpen = filters || settings;
   if (window.innerWidth < MOBILE_MAX_WIDTH) {
@@ -65,7 +65,7 @@ let horizontalOffset = $derived.by(() => {
 
 const handleShowModal = () => {
   // Sync with current newFeature state when opening
-  // const currentFeature = mapCtx.getNewFeature()?.feature;
+  // const currentFeature = appCtx.getNewFeature()?.feature;
   // if (currentFeature?.geometry) {
   // Already has geometry, keep current address
   // const currentDisplayAddress = currentFeature.i18n?.[getLocale()]?.displayAddress || '';
@@ -103,9 +103,9 @@ function handleAccept() {
 }
 
 async function handleSetLocation() {
-  const center = mapCtx.map?.getCenter();
+  const center = appCtx.map?.getCenter();
   if (center) {
-    mapCtx.updateNewFeatureValue('geometry', {
+    appCtx.updateNewFeatureValue('geometry', {
       type: 'Point',
       coordinates: [center.lng, center.lat]
     });
@@ -140,8 +140,8 @@ function handleAddressSave() {
   isDisplayAddressGen = false;
 
   const locale = getLocale();
-  mapCtx.updateNewFeatureValueI18n('displayAddress', displayAddress[locale]);
-  mapCtx.updateNewFeatureValueI18n('displayAddressGen', isDisplayAddressGen);
+  appCtx.updateNewFeatureValueI18n('displayAddress', displayAddress[locale]);
+  appCtx.updateNewFeatureValueI18n('displayAddressGen', isDisplayAddressGen);
 
   isEditingAddress = false;
 }

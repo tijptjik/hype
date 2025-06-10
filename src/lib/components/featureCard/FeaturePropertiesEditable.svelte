@@ -7,7 +7,7 @@ import { getI18n, getLocale } from '$lib/i18n';
 // SERVICES
 import { sortFeatureProperties } from '$lib/client/services/property';
 // CONTEXT
-import { getMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 // TYPES
 import type {
@@ -27,11 +27,11 @@ import type {
 let { feature }: { feature: Feature | UserContributedFeature } = $props();
 
 // STATE : CONTEXT
-const mapCtx = getMapCtx();
+const appCtx = getAppCtx();
 const cardCtx = getFeatureCardContext();
 
 // STATE : SESSION
-const userPreferences = $derived(mapCtx.getUserPreferences());
+const userPreferences = $derived(appCtx.getUserPreferences());
 
 // STATE : LOCAL EDITING
 let editingStates = $state<Record<string, boolean>>({});
@@ -48,8 +48,8 @@ function getAvailableProperties() {
     return [];
   }
 
-  // Find the layer from mapCtx.state.resources.layer
-  const layer = mapCtx.getLayerById(feature.layerId);
+  // Find the layer from appCtx.state.resources.layer
+  const layer = appCtx.getLayerById(feature.layerId);
   if (!layer) {
     return [];
   }
@@ -91,28 +91,17 @@ function getPropertyValues(
   propertyId: Id
 ): { readonly value: string; readonly id: string }[] {
   if (!cardCtx.isNewMode || !feature || !feature.layerId) {
-    console.log('🔵 FeaturePropertiesEditable: getPropertyValues early return:', {
-      isNewMode: cardCtx.isNewMode,
-      hasFeature: !!feature,
-      hasLayerId: !!feature?.layerId
-    });
     return [];
   }
 
-  const layer = mapCtx.getLayerById(feature.layerId);
+  const layer = appCtx.getLayerById(feature.layerId);
   if (!layer) {
-    console.log('🔴 FeaturePropertiesEditable: getPropertyValues - layer not found:', feature.layerId);
     return [];
   }
 
   // Find the property in the layer's properties
   const layerProperty = layer.properties?.find((p) => p.property?.id === propertyId);
   if (!layerProperty?.property?.values) {
-    console.log('🔵 FeaturePropertiesEditable: getPropertyValues - no values found for property:', {
-      propertyId,
-      layerProperty: !!layerProperty,
-      hasPropertyValues: !!layerProperty?.property?.values
-    });
     return [];
   }
 
@@ -123,36 +112,18 @@ function getPropertyValues(
       value: getI18n(v, 'value', userPreferences), // Display text for user
       id: v.id! // Actual value to store
     }));
-    
-  console.log('🔵 FeaturePropertiesEditable: getPropertyValues result:', {
-    propertyId,
-    propertyType: layerProperty.property.type,
-    propertyComponent: layerProperty.property.component,
-    resultCount: result.length,
-    result
-  });
   
   return result;
 }
 
 // Get current property value for display (reactive)
 function getFeatureProp(propertyId: Id) {
-  if (!cardCtx.isNewMode || !mapCtx.newFeature?.feature?.properties) {
-    console.log('🔵 FeaturePropertiesEditable: getFeatureProp early return:', {
-      isNewMode: cardCtx.isNewMode,
-      hasNewFeature: !!mapCtx.newFeature,
-      hasProperties: !!mapCtx.newFeature?.feature?.properties
-    });
+  if (!cardCtx.isNewMode || !appCtx.newFeature?.feature?.properties) {
     return null;
   }
-  const result = mapCtx.newFeature.feature.properties.find(
+  const result = appCtx.newFeature.feature.properties.find(
     (p) => p && p.propertyId === propertyId
   ) as UserContributedFeatureProperty | undefined;
-  console.log('🔵 FeaturePropertiesEditable: getFeatureProp result:', {
-    propertyId,
-    allProperties: mapCtx.newFeature.feature.properties,
-    result
-  });
   return result;
 }
 
@@ -160,11 +131,6 @@ function getFeatureProp(propertyId: Id) {
 function getUniversalSpecifierValue(propertyId: Id): string | undefined {
   const currentProp = getFeatureProp(propertyId);
   const result = currentProp?.value;
-  console.log('🔵 FeaturePropertiesEditable: getUniversalSpecifierValue:', {
-    propertyId,
-    currentProp,
-    result
-  });
   return result;
 }
 
@@ -174,13 +140,7 @@ function getI18nSpecifierValue(
   locale: LocaleExtended
 ): string | undefined {
   const currentProp = getFeatureProp(propertyId);
-  const result = currentProp?.i18n?.[locale]?.value;
-  console.log('🔵 FeaturePropertiesEditable: getI18nSpecifierValue:', {
-    propertyId,
-    locale,
-    currentProp,
-    result
-  });
+  const result = getI18n(currentProp as FeatureProperty, 'value', userPreferences);
   return result;
 }
 
@@ -196,30 +156,18 @@ function getCategoricalValueId(propertyId: Id): string | undefined {
  * @param propertyValueId - The id of the property value to change to
  */
 function handleCategoricalChange(propertyKey: Key, propertyValueId: Id) {
-  console.log('🔵 FeaturePropertiesEditable: handleCategoricalChange called:', {
-    propertyKey,
-    propertyValueId,
-    currentNewFeature: mapCtx.newFeature
-  });
-
-  const featureProp = mapCtx.newFeature!.feature?.properties?.find(
+  const featureProp = appCtx.newFeature!.feature?.properties?.find(
     (p) => p && p.propertyId === propertyKey
   ) as UserContributedFeatureProperty;
-  
-  console.log('🔵 FeaturePropertiesEditable: found categorical featureProp:', featureProp);
 
   if (featureProp) {
     featureProp.propertyValueId = propertyValueId;
-    console.log('🔵 FeaturePropertiesEditable: updated categorical property:', featureProp);
   } else {
-    console.log('🔴 FeaturePropertiesEditable: categorical featureProp not found, calling updateNewFeatureProperty');
     // Property doesn't exist yet, create it using map context
-    mapCtx.updateNewFeatureProperty(propertyKey, {
+    appCtx.updateNewFeatureProperty(propertyKey, {
       propertyValueId: propertyValueId
     });
   }
-
-  console.log('🔵 FeaturePropertiesEditable: newFeature after categorical update:', mapCtx.newFeature);
 }
 
 /**
@@ -233,37 +181,24 @@ function handleSpecifierChange(
   locale: LocaleExtended,
   newValue: string
 ) {
-  console.log('🔵 FeaturePropertiesEditable: handleSpecifierChange called:', {
-    propertyKey,
-    locale,
-    newValue,
-    currentNewFeature: mapCtx.newFeature
-  });
-
-  const featureProp = mapCtx.newFeature!.feature?.properties?.find(
+  const featureProp = appCtx.newFeature!.feature?.properties?.find(
     (p) => p && p.propertyId === propertyKey
   ) as UserContributedFeatureProperty;
-
-  console.log('🔵 FeaturePropertiesEditable: found featureProp:', featureProp);
 
   if (featureProp) {
     if (featureProp.property?.isTranslatable && locale !== 'core') {
       if (!featureProp.i18n) {
-        featureProp.i18n = {};
+        featureProp!.i18n = {};
       }
-      featureProp.i18n[locale] = { locale, value: newValue, valueGen: false };
-      console.log('🔵 FeaturePropertiesEditable: updated translatable property:', featureProp.i18n);
+      featureProp!.i18n[locale] = { locale, value: newValue, valueGen: false };
     } else {
       featureProp.value = newValue;
       // Don't set i18n for non-translatable properties
       if (featureProp.i18n) {
         delete featureProp.i18n;
       }
-      console.log('🔵 FeaturePropertiesEditable: updated non-translatable property:', featureProp.value);
     }
   } else {
-    console.log('🔴 FeaturePropertiesEditable: featureProp not found, calling updateNewFeatureProperty');
-    
     // Find the property definition to check if it's translatable
     const availableProps = getAvailableProperties();
     const propDef = availableProps.find(p => p.propertyId === propertyKey);
@@ -271,19 +206,17 @@ function handleSpecifierChange(
     // Property doesn't exist yet, create it using map context
     if (propDef?.property?.isTranslatable && locale !== 'core') {
       // Translatable property - include i18n structure with locale field
-      mapCtx.updateNewFeatureProperty(propertyKey, {
+      appCtx.updateNewFeatureProperty(propertyKey, {
         value: '',
         i18n: { [locale]: { locale, value: newValue, valueGen: false } }
       });
     } else {
       // Non-translatable property - just set value, no i18n
-      mapCtx.updateNewFeatureProperty(propertyKey, {
+      appCtx.updateNewFeatureProperty(propertyKey, {
         value: newValue
       });
     }
   }
-
-  console.log('🔵 FeaturePropertiesEditable: newFeature after update:', mapCtx.newFeature);
 }
 
 // EDIT MODE HANDLERS
@@ -292,15 +225,6 @@ function getCurrentValue(propertyId: string, prop: any): string {
   const i18nValue = getI18nSpecifierValue(propertyId, getLocale());
   const universalValue = getUniversalSpecifierValue(propertyId);
   const result = translatable ? i18nValue || '' : universalValue || '';
-  
-  console.log('🔵 FeaturePropertiesEditable: getCurrentValue called:', {
-    propertyId,
-    translatable,
-    i18nValue,
-    universalValue,
-    result,
-    newFeatureProperties: mapCtx.newFeature?.feature?.properties
-  });
   
   return result;
 }
@@ -326,11 +250,6 @@ function handleTextareaEditMode(propertyId: string, prop: any) {
 }
 
 function handleInputSubmit(propertyId: string, prop: any) {
-  console.log('🔵 FeaturePropertiesEditable: handleInputSubmit called:', {
-    propertyId,
-    currentValue: currentValues[propertyId],
-    prop
-  });
   editingStates[propertyId] = false;
   handleSpecifierChange(
     propertyId,
@@ -340,11 +259,6 @@ function handleInputSubmit(propertyId: string, prop: any) {
 }
 
 function handleTextareaSubmit(propertyId: string, prop: any) {
-  console.log('🔵 FeaturePropertiesEditable: handleTextareaSubmit called:', {
-    propertyId,
-    currentValue: currentValues[propertyId],
-    prop
-  });
   editingStates[propertyId] = false;
   handleSpecifierChange(
     propertyId,
@@ -375,11 +289,10 @@ function handleEditCancel(propertyId: string) {
               hasPropertyValues: propertyValues.length > 0,
               shouldRenderSelect: prop.component === 'SelectField' && propertyValues.length > 0
             }}
-            {console.log('🔵 FeaturePropertiesEditable: Rendering property:', renderingInfo)}
             <div class="dir-ltr flex flex-col justify-evenly gap-1">
               <span
                 class="font-mono text-xs font-normal uppercase tracking-wide text-gray-400">
-                {getI18n(prop.i18n as PropertyI18nDB, 'label', userPreferences)}
+                {getI18n(prop, 'label', userPreferences)}
               </span>
               <!-- Error message placeholder (for future use) -->
               <div class="min-h-0"></div>
@@ -390,7 +303,7 @@ function handleEditCancel(propertyId: string) {
                   value={getCategoricalValueId(propertyId)}
                   onchange={(e) =>
                     handleCategoricalChange(propertyId, e.currentTarget.value)}>
-                  <option value="">{getI18n(prop.i18n as PropertyI18nDB, 'placeholder', userPreferences)}</option>
+                  <option value="">{getI18n(prop, 'placeholder', userPreferences)}</option>
                   {#each propertyValues as option}
                     <option value={option.id}>{option.value}</option>
                   {/each}
@@ -422,7 +335,7 @@ function handleEditCancel(propertyId: string) {
                         class="textarea textarea-bordered text-md w-full rounded-lg bg-black px-3.5 py-2.5 caret-white outline-none resize-y mt-1.5 -ml-3"
                         bind:this={textareaElements[propertyId]}
                         bind:value={currentValues[propertyId]}
-                        placeholder="{getI18n(prop.i18n as PropertyI18nDB, 'placeholder', userPreferences)}"
+                        placeholder="{getI18n(prop, 'placeholder', userPreferences)}"
                         rows="1"
                         onkeydown={(e) => {
                           e.stopPropagation();
@@ -462,7 +375,7 @@ function handleEditCancel(propertyId: string) {
                     onclick={() => handleTextareaEditMode(propertyId, prop)}>
                     <p
                       class="text-sm flex-1">
-                      {displayValue || `Enter ${getI18n(prop.i18n as PropertyI18nDB, 'label', userPreferences)}`}
+                      {displayValue || `Enter ${getI18n(prop, 'label', userPreferences)}`}
                     </p>
                     <button
                       class="btn btn-ghost btn-sm rounded-none rounded-l-lg px-2 py-1 hover:bg-base-300 focus:text-primary focus:outline-none active:bg-base-200">
@@ -480,7 +393,7 @@ function handleEditCancel(propertyId: string) {
                       class="input input-bordered w-full bg-black caret-white focus:outline-none max-h-8 mt-1.5"
                       bind:value={currentValues[propertyId]}
                       bind:this={inputElements[propertyId]}
-                      placeholder="{getI18n(prop.i18n as PropertyI18nDB, 'placeholder', userPreferences)}"
+                      placeholder="{getI18n(prop, 'placeholder', userPreferences)}"
                       onkeydown={(e) => {
                         e.stopPropagation();
                         if (e.key === 'Enter') {
@@ -505,7 +418,7 @@ function handleEditCancel(propertyId: string) {
                     onclick={() => handleInputEditMode(propertyId, prop)}>
                     <span
                       class="text-sm text-white flex-1">
-                      {displayValue || `Enter ${getI18n(prop.i18n as PropertyI18nDB, 'label', userPreferences)}`}
+                      {displayValue || `Enter ${getI18n(prop, 'label', userPreferences)}`}
                     </span>
                     <button
                       class="btn btn-ghost btn-sm rounded-none rounded-l-lg px-2 py-1 hover:bg-base-300 focus:text-primary focus:outline-none active:scale-100 active:bg-base-200">
