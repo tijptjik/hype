@@ -1,6 +1,6 @@
 // DB
 import { upsert } from '$lib/db/crud';
-import { userFeature } from '$lib/db/schema';
+import { userFeature } from '$lib/db/schema/index';
 // DRIZZLE
 import { eq } from 'drizzle-orm';
 // TYPES

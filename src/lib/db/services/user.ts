@@ -1,3 +1,4 @@
+// ENV
 import { and, SQL, eq, like, sql, or } from 'drizzle-orm';
 // FORMS
 import { superValidate } from 'sveltekit-superforms';
@@ -107,7 +108,7 @@ export const getUser = async (
   conditions: SQL<unknown>[] = []
 ): Promise<UserDB | undefined> =>
   await db.query.user.findFirst({
-    ...withRelations,
+    with: withRelations,
     where: and(...conditions)
   });
 
@@ -286,15 +287,27 @@ export const toFormShape = async (
  * @returns A parsed response shape
  */
 export const toResponseShape = async (
-  user: UserDB,
+  user: UserRaw,
   userLayers: UserLayerDB[] = [],
   userFeatures: any[] = [],
-  isCollection: boolean = false
-) => {
+  isCollection: boolean = false,
+  isSuperAdmin: boolean = false
+): Promise<User | CurrentUser> => {
   const data: any = {
     ...user,
     userLayers,
-    userFeatures
+    userFeatures,
+    roles: [
+      ...user.memberships.map((role) => ({
+        ...role,
+        type: 'organisation'
+      })),
+      ...user.projectRoles.map((role) => ({
+        ...role,
+        type: 'project'
+      }))
+    ] as UserRoleDisco[],
+    ...(isSuperAdmin ? { superAdmin: true } : {})
   };
   return isCollection
     ? (UserCollectionAPI.parse(data) as User)
