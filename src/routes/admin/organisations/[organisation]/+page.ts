@@ -12,7 +12,7 @@ import type { PageLoad } from './$types';
 import type { Organisation } from '$lib/types';
 
 export const load: PageLoad = async ({ params, fetch, data }) => {
-  const isSuperAdmin = data?.session?.user?.superAdmin || false;
+  const isSuperAdmin = data?.user?.superAdmin || false;
   
   return await loadFormData<Organisation>({
     entity: params.organisation,
