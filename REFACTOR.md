@@ -29,6 +29,8 @@ Use the `runed` library - [runed.dev](https://runed.dev/)
 
 - use [@component](https://svelte.dev/docs/svelte/faq#How-do-I-document-my-components) to document components
 
+# Archive 
+
 ## i18n
 
 - [x] unify getters and setters for en with i18n options.
