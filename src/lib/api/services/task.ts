@@ -17,18 +17,17 @@ import {
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
 import { getProjectIdforRoles, isSuperAdmin } from '$lib/auth/utils';
 // SCHEMA
-import { task, feature, layer } from '$lib/db/schema';
+import { task, feature, layer } from '$lib/db/schema/index';
 // DB
 import { applyPrismConstraints, toLocaleMap } from '$lib/db';
 // ZOD
-import { TaskAPI, TaskCollectionAPI } from '$lib/db/zod/schemas/task';
+import { TaskAPI, TaskCollectionAPI } from '$lib/db/zod/schema/task';
 // ENUMS
 import { HierarchicalResource } from '$lib/enums';
 // TYPES
 import type {
   UserRoleDisco,
   Prisms,
-  Session,
   Database,
   Id,
   QueryParams,
@@ -37,7 +36,9 @@ import type {
   TaskCollection,
   Task,
   TaskDBRaw,
-  HubOpts
+  HubOpts,
+  SessionUser,
+  Locale,
 } from '$lib/types';
 
 // ═══════════════════════
@@ -140,7 +141,7 @@ export const taskEntityWithRelations = {
  */
 export const getTaskQueryContext = (
   db: Database,
-  session: Session,
+  user: SessionUser,
   request: Request,
   params: QueryParams,
   userRoles: UserRoleDisco[],
@@ -152,7 +153,7 @@ export const getTaskQueryContext = (
   let excludeColumns = ['isArchived'];
 
   // NON-SUPERADMIN : Hide tasks which are archived
-  if (!isSuperAdmin(session)) {
+  if (!isSuperAdmin(user)) {
     // Tasks don't have isArchived, but their associated features might
     // We'll handle this at the feature level if needed
   }
@@ -166,7 +167,7 @@ export const getTaskQueryContext = (
   if (!isAdminRequest(request)) {
     // Tasks should only be accessible from admin interface
     conditions.push(sql`false`); // Block all public access
-  } else if (!isSuperAdmin(session)) {
+  } else if (!isSuperAdmin(user)) {
     // ADMIN : List tasks where the user has a role in the task's project
     const projectIds = getProjectIdforRoles(userRoles);
     if (projectIds.length > 0) {
@@ -195,7 +196,7 @@ export const getTaskQueryContext = (
  */
 export const getTaskEntityQueryContext = (
   db: Database,
-  session: Session,
+  user: SessionUser,
   request: Request,
   params: QueryParams,
   userRoles: UserRoleDisco[]
@@ -206,7 +207,7 @@ export const getTaskEntityQueryContext = (
   // PUBLIC : Tasks are admin-only resources
   if (!isAdminRequest(request)) {
     conditions.push(sql`false`); // Block all public access
-  } else if (!isSuperAdmin(session)) {
+  } else if (!isSuperAdmin(user)) {
     // ADMIN : Access tasks where user has project role (direct relationship)
     const projectIds = getProjectIdforRoles(userRoles);
     if (projectIds.length > 0) {
@@ -235,13 +236,14 @@ export const getTaskEntityQueryContext = (
  */
 export const assertPermissionsToCreateTask = async (
   db: Database,
-  session: Session,
+  user: SessionUser,
   request: Request,
   data: TaskDBNew,
   userRoles: UserRoleDisco[]
 ) => {
   const commonAssertions = [
-    () => assertUserLoggedIn(session as any)
+    () => assertUserLoggedIn({ user } as any),
+    () => assertAdminRequest(request)
   ];
 
   const assertionError = runAssertions(...commonAssertions);
@@ -254,7 +256,7 @@ export const assertPermissionsToCreateTask = async (
  */
 export const assertPermissionsToUpdateTask = async (
   db: Database,
-  session: Session,
+  user: SessionUser,
   request: Request,
   params: QueryParams,
   userRoles: UserRoleDisco[],
@@ -262,7 +264,7 @@ export const assertPermissionsToUpdateTask = async (
   taskData?: TaskDB
 ) => {
   const commonAssertions = [
-    () => assertUserLoggedIn(session as any),
+    () => assertUserLoggedIn(user as any),
     () => assertAdminRequest(request),
     () => assertParamIdentifierEqualsFormIdentifier({ id: params.id }, refId, 'id')
   ];
@@ -284,7 +286,7 @@ export const assertPermissionsToUpdateTask = async (
   }
 
   const contextAssertion = () =>
-    assertProjectMaintainerOrMemberOrSuperAdmin(session, userRoles, projectId);
+    assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId);
 
   const assertionError = runAssertions(...commonAssertions, contextAssertion);
   if (assertionError) return assertionError;
@@ -296,7 +298,7 @@ export const assertPermissionsToUpdateTask = async (
  */
 export const assertPermissionsToDeleteTask = async (
   db: Database,
-  session: Session,
+  user: SessionUser,
   request: Request,
   params: QueryParams,
   userRoles: UserRoleDisco[],
@@ -305,7 +307,7 @@ export const assertPermissionsToDeleteTask = async (
 ) => {
   return assertPermissionsToUpdateTask(
     db,
-    session,
+    user,
     request,
     params,
     userRoles,

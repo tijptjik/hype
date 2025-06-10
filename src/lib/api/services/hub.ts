@@ -3,17 +3,26 @@ import { applyQueryFilters } from '$lib/api';
 // AUTH
 import { assertUserLoggedIn, assertSuperAdmin, runAssertions } from '$lib/auth/asserts';
 // SCHEMA
-import { hub } from '$lib/db/schema';
+import { hub } from '$lib/db/schema/index';
 // DB
 import { toLocaleMap } from '$lib/db';
 // ZOD
-import { getLocales } from '$lib/db/zod/constraints';
-import { HubAPI, HubCollectionAPI } from '$lib/db/zod/schemas/hub';
+import { HubAPI, HubCollectionAPI } from '$lib/db/zod/schema/hub';
 import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 // TYPES
 import type { SQL } from 'drizzle-orm';
-import type { Hub, QueryParams, HubOpts, HubDB, Session, Code, HubDBRaw, OrganisationDBRaw, OrganisationI18nDB } from '$lib/types';
+import type {
+  Hub,
+  QueryParams,
+  HubOpts,
+  HubDB,
+  HubI18nDB,
+  SessionUser,
+  HubDBRaw,
+  OrganisationDBRaw,
+  OrganisationI18nDB
+} from '$lib/types';
 import type { SuperValidated } from 'sveltekit-superforms';
 
 // ═══════════════════════
@@ -22,6 +31,7 @@ import type { SuperValidated } from 'sveltekit-superforms';
 
 // Simple relations for hub collection
 export const hubCollectionWithRelations = {
+  i18n: {},
   organisations: {
     with: {
       i18n: {},
@@ -107,20 +117,23 @@ export const getHubQueryContext = (params: QueryParams) => {
  * @param hub - The hub database entity
  * @returns Validated form data
  */
-export const toFormShape = async (hub: HubDB): Promise<SuperValidated<Hub>> => {
+export const toFormShape = async (hub: HubDBRaw): Promise<SuperValidated<Hub>> => {
   // @ts-ignore TODO - Fix Zod type error
-    // Transform the hub data structure
+  // Transform the hub data structure
   const transformedHub = {
     ...hub,
-    organisations: hub.organisations?.map((organisation: OrganisationDBRaw) => {
-      return {
-        ...organisation,
-        i18n: toLocaleMap<OrganisationI18nDB>(organisation.i18n as OrganisationI18nDB[]),
-        // Image is already a full object from the relation, no transformation needed
-        image: organisation.image || null
-      };
-    }) || null
+    i18n: hub.i18n ? toLocaleMap(hub.i18n) : {},
+    organisations:
+      hub.organisations?.map((organisation: OrganisationDBRaw) => {
+        return {
+          ...organisation,
+          i18n: toLocaleMap(organisation.i18n),
+          // Image is already a full object from the relation, no transformation needed
+          image: organisation.image || null
+        };
+      }) || null
   };
+  // @ts-ignore Fix ZOD Type Error
   const form = await superValidate(transformedHub, zod(HubAPI) as any);
   return form as SuperValidated<Hub>;
 };
@@ -134,14 +147,16 @@ export const toResponseShape = async (hub: HubDBRaw, isCollection: boolean = fal
   // Transform the hub data structure
   const transformedHub = {
     ...hub,
-    organisations: hub.organisations?.map((organisation: OrganisationDBRaw) => {
-      return {
-        ...organisation,
-        i18n: toLocaleMap<OrganisationI18nDB>(organisation.i18n as OrganisationI18nDB[]),
-        // Image is already a full object from the relation, no transformation needed
-        image: organisation.image || null
-      };
-    }) || null
+    i18n: toLocaleMap<HubI18nDB>(hub.i18n as HubI18nDB[]),
+    organisations:
+      hub.organisations?.map((organisation: OrganisationDBRaw) => {
+        return {
+          ...organisation,
+          i18n: toLocaleMap(organisation.i18n),
+          // Image is already a full object from the relation, no transformation needed
+          image: organisation.image || null
+        };
+      }) || null
   };
 
   return isCollection
@@ -154,18 +169,18 @@ export const toResponseShape = async (hub: HubDBRaw, isCollection: boolean = fal
  ************/
 /**
  * Get the context for updating a hub
- * @param session - The session object
+ * @param user - The user object
  * @param formData - The form data
  * @param refId - The code from the URL parameter
  * @returns Object containing validation and access control context
  * @remarks We don't need to assert code in params equals code in form,
  * as we want to allow the users to change the code of the hub.
  */
-export const assertPermissionsToUpdateHub = (session: Session) => {
+export const assertPermissionsToUpdateHub = (user: SessionUser) => {
   // Run all access control assertions
   const assertionError = runAssertions(
-    () => assertUserLoggedIn(session as any),
-    () => assertSuperAdmin(session)
+    () => assertUserLoggedIn(user as any),
+    () => assertSuperAdmin(user)
   );
 
   if (assertionError) return assertionError;
