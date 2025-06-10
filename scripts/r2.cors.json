@@ -1,22 +1,20 @@
 [
   {
     "AllowedOrigins": [
-      "http://localhost:5173",
-      "https://ghostsigns.pages.dev",
-      "https://tiles.hype.hk",
-      "https://hype.hk",
-      "https://preview.hype.hk",
-      "https://dove-main-tapir.ngrok-free.app",
-      "https://tramways-primary.datalayer.workers.dev/",
-      "http://192.168.1.100.nip.io:5173",
       "http://192.168.1.100:5173",
-      "http://192.168.1.100.nip.io",
-      "http://192.168.1.100",
-      "https://192.168.1.100.nip.io",
-      "https://192.168.1.100",
-      "https://protomaps.github.io",
+      "http://192.168.1.100.nip.io:5173",
+      "http://localhost:4173",
+      "http://localhost:5173",
+      "https://dove-main-tapir.ngrok-free.app",
+      "https://hkghostsigns.com",
+      "https://hkghostsigns.hype.hk",
+      "https://hype.hk",
+      "https://maplibre.org",
       "https://pmtiles.io/",
-      "https://maplibre.org"
+      "https://preview.hype.hk",
+      "https://protomaps.github.io",
+      "https://tiles.hype.hk",
+      "https://tramways-primary.datalayer.workers.dev/"
     ],
     "AllowedMethods": [
       "GET",
