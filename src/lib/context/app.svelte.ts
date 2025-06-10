@@ -6,7 +6,15 @@ import { goto } from '$app/navigation';
 // GEO
 import { bbox } from '@turf/bbox';
 // I18N
-import { getFPI18n, getFallbackLocales, getLocale, setLocale, getI18n } from '$lib/i18n';
+import {
+  getFPI18n,
+  getFallbackLocales,
+  getLocale,
+  setLocale,
+  getI18n
+} from '$lib/i18n';
+// LIB
+import { fetchOrThrow } from '$lib/index';
 // SERVICES
 import {
   debouncedUpdateUserAttribution,
@@ -20,7 +28,7 @@ import { getContext, setContext } from 'svelte';
 // MARKERS
 import { removeMarkerClass, addMarkerClass } from '$lib/map/markers';
 // ENUMS
-import { HierarchicalResource, ResourcePath } from '$lib/enums';
+import { FirstClassResource, ResourcePath } from '$lib/enums';
 // TYPES
 import type {
   Feature,
@@ -29,41 +37,38 @@ import type {
   Organisation,
   Id,
   UserFeature,
-  MapContextState,
+  AppContextState,
   PanelState,
   ActiveCollection,
   Property,
-  UserContributedFeature,
-  Session,
   UserLayer,
   FeatureExtended,
-  CurrentUser,
   SessionUser,
   UserPreferences,
-  UserRoleDisco,
   Locale,
+  CurrentUser,
   UserExperimental,
   DeepPartial,
   NewFeatureTask,
   FeatureProperty,
-  FeaturePropertyI18nDB
+  FeaturePropertyI18nDB,
+  ResourceTypeWithChildren
 } from '$lib/types';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
 import { MOBILE_MAX_WIDTH } from '$lib/index';
 
-export class MapCtx {
+export class AppCtx {
   // Maplibre Map instance
   map: MaplibreMap = $state()!;
   // Tanstack Query Client instance
   queryClient: QueryClient;
   // User data (reactive)
-  user: SessionUser = $state()!;
+  user: CurrentUser | SessionUser | null = $state(null);
   // Whether the map has been initialised
   isInitialised: boolean = $state(false);
-
   // State
-  state: MapContextState = $state({
+  state: AppContextState = $state({
     // Markers -- Which features are shown on the map
     markers: new Map(),
     // Active -- Which feature or collection is in focus on the map
@@ -80,7 +85,9 @@ export class MapCtx {
       organisation: [],
       project: [],
       layer: [],
-      feature: []
+      feature: [],
+      task: [],
+      hub: []
     },
     // User Features -- The user's wishlist and visited features
     userFeatures: {
@@ -107,43 +114,58 @@ export class MapCtx {
   // Silly state to track if the map has been zoomed to a marker
   zoomToMarkerOnly: boolean = $state(false);
 
-  // QueryKeys
-  organisationsQueryKey = ['organisations'];
-  projectsQueryKey = $derived(['projects', this.state.prisms.organisation]);
+  // ═══════════════════════
+  // QUERY KEYS
+  // ═══════════════════════
+
+  organisationsQueryKey = [FirstClassResource.organisation];
+  projectsQueryKey = $derived([
+    FirstClassResource.project,
+    this.state.prisms.organisation
+  ]);
   layersQueryKey = $derived([
-    'layers',
+    FirstClassResource.layer,
     this.state.prisms.organisation,
     this.state.prisms.project
   ]);
   featuresQueryKey = $derived([
-    'features',
+    FirstClassResource.feature,
     this.state.prisms.organisation,
     this.state.prisms.project,
     this.state.prisms.layer
   ]);
   userFeaturesQueryKey = ['userFeatures'];
+  userQueryKey = ['user'];
 
   // Constructor
-  constructor(queryClient: QueryClient, user: CurrentUser) {
+  constructor(queryClient: QueryClient, user: SessionUser | null) {
     this.queryClient = queryClient;
-    if (user && user.id) {
-      const defaultLayers =
-        user?.userLayers?.map((layer: UserLayer) => layer.layerId) ?? [];
-      this.state.prisms.layer = defaultLayers;
-      this.setUser(user);
-    } else {
-      this.resetUser();
-    }
+    this.setUser(user);
   }
 
-  init = async () => {
-    await this.initializeQueries(this.queryClient);
+  init = async (userId: Id | null) => {
+    await this.initializeQueries(this.queryClient, userId);
     this.postLayerMutation();
+    this.postUserMutation();
   };
+
+  reinitializeWithAuth = async () => {
+    if (this.user?.id) {
+      this.isInitialised = false;
+      await this.initializeQueries(this.queryClient, this.user.id);
+      this.postLayerMutation();
+      this.postUserMutation();
+    }
+  };
+
+  // METHOD : SuperAdmin check
+  isSuperAdmin(): boolean {
+    return this.user?.superAdmin === true;
+  }
 
   // Helper method to build API URLs with filters
   private buildApiUrl = (
-    resource: HierarchicalResource,
+    resource: FirstClassResource,
     includeFilters = true
   ): string => {
     const path = ResourcePath[resource];
@@ -155,24 +177,24 @@ export class MapCtx {
 
     if (includeFilters) {
       // Add prism filters based on resource hierarchy
-      if (resource !== HierarchicalResource.organisation) {
+      if (resource !== FirstClassResource.organisation) {
         this.state.prisms.organisation.forEach((org) =>
-          params.append(HierarchicalResource.organisation, org)
+          params.append(FirstClassResource.organisation, org)
         );
       }
 
       if (
-        resource !== HierarchicalResource.organisation &&
-        resource !== HierarchicalResource.project
+        resource !== FirstClassResource.organisation &&
+        resource !== FirstClassResource.project
       ) {
         this.state.prisms.project.forEach((proj) =>
-          params.append(HierarchicalResource.project, proj)
+          params.append(FirstClassResource.project, proj)
         );
       }
 
-      if (resource === HierarchicalResource.feature) {
+      if (resource === FirstClassResource.feature) {
         this.state.prisms.layer.forEach((layer) =>
-          params.append(HierarchicalResource.layer, layer)
+          params.append(FirstClassResource.layer, layer)
         );
       }
     }
@@ -180,33 +202,30 @@ export class MapCtx {
     return `/api/${path}?${params.toString()}`;
   };
 
-  private fetchOrThrow = async <T>(url: string): Promise<T> => {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Network response was not ok');
-    return (await response.json()) as T;
-  };
-
   organisationsQueryFn = async () => {
-    const url = this.buildApiUrl(HierarchicalResource.organisation);
-    return this.fetchOrThrow<Organisation[]>(url);
+    const url = this.buildApiUrl(FirstClassResource.organisation);
+    return fetchOrThrow<Organisation[]>(url);
   };
 
   projectsQueryFn = async () => {
-    const url = this.buildApiUrl(HierarchicalResource.project);
-    return this.fetchOrThrow<Project[]>(url);
+    const url = this.buildApiUrl(FirstClassResource.project);
+    return fetchOrThrow<Project[]>(url);
   };
 
   layersQueryFn = async () => {
-    const url = this.buildApiUrl(HierarchicalResource.layer);
-    return this.fetchOrThrow<Layer[]>(url);
+    const url = this.buildApiUrl(FirstClassResource.layer);
+    return fetchOrThrow<Layer[]>(url);
   };
 
   featuresQueryFn = async () => {
-    const url = this.buildApiUrl(HierarchicalResource.feature);
-    return this.fetchOrThrow<Feature[]>(url);
+    const url = this.buildApiUrl(FirstClassResource.feature);
+    return fetchOrThrow<Feature[]>(url);
   };
 
   userFeaturesQueryFn = async () => {
+    if (!this.user?.id) {
+      return [];
+    }
     const response = await fetch(`/api/userFeatures?userId=${this.user.id}`);
     if (!response.ok) throw new Error('Network response was not ok');
     const data = await response.json();
@@ -214,17 +233,64 @@ export class MapCtx {
     return Array.isArray(data) ? data : [];
   };
 
-  invalidateAndRefresh = async (resource: HierarchicalResource | 'userFeatures') => {
+  userQueryFn = async () => {
+    if (!this.user?.id) {
+      return null;
+    }
+    const response = await fetch(`/api/users/${this.user.id}`);
+    if (!response.ok) throw new Error('Network response was not ok');
+    const data = await response.json();
+    return data as CurrentUser;
+  };
+
+  invalidateAndRefresh = async (resource: FirstClassResource | 'userFeatures') => {
     // Invalidate the query
-    this.queryClient.invalidateQueries({
+    await this.invalidate(resource);
+    // Refresh the resources
+    await this.refresh(resource);
+  };
+
+  invalidate = async (resource: FirstClassResource | 'userFeatures') => {
+    await this.queryClient.invalidateQueries({
       queryKey:
         resource === 'userFeatures'
           ? this.userFeaturesQueryKey
-          : [HierarchicalResource[resource]],
+          : [FirstClassResource[resource]],
       refetchType: 'all',
       exact: false
     });
+  };
 
+  togglePrism = (resource: FirstClassResource, id: Id) => {
+    const prisms = this.state.prisms[resource as ResourceTypeWithChildren];
+    const index = prisms.indexOf(id);
+    if (index === -1) {
+      prisms.push(id);
+    } else {
+      prisms.splice(index, 1);
+    }
+    this.invalidateAndRefresh(resource);
+  };
+
+  // Toggle methods for hierarchical filters
+  toggleOrganisation = (id: Id) => {
+    this.togglePrism(FirstClassResource.organisation, id);
+  };
+
+  toggleProject = (id: Id) => {
+    this.togglePrism(FirstClassResource.project, id);
+  };
+
+  toggleLayer = (id: Id) => {
+    this.togglePrism(FirstClassResource.layer, id);
+  };
+
+  toggleFeature = (id: Id) => {
+    this.togglePrism(FirstClassResource.feature, id);
+  };
+
+  // Cascades refresh to the next resource in the hierarchy
+  refresh = async (resource: FirstClassResource | 'userFeatures') => {
     // Refresh the resources
     if (resource === 'project') {
       this.refreshProjects();
@@ -237,7 +303,25 @@ export class MapCtx {
     }
   };
 
-  private initializeQueries = async (queryClient: QueryClient) => {
+  private initializeQueries = async (queryClient: QueryClient, userId: Id | null) => {
+    // Only fetch data if user is authenticated
+    if (!userId) {
+      // Initialize empty data structures for unauthenticated users
+      this.state.resources.organisation = [];
+      this.state.resources.project = [];
+      this.state.resources.layer = [];
+      this.state.resources.feature = [];
+      // TODO Limit to admin route
+      this.state.resources.task = [];
+      this.state.resources.hub = [];
+      // TODO Limit to (app) route
+      this.state.userFeatures = {
+        wishlisted: [],
+        visited: []
+      };
+      return;
+    }
+
     // Organizations query
     this.state.resources.organisation = await queryClient.fetchQuery({
       queryKey: this.organisationsQueryKey,
@@ -262,6 +346,10 @@ export class MapCtx {
       queryFn: this.featuresQueryFn
     });
 
+    // Tasks and hubs are initialized in AdminCtx for admin routes only
+    this.state.resources.task = [];
+    this.state.resources.hub = [];
+
     // Initialize user features
     this.state.userFeatures = await queryClient
       .fetchQuery({
@@ -273,170 +361,12 @@ export class MapCtx {
         visited: (uf || []).filter((f: UserFeature) => f.isVisited)
       }));
 
+    this.user = (await queryClient.fetchQuery({
+      queryKey: this.userQueryKey,
+      queryFn: this.userQueryFn
+    })) as CurrentUser;
+
     this.isInitialised = true;
-  };
-
-  // Toggle methods for hierarchical filters
-  toggleOrganisation = (id: Id) => {
-    const orgs = this.state.prisms.organisation;
-    const index = orgs.indexOf(id);
-    if (index === -1) {
-      orgs.push(id);
-    } else {
-      orgs.splice(index, 1);
-    }
-    this.refreshProjects();
-  };
-
-  resetOrganisations = () => {
-    this.state.prisms.organisation = [];
-    this.refreshProjects();
-  };
-
-  toggleProject = (id: Id) => {
-    const projs = this.state.prisms.project;
-    const index = projs.indexOf(id);
-    if (index === -1) {
-      projs.push(id);
-    } else {
-      projs.splice(index, 1);
-    }
-    this.refreshLayers();
-  };
-
-  resetProjects = () => {
-    this.state.prisms.project = [];
-    this.refreshLayers();
-  };
-
-  // TODO : Clear the Omnibar when a layer is toggled
-  toggleLayer = (id: Id) => {
-    const layers = this.state.prisms.layer;
-    const index = layers.indexOf(id);
-    if (index === -1) {
-      this.addLayer(id);
-    } else {
-      this.removeLayer(id);
-    }
-  };
-
-  addLayer = (id: Id) => {
-    this.state.prisms.layer.push(id);
-    this.postLayerMutation();
-  };
-
-  removeLayer = (id: Id) => {
-    this.state.prisms.layer = this.state.prisms.layer.filter((l) => l !== id);
-    this.postLayerMutation();
-  };
-
-  setLayers = (layers: Id[]) => {
-    this.state.prisms.layer = layers;
-    this.postLayerMutation();
-  };
-
-  resetLayers = () => {
-    this.state.prisms.layer = [];
-    this.postLayerMutation();
-  };
-
-  initialiseCategoricalPropertyFilters = (layerId: Id) => {
-    const layer = this.state.resources.layer.find((l) => l.id === layerId);
-    if (!layer) {
-      return;
-    }
-
-    const project = this.state.resources.project.find((p) => p.id === layer.projectId);
-    if (!project) {
-      return;
-    }
-
-    // Filter properties based on visibility in layer (similar logic to Categories.svelte)
-    const classifierProperties =
-      project.properties
-        ?.filter((p) => p.type === 'classifier')
-        .filter((prop) => {
-          const layerProperty = layer.properties?.find(
-            (lp) => lp.propertyId === prop.id
-          );
-          // Only consider properties visible in the layer AND not range fields
-          return layerProperty?.isVisible !== false && prop.component !== 'RangeField';
-        })
-        // Ensure uniqueness by key within the project's properties relevant to this layer
-        .filter(
-          (prop, index, self) => index === self.findIndex((p) => p.key === prop.key)
-        ) || [];
-
-    // Ensure the layer's filter object exists
-    if (!this.state.filters.properties![layerId]) {
-      this.state.filters.properties![layerId] = {};
-    }
-
-    const layerFilters = this.state.filters.properties![layerId];
-
-    // Initialize each classifier property with an empty array if not already set
-    classifierProperties.forEach((property: Property) => {
-      if (!(property.key in layerFilters)) {
-        layerFilters[property.key] = [];
-      }
-    });
-  };
-
-  initialiseRangePropertyFilter = (layerId: Id) => {
-    const layer = this.state.resources.layer.find((l) => l.id === layerId);
-    if (!layer) {
-      return;
-    }
-
-    const project = this.state.resources.project.find((p) => p.id === layer.projectId);
-    if (!project) {
-      return;
-    }
-
-    // Find properties that are RangeFields and visible for this layer
-    const rangeProperties =
-      project.properties
-        ?.filter((p) => p.component === 'RangeField') // Identify range properties
-        .filter((prop) => {
-          const layerProperty = layer.properties?.find(
-            (lp) => lp.propertyId === prop.id
-          );
-          // Only consider properties visible in the layer
-          return layerProperty?.isVisible !== false;
-        })
-        // Ensure uniqueness by key
-        .filter(
-          (prop, index, self) => index === self.findIndex((p) => p.key === prop.key)
-        ) || [];
-
-    // Ensure the layer's filter object exists
-    if (!this.state.filters.properties![layerId]) {
-      this.state.filters.properties![layerId] = {};
-    }
-
-    const layerFilters = this.state.filters.properties![layerId];
-
-    // Initialize each range property using its min/max if not already set
-    rangeProperties.forEach((property: Property) => {
-      // Validate that min and max exist and are numbers
-      const min = property.min;
-      const max = property.max;
-
-      if (
-        !(property.key in layerFilters) &&
-        typeof min === 'number' &&
-        typeof max === 'number'
-      ) {
-        const filterConfig = {
-          globalMin: min,
-          globalMax: max,
-          rangeMin: min, // Default rangeMin to globalMin
-          rangeMax: max // Default rangeMax to globalMax
-        };
-
-        layerFilters[property.key] = filterConfig;
-      }
-    });
   };
 
   postLayerMutation = () => {
@@ -461,7 +391,18 @@ export class MapCtx {
       }
     });
 
-    this.refreshFeatures();
+    // Only refresh features if user is authenticated
+    if (this.user?.id) {
+      this.refreshFeatures();
+    }
+  };
+
+  postUserMutation = () => {
+    if (this.user && 'userLayers' in this.user) {
+      // Set default layers if user has userLayers
+      this.state.prisms.layer =
+        this.user.userLayers?.map((layer: UserLayer) => layer.layerId) ?? [];
+    }
   };
 
   refreshProjects = async () => {
@@ -489,6 +430,8 @@ export class MapCtx {
       queryFn: this.featuresQueryFn
     });
   };
+
+  // Tasks and hubs refresh methods moved to AdminCtx
 
   refreshUserFeatures = async () => {
     this.state.userFeatures = await this.queryClient
@@ -579,6 +522,14 @@ export class MapCtx {
 
   // PRISM RELATIONS
 
+  getPrism = (resource: FirstClassResource) => {
+    return this.state.prisms[resource as ResourceTypeWithChildren];
+  };
+
+  isPrism = (resource: FirstClassResource, id: Id) => {
+    return this.state.prisms[resource as ResourceTypeWithChildren]?.includes(id);
+  };
+
   getOrganisation = (project: Project): Organisation | undefined =>
     this.getOrganisationById(project.organisationId);
 
@@ -594,41 +545,57 @@ export class MapCtx {
   getLayer = (feature: Feature | FeatureExtended): Layer | undefined =>
     this.getLayerById(feature.layerId);
 
-  getLayerById = (id: Id): Layer | undefined =>
-    this.state.resources.layer.find((layer) => layer.id === id);
-
+  getLayerById = (id: Id): Layer | undefined => {
+    return this.state.resources.layer.find((layer) => layer.id === id);
+  };
   // COUNT METHODS
   getOrganisationProjectCount = (organisationId: Id): number =>
-    this.state.resources.project.filter((p) => p.organisationId === organisationId).length;
+    this.state.resources.project.filter((p) => p.organisationId === organisationId)
+      .length;
 
   getProjectLayerCount = (projectId: Id): number =>
     this.state.resources.layer.filter((l) => l.projectId === projectId).length;
 
   // CONTEXTUAL NAME METHODS
-  getContextualOrganisationName = (organisation: Organisation, hideIfOnly: boolean = true): string | null => {
+  getContextualOrganisationName = (
+    organisation: Organisation,
+    hideIfOnly: boolean = true
+  ): string | null => {
     const projectCount = this.getOrganisationProjectCount(organisation.id);
     if (hideIfOnly && projectCount === 1) {
       return null;
     }
-    return getI18n(organisation, 'nameShort', this.getUserPreferences());
+    return getI18n(organisation.i18n!, 'nameShort', this.getUserPreferences());
   };
 
-  getContextualProjectName = (project: Project, hideIfOnly: boolean = true): string | null => {
-    const organisationProjectCount = this.getOrganisationProjectCount(project.organisationId);
+  getContextualProjectName = (
+    project: Project,
+    hideIfOnly: boolean = true
+  ): string | null => {
+    const organisationProjectCount = this.getOrganisationProjectCount(
+      project.organisationId
+    );
     if (hideIfOnly && organisationProjectCount === 1) {
       return null;
     }
-    return getI18n(project, 'nameShort', this.getUserPreferences()) || 
-           getI18n(project, 'name', this.getUserPreferences());
+    return (
+      getI18n(project.i18n!, 'nameShort', this.getUserPreferences()) ||
+      getI18n(project.i18n!, 'name', this.getUserPreferences())
+    );
   };
 
-  getContextualLayerName = (layer: Layer, hideIfOnly: boolean = true): string | null => {
+  getContextualLayerName = (
+    layer: Layer,
+    hideIfOnly: boolean = true
+  ): string | null => {
     const projectLayerCount = this.getProjectLayerCount(layer.projectId);
     if (hideIfOnly && projectLayerCount === 1) {
       return null;
     }
-    return getI18n(layer, 'nameShort', this.getUserPreferences()) || 
-           getI18n(layer, 'name', this.getUserPreferences());
+    return (
+      getI18n(layer.i18n!, 'nameShort', this.getUserPreferences()) ||
+      getI18n(layer.i18n!, 'name', this.getUserPreferences())
+    );
   };
 
   // FEATURE COLLECTIONS
@@ -1186,7 +1153,7 @@ export class MapCtx {
 
   // FEATURE COLLECTIONS -- Utils
 
-  getFeatureById = (id: Id): Feature => {
+  getFeatureById = (id: Id): Feature | undefined => {
     return this.features[id];
   };
 
@@ -1318,23 +1285,23 @@ export class MapCtx {
     if (newFeature.feature && !newFeature.feature.i18n) {
       const requiredLocales = ['en', 'zh-hant', 'zh-hans'];
       const currentLocale = getLocale();
-      
+
       newFeature.feature.i18n = {};
-              requiredLocales.forEach(locale => {
-          newFeature.feature!.i18n![locale] = {
-            ...newFeature.feature!.i18n![locale],
-            locale: locale,
-            title: undefined,
-            description: undefined
-          } as any;
-        });
+      requiredLocales.forEach((locale) => {
+        newFeature.feature!.i18n![locale as Locale] = {
+          ...newFeature.feature!.i18n![locale as Locale],
+          locale: locale,
+          title: undefined,
+          description: undefined
+        } as any;
+      });
     }
     this.newFeature = newFeature;
   };
 
   updateNewFeature = (newFeature: DeepPartial<NewFeatureTask>) => {
-    this.newFeature = { 
-      ...this.newFeature, 
+    this.newFeature = {
+      ...this.newFeature,
       ...newFeature,
       feature: {
         ...this.newFeature?.feature,
@@ -1359,55 +1326,42 @@ export class MapCtx {
       ...this.newFeature,
       feature: {
         ...this.newFeature?.feature,
-        i18n: { 
-          ...this.newFeature?.feature?.i18n, 
-          [locale]: { 
-            ...this.newFeature?.feature?.i18n?.[locale], 
-            [key]: value 
-          } 
+        i18n: {
+          ...this.newFeature?.feature?.i18n,
+          [locale]: {
+            ...this.newFeature?.feature?.i18n?.[locale],
+            [key]: value
+          }
         } as any
       }
     };
   };
 
   updateNewFeatureProperty = (propertyId: Id, object: Partial<FeatureProperty>) => {
-    console.log('🟡 MapCtx: updateNewFeatureProperty called:', {
-      propertyId,
-      object,
-      currentNewFeature: this.newFeature
-    });
-    
     if (!this.newFeature?.feature) {
-      console.log('🔴 MapCtx: no newFeature.feature, returning');
       return;
     }
-    
+
     // Initialize properties array if it doesn't exist
     if (!this.newFeature.feature.properties) {
       this.newFeature.feature.properties = [];
-      console.log('🟡 MapCtx: initialized empty properties array');
     }
-    
+
     const propIndex = this.newFeature.feature.properties.findIndex(
       (p) => p!.propertyId === propertyId
     );
 
-    console.log('🟡 MapCtx: found property at index:', propIndex);
-
     let updatedProperties: any[];
-    
+
     if (propIndex >= 0) {
       // Update existing property
-      console.log('🟡 MapCtx: updating existing property at index', propIndex);
       updatedProperties = [...this.newFeature.feature.properties];
       updatedProperties[propIndex] = {
         ...updatedProperties[propIndex]!,
         ...object
       };
-      console.log('🟡 MapCtx: updated existing property:', updatedProperties[propIndex]);
     } else {
       // Create new property
-      console.log('🟡 MapCtx: creating new property');
       const newProperty = {
         id: '', // Will be set when saved
         propertyId,
@@ -1415,18 +1369,16 @@ export class MapCtx {
         value: '',
         ...object
       };
-      
+
       // Only add i18n if it's provided in the object
       if (object.i18n) {
         newProperty.i18n = object.i18n;
       }
-      
+
       updatedProperties = [...this.newFeature.feature.properties, newProperty];
-      console.log('🟡 MapCtx: created new property:', newProperty);
     }
-    
+
     // Create a new newFeature object to ensure reactivity
-    const oldNewFeature = this.newFeature;
     this.newFeature = {
       ...this.newFeature,
       feature: {
@@ -1434,22 +1386,24 @@ export class MapCtx {
         properties: updatedProperties
       }
     };
-    
-    console.log('🟡 MapCtx: updated newFeature:', {
-      oldNewFeature,
-      newNewFeature: this.newFeature,
-      updatedProperties
-    });
   };
 
-  updateNewFeatureI18nProperty = (propertyId: Id, object: Partial<FeaturePropertyI18nDB>, locale: Locale = getLocale()) => {
+  updateNewFeatureI18nProperty = (
+    propertyId: Id,
+    object: Partial<FeaturePropertyI18nDB>,
+    locale: Locale = getLocale()
+  ) => {
     const propIndex = this.newFeature?.feature?.properties?.findIndex(
       (p) => p!.propertyId === propertyId
     );
 
-    if (propIndex !== undefined && propIndex >= 0 && this.newFeature?.feature?.properties?.[propIndex]?.i18n) {
-      this.newFeature.feature.properties[propIndex].i18n![locale] = {
-        ...this.newFeature.feature.properties[propIndex].i18n![locale]!,
+    if (
+      propIndex !== undefined &&
+      propIndex >= 0 &&
+      this.newFeature?.feature?.properties?.[propIndex]?.i18n
+    ) {
+      this.newFeature.feature.properties[propIndex].i18n![locale as Locale] = {
+        ...this.newFeature.feature.properties[propIndex].i18n![locale as Locale]!,
         ...object
       };
     }
@@ -1464,65 +1418,76 @@ export class MapCtx {
   };
 
   // USER DATA
-
-  setUser = (user: SessionUser) => {
+  setUser = async (user: CurrentUser | SessionUser | null) => {
     this.user = user;
   };
 
-  getUser = (): SessionUser => {
+  getUser = (): CurrentUser | SessionUser | null => {
     return this.user;
   };
 
   resetUser = () => {
-    this.user = {} as SessionUser;
+    this.user = null;
   };
 
   getUserPreferences = (withDefaults: boolean = true): UserPreferences => {
     return withDefaults
       ? {
           fallbackLocales:
-            this.user.preferences.fallbackLocales ?? getFallbackLocales(getLocale()),
+            (this.user as CurrentUser).preferences.fallbackLocales as Locale[] ??
+            getFallbackLocales(getLocale()) as Locale[],
           allowMachineTranslation:
-            this.user.preferences.allowMachineTranslation ?? false,
+            (this.user as CurrentUser).preferences.allowMachineTranslation ?? false,
           preferFallbackInCurrentLocale:
-            this.user.preferences.preferFallbackInCurrentLocale ?? false,
+            (this.user as CurrentUser).preferences.preferFallbackInCurrentLocale ??
+            false,
           isTranslateButtonVisible:
-            this.user.preferences.isTranslateButtonVisible ?? true
+            (this.user as CurrentUser).preferences.isTranslateButtonVisible ?? true
         }
-      : this.user.preferences;
+      : (this.user as CurrentUser).preferences as UserPreferences;
   };
 
   updateUserPreferences = (preferences: UserPreferences) => {
-    this.user.preferences = {
-      ...this.user.preferences,
+    (this.user as CurrentUser).preferences = {
+      ...(this.user as CurrentUser).preferences,
       ...preferences
     };
   };
 
   setLocale = async (locale: Locale) => {
-    this.user.locale = locale;
-    await updateLocale(this.user.id, locale);
+    (this.user as CurrentUser).locale = locale;
+    await updateLocale((this.user as CurrentUser).id, locale);
     // I18N : Update Paraglide's locale, triggers a page reload
     setLocale(locale);
   };
 
   setFallbackLocales = (localeCode: Locale, checked: boolean) => {
-    const currentFallbacks = this.user.preferences.fallbackLocales || [];
+    const currentFallbacks =
+      (this.user as CurrentUser).preferences.fallbackLocales || [];
     if (checked) {
       if (!currentFallbacks.includes(localeCode)) {
-        this.user.preferences.fallbackLocales = [...currentFallbacks, localeCode];
+        (this.user as CurrentUser).preferences.fallbackLocales = [
+          ...currentFallbacks,
+          localeCode
+        ];
       }
     } else {
-      this.user.preferences.fallbackLocales = currentFallbacks.filter(
+      (this.user as CurrentUser).preferences.fallbackLocales = currentFallbacks.filter(
         (lc) => lc !== localeCode
       );
     }
-    debouncedUpdateUserPreferences(this.user.id, this.user.preferences);
+    debouncedUpdateUserPreferences(
+      (this.user as CurrentUser).id,
+      (this.user as CurrentUser).preferences
+    );
   };
 
   setAdvancedFeature = (code: keyof UserPreferences, value: boolean) => {
-    (this.user.preferences[code] as boolean) = value;
-    debouncedUpdateUserPreferences(this.user.id, this.user.preferences);
+    ((this.user as CurrentUser).preferences[code] as boolean) = value;
+    debouncedUpdateUserPreferences(
+      (this.user as CurrentUser).id,
+      (this.user as CurrentUser).preferences as UserPreferences
+    );
   };
 
   setUserAttribution = async (
@@ -1530,56 +1495,197 @@ export class MapCtx {
     onSuccess?: (attribution: string) => void,
     onError?: (error: any) => void
   ) => {
-    this.user.attribution = attribution;
-    await debouncedUpdateUserAttribution(this.user.id, attribution, onSuccess, onError);
+    (this.user as CurrentUser).attribution = attribution;
+    await debouncedUpdateUserAttribution(
+      (this.user as CurrentUser).id,
+      attribution,
+      onSuccess,
+      onError
+    );
   };
 
   getUserLayers = (): UserLayer[] => {
-    return this.user.userLayers;
+    return (this.user as CurrentUser).userLayers;
   };
 
   getUserLayerIds = (): string[] => {
-    return this.user.userLayers.map((layer: UserLayer) => layer.layerId);
+    return (this.user as CurrentUser).userLayers.map(
+      (layer: UserLayer) => layer.layerId
+    );
   };
 
   setUserLayer = (layerId: string, checked: boolean) => {
-    const currentUserLayers = this.user.userLayers || [];
+    const currentUserLayers = (this.user as CurrentUser).userLayers || [];
     if (checked) {
       if (!currentUserLayers.some((ul) => ul.layerId === layerId)) {
-        this.user.userLayers = [
+        (this.user as CurrentUser).userLayers = [
           ...currentUserLayers,
           {
-            userId: this.user.id,
+            userId: (this.user as CurrentUser).id,
             layerId,
             isVisibleOnLoad: true
           }
         ];
       }
     } else {
-      this.user.userLayers = currentUserLayers.filter((ul) => ul.layerId !== layerId);
+      (this.user as CurrentUser).userLayers = currentUserLayers.filter(
+        (ul) => ul.layerId !== layerId
+      );
     }
-    debouncedUpdateUserLayers(this.user.id, this.user.userLayers);
+    debouncedUpdateUserLayers(
+      (this.user as CurrentUser).id,
+      (this.user as CurrentUser).userLayers
+    );
   };
 
   setExperimental = (featureCode: keyof UserExperimental, checked: boolean) => {
-    const currentExperimental = this.user.experimental || {};
-    this.user.experimental = {
+    const currentExperimental = (this.user as CurrentUser).experimental || {};
+    (this.user as CurrentUser).experimental = {
       ...currentExperimental,
       [featureCode]: checked
     };
-    debouncedUpdateUserExperimental(this.user.id, this.user.experimental);
+    debouncedUpdateUserExperimental(
+      (this.user as CurrentUser).id,
+      (this.user as CurrentUser).experimental
+    );
   };
 
-  getUserRoles = (): UserRoleDisco[] => {
-    return this.user.roles ?? [];
+  resetOrganisations = () => {
+    this.state.prisms.organisation = [];
+    this.invalidateAndRefresh(FirstClassResource.organisation);
+  };
+
+  resetProjects = () => {
+    this.state.prisms.project = [];
+    this.invalidateAndRefresh(FirstClassResource.project);
+  };
+
+  // TODO : Clear the Omnibar when a layer is toggled
+  addLayer = (id: Id) => {
+    this.state.prisms.layer.push(id);
+    this.postLayerMutation();
+  };
+
+  removeLayer = (id: Id) => {
+    this.state.prisms.layer = this.state.prisms.layer.filter((l) => l !== id);
+    this.postLayerMutation();
+  };
+
+  setLayers = (layers: Id[]) => {
+    this.state.prisms.layer = layers;
+    this.postLayerMutation();
+  };
+
+  resetLayers = () => {
+    this.state.prisms.layer = [];
+    this.postLayerMutation();
+  };
+
+  initialiseCategoricalPropertyFilters = (layerId: Id) => {
+    const layer = this.state.resources.layer.find((l) => l.id === layerId);
+    if (!layer) {
+      return;
+    }
+
+    const project = this.state.resources.project.find((p) => p.id === layer.projectId);
+    if (!project) {
+      return;
+    }
+
+    // Filter properties based on visibility in layer (similar logic to Categories.svelte)
+    const classifierProperties =
+      project.properties
+        ?.filter((p) => p.type === 'classifier')
+        .filter((prop) => {
+          const layerProperty = layer.properties?.find(
+            (lp) => lp.propertyId === prop.id
+          );
+          // Only consider properties visible in the layer AND not range fields
+          return layerProperty?.isVisible !== false && prop.component !== 'RangeField';
+        })
+        // Ensure uniqueness by key within the project's properties relevant to this layer
+        .filter(
+          (prop, index, self) => index === self.findIndex((p) => p.key === prop.key)
+        ) || [];
+
+    // Ensure the layer's filter object exists
+    if (!this.state.filters.properties![layerId]) {
+      this.state.filters.properties![layerId] = {};
+    }
+
+    const layerFilters = this.state.filters.properties![layerId];
+
+    // Initialize each classifier property with an empty array if not already set
+    classifierProperties.forEach((property: Property) => {
+      if (!(property.key in layerFilters)) {
+        layerFilters[property.key] = [];
+      }
+    });
+  };
+
+  initialiseRangePropertyFilter = (layerId: Id) => {
+    const layer = this.state.resources.layer.find((l) => l.id === layerId);
+    if (!layer) {
+      return;
+    }
+
+    const project = this.state.resources.project.find((p) => p.id === layer.projectId);
+    if (!project) {
+      return;
+    }
+
+    // Find properties that are RangeFields and visible for this layer
+    const rangeProperties =
+      project.properties
+        ?.filter((p) => p.component === 'RangeField') // Identify range properties
+        .filter((prop) => {
+          const layerProperty = layer.properties?.find(
+            (lp) => lp.propertyId === prop.id
+          );
+          // Only consider properties visible in the layer
+          return layerProperty?.isVisible !== false;
+        })
+        // Ensure uniqueness by key
+        .filter(
+          (prop, index, self) => index === self.findIndex((p) => p.key === prop.key)
+        ) || [];
+
+    // Ensure the layer's filter object exists
+    if (!this.state.filters.properties![layerId]) {
+      this.state.filters.properties![layerId] = {};
+    }
+
+    const layerFilters = this.state.filters.properties![layerId];
+
+    // Initialize each range property using its min/max if not already set
+    rangeProperties.forEach((property: Property) => {
+      // Validate that min and max exist and are numbers
+      const min = property.min;
+      const max = property.max;
+
+      if (
+        !(property.key in layerFilters) &&
+        typeof min === 'number' &&
+        typeof max === 'number'
+      ) {
+        const filterConfig = {
+          globalMin: min,
+          globalMax: max,
+          rangeMin: min, // Default rangeMin to globalMin
+          rangeMax: max // Default rangeMax to globalMax
+        };
+
+        layerFilters[property.key] = filterConfig;
+      }
+    });
   };
 }
 export const MAP_STATE_KEY = Symbol('mapContext');
 
-export const setMapCtx = (queryClient: QueryClient, user: SessionUser) => {
-  const context = new MapCtx(queryClient, user);
-  context.init();
+export const setAppCtx = (queryClient: QueryClient, user: SessionUser | null) => {
+  const context = new AppCtx(queryClient, user);
+  context.init(user?.id ?? null);
   return setContext(MAP_STATE_KEY, context);
 };
 
-export const getMapCtx = (): ReturnType<typeof setMapCtx> => getContext(MAP_STATE_KEY);
+export const getAppCtx = (): ReturnType<typeof setAppCtx> => getContext(MAP_STATE_KEY);
