@@ -6,47 +6,47 @@ export * from './constraints';
 /* ----------------- */
 // USER SCHEMAS
 /* -------- */
-export * from './schemas/user';
+export * from './schema/user';
 
 /* ----------------- */
 // ORGANISATION SCHEMAS
 /* -------- */
-export * from './schemas/organisation';
+export * from './schema/organisation';
 
 /* ----------------- */
 // PROJECT SCHEMAS
 /* -------- */
-export * from './schemas/project';
+export * from './schema/project';
 
 /* ----------------- */
 // LAYER SCHEMAS
 /* -------- */
-export * from './schemas/layer';
+export * from './schema/layer';
 
 /* ----------------- */
 // FEATURE SCHEMAS
 /* -------- */
-export * from './schemas/feature';
+export * from './schema/feature';
 
 /* ----------------- */
 // PROPERTY SCHEMAS
 /* -------- */
-export * from './schemas/property'; 
+export * from './schema/property';
 
 /* ----------------- */
 // TASK SCHEMAS
 /* -------- */
-export * from './schemas/task';
+export * from './schema/task';
 
 /* ----------------- */
 // IMAGE SCHEMAS
 /* -------- */
-export * from './schemas/image';
+export * from './schema/image';
 
 /* ----------------- */
 // HUB SCHEMAS
 /* -------- */
-export * from './schemas/hub';
+export * from './schema/hub';
 
 /* ----------------- */
 // USER API SCHEMAS - AVOID CIRCULAR DEPENDENCIES
@@ -54,9 +54,15 @@ export * from './schemas/hub';
 
 // ZOD
 import { z } from 'zod';
-import { UserBase, UserUpdate, UserBasic, UserCurrent } from './schemas/user';
-import { UserLayerBase, UserLayerUpdate, UserLayerInsert } from './schemas/layer';
-import { FeatureBase, UserFeatureBase, UserFeatureInsert, UserFeatureUpdate } from './schemas/feature';
+import { UserBase, UserUpdate, UserBasic, UserCurrent } from './schema/user';
+import { UserLayerBase, UserLayerUpdate, UserLayerInsert } from './schema/layer';
+import {
+  UserFeatureBase,
+  UserFeatureInsert,
+  UserFeatureUpdate
+} from './schema/feature';
+import { OrganisationRoleBase } from './schema/organisation';
+import { ProjectRoleBase } from './schema/project';
 
 export const UserAPI = UserBasic.extend({
   userLayers: z.array(UserLayerBase),
@@ -69,7 +75,9 @@ export const UserCollectionAPI = UserBasic.extend({
 
 export const UserCurrentAPI = UserCurrent.extend({
   userLayers: z.array(UserLayerBase),
-  userFeatures: z.array(UserFeatureBase)
+  userFeatures: z.array(UserFeatureBase),
+  roles: z.array(z.union([OrganisationRoleBase, ProjectRoleBase])),
+  superAdmin: z.boolean().nullish()
 });
 
 export const UserLayerAPI = UserLayerBase.extend({
@@ -96,7 +104,7 @@ export const UserLayerUpdateAPI = UserLayerUpdate.extend({
 export const UserFeatureUpdateAPI = UserFeatureUpdate.extend({
   // These are required for the upsert operation
   userId: z.string(),
-  featureId: z.string(),
+  featureId: z.string()
   // These are optional for the response shape
   // user: UserBase.optional(),
   // feature: z.lazy(() => FeatureBase).optional()
@@ -104,5 +112,7 @@ export const UserFeatureUpdateAPI = UserFeatureUpdate.extend({
 
 export const UserBaseRaw = UserBase.extend({
   userLayers: z.array(UserLayerBase),
-  userFeatures: z.array(UserFeatureBase)
+  userFeatures: z.array(UserFeatureBase),
+  memberships: z.array(OrganisationRoleBase),
+  projectRoles: z.array(ProjectRoleBase)
 });

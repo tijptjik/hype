@@ -5,6 +5,7 @@ import type {
   feature,
   featureI18n,
   hub,
+  hubI18n,
   layer,
   layerI18n,
   organisation,
@@ -80,6 +81,7 @@ export const getDefaultConstraints = (
     | typeof feature
     | typeof featureI18n
     | typeof hub
+    | typeof hubI18n
 ) => {
   return Object.keys(table).reduce(
     (acc: Record<string, any>, key) => {
