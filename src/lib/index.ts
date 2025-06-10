@@ -292,3 +292,9 @@ export const capitalizeFirstLetter = (text: string | null) => {
   if (!text) return null;
   return text.charAt(0).toUpperCase() + text.slice(1);
 };
+
+export const fetchOrThrow = async <T>(url: string): Promise<T> => {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Network response was not ok');
+  return (await response.json()) as T;
+};

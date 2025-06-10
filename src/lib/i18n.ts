@@ -10,7 +10,7 @@ import type {
 } from '$lib/types';
 // ENUMS
 import { supportedLocales } from '$lib/enums';
-import type { MapCtx } from './context/map.svelte';
+import type { AppCtx } from './context/app.svelte';
 
 /**
  * Get the current locale with Paraglide. Wrapping for type safety.
@@ -39,7 +39,7 @@ export function getFallbackLocales(locale: Locale): Locale[] {
 
 /**
  * Get user preferences with safe defaults
- * @param userPreferences - User preferences from session
+ * @param userPreferences - User preferences from sessionUser
  * @returns UserPreferences with defaults applied
  */
 function getUserPreferencesWithDefaults(userPreferences?: Partial<UserPreferences>): UserPreferences {
