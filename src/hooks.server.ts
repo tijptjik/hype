@@ -3,7 +3,7 @@ import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle } from '@sveltejs/kit';
 // DB
 import { drizzle } from 'drizzle-orm/d1';
-import * as schema from '$lib/db/schema';
+import * as schema from '$lib/db/schema/index';
 // AUTH
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { createAuth } from '$lib/auth';

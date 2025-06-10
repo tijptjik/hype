@@ -9,7 +9,7 @@ const {
 
 export default DATABASE_URL
   ? ({
-      schema: './src/lib/db/schema.ts',
+      schema: './src/lib/db/schema',
       out: './migrations',
       dialect: 'sqlite',
       dbCredentials: {
@@ -17,7 +17,7 @@ export default DATABASE_URL
       }
     } satisfies Config)
   : ({
-      schema: './src/lib/db/schema.ts',
+      schema: './src/lib/db/schema',
       out: './migrations',
       dialect: 'sqlite',
       driver: 'd1-http',

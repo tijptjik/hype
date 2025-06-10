@@ -28,7 +28,7 @@ declare global {
     // interface Error {}
     interface Locals {
       paraglide: ParaglideLocals<AvailableLanguageTag>;
-      db: DrizzleD1Database<typeof import('$lib/db/schema')>;
+      db: DrizzleD1Database<typeof import('$lib/db/schema/index')>;
       hub: HubOpts;
       auth: Auth;
       session?: SessionSession;

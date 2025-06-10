@@ -76,7 +76,7 @@ bun run db:migrate:cf:preview
 
 ## Schema
 
-The schema is defined in `src/lib/db/schema.ts`.
+The schema is defined in `src/lib/db/schema/`.
 
 The relationship between organisations, projects, layers and filters is hierarchical. Properties are defined on projects, and values are defined on properties. The qualitative properties are shown to the users in a features info panel, the categorical properties are shown in a filter panel. Layers control which filters are available to the user when that particular layer is visible.
 
