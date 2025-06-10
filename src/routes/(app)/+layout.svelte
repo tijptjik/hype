@@ -1,10 +1,15 @@
 <script lang="ts">
 // SVELTE
 import { browser } from '$app/environment';
+import { watch } from 'runed';
+import { watchOnce } from 'runed';
+
 // NAVIGATION
 import { goto } from '$app/navigation';
+// AUTH
+import { useSession } from '$lib/auth/client';
 // CONTEXT
-import { getMapCtx, setMapCtx } from '$lib/context/map.svelte';
+import { getAppCtx, setAppCtx } from '$lib/context/app.svelte';
 import { setOmniContext, PageState, getOmniContext } from '$lib/context/omni.svelte';
 // COMPONENTS
 import Menu from '$lib/components/layout/Menu.svelte';
@@ -18,52 +23,53 @@ import LayerSelectionModal from '$lib/components/modals/LayerSelectionModal.svel
 import GeoLocationModal from '$lib/components/modals/GeoLocationModal.svelte';
 import NewFeatureCard from '$lib/components/modals/NewFeatureCard.svelte';
 // TYPES
-import type { LayoutData } from '../(app)/$types';
+import type { LayoutData, LayoutProps } from '../(app)/$types';
 import type { QueryClient } from '@tanstack/svelte-query';
-import type { UserLayer } from '$lib/types';
+import type { SessionUser } from '$lib/types';
 // STYLES
 import '$lib/styles/scrollbar.css';
+
+type AppRootProps = LayoutProps & {
+  children: any;
+  data: LayoutData & {
+    queryClient: QueryClient;
+  };
+};
+
+// PROPS
+let { children, data } : AppRootProps = $props();
+const { queryClient } = data;
+
+// AUTH
+const session = useSession();
 
 // NAVIGATION STATE
 let navDest = $state('');
 
-// PROPS
-let { children, data } = $props();
+// CONTEXT
 
-// Extract session data from layout data
-const { session, queryClient } = data as LayoutData & {
-  queryClient: QueryClient;
-};
-
-// CONTEXT - Set Map Context
-setMapCtx(
+// CONTEXT :: APP
+// Always set up map context, but only fetch data when authenticated
+const appCtx = setAppCtx(
   queryClient,
-  session?.user
+  $session.data?.user as SessionUser | null
 );
 
-// CONTEXT - Set Omni Context
-setOmniContext(getMapCtx());
+// CONTEXT :: OMNI
+const omniCtx = setOmniContext(appCtx);
 
-// CONTEXT - Get Map & Omni Context
-const omniCtx = getOmniContext();
-const mapCtx = getMapCtx();
-
-// Set user data in map context to make it reactive
-mapCtx.setUser(session?.user ?? null);
-
-mapCtx.registerKeydownHandlers();
-
-// Compute map container classes based on visible panels
-// let mapContainerClasses = $derived(() => {
-//   const { filters, maps, stars, settings } = mapCtx.state.panels;
-//   const leftPanelOpen = filters || maps;
-//   const rightPanelOpen = stars || settings;
-
-//   return {
-//     'ml-[480px]': leftPanelOpen && !browser?.innerWidth < MOBILE_MAX_WIDTH,
-//     'mr-[480px]': rightPanelOpen && !browser?.innerWidth < MOBILE_MAX_WIDTH
-//   };
-// });
+// Re-initialize data when user becomes authenticated
+watch(
+  () => $session.data?.user,
+  () => {
+    if ($session.data?.user) {
+      appCtx.setUser($session.data.user);
+      appCtx.reinitializeWithAuth();
+      appCtx.registerKeydownHandlers();
+    } else if (!$session.data?.user && appCtx.user?.id) {
+      appCtx.setUser(null);
+  }
+});
 
 // NAVIGATION HANDLING -- State Change Effect
 $effect(() => {
@@ -76,20 +82,20 @@ $effect(() => {
 </script>
 
 <div class="flex h-dvh flex-col justify-around overflow-hidden">
-  {#if session}
+  {#if $session.data}
     <main
       class="relative top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
       <!-- Panels -->
-      {#if mapCtx.state.panels.filters}
+      {#if appCtx.state.panels.filters}
         <Filters />
       {/if}
-      {#if mapCtx.state.panels.maps}
+      {#if appCtx.state.panels.maps}
         <Maps />
       {/if}
-      {#if mapCtx.state.panels.stars}
+      {#if appCtx.state.panels.stars}
         <Stars />
       {/if}
-      {#if mapCtx.state.panels.settings}
+      {#if appCtx.state.panels.settings}
         <Settings />
       {/if}
       <!-- Map Container -->
