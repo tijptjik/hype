@@ -27,20 +27,21 @@ jobs:
       - name: 'BUILD :: Application'
         run: bun run build
         env:
-          VITE_WRANGLER_ENV: cf
-          VITE_USER_NODE_ENV: ${{ vars.ENVIRONMENT }}
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
           PRIVATE_AUTH_GOOGLE_ID: ${{ secrets.PRIVATE_AUTH_GOOGLE_ID }}
           PRIVATE_AUTH_GOOGLE_SECRET: ${{ secrets.PRIVATE_AUTH_GOOGLE_SECRET }}
           PRIVATE_AUTH_SECRET: ${{ secrets.PRIVATE_AUTH_SECRET }}
-          VITE_CLOUDINARY_CLOUD_NAME: ${{ vars.VITE_CLOUDINARY_CLOUD_NAME }}
-          VITE_CLOUDINARY_API_KEY: ${{ vars.VITE_CLOUDINARY_API_KEY }}
-          VITE_CLOUDINARY_UPLOAD_PRESET: ${{ vars.VITE_CLOUDINARY_UPLOAD_PRESET }}
-          PRIVATE_CLOUDINARY_API_SECRET: ${{ secrets.PRIVATE_CLOUDINARY_API_SECRET }}
           PRIVATE_AZURE_TRANSLATION_KEY: ${{ secrets.PRIVATE_AZURE_TRANSLATION_KEY }}
+          PRIVATE_CLOUDINARY_API_SECRET: ${{ secrets.PRIVATE_CLOUDINARY_API_SECRET }}
+          PRIVATE_SUPERADMIN_USERID: ${{ secrets.PRIVATE_SUPERADMIN_USERID }}
           PUBLIC_AZURE_TRANSLATION_REGION: ${{ vars.PUBLIC_AZURE_TRANSLATION_REGION }}
           PUBLIC_GIPHY_KEY: ${{ vars.PUBLIC_GIPHY_KEY }}
+          VITE_CLOUDINARY_API_KEY: ${{ vars.VITE_CLOUDINARY_API_KEY }}
+          VITE_CLOUDINARY_CLOUD_NAME: ${{ vars.VITE_CLOUDINARY_CLOUD_NAME }}
+          VITE_CLOUDINARY_UPLOAD_PRESET: ${{ vars.VITE_CLOUDINARY_UPLOAD_PRESET }}
+          VITE_USER_NODE_ENV: ${{ vars.ENVIRONMENT }}
+          VITE_WRANGLER_ENV: cf
 
       - name: 'DB :: Apply migrations'
         run: bun wrangler d1 migrations apply hype-db-prod --remote
@@ -72,20 +73,21 @@ jobs:
       - name: 'BUILD :: Application'
         run: bun run build
         env:
-          VITE_WRANGLER_ENV: cf
-          VITE_USER_NODE_ENV: ${{ vars.ENVIRONMENT }}
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
           PRIVATE_AUTH_GOOGLE_ID: ${{ secrets.PRIVATE_AUTH_GOOGLE_ID }}
           PRIVATE_AUTH_GOOGLE_SECRET: ${{ secrets.PRIVATE_AUTH_GOOGLE_SECRET }}
           PRIVATE_AUTH_SECRET: ${{ secrets.PRIVATE_AUTH_SECRET }}
-          VITE_CLOUDINARY_CLOUD_NAME: ${{ vars.VITE_CLOUDINARY_CLOUD_NAME }}
-          VITE_CLOUDINARY_API_KEY: ${{ vars.VITE_CLOUDINARY_API_KEY }}
-          VITE_CLOUDINARY_UPLOAD_PRESET: ${{ vars.VITE_CLOUDINARY_UPLOAD_PRESET }}
-          PRIVATE_CLOUDINARY_API_SECRET: ${{ secrets.PRIVATE_CLOUDINARY_API_SECRET }}
           PRIVATE_AZURE_TRANSLATION_KEY: ${{ secrets.PRIVATE_AZURE_TRANSLATION_KEY }}
+          PRIVATE_CLOUDINARY_API_SECRET: ${{ secrets.PRIVATE_CLOUDINARY_API_SECRET }}
+          PRIVATE_SUPERADMIN_USERID: ${{ secrets.PRIVATE_SUPERADMIN_USERID }}
           PUBLIC_AZURE_TRANSLATION_REGION: ${{ vars.PUBLIC_AZURE_TRANSLATION_REGION }}
           PUBLIC_GIPHY_KEY: ${{ vars.PUBLIC_GIPHY_KEY }}
+          VITE_CLOUDINARY_API_KEY: ${{ vars.VITE_CLOUDINARY_API_KEY }}
+          VITE_CLOUDINARY_CLOUD_NAME: ${{ vars.VITE_CLOUDINARY_CLOUD_NAME }}
+          VITE_CLOUDINARY_UPLOAD_PRESET: ${{ vars.VITE_CLOUDINARY_UPLOAD_PRESET }}
+          VITE_USER_NODE_ENV: ${{ vars.ENVIRONMENT }}
+          VITE_WRANGLER_ENV: cf
 
       - name: 'DB :: Apply migrations'
         run: bun wrangler d1 migrations apply hype-db-preview --remote --env preview
