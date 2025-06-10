@@ -1,21 +1,22 @@
 // DRIZZLE
-import { eq, inArray, SQL } from 'drizzle-orm';
+import { eq, SQL } from 'drizzle-orm';
 // API
 
-import type { Database, Id, Session, UserFeature, UserFeaturePartial, UserRoleDisco } from '$lib/types';
+import type {
+  Id,
+  SessionUser,
+  UserFeature,
+  UserFeaturePartial,
+  UserRoleDisco
+} from '$lib/types';
 
-import type { Prisms, QueryParams } from '$lib/types';
+import type { QueryParams } from '$lib/types';
 
 import { applyQueryFilters, removeExcludedColumns } from '..';
 
-import { userFeature } from '$lib/db/schema';
-import { 
-  assertUserIsSelf, 
-  assertUserLoggedIn, 
-  runAssertions,
-  assertParamIdentifierEqualsFormIdentifier 
-} from '$lib/auth/asserts';
-import { UserFeatureAPI } from '../../db/zod/schemas/feature';
+import { userFeature } from '$lib/db/schema/index';
+import { assertUserIsSelf, assertUserLoggedIn, runAssertions } from '$lib/auth/asserts';
+import { UserFeatureAPI } from '../../db/zod/schema/feature';
 import { toLocaleMap } from '$lib/db';
 
 /**
@@ -27,10 +28,7 @@ import { toLocaleMap } from '$lib/db';
  * @param userRoles - The user roles
  * @param prisms - The prism filters
  */
-export const getUserFeatureQueryContext = (
-  params: QueryParams,
-  userId: Id
-) => {
+export const getUserFeatureQueryContext = (params: QueryParams, userId: Id) => {
   // SETUP : By default, only show non-archived projects,
   // and exclude isArchived and isPublished filters from the query.
   let conditions: SQL<unknown>[] = [];
@@ -54,11 +52,11 @@ export const getUserFeatureQueryContext = (
  * @param userId - The user id
  * @returns Object containing validation and access control context
  */
-export const assertPermissionsToListUserFeature = (session: Session, userId: Id) => {
+export const assertPermissionsToListUserFeature = (user: SessionUser, userId: Id) => {
   // Run all access control assertions
   const assertionError = runAssertions(
-    () => assertUserLoggedIn(session),
-    () => assertUserIsSelf(session, userId)
+    () => assertUserLoggedIn(user),
+    () => assertUserIsSelf(user, userId)
   );
 
   if (assertionError) return assertionError;
@@ -71,14 +69,11 @@ export const assertPermissionsToListUserFeature = (session: Session, userId: Id)
  * @param refId - The id from the URL parameter
  * @returns Object containing validation and access control context
  */
-export const assertPermissionsToUpdateUserFeature = (
-  session: Session, 
-  userId: Id,
-) => {
+export const assertPermissionsToUpdateUserFeature = (user: SessionUser, userId: Id) => {
   // Run all access control assertions
   const assertionError = runAssertions(
-    () => assertUserLoggedIn(session),
-    () => assertUserIsSelf(session, userId)
+    () => assertUserLoggedIn(user),
+    () => assertUserIsSelf(user, userId)
   );
 
   if (assertionError) return assertionError;

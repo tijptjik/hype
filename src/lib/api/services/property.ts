@@ -1,5 +1,5 @@
-import { property } from '$lib/db/schema';
-import type { QueryParams, Session, UserRoleDisco } from '$lib/types';
+import { property } from '$lib/db/schema/index';
+import type { QueryParams, UserRoleDisco, SessionUser } from '$lib/types';
 import type { SQL } from 'drizzle-orm';
 import { applyQueryFilters } from '..';
 
@@ -28,7 +28,7 @@ export const propertyEntityWithRelations = {
  * @param userRoles - The user roles
  */
 export const getPropertyQueryContext = (
-  session: Session,
+  user: SessionUser,
   request: Request,
   params: QueryParams,
   userRoles: UserRoleDisco[]

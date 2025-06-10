@@ -16,20 +16,19 @@ import { isFieldUnique } from '$lib/db';
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
 import { getOrganisationIdforRoles, isSuperAdmin } from '$lib/auth/utils';
 // SCHEMA
-import { organisation } from '$lib/db/schema';
+import { organisation } from '$lib/db/schema/index';
 // ENUMS
-import { HierarchicalResource } from '$lib/enums';
+import { FirstClassResource } from '$lib/enums';
 // TYPES
 import type {
-  Id,
-  UserRoleDisco,
-  OrganisationNew,
-  OrganisationDB,
-  Session,
-  QueryParams,
   Database,
+  Id,
   Organisation,
-  Code
+  OrganisationDB,
+  OrganisationNew,
+  QueryParams,
+  SessionUser,
+  UserRoleDisco
 } from '$lib/types';
 import type { SuperValidated } from 'sveltekit-superforms';
 
@@ -54,13 +53,13 @@ export const organisationWithRelations = {
 
 /**
  * Get the query context for the organisation resource - filters the query based on the user's roles, and the query parameters.
- * @param session - The session object
+ * @param user - The user object
  * @param request - The request object
  * @param params - The query parameters
  * @param userRoles - The user roles
  */
 export const getOrganisationQueryContext = (
-  session: Session,
+  user: SessionUser,
   request: Request,
   params: QueryParams,
   userRoles: UserRoleDisco[]
@@ -71,7 +70,7 @@ export const getOrganisationQueryContext = (
   let excludeColumns = ['isArchived', 'isPublished'];
 
   // NON-SUPERADMIN : Hide organisations which are archived
-  if (!isSuperAdmin(session)) {
+  if (!isSuperAdmin(user)) {
     conditions.push(eq(organisation.isArchived, false))
   } 
 
@@ -81,7 +80,7 @@ export const getOrganisationQueryContext = (
     conditions.push(eq(organisation.isPublished, true));
 
   // ADMIN : List all organisations, where the user has a role in the organisation
-  } else if (!isSuperAdmin(session as Session & { user: { superAdmin: boolean } })) {
+  } else if (!isSuperAdmin(user)) {
     params = removeExcludedColumns(params, ['isArchived']);
     const organisationIds = getOrganisationIdforRoles(userRoles);
     conditions.push(inArray(organisation.id, organisationIds as Id[]));
@@ -93,7 +92,7 @@ export const getOrganisationQueryContext = (
   // CONTEXT : Apply query filters to the conditions
   if (Object.keys(params).length > 0) {
     // For superAdmins, remove isArchived and isPublished from params so they can see all content
-    if (isSuperAdmin(session)) {
+    if (isSuperAdmin(user)) {
       const { isArchived, isPublished, ...filteredParams } = params;
       applyQueryFilters(organisation, filteredParams, conditions);
     } else {
@@ -113,16 +112,14 @@ export const getOrganisationQueryContext = (
  * @returns Object containing validation and access control context
  */
 export const assertPermissionsToCreateOrganisation = (
-  session: Session,
-  request: Request,
-  formData: OrganisationNew,
-  userRoles: UserRoleDisco[]
+  user: SessionUser,
+  request: Request
 ) => {
   // Run all access control assertions
   const assertionError = runAssertions(
-    () => assertUserLoggedIn(session as any),
+    () => assertUserLoggedIn(user),
     () => assertAdminRequest(request),
-    () => assertSuperAdmin(session)
+    () => assertSuperAdmin(user)
   );
 
   if (assertionError) return assertionError;
@@ -139,17 +136,17 @@ export const assertPermissionsToCreateOrganisation = (
  * as we want to allow the users to change the code of the organisation.
  */
 export const assertPermissionsToUpdateOrganisation = (
-  session: Session,
+  user: SessionUser,
   request: Request,
   formData: OrganisationDB,
   userRoles: UserRoleDisco[],
 ) => {
   // Run all access control assertions
   const assertionError = runAssertions(
-    () => assertUserLoggedIn(session as any),
+    () => assertUserLoggedIn(user as any),
     () => assertAdminRequest(request),
-    () => assertOrganisationOwnerOrSuperAdmin(session, userRoles, formData.id!),
-    () => assertIsCoreInclusiveModifiedBySuperAdmin(session, formData)
+    () => assertOrganisationOwnerOrSuperAdmin(user, userRoles, formData.id!),
+    () => assertIsCoreInclusiveModifiedBySuperAdmin(user, formData)
   );
 
   if (assertionError) return assertionError;
@@ -164,7 +161,7 @@ export const assertCodeUnique = async (
   const codeUnique = await isFieldUnique<Organisation>(
     db,
     formData as Organisation,
-    HierarchicalResource.organisation,
+    FirstClassResource.organisation,
     'code'
   );
 
@@ -180,11 +177,11 @@ export const assertCodeUnique = async (
  * Check if the current user will lose access upon success, superAdmins are exempt.
  * @param formData - The form data  
  * @param userRoles - The user roles
- * @param session - The session
+ * @param user - The user
  * @returns True if the current user will lose access upon success, false otherwise
  */
 export const isAccessLostUponSuccess = (
-  session: Session & { user: { superAdmin?: boolean } },
+  user: SessionUser,
   formData: OrganisationNew,
   userRoles?: UserRoleDisco[]
 ) => {
@@ -193,6 +190,6 @@ export const isAccessLostUponSuccess = (
     (role) =>
       role.type === 'organisation' &&
       role.organisationId === formData.id &&
-      role.userId === session.user!.id
-  ) && !session.user.superAdmin;
+      role.userId === user.id
+  ) && !user.superAdmin;
 };

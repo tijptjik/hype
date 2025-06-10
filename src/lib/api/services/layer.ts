@@ -1,5 +1,5 @@
 // DRIZZLE
-import { eq, inArray, SQL, and, or, exists, notExists, sql } from 'drizzle-orm';
+import { eq, inArray, SQL } from 'drizzle-orm';
 // LIB
 import { isAdminRequest } from '../index';
 // API
@@ -8,7 +8,6 @@ import { applyQueryFilters, removeExcludedColumns } from '$lib/api';
 import {
   assertUserLoggedIn,
   assertAdminRequest,
-  assertId,
   runAssertions,
   assertProjectMaintainerOrSuperAdmin,
   assertParamIdentifierEqualsFormIdentifier
@@ -17,12 +16,21 @@ import {
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
 import { getProjectIdforRoles, isSuperAdmin } from '$lib/auth/utils';
 // SCHEMA
-import { layer, project } from '$lib/db/schema';
+import { layer, project } from '$lib/db/schema/index';
 // DB
 import { applyPrismConstraints } from '$lib/db';
 import { HierarchicalResource } from '$lib/enums';
 // TYPES
-import type { UserRoleDisco, Prisms, LayerDB, Session, Database, Id, QueryParams } from '$lib/types';
+import type {
+  UserRoleDisco,
+  Prisms,
+  LayerDB,
+  SessionUser,
+  Database,
+  Id,
+  QueryParams,
+  LayerDBNew
+} from '$lib/types';
 
 /********************
  *  COMMON
@@ -90,7 +98,7 @@ export const layerMergeWithRelations = {
  */
 export const getLayerQueryContext = (
   db: Database,
-  session: Session,
+  user: SessionUser,
   request: Request,
   params: QueryParams,
   userRoles: UserRoleDisco[],
@@ -102,7 +110,7 @@ export const getLayerQueryContext = (
   let excludeColumns = ['isArchived', 'isPublished'];
 
   // NON-SUPERADMIN : Hide layers which are archived
-  if (!isSuperAdmin(session)) {
+  if (!isSuperAdmin(user)) {
     conditions.push(eq(layer.isArchived, false));
   }
 
@@ -118,7 +126,7 @@ export const getLayerQueryContext = (
     conditions.push(eq(layer.isPublished, true));
 
     // ADMIN : List all layers, where the user has a role in the layer's project
-  } else if (!isSuperAdmin(session)) {
+  } else if (!isSuperAdmin(user)) {
     params = removeExcludedColumns(params, ['isArchived']);
     const projectIds = getProjectIdforRoles(userRoles);
     conditions.push(inArray(project.id, projectIds as Id[]));
@@ -133,7 +141,7 @@ export const getLayerQueryContext = (
   // CONTEXT : Apply query filters to the conditions
   if (Object.keys(params).length > 0) {
     // For superAdmins, remove isArchived and isPublished from params so they can see all content
-    if (isSuperAdmin(session)) {
+    if (isSuperAdmin(user)) {
       const { isArchived, isPublished, ...filteredParams } = params;
       applyQueryFilters(layer, filteredParams, conditions);
     } else {
@@ -153,16 +161,16 @@ export const getLayerQueryContext = (
  * @returns Object containing validation and access control context
  */
 export const assertPermissionsToCreateLayer = (
-  session: Session,
+  user: SessionUser,
   request: Request,
-  formData: LayerDB,
+  formData: LayerDBNew,
   userRoles: UserRoleDisco[]
 ) => {
   // Run all access control assertions
   const assertionError = runAssertions(
-    () => assertUserLoggedIn(session as any),
+    () => assertUserLoggedIn(user as any),
     () => assertAdminRequest(request),
-    () => assertProjectMaintainerOrSuperAdmin(session, userRoles, formData.projectId!)
+    () => assertProjectMaintainerOrSuperAdmin(user, userRoles, formData.projectId!)
   );
 
   if (assertionError) return assertionError;
@@ -178,7 +186,7 @@ export const assertPermissionsToCreateLayer = (
  * @returns Object containing validation and access control context
  */
 export const assertPermissionsToUpdateLayer = (
-  session: Session,
+  user: SessionUser,
   request: Request,
   formData: LayerDB,
   userRoles: UserRoleDisco[],
@@ -186,10 +194,10 @@ export const assertPermissionsToUpdateLayer = (
 ) => {
   // Run all access control assertions
   const assertionError = runAssertions(
-    () => assertUserLoggedIn(session as any),
+    () => assertUserLoggedIn(user as any),
     () => assertAdminRequest(request),
     () => assertParamIdentifierEqualsFormIdentifier(formData, refId, 'id'),
-    () => assertProjectMaintainerOrSuperAdmin(session, userRoles, formData.projectId!)
+    () => assertProjectMaintainerOrSuperAdmin(user, userRoles, formData.projectId!)
   );
 
   if (assertionError) return assertionError;

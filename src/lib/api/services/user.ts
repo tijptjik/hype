@@ -11,9 +11,9 @@ import {
 } from '$lib/auth/asserts';
 import { isSuperAdmin } from '$lib/auth/utils';
 // SCHEMA
-import { user } from '$lib/db/schema';
+import { user } from '$lib/db/schema/index';
 // TYPES
-import type { UserRoleDisco, UserDB, Session, QueryParams, Id } from '$lib/types';
+import type { UserRoleDisco, UserDB, Session, SessionUser, QueryParams, Id } from '$lib/types';
 
 /********************
  *  COMMON
@@ -41,13 +41,13 @@ export const userEntityWithRelations = {
 
 /**
  * Get the query context for an user resource - filters the query based on the user's roles, and the query parameters. I.e. only owners of organisations or maintainers of projects can see all the users of the platform as they need to be able to see all the users to manage them. Other roles can only see their own user.
- * @param session - The session object
+ * @param currentUser - The current user object
  * @param request - The request object
  * @param params - The query parameters
  * @param userRoles - The user roles
  */
 export const getUserQueryContext = (
-  session: Session,
+  currentUser: SessionUser,
   request: Request,
   params: QueryParams,
   userRoles: UserRoleDisco[]
@@ -58,7 +58,7 @@ export const getUserQueryContext = (
   let excludeColumns = ['isArchived'];
 
   // NON-SUPERADMIN : Hide users which are archived
-  if (!isSuperAdmin(session)) {
+  if (!isSuperAdmin(currentUser)) {
     conditions.push(eq(user.isArchived, false))
   } 
 
@@ -80,10 +80,10 @@ export const getUserQueryContext = (
   if (!isAdminRequest(request)) {
     params = removeExcludedColumns(params, excludeColumns);
       // Other roles can only see their own user
-      conditions.push(eq(user.id, session.user.id));
+      conditions.push(eq(user.id, currentUser.id));
 
   // ADMIN : Check user roles to determine access level
-  } else if (!isSuperAdmin(session)) {
+  } else if (!isSuperAdmin(currentUser)) {
     params = removeExcludedColumns(params, excludeColumns);
     
     // Check if user has organisation owner or project maintainer role
@@ -95,7 +95,7 @@ export const getUserQueryContext = (
       // No additional conditions needed
     } else {
       // Other roles can only see their own user
-      conditions.push(eq(user.id, session.user.id));
+      conditions.push(eq(user.id, currentUser.id));
     }
 
   // SUPERADMIN : Can see all users regardless of any filters
@@ -121,15 +121,15 @@ export const getUserQueryContext = (
  * @returns Object containing validation and access control context
  */
 export const assertPermissionsToUpdateUser = (
-  session: Session,
+  user: SessionUser,
   formData: UserDB,
   refId: Id
 ) => {
   // Run all access control assertions
   const assertionError = runAssertions(
-    () => assertUserLoggedIn(session as any),
+    () => assertUserLoggedIn(user as any),
     () => assertParamIdentifierEqualsFormIdentifier(formData, refId, 'id'),
-    () => assertUserIsSelf(session, formData.id!)
+    () => assertUserIsSelf(user, formData.id!)
   );
 
   if (assertionError) return assertionError;

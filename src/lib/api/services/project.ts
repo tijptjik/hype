@@ -1,23 +1,22 @@
 // DRIZZLE
 import { eq, inArray, SQL } from 'drizzle-orm';
 // API
-import {isAdminRequest, applyQueryFilters, removeExcludedColumns } from '$lib/api';
+import { isAdminRequest, applyQueryFilters, removeExcludedColumns } from '$lib/api';
 // AUTH
 import {
   assertUserLoggedIn,
   assertAdminRequest,
   runAssertions,
-  assertOrganisationOwnerOrSuperAdmin,
-  assertParamIdentifierEqualsFormIdentifier
+  assertOrganisationOwnerOrSuperAdmin
 } from '$lib/auth/asserts';
 // DB
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
 import { getProjectIdforRoles, isSuperAdmin } from '$lib/auth/utils';
 // SCHEMA
-import { project } from '$lib/db/schema';
+import { project } from '$lib/db/schema/index';
 // DB
 import { applyPrismConstraints, isFieldUnique } from '$lib/db';
-import { HierarchicalResource } from '$lib/enums';
+import { FirstClassResource, HierarchicalResource } from '$lib/enums';
 // TYPES
 import type {
   UserRoleDisco,
@@ -25,11 +24,10 @@ import type {
   Prisms,
   ProjectDB,
   Database,
-  Session,
   Id,
   QueryParams,
   Project,
-  Code
+  SessionUser
 } from '$lib/types';
 import type { SuperValidated } from 'sveltekit-superforms';
 
@@ -67,7 +65,7 @@ export const projectEntityWithRelations = {
 /**
  * Get the query context for the project resource - filters the query based on the user's roles, prisms, and the query parameters.
  * @param db - The Drizzle instance
- * @param session - The session object
+ * @param user - The user object
  * @param request - The request object
  * @param params - The query parameters
  * @param userRoles - The user roles
@@ -75,7 +73,7 @@ export const projectEntityWithRelations = {
  */
 export const getProjectQueryContext = (
   db: Database,
-  session: Session,
+  user: SessionUser,
   request: Request,
   params: QueryParams,
   userRoles: UserRoleDisco[],
@@ -87,7 +85,7 @@ export const getProjectQueryContext = (
   let excludeColumns = ['isArchived', 'isPublished'];
 
   // NON-SUPERADMIN : Hide projects which are archived
-  if (!isSuperAdmin(session)) {
+  if (!isSuperAdmin(user)) {
     conditions.push(eq(project.isArchived, false));
   }
 
@@ -103,7 +101,7 @@ export const getProjectQueryContext = (
     conditions.push(eq(project.isPublished, true));
 
     // ADMIN : List all projects, where the user has a role in the project
-  } else if (!isSuperAdmin(session as Session & { user: { superAdmin: boolean } })) {
+  } else if (!isSuperAdmin(user)) {
     params = removeExcludedColumns(params, ['isArchived']);
     const projectIds = getProjectIdforRoles(userRoles);
     conditions.push(inArray(project.id, projectIds as Id[]));
@@ -118,7 +116,7 @@ export const getProjectQueryContext = (
   // CONTEXT : Apply query filters to the conditions
   if (Object.keys(params).length > 0) {
     // For superAdmins, remove isArchived and isPublished from params so they can see all content
-    if (isSuperAdmin(session)) {
+    if (isSuperAdmin(user)) {
       const { isArchived, isPublished, ...filteredParams } = params;
       applyQueryFilters(project, filteredParams, conditions);
     } else {
@@ -138,17 +136,16 @@ export const getProjectQueryContext = (
  * @returns Object containing validation and access control context
  */
 export const assertPermissionsToCreateProject = (
-  session: Session,
+  user: SessionUser,
   request: Request,
   formData: ProjectNew,
   userRoles: UserRoleDisco[]
 ) => {
   // Run all access control assertions
   const assertionError = runAssertions(
-    () => assertUserLoggedIn(session),
+    () => assertUserLoggedIn(user),
     () => assertAdminRequest(request),
-    () =>
-      assertOrganisationOwnerOrSuperAdmin(session, userRoles, formData.organisationId!) // Only allow org owners to create projects
+    () => assertOrganisationOwnerOrSuperAdmin(user, userRoles, formData.organisationId!) // Only allow org owners to create projects
   );
 
   if (assertionError) return assertionError;
@@ -166,17 +163,16 @@ export const assertPermissionsToCreateProject = (
  * as we want to allow the users to change the code of the project.
  */
 export const assertPermissionsToUpdateProject = (
-  session: Session,
+  user: SessionUser,
   request: Request,
   formData: ProjectDB,
-  userRoles: UserRoleDisco[],
+  userRoles: UserRoleDisco[]
 ) => {
   // Run all access control assertions
   const assertionError = runAssertions(
-    () => assertUserLoggedIn(session as any),
+    () => assertUserLoggedIn(user as any),
     () => assertAdminRequest(request),
-    () =>
-      assertOrganisationOwnerOrSuperAdmin(session, userRoles, formData.organisationId!) // Only allow org owners to update projects
+    () => assertOrganisationOwnerOrSuperAdmin(user, userRoles, formData.organisationId!) // Only allow org owners to update projects
   );
 
   if (assertionError) return assertionError;
@@ -191,7 +187,7 @@ export const assertCodeUnique = async (
   const codeUnique = await isFieldUnique<Project>(
     db,
     formData as Project,
-    HierarchicalResource.project,
+    FirstClassResource.project,
     'code'
   );
 
@@ -202,16 +198,15 @@ export const assertCodeUnique = async (
   return form;
 };
 
-
 /**
  * Check if the current user will lose access upon success, superAdmins are exempt.
  * @param formData - The form data
  * @param userRoles - The user roles
- * @param session - The session
+ * @param user - The user
  * @returns True if the current user will lose access upon success, false otherwise
  */
 export const isAccessLostUponSuccess = (
-  session: Session & { user: { superAdmin?: boolean } },
+  user: SessionUser,
   formData: ProjectNew,
   userRoles?: UserRoleDisco[]
 ) => {
@@ -221,7 +216,7 @@ export const isAccessLostUponSuccess = (
       (role: any) =>
         role.type === 'project' &&
         role.projectId === formData.id &&
-        role.userId === session.user.id
-    ) && !session.user.superAdmin
+        role.userId === user.id
+    ) && !user.superAdmin
   );
 };

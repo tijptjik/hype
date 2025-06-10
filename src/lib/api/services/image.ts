@@ -8,7 +8,6 @@ import { applyQueryFilters, removeExcludedColumns } from '$lib/api';
 import {
   assertUserLoggedIn,
   assertAdminRequest,
-  assertId,
   runAssertions,
   assertProjectMaintainerOrSuperAdmin,
   assertOrganisationOwnerOrSuperAdmin,
@@ -19,19 +18,18 @@ import {
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
 import { isSuperAdmin } from '$lib/auth/utils';
 // SCHEMA
-import { image, featureImage, project, organisation } from '$lib/db/schema';
+import { image, featureImage, project, organisation } from '$lib/db/schema/index';
 // TYPES
 import type {
   UserRoleDisco,
-  Session,
   Database,
   Id,
   QueryParams,
   ImageNew,
   ImageDBFlat,
   ImageDB,
-  ImagePartial,
-  HubOpts
+  HubOpts,
+  SessionUser
 } from '$lib/types';
 import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums';
 import { error } from '@sveltejs/kit';
@@ -104,7 +102,7 @@ export const imageEntityWithRelations = {
  */
 export const getImageQueryContext = (
   db: Database,
-  session: Session,
+  user: SessionUser,
   request: Request,
   params: QueryParams,
   userRoles: UserRoleDisco[],
@@ -117,7 +115,7 @@ export const getImageQueryContext = (
   let excludeColumns = ['isArchived', 'isPublished'];
 
   // NON-SUPERADMIN : Hide images which are archived
-  if (!isSuperAdmin(session)) {
+  if (!isSuperAdmin(user)) {
     conditions.push(eq(image.isArchived, false));
   }
 
@@ -138,7 +136,7 @@ export const getImageQueryContext = (
   } else {
     // Admin view: allow filtering by isPublished if not a superadmin
     // TODO SECURITY : Technically, currently we allow maintainers to see unpublished feature images, from ANY project if they know the featureId.
-    if (!isSuperAdmin(session)) {
+    if (!isSuperAdmin(user)) {
       params = removeExcludedColumns(params, ['isArchived']); // Keep isPublished filterable
     } else {
       conditions = []; // Superadmin sees all
@@ -163,7 +161,7 @@ export const getImageQueryContext = (
  */
 export const getImageEntityQueryContext = (
   db: Database,
-  session: Session,
+  user: SessionUser,
   request: Request,
   params: QueryParams
 ) => {
@@ -173,7 +171,7 @@ export const getImageEntityQueryContext = (
   let excludeColumns = ['isArchived', 'isPublished'];
 
   // NON-SUPERADMIN : Hide images which are archived
-  if (!isSuperAdmin(session)) {
+  if (!isSuperAdmin(user)) {
     conditions.push(eq(image.isArchived, false));
   }
 
@@ -182,7 +180,7 @@ export const getImageEntityQueryContext = (
     params = removeExcludedColumns(params, excludeColumns);
   } else {
     // Admin view: allow filtering by isPublished if not a superadmin
-    if (!isSuperAdmin(session)) {
+    if (!isSuperAdmin(user)) {
       params = removeExcludedColumns(params, ['isArchived']); // Keep isPublished filterable
     } else {
       conditions = []; // Superadmin sees all
@@ -206,7 +204,7 @@ export const getImageEntityQueryContext = (
  */
 export const assertPermissionsToCreateImage = async (
   db: Database,
-  session: Session,
+  user: SessionUser,
   request: Request,
   hubOpts: HubOpts,
   data: ImageNew,
@@ -215,7 +213,7 @@ export const assertPermissionsToCreateImage = async (
   ctxId: Id
 ) => {
   const commonAssertions = [
-    () => assertUserLoggedIn(session as any),
+    () => assertUserLoggedIn(user as any),
     () => assertAdminRequest(request)
   ];
 
@@ -225,15 +223,15 @@ export const assertPermissionsToCreateImage = async (
     case ImageContextResource.feature:
       const projectId = await getProjectIdForFeatureId(db, ctxId as Id, hubOpts);
       contextAssertion = () =>
-        assertProjectMaintainerOrMemberOrSuperAdmin(session, userRoles, projectId);
+        assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId);
       break;
     case ImageContextResource.project:
       contextAssertion = () =>
-        assertProjectMaintainerOrSuperAdmin(session, userRoles, ctxId);
+        assertProjectMaintainerOrSuperAdmin(user, userRoles, ctxId);
       break;
     case ImageContextResource.organisation:
       contextAssertion = () =>
-        assertOrganisationOwnerOrSuperAdmin(session, userRoles, ctxId);
+        assertOrganisationOwnerOrSuperAdmin(user, userRoles, ctxId);
       break;
   }
 
@@ -247,7 +245,7 @@ export const assertPermissionsToCreateImage = async (
  */
 export const assertPermissionsToUpdateImage = async (
   db: Database,
-  session: Session,
+  user: SessionUser,
   request: Request,
   hubOpts: HubOpts,
   params: QueryParams,
@@ -258,7 +256,7 @@ export const assertPermissionsToUpdateImage = async (
   ctxType: ImageContextResource | ImageContextResourceExtended
 ) => {
   const commonAssertions = [
-    () => assertUserLoggedIn(session as any),
+    () => assertUserLoggedIn(user as any),
     () => assertAdminRequest(request),
     () => assertParamIdentifierEqualsFormIdentifier(data, refId, 'id')
   ];
@@ -272,15 +270,15 @@ export const assertPermissionsToUpdateImage = async (
     case ImageContextResource.feature:
       const projectId = await getProjectIdForFeatureId(db, ctxId as Id, hubOpts);
       contextAssertion = () =>
-        assertProjectMaintainerOrMemberOrSuperAdmin(session, userRoles, projectId);
+        assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId);
       break;
     case ImageContextResource.project:
       contextAssertion = () =>
-        assertProjectMaintainerOrSuperAdmin(session, userRoles, ctxId);
+        assertProjectMaintainerOrSuperAdmin(user, userRoles, ctxId);
       break;
     case ImageContextResource.organisation:
       contextAssertion = () =>
-        assertOrganisationOwnerOrSuperAdmin(session, userRoles, ctxId);
+        assertOrganisationOwnerOrSuperAdmin(user, userRoles, ctxId);
       break;
   }
 
@@ -290,7 +288,7 @@ export const assertPermissionsToUpdateImage = async (
 
 export const assertPermissionsToDeleteImage = async (
   db: Database,
-  session: Session,
+  user: SessionUser,
   request: Request,
   hubOpts: HubOpts,
   params: QueryParams,
@@ -301,7 +299,7 @@ export const assertPermissionsToDeleteImage = async (
 ) => {
   return assertPermissionsToUpdateImage(
     db,
-    session,
+    user,
     request,
     hubOpts,
     params,
