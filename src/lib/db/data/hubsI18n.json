@@ -1,0 +1,23 @@
+[
+  {
+    "hubId": "4Jsk5LngvFZq",
+    "locale": "en",
+    "name": "Core Hub",
+    "nameShort": "Core",
+    "description": "The main hub for core organizations and projects"
+  },
+  {
+    "hubId": "4Jsk5LngvFZq",
+    "locale": "zh-hans",
+    "name": "核心中心",
+    "nameShort": "核心",
+    "description": "核心组织和项目的主要中心"
+  },
+  {
+    "hubId": "4Jsk5LngvFZq",
+    "locale": "zh-hant",
+    "name": "核心中心",
+    "nameShort": "核心",
+    "description": "核心組織和項目的主要中心"
+  }
+] 
