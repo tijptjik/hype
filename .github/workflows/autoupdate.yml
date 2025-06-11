@@ -1,4 +1,4 @@
-name: autoupdate
+name: "GIT :: Auto Update Branches"
 on:
   push: {}
   # Alternatively, you can only trigger if commits are pushed to certain branches, e.g.:

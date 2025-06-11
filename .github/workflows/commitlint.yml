@@ -1,4 +1,4 @@
-name: Commitlint
+name: "LINT :: Git Commits"
 
 on: [push, pull_request]
 
