@@ -38,7 +38,7 @@
     "test:watch": "vitest watch",
     "i18n:translate": "bunx @inlang/cli machine translate --project project.inlang",
     "i18n:build": "bunx @inlang/paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide",
-    "commit": "bunx commit"
+    "commit": "git-cz"
   },
   "testDependencies": {
     "@vitest/browser": "^2.1.5",
@@ -54,17 +54,20 @@
     "@cloudflare/vite-plugin": "^1.5.0",
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
+    "@commitlint/cz-commitlint": "^19.8.1",
     "@commitlint/prompt-cli": "^19.8.1",
     "@sveltejs/adapter-static": "^3.0.8",
     "@tanstack/svelte-query-devtools": "^5.80.6",
     "@types/eslint": "^9.6.1",
     "@types/geojson": "^7946.0.16",
     "@types/papaparse": "^5.3.16",
+    "commitizen": "^4.3.1",
     "drizzle-kit": "^0.31.1",
     "eslint": "^9.28.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-svelte": "^3.9.2",
     "globals": "^16.2.0",
+    "inquirer": "9",
     "prettier": "^3.5.3",
     "prettier-plugin-multiline-arrays": "^4.0.3",
     "prettier-plugin-svelte": "^3.4.0",
@@ -130,5 +133,10 @@
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
     "zod": "3.24.2"
+  },
+  "config": {
+    "commitizen": {
+      "path": "@commitlint/cz-commitlint"
+    }
   }
 }
