@@ -1,6 +1,8 @@
 // VITE
 import { defineConfig, loadEnv } from 'vite';
 import { sveltekit } from '@sveltejs/kit/vite';
+// CLOUDFLARE
+import { cloudflare } from '@cloudflare/vite-plugin';
 // TRANSLATION
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
 // DATA
@@ -41,7 +43,11 @@ export default defineConfig({
       cookieName: 'lang'
     }),
     seedDrizzle(),
-    sveltekit()
+    sveltekit(),
+    cloudflare({
+      // Configure the Cloudflare plugin
+      configPath: './wrangler.toml'
+    })
   ],
   optimizeDeps: {
     esbuildOptions: {
