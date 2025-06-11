@@ -31,13 +31,16 @@
     "deploy:prod": "bun wrangler deploy --name hype-prod --env production",
     "deploy:preview": "bun wrangler deploy --name hype-preview --env preview",
     "lint": "prettier --check . && eslint .",
+    "lint:branch": "bunx branch-name-lint .husky/branch-name-lint.json",
     "format": "prettier --write .",
-    "prepare": "svelte-kit sync",
-    "test": "vitest",
-    "test:ui": "vitest --ui",
-    "test:watch": "vitest watch",
+    "prepare": "husky",
+    "test": "vitest --config=vitest.config.ts",
+    "test:run": "vitest run --config=vitest.config.ts",
+    "test:watch": "vitest watch --config=vitest.config.ts",
+    "test:ui": "vitest --config=vitest.config.ts --ui",
     "i18n:translate": "bunx @inlang/cli machine translate --project project.inlang",
-    "i18n:build": "bunx @inlang/paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide"
+    "i18n:build": "bunx @inlang/paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide",
+    "commit": "git-cz"
   },
   "testDependencies": {
     "@vitest/browser": "^2.1.5",
@@ -50,16 +53,25 @@
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.4",
+    "@cloudflare/vite-plugin": "^1.5.0",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@commitlint/cz-commitlint": "^19.8.1",
+    "@commitlint/prompt-cli": "^19.8.1",
     "@sveltejs/adapter-static": "^3.0.8",
     "@tanstack/svelte-query-devtools": "^5.80.6",
     "@types/eslint": "^9.6.1",
     "@types/geojson": "^7946.0.16",
     "@types/papaparse": "^5.3.16",
+    "branch-name-lint": "^3.0.1",
+    "commitizen": "^4.3.1",
     "drizzle-kit": "^0.31.1",
     "eslint": "^9.28.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-svelte": "^3.9.2",
     "globals": "^16.2.0",
+    "husky": "^9.1.7",
+    "inquirer": "9",
     "prettier": "^3.5.3",
     "prettier-plugin-multiline-arrays": "^4.0.3",
     "prettier-plugin-svelte": "^3.4.0",
@@ -68,6 +80,7 @@
     "typescript-eslint": "^8.34.0",
     "vite-node": "^3.2.3",
     "vite-plugin-node-polyfills": "^0.23.0",
+    "vitest": "^3.2.3",
     "wrangler": "^4.19.1"
   },
   "type": "module",
@@ -90,7 +103,7 @@
     "@steeze-ui/heroicons": "^2.4.2",
     "@steeze-ui/svelte-icon": "^1.6.2",
     "@sveltejs/adapter-cloudflare": "^7.0.4",
-    "@sveltejs/kit": "^2.21.3",
+    "@sveltejs/kit": "^2.21.4",
     "@sveltejs/vite-plugin-svelte": "^5.1.0",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/typography": "^0.5.16",
@@ -114,7 +127,7 @@
     "proj4": "^2.17.0",
     "runed": "^0.28.0",
     "short-uuid": "^5.2.0",
-    "svelte": "^5.33.18",
+    "svelte": "^5.33.19",
     "svelte-fa": "^4.0.4",
     "svelte-file-dropzone": "^2.0.9",
     "svelte-range-slider-pips": "3.2.1",
@@ -125,5 +138,13 @@
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
     "zod": "3.24.2"
+  },
+  "config": {
+    "commitizen": {
+      "path": "@commitlint/cz-commitlint",
+      "config": {
+        "path": ".cz-config.js"
+      }
+    }
   }
 }

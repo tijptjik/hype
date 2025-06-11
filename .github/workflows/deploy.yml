@@ -1,4 +1,4 @@
-name: Deploy to Cloudflare
+name: "DEPLOY :: Cloudflare"
 
 on:
   push:
@@ -11,7 +11,7 @@ jobs:
     name: Deploy to Cloudflare [Production]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    environment: production
+    environment: prod
     steps:
       - name: 'GIT :: Checkout'
         uses: actions/checkout@v4
@@ -59,7 +59,7 @@ jobs:
     name: Deploy to Cloudflare [Preview]
     if: github.ref == 'refs/heads/preview'
     runs-on: ubuntu-latest
-    environment: preview-1
+    environment: preview
     steps:
       - name: 'GIT :: Checkout'
         uses: actions/checkout@v4
