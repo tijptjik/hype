@@ -12,6 +12,15 @@
 
 ### Branch Naming Convention
 
+```
+feat/lasar-show
+^--^ ^--------^
+|          |
+|          +---> topic
+|
++-------> Type: feat, chore, docs, fix, refactor, perf, style, or test.
+```
+
 Branch names must follow one of these patterns:
 
 - `main` - The main production branch
