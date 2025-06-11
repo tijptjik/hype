@@ -1,5 +1,6 @@
 # Dependencies
 node_modules
+scripts/.venv
 
 # Output
 .output
@@ -8,14 +9,14 @@ node_modules
 /build
 /build-static
 /package
+/dist
 # Output:migrations
 /migrations/*.js
 
-# Env
+# Secrets
 .env
 .env.*
 !.env.example
-scripts/.venv
 
 # Runners
 vite.config.js.timestamp-*
@@ -23,6 +24,7 @@ vite.config.ts.timestamp-*
 
 # IDE
 .idea
+.vscode
 
 # OS
 .DS_Store
