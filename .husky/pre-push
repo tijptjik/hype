@@ -1,1 +1,8 @@
+# Check merge rules
+./.husky/check-merge.sh
+
+# Check branch naming convention
+bunx branch-name-lint .husky/branch-name-lint.json
+
+# Run tests
 bun run test
