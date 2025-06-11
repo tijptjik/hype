@@ -31,6 +31,7 @@
     "deploy:prod": "bun wrangler deploy --name hype-prod --env production",
     "deploy:preview": "bun wrangler deploy --name hype-preview --env preview",
     "lint": "prettier --check . && eslint .",
+    "lint:branch": "npx branch-name-lint .husky/branch-name-lint.json",
     "format": "prettier --write .",
     "prepare": "husky",
     "test": "vitest",
@@ -61,6 +62,7 @@
     "@types/eslint": "^9.6.1",
     "@types/geojson": "^7946.0.16",
     "@types/papaparse": "^5.3.16",
+    "branch-name-lint": "^3.0.1",
     "commitizen": "^4.3.1",
     "drizzle-kit": "^0.31.1",
     "eslint": "^9.28.0",
@@ -138,7 +140,10 @@
   },
   "config": {
     "commitizen": {
-      "path": "@commitlint/cz-commitlint"
+      "path": "@commitlint/cz-commitlint",
+      "config": {
+        "path": ".cz-config.js"
+      }
     }
   }
 }
