@@ -2,7 +2,7 @@
 ./.husky/check-merge.sh
 
 # Check branch naming convention
-bunx branch-name-lint .husky/branch-name-lint.json
+bun run lint:branch
 
-# Run tests
-bun run test
+# Run tests with custom config
+bun run test:run
