@@ -1,10 +1,11 @@
 <script lang="ts">
+// ENV
+import { PUBLIC_SVELTE_QUERY_DEVTOOLS } from '$env/static/public';
 // SVELTE
 import { watch } from 'runed';
 // STORES
 import { page } from '$app/state';
 // NAVIGATION
-import { goto } from '$app/navigation';
 import { afterNavigate } from '$app/navigation';
 // QUERY
 import { QueryClientProvider } from '@tanstack/svelte-query';
@@ -101,7 +102,8 @@ afterNavigate(() => {
         rel="stylesheet" />
     {/if}
   </div>
-  {#if import.meta.env.VITE_SVELTE_QUERY_DEVTOOLS === 'true'}
-    <!-- <SvelteQueryDevtools /> -->
+  <!-- TODO Prevent this from ever running in PRODUCTION (but it's OK on Preview) -->
+  {#if PUBLIC_SVELTE_QUERY_DEVTOOLS === 'true' }
+    <SvelteQueryDevtools />
   {/if}
 </QueryClientProvider>

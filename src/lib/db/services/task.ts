@@ -275,7 +275,9 @@ export const publishImages = async (
  * Creates a new task with all its dependencies (feature, images, etc.)
  * @param db - The database instance
  * @param taskData - The task data to create
- * @param formData - Optional form data containing images
+ * @param images - Array of image files to process
+ * @param userId - The user ID from the session
+ * @param subscriptionKey - Azure translation API key for feature enrichment
  * @param fetch - Optional fetch function for image processing
  * @throws {Error} If task creation fails
  */
@@ -284,6 +286,7 @@ export const createTaskWithDependencies = async (
   taskData: TaskCreation,
   images: File[],
   userId: string, // The user ID from the session
+  subscriptionKey?: string, // Azure translation API key for feature enrichment
   fetch?: typeof globalThis.fetch
 ): Promise<TaskDB> => {
   let createdFeature: typeof feature.$inferSelect | undefined;
@@ -297,7 +300,8 @@ export const createTaskWithDependencies = async (
     // The API service will handle enrichment, translation, and defaults
     const createdFeature = await createUserContributedFeature(
       db,
-      taskData.feature as UserContributedFeature
+      taskData.feature as UserContributedFeature,
+      subscriptionKey
     );
     taskData.featureId = createdFeature.id;
 

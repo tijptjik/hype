@@ -14,9 +14,10 @@ scripts/.venv
 /migrations/*.js
 
 # Secrets
-.env
 .env.*
 !.env.example
+.dev.vars
+.dev.vars.*
 
 # Runners
 vite.config.js.timestamp-*
@@ -33,5 +34,6 @@ Thumbs.db
 # Data
 local_*.sql
 scripts/data/
+sql/data/
 scripts/.ipynb_checkpoints/
 .data/

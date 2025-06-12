@@ -25,6 +25,10 @@ export default defineConfig({
     teardownTimeout: 1000,
     logHeapUsage: false,
     watch: isWatch,
+    // Use custom tsconfig for tests
+    typecheck: {
+      tsconfig: './tsconfig.test.json'
+    },
     // Disable server completely for tests
     server: {
       deps: {

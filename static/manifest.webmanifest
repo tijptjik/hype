@@ -1,7 +1,7 @@
 {
-  "name": "Ghost Mappers",
-  "short_name": "Ghost Maps",
-  "description": "Ghost Signs Mapping Application",
+  "name": "HYPE.HK",
+  "short_name": "HYPE",
+  "description": "Beautiful Hong Kong",
   "start_url": "/",
   "display": "fullscreen",
   "background_color": "#000000",
@@ -60,16 +60,16 @@
     }
   ],
   "categories": ["maps", "navigation", "utilities"],
-  "keywords": ["heritage", "ghost signs", "mapping", "history", "Hong Kong"],
+  "keywords": ["heritage", "mapping", "history", "Hong Kong"],
   "dir": "auto",
   "iarc_rating_id": "",
   "prefer_related_applications": false,
   "related_applications": [],
   "shortcuts": [
     {
-      "name": "Open Map",
-      "url": "/map",
-      "description": "View the ghost signs map"
+      "name": "Explore the Map",
+      "url": "/",
+      "description": "Open the HYPE.HK map"
     }
   ],
   "share_target": {

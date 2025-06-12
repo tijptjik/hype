@@ -9,7 +9,8 @@ function maskPrivateValues(obj: Record<string, string>): Record<string, string> 
       key.startsWith('PRIVATE_') ||
       key.startsWith('SECRET_') ||
       key.endsWith('_TOKEN') ||
-      key.endsWith('_KEY')
+      key.endsWith('_KEY') ||
+      key.endsWith('_SECRET')
     ) {
       result[key] = '***';
     } else {
@@ -29,8 +30,8 @@ export const GET: RequestHandler = async ({ locals, platform: { env } }) => {
     return JSONResponseOrError({
       // @ts-ignore
       env: maskPrivateValues(vars),
+      env_platform: Object.keys(env),
       locals: locals,
-      env_platform: Object.keys(env)
     });
   } catch (e) {
     // DB : Query Error
