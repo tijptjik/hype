@@ -40,16 +40,27 @@ enabled = true
 directory = "./dist"
 binding = "ASSETS"
 
+[[d1_databases]]
+binding = "DB"
+database_name = "hype-db-local"
+database_id = "6757bbf2-ac2c-4323-b73a-0a48f0c41d62"
+# Ensure migrations_dir points to the correct folder
+migrations_dir = "migrations"
+
 ########
 # PRODUCTION ENVIRONMENT
 ###
 
-[env.production.route]
+[env.production]
+name = "hype-prod"
+
+[[env.production.routes]]
 pattern = "hype.hk"
 custom_domain = true
 
-[env.production.observability]
-enabled = true
+[[env.production.routes]]
+pattern = "hkghostsigns.com"
+custom_domain = true
 
 [env.production.vars]
 ENVIRONMENT = "production"
@@ -58,11 +69,10 @@ NODE_ENV = "production"
 NODE_VERSION = "24.2"
 BUN_VERSION = "1.2.15"
 
-VITE_CLOUDINARY_CLOUD_NAME = "dg6vtsga1"
-VITE_CLOUDINARY_API_KEY = "226917649845399"
-VITE_CLOUDINARY_UPLOAD_PRESET = "ml_default"
+PUBLIC_CLOUDINARY_CLOUD_NAME = "dg6vtsga1"
+PUBLIC_CLOUDINARY_UPLOAD_PRESET = "ml_default"
 
-BETTER_AUTH_URL = "https://hype.hk"
+PUBLIC_AUTH_URL = "https://hype.hk"
 
 PUBLIC_AZURE_TRANSLATION_REGION = "eastasia"
 
@@ -80,8 +90,12 @@ database_id = "7786af0e-3782-47f8-b70d-de645ba836ad"
 [env.preview]
 name = "hype-preview"
 
-[env.preview.route]
+[[env.preview.routes]]
 pattern = "preview.hype.hk"
+custom_domain = true
+
+[[env.preview.routes]]
+pattern = "preview.hkghostsigns.com"
 custom_domain = true
 
 [env.preview.vars]
@@ -91,11 +105,10 @@ NODE_ENV = "staging"
 NODE_VERSION = "24.2"
 BUN_VERSION = "1.2.15"
 
-VITE_CLOUDINARY_CLOUD_NAME = "dg6vtsga1"
-VITE_CLOUDINARY_API_KEY = "226917649845399"
-VITE_CLOUDINARY_UPLOAD_PRESET = "ml_default"
+PUBLIC_CLOUDINARY_CLOUD_NAME = "dg6vtsga1"
+PUBLIC_CLOUDINARY_UPLOAD_PRESET = "ml_default"
 
-BETTER_AUTH_URL = "https://preview.hype.hk"
+PUBLIC_AUTH_URL = "https://preview.hype.hk"
 
 PUBLIC_AZURE_TRANSLATION_REGION = "eastasia"
 
