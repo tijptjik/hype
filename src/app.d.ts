@@ -42,7 +42,7 @@ declare global {
     interface Platform {
       env: {
         // Cloudflare Bindings
-        DB: DrizzleD1Database;
+        DB: DrizzleD1Database<typeof import('$lib/db/schema/index')>;
         ASSETS: any;
         // AUTH
         AUTH_SECRET: string;
