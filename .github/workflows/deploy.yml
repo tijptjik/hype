@@ -24,6 +24,9 @@ jobs:
       - name: 'INSTALL :: Dependencies'
         run: bun install --frozen-lockfile
 
+      - name: 'SYNC :: Generate SvelteKit files'
+        run: bun run sync
+
       - name: 'TEST :: Run tests'
         run: bun run test:run
 
@@ -82,6 +85,9 @@ jobs:
 
       - name: 'INSTALL :: Dependencies'
         run: bun install --frozen-lockfile
+
+      - name: 'SYNC :: Generate SvelteKit files'
+        run: bun run sync
 
       - name: 'TEST :: Run tests'
         run: bun run test:run
