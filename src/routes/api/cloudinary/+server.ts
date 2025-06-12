@@ -5,14 +5,14 @@ import { PUBLIC_CLOUDINARY_CLOUD_NAME } from '$env/static/public';
 // THIRD PARTY
 import crypto from 'crypto';
 
-export const POST = async ({ request, event }) => {
+export const POST = async ({ request, platform }) => {
   const body = await request.json();
   const { paramsToSign } = body;
   const timestamp = Date.now();
 
   // Get environment variables from platform
-  const CLOUDINARY_API_SECRET = event.platform?.env?.CLOUDINARY_API_SECRET;
-  const CLOUDINARY_API_KEY = event.platform?.env?.CLOUDINARY_API_KEY;
+  const CLOUDINARY_API_SECRET = platform?.env?.CLOUDINARY_API_SECRET;
+  const CLOUDINARY_API_KEY = platform?.env?.CLOUDINARY_API_KEY;
 
   if (!CLOUDINARY_API_SECRET || !CLOUDINARY_API_KEY) {
     error(500, 'Missing Cloudinary API credentials');

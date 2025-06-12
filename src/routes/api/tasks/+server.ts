@@ -99,7 +99,7 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
  * Missing Reports, New Photos, and New Features all require images, so they will
  * all have multipart/form-data content type.
  */
-export const POST: RequestHandler = async ({ request, locals, event, fetch }) => {
+export const POST: RequestHandler = async ({ request, locals, platform, fetch }) => {
   // ASSERT : User logged in
   const { db, session, user, userId, userRoles } = await getDatabase(locals, platform);
 
@@ -151,7 +151,7 @@ export const POST: RequestHandler = async ({ request, locals, event, fetch }) =>
     );
 
     // Get Azure translation key from platform for feature enrichment
-    const subscriptionKey = event.platform?.env?.AZURE_TRANSLATION_KEY;
+    const subscriptionKey = platform?.env?.AZURE_TRANSLATION_KEY;
 
     // DB : Create task with all dependencies (feature, images, etc.)
     const createdTask = await createTaskWithDependencies(
