@@ -24,6 +24,7 @@ import { isOrganisation, isProject, isLayer, isFeature } from '$lib/types';
 // TYPES
 import type { SuperValidated } from 'sveltekit-superforms';
 import type { SQL, Table, Column } from 'drizzle-orm';
+import type { D1Database as MiniflareD1Database } from '@miniflare/d1';
 import type {
   Feature,
   Image,
@@ -44,9 +45,9 @@ import type {
   DeleteParamsToSign,
   SignData,
   Session,
-  SessionUser,
-  D1Database
+  SessionUser
 } from '$lib/types';
+
 
 export const getSessionOrError = async (
   locals: App.Locals
@@ -152,7 +153,7 @@ export const getDatabase = async (
   if (!platform?.env.DB) {
     return error(500, 'Database not available');
   }
-  const db = client(platform.env.DB);
+  const db = client(platform.env.DB as unknown as MiniflareD1Database);
   return {
     db,
     session,

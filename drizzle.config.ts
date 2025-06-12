@@ -1,4 +1,4 @@
-import dotenvLoad from 'dotenv-load';
+import dotenvLoad = require('dotenv-load');
 import { defineConfig } from 'drizzle-kit';
 import { D1Helper } from '@nerdfolio/drizzle-d1-helpers';
 

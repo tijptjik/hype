@@ -17,11 +17,11 @@ import type {
   Database,
   ResourceConfig,
   ResourceHierarchy,
-  LocaleBundle,
-  D1Database
+  LocaleBundle
 } from '../types';
 import type { SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
+import type { D1Database as MiniflareD1Database } from '@miniflare/d1';
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -121,7 +121,7 @@ export const resourceConfig: Record<HierarchicalResource, ResourceConfig> = {
 // 2. DATABASE :: CLIENT
 // ═══════════════════════
 
-const client = (database: DrizzleD1Database<typeof schema>) => {
+const client = (database: MiniflareD1Database): DrizzleD1Database<typeof schema> => {
   return drizzle(database, {
     schema,
     logger: PUBLIC_DRIZZLE_LOGGER === 'true' || false

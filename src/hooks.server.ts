@@ -11,6 +11,7 @@ import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { createAuth } from '$lib/auth';
 // TYPES
 import type { Session, SessionUser } from '$lib/types';
+import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 
 let handle: Handle;
 
@@ -88,7 +89,7 @@ const handle_auth: Handle = async ({ event, resolve }) => {
     }
 
     // DB
-    const db = drizzle(event.platform.env.DB, { schema });
+    const db = drizzle(event.platform.env.DB as unknown as MiniflareD1Database, { schema });
 
     // AUTH
     const auth = createAuth(db, {

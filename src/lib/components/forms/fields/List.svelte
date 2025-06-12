@@ -165,7 +165,7 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
       </div>
     {/each}
   {/key}
-  <ErrorLabel {errors} {field} {locale} {fieldRoot} {fieldIndex} {fieldKey} />
+  <ErrorLabel {errors} {field} locale={locale as Locale} {fieldRoot} {fieldIndex} {fieldKey} />
 </div>
 
 <style>
