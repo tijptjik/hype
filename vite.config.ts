@@ -8,7 +8,7 @@ import { paraglideVitePlugin } from '@inlang/paraglide-js';
 // DATA
 // import seed from './src/lib/db/seed';
 // TYPES
-// import type { Plugin } from 'vite';
+import type { Plugin } from 'vite';
 
 // Load env file based on `mode` in the current working directory.
 // Set the third parameter to '' to load all env regardless of the
@@ -18,10 +18,10 @@ import { paraglideVitePlugin } from '@inlang/paraglide-js';
 // PLUGIN :: SEED DRIZZLE
 // const seedDrizzle = async (): Promise<Plugin> => {
 //   if (env.VITE_WRANGLER_ENV !== 'local') {
-//     return {
-//       name: 'no-seed-on-prod',
-//       apply: 'build'
-//     } satisfies Plugin;
+// return {
+// name: 'no-seed-on-prod',
+// apply: 'build'
+// } satisfies Plugin;
 //   } else {
 //     return {
 //       name: 'seed-drizzle',
@@ -33,12 +33,28 @@ import { paraglideVitePlugin } from '@inlang/paraglide-js';
 //   }
 // };
 
+const localCloudflare = async (): Promise<Plugin[]> => {
+  if (process.env.DEV) {
+    return cloudflare({
+      configPath: './wrangler.toml'
+    })
+  } else {
+    return [{
+      name: 'skip-cloudflare-plugin',
+      apply: 'build',
+      buildStart() {
+        console.log('skip-cloudflare-plugin');
+      }
+    }];
+  }
+};
+
 // CONFIG
 export default defineConfig({
   envPrefix: ['VITE_', 'PUBLIC_'],
   environments: {
-    hype_prod : {},
-    hype_preview : {},
+    hype_prod: {},
+    hype_preview: {}
   },
   plugins: [
     paraglideVitePlugin({
@@ -49,10 +65,7 @@ export default defineConfig({
     }),
     // seedDrizzle(),
     sveltekit(),
-    cloudflare({
-      // Configure the Cloudflare plugin
-      configPath: './wrangler.toml'
-    })
+    localCloudflare()
   ],
   optimizeDeps: {
     esbuildOptions: {
