@@ -24,6 +24,9 @@ jobs:
       - name: 'INSTALL :: Dependencies'
         run: bun install --frozen-lockfile
 
+      - name: 'TEST :: Run tests'
+        run: bun run test:run
+
       - name: 'BUILD :: Application'
         run: bun run build
         env:
@@ -79,6 +82,9 @@ jobs:
 
       - name: 'INSTALL :: Dependencies'
         run: bun install --frozen-lockfile
+
+      - name: 'TEST :: Run tests'
+        run: bun run test:run
 
       - name: 'BUILD :: Application'
         run: bun run build
