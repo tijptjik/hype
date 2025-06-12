@@ -1,8 +1,10 @@
-PRAGMA foreign_keys = OFF;
+PRAGMA defer_foreign_keys = ON;
 
+-- BEGIN TRANSACTION;
 -- drop table IF EXISTS sqlite_sequence;
 drop table IF EXISTS d1_migrations;
 drop table IF EXISTS account;
+drop table IF EXISTS verification;
 drop table IF EXISTS feature;
 drop table IF EXISTS featureI18n;
 drop table IF EXISTS featureProperty;
@@ -29,9 +31,13 @@ drop table IF EXISTS organisation;
 drop table IF EXISTS project;
 drop table IF EXISTS image;
 drop table IF EXISTS userLayer;
+drop table IF EXISTS hub;
+drop table IF EXISTS hubI18n;
 
 UPDATE sqlite_sequence
 SET seq = 0
 WHERE name = 'd1_migrations';
 
-PRAGMA foreign_keys = ON;
+-- COMMIT; -- Foreign keys validated here
+
+PRAGMA defer_foreign_keys = OFF;
