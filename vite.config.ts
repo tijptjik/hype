@@ -34,16 +34,21 @@ import type { Plugin } from 'vite';
 // };
 
 const localCloudflare = async (): Promise<Plugin[]> => {
-  if (process.env.DEV) {
+  // Only load Cloudflare plugin in dev mode, skip in CI/build/test environments
+  const isDev = process.env.NODE_ENV === 'development' || process.env.DEV;
+  const isCI = process.env.CI === 'true';
+  const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST;
+  
+  if (isDev && !isCI && !isTest) {
     return cloudflare({
       configPath: './wrangler.toml'
-    })
+    });
   } else {
     return [{
       name: 'skip-cloudflare-plugin',
       apply: 'build',
       buildStart() {
-        console.log('skip-cloudflare-plugin');
+        console.log('🚀 Skipping Cloudflare plugin in CI/build environment');
       }
     }];
   }
