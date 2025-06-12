@@ -2,6 +2,7 @@ import type { AvailableLanguageTag } from '../../lib/paraglide/runtime';
 import type { ParaglideLocals } from '@inlang/paraglide-sveltekit';
 import type { Auth, SessionSession, SessionUser } from '$lib/auth';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
+import type { MiniflareD1Database } from 'miniflare';
 import type { HubOpts } from '$lib/types';
 import type { Flash } from '$lib/types';
 // See https://kit.svelte.dev/docs/types#app
@@ -42,7 +43,7 @@ declare global {
     interface Platform {
       env: {
         // Cloudflare Bindings
-        DB: DrizzleD1Database<typeof import('$lib/db/schema/index')>;
+        DB: MiniflareD1Database;
         ASSETS: any;
         // AUTH
         AUTH_SECRET: string;

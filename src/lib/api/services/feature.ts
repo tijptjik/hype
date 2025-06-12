@@ -23,8 +23,6 @@ import { feature, layer } from '$lib/db/schema/index';
 import { applyPrismConstraints, transformI18nSafely } from '$lib/db';
 import { HierarchicalResource } from '$lib/enums';
 import { getProjectIdForFeature } from '$lib/db/services/feature';
-// TRANSLATION
-import { getTranslation } from '$lib/api/external/translation';
 // FEATURE DB SERVICES
 import { createFeatureWithRelated } from '$lib/db/services/feature';
 // ZOD
@@ -334,6 +332,8 @@ export const createUserContributedFeature = async (
 
     // Only call translation API if we have fields to translate and API key
     if (fieldsToTranslate.length > 0 && subscriptionKey) {
+      // TRANSLATION
+      const { getTranslation } = await import('$lib/api/external/translation');
       try {
         translatedValues = await getTranslation(
           sourceLocale,
@@ -410,9 +410,15 @@ export const createUserContributedFeature = async (
           // Only translate if needed and API key available
           if (needsValue && subscriptionKey) {
             try {
-              const translatedValues = await getTranslation(propSourceLocale, locale, [
-                propSourceTextObj.value
-              ], subscriptionKey);
+              const { getTranslation } = await import('$lib/api/external/translation');
+              const translatedValues = await getTranslation(
+                propSourceLocale,
+                locale,
+                [
+                  propSourceTextObj.value
+                ],
+                subscriptionKey
+              );
               translatedValue = translatedValues[0] || null;
             } catch (error) {
               // Translation failed, translatedValue remains null
