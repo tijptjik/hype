@@ -1,40 +1,45 @@
 // VITE
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 // CLOUDFLARE
 import { cloudflare } from '@cloudflare/vite-plugin';
 // TRANSLATION
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
 // DATA
-import seed from './src/lib/db/seed';
+// import seed from './src/lib/db/seed';
 // TYPES
-import type { Plugin } from 'vite';
+// import type { Plugin } from 'vite';
 
 // Load env file based on `mode` in the current working directory.
 // Set the third parameter to '' to load all env regardless of the
 // `VITE_` prefix.
-const env = loadEnv('development', process.cwd());
+// const env = loadEnv('development', process.cwd(), '');
 
 // PLUGIN :: SEED DRIZZLE
-const seedDrizzle = async (): Promise<Plugin> => {
-  if (env.VITE_WRANGLER_ENV !== 'local') {
-    return {
-      name: 'no-seed-on-prod',
-      apply: 'build'
-    } satisfies Plugin;
-  } else {
-    return {
-      name: 'seed-drizzle',
-      apply: 'serve',
-      buildStart() {
-        seed(env);
-      }
-    } satisfies Plugin;
-  }
-};
+// const seedDrizzle = async (): Promise<Plugin> => {
+//   if (env.VITE_WRANGLER_ENV !== 'local') {
+//     return {
+//       name: 'no-seed-on-prod',
+//       apply: 'build'
+//     } satisfies Plugin;
+//   } else {
+//     return {
+//       name: 'seed-drizzle',
+//       apply: 'serve',
+//       buildStart() {
+//         seed(env);
+//       }
+//     } satisfies Plugin;
+//   }
+// };
 
 // CONFIG
 export default defineConfig({
+  envPrefix: ['VITE_', 'PUBLIC_'],
+  environments: {
+    hype_prod : {},
+    hype_preview : {},
+  },
   plugins: [
     paraglideVitePlugin({
       project: './project.inlang',
@@ -42,7 +47,7 @@ export default defineConfig({
       strategy: ['cookie', 'preferredLanguage', 'baseLocale'],
       cookieName: 'lang'
     }),
-    seedDrizzle(),
+    // seedDrizzle(),
     sveltekit(),
     cloudflare({
       // Configure the Cloudflare plugin
@@ -61,10 +66,9 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
-    // hmr: {
-    // port: 5173
-    // },
-    hmr: false,
+    hmr: {
+      port: 5173
+    },
     allowedHosts: [
       'localhost',
       '127.0.0.1',
