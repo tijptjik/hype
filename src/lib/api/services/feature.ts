@@ -290,11 +290,13 @@ export const assertPermissionsToUpdateFeature = async (
  * Creates a feature from user-contributed data with enrichment and translation
  * @param db - The database instance
  * @param newFeature - The user-contributed feature data
+ * @param subscriptionKey - Azure translation API key
  * @returns The newly created feature with related data
  */
 export const createUserContributedFeature = async (
   db: Database,
-  newFeature: UserContributedFeature
+  newFeature: UserContributedFeature,
+  subscriptionKey?: string
 ) => {
   // Step 1: Get the source locale (first locale with content)
   const providedLocales = Object.keys(newFeature.i18n) as Locale[];
@@ -330,13 +332,14 @@ export const createUserContributedFeature = async (
 
     let translatedValues: string[] = [];
 
-    // Only call translation API if we have fields to translate
-    if (fieldsToTranslate.length > 0) {
+    // Only call translation API if we have fields to translate and API key
+    if (fieldsToTranslate.length > 0 && subscriptionKey) {
       try {
         translatedValues = await getTranslation(
           sourceLocale,
           locale,
-          fieldsToTranslate
+          fieldsToTranslate,
+          subscriptionKey
         );
       } catch (error) {
         // translatedValues remains empty array, will fall back to source content
@@ -404,12 +407,12 @@ export const createUserContributedFeature = async (
 
           let translatedValue: string | null = null;
 
-          // Only translate if needed
-          if (needsValue) {
+          // Only translate if needed and API key available
+          if (needsValue && subscriptionKey) {
             try {
               const translatedValues = await getTranslation(propSourceLocale, locale, [
                 propSourceTextObj.value
-              ]);
+              ], subscriptionKey);
               translatedValue = translatedValues[0] || null;
             } catch (error) {
               // Translation failed, translatedValue remains null

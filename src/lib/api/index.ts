@@ -37,17 +37,15 @@ import type {
   ResourceType,
   Task,
   UserRoleDisco,
-  PropertyI18nDB,
   QueryParams,
   LayerPropertyPartialExtra,
-  LayerI18nDB,
-  FeatureI18nDB,
   OrganisationRoleUser,
   ParamsToSign,
   DeleteParamsToSign,
   SignData,
   Session,
-  SessionUser
+  SessionUser,
+  D1Database
 } from '$lib/types';
 
 export const getSessionOrError = async (
@@ -151,7 +149,10 @@ export const getDatabase = async (
   platform: App.Platform | undefined
 ) => {
   const { user, session } = await getSessionOrError(locals);
-  const db = client(platform?.env.DB);
+  if (!platform?.env.DB) {
+    return error(500, 'Database not available');
+  }
+  const db = client(platform.env.DB);
   return {
     db,
     session,
