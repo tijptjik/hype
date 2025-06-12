@@ -111,9 +111,7 @@ CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id
 
 Production and preview environments are configured with appropriate variables in `wrangler.toml`:
 
-- **ENVIRONMENT**: `production` | `staging`
 - **NODE_ENV**: `production` | `staging`
-- **VITE_USER_NODE_ENV**: `production` | `staging`
 - **API Keys**: Cloudinary & Azure Translation
 
 ### 7. Version Management with Changesets
