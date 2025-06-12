@@ -35,7 +35,7 @@ import type { Plugin } from 'vite';
 
 const localCloudflare = async (): Promise<Plugin[]> => {
   // Only load Cloudflare plugin in dev mode, skip in CI/build/test environments
-  const isDev = process.env.NODE_ENV === 'development' || process.env.DEV;
+  const isDev = process.env.NODE_ENV === 'dev' || process.env.DEV;
   const isCI = process.env.CI === 'true';
   const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST;
   
