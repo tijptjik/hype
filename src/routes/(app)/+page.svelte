@@ -10,7 +10,7 @@ const session = useSession();
 {#if !$session.isPending && !$session.data?.user}
   <div
     class="absolute left-1/2 top-[60%] z-50 -translate-x-1/2 -translate-y-1/2 text-left">
-    <h1 class="mb-4 text-6xl font-bold text-white">GHOST MAPPERS</h1>
+    <h1 class="mb-4 text-6xl font-bold text-white">HKGHOSTSIGNS</h1>
     <button
       class="btn bg-white text-neutral-900"
       onclick={() => {
