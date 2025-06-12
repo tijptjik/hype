@@ -91,7 +91,7 @@ jobs:
           PUBLIC_GIPHY_KEY: ${{ secrets.PUBLIC_GIPHY_KEY }}
 
           # Public variables
-          CLOUDFLARE_ENV: prod
+          CLOUDFLARE_ENV: production
 
       - name: 'DB :: Apply migrations'
         run: bun run db:migration:run:cf:prod
