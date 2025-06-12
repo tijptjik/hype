@@ -27,8 +27,50 @@ jobs:
       - name: 'SYNC :: Generate SvelteKit files'
         run: bun run sync
 
+      - name: 'FIX :: Create temporary tsconfig for CI'
+        run: |
+          # Backup original tsconfig
+          mv tsconfig.json tsconfig.json.bak
+          # Create minimal tsconfig for CI
+          cat > tsconfig.json << 'EOF'
+          {
+            "compilerOptions": {
+              "target": "ES2022",
+              "lib": ["ES2022"],
+              "module": "ESNext",
+              "moduleResolution": "node",
+              "allowJs": true,
+              "checkJs": true,
+              "esModuleInterop": true,
+              "allowSyntheticDefaultImports": true,
+              "forceConsistentCasingInFileNames": true,
+              "resolveJsonModule": true,
+              "skipLibCheck": true,
+              "sourceMap": true,
+              "strict": true,
+              "baseUrl": ".",
+              "paths": {
+                "$lib": ["./src/lib"],
+                "$lib/*": ["./src/lib/*"]
+              }
+            },
+            "include": [
+              "src/**/*.ts",
+              "src/**/*.d.ts"
+            ],
+            "exclude": [
+              "node_modules",
+              ".svelte-kit",
+              "src/lib/paraglide/**/*"
+            ]
+          }
+          EOF
+
       - name: 'TEST :: Run tests'
         run: bun run test:run
+
+      - name: 'FIX :: Restore original tsconfig'
+        run: mv tsconfig.json.bak tsconfig.json
 
       - name: 'BUILD :: Application'
         run: bun run build
@@ -89,8 +131,50 @@ jobs:
       - name: 'SYNC :: Generate SvelteKit files'
         run: bun run sync
 
+      - name: 'FIX :: Create temporary tsconfig for CI'
+        run: |
+          # Backup original tsconfig
+          mv tsconfig.json tsconfig.json.bak
+          # Create minimal tsconfig for CI
+          cat > tsconfig.json << 'EOF'
+          {
+            "compilerOptions": {
+              "target": "ES2022",
+              "lib": ["ES2022"],
+              "module": "ESNext",
+              "moduleResolution": "node",
+              "allowJs": true,
+              "checkJs": true,
+              "esModuleInterop": true,
+              "allowSyntheticDefaultImports": true,
+              "forceConsistentCasingInFileNames": true,
+              "resolveJsonModule": true,
+              "skipLibCheck": true,
+              "sourceMap": true,
+              "strict": true,
+              "baseUrl": ".",
+              "paths": {
+                "$lib": ["./src/lib"],
+                "$lib/*": ["./src/lib/*"]
+              }
+            },
+            "include": [
+              "src/**/*.ts",
+              "src/**/*.d.ts"
+            ],
+            "exclude": [
+              "node_modules",
+              ".svelte-kit",
+              "src/lib/paraglide/**/*"
+            ]
+          }
+          EOF
+
       - name: 'TEST :: Run tests'
         run: bun run test:run
+
+      - name: 'FIX :: Restore original tsconfig'
+        run: mv tsconfig.json.bak tsconfig.json
 
       - name: 'BUILD :: Application'
         run: bun run build
