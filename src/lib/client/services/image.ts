@@ -1,5 +1,7 @@
 // SVELTE
 import { error } from '@sveltejs/kit';
+// ENV
+import { PUBLIC_CLOUDINARY_CLOUD_NAME } from '$env/static/public';
 // COORDINATES
 import Coordinates from 'coordinate-parser';
 // UTILS
@@ -420,7 +422,7 @@ export function getImageFromCloudinaryResponse(response: any): Partial<ImageNew>
   const metadata = response.image_metadata || {}; // Ensure metadata is an object
   return {
     cdn: 'cloudinary' as const,
-    env: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME,
+    env: PUBLIC_CLOUDINARY_CLOUD_NAME,
     cdnId: response.asset_id,
     publicId: response.public_id,
     version: response.version,

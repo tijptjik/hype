@@ -1,13 +1,7 @@
-// RUNTIME AUTH CONFIGURATION
-// This file is used by the application during runtime
-// It uses the actual database connection from Cloudflare D1
-
 // BETTER-AUTH
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { customSession } from 'better-auth/plugins';
-// Note: We'll get these from the platform.env instead of $env/static/private
-// because $env/static/private doesn't work reliably in Cloudflare Workers
 // CONFIG
 import { authConfig } from './auth/config';
 // DB SCHEMA
@@ -26,17 +20,17 @@ import type {
 export const createAuth = (
   db: DrizzleD1Database<typeof schema>,
   env: {
-    PRIVATE_AUTH_SECRET: string;
-    PRIVATE_AUTH_GOOGLE_ID: string;
-    PRIVATE_AUTH_GOOGLE_SECRET: string;
-    PRIVATE_SUPERADMIN_USERID: string;
+    AUTH_SECRET: string;
+    AUTH_GOOGLE_ID: string;
+    AUTH_GOOGLE_SECRET: string;
+    SUPERADMIN_USERID: string;
   }
 ) => {
   return betterAuth({
     // COMMON CONFIG
     ...authConfig,
     // ENV
-    secret: env.PRIVATE_AUTH_SECRET,
+    secret: env.AUTH_SECRET,
     // DB
     database: drizzleAdapter(db, {
       provider: 'sqlite'
@@ -44,8 +38,8 @@ export const createAuth = (
     // OAUTH
     socialProviders: {
       google: {
-        clientId: env.PRIVATE_AUTH_GOOGLE_ID,
-        clientSecret: env.PRIVATE_AUTH_GOOGLE_SECRET
+        clientId: env.AUTH_GOOGLE_ID,
+        clientSecret: env.AUTH_GOOGLE_SECRET
       }
     },
     // PLUGINS
@@ -58,7 +52,7 @@ export const createAuth = (
         // Get user roles and layers
         const roles: UserRoleDisco[] = await getUserRoles(db, user.id);
         const userLayers: UserLayer[] = await getUserLayers(db, user.id);
-        const superAdmin = user.id === env.PRIVATE_SUPERADMIN_USERID;
+        const superAdmin = user.id === env.SUPERADMIN_USERID;
 
         // Return enriched session data
         return {

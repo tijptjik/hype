@@ -189,7 +189,7 @@
     {
       "declarations": [
         "input neighbourhoods",
-        "local neighbourhoodsPlural = hoods: plural"
+        "local neighbourhoodsPlural = neighbourhoods: plural"
       ],
       "selectors": [
         "neighbourhoodsPlural"

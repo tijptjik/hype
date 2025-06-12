@@ -81,5 +81,5 @@ function handleChange() {
       {...field}
       onchange={handleChange} />
   </div>
-  <ErrorLabel {errors} {field} {locale} {fieldRoot} {fieldIndex} {fieldKey} />
+  <ErrorLabel {errors} {field} locale={locale as Locale} {fieldRoot} {fieldIndex} {fieldKey} />
 </label>

@@ -1,19 +1,19 @@
 // SVELTE
 import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle } from '@sveltejs/kit';
+// I18N
+import { paraglideMiddleware } from '$lib/paraglide/server';
 // DB
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '$lib/db/schema/index';
 // AUTH
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { createAuth } from '$lib/auth';
-// I18N
-import { paraglideMiddleware } from '$lib/paraglide/server';
 // TYPES
 import type { Session, SessionUser } from '$lib/types';
+import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 
 let handle: Handle;
-const localWranglerEnv = import.meta.env.VITE_WRANGLER_ENV === 'local';
 
 // ═══════════════════════
 // TRANSLATION HOOK
@@ -41,7 +41,7 @@ const translation: Handle = ({ event, resolve }) =>
  */
 const handle_cors = (async ({ event, resolve }) => {
   // Only add CORS headers in development mode
-  if (import.meta.env.DEV || localWranglerEnv) {
+  if (import.meta.env.DEV) {
     const response = await resolve(event);
     response.headers.set('Access-Control-Allow-Origin', '*');
     response.headers.set(
@@ -89,14 +89,14 @@ const handle_auth: Handle = async ({ event, resolve }) => {
     }
 
     // DB
-    const db = drizzle(event.platform.env.DB, { schema });
+    const db = drizzle(event.platform.env.DB as unknown as MiniflareD1Database, { schema });
 
     // AUTH
     const auth = createAuth(db, {
-      PRIVATE_AUTH_SECRET: event.platform.env.PRIVATE_AUTH_SECRET,
-      PRIVATE_AUTH_GOOGLE_ID: event.platform.env.PRIVATE_AUTH_GOOGLE_ID,
-      PRIVATE_AUTH_GOOGLE_SECRET: event.platform.env.PRIVATE_AUTH_GOOGLE_SECRET,
-      PRIVATE_SUPERADMIN_USERID: event.platform.env.PRIVATE_SUPERADMIN_USERID
+      AUTH_SECRET: event.platform.env.AUTH_SECRET,
+      AUTH_GOOGLE_ID: event.platform.env.AUTH_GOOGLE_ID,
+      AUTH_GOOGLE_SECRET: event.platform.env.AUTH_GOOGLE_SECRET,
+      SUPERADMIN_USERID: event.platform.env.SUPERADMIN_USERID
     });
 
     // SET LOCALS
@@ -160,38 +160,13 @@ const handle_hub_enrichment: Handle = async ({ event, resolve }) => {
  * This is the main hook that is used to sequence the other hooks.
  */
 
-const common_handle_sequence = [
+handle = sequence(
   handle_cors,
   handle_hub,
   handle_auth,
   handle_session_auth,
   handle_hub_enrichment,
   translation
-];
-if (localWranglerEnv) {
-  // This is an ugly hack to avoid Vite loading in the wrangler dep regardless
-  // of the conditional import, and throwing errors when building for CF workers
-  // as wrangler itself has node requirements :doh:
-  const wrangler = 'wrangler';
-  // When developing, this hook will add proxy objects to the `platform` object
-  // which will emulate any bindings defined in `wrangler.toml`.
-  const { getPlatformProxy } = await import(/* @vite-ignore */ wrangler);
-  const platform = await getPlatformProxy();
-
-  const mock_cloudflare = (async ({ event, resolve }) => {
-    if (platform) {
-      // @ts-ignore
-      event.platform = {
-        ...event.platform,
-        ...platform
-      };
-    }
-    return resolve(event);
-  }) satisfies Handle;
-
-  handle = sequence(mock_cloudflare, ...common_handle_sequence);
-} else {
-  handle = sequence(...common_handle_sequence);
-}
+);
 
 export { handle };

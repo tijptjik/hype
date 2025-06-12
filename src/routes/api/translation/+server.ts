@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 // LIB
 import { getTranslation } from '$lib/api/external/translation';
 
-export async function POST({ request }) {
+export async function POST({ request, platform }) {
   try {
     const { source, target, texts } = await request.json();
 
@@ -17,7 +17,19 @@ export async function POST({ request }) {
       );
     }
 
-    const translations = await getTranslation(source, target, texts);
+    // Get Azure translation key from platform
+    const subscriptionKey = platform?.env?.AZURE_TRANSLATION_KEY;
+
+    if (!subscriptionKey) {
+      return json({ error: 'Missing Azure subscription key' }, { status: 500 });
+    }
+
+    const translations = await getTranslation(
+      source,
+      target,
+      texts,
+      subscriptionKey
+    );
 
     return json(translations);
   } catch (error) {

@@ -1,4 +1,5 @@
-import { error } from '@sveltejs/kit';
+// ENV
+import { PUBLIC_DRIZZLE_LOGGER } from '$env/static/public';
 // ORM
 import { drizzle } from 'drizzle-orm/d1';
 import { and, sql, inArray, eq, or, not, exists, Table } from 'drizzle-orm';
@@ -19,6 +20,8 @@ import type {
   LocaleBundle
 } from '../types';
 import type { SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core';
+import type { DrizzleD1Database } from 'drizzle-orm/d1';
+import type { D1Database as MiniflareD1Database } from '@miniflare/d1';
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -65,7 +68,6 @@ import type { SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core';
 
 // Duplicate here to avoid import from $lib
 const NEW_TITLE = 'New';
-const NEW_REF = NEW_TITLE.toLowerCase();
 
 export const resourceConfig: Record<HierarchicalResource, ResourceConfig> = {
   feature: {
@@ -119,10 +121,10 @@ export const resourceConfig: Record<HierarchicalResource, ResourceConfig> = {
 // 2. DATABASE :: CLIENT
 // ═══════════════════════
 
-const client = (database: Database) => {
+const client = (database: MiniflareD1Database): DrizzleD1Database<typeof schema> => {
   return drizzle(database, {
     schema,
-    logger: import.meta.env?.VITE_DRIZZLE_LOGGER === 'true' || false
+    logger: PUBLIC_DRIZZLE_LOGGER === 'true' || false
   });
 };
 

@@ -1,3 +1,5 @@
+// ENV
+import { PUBLIC_HUB_CODE } from '$env/static/public';
 // API
 import { applyQueryFilters } from '$lib/api';
 // AUTH
@@ -16,12 +18,8 @@ import type {
   Hub,
   QueryParams,
   HubOpts,
-  HubDB,
-  HubI18nDB,
   SessionUser,
   HubDBRaw,
-  OrganisationDBRaw,
-  OrganisationI18nDB
 } from '$lib/types';
 import type { SuperValidated } from 'sveltekit-superforms';
 
@@ -54,8 +52,8 @@ export const hubEntityWithRelations = {
  */
 export function getHubFromDomain(host: string | null): HubOpts {
   // Development override
-  if (import.meta.env.VITE_HUB_CODE) {
-    const code = import.meta.env.VITE_HUB_CODE;
+  if (PUBLIC_HUB_CODE) {
+    const code = PUBLIC_HUB_CODE;
     return {
       code: code === 'core' ? undefined : code,
       isCore: code === 'core'

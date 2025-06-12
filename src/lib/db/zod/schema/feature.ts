@@ -68,12 +68,12 @@ export const FeatureI18nBase = createSelectSchema(featureI18n).extend({
 });
 
 export const FeatureI18nInsert = createInsertSchema(featureI18n)
+  .omit({
+    featureId: true
+  })
   .extend({
     ...getDefaultConstraints(featureI18n),
     addressProperties: z.custom<AddressProperties>().default({}).nullish()
-  })
-  .omit({
-    featureId: true
   });
 
 export const FeatureI18nUpdate = createUpdateSchema(featureI18n).extend({
