@@ -1,6 +1,15 @@
 name: "TEST :: Run Tests"
 
 on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+    outputs:
+      test-status:
+        description: "Status of the test run"
+        value: ${{ jobs.test.outputs.status }}
   push:
     branches:
       - main
@@ -83,7 +92,9 @@ jobs:
 
       - name: 'TEST :: Run tests'
         id: test
-        run: bun run test:run
+        run: |
+          mkdir -p test-results
+          bun run test:run
 
       - name: 'CACHE :: Test results'
         uses: actions/cache@v3

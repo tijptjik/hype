@@ -48,9 +48,9 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: 'BUILD :: Application'
-        run: bun run build:cf:${{ inputs.environment }}
+        run: bun run build:cf:${{ github.event_name == 'workflow_call' && inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'preview') }}
         env:
-          CLOUDFLARE_ENV: ${{ inputs.environment }}
+          CLOUDFLARE_ENV: ${{ github.event_name == 'workflow_call' && inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'preview') }}
 
       - name: 'CACHE :: Build'
         uses: actions/cache@v3
