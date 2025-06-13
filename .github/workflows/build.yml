@@ -8,16 +8,8 @@ on:
         type: string
     outputs:
       build-cache-hit:
-        description: "Whether the build cache was hit"
+        description: "Was the build cache hit?"
         value: ${{ jobs.build.outputs.cache-hit }}
-  push:
-    branches:
-      - main
-      - preview
-  pull_request:
-    branches:
-      - preview
-    types: [opened, synchronize, reopened]
 
 jobs:
   build:
@@ -48,9 +40,9 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: 'BUILD :: Application'
-        run: bun run build:cf:${{ github.event_name == 'workflow_call' && inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'preview') }}
+        run: bun run build:cf:${{ inputs.environment }}
         env:
-          CLOUDFLARE_ENV: ${{ github.event_name == 'workflow_call' && inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'preview') }}
+          CLOUDFLARE_ENV: ${{ inputs.environment }}
 
       - name: 'CACHE :: Build'
         uses: actions/cache@v3

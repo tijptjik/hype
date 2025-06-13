@@ -42,6 +42,8 @@ declare global {
     // interface PageState {}
     interface Platform {
       env: {
+        ENVIRONMENT: string;
+        NODE_ENV: string;
         // Cloudflare Bindings
         DB: MiniflareD1Database;
         ASSETS: any;
@@ -53,10 +55,16 @@ declare global {
         // CLOUDINARY
         CLOUDINARY_API_KEY: string;
         CLOUDINARY_API_SECRET: string;
-        CLOUDINARY_CLOUD_NAME: string;
-        CLOUDINARY_UPLOAD_PRESET: string;
+        PUBLIC_CLOUDINARY_CLOUD_NAME: string;
+        PUBLIC_CLOUDINARY_UPLOAD_PRESET: string;
         // AZURE
         AZURE_TRANSLATION_KEY: string;
+        PUBLIC_AZURE_TRANSLATION_REGION: string;
+        // PUBLIC VARS
+        PUBLIC_SVELTE_QUERY_DEVTOOLS: string;
+        PUBLIC_DRIZZLE_LOGGER: string;
+        PUBLIC_HUB_CODE: string;
+        PUBLIC_GIPHY_KEY: string;
       };
       context: {
         waitUntil(promise: Promise<any>): void;

@@ -21,17 +21,34 @@ function maskPrivateValues(obj: Record<string, string>): Record<string, string> 
 }
 
 // @ts-ignore
-export const GET: RequestHandler = async ({ locals, platform: { env } }) => {
+export const GET: RequestHandler = async ({
+  locals,
+  platform
+}: {
+  locals: App.Locals;
+  platform: App.Platform;
+}) => {
   // HTTP : 200 JSON or 404
-  const vars =
-    import.meta.env.VITE_WRANGLER_ENV === 'local' ? process.env : import.meta.env;
+  const vars = platform.env;
+  const env ={
+        "ENVIRONMENT": vars.ENVIRONMENT,
+        "NODE_ENV": vars.NODE_ENV
+      }
+  const public_vars = Object.fromEntries(
+    Object.entries(vars).filter(([key]) => key.startsWith('PUBLIC_'))
+  );
+  const secret_vars = Object.fromEntries(
+    Object.entries(vars).filter(([key]) => !key.startsWith('PUBLIC_') && !Object.keys(env).includes(key))
+  );
   try {
     // HTTP : 200 JSON or 404
     return JSONResponseOrError({
-      // @ts-ignore
-      env: maskPrivateValues(vars),
-      env_platform: Object.keys(env),
-      locals: locals,
+      env,
+      vars: maskPrivateValues(public_vars),
+      secrets: Object.keys(secret_vars),
+      locals: Object.keys(locals).map((key) => ({
+        [key]: Object.keys(locals[key])
+      }))
     });
   } catch (e) {
     // DB : Query Error

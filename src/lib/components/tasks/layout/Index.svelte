@@ -2,7 +2,6 @@
 import { flip } from 'svelte/animate';
 import { cubicOut } from 'svelte/easing';
 import { blur, fade } from 'svelte/transition';
-import { onMount } from 'svelte';
 // COMPONENTS
 import TaskHeader from '$lib/components/tasks/layout/IndexHeader.svelte';
 import TaskRow from '$lib/components/tasks/layout/Row.svelte';
@@ -11,10 +10,11 @@ import BackgroundLines from '../../layout/BackgroundLines.svelte';
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
 import type { Id, Task, Project, Organisation } from '$lib/types';
-import { PUBLIC_GIPHY_KEY } from '$env/static/public';
+// PROPS
+let { giphyKey }: { giphyKey?: string } = $props();
+
 // STATE
 const adminCtx = getAdminCtx();
-// Group tasks by projectId
 let groupedTasks: Record<Id, Task[]> = $derived(
   adminCtx.filteredTasks.reduce(
     (acc, task) => {
@@ -32,9 +32,14 @@ let groupedTasks: Record<Id, Task[]> = $derived(
 
 // Function to get random GIF from Giphy API
 async function getRandomGif(topic = 'zero') {
+  if (!giphyKey) {
+    console.warn('Giphy API key not available');
+    return null;
+  }
+  
   try {
     const response = await fetch(
-      `https://api.giphy.com/v1/gifs/random?api_key=${PUBLIC_GIPHY_KEY}&tag=${encodeURIComponent(topic)}`
+      `https://api.giphy.com/v1/gifs/random?api_key=${giphyKey}&tag=${encodeURIComponent(topic)}`
     );
     const data = await response.json();
     return data.data.images.original.webp;

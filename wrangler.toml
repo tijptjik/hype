@@ -1,5 +1,5 @@
 #:schema node_modules/wrangler/config-schema.json
-name = "hype-prod"
+name = "hype"
 main = ".svelte-kit/cloudflare/_worker.js"
 
 # Whether Wrangler should send usage data to Cloudflare for this project.
@@ -47,12 +47,46 @@ database_id = "6757bbf2-ac2c-4323-b73a-0a48f0c41d62"
 # Ensure migrations_dir points to the correct folder
 migrations_dir = "migrations"
 
+[vars]
+ENVIRONMENT = "local"
+
+PUBLIC_DRIZZLE_LOGGER=false
+PUBLIC_SVELTE_QUERY_DEVTOOLS=false
+
+PUBLIC_HUB_CODE="core"
+
+PUBLIC_CLOUDINARY_CLOUD_NAME="dg6vtsga1"
+PUBLIC_CLOUDINARY_UPLOAD_PRESET="ml_default"
+
+PUBLIC_AZURE_TRANSLATION_REGION="eastasia"
+
+PUBLIC_GIPHY_KEY="tM0RJBEwovwI9i6NZMbyLxqVVnAPdcVz"
+
 ########
 # PRODUCTION ENVIRONMENT
 ###
 
 [env.production]
 name = "hype-prod"
+
+[env.production.vars]
+ENVIRONMENT = "production"
+
+PUBLIC_DRIZZLE_LOGGER=false
+PUBLIC_SVELTE_QUERY_DEVTOOLS=false
+
+PUBLIC_CLOUDINARY_CLOUD_NAME="dg6vtsga1"
+PUBLIC_CLOUDINARY_UPLOAD_PRESET="ml_default"
+
+PUBLIC_AZURE_TRANSLATION_REGION="eastasia"
+
+PUBLIC_GIPHY_KEY="tM0RJBEwovwI9i6NZMbyLxqVVnAPdcVz"
+PUBLIC_HUB_CODE="core"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "hype-db-prod"
+database_id = "7786af0e-3782-47f8-b70d-de645ba836ad"
 
 [[env.production.routes]]
 pattern = "hype.hk"
@@ -66,20 +100,31 @@ custom_domain = true
 pattern = "hkghostsigns.hype.hk"
 custom_domain = true
 
-[env.production.vars]
-ENVIRONMENT = "production"
-
-[[env.production.d1_databases]]
-binding = "DB"
-database_name = "hype-db-prod"
-database_id = "7786af0e-3782-47f8-b70d-de645ba836ad"
-
 ########
 # PREVIEW ENVIRONMENT
 ###
 
 [env.preview]
 name = "hype-preview"
+
+[env.preview.vars]
+ENVIRONMENT = "preview"
+
+PUBLIC_DRIZZLE_LOGGER=false
+PUBLIC_SVELTE_QUERY_DEVTOOLS=false
+
+PUBLIC_CLOUDINARY_CLOUD_NAME="dg6vtsga1"
+PUBLIC_CLOUDINARY_UPLOAD_PRESET="ml_default"
+
+PUBLIC_AZURE_TRANSLATION_REGION="eastasia"
+
+PUBLIC_GIPHY_KEY="tM0RJBEwovwI9i6NZMbyLxqVVnAPdcVz"
+PUBLIC_HUB_CODE="core"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "hype-db-preview"
+database_id = "f6bae0f9-c072-4ef0-9b75-efcc792d40fb"
 
 [[env.preview.routes]]
 pattern = "preview.hype.hk"
@@ -88,14 +133,6 @@ custom_domain = true
 [[env.preview.routes]]
 pattern = "preview.hkghostsigns.com"
 custom_domain = true
-
-[env.preview.vars]
-ENVIRONMENT = "preview"
-
-[[env.preview.d1_databases]]
-binding = "DB"
-database_name = "hype-db-preview"
-database_id = "f6bae0f9-c072-4ef0-9b75-efcc792d40fb"
 
 ########
 # DEVELOPMENT ENVIRONMENT
@@ -106,12 +143,12 @@ ip = "localhost"
 port = 5173
 local_protocol = "http"
 
-# Bind the Workers AI model catalog. Run machine learning models, powered by serverless GPUs, on Cloudflare’s global network
+# Bind the Workers AI model catalog. Run machine learning models, powered by serverless GPUs, on Cloudflare's global network
 # Docs: https://developers.cloudflare.com/pages/functions/bindings/#workers-ai
 # [ai]
 # binding = "AI"
 
-# Bind a D1 database. D1 is Cloudflare’s native serverless SQL database.
+# Bind a D1 database. D1 is Cloudflare's native serverless SQL database.
 # Docs: https://developers.cloudflare.com/pages/functions/bindings/#d1-databases
 
 

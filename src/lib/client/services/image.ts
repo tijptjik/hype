@@ -1,7 +1,5 @@
 // SVELTE
 import { error } from '@sveltejs/kit';
-// ENV
-import { PUBLIC_CLOUDINARY_CLOUD_NAME } from '$env/static/public';
 // COORDINATES
 import Coordinates from 'coordinate-parser';
 // UTILS
@@ -23,7 +21,7 @@ import type {
   ImagePartial,
   Metadata,
   LngLat,
-  SignData
+  SignData,
 } from '$lib/types';
 
 // ═══════════════════════
@@ -383,6 +381,7 @@ export function getCloudinaryUploadEndpoint(cloudname: string): string {
  * @param opts.image - The image data.
  * @param opts.transformation - The transformation to apply to the image.
  * @param opts.raw - Whether to return the raw image URL.
+ * @param opts.cloudName - The Cloudinary cloud name.
  * @returns The generated URL string.
  */
 export function getURLfromImage(opts: {
@@ -392,6 +391,7 @@ export function getURLfromImage(opts: {
   gravity?: string;
   quality?: string;
   format?: string;
+  cloudName: string;
 }): string {
   const {
     image,
@@ -399,15 +399,16 @@ export function getURLfromImage(opts: {
     gravity = 'auto',
     format = 'auto',
     quality = 'auto',
-    raw = false
+    raw = false,
+    cloudName
   } = opts;
 
   const finalTransformation = `${transformation}/g_${gravity}/f_${format}/q_${quality}`;
 
   if (image.cdn === 'cloudinary') {
     return raw
-      ? `https://res.cloudinary.com/${image.env}/image/upload/fl_attachment/${image.publicId}`
-      : `https://res.cloudinary.com/${image.env}/image/upload/${finalTransformation}/v${image.version}/${image.publicId}`;
+      ? `https://res.cloudinary.com/${cloudName}/image/upload/fl_attachment/${image.publicId}`
+      : `https://res.cloudinary.com/${cloudName}/image/upload/${finalTransformation}/v${image.version}/${image.publicId}`;
   } else {
     throw error(404, `Image CDN <code>${image.cdn}</code> not supported`);
   }
@@ -422,7 +423,7 @@ export function getImageFromCloudinaryResponse(response: any): Partial<ImageNew>
   const metadata = response.image_metadata || {}; // Ensure metadata is an object
   return {
     cdn: 'cloudinary' as const,
-    env: PUBLIC_CLOUDINARY_CLOUD_NAME,
+    env: response.env,
     cdnId: response.asset_id,
     publicId: response.public_id,
     version: response.version,

@@ -153,7 +153,11 @@ export const getDatabase = async (
   if (!platform?.env.DB) {
     return error(500, 'Database not available');
   }
-  const db = client(platform.env.DB as unknown as MiniflareD1Database);
+  
+  // Get logger setting from platform env
+  const enableLogger = platform?.env?.PUBLIC_DRIZZLE_LOGGER === 'true';
+  
+  const db = client(platform.env.DB as unknown as MiniflareD1Database, enableLogger);
   return {
     db,
     session,

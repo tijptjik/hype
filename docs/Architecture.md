@@ -4,11 +4,9 @@ The application is deployed on Cloudflare's edge computing platform, utilizing C
 
 ## Table of Contents
 - [Technology Stack](#technology-stack)
-- [Deployment Environments](#deployment-environments)
-  - [Branch Strategy](#branch-strategy)
-- [Database Schema](#database-schema)
-- [Environment Variables](#environment-variables)
-- [Mode selection](#mode-selection)
+- [Build Promotion Strategy](#build-promotion-strategy)
+- [Database Architecture](#database-architecture)
+- [Security Model](#security-model)
 
 ## Technology Stack
 
@@ -21,87 +19,67 @@ The application is deployed on Cloudflare's edge computing platform, utilizing C
 - **Version Management**: Changesets
 - **CI/CD**: GitHub Actions
 
-## Deployment Environments
+## Build Promotion Strategy
 
-**Production Environment**
+### Core Principle
+Instead of building separately for each environment, we build once for preview and promote the same artifacts to production with different runtime configuration.
 
-- **Worker**: `hype-prod`
-- **Database**: `hype-db-prod`
-- **Trigger**: Deployments from `main` branch
-- **URL**: [hype.hk](https://hype.hk)
-- **Configuration**: Full production settings with optimizations
+### Benefits
+- **Faster Deployments**: Production deploys in ~30s vs ~3min
+- **Identical Artifacts**: What you test is what you deploy
+- **Reduced Risk**: No build-time differences between environments
+- **Cost Efficiency**: Less compute time and resources
 
-**Preview Environment**
+### Dynamic Runtime Variables
 
-- **Worker**: `hype-preview`
-- **Database**: `hype-db-preview`
-- **Trigger**: Deployments from `preview` branch
-- **URL**: [preview.hype.hk](https://preview.hype.hk)
-- **Configuration**: Staging settings for testing
+All environment-specific configuration is read at **runtime** from Cloudflare's `platform.env`, not baked into the build.
 
-### Branch Strategy
-
-```
-main (production)     → hype-prod + hype-db-prod
-preview (preview)     → hype-preview + hype-db-preview
-feat/* (dev)          → Local development only
+#### Old Style (Static - Build Time)
+```javascript
+// ❌ Baked into build artifacts
+import { PUBLIC_API_URL } from '$env/static/public';
 ```
 
-### Database Schema
+#### New Style (Dynamic - Runtime)
+```javascript
+// ✅ Read at runtime from platform.env
+export const GET = async ({ platform }) => {
+  const apiUrl = platform?.env?.PUBLIC_API_URL;
+};
+```
 
-Both environments use Drizzle ORM for type-safe database operations with automatic migrations during deployment. The schema are available in /src/lib/db/schema/{domain}.ts
+## Database Architecture
 
-### Environment Variables
+### Schema Management
+- **ORM**: Drizzle for type-safe database operations
+- **Migrations**: Version-controlled schema changes
+- **Environment Isolation**: Separate databases per environment
 
-The following table summarizes the environment variable files used in the project. Each file is used for a specific context (dev, preview, production, drizzle, etc). Files marked with \* are picked up by the @cloudflare/vite-plugin.
+### Database Environments
 
-| File                       | PUBLIC | SECRET | DEV | PREVIEW | PROD | DRIZZLE |
-|----------------------------|--------|--------|-----|---------|------|---------|
-| .dev.vars\*                |        | ✓      | ✓   |         |      |         |
-| .dev.vars.preview          |        | ✓      |     | #       |      |         |
-| .dev.vars.production       |        | ✓      |     |         | #    |         |
-| .env.drizzle.preview.local |        | ✓      |     |         |      | ✓       |
-| .env.drizzle.prod.local    |        | ✓      |     |         |      | ✓       |
-| .env                       | ✓      |        | ✓   | ✓       | ✓    |         |
-| .env.development           | ✓      |        | ✓   |         |      |         |
-| .env.preview               | ✓      |        |     | ✓       |      |         |
-| .env.prod                  | ✓      |        |     |         | ✓    |         |
+| Environment | Database | Purpose |
+|-------------|----------|---------|
+| **Local** | Local D1 via Wrangler | Development and testing |
+| **Preview** | `hype-db-preview` | Integration testing and staging |
+| **Production** | `hype-db-prod` | Live application data |
 
-`#` - Each of the variables herein are uploaded the worker's secret using Wrangler. They are just maintained as a local reference what variables are available in the worker runtimes.
+## Security Model
 
-**Legend:**
+### Secret Management
+1. **Never in Git**: Secrets never committed to repository
+2. **Environment Isolation**: Separate secrets per environment
+3. **Least Privilege**: Secrets only accessible to authorized workflows
+4. **Rotation Ready**: Easy to update via `wrangler secret put`
 
-- PUBLIC: Contains public (non-secret) variables, must be checked into git
-- SECRET: Contains secrets, must NOT be checked into git (should be in .gitignore)
-- DEV: Used for local development
-- PREVIEW: Used for preview deployments
-- PROD: Used for production deployments
-- DRIZZLE: Used for DrizzleKit Studio
+### Access Control
+1. **Branch Protection**: Enforced workflow prevents bypassing
+2. **Environment Gates**: GitHub environments control deployment access
+3. **Audit Trail**: All changes tracked through Git and GitHub Actions
 
-**Notes:**
+### Build Security
+1. **Immutable Artifacts**: Same build promoted across environments
+2. **Verified Builds**: Only tested builds reach production
+3. **Dependency Pinning**: Locked dependency versions via `bun.lockb`
 
-- Files marked with \* (e.g. `.dev.vars`) are picked up by the @cloudflare/vite-plugin to simulate the secrets available to a worker in  Cloudflare.
-- Vite is used as the development server AND the build on GitHub Actions. While is does not run on the Cloudflare Workers, the env vars that it offers in the development server are also available in the builds (e.g. `import.meta.env.PROD` is avaiable in a cloudflare worker environment, even without loading it explicitly.)
-- For SECRETs, you must add them to GitHub repository settings to be available in GitHub Actions, and to the worker's secret variables using Wrangler to be available at runtime in Cloudflare Workers.
-- All SECRET files must be added to `.gitignore` to prevent accidental commits. PUBLIC vars **must** be checked into git for correct operation in all environments.
-- We do NOT need to configure vars in `wrangler.toml` - public vars are picked up from `.env` + `.env.{environment}` and secret vars are stored in the worker config (manually uploaded one by one with wrangler CLI commands).
-- We must inject secrets into environments in `deploy.yml` for them to be available.
-- We do NOT need to inject public vars, as these are available from `.env` + `.env.{environment}`, which are all available in the repository.
+This architecture ensures a secure, efficient, and reliable deployment pipeline that scales with the team and maintains high confidence in production deployments.
 
-#### Mode selection
-
-The correct set of environment variables is determined by setting the right mode / environment for the tool reading in the env vars.
-
-- **DEV** : 
-    - all commands default to running against the local 'development' mode.
-    - `wrangler {command} --env {production,preview}` 
-    - `vite {command} --mode {production,preview}` 
-- **GITHUB** (unsure whether the CLOUDFLARE_ENV is necessary, but technically it picks up the right environment from wrangler.toml when running with @cloudflare/vite-plugin. We currently do NOT build with it though, as it's not yet supported with sveltekit, but in the future this will undoubdtedly be necessary.): 
-    - `CLOUDFLARE_ENV=production vite {ACTION} --mode production`
-    - `CLOUDFLARE_ENV=preview vite {ACTION} --mode preview` 
-- **WORKER** :
-    - These are picked up from the build and the worker environment, no special invocations are required.
-- **DRIZZLE** (we have to extract the vars which Drizzle actually uses as the use of the CLOUDFLARE_D1_TOKEN conflicts with the authentication setup): 
-    - `export $(xargs <.env.drizzle.prod.local) && drizzle-kit studio` 
-    - `export $(xargs <.env.drizzle.preview.local) && drizzle-kit studio` 
----
