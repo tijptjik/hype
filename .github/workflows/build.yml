@@ -21,30 +21,16 @@ jobs:
       - name: 'GIT :: Checkout'
         uses: actions/checkout@v4
 
-      - name: 'CACHE :: Bun installation'
-        uses: actions/cache@v3
-        id: cache-bun
-        with:
-          path: |
-            ~/.bun
-            ~/.cache/bun
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
       - name: 'INSTALL :: Bun'
-        if: steps.cache-bun.outputs.cache-hit != 'true'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: '1.2.15'
 
-      - name: 'CACHE :: Dependencies'
+      - name: 'CACHE :: Restore Dependencies'
         uses: actions/cache@v3
         id: cache-deps
         with:
-          path: |
-            node_modules
-            .svelte-kit
+          path: node_modules
           key: ${{ runner.os }}-deps-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
             ${{ runner.os }}-deps-
@@ -53,18 +39,13 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: bun install --frozen-lockfile
 
-      - name: 'SYNC :: Generate SvelteKit files'
-        run: bun run sync
-
-      - name: 'BUILD :: Build application'
+      - name: 'BUILD :: Application'
         run: bun run build:cf:${{ inputs.environment }}
         env:
           CLOUDFLARE_ENV: ${{ inputs.environment }}
 
-      - name: 'CACHE :: Build artifacts'
+      - name: 'CACHE :: Build'
         uses: actions/cache@v3
         with:
-          path: |
-            build
-            .svelte-kit
+          path: .svelte-kit
           key: ${{ runner.os }}-build-${{ github.sha }} 

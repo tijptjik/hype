@@ -26,22 +26,23 @@ jobs:
         with:
           bun-version: '1.2.15'
 
-      - name: 'CACHE :: Dependencies'
+      - name: 'CACHE :: Restore Dependencies'
         uses: actions/cache@v3
+        id: cache-deps
         with:
-          path: |
-            node_modules
-            .svelte-kit
+          path: node_modules
           key: ${{ runner.os }}-deps-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
             ${{ runner.os }}-deps-
 
-      - name: 'CACHE :: Build artifacts'
+      - name: 'INSTALL :: Dependencies'
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: bun install --frozen-lockfile
+
+      - name: 'CACHE :: Restore Build'
         uses: actions/cache@v3
         with:
-          path: |
-            build
-            .svelte-kit
+          path: .svelte-kit
           key: ${{ runner.os }}-build-${{ github.sha }}
 
       - name: 'TEST :: Run tests'
