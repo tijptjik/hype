@@ -10,14 +10,6 @@ on:
       test-status:
         description: "Status of the test run"
         value: ${{ jobs.test.outputs.status }}
-  push:
-    branches:
-      - main
-      - preview
-  pull_request:
-    branches:
-      - preview
-    types: [opened, synchronize, reopened]
 
 jobs:
   test:
