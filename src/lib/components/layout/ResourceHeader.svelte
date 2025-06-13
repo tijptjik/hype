@@ -7,10 +7,12 @@ import NewEntityButton from '$lib/components/menu/NewEntityButton.svelte';
 import { navItems } from '$lib/navigation';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
+// AUTH
+import { canManageOrganisations, canCreateProjects } from '$lib/auth/utils';
 // TYPES
 import type { FirstClassResource } from '$lib/enums';
 import { useSession } from '$lib/auth/client';
-import type { SessionUser, UserRoleDisco } from '$lib/types';
+import type { SessionUser } from '$lib/types';
 
 let session = useSession();
 let user = $session.data?.user as SessionUser;
@@ -35,40 +37,30 @@ let title = $derived(resource ? navItems[resource].name : '');
  * @returns boolean indicating if new buttons should be shown
  */
 const canCreateEntity = (user: SessionUser, resource: FirstClassResource): boolean => {
-  if (!resource || !adminCtx.appCtx.user) return false;
-
-  const { roles } = adminCtx.appCtx.user as SessionUser;
-  const isSuperAdmin = user?.superAdmin === true;
-
-  // SuperAdmin can create anything
-  if (isSuperAdmin) return true;
+  if (!resource || !user) return false;
 
   switch (resource) {
     case 'organisation':
-      // Only superAdmin can create organisations
-      return false;
+      return canManageOrganisations(user);
 
-    case 'project': {
-      // Only owners of organisation or superAdmin
-      return roles.some(
-        (role) => role.type === 'organisation' && role.role === 'owner'
-      );
-    }
+    case 'project':
+      return canCreateProjects(user);
 
     case 'layer': {
-      // Only maintainers of projects or superAdmin
-      return roles.some(
-        (role) => role.type === 'project' && role.role === 'maintainer'
-      );
+      // For layers, we need to check if user can create layers for any project they have access to
+      // This is a simplified check - in practice, you might want to be more specific
+      return user.superAdmin === true || 
+             user.roles?.some(role => role.type === 'project' && role.role === 'maintainer') === true;
     }
 
     case 'feature': {
-      // Any role in the project or superAdmin
-      return roles.some(
-        (role: UserRoleDisco) =>
-          role.type === 'project' &&
-          (role.role === 'maintainer' || role.role === 'member')
-      );
+      // For features, we need to check if user can manage features for any project they have access to
+      // This is a simplified check - in practice, you might want to be more specific
+      return user.superAdmin === true || 
+             user.roles?.some(role => 
+               role.type === 'project' && 
+               (role.role === 'maintainer' || role.role === 'member')
+             ) === true;
     }
 
     case 'task':
@@ -77,7 +69,7 @@ const canCreateEntity = (user: SessionUser, resource: FirstClassResource): boole
 
     case 'hub':
       // Only superAdmin can create hubs
-      return false;
+      return user.superAdmin === true;
 
     default:
       return false;
