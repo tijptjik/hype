@@ -2,7 +2,7 @@
 
 Journey through Hong Kong
 
-[![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
+[![DEPLOY :: Cloudflare](https://github.com/tijptjik/hype/actions/workflows/deploy.yml/badge.svg)](https://github.com/tijptjik/hype/actions/workflows/deploy.yml) [![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
 
 ## Development
 
