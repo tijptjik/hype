@@ -1,30 +1,36 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
 # Refactor
 
 ## Svelte
 
-- [ ] use [@attach](https://svelte.dev/docs/svelte/@attach) to replace Svelte Actions.
-- [ ] use [<svelte:boundary>](https://svelte.dev/docs/svelte/svelte-boundary)
-- [x] debug with [@debug](https://svelte.dev/docs/svelte/@debug)
+- [ ] use [async](https://github.com/sveltejs/svelte/discussions/15845#discussioncomment-13456944) branch
+- [ ] use [@attach](mdc:https:/svelte.dev/docs/svelte/@attach) to replace Svelte Actions.
+- [ ] use [<svelte:boundary>](mdc:https:/svelte.dev/docs/svelte/svelte-boundary)
+- [x] debug with [@debug](mdc:https:/svelte.dev/docs/svelte/@debug)
 
 ### BitsUI
 
-- [ ] Replace the existing components in favour of [BitsUI](https://bits-ui.com/docs/introduction)
+- [ ] Replace the existing components in favour of [BitsUI](mdc:https:/bits-ui.com/docs/introduction)
 - [ ] Drop DaisyUI.
 
 ### Runed
 
-Use the `runed` library - [runed.dev](https://runed.dev/)
+Use the `runed` library - [runed.dev](mdc:https:/runed.dev)
 
-- [ ] use [useGeolocation](https://runed.dev/docs/utilities/use-geolocation)
-- [ ] use [onClickOutside](https://runed.dev/docs/utilities/on-click-outside)
-- [ ] use [TextareaAutosize](https://runed.dev/docs/utilities/textarea-autosize)
-- [ ] use [previous](https://runed.dev/docs/utilities/previous)
-- [ ] use [debounced](https://runed.dev/docs/utilities/debounced)
-- [ ] use [watch](https://runed.dev/docs/utilities/watch)
-- [ ] use [resource](https://runed.dev/docs/utilities/resource)
+- [ ] use [useGeolocation](mdc:https:/runed.dev/docs/utilities/use-geolocation)
+- [ ] use [onClickOutside](mdc:https:/runed.dev/docs/utilities/on-click-outside)
+- [ ] use [TextareaAutosize](mdc:https:/runed.dev/docs/utilities/textarea-autosize)
+- [ ] use [previous](mdc:https:/runed.dev/docs/utilities/previous)
+- [ ] use [debounced](mdc:https:/runed.dev/docs/utilities/debounced)
+- [ ] use [watch](mdc:https:/runed.dev/docs/utilities/watch)
+- [ ] use [resource](mdc:https:/runed.dev/docs/utilities/resource)
 
 ## Typescript
 
 ### Documentation
 
-- use [@component](https://svelte.dev/docs/svelte/faq#How-do-I-document-my-components) to document components
+- use [@component](mdc:https:/svelte.dev/docs/svelte/faq#How-do-I-document-my-components) to document components
