@@ -437,5 +437,6 @@
   "acidic_maroon_buzzard_swim": "在核心中顯示",
   "long_fit_vole_flow": "中心獨家",
   "mealy_dizzy_lizard_approve": "未找到屬性或屬性不是數組",
-  "misty_awake_haddock_tap": "匿名的"
+  "misty_awake_haddock_tap": "匿名的",
+  "missing_permissions": "權限不足"
 }
