@@ -3,7 +3,9 @@
 ## Table of Contents
 - [Setup](#setup)
 - [Development Flow](#development-flow)
+  - [Branching](#branching)
   - [Advanced](#advanced)
+- [Environment Variables](#environment-variables)
 - [Code Style](#code-style)
 - [Git Conventions](#git-conventions)
   - [Branch Naming](#branch-naming)
@@ -20,11 +22,12 @@ First install dependencies with `bun install`.
 1. **Feature Development** [`Dev`]: Work on `feat/*` branches with local development
 2. **Add Changesets** [`Dev`]: Document significant changes with `bun run cs:add`
 3. **Open a PR**: Open a PR to `preview` branch
-4. **Integration Testing** [`CI`]: `preview` tests the code → deploys to `hype-preview`
-5. **Version Management** [`Maintainer`]: Run `bun run cs:version` to prepare releases
-5. **Production Release** [`Maintainer`]: Merge `preview` to `main` → deploys to `hype-prod`
+4. **PR Validation** [`CI`]: Build + Test (no deployment)
+5. **Integration Testing** [`CI`]: Merge to `preview` → Build + Test + Deploy to staging
+6. **Build Promotion** [`CI`]: Merge `preview` to `main` → Promote cached build to production
+7. **Version Management** [`Maintainer`]: Run `bun run cs:version` to prepare releases
 
-This setup ensures isolated environments, automated deployments, and a clear path from development to production.
+This setup uses **build promotion** - the same tested artifacts from preview are promoted to production without rebuilding, ensuring consistency and faster deployments. For detailed information about the CI/CD pipeline, branch protection, and deployment workflows, see [docs/Deployment.md](../docs/Deployment.md).
 
 
 ### Branching
@@ -57,6 +60,12 @@ This setup ensures isolated environments, automated deployments, and a clear pat
 
 6. After approval and tests pass, the PR will be automatically rebased and merged.
 
+**Branch Protection Rules:**
+- **Main**: Requires successful "DEPLOY :: Preview" status check (enforced for admins)
+- **Preview**: Requires successful "BUILD :: Build Application" and "TEST :: Run Tests" status checks (enforced for admins)
+- **Rebase Strategy**: All merges use rebase to maintain linear Git history
+- **No Force Push**: Force pushes are disabled on protected branches
+
 Note: Direct pushes to `main` are not allowed. All changes must go through PRs. Direct commits to `preview` are allowed for maintainers.
 
 
@@ -82,6 +91,10 @@ bun run dev
 # or start the server and open the app in a new browser tab
 bun run dev -- --open
 ```
+
+## Environment Variables
+
+This project uses **dynamic runtime environment variables** to enable build promotion. For detailed information about environment variable configuration, usage patterns, and deployment strategies, see [docs/Deployment.md](../docs/Deployment.md).
 
 ## Code Style
 
@@ -132,9 +145,11 @@ You can test your branch name with: `bun run lint:branch`
 
 ### Merge Rules
 
-- Merges to `main` are only allowed from `preview` or `hotfix` branches.
-- Direct pushes to `main` are not permitted.
-- All changes must go through the appropriate branch workflow.
+- **Main Branch**: Only accepts merges from `preview` or `hotfix` branches
+- **Preview Branch**: Only accepts merges from feature branches (direct commits allowed for maintainers)
+- **Direct Pushes**: Not permitted to `main` or `preview` (except maintainers on `preview`)
+- **Branch Protection**: Enforced via GitHub settings with required status checks
+- **Build Promotion**: Production deployments reuse preview build artifacts for consistency
 
 ### Commit Messages
 
