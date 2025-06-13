@@ -11,10 +11,33 @@ env:
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
+  check-changesets:
+    name: Check for Changesets
+    runs-on: ubuntu-latest
+    outputs:
+      has_changesets: ${{ steps.check.outputs.has_changesets }}
+    steps:
+      - name: 'GIT :: Checkout Repo'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 'CHECK :: Changesets'
+        id: check
+        run: |
+          if [ -d ".changeset" ] && [ "$(find .changeset -name "*.md" ! -name "README.md" | wc -l)" -gt 0 ]; then
+            echo "has_changesets=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changesets=false" >> $GITHUB_OUTPUT
+          fi
+
   release:
     name: Release
+    needs: check-changesets
+    if: |
+      github.ref == 'refs/heads/main' && 
+      needs.check-changesets.outputs.has_changesets == 'true'
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
     steps:
       - name: 'GIT :: Checkout Repo'
         uses: actions/checkout@v4
@@ -24,13 +47,26 @@ jobs:
         with:
           node-version: '24.2'
 
+      - name: 'CACHE :: Bun installation'
+        uses: actions/cache@v3
+        id: cache-bun
+        with:
+          path: |
+            ~/.bun
+            ~/.cache/bun
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: 'INSTALL :: Bun'
+        if: steps.cache-bun.outputs.cache-hit != 'true'
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.2.15
+          bun-version: '1.2.15'
 
       - name: 'CACHE :: Dependencies'
         uses: actions/cache@v3
+        id: cache-deps
         with:
           path: |
             node_modules

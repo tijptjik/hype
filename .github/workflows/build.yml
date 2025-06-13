@@ -3,7 +3,7 @@ name: "BUILD :: Build Application"
 on:
   workflow_call:
     inputs:
-      environment: # production, preview
+      environment:
         required: true
         type: string
     outputs:
@@ -21,7 +21,19 @@ jobs:
       - name: 'GIT :: Checkout'
         uses: actions/checkout@v4
 
+      - name: 'CACHE :: Bun installation'
+        uses: actions/cache@v3
+        id: cache-bun
+        with:
+          path: |
+            ~/.bun
+            ~/.cache/bun
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: 'INSTALL :: Bun'
+        if: steps.cache-bun.outputs.cache-hit != 'true'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: '1.2.15'
