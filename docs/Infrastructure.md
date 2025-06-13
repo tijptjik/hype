@@ -1,64 +1,30 @@
 # Infrastructure
 
-## Overview
+## Table of Contents
+- [1. Prerequisites](#1-prerequisites)
+- [2. Create Cloudflare Resources](#2-create-cloudflare-resources)
+- [3. Configure Database IDs](#3-configure-database-ids)
+- [4. Run Initial Database Migrations](#4-run-initial-database-migrations)
+- [5. Configure GitHub Secrets](#5-configure-github-secrets)
+- [6. Environment Variables](#6-environment-variables)
+- [7. Deploy Configuration](#7-deploy-configuration)
+- [8. Upload Secrets](#8-upload-secrets)
+- [9. Google OAuth](#9-google-oauth)
 
-The application is deployed on Cloudflare's edge computing platform, utilizing Cloudflare Workers for hosting and D1 for database storage. The infrastructure is designed with two distinct environments (`prod` & `preview`).
+Steps to recreate the infrastructure on Cloudflare and Google. 
 
-## Architecture
-
-### Deployment Environments
-
-**Production Environment**
-- **Worker**: `hype-prod`
-- **Database**: `hype-db-prod`
-- **Trigger**: Deployments from `main` branch
-- **URL**: [hype.hk](https://hype.hk)
-- **Configuration**: Full production settings with optimizations
-
-**Preview Environment**
-- **Worker**: `hype-preview`
-- **Database**: `hype-db-preview`
-- **Trigger**: Deployments from `preview` branch
-- **URL**: [preview.hype.hk](https://preview.hype.hk)
-- **Configuration**: Staging settings for testing
-
-### Technology Stack
-
-- **Runtime**: Cloudflare Workers with Node.js compatibility
-- **Framework**: SvelteKit with Cloudflare adapter
-- **Database**: Cloudflare D1 (SQLite-based)
-- **ORM**: Drizzle
-- **Build Tool**: Bun
-- **Version Management**: Changesets
-- **CI/CD**: GitHub Actions
-
-### Branch Strategy
-
-```
-main (production)     → hype-prod + hype-db-prod
-preview (staging)     → hype-preview + hype-db-preview
-feat/* (dev)          → Local development only
-```
-
-### Database Schema
-
-Both environments use Drizzle ORM for type-safe database operations with automatic migrations during deployment.
-
----
-
-## Setup Instructions
-
-### 1. Prerequisites
+## 1. Prerequisites
 
 Ensure you have:
+
 - Cloudflare account with Workers access
 - GitHub repository with appropriate permissions
 - Wrangler CLI installed locally
 - Bun runtime installed
 
-### 2. Create Cloudflare Resources
+## 2. Create Cloudflare Resources
 
-#### Create D1 Databases
+### Create D1 Databases
 
 ```sh
 # Authenticate with Cloudflare
@@ -66,11 +32,11 @@ bun wrangler login
 # Create production database
 bun wrangler d1 create hype-db-prod
 
-# Create preview database  
+# Create preview database
 bun wrangler d1 create hype-db-preview
 ```
 
-### 3. Configure Database IDs
+## 3. Configure Database IDs
 
 Update `wrangler.toml` with the database IDs returned from the create commands:
 
@@ -81,14 +47,36 @@ binding = "DB"
 database_name = "hype-db-prod"
 database_id = "YOUR_PROD_DATABASE_ID"
 
-# Preview environment  
+# Preview environment
 [[env.preview.d1_databases]]
 binding = "DB"
 database_name = "hype-db-preview"
 database_id = "YOUR_PREVIEW_DATABASE_ID"
 ```
 
-### 4. Run Initial Database Migrations
+## 4. Run Initial Database Migrations
+
+First seed the database with the initial schema
+
+```bash
+# Deploy schema to production database
+bunx wrangler d1 execute hype-db-prod --env production --remote --file=sql/data/init_schema.sql
+
+# Deploy schema to preview database
+bunx wrangler d1 execute hype-db-preview --env preview --remote --file=sql/data/init_schema.sql
+```
+
+load in data
+
+```bash
+# Deploy schema to production database
+bunx wrangler d1 execute hype-db-prod --env production --remote --file=sql/data/init_data_{01,02,03}.sql
+
+# Deploy schema to preview database
+bunx wrangler d1 execute hype-db-preview --env preview --remote --file=sql/data/init_data_{01,02,03}.sql
+```
+
+and apply any migrations
 
 ```bash
 # Deploy schema to production database
@@ -98,96 +86,72 @@ bun run db:migration:run:cf:prod
 bun run db:migration:run:cf:preview
 ```
 
-### 5. Configure GitHub Secrets
+## 5. Configure GitHub Secrets
 
-In your GitHub repository, add these secrets in `prod` and `preview` [environment](https://github.com/tijptjik/hype/settings/environments/)
+In your GitHub repository, add Cloudflare credentials in `prod` and `preview` [environments](https://github.com/tijptjik/hype/settings/environments/)
 
 ```
 CLOUDFLARE_API_TOKEN=your_cloudflare_api_token
 CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id
 ```
 
-### 6. Environment Variables
+Then add in the other secrets the build relies on. See `dev.vars.production` and `dev.vars.preview` for the keys and values.
 
-Production and preview environments are configured with appropriate variables in `wrangler.toml`:
+## 6. Environment Variables
 
-- **NODE_ENV**: `production` | `staging`
-- **API Keys**: Cloudinary & Azure Translation
+Ensure that you have setup the environment variables in the correct places as detailed in the **Environment Variables** section of the Infra docs.
 
-### 7. Version Management with Changesets
-
-The project uses [Changesets](https://github.com/changesets/changesets) for version management and release coordination:
-
-```bash
-# Add a changeset (documents changes for next release)
-bun run cs:add
-
-# Version packages (bumps versions, updates CHANGELOG)
-bun run cs:version
+```
+.dev.vars                    # SECRET, local only, platform.env.{VAR}
+.dev.vars.preview            # SECRET, reference only, platform.env.{VAR}
+.dev.vars.production         # SECRET, reference only, platform.env.{VAR}
+.env                         # PUBLIC, all envs, $env/static/public
+.env.development             # PUBLIC, dev only, $env/static/public
+.env.preview                 # PUBLIC, preview only, $env/static/public
+.env.prod                    # PUBLIC, prod only, $env/static/public
+.env.drizzle.preview.local   # SECRET, drizzle studio only, N/A
+.env.drizzle.prod.local      # SECRET, drizzle studio, N/A
+|                               |         |             |
+|                               |         |             +---> Runtime Access 
+|                               |         +---> Environment / Context       
+|                               +---> Public or Secret 
+|
++-------> filename, .env* is read by VITE, .dev.vars* is a cloudflare spec
 ```
 
-Releases are run as part of a merge to main on the GitHub action.
+Variables in `.env.{mode}` combine with `.env.{mode}`, variables in the former override ones in the latter if they conflict.
 
-**Recommended Release Workflow:**
-1. **Development**: Add changesets when making significant changes
-2. **Pre-release**: Run `bun run cs:version` to bump versions and update changelogs
-3. **Release**: Merge to `preview` for staging validation, then `main` for production
-
-### 8. Deploy Configuration
+## 7. Deploy Configuration
 
 The GitHub Actions workflow (`.github/workflows/deploy.yml`) uses separate jobs for each environment:
 
 **Production Job** (`deploy-to-prod`):
+
 - **Triggers**: Pushes to `main` branch only
 - **Environment**: Uses GitHub `production` environment for secrets
 - **Deploys**: `hype-prod` worker and `hype-db-prod` database
 
 **Preview Job** (`deploy-to-preview`):
-- **Triggers**: Pushes to `preview` branch only  
+
+- **Triggers**: Pushes to `preview` branch only
 - **Environment**: Uses GitHub `preview` environment for secrets
 - **Deploys**: `hype-preview` worker and `hype-db-preview` database
 
 Both jobs:
+
 1. **Install** Bun and project dependencies
 2. **Build** the application with environment-specific configuration
 3. **Migrate** database schema if needed
 4. **Deploy** to the corresponding Cloudflare Worker
 
-### 9. Verification Commands
+## 8. Upload Secrets
 
-```bash
-# Check deployment status
-bun wrangler deployments status --name=hype-prod
-bun wrangler deployments status --name=hype-preview
-
-# Monitor database
-bun run db:studio:cf:prod
-bun run db:studio:cf:preview
-
-# View logs
-bun wrangler tail --name=hype-prod
-```
-
-### 10. Development Workflow
-
-1. **Feature Development**: Work on `feat/*` branches with local development
-2. **Add Changesets**: Document significant changes with `bun run cs:add`
-3. **Integration Testing**: Merge to `preview` branch → deploys to `hype-preview`
-4. **Version Management**: Run `bun run cs:version` to prepare releases
-5. **Production Release**: Merge `preview` to `main` → deploys to `hype-prod`
-
-This setup ensures isolated environments, automated deployments, and a clear path from development to production.
-
-## One-time Infrastructure Setup
-
-Configure your wrangler.toml as that is used is binding assets, defining variables and setting up your roots. After that you just need to set your secrets and ensure Google OAUTH is setup to allow requests from the domains
-
-## Upload Secrets
+Upon a succesful deployment, the worker resources should have been created.
 
 For all the secrets defined in .env, upload them manually with wrangler. To both production and preview environment:
 
 ```bash
-# PROD: Replace <KEY> with the Env Variable you want to set 
+# PROD: Replace <KEY> with the Env Variable you want to set
 npx wrangler secret put <KEY>
 ```
 
@@ -195,3 +159,7 @@ npx wrangler secret put <KEY>
 # Replace <KEY> with the Env Variable you want to set
 npx wrangler secret put --env preview <KEY>
 ```
+
+## 9. Google OAuth
+
+Vist the [Google Cloud Console](https://console.cloud.google.com/auth/clients/234870059065-fb1jvv6e72jb7ogtd755424bjm8pqgij.apps.googleusercontent.com?inv=1&invt=Abz-Pg&project=hypehk) and add `{https://domain.tld}` to the Authorized JavaScript origins and `{https://domain.tld/api/auth/callback/google}` to the Authorized redirect URIs.
