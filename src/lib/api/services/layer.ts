@@ -129,7 +129,7 @@ export const getLayerQueryContext = (
   } else if (!isSuperAdmin(user)) {
     params = removeExcludedColumns(params, ['isArchived']);
     const projectIds = getProjectIdforRoles(userRoles);
-    conditions.push(inArray(project.id, projectIds as Id[]));
+    conditions.push(inArray(layer.projectId, projectIds as Id[]));
     // SUPERADMIN : List all layers regardless of isPublished or isArchived, respecting the prism filters.
   } else {
     // For SuperAdmin, if no prisms are applied, conditions must be empty.

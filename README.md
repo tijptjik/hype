@@ -1,137 +1,21 @@
-# ghostsigns
+# HYPE
 
-Cultural Journeys through Hong Kong
+Journey through Hong Kong
 
 [![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
 
-## Developing
+## Development
 
-First install dependencies with `bun install`.
+See [Contribution](CONTRIBUTING.md) docs.
 
-### Networking
+## Commands
 
-**Mullvad** : Note that some commands are sensitive to Mullvad VPN being installed. As it uses split tunneling to ignore the VPN routing for the development commands, whereas the regular internet connectivity can be routed through the VPN. Sadly Hong Kong is excluded from many AI tools, hence it's an essential part of the setup.
-
-### Expose App
-
-Set `NGROK_AUTHTOKEN` and `NGROK_DOMAIN` environment variables, and make sure ngrok is available with `docker pull ngrok/ngrok`, then run
-
-```sh
-mullvad-exclude docker run --net=host -it -e NGROK_AUTHTOKEN=$NGROK_AUTHTOKEN ngrok/ngrok:latest http --domain=$NGROK_DOMAIN 5173
-```
-
-Then in another shell run
+See [package.json](package.json) for available commands, and run them with bun 
 
 ```bash
-bun run dev
-
-# or start the server and open the app in a new browser tab
-bun run dev -- --open
+bun run {command}
 ```
-
-## Building
-
-To create a production version of your app:
-
-```bash
-bun run build
-```
-
-You can preview the production build with `bun run preview`.
 
 ## Database Management
 
-### Migration
-
-#### Generate Migration
-
-```shell
-bun run db:generate <DESCRIPTION>
-```
-
-#### Run Migration
-
-Migrate `local` database to the latest migration
-
-```shell
-bun run db:migrate:local
-```
-
-Migrate `production` database on `cloudflare` to the latest migration
-
-```shell
-bun run db:migrate:cf:prod
-```
-
-Migrate `staging` database on `cloudflare` to the latest migration
-
-```shell
-bun run db:migrate:cf:preview
-```
-
-## Seeding on Prod
-
-1. Export all tables from DataGrep, except for sqlite_sequence, sqlite_master and d1_migrations
-2. Replace the instructions in `migrations/0001_data.sql` with the instructions from the export
-3. Remove the latest migration from [Cloudflare D1](https://dash.cloudflare.com/a6eeace4b6d9f8e07ab307964e74d801/workers/d1) with Drizzle Studio. Use Google Chrome with the extension.
-4. Run `bun run db:migrate:cf:prod`
-
-## Schema
-
-The schema is defined in `src/lib/db/schema/`.
-
-The relationship between organisations, projects, layers and filters is hierarchical. Properties are defined on projects, and values are defined on properties. The qualitative properties are shown to the users in a features info panel, the categorical properties are shown in a filter panel. Layers control which filters are available to the user when that particular layer is visible.
-
-```
-org:HKSTREETNAMES
-   project:Odonym
-       layer:people
-           filter:type
-           filter:gender
-           filter:nationality
-           info:name
-           ~desc
-       layer:religion
-           filter:type
-           ~desc
-       layer:places
-            filter:type (e.g. city, province, country, river)
-            filter:country
-            info:place
-            ~desc
-       layer:industry
-            filter:type
-            filter:company
-            ~desc
-    project:Language
-        filter:lang_origin
-        info:lang_family
-        layer:meaning
-            ~desc
-        layer:misc
-            ~desc
-        layer:mixed
-            ~desc
-        layer:sound
-            ~desc
-        layer:N/A
-            ~desc
-    project:Age
-        info:year
-        layer:year_bin_1860
-        layer:year_bin_1880
-        layer:year_bin_1900
-        layer:year_bin_1910
-        layer:year_bin_1920
-        layer:year_bin_1930
-        layer:year_bin_1940
-        layer:year_bin_1950
-        layer:year_bin_1960
-        layer:year_bin_1970
-        layer:year_bin_1980
-        layer:year_bin_1990
-        layer:year_bin_2000
-        layer:year_bin_2010
-        layer:year_bin_2020
-        layer:year_bin_2030
-```
+See [Database](docs/Database.md) docs.

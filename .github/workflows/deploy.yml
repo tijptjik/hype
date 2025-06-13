@@ -73,7 +73,7 @@ jobs:
         run: mv tsconfig.json.bak tsconfig.json
 
       - name: 'BUILD :: Application'
-        run: bun run build
+        run: bun run build:cf:prod
         env:
           # Private variables (secrets)
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
@@ -171,7 +171,7 @@ jobs:
         run: mv tsconfig.json.bak tsconfig.json
 
       - name: 'BUILD :: Application'
-        run: bun run build
+        run: bun run build:cf:preview
         env:
           # Private variables (secrets)
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}

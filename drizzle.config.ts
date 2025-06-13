@@ -1,9 +1,10 @@
-import dotenvLoad = require('dotenv-load');
+import { config } from 'dotenv';
 import { defineConfig } from 'drizzle-kit';
 import { D1Helper } from '@nerdfolio/drizzle-d1-helpers';
 
-// I prefer to load from here than to duplicate the vars in .env
-dotenvLoad();
+// Load environment variables from .dev.vars
+config({ path: '.dev.vars' });
+
 // Replace with your D1 database binding name
 const crawledDbHelper = D1Helper.get('DB');
 const isProd = () => process.env.NODE_ENV === 'production';

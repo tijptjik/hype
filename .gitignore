@@ -14,8 +14,8 @@ scripts/.venv
 /migrations/*.js
 
 # Secrets
-.env.*
-!.env.example
+.env.local
+.env.*.local
 .dev.vars
 .dev.vars.*
 
