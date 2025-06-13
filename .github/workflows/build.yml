@@ -48,4 +48,4 @@ jobs:
         uses: actions/cache@v3
         with:
           path: .svelte-kit
-          key: ${{ runner.os }}-build-${{ github.sha }} 
+          key: ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lockb', 'svelte.config.js', 'vite.config.ts') }} 
