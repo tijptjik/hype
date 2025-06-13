@@ -573,7 +573,7 @@ const TRANSLATION_KEY =
   process.env.PRIVATE_AZURE_TRANSLATION_KEY ||
   '';
 
-const languageTagToApiLanguageTag = (
+const localeToApiLanguageTag = (
   source: Locale,
   target: Locale
 ): { sourceLocale: string; targetLocale: string } => {
@@ -598,7 +598,7 @@ async function getTranslation(
   target: Locale,
   texts: string[]
 ): Promise<string[]> {
-  const { sourceLocale, targetLocale } = languageTagToApiLanguageTag(source, target);
+  const { sourceLocale, targetLocale } = localeToApiLanguageTag(source, target);
   return await fetch(
     `${TRANSLATION_ENDPOINT}/translate?api-version=3.0&from=${sourceLocale}&to=${targetLocale}`,
     {

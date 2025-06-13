@@ -13,9 +13,9 @@ import type { Locale } from '$lib/types';
  * @returns Promise<string> - The translated text
  */
 export async function translateText(
-  text: string,
-  targetLanguage: string,
-  sourceLanguage: string = '',
+  texts: string[],
+  sourceLocale: Locale,
+  targetLocale: Locale,
   region: string,
   apiKey: string
 ): Promise<string> {
@@ -25,12 +25,8 @@ export async function translateText(
 
   const params = new URLSearchParams({
     'api-version': '3.0',
-    to: targetLanguage
+    ...localeToApiLanguageTag(sourceLocale, targetLocale)
   });
-
-  if (sourceLanguage) {
-    params.append('from', sourceLanguage);
-  }
 
   const headers = {
     'Ocp-Apim-Subscription-Key': apiKey,
@@ -39,7 +35,7 @@ export async function translateText(
     'X-ClientTraceId': crypto.randomUUID()
   };
 
-  const body = JSON.stringify([{ text }]);
+  const body = JSON.stringify(texts.map((text) => ({ text })));
 
   try {
     const response = await fetch(`${constructed_url}?${params}`, {
@@ -49,11 +45,13 @@ export async function translateText(
     });
 
     if (!response.ok) {
-      throw new Error(`Translation API error: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Translation API error: ${response.status} ${response.statusText}`
+      );
     }
 
-    const result = await response.json();
-    return result[0]?.translations[0]?.text || text;
+    const data = await response.json();
+    return data.map((item: Record<string, any>) => item.translations[0].text);
   } catch (err) {
     console.error('Translation error:', err);
     throw error(500, 'Translation service unavailable');
@@ -63,10 +61,10 @@ export async function translateText(
 /*
  * Convert locale to API language tag
  */
-const languageTagToApiLanguageTag = (
+const localeToApiLanguageTag = (
   source: Locale,
   target: Locale
-): { sourceLocale: string; targetLocale: string } => {
+): { from: string; to: string } => {
   const sourceMaps = {
     en: 'en',
     'zh-hant': 'yue',
@@ -78,7 +76,7 @@ const languageTagToApiLanguageTag = (
     'zh-hans': 'zh-Hans'
   };
   return {
-    sourceLocale: sourceMaps[source as keyof typeof sourceMaps] || source,
-    targetLocale: targetMaps[target as keyof typeof targetMaps] || target
+    from: sourceMaps[source as keyof typeof sourceMaps] || source,
+    to: targetMaps[target as keyof typeof targetMaps] || target
   };
 };
