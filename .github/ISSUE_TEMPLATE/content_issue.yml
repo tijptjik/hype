@@ -1,0 +1,56 @@
+name: Content Issue
+description: Report issues with content, text, or information
+title: "[CONTENT] "
+labels: ["content"]
+body:
+  - type: textarea
+    id: location
+    attributes:
+      label: Content Location
+      description: Where is the problematic content located?
+      placeholder: URL, page name, or section...
+    validations:
+      required: true
+
+  - type: textarea
+    id: issue
+    attributes:
+      label: Issue Description
+      description: What's wrong with the content?
+      placeholder: Describe the content issue...
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Current Content
+      description: What does the content currently say?
+      placeholder: Copy the current text...
+
+  - type: textarea
+    id: suggested
+    attributes:
+      label: Suggested Fix
+      description: What should the content say instead?
+      placeholder: Provide your suggested correction...
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Screenshots showing the content issue
+      placeholder: Drag and drop screenshots here...
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Issue Type
+      description: What type of content issue is this?
+      options:
+        - Typo/Grammar
+        - Outdated Information
+        - Missing Information
+        - Incorrect Information
+        - Translation Issue
+        - Other 
