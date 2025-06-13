@@ -37,7 +37,7 @@ enabled = true
 # Configures static assets that will be served.
 # Docs : https://developers.cloudflare.com/workers/static-assets/binding/
 [assets]
-directory = "./dist"
+directory = "./.svelte-kit/output"
 binding = "ASSETS"
 
 [[d1_databases]]
