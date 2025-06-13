@@ -81,6 +81,7 @@ PUBLIC_CLOUDINARY_UPLOAD_PRESET="ml_default"
 PUBLIC_AZURE_TRANSLATION_REGION="eastasia"
 
 PUBLIC_GIPHY_KEY="tM0RJBEwovwI9i6NZMbyLxqVVnAPdcVz"
+PUBLIC_HUB_CODE="core"
 
 [[env.production.d1_databases]]
 binding = "DB"
@@ -118,6 +119,7 @@ PUBLIC_CLOUDINARY_UPLOAD_PRESET="ml_default"
 PUBLIC_AZURE_TRANSLATION_REGION="eastasia"
 
 PUBLIC_GIPHY_KEY="tM0RJBEwovwI9i6NZMbyLxqVVnAPdcVz"
+PUBLIC_HUB_CODE="core"
 
 [[env.preview.d1_databases]]
 binding = "DB"
