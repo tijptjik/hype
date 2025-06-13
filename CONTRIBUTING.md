@@ -26,6 +26,40 @@ First install dependencies with `bun install`.
 
 This setup ensures isolated environments, automated deployments, and a clear path from development to production.
 
+
+### Branching
+
+1. Create a feature branch from `preview`:
+   ```bash
+   git checkout preview
+   git pull --rebase
+   git checkout -b feat/your-feature
+   ```
+
+2. Make your changes and commit:
+   ```bash
+   git add .
+   git commit -m "feat: your feature"
+   ```
+
+3. Keep your branch up to date:
+   ```bash
+   git fetch origin
+   git rebase origin/preview
+   ```
+
+4. Push your changes:
+   ```bash
+   git push origin feat/your-feature
+   ```
+
+5. Create a PR against `preview`
+
+6. After approval and tests pass, the PR will be automatically rebased and merged.
+
+Note: Direct pushes to `main` are not allowed. All changes must go through PRs. Direct commits to `preview` are allowed for maintainers.
+
+
 ### Advanced
 
 #### Expose Local
