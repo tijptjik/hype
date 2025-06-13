@@ -9,27 +9,30 @@ jobs:
   commitlint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: 'GIT :: Checkout'
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Setup node
-        uses: actions/setup-node@v4
+
+      - name: 'INSTALL :: Bun'
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: lts/*
-          cache: npm
-      - name: Install commitlint
-        run: npm install -D @commitlint/cli @commitlint/config-conventional
-      - name: Print versions
+          bun-version: '1.2.15'
+
+      - name: 'INSTALL :: Commitlint'
+        run: bun add -d @commitlint/cli @commitlint/config-conventional
+
+      - name: 'LOG :: Versions'
         run: |
           git --version
           node --version
-          npm --version
-          npx commitlint --version
+          bun --version
+          bunx commitlint --version
 
-      - name: Validate current commit (last commit) with commitlint
+      - name: 'ASSERT :: Last commit format'
         if: github.event_name == 'push'
         run: npx commitlint --last --verbose
 
-      - name: Validate PR commits with commitlint
+      - name: 'ASSERT :: PR commit format'
         if: github.event_name == 'pull_request'
         run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose

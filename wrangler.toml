@@ -62,6 +62,10 @@ custom_domain = true
 pattern = "hkghostsigns.com"
 custom_domain = true
 
+[[env.production.routes]]
+pattern = "hkghostsigns.hype.hk"
+custom_domain = true
+
 [env.production.vars]
 ENVIRONMENT = "production"
 

@@ -1,14 +1,13 @@
 name: "GIT :: Auto Update Branches"
 on:
   push: {}
-  # Alternatively, you can only trigger if commits are pushed to certain branches, e.g.:
-  # push:
-    # branches:
-      # - main
+
 jobs:
   autoupdate:
-    name: autoupdate
+    name: "GIT :: Refresh target branch"
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     steps:
       - uses: docker://chinthakagodawita/autoupdate-action:v1
         env:
