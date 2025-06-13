@@ -18,66 +18,14 @@ jobs:
     with:
       environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
 
-  deploy-to-prod:
-    name: 'DEPLOY :: Cloudflare [Production]'
+  deploy:
+    name: 'DEPLOY :: Cloudflare'
     needs: [build, test]
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    environment: prod
+    environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'preview' }}
     steps:
       - name: 'GIT :: Checkout'
         uses: actions/checkout@v4
-
-      - name: 'INSTALL :: Bun'
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: '1.2.15'
-
-      - name: 'CACHE :: Dependencies'
-        uses: actions/cache@v3
-        id: cache-deps
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-deps-${{ hashFiles('**/bun.lockb') }}
-          restore-keys: |
-            ${{ runner.os }}-deps-
-
-      - name: 'INSTALL :: Dependencies'
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: bun install --frozen-lockfile
-
-      - name: 'CACHE :: Build artifacts'
-        uses: actions/cache@v3
-        with:
-          path: .svelte-kit
-          key: ${{ runner.os }}-build-${{ github.sha }}
-
-      - name: 'DB :: Apply migrations'
-        run: bun run db:migration:run:cf:prod
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: 'DEPLOY :: Cloudflare Worker'
-        run: bun run deploy:prod
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-  deploy-to-preview:
-    name: 'DEPLOY :: Cloudflare [Preview]'
-    needs: [build, test]
-    if: github.ref == 'refs/heads/preview'
-    runs-on: ubuntu-latest
-    environment: preview
-    steps:
-      - name: 'GIT :: Checkout'
-        uses: actions/checkout@v4
-
-      - name: 'INSTALL :: Node.js'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24.2'
 
       - name: 'INSTALL :: Bun'
         uses: oven-sh/setup-bun@v2
@@ -104,13 +52,13 @@ jobs:
           key: ${{ runner.os }}-build-${{ github.sha }}
 
       - name: 'DB :: Apply migrations'
-        run: bun run db:migration:run:cf:preview
+        run: bun run db:migration:run:cf:${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: 'DEPLOY :: Cloudflare Worker'
-        run: bun run deploy:preview
+        run: bun run deploy:${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

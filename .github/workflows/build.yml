@@ -8,7 +8,7 @@ on:
         type: string
     outputs:
       build-cache-hit:
-        description: "Whether the build cache was hit"
+        description: "Was the build cache hit?"
         value: ${{ jobs.build.outputs.cache-hit }}
   push:
     branches:
