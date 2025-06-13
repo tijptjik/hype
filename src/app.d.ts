@@ -42,6 +42,8 @@ declare global {
     // interface PageState {}
     interface Platform {
       env: {
+        ENVIRONMENT: string;
+        NODE_ENV: string;
         // Cloudflare Bindings
         DB: MiniflareD1Database;
         ASSETS: any;
