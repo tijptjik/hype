@@ -44,6 +44,43 @@ jobs:
           path: .svelte-kit
           key: ${{ runner.os }}-build-${{ github.sha }}
 
+      - name: 'FIX :: Create temporary tsconfig for CI'
+        run: |
+          # Create minimal tsconfig for CI
+          cat > tsconfig.json << 'EOF'
+          {
+            "compilerOptions": {
+              "target": "ES2022",
+              "lib": ["ES2022"],
+              "module": "ESNext",
+              "moduleResolution": "node",
+              "allowJs": true,
+              "checkJs": true,
+              "esModuleInterop": true,
+              "allowSyntheticDefaultImports": true,
+              "forceConsistentCasingInFileNames": true,
+              "resolveJsonModule": true,
+              "skipLibCheck": true,
+              "sourceMap": true,
+              "strict": true,
+              "baseUrl": ".",
+              "paths": {
+                "$lib": ["./src/lib"],
+                "$lib/*": ["./src/lib/*"]
+              }
+            },
+            "include": [
+              "src/**/*.ts",
+              "src/**/*.d.ts"
+            ],
+            "exclude": [
+              "node_modules",
+              ".svelte-kit",
+              "src/lib/paraglide/**/*"
+            ]
+          }
+          EOF
+
       - name: 'TEST :: Run tests'
         id: test
         run: bun run test:run
