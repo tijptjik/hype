@@ -1,0 +1,49 @@
+name: "TEST :: Run Tests"
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+    outputs:
+      test-status:
+        description: "Status of the test run"
+        value: ${{ jobs.test.outputs.status }}
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.test.outputs.status }}
+    steps:
+      - name: 'GIT :: Checkout'
+        uses: actions/checkout@v4
+
+      - name: 'INSTALL :: Bun'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.2.15'
+
+      - name: 'CACHE :: Dependencies'
+        uses: actions/cache@v3
+        with:
+          path: |
+            node_modules
+            .svelte-kit
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-deps-
+
+      - name: 'CACHE :: Build artifacts'
+        uses: actions/cache@v3
+        with:
+          path: |
+            build
+            .svelte-kit
+          key: ${{ runner.os }}-build-${{ github.sha }}
+
+      - name: 'TEST :: Run tests'
+        id: test
+        run: bun run test:run 

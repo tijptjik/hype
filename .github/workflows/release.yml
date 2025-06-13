@@ -14,6 +14,7 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: 'GIT :: Checkout Repo'
         uses: actions/checkout@v4
@@ -28,8 +29,18 @@ jobs:
         with:
           bun-version: 1.2.15
 
+      - name: 'CACHE :: Dependencies'
+        uses: actions/cache@v3
+        with:
+          path: |
+            node_modules
+            .svelte-kit
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-deps-
+
       - name: 'INSTALL :: Dependencies'
-        continue-on-error: true
+        if: steps.cache-deps.outputs.cache-hit != 'true'
         run: bun install
 
       - name: 'RELEASE :: Create Release PR'
