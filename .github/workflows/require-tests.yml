@@ -1,0 +1,20 @@
+name: "REQUIRE :: Tests Pass"
+
+on:
+  pull_request:
+    branches:
+      - main
+      - preview
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-tests:
+    name: Check Test Status
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'CHECK :: Test results'
+        uses: actions/cache@v3
+        id: test-cache
+        with:
+          path: test-results
+          key: ${{ runner.os }}-test-${{ github.event.pull_request.head.sha }} 

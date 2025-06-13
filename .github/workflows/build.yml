@@ -1,0 +1,59 @@
+name: "BUILD :: Build Application"
+
+on:
+  workflow_call:
+    inputs:
+      environment: # [production, preview]
+        required: true
+        type: string
+    outputs:
+      build-cache-hit:
+        description: "Whether the build cache was hit"
+        value: ${{ jobs.build.outputs.cache-hit }}
+  push:
+    branches:
+      - main
+      - preview
+  pull_request:
+    branches:
+      - preview
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build:
+    name: 'BUILD :: App'
+    runs-on: ubuntu-latest
+    outputs:
+      cache-hit: ${{ steps.cache-deps.outputs.cache-hit }}
+    steps:
+      - name: 'GIT :: Checkout'
+        uses: actions/checkout@v4
+
+      - name: 'INSTALL :: Bun'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.2.15'
+
+      - name: 'CACHE :: Restore Dependencies'
+        uses: actions/cache@v3
+        id: cache-deps
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-deps-
+
+      - name: 'INSTALL :: Dependencies'
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: bun install --frozen-lockfile
+
+      - name: 'BUILD :: Application'
+        run: bun run build:cf:${{ github.event_name == 'workflow_call' && inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'preview') }}
+        env:
+          CLOUDFLARE_ENV: ${{ github.event_name == 'workflow_call' && inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'preview') }}
+
+      - name: 'CACHE :: Build'
+        uses: actions/cache@v3
+        with:
+          path: .svelte-kit
+          key: ${{ runner.os }}-build-${{ github.sha }} 

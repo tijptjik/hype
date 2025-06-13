@@ -7,8 +7,20 @@ on:
       - preview
 
 jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
+
+  test:
+    needs: build
+    uses: ./.github/workflows/test.yml
+    with:
+      environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
+
   deploy-to-prod:
-    name: Deploy to Cloudflare [Production]
+    name: 'DEPLOY :: Cloudflare [Production]'
+    needs: [build, test]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: prod
@@ -21,77 +33,24 @@ jobs:
         with:
           bun-version: '1.2.15'
 
+      - name: 'CACHE :: Dependencies'
+        uses: actions/cache@v3
+        id: cache-deps
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-deps-
+
       - name: 'INSTALL :: Dependencies'
+        if: steps.cache-deps.outputs.cache-hit != 'true'
         run: bun install --frozen-lockfile
 
-      - name: 'SYNC :: Generate SvelteKit files'
-        run: bun run sync
-
-      - name: 'FIX :: Create temporary tsconfig for CI'
-        run: |
-          # Backup original tsconfig
-          mv tsconfig.json tsconfig.json.bak
-          # Create minimal tsconfig for CI
-          cat > tsconfig.json << 'EOF'
-          {
-            "compilerOptions": {
-              "target": "ES2022",
-              "lib": ["ES2022"],
-              "module": "ESNext",
-              "moduleResolution": "node",
-              "allowJs": true,
-              "checkJs": true,
-              "esModuleInterop": true,
-              "allowSyntheticDefaultImports": true,
-              "forceConsistentCasingInFileNames": true,
-              "resolveJsonModule": true,
-              "skipLibCheck": true,
-              "sourceMap": true,
-              "strict": true,
-              "baseUrl": ".",
-              "paths": {
-                "$lib": ["./src/lib"],
-                "$lib/*": ["./src/lib/*"]
-              }
-            },
-            "include": [
-              "src/**/*.ts",
-              "src/**/*.d.ts"
-            ],
-            "exclude": [
-              "node_modules",
-              ".svelte-kit",
-              "src/lib/paraglide/**/*"
-            ]
-          }
-          EOF
-
-      - name: 'TEST :: Run tests'
-        run: bun run test:run
-
-      - name: 'FIX :: Restore original tsconfig'
-        run: mv tsconfig.json.bak tsconfig.json
-
-      - name: 'BUILD :: Application'
-        run: bun run build:cf:prod
-        env:
-          # Private variables (secrets)
-          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-          AUTH_GOOGLE_ID: ${{ secrets.AUTH_GOOGLE_ID }}
-          AUTH_GOOGLE_SECRET: ${{ secrets.AUTH_GOOGLE_SECRET }}
-
-          AZURE_TRANSLATION_KEY: ${{ secrets.AZURE_TRANSLATION_KEY }}
-
-          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
-          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
-
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
-          PUBLIC_GIPHY_KEY: ${{ secrets.PUBLIC_GIPHY_KEY }}
-
-          # Public variables
-          CLOUDFLARE_ENV: production
+      - name: 'CACHE :: Build artifacts'
+        uses: actions/cache@v3
+        with:
+          path: .svelte-kit
+          key: ${{ runner.os }}-build-${{ github.sha }}
 
       - name: 'DB :: Apply migrations'
         run: bun run db:migration:run:cf:prod
@@ -106,7 +65,8 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
   deploy-to-preview:
-    name: Deploy to Cloudflare [Preview]
+    name: 'DEPLOY :: Cloudflare [Preview]'
+    needs: [build, test]
     if: github.ref == 'refs/heads/preview'
     runs-on: ubuntu-latest
     environment: preview
@@ -114,82 +74,34 @@ jobs:
       - name: 'GIT :: Checkout'
         uses: actions/checkout@v4
 
+      - name: 'INSTALL :: Node.js'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.2'
+
       - name: 'INSTALL :: Bun'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: '1.2.15'
 
+      - name: 'CACHE :: Restore Dependencies'
+        uses: actions/cache@v3
+        id: cache-deps
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-deps-
+
       - name: 'INSTALL :: Dependencies'
+        if: steps.cache-deps.outputs.cache-hit != 'true'
         run: bun install --frozen-lockfile
 
-      - name: 'SYNC :: Generate SvelteKit files'
-        run: bun run sync
-
-      - name: 'FIX :: Create temporary tsconfig for CI'
-        run: |
-          # Backup original tsconfig
-          mv tsconfig.json tsconfig.json.bak
-          # Create minimal tsconfig for CI
-          cat > tsconfig.json << 'EOF'
-          {
-            "compilerOptions": {
-              "target": "ES2022",
-              "lib": ["ES2022"],
-              "module": "ESNext",
-              "moduleResolution": "node",
-              "allowJs": true,
-              "checkJs": true,
-              "esModuleInterop": true,
-              "allowSyntheticDefaultImports": true,
-              "forceConsistentCasingInFileNames": true,
-              "resolveJsonModule": true,
-              "skipLibCheck": true,
-              "sourceMap": true,
-              "strict": true,
-              "baseUrl": ".",
-              "paths": {
-                "$lib": ["./src/lib"],
-                "$lib/*": ["./src/lib/*"]
-              }
-            },
-            "include": [
-              "src/**/*.ts",
-              "src/**/*.d.ts"
-            ],
-            "exclude": [
-              "node_modules",
-              ".svelte-kit",
-              "src/lib/paraglide/**/*"
-            ]
-          }
-          EOF
-
-      - name: 'TEST :: Run tests'
-        run: bun run test:run
-
-      - name: 'FIX :: Restore original tsconfig'
-        run: mv tsconfig.json.bak tsconfig.json
-
-      - name: 'BUILD :: Application'
-        run: bun run build:cf:preview
-        env:
-          # Private variables (secrets)
-          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-          AUTH_GOOGLE_ID: ${{ secrets.AUTH_GOOGLE_ID }}
-          AUTH_GOOGLE_SECRET: ${{ secrets.AUTH_GOOGLE_SECRET }}
-
-          AZURE_TRANSLATION_KEY: ${{ secrets.AZURE_TRANSLATION_KEY }}
-
-          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
-          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
-
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
-          PUBLIC_GIPHY_KEY: ${{ secrets.PUBLIC_GIPHY_KEY }}
-
-          # Public variables
-          CLOUDFLARE_ENV: preview
+      - name: 'CACHE :: Restore Build'
+        uses: actions/cache@v3
+        with:
+          path: .svelte-kit
+          key: ${{ runner.os }}-build-${{ github.sha }}
 
       - name: 'DB :: Apply migrations'
         run: bun run db:migration:run:cf:preview
