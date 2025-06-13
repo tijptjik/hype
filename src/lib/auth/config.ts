@@ -23,13 +23,15 @@ export const authConfig = {
     'https://hype.hk',
     // CORE :: PREVIEW
     'https://preview.hype.hk',
-    // HUBS
+    // HUBS :: SUBDOMAINS
+    'https://hkghostsigns.hype.hk',
+    // HUBS :: DOMAINS
     'https://hkghostsigns.com',
+    // HUBS :: PREVIEW
+    'https://preview.hkghostsigns.com',
     // DEV
-    'https://ghostsigns.pages.dev',
     'http://localhost:5173',
     'https://dove-main-tapir.ngrok-free.app',
-    'http://192.168.1.100.nip.io:5173'
   ],
 
   user: {
