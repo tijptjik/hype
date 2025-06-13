@@ -49,7 +49,6 @@ migrations_dir = "migrations"
 
 [vars]
 ENVIRONMENT = "local"
-CLOUDFLARE_ENV = "local"
 
 PUBLIC_DRIZZLE_LOGGER=false
 PUBLIC_SVELTE_QUERY_DEVTOOLS=false
@@ -72,7 +71,6 @@ name = "hype-prod"
 
 [env.production.vars]
 ENVIRONMENT = "production"
-CLOUDFLARE_ENV = "production"
 
 PUBLIC_DRIZZLE_LOGGER=false
 PUBLIC_SVELTE_QUERY_DEVTOOLS=false
@@ -110,7 +108,6 @@ name = "hype-preview"
 
 [env.preview.vars]
 ENVIRONMENT = "preview"
-CLOUDFLARE_ENV = "preview"
 
 PUBLIC_DRIZZLE_LOGGER=false
 PUBLIC_SVELTE_QUERY_DEVTOOLS=false

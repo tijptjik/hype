@@ -32,7 +32,7 @@ export const GET: RequestHandler = async ({
   const vars = platform.env;
   const env ={
         "ENVIRONMENT": vars.ENVIRONMENT,
-        "NODE_ENV": vars.NODE_ENV,
+        "NODE_ENV": vars.NODE_ENV
       }
   const public_vars = Object.fromEntries(
     Object.entries(vars).filter(([key]) => key.startsWith('PUBLIC_'))
