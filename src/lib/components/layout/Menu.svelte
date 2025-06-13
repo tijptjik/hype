@@ -30,7 +30,8 @@ let showAdminMenu = $derived(
       (role: UserRoleDisco) =>
         role.role === 'owner' ||
         role.role === 'superadmin' ||
-        role.role === 'maintainer'
+        role.role === 'maintainer' ||
+        role.role === 'member' 
     )
 );
 
