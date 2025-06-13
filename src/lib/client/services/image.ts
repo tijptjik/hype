@@ -381,7 +381,6 @@ export function getCloudinaryUploadEndpoint(cloudname: string): string {
  * @param opts.image - The image data.
  * @param opts.transformation - The transformation to apply to the image.
  * @param opts.raw - Whether to return the raw image URL.
- * @param opts.cloudName - The Cloudinary cloud name.
  * @returns The generated URL string.
  */
 export function getURLfromImage(opts: {
@@ -391,7 +390,6 @@ export function getURLfromImage(opts: {
   gravity?: string;
   quality?: string;
   format?: string;
-  cloudName: string;
 }): string {
   const {
     image,
@@ -399,16 +397,15 @@ export function getURLfromImage(opts: {
     gravity = 'auto',
     format = 'auto',
     quality = 'auto',
-    raw = false,
-    cloudName
+    raw = false
   } = opts;
 
   const finalTransformation = `${transformation}/g_${gravity}/f_${format}/q_${quality}`;
 
   if (image.cdn === 'cloudinary') {
     return raw
-      ? `https://res.cloudinary.com/${cloudName}/image/upload/fl_attachment/${image.publicId}`
-      : `https://res.cloudinary.com/${cloudName}/image/upload/${finalTransformation}/v${image.version}/${image.publicId}`;
+      ? `https://res.cloudinary.com/${image.env}/image/upload/fl_attachment/${image.publicId}`
+      : `https://res.cloudinary.com/${image.env}/image/upload/${finalTransformation}/v${image.version}/${image.publicId}`;
   } else {
     throw error(404, `Image CDN <code>${image.cdn}</code> not supported`);
   }
