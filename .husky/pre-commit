@@ -1,6 +1,3 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
 # Check if we're trying to create a merge commit
 if [ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ]; then
     echo "Merge commits are not allowed. Please use rebase instead."
