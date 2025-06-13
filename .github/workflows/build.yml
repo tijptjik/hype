@@ -1,6 +1,15 @@
 name: "BUILD :: Build Application"
 
 on:
+  workflow_call:
+    inputs:
+      environment: # [production, preview]
+        required: true
+        type: string
+    outputs:
+      build-cache-hit:
+        description: "Whether the build cache was hit"
+        value: ${{ jobs.build.outputs.cache-hit }}
   push:
     branches:
       - main
