@@ -68,8 +68,11 @@ const handle_hub: Handle = async ({ event, resolve }) => {
   // Parse hub info from domain without DB lookup
   const { getHubFromDomain } = await import('$lib/api/services/hub');
 
+  // Get hub code from platform env for development override
+  const hubCode = event.platform?.env?.PUBLIC_HUB_CODE;
+
   // Store hub info in locals for use throughout the app
-  event.locals.hub = getHubFromDomain(host);
+  event.locals.hub = getHubFromDomain(host, hubCode);
 
   return resolve(event);
 };

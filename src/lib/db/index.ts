@@ -1,5 +1,3 @@
-// ENV
-import { PUBLIC_DRIZZLE_LOGGER } from '$env/static/public';
 // ORM
 import { drizzle } from 'drizzle-orm/d1';
 import { and, sql, inArray, eq, or, not, exists, Table } from 'drizzle-orm';
@@ -121,10 +119,10 @@ export const resourceConfig: Record<HierarchicalResource, ResourceConfig> = {
 // 2. DATABASE :: CLIENT
 // ═══════════════════════
 
-const client = (database: MiniflareD1Database): DrizzleD1Database<typeof schema> => {
+const client = (database: MiniflareD1Database, enableLogger: boolean = false): DrizzleD1Database<typeof schema> => {
   return drizzle(database, {
     schema,
-    logger: PUBLIC_DRIZZLE_LOGGER === 'true' || false
+    logger: enableLogger
   });
 };
 

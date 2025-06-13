@@ -1,43 +1,64 @@
-// SVELTE
-import { PUBLIC_AZURE_TRANSLATION_REGION } from '$env/static/public';
 // THIRD PARTY
-import { v4 as uuidv4 } from 'uuid';
+import { error } from '@sveltejs/kit';
 // TYPES
 import type { Locale } from '$lib/types';
 
-/*
- * Get translation from Azure Translation API
+/**
+ * Translates text using Azure Cognitive Services Translator
+ * @param text - The text to translate
+ * @param targetLanguage - The target language code (e.g., 'zh-Hans', 'zh-Hant', 'en')
+ * @param sourceLanguage - The source language code (optional, auto-detect if not provided)
+ * @param region - The Azure region for the translation service
+ * @param apiKey - The Azure translation API key
+ * @returns Promise<string> - The translated text
  */
-export const getTranslation = async (
-  source: Locale,
-  target: Locale,
-  texts: string[],
-  subscriptionKey: string
-): Promise<string[]> => {
-  const { sourceLocale, targetLocale } = languageTagToApiLanguageTag(source, target);
-  const ENDPOINT = 'https://api.cognitive.microsofttranslator.com';
-  return await fetch(
-    `${ENDPOINT}/translate?api-version=3.0&from=${sourceLocale}&to=${targetLocale}`,
-    {
+export async function translateText(
+  text: string,
+  targetLanguage: string,
+  sourceLanguage: string = '',
+  region: string,
+  apiKey: string
+): Promise<string> {
+  const endpoint = 'https://api.cognitive.microsofttranslator.com';
+  const path = '/translate';
+  const constructed_url = endpoint + path;
+
+  const params = new URLSearchParams({
+    'api-version': '3.0',
+    to: targetLanguage
+  });
+
+  if (sourceLanguage) {
+    params.append('from', sourceLanguage);
+  }
+
+  const headers = {
+    'Ocp-Apim-Subscription-Key': apiKey,
+    'Ocp-Apim-Subscription-Region': region,
+    'Content-type': 'application/json',
+    'X-ClientTraceId': crypto.randomUUID()
+  };
+
+  const body = JSON.stringify([{ text }]);
+
+  try {
+    const response = await fetch(`${constructed_url}?${params}`, {
       method: 'POST',
-      headers: {
-        'Ocp-Apim-Subscription-Key': subscriptionKey,
-        'Ocp-Apim-Subscription-Region': PUBLIC_AZURE_TRANSLATION_REGION,
-        'Content-type': 'application/json',
-        'X-ClientTraceId': uuidv4().toString()
-      },
-      body: JSON.stringify(
-        texts.map((text) => ({
-          text: text
-        }))
-      )
-    }
-  )
-    .then((response) => response.json())
-    .then((data) => {
-      return data.map((item: Record<string, any>) => item.translations[0].text);
+      headers,
+      body
     });
-};
+
+    if (!response.ok) {
+      throw new Error(`Translation API error: ${response.status} ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    return result[0]?.translations[0]?.text || text;
+  } catch (err) {
+    console.error('Translation error:', err);
+    throw error(500, 'Translation service unavailable');
+  }
+}
 
 /*
  * Convert locale to API language tag

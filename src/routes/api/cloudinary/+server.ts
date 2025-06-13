@@ -1,7 +1,5 @@
 // SVELTE
 import { error, json } from '@sveltejs/kit';
-import { PUBLIC_CLOUDINARY_CLOUD_NAME } from '$env/static/public';
-
 // THIRD PARTY
 import crypto from 'crypto';
 
@@ -13,8 +11,9 @@ export const POST = async ({ request, platform }) => {
   // Get environment variables from platform
   const CLOUDINARY_API_SECRET = platform?.env?.CLOUDINARY_API_SECRET;
   const CLOUDINARY_API_KEY = platform?.env?.CLOUDINARY_API_KEY;
+  const CLOUDINARY_CLOUD_NAME = platform?.env?.PUBLIC_CLOUDINARY_CLOUD_NAME;
 
-  if (!CLOUDINARY_API_SECRET || !CLOUDINARY_API_KEY) {
+  if (!CLOUDINARY_API_SECRET || !CLOUDINARY_API_KEY || !CLOUDINARY_CLOUD_NAME) {
     error(500, 'Missing Cloudinary API credentials');
   }
 
@@ -37,7 +36,7 @@ export const POST = async ({ request, platform }) => {
     return json({
       signature,
       timestamp,
-      cloudname: PUBLIC_CLOUDINARY_CLOUD_NAME,
+      cloudname: CLOUDINARY_CLOUD_NAME,
       apikey: CLOUDINARY_API_KEY
     });
   } catch (e) {

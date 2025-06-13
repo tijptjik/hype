@@ -1,5 +1,3 @@
-// ENV
-import { PUBLIC_HUB_CODE } from '$env/static/public';
 // API
 import { applyQueryFilters } from '$lib/api';
 // AUTH
@@ -50,10 +48,10 @@ export const hubEntityWithRelations = {
  * Parses host to determine hub identifier without DB lookup
  * Returns hub identifier object for efficient filtering
  */
-export function getHubFromDomain(host: string | null): HubOpts {
+export function getHubFromDomain(host: string | null, hubCode?: string): HubOpts {
   // Development override
-  if (PUBLIC_HUB_CODE) {
-    const code = PUBLIC_HUB_CODE;
+  if (hubCode) {
+    const code = hubCode;
     return {
       code: code === 'core' ? undefined : code,
       isCore: code === 'core'

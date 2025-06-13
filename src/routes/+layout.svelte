@@ -1,6 +1,4 @@
 <script lang="ts">
-// ENV
-import { PUBLIC_SVELTE_QUERY_DEVTOOLS } from '$env/static/public';
 // SVELTE
 import { watch } from 'runed';
 // STORES
@@ -103,7 +101,7 @@ afterNavigate(() => {
     {/if}
   </div>
   <!-- TODO Prevent this from ever running in PRODUCTION (but it's OK on Preview) -->
-  {#if PUBLIC_SVELTE_QUERY_DEVTOOLS === 'true' }
+  {#if data.PUBLIC_SVELTE_QUERY_DEVTOOLS === 'true' }
     <SvelteQueryDevtools />
   {/if}
 </QueryClientProvider>
