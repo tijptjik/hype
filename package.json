@@ -6,7 +6,8 @@
     "url": "https://github.com/tijptjik/hype/issues"
   },
   "scripts": {
-    "dev": "mullvad-exclude vite dev",
+    "dev": "vite dev",
+    "dev:no-mullvad": "mullvad-exclude vite dev",
     "dev:local": "vite -d dev",
     "build": "sync && vite build",
     "build:preview": "vite preview",
@@ -22,9 +23,9 @@
     "db:migration:run:local": "wrangler d1 migrations apply hype-db-local",
     "db:migration:run:cf:prod": "wrangler d1 migrations apply hype-db-prod --remote --env production",
     "db:migration:run:cf:preview": "wrangler d1 migrations apply hype-db-preview --remote --env preview",
-    "db:studio:local": "source .dev.vars && drizzle-kit studio --config=drizzle.config.ts",
-    "db:studio:cf:prod": "source .dev.vars.preview && drizzle-kit studio --config=drizzle.config.ts",
-    "db:studio:cf:preview": "source .dev.vars.production && drizzle-kit studio --config=drizzle.config.ts",
+    "db:studio:local": "drizzle-kit studio --config=drizzle.config.ts",
+    "db:studio:cf:prod": "export $(xargs <.env.drizzle.prod.local) && drizzle-kit studio --config=drizzle.config.ts",
+    "db:studio:cf:preview": "export $(xargs <.env.drizzle.preview.local) && drizzle-kit studio --config=drizzle.config.ts",
     "deploy:prod": "bun wrangler deploy --name hype-prod --env production",
     "deploy:preview": "bun wrangler deploy --name hype-preview --env preview",
     "lint": "prettier --check . && eslint .",
