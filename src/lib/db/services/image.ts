@@ -181,7 +181,7 @@ export const getImagesForFeature = async (
     })
     .from(image)
     .innerJoin(featureImage, eq(image.id, featureImage.imageId))
-    .innerJoin(user, eq(image.contributorId, user.id))
+    .leftJoin(user, eq(image.contributorId, user.id))
     .where(and(...conditions))) as ImageDBFlat[];
 };
 
@@ -207,7 +207,7 @@ export const getImagesForTask = async (
     .from(image)
     .innerJoin(featureImage, eq(image.id, featureImage.imageId))
     .innerJoin(taskImage, eq(image.id, taskImage.imageId))
-    .innerJoin(user, eq(image.contributorId, user.id))
+    .leftJoin(user, eq(image.contributorId, user.id))
     .where(and(...conditions))) as ImageDBFlat[];
 };
 
