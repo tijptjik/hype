@@ -50,9 +50,16 @@ jobs:
 
       - name: 'CACHE :: Restore Build'
         uses: actions/cache@v3
+        id: cache-build-preview
         with:
           path: .svelte-kit
           key: ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lockb', 'svelte.config.js', 'vite.config.ts') }}
+
+      - name: 'BUILD :: Application (if cache miss)'
+        if: steps.cache-build-preview.outputs.cache-hit != 'true'
+        run: bun run build:cf:preview
+        env:
+          CLOUDFLARE_ENV: preview
 
       - name: 'DB :: Apply migrations'
         run: bun run db:migration:run:cf:preview
@@ -104,7 +111,9 @@ jobs:
 
       - name: 'BUILD :: Application (if cache miss)'
         if: steps.cache-build.outputs.cache-hit != 'true'
-        run: bun run build
+        run: |
+          rm -rf .svelte-kit
+          bun run build
 
       - name: 'VERIFY :: Build Cache'
         if: steps.cache-build.outputs.cache-hit != 'true'
