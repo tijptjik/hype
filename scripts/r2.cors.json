@@ -1,20 +1,7 @@
 [
   {
     "AllowedOrigins": [
-      "http://192.168.1.100:5173",
-      "http://192.168.1.100.nip.io:5173",
-      "http://localhost:4173",
-      "http://localhost:5173",
-      "https://dove-main-tapir.ngrok-free.app",
-      "https://hkghostsigns.com",
-      "https://hkghostsigns.hype.hk",
-      "https://hype.hk",
-      "https://maplibre.org",
-      "https://pmtiles.io/",
-      "https://preview.hype.hk",
-      "https://protomaps.github.io",
-      "https://tiles.hype.hk",
-      "https://tramways-primary.datalayer.workers.dev/"
+      "https://tiles.hype.hk"
     ],
     "AllowedMethods": [
       "GET",
