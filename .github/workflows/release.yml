@@ -12,7 +12,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
   check-changesets:
-    name: Check for Changesets
+    name: 'VERSION :: Check for Changesets'
     runs-on: ubuntu-latest
     outputs:
       has_changesets: ${{ steps.check.outputs.has_changesets }}
@@ -32,7 +32,7 @@ jobs:
           fi
 
   release:
-    name: Release
+    name: 'VERSION :: Release'
     needs: check-changesets
     if: |
       github.ref == 'refs/heads/main' && 

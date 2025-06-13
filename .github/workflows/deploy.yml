@@ -19,7 +19,7 @@ jobs:
       environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
 
   deploy-to-prod:
-    name: Deploy to Cloudflare [Production]
+    name: 'DEPLOY :: Cloudflare [Production]'
     needs: [build, test]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -65,7 +65,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
   deploy-to-preview:
-    name: Deploy to Cloudflare [Preview]
+    name: 'DEPLOY :: Cloudflare [Preview]'
     needs: [build, test]
     if: github.ref == 'refs/heads/preview'
     runs-on: ubuntu-latest
