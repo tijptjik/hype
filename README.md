@@ -1,8 +1,7 @@
 # HYPE
 
 ![Release](https://img.shields.io/github/v/release/tijptjik/hype)
-![Build Status](https://github.com/tijptjik/hype/actions/workflows/deploy.yml/badge.svg?branch=preview)
-![Production Deploy](https://github.com/tijptjik/hype/actions/workflows/deploy.yml/badge.svg?branch=main)
+![Status](https://github.com/tijptjik/hype/actions/workflows/deploy.yml/badge.svg?branch=main)
 ![License](https://img.shields.io/github/license/tijptjik/hype)
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
