@@ -52,7 +52,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: .svelte-kit
-          key: ${{ runner.os }}-build-${{ github.sha }}
+          key: ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lockb', 'svelte.config.js', 'vite.config.ts') }}
 
       - name: 'DB :: Apply migrations'
         run: bun run db:migration:run:cf:preview
@@ -98,13 +98,15 @@ jobs:
         id: cache-build
         with:
           path: .svelte-kit
-          key: ${{ runner.os }}-build-${{ github.sha }}
+          key: ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lockb', 'svelte.config.js', 'vite.config.ts') }}
+          restore-keys: |
+            ${{ runner.os }}-build-
           fail-on-cache-miss: true
 
       - name: 'VERIFY :: Build Cache'
         if: steps.cache-build.outputs.cache-hit != 'true'
         run: |
-          echo "❌ No preview build found for commit ${{ github.sha }}"
+          echo "❌ No preview build found for hash ${{ hashFiles('src/**', 'package.json', 'bun.lockb', 'svelte.config.js', 'vite.config.ts') }}"
           echo "This commit must be deployed to preview first before promoting to production"
           exit 1
 
