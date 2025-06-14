@@ -438,5 +438,6 @@
   "long_fit_vole_flow": "中心独家",
   "mealy_dizzy_lizard_approve": "未找到属性或属性不是数组",
   "misty_awake_haddock_tap": "匿名的",
-  "missing_permissions": "权限不足"
+  "missing_permissions": "权限不足",
+  "resource_not_found": "找不到{resourceType}"
 }
