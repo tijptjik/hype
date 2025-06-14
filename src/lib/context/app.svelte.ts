@@ -518,6 +518,80 @@ export class AppCtx {
         wishlisted: (uf || []).filter((f: UserFeature) => f.isWishlisted),
         visited: (uf || []).filter((f: UserFeature) => f.isVisited)
       }));
+    
+    // If active collection is a walk, refresh it and handle navigation
+    this.postUserFeaturesMutation();
+  };
+
+  /*
+  * Handles user features mutation and refreshes the active walk collection
+  * If a user has their stars selected as an ActiveCollection (Walk), then we
+  * ensure that the collection count is updated and the card navigates to
+  * the next item on the list, or returns home if the list is empty.
+  */
+  postUserFeaturesMutation = (): void => {
+    const activeCollection = this.getActiveCollection();
+    if (!activeCollection || activeCollection.type !== 'walk') {
+      return;
+    }
+
+    const currentActiveFeature = this.getActiveFeature();
+    let updatedItems: Feature[] = [];
+
+    // Get updated items based on walk type
+    if (activeCollection.id === 'stars') {
+      updatedItems = this.getWishlistedFeatures();
+    }
+    // TODO: Add other walk types when implemented
+
+    // If the collection is now empty, reset and navigate to home
+    if (updatedItems.length === 0) {
+      this.resetActiveCollection();
+      goto('/');
+      return;
+    }
+
+    // Update the collection with new items
+    this.setActiveCollection(
+      {
+        ...activeCollection,
+        items: updatedItems
+      },
+      {
+        highlight: false,
+        focus: false,
+        activateFirst: false,
+        focusFirst: false
+      }
+    );
+
+    // Handle navigation if current feature is no longer in the collection
+    if (currentActiveFeature) {
+      const isCurrentFeatureStillInCollection = updatedItems.some(
+        (f) => f.id === currentActiveFeature.id
+      );
+
+      if (!isCurrentFeatureStillInCollection) {
+        // Find the next feature to navigate to
+        const currentIndex = activeCollection.items.findIndex(
+          (f) => f.id === currentActiveFeature.id
+        );
+        
+        let nextFeature: Feature | null = null;
+        
+        // Try to get the next feature in the original list
+        if (currentIndex >= 0 && currentIndex < updatedItems.length) {
+          nextFeature = updatedItems[currentIndex];
+        } else if (updatedItems.length > 0) {
+          // If current index is out of bounds, get the last item
+          nextFeature = updatedItems[updatedItems.length - 1];
+        }
+
+        if (nextFeature) {
+          this.setActiveFeature(nextFeature.id, { focus: true, isCardOpen: true });
+        }
+      }
+    }
   };
 
   syncProjectPrisms = async () => {
