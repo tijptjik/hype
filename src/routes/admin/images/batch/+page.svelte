@@ -51,54 +51,70 @@ function extractFeatureIdFromFilename(filename: string): string | null {
   return nameWithoutExt;
 }
 
+// Define the context type
+type FeatureContext = {
+  feature: Feature;
+  layer: any;
+  project: any;
+  organisation: any;
+  layerId: string;
+  projectId: string;
+  organisationId: string;
+};
+
 // Get context for a feature ID
-function getContextForFeature(featureId: string) {
-  const feature = appCtx.getFeatureById(featureId);
+async function getContextForFeature(featureId: string): Promise<FeatureContext | null> {
+  try {
+    const feature = await appCtx.getFeatureById(featureId);
+    if (!feature) {
+      console.error(`Feature not found for ID: ${featureId}`);
+      return null;
+    }
+    
+    const { layer, project, organisation } = await appCtx.getHierarchy(feature);
 
-  if (!feature) {
-    console.error(`Feature not found for ID: ${featureId}`);
-    return null;
-  }
+    if (!layer || !project || !organisation) {
+      console.error(`Missing hierarchy for feature ${featureId}:`, {
+        layer,
+        project,
+        organisation
+      });
+      return null;
+    }
 
-  const layer = appCtx.getLayer(feature);
-  const project = layer ? appCtx.getProject(layer) : null;
-  const organisation = project ? appCtx.getOrganisation(project) : null;
-
-  if (!layer || !project || !organisation) {
-    console.error(`Missing hierarchy for feature ${featureId}:`, {
+    return {
+      feature,
       layer,
       project,
-      organisation
-    });
+      organisation,
+      layerId: layer.id,
+      projectId: project.id,
+      organisationId: organisation.id
+    };
+  } catch (error) {
+    console.error(`Error getting context for feature ${featureId}:`, error);
     return null;
   }
-
-  return {
-    feature,
-    layer,
-    project,
-    organisation,
-    layerId: layer.id,
-    projectId: project.id,
-    organisationId: organisation.id
-  };
 }
 
 // Create upload context for feature
-function createUploadContextForFeature(
+async function createUploadContextForFeature(
   featureId: string,
-  context: ReturnType<typeof getContextForFeature>
-) {
-  if (!context) return null;
+  context: FeatureContext
+): Promise<ImageUploadCtx | null> {
+  try {
+    const uploadCtx: ImageUploadCtx = {
+      ctxType: ImageContextResource.feature,
+      ctxId: featureId,
+      organisation: context.organisation,
+      project: context.project
+    };
 
-  const uploadCtx: ImageUploadCtx = {
-    ctxType: ImageContextResource.feature,
-    ctxId: featureId,
-    organisation: context.organisation,
-    project: context.project
-  };
-
-  return uploadCtx;
+    return uploadCtx;
+  } catch (error) {
+    console.error(`Error creating upload context for feature ${featureId}:`, error);
+    return null;
+  }
 }
 
 // Handle file drop
@@ -159,7 +175,7 @@ async function processSingleUpload(result: BatchUploadResult, index: number) {
     return;
   }
 
-  const context = getContextForFeature(result.featureId);
+  const context = await getContextForFeature(result.featureId);
   if (!context) {
     uploadResults[index] = {
       ...result,
@@ -173,7 +189,7 @@ async function processSingleUpload(result: BatchUploadResult, index: number) {
     return;
   }
 
-  const uploadCtx = createUploadContextForFeature(result.featureId, context);
+  const uploadCtx = await createUploadContextForFeature(result.featureId, context);
   if (!uploadCtx) {
     uploadResults[index] = {
       ...result,
