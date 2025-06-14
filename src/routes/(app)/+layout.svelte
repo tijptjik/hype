@@ -57,14 +57,21 @@ const omniCtx = setOmniContext(appCtx);
 // Re-initialize data when user becomes authenticated
 watch(
   () => $session.data?.user,
-  () => {
-    if ($session.data?.user) {
-      appCtx.setUser($session.data.user as unknown as SessionUser);
+  (newUser) => {
+    // Only reinitialize if user actually changed (not just session refresh)
+    const currentUserId = appCtx.user?.id;
+    const newUserId = newUser?.id;
+    
+    if (newUser && newUserId !== currentUserId) {
+      // User login or user changed
+      appCtx.setUser(newUser as unknown as SessionUser);
       appCtx.reinitializeWithAuth();
       appCtx.registerKeydownHandlers();
-    } else if (!$session.data?.user && appCtx.user?.id) {
+    } else if (!newUser && currentUserId) {
+      // User logout
       appCtx.setUser(null);
     }
+    // Ignore cases where session refreshed but user didn't change
   }
 );
 
