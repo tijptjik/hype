@@ -25,6 +25,8 @@ import {
 } from '$lib/client/services/user';
 // CONTEXT
 import { getContext, setContext } from 'svelte';
+// SVELTE
+import { SvelteMap } from 'svelte/reactivity';
 // MARKERS
 import { removeMarkerClass, addMarkerClass } from '$lib/map/markers';
 // ENUMS
@@ -97,7 +99,7 @@ export class AppCtx {
   };
 
   // Features map for current state (rebuilt when state.resources.feature changes)
-  private featuresMap = $state(new Map<Id, Feature>());
+  private featuresMap = new SvelteMap<Id, Feature>();
   private organisationCodeToId = new Map<Code, Id>();
   private projectCodeToId = new Map<Code, Id>();
   private hubCodeToId = new Map<Code, Id>();
@@ -361,6 +363,25 @@ export class AppCtx {
   };
 
   invalidate = async (resource: FirstClassResource | 'userFeatures'): Promise<void> => {
+    // Clear relevant caches when invalidating (forces fresh data)
+    if (resource === FirstClassResource.organisation) {
+      this.cache.organisation.clear();
+      this.organisationCodeToId.clear();
+    } else if (resource === FirstClassResource.project) {
+      this.cache.project.clear();
+      this.projectCodeToId.clear();
+    } else if (resource === FirstClassResource.layer) {
+      this.cache.layer.clear();
+    } else if (resource === FirstClassResource.feature) {
+      this.cache.feature.clear();
+      this.featuresMap.clear();
+    } else if (resource === FirstClassResource.task) {
+      this.cache.task.clear();
+    } else if (resource === FirstClassResource.hub) {
+      this.cache.hub.clear();
+      this.hubCodeToId.clear();
+    }
+
     await this.queryClient.invalidateQueries({
       queryKey:
         resource === 'userFeatures'
@@ -379,7 +400,7 @@ export class AppCtx {
     } else {
       prisms.splice(index, 1);
     }
-    this.invalidateAndRefresh(resource);
+    this.refresh(resource);
   };
 
   // Toggle methods for hierarchical filters
@@ -424,12 +445,10 @@ export class AppCtx {
       queryKey: this.queryMap.get(FirstClassResource.organisation)!.queryKey(),
       queryFn: this.queryMap.get(FirstClassResource.organisation)!.queryFn
     });
-    // Cache organizations
-    this.state.resources.organisation.forEach((org) => {
-      this.cache.organisation.set(org.id, org);
-    });
-    // Populate organisation code-to-ID mapping
-    this.populateOrganisationCodeToIdMap();
+    // Efficiently sync organization cache (only add missing, remove stale)
+    this.syncCacheMap(this.cache.organisation, this.state.resources.organisation);
+    // Efficiently sync organisation code-to-ID mapping
+    this.syncCodeToIdMap(this.organisationCodeToId, this.state.resources.organisation);
     this.refreshProjects();
     this.refreshHubs();
   };
@@ -439,12 +458,10 @@ export class AppCtx {
       queryKey: this.queryMap.get(FirstClassResource.project)!.queryKey(),
       queryFn: this.queryMap.get(FirstClassResource.project)!.queryFn
     });
-    // Cache projects
-    this.state.resources.project.forEach((project) => {
-      this.cache.project.set(project.id, project);
-    });
-    // Populate project code-to-ID mapping
-    this.populateProjectCodeToIdMap();
+    // Efficiently sync project cache (only add missing, remove stale)
+    this.syncCacheMap(this.cache.project, this.state.resources.project);
+    // Efficiently sync project code-to-ID mapping
+    this.syncCodeToIdMap(this.projectCodeToId, this.state.resources.project);
     this.syncProjectPrisms();
     this.refreshLayers();
   };
@@ -454,11 +471,8 @@ export class AppCtx {
       queryKey: this.queryMap.get(FirstClassResource.layer)!.queryKey(),
       queryFn: this.queryMap.get(FirstClassResource.layer)!.queryFn
     });
-    // Cache layers
-    this.state.resources.layer.forEach((layer) => {
-      this.cache.layer.set(layer.id, layer);
-    });
-    // Populate layer code-to-ID mapping
+    // Efficiently sync layer cache (only add missing, remove stale)
+    this.syncCacheMap(this.cache.layer, this.state.resources.layer);
     this.syncLayerPrisms();
     // Also calls this.refreshFeatures()
     this.postLayerMutation();
@@ -469,10 +483,8 @@ export class AppCtx {
       queryKey: this.queryMap.get(FirstClassResource.feature)!.queryKey(),
       queryFn: this.queryMap.get(FirstClassResource.feature)!.queryFn
     });
-    // Cache features
-    this.state.resources.feature.forEach((feature) => {
-      this.cache.feature.set(feature.id, feature);
-    });
+    // Efficiently sync feature cache (only add missing, remove stale)
+    this.syncCacheMap(this.cache.feature, this.state.resources.feature);
     this.rebuildFeaturesMap();
   };
 
@@ -481,10 +493,8 @@ export class AppCtx {
       queryKey: this.queryMap.get(FirstClassResource.task)!.queryKey(),
       queryFn: this.queryMap.get(FirstClassResource.task)!.queryFn
     });
-    // Cache tasks
-    this.state.resources.task.forEach((task) => {
-      this.cache.task.set(task.id, task);
-    });
+    // Efficiently sync task cache (only add missing, remove stale)
+    this.syncCacheMap(this.cache.task, this.state.resources.task);
   };
 
   refreshHubs = async (): Promise<void> => {
@@ -493,11 +503,10 @@ export class AppCtx {
       queryKey: this.queryMap.get(FirstClassResource.hub)!.queryKey(),
       queryFn: this.queryMap.get(FirstClassResource.hub)!.queryFn
     });
-    // Cache hubs
-    this.state.resources.hub.forEach((hub) => {
-      this.cache.hub.set(hub.id, hub);
-    });
-    this.populateHubCodeToIdMap();
+    // Efficiently sync hub cache (only add missing, remove stale)
+    this.syncCacheMap(this.cache.hub, this.state.resources.hub);
+    // Efficiently sync hub code-to-ID mapping
+    this.syncCodeToIdMap(this.hubCodeToId, this.state.resources.hub);
   };
 
   refreshUserFeatures = async (): Promise<void> => {
@@ -565,27 +574,6 @@ export class AppCtx {
   // CODE TO ID MAPPINGS
   // ═══════════════════════
 
-  private populateOrganisationCodeToIdMap = (): void => {
-    this.organisationCodeToId.clear();
-    this.cache.organisation.forEach((org) => {
-      this.organisationCodeToId.set(org.code, org.id);
-    });
-  };
-
-  private populateProjectCodeToIdMap = (): void => {
-    this.projectCodeToId.clear();
-    this.cache.project.forEach((project) => {
-      this.projectCodeToId.set(project.code, project.id);
-    });
-  };
-
-  private populateHubCodeToIdMap = (): void => {
-    this.hubCodeToId.clear();
-    this.cache.hub.forEach((hub) => {
-      this.hubCodeToId.set(hub.code, hub.id);
-    });
-  };
-
   getOrganisationIdByCode = (code: Code): Id | undefined => {
     return this.organisationCodeToId.get(code);
   };
@@ -605,7 +593,7 @@ export class AppCtx {
   toggleNeighbourhood = (name: string) => {
     const current = this.state.filters.neighbourhoods;
     this.state.filters.neighbourhoods = current.includes(name)
-      ? current.filter((n) => n !== name).sort()
+      ? current.filter((n) => n !== name)
       : [...current, name].sort();
   };
 
@@ -655,6 +643,7 @@ export class AppCtx {
 
   resetFilters = (): void => {
     this.state.filters = { neighbourhoods: [], properties: {} };
+    // Re-initialize property filters for active layers
     this.state.prisms.layer.forEach((layerId) => {
       this.initialiseCategoricalPropertyFilters(layerId);
       this.initialiseRangePropertyFilter(layerId);
@@ -994,7 +983,7 @@ export class AppCtx {
       return Array.from(this.features.keys());
     }
 
-    const featureList = Object.values(this.features);
+    const featureList = Array.from(this.features.values());
 
     const filteredIds = featureList
       .filter((f: Feature) => {
@@ -1079,6 +1068,11 @@ export class AppCtx {
 
   // Features, given the selected Neighbourhoods and Properties
   getVisibleFeatureIds = (): Id[] => {
+    console.log(
+      'getVisibleFeatureIds',
+      this.featuresForNeighbourhoods,
+      this.featuresForProperties
+    );
     return Array.from(
       new Set(this.featuresForNeighbourhoods).intersection(
         new Set(this.featuresForProperties)
@@ -1137,6 +1131,18 @@ export class AppCtx {
     }
   };
 
+  resetActiveCollection = (): void => {
+    // Remove "highlighted" class from all features
+    this.unhighlightAllFeatures();
+    // Reset active collection
+    this.state.active.collection = null;
+    // Remove 'active' class from the active feature
+    this.state.active.feature?.id &&
+      removeMarkerClass(this, this.state.active.feature.id);
+    // Reset active feature
+    this.state.active.feature = null;
+  };
+
   getActiveFeature = (): Feature | null => this.state.active.feature;
 
   setActiveFeature = (
@@ -1183,18 +1189,6 @@ export class AppCtx {
     this.state.resources.feature.forEach((f) => {
       removeMarkerClass(this, f.id, 'highlighted');
     });
-  };
-
-  resetActiveCollection = (): void => {
-    // Remove "highlighted" class from all features
-    this.unhighlightAllFeatures();
-    // Reset active collection
-    this.state.active.collection = null;
-    // Remove 'active' class from the active feature
-    this.state.active.feature?.id &&
-      removeMarkerClass(this, this.state.active.feature.id);
-    // Reset active feature
-    this.state.active.feature = null;
   };
 
   // NAVIGATION METHODS
@@ -1420,37 +1414,54 @@ export class AppCtx {
     animate();
   };
 
-  // FEATURE COLLECTIONS -- Features
+  // ═══════════════════════
+  // REACTIVE FEATURE COLLECTIONS
+  // ═══════════════════════
 
-  // Rebuild features map from current state.resources.feature
+  // Efficiently update features map from current state.resources.feature
   private rebuildFeaturesMap = () => {
-    this.featuresMap.clear();
-    this.state.resources.feature.forEach((feature) => {
+    const newFeatures = this.state.resources.feature;
+    const newFeatureIds = new Set(newFeatures.map((f) => f.id));
+
+    // Remove features that are no longer in the result set
+    for (const [id] of this.featuresMap) {
+      if (!newFeatureIds.has(id)) {
+        this.featuresMap.delete(id);
+      }
+    }
+
+    // Add new features or update existing ones
+    newFeatures.forEach((feature) => {
       this.featuresMap.set(feature.id, feature);
     });
   };
 
   // Public getter for features map (O(1) lookup, no rebuilding on access)
-  get features(): Map<Id, Feature> {
+  get features(): SvelteMap<Id, Feature> {
     return this.featuresMap;
   }
 
-  // FEATURE COLLECTIONS -- FeatureIds
+  // FEATURE COLLECTIONS -- FeatureIds (Fixed $derived approach)
 
   // FeatureIds for Selected Neighbourhoods
-  featuresForNeighbourhoods: Id[] = $derived.by(this.getFeatureIdsForNeighbourhoods);
+  featuresForNeighbourhoods: Id[] = $derived(
+    (this.featuresMap.size && this.getFeatureIdsForNeighbourhoods()) || []) as Id[]
+
   // FeatureIds for Selected Properties
-  featuresForProperties: Id[] = $derived.by(this.getFeatureIdsForProperties);
+  featuresForProperties: Id[] = $derived(
+    (this.featuresMap.size && this.getFeatureIdsForProperties()) || []) as Id[]
+
   // Intersection of Neighbourhoods and Properties featureIds
-  featuresVisible: Id[] = $derived.by(this.getVisibleFeatureIds);
+  featuresVisible: Id[] = $derived(this.getVisibleFeatureIds());
   // FeatureIds for Wishlisted Features
-  featuresWishlisted: Id[] = $derived.by(this.getWishlistedFeatureIds);
+  featuresWishlisted: Id[] = $derived(this.getWishlistedFeatureIds()) as Id[];
   // FeatureIds for Visited Features
-  featuresVisited: Id[] = $derived.by(this.getVisitedFeatureIds);
+  featuresVisited: Id[] = $derived(this.getVisitedFeatureIds()) as Id[];
 
   // FILTER -- ACCESSORS
 
   // Accessor for Active Property Filters
+  // TODO Make properties more efficient and first-class citizens
   propertyFilters = $derived(this.state.filters.properties);
 
   setCategoricalPropertyFilter = (
@@ -1523,13 +1534,12 @@ export class AppCtx {
 
   // FEATURE COLLECTIONS -- Utils
 
-  getFeaturesByIds = (ids: Id[]): Feature[] => {
-    return ids.map((id) => this.features.get(id)).filter((f) => f !== undefined);
-  };
+  getFeaturesByIds = (ids: Id[]): Feature[] => ids.map((id) => this.features.get(id)).filter((f) => f !== undefined);
 
   // FEATURE COLLECTIONS -- Convenience Methods
 
   getVisibleFeatures = (): Feature[] => {
+    console.log('getVisibleFeatures', this.featuresVisible);
     return this.getFeaturesByIds(this.featuresVisible);
   };
 
@@ -1648,7 +1658,6 @@ export class AppCtx {
     // Initialize with proper locale structure for all required locales
     if (newFeature.feature && !newFeature.feature.i18n) {
       const requiredLocales = ['en', 'zh-hant', 'zh-hans'];
-      const currentLocale = getLocale();
 
       newFeature.feature.i18n = {};
       requiredLocales.forEach((locale) => {
@@ -1927,12 +1936,40 @@ export class AppCtx {
     );
   };
 
+  // Clear all cache maps (for actual data reset scenarios)
+  clearAllCaches = (): void => {
+    this.cache.organisation.clear();
+    this.cache.project.clear();
+    this.cache.layer.clear();
+    this.cache.feature.clear();
+    this.cache.task.clear();
+    this.cache.hub.clear();
+    this.cache.property.clear();
+    this.featuresMap.clear();
+    this.organisationCodeToId.clear();
+    this.projectCodeToId.clear();
+    this.hubCodeToId.clear();
+  };
+
+  // Efficient reset methods - clears selection filters, used cache if data was fetched before, otherwise refetches
   resetOrganisations = () => {
+    this.state.prisms.organisation = [];
+    this.refreshOrganisations();
+  };
+
+  // Efficient reset methods - clears selection filters, used cache if data was fetched before, otherwise refetches
+  resetProjects = () => {
+    this.state.prisms.project = [];
+    this.refreshProjects();
+  };
+
+  // Force refresh methods for when you actually need to invalidate and fetch fresh data
+  forceRefreshOrganisations = () => {
     this.state.prisms.organisation = [];
     this.invalidateAndRefresh(FirstClassResource.organisation);
   };
 
-  resetProjects = () => {
+  forceRefreshProjects = () => {
     this.state.prisms.project = [];
     this.invalidateAndRefresh(FirstClassResource.project);
   };
@@ -2055,6 +2092,50 @@ export class AppCtx {
         layerFilters[property.key] = filterConfig;
       }
     });
+  };
+
+  // ═══════════════════════
+  // CACHE UPDATE UTILITIES
+  // ═══════════════════════
+
+  // Generic map sync - only add missing items and remove stale ones (no overwrites)
+  private syncMap = <K, V, T>(
+    map: Map<K, V>,
+    newItems: T[],
+    getKey: (item: T) => K,
+    getValue?: (item: T) => V
+  ): void => {
+    const newKeys = new Set(newItems.map(getKey));
+
+    // Remove entries that are no longer in the result set
+    for (const [key] of map) {
+      if (!newKeys.has(key)) {
+        map.delete(key);
+      }
+    }
+
+    // Only add entries that aren't already present
+    newItems.forEach((item) => {
+      const key = getKey(item);
+      if (!map.has(key)) {
+        map.set(key, getValue ? getValue(item) : (item as unknown as V));
+      }
+    });
+  };
+
+  // Convenience methods using the generic syncMap
+  private syncCacheMap = <T extends { id: Id }>(
+    cache: Map<Id, T>,
+    newItems: T[]
+  ): void => {
+    this.syncMap(cache, newItems, item => item.id);
+  };
+
+  private syncCodeToIdMap = <T extends { id: Id; code: Code }>(
+    codeMap: Map<Code, Id>,
+    newItems: T[]
+  ): void => {
+    this.syncMap(codeMap, newItems, item => item.code, item => item.id);
   };
 }
 export const MAP_STATE_KEY = Symbol('mapContext');
