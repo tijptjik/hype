@@ -178,13 +178,22 @@ export function isProjectMember(
  * Checks if the user can create projects
  * Must be organisation owner or superadmin
  */
-export function canCreateProjects(user: SessionUser | null, organisationId: Id): boolean {
+export function canCreateProjects(user: SessionUser | null, organisationId?: Id): boolean {
   if (!user) return false;
   
-  return (
-    canManageOrganisations(user) ||
-    isOrganisationOwner(user, organisationId)
-  );
+  // SuperAdmin can always create projects
+  if (canManageOrganisations(user)) return true;
+  
+  // If organisationId is provided, check if user is owner of that specific organisation
+  if (organisationId) {
+    return isOrganisationOwner(user, organisationId);
+  }
+  
+  // If no organisationId provided, check if user is owner of any organisation
+  return user.roles?.some(
+    (role: UserRoleDisco) =>
+      role.type === 'organisation' && role.role === 'owner'
+  ) ?? false;
 }
 
 /**

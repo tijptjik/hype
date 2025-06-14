@@ -42,7 +42,7 @@ let {
 }: Props = $props();
 
 // Check if user has the required permission
-let hasPermission = $derived(() => {
+let hasPermission = $derived.by(() => {
   if (!user) return false;
 
   switch (permission) {
