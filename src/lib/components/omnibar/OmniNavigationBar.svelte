@@ -22,7 +22,7 @@ let isNewFeature = $derived(omniCtx.isNewFeatureMode);
 <div
   id="omni-nav-bar"
   class="relative z-30 col-start-1 row-start-1 flex min-h-16 w-full items-center border-b-3 border-base-300 bg-black transition-[height] w-120:rounded-lg w-120:border-3 w-192:min-h-14">
-  {#if isNotFeatureMode && !isNewFeature}
+  {#if isNotFeatureMode && !isNewFeature && appCtx.state.active.collection}
     <div class="flex h-full w-full items-center">
       <div class="h-full flex-shrink-0">
         <OmniNavArrow direction="left" />

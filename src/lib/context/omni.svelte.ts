@@ -405,18 +405,20 @@ export class OmniContext {
   // NAVIGATION METHODS
 
   navNext() {
-    if (this.navIndex < this.appCtx.state.active.collection!.items.length - 1) {
+    const collection = this.appCtx.state.active.collection;
+    if (collection && this.navIndex < collection.items.length - 1) {
       this.appCtx.setActiveFeature(
-        this.appCtx.state.active.collection!.items[this.navIndex + 1].id,
+        collection.items[this.navIndex + 1].id,
         { focus: true }
       );
     }
   }
 
   navPrevious() {
-    if (this.navIndex > 0) {
+    const collection = this.appCtx.state.active.collection;
+    if (collection && this.navIndex > 0) {
       this.appCtx.setActiveFeature(
-        this.appCtx.state.active.collection!.items[this.navIndex - 1].id,
+        collection.items[this.navIndex - 1].id,
         { focus: true }
       );
     }
@@ -426,11 +428,13 @@ export class OmniContext {
   navTitle = $derived(
     this.state.mode === 'search'
       ? `Search Results: ${this.state.searchTerm}`
-      : getI18n(
-          this.appCtx.state.active.collection!,
-          'name',
-          this.appCtx.getUserPreferences()
-        )
+      : this.appCtx.state.active.collection
+        ? getI18n(
+            this.appCtx.state.active.collection,
+            'name',
+            this.appCtx.getUserPreferences()
+          )
+        : ''
   );
 
   // OPEN/CLOSE METHODS
