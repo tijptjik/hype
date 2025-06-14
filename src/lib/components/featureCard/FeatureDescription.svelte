@@ -95,7 +95,7 @@ $effect(() => {
   <div
     class="flex-shrink-3 relative z-10 my-0 flex min-h-12 flex-col bg-black caret-transparent">
     <div class="overflow-y-auto" bind:this={scrollContainer} use:smartScroll>
-      <div class="h-auto min-h-8 w-100:pl-2">
+      <div class="h-auto min-h-8 w-100:pl-6 w-100:pr-4">
         <p
           class="m-0 overflow-visible p-0 text-sm font-thin leading-tight tracking-tight text-gray-300">
           {@html description.replaceAll('\n', '<br />')}
