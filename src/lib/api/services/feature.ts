@@ -34,7 +34,6 @@ import type {
   UserRoleDisco,
   Prisms,
   FeatureDBNew,
-  Session,
   Database,
   Id,
   SessionUser,
@@ -42,7 +41,6 @@ import type {
   QueryParams,
   UserContributedFeature,
   Locale,
-  FeatureI18nDB
 } from '$lib/types';
 
 /********************
@@ -52,43 +50,13 @@ export const featureCollectionWithRelations = {
   i18n: true,
   properties: {
     with: {
-      i18n: true,
-      property: {
-        with: {
-          i18n: true,
-          values: {
-            with: {
-              i18n: true
-            }
-          }
-        }
-      },
-      propertyValue: {
-        with: {
-          i18n: true
-        }
-      }
+      i18n: true
     }
   }
 };
 
 export const featureEntityWithRelations = {
   ...featureCollectionWithRelations,
-  layer: {
-    with: {
-      i18n: true,
-      project: {
-        with: {
-          i18n: true,
-          organisation: {
-            with: {
-              i18n: true
-            }
-          }
-        }
-      }
-    }
-  },
   contributor: {
     columns: userColumnsWithPrivacyProtected
   },
