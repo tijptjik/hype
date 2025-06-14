@@ -153,7 +153,11 @@ onMount(async () => {
       if (omniCtx.state.isCardOpen) {
         omniCtx.close();
       }
-      // Priority 2: Close panels if open
+      // Priority 2: Close tray if open in search mode
+      else if (omniCtx.state.mode === 'search' && omniCtx.state.isTrayOpen) {
+        omniCtx.closeTray();
+      }
+      // Priority 3: Close panels if open
       else if (Object.values(appCtx.state.panels).some((panel) => panel)) {
         appCtx.closeAllPanels();
       }
