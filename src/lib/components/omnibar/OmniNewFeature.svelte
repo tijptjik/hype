@@ -4,34 +4,33 @@ import { m } from '$lib/i18n';
 // CONTEXT
 import { getOmniContext } from '$lib/context/omni.svelte';
 import { getAppCtx } from '$lib/context/app.svelte';
-// TYPES
-import type { Layer, Project } from '$lib/types';
 // CONTEXT
 const omniCtx = getOmniContext();
 const appCtx = getAppCtx();
 
-let handleClick = (e: Event) => {
+let activeLayers = $derived(appCtx.state.prisms.layer);
+let singleActiveLayer = $derived(activeLayers.length === 1 ? appCtx.cache.layer.get(activeLayers[0]) : null);
+
+let handleClick = async (e: Event) => {
   e.preventDefault();
   e.stopPropagation();
   omniCtx.setMode('new-feature');
-  // Determine whether there is only a single layer active
-  const activeLayers = appCtx.state.prisms.layer;
+  
   if (activeLayers.length === 1) {
-    // If only one layer is active, proceed with that layer
-    const layer = appCtx.getLayerById(activeLayers[0]);
-    const project = appCtx.getProject(layer as Layer);
-    const organisation = appCtx.getOrganisation(project as Project);
-    appCtx.setNewFeature({
-      layerId: layer?.id,
-      projectId: project?.id,
-      organisationId: organisation?.id,
-      feature: {
-        layerId: layer?.id
-      }
-    });
-    // Trigger the GeoLocation modal directly
-    const event = new CustomEvent('showGeoLocationModal');
-    window.dispatchEvent(event);
+    if (singleActiveLayer) {
+      const hierarchy = await appCtx.getHierarchy(singleActiveLayer!);
+      appCtx.setNewFeature({
+        organisationId: hierarchy.organisation?.id,
+        projectId: hierarchy.project?.id,
+        layerId: hierarchy.layer?.id,
+        feature: {
+          layerId: hierarchy.layer?.id
+        }
+      });
+      // Trigger the GeoLocation modal directly
+      const event = new CustomEvent('showGeoLocationModal');
+      window.dispatchEvent(event);
+    }
   } else {
     // If multiple layers are active, dispatch event to show the layer selection modal
     const event = new CustomEvent('showLayerSelectionModal');
@@ -39,7 +38,6 @@ let handleClick = (e: Event) => {
   }
 };
 </script>
-
 <div
   class="flex select-none flex-col divide-y divide-neutral-800 overscroll-none bg-neutral-900 caret-transparent">
   <button
