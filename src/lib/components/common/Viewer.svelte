@@ -60,7 +60,9 @@ const handleDrop = async (e: CustomEvent) => {
     e.detail.fileRejections,
     {
       onSuccess: (savedImage) => {
-        adminCtx.invalidateAndRefresh(adminCtx.activeResource as FirstClassResource);
+        if (adminCtx.activeResourceType) {
+          adminCtx.invalidateAndRefresh(adminCtx.activeResourceType);
+        }
       },
       onError: () => {
         console.error('[Viewer] Upload error');

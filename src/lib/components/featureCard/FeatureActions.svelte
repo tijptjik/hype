@@ -124,16 +124,14 @@ async function submitMissingReport() {
   try {
     cardCtx.isSubmitting = true;
 
-    const layer = appCtx.getLayer(feature as Feature)!;
-    const project = appCtx.getProject(layer)!;
-    const organisation = appCtx.getOrganisation(project)!;
+    const {layer, project, organisation} = await appCtx.getHierarchy(feature as Feature);
 
     // Submit using client service
     await submitMissingReportAPI(
       feature as Feature,
-      layer,
-      project,
-      organisation,
+      layer!,
+      project!,
+      organisation!,
       cardCtx.userData.missingReason,
       cardCtx.userData.photos,
       appCtx.user!.id
@@ -217,16 +215,14 @@ async function submitNewPhotos() {
   try {
     cardCtx.isSubmitting = true;
 
-    const layer = appCtx.getLayer(feature as Feature)!;
-    const project = appCtx.getProject(layer)!;
-    const organisation = appCtx.getOrganisation(project)!;
+    const {layer, project, organisation} = await appCtx.getHierarchy(feature as Feature);
 
     // Submit using client service
     await submitNewPhotosAPI(
       feature as Feature,
-      layer,
-      project,
-      organisation,
+      layer!,
+      project!,
+      organisation!,
       cardCtx.userData.photos,
       appCtx.user!.id
     );

@@ -18,7 +18,7 @@ const adminCtx = getAdminCtx();
 
 let showFormControler = $derived(adminCtx.state.active.facet !== 'images');
 let showActionButton = $derived(
-  adminCtx.state.active.entity !== NEW_REF && adminCtx.state.active.entity !== false
+  adminCtx.state.active.resourceRef !== NEW_REF && adminCtx.state.active.resourceRef !== false
 );
 
 // Resources that can be archived (all resources have isArchived)
@@ -40,13 +40,13 @@ const publishableResources = [
 
 let showArchiveButton = $derived(
   showActionButton &&
-    archiveableResources.includes(adminCtx.activeResource as FirstClassResource) &&
+    archiveableResources.includes(adminCtx.activeResourceType as FirstClassResource) &&
     adminCtx.appCtx?.user?.superAdmin === true
 );
 
 let showPublishButton = $derived(
   showActionButton &&
-    publishableResources.includes(adminCtx.activeResource as FirstClassResource)
+    publishableResources.includes(adminCtx.activeResourceType as FirstClassResource)
 );
 </script>
 

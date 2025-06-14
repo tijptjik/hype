@@ -35,8 +35,8 @@ let {
   isExistingCheck,
   toItem = (item: ResultType) => {
     const formId =
-      adminCtx.activeResource === 'project' ? 'projectId' : 'organisationId';
-    const disco = adminCtx.activeResource === 'project' ? 'project' : 'organisation';
+      adminCtx.activeResourceType === 'project' ? 'projectId' : 'organisationId';
+    const disco = adminCtx.activeResourceType === 'project' ? 'project' : 'organisation';
     return {
       type: disco as 'project' | 'organisation',
       userId: item.id,

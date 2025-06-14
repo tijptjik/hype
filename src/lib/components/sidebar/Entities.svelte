@@ -60,7 +60,7 @@ let isVisible = (id: Id) => {
   if (showFilters) {
     isVisible = true;
   } else if (navItems[resourceType].isShownInSidebar) {
-    if (adminCtx.activeResource === resourceType) {
+    if (adminCtx.activeResourceType === resourceType) {
       isVisible = true;
     } else if (adminCtx.appCtx.isPrism(resourceType, id)) {
       isVisible = true;
@@ -98,11 +98,11 @@ let getDisplayName = (entity: Exclude<Resource, Task>) => {
     in:slide={{ duration: 400, axis: 'y' }}
     out:slide={{ duration: 400, axis: 'y' }}>
     {#each entities as entity}
-      {@const entityRef: Id | Code = adminCtx.getEntityRef(
+      {@const entityRef: Id | Code = adminCtx.getResourceRef(
       resourceType as FirstClassResource,
       entity.id as Id
     ) as Id | Code}
-      {@const isActive = adminCtx.activeEntity === entityRef}
+      {@const isActive = adminCtx.activeResourceRef === entityRef}
       {@const href = `${ADMIN_PATH}/${adminCtx.getEntityPath(
         resourceType as FirstClassResource,
         entity.id as Id
@@ -116,7 +116,7 @@ let getDisplayName = (entity: Exclude<Resource, Task>) => {
               onclick={(e) => {
                 e.preventDefault();
                 // UGLY HACK - TODO: Fix once SuperForms has proper support for Svelte 5
-                if (adminCtx.activeEntity === NEW_REF) {
+                if (adminCtx.activeResourceRef === NEW_REF) {
                   window.location.href = href;
                 } else {
                   navigateOnAdmin(

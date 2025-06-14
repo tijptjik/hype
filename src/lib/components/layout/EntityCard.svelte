@@ -100,9 +100,9 @@ const getPropertyValue = (entity: any, keyPath: string, useI18n = true): any => 
 const adminCtx = getAdminCtx();
 
 const href = $derived(
-  adminCtx.activeResource
+  adminCtx.activeResourceType
     ? `${ADMIN_PATH}/${adminCtx.getEntityPath(
-        adminCtx.activeResource,
+        adminCtx.activeResourceType,
         entity.id
       )}${page.url.search}`
     : null
