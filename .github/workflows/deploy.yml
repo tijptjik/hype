@@ -59,6 +59,12 @@ jobs:
         env:
           CLOUDFLARE_ENV: preview
 
+      - name: 'BUILD :: Application (if cache miss)'
+        if: steps.cache-build-preview.outputs.cache-hit != 'true'
+        run: bun run build:cf:preview
+        env:
+          CLOUDFLARE_ENV: preview
+
       - name: 'DB :: Apply migrations'
         run: bun run db:migration:run:cf:preview
         env:
