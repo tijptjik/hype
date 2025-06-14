@@ -20,20 +20,33 @@ const omniCtx = getOmniContext();
 // DERIVED -- Titles
 let collectionTitle = $derived(
   omniCtx.isFeatureMode
-    ? getI18n(appCtx.getActiveFeature()!, 'displayAddress', {
-        ...appCtx.getUserPreferences(),
-        allowMachineTranslation: true
-      })
-    : getI18n(
-        appCtx.getActiveCollection()!,
-        'name',
-        appCtx.getUserPreferences(),
-        m.place()
-      )
+    ? (() => {
+        const feature = appCtx.getActiveFeature();
+        return feature 
+          ? getI18n(feature, 'displayAddress', {
+              ...appCtx.getUserPreferences(),
+              allowMachineTranslation: true
+            })
+          : '';
+      })()
+    : (() => {
+        const collection = appCtx.getActiveCollection();
+        return collection
+          ? getI18n(
+              collection,
+              'name',
+              appCtx.getUserPreferences(),
+              m.place()
+            )
+          : '';
+      })()
 );
-let featureTitle = $derived(
-  getI18n(appCtx.getActiveFeature()!, 'title', appCtx.getUserPreferences())
-);
+let featureTitle = $derived((() => {
+  const feature = appCtx.getActiveFeature();
+  return feature
+    ? getI18n(feature, 'title', appCtx.getUserPreferences())
+    : '';
+})());
 let newFeatureTitle = $derived(
   getI18n(
     appCtx.getNewFeature() as Feature,
@@ -111,13 +124,19 @@ async function startScrollAnimation(state: ScrollState) {
 
   state.isScrolling = true;
 
-  while (state.needsScroll) {
+  while (state.needsScroll && state.content && state.container) {
     // Create the duplicate element for seamless loop
     const duplicate = state.content.cloneNode(true) as HTMLSpanElement;
     state.container.appendChild(duplicate);
 
     // Initial pause at start position
     await new Promise((resolve) => setTimeout(resolve, 3000));
+
+    // Check again after async pause
+    if (!state.content || !state.container || !state.needsScroll) {
+      duplicate.remove();
+      break;
+    }
 
     // Calculate scroll duration based on content width
     const scrollDistance = state.scrollWidth;
@@ -132,22 +151,40 @@ async function startScrollAnimation(state: ScrollState) {
     // Wait for scroll to complete
     await new Promise((resolve) => setTimeout(resolve, duration));
 
+    // Check again after scroll completion
+    if (!state.content || !state.container) {
+      duplicate.remove();
+      break;
+    }
+
     // Clean up and prepare for next cycle
     state.content.style.transition = 'none';
     state.content.style.transform = 'translateX(0)';
     duplicate.remove();
   }
+
+  state.isScrolling = false;
 }
 
 // Watch for content changes
 $effect(() => {
   featureTitle;
-  requestAnimationFrame(() => setupScroll(featureScroll));
+  if (!featureTitle) {
+    featureScroll.needsScroll = false;
+    featureScroll.isScrolling = false;
+  } else {
+    requestAnimationFrame(() => setupScroll(featureScroll));
+  }
 });
 
 $effect(() => {
   collectionTitle;
-  requestAnimationFrame(() => setupScroll(collectionScroll));
+  if (!collectionTitle) {
+    collectionScroll.needsScroll = false;
+    collectionScroll.isScrolling = false;
+  } else {
+    requestAnimationFrame(() => setupScroll(collectionScroll));
+  }
 });
 
 // Add resize observers
