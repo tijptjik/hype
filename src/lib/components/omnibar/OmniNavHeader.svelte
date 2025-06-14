@@ -213,8 +213,9 @@ $effect(() => {
     duplicates.forEach(dup => dup.remove());
     
     // Setup scroll after DOM is updated and text is rendered
+    // Use longer delay for initial load when content might be loading
     requestAnimationFrame(() => {
-      setTimeout(() => setupScroll(featureScroll), 150);
+      setTimeout(() => setupScroll(featureScroll), 300);
     });
   }
 });
@@ -239,8 +240,9 @@ $effect(() => {
     duplicates.forEach(dup => dup.remove());
     
     // Setup scroll after DOM is updated and text is rendered
+    // Use longer delay for initial load when content might be loading
     requestAnimationFrame(() => {
-      setTimeout(() => setupScroll(collectionScroll), 150);
+      setTimeout(() => setupScroll(collectionScroll), 300);
     });
   }
 });
