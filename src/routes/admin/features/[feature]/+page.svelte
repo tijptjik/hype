@@ -171,7 +171,7 @@ function handleMapFullscreenChange(isFullscreen: boolean): void {
       <EntityActions {form} />
     {/snippet}
   </Header>
-  {#if adminCtx.appCtx.isInitialised}
+  {#if adminCtx.appCtx.isInitialised && pageProps.data.validatedForm}
     {#await adminCtx.appCtx.getHierarchy(pageProps.data.validatedForm.data as Feature) then { organisation, project }}
       <ImageProvider
         mode="gallery"
