@@ -1026,6 +1026,8 @@ export type UserContributedFeatureProperty = {
 };
 
 export type UserContributedFeature = {
+  organisationId: string;
+  projectId: string;
   layerId: string;
   geometry: Geometry;
   i18n: Partial<
