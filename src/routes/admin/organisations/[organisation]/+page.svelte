@@ -187,7 +187,7 @@ let headerActions = $derived(
             isAdminMode={true}
             ctxType={ImageContextResource.organisation}
             ctxId={pageProps.data.entity}
-            organisation={adminCtx.getEntity() as Organisation}
+            organisation={pageProps.data.validatedForm.data as Organisation}
             image={pageProps.data.image as Image}>
             <ImageSection
               title={m.admin__forms_organisation_image_title()}
