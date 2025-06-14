@@ -160,6 +160,7 @@ export const POST: RequestHandler = async ({ request, locals, platform, fetch })
       images,
       userId,
       subscriptionKey,
+      platform?.env.PUBLIC_AZURE_TRANSLATION_REGION,
       fetch
     );
 

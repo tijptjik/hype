@@ -18,7 +18,7 @@ export async function translateText(
   targetLocale: Locale,
   region: string,
   apiKey: string
-): Promise<string> {
+): Promise<string[]> {
   const endpoint = 'https://api.cognitive.microsofttranslator.com';
   const path = '/translate';
   const constructed_url = endpoint + path;
