@@ -439,6 +439,7 @@
   "mealy_dizzy_lizard_approve": "No properties found or properties is not an array",
   "misty_awake_haddock_tap": "Anonymous",
   "missing_permissions": "Missing Permissions",
-  "admin_only": "Admin Only",
-  "resource_not_found": "{resourceType} not found"
+  "resource_not_found": "{resourceType} not found",
+  "ornate_happy_meerkat_roam": "User",
+  "born_plane_javelina_strive": "Task"
 }
