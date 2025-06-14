@@ -11,6 +11,10 @@ PRAGMA foreign_keys = off;
 --         layer has direct references to projectId, organisationId
 -- ==============================================================================
 
+-- Step 0: Populate layer.organisationId from project hierarchy
+-- All layers belong to projectId 'YuSFnia9VOtG' which belongs to organisationId '4Jsk5LngvFZq'
+UPDATE `featurePropertyI18n` SET `value` = 'TBD';--> statement-breakpoint
+
 -- Step 1: Add nullable columns first to avoid constraint violations
 ALTER TABLE `feature` ADD `organisationId` text;--> statement-breakpoint
 ALTER TABLE `feature` ADD `projectId` text;--> statement-breakpoint
@@ -199,44 +203,47 @@ CREATE TABLE `featurePropertyI18n_new` (
   `featureId` text NOT NULL,
   `propertyId` text NOT NULL,
   `locale` text NOT NULL,
-  `value` text NOT NULL,
+  `value` text,
+  `valueGen` integer,
   PRIMARY KEY(`featureId`, `propertyId`, `locale`)
 );--> statement-breakpoint
 
--- Copy featurePropertyI18n data
+-- Copy featurePropertyI18n data with explicit column mapping
 INSERT INTO `featurePropertyI18n_new` (
-  `featureId`, `propertyId`, `locale`, `value`
+  `featureId`, `propertyId`, `locale`, `value`, `valueGen`
 )
 SELECT 
-  `featureId`, `propertyId`, `locale`, `value`
+  `featureId`, `propertyId`, `locale`, `value`, `valueGen`
 FROM `featurePropertyI18n`;--> statement-breakpoint
 
 -- Create new task table (tasks reference features)
 CREATE TABLE `task_new` (
   `id` text PRIMARY KEY NOT NULL,
+  `organisationId` text NOT NULL,
   `projectId` text NOT NULL,
-  `featureId` text,
-  `assigneeId` text,
-  `assignerId` text,
+  `featureId` text NOT NULL,
+  `contributorId` text NOT NULL,
+  `reviewerId` text,
   `type` text NOT NULL,
-  `status` text DEFAULT 'pending' NOT NULL,
-  `priority` text DEFAULT 'medium' NOT NULL,
-  `title` text NOT NULL,
-  `description` text,
-  `dueDate` text,
-  `completedAt` text,
+  `message` text,
+  `isReviewed` integer DEFAULT false NOT NULL,
+  `reviewOutcome` text,
+  `reviewAction` text,
+  `reviewReason` text,
   `createdAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
   `modifiedAt` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL
 );--> statement-breakpoint
 
--- Copy task data
+-- Copy task data with explicit column mapping
 INSERT INTO `task_new` (
-  `id`, `projectId`, `featureId`, `assigneeId`, `assignerId`, `type`, `status`, 
-  `priority`, `title`, `description`, `dueDate`, `completedAt`, `createdAt`, `modifiedAt`
+  `id`, `organisationId`, `projectId`, `featureId`, `contributorId`, `reviewerId`,
+  `type`, `message`, `isReviewed`, `reviewOutcome`, `reviewAction`, `reviewReason`, 
+  `createdAt`, `modifiedAt`
 )
 SELECT 
-  `id`, `projectId`, `featureId`, `assigneeId`, `assignerId`, `type`, `status`,
-  `priority`, `title`, `description`, `dueDate`, `completedAt`, `createdAt`, `modifiedAt`
+  `id`, `organisationId`, `projectId`, `featureId`, `contributorId`, `reviewerId`,
+  `type`, `message`, `isReviewed`, `reviewOutcome`, `reviewAction`, `reviewReason`,
+  `createdAt`, `modifiedAt`
 FROM `task`;--> statement-breakpoint
 
 -- ============================================================================
