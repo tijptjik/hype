@@ -63,6 +63,7 @@ import type {
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
 import { MOBILE_MAX_WIDTH } from '$lib/index';
+import { feature } from '../db/schema/feature';
 
 export class AppCtx {
   // Maplibre Map instance
@@ -864,27 +865,56 @@ export class AppCtx {
   // HIERARCHY METHODS
   // ================================================
 
+  getHierarchyForTask = async (task: Task): Promise<ResourceContext> => {
+    const feature = await this.getFeatureById(task.featureId as Id);
+    if (!feature)
+      return {
+        feature: undefined,
+        layer: undefined,
+        project: undefined,
+        organisation: undefined
+      };
+    return await this.getHierarchy(feature);
+  };
+
   getHierarchy = async (
     resource: Feature | Layer | Project | Organisation
   ): Promise<ResourceContext> => {
+    // Determine what type of resource we have and build hierarchy accordingly
+    let layer: Layer | undefined;
+    let project: Project | undefined;
+    let organisation: Organisation | undefined;
+
+    if ('layerId' in resource) {
+      // Feature - get its layer, then project, then organisation
+      layer = await this.getLayerById(resource.layerId);
+      if (layer) {
+        project = await this.getProjectById(layer.projectId);
+        if (project) {
+          organisation = await this.getOrganisationById(project.organisationId);
+        }
+      }
+    } else if ('projectId' in resource) {
+      // Layer - use itself, get its project, then organisation
+      layer = resource as Layer;
+      project = await this.getProjectById(layer.projectId);
+      if (project) {
+        organisation = await this.getOrganisationById(project.organisationId);
+      }
+    } else if ('organisationId' in resource) {
+      // Project - use itself, get its organisation
+      project = resource as Project;
+      organisation = await this.getOrganisationById(project.organisationId);
+    } else {
+      // Organisation - use itself
+      organisation = resource as Organisation;
+    }
+
     return {
-      feature: 'layerId' in resource ? resource : undefined,
-      layer:
-        'layerId' in resource
-          ? await this.getLayerById(resource.layerId)
-          : 'projectId' in resource
-            ? await this.getLayerById(resource.projectId)
-            : undefined,
-      project:
-        'projectId' in resource
-          ? await this.getProjectById(resource.projectId)
-          : 'organisationId' in resource
-            ? await this.getProjectById(resource.organisationId)
-            : undefined,
-      organisation:
-        'organisationId' in resource
-          ? await this.getOrganisationById(resource.organisationId)
-          : undefined
+      feature: 'layerId' in resource ? (resource as Feature) : undefined,
+      layer,
+      project,
+      organisation
     };
   };
 
