@@ -76,9 +76,11 @@ export class OmniContext {
       const featuresSize = this.appCtx.features.size; // Track feature changes
       const userFeaturesWishlisted = this.appCtx.state.userFeatures.wishlisted.length; // Track wishlist changes
       
-      // Update search results immediately (no setTimeout to preserve reactivity)
-      this.updateSearchResults(searchTerm);
+      // Schedule async update outside reactive context
+      setTimeout(() => this.updateSearchResults(searchTerm), 0);
     });
+
+
   }
 
   // Async method to update search results
@@ -201,7 +203,7 @@ export class OmniContext {
         this.closeCard();
       }
 
-      // If there is no card, but the tray is open, close the tray
+    // If there is no card, but the tray is open, close the tray
     } else if (this.state.mode === 'navigation' && this.state.isTrayOpen) {
       this.closeTray();
       // If we are in navigation mode, reset the results and go back to search
@@ -376,7 +378,6 @@ export class OmniContext {
 
   // SEARCH UTILS
   toGroups(results: SearchResult[]) {
-    console.log(results);
     return {
       walks: results.filter((r) => r.group === 'walks'),
       neighbourhoods: results

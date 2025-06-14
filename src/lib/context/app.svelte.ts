@@ -738,6 +738,11 @@ export class AppCtx {
     resource: FirstClassResource,
     id: Id
   ): Promise<T | undefined> => {
+    // Guard against undefined or invalid IDs
+    if (!id || id === 'undefined') {
+      return undefined;
+    }
+    
     try {
       const response = await fetch(`/api/${ResourcePath[resource]}/${id}`);
       if (!response.ok) return undefined;

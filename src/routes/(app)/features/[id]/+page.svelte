@@ -35,7 +35,7 @@ let featureId: string = $state(page.params.id);
 
 // CONTEXT
 const appCtx = getAppCtx();
-// #ts-expect-error - TODO Svelte Async 
+// @ts-expect-error - TODO Svelte Async 
 let feature = $derived(await appCtx.getFeatureById(page.params.id))!;
 const omniCtx = getOmniContext();
 
@@ -50,7 +50,7 @@ let mode = $derived(cardCtx.state.mode);
 
 // EFFECTS
 $effect(() => {
-  if (!appCtx.isInitialised) {
+  if (!appCtx.isInitialised || !page.params.id) {
     return;
   }
   featureId = page.params.id;
@@ -69,7 +69,9 @@ $effect(() => {
 
 // Helper function to handle async operations
 async function handleFeatureSelection() {
-  await omniCtx.handleFeatureSelection(appCtx, featureId);
+  if (featureId) {
+    await omniCtx.handleFeatureSelection(appCtx, featureId);
+  }
 }
 </script>
 

@@ -19,7 +19,6 @@ import type { LngLatLike } from 'maplibre-gl';
 // Async version that uses getHierarchy for guaranteed data with cache-miss handling
 export async function getWishlistedFeaturesAsync(appCtx: AppCtx): Promise<FeatureExtended[]> {
   const wishlistedFeatures = appCtx.getWishlistedFeatures();
-  console.log(wishlistedFeatures)
   
   return Promise.all(
     wishlistedFeatures.map(async (feature) => {
