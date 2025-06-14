@@ -160,7 +160,7 @@ function handleMapFullscreenChange(isFullscreen: boolean): void {
       <HeaderButton
         facet={{ label: m.feature__address(), ref: 'address' }}
         isActive={adminCtx.activeFacet === 'address'} />
-      {#if adminCtx.activeEntity !== 'new'}
+      {#if adminCtx.activeResourceRef !== 'new'}
         <HeaderButton
           facet={{ label: m.feature__images(), ref: 'images' }}
           isActive={adminCtx.activeFacet === 'images'} />
@@ -172,21 +172,14 @@ function handleMapFullscreenChange(isFullscreen: boolean): void {
     {/snippet}
   </Header>
   {#if adminCtx.appCtx.isInitialised}
-    <ImageProvider
-      mode="gallery"
-      isAdminMode={true}
-      ctxType={ImageContextResource.feature}
-      ctxId={pageProps.data.entity}
-      organisation={adminCtx.getAscendantOrSelf(
-        pageProps.data.validatedForm.data as unknown as Resource,
-        FirstClassResource.feature,
-        FirstClassResource.organisation
-      ) as Omit<OrganisationDB, 'isCoreInclusive'>}
-      project={adminCtx.getAscendantOrSelf(
-        pageProps.data.validatedForm.data as unknown as Resource,
-        FirstClassResource.feature,
-        FirstClassResource.project
-      ) as ProjectDB}>
+    {#await adminCtx.appCtx.getHierarchy(pageProps.data.validatedForm.data as Feature) then { organisation, project }}
+      <ImageProvider
+        mode="gallery"
+        isAdminMode={true}
+        ctxType={ImageContextResource.feature}
+        ctxId={pageProps.data.entity}
+        organisation={organisation as Omit<OrganisationDB, 'isCoreInclusive'>}
+        {project}>
       <form
         id="featureForm"
         method="POST"
@@ -273,6 +266,12 @@ function handleMapFullscreenChange(isFullscreen: boolean): void {
         </main>
       </form>
     </ImageProvider>
+    {:catch error}
+      <!-- Error state - show fallback -->
+      <div class="flex items-center justify-center p-8">
+        <div class="text-error">Failed to load feature hierarchy</div>
+      </div>
+    {/await}
   {/if}
 </div>
 

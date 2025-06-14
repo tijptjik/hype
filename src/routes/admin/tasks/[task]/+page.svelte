@@ -37,54 +37,48 @@ adminCtx.setFacet('core', pageProps.data.task.id, FirstClassResource.task);
 </script>
 
 <!-- LAYOUT -->
-<ImageProvider
-  mode="gallery"
-  isAdminMode={true}
-  ctxType={ImageContextResource.feature}
-  ctxId={task.featureId as Id}
-  organisation={adminCtx.getEntity(
-    FirstClassResource.organisation,
-    task.organisationId,
-    true
-  ) as Organisation}
-  project={adminCtx.getEntity(
-    FirstClassResource.project,
-    task.projectId,
-    true
-  ) as Project}
-  ctxTypeSecondary={ImageContextResourceExtended.task}
-  ctxIdSecondary={task.id}
-  highlightedIds={task.images?.map((taskImage) => taskImage.imageId as Id) || []}>
-  <div
-    class="h-full overflow-y-auto bg-gradient-to-br from-rose-500 to-indigo-700 bg-fixed p-6">
-    <TaskRoot {task}>
-      <TaskHeader {task} isRoundedBottom={false}>
-        {#snippet Left()}
-          <Title {task} />
-        {/snippet}
-        {#snippet Right()}
+{#await adminCtx.appCtx.getHierarchyForTask(task) then { organisation, project }}
+  <ImageProvider
+    mode="gallery"
+    isAdminMode={true}
+    ctxType={ImageContextResource.feature}
+    ctxId={task.featureId as Id}
+    {organisation}
+    {project}
+    ctxTypeSecondary={ImageContextResourceExtended.task}
+    ctxIdSecondary={task.id}
+    highlightedIds={task.images?.map((taskImage) => taskImage.imageId as Id) || []}>
+    <div
+      class="h-full overflow-y-auto bg-gradient-to-br from-rose-500 to-indigo-700 bg-fixed p-6">
+      <TaskRoot {task}>
+        <TaskHeader {task} isRoundedBottom={false}>
+          {#snippet Left()}
+            <Title {task} />
+          {/snippet}
+          {#snippet Right()}
+            {#if task.type === 'reportedMissing'}
+              <ReportedMissingActions {task} />
+            {:else if task.type === 'newPhoto'}
+              <NewPhotoActions {task} />
+            {:else if task.type === 'newFeature'}
+              <NewFeatureActions {task} />
+            {/if}
+          {/snippet}
+        </TaskHeader>
+        <TaskMain {task}>
+          <div class="flex flex-1 flex-col">
+            <Image isDropzone={!task.isReviewed} />
+            <TaskFooter>
+              <Gallery />
+            </TaskFooter>
+          </div>
           {#if task.type === 'reportedMissing'}
-            <ReportedMissingActions {task} />
-          {:else if task.type === 'newPhoto'}
-            <NewPhotoActions {task} />
+            <ReportedMissingControls {task} />
           {:else if task.type === 'newFeature'}
-            <NewFeatureActions {task} />
+            <NewFeatureControls {task} />
           {/if}
-        {/snippet}
-      </TaskHeader>
-      <TaskMain {task}>
-        <div class="flex flex-1 flex-col">
-          <Image isDropzone={!task.isReviewed} />
-          <TaskFooter>
-            <Gallery />
-          </TaskFooter>
-        </div>
-        {#if task.type === 'reportedMissing'}
-          <ReportedMissingControls {task} />
-        {:else if task.type === 'newFeature'}
-          <NewFeatureControls {task} />
-        {/if}
-      </TaskMain>
-    </TaskRoot>
-  </div>
-</ImageProvider>
+        </TaskMain>
+      </TaskRoot>
+    </div>
+  </ImageProvider>
+{/await}
