@@ -242,8 +242,7 @@ export const assertPermissionsToCreateTask = async (
   userRoles: UserRoleDisco[]
 ) => {
   const commonAssertions = [
-    () => assertUserLoggedIn({ user } as any),
-    () => assertAdminRequest(request)
+    () => assertUserLoggedIn({ user } as any)
   ];
 
   const assertionError = runAssertions(...commonAssertions);
