@@ -93,7 +93,6 @@ export class AppCtx {
     feature: new Map<Id, Feature>(),
     task: new Map<Id, Task>(),
     hub: new Map<Id, Hub>(),
-    // TODO implement cache for properties
     property: new Map<Id, Property>()
   };
 
@@ -170,6 +169,11 @@ export class AppCtx {
     this.state.prisms.project,
     this.state.prisms.layer
   ]);
+  propertiesQueryKey = $derived([
+    'property',
+    this.state.prisms.organisation,
+    this.state.prisms.project
+  ]);
   userFeaturesQueryKey = ['userFeatures'];
   userQueryKey = ['user'];
 
@@ -218,6 +222,12 @@ export class AppCtx {
     this.queryMap.set('userFeatures', {
       queryKey: () => this.userFeaturesQueryKey,
       queryFn: () => this.userFeaturesQueryFn()
+    });
+
+    // PROPERTIES
+    this.queryMap.set(FirstClassResource.property, {
+      queryKey: () => this.propertiesQueryKey,
+      queryFn: () => this.propertiesQueryFn()
     });
   };
 
@@ -276,16 +286,19 @@ export class AppCtx {
   // Helper method to build API URLs with filters
   private buildApiUrl = (
     resource: FirstClassResource,
+    includePrisms: boolean = true,
     includeFilters: boolean = true
   ): string => {
     const path = ResourcePath[resource];
     const params = new URLSearchParams();
 
-    // Add isArchived filter by default
-    params.append('isArchived', 'false');
-    params.append('isPublished', 'true');
-
+    // Add isArchived filter by default (except for properties which don't have these fields)
     if (includeFilters) {
+      params.append('isArchived', 'false');
+      params.append('isPublished', 'true');
+    }
+
+    if (includePrisms) {
       // Add prism filters based on resource hierarchy
       if (resource !== FirstClassResource.organisation) {
         this.state.prisms.organisation.forEach((org) =>
@@ -330,6 +343,11 @@ export class AppCtx {
   featuresQueryFn = async (): Promise<Feature[]> => {
     const url = this.buildApiUrl(FirstClassResource.feature);
     return fetchOrThrow<Feature[]>(url);
+  };
+
+  propertiesQueryFn = async (): Promise<Property[]> => {
+    const url = this.buildApiUrl(FirstClassResource.property, true, false);
+    return fetchOrThrow<Property[]>(url);
   };
 
   userFeaturesQueryFn = async (): Promise<UserFeature[]> => {
@@ -379,6 +397,8 @@ export class AppCtx {
     } else if (resource === FirstClassResource.hub) {
       this.cache.hub.clear();
       this.hubCodeToId.clear();
+    } else if (resource === FirstClassResource.property) {
+      this.cache.property.clear();
     }
 
     await this.queryClient.invalidateQueries({
@@ -434,6 +454,8 @@ export class AppCtx {
       this.refreshTasks();
     } else if (resource === 'hub') {
       this.refreshHubs();
+    } else if (resource === 'property') {
+      this.refreshProperties();
     } else if (resource === 'userFeatures') {
       this.refreshUserFeatures();
     }
@@ -462,6 +484,7 @@ export class AppCtx {
     // Efficiently sync project code-to-ID mapping
     this.syncCodeToIdMap(this.projectCodeToId, this.state.resources.project);
     this.syncProjectPrisms();
+    this.refreshProperties();
     this.refreshLayers();
   };
 
@@ -506,6 +529,15 @@ export class AppCtx {
     this.syncCacheMap(this.cache.hub, this.state.resources.hub);
     // Efficiently sync hub code-to-ID mapping
     this.syncCodeToIdMap(this.hubCodeToId, this.state.resources.hub);
+  };
+
+  refreshProperties = async (): Promise<void> => {
+    const properties = await this.queryClient.fetchQuery({
+      queryKey: this.queryMap.get(FirstClassResource.property)!.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.property)!.queryFn
+    });
+    // Efficiently sync property cache (only add missing, remove stale)
+    this.syncCacheMap(this.cache.property, properties);
   };
 
   refreshUserFeatures = async (): Promise<void> => {
