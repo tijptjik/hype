@@ -23,7 +23,8 @@ import type {
   Project,
   Layer,
   NewFeatureTask,
-  DeepPartial
+  DeepPartial,
+  Id
 } from '$lib/types';
 // UTILS
 import { MOBILE_MAX_WIDTH } from '$lib/index';
@@ -44,10 +45,14 @@ let newFeature: DeepPartial<NewFeatureTask> | null = $derived.by(appCtx.getNewFe
 
 // DERIVED STATE
 let selectedOrganisation = $derived(
-  appCtx.getOrganisationById(newFeature?.organisationId!)
+  newFeature?.organisationId ? appCtx.cache.organisation.get(newFeature.organisationId) : undefined
 );
-let selectedProject = $derived(appCtx.getProjectById(newFeature?.projectId!));
-let selectedLayer = $derived(appCtx.getLayerById(newFeature?.layerId!));
+let selectedProject = $derived(
+  newFeature?.projectId ? appCtx.cache.project.get(newFeature.projectId) : undefined
+);
+let selectedLayer = $derived(
+  newFeature?.layerId ? appCtx.cache.layer.get(newFeature.layerId) : undefined
+);
 
 // PANEL STATE
 let horizontalOffset = $derived.by(() => {
@@ -109,13 +114,13 @@ const handleShowModal = () => {
   );
   if (activeLayers.length > 0) {
     const firstLayer = activeLayers[0];
-    const project = appCtx.getProject(firstLayer);
-    const organisation = project ? appCtx.getOrganisation(project) : null;
+    const project = appCtx.cache.project.get(firstLayer.projectId);
+    const organisation = project ? appCtx.cache.organisation.get(project.organisationId) : null;
 
     // Check if all layers share the same organisation
     const allSameOrg = activeLayers.every((layer) => {
-      const layerProject = appCtx.getProject(layer);
-      const layerOrg = layerProject ? appCtx.getOrganisation(layerProject) : null;
+      const layerProject = appCtx.cache.project.get(layer.projectId);
+      const layerOrg = layerProject ? appCtx.cache.organisation.get(layerProject.organisationId) : null;
       return layerOrg?.id === organisation?.id;
     });
 
@@ -159,31 +164,36 @@ function handleResourceSelect(resource: Organisation | Project | Layer, e: Event
   e.preventDefault();
   e.stopPropagation();
 
-  if ('organisationId' in resource) {
-    // This is a Project
+  // Check from most specific to least specific since children inherit all parent keys
+  if ('projectId' in resource && 'organisationId' in resource) {
+    // This is a Layer - has both projectId and organisationId
+    const layer = resource as Layer;
     appCtx.updateNewFeature({
-      organisationId: resource.organisationId,
-      projectId: resource.id,
+      organisationId: layer.organisationId as Id,
+      projectId: layer.projectId as Id,
+      layerId: layer.id as Id,
+      feature: {
+        layerId: layer.id as Id
+      }
+    });
+    isValid = true;
+  } else if ('organisationId' in resource) {
+    // This is a Project - has organisationId but not projectId
+    const project = resource as Project;
+    appCtx.updateNewFeature({
+      organisationId: project.organisationId as Id,
+      projectId: project.id as Id,
       layerId: undefined,
       feature: {
         layerId: undefined
       }
     });
-  } else if ('projectId' in resource) {
-    // This is a Layer
-    appCtx.updateNewFeature({
-      organisationId: appCtx.getProject(resource)?.organisationId,
-      projectId: resource.projectId,
-      layerId: resource.id,
-      feature: {
-        layerId: resource.id
-      }
-    });
     isValid = true;
   } else {
-    // This is an Organisation
+    // This is an Organisation - has neither projectId nor organisationId as foreign key
+    const organisation = resource as Organisation;
     appCtx.updateNewFeature({
-      organisationId: resource.id,
+      organisationId: organisation.id as Id,
       projectId: undefined,
       layerId: undefined,
       feature: {
