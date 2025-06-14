@@ -171,10 +171,26 @@ export const UserFeatureUpdateExtended = UserFeatureUpdate.extend({});
 // FEATURE API
 /* -------- */
 
-export const FeatureCollectionAPI = FeatureBase.extend({
-  i18n: getLocales(FeatureI18nBase),
-  properties: z.array(FeaturePropertyCollectionAPI),
-  images: z.lazy(() => z.array(FeatureImageAPI).nullish()),
+// Basic feature collection schema - optimized for performance
+export const FeatureCollectionAPI = FeatureBase.omit({
+  addressMeta: true,
+  publisherId: true,
+  publishedAt: true,
+  visitableAsOf: true,
+  isIntangible: true,
+  isVisitable: true,
+  createdAt: true,
+  modifiedAt: true
+}).extend({
+  i18n: getLocales(FeatureI18nBase.omit({
+    addressProperties: true
+  }).extend({
+    // Keep only neighbourhood from addressProperties
+    neighbourhood: z.string().nullish()
+  })),
+  properties: z.array(FeaturePropertyBase.extend({
+    i18n: getLocales(FeaturePropertyI18nBase).nullish()
+  })),
   image: createSelectSchema(image)
     .pick({
       id: true,
@@ -187,11 +203,14 @@ export const FeatureCollectionAPI = FeatureBase.extend({
     .nullish()
 });
 
+// Full feature entity schema
 export const FeatureAPI = FeatureBase.extend({
   i18n: getLocales(FeatureI18nBase),
   properties: z.array(FeaturePropertyAPI),
   contributor: UserBasic.nullish(),
-  publisher: UserBasic.nullish()
+  publisher: UserBasic.nullish(),
+  // TODO Maybe restrict this futrther?
+  images: z.lazy(() => z.array(FeatureImageAPI).nullish()),
 });
 
 export const FeatureInsertAPI = FeatureInsert.extend({
@@ -225,7 +244,7 @@ export const UserFeatureInsertAPI = UserFeatureInsert;
 // UserFeatureUpdateAPI defined in index.ts
 
 // Extended on the client side to include hierarchy information
-export const FeatureClientExt = FeatureAPI.extend({
+export const FeatureClientExt = FeatureCollectionAPI.extend({
   hierarchy: z.object({
     organisation: z.string().nullable(),
     project: z.string().nullable(),
