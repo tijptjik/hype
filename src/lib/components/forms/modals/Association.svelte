@@ -32,7 +32,7 @@ let {
 
 // RESOURCES
 const parentResourceType = HierarchicalResourceParent[
-  adminCtx.activeResource as keyof typeof HierarchicalResourceParent
+  adminCtx.activeResourceType as keyof typeof HierarchicalResourceParent
 ] as ResourceTypeWithChildren;
 
 // STATE
@@ -51,7 +51,7 @@ const handleSelect = (item: Resource) => {
 
 const handleConfirm = () => {
   if (!selectedItem) return;
-  navigateOnAdmin(adminCtx, adminCtx.activeResource, NEW_REF, undefined, {
+  navigateOnAdmin(adminCtx, adminCtx.activeResourceType, NEW_REF, undefined, {
     parentId: selectedItem.id,
     parentRef:
       selectedItem[

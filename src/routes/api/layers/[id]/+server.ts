@@ -88,7 +88,7 @@ export const GET: RequestHandler = async ({
     const result = await getLayer(db, layerEntityWithRelations, conditions, locals.hub);
 
     if (!result) {
-      return error(404, 'Layer not found');
+      return error(404, m.resource_not_found({ resourceType: m.active_bold_cobra_grin() }));
     }
 
     // RESPONSE : Build the response shape
@@ -119,21 +119,21 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
   // ASSERT : User logged in
   const { db, user, userRoles } = await getDatabase(locals, platform);
 
+  // ASSERT : Valid form
+  const formData: Layer = await request.json();
+  const form = (await superValidate(
+    formData,
+    // @ts-ignore - FORM : Fix type error
+    zod(LayerUpdateAPI)
+  )) as SuperValidated<Layer>;
+
+  // RETURN : early if the form is not valid
+  if (!form.valid) return SuperFormResponse<Layer>(form);
+
+  // ACCESS CONTROL : Check permissions OUTSIDE try-catch
+  assertPermissionsToUpdateLayer(user, request, formData, userRoles, params.id as Id);
+
   try {
-    // ASSERT : Valid form
-    const formData: Layer = await request.json();
-    const form = (await superValidate(
-      formData,
-      // @ts-ignore - FORM : Fix type error
-      zod(LayerUpdateAPI)
-    )) as SuperValidated<Layer>;
-
-    // RETURN : early if the form is not valid
-    if (!form.valid) return SuperFormResponse<Layer>(form);
-
-    // ACCESS CONTROL : Check permissions
-    assertPermissionsToUpdateLayer(user, request, formData, userRoles, params.id as Id);
-
     // DB : Update the layer
     const updatedLayer = await updateLayerWithRelated(db, form.data, params.id);
 
@@ -162,19 +162,20 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
   if (!params.id) return error(400, m.deft_sleek_wasp_dine());
   const { db, user, userRoles } = await getDatabase(locals, platform);
+  
+  // ASSERT : Valid form data
+  const newData: LayerPartial = await request.json();
+
+  // Get the existing layer to verify access OUTSIDE try-catch
+  const conditions = [eq(layer.id, params.id as string)];
+  const existing = (await getLayer(db, {}, conditions, locals.hub)) as LayerDB;
+
+  if (!existing) return error(404, m.resource_not_found({ resourceType: m.active_bold_cobra_grin() }));
+
+  // Use assertion functions for access control OUTSIDE try-catch
+  assertPermissionsToUpdateLayer(user, request, existing, userRoles, params.id as Id);
+
   try {
-    // ASSERT : Valid form data
-    const newData: LayerPartial = await request.json();
-
-    // Get the existing layer to verify access
-    const conditions = [eq(layer.id, params.id as string)];
-    const existing = (await getLayer(db, {}, conditions, locals.hub)) as LayerDB;
-
-    if (!existing) return error(404, m.quiet_soft_mole_animate());
-
-    // Use assertion functions for access control
-    assertPermissionsToUpdateLayer(user, request, existing, userRoles, params.id as Id);
-
     // DB : Update only the basic layer fields (no relations for PATCH)
     const updated = await updateLayer(db, newData, params.id);
 

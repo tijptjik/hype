@@ -48,8 +48,8 @@ let notificationCount = $derived(adminCtx.filteredTasks.length);
     {/if}
     <li>
       <IconicMenuButton
-        href={adminCtx.activeResource === 'feature' && adminCtx.activeEntity
-          ? `/features/${adminCtx.activeEntity}`
+        href={adminCtx.activeResourceType === 'feature' && adminCtx.activeResourceRef
+          ? `/features/${adminCtx.activeResourceRef}`
           : '/'}
         iconSrc={Map} />
     </li>

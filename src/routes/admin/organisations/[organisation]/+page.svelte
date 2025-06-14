@@ -95,8 +95,7 @@ const FIELDS: Record<string, FormField> = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Organisation> = $props();
-adminCtx.setEntity(pageProps.data.entity, FirstClassResource.organisation);
-adminCtx.setFacet('core');
+adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.organisation);
 
 let form = setForm(
   RESOURCE,
@@ -140,7 +139,7 @@ let headerActions = $derived(
       <HeaderButton
         facet={{ label: m.organisation__core(), ref: 'core' }}
         isActive={adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false} />
-      {#if adminCtx.activeEntity !== 'new'}
+      {#if adminCtx.activeResourceRef !== 'new'}
         <HeaderButton
           facet={{ label: m.organisation__images(), ref: 'images' }}
           isActive={adminCtx.activeFacet === 'images'} />
@@ -188,7 +187,7 @@ let headerActions = $derived(
             isAdminMode={true}
             ctxType={ImageContextResource.organisation}
             ctxId={pageProps.data.entity}
-            organisation={adminCtx.getEntity() as Organisation}
+            organisation={pageProps.data.validatedForm.data as Organisation}
             image={pageProps.data.image as Image}>
             <ImageSection
               title={m.admin__forms_organisation_image_title()}

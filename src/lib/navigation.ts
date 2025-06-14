@@ -82,15 +82,15 @@ export const navigateOnAdmin = (
   let url = `${ADMIN_PATH}`;
   if (resource) {
     url += `/${ResourcePath[resource]}`;
-    adminCtx.setResource(resource);
+    adminCtx.setResourceType(resource);
   } else {
-    adminCtx.setResource(false);
+    adminCtx.setResourceType(false);
   }
   if (entityRef) {
     url += `/${entityRef}`;
-    adminCtx.setEntity(entityRef);
+    adminCtx.setResourceRef(entityRef);
   } else {
-    adminCtx.setEntity(false);
+    adminCtx.setResourceRef(false);
   }
   if (facet) {
     url += `#${facet}`;
@@ -110,4 +110,56 @@ if (ResourcePath) {
     const pathValue: string = ResourcePath[path as keyof typeof ResourcePath];
     reversePath.set(pathValue, path as FirstClassResource);
   });
+}
+
+// ═══════════════════════
+// BREADCRUMBS :: ASYNC UTILITIES
+// ═══════════════════════
+
+/**
+ * Generate breadcrumbs for a resource hierarchy using async lookups
+ */
+export async function getBreadcrumbs(
+  appCtx: any, // AppCtx type
+  resourceType: FirstClassResource,
+  resourceRef: Id | Code
+): Promise<{ name: string; href: string }[]> {
+  try {
+    // Get the current resource using the unified lookup
+    const currentResource = await appCtx.getResourceByRef(resourceType, resourceRef);
+    if (!currentResource) {
+      return [];
+    }
+
+    // Get the full hierarchy for this resource
+    const hierarchy = await appCtx.getHierarchy(currentResource);
+    const breadcrumbs: { name: string; href: string }[] = [];
+
+    // Build breadcrumbs from hierarchy (organization -> project -> layer -> feature)
+    if (hierarchy.organisation && resourceType !== 'organisation') {
+      breadcrumbs.push({
+        name: appCtx.getContextualOrganisationName(hierarchy.organisation, false),
+        href: `${ADMIN_PATH}/${ResourcePath.organisation}/${hierarchy.organisation.code}`
+      });
+    }
+
+    if (hierarchy.project && resourceType !== 'project') {
+      breadcrumbs.push({
+        name: appCtx.getContextualProjectName(hierarchy.project, false),
+        href: `${ADMIN_PATH}/${ResourcePath.project}/${hierarchy.project.code}`
+      });
+    }
+
+    if (hierarchy.layer && resourceType !== 'layer') {
+      breadcrumbs.push({
+        name: appCtx.getContextualLayerName(hierarchy.layer, false),
+        href: `${ADMIN_PATH}/${ResourcePath.layer}/${hierarchy.layer.id}`
+      });
+    }
+
+    return breadcrumbs;
+  } catch (error) {
+    console.error('Failed to generate breadcrumbs:', error);
+    return [];
+  }
 }

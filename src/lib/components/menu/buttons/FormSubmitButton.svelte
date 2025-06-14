@@ -6,8 +6,20 @@ import { slide } from 'svelte/transition';
 import { CheckCircle, ExclamationCircle } from '@steeze-ui/heroicons';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
+// CONTEXT
+import { getAdminCtx } from '$lib/context/admin.svelte';
+// AUTH
+import { useSession } from '$lib/auth/client';
+import {
+  canManageOrganisations,
+  canUpdateOrganisation,
+  canUpdateProject,
+  canUpdateLayer,
+  canManageFeatures
+} from '$lib/auth/utils';
 // TYPES
 import type { Form } from '$lib/types';
+import type { SessionUser } from '$lib/types';
 
 let menuProps: { form: Form } = $props();
 

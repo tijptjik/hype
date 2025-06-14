@@ -31,9 +31,7 @@ jobs:
         id: cache-deps
         with:
           path: node_modules
-          key: ${{ runner.os }}-deps-${{ hashFiles('**/bun.lockb') }}
-          restore-keys: |
-            ${{ runner.os }}-deps-
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/bun.lock') }}
 
       - name: 'INSTALL :: Dependencies'
         if: steps.cache-deps.outputs.cache-hit != 'true'

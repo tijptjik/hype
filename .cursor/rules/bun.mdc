@@ -5,4 +5,6 @@ alwaysApply: true
 ---
 - Use Bun to manage all project dependencies.
 - Use Bun to run all commands.
-- Refer to package.json for run commands
+- Refer to package.json for run commands.
+- Use bunx where you would otherwise use npx
+- Do NOT use npm or pnpm

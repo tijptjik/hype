@@ -84,12 +84,16 @@ let handleReset = () => {
   {/if}
   <ResourceContainer>
     {#each filteredProjects as resource}
-      <FilteredResource
-        {resource}
-        resourceParent={appCtx.getOrganisation(resource)}
+      {#await appCtx.getHierarchy(resource) then {organisation}}
+        <FilteredResource
+          {resource}
+          resourceParent={organisation}
         selectedClass="bg-accent"
-        isSelected={selectedProjects.includes(resource.id)}
-        onClick={() => appCtx.toggleProject(resource.id)} />
+          isSelected={selectedProjects.includes(resource.id)}
+          onClick={() => appCtx.toggleProject(resource.id)} />
+      {:catch error}
+        <p>Error loading projects</p>
+      {/await}
     {/each}
   </ResourceContainer>
 </Section>

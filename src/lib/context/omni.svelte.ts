@@ -3,7 +3,7 @@ import { getContext, setContext } from 'svelte';
 import { goto } from '$app/navigation';
 // LIB
 import { MOBILE_MAX_WIDTH } from '$lib';
-import { searchAll } from '$lib/map/data';
+import { searchAllAsync } from '$lib/map/data';
 // I18N
 import { getI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
@@ -58,15 +58,41 @@ export class OmniContext {
   pageState: PageState = $state(PageState.NoTransition);
   isIntentionallyClosing: boolean = $state(false);
 
+  // Search results state (updated asynchronously)
+  searchResults: Record<string, SearchResult[]> = $state({
+    features: [],
+    neighbourhoods: [],
+    walks: []
+  });
+
   // Constructor with appCtx
   constructor(appCtx: AppCtx) {
     this.appCtx = appCtx;
+    
+    // Effect to update search results when dependencies change
+    $effect(() => {
+      // Explicitly track all reactive dependencies
+      const searchTerm = this.state.searchTerm;
+      const featuresSize = this.appCtx.features.size; // Track feature changes
+      const userFeaturesWishlisted = this.appCtx.state.userFeatures.wishlisted.length; // Track wishlist changes
+      
+      // Schedule async update outside reactive context
+      setTimeout(() => this.updateSearchResults(searchTerm), 0);
+    });
+
+
   }
 
-  // DERIVED values after state and constructor
-  searchResults: Record<string, SearchResult[]> = $derived(
-    this.toGroups(searchAll(this.state.searchTerm, this.appCtx))
-  );
+  // Async method to update search results
+  private async updateSearchResults(searchTerm: string) {
+    try {
+      const results = await searchAllAsync(searchTerm, this.appCtx);
+      this.searchResults = this.toGroups(results);
+    } catch (error) {
+      console.error('Error updating search results:', error);
+      this.searchResults = { features: [], neighbourhoods: [], walks: [] };
+    }
+  }
 
   // MAPS
   searchHandlers = {
@@ -177,7 +203,7 @@ export class OmniContext {
         this.closeCard();
       }
 
-      // If there is no card, but the tray is open, close the tray
+    // If there is no card, but the tray is open, close the tray
     } else if (this.state.mode === 'navigation' && this.state.isTrayOpen) {
       this.closeTray();
       // If we are in navigation mode, reset the results and go back to search
@@ -240,7 +266,7 @@ export class OmniContext {
       });
     }
 
-    let feature = appCtx.getFeatureById(featureId);
+    let feature = await appCtx.getFeatureById(featureId);
     if (feature == null) {
       console.error('Feature not found:', featureId);
       return;
@@ -380,18 +406,20 @@ export class OmniContext {
   // NAVIGATION METHODS
 
   navNext() {
-    if (this.navIndex < this.appCtx.state.active.collection!.items.length - 1) {
+    const collection = this.appCtx.state.active.collection;
+    if (collection && this.navIndex < collection.items.length - 1) {
       this.appCtx.setActiveFeature(
-        this.appCtx.state.active.collection!.items[this.navIndex + 1].id,
+        collection.items[this.navIndex + 1].id,
         { focus: true }
       );
     }
   }
 
   navPrevious() {
-    if (this.navIndex > 0) {
+    const collection = this.appCtx.state.active.collection;
+    if (collection && this.navIndex > 0) {
       this.appCtx.setActiveFeature(
-        this.appCtx.state.active.collection!.items[this.navIndex - 1].id,
+        collection.items[this.navIndex - 1].id,
         { focus: true }
       );
     }
@@ -401,11 +429,13 @@ export class OmniContext {
   navTitle = $derived(
     this.state.mode === 'search'
       ? `Search Results: ${this.state.searchTerm}`
-      : getI18n(
-          this.appCtx.state.active.collection!,
-          'name',
-          this.appCtx.getUserPreferences()
-        )
+      : this.appCtx.state.active.collection
+        ? getI18n(
+            this.appCtx.state.active.collection,
+            'name',
+            this.appCtx.getUserPreferences()
+          )
+        : ''
   );
 
   // OPEN/CLOSE METHODS

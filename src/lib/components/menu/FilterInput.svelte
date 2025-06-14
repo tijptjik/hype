@@ -31,7 +31,7 @@ const {
 
 // Reset filter text after navigation if it's for the current resource
 afterNavigate(() => {
-  if (adminCtx.activeResource === resourceType && resourceType !== 'feature') {
+  if (adminCtx.activeResourceType === resourceType && resourceType !== 'feature') {
     resetInput();
   }
 });

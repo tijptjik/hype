@@ -1,8 +1,7 @@
 # HYPE
 
 ![Release](https://img.shields.io/github/v/release/tijptjik/hype)
-![Build Status](https://github.com/tijptjik/hype/actions/workflows/deploy.yml/badge.svg?branch=preview)
-![Production Deploy](https://github.com/tijptjik/hype/actions/workflows/deploy.yml/badge.svg?branch=main)
+![Status](https://github.com/tijptjik/hype/actions/workflows/deploy.yml/badge.svg?branch=main)
 ![License](https://img.shields.io/github/license/tijptjik/hype)
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
@@ -14,14 +13,13 @@
 ![Cloudflare](https://img.shields.io/badge/Cloudflare-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)
 ![TailwindCSS](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
 
-![Changesets](https://img.shields.io/badge/Changesets-enabled-green?style=for-the-badge)
-![Commitizen](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg?style=for-the-badge)
-![Code Style](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=for-the-badge)
-
-
 Journey through Hong Kong
 
 ## Development
+
+![Code Style](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=for-the-badge)
+![Commitizen](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg?style=for-the-badge)
+![Changesets](https://img.shields.io/badge/Changesets-enabled-green?style=for-the-badge)
 
 See [Contribution](CONTRIBUTING.md) docs.
 

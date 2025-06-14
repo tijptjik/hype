@@ -275,6 +275,13 @@ export type ResourceConfig = {
 
 export type ResourceHierarchy = ResourceConfig[];
 
+export type ResourceContext = {
+  feature?: Feature;
+  layer?: Layer;
+  project?: Project;
+  organisation?: Organisation;
+};
+
 export type ResourceType =
   | 'organisation'
   | 'project'
@@ -306,9 +313,9 @@ export type ResourceTypeWithChildren = Exclude<
 // NAVIGATION :: ADMIN :: ACTIVE RESOURCE
 /* -------- */
 
-type activeResource = {
-  resource: FirstClassResource | false;
-  entity: Ref | false;
+type activeResourceType = {
+  resourceType: FirstClassResource | false;
+  resourceRef: Ref | false;
   facet: FacetType | false;
 };
 
@@ -523,7 +530,7 @@ export type Key = string;
 /* -------- */
 
 export type ResourceState = {
-  active: activeResource;
+  active: activeResourceType;
   prisms: Prisms;
   resources: FilteredResources;
   filters: AdminFilterStates;
@@ -1026,7 +1033,9 @@ export type UserContributedFeatureProperty = {
 };
 
 export type UserContributedFeature = {
-  layerId: string;
+  organisationId: Id;
+  projectId: Id;
+  layerId: Id;
   geometry: Geometry;
   i18n: Partial<
     Record<

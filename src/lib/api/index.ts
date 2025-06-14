@@ -121,7 +121,7 @@ export const SuperFormResponse = <
       });
     } else {
       // Type-safe property lookup
-      const entityRef = getEntityRef(validatedForm.data as Resource);
+      const entityRef = getResourceRef(validatedForm.data as Resource);
       return actionResult('redirect', `${ADMIN_PATH}/${resourcePath}/${entityRef}`, {
         status: 303
       });
@@ -134,7 +134,7 @@ export const SuperFormResponse = <
 };
 
 // Helper function to get the correct reference property
-function getEntityRef<T extends Resource>(resource: T): string {
+function getResourceRef<T extends Resource>(resource: T): string {
   if (isOrganisationOrProject(resource)) {
     return resource.code;
   }

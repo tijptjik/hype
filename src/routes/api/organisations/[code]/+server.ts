@@ -9,7 +9,6 @@ import { eq } from 'drizzle-orm';
 import { superValidate } from 'sveltekit-superforms';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
-import { OrganisationInsertAPI, OrganisationInsertSuperAdminAPI } from '$lib/db/zod';
 // SCHEMA
 import { organisation } from '$lib/db/schema/index';
 // DB
@@ -43,6 +42,7 @@ import type {
   OrganisationPartial,
   Code
 } from '$lib/types';
+import { OrganisationInsertAPI, OrganisationInsertSuperAdminAPI } from '$lib/db/zod';
 
 /********************
  *  COMMON
@@ -117,53 +117,62 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
   // ASSERT : User logged in
   const { db, user, userRoles } = await getDatabase(locals, platform);
 
-  try {
-    // ASSERT : Valid form
-    const formData: Organisation = await request.json();
+  // ASSERT : Valid form data
+  const formData: Organisation = await request.json();
 
-    // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
-    const updateSchema = user.superAdmin
-      ? OrganisationInsertSuperAdminAPI
-      : OrganisationInsertAPI;
+  // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
+  const updateSchema = user.superAdmin
+    ? OrganisationInsertSuperAdminAPI
+    : OrganisationInsertAPI;
 
-    // @ts-ignore - FORM : Fix type error
-    let form = (await superValidate(
-      formData,
-      // @ts-ignore - FORM : Fix type error
-      zod(updateSchema)
-    )) as SuperValidated<Organisation>;
-
-    // ASSERT : Code has (1) not changed, or (2) changed to another unique value
-    // Use URL param code for lookup, form code for comparison
-    if (params.code !== formData.code) {
-      // @ts-ignore - FORM : Fix form type error
-      form = await assertCodeUnique(db, form, formData);
-    }
-
-    // RETURN : early if the form is not valid
+  let form = (await superValidate(
+    formData,
     // @ts-ignore - FORM : Fix SuperForm type error
-    if (!form.valid) return SuperFormResponse<Organisation>(form);
+    zod(updateSchema)
+  )) as SuperValidated<Organisation>;
 
-    // ASSERT : Permissions to update organisation
-    assertPermissionsToUpdateOrganisation(user, request, formData, userRoles);
+  // ASSERT : Code has (1) not changed, or (2) changed to another unique value
+  // Use URL param code for lookup, form code for comparison
+  if (params.code !== formData.code) {
+    // @ts-ignore - FORM : Fix form type error
+    form = await assertCodeUnique(db, form, formData);
+  }
 
-    // STATE : Will the current user lose access on membership changes.
-    const isAccessLost = isAccessLostUponSuccess(user, formData, userRoles);
+  // RETURN : early if the form is not valid
+  if (!form.valid) return SuperFormResponse<Organisation>(form);
 
-    // DB : Update the organisation and related data using URL param code for lookup
+  // ASSERT : Organisation Exists
+  const existingForPermCheck = (await getOrganisation(
+    db,
+    {},
+    [eq(organisation.code, params.code!)],
+    locals.hub
+  )) as OrganisationDB;
+
+  if (!existingForPermCheck)
+    return error(404, m.resource_not_found({ resourceType: m.any_small_midge_aim() }));
+
+  // ACCESS CONTROL : Check permissions
+  assertPermissionsToUpdateOrganisation(user, request, existingForPermCheck, userRoles);
+
+  try {
+    // DB : Update the organisation
     const updatedOrganisation = await updateOrganisationWithRelated(
       db,
       form.data,
       params.code
     );
 
-    // FORM : Rebuild the form data
+    // RESPONSE : Convert to form shape
     const updatedForm = await toFormShape(
       updatedOrganisation,
       updatedOrganisation.i18n,
       updatedOrganisation.userRoles,
       user.superAdmin || false
     );
+
+    // ACCESS : Check for user access loss after code change
+    const isAccessLost = isAccessLostUponSuccess(user, formData, userRoles);
 
     // STATE : Determine if redirect is needed (only when code changes or access is lost)
     const shouldRedirect = isAccessLost || params.code !== formData.code;
@@ -194,43 +203,42 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
  * such as the organisation publish or archive status.
  */
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
+  // ASSERT : User logged in
   const { db, user, userRoles } = await getDatabase(locals, platform);
+
+  // ASSERT : Valid form data
+  const newData: OrganisationPartial = await request.json();
+
+  // ASSERT : Organisation Exists
+  const existing = (await getOrganisation(
+    db,
+    {},
+    [eq(organisation.code, params.code!)],
+    locals.hub
+  )) as OrganisationDB;
+
+  if (!existing)
+    return error(404, m.resource_not_found({ resourceType: m.any_small_midge_aim() }));
+
+  // ASSERT : Code has (1) not changed, or (2) changed to another unique value
+  // Use URL param code for lookup, form code for comparison
+  if ('code' in newData && params.code !== newData.code) {
+    // @ts-ignore - FORM : Fix form type error
+    form = await assertCodeUnique(db, form, newData);
+  }
+
+  // Use assertion functions for access control
+  assertPermissionsToUpdateOrganisation(user, request, existing, userRoles);
+
   try {
-    // ASSERT : Valid form data
-    const newData: OrganisationPartial = await request.json();
-
-    // Get the existing organisation to verify access
-    const existing = (await getOrganisation(
-      db,
-      {},
-      [
-        eq(organisation.code, params.code as string)
-      ],
-      locals.hub
-    )) as OrganisationDB;
-
-    if (!existing) {
-      return error(404, 'Organisation not found');
-    }
-
-    // ASSERT : Code has (1) not changed, or (2) changed to another unique value
-    // Use URL param code for lookup, form code for comparison
-    if ('code' in newData && params.code !== newData.code) {
-      // @ts-ignore - FORM : Fix form type error
-      form = await assertCodeUnique(db, form, newData);
-    }
-
-    // Use assertion functions for access control
-    assertPermissionsToUpdateOrganisation(user, request, existing, userRoles);
-
     // DB : Update only the basic organisation fields (no relations for PATCH)
-    const updated = await updateOrganisation(db, newData, params.code as string);
+    await updateOrganisation(db, newData, params.code as Code);
 
     // DB : Get the updated organisation with all relations for response
     const updatedWithRelations = await getOrganisation(
       db,
       organisationWithRelations,
-      [eq(organisation.code, params.code as string)],
+      [eq(organisation.code, params.code as Code)],
       locals.hub
     );
 

@@ -84,15 +84,17 @@ let handleReset = () => {
   {/if}
   <ResourceContainer>
     {#each filteredLayers as layer}
-      {@const project = appCtx.getProject(layer)}
-      {@const organisation = appCtx.getOrganisation(project!)}
-      <FilteredLayer
-        {layer}
-        {project}
-        {organisation}
-        selectedClass="bg-secondary"
-        isSelected={selectedLayers.includes(layer.id)}
-        onClick={() => appCtx.toggleLayer(layer.id)} />
+      {#await appCtx.getHierarchy(layer) then {project, organisation}}
+        <FilteredLayer
+          {layer}
+          {project}
+          {organisation}
+          selectedClass="bg-secondary"
+          isSelected={selectedLayers.includes(layer.id)}
+          onClick={() => appCtx.toggleLayer(layer.id)} />
+      {:catch error}
+        <p>Error loading layers</p>
+      {/await}
     {/each}
   </ResourceContainer>
 </Section>

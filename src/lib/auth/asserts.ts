@@ -58,7 +58,7 @@ export const assertAdminRequest = (request: Request): void | Response => {
  * Assert that the user has an owner role for the specified organisation
  * @param userRoles - Array of user roles
  * @param organisationId - The organisation ID to check access for
- * @throws {Response} 401 error if user doesn't have access to the organisation
+ * @throws {Response} 403 error if user doesn't have access to the organisation
  */
 export const assertOrganisationOwner = (
   userRoles: UserRoleDisco[],
@@ -71,7 +71,7 @@ export const assertOrganisationOwner = (
       role.role === 'owner'
   );
   if (!hasRole) {
-    return error(401, m.neat_noble_okapi_blunt());
+    return error(403, m.missing_permissions());
   }
 };
 
@@ -79,7 +79,7 @@ export const assertOrganisationOwner = (
  * Assert that the user has a maintainer role for the specified project
  * @param userRoles - Array of user roles
  * @param projectId - The project ID to check access for
- * @throws {Response} 401 error if user doesn't have access to the project
+ * @throws {Response} 403 error if user doesn't have access to the project
  */
 export const assertProjectMaintainer = (
   userRoles: UserRoleDisco[],
@@ -92,7 +92,7 @@ export const assertProjectMaintainer = (
       role.role === 'maintainer'
   );
   if (!hasRole) {
-    return error(401, m.neat_noble_okapi_blink());
+    return error(403, m.missing_permissions());
   }
 };
 
@@ -100,7 +100,7 @@ export const assertProjectMaintainer = (
  * Assert that the user has a member role for the specified project
  * @param userRoles - Array of user roles
  * @param projectId - The project ID to check access for
- * @throws {Response} 401 error if user doesn't have access to the project
+ * @throws {Response} 403 error if user doesn't have access to the project
  */
 export const assertProjectMember = (
   userRoles: UserRoleDisco[],
@@ -111,17 +111,17 @@ export const assertProjectMember = (
       role.type === 'project' && role.projectId === projectId && role.role === 'member'
   );
   if (!hasRole) {
-    return error(401, m.neat_noble_okapi_blink());
+    return error(403, m.missing_permissions());
   }
 };
 /**
  * Assert that the user is a super admin
  * @param session - The session object
- * @throws {Response} 401 error if user is not a super admin
+ * @throws {Response} 403 error if user is not a super admin
  */
 export const assertSuperAdmin = (user: SessionUser): void | Response => {
   if (!user?.superAdmin) {
-    return error(401, m.neat_noble_okapi_edit());
+    return error(403, m.missing_permissions());
   }
 };
 
@@ -130,7 +130,7 @@ export const assertUserIsSelf = (
   userId: string
 ): void | Response => {
   if (user.id !== userId) {
-    return error(401, m.swift_weary_mule_persist());
+    return error(403, m.missing_permissions());
   }
 };
 
@@ -151,7 +151,7 @@ export const assertOrganisationOwnerOrSuperAdmin = (
   } catch {}
   // Only error if BOTH checks failed
   if (!isOrgOwner && !isSuperAdmin) {
-    return error(401, m.neat_noble_okapi_blunt());
+    return error(403, m.missing_permissions());
   }
 };
 
@@ -166,7 +166,7 @@ export const assertIsCoreInclusiveModifiedBySuperAdmin = (
   } catch {}
   // Only error if not  SUPERADMIN and newData is not undefined
   if (!isSuperAdmin && newData && 'isCoreInclusive' in newData) {
-    return error(401, m.not_superadmin());
+    return error(403, m.missing_permissions());
   }
 };
 
@@ -187,7 +187,7 @@ export const assertProjectMaintainerOrSuperAdmin = (
   } catch {}
   // Only error if BOTH checks failed
   if (!isProjectMaintainer && !isSuperAdmin) {
-    return error(401, m.neat_noble_okapi_blink());
+    return error(403, m.missing_permissions());
   }
 };
 
@@ -213,7 +213,7 @@ export const assertProjectMaintainerOrMemberOrSuperAdmin = (
   } catch {}
   // Only error if ALL checks failed
   if (!isProjectMaintainer && !isProjectMember && !isSuperAdmin) {
-    return error(401, m.neat_noble_okapi_blink());
+    return error(403, m.missing_permissions());
   }
 };
 

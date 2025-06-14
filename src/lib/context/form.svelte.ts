@@ -190,7 +190,7 @@ class BaseForm<T extends Record<string, unknown>> {
           options: { clearOnNavigate: false, clearAfterMs: 5000 }
         });
 
-        this.adminCtx.setEntity(result.location.split('/').pop() as Id | Code);
+        this.adminCtx.setResourceRef(result.location.split('/').pop() as Id | Code);
 
         await goto(url.toString());
       } else if (result.type === 'success') {
@@ -209,6 +209,11 @@ class BaseForm<T extends Record<string, unknown>> {
           console.error('[FORM CONTEXT]', result.data?.errors);
           // this.form.set(result.data?.data);
           this.errors.set(result.data?.errors);
+        } else if (result.type === 'error') {
+          // Extract the actual error message from SvelteKit error responses (403, 404, etc.)
+          const errorMessage = (result as any)?.error?.message || result.status + ' Error';
+          this.flash.set({ type: 'error', message: errorMessage });
+          console.error('[FORM CONTEXT] HTTP Error:', result);
         } else {
           this.flash.set({ type: 'error', message: m.round_pretty_lark_drip() });
         }

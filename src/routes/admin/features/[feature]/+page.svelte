@@ -107,8 +107,7 @@ const FIELDS: FormFieldConfig = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Feature> = $props();
-adminCtx.setEntity(pageProps.data.entity, FirstClassResource.feature);
-adminCtx.setFacet('core');
+adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.feature);
 
 // STATE : FORM
 let form = setForm(
@@ -161,7 +160,7 @@ function handleMapFullscreenChange(isFullscreen: boolean): void {
       <HeaderButton
         facet={{ label: m.feature__address(), ref: 'address' }}
         isActive={adminCtx.activeFacet === 'address'} />
-      {#if adminCtx.activeEntity !== 'new'}
+      {#if adminCtx.activeResourceRef !== 'new'}
         <HeaderButton
           facet={{ label: m.feature__images(), ref: 'images' }}
           isActive={adminCtx.activeFacet === 'images'} />
@@ -172,22 +171,15 @@ function handleMapFullscreenChange(isFullscreen: boolean): void {
       <EntityActions {form} />
     {/snippet}
   </Header>
-  {#if adminCtx.appCtx.isInitialised}
-    <ImageProvider
-      mode="gallery"
-      isAdminMode={true}
-      ctxType={ImageContextResource.feature}
-      ctxId={pageProps.data.entity}
-      organisation={adminCtx.getAscendantOrSelf(
-        pageProps.data.validatedForm.data as unknown as Resource,
-        FirstClassResource.feature,
-        FirstClassResource.organisation
-      ) as Omit<OrganisationDB, 'isCoreInclusive'>}
-      project={adminCtx.getAscendantOrSelf(
-        pageProps.data.validatedForm.data as unknown as Resource,
-        FirstClassResource.feature,
-        FirstClassResource.project
-      ) as ProjectDB}>
+  {#if adminCtx.appCtx.isInitialised && pageProps.data.validatedForm}
+    {#await adminCtx.appCtx.getHierarchy(pageProps.data.validatedForm.data as Feature) then { organisation, project }}
+      <ImageProvider
+        mode="gallery"
+        isAdminMode={true}
+        ctxType={ImageContextResource.feature}
+        ctxId={pageProps.data.entity}
+        organisation={organisation as Omit<OrganisationDB, 'isCoreInclusive'>}
+        {project}>
       <form
         id="featureForm"
         method="POST"
@@ -274,6 +266,12 @@ function handleMapFullscreenChange(isFullscreen: boolean): void {
         </main>
       </form>
     </ImageProvider>
+    {:catch error}
+      <!-- Error state - show fallback -->
+      <div class="flex items-center justify-center p-8">
+        <div class="text-error">Failed to load feature hierarchy</div>
+      </div>
+    {/await}
   {/if}
 </div>
 

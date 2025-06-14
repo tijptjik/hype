@@ -1,7 +1,6 @@
 // I18N
 import { getLocale } from '$lib/i18n';
 // LIB
-import { ADMIN_PATH } from '$lib/index';
 import { navigateOnAdmin } from '$lib/navigation';
 import { fetchOrThrow } from '$lib/index';
 // CONTEXT
@@ -24,24 +23,20 @@ import type {
   Layer,
   Feature,
   Id,
-  ResourceState as ResourceStateType,
   FacetType,
   Task,
   Code,
   AdminFilterStates,
   AdminFilterState,
   Resource,
-  ResourceTypeWithChildren,
-  Hub,
-  UserRoleDisco,
-  SessionUser
+  Hub
 } from '../types';
 
 // State type for AdminCtx - only includes admin-specific state
 type AdminResourceState = {
   active: {
-    resource: FirstClassResource | false;
-    entity: Id | Code | false;
+    resourceType: FirstClassResource | false;
+    resourceRef: Id | Code | false;
     facet: FacetType | false;
   };
   filters: AdminFilterStates;
@@ -84,8 +79,44 @@ export class AdminCtx {
   constructor(queryClient: QueryClient, appCtx: AppCtx) {
     this.queryClient = queryClient;
     this.appCtx = appCtx;
-    this.initializeQueries(queryClient);
+    this.initializeAdminQueryMap();
   }
+
+  // Initialize admin-specific query map on appCtx
+  private initializeAdminQueryMap = (): void => {
+    // Override the default query functions with admin-specific ones
+    // but reuse AppCtx query keys for common resources
+    this.appCtx.queryMap.set(FirstClassResource.organisation, {
+      queryKey: () => this.appCtx.organisationsQueryKey,
+      queryFn: () => this.organisationsQueryFn()
+    });
+
+    this.appCtx.queryMap.set(FirstClassResource.project, {
+      queryKey: () => this.appCtx.projectsQueryKey,
+      queryFn: () => this.projectsQueryFn()
+    });
+
+    this.appCtx.queryMap.set(FirstClassResource.layer, {
+      queryKey: () => this.appCtx.layersQueryKey,
+      queryFn: () => this.layersQueryFn()
+    });
+
+    this.appCtx.queryMap.set(FirstClassResource.feature, {
+      queryKey: () => this.appCtx.featuresQueryKey,
+      queryFn: () => this.featuresQueryFn()
+    });
+
+    // Admin-specific resources with their own query keys
+    this.appCtx.queryMap.set(FirstClassResource.task, {
+      queryKey: () => this.tasksQueryKey,
+      queryFn: () => this.tasksQueryFn()
+    });
+
+    this.appCtx.queryMap.set(FirstClassResource.hub, {
+      queryKey: () => this.hubsQueryKey,
+      queryFn: () => this.hubsQueryFn()
+    });
+  };
 
   // ═══════════════════════
   // STATE
@@ -93,8 +124,8 @@ export class AdminCtx {
 
   state: AdminResourceState = $state({
     active: {
-      resource: false,
-      entity: false,
+      resourceType: false,
+      resourceRef: false,
       facet: false
     },
     filters: {
@@ -111,54 +142,35 @@ export class AdminCtx {
   // ACTIVE RESOURCES
   // ═══════════════════════
 
-  activeResource = $derived(this.state.active.resource);
-  activeEntity = $derived(this.state.active.entity);
-  activeFacet = $derived(this.state.active.facet);
-
-  activeEntityHref = $derived(
-    this.activeResource && this.activeEntity
-      ? `${ADMIN_PATH}/${ResourcePath[this.activeResource]}/${this.activeEntity}`
-      : null
+  activeResourceType: FirstClassResource | false = $derived(
+    this.state.active.resourceType
   );
-
-  // ═══════════════════════
-  // ACTIVE RESOURCE :: GETTERS
-  // ═══════════════════════
-
-  getEntities = (resource?: FirstClassResource) => {
-    let resourceKey = resource ?? this.state.active.resource;
-    if (!resourceKey) return [];
-    return this.appCtx.state.resources[resourceKey];
-  };
-
-  getEntity(resource?: FirstClassResource, entityRef?: Id | Code, byId = false) {
-    let resourceKey = resource ?? this.activeResource;
-    let entityRefKey = byId ? 'id' : resourceKey ? ResourceRefKey[resourceKey] : null;
-    if (!entityRefKey || !resourceKey) return null;
-    return this.appCtx.state.resources[resourceKey].find(
-      (entity) =>
-        entity[entityRefKey as keyof Resource] ===
-        (entityRef ? entityRef : this.activeEntity)
-    );
-  }
+  activeResourceRef: Id | Code | false = $derived(this.state.active.resourceRef);
+  activeFacet: FacetType | false = $derived(this.state.active.facet);
 
   // ═══════════════════════
   // ACTIVE RESOURCE :: SETTERS
   // ═══════════════════════
 
-  setResource(resource: FirstClassResource | false) {
-    this.state.active.resource = resource;
+  setResourceType(resource: FirstClassResource | false): void {
+    this.state.active.resourceType = resource;
   }
 
-  setEntity(entity: Id | Code | false, resource?: FirstClassResource) {
+  setResourceRef(ref: Id | Code | false, resource?: FirstClassResource): void {
     // If the new entity is a different resource type to the current entity, update the state
     if (resource) {
-      this.setResource(resource);
+      this.setResourceType(resource);
     }
-    this.state.active.entity = entity;
+    this.state.active.resourceRef = ref;
   }
 
-  setFacet(facet: FacetType | false) {
+  setFacet(
+    facet: FacetType | false,
+    ref?: Id | Code | false,
+    resource?: FirstClassResource
+  ): void {
+    if (ref) this.setResourceRef(ref, resource);
+    if (resource) this.setResourceType(resource);
     this.state.active.facet = facet;
   }
 
@@ -263,49 +275,11 @@ export class AdminCtx {
     return fetchOrThrow<Hub[]>(url);
   };
 
-  // ═══════════════════════
-  // ADMIN QUERY :: INIT
-  // ═══════════════════════
-
-  private async initializeQueries(queryClient: QueryClient) {
-    // Organizations query
-    this.appCtx.state.resources.organisation = await queryClient.fetchQuery({
-      queryKey: this.appCtx.organisationsQueryKey,
-      queryFn: this.organisationsQueryFn
-    });
-
-    // Projects query
-    this.appCtx.state.resources.project = await queryClient.fetchQuery({
-      queryKey: this.appCtx.projectsQueryKey,
-      queryFn: this.projectsQueryFn
-    });
-
-    // Layers query
-    this.appCtx.state.resources.layer = await queryClient.fetchQuery({
-      queryKey: this.appCtx.layersQueryKey,
-      queryFn: this.layersQueryFn
-    });
-
-    // Features query
-    this.appCtx.state.resources.feature = await queryClient.fetchQuery({
-      queryKey: this.appCtx.featuresQueryKey,
-      queryFn: this.featuresQueryFn
-    });
-
-    // Tasks query
-    this.appCtx.state.resources.task = await queryClient.fetchQuery({
-      queryKey: this.tasksQueryKey,
-      queryFn: this.tasksQueryFn
-    });
-
-    // Hubs query (SuperAdmin only)
-    if (this.appCtx.isSuperAdmin()) {
-      this.appCtx.state.resources.hub = await queryClient.fetchQuery({
-        queryKey: this.hubsQueryKey,
-        queryFn: this.hubsQueryFn
-      });
-    }
-  }
+  // Initialize data using appCtx's refresh methods
+  init = async (): Promise<void> => {
+    // Use AppCtx's cascading refresh logic but with admin query functions
+    await this.appCtx.refreshOrganisations();
+  };
 
   // ═══════════════════════
   // ADMIN QUERY :: INVALIDATION
@@ -313,74 +287,7 @@ export class AdminCtx {
 
   async invalidateAndRefresh(resource: FirstClassResource) {
     await this.appCtx.invalidate(resource);
-    await this.refresh(resource);
-  }
-
-  // Cascades refresh to the next resource in the hierarchy
-  // Cascades refresh to the next resource in the hierarchy
-  refresh = async (resource: FirstClassResource) => {
-    // Refresh the resources
-    if (resource === 'organisation') {
-      this.refreshOrganisation();
-    } else if (resource === 'project') {
-      this.refreshProjects();
-    } else if (resource === 'layer') {
-      this.refreshLayers();
-    } else if (resource === 'feature') {
-      this.refreshFeatures();
-    } else if (resource === 'task') {
-      this.refreshTasks();
-    } else if (resource === 'hub') {
-      this.refreshHubs();
-    }
-  };
-
-  async refreshOrganisation() {
-    this.appCtx.state.resources.organisation = await this.queryClient.fetchQuery({
-      queryKey: this.appCtx.organisationsQueryKey,
-      queryFn: this.organisationsQueryFn
-    });
-  }
-
-  async refreshProjects() {
-    this.appCtx.state.resources.project = await this.queryClient.fetchQuery({
-      queryKey: this.appCtx.projectsQueryKey,
-      queryFn: this.projectsQueryFn
-    });
-    this.appCtx.syncProjectPrisms();
-    this.refreshLayers();
-  }
-
-  async refreshLayers() {
-    this.appCtx.state.resources.layer = await this.queryClient.fetchQuery({
-      queryKey: this.appCtx.layersQueryKey,
-      queryFn: this.layersQueryFn
-    });
-    this.appCtx.syncLayerPrisms();
-    this.refreshFeatures();
-  }
-
-  async refreshFeatures() {
-    this.appCtx.state.resources.feature = await this.queryClient.fetchQuery({
-      queryKey: this.appCtx.featuresQueryKey,
-      queryFn: this.featuresQueryFn
-    });
-    this.refreshTasks();
-  }
-
-  async refreshTasks() {
-    this.appCtx.state.resources.task = await this.queryClient.fetchQuery({
-      queryKey: this.tasksQueryKey,
-      queryFn: this.tasksQueryFn
-    });
-  }
-
-  async refreshHubs() {
-    if (!this.appCtx.isSuperAdmin()) return;
-    this.appCtx.state.resources.hub = await this.queryClient.fetchQuery({
-      queryKey: this.hubsQueryKey,
-      queryFn: this.hubsQueryFn
-    });
+    await this.appCtx.refresh(resource);
   }
 
   // ═══════════════════════
@@ -557,69 +464,28 @@ export class AdminCtx {
     this.state.filters[resource][property] = !this.state.filters[resource][property];
   };
 
-  // PRISM RELATIONS
-
-  getResourcePath = (resource?: FirstClassResource) => {
-    const resourceKey = resource ?? this.state.active.resource;
-    if (!resourceKey) return null;
-    return ResourcePath[resourceKey];
-  };
-
   // ═══════════════════════
   // ADMIN LOOKUPS
   // ═══════════════════════
 
-  getEntityRef = (resource: FirstClassResource, id: Id) => {
+  getEntityPath = (resource: FirstClassResource, id: Id) => {
+    const ref = this.getResourceRef(resource, id);
+    if (!ref) return null;
+    return `${this.getResourcePathPart(resource)}/${ref}`;
+  };
+
+  getResourceRef = (resource: FirstClassResource, id: Id) => {
     if (!resource) return false;
     const refKey = ResourceRefKey[resource];
-    const entity = this.appCtx.state.resources[resource].find(
-      (entity) => entity.id === id
-    );
+    const entity = this.appCtx.cache[resource].get(id);
     if (!entity) return false;
     return entity[refKey as keyof Resource];
   };
 
-  getEntityPath = (resource: FirstClassResource, id: Id) => {
-    const ref = this.getEntityRef(resource, id);
-    if (!ref) return null;
-    return `${this.getResourcePath(resource)}/${ref}`;
-  };
-
-  // Hierarchical Resource Helpers
-  getAscendantOrSelf = (
-    entity: Resource,
-    resource: FirstClassResource,
-    ascendantResource: FirstClassResource
-  ): Resource | null => {
-    // If the resource is the same as the ascendant resource, return itself
-    if (resource === ascendantResource) return entity;
-    // Organisation is the top level resource
-    if (resource === FirstClassResource.organisation) return null;
-    // Go through the hierarchy to find the ascendant
-    let isDescendant = false;
-    if (
-      resource == FirstClassResource.feature &&
-      ascendantResource != FirstClassResource.feature
-    ) {
-      entity = this.appCtx.getLayer(entity as Feature) as Layer;
-      isDescendant = true;
-    }
-    if (
-      (resource == FirstClassResource.layer || isDescendant) &&
-      ascendantResource != FirstClassResource.layer
-    ) {
-      entity = this.appCtx.getProject(entity as Layer) as Project;
-      isDescendant = true;
-    }
-    if (
-      (resource == FirstClassResource.project || isDescendant) &&
-      ascendantResource != FirstClassResource.project
-    ) {
-      entity = this.appCtx.getOrganisation(entity as Project) as Organisation;
-      isDescendant = true;
-    }
-    // Return the ascendant or null if an invalid ancestry relationship was provided
-    return isDescendant ? entity : null;
+  getResourcePathPart = (resource?: FirstClassResource) => {
+    const resourceKey = resource ?? this.state.active.resourceType;
+    if (!resourceKey) return null;
+    return ResourcePath[resourceKey];
   };
 
   // ═══════════════════════
@@ -633,7 +499,7 @@ export class AdminCtx {
   goToNextTask = () => {
     let nextIndex;
     const currentIndex = this.filteredTasks.findIndex(
-      (task) => task.id === this.activeEntity
+      (task) => task.id === this.activeResourceRef
     );
     const taskCount = this.filteredTasks.length;
 
@@ -661,16 +527,17 @@ export class AdminCtx {
   };
 
   isViewportContained = $derived(
-    this.activeEntity == false ||
+    this.activeResourceRef == false ||
       this.activeFacet == 'address' ||
       this.activeFacet == 'images' ||
-      (this.activeResource == 'feature' &&
+      (this.activeResourceType == 'feature' &&
         (this.activeFacet == 'core' || this.activeFacet == false)) ||
-      (this.activeResource == 'task' && this.activeEntity)
+      (this.activeResourceType == 'task' && this.activeResourceRef)
   );
 
   isShowIndex = $derived(
-    this.activeResource && (this.activeEntity === null || this.activeEntity === false)
+    this.activeResourceType &&
+      (this.activeResourceRef === null || this.activeResourceRef === false)
   );
 }
 

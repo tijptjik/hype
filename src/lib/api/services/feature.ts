@@ -294,7 +294,8 @@ export const assertPermissionsToUpdateFeature = async (
 export const createUserContributedFeature = async (
   db: Database,
   newFeature: UserContributedFeature,
-  subscriptionKey?: string
+  region: string,
+  subscriptionKey: string
 ) => {
   // Step 1: Get the source locale (first locale with content)
   const providedLocales = Object.keys(newFeature.i18n) as Locale[];
@@ -333,12 +334,13 @@ export const createUserContributedFeature = async (
     // Only call translation API if we have fields to translate and API key
     if (fieldsToTranslate.length > 0 && subscriptionKey) {
       // TRANSLATION
-      const { getTranslation } = await import('$lib/api/external/translation');
+      const { translateText } = await import('$lib/api/external/translation');
       try {
-        translatedValues = await getTranslation(
+        translatedValues = await translateText(
+          fieldsToTranslate,
           sourceLocale,
           locale,
-          fieldsToTranslate,
+          region,
           subscriptionKey
         );
       } catch (error) {
@@ -410,13 +412,12 @@ export const createUserContributedFeature = async (
           // Only translate if needed and API key available
           if (needsValue && subscriptionKey) {
             try {
-              const { getTranslation } = await import('$lib/api/external/translation');
-              const translatedValues = await getTranslation(
+              const { translateText } = await import('$lib/api/external/translation');
+              const translatedValues = await translateText(
+                [propSourceTextObj.value],
                 propSourceLocale,
                 locale,
-                [
-                  propSourceTextObj.value
-                ],
+                region,
                 subscriptionKey
               );
               translatedValue = translatedValues[0] || null;

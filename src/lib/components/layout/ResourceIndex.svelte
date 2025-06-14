@@ -40,7 +40,7 @@ let updateTimeout: number;
 
 // FILTER TEXT
 let filterText = $derived(
-  adminCtx.state.filters[adminCtx.activeResource as FirstClassResource]?.text
+  adminCtx.state.filters[adminCtx.activeResourceType as FirstClassResource]?.text
 );
 let lastUsedFilterText = $state('');
 

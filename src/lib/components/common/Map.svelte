@@ -2,7 +2,7 @@
 // SVELTE
 import { onMount } from 'svelte';
 // MapLibre
-import SpectralStyle from '$lib/map/style-protomaps.json';
+import SpectralStyle from '$lib/map/styles/style-protomaps.json';
 import { addAddressMarker } from '$lib/map/markers';
 import { getCoordinates } from '$lib/map/data';
 // UTILS
@@ -141,8 +141,8 @@ $effect(() => {
     addressMarker = addAddressMarker(maplibregl, appCtx, addressLngLat);
     markedAddressLngLat = addressLngLat;
   }
-  if (adminCtx.activeEntity && adminCtx.activeEntity !== featureMarkerId) {
-    featureMarkerId = adminCtx.activeEntity;
+  if (adminCtx.activeResourceRef && adminCtx.activeResourceRef !== featureMarkerId) {
+    featureMarkerId = adminCtx.activeResourceRef;
     if (addressMarker) {
       addressMarker.remove();
     }

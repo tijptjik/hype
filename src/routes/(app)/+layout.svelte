@@ -2,7 +2,6 @@
 // SVELTE
 import { browser } from '$app/environment';
 import { watch } from 'runed';
-import { watchOnce } from 'runed';
 
 // NAVIGATION
 import { goto } from '$app/navigation';
@@ -58,14 +57,21 @@ const omniCtx = setOmniContext(appCtx);
 // Re-initialize data when user becomes authenticated
 watch(
   () => $session.data?.user,
-  () => {
-    if ($session.data?.user) {
-      appCtx.setUser($session.data.user as unknown as SessionUser);
+  (newUser) => {
+    // Only reinitialize if user actually changed (not just session refresh)
+    const currentUserId = appCtx.user?.id;
+    const newUserId = newUser?.id;
+    
+    if (newUser && newUserId !== currentUserId) {
+      // User login or user changed
+      appCtx.setUser(newUser as unknown as SessionUser);
       appCtx.reinitializeWithAuth();
       appCtx.registerKeydownHandlers();
-    } else if (!$session.data?.user && appCtx.user?.id) {
+    } else if (!newUser && currentUserId) {
+      // User logout
       appCtx.setUser(null);
     }
+    // Ignore cases where session refreshed but user didn't change
   }
 );
 
@@ -80,7 +86,7 @@ $effect(() => {
 </script>
 
 <div class="flex h-dvh flex-col justify-around overflow-hidden">
-  {#if $session.data}
+  {#if !$session.isPending && $session.data}
     <main
       class="relative top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
       <!-- Panels -->
@@ -107,10 +113,17 @@ $effect(() => {
       </div>
     </main>
     <Menu />
-  {:else}
+  {:else if !$session.isPending && !$session.data}
     <main class="top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
       {@render children()}
       <Map />
+    </main>
+  {:else}
+    <!-- Loading state while session is pending -->
+    <main class="top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
+      <div class="flex h-full items-center justify-center">
+        <div class="loading loading-spinner loading-lg text-primary"></div>
+      </div>
     </main>
   {/if}
 </div>

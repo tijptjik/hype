@@ -30,13 +30,13 @@ let isLoading = $state(false);
 const handleClick = async (e: Event) => {
   e.preventDefault();
   e.stopPropagation();
-  if (isLoading || !adminCtx.activeEntity || adminCtx.activeEntity === NEW_REF) return;
+  if (isLoading || !adminCtx.activeResourceRef || adminCtx.activeResourceRef === NEW_REF) return;
 
   isLoading = true;
 
   try {
     const response = await fetch(
-      `/api/${ResourcePath[adminCtx.activeResource as FirstClassResource]}/${adminCtx.activeEntity}`,
+      `/api/${ResourcePath[adminCtx.activeResourceType as FirstClassResource]}/${adminCtx.activeResourceRef}`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -50,8 +50,8 @@ const handleClick = async (e: Event) => {
 
     if (result && result.type === 'success') {
       // INVALIDE CACHE
-      if (adminCtx.activeResource) {
-        adminCtx.invalidateAndRefresh(adminCtx.activeResource);
+      if (adminCtx.activeResourceType) {
+        adminCtx.invalidateAndRefresh(adminCtx.activeResourceType);
       }
 
       // UPDATE FORM - Reset with new data to avoid dirtying the form

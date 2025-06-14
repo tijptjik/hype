@@ -53,6 +53,8 @@ export const feature = sqliteTable('feature', {
   })
     .$type<AddressMeta>()
     .default({}),
+  organisationId: text('organisationId').notNull(),
+  projectId: text('projectId').notNull(),
   layerId: text('layerId').notNull(),
   contributorId: text('contributorId'),
   // True : Feature is shown in the User App

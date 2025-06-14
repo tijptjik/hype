@@ -29,7 +29,7 @@ let currentIndex = $derived(
     {direction === 'right' ? 'w-140:rounded-r-md ml-1.5' : 'w-140:rounded-l-md mr-1.5'}"
   disabled={direction === 'left'
     ? currentIndex <= 0
-    : appCtx.state.active.collection!.items.length - 1 <= currentIndex}
+    : (appCtx.state.active.collection?.items.length || 0) - 1 <= currentIndex}
   onclick={() =>
     direction === 'left'
       ? appCtx.navPrevious({ isCardOpen: omniCtx.state.isCardOpen })
@@ -39,7 +39,7 @@ let currentIndex = $derived(
     class="h-5 w-5 group-hover:text-neutral-content {(
       direction === 'left'
         ? currentIndex <= 0
-        : appCtx.state.active.collection!.items.length - 1 <= currentIndex
+        : (appCtx.state.active.collection?.items.length || 0) - 1 <= currentIndex
     )
       ? 'opacity-50'
       : ''} transition-opacity duration-200" />

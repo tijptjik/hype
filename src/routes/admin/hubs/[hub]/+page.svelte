@@ -69,8 +69,7 @@ const FIELDS: Record<string, FormField> = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Hub> = $props();
-adminCtx.setEntity(pageProps.data.entity, RESOURCE);
-adminCtx.setFacet('core');
+adminCtx.setFacet('core', pageProps.data.entity, RESOURCE);
 
 // STATE : FORM
 let form = setForm(

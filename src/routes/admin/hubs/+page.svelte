@@ -21,9 +21,7 @@ const keyMap: KeyMap = {
 
 // CONTEXT
 const adminCtx = getAdminCtx();
-adminCtx.setResource(FirstClassResource.hub);
-adminCtx.setEntity(false);
-adminCtx.setFacet(false);
+adminCtx.setFacet(false, false, FirstClassResource.hub);
 
 // Use filteredHubs from resource state (requires superadmin access)
 let entities = $derived(adminCtx.filteredHubs);

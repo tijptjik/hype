@@ -12,96 +12,120 @@ import Section from '$lib/components/panels/common/Section.svelte';
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte';
 import Icon from '$lib/components/common/Icon.svelte';
 import { Squares2x2 } from '@steeze-ui/heroicons';
+// SERVICES
+import { filterUserFeaturesByHierarchy } from '$lib/client/services/userFeatures';
+// TYPES
+import type { Organisation, Project, Layer, Feature } from '$lib/types';
 
 // CONTEXT
 const appCtx = getAppCtx();
 const omniCtx = getOmniContext();
+
 // STATE
 let searchTerm = $state('');
 
-// Get wishlisted features
-let wishlistedFeatures = $derived(
-  appCtx.state.userFeatures.wishlisted?.flatMap((wishlist) => {
-    const feature = appCtx.state.resources.feature.find(
-      (f) => f.id === wishlist.featureId
-    );
+// Get wishlisted features with hierarchy
+let wishlistedFeaturesPromise = $derived(
+  (async () => {
+    if (!appCtx.state.userFeatures.wishlisted) return [];
 
-    // Skip if feature doesn't exist
-    if (!feature) return [];
+    const results = [];
+    for (const wishlist of appCtx.state.userFeatures.wishlisted) {
+      const feature = appCtx.state.resources.feature.find(
+        (f) => f.id === wishlist.featureId
+      );
 
-    const layer = appCtx.getLayer(feature);
-    const project = layer ? appCtx.getProject(layer) : undefined;
-    const organisation = project ? appCtx.getOrganisation(project) : undefined;
+      // Skip if feature doesn't exist
+      if (!feature) continue;
 
-    return [
-      {
-        ...wishlist,
-        hierarchy: {
-          organisation: getI18n(organisation, 'nameShort', appCtx.getUserPreferences()),
-          project: appCtx.getContextualProjectName(project!),
-          layer: appCtx.getContextualLayerName(layer!),
-          feature: getI18n(feature, 'title', appCtx.getUserPreferences())
-        }
+      try {
+        const hierarchy = await appCtx.getHierarchy(feature);
+
+        results.push({
+          ...wishlist,
+          feature,
+          hierarchy
+        });
+      } catch (error) {
+        console.warn('Failed to get hierarchy for feature:', feature.id, error);
       }
-    ];
-  }) ?? []
+    }
+
+    return results;
+  })()
 );
-
-// Filter function
-function filterFeatures(features: typeof wishlistedFeatures, term: string) {
-  if (!term) return features;
-  const searchLower = term.toLowerCase();
-  return features.filter(
-    (feature) =>
-      feature.hierarchy.organisation.toLowerCase().includes(searchLower) ||
-      (feature.hierarchy.project?.toLowerCase().includes(searchLower) ?? false) ||
-      (feature.hierarchy.layer?.toLowerCase().includes(searchLower) ?? false) ||
-      feature.hierarchy.feature.toLowerCase().includes(searchLower)
-  );
-}
-
-const filteredFeatures = $derived(filterFeatures(wishlistedFeatures, searchTerm));
 </script>
 
 <Section title={m.stars__want_to_visit()} icon="/compass.svg">
-  {#if wishlistedFeatures.length > 5}
-    <FilterBar bind:searchTerm />
-  {/if}
-  <div class="flex min-h-0 flex-col">
-    {#if filteredFeatures.length === 0}
-      <div class="flex flex-wrap justify-start gap-2 px-[34px] pt-2">
-        <p class="text-sm text-base-content/60">{m.short_watery_marten_race()}</p>
-      </div>
-    {:else}
-      <div class="scrollbar-thin flex-1 overflow-y-auto">
-        {#each filteredFeatures as wishlist (wishlist.featureId)}
-          <div
-            class="min-h-21 flex cursor-pointer flex-row items-center justify-between gap-4 bg-black px-4 py-2 text-[#374151]"
-            animate:flip={{ duration: 200 }}
-            onclick={() =>
-              omniCtx.handleFeatureSelection(appCtx, wishlist.featureId, {
-                openCard: true
-              })}>
-            <Icon src={Squares2x2} class="h-5 w-5 flex-shrink-0" theme="fill" />
-            <div class="flex flex-grow flex-col">
-              <p class="text-xs uppercase tracking-widest">
-                <span class="text-primary">{wishlist.hierarchy.organisation}</span>
-                {#if wishlist.hierarchy.project}
-                  <span class="mx-1 text-secondary">›</span>
-                  <span class="text-secondary">{wishlist.hierarchy.project}</span>
-                {/if}
-                {#if wishlist.hierarchy.layer}
-                  <span class="mx-1 text-secondary">›</span>
-                  <span class="text-secondary">{wishlist.hierarchy.layer}</span>
-                {/if}
-              </p>
-              <p class="font-normal text-neutral-300">
-                {wishlist.hierarchy.feature}
-              </p>
-            </div>
-          </div>
-        {/each}
-      </div>
+  {#await wishlistedFeaturesPromise}
+    <div class="flex flex-wrap justify-start gap-2 px-[34px] pt-2">
+      <p class="text-sm text-base-content/60">Loading...</p>
+    </div>
+  {:then wishlistedFeatures}
+    {#if wishlistedFeatures.length > 5}
+      <FilterBar bind:searchTerm />
     {/if}
-  </div>
+    {@const filteredFeatures = filterUserFeaturesByHierarchy(
+      wishlistedFeatures,
+      searchTerm
+    )}
+    <div class="flex min-h-0 flex-col">
+      {#if filteredFeatures.length === 0}
+        <div class="flex flex-wrap justify-start gap-2 px-[34px] pt-2">
+          <p class="text-sm text-base-content/60">{m.short_watery_marten_race()}</p>
+        </div>
+      {:else}
+        <div class="scrollbar-thin flex-1 overflow-y-auto">
+          {#each filteredFeatures as wishlist (wishlist.featureId)}
+            {@const organisationName = getI18n(
+              wishlist.hierarchy.organisation,
+              'nameShort',
+              appCtx.getUserPreferences()
+            )}
+            {@const showOrganisation = wishlist.hierarchy.organisation}
+            {@const projectName = appCtx.getContextualProjectName(wishlist.hierarchy.project)}
+            {@const showProject = wishlist.hierarchy.project && projectName}
+            {@const layerName = appCtx.getContextualLayerName(wishlist.hierarchy.layer!)}
+            {@const showLayer = wishlist.hierarchy.layer && layerName}
+            {@const featureName = getI18n(
+              wishlist.feature,
+              'title',
+              appCtx.getUserPreferences()
+            )}
+            <div
+              class="min-h-21 flex cursor-pointer flex-row items-center justify-between gap-4 bg-black px-4 py-2 text-[#374151]"
+              animate:flip={{ duration: 200 }}
+              onclick={() =>
+                omniCtx.handleFeatureSelection(appCtx, wishlist.featureId, {
+                  openCard: true
+                })}>
+              <Icon src={Squares2x2} class="h-5 w-5 flex-shrink-0" theme="fill" />
+              <div class="flex flex-grow flex-col">
+                <p class="text-xs uppercase tracking-widest">
+                  {#if showOrganisation}
+                    <span class="text-primary">{organisationName}</span>
+                  {/if}
+                  {#if showProject}
+                    <span class="mx-1 text-secondary">›</span>
+                    <span class="text-secondary">{projectName}</span>
+                  {/if}
+                  {#if showLayer}
+                    <span class="mx-1 text-secondary">›</span>
+                    <span class="text-secondary">{layerName}</span>
+                  {/if}
+                </p>
+                <p class="font-normal text-neutral-300">
+                  {featureName}
+                </p>
+              </div>
+            </div>
+          {/each}
+        </div>
+      {/if}
+    </div>
+  {:catch error}
+    <div class="flex flex-wrap justify-start gap-2 px-[34px] pt-2">
+      <p class="text-sm text-red-400">Error loading wishlisted features</p>
+    </div>
+  {/await}
 </Section>

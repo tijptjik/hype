@@ -5,6 +5,7 @@ alwaysApply: true
 ---
 - Use type guards and type predicates for runtime type checking
 - Implement discriminated unions for complex state management
+- Provide explicit return types
 - Leverage utility types (Partial, Readonly, Pick, etc.)
 - Use `as const` for enum-like constants
 - Apply literal types for resource types and states

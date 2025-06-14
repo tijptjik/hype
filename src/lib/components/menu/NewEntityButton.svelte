@@ -21,7 +21,7 @@ const onclick = (e: MouseEvent) => {
   adminCtx.setFacet(false);
   if (
     requiresParentAssociation(
-      adminCtx.activeResource as unknown as HierarchicalResource
+      adminCtx.activeResourceType as unknown as HierarchicalResource
     )
   ) {
     // Let the user pick the parent to be associated with
@@ -30,7 +30,7 @@ const onclick = (e: MouseEvent) => {
     // Directly navigate to the new entity page
     navigateOnAdmin(
       adminCtx,
-      adminCtx.activeResource as FirstClassResource,
+      adminCtx.activeResourceType as FirstClassResource,
       NEW_REF,
       'core'
     );

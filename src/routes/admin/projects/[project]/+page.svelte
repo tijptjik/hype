@@ -38,7 +38,8 @@ import type {
   FormField,
   FormFieldArray,
   FormFieldArrayDefinition,
-  Image
+  Image,
+  Id
 } from '$lib/types';
 
 // CONTEXT
@@ -212,8 +213,7 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Project> = $props();
-adminCtx.setEntity(pageProps.data.entity, FirstClassResource.project);
-adminCtx.setFacet('core');
+adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.project);
 
 // STATE : FORM
 let form = setForm(
@@ -252,7 +252,7 @@ let title = $derived(
       <HeaderButton
         facet={{ label: m.project__fields(), ref: 'fields' }}
         isActive={adminCtx.activeFacet === 'fields'} />
-      {#if adminCtx.activeEntity !== 'new'}
+      {#if adminCtx.activeResourceRef !== 'new'}
         <HeaderButton
           facet={{ label: m.project__images(), ref: 'images' }}
           isActive={adminCtx.activeFacet === 'images'} />
@@ -264,75 +264,75 @@ let title = $derived(
     {/snippet}
   </Header>
   {#if adminCtx.appCtx.isInitialised}
-    <form
-      id="projectForm"
-      method="POST"
-      use:enhance
-      role="form"
-      transition:fade
-      data-testid="projectForm"
-      class="h-full">
-      <main class="flex h-full flex-col gap-6 overflow-y-auto p-6">
-        {#if adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false}
-          <I18nSection
-            title={m.admin__forms_common_descriptors()}
-            fields={FIELDS.i18n}
-            {form} />
-          <I18nSection
-            title={m.admin__forms_project_credit()}
-            subtitle={m.admin__forms_project_credit_subtitle()}
-            fields={FIELDS.credit}
-            {form} />
-          <div class="flex flex-row gap-6">
-            <UserSection
-              title={m.admin__forms_project_members_title()}
-              subtitle={m.admin__forms_project_members_subtitle()}
-              fields={FIELDS.users}
-              {form}
-              joinConfig={{
-                discriminator: 'role',
-                checkedValue: 'maintainer',
-                uncheckedValue: 'member'
-              }} />
-            <SpecificationSection
-              title={m.admin__forms_common_specifiers()}
-              fields={FIELDS.specification as FormField}
+    {#await adminCtx.appCtx.getHierarchy(pageProps.data.validatedForm.data) then { organisation, project }}
+      <form
+        id="projectForm"
+        method="POST"
+        use:enhance
+        role="form"
+        transition:fade
+        data-testid="projectForm"
+        class="h-full">
+        <main class="flex h-full flex-col gap-6 overflow-y-auto p-6">
+          {#if adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false}
+            <I18nSection
+              title={m.admin__forms_common_descriptors()}
+              fields={FIELDS.i18n}
               {form} />
-          </div>
-        {:else if adminCtx.activeFacet === 'fields'}
-          <div class="flex flex-col gap-6">
-            <PropertySection
-              title={m.admin__forms_common_classifiers()}
-              subtitle={m.admin__forms_common_classifiers_subtitle()}
-              fieldDiscriminator="classifier"
-              fields={FIELDS.config as FormFieldArray}
+            <I18nSection
+              title={m.admin__forms_project_credit()}
+              subtitle={m.admin__forms_project_credit_subtitle()}
+              fields={FIELDS.credit}
               {form} />
-            <PropertySection
-              title={m.admin__forms_common_specifiers()}
-              subtitle={m.admin__forms_common_specifiers_subtitle()}
-              fieldDiscriminator="specifier"
-              fields={FIELDS.config as FormFieldArray}
-              {form} />
-          </div>
-        {:else if adminCtx.activeFacet === 'images'}
-          <ImageProvider
-            mode="standalone"
-            isAdminMode={true}
-            ctxType={ImageContextResource.project}
-            ctxId={pageProps.data.entity}
-            organisation={adminCtx.appCtx.getOrganisation(
-              adminCtx.getEntity() as Project
-            )}
-            project={adminCtx.getEntity() as Project}
-            image={pageProps.data.image as Image}>
-            <ImageSection
-              title={m.admin__forms_project_image_title()}
-              fields={FIELDS.images as FormField}
-              image={pageProps.data.image ?? null}
-              {form} />
-          </ImageProvider>
-        {/if}
-      </main>
-    </form>
+            <div class="flex flex-row gap-6">
+              <UserSection
+                title={m.admin__forms_project_members_title()}
+                subtitle={m.admin__forms_project_members_subtitle()}
+                fields={FIELDS.users}
+                {form}
+                joinConfig={{
+                  discriminator: 'role',
+                  checkedValue: 'maintainer',
+                  uncheckedValue: 'member'
+                }} />
+              <SpecificationSection
+                title={m.admin__forms_common_specifiers()}
+                fields={FIELDS.specification as FormField}
+                {form} />
+            </div>
+          {:else if adminCtx.activeFacet === 'fields'}
+            <div class="flex flex-col gap-6">
+              <PropertySection
+                title={m.admin__forms_common_classifiers()}
+                subtitle={m.admin__forms_common_classifiers_subtitle()}
+                fieldDiscriminator="classifier"
+                fields={FIELDS.config as FormFieldArray}
+                {form} />
+              <PropertySection
+                title={m.admin__forms_common_specifiers()}
+                subtitle={m.admin__forms_common_specifiers_subtitle()}
+                fieldDiscriminator="specifier"
+                fields={FIELDS.config as FormFieldArray}
+                {form} />
+            </div>
+          {:else if adminCtx.activeFacet === 'images'}
+            <ImageProvider
+              mode="standalone"
+              isAdminMode={true}
+              ctxType={ImageContextResource.project}
+              ctxId={pageProps.data.entity}
+              {organisation}
+              {project}
+              image={pageProps.data.image as Image}>
+              <ImageSection
+                title={m.admin__forms_project_image_title()}
+                fields={FIELDS.images as FormField}
+                image={pageProps.data.image ?? null}
+                {form} />
+            </ImageProvider>
+          {/if}
+        </main>
+      </form>
+    {/await}
   {/if}
 </div>
