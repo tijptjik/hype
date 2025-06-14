@@ -89,7 +89,14 @@ afterNavigate(() => {
     class:font-hant={getLocale() === 'zh-hant'}
     class:font-hans={getLocale() === 'zh-hans'}>
     <FlashMessage />
-    <svelte:boundary>{@render children()}</svelte:boundary>
+    <svelte:boundary>
+      {#snippet pending()}
+        <div class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-300">
+          <div class="loading loading-spinner loading-lg text-primary"></div>
+        </div>
+      {/snippet}
+      {@render children()}
+    </svelte:boundary>
     {#if getLocale() === 'zh-hant'}
       <link
         href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@100..900&display=swap"
