@@ -3,7 +3,7 @@ import { getContext, setContext } from 'svelte';
 import { goto } from '$app/navigation';
 // LIB
 import { MOBILE_MAX_WIDTH } from '$lib';
-import { searchAll } from '$lib/map/data';
+import { searchAllAsync } from '$lib/map/data';
 // I18N
 import { getI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
@@ -58,15 +58,39 @@ export class OmniContext {
   pageState: PageState = $state(PageState.NoTransition);
   isIntentionallyClosing: boolean = $state(false);
 
+  // Search results state (updated asynchronously)
+  searchResults: Record<string, SearchResult[]> = $state({
+    features: [],
+    neighbourhoods: [],
+    walks: []
+  });
+
   // Constructor with appCtx
   constructor(appCtx: AppCtx) {
     this.appCtx = appCtx;
+    
+    // Effect to update search results when dependencies change
+    $effect(() => {
+      // Explicitly track all reactive dependencies
+      const searchTerm = this.state.searchTerm;
+      const featuresSize = this.appCtx.features.size; // Track feature changes
+      const userFeaturesWishlisted = this.appCtx.state.userFeatures.wishlisted.length; // Track wishlist changes
+      
+      // Update search results immediately (no setTimeout to preserve reactivity)
+      this.updateSearchResults(searchTerm);
+    });
   }
 
-  // DERIVED values after state and constructor
-  searchResults: Record<string, SearchResult[]> = $derived(
-    this.toGroups(searchAll(this.state.searchTerm, this.appCtx))
-  );
+  // Async method to update search results
+  private async updateSearchResults(searchTerm: string) {
+    try {
+      const results = await searchAllAsync(searchTerm, this.appCtx);
+      this.searchResults = this.toGroups(results);
+    } catch (error) {
+      console.error('Error updating search results:', error);
+      this.searchResults = { features: [], neighbourhoods: [], walks: [] };
+    }
+  }
 
   // MAPS
   searchHandlers = {
@@ -240,7 +264,7 @@ export class OmniContext {
       });
     }
 
-    let feature = appCtx.getFeatureById(featureId);
+    let feature = await appCtx.getFeatureById(featureId);
     if (feature == null) {
       console.error('Feature not found:', featureId);
       return;
@@ -352,6 +376,7 @@ export class OmniContext {
 
   // SEARCH UTILS
   toGroups(results: SearchResult[]) {
+    console.log(results);
     return {
       walks: results.filter((r) => r.group === 'walks'),
       neighbourhoods: results
