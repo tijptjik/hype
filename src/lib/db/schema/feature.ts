@@ -46,6 +46,10 @@ export const feature = sqliteTable('feature', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => nanoid(12)),
+  organisationId: text('organisationId').notNull(),
+  projectId: text('projectId').notNull(),
+  layerId: text('layerId').notNull(),
+  contributorId: text('contributorId'),
   geometry: text('geometry', { mode: 'json' }).notNull().$type<GeometryObject>(),
   // Address Metadata
   addressMeta: text('addressMeta', {
@@ -53,10 +57,6 @@ export const feature = sqliteTable('feature', {
   })
     .$type<AddressMeta>()
     .default({}),
-  organisationId: text('organisationId').notNull(),
-  projectId: text('projectId').notNull(),
-  layerId: text('layerId').notNull(),
-  contributorId: text('contributorId'),
   // True : Feature is shown in the User App
   // False : Feature is only shown in the Admin Panel
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),

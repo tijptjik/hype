@@ -135,17 +135,21 @@ export const projectRoleRelations = relations(projectRole, ({ one }) => ({
  * Links layer to its translations, properties, features, and project
  */
 export const layerRelations = relations(layer, ({ many, one }) => ({
-  i18n: many(layerI18n),
-  properties: many(layerProperty),
-  features: many(feature),
-  publisher: one(user, {
-    fields: [layer.publisherId],
-    references: [user.id]
+  organisation: one(organisation, {
+    fields: [layer.organisationId],
+    references: [organisation.id]
   }),
   project: one(project, {
     fields: [layer.projectId],
     references: [project.id]
-  })
+  }),
+  i18n: many(layerI18n),
+  properties: many(layerProperty),
+  publisher: one(user, {
+    fields: [layer.publisherId],
+    references: [user.id]
+  }),
+  features: many(feature),
 }));
 
 /**
@@ -226,6 +230,14 @@ export const propertyValueI18nRelations = relations(propertyValueI18n, ({ one })
  * Links feature to its translations, properties, images, and metadata
  */
 export const featureRelations = relations(feature, ({ one, many }) => ({
+  organisation: one(organisation, {
+    fields: [feature.organisationId],
+    references: [organisation.id]
+  }),
+  project: one(project, {
+    fields: [feature.projectId],
+    references: [project.id]
+  }),
   layer: one(layer, {
     fields: [feature.layerId],
     references: [layer.id]
