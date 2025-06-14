@@ -50,6 +50,8 @@ async function handleImageLoad() {
       ]);
       imageStore[src] = img;
     }
+    // TODO handle unavaialble images
+    if (!imgElement) return;
     imgElement.src = imageStore[src].src;
     loaded = true;
     onLoad?.();
@@ -62,7 +64,7 @@ async function handleImageLoad() {
 
 // Reset loaded state and start loading when src changes
 $effect(() => {
-  if (src !== lastSrc) {
+  if (imgElement && src !== lastSrc) {
     lastSrc = src;
     loaded = false;
     handleImageLoad();
