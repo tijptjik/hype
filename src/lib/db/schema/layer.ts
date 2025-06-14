@@ -25,6 +25,7 @@ export const layer = sqliteTable('layer', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => nanoid(12)),
+  organisationId: text('organisationId').notNull(),
   projectId: text('projectId').notNull(),
   // Additional Information
   metadata: text('metadata', { mode: 'json' }).$type<LayerMetadata>(),
