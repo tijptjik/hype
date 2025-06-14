@@ -92,11 +92,15 @@ async function toggleVisited() {
   isSubmittingVisit = true;
 
   try {
+    // If marking as visited and item is wishlisted, remove from wishlist
+    const shouldRemoveFromWishlist = !isVisited && isWishlisted;
+    const newWishlistStatus = shouldRemoveFromWishlist ? false : (wishlistedFeature?.isWishlisted || false);
+    
     await toggleVisitedStatus(
       appCtx.user!.id,
       feature.id,
       isVisited,
-      wishlistedFeature?.isWishlisted || false
+      newWishlistStatus
     );
 
     // Optimistically update the UI
