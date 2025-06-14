@@ -61,18 +61,18 @@ export const PUT: RequestHandler = async ({ request, locals, platform }) => {
   // ASSERT : User logged in
   const { db, userId, user } = await getDatabase(locals, platform);
 
+  // VALIDATION: Parse and validate request body OUTSIDE try-catch
+  const body = await request.json();
+  const validatedData = UserFeatureUpdateAPI.parse(body);
+
+  if (!validatedData.userId) {
+    return error(400, 'Target User ID is required in request body');
+  }
+
+  // ASSERT : Permissions to update user feature OUTSIDE try-catch
+  assertPermissionsToUpdateUserFeature(user, validatedData.userId);
+
   try {
-    // VALIDATION: Parse and validate request body
-    const body = await request.json();
-    const validatedData = UserFeatureUpdateAPI.parse(body);
-
-    if (!validatedData.userId) {
-      return error(400, 'Target User ID is required in request body');
-    }
-
-    // ASSERT : Permissions to update user feature
-    assertPermissionsToUpdateUserFeature(user, validatedData.userId);
-
     // DB: Upsert user feature
     const result = await upsertUserFeature(db, userId, validatedData);
 

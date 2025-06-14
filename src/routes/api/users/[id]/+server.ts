@@ -1,5 +1,7 @@
 // SVELTEKIT
 import { error, type RequestHandler } from '@sveltejs/kit';
+// I18n
+import { m } from '$lib/i18n';
 // DRIZZLE
 import { eq } from 'drizzle-orm';
 // DB
@@ -82,20 +84,20 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
   // ASSERT : User logged in
   const { db, user: sessionUser } = await getDatabase(locals, platform);
 
+  // ASSERT : Valid form data - move outside try-catch
+  const newData: UserPartial = await request.json();
+
+  // Get the existing user to verify access OUTSIDE try-catch
+  const existing = (await getUser(db, {}, [
+    eq(user.id, params.id as string)
+  ])) as UserDB;
+
+  if (!existing) return error(404, m.resource_not_found({ resourceType: m.ornate_happy_meerkat_roam() }));
+
+  // ASSERT : Permissions to update user OUTSIDE try-catch
+  assertPermissionsToUpdateUser(sessionUser!, existing, params.id as Id);
+
   try {
-    // ASSERT : Valid form data
-    const newData: UserPartial = await request.json();
-
-    // Get the existing user to verify access
-    const existing = (await getUser(db, {}, [
-      eq(user.id, params.id as string)
-    ])) as UserDB;
-
-    if (!existing) return error(404, 'User not found');
-
-    // ASSERT : Permissions to update user
-    assertPermissionsToUpdateUser(sessionUser!, existing, params.id as Id);
-
     // DB : Update the userBase (no relations for PATCH)
     const updated = await updateUser(db, newData, params.id as string);
     let updatedFeatures: UserFeatureDB[] = [];
