@@ -82,15 +82,15 @@ export const navigateOnAdmin = (
   let url = `${ADMIN_PATH}`;
   if (resource) {
     url += `/${ResourcePath[resource]}`;
-    adminCtx.setResource(resource);
+    adminCtx.setResourceType(resource);
   } else {
-    adminCtx.setResource(false);
+    adminCtx.setResourceType(false);
   }
   if (entityRef) {
     url += `/${entityRef}`;
-    adminCtx.setEntity(entityRef);
+    adminCtx.setResourceRef(entityRef);
   } else {
-    adminCtx.setEntity(false);
+    adminCtx.setResourceRef(false);
   }
   if (facet) {
     url += `#${facet}`;

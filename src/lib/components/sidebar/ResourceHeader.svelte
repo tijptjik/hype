@@ -30,8 +30,8 @@ let onClick = (e: MouseEvent) => {
     draggable="false"
     href="{ADMIN_PATH}/{ResourcePath[resourceType]}"
     onclick={(e) => onClick(e)}
-    class="flex select-none items-center border-l-3 p-6 {adminCtx.activeResource ===
-      resourceType && !adminCtx.activeEntity
+    class="flex select-none items-center border-l-3 p-6 {adminCtx.activeResourceType ===
+      resourceType && !adminCtx.activeResourceRef
       ? 'border-primary'
       : 'border-base-300'} rounded-none">
     <Icon src={navItems[resourceType].icon} class="h-6 w-6" />

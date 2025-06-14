@@ -14,7 +14,7 @@ import type { FirstClassResource } from '$lib/enums';
 const adminCtx = getAdminCtx();
 
 // STATE : DERIVED :: RESOURCE MODE
-let resource = $derived(adminCtx.activeResource);
+let resource = $derived(adminCtx.activeResourceType);
 let resourceMode = $derived(adminCtx.isShowIndex);
 
 // STATE : DERIVED :: TITLE

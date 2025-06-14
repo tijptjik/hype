@@ -43,7 +43,7 @@ $effect(() => {
 </script>
 
 <div>
-  {#if !searchMode && adminCtx.activeResource !== 'feature'}
+  {#if !searchMode && adminCtx.activeResourceType !== 'feature'}
     <button
       class="btn-rounded btn btn-ghost ml-auto bg-base-100"
       onclick={toggleRemoveMode}>

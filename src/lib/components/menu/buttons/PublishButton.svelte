@@ -50,7 +50,7 @@ $effect(() => {
 const handleClick = async (e: Event) => {
   e.preventDefault();
   e.stopPropagation();
-  if (isLoading || !adminCtx.activeEntity || adminCtx.activeEntity === NEW_REF) return;
+  if (isLoading || !adminCtx.activeResourceRef || adminCtx.activeResourceRef === NEW_REF) return;
 
   isLoading = true;
 
@@ -63,7 +63,7 @@ const handleClick = async (e: Event) => {
     }
 
     const response: Response = await fetch(
-      `/api/${ResourcePath[adminCtx.activeResource as FirstClassResource]}/${adminCtx.activeEntity}`,
+      `/api/${ResourcePath[adminCtx.activeResourceType as FirstClassResource]}/${adminCtx.activeResourceRef}`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -81,8 +81,8 @@ const handleClick = async (e: Event) => {
 
     if (result && result.type === 'success') {
       // INVALIDE CACHE
-      if (adminCtx.activeResource) {
-        adminCtx.invalidateAndRefresh(adminCtx.activeResource);
+      if (adminCtx.activeResourceType) {
+        adminCtx.invalidateAndRefresh(adminCtx.activeResourceType);
       }
       // UPDATE FORM - Reset with new data to avoid dirtying the form
       reset({
@@ -116,8 +116,8 @@ const handleClick = async (e: Event) => {
   onclick={handleClick}
   disabled={isInvalid ||
     isLoading ||
-    !adminCtx.activeEntity ||
-    adminCtx.activeEntity === NEW_REF}>
+    !adminCtx.activeResourceRef ||
+    adminCtx.activeResourceRef === NEW_REF}>
   {#if $form.isPublished}
     <Icon src={EyeSlash} class="h-5 w-5" />
     {m.forms__unpublish()}

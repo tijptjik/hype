@@ -116,7 +116,7 @@ $effect(() => {
         <label
           class="label flex flex-shrink-0 flex-grow-0 flex-col items-center gap-2 pb-2 text-sm"
           style="font-variant: small-caps; font-variant-caps: small-caps;">
-          {adminCtx.activeResource === 'project' ? 'Maintainer' : 'Owner'}
+          {adminCtx.activeResourceType === 'project' ? 'Maintainer' : 'Owner'}
           <input
             name={userRole.user.id}
             type="checkbox"
