@@ -53,7 +53,12 @@ import type {
   FeatureProperty,
   FeaturePropertyI18nDB,
   ResourceTypeWithChildren,
-  FeatureI18nFieldKeys
+  FeatureI18nFieldKeys,
+  Task,
+  Hub,
+  Code,
+  ResourceContext,
+  Resource
 } from '$lib/types';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
@@ -68,6 +73,34 @@ export class AppCtx {
   user: CurrentUser | SessionUser | null = $state(null);
   // Whether the map has been initialised
   isInitialised: boolean = $state(false);
+
+  // Query map to store different query functions (can be overridden by AdminCtx)
+  queryMap = new Map<
+    FirstClassResource | 'userFeatures',
+    {
+      queryKey: () => any[];
+      queryFn: () => Promise<any>;
+    }
+  >();
+
+  // Cache for all resources
+  cache = {
+    organisation: new Map<Id, Organisation>(),
+    project: new Map<Id, Project>(),
+    layer: new Map<Id, Layer>(),
+    feature: new Map<Id, Feature>(),
+    task: new Map<Id, Task>(),
+    hub: new Map<Id, Hub>(),
+    // TODO implement cache for properties
+    property: new Map<Id, Property>()
+  };
+
+  // Features map for current state (rebuilt when state.resources.feature changes)
+  private featuresMap = $state(new Map<Id, Feature>());
+  private organisationCodeToId = new Map<Code, Id>();
+  private projectCodeToId = new Map<Code, Id>();
+  private hubCodeToId = new Map<Code, Id>();
+
   // State
   state: AppContextState = $state({
     // Markers -- Which features are shown on the map
@@ -142,20 +175,94 @@ export class AppCtx {
   constructor(queryClient: QueryClient, user: SessionUser | null) {
     this.queryClient = queryClient;
     this.setUser(user);
+    this.initializeQueryMap();
   }
 
-  init = async (userId: Id | null) => {
-    await this.initializeQueries(this.queryClient, userId);
-    this.postLayerMutation();
-    this.postUserMutation();
+  // Initialize default query map (can be overridden by AdminCtx)
+  private initializeQueryMap = (): void => {
+    this.queryMap.set(FirstClassResource.organisation, {
+      queryKey: () => this.organisationsQueryKey,
+      queryFn: () => this.organisationsQueryFn()
+    });
+
+    this.queryMap.set(FirstClassResource.project, {
+      queryKey: () => this.projectsQueryKey,
+      queryFn: () => this.projectsQueryFn()
+    });
+
+    this.queryMap.set(FirstClassResource.layer, {
+      queryKey: () => this.layersQueryKey,
+      queryFn: () => this.layersQueryFn()
+    });
+
+    this.queryMap.set(FirstClassResource.feature, {
+      queryKey: () => this.featuresQueryKey,
+      queryFn: () => this.featuresQueryFn()
+    });
+
+    // ADMIN ONLY
+    this.queryMap.set(FirstClassResource.task, {
+      queryKey: () => [FirstClassResource.task],
+      queryFn: () => Promise.resolve([])
+    });
+
+    // ADMIN ONLY
+    this.queryMap.set(FirstClassResource.hub, {
+      queryKey: () => [FirstClassResource.hub],
+      queryFn: () => Promise.resolve([])
+    });
+
+    // APP ONLY
+    this.queryMap.set('userFeatures', {
+      queryKey: () => this.userFeaturesQueryKey,
+      queryFn: () => this.userFeaturesQueryFn()
+    });
   };
 
-  reinitializeWithAuth = async () => {
+  init = async (userId: Id | null): Promise<void> => {
+    // Only initialize if user is authenticated
+    if (!userId) {
+      // Initialize empty data structures for unauthenticated users
+      this.state.resources.organisation = [];
+      this.state.resources.project = [];
+      this.state.resources.layer = [];
+      this.state.resources.feature = [];
+      this.state.resources.task = [];
+      this.state.resources.hub = [];
+      this.state.userFeatures = {
+        wishlisted: [],
+        visited: []
+      };
+      return;
+    }
+
+    // Use refreshOrganisations to trigger proper cascades and post-mutation logic
+    await this.refreshOrganisations();
+
+    // Initialize user data
+    this.state.userFeatures = await this.queryClient
+      .fetchQuery({
+        queryKey: this.queryMap.get('userFeatures')!.queryKey(),
+        queryFn: this.queryMap.get('userFeatures')!.queryFn
+      })
+      .then((uf) => ({
+        wishlisted: (uf || []).filter((f: UserFeature) => f.isWishlisted),
+        visited: (uf || []).filter((f: UserFeature) => f.isVisited)
+      }));
+
+    this.user = (await this.queryClient.fetchQuery({
+      queryKey: this.userQueryKey,
+      queryFn: this.userQueryFn
+    })) as CurrentUser;
+
+    this.postUserMutation();
+    this.isInitialised = true;
+  };
+
+  reinitializeWithAuth = async (): Promise<void> => {
     if (this.user?.id) {
       this.isInitialised = false;
-      await this.initializeQueries(this.queryClient, this.user.id);
-      this.postLayerMutation();
-      this.postUserMutation();
+      await this.init(this.user.id);
     }
   };
 
@@ -167,7 +274,7 @@ export class AppCtx {
   // Helper method to build API URLs with filters
   private buildApiUrl = (
     resource: FirstClassResource,
-    includeFilters = true
+    includeFilters: boolean = true
   ): string => {
     const path = ResourcePath[resource];
     const params = new URLSearchParams();
@@ -203,27 +310,27 @@ export class AppCtx {
     return `/api/${path}?${params.toString()}`;
   };
 
-  organisationsQueryFn = async () => {
+  organisationsQueryFn = async (): Promise<Organisation[]> => {
     const url = this.buildApiUrl(FirstClassResource.organisation);
     return fetchOrThrow<Organisation[]>(url);
   };
 
-  projectsQueryFn = async () => {
+  projectsQueryFn = async (): Promise<Project[]> => {
     const url = this.buildApiUrl(FirstClassResource.project);
     return fetchOrThrow<Project[]>(url);
   };
 
-  layersQueryFn = async () => {
+  layersQueryFn = async (): Promise<Layer[]> => {
     const url = this.buildApiUrl(FirstClassResource.layer);
     return fetchOrThrow<Layer[]>(url);
   };
 
-  featuresQueryFn = async () => {
+  featuresQueryFn = async (): Promise<Feature[]> => {
     const url = this.buildApiUrl(FirstClassResource.feature);
     return fetchOrThrow<Feature[]>(url);
   };
 
-  userFeaturesQueryFn = async () => {
+  userFeaturesQueryFn = async (): Promise<UserFeature[]> => {
     if (!this.user?.id) {
       return [];
     }
@@ -234,24 +341,25 @@ export class AppCtx {
     return Array.isArray(data) ? data : [];
   };
 
-  userQueryFn = async () => {
+  userQueryFn = async (): Promise<CurrentUser | null> => {
     if (!this.user?.id) {
       return null;
     }
     const response = await fetch(`/api/users/${this.user.id}`);
     if (!response.ok) throw new Error('Network response was not ok');
-    const data = await response.json();
-    return data as CurrentUser;
+    return (await response.json()) as CurrentUser;
   };
 
-  invalidateAndRefresh = async (resource: FirstClassResource | 'userFeatures') => {
+  invalidateAndRefresh = async (
+    resource: FirstClassResource | 'userFeatures'
+  ): Promise<void> => {
     // Invalidate the query
     await this.invalidate(resource);
     // Refresh the resources
     await this.refresh(resource);
   };
 
-  invalidate = async (resource: FirstClassResource | 'userFeatures') => {
+  invalidate = async (resource: FirstClassResource | 'userFeatures'): Promise<void> => {
     await this.queryClient.invalidateQueries({
       queryKey:
         resource === 'userFeatures'
@@ -262,7 +370,7 @@ export class AppCtx {
     });
   };
 
-  togglePrism = (resource: FirstClassResource, id: Id) => {
+  togglePrism = (resource: FirstClassResource, id: Id): void => {
     const prisms = this.state.prisms[resource as ResourceTypeWithChildren];
     const index = prisms.indexOf(id);
     if (index === -1) {
@@ -274,103 +382,148 @@ export class AppCtx {
   };
 
   // Toggle methods for hierarchical filters
-  toggleOrganisation = (id: Id) => {
+  toggleOrganisation = (id: Id): void => {
     this.togglePrism(FirstClassResource.organisation, id);
   };
 
-  toggleProject = (id: Id) => {
+  toggleProject = (id: Id): void => {
     this.togglePrism(FirstClassResource.project, id);
   };
 
-  toggleLayer = (id: Id) => {
+  toggleLayer = (id: Id): void => {
     this.togglePrism(FirstClassResource.layer, id);
   };
 
-  toggleFeature = (id: Id) => {
+  toggleFeature = (id: Id): void => {
     this.togglePrism(FirstClassResource.feature, id);
   };
 
   // Cascades refresh to the next resource in the hierarchy
-  refresh = async (resource: FirstClassResource | 'userFeatures') => {
+  refresh = async (resource: FirstClassResource | 'userFeatures'): Promise<void> => {
     // Refresh the resources
-    if (resource === 'project') {
+    if (resource === 'organisation') {
+      this.refreshOrganisations();
+    } else if (resource === 'project') {
       this.refreshProjects();
     } else if (resource === 'layer') {
       this.refreshLayers();
     } else if (resource === 'feature') {
       this.refreshFeatures();
+    } else if (resource === 'task') {
+      this.refreshTasks();
+    } else if (resource === 'hub') {
+      this.refreshHubs();
     } else if (resource === 'userFeatures') {
       this.refreshUserFeatures();
     }
   };
 
-  private initializeQueries = async (queryClient: QueryClient, userId: Id | null) => {
-    // Only fetch data if user is authenticated
-    if (!userId) {
-      // Initialize empty data structures for unauthenticated users
-      this.state.resources.organisation = [];
-      this.state.resources.project = [];
-      this.state.resources.layer = [];
-      this.state.resources.feature = [];
-      // TODO Limit to admin route
-      this.state.resources.task = [];
-      this.state.resources.hub = [];
-      // TODO Limit to (app) route
-      this.state.userFeatures = {
-        wishlisted: [],
-        visited: []
-      };
-      return;
-    }
-
-    // Organizations query
-    this.state.resources.organisation = await queryClient.fetchQuery({
-      queryKey: this.organisationsQueryKey,
-      queryFn: this.organisationsQueryFn
+  refreshOrganisations = async (): Promise<void> => {
+    this.state.resources.organisation = await this.queryClient.fetchQuery({
+      queryKey: this.queryMap.get(FirstClassResource.organisation)!.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.organisation)!.queryFn
     });
-
-    // Projects query
-    this.state.resources.project = await queryClient.fetchQuery({
-      queryKey: this.projectsQueryKey,
-      queryFn: this.projectsQueryFn
+    // Cache organizations
+    this.state.resources.organisation.forEach((org) => {
+      this.cache.organisation.set(org.id, org);
     });
+    // Populate organisation code-to-ID mapping
+    this.populateOrganisationCodeToIdMap();
+    this.refreshProjects();
+    this.refreshHubs();
+  };
 
-    // Layers query
-    this.state.resources.layer = await queryClient.fetchQuery({
-      queryKey: this.layersQueryKey,
-      queryFn: this.layersQueryFn
+  refreshProjects = async (): Promise<void> => {
+    this.state.resources.project = await this.queryClient.fetchQuery({
+      queryKey: this.queryMap.get(FirstClassResource.project)!.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.project)!.queryFn
     });
-
-    // Features query
-    this.state.resources.feature = await queryClient.fetchQuery({
-      queryKey: this.featuresQueryKey,
-      queryFn: this.featuresQueryFn
+    // Cache projects
+    this.state.resources.project.forEach((project) => {
+      this.cache.project.set(project.id, project);
     });
+    // Populate project code-to-ID mapping
+    this.populateProjectCodeToIdMap();
+    this.syncProjectPrisms();
+    this.refreshLayers();
+  };
 
-    // Tasks and hubs are initialized in AdminCtx for admin routes only
-    this.state.resources.task = [];
-    this.state.resources.hub = [];
+  refreshLayers = async (): Promise<void> => {
+    this.state.resources.layer = await this.queryClient.fetchQuery({
+      queryKey: this.queryMap.get(FirstClassResource.layer)!.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.layer)!.queryFn
+    });
+    // Cache layers
+    this.state.resources.layer.forEach((layer) => {
+      this.cache.layer.set(layer.id, layer);
+    });
+    // Populate layer code-to-ID mapping
+    this.syncLayerPrisms();
+    // Also calls this.refreshFeatures()
+    this.postLayerMutation();
+  };
 
-    // Initialize user features
-    this.state.userFeatures = await queryClient
+  refreshFeatures = async (): Promise<void> => {
+    this.state.resources.feature = await this.queryClient.fetchQuery({
+      queryKey: this.queryMap.get(FirstClassResource.feature)!.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.feature)!.queryFn
+    });
+    // Cache features
+    this.state.resources.feature.forEach((feature) => {
+      this.cache.feature.set(feature.id, feature);
+    });
+    this.rebuildFeaturesMap();
+  };
+
+  refreshTasks = async (): Promise<void> => {
+    this.state.resources.task = await this.queryClient.fetchQuery({
+      queryKey: this.queryMap.get(FirstClassResource.task)!.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.task)!.queryFn
+    });
+    // Cache tasks
+    this.state.resources.task.forEach((task) => {
+      this.cache.task.set(task.id, task);
+    });
+  };
+
+  refreshHubs = async (): Promise<void> => {
+    if (!this.isSuperAdmin()) return;
+    this.state.resources.hub = await this.queryClient.fetchQuery({
+      queryKey: this.queryMap.get(FirstClassResource.hub)!.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.hub)!.queryFn
+    });
+    // Cache hubs
+    this.state.resources.hub.forEach((hub) => {
+      this.cache.hub.set(hub.id, hub);
+    });
+    this.populateHubCodeToIdMap();
+  };
+
+  refreshUserFeatures = async (): Promise<void> => {
+    this.state.userFeatures = await this.queryClient
       .fetchQuery({
-        queryKey: this.userFeaturesQueryKey,
-        queryFn: this.userFeaturesQueryFn
+        queryKey: this.queryMap.get('userFeatures')!.queryKey(),
+        queryFn: this.queryMap.get('userFeatures')!.queryFn
       })
       .then((uf) => ({
         wishlisted: (uf || []).filter((f: UserFeature) => f.isWishlisted),
         visited: (uf || []).filter((f: UserFeature) => f.isVisited)
       }));
-
-    this.user = (await queryClient.fetchQuery({
-      queryKey: this.userQueryKey,
-      queryFn: this.userQueryFn
-    })) as CurrentUser;
-
-    this.isInitialised = true;
   };
 
-  postLayerMutation = () => {
+  syncProjectPrisms = async () => {
+    this.state.prisms.project = this.state.prisms.project.filter((project) => {
+      return this.state.resources.project.some((p) => p.id === project);
+    });
+  };
+
+  syncLayerPrisms = async () => {
+    this.state.prisms.layer = this.state.prisms.layer.filter((layer) => {
+      return this.state.resources.layer.some((l) => l.id === layer);
+    });
+  };
+
+  postLayerMutation = (): void => {
     const currentLayerIds = new Set(this.state.prisms.layer);
     const existingFilterLayerIds = new Set(
       Object.keys(this.state.filters.properties || {})
@@ -395,10 +548,11 @@ export class AppCtx {
     // Only refresh features if user is authenticated
     if (this.user?.id) {
       this.refreshFeatures();
+      this.refreshTasks();
     }
   };
 
-  postUserMutation = () => {
+  postUserMutation = (): void => {
     if (this.user && 'userLayers' in this.user) {
       // Set default layers if user has userLayers
       this.state.prisms.layer =
@@ -406,56 +560,41 @@ export class AppCtx {
     }
   };
 
-  refreshProjects = async () => {
-    this.state.resources.project = await this.queryClient.fetchQuery({
-      queryKey: this.projectsQueryKey,
-      queryFn: this.projectsQueryFn
-    });
-    this.syncProjectPrisms();
-    this.refreshLayers();
-  };
+  // ═══════════════════════
+  // CODE TO ID MAPPINGS
+  // ═══════════════════════
 
-  refreshLayers = async () => {
-    this.state.resources.layer = await this.queryClient.fetchQuery({
-      queryKey: this.layersQueryKey,
-      queryFn: this.layersQueryFn
-    });
-    this.syncLayerPrisms();
-    this.postLayerMutation();
-    this.refreshFeatures();
-  };
-
-  refreshFeatures = async () => {
-    this.state.resources.feature = await this.queryClient.fetchQuery({
-      queryKey: this.featuresQueryKey,
-      queryFn: this.featuresQueryFn
+  private populateOrganisationCodeToIdMap = (): void => {
+    this.organisationCodeToId.clear();
+    this.cache.organisation.forEach((org) => {
+      this.organisationCodeToId.set(org.code, org.id);
     });
   };
 
-  // Tasks and hubs refresh methods moved to AdminCtx
-
-  refreshUserFeatures = async () => {
-    this.state.userFeatures = await this.queryClient
-      .fetchQuery({
-        queryKey: this.userFeaturesQueryKey,
-        queryFn: this.userFeaturesQueryFn
-      })
-      .then((uf) => ({
-        wishlisted: (uf || []).filter((f: UserFeature) => f.isWishlisted),
-        visited: (uf || []).filter((f: UserFeature) => f.isVisited)
-      }));
-  };
-
-  syncProjectPrisms = async () => {
-    this.state.prisms.project = this.state.prisms.project.filter((project) => {
-      return this.state.resources.project.some((p) => p.id === project);
+  private populateProjectCodeToIdMap = (): void => {
+    this.projectCodeToId.clear();
+    this.cache.project.forEach((project) => {
+      this.projectCodeToId.set(project.code, project.id);
     });
   };
 
-  syncLayerPrisms = async () => {
-    this.state.prisms.layer = this.state.prisms.layer.filter((layer) => {
-      return this.state.resources.layer.some((l) => l.id === layer);
+  private populateHubCodeToIdMap = (): void => {
+    this.hubCodeToId.clear();
+    this.cache.hub.forEach((hub) => {
+      this.hubCodeToId.set(hub.code, hub.id);
     });
+  };
+
+  getOrganisationIdByCode = (code: Code): Id | undefined => {
+    return this.organisationCodeToId.get(code);
+  };
+
+  getProjectIdByCode = (code: Code): Id | undefined => {
+    return this.projectCodeToId.get(code);
+  };
+
+  getHubIdByCode = (code: Code): Id | undefined => {
+    return this.hubCodeToId.get(code);
   };
 
   // FILTERS
@@ -513,7 +652,7 @@ export class AppCtx {
     };
   };
 
-  resetFilters = () => {
+  resetFilters = (): void => {
     this.state.filters = { neighbourhoods: [], properties: {} };
     this.state.prisms.layer.forEach((layerId) => {
       this.initialiseCategoricalPropertyFilters(layerId);
@@ -523,32 +662,236 @@ export class AppCtx {
 
   // PRISM RELATIONS
 
-  getPrism = (resource: FirstClassResource) => {
+  getPrism = (resource: FirstClassResource): Id[] => {
     return this.state.prisms[resource as ResourceTypeWithChildren];
   };
 
-  isPrism = (resource: FirstClassResource, id: Id) => {
+  isPrism = (resource: FirstClassResource, id: Id): boolean => {
     return this.state.prisms[resource as ResourceTypeWithChildren]?.includes(id);
   };
 
-  getOrganisation = (project: Project): Organisation | undefined =>
-    this.getOrganisationById(project.organisationId);
-
-  getOrganisationById = (id: Id): Organisation | undefined =>
-    this.state.resources.organisation.find((org) => org.id === id);
-
-  getProject = (layer: Layer): Project | undefined =>
-    this.getProjectById(layer.projectId);
-
-  getProjectById = (id: Id): Project | undefined =>
-    this.state.resources.project.find((proj) => proj.id === id);
-
-  getLayer = (feature: Feature | FeatureExtended): Layer | undefined =>
-    this.getLayerById(feature.layerId);
-
-  getLayerById = (id: Id): Layer | undefined => {
-    return this.state.resources.layer.find((layer) => layer.id === id);
+  // Helper method to fetch resource by ID with cache miss handling
+  private fetchResourceById = async <T>(
+    resource: FirstClassResource,
+    id: Id
+  ): Promise<T | undefined> => {
+    try {
+      const response = await fetch(`/api/${ResourcePath[resource]}/${id}`);
+      if (!response.ok) return undefined;
+      return await response.json();
+    } catch {
+      return undefined;
+    }
   };
+
+  getOrganisationById = async (
+    id: Id,
+    fetchOnCacheMiss: boolean = true
+  ): Promise<Organisation | undefined> => {
+    // Check cache first
+    let org = this.cache.organisation.get(id);
+    if (org) return org;
+
+    if (fetchOnCacheMiss) {
+      org = await this.fetchResourceById<Organisation>(
+        FirstClassResource.organisation,
+        id
+      );
+      if (org) {
+        this.cache.organisation.set(id, org);
+        return org;
+      }
+    }
+
+    return undefined;
+  };
+
+  getProjectById = async (
+    id: Id,
+    fetchOnCacheMiss: boolean = true
+  ): Promise<Project | undefined> => {
+    // Check cache first
+    let project = this.cache.project.get(id);
+    if (project) return project;
+
+    if (fetchOnCacheMiss) {
+      project = await this.fetchResourceById<Project>(FirstClassResource.project, id);
+      if (project) {
+        this.cache.project.set(id, project);
+        return project;
+      }
+    }
+
+    return undefined;
+  };
+
+  getLayerById = async (
+    id: Id,
+    fetchOnCacheMiss: boolean = true
+  ): Promise<Layer | undefined> => {
+    // Check cache first
+    let layer = this.cache.layer.get(id);
+    if (layer) return layer;
+
+    if (fetchOnCacheMiss) {
+      layer = await this.fetchResourceById<Layer>(FirstClassResource.layer, id);
+      if (layer) {
+        this.cache.layer.set(id, layer);
+        return layer;
+      }
+    }
+
+    return undefined;
+  };
+
+  getFeatureById = async (
+    id: Id,
+    fetchOnCacheMiss: boolean = true
+  ): Promise<Feature | undefined> => {
+    // Check cache first
+    let feature = this.cache.feature.get(id);
+    if (feature) return feature;
+
+    if (fetchOnCacheMiss) {
+      feature = await this.fetchResourceById<Feature>(FirstClassResource.feature, id);
+      if (feature) {
+        this.cache.feature.set(id, feature);
+        return feature;
+      }
+    }
+
+    return undefined;
+  };
+
+  getTaskById = async (
+    id: Id,
+    fetchOnCacheMiss: boolean = true
+  ): Promise<Task | undefined> => {
+    // Check cache first
+    let task = this.cache.task.get(id);
+    if (task) return task;
+
+    if (fetchOnCacheMiss) {
+      task = await this.fetchResourceById<Task>(FirstClassResource.task, id);
+      if (task) {
+        this.cache.task.set(id, task);
+        return task;
+      }
+    }
+
+    return undefined;
+  };
+
+  getHubById = async (
+    id: Id,
+    fetchOnCacheMiss: boolean = true
+  ): Promise<Hub | undefined> => {
+    // Check cache first
+    let hub = this.cache.hub.get(id);
+    if (hub) return hub;
+
+    if (fetchOnCacheMiss) {
+      hub = await this.fetchResourceById<Hub>(FirstClassResource.hub, id);
+      if (hub) {
+        this.cache.hub.set(id, hub);
+        return hub;
+      }
+    }
+
+    return undefined;
+  };
+
+  getPropertyById = async (
+    id: Id,
+    fetchOnCacheMiss: boolean = true
+  ): Promise<Property | undefined> => {
+    // Check cache first
+    let property = this.cache.property.get(id);
+    if (property) return property;
+
+    if (fetchOnCacheMiss) {
+      // Properties don't have their own API endpoint, they come with projects
+      // For now, return undefined if not cached
+      return undefined;
+    }
+
+    return undefined;
+  };
+
+  getResourceById = async (
+    resource: FirstClassResource,
+    id: Id
+  ): Promise<Resource | undefined> => {
+    switch (resource) {
+      case FirstClassResource.organisation:
+        return await this.getOrganisationById(id);
+      case FirstClassResource.project:
+        return await this.getProjectById(id);
+      case FirstClassResource.layer:
+        return await this.getLayerById(id);
+      case FirstClassResource.feature:
+        return await this.getFeatureById(id);
+      case FirstClassResource.task:
+        return await this.getTaskById(id);
+      case FirstClassResource.hub:
+        return await this.getHubById(id);
+    }
+  };
+
+  getResourceByRef = async (
+    resource: FirstClassResource,
+    ref: Id | Code
+  ): Promise<Resource | undefined> => {
+    switch (resource) {
+      case FirstClassResource.organisation:
+        return await this.getOrganisationById(
+          this.getOrganisationIdByCode(ref as Code)! as Id
+        );
+      case FirstClassResource.project:
+        return await this.getProjectById(this.getProjectIdByCode(ref as Code)! as Id);
+      case FirstClassResource.layer:
+        return await this.getLayerById(ref as Id);
+      case FirstClassResource.feature:
+        return await this.getFeatureById(ref as Id);
+      case FirstClassResource.task:
+        return await this.getTaskById(ref as Id);
+      case FirstClassResource.hub:
+        return await this.getHubById(this.getHubIdByCode(ref as Code)! as Id);
+    }
+  };
+
+  // ================================================
+  // HIERARCHY METHODS
+  // ================================================
+
+  getHierarchy = async (
+    resource: Feature | Layer | Project | Organisation
+  ): Promise<ResourceContext> => {
+    return {
+      feature: 'layerId' in resource ? resource : undefined,
+      layer:
+        'layerId' in resource
+          ? await this.getLayerById(resource.layerId)
+          : 'projectId' in resource
+            ? await this.getLayerById(resource.projectId)
+            : undefined,
+      project:
+        'projectId' in resource
+          ? await this.getProjectById(resource.projectId)
+          : 'organisationId' in resource
+            ? await this.getProjectById(resource.organisationId)
+            : undefined,
+      organisation:
+        'organisationId' in resource
+          ? await this.getOrganisationById(resource.organisationId)
+          : undefined
+    };
+  };
+
+  // ================================================
+  // COUNT METHODS
+  // ================================================
+
   // COUNT METHODS
   getOrganisationProjectCount = (organisationId: Id): number =>
     this.state.resources.project.filter((p) => p.organisationId === organisationId)
@@ -602,16 +945,10 @@ export class AppCtx {
 
   // FEATURE COLLECTIONS
 
-  // All Features by Id, given the active layers
-  getAllFeatureIds = (): Id[] =>
-    this.state.prisms.layer.length > 0
-      ? this.state.resources.feature.map((f) => f.id)
-      : [];
-
   // Features, given the selected Neighbourhoods (or all if none)
   getFeatureIdsForNeighbourhoods = (): Id[] => {
     if (this.state.filters.neighbourhoods.length === 0) {
-      return this.featuresAll;
+      return Array.from(this.features.keys());
     }
     const neighbourhoodFeatures = this.state.filters.neighbourhoods.flatMap(
       (neighbourhood) => {
@@ -624,7 +961,7 @@ export class AppCtx {
   getFeatureIdsForProperties = (): Id[] => {
     // If there are no layers being filtered at all, return all features.
     if (Object.keys(this.propertyFilters).length === 0) {
-      return this.featuresAll;
+      return Array.from(this.features.keys());
     }
 
     const featureList = Object.values(this.features);
@@ -784,7 +1121,7 @@ export class AppCtx {
       removeMarkerClass(this, this.state.active.feature.id);
     }
     // Set active state to new feature
-    this.state.active.feature = this.features[featureId];
+    this.state.active.feature = this.features.get(featureId)!;
     // TODO : Add "active" class to the feature on the map
     addMarkerClass(this, featureId);
     if (options.focus) {
@@ -811,14 +1148,14 @@ export class AppCtx {
     }
   };
 
-  unhighlightAllFeatures = () => {
+  unhighlightAllFeatures = (): void => {
     // Remove "highlighted" class from all features
     this.state.resources.feature.forEach((f) => {
       removeMarkerClass(this, f.id, 'highlighted');
     });
   };
 
-  resetActiveCollection = () => {
+  resetActiveCollection = (): void => {
     // Remove "highlighted" class from all features
     this.unhighlightAllFeatures();
     // Reset active collection
@@ -832,7 +1169,7 @@ export class AppCtx {
 
   // NAVIGATION METHODS
 
-  navNext = (options: { isCardOpen: boolean } = { isCardOpen: true }) => {
+  navNext = (options: { isCardOpen: boolean } = { isCardOpen: true }): void => {
     let navIndex =
       this.state.active.collection?.items.findIndex(
         (item) => item.id === this.state.active.feature?.id
@@ -848,7 +1185,7 @@ export class AppCtx {
     }
   };
 
-  navPrevious = (options: { isCardOpen: boolean } = { isCardOpen: true }) => {
+  navPrevious = (options: { isCardOpen: boolean } = { isCardOpen: true }): void => {
     let navIndex =
       this.state.active.collection?.items.findIndex(
         (item) => item.id === this.state.active.feature?.id
@@ -867,7 +1204,7 @@ export class AppCtx {
   navToIndex = (
     index: number,
     options: { isCardOpen: boolean } = { isCardOpen: true }
-  ) => {
+  ): void => {
     if (index > 0) {
       this.setActiveFeature(this.state.active.collection?.items[index]?.id as Id, {
         ...options,
@@ -878,18 +1215,18 @@ export class AppCtx {
 
   // MAP OPERATIONS -- REBOUNDING
 
-  zoomToActiveCollection = () => {
+  zoomToActiveCollection = (): void => {
     const features = this.getActiveCollection()?.items || [];
     this.zoomToFeatures(features);
   };
 
-  zoomToActiveFeature = () => {
+  zoomToActiveFeature = (): void => {
     const feature = this.getActiveFeature();
     if (!feature) return;
     this.zoomToFeatures([feature]);
   };
 
-  zoomToFeatures = (features?: Feature[]) => {
+  zoomToFeatures = (features?: Feature[]): void => {
     if (!this.map) return;
 
     // Use provided features or current state features
@@ -943,7 +1280,7 @@ export class AppCtx {
     }
   };
 
-  zoomToCoordinates = (coordinates: [number, number][]) => {
+  zoomToCoordinates = (coordinates: [number, number][]): void => {
     if (!this.map) return;
 
     // Create a FeatureCollection
@@ -984,7 +1321,7 @@ export class AppCtx {
 
   // FILTER Utils
 
-  expandToSubNeighbourhoods = (neighbourhoodKey: string) => {
+  expandToSubNeighbourhoods = (neighbourhoodKey: string): Feature[] => {
     let neighbourhoodFeatures = [];
     if (neighbourhoodKey in subNeighbourhoods) {
       subNeighbourhoods[neighbourhoodKey as keyof typeof subNeighbourhoods].forEach(
@@ -1012,7 +1349,7 @@ export class AppCtx {
     return neighbourhoodFeatures;
   };
 
-  startCircularFlight = (center: [number, number], radiusKm: number = 5) => {
+  startCircularFlight = (center: [number, number], radiusKm: number = 5): void => {
     if (!this.map) return;
 
     const STEPS = 360; // One step per degree
@@ -1055,20 +1392,21 @@ export class AppCtx {
 
   // FEATURE COLLECTIONS -- Features
 
-  features: Record<Id, Feature> = $derived(
-    this.state.resources.feature.reduce(
-      (acc, f) => {
-        acc[f.id] = f;
-        return acc;
-      },
-      {} as Record<Id, Feature>
-    )
-  );
+  // Rebuild features map from current state.resources.feature
+  private rebuildFeaturesMap = () => {
+    this.featuresMap.clear();
+    this.state.resources.feature.forEach((feature) => {
+      this.featuresMap.set(feature.id, feature);
+    });
+  };
+
+  // Public getter for features map (O(1) lookup, no rebuilding on access)
+  get features(): Map<Id, Feature> {
+    return this.featuresMap;
+  }
 
   // FEATURE COLLECTIONS -- FeatureIds
 
-  // FeatureIds for Active Layers
-  featuresAll: Id[] = $derived.by(this.getAllFeatureIds);
   // FeatureIds for Selected Neighbourhoods
   featuresForNeighbourhoods: Id[] = $derived.by(this.getFeatureIdsForNeighbourhoods);
   // FeatureIds for Selected Properties
@@ -1155,14 +1493,8 @@ export class AppCtx {
 
   // FEATURE COLLECTIONS -- Utils
 
-  getFeatureById = (id: Id): Feature | undefined => {
-    return this.features[id];
-  };
-
   getFeaturesByIds = (ids: Id[]): Feature[] => {
-    return ids
-      .map((id) => this.getFeatureById(id) || undefined)
-      .filter((f) => f !== undefined);
+    return ids.map((id) => this.features.get(id)).filter((f) => f !== undefined);
   };
 
   // FEATURE COLLECTIONS -- Convenience Methods
@@ -1184,7 +1516,7 @@ export class AppCtx {
   };
 
   // Panel methods
-  togglePanel = (panel: keyof PanelState, closeAll: boolean = false) => {
+  togglePanel = (panel: keyof PanelState, closeAll: boolean = false): void => {
     const leftPanels = ['maps', 'stars'];
     const rightPanels = ['filters', 'settings'];
     const currentState = this.state.panels[panel];
@@ -1207,7 +1539,7 @@ export class AppCtx {
     }
   };
 
-  focusPanel = (position: 'left' | 'right') => {
+  focusPanel = (position: 'left' | 'right'): void => {
     let panelElement = null;
     setTimeout(() => {
       panelElement = document.getElementById(`${position}-panel`);
@@ -1220,32 +1552,32 @@ export class AppCtx {
     }, 250);
   };
 
-  closeLeftPanel = () => {
+  closeLeftPanel = (): void => {
     this.state.panels.filters = false;
     this.state.panels.maps = false;
   };
 
-  closeRightPanel = () => {
+  closeRightPanel = (): void => {
     this.state.panels.stars = false;
     this.state.panels.settings = false;
   };
 
-  closeAllPanels = () => {
+  closeAllPanels = (): void => {
     Object.keys(this.state.panels).forEach((panel) => {
       this.state.panels[panel as keyof PanelState] = false;
     });
   };
 
-  openPanel = (panel: keyof PanelState) => {
+  openPanel = (panel: keyof PanelState): void => {
     this.state.panels[panel] = true;
   };
 
-  closePanel = (panel: keyof PanelState) => {
+  closePanel = (panel: keyof PanelState): void => {
     this.state.panels[panel] = false;
   };
 
   // Refocus map on currently visible features
-  zoomToAllVisibleFeatures = () => {
+  zoomToAllVisibleFeatures = (): void => {
     const visibleFeatures = this.getVisibleFeatures();
     if (visibleFeatures.length > 0) {
       this.zoomToFeatures(visibleFeatures);
@@ -1253,11 +1585,11 @@ export class AppCtx {
   };
 
   // KEYDOWN HANDLERS
-  registerKeydownHandlers = () => {
+  registerKeydownHandlers = (): void => {
     document.addEventListener('keydown', this.handleKeydown);
   };
 
-  handleKeydown = (event: KeyboardEvent) => {
+  handleKeydown = (event: KeyboardEvent): void => {
     let keyMatched = false;
 
     if (event.key === '1') {
@@ -1282,7 +1614,7 @@ export class AppCtx {
 
   // NEW FEATURE
 
-  setNewFeature = (newFeature: DeepPartial<NewFeatureTask>) => {
+  setNewFeature = (newFeature: DeepPartial<NewFeatureTask>): void => {
     // Initialize with proper locale structure for all required locales
     if (newFeature.feature && !newFeature.feature.i18n) {
       const requiredLocales = ['en', 'zh-hant', 'zh-hans'];
@@ -1301,7 +1633,7 @@ export class AppCtx {
     this.newFeature = newFeature;
   };
 
-  updateNewFeature = (newFeature: DeepPartial<NewFeatureTask>) => {
+  updateNewFeature = (newFeature: DeepPartial<NewFeatureTask>): void => {
     this.newFeature = {
       ...this.newFeature,
       ...newFeature,
@@ -1312,7 +1644,7 @@ export class AppCtx {
     };
   };
 
-  updateNewFeatureValue = (key: keyof NewFeatureTask['feature'], value: any) => {
+  updateNewFeatureValue = (key: keyof NewFeatureTask['feature'], value: any): void => {
     this.newFeature = {
       ...this.newFeature,
       feature: { ...this.newFeature?.feature, [key]: value }
@@ -1323,7 +1655,7 @@ export class AppCtx {
     key: FeatureI18nFieldKeys,
     value: any,
     locale: Locale = getLocale()
-  ) => {
+  ): void => {
     this.newFeature = {
       ...this.newFeature,
       feature: {
@@ -1339,7 +1671,10 @@ export class AppCtx {
     };
   };
 
-  updateNewFeatureProperty = (propertyId: Id, object: Partial<FeatureProperty>) => {
+  updateNewFeatureProperty = (
+    propertyId: Id,
+    object: Partial<FeatureProperty>
+  ): void => {
     if (!this.newFeature?.feature) {
       return;
     }
@@ -1394,7 +1729,7 @@ export class AppCtx {
     propertyId: Id,
     object: Partial<FeaturePropertyI18nDB>,
     locale: Locale = getLocale()
-  ) => {
+  ): void => {
     const propIndex = this.newFeature?.feature?.properties?.findIndex(
       (p) => p!.propertyId === propertyId
     );
@@ -1433,6 +1768,16 @@ export class AppCtx {
   };
 
   getUserPreferences = (withDefaults: boolean = true): UserPreferences => {
+    // If no user, return default preferences
+    if (!this.user) {
+      return {
+        fallbackLocales: getFallbackLocales(getLocale()) as Locale[],
+        allowMachineTranslation: false,
+        preferFallbackInCurrentLocale: false,
+        isTranslateButtonVisible: true
+      };
+    }
+
     return withDefaults
       ? {
           fallbackLocales:
