@@ -89,7 +89,7 @@ afterNavigate(() => {
     class:font-hant={getLocale() === 'zh-hant'}
     class:font-hans={getLocale() === 'zh-hans'}>
     <FlashMessage />
-    {@render children()}
+    <svelte:boundary>{@render children()}</svelte:boundary>
     {#if getLocale() === 'zh-hant'}
       <link
         href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@100..900&display=swap"
@@ -101,7 +101,7 @@ afterNavigate(() => {
     {/if}
   </div>
   <!-- TODO Prevent this from ever running in PRODUCTION (but it's OK on Preview) -->
-  {#if data.PUBLIC_SVELTE_QUERY_DEVTOOLS === 'true' }
+  {#if data.PUBLIC_SVELTE_QUERY_DEVTOOLS === 'true'}
     <SvelteQueryDevtools />
   {/if}
 </QueryClientProvider>
