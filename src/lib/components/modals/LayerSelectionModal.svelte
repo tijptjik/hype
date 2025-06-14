@@ -173,6 +173,8 @@ function handleResourceSelect(resource: Organisation | Project | Layer, e: Event
       projectId: layer.projectId as Id,
       layerId: layer.id as Id,
       feature: {
+        organisationId: layer.organisationId as Id,
+        projectId: layer.projectId as Id,
         layerId: layer.id as Id
       }
     });
@@ -185,6 +187,8 @@ function handleResourceSelect(resource: Organisation | Project | Layer, e: Event
       projectId: project.id as Id,
       layerId: undefined,
       feature: {
+        organisationId: project.organisationId as Id,
+        projectId: project.id as Id,
         layerId: undefined
       }
     });
@@ -197,6 +201,8 @@ function handleResourceSelect(resource: Organisation | Project | Layer, e: Event
       projectId: undefined,
       layerId: undefined,
       feature: {
+        organisationId: organisation.id as Id,
+        projectId: undefined,
         layerId: undefined
       }
     });
@@ -216,7 +222,7 @@ function clearResource(level: 'organisation' | 'project' | 'layer', e: Event) {
   // Clear from this level onwards
   for (let i = levelIndex; i < hierarchy.length; i++) {
     updates[hierarchy[i]] = undefined;
-    if (hierarchy[i] === 'layerId') updates.feature.layerId = undefined;
+    updates.feature[hierarchy[i]] = undefined;
   }
 
   appCtx.updateNewFeature(updates);
