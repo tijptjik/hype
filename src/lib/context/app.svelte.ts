@@ -65,7 +65,6 @@ import type {
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
 import { MOBILE_MAX_WIDTH } from '$lib/index';
-import { feature } from '../db/schema/feature';
 
 export class AppCtx {
   // Maplibre Map instance
@@ -1068,11 +1067,6 @@ export class AppCtx {
 
   // Features, given the selected Neighbourhoods and Properties
   getVisibleFeatureIds = (): Id[] => {
-    console.log(
-      'getVisibleFeatureIds',
-      this.featuresForNeighbourhoods,
-      this.featuresForProperties
-    );
     return Array.from(
       new Set(this.featuresForNeighbourhoods).intersection(
         new Set(this.featuresForProperties)
@@ -1539,7 +1533,6 @@ export class AppCtx {
   // FEATURE COLLECTIONS -- Convenience Methods
 
   getVisibleFeatures = (): Feature[] => {
-    console.log('getVisibleFeatures', this.featuresVisible);
     return this.getFeaturesByIds(this.featuresVisible);
   };
 

@@ -28,7 +28,7 @@ let searchTerm = $state('');
 let wishlistedFeaturesPromise = $derived(
   (async () => {
     if (!appCtx.state.userFeatures.wishlisted) return [];
-    
+
     const results = [];
     for (const wishlist of appCtx.state.userFeatures.wishlisted) {
       const feature = appCtx.state.resources.feature.find(
@@ -40,7 +40,7 @@ let wishlistedFeaturesPromise = $derived(
 
       try {
         const hierarchy = await appCtx.getHierarchy(feature);
-        
+
         results.push({
           ...wishlist,
           feature,
@@ -50,7 +50,7 @@ let wishlistedFeaturesPromise = $derived(
         console.warn('Failed to get hierarchy for feature:', feature.id, error);
       }
     }
-    
+
     return results;
   })()
 );
@@ -65,7 +65,10 @@ let wishlistedFeaturesPromise = $derived(
     {#if wishlistedFeatures.length > 5}
       <FilterBar bind:searchTerm />
     {/if}
-    {@const filteredFeatures = filterUserFeaturesByHierarchy(wishlistedFeatures, searchTerm)}
+    {@const filteredFeatures = filterUserFeaturesByHierarchy(
+      wishlistedFeatures,
+      searchTerm
+    )}
     <div class="flex min-h-0 flex-col">
       {#if filteredFeatures.length === 0}
         <div class="flex flex-wrap justify-start gap-2 px-[34px] pt-2">
@@ -74,6 +77,21 @@ let wishlistedFeaturesPromise = $derived(
       {:else}
         <div class="scrollbar-thin flex-1 overflow-y-auto">
           {#each filteredFeatures as wishlist (wishlist.featureId)}
+            {@const organisationName = getI18n(
+              wishlist.hierarchy.organisation,
+              'nameShort',
+              appCtx.getUserPreferences()
+            )}
+            {@const showOrganisation = wishlist.hierarchy.organisation}
+            {@const projectName = appCtx.getContextualProjectName(wishlist.hierarchy.project)}
+            {@const showProject = wishlist.hierarchy.project && projectName}
+            {@const layerName = appCtx.getContextualLayerName(wishlist.hierarchy.layer!)}
+            {@const showLayer = wishlist.hierarchy.layer && layerName}
+            {@const featureName = getI18n(
+              wishlist.feature,
+              'title',
+              appCtx.getUserPreferences()
+            )}
             <div
               class="min-h-21 flex cursor-pointer flex-row items-center justify-between gap-4 bg-black px-4 py-2 text-[#374151]"
               animate:flip={{ duration: 200 }}
@@ -84,20 +102,20 @@ let wishlistedFeaturesPromise = $derived(
               <Icon src={Squares2x2} class="h-5 w-5 flex-shrink-0" theme="fill" />
               <div class="flex flex-grow flex-col">
                 <p class="text-xs uppercase tracking-widest">
-                  {#if wishlist.hierarchy.organisation}
-                    <span class="text-primary">{getI18n(wishlist.hierarchy.organisation, 'nameShort', appCtx.getUserPreferences())}</span>
+                  {#if showOrganisation}
+                    <span class="text-primary">{organisationName}</span>
                   {/if}
-                  {#if wishlist.hierarchy.project}
+                  {#if showProject}
                     <span class="mx-1 text-secondary">›</span>
-                    <span class="text-secondary">{appCtx.getContextualProjectName(wishlist.hierarchy.project)}</span>
+                    <span class="text-secondary">{projectName}</span>
                   {/if}
-                  {#if wishlist.hierarchy.layer}
+                  {#if showLayer}
                     <span class="mx-1 text-secondary">›</span>
-                    <span class="text-secondary">{appCtx.getContextualLayerName(wishlist.hierarchy.layer)}</span>
+                    <span class="text-secondary">{layerName}</span>
                   {/if}
                 </p>
                 <p class="font-normal text-neutral-300">
-                  {getI18n(wishlist.feature, 'title', appCtx.getUserPreferences())}
+                  {featureName}
                 </p>
               </div>
             </div>

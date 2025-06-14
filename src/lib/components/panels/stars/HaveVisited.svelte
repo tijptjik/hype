@@ -32,7 +32,7 @@ let searchTerm = $state('');
 let visitedFeaturesPromise = $derived(
   (async () => {
     if (!appCtx.state.userFeatures.visited) return [];
-    
+
     const results = [];
     for (const visited of appCtx.state.userFeatures.visited) {
       const feature = appCtx.state.resources.feature.find(
@@ -44,7 +44,7 @@ let visitedFeaturesPromise = $derived(
 
       try {
         const hierarchy = await appCtx.getHierarchy(feature);
-        
+
         results.push({
           ...visited,
           feature,
@@ -54,7 +54,7 @@ let visitedFeaturesPromise = $derived(
         console.warn('Failed to get hierarchy for feature:', feature.id, error);
       }
     }
-    
+
     return results;
   })()
 );
@@ -69,7 +69,10 @@ let visitedFeaturesPromise = $derived(
     {#if visitedFeatures.length > 5}
       <FilterBar bind:searchTerm />
     {/if}
-    {@const filteredFeatures = filterUserFeaturesByHierarchy(visitedFeatures, searchTerm)}
+    {@const filteredFeatures = filterUserFeaturesByHierarchy(
+      visitedFeatures,
+      searchTerm
+    )}
     <div class="flex min-h-0 flex-auto flex-col">
       {#if filteredFeatures.length === 0}
         <div class="flex flex-wrap justify-start gap-2 px-[34px] pt-2">
@@ -78,6 +81,23 @@ let visitedFeaturesPromise = $derived(
       {:else}
         <div class="scrollbar-thin flex-1 overflow-y-auto">
           {#each filteredFeatures.sort((a, b) => new Date(b.visitedAt!).getTime() - new Date(a.visitedAt!).getTime()) as visited (visited.featureId)}
+            {@const organisationName = getI18n(
+              visited.hierarchy.organisation,
+              'nameShort',
+              appCtx.getUserPreferences()
+            )}
+            {@const showOrganisation = visited.hierarchy.organisation}
+            {@const projectName = appCtx.getContextualProjectName(
+              visited.hierarchy.project
+            )}
+            {@const showProject = visited.hierarchy.project && projectName}
+            {@const layerName = appCtx.getContextualLayerName(visited.hierarchy.layer!)}
+            {@const showLayer = visited.hierarchy.layer && layerName}
+            {@const featureName = getI18n(
+              visited.feature,
+              'title',
+              appCtx.getUserPreferences()
+            )}
             <div
               class="min-h-21 flex cursor-pointer flex-row items-start justify-between gap-4 bg-black px-4 py-2 text-[#374151]"
               animate:flip={{ duration: 200 }}
@@ -90,20 +110,16 @@ let visitedFeaturesPromise = $derived(
                 <div class="flex flex-wrap justify-between pb-1">
                   <div>
                     <p class="text-xs uppercase tracking-widest">
-                      {#if visited.hierarchy.organisation}
-                        <span class="text-primary">{getI18n(visited.hierarchy.organisation, 'nameShort', appCtx.getUserPreferences())}</span>
+                      {#if showOrganisation}
+                        <span class="text-primary">{organisationName}</span>
                       {/if}
-                      {#if visited.hierarchy.project}
+                      {#if showProject}
                         <span class="mx-1 text-secondary">›</span>
-                        <span class="text-secondary"
-                          >{getI18n(visited.hierarchy.project, 'nameShort', appCtx.getUserPreferences())
-                            .replaceAll('_', '')
-                            .replaceAll(' ', '')}</span>
+                        <span class="text-secondary">{projectName}</span>
                       {/if}
-                      {#if visited.hierarchy.layer}
+                      {#if showLayer}
                         <span class="mx-1 text-secondary">›</span>
-                        <span class="text-secondary"
-                          >{appCtx.getContextualLayerName(visited.hierarchy.layer).replaceAll(' ', '')}</span>
+                        <span class="text-secondary">{layerName}</span>
                       {/if}
                     </p>
                   </div>
