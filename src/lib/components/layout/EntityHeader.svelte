@@ -1,36 +1,24 @@
 <script lang="ts">
-import { getLocale } from '$lib/i18n';
 import { slide } from 'svelte/transition';
-import { ADMIN_PATH } from '$lib';
 // STORES
-import { navItems } from '$lib/navigation';
+import { navItems, getBreadcrumbs } from '$lib/navigation';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Bars3 } from '@steeze-ui/heroicons';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
-import type {
-  Resource,
-  ResourceType,
-  Organisation,
-  Project,
-  Layer,
-  Feature
-} from '$lib/types';
 import type { Snippet } from 'svelte';
 
 // STATE : PROPS
 let {
   title,
   icon,
-  breadcrumbs = $bindable([]),
   menuItems,
   actions
 }: {
   title: string;
   icon?: any;
-  breadcrumbs?: { name: string; href: string }[];
   menuItems?: Snippet;
   actions?: Snippet;
 } = $props();
@@ -38,96 +26,9 @@ let {
 // STATE : CONTEXT
 const adminCtx = getAdminCtx();
 
-// Auto-generate breadcrumbs if not provided
-const autoBreadcrumbs = $derived(() => {
-  if (breadcrumbs && breadcrumbs.length > 0) {
-    return breadcrumbs;
-  }
-
-  if (!adminCtx.activeResource || !adminCtx.activeEntity) {
-    return [];
-  }
-
-  const currentEntity = adminCtx.getEntity();
-  if (!currentEntity) {
-    return [];
-  }
-
-  const parents: { name: string; href: string }[] = [];
-  buildParentChain(currentEntity, adminCtx.activeResource, parents);
-  return parents;
-});
-
-// Simplified parent chain builder
-function buildParentChain(
-  entity: Resource,
-  resourceType: ResourceType,
-  parents: { name: string; href: string }[]
-) {
-  const parentMap = {
-    feature: { getter: adminCtx.appCtx.getLayer, parentType: 'layer' as ResourceType },
-    layer: {
-      getter: adminCtx.appCtx.getProject,
-      parentType: 'project' as ResourceType
-    },
-    project: {
-      getter: adminCtx.appCtx.getOrganisation,
-      parentType: 'organisation' as ResourceType
-    }
-  };
-
-  const parentInfo = parentMap[resourceType as keyof typeof parentMap];
-  if (!parentInfo) return;
-
-  const parentEntity = parentInfo.getter(entity as any);
-  if (parentEntity) {
-    addParentToChain(parents, parentEntity, parentInfo.parentType);
-    buildParentChain(parentEntity, parentInfo.parentType, parents);
-  }
-}
-
-function addParentToChain(
-  parents: { name: string; href: string }[],
-  parentEntity: Resource,
-  resourceType: ResourceType
-) {
-  const parentRef = adminCtx.getEntityRef(
-    resourceType as any,
-    parentEntity.id as string
-  );
-  if (parentRef) {
-    const parentPath = `${ADMIN_PATH}/${resourceType}s/${parentRef}`;
-
-    let parentName = 'Unknown';
-    const typedParent = parentEntity as Organisation | Project | Layer | Feature;
-    const currentLocale = getLocale();
-    if (typedParent.i18n?.[currentLocale]) {
-      parentName =
-        typedParent.i18n[currentLocale].name ||
-        typedParent.i18n[currentLocale].nameShort ||
-        typedParent.i18n[currentLocale].title ||
-        parentEntity.id ||
-        'Unknown';
-    } else {
-      parentName = parentEntity.id || 'Unknown';
-    }
-
-    parents.unshift({
-      name: parentName,
-      href: getParentHref(parentPath)
-    });
-  }
-}
-
-function getParentHref(parentPath: string): string {
-  const url = new URL(window.location.href);
-  url.pathname = parentPath;
-  return url.toString();
-}
-
 // Default icon from navigation if not provided
 const displayIcon = $derived(
-  icon || navItems[adminCtx.activeResource as keyof typeof navItems]?.icon
+  icon || navItems[adminCtx.activeResourceType as keyof typeof navItems]?.icon
 );
 </script>
 
@@ -141,26 +42,35 @@ const displayIcon = $derived(
 
       <div class="flex flex-col">
         <!-- Breadcrumbs -->
-        {#if autoBreadcrumbs().length > 0}
-          <div
-            class="hidden items-center space-x-2 text-sm font-medium text-gray-300 @md:flex">
-            {#each autoBreadcrumbs() as parent, i}
-              <a
-                draggable="false"
-                out:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
-                in:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
-                href={parent.href}
-                class="inline-block h-5 select-none overflow-hidden whitespace-nowrap hover:text-white">
-                {parent.name}
-              </a>
-              {#if i < autoBreadcrumbs().length - 1}
-                <span
-                  out:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
-                  in:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
-                  class="inline-block whitespace-nowrap text-gray-400">/</span>
-              {/if}
-            {/each}
-          </div>
+        {#if adminCtx.activeResourceType && adminCtx.activeResourceRef}
+          {#await getBreadcrumbs(adminCtx.appCtx, adminCtx.activeResourceType, adminCtx.activeResourceRef)}
+            <!-- Loading state - could show skeleton if needed -->
+          {:then breadcrumbs}
+            {#if breadcrumbs.length > 0}
+              <div
+                class="hidden items-center space-x-2 text-sm font-medium text-gray-300 @md:flex">
+                {#each breadcrumbs as parent, i}
+                  <a
+                    draggable="false"
+                    out:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
+                    in:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
+                    href={parent.href}
+                    class="inline-block h-5 select-none overflow-hidden whitespace-nowrap hover:text-white">
+                    {parent.name}
+                  </a>
+                  {#if i < breadcrumbs.length - 1}
+                    <span
+                      out:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
+                      in:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
+                      class="inline-block whitespace-nowrap text-gray-400">/</span>
+                  {/if}
+                {/each}
+              </div>
+            {/if}
+          {:catch error}
+            <!-- Error state - fail silently for breadcrumbs -->
+            <!-- console.error should handle logging in getBreadcrumbs -->
+          {/await}
         {/if}
 
         <!-- Title -->
