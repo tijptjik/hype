@@ -28,6 +28,9 @@ const config = {
   // for more information about preprocessors
   compilerOptions: {
     runes: true,
+    experimental: {
+      async: true
+    },
     // disable all warnings coming from node_modules and all accessibility warnings
     warningFilter: (warning) =>
       !warning.filename?.includes('node_modules') &&
