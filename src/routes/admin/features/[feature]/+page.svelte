@@ -107,8 +107,7 @@ const FIELDS: FormFieldConfig = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Feature> = $props();
-adminCtx.setEntity(pageProps.data.entity, FirstClassResource.feature);
-adminCtx.setFacet('core');
+adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.feature);
 
 // STATE : FORM
 let form = setForm(

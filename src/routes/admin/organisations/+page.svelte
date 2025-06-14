@@ -40,9 +40,7 @@ const keyMap: KeyMap = {
 
 // CONTEXT
 const adminCtx = getAdminCtx();
-adminCtx.setResource(RESOURCE);
-adminCtx.setEntity(false);
-adminCtx.setFacet(false);
+adminCtx.setFacet(false, false, RESOURCE);
 </script>
 
 <ResourceHeader />

@@ -190,7 +190,7 @@ class BaseForm<T extends Record<string, unknown>> {
           options: { clearOnNavigate: false, clearAfterMs: 5000 }
         });
 
-        this.adminCtx.setEntity(result.location.split('/').pop() as Id | Code);
+        this.adminCtx.setResourceRef(result.location.split('/').pop() as Id | Code);
 
         await goto(url.toString());
       } else if (result.type === 'success') {

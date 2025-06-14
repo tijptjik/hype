@@ -9,7 +9,6 @@ import { eq } from 'drizzle-orm';
 import { superValidate } from 'sveltekit-superforms';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
-import { OrganisationInsertAPI, OrganisationInsertSuperAdminAPI } from '$lib/db/zod';
 // SCHEMA
 import { organisation } from '$lib/db/schema/index';
 // DB
@@ -43,6 +42,7 @@ import type {
   OrganisationPartial,
   Code
 } from '$lib/types';
+import { OrganisationInsertAPI, OrganisationInsertSuperAdminAPI } from '$lib/db/zod';
 
 /********************
  *  COMMON

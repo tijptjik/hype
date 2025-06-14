@@ -212,8 +212,7 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Project> = $props();
-adminCtx.setEntity(pageProps.data.entity, FirstClassResource.project);
-adminCtx.setFacet('core');
+adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.project);
 
 // STATE : FORM
 let form = setForm(
@@ -252,7 +251,7 @@ let title = $derived(
       <HeaderButton
         facet={{ label: m.project__fields(), ref: 'fields' }}
         isActive={adminCtx.activeFacet === 'fields'} />
-      {#if adminCtx.activeEntity !== 'new'}
+      {#if adminCtx.activeResourceRef !== 'new'}
         <HeaderButton
           facet={{ label: m.project__images(), ref: 'images' }}
           isActive={adminCtx.activeFacet === 'images'} />

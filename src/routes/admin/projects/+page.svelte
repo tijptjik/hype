@@ -38,9 +38,7 @@ const keyMap: KeyMap = {
 
 // CONTEXT
 const adminCtx = getAdminCtx();
-adminCtx.setResource(FirstClassResource.project);
-adminCtx.setEntity(false);
-adminCtx.setFacet(false);
+adminCtx.setFacet(false, false, FirstClassResource.project);
 
 let entities = $derived(adminCtx.filteredProjects);
 </script>

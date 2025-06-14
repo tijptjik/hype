@@ -28,9 +28,7 @@ const adminCtx = getAdminCtx();
 const appCtx = getAppCtx();
 
 // Set the active resource to something appropriate for admin context
-adminCtx.setResource(FirstClassResource.feature);
-adminCtx.setEntity(false);
-adminCtx.setFacet(false);
+adminCtx.setFacet(false, false, FirstClassResource.feature);
 
 // STATE
 let uploadResults: BatchUploadResult[] = $state([]);
