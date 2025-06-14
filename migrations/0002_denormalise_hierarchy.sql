@@ -1,4 +1,3 @@
-BEGIN TRANSACTION;
 PRAGMA foreign_keys = off;
 
 -- ==============================================================================
@@ -274,4 +273,3 @@ ALTER TABLE `task_new` RENAME TO `task`;--> statement-breakpoint
 
 -- Re-enable foreign keys
 PRAGMA foreign_keys = on;
-COMMIT;
