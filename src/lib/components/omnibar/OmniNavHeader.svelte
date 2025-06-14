@@ -96,27 +96,39 @@ let collectionScroll = $state<ScrollState>({
 function setupScroll(state: ScrollState) {
   if (!state.container || !state.content) return;
 
-  // check if a previous duplicate exists
-  const previousDuplicate = state.container.querySelector('span:not(:first-child)');
-  if (previousDuplicate) {
-    previousDuplicate.remove();
-  }
+  // Stop any existing animation
+  state.isScrolling = false;
 
-  // Get the actual content width without any constraints
-  state.content.style.width = 'auto';
-  state.content.style.position = 'absolute';
-  state.scrollWidth = state.content.offsetWidth;
+  // Clean up any existing duplicates more thoroughly
+  const existingDuplicates = state.container.querySelectorAll('span:not(:first-child)');
+  existingDuplicates.forEach(dup => dup.remove());
+  
+  // Wait a frame to ensure cleanup is complete
+  requestAnimationFrame(() => {
+    if (!state.content || !state.container) return;
+    
+    // Reset styles
+    state.content.style.transform = 'translateX(0)';
+    state.content.style.transition = 'none';
+    state.content.style.position = 'relative';
 
-  // Reset styles and get container width
-  state.content.style.width = '';
-  state.content.style.position = '';
-  state.containerWidth = state.container.offsetWidth;
+    // Measure content width without the tilde - we'll position the duplicate at the content end
+    const rect = state.content.getBoundingClientRect();
+    state.scrollWidth = rect.width;
+    state.containerWidth = state.container.getBoundingClientRect().width;
+    
+    // Check if we need scroll (add small buffer for tilde)
+    state.needsScroll = state.scrollWidth > (state.containerWidth - 25);
 
-  state.needsScroll = state.scrollWidth > state.containerWidth;
-
-  if (state.needsScroll && !state.isScrolling) {
-    startScrollAnimation(state);
-  }
+    if (state.needsScroll && !state.isScrolling) {
+      // Add overflow class to show tilde
+      state.container.classList.add('overflow-hidden');
+      startScrollAnimation(state);
+    } else {
+      // Remove overflow class if no scroll needed
+      state.container.classList.remove('overflow-hidden');
+    }
+  });
 }
 
 async function startScrollAnimation(state: ScrollState) {
@@ -124,43 +136,57 @@ async function startScrollAnimation(state: ScrollState) {
 
   state.isScrolling = true;
 
-  while (state.needsScroll && state.content && state.container) {
-    // Create the duplicate element for seamless loop
+  while (state.needsScroll && state.content && state.container && state.isScrolling) {
+    // Create duplicate positioned immediately after the original content
     const duplicate = state.content.cloneNode(true) as HTMLSpanElement;
+    duplicate.style.position = 'absolute';
+    duplicate.style.top = '0';
+    duplicate.style.left = `${state.scrollWidth}px`; // Position at end of original content
+    duplicate.style.transform = 'translateX(0)';
+    duplicate.style.transition = 'none';
     state.container.appendChild(duplicate);
 
-    // Initial pause at start position
+    // Initial pause (3 seconds)
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
-    // Check again after async pause
-    if (!state.content || !state.container || !state.needsScroll) {
-      duplicate.remove();
+    if (!state.isScrolling || !state.content || !state.container || !state.needsScroll) {
+      if (duplicate && duplicate.parentNode) {
+        duplicate.remove();
+      }
       break;
     }
 
-    // Calculate scroll duration based on content width
-    const scrollDistance = state.scrollWidth;
-    const duration = (scrollDistance / 45) * 1000;
+    // Calculate animation duration - scroll exactly the content width
+    const duration = (state.scrollWidth / 45) * 1000; // 45px per second
 
-    // Scroll both elements
+    // Animate both elements moving left by exactly the content width
     state.content.style.transition = `transform ${duration}ms linear`;
     duplicate.style.transition = `transform ${duration}ms linear`;
-    state.content.style.transform = `translateX(-100%)`;
-    duplicate.style.transform = `translateX(-100%)`;
+    
+    state.content.style.transform = `translateX(-${state.scrollWidth}px)`;
+    duplicate.style.transform = `translateX(-${state.scrollWidth}px)`;
 
-    // Wait for scroll to complete
+    // Wait for animation to complete
     await new Promise((resolve) => setTimeout(resolve, duration));
 
-    // Check again after scroll completion
-    if (!state.content || !state.container) {
-      duplicate.remove();
+    if (!state.isScrolling || !state.content || !state.container || !state.needsScroll) {
+      if (duplicate && duplicate.parentNode) {
+        duplicate.remove();
+      }
       break;
     }
 
-    // Clean up and prepare for next cycle
+    // Reset positions for next cycle - original is now where duplicate was
     state.content.style.transition = 'none';
     state.content.style.transform = 'translateX(0)';
-    duplicate.remove();
+    
+    // Remove duplicate safely
+    if (duplicate && duplicate.parentNode) {
+      duplicate.remove();
+    }
+
+    // Brief pause before next cycle
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
   state.isScrolling = false;
@@ -169,29 +195,64 @@ async function startScrollAnimation(state: ScrollState) {
 // Watch for content changes
 $effect(() => {
   featureTitle;
-  if (!featureTitle) {
-    featureScroll.needsScroll = false;
-    featureScroll.isScrolling = false;
-  } else {
-    requestAnimationFrame(() => setupScroll(featureScroll));
+  // Stop any existing animation and reset
+  featureScroll.isScrolling = false;
+  featureScroll.needsScroll = false;
+  
+  if (featureScroll.container) {
+    featureScroll.container.classList.remove('overflow-hidden');
+  }
+  
+  if (featureTitle && featureScroll.content && featureScroll.container) {
+    // Reset styles immediately
+    featureScroll.content.style.transform = 'translateX(0)';
+    featureScroll.content.style.transition = 'none';
+    
+    // Clean up duplicates
+    const duplicates = featureScroll.container.querySelectorAll('span:not(:first-child)');
+    duplicates.forEach(dup => dup.remove());
+    
+    // Setup scroll after DOM is updated and text is rendered
+    requestAnimationFrame(() => {
+      setTimeout(() => setupScroll(featureScroll), 150);
+    });
   }
 });
 
 $effect(() => {
   collectionTitle;
-  if (!collectionTitle) {
-    collectionScroll.needsScroll = false;
-    collectionScroll.isScrolling = false;
-  } else {
-    requestAnimationFrame(() => setupScroll(collectionScroll));
+  // Stop any existing animation and reset
+  collectionScroll.isScrolling = false;
+  collectionScroll.needsScroll = false;
+  
+  if (collectionScroll.container) {
+    collectionScroll.container.classList.remove('overflow-hidden');
+  }
+  
+  if (collectionTitle && collectionScroll.content && collectionScroll.container) {
+    // Reset styles immediately
+    collectionScroll.content.style.transform = 'translateX(0)';
+    collectionScroll.content.style.transition = 'none';
+    
+    // Clean up duplicates
+    const duplicates = collectionScroll.container.querySelectorAll('span:not(:first-child)');
+    duplicates.forEach(dup => dup.remove());
+    
+    // Setup scroll after DOM is updated and text is rendered
+    requestAnimationFrame(() => {
+      setTimeout(() => setupScroll(collectionScroll), 150);
+    });
   }
 });
 
 // Add resize observers
 $effect(() => {
   const observer = new ResizeObserver(() => {
-    setupScroll(featureScroll);
-    setupScroll(collectionScroll);
+    // Debounce resize events
+    setTimeout(() => {
+      if (featureTitle) setupScroll(featureScroll);
+      if (collectionTitle) setupScroll(collectionScroll);
+    }, 100);
   });
 
   if (featureScroll.container) observer.observe(featureScroll.container);
@@ -206,6 +267,16 @@ onDestroy(() => {
   featureScroll.isScrolling = false;
   collectionScroll.needsScroll = false;
   collectionScroll.isScrolling = false;
+  
+  // Clean up any remaining duplicates
+  if (featureScroll.container) {
+    const duplicates = featureScroll.container.querySelectorAll('span:not(:first-child)');
+    duplicates.forEach(dup => dup.remove());
+  }
+  if (collectionScroll.container) {
+    const duplicates = collectionScroll.container.querySelectorAll('span:not(:first-child)');
+    duplicates.forEach(dup => dup.remove());
+  }
 });
 </script>
 
