@@ -33,8 +33,7 @@ let task = $derived(pageProps.data.task);
 
 // CONTEXT
 const adminCtx = getAdminCtx();
-adminCtx.setEntity(pageProps.data.task.id, FirstClassResource.task);
-adminCtx.setFacet('core');
+adminCtx.setFacet('core', pageProps.data.task.id, FirstClassResource.task);
 </script>
 
 <!-- LAYOUT -->

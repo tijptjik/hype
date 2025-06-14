@@ -9,9 +9,7 @@ import { FirstClassResource } from '$lib/enums';
 
 // CONTEXT
 const adminCtx = getAdminCtx();
-adminCtx.setResource(FirstClassResource.task);
-adminCtx.setEntity(false);
-adminCtx.setFacet(false);
+adminCtx.setFacet(false, false, FirstClassResource.task);
 </script>
 
 <TaskHeader />

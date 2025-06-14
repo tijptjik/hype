@@ -42,7 +42,7 @@ const keyMap: KeyMap = {
 
 // CONTEXT
 const adminCtx = getAdminCtx();
-adminCtx.setResource(FirstClassResource.layer);
+adminCtx.setFacet(false, false, FirstClassResource.layer);
 let entities = $derived(adminCtx.filteredLayers);
 </script>
 

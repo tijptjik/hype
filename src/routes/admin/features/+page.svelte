@@ -16,9 +16,7 @@ import type { Resource, Feature } from '$lib/types';
 
 // CONTEXT
 const adminCtx = getAdminCtx();
-adminCtx.setResource(FirstClassResource.feature);
-adminCtx.setEntity(false);
-adminCtx.setFacet(false);
+adminCtx.setFacet(false, false, FirstClassResource.feature);
 
 // CONFIG :: KEY MAP
 const keyMap: KeyMap = {

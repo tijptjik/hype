@@ -67,9 +67,9 @@ $effect(() => {
 
 // RESOURCE HIERARCHY
 const feature = $derived(appCtx.getFeatureById(featureId)) as Feature;
-const layer = $derived(appCtx.getLayer(feature)) as Layer;
-const project = $derived(appCtx.getProject(layer)) as Project;
-const organisation = $derived(appCtx.getOrganisation(project)) as Organisation;
+const layer = $derived(appCtx.cache.layer.get(feature?.layerId)) as Layer;
+const project = $derived(layer ? appCtx.cache.project.get(layer.projectId) : null) as Project;
+const organisation = $derived(project ? appCtx.cache.organisation.get(project.organisationId) : null) as Organisation;
 
 // Helper function to handle async operations
 async function handleFeatureSelection() {

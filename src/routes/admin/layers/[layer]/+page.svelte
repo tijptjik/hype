@@ -75,8 +75,7 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Layer> = $props();
-adminCtx.setEntity(pageProps.data.entity, FirstClassResource.layer);
-adminCtx.setFacet('core');
+adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.layer);
 
 // STATE : FORM
 let form = setForm(
