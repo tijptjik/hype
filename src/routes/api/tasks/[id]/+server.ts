@@ -1,6 +1,8 @@
 import { error, json } from '@sveltejs/kit';
 // DRIZZLE
 import { eq } from 'drizzle-orm';
+// I18N
+import { m } from '$lib/i18n';
 // ZOD
 import { TaskUpdate } from '$lib/db/zod/schema/task';
 // API
@@ -80,7 +82,7 @@ export const GET: RequestHandler = async ({
     })) as TaskDBRaw;
 
     if (!data) {
-      return error(404, 'Task not found');
+      return error(404, m.resource_not_found({ resourceType: m.born_plane_javelina_strive() }));
     }
 
     const result = await toResponseShape(data, false);

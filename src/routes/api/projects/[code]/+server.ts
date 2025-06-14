@@ -1,12 +1,14 @@
 // SVELTE
 import { error, json } from '@sveltejs/kit';
+// I18n
+import { m } from '$lib/i18n';
 // DRIZZLE
 import { eq } from 'drizzle-orm';
 // FORMS
 import { superValidate } from 'sveltekit-superforms';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
-import { ProjectAPI, ProjectUpdateAPI } from '$lib/db/zod';
+import { ProjectUpdateAPI } from '$lib/db/zod';
 // SCHEMA
 import { project } from '$lib/db/schema/index';
 // DB
@@ -90,7 +92,7 @@ export const GET: RequestHandler = async ({
     });
 
     if (!result) {
-      return error(404, 'Project not found');
+      return error(404, m.resource_not_found({ resourceType: m.deft_mealy_ant_vent() }));
     }
 
     // RESPONSE : Build the response shape
@@ -182,7 +184,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
       isSuperAdmin: user!.superAdmin || false
     })) as ProjectDB;
 
-    if (!existing) return error(404, 'Project not found');
+    if (!existing) return error(404, m.resource_not_found({ resourceType: m.deft_mealy_ant_vent() }));
 
     // ASSERT : Code has (1) not changed, or (2) changed to another unique value
     // Use URL param code for lookup, form code for comparison
