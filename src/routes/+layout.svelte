@@ -101,7 +101,7 @@ afterNavigate(() => {
     {/if}
   </div>
   <!-- TODO Prevent this from ever running in PRODUCTION (but it's OK on Preview) -->
-  {#if data.PUBLIC_SVELTE_QUERY_DEVTOOLS === 'true'}
+  {#if data.PUBLIC_SVELTE_QUERY_DEVTOOLS === true}
     <SvelteQueryDevtools />
   {/if}
 </QueryClientProvider>
