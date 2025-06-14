@@ -50,6 +50,7 @@ export const feature = sqliteTable('feature', {
   projectId: text('projectId').notNull(),
   layerId: text('layerId').notNull(),
   contributorId: text('contributorId'),
+  
   geometry: text('geometry', { mode: 'json' }).notNull().$type<GeometryObject>(),
   // Address Metadata
   addressMeta: text('addressMeta', {
