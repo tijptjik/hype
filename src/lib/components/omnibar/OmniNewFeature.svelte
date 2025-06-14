@@ -24,6 +24,8 @@ let handleClick = async (e: Event) => {
         projectId: hierarchy.project?.id,
         layerId: hierarchy.layer?.id,
         feature: {
+          organisationId: hierarchy.organisation?.id,
+          projectId: hierarchy.project?.id,
           layerId: hierarchy.layer?.id
         }
       });

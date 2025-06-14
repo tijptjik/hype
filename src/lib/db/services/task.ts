@@ -286,7 +286,8 @@ export const createTaskWithDependencies = async (
   taskData: TaskCreation,
   images: File[],
   userId: string, // The user ID from the session
-  subscriptionKey?: string, // Azure translation API key for feature enrichment
+  region: string, // Azure translation region for feature enrichment
+  subscriptionKey: string, // Azure translation API key for feature enrichment
   fetch?: typeof globalThis.fetch
 ): Promise<TaskDB> => {
   let createdFeature: typeof feature.$inferSelect | undefined;
@@ -301,9 +302,15 @@ export const createTaskWithDependencies = async (
     const createdFeature = await createUserContributedFeature(
       db,
       taskData.feature as UserContributedFeature,
-      subscriptionKey
+      region,
+      subscriptionKey,
     );
     taskData.featureId = createdFeature.id;
+    
+    // Update task data with the actual hierarchical IDs from the created feature
+    // This ensures the task references the correct project/organisation
+    taskData.organisationId = createdFeature.organisationId;
+    taskData.projectId = createdFeature.projectId;
 
     // Remove the feature object from taskData since we now have featureId
     // and task validation doesn't need the full feature object
