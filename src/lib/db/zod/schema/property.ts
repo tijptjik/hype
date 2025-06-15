@@ -75,12 +75,12 @@ export const PropertyAPI = PropertyBase.extend({
 
 export const PropertyInsertAPI = PropertyInsert.extend({
   i18n: getLocales(PropertyI18nInsert),
-  values: z.array(PropertyValueInsertAPI)
+  values: z.array(PropertyValueInsertAPI).nullish()
 });
 
 export const PropertyUpdateAPI = PropertyUpdate.extend({
   i18n: getLocales(PropertyI18nUpdate),
-  values: z.array(PropertyValueUpdateAPI)
+  values: z.array(PropertyValueUpdateAPI).nullish()
 });
 
 // INTERMEDIATE
