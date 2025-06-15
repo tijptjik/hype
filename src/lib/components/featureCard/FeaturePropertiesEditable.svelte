@@ -20,9 +20,7 @@ import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 // TYPES
 import type {
   Feature,
-  LocaleExtended,
   UserContributedFeature,
-  Id,
 } from '$lib/types';
 
 // STATE : PROPS
@@ -48,47 +46,11 @@ const availableFeatureProperties = $derived(
   feature?.layerId ? getUserContributableProperties(appCtx, feature.layerId) : []
 );
 
-// Helper functions that use the service functions
-function getUniversalSpecifierValueForComponent(propertyId: Id): string | undefined {
-  return getUniversalSpecifierValue(appCtx, propertyId);
-}
-
-function getI18nSpecifierValueForComponent(propertyId: Id): string | undefined {
-  return getI18nSpecifierValue(appCtx, propertyId);
-}
-
-function getCategoricalValueIdForComponent(propertyId: Id): string | undefined {
-  return getClassifierValueId(appCtx, propertyId);
-}
-
-/**
- * Handle categorical property change
- * @param propertyId - The ID of the property to change
- * @param propertyValueId - The id of the property value to change to
- */
-function handleCategoricalChangeForComponent(propertyId: Id, propertyValueId: Id) {
-  handleCategoricalChange(appCtx, propertyId, propertyValueId);
-}
-
-/**
- * Handle specifier property change (i18n values)
- * @param propertyId - The ID of the property to change
- * @param locale - The locale of the property to change ('core' for universal specifier)
- * @param newValue - The new value of the property
- */
-function handleSpecifierChangeForComponent(
-  propertyId: Id,
-  locale: LocaleExtended,
-  newValue: string
-) {
-  handleSpecifierChange(appCtx, propertyId, locale, newValue);
-}
-
 // EDIT MODE HANDLERS
 function getCurrentValue(propertyId: string, prop: any): string {
   const translatable = prop.isTranslatable;
-  const i18nValue = getI18nSpecifierValueForComponent(propertyId);
-  const universalValue = getUniversalSpecifierValueForComponent(propertyId);
+  const i18nValue = getI18nSpecifierValue(appCtx, propertyId);
+  const universalValue = getUniversalSpecifierValue(appCtx, propertyId);
   const result = translatable ? i18nValue || '' : universalValue || '';
 
   return result;
@@ -116,20 +78,12 @@ function handleTextareaEditMode(propertyId: string, prop: any) {
 
 function handleInputSubmit(propertyId: string, prop: any) {
   editingStates[propertyId] = false;
-  handleSpecifierChangeForComponent(
-    propertyId,
-    prop.isTranslatable ? getLocale() : 'core',
-    currentValues[propertyId] || ''
-  );
+  handleSpecifierChange(appCtx, propertyId, prop.isTranslatable ? getLocale() : 'core', currentValues[propertyId] || '');
 }
 
 function handleTextareaSubmit(propertyId: string, prop: any) {
   editingStates[propertyId] = false;
-  handleSpecifierChangeForComponent(
-    propertyId,
-    prop.isTranslatable ? getLocale() : 'core',
-    currentValues[propertyId] || ''
-  );
+  handleSpecifierChange(appCtx, propertyId, prop.isTranslatable ? getLocale() : 'core', currentValues[propertyId] || '');
 }
 
 function handleEditCancel(propertyId: string) {
@@ -158,9 +112,9 @@ function handleEditCancel(propertyId: string) {
                 <!-- SelectField Component: Dropdown -->
                 <select
                   class="select select-sm w-full border-none bg-black pl-0 focus:border-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 active:outline-none active:ring-0"
-                  value={getCategoricalValueIdForComponent(propertyId)}
+                  value={getClassifierValueId(appCtx, propertyId)}
                   onchange={(e) =>
-                    handleCategoricalChangeForComponent(propertyId, e.currentTarget.value)}>
+                    handleCategoricalChange(appCtx, propertyId, e.currentTarget.value)}>
                   <option value=""
                     >{getI18n(prop, 'placeholder', userPreferences)}</option>
                   {#each propertyValues.entries() as [id, localisedValue]}
@@ -291,10 +245,10 @@ function handleEditCancel(propertyId: string) {
                 <input
                   type="text"
                   class="input input-sm input-bordered w-full"
-                  value={getUniversalSpecifierValueForComponent(propertyId)}
+                  value={getUniversalSpecifierValue(appCtx, propertyId)}
                   placeholder="Enter value..."
                   onchange={(e) =>
-                    handleCategoricalChangeForComponent(propertyId, e.currentTarget.value)} />
+                    handleCategoricalChange(appCtx, propertyId, e.currentTarget.value)} />
               {/if}
             </div>
           {/if}

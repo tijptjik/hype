@@ -28,8 +28,6 @@ import {
 import { 
   getFeatureIdsForProperties, 
   sortProperties,
-  updateNewFeatureProperty,
-  updateNewFeatureI18nProperty
 } from '$lib/client/services/property';
 // CONTEXT
 import { getContext, setContext } from 'svelte';
