@@ -114,6 +114,7 @@ const precache_function = (o: any) => {
   // From tiles [x,y,z] to URLs
   const urls = tiles
     .map((t) => {
+      if (o.sources == null) return [];
       return o.sources.map((s: string) => {
         return s
           .replace('{x}', t[0].toString())
