@@ -1,10 +1,9 @@
 <script lang="ts">
 // SVELTE
 import { watch } from 'runed';
+import { onMount } from 'svelte';
 // STORES
 import { page } from '$app/state';
-// NAVIGATION
-import { afterNavigate } from '$app/navigation';
 // QUERY
 import { QueryClientProvider } from '@tanstack/svelte-query';
 import { SvelteQueryDevtools } from '@tanstack/svelte-query-devtools';
@@ -16,6 +15,10 @@ import { getLocale, setLocale } from '$lib/i18n';
 import { setAppCtx } from '$lib/context/app.svelte';
 // COMPONENTS
 import FlashMessage from '$lib/components/common/FlashMessage.svelte';
+// LIB
+import { loadScript } from '$lib';
+// MAPLIBRE
+import { monkeyPatchMapLibre } from '$lib/map/maplibre-preload';
 // STYLES
 import 'tailwindcss/tailwind.css';
 // TYPES
@@ -35,6 +38,25 @@ const session = useSession();
 
 // Set AppCtx in context
 const appCtx = setAppCtx(queryClient, $session.data?.user as SessionUser | null);
+
+// Load maplibre globally
+onMount(async () => {
+  try {
+    // To minimize the payload in Cloudflare, we are manually inserting mapping dependencies here as they are heavy
+    console.log('loading maplibre');
+    // and the max worker size in the free tier is 1 MB
+    await loadScript('https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js');
+    const maplibre = monkeyPatchMapLibre();
+    // @ts-ignore - Adding maplibre to global scope
+    globalThis.maplibregl = maplibre;
+    
+    // Store maplibre in the app context so components can access it
+    appCtx.maplibre = maplibre;
+    appCtx.isMaplibreLoaded = true;
+  } catch (error) {
+    console.error('Failed to load maplibre:', error);
+  }
+});
 
 // Initialize AppCtx if not already initialized
 if (!appCtx.isInitialised) {

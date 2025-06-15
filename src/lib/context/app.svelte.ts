@@ -70,6 +70,10 @@ import { sortProperties } from '$lib/client/services/property';
 export class AppCtx {
   // Maplibre Map instance
   map: MaplibreMap = $state()!;
+  // Maplibre library instance (loaded globally)
+  maplibre: any = $state(null);
+  // Whether maplibre has been loaded
+  isMaplibreLoaded: boolean = $state(false);
   // Tanstack Query Client instance
   queryClient: QueryClient;
   // User data (reactive)
