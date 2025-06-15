@@ -30,7 +30,8 @@ import type {
   AdminFilterState,
   Resource,
   Hub,
-  FilteredResources
+  FilteredResources,
+  Property
 } from '../types';
 
 // State type for AdminCtx - only includes admin-specific state
@@ -108,6 +109,12 @@ export class AdminCtx {
     this.appCtx.queryMap.set(FirstClassResource.feature, {
       queryKey: () => this.appCtx.featuresQueryKey,
       queryFn: () => this.featuresQueryFn()
+    });
+
+    // PROPERTIES - reuse AppCtx query key and function
+    this.appCtx.queryMap.set(FirstClassResource.property, {
+      queryKey: () => this.appCtx.propertiesQueryKey,
+      queryFn: () => this.propertiesQueryFn()
     });
 
     // Admin-specific resources with their own query keys
@@ -206,17 +213,18 @@ export class AdminCtx {
     const params = new URLSearchParams();
 
     // Add isArchived / isReviewed filter by default
-    if (resource !== FirstClassResource.task) {
+    if (resource !== FirstClassResource.task && resource !== FirstClassResource.property) {
       // SuperAdmin users should see all archived resources, so don't force isArchived=false
       if (!this.appCtx.isSuperAdmin()) {
         params.append('isArchived', 'false');
       }
-    } else {
+    } else if (resource === FirstClassResource.task) {
       const isReviewed = this.state.filters[FirstClassResource.task].isReviewed;
       if (isReviewed !== null) {
         params.append('isReviewed', isReviewed!.toString());
       }
     }
+    // PRoperties have no filters
 
     if (includeFilters) {
       // Add prism filters based on resource hierarchy
@@ -272,6 +280,11 @@ export class AdminCtx {
   tasksQueryFn = async () => {
     const url = this.buildApiUrl(FirstClassResource.task);
     return fetchOrThrow<Task[]>(url);
+  };
+
+  propertiesQueryFn = async () => {
+    const url = this.buildApiUrl(FirstClassResource.property);
+    return fetchOrThrow<Property[]>(url);
   };
 
   hubsQueryFn = async () => {
