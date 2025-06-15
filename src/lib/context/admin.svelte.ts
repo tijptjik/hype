@@ -608,5 +608,5 @@ export const getAdminCtx = (): AdminCtx => {
       }
     }) as AdminCtx;
   }
-  return ctx;
+  return ctx as AdminCtx;
 };

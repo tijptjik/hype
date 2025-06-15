@@ -40,7 +40,7 @@ function getLabelCount() {
   name={id}
   bind:value
   {placeholder}
-  class="w-full truncate rounded-md bg-neutral p-2 focus:border-none focus:outline-none focus:ring-0 active:border-none active:outline-none group-focus-within:pr-0 {inputType !== 'number' && getLabelCount() === 1
+  class="w-full truncate rounded-md bg-neutral p-2 focus:border-none focus:outline-none focus:ring-0 active:border-none active:outline-none group-focus-within:pr-0 h-12 text-sm {value == "" ? 'text-base-content/60 italic' : 'text-base-content text-bold'} {inputType !== 'number' && getLabelCount() === 1
     ? 'pr-10'
     : inputType !== 'number' && getLabelCount() === 2
       ? 'pr-20'
