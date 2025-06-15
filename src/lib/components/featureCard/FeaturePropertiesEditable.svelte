@@ -7,10 +7,10 @@ import { getI18n, getLocale } from '$lib/i18n';
 // SERVICES
 import { 
   getUserContributableProperties,
-  getPropertyValues,
+  getLocalisedPropertyValues,
   getUniversalSpecifierValue,
   getI18nSpecifierValue,
-  getCategoricalValueId,
+  getClassifierValueId,
   handleCategoricalChange,
   handleSpecifierChange,
 } from '$lib/client/services/property';
@@ -48,16 +48,6 @@ const availableFeatureProperties = $derived(
   feature?.layerId ? getUserContributableProperties(appCtx, feature.layerId) : []
 );
 
-// Get available property values for dropdowns (categorical options) from cache
-function getPropertyValuesForComponent(
-  propertyId: Id
-): { readonly value: string; readonly id: string }[] {
-  if (!cardCtx.isNewMode) {
-    return [];
-  }
-  return getPropertyValues(appCtx, propertyId);
-}
-
 // Helper functions that use the service functions
 function getUniversalSpecifierValueForComponent(propertyId: Id): string | undefined {
   return getUniversalSpecifierValue(appCtx, propertyId);
@@ -68,7 +58,7 @@ function getI18nSpecifierValueForComponent(propertyId: Id): string | undefined {
 }
 
 function getCategoricalValueIdForComponent(propertyId: Id): string | undefined {
-  return getCategoricalValueId(appCtx, propertyId);
+  return getClassifierValueId(appCtx, propertyId);
 }
 
 /**
@@ -156,7 +146,7 @@ function handleEditCancel(propertyId: string) {
       {#if cardCtx.isNewMode}
         {#each availableFeatureProperties as { property: prop, propertyId, value, i18n } (propertyId)}
           {#if prop}
-            {@const propertyValues = getPropertyValuesForComponent(propertyId)}
+            {@const propertyValues = getLocalisedPropertyValues(appCtx, propertyId)}
             <div class="dir-ltr flex flex-col justify-evenly gap-1">
               <span
                 class="font-mono text-xs font-normal uppercase tracking-wide text-gray-400">
@@ -164,7 +154,7 @@ function handleEditCancel(propertyId: string) {
               </span>
               <!-- Error message placeholder (for future use) -->
               <div class="min-h-0"></div>
-              {#if prop.component === 'SelectField' && propertyValues.length > 0}
+              {#if prop.component === 'SelectField' && propertyValues.size > 0}
                 <!-- SelectField Component: Dropdown -->
                 <select
                   class="select select-sm w-full border-none bg-black pl-0 focus:border-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 active:outline-none active:ring-0"
@@ -173,8 +163,8 @@ function handleEditCancel(propertyId: string) {
                     handleCategoricalChangeForComponent(propertyId, e.currentTarget.value)}>
                   <option value=""
                     >{getI18n(prop, 'placeholder', userPreferences)}</option>
-                  {#each propertyValues as option}
-                    <option value={option.id}>{option.value}</option>
+                  {#each propertyValues.entries() as [id, localisedValue]}
+                    <option value={id}>{localisedValue}</option>
                   {/each}
                 </select>
               {:else if prop.component === 'TextareaField'}

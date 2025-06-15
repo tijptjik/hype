@@ -1700,22 +1700,6 @@ export class AppCtx {
     };
   };
 
-  updateNewFeatureProperty = (
-    propertyId: Id,
-    object: Partial<FeatureProperty>
-  ): void => {
-    // Delegate to the property service
-    updateNewFeatureProperty(this, propertyId, object);
-  };
-
-  updateNewFeatureI18nProperty = (
-    propertyId: Id,
-    object: Partial<FeaturePropertyI18nDB>,
-    locale: Locale = getLocale()
-  ): void => {
-    // Delegate to the property service
-    updateNewFeatureI18nProperty(this, propertyId, object, locale);
-  };
 
   getNewFeature = (): DeepPartial<NewFeatureTask> | null => {
     return this.newFeature;
