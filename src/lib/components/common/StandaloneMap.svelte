@@ -1,5 +1,5 @@
 <script lang="ts">
-// import { AttributionControl, GeolocateControl, Map, NavigationControl, ScaleControl } from 'maplibre-gl';
+import { AttributionControl, GeolocateControl, Map, NavigationControl, ScaleControl } from 'maplibre-gl';
 // SVELTE
 import { onMount } from 'svelte';
 import { watch } from 'runed';
@@ -160,7 +160,7 @@ onMount(async () => {
       }
     }
   });
-
+  // TODO Add Navigation control
   // appCtx.map!.addControl(new NavigationControl({}), 'bottom-right');
   // appCtx.map!.addControl(new ScaleControl({ maxWidth: 80, unit: 'metric' }), 'bottom-left');
   // appCtx.map!.addControl(new AttributionControl({ compact: true }), 'bottom-right');
