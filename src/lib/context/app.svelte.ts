@@ -179,10 +179,15 @@ export class AppCtx {
   userQueryKey = ['user'];
 
   // Constructor
-  constructor(queryClient: QueryClient, user: SessionUser | null) {
+  constructor(queryClient: QueryClient, user: SessionUser | null, isAdminMode: boolean = false) {
     this.queryClient = queryClient;
     this.setUser(user);
     this.initializeQueryMap();
+    
+    // Only register keydown handlers in non-admin mode
+    if (!isAdminMode) {
+      this.registerKeydownHandlers();
+    }
   }
 
   // Initialize default query map (can be overridden by AdminCtx)
@@ -1763,6 +1768,10 @@ export class AppCtx {
     document.addEventListener('keydown', this.handleKeydown);
   };
 
+  unregisterKeydownHandlers = (): void => {
+    document.removeEventListener('keydown', this.handleKeydown);
+  };
+
   handleKeydown = (event: KeyboardEvent): void => {
     let keyMatched = false;
 
@@ -2274,8 +2283,8 @@ export class AppCtx {
 }
 export const MAP_STATE_KEY = Symbol('mapContext');
 
-export const setAppCtx = (queryClient: QueryClient, user: SessionUser | null) => {
-  const context = new AppCtx(queryClient, user);
+export const setAppCtx = (queryClient: QueryClient, user: SessionUser | null, isAdminMode: boolean = false) => {
+  const context = new AppCtx(queryClient, user, isAdminMode);
   context.init(user?.id ?? null);
   return setContext(MAP_STATE_KEY, context);
 };

@@ -37,7 +37,7 @@ const session = useSession();
 
 // Always set up map context, but only fetch data when authenticated
 // CONTEXT :: APP
-const appCtx = setAppCtx(queryClient, $session.data?.user as SessionUser | null);
+const appCtx = setAppCtx(queryClient, $session.data?.user as SessionUser | null, true);
 // CONTEXT :: ADMIN
 const adminCtx = setAdminCtx(queryClient, appCtx);
 
@@ -51,7 +51,6 @@ watch(
     if ($session.data?.user) {
       appCtx.setUser($session.data.user as SessionUser);
       appCtx.reinitializeWithAuth();
-      appCtx.registerKeydownHandlers();
     } else if (!$session.data?.user && appCtx.user?.id) {
       appCtx.setUser(null);
     }
