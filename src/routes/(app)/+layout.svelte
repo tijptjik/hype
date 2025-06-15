@@ -48,23 +48,12 @@ let navDest = $state('');
 // Get the shared AppCtx from root layout
 const appCtx = getAppCtx();
 
-// Initialize AppCtx if not already initialized
-if (!appCtx.isInitialised) {
-  const currentUser = $session.data?.user;
-  if (currentUser) {
-    appCtx.setUser(currentUser as SessionUser);
-    appCtx.init(currentUser.id);
-  } else {
-    appCtx.init(null);
-  }
-}
-
 // CONTEXT :: OMNI
 const omniCtx = setOmniContext(appCtx);
 
 // NAVIGATION HANDLING -- State Change Effect
 $effect(() => {
-  if (browser && omniCtx.pageState === PageState.ReadyToNav && navDest) {
+  if (browser && omniCtx && omniCtx.pageState === PageState.ReadyToNav && navDest) {
     goto(navDest.replace('(app)', '')).then(() => {
       omniCtx.pageState = PageState.NoTransition;
     });

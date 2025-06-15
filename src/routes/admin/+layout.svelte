@@ -38,17 +38,6 @@ const session = useSession();
 // Get the shared AppCtx from root layout
 const appCtx = getAppCtx();
 
-// Initialize AppCtx if not already initialized
-if (!appCtx.isInitialised) {
-  const currentUser = $session.data?.user;
-  if (currentUser) {
-    appCtx.setUser(currentUser as SessionUser);
-    appCtx.init(currentUser.id);
-  } else {
-    appCtx.init(null);
-  }
-}
-
 // CONTEXT :: ADMIN
 const adminCtx = setAdminCtx(queryClient, appCtx);
 

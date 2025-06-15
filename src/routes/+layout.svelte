@@ -36,6 +36,17 @@ const session = useSession();
 // Set AppCtx in context
 const appCtx = setAppCtx(queryClient, $session.data?.user as SessionUser | null);
 
+// Initialize AppCtx if not already initialized
+if (!appCtx.isInitialised) {
+  const currentUser = $session.data?.user;
+  if (currentUser) {
+    appCtx.setUser(currentUser as SessionUser);
+    appCtx.init(currentUser.id);
+  } else {
+    appCtx.init(null);
+  }
+}
+
 // Determine if we're in admin mode based on the route
 const isAdminMode = $derived(page.route.id?.startsWith('/admin') ?? false);
 
