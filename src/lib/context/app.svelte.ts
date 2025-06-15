@@ -1,5 +1,4 @@
 // DATA
-import subNeighbourhoods from '$lib/map/subNeighbourhoods.json';
 import { QueryClient } from '@tanstack/svelte-query';
 // NAVIGATION
 import { goto } from '$app/navigation';
@@ -7,7 +6,6 @@ import { goto } from '$app/navigation';
 import { bbox } from '@turf/bbox';
 // I18N
 import {
-  getFPI18n,
   getFallbackLocales,
   getLocale,
   setLocale,
@@ -23,6 +21,11 @@ import {
   debouncedUpdateUserPreferences,
   updateLocale
 } from '$lib/client/services/user';
+import {
+  getFeatureIdsForNeighbourhoods,
+  expandToSubNeighbourhoods,
+} from '$lib/client/services/geospatial';
+import { getFeatureIdsForProperties, sortProperties } from '$lib/client/services/property';
 // CONTEXT
 import { getContext, setContext } from 'svelte';
 // SVELTE
@@ -44,7 +47,6 @@ import type {
   ActiveCollection,
   Property,
   UserLayer,
-  FeatureExtended,
   SessionUser,
   UserPreferences,
   Locale,
@@ -65,7 +67,6 @@ import type {
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
 import { MOBILE_MAX_WIDTH } from '$lib/index';
-import { sortProperties } from '$lib/client/services/property';
 
 export class AppCtx {
   // Maplibre Map instance
@@ -1170,104 +1171,11 @@ export class AppCtx {
 
   // Features, given the selected Neighbourhoods (or all if none)
   getFeatureIdsForNeighbourhoods = (): Id[] => {
-    if (this.state.filters.neighbourhoods.length === 0) {
-      return Array.from(this.features.keys());
-    }
-    const neighbourhoodFeatures = this.state.filters.neighbourhoods.flatMap(
-      (neighbourhood) => {
-        return this.expandToSubNeighbourhoods(neighbourhood);
-      }
-    );
-    return neighbourhoodFeatures.map((f) => f.id);
+    return getFeatureIdsForNeighbourhoods(this);
   };
 
   getFeatureIdsForProperties = (): Id[] => {
-    // If there are no layers being filtered at all, return all features.
-    if (Object.keys(this.propertyFilters).length === 0) {
-      return Array.from(this.features.keys());
-    }
-
-    const featureList = Array.from(this.features.values());
-
-    const filteredIds = featureList
-      .filter((f: Feature) => {
-        // Get filters specific to this feature's layer
-        const layerSpecificFilters = this.propertyFilters[f.layerId];
-
-        // If there are no filters defined for this feature's layer, it passes this check.
-        if (!layerSpecificFilters || Object.keys(layerSpecificFilters).length === 0) {
-          return true;
-        }
-
-        // Check if the feature matches ALL filters defined for its layer
-        const allFiltersMatch = Object.entries(layerSpecificFilters).every(
-          ([propertyKey, selectedValues]) => {
-            // If the filter has no values (e.g., empty array for categorical), it matches all features for this property.
-            if (Array.isArray(selectedValues) && selectedValues.length === 0) {
-              return true;
-            }
-
-            // Get the feature's property object
-            const featureProperty = f.properties.find(
-              (p) => p.property?.key === propertyKey
-            );
-
-            // If the feature doesn't have this property defined, it cannot match the filter.
-            if (!featureProperty) {
-              return false;
-            }
-
-            // Use the propertyValue if available (typically for linked values), otherwise fallback to the direct value
-            const featureValue = getFPI18n(featureProperty, this.getUserPreferences());
-
-            // Let's also try getting the raw value without i18n
-            const rawValue = featureProperty.value;
-
-            // If the feature has the property but the value is null/undefined, it also cannot match.
-            if (featureValue === undefined || featureValue === null) {
-              return false;
-            }
-
-            // Special handling for "Unset" values - they should not match range filters
-            if (
-              featureValue === 'Unset' ||
-              featureValue === '' ||
-              rawValue === null ||
-              rawValue === undefined
-            ) {
-              return false;
-            }
-
-            let match = false;
-            // Check if the feature's value matches the filter criteria
-            if (Array.isArray(selectedValues)) {
-              // Handle categorical filters (multi-select) - Already checked for empty array above
-              match = selectedValues.includes(featureValue);
-            } else if (
-              typeof selectedValues === 'object' &&
-              selectedValues !== null && // Ensure selectedValues is not null
-              'rangeMin' in selectedValues &&
-              'rangeMax' in selectedValues
-            ) {
-              // Handle range filters
-              const numericFeatureValue = Number(featureValue);
-              match =
-                !isNaN(numericFeatureValue) &&
-                numericFeatureValue >= selectedValues.rangeMin &&
-                numericFeatureValue <= selectedValues.rangeMax;
-            } else {
-              // Should not happen with current filter setting methods
-              match = false;
-            }
-            return match;
-          }
-        );
-
-        return allFiltersMatch;
-      })
-      .map((f) => f.id);
-
-    return filteredIds;
+    return getFeatureIdsForProperties(this);
   };
 
   // Features, given the selected Neighbourhoods and Properties
@@ -1549,70 +1457,9 @@ export class AppCtx {
   // FILTER Utils
 
   expandToSubNeighbourhoods = (neighbourhoodKey: string): Feature[] => {
-    let neighbourhoodFeatures = [];
-    if (neighbourhoodKey in subNeighbourhoods) {
-      subNeighbourhoods[neighbourhoodKey as keyof typeof subNeighbourhoods].forEach(
-        (n) => {
-          neighbourhoodFeatures.push(
-            ...this.state.resources.feature.filter(
-              (feature) =>
-                n === feature.i18n?.[getLocale()]?.addressProperties?.neighbourhood
-            )
-          );
-        }
-      );
-    } else {
-      neighbourhoodFeatures.push(
-        ...this.state.resources.feature.filter(
-          (feature) =>
-            neighbourhoodKey ===
-            feature.i18n?.[getLocale()]?.addressProperties?.neighbourhood
-        )
-      );
-    }
-    return neighbourhoodFeatures;
+    return expandToSubNeighbourhoods(this, neighbourhoodKey);
   };
 
-  startCircularFlight = (center: [number, number], radiusKm: number = 5): void => {
-    if (!this.map) return;
-
-    const STEPS = 360; // One step per degree
-    const STEP_DURATION = 500; // milliseconds per step
-    let currentAngle = 0;
-
-    const animate = () => {
-      // Convert angle to radians
-      const angleRad = (currentAngle * Math.PI) / 180;
-
-      // Calculate new position
-      const newLng = center[0] + (radiusKm / 111.32) * Math.cos(angleRad);
-      const newLat =
-        center[1] +
-        (radiusKm / (111.32 * Math.cos((center[1] * Math.PI) / 180))) *
-          Math.sin(angleRad);
-
-      // @ts-ignore
-      this.map?.cachedFlyTo({
-        center: [newLng, newLat],
-        zoom: 13.5,
-        speed: 0.04,
-        curve: 1,
-        easing: (t: number) => t,
-        run: true // This will execute the animation
-      });
-
-      // Increment angle
-      currentAngle = (currentAngle + 1) % 360;
-
-      // Schedule next frame
-      setTimeout(() => {
-        requestAnimationFrame(animate);
-      }, STEP_DURATION);
-    };
-
-    // Start animation
-    animate();
-  };
 
   // ═══════════════════════
   // REACTIVE FEATURE COLLECTIONS
