@@ -29,7 +29,8 @@ import type {
   AdminFilterStates,
   AdminFilterState,
   Resource,
-  Hub
+  Hub,
+  FilteredResources
 } from '../types';
 
 // State type for AdminCtx - only includes admin-specific state
@@ -71,6 +72,9 @@ export class AdminCtx {
   queryClient: QueryClient;
   // App Context
   appCtx: AppCtx;
+
+  // Load State
+  isInitialised: boolean = $state(false);
 
   // ═══════════════════════
   // CONSTRUCTOR
@@ -134,7 +138,8 @@ export class AdminCtx {
       layer: { text: '', properties: {}, isPublished: null, isArchived: false },
       feature: { text: '', properties: {}, isPublished: null, isArchived: false },
       task: { text: '', properties: {}, isReviewed: false },
-      hub: { text: '', properties: {}, isArchived: false }
+      hub: { text: '', properties: {}, isArchived: false },
+      property: { text: '', properties: {} }
     }
   });
 
@@ -279,6 +284,7 @@ export class AdminCtx {
   init = async (): Promise<void> => {
     // Use AppCtx's cascading refresh logic but with admin query functions
     await this.appCtx.refreshOrganisations();
+    this.isInitialised = true;
   };
 
   // ═══════════════════════
@@ -301,7 +307,7 @@ export class AdminCtx {
     let filterKeys = ['isPublished', 'isArchived'];
     let query = this.state.filters[resource as keyof AdminFilterStates].text || '';
     // FULL SET
-    let result = this.appCtx.state.resources[resource] as T[];
+    let result = this.appCtx.state.resources[resource as keyof FilteredResources] as T[];
     // STATE FILTERS
     if (filters.state) {
       result = result.filter((entity) =>
@@ -476,7 +482,7 @@ export class AdminCtx {
 
   getResourceRef = (resource: FirstClassResource, id: Id) => {
     if (!resource) return false;
-    const refKey = ResourceRefKey[resource];
+    const refKey = ResourceRefKey[resource as keyof typeof ResourceRefKey];
     const entity = this.appCtx.cache[resource].get(id);
     if (!entity) return false;
     return entity[refKey as keyof Resource];
@@ -523,7 +529,7 @@ export class AdminCtx {
   // ═══════════════════════
 
   hasManyEntities = (resource: FirstClassResource | HierarchicalResource) => {
-    return this.appCtx.state.resources[resource].length > 3;
+    return this.appCtx.state.resources[resource as keyof FilteredResources].length > 3;
   };
 
   isViewportContained = $derived(
@@ -541,10 +547,10 @@ export class AdminCtx {
   );
 }
 
-export const HIERARCHICAL_RESOURCE_STATE_KEY = Symbol('adminCtx');
+export const ADMINCTX_KEY = Symbol('adminCtx');
 
 export const setAdminCtx = (queryClient: QueryClient, appCtx: AppCtx) =>
-  setContext(HIERARCHICAL_RESOURCE_STATE_KEY, new AdminCtx(queryClient, appCtx));
+  setContext(ADMINCTX_KEY, new AdminCtx(queryClient, appCtx));
 
 export const getAdminCtx = (): ReturnType<typeof setAdminCtx> =>
-  getContext(HIERARCHICAL_RESOURCE_STATE_KEY);
+  getContext(ADMINCTX_KEY);

@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { watch } from 'runed';
 // AUTH
 import { useSession } from '$lib/auth/client';
 // COMPONENTS
@@ -49,6 +51,16 @@ if (!appCtx.isInitialised) {
 
 // CONTEXT :: ADMIN
 const adminCtx = setAdminCtx(queryClient, appCtx);
+
+// Initialize AdminCtx if AppCtx is ready
+watch(
+  () => appCtx.isInitialised,
+  (isInitialised) => {
+    if (isInitialised && !adminCtx.isInitialised) {
+      adminCtx.init();
+    }
+  }
+);
 
 // CONTEXT :: SIDEBAR
 setSidebarCtx();
