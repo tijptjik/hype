@@ -449,21 +449,21 @@ export class AppCtx {
   refresh = async (resource: FirstClassResource | 'userFeatures'): Promise<void> => {
     // Refresh the resources
     if (resource === 'organisation') {
-      this.refreshOrganisations();
+      await this.refreshOrganisations();
     } else if (resource === 'project') {
-      this.refreshProjects();
+      await this.refreshProjects();
     } else if (resource === 'layer') {
-      this.refreshLayers();
+      await this.refreshLayers();
     } else if (resource === 'feature') {
-      this.refreshFeatures();
+      await this.refreshFeatures();
     } else if (resource === 'task') {
-      this.refreshTasks();
+      await this.refreshTasks();
     } else if (resource === 'hub') {
-      this.refreshHubs();
+      await this.refreshHubs();
     } else if (resource === 'property') {
-      this.refreshProperties();
+      await this.refreshProperties();
     } else if (resource === 'userFeatures') {
-      this.refreshUserFeatures();
+      await this.refreshUserFeatures();
     }
   };
 
@@ -476,8 +476,8 @@ export class AppCtx {
     this.syncCacheMap(this.cache.organisation, this.state.resources.organisation);
     // Efficiently sync organisation code-to-ID mapping
     this.syncCodeToIdMap(this.organisationCodeToId, this.state.resources.organisation);
-    this.refreshProjects();
-    this.refreshHubs();
+    await this.refreshProjects();
+    await this.refreshHubs();
   };
 
   refreshProjects = async (): Promise<void> => {
@@ -490,8 +490,10 @@ export class AppCtx {
     // Efficiently sync project code-to-ID mapping
     this.syncCodeToIdMap(this.projectCodeToId, this.state.resources.project);
     this.syncProjectPrisms();
-    this.refreshProperties();
-    this.refreshLayers();
+    await this.refreshProperties();
+    await this.refreshLayers();
+    // Sync layer prisms after layers are refreshed (when projects change, available layers change)
+    this.syncLayerPrisms();
   };
 
   refreshLayers = async (): Promise<void> => {
@@ -501,9 +503,8 @@ export class AppCtx {
     });
     // Efficiently sync layer cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.layer, this.state.resources.layer);
-    this.syncLayerPrisms();
     // Also calls this.refreshFeatures()
-    this.postLayerMutation();
+    await this.postLayerMutation();
   };
 
   refreshFeatures = async (): Promise<void> => {
@@ -632,7 +633,7 @@ export class AppCtx {
     }
   };
 
-  syncProjectPrisms = async () => {
+  syncProjectPrisms = () => {
     const filteredProjects = this.state.prisms.project.filter((project) => {
       return this.state.resources.project.some((p) => p.id === project);
     });
@@ -646,21 +647,27 @@ export class AppCtx {
     }
   };
 
-  syncLayerPrisms = async () => {
+  syncLayerPrisms = () => {
     const filteredLayers = this.state.prisms.layer.filter((layer) => {
       return this.state.resources.layer.some((l) => l.id === layer);
     });
 
+    // Use Set comparison for proper array equality check
+    const currentSet = new Set(this.state.prisms.layer);
+    const filteredSet = new Set(filteredLayers);
+    
+    // Check if sets are different (different lengths or different contents)
+    const shouldUpdate = 
+      currentSet.size !== filteredSet.size ||
+      !Array.from(currentSet).every(id => filteredSet.has(id));
+    
     // Only update if the array actually changed
-    if (
-      filteredLayers.length !== this.state.prisms.layer.length ||
-      !filteredLayers.every((id, index) => id === this.state.prisms.layer[index])
-    ) {
+    if (shouldUpdate) {
       this.state.prisms.layer = filteredLayers;
     }
   };
 
-  postLayerMutation = (): void => {
+  postLayerMutation = async (): Promise<void> => {
     const currentLayerIds = new Set(this.state.prisms.layer);
     const existingFilterLayerIds = new Set(
       Object.keys(this.state.filters.properties || {})
@@ -684,8 +691,8 @@ export class AppCtx {
 
     // Only refresh features if user is authenticated
     if (this.user?.id) {
-      this.refreshFeatures();
-      this.refreshTasks();
+      await this.refreshFeatures();
+      await this.refreshTasks();
     }
   };
 
