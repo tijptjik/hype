@@ -30,7 +30,7 @@ import { SvelteMap } from 'svelte/reactivity';
 // MARKERS
 import { removeMarkerClass, addMarkerClass } from '$lib/map/markers';
 // ENUMS
-import { FirstClassResource, ResourcePath } from '$lib/enums';
+import { FirstClassResource, ResourcePath, ResourceRefKey } from '$lib/enums';
 // TYPES
 import type {
   Feature,
@@ -552,17 +552,17 @@ export class AppCtx {
         wishlisted: (uf || []).filter((f: UserFeature) => f.isWishlisted),
         visited: (uf || []).filter((f: UserFeature) => f.isVisited)
       }));
-    
+
     // If active collection is a walk, refresh it and handle navigation
     this.postUserFeaturesMutation();
   };
 
   /*
-  * Handles user features mutation and refreshes the active walk collection
-  * If a user has their stars selected as an ActiveCollection (Walk), then we
-  * ensure that the collection count is updated and the card navigates to
-  * the next item on the list, or returns home if the list is empty.
-  */
+   * Handles user features mutation and refreshes the active walk collection
+   * If a user has their stars selected as an ActiveCollection (Walk), then we
+   * ensure that the collection count is updated and the card navigates to
+   * the next item on the list, or returns home if the list is empty.
+   */
   postUserFeaturesMutation = (): void => {
     const activeCollection = this.getActiveCollection();
     if (!activeCollection || activeCollection.type !== 'walk') {
@@ -610,9 +610,9 @@ export class AppCtx {
         const currentIndex = activeCollection.items.findIndex(
           (f) => f.id === currentActiveFeature.id
         );
-        
+
         let nextFeature: Feature | null = null;
-        
+
         // Try to get the next feature in the original list
         if (currentIndex >= 0 && currentIndex < updatedItems.length) {
           nextFeature = updatedItems[currentIndex];
@@ -632,10 +632,12 @@ export class AppCtx {
     const filteredProjects = this.state.prisms.project.filter((project) => {
       return this.state.resources.project.some((p) => p.id === project);
     });
-    
+
     // Only update if the array actually changed
-    if (filteredProjects.length !== this.state.prisms.project.length || 
-        !filteredProjects.every((id, index) => id === this.state.prisms.project[index])) {
+    if (
+      filteredProjects.length !== this.state.prisms.project.length ||
+      !filteredProjects.every((id, index) => id === this.state.prisms.project[index])
+    ) {
       this.state.prisms.project = filteredProjects;
     }
   };
@@ -644,10 +646,12 @@ export class AppCtx {
     const filteredLayers = this.state.prisms.layer.filter((layer) => {
       return this.state.resources.layer.some((l) => l.id === layer);
     });
-    
+
     // Only update if the array actually changed
-    if (filteredLayers.length !== this.state.prisms.layer.length || 
-        !filteredLayers.every((id, index) => id === this.state.prisms.layer[index])) {
+    if (
+      filteredLayers.length !== this.state.prisms.layer.length ||
+      !filteredLayers.every((id, index) => id === this.state.prisms.layer[index])
+    ) {
       this.state.prisms.layer = filteredLayers;
     }
   };
@@ -782,15 +786,19 @@ export class AppCtx {
   // Helper method to fetch resource by ID with cache miss handling
   private fetchResourceById = async <T>(
     resource: FirstClassResource,
-    id: Id
+    ref: Id
   ): Promise<T | undefined> => {
     // Guard against undefined or invalid IDs
-    if (!id || id === 'undefined') {
+    if (!ref || ref === 'undefined') {
       return undefined;
     }
-    
+
+    let refKey = ResourceRefKey[resource as keyof typeof ResourceRefKey];
+
     try {
-      const response = await fetch(`/api/${ResourcePath[resource]}/${id}`);
+      const response = await fetch(
+        `/api/${ResourcePath[resource]}/${ref}${refKey === 'code' ? '?byId=true' : ''}`
+      );
       if (!response.ok) return undefined;
       return await response.json();
     } catch {
@@ -935,17 +943,19 @@ export class AppCtx {
   // Helper method to get visible classifier properties for a layer
   getClassifierPropertiesForLayer = async (layer: Layer): Promise<Property[]> => {
     if (!layer.properties) return [];
-    
+
     // Get Properties associated with LayerProperties
     const properties = layer.properties
-      .filter(lp => lp.isVisible !== false)
-      .map(lp => this.cache.property.get(lp.propertyId));
-    
+      .filter((lp) => lp.isVisible !== false)
+      .map((lp) => this.cache.property.get(lp.propertyId));
+
     // Filter classifiers then sort by rank
     return sortProperties(
-      properties.filter((prop): prop is Property => 
-        prop !== undefined && prop.type === 'classifier'
-      ).map((p) => ({ property: p }))
+      properties
+        .filter(
+          (prop): prop is Property => prop !== undefined && prop.type === 'classifier'
+        )
+        .map((p) => ({ property: p }))
     ).map((item) => item.property!);
   };
 
@@ -1489,9 +1499,7 @@ export class AppCtx {
           neighbourhoodFeatures.push(
             ...this.state.resources.feature.filter(
               (feature) =>
-                n ===
-                feature.i18n?.[getLocale()]?.addressProperties
-                  ?.neighbourhood
+                n === feature.i18n?.[getLocale()]?.addressProperties?.neighbourhood
             )
           );
         }
@@ -1501,8 +1509,7 @@ export class AppCtx {
         ...this.state.resources.feature.filter(
           (feature) =>
             neighbourhoodKey ===
-            feature.i18n?.[getLocale()]?.addressProperties
-              ?.neighbourhood
+            feature.i18n?.[getLocale()]?.addressProperties?.neighbourhood
         )
       );
     }
@@ -1581,11 +1588,13 @@ export class AppCtx {
 
   // FeatureIds for Selected Neighbourhoods
   featuresForNeighbourhoods: Id[] = $derived(
-    (this.featuresMap.size && this.getFeatureIdsForNeighbourhoods()) || []) as Id[]
+    (this.featuresMap.size && this.getFeatureIdsForNeighbourhoods()) || []
+  ) as Id[];
 
   // FeatureIds for Selected Properties
   featuresForProperties: Id[] = $derived(
-    (this.featuresMap.size && this.getFeatureIdsForProperties()) || []) as Id[]
+    (this.featuresMap.size && this.getFeatureIdsForProperties()) || []
+  ) as Id[];
 
   // Intersection of Neighbourhoods and Properties featureIds
   featuresVisible: Id[] = $derived(this.getVisibleFeatureIds());
@@ -1670,7 +1679,8 @@ export class AppCtx {
 
   // FEATURE COLLECTIONS -- Utils
 
-  getFeaturesByIds = (ids: Id[]): Feature[] => ids.map((id) => this.features.get(id)).filter((f) => f !== undefined);
+  getFeaturesByIds = (ids: Id[]): Feature[] =>
+    ids.map((id) => this.features.get(id)).filter((f) => f !== undefined);
 
   // FEATURE COLLECTIONS -- Convenience Methods
 
@@ -2267,14 +2277,19 @@ export class AppCtx {
     cache: Map<Id, T>,
     newItems: T[]
   ): void => {
-    this.syncMap(cache, newItems, item => item.id);
+    this.syncMap(cache, newItems, (item) => item.id);
   };
 
   private syncCodeToIdMap = <T extends { id: Id; code: Code }>(
     codeMap: Map<Code, Id>,
     newItems: T[]
   ): void => {
-    this.syncMap(codeMap, newItems, item => item.code, item => item.id);
+    this.syncMap(
+      codeMap,
+      newItems,
+      (item) => item.code,
+      (item) => item.id
+    );
   };
 }
 export const APPCTX_KEY = Symbol('mapContext');

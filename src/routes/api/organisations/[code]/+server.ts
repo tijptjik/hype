@@ -58,7 +58,7 @@ const RESOURCE_PATH = 'organisations';
 /**
  * Reads an organisation
  */
-export const GET: RequestHandler = async ({ params, locals, platform, request }) => {
+export const GET: RequestHandler = async ({ params, locals, platform, request, url }) => {
   // ASSERT : User Logged in
   const { db, user, userRoles } = await getDatabase(locals, platform);
 
@@ -71,9 +71,16 @@ export const GET: RequestHandler = async ({ params, locals, platform, request })
       userRoles
     );
 
-    // EXTEND : Add GET identifier (code)
+    // CHECK : Query parameter for lookup by ID vs code
+    const byId = url.searchParams.get('byId') === 'true';
+
+    // EXTEND : Add GET identifier (code or id)
     if (params.code) {
-      conditions.push(eq(organisation.code, params.code));
+      if (byId) {
+        conditions.push(eq(organisation.id, params.code));
+      } else {
+        conditions.push(eq(organisation.code, params.code));
+      }
     }
 
     const result = await getOrganisation(

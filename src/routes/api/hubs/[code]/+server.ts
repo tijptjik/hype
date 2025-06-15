@@ -72,8 +72,15 @@ export const GET: RequestHandler = async ({ params, locals, platform, url }) => 
   const { conditions } = getHubQueryContext(queryParams);
 
   try {
-    // Add condition for specific hub code
-    conditions.push(eq(hub.code, params.code!));
+    // CHECK : Query parameter for lookup by ID vs code
+    const byId = url.searchParams.get('byId') === 'true';
+
+    // Add condition for specific hub code or id
+    if (byId) {
+      conditions.push(eq(hub.id, params.code!));
+    } else {
+      conditions.push(eq(hub.code, params.code!));
+    }
 
     // DB : Get the hub
     const result = await getHub(db, hubEntityWithRelations, conditions);
