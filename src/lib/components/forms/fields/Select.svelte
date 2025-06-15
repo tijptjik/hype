@@ -5,7 +5,7 @@ import Select from '$lib/components/forms/elements/Select.svelte';
 import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
 import FieldLabel from '$lib/components/forms/labels/Field.svelte';
 // TYPES
-import type { FieldPropsExtended, FieldDiscriminator } from '$lib/types';
+import type { FieldPropsExtended, FieldDiscriminator, LocaleExtended } from '$lib/types';
 
 // STATE : PROPS
 let {
@@ -16,7 +16,7 @@ let {
   fieldKey,
   field,
   ...fieldProps
-}: FieldPropsExtended & { fieldDiscriminator: FieldDiscriminator } = $props();
+}: FieldPropsExtended & { fieldDiscriminator: FieldDiscriminator, locale: LocaleExtended } = $props();
 
 // STATE : FORM
 let { form, constraints, errors } = fieldProps.form;
