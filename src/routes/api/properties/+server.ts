@@ -15,7 +15,7 @@ import {
 // SCHEMA
 import { property, project as projectTable } from '$lib/db/schema/index';
 // SERVICES
-import { listProperties } from '$lib/db/services/property';
+import { listProperties, toResponseShape } from '$lib/db/services/property';
 // DRIZZLE
 import { inArray } from 'drizzle-orm';
 // TYPES
@@ -72,8 +72,18 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
       additionalConditions
     );
 
+    // RESPONSE : Transform each property to proper response shape
+    const data = result.map(property => 
+      toResponseShape(
+        property,
+        property.i18n,
+        property.values || [],
+        property.values?.flatMap(v => v.i18n || []) || []
+      )
+    );
+
     // HTTP : 200 JSON or 404
-    return JSONResponseOrError(result);
+    return JSONResponseOrError(data);
   } catch (e) {
     // DB : Query Error
     logZodError(e, 'Property list error:');
