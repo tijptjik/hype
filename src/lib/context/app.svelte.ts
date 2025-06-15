@@ -1265,6 +1265,10 @@ export class AppCtx {
 
   // Features, given the selected Neighbourhoods and Properties
   getVisibleFeatureIds = (): Id[] => {
+    // If no layers are selects, return none.
+    if (this.state.prisms.layer.length === 0) {
+      return [];
+    }
     return Array.from(
       new Set(this.featuresForNeighbourhoods).intersection(
         new Set(this.featuresForProperties)
