@@ -1,4 +1,6 @@
 // TYPES
+import type { AppCtx } from '$lib/context/app.svelte';
+import { FirstClassResource } from '$lib/enums';
 import type { Property, FeatureProperty } from '$lib/types';
 
 /**
@@ -94,3 +96,48 @@ export function sortFeatureProperties(
     )
     .filter((fp): fp is Omit<FeatureProperty, 'featureId'> => fp !== undefined);
 }
+
+
+export let getGroupedClassifierProperties = async (appCtx : AppCtx) : Promise<Array<{
+  hierarchy: {
+    organisation: string | null;
+    project: string | null;
+    layer: string | null;
+    layerId: string;
+  };
+  properties: Property[];
+}>> => {
+  const results = await Promise.all(
+    appCtx.getPrism(FirstClassResource.layer).map(async (layerId) => {
+      // Get layer
+      const layer = await appCtx.getLayerById(layerId);
+      if (!layer) return null;
+      // Get project and organisation for this layer
+      const { project, organisation } = await appCtx.getHierarchy(layer);
+      if (!project || !organisation) return null;
+
+      // Get sorted classifier properties from layerProperties 
+      const properties = await appCtx.getClassifierPropertiesForLayer(layer);
+      if (properties.length === 0) return null;
+      
+      // Construct hierarchy info
+      const hierarchy = {
+        organisation: appCtx.getContextualOrganisationName(organisation),
+        project: appCtx.getContextualProjectName(project),
+        layer: appCtx.getContextualLayerName(layer),
+        layerId: layer.id // Pass layerId for direct filter access
+      };
+
+      return {
+        hierarchy,
+        properties
+      };
+    })
+  );
+
+  // Filter out nulls and empty groups
+  return results.filter(
+    (group): group is NonNullable<typeof group> =>
+      group !== null
+  );
+};
