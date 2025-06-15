@@ -42,8 +42,6 @@ import type {
   FormFieldNested,
   FormFieldConfig,
   OrganisationDB,
-  ProjectDB,
-  Resource
 } from '$lib/types';
 // CONTEXT
 const adminCtx = getAdminCtx();
