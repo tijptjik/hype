@@ -13,7 +13,7 @@ type Props = {
 let { layerId, appCtx, properties }: Props = $props();
 
 let displayText = $derived(
-  displaySelectedFilters(appCtx.propertyFilters?.[layerId], properties, appCtx)
+  displaySelectedFilters(appCtx, appCtx.propertyFilters?.[layerId], properties)
 );
 </script>
 

@@ -1,6 +1,5 @@
 <script lang="ts">
 // I18N
-import { getI18n, getLocale } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // SERVICES
 import { getGroupedClassifierProperties } from '$lib/client/services/property';
@@ -12,15 +11,12 @@ import SelectedFilters from '$lib/components/panels/filters/SelectedFilters.svel
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
-import type {
-  Id,
-  Property,
-  PropertyValue
-} from '$lib/types'; // Ensure Property type is imported
+import type { Id, Property } from '$lib/types';
 
 // Initialize map state
 const appCtx = getAppCtx();
 
+// @ts-expect-error SVELTE ASYNC
 let layerCategories = $derived(await getGroupedClassifierProperties(appCtx));
 </script>
 
@@ -42,27 +38,11 @@ let layerCategories = $derived(await getGroupedClassifierProperties(appCtx));
     {hierarchy}>
     <div class="space-y-2">
       {#each properties as property (property.id)}
+        {@const layerId = hierarchy.layerId}
         {#if property.component === 'RangeField'}
-          <!-- Pass necessary props directly -->
-          <RangeFilter
-            key={property.key}
-            layerId={hierarchy.layerId}
-            label={getI18n(property, 'label', appCtx.getUserPreferences()) ||
-              property.key}
-            min={property.min!}
-            max={property.max!}
-            defaultOpen={property.key === 'grade'} />
+          <RangeFilter {property} {layerId} defaultOpen={property.key === 'grade'} />
         {:else}
-          <!-- Pass necessary props directly -->
-          <CategoryFilter
-            key={property.key}
-            layerId={hierarchy.layerId}
-            label={getI18n(property, 'label', appCtx.getUserPreferences()) ||
-              property.key}
-            values={(property.values as PropertyValue[])?.map(
-              (v) => v.i18n?.[getLocale()]?.value
-            ) || []}
-            defaultOpen={property.key === 'grade'} />
+          <CategoryFilter {property} {layerId} />
         {/if}
       {/each}
     </div>
