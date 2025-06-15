@@ -1,15 +1,13 @@
 <script lang="ts">
 // SVELTE
 import { browser } from '$app/environment';
-import { watch } from 'runed';
-
 // NAVIGATION
 import { goto } from '$app/navigation';
 // AUTH
 import { useSession } from '$lib/auth/client';
 // CONTEXT
-import { getAppCtx, setAppCtx } from '$lib/context/app.svelte';
-import { setOmniContext, PageState, getOmniContext } from '$lib/context/omni.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
+import { setOmniContext, PageState } from '$lib/context/omni.svelte';
 // COMPONENTS
 import Menu from '$lib/components/layout/Menu.svelte';
 import Map from '$lib/components/common/StandaloneMap.svelte';
@@ -36,8 +34,7 @@ type AppRootProps = LayoutProps & {
 };
 
 // PROPS
-let { children, data }: AppRootProps = $props();
-const { queryClient } = data;
+let { children }: AppRootProps = $props();
 
 // AUTH
 const session = useSession();
@@ -48,32 +45,24 @@ let navDest = $state('');
 // CONTEXT
 
 // CONTEXT :: APP
-// Always set up map context, but only fetch data when authenticated
-const appCtx = setAppCtx(queryClient, $session.data?.user as SessionUser | null);
+// Get the shared AppCtx from root layout
+const appCtx = getAppCtx();
+
+// Initialize AppCtx if not already initialized
+if (!appCtx.isInitialised) {
+  const currentUser = $session.data?.user;
+  if (currentUser) {
+    appCtx.setUser(currentUser as SessionUser);
+    appCtx.init(currentUser.id);
+  } else {
+    appCtx.init(null);
+  }
+}
 
 // CONTEXT :: OMNI
 const omniCtx = setOmniContext(appCtx);
 
-// Re-initialize data when user becomes authenticated
-watch(
-  () => $session.data?.user,
-  (newUser) => {
-    // Only reinitialize if user actually changed (not just session refresh)
-    const currentUserId = appCtx.user?.id;
-    const newUserId = newUser?.id;
-    
-    if (newUser && newUserId !== currentUserId) {
-      // User login or user changed
-      appCtx.setUser(newUser as unknown as SessionUser);
-      appCtx.reinitializeWithAuth();
-      appCtx.registerKeydownHandlers();
-    } else if (!newUser && currentUserId) {
-      // User logout
-      appCtx.setUser(null);
-    }
-    // Ignore cases where session refreshed but user didn't change
-  }
-);
+
 
 // NAVIGATION HANDLING -- State Change Effect
 $effect(() => {

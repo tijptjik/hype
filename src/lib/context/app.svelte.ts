@@ -179,15 +179,11 @@ export class AppCtx {
   userQueryKey = ['user'];
 
   // Constructor
-  constructor(queryClient: QueryClient, user: SessionUser | null, isAdminMode: boolean = false) {
+  constructor(queryClient: QueryClient, user: SessionUser | null) {
     this.queryClient = queryClient;
     this.setUser(user);
     this.initializeQueryMap();
-    
-    // Only register keydown handlers in non-admin mode
-    if (!isAdminMode) {
-      this.registerKeydownHandlers();
-    }
+    // Note: keydown handlers are managed dynamically by the root layout
   }
 
   // Initialize default query map (can be overridden by AdminCtx)
@@ -2281,12 +2277,12 @@ export class AppCtx {
     this.syncMap(codeMap, newItems, item => item.code, item => item.id);
   };
 }
-export const MAP_STATE_KEY = Symbol('mapContext');
+export const APPCTX_KEY = Symbol('mapContext');
 
-export const setAppCtx = (queryClient: QueryClient, user: SessionUser | null, isAdminMode: boolean = false) => {
-  const context = new AppCtx(queryClient, user, isAdminMode);
-  context.init(user?.id ?? null);
-  return setContext(MAP_STATE_KEY, context);
+export const setAppCtx = (queryClient: QueryClient, user: SessionUser | null) => {
+  const context = new AppCtx(queryClient, user);
+  // Don't initialize immediately - let the session watcher handle it after mount
+  return setContext(APPCTX_KEY, context);
 };
 
-export const getAppCtx = (): ReturnType<typeof setAppCtx> => getContext(MAP_STATE_KEY);
+export const getAppCtx = (): ReturnType<typeof setAppCtx> => getContext(APPCTX_KEY);
