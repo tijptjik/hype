@@ -5,12 +5,7 @@ import { goto } from '$app/navigation';
 // GEO
 import { bbox } from '@turf/bbox';
 // I18N
-import {
-  getFallbackLocales,
-  getLocale,
-  setLocale,
-  getI18n
-} from '$lib/i18n';
+import { getFallbackLocales, getLocale, setLocale, getI18n } from '$lib/i18n';
 // LIB
 import { fetchOrThrow } from '$lib/index';
 // SERVICES
@@ -23,11 +18,11 @@ import {
 } from '$lib/client/services/user';
 import {
   getFeatureIdsForNeighbourhoods,
-  expandToSubNeighbourhoods,
+  expandToSubNeighbourhoods
 } from '$lib/client/services/geospatial';
-import { 
-  getFeatureIdsForProperties, 
-  sortProperties,
+import {
+  getFeatureIdsForProperties,
+  sortProperties
 } from '$lib/client/services/property';
 // CONTEXT
 import { getContext, setContext } from 'svelte';
@@ -390,6 +385,7 @@ export class AppCtx {
   };
 
   invalidate = async (resource: FirstClassResource | 'userFeatures'): Promise<void> => {
+    const resourcesToInvalidate = [resource];
     // Clear relevant caches when invalidating (forces fresh data)
     if (resource === FirstClassResource.organisation) {
       this.cache.organisation.clear();
@@ -397,6 +393,8 @@ export class AppCtx {
     } else if (resource === FirstClassResource.project) {
       this.cache.project.clear();
       this.projectCodeToId.clear();
+      this.cache.property.clear();
+      resourcesToInvalidate.push(FirstClassResource.property);
     } else if (resource === FirstClassResource.layer) {
       this.cache.layer.clear();
     } else if (resource === FirstClassResource.feature) {
@@ -407,17 +405,21 @@ export class AppCtx {
     } else if (resource === FirstClassResource.hub) {
       this.cache.hub.clear();
       this.hubCodeToId.clear();
+      this.cache.organisation.clear();
+      resourcesToInvalidate.push(FirstClassResource.organisation);
     } else if (resource === FirstClassResource.property) {
       this.cache.property.clear();
     }
 
-    await this.queryClient.invalidateQueries({
-      queryKey:
-        resource === 'userFeatures'
-          ? this.userFeaturesQueryKey
-          : [FirstClassResource[resource]],
-      refetchType: 'all',
-      exact: false
+    resourcesToInvalidate.forEach(async (resource) => {
+      await this.queryClient.invalidateQueries({
+        queryKey:
+          resource === 'userFeatures'
+            ? this.userFeaturesQueryKey
+            : [FirstClassResource[resource]],
+        refetchType: 'all',
+        exact: false
+      });
     });
   };
 
@@ -659,12 +661,12 @@ export class AppCtx {
     // Use Set comparison for proper array equality check
     const currentSet = new Set(this.state.prisms.layer);
     const filteredSet = new Set(filteredLayers);
-    
+
     // Check if sets are different (different lengths or different contents)
-    const shouldUpdate = 
+    const shouldUpdate =
       currentSet.size !== filteredSet.size ||
-      !Array.from(currentSet).every(id => filteredSet.has(id));
-    
+      !Array.from(currentSet).every((id) => filteredSet.has(id));
+
     // Only update if the array actually changed
     if (shouldUpdate) {
       this.state.prisms.layer = filteredLayers;
@@ -1463,7 +1465,6 @@ export class AppCtx {
     return expandToSubNeighbourhoods(this, neighbourhoodKey);
   };
 
-
   // ═══════════════════════
   // REACTIVE FEATURE COLLECTIONS
   // ═══════════════════════
@@ -1697,7 +1698,6 @@ export class AppCtx {
       }
     };
   };
-
 
   getNewFeature = (): DeepPartial<NewFeatureTask> | null => {
     return this.newFeature;
