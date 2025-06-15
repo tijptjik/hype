@@ -12,6 +12,8 @@ import { SvelteQueryDevtools } from '@tanstack/svelte-query-devtools';
 import { useSession } from '$lib/auth/client';
 // I18N
 import { getLocale, setLocale } from '$lib/i18n';
+// CONTEXT
+import { setAppCtx } from '$lib/context/app.svelte';
 // COMPONENTS
 import FlashMessage from '$lib/components/common/FlashMessage.svelte';
 // STYLES
@@ -31,15 +33,41 @@ const { queryClient } = data as LayoutData & {
 
 const session = useSession();
 
-// Set Page Metadata
-let title = $state(page.data.title);
-let site_name = $state(page.data.site_name);
-let site_description = $state(page.data.site_description);
-let socialImage = {
-  image: '/favicon.png',
-  width: '200',
-  height: '200'
-};
+// Set AppCtx in context
+const appCtx = setAppCtx(queryClient, $session.data?.user as SessionUser | null);
+
+// Determine if we're in admin mode based on the route
+const isAdminMode = $derived(page.route.id?.startsWith('/admin') ?? false);
+
+// Handle keydown listeners based on admin mode
+watch(
+  () => isAdminMode,
+  (newIsAdminMode) => {
+    newIsAdminMode
+      ? appCtx.unregisterKeydownHandlers()
+      : appCtx.registerKeydownHandlers();
+  }
+);
+
+// Handle user session changes
+watch(
+  () => $session.data?.user,
+  (newUser) => {
+    // Only reinitialize if user actually changed (not just session refresh)
+    const currentUserId = appCtx.user?.id;
+    const newUserId = newUser?.id;
+
+    if (newUser && newUserId !== currentUserId) {
+      // User login or user changed
+      appCtx.setUser(newUser as unknown as SessionUser);
+      appCtx.reinitializeWithAuth();
+    } else if (!newUser && currentUserId) {
+      // User logout
+      appCtx.setUser(null);
+    }
+    // Ignore cases where session refreshed but user didn't change
+  }
+);
 
 // Handle language setup from client-side session
 watch(
@@ -54,11 +82,24 @@ watch(
   }
 );
 
-afterNavigate(() => {
-  title = page.data.title;
-  site_name = page.data.site_name;
-  site_description = page.data.site_description;
-});
+// Set Page Metadata
+let title = $state(page.data.title);
+let site_name = $state(page.data.site_name);
+let site_description = $state(page.data.site_description);
+let socialImage = {
+  image: '/favicon.png',
+  width: '200',
+  height: '200'
+};
+
+watch(
+  () => page.data,
+  (newData) => {
+    title = newData.title;
+    site_name = newData.site_name;
+    site_description = newData.site_description;
+  }
+);
 </script>
 
 <svelte:head>
@@ -90,8 +131,10 @@ afterNavigate(() => {
     class:font-hans={getLocale() === 'zh-hans'}>
     <FlashMessage />
     <svelte:boundary>
+      <!-- @ts-expect-error SVELTE ASYNC -->
       {#snippet pending()}
-        <div class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-300">
+        <div
+          class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-300">
           <div class="loading loading-spinner loading-lg text-primary"></div>
         </div>
       {/snippet}
