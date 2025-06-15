@@ -83,17 +83,14 @@ let handleReset = () => {
     <FilterBar bind:searchTerm onReset={handleReset} />
   {/if}
   <ResourceContainer>
-    {#each filteredProjects as resource}
-      {#await appCtx.getHierarchy(resource) then {organisation}}
-        <FilteredResource
-          {resource}
-          resourceParent={organisation}
+    {#each filteredProjects as resource (resource.id)}
+      {@const hierarchy = appCtx.getHierarchySync(resource)}
+      <FilteredResource
+        {resource}
+        resourceParent={hierarchy.organisation}
         selectedClass="bg-accent"
-          isSelected={selectedProjects.includes(resource.id)}
-          onClick={() => appCtx.toggleProject(resource.id)} />
-      {:catch error}
-        <p>Error loading projects</p>
-      {/await}
+        isSelected={selectedProjects.includes(resource.id)}
+        onClick={() => appCtx.toggleProject(resource.id)} />
     {/each}
   </ResourceContainer>
 </Section>

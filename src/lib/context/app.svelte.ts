@@ -1021,6 +1021,48 @@ export class AppCtx {
     return await this.getHierarchy(feature);
   };
 
+  // Synchronous version that uses cache only (for UI components)
+  getHierarchySync = (
+    resource: Feature | Layer | Project | Organisation
+  ): ResourceContext => {
+    // Determine what type of resource we have and build hierarchy accordingly
+    let layer: Layer | undefined;
+    let project: Project | undefined;
+    let organisation: Organisation | undefined;
+
+    if ('layerId' in resource) {
+      // Feature - get its layer, then project, then organisation from cache
+      layer = this.cache.layer.get(resource.layerId);
+      if (layer) {
+        project = this.cache.project.get(layer.projectId);
+        if (project) {
+          organisation = this.cache.organisation.get(project.organisationId);
+        }
+      }
+    } else if ('projectId' in resource) {
+      // Layer - use itself, get its project, then organisation from cache
+      layer = resource as Layer;
+      project = this.cache.project.get(layer.projectId);
+      if (project) {
+        organisation = this.cache.organisation.get(project.organisationId);
+      }
+    } else if ('organisationId' in resource) {
+      // Project - use itself, get its organisation from cache
+      project = resource as Project;
+      organisation = this.cache.organisation.get(project.organisationId);
+    } else {
+      // Organisation - use itself
+      organisation = resource as Organisation;
+    }
+
+    return {
+      feature: 'layerId' in resource ? (resource as Feature) : undefined,
+      layer,
+      project,
+      organisation
+    };
+  };
+
   getHierarchy = async (
     resource: Feature | Layer | Project | Organisation
   ): Promise<ResourceContext> => {

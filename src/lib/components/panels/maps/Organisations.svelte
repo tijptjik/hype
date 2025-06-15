@@ -86,7 +86,7 @@ let handleReset = () => {
     <FilterBar bind:searchTerm onReset={handleReset} />
   {/if}
   <ResourceContainer>
-    {#each filteredOrganisations as resource}
+    {#each filteredOrganisations as resource (resource.id)}
       <FilteredResource
         {resource}
         isSelected={selectedOrganisations.includes(resource.id)}
