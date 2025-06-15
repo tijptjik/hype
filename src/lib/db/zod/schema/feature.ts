@@ -182,11 +182,10 @@ export const FeatureCollectionAPI = FeatureBase.omit({
   createdAt: true,
   modifiedAt: true
 }).extend({
-  i18n: getLocales(FeatureI18nBase.omit({
-    addressProperties: true
-  }).extend({
-    // Keep only neighbourhood from addressProperties
-    neighbourhood: z.string().nullish()
+  i18n: getLocales(z.object({
+    addressProperties: z.object({
+      neighbourhood: z.string().nullish()
+    }).nullish()
   })),
   properties: z.array(FeaturePropertyBase.extend({
     i18n: getLocales(FeaturePropertyI18nBase).nullish()

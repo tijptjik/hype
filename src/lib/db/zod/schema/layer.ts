@@ -78,9 +78,24 @@ export const UserLayerUpdate = createUpdateSchema(userLayer);
 // LAYER API SCHEMAS
 /* -------- */
 
-export const LayerAPI = LayerBase.extend({
+// Basic layer collection schema - optimized for performance
+export const LayerCollectionAPI = LayerBase.omit({
+  publisherId: true,
+  publishedAt: true,
+  createdAt: true,
+  modifiedAt: true
+}).extend({
   i18n: getLocales(LayerI18nBase),
-  properties: z.array(LayerPropertyUpdateExtra),
+  properties: z.array(LayerPropertyBase)
+});
+
+// Basic layer entity schema - optimized for performance  
+export const LayerAPI = LayerBase.omit({
+  createdAt: true,
+  modifiedAt: true
+}).extend({
+  i18n: getLocales(LayerI18nBase),
+  properties: z.array(LayerPropertyBase),
   publisher: UserBasic.nullish()
 });
 
