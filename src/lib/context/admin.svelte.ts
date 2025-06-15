@@ -552,5 +552,48 @@ export const ADMINCTX_KEY = Symbol('adminCtx');
 export const setAdminCtx = (queryClient: QueryClient, appCtx: AppCtx) =>
   setContext(ADMINCTX_KEY, new AdminCtx(queryClient, appCtx));
 
-export const getAdminCtx = (): ReturnType<typeof setAdminCtx> =>
-  getContext(ADMINCTX_KEY);
+export const getAdminCtx = (): AdminCtx => {
+  const ctx = getContext(ADMINCTX_KEY);
+  if (!ctx) {
+    // Return a safe proxy object that prevents errors when AdminCtx isn't ready
+    return new Proxy({} as any, {
+      get(target, prop) {
+        if (prop === 'isInitialised') return false;
+        if (prop === 'setFacet') return () => {}; // No-op function
+        if (prop === 'filteredOrganisations') return [];
+        if (prop === 'filteredProjects') return [];
+        if (prop === 'filteredLayers') return [];
+        if (prop === 'filteredFeatures') return [];
+        if (prop === 'filteredTasks') return [];
+        if (prop === 'filteredHubs') return [];
+        if (prop === 'activeResourceType') return false;
+        if (prop === 'activeResourceRef') return false;
+        if (prop === 'activeFacet') return false;
+        if (prop === 'isShowIndex') return false;
+        if (prop === 'isViewportContained') return true;
+        if (prop === 'state') return {
+          active: {
+            resourceType: false,
+            resourceRef: false,
+            facet: false
+          },
+          filters: {
+            organisation: { text: '', properties: {}, isPublished: null, isArchived: false },
+            project: { text: '', properties: {}, isPublished: null, isArchived: false },
+            layer: { text: '', properties: {}, isPublished: null, isArchived: false },
+            feature: { text: '', properties: {}, isPublished: null, isArchived: false },
+            task: { text: '', properties: {}, isReviewed: false },
+            hub: { text: '', properties: {}, isArchived: false },
+            property: { text: '', properties: {} }
+          }
+        };
+        if (prop === 'appCtx') return {
+          isInitialised: false,
+          state: { resources: {} }
+        };
+        return undefined;
+      }
+    }) as AdminCtx;
+  }
+  return ctx;
+};
