@@ -25,7 +25,12 @@ import {
   getFeatureIdsForNeighbourhoods,
   expandToSubNeighbourhoods,
 } from '$lib/client/services/geospatial';
-import { getFeatureIdsForProperties, sortProperties } from '$lib/client/services/property';
+import { 
+  getFeatureIdsForProperties, 
+  sortProperties,
+  updateNewFeatureProperty,
+  updateNewFeatureI18nProperty
+} from '$lib/client/services/property';
 // CONTEXT
 import { getContext, setContext } from 'svelte';
 // SVELTE
@@ -1699,54 +1704,8 @@ export class AppCtx {
     propertyId: Id,
     object: Partial<FeatureProperty>
   ): void => {
-    if (!this.newFeature?.feature) {
-      return;
-    }
-
-    // Initialize properties array if it doesn't exist
-    if (!this.newFeature.feature.properties) {
-      this.newFeature.feature.properties = [];
-    }
-
-    const propIndex = this.newFeature.feature.properties.findIndex(
-      (p) => p!.propertyId === propertyId
-    );
-
-    let updatedProperties: any[];
-
-    if (propIndex >= 0) {
-      // Update existing property
-      updatedProperties = [...this.newFeature.feature.properties];
-      updatedProperties[propIndex] = {
-        ...updatedProperties[propIndex]!,
-        ...object
-      };
-    } else {
-      // Create new property
-      const newProperty = {
-        id: '', // Will be set when saved
-        propertyId,
-        featureId: '', // Will be set when feature is created
-        value: '',
-        ...object
-      };
-
-      // Only add i18n if it's provided in the object
-      if (object.i18n) {
-        newProperty.i18n = object.i18n;
-      }
-
-      updatedProperties = [...this.newFeature.feature.properties, newProperty];
-    }
-
-    // Create a new newFeature object to ensure reactivity
-    this.newFeature = {
-      ...this.newFeature,
-      feature: {
-        ...this.newFeature.feature,
-        properties: updatedProperties
-      }
-    };
+    // Delegate to the property service
+    updateNewFeatureProperty(this, propertyId, object);
   };
 
   updateNewFeatureI18nProperty = (
@@ -1754,20 +1713,8 @@ export class AppCtx {
     object: Partial<FeaturePropertyI18nDB>,
     locale: Locale = getLocale()
   ): void => {
-    const propIndex = this.newFeature?.feature?.properties?.findIndex(
-      (p) => p!.propertyId === propertyId
-    );
-
-    if (
-      propIndex !== undefined &&
-      propIndex >= 0 &&
-      this.newFeature?.feature?.properties?.[propIndex]?.i18n
-    ) {
-      this.newFeature.feature.properties[propIndex].i18n![locale] = {
-        ...this.newFeature.feature.properties[propIndex].i18n![locale as Locale]!,
-        ...(object as { locale: Locale; value: string; valueGen: boolean })
-      };
-    }
+    // Delegate to the property service
+    updateNewFeatureI18nProperty(this, propertyId, object, locale);
   };
 
   getNewFeature = (): DeepPartial<NewFeatureTask> | null => {

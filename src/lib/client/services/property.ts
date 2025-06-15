@@ -13,7 +13,8 @@ import type {
   Locale,
   LocaleExtended,
   Id,
-  RangeFilterValue
+  RangeFilterValue,
+  FeaturePropertyI18nDB
 } from '$lib/types';
 
 // ═══════════════════════
@@ -51,6 +52,8 @@ import type {
 //    - getCategoricalValueId
 //    - updateFeatureProperty
 //    - updateFeatureI18nProperty
+//    - updateNewFeatureProperty
+//    - updateNewFeatureI18nProperty
 //    - handleCategoricalChange
 //    - handleSpecifierChange
 
@@ -529,21 +532,28 @@ export function getFeatureIdsForProperties(appCtx: AppCtx): Id[] {
 
 /**
  * Gets available properties for a layer from the cache.
+ * 
+ * @remark While properties are defined at the project level, at the
+ * layer level (layerProperty) we define where they 
+ * are to be included for that particular layer (isVisible) and whether
+ * they are editable by the public - i.e. whether they can be set as part
+ * of a newFeature flow.
  */
-export function getAvailableProperties(
+export function getUserContributableProperties(
   appCtx: AppCtx,
   layerId: Id
 ): Omit<FeatureProperty, 'featureId'>[] {
   if (!layerId) {
     return [];
   }
-
+  // ASSERT : Layer exists
   const layer = appCtx.cache.layer.get(layerId);
   if (!layer) {
+    console.warn(`Layer ${layerId} not found`);
     return [];
   }
 
-  // Get categorical and specifier properties that are visible
+  // Get categorical and specifier properties that are user contributable
   const availableProperties =
     layer.properties
       ?.filter((layerProp) => {
@@ -551,7 +561,8 @@ export function getAvailableProperties(
         return (
           property &&
           (property.type === 'classifier' || property.type === 'specifier') &&
-          layerProp.isVisible !== false &&
+          layerProp.isVisible === true &&
+          layerProp.isUserContributed === true &&
           property.key !== 'grade'
         );
       })
@@ -630,7 +641,7 @@ export function getI18nSpecifierValue(
   if (!featureProperty) return undefined;
 
   const result = getI18n(featureProperty as any, 'value', appCtx.getUserPreferences());
-  return result || undefined;
+  return result ?? undefined;
 }
 
 /**
@@ -641,7 +652,8 @@ export function getCategoricalValueId(
   propertyId: Id
 ): string | undefined {
   const featureProperty = getFeatureProperty(appCtx, propertyId);
-  return featureProperty?.propertyValueId || undefined;
+  const valueId = featureProperty?.propertyValueId;
+  return valueId && valueId !== null ? valueId : undefined;
 }
 
 /**
@@ -653,13 +665,13 @@ export function updateFeatureProperty(
   updates: Partial<FeatureProperty>
 ): void {
   const existingProperty = getFeatureProperty(appCtx, propertyId);
-
+  
   if (existingProperty) {
     // Update existing property
     Object.assign(existingProperty, updates);
   } else {
     // Create new property
-    appCtx.updateNewFeatureProperty(propertyId, updates);
+    updateNewFeatureProperty(appCtx, propertyId, updates);
   }
 }
 
@@ -674,7 +686,7 @@ export function updateFeatureI18nProperty(
   valueGen: boolean = false
 ): void {
   const existingProperty = getFeatureProperty(appCtx, propertyId);
-
+  
   if (existingProperty) {
     // Update existing property's i18n
     if (!existingProperty.i18n) {
@@ -683,10 +695,93 @@ export function updateFeatureI18nProperty(
     existingProperty.i18n[locale] = { locale, value, valueGen };
   } else {
     // Create new property with i18n
-    appCtx.updateNewFeatureProperty(propertyId, {
+    updateNewFeatureProperty(appCtx, propertyId, {
       value: '',
       i18n: { [locale]: { locale, value, valueGen } }
     });
+  }
+}
+
+/**
+ * Updates a property in the new feature context (moved from AppCtx).
+ */
+export function updateNewFeatureProperty(
+  appCtx: AppCtx,
+  propertyId: Id,
+  object: Partial<FeatureProperty>
+): void {
+  if (!appCtx.newFeature?.feature) {
+    return;
+  }
+
+  // Initialize properties array if it doesn't exist
+  if (!appCtx.newFeature.feature.properties) {
+    appCtx.newFeature.feature.properties = [];
+  }
+
+  const propIndex = appCtx.newFeature.feature.properties.findIndex(
+    (p) => p!.propertyId === propertyId
+  );
+
+  let updatedProperties: any[];
+
+  if (propIndex >= 0) {
+    // Update existing property
+    updatedProperties = [...appCtx.newFeature.feature.properties];
+    updatedProperties[propIndex] = {
+      ...updatedProperties[propIndex]!,
+      ...object
+    };
+  } else {
+    // Create new property
+    const newProperty = {
+      id: '', // Will be set when saved
+      propertyId,
+      featureId: '', // Will be set when feature is created
+      value: '',
+      ...object
+    };
+
+    // Only add i18n if it's provided in the object
+    if (object.i18n) {
+      newProperty.i18n = object.i18n;
+    }
+
+    updatedProperties = [...appCtx.newFeature.feature.properties, newProperty];
+  }
+
+  // Create a new newFeature object to ensure reactivity
+  appCtx.newFeature = {
+    ...appCtx.newFeature,
+    feature: {
+      ...appCtx.newFeature.feature,
+      properties: updatedProperties
+    }
+  };
+}
+
+/**
+ * Updates a feature property's i18n value in the new feature context (moved from AppCtx).
+ */
+export function updateNewFeatureI18nProperty(
+  appCtx: AppCtx,
+  propertyId: Id,
+  object: Partial<FeaturePropertyI18nDB>,
+  locale: Locale
+): void {
+  const propIndex = appCtx.newFeature?.feature?.properties?.findIndex(
+    (p) => p!.propertyId === propertyId
+  );
+
+  if (
+    propIndex !== undefined &&
+    propIndex >= 0 &&
+    appCtx.newFeature?.feature?.properties?.[propIndex]?.i18n
+  ) {
+    appCtx.newFeature.feature.properties[propIndex].i18n![locale] = {
+      ...appCtx.newFeature.feature.properties[propIndex].i18n![locale as Locale]!,
+      ...(object as { locale: Locale; value: string; valueGen: boolean })
+    };
   }
 }
 
