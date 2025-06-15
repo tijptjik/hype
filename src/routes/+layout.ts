@@ -22,6 +22,10 @@ export async function load({ data }) {
 
   return { 
     queryClient,
-    PUBLIC_SVELTE_QUERY_DEVTOOLS: data.PUBLIC_SVELTE_QUERY_DEVTOOLS
+    PUBLIC_SVELTE_QUERY_DEVTOOLS: data.PUBLIC_SVELTE_QUERY_DEVTOOLS,
+    // TODO Properly determine the title (could be a Hub)
+    title: 'HYPE',
+    site_name: 'HYPE',
+    site_description: 'HYPE'
   };
 }
