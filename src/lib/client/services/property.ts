@@ -1,19 +1,20 @@
+// I18N
+import { m } from '$lib/i18n';
+import { getI18n } from '$lib/i18n';
+// ENUMS
+import { FirstClassResource } from '$lib/enums';
 // TYPES
 import type { AppCtx } from '$lib/context/app.svelte';
-import { FirstClassResource } from '$lib/enums';
 import type {
   Property,
   FeatureProperty,
   PropertyValue,
   Feature,
   Locale,
+  LocaleExtended,
   Id,
-  RangeFilterValue,
-  UserPreferences
+  RangeFilterValue
 } from '$lib/types';
-// I18N
-import { getLocale, getI18n, getFPI18n } from '$lib/i18n';
-import * as m from '$lib/paraglide/messages';
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -40,6 +41,18 @@ import * as m from '$lib/paraglide/messages';
 //
 // 5. FILTERING
 //    - getFeatureIdsForProperties
+//
+// 6. FEATURE PROPERTY HELPERS
+//    - getAvailableProperties
+//    - getPropertyValues
+//    - getFeatureProperty
+//    - getUniversalSpecifierValue
+//    - getI18nSpecifierValue
+//    - getCategoricalValueId
+//    - updateFeatureProperty
+//    - updateFeatureI18nProperty
+//    - handleCategoricalChange
+//    - handleSpecifierChange
 
 // ═══════════════════════
 // 1. SORTING
@@ -462,14 +475,20 @@ export function getFeatureIdsForProperties(appCtx: AppCtx): Id[] {
         if (property.type === 'classifier' && property.component === 'SelectField') {
           // Categorical filter: check if feature's PropertyValue ID is in selected IDs
           if (Array.isArray(filterValue)) {
-            return featureProperty.propertyValueId 
+            return featureProperty.propertyValueId
               ? filterValue.includes(featureProperty.propertyValueId)
               : false;
           }
           return false;
-        } else if (property.type === 'classifier' && property.component === 'RangeField') {
+        } else if (
+          property.type === 'classifier' &&
+          property.component === 'RangeField'
+        ) {
           // If the range filter is set in the globalMin/Max range we should not fail any features
-          if (filterValue.rangeMin === filterValue.globalMin && filterValue.rangeMax === filterValue.globalMax) {
+          if (
+            filterValue.rangeMin === filterValue.globalMin &&
+            filterValue.rangeMax === filterValue.globalMax
+          ) {
             return true;
           }
 
@@ -482,9 +501,9 @@ export function getFeatureIdsForProperties(appCtx: AppCtx): Id[] {
           ) {
             // If no value available, consider it as not matching the filter
             if (!featureProperty.value) {
-              return false
+              return false;
             }
-            
+
             const numericValue = Number(featureProperty.value);
             return (
               !isNaN(numericValue) &&
@@ -502,4 +521,206 @@ export function getFeatureIdsForProperties(appCtx: AppCtx): Id[] {
     .map((feature) => feature.id);
 
   return filteredIds;
+}
+
+// ═══════════════════════
+// 6. FEATURE PROPERTY HELPERS
+// ═══════════════════════
+
+/**
+ * Gets available properties for a layer from the cache.
+ */
+export function getAvailableProperties(
+  appCtx: AppCtx,
+  layerId: Id
+): Omit<FeatureProperty, 'featureId'>[] {
+  if (!layerId) {
+    return [];
+  }
+
+  const layer = appCtx.cache.layer.get(layerId);
+  if (!layer) {
+    return [];
+  }
+
+  // Get categorical and specifier properties that are visible
+  const availableProperties =
+    layer.properties
+      ?.filter((layerProp) => {
+        const property = appCtx.cache.property.get(layerProp.propertyId);
+        return (
+          property &&
+          (property.type === 'classifier' || property.type === 'specifier') &&
+          layerProp.isVisible !== false &&
+          property.key !== 'grade'
+        );
+      })
+      .map((layerProp) => {
+        const property = appCtx.cache.property.get(layerProp.propertyId);
+        return {
+          property,
+          propertyId: layerProp.propertyId
+        };
+      })
+      .filter(
+        (item): item is { property: Property; propertyId: Id } =>
+          item.property !== undefined
+      ) || [];
+
+  return sortFeatureProperties(
+    availableProperties as Omit<FeatureProperty, 'featureId'>[]
+  );
+}
+
+/**
+ * Gets property values for a categorical property from the cache.
+ */
+export function getPropertyValues(
+  appCtx: AppCtx,
+  propertyId: Id
+): { readonly value: string; readonly id: string }[] {
+  const property = appCtx.cache.property.get(propertyId);
+  if (!property?.values) {
+    return [];
+  }
+
+  return property.values
+    .filter((v) => v.id)
+    .map((v) => ({
+      value: getI18n(v, 'value', appCtx.getUserPreferences()),
+      id: v.id!
+    }));
+}
+
+/**
+ * Gets a feature property by property ID from the new feature context.
+ */
+export function getFeatureProperty(
+  appCtx: AppCtx,
+  propertyId: Id
+): FeatureProperty | null {
+  if (!appCtx.newFeature?.feature?.properties) {
+    return null;
+  }
+
+  return appCtx.newFeature.feature.properties.find(
+    (p) => p && p.propertyId === propertyId
+  ) as FeatureProperty | null;
+}
+
+/**
+ * Gets the universal specifier value for a property.
+ */
+export function getUniversalSpecifierValue(
+  appCtx: AppCtx,
+  propertyId: Id
+): string | undefined {
+  const featureProperty = getFeatureProperty(appCtx, propertyId);
+  return featureProperty?.value;
+}
+
+/**
+ * Gets the i18n specifier value for a property in the current locale.
+ */
+export function getI18nSpecifierValue(
+  appCtx: AppCtx,
+  propertyId: Id
+): string | undefined {
+  const featureProperty = getFeatureProperty(appCtx, propertyId);
+  if (!featureProperty) return undefined;
+
+  const result = getI18n(featureProperty as any, 'value', appCtx.getUserPreferences());
+  return result || undefined;
+}
+
+/**
+ * Gets the categorical value ID for a property.
+ */
+export function getCategoricalValueId(
+  appCtx: AppCtx,
+  propertyId: Id
+): string | undefined {
+  const featureProperty = getFeatureProperty(appCtx, propertyId);
+  return featureProperty?.propertyValueId || undefined;
+}
+
+/**
+ * Updates a feature property in the new feature context.
+ */
+export function updateFeatureProperty(
+  appCtx: AppCtx,
+  propertyId: Id,
+  updates: Partial<FeatureProperty>
+): void {
+  const existingProperty = getFeatureProperty(appCtx, propertyId);
+
+  if (existingProperty) {
+    // Update existing property
+    Object.assign(existingProperty, updates);
+  } else {
+    // Create new property
+    appCtx.updateNewFeatureProperty(propertyId, updates);
+  }
+}
+
+/**
+ * Updates a feature property's i18n value.
+ */
+export function updateFeatureI18nProperty(
+  appCtx: AppCtx,
+  propertyId: Id,
+  locale: Locale,
+  value: string,
+  valueGen: boolean = false
+): void {
+  const existingProperty = getFeatureProperty(appCtx, propertyId);
+
+  if (existingProperty) {
+    // Update existing property's i18n
+    if (!existingProperty.i18n) {
+      existingProperty.i18n = {};
+    }
+    existingProperty.i18n[locale] = { locale, value, valueGen };
+  } else {
+    // Create new property with i18n
+    appCtx.updateNewFeatureProperty(propertyId, {
+      value: '',
+      i18n: { [locale]: { locale, value, valueGen } }
+    });
+  }
+}
+
+/**
+ * Handles categorical property change for new features.
+ */
+export function handleCategoricalChange(
+  appCtx: AppCtx,
+  propertyId: Id,
+  propertyValueId: Id
+): void {
+  updateFeatureProperty(appCtx, propertyId, {
+    propertyValueId: propertyValueId
+  });
+}
+
+/**
+ * Handles specifier property change for new features.
+ */
+export function handleSpecifierChange(
+  appCtx: AppCtx,
+  propertyId: Id,
+  locale: LocaleExtended,
+  newValue: string
+): void {
+  const property = appCtx.cache.property.get(propertyId);
+
+  if (property?.isTranslatable && locale !== 'core') {
+    // Translatable property - use i18n structure
+    updateFeatureI18nProperty(appCtx, propertyId, locale as Locale, newValue);
+  } else {
+    // Non-translatable property - just set value
+    updateFeatureProperty(appCtx, propertyId, {
+      value: newValue
+    });
+  }
 }
