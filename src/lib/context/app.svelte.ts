@@ -65,6 +65,7 @@ import type {
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
 import { MOBILE_MAX_WIDTH } from '$lib/index';
+import { sortProperties } from '$lib/client/services/property';
 
 export class AppCtx {
   // Maplibre Map instance
@@ -930,6 +931,23 @@ export class AppCtx {
     return undefined;
   };
 
+  // Helper method to get visible classifier properties for a layer
+  getClassifierPropertiesForLayer = async (layer: Layer): Promise<Property[]> => {
+    if (!layer.properties) return [];
+    
+    // Get Properties associated with LayerProperties
+    const properties = layer.properties
+      .filter(lp => lp.isVisible !== false)
+      .map(lp => this.cache.property.get(lp.propertyId));
+    
+    // Filter classifiers then sort by rank
+    return sortProperties(
+      properties.filter((prop): prop is Property => 
+        prop !== undefined && prop.type === 'classifier'
+      ).map((p) => ({ property: p }))
+    ).map((item) => item.property!);
+  };
+
   getResourceById = async (
     resource: FirstClassResource,
     id: Id
@@ -1471,7 +1489,7 @@ export class AppCtx {
             ...this.state.resources.feature.filter(
               (feature) =>
                 n ===
-                (feature as FeatureExtended).i18n?.[getLocale()]?.addressProperties
+                feature.i18n?.[getLocale()]?.addressProperties
                   ?.neighbourhood
             )
           );
@@ -1482,7 +1500,7 @@ export class AppCtx {
         ...this.state.resources.feature.filter(
           (feature) =>
             neighbourhoodKey ===
-            (feature as FeatureExtended).i18n?.[getLocale()]?.addressProperties
+            feature.i18n?.[getLocale()]?.addressProperties
               ?.neighbourhood
         )
       );
@@ -1709,12 +1727,12 @@ export class AppCtx {
   };
 
   closeLeftPanel = (): void => {
-    this.state.panels.filters = false;
     this.state.panels.maps = false;
+    this.state.panels.stars = false;
   };
 
   closeRightPanel = (): void => {
-    this.state.panels.stars = false;
+    this.state.panels.filters = false;
     this.state.panels.settings = false;
   };
 
