@@ -49,7 +49,8 @@ let id = $derived(
         values={field.values}
         {locale}
         {...field}
-        onchange={() =>
+        onchange={(e) => {
+          const newValue = (e.target as HTMLSelectElement).value;
           updateForm(
             form,
             field,
@@ -57,9 +58,10 @@ let id = $derived(
             fieldRoot,
             fieldIndex,
             fieldKey,
-            fieldValues.value as string,
+            newValue,
             false // Set to false when human edits the field
-          )} />
+          );
+        }} />
     </div>
     <ErrorLabel {errors} {field} {locale} {fieldRoot} {fieldIndex} {fieldKey} />
   </label>

@@ -16,7 +16,7 @@ let {
   isTranslated = false,
   inputType = 'text',
   onchange
-}: InputProps & { onchange: () => unknown } = $props();
+}: InputProps & { onchange: (value: string) => unknown } = $props();
 
 // SET PLACEHOLDER
 placeholder = placeholder
@@ -47,7 +47,7 @@ function getLabelCount() {
       : inputType == 'number'
         ? 'pr-2 group-focus-within:pr-2'
         : ''}"
-  oninput={onchange} />
+  oninput={(e) => onchange((e.target as HTMLInputElement).value)} />
 
 {#if (isGenAI || locale !== 'core') && isTranslated}
   <div class="absolute right-2 top-[7px]">
