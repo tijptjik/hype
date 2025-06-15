@@ -8,6 +8,8 @@ import { useSession } from '$lib/auth/client';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 import { setOmniContext, PageState } from '$lib/context/omni.svelte';
+// SERVICES
+import { startCircularFlight } from '$lib/client/services/geospatial';
 // COMPONENTS
 import Menu from '$lib/components/layout/Menu.svelte';
 import Map from '$lib/components/common/StandaloneMap.svelte';
@@ -51,12 +53,39 @@ const appCtx = getAppCtx();
 // CONTEXT :: OMNI
 const omniCtx = setOmniContext(appCtx);
 
+// CIRCULAR FLIGHT ANIMATION STATE
+let stopCircularFlight: (() => void) | null = $state(null);
+
 // NAVIGATION HANDLING -- State Change Effect
 $effect(() => {
   if (browser && omniCtx && omniCtx.pageState === PageState.ReadyToNav && navDest) {
     goto(navDest.replace('(app)', '')).then(() => {
       omniCtx.pageState = PageState.NoTransition;
     });
+  }
+});
+
+// TODO sync map center and flight starting position.
+// CIRCULAR FLIGHT ANIMATION -- Authentication Effect
+$effect(() => {
+  if (!$session.isPending) {
+    if (!$session.data) {
+      // User is not authenticated - start circular flight animation
+      if (!stopCircularFlight) {
+        setTimeout(() => {
+          const cleanup = startCircularFlight(appCtx,[114.17276, 22.29191], 5);
+          if (cleanup) {
+            stopCircularFlight = cleanup;
+          }
+        }, 1000);
+      }
+    } else {
+      // User is authenticated - stop circular flight animation
+      if (stopCircularFlight) {
+        stopCircularFlight();
+        stopCircularFlight = null;
+      }
+    }
   }
 });
 </script>
