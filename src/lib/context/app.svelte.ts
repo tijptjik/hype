@@ -627,15 +627,27 @@ export class AppCtx {
   };
 
   syncProjectPrisms = async () => {
-    this.state.prisms.project = this.state.prisms.project.filter((project) => {
+    const filteredProjects = this.state.prisms.project.filter((project) => {
       return this.state.resources.project.some((p) => p.id === project);
     });
+    
+    // Only update if the array actually changed
+    if (filteredProjects.length !== this.state.prisms.project.length || 
+        !filteredProjects.every((id, index) => id === this.state.prisms.project[index])) {
+      this.state.prisms.project = filteredProjects;
+    }
   };
 
   syncLayerPrisms = async () => {
-    this.state.prisms.layer = this.state.prisms.layer.filter((layer) => {
+    const filteredLayers = this.state.prisms.layer.filter((layer) => {
       return this.state.resources.layer.some((l) => l.id === layer);
     });
+    
+    // Only update if the array actually changed
+    if (filteredLayers.length !== this.state.prisms.layer.length || 
+        !filteredLayers.every((id, index) => id === this.state.prisms.layer[index])) {
+      this.state.prisms.layer = filteredLayers;
+    }
   };
 
   postLayerMutation = (): void => {
