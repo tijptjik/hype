@@ -182,8 +182,6 @@ function resetAnimation(container: HTMLDivElement | null) {
 $effect(() => {
   // Re-check when content changes and reset animation
   featureTitle;
-  console.log(featureTitle);
-  
   // Use the current reactive title to determine scroll need, not DOM content
   const currentTitle = isNewFeatureMode ? newFeatureTitle : featureTitle;
   const needsScroll = checkScrollNeedForText(featureContainer, currentTitle);

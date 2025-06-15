@@ -4,6 +4,8 @@ import Icon from '$lib/components/common/Icon.svelte';
 import RangeSlider from 'svelte-range-slider-pips';
 // I18N
 import { m } from '$lib/i18n';
+// SERVICES
+import { setRangePropertyFilter } from '$lib/client/services/property';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
@@ -71,7 +73,7 @@ let values: [number, number] = $derived([
           pushy
           float
           on:change={() => {
-            appCtx.setRangePropertyFilter(layerId, key, values);
+            setRangePropertyFilter(appCtx, layerId, key, values);
             appCtx.zoomToAllVisibleFeatures();
           }} />
       </div>

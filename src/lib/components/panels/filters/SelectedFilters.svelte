@@ -1,6 +1,6 @@
 <script lang="ts">
-// UTILS
-import { displaySelectedFilters } from '$lib/utils/formatting';
+// SERVICES
+import { displaySelectedFilters } from '$lib/client/services/property';
 // TYPES
 import type { Id, Property } from '$lib/types';
 
