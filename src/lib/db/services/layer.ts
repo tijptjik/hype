@@ -71,10 +71,7 @@ import { LayerAPI } from '../zod';
 //    - toFormShape
 //    - toResponseShape
 //
-// 5. UTILS :: MERGE
-//    - mergeProjectProperties
-//
-// 6. UTILS :: LOOKUPS
+// 5. UTILS :: LOOKUPS
 //    - getLayerMap
 //
 
@@ -459,29 +456,6 @@ export const updateLayerWithRelated = async (
 // 4. UTILS :: SHAPING
 // ═══════════════════════
 
-// Helper function to transform layer property i18n with deep nesting
-const transformLayerPropertyI18n = (layerProp: any): any => {
-  if (!layerProp.property) return layerProp;
-
-  const transformedProp = {
-    ...layerProp,
-    property: {
-      ...layerProp.property,
-      // Transform property-level i18n (always expect array from DB, convert to locale map)
-      i18n: transformI18nSafely(layerProp.property.i18n, {}),
-      // Transform property values if they exist
-      values:
-        layerProp.property.values?.map((value: any) => ({
-          ...value,
-          // Transform value-level i18n (always expect array from DB, convert to locale map)
-          i18n: transformI18nSafely(value.i18n, {})
-        })) || []
-    }
-  };
-
-  return transformedProp;
-};
-
 /**
  * Convert layer data to form shape for validation
  * @param data - The layer database entity
@@ -494,13 +468,10 @@ export const toFormShape = async (
   i18n: LayerI18nDB[],
   properties: LayerPropertyDBRaw[]
 ) => {
-  const formI18n = transformI18nSafely(i18n, {});
-  const formProperties: LayerPropertyNew[] = properties.map(transformLayerPropertyI18n);
-
   const formData = {
     ...data,
-    i18n: formI18n,
-    properties: formProperties
+    i18n: transformI18nSafely(i18n, {}),
+    properties
   };
 
   // @ts-ignore TODO - Fix Zod type error
@@ -523,68 +494,13 @@ export const toResponseShape = async (
   const data = {
     ...layer,
     i18n: transformI18nSafely(i18n, {}),
-    properties: properties.map(transformLayerPropertyI18n)
+    properties
   };
   return LayerAPI.parse(data);
 };
 
 // ═══════════════════════
-// 5. UTILS :: MERGE
-// ═══════════════════════
-
-/**
- * Merge project properties into layer
- */
-export const mergeProjectProperties = async (
-  db: Database,
-  result: Layer
-): Promise<Layer> => {
-  // Get all properties for the layer's project
-  const projectProps = await db.query.property.findMany({
-    where: eq(propertySchema.projectId, result.projectId),
-    with: {
-      i18n: true,
-      values: {
-        with: {
-          i18n: true
-        }
-      }
-    }
-  });
-
-  // Get existing property IDs
-  const existingPropertyIds = result.properties?.map((prop) => prop.propertyId) || [];
-
-  // Initialize properties array if it doesn't exist
-  if (!result.properties) {
-    result.properties = [];
-  }
-
-  // Add project properties that aren't already in the layer
-  projectProps.forEach((projectProp: any) => {
-    if (!existingPropertyIds.includes(projectProp.id)) {
-      projectProp.i18n = transformI18nSafely(projectProp.i18n, {});
-      // Handle property values
-      if (projectProp.values) {
-        projectProp.values = projectProp.values.map((value: any) => ({
-          ...value,
-          i18n: transformI18nSafely(value.i18n, {})
-        }));
-      }
-      result.properties.push({
-        layerId: result.id,
-        propertyId: projectProp.id,
-        isVisible: false, // Default to not visible for new properties
-        property: projectProp
-      });
-    }
-  });
-
-  return result;
-};
-
-// ═══════════════════════
-// 6. UTILS :: LOOKUPS
+// 5. UTILS :: LOOKUPS
 // ═══════════════════════
 
 /**
