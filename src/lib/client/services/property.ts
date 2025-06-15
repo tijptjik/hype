@@ -14,7 +14,8 @@ import type {
   LocaleExtended,
   Id,
   RangeFilterValue,
-  FeaturePropertyI18nDB
+  FeaturePropertyI18nDB,
+  Layer
 } from '$lib/types';
 
 // ═══════════════════════
@@ -45,6 +46,8 @@ import type {
 //
 // 6.1 FEATURE PROPERTY
 //   :: GETTERS
+//    - getFeatureCardDisplayProperties
+//    - getFeatureCardEditableProperties
 //    - getUserContributableProperties
 //    - getLocalisedPropertyValues
 //    - getFeatureProperty
@@ -152,13 +155,13 @@ export let getGroupedClassifierProperties = async (
   appCtx: AppCtx
 ): Promise<
   Array<{
-    hierarchy: {
-      organisation: string | null;
-      project: string | null;
-      layer: string | null;
-      layerId: string;
-    };
-    properties: Property[];
+  hierarchy: {
+    organisation: string | null;
+    project: string | null;
+    layer: string | null;
+    layerId: string;
+  };
+  properties: Property[];
   }>
 > => {
   const results = await Promise.all(
@@ -170,10 +173,10 @@ export let getGroupedClassifierProperties = async (
       const { project, organisation } = await appCtx.getHierarchy(layer);
       if (!project || !organisation) return null;
 
-      // Get sorted classifier properties from layerProperties
+      // Get sorted classifier properties from layerProperties 
       const properties = await appCtx.getClassifierPropertiesForLayer(layer);
       if (properties.length === 0) return null;
-
+      
       // Construct hierarchy info
       const hierarchy = {
         organisation: appCtx.getContextualOrganisationName(organisation),
@@ -534,8 +537,73 @@ export function getFeatureIdsForProperties(appCtx: AppCtx): Id[] {
 // 6. FEATURE PROPERTY :: GETTERS
 // ═══════════════════════
 
+
 /**
- * Gets available properties for a layer from the cache.
+ * Gets properties for a display FeatureCard.
+ * 
+ * @param appCtx - The application context.
+ * @param layerId - The ID of the layer to get the properties for.
+ * @param feature - The feature to get the properties for.
+ * @returns The properties for the feature.
+ */
+export function getFeatureCardDisplayProperties(
+  appCtx: AppCtx,
+  layerId: Id,
+  feature: Feature
+): Omit<FeatureProperty, 'featureId'>[] {
+  if (!layerId) {
+    return [];
+  }
+  // ASSERT : Layer exists
+  const layer = appCtx.cache.layer.get(layerId);
+  if (!layer) {
+    console.warn(`Layer ${layerId} not found`);
+    return [];
+  }
+
+  // Get all visible properties for the layer (not just user contributable ones)
+  const layerProperties = layer.properties
+    ?.filter((layerProp) => {
+      const property = appCtx.cache.property.get(layerProp.propertyId);
+      return (
+        property &&
+        (property.type === 'classifier' || property.type === 'specifier') &&
+        layerProp.isVisible === true &&
+        property.key !== 'grade'
+      );
+    })
+    .map((layerProp) => {
+      const property = appCtx.cache.property.get(layerProp.propertyId);
+      return {
+        property,
+        propertyId: layerProp.propertyId
+      };
+    })
+    .filter(
+      (item): item is { property: Property; propertyId: Id } =>
+        item.property !== undefined
+    ) || [];
+
+  // Map layer properties to feature properties, including the property definition
+  return sortFeatureProperties(
+    layerProperties
+      .map(item => {
+        const featureProperty = feature.properties.find(prop => prop.propertyId === item.propertyId);
+        if (featureProperty) {
+          return {
+            ...featureProperty,
+            property: item.property
+          };
+        }
+        return null;
+      })
+      .filter((item): item is FeatureProperty & { property: Property } => item !== null)
+  );
+}
+
+
+/**
+ * Gets properties for an editable FeatureCard. 
  * 
  * @remark While properties are defined at the project level, at the
  * layer level (layerProperty) we define where they 
@@ -543,7 +611,7 @@ export function getFeatureIdsForProperties(appCtx: AppCtx): Id[] {
  * they are editable by the public - i.e. whether they can be set as part
  * of a newFeature flow.
  */
-export function getUserContributableProperties(
+export function getFeatureCardEditableProperties(
   appCtx: AppCtx,
   layerId: Id
 ): Omit<FeatureProperty, 'featureId'>[] {
@@ -558,33 +626,30 @@ export function getUserContributableProperties(
   }
 
   // Get categorical and specifier properties that are user contributable
-  const availableProperties =
-    layer.properties
-      ?.filter((layerProp) => {
-        const property = appCtx.cache.property.get(layerProp.propertyId);
-        return (
-          property &&
-          (property.type === 'classifier' || property.type === 'specifier') &&
-          layerProp.isVisible === true &&
-          layerProp.isUserContributed === true &&
-          property.key !== 'grade'
-        );
-      })
-      .map((layerProp) => {
-        const property = appCtx.cache.property.get(layerProp.propertyId);
-        return {
-          property,
-          propertyId: layerProp.propertyId
-        };
-      })
-      .filter(
-        (item): item is { property: Property; propertyId: Id } =>
-          item.property !== undefined
-      ) || [];
+  const layerProperties = layer.properties
+    ?.filter((layerProp) => {
+      const property = appCtx.cache.property.get(layerProp.propertyId);
+      return (
+        property &&
+        (property.type === 'classifier' || property.type === 'specifier') &&
+        layerProp.isVisible === true &&
+        layerProp.isUserContributed === true &&
+        property.key !== 'grade'
+      );
+    })
+    .map((layerProp) => {
+      const property = appCtx.cache.property.get(layerProp.propertyId);
+      return {
+        property,
+        propertyId: layerProp.propertyId
+      };
+    })
+    .filter(
+      (item): item is { property: Property; propertyId: Id } =>
+        item.property !== undefined
+    ) || [];
 
-  return sortFeatureProperties(
-    availableProperties as Omit<FeatureProperty, 'featureId'>[]
-  );
+  return sortFeatureProperties(layerProperties);
 }
 
 /**

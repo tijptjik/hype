@@ -6,7 +6,7 @@ import { Check, PencilSquare } from '@steeze-ui/heroicons';
 import { getI18n, getLocale } from '$lib/i18n';
 // SERVICES
 import { 
-  getUserContributableProperties,
+  getFeatureCardEditableProperties,
   getLocalisedPropertyValues,
   getUniversalSpecifierValue,
   getI18nSpecifierValue,
@@ -43,7 +43,7 @@ let textareaElements = $state<Record<string, HTMLTextAreaElement>>({});
 // FUNCTIONS
 // Available properties that could be added to the feature
 const availableFeatureProperties = $derived(
-  feature?.layerId ? getUserContributableProperties(appCtx, feature.layerId) : []
+  feature?.layerId ? getFeatureCardEditableProperties(appCtx, feature.layerId) : []
 );
 
 // EDIT MODE HANDLERS
