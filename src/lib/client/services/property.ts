@@ -43,13 +43,17 @@ import type {
 // 5. FILTERING
 //    - getFeatureIdsForProperties
 //
-// 6. FEATURE PROPERTY HELPERS
-//    - getAvailableProperties
-//    - getPropertyValues
+// 6.1 FEATURE PROPERTY
+//   :: GETTERS
+//    - getUserContributableProperties
+//    - getLocalisedPropertyValues
 //    - getFeatureProperty
 //    - getUniversalSpecifierValue
 //    - getI18nSpecifierValue
-//    - getCategoricalValueId
+//    - getClassifierValueId
+//
+// 6.2 FEATURE PROPERTY 
+//   :: SETTERS
 //    - updateFeatureProperty
 //    - updateFeatureI18nProperty
 //    - updateNewFeatureProperty
@@ -527,7 +531,7 @@ export function getFeatureIdsForProperties(appCtx: AppCtx): Id[] {
 }
 
 // ═══════════════════════
-// 6. FEATURE PROPERTY HELPERS
+// 6. FEATURE PROPERTY :: GETTERS
 // ═══════════════════════
 
 /**
@@ -585,53 +589,68 @@ export function getUserContributableProperties(
 
 /**
  * Gets property values for a categorical property from the cache.
+ * 
+ * @param appCtx - The application context.
+ * @param propertyId - The ID of the property to get the values for.
+ * @returns A map of property value IDs to their localised values.
  */
-export function getPropertyValues(
+export function getLocalisedPropertyValues(
   appCtx: AppCtx,
   propertyId: Id
-): { readonly value: string; readonly id: string }[] {
+): Map<Id, string> {
   const property = appCtx.cache.property.get(propertyId);
-  if (!property?.values) {
-    return [];
-  }
-
-  return property.values
-    .filter((v) => v.id)
-    .map((v) => ({
-      value: getI18n(v, 'value', appCtx.getUserPreferences()),
-      id: v.id!
-    }));
+  if (!property?.values) return new Map<Id, string>();
+  return propertyValuesToLocalisedOptions(appCtx, property.values);
 }
 
 /**
  * Gets a feature property by property ID from the new feature context.
+ * 
+ * @param appCtx - The application context.
+ * @param propertyId - The ID of the property to get the values for.
+ * @param featureId - Optional feature ID to get the property for.
+ * If not provided, the property will be searched for in the new feature context.
  */
 export function getFeatureProperty(
   appCtx: AppCtx,
-  propertyId: Id
+  propertyId: Id,
+  featureId?: Id | null
 ): FeatureProperty | null {
-  if (!appCtx.newFeature?.feature?.properties) {
-    return null;
+  if (!featureId) {
+    // ASSERT : newFeature exists
+    if (!appCtx.newFeature?.feature?.properties) return null; 
+    return appCtx.newFeature.feature.properties.find(
+      (p) => p && p.propertyId === propertyId
+    ) as FeatureProperty | null;
+  } else {
+    return appCtx.features.get(featureId)?.properties.find(
+      (p) => p && p.propertyId === propertyId
+    ) as FeatureProperty | null;
   }
-
-  return appCtx.newFeature.feature.properties.find(
-    (p) => p && p.propertyId === propertyId
-  ) as FeatureProperty | null;
 }
 
 /**
  * Gets the universal specifier value for a property.
+ * 
+ * @param appCtx - The application context.
+ * @param propertyId - The ID of the property to get the values for.
+ * @returns The universal specifier value for the property.
  */
 export function getUniversalSpecifierValue(
   appCtx: AppCtx,
   propertyId: Id
-): string | undefined {
+): string | undefined | null {
   const featureProperty = getFeatureProperty(appCtx, propertyId);
-  return featureProperty?.value;
+  if (!featureProperty) return null;
+  return featureProperty.value;
 }
 
 /**
  * Gets the i18n specifier value for a property in the current locale.
+ * 
+ * @param appCtx - The application context.
+ * @param propertyId - The ID of the property to get the values for.
+ * @returns The i18n specifier value for the property.
  */
 export function getI18nSpecifierValue(
   appCtx: AppCtx,
@@ -639,15 +658,18 @@ export function getI18nSpecifierValue(
 ): string | undefined {
   const featureProperty = getFeatureProperty(appCtx, propertyId);
   if (!featureProperty) return undefined;
-
   const result = getI18n(featureProperty as any, 'value', appCtx.getUserPreferences());
   return result ?? undefined;
 }
 
 /**
- * Gets the categorical value ID for a property.
+ * Gets the classifier value ID for a property.
+ * 
+ * @param appCtx - The application context.
+ * @param propertyId - The ID of the property to get the values for.
+ * @returns The classifier value ID for the property.
  */
-export function getCategoricalValueId(
+export function getClassifierValueId(
   appCtx: AppCtx,
   propertyId: Id
 ): string | undefined {
@@ -656,8 +678,17 @@ export function getCategoricalValueId(
   return valueId && valueId !== null ? valueId : undefined;
 }
 
+
+// ═══════════════════════
+// 6. FEATURE PROPERTY :: SETTERS
+// ═══════════════════════
+
 /**
  * Updates a feature property in the new feature context.
+ * 
+ * @param appCtx - The application context.
+ * @param propertyId - The ID of the property to update.
+ * @param updates - The updates to apply to the property.
  */
 export function updateFeatureProperty(
   appCtx: AppCtx,
@@ -677,6 +708,17 @@ export function updateFeatureProperty(
 
 /**
  * Updates a feature property's i18n value.
+ * 
+ * @remark This function is used to provide a way to update the i18n value of a property.
+ * By default we assume that the user is making a contribution in their own locale.
+ * @todo Add UI support for providing values in other locales (i.e. allow users-translatable)
+ * values.
+ * 
+ * @param appCtx - The application context.
+ * @param propertyId - The ID of the property to update.
+ * @param locale - The locale to update the property for.
+ * @param value - The value to update the property to.
+ * @param valueGen - Whether the value is generated.
  */
 export function updateFeatureI18nProperty(
   appCtx: AppCtx,
@@ -703,7 +745,11 @@ export function updateFeatureI18nProperty(
 }
 
 /**
- * Updates a property in the new feature context (moved from AppCtx).
+ * Updates a property in the new feature context
+ * 
+ * @param appCtx - The application context.
+ * @param propertyId - The ID of the property to update.
+ * @param object - The object to update the property with.
  */
 export function updateNewFeatureProperty(
   appCtx: AppCtx,
@@ -761,7 +807,12 @@ export function updateNewFeatureProperty(
 }
 
 /**
- * Updates a feature property's i18n value in the new feature context (moved from AppCtx).
+ * Updates a feature property's i18n value in the new feature context
+ * 
+ * @param appCtx - The application context.
+ * @param propertyId - The ID of the property to update.
+ * @param object - The object to update the property with.
+ * @param locale - The locale to update the property for.
  */
 export function updateNewFeatureI18nProperty(
   appCtx: AppCtx,
@@ -787,6 +838,10 @@ export function updateNewFeatureI18nProperty(
 
 /**
  * Handles categorical property change for new features.
+ * 
+ * @param appCtx - The application context.
+ * @param propertyId - The ID of the property to update.
+ * @param propertyValueId - The ID of the property value to update.
  */
 export function handleCategoricalChange(
   appCtx: AppCtx,
@@ -800,6 +855,11 @@ export function handleCategoricalChange(
 
 /**
  * Handles specifier property change for new features.
+ * 
+ * @param appCtx - The application context.
+ * @param propertyId - The ID of the property to update.
+ * @param locale - The locale to update the property for.
+ * @param newValue - The new value to update the property to.
  */
 export function handleSpecifierChange(
   appCtx: AppCtx,
