@@ -5,13 +5,14 @@ import type {
   Property,
   FeatureProperty,
   PropertyValue,
+  Feature,
   Locale,
   Id,
   RangeFilterValue,
   UserPreferences
 } from '$lib/types';
 // I18N
-import { getLocale, getI18n } from '$lib/i18n';
+import { getLocale, getI18n, getFPI18n } from '$lib/i18n';
 import * as m from '$lib/paraglide/messages';
 
 // ═══════════════════════
@@ -36,6 +37,9 @@ import * as m from '$lib/paraglide/messages';
 //    - displaySelectedProperties
 //    - displaySelectedFilters
 //    - displayRangeFilter
+//
+// 5. FILTERING
+//    - getFeatureIdsForProperties
 
 // ═══════════════════════
 // 1. SORTING
@@ -403,4 +407,99 @@ export function displayRangeFilter(
   } else {
     return `${m.filters__between()} ${values[0]} ${m.filters__and()} ${values[1]} ${m.filters__stars()}`;
   }
+}
+
+// ═══════════════════════
+// 5. FILTERING
+// ═══════════════════════
+
+/**
+ * Gets feature IDs filtered by property filters.
+ * Returns all features if no property filters are active.
+ */
+export function getFeatureIdsForProperties(appCtx: AppCtx): Id[] {
+  // If there are no property filters at all, return all features
+  if (Object.keys(appCtx.propertyFilters).length === 0) {
+    return Array.from(appCtx.features.keys());
+  }
+
+  const featureList = Array.from(appCtx.features.values());
+
+  const filteredIds = featureList
+    .filter((feature: Feature) => {
+      // Get filters specific to this feature's layer
+      const layerFilters = appCtx.propertyFilters[feature.layerId];
+
+      // If no filters for this layer, feature passes
+      if (!layerFilters || Object.keys(layerFilters).length === 0) {
+        return true;
+      }
+
+      // Check if feature matches ALL filters for its layer
+      return Object.entries(layerFilters).every(([propertyId, filterValue]) => {
+        // Empty categorical filter matches all
+        if (Array.isArray(filterValue) && filterValue.length === 0) {
+          return true;
+        }
+
+        // Find the feature's property by property ID
+        const featureProperty = feature.properties.find(
+          (fp: FeatureProperty) => fp.propertyId === propertyId
+        );
+
+        if (!featureProperty) {
+          return false; // Feature doesn't have this property
+        }
+
+        // Get the property definition to check type and component
+        const property = appCtx.cache.property.get(propertyId);
+        if (!property) {
+          console.error(`Property definition not found for propertyId: ${propertyId}`);
+          return true; // Property definition not found, so we keep showing it
+        }
+
+        // Handle different property types and components
+        if (property.type === 'classifier' && property.component === 'SelectField') {
+          // Categorical filter: check if feature's PropertyValue ID is in selected IDs
+          if (Array.isArray(filterValue)) {
+            return featureProperty.propertyValueId 
+              ? filterValue.includes(featureProperty.propertyValueId)
+              : false;
+          }
+          return false;
+        } else if (property.type === 'classifier' && property.component === 'RangeField') {
+          // If the range filter is set in the globalMin/Max range we should not fail any features
+          if (filterValue.rangeMin === filterValue.globalMin && filterValue.rangeMax === filterValue.globalMax) {
+            return true;
+          }
+
+          // Range filter: check if numeric value is within range
+          if (
+            typeof filterValue === 'object' &&
+            filterValue !== null &&
+            'rangeMin' in filterValue &&
+            'rangeMax' in filterValue
+          ) {
+            // If no value available, consider it as not matching the filter
+            if (!featureProperty.value) {
+              return false
+            }
+            
+            const numericValue = Number(featureProperty.value);
+            return (
+              !isNaN(numericValue) &&
+              numericValue >= filterValue.rangeMin &&
+              numericValue <= filterValue.rangeMax
+            );
+          }
+          return false;
+        }
+
+        // For other property types/components, return true for now
+        return true;
+      });
+    })
+    .map((feature) => feature.id);
+
+  return filteredIds;
 }
