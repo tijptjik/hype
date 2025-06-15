@@ -6,15 +6,13 @@ import { Check, PencilSquare } from '@steeze-ui/heroicons';
 import { getI18n, getLocale } from '$lib/i18n';
 // SERVICES
 import { 
-  sortFeatureProperties,
-  getAvailableProperties,
+  getUserContributableProperties,
   getPropertyValues,
-  getFeatureProperty,
   getUniversalSpecifierValue,
   getI18nSpecifierValue,
   getCategoricalValueId,
   handleCategoricalChange,
-  handleSpecifierChange
+  handleSpecifierChange,
 } from '$lib/client/services/property';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
@@ -22,15 +20,9 @@ import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 // TYPES
 import type {
   Feature,
-  FeatureProperty,
   LocaleExtended,
-  UserContributedFeatureProperty,
   UserContributedFeature,
-  Key,
   Id,
-  PropertyI18nDB,
-  PropertyDBRaw,
-  PropertyValue
 } from '$lib/types';
 
 // STATE : PROPS
@@ -53,7 +45,7 @@ let textareaElements = $state<Record<string, HTMLTextAreaElement>>({});
 // FUNCTIONS
 // Available properties that could be added to the feature
 const availableFeatureProperties = $derived(
-  feature?.layerId ? getAvailableProperties(appCtx, feature.layerId) : []
+  feature?.layerId ? getUserContributableProperties(appCtx, feature.layerId) : []
 );
 
 // Get available property values for dropdowns (categorical options) from cache
@@ -165,14 +157,6 @@ function handleEditCancel(propertyId: string) {
         {#each availableFeatureProperties as { property: prop, propertyId, value, i18n } (propertyId)}
           {#if prop}
             {@const propertyValues = getPropertyValuesForComponent(propertyId)}
-            {@const renderingInfo = {
-              propertyId,
-              component: prop.component,
-              type: prop.type,
-              hasPropertyValues: propertyValues.length > 0,
-              shouldRenderSelect:
-                prop.component === 'SelectField' && propertyValues.length > 0
-            }}
             <div class="dir-ltr flex flex-col justify-evenly gap-1">
               <span
                 class="font-mono text-xs font-normal uppercase tracking-wide text-gray-400">
