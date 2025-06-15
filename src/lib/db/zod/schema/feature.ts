@@ -92,8 +92,8 @@ export const FeaturePropertyBase = createSelectSchema(featureProperty).extend({
   // value can be string, number, boolean, or null. Zod schema should reflect this.
   // For simplicity, keeping as string().nullable() but this might need to be z.any() or a union for more flexibility if type is not always string.
   // For simplicity, keeping as string().nullable() but this might need to be z.any() or a union for more flexibility if type is not always string.
-  value: z.string().nullable().optional(),
-  propertyValueId: z.string().nullable().optional()
+  value: z.string().nullish(),
+  propertyValueId: z.string().nullish()
 });
 
 export const FeaturePropertyInsert = createInsertSchema(featureProperty).extend({
@@ -102,8 +102,8 @@ export const FeaturePropertyInsert = createInsertSchema(featureProperty).extend(
 });
 
 export const FeaturePropertyUpdate = createUpdateSchema(featureProperty).extend({
-  value: z.string().nullable().optional(),
-  propertyValueId: z.string().nullable().optional(),
+  value: z.string().nullish(),
+  propertyValueId: z.string().nullish(),
   featureId: z.string().optional()
 });
 
@@ -182,7 +182,7 @@ export const FeatureCollectionAPI = FeatureBase.omit({
   createdAt: true,
   modifiedAt: true
 }).extend({
-  i18n: getLocales(z.object({
+  i18n: getLocales(FeatureI18nBase.extend({
     addressProperties: z.object({
       neighbourhood: z.string().nullish()
     }).nullish()
