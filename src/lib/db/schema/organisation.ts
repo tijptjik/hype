@@ -1,6 +1,10 @@
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+// SCHEMA
+import { image } from './image';
+import { user } from './user';
+import { hub } from './hub';
 // ENUM
 import { OrganisationRoleType, supportedLocales } from '../../enums';
 
@@ -44,9 +48,15 @@ export const organisation = sqliteTable('organisation', {
   // Public identifier
   code: text('code').unique().notNull(),
   url: text('url'),
-  imageId: text('imageId'),
+  imageId: text('imageId').references(() => image.id, {
+    onDelete: 'set null',
+    onUpdate: 'cascade'
+  }),
   // Hub assignment
-  hubId: text('hubId'),
+  hubId: text('hubId').references(() => hub.id, {
+    onDelete: 'set null',
+    onUpdate: 'cascade'
+  }),
   // If true, organisation and all its resources are exclusive to the hub, and not served on core.
   isHubExclusive: integer('isHubExclusive', { mode: 'boolean' })
     .notNull()
@@ -57,7 +67,10 @@ export const organisation = sqliteTable('organisation', {
     .default(true),
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(true),
   publishedAt: text('publishedAt'),
-  publisherId: text('publisherId'),
+  publisherId: text('publisherId').references(() => user.id, {
+    onDelete: 'set null',
+    onUpdate: 'cascade'
+  }),
   // False : Organisation may be shown in the Admin Panel
   // True : Organisation is considered deleted
   isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
@@ -114,7 +127,9 @@ export const organisationRole = sqliteTable(
     organisationId: text('organisationId')
       .notNull()
       .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    userId: text('userId').notNull(),
+    userId: text('userId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     role: text('role', {
       enum: Object.values(OrganisationRoleType) as [string, ...string[]]
     })
