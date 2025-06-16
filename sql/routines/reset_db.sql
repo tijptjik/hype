@@ -1,7 +1,7 @@
 PRAGMA foreign_keys = OFF;
 PRAGMA defer_foreign_keys = ON;
 
-BEGIN TRANSACTION;
+-- BEGIN TRANSACTION;
 
 -- Drop all tables in reverse dependency order (Level 4 → Level 0)
 -- Level 4: Depends on Level 3
@@ -55,7 +55,7 @@ DROP TABLE IF EXISTS verification;
 -- Reset the sequence counter if sqlite_sequence exists
 UPDATE sqlite_sequence SET seq = 0 WHERE name = 'd1_migrations' AND EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='sqlite_sequence');
 
-COMMIT;
+-- COMMIT;
 
 PRAGMA defer_foreign_keys = OFF;
 PRAGMA foreign_keys = ON;
