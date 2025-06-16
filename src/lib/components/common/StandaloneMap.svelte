@@ -1,7 +1,7 @@
 <script lang="ts">
-// import { AttributionControl, GeolocateControl, Map, NavigationControl, ScaleControl } from 'maplibre-gl';
+import { AttributionControl, GeolocateControl, Map, NavigationControl, ScaleControl } from 'maplibre-gl';
 // SVELTE
-import { onMount, tick } from 'svelte';
+import { onMount } from 'svelte';
 import { watch } from 'runed';
 // ICONS
 import { Square3Stack3d } from '@steeze-ui/heroicons';
@@ -12,7 +12,6 @@ import { cubicInOut } from 'svelte/easing';
 // I18N
 import { m } from '$lib/i18n';
 // LIB
-import { loadScript } from '$lib';
 import { updateMarkers } from '$lib/map/markers';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
@@ -30,33 +29,31 @@ import {
 // STYLES
 import '$lib/styles/map.css';
 // MAPLIBRE
-import { monkeyPatchMapLibre } from '$lib/map/maplibre-preload';
 import { Point } from 'maplibre-gl';
 // CONFIG
 import { MOBILE_MAX_WIDTH } from '$lib/index';
 // TYPES
 import type { PointLike, LngLatLike } from 'maplibre-gl';
+
 // let mapStore: MapStore = getContext(MAPSTORE_CONTEXT_KEY);
 let mapContainer: HTMLDivElement;
-
-// GLOBAL
-let maplibre: any;
 // CONTEXT
 const appCtx = getAppCtx();
 const omniCtx = getOmniContext();
 
 let lastHorizontalOffset = $state(0);
 let isAnimating = $state(false);
+
 // WATCHERS
 // Watch for changes in features
 onMount(async () => {
-  // To minimize the payload in Cloudflare, we are manually inserting mapping dependencies here as they are heavy
-  // and the max worker size in the free tier is 1 MB
-  await loadScript('https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js');
-  // @ts-ignore
-  globalThis.maplibregl = maplibregl;
-
-  maplibre = monkeyPatchMapLibre();
+  // To minimize the payload in Cloudflare, we are manually inserting mapping dependencies here as they 
+  // are heavy and the max worker size in the free tier is 1 MB
+  
+  // Wait for maplibre to be loaded globally
+  while (!appCtx.isMaplibreLoaded || !appCtx.maplibre) {
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
 
   // Wait for the DOM element to be available
   if (!mapContainer) {
@@ -64,7 +61,7 @@ onMount(async () => {
     return;
   }
 
-  appCtx.map = new maplibre.Map({
+  appCtx.map = new appCtx.maplibre.Map({
     container: mapContainer,
     style: {
       version: 8,
@@ -108,7 +105,7 @@ onMount(async () => {
 
     if (appCtx.user) {
       // Initialize and store the GeolocateControl
-      const geolocateControl = new maplibre.GeolocateControl({
+      const geolocateControl = new appCtx.maplibre.GeolocateControl({
         positionOptions: {
           timeout: 5000,
           enableHighAccuracy: true,
@@ -163,17 +160,17 @@ onMount(async () => {
       }
     }
   });
-
+  // TODO Add Navigation control
   // appCtx.map!.addControl(new NavigationControl({}), 'bottom-right');
   // appCtx.map!.addControl(new ScaleControl({ maxWidth: 80, unit: 'metric' }), 'bottom-left');
   // appCtx.map!.addControl(new AttributionControl({ compact: true }), 'bottom-right');
 });
 
 watch(
-  () => appCtx.featuresVisible,
+  () => [appCtx.featuresVisible, appCtx.isMaplibreLoaded],
   () => {
-    if (!isAnimating) {
-      updateMarkers(appCtx, appCtx.getVisibleFeatures(), maplibre);
+    if (!isAnimating && appCtx.maplibre && appCtx.isMaplibreLoaded) {
+      updateMarkers(appCtx, appCtx.getVisibleFeatures(), appCtx.maplibre);
     }
   }
 );

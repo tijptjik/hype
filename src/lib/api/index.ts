@@ -218,7 +218,8 @@ const resourceConfig: Record<
     parentRefKey: 'id',
     keyToParent: 'featureId'
   },
-  hub: {}
+  hub: {},
+  property: {}
 };
 
 type LoadFormDataOptions<T extends Record<string, unknown>> = {

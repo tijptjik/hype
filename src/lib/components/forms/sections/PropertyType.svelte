@@ -54,7 +54,8 @@ let propsInSection = $derived(
 const addAction = async (e: Event) => {
   e.preventDefault();
   e.stopPropagation();
-  const id = nanoid();
+  const id = nanoid(12);
+  const defaultLabel = '';
   const newProperty: PropertyNew & { id: Id } = {
     id: id,
     projectId: $form.id,
@@ -65,7 +66,7 @@ const addAction = async (e: Event) => {
       fieldDiscriminator === 'classifier'
         ? classifierComponentTypes[0]
         : specifierComponentTypes[0],
-    isTranslatable: true,
+    isTranslatable: fieldDiscriminator === 'classifier',
     values: fieldDiscriminator === 'classifier' ? [] : null,
     min: null,
     max: null,
@@ -73,7 +74,7 @@ const addAction = async (e: Event) => {
       en: {
         locale: 'en',
         propertyId: id,
-        label: '',
+        label: defaultLabel,
         labelGen: false,
         placeholder: '',
         placeholderGen: false
@@ -81,7 +82,7 @@ const addAction = async (e: Event) => {
       'zh-hant': {
         locale: 'zh-hant',
         propertyId: id,
-        label: '',
+        label: defaultLabel,
         labelGen: false,
         placeholder: '',
         placeholderGen: false
@@ -89,7 +90,7 @@ const addAction = async (e: Event) => {
       'zh-hans': {
         locale: 'zh-hans',
         propertyId: id,
-        label: '',
+        label: defaultLabel,
         labelGen: false,
         placeholder: '',
         placeholderGen: false

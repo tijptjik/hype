@@ -4,40 +4,42 @@ import Icon from '$lib/components/common/Icon.svelte';
 import RangeSlider from 'svelte-range-slider-pips';
 // I18N
 import { m } from '$lib/i18n';
+import { getI18n } from '$lib/i18n';
+// SERVICES
+import {
+  setRangePropertyFilter,
+  displayRangeFilter
+} from '$lib/client/services/property';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
-import type { Id } from '$lib/types';
+import type { Id, Property } from '$lib/types';
 let appCtx = getAppCtx();
 
 type Props = {
-  key: string;
-  label: string;
-  min: number;
-  max: number;
+  property: Property;
   layerId: Id;
   defaultOpen: boolean;
 };
 
-let { key, label, min, max, layerId, defaultOpen = false }: Props = $props();
+let { property, layerId, defaultOpen = false }: Props = $props();
+
+// Derive values from property
+let label = $derived(
+  getI18n(property, 'label', appCtx.getUserPreferences(), property.key)
+);
+let min = $derived(property.min!);
+let max = $derived(property.max!);
 
 let isOpen = $state(defaultOpen);
-let selectedRange = $derived(appCtx.propertyFilters?.[layerId]?.[key]);
-
-let displayText = $derived.by(() => {
-  if (min === values[0] && max === values[1]) {
-    return m.filters__all();
-  } else if (values[0] === values[1]) {
-    return `${m.filters__only()} ${values[0]} ${m.filters__stars()}`;
-  } else {
-    return `${m.filters__between()} ${values[0]} ${m.filters__and()} ${values[1]} ${m.filters__stars()}`;
-  }
-});
+let selectedRange = $derived(appCtx.propertyFilters?.[layerId]?.[property.id]);
 
 let values: [number, number] = $derived([
   selectedRange?.rangeMin ?? min,
   selectedRange?.rangeMax ?? max
 ]);
+
+let displayText = $derived(displayRangeFilter(min, max, values));
 </script>
 
 <div class="ml-4 min-h-10 flex-shrink-0 rounded-l-md bg-[#0a0a0a]">
@@ -71,8 +73,7 @@ let values: [number, number] = $derived([
           pushy
           float
           on:change={() => {
-            appCtx.setRangePropertyFilter(layerId, key, values);
-            appCtx.zoomToAllVisibleFeatures();
+            setRangePropertyFilter(appCtx, layerId, property.id, values);
           }} />
       </div>
     </div>

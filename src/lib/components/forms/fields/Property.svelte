@@ -1,5 +1,6 @@
 <script lang="ts">
 // I18N
+import { m } from '$lib/i18n';
 import { getLocale } from '$lib/i18n';
 // LIB
 import { customAlphabet } from 'nanoid';
@@ -82,6 +83,12 @@ let complexValues: IntermediateValue[] = $state([]);
 
 // STATE : DERIVED VALUES
 let currentProperty = $derived($formStore[fieldRoot]?.find((p) => p.id === propertyId));
+
+// Make title reactive to property changes
+let propertyTitle = $derived(
+  $formStore[fieldRoot]?.find((p) => p.id === propertyId)?.i18n?.[getLocale() as Locale]
+    ?.label || m.deft_dry_chipmunk_blink()
+);
 
 // STATE : LOCAL UI
 let collapsed = $state(false);
@@ -248,6 +255,22 @@ const isVisible = (field: FormFieldExtendedDefinition) => {
       field.showForComponent.includes(currentProperty.component as FieldComponentType))
   );
 };
+
+// Create a derived value for visible fields that updates when component changes
+let visibleFields = $derived(
+  currentProperty
+    ? Object.entries(fields).filter(([fieldKey, fieldDef]) => {
+        const property = $formStore[fieldRoot]?.find((p) => p.id === propertyId);
+        return (
+          !fieldDef.showForComponent ||
+          (fieldDef.showForComponent &&
+            fieldDef.showForComponent.includes(
+              property?.component as FieldComponentType
+            ))
+        );
+      })
+    : []
+);
 
 // --- Translation Bar Logic for Property & its Values ---
 let loadingLocale = $state<Locale | null>(null);
@@ -527,7 +550,7 @@ const allI18nErrorsForPropertyValues = $derived.by(() => {
       class="flex cursor-pointer items-center justify-between gap-3 rounded-lg bg-base-100 p-2 py-2 pl-4 text-center text-xl font-bold"
       onclick={() => (collapsed = !collapsed)}>
       <span>
-        {currentProperty?.i18n?.[getLocale() as Locale]?.label || 'Untitled Property'}
+        {propertyTitle}
       </span>
       {#if isSpecifier}
         <label
@@ -596,14 +619,14 @@ const allI18nErrorsForPropertyValues = $derived.by(() => {
             : ''}">
           <div
             class="flex flex-col content-start items-start gap-4 px-6 py-2 pb-2 pt-4">
-            {#each Object.entries(fields) as [fieldKey, fieldDef], propIndex (fieldKey)}
+            {#each visibleFields as [fieldKey, fieldDef], propIndex (`${fieldKey}-${$formStore[fieldRoot]?.find((p) => p.id === propertyId)?.component || 'default'}`)}
               {@const FieldComponent = getFieldComponent(fieldDef.component)}
               {@const isListField = fieldDef.component === 'ListField'}
               {@const shouldShowField =
                 fieldDef.isTranslated ||
                 isNotLocale(locale) ||
                 (!fieldDef.isTranslated && colIndex === 0)}
-              {#if FieldComponent && isVisible(fieldDef) && shouldShowField}
+              {#if FieldComponent && shouldShowField}
                 <FieldComponent
                   {...{
                     ...(fieldProps as any),
@@ -620,7 +643,7 @@ const allI18nErrorsForPropertyValues = $derived.by(() => {
                       actionProps: complexActionProps
                     })
                   }} />
-              {:else if FieldComponent && isVisible(fieldDef)}
+              {:else if FieldComponent}
                 <FauxInput />
               {/if}
             {/each}

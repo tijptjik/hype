@@ -7,6 +7,13 @@ import {
 } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+// SCHEMA
+import { organisation } from './organisation';
+import { project } from './project';
+import { layer } from './layer';
+import { user } from './user';
+import { property } from './property';
+import { propertyValue } from './property';
 // ENUM
 import { supportedLocales } from '../../enums';
 // TYPES
@@ -46,6 +53,18 @@ export const feature = sqliteTable('feature', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => nanoid(12)),
+  organisationId: text('organisationId')
+    .notNull()
+    .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  projectId: text('projectId')
+    .notNull()
+    .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  layerId: text('layerId')
+    .notNull()
+    .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  contributorId: text('contributorId')
+    .references(() => user.id, { onDelete: 'set null', onUpdate: 'cascade' }),
+  
   geometry: text('geometry', { mode: 'json' }).notNull().$type<GeometryObject>(),
   // Address Metadata
   addressMeta: text('addressMeta', {
@@ -53,14 +72,11 @@ export const feature = sqliteTable('feature', {
   })
     .$type<AddressMeta>()
     .default({}),
-  organisationId: text('organisationId').notNull(),
-  projectId: text('projectId').notNull(),
-  layerId: text('layerId').notNull(),
-  contributorId: text('contributorId'),
   // True : Feature is shown in the User App
   // False : Feature is only shown in the Admin Panel
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
-  publisherId: text('publisherId'),
+  publisherId: text('publisherId')
+    .references(() => user.id, { onDelete: 'set null', onUpdate: 'cascade' }),
   publishedAt: text('publishedAt'),
   // False : Feature shows up everywhere in the Admin Panel
   // True : Feature only shows up in the Review Queue
@@ -131,8 +147,11 @@ export const featureProperty = sqliteTable(
     featureId: text('featureId')
       .notNull()
       .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    propertyId: text('propertyId').notNull(),
-    propertyValueId: text('propertyValueId'),
+    propertyId: text('propertyId')
+      .notNull()
+      .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    propertyValueId: text('propertyValueId')
+      .references(() => propertyValue.id, { onDelete: 'set null', onUpdate: 'cascade' }),
     // If the property value is non-categorical AND it does not translate, e.g. a number, a date, a boolean, etc.
     // The value is set directly on the featureProperty table. In this case, the propertyValueId is null, and there
     // are no i18n records for this property. The inverse is also true, i.e. if the property value is non-categorical,
@@ -160,7 +179,9 @@ export const featurePropertyI18n = sqliteTable(
         onDelete: 'cascade',
         onUpdate: 'cascade'
       }),
-    propertyId: text('propertyId').notNull(),
+    propertyId: text('propertyId')
+      .notNull()
+      .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     locale: text('locale', {
       enum: supportedLocales as [string, ...string[]]
     }).notNull(),

@@ -5,8 +5,6 @@ import { onMount } from 'svelte';
 import SpectralStyle from '$lib/map/styles/style-protomaps.json';
 import { addAddressMarker } from '$lib/map/markers';
 import { getCoordinates } from '$lib/map/data';
-// UTILS
-import { loadScript } from '$lib';
 // ICONS
 import { ArrowsPointingIn, ArrowsPointingOut } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
@@ -16,10 +14,6 @@ import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
 import type { Marker, LngLatLike } from 'maplibre-gl';
 import type { Id, AddressMeta } from '$lib/types';
-// Add import for preload code
-import { monkeyPatchMapLibre } from '$lib/map/maplibre-preload';
-// GLOBAL
-let maplibre: any;
 type MapProps = {
   coordinates: number[];
   addressMeta: AddressMeta | null;
@@ -54,14 +48,12 @@ let addressMarker: Marker | null = $state(null);
 let featureMarkerId: Id | null = $state(null);
 
 onMount(async () => {
-  // EFFECTS :: ON MOUNT
-  await loadScript('https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js');
-  // @ts-ignore
-  globalThis.maplibregl = maplibregl;
+  // Wait for maplibre to be loaded globally
+  while (!appCtx.isMaplibreLoaded || !appCtx.maplibre) {
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
 
-  maplibre = monkeyPatchMapLibre();
-
-  appCtx.map = new maplibre.Map({
+  appCtx.map = new appCtx.maplibre.Map({
     container: mapContainer,
     style: SpectralStyle,
     center: mapProps.coordinates,
@@ -78,7 +70,7 @@ onMount(async () => {
     isMapLoaded = true;
   });
 
-  feature = new maplibre.Marker({
+  feature = new appCtx.maplibre.Marker({
     color: '#F04D7F',
     clickTolerance: 24,
     draggable: mapProps.draggable || true
@@ -138,7 +130,7 @@ $effect(() => {
       addressMarker.remove();
     }
     // Add new marker
-    addressMarker = addAddressMarker(maplibregl, appCtx, addressLngLat);
+    addressMarker = addAddressMarker(appCtx.maplibre, appCtx, addressLngLat);
     markedAddressLngLat = addressLngLat;
   }
   if (adminCtx.activeResourceRef && adminCtx.activeResourceRef !== featureMarkerId) {

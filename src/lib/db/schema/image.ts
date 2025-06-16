@@ -7,6 +7,8 @@ import {
 } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+// SCHEMA
+import { feature } from './feature';
 // ENUM
 import { ImageCDN, ImageEnv, ImageIntent } from '../../enums';
 // TYPES
@@ -80,7 +82,9 @@ export const image = sqliteTable('image', {
 export const featureImage = sqliteTable(
   'featureImage',
   {
-    featureId: text('featureId').notNull(),
+    featureId: text('featureId')
+      .notNull()
+      .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     imageId: text('imageId')
       .notNull()
       .references(() => image.id, { onDelete: 'cascade', onUpdate: 'cascade' }),

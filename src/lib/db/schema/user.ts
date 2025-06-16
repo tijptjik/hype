@@ -1,6 +1,9 @@
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+// SCHEMA
+import { feature } from './feature';
+import { layer } from './layer';
 // ENUM
 import { SupportedLocales, supportedLocales } from '../../enums';
 // TYPES
@@ -172,7 +175,9 @@ export const userFeature = sqliteTable(
     userId: text('userId')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    featureId: text('featureId').notNull(),
+    featureId: text('featureId')
+      .notNull()
+      .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     isVisited: integer('isVisited', { mode: 'boolean' }).default(false).notNull(),
     isWishlisted: integer('isWishlisted', { mode: 'boolean' }).default(false).notNull(),
     visitedAt: text('visitedAt'),
@@ -197,7 +202,9 @@ export const userFeature = sqliteTable(
 export const userLayer = sqliteTable(
   'userLayer',
   {
-    layerId: text('layerId').notNull(),
+    layerId: text('layerId')
+    .notNull()
+    .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     userId: text('userId')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),

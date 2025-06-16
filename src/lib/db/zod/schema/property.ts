@@ -22,10 +22,16 @@ import { getDefaultConstraints, getLocales } from '../constraints';
 
 export const PropertyBase = createSelectSchema(property);
 export const PropertyInsert = createInsertSchema(property).extend({
-  ...getDefaultConstraints(property)
+  ...getDefaultConstraints(property),
+  // Coerce string inputs to numbers for min/max fields
+  min: z.coerce.number().int().nullish(),
+  max: z.coerce.number().int().nullish()
 });
 export const PropertyUpdate = createUpdateSchema(property).extend({
-  ...getDefaultConstraints(property)
+  ...getDefaultConstraints(property),
+  // Coerce string inputs to numbers for min/max fields
+  min: z.coerce.number().int().nullish(),
+  max: z.coerce.number().int().nullish()
 });
 
 /* ----------------- */
@@ -75,12 +81,18 @@ export const PropertyAPI = PropertyBase.extend({
 
 export const PropertyInsertAPI = PropertyInsert.extend({
   i18n: getLocales(PropertyI18nInsert),
-  values: z.array(PropertyValueInsertAPI)
+  values: z.array(PropertyValueInsertAPI).nullish(),
+  // Ensure coercion is maintained in API schemas
+  min: z.coerce.number().int().nullish(),
+  max: z.coerce.number().int().nullish()
 });
 
 export const PropertyUpdateAPI = PropertyUpdate.extend({
   i18n: getLocales(PropertyI18nUpdate),
-  values: z.array(PropertyValueUpdateAPI)
+  values: z.array(PropertyValueUpdateAPI).nullish(),
+  // Ensure coercion is maintained in API schemas
+  min: z.coerce.number().int().nullish(),
+  max: z.coerce.number().int().nullish()
 });
 
 // INTERMEDIATE

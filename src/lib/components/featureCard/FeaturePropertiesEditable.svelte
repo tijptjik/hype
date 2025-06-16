@@ -5,22 +5,22 @@ import { Check, PencilSquare } from '@steeze-ui/heroicons';
 // I18N
 import { getI18n, getLocale } from '$lib/i18n';
 // SERVICES
-import { sortFeatureProperties } from '$lib/client/services/property';
+import { 
+  getFeatureCardEditableProperties,
+  getLocalisedPropertyValues,
+  getUniversalSpecifierValue,
+  getI18nSpecifierValue,
+  getClassifierValueId,
+  handleCategoricalChange,
+  handleSpecifierChange,
+} from '$lib/client/services/property';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 // TYPES
 import type {
   Feature,
-  FeatureProperty,
-  LocaleExtended,
-  UserContributedFeatureProperty,
   UserContributedFeature,
-  Key,
-  Id,
-  PropertyI18nDB,
-  PropertyDBRaw,
-  PropertyValue
 } from '$lib/types';
 
 // STATE : PROPS
@@ -41,189 +41,16 @@ let inputElements = $state<Record<string, HTMLInputElement>>({});
 let textareaElements = $state<Record<string, HTMLTextAreaElement>>({});
 
 // FUNCTIONS
-// Get all available properties for the layer (for display purposes only)
-function getAvailableProperties() {
-  // Safety check: if feature is null/undefined or doesn't have layerId, return empty array
-  if (!feature || !feature.layerId) {
-    return [];
-  }
-
-  // Find the layer from appCtx.state.resources.layer
-  const layer = appCtx.getLayerById(feature.layerId);
-  if (!layer) {
-    return [];
-  }
-
-  // Get categorical properties (classifiers) - filter directly since prop IS the layer property
-  const categoricalProperties =
-    layer.properties
-      ?.filter((prop) => prop.property?.type === 'classifier')
-      .filter((prop) => {
-        // Only consider properties visible in the layer AND not grade
-        return prop.isVisible !== false && prop.property?.key !== 'grade';
-      }) || [];
-
-  // Get specifier properties (text-based properties that need i18n)
-  const specifierProperties =
-    layer.properties
-      ?.filter((prop) => prop.property?.type === 'specifier')
-      .filter((prop) => {
-        return prop.isVisible !== false;
-      }) || [];
-
-  const combinedProperties = [...categoricalProperties, ...specifierProperties];
-
-  const mappedProperties = combinedProperties.map((prop) => ({
-    property: prop.property,
-    propertyId: prop.property?.id
-  })) as Omit<FeatureProperty, 'featureId'>[];
-
-  const sortedProperties = sortFeatureProperties(mappedProperties);
-
-  return sortedProperties;
-}
-
 // Available properties that could be added to the feature
-const availableFeatureProperties = $derived(getAvailableProperties());
-
-// Get available property values for dropdowns (categorical options) from layer properties
-function getPropertyValues(
-  propertyId: Id
-): { readonly value: string; readonly id: string }[] {
-  if (!cardCtx.isNewMode || !feature || !feature.layerId) {
-    return [];
-  }
-
-  const layer = appCtx.getLayerById(feature.layerId);
-  if (!layer) {
-    return [];
-  }
-
-  // Find the property in the layer's properties
-  const layerProperty = layer.properties?.find((p) => p.property?.id === propertyId);
-  if (!layerProperty?.property?.values) {
-    return [];
-  }
-
-  // Return values with SelectComplex structure: value is display text, id is stored value
-  const result = (layerProperty.property as PropertyDBRaw).values
-    ?.filter((v: PropertyValue) => v.id) // Filter out any values without IDs
-    ?.map((v: PropertyValue) => ({
-      value: getI18n(v, 'value', userPreferences), // Display text for user
-      id: v.id! // Actual value to store
-    }));
-
-  return result;
-}
-
-// Get current property value for display (reactive)
-function getFeatureProp(propertyId: Id) {
-  if (!cardCtx.isNewMode || !appCtx.newFeature?.feature?.properties) {
-    return null;
-  }
-  const result = appCtx.newFeature.feature.properties.find(
-    (p) => p && p.propertyId === propertyId
-  ) as UserContributedFeatureProperty | undefined;
-  return result;
-}
-
-// Get current simple value (reactive) - for universal specifier properties
-function getUniversalSpecifierValue(propertyId: Id): string | undefined {
-  const currentProp = getFeatureProp(propertyId);
-  const result = currentProp?.value;
-  return result;
-}
-
-// Get current i18n value (reactive) - for translatable specifier properties
-function getI18nSpecifierValue(
-  propertyId: Id,
-  locale: LocaleExtended
-): string | undefined {
-  const currentProp = getFeatureProp(propertyId);
-  const result = getI18n(currentProp as FeatureProperty, 'value', userPreferences);
-  return result;
-}
-
-// Get current stored property value ID (reactive) - for categorical properties
-function getCategoricalValueId(propertyId: Id): string | undefined {
-  const currentProp = getFeatureProp(propertyId) as FeatureProperty;
-  return currentProp?.propertyValueId || undefined;
-}
-
-/**
- * Handle categorical property change
- * @param propertyKey - The key of the property to change
- * @param propertyValueId - The id of the property value to change to
- */
-function handleCategoricalChange(propertyKey: Key, propertyValueId: Id) {
-  const featureProp = appCtx.newFeature!.feature?.properties?.find(
-    (p) => p && p.propertyId === propertyKey
-  ) as UserContributedFeatureProperty;
-
-  if (featureProp) {
-    featureProp.propertyValueId = propertyValueId;
-  } else {
-    // Property doesn't exist yet, create it using map context
-    appCtx.updateNewFeatureProperty(propertyKey, {
-      propertyValueId: propertyValueId
-    });
-  }
-}
-
-/**
- * Handle specifier property change (i18n values)
- * @param propertyKey - The key of the property to change
- * @param locale - The locale of the property to change ('core' for universal specifier)
- * @param newValue - The new value of the property
- */
-function handleSpecifierChange(
-  propertyKey: string,
-  locale: LocaleExtended,
-  newValue: string
-) {
-  const featureProp = appCtx.newFeature!.feature?.properties?.find(
-    (p) => p && p.propertyId === propertyKey
-  ) as UserContributedFeatureProperty;
-
-  if (featureProp) {
-    if (featureProp.property?.isTranslatable && locale !== 'core') {
-      if (!featureProp.i18n) {
-        featureProp!.i18n = {};
-      }
-      featureProp!.i18n[locale] = { locale, value: newValue, valueGen: false };
-    } else {
-      featureProp.value = newValue;
-      // Don't set i18n for non-translatable properties
-      if (featureProp.i18n) {
-        delete featureProp.i18n;
-      }
-    }
-  } else {
-    // Find the property definition to check if it's translatable
-    const availableProps = getAvailableProperties();
-    const propDef = availableProps.find((p) => p.propertyId === propertyKey);
-
-    // Property doesn't exist yet, create it using map context
-    if (propDef?.property?.isTranslatable && locale !== 'core') {
-      // Translatable property - include i18n structure with locale field
-      appCtx.updateNewFeatureProperty(propertyKey, {
-        value: '',
-        i18n: { [locale]: { locale, value: newValue, valueGen: false } }
-      });
-    } else {
-      // Non-translatable property - just set value, no i18n
-      appCtx.updateNewFeatureProperty(propertyKey, {
-        value: newValue
-      });
-    }
-  }
-}
+const availableFeatureProperties = $derived(
+  feature?.layerId ? getFeatureCardEditableProperties(appCtx, feature.layerId) : []
+);
 
 // EDIT MODE HANDLERS
 function getCurrentValue(propertyId: string, prop: any): string {
   const translatable = prop.isTranslatable;
-  const i18nValue = getI18nSpecifierValue(propertyId, getLocale());
-  const universalValue = getUniversalSpecifierValue(propertyId);
+  const i18nValue = getI18nSpecifierValue(appCtx, propertyId);
+  const universalValue = getUniversalSpecifierValue(appCtx, propertyId);
   const result = translatable ? i18nValue || '' : universalValue || '';
 
   return result;
@@ -251,20 +78,12 @@ function handleTextareaEditMode(propertyId: string, prop: any) {
 
 function handleInputSubmit(propertyId: string, prop: any) {
   editingStates[propertyId] = false;
-  handleSpecifierChange(
-    propertyId,
-    prop.isTranslatable ? getLocale() : 'core',
-    currentValues[propertyId] || ''
-  );
+  handleSpecifierChange(appCtx, propertyId, prop.isTranslatable ? getLocale() : 'core', currentValues[propertyId] || '');
 }
 
 function handleTextareaSubmit(propertyId: string, prop: any) {
   editingStates[propertyId] = false;
-  handleSpecifierChange(
-    propertyId,
-    prop.isTranslatable ? getLocale() : 'core',
-    currentValues[propertyId] || ''
-  );
+  handleSpecifierChange(appCtx, propertyId, prop.isTranslatable ? getLocale() : 'core', currentValues[propertyId] || '');
 }
 
 function handleEditCancel(propertyId: string) {
@@ -281,15 +100,7 @@ function handleEditCancel(propertyId: string) {
       {#if cardCtx.isNewMode}
         {#each availableFeatureProperties as { property: prop, propertyId, value, i18n } (propertyId)}
           {#if prop}
-            {@const propertyValues = getPropertyValues(propertyId)}
-            {@const renderingInfo = {
-              propertyId,
-              component: prop.component,
-              type: prop.type,
-              hasPropertyValues: propertyValues.length > 0,
-              shouldRenderSelect:
-                prop.component === 'SelectField' && propertyValues.length > 0
-            }}
+            {@const propertyValues = getLocalisedPropertyValues(appCtx, propertyId)}
             <div class="dir-ltr flex flex-col justify-evenly gap-1">
               <span
                 class="font-mono text-xs font-normal uppercase tracking-wide text-gray-400">
@@ -297,17 +108,17 @@ function handleEditCancel(propertyId: string) {
               </span>
               <!-- Error message placeholder (for future use) -->
               <div class="min-h-0"></div>
-              {#if prop.component === 'SelectField' && propertyValues.length > 0}
+              {#if prop.component === 'SelectField' && propertyValues.size > 0}
                 <!-- SelectField Component: Dropdown -->
                 <select
                   class="select select-sm w-full border-none bg-black pl-0 focus:border-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 active:outline-none active:ring-0"
-                  value={getCategoricalValueId(propertyId)}
+                  value={getClassifierValueId(appCtx, propertyId)}
                   onchange={(e) =>
-                    handleCategoricalChange(propertyId, e.currentTarget.value)}>
+                    handleCategoricalChange(appCtx, propertyId, e.currentTarget.value)}>
                   <option value=""
                     >{getI18n(prop, 'placeholder', userPreferences)}</option>
-                  {#each propertyValues as option}
-                    <option value={option.id}>{option.value}</option>
+                  {#each propertyValues.entries() as [id, localisedValue]}
+                    <option value={id}>{localisedValue}</option>
                   {/each}
                 </select>
               {:else if prop.component === 'TextareaField'}
@@ -434,10 +245,10 @@ function handleEditCancel(propertyId: string) {
                 <input
                   type="text"
                   class="input input-sm input-bordered w-full"
-                  value={getUniversalSpecifierValue(propertyId)}
+                  value={getUniversalSpecifierValue(appCtx, propertyId)}
                   placeholder="Enter value..."
                   onchange={(e) =>
-                    handleCategoricalChange(propertyId, e.currentTarget.value)} />
+                    handleCategoricalChange(appCtx, propertyId, e.currentTarget.value)} />
               {/if}
             </div>
           {/if}

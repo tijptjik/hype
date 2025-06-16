@@ -22,7 +22,7 @@ adminCtx.setFacet(false, false, FirstClassResource.feature);
 const keyMap: KeyMap = {
   id: 'id',
   title: 'i18n.title',
-  subtitle: 'addressProperties.neighbourhood',
+  subtitle: 'i18n.addressProperties.neighbourhood',
   description: 'i18n.displayAddress',
   image: 'image',
   badges: [

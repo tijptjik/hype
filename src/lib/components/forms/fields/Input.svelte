@@ -56,7 +56,7 @@ let id = $derived(
 );
 
 // HANDLERS
-function handleChange() {
+function handleChange(newValue: string) {
   updateForm(
     form,
     field,
@@ -64,7 +64,7 @@ function handleChange() {
     fieldRoot,
     fieldIndex,
     fieldKey,
-    fieldValues.value as string,
+    newValue,
     false // Set to false when human edits the field
   );
 }

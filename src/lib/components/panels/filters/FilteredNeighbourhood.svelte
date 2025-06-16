@@ -1,4 +1,6 @@
 <script lang="ts">
+// TRANSITIONS
+import { slide } from 'svelte/transition';
 // I18N
 import { getI18n, getLocale } from '$lib/i18n';
 // DATA
@@ -46,6 +48,8 @@ function getFeatureCount(neighbourhoodKey: string) {
 {#if getFeatureCount(neighbourhood) > 0}
   <div
     class="focus:-ring-offset-2 group ml-4 flex cursor-pointer flex-row items-center justify-between gap-4 overflow-visible rounded-l-md bg-black py-2 pl-4 pr-[30px] caret-transparent transition-colors duration-200 focus:outline-none focus:ring-0"
+    in:slide={{ axis: 'y', duration: 200 }}
+    out:slide={{ axis: 'y', duration: 200 }}
     onclick={() => {
       appCtx.toggleNeighbourhood(neighbourhood);
       appCtx.zoomToAllVisibleFeatures();

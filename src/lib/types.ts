@@ -25,6 +25,7 @@ import {
   FeatureAPI,
   FeatureBase,
   FeatureClientExt,
+  FeatureCollectionAPI,
   FeatureI18nBase,
   FeatureI18nInsert,
   FeatureI18nUpdate,
@@ -889,6 +890,7 @@ export type FeatureDBRaw = z.infer<typeof FeatureRaw>;
 /* -------- */
 
 // Feature with all fields, including translations and properties
+export type FeatureCollection = z.infer<typeof FeatureCollectionAPI>;
 export type Feature = z.infer<typeof FeatureAPI>;
 // Like Feature, but without the featureId in translations and properties
 export type FeatureNew = z.infer<typeof FeatureInsertAPI>;

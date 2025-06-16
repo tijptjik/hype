@@ -29,7 +29,9 @@ import type {
   AdminFilterStates,
   AdminFilterState,
   Resource,
-  Hub
+  Hub,
+  FilteredResources,
+  Property
 } from '../types';
 
 // State type for AdminCtx - only includes admin-specific state
@@ -72,6 +74,9 @@ export class AdminCtx {
   // App Context
   appCtx: AppCtx;
 
+  // Load State
+  isInitialised: boolean = $state(false);
+
   // ═══════════════════════
   // CONSTRUCTOR
   // ═══════════════════════
@@ -106,6 +111,12 @@ export class AdminCtx {
       queryFn: () => this.featuresQueryFn()
     });
 
+    // PROPERTIES - reuse AppCtx query key and function
+    this.appCtx.queryMap.set(FirstClassResource.property, {
+      queryKey: () => this.appCtx.propertiesQueryKey,
+      queryFn: () => this.propertiesQueryFn()
+    });
+
     // Admin-specific resources with their own query keys
     this.appCtx.queryMap.set(FirstClassResource.task, {
       queryKey: () => this.tasksQueryKey,
@@ -134,7 +145,8 @@ export class AdminCtx {
       layer: { text: '', properties: {}, isPublished: null, isArchived: false },
       feature: { text: '', properties: {}, isPublished: null, isArchived: false },
       task: { text: '', properties: {}, isReviewed: false },
-      hub: { text: '', properties: {}, isArchived: false }
+      hub: { text: '', properties: {}, isArchived: false },
+      property: { text: '', properties: {} }
     }
   });
 
@@ -201,17 +213,18 @@ export class AdminCtx {
     const params = new URLSearchParams();
 
     // Add isArchived / isReviewed filter by default
-    if (resource !== FirstClassResource.task) {
+    if (resource !== FirstClassResource.task && resource !== FirstClassResource.property) {
       // SuperAdmin users should see all archived resources, so don't force isArchived=false
       if (!this.appCtx.isSuperAdmin()) {
         params.append('isArchived', 'false');
       }
-    } else {
+    } else if (resource === FirstClassResource.task) {
       const isReviewed = this.state.filters[FirstClassResource.task].isReviewed;
       if (isReviewed !== null) {
         params.append('isReviewed', isReviewed!.toString());
       }
     }
+    // PRoperties have no filters
 
     if (includeFilters) {
       // Add prism filters based on resource hierarchy
@@ -269,6 +282,11 @@ export class AdminCtx {
     return fetchOrThrow<Task[]>(url);
   };
 
+  propertiesQueryFn = async () => {
+    const url = this.buildApiUrl(FirstClassResource.property);
+    return fetchOrThrow<Property[]>(url);
+  };
+
   hubsQueryFn = async () => {
     if (!this.appCtx.isSuperAdmin()) return [];
     const url = this.buildApiUrl(FirstClassResource.hub);
@@ -279,6 +297,7 @@ export class AdminCtx {
   init = async (): Promise<void> => {
     // Use AppCtx's cascading refresh logic but with admin query functions
     await this.appCtx.refreshOrganisations();
+    this.isInitialised = true;
   };
 
   // ═══════════════════════
@@ -301,7 +320,7 @@ export class AdminCtx {
     let filterKeys = ['isPublished', 'isArchived'];
     let query = this.state.filters[resource as keyof AdminFilterStates].text || '';
     // FULL SET
-    let result = this.appCtx.state.resources[resource] as T[];
+    let result = this.appCtx.state.resources[resource as keyof FilteredResources] as T[];
     // STATE FILTERS
     if (filters.state) {
       result = result.filter((entity) =>
@@ -476,7 +495,7 @@ export class AdminCtx {
 
   getResourceRef = (resource: FirstClassResource, id: Id) => {
     if (!resource) return false;
-    const refKey = ResourceRefKey[resource];
+    const refKey = ResourceRefKey[resource as keyof typeof ResourceRefKey];
     const entity = this.appCtx.cache[resource].get(id);
     if (!entity) return false;
     return entity[refKey as keyof Resource];
@@ -523,7 +542,7 @@ export class AdminCtx {
   // ═══════════════════════
 
   hasManyEntities = (resource: FirstClassResource | HierarchicalResource) => {
-    return this.appCtx.state.resources[resource].length > 3;
+    return this.appCtx.state.resources[resource as keyof FilteredResources].length > 3;
   };
 
   isViewportContained = $derived(
@@ -541,10 +560,53 @@ export class AdminCtx {
   );
 }
 
-export const HIERARCHICAL_RESOURCE_STATE_KEY = Symbol('adminCtx');
+export const ADMINCTX_KEY = Symbol('adminCtx');
 
 export const setAdminCtx = (queryClient: QueryClient, appCtx: AppCtx) =>
-  setContext(HIERARCHICAL_RESOURCE_STATE_KEY, new AdminCtx(queryClient, appCtx));
+  setContext(ADMINCTX_KEY, new AdminCtx(queryClient, appCtx));
 
-export const getAdminCtx = (): ReturnType<typeof setAdminCtx> =>
-  getContext(HIERARCHICAL_RESOURCE_STATE_KEY);
+export const getAdminCtx = (): AdminCtx => {
+  const ctx = getContext(ADMINCTX_KEY);
+  if (!ctx) {
+    // Return a safe proxy object that prevents errors when AdminCtx isn't ready
+    return new Proxy({} as any, {
+      get(target, prop) {
+        if (prop === 'isInitialised') return false;
+        if (prop === 'setFacet') return () => {}; // No-op function
+        if (prop === 'filteredOrganisations') return [];
+        if (prop === 'filteredProjects') return [];
+        if (prop === 'filteredLayers') return [];
+        if (prop === 'filteredFeatures') return [];
+        if (prop === 'filteredTasks') return [];
+        if (prop === 'filteredHubs') return [];
+        if (prop === 'activeResourceType') return false;
+        if (prop === 'activeResourceRef') return false;
+        if (prop === 'activeFacet') return false;
+        if (prop === 'isShowIndex') return false;
+        if (prop === 'isViewportContained') return true;
+        if (prop === 'state') return {
+          active: {
+            resourceType: false,
+            resourceRef: false,
+            facet: false
+          },
+          filters: {
+            organisation: { text: '', properties: {}, isPublished: null, isArchived: false },
+            project: { text: '', properties: {}, isPublished: null, isArchived: false },
+            layer: { text: '', properties: {}, isPublished: null, isArchived: false },
+            feature: { text: '', properties: {}, isPublished: null, isArchived: false },
+            task: { text: '', properties: {}, isReviewed: false },
+            hub: { text: '', properties: {}, isArchived: false },
+            property: { text: '', properties: {} }
+          }
+        };
+        if (prop === 'appCtx') return {
+          isInitialised: false,
+          state: { resources: {} }
+        };
+        return undefined;
+      }
+    }) as AdminCtx;
+  }
+  return ctx as AdminCtx;
+};

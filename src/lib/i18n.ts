@@ -159,7 +159,7 @@ export function getI18n<T>(
  * @returns The translated value of the feature property.
  */
 export function getFPI18n(
-  obj: FeatureProperty,
+  obj: Omit<FeatureProperty, 'featureId'>,
   userPreferences: UserPreferences
 ): string {
   const field = 'value';
@@ -183,9 +183,9 @@ export function getFPI18n(
     return obj.value;
   }
   // CASE : CLASSIFIER Property
-  else if (obj.property?.type === 'classifier' && obj.propertyValue) {
+  else if (obj.property?.type === 'classifier' && obj.propertyValueId) {
     return getI18n<PropertyValueI18nDB>(
-      obj.propertyValue,
+      obj.property.values?.find(v => v.id === obj.propertyValueId)?.i18n as Record<Locale, PropertyValueI18nDB>,
       field,
       userPreferences,
       fallback
