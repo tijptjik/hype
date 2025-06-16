@@ -219,6 +219,84 @@
   fill: #d1e4f4;
 }
 
+/* ═══════════════════════
+   4. USER LOCATION
+   ═══════════════════════ */
+
+/* User location marker - ethereal neon green orb */
+.maplibregl-user-location-dot {
+  /* Desaturated neon green core with ethereal glow */
+  background: radial-gradient(circle, #ffffff 10%, #9dff9d 30%, #7aff7a 90%, #ffffff 100%) !important;
+  width: 16px !important;
+  height: 16px !important;
+  border-radius: 50% !important;
+  box-shadow: 
+    0 0 0 1px rgba(255, 255, 255, 0),
+    0 0 6px #fffffffb, 
+    0 0 12px #ffffff48, 
+    0 0 18px #68dc68d1,
+    0 0 24px rgba(105, 221, 105, 0.294),
+    inset 0 0 6px rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Override the pulsing background pseudo-element */
+.maplibregl-user-location-dot::before {
+  background: radial-gradient(circle, transparent 0%, transparent 50%, rgba(157, 255, 157, 0.6) 70%, rgba(122, 255, 122, 0.4) 85%, transparent 100%) !important;
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 50% !important;
+  content: "" !important;
+  position: absolute !important;
+  z-index: -1 !important;
+}
+
+/* Override the white border pseudo-element - ethereal glow */
+.maplibregl-user-location-dot::after {
+  border-radius: 50% !important;
+  border: none !important;
+  content: "" !important;
+  height: 20px !important;
+  left: -2px !important;
+  position: absolute !important;
+  top: -2px !important;
+  width: 20px !important;
+  box-sizing: border-box !important;
+  z-index: -2 !important;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 10%, rgba(157, 255, 157, 0.4) 30%, rgba(122, 255, 122, 0.3) 50%, rgba(77, 255, 77, 0.15) 70%, transparent 90%) !important;
+  box-shadow: 
+    0 0 6px rgba(157, 255, 157, 0.8),
+    0 0 12px rgba(122, 255, 122, 0.6),
+    0 0 18px rgba(77, 255, 77, 0.4),
+    0 0 24px rgba(77, 255, 77, 0.2),
+    0 0 30px rgba(77, 255, 77, 0.1) !important;
+}
+
+/* Smooth breathing pulse like a living beacon */
+@keyframes userLocationOrbPulse {
+  0% { 
+    transform: scale(1); 
+    opacity: 0.8; 
+  }
+  50% { 
+    transform: scale(2.5); 
+    opacity: 0; 
+  }
+  100% { 
+    transform: scale(1); 
+    opacity: 0.4; 
+  }
+}
+
+.maplibregl-user-location-dot-stale {
+  background: radial-gradient(circle, #66ffff 30%, #99eeee 70%) !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 
+    0 0 0 3px rgba(102, 255, 255, 0.3),
+    0 0 8px #66ffff !important;
+  animation: none !important;
+}
+
+
 
 /* ═══════════════════════
    5. MAP CONTROLS
