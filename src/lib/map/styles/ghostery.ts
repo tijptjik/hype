@@ -39,15 +39,38 @@ export const ghosteryBuildings: AddLayerObject = {
   paint: {
     'fill-color': 'rgba(15, 14, 14, 1)',
     'fill-opacity': 0.5,
-    'fill-outline-color': [
+    // Remove fill-outline-color since we're using a separate line layer
+    'fill-outline-color': 'transparent'
+  }
+};
+
+export const ghosteryBuildingsOutline: AddLayerObject = {
+  id: 'buildings_outline',
+  source: 'hongkong-latest',
+  'source-layer': 'buildings',
+  type: 'line',
+  minzoom: 17,
+  filter: ['in', 'kind', 'building', 'building_part'],
+  paint: {
+    'line-color': [
       'interpolate',
       ['linear'],
       ['zoom'],
       17,
-      'rgba(13, 13, 13, 1)',
+      'rgba(240, 77, 127, 0.1)', // Start with hot pink at lower zoom
       20,
-      'rgba(240, 77, 127, 0.66)'
-    ]
+      'rgba(240, 77, 127, 1)'    // Full hot pink at higher zoom
+    ],
+    'line-width': [
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      17, 1,
+      19, 2,
+      21, 3,
+      23, 5
+    ],
+    'line-opacity': 0.8
   }
 };
 

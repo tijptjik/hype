@@ -21,6 +21,7 @@ import {
   ghosteryEarth,
   ghosteryRoads,
   ghosteryBuildings,
+  ghosteryBuildingsOutline,
   ghosteryAddressLabel,
   ghosteryPlacesLocality,
   ghosteryPlacesSubplace,
@@ -91,7 +92,7 @@ onMount(async () => {
     if (!appCtx.user?.experimental?.noLabelsMode) {
       appCtx.map.addLayer(ghosteryEarth);
     }
-    for (const layer of [ghosteryRoads, ghosteryBuildings, ghosteryAddressLabel]) {
+    for (const layer of [ghosteryRoads, ghosteryBuildings, ghosteryBuildingsOutline, ghosteryAddressLabel]) {
       appCtx.map.addLayer(layer);
     }
     if (!appCtx.user?.experimental?.noLabelsMode) {
