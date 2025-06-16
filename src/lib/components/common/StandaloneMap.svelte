@@ -118,14 +118,13 @@ onMount(async () => {
       });
 
       // HACK: This is a hack to prevent the geolocate control from updating the camera
-      geolocateControl._updateCamera = () => {};
-
+      // geolocateControl._updateCamera = () => {};
       appCtx.map!.addControl(geolocateControl, 'bottom-right');
 
       // TODO : Reactivate
-      // setTimeout(() => {
-      //   geolocateControl._geolocateButton.click();
-      // }, 200);
+      setTimeout(() => {
+        geolocateControl._geolocateButton.click();
+      }, 200);
 
       navigator.geolocation.watchPosition(
         (geoLocation) => {
@@ -133,7 +132,7 @@ onMount(async () => {
         },
         (error) => {
           // TODO: Add a fallback to the default location
-          // console.error('Error getting geolocation:', error);
+          console.error('Error getting geolocation:', error);
         },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: Infinity }
       );
