@@ -40,8 +40,10 @@ jobs:
       - name: 'CACHE :: Restore Build'
         uses: actions/cache@v3
         with:
-          path: .svelte-kit
-          key: ${{ runner.os }}-build-${{ github.sha }}
+          path: |
+            .svelte-kit
+            node_modules/.vite
+          key: ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'svelte.config.js', 'vite.config.ts') }}
 
       - name: 'FIX :: Create temporary tsconfig for CI'
         run: |
