@@ -36,5 +36,6 @@ local_*.sql
 scripts/data/
 sql/data/
 sql/backup/
+sql/cache/
 scripts/.ipynb_checkpoints/
 .data/
