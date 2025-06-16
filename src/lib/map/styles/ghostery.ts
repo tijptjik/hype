@@ -482,8 +482,8 @@ export const ghosteryPlacesLocality: AddLayerObject = {
   },
   paint: {
     'text-color': '#FFFFFF',
-    'text-halo-color': '#4987E2',
-    'text-halo-width': 1
+    'text-halo-color': 'rgb(73, 135, 226)',
+    'text-halo-width': 0.5,
   }
 };
 
@@ -816,8 +816,334 @@ export const ghosteryPlacesSubplace: AddLayerObject = {
   },
   paint: {
     'text-color': '#FFFFFF',
-    'text-halo-color': '#4987E2',
-    'text-halo-width': 1
+    'text-halo-color': 'rgb(73, 135, 226)',
+    'text-halo-width': 0.5,
+  }
+};
+
+export const ghosteryRoadsLabelsMajor: AddLayerObject = {
+  id: 'roads_labels_major',
+  type: 'symbol',
+  source: 'hongkong-latest',
+  'source-layer': 'roads',
+  minzoom: 12,
+  filter: ['in', 'kind', 'highway', 'major_road'],
+  layout: {
+    'symbol-sort-key': ['get', 'min_zoom'],
+    'symbol-placement': 'line',
+    'symbol-spacing': [
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      12, 300,  // Very frequent at lower zoom for highways
+      16, 400,  // Still frequent at mid zoom  
+      20, 500   // Moderate spacing at high zoom
+    ],
+    'text-font': ['Noto Sans Medium'], // Slightly bolder for major roads
+    'text-field': [
+      'case',
+      [
+        'all',
+        ['any', ['has', 'name'], ['has', 'pgf:name']],
+        ['!', ['any', ['has', 'name2'], ['has', 'pgf:name2']]],
+        ['!', ['any', ['has', 'name3'], ['has', 'pgf:name3']]]
+      ],
+      [
+        'case',
+        ['has', 'script'],
+        [
+          'case',
+          [
+            'any',
+            ['is-supported-script', ['get', 'name']],
+            ['has', 'pgf:name']
+          ],
+          [
+            'format',
+            ['coalesce', ['get', 'name:en'], ['get', 'name:en']],
+            {},
+            '\n',
+            {},
+            [
+              'case',
+              [
+                'all',
+                ['!', ['has', 'name:en']],
+                ['has', 'name:en'],
+                ['!', ['has', 'script']]
+              ],
+              '',
+              ['coalesce', ['get', 'pgf:name'], ['get', 'name']]
+            ],
+            {
+              'text-font': [
+                'case',
+                ['==', ['get', 'script'], 'Devanagari'],
+                ['literal', ['Noto Sans Devanagari Regular v1']],
+                ['literal', ['Noto Sans Regular']]
+              ]
+            }
+          ],
+          ['get', 'name:en']
+        ],
+        [
+          'format',
+          [
+            'coalesce',
+            ['get', 'name:en'],
+            ['get', 'pgf:name'],
+            ['get', 'name']
+          ],
+          {}
+        ]
+      ],
+      [
+        'all',
+        ['any', ['has', 'name'], ['has', 'pgf:name']],
+        ['any', ['has', 'name2'], ['has', 'pgf:name2']],
+        ['!', ['any', ['has', 'name3'], ['has', 'pgf:name3']]]
+      ],
+      [
+        'case',
+        ['all', ['has', 'script'], ['has', 'script2']],
+        [
+          'format',
+          ['get', 'name:en'],
+          {},
+          '\n',
+          {},
+          ['coalesce', ['get', 'pgf:name'], ['get', 'name']],
+          {
+            'text-font': [
+              'case',
+              ['==', ['get', 'script'], 'Devanagari'],
+              ['literal', ['Noto Sans Devanagari Regular v1']],
+              ['literal', ['Noto Sans Regular']]
+            ]
+          },
+          '\n',
+          {},
+          ['coalesce', ['get', 'pgf:name2'], ['get', 'name2']],
+          {
+            'text-font': [
+              'case',
+              ['==', ['get', 'script2'], 'Devanagari'],
+              ['literal', ['Noto Sans Devanagari Regular v1']],
+              ['literal', ['Noto Sans Regular']]
+            ]
+          }
+        ],
+        [
+          'case',
+          ['has', 'script2'],
+          [
+            'format',
+            [
+              'coalesce',
+              ['get', 'name:en'],
+              ['get', 'pgf:name'],
+              ['get', 'name']
+            ],
+            {},
+            '\n',
+            {},
+            ['coalesce', ['get', 'pgf:name2'], ['get', 'name2']],
+            {
+              'text-font': [
+                'case',
+                ['==', ['get', 'script2'], 'Devanagari'],
+                ['literal', ['Noto Sans Devanagari Regular v1']],
+                ['literal', ['Noto Sans Regular']]
+              ]
+            }
+          ],
+          [
+            'format',
+            [
+              'coalesce',
+              ['get', 'name:en'],
+              ['get', 'pgf:name2'],
+              ['get', 'name2']
+            ],
+            {},
+            '\n',
+            {},
+            ['coalesce', ['get', 'pgf:name'], ['get', 'name']],
+            {
+              'text-font': [
+                'case',
+                ['==', ['get', 'script'], 'Devanagari'],
+                ['literal', ['Noto Sans Devanagari Regular v1']],
+                ['literal', ['Noto Sans Regular']]
+              ]
+            }
+          ]
+        ]
+      ],
+      [
+        'case',
+        ['all', ['has', 'script'], ['has', 'script2'], ['has', 'script3']],
+        [
+          'format',
+          ['get', 'name:en'],
+          {},
+          '\n',
+          {},
+          ['coalesce', ['get', 'pgf:name'], ['get', 'name']],
+          {
+            'text-font': [
+              'case',
+              ['==', ['get', 'script'], 'Devanagari'],
+              ['literal', ['Noto Sans Devanagari Regular v1']],
+              ['literal', ['Noto Sans Regular']]
+            ]
+          },
+          '\n',
+          {},
+          ['coalesce', ['get', 'pgf:name2'], ['get', 'name2']],
+          {
+            'text-font': [
+              'case',
+              ['==', ['get', 'script2'], 'Devanagari'],
+              ['literal', ['Noto Sans Devanagari Regular v1']],
+              ['literal', ['Noto Sans Regular']]
+            ]
+          },
+          '\n',
+          {},
+          ['coalesce', ['get', 'pgf:name3'], ['get', 'name3']],
+          {
+            'text-font': [
+              'case',
+              ['==', ['get', 'script3'], 'Devanagari'],
+              ['literal', ['Noto Sans Devanagari Regular v1']],
+              ['literal', ['Noto Sans Regular']]
+            ]
+          }
+        ],
+        [
+          'case',
+          ['!', ['has', 'script']],
+          [
+            'format',
+            [
+              'coalesce',
+              ['get', 'name:en'],
+              ['get', 'pgf:name'],
+              ['get', 'name']
+            ],
+            {},
+            '\n',
+            {},
+            ['coalesce', ['get', 'pgf:name2'], ['get', 'name2']],
+            {
+              'text-font': [
+                'case',
+                ['==', ['get', 'script2'], 'Devanagari'],
+                ['literal', ['Noto Sans Devanagari Regular v1']],
+                ['literal', ['Noto Sans Regular']]
+              ]
+            },
+            '\n',
+            {},
+            ['coalesce', ['get', 'pgf:name3'], ['get', 'name3']],
+            {
+              'text-font': [
+                'case',
+                ['==', ['get', 'script3'], 'Devanagari'],
+                ['literal', ['Noto Sans Devanagari Regular v1']],
+                ['literal', ['Noto Sans Regular']]
+              ]
+            }
+          ],
+          ['!', ['has', 'script2']],
+          [
+            'format',
+            [
+              'coalesce',
+              ['get', 'name:en'],
+              ['get', 'pgf:name2'],
+              ['get', 'name2']
+            ],
+            {},
+            '\n',
+            {},
+            ['coalesce', ['get', 'pgf:name'], ['get', 'name']],
+            {
+              'text-font': [
+                'case',
+                ['==', ['get', 'script'], 'Devanagari'],
+                ['literal', ['Noto Sans Devanagari Regular v1']],
+                ['literal', ['Noto Sans Regular']]
+              ]
+            },
+            '\n',
+            {},
+            ['coalesce', ['get', 'pgf:name3'], ['get', 'name3']],
+            {
+              'text-font': [
+                'case',
+                ['==', ['get', 'script3'], 'Devanagari'],
+                ['literal', ['Noto Sans Devanagari Regular v1']],
+                ['literal', ['Noto Sans Regular']]
+              ]
+            }
+          ],
+          [
+            'format',
+            [
+              'coalesce',
+              ['get', 'name:en'],
+              ['get', 'pgf:name3'],
+              ['get', 'name3']
+            ],
+            {},
+            '\n',
+            {},
+            ['coalesce', ['get', 'pgf:name'], ['get', 'name']],
+            {
+              'text-font': [
+                'case',
+                ['==', ['get', 'script'], 'Devanagari'],
+                ['literal', ['Noto Sans Devanagari Regular v1']],
+                ['literal', ['Noto Sans Regular']]
+              ]
+            },
+            '\n',
+            {},
+            ['coalesce', ['get', 'pgf:name2'], ['get', 'name2']],
+            {
+              'text-font': [
+                'case',
+                ['==', ['get', 'script2'], 'Devanagari'],
+                ['literal', ['Noto Sans Devanagari Regular v1']],
+                ['literal', ['Noto Sans Regular']]
+              ]
+            }
+          ]
+        ]
+      ]
+    ],
+    'text-size': [
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      12, 11,
+      16, 13,
+      20, 16
+    ],
+    'text-anchor': 'center',
+    'text-justify': 'center',
+    'text-rotation-alignment': 'map',
+    'text-allow-overlap': false,
+    'symbol-avoid-edges': true,
+    'text-max-angle': 30
+  },
+  paint: {
+    'text-color': '#FFFFFF',
+    'text-halo-color': 'rgb(73, 135, 226)',
+    'text-halo-width': 0.5,
+    'text-translate-anchor': 'map'
   }
 };
 
@@ -831,7 +1157,14 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
   layout: {
     'symbol-sort-key': ['get', 'min_zoom'],
     'symbol-placement': 'line',
-    'symbol-spacing': 1000,
+    'symbol-spacing': [
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      16, 500,  // More frequent for mobile viewing
+      18, 600,  
+      20, 700
+    ],
     'text-font': ['Noto Sans Regular'],
     'text-field': [
       'case',
@@ -1126,8 +1459,8 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
   },
   paint: {
     'text-color': 'rgba(255,255,255,0.9)',
-    'text-halo-color': 'rgb(73, 135, 226, 0.6)',
-    'text-halo-width': 1,
+    'text-halo-color': 'rgb(73, 135, 226)',
+    'text-halo-width': 0.5,
     'text-translate-anchor': 'map'
   }
 };

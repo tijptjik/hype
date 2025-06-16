@@ -24,7 +24,8 @@ import {
   ghosteryAddressLabel,
   ghosteryPlacesLocality,
   ghosteryPlacesSubplace,
-  ghosteryRoadsLabelsMinor
+  ghosteryRoadsLabelsMinor,
+  ghosteryRoadsLabelsMajor
 } from '$lib/map/styles/ghostery';
 // STYLES
 import '$lib/styles/map.css';
@@ -97,7 +98,8 @@ onMount(async () => {
       for (const layer of [
         ghosteryPlacesLocality,
         ghosteryPlacesSubplace,
-        ghosteryRoadsLabelsMinor
+        ghosteryRoadsLabelsMinor,
+        ghosteryRoadsLabelsMajor
       ]) {
         appCtx.map.addLayer(layer);
       }
