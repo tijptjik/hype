@@ -7,10 +7,14 @@ alwaysApply: false
 
 ## Svelte
 
-- [ ] use [async](https://github.com/sveltejs/svelte/discussions/15845#discussioncomment-13456944) branch
+- [ ] use [async](mdc:https:/github.com/sveltejs/svelte/discussions/15845#discussioncomment-13456944) branch
 - [ ] use [@attach](mdc:https:/svelte.dev/docs/svelte/@attach) to replace Svelte Actions.
 - [ ] use [<svelte:boundary>](mdc:https:/svelte.dev/docs/svelte/svelte-boundary)
 - [x] debug with [@debug](mdc:https:/svelte.dev/docs/svelte/@debug)
+
+### Maplibre
+
+- [ ] Move to (svelte-maplibre-gl)[https://github.com/MIERUNE/svelte-maplibre-gl]
 
 ### BitsUI
 

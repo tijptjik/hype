@@ -79,8 +79,14 @@ export default defineConfig({
     }
   },
   build: {
-    target: 'es2020'
+    target: 'es2020',
+    // Preserve cache between CI runs
+    rollupOptions: {
+      cache: true
+    }
   },
+  // Enable build caching for CI environments
+  cacheDir: '.svelte-kit/vite',
   server: {
     port: 5173,
     strictPort: true,

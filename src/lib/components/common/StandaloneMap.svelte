@@ -1,58 +1,58 @@
 <script lang="ts">
-import { AttributionControl, GeolocateControl, Map, NavigationControl, ScaleControl } from 'maplibre-gl';
-// SVELTE
 import { onMount } from 'svelte';
 import { watch } from 'runed';
-// ICONS
-import { Square3Stack3d } from '@steeze-ui/heroicons';
-import Icon from '$lib/components/common/Icon.svelte';
+// I18N
+import { m } from '$lib/i18n';
 // ANIMATION
 import { fade } from 'svelte/transition';
 import { cubicInOut } from 'svelte/easing';
-// I18N
-import { m } from '$lib/i18n';
 // LIB
 import { updateMarkers } from '$lib/map/markers';
+// ICONS
+import { Square3Stack3d } from '@steeze-ui/heroicons';
+import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
-// MAP STYLES
+// MAPLibre STYLES
 import {
   ghosteryEarth,
   ghosteryRoads,
   ghosteryBuildings,
+  ghosteryBuildingsOutline,
   ghosteryAddressLabel,
   ghosteryPlacesLocality,
   ghosteryPlacesSubplace,
-  ghosteryRoadsLabelsMinor
+  ghosteryRoadsLabelsMinor,
+  ghosteryRoadsLabelsMajor
 } from '$lib/map/styles/ghostery';
 // STYLES
-import '$lib/styles/map.css';
-// MAPLIBRE
-import { Point } from 'maplibre-gl';
+// import '$lib/styles/map.css';
 // CONFIG
 import { MOBILE_MAX_WIDTH } from '$lib/index';
 // TYPES
-import type { PointLike, LngLatLike } from 'maplibre-gl';
+import type { PointLike, LngLatLike, Point } from 'maplibre-gl';
 
-// let mapStore: MapStore = getContext(MAPSTORE_CONTEXT_KEY);
+// ELEMENTS
 let mapContainer: HTMLDivElement;
+
 // CONTEXT
 const appCtx = getAppCtx();
 const omniCtx = getOmniContext();
 
+// STATE
 let lastHorizontalOffset = $state(0);
 let isAnimating = $state(false);
 
 // WATCHERS
 // Watch for changes in features
 onMount(async () => {
-  // To minimize the payload in Cloudflare, we are manually inserting mapping dependencies here as they 
+  // To minimize the payload in Cloudflare, we are manually inserting mapping dependencies here as they
   // are heavy and the max worker size in the free tier is 1 MB
-  
+
   // Wait for maplibre to be loaded globally
   while (!appCtx.isMaplibreLoaded || !appCtx.maplibre) {
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 10));
   }
 
   // Wait for the DOM element to be available
@@ -61,6 +61,7 @@ onMount(async () => {
     return;
   }
 
+  // MAP : Create the map instance
   appCtx.map = new appCtx.maplibre.Map({
     container: mapContainer,
     style: {
@@ -79,8 +80,7 @@ onMount(async () => {
     attributionControl: false
   });
 
-  // appCtx.map.transform.setFov(0);
-
+  // LAYERS : Add the base layers to the map
   appCtx.map.on('load', () => {
     appCtx.map.addSource('hongkong-latest', {
       type: 'vector',
@@ -90,53 +90,101 @@ onMount(async () => {
     if (!appCtx.user?.experimental?.noLabelsMode) {
       appCtx.map.addLayer(ghosteryEarth);
     }
-    for (const layer of [ghosteryRoads, ghosteryBuildings, ghosteryAddressLabel]) {
+    for (const layer of [
+      ghosteryRoads,
+      ghosteryBuildings,
+      ghosteryBuildingsOutline,
+      ghosteryAddressLabel
+    ]) {
       appCtx.map.addLayer(layer);
     }
     if (!appCtx.user?.experimental?.noLabelsMode) {
       for (const layer of [
         ghosteryPlacesLocality,
         ghosteryPlacesSubplace,
-        ghosteryRoadsLabelsMinor
+        ghosteryRoadsLabelsMinor,
+        ghosteryRoadsLabelsMajor
       ]) {
         appCtx.map.addLayer(layer);
       }
     }
 
+    // CONTROLS : Add the controls to the map
     if (appCtx.user) {
       // Initialize and store the GeolocateControl
+      // See https://github.com/mapbox/mapbox-gl-js/issues/13067#issuecomment-1925291846
       const geolocateControl = new appCtx.maplibre.GeolocateControl({
         positionOptions: {
           timeout: 5000,
           enableHighAccuracy: true,
           maximumAge: Infinity
         },
-        trackUserLocation: true
+        trackUserLocation: true,
+        showUserHeading: true,
+        showUserLocation: true
       });
 
-      // HACK: This is a hack to prevent the geolocate control from updating the camera
-      geolocateControl._updateCamera = () => {};
-
+      // store the original _updateCamera implementation to restore later
+      const updateCamera = geolocateControl._updateCamera;
+      // replace updateCamera method with noop operation, so that we can control
+      // the initial flyTo of the user's location.
+      geolocateControl._updateCamera = function () {};
       appCtx.map!.addControl(geolocateControl, 'bottom-right');
+      appCtx.map!.on('load', () => {
+        // after first geolocate...
+        geolocateControl.once('geolocate', () => {
+          // restore update camera for future use
+          geolocateControl._updateCamera = updateCamera;
+        });
+        // trigger to get the dot on the map
+        geolocateControl.trigger();
+      });
 
-      // TODO : Reactivate
-      // setTimeout(() => {
-      //   geolocateControl._geolocateButton.click();
-      // }, 200);
+      // Programmatically click on the navigation control
+      setTimeout(() => {
+        geolocateControl._geolocateButton.click();
+      }, 200);
 
+      let hasReceivedFirstFix = false;
+
+      // WATCHER : Watch for changes in the user's location
       navigator.geolocation.watchPosition(
         (geoLocation) => {
           appCtx.state.userLocation = geoLocation;
+
+          // Fly to user location on first GPS fix if no active feature
+          const isViewingFeature = window.location.pathname.includes('/features/');
+          if (!hasReceivedFirstFix && !isViewingFeature) {
+            hasReceivedFirstFix = true;
+            const { latitude, longitude } = geoLocation.coords;
+
+            appCtx.map?.flyTo({
+              center: [longitude, latitude],
+              zoom: 19,
+              duration: 2500
+            });
+          }
         },
         (error) => {
           // TODO: Add a fallback to the default location
-          // console.error('Error getting geolocation:', error);
+          console.error('Error getting geolocation:', error);
         },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: Infinity }
+      );
+
+      appCtx.map!.addControl(
+        new appCtx.maplibre.NavigationControl({
+          showZoom: false,
+          showCompass: true,
+          showPitch: true,
+          showRotate: true
+        }),
+        'bottom-right'
       );
     }
   });
 
+  // LISTENERS : Add the listeners to the map
   appCtx.map!.on('click', (e) => {
     e.originalEvent.preventDefault();
     e.originalEvent.stopPropagation();
@@ -160,10 +208,7 @@ onMount(async () => {
       }
     }
   });
-  // TODO Add Navigation control
-  // appCtx.map!.addControl(new NavigationControl({}), 'bottom-right');
-  // appCtx.map!.addControl(new ScaleControl({ maxWidth: 80, unit: 'metric' }), 'bottom-left');
-  // appCtx.map!.addControl(new AttributionControl({ compact: true }), 'bottom-right');
+  // TODO Add Attribution
 });
 
 watch(
@@ -199,7 +244,7 @@ $effect(() => {
     isAnimating = true;
     let coordinates = appCtx.map!.getCenter();
     const centerInPx: Point = appCtx.map!.project(coordinates);
-    const newPoint: PointLike = new Point(
+    const newPoint: PointLike = new appCtx.maplibre.Point(
       centerInPx.x +
         (horizontalOffset() === 0 ? lastHorizontalOffset : -horizontalOffset()),
       centerInPx.y
