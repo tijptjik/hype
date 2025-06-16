@@ -34,8 +34,8 @@ const envVars = loadEnvVars();
 
 // GEOCODING - inline to avoid SvelteKit env issues
 // DATA
-import neighbourhoods from '../src/lib/map/neighbourhoods.json' assert { type: 'json' };
-import properties from '../src/lib/db/data/property.json' assert { type: 'json' };
+import neighbourhoods from '../../src/lib/map/neighbourhoods.json' assert { type: 'json' };
+import properties from '../../src/lib/db/data/property.json' assert { type: 'json' };
 
 // UTILS
 import {
@@ -49,7 +49,7 @@ import {
   applyAddressAbbreviations,
   getNormalisedCountry,
   districtCodeToName
-} from '../src/lib/utils/geocoding.js';
+} from '../../src/lib/utils/geocoding.js';
 
 // TYPES for geocoding
 import type {
@@ -58,7 +58,7 @@ import type {
   ParsedReverseGeocodeResult,
   ALSResult,
   ALSSuggestedAddressItem
-} from '../src/lib/types.js';
+} from '../../src/lib/types.js';
 
 type Neighbourhood = string;
 type NeighbourhoodI18n = Record<
@@ -561,7 +561,7 @@ async function reverseGeocode(
 
 // Translation service - create our own version
 import { v4 as uuidv4 } from 'uuid';
-import type { Locale } from '../src/lib/types.js';
+import type { Locale } from '../../src/lib/types.js';
 
 const TRANSLATION_ENDPOINT = 'https://api.cognitive.microsofttranslator.com';
 const TRANSLATION_REGION =
@@ -623,11 +623,11 @@ async function getTranslation(
 }
 
 // ENUMS
-import { supportedLocales } from '../src/lib/enums.js';
+import { supportedLocales } from '../../src/lib/enums.js';
 
 // TYPES
 import type { GeometryObject } from 'geojson';
-import type { AddressMeta } from '../src/lib/types.js';
+import type { AddressMeta } from '../../src/lib/types.js';
 
 interface CSVRow {
   id: string;
