@@ -18,8 +18,16 @@ export const ghosteryRoads: AddLayerObject = {
   source: 'hongkong-latest',
   'source-layer': 'roads',
   type: 'line',
-  filter: ['in', 'kind', 'major_road', 'minor_road'],
-  paint: { 'line-color': '#4987E2' }
+  filter: ['in', 'kind', 'highway', 'major_road', 'minor_road'],
+  paint: { 
+    'line-color': '#4987E2',
+    'line-width': [
+      'case',
+      ['==', ['get', 'kind'], 'highway'], 1.5,
+      ['==', ['get', 'kind'], 'major_road'], 1.5,
+      1.2
+    ]
+  }
 };
 
 export const ghosteryBuildings: AddLayerObject = {
