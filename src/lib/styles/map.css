@@ -219,6 +219,40 @@
   fill: #d1e4f4;
 }
 
+
+/* ═══════════════════════
+   5. MAP CONTROLS
+   ═══════════════════════ */
+
+/* Geolocate control button styling */
+.maplibregl-ctrl-geolocate {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+.maplibregl-ctrl-geolocate:hover {
+  border-radius: 12px !important;
+}
+
+.maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-active {
+  border-radius: 12px !important;
+}
+
+/* Geolocate control icon - #4987E2 color */
+.maplibregl-ctrl-geolocate .maplibregl-ctrl-icon {
+  filter: invert(50%) sepia(100%) saturate(800%) hue-rotate(210deg) brightness(115%) contrast(90%) !important;
+  transition: filter 0.2s ease-in-out !important;
+}
+
+.maplibregl-ctrl-geolocate:hover .maplibregl-ctrl-icon {
+  filter: invert(50%) sepia(100%) saturate(800%) hue-rotate(210deg) brightness(92%) contrast(90%) !important;
+}
+
+.maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-active .maplibregl-ctrl-icon {
+  filter: invert(50%) sepia(100%) saturate(960%) hue-rotate(210deg) brightness(115%) contrast(90%) !important;
+}
+
+/* Control groups */
 .maplibregl-ctrl-group {
   background-color: #000;
   border-radius: 12px;
