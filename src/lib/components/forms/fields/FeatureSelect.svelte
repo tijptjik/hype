@@ -22,7 +22,6 @@ let propertyValues = $derived(getLocalisedPropertyValues(appCtx, propertyId));
 let placeholder = $derived(
   getI18n(property, 'placeholder', userPreferences) || 'Select...'
 );
-console.log(placeholder, value)
 </script>
 
 <select
