@@ -15,6 +15,7 @@ alwaysApply: false
 ### Maplibre
 
 - [ ] Move to (svelte-maplibre-gl)[https://github.com/MIERUNE/svelte-maplibre-gl]
+
 ### BitsUI
 
 - [ ] Replace the existing components in favour of [BitsUI](mdc:https:/bits-ui.com/docs/introduction)
