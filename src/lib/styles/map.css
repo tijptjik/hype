@@ -297,9 +297,47 @@
 }
 
 
+/* ═══════════════════════
+   5. MAP CONTROLS :: Navigation
+   ═══════════════════════ */
+
+.maplibregl-ctrl-compass {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+.maplibregl-ctrl-compass .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' fill='%23333' viewBox='0 0 29 29'%3E%3Cpath d='m10.5 14 4-8 4 8z'/%3E%3Cpath fill='%23A294E5' d='m10.5 16 4 8 4-8z'/%3E%3C/svg%3E") !important;
+  position: relative !important;
+}
+
+.maplibregl-ctrl-compass .maplibregl-ctrl-icon::after {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' fill='%23555' viewBox='0 0 29 29'%3E%3Cpath d='m10.5 14 4-8 4 8z'/%3E%3Cpath fill='%23B8A8FF' d='m10.5 16 4 8 4-8z'/%3E%3C/svg%3E") !important;
+  opacity: 0 !important;
+  transition: opacity 0.3s ease-in-out !important;
+}
+
+.maplibregl-ctrl-compass:hover .maplibregl-ctrl-icon::after {
+  opacity: 1 !important;
+}
+
+.maplibregl-ctrl-compass:hover .maplibregl-ctrl-icon {
+  filter: invert(50%) sepia(100%) saturate(800%) hue-rotate(210deg) brightness(92%) contrast(90%) !important;
+}
+
+
+
+/* <button class="maplibregl-ctrl-compass" type="button" title="Reset bearing to north" aria-label="Reset bearing to north"><span class="maplibregl-ctrl-icon" aria-hidden="true" style="transform: rotate(-17.6deg);"></span></button> */
+
 
 /* ═══════════════════════
-   5. MAP CONTROLS
+   5. MAP CONTROLS :: UserLocation
    ═══════════════════════ */
 
 /* Geolocate control button styling */
@@ -319,7 +357,7 @@
 /* Geolocate control icon - #4987E2 color */
 .maplibregl-ctrl-geolocate .maplibregl-ctrl-icon {
   filter: invert(50%) sepia(100%) saturate(800%) hue-rotate(210deg) brightness(115%) contrast(90%) !important;
-  transition: filter 0.2s ease-in-out !important;
+  transition: all 0.3s ease-in-out !important;
 }
 
 .maplibregl-ctrl-geolocate:hover .maplibregl-ctrl-icon {
