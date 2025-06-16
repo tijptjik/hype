@@ -8,11 +8,10 @@ import { Map, BuildingLibrary as Building, MapPin } from '@steeze-ui/heroicons';
 
 // PROPS
 type Props = {
-  title: string;
   group: 'walks' | 'neighbourhoods' | 'features';
 };
 
-let { title, group }: Props = $props();
+let { group }: Props = $props();
 
 const icons = {
   walks: Map,

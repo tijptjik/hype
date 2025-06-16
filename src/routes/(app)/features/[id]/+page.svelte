@@ -36,7 +36,7 @@ let featureId: string = $state(page.params.id);
 // CONTEXT
 const appCtx = getAppCtx();
 // @ts-expect-error - TODO Svelte Async 
-let feature = $derived(await appCtx.getFeatureById(page.params.id))!;
+let feature = $derived(await appCtx.getFeatureById(page.params.id));
 const omniCtx = getOmniContext();
 
 // CONTEXT :: FEATURE CARD
@@ -54,7 +54,6 @@ $effect(() => {
     return;
   }
   featureId = page.params.id;
-  feature = appCtx.cache.feature.get(featureId)!;
 
   // Only react to activeCollection changes, not flag changes
   if (appCtx.getActiveCollection() == null) {

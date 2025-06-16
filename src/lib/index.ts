@@ -191,7 +191,7 @@ export const getFeaturePropertyComplexValue = (
 export const updateForm = (
   form: Writable<Exclude<Resource, Task>>,
   field: FormFieldDefinition,
-  locale: Locale,
+  locale: LocaleExtended,
   fieldRoot: string,
   fieldIndex: number,
   fieldKey: string,

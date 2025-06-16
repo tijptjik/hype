@@ -1,18 +1,11 @@
 // DATA
-import subNeighbourhoods from '$lib/map/subNeighbourhoods.json';
 import { QueryClient } from '@tanstack/svelte-query';
 // NAVIGATION
 import { goto } from '$app/navigation';
 // GEO
 import { bbox } from '@turf/bbox';
 // I18N
-import {
-  getFPI18n,
-  getFallbackLocales,
-  getLocale,
-  setLocale,
-  getI18n
-} from '$lib/i18n';
+import { getFallbackLocales, getLocale, setLocale, getI18n } from '$lib/i18n';
 // LIB
 import { fetchOrThrow } from '$lib/index';
 // SERVICES
@@ -23,6 +16,14 @@ import {
   debouncedUpdateUserPreferences,
   updateLocale
 } from '$lib/client/services/user';
+import {
+  getFeatureIdsForNeighbourhoods,
+  expandToSubNeighbourhoods
+} from '$lib/client/services/geospatial';
+import {
+  getFeatureIdsForProperties,
+  sortProperties
+} from '$lib/client/services/property';
 // CONTEXT
 import { getContext, setContext } from 'svelte';
 // SVELTE
@@ -30,7 +31,7 @@ import { SvelteMap } from 'svelte/reactivity';
 // MARKERS
 import { removeMarkerClass, addMarkerClass } from '$lib/map/markers';
 // ENUMS
-import { FirstClassResource, ResourcePath } from '$lib/enums';
+import { FirstClassResource, ResourcePath, ResourceRefKey } from '$lib/enums';
 // TYPES
 import type {
   Feature,
@@ -44,7 +45,6 @@ import type {
   ActiveCollection,
   Property,
   UserLayer,
-  FeatureExtended,
   SessionUser,
   UserPreferences,
   Locale,
@@ -69,6 +69,10 @@ import { MOBILE_MAX_WIDTH } from '$lib/index';
 export class AppCtx {
   // Maplibre Map instance
   map: MaplibreMap = $state()!;
+  // Maplibre library instance (loaded globally)
+  maplibre: any = $state(null);
+  // Whether maplibre has been loaded
+  isMaplibreLoaded: boolean = $state(false);
   // Tanstack Query Client instance
   queryClient: QueryClient;
   // User data (reactive)
@@ -93,7 +97,6 @@ export class AppCtx {
     feature: new Map<Id, Feature>(),
     task: new Map<Id, Task>(),
     hub: new Map<Id, Hub>(),
-    // TODO implement cache for properties
     property: new Map<Id, Property>()
   };
 
@@ -170,6 +173,11 @@ export class AppCtx {
     this.state.prisms.project,
     this.state.prisms.layer
   ]);
+  propertiesQueryKey = $derived([
+    'property',
+    this.state.prisms.organisation,
+    this.state.prisms.project
+  ]);
   userFeaturesQueryKey = ['userFeatures'];
   userQueryKey = ['user'];
 
@@ -178,6 +186,7 @@ export class AppCtx {
     this.queryClient = queryClient;
     this.setUser(user);
     this.initializeQueryMap();
+    // Note: keydown handlers are managed dynamically by the root layout
   }
 
   // Initialize default query map (can be overridden by AdminCtx)
@@ -218,6 +227,12 @@ export class AppCtx {
     this.queryMap.set('userFeatures', {
       queryKey: () => this.userFeaturesQueryKey,
       queryFn: () => this.userFeaturesQueryFn()
+    });
+
+    // PROPERTIES
+    this.queryMap.set(FirstClassResource.property, {
+      queryKey: () => this.propertiesQueryKey,
+      queryFn: () => this.propertiesQueryFn()
     });
   };
 
@@ -276,16 +291,19 @@ export class AppCtx {
   // Helper method to build API URLs with filters
   private buildApiUrl = (
     resource: FirstClassResource,
+    includePrisms: boolean = true,
     includeFilters: boolean = true
   ): string => {
     const path = ResourcePath[resource];
     const params = new URLSearchParams();
 
-    // Add isArchived filter by default
-    params.append('isArchived', 'false');
-    params.append('isPublished', 'true');
-
+    // Add isArchived filter by default (except for properties which don't have these fields)
     if (includeFilters) {
+      params.append('isArchived', 'false');
+      params.append('isPublished', 'true');
+    }
+
+    if (includePrisms) {
       // Add prism filters based on resource hierarchy
       if (resource !== FirstClassResource.organisation) {
         this.state.prisms.organisation.forEach((org) =>
@@ -332,6 +350,11 @@ export class AppCtx {
     return fetchOrThrow<Feature[]>(url);
   };
 
+  propertiesQueryFn = async (): Promise<Property[]> => {
+    const url = this.buildApiUrl(FirstClassResource.property, true, false);
+    return fetchOrThrow<Property[]>(url);
+  };
+
   userFeaturesQueryFn = async (): Promise<UserFeature[]> => {
     if (!this.user?.id) {
       return [];
@@ -362,6 +385,7 @@ export class AppCtx {
   };
 
   invalidate = async (resource: FirstClassResource | 'userFeatures'): Promise<void> => {
+    const resourcesToInvalidate = [resource];
     // Clear relevant caches when invalidating (forces fresh data)
     if (resource === FirstClassResource.organisation) {
       this.cache.organisation.clear();
@@ -369,6 +393,8 @@ export class AppCtx {
     } else if (resource === FirstClassResource.project) {
       this.cache.project.clear();
       this.projectCodeToId.clear();
+      this.cache.property.clear();
+      resourcesToInvalidate.push(FirstClassResource.property);
     } else if (resource === FirstClassResource.layer) {
       this.cache.layer.clear();
     } else if (resource === FirstClassResource.feature) {
@@ -379,15 +405,21 @@ export class AppCtx {
     } else if (resource === FirstClassResource.hub) {
       this.cache.hub.clear();
       this.hubCodeToId.clear();
+      this.cache.organisation.clear();
+      resourcesToInvalidate.push(FirstClassResource.organisation);
+    } else if (resource === FirstClassResource.property) {
+      this.cache.property.clear();
     }
 
-    await this.queryClient.invalidateQueries({
-      queryKey:
-        resource === 'userFeatures'
-          ? this.userFeaturesQueryKey
-          : [FirstClassResource[resource]],
-      refetchType: 'all',
-      exact: false
+    resourcesToInvalidate.forEach(async (resource) => {
+      await this.queryClient.invalidateQueries({
+        queryKey:
+          resource === 'userFeatures'
+            ? this.userFeaturesQueryKey
+            : [FirstClassResource[resource]],
+        refetchType: 'all',
+        exact: false
+      });
     });
   };
 
@@ -423,19 +455,21 @@ export class AppCtx {
   refresh = async (resource: FirstClassResource | 'userFeatures'): Promise<void> => {
     // Refresh the resources
     if (resource === 'organisation') {
-      this.refreshOrganisations();
+      await this.refreshOrganisations();
     } else if (resource === 'project') {
-      this.refreshProjects();
+      await this.refreshProjects();
     } else if (resource === 'layer') {
-      this.refreshLayers();
+      await this.refreshLayers();
     } else if (resource === 'feature') {
-      this.refreshFeatures();
+      await this.refreshFeatures();
     } else if (resource === 'task') {
-      this.refreshTasks();
+      await this.refreshTasks();
     } else if (resource === 'hub') {
-      this.refreshHubs();
+      await this.refreshHubs();
+    } else if (resource === 'property') {
+      await this.refreshProperties();
     } else if (resource === 'userFeatures') {
-      this.refreshUserFeatures();
+      await this.refreshUserFeatures();
     }
   };
 
@@ -448,8 +482,8 @@ export class AppCtx {
     this.syncCacheMap(this.cache.organisation, this.state.resources.organisation);
     // Efficiently sync organisation code-to-ID mapping
     this.syncCodeToIdMap(this.organisationCodeToId, this.state.resources.organisation);
-    this.refreshProjects();
-    this.refreshHubs();
+    await this.refreshProjects();
+    await this.refreshHubs();
   };
 
   refreshProjects = async (): Promise<void> => {
@@ -462,7 +496,10 @@ export class AppCtx {
     // Efficiently sync project code-to-ID mapping
     this.syncCodeToIdMap(this.projectCodeToId, this.state.resources.project);
     this.syncProjectPrisms();
-    this.refreshLayers();
+    await this.refreshProperties();
+    await this.refreshLayers();
+    // Sync layer prisms after layers are refreshed (when projects change, available layers change)
+    this.syncLayerPrisms();
   };
 
   refreshLayers = async (): Promise<void> => {
@@ -472,9 +509,8 @@ export class AppCtx {
     });
     // Efficiently sync layer cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.layer, this.state.resources.layer);
-    this.syncLayerPrisms();
     // Also calls this.refreshFeatures()
-    this.postLayerMutation();
+    await this.postLayerMutation();
   };
 
   refreshFeatures = async (): Promise<void> => {
@@ -508,6 +544,15 @@ export class AppCtx {
     this.syncCodeToIdMap(this.hubCodeToId, this.state.resources.hub);
   };
 
+  refreshProperties = async (): Promise<void> => {
+    const properties = await this.queryClient.fetchQuery({
+      queryKey: this.queryMap.get(FirstClassResource.property)!.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.property)!.queryFn
+    });
+    // Efficiently sync property cache (only add missing, remove stale)
+    this.syncCacheMap(this.cache.property, properties);
+  };
+
   refreshUserFeatures = async (): Promise<void> => {
     this.state.userFeatures = await this.queryClient
       .fetchQuery({
@@ -518,17 +563,17 @@ export class AppCtx {
         wishlisted: (uf || []).filter((f: UserFeature) => f.isWishlisted),
         visited: (uf || []).filter((f: UserFeature) => f.isVisited)
       }));
-    
+
     // If active collection is a walk, refresh it and handle navigation
     this.postUserFeaturesMutation();
   };
 
   /*
-  * Handles user features mutation and refreshes the active walk collection
-  * If a user has their stars selected as an ActiveCollection (Walk), then we
-  * ensure that the collection count is updated and the card navigates to
-  * the next item on the list, or returns home if the list is empty.
-  */
+   * Handles user features mutation and refreshes the active walk collection
+   * If a user has their stars selected as an ActiveCollection (Walk), then we
+   * ensure that the collection count is updated and the card navigates to
+   * the next item on the list, or returns home if the list is empty.
+   */
   postUserFeaturesMutation = (): void => {
     const activeCollection = this.getActiveCollection();
     if (!activeCollection || activeCollection.type !== 'walk') {
@@ -576,9 +621,9 @@ export class AppCtx {
         const currentIndex = activeCollection.items.findIndex(
           (f) => f.id === currentActiveFeature.id
         );
-        
+
         let nextFeature: Feature | null = null;
-        
+
         // Try to get the next feature in the original list
         if (currentIndex >= 0 && currentIndex < updatedItems.length) {
           nextFeature = updatedItems[currentIndex];
@@ -594,19 +639,41 @@ export class AppCtx {
     }
   };
 
-  syncProjectPrisms = async () => {
-    this.state.prisms.project = this.state.prisms.project.filter((project) => {
+  syncProjectPrisms = () => {
+    const filteredProjects = this.state.prisms.project.filter((project) => {
       return this.state.resources.project.some((p) => p.id === project);
     });
+
+    // Only update if the array actually changed
+    if (
+      filteredProjects.length !== this.state.prisms.project.length ||
+      !filteredProjects.every((id, index) => id === this.state.prisms.project[index])
+    ) {
+      this.state.prisms.project = filteredProjects;
+    }
   };
 
-  syncLayerPrisms = async () => {
-    this.state.prisms.layer = this.state.prisms.layer.filter((layer) => {
+  syncLayerPrisms = () => {
+    const filteredLayers = this.state.prisms.layer.filter((layer) => {
       return this.state.resources.layer.some((l) => l.id === layer);
     });
+
+    // Use Set comparison for proper array equality check
+    const currentSet = new Set(this.state.prisms.layer);
+    const filteredSet = new Set(filteredLayers);
+
+    // Check if sets are different (different lengths or different contents)
+    const shouldUpdate =
+      currentSet.size !== filteredSet.size ||
+      !Array.from(currentSet).every((id) => filteredSet.has(id));
+
+    // Only update if the array actually changed
+    if (shouldUpdate) {
+      this.state.prisms.layer = filteredLayers;
+    }
   };
 
-  postLayerMutation = (): void => {
+  postLayerMutation = async (): Promise<void> => {
     const currentLayerIds = new Set(this.state.prisms.layer);
     const existingFilterLayerIds = new Set(
       Object.keys(this.state.filters.properties || {})
@@ -630,8 +697,8 @@ export class AppCtx {
 
     // Only refresh features if user is authenticated
     if (this.user?.id) {
-      this.refreshFeatures();
-      this.refreshTasks();
+      await this.refreshFeatures();
+      await this.refreshTasks();
     }
   };
 
@@ -736,15 +803,19 @@ export class AppCtx {
   // Helper method to fetch resource by ID with cache miss handling
   private fetchResourceById = async <T>(
     resource: FirstClassResource,
-    id: Id
+    ref: Id
   ): Promise<T | undefined> => {
     // Guard against undefined or invalid IDs
-    if (!id || id === 'undefined') {
+    if (!ref || ref === 'undefined') {
       return undefined;
     }
-    
+
+    let refKey = ResourceRefKey[resource as keyof typeof ResourceRefKey];
+
     try {
-      const response = await fetch(`/api/${ResourcePath[resource]}/${id}`);
+      const response = await fetch(
+        `/api/${ResourcePath[resource]}/${ref}${refKey === 'code' ? '?byId=true' : ''}`
+      );
       if (!response.ok) return undefined;
       return await response.json();
     } catch {
@@ -886,6 +957,25 @@ export class AppCtx {
     return undefined;
   };
 
+  // Helper method to get visible classifier properties for a layer
+  getClassifierPropertiesForLayer = async (layer: Layer): Promise<Property[]> => {
+    if (!layer.properties) return [];
+
+    // Get Properties associated with LayerProperties
+    const properties = layer.properties
+      .filter((lp) => lp.isVisible !== false)
+      .map((lp) => this.cache.property.get(lp.propertyId));
+
+    // Filter classifiers then sort by rank
+    return sortProperties(
+      properties
+        .filter(
+          (prop): prop is Property => prop !== undefined && prop.type === 'classifier'
+        )
+        .map((p) => ({ property: p }))
+    ).map((item) => item.property!);
+  };
+
   getResourceById = async (
     resource: FirstClassResource,
     id: Id
@@ -942,6 +1032,48 @@ export class AppCtx {
         organisation: undefined
       };
     return await this.getHierarchy(feature);
+  };
+
+  // Synchronous version that uses cache only (for UI components)
+  getHierarchySync = (
+    resource: Feature | Layer | Project | Organisation
+  ): ResourceContext => {
+    // Determine what type of resource we have and build hierarchy accordingly
+    let layer: Layer | undefined;
+    let project: Project | undefined;
+    let organisation: Organisation | undefined;
+
+    if ('layerId' in resource) {
+      // Feature - get its layer, then project, then organisation from cache
+      layer = this.cache.layer.get(resource.layerId);
+      if (layer) {
+        project = this.cache.project.get(layer.projectId);
+        if (project) {
+          organisation = this.cache.organisation.get(project.organisationId);
+        }
+      }
+    } else if ('projectId' in resource) {
+      // Layer - use itself, get its project, then organisation from cache
+      layer = resource as Layer;
+      project = this.cache.project.get(layer.projectId);
+      if (project) {
+        organisation = this.cache.organisation.get(project.organisationId);
+      }
+    } else if ('organisationId' in resource) {
+      // Project - use itself, get its organisation from cache
+      project = resource as Project;
+      organisation = this.cache.organisation.get(project.organisationId);
+    } else {
+      // Organisation - use itself
+      organisation = resource as Organisation;
+    }
+
+    return {
+      feature: 'layerId' in resource ? (resource as Feature) : undefined,
+      layer,
+      project,
+      organisation
+    };
   };
 
   getHierarchy = async (
@@ -1044,108 +1176,19 @@ export class AppCtx {
 
   // Features, given the selected Neighbourhoods (or all if none)
   getFeatureIdsForNeighbourhoods = (): Id[] => {
-    if (this.state.filters.neighbourhoods.length === 0) {
-      return Array.from(this.features.keys());
-    }
-    const neighbourhoodFeatures = this.state.filters.neighbourhoods.flatMap(
-      (neighbourhood) => {
-        return this.expandToSubNeighbourhoods(neighbourhood);
-      }
-    );
-    return neighbourhoodFeatures.map((f) => f.id);
+    return getFeatureIdsForNeighbourhoods(this);
   };
 
   getFeatureIdsForProperties = (): Id[] => {
-    // If there are no layers being filtered at all, return all features.
-    if (Object.keys(this.propertyFilters).length === 0) {
-      return Array.from(this.features.keys());
-    }
-
-    const featureList = Array.from(this.features.values());
-
-    const filteredIds = featureList
-      .filter((f: Feature) => {
-        // Get filters specific to this feature's layer
-        const layerSpecificFilters = this.propertyFilters[f.layerId];
-
-        // If there are no filters defined for this feature's layer, it passes this check.
-        if (!layerSpecificFilters || Object.keys(layerSpecificFilters).length === 0) {
-          return true;
-        }
-
-        // Check if the feature matches ALL filters defined for its layer
-        const allFiltersMatch = Object.entries(layerSpecificFilters).every(
-          ([propertyKey, selectedValues]) => {
-            // If the filter has no values (e.g., empty array for categorical), it matches all features for this property.
-            if (Array.isArray(selectedValues) && selectedValues.length === 0) {
-              return true;
-            }
-
-            // Get the feature's property object
-            const featureProperty = f.properties.find(
-              (p) => p.property?.key === propertyKey
-            );
-
-            // If the feature doesn't have this property defined, it cannot match the filter.
-            if (!featureProperty) {
-              return false;
-            }
-
-            // Use the propertyValue if available (typically for linked values), otherwise fallback to the direct value
-            const featureValue = getFPI18n(featureProperty, this.getUserPreferences());
-
-            // Let's also try getting the raw value without i18n
-            const rawValue = featureProperty.value;
-
-            // If the feature has the property but the value is null/undefined, it also cannot match.
-            if (featureValue === undefined || featureValue === null) {
-              return false;
-            }
-
-            // Special handling for "Unset" values - they should not match range filters
-            if (
-              featureValue === 'Unset' ||
-              featureValue === '' ||
-              rawValue === null ||
-              rawValue === undefined
-            ) {
-              return false;
-            }
-
-            let match = false;
-            // Check if the feature's value matches the filter criteria
-            if (Array.isArray(selectedValues)) {
-              // Handle categorical filters (multi-select) - Already checked for empty array above
-              match = selectedValues.includes(featureValue);
-            } else if (
-              typeof selectedValues === 'object' &&
-              selectedValues !== null && // Ensure selectedValues is not null
-              'rangeMin' in selectedValues &&
-              'rangeMax' in selectedValues
-            ) {
-              // Handle range filters
-              const numericFeatureValue = Number(featureValue);
-              match =
-                !isNaN(numericFeatureValue) &&
-                numericFeatureValue >= selectedValues.rangeMin &&
-                numericFeatureValue <= selectedValues.rangeMax;
-            } else {
-              // Should not happen with current filter setting methods
-              match = false;
-            }
-            return match;
-          }
-        );
-
-        return allFiltersMatch;
-      })
-      .map((f) => f.id);
-
-    return filteredIds;
+    return getFeatureIdsForProperties(this);
   };
 
   // Features, given the selected Neighbourhoods and Properties
   getVisibleFeatureIds = (): Id[] => {
+    // If no layers are selects, return none.
+    if (this.state.prisms.layer.length === 0) {
+      return [];
+    }
     return Array.from(
       new Set(this.featuresForNeighbourhoods).intersection(
         new Set(this.featuresForProperties)
@@ -1419,72 +1462,7 @@ export class AppCtx {
   // FILTER Utils
 
   expandToSubNeighbourhoods = (neighbourhoodKey: string): Feature[] => {
-    let neighbourhoodFeatures = [];
-    if (neighbourhoodKey in subNeighbourhoods) {
-      subNeighbourhoods[neighbourhoodKey as keyof typeof subNeighbourhoods].forEach(
-        (n) => {
-          neighbourhoodFeatures.push(
-            ...this.state.resources.feature.filter(
-              (feature) =>
-                n ===
-                (feature as FeatureExtended).i18n?.[getLocale()]?.addressProperties
-                  ?.neighbourhood
-            )
-          );
-        }
-      );
-    } else {
-      neighbourhoodFeatures.push(
-        ...this.state.resources.feature.filter(
-          (feature) =>
-            neighbourhoodKey ===
-            (feature as FeatureExtended).i18n?.[getLocale()]?.addressProperties
-              ?.neighbourhood
-        )
-      );
-    }
-    return neighbourhoodFeatures;
-  };
-
-  startCircularFlight = (center: [number, number], radiusKm: number = 5): void => {
-    if (!this.map) return;
-
-    const STEPS = 360; // One step per degree
-    const STEP_DURATION = 500; // milliseconds per step
-    let currentAngle = 0;
-
-    const animate = () => {
-      // Convert angle to radians
-      const angleRad = (currentAngle * Math.PI) / 180;
-
-      // Calculate new position
-      const newLng = center[0] + (radiusKm / 111.32) * Math.cos(angleRad);
-      const newLat =
-        center[1] +
-        (radiusKm / (111.32 * Math.cos((center[1] * Math.PI) / 180))) *
-          Math.sin(angleRad);
-
-      // @ts-ignore
-      this.map?.cachedFlyTo({
-        center: [newLng, newLat],
-        zoom: 13.5,
-        speed: 0.04,
-        curve: 1,
-        easing: (t: number) => t,
-        run: true // This will execute the animation
-      });
-
-      // Increment angle
-      currentAngle = (currentAngle + 1) % 360;
-
-      // Schedule next frame
-      setTimeout(() => {
-        requestAnimationFrame(animate);
-      }, STEP_DURATION);
-    };
-
-    // Start animation
-    animate();
+    return expandToSubNeighbourhoods(this, neighbourhoodKey);
   };
 
   // ═══════════════════════
@@ -1518,11 +1496,13 @@ export class AppCtx {
 
   // FeatureIds for Selected Neighbourhoods
   featuresForNeighbourhoods: Id[] = $derived(
-    (this.featuresMap.size && this.getFeatureIdsForNeighbourhoods()) || []) as Id[]
+    (this.featuresMap.size && this.getFeatureIdsForNeighbourhoods()) || []
+  ) as Id[];
 
   // FeatureIds for Selected Properties
   featuresForProperties: Id[] = $derived(
-    (this.featuresMap.size && this.getFeatureIdsForProperties()) || []) as Id[]
+    (this.featuresMap.size && this.getFeatureIdsForProperties()) || []
+  ) as Id[];
 
   // Intersection of Neighbourhoods and Properties featureIds
   featuresVisible: Id[] = $derived(this.getVisibleFeatureIds());
@@ -1537,77 +1517,10 @@ export class AppCtx {
   // TODO Make properties more efficient and first-class citizens
   propertyFilters = $derived(this.state.filters.properties);
 
-  setCategoricalPropertyFilter = (
-    layerId: Id,
-    propertyKey: string,
-    values: string[]
-  ) => {
-    this.state.filters.properties![layerId] = {
-      ...(this.state.filters.properties![layerId] || {}),
-      [propertyKey]: values
-    };
-  };
-
-  removeCategoricalPropertyFilter = (layerId: Id, propertyKey: string) => {
-    delete this.state.filters.properties![layerId]?.[propertyKey];
-  };
-
-  setRangePropertyFilter = (
-    layerId: Id,
-    propertyKey: string,
-    values: [number, number]
-  ) => {
-    // Only update if the values have actually changed to prevent unnecessary reactivity triggers
-    if (
-      this.state.filters.properties![layerId]?.[propertyKey]?.rangeMin !== values[0] ||
-      this.state.filters.properties![layerId]?.[propertyKey]?.rangeMax !== values[1]
-    ) {
-      // Ensure the layer object exists
-      if (!this.state.filters.properties![layerId]) {
-        this.state.filters.properties![layerId] = {};
-      }
-
-      // Get the existing range filter or find the property definition to get global min/max
-      const existingRangeFilter =
-        this.state.filters.properties![layerId]?.[propertyKey] || {};
-
-      // If globalMin/globalMax are missing, find them from the property definition
-      let globalMin = existingRangeFilter.globalMin;
-      let globalMax = existingRangeFilter.globalMax;
-
-      if (globalMin === undefined || globalMax === undefined) {
-        // Find the property definition to get the global min/max
-        const layer = this.state.resources.layer.find((l) => l.id === layerId);
-        if (layer) {
-          const project = this.state.resources.project.find(
-            (p) => p.id === layer.projectId
-          );
-          if (project) {
-            const property = project.properties?.find((p) => p.key === propertyKey);
-            if (
-              property &&
-              typeof property.min === 'number' &&
-              typeof property.max === 'number'
-            ) {
-              globalMin = property.min;
-              globalMax = property.max;
-            }
-          }
-        }
-      }
-
-      this.state.filters.properties![layerId][propertyKey] = {
-        globalMin,
-        globalMax,
-        rangeMin: values[0],
-        rangeMax: values[1]
-      };
-    }
-  };
-
   // FEATURE COLLECTIONS -- Utils
 
-  getFeaturesByIds = (ids: Id[]): Feature[] => ids.map((id) => this.features.get(id)).filter((f) => f !== undefined);
+  getFeaturesByIds = (ids: Id[]): Feature[] =>
+    ids.map((id) => this.features.get(id)).filter((f) => f !== undefined);
 
   // FEATURE COLLECTIONS -- Convenience Methods
 
@@ -1665,12 +1578,12 @@ export class AppCtx {
   };
 
   closeLeftPanel = (): void => {
-    this.state.panels.filters = false;
     this.state.panels.maps = false;
+    this.state.panels.stars = false;
   };
 
   closeRightPanel = (): void => {
-    this.state.panels.stars = false;
+    this.state.panels.filters = false;
     this.state.panels.settings = false;
   };
 
@@ -1699,6 +1612,10 @@ export class AppCtx {
   // KEYDOWN HANDLERS
   registerKeydownHandlers = (): void => {
     document.addEventListener('keydown', this.handleKeydown);
+  };
+
+  unregisterKeydownHandlers = (): void => {
+    document.removeEventListener('keydown', this.handleKeydown);
   };
 
   handleKeydown = (event: KeyboardEvent): void => {
@@ -1780,81 +1697,6 @@ export class AppCtx {
         } as any
       }
     };
-  };
-
-  updateNewFeatureProperty = (
-    propertyId: Id,
-    object: Partial<FeatureProperty>
-  ): void => {
-    if (!this.newFeature?.feature) {
-      return;
-    }
-
-    // Initialize properties array if it doesn't exist
-    if (!this.newFeature.feature.properties) {
-      this.newFeature.feature.properties = [];
-    }
-
-    const propIndex = this.newFeature.feature.properties.findIndex(
-      (p) => p!.propertyId === propertyId
-    );
-
-    let updatedProperties: any[];
-
-    if (propIndex >= 0) {
-      // Update existing property
-      updatedProperties = [...this.newFeature.feature.properties];
-      updatedProperties[propIndex] = {
-        ...updatedProperties[propIndex]!,
-        ...object
-      };
-    } else {
-      // Create new property
-      const newProperty = {
-        id: '', // Will be set when saved
-        propertyId,
-        featureId: '', // Will be set when feature is created
-        value: '',
-        ...object
-      };
-
-      // Only add i18n if it's provided in the object
-      if (object.i18n) {
-        newProperty.i18n = object.i18n;
-      }
-
-      updatedProperties = [...this.newFeature.feature.properties, newProperty];
-    }
-
-    // Create a new newFeature object to ensure reactivity
-    this.newFeature = {
-      ...this.newFeature,
-      feature: {
-        ...this.newFeature.feature,
-        properties: updatedProperties
-      }
-    };
-  };
-
-  updateNewFeatureI18nProperty = (
-    propertyId: Id,
-    object: Partial<FeaturePropertyI18nDB>,
-    locale: Locale = getLocale()
-  ): void => {
-    const propIndex = this.newFeature?.feature?.properties?.findIndex(
-      (p) => p!.propertyId === propertyId
-    );
-
-    if (
-      propIndex !== undefined &&
-      propIndex >= 0 &&
-      this.newFeature?.feature?.properties?.[propIndex]?.i18n
-    ) {
-      this.newFeature.feature.properties[propIndex].i18n![locale] = {
-        ...this.newFeature.feature.properties[propIndex].i18n![locale as Locale]!,
-        ...(object as { locale: Locale; value: string; valueGen: boolean })
-      };
-    }
   };
 
   getNewFeature = (): DeepPartial<NewFeatureTask> | null => {
@@ -2200,22 +2042,27 @@ export class AppCtx {
     cache: Map<Id, T>,
     newItems: T[]
   ): void => {
-    this.syncMap(cache, newItems, item => item.id);
+    this.syncMap(cache, newItems, (item) => item.id);
   };
 
   private syncCodeToIdMap = <T extends { id: Id; code: Code }>(
     codeMap: Map<Code, Id>,
     newItems: T[]
   ): void => {
-    this.syncMap(codeMap, newItems, item => item.code, item => item.id);
+    this.syncMap(
+      codeMap,
+      newItems,
+      (item) => item.code,
+      (item) => item.id
+    );
   };
 }
-export const MAP_STATE_KEY = Symbol('mapContext');
+export const APPCTX_KEY = Symbol('mapContext');
 
 export const setAppCtx = (queryClient: QueryClient, user: SessionUser | null) => {
   const context = new AppCtx(queryClient, user);
-  context.init(user?.id ?? null);
-  return setContext(MAP_STATE_KEY, context);
+  // Don't initialize immediately - let the session watcher handle it after mount
+  return setContext(APPCTX_KEY, context);
 };
 
-export const getAppCtx = (): ReturnType<typeof setAppCtx> => getContext(MAP_STATE_KEY);
+export const getAppCtx = (): ReturnType<typeof setAppCtx> => getContext(APPCTX_KEY);

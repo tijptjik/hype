@@ -5,6 +5,8 @@ import { Star, Check, PencilSquare } from '@steeze-ui/heroicons';
 // I18N
 import { getI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
+// SERVICES
+import { updateNewFeatureProperty } from '$lib/client/services/property';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
@@ -31,13 +33,10 @@ const userPreferences = $derived(appCtx.getUserPreferences());
 
 // STATE : LOCAL
 let gradePropertyId: Id = $derived(
-  cardCtx.isNewMode
-    ? appCtx
-        .getLayerById(feature.layerId)
-        ?.properties?.find((p) => p.property?.key === 'grade')?.propertyId
-    : (feature.properties as FeatureProperty[])?.find(
-        (p) => p.property?.key === 'grade'
-      )?.propertyId
+    appCtx.cache.layer.get(feature.layerId)?.properties?.find((p: any) => {
+      const property = appCtx.cache.property.get(p.propertyId);
+      return property?.key === 'grade';
+    })?.propertyId
 ) as Id;
 
 let grade = $derived(
@@ -82,7 +81,8 @@ function handleTitleCancel() {
 }
 
 function handleGradeSelect(newGrade: number) {
-  appCtx.updateNewFeatureProperty(gradePropertyId, {
+  updateNewFeatureProperty(appCtx, gradePropertyId, {
+    propertyId: gradePropertyId,
     value: newGrade.toString()
   });
 }
@@ -172,7 +172,7 @@ function handleGradeSelect(newGrade: number) {
       <span>{grade}/5</span>
     {:else}
       <span class="translate-x-[28px] rounded-full bg-black text-[8px] text-white"
-        >unrated</span>
+        >{m.misty_quiet_sheep_push()}</span>
       <Icon src={Star} class="h-6 w-6" theme="solid" />
     {/if}
   </div>

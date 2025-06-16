@@ -27,6 +27,7 @@ const resetInput = async (e: Event) => {
   <input
     id="search"
     type="text"
+    autocomplete="off"
     bind:value={searchTerm}
     onkeydown={(e) => {
       if (e.key === 'Escape') {

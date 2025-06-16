@@ -1,6 +1,10 @@
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+// SCHEMA
+import { organisation } from './organisation';
+import { image } from './image';
+import { user } from './user';
 // ENUM
 import { ProjectRoleType, supportedLocales } from '../../enums';
 
@@ -23,14 +27,22 @@ export const project = sqliteTable('project', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => nanoid(12)),
-  organisationId: text('organisationId').notNull(),
+  organisationId: text('organisationId')
+    .notNull()
+    .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
   // Public identifier
   code: text('code').unique().notNull(),
-  imageId: text('imageId'),
+  imageId: text('imageId').references(() => image.id, {
+    onDelete: 'set null',
+    onUpdate: 'cascade'
+  }),
   // Accessible to the public in the app
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
   publishedAt: text('publishedAt'),
-  publisherId: text('publisherId'),
+  publisherId: text('publisherId').references(() => user.id, {
+    onDelete: 'set null',
+    onUpdate: 'cascade'
+  }),
   // False : Project may be shown in the Admin Panel
   // True : Project is considered deleted
   isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
@@ -93,7 +105,9 @@ export const projectRole = sqliteTable(
     projectId: text('projectId')
       .notNull()
       .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    userId: text('userId').notNull(),
+    userId: text('userId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     role: text('role', {
       enum: Object.values(ProjectRoleType) as [string, ...string[]]
     })

@@ -1,6 +1,11 @@
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+// SCHEMA
+import { organisation } from './organisation';
+import { project } from './project';
+import { user } from './user';
+import { property } from './property';
 // ENUM
 import { supportedLocales } from '../../enums';
 // TYPES
@@ -25,8 +30,12 @@ export const layer = sqliteTable('layer', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => nanoid(12)),
-  organisationId: text('organisationId').notNull(),
-  projectId: text('projectId').notNull(),
+  organisationId: text('organisationId')
+    .notNull()
+    .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  projectId: text('projectId')
+    .notNull()
+    .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
   // Additional Information
   metadata: text('metadata', { mode: 'json' }).$type<LayerMetadata>(),
   // Is this layer enabled for new users by default?
@@ -36,7 +45,8 @@ export const layer = sqliteTable('layer', {
   // Accessible to the public in the app
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
   publishedAt: text('publishedAt'),
-  publisherId: text('publisherId'),
+  publisherId: text('publisherId')
+    .references(() => user.id, { onDelete: 'set null', onUpdate: 'cascade' }),
   // False : Layer may be shown in the Admin Panel
   // True : Layer is considered deleted
   isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
@@ -86,8 +96,12 @@ export const layerI18n = sqliteTable(
  * Links properties to layers with visibility settings
  */
 export const layerProperty = sqliteTable('layerProperty', {
-  layerId: text('layerId').notNull(),
-  propertyId: text('propertyId').notNull(),
+  layerId: text('layerId')
+    .notNull()
+    .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  propertyId: text('propertyId')
+    .notNull()
+    .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
   isVisible: integer('isVisible', { mode: 'boolean' }).notNull().default(true),
   isUserContributed: integer('isUserContributed', { mode: 'boolean' })
     .notNull()

@@ -1,6 +1,6 @@
 <script lang="ts">
-// UTILS
-import { displaySelectedFilters } from '$lib/utils/formatting';
+// SERVICES
+import { displaySelectedFilters } from '$lib/client/services/property';
 // TYPES
 import type { Id, Property } from '$lib/types';
 
@@ -13,7 +13,7 @@ type Props = {
 let { layerId, appCtx, properties }: Props = $props();
 
 let displayText = $derived(
-  displaySelectedFilters(appCtx.propertyFilters?.[layerId], properties, appCtx)
+  displaySelectedFilters(appCtx, appCtx.propertyFilters?.[layerId], properties)
 );
 </script>
 

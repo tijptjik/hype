@@ -488,4 +488,54 @@ export const OMNI_CONTEXT_KEY = Symbol('omniContext');
 export const setOmniContext = (appCtx: AppCtx) =>
   setContext(OMNI_CONTEXT_KEY, new OmniContext(appCtx));
 
-export const getOmniContext = (): OmniContext => getContext(OMNI_CONTEXT_KEY);
+export const getOmniContext = (): OmniContext => {
+  const ctx = getContext(OMNI_CONTEXT_KEY);
+  if (!ctx) {
+    // Return a safe proxy object that prevents errors when OmniContext isn't ready
+    return new Proxy({} as OmniContext, {
+      get(target, prop) {
+        if (prop === 'state') return {
+          mode: 'search',
+          isTrayOpen: false,
+          isCardOpen: false,
+          searchTerm: '',
+          focusedIndex: -1
+        };
+        if (prop === 'searchResults') return {
+          features: [],
+          neighbourhoods: [],
+          walks: []
+        };
+        if (prop === 'pageState') return PageState.NoTransition;
+        if (prop === 'isIntentionallyClosing') return false;
+        if (prop === 'cardCtx') return null;
+        if (prop === 'limits') return { features: 5, neighbourhoods: 3, walks: 1 };
+        if (prop === 'isFeatureMode') return false;
+        if (prop === 'isNewFeatureMode') return false;
+        if (prop === 'isSearchMode') return true;
+        if (prop === 'isNavigationMode') return false;
+        if (prop === 'totalResults') return 0;
+        if (prop === 'navIndex') return -1;
+        if (prop === 'navTitle') return '';
+        // Return no-op functions for methods
+        if (typeof prop === 'string' && (
+          prop.startsWith('set') || 
+          prop.startsWith('clear') || 
+          prop.startsWith('focus') || 
+          prop.startsWith('reset') || 
+          prop.startsWith('cancel') || 
+          prop.startsWith('close') || 
+          prop.startsWith('open') || 
+          prop.startsWith('toggle') || 
+          prop.startsWith('select') || 
+          prop.startsWith('handle') || 
+          prop.startsWith('nav')
+        )) {
+          return () => {};
+        }
+        return undefined;
+      }
+    }) as OmniContext;
+  }
+  return ctx;
+};

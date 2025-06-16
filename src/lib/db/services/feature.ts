@@ -16,6 +16,8 @@ import {
   featureI18n,
   featureProperty,
   featurePropertyI18n,
+  featureImage,
+  image,
   layer
 } from '../schema';
 // SERVICES
@@ -513,11 +515,11 @@ export const createFeatureWithRelated = async (db: Database, data: FeatureNew) =
 };
 
 /**
- * Updates a feature with i18n, properties.
+ * Updates a feature with i18n, properties, and image following FeatureAPI schema.
  * @param db - The database instance
  * @param data - The feature data to update
  * @param featureId - Optional feature ID (defaults to data.id)
- * @returns The updated project with related data
+ * @returns The updated feature with related data following FeatureAPI
  */
 export const updateFeatureWithRelated = async (
   db: Database,
@@ -541,24 +543,42 @@ export const updateFeatureWithRelated = async (
     featureId
   );
 
-  const layerNested = await db.query.layer.findFirst({
-    where: eq(layer.id, feature.layerId),
-    with: {
-      i18n: true,
-      project: {
-        with: {
-          i18n: true,
-          organisation: { with: { i18n: true } }
-        }
-      }
-    }
-  });
+  // Use direct SQL query to get correct featureImage records (Drizzle relations are broken due to missing FK)
+  const featureImageRecords = await db
+    .select()
+    .from(featureImage)
+    .where(eq(featureImage.featureId, idToUse));
+
+  // Get the actual image data for each featureImage record
+  let selectedImage: ImageDB | null = null;
+  if (featureImageRecords.length > 0) {
+    // Build the correct structure for selectCanonicalOrFirstImage
+    const imagesWithData = await Promise.all(
+      featureImageRecords.map(async (featureImg) => {
+        const imageData = await db.query.image.findFirst({
+          where: eq(image.id, featureImg.imageId)
+        });
+        return {
+          ...featureImg,
+          image: imageData
+        };
+      })
+    );
+
+    // Select canonical or first image using the correct data
+    selectedImage = selectCanonicalOrFirstImage(imagesWithData);
+    
+    console.log('DEBUG updateFeatureWithRelated - Using direct query, found', featureImageRecords.length, 'images for feature', idToUse);
+    console.log('DEBUG updateFeatureWithRelated - Selected image:', selectedImage?.id || 'null');
+  } else {
+    console.log('DEBUG updateFeatureWithRelated - No images found for feature', idToUse);
+  }
 
   return {
     ...feature,
     i18n,
     properties,
-    layer: layerNested
+    image: selectedImage
   };
 };
 
@@ -879,5 +899,6 @@ const selectCanonicalOrFirstImage = (
       selectedImage = featureImages[0].image;
     }
   }
+  
   return selectedImage;
 };

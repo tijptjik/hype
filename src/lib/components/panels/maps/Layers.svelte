@@ -83,18 +83,15 @@ let handleReset = () => {
     <FilterBar bind:searchTerm onReset={handleReset} />
   {/if}
   <ResourceContainer>
-    {#each filteredLayers as layer}
-      {#await appCtx.getHierarchy(layer) then {project, organisation}}
-        <FilteredLayer
-          {layer}
-          {project}
-          {organisation}
-          selectedClass="bg-secondary"
-          isSelected={selectedLayers.includes(layer.id)}
-          onClick={() => appCtx.toggleLayer(layer.id)} />
-      {:catch error}
-        <p>Error loading layers</p>
-      {/await}
+    {#each filteredLayers as layer (layer.id)}
+      {@const hierarchy = appCtx.getHierarchySync(layer)}
+      <FilteredLayer
+        {layer}
+        project={hierarchy.project}
+        organisation={hierarchy.organisation}
+        selectedClass="bg-secondary"
+        isSelected={selectedLayers.includes(layer.id)}
+        onClick={() => appCtx.toggleLayer(layer.id)} />
     {/each}
   </ResourceContainer>
 </Section>

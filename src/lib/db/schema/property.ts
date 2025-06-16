@@ -1,6 +1,8 @@
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+// SCHEMA
+import { project } from './project';
 // ENUM
 import {
   FieldDiscriminator,
@@ -26,7 +28,9 @@ export const property = sqliteTable('property', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => nanoid(12)),
-  projectId: text('projectId').notNull(),
+  projectId: text('projectId')
+    .notNull()
+    .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
   type: text('type', {
     enum: Object.values(FieldDiscriminator) as [string, ...string[]]
   })

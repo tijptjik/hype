@@ -6,7 +6,7 @@
       "dependencies": {
         "@emeraldpay/hashicon": "^0.5.2",
         "@inlang/paraglide-js": "^2.1.0",
-        "@libsql/client": "^0.15.8",
+        "@libsql/client": "0.15.8",
         "@mapbox/tilebelt": "^2.0.2",
         "@placemarkio/geo-viewport": "^1.0.2",
         "@steeze-ui/heroicons": "^2.4.2",

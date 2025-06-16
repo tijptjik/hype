@@ -2,20 +2,26 @@
 // I18N
 import { getLocale } from '$lib/i18n';
 import { m } from '$lib/i18n';
+import { getI18n } from '$lib/i18n';
+// CONTEXT
+import { getAppCtx } from '$lib/context/app.svelte';
 // COMPONENTS
 import Header from '$lib/components/forms/extra/Header.svelte';
-import SelectFieldComplex from '$lib/components/forms/fields/SelectComplex.svelte';
-import RangeField from '$lib/components/forms/fields/Range.svelte';
-import ToggleField from '$lib/components/forms/fields/Toggle.svelte';
-import InputField from '$lib/components/forms/fields/Input.svelte';
-import TextareaField from '$lib/components/forms/fields/Textarea.svelte';
+import FeatureInputField from '$lib/components/forms/fields/FeatureInput.svelte';
+import FeatureTextareaField from '$lib/components/forms/fields/FeatureTextarea.svelte';
+import FeatureRangeField from '$lib/components/forms/fields/FeatureRange.svelte';
+import FeatureToggleField from '$lib/components/forms/fields/FeatureToggle.svelte';
+import FeatureSelect from '$lib/components/forms/fields/FeatureSelect.svelte';
 import { fade } from 'svelte/transition';
 // TYPES
-import type { SectionProps, Field } from '$lib/types';
+import type { SectionProps } from '$lib/types';
 
 // STATE : PROPS
 let sectionProps: SectionProps = $props();
 let { fields, fieldDiscriminator } = sectionProps;
+
+// STATE : CONTEXT
+const appCtx = getAppCtx();
 
 // STATE : FORM
 let { form } = sectionProps.form;
@@ -27,9 +33,19 @@ const getPropertyValue = (item: any, key: string) => {
   return item?.[key] ?? item?.value ?? '';
 };
 
+// Helper function to get current form value for a property
+const getCurrentFormValue = (item: any, propertyId: string): string => {
+  // For form editing, we get the value from the form item directly
+  if (item?.i18n?.[locale]?.value) {
+    return item.i18n[locale].value;
+  }
+  return item?.value || '';
+};
+
 // Helper function to check if property should be visible
-const isPropertyVisible = (item: any) => {
-  return item?.property?.type === fieldDiscriminator && item?.property;
+const isPropertyVisible = (item: any, property: any) => {
+  const result = property?.type === fieldDiscriminator && property;
+  return result;
 };
 
 // Type-safe form access
@@ -39,11 +55,35 @@ const getFormField = (fieldRoot: string) => {
 };
 
 // Type guard for property items
-const isPropertyItem = (item: unknown): item is { property: any; id: string } => {
+const isPropertyItem = (item: unknown): item is { propertyId: string; featureId: string; propertyValueId?: string; value?: string; i18n?: any; property?: any } => {
   return (
-    typeof item === 'object' && item !== null && 'property' in item && 'id' in item
+    typeof item === 'object' && item !== null && 'propertyId' in item && 'featureId' in item
   );
 };
+
+// Helper function to update form value for specifier properties
+const updateFormSpecifierValue = (fieldRoot: string, index: number, newValue: string, property: any) => {
+  form.update(($form: any) => {
+    if (Array.isArray($form[fieldRoot]) && $form[fieldRoot][index]) {
+      if (property.isTranslatable) {
+        // Update i18n value for translatable properties
+        if (!$form[fieldRoot][index].i18n) {
+          $form[fieldRoot][index].i18n = {};
+        }
+        $form[fieldRoot][index].i18n[locale] = {
+          locale,
+          value: newValue,
+          valueGen: false
+        };
+      } else {
+        // Update universal value for non-translatable properties
+        $form[fieldRoot][index].value = newValue;
+      }
+    }
+    return $form;
+  });
+};
+
 </script>
 
 <div
@@ -54,8 +94,7 @@ const isPropertyItem = (item: unknown): item is { property: any; id: string } =>
       ? '2xl:basis-1/4-gap-6 basis-1/3-gap-6'
       : 'basis-1/2-gap-6 2xl:basis-1/3-gap-6'}">
   <Header {...sectionProps} />
-  {#each Object.entries(fields) as [fieldRoot_, field]}
-    {@const fieldRoot = fieldRoot_ as keyof typeof $form}
+    {#each Object.entries(fields) as [fieldRoot_, field]}
     {@const formField = getFormField(fieldRoot_)}
     <div
       class="grid grid-cols-1 {fieldDiscriminator == 'classifier'
@@ -64,71 +103,66 @@ const isPropertyItem = (item: unknown): item is { property: any; id: string } =>
       {#if field.isArray && Array.isArray(formField)}
         {#each formField as item, index}
           {#if isPropertyItem(item)}
-            {#key item.id}
-              {#if isPropertyVisible(item)}
+            {@const property = item.property || appCtx.cache.property.get(item.propertyId)}
+            {#key `${item.featureId}-${item.propertyId}`}
+                {#if isPropertyVisible(item, property)}
                 <div
                   transition:fade
                   class="flex items-start justify-between gap-2 rounded-lg bg-base-100 p-4 shadow-lg">
                   <div class="text-md w-24 flex-grow-0">
-                    {item?.property?.i18n?.[getLocale()]?.label ||
+                    {getI18n(property, 'label', appCtx.getUserPreferences()) ||
                       m.red_arable_herring_trust()}
                     <br />
                     <small class="text-xs text-neutral-content/50"
-                      >{item?.property?.key || ''}</small>
+                      >{property?.key || ''}</small>
                   </div>
                   <div class="flex-grow">
-                    {#if item?.property?.component === 'SelectField'}
-                      <SelectFieldComplex
-                        {...sectionProps}
-                        {locale}
-                        fieldRoot={fieldRoot_ as Field}
-                        {field}
-                        fieldIndex={index}
-                        fieldKey={'propertyValueId' as Field} />
-                    {:else if item?.property?.component === 'RangeField'}
-                      <RangeField
-                        {...sectionProps}
-                        fieldRoot={fieldRoot_ as Field}
-                        {field}
-                        fieldIndex={index}
-                        fieldKey="value" />
-                    {:else if item?.property?.component === 'ToggleField'}
-                      <ToggleField
-                        label={item?.property?.i18n?.[getLocale()]?.label || 'Toggle'}
-                        checked={!!getPropertyValue(item, 'value')}
-                        onChange={(e) => {
-                          e.preventDefault();
+                    {#if property?.component === 'SelectField'}
+                      <FeatureSelect
+                        {property}
+                        value={item.propertyValueId || ''}
+                        userPreferences={appCtx.getUserPreferences()}
+                        {appCtx}
+                        propertyId={item.propertyId}
+                        onChange={(newValue) => {
                           form.update(($form: any) => {
-                            if (
-                              Array.isArray($form[fieldRoot_]) &&
-                              $form[fieldRoot_][index]
-                            ) {
-                              $form[fieldRoot_][index]['value'] = !getPropertyValue(
-                                item,
-                                'value'
-                              );
+                            if (Array.isArray($form[fieldRoot_]) && $form[fieldRoot_][index]) {
+                              $form[fieldRoot_][index].propertyValueId = newValue;
                             }
                             return $form;
                           });
                         }} />
-                    {:else if item?.property?.component === 'InputField'}
-                      <InputField
-                        {...sectionProps}
-                        fieldDiscriminator={fieldDiscriminator!}
-                        {locale}
-                        fieldRoot={fieldRoot_ as Field}
-                        {field}
-                        fieldIndex={index}
-                        fieldKey="value" />
-                    {:else if item?.property?.component === 'TextareaField'}
-                      <TextareaField
-                        {...sectionProps}
-                        fieldDiscriminator={fieldDiscriminator!}
-                        {locale}
-                        fieldRoot={fieldRoot_ as Field}
-                        {field}
-                        fieldIndex={index}
-                        fieldKey="value" />
+                    {:else if property?.component === 'RangeField'}
+                      <FeatureRangeField
+                        {property}
+                        value={getPropertyValue(item, 'value')}
+                        onChange={(newValue) => {
+                          updateFormSpecifierValue(fieldRoot_, index, newValue, property);
+                        }} />
+                    {:else if property?.component === 'ToggleField'}
+                      <FeatureToggleField
+                        {property}
+                        checked={!!getPropertyValue(item, 'value')}
+                        userPreferences={appCtx.getUserPreferences()}
+                        onChange={(checked) => {
+                          updateFormSpecifierValue(fieldRoot_, index, checked.toString(), property);
+                        }} />
+                    {:else if property?.component === 'InputField'}
+                      <FeatureInputField
+                        {property}
+                        value={getCurrentFormValue(item, item.propertyId)}
+                        userPreferences={appCtx.getUserPreferences()}
+                        onChange={(newValue) => {
+                          updateFormSpecifierValue(fieldRoot_, index, newValue, property);
+                        }} />
+                    {:else if property?.component === 'TextareaField'}
+                      <FeatureTextareaField
+                        {property}
+                        value={getCurrentFormValue(item, item.propertyId)}
+                        userPreferences={appCtx.getUserPreferences()}
+                        onChange={(newValue) => {
+                          updateFormSpecifierValue(fieldRoot_, index, newValue, property);
+                        }} />
                     {/if}
                   </div>
                 </div>

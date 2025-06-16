@@ -82,8 +82,15 @@ export const GET: RequestHandler = async ({
   );
 
   try {
-    // Add condition for specific project code
-    conditions.push(eq(project.code, params.code!));
+    // CHECK : Query parameter for lookup by ID vs code
+    const byId = url.searchParams.get('byId') === 'true';
+
+    // Add condition for specific project code or id
+    if (byId) {
+      conditions.push(eq(project.id, params.code!));
+    } else {
+      conditions.push(eq(project.code, params.code!));
+    }
 
     // DB : Get the project
     const result = await getProject(db, projectEntityWithRelations, conditions, {

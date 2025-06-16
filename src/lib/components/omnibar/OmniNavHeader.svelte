@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { onDestroy } from 'svelte';
+import { onMount } from 'svelte';
 // I18n
 import { getI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
@@ -22,7 +22,7 @@ let collectionTitle = $derived(
   omniCtx.isFeatureMode
     ? (() => {
         const feature = appCtx.getActiveFeature();
-        return feature 
+        return feature
           ? getI18n(feature, 'displayAddress', {
               ...appCtx.getUserPreferences(),
               allowMachineTranslation: true
@@ -32,21 +32,29 @@ let collectionTitle = $derived(
     : (() => {
         const collection = appCtx.getActiveCollection();
         return collection
-          ? getI18n(
-              collection,
-              'name',
-              appCtx.getUserPreferences(),
-              m.place()
-            )
+          ? getI18n(collection, 'name', appCtx.getUserPreferences(), m.place())
           : '';
       })()
 );
-let featureTitle = $derived((() => {
-  const feature = appCtx.getActiveFeature();
-  return feature
-    ? getI18n(feature, 'title', appCtx.getUserPreferences())
-    : '';
-})());
+let featureTitle = $derived(
+  (() => {
+    const feature = appCtx.getActiveFeature();
+    return feature ? getI18n(feature, 'title', appCtx.getUserPreferences()) : '';
+  })()
+);
+
+// Reset scroll states immediately when titles change
+$effect(() => {
+  featureTitle;
+  featureNeedsScroll = false;
+  featureContentReady = false;
+});
+
+$effect(() => {
+  collectionTitle;
+  collectionNeedsScroll = false;
+  collectionContentReady = false;
+});
 let newFeatureTitle = $derived(
   getI18n(
     appCtx.getNewFeature() as Feature,
@@ -65,220 +73,160 @@ let collectionMode = $derived(omniCtx.state.mode);
 let isNotFeatureMode = $derived(collectionMode !== 'feature');
 let isNewFeatureMode = $derived(collectionMode === 'new-feature');
 
-// SCROLL STATE
-type ScrollState = {
-  container: HTMLSpanElement | null;
-  content: HTMLSpanElement | null;
-  needsScroll: boolean;
-  isScrolling: boolean;
-  scrollWidth: number;
-  containerWidth: number;
-};
+// ═══════════════════════
+// 1.0 SCROLLING TEXT :: STATE
+// ═══════════════════════
 
-let featureScroll = $state<ScrollState>({
-  container: null,
-  content: null,
-  needsScroll: false,
-  isScrolling: false,
-  scrollWidth: 0,
-  containerWidth: 0
-});
+let featureContainer: HTMLDivElement | null = $state(null);
+let featureContent: HTMLSpanElement | null = $state(null);
+let featureNeedsScroll = $state(false);
+let featureContentReady = $state(false);
 
-let collectionScroll = $state<ScrollState>({
-  container: null,
-  content: null,
-  needsScroll: false,
-  isScrolling: false,
-  scrollWidth: 0,
-  containerWidth: 0
-});
+let collectionContainer: HTMLDivElement | null = $state(null);
+let collectionContent: HTMLSpanElement | null = $state(null);
+let collectionNeedsScroll = $state(false);
+let collectionContentReady = $state(false);
 
-function setupScroll(state: ScrollState) {
-  if (!state.container || !state.content) return;
+// ═══════════════════════
+// 2.0 SCROLLING TEXT :: MEASUREMENT
+// ═══════════════════════
 
-  // Stop any existing animation
-  state.isScrolling = false;
+function checkScrollNeed(
+  container: HTMLDivElement | null,
+  content: HTMLSpanElement | null
+): boolean {
+  if (!container || !content) return false;
 
-  // Clean up any existing duplicates more thoroughly
-  const existingDuplicates = state.container.querySelectorAll('span:not(:first-child)');
-  existingDuplicates.forEach(dup => dup.remove());
+  const containerWidth = container.clientWidth;
+  const contentWidth = content.scrollWidth;
+  return contentWidth > containerWidth - 30; // Buffer for tilde
+}
+
+function checkScrollNeedForText(container: HTMLDivElement | null, text: string): boolean {
+  if (!container || !text) return false;
+
+  // Create a temporary element to measure the text width
+  const tempElement = document.createElement('span');
+  tempElement.style.position = 'absolute';
+  tempElement.style.visibility = 'hidden';
+  tempElement.style.whiteSpace = 'nowrap';
+  tempElement.style.pointerEvents = 'none';
   
-  // Wait a frame to ensure cleanup is complete
+  // Copy styles from container to get accurate measurement
+  const containerStyle = window.getComputedStyle(container);
+  tempElement.style.fontSize = containerStyle.fontSize;
+  tempElement.style.fontFamily = containerStyle.fontFamily;
+  tempElement.style.fontWeight = containerStyle.fontWeight;
+  
+  tempElement.textContent = text;
+  document.body.appendChild(tempElement);
+  
+  const textWidth = tempElement.scrollWidth;
+  const containerWidth = container.clientWidth;
+  
+  document.body.removeChild(tempElement);
+  
+  return textWidth > containerWidth - 30; // Buffer for tilde
+}
+
+// ═══════════════════════
+// 3.0 SCROLLING TEXT :: LIFECYCLE
+// ═══════════════════════
+
+onMount(() => {
+  const checkAll = () => {
+    featureNeedsScroll = checkScrollNeed(featureContainer, featureContent);
+    collectionNeedsScroll = checkScrollNeed(collectionContainer, collectionContent);
+  };
+
+  checkAll();
+  window.addEventListener('resize', checkAll);
+
+  return () => {
+    window.removeEventListener('resize', checkAll);
+  };
+});
+
+// ═══════════════════════
+// 4.0 SCROLLING TEXT :: ANIMATION RESET
+// ═══════════════════════
+
+function resetAnimation(container: HTMLDivElement | null) {
+  if (!container) return;
+  
+  const wrapper = container.querySelector('.scroll-wrapper') as HTMLDivElement;
+  if (!wrapper) return;
+  
+  // Force animation restart by removing and re-adding the animate class
+  wrapper.classList.remove('animate');
+  wrapper.style.animation = 'none';
+  wrapper.style.transform = 'translateX(0)'; // Reset position to start
+  
+  // Force reflow
+  wrapper.offsetHeight;
+  
+  // Re-add animation
   requestAnimationFrame(() => {
-    if (!state.content || !state.container) return;
-    
-    // Reset styles
-    state.content.style.transform = 'translateX(0)';
-    state.content.style.transition = 'none';
-    state.content.style.position = 'relative';
-
-    // Measure content width without the tilde - we'll position the duplicate at the content end
-    const rect = state.content.getBoundingClientRect();
-    state.scrollWidth = rect.width;
-    state.containerWidth = state.container.getBoundingClientRect().width;
-    
-    // Check if we need scroll (add small buffer for tilde)
-    state.needsScroll = state.scrollWidth > (state.containerWidth - 25);
-
-    if (state.needsScroll && !state.isScrolling) {
-      // Add overflow class to show tilde
-      state.container.classList.add('overflow-hidden');
-      startScrollAnimation(state);
-    } else {
-      // Remove overflow class if no scroll needed
-      state.container.classList.remove('overflow-hidden');
+    wrapper.style.animation = '';
+    wrapper.style.transform = ''; // Clear inline transform
+    if (wrapper.classList.contains('needs-scroll')) {
+      wrapper.classList.add('animate');
     }
   });
 }
 
-async function startScrollAnimation(state: ScrollState) {
-  if (!state.needsScroll || !state.content || !state.container) return;
+// ═══════════════════════
+// 5.0 SCROLLING TEXT :: REACTIVE EFFECTS
+// ═══════════════════════
 
-  state.isScrolling = true;
-
-  while (state.needsScroll && state.content && state.container && state.isScrolling) {
-    // Create duplicate positioned immediately after the original content
-    const duplicate = state.content.cloneNode(true) as HTMLSpanElement;
-    duplicate.style.position = 'absolute';
-    duplicate.style.top = '0';
-    duplicate.style.left = `${state.scrollWidth}px`; // Position at end of original content
-    duplicate.style.transform = 'translateX(0)';
-    duplicate.style.transition = 'none';
-    state.container.appendChild(duplicate);
-
-    // Initial pause (3 seconds)
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-
-    if (!state.isScrolling || !state.content || !state.container || !state.needsScroll) {
-      if (duplicate && duplicate.parentNode) {
-        duplicate.remove();
-      }
-      break;
-    }
-
-    // Calculate animation duration - scroll exactly the content width
-    const duration = (state.scrollWidth / 45) * 1000; // 45px per second
-
-    // Animate both elements moving left by exactly the content width
-    state.content.style.transition = `transform ${duration}ms linear`;
-    duplicate.style.transition = `transform ${duration}ms linear`;
-    
-    state.content.style.transform = `translateX(-${state.scrollWidth}px)`;
-    duplicate.style.transform = `translateX(-${state.scrollWidth}px)`;
-
-    // Wait for animation to complete
-    await new Promise((resolve) => setTimeout(resolve, duration));
-
-    if (!state.isScrolling || !state.content || !state.container || !state.needsScroll) {
-      if (duplicate && duplicate.parentNode) {
-        duplicate.remove();
-      }
-      break;
-    }
-
-    // Reset positions for next cycle - original is now where duplicate was
-    state.content.style.transition = 'none';
-    state.content.style.transform = 'translateX(0)';
-    
-    // Remove duplicate safely
-    if (duplicate && duplicate.parentNode) {
-      duplicate.remove();
-    }
-
-    // Brief pause before next cycle
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-
-  state.isScrolling = false;
-}
-
-// Watch for content changes
 $effect(() => {
+  // Re-check when content changes and reset animation
   featureTitle;
-  // Stop any existing animation and reset
-  featureScroll.isScrolling = false;
-  featureScroll.needsScroll = false;
+  // Use the current reactive title to determine scroll need, not DOM content
+  const currentTitle = isNewFeatureMode ? newFeatureTitle : featureTitle;
+  const needsScroll = checkScrollNeedForText(featureContainer, currentTitle);
   
-  if (featureScroll.container) {
-    featureScroll.container.classList.remove('overflow-hidden');
+  featureNeedsScroll = needsScroll;
+  
+  // Only reset animation if scrolling is needed
+  if (needsScroll) {
+    resetAnimation(featureContainer);
   }
   
-  if (featureTitle && featureScroll.content && featureScroll.container) {
-    // Reset styles immediately
-    featureScroll.content.style.transform = 'translateX(0)';
-    featureScroll.content.style.transition = 'none';
-    
-    // Clean up duplicates
-    const duplicates = featureScroll.container.querySelectorAll('span:not(:first-child)');
-    duplicates.forEach(dup => dup.remove());
-    
-    // Setup scroll after DOM is updated and text is rendered
-    // Use longer delay for initial load when content might be loading
-    requestAnimationFrame(() => {
-      setTimeout(() => setupScroll(featureScroll), 300);
-    });
-  }
+  // Wait for DOM to update with new content before showing
+  setTimeout(() => {
+    const displayedText = featureContent?.textContent || '';
+    if (displayedText === currentTitle) {
+      featureContentReady = true;
+    }
+  }, 0);
 });
 
 $effect(() => {
+  // Re-check when content changes and reset animation
   collectionTitle;
-  // Stop any existing animation and reset
-  collectionScroll.isScrolling = false;
-  collectionScroll.needsScroll = false;
   
-  if (collectionScroll.container) {
-    collectionScroll.container.classList.remove('overflow-hidden');
+  // Use the current reactive title to determine scroll need, not DOM content
+  const currentTitle = isNewFeatureMode 
+    ? m.smart_crazy_cuckoo_play()
+    : collectionTitle + (isNotFeatureMode ? ` (${index} of ${collectionSize})` : '');
+  
+  const needsScroll = checkScrollNeedForText(collectionContainer, currentTitle);
+  collectionNeedsScroll = needsScroll;
+  
+  // Only reset animation if scrolling is needed
+  if (needsScroll) {
+    resetAnimation(collectionContainer);
   }
   
-  if (collectionTitle && collectionScroll.content && collectionScroll.container) {
-    // Reset styles immediately
-    collectionScroll.content.style.transform = 'translateX(0)';
-    collectionScroll.content.style.transition = 'none';
+  setTimeout(() => {
+    // Verify the displayed content matches the current reactive state
+    const displayedText = collectionContent?.textContent || '';
     
-    // Clean up duplicates
-    const duplicates = collectionScroll.container.querySelectorAll('span:not(:first-child)');
-    duplicates.forEach(dup => dup.remove());
-    
-    // Setup scroll after DOM is updated and text is rendered
-    // Use longer delay for initial load when content might be loading
-    requestAnimationFrame(() => {
-      setTimeout(() => setupScroll(collectionScroll), 300);
-    });
-  }
-});
-
-// Add resize observers
-$effect(() => {
-  const observer = new ResizeObserver(() => {
-    // Debounce resize events
-    setTimeout(() => {
-      if (featureTitle) setupScroll(featureScroll);
-      if (collectionTitle) setupScroll(collectionScroll);
-    }, 100);
-  });
-
-  if (featureScroll.container) observer.observe(featureScroll.container);
-  if (collectionScroll.container) observer.observe(collectionScroll.container);
-
-  return () => observer.disconnect();
-});
-
-// Cleanup on destroy
-onDestroy(() => {
-  featureScroll.needsScroll = false;
-  featureScroll.isScrolling = false;
-  collectionScroll.needsScroll = false;
-  collectionScroll.isScrolling = false;
-  
-  // Clean up any remaining duplicates
-  if (featureScroll.container) {
-    const duplicates = featureScroll.container.querySelectorAll('span:not(:first-child)');
-    duplicates.forEach(dup => dup.remove());
-  }
-  if (collectionScroll.container) {
-    const duplicates = collectionScroll.container.querySelectorAll('span:not(:first-child)');
-    duplicates.forEach(dup => dup.remove());
-  }
+    if (displayedText.includes(currentTitle) || displayedText === currentTitle) {
+      collectionContentReady = true;
+    }
+  }, 0);
 });
 </script>
 
@@ -305,32 +253,87 @@ onDestroy(() => {
       {/if}
       <div
         class="flex min-w-0 flex-1 -translate-y-0.5 flex-col overflow-hidden transition-[height] duration-300">
+        <!-- Collection Title -->
         <div
-          class="title relative h-[22px] w-full {collectionScroll.needsScroll
+          class="scroll-container relative h-[22px] w-full pt-1.5 {collectionNeedsScroll
             ? 'overflow-hidden'
-            : 'overflow-visible'} whitespace-nowrap"
-          bind:this={collectionScroll.container}>
-          <span
-            class="inline-block pr-3 text-xs text-base-content/60"
-            bind:this={collectionScroll.content}>
-            {#if isNewFeatureMode}
-              {m.smart_crazy_cuckoo_play()}
-            {:else}
-              {collectionTitle}
-              {#if isNotFeatureMode}
-                <span>({index} of {collectionSize})</span>
+            : 'overflow-visible'}"
+          bind:this={collectionContainer}>
+          {#if collectionContentReady}
+            <div
+              class="scroll-wrapper {collectionNeedsScroll
+                ? 'animate needs-scroll'
+                : ''}">
+              <span
+                class="scroll-primary text-xs text-base-content/60"
+                bind:this={collectionContent}>
+                {#if isNewFeatureMode}
+                  {m.smart_crazy_cuckoo_play()}
+                {:else}
+                  {collectionTitle}
+                  {#if isNotFeatureMode}
+                    <span>({index} of {collectionSize})</span>
+                  {/if}
+                {/if}
+              </span>
+              {#if collectionNeedsScroll}
+                <span class="scroll-secondary text-xs text-base-content/60">
+                  {#if isNewFeatureMode}
+                    {m.smart_crazy_cuckoo_play()}
+                  {:else}
+                    {collectionTitle}
+                    {#if isNotFeatureMode}
+                      <span>({index} of {collectionSize})</span>
+                    {/if}
+                  {/if}
+                </span>
               {/if}
-            {/if}
-          </span>
+            </div>
+          {:else}
+            <!-- Hidden content for measurement -->
+            <div class="scroll-wrapper opacity-0">
+              <span
+                class="scroll-primary text-xs text-base-content/60"
+                bind:this={collectionContent}>
+                {#if isNewFeatureMode}
+                  {m.smart_crazy_cuckoo_play()}
+                {:else}
+                  {collectionTitle}
+                  {#if isNotFeatureMode}
+                    <span>({index} of {collectionSize})</span>
+                  {/if}
+                {/if}
+              </span>
+            </div>
+          {/if}
         </div>
+
+        <!-- Feature Title -->
         <div
-          class="title relative h-6 w-full {featureScroll.needsScroll
+          class="scroll-container relative h-6 w-full {featureNeedsScroll
             ? 'overflow-hidden'
-            : 'overflow-visible'} whitespace-nowrap"
-          bind:this={featureScroll.container}>
-          <span class="inline-block pr-2 font-medium" bind:this={featureScroll.content}>
-            {isNewFeatureMode ? newFeatureTitle : featureTitle}
-          </span>
+            : 'overflow-visible'}"
+          bind:this={featureContainer}>
+          {#if featureContentReady}
+            <div
+              class="scroll-wrapper {featureNeedsScroll ? 'animate needs-scroll' : ''}">
+              <span class="scroll-primary font-medium" bind:this={featureContent}>
+                {isNewFeatureMode ? newFeatureTitle : featureTitle}
+              </span>
+              {#if featureNeedsScroll}
+                <span class="scroll-secondary font-medium">
+                  {isNewFeatureMode ? newFeatureTitle : featureTitle}
+                </span>
+              {/if}
+            </div>
+          {:else}
+            <!-- Hidden content for measurement -->
+            <div class="scroll-wrapper opacity-100">
+              <span class="scroll-primary font-medium" bind:this={featureContent}>
+                {isNewFeatureMode ? newFeatureTitle : featureTitle}
+              </span>
+            </div>
+          {/if}
         </div>
       </div>
     </div>
@@ -352,19 +355,16 @@ onDestroy(() => {
 </div>
 
 <style>
-.title {
-  max-width: 100%;
+/* ═══════════════════════
+   INFINITE SCROLL STYLES
+   ═══════════════════════ */
+
+.scroll-container {
   position: relative;
+  max-width: 100%;
 }
 
-.title.overflow-hidden span::after {
-  color: white;
-  content: ' ~';
-  padding-left: 10px;
-  display: inline-block;
-}
-
-.title.overflow-hidden {
+.scroll-container.overflow-hidden {
   mask-image: linear-gradient(
     to right,
     black 0px,
@@ -373,8 +373,55 @@ onDestroy(() => {
   );
 }
 
-/* Ensure smooth animation */
-.title span {
+.scroll-wrapper {
+  display: flex;
+  white-space: nowrap;
+  width: fit-content;
+}
+
+.scroll-wrapper.animate {
+  animation: scroll-single-title 13s linear infinite;
+  animation-delay: 3s; /* 3 second pause at start */
+}
+
+.scroll-wrapper.animate:hover {
+  animation-play-state: paused;
+}
+
+.scroll-primary {
+  display: inline-block;
+  padding-right: 10px; /* Further reduced gap between titles */
+}
+
+.scroll-secondary {
+  display: inline-block;
+}
+
+/* Add tilde indicator for overflow */
+.scroll-container.overflow-hidden .scroll-primary::after {
+  color: currentColor;
+  content: ' ~';
+  padding-left: 10px;
+  display: inline-block;
+}
+
+/* Animation that scrolls one title width then pauses */
+@keyframes scroll-single-title {
+  0% {
+    transform: translateX(0);
+  }
+  /* Scroll phase: 0% to 77% (10s out of 13s) - scroll to center second title (50% + half spacing) */
+  77% {
+    transform: translateX(calc(-50% - 15px));
+  }
+  /* Pause phase: 77% to 100% (3s pause) */
+  100% {
+    transform: translateX(calc(-50% - 15px));
+  }
+}
+
+/* Smooth animation performance */
+.scroll-wrapper {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   transform-style: preserve-3d;

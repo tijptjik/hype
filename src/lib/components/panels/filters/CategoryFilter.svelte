@@ -2,58 +2,54 @@
 // ICONS
 import { ChevronDown, ChevronUp } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
-// UTILS
+// SERVICES
 import {
-  getOriginalValue,
-  getPropValueInCurrentLocale,
-  displaySelectedProperties
-} from '$lib/utils/formatting';
+  toggleCategoricalPropertyValue,
+  displaySelectedProperties,
+  propertyValuesToLocalisedOptions
+} from '$lib/client/services/property';
+// I18N
+import { getI18n } from '$lib/i18n';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
-import type { Id, TranslatedValue } from '$lib/types';
+import type { Id, Property, PropertyValue } from '$lib/types';
 
 let appCtx = getAppCtx();
 
 type Props = {
-  key: string;
-  label: string;
-  values: Array<string | TranslatedValue>; // Property definition values
+  property: Property;
   layerId: Id;
-  defaultOpen: boolean;
+  defaultOpen?: boolean;
 };
 
-let { key, label, values = [], layerId, defaultOpen = false }: Props = $props();
+let { property, layerId, defaultOpen = false }: Props = $props();
 
-// Derive selected values directly from context's propertyFilters
-let selected = $derived(appCtx.propertyFilters?.[layerId]?.[key] ?? []);
+// Derive label from property i18n
+let label = $derived(
+  getI18n(property, 'label', appCtx.getUserPreferences(), property.key)
+);
+
+// Get property values from the property
+let propertyValues = $derived((property.values as PropertyValue[]) || []);
+
+// Create localized options map for display
+let localisedOptions = $derived(propertyValuesToLocalisedOptions(appCtx, propertyValues));
+
+// Derive selected values directly from context's propertyFilters using property ID
+let selectedPropertyValueIds = $derived(
+  appCtx.propertyFilters?.[layerId]?.[property.id] ?? []
+);
 
 let isOpen = $state(defaultOpen);
 
-function toggleValue(value: string | TranslatedValue) {
-  const originalValue = getOriginalValue(value);
-  const currentSelection = appCtx.propertyFilters?.[layerId]?.[key] ?? [];
-  const index = currentSelection.indexOf(originalValue);
-  let newSelection: string[];
-
-  if (index === -1) {
-    newSelection = [...currentSelection, originalValue];
-  } else {
-    newSelection = currentSelection.filter((v: string) => v !== originalValue);
-  }
-
-  // Update context using the dedicated methods
-  if (newSelection.length > 0) {
-    appCtx.setCategoricalPropertyFilter(layerId, key, newSelection);
-  } else {
-    // If selection becomes empty, remove the key from the filter object for this layer
-    appCtx.removeCategoricalPropertyFilter(layerId, key);
-  }
-
-  appCtx.zoomToAllVisibleFeatures();
+function toggleValue(value: PropertyValue) {
+  toggleCategoricalPropertyValue(appCtx, layerId, property.id, value.id);
 }
 
-let displayText = $derived(displaySelectedProperties(selected, values));
+let displayText = $derived(
+  displaySelectedProperties(selectedPropertyValueIds, localisedOptions)
+);
 </script>
 
 <div class="ml-4 min-h-10 flex-shrink-0 rounded-l-md bg-[#0a0a0a]">
@@ -73,8 +69,7 @@ let displayText = $derived(displaySelectedProperties(selected, values));
     <div
       class="flex max-h-[260px] flex-col overflow-y-auto overscroll-contain rounded-l-md bg-base-300"
       tabindex="-1">
-      {#each values as value (getOriginalValue(value))}
-        {@const originalValue = getOriginalValue(value)}
+      {#each propertyValues as value (value.id)}
         <label
           class="group label cursor-pointer justify-start gap-3 px-6 pr-2 first:pt-4 last:pb-4 focus:outline-none focus:ring-0"
           tabindex="0"
@@ -85,19 +80,19 @@ let displayText = $derived(displaySelectedProperties(selected, values));
             }
           }}>
           <div
-            class="flex h-2 w-2 items-center gap-2 rounded-full group-hover:bg-base-content/60 group-focus:outline-none group-focus:ring-0 group-focus-visible:bg-base-content/60 {selected.includes(
-              originalValue
+            class="flex h-2 w-2 items-center gap-2 rounded-full group-hover:bg-base-content/60 group-focus:outline-none group-focus:ring-0 group-focus-visible:bg-base-content/60 {selectedPropertyValueIds.includes(
+              value.id
             )
               ? 'bg-sky-600 group-hover:bg-sky-600/60 group-focus-visible:bg-sky-600/60'
               : 'border-1 border-base-content/60 bg-transparent'}">
           </div>
           <input
             type="checkbox"
-            checked={selected.includes(originalValue)}
+            checked={selectedPropertyValueIds.includes(value.id)}
             class="checkbox checkbox-sm hidden"
             onchange={() => toggleValue(value)} />
           <span class="label-text text-sm font-medium"
-            >{getPropValueInCurrentLocale(value)}</span>
+            >{localisedOptions.get(value.id) || '?'}</span>
         </label>
       {/each}
     </div>

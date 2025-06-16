@@ -1,4 +1,6 @@
 <script lang="ts">
+// ANIMATION
+import { slide } from 'svelte/transition';
 // ICONS
 import { Funnel, XMark } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
@@ -22,6 +24,8 @@ const {
 
 <div
   class="group flex cursor-pointer flex-row items-center justify-between gap-4 bg-black py-2 pl-8 pr-4 text-base-content caret-transparent transition-colors duration-200 focus:outline-none focus:ring-0"
+  in:slide={{ axis: 'y', duration: 200 }}
+  out:slide={{ axis: 'y', duration: 200 }}
   onclick={onClick}
   onkeydown={(e) => {
     if (e.key === 'Enter' || e.key === ' ') {

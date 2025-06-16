@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18n
+import { m } from '$lib/i18n';
 // SVELTE
 import { onMount } from 'svelte';
 // STORES
@@ -6,7 +8,6 @@ import { page } from '$app/state';
 // SERVICES
 import { getURLfromImage } from '$lib/client/services/image';
 // CONTEXT
-import { getImageContext } from '$lib/context/image.svelte';
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
 import Image from '$lib/components/common/Image.svelte';
@@ -18,9 +19,15 @@ import type { ImageDB } from '$lib/types';
 let SectionProps = $props();
 
 let { form } = SectionProps.form;
-let loadedImage = $state();
-// SERVICES
-const imageCtx = getImageContext();
+
+let imageSrc = $derived(
+  $form.image
+    ? getURLfromImage({
+        image: $form.image as ImageDB,
+        transformation: 'c_fill,h_320,w_320,q_auto'
+      })
+    : ''
+);
 
 // HANDLERS
 const adminCtx = getAdminCtx();
@@ -46,24 +53,17 @@ const navigateToGallery = (e: Event) => {
         <!-- Background Image -->
         <div class="z-1 absolute inset-0 h-full w-full bg-neutral opacity-50">
           <Image
-            src={getURLfromImage({
-              image: $form.image as ImageDB,
-              transformation: 'c_fill,h_320,w_320,q_auto'
-            })}
+            src={imageSrc}
             alt="Background Image"
             class="h-full w-full text-base-100 blur-sm"
             layout="cover"
             showLoading={false}
             showError={false} />
         </div>
-
         <!-- Main Image -->
         <div class="z-2 absolute h-full w-full overflow-hidden p-2">
           <Image
-            src={getURLfromImage({
-              image: $form.image as ImageDB,
-              transformation: 'c_fit,h_320,w_320,q_auto'
-            })}
+            src={imageSrc}
             alt="Canonical image of feature"
             class="mx-auto h-full overflow-hidden rounded-lg text-base-100"
             layout="contain"
@@ -77,7 +77,7 @@ const navigateToGallery = (e: Event) => {
       <div
         class="flex h-full w-full flex-col items-center justify-center gap-4 rounded-lg bg-base-300">
         <Icon src={Photo} class="h-8 w-8 text-base-content/50" />
-        <span class="text-base-content/50">upload in gallery</span>
+        <span class="text-base-content/50">{m.left_dizzy_trout_peel()}</span>
       </div>
     </a>
   {/if}

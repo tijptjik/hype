@@ -37,36 +37,13 @@ import type {
  ************/
 export const layerCollectionWithRelations = {
   i18n: true,
-  properties: {
-    with: {
-      property: {
-        with: {
-          i18n: true,
-          values: {
-            with: {
-              i18n: true
-            }
-          }
-        }
-      }
-    }
-  }
+  properties: true
 };
 
 export const layerEntityWithRelations = {
   ...layerCollectionWithRelations,
   publisher: {
     columns: userColumnsWithPrivacyProtected
-  },
-  project: {
-    with: {
-      i18n: true,
-      organisation: {
-        with: {
-          i18n: true
-        }
-      }
-    }
   }
 };
 

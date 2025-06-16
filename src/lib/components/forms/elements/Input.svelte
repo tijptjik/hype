@@ -16,7 +16,7 @@ let {
   isTranslated = false,
   inputType = 'text',
   onchange
-}: InputProps & { onchange: () => unknown } = $props();
+}: InputProps & { onchange: (value: string) => unknown } = $props();
 
 // SET PLACEHOLDER
 placeholder = placeholder
@@ -40,15 +40,14 @@ function getLabelCount() {
   name={id}
   bind:value
   {placeholder}
-  class="w-full truncate rounded-md bg-neutral p-2 focus:border-none focus:outline-none focus:ring-0 active:border-none active:outline-none group-focus-within:pr-0 {getLabelCount() ===
-  1
+  class="w-full truncate rounded-md bg-neutral p-2 focus:border-none focus:outline-none focus:ring-0 active:border-none active:outline-none group-focus-within:pr-0 h-12 text-sm {value == "" ? 'text-base-content/60 italic' : 'text-base-content text-bold'} {inputType !== 'number' && getLabelCount() === 1
     ? 'pr-10'
-    : getLabelCount() === 2
+    : inputType !== 'number' && getLabelCount() === 2
       ? 'pr-20'
-      : ''}"
-  class:padOne={getLabelCount() === 1}
-  class:padTwo={getLabelCount() === 2}
-  oninput={onchange} />
+      : inputType == 'number'
+        ? 'pr-2 group-focus-within:pr-2'
+        : ''}"
+  oninput={(e) => onchange((e.target as HTMLInputElement).value)} />
 
 {#if (isGenAI || locale !== 'core') && isTranslated}
   <div class="absolute right-2 top-[7px]">

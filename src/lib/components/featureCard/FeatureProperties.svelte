@@ -3,11 +3,11 @@
 import { getI18n, getFPI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // SERVICES
-import { sortProperties } from '$lib/client/services/property';
+import { getFeatureCardDisplayProperties } from '$lib/client/services/property';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 // Types
-import type { Feature } from '$lib/types';
+import type { Feature, FeatureProperty } from '$lib/types';
 
 // STATE : PROPS
 let { feature }: { feature: Feature } = $props();
@@ -19,13 +19,20 @@ const appCtx = getAppCtx();
 const userPreferences = $derived(appCtx.getUserPreferences());
 
 // FUNCTIONS
-// Sort properties by type (classifiers first) then rank
-const sortedProperties = $derived(sortProperties(feature.properties));
+// Get display properties for the feature
+const featureProperties = $derived(
+  getFeatureCardDisplayProperties(appCtx, feature.layerId, feature).filter(
+    (p) =>
+      p.property?.key !== 'grade' &&
+      getFPI18n(p, userPreferences) !== '-' &&
+      getFPI18n(p, userPreferences) !== m.great_crazy_squid_promise()
+  )
+);
 </script>
 
 <div
   class="justify-flex-start dir-rtl pointer-events-auto flex h-48 flex-wrap items-start gap-2 overflow-y-auto overscroll-contain pl-3 pr-0 w-100:pl-6 w-120:gap-4">
-  {#each sortedProperties.filter((p) => p.property?.key !== 'grade' && getFPI18n(p, userPreferences) !== '-' && getFPI18n(p, userPreferences) !== m.great_crazy_squid_promise()) as property}
+  {#each featureProperties as property (property.propertyId)}
     <div
       class="dir-ltr flex max-h-48 flex-[0_0_calc(50%-4px)] flex-col justify-evenly w-120:flex-[0_0_calc(50%-16px)]">
       <span class="font-mono text-xs font-normal uppercase tracking-wide text-gray-400">
