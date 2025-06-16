@@ -1,6 +1,20 @@
 @import 'https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css';
 
-/* GLOBALE STYLES */
+/* ═══════════════════════════════════════════════════════════════════════════════
+   MAP STYLES - TABLE OF CONTENTS
+   ═══════════════════════════════════════════════════════════════════════════════
+
+   1. GLOBAL STYLES ...................... Global map styles and utilities
+   2. MAPLIBRE OVERRIDES .................. MapLibre GL specific overrides  
+   3. FEATURE MARKERS .................... Custom feature marker styling
+   4. USER LOCATION ...................... User location marker and controls
+   5. MAP CONTROLS ....................... Navigation and other map controls
+
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════
+   1. GLOBAL STYLES
+   ═══════════════════════ */
 ::selection {
   color: #15191e;
   background: #a6adbb;
@@ -24,11 +38,24 @@
   scrollbar-width: none; /* Firefox */
 }
 
+/* ═══════════════════════
+   2. MAPLIBRE OVERRIDES
+   ═══════════════════════ */
+
 .maplibregl-canvas {
   outline: none;
 }
 
-/* Marker styles */
+/* Hide accuracy circle by default */
+.maplibregl-user-location-accuracy-circle {
+  z-index: 5;
+  display: none;
+}
+
+/* ═══════════════════════
+   3. FEATURE MARKERS
+   ═══════════════════════ */
+   
 .marker-container {
   opacity: 0;
   cursor: pointer;
@@ -97,10 +124,6 @@
   transform: scale(1.1);
   transition: transform 0.1s ease-in-out;
 }
-.maplibregl-user-location-accuracy-circle {
-  z-index: 5;
-  display: none;
-}
 
 .marker-container svg {
   overflow: visible;
@@ -111,14 +134,14 @@
   fill: #cb37c1;
   stroke: #ffdaf3cc;
   stroke-width: 1.5;
-  opacity: 0.6;
+  opacity: 0.7;
   transition: opacity 0.2s ease-in-out;
 }
 
 .highlighted .marker-circle {
   stroke-width: 2;
-  stroke: #daffdb;
   fill: #a4ff72;
+  stroke: #daffdb;
   transition:
     stroke-width 0.3s ease-in-out,
     fill 0.3s ease-in-out,
