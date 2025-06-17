@@ -38,6 +38,12 @@ export const localeNames: Record<Locale, Record<Locale, string>> = {
   [SupportedLocales['zh-hans']]: LocaleNamesZhHans
 };
 
+export const localeCodes: Record<Locale, string> = {
+  [SupportedLocales.en]: 'EN',
+  [SupportedLocales['zh-hant']]: 'HK',
+  [SupportedLocales['zh-hans']]: 'CN'
+};
+
 /* ----------------- */
 // HIERARCHICAL RESOURCES
 /* -------- */
