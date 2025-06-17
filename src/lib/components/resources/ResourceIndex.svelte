@@ -10,7 +10,7 @@ import EntityCard from '$lib/components/resources/EntityCard.svelte';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
-import type { Task, Resource, LayoutMode, ControlMode } from '$lib/types';
+import type { Task, Resource, LayoutMode, ControlMode, FirstClassResource } from '$lib/types';
 
 let {
   entities,
@@ -93,9 +93,11 @@ let columnCount = $derived(
               {#if row}
                 {@render row(item as T, rowIdx)}
               {:else}
-                <div class="rounded-lg bg-base-100 p-4 shadow-sm">
-                  <div class="text-lg font-semibold">{(item as T).id}</div>
-                </div>
+                <a href={`/admin/${adminCtx.getEntityPath(adminCtx.activeResourceType as FirstClassResource, item.id)}`}>
+                  <div class="rounded-lg bg-base-100 p-4 shadow-sm">
+                    <div class="text-lg font-semibold">{(item as T).id}</div>
+                  </div>
+                </a>
               {/if}
             </div>
           {/if}

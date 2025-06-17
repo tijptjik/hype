@@ -369,6 +369,7 @@ export type FeatureViewFilters = {
   properties: Record<Id, FilterTriState>; // propertyId -> state
 };
 
+// TODO implement other resource types as needed
 export type ViewFilters = {
   organisation?: never;
   project?: never;
@@ -376,7 +377,6 @@ export type ViewFilters = {
   feature: FeatureViewFilters;
   task?: never;
   hub?: never;
-  // Add other resource types as needed
 };
 
 /* ----------------- */

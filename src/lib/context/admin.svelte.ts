@@ -392,19 +392,21 @@ export class AdminCtx {
     resource: FirstClassResource | HierarchicalResource,
     filters = { text: true, state: true }
   ): T[] => {
+    // TODO Remove these filterkeys / or move them to a more logical place
     let filterKeys = ['isPublished', 'isArchived'];
     let query = this.state.filters[resource as keyof AdminFilterStates].text || '';
     // FULL SET
     let result = this.appCtx.state.resources[
       resource as keyof FilteredResources
     ] as T[];
-    // STATE FILTERS
+    // TIER 2 FILTERS :: (App Wide)
+    // TODO Since we've temoved the toggles from the UI this will do nothing
     if (filters.state) {
       result = result.filter((entity) =>
         filterKeys.every((key) => this.booleanFilter(resource, entity, key))
       );
     }
-    // TEXT FILTERS
+    // TIER 2 FILTERS :: Text :: (App Wide)
     if (filters.text && resource !== FirstClassResource.hub) {
       result = result.filter((entity: T) => {
         if (!isHub(entity)) {
@@ -417,6 +419,142 @@ export class AdminCtx {
       });
     }
     return result;
+  };
+
+  applyViewFilters = (
+    resource: FirstClassResource,
+    entities: Resource[]
+  ): Resource[] => {
+    if (resource === FirstClassResource.feature) {
+      return this.applyFeatureViewFilters(entities as Feature[]);
+    }
+    // TODO: Implement view filters for other resource types
+    return entities;
+  };
+
+  applyFeatureViewFilters = (entities: Feature[]): Feature[] => {
+    const filters = this.state.viewFilters.feature;
+    if (!filters) return entities;
+
+    // Determine active locales from filter state
+    const activeLocales = new Set<Locale>();
+    for (const [locale, isActive] of Object.entries(filters.translationLocales)) {
+      if (isActive) {
+        activeLocales.add(locale as Locale);
+      }
+    }
+
+    return entities.filter((feature) => {
+      if (!this.filterByStatus(feature, filters)) return false;
+      if (!this.filterByAuthorship(feature, filters, activeLocales)) return false;
+      if (!this.filterByTranslation(feature, filters, activeLocales)) return false;
+      // TODO: Implement property-based filters
+      return true;
+    });
+  };
+
+  // ═══════════════════════
+  // ADMIN FILTERS :: HELPERS
+  // ═══════════════════════
+
+  private filterByStatus = (
+    feature: Feature,
+    filters: ViewFilters['feature']
+  ): boolean => {
+    const statusFilters: (keyof typeof filters)[] = [
+      'isPublished',
+      'isPendingReview',
+      'isArchived',
+      'isIntangible',
+      'isVisitable'
+    ];
+    for (const key of statusFilters) {
+      const filterValue = filters[key] as FilterTriState;
+      if (filterValue !== null && feature[key as keyof Feature] !== filterValue) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  private filterByAuthorship = (
+    feature: Feature,
+    filters: ViewFilters['feature'],
+    activeLocales: Set<Locale>
+  ): boolean => {
+    // hasTitle filter
+    const hasTitleFilter = filters.hasTitle;
+    if (hasTitleFilter !== null) {
+      const hasTitle = [...activeLocales].some((locale) => {
+        const i18n = feature.i18n?.[locale];
+        return i18n && i18n.title && i18n.title.length > 1 && !i18n.titleGen;
+      });
+      if (hasTitle !== hasTitleFilter) return false;
+    }
+
+    // hasDescription filter
+    const hasDescriptionFilter = filters.hasDescription;
+    if (hasDescriptionFilter !== null) {
+      const hasDescription = [...activeLocales].some((locale) => {
+        const i18n = feature.i18n?.[locale];
+        return (
+          i18n && i18n.description && i18n.description.length > 1 && !i18n.descriptionGen
+        );
+      });
+      if (hasDescription !== hasDescriptionFilter) return false;
+    }
+
+    return true;
+  };
+
+  private filterByTranslation = (
+    feature: Feature,
+    filters: ViewFilters['feature'],
+    activeLocales: Set<Locale>
+  ): boolean => {
+    const translationChecks: {
+      filterKey: 'isTitleTranslated' | 'isDescriptionTranslated' | 'isAddressTranslated';
+      textField: 'title' | 'description' | 'address';
+      genField: 'titleGen' | 'descriptionGen' | 'addressGen';
+    }[] = [
+      {
+        filterKey: 'isTitleTranslated',
+        textField: 'title',
+        genField: 'titleGen'
+      },
+      {
+        filterKey: 'isDescriptionTranslated',
+        textField: 'description',
+        genField: 'descriptionGen'
+      },
+      {
+        filterKey: 'isAddressTranslated',
+        textField: 'address',
+        genField: 'addressGen'
+      }
+    ];
+
+    for (const { filterKey, textField, genField } of translationChecks) {
+      const localeStates = filters[filterKey];
+      if (!localeStates) continue;
+
+      for (const locale of activeLocales) {
+        const filterValue = localeStates[locale];
+        if (filterValue === null) continue;
+
+        const i18n = feature.i18n?.[locale];
+        const text = i18n?.[textField];
+        const isGenerated = i18n?.[genField] ?? false;
+        const featureHasText = text && text.length > 1 && !isGenerated;
+
+        if (featureHasText !== filterValue) {
+          return false;
+        }
+      }
+    }
+
+    // TODO: Implement isSpecifierTranslated filter
+    return true;
   };
 
   getFilteredTask = () => {
@@ -520,32 +658,38 @@ export class AdminCtx {
     // Explicitly access reactive dependencies so Svelte tracks them
     this.appCtx.state.resources.organisation;
     this.state.filters.organisation;
+    this.state.viewFilters.organisation;
     return this.getFilteredResource<Organisation>(FirstClassResource.organisation);
   });
   filteredProjects = $derived.by(() => {
     this.appCtx.state.resources.project;
     this.state.filters.project;
+    this.state.viewFilters.project;
     return this.getFilteredResource<Project>(FirstClassResource.project);
   });
   filteredLayers = $derived.by(() => {
     this.appCtx.state.resources.layer;
     this.state.filters.layer;
+    this.state.viewFilters.layer;
     return this.getFilteredResource<Layer>(FirstClassResource.layer);
   }) as Layer[];
   filteredFeatures = $derived.by(() => {
     this.appCtx.state.resources.feature;
     this.state.filters.feature;
+    this.state.viewFilters.feature;
     return this.getFilteredResource<Feature>(FirstClassResource.feature);
   });
   filteredTasks = $derived.by(() => {
     this.appCtx.state.resources.task;
     this.state.filters.task;
+    this.state.viewFilters.task;
     return this.getFilteredTask();
   });
   filteredHubs = $derived.by(() => {
     if (!this.appCtx.isSuperAdmin()) return [];
     this.appCtx.state.resources.hub;
     this.state.filters.hub;
+    this.state.viewFilters.hub;
     return this.getFilteredHub();
   });
 

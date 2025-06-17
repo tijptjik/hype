@@ -56,7 +56,7 @@ const keyMap: KeyMap = {
     }
   ]
 };
-let entities: Feature[] = $derived(adminCtx.filteredFeatures);
+let entities: Feature[] = $derived(adminCtx.getViewFilteredResource<Feature>(FirstClassResource.feature) );
 </script>
 
 <!-- LAYOUT -->
@@ -100,6 +100,7 @@ let entities: Feature[] = $derived(adminCtx.filteredFeatures);
     </EntityCard>
   {/snippet}
   {#snippet row(entity: Feature, rowIdx: number)}
+    <a href={`/admin/${adminCtx.getEntityPath(adminCtx.activeResourceType as FirstClassResource, entity.id)}`}>
     <div
       class="flex flex-row items-center justify-between rounded-lg bg-base-100 p-4 px-8 shadow-sm transition-shadow hover:shadow-md">
       <div class="flex flex-row items-center justify-between">
@@ -122,5 +123,6 @@ let entities: Feature[] = $derived(adminCtx.filteredFeatures);
         </div>
       </div>
     </div>
+    </a>
   {/snippet}
 </ResourceIndex>

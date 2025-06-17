@@ -272,7 +272,7 @@ export function getFeatureTaskLabel(
   if (!targetState) {
     return (
       filterDef.falseLabel ||
-      (filterDef.invertBoolean ? m.filters__all() : m.filters__not())
+      (filterDef.invertBoolean ? m.filters__only() : m.filters__not())
     );
   } else {
     return (
