@@ -388,7 +388,8 @@ export type FeatureStatusFilterKey =
 export type FeatureTranslationFilterKey =
   | 'isTitleTranslated'
   | 'isDescriptionTranslated'
-  | 'isAddressTranslated';
+  | 'isAddressTranslated'
+  | 'isSpecifierTranslated';
 
 export type FeatureAuthorshipFilterKey =
   | 'hasTitle'

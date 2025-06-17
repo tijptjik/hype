@@ -189,9 +189,9 @@ export function setAuthorshipFilterState(
 // TRANSLATION
 /* -------- */
 
-export function getTranslationFilterState(
+export function getTranslationFilterState<K extends FeatureTranslationFilterKey>(
   adminCtx: AdminCtx,
-  filterKey: FeatureTranslationFilterKey,
+  filterKey: K,
   activeLocales: Set<Locale>
 ): FilterTriState {
   const sectionFilters = getSimpleFilterState(adminCtx, filterKey);
@@ -230,9 +230,9 @@ export function getTranslationFilterState(
   return true;
 }
 
-export function setTranslationFilterState(
+export function setTranslationFilterState<K extends FeatureTranslationFilterKey>(
   adminCtx: AdminCtx,
-  filterKey: FeatureTranslationFilterKey,
+  filterKey: K,
   activeLocales: Set<Locale>,
   value: FilterTriState
 ) {
