@@ -8,11 +8,19 @@ import { navItems } from '$lib/navigation';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // AUTH
+import { useSession } from '$lib/auth/client';
 import { canCreateEntity } from '$lib/client/services/auth';
 // TYPES
-import type { FirstClassResource } from '$lib/enums';
-import { useSession } from '$lib/auth/client';
 import type { SessionUser } from '$lib/types';
+import type { FirstClassResource } from '$lib/enums';
+
+let {
+  filters,
+  modes
+}: {
+  filters?: () => any;
+  modes?: () => any;
+} = $props();
 
 let session = useSession();
 let user = $session.data?.user as SessionUser;
@@ -21,7 +29,12 @@ let user = $session.data?.user as SessionUser;
 const adminCtx = getAdminCtx();
 
 // STATE : DERIVED :: RESOURCE MODE
-let resource = $derived(adminCtx.activeResourceType);
+let resource = $derived(
+  adminCtx.activeResourceType as Exclude<
+    FirstClassResource,
+    FirstClassResource.property | FirstClassResource.task
+  >
+);
 let resourceMode = $derived(adminCtx.isShowIndex);
 
 // STATE : DERIVED :: TITLE
@@ -40,7 +53,7 @@ let showNewButton = $derived(user && resource && canCreateEntity(user, resource)
     class:to-fuchsia-800={!resourceMode}>
     <div class="flex-1">
       <div class="flex items-center space-x-4">
-        <Icon src={navItems[resource as FirstClassResource].icon} class="h-6 w-6" />
+        <Icon src={navItems[resource].icon} class="h-6 w-6" />
         <h2 class="text-2xl font-semibold">{title}</h2>
       </div>
     </div>
@@ -49,11 +62,15 @@ let showNewButton = $derived(user && resource && canCreateEntity(user, resource)
         <NewEntityButton />
         <div class="divider divider-horizontal"></div>
       {/if}
-      <FilterInput
-        resourceType={resource as FirstClassResource}
-        rounded={true}
-        showUnpublishedToggle={resource !== 'task'}
-        showReviewedToggle={resource === 'task'} />
+      {#if filters}
+        {@render filters()}
+      {:else}
+        <FilterInput resourceType={resource} rounded={true} />
+      {/if}
+      {#if modes}
+        <div class="divider divider-horizontal"></div>
+        {@render modes()}
+      {/if}
     </div>
   </header>
 {/if}
