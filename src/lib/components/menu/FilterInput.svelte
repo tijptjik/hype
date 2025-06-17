@@ -43,29 +43,29 @@ $effect(() => {
 });
 
 // HANDLERS : INPUTS EVENTS
-function handleUnpublishedOnlyToggle(e: Event) {
+// function handleUnpublishedOnlyToggle(e: Event) {
   // TODO - detach the display in the main view from the sidebar, otherwise
   // the sidebar will display will also hide the unpublished items and potentially
   // hide the pinned filters.
-  e.preventDefault();
-  let showUnpublishedOnly = (e.target as HTMLInputElement).checked;
-  adminCtx.state.filters[resourceType as keyof AdminFilterStates].isPublished =
-    showUnpublishedOnly ? false : null;
-}
-let showUnpublishedOnly = $derived(
-  adminCtx.state.filters[resourceType as keyof AdminFilterStates].isPublished === false
-);
+  // e.preventDefault();
+  // let showUnpublishedOnly = (e.target as HTMLInputElement).checked;
+  // adminCtx.state.filters[resourceType as keyof AdminFilterStates].isPublished =
+    // showUnpublishedOnly ? false : null;
+// }
+// let showUnpublishedOnly = $derived(
+  // adminCtx.state.filters[resourceType as keyof AdminFilterStates].isPublished === false
+// );
 
-let showUnreviewedOnly = $derived(
-  adminCtx.state.filters[resourceType as keyof AdminFilterStates].isReviewed === false
-);
-function handleReviewedToggle(e: Event) {
-  e.preventDefault();
-  let showUnreviewedOnly = (e.target as HTMLInputElement).checked;
-  adminCtx.state.filters[resourceType as keyof AdminFilterStates].isReviewed =
-    showUnreviewedOnly ? false : null;
-  adminCtx.refreshTasks();
-}
+// let showUnreviewedOnly = $derived(
+  // adminCtx.state.filters[resourceType as keyof AdminFilterStates].isReviewed === false
+// );
+// function handleReviewedToggle(e: Event) {
+//   e.preventDefault();
+//   let showUnreviewedOnly = (e.target as HTMLInputElement).checked;
+//   adminCtx.state.filters[resourceType as keyof AdminFilterStates].isReviewed =
+//     showUnreviewedOnly ? false : null;
+//   adminCtx.refreshTasks();
+// }
 
 // HANDLERS : KEYBOARD EVENTS
 function handleKeydown(event: KeyboardEvent) {
@@ -86,7 +86,7 @@ function handleInput(e: Event) {
 </script>
 
 <div class={showUnpublishedToggle || showReviewedToggle ? 'flex gap-4' : ''}>
-  {#if showUnpublishedToggle}
+  <!-- {#if showUnpublishedToggle}
     <div class="flex items-center gap-2">
       <input
         name="isPublished"
@@ -116,7 +116,7 @@ function handleInput(e: Event) {
         {m.aloof_stale_jaguar_wave()}
       </label>
     </div>
-  {/if}
+  {/if} -->
 
   <div
     class="relative {rounded ? '' : 'flex-shrink-0 border-l-3 border-base-200'}"
@@ -124,7 +124,7 @@ function handleInput(e: Event) {
     <input
       name="text"
       type="text"
-      placeholder="Match name and description"
+      placeholder=""
       class="input m-0 w-full bg-neutral px-6 pr-10 text-sm caret-white focus:border-none focus:outline-none focus:placeholder:text-transparent {rounded
         ? 'h-10 min-w-72 rounded-xl'
         : 'rounded-none'}"
