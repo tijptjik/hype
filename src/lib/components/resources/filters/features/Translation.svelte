@@ -9,14 +9,17 @@ import { getAdminCtx } from '$lib/context/admin.svelte';
 // SERVICES
 import {
   getTranslationFilterState,
-  toggleBooleanState,
-  handleToggleChange,
+  handleLabelClick,
+  handleToggleClick,
   getFeatureTaskLabel
 } from '$lib/client/services/filters';
+// COMPONENTS
+import FilterToggle from '../FilterToggle.svelte';
 // ENUM
 import { supportedLocales, localeCodes } from '$lib/enums';
 // TYPES
 import type { FeatureTranslationFilterKey, Locale } from '$lib/types';
+
 
 // CONTEXT
 const adminCtx = getAdminCtx();
@@ -73,34 +76,16 @@ function toggleLocale(locale: Locale) {
       activeLocales
     )}
     {@const key = filterKey as FeatureTranslationFilterKey}
-    <div
-      class="group flex flex-col items-center gap-[8px] tracking-widest"
-      style="transform: translateX({-32 * idx}px)">
-      <label class="text-xs uppercase leading-none text-base-content/70">
-        {filterDef.label}
-      </label>
-      <div class="flex items-center gap-2">
-        <span
-          onclick={() =>
-            toggleBooleanState(adminCtx, key, false, undefined, activeLocales)}
-          class="text text-sm uppercase text-base-content opacity-0 transition-opacity duration-300 group-hover:opacity-40">
-          {getFeatureTaskLabel(adminCtx, filterDef, false, true)}
-        </span>
-        <input
-          type="checkbox"
-          class="toggle toggle-sm"
-          checked={currentValue === true}
-          indeterminate={currentValue === null}
-          onchange={(e) =>
-            handleToggleChange(adminCtx, key, e, undefined, activeLocales)} />
-        <span
-          onclick={() =>
-            toggleBooleanState(adminCtx, key, true, undefined, activeLocales)}
-          class="text text-sm uppercase text-base-content opacity-0 transition-opacity duration-300 group-hover:opacity-40">
-          {getFeatureTaskLabel(adminCtx, filterDef, true, true)}
-        </span>
-      </div>
-    </div>
+    <FilterToggle
+      label={filterDef.label}
+      {currentValue}
+      {idx}
+      transformOffset={32}
+      falseLabel={getFeatureTaskLabel(filterDef, false, true)}
+      trueLabel={getFeatureTaskLabel(filterDef, true, true)}
+      onToggleFalse={() => handleLabelClick(adminCtx, key, false, undefined, activeLocales)}
+      onToggleTrue={() => handleLabelClick(adminCtx, key, true, undefined, activeLocales)}
+      onToggleChange={(e) => handleToggleClick(adminCtx, key, e, undefined, activeLocales)} />
   {/each}
   <!-- Specifier Translation (TODO) -->
   <div class="self-center text-xs text-base-content/60"></div>

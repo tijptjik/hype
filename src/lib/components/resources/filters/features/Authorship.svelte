@@ -5,46 +5,34 @@ import { m } from '$lib/i18n';
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // SERVICES
 import {
-  getSimpleFilterState,
+  getAuthorshipFilterState,
   handleLabelClick,
   handleToggleClick,
   getFeatureTaskLabel
 } from '$lib/client/services/filters';
 // COMPONENTS
 import FilterToggle from '../FilterToggle.svelte';
-// TYPES
-import type { FeatureStatusFilterKey } from '$lib/types';
 
 // CONTEXT
 const adminCtx = getAdminCtx();
 
 // FILTER DEFINITIONS
-const statusFilters: Record<
-  FeatureStatusFilterKey,
-  { label: string; invertBoolean?: boolean }
-> = {
-  isPublished: {
-    label: m.yummy_ornate_snail_bend()
+const authorshipFilters: Record<'hasTitle' | 'hasDescription', { label: string }> = {
+  hasTitle: {
+    label: m.feature__title()
   },
-  isPendingReview: {
-    label: m.plain_broad_shell_dart(),
-    invertBoolean: true
-  },
-  isArchived: {
-    label: m.bad_swift_cheetah_surge()
-  },
-  isIntangible: {
-    label: m.teary_fit_maggot_heart()
-  },
-  isVisitable: {
-    label: m.dry_aware_squirrel_cheer()
+  hasDescription: {
+    label: m.feature__description()
   }
 };
 </script>
 
-{#each Object.entries(statusFilters) as [filterKey, filterDef], idx (filterKey)}
-  {@const currentValue = getSimpleFilterState(adminCtx, filterKey as FeatureStatusFilterKey)}
-  {@const key = filterKey as FeatureStatusFilterKey}
+{#each Object.entries(authorshipFilters) as [filterKey, filterDef], idx (filterKey)}
+  {@const currentValue = getAuthorshipFilterState(
+    adminCtx,
+    filterKey as 'hasTitle' | 'hasDescription'
+  )}
+  {@const key = filterKey as 'hasTitle' | 'hasDescription'}
   <FilterToggle
     label={filterDef.label}
     {currentValue}
