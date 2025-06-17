@@ -8,7 +8,7 @@ import { navItems } from '$lib/navigation';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // AUTH
-import { canManageOrganisations, canCreateProjects } from '$lib/auth/utils';
+import { canCreateEntity } from '$lib/client/services/auth';
 // TYPES
 import type { FirstClassResource } from '$lib/enums';
 import { useSession } from '$lib/auth/client';
@@ -26,55 +26,6 @@ let resourceMode = $derived(adminCtx.isShowIndex);
 
 // STATE : DERIVED :: TITLE
 let title = $derived(resource ? navItems[resource].name : '');
-
-// ═══════════════════════
-// PERMISSION CHECKING
-// ═══════════════════════
-
-/**
- * Check if the user can create new entities for the given resource type
- * @param resource - The resource type to check permissions for
- * @returns boolean indicating if new buttons should be shown
- */
-const canCreateEntity = (user: SessionUser, resource: FirstClassResource): boolean => {
-  if (!resource || !user) return false;
-
-  switch (resource) {
-    case 'organisation':
-      return canManageOrganisations(user);
-
-    case 'project':
-      return canCreateProjects(user);
-
-    case 'layer': {
-      // For layers, we need to check if user can create layers for any project they have access to
-      // This is a simplified check - in practice, you might want to be more specific
-      return user.superAdmin === true || 
-             user.roles?.some(role => role.type === 'project' && role.role === 'maintainer') === true;
-    }
-
-    case 'feature': {
-      // For features, we need to check if user can manage features for any project they have access to
-      // This is a simplified check - in practice, you might want to be more specific
-      return user.superAdmin === true || 
-             user.roles?.some(role => 
-               role.type === 'project' && 
-               (role.role === 'maintainer' || role.role === 'member')
-             ) === true;
-    }
-
-    case 'task':
-      // Tasks cannot be created manually
-      return false;
-
-    case 'hub':
-      // Only superAdmin can create hubs
-      return user.superAdmin === true;
-
-    default:
-      return false;
-  }
-};
 
 // STATE : DERIVED :: SHOW NEW BUTTON
 let showNewButton = $derived(user && resource && canCreateEntity(user, resource));
