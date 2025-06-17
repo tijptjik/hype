@@ -1,6 +1,6 @@
 <script lang="ts">
 // ANIMATION
-import { fly, slide } from 'svelte/transition';
+import { fly, slide, fade } from 'svelte/transition';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import FeatureFilterBarStatusSection from './Status.svelte';
@@ -72,15 +72,14 @@ function toggleSectionMenu() {
     <div class="relative flex flex-row items-center">
       <!-- SECTION SELECTION MODE: Show all sections horizontally -->
       <div
-        class="absolute z-30 flex items-center gap-2 bg-base-200 h-16"
-        transition:fly={{ x: -20, duration: 300 }}>
+        class="absolute z-30 flex items-center gap-2 bg-base-200 h-16">
         <!-- All Section Options -->
         {#each Object.entries(filterSections) as [key, section], idx (key)}
           {#if showSectionMenu && activeSection !== key}
             <button
               class="btn btn-ghost btn-sm h-10 gap-2 hover:bg-transparent hover:text-white"
               in:fly={{ x: 20, duration: 300, delay: 50 * idx }}
-              out:fly={{ x: -20, duration: 300, delay: 50 * idx }}
+              out:fade={{ duration: 300 }}
               onclick={() => selectSection(key)}>
               <Icon src={section.icon} class="h-4 w-4" />
               <span class="hidden lg:inline">{section.title}</span>

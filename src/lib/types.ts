@@ -310,7 +310,6 @@ export type ResourceTypeWithChildren = Exclude<
   'feature' | 'task'
 >;
 
-
 /* ----------------- */
 // NAVIGATION :: ADMIN :: ACTIVE RESOURCE
 /* -------- */
@@ -349,23 +348,23 @@ export type FeatureViewFilters = {
   isArchived: FilterTriState;
   isIntangible: FilterTriState;
   isVisitable: FilterTriState;
-  
+
   // Image related
   hasImage: FilterTriState;
   isOneImagePublished: FilterTriState;
   isAllImagePublished: FilterTriState;
-  
+
   // Authorship related
   hasTitle: FilterTriState;
   hasDescription: FilterTriState;
-  
+
   // Translation related (per locale)
   translationLocales: Record<Locale, boolean>; // Which locales to consider for translation filters
   isTitleTranslated: LocalisedFilterTriState;
   isDescriptionTranslated: LocalisedFilterTriState;
   isSpecifierTranslated: LocalisedFilterTriState; // TODO: implement
   isAddressTranslated: LocalisedFilterTriState;
-  
+
   // Property related
   properties: Record<Id, FilterTriState>; // propertyId -> state
 };
@@ -374,7 +373,6 @@ export type ViewFilters = {
   feature: FeatureViewFilters;
   // Add other resource types as needed
 };
-
 
 /* ----------------- */
 // FILTERS :: ADMIN :: FEATURES
@@ -387,6 +385,10 @@ export type FeatureStatusFilterKey =
   | 'isIntangible'
   | 'isVisitable';
 
+export type FeatureTranslationFilterKey =
+  | 'isTitleTranslated'
+  | 'isDescriptionTranslated'
+  | 'isAddressTranslated';
 
 /* ----------------- */
 // FILTERS :: APP
@@ -1808,8 +1810,6 @@ export interface HubOpts {
   isCore: boolean;
   isSuperAdmin?: boolean;
 }
-
-
 
 /* ----------------- */
 // TYPESCRIPT UTILITIES
