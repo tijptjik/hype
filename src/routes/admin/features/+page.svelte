@@ -97,4 +97,22 @@ let entities: Feature[] = $derived(adminCtx.filteredFeatures);
       {/snippet}
     </EntityCard>
   {/snippet}
+  {#snippet row(entity: Feature, rowIdx: number)}
+    <div
+      class="flex items-center justify-between rounded-lg bg-base-100 p-4 shadow-sm transition-shadow hover:shadow-md">
+      <div class="flex-1">
+        <h3 class="text-lg font-semibold">
+          {entity.i18n?.[getLocale()]?.title || 'Untitled'}
+        </h3>
+        <p class="text-sm text-base-content/70">
+          {entity.i18n?.[getLocale()]?.displayAddress || 'No address'}
+        </p>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="badge {entity.isPublished ? 'badge-primary' : 'badge-ghost'}">
+          {entity.isPublished ? 'Published' : 'Draft'}
+        </span>
+      </div>
+    </div>
+  {/snippet}
 </ResourceIndex>
