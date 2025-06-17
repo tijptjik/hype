@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // SERVICES
@@ -6,7 +8,7 @@ import {
   getFeatureFilterState,
   toggleBooleanState,
   handleToggleChange,
-  getFeatureFilterLabel
+  getFeatureTaskLabel
 } from '$lib/client/services/filters';
 // TYPES
 import type { FeatureStatusFilterKey } from '$lib/types';
@@ -20,20 +22,20 @@ const statusFilters: Record<
   { label: string; invertBoolean?: boolean }
 > = {
   isPublished: {
-    label: 'Published'
+    label: m.yummy_ornate_snail_bend()
   },
   isPendingReview: {
-    label: 'Reviewed',
+    label: m.plain_broad_shell_dart(),
     invertBoolean: true
   },
   isArchived: {
-    label: 'Archived'
+    label: m.bad_swift_cheetah_surge()
   },
   isIntangible: {
-    label: 'Intangible'
+    label: m.teary_fit_maggot_heart()
   },
   isVisitable: {
-    label: 'Visitable'
+    label: m.dry_aware_squirrel_cheer()
   }
 };
 </script>
@@ -44,7 +46,9 @@ const statusFilters: Record<
     filterKey as FeatureStatusFilterKey
   )}
   {@const key = filterKey as FeatureStatusFilterKey}
-  <div class="group flex flex-col items-center gap-[6px] tracking-widest">
+  <div
+    class="group flex flex-col items-center gap-[8px] tracking-widest"
+    style="transform: translateX({-16 * idx}px)">
     <label class="text-xs uppercase leading-none text-base-content/70">
       {filterDef.label}
     </label>
@@ -52,7 +56,7 @@ const statusFilters: Record<
       <span
         onclick={() => toggleBooleanState(adminCtx, key, false)}
         class="text text-sm uppercase text-base-content opacity-0 transition-opacity duration-300 group-hover:opacity-40">
-        {getFeatureFilterLabel(adminCtx, filterDef, false)}
+        {getFeatureTaskLabel(adminCtx, filterDef, false)}
       </span>
       <input
         type="checkbox"
@@ -63,7 +67,7 @@ const statusFilters: Record<
       <span
         onclick={() => toggleBooleanState(adminCtx, key, true)}
         class="text text-sm uppercase text-base-content opacity-0 transition-opacity duration-300 group-hover:opacity-40">
-        {getFeatureFilterLabel(adminCtx, filterDef, true)}
+        {getFeatureTaskLabel(adminCtx, filterDef, true)}
       </span>
     </div>
   </div>
