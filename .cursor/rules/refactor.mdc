@@ -12,6 +12,28 @@ alwaysApply: false
 - [ ] use [<svelte:boundary>](mdc:https:/svelte.dev/docs/svelte/svelte-boundary)
 - [x] debug with [@debug](mdc:https:/svelte.dev/docs/svelte/@debug)
 
+### Iconify
+
+- [ ] Move to iconify (https://github.com/unplugin/unplugin-icons/tree/main/examples/vite-svelte)
+    - [ ] Select an [icon set](mdc:https:/icones.js.org) / https://iconify.design/ 
+- [ ] Use [unplugin-icon](mdc:https:/github.com/unplugin/unplugin-icons/tree/main) and config for sveltekit
+
+```js
+import { sveltekit } from '@sveltejs/kit/vite'
+import Icons from 'unplugin-icons/vite'
+// vite.config.js
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  plugins: [
+    sveltekit(),
+    Icons({
+      compiler: 'svelte',
+    })
+  ]
+})
+```
+
 ### Maplibre
 
 - [ ] Move to (svelte-maplibre-gl)[https://github.com/MIERUNE/svelte-maplibre-gl]

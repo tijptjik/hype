@@ -30,7 +30,7 @@ let entities = $derived(adminCtx.filteredHubs);
 <!-- LAYOUT -->
 <ResourceHeader />
 <ResourceIndex {entities}>
-  {#snippet children(entity)}
+  {#snippet cards(entity)}
     <EntityCard {entity} {keyMap} />
   {/snippet}
 </ResourceIndex>

@@ -45,7 +45,7 @@ adminCtx.setFacet(false, false, RESOURCE);
 
 <ResourceHeader />
 <ResourceIndex entities={adminCtx.filteredOrganisations}>
-  {#snippet children(entity, idx)}
+  {#snippet cards(entity, idx)}
     <EntityCard {entity} {keyMap} />
   {/snippet}
 </ResourceIndex>

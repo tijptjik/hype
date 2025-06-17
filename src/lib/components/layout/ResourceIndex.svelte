@@ -17,7 +17,7 @@ let {
   children
 }: {
   entities: T[];
-  children: (entity: T, idx: number) => any;
+  card?: (entity: T, idx: number) => any;
 } = $props();
 
 // CONTEXT

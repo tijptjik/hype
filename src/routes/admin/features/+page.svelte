@@ -54,9 +54,8 @@ let entities = $derived(adminCtx.filteredFeatures);
 </script>
 
 <!-- LAYOUT -->
-<ResourceHeader />
-<ResourceIndex {entities}>
-  {#snippet children(entity)}
+<ResourceIndex {entities} {layoutMode} {controlMode}>
+  {#snippet card(entity: Feature)}
     <EntityCard {entity} {keyMap}>
       {#snippet badgesExtra(entity: Feature)}
         {#each entity.properties.filter((p) => p.propertyValueId) as property}

@@ -48,7 +48,7 @@ let entities = $derived(adminCtx.filteredLayers);
 
 <ResourceHeader />
 <ResourceIndex {entities}>
-  {#snippet children(entity)}
+  {#snippet cards(entity)}
     <EntityCard entity={entity as Layer} {keyMap}>
       {#snippet header(entity: Layer)}
         <Image
