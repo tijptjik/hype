@@ -14,7 +14,7 @@ import {
 } from '$lib/auth/asserts';
 // DB
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
-import { getProjectIdforRoles, isSuperAdmin } from '$lib/auth/utils';
+import { getProjectIdforRoles, isSuperAdmin } from '$lib/client/services/auth';
 // SCHEMA
 import { layer, project } from '$lib/db/schema/index';
 // DB

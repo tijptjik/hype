@@ -10,7 +10,7 @@ import {
   canCreateLayers,
   canUpdateLayer,
   canManageFeatures
-} from '$lib/auth/utils';
+} from '$lib/client/services/auth';
 
 type PermissionType = 
   | 'manage-organisations'

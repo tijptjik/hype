@@ -271,3 +271,53 @@ export function canManageFeatures(
     isProjectMember(user, projectId)
   );
 }
+
+// ═══════════════════════
+// 2.5 PERMISSIONS :: RESOURCE
+// ═══════════════════════
+
+/**
+ * Check if the user can create new entities for the given resource type
+ * @param user - The user to check permissions for
+ * @param resource - The resource type to check permissions for
+ * @returns boolean indicating if new buttons should be shown
+ */
+export function canCreateEntity(user: SessionUser | null, resource: string): boolean {
+  if (!resource || !user) return false;
+
+  switch (resource) {
+    case 'organisation':
+      return canManageOrganisations(user);
+
+    case 'project':
+      return canCreateProjects(user);
+
+    case 'layer': {
+      // For layers, we need to check if user can create layers for any project they have access to
+      // This is a simplified check - in practice, you might want to be more specific
+      return user.superAdmin === true || 
+             user.roles?.some(role => role.type === 'project' && role.role === 'maintainer') === true;
+    }
+
+    case 'feature': {
+      // For features, we need to check if user can manage features for any project they have access to
+      // This is a simplified check - in practice, you might want to be more specific
+      return user.superAdmin === true || 
+             user.roles?.some(role => 
+               role.type === 'project' && 
+               (role.role === 'maintainer' || role.role === 'member')
+             ) === true;
+    }
+
+    case 'task':
+      // Tasks cannot be created manually
+      return false;
+
+    case 'hub':
+      // Only superAdmin can create hubs
+      return user.superAdmin === true;
+
+    default:
+      return false;
+  }
+}

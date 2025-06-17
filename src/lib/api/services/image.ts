@@ -16,7 +16,7 @@ import {
 } from '$lib/auth/asserts';
 // DB
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
-import { isSuperAdmin } from '$lib/auth/utils';
+import { isSuperAdmin } from '$lib/client/services/auth';
 // SCHEMA
 import { image, featureImage, project, organisation } from '$lib/db/schema/index';
 // TYPES
