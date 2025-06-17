@@ -8,7 +8,6 @@ import EntityCard from '$lib/components/resources/EntityCard.svelte';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
 // TYPES
-import type { KeyMap } from '$lib/components/resources/EntityCard.svelte';
 import type { KeyMap, Organisation } from '$lib/types';
 
 // CONFIG :: KEY MAP
