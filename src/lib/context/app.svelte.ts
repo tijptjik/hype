@@ -115,9 +115,11 @@ export class AppCtx {
       feature: null,
       collection: null
     },
-    // Filters -- Which neighbourhoods and properties being filtered for when showing features on the map
-    filters: { neighbourhoods: [], properties: {} },
-    // Prisms -- Which organisations, projects, and layers are pre-filtered when fetching features from the database
+    // ═══════════════════════
+    // 3-TIER FILTER SYSTEM
+    // ═══════════════════════
+    // TIER 1: PRISMS -- Which organisations, projects, and layers are pre-filtered when fetching features from the database
+    // Applied at the server level to constrain the result set of first-class resources available
     prisms: { organisation: [], project: [], layer: [] },
     // TIER 2: APP FILTERS -- Which neighbourhoods and properties being filtered for when showing features on the map
     // Applied in the app regardless of view - affects all features displayed on the map and in collections

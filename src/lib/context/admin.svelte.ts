@@ -33,7 +33,8 @@ import type {
   FilteredResources,
   Property,
   ViewFilters,
-  Locale
+  Locale,
+  FilterTriState
 } from '../types';
 
 // State type for AdminCtx - only includes admin-specific state
@@ -47,6 +48,80 @@ type AdminResourceState = {
   filters: AdminFilterStates;
   // TIER 3: VIEW FILTERS - Only affect current route/view
   viewFilters: ViewFilters;
+};
+
+// ═══════════════════════
+// 3-TIER FILTER SYSTEM
+// ═══════════════════════
+
+// TIER 1: PRISMS -- Which organisations, projects, and layers are pre-filtered when fetching features from the database
+// Applied at the server level to constrain the result set of first-class resources available
+
+// See AppCtx.state.prisms
+
+// TIER 2: APP FILTERS -- Which neighbourhoods and properties being filtered for when showing features on the map
+// Applied in the app regardless of view - affects all features displayed on the map and in collections
+
+// TIER 3: VIEW FILTERS -- Handled by individual admin views (e.g., /admin/features/)
+// Only affect the current route/view they are applied on, not the underlying data or map view
+
+const defaultFilters = {
+  organisation: { text: '', properties: {}, isPublished: null, isArchived: false },
+  project: { text: '', properties: {}, isPublished: null, isArchived: false },
+  layer: { text: '', properties: {}, isPublished: null, isArchived: false },
+  feature: { text: '', properties: {}, isPublished: null, isArchived: false },
+  task: { text: '', properties: {}, isReviewed: false },
+  hub: { text: '', properties: {}, isArchived: false },
+  property: { text: '', properties: {} }
+};
+
+const viewFilters = {
+  feature: {
+    // Status related
+    isPublished: null,
+    isPendingReview: null,
+    isArchived: null,
+    isIntangible: null,
+    isVisitable: null,
+
+    // Image related
+    hasImage: null,
+    isOneImagePublished: null,
+    isAllImagePublished: null,
+
+    // Authorship related
+    hasTitle: null,
+    hasDescription: null,
+
+    // Translation related
+    translationLocales: {
+      en: false, // Default: English not selected
+      'zh-hant': true,
+      'zh-hans': true
+    },
+    isTitleTranslated: {
+      en: null,
+      'zh-hant': null,
+      'zh-hans': null
+    },
+    isDescriptionTranslated: {
+      en: null,
+      'zh-hant': null,
+      'zh-hans': null
+    },
+    isSpecifiedTranslated: {
+      en: null,
+      'zh-hant': null,
+      'zh-hans': null
+    },
+    isAddressTranslated: {
+      en: null,
+      'zh-hant': null,
+      'zh-hans': null
+    },
+    // Property related
+    properties: {} as Record<Id, FilterTriState>
+  }
 };
 
 export class AdminCtx {
@@ -78,7 +153,6 @@ export class AdminCtx {
   queryClient: QueryClient;
   // App Context
   appCtx: AppCtx;
-
   // Load State
   isInitialised: boolean = $state(false);
 
@@ -144,27 +218,8 @@ export class AdminCtx {
       resourceRef: false,
       facet: false
     },
-    // ═══════════════════════
-    // 3-TIER FILTER SYSTEM
-    // ═══════════════════════
-    
-    // TIER 1: PRISMS -- Which organisations, projects, and layers are pre-filtered when fetching features from the database
-    // Applied at the server level to constrain the result set of first-class resources available
-
-    // See AppCtx.state.prisms
-    
-    // TIER 2: APP FILTERS -- Which neighbourhoods and properties being filtered for when showing features on the map
-    // Applied in the app regardless of view - affects all features displayed on the map and in collections
-
-    filters: {
-      organisation: { text: '', properties: {}, isPublished: null, isArchived: false },
-      project: { text: '', properties: {}, isPublished: null, isArchived: false },
-      layer: { text: '', properties: {}, isPublished: null, isArchived: false },
-      feature: { text: '', properties: {}, isPublished: null, isArchived: false },
-      task: { text: '', properties: {}, isReviewed: false },
-      hub: { text: '', properties: {}, isArchived: false },
-      property: { text: '', properties: {} }
-    }
+    filters: defaultFilters,
+    viewFilters: viewFilters
   });
 
   // ═══════════════════════
@@ -230,7 +285,10 @@ export class AdminCtx {
     const params = new URLSearchParams();
 
     // Add isArchived / isReviewed filter by default
-    if (resource !== FirstClassResource.task && resource !== FirstClassResource.property) {
+    if (
+      resource !== FirstClassResource.task &&
+      resource !== FirstClassResource.property
+    ) {
       // SuperAdmin users should see all archived resources, so don't force isArchived=false
       if (!this.appCtx.isSuperAdmin()) {
         params.append('isArchived', 'false');
@@ -337,7 +395,9 @@ export class AdminCtx {
     let filterKeys = ['isPublished', 'isArchived'];
     let query = this.state.filters[resource as keyof AdminFilterStates].text || '';
     // FULL SET
-    let result = this.appCtx.state.resources[resource as keyof FilteredResources] as T[];
+    let result = this.appCtx.state.resources[
+      resource as keyof FilteredResources
+    ] as T[];
     // STATE FILTERS
     if (filters.state) {
       result = result.filter((entity) =>
@@ -601,26 +661,21 @@ export const getAdminCtx = (): AdminCtx => {
         if (prop === 'activeFacet') return false;
         if (prop === 'isShowIndex') return false;
         if (prop === 'isViewportContained') return true;
-        if (prop === 'state') return {
-          active: {
-            resourceType: false,
-            resourceRef: false,
-            facet: false
-          },
-          filters: {
-            organisation: { text: '', properties: {}, isPublished: null, isArchived: false },
-            project: { text: '', properties: {}, isPublished: null, isArchived: false },
-            layer: { text: '', properties: {}, isPublished: null, isArchived: false },
-            feature: { text: '', properties: {}, isPublished: null, isArchived: false },
-            task: { text: '', properties: {}, isReviewed: false },
-            hub: { text: '', properties: {}, isArchived: false },
-            property: { text: '', properties: {} }
-          }
-        };
-        if (prop === 'appCtx') return {
-          isInitialised: false,
-          state: { resources: {} }
-        };
+        if (prop === 'state')
+          return {
+            active: {
+              resourceType: false,
+              resourceRef: false,
+              facet: false
+            },
+            filters: defaultFilters,
+            viewFilters: defaultFilters
+          };
+        if (prop === 'appCtx')
+          return {
+            isInitialised: false,
+            state: { resources: {} }
+          };
         return undefined;
       }
     }) as AdminCtx;
