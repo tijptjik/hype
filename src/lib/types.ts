@@ -370,7 +370,12 @@ export type FeatureViewFilters = {
 };
 
 export type ViewFilters = {
+  organisation?: never;
+  project?: never;
+  layer?: never;
   feature: FeatureViewFilters;
+  task?: never;
+  hub?: never;
   // Add other resource types as needed
 };
 

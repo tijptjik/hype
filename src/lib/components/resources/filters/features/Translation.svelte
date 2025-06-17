@@ -9,8 +9,7 @@ import { getAdminCtx } from '$lib/context/admin.svelte';
 // SERVICES
 import {
   getTranslationFilterState,
-  handleLabelClick,
-  handleToggleClick,
+  toggleFilterState,
   getFeatureTaskLabel
 } from '$lib/client/services/filters';
 // COMPONENTS
@@ -34,6 +33,9 @@ const translationFilters: Record<FeatureTranslationFilterKey, { label: string }>
   },
   isAddressTranslated: {
     label: m.feature__address()
+  },
+  isSpecifierTranslated: {
+    label: m.admin__forms_common_specifiers()
   }
 };
 
@@ -83,9 +85,12 @@ function toggleLocale(locale: Locale) {
       transformOffset={32}
       falseLabel={getFeatureTaskLabel(filterDef, false, true)}
       trueLabel={getFeatureTaskLabel(filterDef, true, true)}
-      onToggleFalse={() => handleLabelClick(adminCtx, key, false, undefined, activeLocales)}
-      onToggleTrue={() => handleLabelClick(adminCtx, key, true, undefined, activeLocales)}
-      onToggleChange={(e) => handleToggleClick(adminCtx, key, e, undefined, activeLocales)} />
+      onToggleFalse={() => toggleFilterState(adminCtx, key, false, undefined, activeLocales)}
+      onToggleTrue={() => toggleFilterState(adminCtx, key, true, undefined, activeLocales)}
+      onToggleChange={() => {
+        const nextState = currentValue === null ? true : currentValue === true ? false : null;
+        toggleFilterState(adminCtx, key, nextState, undefined, activeLocales);
+      }} />
   {/each}
   <!-- Specifier Translation (TODO) -->
   <div class="self-center text-xs text-base-content/60"></div>

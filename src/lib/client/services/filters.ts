@@ -48,7 +48,7 @@ export function getSimpleFilterState<K extends keyof FeatureViewFilters>(
   if (!featureFilters || typeof featureFilters !== 'object') return null;
 
   const sectionFilters = featureFilters[filterKey];
-  if (!sectionFilters) return null;
+  if (sectionFilters === undefined || sectionFilters === null) return null;
 
   // For simple filters like isPublished
   if (!propertyId) {
@@ -115,34 +115,17 @@ export function setSimpleFilterState<K extends keyof FeatureViewFilters>(
 // SETTERS :: TOGGLERS
 /* -------- */
 
-// GENERIC TOGGLE HANDLERS
-export function handleToggleClick<K extends keyof FeatureViewFilters>(
+export function toggleFilterState<K extends keyof FeatureViewFilters>(
   adminCtx: AdminCtx,
   filterKey: K,
-  event: Event,
-  propertyId?: Id,
-  activeLocales?: Set<Locale>
-) {
-  // GET
-  const target = event.target as HTMLInputElement;
-  let currentState = getFilterState(adminCtx, filterKey, propertyId, activeLocales);
-  // DETERMINE
-  let newValue = currentState === null ? true : currentState === false ? null : false;
-  // SET
-  setFilterState(adminCtx, filterKey, newValue, propertyId, activeLocales);
-}
-
-export function handleLabelClick<K extends keyof FeatureViewFilters>(
-  adminCtx: AdminCtx,
-  filterKey: K,
-  labelValue: FilterTriState,
+  value: FilterTriState,
   propertyId?: Id,
   activeLocales?: Set<Locale>
 ) {
   // GET
   let currentState = getFilterState(adminCtx, filterKey, propertyId, activeLocales);
   // DETERMINE
-  const newValue = labelValue === currentState ? null : labelValue;
+  const newValue = value === currentState ? null : value;
   // SET
   setFilterState(adminCtx, filterKey, newValue, propertyId, activeLocales);
 }

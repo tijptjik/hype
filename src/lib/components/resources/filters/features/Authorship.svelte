@@ -6,8 +6,7 @@ import { getAdminCtx } from '$lib/context/admin.svelte';
 // SERVICES
 import {
   getAuthorshipFilterState,
-  handleLabelClick,
-  handleToggleClick,
+  toggleFilterState,
   getFeatureTaskLabel
 } from '$lib/client/services/filters';
 // COMPONENTS
@@ -39,7 +38,10 @@ const authorshipFilters: Record<'hasTitle' | 'hasDescription', { label: string }
     {idx}
     falseLabel={getFeatureTaskLabel(filterDef, false)}
     trueLabel={getFeatureTaskLabel(filterDef, true)}
-    onToggleFalse={() => handleLabelClick(adminCtx, key, false)}
-    onToggleTrue={() => handleLabelClick(adminCtx, key, true)}
-    onToggleChange={(e) => handleToggleClick(adminCtx, key, e)} />
+    onToggleFalse={() => toggleFilterState(adminCtx, key, false)}
+    onToggleTrue={() => toggleFilterState(adminCtx, key, true)}
+    onToggleChange={() => {
+      const nextState = currentValue === null ? true : currentValue === true ? false : null;
+      toggleFilterState(adminCtx, key, nextState);
+    }} />
 {/each}
