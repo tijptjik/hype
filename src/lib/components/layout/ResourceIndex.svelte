@@ -1,4 +1,6 @@
 <script lang="ts" generics="T extends Resource">
+// SVELTE
+import { slide } from 'svelte/transition';
 // I18N
 import { m } from '$lib/i18n';
 // VIRTUA
@@ -15,13 +17,15 @@ let {
   layoutMode,
   controlMode,
   card,
-  row
+  row,
+  controlBar
 }: {
   entities: T[];
   layoutMode: LayoutMode;
   controlMode: ControlMode;
   card?: (entity: T, idx: number) => any;
   row?: (entity: T, idx: number) => any;
+  controlBar?: () => any;
 } = $props();
 
 // CONTEXT
@@ -43,6 +47,15 @@ let columnCount = $derived(
       : 1
 );
 </script>
+
+<!-- Control Bar (slides down when controlMode is active) -->
+{#if controlMode === 'filter'}
+  <div transition:slide>
+    {#if controlBar}
+      {@render controlBar()}
+    {/if}
+  </div>
+{/if}
 
 <div
   bind:clientHeight={gridHeight}

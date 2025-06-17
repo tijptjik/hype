@@ -78,20 +78,20 @@ const defaultFilters = {
 const viewFilters = {
   feature: {
     // Status related
-    isPublished: null,
+    isPublished: false,
     isPendingReview: null,
-    isArchived: null,
+    isArchived: false,
     isIntangible: null,
     isVisitable: null,
 
     // Image related
-    hasImage: null,
+    hasImage: false,
     isOneImagePublished: null,
     isAllImagePublished: null,
 
     // Authorship related
-    hasTitle: null,
-    hasDescription: null,
+    hasTitle: false,
+    hasDescription: false,
 
     // Translation related
     translationLocales: {
@@ -101,15 +101,15 @@ const viewFilters = {
     },
     isTitleTranslated: {
       en: null,
-      'zh-hant': null,
-      'zh-hans': null
+      'zh-hant': false,
+      'zh-hans': false
     },
     isDescriptionTranslated: {
       en: null,
-      'zh-hant': null,
-      'zh-hans': null
+      'zh-hant': false,
+      'zh-hans': false
     },
-    isSpecifiedTranslated: {
+    isSpecifierTranslated: {
       en: null,
       'zh-hant': null,
       'zh-hans': null

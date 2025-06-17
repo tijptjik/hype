@@ -10,6 +10,7 @@ import LayoutModes from '$lib/components/layout/ResourceIndexLayoutModes.svelte'
 import ControlModes from '$lib/components/layout/ResourceIndexControlModes.svelte';
 import FilterInput from '$lib/components/menu/FilterInput.svelte';
 import EntityCard from '$lib/components/layout/EntityCard.svelte';
+import FeatureFilterControlBar from '$lib/components/layout/FeatureFilterControlBar.svelte';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
 // CONFIG :: KEY MAP
@@ -76,6 +77,9 @@ let entities: Feature[] = $derived(adminCtx.filteredFeatures);
 </ResourceHeader>
 
 <ResourceIndex {entities} {layoutMode} {controlMode}>
+  {#snippet controlBar()}
+    <FeatureFilterControlBar />
+  {/snippet}
   {#snippet card(entity: Feature)}
     <EntityCard {entity} {keyMap}>
       {#snippet badgesExtra(entity: Feature)}
