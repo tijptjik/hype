@@ -54,14 +54,13 @@ let showNewButton = $derived(user && resource && canCreateEntity(user, resource)
     <div class="flex-1">
       <div class="flex items-center space-x-4">
         <Icon src={navItems[resource].icon} class="h-6 w-6" />
-        <h2 class="text-2xl font-semibold">{title}</h2>
+        <h2 class="text-2xl font-semibold pr-2">{title}</h2>
+        {#if showNewButton}
+          <NewEntityButton />
+        {/if}
       </div>
     </div>
     <div class="flex flex-none items-center space-x-5">
-      {#if showNewButton}
-        <NewEntityButton />
-        <div class="divider divider-horizontal"></div>
-      {/if}
       {#if filters}
         {@render filters()}
       {:else}

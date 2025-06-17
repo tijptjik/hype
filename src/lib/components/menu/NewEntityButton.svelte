@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
 // NAVIGATION
 import { navigateOnAdmin } from '$lib/navigation';
 // LIB
@@ -54,7 +56,9 @@ let requiresParentAssociation = (resource: HierarchicalResource): boolean => {
 };
 </script>
 
-<button {onclick} class="btn btn-primary btn-sm text-white"> ADD </button>
+<button {onclick} class="btn btn-primary btn-sm uppercase text-white">
+  {m.wacky_home_sawfish_accept()}
+</button>
 
 {#if modalOpen}
   <AssociationModal bind:isOpen={modalOpen} />
