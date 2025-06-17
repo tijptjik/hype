@@ -76,7 +76,7 @@ let entities: Feature[] = $derived(adminCtx.getViewFilteredResource<Feature>(Fir
 
 <ResourceIndex {entities} {layoutMode} {controlMode}>
   {#snippet controlBar()}
-    <FilterControlBar />
+    <FilterControlBar count={entities.length} />
   {/snippet}
   {#snippet card(entity: Feature)}
     <EntityCard {entity} {keyMap}>

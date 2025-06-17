@@ -1,6 +1,10 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
 // ANIMATION
 import { fly, slide, fade } from 'svelte/transition';
+// ENUMS
+import { FirstClassResource } from '$lib/enums';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import StatusSection from './Status.svelte';
@@ -19,6 +23,8 @@ import {
   Cog6Tooth,
   Funnel
 } from '@steeze-ui/heroicons';
+
+let { count } = $props();
 
 // STATE
 let activeSection: string | null = $state(null);
@@ -46,10 +52,11 @@ function selectSection(sectionKey: string) {
 function toggleSectionMenu() {
   showSectionMenu = !showSectionMenu;
 }
+
 </script>
 
 <div
-  class="items-centerw-full relative flex h-16 flex-row gap-4 bg-base-200"
+  class="relative flex h-16 w-full flex-row items-center justify-between gap-4 bg-base-200"
   transition:slide>
   <div class="group/sections bg-200 mx-4 flex h-16 items-center gap-4 bg-base-200">
     <!-- Anchor -->
@@ -105,5 +112,9 @@ function toggleSectionMenu() {
         {/if}
       </div>
     </div>
+  </div>
+  <div class="flex items-center pr-8 text-sm text-base-content/60 gap-2">
+    <span>{count}</span>
+    <span>{m.busy_flaky_mayfly_chop()}</span>
   </div>
 </div>
