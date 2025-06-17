@@ -10,7 +10,7 @@ import LayoutModes from '$lib/components/resources/controls/ResourceIndexLayoutM
 import ControlModes from '$lib/components/resources/controls/ResourceIndexControlModes.svelte';
 import FilterInput from '$lib/components/menu/FilterInput.svelte';
 import EntityCard from '$lib/components/resources/EntityCard.svelte';
-import FeatureFilterControlBar from '$lib/components/resources/filters/features/Root.svelte';
+import FilterControlBar from '$lib/components/resources/filters/features/Root.svelte';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
 // TYPES
@@ -76,7 +76,7 @@ let entities: Feature[] = $derived(adminCtx.filteredFeatures);
 
 <ResourceIndex {entities} {layoutMode} {controlMode}>
   {#snippet controlBar()}
-    <FeatureFilterControlBar />
+    <FilterControlBar />
   {/snippet}
   {#snippet card(entity: Feature)}
     <EntityCard {entity} {keyMap}>
@@ -101,19 +101,25 @@ let entities: Feature[] = $derived(adminCtx.filteredFeatures);
   {/snippet}
   {#snippet row(entity: Feature, rowIdx: number)}
     <div
-      class="flex items-center justify-between rounded-lg bg-base-100 p-4 shadow-sm transition-shadow hover:shadow-md">
-      <div class="flex-1">
-        <h3 class="text-lg font-semibold">
-          {entity.i18n?.[getLocale()]?.title || 'Untitled'}
-        </h3>
-        <p class="text-sm text-base-content/70">
-          {entity.i18n?.[getLocale()]?.displayAddress || 'No address'}
-        </p>
+      class="flex flex-row items-center justify-between rounded-lg bg-base-100 p-4 px-8 shadow-sm transition-shadow hover:shadow-md">
+      <div class="flex flex-row items-center justify-between">
+        <div class="flex-1">
+          <h3 class="text-lg font-semibold">
+            {entity.i18n?.[getLocale()]?.title || 'Untitled'}
+          </h3>
+          <p class="text-sm text-base-content/70">
+            {entity.i18n?.[getLocale()]?.displayAddress || 'No address'}
+          </p>
+        </div>
+        <div class="divider divider-horizontal mx-4"></div>
       </div>
-      <div class="flex items-center space-x-2">
-        <span class="badge {entity.isPublished ? 'badge-primary' : 'badge-ghost'}">
-          {entity.isPublished ? 'Published' : 'Draft'}
-        </span>
+      <div class="flex flex-row items-center justify-between">
+        <div class="divider divider-horizontal mx-4"></div>
+        <div class="flex items-center space-x-2">
+          <span class="badge {entity.isPublished ? 'badge-primary' : 'badge-ghost'}">
+            {entity.isPublished ? 'Published' : 'Draft'}
+          </span>
+        </div>
       </div>
     </div>
   {/snippet}

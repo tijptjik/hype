@@ -3,12 +3,12 @@
 import { fly, slide, fade } from 'svelte/transition';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
-import FeatureFilterBarStatusSection from './Status.svelte';
-import FeatureFilterBarImageSection from './Images.svelte';
-import FeatureFilterBarAuthorshipSection from './Authorship.svelte';
-import FeatureFilterBarTranslationSection from './Translation.svelte';
-import FeatureFilterBarCategoricalSection from './Classifiers.svelte';
-import FeatureFilterBarSpecifierSection from './Specifiers.svelte';
+import StatusSection from './Status.svelte';
+import ImageSection from './Images.svelte';
+import AuthorshipSection from './Authorship.svelte';
+import TranslationSection from './Translation.svelte';
+import ClassifierSection from './Classifiers.svelte';
+import SpecifierSection from './Specifiers.svelte';
 // ICONS
 import {
   CircleStack,
@@ -30,7 +30,7 @@ const filterSections = {
   authorship: { icon: PencilSquare, title: 'Content' },
   image: { icon: Photo, title: 'Images' },
   status: { icon: CircleStack, title: 'Status' },
-  categorical: { icon: Tag, title: 'Categories' },
+  classifier: { icon: Tag, title: 'Categories' },
   specifier: { icon: Cog6Tooth, title: 'Specifiers' }
 };
 
@@ -91,17 +91,17 @@ function toggleSectionMenu() {
         class="absolute z-20 w-auto flex flex-row gap-2 justify-center transition-opacity duration-300 {showSectionMenu ? 'opacity-0' : 'opacity-100'}">
         <!-- Active Section Filters -->
         {#if activeSection === 'status'}
-          <FeatureFilterBarStatusSection />
+          <StatusSection />
         {:else if activeSection === 'image'}
-          <FeatureFilterBarImageSection />
+          <ImageSection />
         {:else if activeSection === 'authorship'}
-          <FeatureFilterBarAuthorshipSection />
+          <AuthorshipSection />
         {:else if activeSection === 'translation'}
-          <FeatureFilterBarTranslationSection />
-        {:else if activeSection === 'categorical'}
-          <FeatureFilterBarCategoricalSection />
+          <TranslationSection />
+        {:else if activeSection === 'classifier'}
+          <ClassifierSection />
         {:else if activeSection === 'specifier'}
-          <FeatureFilterBarSpecifierSection />
+          <SpecifierSection />
         {/if}
       </div>
     </div>
