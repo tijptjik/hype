@@ -4,15 +4,14 @@ import { getLocale } from '$lib/i18n';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
-import ResourceHeader from '$lib/components/layout/ResourceHeader.svelte';
-import ResourceIndex from '$lib/components/layout/ResourceIndex.svelte';
-import EntityCard from '$lib/components/layout/EntityCard.svelte';
+import ResourceHeader from  '$lib/components/resources/headers/ResourceHeader.svelte';
+import ResourceIndex from '$lib/components/resources/ResourceIndex.svelte';
+import EntityCard from '$lib/components/resources/EntityCard.svelte';
 import Image from '$lib/components/common/Image.svelte';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
 // TYPES
-import type { KeyMap } from '$lib/components/layout/EntityCard.svelte';
-import type { Layer } from '$lib/types';
+import type { KeyMap, Layer } from '$lib/types';
 
 // CONFIG :: KEY MAP
 const keyMap: KeyMap = {

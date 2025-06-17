@@ -2,7 +2,7 @@
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
-import TaskHeader from '$lib/components/layout/TaskHeader.svelte';
+import TaskHeader from '$lib/components/resources/headers/TaskHeader.svelte';
 import TaskIndex from '$lib/components/tasks/layout/Index.svelte';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';

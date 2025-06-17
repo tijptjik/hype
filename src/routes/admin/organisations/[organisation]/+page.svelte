@@ -16,7 +16,7 @@ import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 import { getFlash } from 'sveltekit-flash-message';
 import { page } from '$app/state';
 // COMPONENTS
-import Header from '$lib/components/layout/EntityHeader.svelte';
+import Header from '$lib/components/resources/headers/EntityHeader.svelte'
 import HeaderButton from '$lib/components/layout/HeaderButton.svelte';
 import EntityActions from '$lib/components/menu/EntityActions.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';

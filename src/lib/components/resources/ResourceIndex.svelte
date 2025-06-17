@@ -6,7 +6,7 @@ import { m } from '$lib/i18n';
 // VIRTUA
 import { VList } from 'virtua/svelte';
 // COMPONENTS
-import EntityCard from '$lib/components/layout/EntityCard.svelte';
+import EntityCard from '$lib/components/resources/EntityCard.svelte';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES

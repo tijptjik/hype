@@ -310,6 +310,7 @@ export type ResourceTypeWithChildren = Exclude<
   'feature' | 'task'
 >;
 
+
 /* ----------------- */
 // NAVIGATION :: ADMIN :: ACTIVE RESOURCE
 /* -------- */
@@ -363,6 +364,27 @@ export type ActiveCollection = {
   i18n: Record<Locale, { name: string }>;
   items: Feature[];
 } | null;
+
+/* ----------------- */
+// ENTITY CARDS
+/* -------- */
+
+export type KeyMap = {
+  id: 'id' | 'code' | string;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  image: string;
+  tags?: string[];
+  badges?: Array<{
+    label: string;
+    variant?: 'primary' | 'secondary' | 'outline' | undefined;
+    type?: 'boolean';
+    trueText?: string;
+    falseText?: string;
+    superAdminOnly?: boolean;
+  }>;
+};
 
 /* ----------------- */
 // URL
@@ -1762,7 +1784,7 @@ export type FeatureViewFilters = {
   translationLocales: Record<Locale, boolean>; // Which locales to consider for translation filters
   isTitleTranslated: LocalisedFilterTriState;
   isDescriptionTranslated: LocalisedFilterTriState;
-  isSpecifiedTranslated: LocalisedFilterTriState; // TODO: implement
+  isSpecifierTranslated: LocalisedFilterTriState; // TODO: implement
   isAddressTranslated: LocalisedFilterTriState;
   
   // Property related

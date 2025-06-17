@@ -4,19 +4,17 @@ import { getLocale } from '$lib/i18n';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
-import ResourceHeader from '$lib/components/layout/ResourceHeader.svelte';
-import ResourceIndex from '$lib/components/layout/ResourceIndex.svelte';
-import LayoutModes from '$lib/components/layout/ResourceIndexLayoutModes.svelte';
-import ControlModes from '$lib/components/layout/ResourceIndexControlModes.svelte';
+import ResourceHeader from '$lib/components/resources/headers/ResourceHeader.svelte';
+import ResourceIndex from '$lib/components/resources/ResourceIndex.svelte';
+import LayoutModes from '$lib/components/resources/controls/ResourceIndexLayoutModes.svelte';
+import ControlModes from '$lib/components/resources/controls/ResourceIndexControlModes.svelte';
 import FilterInput from '$lib/components/menu/FilterInput.svelte';
-import EntityCard from '$lib/components/layout/EntityCard.svelte';
-import FeatureFilterControlBar from '$lib/components/layout/FeatureFilterControlBar.svelte';
+import EntityCard from '$lib/components/resources/EntityCard.svelte';
+import FeatureFilterControlBar from '$lib/components/resources/filters/features/Root.svelte';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
-// CONFIG :: KEY MAP
-import type { KeyMap } from '$lib/components/layout/EntityCard.svelte';
 // TYPES
-import type { Feature, ControlMode, LayoutMode } from '$lib/types';
+import type { KeyMap, Feature, ControlMode, LayoutMode } from '$lib/types';
 
 // CONTEXT
 const adminCtx = getAdminCtx();
