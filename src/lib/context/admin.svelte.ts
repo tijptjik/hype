@@ -31,7 +31,9 @@ import type {
   Resource,
   Hub,
   FilteredResources,
-  Property
+  Property,
+  ViewFilters,
+  Locale
 } from '../types';
 
 // State type for AdminCtx - only includes admin-specific state
@@ -41,7 +43,10 @@ type AdminResourceState = {
     resourceRef: Id | Code | false;
     facet: FacetType | false;
   };
+  // TIER 2: APP FILTERS - App-wide affect
   filters: AdminFilterStates;
+  // TIER 3: VIEW FILTERS - Only affect current route/view
+  viewFilters: ViewFilters;
 };
 
 export class AdminCtx {
@@ -139,6 +144,18 @@ export class AdminCtx {
       resourceRef: false,
       facet: false
     },
+    // ═══════════════════════
+    // 3-TIER FILTER SYSTEM
+    // ═══════════════════════
+    
+    // TIER 1: PRISMS -- Which organisations, projects, and layers are pre-filtered when fetching features from the database
+    // Applied at the server level to constrain the result set of first-class resources available
+
+    // See AppCtx.state.prisms
+    
+    // TIER 2: APP FILTERS -- Which neighbourhoods and properties being filtered for when showing features on the map
+    // Applied in the app regardless of view - affects all features displayed on the map and in collections
+
     filters: {
       organisation: { text: '', properties: {}, isPublished: null, isArchived: false },
       project: { text: '', properties: {}, isPublished: null, isArchived: false },

@@ -119,6 +119,11 @@ export class AppCtx {
     filters: { neighbourhoods: [], properties: {} },
     // Prisms -- Which organisations, projects, and layers are pre-filtered when fetching features from the database
     prisms: { organisation: [], project: [], layer: [] },
+    // TIER 2: APP FILTERS -- Which neighbourhoods and properties being filtered for when showing features on the map
+    // Applied in the app regardless of view - affects all features displayed on the map and in collections
+    filters: { neighbourhoods: [], properties: {} },
+    // TIER 3: VIEW FILTERS -- Handled by individual admin views (e.g., AdminCtx.state.viewFilters)
+    // Only affect the current route/view they are applied on, not the underlying data or map view
     // Resources -- The resources fetched from the database (post prism-filtering, pre filters-filtering)
     resources: {
       organisation: [],
