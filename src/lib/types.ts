@@ -390,6 +390,15 @@ export type FeatureTranslationFilterKey =
   | 'isDescriptionTranslated'
   | 'isAddressTranslated';
 
+export type FeatureAuthorshipFilterKey =
+  | 'hasTitle'
+  | 'hasDescription';
+
+export type FeatureImageFilterKey =
+  | 'hasImage'
+  | 'isOneImagePublished'
+  | 'isAllImagePublished';
+
 /* ----------------- */
 // FILTERS :: APP
 /* -------- */
