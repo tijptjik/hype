@@ -1730,6 +1730,13 @@ export interface HubOpts {
 }
 
 /* ----------------- */
+// ADMIN CONTROLS
+/* -------- */
+export type LayoutMode = 'table' | 'list' | 'card';
+export type ControlMode = 'filter' | null;
+
+
+/* ----------------- */
 // TYPESCRIPT UTILITIES
 /* -------- */
 
