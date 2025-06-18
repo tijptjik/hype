@@ -93,7 +93,7 @@ export class AppCtx {
   >();
 
   // Cache for all resources
-  cache = {
+  cache : Cache = {
     organisation: new Map(),
     project: new Map(),
     layer: new Map(),
