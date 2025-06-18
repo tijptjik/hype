@@ -189,7 +189,7 @@ import type {
 import type { enhance } from '$app/forms';
 import type { Marker } from 'maplibre-gl';
 import type { Writable } from 'svelte/store';
-import type { SvelteSet } from 'svelte/reactivity';
+import type { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import type { Geometry } from 'geojson';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import type { SQLiteTable, SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core';
@@ -461,6 +461,26 @@ export type KeyMap = {
     superAdminOnly?: boolean;
   }>;
 };
+
+/* ----------------- */
+// STATS
+/* -------- */
+
+export type StatsCache = SvelteMap<FirstClassResource, SvelteMap<Id, SvelteMap<Key, { value: any; type: 'boolean' | 'count' | 'mean' | 'sum' }>>>;
+
+// Define the shape of the cache
+export type Cache = {
+  organisation: Map<Id, Organisation>;
+  project: Map<Id, Project>;
+  layer: Map<Id, Layer>;
+  feature: Map<Id, Feature>;
+  property: Map<Id, Property>;
+  task: Map<Id, Task>;
+  hub: Map<Id, Hub>;
+  image: Map<Id, ImageDB>;
+  stats: StatsCache;
+};
+
 
 /* ----------------- */
 // URL

@@ -52,15 +52,18 @@ import type {
   UserExperimental,
   DeepPartial,
   NewFeatureTask,
-  FeatureProperty,
-  FeaturePropertyI18nDB,
   ResourceTypeWithChildren,
   FeatureI18nFieldKeys,
   Task,
   Hub,
   Code,
   ResourceContext,
-  Resource
+  Resource,
+  Image,
+  ImageDB,
+  Key,
+  Cache,
+  StatsCache
 } from '$lib/types';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
@@ -91,13 +94,15 @@ export class AppCtx {
 
   // Cache for all resources
   cache = {
-    organisation: new Map<Id, Organisation>(),
-    project: new Map<Id, Project>(),
-    layer: new Map<Id, Layer>(),
-    feature: new Map<Id, Feature>(),
-    task: new Map<Id, Task>(),
-    hub: new Map<Id, Hub>(),
-    property: new Map<Id, Property>()
+    organisation: new Map(),
+    project: new Map(),
+    layer: new Map(),
+    feature: new Map(),
+    task: new Map(),
+    hub: new Map(),
+    property: new Map(),
+    image: new Map(),
+    stats: new SvelteMap()
   };
 
   // Features map for current state (rebuilt when state.resources.feature changes)
