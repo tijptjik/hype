@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';  
+import { m } from '$lib/i18n';
 
 // TYPES
 interface Props {
@@ -42,7 +42,12 @@ const {
     </span>
     <input
       type="checkbox"
-      class="toggle toggle-sm border-neutral-content/30 bg-neutral-content/30 text-neutral-content/30 transition-colors {currentValue === null ? 'bg-white' : (currentValue === false ? 'bg-red-500' : 'bg-[#CF4FB0]')}"
+      class="toggle toggle-sm border-neutral-content/30 bg-[#CF4FB0] text-neutral-content/30 transition-colors {currentValue ===
+      null
+        ? 'bg-neutral-content/30'
+        : currentValue === false
+          ? 'bg-red-500'
+          : ''}"
       checked={currentValue === true}
       indeterminate={currentValue === null}
       onchange={onToggleChange} />
@@ -52,4 +57,4 @@ const {
       {trueLabel}
     </span>
   </div>
-</div> 
+</div>
