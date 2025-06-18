@@ -15,8 +15,14 @@ import EntityCard from '$lib/components/resources/EntityCard.svelte';
 import FilterControlBar from '$lib/components/resources/filters/features/Root.svelte';
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 import Viewer from '$lib/components/common/Viewer.svelte';
-import FeatureRowStats from '$lib/components/features/FeatureRowStats.svelte';
 import ScrollableText from '$lib/components/common/ScrollableText.svelte';
+// STAT COMPONENTS
+import StatusStats from '$lib/components/features/stats/StatusStats.svelte';
+import TranslationStats from '$lib/components/features/stats/TranslationStats.svelte';
+import ContentStats from '$lib/components/features/stats/ContentStats.svelte';
+import ImageStats from '$lib/components/features/stats/ImageStats.svelte';
+import CategoryStats from '$lib/components/features/stats/CategoryStats.svelte';
+import SpecifierStats from '$lib/components/features/stats/SpecifierStats.svelte';
 // ENUMS
 import { FirstClassResource, ImageContextResource } from '$lib/enums';
 // TYPES
@@ -236,14 +242,62 @@ function focusFirstItem(e: CustomEvent<KeyboardEvent>) {
         <div class="flex h-10 flex-col items-center justify-between">
           <small class="text-xs text-base-content/60">GRAPHEME</small>
           <div class="tooltip" data-tip={grapheme}>
-            <p class="max-w-[100px] truncate text-sm text-base-content">
-              {grapheme}
+      <!-- Status Stats -->
+      <StatusStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
+
+      <!-- Translation Stats (hidden on small screens) -->
+      <div class="hidden md:block">
+        <TranslationStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
+      </div>
+
+      <!-- Content Stats (hidden on medium screens and smaller) -->
+      <div class="hidden lg:block">
+        <ContentStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
+      </div>
+
+      <!-- Image Stats (hidden on large screens and smaller) -->
+      <div class="hidden xl:block">
+        <ImageStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
+      </div>
+
+      <!-- Category Stats (hidden on xl screens and smaller) -->
+      <div class="hidden 2xl:block">
+        <CategoryStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
+      </div>
+
+      <!-- Specifier Stats (hidden on 2xl screens and smaller) -->
+      <div class="hidden 3xl:block">
+        <SpecifierStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
             </p>
           </div>
         </div>
 
-        <!-- Middle Section: Grapheme + Stats (distributed) -->
-        <FeatureRowStats feature={entity} />
+      <!-- Status Stats -->
+      <StatusStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
+
+      <!-- Translation Stats (hidden on small screens) -->
+      <div class="hidden md:block">
+        <TranslationStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
+      </div>
+
+      <!-- Content Stats (hidden on medium screens and smaller) -->
+      <div class="hidden lg:block">
+        <ContentStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
+      </div>
+
+      <!-- Image Stats (hidden on large screens and smaller) -->
+      <div class="hidden xl:block">
+        <ImageStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
+      </div>
+
+      <!-- Category Stats (hidden on xl screens and smaller) -->
+      <div class="hidden 2xl:block">
+        <CategoryStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
+      </div>
+
+      <!-- Specifier Stats (hidden on 2xl screens and smaller) -->
+      <div class="hidden 3xl:block">
+        <SpecifierStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
       </div>
 
       <!-- Right Section: Status -->
