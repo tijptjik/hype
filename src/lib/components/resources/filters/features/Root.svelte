@@ -15,18 +15,23 @@ import SpecifierSection from './Specifiers.svelte';
 import {
   CircleStack,
   Photo,
-  PencilSquare,
   Language,
   Tag,
-  Cog6Tooth,
+  Pencil,
   Funnel,
-  XMark
+  XMark,
+  BookOpen
 } from '@steeze-ui/heroicons';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
-import type { FeatureViewFilters, Property, FeatureTranslationFilterKey } from '$lib/types';
-import type { SvelteSet } from 'svelte/reactivity';
+import type {
+  FeatureViewFilters,
+  FeatureTranslationFilterKey,
+  FeatureStatusFilterKey,
+  FeatureImageFilterKey,
+  FeatureAuthorshipFilterKey
+} from '$lib/types';
 
 let { count } = $props();
 
@@ -38,18 +43,28 @@ let showSectionMenu = $state(true);
 
 // FILTER SECTIONS CONFIG
 const filterSections = {
-  translation: { icon: Language, title: 'Translation' },
-  authorship: { icon: PencilSquare, title: 'Content' },
-  image: { icon: Photo, title: 'Images' },
   status: { icon: CircleStack, title: 'Status' },
+  authorship: { icon: BookOpen, title: 'Content' },
+  translation: { icon: Language, title: 'Translation' },
+  image: { icon: Photo, title: 'Images' },
   classifier: { icon: Tag, title: 'Categories' },
-  specifier: { icon: Cog6Tooth, title: 'Specifiers' }
+  specifier: { icon: Pencil, title: 'Specifiers' }
 };
 
 const filterKeys: Record<string, (keyof FeatureViewFilters)[]> = {
-  status: ['isPublished', 'isPendingReview', 'isArchived', 'isIntangible', 'isVisitable'],
-  image: ['hasImage', 'isOneImagePublished', 'isAllImagePublished'],
-  authorship: ['hasTitle', 'hasDescription'],
+  status: [
+    'isPublished',
+    'isPendingReview',
+    'isArchived',
+    'isIntangible',
+    'isVisitable'
+  ] as FeatureStatusFilterKey[],
+  image: [
+    'hasImage',
+    'isOneImagePublished',
+    'isAllImagePublished'
+  ] as FeatureImageFilterKey[],
+  authorship: ['hasTitle', 'hasDescription'] as FeatureAuthorshipFilterKey[],
   translation: [
     'isTitleTranslated',
     'isDescriptionTranslated',
@@ -61,6 +76,16 @@ const filterKeys: Record<string, (keyof FeatureViewFilters)[]> = {
 const getFilterCount = (section: string) => {
   const featureFilters = adminCtx.state.viewFilters.feature;
   let count = 0;
+  if (section === 'status') {
+    count = filterKeys[section].filter((filterKey) => {
+      // isArchived is for SuperAdmin only so we ignore
+      return (
+        featureFilters[filterKey as FeatureTranslationFilterKey] !== null &&
+        filterKey !== 'isArchived'
+      );
+    }).length;
+    return count;
+  }
 
   if (section === 'translation') {
     filterKeys[section].forEach((featureKey) => {
@@ -84,6 +109,14 @@ const getFilterCount = (section: string) => {
   return count;
 };
 
+const totalFilterCount = $derived(() => {
+  let total = 0;
+  for (const section of Object.keys(filterSections)) {
+    total += getFilterCount(section);
+  }
+  return total;
+});
+
 // HANDLERS
 function selectSection(sectionKey: string) {
   if (activeSection == sectionKey) {
@@ -100,7 +133,6 @@ function toggleSectionMenu() {
 function resetFilters() {
   adminCtx.resetViewFilters();
 }
-
 </script>
 
 <div
@@ -109,7 +141,7 @@ function resetFilters() {
   <div class="group/sections bg-200 mx-4 flex h-16 items-center gap-4 bg-base-200">
     <!-- Anchor -->
     <div
-      class="group/anchor flex items-center justify-center opacity-70 transition-opacity duration-300 hover:opacity-100 mr-4"
+      class="group/anchor mr-4 flex items-center justify-center opacity-70 transition-opacity duration-300 hover:opacity-100"
       onmouseenter={toggleSectionMenu}>
       <button
         class="btn btn-ghost btn-sm h-10 group-hover/anchor:bg-transparent group-hover/anchor:text-white">
@@ -126,8 +158,7 @@ function resetFilters() {
     </div>
     <div class="relative flex flex-row items-center">
       <!-- SECTION SELECTION MODE: Show all sections horizontally -->
-      <div
-        class="absolute z-30 flex items-center gap-2 bg-base-200 h-16">
+      <div class="absolute z-30 flex h-16 items-center gap-2 bg-base-200">
         <!-- All Section Options -->
         {#each Object.entries(filterSections) as [key, section], idx (key)}
           {#if showSectionMenu && activeSection !== key}
@@ -139,14 +170,17 @@ function resetFilters() {
               <Icon src={section.icon} class="h-4 w-4" />
               <span class="hidden lg:inline">{section.title}</span>
               {#if getFilterCount(key) > 0}
-                <div class="badge badge-secondary badge-xs absolute -right-1 -top-1"></div>
+                <div class="badge badge-secondary badge-xs absolute -right-1 -top-1">
+                </div>
               {/if}
             </button>
           {/if}
         {/each}
       </div>
       <div
-        class="absolute z-20 w-auto flex flex-row gap-2 justify-center transition-opacity duration-300 {showSectionMenu ? 'opacity-0' : 'opacity-100'}">
+        class="absolute z-20 flex w-auto flex-row justify-center gap-2 transition-opacity duration-300 {showSectionMenu
+          ? 'opacity-0'
+          : 'opacity-100'}">
         <!-- Active Section Filters -->
         {#if activeSection === 'status'}
           <StatusSection />
@@ -164,12 +198,15 @@ function resetFilters() {
       </div>
     </div>
   </div>
-  <div class="flex items-center pr-8 text-base-content/60 gap-4">
+  <div class="flex items-center gap-4 pr-8 text-base-content/60">
     <div class="text-sm">
       <span>{count}</span>
       <span>{m.busy_flaky_mayfly_chop()}</span>
     </div>
-    <button class="btn btn-ghost btn-circle btn-sm" onclick={resetFilters}>
+    <button
+      class="btn btn-circle btn-ghost btn-sm"
+      onclick={resetFilters}
+      disabled={totalFilterCount() === 0}>
       <Icon src={XMark} class="h-4 w-4" />
     </button>
   </div>
