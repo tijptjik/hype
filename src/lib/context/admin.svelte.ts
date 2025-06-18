@@ -461,6 +461,16 @@ export class AdminCtx {
   // ADMIN FILTERS :: HELPERS
   // ═══════════════════════
 
+  /**
+   * Filters features by their publication and review status flags.
+   * 
+   * Note: isPendingReview has inverted logic - a filter value of `true` 
+   * means "show features NOT pending review" (where feature.isPendingReview is false).
+   * 
+   * @param feature - The feature to evaluate
+   * @param filters - Status filter settings
+   * @returns true if feature passes all status filters
+   */
   private filterByStatus = (
     feature: Feature,
     filters: ViewFilters['feature']
@@ -486,6 +496,16 @@ export class AdminCtx {
     return true;
   };
 
+  /**
+   * Filters features by whether they have user-authored content.
+   * 
+   * Checks if features have non-generated titles and descriptions across
+   * any locale. Features without i18n data are considered to have no content.
+   * 
+   * @param feature - The feature to evaluate
+   * @param filters - Authorship filter settings
+   * @returns true if feature passes authorship filters
+   */
   private filterByAuthorship = (
     feature: Feature,
     filters: ViewFilters['feature']
@@ -520,6 +540,19 @@ export class AdminCtx {
     return true;
   };
 
+  /**
+   * Filters features by translation status across multiple locales and fields.
+   * 
+   * For each translation field (title, description, address), checks if the feature
+   * meets the translation requirements across all active locales. If ALL values
+   * for a field are null/empty across all locales, the field is considered as
+   * "no content to translate" and passes the filter.
+   * 
+   * @param feature - The feature to evaluate
+   * @param filters - Translation filter settings per locale
+   * @param activeLocales - Set of locales to check
+   * @returns true if feature passes all translation filters
+   */
   private filterByTranslation = (
     feature: Feature,
     filters: ViewFilters['feature'],
@@ -547,6 +580,16 @@ export class AdminCtx {
         (locale) => filters[filterKey]?.[locale] !== null
       );
       if (!isAnyLocaleFiltered) continue;
+
+      // Check if ALL locales have no content for this field (no text to translate)
+      const allLocalesEmpty = [...activeLocales].every((locale) => {
+        const i18n = feature.i18n?.[locale];
+        const text = i18n?.[textField as keyof typeof i18n];
+        return !text || (typeof text === 'string' && text.trim().length === 0);
+      });
+
+      // If no content exists across all locales, consider it as passing (nothing to translate)
+      if (allLocalesEmpty) continue;
 
       const allLocalesMatch = [...activeLocales].every((locale) => {
         const filterValue = filters[filterKey]?.[locale];
@@ -621,15 +664,17 @@ export class AdminCtx {
   };
 
 
-    /**
-   * Filters features by property presence and value
-   *
-   * Supported filters are dynamic, based on the properties of defined in the project.
-   * - properties - propertyId -> value
-   *
-   * @param feature - The feature to filter
-   * @param filters - The filters to apply
-   * @returns True if the feature matches the filters, false otherwise
+  /**
+   * Filters features by property presence and values.
+   * 
+   * Handles both classifier and specifier property types:
+   * - Classifier: Checks for presence/absence of a selected value
+   * - Specifier: For translatable properties, checks across all locales; 
+   *   for non-translatable, checks single value
+   * 
+   * @param feature - The feature to evaluate
+   * @param filters - Property filter settings (propertyId -> boolean)
+   * @returns true if feature passes all property filters
    */
   private filterByProperties = (
     feature: Feature,

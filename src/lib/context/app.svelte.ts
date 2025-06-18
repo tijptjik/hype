@@ -24,6 +24,7 @@ import {
   getFeatureIdsForProperties,
   sortProperties
 } from '$lib/client/services/property';
+import { primeFeatureStatsCache } from '$lib/client/services/stats';
 // CONTEXT
 import { getContext, setContext } from 'svelte';
 // SVELTE
@@ -543,7 +544,7 @@ export class AppCtx {
     this.state.resources.feature = features;
     this.syncCacheMap(this.cache.feature, features);
 
-    // Populate image cache from feature images
+    // Populate image cache from feature images and pre-populate stats cache
     for (const feature of features) {
       if (feature.images) {
         for (const featureImage of feature.images) {
@@ -552,6 +553,9 @@ export class AppCtx {
           }
         }
       }
+      
+      // Pre-populate stats cache for this feature
+      primeFeatureStatsCache(this, feature);
     }
 
     this.rebuildFeaturesMap();
