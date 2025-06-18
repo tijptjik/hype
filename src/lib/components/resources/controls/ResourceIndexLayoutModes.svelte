@@ -47,7 +47,7 @@ function toggleMode() {
 }
 </script>
 
-<div class="flex items-center space-x-2">
+<div class="flex items-center space-x-2 caret-transparent">
   <button
     class="btn btn-ghost px-3 transition-opacity duration-200"
     onclick={toggleMode}

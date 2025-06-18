@@ -42,7 +42,7 @@ function toggleMode(modeKey: ControlMode) {
 }
 </script>
 
-<div class="flex items-center space-x-2">
+<div class="flex items-center space-x-2 caret-transparent">
   {#each modes as modeKey}
     {@const { icon, label } = modeConfig[modeKey]}
     <button
