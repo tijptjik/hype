@@ -30,8 +30,6 @@ body:
       label: Expected Behavior
       description: What you expected to happen
       placeholder: Describe what should happen...
-    validations:
-      required: true
 
   - type: textarea
     id: actual
@@ -39,8 +37,6 @@ body:
       label: Actual Behavior
       description: What actually happened
       placeholder: Describe what actually happened...
-    validations:
-      required: true
 
   - type: textarea
     id: screenshots

@@ -418,23 +418,24 @@ export class AdminCtx {
         }
       });
     }
+
     return result;
   };
 
-  applyViewFilters = (
-    resource: FirstClassResource,
-    entities: Resource[]
-  ): Resource[] => {
+  getViewFilteredResource = <T extends Resource>(resource: FirstClassResource): T[] => {
+    const entities = this.getFilteredResource(resource);
+
     if (resource === FirstClassResource.feature) {
-      return this.applyFeatureViewFilters(entities as Feature[]);
+      return this.applyFeatureViewFilters(entities) as T[];
     }
     // TODO: Implement view filters for other resource types
-    return entities;
+    return entities as T[];
   };
 
-  applyFeatureViewFilters = (entities: Feature[]): Feature[] => {
+  applyFeatureViewFilters = (entities: Resource[]): Resource[] => {
+    const features = entities as Feature[];
     const filters = this.state.viewFilters.feature;
-    if (!filters) return entities;
+    if (!filters) return features;
 
     // Determine active locales from filter state
     const activeLocales = new Set<Locale>();
@@ -444,9 +445,9 @@ export class AdminCtx {
       }
     }
 
-    return entities.filter((feature) => {
+    return features.filter((feature) => {
       if (!this.filterByStatus(feature, filters)) return false;
-      if (!this.filterByAuthorship(feature, filters, activeLocales)) return false;
+      if (!this.filterByAuthorship(feature, filters)) return false;
       if (!this.filterByTranslation(feature, filters, activeLocales)) return false;
       // TODO: Implement property-based filters
       return true;
@@ -461,47 +462,56 @@ export class AdminCtx {
     feature: Feature,
     filters: ViewFilters['feature']
   ): boolean => {
-    const statusFilters: (keyof typeof filters)[] = [
-      'isPublished',
-      'isPendingReview',
-      'isArchived',
-      'isIntangible',
-      'isVisitable'
-    ];
-    for (const key of statusFilters) {
-      const filterValue = filters[key] as FilterTriState;
-      if (filterValue !== null && feature[key as keyof Feature] !== filterValue) {
-        return false;
-      }
+    if (filters.isPublished !== null && feature.isPublished !== filters.isPublished)
+      return false;
+    if (filters.isArchived !== null && feature.isArchived !== filters.isArchived)
+      return false;
+    if (filters.isIntangible !== null && feature.isIntangible !== filters.isIntangible)
+      return false;
+    if (filters.isVisitable !== null && feature.isVisitable !== filters.isVisitable)
+      return false;
+
+    // isPendingReview has inverted logic, so the check is flipped.
+    // A filter value of `true` means "show features NOT pending review" (where feature.isPendingReview is false)
+    if (
+      filters.isPendingReview !== null &&
+      feature.isPendingReview === filters.isPendingReview
+    ) {
+      return false;
     }
+
     return true;
   };
 
   private filterByAuthorship = (
     feature: Feature,
-    filters: ViewFilters['feature'],
-    activeLocales: Set<Locale>
+    filters: ViewFilters['feature']
   ): boolean => {
-    // hasTitle filter
-    const hasTitleFilter = filters.hasTitle;
-    if (hasTitleFilter !== null) {
-      const hasTitle = [...activeLocales].some((locale) => {
-        const i18n = feature.i18n?.[locale];
-        return i18n && i18n.title && i18n.title.length > 1 && !i18n.titleGen;
-      });
-      if (hasTitle !== hasTitleFilter) return false;
+    if (!feature.i18n) {
+      if (filters.hasTitle === true || filters.hasDescription === true) return false;
+      return true;
     }
 
-    // hasDescription filter
-    const hasDescriptionFilter = filters.hasDescription;
-    if (hasDescriptionFilter !== null) {
-      const hasDescription = [...activeLocales].some((locale) => {
-        const i18n = feature.i18n?.[locale];
-        return (
-          i18n && i18n.description && i18n.description.length > 1 && !i18n.descriptionGen
-        );
-      });
-      if (hasDescription !== hasDescriptionFilter) return false;
+    const allLocales = Object.keys(feature.i18n) as Locale[];
+
+    if (filters.hasTitle !== null) {
+      const hasTitle = allLocales.some(
+        (locale) =>
+          feature.i18n?.[locale]?.title &&
+          feature.i18n[locale]!.title!.length > 1 &&
+          !feature.i18n[locale]!.titleGen
+      );
+      if (hasTitle !== filters.hasTitle) return false;
+    }
+
+    if (filters.hasDescription !== null) {
+      const hasDescription = allLocales.some(
+        (locale) =>
+          feature.i18n?.[locale]?.description &&
+          feature.i18n[locale]!.description!.length > 1 &&
+          !feature.i18n[locale]!.descriptionGen
+      );
+      if (hasDescription !== filters.hasDescription) return false;
     }
 
     return true;
@@ -517,43 +527,37 @@ export class AdminCtx {
       textField: 'title' | 'description' | 'address';
       genField: 'titleGen' | 'descriptionGen' | 'addressGen';
     }[] = [
-      {
-        filterKey: 'isTitleTranslated',
-        textField: 'title',
-        genField: 'titleGen'
-      },
+      { filterKey: 'isTitleTranslated', textField: 'title', genField: 'titleGen' },
       {
         filterKey: 'isDescriptionTranslated',
         textField: 'description',
         genField: 'descriptionGen'
       },
-      {
-        filterKey: 'isAddressTranslated',
-        textField: 'address',
-        genField: 'addressGen'
-      }
+      { filterKey: 'isAddressTranslated', textField: 'address', genField: 'addressGen' }
     ];
 
     for (const { filterKey, textField, genField } of translationChecks) {
-      const localeStates = filters[filterKey];
-      if (!localeStates) continue;
+      const isAnyLocaleFiltered = [...activeLocales].some(
+        (locale) => filters[filterKey]?.[locale] !== null
+      );
+      if (!isAnyLocaleFiltered) continue;
 
-      for (const locale of activeLocales) {
-        const filterValue = localeStates[locale];
-        if (filterValue === null) continue;
+      const allLocalesMatch = [...activeLocales].every((locale) => {
+        const filterValue = filters[filterKey]?.[locale];
+        if (filterValue === null) return true;
 
         const i18n = feature.i18n?.[locale];
-        const text = i18n?.[textField];
-        const isGenerated = i18n?.[genField] ?? false;
-        const featureHasText = text && text.length > 1 && !isGenerated;
+        const text = i18n?.[textField as keyof typeof i18n];
+        const isGenerated = i18n?.[genField as keyof typeof i18n] ?? false;
+        const featureHasText =
+          typeof text === 'string' && text.length > 1 && !isGenerated;
 
-        if (featureHasText !== filterValue) {
-          return false;
-        }
-      }
+        return featureHasText === filterValue;
+      });
+
+      if (!allLocalesMatch) return false;
     }
 
-    // TODO: Implement isSpecifierTranslated filter
     return true;
   };
 
@@ -702,6 +706,10 @@ export class AdminCtx {
     property: 'isPublished' | 'isArchived' | 'isReviewed'
   ) => {
     this.state.filters[resource][property] = !this.state.filters[resource][property];
+  };
+
+  resetViewFilters = () => {
+    this.state.viewFilters = structuredClone(viewFilters);
   };
 
   // ═══════════════════════

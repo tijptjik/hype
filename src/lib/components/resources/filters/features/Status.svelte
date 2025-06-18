@@ -7,6 +7,7 @@ import { getAdminCtx } from '$lib/context/admin.svelte';
 import {
   getSimpleFilterState,
   toggleFilterState,
+  setFilterState,
   getFeatureTaskLabel
 } from '$lib/client/services/filters';
 // COMPONENTS
@@ -54,6 +55,6 @@ const statusFilters: Record<
     onToggleTrue={() => toggleFilterState(adminCtx, key, true)}
     onToggleChange={() => {
       const nextState = currentValue === null ? true : currentValue === true ? false : null;
-      toggleFilterState(adminCtx, key, nextState);
+      setFilterState(adminCtx, key, nextState);
     }} />
 {/each}

@@ -18,8 +18,6 @@ body:
       label: Issue Description
       description: What's wrong with the content?
       placeholder: Describe the content issue...
-    validations:
-      required: true
 
   - type: textarea
     id: current
