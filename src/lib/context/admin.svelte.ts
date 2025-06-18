@@ -451,7 +451,8 @@ export class AdminCtx {
       if (!this.filterByStatus(feature, filters)) return false;
       if (!this.filterByAuthorship(feature, filters)) return false;
       if (!this.filterByTranslation(feature, filters, activeLocales)) return false;
-      // TODO: Implement property-based filters
+      if (!this.filterByImages(feature, filters)) return false;
+      if (!this.filterByProperties(feature, filters)) return false;
       return true;
     });
   };
@@ -525,7 +526,10 @@ export class AdminCtx {
     activeLocales: Set<Locale>
   ): boolean => {
     const translationChecks: {
-      filterKey: 'isTitleTranslated' | 'isDescriptionTranslated' | 'isAddressTranslated';
+      filterKey:
+        | 'isTitleTranslated'
+        | 'isDescriptionTranslated'
+        | 'isAddressTranslated';
       textField: 'title' | 'description' | 'address';
       genField: 'titleGen' | 'descriptionGen' | 'addressGen';
     }[] = [
@@ -559,6 +563,128 @@ export class AdminCtx {
 
       if (!allLocalesMatch) return false;
     }
+
+    return true;
+  };
+
+  /**
+   * Filters features by image presence and publication status
+   *
+   * Supported filters
+   * - hasImage - has at least one image
+   * - isOneImagePublished - has at least one published image
+   * - isAllImagePublished - ALL images must be published
+   *
+   * @param feature - The feature to filter
+   * @param filters - The filters to apply
+   * @returns True if the feature matches the filters, false otherwise
+   */
+  private filterByImages = (
+    feature: Feature,
+    filters: ViewFilters['feature']
+  ): boolean => {
+    const images = feature.images ?? [];
+    const hasImages = images.length > 0;
+
+    if (filters.hasImage !== null) {
+      if (filters.hasImage !== hasImages) return false;
+    }
+
+    if (hasImages) {
+      if (filters.isOneImagePublished !== null) {
+        if (filters.isOneImagePublished === true) {
+          if (images.some((img) => img.isPublished)) return true;
+        }
+        if (filters.isOneImagePublished === false) {
+          if (images.every((img) => !img.isPublished)) return true;
+        }
+      }
+
+      if (filters.isAllImagePublished !== null) {
+        if (filters.isAllImagePublished === true) {
+          if (images.every((img) => img.isPublished)) return true;
+        }
+        if (filters.isAllImagePublished === false) {
+          if (images.some((img) => !img.isPublished)) return true;
+        }
+      }
+    } else {
+      if (filters.isOneImagePublished !== null) {
+        if (filters.isOneImagePublished === true) return false;
+      }
+
+      if (filters.isAllImagePublished !== null) {
+        if (filters.isAllImagePublished === true) return false;
+      }
+    }
+    return true;
+  };
+
+
+    /**
+   * Filters features by property presence and value
+   *
+   * Supported filters are dynamic, based on the properties of defined in the project.
+   * - properties - propertyId -> value
+   *
+   * @param feature - The feature to filter
+   * @param filters - The filters to apply
+   * @returns True if the feature matches the filters, false otherwise
+   */
+  private filterByProperties = (
+    feature: Feature,
+    filters: ViewFilters['feature']
+  ): boolean => {
+    const propertyFilters = filters.properties;
+
+    const propertyFilterIds = Object.keys(propertyFilters).filter(
+      (id) => propertyFilters[id] !== null
+    );
+
+    if (propertyFilterIds.length === 0) {
+      return true; // No active property filters
+    }
+
+    const PropertyCache = this.appCtx.cache.property
+
+    for (const propertyId of propertyFilterIds) {
+      const filterValue = propertyFilters[propertyId]; // true or false
+      const propertyDef = PropertyCache.get(propertyId) as Property;
+      const featureProp = feature.properties?.find((p) => p.propertyId === propertyId);
+
+      if (!propertyDef) continue;
+
+      if (propertyDef.type === 'classifier') {
+        const hasValue = !!featureProp?.propertyValueId;
+        if (hasValue !== filterValue) return false;
+      
+      } else if (propertyDef.type === 'specifier') {
+        // For "specifier" properties, the filter checks for the presence or absence of a value.
+        // If the property is translatable, it checks all locales for values.
+        // - If filterValue is true: the feature must have at least one non-empty value in any locale.
+        // - If filterValue is false: the feature must have all locales empty for this property.
+        if (propertyDef.isTranslatable) {
+          const allLocaleValues = featureProp?.i18n
+            ? Object.values(featureProp.i18n).map((t) => t.value)
+            : [];
+          if (filterValue === true) {
+            // ASSERT: Only features with at least one non-empty value in any locale pass.
+            const hasSomeValue = allLocaleValues.some((v) => v && v.length > 0);
+            if (!hasSomeValue) return false;
+          } else {
+            // ASSERT: Only features with all locales empty for this property pass.
+            const allAreEmpty = allLocaleValues.every((v) => !v || v.length === 0);
+            if (!allAreEmpty) return false;
+          }
+        } else {
+          // For non-translatable specifiers, check the single value.
+          // - If filterValue is true: the feature must have a non-empty value.
+          // - If filterValue is false: the feature must have an empty or missing value.
+          const hasValue = !!featureProp?.value && featureProp.value.length > 0;
+          if (hasValue !== filterValue) return false;
+        }
+      }
+    } 
 
     return true;
   };
