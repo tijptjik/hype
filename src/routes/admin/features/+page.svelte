@@ -129,11 +129,9 @@ function handleRowKeyDown(event: KeyboardEvent, entity: Feature) {
   }
 }
 
-
-
-function focusFirstItem(e: CustomEvent<KeyboardEvent>) {
-  e.detail.preventDefault();
-  const firstItem = listContainer?.querySelector('[tabindex="0"]') as HTMLElement;
+function focusFirstItem(event: KeyboardEvent) {
+  event.preventDefault();
+  const firstItem = listContainer?.querySelector('a[tabindex="0"]') as HTMLElement;
   firstItem?.focus();
 }
 </script>
@@ -145,7 +143,8 @@ function focusFirstItem(e: CustomEvent<KeyboardEvent>) {
       resourceType={FirstClassResource.feature}
       rounded={true}
       showUnpublishedToggle={false}
-      showReviewedToggle={true} />
+      showReviewedToggle={true}
+      ontabout={focusFirstItem} />
   {/snippet}
   {#snippet modes()}
     <ControlModes bind:controlMode defaultMode="filter" />
@@ -153,7 +152,7 @@ function focusFirstItem(e: CustomEvent<KeyboardEvent>) {
   {/snippet}
 </ResourceHeader>
 
-<ResourceIndex {entities} {layoutMode} {controlMode}>
+<ResourceIndex {entities} {layoutMode} {controlMode} bind:listContainer>
   {#snippet controlBar()}
     <FilterControlBar count={entities.length} />
   {/snippet}
@@ -181,12 +180,22 @@ function focusFirstItem(e: CustomEvent<KeyboardEvent>) {
   {#snippet row(entity)}
     {@const grapheme =
       entity.properties.find((p) => p.propertyId === graphemeProperty?.id)?.value || ''}
+    <div class="@container/main">
     <a
       href="/admin/{adminCtx.getEntityPath(
         adminCtx.activeResourceType as FirstClassResource,
         entity.id
       )}"
-      class="flex items-center gap-4 rounded-lg bg-base-100 p-2 pr-4 shadow-sm transition-shadow hover:shadow-md"
+      class="
+        grid items-center gap-4 rounded-lg bg-base-100 p-2 shadow-sm transition-shadow hover:shadow-md
+        focus:outline-none focus:ring-2 focus:ring-primary
+        grid-cols-[minmax(300px,40%)_1fr_100px]
+        @[50rem]/main:grid-cols-[minmax(300px,35%)_1fr_100px]
+        @[62rem]/main:grid-cols-[minmax(320px,32%)_1fr_130px]
+        @[74rem]/main:grid-cols-[minmax(360px,30%)_1fr_140px]
+        @[86rem]/main:grid-cols-[minmax(380px,28%)_1fr_150px]
+        @[98rem]/main:grid-cols-[minmax(420px,25%)_1fr_160px]
+      "
       onkeydown={(e) => handleRowKeyDown(e, entity)}
       tabindex="0">
       <!-- Left Section: Image + Title/Address -->
@@ -201,7 +210,8 @@ function focusFirstItem(e: CustomEvent<KeyboardEvent>) {
           onkeydown={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (e.key === 'Enter' && entity.image) openModal(entity.image as ImageDBBasic, entity);
+            if (e.key === 'Enter' && entity.image)
+              openModal(entity.image as ImageDBBasic, entity);
           }}
           role="button">
           {#if entity.image}
@@ -233,86 +243,62 @@ function focusFirstItem(e: CustomEvent<KeyboardEvent>) {
         </div>
       </div>
 
-      <div class="flex flex-1 items-center justify-around">
-        <div class="flex h-10 flex-col items-center justify-between">
+      <!-- Middle Section: All Stats Centered -->
+      <div class="flex items-center justify-center gap-8 @[62rem]/main:gap-8 @[74rem]/main:gap-9 @[86rem]/main:gap-10 @[98rem]/main:gap-12 @[120rem]/main:gap-20">
+        <!-- Grapheme -->
+        <div class="flex flex-col items-center justify-center gap-1">
           <small class="text-xs text-base-content/60">GRAPHEME</small>
           <div class="tooltip" data-tip={grapheme}>
-      <!-- Status Stats -->
-      <StatusStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
-
-      <!-- Translation Stats (hidden on small screens) -->
-      <div class="hidden md:block">
-        <TranslationStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
-      </div>
-
-      <!-- Content Stats (hidden on medium screens and smaller) -->
-      <div class="hidden lg:block">
-        <ContentStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
-      </div>
-
-      <!-- Image Stats (hidden on large screens and smaller) -->
-      <div class="hidden xl:block">
-        <ImageStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
-      </div>
-
-      <!-- Category Stats (hidden on xl screens and smaller) -->
-      <div class="hidden 2xl:block">
-        <CategoryStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
-      </div>
-
-      <!-- Specifier Stats (hidden on 2xl screens and smaller) -->
-      <div class="hidden 3xl:block">
-        <SpecifierStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
+            <p class="w-[80px] @[62rem]/main:w-[120px] @[74rem]/main:w-[160px] @[86rem]/main:w-[200px] truncate text-sm text-base-content">
+              {grapheme || '-'}
             </p>
           </div>
         </div>
 
-      <!-- Status Stats -->
-      <StatusStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
+        <!-- Status Stats -->
+        <StatusStats feature={entity} appCtx={adminCtx.appCtx} />
 
-      <!-- Translation Stats (hidden on small screens) -->
-      <div class="hidden md:block">
-        <TranslationStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
-      </div>
+        <!-- Translation Stats -->
+        <div class="hidden @[50rem]/main:block">
+          <TranslationStats feature={entity} appCtx={adminCtx.appCtx} />
+        </div>
 
-      <!-- Content Stats (hidden on medium screens and smaller) -->
-      <div class="hidden lg:block">
-        <ContentStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
-      </div>
+        <!-- Content Stats -->
+        <div class="hidden @[50rem]/main:block">
+          <ContentStats feature={entity} appCtx={adminCtx.appCtx} />
+        </div>
 
-      <!-- Image Stats (hidden on large screens and smaller) -->
-      <div class="hidden xl:block">
-        <ImageStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
-      </div>
+        <!-- Image Stats -->
+        <div class="hidden @[62rem]/main:block">
+          <ImageStats feature={entity} appCtx={adminCtx.appCtx} />
+        </div>
 
-      <!-- Category Stats (hidden on xl screens and smaller) -->
-      <div class="hidden 2xl:block">
-        <CategoryStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
-      </div>
+        <!-- Category Stats -->
+        <div class="hidden @[78rem]/main:block">
+          <CategoryStats feature={entity} appCtx={adminCtx.appCtx} />
+        </div>
 
-      <!-- Specifier Stats (hidden on 2xl screens and smaller) -->
-      <div class="hidden 3xl:block">
-        <SpecifierStats feature={entity} appCtx={adminCtx.appCtx} showTitle={false} />
-      </div>
-
-      <!-- Right Section: Status -->
-      <div class="flex flex-none items-center">
-        <div class="divider divider-horizontal mx-4"></div>
-        <div class="flex w-24 items-center justify-center gap-2">
-          <span
-            class="badge rounded-lg bg-base-200 px-3 py-3 uppercase"
-            class:text-orange-500={entity.isPendingReview}
-            class:text-ok={entity.isPublished}
-            class:text-error={!entity.isPublished && !entity.isPendingReview}>
-            {entity.isPendingReview
-              ? 'Suggested'
-              : entity.isPublished
-                ? 'Published'
-                : 'Draft'}
-          </span>
+        <!-- Specifier Stats -->
+        <div class="hidden @[84rem]/main:block">
+          <SpecifierStats feature={entity} appCtx={adminCtx.appCtx} />
         </div>
       </div>
-    </a>
+
+      <!-- Status Badge -->
+      <div class="flex items-center justify-end px-3">
+        <span
+          class="badge rounded-lg bg-base-200 px-3 py-3 text-xs uppercase"
+          class:text-orange-500={entity.isPendingReview}
+          class:text-ok={entity.isPublished}
+          class:text-error={!entity.isPublished && !entity.isPendingReview}>
+          {entity.isPendingReview
+            ? 'Suggested'
+            : entity.isPublished
+              ? 'Published'
+              : 'Draft'}
+        </span>
+      </div>
+    </a></div>
   {/snippet}
 </ResourceIndex>
 <CompletionFooter {entities} />
