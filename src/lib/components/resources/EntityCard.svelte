@@ -13,12 +13,12 @@ import { getURLfromImage } from '$lib/client/services/image';
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
 import Image from '$lib/components/common/Image.svelte';
-// ENUMS
-import { ResourcePath } from '$lib/enums';
 // TYPES
 import type { Resource, ImageDB, Task, KeyMap } from '$lib/types';
 
-type EntityWithOptionalImage = Exclude<Resource, Task> & { image?: ImageDB | null };
+type EntityWithOptionalImage = Exclude<Resource, Task> & {
+  image?: Partial<ImageDB> & { id: string } | null;
+};
 
 type Props = {
   entity: EntityWithOptionalImage;
