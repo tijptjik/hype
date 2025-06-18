@@ -302,6 +302,11 @@ export class ImageCtx {
       return 'loading';
     } else if (
       this.activeImage &&
+      this.getLoadStatus(this.activeImage.id) === 'error'
+    ) {
+      return 'error';
+    } else if (
+      this.activeImage &&
       this.getLoadStatus(this.activeImage.id) === 'loaded'
     ) {
       return 'loaded';

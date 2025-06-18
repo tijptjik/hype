@@ -13,8 +13,7 @@ import ControlModes from '$lib/components/resources/controls/ResourceIndexContro
 import FilterInput from '$lib/components/menu/FilterInput.svelte';
 import EntityCard from '$lib/components/resources/EntityCard.svelte';
 import FilterControlBar from '$lib/components/resources/filters/features/Root.svelte';
-import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
-import Viewer from '$lib/components/common/Viewer.svelte';
+import FullScreenViewer from '$lib/components/modals/FullScreenViewer.svelte';
 import ScrollableText from '$lib/components/common/ScrollableText.svelte';
 // STAT COMPONENTS
 import StatusStats from '$lib/components/features/stats/StatusStats.svelte';
@@ -99,8 +98,8 @@ let graphemeProperty = $derived(
   adminCtx.appCtx.cache.property.values().find((p) => p.key === 'graphemes')
 );
 
-function openModal(image: ImageDBBasic, feature: Feature) {
-  selectedImage = image;
+function openModal(image: ImageDBBasic | ImageDB, feature: Feature) {
+  selectedImage = image as ImageDB;
   selectedFeature = feature;
 }
 
@@ -130,11 +129,7 @@ function handleRowKeyDown(event: KeyboardEvent, entity: Feature) {
   }
 }
 
-function handleKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape' || event.key === ' ') {
-    closeModal();
-  }
-}
+
 
 function focusFirstItem(e: CustomEvent<KeyboardEvent>) {
   e.detail.preventDefault();
@@ -195,18 +190,18 @@ function focusFirstItem(e: CustomEvent<KeyboardEvent>) {
       onkeydown={(e) => handleRowKeyDown(e, entity)}
       tabindex="0">
       <!-- Left Section: Image + Title/Address -->
-      <div class="flex flex-none items-center gap-4">
+      <div class="flex items-center gap-4">
         <div
           class="relative h-16 w-16 flex-shrink-0 cursor-pointer"
           onclick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (entity.image) openModal(entity.image, entity);
+            if (entity.image) openModal(entity.image as ImageDBBasic, entity);
           }}
           onkeydown={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (e.key === 'Enter' && entity.image) openModal(entity.image, entity);
+            if (e.key === 'Enter' && entity.image) openModal(entity.image as ImageDBBasic, entity);
           }}
           role="button">
           {#if entity.image}
@@ -224,7 +219,7 @@ function focusFirstItem(e: CustomEvent<KeyboardEvent>) {
             </div>
           {/if}
         </div>
-        <div class="flex w-64 flex-col overflow-hidden">
+        <div class="flex flex-col overflow-hidden">
           <ScrollableText
             text={entity.i18n?.[getLocale()]?.title || 'Untitled'}
             textClass="font-medium text-base-content"
@@ -324,28 +319,12 @@ function focusFirstItem(e: CustomEvent<KeyboardEvent>) {
 
 <!-- MODAL -->
 
-<svelte:window on:keydown={handleKeydown} />
-{#if selectedImage}
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/75"
-    onclick={closeModal}
-    role="dialog"
-    aria-modal="true">
-    <div class="h-screen w-screen" onclick={(e) => e.stopPropagation()}>
-      {#if selectedImage && selectedFeature}
-        <div class="h-full w-full" onclick={closeModal}>
-          <ImageProvider
-            ctxId={selectedFeature.id}
-            ctxType={FirstClassResource.feature as unknown as ImageContextResource}
-            image={selectedImage}
-            isAdminMode={true}
-            mode="gallery"
-            organisation={selectedOrganisation}
-            project={selectedProject}>
-            <Viewer isDropzone={false} />
-          </ImageProvider>
-        </div>
-      {/if}
-    </div>
-  </div>
+{#if selectedImage && selectedFeature}
+  <FullScreenViewer
+    image={selectedImage}
+    feature={selectedFeature}
+    organisation={selectedOrganisation}
+    project={selectedProject}
+    isAdminMode={true}
+    on:close={closeModal} />
 {/if}
