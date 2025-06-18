@@ -64,6 +64,7 @@ export const FeatureImageAPI = FeatureImageBase.extend({
 });
 
 export const ImageAPI = ImageBase.extend({
+  altText: z.string().nullish(),
   featureId: z.string().optional(),
   attribution: z.string().optional(),
   intent: z

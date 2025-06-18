@@ -257,7 +257,7 @@ export function setPropertyFilterState(
 }
 
 /* ------------------ */
-// HELPERS
+// LABELS
 /* -------- */
 
 export function getFeatureTaskLabel(
