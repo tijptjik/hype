@@ -36,22 +36,23 @@ const modeConfig = {
   }
 };
 
-function setMode(newMode: LayoutMode) {
-  layoutMode = newMode;
+const nextMode = $derived.by(() => {
+  const currentIndex = modes.indexOf(layoutMode);
+  const nextIndex = (currentIndex + 1) % modes.length;
+  return modes[nextIndex];
+});
+
+function toggleMode() {
+  layoutMode = nextMode;
 }
 </script>
 
 <div class="flex items-center space-x-2">
-  {#each modes as modeKey}
-  {@const {icon, label} = modeConfig[modeKey]}
-    <button
-      class="btn btn-ghost transition-opacity duration-200 px-3"
-      class:opacity-100={layoutMode === modeKey}
-      class:opacity-70={layoutMode !== modeKey}
-      class:hover:opacity-100={layoutMode !== modeKey}
-      onclick={() => setMode(modeKey)}
-      title={label}>
-      <Icon src={icon as any} class="h-6 w-6" />
-    </button>
-  {/each}
+  <button
+    class="btn btn-ghost px-3 transition-opacity duration-200"
+    onclick={toggleMode}
+    title={`Switch to ${modeConfig[nextMode].label}`}
+  >
+    <Icon src={modeConfig[nextMode].icon as any} class="h-6 w-6" />
+  </button>
 </div>

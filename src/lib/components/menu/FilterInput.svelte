@@ -131,7 +131,6 @@ function handleInput(e: Event) {
       bind:value={adminCtx.state.filters[resourceType as keyof AdminFilterStates].text}
       oninput={handleInput}
       onkeydown={handleKeydown}
-      tabindex="1"
       aria-label="Filter {resourceType}s" />
     <div class="absolute inset-y-0 right-2 flex items-center pr-3">
       {#if adminCtx.state.filters[resourceType as keyof AdminFilterStates].text}

@@ -35,7 +35,7 @@ const translationFilters: Record<FeatureTranslationFilterKey, { label: string }>
     label: m.feature__address()
   },
   isSpecifierTranslated: {
-    label: m.admin__forms_common_specifiers()
+    label: m.spicy_ideal_butterfly_revive()
   }
 };
 
@@ -82,7 +82,7 @@ function toggleLocale(locale: Locale) {
       label={filterDef.label}
       {currentValue}
       {idx}
-      transformOffset={32}
+      transformOffset={36}
       falseLabel={getFeatureTaskLabel(filterDef, false, true)}
       trueLabel={getFeatureTaskLabel(filterDef, true, true)}
       onToggleFalse={() => toggleFilterState(adminCtx, key, false, undefined, activeLocales)}

@@ -1,11 +1,12 @@
 <script lang="ts">
+// CONTEXT
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 // ICONS
 import { Funnel } from '@steeze-ui/heroicons';
 // TYPES
 import type { ControlMode } from '$lib/types';
-
 
 let {
   controlMode = $bindable(),
@@ -16,6 +17,8 @@ let {
   defaultMode?: ControlMode;
   modes?: Exclude<ControlMode, null>[];
 } = $props();
+
+const adminCtx = getAdminCtx();
 
 // Initialize mode if not set
 if (!controlMode) {
@@ -30,7 +33,12 @@ const modeConfig = {
 };
 
 function toggleMode(modeKey: ControlMode) {
-  controlMode = controlMode === modeKey ? null : modeKey;
+  if (controlMode === modeKey) {
+    controlMode = null;
+    adminCtx.resetViewFilters();
+  } else {
+    controlMode = modeKey;
+  }
 }
 </script>
 

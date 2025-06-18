@@ -5,49 +5,65 @@ import { m } from '$lib/i18n';
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // SERVICES
 import {
-  getImageFilterState,
-  toggleFilterState,
+  getSimpleFilterState,
+  setFilterState,
   getFeatureTaskLabel
 } from '$lib/client/services/filters';
 // COMPONENTS
 import FilterToggle from '../FilterToggle.svelte';
+// TYPES
+import type { FeatureImageFilterKey } from '$lib/types';
 
 // CONTEXT
 const adminCtx = getAdminCtx();
 
-// FILTER DEFINITIONS
-const imageFilters: Record<
-  'hasImage' | 'isOneImagePublished' | 'isAllImagePublished',
-  { label: string }
+const filterConfig: Record<
+  FeatureImageFilterKey,
+  { label: string; trueLabel: string; falseLabel: string }
 > = {
   hasImage: {
-    label: m.feature__images()
+    label: m.feature__images(),
+    falseLabel: m.royal_civil_goldfish_fetch(),
+    trueLabel: m.awful_ok_polecat_rise(),
   },
   isOneImagePublished: {
-    label: m.long_zippy_felix_mix()
+    label: m.long_zippy_felix_mix(),
+    falseLabel: m.royal_civil_goldfish_fetch(),
+    trueLabel: m.awful_ok_polecat_rise(),
   },
   isAllImagePublished: {
-    label: m.these_weary_shark_revive()
+    label: m.long_zippy_felix_mix(),
+    falseLabel: m.suave_lazy_tiger_attend(),  
+    trueLabel: m.filters__all()
   }
 };
 </script>
 
-{#each Object.entries(imageFilters) as [filterKey, filterDef], idx (filterKey)}
-  {@const currentValue = getImageFilterState(
+{#each Object.entries(filterConfig) as [filterKey, filterDef], idx (filterKey)}
+  {@const currentValue = getSimpleFilterState(
     adminCtx,
-    filterKey as 'hasImage' | 'isOneImagePublished' | 'isAllImagePublished'
+    filterKey as FeatureImageFilterKey
   )}
-  {@const key = filterKey as 'hasImage' | 'isOneImagePublished' | 'isAllImagePublished'}
+  {@const key = filterKey as FeatureImageFilterKey}
+  {@const onToggleChange = () => {
+    const nextState =
+      currentValue === null ? true : currentValue === true ? false : null;
+    setFilterState(adminCtx, key, nextState);
+  }}
+  {@const onToggleTrue = () => {
+    const nextState = currentValue === true ? null : true;
+    setFilterState(adminCtx, key, nextState);
+  }}
+  {@const onToggleFalse = () => {
+    const nextState = currentValue === false ? null : false;
+    setFilterState(adminCtx, key, nextState);
+  }}
   <FilterToggle
     label={filterDef.label}
     {currentValue}
     {idx}
-    falseLabel={getFeatureTaskLabel(filterDef, false)}
-    trueLabel={getFeatureTaskLabel(filterDef, true)}
-    onToggleFalse={() => toggleFilterState(adminCtx, key, false)}
-    onToggleTrue={() => toggleFilterState(adminCtx, key, true)}
-    onToggleChange={() => {
-      const nextState = currentValue === null ? true : currentValue === true ? false : null;
-      toggleFilterState(adminCtx, key, nextState);
-    }} />
-{/each} 
+    transformOffset={20}
+    {onToggleChange}
+    {onToggleFalse}
+    {onToggleTrue} />
+{/each}

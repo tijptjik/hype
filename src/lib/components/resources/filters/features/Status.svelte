@@ -21,17 +21,20 @@ const adminCtx = getAdminCtx();
 // FILTER DEFINITIONS
 const statusFilters: Record<
   FeatureStatusFilterKey,
-  { label: string; invertBoolean?: boolean }
+  { label: string; invertBoolean?: boolean; trueLabel?: string; falseLabel?: string, superAdminOnly?: boolean }
 > = {
   isPublished: {
     label: m.yummy_ornate_snail_bend()
   },
   isPendingReview: {
     label: m.plain_broad_shell_dart(),
-    invertBoolean: true
+    invertBoolean: true,
+    trueLabel: m.filters__has(),
+    falseLabel: m.filters__not()
   },
   isArchived: {
-    label: m.bad_swift_cheetah_surge()
+    label: m.bad_swift_cheetah_surge(),
+    superAdminOnly: true
   },
   isIntangible: {
     label: m.teary_fit_maggot_heart()
@@ -43,18 +46,22 @@ const statusFilters: Record<
 </script>
 
 {#each Object.entries(statusFilters) as [filterKey, filterDef], idx (filterKey)}
-  {@const currentValue = getSimpleFilterState(adminCtx, filterKey as FeatureStatusFilterKey)}
-  {@const key = filterKey as FeatureStatusFilterKey}
-  <FilterToggle
-    label={filterDef.label}
-    {currentValue}
-    {idx}
-    falseLabel={getFeatureTaskLabel(filterDef, false)}
-    trueLabel={getFeatureTaskLabel(filterDef, true)}
-    onToggleFalse={() => toggleFilterState(adminCtx, key, false)}
-    onToggleTrue={() => toggleFilterState(adminCtx, key, true)}
-    onToggleChange={() => {
-      const nextState = currentValue === null ? true : currentValue === true ? false : null;
-      setFilterState(adminCtx, key, nextState);
-    }} />
+  {#if filterDef.superAdminOnly && !adminCtx.appCtx.user?.superAdmin}
+    <!-- do nothing -->
+  {:else}
+    {@const currentValue = getSimpleFilterState(adminCtx, filterKey as FeatureStatusFilterKey)}
+    {@const key = filterKey as FeatureStatusFilterKey}
+    <FilterToggle
+      label={filterDef.label}
+      {currentValue}
+      {idx}
+      falseLabel={getFeatureTaskLabel(filterDef, false)}
+      trueLabel={getFeatureTaskLabel(filterDef, true)}
+      onToggleFalse={() => toggleFilterState(adminCtx, key, false, undefined, undefined, filterDef.invertBoolean)}
+      onToggleTrue={() => toggleFilterState(adminCtx, key, true, undefined, undefined, filterDef.invertBoolean)}
+      onToggleChange={() => {
+        const nextState = currentValue === null ? true : currentValue === true ? false : null;
+        setFilterState(adminCtx, key, nextState, undefined, undefined, filterDef.invertBoolean);
+      }} />
+  {/if}
 {/each}

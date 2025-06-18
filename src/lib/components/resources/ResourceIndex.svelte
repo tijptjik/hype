@@ -3,14 +3,16 @@
 import { slide } from 'svelte/transition';
 // I18N
 import { m } from '$lib/i18n';
-// VIRTUA
-import { VList } from 'virtua/svelte';
+// VIRTUAL LIST
+import SvelteVirtualList from '$lib/components/layout/virtual-list/SvelteVirtualList.svelte';
 // COMPONENTS
 import EntityCard from '$lib/components/resources/EntityCard.svelte';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
+// ENUMS
+import { FirstClassResource } from '$lib/enums';
 // TYPES
-import type { Task, Resource, LayoutMode, ControlMode, FirstClassResource } from '$lib/types';
+import type { Task, Resource, LayoutMode, ControlMode } from '$lib/types';
 
 let {
   entities,
@@ -18,7 +20,8 @@ let {
   controlMode,
   card,
   row,
-  controlBar
+  controlBar,
+  bufferSize = 20
 }: {
   entities: T[];
   layoutMode: LayoutMode;
@@ -26,6 +29,7 @@ let {
   card?: (entity: T, idx: number) => any;
   row?: (entity: T, idx: number) => any;
   controlBar?: () => any;
+  bufferSize?: number;
 } = $props();
 
 // CONTEXT
@@ -33,12 +37,11 @@ const adminCtx = getAdminCtx();
 
 // STATE
 let isInitialised = $state(true);
-let gridHeight = $state(0);
 let gridWidth = $state(0);
 
 // GRID CONFIGURATION
-let itemHeight = layoutMode === 'table' ? 80 : 500; // Approximate height of EntityCard + margins
 let itemWidth = 340; // Approximate width of EntityCard + margins
+let itemHeight = layoutMode === 'table' ? 80 : 500; // Approximate width of EntityCard + margins
 let columnCount = $derived(
   layoutMode === 'table'
     ? 1
@@ -46,6 +49,22 @@ let columnCount = $derived(
       ? Math.floor(gridWidth / itemWidth)
       : 1
 );
+
+const gridData = $derived.by(() => {
+  const acc: { id: string; entities: T[]; startingIndex: number }[] = [];
+  if (layoutMode === 'table' || columnCount === 0) {
+    return entities.map((e, i) => ({ id: e.id, entities: [e], startingIndex: i }));
+  }
+  for (let i = 0; i < entities.length; i += columnCount) {
+    const rowEntities = entities.slice(i, i + columnCount);
+    acc.push({
+      id: rowEntities[0].id,
+      entities: rowEntities,
+      startingIndex: i
+    });
+  }
+  return acc;
+});
 </script>
 
 <!-- Control Bar (slides down when controlMode is active) -->
@@ -58,31 +77,30 @@ let columnCount = $derived(
 {/if}
 
 <div
-  bind:clientHeight={gridHeight}
   bind:clientWidth={gridWidth}
-  class="mb-12 grid h-full gap-12 overflow-hidden bg-gradient-to-bl from-rose-500 to-fuchsia-800 bg-fixed @container/grid"
-  style="grid-template-columns: repeat(var(--grid-columns), minmax(0, 1fr));">
+  class="mb-12 grid pt-4 px-4 gap-12 overflow-y-auto bg-gradient-to-bl from-rose-500 to-fuchsia-800 bg-fixed @container/grid"
+  style="height: calc(100vh - 100px);"
+>
   <!-- Loading State -->
   {#if isInitialised}
     {#if entities.length > 0}
-      <VList
-        data={entities}
-        class="h-full w-full p-6"
-        getKey={(item: Exclude<T, Task>) => (item as T).id}>
-        {#snippet children(item: Exclude<T, Task>, rowIdx: number)}
+      <SvelteVirtualList items={gridData} {bufferSize} containerClass="virtual-list-container pt-12">
+        {#snippet renderItem(item, index)}
+          {@const { entities: rowItem, startingIndex: rowIdx } = item}
           {#if layoutMode === 'card'}
             <!-- Grid Row -->
             <div
               class="grid gap-4 px-2 py-2"
-              style="grid-template-columns: repeat({columnCount}, minmax(0, 1fr));">
-              {#each Array(columnCount) as _, colIdx}
-                {@const entity: T = entities[rowIdx * columnCount + colIdx]}
+              style="grid-template-columns: repeat({columnCount}, minmax(0, 1fr));"
+            >
+              {#each rowItem as entity, colIdx}
+                {@const entityIdx = rowIdx + colIdx}
                 {#if entity}
                   <div class="transition-all duration-200 hover:scale-105">
                     {#if card}
-                      {@render card(entity, rowIdx * columnCount + colIdx)}
+                      {@render card(entity, entityIdx)}
                     {:else}
-                      <EntityCard {entity} keyMap={{}} />
+                      <EntityCard entity={entity as any} keyMap={{ id: 'id', title: 'id', image: '' }} />
                     {/if}
                   </div>
                 {/if}
@@ -91,23 +109,29 @@ let columnCount = $derived(
           {:else if layoutMode === 'table'}
             <div class="px-2 py-1">
               {#if row}
-                {@render row(item as T, rowIdx)}
+                {@render row(rowItem[0] as T, rowIdx)}
               {:else}
-                <a href={`/admin/${adminCtx.getEntityPath(adminCtx.activeResourceType as FirstClassResource, item.id)}`}>
+                <a
+                  href={`/admin/${adminCtx.getEntityPath(
+                    adminCtx.activeResourceType as FirstClassResource,
+                    (rowItem[0] as T).id
+                  )}`}
+                >
                   <div class="rounded-lg bg-base-100 p-4 shadow-sm">
-                    <div class="text-lg font-semibold">{(item as T).id}</div>
+                    <div class="text-lg font-semibold">{(rowItem[0] as T).id}</div>
                   </div>
                 </a>
               {/if}
             </div>
           {/if}
         {/snippet}
-      </VList>
+      </SvelteVirtualList>
     {:else}
       <!-- Empty State -->
       <div class="flex h-full w-full items-center justify-center text-center">
         <h2
-          class="w-full text-center text-xl text-base-content/70 transition-opacity delay-75 duration-500">
+          class="w-full text-center text-xl text-base-content/70 transition-opacity delay-75 duration-500"
+        >
           {m.omni__no_results()}
         </h2>
       </div>

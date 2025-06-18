@@ -22,8 +22,8 @@ const {
   onToggleTrue,
   onToggleChange,
   idx = 0,
-  falseLabel = m.filters__not(),
-  trueLabel = m.filters__only(),
+  falseLabel = m.filters__no(),
+  trueLabel = m.filters__has(),
   transformOffset = 16
 }: Props = $props();
 </script>

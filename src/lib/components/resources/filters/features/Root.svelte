@@ -3,8 +3,6 @@
 import { m } from '$lib/i18n';
 // ANIMATION
 import { fly, slide, fade } from 'svelte/transition';
-// ENUMS
-import { FirstClassResource } from '$lib/enums';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import StatusSection from './Status.svelte';
@@ -21,10 +19,18 @@ import {
   Language,
   Tag,
   Cog6Tooth,
-  Funnel
+  Funnel,
+  XMark
 } from '@steeze-ui/heroicons';
+// CONTEXT
+import { getAdminCtx } from '$lib/context/admin.svelte';
+// TYPES
+import type { FeatureViewFilters, Property, FeatureTranslationFilterKey } from '$lib/types';
+import type { SvelteSet } from 'svelte/reactivity';
 
 let { count } = $props();
+
+const adminCtx = getAdminCtx();
 
 // STATE
 let activeSection: string | null = $state(null);
@@ -40,6 +46,44 @@ const filterSections = {
   specifier: { icon: Cog6Tooth, title: 'Specifiers' }
 };
 
+const filterKeys: Record<string, (keyof FeatureViewFilters)[]> = {
+  status: ['isPublished', 'isPendingReview', 'isArchived', 'isIntangible', 'isVisitable'],
+  image: ['hasImage', 'isOneImagePublished', 'isAllImagePublished'],
+  authorship: ['hasTitle', 'hasDescription'],
+  translation: [
+    'isTitleTranslated',
+    'isDescriptionTranslated',
+    'isAddressTranslated',
+    'isSpecifierTranslated'
+  ]
+};
+
+const getFilterCount = (section: string) => {
+  const featureFilters = adminCtx.state.viewFilters.feature;
+  let count = 0;
+
+  if (section === 'translation') {
+    filterKeys[section].forEach((featureKey) => {
+      const filterValue = featureFilters[featureKey as FeatureTranslationFilterKey];
+      if (filterValue && typeof filterValue === 'object') {
+        Object.values(filterValue).forEach((v) => {
+          if (v !== null) count++;
+        });
+      }
+    });
+  } else if (filterKeys[section]) {
+    filterKeys[section].forEach((key) => {
+      if (key === 'isArchived') {
+        if (!adminCtx.appCtx.user?.superAdmin) return;
+      }
+      if (featureFilters[key as keyof FeatureViewFilters] !== null) {
+        count++;
+      }
+    });
+  }
+  return count;
+};
+
 // HANDLERS
 function selectSection(sectionKey: string) {
   if (activeSection == sectionKey) {
@@ -51,6 +95,10 @@ function selectSection(sectionKey: string) {
 
 function toggleSectionMenu() {
   showSectionMenu = !showSectionMenu;
+}
+
+function resetFilters() {
+  adminCtx.resetViewFilters();
 }
 
 </script>
@@ -84,12 +132,15 @@ function toggleSectionMenu() {
         {#each Object.entries(filterSections) as [key, section], idx (key)}
           {#if showSectionMenu && activeSection !== key}
             <button
-              class="btn btn-ghost btn-sm h-10 gap-2 hover:bg-transparent hover:text-white"
+              class="btn btn-ghost btn-sm relative h-10 gap-2 hover:bg-transparent hover:text-white"
               in:fly={{ x: 20, duration: 300, delay: 50 * idx }}
               out:fade={{ duration: 300 }}
               onclick={() => selectSection(key)}>
               <Icon src={section.icon} class="h-4 w-4" />
               <span class="hidden lg:inline">{section.title}</span>
+              {#if getFilterCount(key) > 0}
+                <div class="badge badge-secondary badge-xs absolute -right-1 -top-1"></div>
+              {/if}
             </button>
           {/if}
         {/each}
@@ -113,8 +164,13 @@ function toggleSectionMenu() {
       </div>
     </div>
   </div>
-  <div class="flex items-center pr-8 text-sm text-base-content/60 gap-2">
-    <span>{count}</span>
-    <span>{m.busy_flaky_mayfly_chop()}</span>
+  <div class="flex items-center pr-8 text-base-content/60 gap-4">
+    <div class="text-sm">
+      <span>{count}</span>
+      <span>{m.busy_flaky_mayfly_chop()}</span>
+    </div>
+    <button class="btn btn-ghost btn-circle btn-sm" onclick={resetFilters}>
+      <Icon src={XMark} class="h-4 w-4" />
+    </button>
   </div>
 </div>

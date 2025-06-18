@@ -18,17 +18,29 @@ import { ResourcePath } from '$lib/enums';
 // TYPES
 import type { Resource, ImageDB, Task, KeyMap } from '$lib/types';
 
+type EntityWithOptionalImage = Exclude<Resource, Task> & { image?: ImageDB | null };
+
 type Props = {
-  entity: Exclude<Resource, Task>;
+  entity: EntityWithOptionalImage;
   keyMap: KeyMap;
   header?: any;
   badges?: any;
   badgesExtra?: any;
   content?: any;
   actions?: any;
+  onImageClick?: (entity: Exclude<Resource, Task>) => void;
 };
 
-let { entity, keyMap, header, badges, badgesExtra, content, actions }: Props = $props();
+let {
+  entity,
+  keyMap,
+  header,
+  badges,
+  badgesExtra,
+  content,
+  actions,
+  onImageClick
+}: Props = $props();
 let locale = $derived(getLocale());
 
 // Utility function to get nested property values using dot notation
@@ -107,33 +119,50 @@ const onclick = (e: MouseEvent | KeyboardEvent) => {
     goto(href);
   }
 };
+
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    onclick(e);
+  } else if (e.key === ' ' && onImageClick && entity.image) {
+    e.preventDefault();
+    onImageClick(entity);
+  } else if (e.key === ' ') {
+    // Fallback to click for cards without image action
+    e.preventDefault();
+    onclick(e);
+  }
+};
 </script>
 
-<a
+<div
   draggable="false"
-  href={href || '#'}
-  {onclick}
   role="article"
-  tabindex="2"
+  tabindex="0"
   class="duration-800 card select-none bg-base-100 shadow-xl transition-shadow hover:scale-[.99] hover:shadow-2xl hover:shadow-primary focus-visible:shadow-primary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-secondary active:outline-none"
-  onkeydown={(e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onclick(e);
-    }
-  }}>
+  onkeydown={handleKeyDown}
+  onclick={onclick}>
   <!-- Header Section -->
   {#if header}
     {@render header(entity)}
   {:else}
-    <Image
-      src={getNestedValue(entity, keyMap.image)
-        ? getURLfromImage({
-            image: getNestedValue(entity, keyMap.image) as ImageDB
-          })
-        : getHashiconUrl(entity.id)}
-      alt={getPropertyValue(entity, keyMap.title)}
-      layout="cover" />
+    <div
+      class="cursor-pointer"
+      onclick={(e) => {
+        if (onImageClick && entity.image) {
+          e.stopPropagation();
+          onImageClick(entity);
+        }
+      }}>
+      <Image
+        src={getNestedValue(entity, keyMap.image)
+          ? getURLfromImage({
+              image: getNestedValue(entity, keyMap.image) as ImageDB
+            })
+          : getHashiconUrl(entity.id)}
+        alt={getPropertyValue(entity, keyMap.title)}
+        layout="cover" />
+    </div>
   {/if}
 
   <!-- Content Section -->
@@ -185,4 +214,4 @@ const onclick = (e: MouseEvent | KeyboardEvent) => {
       {/if}
     </div>
   </div>
-</a>
+</div>
