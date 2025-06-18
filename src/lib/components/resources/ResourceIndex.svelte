@@ -12,7 +12,7 @@ import { getAdminCtx } from '$lib/context/admin.svelte';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
 // TYPES
-import type { Task, Resource, LayoutMode, ControlMode } from '$lib/types';
+import type { Resource, LayoutMode, ControlMode } from '$lib/types';
 
 let {
   entities,
@@ -21,7 +21,8 @@ let {
   card,
   row,
   controlBar,
-  bufferSize = 20
+  bufferSize = 20,
+  listContainer = $bindable()
 }: {
   entities: T[];
   layoutMode: LayoutMode;
@@ -30,6 +31,7 @@ let {
   row?: (entity: T, idx: number) => any;
   controlBar?: () => any;
   bufferSize?: number;
+  listContainer?: HTMLElement | null;
 } = $props();
 
 // CONTEXT
@@ -78,7 +80,8 @@ const gridData = $derived.by(() => {
 
 <div
   bind:clientWidth={gridWidth}
-  class="grid flex-1 gap-12 overflow-y-auto bg-gradient-to-bl from-rose-500 to-fuchsia-800 bg-fixed px-4 pt-4 @container/grid"
+  bind:this={listContainer}
+  class="@container/grid grid flex-1 gap-12 overflow-y-auto bg-gradient-to-bl from-rose-500 to-fuchsia-800 bg-fixed"
   style="height: calc(100vh - 164px);">
   <!-- Loading State -->
   {#if isInitialised}
@@ -87,7 +90,9 @@ const gridData = $derived.by(() => {
         <SvelteVirtualList
           defaultEstimatedItemHeight={itemHeight}
           items={gridData}
-          {bufferSize}>
+          {bufferSize}
+          viewportClass="virtual-list-viewport pt-4"
+          itemsClass="virtual-list-items px-4">
           {#snippet renderItem(item, index)}
             {@const { entities: rowItem, startingIndex: rowIdx } = item}
             {#if layoutMode === 'card'}

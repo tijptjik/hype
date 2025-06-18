@@ -195,6 +195,7 @@ function focusFirstItem(event: KeyboardEvent) {
         @[74rem]/main:grid-cols-[minmax(360px,30%)_1fr_140px]
         @[86rem]/main:grid-cols-[minmax(380px,28%)_1fr_150px]
         @[98rem]/main:grid-cols-[minmax(420px,25%)_1fr_160px]
+        caret-transparent
       "
       onkeydown={(e) => handleRowKeyDown(e, entity)}
       tabindex="0">
@@ -208,10 +209,12 @@ function focusFirstItem(event: KeyboardEvent) {
             if (entity.image) openModal(entity.image as ImageDBBasic, entity);
           }}
           onkeydown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (e.key === 'Enter' && entity.image)
-              openModal(entity.image as ImageDBBasic, entity);
+            // Only handle Enter key here, let Space bubble up to the row handler
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              e.stopPropagation();
+              if (entity.image) openModal(entity.image as ImageDBBasic, entity);
+            }
           }}
           role="button">
           {#if entity.image}

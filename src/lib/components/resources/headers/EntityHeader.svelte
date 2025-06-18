@@ -33,7 +33,7 @@ const displayIcon = $derived(
 </script>
 
 <header
-  class="navbar sticky left-0 top-0 z-20 h-17.5 w-full flex-none bg-gradient-to-r from-rose-500 to-fuchsia-800 px-12 py-4 shadow-lg">
+  class="navbar sticky left-0 top-0 z-20 h-17.5 w-full flex-none bg-gradient-to-r from-rose-500 to-fuchsia-800 px-12 py-4 shadow-lg caret-transparent">
   <div class="flex-1 @container">
     <div class="flex items-center space-x-4">
       {#if displayIcon}
