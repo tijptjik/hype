@@ -822,7 +822,7 @@ export class AdminCtx {
       textObject.title?.toLowerCase().includes(query.toLowerCase()) ||
       textObject.nameShort?.toLowerCase().includes(query.toLowerCase()) ||
       textObject.description?.toLowerCase().includes(query.toLowerCase()) ||
-      textObject.address?.toLowerCase().includes(query.toLowerCase())
+      textObject.displayAddress?.toLowerCase().includes(query.toLowerCase())
     );
   };
 
