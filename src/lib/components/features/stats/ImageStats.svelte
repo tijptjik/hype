@@ -2,7 +2,7 @@
 // COMPONENTS
 import ProgressPips from '$lib/components/common/ProgressPips.svelte';
 // SERVICES
-import { calculateImageCompletion } from '$lib/client/services/stats';
+import { calculateImageCompletion, getCachedFeatureBoolean } from '$lib/client/services/stats';
 // ICONS
 import { Photo } from '@steeze-ui/heroicons';
 // TYPES
@@ -19,11 +19,10 @@ let {
   showTitle?: boolean;
 } = $props();
 
-const imageCompletion = $derived(calculateImageCompletion(appCtx, feature));
 const statuses = $derived([
-  imageCompletion.hasImage,
-  imageCompletion.isOneImagePublished,
-  imageCompletion.isAllImagePublished
+  getCachedFeatureBoolean(appCtx, feature, 'image_hasImage', () => calculateImageCompletion(appCtx, feature).hasImage),
+  getCachedFeatureBoolean(appCtx, feature, 'image_isOneImagePublished', () => calculateImageCompletion(appCtx, feature).isOneImagePublished),
+  getCachedFeatureBoolean(appCtx, feature, 'image_isAllImagePublished', () => calculateImageCompletion(appCtx, feature).isAllImagePublished)
 ]);
 </script>
 

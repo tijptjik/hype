@@ -2,7 +2,7 @@
 // COMPONENTS
 import ProgressPips from '$lib/components/common/ProgressPips.svelte';
 // SERVICES
-import { calculateSpecifierCompletion } from '$lib/client/services/stats';
+import { calculateSpecifierCompletion, getCachedFeatureBoolean } from '$lib/client/services/stats';
 // ICONS
 import { Pencil } from '@steeze-ui/heroicons';
 // TYPES
@@ -20,7 +20,9 @@ let {
 } = $props();
 
 const specifierCompletion = $derived(calculateSpecifierCompletion(appCtx, feature));
-const statuses = $derived(specifierCompletion.map(spec => spec.present));
+const statuses = $derived(specifierCompletion.map((spec, index) => 
+  getCachedFeatureBoolean(appCtx, feature, `specifier_${index}_present`, () => spec.present)
+));
 </script>
 
 <ProgressPips title="FREEFORM" icon={Pencil} {statuses} {showTitle} /> 

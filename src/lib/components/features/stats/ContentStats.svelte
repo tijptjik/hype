@@ -2,7 +2,7 @@
 // COMPONENTS
 import ProgressPips from '$lib/components/common/ProgressPips.svelte';
 // SERVICES
-import { calculateContentCompletion } from '$lib/client/services/stats';
+import { calculateContentCompletion, getCachedFeatureBoolean } from '$lib/client/services/stats';
 // ICONS
 import { BookOpen } from '@steeze-ui/heroicons';
 // TYPES

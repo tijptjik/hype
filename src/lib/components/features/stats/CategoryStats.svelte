@@ -2,7 +2,7 @@
 // COMPONENTS
 import ProgressPips from '$lib/components/common/ProgressPips.svelte';
 // SERVICES
-import { calculateCategoryCompletion } from '$lib/client/services/stats';
+import { calculateCategoryCompletion, getCachedFeatureBoolean } from '$lib/client/services/stats';
 // ICONS
 import { Tag } from '@steeze-ui/heroicons';
 // TYPES
@@ -20,7 +20,9 @@ let {
 } = $props();
 
 const categoryCompletion = $derived(calculateCategoryCompletion(appCtx, feature));
-const statuses = $derived(categoryCompletion.map(cat => cat.present));
+const statuses = $derived(categoryCompletion.map((cat, index) => 
+  getCachedFeatureBoolean(appCtx, feature, `category_${index}_present`, () => cat.present)
+));
 </script>
 
 <ProgressPips title="CATEGORIES" icon={Tag} {statuses} {showTitle} /> 

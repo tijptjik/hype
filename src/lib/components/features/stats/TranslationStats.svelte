@@ -2,7 +2,7 @@
 // COMPONENTS
 import ProgressPips from '$lib/components/common/ProgressPips.svelte';
 // SERVICES
-import { calculateTranslationCompletion } from '$lib/client/services/stats';
+import { calculateTranslationCompletion, getCachedFeatureBoolean } from '$lib/client/services/stats';
 // ICONS
 import { Language } from '@steeze-ui/heroicons';
 // TYPES
