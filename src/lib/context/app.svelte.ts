@@ -265,6 +265,9 @@ export class AppCtx {
       return;
     }
 
+    // Initialize stats cache
+    this.initStatsCache();
+
     // Use refreshOrganisations to trigger proper cascades and post-mutation logic
     await this.refreshOrganisations();
 
@@ -285,7 +288,14 @@ export class AppCtx {
     })) as CurrentUser;
 
     this.postUserMutation();
+
     this.isInitialised = true;
+  };
+
+  initStatsCache = (): void => {
+    Object.values(FirstClassResource).forEach(resourceType => {
+      this.cache.stats.set(resourceType, new SvelteMap());
+    });
   };
 
   reinitializeWithAuth = async (): Promise<void> => {

@@ -6,7 +6,7 @@ import { fetchOrThrow } from '$lib/index';
 // CONTEXT
 import { getContext, setContext } from 'svelte';
 import { QueryClient } from '@tanstack/svelte-query';
-import { AppCtx } from '$lib/context/app.svelte';
+import { AppCtx, APPCTX_KEY } from '$lib/context/app.svelte';
 // ENUMS
 import {
   ResourcePath,
@@ -34,7 +34,8 @@ import type {
   Property,
   ViewFilters,
   Locale,
-  FilterTriState
+  FilterTriState,
+  FeatureI18nDB
 } from '../types';
 
 // State type for AdminCtx - only includes admin-specific state
@@ -148,6 +149,7 @@ export class AdminCtx {
   // 6 ADMIN LOOKUPS
   // 7. NAVIGATION
   // 8. UTILS :: LAYOUT
+  // 9. STATS
 
   // Tanstack Query Client instance
   queryClient: QueryClient;
