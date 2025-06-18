@@ -526,12 +526,24 @@ export class AppCtx {
   };
 
   refreshFeatures = async (): Promise<void> => {
-    this.state.resources.feature = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.feature)!.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.feature)!.queryFn
+    const features = await this.queryClient.fetchQuery<Feature[]>({
+      queryKey: this.featuresQueryKey,
+      queryFn: () => this.featuresQueryFn()
     });
-    // Efficiently sync feature cache (only add missing, remove stale)
-    this.syncCacheMap(this.cache.feature, this.state.resources.feature);
+    this.state.resources.feature = features;
+    this.syncCacheMap(this.cache.feature, features);
+
+    // Populate image cache from feature images
+    for (const feature of features) {
+      if (feature.images) {
+        for (const featureImage of feature.images) {
+          if (featureImage.image) {
+            this.cache.image.set(featureImage.image.id, featureImage.image as Image);
+          }
+        }
+      }
+    }
+
     this.rebuildFeaturesMap();
   };
 
@@ -1871,6 +1883,7 @@ export class AppCtx {
     this.cache.task.clear();
     this.cache.hub.clear();
     this.cache.property.clear();
+    this.cache.image.clear();
     this.featuresMap.clear();
     this.organisationCodeToId.clear();
     this.projectCodeToId.clear();
