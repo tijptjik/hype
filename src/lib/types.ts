@@ -62,6 +62,7 @@ import {
   ImageAPI,
   ImageBase,
   ImageBaseRaw,
+  ImageBasic,
   ImageFlat,
   ImageFlatUpdate,
   ImageInsert,
@@ -345,9 +346,9 @@ export type FeatureViewFilters = {
   // Status related
   isPublished: FilterTriState;
   isPendingReview: FilterTriState;
-  isArchived: FilterTriState;
   isIntangible: FilterTriState;
   isVisitable: FilterTriState;
+  isArchived: FilterTriState;
 
   // Image related
   hasImage: FilterTriState;
@@ -1246,6 +1247,7 @@ export type PropertyValuePartial = z.infer<typeof PropertyValueUpdateAPI>;
 /* -------- */
 
 export type ImageDB = z.infer<typeof ImageBase>;
+export type ImageDBBasic = z.infer<typeof ImageBasic>;
 export type ImageDBNew = z.infer<typeof ImageInsert>;
 export type ImageDBPartial = z.infer<typeof ImageUpdate>;
 export type ImageDBFlat = z.infer<typeof ImageFlat>;
@@ -1883,3 +1885,99 @@ export function isHub(resource: Resource): resource is Hub {
 
 // FEATURE TYPES
 export type { FeatureClientExt, FeatureI18nFieldKeys } from './db/zod/schema/feature';
+
+
+import type { Snippet } from 'svelte'
+
+
+/* ----------------- */
+// VIRUAL LIST
+/* -------- */
+
+// Courtesy of https://github.com/humanspeak/svelte-virtual-list/blob/main/src/lib/types.ts
+
+/**
+ * Defines the scroll direction and rendering mode for the virtual list.
+ *
+ * @typedef {'topToBottom' | 'bottomToTop'} SvelteVirtualListMode
+ */
+export type SvelteVirtualListMode = 'topToBottom' | 'bottomToTop'
+
+/**
+ * Configuration properties for the SvelteVirtualList component.
+ *
+ * @typedef {Object} SvelteVirtualListProps
+ */
+export type SvelteVirtualListProps = {
+    /**
+     * Number of items to render outside the visible viewport for smooth scrolling.
+     * @default 20
+     */
+    bufferSize?: number
+    /**
+     * CSS class to apply to the outer container element.
+     */
+    containerClass?: string
+    /**
+     * CSS class to apply to the content wrapper element.
+     */
+    contentClass?: string
+    /**
+     * Initial height estimate for each item in pixels. Used for optimization before actual measurements are available.
+     * @default 40
+     */
+    defaultEstimatedItemHeight?: number
+    /**
+     * When true, enables debug mode with additional logging and information.
+     * @default false
+     */
+    debug?: boolean
+    /**
+     * Custom callback to handle debug information. Receives a SvelteVirtualListDebugInfo object.
+     */
+    debugFunction?: (_info: SvelteVirtualListDebugInfo) => void
+    /**
+     * The complete array of items to be virtualized.
+     */
+    items: any[] // eslint-disable-line @typescript-eslint/no-explicit-any
+    /**
+     * CSS class to apply to individual item containers.
+     */
+    itemsClass?: string
+    /**
+     * Determines the scroll and render direction.
+     * @default 'topToBottom'
+     */
+    mode?: SvelteVirtualListMode
+    /**
+     * Svelte snippet function that defines how each item should be rendered. Receives the item and its index as arguments.
+     */
+    renderItem: Snippet<[item: any, index: number]> // eslint-disable-line @typescript-eslint/no-explicit-any
+    /**
+     * Base test ID for component elements to facilitate testing.
+     */
+    testId?: string
+    /**
+     * CSS class to apply to the scrollable viewport element.
+     */
+    viewportClass?: string
+}
+
+/**
+ * Debug information provided by the virtual list during rendering.
+ *
+ * @typedef {Object} SvelteVirtualListDebugInfo
+ * @property {number} endIndex - Index of the last rendered item in the viewport.
+ * @property {number} startIndex - Index of the first rendered item in the viewport.
+ * @property {number} totalItems - Total number of items in the list.
+ * @property {number} visibleItemsCount - Number of items currently visible in the viewport.
+ * @property {number} processedItems - Number of items processed in the viewport.
+ */
+export type SvelteVirtualListDebugInfo = {
+    endIndex: number
+    startIndex: number
+    totalItems: number
+    visibleItemsCount: number
+    processedItems: number
+    averageItemHeight: number
+}
