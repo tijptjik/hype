@@ -358,13 +358,14 @@ export type FeatureViewFilters = {
   // Authorship related
   hasTitle: FilterTriState;
   hasDescription: FilterTriState;
+  hasDisplayAddress: FilterTriState;
 
   // Translation related (per locale)
   translationLocales: Record<Locale, boolean>; // Which locales to consider for translation filters
   isTitleTranslated: LocalisedFilterTriState;
   isDescriptionTranslated: LocalisedFilterTriState;
-  isSpecifierTranslated: LocalisedFilterTriState; // TODO: implement
   isAddressTranslated: LocalisedFilterTriState;
+  isSpecifierTranslated: LocalisedFilterTriState;
 
   // Property related
   properties: Record<Id, FilterTriState>; // propertyId -> state
@@ -399,7 +400,8 @@ export type FeatureTranslationFilterKey =
 
 export type FeatureAuthorshipFilterKey =
   | 'hasTitle'
-  | 'hasDescription';
+  | 'hasDescription'
+  | 'hasDisplayAddress';
 
 export type FeatureImageFilterKey =
   | 'hasImage'
@@ -415,7 +417,7 @@ export type FilteredResources = {
   organisation: Organisation[];
   project: Project[];
   layer: Layer[];
-  feature: Feature[];
+  feature: FeatureFromCollection[];
   task: Task[];
   hub: Hub[];
 };
@@ -438,7 +440,7 @@ export type ActiveCollection = {
   id: string;
   type: 'neighbourhood' | 'walk' | 'feature' | 'search';
   i18n: Record<Locale, { name: string }>;
-  items: Feature[];
+  items: FeatureFromCollection[];
 } | null;
 
 /* ----------------- */
@@ -466,7 +468,13 @@ export type KeyMap = {
 // STATS
 /* -------- */
 
-export type StatsCache = SvelteMap<FirstClassResource, SvelteMap<Id, SvelteMap<Key, { value: any; type: 'boolean' | 'count' | 'mean' | 'sum' }>>>;
+export type StatsCache = SvelteMap<
+  FirstClassResource,
+  SvelteMap<
+    Id,
+    SvelteMap<Key, { value: any; type: 'boolean' | 'count' | 'mean' | 'sum' }>
+  >
+>;
 
 // Define the shape of the cache
 export type Cache = {
@@ -480,7 +488,6 @@ export type Cache = {
   image: Map<Id, ImageDB>;
   stats: StatsCache;
 };
-
 
 /* ----------------- */
 // URL
@@ -1008,7 +1015,7 @@ export type FeatureDBRaw = z.infer<typeof FeatureRaw>;
 /* -------- */
 
 // Feature with all fields, including translations and properties
-export type FeatureCollection = z.infer<typeof FeatureCollectionAPI>;
+export type FeatureFromCollection = z.infer<typeof FeatureCollectionAPI>;
 export type Feature = z.infer<typeof FeatureAPI>;
 // Like Feature, but without the featureId in translations and properties
 export type FeatureNew = z.infer<typeof FeatureInsertAPI>;
@@ -1593,7 +1600,7 @@ export type SearchResult = {
 export type AppContextState = {
   markers: Map<Id, Marker>;
   active: {
-    feature: Feature | null;
+    feature: FeatureFromCollection | null;
     collection: ActiveCollection | null;
   };
   filters: FilterState;
@@ -1906,9 +1913,7 @@ export function isHub(resource: Resource): resource is Hub {
 // FEATURE TYPES
 export type { FeatureClientExt, FeatureI18nFieldKeys } from './db/zod/schema/feature';
 
-
-import type { Snippet } from 'svelte'
-
+import type { Snippet } from 'svelte';
 
 /* ----------------- */
 // VIRUAL LIST
@@ -1921,7 +1926,7 @@ import type { Snippet } from 'svelte'
  *
  * @typedef {'topToBottom' | 'bottomToTop'} SvelteVirtualListMode
  */
-export type SvelteVirtualListMode = 'topToBottom' | 'bottomToTop'
+export type SvelteVirtualListMode = 'topToBottom' | 'bottomToTop';
 
 /**
  * Configuration properties for the SvelteVirtualList component.
@@ -1929,59 +1934,59 @@ export type SvelteVirtualListMode = 'topToBottom' | 'bottomToTop'
  * @typedef {Object} SvelteVirtualListProps
  */
 export type SvelteVirtualListProps = {
-    /**
-     * Number of items to render outside the visible viewport for smooth scrolling.
-     * @default 20
-     */
-    bufferSize?: number
-    /**
-     * CSS class to apply to the outer container element.
-     */
-    containerClass?: string
-    /**
-     * CSS class to apply to the content wrapper element.
-     */
-    contentClass?: string
-    /**
-     * Initial height estimate for each item in pixels. Used for optimization before actual measurements are available.
-     * @default 40
-     */
-    defaultEstimatedItemHeight?: number
-    /**
-     * When true, enables debug mode with additional logging and information.
-     * @default false
-     */
-    debug?: boolean
-    /**
-     * Custom callback to handle debug information. Receives a SvelteVirtualListDebugInfo object.
-     */
-    debugFunction?: (_info: SvelteVirtualListDebugInfo) => void
-    /**
-     * The complete array of items to be virtualized.
-     */
-    items: any[] // eslint-disable-line @typescript-eslint/no-explicit-any
-    /**
-     * CSS class to apply to individual item containers.
-     */
-    itemsClass?: string
-    /**
-     * Determines the scroll and render direction.
-     * @default 'topToBottom'
-     */
-    mode?: SvelteVirtualListMode
-    /**
-     * Svelte snippet function that defines how each item should be rendered. Receives the item and its index as arguments.
-     */
-    renderItem: Snippet<[item: any, index: number]> // eslint-disable-line @typescript-eslint/no-explicit-any
-    /**
-     * Base test ID for component elements to facilitate testing.
-     */
-    testId?: string
-    /**
-     * CSS class to apply to the scrollable viewport element.
-     */
-    viewportClass?: string
-}
+  /**
+   * Number of items to render outside the visible viewport for smooth scrolling.
+   * @default 20
+   */
+  bufferSize?: number;
+  /**
+   * CSS class to apply to the outer container element.
+   */
+  containerClass?: string;
+  /**
+   * CSS class to apply to the content wrapper element.
+   */
+  contentClass?: string;
+  /**
+   * Initial height estimate for each item in pixels. Used for optimization before actual measurements are available.
+   * @default 40
+   */
+  defaultEstimatedItemHeight?: number;
+  /**
+   * When true, enables debug mode with additional logging and information.
+   * @default false
+   */
+  debug?: boolean;
+  /**
+   * Custom callback to handle debug information. Receives a SvelteVirtualListDebugInfo object.
+   */
+  debugFunction?: (_info: SvelteVirtualListDebugInfo) => void;
+  /**
+   * The complete array of items to be virtualized.
+   */
+  items: any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+  /**
+   * CSS class to apply to individual item containers.
+   */
+  itemsClass?: string;
+  /**
+   * Determines the scroll and render direction.
+   * @default 'topToBottom'
+   */
+  mode?: SvelteVirtualListMode;
+  /**
+   * Svelte snippet function that defines how each item should be rendered. Receives the item and its index as arguments.
+   */
+  renderItem: Snippet<[item: any, index: number]>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  /**
+   * Base test ID for component elements to facilitate testing.
+   */
+  testId?: string;
+  /**
+   * CSS class to apply to the scrollable viewport element.
+   */
+  viewportClass?: string;
+};
 
 /**
  * Debug information provided by the virtual list during rendering.
@@ -1994,10 +1999,10 @@ export type SvelteVirtualListProps = {
  * @property {number} processedItems - Number of items processed in the viewport.
  */
 export type SvelteVirtualListDebugInfo = {
-    endIndex: number
-    startIndex: number
-    totalItems: number
-    visibleItemsCount: number
-    processedItems: number
-    averageItemHeight: number
-}
+  endIndex: number;
+  startIndex: number;
+  totalItems: number;
+  visibleItemsCount: number;
+  processedItems: number;
+  averageItemHeight: number;
+};

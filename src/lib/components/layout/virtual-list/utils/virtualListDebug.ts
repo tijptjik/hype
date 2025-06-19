@@ -1,4 +1,4 @@
-import type { SvelteVirtualListDebugInfo } from '../../virtual-list-core/src/lib/types.js'
+import type { SvelteVirtualListDebugInfo } from '../../virtual-list-core/src/lib/types.js';
 
 /**
  * Determines whether debug information should be displayed based on state changes in the virtual list.
@@ -30,18 +30,18 @@ import type { SvelteVirtualListDebugInfo } from '../../virtual-list-core/src/lib
  * );
  */
 export function shouldShowDebugInfo(
-    prevRange: { start: number; end: number } | null,
-    currentRange: { start: number; end: number },
-    prevHeight: number,
-    currentHeight: number
+  prevRange: { start: number; end: number } | null,
+  currentRange: { start: number; end: number },
+  prevHeight: number,
+  currentHeight: number
 ): boolean {
-    if (!prevRange) return true
+  if (!prevRange) return true;
 
-    return (
-        prevRange.start !== currentRange.start ||
-        prevRange.end !== currentRange.end ||
-        prevHeight !== currentHeight
-    )
+  return (
+    prevRange.start !== currentRange.start ||
+    prevRange.end !== currentRange.end ||
+    prevHeight !== currentHeight
+  );
 }
 
 /**
@@ -76,17 +76,17 @@ export function shouldShowDebugInfo(
  * @throws {Error} Will throw if end index is less than start index in visibleRange
  */
 export function createDebugInfo(
-    visibleRange: { start: number; end: number },
-    totalItems: number,
-    processedItems: number,
-    averageItemHeight: number
+  visibleRange: { start: number; end: number },
+  totalItems: number,
+  processedItems: number,
+  averageItemHeight: number
 ): SvelteVirtualListDebugInfo {
-    return {
-        visibleItemsCount: visibleRange.end - visibleRange.start,
-        startIndex: visibleRange.start,
-        endIndex: visibleRange.end,
-        totalItems,
-        processedItems,
-        averageItemHeight
-    }
+  return {
+    visibleItemsCount: visibleRange.end - visibleRange.start,
+    startIndex: visibleRange.start,
+    endIndex: visibleRange.end,
+    totalItems,
+    processedItems,
+    averageItemHeight
+  };
 }

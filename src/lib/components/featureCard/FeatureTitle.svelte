@@ -33,10 +33,10 @@ const userPreferences = $derived(appCtx.getUserPreferences());
 
 // STATE : LOCAL
 let gradePropertyId: Id = $derived(
-    appCtx.cache.layer.get(feature.layerId)?.properties?.find((p: any) => {
-      const property = appCtx.cache.property.get(p.propertyId);
-      return property?.key === 'grade';
-    })?.propertyId
+  appCtx.cache.layer.get(feature.layerId)?.properties?.find((p: any) => {
+    const property = appCtx.cache.property.get(p.propertyId);
+    return property?.key === 'grade';
+  })?.propertyId
 ) as Id;
 
 let grade = $derived(

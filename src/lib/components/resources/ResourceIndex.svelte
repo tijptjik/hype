@@ -81,7 +81,7 @@ const gridData = $derived.by(() => {
 <div
   bind:clientWidth={gridWidth}
   bind:this={listContainer}
-  class="@container/grid grid flex-1 gap-12 overflow-y-auto bg-gradient-to-bl from-rose-500 to-fuchsia-800 bg-fixed"
+  class="grid flex-1 gap-12 overflow-y-auto bg-gradient-to-bl from-rose-500 to-fuchsia-800 bg-fixed @container/grid"
   style="height: calc(100vh - 164px);">
   <!-- Loading State -->
   {#if isInitialised}

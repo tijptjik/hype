@@ -12,7 +12,7 @@ import {
   canManageFeatures
 } from '$lib/client/services/auth';
 
-type PermissionType = 
+type PermissionType =
   | 'manage-organisations'
   | 'update-organisation'
   | 'create-projects'
@@ -31,14 +31,14 @@ interface Props {
   disabled?: boolean;
 }
 
-let { 
-  user, 
-  permission, 
-  organisationId, 
-  projectId, 
-  children, 
-  fallback, 
-  disabled = false 
+let {
+  user,
+  permission,
+  organisationId,
+  projectId,
+  children,
+  fallback,
+  disabled = false
 }: Props = $props();
 
 // Check if user has the required permission
@@ -48,25 +48,25 @@ let hasPermission = $derived.by(() => {
   switch (permission) {
     case 'manage-organisations':
       return canManageOrganisations(user);
-    
+
     case 'update-organisation':
       return organisationId ? canUpdateOrganisation(user, organisationId) : false;
-    
+
     case 'create-projects':
       return canCreateProjects(user);
-    
+
     case 'update-project':
       return projectId ? canUpdateProject(user, projectId, organisationId) : false;
-    
+
     case 'create-layers':
       return projectId ? canCreateLayers(user, projectId) : false;
-    
+
     case 'update-layer':
       return projectId ? canUpdateLayer(user, projectId) : false;
-    
+
     case 'manage-features':
       return projectId ? canManageFeatures(user, projectId) : false;
-    
+
     default:
       return false;
   }
@@ -82,4 +82,4 @@ let hasPermission = $derived.by(() => {
   {@render children()}
 {:else if fallback}
   {@render fallback()}
-{/if} 
+{/if}

@@ -62,9 +62,11 @@ export const feature = sqliteTable('feature', {
   layerId: text('layerId')
     .notNull()
     .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  contributorId: text('contributorId')
-    .references(() => user.id, { onDelete: 'set null', onUpdate: 'cascade' }),
-  
+  contributorId: text('contributorId').references(() => user.id, {
+    onDelete: 'set null',
+    onUpdate: 'cascade'
+  }),
+
   geometry: text('geometry', { mode: 'json' }).notNull().$type<GeometryObject>(),
   // Address Metadata
   addressMeta: text('addressMeta', {
@@ -75,8 +77,10 @@ export const feature = sqliteTable('feature', {
   // True : Feature is shown in the User App
   // False : Feature is only shown in the Admin Panel
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
-  publisherId: text('publisherId')
-    .references(() => user.id, { onDelete: 'set null', onUpdate: 'cascade' }),
+  publisherId: text('publisherId').references(() => user.id, {
+    onDelete: 'set null',
+    onUpdate: 'cascade'
+  }),
   publishedAt: text('publishedAt'),
   // False : Feature shows up everywhere in the Admin Panel
   // True : Feature only shows up in the Review Queue
@@ -150,8 +154,10 @@ export const featureProperty = sqliteTable(
     propertyId: text('propertyId')
       .notNull()
       .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    propertyValueId: text('propertyValueId')
-      .references(() => propertyValue.id, { onDelete: 'set null', onUpdate: 'cascade' }),
+    propertyValueId: text('propertyValueId').references(() => propertyValue.id, {
+      onDelete: 'set null',
+      onUpdate: 'cascade'
+    }),
     // If the property value is non-categorical AND it does not translate, e.g. a number, a date, a boolean, etc.
     // The value is set directly on the featureProperty table. In this case, the propertyValueId is null, and there
     // are no i18n records for this property. The inverse is also true, i.e. if the property value is non-categorical,

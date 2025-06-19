@@ -128,7 +128,13 @@ export const listFeaturesWithImage = async (
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOpts
-): Promise<(FeatureDB & { image: ImageDB | null; imageCount: number; imagePublishedCount: number })[]> => {
+): Promise<
+  (FeatureDB & {
+    image: ImageDB | null;
+    imageCount: number;
+    imagePublishedCount: number;
+  })[]
+> => {
   // Apply hub filtering if opts is provided
   const hubFilter = getFeatureHubFilter(db, opts);
   if (hubFilter) {
@@ -153,22 +159,22 @@ export const listFeaturesWithImage = async (
   // Post-process to select the canonical or first image and calculate counts
   const featuresWithSelectedImage = featuresRaw.map((feature) => {
     const rawImages = (feature as any).images || [];
-    
+
     // Transform raw images to the expected format for selectCanonicalOrFirstImage
     const transformedImages = rawImages.map((img: any) => ({
       intent: img.intent,
       image: img.image || null
     }));
-    
+
     const selectedImage = selectCanonicalOrFirstImage(transformedImages);
-    
+
     // Calculate image counts for filtering
     const imageCount = rawImages.length;
     const imagePublishedCount = rawImages.filter((img: any) => img.isPublished).length;
-    
+
     const { images: _, ...restOfFeature } = feature as any; // Remove the raw images array
-    return { 
-      ...restOfFeature, 
+    return {
+      ...restOfFeature,
       image: selectedImage,
       imageCount,
       imagePublishedCount
@@ -579,26 +585,20 @@ export const updateFeatureWithRelated = async (
         });
         return {
           ...featureImg,
-          image: imageData
+          image: imageData || null
         };
       })
     );
-
     // Select canonical or first image using the correct data
     selectedImage = selectCanonicalOrFirstImage(imagesWithData);
-    
-    console.log('DEBUG updateFeatureWithRelated - Using direct query, found', featureImageRecords.length, 'images for feature', idToUse);
-    console.log('DEBUG updateFeatureWithRelated - Selected image:', selectedImage?.id || 'null');
-  } else {
-    console.log('DEBUG updateFeatureWithRelated - No images found for feature', idToUse);
-  }
 
-  return {
-    ...feature,
-    i18n,
-    properties,
-    image: selectedImage
-  };
+    return {
+      ...feature,
+      i18n,
+      properties,
+      image: selectedImage
+    };
+  }
 };
 
 /********************
@@ -918,6 +918,5 @@ const selectCanonicalOrFirstImage = (
       selectedImage = featureImages[0].image;
     }
   }
-  
   return selectedImage;
 };

@@ -51,8 +51,7 @@ function toggleMode() {
   <button
     class="btn btn-ghost px-3 transition-opacity duration-200"
     onclick={toggleMode}
-    title={`Switch to ${modeConfig[nextMode].label}`}
-  >
+    title={`Switch to ${modeConfig[nextMode].label}`}>
     <Icon src={modeConfig[nextMode].icon as any} class="h-6 w-6" />
   </button>
 </div>

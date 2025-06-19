@@ -21,7 +21,7 @@ import type { Code, FacetType, Id, NavItem } from '$lib/types';
 
 // NAVIGATION
 // NOTE : We cannot use Enums here for path or seq as the build process only procudes them on a hard refresh.
-export const navItems: Record<FirstClassResource, NavItem> = {
+export const navItems: Record<Exclude<FirstClassResource, 'property'>, NavItem> = {
   organisation: {
     name: m.maps__organisations(),
     icon: OrganisationIcon,
@@ -92,13 +92,13 @@ export const navigateOnAdmin = (
   } else {
     adminCtx.setResourceRef(false);
   }
+  if (queryParams) url += `?${new URLSearchParams(queryParams).toString()}`;
   if (facet) {
     url += `#${facet}`;
     adminCtx.setFacet(facet);
   } else {
     adminCtx.setFacet(false);
   }
-  if (queryParams) url += `?${new URLSearchParams(queryParams).toString()}`;
   goto(url);
 };
 

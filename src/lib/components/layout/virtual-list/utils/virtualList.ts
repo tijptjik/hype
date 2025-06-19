@@ -1,5 +1,5 @@
-import type { SvelteVirtualListMode } from '../../virtual-list-core/src/lib/types.js'
-import type { VirtualListSetters, VirtualListState } from './types.js'
+import type { SvelteVirtualListMode } from '../../virtual-list-core/src/lib/types.js';
+import type { VirtualListSetters, VirtualListState } from './types.js';
 
 /**
  * Calculates the maximum scroll position for a virtual list.
@@ -14,14 +14,14 @@ import type { VirtualListSetters, VirtualListState } from './types.js'
  * @returns {number} The maximum scroll position in pixels
  */
 export const calculateScrollPosition = (
-    totalItems: number,
-    itemHeight: number,
-    containerHeight: number
+  totalItems: number,
+  itemHeight: number,
+  containerHeight: number
 ) => {
-    if (totalItems === 0) return 0
-    const totalHeight = totalItems * itemHeight
-    return Math.max(0, totalHeight - containerHeight)
-}
+  if (totalItems === 0) return 0;
+  const totalHeight = totalItems * itemHeight;
+  return Math.max(0, totalHeight - containerHeight);
+};
 
 /**
  * Determines the range of items that should be rendered in the virtual list.
@@ -39,30 +39,33 @@ export const calculateScrollPosition = (
  * @returns {{ start: number, end: number }} Range of indices to render
  */
 export const calculateVisibleRange = (
-    scrollTop: number,
-    viewportHeight: number,
-    itemHeight: number,
-    totalItems: number,
-    bufferSize: number,
-    mode: SvelteVirtualListMode
+  scrollTop: number,
+  viewportHeight: number,
+  itemHeight: number,
+  totalItems: number,
+  bufferSize: number,
+  mode: SvelteVirtualListMode
 ) => {
-    if (mode === 'bottomToTop') {
-        const visibleCount = Math.ceil(viewportHeight / itemHeight) + 1
-        const bottomIndex = totalItems - Math.floor(scrollTop / itemHeight)
-        // Add buffer to both ends
-        const start = Math.max(0, bottomIndex - visibleCount - bufferSize)
-        const end = Math.min(totalItems, bottomIndex + bufferSize)
-        return { start, end }
-    } else {
-        const start = Math.floor(scrollTop / itemHeight)
-        const end = Math.min(totalItems, start + Math.ceil(viewportHeight / itemHeight) + 1)
-        // Add buffer to both ends
-        return {
-            start: Math.max(0, start - bufferSize),
-            end: Math.min(totalItems, end + bufferSize)
-        }
-    }
-}
+  if (mode === 'bottomToTop') {
+    const visibleCount = Math.ceil(viewportHeight / itemHeight) + 1;
+    const bottomIndex = totalItems - Math.floor(scrollTop / itemHeight);
+    // Add buffer to both ends
+    const start = Math.max(0, bottomIndex - visibleCount - bufferSize);
+    const end = Math.min(totalItems, bottomIndex + bufferSize);
+    return { start, end };
+  } else {
+    const start = Math.floor(scrollTop / itemHeight);
+    const end = Math.min(
+      totalItems,
+      start + Math.ceil(viewportHeight / itemHeight) + 1
+    );
+    // Add buffer to both ends
+    return {
+      start: Math.max(0, start - bufferSize),
+      end: Math.min(totalItems, end + bufferSize)
+    };
+  }
+};
 
 /**
  * Calculates the CSS transform value for positioning the virtual list items.
@@ -79,16 +82,16 @@ export const calculateVisibleRange = (
  * @returns {number} The calculated transform Y value in pixels
  */
 export const calculateTransformY = (
-    mode: SvelteVirtualListMode,
-    totalItems: number,
-    visibleEnd: number,
-    visibleStart: number,
-    itemHeight: number
+  mode: SvelteVirtualListMode,
+  totalItems: number,
+  visibleEnd: number,
+  visibleStart: number,
+  itemHeight: number
 ) => {
-    return mode === 'bottomToTop'
-        ? (totalItems - visibleEnd) * itemHeight
-        : visibleStart * itemHeight
-}
+  return mode === 'bottomToTop'
+    ? (totalItems - visibleEnd) * itemHeight
+    : visibleStart * itemHeight;
+};
 
 /**
  * Updates the virtual list's height and scroll position when necessary.
@@ -103,35 +106,35 @@ export const calculateTransformY = (
  * @param {boolean} immediate - Whether to perform the update immediately
  */
 export const updateHeightAndScroll = (
-    state: VirtualListState,
-    setters: VirtualListSetters,
-    immediate = false
+  state: VirtualListState,
+  setters: VirtualListSetters,
+  immediate = false
 ) => {
-    const {
-        initialized,
-        mode,
-        containerElement,
-        viewportElement,
-        calculatedItemHeight,
-        scrollTop
-    } = state
+  const {
+    initialized,
+    mode,
+    containerElement,
+    viewportElement,
+    calculatedItemHeight,
+    scrollTop
+  } = state;
 
-    const { setHeight, setScrollTop } = setters
+  const { setHeight, setScrollTop } = setters;
 
-    if (immediate) {
-        if (containerElement && viewportElement && initialized) {
-            const newHeight = containerElement.getBoundingClientRect().height
-            setHeight(newHeight)
+  if (immediate) {
+    if (containerElement && viewportElement && initialized) {
+      const newHeight = containerElement.getBoundingClientRect().height;
+      setHeight(newHeight);
 
-            if (mode === 'bottomToTop') {
-                const visibleIndex = Math.floor(scrollTop / calculatedItemHeight)
-                const newScrollTop = visibleIndex * calculatedItemHeight
-                viewportElement.scrollTop = newScrollTop
-                setScrollTop(newScrollTop)
-            }
-        }
+      if (mode === 'bottomToTop') {
+        const visibleIndex = Math.floor(scrollTop / calculatedItemHeight);
+        const newScrollTop = visibleIndex * calculatedItemHeight;
+        viewportElement.scrollTop = newScrollTop;
+        setScrollTop(newScrollTop);
+      }
     }
-}
+  }
+};
 
 /**
  * Calculates the average height of visible items in a virtual list.
@@ -161,53 +164,55 @@ export const updateHeightAndScroll = (
  * )
  */
 export const calculateAverageHeight = (
-    itemElements: HTMLElement[],
-    visibleRange: { start: number },
-    heightCache: Record<number, number>,
-    currentItemHeight: number
+  itemElements: HTMLElement[],
+  visibleRange: { start: number },
+  heightCache: Record<number, number>,
+  currentItemHeight: number
 ): {
-    newHeight: number
-    newLastMeasuredIndex: number
-    updatedHeightCache: Record<number, number>
+  newHeight: number;
+  newLastMeasuredIndex: number;
+  updatedHeightCache: Record<number, number>;
 } => {
-    const validElements = itemElements.filter((el) => el)
-    if (validElements.length === 0) {
-        return {
-            newHeight: currentItemHeight,
-            newLastMeasuredIndex: visibleRange.start,
-            updatedHeightCache: heightCache
-        }
-    }
-
-    const newHeightCache = { ...heightCache }
-
-    // Cache heights for new items
-    validElements.forEach((el, i) => {
-        const itemIndex = visibleRange.start + i
-        if (!newHeightCache[itemIndex]) {
-            try {
-                const height = el.getBoundingClientRect().height
-                if (Number.isFinite(height) && height > 0) {
-                    newHeightCache[itemIndex] = height
-                }
-            } catch {
-                // Skip invalid measurements
-            }
-        }
-    })
-
-    // Calculate average from valid cached heights
-    const validHeights = Object.values(newHeightCache).filter((h) => Number.isFinite(h) && h > 0)
-
+  const validElements = itemElements.filter((el) => el);
+  if (validElements.length === 0) {
     return {
-        newHeight:
-            validHeights.length > 0
-                ? validHeights.reduce((sum, h) => sum + h, 0) / validHeights.length
-                : currentItemHeight,
-        newLastMeasuredIndex: visibleRange.start,
-        updatedHeightCache: newHeightCache
+      newHeight: currentItemHeight,
+      newLastMeasuredIndex: visibleRange.start,
+      updatedHeightCache: heightCache
+    };
+  }
+
+  const newHeightCache = { ...heightCache };
+
+  // Cache heights for new items
+  validElements.forEach((el, i) => {
+    const itemIndex = visibleRange.start + i;
+    if (!newHeightCache[itemIndex]) {
+      try {
+        const height = el.getBoundingClientRect().height;
+        if (Number.isFinite(height) && height > 0) {
+          newHeightCache[itemIndex] = height;
+        }
+      } catch {
+        // Skip invalid measurements
+      }
     }
-}
+  });
+
+  // Calculate average from valid cached heights
+  const validHeights = Object.values(newHeightCache).filter(
+    (h) => Number.isFinite(h) && h > 0
+  );
+
+  return {
+    newHeight:
+      validHeights.length > 0
+        ? validHeights.reduce((sum, h) => sum + h, 0) / validHeights.length
+        : currentItemHeight,
+    newLastMeasuredIndex: visibleRange.start,
+    updatedHeightCache: newHeightCache
+  };
+};
 
 /**
  * Processes large arrays in chunks to prevent UI blocking.
@@ -234,29 +239,29 @@ export const calculateAverageHeight = (
  * )
  */
 export const processChunked = async (
-    items: any[], // eslint-disable-line @typescript-eslint/no-explicit-any
-    chunkSize: number,
-    onProgress: (processed: number) => void, // eslint-disable-line no-unused-vars
-    onComplete: () => void
+  items: any[], // eslint-disable-line @typescript-eslint/no-explicit-any
+  chunkSize: number,
+  onProgress: (processed: number) => void, // eslint-disable-line no-unused-vars
+  onComplete: () => void
 ) => {
-    if (!items.length) {
-        onComplete()
-        return
+  if (!items.length) {
+    onComplete();
+    return;
+  }
+
+  const processChunk = async (startIdx: number) => {
+    const endIdx = Math.min(startIdx + chunkSize, items.length);
+    onProgress(endIdx);
+
+    if (endIdx < items.length) {
+      setTimeout(() => processChunk(endIdx), 0);
+    } else {
+      onComplete();
     }
+  };
 
-    const processChunk = async (startIdx: number) => {
-        const endIdx = Math.min(startIdx + chunkSize, items.length)
-        onProgress(endIdx)
-
-        if (endIdx < items.length) {
-            setTimeout(() => processChunk(endIdx), 0)
-        } else {
-            onComplete()
-        }
-    }
-
-    await processChunk(0)
-}
+  await processChunk(0);
+};
 
 /**
  * Builds a block sum array for fast offset calculation in large virtual lists.
@@ -269,25 +274,25 @@ export const processChunked = async (
  * @returns {number[]} Array of prefix sums at each block boundary
  */
 export const buildBlockSums = (
-    heightCache: Record<number, number>,
-    calculatedItemHeight: number,
-    totalItems: number,
-    blockSize = 1000
+  heightCache: Record<number, number>,
+  calculatedItemHeight: number,
+  totalItems: number,
+  blockSize = 1000
 ): number[] => {
-    const blockSums: number[] = []
-    let sum = 0
-    for (let i = 0; i < totalItems; i++) {
-        sum += heightCache[i] ?? calculatedItemHeight
-        if ((i + 1) % blockSize === 0) {
-            blockSums.push(sum)
-        }
+  const blockSums: number[] = [];
+  let sum = 0;
+  for (let i = 0; i < totalItems; i++) {
+    sum += heightCache[i] ?? calculatedItemHeight;
+    if ((i + 1) % blockSize === 0) {
+      blockSums.push(sum);
     }
-    // Push the last partial block if needed
-    if (totalItems % blockSize !== 0) {
-        blockSums.push(sum)
-    }
-    return blockSums
-}
+  }
+  // Push the last partial block if needed
+  if (totalItems % blockSize !== 0) {
+    blockSums.push(sum);
+  }
+  return blockSums;
+};
 
 /**
  * Calculates the scroll offset (in pixels) needed to bring a specific item into view in a virtual list.
@@ -311,26 +316,26 @@ export const buildBlockSums = (
  * const offset = getScrollOffsetForIndex(heightCache, calculatedItemHeight, 12345, blockSums);
  */
 export const getScrollOffsetForIndex = (
-    heightCache: Record<number, number>,
-    calculatedItemHeight: number,
-    idx: number,
-    blockSums?: number[],
-    blockSize = 1000
+  heightCache: Record<number, number>,
+  calculatedItemHeight: number,
+  idx: number,
+  blockSums?: number[],
+  blockSize = 1000
 ): number => {
-    if (idx <= 0) return 0
-    if (!blockSums) {
-        // Fallback: O(n) for a single query
-        let offset = 0
-        for (let i = 0; i < idx; i++) {
-            offset += heightCache[i] ?? calculatedItemHeight
-        }
-        return offset
+  if (idx <= 0) return 0;
+  if (!blockSums) {
+    // Fallback: O(n) for a single query
+    let offset = 0;
+    for (let i = 0; i < idx; i++) {
+      offset += heightCache[i] ?? calculatedItemHeight;
     }
-    const blockIdx = Math.floor(idx / blockSize)
-    let offset = blockIdx > 0 ? blockSums[blockIdx - 1] : 0
-    const start = blockIdx * blockSize
-    for (let i = start; i < idx; i++) {
-        offset += heightCache[i] ?? calculatedItemHeight
-    }
-    return offset
-}
+    return offset;
+  }
+  const blockIdx = Math.floor(idx / blockSize);
+  let offset = blockIdx > 0 ? blockSums[blockIdx - 1] : 0;
+  const start = blockIdx * blockSize;
+  for (let i = start; i < idx; i++) {
+    offset += heightCache[i] ?? calculatedItemHeight;
+  }
+  return offset;
+};

@@ -45,8 +45,10 @@ export const layer = sqliteTable('layer', {
   // Accessible to the public in the app
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
   publishedAt: text('publishedAt'),
-  publisherId: text('publisherId')
-    .references(() => user.id, { onDelete: 'set null', onUpdate: 'cascade' }),
+  publisherId: text('publisherId').references(() => user.id, {
+    onDelete: 'set null',
+    onUpdate: 'cascade'
+  }),
   // False : Layer may be shown in the Admin Panel
   // True : Layer is considered deleted
   isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),

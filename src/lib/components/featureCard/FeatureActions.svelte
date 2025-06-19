@@ -94,8 +94,10 @@ async function toggleVisited() {
   try {
     // If marking as visited and item is wishlisted, remove from wishlist
     const shouldRemoveFromWishlist = !isVisited && isWishlisted;
-    const newWishlistStatus = shouldRemoveFromWishlist ? false : (wishlistedFeature?.isWishlisted || false);
-    
+    const newWishlistStatus = shouldRemoveFromWishlist
+      ? false
+      : wishlistedFeature?.isWishlisted || false;
+
     await toggleVisitedStatus(
       appCtx.user!.id,
       feature.id,
@@ -128,7 +130,9 @@ async function submitMissingReport() {
   try {
     cardCtx.isSubmitting = true;
 
-    const {layer, project, organisation} = await appCtx.getHierarchy(feature as Feature);
+    const { layer, project, organisation } = await appCtx.getHierarchy(
+      feature as Feature
+    );
 
     // Submit using client service
     await submitMissingReportAPI(
@@ -219,7 +223,9 @@ async function submitNewPhotos() {
   try {
     cardCtx.isSubmitting = true;
 
-    const {layer, project, organisation} = await appCtx.getHierarchy(feature as Feature);
+    const { layer, project, organisation } = await appCtx.getHierarchy(
+      feature as Feature
+    );
 
     // Submit using client service
     await submitNewPhotosAPI(

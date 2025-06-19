@@ -89,7 +89,7 @@ export const LayerCollectionAPI = LayerBase.omit({
   properties: z.array(LayerPropertyBase)
 });
 
-// Basic layer entity schema - optimized for performance  
+// Basic layer entity schema - optimized for performance
 export const LayerAPI = LayerBase.omit({
   createdAt: true,
   modifiedAt: true

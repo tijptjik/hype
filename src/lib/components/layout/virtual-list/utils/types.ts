@@ -1,4 +1,4 @@
-import type { SvelteVirtualListMode } from '$lib/types.js'
+import type { SvelteVirtualListMode } from '$lib/types.js';
 
 /**
  * Represents the internal state of a virtual list component.
@@ -16,14 +16,14 @@ import type { SvelteVirtualListMode } from '$lib/types.js'
  * @property {number} scrollTop - Current vertical scroll position in pixels
  */
 export type VirtualListState = {
-    initialized: boolean
-    mode: SvelteVirtualListMode
-    containerElement: HTMLElement | null
-    viewportElement: HTMLElement | null
-    calculatedItemHeight: number
-    height: number
-    scrollTop: number
-}
+  initialized: boolean;
+  mode: SvelteVirtualListMode;
+  containerElement: HTMLElement | null;
+  viewportElement: HTMLElement | null;
+  calculatedItemHeight: number;
+  height: number;
+  scrollTop: number;
+};
 
 /**
  * Collection of setter functions for updating VirtualListState properties.
@@ -37,14 +37,14 @@ export type VirtualListState = {
  * @property {Function} setInitialized - Updates the initialization status of the virtual list
  */
 export type VirtualListSetters = {
-    setHeight: (height: number) => void // eslint-disable-line no-unused-vars
-    setScrollTop: (scrollTop: number) => void // eslint-disable-line no-unused-vars
-    setInitialized: (initialized: boolean) => void // eslint-disable-line no-unused-vars
-}
+  setHeight: (height: number) => void; // eslint-disable-line no-unused-vars
+  setScrollTop: (scrollTop: number) => void; // eslint-disable-line no-unused-vars
+  setInitialized: (initialized: boolean) => void; // eslint-disable-line no-unused-vars
+};
 
 /**
  * Cache for storing measured item heights
  * - Key: Item index in the list
  * - Value: Measured height in pixels
  */
-export type HeightCache = Record<number, number>
+export type HeightCache = Record<number, number>;

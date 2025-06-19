@@ -36,7 +36,7 @@ async function getRandomGif(topic = 'zero') {
     console.warn('Giphy API key not available');
     return null;
   }
-  
+
   try {
     const response = await fetch(
       `https://api.giphy.com/v1/gifs/random?api_key=${giphyKey}&tag=${encodeURIComponent(topic)}`

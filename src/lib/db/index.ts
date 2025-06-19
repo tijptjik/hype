@@ -119,7 +119,10 @@ export const resourceConfig: Record<HierarchicalResource, ResourceConfig> = {
 // 2. DATABASE :: CLIENT
 // ═══════════════════════
 
-const client = (database: MiniflareD1Database, enableLogger: boolean = false): DrizzleD1Database<typeof schema> => {
+const client = (
+  database: MiniflareD1Database,
+  enableLogger: boolean = false
+): DrizzleD1Database<typeof schema> => {
   return drizzle(database, {
     schema,
     logger: enableLogger

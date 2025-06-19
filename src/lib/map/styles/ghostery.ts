@@ -19,12 +19,14 @@ export const ghosteryRoads: AddLayerObject = {
   'source-layer': 'roads',
   type: 'line',
   filter: ['in', 'kind', 'highway', 'major_road', 'minor_road'],
-  paint: { 
+  paint: {
     'line-color': '#4987E2',
     'line-width': [
       'case',
-      ['==', ['get', 'kind'], 'highway'], 1.5,
-      ['==', ['get', 'kind'], 'major_road'], 1.5,
+      ['==', ['get', 'kind'], 'highway'],
+      1.5,
+      ['==', ['get', 'kind'], 'major_road'],
+      1.5,
       1.2
     ]
   }
@@ -59,16 +61,20 @@ export const ghosteryBuildingsOutline: AddLayerObject = {
       17,
       'rgba(240, 77, 127, 0.1)', // Start with hot pink at lower zoom
       20,
-      'rgba(240, 77, 127, 1)'    // Full hot pink at higher zoom
+      'rgba(240, 77, 127, 1)' // Full hot pink at higher zoom
     ],
     'line-width': [
       'interpolate',
       ['linear'],
       ['zoom'],
-      17, 1,
-      19, 2,
-      21, 3,
-      23, 5
+      17,
+      1,
+      19,
+      2,
+      21,
+      3,
+      23,
+      5
     ],
     'line-opacity': 0.8
   }
@@ -506,7 +512,7 @@ export const ghosteryPlacesLocality: AddLayerObject = {
   paint: {
     'text-color': '#FFFFFF',
     'text-halo-color': 'rgb(73, 135, 226)',
-    'text-halo-width': 0.5,
+    'text-halo-width': 0.5
   }
 };
 
@@ -840,7 +846,7 @@ export const ghosteryPlacesSubplace: AddLayerObject = {
   paint: {
     'text-color': '#FFFFFF',
     'text-halo-color': 'rgb(73, 135, 226)',
-    'text-halo-width': 0.5,
+    'text-halo-width': 0.5
   }
 };
 
@@ -858,9 +864,12 @@ export const ghosteryRoadsLabelsMajor: AddLayerObject = {
       'interpolate',
       ['linear'],
       ['zoom'],
-      12, 300,  // Very frequent at lower zoom for highways
-      16, 400,  // Still frequent at mid zoom  
-      20, 500   // Moderate spacing at high zoom
+      12,
+      300, // Very frequent at lower zoom for highways
+      16,
+      400, // Still frequent at mid zoom
+      20,
+      500 // Moderate spacing at high zoom
     ],
     'text-font': ['Noto Sans Medium'], // Slightly bolder for major roads
     'text-field': [
@@ -1151,9 +1160,12 @@ export const ghosteryRoadsLabelsMajor: AddLayerObject = {
       'interpolate',
       ['linear'],
       ['zoom'],
-      12, 11,
-      16, 13,
-      20, 16
+      12,
+      11,
+      16,
+      13,
+      20,
+      16
     ],
     'text-anchor': 'center',
     'text-justify': 'center',
@@ -1184,9 +1196,12 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
       'interpolate',
       ['linear'],
       ['zoom'],
-      16, 500,  // More frequent for mobile viewing
-      18, 600,  
-      20, 700
+      16,
+      500, // More frequent for mobile viewing
+      18,
+      600,
+      20,
+      700
     ],
     'text-font': ['Noto Sans Regular'],
     'text-field': [

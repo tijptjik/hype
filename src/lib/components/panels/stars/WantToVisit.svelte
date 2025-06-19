@@ -83,9 +83,13 @@ let wishlistedFeaturesPromise = $derived(
               appCtx.getUserPreferences()
             )}
             {@const showOrganisation = wishlist.hierarchy.organisation}
-            {@const projectName = appCtx.getContextualProjectName(wishlist.hierarchy.project)}
+            {@const projectName = appCtx.getContextualProjectName(
+              wishlist.hierarchy.project
+            )}
             {@const showProject = wishlist.hierarchy.project && projectName}
-            {@const layerName = appCtx.getContextualLayerName(wishlist.hierarchy.layer!)}
+            {@const layerName = appCtx.getContextualLayerName(
+              wishlist.hierarchy.layer!
+            )}
             {@const showLayer = wishlist.hierarchy.layer && layerName}
             {@const featureName = getI18n(
               wishlist.feature,

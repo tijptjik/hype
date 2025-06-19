@@ -17,7 +17,7 @@ import Image from '$lib/components/common/Image.svelte';
 import type { Resource, ImageDB, Task, KeyMap } from '$lib/types';
 
 type EntityWithOptionalImage = Exclude<Resource, Task> & {
-  image?: Partial<ImageDB> & { id: string } | null;
+  image?: (Partial<ImageDB> & { id: string }) | null;
 };
 
 type Props = {
@@ -141,7 +141,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
   tabindex="0"
   class="duration-800 card select-none bg-base-100 shadow-xl transition-shadow hover:scale-[.99] hover:shadow-2xl hover:shadow-primary focus-visible:shadow-primary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-secondary active:outline-none"
   onkeydown={handleKeyDown}
-  onclick={onclick}>
+  {onclick}>
   <!-- Header Section -->
   {#if header}
     {@render header(entity)}

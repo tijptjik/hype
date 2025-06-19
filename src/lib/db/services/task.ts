@@ -303,10 +303,10 @@ export const createTaskWithDependencies = async (
       db,
       taskData.feature as UserContributedFeature,
       region,
-      subscriptionKey,
+      subscriptionKey
     );
     taskData.featureId = createdFeature.id;
-    
+
     // Update task data with the actual hierarchical IDs from the created feature
     // This ensures the task references the correct project/organisation
     taskData.organisationId = createdFeature.organisationId;

@@ -63,7 +63,6 @@ function handleInput(e: Event) {
 </script>
 
 <div class={showUnpublishedToggle || showReviewedToggle ? 'flex gap-4' : ''}>
-
   <div
     class="relative {rounded ? '' : 'flex-shrink-0 border-l-3 border-base-200'}"
     role="search">

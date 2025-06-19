@@ -211,7 +211,8 @@ class BaseForm<T extends Record<string, unknown>> {
           this.errors.set(result.data?.errors);
         } else if (result.type === 'error') {
           // Extract the actual error message from SvelteKit error responses (403, 404, etc.)
-          const errorMessage = (result as any)?.error?.message || result.status + ' Error';
+          const errorMessage =
+            (result as any)?.error?.message || result.status + ' Error';
           this.flash.set({ type: 'error', message: errorMessage });
           console.error('[FORM CONTEXT] HTTP Error:', result);
         } else {

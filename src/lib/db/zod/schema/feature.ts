@@ -179,14 +179,20 @@ export const FeatureCollectionAPI = FeatureBase.omit({
   createdAt: true,
   modifiedAt: true
 }).extend({
-  i18n: getLocales(FeatureI18nBase.extend({
-    addressProperties: z.object({
-      neighbourhood: z.string().nullish()
-    }).nullish()
-  })),
-  properties: z.array(FeaturePropertyBase.extend({
-    i18n: getLocales(FeaturePropertyI18nBase).nullish()
-  })),
+  i18n: getLocales(
+    FeatureI18nBase.extend({
+      addressProperties: z
+        .object({
+          neighbourhood: z.string().nullish()
+        })
+        .nullish()
+    })
+  ),
+  properties: z.array(
+    FeaturePropertyBase.extend({
+      i18n: getLocales(FeaturePropertyI18nBase).nullish()
+    })
+  ),
   image: createSelectSchema(image)
     .pick({
       id: true,
@@ -196,7 +202,9 @@ export const FeatureCollectionAPI = FeatureBase.omit({
       publicId: true,
       version: true
     })
-    .nullish()
+    .nullish(),
+  imageCount: z.number(),
+  imagePublishedCount: z.number()
 });
 
 // Full feature entity schema
@@ -215,7 +223,7 @@ export const FeatureAPI = FeatureBase.extend({
       version: true
     })
     .nullish(),
-  images: z.lazy(() => z.array(FeatureImageAPI).nullish()),
+  images: z.lazy(() => z.array(FeatureImageAPI).nullish())
 });
 
 export const FeatureInsertAPI = FeatureInsert.extend({

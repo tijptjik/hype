@@ -1,6 +1,6 @@
-import { BROWSER } from 'esm-env'
-import type { HeightCache } from './types.js'
-import { calculateAverageHeight } from './virtualList.js'
+import { BROWSER } from 'esm-env';
+import type { HeightCache } from './types.js';
+import { calculateAverageHeight } from './virtualList.js';
 
 /**
  * Calculates and updates the average height of visible items with debouncing.
@@ -71,42 +71,43 @@ import { calculateAverageHeight } from './virtualList.js'
  * @returns Timeout object or null if calculation was skipped
  */
 export const calculateAverageHeightDebounced = (
-    isCalculatingHeight: boolean,
-    heightUpdateTimeout: ReturnType<typeof setTimeout> | null,
-    visibleItemsGetter: () => { start: number; end: number },
-    itemElements: HTMLElement[],
-    heightCache: HeightCache,
-    lastMeasuredIndex: number,
-    calculatedItemHeight: number,
-    /* trunk-ignore(eslint/no-unused-vars) */
-    onUpdate: (result: {
-        newHeight: number
-        newLastMeasuredIndex: number
-        updatedHeightCache: HeightCache
-    }) => void,
-    debounceTime = 200
+  isCalculatingHeight: boolean,
+  heightUpdateTimeout: ReturnType<typeof setTimeout> | null,
+  visibleItemsGetter: () => { start: number; end: number },
+  itemElements: HTMLElement[],
+  heightCache: HeightCache,
+  lastMeasuredIndex: number,
+  calculatedItemHeight: number,
+  /* trunk-ignore(eslint/no-unused-vars) */
+  onUpdate: (result: {
+    newHeight: number;
+    newLastMeasuredIndex: number;
+    updatedHeightCache: HeightCache;
+  }) => void,
+  debounceTime = 200
 ): NodeJS.Timeout | null => {
-    if (!BROWSER || isCalculatingHeight || heightUpdateTimeout) return null
+  if (!BROWSER || isCalculatingHeight || heightUpdateTimeout) return null;
 
-    const visibleRange = visibleItemsGetter()
-    const currentIndex = visibleRange.start
+  const visibleRange = visibleItemsGetter();
+  const currentIndex = visibleRange.start;
 
-    if (currentIndex === lastMeasuredIndex) return null
+  if (currentIndex === lastMeasuredIndex) return null;
 
-    return setTimeout(() => {
-        const { newHeight, newLastMeasuredIndex, updatedHeightCache } = calculateAverageHeight(
-            itemElements,
-            visibleRange,
-            heightCache,
-            calculatedItemHeight
-        )
+  return setTimeout(() => {
+    const { newHeight, newLastMeasuredIndex, updatedHeightCache } =
+      calculateAverageHeight(
+        itemElements,
+        visibleRange,
+        heightCache,
+        calculatedItemHeight
+      );
 
-        if (Math.abs(newHeight - calculatedItemHeight) > 1) {
-            onUpdate({
-                newHeight,
-                newLastMeasuredIndex,
-                updatedHeightCache
-            })
-        }
-    }, debounceTime)
-}
+    if (Math.abs(newHeight - calculatedItemHeight) > 1) {
+      onUpdate({
+        newHeight,
+        newLastMeasuredIndex,
+        updatedHeightCache
+      });
+    }
+  }, debounceTime);
+};
