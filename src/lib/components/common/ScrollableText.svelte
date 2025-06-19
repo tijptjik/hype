@@ -49,13 +49,13 @@ onMount(() => {
     class:animate={needsScroll}
     class:needs-scroll={needsScroll}>
     <span class="scroll-primary {textClass}" bind:this={contentSpan}>
-      {text}
+      {@html text}
     </span>
     {#if needsScroll}
       <span class="separator text-neutral-content" style="width: {padding}px;"
         >{separator}</span>
       <span class="scroll-secondary {textClass}">
-        {text}
+        {@html text}
       </span>
     {/if}
   </div>
