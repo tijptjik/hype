@@ -16,6 +16,11 @@ import {
 } from '$lib/enums';
 // GUARDS
 import { isHub } from '$lib/types';
+// CLIENT SERVICES
+import {
+  getCachedFeatureSpecifierTranslation,
+  calculateSpecifierTranslation
+} from '$lib/client/services/stats';
 // TYPES
 import type {
   Organisation,
@@ -93,6 +98,7 @@ const viewFilters: ViewFilters = {
     // Authorship related
     hasTitle: null,
     hasDescription: null,
+    hasDisplayAddress: null,
 
     // Translation related
     translationLocales: {
@@ -374,6 +380,11 @@ export class AdminCtx {
   init = async (): Promise<void> => {
     // Use AppCtx's cascading refresh logic but with admin query functions
     await this.appCtx.refreshOrganisations();
+
+    // Always refresh tasks when admin initializes to ensure fresh task data
+    // This is especially important when navigating from app to admin
+    await this.invalidateAndRefresh(FirstClassResource.task);
+
     this.isInitialised = true;
   };
 
@@ -463,10 +474,10 @@ export class AdminCtx {
 
   /**
    * Filters features by their publication and review status flags.
-   * 
-   * Note: isPendingReview has inverted logic - a filter value of `true` 
+   *
+   * Note: isPendingReview has inverted logic - a filter value of `true`
    * means "show features NOT pending review" (where feature.isPendingReview is false).
-   * 
+   *
    * @param feature - The feature to evaluate
    * @param filters - Status filter settings
    * @returns true if feature passes all status filters
@@ -498,10 +509,10 @@ export class AdminCtx {
 
   /**
    * Filters features by whether they have user-authored content.
-   * 
+   *
    * Checks if features have non-generated titles and descriptions across
    * any locale. Features without i18n data are considered to have no content.
-   * 
+   *
    * @param feature - The feature to evaluate
    * @param filters - Authorship filter settings
    * @returns true if feature passes authorship filters
@@ -537,17 +548,27 @@ export class AdminCtx {
       if (hasDescription !== filters.hasDescription) return false;
     }
 
+    if (filters.hasDisplayAddress !== null) {
+      const hasDisplayAddress = allLocales.some(
+        (locale) =>
+          feature.i18n?.[locale]?.displayAddress &&
+          feature.i18n[locale]!.displayAddress!.length > 1 &&
+          !feature.i18n[locale]!.displayAddressGen
+      );
+      if (hasDisplayAddress !== filters.hasDisplayAddress) return false;
+    }
+
     return true;
   };
 
   /**
    * Filters features by translation status across multiple locales and fields.
-   * 
+   *
    * For each translation field (title, description, address), checks if the feature
    * meets the translation requirements across all active locales. If ALL values
    * for a field are null/empty across all locales, the field is considered as
    * "no content to translate" and passes the filter.
-   * 
+   *
    * @param feature - The feature to evaluate
    * @param filters - Translation filter settings per locale
    * @param activeLocales - Set of locales to check
@@ -563,8 +584,8 @@ export class AdminCtx {
         | 'isTitleTranslated'
         | 'isDescriptionTranslated'
         | 'isAddressTranslated';
-      textField: 'title' | 'description' | 'address';
-      genField: 'titleGen' | 'descriptionGen' | 'addressGen';
+      textField: 'title' | 'description' | 'displayAddress';
+      genField: 'titleGen' | 'descriptionGen' | 'displayAddressGen';
     }[] = [
       { filterKey: 'isTitleTranslated', textField: 'title', genField: 'titleGen' },
       {
@@ -572,7 +593,11 @@ export class AdminCtx {
         textField: 'description',
         genField: 'descriptionGen'
       },
-      { filterKey: 'isAddressTranslated', textField: 'address', genField: 'addressGen' }
+      {
+        filterKey: 'isAddressTranslated',
+        textField: 'displayAddress',
+        genField: 'displayAddressGen'
+      }
     ];
 
     for (const { filterKey, textField, genField } of translationChecks) {
@@ -588,9 +613,6 @@ export class AdminCtx {
         return !text || (typeof text === 'string' && text.trim().length === 0);
       });
 
-      // If no content exists across all locales, consider it as passing (nothing to translate)
-      if (allLocalesEmpty) continue;
-
       const allLocalesMatch = [...activeLocales].every((locale) => {
         const filterValue = filters[filterKey]?.[locale];
         if (filterValue === null) return true;
@@ -601,10 +623,46 @@ export class AdminCtx {
         const featureHasText =
           typeof text === 'string' && text.length > 1 && !isGenerated;
 
-        return featureHasText === filterValue;
+        // If filtering for TRUE: Include features where content exists AND is translated OR no source content exists (NULL case)
+        // If filtering for FALSE: Include only features where content exists AND is NOT translated (exclude NULL case)
+        if (filterValue === true) {
+          return featureHasText || allLocalesEmpty; // TRUE includes NULL (no source content)
+        } else {
+          return !featureHasText && !allLocalesEmpty; // FALSE excludes NULL (requires source content to be false)
+        }
       });
 
       if (!allLocalesMatch) return false;
+    }
+
+    // Handle specifier translation filter separately (global, not per-locale)
+    const isSpecifierFiltered = [...activeLocales].some(
+      (locale) => filters.isSpecifierTranslated?.[locale] !== null
+    );
+
+    if (isSpecifierFiltered) {
+      // Get the specifier translation status (tri-state: true, false, or null)
+      const specifierStatus = getCachedFeatureSpecifierTranslation(
+        this.appCtx,
+        feature,
+        (f) => calculateSpecifierTranslation(f)
+      );
+
+      // Check if any active locale has a filter set
+      const specifierMatches = [...activeLocales].every((locale) => {
+        const filterValue = filters.isSpecifierTranslated?.[locale];
+        if (filterValue === null) return true;
+
+        // If filtering for TRUE: Include features where specifiers are translated OR no source content exists (NULL case)
+        // If filtering for FALSE: Include only features where specifiers exist AND are NOT translated (exclude NULL case)
+        if (filterValue === true) {
+          return specifierStatus === true || specifierStatus === null; // TRUE includes NULL (no source content)
+        } else {
+          return specifierStatus === false; // FALSE excludes NULL (requires source content to be false)
+        }
+      });
+
+      if (!specifierMatches) return false;
     }
 
     return true;
@@ -626,6 +684,55 @@ export class AdminCtx {
     feature: Feature,
     filters: ViewFilters['feature']
   ): boolean => {
+    // Check if feature has the new count fields (from collection API)
+    if ('imageCount' in feature && 'imagePublishedCount' in feature) {
+      const imageCount = (feature as any).imageCount as number;
+      const imagePublishedCount = (feature as any).imagePublishedCount as number;
+      const hasImages = imageCount > 0;
+
+      if (filters.hasImage !== null) {
+        if (filters.hasImage !== hasImages) return false;
+      }
+
+      if (hasImages) {
+        if (filters.isOneImagePublished !== null) {
+          const hasAtLeastOnePublished = imagePublishedCount > 0;
+          if (filters.isOneImagePublished === true) {
+            // TRUE: Show features with at least one published image
+            if (!hasAtLeastOnePublished) return false;
+          } else {
+            // FALSE: Show features where ALL images are unpublished
+            if (hasAtLeastOnePublished) return false;
+          }
+        }
+
+        if (filters.isAllImagePublished !== null) {
+          const allImagesPublished =
+            imageCount > 0 && imagePublishedCount === imageCount;
+          if (filters.isAllImagePublished === true) {
+            // TRUE: Show features where ALL images are published
+            if (!allImagesPublished) return false;
+          } else {
+            // FALSE: Show features that have NOT published ALL their images (at least one unpublished)
+            if (allImagesPublished) return false;
+          }
+        }
+      } else {
+        // No images case - in tri-state logic, features with no images should be excluded from BOTH true and false filters
+        if (filters.isOneImagePublished !== null) {
+          // Features with no images don't pass either TRUE or FALSE filters (tri-state: null case)
+          return false;
+        }
+
+        if (filters.isAllImagePublished !== null) {
+          // Features with no images don't pass either TRUE or FALSE filters (tri-state: null case)
+          return false;
+        }
+      }
+      return true;
+    }
+
+    // Fallback to images array for individual feature API or compatibility
     const images = feature.images ?? [];
     const hasImages = images.length > 0;
 
@@ -635,43 +742,55 @@ export class AdminCtx {
 
     if (hasImages) {
       if (filters.isOneImagePublished !== null) {
+        // Note: isPublished is on the feature-image relationship, not the image itself
+        const hasAtLeastOnePublished = images.some(
+          (featureImage) => featureImage.isPublished
+        );
         if (filters.isOneImagePublished === true) {
-          if (images.some((img) => img.isPublished)) return true;
-        }
-        if (filters.isOneImagePublished === false) {
-          if (images.every((img) => !img.isPublished)) return true;
+          // TRUE: Show features with at least one published image
+          if (!hasAtLeastOnePublished) return false;
+        } else {
+          // FALSE: Show features where ALL images are unpublished
+          if (hasAtLeastOnePublished) return false;
         }
       }
 
       if (filters.isAllImagePublished !== null) {
+        // Note: isPublished is on the feature-image relationship, not the image itself
+        const allImagesPublished = images.every(
+          (featureImage) => featureImage.isPublished
+        );
         if (filters.isAllImagePublished === true) {
-          if (images.every((img) => img.isPublished)) return true;
-        }
-        if (filters.isAllImagePublished === false) {
-          if (images.some((img) => !img.isPublished)) return true;
+          // TRUE: Show features where ALL images are published
+          if (!allImagesPublished) return false;
+        } else {
+          // FALSE: Show features that have NOT published ALL their images (at least one unpublished)
+          if (allImagesPublished) return false;
         }
       }
     } else {
+      // No images case - in tri-state logic, features with no images should be excluded from BOTH true and false filters
       if (filters.isOneImagePublished !== null) {
-        if (filters.isOneImagePublished === true) return false;
+        // Features with no images don't pass either TRUE or FALSE filters (tri-state: null case)
+        return false;
       }
 
       if (filters.isAllImagePublished !== null) {
-        if (filters.isAllImagePublished === true) return false;
+        // Features with no images don't pass either TRUE or FALSE filters (tri-state: null case)
+        return false;
       }
     }
     return true;
   };
 
-
   /**
    * Filters features by property presence and values.
-   * 
+   *
    * Handles both classifier and specifier property types:
    * - Classifier: Checks for presence/absence of a selected value
-   * - Specifier: For translatable properties, checks across all locales; 
+   * - Specifier: For translatable properties, checks across all locales;
    *   for non-translatable, checks single value
-   * 
+   *
    * @param feature - The feature to evaluate
    * @param filters - Property filter settings (propertyId -> boolean)
    * @returns true if feature passes all property filters
@@ -690,7 +809,7 @@ export class AdminCtx {
       return true; // No active property filters
     }
 
-    const PropertyCache = this.appCtx.cache.property
+    const PropertyCache = this.appCtx.cache.property;
 
     for (const propertyId of propertyFilterIds) {
       const filterValue = propertyFilters[propertyId]; // true or false
@@ -700,9 +819,20 @@ export class AdminCtx {
       if (!propertyDef) continue;
 
       if (propertyDef.type === 'classifier') {
-        const hasValue = !!featureProp?.propertyValueId;
+        let hasValue = false;
+
+        if (propertyDef.component === 'RangeField') {
+          // RangeField classifier: check if value is not undefined, null, or empty string
+          hasValue =
+            featureProp?.value !== undefined &&
+            featureProp?.value !== null &&
+            featureProp?.value !== '';
+        } else {
+          // SelectField classifier (default): check if there's a propertyValueId
+          hasValue = !!featureProp?.propertyValueId;
+        }
+
         if (hasValue !== filterValue) return false;
-      
       } else if (propertyDef.type === 'specifier') {
         // For "specifier" properties, the filter checks for the presence or absence of a value.
         // If the property is translatable, it checks all locales for values.
@@ -729,7 +859,7 @@ export class AdminCtx {
           if (hasValue !== filterValue) return false;
         }
       }
-    } 
+    }
 
     return true;
   };
@@ -889,10 +1019,10 @@ export class AdminCtx {
   // ADMIN LOOKUPS
   // ═══════════════════════
 
-  getEntityPath = (resource: FirstClassResource, id: Id) => {
+  getEntityPath = (resource: FirstClassResource, id: Id, facet?: string) => {
     const ref = this.getResourceRef(resource, id);
     if (!ref) return null;
-    return `${this.getResourcePathPart(resource)}/${ref}`;
+    return `${this.getResourcePathPart(resource)}/${ref}${facet ? `#${facet}` : ''}`;
   };
 
   getResourceRef = (resource: FirstClassResource, id: Id) => {
