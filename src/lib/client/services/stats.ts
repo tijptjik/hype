@@ -464,28 +464,46 @@ export function calculateTranslationCompletionTriState(
     fieldKey: 'title' | 'description' | 'displayAddress',
     genKey: 'titleGen' | 'descriptionGen' | 'displayAddressGen'
   ): boolean | null => {
-    // Check if ANY locale has content for this field (is there source content to translate?)
-    const hasSourceContent = Object.values(i18nEntries).some((entry: FeatureI18nDB) => {
-      const fieldValue = entry[fieldKey];
-      return fieldValue && fieldValue.length > 0;
-    });
-
-    if (!hasSourceContent) {
-      // No source content in any locale - return null (orange/no source to translate)
-      return null;
-    }
-
-    // Check if this specific locale has translated content
+    // First check if this specific locale has content
     const entry = i18nEntries[locale];
     if (!entry) {
-      return false; // Source exists but this locale has no translation
+      // No i18n entry for this locale - check if ANY locale has manual content
+      return checkIfAnyLocaleHasManualContent(fieldKey, genKey);
     }
 
     const fieldValue = entry[fieldKey];
+    if (!fieldValue || fieldValue.length === 0) {
+      // No content in this locale - check if ANY locale has manual content
+      return checkIfAnyLocaleHasManualContent(fieldKey, genKey);
+    }
+
     const isGenerated = entry[genKey] ?? false; // Default to false if missing
 
-    // Must have content, not be generated, and be non-empty
-    return !isGenerated && !!fieldValue && fieldValue.length > 0;
+    // Has content in this locale - check if it's translated (not generated)
+    return !isGenerated;
+  };
+
+  // Helper function to check if ANY locale has manual (non-generated) content for this field
+  const checkIfAnyLocaleHasManualContent = (
+    fieldKey: 'title' | 'description' | 'displayAddress',
+    genKey: 'titleGen' | 'descriptionGen' | 'displayAddressGen'
+  ): boolean | null => {
+    const allEntries = Object.values(i18nEntries);
+
+    // Check if ANY locale has manual content for this field
+    const hasManualContent = allEntries.some((entry: any) => {
+      const fieldValue = entry[fieldKey];
+      const isGenerated = entry[genKey] ?? false;
+      return fieldValue && fieldValue.length > 0 && !isGenerated;
+    });
+
+    if (hasManualContent) {
+      // Some locale has manual content, but not this specific locale
+      return false; // This locale is not translated
+    } else {
+      // No locale has manual content - return null (no manual translation available)
+      return null;
+    }
   };
 
   return {

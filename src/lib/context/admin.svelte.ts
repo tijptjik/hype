@@ -606,12 +606,14 @@ export class AdminCtx {
       );
       if (!isAnyLocaleFiltered) continue;
 
-      // Check if ALL locales have no content for this field (no text to translate)
-      const allLocalesEmpty = [...activeLocales].every((locale) => {
-        const i18n = feature.i18n?.[locale];
-        const text = i18n?.[textField as keyof typeof i18n];
-        return !text || (typeof text === 'string' && text.trim().length === 0);
-      });
+      // First, check if ANY locale has manual (non-generated) content for this field
+      const hasAnyManualContent = Object.values(feature.i18n ?? {}).some(
+        (i18n: any) => {
+          const text = i18n?.[textField];
+          const isGenerated = i18n?.[genField] ?? false;
+          return text && typeof text === 'string' && text.length > 0 && !isGenerated;
+        }
+      );
 
       const allLocalesMatch = [...activeLocales].every((locale) => {
         const filterValue = filters[filterKey]?.[locale];
@@ -620,15 +622,29 @@ export class AdminCtx {
         const i18n = feature.i18n?.[locale];
         const text = i18n?.[textField as keyof typeof i18n];
         const isGenerated = i18n?.[genField as keyof typeof i18n] ?? false;
-        const featureHasText =
-          typeof text === 'string' && text.length > 1 && !isGenerated;
 
-        // If filtering for TRUE: Include features where content exists AND is translated OR no source content exists (NULL case)
-        // If filtering for FALSE: Include only features where content exists AND is NOT translated (exclude NULL case)
+        // Check if this locale has source content
+        const hasSourceContent = text && typeof text === 'string' && text.length > 0;
+
+        if (!hasSourceContent) {
+          // No source content in this locale
+          if (!hasAnyManualContent) {
+            // No manual content anywhere - this is null case, exclude from both TRUE and FALSE filters
+            return false;
+          } else {
+            // Some other locale has manual content, so this locale is "not translated"
+            return filterValue === false;
+          }
+        }
+        // Has source content - check if it's translated (not generated)
+        const isTranslated = !isGenerated;
+
+        // If filtering for TRUE: Include features where content is translated
+        // If filtering for FALSE: Include features where content is NOT translated
         if (filterValue === true) {
-          return featureHasText || allLocalesEmpty; // TRUE includes NULL (no source content)
+          return isTranslated;
         } else {
-          return !featureHasText && !allLocalesEmpty; // FALSE excludes NULL (requires source content to be false)
+          return !isTranslated;
         }
       });
 
