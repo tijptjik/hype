@@ -55,7 +55,7 @@ import type {
 //    - getI18nSpecifierValue
 //    - getClassifierValueId
 //
-// 6.2 FEATURE PROPERTY 
+// 6.2 FEATURE PROPERTY
 //   :: SETTERS
 //    - updateFeatureProperty
 //    - updateFeatureI18nProperty
@@ -155,13 +155,13 @@ export let getGroupedClassifierProperties = async (
   appCtx: AppCtx
 ): Promise<
   Array<{
-  hierarchy: {
-    organisation: string | null;
-    project: string | null;
-    layer: string | null;
-    layerId: string;
-  };
-  properties: Property[];
+    hierarchy: {
+      organisation: string | null;
+      project: string | null;
+      layer: string | null;
+      layerId: string;
+    };
+    properties: Property[];
   }>
 > => {
   const results = await Promise.all(
@@ -173,10 +173,10 @@ export let getGroupedClassifierProperties = async (
       const { project, organisation } = await appCtx.getHierarchy(layer);
       if (!project || !organisation) return null;
 
-      // Get sorted classifier properties from layerProperties 
+      // Get sorted classifier properties from layerProperties
       const properties = await appCtx.getClassifierPropertiesForLayer(layer);
       if (properties.length === 0) return null;
-      
+
       // Construct hierarchy info
       const hierarchy = {
         organisation: appCtx.getContextualOrganisationName(organisation),
@@ -537,10 +537,9 @@ export function getFeatureIdsForProperties(appCtx: AppCtx): Id[] {
 // 6. FEATURE PROPERTY :: GETTERS
 // ═══════════════════════
 
-
 /**
  * Gets properties for a display FeatureCard.
- * 
+ *
  * @param appCtx - The application context.
  * @param layerId - The ID of the layer to get the properties for.
  * @param feature - The feature to get the properties for.
@@ -562,33 +561,36 @@ export function getFeatureCardDisplayProperties(
   }
 
   // Get all visible properties for the layer (not just user contributable ones)
-  const layerProperties = layer.properties
-    ?.filter((layerProp) => {
-      const property = appCtx.cache.property.get(layerProp.propertyId);
-      return (
-        property &&
-        (property.type === 'classifier' || property.type === 'specifier') &&
-        layerProp.isVisible === true &&
-        property.key !== 'grade'
-      );
-    })
-    .map((layerProp) => {
-      const property = appCtx.cache.property.get(layerProp.propertyId);
-      return {
-        property,
-        propertyId: layerProp.propertyId
-      };
-    })
-    .filter(
-      (item): item is { property: Property; propertyId: Id } =>
-        item.property !== undefined
-    ) || [];
+  const layerProperties =
+    layer.properties
+      ?.filter((layerProp) => {
+        const property = appCtx.cache.property.get(layerProp.propertyId);
+        return (
+          property &&
+          (property.type === 'classifier' || property.type === 'specifier') &&
+          layerProp.isVisible === true &&
+          property.key !== 'grade'
+        );
+      })
+      .map((layerProp) => {
+        const property = appCtx.cache.property.get(layerProp.propertyId);
+        return {
+          property,
+          propertyId: layerProp.propertyId
+        };
+      })
+      .filter(
+        (item): item is { property: Property; propertyId: Id } =>
+          item.property !== undefined
+      ) || [];
 
   // Map layer properties to feature properties, including the property definition
   return sortFeatureProperties(
     layerProperties
-      .map(item => {
-        const featureProperty = feature.properties.find(prop => prop.propertyId === item.propertyId);
+      .map((item) => {
+        const featureProperty = feature.properties.find(
+          (prop) => prop.propertyId === item.propertyId
+        );
         if (featureProperty) {
           return {
             ...featureProperty,
@@ -601,12 +603,11 @@ export function getFeatureCardDisplayProperties(
   );
 }
 
-
 /**
- * Gets properties for an editable FeatureCard. 
- * 
+ * Gets properties for an editable FeatureCard.
+ *
  * @remark While properties are defined at the project level, at the
- * layer level (layerProperty) we define where they 
+ * layer level (layerProperty) we define where they
  * are to be included for that particular layer (isVisible) and whether
  * they are editable by the public - i.e. whether they can be set as part
  * of a newFeature flow.
@@ -626,35 +627,36 @@ export function getFeatureCardEditableProperties(
   }
 
   // Get categorical and specifier properties that are user contributable
-  const layerProperties = layer.properties
-    ?.filter((layerProp) => {
-      const property = appCtx.cache.property.get(layerProp.propertyId);
-      return (
-        property &&
-        (property.type === 'classifier' || property.type === 'specifier') &&
-        layerProp.isVisible === true &&
-        layerProp.isUserContributed === true &&
-        property.key !== 'grade'
-      );
-    })
-    .map((layerProp) => {
-      const property = appCtx.cache.property.get(layerProp.propertyId);
-      return {
-        property,
-        propertyId: layerProp.propertyId
-      };
-    })
-    .filter(
-      (item): item is { property: Property; propertyId: Id } =>
-        item.property !== undefined
-    ) || [];
+  const layerProperties =
+    layer.properties
+      ?.filter((layerProp) => {
+        const property = appCtx.cache.property.get(layerProp.propertyId);
+        return (
+          property &&
+          (property.type === 'classifier' || property.type === 'specifier') &&
+          layerProp.isVisible === true &&
+          layerProp.isUserContributed === true &&
+          property.key !== 'grade'
+        );
+      })
+      .map((layerProp) => {
+        const property = appCtx.cache.property.get(layerProp.propertyId);
+        return {
+          property,
+          propertyId: layerProp.propertyId
+        };
+      })
+      .filter(
+        (item): item is { property: Property; propertyId: Id } =>
+          item.property !== undefined
+      ) || [];
 
   return sortFeatureProperties(layerProperties);
 }
 
 /**
  * Gets property values for a categorical property from the cache.
- * 
+ *
  * @param appCtx - The application context.
  * @param propertyId - The ID of the property to get the values for.
  * @returns A map of property value IDs to their localised values.
@@ -670,7 +672,7 @@ export function getLocalisedPropertyValues(
 
 /**
  * Gets a feature property by property ID from the new feature context.
- * 
+ *
  * @param appCtx - The application context.
  * @param propertyId - The ID of the property to get the values for.
  * @param featureId - Optional feature ID to get the property for.
@@ -683,20 +685,22 @@ export function getFeatureProperty(
 ): FeatureProperty | null {
   if (!featureId) {
     // ASSERT : newFeature exists
-    if (!appCtx.newFeature?.feature?.properties) return null; 
+    if (!appCtx.newFeature?.feature?.properties) return null;
     return appCtx.newFeature.feature.properties.find(
       (p) => p && p.propertyId === propertyId
     ) as FeatureProperty | null;
   } else {
-    return appCtx.features.get(featureId)?.properties.find(
-      (p) => p && p.propertyId === propertyId
-    ) as FeatureProperty | null;
+    return appCtx.features
+      .get(featureId)
+      ?.properties.find(
+        (p) => p && p.propertyId === propertyId
+      ) as FeatureProperty | null;
   }
 }
 
 /**
  * Gets the universal specifier value for a property.
- * 
+ *
  * @param appCtx - The application context.
  * @param propertyId - The ID of the property to get the values for.
  * @returns The universal specifier value for the property.
@@ -712,7 +716,7 @@ export function getUniversalSpecifierValue(
 
 /**
  * Gets the i18n specifier value for a property in the current locale.
- * 
+ *
  * @param appCtx - The application context.
  * @param propertyId - The ID of the property to get the values for.
  * @returns The i18n specifier value for the property.
@@ -729,7 +733,7 @@ export function getI18nSpecifierValue(
 
 /**
  * Gets the classifier value ID for a property.
- * 
+ *
  * @param appCtx - The application context.
  * @param propertyId - The ID of the property to get the values for.
  * @returns The classifier value ID for the property.
@@ -743,14 +747,13 @@ export function getClassifierValueId(
   return valueId && valueId !== null ? valueId : undefined;
 }
 
-
 // ═══════════════════════
 // 6. FEATURE PROPERTY :: SETTERS
 // ═══════════════════════
 
 /**
  * Updates a feature property in the new feature context.
- * 
+ *
  * @param appCtx - The application context.
  * @param propertyId - The ID of the property to update.
  * @param updates - The updates to apply to the property.
@@ -761,7 +764,7 @@ export function updateFeatureProperty(
   updates: Partial<FeatureProperty>
 ): void {
   const existingProperty = getFeatureProperty(appCtx, propertyId);
-  
+
   if (existingProperty) {
     // Update existing property
     Object.assign(existingProperty, updates);
@@ -773,12 +776,12 @@ export function updateFeatureProperty(
 
 /**
  * Updates a feature property's i18n value.
- * 
+ *
  * @remark This function is used to provide a way to update the i18n value of a property.
  * By default we assume that the user is making a contribution in their own locale.
  * @todo Add UI support for providing values in other locales (i.e. allow users-translatable)
  * values.
- * 
+ *
  * @param appCtx - The application context.
  * @param propertyId - The ID of the property to update.
  * @param locale - The locale to update the property for.
@@ -793,7 +796,7 @@ export function updateFeatureI18nProperty(
   valueGen: boolean = false
 ): void {
   const existingProperty = getFeatureProperty(appCtx, propertyId);
-  
+
   if (existingProperty) {
     // Update existing property's i18n
     if (!existingProperty.i18n) {
@@ -811,7 +814,7 @@ export function updateFeatureI18nProperty(
 
 /**
  * Updates a property in the new feature context
- * 
+ *
  * @param appCtx - The application context.
  * @param propertyId - The ID of the property to update.
  * @param object - The object to update the property with.
@@ -873,7 +876,7 @@ export function updateNewFeatureProperty(
 
 /**
  * Updates a feature property's i18n value in the new feature context
- * 
+ *
  * @param appCtx - The application context.
  * @param propertyId - The ID of the property to update.
  * @param object - The object to update the property with.
@@ -903,7 +906,7 @@ export function updateNewFeatureI18nProperty(
 
 /**
  * Handles categorical property change for new features.
- * 
+ *
  * @param appCtx - The application context.
  * @param propertyId - The ID of the property to update.
  * @param propertyValueId - The ID of the property value to update.
@@ -920,7 +923,7 @@ export function handleCategoricalChange(
 
 /**
  * Handles specifier property change for new features.
- * 
+ *
  * @param appCtx - The application context.
  * @param propertyId - The ID of the property to update.
  * @param locale - The locale to update the property for.
