@@ -34,7 +34,9 @@ let label = $derived(
 let propertyValues = $derived((property.values as PropertyValue[]) || []);
 
 // Create localized options map for display
-let localisedOptions = $derived(propertyValuesToLocalisedOptions(appCtx, propertyValues));
+let localisedOptions = $derived(
+  propertyValuesToLocalisedOptions(appCtx, propertyValues)
+);
 
 // Derive selected values directly from context's propertyFilters using property ID
 let selectedPropertyValueIds = $derived(

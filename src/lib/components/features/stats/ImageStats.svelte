@@ -2,7 +2,11 @@
 // COMPONENTS
 import ProgressPips from '$lib/components/common/ProgressPips.svelte';
 // SERVICES
-import { calculateImageCompletion, getCachedFeatureBoolean } from '$lib/client/services/stats';
+import {
+  calculateImageCompletion,
+  getCachedFeatureBoolean,
+  getCachedFeatureTriState
+} from '$lib/client/services/stats';
 // ICONS
 import { Photo } from '@steeze-ui/heroicons';
 // TYPES
@@ -19,11 +23,26 @@ let {
   showTitle?: boolean;
 } = $props();
 
-const statuses = $derived([
-  getCachedFeatureBoolean(appCtx, feature, 'image_hasImage', () => calculateImageCompletion(appCtx, feature).hasImage),
-  getCachedFeatureBoolean(appCtx, feature, 'image_isOneImagePublished', () => calculateImageCompletion(appCtx, feature).isOneImagePublished),
-  getCachedFeatureBoolean(appCtx, feature, 'image_isAllImagePublished', () => calculateImageCompletion(appCtx, feature).isAllImagePublished)
-]);
+const statuses = $derived({
+  'Has Image': getCachedFeatureBoolean(
+    appCtx,
+    feature,
+    'hasImage',
+    () => calculateImageCompletion(appCtx, feature).hasImage
+  ),
+  'One Published': getCachedFeatureTriState(
+    appCtx,
+    feature,
+    'isOneImagePublished',
+    () => calculateImageCompletion(appCtx, feature).isOneImagePublished
+  ),
+  'All Published': getCachedFeatureTriState(
+    appCtx,
+    feature,
+    'isAllImagePublished',
+    () => calculateImageCompletion(appCtx, feature).isAllImagePublished
+  )
+});
 </script>
 
-<ProgressPips title="IMAGE" icon={Photo} {statuses} {showTitle} /> 
+<ProgressPips title="IMAGE" icon={Photo} {statuses} {showTitle} />

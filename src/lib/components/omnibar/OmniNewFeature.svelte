@@ -9,13 +9,15 @@ const omniCtx = getOmniContext();
 const appCtx = getAppCtx();
 
 let activeLayers = $derived(appCtx.state.prisms.layer);
-let singleActiveLayer = $derived(activeLayers.length === 1 ? appCtx.cache.layer.get(activeLayers[0]) : null);
+let singleActiveLayer = $derived(
+  activeLayers.length === 1 ? appCtx.cache.layer.get(activeLayers[0]) : null
+);
 
 let handleClick = async (e: Event) => {
   e.preventDefault();
   e.stopPropagation();
   omniCtx.setMode('new-feature');
-  
+
   if (activeLayers.length === 1) {
     if (singleActiveLayer) {
       const hierarchy = await appCtx.getHierarchy(singleActiveLayer!);
@@ -40,6 +42,7 @@ let handleClick = async (e: Event) => {
   }
 };
 </script>
+
 <div
   class="flex select-none flex-col divide-y divide-neutral-800 overscroll-none bg-neutral-900 caret-transparent">
   <button

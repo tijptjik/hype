@@ -1,6 +1,9 @@
 <script lang="ts">
 // SVELTE
 import { goto } from '$app/navigation';
+// I18N
+import { m } from '$lib/i18n';
+import { getI18n } from '$lib/i18n';
 // COMPONENTS
 import ScrollableText from '$lib/components/common/ScrollableText.svelte';
 import StatusStats from '$lib/components/features/stats/StatusStats.svelte';
@@ -12,77 +15,98 @@ import SpecifierStats from '$lib/components/features/stats/SpecifierStats.svelte
 // SERVICES
 import { getURLfromImage } from '$lib/client/services/image';
 // I18N
-import { m } from '$lib/i18n';
 import { getLocale } from '$lib/i18n';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
 // TYPES
-import type { Feature, Property, ImageDB, ImageDBBasic } from '$lib/types';
+import type { Feature, ImageDB, ImageDBBasic } from '$lib/types';
 import type { AdminCtx } from '$lib/context/admin.svelte';
 
 type Props = {
+  adminCtx: AdminCtx;
   entity: Feature;
   index: number;
-  adminCtx: AdminCtx;
-  graphemeProperty: Property | undefined;
-  selectedFeatureIndex: number | null;
-  selectedImage: ImageDB | null;
-  onNavigateToResource: (entity: Feature) => void;
-  onRowKeyDown: (e: KeyboardEvent, entity: Feature) => void;
-  onOpenModal: (image: ImageDBBasic, entity: Feature) => void;
+  onImageClick?: (image: ImageDBBasic, feature: Feature) => void;
+  isSelected?: boolean;
 };
 
-let {
-  entity,
-  index,
-  adminCtx,
-  graphemeProperty,
-  selectedFeatureIndex,
-  selectedImage,
-  onNavigateToResource,
-  onRowKeyDown,
-  onOpenModal
-}: Props = $props();
+// STATE : PROPS
+let { adminCtx, entity, index, onImageClick, isSelected = false }: Props = $props();
 
-// DERIVED
-// TODO make highlighted fields configurable
-let grapheme = $derived(
+// STATE : DERIVED
+const appCtx = adminCtx.appCtx;
+const locale = $derived(getLocale());
+const graphemeProperty = $derived(
+  appCtx.cache.property.values().find((p) => p.key === 'graphemes')
+);
+const grapheme = $derived(
   entity.properties.find((p) => p.propertyId === graphemeProperty?.id)?.value || ''
 );
+
+function navigateToResource(entity: Feature) {
+  goto(
+    `/admin/${adminCtx.getEntityPath(
+      adminCtx.activeResourceType as FirstClassResource,
+      entity.id
+    )}`
+  );
+}
+
+function handleRowKeyDown(event: KeyboardEvent, entity: Feature) {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    event.stopPropagation();
+    navigateToResource(entity);
+  } else if (event.key === ' ' || event.key === 'Space') {
+    event.preventDefault();
+    event.stopPropagation();
+    if (entity.image && onImageClick) {
+      onImageClick(entity.image as ImageDBBasic, entity);
+    }
+  }
+}
+
+function handleThumbnailClick(e: Event, image: ImageDBBasic, feature: Feature) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (onImageClick) {
+    onImageClick(image, feature);
+  }
+}
 </script>
 
 <div class="@container/main">
   <div
-    onclick={() => onNavigateToResource(entity)}
-    onkeydown={(e) => onRowKeyDown(e, entity)}
+    onclick={() => navigateToResource(entity)}
+    onkeydown={(e) => handleRowKeyDown(e, entity)}
     tabindex="0"
     role="button"
     data-entity-index={index}
     class="focus:outline:none grid cursor-pointer grid-cols-[minmax(300px,40%)_1fr_100px] items-center gap-4
-     rounded-lg bg-base-100 p-2 caret-transparent shadow-sm transition-shadow hover:shadow-md focus:ring-2 focus:ring-offset-2
-     focus:ring-offset-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-secondary
-    @[50rem]/main:grid-cols-[minmax(300px,35%)_1fr_100px]
-    @[62rem]/main:grid-cols-[minmax(320px,32%)_1fr_130px]
-    @[74rem]/main:grid-cols-[minmax(360px,30%)_1fr_140px]
-    @[86rem]/main:grid-cols-[minmax(380px,28%)_1fr_150px]
-    @[98rem]/main:grid-cols-[minmax(420px,25%)_1fr_160px]"
-    class:ring-2={selectedFeatureIndex === index && selectedImage}
-    class:ring-primary={selectedFeatureIndex === index && selectedImage}
-    class:ring-offset-2={selectedFeatureIndex === index && selectedImage}>
+         rounded-lg bg-base-100 p-2 caret-transparent shadow-sm transition-shadow hover:shadow-md focus:ring-2 focus:ring-offset-2
+         focus:ring-offset-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-secondary
+        @[50rem]/main:grid-cols-[minmax(300px,35%)_1fr_100px]
+        @[62rem]/main:grid-cols-[minmax(320px,32%)_1fr_130px]
+        @[74rem]/main:grid-cols-[minmax(360px,30%)_1fr_140px]
+        @[86rem]/main:grid-cols-[minmax(380px,28%)_1fr_150px]
+        @[98rem]/main:grid-cols-[minmax(420px,25%)_1fr_160px]"
+    class:ring-2={isSelected}
+    class:ring-primary={isSelected}
+    class:ring-offset-2={isSelected}>
     <!-- Left Section: Image + Title/Address -->
     <div class="flex items-center gap-4">
       <div
         class="relative h-16 w-16 flex-shrink-0 cursor-pointer"
         onclick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (entity.image) onOpenModal(entity.image as ImageDBBasic, entity);
+          if (entity.image)
+            handleThumbnailClick(e, entity.image as ImageDBBasic, entity);
         }}
         onkeydown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
             e.stopPropagation();
-            if (entity.image) onOpenModal(entity.image as ImageDBBasic, entity);
+            if (entity.image)
+              handleThumbnailClick(e, entity.image as ImageDBBasic, entity);
           }
         }}
         role="button">
@@ -103,26 +127,32 @@ let grapheme = $derived(
       </div>
       <div class="flex flex-col overflow-hidden">
         <ScrollableText
-          text={entity.i18n?.[getLocale()]?.title || 'Untitled'}
+          text={getI18n(
+            entity,
+            'title',
+            appCtx.getUserPreferences(),
+            m.deft_dry_chipmunk_blink()
+          )}
           textClass="font-medium text-base-content"
           separator="⸱"
           padding={32} />
         <div
-          onclick={() =>
-            goto(
-              `/admin/${adminCtx.getEntityPath(FirstClassResource.feature, entity.id, 'address')}`
-            )}
+          onclick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            goto(`/admin/features/${entity.id}#address`);
+          }}
           onkeydown={(e) => {
             if (e.key === 'Enter') {
-              goto(
-                `/admin/${adminCtx.getEntityPath(FirstClassResource.feature, entity.id, 'address')}`
-              );
+              e.preventDefault();
+              e.stopPropagation();
+              goto(`/admin/features/${entity.id}#address`);
             }
           }}
           role="button"
           class="cursor-pointer hover:text-primary">
           <ScrollableText
-            text={entity.i18n?.[getLocale()]?.displayAddress || 'No address'}
+            text={entity.i18n?.[locale]?.displayAddress || 'No address'}
             textClass="text-sm text-base-content/60 hover:text-primary"
             separator="⚲"
             padding={24} />
@@ -133,7 +163,6 @@ let grapheme = $derived(
     <!-- Middle Section: All Stats Centered -->
     <div
       class="pointer-events-none flex items-center justify-center gap-8 @[62rem]/main:gap-8 @[74rem]/main:gap-9 @[86rem]/main:gap-10 @[98rem]/main:gap-12 @[120rem]/main:gap-20">
-      <!-- Re-enable events for tooltips -->
       <style>
       .tooltip,
       [data-tip] {
