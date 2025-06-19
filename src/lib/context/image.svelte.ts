@@ -185,13 +185,24 @@ export class ImageCtx {
   }
 
   async setContext(options: ImageCtxOptions) {
-    this.resetLoadStatus();
-    this.resetThumbnailLoadStatus();
-    this.resetPendingConfirmation();
-    this.resetDeletionQueue();
-    this.resetUploadQueue();
-    this.resetActiveImage();
-    this.resetImages();
+    // Check if this is actually a context change to avoid unnecessary resets
+    const isContextChange =
+      this.state.mode !== options.mode ||
+      this.state.ctxType !== options.ctxType ||
+      this.state.ctxId !== (options.ctxId || null) ||
+      this.state.organisation?.id !== options.organisation?.id ||
+      this.state.project?.id !== options.project?.id;
+
+    if (isContextChange) {
+      this.resetLoadStatus();
+      this.resetThumbnailLoadStatus();
+      this.resetPendingConfirmation();
+      this.resetDeletionQueue();
+      this.resetUploadQueue();
+      this.resetActiveImage();
+      this.resetImages();
+    }
+
     // this.queryClient = queryClient;
     this.state.mode = options.mode;
     this.isAdminMode = options.isAdminMode;
@@ -205,7 +216,10 @@ export class ImageCtx {
 
     if (options.mode === 'standalone' && options.image) {
       await this.setImages([options.image as Image]);
-      this.setLoadStatus(options.image.id, 'loading');
+      // Only set loading status if it doesn't already exist or if context changed
+      if (isContextChange || !this.getLoadStatus(options.image.id)) {
+        this.setLoadStatus(options.image.id, 'loading');
+      }
     } else if (options.mode === 'standalone' && !options.image) {
       await this.setImages([]);
     } else if (options.mode === 'gallery') {
