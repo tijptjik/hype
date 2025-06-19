@@ -27,16 +27,17 @@ custom_domain = true
 
 Add the domains to tile server's [allowed origin domains](https://dash.cloudflare.com/a6eeace4b6d9f8e07ab307964e74d801/workers/services/view/protomap/production/settings#variables).
 
-
 ## Google OAuth
 
 Add the domains to the [Google Cloud Console](https://console.cloud.google.com/auth/clients/234870059065-fb1jvv6e72jb7ogtd755424bjm8pqgij.apps.googleusercontent.com?inv=1&invt=Abz-Pg&project=hypehk):
 
 ### Authorized JavaScript origins
+
 - `https://{domain.tld}`
 - `https://{code}.hype.hk`
 
 ### Authorized redirect URIs
+
 - `https://{domain.tld}/api/auth/callback/google`
 - `https://{code}.hype.hk/api/auth/callback/google`
 

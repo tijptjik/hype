@@ -185,7 +185,10 @@ export function getFPI18n(
   // CASE : CLASSIFIER Property
   else if (obj.property?.type === 'classifier' && obj.propertyValueId) {
     return getI18n<PropertyValueI18nDB>(
-      obj.property.values?.find(v => v.id === obj.propertyValueId)?.i18n as Record<Locale, PropertyValueI18nDB>,
+      obj.property.values?.find((v) => v.id === obj.propertyValueId)?.i18n as Record<
+        Locale,
+        PropertyValueI18nDB
+      >,
       field,
       userPreferences,
       fallback

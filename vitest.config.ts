@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 import { resolve } from 'path';
 
 const isWatch = process.env.CI !== 'true' && process.env.VITEST_MODE !== 'run';
@@ -6,13 +6,18 @@ const isWatch = process.env.CI !== 'true' && process.env.VITEST_MODE !== 'run';
 export default defineConfig({
   resolve: {
     alias: {
-      $lib: resolve(__dirname, 'src/lib'),
-    },
+      $lib: resolve(__dirname, 'src/lib')
+    }
   },
   test: {
-    environment: 'node',
-    globals: false,
-    setupFiles: [],
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./vitest.setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: 'lcov',
+      exclude: ['docs/**', '.trunk/**', '.svelte-kit/**', 'tests/**', 'src/routes/**']
+    },
     pool: 'forks',
     poolOptions: {
       forks: {
@@ -46,4 +51,4 @@ export default defineConfig({
       '**/src/app.html'
     ]
   }
-}); 
+});

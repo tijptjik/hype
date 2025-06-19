@@ -1,4 +1,4 @@
-name: "BUILD :: Build Application"
+name: 'BUILD :: Build Application'
 
 on:
   workflow_call:
@@ -8,7 +8,7 @@ on:
         type: string
     outputs:
       build-cache-hit:
-        description: "Was the build cache hit?"
+        description: 'Was the build cache hit?'
         value: ${{ jobs.build.outputs.cache-hit }}
 
 jobs:
@@ -24,7 +24,7 @@ jobs:
       - name: 'INSTALL :: Bun'
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: '1.2.15'
+          bun-version: '1.2.16'
 
       - name: 'CACHE :: Restore Dependencies'
         uses: actions/cache@v3
@@ -52,4 +52,4 @@ jobs:
         if: steps.cache-build.outputs.cache-hit != 'true'
         run: bun run build:cf:${{ inputs.environment }}
         env:
-          CLOUDFLARE_ENV: ${{ inputs.environment }} 
+          CLOUDFLARE_ENV: ${{ inputs.environment }}

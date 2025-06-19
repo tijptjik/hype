@@ -32,13 +32,14 @@ let { form } = fieldProps.form;
         <div
           transition:fade
           class="flex flex-row items-stretch justify-between gap-3 rounded-lg bg-base-100 shadow-lg">
-          <div class="text-md flex-grow basis-2/5 flex flex-col p-4 pr-0 ">
+          <div class="text-md flex flex-grow basis-2/5 flex-col p-4 pr-0">
             {getI18n(property, 'label', appCtx.getUserPreferences())}
             <br /><small>{property?.key}</small>
           </div>
 
           <!-- Published Toggle -->
-          <div class="text-md flex flex-grow basis-3/5 flex-col gap-2 rounded-r-lg bg-base-300 p-3">
+          <div
+            class="text-md flex flex-grow basis-3/5 flex-col gap-2 rounded-r-lg bg-base-300 p-3">
             <label class="flex cursor-pointer items-center justify-between gap-2">
               <span
                 class="flex flex-row items-center gap-2 font-mono text-sm font-light tracking-tighter">

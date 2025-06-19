@@ -16,7 +16,7 @@ import {
   canUpdateProject,
   canUpdateLayer,
   canManageFeatures
-} from '$lib/auth/utils';
+} from '$lib/client/services/auth';
 // TYPES
 import type { Form } from '$lib/types';
 import type { SessionUser } from '$lib/types';

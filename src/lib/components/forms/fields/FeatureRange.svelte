@@ -11,7 +11,9 @@ type Props = {
 let { property, value, onChange }: Props = $props();
 
 // STATE : DERIVED
-let numericValue = $derived(typeof value === 'string' ? parseFloat(value) || 0 : value || 0);
+let numericValue = $derived(
+  typeof value === 'string' ? parseFloat(value) || 0 : value || 0
+);
 let min = $derived(property?.min || 0);
 let max = $derived(property?.max || 100);
 </script>
@@ -35,4 +37,4 @@ let max = $derived(property?.max || 100);
     <span>❘</span>
     <span>{max}</span>
   </div>
-</div> 
+</div>

@@ -6,7 +6,7 @@ export default {
       'always',
       [
         'chore',
-        'docs', 
+        'docs',
         'feat',
         'fix',
         'perf',

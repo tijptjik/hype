@@ -30,15 +30,17 @@ export const GET: RequestHandler = async ({
 }) => {
   // HTTP : 200 JSON or 404
   const vars = platform.env;
-  const env ={
-        "ENVIRONMENT": vars.ENVIRONMENT,
-        "NODE_ENV": vars.NODE_ENV
-      }
+  const env = {
+    ENVIRONMENT: vars.ENVIRONMENT,
+    NODE_ENV: vars.NODE_ENV
+  };
   const public_vars = Object.fromEntries(
     Object.entries(vars).filter(([key]) => key.startsWith('PUBLIC_'))
   );
   const secret_vars = Object.fromEntries(
-    Object.entries(vars).filter(([key]) => !key.startsWith('PUBLIC_') && !Object.keys(env).includes(key))
+    Object.entries(vars).filter(
+      ([key]) => !key.startsWith('PUBLIC_') && !Object.keys(env).includes(key)
+    )
   );
   try {
     // HTTP : 200 JSON or 404

@@ -13,35 +13,49 @@ import type { Id, UserFeature, Feature } from '$lib/types';
  * @param searchTerm - Search term to filter by
  * @returns Filtered array of features
  */
-export const filterUserFeaturesByHierarchy = <T extends { feature: Feature; hierarchy: any }>(
+export const filterUserFeaturesByHierarchy = <
+  T extends { feature: Feature; hierarchy: any }
+>(
   features: T[],
   searchTerm: string
 ): T[] => {
   if (!searchTerm) return features;
-  
+
   const searchLower = searchTerm.toLowerCase();
   const locale = getLocale();
-  
+
   return features.filter((item) => {
     const { feature, hierarchy } = item;
-    
+
     // Helper to search i18n properties safely
     const searchI18n = (resource: any, properties: string[]) => {
       if (!resource?.i18n?.[locale]) return false;
-      return properties.some(prop => {
+      return properties.some((prop) => {
         const value = resource.i18n[locale][prop];
         return value && value.toLowerCase().includes(searchLower);
       });
     };
-    
+
     // Search feature properties
     if (searchI18n(feature, ['title', 'description', 'displayAddress'])) return true;
-    
+
     // Search hierarchy resources
-    if (hierarchy.organisation && searchI18n(hierarchy.organisation, ['name', 'nameShort', 'description'])) return true;
-    if (hierarchy.project && searchI18n(hierarchy.project, ['name', 'nameShort', 'description'])) return true;
-    if (hierarchy.layer && searchI18n(hierarchy.layer, ['name', 'nameShort', 'description'])) return true;
-    
+    if (
+      hierarchy.organisation &&
+      searchI18n(hierarchy.organisation, ['name', 'nameShort', 'description'])
+    )
+      return true;
+    if (
+      hierarchy.project &&
+      searchI18n(hierarchy.project, ['name', 'nameShort', 'description'])
+    )
+      return true;
+    if (
+      hierarchy.layer &&
+      searchI18n(hierarchy.layer, ['name', 'nameShort', 'description'])
+    )
+      return true;
+
     return false;
   });
 };

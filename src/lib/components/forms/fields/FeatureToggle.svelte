@@ -15,7 +15,14 @@ type Props = {
   isSolid?: boolean;
 };
 
-let { property, checked, userPreferences, onChange, size = 'sm', isSolid = true }: Props = $props();
+let {
+  property,
+  checked,
+  userPreferences,
+  onChange,
+  size = 'sm',
+  isSolid = true
+}: Props = $props();
 
 // STATE : DERIVED
 let label = $derived(getI18n(property, 'label', userPreferences) || 'Toggle');
@@ -30,9 +37,5 @@ function handleToggle(e: Event) {
   class="flex flex-row items-center justify-between gap-4 {isSolid
     ? 'rounded-full bg-base-200'
     : 'bg-base-100'} px-4 py-1 align-baseline">
-  <Toggle 
-    {label}
-    {checked}
-    {size}
-    onChange={handleToggle} />
-</div> 
+  <Toggle {label} {checked} {size} onChange={handleToggle} />
+</div>

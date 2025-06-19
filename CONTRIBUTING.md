@@ -1,6 +1,7 @@
 # Contribution
 
 ## Table of Contents
+
 - [Setup](#setup)
 - [Development Flow](#development-flow)
   - [Branching](#branching)
@@ -29,10 +30,10 @@ First install dependencies with `bun install`.
 
 This setup uses **build promotion** - the same tested artifacts from preview are promoted to production without rebuilding, ensuring consistency and faster deployments. For detailed information about the CI/CD pipeline, branch protection, and deployment workflows, see [docs/Deployment.md](../docs/Deployment.md).
 
-
 ### Branching
 
 1. Create a feature branch from `preview`:
+
    ```bash
    git checkout preview
    git pull --rebase
@@ -40,18 +41,21 @@ This setup uses **build promotion** - the same tested artifacts from preview are
    ```
 
 2. Make your changes and commit:
+
    ```bash
    git add .
    git commit -m "feat: your feature"
    ```
 
 3. Keep your branch up to date:
+
    ```bash
    git fetch origin
    git rebase origin/preview
    ```
 
 4. Push your changes:
+
    ```bash
    git push origin feat/your-feature
    ```
@@ -61,13 +65,13 @@ This setup uses **build promotion** - the same tested artifacts from preview are
 6. After approval and tests pass, the PR will be automatically rebased and merged.
 
 **Branch Protection Rules:**
+
 - **Main**: Requires successful "DEPLOY :: Preview" status check (enforced for admins)
 - **Preview**: Requires successful "BUILD :: Build Application" and "TEST :: Run Tests" status checks (enforced for admins)
 - **Rebase Strategy**: All merges use rebase to maintain linear Git history
 - **No Force Push**: Force pushes are disabled on protected branches
 
 Note: Direct pushes to `main` are not allowed. All changes must go through PRs. Direct commits to `preview` are allowed for maintainers.
-
 
 ### Advanced
 
@@ -120,7 +124,7 @@ feat/lasar-show
 Branch names must follow one of these patterns:
 
 - `main` - The main production branch
-- `preview` - The preview/staging branch  
+- `preview` - The preview/staging branch
 - `hotfix` - Emergency fixes branch
 - `{type}/{topic}` - Feature/development branches
 
@@ -136,6 +140,7 @@ Where `{type}` must be one of the following commit types:
 - **test** - Adding or correcting tests
 
 Examples of valid branch names:
+
 - `feat/user-authentication`
 - `fix/login-bug`
 - `docs/api-documentation`
@@ -197,17 +202,20 @@ Must be one of the following:
 - **test**: Adding missing tests or correcting existing tests
 
 #### Subject
+
 The subject contains a succinct description of the change:
 
-* use the imperative, present tense: "change" not "changed" nor "changes"
-* don't capitalize the first letter
-* no dot (.) at the end
+- use the imperative, present tense: "change" not "changed" nor "changes"
+- don't capitalize the first letter
+- no dot (.) at the end
 
 #### Body
+
 Just as in the **subject**, use the imperative, present tense: "change" not "changed" nor "changes".
 The body should include the motivation for the change and contrast this with previous behavior.
 
 #### Footer
+
 The footer is the place to reference GitHub issues that this commit **Closes**.
 
 ## Changesets

@@ -9,7 +9,7 @@ import {
   assertUserIsSelf,
   assertParamIdentifierEqualsFormIdentifier
 } from '$lib/auth/asserts';
-import { isSuperAdmin } from '$lib/auth/utils';
+import { isSuperAdmin } from '$lib/client/services/auth';
 // SCHEMA
 import { user } from '$lib/db/schema/index';
 // TYPES

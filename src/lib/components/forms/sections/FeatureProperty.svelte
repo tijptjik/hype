@@ -55,14 +55,31 @@ const getFormField = (fieldRoot: string) => {
 };
 
 // Type guard for property items
-const isPropertyItem = (item: unknown): item is { propertyId: string; featureId: string; propertyValueId?: string; value?: string; i18n?: any; property?: any } => {
+const isPropertyItem = (
+  item: unknown
+): item is {
+  propertyId: string;
+  featureId: string;
+  propertyValueId?: string;
+  value?: string;
+  i18n?: any;
+  property?: any;
+} => {
   return (
-    typeof item === 'object' && item !== null && 'propertyId' in item && 'featureId' in item
+    typeof item === 'object' &&
+    item !== null &&
+    'propertyId' in item &&
+    'featureId' in item
   );
 };
 
 // Helper function to update form value for specifier properties
-const updateFormSpecifierValue = (fieldRoot: string, index: number, newValue: string, property: any) => {
+const updateFormSpecifierValue = (
+  fieldRoot: string,
+  index: number,
+  newValue: string,
+  property: any
+) => {
   form.update(($form: any) => {
     if (Array.isArray($form[fieldRoot]) && $form[fieldRoot][index]) {
       if (property.isTranslatable) {
@@ -83,7 +100,6 @@ const updateFormSpecifierValue = (fieldRoot: string, index: number, newValue: st
     return $form;
   });
 };
-
 </script>
 
 <div
@@ -94,7 +110,7 @@ const updateFormSpecifierValue = (fieldRoot: string, index: number, newValue: st
       ? '2xl:basis-1/4-gap-6 basis-1/3-gap-6'
       : 'basis-1/2-gap-6 2xl:basis-1/3-gap-6'}">
   <Header {...sectionProps} />
-    {#each Object.entries(fields) as [fieldRoot_, field]}
+  {#each Object.entries(fields) as [fieldRoot_, field]}
     {@const formField = getFormField(fieldRoot_)}
     <div
       class="grid grid-cols-1 {fieldDiscriminator == 'classifier'
@@ -103,9 +119,10 @@ const updateFormSpecifierValue = (fieldRoot: string, index: number, newValue: st
       {#if field.isArray && Array.isArray(formField)}
         {#each formField as item, index}
           {#if isPropertyItem(item)}
-            {@const property = item.property || appCtx.cache.property.get(item.propertyId)}
+            {@const property =
+              item.property || appCtx.cache.property.get(item.propertyId)}
             {#key `${item.featureId}-${item.propertyId}`}
-                {#if isPropertyVisible(item, property)}
+              {#if isPropertyVisible(item, property)}
                 <div
                   transition:fade
                   class="flex items-start justify-between gap-2 rounded-lg bg-base-100 p-4 shadow-lg">
@@ -126,7 +143,10 @@ const updateFormSpecifierValue = (fieldRoot: string, index: number, newValue: st
                         propertyId={item.propertyId}
                         onChange={(newValue) => {
                           form.update(($form: any) => {
-                            if (Array.isArray($form[fieldRoot_]) && $form[fieldRoot_][index]) {
+                            if (
+                              Array.isArray($form[fieldRoot_]) &&
+                              $form[fieldRoot_][index]
+                            ) {
                               $form[fieldRoot_][index].propertyValueId = newValue;
                             }
                             return $form;
@@ -137,7 +157,12 @@ const updateFormSpecifierValue = (fieldRoot: string, index: number, newValue: st
                         {property}
                         value={getPropertyValue(item, 'value')}
                         onChange={(newValue) => {
-                          updateFormSpecifierValue(fieldRoot_, index, newValue, property);
+                          updateFormSpecifierValue(
+                            fieldRoot_,
+                            index,
+                            newValue,
+                            property
+                          );
                         }} />
                     {:else if property?.component === 'ToggleField'}
                       <FeatureToggleField
@@ -145,7 +170,12 @@ const updateFormSpecifierValue = (fieldRoot: string, index: number, newValue: st
                         checked={!!getPropertyValue(item, 'value')}
                         userPreferences={appCtx.getUserPreferences()}
                         onChange={(checked) => {
-                          updateFormSpecifierValue(fieldRoot_, index, checked.toString(), property);
+                          updateFormSpecifierValue(
+                            fieldRoot_,
+                            index,
+                            checked.toString(),
+                            property
+                          );
                         }} />
                     {:else if property?.component === 'InputField'}
                       <FeatureInputField
@@ -153,7 +183,12 @@ const updateFormSpecifierValue = (fieldRoot: string, index: number, newValue: st
                         value={getCurrentFormValue(item, item.propertyId)}
                         userPreferences={appCtx.getUserPreferences()}
                         onChange={(newValue) => {
-                          updateFormSpecifierValue(fieldRoot_, index, newValue, property);
+                          updateFormSpecifierValue(
+                            fieldRoot_,
+                            index,
+                            newValue,
+                            property
+                          );
                         }} />
                     {:else if property?.component === 'TextareaField'}
                       <FeatureTextareaField
@@ -161,7 +196,12 @@ const updateFormSpecifierValue = (fieldRoot: string, index: number, newValue: st
                         value={getCurrentFormValue(item, item.propertyId)}
                         userPreferences={appCtx.getUserPreferences()}
                         onChange={(newValue) => {
-                          updateFormSpecifierValue(fieldRoot_, index, newValue, property);
+                          updateFormSpecifierValue(
+                            fieldRoot_,
+                            index,
+                            newValue,
+                            property
+                          );
                         }} />
                     {/if}
                   </div>

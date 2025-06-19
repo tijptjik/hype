@@ -33,7 +33,7 @@ let projectName = $derived(appCtx.getContextualProjectName(project, false));
   class="group flex cursor-pointer flex-row items-center justify-between gap-4 bg-black py-2 pl-8 pr-4 caret-transparent transition-colors duration-200 focus:outline-none focus:ring-0"
   onclick={onClick}
   in:slide={{ axis: 'y', duration: 200 }}
-  out:slide={{ axis: 'y', duration: 200, }}
+  out:slide={{ axis: 'y', duration: 200 }}
   onkeydown={(e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       onClick();

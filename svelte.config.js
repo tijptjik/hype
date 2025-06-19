@@ -26,7 +26,7 @@ const selectAdapter = () => {
 const config = {
   // Consult https://kit.svelte.dev/docs/integrations#preprocessors
   // for more information about preprocessors
- compilerOptions: {
+  compilerOptions: {
     experimental: {
       async: true
     },

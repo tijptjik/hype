@@ -24,7 +24,7 @@ const onclick = (e: MouseEvent) => {
 
 <li>
   <a
-    href="?facet={facet.ref}"
+    href="#{facet.ref}"
     class="btn btn-sm {isActive
       ? 'btn-primary'
       : 'btn-ghost'} text-white hover:btn-primary"

@@ -17,17 +17,18 @@ import type {
 import type { LngLatLike } from 'maplibre-gl';
 
 // Async version that uses getHierarchy for guaranteed data with cache-miss handling
-export async function getWishlistedFeaturesAsync(appCtx: AppCtx): Promise<FeatureExtended[]> {
+export async function getWishlistedFeaturesAsync(
+  appCtx: AppCtx
+): Promise<FeatureExtended[]> {
   const wishlistedFeatures = appCtx.getWishlistedFeatures();
-  
+
   return Promise.all(
     wishlistedFeatures.map(async (feature) => {
       const { layer, project, organisation } = await appCtx.getHierarchy(feature);
 
-      const projectLayerCount = project 
-        ? appCtx.state.resources.layer.filter(
-            (l: Layer) => l.projectId === project.id
-          ).length
+      const projectLayerCount = project
+        ? appCtx.state.resources.layer.filter((l: Layer) => l.projectId === project.id)
+            .length
         : 0;
 
       return {
@@ -39,9 +40,10 @@ export async function getWishlistedFeaturesAsync(appCtx: AppCtx): Promise<Featur
           project: project
             ? getI18n(project, 'nameShort', appCtx.getUserPreferences())
             : null,
-          layer: layer && projectLayerCount > 1
-            ? getI18n(layer, 'nameShort', appCtx.getUserPreferences())
-            : null,
+          layer:
+            layer && projectLayerCount > 1
+              ? getI18n(layer, 'nameShort', appCtx.getUserPreferences())
+              : null,
           feature: getI18n(feature, 'title', appCtx.getUserPreferences())
         }
       };
@@ -92,7 +94,10 @@ export function getNeighbourhoodFeatureCount(
 }
 
 // Async version that uses getWishlistedFeaturesAsync for better hierarchy data
-export async function searchAllAsync(term: string, appCtx: AppCtx): Promise<SearchResult[]> {
+export async function searchAllAsync(
+  term: string,
+  appCtx: AppCtx
+): Promise<SearchResult[]> {
   const results: SearchResult[] = [];
 
   // Source 1 - Walks (using async version with proper hierarchy fetching)
@@ -151,7 +156,6 @@ export async function searchAllAsync(term: string, appCtx: AppCtx): Promise<Sear
 
   return results;
 }
-
 
 export function getCoordinates(lngLat: LngLatLike | null): [number, number] | null {
   if (!lngLat) return null;

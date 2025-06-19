@@ -11,8 +11,8 @@ branches:
       required_status_checks:
         strict: true
         contexts:
-          - "DEPLOY :: Preview"  # Must deploy to preview first
-      enforce_admins: true  # Even admins must follow the workflow
+          - 'DEPLOY :: Preview' # Must deploy to preview first
+      enforce_admins: true # Even admins must follow the workflow
       required_pull_request_reviews:
         required_approving_review_count: 1
         dismiss_stale_reviews: true
@@ -27,8 +27,8 @@ branches:
       required_status_checks:
         strict: true
         contexts:
-          - "BUILD :: Build Application"
-          - "TEST :: Run Tests"
+          - 'BUILD :: Build Application'
+          - 'TEST :: Run Tests'
       enforce_admins: true
       required_pull_request_reviews:
         required_approving_review_count: 1
@@ -36,4 +36,4 @@ branches:
         require_code_owner_reviews: false
       restrictions: null
       allow_force_pushes: false
-      allow_deletions: false 
+      allow_deletions: false

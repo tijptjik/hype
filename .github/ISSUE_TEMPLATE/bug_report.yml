@@ -1,7 +1,7 @@
 name: Bug Report
 description: Report a bug or issue
-title: "[BUG] "
-labels: ["bug"]
+title: '[BUG] '
+labels: ['bug']
 body:
   - type: textarea
     id: description
@@ -30,8 +30,6 @@ body:
       label: Expected Behavior
       description: What you expected to happen
       placeholder: Describe what should happen...
-    validations:
-      required: true
 
   - type: textarea
     id: actual
@@ -39,8 +37,6 @@ body:
       label: Actual Behavior
       description: What actually happened
       placeholder: Describe what actually happened...
-    validations:
-      required: true
 
   - type: textarea
     id: screenshots
@@ -54,4 +50,4 @@ body:
     attributes:
       label: Browser/Environment
       description: Browser, device, or environment where this occurs
-      placeholder: Chrome 120, Mobile Safari, etc. 
+      placeholder: Chrome 120, Mobile Safari, etc.

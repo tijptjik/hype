@@ -5,23 +5,20 @@ import { Check, PencilSquare } from '@steeze-ui/heroicons';
 // I18N
 import { getI18n, getLocale } from '$lib/i18n';
 // SERVICES
-import { 
+import {
   getFeatureCardEditableProperties,
   getLocalisedPropertyValues,
   getUniversalSpecifierValue,
   getI18nSpecifierValue,
   getClassifierValueId,
   handleCategoricalChange,
-  handleSpecifierChange,
+  handleSpecifierChange
 } from '$lib/client/services/property';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 // TYPES
-import type {
-  Feature,
-  UserContributedFeature,
-} from '$lib/types';
+import type { Feature, UserContributedFeature } from '$lib/types';
 
 // STATE : PROPS
 let { feature }: { feature: Feature | UserContributedFeature } = $props();
@@ -78,12 +75,22 @@ function handleTextareaEditMode(propertyId: string, prop: any) {
 
 function handleInputSubmit(propertyId: string, prop: any) {
   editingStates[propertyId] = false;
-  handleSpecifierChange(appCtx, propertyId, prop.isTranslatable ? getLocale() : 'core', currentValues[propertyId] || '');
+  handleSpecifierChange(
+    appCtx,
+    propertyId,
+    prop.isTranslatable ? getLocale() : 'core',
+    currentValues[propertyId] || ''
+  );
 }
 
 function handleTextareaSubmit(propertyId: string, prop: any) {
   editingStates[propertyId] = false;
-  handleSpecifierChange(appCtx, propertyId, prop.isTranslatable ? getLocale() : 'core', currentValues[propertyId] || '');
+  handleSpecifierChange(
+    appCtx,
+    propertyId,
+    prop.isTranslatable ? getLocale() : 'core',
+    currentValues[propertyId] || ''
+  );
 }
 
 function handleEditCancel(propertyId: string) {
@@ -248,7 +255,11 @@ function handleEditCancel(propertyId: string) {
                   value={getUniversalSpecifierValue(appCtx, propertyId)}
                   placeholder="Enter value..."
                   onchange={(e) =>
-                    handleCategoricalChange(appCtx, propertyId, e.currentTarget.value)} />
+                    handleCategoricalChange(
+                      appCtx,
+                      propertyId,
+                      e.currentTarget.value
+                    )} />
               {/if}
             </div>
           {/if}

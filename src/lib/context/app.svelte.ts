@@ -24,6 +24,7 @@ import {
   getFeatureIdsForProperties,
   sortProperties
 } from '$lib/client/services/property';
+import { primeFeatureStatsCache } from '$lib/client/services/stats';
 // CONTEXT
 import { getContext, setContext } from 'svelte';
 // SVELTE
@@ -52,15 +53,16 @@ import type {
   UserExperimental,
   DeepPartial,
   NewFeatureTask,
-  FeatureProperty,
-  FeaturePropertyI18nDB,
   ResourceTypeWithChildren,
   FeatureI18nFieldKeys,
   Task,
   Hub,
   Code,
   ResourceContext,
-  Resource
+  Resource,
+  Image,
+  Cache,
+  FeatureFromCollection
 } from '$lib/types';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
@@ -90,18 +92,20 @@ export class AppCtx {
   >();
 
   // Cache for all resources
-  cache = {
-    organisation: new Map<Id, Organisation>(),
-    project: new Map<Id, Project>(),
-    layer: new Map<Id, Layer>(),
-    feature: new Map<Id, Feature>(),
-    task: new Map<Id, Task>(),
-    hub: new Map<Id, Hub>(),
-    property: new Map<Id, Property>()
+  cache: Cache = {
+    organisation: new Map(),
+    project: new Map(),
+    layer: new Map(),
+    feature: new Map(),
+    task: new Map(),
+    hub: new Map(),
+    property: new Map(),
+    image: new Map(),
+    stats: new SvelteMap()
   };
 
   // Features map for current state (rebuilt when state.resources.feature changes)
-  private featuresMap = new SvelteMap<Id, Feature>();
+  private featuresMap = new SvelteMap<Id, FeatureFromCollection>();
   private organisationCodeToId = new Map<Code, Id>();
   private projectCodeToId = new Map<Code, Id>();
   private hubCodeToId = new Map<Code, Id>();
@@ -115,10 +119,17 @@ export class AppCtx {
       feature: null,
       collection: null
     },
-    // Filters -- Which neighbourhoods and properties being filtered for when showing features on the map
-    filters: { neighbourhoods: [], properties: {} },
-    // Prisms -- Which organisations, projects, and layers are pre-filtered when fetching features from the database
+    // ═══════════════════════
+    // 3-TIER FILTER SYSTEM
+    // ═══════════════════════
+    // TIER 1: PRISMS -- Which organisations, projects, and layers are pre-filtered when fetching features from the database
+    // Applied at the server level to constrain the result set of first-class resources available
     prisms: { organisation: [], project: [], layer: [] },
+    // TIER 2: APP FILTERS -- Which neighbourhoods and properties being filtered for when showing features on the map
+    // Applied in the app regardless of view - affects all features displayed on the map and in collections
+    filters: { neighbourhoods: [], properties: {} },
+    // TIER 3: VIEW FILTERS -- Handled by individual admin views (e.g., AdminCtx.state.viewFilters)
+    // Only affect the current route/view they are applied on, not the underlying data or map view
     // Resources -- The resources fetched from the database (post prism-filtering, pre filters-filtering)
     resources: {
       organisation: [],
@@ -253,6 +264,9 @@ export class AppCtx {
       return;
     }
 
+    // Initialize stats cache
+    this.initStatsCache();
+
     // Use refreshOrganisations to trigger proper cascades and post-mutation logic
     await this.refreshOrganisations();
 
@@ -273,7 +287,14 @@ export class AppCtx {
     })) as CurrentUser;
 
     this.postUserMutation();
+
     this.isInitialised = true;
+  };
+
+  initStatsCache = (): void => {
+    Object.values(FirstClassResource).forEach((resourceType) => {
+      this.cache.stats.set(resourceType, new SvelteMap());
+    });
   };
 
   reinitializeWithAuth = async (): Promise<void> => {
@@ -514,12 +535,27 @@ export class AppCtx {
   };
 
   refreshFeatures = async (): Promise<void> => {
-    this.state.resources.feature = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.feature)!.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.feature)!.queryFn
+    const features = await this.queryClient.fetchQuery<Feature[]>({
+      queryKey: this.featuresQueryKey,
+      queryFn: () => this.featuresQueryFn()
     });
-    // Efficiently sync feature cache (only add missing, remove stale)
-    this.syncCacheMap(this.cache.feature, this.state.resources.feature);
+    this.state.resources.feature = features;
+    this.syncCacheMap(this.cache.feature, features);
+
+    // Populate image cache from feature images and pre-populate stats cache
+    for (const feature of features) {
+      if (feature.images) {
+        for (const featureImage of feature.images) {
+          if (featureImage.image) {
+            this.cache.image.set(featureImage.image.id, featureImage.image as Image);
+          }
+        }
+      }
+
+      // Pre-populate stats cache for this feature
+      primeFeatureStatsCache(this, feature);
+    }
+
     this.rebuildFeaturesMap();
   };
 
@@ -581,7 +617,7 @@ export class AppCtx {
     }
 
     const currentActiveFeature = this.getActiveFeature();
-    let updatedItems: Feature[] = [];
+    let updatedItems: FeatureFromCollection[] = [];
 
     // Get updated items based on walk type
     if (activeCollection.id === 'stars') {
@@ -622,7 +658,7 @@ export class AppCtx {
           (f) => f.id === currentActiveFeature.id
         );
 
-        let nextFeature: Feature | null = null;
+        let nextFeature: FeatureFromCollection | null = null;
 
         // Try to get the next feature in the original list
         if (currentIndex >= 0 && currentIndex < updatedItems.length) {
@@ -1259,7 +1295,7 @@ export class AppCtx {
     this.state.active.feature = null;
   };
 
-  getActiveFeature = (): Feature | null => this.state.active.feature;
+  getActiveFeature = (): FeatureFromCollection | null => this.state.active.feature;
 
   setActiveFeature = (
     featureId: Id,
@@ -1366,7 +1402,7 @@ export class AppCtx {
     this.zoomToFeatures([feature]);
   };
 
-  zoomToFeatures = (features?: Feature[]): void => {
+  zoomToFeatures = (features?: FeatureFromCollection[]): void => {
     if (!this.map) return;
 
     // Use provided features or current state features
@@ -1488,7 +1524,7 @@ export class AppCtx {
   };
 
   // Public getter for features map (O(1) lookup, no rebuilding on access)
-  get features(): SvelteMap<Id, Feature> {
+  get features(): SvelteMap<Id, FeatureFromCollection> {
     return this.featuresMap;
   }
 
@@ -1519,20 +1555,20 @@ export class AppCtx {
 
   // FEATURE COLLECTIONS -- Utils
 
-  getFeaturesByIds = (ids: Id[]): Feature[] =>
+  getFeaturesByIds = (ids: Id[]): FeatureFromCollection[] =>
     ids.map((id) => this.features.get(id)).filter((f) => f !== undefined);
 
   // FEATURE COLLECTIONS -- Convenience Methods
 
-  getVisibleFeatures = (): Feature[] => {
+  getVisibleFeatures = (): FeatureFromCollection[] => {
     return this.getFeaturesByIds(this.featuresVisible);
   };
 
-  getWishlistedFeatures = (): Feature[] => {
+  getWishlistedFeatures = (): FeatureFromCollection[] => {
     return this.getFeaturesByIds(this.featuresWishlisted);
   };
 
-  getVisitedFeatures = (): Feature[] => {
+  getVisitedFeatures = (): FeatureFromCollection[] => {
     return this.getFeaturesByIds(this.featuresVisited);
   };
 
@@ -1859,6 +1895,7 @@ export class AppCtx {
     this.cache.task.clear();
     this.cache.hub.clear();
     this.cache.property.clear();
+    this.cache.image.clear();
     this.featuresMap.clear();
     this.organisationCodeToId.clear();
     this.projectCodeToId.clear();

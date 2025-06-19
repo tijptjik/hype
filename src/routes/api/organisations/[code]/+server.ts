@@ -58,7 +58,13 @@ const RESOURCE_PATH = 'organisations';
 /**
  * Reads an organisation
  */
-export const GET: RequestHandler = async ({ params, locals, platform, request, url }) => {
+export const GET: RequestHandler = async ({
+  params,
+  locals,
+  platform,
+  request,
+  url
+}) => {
   // ASSERT : User Logged in
   const { db, user, userRoles } = await getDatabase(locals, platform);
 

@@ -45,7 +45,9 @@ let newFeature: DeepPartial<NewFeatureTask> | null = $derived.by(appCtx.getNewFe
 
 // DERIVED STATE
 let selectedOrganisation = $derived(
-  newFeature?.organisationId ? appCtx.cache.organisation.get(newFeature.organisationId) : undefined
+  newFeature?.organisationId
+    ? appCtx.cache.organisation.get(newFeature.organisationId)
+    : undefined
 );
 let selectedProject = $derived(
   newFeature?.projectId ? appCtx.cache.project.get(newFeature.projectId) : undefined
@@ -115,12 +117,16 @@ const handleShowModal = () => {
   if (activeLayers.length > 0) {
     const firstLayer = activeLayers[0];
     const project = appCtx.cache.project.get(firstLayer.projectId);
-    const organisation = project ? appCtx.cache.organisation.get(project.organisationId) : null;
+    const organisation = project
+      ? appCtx.cache.organisation.get(project.organisationId)
+      : null;
 
     // Check if all layers share the same organisation
     const allSameOrg = activeLayers.every((layer) => {
       const layerProject = appCtx.cache.project.get(layer.projectId);
-      const layerOrg = layerProject ? appCtx.cache.organisation.get(layerProject.organisationId) : null;
+      const layerOrg = layerProject
+        ? appCtx.cache.organisation.get(layerProject.organisationId)
+        : null;
       return layerOrg?.id === organisation?.id;
     });
 

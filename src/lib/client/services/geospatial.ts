@@ -40,7 +40,10 @@ export function getFeatureIdsForNeighbourhoods(appCtx: AppCtx): Id[] {
 /**
  * Expands a neighbourhood key to include all sub-neighbourhoods and their features.
  */
-export function expandToSubNeighbourhoods(appCtx: AppCtx, neighbourhoodKey: string): Feature[] {
+export function expandToSubNeighbourhoods(
+  appCtx: AppCtx,
+  neighbourhoodKey: string
+): Feature[] {
   let neighbourhoodFeatures = [];
   if (neighbourhoodKey in subNeighbourhoods) {
     subNeighbourhoods[neighbourhoodKey as keyof typeof subNeighbourhoods].forEach(
@@ -73,7 +76,11 @@ export function expandToSubNeighbourhoods(appCtx: AppCtx, neighbourhoodKey: stri
  * Starts a circular flight animation around a center point.
  * Completes a 5km circle in exactly 1 minute and loops continuously.
  */
-export function startCircularFlight(appCtx: AppCtx, center: [number, number], radiusKm: number = 5): (() => void) | void {
+export function startCircularFlight(
+  appCtx: AppCtx,
+  center: [number, number],
+  radiusKm: number = 5
+): (() => void) | void {
   if (!appCtx.map) return;
 
   const TOTAL_DURATION = 120000; // 1 minute in milliseconds
@@ -82,11 +89,11 @@ export function startCircularFlight(appCtx: AppCtx, center: [number, number], ra
 
   const animate = (currentTime: number) => {
     if (!startTime) startTime = currentTime;
-    
+
     // Calculate elapsed time and progress (0 to 1)
     const elapsed = (currentTime - startTime) % TOTAL_DURATION;
     const progress = elapsed / TOTAL_DURATION;
-    
+
     // Calculate angle based on progress (0 to 2π radians)
     const angleRad = progress * 2 * Math.PI;
 
@@ -118,4 +125,4 @@ export function startCircularFlight(appCtx: AppCtx, center: [number, number], ra
       cancelAnimationFrame(animationId);
     }
   };
-} 
+}

@@ -21,6 +21,7 @@ const imageCtx = getImageContext();
   <div
     class="flex h-12 flex-row flex-nowrap items-center justify-between gap-2 overflow-hidden whitespace-nowrap text-nowrap align-baseline"
     transition:slide={{ axis: 'x', duration: 500, easing: cubicInOut }}>
+    <!-- TODO: Fix reactivity issue - this toggle disappears when navigating away from the feature page, likely due to imageCtx.activeImage losing reactivity -->
     <Toggle
       label="Published"
       size="sm"

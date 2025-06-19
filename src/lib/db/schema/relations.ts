@@ -149,7 +149,7 @@ export const layerRelations = relations(layer, ({ many, one }) => ({
     fields: [layer.publisherId],
     references: [user.id]
   }),
-  features: many(feature),
+  features: many(feature)
 }));
 
 /**

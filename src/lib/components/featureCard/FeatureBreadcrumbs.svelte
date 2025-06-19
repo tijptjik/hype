@@ -67,9 +67,12 @@ function showLayerSelectionModal() {
       </div>
     </div>
   {:then hierarchy}
-  {@const organisationName = appCtx.getContextualOrganisationName(hierarchy.organisation!, false)}
-  {@const projectName = appCtx.getContextualProjectName(hierarchy.project)}
-  {@const layerName = appCtx.getContextualLayerName(hierarchy.layer!)}
+    {@const organisationName = appCtx.getContextualOrganisationName(
+      hierarchy.organisation!,
+      false
+    )}
+    {@const projectName = appCtx.getContextualProjectName(hierarchy.project)}
+    {@const layerName = appCtx.getContextualLayerName(hierarchy.layer!)}
     <div
       class="pointer-events-auto flex w-full flex-shrink-0 items-center justify-between bg-black pl-2 w-100:pl-4">
       <div

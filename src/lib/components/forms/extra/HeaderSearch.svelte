@@ -36,7 +36,8 @@ let {
   toItem = (item: ResultType) => {
     const formId =
       adminCtx.activeResourceType === 'project' ? 'projectId' : 'organisationId';
-    const disco = adminCtx.activeResourceType === 'project' ? 'project' : 'organisation';
+    const disco =
+      adminCtx.activeResourceType === 'project' ? 'project' : 'organisation';
     return {
       type: disco as 'project' | 'organisation',
       userId: item.id,

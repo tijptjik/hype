@@ -19,15 +19,16 @@ import { getAdminCtx } from '$lib/context/admin.svelte';
 const imageCtx = getImageContext();
 const adminCtx = getAdminCtx();
 // TYPES
-import type { FirstClassResource } from '$lib/enums';
+import type { Snippet } from 'svelte';
 
 type Props = {
-  LeftActions?: any;
-  MiddleActions?: any;
-  RightActions?: any;
+  LeftActions?: Snippet;
+  MiddleActions?: Snippet;
+  RightActions?: Snippet;
   isDropzone?: boolean;
   enableReplacement?: boolean;
   isCrossfade?: boolean;
+  hideActions?: boolean;
 };
 
 // STATE : PROPS
@@ -36,7 +37,8 @@ let {
   MiddleActions,
   RightActions,
   isDropzone = false,
-  isCrossfade = true
+  isCrossfade = true,
+  hideActions = false
 }: Props = $props();
 
 let image = $derived(imageCtx.activeImage);
@@ -49,9 +51,17 @@ let isTransition = $derived(viewerState == 'transition');
 let isLoaded = $derived(viewerState == 'loaded');
 let isEmpty = $derived(viewerState == 'empty');
 let isLoading = $derived(viewerState == 'loading');
+let isError = $derived(viewerState == 'error');
 let isReplacing = $derived(isPreviewReplacement || isTransition);
 
 let lastLoadedImageId = $state<string | null>(null);
+
+// Effect to ensure loading state is properly initialized when image changes
+$effect(() => {
+  if (image?.id && !imageCtx.getLoadStatus(image.id)) {
+    imageCtx.setLoadStatus(image.id, 'loading');
+  }
+});
 // HANDLERS :: FILE DROP
 const handleDrop = async (e: CustomEvent) => {
   if (!isDropzone) return;
@@ -76,11 +86,11 @@ const handleDrop = async (e: CustomEvent) => {
 {#snippet LoadingOverlay(message = 'Loading...')}
   <div
     class="absolute inset-0 z-40 flex items-center justify-center"
-    in:fade={{ duration: 200, delay: 200 }}
-    out:fade={{ duration: 200 }}>
+    in:fade={{ duration: 500, delay: 1500 }}
+    out:fade={{ duration: 250 }}>
     <div
       class="flex flex-col items-center gap-2 rounded-lg"
-      in:scale={{ duration: 200, delay: 200, start: 0.95 }}>
+      in:scale={{ duration: 500, delay: 1500, start: 0.95 }}>
       <span class="loading loading-spinner loading-lg text-primary"></span>
     </div>
   </div>
@@ -118,19 +128,25 @@ const handleDrop = async (e: CustomEvent) => {
         showLoading={false}
         showError={false}
         onLoad={() => {
-          if (image?.id === lastLoadedImageId) {
-            return;
-          }
+          if (!image?.id) return;
 
-          imageCtx.setLoadStatus(image?.id, 'loaded');
-          imageCtx.setActiveImage(image);
+          // Always update load status, even if it's the same image
+          // This handles cases where the image context resets loading state
+          imageCtx.setLoadStatus(image.id, 'loaded');
+          lastLoadedImageId = image.id;
+        }}
+        onError={() => {
+          if (!image?.id) return;
+
+          console.warn(`[Viewer] Failed to load image ${image.id}`);
+          imageCtx.setLoadStatus(image.id, 'error');
         }} />
     </div>
   {/if}
 
   <!-- Loading Overlay -->
   {#if isPreview || isPreviewReplacement || isLoading}
-    {@render LoadingOverlay('Uploading...')}
+    <!-- {@render LoadingOverlay('Loading...')} -->
   {/if}
 {/snippet}
 
@@ -165,18 +181,29 @@ const handleDrop = async (e: CustomEvent) => {
 
   <!-- Loading Overlay -->
   {#if isPreview || isPreviewReplacement || isLoading}
-    {@render LoadingOverlay('Uploading...')}
+    <!-- TODO Figure out what was causign this spinned to hang and add the spinner back -->
+    <!-- {@render LoadingOverlay('Uploading...')} -->
   {/if}
 {/snippet}
 
 {#snippet EmptyContent()}
-  <Icon src={Photo} class="mx-auto mt-4 h-8 w-8" />
-  <span class="mx-auto pb-6 text-sm">Drop image</span>
+  {#if isDropzone}
+    <Icon src={Photo} class="mx-auto mt-4 h-8 w-8" />
+    <span class="mx-auto pb-6 text-sm">Drop image</span>
+  {/if}
+{/snippet}
+
+{#snippet ErrorContent()}
+  <div class="flex flex-col items-center justify-center gap-2 text-error">
+    <Icon src={Photo} class="mx-auto mt-4 h-8 w-8" />
+    <span class="mx-auto pb-6 text-sm">Failed to load image</span>
+  </div>
 {/snippet}
 
 <div
   class="relative flex h-full w-full flex-col {isDropzone ? 'group' : ''}"
-  style="transition: outline-color 150ms ease-out">
+  style="transition: outline-color 150ms ease-out"
+  in:fade={{ duration: 300, delay: 50 }}>
   {#if isDropzone}
     <Dropzone
       accept={['image/*']}
@@ -197,6 +224,9 @@ const handleDrop = async (e: CustomEvent) => {
       {#if isEmpty}
         {@render EmptyContent()}
       {/if}
+      {#if isError}
+        {@render ErrorContent()}
+      {/if}
     </Dropzone>
   {:else}
     {#if isLoaded || isLoading || isTransition}
@@ -205,11 +235,14 @@ const handleDrop = async (e: CustomEvent) => {
     {#if isLoading || isTransition || isPreview || isPreviewReplacement}
       {@render PreviewContent()}
     {/if}
-    {#if isEmpty}
+    {#if isEmpty && isDropzone}
       {@render EmptyContent()}
     {/if}
+    {#if isError}
+      {@render ErrorContent()}
+    {/if}
   {/if}
-  {#if image}
+  {#if image && !hideActions}
     <!-- Actions -->
     <!-- Left Actions -->
     <div

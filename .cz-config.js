@@ -28,8 +28,7 @@ module.exports = {
     { name: 'accounts' },
     { name: 'admin' },
     { name: 'exampleScope' },
-    { name: 'changeMe' }
-  ],
+    { name: 'changeMe' }],
 
   usePreparedCommit: false, // to re-use commit from ./.git/COMMIT_EDITMSG
   allowTicketNumber: false,
@@ -70,6 +69,6 @@ module.exports = {
   // limit subject length
   subjectLimit: 100,
   // breaklineChar: '|', // It is supported for fields body and footer.
-  footerPrefix : 'ISSUES CLOSED:'
+  footerPrefix: 'ISSUES CLOSED:'
   // askForBreakingChangeFirst : true, // default is false
 };

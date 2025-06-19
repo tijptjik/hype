@@ -94,16 +94,30 @@ export const updateFeatureImage = async (
   db: Database,
   modifiedFeatureImage: ImageDBFlatUpdate,
   imageId: string
-): Promise<FeatureImageDB> =>
-  await updateRelated(
+): Promise<FeatureImageDB> => {
+  // Extract only the featureImage-specific fields
+  const featureImageData: Partial<FeatureImageDB> = {};
+
+  if (modifiedFeatureImage.isPublished !== undefined) {
+    featureImageData.isPublished = modifiedFeatureImage.isPublished;
+  }
+  if (modifiedFeatureImage.intent !== undefined) {
+    featureImageData.intent = modifiedFeatureImage.intent;
+  }
+  if (modifiedFeatureImage.publishedAt !== undefined) {
+    featureImageData.publishedAt = modifiedFeatureImage.publishedAt;
+  }
+
+  return await updateRelated(
     db,
     featureImage,
-    modifiedFeatureImage,
+    featureImageData,
     featureImage.imageId,
     imageId,
     featureImage.featureId,
     modifiedFeatureImage.featureId
   );
+};
 
 export const createTaskImagesFromImageIds = async (
   db: Database,

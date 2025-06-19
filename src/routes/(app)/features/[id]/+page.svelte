@@ -35,7 +35,7 @@ let featureId: string = $state(page.params.id);
 
 // CONTEXT
 const appCtx = getAppCtx();
-// @ts-expect-error - TODO Svelte Async 
+// @ts-expect-error - TODO Svelte Async
 let feature = $derived(await appCtx.getFeatureById(page.params.id));
 const omniCtx = getOmniContext();
 

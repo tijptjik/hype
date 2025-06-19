@@ -68,19 +68,17 @@ export class OmniContext {
   // Constructor with appCtx
   constructor(appCtx: AppCtx) {
     this.appCtx = appCtx;
-    
+
     // Effect to update search results when dependencies change
     $effect(() => {
       // Explicitly track all reactive dependencies
       const searchTerm = this.state.searchTerm;
       const featuresSize = this.appCtx.features.size; // Track feature changes
       const userFeaturesWishlisted = this.appCtx.state.userFeatures.wishlisted.length; // Track wishlist changes
-      
+
       // Schedule async update outside reactive context
       setTimeout(() => this.updateSearchResults(searchTerm), 0);
     });
-
-
   }
 
   // Async method to update search results
@@ -203,7 +201,7 @@ export class OmniContext {
         this.closeCard();
       }
 
-    // If there is no card, but the tray is open, close the tray
+      // If there is no card, but the tray is open, close the tray
     } else if (this.state.mode === 'navigation' && this.state.isTrayOpen) {
       this.closeTray();
       // If we are in navigation mode, reset the results and go back to search
@@ -408,20 +406,18 @@ export class OmniContext {
   navNext() {
     const collection = this.appCtx.state.active.collection;
     if (collection && this.navIndex < collection.items.length - 1) {
-      this.appCtx.setActiveFeature(
-        collection.items[this.navIndex + 1].id,
-        { focus: true }
-      );
+      this.appCtx.setActiveFeature(collection.items[this.navIndex + 1].id, {
+        focus: true
+      });
     }
   }
 
   navPrevious() {
     const collection = this.appCtx.state.active.collection;
     if (collection && this.navIndex > 0) {
-      this.appCtx.setActiveFeature(
-        collection.items[this.navIndex - 1].id,
-        { focus: true }
-      );
+      this.appCtx.setActiveFeature(collection.items[this.navIndex - 1].id, {
+        focus: true
+      });
     }
   }
 
@@ -494,18 +490,20 @@ export const getOmniContext = (): OmniContext => {
     // Return a safe proxy object that prevents errors when OmniContext isn't ready
     return new Proxy({} as OmniContext, {
       get(target, prop) {
-        if (prop === 'state') return {
-          mode: 'search',
-          isTrayOpen: false,
-          isCardOpen: false,
-          searchTerm: '',
-          focusedIndex: -1
-        };
-        if (prop === 'searchResults') return {
-          features: [],
-          neighbourhoods: [],
-          walks: []
-        };
+        if (prop === 'state')
+          return {
+            mode: 'search',
+            isTrayOpen: false,
+            isCardOpen: false,
+            searchTerm: '',
+            focusedIndex: -1
+          };
+        if (prop === 'searchResults')
+          return {
+            features: [],
+            neighbourhoods: [],
+            walks: []
+          };
         if (prop === 'pageState') return PageState.NoTransition;
         if (prop === 'isIntentionallyClosing') return false;
         if (prop === 'cardCtx') return null;
@@ -518,19 +516,20 @@ export const getOmniContext = (): OmniContext => {
         if (prop === 'navIndex') return -1;
         if (prop === 'navTitle') return '';
         // Return no-op functions for methods
-        if (typeof prop === 'string' && (
-          prop.startsWith('set') || 
-          prop.startsWith('clear') || 
-          prop.startsWith('focus') || 
-          prop.startsWith('reset') || 
-          prop.startsWith('cancel') || 
-          prop.startsWith('close') || 
-          prop.startsWith('open') || 
-          prop.startsWith('toggle') || 
-          prop.startsWith('select') || 
-          prop.startsWith('handle') || 
-          prop.startsWith('nav')
-        )) {
+        if (
+          typeof prop === 'string' &&
+          (prop.startsWith('set') ||
+            prop.startsWith('clear') ||
+            prop.startsWith('focus') ||
+            prop.startsWith('reset') ||
+            prop.startsWith('cancel') ||
+            prop.startsWith('close') ||
+            prop.startsWith('open') ||
+            prop.startsWith('toggle') ||
+            prop.startsWith('select') ||
+            prop.startsWith('handle') ||
+            prop.startsWith('nav'))
+        ) {
           return () => {};
         }
         return undefined;

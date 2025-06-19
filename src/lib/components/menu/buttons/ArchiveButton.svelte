@@ -30,7 +30,12 @@ let isLoading = $state(false);
 const handleClick = async (e: Event) => {
   e.preventDefault();
   e.stopPropagation();
-  if (isLoading || !adminCtx.activeResourceRef || adminCtx.activeResourceRef === NEW_REF) return;
+  if (
+    isLoading ||
+    !adminCtx.activeResourceRef ||
+    adminCtx.activeResourceRef === NEW_REF
+  )
+    return;
 
   isLoading = true;
 

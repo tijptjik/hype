@@ -1,4 +1,3 @@
-
 # Database Management
 
 ## Schema
@@ -7,9 +6,9 @@ The schema is defined in `src/lib/db/schema/*.ts`.
 
 - The relationship between organisations, projects, layers and filters is hierarchical.
 - Properties are defined on projects, and values are defined on properties.
-    - Qualitative properties are shown to the users in a features info panel
-    - Categorical properties are shown in a filter panel.
-    - Layers control which filters are available to the user when that particular layer is visible.
+  - Qualitative properties are shown to the users in a features info panel
+  - Categorical properties are shown in a filter panel.
+  - Layers control which filters are available to the user when that particular layer is visible.
 
 ## Migration
 

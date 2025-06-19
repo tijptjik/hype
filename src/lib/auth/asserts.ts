@@ -7,7 +7,6 @@ import type {
   Code,
   Id,
   OrganisationPartial,
-  Session,
   SessionUser,
   UserRoleDisco
 } from '$lib/types';

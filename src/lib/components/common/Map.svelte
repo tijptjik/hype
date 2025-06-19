@@ -50,7 +50,7 @@ let featureMarkerId: Id | null = $state(null);
 onMount(async () => {
   // Wait for maplibre to be loaded globally
   while (!appCtx.isMaplibreLoaded || !appCtx.maplibre) {
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 10));
   }
 
   appCtx.map = new appCtx.maplibre.Map({

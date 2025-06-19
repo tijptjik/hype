@@ -62,6 +62,7 @@ import {
   ImageAPI,
   ImageBase,
   ImageBaseRaw,
+  ImageBasic,
   ImageFlat,
   ImageFlatUpdate,
   ImageInsert,
@@ -188,7 +189,7 @@ import type {
 import type { enhance } from '$app/forms';
 import type { Marker } from 'maplibre-gl';
 import type { Writable } from 'svelte/store';
-import type { SvelteSet } from 'svelte/reactivity';
+import type { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import type { Geometry } from 'geojson';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import type { SQLiteTable, SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core';
@@ -330,6 +331,84 @@ export type NavItem = {
 };
 
 /* ----------------- */
+// ADMIN CONTROLS
+/* -------- */
+export type LayoutMode = 'table' | 'list' | 'card';
+export type ControlMode = 'filter' | null;
+
+/* ----------------- */
+// VIEW FILTERS (TIER 3)
+/* -------- */
+export type FilterTriState = boolean | null;
+export type LocalisedFilterTriState = Record<Locale, FilterTriState>;
+
+export type FeatureViewFilters = {
+  // Status related
+  isPublished: FilterTriState;
+  isPendingReview: FilterTriState;
+  isIntangible: FilterTriState;
+  isVisitable: FilterTriState;
+  isArchived: FilterTriState;
+
+  // Image related
+  hasImage: FilterTriState;
+  isOneImagePublished: FilterTriState;
+  isAllImagePublished: FilterTriState;
+
+  // Authorship related
+  hasTitle: FilterTriState;
+  hasDescription: FilterTriState;
+  hasDisplayAddress: FilterTriState;
+
+  // Translation related (per locale)
+  translationLocales: Record<Locale, boolean>; // Which locales to consider for translation filters
+  isTitleTranslated: LocalisedFilterTriState;
+  isDescriptionTranslated: LocalisedFilterTriState;
+  isAddressTranslated: LocalisedFilterTriState;
+  isSpecifierTranslated: LocalisedFilterTriState;
+
+  // Property related
+  properties: Record<Id, FilterTriState>; // propertyId -> state
+};
+
+// TODO implement other resource types as needed
+export type ViewFilters = {
+  organisation?: never;
+  project?: never;
+  layer?: never;
+  feature: FeatureViewFilters;
+  task?: never;
+  hub?: never;
+};
+
+/* ----------------- */
+// FILTERS :: ADMIN :: FEATURES
+/* -------- */
+
+export type FeatureStatusFilterKey =
+  | 'isPublished'
+  | 'isPendingReview'
+  | 'isArchived'
+  | 'isIntangible'
+  | 'isVisitable';
+
+export type FeatureTranslationFilterKey =
+  | 'isTitleTranslated'
+  | 'isDescriptionTranslated'
+  | 'isAddressTranslated'
+  | 'isSpecifierTranslated';
+
+export type FeatureAuthorshipFilterKey =
+  | 'hasTitle'
+  | 'hasDescription'
+  | 'hasDisplayAddress';
+
+export type FeatureImageFilterKey =
+  | 'hasImage'
+  | 'isOneImagePublished'
+  | 'isAllImagePublished';
+
+/* ----------------- */
 // FILTERS :: APP
 /* -------- */
 
@@ -338,7 +417,7 @@ export type FilteredResources = {
   organisation: Organisation[];
   project: Project[];
   layer: Layer[];
-  feature: Feature[];
+  feature: FeatureFromCollection[];
   task: Task[];
   hub: Hub[];
 };
@@ -361,8 +440,54 @@ export type ActiveCollection = {
   id: string;
   type: 'neighbourhood' | 'walk' | 'feature' | 'search';
   i18n: Record<Locale, { name: string }>;
-  items: Feature[];
+  items: FeatureFromCollection[];
 } | null;
+
+/* ----------------- */
+// ENTITY CARDS
+/* -------- */
+
+export type KeyMap = {
+  id: 'id' | 'code' | string;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  image: string;
+  tags?: string[];
+  badges?: Array<{
+    label: string;
+    variant?: 'primary' | 'secondary' | 'outline' | undefined;
+    type?: 'boolean';
+    trueText?: string;
+    falseText?: string;
+    superAdminOnly?: boolean;
+  }>;
+};
+
+/* ----------------- */
+// STATS
+/* -------- */
+
+export type StatsCache = SvelteMap<
+  FirstClassResource,
+  SvelteMap<
+    Id,
+    SvelteMap<Key, { value: any; type: 'boolean' | 'count' | 'mean' | 'sum' }>
+  >
+>;
+
+// Define the shape of the cache
+export type Cache = {
+  organisation: Map<Id, Organisation>;
+  project: Map<Id, Project>;
+  layer: Map<Id, Layer>;
+  feature: Map<Id, Feature>;
+  property: Map<Id, Property>;
+  task: Map<Id, Task>;
+  hub: Map<Id, Hub>;
+  image: Map<Id, ImageDB>;
+  stats: StatsCache;
+};
 
 /* ----------------- */
 // URL
@@ -890,7 +1015,7 @@ export type FeatureDBRaw = z.infer<typeof FeatureRaw>;
 /* -------- */
 
 // Feature with all fields, including translations and properties
-export type FeatureCollection = z.infer<typeof FeatureCollectionAPI>;
+export type FeatureFromCollection = z.infer<typeof FeatureCollectionAPI>;
 export type Feature = z.infer<typeof FeatureAPI>;
 // Like Feature, but without the featureId in translations and properties
 export type FeatureNew = z.infer<typeof FeatureInsertAPI>;
@@ -1149,6 +1274,7 @@ export type PropertyValuePartial = z.infer<typeof PropertyValueUpdateAPI>;
 /* -------- */
 
 export type ImageDB = z.infer<typeof ImageBase>;
+export type ImageDBBasic = z.infer<typeof ImageBasic>;
 export type ImageDBNew = z.infer<typeof ImageInsert>;
 export type ImageDBPartial = z.infer<typeof ImageUpdate>;
 export type ImageDBFlat = z.infer<typeof ImageFlat>;
@@ -1474,7 +1600,7 @@ export type SearchResult = {
 export type AppContextState = {
   markers: Map<Id, Marker>;
   active: {
-    feature: Feature | null;
+    feature: FeatureFromCollection | null;
     collection: ActiveCollection | null;
   };
   filters: FilterState;
@@ -1786,3 +1912,97 @@ export function isHub(resource: Resource): resource is Hub {
 
 // FEATURE TYPES
 export type { FeatureClientExt, FeatureI18nFieldKeys } from './db/zod/schema/feature';
+
+import type { Snippet } from 'svelte';
+
+/* ----------------- */
+// VIRUAL LIST
+/* -------- */
+
+// Courtesy of https://github.com/humanspeak/svelte-virtual-list/blob/main/src/lib/types.ts
+
+/**
+ * Defines the scroll direction and rendering mode for the virtual list.
+ *
+ * @typedef {'topToBottom' | 'bottomToTop'} SvelteVirtualListMode
+ */
+export type SvelteVirtualListMode = 'topToBottom' | 'bottomToTop';
+
+/**
+ * Configuration properties for the SvelteVirtualList component.
+ *
+ * @typedef {Object} SvelteVirtualListProps
+ */
+export type SvelteVirtualListProps = {
+  /**
+   * Number of items to render outside the visible viewport for smooth scrolling.
+   * @default 20
+   */
+  bufferSize?: number;
+  /**
+   * CSS class to apply to the outer container element.
+   */
+  containerClass?: string;
+  /**
+   * CSS class to apply to the content wrapper element.
+   */
+  contentClass?: string;
+  /**
+   * Initial height estimate for each item in pixels. Used for optimization before actual measurements are available.
+   * @default 40
+   */
+  defaultEstimatedItemHeight?: number;
+  /**
+   * When true, enables debug mode with additional logging and information.
+   * @default false
+   */
+  debug?: boolean;
+  /**
+   * Custom callback to handle debug information. Receives a SvelteVirtualListDebugInfo object.
+   */
+  debugFunction?: (_info: SvelteVirtualListDebugInfo) => void;
+  /**
+   * The complete array of items to be virtualized.
+   */
+  items: any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+  /**
+   * CSS class to apply to individual item containers.
+   */
+  itemsClass?: string;
+  /**
+   * Determines the scroll and render direction.
+   * @default 'topToBottom'
+   */
+  mode?: SvelteVirtualListMode;
+  /**
+   * Svelte snippet function that defines how each item should be rendered. Receives the item and its index as arguments.
+   */
+  renderItem: Snippet<[item: any, index: number]>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  /**
+   * Base test ID for component elements to facilitate testing.
+   */
+  testId?: string;
+  /**
+   * CSS class to apply to the scrollable viewport element.
+   */
+  viewportClass?: string;
+};
+
+/**
+ * Debug information provided by the virtual list during rendering.
+ *
+ * @typedef {Object} SvelteVirtualListDebugInfo
+ * @property {number} endIndex - Index of the last rendered item in the viewport.
+ * @property {number} startIndex - Index of the first rendered item in the viewport.
+ * @property {number} totalItems - Total number of items in the list.
+ * @property {number} visibleItemsCount - Number of items currently visible in the viewport.
+ * @property {number} processedItems - Number of items processed in the viewport.
+ */
+export type SvelteVirtualListDebugInfo = {
+  endIndex: number;
+  startIndex: number;
+  totalItems: number;
+  visibleItemsCount: number;
+  processedItems: number;
+  averageItemHeight: number;
+};

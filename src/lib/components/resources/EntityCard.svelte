@@ -13,39 +13,38 @@ import { getURLfromImage } from '$lib/client/services/image';
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
 import Image from '$lib/components/common/Image.svelte';
-// ENUMS
-import { ResourcePath } from '$lib/enums';
+import ScrollableText from '$lib/components/common/ScrollableText.svelte';
 // TYPES
-import type { Resource, ImageDB, Task } from '$lib/types';
+import type { Snippet } from 'svelte';
+import type { Resource, ImageDB, Task, KeyMap } from '$lib/types';
 
-export type KeyMap = {
-  id: 'id' | 'code' | string;
-  title: string;
-  subtitle?: string;
-  description?: string;
-  image: string;
-  tags?: string[];
-  badges?: Array<{
-    label: string;
-    variant?: 'primary' | 'secondary' | 'outline' | undefined;
-    type?: 'boolean';
-    trueText?: string;
-    falseText?: string;
-    superAdminOnly?: boolean;
-  }>;
+type EntityWithOptionalImage = Exclude<Resource, Task> & {
+  image?: (Partial<ImageDB> & { id: string }) | null;
 };
 
 type Props = {
-  entity: Exclude<Resource, Task>;
+  entity: EntityWithOptionalImage;
   keyMap: KeyMap;
-  header?: any;
-  badges?: any;
-  badgesExtra?: any;
-  content?: any;
-  actions?: any;
+  header?: Snippet;
+  badges?: Snippet;
+  badgesExtra?: Snippet;
+  content?: Snippet;
+  actions?: Snippet;
+  footer?: Snippet;
+  onImageClick?: (entity: Exclude<Resource, Task>) => void;
 };
 
-let { entity, keyMap, header, badges, badgesExtra, content, actions }: Props = $props();
+let {
+  entity,
+  keyMap,
+  header,
+  badges,
+  badgesExtra,
+  content,
+  actions,
+  footer,
+  onImageClick
+}: Props = $props();
 let locale = $derived(getLocale());
 
 // Utility function to get nested property values using dot notation
@@ -54,14 +53,11 @@ const getNestedValue = (obj: any, path: string): any => {
     if (!current || current[key] === undefined) {
       return undefined;
     }
-
     let value = current[key];
-
     // If the value is an array, take the first element
     if (Array.isArray(value) && value.length > 0) {
       value = value[0];
     }
-
     return value;
   }, obj);
 };
@@ -124,62 +120,82 @@ const onclick = (e: MouseEvent | KeyboardEvent) => {
     goto(href);
   }
 };
+
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    onclick(e);
+  } else if (e.key === ' ' && onImageClick && entity.image) {
+    e.preventDefault();
+    onImageClick(entity);
+  } else if (e.key === ' ') {
+    // Fallback to click for cards without image action
+    e.preventDefault();
+    onclick(e);
+  }
+};
 </script>
 
-<a
+<div
   draggable="false"
-  href={href || '#'}
-  {onclick}
   role="article"
-  tabindex="2"
-  class="duration-800 card select-none bg-base-100 shadow-xl transition-shadow hover:scale-[.99] hover:shadow-2xl hover:shadow-primary focus-visible:shadow-primary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-secondary active:outline-none"
-  onkeydown={(e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onclick(e);
-    }
-  }}>
+  tabindex="0"
+  class="duration-800 card select-none rounded-xl bg-base-100 shadow-xl transition-shadow hover:scale-[.99] hover:shadow-2xl hover:shadow-primary focus-visible:shadow-primary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-secondary active:outline-none"
+  onkeydown={handleKeyDown}
+  {onclick}>
   <!-- Header Section -->
   {#if header}
-    {@render header(entity)}
+    {@render header()}
   {:else}
-    <Image
-      src={getNestedValue(entity, keyMap.image)
-        ? getURLfromImage({
-            image: getNestedValue(entity, keyMap.image) as ImageDB
-          })
-        : getHashiconUrl(entity.id)}
-      alt={getPropertyValue(entity, keyMap.title)}
-      layout="cover" />
+    <div
+      class="cursor-pointer overflow-hidden rounded-t-xl"
+      onclick={(e) => {
+        if (onImageClick && entity.image) {
+          e.stopPropagation();
+          onImageClick(entity);
+        }
+      }}>
+      <Image
+        src={getNestedValue(entity, keyMap.image)
+          ? getURLfromImage({
+              image: getNestedValue(entity, keyMap.image) as ImageDB
+            })
+          : getHashiconUrl(entity.id)}
+        alt={getPropertyValue(entity, keyMap.title)}
+        layout="cover" />
+    </div>
   {/if}
 
   <!-- Content Section -->
-  <div class="card-body w-full pb-6">
+  <div class="card-body w-full px-6 pb-0">
     {#if content}
-      {@render content(entity)}
+      {@render content()}
     {:else}
-      <h2 class="card-title mt-0">
-        {getPropertyValue(entity, keyMap.title)}
-        {#if keyMap.subtitle}
-          <small class="text-sm text-gray-500"
-            >{getPropertyValue(entity, keyMap.subtitle)}</small>
-        {/if}
+      <h2 class="card-title -mt-3">
+        <ScrollableText text={getPropertyValue(entity, keyMap.title)} />
       </h2>
+      {#if keyMap.subtitle}
+        <small class="mb-2 text-sm text-gray-500"
+          >{getPropertyValue(entity, keyMap.subtitle)}</small>
+      {/if}
       {#if keyMap.description}
-        <p class="mt-2">{@html getPropertyValue(entity, keyMap.description)}</p>
+        <p class="-mt-5 text-neutral-content">
+          <ScrollableText text={getPropertyValue(entity, keyMap.description)} />
+        </p>
       {/if}
     {/if}
 
     <!-- Actions Section -->
     <div class="mt-2 flex w-full flex-row items-center justify-between">
       {#if actions}
-        {@render actions(entity)}
+        {@render actions()}
       {:else}
         <!-- Badges Section -->
         {#if badges}
-          {@render badges(entity)}
+          {@render badges()}
         {:else if keyMap.badges?.length}
-          <div class="flex flex-row flex-wrap justify-center gap-2 py-2 align-middle">
+          <div
+            class="mb-2 flex flex-row flex-wrap justify-center gap-2 py-2 align-middle">
             {#each keyMap.badges.filter((badge) => !badge.superAdminOnly || adminCtx.appCtx.user?.superAdmin === true) as badge}
               {#if badge.type === 'boolean'}
                 {@const boolValue = getNestedValue(entity, badge.label)}
@@ -195,11 +211,18 @@ const onclick = (e: MouseEvent | KeyboardEvent) => {
             {/each}
             <!-- Extra Badges Section -->
             {#if badgesExtra}
-              {@render badgesExtra(entity)}
+              {@render badgesExtra()}
             {/if}
           </div>
         {/if}
       {/if}
     </div>
   </div>
-</a>
+  <!-- Footer Section -->
+  {#if footer}
+    <footer
+      class="flex w-full flex-row items-center justify-between rounded-b-xl bg-black px-6 py-2">
+      {@render footer()}
+    </footer>
+  {/if}
+</div>

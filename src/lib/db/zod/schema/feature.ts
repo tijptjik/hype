@@ -35,7 +35,6 @@ import { FeatureImageAPI } from './image';
 // TYPES
 import type { AddressMeta, AddressProperties, Locale } from '$lib/types';
 import type { GeometryObject } from 'geojson';
-import { LayerAPI } from './layer';
 import { supportedLocales } from '$lib/enums';
 
 /* ----------------- */
@@ -177,19 +176,23 @@ export const FeatureCollectionAPI = FeatureBase.omit({
   publisherId: true,
   publishedAt: true,
   visitableAsOf: true,
-  isIntangible: true,
-  isVisitable: true,
   createdAt: true,
   modifiedAt: true
 }).extend({
-  i18n: getLocales(FeatureI18nBase.extend({
-    addressProperties: z.object({
-      neighbourhood: z.string().nullish()
-    }).nullish()
-  })),
-  properties: z.array(FeaturePropertyBase.extend({
-    i18n: getLocales(FeaturePropertyI18nBase).nullish()
-  })),
+  i18n: getLocales(
+    FeatureI18nBase.extend({
+      addressProperties: z
+        .object({
+          neighbourhood: z.string().nullish()
+        })
+        .nullish()
+    })
+  ),
+  properties: z.array(
+    FeaturePropertyBase.extend({
+      i18n: getLocales(FeaturePropertyI18nBase).nullish()
+    })
+  ),
   image: createSelectSchema(image)
     .pick({
       id: true,
@@ -199,7 +202,9 @@ export const FeatureCollectionAPI = FeatureBase.omit({
       publicId: true,
       version: true
     })
-    .nullish()
+    .nullish(),
+  imageCount: z.number(),
+  imagePublishedCount: z.number()
 });
 
 // Full feature entity schema
@@ -208,14 +213,23 @@ export const FeatureAPI = FeatureBase.extend({
   properties: z.array(FeaturePropertyAPI),
   contributor: UserBasic.nullish(),
   publisher: UserBasic.nullish(),
-  // TODO Maybe restrict this futrther?
-  images: z.lazy(() => z.array(FeatureImageAPI).nullish()),
+  image: createSelectSchema(image)
+    .pick({
+      id: true,
+      cdn: true,
+      env: true,
+      cdnId: true,
+      publicId: true,
+      version: true
+    })
+    .nullish(),
+  images: z.lazy(() => z.array(FeatureImageAPI).nullish())
 });
 
 export const FeatureInsertAPI = FeatureInsert.extend({
   i18n: getLocales(FeatureI18nInsert),
   properties: z.array(FeaturePropertyInsertAPI),
-  isVisitable: z.boolean().default(true).nullish(),
+  isVisitable: z.boolean().default(true),
   addressMeta: z.custom<AddressMeta>().default({}).nullish()
 });
 

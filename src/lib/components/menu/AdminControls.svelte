@@ -4,7 +4,7 @@ import { page } from '$app/state';
 // LIB
 import { ADMIN_PATH } from '$lib/index';
 // AUTH
-import { hasControlPanelAccess } from '$lib/auth/utils';
+import { hasControlPanelAccess } from '$lib/client/services/auth';
 // NAVIGATION
 import { navigateOnAdmin } from '$lib/navigation';
 // COMPONENTS

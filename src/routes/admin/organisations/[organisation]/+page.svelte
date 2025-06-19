@@ -16,7 +16,7 @@ import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 import { getFlash } from 'sveltekit-flash-message';
 import { page } from '$app/state';
 // COMPONENTS
-import Header from '$lib/components/layout/EntityHeader.svelte';
+import Header from '$lib/components/resources/headers/EntityHeader.svelte';
 import HeaderButton from '$lib/components/layout/HeaderButton.svelte';
 import EntityActions from '$lib/components/menu/EntityActions.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
@@ -95,7 +95,29 @@ const FIELDS: Record<string, FormField> = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Organisation> = $props();
-adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.organisation);
+
+// Read facet from URL hash
+const hashFacet = $derived(() => {
+  if (typeof window !== 'undefined') {
+    const hash = page.url.hash;
+    return hash ? hash.substring(1) : null;
+  }
+  return null;
+});
+
+// Set facet from hash or default to 'core'
+$effect(() => {
+  const facet = hashFacet();
+  if (facet && ['core', 'images'].includes(facet)) {
+    adminCtx.setFacet(
+      facet as any,
+      pageProps.data.entity,
+      FirstClassResource.organisation
+    );
+  } else {
+    adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.organisation);
+  }
+});
 
 let form = setForm(
   RESOURCE,

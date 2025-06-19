@@ -58,7 +58,7 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
       where: inArray(projectTable.organisationId, prisms.organisation),
       columns: { id: true }
     });
-    const projectIds = projectsInOrgs.map(p => p.id);
+    const projectIds = projectsInOrgs.map((p) => p.id);
     if (projectIds.length > 0) {
       additionalConditions.push(inArray(property.projectId, projectIds));
     }
@@ -73,12 +73,12 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
     );
 
     // RESPONSE : Transform each property to proper response shape
-    const data = result.map(property => 
+    const data = result.map((property) =>
       toResponseShape(
         property,
         property.i18n,
         property.values || [],
-        property.values?.flatMap(v => v.i18n || []) || []
+        property.values?.flatMap((v) => v.i18n || []) || []
       )
     );
 
@@ -89,4 +89,4 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
     logZodError(e, 'Property list error:');
     return error(500, 'Property retrieval failed');
   }
-}; 
+};

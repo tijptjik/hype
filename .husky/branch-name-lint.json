@@ -2,7 +2,7 @@
   "branchNameLinter": {
     "prefixes": [
       "chore",
-      "docs", 
+      "docs",
       "feat",
       "fix",
       "perf",
@@ -33,4 +33,4 @@
     "msgPrefixSuggestion": "Instead of \"%s\" try \"%s\".",
     "msgSeparatorRequired": "Branch \"%s\" must contain a separator \"%s\". Format: {type}/{topic}"
   }
-} 
+}

@@ -18,7 +18,8 @@ const adminCtx = getAdminCtx();
 
 let showFormControler = $derived(adminCtx.state.active.facet !== 'images');
 let showActionButton = $derived(
-  adminCtx.state.active.resourceRef !== NEW_REF && adminCtx.state.active.resourceRef !== false
+  adminCtx.state.active.resourceRef !== NEW_REF &&
+    adminCtx.state.active.resourceRef !== false
 );
 
 // Resources that can be archived (all resources have isArchived)

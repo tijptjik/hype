@@ -14,7 +14,7 @@ import {
 // DB
 import { isFieldUnique } from '$lib/db';
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
-import { getOrganisationIdforRoles, isSuperAdmin } from '$lib/auth/utils';
+import { getOrganisationIdforRoles, isSuperAdmin } from '$lib/client/services/auth';
 // SCHEMA
 import { organisation } from '$lib/db/schema/index';
 // ENUMS

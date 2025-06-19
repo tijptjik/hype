@@ -17,31 +17,28 @@ let showPower = $state(false);
 
 {#if $session.data?.user}
   <div
-    class="grid h-10 w-12 overflow-hidden px-2"
+    class="grid h-10 w-10 px-2"
     onmouseenter={() => (showPower = true)}
     onmouseleave={() => (showPower = false)}>
     {#if showPower}
-      <div
+      <button
         transition:fade={{ duration: 300 }}
-        class="col-start-1 col-end-2 row-start-1 row-end-2 h-10 w-10">
-        <button
-          class="m-0 flex h-10 w-10 items-center justify-center rounded-full bg-neutral-800 p-0"
-          onclick={async () => {
-            await signOut({
-              fetchOptions: {
-                onSuccess: () => {
-                  goto('/'); // redirect to login page
-                }
+        class="btn btn-ghost btn-sm col-start-1 col-end-2 row-start-1 row-end-2 h-12 min-h-0 w-12 rounded-full p-0"
+        onclick={async () => {
+          await signOut({
+            fetchOptions: {
+              onSuccess: () => {
+                goto('/'); // redirect to login page
               }
-            });
-          }}>
-          <Icon src={Power} class="h-5 w-5 stroke-2 text-primary" />
-        </button>
-      </div>
+            }
+          });
+        }}>
+        <Icon src={Power} class="h-5 w-5 stroke-2" />
+      </button>
     {:else}
-      <div
+      <button
         transition:fade={{ duration: 300 }}
-        class="col-start-1 col-end-2 row-start-1 row-end-2">
+        class="btn btn-ghost btn-sm col-start-1 col-end-2 row-start-1 row-end-2 h-12 min-h-0 w-12 rounded-full p-0">
         <div class="avatar">
           <div class="w-10 rounded-full">
             <img
@@ -50,14 +47,14 @@ let showPower = $state(false);
               referrerpolicy="no-referrer" />
           </div>
         </div>
-      </div>
+      </button>
     {/if}
   </div>
 {:else}
-  <a
+  <button
     draggable="false"
     class="btn btn-primary"
     onclick={() => signIn.social({ provider: 'google', callbackURL: '/' })}>
     {m.navbar__signin()}
-  </a>
+  </button>
 {/if}

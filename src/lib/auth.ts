@@ -47,7 +47,7 @@ export const createAuth = (
       customSession(async ({ user, session }) => {
         // Import these here to avoid circular dependencies
         const { getUserRoles } = await import('$lib/db/services/user');
-        const { getUserLayers } = await import('./auth/utils');
+        const { getUserLayers } = await import('./client/services/auth');
 
         // Get user roles and layers
         const roles: UserRoleDisco[] = await getUserRoles(db, user.id);

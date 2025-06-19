@@ -2,14 +2,15 @@
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
-import ResourceHeader from '$lib/components/layout/ResourceHeader.svelte';
-import ResourceIndex from '$lib/components/layout/ResourceIndex.svelte';
-import EntityCard from '$lib/components/layout/EntityCard.svelte';
+import ResourceHeader from '$lib/components/resources/headers/ResourceHeader.svelte';
+import ResourceIndex from '$lib/components/resources/ResourceIndex.svelte';
+import LayoutModes from '$lib/components/resources/controls/ResourceIndexLayoutModes.svelte';
+import ControlModes from '$lib/components/resources/controls/ResourceIndexControlModes.svelte';
+import EntityCard from '$lib/components/resources/EntityCard.svelte';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
 // TYPES
-import type { KeyMap } from '$lib/components/layout/EntityCard.svelte';
-import type { Organisation } from '$lib/types';
+import type { KeyMap, Organisation, LayoutMode, ControlMode } from '$lib/types';
 
 // CONFIG :: KEY MAP
 const RESOURCE = FirstClassResource.organisation;
@@ -41,11 +42,22 @@ const keyMap: KeyMap = {
 // CONTEXT
 const adminCtx = getAdminCtx();
 adminCtx.setFacet(false, false, RESOURCE);
+
+// STATE
+let layoutMode: LayoutMode = $state('card');
+let controlMode: ControlMode = $state('filter');
+let entities: Organisation[] = $derived(adminCtx.filteredOrganisations);
 </script>
 
-<ResourceHeader />
-<ResourceIndex entities={adminCtx.filteredOrganisations}>
-  {#snippet children(entity, idx)}
+<ResourceHeader>
+  {#snippet modes()}
+    <ControlModes bind:controlMode defaultMode="filter" />
+    <LayoutModes bind:layoutMode defaultMode="card" />
+  {/snippet}
+</ResourceHeader>
+
+<ResourceIndex {entities} {layoutMode} {controlMode}>
+  {#snippet card(entity: Organisation)}
     <EntityCard {entity} {keyMap} />
   {/snippet}
 </ResourceIndex>

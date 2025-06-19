@@ -69,7 +69,10 @@ export default {
       colors: {
         'gradient-end': 'hsl(var(--fuchsia-800))', // color-variable
         'gradient-start': 'hsl(var(--rose-500))', // color-variable
-        secondary: '#7482FF' // color-variable
+        secondary: '#7482FF', // color-variable
+        ok: 'rgb(62, 173, 142)', // color-variable
+        pending: '#e0c285', // color-variable
+        error: 'rgb(223, 69, 69)' // color-variable
       },
       fontSize: {
         '2xs': '0.625rem',

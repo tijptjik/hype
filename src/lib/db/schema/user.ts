@@ -203,8 +203,8 @@ export const userLayer = sqliteTable(
   'userLayer',
   {
     layerId: text('layerId')
-    .notNull()
-    .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+      .notNull()
+      .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     userId: text('userId')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
