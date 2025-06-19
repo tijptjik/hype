@@ -46,7 +46,7 @@ let showNewButton = $derived(user && resource && canCreateEntity(user, resource)
 
 {#if resource}
   <header
-    class="navbar h-17.5 px-12 py-4 shadow-lg"
+    class="navbar h-17.5 px-12 py-4 caret-transparent shadow-lg"
     class:bg-base-300={resourceMode}
     class:bg-gradient-to-r={!resourceMode}
     class:from-rose-500={!resourceMode}
