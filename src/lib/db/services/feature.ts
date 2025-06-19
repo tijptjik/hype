@@ -116,10 +116,11 @@ export const listFeatures = async (
 };
 
 /**
- * Lists features and includes a canonical or first image for each.
+ * Lists features and includes a canonical or first image for each, plus image counts for filtering.
  * - Prioritizes images where featureImage.intent === \'canonical\'.
  * - Falls back to the first associated image if no canonical one is found.
  * - Image will be null if no images are associated.
+ * - Includes imageCount and imagePublishedCount for filtering purposes.
  */
 export const listFeaturesWithImage = async (
   db: Database,
@@ -127,7 +128,7 @@ export const listFeaturesWithImage = async (
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOpts
-): Promise<(FeatureDB & { image: ImageDB | null })[]> => {
+): Promise<(FeatureDB & { image: ImageDB | null; imageCount: number; imagePublishedCount: number })[]> => {
   // Apply hub filtering if opts is provided
   const hubFilter = getFeatureHubFilter(db, opts);
   if (hubFilter) {
@@ -149,11 +150,29 @@ export const listFeaturesWithImage = async (
     where: conditions.length > 0 ? and(...conditions) : undefined
   });
 
-  // Post-process to select the canonical or first image
+  // Post-process to select the canonical or first image and calculate counts
   const featuresWithSelectedImage = featuresRaw.map((feature) => {
-    const selectedImage = selectCanonicalOrFirstImage((feature as any).images);
-    const { images, ...restOfFeature } = feature as any; // Remove the raw images array
-    return { ...restOfFeature, image: selectedImage };
+    const rawImages = (feature as any).images || [];
+    
+    // Transform raw images to the expected format for selectCanonicalOrFirstImage
+    const transformedImages = rawImages.map((img: any) => ({
+      intent: img.intent,
+      image: img.image || null
+    }));
+    
+    const selectedImage = selectCanonicalOrFirstImage(transformedImages);
+    
+    // Calculate image counts for filtering
+    const imageCount = rawImages.length;
+    const imagePublishedCount = rawImages.filter((img: any) => img.isPublished).length;
+    
+    const { images: _, ...restOfFeature } = feature as any; // Remove the raw images array
+    return { 
+      ...restOfFeature, 
+      image: selectedImage,
+      imageCount,
+      imagePublishedCount
+    };
   });
 
   return featuresWithSelectedImage;
