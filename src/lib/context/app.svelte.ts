@@ -61,10 +61,8 @@ import type {
   ResourceContext,
   Resource,
   Image,
-  ImageDB,
-  Key,
   Cache,
-  StatsCache
+  FeatureFromCollection
 } from '$lib/types';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
@@ -94,7 +92,7 @@ export class AppCtx {
   >();
 
   // Cache for all resources
-  cache : Cache = {
+  cache: Cache = {
     organisation: new Map(),
     project: new Map(),
     layer: new Map(),
@@ -107,7 +105,7 @@ export class AppCtx {
   };
 
   // Features map for current state (rebuilt when state.resources.feature changes)
-  private featuresMap = new SvelteMap<Id, Feature>();
+  private featuresMap = new SvelteMap<Id, FeatureFromCollection>();
   private organisationCodeToId = new Map<Code, Id>();
   private projectCodeToId = new Map<Code, Id>();
   private hubCodeToId = new Map<Code, Id>();
@@ -294,7 +292,7 @@ export class AppCtx {
   };
 
   initStatsCache = (): void => {
-    Object.values(FirstClassResource).forEach(resourceType => {
+    Object.values(FirstClassResource).forEach((resourceType) => {
       this.cache.stats.set(resourceType, new SvelteMap());
     });
   };
@@ -553,7 +551,7 @@ export class AppCtx {
           }
         }
       }
-      
+
       // Pre-populate stats cache for this feature
       primeFeatureStatsCache(this, feature);
     }
@@ -619,7 +617,7 @@ export class AppCtx {
     }
 
     const currentActiveFeature = this.getActiveFeature();
-    let updatedItems: Feature[] = [];
+    let updatedItems: FeatureFromCollection[] = [];
 
     // Get updated items based on walk type
     if (activeCollection.id === 'stars') {
@@ -660,7 +658,7 @@ export class AppCtx {
           (f) => f.id === currentActiveFeature.id
         );
 
-        let nextFeature: Feature | null = null;
+        let nextFeature: FeatureFromCollection | null = null;
 
         // Try to get the next feature in the original list
         if (currentIndex >= 0 && currentIndex < updatedItems.length) {
@@ -1297,7 +1295,7 @@ export class AppCtx {
     this.state.active.feature = null;
   };
 
-  getActiveFeature = (): Feature | null => this.state.active.feature;
+  getActiveFeature = (): FeatureFromCollection | null => this.state.active.feature;
 
   setActiveFeature = (
     featureId: Id,
@@ -1404,7 +1402,7 @@ export class AppCtx {
     this.zoomToFeatures([feature]);
   };
 
-  zoomToFeatures = (features?: Feature[]): void => {
+  zoomToFeatures = (features?: FeatureFromCollection[]): void => {
     if (!this.map) return;
 
     // Use provided features or current state features
@@ -1526,7 +1524,7 @@ export class AppCtx {
   };
 
   // Public getter for features map (O(1) lookup, no rebuilding on access)
-  get features(): SvelteMap<Id, Feature> {
+  get features(): SvelteMap<Id, FeatureFromCollection> {
     return this.featuresMap;
   }
 
@@ -1557,20 +1555,20 @@ export class AppCtx {
 
   // FEATURE COLLECTIONS -- Utils
 
-  getFeaturesByIds = (ids: Id[]): Feature[] =>
+  getFeaturesByIds = (ids: Id[]): FeatureFromCollection[] =>
     ids.map((id) => this.features.get(id)).filter((f) => f !== undefined);
 
   // FEATURE COLLECTIONS -- Convenience Methods
 
-  getVisibleFeatures = (): Feature[] => {
+  getVisibleFeatures = (): FeatureFromCollection[] => {
     return this.getFeaturesByIds(this.featuresVisible);
   };
 
-  getWishlistedFeatures = (): Feature[] => {
+  getWishlistedFeatures = (): FeatureFromCollection[] => {
     return this.getFeaturesByIds(this.featuresWishlisted);
   };
 
-  getVisitedFeatures = (): Feature[] => {
+  getVisitedFeatures = (): FeatureFromCollection[] => {
     return this.getFeaturesByIds(this.featuresVisited);
   };
 
