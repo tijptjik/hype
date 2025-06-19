@@ -150,8 +150,9 @@ export const POST: RequestHandler = async ({ request, locals, platform, fetch })
       userRoles
     );
 
-    // Get Azure translation key from platform for feature enrichment
-    const subscriptionKey = platform?.env?.AZURE_TRANSLATION_KEY;
+    // Get Azure translation credentials from platform for feature enrichment
+    const subscriptionKey = platform?.env?.AZURE_TRANSLATION_KEY || '';
+    const region = platform?.env?.PUBLIC_AZURE_TRANSLATION_REGION || '';
 
     // DB : Create task with all dependencies (feature, images, etc.)
     const createdTask = await createTaskWithDependencies(
@@ -159,8 +160,8 @@ export const POST: RequestHandler = async ({ request, locals, platform, fetch })
       taskData,
       images,
       userId,
+      region,
       subscriptionKey,
-      platform?.env.PUBLIC_AZURE_TRANSLATION_REGION,
       fetch
     );
 
