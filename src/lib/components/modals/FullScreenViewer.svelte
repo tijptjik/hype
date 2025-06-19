@@ -1,6 +1,4 @@
 <script lang="ts">
-// SVELTE
-import { createEventDispatcher } from 'svelte';
 // COMPONENTS
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 import Viewer from '$lib/components/common/Viewer.svelte';
@@ -8,40 +6,71 @@ import Viewer from '$lib/components/common/Viewer.svelte';
 import { FirstClassResource, ImageContextResource } from '$lib/enums';
 // TYPES
 import type { ImageDB, Feature, Organisation, Project } from '$lib/types';
+import type { AdminCtx } from '$lib/context/admin.svelte';
 
 type Props = {
+  adminCtx: AdminCtx;
   image: ImageDB;
   feature: Feature;
   organisation?: Organisation;
   project?: Project;
   isAdminMode?: boolean;
+  currentIndex?: number;
+  totalCount?: number;
+  canNavigatePrevious?: boolean;
+  canNavigateNext?: boolean;
+  onClose: () => void;
+  onNavigateNext?: () => void;
+  onNavigatePrevious?: () => void;
 };
 
 // STATE : PROPS
 let {
+  adminCtx,
   image,
   feature,
   organisation,
   project,
-  isAdminMode = false
+  isAdminMode = false,
+  canNavigatePrevious = false,
+  canNavigateNext = false,
+  onClose,
+  onNavigateNext,
+  onNavigatePrevious
 }: Props = $props();
 
-const dispatch = createEventDispatcher<{
-  close: void;
-}>();
-
 function handleKeydown(event: KeyboardEvent) {
+  // Only handle events if the modal is actually open and feature exists
+  if (!feature || !image) return;
+
   if (event.key === 'Escape' || event.key === ' ') {
-    dispatch('close');
+    event.preventDefault();
+    event.stopPropagation();
+    onClose();
+  } else if (event.key === 'Enter') {
+    event.preventDefault();
+    event.stopPropagation();
+    const featureId = feature.id; // Capture the ID before dispatching close
+    // Navigate to feature address facet
+    onClose();
+    window.location.href = `/admin/${adminCtx.getEntityPath(FirstClassResource.feature, featureId, 'images')}`;
+  } else if (event.key === 'Tab') {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.shiftKey && canNavigatePrevious && onNavigatePrevious) {
+      onNavigatePrevious();
+    } else if (!event.shiftKey && canNavigateNext && onNavigateNext) {
+      onNavigateNext();
+    }
   }
 }
 
 function closeModal() {
-  dispatch('close');
+  onClose();
 }
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} />
 
 <div
   class="fixed inset-0 z-50 flex items-center justify-center bg-black/75"
@@ -50,16 +79,18 @@ function closeModal() {
   aria-modal="true">
   <div class="h-screen w-screen" onclick={(e) => e.stopPropagation()}>
     <div class="h-full w-full" onclick={closeModal}>
-      <ImageProvider
-        ctxId={feature.id}
-        ctxType={FirstClassResource.feature as unknown as ImageContextResource}
-        {image}
-        {isAdminMode}
-        mode="gallery"
-        {organisation}
-        {project}>
-        <Viewer isDropzone={false} hideActions={true} />
-      </ImageProvider>
+      {#if feature}
+        <ImageProvider
+          ctxId={feature.id}
+          ctxType={FirstClassResource.feature as unknown as ImageContextResource}
+          {image}
+          {isAdminMode}
+          mode="gallery"
+          {organisation}
+          {project}>
+          <Viewer isDropzone={false} hideActions={true} />
+        </ImageProvider>
+      {/if}
     </div>
   </div>
-</div> 
+</div>

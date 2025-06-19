@@ -73,7 +73,7 @@ $effect(() => {
       // User is not authenticated - start circular flight animation
       if (!stopCircularFlight) {
         setTimeout(() => {
-          const cleanup = startCircularFlight(appCtx,[114.17276, 22.29191], 5);
+          const cleanup = startCircularFlight(appCtx, [114.17276, 22.29191], 5);
           if (cleanup) {
             stopCircularFlight = cleanup;
           }
