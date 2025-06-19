@@ -91,7 +91,7 @@ function toggleLocale(locale: Locale) {
         label={filterDef.label}
         {currentValue}
         {idx}
-        transformOffset={24}
+        transformOffset={12}
         falseLabel={getFeatureTaskLabel(filterDef, false, true)}
         trueLabel={getFeatureTaskLabel(filterDef, true, true)}
         onToggleFalse={() =>

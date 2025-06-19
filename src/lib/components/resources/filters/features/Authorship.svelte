@@ -18,15 +18,24 @@ import type { FeatureAuthorshipFilterKey } from '$lib/types';
 const adminCtx = getAdminCtx();
 
 // FILTER DEFINITIONS
-const authorshipFilters: Record<FeatureAuthorshipFilterKey, { label: string }> = {
+const authorshipFilters: Record<
+  FeatureAuthorshipFilterKey,
+  { label: string; trueLabel?: string; falseLabel?: string }
+> = {
   hasTitle: {
-    label: m.feature__title()
+    label: m.feature__title(),
+    falseLabel: m.filters__no(),
+    trueLabel: m.filters__has()
   },
   hasDescription: {
-    label: m.feature__description()
+    label: m.feature__description(),
+    falseLabel: m.filters__no(),
+    trueLabel: m.filters__has()
   },
   hasDisplayAddress: {
-    label: m.feature__address()
+    label: m.feature__address(),
+    falseLabel: m.filters__no(),
+    trueLabel: m.filters__has()
   }
 };
 </script>
@@ -41,6 +50,7 @@ const authorshipFilters: Record<FeatureAuthorshipFilterKey, { label: string }> =
     label={filterDef.label}
     {currentValue}
     {idx}
+    transformOffset={8}
     falseLabel={getFeatureTaskLabel(filterDef, false)}
     trueLabel={getFeatureTaskLabel(filterDef, true)}
     onToggleFalse={() => toggleFilterState(adminCtx, key, false)}

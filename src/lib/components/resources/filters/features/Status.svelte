@@ -32,21 +32,29 @@ const statusFilters: Record<
   isPendingReview: {
     label: m.plain_broad_shell_dart(),
     invertBoolean: true,
-    trueLabel: m.filters__only(),
-    falseLabel: m.filters__not()
+    falseLabel: m.filters__not(),
+    trueLabel: m.filters__is()
   },
   isPublished: {
-    label: m.yummy_ornate_snail_bend()
+    label: m.yummy_ornate_snail_bend(),
+    falseLabel: m.filters__not(),
+    trueLabel: m.filters__is()
   },
   isVisitable: {
-    label: m.dry_aware_squirrel_cheer()
+    label: m.dry_aware_squirrel_cheer(),
+    falseLabel: m.filters__not(),
+    trueLabel: m.filters__is()
   },
   isIntangible: {
-    label: m.teary_fit_maggot_heart()
+    label: m.teary_fit_maggot_heart(),
+    falseLabel: m.filters__not(),
+    trueLabel: m.filters__is()
   },
   isArchived: {
     label: m.bad_swift_cheetah_surge(),
-    superAdminOnly: true
+    superAdminOnly: true,
+    falseLabel: m.filters__not(),
+    trueLabel: m.filters__is()
   }
 };
 </script>
@@ -64,6 +72,7 @@ const statusFilters: Record<
       label={filterDef.label}
       {currentValue}
       {idx}
+      transformOffset={12}
       falseLabel={getFeatureTaskLabel(filterDef, false)}
       trueLabel={getFeatureTaskLabel(filterDef, true)}
       onToggleFalse={() => toggleFilterState(adminCtx, key, false)}

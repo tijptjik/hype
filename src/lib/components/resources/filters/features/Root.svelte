@@ -48,7 +48,7 @@ const filterSections = {
   translation: { icon: Language, title: m.filters__translation() },
   image: { icon: Photo, title: m.filters__image() },
   classifier: { icon: Tag, title: m.sunny_day_lemur_conquer_short() },
-  specifier: { icon: Pencil, title: m.alert_blue_raven_grasp() }
+  specifier: { icon: Pencil, title: m.admin__forms_common_specifiers_short() }
 };
 
 const filterKeys: Record<string, (keyof FeatureViewFilters)[]> = {

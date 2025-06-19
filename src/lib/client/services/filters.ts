@@ -211,6 +211,7 @@ export function getTranslationFilterState<K extends FeatureTranslationFilterKey>
   }
 
   // If they're not all the same, set them all to true and return true
+  // This is to recover from inconsistent states, this should never happen.
   for (const locale of activeLocales) {
     (sectionFilters as any)[locale] = true;
   }
@@ -270,7 +271,7 @@ export function getFeatureTaskLabel(
   isTranslation: boolean = false
 ): string {
   if (isTranslation) {
-    return !targetState ? 'ToDo' : 'Done';
+    return !targetState ? m.filters__todo() : m.filters__done();
   }
 
   if (!targetState) {

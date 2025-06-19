@@ -457,6 +457,7 @@
   "filters__not": "不是",
   "filters__no": "不",
   "filters__has": "有",
+  "filters__is": "是",
   "busy_flaky_mayfly_chop": "結果",
   "royal_civil_goldfish_fetch": "沒有任何",
   "awful_ok_polecat_rise": "一些",
@@ -476,5 +477,7 @@
   "alert_blue_raven_grasp": "所有自由格式字段",
   "filters__translation": "翻譯",
   "filters__image": "圖片",
-  "filters__status": "地位"
+  "filters__status": "地位",
+  "filters__todo": "待辦事項",
+  "filters__done": "完畢"
 }

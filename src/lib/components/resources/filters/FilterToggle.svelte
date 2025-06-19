@@ -29,22 +29,24 @@ const {
 </script>
 
 <div
-  class="group flex flex-col items-center gap-[8px] tracking-widest"
+  class="group flex min-w-[120px] flex-col items-center gap-[8px] tracking-widest"
   style="transform: translateX({-transformOffset * idx}px)">
-  <label class="text-xs uppercase leading-none text-base-content/70">
+  <label class="text-center text-xs uppercase leading-none text-base-content/70">
     {label}
   </label>
-  <div class="flex items-center gap-2">
+  <div
+    class="grid w-full items-center gap-2"
+    style="grid-template-columns: 1fr auto 1fr;">
     <span
       onclick={onToggleFalse}
-      class="text cursor-pointer text-sm uppercase text-base-content opacity-0 transition-opacity duration-300 group-hover:opacity-40"
+      class="text cursor-pointer text-right text-sm uppercase text-base-content opacity-0 transition-opacity duration-300 group-hover:opacity-40"
       role="button"
       tabindex="-1">
       {falseLabel}
     </span>
     <input
       type="checkbox"
-      class="toggle toggle-sm border-neutral-content/30 bg-[#CF4FB0] text-neutral-content/30 transition-colors {currentValue ===
+      class="toggle toggle-sm justify-self-center border-neutral-content/30 bg-[#CF4FB0] text-neutral-content/30 transition-colors {currentValue ===
       null
         ? 'bg-neutral-content/30'
         : currentValue === false
@@ -59,7 +61,7 @@ const {
       }} />
     <span
       onclick={onToggleTrue}
-      class="text cursor-pointer text-sm uppercase text-base-content opacity-0 transition-opacity duration-300 group-hover:opacity-40"
+      class="text cursor-pointer text-left text-sm uppercase text-base-content opacity-0 transition-opacity duration-300 group-hover:opacity-40"
       role="button"
       tabindex="-1">
       {trueLabel}

@@ -19,7 +19,7 @@ const filterConfig: Record<
 > = {
   hasImage: {
     label: m.feature__images(),
-    falseLabel: m.royal_civil_goldfish_fetch(),
+    falseLabel: m.filters__no(),
     trueLabel: m.awful_ok_polecat_rise()
   },
   isOneImagePublished: {
@@ -58,7 +58,7 @@ const filterConfig: Record<
     label={filterDef.label}
     {currentValue}
     {idx}
-    transformOffset={0}
+    transformOffset={8}
     falseLabel={filterDef.falseLabel}
     trueLabel={filterDef.trueLabel}
     {onToggleChange}
