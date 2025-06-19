@@ -40,7 +40,7 @@ import type {
   FeatureNew,
   QueryParams,
   UserContributedFeature,
-  Locale,
+  Locale
 } from '$lib/types';
 
 /********************
@@ -284,69 +284,81 @@ export const createUserContributedFeature = async (
 
   for (const locale of supportedLocales) {
     const textObj = newFeature.i18n[locale];
+    const isSourceLocale = locale === sourceLocale;
 
-    // Determine which fields need translation (missing in textObj but available in source)
-    const needsTitle = !textObj?.title && sourceTextObj.title;
-    const needsDescription = !textObj?.description && sourceTextObj.description;
-    const needsDisplayAddress =
-      !textObj?.displayAddress && sourceTextObj.displayAddress;
+    if (isSourceLocale) {
+      // For source locale, preserve original values and set Gen flags to false
+      enrichedI18n[locale as Locale] = {
+        locale: locale,
+        title: sourceTextObj.title,
+        description: sourceTextObj.description || null,
+        displayAddress: sourceTextObj.displayAddress || null,
+        titleGen: false, // Original content, not generated
+        descriptionGen: false,
+        displayAddressGen: false,
+        addressProperties: {}
+      };
+    } else {
+      // For target locales, determine what needs translation
+      const needsTitle = Boolean(sourceTextObj.title);
+      const needsDescription = Boolean(sourceTextObj.description);
+      const needsDisplayAddress = Boolean(sourceTextObj.displayAddress);
 
-    // Collect fields that need translation (non-empty source values only)
-    const fieldsToTranslate: string[] = [];
-    if (needsTitle) fieldsToTranslate.push(sourceTextObj.title);
-    if (needsDescription) fieldsToTranslate.push(sourceTextObj.description!);
-    if (needsDisplayAddress) fieldsToTranslate.push(sourceTextObj.displayAddress!);
+      // Collect fields that need translation (only non-empty source values)
+      const fieldsToTranslate: string[] = [];
+      if (needsTitle) fieldsToTranslate.push(sourceTextObj.title);
+      if (needsDescription) fieldsToTranslate.push(sourceTextObj.description!);
+      if (needsDisplayAddress) fieldsToTranslate.push(sourceTextObj.displayAddress!);
 
-    let translatedValues: string[] = [];
+      let translatedValues: string[] = [];
 
-    // Only call translation API if we have fields to translate and API key
-    if (fieldsToTranslate.length > 0 && subscriptionKey) {
-      // TRANSLATION
-      const { translateText } = await import('$lib/api/external/translation');
-      try {
-        translatedValues = await translateText(
-          fieldsToTranslate,
-          sourceLocale,
-          locale,
-          region,
-          subscriptionKey
-        );
-      } catch (error) {
-        // translatedValues remains empty array, will fall back to source content
+      // Only call translation API if we have fields to translate and API key
+      if (fieldsToTranslate.length > 0 && subscriptionKey) {
+        // TRANSLATION
+        const { translateText } = await import('$lib/api/external/translation');
+        try {
+          translatedValues = await translateText(
+            fieldsToTranslate,
+            sourceLocale,
+            locale,
+            region,
+            subscriptionKey
+          );
+        } catch (error) {
+          console.error(`Translation failed for ${sourceLocale} -> ${locale}:`, error);
+          // translatedValues remains empty array, will fall back to source content
+        }
       }
+
+      // Build the enriched object with proper field-level tracking
+      let translationIndex = 0;
+
+      // Extract translated values in order
+      const translatedTitle =
+        needsTitle && translationIndex < translatedValues.length
+          ? translatedValues[translationIndex++]
+          : null;
+      const translatedDescription =
+        needsDescription && translationIndex < translatedValues.length
+          ? translatedValues[translationIndex++]
+          : null;
+      const translatedDisplayAddress =
+        needsDisplayAddress && translationIndex < translatedValues.length
+          ? translatedValues[translationIndex++]
+          : null;
+
+      enrichedI18n[locale as Locale] = {
+        locale: locale,
+        title: translatedTitle || sourceTextObj.title,
+        description: translatedDescription || sourceTextObj.description || null,
+        displayAddress:
+          translatedDisplayAddress || sourceTextObj.displayAddress || null,
+        titleGen: Boolean(translatedTitle), // True if translation was provided
+        descriptionGen: Boolean(translatedDescription), // True if translation was provided
+        displayAddressGen: Boolean(translatedDisplayAddress), // True if translation was provided
+        addressProperties: {}
+      };
     }
-
-    // Build the enriched object with proper field-level tracking
-    let translationIndex = 0;
-
-    // Extract translated values in order
-    const translatedTitle =
-      needsTitle && translationIndex < translatedValues.length
-        ? translatedValues[translationIndex++]
-        : null;
-    const translatedDescription =
-      needsDescription && translationIndex < translatedValues.length
-        ? translatedValues[translationIndex++]
-        : null;
-    const translatedDisplayAddress =
-      needsDisplayAddress && translationIndex < translatedValues.length
-        ? translatedValues[translationIndex++]
-        : null;
-
-    enrichedI18n[locale as Locale] = {
-      locale: locale, // Include the locale field that transformI18nSafely / toLocaleMap expects
-      title: textObj?.title || translatedTitle || sourceTextObj.title,
-      description:
-        textObj?.description || translatedDescription || sourceTextObj.description,
-      displayAddress:
-        textObj?.displayAddress ||
-        translatedDisplayAddress ||
-        sourceTextObj.displayAddress,
-      titleGen: Boolean(!textObj?.title && translatedTitle), // Only true if field was actually translated
-      descriptionGen: Boolean(!textObj?.description && translatedDescription),
-      displayAddressGen: Boolean(!textObj?.displayAddress && translatedDisplayAddress),
-      addressProperties: {}
-    };
   }
 
   // Step 3: Process translatable properties
@@ -371,34 +383,44 @@ export const createUserContributedFeature = async (
 
         for (const locale of supportedLocales) {
           const propTextObj = prop.i18n[locale];
+          const isSourceLocale = locale === propSourceLocale;
 
-          // Check if this locale needs translation
-          const needsValue = !propTextObj?.value && propSourceTextObj.value;
+          if (isSourceLocale) {
+            // For source locale, preserve original value and set Gen flag to false
+            enrichedPropertyI18n[locale] = {
+              locale: locale,
+              value: propSourceTextObj.value,
+              valueGen: false // Original content, not generated
+            };
+          } else {
+            // For target locales, determine if translation is needed
+            const needsValue = Boolean(propSourceTextObj.value);
 
-          let translatedValue: string | null = null;
+            let translatedValue: string | null = null;
 
-          // Only translate if needed and API key available
-          if (needsValue && subscriptionKey) {
-            try {
-              const { translateText } = await import('$lib/api/external/translation');
-              const translatedValues = await translateText(
-                [propSourceTextObj.value],
-                propSourceLocale,
-                locale,
-                region,
-                subscriptionKey
-              );
-              translatedValue = translatedValues[0] || null;
-            } catch (error) {
-              // Translation failed, translatedValue remains null
+            // Only translate if needed and API key available
+            if (needsValue && subscriptionKey) {
+              try {
+                const { translateText } = await import('$lib/api/external/translation');
+                const translatedValues = await translateText(
+                  [propSourceTextObj.value],
+                  propSourceLocale,
+                  locale,
+                  region,
+                  subscriptionKey
+                );
+                translatedValue = translatedValues[0] || null;
+              } catch (error) {
+                // Translation failed, translatedValue remains null
+              }
             }
-          }
 
-          enrichedPropertyI18n[locale] = {
-            locale: locale,
-            value: propTextObj?.value || translatedValue || propSourceTextObj.value,
-            valueGen: Boolean(!propTextObj?.value && translatedValue)
-          };
+            enrichedPropertyI18n[locale] = {
+              locale: locale,
+              value: translatedValue || propSourceTextObj.value,
+              valueGen: Boolean(translatedValue) // True if translation was provided
+            };
+          }
         }
 
         return {
@@ -414,6 +436,7 @@ export const createUserContributedFeature = async (
   // Step 4: Create the enriched feature object
   const enrichedFeature = {
     ...newFeature,
+    isPendingReview: true, // User-contributed features should be marked for review
     i18n: transformI18nSafely(enrichedI18n as Record<Locale, any>),
     properties: enrichedProperties
   };
