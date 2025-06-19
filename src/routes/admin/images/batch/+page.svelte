@@ -70,7 +70,7 @@ async function getContextForFeature(featureId: string): Promise<FeatureContext |
       console.error(`Feature not found for ID: ${featureId}`);
       return null;
     }
-    
+
     const { layer, project, organisation } = await appCtx.getHierarchy(feature);
 
     if (!layer || !project || !organisation) {

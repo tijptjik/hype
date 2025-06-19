@@ -16,7 +16,7 @@ import { getAdminCtx } from '$lib/context/admin.svelte';
 // PROVIDERS
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // COMPONENTS
-import Header from '$lib/components/resources/headers/EntityHeader.svelte'
+import Header from '$lib/components/resources/headers/EntityHeader.svelte';
 import HeaderButton from '$lib/components/layout/HeaderButton.svelte';
 import EntityActions from '$lib/components/menu/EntityActions.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
@@ -41,7 +41,7 @@ import type {
   FormFieldArrayDefinition,
   FormFieldNested,
   FormFieldConfig,
-  OrganisationDB,
+  OrganisationDB
 } from '$lib/types';
 // CONTEXT
 const adminCtx = getAdminCtx();
@@ -105,7 +105,25 @@ const FIELDS: FormFieldConfig = {
 
 // STATE : PROPS
 let pageProps: FormPageProps<Feature> = $props();
-adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.feature);
+
+// Read facet from URL hash
+const hashFacet = $derived(() => {
+  if (typeof window !== 'undefined') {
+    const hash = page.url.hash;
+    return hash ? hash.substring(1) : null;
+  }
+  return null;
+});
+
+// Set facet from hash or default to 'core'
+$effect(() => {
+  const facet = hashFacet();
+  if (facet && ['core', 'address', 'images'].includes(facet)) {
+    adminCtx.setFacet(facet as any, pageProps.data.entity, FirstClassResource.feature);
+  } else {
+    adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.feature);
+  }
+});
 
 // STATE : FORM
 let form = setForm(
@@ -178,92 +196,92 @@ function handleMapFullscreenChange(isFullscreen: boolean): void {
         ctxId={pageProps.data.entity}
         organisation={organisation as Omit<OrganisationDB, 'isCoreInclusive'>}
         {project}>
-      <form
-        id="featureForm"
-        method="POST"
-        use:enhance
-        role="form"
-        transition:fade
-        data-testid="featureForm"
-        class="h-full">
-        <main
-          class="flex flex-1 flex-row gap-6 overflow-hidden bg-black p-6 pr-3"
-          style="height: calc(100vh - 148px) !important;">
-          <div
-            class="map-container relative h-full flex-1 overflow-hidden @container"
-            class:fullscreen={isMapFullscreen}>
-            <MapSection
-              {form}
-              fields={FIELDS.map}
-              toggleFullscreen={handleMapFullscreenChange} />
+        <form
+          id="featureForm"
+          method="POST"
+          use:enhance
+          role="form"
+          transition:fade
+          data-testid="featureForm"
+          class="h-full">
+          <main
+            class="flex flex-1 flex-row gap-6 overflow-hidden bg-black p-6 pr-3"
+            style="height: calc(100vh - 148px) !important;">
             <div
-              class="absolute bottom-2 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex">
-              <UserAttributionCard
-                userId={pageProps.data.validatedForm.data.contributorId}
-                date={pageProps.data.validatedForm.data.createdAt ?? undefined}
-                type="contributor" />
-              <UserAttributionCard
-                userId={pageProps.data.validatedForm.data.publisherId}
-                date={pageProps.data.validatedForm.data.publishedAt ?? undefined}
-                type="publisher" />
+              class="map-container relative h-full flex-1 overflow-hidden @container"
+              class:fullscreen={isMapFullscreen}>
+              <MapSection
+                {form}
+                fields={FIELDS.map}
+                toggleFullscreen={handleMapFullscreenChange} />
+              <div
+                class="absolute bottom-2 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex">
+                <UserAttributionCard
+                  userId={pageProps.data.validatedForm.data.contributorId}
+                  date={pageProps.data.validatedForm.data.createdAt ?? undefined}
+                  type="contributor" />
+                <UserAttributionCard
+                  userId={pageProps.data.validatedForm.data.publisherId}
+                  date={pageProps.data.validatedForm.data.publishedAt ?? undefined}
+                  type="publisher" />
+              </div>
             </div>
-          </div>
-          <div
-            class="content-container h-auto scroll-m-10 scroll-p-12 overflow-y-auto"
-            class:shrink={isMapFullscreen}>
-            <div class="flex h-full flex-col-reverse justify-end gap-6 pr-3">
-              {#if adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false}
-                <div class="flex flex-wrap justify-between gap-6">
-                  <PropertySection
+            <div
+              class="content-container h-auto scroll-m-10 scroll-p-12 overflow-y-auto"
+              class:shrink={isMapFullscreen}>
+              <div class="flex h-full flex-col-reverse justify-end gap-6 pr-3">
+                {#if adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false}
+                  <div class="flex flex-wrap justify-between gap-6">
+                    <PropertySection
+                      {form}
+                      title={m.admin__forms_common_classifiers()}
+                      subtitle={m.admin__forms_common_classifiers_subtitle()}
+                      fieldDiscriminator="classifier"
+                      fields={FIELDS.property as FormFieldArray}
+                      cols={pageProps.data.entity == NEW_REF ? 2 : 3} />
+                    <PropertySection
+                      {form}
+                      title={m.admin__forms_common_specifiers()}
+                      subtitle={m.admin__forms_common_specifiers_subtitle()}
+                      fieldDiscriminator="specifier"
+                      fields={FIELDS.property as FormFieldArray}
+                      cols={pageProps.data.entity == NEW_REF ? 2 : 3} />
+                    {#if pageProps.data.entity !== NEW_REF}
+                      <CanonicalImage {form} />
+                    {/if}
+                  </div>
+                  <I18nSection
                     {form}
-                    title={m.admin__forms_common_classifiers()}
-                    subtitle={m.admin__forms_common_classifiers_subtitle()}
-                    fieldDiscriminator="classifier"
-                    fields={FIELDS.property as FormFieldArray}
-                    cols={pageProps.data.entity == NEW_REF ? 2 : 3} />
-                  <PropertySection
+                    title={m.admin__forms_common_descriptors()}
+                    fields={FIELDS.i18n as FormField}
+                    headerActions={featureActionSnippet}
+                    infoContent={featureInfoSnippet} />
+                  <!-- TODO Add support for translatable specifiers -->
+                {:else if adminCtx.activeFacet === 'address'}
+                  <AddressComponentSection
                     {form}
-                    title={m.admin__forms_common_specifiers()}
-                    subtitle={m.admin__forms_common_specifiers_subtitle()}
-                    fieldDiscriminator="specifier"
-                    fields={FIELDS.property as FormFieldArray}
-                    cols={pageProps.data.entity == NEW_REF ? 2 : 3} />
-                  {#if pageProps.data.entity !== NEW_REF}
-                    <CanonicalImage {form} />
-                  {/if}
-                </div>
-                <I18nSection
-                  {form}
-                  title={m.admin__forms_common_descriptors()}
-                  fields={FIELDS.i18n as FormField}
-                  headerActions={featureActionSnippet}
-                  infoContent={featureInfoSnippet} />
-                <!-- TODO Add support for translatable specifiers -->
-              {:else if adminCtx.activeFacet === 'address'}
-                <AddressComponentSection
-                  {form}
-                  title={m.admin__forms_feature_address_components_title()}
-                  fields={FIELDS.address as FormField & FormFieldNested} />
-                <AddressSection
-                  {form}
-                  title={m.admin__forms_feature_addressing_title()}
-                  subtitle={m.admin__forms_feature_addressing_subtitle()}
-                  fields={FIELDS.address as FormField & FormFieldNested} />
-              {:else if adminCtx.activeFacet === 'images' && pageProps.data.entity !== NEW_REF}
-                <ViewerSection
-                  {form}
-                  title={m.admin__forms_feature_viewer_title()}
-                  fields={FIELDS.viewer as FormFieldNested} />
-                <GallerySection
-                  {form}
-                  title={m.admin__forms_feature_gallery_title()}
-                  fields={FIELDS.gallery as FormFieldNested} />
-              {/if}
+                    title={m.admin__forms_feature_address_components_title()}
+                    fields={FIELDS.address as FormField & FormFieldNested} />
+                  <AddressSection
+                    {form}
+                    title={m.admin__forms_feature_addressing_title()}
+                    subtitle={m.admin__forms_feature_addressing_subtitle()}
+                    fields={FIELDS.address as FormField & FormFieldNested} />
+                {:else if adminCtx.activeFacet === 'images' && pageProps.data.entity !== NEW_REF}
+                  <ViewerSection
+                    {form}
+                    title={m.admin__forms_feature_viewer_title()}
+                    fields={FIELDS.viewer as FormFieldNested} />
+                  <GallerySection
+                    {form}
+                    title={m.admin__forms_feature_gallery_title()}
+                    fields={FIELDS.gallery as FormFieldNested} />
+                {/if}
+              </div>
             </div>
-          </div>
-        </main>
-      </form>
-    </ImageProvider>
+          </main>
+        </form>
+      </ImageProvider>
     {:catch error}
       <!-- Error state - show fallback -->
       <div class="flex items-center justify-center p-8">
