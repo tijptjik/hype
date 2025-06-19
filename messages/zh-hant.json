@@ -463,5 +463,6 @@
   "suave_lazy_tiger_attend": "任何",
   "filters__was": "曾是",
   "teary_fit_maggot_socket": "有形",
-  "filters__content": "內容"
+  "filters__content": "內容",
+  "filters__not_all": "全部"
 }

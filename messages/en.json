@@ -369,7 +369,6 @@
   "giant_deft_kangaroo_feel": "Display Address",
   "even_sunny_lizard_dare": "Publicly Accessible",
   "teary_fit_maggot_heart": "Intangible",
-  "teary_fit_maggot_socket": "Tangible",
   "novel_real_gadfly_savor": "TRANSLATE FROM",
   "novel_real_gadfly_savor_missing": "TRANSLATE MISSING FROM",
   "wacky_home_sawfish_accept": "Add",
@@ -457,11 +456,12 @@
   "dry_aware_squirrel_cheer": "Visitable",
   "swift_fine_shrimp_assure": "Locales",
   "long_zippy_felix_mix": "Published",
-  "these_weary_shark_revive": "All Published",
   "busy_flaky_mayfly_chop": "Results",
   "royal_civil_goldfish_fetch": "None",
   "awful_ok_polecat_rise": "Some",
   "suave_lazy_tiger_attend": "Any",
   "filters__was": "Was",
-  "filters__content": "Content"
+  "filters__content": "Content",
+  "teary_fit_maggot_socket": "Tangible",
+  "filters__not_all": "A̶L̶L̶"
 }
