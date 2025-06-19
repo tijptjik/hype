@@ -86,11 +86,11 @@ const handleDrop = async (e: CustomEvent) => {
 {#snippet LoadingOverlay(message = 'Loading...')}
   <div
     class="absolute inset-0 z-40 flex items-center justify-center"
-    in:fade={{ duration: 200, delay: 200 }}
-    out:fade={{ duration: 200 }}>
+    in:fade={{ duration: 500, delay: 1500 }}
+    out:fade={{ duration: 250 }}>
     <div
       class="flex flex-col items-center gap-2 rounded-lg"
-      in:scale={{ duration: 200, delay: 200, start: 0.95 }}>
+      in:scale={{ duration: 500, delay: 1500, start: 0.95 }}>
       <span class="loading loading-spinner loading-lg text-primary"></span>
     </div>
   </div>
@@ -137,7 +137,7 @@ const handleDrop = async (e: CustomEvent) => {
         }}
         onError={() => {
           if (!image?.id) return;
-          
+
           console.warn(`[Viewer] Failed to load image ${image.id}`);
           imageCtx.setLoadStatus(image.id, 'error');
         }} />
@@ -146,7 +146,7 @@ const handleDrop = async (e: CustomEvent) => {
 
   <!-- Loading Overlay -->
   {#if isPreview || isPreviewReplacement || isLoading}
-    {@render LoadingOverlay('Uploading...')}
+    <!-- {@render LoadingOverlay('Loading...')} -->
   {/if}
 {/snippet}
 
@@ -181,7 +181,8 @@ const handleDrop = async (e: CustomEvent) => {
 
   <!-- Loading Overlay -->
   {#if isPreview || isPreviewReplacement || isLoading}
-    {@render LoadingOverlay('Uploading...')}
+    <!-- TODO Figure out what was causign this spinned to hang and add the spinner back -->
+    <!-- {@render LoadingOverlay('Uploading...')} -->
   {/if}
 {/snippet}
 
