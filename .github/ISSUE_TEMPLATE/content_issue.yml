@@ -1,7 +1,7 @@
 name: Content Issue
 description: Report issues with content, text, or information
-title: "[CONTENT] "
-labels: ["content"]
+title: '[CONTENT] '
+labels: ['content']
 body:
   - type: textarea
     id: location
@@ -51,4 +51,4 @@ body:
         - Missing Information
         - Incorrect Information
         - Translation Issue
-        - Other 
+        - Other

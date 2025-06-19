@@ -8,7 +8,7 @@ import zhHansMessages from '../../messages/zh-hans.json';
 
 /**
  * I18N Message Validation Tests
- * 
+ *
  * These tests ensure that:
  * 1. All supported languages have message files
  * 2. All languages have the same message keys (no missing translations)
@@ -26,10 +26,10 @@ describe('I18N Message Validation', () => {
   // HELPER FUNCTIONS
   const getAllKeys = (obj: Record<string, any>, prefix = ''): string[] => {
     const keys: string[] = [];
-    
+
     for (const [key, value] of Object.entries(obj)) {
       const fullKey = prefix ? `${prefix}.${key}` : key;
-      
+
       if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
         // Nested object - recurse
         keys.push(...getAllKeys(value, fullKey));
@@ -38,16 +38,16 @@ describe('I18N Message Validation', () => {
         keys.push(fullKey);
       }
     }
-    
+
     return keys.sort();
   };
 
   const getEmptyKeys = (obj: Record<string, any>, prefix = ''): string[] => {
     const emptyKeys: string[] = [];
-    
+
     for (const [key, value] of Object.entries(obj)) {
       const fullKey = prefix ? `${prefix}.${key}` : key;
-      
+
       if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
         // Nested object - recurse
         emptyKeys.push(...getEmptyKeys(value, fullKey));
@@ -58,12 +58,12 @@ describe('I18N Message Validation', () => {
         }
       }
     }
-    
+
     return emptyKeys;
   };
 
   it('should have message files for all supported locales', () => {
-    supportedLocales.forEach(locale => {
+    supportedLocales.forEach((locale) => {
       expect(messageFiles[locale]).toBeDefined();
       expect(typeof messageFiles[locale]).toBe('object');
       expect(messageFiles[locale]).not.toBeNull();
@@ -72,28 +72,37 @@ describe('I18N Message Validation', () => {
 
   it('should have consistent message keys across all languages', () => {
     // Get all keys from each language
-    const keysByLocale = supportedLocales.reduce((acc, locale) => {
-      acc[locale] = getAllKeys(messageFiles[locale]);
-      return acc;
-    }, {} as Record<string, string[]>);
+    const keysByLocale = supportedLocales.reduce(
+      (acc, locale) => {
+        acc[locale] = getAllKeys(messageFiles[locale]);
+        return acc;
+      },
+      {} as Record<string, string[]>
+    );
 
     // Use English as the reference language
     const referenceKeys = keysByLocale[SupportedLocales.en];
     expect(referenceKeys.length).toBeGreaterThan(0);
 
     // Check each other language has the same keys
-    supportedLocales.forEach(locale => {
+    supportedLocales.forEach((locale) => {
       if (locale === SupportedLocales.en) return;
 
       const localeKeys = keysByLocale[locale];
-      
+
       // Check for missing keys in this locale
-      const missingKeys = referenceKeys.filter(key => !localeKeys.includes(key));
-      expect(missingKeys, `Missing keys in ${locale}: ${missingKeys.join(', ')}`).toHaveLength(0);
+      const missingKeys = referenceKeys.filter((key) => !localeKeys.includes(key));
+      expect(
+        missingKeys,
+        `Missing keys in ${locale}: ${missingKeys.join(', ')}`
+      ).toHaveLength(0);
 
       // Check for extra keys in this locale
-      const extraKeys = localeKeys.filter(key => !referenceKeys.includes(key));
-      expect(extraKeys, `Extra keys in ${locale}: ${extraKeys.join(', ')}`).toHaveLength(0);
+      const extraKeys = localeKeys.filter((key) => !referenceKeys.includes(key));
+      expect(
+        extraKeys,
+        `Extra keys in ${locale}: ${extraKeys.join(', ')}`
+      ).toHaveLength(0);
 
       // Keys should be identical
       expect(localeKeys).toEqual(referenceKeys);
@@ -101,33 +110,38 @@ describe('I18N Message Validation', () => {
   });
 
   it('should not have any empty or undefined message values', () => {
-    supportedLocales.forEach(locale => {
+    supportedLocales.forEach((locale) => {
       const emptyKeys = getEmptyKeys(messageFiles[locale]);
-      expect(emptyKeys, `Empty/undefined values in ${locale}: ${emptyKeys.join(', ')}`).toHaveLength(0);
+      expect(
+        emptyKeys,
+        `Empty/undefined values in ${locale}: ${emptyKeys.join(', ')}`
+      ).toHaveLength(0);
     });
   });
 
   it('should have non-empty message files', () => {
-    supportedLocales.forEach(locale => {
+    supportedLocales.forEach((locale) => {
       const keys = getAllKeys(messageFiles[locale]);
-      expect(keys.length, `${locale} message file should not be empty`).toBeGreaterThan(0);
+      expect(keys.length, `${locale} message file should not be empty`).toBeGreaterThan(
+        0
+      );
     });
   });
 
   it('should have consistent structure depth across languages', () => {
     const getMaxDepth = (obj: Record<string, any>, currentDepth = 0): number => {
       let maxDepth = currentDepth;
-      
+
       for (const value of Object.values(obj)) {
         if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
           maxDepth = Math.max(maxDepth, getMaxDepth(value, currentDepth + 1));
         }
       }
-      
+
       return maxDepth;
     };
 
-    const depths = supportedLocales.map(locale => ({
+    const depths = supportedLocales.map((locale) => ({
       locale,
       depth: getMaxDepth(messageFiles[locale])
     }));
@@ -135,7 +149,10 @@ describe('I18N Message Validation', () => {
     // All languages should have the same maximum nesting depth
     const referenceDepth = depths[0].depth;
     depths.forEach(({ locale, depth }) => {
-      expect(depth, `${locale} has different nesting depth (${depth}) than reference (${referenceDepth})`).toBe(referenceDepth);
+      expect(
+        depth,
+        `${locale} has different nesting depth (${depth}) than reference (${referenceDepth})`
+      ).toBe(referenceDepth);
     });
   });
 
@@ -143,21 +160,22 @@ describe('I18N Message Validation', () => {
     // Verify that the message file keys match exactly with our supported locales
     const messageFileLocales = Object.keys(messageFiles).sort();
     const expectedLocales = supportedLocales.slice().sort();
-    
+
     expect(messageFileLocales).toEqual(expectedLocales);
   });
 
   // DIAGNOSTIC INFORMATION
   it('should provide diagnostic information about message coverage', () => {
-    const diagnostics = supportedLocales.map(locale => {
+    const diagnostics = supportedLocales.map((locale) => {
       const keys = getAllKeys(messageFiles[locale]);
       const emptyKeys = getEmptyKeys(messageFiles[locale]);
-      
+
       return {
         locale,
         totalKeys: keys.length,
         emptyKeys: emptyKeys.length,
-        coverage: ((keys.length - emptyKeys.length) / keys.length * 100).toFixed(2) + '%'
+        coverage:
+          (((keys.length - emptyKeys.length) / keys.length) * 100).toFixed(2) + '%'
       };
     });
 
@@ -169,4 +187,4 @@ describe('I18N Message Validation', () => {
       expect(emptyKeys, `${locale} should have no empty keys`).toBe(0);
     });
   });
-}); 
+});

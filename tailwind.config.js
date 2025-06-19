@@ -71,7 +71,7 @@ export default {
         'gradient-start': 'hsl(var(--rose-500))', // color-variable
         secondary: '#7482FF', // color-variable
         ok: 'rgb(62, 173, 142)', // color-variable
-        error: 'rgb(223, 69, 69)'// color-variable
+        error: 'rgb(223, 69, 69)' // color-variable
       },
       fontSize: {
         '2xs': '0.625rem',

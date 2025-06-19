@@ -1,4 +1,4 @@
-name: "DEPLOY :: Cloudflare"
+name: 'DEPLOY :: Cloudflare'
 
 on:
   push:

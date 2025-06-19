@@ -1,4 +1,4 @@
-name: "TEST :: Run Tests"
+name: 'TEST :: Run Tests'
 
 on:
   workflow_call:
@@ -8,7 +8,7 @@ on:
         type: string
     outputs:
       test-status:
-        description: "Status of the test run"
+        description: 'Status of the test run'
         value: ${{ jobs.test.outputs.status }}
 
 jobs:
@@ -92,4 +92,4 @@ jobs:
         uses: actions/cache@v3
         with:
           path: test-results
-          key: ${{ runner.os }}-test-${{ github.sha }} 
+          key: ${{ runner.os }}-test-${{ github.sha }}

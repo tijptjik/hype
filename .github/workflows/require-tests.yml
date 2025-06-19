@@ -1,4 +1,4 @@
-name: "REQUIRE :: Tests Pass"
+name: 'REQUIRE :: Tests Pass'
 
 on:
   pull_request:
@@ -17,4 +17,4 @@ jobs:
         id: test-cache
         with:
           path: test-results
-          key: ${{ runner.os }}-test-${{ github.event.pull_request.head.sha }} 
+          key: ${{ runner.os }}-test-${{ github.event.pull_request.head.sha }}

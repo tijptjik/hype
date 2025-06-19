@@ -1,7 +1,7 @@
 name: Feature Request
 description: Suggest a new feature or enhancement
-title: "[FEATURE] "
-labels: ["enhancement"]
+title: '[FEATURE] '
+labels: ['enhancement']
 body:
   - type: textarea
     id: description
@@ -38,4 +38,4 @@ body:
     attributes:
       label: Alternatives Considered
       description: Any alternative solutions or features you've considered
-      placeholder: Describe alternatives... 
+      placeholder: Describe alternatives...

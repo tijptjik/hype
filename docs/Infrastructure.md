@@ -1,6 +1,7 @@
 # Infrastructure
 
 ## Table of Contents
+
 - [Overview](#overview)
 - [Technology Stack](#technology-stack)
 - [Setup Instructions](#setup-instructions)
@@ -120,6 +121,7 @@ Then add the other secrets the build relies on. See `.dev.vars.production` and `
 Public environment variables are configured in `wrangler.toml` and read at runtime. Secret variables are uploaded separately using `wrangler secret put`.
 
 **Public Variables** (in `wrangler.toml`):
+
 ```toml
 [vars]
 PUBLIC_DRIZZLE_LOGGER=false

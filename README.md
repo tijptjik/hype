@@ -25,7 +25,7 @@ See [Contribution](CONTRIBUTING.md) docs.
 
 ## Commands
 
-See [package.json](package.json) for available commands, and run them with bun 
+See [package.json](package.json) for available commands, and run them with bun
 
 ```bash
 bun run {command}

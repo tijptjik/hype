@@ -38,19 +38,21 @@ const localCloudflare = async (): Promise<Plugin[]> => {
   const isDev = process.env.NODE_ENV === 'dev' || process.env.DEV;
   const isCI = process.env.CI === 'true';
   const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST;
-  
+
   if (isDev && !isCI && !isTest) {
     return cloudflare({
       configPath: './wrangler.toml'
     });
   } else {
-    return [{
-      name: 'skip-cloudflare-plugin',
-      apply: 'build',
-      buildStart() {
-        console.log('🚀 Skipping Cloudflare plugin in CI/build environment');
+    return [
+      {
+        name: 'skip-cloudflare-plugin',
+        apply: 'build',
+        buildStart() {
+          console.log('🚀 Skipping Cloudflare plugin in CI/build environment');
+        }
       }
-    }];
+    ];
   }
 };
 
