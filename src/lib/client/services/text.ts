@@ -33,4 +33,4 @@ export function resetAnimation(container: HTMLDivElement | null) {
       wrapper.classList.add('animate');
     }
   });
-} 
+}

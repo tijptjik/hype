@@ -12,13 +12,7 @@ import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 // TYPES
 import type { SQL } from 'drizzle-orm';
-import type {
-  Hub,
-  QueryParams,
-  HubOpts,
-  SessionUser,
-  HubDBRaw,
-} from '$lib/types';
+import type { Hub, QueryParams, HubOpts, SessionUser, HubDBRaw } from '$lib/types';
 import type { SuperValidated } from 'sveltekit-superforms';
 
 // ═══════════════════════

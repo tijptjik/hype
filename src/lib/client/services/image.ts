@@ -21,7 +21,7 @@ import type {
   ImagePartial,
   Metadata,
   LngLat,
-  SignData,
+  SignData
 } from '$lib/types';
 
 // ═══════════════════════

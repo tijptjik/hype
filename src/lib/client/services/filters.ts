@@ -56,7 +56,11 @@ export function getSimpleFilterState<K extends keyof FeatureViewFilters>(
   }
 
   // For nested filters
-  if (typeof sectionFilters === 'object' && filterKey in sectionFilters) {
+  if (
+    typeof sectionFilters === 'object' &&
+    propertyId &&
+    propertyId in sectionFilters
+  ) {
     return (sectionFilters as any)[propertyId];
   }
 

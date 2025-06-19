@@ -4,7 +4,8 @@ import { getI18n } from '$lib/i18n';
 // SERVICES
 import { getLocalisedPropertyValues } from '$lib/client/services/property';
 // TYPES
-import type { Property, AppCtx } from '$lib/types';
+import type { Property } from '$lib/types';
+import type { AppCtx } from '$lib/context/app.svelte';
 
 type Props = {
   property: Property;
@@ -15,7 +16,8 @@ type Props = {
   onChange: (value: string) => void;
 };
 
-let { property, value, userPreferences, appCtx, propertyId, onChange }: Props = $props();
+let { property, value, userPreferences, appCtx, propertyId, onChange }: Props =
+  $props();
 
 // STATE : DERIVED
 let propertyValues = $derived(getLocalisedPropertyValues(appCtx, propertyId));
@@ -25,7 +27,10 @@ let placeholder = $derived(
 </script>
 
 <select
-  class="select select-sm w-full rounded-md border-none bg-neutral p-2 px-4 outline-none focus-within:border-none focus-within:outline-none focus:border-none focus:outline-none h-12 {value == "" ? 'text-base-content/60 italic' : 'text-base-content text-bold'}"
+  class="select select-sm h-12 w-full rounded-md border-none bg-neutral p-2 px-4 outline-none focus-within:border-none focus-within:outline-none focus:border-none focus:outline-none {value ==
+  ''
+    ? 'italic text-base-content/60'
+    : 'text-bold text-base-content'}"
   {value}
   onchange={(e) => {
     const target = e.target as HTMLSelectElement;
@@ -35,4 +40,4 @@ let placeholder = $derived(
   {#each propertyValues.entries() as [id, localisedValue]}
     <option value={id}>{localisedValue}</option>
   {/each}
-</select> 
+</select>

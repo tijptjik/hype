@@ -111,7 +111,7 @@ export function isOrganisationOwner(
   organisationId: string
 ): boolean {
   if (!user?.roles) return false;
-  
+
   return user.roles.some(
     (role: UserRoleDisco) =>
       role.type === 'organisation' &&
@@ -129,11 +129,8 @@ export function canUpdateOrganisation(
   organisationId: string
 ): boolean {
   if (!user) return false;
-  
-  return (
-    canManageOrganisations(user) ||
-    isOrganisationOwner(user, organisationId)
-  );
+
+  return canManageOrganisations(user) || isOrganisationOwner(user, organisationId);
 }
 
 // ═══════════════════════
@@ -148,7 +145,7 @@ export function isProjectMaintainer(
   projectId: string
 ): boolean {
   if (!user?.roles) return false;
-  
+
   return user.roles.some(
     (role: UserRoleDisco) =>
       role.type === 'project' &&
@@ -160,17 +157,12 @@ export function isProjectMaintainer(
 /**
  * Checks if the user is a member of a specific project
  */
-export function isProjectMember(
-  user: SessionUser | null,
-  projectId: string
-): boolean {
+export function isProjectMember(user: SessionUser | null, projectId: string): boolean {
   if (!user?.roles) return false;
-  
+
   return user.roles.some(
     (role: UserRoleDisco) =>
-      role.type === 'project' &&
-      role.projectId === projectId &&
-      role.role === 'member'
+      role.type === 'project' && role.projectId === projectId && role.role === 'member'
   );
 }
 
@@ -178,22 +170,26 @@ export function isProjectMember(
  * Checks if the user can create projects
  * Must be organisation owner or superadmin
  */
-export function canCreateProjects(user: SessionUser | null, organisationId?: Id): boolean {
+export function canCreateProjects(
+  user: SessionUser | null,
+  organisationId?: Id
+): boolean {
   if (!user) return false;
-  
+
   // SuperAdmin can always create projects
   if (canManageOrganisations(user)) return true;
-  
+
   // If organisationId is provided, check if user is owner of that specific organisation
   if (organisationId) {
     return isOrganisationOwner(user, organisationId);
   }
-  
+
   // If no organisationId provided, check if user is owner of any organisation
-  return user.roles?.some(
-    (role: UserRoleDisco) =>
-      role.type === 'organisation' && role.role === 'owner'
-  ) ?? false;
+  return (
+    user.roles?.some(
+      (role: UserRoleDisco) => role.type === 'organisation' && role.role === 'owner'
+    ) ?? false
+  );
 }
 
 /**
@@ -206,7 +202,7 @@ export function canUpdateProject(
   organisationId?: string
 ): boolean {
   if (!user) return false;
-  
+
   return (
     user.superAdmin === true ||
     isProjectMaintainer(user, projectId) ||
@@ -222,28 +218,19 @@ export function canUpdateProject(
  * Checks if the user can create layers for a specific project
  * Must be project maintainer or superadmin
  */
-export function canCreateLayers(
-  user: SessionUser | null,
-  projectId: string
-): boolean {
+export function canCreateLayers(user: SessionUser | null, projectId: string): boolean {
   if (!user) return false;
-  
-  return (
-    user.superAdmin === true ||
-    isProjectMaintainer(user, projectId)
-  );
+
+  return user.superAdmin === true || isProjectMaintainer(user, projectId);
 }
 
 /**
  * Checks if the user can update layers for a specific project
  * Must be project maintainer, member, or superadmin
  */
-export function canUpdateLayer(
-  user: SessionUser | null,
-  projectId: string
-): boolean {
+export function canUpdateLayer(user: SessionUser | null, projectId: string): boolean {
   if (!user) return false;
-  
+
   return (
     user.superAdmin === true ||
     isProjectMaintainer(user, projectId) ||
@@ -264,7 +251,7 @@ export function canManageFeatures(
   projectId: string
 ): boolean {
   if (!user) return false;
-  
+
   return (
     user.superAdmin === true ||
     isProjectMaintainer(user, projectId) ||
@@ -295,18 +282,25 @@ export function canCreateEntity(user: SessionUser | null, resource: string): boo
     case 'layer': {
       // For layers, we need to check if user can create layers for any project they have access to
       // This is a simplified check - in practice, you might want to be more specific
-      return user.superAdmin === true || 
-             user.roles?.some(role => role.type === 'project' && role.role === 'maintainer') === true;
+      return (
+        user.superAdmin === true ||
+        user.roles?.some(
+          (role) => role.type === 'project' && role.role === 'maintainer'
+        ) === true
+      );
     }
 
     case 'feature': {
       // For features, we need to check if user can manage features for any project they have access to
       // This is a simplified check - in practice, you might want to be more specific
-      return user.superAdmin === true || 
-             user.roles?.some(role => 
-               role.type === 'project' && 
-               (role.role === 'maintainer' || role.role === 'member')
-             ) === true;
+      return (
+        user.superAdmin === true ||
+        user.roles?.some(
+          (role) =>
+            role.type === 'project' &&
+            (role.role === 'maintainer' || role.role === 'member')
+        ) === true
+      );
     }
 
     case 'task':

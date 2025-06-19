@@ -31,7 +31,7 @@ let showAdminMenu = $derived(
         role.role === 'owner' ||
         role.role === 'superadmin' ||
         role.role === 'maintainer' ||
-        role.role === 'member' 
+        role.role === 'member'
     )
 );
 

@@ -13,21 +13,30 @@ type Props = {
   rows?: number;
 };
 
-let { property, value, userPreferences, onChange, placeholder, rows = 3 }: Props = $props();
+let {
+  property,
+  value,
+  userPreferences,
+  onChange,
+  placeholder,
+  rows = 3
+}: Props = $props();
 
 // STATE : DERIVED
 let computedPlaceholder = $derived(
-  placeholder || 
-  getI18n(property, 'placeholder', userPreferences) || 
-  'Enter value...'
+  placeholder || getI18n(property, 'placeholder', userPreferences) || 'Enter value...'
 );
 </script>
 
-<div class="relative rounded-lg border-none bg-neutral pl-0 pr-3 focus-within:outline-neutral-500">
+<div
+  class="relative rounded-lg border-none bg-neutral pl-0 pr-3 focus-within:outline-neutral-500">
   <textarea
-    class="w-full resize-none rounded-md bg-neutral p-2 focus:border-none focus:outline-none focus:ring-0 active:border-none active:outline-none {value == "" ? 'text-base-content/60 italic' : 'text-base-content text-bold'}"
+    class="w-full resize-none rounded-md bg-neutral p-2 focus:border-none focus:outline-none focus:ring-0 active:border-none active:outline-none {value ==
+    ''
+      ? 'italic text-base-content/60'
+      : 'text-bold text-base-content'}"
     {value}
     {rows}
     placeholder={computedPlaceholder}
     oninput={(e) => onChange((e.target as HTMLTextAreaElement).value)}></textarea>
-</div> 
+</div>
