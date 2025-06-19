@@ -28,7 +28,7 @@ export function setStatistic(
   type: 'boolean' | 'count' | 'mean' | 'sum'
 ): void {
   let resourceStats = appCtx.cache.stats.get(resourceType);
-  
+
   if (!resourceStats) {
     resourceStats = new SvelteMap();
     appCtx.cache.stats.set(resourceType, resourceStats);
