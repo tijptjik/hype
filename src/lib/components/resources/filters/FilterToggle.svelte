@@ -37,7 +37,9 @@ const {
   <div class="flex items-center gap-2">
     <span
       onclick={onToggleFalse}
-      class="text text-sm uppercase text-base-content opacity-0 transition-opacity duration-300 group-hover:opacity-40">
+      class="text cursor-pointer text-sm uppercase text-base-content opacity-0 transition-opacity duration-300 group-hover:opacity-40"
+      role="button"
+      tabindex="-1">
       {falseLabel}
     </span>
     <input
@@ -50,10 +52,16 @@ const {
           : ''}"
       checked={currentValue === true}
       indeterminate={currentValue === null}
-      onchange={onToggleChange} />
+      onchange={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onToggleChange(e);
+      }} />
     <span
       onclick={onToggleTrue}
-      class="text text-sm uppercase text-base-content opacity-0 transition-opacity duration-300 group-hover:opacity-40">
+      class="text cursor-pointer text-sm uppercase text-base-content opacity-0 transition-opacity duration-300 group-hover:opacity-40"
+      role="button"
+      tabindex="-1">
       {trueLabel}
     </span>
   </div>
