@@ -12,8 +12,6 @@ type Props = {
   adminCtx: AdminCtx;
   image: ImageDB;
   feature: Feature;
-  organisation?: Organisation;
-  project?: Project;
   isAdminMode?: boolean;
   currentIndex?: number;
   totalCount?: number;
@@ -29,8 +27,6 @@ let {
   adminCtx,
   image,
   feature,
-  organisation,
-  project,
   isAdminMode = false,
   canNavigatePrevious = false,
   canNavigateNext = false,
@@ -38,6 +34,14 @@ let {
   onNavigateNext,
   onNavigatePrevious
 }: Props = $props();
+
+let organisation = $derived<Organisation | undefined>(
+  feature ? adminCtx.appCtx.cache.organisation.get(feature.organisationId) : undefined
+);
+
+let project = $derived<Project | undefined>(
+  feature ? adminCtx.appCtx.cache.project.get(feature.projectId) : undefined
+);
 
 function handleKeydown(event: KeyboardEvent) {
   // Only handle events if the modal is actually open and feature exists

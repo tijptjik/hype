@@ -53,6 +53,9 @@ function navigateToResource(entity: Feature) {
 }
 
 function handleRowKeyDown(event: KeyboardEvent, entity: Feature) {
+  // Don't handle keyboard events if this row is selected (modal is open)
+  if (isSelected) return;
+
   if (event.key === 'Enter') {
     event.preventDefault();
     event.stopPropagation();
