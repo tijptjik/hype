@@ -475,5 +475,6 @@
   "sunny_day_lemur_conquer_short": "类别",
   "alert_blue_raven_grasp": "所有自由格式字段",
   "filters__translation": "翻译",
-  "filters__image": "图片"
+  "filters__image": "图片",
+  "filters__status": "地位"
 }

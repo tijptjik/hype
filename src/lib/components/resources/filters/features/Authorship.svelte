@@ -11,17 +11,22 @@ import {
 } from '$lib/client/services/filters';
 // COMPONENTS
 import FilterToggle from '../FilterToggle.svelte';
+// TYPES
+import type { FeatureAuthorshipFilterKey } from '$lib/types';
 
 // CONTEXT
 const adminCtx = getAdminCtx();
 
 // FILTER DEFINITIONS
-const authorshipFilters: Record<'hasTitle' | 'hasDescription', { label: string }> = {
+const authorshipFilters: Record<FeatureAuthorshipFilterKey, { label: string }> = {
   hasTitle: {
     label: m.feature__title()
   },
   hasDescription: {
     label: m.feature__description()
+  },
+  hasDisplayAddress: {
+    label: m.feature__address()
   }
 };
 </script>
@@ -29,9 +34,9 @@ const authorshipFilters: Record<'hasTitle' | 'hasDescription', { label: string }
 {#each Object.entries(authorshipFilters) as [filterKey, filterDef], idx (filterKey)}
   {@const currentValue = getAuthorshipFilterState(
     adminCtx,
-    filterKey as 'hasTitle' | 'hasDescription'
+    filterKey as FeatureAuthorshipFilterKey
   )}
-  {@const key = filterKey as 'hasTitle' | 'hasDescription'}
+  {@const key = filterKey as FeatureAuthorshipFilterKey}
   <FilterToggle
     label={filterDef.label}
     {currentValue}
@@ -41,7 +46,8 @@ const authorshipFilters: Record<'hasTitle' | 'hasDescription', { label: string }
     onToggleFalse={() => toggleFilterState(adminCtx, key, false)}
     onToggleTrue={() => toggleFilterState(adminCtx, key, true)}
     onToggleChange={() => {
-      const nextState = currentValue === null ? true : currentValue === true ? false : null;
+      const nextState =
+        currentValue === null ? true : currentValue === true ? false : null;
       toggleFilterState(adminCtx, key, nextState);
     }} />
 {/each}

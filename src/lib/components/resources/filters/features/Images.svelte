@@ -4,11 +4,7 @@ import { m } from '$lib/i18n';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // SERVICES
-import {
-  getSimpleFilterState,
-  setFilterState,
-  getFeatureTaskLabel
-} from '$lib/client/services/filters';
+import { getSimpleFilterState, setFilterState } from '$lib/client/services/filters';
 // COMPONENTS
 import FilterToggle from '../FilterToggle.svelte';
 // TYPES
@@ -24,16 +20,16 @@ const filterConfig: Record<
   hasImage: {
     label: m.feature__images(),
     falseLabel: m.royal_civil_goldfish_fetch(),
-    trueLabel: m.awful_ok_polecat_rise(),
+    trueLabel: m.awful_ok_polecat_rise()
   },
   isOneImagePublished: {
     label: m.long_zippy_felix_mix(),
     falseLabel: m.royal_civil_goldfish_fetch(),
-    trueLabel: m.awful_ok_polecat_rise(),
+    trueLabel: m.awful_ok_polecat_rise()
   },
   isAllImagePublished: {
     label: m.long_zippy_felix_mix(),
-    falseLabel: m.suave_lazy_tiger_attend(),  
+    falseLabel: m.filters__not_all(),
     trueLabel: m.filters__all()
   }
 };
@@ -62,7 +58,9 @@ const filterConfig: Record<
     label={filterDef.label}
     {currentValue}
     {idx}
-    transformOffset={20}
+    transformOffset={0}
+    falseLabel={filterDef.falseLabel}
+    trueLabel={filterDef.trueLabel}
     {onToggleChange}
     {onToggleFalse}
     {onToggleTrue} />

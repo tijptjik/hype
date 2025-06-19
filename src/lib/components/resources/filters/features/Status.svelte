@@ -66,26 +66,12 @@ const statusFilters: Record<
       {idx}
       falseLabel={getFeatureTaskLabel(filterDef, false)}
       trueLabel={getFeatureTaskLabel(filterDef, true)}
-      onToggleFalse={() =>
-        toggleFilterState(
-          adminCtx,
-          key,
-          false
-        )}
-      onToggleTrue={() =>
-        toggleFilterState(
-          adminCtx,
-          key,
-          true
-        )}
+      onToggleFalse={() => toggleFilterState(adminCtx, key, false)}
+      onToggleTrue={() => toggleFilterState(adminCtx, key, true)}
       onToggleChange={() => {
         const nextState =
           currentValue === null ? true : currentValue === true ? false : null;
-        setFilterState(
-          adminCtx,
-          key,
-          nextState
-        );
+        setFilterState(adminCtx, key, nextState);
       }} />
   {/if}
 {/each}

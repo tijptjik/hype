@@ -43,12 +43,12 @@ let showSectionMenu = $state(true);
 
 // FILTER SECTIONS CONFIG
 const filterSections = {
-  status: { icon: CircleStack, title: 'Status' },
-  authorship: { icon: BookOpen, title: 'Content' },
-  translation: { icon: Language, title: 'Translation' },
-  image: { icon: Photo, title: 'Images' },
-  classifier: { icon: Tag, title: 'Categories' },
-  specifier: { icon: Pencil, title: 'Specifiers' }
+  status: { icon: CircleStack, title: m.filters__status() },
+  authorship: { icon: BookOpen, title: m.filters__content() },
+  translation: { icon: Language, title: m.filters__translation() },
+  image: { icon: Photo, title: m.filters__image() },
+  classifier: { icon: Tag, title: m.sunny_day_lemur_conquer_short() },
+  specifier: { icon: Pencil, title: m.alert_blue_raven_grasp() }
 };
 
 const filterKeys: Record<string, (keyof FeatureViewFilters)[]> = {
@@ -64,7 +64,11 @@ const filterKeys: Record<string, (keyof FeatureViewFilters)[]> = {
     'isOneImagePublished',
     'isAllImagePublished'
   ] as FeatureImageFilterKey[],
-  authorship: ['hasTitle', 'hasDescription'] as FeatureAuthorshipFilterKey[],
+  authorship: [
+    'hasTitle',
+    'hasDescription',
+    'hasDisplayAddress'
+  ] as FeatureAuthorshipFilterKey[],
   translation: [
     'isTitleTranslated',
     'isDescriptionTranslated',
@@ -76,6 +80,7 @@ const filterKeys: Record<string, (keyof FeatureViewFilters)[]> = {
 const getFilterCount = (section: string) => {
   const featureFilters = adminCtx.state.viewFilters.feature;
   let count = 0;
+
   if (section === 'status') {
     count = filterKeys[section].filter((filterKey) => {
       // isArchived is for SuperAdmin only so we ignore
@@ -96,6 +101,22 @@ const getFilterCount = (section: string) => {
         });
       }
     });
+  } else if (section === 'classifier' || section === 'specifier') {
+    // Handle property-based filters (classifiers and specifiers)
+    const propertiesFilter = featureFilters.properties;
+    if (propertiesFilter && typeof propertiesFilter === 'object') {
+      const properties = [...adminCtx.appCtx.cache.property.values()].filter(
+        (p) => p.type === (section === 'classifier' ? 'classifier' : 'specifier')
+      );
+      properties.forEach((property) => {
+        if (
+          propertiesFilter[property.id] !== null &&
+          propertiesFilter[property.id] !== undefined
+        ) {
+          count++;
+        }
+      });
+    }
   } else if (filterKeys[section]) {
     filterKeys[section].forEach((key) => {
       if (key === 'isArchived') {

@@ -474,5 +474,6 @@
   "sunny_day_lemur_conquer_short": "Categories",
   "alert_blue_raven_grasp": "All Freeform Fields",
   "filters__translation": "Translation",
-  "filters__image": "Images"
+  "filters__image": "Images",
+  "filters__status": "Status"
 }
