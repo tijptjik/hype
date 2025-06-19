@@ -615,36 +615,50 @@ export class AdminCtx {
         }
       );
 
+      // Calculate multi-locale translation status - ALL active locales must be translated for TRUE
+      const calculateMultiLocaleTranslationStatus = (): boolean | null => {
+        if (!hasAnyManualContent) {
+          return null; // No manual content anywhere
+        }
+
+        // Check if ALL active locales have manual translation
+        const allActiveLocalesTranslated = [...activeLocales].every((locale) => {
+          const i18n = feature.i18n?.[locale];
+          if (!i18n) return false; // No entry for this locale
+
+          const text = i18n[textField as keyof typeof i18n];
+          const isGenerated = i18n[genField as keyof typeof i18n] ?? false;
+
+          return text && typeof text === 'string' && text.length > 0 && !isGenerated;
+        });
+
+        return allActiveLocalesTranslated;
+      };
+
+      const multiLocaleStatus = calculateMultiLocaleTranslationStatus();
+
       const allLocalesMatch = [...activeLocales].every((locale) => {
         const filterValue = filters[filterKey]?.[locale];
         if (filterValue === null) return true;
 
-        const i18n = feature.i18n?.[locale];
-        const text = i18n?.[textField as keyof typeof i18n];
-        const isGenerated = i18n?.[genField as keyof typeof i18n] ?? false;
-
-        // Check if this locale has source content
-        const hasSourceContent = text && typeof text === 'string' && text.length > 0;
-
-        if (!hasSourceContent) {
-          // No source content in this locale
-          if (!hasAnyManualContent) {
-            // No manual content anywhere - this is null case, exclude from both TRUE and FALSE filters
-            return false;
-          } else {
-            // Some other locale has manual content, so this locale is "not translated"
-            return filterValue === false;
-          }
+        // Debug logging for specific feature
+        if (feature.id === '-7dU5oH9HEYk' && textField === 'description') {
+          console.log(`FILTER DEBUG ${feature.id} - ${locale} ${textField}:`, {
+            hasAnyManualContent,
+            multiLocaleStatus,
+            filterValue,
+            willMatch:
+              filterValue === true
+                ? multiLocaleStatus === true
+                : multiLocaleStatus === false
+          });
         }
-        // Has source content - check if it's translated (not generated)
-        const isTranslated = !isGenerated;
 
-        // If filtering for TRUE: Include features where content is translated
-        // If filtering for FALSE: Include features where content is NOT translated
+        // Use multi-locale status for filtering
         if (filterValue === true) {
-          return isTranslated;
+          return multiLocaleStatus === true; // ALL locales must be translated
         } else {
-          return !isTranslated;
+          return multiLocaleStatus === false; // Some locales are not translated (but manual content exists)
         }
       });
 

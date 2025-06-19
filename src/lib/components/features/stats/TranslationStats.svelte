@@ -3,17 +3,17 @@
 import ProgressPips from '$lib/components/common/ProgressPips.svelte';
 // SERVICES
 import {
-  calculateTranslationCompletionTriState,
-  getCachedFeatureTranslationTriState,
   getCachedFeatureSpecifierTranslation,
   calculateSpecifierTranslation
 } from '$lib/client/services/stats';
+// ENUMS
+import { FirstClassResource } from '$lib/enums';
 // ICONS
 import { Language } from '@steeze-ui/heroicons';
-// I18N
-import { getLocale } from '$lib/i18n';
+// CONTEXT
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
-import type { Feature } from '$lib/types';
+import type { Feature, Locale } from '$lib/types';
 import type { AppCtx } from '$lib/context/app.svelte';
 
 let {
@@ -26,7 +26,35 @@ let {
   showTitle?: boolean;
 } = $props();
 
-const currentLocale = $derived(getLocale());
+const adminCtx = getAdminCtx();
+
+// Get active translation locales from admin context
+const activeTranslationLocales = $derived.by(() => {
+  const locales: Locale[] = [];
+  const translationLocales = adminCtx.state.viewFilters.feature.translationLocales;
+  for (const [locale, isActive] of Object.entries(translationLocales)) {
+    if (isActive) {
+      locales.push(locale as Locale);
+    }
+  }
+  return locales;
+});
+
+// Force clear translation cache for this feature to ensure fresh calculations with multi-locale logic
+const featureStats = appCtx.cache.stats.get(FirstClassResource.feature);
+if (featureStats && featureStats.has(feature.id)) {
+  const stats = featureStats.get(feature.id);
+  if (stats) {
+    // Clear all translation-related cached stats for this feature
+    const keysToDelete = [];
+    for (const key of stats.keys()) {
+      if (key.includes('Translated.')) {
+        keysToDelete.push(key);
+      }
+    }
+    keysToDelete.forEach((key) => stats.delete(key));
+  }
+}
 
 // Helper function to create translation tooltip
 function getTranslationTooltip(fieldName: string, status: boolean | null): string {
@@ -36,28 +64,48 @@ function getTranslationTooltip(fieldName: string, status: boolean | null): strin
 }
 
 const statuses = $derived.by(() => {
-  const titleStatus = getCachedFeatureTranslationTriState(
-    appCtx,
-    feature,
-    'isTitleTranslated',
-    currentLocale,
-    (f, locale) => calculateTranslationCompletionTriState(appCtx, f, locale).title
-  );
-  const descriptionStatus = getCachedFeatureTranslationTriState(
-    appCtx,
-    feature,
-    'isDescriptionTranslated',
-    currentLocale,
-    (f, locale) => calculateTranslationCompletionTriState(appCtx, f, locale).description
-  );
-  const addressStatus = getCachedFeatureTranslationTriState(
-    appCtx,
-    feature,
-    'isAddressTranslated',
-    currentLocale,
-    (f, locale) =>
-      calculateTranslationCompletionTriState(appCtx, f, locale).displayAddress
-  );
+  // Calculate multi-locale translation status - ALL active locales must be translated for green
+  const calculateMultiLocaleStatus = (
+    fieldKey: 'title' | 'description' | 'displayAddress'
+  ) => {
+    if (activeTranslationLocales.length === 0) return null;
+
+    const i18nEntries = feature?.i18n ?? {};
+    const genKey =
+      fieldKey === 'title'
+        ? 'titleGen'
+        : fieldKey === 'description'
+          ? 'descriptionGen'
+          : 'displayAddressGen';
+
+    // Check if ANY locale has manual content for this field
+    const hasAnyManualContent = Object.values(i18nEntries).some((entry: any) => {
+      const fieldValue = entry[fieldKey];
+      const isGenerated = entry[genKey] ?? false;
+      return fieldValue && fieldValue.length > 0 && !isGenerated;
+    });
+
+    if (!hasAnyManualContent) {
+      return null; // No manual content anywhere
+    }
+
+    // Check if ALL active locales have manual translation
+    const allActiveLocalesTranslated = activeTranslationLocales.every((locale) => {
+      const entry = i18nEntries[locale];
+      if (!entry) return false; // No entry for this locale
+
+      const fieldValue = entry[fieldKey];
+      const isGenerated = entry[genKey] ?? false;
+
+      return fieldValue && fieldValue.length > 0 && !isGenerated;
+    });
+
+    return allActiveLocalesTranslated;
+  };
+
+  const titleStatus = calculateMultiLocaleStatus('title');
+  const descriptionStatus = calculateMultiLocaleStatus('description');
+  const addressStatus = calculateMultiLocaleStatus('displayAddress');
 
   const result = {
     [getTranslationTooltip('Title', titleStatus)]: titleStatus,
@@ -65,7 +113,6 @@ const statuses = $derived.by(() => {
     [getTranslationTooltip('Address', addressStatus)]: addressStatus
   };
 
-  // TODO: Implement translatable specifiers - currently just shows global translation status
   // Add property translation status for admin users only (now tri-state)
   if (appCtx.user?.superAdmin) {
     const propertyStatus = getCachedFeatureSpecifierTranslation(appCtx, feature, (f) =>

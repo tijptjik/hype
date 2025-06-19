@@ -239,9 +239,9 @@ export function setTranslationFilterState<K extends FeatureTranslationFilterKey>
   }
 
   // Set all locales: inactive ones to null, active ones to the provided value
-  const allLocales: Locale[] = ['en', 'zh-hant', 'zh-hans'];
-  for (const locale of allLocales) {
-    if (activeLocales.has(locale)) {
+  const translationLocales = adminCtx.state.viewFilters.feature.translationLocales;
+  for (const locale of Object.keys(translationLocales)) {
+    if (activeLocales.has(locale as Locale)) {
       (sectionFilters as any)[locale] = value;
     } else {
       (sectionFilters as any)[locale] = null;
