@@ -92,7 +92,11 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     eq(user.id, params.id as string)
   ])) as UserDB;
 
-  if (!existing) return error(404, m.resource_not_found({ resourceType: m.ornate_happy_meerkat_roam() }));
+  if (!existing)
+    return error(
+      404,
+      m.resource_not_found({ resourceType: m.ornate_happy_meerkat_roam() })
+    );
 
   // ASSERT : Permissions to update user OUTSIDE try-catch
   assertPermissionsToUpdateUser(sessionUser!, existing, params.id as Id);

@@ -20,7 +20,7 @@ export async function load({ data }) {
     }
   });
 
-  return { 
+  return {
     queryClient,
     PUBLIC_SVELTE_QUERY_DEVTOOLS: data.PUBLIC_SVELTE_QUERY_DEVTOOLS,
     // TODO Properly determine the title (could be a Hub)

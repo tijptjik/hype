@@ -99,7 +99,10 @@ export const GET: RequestHandler = async ({
     });
 
     if (!result) {
-      return error(404, m.resource_not_found({ resourceType: m.deft_mealy_ant_vent() }));
+      return error(
+        404,
+        m.resource_not_found({ resourceType: m.deft_mealy_ant_vent() })
+      );
     }
 
     // RESPONSE : Build the response shape
@@ -191,7 +194,11 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
       isSuperAdmin: user!.superAdmin || false
     })) as ProjectDB;
 
-    if (!existing) return error(404, m.resource_not_found({ resourceType: m.deft_mealy_ant_vent() }));
+    if (!existing)
+      return error(
+        404,
+        m.resource_not_found({ resourceType: m.deft_mealy_ant_vent() })
+      );
 
     // ASSERT : Code has (1) not changed, or (2) changed to another unique value
     // Use URL param code for lookup, form code for comparison

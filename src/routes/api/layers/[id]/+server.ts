@@ -88,7 +88,10 @@ export const GET: RequestHandler = async ({
     const result = await getLayer(db, layerEntityWithRelations, conditions, locals.hub);
 
     if (!result) {
-      return error(404, m.resource_not_found({ resourceType: m.active_bold_cobra_grin() }));
+      return error(
+        404,
+        m.resource_not_found({ resourceType: m.active_bold_cobra_grin() })
+      );
     }
 
     // RESPONSE : Build the response shape
@@ -162,7 +165,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
   if (!params.id) return error(400, m.deft_sleek_wasp_dine());
   const { db, user, userRoles } = await getDatabase(locals, platform);
-  
+
   // ASSERT : Valid form data
   const newData: LayerPartial = await request.json();
 
@@ -170,7 +173,11 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
   const conditions = [eq(layer.id, params.id as string)];
   const existing = (await getLayer(db, {}, conditions, locals.hub)) as LayerDB;
 
-  if (!existing) return error(404, m.resource_not_found({ resourceType: m.active_bold_cobra_grin() }));
+  if (!existing)
+    return error(
+      404,
+      m.resource_not_found({ resourceType: m.active_bold_cobra_grin() })
+    );
 
   // Use assertion functions for access control OUTSIDE try-catch
   assertPermissionsToUpdateLayer(user, request, existing, userRoles, params.id as Id);

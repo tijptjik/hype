@@ -82,7 +82,10 @@ export const GET: RequestHandler = async ({
     })) as TaskDBRaw;
 
     if (!data) {
-      return error(404, m.resource_not_found({ resourceType: m.born_plane_javelina_strive() }));
+      return error(
+        404,
+        m.resource_not_found({ resourceType: m.born_plane_javelina_strive() })
+      );
     }
 
     const result = await toResponseShape(data, false);

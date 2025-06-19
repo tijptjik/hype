@@ -49,7 +49,7 @@ onMount(async () => {
     const maplibre = monkeyPatchMapLibre();
     // @ts-ignore - Adding maplibre to global scope
     globalThis.maplibregl = maplibre;
-    
+
     // Store maplibre in the app context so components can access it
     appCtx.maplibre = maplibre;
     appCtx.isMaplibreLoaded = true;

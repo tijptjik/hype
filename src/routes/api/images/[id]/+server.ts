@@ -132,7 +132,8 @@ export const PATCH: RequestHandler = async ({
     let updatedFeatureImage: FeatureImageDB | undefined;
 
     const parseResult = ImageFlatUpdate.safeParse(data);
-    if (parseResult.success) {
+    if (parseResult.success && parseResult.data.featureId) {
+      // Only update featureImage if we have the required featureId
       updatedFeatureImage = await updateFeatureImage(
         db,
         parseResult.data,
