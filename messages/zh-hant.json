@@ -485,5 +485,7 @@
   "settings_admin_panel_auto_hide": "自動隱藏側邊欄",
   "settings_admin_panel_auto_hide_description": "折疊狀態下懸停時側邊欄會打開",
   "settings_admin_panel_collapsed": "折疊側邊欄",
-  "settings_admin_panel_collapsed_description": "預設折疊側邊欄"
+  "settings_admin_panel_collapsed_description": "預設折疊側邊欄",
+  "close_odd_hornet_feast": "拖放以替換圖像",
+  "born_plain_bulldog_stop": "放下影像"
 }
