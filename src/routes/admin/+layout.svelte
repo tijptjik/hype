@@ -3,6 +3,7 @@
 import { watch } from 'runed';
 // COMPONENTS
 import Sidebar from '$lib/components/sidebar/Root.svelte';
+import SecondarySidebar from '$lib/components/sidebar/SecondarySidebar.svelte';
 import Navbar from '$lib/components/layout/Navbar.svelte';
 import MinWidthProtector from '$lib/components/layout/MinWidth.svelte';
 import Settings from '$lib/components/panels/Settings.svelte';
@@ -51,28 +52,26 @@ setSidebarCtx();
 <!-- LAYOUT -->
 <MinWidthProtector>
   {#if adminCtx.isInitialised}
-    <Sidebar />
-    <div class="flex h-screen w-full select-none flex-col drag-none">
-      <header class="flex-none bg-black">
-        <Navbar />
-      </header>
+    <div class="flex h-screen w-full overflow-hidden drag-none">
+      <Sidebar />
       <main
         class="flex h-full flex-1 flex-col overflow-hidden"
         class:pb-[72px]={!adminCtx.isViewportContained}>
         {@render children()}
       </main>
-      {#if appCtx.state.panels.settings}
-        <div
-          class="absolute inset-0 top-16 z-50 bg-black/50"
-          onclick={() => appCtx.closePanel('settings')}>
-          <div
-            class="absolute right-0 top-0 h-full w-96 bg-base-100"
-            onclick={(e) => e.stopPropagation()}>
-            <Settings />
-          </div>
-        </div>
-      {/if}
+      <SecondarySidebar />
     </div>
+    {#if appCtx.state.panels.settings}
+      <div
+        class="absolute inset-0 z-50 bg-black/50"
+        onclick={() => appCtx.closePanel('settings')}>
+        <div
+          class="absolute right-0 top-0 h-full w-96 bg-base-100"
+          onclick={(e) => e.stopPropagation()}>
+          <Settings />
+        </div>
+      </div>
+    {/if}
   {:else}
     <div class="flex h-screen w-full items-center justify-center">
       <div class="loading loading-spinner loading-lg"></div>

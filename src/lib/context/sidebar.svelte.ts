@@ -3,10 +3,10 @@ import { setContext } from 'svelte';
 // ENUM
 import { HierarchicalResource } from '$lib/enums';
 // TYPES
-import type { SidebarStateState } from '$lib/types';
+import type { SidebarCtxState } from '$lib/types';
 
-class SidebarState {
-  state: SidebarStateState = $state({
+class SidebarCtx {
+  state: SidebarCtxState = $state({
     isOpen: true, // Will be updated on init based on admin preferences
     // Set in the Root component for auto-hide behavior
     isVisuallyOpen: true,
@@ -76,7 +76,7 @@ class SidebarState {
 
 export const SIDEBAR_STATE_KEY = Symbol('sidebarState');
 
-export const setSidebarState = () => setContext(SIDEBAR_STATE_KEY, new SidebarState());
+export const setSidebarState = () => setContext(SIDEBAR_STATE_KEY, new SidebarCtx());
 
 export const getSidebarState = (): ReturnType<typeof setSidebarState> =>
   getContext(SIDEBAR_STATE_KEY);

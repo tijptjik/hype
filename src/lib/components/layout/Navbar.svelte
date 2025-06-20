@@ -4,7 +4,6 @@ import { m } from '$lib/i18n';
 // LIB
 import { ADMIN_PATH } from '$lib/index';
 // COMPONENTS
-import AdminControls from '$lib/components/menu/AdminControls.svelte';
 import UserMenu from '$lib/components/menu/UserMenu.svelte';
 </script>
 
@@ -23,8 +22,6 @@ import UserMenu from '$lib/components/menu/UserMenu.svelte';
   </div>
 
   <div class="navbar-end space-x-2 caret-transparent">
-    <AdminControls />
-    <div class="mx-2 h-5 w-px bg-neutral-800"></div>
     <UserMenu />
   </div>
 </nav>
