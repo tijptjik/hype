@@ -21,6 +21,7 @@ const UserPreferencesSchema = z.object({
   admin: z
     .object({
       isAdminMapCollapsed: z.boolean().optional(),
+      isPrimaryPanelCollapsed: z.boolean().optional(),
       isPrimaryPanelAutoHide: z.boolean().optional()
     })
     .optional()

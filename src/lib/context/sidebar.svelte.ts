@@ -7,7 +7,7 @@ import type { SidebarStateState } from '$lib/types';
 
 class SidebarState {
   state: SidebarStateState = $state({
-    isOpen: true,
+    isOpen: true, // Will be updated on init based on admin preferences
     // Set in the Root component for auto-hide behavior
     isVisuallyOpen: true,
     isSectionOpen: {
@@ -61,6 +61,12 @@ class SidebarState {
 
   setVisuallyOpen = (open: boolean) => {
     this.state.isVisuallyOpen = open;
+  };
+
+  // Initialize sidebar state based on admin preferences
+  initializeState = (isPrimaryPanelCollapsed: boolean) => {
+    this.state.isOpen = !isPrimaryPanelCollapsed;
+    this.state.isVisuallyOpen = !isPrimaryPanelCollapsed;
   };
 
   isSectionOpen = (section: HierarchicalResource) => {

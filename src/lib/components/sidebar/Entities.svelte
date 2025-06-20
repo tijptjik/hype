@@ -50,7 +50,7 @@ const filterableByQueryParams: FilterableResourceType[] = [
 
 let isFilterable = $derived(adminCtx.hasManyEntities(resourceType));
 let showFilters = $derived(
-      sidebarState.isVisuallyOpenState() &&
+  sidebarState.isVisuallyOpenState() &&
     sidebarState.isSectionOpen(resourceType as unknown as HierarchicalResource) &&
     isFilterable
 );
@@ -136,7 +136,7 @@ let getDisplayName = (entity: Exclude<Resource, Task>) => {
                 appCtx.isPrism(resourceType, entity.id as Id)}
               class:border-base-300={!isActive &&
                 !appCtx.isPrism(resourceType, entity.id as Id)}>
-              {#if sidebarState.isOpen() || !isActive}
+              {#if sidebarState.isVisuallyOpenState() || !isActive}
                 <span class="ml-[6px] h-4 w-4 text-xs text-white/80"> ●</span>
               {:else if isActive}
                 <p class="ml-[3px]">
@@ -146,13 +146,13 @@ let getDisplayName = (entity: Exclude<Resource, Task>) => {
                     onHoverOnly={false} />
                 </p>
               {/if}
-              {#if sidebarState.isOpen()}
+              {#if sidebarState.isVisuallyOpenState()}
                 <span class="ml-3 text-sm font-light">
                   {getDisplayName(entity as Exclude<Resource, Task>)}
                 </span>
               {/if}
             </a>
-            {#if sidebarState.isOpen() && filterableByQueryParams.includes(resourceType as FilterableResourceType)}
+            {#if sidebarState.isVisuallyOpenState() && filterableByQueryParams.includes(resourceType as FilterableResourceType)}
               <FilterToggle {resourceType} id={entity.id as Id} />
             {/if}
           </div>

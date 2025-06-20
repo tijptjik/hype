@@ -482,6 +482,8 @@
   "settings_admin_title": "Admin",
   "settings_admin_map_collapsed": "Collapsed Map",
   "settings_admin_map_collapsed_description": "Collapse the map by default when editing features",
+  "settings_admin_panel_collapsed": "Collapsed Sidebar",
+  "settings_admin_panel_collapsed_description": "Collapse the sidebar by default",
   "settings_admin_panel_auto_hide": "Auto-hide Sidebar",
-  "settings_admin_panel_auto_hide_description": "Sidebar opens on hover when collapsed"
+  "settings_admin_panel_auto_hide_description": "Sidebar opens when hovered on, and closes when not"
 }
