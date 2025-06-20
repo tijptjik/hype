@@ -174,7 +174,7 @@ function handleMapCollapse(): void {
 {/snippet}
 
 <!-- LAYOUT -->
-<div class="h-full overflow-hidden bg-black">
+<div class="flex h-full flex-col bg-black">
   <Header {title}>
     {#snippet menuItems()}
       <HeaderButton
@@ -199,10 +199,12 @@ function handleMapCollapse(): void {
       <ImageProvider
         mode="gallery"
         isAdminMode={true}
-        ctxType={ImageContextResource.feature}
-        ctxId={pageProps.data.entity}
-        organisation={organisation as Omit<OrganisationDB, 'isCoreInclusive'>}
-        {project}>
+        context={{
+          ctxType: ImageContextResource.feature,
+          ctxId: (pageProps.data.validatedForm.data as Feature).id,
+          organisation: organisation as Omit<OrganisationDB, 'isCoreInclusive'>,
+          project
+        }}>
         <form
           id="featureForm"
           method="POST"
@@ -210,12 +212,11 @@ function handleMapCollapse(): void {
           role="form"
           transition:fade
           data-testid="featureForm"
-          class="h-full">
+          class="min-h-0 flex-1">
           <main
-            class="flex flex-1 flex-row gap-6 overflow-hidden bg-black p-6 pr-3"
-            style="height: calc(100vh - 148px) !important;">
+            class="flex h-full min-h-0 flex-1 flex-row gap-6 overflow-visible bg-black pl-6 pt-6">
             <div
-              class="relative h-full overflow-hidden transition-all duration-300 ease-in-out @container"
+              class="relative h-full overflow-hidden rounded-lg pb-6 transition-all duration-300 ease-in-out @container"
               class:flex-[0_0_3%]={isMapCollapsed}
               class:overflow-visible={isMapCollapsed}
               class:flex-[0_0_100%]={isMapFullscreen}
@@ -226,7 +227,7 @@ function handleMapCollapse(): void {
                 toggleFullscreen={handleMapFullscreenChange}
                 toggleCollapsed={handleMapCollapse} />
               <div
-                class="absolute bottom-2 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex">
+                class="absolute bottom-6 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex">
                 <UserAttributionCard
                   userId={pageProps.data.validatedForm.data.contributorId}
                   date={pageProps.data.validatedForm.data.createdAt ?? undefined}
@@ -238,7 +239,7 @@ function handleMapCollapse(): void {
               </div>
             </div>
             <div
-              class="h-auto scroll-m-10 scroll-p-12 overflow-y-auto transition-all duration-300 ease-in-out"
+              class="h-full overflow-y-auto transition-all duration-300 ease-in-out"
               class:flex-[0_0_0%]={isMapFullscreen}
               class:overflow-hidden={isMapFullscreen}
               class:opacity-0={isMapFullscreen}
@@ -247,54 +248,58 @@ function handleMapCollapse(): void {
               class:flex-[0_0_96%]={isMapCollapsed}
               class:flex-[0_0_66%]={!isMapFullscreen && !isMapCollapsed}
               class:opacity-100={!isMapFullscreen}>
-              <div class="flex h-full flex-col-reverse justify-end gap-6 pr-3">
-                {#if adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false}
-                  <div class="flex flex-wrap justify-between gap-6">
-                    <PropertySection
+              <div class="pb-6 pr-6">
+                <div class="flex flex-col gap-6">
+                  {#if adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false}
+                    <I18nSection
                       {form}
-                      title={m.admin__forms_common_classifiers()}
-                      subtitle={m.admin__forms_common_classifiers_subtitle()}
-                      fieldDiscriminator="classifier"
-                      fields={FIELDS.property as FormFieldArray}
-                      cols={pageProps.data.entity == NEW_REF ? 2 : 3} />
-                    <PropertySection
+                      title={m.admin__forms_common_descriptors()}
+                      fields={FIELDS.i18n as FormField}
+                      headerActions={featureActionSnippet}
+                      infoContent={featureInfoSnippet} />
+                    <!-- TODO Add support for translatable specifiers -->
+                    <div class="flex flex-wrap justify-between gap-6">
+                      <PropertySection
+                        {form}
+                        title={m.admin__forms_common_classifiers()}
+                        subtitle={m.admin__forms_common_classifiers_subtitle()}
+                        fieldDiscriminator="classifier"
+                        fields={FIELDS.property as FormFieldArray}
+                        cols={pageProps.data.entity == NEW_REF ? 2 : 3} />
+                      <PropertySection
+                        {form}
+                        title={m.admin__forms_common_specifiers()}
+                        subtitle={m.admin__forms_common_specifiers_subtitle()}
+                        fieldDiscriminator="specifier"
+                        fields={FIELDS.property as FormFieldArray}
+                        cols={pageProps.data.entity == NEW_REF ? 2 : 3} />
+                      {#if pageProps.data.entity !== NEW_REF}
+                        <CanonicalImage
+                          {form}
+                          image={pageProps.data.validatedForm.data.image} />
+                      {/if}
+                    </div>
+                  {:else if adminCtx.activeFacet === 'address'}
+                    <AddressComponentSection
                       {form}
-                      title={m.admin__forms_common_specifiers()}
-                      subtitle={m.admin__forms_common_specifiers_subtitle()}
-                      fieldDiscriminator="specifier"
-                      fields={FIELDS.property as FormFieldArray}
-                      cols={pageProps.data.entity == NEW_REF ? 2 : 3} />
-                    {#if pageProps.data.entity !== NEW_REF}
-                      <CanonicalImage {form} />
-                    {/if}
-                  </div>
-                  <I18nSection
-                    {form}
-                    title={m.admin__forms_common_descriptors()}
-                    fields={FIELDS.i18n as FormField}
-                    headerActions={featureActionSnippet}
-                    infoContent={featureInfoSnippet} />
-                  <!-- TODO Add support for translatable specifiers -->
-                {:else if adminCtx.activeFacet === 'address'}
-                  <AddressComponentSection
-                    {form}
-                    title={m.admin__forms_feature_address_components_title()}
-                    fields={FIELDS.address as FormField & FormFieldNested} />
-                  <AddressSection
-                    {form}
-                    title={m.admin__forms_feature_addressing_title()}
-                    subtitle={m.admin__forms_feature_addressing_subtitle()}
-                    fields={FIELDS.address as FormField & FormFieldNested} />
-                {:else if adminCtx.activeFacet === 'images' && pageProps.data.entity !== NEW_REF}
-                  <ViewerSection
-                    {form}
-                    title={m.admin__forms_feature_viewer_title()}
-                    fields={FIELDS.viewer as FormFieldNested} />
-                  <GallerySection
-                    {form}
-                    title={m.admin__forms_feature_gallery_title()}
-                    fields={FIELDS.gallery as FormFieldNested} />
-                {/if}
+                      title={m.admin__forms_feature_address_components_title()}
+                      fields={FIELDS.address as FormField & FormFieldNested} />
+                    <AddressSection
+                      {form}
+                      title={m.admin__forms_feature_addressing_title()}
+                      subtitle={m.admin__forms_feature_addressing_subtitle()}
+                      fields={FIELDS.address as FormField & FormFieldNested} />
+                  {:else if adminCtx.activeFacet === 'images' && pageProps.data.entity !== NEW_REF}
+                    <ViewerSection
+                      {form}
+                      title={m.admin__forms_feature_viewer_title()}
+                      fields={FIELDS.viewer as FormFieldNested} />
+                    <GallerySection
+                      {form}
+                      title={m.admin__forms_feature_gallery_title()}
+                      fields={FIELDS.gallery as FormFieldNested} />
+                  {/if}
+                </div>
               </div>
             </div>
           </main>
