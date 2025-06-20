@@ -127,7 +127,7 @@ $effect(() => {
     <!-- Loading state while session is pending -->
     <main class="top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
       <div class="flex h-full items-center justify-center">
-        <div class="loading loading-spinner loading-lg text-primary"></div>
+        <div class="loading loading-ring loading-lg text-primary"></div>
       </div>
     </main>
   {/if}
