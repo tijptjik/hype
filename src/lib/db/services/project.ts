@@ -44,7 +44,8 @@ import type {
   HubOpts,
   PropertyI18nDB,
   PropertyValueI18nDB,
-  PropertyValueDBRaw
+  PropertyValueDBRaw,
+  Code
 } from '$lib/types';
 
 // ═══════════════════════
@@ -143,8 +144,14 @@ export const createProject = async (
 export const updateProject = async (
   db: Database,
   data: ProjectDBPartial,
-  ref: string
+  ref: Code
 ): Promise<ProjectDB> => await update(db, project, data, project.code, ref);
+
+export const updateProjectById = async (
+  db: Database,
+  data: ProjectDBPartial,
+  id: Id
+): Promise<ProjectDB> => await update(db, project, data, project.id, id);
 
 /********************
  *  2. CRUD :: RELATIONAL OPERATIONS

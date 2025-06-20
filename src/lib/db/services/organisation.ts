@@ -218,6 +218,19 @@ export const updateOrganisation = async (
 ): Promise<OrganisationDB> =>
   await update(db, organisation, data, organisation.code, ref);
 
+/**
+ * Updates an existing organisation in the database by ID
+ * @param db - The database instance
+ * @param data - The updated organisation data
+ * @param id - The ID of the organisation
+ * @returns The updated organisation
+ */
+export const updateOrganisationById = async (
+  db: Database,
+  data: OrganisationDBPartial,
+  id: Id
+): Promise<OrganisationDB> => await update(db, organisation, data, organisation.id, id);
+
 // ═══════════════════════
 // 2. CRUD :: RELATIONAL OPERATIONS (OrganisationI18n)
 // ═══════════════════════
