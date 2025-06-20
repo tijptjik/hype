@@ -1544,17 +1544,7 @@ export type ListFieldProps = FieldPropsExtended & {
 
 export type ImageProviderProps = {
   children: any;
-  mode: ImageCtxMode;
-  isAdminMode: boolean;
-  ctxType: ImageContextResource;
-  ctxId: Id;
-  organisation?: Omit<OrganisationDB, 'isCoreInclusive'>;
-  project?: ProjectDB;
-  image?: Image;
-  ctxTypeSecondary?: ImageContextResourceExtended;
-  ctxIdSecondary?: Id;
-  highlightedIds?: Id[];
-};
+} & ImageCtxConstructorOptions;
 
 export interface ImageContextConfig {
   ctxType?: ImageContextResource;
@@ -1590,12 +1580,17 @@ export interface ImageCtxStateRefactored {
   // CRUD :: READ
   images: SvelteMap<Id, Image>;
   activeImage: Image | null;
+  targetImage: Image | null;
+  isTransitioning: boolean;
   activePreview: ImageUpload | null;
 
+  // Change tracking for PhotoFrame transition logic
+  lastChangeType: 'index' | 'target' | 'context' | null;
+
   // Status tracking
-  loadStatus: Record<Id, LoadStatus>;
-  uploadStatus: Record<Id, UploadStatus>;
-  thumbnailLoadStatus: Record<Id, LoadStatus>;
+  loadStatus: SvelteMap<Id, LoadStatus>;
+  uploadStatus: SvelteMap<Id, UploadStatus>;
+  thumbnailLoadStatus: SvelteMap<Id, LoadStatus>;
   preloadedImages: SvelteSet<string>;
 
   // CRUD :: DELETE
@@ -1687,7 +1682,7 @@ export type AppContextState = {
   panels: PanelState;
 };
 
-export type ImageCtxMode = 'standalone' | 'gallery';
+export type ImageCtxMode = 'standalone' | 'gallery' | 'carousel';
 export type ImageCtxState = {
   mode: ImageCtxMode;
 
@@ -1700,7 +1695,7 @@ export type ImageCtxState = {
   project: ProjectDB | null;
 
   highlightedIds: Id[];
-  uploadQueue: ImageUploadState[];
+  uploadQueue: ImageUpload[];
   loadStatus: Record<string, LoadStatus>;
   activeId: string | null;
   images: (Image & { preview?: string })[];
