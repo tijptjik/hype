@@ -1348,7 +1348,7 @@ export type Metadata = Record<string, string>;
 
 export type LoadStatus = 'initial' | 'uploaded' | 'loading' | 'loaded' | 'error';
 export type UploadStatus = 'idle' | 'uploading' | 'uploaded' | 'error' | 'invalidated';
-export type ImageUploadState = {
+export type ImageUpload = {
   file: File;
   status: UploadStatus;
   retries: number;
@@ -1555,6 +1555,53 @@ export type ImageProviderProps = {
   ctxIdSecondary?: Id;
   highlightedIds?: Id[];
 };
+
+export interface ImageContextConfig {
+  ctxType?: ImageContextResource;
+  ctxId?: Id;
+  organisation?: OrganisationDB;
+  project?: ProjectDB;
+  ctxTypeSecondary?: ImageContextResourceExtended;
+  ctxIdSecondary?: Id;
+}
+
+export interface ImageCtxConstructorOptions {
+  mode?: ImageCtxMode;
+  isAdminMode?: boolean;
+  context?: ImageContextConfig | null;
+  image?: Image | null;
+  highlightedIds?: Id[];
+}
+
+export interface ImageCtxStateRefactored {
+  // Mode configuration
+  mode: ImageCtxMode;
+
+  // Context configuration
+  context: ImageContextConfig | null;
+
+  // Highlighted image IDs
+  highlightedIds: Id[];
+
+  // CRUD :: CREATE
+  uploadQueue: ImageUpload[];
+  rejected: File[];
+
+  // CRUD :: READ
+  images: SvelteMap<Id, Image>;
+  activeImage: Image | null;
+  activePreview: ImageUpload | null;
+
+  // Status tracking
+  loadStatus: Record<Id, LoadStatus>;
+  uploadStatus: Record<Id, UploadStatus>;
+  thumbnailLoadStatus: Record<Id, LoadStatus>;
+  preloadedImages: SvelteSet<string>;
+
+  // CRUD :: DELETE
+  pendingConfirmation: SvelteSet<Id>;
+  deletionQueue: SvelteSet<Id>;
+}
 
 // ELEMENTS
 
@@ -2000,6 +2047,11 @@ export type SvelteVirtualListProps = {
    * CSS class to apply to the scrollable viewport element.
    */
   viewportClass?: string;
+  /**
+   * Top padding in pixels for the viewport (affects content height calculation).
+   * @default 0
+   */
+  viewportPaddingTop?: number;
 };
 
 /**
