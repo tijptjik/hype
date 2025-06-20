@@ -258,6 +258,7 @@ let enhance = $derived(form.enhance);
 let title = $derived(
   pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE
 );
+let image = $derived(pageProps.data.image as Image);
 </script>
 
 <!-- LAYOUT -->
@@ -337,15 +338,17 @@ let title = $derived(
             <ImageProvider
               mode="standalone"
               isAdminMode={true}
-              ctxType={ImageContextResource.project}
-              ctxId={pageProps.data.entity}
-              {organisation}
-              {project}
-              image={pageProps.data.image as Image}>
+              context={{
+                ctxType: ImageContextResource.project,
+                ctxId: (pageProps.data.validatedForm.data as Project).id,
+                organisation,
+                project
+              }}
+              {image}>
               <ImageSection
                 title={m.admin__forms_project_image_title()}
                 fields={FIELDS.images as FormField}
-                image={pageProps.data.image ?? null}
+                {image}
                 {form} />
             </ImageProvider>
           {/if}
