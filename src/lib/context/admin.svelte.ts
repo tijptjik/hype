@@ -46,6 +46,7 @@ import type {
   UserPreferences,
   AdminPreferences
 } from '../types';
+import { goto } from '$app/navigation';
 
 // State type for AdminCtx - only includes admin-specific state
 type AdminResourceState = {
@@ -265,7 +266,7 @@ export class AdminCtx {
     ref?: Id | Code | false,
     resource?: FirstClassResource
   ): void {
-    if (ref) this.setResourceRef(ref, resource);
+    if (ref !== undefined) this.setResourceRef(ref);
     if (resource) this.setResourceType(resource);
     this.state.active.facet = facet;
   }
@@ -1076,7 +1077,13 @@ export class AdminCtx {
   // ADMIN LOOKUPS
   // ═══════════════════════
 
-  getEntityPath = (resource: FirstClassResource, id: Id, facet?: string) => {
+  navigateToResource = (resource: FirstClassResource, id: Id, facet?: string) => {
+    const url = this.getUrlForResource(resource, id, facet);
+    if (!url) return;
+    goto(url);
+  };
+
+  getUrlForResource = (resource: FirstClassResource, id: Id, facet?: string) => {
     const ref = this.getResourceRef(resource, id);
     if (!ref) return null;
     return `${this.getResourcePathPart(resource)}/${ref}${facet ? `#${facet}` : ''}`;
