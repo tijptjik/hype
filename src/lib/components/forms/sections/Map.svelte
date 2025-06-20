@@ -13,6 +13,7 @@ import type { LngLatLike } from 'maplibre-gl';
 // STATE : PROPS
 let sectionProps: SectionProps & {
   toggleFullscreen: (isFullscreen: boolean) => void;
+  toggleCollapsed: (isCollapsed: boolean) => void;
 } = $props();
 
 // STATE : CONTEXT :: FORM
