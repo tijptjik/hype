@@ -86,9 +86,17 @@ class BaseForm<T extends Record<string, unknown>> {
     const hasUserRoles = (form.data as any).userRoles?.length > 0;
     const hasMaintainerRoles = (form.data as any).maintainerRoles?.length > 0;
     const hasOrganisations = (form.data as any).organisations?.length > 0;
+    const hasImage = (form.data as any).image != null;
 
     let formData;
-    if (hasNestedProperties || hasUserRoles || hasMaintainerRoles || hasOrganisations) {
+    // TODO: This is a hack to preserve nested data. We should find a better way to do this.
+    if (
+      hasNestedProperties ||
+      hasUserRoles ||
+      hasMaintainerRoles ||
+      hasOrganisations ||
+      hasImage
+    ) {
       // Skip defaults() if we have nested data to preserve it
       formData = form.data;
     } else {
