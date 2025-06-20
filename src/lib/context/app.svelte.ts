@@ -309,6 +309,12 @@ export class AppCtx {
     return this.user?.superAdmin === true;
   }
 
+  // ASSERT :: App is in admin dashboard
+  isAdmin(): boolean {
+    // Check if we're in admin interface - can be determined by URL path
+    return typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+  }
+
   // Helper method to build API URLs with filters
   private buildApiUrl = (
     resource: FirstClassResource,
