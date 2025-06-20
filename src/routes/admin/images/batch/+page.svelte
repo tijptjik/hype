@@ -314,7 +314,7 @@ let pendingCount = $derived(uploadResults.filter((r) => r.status === 'pending').
                 {:else if result.status === 'error'}
                   <Icon src={XCircle} class="h-5 w-5 text-error" />
                 {:else if result.status === 'uploading'}
-                  <span class="loading loading-spinner loading-sm text-warning"></span>
+                  <span class="loading loading-ring loading-sm text-warning"></span>
                 {:else}
                   <Icon src={Photo} class="h-5 w-5 text-base-content/50" />
                 {/if}

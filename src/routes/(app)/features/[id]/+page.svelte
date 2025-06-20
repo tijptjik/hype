@@ -118,6 +118,6 @@ async function handleFeatureSelection() {
   {/await}
 {:else}
   <div class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-300">
-    <div class="loading loading-spinner loading-lg text-primary"></div>
+    <div class="loading loading-ring loading-lg text-primary"></div>
   </div>
 {/if}

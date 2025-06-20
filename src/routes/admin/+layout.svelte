@@ -55,7 +55,7 @@ setSidebarCtx();
     <div class="flex h-screen w-full overflow-hidden drag-none">
       <Sidebar />
       <main
-        class="flex h-full flex-1 flex-col overflow-hidden"
+        class="dvh-full flex flex-1 flex-col overflow-hidden"
         class:pb-[72px]={!adminCtx.isViewportContained}>
         {@render children()}
       </main>
@@ -74,7 +74,7 @@ setSidebarCtx();
     {/if}
   {:else}
     <div class="flex h-screen w-full items-center justify-center">
-      <div class="loading loading-spinner loading-lg"></div>
+      <div class="loading loading-ring loading-lg"></div>
     </div>
   {/if}
 </MinWidthProtector>
