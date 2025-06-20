@@ -278,7 +278,7 @@ onMount(() => {
             onclick={handleSetLocation}
             disabled={isLoading}>
             {#if isLoading}
-              <span class="loading loading-spinner loading-sm"></span>
+              <span class="loading loading-ring loading-sm"></span>
               {m.full_calm_monkey_engage()}
             {:else}
               {m.cool_ago_jackdaw_pop()}

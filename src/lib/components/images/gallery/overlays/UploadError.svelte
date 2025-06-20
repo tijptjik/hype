@@ -5,10 +5,10 @@ import { fade } from 'svelte/transition';
 // SERVICES
 import { getImageContext } from '$lib/context/image.svelte';
 // TYPES
-import type { ImageUploadState } from '$lib/types';
+import type { ImageUpload } from '$lib/types';
 
 type Props = {
-  fileObject: ImageUploadState;
+  fileObject: ImageUpload;
 };
 
 let { fileObject }: Props = $props();

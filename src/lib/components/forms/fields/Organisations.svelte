@@ -129,7 +129,7 @@ $effect(() => {
           <img
             src={getURLfromImage({
               image: organisation.image as ImageDB,
-              transformation: 'c_fill,h_320,w_320,q_auto'
+              transformation: 'c_fill,h_100,w_100,q_auto'
             })}
             class="h-24 w-24 object-cover" />
         </figure>

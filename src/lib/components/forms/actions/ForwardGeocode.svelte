@@ -142,7 +142,7 @@ let handleGeocodeToLocate = (e: Event) => {
     {onclick}
     disabled={isLoading}>
     {#if isGeocoding}
-      <span class="loading loading-spinner loading-sm"></span>
+      <span class="loading loading-ring loading-sm"></span>
       <span class="hidden md:block">{m.admin__geo_forward_geocode_loading()}</span>
     {:else}
       <Icon src={icon} class="h-4 w-4" />

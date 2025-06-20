@@ -1,10 +1,10 @@
 <script lang="ts">
 import Uploading from './overlays/Uploading.svelte';
 import UploadError from './overlays/UploadError.svelte';
-import type { ImageUploadState } from '$lib/types';
+import type { ImageUpload } from '$lib/types';
 
 type Props = {
-  fileObject: ImageUploadState;
+  fileObject: ImageUpload;
 };
 
 let { fileObject }: Props = $props();

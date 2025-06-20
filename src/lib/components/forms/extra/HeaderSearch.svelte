@@ -243,7 +243,7 @@ const resetResults = () => (searchResults = []);
                           <img
                             src={getURLfromImage({
                               image: item.image,
-                              transformation: 'c_fill,w_40,h_40,q_auto'
+                              transformation: 'c_fill,w_100,h_100,q_auto'
                             })}
                             class="relative h-10 w-10 rounded object-cover opacity-0 transition-opacity duration-200"
                             onload={(e) => {
