@@ -101,21 +101,21 @@ const isActive = (href: string) => {
   </div>
 
   <!-- ADMIN CONTROLS arranged vertically -->
-  <div class="flex flex-grow flex-col items-center gap-2 p-2">
+  <div class="flex flex-grow flex-col items-center gap-2">
     {#each adminControlItems as item}
       <div class="flex-shrink-0">
         <a
           draggable="false"
           onclick={item.handleClick}
           href={item.href}
-          class="group btn btn-circle btn-ghost relative select-none bg-inherit hover:bg-transparent {isActive(
+          class="group btn btn-circle btn-ghost relative h-[68px] select-none bg-inherit hover:bg-transparent {isActive(
             item.href
           )
             ? 'btn-active'
             : ''}">
           {#if item.notificationCount > 0}
             <div
-              class="badge badge-primary badge-sm absolute -right-1 -top-1 size-5 text-xs">
+              class="badge badge-primary badge-sm absolute right-0.5 top-[8px] size-5 text-xs">
               {item.notificationCount}
             </div>
           {/if}
