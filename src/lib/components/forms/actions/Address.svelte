@@ -52,7 +52,7 @@ async function handleGeocode(e: Event) {
     onclick={handleGeocode}
     disabled={isGeocoding}>
     {#if isGeocoding}
-      <span class="loading loading-spinner loading-sm"></span>
+      <span class="loading loading-ring loading-sm"></span>
       <span class="hidden md:block"
         >{m.admin__geo_lookup_address_at_location_loading()}</span>
     {:else}

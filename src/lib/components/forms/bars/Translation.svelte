@@ -118,7 +118,7 @@ async function translateFields(event: Event, source: Locale, target: Locale) {
           disabled={loadingLocale !== null}
           onclick={(e) => onClear(e)}>
           {#if loadingLocale === targetLocale}
-            <span class="loading loading-spinner loading-sm"></span>
+            <span class="loading loading-ring loading-sm"></span>
           {:else}
             <Icon src={Backspace} class="h-5 w-5" />
           {/if}
@@ -134,7 +134,7 @@ async function translateFields(event: Event, source: Locale, target: Locale) {
               : await translateFields(e, sourceLocale, targetLocale);
           }}>
           {#if loadingLocale === sourceLocale}
-            <span class="loading loading-spinner loading-sm"></span>
+            <span class="loading loading-ring loading-sm"></span>
           {:else}
             {localeLabels.find((locale) => locale.locale === sourceLocale)?.label}
           {/if}

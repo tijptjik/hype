@@ -87,7 +87,7 @@ async function handleTranslate(event: Event) {
       disabled={loadingTranslation}
       onclick={(e) => handleTranslate(e)}>
       {#if loadingTranslation}
-        <span class="loading loading-spinner loading-sm"></span>
+        <span class="loading loading-ring loading-sm"></span>
       {:else}
         EN
       {/if}

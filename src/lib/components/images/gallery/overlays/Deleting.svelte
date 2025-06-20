@@ -5,5 +5,5 @@ import { fade } from 'svelte/transition';
 <div
   class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-100/50 backdrop-blur-sm"
   transition:fade={{ duration: 1000 }}>
-  <span class="loading loading-spinner loading-md"></span>
+  <span class="loading loading-ring loading-md"></span>
 </div>
