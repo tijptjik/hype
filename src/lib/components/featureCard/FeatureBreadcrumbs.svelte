@@ -63,7 +63,7 @@ function showLayerSelectionModal() {
       <div
         class="flex items-center gap-2 font-mono text-xs uppercase text-neutral-content">
         <Icon src={Squares2x2} class="h-6 w-6" />
-        <div class="loading loading-spinner loading-xs"></div>
+        <div class="loading loading-ring loading-xs"></div>
       </div>
     </div>
   {:then hierarchy}
