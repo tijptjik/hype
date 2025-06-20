@@ -48,6 +48,7 @@ import type {
   UserLayer,
   SessionUser,
   UserPreferences,
+  AdminPreferences,
   Locale,
   CurrentUser,
   UserExperimental,
@@ -304,7 +305,7 @@ export class AppCtx {
     }
   };
 
-  // METHOD : SuperAdmin check
+  // ASSERT :: User is SuperAdmin
   isSuperAdmin(): boolean {
     return this.user?.superAdmin === true;
   }
@@ -312,7 +313,9 @@ export class AppCtx {
   // ASSERT :: App is in admin dashboard
   isAdmin(): boolean {
     // Check if we're in admin interface - can be determined by URL path
-    return typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+    return (
+      typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')
+    );
   }
 
   // Helper method to build API URLs with filters
@@ -1769,7 +1772,10 @@ export class AppCtx {
         fallbackLocales: getFallbackLocales(getLocale()) as Locale[],
         allowMachineTranslation: false,
         preferFallbackInCurrentLocale: false,
-        isTranslateButtonVisible: true
+        isTranslateButtonVisible: true,
+        admin: {
+          isAdminMapCollapsed: false
+        }
       };
     }
 
@@ -1784,7 +1790,11 @@ export class AppCtx {
             (this.user as CurrentUser).preferences.preferFallbackInCurrentLocale ??
             false,
           isTranslateButtonVisible:
-            (this.user as CurrentUser).preferences.isTranslateButtonVisible ?? true
+            (this.user as CurrentUser).preferences.isTranslateButtonVisible ?? true,
+          admin: {
+            isAdminMapCollapsed:
+              (this.user as CurrentUser).preferences.admin?.isAdminMapCollapsed ?? false
+          }
         }
       : ((this.user as CurrentUser).preferences as UserPreferences);
   };
@@ -1792,7 +1802,11 @@ export class AppCtx {
   updateUserPreferences = (preferences: UserPreferences) => {
     (this.user as CurrentUser).preferences = {
       ...(this.user as CurrentUser).preferences,
-      ...preferences
+      ...preferences,
+      admin: {
+        ...(this.user as CurrentUser).preferences.admin,
+        ...preferences.admin
+      }
     };
   };
 

@@ -478,5 +478,8 @@
   "filters__image": "Images",
   "filters__status": "Status",
   "filters__todo": "ToDo",
-  "filters__done": "Done"
+  "filters__done": "Done",
+  "settings_admin_title": "Admin",
+  "settings_admin_map_collapsed": "Collapsed Map",
+  "settings_admin_map_collapsed_description": "Collapse the map by default when editing features"
 }

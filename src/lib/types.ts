@@ -749,11 +749,16 @@ export type OrganisationJoinConfig = {
 
 // JSON type objects for user preferences and experimental features
 
+export type AdminPreferences = {
+  isAdminMapCollapsed: boolean;
+};
+
 export type UserPreferences = {
   fallbackLocales: Locale[];
   allowMachineTranslation: boolean;
   preferFallbackInCurrentLocale: boolean;
   isTranslateButtonVisible: boolean;
+  admin: AdminPreferences;
 };
 
 export type UserExperimental = {

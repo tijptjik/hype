@@ -17,7 +17,12 @@ const UserPreferencesSchema = z.object({
   fallbackLocales: z.array(z.string()),
   allowMachineTranslation: z.boolean(),
   preferFallbackInCurrentLocale: z.boolean(),
-  isTranslateButtonVisible: z.boolean()
+  isTranslateButtonVisible: z.boolean(),
+  admin: z
+    .object({
+      isAdminMapCollapsed: z.boolean()
+    })
+    .optional()
 });
 
 const UserExperimentalSchema = z.object({
