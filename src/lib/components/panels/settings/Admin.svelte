@@ -23,6 +23,11 @@ const preferencesConfig = [
     name: m.settings_admin_map_collapsed(),
     description: m.settings_admin_map_collapsed_description(),
     code: 'isAdminMapCollapsed' as keyof AdminPreferences
+  },
+  {
+    name: m.settings_admin_panel_auto_hide(),
+    description: m.settings_admin_panel_auto_hide_description(),
+    code: 'isPrimaryPanelAutoHide' as keyof AdminPreferences
   }
 ];
 </script>

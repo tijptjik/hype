@@ -50,7 +50,7 @@ const filterableByQueryParams: FilterableResourceType[] = [
 
 let isFilterable = $derived(adminCtx.hasManyEntities(resourceType));
 let showFilters = $derived(
-  sidebarState.isOpen() &&
+      sidebarState.isVisuallyOpenState() &&
     sidebarState.isSectionOpen(resourceType as unknown as HierarchicalResource) &&
     isFilterable
 );
@@ -127,7 +127,7 @@ let getDisplayName = (entity: Exclude<Resource, Task>) => {
                   );
                 }
               }}
-              class="flex select-none items-center border-l-3 drag-none {!sidebarState.isOpen() &&
+              class="flex select-none items-center border-l-3 drag-none {!sidebarState.isVisuallyOpenState() &&
               isActive
                 ? 'h-[52px] px-4'
                 : 'h-[52px] px-6'}"

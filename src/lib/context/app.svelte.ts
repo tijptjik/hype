@@ -1774,7 +1774,8 @@ export class AppCtx {
         preferFallbackInCurrentLocale: false,
         isTranslateButtonVisible: true,
         admin: {
-          isAdminMapCollapsed: false
+          isAdminMapCollapsed: false,
+          isPrimaryPanelAutoHide: false
         }
       };
     }
@@ -1793,7 +1794,9 @@ export class AppCtx {
             (this.user as CurrentUser).preferences.isTranslateButtonVisible ?? true,
           admin: {
             isAdminMapCollapsed:
-              (this.user as CurrentUser).preferences.admin?.isAdminMapCollapsed ?? false
+              (this.user as CurrentUser).preferences.admin?.isAdminMapCollapsed ?? false,
+            isPrimaryPanelAutoHide:
+              (this.user as CurrentUser).preferences.admin?.isPrimaryPanelAutoHide ?? false
           }
         }
       : ((this.user as CurrentUser).preferences as UserPreferences);

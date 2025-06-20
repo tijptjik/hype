@@ -1057,7 +1057,8 @@ export class AdminCtx {
     if (!this.appCtx.user) return;
     if (!(this.appCtx.user as CurrentUser).preferences.admin) {
       (this.appCtx.user as CurrentUser).preferences.admin = {
-        isAdminMapCollapsed: false
+        isAdminMapCollapsed: false,
+        isPrimaryPanelAutoHide: false
       };
     }
     if (!this.appCtx.user.preferences.admin) {

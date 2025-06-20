@@ -35,7 +35,7 @@ let onClick = (e: MouseEvent) => {
       ? 'border-primary'
       : 'border-base-300'} rounded-none">
     <Icon src={navItems[resourceType].icon} class="h-6 w-6" />
-    {#if sidebarState.isOpen()}
+    {#if sidebarState.isVisuallyOpenState()}
       <span class="ml-3 font-mono">{navItems[resourceType].name}</span>
     {/if}
   </a>

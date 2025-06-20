@@ -18,7 +18,8 @@ import {
   SupportedLocales,
   FieldDiscriminator as FieldDiscriminatorEnum,
   TaskType as TaskTypeEnum,
-  TaskReviewOutcome
+  TaskReviewOutcome,
+  HierarchicalResource
 } from './enums';
 // ZOD SCHEMAS
 import {
@@ -329,6 +330,13 @@ export type NavItem = {
   isShownInSidebar: boolean;
   isAlwaysExpanded: boolean;
 };
+
+export type SidebarStateState = {
+  isOpen: boolean;
+  isVisuallyOpen: boolean;
+  isSectionOpen: Record<HierarchicalResource, boolean | null>;
+};
+
 
 /* ----------------- */
 // ADMIN CONTROLS
@@ -751,6 +759,7 @@ export type OrganisationJoinConfig = {
 
 export type AdminPreferences = {
   isAdminMapCollapsed: boolean;
+  isPrimaryPanelAutoHide: boolean;
 };
 
 export type UserPreferences = {
