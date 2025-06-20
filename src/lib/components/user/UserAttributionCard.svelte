@@ -58,7 +58,7 @@ async function fetchUser(id: string | null): Promise<UserData> {
     {#await userPromise}
       <div
         class="flex min-w-[200px] items-center gap-3 rounded-lg bg-base-200/30 p-3 backdrop-blur-sm transition-all duration-200">
-        <div class="loading loading-spinner loading-md min-h-12"></div>
+        <div class="loading loading-ring loading-md min-h-12"></div>
       </div>
     {:then user}
       <div
