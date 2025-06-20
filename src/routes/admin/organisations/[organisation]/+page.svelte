@@ -143,6 +143,7 @@ let enhance = $derived(form.enhance);
 let title = $derived(
   pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE
 );
+let image = $derived(pageProps.data.image as Image);
 let { form: organisationForm } = form;
 
 let headerActions = $derived(
@@ -207,14 +208,16 @@ let headerActions = $derived(
           <ImageProvider
             mode="standalone"
             isAdminMode={true}
-            ctxType={ImageContextResource.organisation}
-            ctxId={pageProps.data.entity}
-            organisation={pageProps.data.validatedForm.data as Organisation}
-            image={pageProps.data.image as Image}>
+            {image}
+            context={{
+              ctxType: ImageContextResource.organisation,
+              ctxId: (pageProps.data.validatedForm.data as Organisation).id,
+              organisation: pageProps.data.validatedForm.data as Organisation
+            }}>
             <ImageSection
               title={m.admin__forms_organisation_image_title()}
               fields={FIELDS.images}
-              image={pageProps.data.image as Image}
+              {image}
               {form} />
           </ImageProvider>
         {/if}
