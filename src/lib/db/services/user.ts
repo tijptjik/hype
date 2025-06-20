@@ -1,5 +1,5 @@
 // ENV
-import { and, SQL, eq, like, sql, or } from 'drizzle-orm';
+import { and, SQL, eq, like, sql, or, Column } from 'drizzle-orm';
 // FORMS
 import { superValidate } from 'sveltekit-superforms';
 import { user, userFeature, userLayer } from '../schema';
@@ -105,24 +105,20 @@ export const searchUsers = async (
 export const getUser = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = []
+  conditions: SQL<unknown>[] = [],
+  columns?: Record<string, boolean>
 ): Promise<UserDB | undefined> =>
   await db.query.user.findFirst({
     with: withRelations,
-    where: and(...conditions)
+    where: and(...conditions),
+    ...(columns ? { columns } : {})
   });
 
 export const getUserById = async (
   db: Database,
-  userId: Id
-): Promise<UserDB | undefined> =>
-  await getUser(
-    db,
-    {
-      columns: userColumnsWithPrivacyProtected
-    },
-    [eq(user.id, userId)]
-  );
+  userId: Id,
+  columns?: Record<string, boolean>
+): Promise<UserDB | undefined> => await getUser(db, {}, [eq(user.id, userId)], columns);
 
 /**
  * Updates an existing user in the database
