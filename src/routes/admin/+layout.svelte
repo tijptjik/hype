@@ -1,10 +1,11 @@
 <script lang="ts">
 // SVELTE
 import { watch } from 'runed';
+import { afterNavigate } from '$app/navigation';
+import { page } from '$app/state';
 // COMPONENTS
 import Sidebar from '$lib/components/sidebar/Root.svelte';
 import SecondarySidebar from '$lib/components/sidebar/SecondarySidebar.svelte';
-import Navbar from '$lib/components/layout/Navbar.svelte';
 import MinWidthProtector from '$lib/components/layout/MinWidth.svelte';
 import Settings from '$lib/components/panels/Settings.svelte';
 // STYLES
@@ -13,6 +14,8 @@ import '$lib/styles/admin.css';
 import { setAdminCtx } from '$lib/context/admin.svelte';
 import { getAppCtx } from '$lib/context/app.svelte';
 import { setSidebarState as setSidebarCtx } from '$lib/context/sidebar.svelte';
+// ENUMS
+import { FirstClassResource, ResourcePath } from '$lib/enums';
 // TYPES
 import type { LayoutProps, LayoutData } from './$types';
 import type { QueryClient } from '@tanstack/svelte-query';
@@ -47,6 +50,29 @@ watch(
 
 // CONTEXT :: SIDEBAR
 setSidebarCtx();
+
+// NAVIGATION :: Reset activeResourceRef when navigating to index pages
+afterNavigate(() => {
+  if (!adminCtx.isInitialised) return;
+
+  const pathname = page.url.pathname;
+
+  // Check if we're on an index page (no specific resource ref)
+  const isIndexPage = Object.values(ResourcePath).some(
+    (path) => pathname === `/admin/${path}` || pathname === `/admin/${path}/`
+  );
+
+  if (isIndexPage && adminCtx.activeResourceRef !== false) {
+    // Extract resource type from path
+    const resourceType = Object.entries(ResourcePath).find(([_, path]) =>
+      pathname.includes(`/admin/${path}`)
+    )?.[0] as FirstClassResource;
+
+    if (resourceType) {
+      adminCtx.setResourceRef(false, resourceType);
+    }
+  }
+});
 </script>
 
 <!-- LAYOUT -->
