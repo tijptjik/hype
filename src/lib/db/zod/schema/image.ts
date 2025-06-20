@@ -72,7 +72,8 @@ export const ImageAPI = ImageBase.extend({
     .default(ImageIntent.undefined)
     .optional(),
   isPublished: z.boolean().default(false).optional(),
-  publishedAt: z.string().optional()
+  publishedAt: z.string().optional(),
+  preview: z.string().optional()
 });
 
 export const ImageInsertAPI = ImageInsert.extend({
