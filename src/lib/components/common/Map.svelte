@@ -1,5 +1,6 @@
 <script lang="ts">
 // SVELTE
+import { fade } from 'svelte/transition';
 import { onMount } from 'svelte';
 // MapLibre
 import SpectralStyle from '$lib/map/styles/style-protomaps.json';
@@ -19,6 +20,7 @@ type MapProps = {
   addressMeta: AddressMeta | null;
   draggable?: boolean;
   toggleFullscreen?: (isFullscreen: boolean) => void;
+  toggleCollapsed?: (isCollapsed: boolean) => void;
   dragEndCallback?: (lngLat: number[]) => void;
 };
 
@@ -26,7 +28,12 @@ type MapProps = {
 let appCtx = getAppCtx();
 let adminCtx = getAdminCtx();
 
+let isMapCollapsed = $state(
+  adminCtx.appCtx.getUserPreferences().admin.isAdminMapCollapsed
+);
+
 let isFullscreen = $state(false);
+let isCollapsed = $state(isMapCollapsed);
 
 // STATE : PROPS
 let mapProps: MapProps = $props();
@@ -145,9 +152,39 @@ $effect(() => {
 <!-- ENHANCEMENT - show the canonical image on top of the marker, so that we 
  can remove the canonical image box and leave more space for the properties -->
 <div class="relative h-full w-full">
-  <div class="absolute right-4 top-4 z-10">
+  <div
+    class="{isCollapsed
+      ? 'absolute w-full justify-center'
+      : 'absolute right-4 '} top-4 z-10 flex flex-row gap-2">
     <button
-      class="btn btn-circle btn-sm bg-base-100 opacity-80 hover:opacity-100"
+      class="btn btn-circle btn-sm bg-base-100 opacity-80 hover:opacity-100 {isFullscreen
+        ? 'hidden'
+        : ''} "
+      transition:fade={{ duration: 300 }}
+      onclick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        isCollapsed = !isCollapsed;
+        mapProps.toggleCollapsed?.(isCollapsed);
+      }}>
+      <div class="swap">
+        <input
+          name="collapsed"
+          type="checkbox"
+          checked={isCollapsed}
+          onchange={() => {
+            isCollapsed = !isCollapsed;
+            mapProps.toggleCollapsed?.(isCollapsed);
+          }} />
+        <Icon src={ArrowsPointingOut} class="swap-on h-5 w-5" />
+        <Icon src={ArrowsPointingIn} class="swap-off h-5 w-5" />
+      </div>
+    </button>
+    <button
+      class="btn btn-circle btn-sm bg-base-100 opacity-80 hover:opacity-100 {isCollapsed
+        ? 'hidden'
+        : ''}"
+      transition:fade={{ duration: 300 }}
       onclick={(e) => {
         e.preventDefault();
         e.stopPropagation();

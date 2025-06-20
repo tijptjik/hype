@@ -148,6 +148,9 @@ watch(
 // STATE : DERIVED
 let enhance = $derived(form.enhance);
 let isMapFullscreen = $state(false);
+let isMapCollapsed = $state(
+  adminCtx.appCtx.getUserPreferences().admin.isAdminMapCollapsed
+);
 let title = $derived(
   pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.title || NEW_TITLE
 );
@@ -155,6 +158,10 @@ let title = $derived(
 // UTILS
 function handleMapFullscreenChange(isFullscreen: boolean): void {
   isMapFullscreen = isFullscreen;
+}
+
+function handleMapCollapse(): void {
+  isMapCollapsed = !isMapCollapsed;
 }
 </script>
 
@@ -208,12 +215,16 @@ function handleMapFullscreenChange(isFullscreen: boolean): void {
             class="flex flex-1 flex-row gap-6 overflow-hidden bg-black p-6 pr-3"
             style="height: calc(100vh - 148px) !important;">
             <div
-              class="map-container relative h-full flex-1 overflow-hidden @container"
-              class:fullscreen={isMapFullscreen}>
+              class="relative h-full overflow-hidden transition-all duration-300 ease-in-out @container"
+              class:flex-[0_0_3%]={isMapCollapsed}
+              class:overflow-visible={isMapCollapsed}
+              class:flex-[0_0_100%]={isMapFullscreen}
+              class:flex-[0_0_33%]={!isMapFullscreen && !isMapCollapsed}>
               <MapSection
                 {form}
                 fields={FIELDS.map}
-                toggleFullscreen={handleMapFullscreenChange} />
+                toggleFullscreen={handleMapFullscreenChange}
+                toggleCollapsed={handleMapCollapse} />
               <div
                 class="absolute bottom-2 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex">
                 <UserAttributionCard
@@ -227,8 +238,15 @@ function handleMapFullscreenChange(isFullscreen: boolean): void {
               </div>
             </div>
             <div
-              class="content-container h-auto scroll-m-10 scroll-p-12 overflow-y-auto"
-              class:shrink={isMapFullscreen}>
+              class="h-auto scroll-m-10 scroll-p-12 overflow-y-auto transition-all duration-300 ease-in-out"
+              class:flex-[0_0_0%]={isMapFullscreen}
+              class:overflow-hidden={isMapFullscreen}
+              class:opacity-0={isMapFullscreen}
+              class:w-[400px]={isMapFullscreen}
+              class:h-[400px]={isMapFullscreen}
+              class:flex-[0_0_96%]={isMapCollapsed}
+              class:flex-[0_0_66%]={!isMapFullscreen && !isMapCollapsed}
+              class:opacity-100={!isMapFullscreen}>
               <div class="flex h-full flex-col-reverse justify-end gap-6 pr-3">
                 {#if adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false}
                   <div class="flex flex-wrap justify-between gap-6">
@@ -290,30 +308,3 @@ function handleMapFullscreenChange(isFullscreen: boolean): void {
     {/await}
   {/if}
 </div>
-
-<style>
-.map-container {
-  flex-basis: 33% !important;
-  transition: flex-basis 0.3s ease-in-out !important;
-}
-.map-container.fullscreen {
-  flex-basis: 100% !important;
-}
-
-.content-container {
-  flex-basis: 66% !important;
-  transition:
-    flex-basis 0.3s ease-in-out,
-    opacity 0.2s ease-in-out;
-  opacity: 1 !important;
-}
-
-.content-container.shrink {
-  flex-basis: 0% !important;
-  overflow: hidden;
-  opacity: 0 !important;
-  overflow: hidden !important;
-  width: 400px !important;
-  height: 400px !important;
-}
-</style>
