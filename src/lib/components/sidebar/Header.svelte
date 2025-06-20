@@ -10,7 +10,7 @@ const sidebarState = getSidebarState();
 </script>
 
 <div class="flex flex-shrink-0 flex-row items-center justify-between bg-black p-4">
-  {#if sidebarState.isOpen()}
+  {#if sidebarState.isVisuallyOpenState()}
     <div class="invisible h-12 w-12"></div>
     <div class="flex w-full items-center justify-center">
       <Icon src={Bolt} class="h-8 w-8 text-primary" />

@@ -20,7 +20,8 @@ const UserPreferencesSchema = z.object({
   isTranslateButtonVisible: z.boolean(),
   admin: z
     .object({
-      isAdminMapCollapsed: z.boolean()
+      isAdminMapCollapsed: z.boolean().optional(),
+      isPrimaryPanelAutoHide: z.boolean().optional()
     })
     .optional()
 });
