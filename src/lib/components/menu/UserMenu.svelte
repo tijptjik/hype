@@ -13,7 +13,7 @@ const appCtx = getAppCtx();
 </script>
 
 {#if $session.data?.user}
-  <div class="flex items-center gap-2">
+  <div class="flex items-center gap-2 w-full">
     <div class="grid h-10 w-10 px-2">
       <button
         onclick={() => appCtx.togglePanel('settings')}
