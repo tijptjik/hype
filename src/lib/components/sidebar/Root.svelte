@@ -14,14 +14,27 @@ const adminCtx = getAdminCtx();
 let isHovering = $state(false);
 let autoHideTimeout: ReturnType<typeof setTimeout> | null = null;
 
-// Get admin preference for auto-hide
+// Get admin preferences
+const adminPreferences = $derived(adminCtx.appCtx.getUserPreferences().admin);
 const isPrimaryPanelAutoHide = $derived(
-  adminCtx.appCtx.isAdmin() && adminCtx.appCtx.getUserPreferences().admin.isPrimaryPanelAutoHide
+  adminCtx.appCtx.isAdmin() && adminPreferences.isPrimaryPanelAutoHide
 );
+const isPrimaryPanelCollapsed = $derived(
+  adminCtx.appCtx.isAdmin() && adminPreferences.isPrimaryPanelCollapsed
+);
+
+// Initialize sidebar state based on admin preferences (only once)
+let isInitialized = $state(false);
+$effect(() => {
+  if (adminCtx.isInitialised && !isInitialized) {
+    sidebarState.initializeState(isPrimaryPanelCollapsed);
+    isInitialized = true;
+  }
+});
 
 // Determine if sidebar should be visually open (considering auto-hide behavior)
 const isVisuallyOpen = $derived(
-  isPrimaryPanelAutoHide ? (sidebarState.isOpen() || isHovering) : sidebarState.isOpen()
+  isPrimaryPanelAutoHide ? sidebarState.isOpen() || isHovering : sidebarState.isOpen()
 );
 
 // Sync visual state to sidebar context for child components
@@ -56,7 +69,9 @@ function handleMouseLeave() {
 <aside
   id="sidebar"
   class="flex-shrink-1 flex h-screen flex-col bg-base-300 caret-transparent transition-all"
-  style="width: {isVisuallyOpen ? sidebarState.width.isOpen : sidebarState.width.isClosed}px"
+  style="width: {isVisuallyOpen
+    ? sidebarState.width.isOpen
+    : sidebarState.width.isClosed}px"
   onmouseenter={handleMouseEnter}
   onmouseleave={handleMouseLeave}>
   <Header />

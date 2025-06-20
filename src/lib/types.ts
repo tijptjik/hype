@@ -337,7 +337,6 @@ export type SidebarStateState = {
   isSectionOpen: Record<HierarchicalResource, boolean | null>;
 };
 
-
 /* ----------------- */
 // ADMIN CONTROLS
 /* -------- */
@@ -759,6 +758,7 @@ export type OrganisationJoinConfig = {
 
 export type AdminPreferences = {
   isAdminMapCollapsed: boolean;
+  isPrimaryPanelCollapsed: boolean;
   isPrimaryPanelAutoHide: boolean;
 };
 

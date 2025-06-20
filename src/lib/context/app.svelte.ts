@@ -1775,6 +1775,7 @@ export class AppCtx {
         isTranslateButtonVisible: true,
         admin: {
           isAdminMapCollapsed: false,
+          isPrimaryPanelCollapsed: false,
           isPrimaryPanelAutoHide: false
         }
       };
@@ -1794,9 +1795,14 @@ export class AppCtx {
             (this.user as CurrentUser).preferences.isTranslateButtonVisible ?? true,
           admin: {
             isAdminMapCollapsed:
-              (this.user as CurrentUser).preferences.admin?.isAdminMapCollapsed ?? false,
+              (this.user as CurrentUser).preferences.admin?.isAdminMapCollapsed ??
+              false,
+            isPrimaryPanelCollapsed:
+              (this.user as CurrentUser).preferences.admin?.isPrimaryPanelCollapsed ??
+              false,
             isPrimaryPanelAutoHide:
-              (this.user as CurrentUser).preferences.admin?.isPrimaryPanelAutoHide ?? false
+              (this.user as CurrentUser).preferences.admin?.isPrimaryPanelAutoHide ??
+              false
           }
         }
       : ((this.user as CurrentUser).preferences as UserPreferences);
