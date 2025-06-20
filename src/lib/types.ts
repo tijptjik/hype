@@ -331,7 +331,7 @@ export type NavItem = {
   isAlwaysExpanded: boolean;
 };
 
-export type SidebarStateState = {
+export type SidebarCtxState = {
   isOpen: boolean;
   isVisuallyOpen: boolean;
   isSectionOpen: Record<HierarchicalResource, boolean | null>;
