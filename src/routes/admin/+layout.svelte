@@ -1,12 +1,11 @@
 <script lang="ts">
 // SVELTE
 import { watch } from 'runed';
-// AUTH
-import { useSession } from '$lib/auth/client';
 // COMPONENTS
 import Sidebar from '$lib/components/sidebar/Root.svelte';
 import Navbar from '$lib/components/layout/Navbar.svelte';
 import MinWidthProtector from '$lib/components/layout/MinWidth.svelte';
+import Settings from '$lib/components/panels/Settings.svelte';
 // STYLES
 import '$lib/styles/admin.css';
 // CONTEXT
@@ -16,7 +15,6 @@ import { setSidebarState as setSidebarCtx } from '$lib/context/sidebar.svelte';
 // TYPES
 import type { LayoutProps, LayoutData } from './$types';
 import type { QueryClient } from '@tanstack/svelte-query';
-import type { SessionUser } from '$lib/types';
 
 type AdminRootProps = LayoutProps & {
   children: any;
@@ -28,11 +26,6 @@ type AdminRootProps = LayoutProps & {
 // PROPS
 let { children, data }: AdminRootProps = $props();
 const { queryClient } = data;
-
-// AUTH
-const session = useSession();
-
-// CONTEXT - Initialize with client session
 
 // CONTEXT :: APP
 // Get the shared AppCtx from root layout
@@ -68,6 +61,17 @@ setSidebarCtx();
         class:pb-[72px]={!adminCtx.isViewportContained}>
         {@render children()}
       </main>
+      {#if appCtx.state.panels.settings}
+        <div
+          class="absolute inset-0 top-16 z-50 bg-black/50"
+          onclick={() => appCtx.closePanel('settings')}>
+          <div
+            class="absolute right-0 top-0 h-full w-96 bg-base-100"
+            onclick={(e) => e.stopPropagation()}>
+            <Settings />
+          </div>
+        </div>
+      {/if}
     </div>
   {:else}
     <div class="flex h-screen w-full items-center justify-center">
