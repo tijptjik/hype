@@ -41,12 +41,14 @@ adminCtx.setFacet('core', pageProps.data.task.id, FirstClassResource.task);
   <ImageProvider
     mode="gallery"
     isAdminMode={true}
-    ctxType={ImageContextResource.feature}
-    ctxId={task.featureId as Id}
-    {organisation}
-    {project}
-    ctxTypeSecondary={ImageContextResourceExtended.task}
-    ctxIdSecondary={task.id}
+    context={{
+      ctxType: ImageContextResource.feature,
+      ctxId: task.featureId as Id,
+      organisation,
+      project,
+      ctxTypeSecondary: ImageContextResourceExtended.task,
+      ctxIdSecondary: task.id
+    }}
     highlightedIds={task.images?.map((taskImage) => taskImage.imageId as Id) || []}>
     <div
       class="h-full overflow-y-auto bg-gradient-to-br from-rose-500 to-indigo-700 bg-fixed p-6">

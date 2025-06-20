@@ -79,12 +79,14 @@ async function handleFeatureSelection() {
     <FeatureCard>
       {#if appCtx.isInitialised}
         <ImageProvider
-          mode="gallery"
+          mode="carousel"
           isAdminMode={false}
-          ctxType={ImageContextResource.feature}
-          ctxId={featureId}
-          {organisation}
-          {project}>
+          context={{
+            ctxType: ImageContextResource.feature,
+            ctxId: featureId,
+            organisation,
+            project
+          }}>
           {#if mode === FeatureCardMode.Display}
             <Container>
               <FeatureGallery />
