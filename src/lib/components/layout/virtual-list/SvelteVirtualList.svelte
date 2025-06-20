@@ -155,7 +155,8 @@ const {
   debugFunction, // Custom debug logging function
   mode = 'topToBottom', // Scroll direction mode
   bufferSize = 20, // Number of items to render outside visible area
-  testId // Base test ID for component elements (undefined = no data-testid attributes)
+  testId, // Base test ID for component elements (undefined = no data-testid attributes)
+  viewportPaddingTop = 0 // Top padding in pixels for the viewport (affects content height calculation)
 }: SvelteVirtualListProps = $props();
 
 /**
@@ -588,6 +589,7 @@ export const scrollToIndex = (
   <!-- Viewport handles scrolling -->
   <div
     id="virtual-list-viewport"
+    style:padding-top="{viewportPaddingTop}px"
     {...testId ? { 'data-testid': `${testId}-viewport` } : {}}
     class={viewportClass ?? 'virtual-list-viewport'}
     bind:this={viewportElement}
@@ -597,7 +599,10 @@ export const scrollToIndex = (
       id="virtual-list-content"
       {...testId ? { 'data-testid': `${testId}-content` } : {}}
       class={contentClass ?? 'virtual-list-content'}
-      style:height="{Math.max(height, items.length * calculatedItemHeight)}px">
+      style:height="{Math.max(
+        height - viewportPaddingTop,
+        items.length * calculatedItemHeight
+      )}px">
       <!-- Items container is translated to show correct items -->
       <div
         id="virtual-list-items"
