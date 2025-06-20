@@ -3,10 +3,12 @@ import { getLocale } from '$lib/i18n';
 // LIB
 import { navigateOnAdmin } from '$lib/navigation';
 import { fetchOrThrow } from '$lib/index';
+// SERVICES
+import { debouncedUpdateUserPreferences } from '$lib/client/services/user';
 // CONTEXT
 import { getContext, setContext } from 'svelte';
 import { QueryClient } from '@tanstack/svelte-query';
-import { AppCtx, APPCTX_KEY } from '$lib/context/app.svelte';
+import { AppCtx } from '$lib/context/app.svelte';
 // ENUMS
 import {
   ResourcePath,
@@ -40,7 +42,9 @@ import type {
   ViewFilters,
   Locale,
   FilterTriState,
-  FeatureI18nDB
+  CurrentUser,
+  UserPreferences,
+  AdminPreferences
 } from '../types';
 
 // State type for AdminCtx - only includes admin-specific state
@@ -1043,6 +1047,27 @@ export class AdminCtx {
 
   resetViewFilters = () => {
     this.state.viewFilters = structuredClone(viewFilters);
+  };
+
+  // ═══════════════════════
+  // ADMIN PREFERENCES
+  // ═══════════════════════
+
+  setAdminPreference = (code: keyof AdminPreferences, value: boolean) => {
+    if (!this.appCtx.user) return;
+    if (!(this.appCtx.user as CurrentUser).preferences.admin) {
+      (this.appCtx.user as CurrentUser).preferences.admin = {
+        isAdminMapCollapsed: false
+      };
+    }
+    if (!this.appCtx.user.preferences.admin) {
+      this.appCtx.user.preferences.admin = { [code]: value };
+    }
+    this.appCtx.user.preferences.admin![code] = value;
+    debouncedUpdateUserPreferences(
+      (this.appCtx.user as CurrentUser).id,
+      (this.appCtx.user as CurrentUser).preferences as UserPreferences
+    );
   };
 
   // ═══════════════════════

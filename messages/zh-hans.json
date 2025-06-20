@@ -478,5 +478,8 @@
   "filters__image": "图片",
   "filters__status": "地位",
   "filters__todo": "待办事项",
-  "filters__done": "完毕"
+  "filters__done": "完毕",
+  "settings_admin_title": "行政",
+  "settings_admin_map_collapsed": "折叠地图",
+  "settings_admin_map_collapsed_description": "编辑要素时默认折叠地图"
 }

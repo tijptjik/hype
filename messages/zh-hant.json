@@ -478,5 +478,8 @@
   "filters__image": "圖片",
   "filters__status": "地位",
   "filters__todo": "待辦事項",
-  "filters__done": "完畢"
+  "filters__done": "完畢",
+  "settings_admin_title": "行政",
+  "settings_admin_map_collapsed": "折疊地圖",
+  "settings_admin_map_collapsed_description": "編輯要素時預設折疊地圖"
 }
