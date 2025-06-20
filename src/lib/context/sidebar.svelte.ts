@@ -2,15 +2,14 @@ import { getContext } from 'svelte';
 import { setContext } from 'svelte';
 // ENUM
 import { HierarchicalResource } from '$lib/enums';
-
-type SidebarStateState = {
-  isOpen: boolean;
-  isSectionOpen: Record<HierarchicalResource, boolean | null>;
-};
+// TYPES
+import type { SidebarStateState } from '$lib/types';
 
 class SidebarState {
   state: SidebarStateState = $state({
     isOpen: true,
+    // Set in the Root component for auto-hide behavior
+    isVisuallyOpen: true,
     isSectionOpen: {
       organisation: null,
       project: null,
@@ -53,6 +52,15 @@ class SidebarState {
 
   isOpen = () => {
     return this.state.isOpen;
+  };
+
+  // Auto-hide behaviour - set in the Root component
+  isVisuallyOpenState = () => {
+    return this.state.isVisuallyOpen;
+  };
+
+  setVisuallyOpen = (open: boolean) => {
+    this.state.isVisuallyOpen = open;
   };
 
   isSectionOpen = (section: HierarchicalResource) => {

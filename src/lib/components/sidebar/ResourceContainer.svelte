@@ -18,7 +18,7 @@ let { resourceType }: { resourceType: FirstClassResource } = $props();
 
 let isFilterable = $derived(adminCtx.hasManyEntities(resourceType));
 let showFilters = $derived(
-  sidebarState.isOpen() &&
+  sidebarState.isVisuallyOpenState() &&
     sidebarState.isSectionOpen(resourceType as unknown as HierarchicalResource) &&
     isFilterable
 );

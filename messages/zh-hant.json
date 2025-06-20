@@ -481,5 +481,7 @@
   "filters__done": "完畢",
   "settings_admin_title": "行政",
   "settings_admin_map_collapsed": "折疊地圖",
-  "settings_admin_map_collapsed_description": "編輯要素時預設折疊地圖"
+  "settings_admin_map_collapsed_description": "編輯要素時預設折疊地圖",
+  "settings_admin_panel_auto_hide": "自動隱藏側邊欄",
+  "settings_admin_panel_auto_hide_description": "折疊狀態下懸停時側邊欄會打開"
 }
