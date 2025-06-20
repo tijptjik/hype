@@ -36,7 +36,6 @@
   "navbar__neighbourhoods": "Hoods",
   "navbar__blog": "Blog",
   "navbar__about": "About",
-  "navbar__ghostmapper": "GhostMapper",
   "navbar__profile": "Profile",
   "navbar__settings": "Settings",
   "navbar__signin": "Sign in",
@@ -485,5 +484,8 @@
   "settings_admin_panel_collapsed": "Collapsed Sidebar",
   "settings_admin_panel_collapsed_description": "Collapse the sidebar by default",
   "settings_admin_panel_auto_hide": "Auto-hide Sidebar",
-  "settings_admin_panel_auto_hide_description": "Sidebar opens when hovered on, and closes when not"
+  "settings_admin_panel_auto_hide_description": "Sidebar opens when hovered on, and closes when not",
+  "close_odd_hornet_feast": "Drop to replace image",
+  "born_plain_bulldog_stop": "Drop image",
+  "navbar__ghostmapper": "GhostMapper"
 }
