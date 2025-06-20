@@ -1,10 +1,8 @@
 // SVELTE
-import { error, json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 // DB SCHEMA
 import { image } from '$lib/db/schema/index';
 // DB SERVICES
-import { updateOrganisation } from '$lib/db/services/organisation';
-import { updateProject } from '$lib/db/services/project';
 import {
   createImage,
   createFeatureImage,
@@ -12,6 +10,8 @@ import {
   toResponseShape,
   toResponseShapeProjectOrOrganisation
 } from '$lib/db/services/image';
+import { updateOrganisationById } from '$lib/db/services/organisation';
+import { updateProjectById } from '$lib/db/services/project';
 import { getUserById } from '$lib/db/services/user';
 // API SERVICES
 import { JSONResponseOrError, isValidQueryParamsOrError, getDatabase } from '$lib/api';
@@ -29,6 +29,7 @@ import {
 } from '$lib/db/zod';
 import type { RequestHandler } from '@sveltejs/kit';
 import type { ImageNew, Id, QueryParams, FeatureImage } from '$lib/types';
+import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
 
 /********************
  *  LIST
@@ -102,7 +103,11 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
 export const POST: RequestHandler = async ({ request, locals, platform }) => {
   // ASSERT : User logged in
   const { db, user, userId, userRoles } = await getDatabase(locals, platform);
-  const userWithAttribution = await getUserById(db, userId);
+  const userWithAttribution = await getUserById(
+    db,
+    userId,
+    userColumnsWithPrivacyProtected
+  );
 
   try {
     // ASSERT : Valid submitted data
@@ -184,9 +189,9 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       // DB : Update the Project or Organisation
       const payload = { imageId: createdImage.id };
       if (validatedData.ctxType === ImageContextResource.project) {
-        await updateProject(db, payload, validatedData.ctxId);
+        await updateProjectById(db, payload, validatedData.ctxId);
       } else if (validatedData.ctxType === ImageContextResource.organisation) {
-        await updateOrganisation(db, payload, validatedData.ctxId);
+        await updateOrganisationById(db, payload, validatedData.ctxId);
       }
 
       const responseData = await toResponseShapeProjectOrOrganisation(
