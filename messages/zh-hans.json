@@ -483,5 +483,7 @@
   "settings_admin_map_collapsed": "折叠地图",
   "settings_admin_map_collapsed_description": "编辑要素时默认折叠地图",
   "settings_admin_panel_auto_hide": "自动隐藏侧边栏",
-  "settings_admin_panel_auto_hide_description": "折叠状态下悬停时侧边栏会打开"
+  "settings_admin_panel_auto_hide_description": "折叠状态下悬停时侧边栏会打开",
+  "settings_admin_panel_collapsed": "折叠侧边栏",
+  "settings_admin_panel_collapsed_description": "默认折叠侧边栏"
 }
