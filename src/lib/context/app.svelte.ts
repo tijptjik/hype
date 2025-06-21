@@ -104,7 +104,7 @@ export class AppCtx {
   };
 
   // Features map for current state (rebuilt when state.resources.feature changes)
-  private featuresMap = new SvelteMap<Id, FeatureFromCollection>();
+  private featuresMap = new SvelteMap<Id, FeatureFromCollection | Feature>();
   private organisationCodeToId = new Map<Code, Id>();
   private projectCodeToId = new Map<Code, Id>();
   private hubCodeToId = new Map<Code, Id>();
@@ -929,6 +929,7 @@ export class AppCtx {
       feature = await this.fetchResourceById<Feature>(FirstClassResource.feature, id);
       if (feature) {
         this.cache.feature.set(id, feature);
+        this.addFeatureToMap(feature as Feature);
         return feature;
       }
     }
@@ -1519,6 +1520,10 @@ export class AppCtx {
     newFeatures.forEach((feature) => {
       this.featuresMap.set(feature.id, feature);
     });
+  };
+
+  addFeatureToMap = (feature: FeatureFromCollection | Feature) => {
+    this.featuresMap.set(feature.id, feature);
   };
 
   // Public getter for features map (O(1) lookup, no rebuilding on access)
