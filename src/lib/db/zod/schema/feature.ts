@@ -267,7 +267,7 @@ export const FeatureAPI = FeatureBase.extend({
   properties: z.array(FeaturePropertyAPI),
   contributor: UserBasic.nullish(),
   publisher: UserBasic.nullish(),
-  image: ImageAPI,
+  image: ImageAPI.nullish(),
   images: z.lazy(() => z.array(ImageAPI).nullish())
 });
 
