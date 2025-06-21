@@ -25,12 +25,12 @@ function handleClick(e: MouseEvent) {
 
 <button
   class="arrow absolute {direction === 'left'
-    ? 'left-6'
-    : 'right-6'} top-1/2 z-40 -translate-y-1/2 transform rounded-full bg-base-100/80 p-2 shadow-lg backdrop-blur-sm transition-all hover:scale-110 hover:bg-base-100 hover:shadow-xl"
+    ? 'left-8'
+    : 'right-8'} top-1/2 z-40 h-10 w-10 -translate-y-1/2 transform rounded-full bg-base-100/80 p-2 shadow-lg backdrop-blur-sm transition-all hover:bg-base-100 hover:shadow-xl"
   onclick={handleClick}
   in:fade={{ duration: 200 }}
   out:fade={{ duration: 200 }}>
-  <Icon src={direction === 'left' ? ChevronLeft : ChevronRight} class="h-5 w-5" />
+  <Icon src={direction === 'left' ? ChevronLeft : ChevronRight} class="h-6 w-6" />
 </button>
 
 <style>

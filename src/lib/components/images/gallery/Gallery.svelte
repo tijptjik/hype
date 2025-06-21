@@ -8,7 +8,9 @@ import Thumbnail from '$lib/components/images/gallery/Thumbnail.svelte';
 import UploadThumbnail from '$lib/components/images/gallery/ThumbnailWhileUploading.svelte';
 import ScrollArrow from '$lib/components/images/gallery/ScrollArrow.svelte';
 import Dropzone from '$lib/components/images/gallery/Dropzone.svelte';
-import type { ImageUploadState } from '$lib/types';
+// TYPES
+import type { ImageUpload } from '$lib/types';
+
 // SERVICES
 const imageCtx = getImageContext();
 
@@ -29,6 +31,9 @@ let showRightArrow = $state(false);
 
 // DOM
 let scrollContainer: HTMLElement;
+
+// Get images for rendering
+let images = $derived(imageCtx.getImages());
 
 // HANDLERS :: SCROLL
 const handleWheel = (event: WheelEvent) => {
@@ -88,9 +93,27 @@ const scrollTo = (direction: 'left' | 'right') => {
   });
 };
 
+// HANDLERS :: THUMBNAIL INTERACTION
+const handleThumbnailHover = (imageId: string, event: MouseEvent) => {
+  event.preventDefault();
+  event.stopPropagation();
+  // Use target() method for proper communication with main viewer
+  imageCtx.target(imageId);
+};
+
+const handleThumbnailClick = (imageId: string, event: MouseEvent) => {
+  event.preventDefault();
+  event.stopPropagation();
+  // Use target() method which sets lastChangeType to 'target' for proper PhotoFrame transitions
+  imageCtx.target(imageId);
+};
+
+// EFFECT :: AUTO-SCROLL TO ACTIVE IMAGE
 $effect(() => {
   if (imageCtx.activeImage) {
-    const activeImageElement = document.getElementById(imageCtx.activeImage.id);
+    const activeImageElement = document.getElementById(
+      `thumbnail-${imageCtx.activeImage.id}`
+    );
     if (activeImageElement && scrollContainer) {
       // Get container and element positions
       const containerRect = scrollContainer.getBoundingClientRect();
@@ -119,12 +142,14 @@ $effect(() => {
 {#if showLeftArrow}
   <ScrollArrow direction="left" onScroll={scrollTo} />
 {/if}
+
 <!-- Main scroll container -->
 <div
-  class="flex w-full min-w-0 gap-4 overflow-x-auto scroll-smooth rounded-xl bg-base-100 p-4"
+  class="flex h-full w-full min-w-0 gap-4 overflow-x-auto scroll-smooth rounded-xl bg-base-100 p-4"
   bind:this={scrollContainer}
   onwheel={handleWheel}
-  onscroll={handleScroll}>
+  onscroll={handleScroll}
+  tabindex="-1">
   <!-- Dropzone always first -->
   {#if hasDropzone}
     <div class="h-[200px] w-[200px] flex-none">
@@ -142,18 +167,20 @@ $effect(() => {
     {/if}
   {/each}
 
-  <!-- Images -->
-  {#each imageCtx.getImages() as image, i (image.id)}
+  <!-- Thumbnails with proper interaction handlers -->
+  {#each images as image, i (image.id)}
     <div
-      id={image.id}
+      id="thumbnail-{image.id}"
       animate:flip={{ duration: 300 }}
-      in:fade={{ duration: 200, delay: i * 100 }}
-      out:fade={{ duration: 200 }}
-      class="relative h-[200px] w-[200px] flex-none">
+      in:fade={{ duration: 300, delay: 300 + i * 50 }}
+      out:fade={{ duration: 400 }}
+      class="relative h-[200px] w-[200px] flex-none cursor-pointer"
+      onmouseenter={(e) => handleThumbnailHover(image.id, e)}
+      onclick={(e) => handleThumbnailClick(image.id, e)}>
       {#if imageCtx.isImageBeingReplaced(image.id)}
         <!-- Show upload thumbnail for replacement -->
         <UploadThumbnail
-          fileObject={imageCtx.getReplacementUpload(image.id) as ImageUploadState} />
+          fileObject={imageCtx.getReplacementUpload(image.id) as ImageUpload} />
       {:else}
         <Thumbnail
           {image}
