@@ -20,3 +20,16 @@
   color: #15191e;
   background: #a6adbb;
 }
+
+/* Hide caret everywhere except in inputs */
+* {
+  caret-color: transparent;
+}
+
+/* Show caret in input elements */
+input,
+textarea,
+[contenteditable='true'],
+[contenteditable=''] {
+  caret-color: inherit;
+}
