@@ -4,8 +4,8 @@ import { getAdminCtx } from '$lib/context/admin.svelte';
 // PROVIDERS
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // COMPONENTS :: COMMON
-import Image from '$lib/components/tasks/common/Image.svelte';
 import Gallery from '$lib/components/tasks/common/Gallery.svelte';
+import Viewer from '$lib/components/common/Viewer.svelte';
 // COMPONENTS :: LAYOUT
 import TaskRoot from '$lib/components/tasks/layout/EntityRoot.svelte';
 import TaskHeader from '$lib/components/tasks/layout/Header.svelte';
@@ -68,7 +68,7 @@ adminCtx.setFacet('core', pageProps.data.task.id, FirstClassResource.task);
         </TaskHeader>
         <TaskMain {task}>
           <div class="flex flex-1 flex-col">
-            <Image isDropzone={!task.isReviewed} mode="gallery"/>
+            <Viewer isDropzone={!task.isReviewed} />
             <TaskFooter>
               <Gallery />
             </TaskFooter>

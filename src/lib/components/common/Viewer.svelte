@@ -89,15 +89,12 @@ const handleDrop = async (e: CustomEvent) => {
   {:else if isError}
     {@render ErrorContent()}
   {:else}
-    <PhotoFrame
-      class="relative h-full w-full rounded-2xl"
-      mode="standalone"
-      layout="contain">
+    <PhotoFrame class="h-full w-full rounded-2xl" mode="standalone" layout="contain">
       {#snippet children()}
         {#if image && !hideActions}
           <!-- Left Actions -->
           <div
-            class="absolute bottom-0 left-0 z-10 m-10 flex flex-row items-start gap-4 overflow-visible">
+            class="absolute bottom-0 left-0 z-30 m-10 flex flex-row items-start gap-4 overflow-visible">
             {#if LeftActions}
               {@render LeftActions()}
             {:else}
@@ -110,14 +107,14 @@ const handleDrop = async (e: CustomEvent) => {
           <!-- Middle Actions -->
           {#if MiddleActions}
             <div
-              class="absolute bottom-0 left-0 z-10 m-10 flex flex-row items-center gap-4 overflow-visible">
+              class="absolute bottom-0 left-0 z-30 m-10 flex flex-row items-center gap-4 overflow-visible">
               {@render MiddleActions()}
             </div>
           {/if}
 
           <!-- Right Actions -->
           <div
-            class="absolute bottom-0 right-0 z-10 m-10 flex flex-row items-end gap-4 overflow-visible">
+            class="absolute bottom-0 right-0 z-30 m-10 flex flex-row items-end gap-4 overflow-visible">
             {#if RightActions}
               {@render RightActions()}
             {:else}
