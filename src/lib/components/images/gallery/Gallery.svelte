@@ -145,11 +145,10 @@ $effect(() => {
 
 <!-- Main scroll container -->
 <div
-  class="flex h-full w-full min-w-0 gap-4 overflow-x-auto scroll-smooth rounded-xl bg-base-100 p-4"
+  class="flex w-full min-w-0 gap-4 overflow-x-auto scroll-smooth rounded-xl bg-base-100 p-4"
   bind:this={scrollContainer}
   onwheel={handleWheel}
-  onscroll={handleScroll}
-  tabindex="-1">
+  onscroll={handleScroll}>
   <!-- Dropzone always first -->
   {#if hasDropzone}
     <div class="h-[200px] w-[200px] flex-none">
@@ -168,12 +167,12 @@ $effect(() => {
   {/each}
 
   <!-- Thumbnails with proper interaction handlers -->
-  {#each images as image, i (image.id)}
+  {#each imageCtx.getImages() as image, i (image.id)}
     <div
       id="thumbnail-{image.id}"
       animate:flip={{ duration: 300 }}
-      in:fade={{ duration: 300, delay: 300 + i * 50 }}
-      out:fade={{ duration: 400 }}
+      in:fade={{ duration: 200, delay: i * 100 }}
+      out:fade={{ duration: 200 }}
       class="relative h-[200px] w-[200px] flex-none cursor-pointer"
       onmouseenter={(e) => handleThumbnailHover(image.id, e)}
       onclick={(e) => handleThumbnailClick(image.id, e)}>

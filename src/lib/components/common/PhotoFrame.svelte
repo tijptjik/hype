@@ -141,11 +141,6 @@ watch(
       animationId = null;
     }
 
-    // If we're already transitioning, use the current overlay as the new base
-    if (isTransitioning && overlayImage) {
-      baseImage = overlayImage;
-    }
-
     // Start crossfade transition
     overlayImage = newDisplayImage;
     isTransitioning = true;
@@ -219,33 +214,34 @@ function getImageOpacity(
 </script>
 
 <div class="relative {className}" style="transition-duration: {transitionDuration}ms;">
-  <!-- Base Image (OLD - behind) -->
+  <!-- Base Image -->
   {#if baseImage && baseImage.src}
-    <div class="absolute inset-0 z-0">
-      <Picture
-        src={baseImage?.src || ''}
-        alt={altText}
-        {layout}
-        {showLoading}
-        {showError}
-        {showBackground}
-        opacity={getImageOpacity(baseImage, isTransitioning ? 1 - overlayOpacity : 1)}
-        onLoad={() => {
-          if (!baseImage?.isPreview && baseImage?.image) {
-            imageCtx.setLoadStatus(baseImage?.image.id, 'loaded');
-          }
-        }}
-        onError={() => {
-          if (!baseImage?.isPreview && baseImage?.image) {
-            imageCtx.setLoadStatus(baseImage?.image.id, 'error');
-          }
-        }} />
-    </div>
+    <Picture
+      src={baseImage?.src || ''}
+      alt={altText}
+      {layout}
+      {showLoading}
+      {showError}
+      {showBackground}
+      opacity={getImageOpacity(
+        baseImage,
+        isTransitioning && overlayImage ? 1 - overlayOpacity : 1
+      )}
+      onLoad={() => {
+        if (!baseImage?.isPreview && baseImage?.image) {
+          imageCtx.setLoadStatus(baseImage?.image.id, 'loaded');
+        }
+      }}
+      onError={() => {
+        if (!baseImage?.isPreview && baseImage?.image) {
+          imageCtx.setLoadStatus(baseImage?.image.id, 'error');
+        }
+      }} />
   {/if}
 
-  <!-- Overlay Image (NEW - in front during transition) -->
+  <!-- Overlay Image (during crossfade transition) -->
   {#if overlayImage && overlayImage.src && isTransitioning}
-    <div class="z-1 absolute inset-0">
+    <div class="absolute inset-0">
       <Picture
         src={overlayImage?.src || ''}
         alt={`Transitioning to ${overlayImage.id}`}

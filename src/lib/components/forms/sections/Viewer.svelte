@@ -47,7 +47,7 @@ let image = $derived(imageCtx.activeImage);
     {#if imageCtx.getImages().length > 1}
       <!-- Left Navigation -->
       <div
-        class="absolute left-0 top-[80px] z-20 flex h-[calc(100%-160px)] w-[20%] cursor-pointer items-center justify-start pl-2 caret-transparent opacity-0 transition-opacity duration-200 hover:opacity-100"
+        class="absolute left-0 top-0 z-20 flex h-full w-[20%] cursor-pointer items-center justify-start pl-2 caret-transparent opacity-0 transition-opacity duration-200 hover:opacity-100"
         onclick={(e: MouseEvent) => imageCtx.switchToImage(e, 'prev')}
         role="button"
         tabindex="0">
@@ -61,7 +61,7 @@ let image = $derived(imageCtx.activeImage);
 
       <!-- Right Navigation -->
       <div
-        class="absolute right-0 top-[80px] z-20 flex h-[calc(100%-160px)] w-[20%] cursor-pointer items-center justify-end pr-2 caret-transparent opacity-0 transition-opacity duration-200 hover:opacity-100"
+        class="absolute right-0 top-0 z-20 flex h-full w-[20%] cursor-pointer items-center justify-end pr-2 caret-transparent opacity-0 transition-opacity duration-200 hover:opacity-100"
         onclick={(e: MouseEvent) => imageCtx.switchToImage(e, 'next')}
         role="button"
         tabindex="0">
