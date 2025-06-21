@@ -46,11 +46,11 @@ let showNewButton = $derived(user && resource && canCreateEntity(user, resource)
 
 {#if resource}
   <header
-    class="navbar h-17.5 px-12 py-4 caret-transparent shadow-lg"
-    class:bg-base-300={resourceMode}
-    class:bg-gradient-to-r={!resourceMode}
-    class:from-rose-500={!resourceMode}
-    class:to-fuchsia-800={!resourceMode}>
+    class="navbar h-[72px] flex-shrink-0 flex-grow-0 py-4 pl-6 caret-transparent shadow-lg"
+    class:bg-black={adminCtx.isShowIndex}
+    class:bg-gradient-to-r={!adminCtx.isShowIndex}
+    class:from-rose-500={!adminCtx.isShowIndex}
+    class:to-fuchsia-800={!adminCtx.isShowIndex}>
     <div class="flex-1">
       <div class="flex items-center space-x-4">
         <Icon src={navItems[resource].icon} class="h-6 w-6" />
@@ -60,7 +60,7 @@ let showNewButton = $derived(user && resource && canCreateEntity(user, resource)
         {/if}
       </div>
     </div>
-    <div class="flex flex-none items-center space-x-5">
+    <div class="flex flex-none items-center space-x-5 pr-[16px]">
       {#if filters}
         {@render filters()}
       {:else}
