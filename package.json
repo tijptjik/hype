@@ -58,8 +58,8 @@
     "webdriverio": "^9.3.0"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.29.4",
-    "@cloudflare/vite-plugin": "^1.7.2",
+    "@changesets/cli": "^2.29.5",
+    "@cloudflare/vite-plugin": "^1.7.4",
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
     "@commitlint/cz-commitlint": "^19.8.1",
@@ -93,7 +93,7 @@
     "vite-node": "^3.2.4",
     "vite-plugin-node-polyfills": "^0.23.0",
     "vitest": "^3.2.4",
-    "wrangler": "^4.20.3"
+    "wrangler": "^4.20.5"
   },
   "type": "module",
   "trustedDependencies": [
@@ -126,7 +126,7 @@
     "@types/proj4": "^2.5.6",
     "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.21",
-    "better-auth": "^1.2.9",
+    "better-auth": "^1.2.10",
     "coordinate-parser": "^1.0.7",
     "daisyui": "4.12.24",
     "date-fns": "^4.1.0",
