@@ -8,6 +8,8 @@ import NewPhotoContent from '$lib/components/tasks/info/NewPhoto.svelte';
 import Actions from '$lib/components/tasks/common/Actions.svelte';
 // SERVICES
 import { updateTaskReview } from '$lib/client/services/task';
+// NAVIGATION
+import { goToNextTask } from '$lib/navigation';
 // TYPES
 import type { Task } from '$lib/types';
 import type { IconSource } from '@steeze-ui/svelte-icon';
@@ -75,7 +77,7 @@ const handleAction = async (action: string, e: Event, reviewReason?: string) => 
       reviewReason
     });
 
-    adminCtx.goToNextTask();
+    goToNextTask(adminCtx);
   } catch (error) {
     console.error(`Failed to ${action} task:`, error);
   }

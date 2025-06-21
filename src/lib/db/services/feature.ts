@@ -28,6 +28,7 @@ import {
   FeatureUpdateAPI,
   FeatureCollectionAPI,
   FeaturePropertyCollectionAPI,
+  FeatureAPI,
   FeaturePropertyAPI
 } from '../zod';
 // ENUMS
@@ -53,8 +54,8 @@ import type {
   LayerDBRaw,
   Locale,
   NewFeatureProperty,
-  PropertyValueI18nDB,
   ImageDB,
+  ImageDBFlat,
   HubOpts
 } from '$lib/types';
 
@@ -128,25 +129,24 @@ export const listFeaturesWithImage = async (
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOpts
-): Promise<
-  (FeatureDB & {
-    image: ImageDB | null;
-    imageCount: number;
-    imagePublishedCount: number;
-  })[]
-> => {
+): Promise<FeatureDBRaw[]> => {
   // Apply hub filtering if opts is provided
   const hubFilter = getFeatureHubFilter(db, opts);
   if (hubFilter) {
     conditions.push(hubFilter);
   }
   // Define the relations needed to fetch featureImages and their nested images
-  const relationsForImageFetch = {
+  const relationsForImageFetch: Record<string, boolean | object> = {
     ...withRelations,
     images: {
       // Relation from feature to featureImage table (feature.images)
       with: {
-        image: { with: {} } // Relation from featureImage to image table (featureImage.image)
+        image: {
+          // Relation from featureImage to image table (featureImage.image)
+          with: {
+            contributor: true
+          }
+        }
       }
     }
   };
@@ -156,32 +156,7 @@ export const listFeaturesWithImage = async (
     where: conditions.length > 0 ? and(...conditions) : undefined
   });
 
-  // Post-process to select the canonical or first image and calculate counts
-  const featuresWithSelectedImage = featuresRaw.map((feature) => {
-    const rawImages = (feature as any).images || [];
-
-    // Transform raw images to the expected format for selectCanonicalOrFirstImage
-    const transformedImages = rawImages.map((img: any) => ({
-      intent: img.intent,
-      image: img.image || null
-    }));
-
-    const selectedImage = selectCanonicalOrFirstImage(transformedImages);
-
-    // Calculate image counts for filtering
-    const imageCount = rawImages.length;
-    const imagePublishedCount = rawImages.filter((img: any) => img.isPublished).length;
-
-    const { images: _, ...restOfFeature } = feature as any; // Remove the raw images array
-    return {
-      ...restOfFeature,
-      image: selectedImage,
-      imageCount,
-      imagePublishedCount
-    };
-  });
-
-  return featuresWithSelectedImage;
+  return featuresRaw as FeatureDBRaw[];
 };
 
 export const getFeature = async (
@@ -221,19 +196,9 @@ export const getFeatureWithImage = async (
   if (hubFilter) {
     conditions.push(hubFilter);
   }
-  // Define the relations needed to fetch featureImages and their nested images
-  const relationsForImageFetch = {
-    ...withRelations,
-    images: {
-      // Relation from feature to featureImage table (feature.images)
-      with: {
-        image: { with: {} } // Relation from featureImage to image table (featureImage.image)
-      }
-    }
-  };
 
   const featureRaw = await db.query.feature.findFirst({
-    with: relationsForImageFetch,
+    with: withRelations,
     where: conditions.length > 0 ? and(...conditions) : undefined
   });
 
@@ -241,8 +206,9 @@ export const getFeatureWithImage = async (
 
   // Post-process to select the canonical or first image
   const selectedImage = selectCanonicalOrFirstImage((featureRaw as any).images);
-  const { images, ...restOfFeature } = featureRaw as any; // Remove the raw images array
-  return { ...restOfFeature, image: selectedImage };
+
+  // Return both the selected image AND preserve the images array for entity responses
+  return { ...featureRaw, image: selectedImage } as any;
 };
 
 /**
@@ -580,12 +546,15 @@ export const updateFeatureWithRelated = async (
     // Build the correct structure for selectCanonicalOrFirstImage
     const imagesWithData = await Promise.all(
       featureImageRecords.map(async (featureImg) => {
-        const imageData = await db.query.image.findFirst({
-          where: eq(image.id, featureImg.imageId)
+        const imageData: ImageDB | undefined = await db.query.image.findFirst({
+          where: eq(image.id, featureImg.imageId),
+          with: {
+            contributor: true
+          }
         });
         return {
           ...featureImg,
-          image: imageData || null
+          image: imageData as (ImageDB & { contributor: { attribution: string | null } | null }) | undefined
         };
       })
     );
@@ -747,11 +716,42 @@ export const toResponseShape = async (
   isCollection: boolean = false
 ) => {
   const propertiesData = toPropertyShape(properties, isCollection);
-  return (isCollection ? FeatureCollectionAPI : FeatureUpdateAPI).parse({
-    ...data,
-    i18n: transformI18nSafely(i18n),
-    properties: propertiesData
-  });
+
+  // Extract selected image and images array from raw data
+  const rawImages = (data as any).images || [];
+  const selectedImage = selectCanonicalOrFirstImage(rawImages);
+  const imageCount = rawImages.length;
+  const imagePublishedCount = rawImages.filter((img: any) => img.isPublished).length;
+
+  if (isCollection) {
+    // Collection response - only includes selected image, imageCount, imagePublishedCount
+    return FeatureCollectionAPI.parse({
+      ...data,
+      i18n: transformI18nSafely(i18n),
+      properties: propertiesData,
+      image: selectedImage,
+      imageCount,
+      imagePublishedCount
+    });
+  } else {
+    // Entity response - includes both selected image and images array
+    const imagesArray =
+      rawImages?.map((img: any) => ({
+        ...img.image,
+        intent: img.intent,
+        isPublished: img.isPublished,
+        publishedAt: img.publishedAt,
+        attribution: img.image?.contributor?.attribution || img.image?.credit || null
+      })) || null;
+
+    return FeatureAPI.parse({
+      ...data,
+      i18n: transformI18nSafely(i18n),
+      properties: propertiesData,
+      image: selectedImage,
+      images: imagesArray
+    });
+  }
 };
 
 /**
@@ -882,6 +882,7 @@ export const buildResponseShape = async (
       processedFeature.i18n || [],
       processedFeature.properties || []
     );
+
     return data;
   } catch (error) {
     logZodError(error, '[buildResponseShape] Validation error:');
@@ -901,10 +902,12 @@ export const buildResponseShape = async (
 const selectCanonicalOrFirstImage = (
   featureImages?: (NonNullable<unknown> & {
     intent: string | null;
-    image: ImageDB | null;
+    isPublished: boolean;
+    publishedAt: string | null;
+    image: (ImageDB & { contributor: { attribution: string | null } | null }) | undefined;
   })[]
-): ImageDB | null => {
-  let selectedImage: ImageDB | null = null;
+): ImageDBFlat | null => {
+  let selectedFeatureImage: any = null;
 
   if (featureImages && featureImages.length > 0) {
     const canonicalFeatureImage = featureImages.find(
@@ -912,11 +915,28 @@ const selectCanonicalOrFirstImage = (
     );
 
     if (canonicalFeatureImage && canonicalFeatureImage.image) {
-      selectedImage = canonicalFeatureImage.image;
+      selectedFeatureImage = canonicalFeatureImage;
     } else if (featureImages[0] && featureImages[0].image) {
       // Fallback to the first image if no canonical one is found
-      selectedImage = featureImages[0].image;
+      selectedFeatureImage = featureImages[0];
     }
   }
-  return selectedImage;
+
+  if (!selectedFeatureImage || !selectedFeatureImage.image) {
+    return null;
+  }
+
+  // Extract attribution from contributor
+  const attribution =
+    selectedFeatureImage.image.contributor?.attribution ||
+    selectedFeatureImage.image.credit ||
+    null;
+
+  return {
+    ...selectedFeatureImage.image,
+    intent: selectedFeatureImage.intent,
+    isPublished: selectedFeatureImage.isPublished,
+    publishedAt: selectedFeatureImage.publishedAt,
+    attribution
+  };
 };

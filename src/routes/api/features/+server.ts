@@ -34,7 +34,7 @@ import {
 // TYPES
 import type { RequestHandler } from '@sveltejs/kit';
 import type { SuperValidated } from 'sveltekit-superforms';
-import type { FeatureNew, Feature, QueryParams } from '$lib/types';
+import type { FeatureNew, Feature, QueryParams, FeatureDBRaw } from '$lib/types';
 
 /********************
  *  COMMON
@@ -77,8 +77,8 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
       locals.hub
     );
 
-    // RESPONSE : Build the response shape with merged properties
-    const data = await buildCollectionResponseShape(db, result, locals.hub);
+    // RESPONSE : Build the response shape with merged properties  
+    const data = await buildCollectionResponseShape(db, result as FeatureDBRaw[], locals.hub);
 
     // HTTP : 200 JSON or 404
     return JSONResponseOrError(data);

@@ -197,7 +197,6 @@ function handleMapCollapse(): void {
   {#if adminCtx.appCtx.isInitialised && pageProps.data.validatedForm}
     {#await adminCtx.appCtx.getHierarchy(pageProps.data.validatedForm.data as Feature) then { organisation, project }}
       <ImageProvider
-        mode="gallery"
         isAdminMode={true}
         context={{
           ctxType: ImageContextResource.feature,
@@ -258,7 +257,7 @@ function handleMapCollapse(): void {
                       headerActions={featureActionSnippet}
                       infoContent={featureInfoSnippet} />
                     <!-- TODO Add support for translatable specifiers -->
-                    <div class="flex flex-wrap justify-between gap-6">
+                    <div class="flex flex-wrap justify-between items-start gap-6">
                       <PropertySection
                         {form}
                         title={m.admin__forms_common_classifiers()}

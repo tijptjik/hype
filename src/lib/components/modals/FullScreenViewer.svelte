@@ -1,12 +1,13 @@
 <script lang="ts">
 // COMPONENTS
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
-import Viewer from '$lib/components/common/Viewer.svelte';
 // ENUMS
 import { FirstClassResource, ImageContextResource } from '$lib/enums';
 // TYPES
 import type { ImageDB, Feature, Organisation, Project } from '$lib/types';
 import type { AdminCtx } from '$lib/context/admin.svelte';
+import { navigateOnAdmin } from '$lib/navigation';
+import Viewer from '../common/Viewer.svelte';
 
 type Props = {
   adminCtx: AdminCtx;
@@ -57,7 +58,7 @@ function handleKeydown(event: KeyboardEvent) {
     const featureId = feature.id; // Capture the ID before dispatching close
     // Navigate to feature address facet
     onClose();
-    window.location.href = `/admin/${adminCtx.getEntityPath(FirstClassResource.feature, featureId, 'images')}`;
+    navigateOnAdmin(adminCtx, FirstClassResource.feature, featureId, 'images');
   } else if (event.key === 'Tab') {
     event.preventDefault();
     event.stopPropagation();
@@ -85,13 +86,14 @@ function closeModal() {
     <div class="h-full w-full" onclick={closeModal}>
       {#if feature}
         <ImageProvider
-          ctxId={feature.id}
-          ctxType={FirstClassResource.feature as unknown as ImageContextResource}
-          {image}
           {isAdminMode}
-          mode="gallery"
-          {organisation}
-          {project}>
+          context={{
+            ctxType: FirstClassResource.feature as unknown as ImageContextResource,
+            ctxId: feature.id,
+            organisation,
+            project
+          }}
+          {image}>
           <Viewer isDropzone={false} hideActions={true} />
         </ImageProvider>
       {/if}

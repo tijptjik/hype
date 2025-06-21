@@ -10,6 +10,8 @@ import ReportedMissingContent from '$lib/components/tasks/info/ReportedMissing.s
 import Actions from '$lib/components/tasks/common/Actions.svelte';
 // SERVICES
 import { updateTaskReview, updateFeatureFromTask } from '$lib/client/services/task';
+// NAVIGATION
+import { goToNextTask } from '$lib/navigation';
 // TYPES
 import type { Task } from '$lib/types';
 import type { IconSource } from '@steeze-ui/svelte-icon';
@@ -102,7 +104,7 @@ const handleAction = async (action: string, e: Event, reviewReason?: string) => 
       });
     }
 
-    adminCtx.goToNextTask();
+    goToNextTask(adminCtx);
   } catch (error) {
     console.error('Failed to set task state:', error);
   }

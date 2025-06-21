@@ -23,9 +23,12 @@ import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 import type { UploadedPhoto, CameraPermissionStatus } from '$lib/types';
 // CONTEXT
 const cardCtx = getFeatureCardContext();
+import { getImageContext } from '$lib/context/image.svelte';
 
-// PROPS
-const { isCameraActive = false, isSingleImage = false } = $props();
+const imageCtx = getImageContext();
+
+// Get configuration from ImageCtx instead of props
+let isSingleImage = $derived(imageCtx.state.mode === 'standalone');
 
 // STATE
 // Photo gallery state
@@ -63,9 +66,9 @@ let showComponent = $state(false);
 const SWIPE_THRESHOLD = 0.3; // 30% of container width
 
 // INITIALIZE CAMERA IF NEEDED
-if (isCameraActive) {
+$effect(() => {
   openCamera();
-}
+});
 
 // PHOTO MANAGEMENT FUNCTIONS
 /**
@@ -468,7 +471,7 @@ onMount(() => {
           class="absolute inset-0 z-50 flex h-full w-full items-center justify-center bg-black/70"
           out:fade={{ duration: 300 }}>
           <div class="flex flex-col items-center gap-4">
-            <div class="loading loading-spinner loading-lg text-primary"></div>
+            <div class="loading loading-ring loading-lg text-primary"></div>
           </div>
         </div>
       {:else if showCameraInterface}
