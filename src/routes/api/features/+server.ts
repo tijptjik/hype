@@ -13,7 +13,8 @@ import {
   logZodError,
   SuperFormResponse,
   SuperFormErrorResponse,
-  JSONResponseOrError
+  JSONResponseOrError,
+  isAdminRequest
 } from '$lib/api';
 import {
   getFeatureQueryContext,
@@ -68,6 +69,9 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
     getPrisms(url)
   );
 
+  // FILTER : Determine if we should filter unpublished images (for public requests)
+  const shouldFilterUnpublishedImages = !isAdminRequest(request);
+
   try {
     // DB : List the features
     const result = await listFeaturesWithImage(
@@ -81,7 +85,8 @@ export const GET: RequestHandler = async ({ locals, platform, url, request }) =>
     const data = await buildCollectionResponseShape(
       db,
       result as FeatureDBRaw[],
-      locals.hub
+      locals.hub,
+      shouldFilterUnpublishedImages
     );
 
     // HTTP : 200 JSON or 404

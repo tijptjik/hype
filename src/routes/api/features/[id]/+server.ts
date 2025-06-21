@@ -16,7 +16,8 @@ import {
   logZodError,
   SuperFormResponse,
   SuperFormErrorResponse,
-  JSONResponseOrError
+  JSONResponseOrError,
+  isAdminRequest
 } from '$lib/api';
 import {
   assertPermissionsToUpdateFeature,
@@ -44,7 +45,9 @@ import type {
   FeatureDBRaw,
   FeatureNew,
   FeaturePartial,
-  Id
+  Id,
+  FeatureI18nDB,
+  FeaturePropertyDB
 } from '$lib/types';
 
 /********************
@@ -84,6 +87,9 @@ export const GET: RequestHandler = async ({
   // Add the specific feature ID condition
   conditions.push(eq(feature.id, params.id as Id));
 
+  // FILTER : Determine if we should filter unpublished images (for public requests)
+  const shouldFilterUnpublishedImages = !isAdminRequest(request);
+
   try {
     const result = (await getFeatureWithImage(
       db,
@@ -97,7 +103,12 @@ export const GET: RequestHandler = async ({
     }
 
     // RESPONSE : Build the response shape with merged properties
-    const data = await buildResponseShape(db, result, locals.hub);
+    const data = await buildResponseShape(
+      db,
+      result,
+      locals.hub,
+      shouldFilterUnpublishedImages
+    );
     return JSONResponseOrError(data);
   } catch (e) {
     logZodError(e, 'Feature read error:');
@@ -140,7 +151,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     );
 
     // DB : Update the feature
-    const updatedFeature = await updateFeatureWithRelated(
+    const updatedFeature: FeatureDBRaw = await updateFeatureWithRelated(
       db,
       form.data as FeaturePartial,
       params.id as Id
@@ -148,8 +159,8 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 
     const responseForm = await toFormShape(
       updatedFeature,
-      updatedFeature.i18n,
-      updatedFeature.properties
+      (updatedFeature as FeatureDBRaw).i18n as FeatureI18nDB[],
+      (updatedFeature as FeatureDBRaw).properties as FeaturePropertyDB[]
     );
 
     return SuperFormResponse<Feature>(responseForm, false, false, RESOURCE_PATH, 200);
@@ -205,8 +216,16 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
       return error(500, 'Failed to retrieve updated feature');
     }
 
+    // FILTER : Determine if we should filter unpublished images (for public requests)
+    const shouldFilterUnpublishedImages = !isAdminRequest(request);
+
     // RESPONSE : Build the response shape with merged properties
-    const data = await buildResponseShape(db, updatedWithRelations, locals.hub);
+    const data = await buildResponseShape(
+      db,
+      updatedWithRelations,
+      locals.hub,
+      shouldFilterUnpublishedImages
+    );
 
     return json({ type: 'success', data });
   } catch (err) {

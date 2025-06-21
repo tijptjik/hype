@@ -205,7 +205,7 @@ export const getFeatureWithImage = async (
   if (!featureRaw) return undefined;
 
   // Post-process to select the canonical or first image
-  const selectedImage = selectCanonicalOrFirstImage((featureRaw as any).images);
+  const selectedImage = selectCanonicalOrFirstImage((featureRaw as any).images, false);
 
   // Return both the selected image AND preserve the images array for entity responses
   return { ...featureRaw, image: selectedImage } as any;
@@ -516,7 +516,14 @@ export const updateFeatureWithRelated = async (
   db: Database,
   data: FeaturePartial,
   featureId: Id
-) => {
+): Promise<
+  | (FeatureDB & {
+      i18n: FeatureI18nDB[];
+      properties: FeaturePropertyDB[];
+      image: ImageDBFlat | null;
+    })
+  | undefined
+> => {
   const idToUse = (data.id as string) || featureId;
 
   // Remove the id from the data to prevent UNIQUE constraint violation
@@ -560,8 +567,8 @@ export const updateFeatureWithRelated = async (
         };
       })
     );
-    // Select canonical or first image using the correct data
-    selectedImage = selectCanonicalOrFirstImage(imagesWithData);
+    // Select canonical or first image using the correct data (admin context, no filtering)
+    selectedImage = selectCanonicalOrFirstImage(imagesWithData, false);
 
     return {
       ...feature,
@@ -715,13 +722,20 @@ export const toResponseShape = async (
   data: FeatureDBRaw,
   i18n: FeatureI18nDB[],
   properties: FeatureProperty[],
-  isCollection: boolean = false
+  isCollection: boolean = false,
+  shouldFilterUnpublishedImages: boolean = false
 ) => {
   const propertiesData = toPropertyShape(properties, isCollection);
 
   // Extract selected image and images array from raw data
   const rawImages = (data as any).images || [];
-  const selectedImage = selectCanonicalOrFirstImage(rawImages);
+  const filteredImages = shouldFilterUnpublishedImages
+    ? rawImages.filter((img: any) => img.isPublished)
+    : rawImages;
+  const selectedImage = selectCanonicalOrFirstImage(
+    rawImages,
+    shouldFilterUnpublishedImages
+  );
   const imageCount = rawImages.length;
   const imagePublishedCount = rawImages.filter((img: any) => img.isPublished).length;
 
@@ -738,7 +752,7 @@ export const toResponseShape = async (
   } else {
     // Entity response - includes both selected image and images array
     const imagesArray =
-      rawImages?.map((img: any) => ({
+      filteredImages?.map((img: any) => ({
         ...img.image,
         intent: img.intent,
         isPublished: img.isPublished,
@@ -812,12 +826,15 @@ export function mergeFeatureProperties(
  * Builds response shape for a collection of features with layer property merging
  * @param db - The database instance
  * @param features - Array of feature database entities
+ * @param hubOpts - Hub options
+ * @param shouldFilterUnpublishedImages - Whether to filter unpublished images
  * @returns Array of validated response data
  */
 export const buildCollectionResponseShape = async (
   db: Database,
   features: FeatureDBRaw[],
-  hubOpts: HubOpts
+  hubOpts: HubOpts,
+  shouldFilterUnpublishedImages: boolean = false
 ) => {
   // Get unique layer IDs from the features
   const uniqueLayerIds = [...new Set(features.map((feature) => feature.layerId))];
@@ -841,7 +858,8 @@ export const buildCollectionResponseShape = async (
         processedFeature,
         processedFeature.i18n || [],
         processedFeature.properties || [],
-        true
+        true,
+        shouldFilterUnpublishedImages
       );
     })
   );
@@ -853,12 +871,15 @@ export const buildCollectionResponseShape = async (
  * Builds response shape for a single feature with layer property merging
  * @param db - The database instance
  * @param feature - Feature database entity
+ * @param hubOpts - Hub options
+ * @param shouldFilterUnpublishedImages - Whether to filter unpublished images
  * @returns Validated response data
  */
 export const buildResponseShape = async (
   db: Database,
   feature: FeatureDBRaw,
-  hubOpts: HubOpts
+  hubOpts: HubOpts,
+  shouldFilterUnpublishedImages: boolean = false
 ) => {
   // Fetch layer data with properties to merge visible properties
   const { getLayer } = await import('./layer');
@@ -882,7 +903,9 @@ export const buildResponseShape = async (
     const data = await toResponseShape(
       processedFeature,
       processedFeature.i18n || [],
-      processedFeature.properties || []
+      processedFeature.properties || [],
+      false,
+      shouldFilterUnpublishedImages
     );
 
     return data;
@@ -899,6 +922,7 @@ export const buildResponseShape = async (
 /**
  * Selects the canonical image, or the first available image, from a list of feature images.
  * @param featureImages - Array of feature image records (relation from feature to featureImage, with nested image).
+ * @param shouldFilterUnpublished - Whether to filter out unpublished images (for public requests)
  * @returns The selected ImageDB record or null if no suitable image is found.
  */
 const selectCanonicalOrFirstImage = (
@@ -909,20 +933,26 @@ const selectCanonicalOrFirstImage = (
     image:
       | (ImageDB & { contributor: { attribution: string | null } | null })
       | undefined;
-  })[]
+  })[],
+  shouldFilterUnpublished: boolean = false
 ): ImageDBFlat | null => {
   let selectedFeatureImage: any = null;
 
   if (featureImages && featureImages.length > 0) {
-    const canonicalFeatureImage = featureImages.find(
+    // Filter out unpublished images if requested
+    const availableImages = shouldFilterUnpublished
+      ? featureImages.filter((fi) => fi.isPublished)
+      : featureImages;
+
+    const canonicalFeatureImage = availableImages.find(
       (fi) => fi.intent === ImageIntent.canonical
     );
 
     if (canonicalFeatureImage && canonicalFeatureImage.image) {
       selectedFeatureImage = canonicalFeatureImage;
-    } else if (featureImages[0] && featureImages[0].image) {
+    } else if (availableImages[0] && availableImages[0].image) {
       // Fallback to the first image if no canonical one is found
-      selectedFeatureImage = featureImages[0];
+      selectedFeatureImage = availableImages[0];
     }
   }
 
