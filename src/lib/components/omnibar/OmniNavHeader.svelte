@@ -38,10 +38,12 @@ let collectionTitle = $derived(
       })()
 );
 let featureTitle = $derived(
-  (() => {
-    const feature = appCtx.getActiveFeature();
-    return feature ? getI18n(feature, 'title', appCtx.getUserPreferences()) : '';
-  })()
+  getI18n(
+    appCtx.state.active.feature!,
+    'title',
+    appCtx.getUserPreferences(),
+    m.deft_dry_chipmunk_blink()
+  )
 );
 
 let newFeatureTitle = $derived(
@@ -69,8 +71,6 @@ let fullCollectionText = $derived(
       ? `${collectionTitle} (${index} of ${collectionSize})`
       : collectionTitle
 );
-
-let fullFeatureText = $derived(isNewFeatureMode ? newFeatureTitle : featureTitle);
 </script>
 
 <div
@@ -106,7 +106,7 @@ let fullFeatureText = $derived(isNewFeatureMode ? newFeatureTitle : featureTitle
 
         <!-- Feature Title -->
         <ScrollableText
-          text={fullFeatureText}
+          text={isNewFeatureMode ? newFeatureTitle : featureTitle}
           containerClass="h-6"
           textClass="font-medium"
           separator="~"
