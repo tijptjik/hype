@@ -15,7 +15,7 @@ let { children }: { children: any } = $props();
 <div class="h-full w-full" class:opacity-0={!isViewportWideEnough}>
   {@render children()}
 </div>
-{#if !isViewportWideEnough}
+{#if innerWidth && !isViewportWideEnough}
   <div
     class="fixed z-[100] flex h-screen w-full items-center justify-center bg-base-100 p-4 caret-transparent"
     transition:fade={{ duration: 300 }}>
