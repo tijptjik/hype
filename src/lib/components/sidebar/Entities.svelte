@@ -3,6 +3,8 @@
 import { getI18n } from '$lib/i18n';
 // TRANSITIONS
 import { slide } from 'svelte/transition';
+// SERVICES
+import { getResourceRef, getUrlForResource } from '$lib/navigation';
 // LIB
 import { ADMIN_PATH, NEW_REF } from '$lib/index';
 // CONTEXT
@@ -59,12 +61,16 @@ let isVisible = (id: Id) => {
   let isVisible = false;
   if (showFilters) {
     isVisible = true;
-  } else if (navItems[resourceType].isShownInSidebar) {
+  } else if (
+    navItems[resourceType as Exclude<FirstClassResource, 'property'>].isShownInSidebar
+  ) {
     if (adminCtx.activeResourceType === resourceType) {
       isVisible = true;
     } else if (adminCtx.appCtx.isPrism(resourceType, id)) {
       isVisible = true;
-    } else if (navItems[resourceType].isAlwaysExpanded) {
+    } else if (
+      navItems[resourceType as Exclude<FirstClassResource, 'property'>].isAlwaysExpanded
+    ) {
       isVisible = true;
     }
   }
@@ -92,21 +98,24 @@ let getDisplayName = (entity: Exclude<Resource, Task>) => {
     class="scrollbar-thin divide-y divide-base-300 bg-base-300 {isCollapsed
       ? 'flex-grow-0 overflow-y-auto'
       : 'overflow-y-scroll'}
-        {navItems[resourceType as FirstClassResource].isAlwaysExpanded
+        {navItems[resourceType as Exclude<FirstClassResource, 'property'>]
+      .isAlwaysExpanded
       ? 'h-0 flex-grow'
       : ''}"
     in:slide={{ duration: 400, axis: 'y' }}
     out:slide={{ duration: 400, axis: 'y' }}>
     {#each entities as entity}
-      {@const entityRef: Id | Code = adminCtx.getResourceRef(
+      {@const entityRef: Id | Code = getResourceRef(
+        adminCtx,
       resourceType as FirstClassResource,
       entity.id as Id
     ) as Id | Code}
       {@const isActive = adminCtx.activeResourceRef === entityRef}
-      {@const href = `${ADMIN_PATH}/${adminCtx.getEntityPath(
+      {@const href = getUrlForResource(
+        adminCtx,
         resourceType as FirstClassResource,
         entity.id as Id
-      )}`}
+      )}
       {#if isVisible(entity.id as Id)}
         <li class="group relative bg-base-100 drag-none">
           <div class="relative drag-none">
@@ -117,7 +126,7 @@ let getDisplayName = (entity: Exclude<Resource, Task>) => {
                 e.preventDefault();
                 // UGLY HACK - TODO: Fix once SuperForms has proper support for Svelte 5
                 if (adminCtx.activeResourceRef === NEW_REF) {
-                  window.location.href = href;
+                  window.location.href = href as string;
                 } else {
                   navigateOnAdmin(
                     adminCtx,
