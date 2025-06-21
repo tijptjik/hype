@@ -488,7 +488,7 @@ export type Cache = {
   organisation: Map<Id, Organisation>;
   project: Map<Id, Project>;
   layer: Map<Id, Layer>;
-  feature: Map<Id, Feature>;
+  feature: Map<Id, FeatureFromCollection | Feature>;
   property: Map<Id, Property>;
   task: Map<Id, Task>;
   hub: Map<Id, Hub>;
@@ -685,7 +685,14 @@ export type Field =
   | LayerField
   | FeatureField
   | HubField;
-export type Resource = Organisation | Project | Layer | Feature | Task | Hub;
+export type Resource =
+  | Organisation
+  | Project
+  | Layer
+  | Feature
+  | FeatureFromCollection
+  | Task
+  | Hub;
 export type ResourceNew =
   | OrganisationNew
   | ProjectNew
