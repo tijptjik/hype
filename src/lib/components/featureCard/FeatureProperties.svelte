@@ -7,7 +7,7 @@ import { getFeatureCardDisplayProperties } from '$lib/client/services/property';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 // Types
-import type { Feature, FeatureProperty } from '$lib/types';
+import type { Feature } from '$lib/types';
 
 // STATE : PROPS
 let { feature }: { feature: Feature } = $props();

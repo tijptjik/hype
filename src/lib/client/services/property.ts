@@ -554,7 +554,7 @@ export function getFeatureCardDisplayProperties(
     return [];
   }
   // ASSERT : Layer exists
-  const layer = appCtx.cache.layer.get(layerId);
+  const layer = appCtx.state.resources.layer.find((l) => l.id === layerId);
   if (!layer) {
     console.warn(`Layer ${layerId} not found`);
     return [];
