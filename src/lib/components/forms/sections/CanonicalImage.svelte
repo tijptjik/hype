@@ -22,7 +22,7 @@ let { form } = SectionProps.form;
 const adminCtx = getAdminCtx();
 
 // Get the feature from admin context to access the canonical image
-const feature : Feature = $derived(adminCtx.appCtx.cache.feature.get($form?.id))!;
+const feature: Feature = $derived(adminCtx.appCtx.cache.feature.get($form?.id))!;
 const canonicalImage = $derived(feature.image as Image | null);
 </script>
 

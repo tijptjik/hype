@@ -48,9 +48,7 @@ let isOpen = $state(false);
 // STATE : DERIVED
 let newFeature = $derived(appCtx.getNewFeature())! as NewFeatureWithLocationAndParents;
 let feature = $derived(newFeature.feature as Feature)!;
-let { organisation, project } = $derived(
-  appCtx.getHierarchySync(feature)
-);
+let { organisation, project } = $derived(appCtx.getHierarchySync(feature));
 
 // EVENT HANDLERS
 function handleShowModal() {

@@ -50,10 +50,10 @@ async function preloadImage(imageSrc: string): Promise<HTMLImageElement> {
   if (imageStore[imageSrc]) {
     return imageStore[imageSrc];
   }
-  
+
   const img = new Image();
   img.src = imageSrc;
-  
+
   await Promise.all([
     new Promise((resolve, reject) => {
       img.onload = resolve;
@@ -61,7 +61,7 @@ async function preloadImage(imageSrc: string): Promise<HTMLImageElement> {
     }),
     img.decode()
   ]);
-  
+
   imageStore[imageSrc] = img;
   return img;
 }
@@ -69,7 +69,7 @@ async function preloadImage(imageSrc: string): Promise<HTMLImageElement> {
 // Handle src changes with smooth transitions
 $effect(() => {
   if (!src) return;
-  
+
   // First image load - no transition needed
   if (!baseImageSrc) {
     preloadImage(src)
@@ -86,32 +86,32 @@ $effect(() => {
       });
     return;
   }
-  
+
   // Same image - no change needed
   if (src === baseImageSrc) {
     return;
   }
-  
+
   // Different image - start transition
   overlayImageSrc = src;
   isTransitioning = true;
   overlayOpacity = 0;
-  
+
   // Preload the new image
   preloadImage(src)
     .then(() => {
       // Start fade transition
       const startTime = performance.now();
       const transitionDuration = 300;
-      
+
       const animate = (currentTime: number) => {
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / transitionDuration, 1);
-        
+
         // Ease-out cubic
         const eased = 1 - Math.pow(1 - progress, 3);
         overlayOpacity = eased;
-        
+
         if (progress < 1) {
           animationId = requestAnimationFrame(animate);
         } else {
@@ -124,7 +124,7 @@ $effect(() => {
           onLoad?.();
         }
       };
-      
+
       animationId = requestAnimationFrame(animate);
     })
     .catch((err) => {
