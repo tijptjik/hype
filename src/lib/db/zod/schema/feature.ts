@@ -68,14 +68,14 @@ const ImageBase = createSelectSchema(image).extend({
 
 const ImageAPI = ImageBase.extend({
   altText: z.string().nullish(),
-  featureId: z.string().optional(),
+  featureId: z.string().nullish(),
   attribution: z.string().nullish(),
   intent: z
     .enum(Object.values(ImageIntent) as [string, ...string[]])
     .default(ImageIntent.undefined)
     .optional(),
   isPublished: z.boolean().default(false).optional(),
-  publishedAt: z.string().optional(),
+  publishedAt: z.string().nullish(),
   preview: z.string().optional()
 });
 
