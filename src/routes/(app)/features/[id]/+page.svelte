@@ -95,8 +95,8 @@ async function handleFeatureSelection() {
 
       <ImageProvider
         isAdminMode={false}
-        image={feature.image}
-        images={feature.images}
+        image={feature.image as Image}
+        images={feature.images as Image[]}
         context={{
           ctxType: ImageContextResource.feature,
           ctxId: featureId,

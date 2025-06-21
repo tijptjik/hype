@@ -100,8 +100,8 @@ export class AppCtx {
     feature: new Map(),
     task: new Map(),
     hub: new Map(),
-    property: new Map(),
-    image: new Map(),
+    property: new SvelteMap(),
+    image: new SvelteMap(),
     stats: new SvelteMap()
   };
 
@@ -1932,26 +1932,26 @@ export class AppCtx {
   };
 
   // Efficient reset methods - clears selection filters, used cache if data was fetched before, otherwise refetches
-  resetOrganisations = () => {
+  resetOrganisations = async () => {
     this.state.prisms.organisation = [];
-    this.refreshOrganisations();
+    await this.refreshOrganisations();
   };
 
   // Efficient reset methods - clears selection filters, used cache if data was fetched before, otherwise refetches
-  resetProjects = () => {
+  resetProjects = async () => {
     this.state.prisms.project = [];
-    this.refreshProjects();
+    await this.refreshProjects();
   };
 
   // Force refresh methods for when you actually need to invalidate and fetch fresh data
-  forceRefreshOrganisations = () => {
+  forceRefreshOrganisations = async () => {
     this.state.prisms.organisation = [];
-    this.invalidateAndRefresh(FirstClassResource.organisation);
+    await this.invalidateAndRefresh(FirstClassResource.organisation);
   };
 
-  forceRefreshProjects = () => {
+  forceRefreshProjects = async () => {
     this.state.prisms.project = [];
-    this.invalidateAndRefresh(FirstClassResource.project);
+    await this.invalidateAndRefresh(FirstClassResource.project);
   };
 
   // TODO : Clear the Omnibar when a layer is toggled
