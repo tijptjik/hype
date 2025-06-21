@@ -149,7 +149,7 @@ watch(
 let enhance = $derived(form.enhance);
 let isMapFullscreen = $state(false);
 let isMapCollapsed = $state(
-  adminCtx.appCtx.getUserPreferences().admin.isAdminMapCollapsed
+  adminCtx.appCtx.getUserPreferences()?.admin.isAdminMapCollapsed ?? false
 );
 let title = $derived(
   pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.title || NEW_TITLE
@@ -247,8 +247,12 @@ function handleMapCollapse(): void {
               class:flex-[0_0_96%]={isMapCollapsed}
               class:flex-[0_0_66%]={!isMapFullscreen && !isMapCollapsed}
               class:opacity-100={!isMapFullscreen}>
-              <div class="pb-6 pr-6">
-                <div class="flex flex-col gap-6">
+              <div
+                class="pb-6 pr-6 {adminCtx.activeFacet === 'images' ? 'h-full' : ''}">
+                <div
+                  class="flex flex-col gap-6 {adminCtx.activeFacet === 'images'
+                    ? 'h-full items-stretch'
+                    : ''}">
                   {#if adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false}
                     <I18nSection
                       {form}
@@ -289,14 +293,20 @@ function handleMapCollapse(): void {
                       subtitle={m.admin__forms_feature_addressing_subtitle()}
                       fields={FIELDS.address as FormField & FormFieldNested} />
                   {:else if adminCtx.activeFacet === 'images' && pageProps.data.entity !== NEW_REF}
-                    <ViewerSection
-                      {form}
-                      title={m.admin__forms_feature_viewer_title()}
-                      fields={FIELDS.viewer as FormFieldNested} />
-                    <GallerySection
-                      {form}
-                      title={m.admin__forms_feature_gallery_title()}
-                      fields={FIELDS.gallery as FormFieldNested} />
+                    <div class="flex h-full min-h-0 flex-col items-stretch gap-6">
+                      <div class="min-h-0 flex-1">
+                        <ViewerSection
+                          {form}
+                          title={m.admin__forms_feature_viewer_title()}
+                          fields={FIELDS.viewer as FormFieldNested} />
+                      </div>
+                      <div class="flex-none">
+                        <GallerySection
+                          {form}
+                          title={m.admin__forms_feature_gallery_title()}
+                          fields={FIELDS.gallery as FormFieldNested} />
+                      </div>
+                    </div>
                   {/if}
                 </div>
               </div>
@@ -307,7 +317,7 @@ function handleMapCollapse(): void {
     {:catch error}
       <!-- Error state - show fallback -->
       <div class="flex items-center justify-center p-8">
-        <div class="text-error">Failed to load feature hierarchy</div>
+        <div class="text-error">{m.blue_long_felix_bask()}</div>
       </div>
     {/await}
   {/if}
