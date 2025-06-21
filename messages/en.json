@@ -446,7 +446,7 @@
   "misty_quiet_sheep_push": "unrated",
   "yummy_ornate_snail_bend": "Published",
   "grand_such_bullock_play": " Admin Only",
-  "left_dizzy_trout_peel": "upload in gallery",
+  "left_dizzy_trout_peel": "Upload in Gallery",
   "filters__not": "Not",
   "filters__no": "No",
   "filters__has": "Has",
@@ -487,5 +487,10 @@
   "settings_admin_panel_auto_hide_description": "Sidebar opens when hovered on, and closes when not",
   "close_odd_hornet_feast": "Drop to replace image",
   "born_plain_bulldog_stop": "Drop image",
-  "navbar__ghostmapper": "GhostMapper"
+  "navbar__ghostmapper": "GhostMapper",
+  "stale_quick_fireant_enchant": "Failed to load image",
+  "jumpy_misty_panther_scold": "Unknown",
+  "fluffy_fresh_ant_aim": "On",
+  "whole_upper_quail_bloom": "Unknown",
+  "clear_patchy_bobcat_wish": "By"
 }

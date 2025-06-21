@@ -17,7 +17,29 @@ import { UserBase } from './user';
 // IMAGE CORE SCHEMAS
 /* -------- */
 
-export const ImageBase = createSelectSchema(image);
+export const EXIFBasic = z.object({
+  Copyright: z.string().nullish(),
+  CopyrightNotice: z.string().nullish(),
+  Credit: z.string().nullish(),
+  DateTimeOriginal: z.string().nullish(),
+  CreateDate: z.string().nullish(),
+  ModifyDate: z.string().nullish(),
+  GPSLatitude: z.string().nullish(),
+  GPSLongitude: z.string().nullish(),
+  'By-line': z.string().nullish(),
+  Keywords: z.string().nullish(),
+  ImageWidth: z.string().nullish(),
+  ImageHeight: z.string().nullish(),
+  Make: z.string().nullish(),
+  Model: z.string().nullish(),
+  LensModel: z.string().nullish(),
+  LensInfo: z.string().nullish(),
+  RawFileName: z.string().nullish()
+});
+
+export const ImageBase = createSelectSchema(image).extend({
+  metadata: EXIFBasic.nullish()
+});
 export const ImageBasic = ImageBase.pick({
   id: true,
   cdn: true,
@@ -66,7 +88,7 @@ export const FeatureImageAPI = FeatureImageBase.extend({
 export const ImageAPI = ImageBase.extend({
   altText: z.string().nullish(),
   featureId: z.string().optional(),
-  attribution: z.string().optional(),
+  attribution: z.string().nullish(),
   intent: z
     .enum(Object.values(ImageIntent) as [string, ...string[]])
     .default(ImageIntent.undefined)
@@ -109,20 +131,20 @@ export const FeatureImageUpdateAPI = FeatureImageUpdate.extend({
 /* -------- */
 
 export const ImageFlat = ImageBase.extend({
-  featureId: z.string().optional(),
+  featureId: z.string(),
   attribution: z.string().nullish(),
-  intent: z.enum(Object.values(ImageIntent) as [string, ...string[]]).optional(),
-  isPublished: z.boolean().optional(),
-  publishedAt: z.string().optional()
+  intent: z.enum(Object.values(ImageIntent) as [string, ...string[]]).nullish(),
+  isPublished: z.boolean().nullish(),
+  publishedAt: z.string().nullish()
 });
 
 export const ImageFlatUpdate = ImageUpdate.extend({
   featureId: z.string(),
   imageId: z.string(),
-  attribution: z.string().optional(),
-  intent: z.enum(Object.values(ImageIntent) as [string, ...string[]]).optional(),
-  isPublished: z.boolean().optional(),
-  publishedAt: z.string().optional()
+  attribution: z.string().nullish(),
+  intent: z.enum(Object.values(ImageIntent) as [string, ...string[]]).nullish(),
+  isPublished: z.boolean().nullish(),
+  publishedAt: z.string().nullish()
 });
 
 export const ImageBaseRaw = ImageBase.extend({

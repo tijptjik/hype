@@ -8,13 +8,13 @@ import { getI18n } from '$lib/i18n';
 import { getAppCtx } from '$lib/context/app.svelte';
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 // TYPES
-import type { Feature, UserContributedFeature } from '$lib/types';
+import type { Feature } from '$lib/types';
 
 // HTML ELEMENTS
 let addressInput: HTMLInputElement = $state()!;
 
 type Props = {
-  feature: UserContributedFeature;
+  feature: Feature;
 };
 // STATE : PROPS
 let { feature }: Props = $props();

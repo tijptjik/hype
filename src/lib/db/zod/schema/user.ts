@@ -13,24 +13,38 @@ import { user } from '$lib/db/schema/user';
  */
 
 // Define JSON object schemas for user fields
-const UserPreferencesSchema = z.object({
-  fallbackLocales: z.array(z.string()),
-  allowMachineTranslation: z.boolean(),
-  preferFallbackInCurrentLocale: z.boolean(),
-  isTranslateButtonVisible: z.boolean(),
-  admin: z
-    .object({
-      isAdminMapCollapsed: z.boolean().optional(),
-      isPrimaryPanelCollapsed: z.boolean().optional(),
-      isPrimaryPanelAutoHide: z.boolean().optional()
-    })
-    .optional()
-});
+const UserPreferencesSchema = z
+  .object({
+    fallbackLocales: z.array(z.string()).nullish(),
+    allowMachineTranslation: z.boolean().nullish(),
+    preferFallbackInCurrentLocale: z.boolean().nullish(),
+    isTranslateButtonVisible: z.boolean().nullish(),
+    admin: z
+      .object({
+        isAdminMapCollapsed: z.boolean().optional(),
+        isPrimaryPanelCollapsed: z.boolean().optional(),
+        isPrimaryPanelAutoHide: z.boolean().optional()
+      })
+      .nullish()
+  })
+  .default({
+    fallbackLocales: ['en'],
+    allowMachineTranslation: false,
+    preferFallbackInCurrentLocale: false,
+    isTranslateButtonVisible: true,
+    admin: {}
+  });
 
-const UserExperimentalSchema = z.object({
-  contributorMode: z.boolean(),
-  noLabelsMode: z.boolean()
-});
+const UserExperimentalSchema = z
+  .object({
+    contributorMode: z.boolean().nullish(),
+    noLabelsMode: z.boolean().nullish()
+  })
+  .default({
+    contributorMode: false,
+    noLabelsMode: false
+  })
+  .nullish();
 
 export const UserBase = createSelectSchema(user);
 export const UserBasic = UserBase.pick({

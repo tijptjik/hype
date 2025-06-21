@@ -14,7 +14,6 @@ import FeatureDescriptionEditable from '$lib/components/featureCard/FeatureDescr
 import FeaturePropertiesEditable from '$lib/components/featureCard/FeaturePropertiesEditable.svelte';
 import FeatureGeoLocation from '$lib/components/featureCard/FeatureGeoLocation.svelte';
 import FeatureActions from '$lib/components/featureCard/FeatureActions.svelte';
-import Spacer from '$lib/components/featureCard/layout/Spacer.svelte';
 import Container from '$lib/components/featureCard/layout/Container.svelte';
 import ContributorCredit from '$lib/components/featureCard/ContributorCredit.svelte';
 // CONTEXT
@@ -29,7 +28,9 @@ import { FeatureCardMode, ImageContextResource } from '$lib/enums';
 // TYPES
 import type {
   NewFeatureWithLocationAndParents,
-  UserContributedFeature
+  OrganisationDB,
+  ProjectDB,
+  Feature
 } from '$lib/types';
 
 // CONTEXT
@@ -45,10 +46,11 @@ omniCtx.setFeatureCardContext(cardCtx);
 // STATE
 let isOpen = $state(false);
 // STATE : DERIVED
-let newFeature = $derived(appCtx.getNewFeature()) as NewFeatureWithLocationAndParents;
-let feature = $derived(appCtx.getNewFeature()?.feature as UserContributedFeature);
-let organisation = $derived(appCtx.getOrganisationById(newFeature?.organisationId!));
-let project = $derived(appCtx.getProjectById(newFeature?.projectId!));
+let newFeature = $derived(appCtx.getNewFeature())! as NewFeatureWithLocationAndParents;
+let feature = $derived(newFeature.feature as Feature)!;
+let { organisation, project } = $derived(
+  appCtx.getHierarchySync(feature)
+);
 
 // EVENT HANDLERS
 function handleShowModal() {
@@ -73,12 +75,13 @@ onMount(() => {
 {#if isOpen && newFeature && feature}
   <FeatureCard>
     <ImageProvider
-      mode="gallery"
       isAdminMode={false}
-      ctxType={ImageContextResource.feature}
-      ctxId={NEW_REF}
-      {organisation}
-      {project}>
+      context={{
+        ctxType: ImageContextResource.feature,
+        ctxId: NEW_REF,
+        organisation: organisation as Omit<OrganisationDB, 'isCoreInclusive'>,
+        project: project as Omit<ProjectDB, 'isCoreInclusive'>
+      }}>
       <Container>
         <FeatureGallery />
         <FeatureBreadcrumbs {feature} />

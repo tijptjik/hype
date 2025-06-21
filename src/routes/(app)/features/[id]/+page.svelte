@@ -29,14 +29,46 @@ import {
 // ENUMS
 import { FeatureCardMode, ImageContextResource } from '$lib/enums';
 // TYPES
+import type { Feature, Image } from '$lib/types';
 
 // PARAMS
 let featureId: string = $state(page.params.id);
 
 // CONTEXT
 const appCtx = getAppCtx();
-// @ts-expect-error - TODO Svelte Async
-let feature = $derived(await appCtx.getFeatureById(page.params.id));
+
+// Use state instead of async derived to prevent component destruction
+let feature_: Feature | undefined = $state()!;
+
+// Load feature in effect to avoid component hierarchy destruction
+$effect(() => {
+  if (!page.params.id) {
+    return;
+  }
+
+  const loadFeatureAndSetContext = async () => {
+    try {
+      // 1. First, load the fresh feature data
+      const loadedFeature = await appCtx.getFeatureById(page.params.id);
+      // 2. Update the feature state
+      feature_ = loadedFeature!;
+      // 3. THEN set the featureId (which triggers ImageProvider update)
+      featureId = page.params.id;
+      // Only react to activeCollection changes after feature is loaded
+      if (appCtx.getActiveCollection() == null) {
+        const isClosing = untrack(() => omniCtx.isIntentionallyClosing);
+        if (!isClosing) {
+          void handleFeatureSelection();
+        }
+      }
+    } catch (error) {
+      console.error('Error loading feature:', error);
+    }
+  };
+
+  loadFeatureAndSetContext();
+});
+
 const omniCtx = getOmniContext();
 
 // CONTEXT :: FEATURE CARD
@@ -48,24 +80,6 @@ omniCtx.setFeatureCardContext(cardCtx);
 // STATE
 let mode = $derived(cardCtx.state.mode);
 
-// EFFECTS
-$effect(() => {
-  if (!appCtx.isInitialised || !page.params.id) {
-    return;
-  }
-  featureId = page.params.id;
-
-  // Only react to activeCollection changes, not flag changes
-  if (appCtx.getActiveCollection() == null) {
-    // Check the flag without making the effect reactive to it
-    const isClosing = untrack(() => omniCtx.isIntentionallyClosing);
-
-    if (!isClosing) {
-      void handleFeatureSelection();
-    }
-  }
-});
-
 // Helper function to handle async operations
 async function handleFeatureSelection() {
   if (featureId) {
@@ -74,50 +88,50 @@ async function handleFeatureSelection() {
 }
 </script>
 
-{#if appCtx && feature}
-  {#await appCtx.getHierarchy(feature) then { organisation, project }}
-    <FeatureCard>
-      {#if appCtx.isInitialised}
-        <ImageProvider
-          mode="carousel"
-          isAdminMode={false}
-          context={{
-            ctxType: ImageContextResource.feature,
-            ctxId: featureId,
-            organisation,
-            project
-          }}>
-          {#if mode === FeatureCardMode.Display}
-            <Container>
-              <FeatureGallery />
-              <FeatureBreadcrumbs {feature} />
-              <FeatureTitle {feature} />
-              <FeatureDescription {feature} />
-              <Spacer />
-              <FeaturePortalSection>
-                {#snippet left()}
-                  <FeatureProperties {feature} />
-                {/snippet}
-                {#snippet right()}
-                  <FeaturePortal {feature} />
-                {/snippet}
-              </FeaturePortalSection>
-              <Spacer />
-            </Container>
-          {:else if mode === FeatureCardMode.New}
-            <FeatureGallery />
-          {:else if mode === FeatureCardMode.Missing}
-            <FeatureGallery isSingleImage={true} />
-            <MissingReportReason />
-          {:else if mode === FeatureCardMode.AddPhoto}
-            <FeatureGallery isCameraActive={true} />
-            <PhotoCredit />
-          {/if}
-          <FeatureActions {feature} />
-        </ImageProvider>
+{#if appCtx}
+  <FeatureCard>
+    {#if feature_}
+    {@const feature = feature_ as Feature}
+
+    <ImageProvider
+      isAdminMode={false}
+      image={feature.image}
+      images={feature.images}
+      context={{
+        ctxType: ImageContextResource.feature,
+        ctxId: featureId,
+        ...appCtx.getHierarchySync(feature_)
+      }}>
+      {#if mode === FeatureCardMode.Display}
+        <Container>
+          <FeatureGallery />
+          <FeatureBreadcrumbs {feature} />
+          <FeatureTitle {feature} />
+          <FeatureDescription {feature} />
+          <Spacer />
+          <FeaturePortalSection>
+            {#snippet left()}
+              <FeatureProperties {feature} />
+            {/snippet}
+            {#snippet right()}
+              <FeaturePortal {feature} />
+            {/snippet}
+          </FeaturePortalSection>
+          <Spacer />
+        </Container>
+      {:else if mode === FeatureCardMode.New}
+        <FeatureGallery />
+      {:else if mode === FeatureCardMode.Missing}
+        <FeatureGallery />
+        <MissingReportReason />
+      {:else if mode === FeatureCardMode.AddPhoto}
+        <FeatureGallery />
+        <PhotoCredit />
       {/if}
-    </FeatureCard>
-  {/await}
+      <FeatureActions {feature} />
+    </ImageProvider>
+    {/if}
+  </FeatureCard>
 {:else}
   <div class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-300">
     <div class="loading loading-ring loading-lg text-primary"></div>

@@ -39,7 +39,6 @@ adminCtx.setFacet('core', pageProps.data.task.id, FirstClassResource.task);
 <!-- LAYOUT -->
 {#await adminCtx.appCtx.getHierarchyForTask(task) then { organisation, project }}
   <ImageProvider
-    mode="gallery"
     isAdminMode={true}
     context={{
       ctxType: ImageContextResource.feature,
@@ -69,7 +68,7 @@ adminCtx.setFacet('core', pageProps.data.task.id, FirstClassResource.task);
         </TaskHeader>
         <TaskMain {task}>
           <div class="flex flex-1 flex-col">
-            <Image isDropzone={!task.isReviewed} />
+            <Image isDropzone={!task.isReviewed} mode="gallery"/>
             <TaskFooter>
               <Gallery />
             </TaskFooter>

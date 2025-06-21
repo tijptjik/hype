@@ -974,7 +974,7 @@ export class AdminCtx {
     return filterValue === null || filterValue === entity[property as keyof Resource];
   };
 
-  textFilter = <T extends Organisation | Project | Layer | Feature>(
+  textFilter = <T extends Organisation | Project | Layer | Feature | Hub | FeatureFromCollection>(
     resource: FirstClassResource,
     entity: T,
     query: string

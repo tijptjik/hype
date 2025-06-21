@@ -336,7 +336,6 @@ let image = $derived(pageProps.data.image as Image);
             </div>
           {:else if adminCtx.activeFacet === 'images'}
             <ImageProvider
-              mode="standalone"
               isAdminMode={true}
               context={{
                 ctxType: ImageContextResource.project,

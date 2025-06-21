@@ -62,6 +62,15 @@ export const featureEntityWithRelations = {
   },
   publisher: {
     columns: userColumnsWithPrivacyProtected
+  },
+  images: {
+    with: {
+      image: {
+        with: {
+          contributor: true
+        }
+      }
+    }
   }
 };
 
