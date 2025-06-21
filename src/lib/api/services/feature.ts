@@ -102,7 +102,7 @@ export const getFeatureQueryContext = (
   const excludeColumns = ['isArchived', 'isPublished'];
 
   // NON-SUPERADMIN : Hide features which are archived
-  if (!isSuperAdmin(user)) {
+  if (!isSuperAdmin(user) || !isAdminRequest(request)) {
     conditions.push(eq(feature.isArchived, false));
   }
 
