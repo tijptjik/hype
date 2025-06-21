@@ -35,35 +35,33 @@ import { removeMarkerClass, addMarkerClass } from '$lib/map/markers';
 import { FirstClassResource, ResourcePath, ResourceRefKey } from '$lib/enums';
 // TYPES
 import type {
-  Feature,
-  Project,
-  Layer,
-  Organisation,
-  Id,
-  UserFeature,
-  AppContextState,
-  PanelState,
   ActiveCollection,
-  Property,
-  UserLayer,
-  SessionUser,
-  UserPreferences,
-  AdminPreferences,
-  Locale,
-  CurrentUser,
-  UserExperimental,
-  DeepPartial,
-  NewFeatureTask,
-  ResourceTypeWithChildren,
-  FeatureI18nFieldKeys,
-  Task,
-  Hub,
-  Code,
-  ResourceContext,
-  Resource,
-  Image,
+  AppContextState,
   Cache,
-  FeatureFromCollection
+  Code,
+  CurrentUser,
+  DeepPartial,
+  Feature,
+  FeatureFromCollection,
+  FeatureI18nFieldKeys,
+  Hub,
+  Id,
+  Layer,
+  Locale,
+  NewFeatureTask,
+  Organisation,
+  PanelState,
+  Project,
+  Property,
+  Resource,
+  ResourceContext,
+  ResourceTypeWithChildren,
+  SessionUser,
+  Task,
+  UserExperimental,
+  UserFeature,
+  UserLayer,
+  UserPreferences
 } from '$lib/types';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
@@ -375,9 +373,9 @@ export class AppCtx {
     return fetchOrThrow<Layer[]>(url);
   };
 
-  featuresQueryFn = async (): Promise<Feature[]> => {
+  featuresQueryFn = async (): Promise<FeatureFromCollection[]> => {
     const url = this.buildApiUrl(FirstClassResource.feature);
-    return fetchOrThrow<Feature[]>(url);
+    return fetchOrThrow<FeatureFromCollection[]>(url);
   };
 
   propertiesQueryFn = async (): Promise<Property[]> => {
@@ -544,26 +542,17 @@ export class AppCtx {
   };
 
   refreshFeatures = async (): Promise<void> => {
-    const features = await this.queryClient.fetchQuery<Feature[]>({
+    const features = await this.queryClient.fetchQuery({
       queryKey: this.featuresQueryKey,
       queryFn: () => this.featuresQueryFn()
     });
     this.state.resources.feature = features;
     this.syncCacheMap(this.cache.feature, features);
 
-    // Populate image cache from feature images and pre-populate stats cache
-    for (const feature of features) {
-      if (feature.images) {
-        for (const featureImage of feature.images) {
-          if (featureImage.image) {
-            this.cache.image.set(featureImage.image.id, featureImage.image as Image);
-          }
-        }
-      }
-
-      // Pre-populate stats cache for this feature
+    // Pre-populate stats cache for this feature
+    features.forEach((feature) => {
       primeFeatureStatsCache(this, feature);
-    }
+    });
 
     this.rebuildFeaturesMap();
   };
@@ -931,7 +920,7 @@ export class AppCtx {
   getFeatureById = async (
     id: Id,
     fetchOnCacheMiss: boolean = true
-  ): Promise<Feature | undefined> => {
+  ): Promise<FeatureFromCollection | Feature | undefined> => {
     // Check cache first
     let feature = this.cache.feature.get(id);
     if (feature) return feature;
@@ -1122,7 +1111,7 @@ export class AppCtx {
   };
 
   getHierarchy = async (
-    resource: Feature | Layer | Project | Organisation
+    resource: FeatureFromCollection | Feature | Layer | Project | Organisation
   ): Promise<ResourceContext> => {
     // Determine what type of resource we have and build hierarchy accordingly
     let layer: Layer | undefined;
@@ -1911,7 +1900,7 @@ export class AppCtx {
     };
     debouncedUpdateUserExperimental(
       (this.user as CurrentUser).id,
-      (this.user as CurrentUser).experimental
+      (this.user as CurrentUser).experimental as UserExperimental
     );
   };
 
