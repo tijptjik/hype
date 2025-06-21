@@ -9,6 +9,7 @@ import { ADMIN_PATH } from '$lib/index';
 import { hashicon } from '@emeraldpay/hashicon';
 // SERVICES
 import { getURLfromImage } from '$lib/client/services/image';
+import { getUrlForResource } from '$lib/navigation';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
@@ -97,7 +98,8 @@ const adminCtx = getAdminCtx();
 
 const href = $derived(
   adminCtx.activeResourceType
-    ? `${ADMIN_PATH}/${adminCtx.getEntityPath(
+    ? `${getUrlForResource(
+        adminCtx,
         adminCtx.activeResourceType,
         entity.id
       )}${page.url.search}`
@@ -140,7 +142,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
   draggable="false"
   role="article"
   tabindex="0"
-  class="duration-800 card select-none rounded-xl bg-base-100 shadow-xl transition-shadow hover:scale-[.99] hover:shadow-2xl hover:shadow-primary focus-visible:shadow-primary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-secondary active:outline-none"
+  class="duration-800 hover:scale-1 card select-none rounded-xl bg-base-100 shadow-xl transition-shadow hover:shadow-xl hover:shadow-primary focus-visible:shadow-primary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-secondary active:outline-none"
   onkeydown={handleKeyDown}
   {onclick}>
   <!-- Header Section -->
