@@ -29,7 +29,7 @@ let appCtx = getAppCtx();
 let adminCtx = getAdminCtx();
 
 let isMapCollapsed = $state(
-  adminCtx.appCtx.getUserPreferences().admin.isAdminMapCollapsed
+  adminCtx.appCtx.getUserPreferences().admin?.isAdminMapCollapsed ?? false
 );
 
 let isFullscreen = $state(false);
