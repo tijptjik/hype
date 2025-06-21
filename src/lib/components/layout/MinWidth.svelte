@@ -1,7 +1,8 @@
 <script lang="ts">
 import { m } from '$lib/i18n';
 import { ADMIN_MIN_WIDTH } from '$lib';
-
+// SVELTE
+import { fade } from 'svelte/transition';
 // STATE :: VIEWPORT
 let innerWidth = $state(0);
 let isViewportWideEnough = $derived(innerWidth >= ADMIN_MIN_WIDTH);
@@ -11,11 +12,13 @@ let { children }: { children: any } = $props();
 
 <svelte:window bind:innerWidth />
 
-{#if isViewportWideEnough}
+<div class="h-full w-full" class:opacity-0={!isViewportWideEnough}>
   {@render children()}
-{:else}
+</div>
+{#if !isViewportWideEnough}
   <div
-    class="fixed z-[100] flex h-screen w-full items-center justify-center bg-base-100 p-4 caret-transparent">
+    class="fixed z-[100] flex h-screen w-full items-center justify-center bg-base-100 p-4 caret-transparent"
+    transition:fade={{ duration: 300 }}>
     <div class="card w-full max-w-md border border-base-300 bg-base-200 shadow-xl">
       <div class="card-body text-center">
         <div class="mb-4 flex justify-center">
