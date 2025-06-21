@@ -194,22 +194,39 @@ export const DELETE: RequestHandler = async ({
       return error(404, 'Image not found');
     }
 
-    // 2. Delete from Cloudinary
-    if (imageToDelete.publicId) {
-      // Fetch signature for deletion
-      const signData = await getSignedRequest(eventFetch, {
-        public_id: imageToDelete.publicId
-      });
-      await delFromCloudinary(eventFetch, signData, imageToDelete.publicId);
-    }
-
-    // 3. Delete from database
+    // 2. Delete from database first (so UI stops trying to load the image)
     await db.delete(image).where(eq(image.id, params.id as Id));
     // Feature Image is deleted by cascade
+
+    // 3. Delete from Cloudinary second (cleanup external resource)
+    if (imageToDelete.publicId) {
+      try {
+        // Fetch signature for deletion
+        const signData = await getSignedRequest(eventFetch, {
+          public_id: imageToDelete.publicId
+        });
+        await delFromCloudinary(eventFetch, signData, imageToDelete.publicId);
+      } catch (cloudinaryError) {
+        // Log but don't fail the entire operation if Cloudinary deletion fails
+        console.warn(
+          'Failed to delete from Cloudinary (database already cleaned up):',
+          cloudinaryError
+        );
+      }
+    }
 
     return json({ type: 'success', message: 'Image deleted successfully' });
   } catch (e: any) {
     console.error('Failed to delete image:', e);
+
+    // Check for specific D1 constraint error (taskImage foreign key constraint)
+    if (
+      e?.cause?.message?.includes('taskImage.imageId') &&
+      e?.cause?.message?.includes('SQLITE_CONSTRAINT')
+    ) {
+      return error(400, 'Cannot delete image. It belongs to a Task');
+    }
+
     // Check if it's a SvelteKit error object
     if (e && typeof e.status === 'number' && typeof e.body === 'object') {
       return error(e.status, e.body.message || 'Failed to delete image');

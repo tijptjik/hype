@@ -351,7 +351,20 @@ export const getCtxFromUrl = (url: URL) => {
 export const sortImages = (images: ImageDBFlat[] | ImageDB[]) => {
   // Sort images by publication status, intent, and creation date
   images!.sort((a: any, b: any) => {
-    // First sort by publication status (only if both are feature images)
+    // Priority 1: Unpublished with no intent (undefined) come first
+    const aIsUnpublishedNoIntent =
+      a.featureImage &&
+      !a.featureImage.isPublished &&
+      (!a.featureImage.intent || a.featureImage.intent === 'undefined');
+    const bIsUnpublishedNoIntent =
+      b.featureImage &&
+      !b.featureImage.isPublished &&
+      (!b.featureImage.intent || b.featureImage.intent === 'undefined');
+
+    if (aIsUnpublishedNoIntent && !bIsUnpublishedNoIntent) return -1;
+    if (!aIsUnpublishedNoIntent && bIsUnpublishedNoIntent) return 1;
+
+    // Priority 2: Published vs unpublished (published first among remaining)
     if (
       a.featureImage &&
       b.featureImage &&
@@ -359,7 +372,8 @@ export const sortImages = (images: ImageDBFlat[] | ImageDB[]) => {
     ) {
       return a.featureImage.isPublished ? -1 : 1;
     }
-    // Then sort by intent order (only if both are feature images)
+
+    // Priority 3: Intent order within same publish status
     if (a.featureImage && b.featureImage) {
       const intentCompare =
         intentOrder.indexOf(a.featureImage.intent) -
@@ -368,7 +382,8 @@ export const sortImages = (images: ImageDBFlat[] | ImageDB[]) => {
         return intentCompare;
       }
     }
-    // Finally, sort by creation date (newest first)
+
+    // Priority 4: Creation date (newest first)
     return (
       new Date(b.createdAt as string).getTime() -
       new Date(a.createdAt as string).getTime()

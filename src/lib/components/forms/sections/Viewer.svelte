@@ -45,12 +45,33 @@ let image = $derived(imageCtx.activeImage);
     </Viewer>
     <!-- Navigation Arrows -->
     {#if imageCtx.getImages().length > 1}
-      <ScrollArrow
-        direction="left"
-        onClick={(e: MouseEvent) => imageCtx.switchToImage(e, 'prev')} />
-      <ScrollArrow
-        direction="right"
-        onClick={(e: MouseEvent) => imageCtx.switchToImage(e, 'next')} />
+      <!-- Left Navigation -->
+      <div
+        class="absolute left-0 top-[80px] z-20 flex h-[calc(100%-160px)] w-[20%] cursor-pointer items-center justify-start pl-2 caret-transparent opacity-0 transition-opacity duration-200 hover:opacity-100"
+        onclick={(e: MouseEvent) => imageCtx.switchToImage(e, 'prev')}
+        role="button"
+        tabindex="0">
+        <ScrollArrow
+          direction="left"
+          onClick={(e: MouseEvent) => {
+            e.stopPropagation();
+            imageCtx.switchToImage(e, 'prev');
+          }} />
+      </div>
+
+      <!-- Right Navigation -->
+      <div
+        class="absolute right-0 top-[80px] z-20 flex h-[calc(100%-160px)] w-[20%] cursor-pointer items-center justify-end pr-2 caret-transparent opacity-0 transition-opacity duration-200 hover:opacity-100"
+        onclick={(e: MouseEvent) => imageCtx.switchToImage(e, 'next')}
+        role="button"
+        tabindex="0">
+        <ScrollArrow
+          direction="right"
+          onClick={(e: MouseEvent) => {
+            e.stopPropagation();
+            imageCtx.switchToImage(e, 'next');
+          }} />
+      </div>
     {/if}
   </main>
 </div>

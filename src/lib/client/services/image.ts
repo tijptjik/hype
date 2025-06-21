@@ -664,9 +664,21 @@ export function getCreditFromMetadata(metadata: Metadata): string | undefined {
 
 export function sortImages(images: Image[]) {
   const sortedImages = images.sort((a, b) => {
+    // Priority 1: Unpublished with no intent (undefined) come first
+    const aIsUnpublishedNoIntent =
+      !a.isPublished && (!a.intent || a.intent === 'undefined');
+    const bIsUnpublishedNoIntent =
+      !b.isPublished && (!b.intent || b.intent === 'undefined');
+
+    if (aIsUnpublishedNoIntent && !bIsUnpublishedNoIntent) return -1;
+    if (!aIsUnpublishedNoIntent && bIsUnpublishedNoIntent) return 1;
+
+    // Priority 2: Published vs unpublished (published first among remaining)
     if (a.isPublished !== b.isPublished) {
       return a.isPublished ? -1 : 1;
     }
+
+    // Priority 3: Intent order within same publish status
     if (a.intent && b.intent) {
       const intentCompare =
         intentOrder.indexOf(a.intent as Intent) -
@@ -675,6 +687,8 @@ export function sortImages(images: Image[]) {
         return intentCompare;
       }
     }
+
+    // Priority 4: Creation date (newest first)
     return (
       new Date(b.createdAt as string).getTime() -
       new Date(a.createdAt as string).getTime()
