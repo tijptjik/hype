@@ -3,7 +3,13 @@ import { SvelteMap } from 'svelte/reactivity';
 // ENUMS
 import { FirstClassResource, supportedLocales } from '$lib/enums';
 // TYPES
-import type { Feature, Property, FeatureI18nDB, FeatureProperty } from '$lib/types';
+import type {
+  Feature,
+  Property,
+  FeatureI18nDB,
+  FeatureProperty,
+  FeatureFromCollection
+} from '$lib/types';
 import type { AppCtx } from '$lib/context/app.svelte';
 
 // ═══════════════════════
@@ -46,9 +52,9 @@ export function setStatistic(
 // Helper method to get cached boolean statistics for features (read-only)
 export function getCachedFeatureBoolean(
   appCtx: AppCtx,
-  feature: Feature,
+  feature: FeatureFromCollection,
   statistic: string,
-  calculator: (feature: Feature) => boolean
+  calculator: (feature: FeatureFromCollection) => boolean
 ): boolean {
   const cached = getStatistic(
     appCtx,
@@ -67,7 +73,7 @@ export function getCachedFeatureBoolean(
 // Helper method to set cached boolean statistics for features (separate from reading)
 export function setCachedFeatureBoolean(
   appCtx: AppCtx,
-  feature: Feature,
+  feature: FeatureFromCollection,
   statistic: string,
   value: boolean
 ): void {
@@ -84,9 +90,9 @@ export function setCachedFeatureBoolean(
 // Helper methods for tri-state caching (boolean | null)
 export function getCachedFeatureTriState(
   appCtx: AppCtx,
-  feature: Feature,
+  feature: FeatureFromCollection,
   statistic: string,
-  calculator: (feature: Feature) => boolean | null
+  calculator: (feature: FeatureFromCollection) => boolean | null
 ): boolean | null {
   const cached = getStatistic(
     appCtx,
@@ -104,7 +110,7 @@ export function getCachedFeatureTriState(
 
 export function setCachedFeatureTriState(
   appCtx: AppCtx,
-  feature: Feature,
+  feature: FeatureFromCollection,
   statistic: string,
   value: boolean | null
 ): void {
@@ -121,10 +127,10 @@ export function setCachedFeatureTriState(
 // Helper methods for per-locale translation caching
 export function getCachedFeatureTranslationBoolean(
   appCtx: AppCtx,
-  feature: Feature,
+  feature: FeatureFromCollection,
   statistic: string,
   locale: string,
-  calculator: (feature: Feature, locale: string) => boolean
+  calculator: (feature: FeatureFromCollection, locale: string) => boolean
 ): boolean {
   const localeStatistic = `${statistic}.${locale}`;
   const cached = getStatistic(
@@ -162,10 +168,10 @@ export function setCachedFeatureTranslationBoolean(
 // Helper methods for per-locale translation tri-state caching (boolean | null)
 export function getCachedFeatureTranslationTriState(
   appCtx: AppCtx,
-  feature: Feature,
+  feature: FeatureFromCollection,
   statistic: string,
   locale: string,
-  calculator: (feature: Feature, locale: string) => boolean | null
+  calculator: (feature: FeatureFromCollection, locale: string) => boolean | null
 ): boolean | null {
   const localeStatistic = `${statistic}.${locale}`;
   const cached = getStatistic(
@@ -184,7 +190,7 @@ export function getCachedFeatureTranslationTriState(
 
 export function setCachedFeatureTranslationTriState(
   appCtx: AppCtx,
-  feature: Feature,
+  feature: FeatureFromCollection,
   statistic: string,
   locale: string,
   value: boolean | null
@@ -203,9 +209,13 @@ export function setCachedFeatureTranslationTriState(
 // Helper methods for property-based caching (categories/specifiers)
 export function getCachedFeaturePropertyBoolean(
   appCtx: AppCtx,
-  feature: Feature,
+  feature: FeatureFromCollection,
   propertyId: string,
-  calculator: (feature: Feature, propertyId: string, appCtx?: AppCtx) => boolean
+  calculator: (
+    feature: FeatureFromCollection,
+    propertyId: string,
+    appCtx?: AppCtx
+  ) => boolean
 ): boolean {
   const propertyStatistic = `properties.${propertyId}`;
   const cached = getStatistic(
@@ -224,7 +234,7 @@ export function getCachedFeaturePropertyBoolean(
 
 export function setCachedFeaturePropertyBoolean(
   appCtx: AppCtx,
-  feature: Feature,
+  feature: FeatureFromCollection,
   propertyId: string,
   value: boolean
 ): void {
@@ -242,8 +252,8 @@ export function setCachedFeaturePropertyBoolean(
 // Helper function for tri-state specifier translation caching
 export function getCachedFeatureSpecifierTranslation(
   appCtx: AppCtx,
-  feature: Feature,
-  calculator: (feature: Feature) => boolean | null
+  feature: FeatureFromCollection,
+  calculator: (feature: FeatureFromCollection) => boolean | null
 ): boolean | null {
   const cached = getStatistic(
     appCtx,
@@ -260,7 +270,10 @@ export function getCachedFeatureSpecifierTranslation(
 }
 
 // Pre-populate stats cache for a feature (called during feature refresh)
-export function primeFeatureStatsCache(appCtx: AppCtx, feature: Feature): void {
+export function primeFeatureStatsCache(
+  appCtx: AppCtx,
+  feature: FeatureFromCollection
+): void {
   // Clear existing cache for this feature to ensure fresh calculation with correct image logic
   const resourceStats = appCtx.cache.stats.get(FirstClassResource.feature);
   if (resourceStats && resourceStats.has(feature.id)) {
@@ -339,7 +352,7 @@ export function primeFeatureStatsCache(appCtx: AppCtx, feature: Feature): void {
   );
   setCachedFeatureBoolean(appCtx, feature, 'hasDisplayAddress', hasDisplayAddress);
 
-  const imageCompletion = calculateImageCompletion(appCtx, feature);
+  const imageCompletion = calculateImageCompletion(feature);
   setCachedFeatureBoolean(appCtx, feature, 'hasImage', imageCompletion.hasImage);
   setCachedFeatureTriState(
     appCtx,
@@ -382,7 +395,7 @@ export function primeFeatureStatsCache(appCtx: AppCtx, feature: Feature): void {
 
 export function calculateContentCompletion(
   appCtx: AppCtx,
-  feature: Feature
+  feature: FeatureFromCollection
 ): { title: boolean; description: boolean } {
   return {
     title: (Object.values(feature?.i18n ?? {}) as FeatureI18nDB[]).some(
@@ -397,7 +410,7 @@ export function calculateContentCompletion(
 
 export function calculateTranslationCompletion(
   appCtx: AppCtx,
-  feature: Feature,
+  feature: FeatureFromCollection,
   locale?: string
 ): Record<string, boolean> {
   const i18nEntries = feature?.i18n ?? {};
@@ -454,7 +467,7 @@ export function calculateTranslationCompletion(
 // New tri-state translation completion function
 export function calculateTranslationCompletionTriState(
   appCtx: AppCtx,
-  feature: Feature,
+  feature: FeatureFromCollection,
   locale: string
 ): Record<string, boolean | null> {
   const i18nEntries = feature?.i18n ?? {};
@@ -513,45 +526,27 @@ export function calculateTranslationCompletionTriState(
   };
 }
 
-export function calculateImageCompletion(
-  appCtx: AppCtx,
-  feature: Feature
-): {
+export function calculateImageCompletion(feature: FeatureFromCollection): {
   hasImage: boolean;
   isOneImagePublished: boolean | null;
   isAllImagePublished: boolean | null;
 } {
   // Check if feature has the new count fields (from collection API)
-  if ('imageCount' in feature && 'imagePublishedCount' in feature) {
-    const imageCount = (feature as any).imageCount as number;
-    const imagePublishedCount = (feature as any).imagePublishedCount as number;
-
-    return {
-      hasImage: imageCount > 0,
-      // Tri-state logic: true = has images AND at least one published, false = has images BUT none published, null = no images
-      isOneImagePublished: imageCount === 0 ? null : imagePublishedCount > 0,
-      // Tri-state logic: true = has images AND all published, false = has images BUT not all published, null = no images
-      isAllImagePublished: imageCount === 0 ? null : imagePublishedCount === imageCount
-    };
-  }
-
-  // Fallback to images array for individual feature API or compatibility
-  const images = feature.images ?? [];
-  const hasImages = images.length > 0;
+  const imageCount = (feature as any).imageCount as number;
+  const imagePublishedCount = (feature as any).imagePublishedCount as number;
 
   return {
-    hasImage: hasImages,
-    // Tri-state logic for images array
-    isOneImagePublished: !hasImages
-      ? null
-      : images.some((featureImage) => featureImage.isPublished),
-    isAllImagePublished: !hasImages
-      ? null
-      : images.every((featureImage) => featureImage.isPublished)
+    hasImage: imageCount > 0,
+    // Tri-state logic: true = has images AND at least one published, false = has images BUT none published, null = no images
+    isOneImagePublished: imageCount === 0 ? null : imagePublishedCount > 0,
+    // Tri-state logic: true = has images AND all published, false = has images BUT not all published, null = no images
+    isAllImagePublished: imageCount === 0 ? null : imagePublishedCount === imageCount
   };
 }
 
-export function calculateSpecifierTranslation(feature: Feature): boolean | null {
+export function calculateSpecifierTranslation(
+  feature: FeatureFromCollection
+): boolean | null {
   // Get all feature properties
   const properties = feature.properties || [];
 
@@ -589,7 +584,7 @@ export function calculateSpecifierTranslation(feature: Feature): boolean | null 
 
 // Property presence calculators that match filter logic exactly
 export function calculateClassifierPresence(
-  feature: Feature,
+  feature: FeatureFromCollection,
   propertyId: string,
   appCtx?: AppCtx
 ): boolean {
@@ -616,7 +611,7 @@ export function calculateClassifierPresence(
 }
 
 export function calculateSpecifierPresence(
-  feature: Feature,
+  feature: FeatureFromCollection,
   propertyId: string
 ): boolean {
   const featureProp = feature.properties?.find((fp) => fp.propertyId === propertyId);
@@ -641,7 +636,7 @@ export function calculateSpecifierPresence(
 
 export function calculateOverallStats(
   appCtx: AppCtx,
-  entities: Feature[],
+  entities: FeatureFromCollection[],
   adminCtx?: any // Optional admin context for translation locale filtering
 ): {
   content: number;
@@ -735,7 +730,7 @@ export function calculateOverallStats(
     }
 
     // Image - requires BOTH hasImage AND isOneImagePublished to be TRUE
-    const imageCompletion = calculateImageCompletion(appCtx, feature);
+    const imageCompletion = calculateImageCompletion(feature);
     if (imageCompletion.hasImage && imageCompletion.isOneImagePublished === true) {
       imageScore += 1;
     }
