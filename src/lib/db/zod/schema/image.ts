@@ -131,7 +131,7 @@ export const FeatureImageUpdateAPI = FeatureImageUpdate.extend({
 /* -------- */
 
 export const ImageFlat = ImageBase.extend({
-  featureId: z.string(),
+  featureId: z.string().nullish(),
   attribution: z.string().nullish(),
   intent: z.enum(Object.values(ImageIntent) as [string, ...string[]]).nullish(),
   isPublished: z.boolean().nullish(),
