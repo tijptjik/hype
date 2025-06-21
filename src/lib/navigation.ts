@@ -14,10 +14,10 @@ import {
   BuildingLibrary as HubIcon
 } from '@steeze-ui/heroicons';
 // ENUMS
-import { FirstClassResource, ResourcePath } from '$lib/enums';
+import { FirstClassResource, ResourcePath, ResourceRefKey } from '$lib/enums';
 // TYPES
 import type { AdminCtx } from '$lib/context/admin.svelte';
-import type { Code, FacetType, Id, NavItem } from '$lib/types';
+import type { Code, FacetType, Id, NavItem, Resource } from '$lib/types';
 
 // NAVIGATION
 // NOTE : We cannot use Enums here for path or seq as the build process only procudes them on a hard refresh.
@@ -70,6 +70,38 @@ export const navItems: Record<Exclude<FirstClassResource, 'property'>, NavItem> 
     isShownInSidebar: false,
     isAlwaysExpanded: false
   }
+};
+
+export const getUrlForResource = (
+  adminCtx: AdminCtx,
+  resource: FirstClassResource,
+  id: Id,
+  facet?: string
+) => {
+  const ref = getResourceRef(adminCtx, resource, id);
+  if (!ref) return null;
+  return `${ADMIN_PATH}/${getResourcePathPart(adminCtx, resource)}/${ref}${facet ? `#${facet}` : ''}`;
+};
+
+export const getResourceRef = (
+  adminCtx: AdminCtx,
+  resource: FirstClassResource,
+  id: Id
+) => {
+  if (!resource) return false;
+  const refKey = ResourceRefKey[resource as keyof typeof ResourceRefKey];
+  const entity = adminCtx.appCtx.cache[resource].get(id);
+  if (!entity) return false;
+  return entity[refKey as keyof Resource];
+};
+
+export const getResourcePathPart = (
+  adminCtx: AdminCtx,
+  resource?: FirstClassResource
+) => {
+  const resourceKey = resource ?? adminCtx.state.active.resourceType;
+  if (!resourceKey) return null;
+  return ResourcePath[resourceKey];
 };
 
 export const navigateOnAdmin = (
@@ -163,3 +195,33 @@ export async function getBreadcrumbs(
     return [];
   }
 }
+
+// ═══════════════════════
+// NAVIGATION :: TASKS
+// ═══════════════════════
+
+/**
+ * Navigates to the next task. If the current task is the last task, it will navigate to the previous task. If no tasks are available, it will navigate to the overview.
+ */
+
+export const goToNextTask = (adminCtx: AdminCtx) => {
+  let nextIndex;
+  const currentIndex = adminCtx.filteredTasks.findIndex(
+    (task) => task.id === adminCtx.activeResourceRef
+  );
+  const taskCount = adminCtx.filteredTasks.length;
+
+  if (currentIndex !== -1) {
+    if (currentIndex < taskCount - 1) {
+      nextIndex = currentIndex + 1;
+    } else if (currentIndex === taskCount - 1 && taskCount > 1) {
+      nextIndex = currentIndex - 1;
+    } else {
+      nextIndex = undefined;
+    }
+  }
+  const nextTaskId =
+    nextIndex !== undefined ? adminCtx.filteredTasks[nextIndex].id : undefined;
+  adminCtx.invalidateAndRefresh(FirstClassResource.task);
+  navigateOnAdmin(adminCtx, FirstClassResource.task!, nextTaskId);
+};

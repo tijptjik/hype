@@ -1,7 +1,6 @@
 // I18N
 import { getLocale } from '$lib/i18n';
 // LIB
-import { navigateOnAdmin } from '$lib/navigation';
 import { fetchOrThrow } from '$lib/index';
 // SERVICES
 import { debouncedUpdateUserPreferences } from '$lib/client/services/user';
@@ -44,7 +43,8 @@ import type {
   FilterTriState,
   CurrentUser,
   UserPreferences,
-  AdminPreferences
+  AdminPreferences,
+  FeatureFromCollection
 } from '../types';
 import { goto } from '$app/navigation';
 
@@ -176,11 +176,21 @@ export class AdminCtx {
   constructor(queryClient: QueryClient, appCtx: AppCtx) {
     this.queryClient = queryClient;
     this.appCtx = appCtx;
-    this.initializeAdminQueryMap();
+
+    // Only initialize if appCtx is defined and has the required properties
+    if (this.appCtx && this.appCtx.queryMap) {
+      this.initializeAdminQueryMap();
+    }
   }
 
   // Initialize admin-specific query map on appCtx
   private initializeAdminQueryMap = (): void => {
+    // Guard against undefined appCtx
+    if (!this.appCtx || !this.appCtx.queryMap) {
+      console.warn('AdminCtx: Cannot initialize query map - appCtx not ready');
+      return;
+    }
+
     // Override the default query functions with admin-specific ones
     // but reuse AppCtx query keys for common resources
     this.appCtx.queryMap.set(FirstClassResource.organisation, {
@@ -383,6 +393,11 @@ export class AdminCtx {
 
   // Initialize data using appCtx's refresh methods
   init = async (): Promise<void> => {
+    // Ensure query map is initialized if it wasn't done in constructor
+    if (this.appCtx && this.appCtx.queryMap && !this.isInitialised) {
+      this.initializeAdminQueryMap();
+    }
+
     // Use AppCtx's cascading refresh logic but with admin query functions
     await this.appCtx.refreshOrganisations();
 
@@ -974,7 +989,9 @@ export class AdminCtx {
     return filterValue === null || filterValue === entity[property as keyof Resource];
   };
 
-  textFilter = <T extends Organisation | Project | Layer | Feature | Hub | FeatureFromCollection>(
+  textFilter = <
+    T extends Organisation | Project | Layer | Feature | Hub | FeatureFromCollection
+  >(
     resource: FirstClassResource,
     entity: T,
     query: string
@@ -1056,8 +1073,8 @@ export class AdminCtx {
 
   setAdminPreference = (code: keyof AdminPreferences, value: boolean) => {
     if (!this.appCtx.user) return;
-    if (!(this.appCtx.user as CurrentUser).preferences.admin) {
-      (this.appCtx.user as CurrentUser).preferences.admin = {
+    if (!(this.appCtx.user as CurrentUser).preferences?.admin) {
+      (this.appCtx.user as CurrentUser).preferences!.admin = {
         isAdminMapCollapsed: false,
         isPrimaryPanelCollapsed: false,
         isPrimaryPanelAutoHide: false
@@ -1071,66 +1088,6 @@ export class AdminCtx {
       (this.appCtx.user as CurrentUser).id,
       (this.appCtx.user as CurrentUser).preferences as UserPreferences
     );
-  };
-
-  // ═══════════════════════
-  // ADMIN LOOKUPS
-  // ═══════════════════════
-
-  navigateToResource = (resource: FirstClassResource, id: Id, facet?: string) => {
-    const url = this.getUrlForResource(resource, id, facet);
-    if (!url) return;
-    goto(url);
-  };
-
-  getUrlForResource = (resource: FirstClassResource, id: Id, facet?: string) => {
-    const ref = this.getResourceRef(resource, id);
-    if (!ref) return null;
-    return `${this.getResourcePathPart(resource)}/${ref}${facet ? `#${facet}` : ''}`;
-  };
-
-  getResourceRef = (resource: FirstClassResource, id: Id) => {
-    if (!resource) return false;
-    const refKey = ResourceRefKey[resource as keyof typeof ResourceRefKey];
-    const entity = this.appCtx.cache[resource].get(id);
-    if (!entity) return false;
-    return entity[refKey as keyof Resource];
-  };
-
-  getResourcePathPart = (resource?: FirstClassResource) => {
-    const resourceKey = resource ?? this.state.active.resourceType;
-    if (!resourceKey) return null;
-    return ResourcePath[resourceKey];
-  };
-
-  // ═══════════════════════
-  // NAVIGATION
-  // ═══════════════════════
-
-  /**
-   * Navigates to the next task. If the current task is the last task, it will navigate to the previous task. If no tasks are available, it will navigate to the overview.
-   */
-
-  goToNextTask = () => {
-    let nextIndex;
-    const currentIndex = this.filteredTasks.findIndex(
-      (task) => task.id === this.activeResourceRef
-    );
-    const taskCount = this.filteredTasks.length;
-
-    if (currentIndex !== -1) {
-      if (currentIndex < taskCount - 1) {
-        nextIndex = currentIndex + 1;
-      } else if (currentIndex === taskCount - 1 && taskCount > 1) {
-        nextIndex = currentIndex - 1;
-      } else {
-        nextIndex = undefined;
-      }
-    }
-    const nextTaskId =
-      nextIndex !== undefined ? this.filteredTasks[nextIndex].id : undefined;
-    this.invalidateAndRefresh(FirstClassResource.task);
-    navigateOnAdmin(this, FirstClassResource.task!, nextTaskId);
   };
 
   // ═══════════════════════
