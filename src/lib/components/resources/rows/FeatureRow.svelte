@@ -14,6 +14,7 @@ import CategoryStats from '$lib/components/features/stats/CategoryStats.svelte';
 import SpecifierStats from '$lib/components/features/stats/SpecifierStats.svelte';
 // SERVICES
 import { getURLfromImage } from '$lib/client/services/image';
+import { navigateOnAdmin } from '$lib/navigation';
 // I18N
 import { getLocale } from '$lib/i18n';
 // ENUMS
@@ -43,15 +44,6 @@ const grapheme = $derived(
   entity.properties.find((p) => p.propertyId === graphemeProperty?.id)?.value || ''
 );
 
-function navigateToResource(entity: Feature) {
-  goto(
-    `/admin/${adminCtx.getEntityPath(
-      adminCtx.activeResourceType as FirstClassResource,
-      entity.id
-    )}`
-  );
-}
-
 function handleRowKeyDown(event: KeyboardEvent, entity: Feature) {
   // Don't handle keyboard events if this row is selected (modal is open)
   if (isSelected) return;
@@ -59,7 +51,7 @@ function handleRowKeyDown(event: KeyboardEvent, entity: Feature) {
   if (event.key === 'Enter') {
     event.preventDefault();
     event.stopPropagation();
-    navigateToResource(entity);
+    navigateOnAdmin(adminCtx, FirstClassResource.feature, entity.id);
   } else if (event.key === ' ' || event.key === 'Space') {
     event.preventDefault();
     event.stopPropagation();
@@ -80,7 +72,7 @@ function handleThumbnailClick(e: Event, image: ImageDBBasic, feature: Feature) {
 
 <div class="@container/main">
   <div
-    onclick={() => navigateToResource(entity)}
+    onclick={() => navigateOnAdmin(adminCtx, FirstClassResource.feature, entity.id)}
     onkeydown={(e) => handleRowKeyDown(e, entity)}
     tabindex="0"
     role="button"
@@ -143,13 +135,18 @@ function handleThumbnailClick(e: Event, image: ImageDBBasic, feature: Feature) {
           onclick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            goto(`/admin/features/${entity.id}#address`);
+            navigateOnAdmin(adminCtx, FirstClassResource.feature, entity.id, 'address');
           }}
           onkeydown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
               e.stopPropagation();
-              goto(`/admin/features/${entity.id}#address`);
+              navigateOnAdmin(
+                adminCtx,
+                FirstClassResource.feature,
+                entity.id,
+                'address'
+              );
             }
           }}
           role="button"
