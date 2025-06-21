@@ -88,7 +88,10 @@ function handleFilesSelect(
         on:drop={handleFilesSelect}>
         {#if sectionProps.image || imageCtx.activePreview || imageCtx.activeImage}
           <!-- Existing image, upload preview, or uploaded image -->
-          <PhotoFrame class="h-full w-full rounded-b-2xl" layout="contain" mode="standalone"/>
+          <PhotoFrame
+            class="h-full w-full rounded-b-2xl"
+            layout="contain"
+            mode="standalone" />
           <!-- Replace overlay that appears on hover (hidden during upload) -->
           {#if !isUploading && sectionProps.image}
             <div

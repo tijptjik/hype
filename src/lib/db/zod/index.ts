@@ -78,10 +78,12 @@ export const UserCurrentAPI = UserCurrent.extend({
   userFeatures: z.array(UserFeatureBase),
   roles: z.array(z.union([OrganisationRoleBase, ProjectRoleBase])),
   superAdmin: z.boolean().nullish(),
-  experimental: z.object({
-    contributorMode: z.boolean().nullish(),
-    noLabelsMode: z.boolean().nullish()
-  }).nullish()
+  experimental: z
+    .object({
+      contributorMode: z.boolean().nullish(),
+      noLabelsMode: z.boolean().nullish()
+    })
+    .nullish()
 });
 
 export const UserLayerAPI = UserLayerBase.extend({

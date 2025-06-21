@@ -66,7 +66,7 @@ const handleError = () => {
     <img
       {src}
       {alt}
-      class="absolute inset-0 z-0 h-full w-full bg-transparent object-cover opacity-60 blur-sm"/>
+      class="absolute inset-0 z-0 h-full w-full bg-transparent object-cover opacity-60 blur-sm" />
   {/if}
   <!-- Foreground Image -->
   <img
