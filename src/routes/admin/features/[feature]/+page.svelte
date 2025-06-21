@@ -41,7 +41,8 @@ import type {
   FormFieldArrayDefinition,
   FormFieldNested,
   FormFieldConfig,
-  OrganisationDB
+  OrganisationDB,
+  Image
 } from '$lib/types';
 // CONTEXT
 const adminCtx = getAdminCtx();
@@ -149,7 +150,7 @@ watch(
 let enhance = $derived(form.enhance);
 let isMapFullscreen = $state(false);
 let isMapCollapsed = $state(
-  adminCtx.appCtx.getUserPreferences()?.admin.isAdminMapCollapsed ?? false
+  adminCtx.appCtx.getUserPreferences()?.admin?.isAdminMapCollapsed ?? false
 );
 let title = $derived(
   pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.title || NEW_TITLE
@@ -198,6 +199,8 @@ function handleMapCollapse(): void {
     {#await adminCtx.appCtx.getHierarchy(pageProps.data.validatedForm.data as Feature) then { organisation, project }}
       <ImageProvider
         isAdminMode={true}
+        image={(pageProps.data.validatedForm.data as Feature).image as Image}
+        images={(pageProps.data.validatedForm.data as Feature).images as Image[]}
         context={{
           ctxType: ImageContextResource.feature,
           ctxId: (pageProps.data.validatedForm.data as Feature).id,
@@ -293,8 +296,9 @@ function handleMapCollapse(): void {
                       subtitle={m.admin__forms_feature_addressing_subtitle()}
                       fields={FIELDS.address as FormField & FormFieldNested} />
                   {:else if adminCtx.activeFacet === 'images' && pageProps.data.entity !== NEW_REF}
-                    <div class="flex h-full min-h-0 flex-col items-stretch gap-6">
-                      <div class="min-h-0 flex-1">
+                    <div
+                      class="flex h-full min-h-0 flex-col items-stretch gap-6 overflow-hidden">
+                      <div class="min-h-0 flex-1 overflow-hidden">
                         <ViewerSection
                           {form}
                           title={m.admin__forms_feature_viewer_title()}

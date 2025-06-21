@@ -29,10 +29,15 @@ type Props = {
 
 let { image, idx, actionProps, isHighlighted = false }: Props = $props();
 
-// Track both main image and thumbnail load states
-let imageLoadState = $derived(imageCtx.getLoadStatus(image.id));
+// Track thumbnail load state (main image load state is handled by PhotoFrame/Viewer)
 let thumbnailLoadState = $derived(imageCtx.getThumbnailLoadStatus(image.id));
-let isPublished = $derived(imageCtx.getImageIsPublished(image.id));
+// Make isPublished reactive to changes in the image context state
+// First check the updated image from context, then fall back to image prop
+let isPublished = $derived.by(() => {
+  const contextImage = imageCtx.getImage(image.id);
+  const result = contextImage?.isPublished ?? image.isPublished;
+  return result;
+});
 
 // Initialize load states for this thumbnail
 onMount(() => {
@@ -40,33 +45,27 @@ onMount(() => {
   if (thumbnailLoadState === undefined) {
     imageCtx.setThumbnailLoadStatus(image.id, 'loading');
   }
-
-  // TODO Prefetch the images
 });
 
 // Cleanup on component destruction
 onDestroy(() => {
+  // Clean up thumbnail load status when component is destroyed
   imageCtx.resetThumbnailLoadStatus(image.id);
 });
 </script>
 
-<div
-  class="relative h-full w-full"
-  data-image-id={image.id}
-  onmouseenter={() => imageCtx.setActiveImage(image)}
-  onclick={() => imageCtx.setActiveImage(image)}
-  bind:this={thumbnailRef}>
+<div class="relative h-full w-full" data-image-id={image.id} bind:this={thumbnailRef}>
   <Img
-    class="h-50 w-50 mx-auto overflow-hidden rounded-lg border-base-100 text-neutral transition-opacity duration-300 
-      {isPublished ? '' : 'border-2 border-base-200/60 opacity-70'}
-      {thumbnailLoadState === 'loading' ? 'opacity-0' : 'opacity-100'}"
+    class="mx-auto h-[200px] w-[200px] overflow-hidden rounded-lg border-base-100 text-neutral transition-opacity duration-300 
+      {isPublished ? 'opacity-100' : 'border-2 border-base-200/60 blur-sm'}
+      {thumbnailLoadState === 'loading' ? '!opacity-30' : ''}"
     src={getURLfromImage({
       image,
       transformation: 'c_fill,w_200,h_200'
     })}
     alt="thumbnail"
     layout="cover"
-    showLoading={false}
+    showLoading={true}
     onLoad={() => {
       imageCtx.setThumbnailLoadStatus(image.id, 'loaded');
     }}
@@ -80,15 +79,26 @@ onDestroy(() => {
     </div>
   {/if}
 
-  {#if thumbnailLoadState === 'loaded' && (!actionProps || !actionProps.removeMode) && image.intent}
+  {#if thumbnailLoadState === 'loaded'}
     <IntentLabel
       container={thumbnailRef}
-      intent={image.intent}
+      intent={image.intent || 'undefined'}
       {idx}
       imageId={image.id} />
   {/if}
 
-  {#if thumbnailLoadState === 'loading'}
+  <!-- Error message overlay (highest priority) -->
+  {#if imageCtx.hasErrorMessage(image.id)}
+    <div
+      class="absolute inset-0 z-30 flex flex-col items-center justify-center rounded-lg bg-error text-error-content backdrop-blur-sm">
+      <div class="p-2 text-center">
+        <div class="mb-1 text-2xl text-white">⚠</div>
+        <p class="text-lg font-semibold text-white/70">
+          {@html imageCtx.getErrorMessage(image.id)?.message}
+        </p>
+      </div>
+    </div>
+  {:else if thumbnailLoadState === 'loading'}
     <Loading />
   {:else if actionProps}
     {#if actionProps.removeMode && thumbnailLoadState === 'loaded' && !imageCtx.pendingConfirmationHas(image.id) && !imageCtx.deletionQueueHas(image.id)}

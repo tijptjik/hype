@@ -1,13 +1,14 @@
 // SVELTE
 import { getContext, setContext } from 'svelte';
 import { SvelteSet, SvelteMap } from 'svelte/reactivity';
+// I18N
+import { m } from '$lib/i18n';
 // SERVICES
 import {
   uploadAndProcessImage,
   updateImageIntent,
   updateImageIsPublished,
   deleteImage,
-  getImages,
   getURLfromImage,
   sortImages
 } from '$lib/client/services/image';
@@ -30,8 +31,6 @@ import type {
   OrganisationDB,
   ProjectDB,
   ImageUploadCtx,
-  ImageCtxMode,
-  ImageDB,
   ImageCtxConstructorOptions,
   ImageContextConfig,
   Feature
@@ -281,7 +280,7 @@ export class ImageCtx {
     rejected: [] as File[],
 
     // CRUD :: READ
-    images: new SvelteMap<Id, ImageDB>(),
+    images: new SvelteMap<Id, Image>(),
     activeImage: null as Image | null,
     targetImage: null as Image | null, // Image we're transitioning to
     isTransitioning: false, // Whether we're smoothly transitioning between images
@@ -295,6 +294,9 @@ export class ImageCtx {
     uploadStatus: new SvelteMap<Id, UploadStatus>(),
     thumbnailLoadStatus: new SvelteMap<Id, LoadStatus>(),
     preloadedImages: new SvelteSet<string>(),
+
+    // Error tracking
+    errorMessages: new SvelteMap<Id, { message: string; timestamp: number }>(),
 
     // CRUD :: DELETE
     pendingConfirmation: new SvelteSet<Id>(),
@@ -526,11 +528,11 @@ export class ImageCtx {
   // ═══════════════════════
   // 3.6 STATE MANAGEMENT :: IMAGES
   // ═══════════════════════
-  getImage(imageId: Id): ImageDB | undefined {
+  getImage(imageId: Id): Image | undefined {
     return this.state.images.get(imageId);
   }
 
-  getImages(): ImageDB[] {
+  getImages(): Image[] {
     return Array.from(this.state.images.values());
   }
 
@@ -551,7 +553,7 @@ export class ImageCtx {
     // Simple approach: just update the images and let PhotoFrame handle transitions
     this.state.images.clear();
     sortedImages.forEach((image) => {
-      this.state.images.set(image.id, image as ImageDB);
+      this.state.images.set(image.id, image as Image);
     });
 
     await this.preloadImages();
@@ -569,7 +571,15 @@ export class ImageCtx {
   setForImage(imageId: Id, key: keyof Image, value: any) {
     const image = this.getImage(imageId);
     if (!image) return;
-    (image as any)[key] = value;
+
+    // Create a new object to trigger reactivity
+    const updatedImage = { ...image, [key]: value };
+    this.state.images.set(imageId, updatedImage as Image);
+
+    // Also update activeImage if it's the same image
+    if (this.state.activeImage?.id === imageId) {
+      this.state.activeImage = updatedImage as Image;
+    }
   }
 
   // ═══════════════════════
@@ -580,7 +590,6 @@ export class ImageCtx {
   }
 
   setLoadStatus(imageId: Id, status: LoadStatus) {
-    console.log('HUMAN :: setLoaded', imageId, status);
     // Guard against redundant updates
     if (this.state.loadStatus.get(imageId) === status) {
       return;
@@ -683,6 +692,33 @@ export class ImageCtx {
     } else {
       this.state.thumbnailLoadStatus.clear();
     }
+  }
+
+  // ═══════════════════════
+  // 3.7 STATE MANAGEMENT :: ERROR MESSAGES
+  // ═══════════════════════
+  setErrorMessage(imageId: Id, message: string) {
+    this.state.errorMessages.set(imageId, {
+      message,
+      timestamp: Date.now()
+    });
+
+    // Auto-clear after 5 seconds
+    setTimeout(() => {
+      this.clearErrorMessage(imageId);
+    }, 5000);
+  }
+
+  getErrorMessage(imageId: Id): { message: string; timestamp: number } | undefined {
+    return this.state.errorMessages.get(imageId);
+  }
+
+  clearErrorMessage(imageId: Id) {
+    this.state.errorMessages.delete(imageId);
+  }
+
+  hasErrorMessage(imageId: Id): boolean {
+    return this.state.errorMessages.has(imageId);
   }
 
   // ═══════════════════════
@@ -836,13 +872,20 @@ export class ImageCtx {
     // Try to get images from AppCtx cache first
     if (ctxType === 'feature') {
       const feature = this.appCtx.cache.feature.get(ctxId) as Feature | undefined;
+
       if (feature) {
         // If we have feature.images array, use it
         if (feature.images && feature.images.length > 0) {
           return feature.images;
         }
 
-        // If we have feature.image but no images array, use the single image
+        // If feature.images is undefined/null, this is likely a FeatureFromCollection
+        // Fall back to API to get the full images array
+        if (feature.images === undefined || feature.images === null) {
+          return this.fetchImagesFromAPI(ctxType, ctxId, includeSingleImage);
+        }
+
+        // If we have feature.image but empty images array, use the single image
         if (feature.image && includeSingleImage) {
           return [feature.image];
         }
@@ -899,10 +942,13 @@ export class ImageCtx {
   }
 
   async refreshImages() {
-    if (!this.state.context) return;
+    if (!this.state.context) {
+      return;
+    }
 
     // Get the images for the primary resource
     const images = await this.imagesQueryFn();
+
     // Filter out null/undefined images before processing
     const validImages = images.filter(
       (image): image is Image => image != null && image.id != null
@@ -912,10 +958,12 @@ export class ImageCtx {
     // Get the images for the secondary resource
     if (this.state.context.ctxTypeSecondary) {
       const extendedImages = await this.extendedImagesQueryFn();
+
       // Filter out null/undefined extended images too
       const validExtendedImages = extendedImages.filter(
         (image): image is Image => image != null && image.id != null
       );
+
       // Typically there will be an overlap of images between the primary and secondary resources, so we only add the images that are not already in the primary resource,
       // A scenario where this is not true is when the secondary resource is a task and the images have been rejected (i.e. deleted from the primary resource). We would still want to show the rejected images in the task viewer. To give context for the decision.
       validExtendedImages.forEach((image: Image) => {
@@ -944,11 +992,13 @@ export class ImageCtx {
       throw new Error('No context type or ID provided');
     }
 
-    return this.fetchImagesFromCache(
+    const result = await this.fetchImagesFromCache(
       this.state.context.ctxType,
       this.state.context.ctxId,
       true
     );
+
+    return result;
   }
 
   async extendedImagesQueryFn() {
@@ -1160,7 +1210,7 @@ export class ImageCtx {
       if (savedImage) {
         if (uploadCtx.imageToReplace) {
           // Update existing image in map
-          this.state.images.set(savedImage.id, savedImage as ImageDB);
+          this.state.images.set(savedImage.id, savedImage as Image);
           // Update active image if it was the one being replaced
           if (this.state.activeImage?.id === uploadCtx.imageToReplace.id) {
             // Set change type to enable smooth transition from replacement preview to final image
@@ -1169,7 +1219,7 @@ export class ImageCtx {
           }
         } else {
           // Add new image to map
-          this.state.images.set(savedImage.id, savedImage as ImageDB);
+          this.state.images.set(savedImage.id, savedImage as Image);
           // For fresh uploads, always set as active image if no active image exists
           if (!this.state.activeImage) {
             this.setActiveImage(savedImage);
@@ -1275,6 +1325,8 @@ export class ImageCtx {
     );
     if (updatedImage.id) {
       this.toggleForActiveImage('isPublished');
+      // Re-sort images when publish status changes
+      this.sortImagesInternal();
     }
   }
 
@@ -1320,9 +1372,23 @@ export class ImageCtx {
       if (this.state.activeImage?.id === imageId) {
         this.setActiveImageToFirst();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to delete image (ImageCtx.delete context):', error);
-      // Potentially re-throw or handle error state in UI
+
+      // Extract error message from the server response
+      let errorMessage = 'Failed to delete image';
+      if (error?.message) {
+        // Parse the error message from deleteImage service
+        if (error.message.includes('Cannot delete image. It belongs to a Task')) {
+          errorMessage = m.quaint_quaint_fly_zap();
+        } else if (error.message.includes('Failed to delete image:')) {
+          // Extract the part after "Failed to delete image: "
+          errorMessage = error.message.replace('Failed to delete image: ', '');
+        }
+      }
+
+      // Show error message on the thumbnail for 5 seconds
+      this.setErrorMessage(imageId, errorMessage);
     } finally {
       // These state updates should always run
       this.removeFromPendingConfirmation(imageId);
@@ -1425,7 +1491,7 @@ export class ImageCtx {
     // Clear and repopulate the map with sorted images
     this.state.images.clear();
     sortedImages.forEach((image) => {
-      this.state.images.set(image.id, image as ImageDB);
+      this.state.images.set(image.id, image as Image);
     });
   }
 }

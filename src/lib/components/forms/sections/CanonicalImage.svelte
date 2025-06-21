@@ -5,7 +5,6 @@ import { m } from '$lib/i18n';
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
 import PhotoFrame from '$lib/components/common/PhotoFrame.svelte';
-import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 import Icon from '$lib/components/common/Icon.svelte';
 import { Photo } from '@steeze-ui/heroicons';
 // ENUMS
@@ -23,30 +22,19 @@ const adminCtx = getAdminCtx();
 
 // Get the feature from admin context to access the canonical image
 const feature: Feature = $derived(adminCtx.appCtx.cache.feature.get($form?.id))!;
-const canonicalImage = $derived(feature.image as Image | null);
+const canonicalImage = $derived(feature?.image as Image | null);
 </script>
 
 <div class="h-full w-full flex-1 basis-full 2xl:basis-1/3-gap-6">
   {#if canonicalImage}
-    <ImageProvider image={canonicalImage}>
-      <a
-        href={getUrlForResource(
-          adminCtx,
-          FirstClassResource.feature,
-          $form.id,
-          'images'
-        )}
-        onclick={() =>
-          navigateOnAdmin(adminCtx, FirstClassResource.feature, $form.id, 'images')}>
-        <div class="relative h-full w-full overflow-hidden rounded-lg">
-          <PhotoFrame
-            class="h-full w-full"
-            mode="standalone"
-            layout="contain"
-            transformation="c_fill,h_512,w_512,q_auto" />
-        </div>
-      </a>
-    </ImageProvider>
+    <a
+      href={getUrlForResource(adminCtx, FirstClassResource.feature, $form.id, 'images')}
+      onclick={() =>
+        navigateOnAdmin(adminCtx, FirstClassResource.feature, $form.id, 'images')}>
+      <div class="relative h-[512px] w-full overflow-hidden rounded-lg">
+        <PhotoFrame class="h-full w-full" transformation="c_fill,h_512,w_512,q_auto" />
+      </div>
+    </a>
   {:else}
     <a
       class="h-full flex-1"

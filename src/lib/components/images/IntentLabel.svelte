@@ -23,6 +23,13 @@ type Props = {
 let { intent, idx, imageId, container }: Props = $props();
 
 let images = $derived(imageCtx.getImages());
+// Make intent reactive to changes in ImageCtx
+// Get latest intent from context or fall back to prop
+let currentIntent = $derived.by(() => {
+  const contextImage = imageCtx.getImage(imageId);
+  // ImageDB doesn't have intent, so we check if it's actually an Image type
+  return (contextImage as any)?.intent || intent;
+});
 const intentContext = $state({
   id: null as string | null,
   ref: null as HTMLDivElement | null
@@ -34,6 +41,7 @@ function handleIntentKeydown(e: KeyboardEvent, imageId: string, intent: Intent) 
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault();
     imageCtx.handleSetIntent(imageId, intent);
+    intentContext.id = null;
   } else if (e.key === 'Escape') {
     e.preventDefault();
     intentContext.id = null;
@@ -51,12 +59,13 @@ container.addEventListener('mouseleave', () => {
 </script>
 
 <div
-  class="absolute bottom-0 left-0 right-0 flex justify-center p-2"
+  class="absolute bottom-0 left-0 right-0 z-20 flex justify-center p-2"
   transition:fade={{ duration: 200, delay: 150 + idx * 50 }}>
   <div class="relative">
     <button
       class="rounded-lg px-3 py-[6px] text-sm font-medium backdrop-blur-sm transition-all duration-200
-          {intent === 'canonical'
+          focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-secondary
+          {currentIntent === 'canonical'
         ? 'bg-primary hover:bg-primary/90'
         : 'bg-base-100/80 hover:bg-base-200/80'}"
       onmouseenter={() => {
@@ -67,7 +76,7 @@ container.addEventListener('mouseleave', () => {
         e.stopPropagation();
         intentContext.id = intentContext.id === imageId ? null : imageId;
       }}>
-      {intent}
+      {currentIntent}
     </button>
 
     {#if intentContext.id === imageId}
@@ -75,12 +84,15 @@ container.addEventListener('mouseleave', () => {
         class="absolute bottom-[34px] left-[-20px] mb-1 w-32 overflow-hidden rounded-lg bg-base-100 shadow-lg"
         bind:this={intentContext.ref}
         transition:fade={{ duration: 150 }}>
-        {#each intentOrder.filter((option) => option !== intent) as option, idx}
+        {#each intentOrder.filter((option) => option !== currentIntent) as option, idx}
           <button
-            class="w-full px-2 py-[5px] text-center text-sm hover:bg-primary focus:bg-primary focus:outline-none
-                  {option === intent ? 'bg-base-200' : ''}
+            class="w-full px-2 py-[5px] text-center text-sm hover:bg-primary focus:bg-primary
+                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-secondary
+                  {option === currentIntent ? 'bg-base-200' : ''}
                   {option === 'canonical' &&
-            images.some((img) => img.id !== imageId && img.intent === 'canonical')
+            images.some(
+              (img) => img.id !== imageId && (img as any).intent === 'canonical'
+            )
               ? 'text-primary'
               : ''}"
             onclick={(e) => {
