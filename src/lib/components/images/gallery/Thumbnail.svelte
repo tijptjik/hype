@@ -75,7 +75,7 @@ onDestroy(() => {
 
   {#if isHighlighted}
     <div
-      class="absolute bottom-0 right-0 h-0 w-0 border-b-[20px] border-l-[20px] border-b-primary border-l-transparent">
+      class="absolute bottom-0 right-0 z-50 h-0 w-0 border-b-[20px] border-l-[20px] border-b-primary border-l-transparent">
     </div>
   {/if}
 
