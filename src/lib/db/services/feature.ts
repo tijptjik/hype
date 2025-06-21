@@ -554,7 +554,9 @@ export const updateFeatureWithRelated = async (
         });
         return {
           ...featureImg,
-          image: imageData as (ImageDB & { contributor: { attribution: string | null } | null }) | undefined
+          image: imageData as
+            | (ImageDB & { contributor: { attribution: string | null } | null })
+            | undefined
         };
       })
     );
@@ -904,7 +906,9 @@ const selectCanonicalOrFirstImage = (
     intent: string | null;
     isPublished: boolean;
     publishedAt: string | null;
-    image: (ImageDB & { contributor: { attribution: string | null } | null }) | undefined;
+    image:
+      | (ImageDB & { contributor: { attribution: string | null } | null })
+      | undefined;
   })[]
 ): ImageDBFlat | null => {
   let selectedFeatureImage: any = null;

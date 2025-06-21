@@ -13,7 +13,6 @@ import { getImageContext } from '$lib/context/image.svelte';
 const cardCtx = getFeatureCardContext();
 
 const imageCtx = getImageContext();
-
 </script>
 
 <div
@@ -21,5 +20,5 @@ const imageCtx = getImageContext();
     .state.mode === FeatureCardMode.Display
     ? 'min-h-56 flex-shrink'
     : 'min-h-64 flex-shrink-0'}">
-    <Carousel />
+  <Carousel />
 </div>

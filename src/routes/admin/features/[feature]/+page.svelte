@@ -257,7 +257,7 @@ function handleMapCollapse(): void {
                       headerActions={featureActionSnippet}
                       infoContent={featureInfoSnippet} />
                     <!-- TODO Add support for translatable specifiers -->
-                    <div class="flex flex-wrap justify-between items-start gap-6">
+                    <div class="flex flex-wrap items-start justify-between gap-6">
                       <PropertySection
                         {form}
                         title={m.admin__forms_common_classifiers()}

@@ -91,45 +91,45 @@ async function handleFeatureSelection() {
 {#if appCtx}
   <FeatureCard>
     {#if feature_}
-    {@const feature = feature_ as Feature}
+      {@const feature = feature_ as Feature}
 
-    <ImageProvider
-      isAdminMode={false}
-      image={feature.image}
-      images={feature.images}
-      context={{
-        ctxType: ImageContextResource.feature,
-        ctxId: featureId,
-        ...appCtx.getHierarchySync(feature_)
-      }}>
-      {#if mode === FeatureCardMode.Display}
-        <Container>
+      <ImageProvider
+        isAdminMode={false}
+        image={feature.image}
+        images={feature.images}
+        context={{
+          ctxType: ImageContextResource.feature,
+          ctxId: featureId,
+          ...appCtx.getHierarchySync(feature_)
+        }}>
+        {#if mode === FeatureCardMode.Display}
+          <Container>
+            <FeatureGallery />
+            <FeatureBreadcrumbs {feature} />
+            <FeatureTitle {feature} />
+            <FeatureDescription {feature} />
+            <Spacer />
+            <FeaturePortalSection>
+              {#snippet left()}
+                <FeatureProperties {feature} />
+              {/snippet}
+              {#snippet right()}
+                <FeaturePortal {feature} />
+              {/snippet}
+            </FeaturePortalSection>
+            <Spacer />
+          </Container>
+        {:else if mode === FeatureCardMode.New}
           <FeatureGallery />
-          <FeatureBreadcrumbs {feature} />
-          <FeatureTitle {feature} />
-          <FeatureDescription {feature} />
-          <Spacer />
-          <FeaturePortalSection>
-            {#snippet left()}
-              <FeatureProperties {feature} />
-            {/snippet}
-            {#snippet right()}
-              <FeaturePortal {feature} />
-            {/snippet}
-          </FeaturePortalSection>
-          <Spacer />
-        </Container>
-      {:else if mode === FeatureCardMode.New}
-        <FeatureGallery />
-      {:else if mode === FeatureCardMode.Missing}
-        <FeatureGallery />
-        <MissingReportReason />
-      {:else if mode === FeatureCardMode.AddPhoto}
-        <FeatureGallery />
-        <PhotoCredit />
-      {/if}
-      <FeatureActions {feature} />
-    </ImageProvider>
+        {:else if mode === FeatureCardMode.Missing}
+          <FeatureGallery />
+          <MissingReportReason />
+        {:else if mode === FeatureCardMode.AddPhoto}
+          <FeatureGallery />
+          <PhotoCredit />
+        {/if}
+        <FeatureActions {feature} />
+      </ImageProvider>
     {/if}
   </FeatureCard>
 {:else}

@@ -34,7 +34,7 @@ import type {
   ImageDB,
   ImageCtxConstructorOptions,
   ImageContextConfig,
-  Feature,
+  Feature
 } from '$lib/types';
 
 // ═══════════════════════
@@ -216,7 +216,7 @@ export class ImageCtx {
       this.resetImages();
       this.resetActivePreview();
       this.resetActiveImage();
-      
+
       // Mark this as a context change for PhotoFrame transition logic
       this.state.lastChangeType = 'context';
     }
@@ -226,15 +226,15 @@ export class ImageCtx {
 
     // For context changes, ignore the provided image and always use first from new context
     const effectiveImage = isContextChange ? null : image;
-    
+
     // Helper function to set active image and loading status
     const setActiveImageWithLoading = (targetImage: Image | null) => {
       if (targetImage) {
         this.setActiveImage(targetImage);
         this.setLoadStatus(targetImage.id, 'loading');
       }
-        // Use first available image - but do this after images are set
-        // setActiveImageToFirst will be called after setImages() completes
+      // Use first available image - but do this after images are set
+      // setActiveImageToFirst will be called after setImages() completes
     };
 
     // Handle image loading based on what's provided
