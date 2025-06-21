@@ -10,6 +10,7 @@ import {
 import {
   feature,
   featureI18n,
+  featureImage,
   featureProperty,
   featurePropertyI18n,
   image,
@@ -31,11 +32,73 @@ import {
   PropertyValueUpdateAPI
 } from './property';
 import { UserBasic } from './user';
-import { FeatureImageAPI } from './image';
+// ENUMS
+import { ImageIntent, supportedLocales } from '$lib/enums';
 // TYPES
-import type { AddressMeta, AddressProperties, Locale } from '$lib/types';
+import type { AddressMeta, AddressProperties, EXIF } from '$lib/types';
 import type { GeometryObject } from 'geojson';
-import { supportedLocales } from '$lib/enums';
+
+/* ----------------- */
+// LOCAL SCHEMAS (Private - not exported to avoid circular dependencies)
+/* -------- */
+
+const EXIFBasic = z.object({
+  Copyright: z.string().nullish(),
+  CopyrightNotice: z.string().nullish(),
+  Credit: z.string().nullish(),
+  DateTimeOriginal: z.string().nullish(),
+  CreateDate: z.string().nullish(),
+  ModifyDate: z.string().nullish(),
+  GPSLatitude: z.string().nullish(),
+  GPSLongitude: z.string().nullish(),
+  'By-line': z.string().nullish(),
+  Keywords: z.string().nullish(),
+  ImageWidth: z.string().nullish(),
+  ImageHeight: z.string().nullish(),
+  Make: z.string().nullish(),
+  Model: z.string().nullish(),
+  LensModel: z.string().nullish(),
+  LensInfo: z.string().nullish(),
+  RawFileName: z.string().nullish()
+});
+
+const ImageBase = createSelectSchema(image).extend({
+  metadata: EXIFBasic.nullish()
+});
+
+const ImageAPI = ImageBase.extend({
+  altText: z.string().nullish(),
+  featureId: z.string().optional(),
+  attribution: z.string().nullish(),
+  intent: z
+    .enum(Object.values(ImageIntent) as [string, ...string[]])
+    .default(ImageIntent.undefined)
+    .optional(),
+  isPublished: z.boolean().default(false).optional(),
+  publishedAt: z.string().optional(),
+  preview: z.string().optional()
+});
+
+const ImageFlatBase = createSelectSchema(image).extend({
+  metadata: EXIFBasic.nullish(),
+  attribution: z.string().nullish(),
+  intent: z.enum(Object.values(ImageIntent) as [string, ...string[]]).optional(),
+  isPublished: z.boolean().nullish(),
+  publishedAt: z.string().nullish()
+});
+
+const ImageBasicFlat = ImageFlatBase.pick({
+  id: true,
+  cdn: true,
+  env: true,
+  cdnId: true,
+  publicId: true,
+  version: true,
+  attribution: true,
+  intent: true,
+  isPublished: true,
+  publishedAt: true
+}).nullish();
 
 /* ----------------- */
 // FEATURE CORE
@@ -193,16 +256,7 @@ export const FeatureCollectionAPI = FeatureBase.omit({
       i18n: getLocales(FeaturePropertyI18nBase).nullish()
     })
   ),
-  image: createSelectSchema(image)
-    .pick({
-      id: true,
-      cdn: true,
-      env: true,
-      cdnId: true,
-      publicId: true,
-      version: true
-    })
-    .nullish(),
+  image: ImageBasicFlat,
   imageCount: z.number(),
   imagePublishedCount: z.number()
 });
@@ -213,17 +267,8 @@ export const FeatureAPI = FeatureBase.extend({
   properties: z.array(FeaturePropertyAPI),
   contributor: UserBasic.nullish(),
   publisher: UserBasic.nullish(),
-  image: createSelectSchema(image)
-    .pick({
-      id: true,
-      cdn: true,
-      env: true,
-      cdnId: true,
-      publicId: true,
-      version: true
-    })
-    .nullish(),
-  images: z.lazy(() => z.array(FeatureImageAPI).nullish())
+  image: ImageAPI,
+  images: z.lazy(() => z.array(ImageAPI).nullish())
 });
 
 export const FeatureInsertAPI = FeatureInsert.extend({
@@ -235,17 +280,7 @@ export const FeatureInsertAPI = FeatureInsert.extend({
 
 export const FeatureUpdateAPI = FeatureUpdate.extend({
   i18n: getLocales(FeatureI18nUpdate),
-  properties: z.array(FeaturePropertyUpdateAPI),
-  image: createSelectSchema(image)
-    .pick({
-      id: true,
-      cdn: true,
-      env: true,
-      cdnId: true,
-      publicId: true,
-      version: true
-    })
-    .nullish()
+  properties: z.array(FeaturePropertyUpdateAPI)
 });
 
 /* ----------------- */
@@ -271,7 +306,21 @@ export const FeatureClientExt = FeatureCollectionAPI.extend({
 /* -------- */
 
 export const FeatureRaw = FeatureBase.extend({
-  image: createSelectSchema(image).nullish(),
+  images: z
+    .lazy(() =>
+      z.array(
+        createSelectSchema(featureImage)
+          .extend({
+            image: createSelectSchema(image)
+              .extend({
+                contributor: UserBasic.nullish()
+              })
+              .nullish()
+          })
+          .nullish()
+      )
+    )
+    .nullish(),
   i18n: z.array(FeatureI18nBase).optional(),
   properties: z
     .array(

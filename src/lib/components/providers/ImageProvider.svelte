@@ -4,32 +4,22 @@ import { getImageContext, setImageContext } from '$lib/context/image.svelte';
 import type { ImageProviderProps } from '$lib/types';
 
 // STATE
-let lastSet: string | null = $state(null);
+let lastSet: string | undefined = $state();
 
 // PROPS
-let { children, ...settings }: ImageProviderProps = $props();
+let { children, ...options }: ImageProviderProps = $props();
 
 // CONTEXT
-setImageContext(
-  settings.mode,
-  settings.isAdminMode,
-  settings.ctxType,
-  settings.ctxId,
-  settings.organisation,
-  settings.project,
-  settings.image,
-  settings.ctxTypeSecondary,
-  settings.ctxIdSecondary,
-  settings.highlightedIds
-);
+setImageContext(options);
 
 let imageCtx = getImageContext();
 
 // EFFECTS
 $effect(() => {
-  if (lastSet !== settings.ctxId) {
-    imageCtx.setContext(settings);
-    lastSet = settings.ctxId;
+  const contextId = options.context?.ctxId;
+  if (lastSet !== contextId) {
+    imageCtx.setContext(options);
+    lastSet = contextId;
   }
 });
 </script>

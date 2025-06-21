@@ -767,7 +767,7 @@ export type UserPreferences = {
   allowMachineTranslation: boolean;
   preferFallbackInCurrentLocale: boolean;
   isTranslateButtonVisible: boolean;
-  admin: AdminPreferences;
+  admin?: AdminPreferences;
 };
 
 export type UserExperimental = {
@@ -1325,6 +1325,7 @@ export type Intent =
 
 export type EXIF = {
   CopyrightNotice: string;
+  Copyright: string;
   Credit: string;
   DateTimeOriginal: string;
   CreateDate: string;
@@ -1334,6 +1335,26 @@ export type EXIF = {
   'By-line': string;
   [key: string]: string;
 };
+
+export type EXIFBasic = Partial<{
+  Copyright: string;
+  CopyrightNotice: string;
+  Credit: string;
+  DateTimeOriginal: string;
+  CreateDate: string;
+  ModifyDate: string;
+  GPSLatitude: string;
+  GPSLongitude: string;
+  'By-line': string;
+  Keywords: string;
+  ImageWidth: string;
+  ImageHeight: string;
+  Make: string;
+  Model: string;
+  LensModel: string;
+  LensInfo: string;
+  RawFileName: string;
+}>;
 
 export type LngLat = {
   latitude?: string;
@@ -1556,46 +1577,11 @@ export interface ImageContextConfig {
 }
 
 export interface ImageCtxConstructorOptions {
-  mode?: ImageCtxMode;
   isAdminMode?: boolean;
   context?: ImageContextConfig | null;
   image?: Image | null;
+  images?: Image[] | null;
   highlightedIds?: Id[];
-}
-
-export interface ImageCtxStateRefactored {
-  // Mode configuration
-  mode: ImageCtxMode;
-
-  // Context configuration
-  context: ImageContextConfig | null;
-
-  // Highlighted image IDs
-  highlightedIds: Id[];
-
-  // CRUD :: CREATE
-  uploadQueue: ImageUpload[];
-  rejected: File[];
-
-  // CRUD :: READ
-  images: SvelteMap<Id, Image>;
-  activeImage: Image | null;
-  targetImage: Image | null;
-  isTransitioning: boolean;
-  activePreview: ImageUpload | null;
-
-  // Change tracking for PhotoFrame transition logic
-  lastChangeType: 'index' | 'target' | 'context' | null;
-
-  // Status tracking
-  loadStatus: SvelteMap<Id, LoadStatus>;
-  uploadStatus: SvelteMap<Id, UploadStatus>;
-  thumbnailLoadStatus: SvelteMap<Id, LoadStatus>;
-  preloadedImages: SvelteSet<string>;
-
-  // CRUD :: DELETE
-  pendingConfirmation: SvelteSet<Id>;
-  deletionQueue: SvelteSet<Id>;
 }
 
 // ELEMENTS

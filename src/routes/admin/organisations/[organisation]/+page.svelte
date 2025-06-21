@@ -206,7 +206,6 @@ let headerActions = $derived(
           </div>
         {:else if adminCtx.activeFacet === 'images'}
           <ImageProvider
-            mode="standalone"
             isAdminMode={true}
             {image}
             context={{

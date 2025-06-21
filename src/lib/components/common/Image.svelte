@@ -4,6 +4,10 @@ import Loading from '$lib/components/images/gallery/overlays/Loading.svelte';
 import LoadError from '$lib/components/images/gallery/overlays/LoadError.svelte';
 import { onDestroy } from 'svelte';
 
+// IMAGE
+
+// A Component for handling stand-alone images, which are not loaded in the context of ImageProvider.
+
 // TYPES
 type Props = {
   src: string;
@@ -17,10 +21,13 @@ type Props = {
 };
 
 let error = $state(false);
-let imgElement: HTMLImageElement;
-let lastSrc = $state('');
 let loaded = $state(false);
 let imageStore: Record<string, HTMLImageElement> = $state({});
+let baseImageSrc = $state(''); // Currently visible image
+let overlayImageSrc = $state(''); // New image loading in overlay
+let isTransitioning = $state(false);
+let overlayOpacity = $state(0);
+let animationId: number | null = null;
 let {
   src,
   alt,
@@ -34,41 +41,100 @@ let {
 
 onDestroy(() => {
   imageStore = {};
+  if (animationId !== null) {
+    cancelAnimationFrame(animationId);
+  }
 });
 
-async function handleImageLoad() {
-  try {
-    if (!imageStore[src]) {
-      let img = new Image();
-      img.src = src;
-      // Wait for both loading and decoding to complete
-      await Promise.all([
-        new Promise((resolve) => {
-          img.onload = resolve;
-        }),
-        img.decode()
-      ]);
-      imageStore[src] = img;
-    }
-    // TODO handle unavaialble images
-    if (!imgElement) return;
-    imgElement.src = imageStore[src].src;
-    loaded = true;
-    onLoad?.();
-  } catch (err) {
-    console.error('[Image] Load failed for:', src, err);
-    error = true;
-    onError?.();
+async function preloadImage(imageSrc: string): Promise<HTMLImageElement> {
+  if (imageStore[imageSrc]) {
+    return imageStore[imageSrc];
   }
+  
+  const img = new Image();
+  img.src = imageSrc;
+  
+  await Promise.all([
+    new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+    }),
+    img.decode()
+  ]);
+  
+  imageStore[imageSrc] = img;
+  return img;
 }
 
-// Reset loaded state and start loading when src changes
+// Handle src changes with smooth transitions
 $effect(() => {
-  if (imgElement && src !== lastSrc) {
-    lastSrc = src;
-    loaded = false;
-    handleImageLoad();
+  if (!src) return;
+  
+  // First image load - no transition needed
+  if (!baseImageSrc) {
+    preloadImage(src)
+      .then(() => {
+        baseImageSrc = src;
+        loaded = true;
+        error = false;
+        onLoad?.();
+      })
+      .catch((err) => {
+        console.error('[Image] Load failed for:', src, err);
+        error = true;
+        onError?.();
+      });
+    return;
   }
+  
+  // Same image - no change needed
+  if (src === baseImageSrc) {
+    return;
+  }
+  
+  // Different image - start transition
+  overlayImageSrc = src;
+  isTransitioning = true;
+  overlayOpacity = 0;
+  
+  // Preload the new image
+  preloadImage(src)
+    .then(() => {
+      // Start fade transition
+      const startTime = performance.now();
+      const transitionDuration = 300;
+      
+      const animate = (currentTime: number) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / transitionDuration, 1);
+        
+        // Ease-out cubic
+        const eased = 1 - Math.pow(1 - progress, 3);
+        overlayOpacity = eased;
+        
+        if (progress < 1) {
+          animationId = requestAnimationFrame(animate);
+        } else {
+          // Transition complete - swap images
+          baseImageSrc = overlayImageSrc;
+          overlayImageSrc = '';
+          isTransitioning = false;
+          overlayOpacity = 0;
+          animationId = null;
+          onLoad?.();
+        }
+      };
+      
+      animationId = requestAnimationFrame(animate);
+    })
+    .catch((err) => {
+      console.error('[Image] Load failed for:', src, err);
+      error = true;
+      isTransitioning = false;
+      overlayImageSrc = '';
+      overlayOpacity = 0;
+      onError?.();
+    });
 });
 </script>
 
@@ -82,23 +148,34 @@ $effect(() => {
   {#if showError && error}
     <LoadError />
   {/if}
-  <img
-    bind:this={imgElement}
-    {alt}
-    class="{loaded
-      ? 'opacity-100'
-      : 'opacity-0'} transition-opacity duration-300 {className
-      ? className
-      : ''} {layout === 'cover'
-      ? 'h-full w-full object-cover'
-      : layout === 'fill'
-        ? 'object-fill'
-        : layout === 'fit'
-          ? 'object-fit'
-          : 'object-contain'} bg-transparent"
-    onerror={() => {
-      error = true;
-      loaded = true;
-      onError?.();
-    }} />
+
+  <!-- Base image (currently visible) -->
+  {#if baseImageSrc && imageStore[baseImageSrc]}
+    <img
+      src={imageStore[baseImageSrc].src}
+      {alt}
+      class="absolute inset-0 opacity-100 {layout === 'cover'
+        ? 'h-full w-full object-cover'
+        : layout === 'fill'
+          ? 'object-fill'
+          : layout === 'fit'
+            ? 'object-fit'
+            : 'object-contain'} bg-transparent"
+      style="z-index: 1;" />
+  {/if}
+
+  <!-- Overlay image (fading in during transition) -->
+  {#if isTransitioning && overlayImageSrc && imageStore[overlayImageSrc]}
+    <img
+      src={imageStore[overlayImageSrc].src}
+      {alt}
+      class="absolute inset-0 transition-opacity duration-300 {layout === 'cover'
+        ? 'h-full w-full object-cover'
+        : layout === 'fill'
+          ? 'object-fill'
+          : layout === 'fit'
+            ? 'object-fit'
+            : 'object-contain'} bg-transparent"
+      style="opacity: {overlayOpacity}; z-index: 2;" />
+  {/if}
 </figure>
