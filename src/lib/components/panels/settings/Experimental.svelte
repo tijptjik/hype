@@ -40,8 +40,7 @@ const featuresConfig: ExperimentalFeatureConfig[] = [
   defaultOpen={false}
   iconVerticalPaddingClass="py-3 pr-5"
   position="right">
-  <div
-    class="scrollbar-thin flex min-h-0 w-full flex-col gap-2 overflow-y-auto pb-16 pl-4">
+  <div class="flex min-h-0 w-full flex-col gap-2 overflow-y-auto pb-16 pl-4">
     {#each featuresConfig as feature}
       <div
         class="min-h-18 flex w-full flex-row items-center justify-between gap-4 px-4 py-2 pr-[27px]">

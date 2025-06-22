@@ -21,8 +21,7 @@ const userLayerIds = $derived(new Set(appCtx.getUserLayerIds()));
 </script>
 
 <Section title={m.settings_default_map_title()} icon="/globe.svg" position="right">
-  <div
-    class="scrollbar-thin flex min-h-0 flex-col gap-2 overflow-y-auto rounded-lg pl-6 pr-3">
+  <div class="flex min-h-0 flex-col gap-2 overflow-y-auto rounded-lg pl-6 pr-3">
     {#each appCtx.state.resources.layer as layer}
       {#await appCtx.getHierarchy(layer) then { organisation, project }}
         {@const organisationName = getI18n(

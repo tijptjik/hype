@@ -75,7 +75,7 @@ let wishlistedFeaturesPromise = $derived(
           <p class="text-sm text-base-content/60">{m.short_watery_marten_race()}</p>
         </div>
       {:else}
-        <div class="scrollbar-thin flex-1 overflow-y-auto">
+        <div class="flex-1 overflow-y-auto">
           {#each filteredFeatures as wishlist (wishlist.featureId)}
             {@const organisationName = getI18n(
               wishlist.hierarchy.organisation,
