@@ -145,6 +145,7 @@
     "svelte-range-slider-pips": "3.2.1",
     "sveltekit-flash-message": "^2.4.6",
     "sveltekit-superforms": "^2.27.0",
+    "svrollbar": "https://github.com/tijptjik/svrollbar",
     "tailwindcss": "3.4.17",
     "tailwindcss-unimportant": "^2.1.1",
     "typescript": "^5.8.3",
