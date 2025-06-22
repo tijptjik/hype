@@ -79,7 +79,7 @@ let visitedFeaturesPromise = $derived(
           <p class="text-sm text-base-content/60">{m.due_mad_whale_attend()}</p>
         </div>
       {:else}
-        <div class="scrollbar-thin flex-1 overflow-y-auto">
+        <div class="flex-1 overflow-y-auto">
           {#each filteredFeatures.sort((a, b) => new Date(b.visitedAt!).getTime() - new Date(a.visitedAt!).getTime()) as visited (visited.featureId)}
             {@const organisationName = getI18n(
               visited.hierarchy.organisation,

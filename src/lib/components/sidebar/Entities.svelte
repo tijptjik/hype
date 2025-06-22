@@ -95,7 +95,7 @@ let getDisplayName = (entity: Exclude<Resource, Task>) => {
 <!-- ENTITIES : LIST -->
 {#if resourceType}
   <ul
-    class="scrollbar-thin divide-y divide-base-300 bg-base-300 {isCollapsed
+    class="divide-y divide-base-300 bg-base-300 {isCollapsed
       ? 'flex-grow-0 overflow-y-auto'
       : 'overflow-y-scroll'}
         {navItems[resourceType as Exclude<FirstClassResource, 'property'>]
