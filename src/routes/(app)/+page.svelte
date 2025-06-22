@@ -4,6 +4,10 @@ import { m } from '$lib/i18n';
 // AUTH
 import { signIn, useSession } from '$lib/auth/client';
 
+// TODO There's a flash where the login is visible before the session is loaded.
+// This is because the session is loaded in the layout, and the layout is loaded
+// before the page. We need to find a way to load the session before the page is
+// loaded, or to hide the login button until the session is loaded.
 const session = useSession();
 </script>
 
