@@ -5,7 +5,7 @@ import { ADMIN_PATH } from '$lib/index';
 // ENUMS
 import { FirstClassResource, ResourcePath } from '$lib/enums';
 
-const DEFAULT_RESOURCE = FirstClassResource.organisation;
+const DEFAULT_RESOURCE = FirstClassResource.feature;
 
 export function load() {
   const resourcePath = ResourcePath[DEFAULT_RESOURCE];
