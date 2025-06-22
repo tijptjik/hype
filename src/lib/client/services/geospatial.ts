@@ -104,11 +104,16 @@ export function startCircularFlight(
       (radiusKm / (111.32 * Math.cos((center[1] * Math.PI) / 180))) *
         Math.sin(angleRad);
 
+    // Calculate bearing as direction of travel (tangent to circle)
+    // Add π/2 to get tangent direction, then convert to degrees
+    const bearingRad = angleRad + Math.PI / 2;
+    const bearingDeg = (bearingRad * 180) / Math.PI;
+
     // Use jumpTo for immediate, smooth positioning without animation conflicts
     appCtx.map?.jumpTo({
       center: [newLng, newLat],
       zoom: 14,
-      bearing: 17.6,
+      bearing: bearingDeg,
       pitch: 45
     });
 
