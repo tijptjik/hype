@@ -5,13 +5,17 @@ const {
   height,
   itemHeight,
   children,
-  getKey
+  getKey,
+  bufferBefore = 20,
+  bufferAfter = 25
 }: {
   items: Array<T>;
   height: string;
   itemHeight?: number | undefined;
   children: Snippet<[T]>;
   getKey?: (item: T) => string | number;
+  bufferBefore?: number;
+  bufferAfter?: number;
 } = $props();
 // read-only, but visible to consumers via bind:start
 let start = $state(0);
@@ -27,9 +31,15 @@ let resizeObserver: ResizeObserver | null = null;
 let top = $state(0);
 let bottom = $state(0);
 let average_height: number = $state(null!);
+
+// Calculate render bounds including buffers
+const renderStart = $derived(Math.max(0, start - bufferBefore));
+const renderEnd = $derived(Math.min(items.length, end + bufferAfter));
+
+// Visible items now include buffered items
 const visible: Array<{ id: number | string; data: T }> = $derived(
-  items.slice(start, end).map((data, i) => {
-    return { id: getKey?.(data) ?? i + start, data };
+  items.slice(renderStart, renderEnd).map((data, i) => {
+    return { id: getKey?.(data) ?? i + renderStart, data };
   })
 );
 // whenever `items` changes, invalidate the current heightmap
@@ -50,12 +60,12 @@ async function refresh(
   let i = start;
 
   while (content_height < viewport_height && i < items.length) {
-    let row = rows[i - start];
+    let row = rows[i - renderStart];
 
     if (!row) {
       end = i + 1;
       await tick(); // render the newly visible row
-      row = rows[i - start];
+      row = rows[i - renderStart];
     }
 
     // Defensive check - use itemHeight if DOM element isn't ready
@@ -66,22 +76,32 @@ async function refresh(
   }
 
   end = i;
-  const remaining = items.length - end;
-  average_height = (top + content_height) / end;
-  if (end === 0) {
-    average_height = itemHeight || 50;
-  }
 
-  bottom = remaining * average_height;
+  // Calculate average height based on all known heights
+  const known_heights = height_map.filter((h) => h > 0);
+  average_height =
+    known_heights.length > 0
+      ? known_heights.reduce((sum, h) => sum + h, 0) / known_heights.length
+      : itemHeight || 50;
+
+  // Adjust top padding: height of items before renderStart
+  top = height_map
+    .slice(0, renderStart)
+    .reduce((sum, h) => sum + (h || average_height), 0);
+
+  // Adjust bottom padding: height of items after renderEnd
+  const remaining = items.length - renderEnd;
+  const bottomOverflow = viewport_height * 0.25;
+  bottom = remaining * average_height + bottomOverflow;
 
   height_map.length = items.length;
 
   // Only check total height if we have meaningful measurements
   const totalHeight = height_map.reduce((x, y) => x + (y || average_height), 0);
 
-  // Prevent scrolling beyond actual content
-  if (scrollTop + viewport_height > totalHeight) {
-    const maxScroll = Math.max(0, totalHeight - viewport_height);
+  // Prevent scrolling beyond actual content + overflow
+  if (scrollTop + viewport_height > totalHeight + bottomOverflow) {
+    const maxScroll = Math.max(0, totalHeight + bottomOverflow - viewport_height);
     if (scrollTop > maxScroll) {
       viewport.scrollTo(0, maxScroll);
     }
@@ -95,103 +115,109 @@ async function refresh(
 }
 
 let scrollRAF: number | null = null;
-
-// Force Chrome to update scrollbar position immediately
-function forceScrollbarUpdate() {
-  if (viewport) {
-    // Force style recalculation to update scrollbar position
-    viewport.style.transform = 'translateZ(0)';
-    viewport.offsetHeight; // Force layout
-    viewport.style.transform = '';
-  }
-}
+let isChrome = typeof window !== 'undefined' && /Chrome/.test(navigator.userAgent);
 
 async function handle_scroll() {
-  // Force immediate scrollbar update in Chrome
-  forceScrollbarUpdate();
+  // Chrome: Skip RAF debouncing for immediate response
+  if (isChrome) {
+    await handle_scroll_immediate();
+    return;
+  }
 
-  // Debounce with requestAnimationFrame for smoother Chrome performance
+  // Firefox: Keep RAF for smooth performance
   if (scrollRAF) {
     cancelAnimationFrame(scrollRAF);
   }
 
   scrollRAF = requestAnimationFrame(async () => {
-    const { scrollTop } = viewport;
-    const old_start = start;
-
-    // Defensive height mapping - handle missing DOM elements gracefully
-    for (let v = 0; v < rows.length; v += 1) {
-      const element = rows[v] as HTMLElement;
-      if (element && start + v < items.length) {
-        height_map[start + v] = itemHeight || element.offsetHeight;
-      }
-    }
-
-    let i = 0;
-    let y = 0;
-
-    while (i < items.length) {
-      const row_height = height_map[i] || average_height || itemHeight || 50;
-      if (y + row_height > scrollTop) {
-        start = i;
-        top = y;
-        break;
-      }
-      y += row_height;
-      i += 1;
-    }
-
-    while (i < items.length) {
-      y += height_map[i] || average_height || itemHeight || 50;
-      i += 1;
-      if (y > scrollTop + viewport_height) break;
-    }
-
-    end = i;
-    const remaining = items.length - end;
-    average_height = y / end || itemHeight || 50;
-
-    // Fill unknown heights more defensively
-    for (let j = 0; j < items.length; j++) {
-      if (!height_map[j]) {
-        height_map[j] = average_height;
-      }
-    }
-
-    bottom = remaining * average_height;
-
-    // prevent jumping if we scrolled up into unknown territory
-    if (start < old_start) {
-      await tick();
-      let expected_height = 0;
-      let actual_height = 0;
-
-      for (let i = start; i < old_start; i += 1) {
-        const rowElement = rows[i - start] as HTMLElement;
-        if (rowElement) {
-          expected_height += height_map[i] || average_height;
-          actual_height += itemHeight || rowElement.offsetHeight;
-        }
-      }
-
-      const d = actual_height - expected_height;
-      if (Math.abs(d) > 1) {
-        // Only adjust if significant difference
-        viewport.scrollTo(0, scrollTop + d);
-      }
-    }
-
-    // Check if user is at bottom and prevent over-scrolling
-    const totalHeight = height_map.reduce((x, y) => x + (y || average_height), 0);
-    const maxScroll = Math.max(0, totalHeight - viewport_height);
-    const isAtBottom = scrollTop >= maxScroll - 1; // Allow 1px tolerance
-
-    if (scrollTop + viewport_height > totalHeight && !isAtBottom) {
-      viewport.scrollTo(0, maxScroll);
-    }
-
+    await handle_scroll_immediate();
     scrollRAF = null;
   });
+}
+
+async function handle_scroll_immediate() {
+  const { scrollTop } = viewport;
+  const old_start = start;
+
+  // Defensive height mapping - handle missing DOM elements gracefully
+  for (let v = 0; v < rows.length; v += 1) {
+    const element = rows[v] as HTMLElement;
+    const actualIndex = renderStart + v;
+    if (element && actualIndex < items.length) {
+      height_map[actualIndex] = itemHeight || element.offsetHeight;
+    }
+  }
+
+  let i = 0;
+  let y = 0;
+
+  while (i < items.length) {
+    const row_height = height_map[i] || average_height || itemHeight || 50;
+    if (y + row_height > scrollTop) {
+      start = i;
+      top = y;
+      break;
+    }
+    y += row_height;
+    i += 1;
+  }
+
+  while (i < items.length) {
+    y += height_map[i] || average_height || itemHeight || 50;
+    i += 1;
+    if (y > scrollTop + viewport_height) break;
+  }
+
+  end = i;
+  const remaining = items.length - end;
+  average_height = y / end || itemHeight || 50;
+
+  // Fill unknown heights more defensively
+  for (let j = 0; j < items.length; j++) {
+    if (!height_map[j]) {
+      height_map[j] = average_height;
+    }
+  }
+
+  // Calculate new top padding (items before renderStart)
+  const new_renderStart = Math.max(0, start - bufferBefore);
+  top = height_map.slice(0, new_renderStart).reduce((sum, h) => sum + h, 0);
+
+  // Calculate new bottom padding (items after renderEnd)
+  const new_renderEnd = Math.min(items.length, end + bufferAfter);
+  const new_remaining = items.length - new_renderEnd;
+  const new_bottomOverflow = viewport_height * 0.1;
+  bottom = new_remaining * average_height + new_bottomOverflow;
+
+  // prevent jumping if we scrolled up into unknown territory
+  if (start < old_start) {
+    await tick();
+    let expected_height = 0;
+    let actual_height = 0;
+
+    for (let i = start; i < old_start; i += 1) {
+      const rowIndex = i - new_renderStart;
+      if (rows[rowIndex]) {
+        expected_height += height_map[i] || average_height;
+        actual_height += itemHeight || (rows[rowIndex] as HTMLElement).offsetHeight;
+      }
+    }
+
+    const d = actual_height - expected_height;
+    if (Math.abs(d) > 1) {
+      // Only adjust if significant difference
+      viewport.scrollTo(0, scrollTop + d);
+    }
+  }
+
+  // Check if user is at bottom and prevent over-scrolling
+  const totalHeight = height_map.reduce((x, y) => x + (y || average_height), 0);
+  const maxScroll = Math.max(0, totalHeight + new_bottomOverflow - viewport_height);
+  const isAtBottom = scrollTop >= maxScroll - 1; // Allow 1px tolerance
+
+  if (scrollTop + viewport_height > totalHeight + new_bottomOverflow && !isAtBottom) {
+    viewport.scrollTo(0, maxScroll);
+  }
 }
 
 function handleHeightChange() {
@@ -201,6 +227,12 @@ function handleHeightChange() {
 onMount(() => {
   rows = contents.getElementsByTagName('svelte-virtual-list-row');
   resizeObserver = new ResizeObserver(handleHeightChange);
+
+  // Chrome: Use passive scroll listener for better performance
+  if (isChrome && viewport) {
+    viewport.addEventListener('scroll', handle_scroll, { passive: true });
+  }
+
   mounted = true;
 });
 </script>
@@ -208,7 +240,7 @@ onMount(() => {
 <svelte-virtual-list-viewport
   bind:this={viewport}
   bind:offsetHeight={viewport_height}
-  onscroll={handle_scroll}
+  onscroll={isChrome ? undefined : handle_scroll}
   style="height: {height};">
   <svelte-virtual-list-contents
     bind:this={contents}
@@ -290,22 +322,9 @@ svelte-virtual-list-row * {
 /* Chrome-specific optimizations that won't affect Firefox */
 @supports (-webkit-appearance: none) {
   svelte-virtual-list-viewport {
-    /* Chrome: Enable smooth compositor scrolling */
-    scroll-timeline: --scroll-timeline;
+    /* Chrome: Smooth scrolling */
     overscroll-behavior: contain;
-    /* Force synchronous scrollbar updates */
     scroll-behavior: auto !important;
-  }
-
-  svelte-virtual-list-contents {
-    /* Chrome: Force immediate layout updates */
-    contain: layout style paint;
-  }
-
-  svelte-virtual-list-row {
-    /* Chrome: Optimize for fast content swapping */
-    content-visibility: auto;
-    contain-intrinsic-size: auto 50px;
   }
 }
 
@@ -313,75 +332,19 @@ svelte-virtual-list-row * {
 @supports (-moz-appearance: none) {
   svelte-virtual-list-viewport {
     /* Firefox: Force GPU layer creation */
-    will-change: scroll-position, transform;
-    -moz-transform: translateZ(0);
-    /* Firefox smooth scrolling optimization */
+    will-change: scroll-position;
     scroll-behavior: auto;
-    overflow-anchor: none;
   }
 
-  svelte-virtual-list-contents {
-    /* Firefox: GPU layer for content container */
-    will-change: transform, opacity;
-    -moz-transform: translateZ(0);
-    -moz-backface-visibility: hidden;
-    /* Firefox: Optimize painting */
-    -moz-osx-font-smoothing: grayscale;
-  }
-
+  svelte-virtual-list-contents,
   svelte-virtual-list-row {
-    /* Firefox: Individual row GPU acceleration */
-    will-change: transform, opacity;
-    -moz-transform: translateZ(0);
-    -moz-backface-visibility: hidden;
-    /* Firefox: Optimize text rendering */
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeSpeed;
+    /* Firefox: Simple GPU acceleration */
+    will-change: transform;
   }
 
-  /* Firefox: Force GPU for all child elements */
   svelte-virtual-list-row * {
-    -moz-transform: translateZ(0);
-    -moz-backface-visibility: hidden;
+    /* Firefox: GPU for child elements */
     will-change: transform;
-  }
-
-  /* Firefox: Optimize scrollbar rendering */
-  svelte-virtual-list-viewport::-moz-scrollbar {
-    width: 12px;
-  }
-
-  svelte-virtual-list-viewport::-moz-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.3);
-    border-radius: 6px;
-    will-change: transform;
-    -moz-transform: translateZ(0);
-  }
-
-  svelte-virtual-list-viewport::-moz-scrollbar-track {
-    background: transparent;
-    will-change: transform;
-    -moz-transform: translateZ(0);
-  }
-}
-
-/* Cross-browser GPU acceleration fallback */
-@supports (transform: translateZ(0)) {
-  svelte-virtual-list-viewport {
-    /* Ensure GPU layer across all browsers */
-    isolation: isolate;
-    layer-name: virtual-list-viewport;
-  }
-
-  svelte-virtual-list-contents {
-    /* Force compositing layer */
-    isolation: isolate;
-    layer-name: virtual-list-contents;
-  }
-
-  svelte-virtual-list-row {
-    /* Individual row layers */
-    isolation: isolate;
   }
 }
 </style>
