@@ -1,6 +1,8 @@
 <script lang="ts" generics="T">
 // SVELTE
 import { tick, untrack } from 'svelte';
+// COMPONENTS
+import Scrollbar from '../common/Scrollbar.svelte';
 // TYPES
 import type { Snippet } from 'svelte';
 
@@ -77,6 +79,26 @@ const renderedItems: Array<{ id: number | string; data: T }> = $derived(
 
 // STATE :: ANIMATION :: RAF
 let scrollRAF: number | null = null;
+
+// STATE :: SCROLLBAR :: CALCULATED DIMENSIONS
+let currentScrollTop = $state(0);
+
+// Calculate the true content dimensions for stable scrollbar
+const totalContentHeight = $derived(() => {
+  if (canResize) {
+    // Use heightMap for precise calculation when available
+    const mappedHeight = heightMap.reduce(
+      (sum, h) => sum + (h || averageHeight || 50),
+      0
+    );
+    const unmappedCount = Math.max(0, items.length - heightMap.length);
+    const unmappedHeight = unmappedCount * (averageHeight || 50);
+    return mappedHeight + unmappedHeight + padding * 2;
+  } else {
+    // Fixed height calculation
+    return items.length * (itemHeight || 50) + padding * 2;
+  }
+});
 
 // ═══════════════════════
 // 4. EFFECTS
@@ -184,6 +206,7 @@ async function handle_scroll() {
 
 async function handle_scroll_immediate() {
   const { scrollTop } = viewport;
+  currentScrollTop = scrollTop;
   const oldRenderStart = renderStart;
   const oldRenderEnd = renderEnd;
 
@@ -295,7 +318,22 @@ $effect(() => {
       if (isChrome && viewport) {
         viewport.addEventListener('scroll', handle_scroll, { passive: true });
       }
+
+      // Listen for custom scroll events from SafeSvrollbar (virtual mode)
+      const handleVirtualScroll = (event: Event) => {
+        const customEvent = event as CustomEvent;
+        if (viewport && customEvent.detail) {
+          viewport.scrollTop = customEvent.detail.scrollTop;
+        }
+      };
+
+      window.addEventListener('virtualscroll', handleVirtualScroll);
+
       isMounted = true;
+
+      return () => {
+        window.removeEventListener('virtualscroll', handleVirtualScroll);
+      };
     }
   });
 });
@@ -317,6 +355,23 @@ $effect(() => {
     {/each}
   </svelte-virtual-list-contents>
 </svelte-virtual-list-viewport>
+
+<!-- SafeSvrollbar Integration with virtual mode and calculated dimensions -->
+{#if viewportHeight > 0 && totalContentHeight() > 0}
+  <Scrollbar
+    virtual={true}
+    {viewportHeight}
+    contentsHeight={totalContentHeight()}
+    scrollTop={currentScrollTop}
+    showThumbOnTrackEnter={true}
+    alwaysVisible={true}
+    width={{
+      track: 19,
+      thumb: 10,
+      thumbActive: 12
+    }}
+    margin={{ top: 16, bottom: 24 }} />
+{/if}
 
 <style>
 svelte-virtual-list-viewport {
