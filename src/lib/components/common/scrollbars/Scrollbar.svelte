@@ -3,7 +3,7 @@
 import { onMount } from 'svelte';
 // SVROLLBAR
 import { Svrollbar } from 'svrollbar';
-import VirtualSvrollbar from './TempVirtualbar.svelte';
+import VirtualSvrollbar from './VirtualScrollbar.svelte';
 // BROWSER
 import { BROWSER } from 'esm-env';
 
@@ -37,13 +37,14 @@ let {
   hideAfter?: number;
   initiallyVisible?: boolean;
   margin?: { top?: number; right?: number; bottom?: number; left?: number };
+  width?: { track?: number; thumb?: number; thumbActive?: number };
+  opacity?: { track?: number; thumb?: number; thumbActive?: number };
   vTrackIn?: (node: HTMLElement) => any;
   vTrackOut?: (node: HTMLElement) => any;
   vThumbIn?: (node: HTMLElement) => any;
   vThumbOut?: (node: HTMLElement) => any;
   onshow?: () => void;
   onhide?: () => void;
-  [key: string]: any;
 }>();
 
 let svrollbarElement: HTMLElement;
