@@ -137,7 +137,7 @@
     "papaparse": "^5.5.3",
     "postcss": "^8.5.6",
     "proj4": "^2.19.3",
-    "runed": "^0.28.0",
+    "runed": "^0.29.0",
     "short-uuid": "^5.2.0",
     "svelte": "https://pkg.pr.new/svelte@async",
     "svelte-fa": "^4.0.4",
