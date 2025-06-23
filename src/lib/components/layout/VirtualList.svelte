@@ -1,5 +1,13 @@
 <script lang="ts" generics="T">
-import { onMount, tick, type Snippet } from 'svelte';
+// SVELTE
+import { tick, untrack } from 'svelte';
+// TYPES
+import type { Snippet } from 'svelte';
+
+// ═══════════════════════
+// 1. PROPS
+// ═══════════════════════
+
 const {
   items,
   height,
@@ -7,7 +15,9 @@ const {
   children,
   getKey,
   bufferBefore = 20,
-  bufferAfter = 25
+  bufferAfter = 25,
+  canResize = false,
+  padding = 0
 }: {
   items: Array<T>;
   height: string;
@@ -16,106 +26,143 @@ const {
   getKey?: (item: T) => string | number;
   bufferBefore?: number;
   bufferAfter?: number;
+  canResize?: boolean;
+  padding?: number;
 } = $props();
-// read-only, but visible to consumers via bind:start
-let start = $state(0);
-let end = $state(0);
-// local state
-let height_map: Array<number> = $state([]);
-let rows: HTMLCollectionOf<Element> = $state(null!);
+
+// ═══════════════════════
+// 2. ELEMENTS
+// ═══════════════════════
+
 let viewport: HTMLElement = $state(null!);
 let contents: HTMLElement = $state(null!);
-let viewport_height = $state(0);
-let mounted: boolean = $state(false);
-let resizeObserver: ResizeObserver | null = null;
-let top = $state(0);
-let bottom = $state(0);
-let average_height: number = $state(null!);
+let renderedRows: HTMLCollectionOf<Element> = $state(null!);
 
+// ═══════════════════════
+// 3. STATE
+// ═══════════════════════
+
+// STATE :: INDEXES :: VISIBLE
+let start = $state(0);
+let end = $state(0);
+
+// STATE :: INDEXES :: RENDER
 // Calculate render bounds including buffers
 const renderStart = $derived(Math.max(0, start - bufferBefore));
 const renderEnd = $derived(Math.min(items.length, end + bufferAfter));
 
-// Visible items now include buffered items
-const visible: Array<{ id: number | string; data: T }> = $derived(
+// STATE :: PADDING
+let top = $state(0);
+let bottom = $state(0);
+
+// STATE :: HEIGHTS
+let heightMap: Array<number> = $state([]);
+let averageHeight: number = $state(null!);
+let viewportHeight = $state(0);
+
+// STATE :: BOOLEAN
+let isChrome = typeof window !== 'undefined' && /Chrome/.test(navigator.userAgent);
+let isMounted: boolean = $state(false);
+
+// STATE :: OBSERVERS
+let resizeObserver: ResizeObserver | null = null;
+
+// STATE :: DERIVED :: ITEMS :: RENDERED
+// Rendered items include buffered items
+const renderedItems: Array<{ id: number | string; data: T }> = $derived(
   items.slice(renderStart, renderEnd).map((data, i) => {
     return { id: getKey?.(data) ?? i + renderStart, data };
   })
 );
-// whenever `items` changes, invalidate the current heightmap
+
+// STATE :: ANIMATION :: RAF
+let scrollRAF: number | null = null;
+
+// ═══════════════════════
+// 4. EFFECTS
+// ═══════════════════════
+
+// STATE :: INVALIDATION :: HEIGHT MAP
 $effect(() => {
-  if (mounted) {
-    refresh(items, viewport_height, itemHeight);
+  // whenever `items` changes, invalidate the current heightmap
+  if (isMounted) {
+    refresh(items, viewportHeight, itemHeight);
   }
 });
-async function refresh(
-  items: Array<any>,
-  viewport_height: number,
-  itemHeight?: number
-) {
+
+// ═══════════════════════
+// 5. REFRESH
+// ═══════════════════════
+
+// Refresh the height map and adjust the padding to match the new content.
+// Used when (1) items change, (2) viewport height changes, or (3) item height changes.
+async function refresh(items: Array<any>, viewportHeight: number, itemHeight?: number) {
   const { scrollTop } = viewport;
   await tick(); // wait until the DOM is up to date
 
-  let content_height = top - scrollTop;
+  // Start with the height of rendered content that is currently scrolled out of view above the viewport.
+  let contentHeight = scrollTop - top;
   let i = start;
 
-  while (content_height < viewport_height && i < items.length) {
-    let row = rows[i - renderStart];
+  while (contentHeight < viewportHeight && i < items.length) {
+    let row = renderedRows[i - renderStart];
 
     if (!row) {
       end = i + 1;
       await tick(); // render the newly visible row
-      row = rows[i - renderStart];
+      row = renderedRows[i - renderStart];
     }
 
     // Defensive check - use itemHeight if DOM element isn't ready
-    const row_height = (height_map[i] =
+    const rowHeight = (heightMap[i] =
       itemHeight || (row && (row as HTMLElement).offsetHeight) || 50);
-    content_height += row_height;
+    contentHeight += rowHeight;
     i += 1;
   }
 
   end = i;
 
   // Calculate average height based on all known heights
-  const known_heights = height_map.filter((h) => h > 0);
-  average_height =
-    known_heights.length > 0
-      ? known_heights.reduce((sum, h) => sum + h, 0) / known_heights.length
+  const knownHeights = heightMap.filter((h) => h > 0);
+  averageHeight =
+    knownHeights.length > 0
+      ? knownHeights.reduce((sum, h) => sum + h, 0) / knownHeights.length
       : itemHeight || 50;
 
   // Adjust top padding: height of items before renderStart
-  top = height_map
+  top = heightMap
     .slice(0, renderStart)
-    .reduce((sum, h) => sum + (h || average_height), 0);
+    .reduce((sum, h) => sum + (h || averageHeight), 0);
 
   // Adjust bottom padding: height of items after renderEnd
   const remaining = items.length - renderEnd;
-  const bottomOverflow = viewport_height * 0.25;
-  bottom = remaining * average_height + bottomOverflow;
+  const bottomOverflow = viewportHeight * 0.25;
+  bottom = remaining * averageHeight + bottomOverflow;
 
-  height_map.length = items.length;
+  heightMap.length = items.length;
 
   // Only check total height if we have meaningful measurements
-  const totalHeight = height_map.reduce((x, y) => x + (y || average_height), 0);
+  const totalHeight = heightMap.reduce((x, y) => x + (y || averageHeight), 0);
 
   // Prevent scrolling beyond actual content + overflow
-  if (scrollTop + viewport_height > totalHeight + bottomOverflow) {
-    const maxScroll = Math.max(0, totalHeight + bottomOverflow - viewport_height);
+  if (scrollTop + viewportHeight > totalHeight + bottomOverflow) {
+    const maxScroll = Math.max(0, totalHeight + bottomOverflow - viewportHeight);
     if (scrollTop > maxScroll) {
       viewport.scrollTo(0, maxScroll);
     }
   }
-
-  for (const row of rows) {
-    if (row) {
-      resizeObserver?.observe(row);
+  if (canResize) {
+    for (const row of renderedRows) {
+      if (row) {
+        resizeObserver?.observe(row);
+      }
     }
   }
 }
 
-let scrollRAF: number | null = null;
-let isChrome = typeof window !== 'undefined' && /Chrome/.test(navigator.userAgent);
+// ═══════════════════════
+// 6. HANDLERS :: SCROLL
+// ═══════════════════════
 
 async function handle_scroll() {
   // Chrome: Skip RAF debouncing for immediate response
@@ -137,14 +184,26 @@ async function handle_scroll() {
 
 async function handle_scroll_immediate() {
   const { scrollTop } = viewport;
-  const old_start = start;
+  const oldRenderStart = renderStart;
+  const oldRenderEnd = renderEnd;
 
-  // Defensive height mapping - handle missing DOM elements gracefully
-  for (let v = 0; v < rows.length; v += 1) {
-    const element = rows[v] as HTMLElement;
-    const actualIndex = renderStart + v;
-    if (element && actualIndex < items.length) {
-      height_map[actualIndex] = itemHeight || element.offsetHeight;
+  // Only measure heights for newly rendered items if canResize is true
+  if (canResize) {
+    // Only check items that are newly added to the render range
+    for (let v = 0; v < renderedRows.length; v += 1) {
+      const element = renderedRows[v] as HTMLElement;
+      const actualIndex = renderStart + v;
+
+      if (element && actualIndex < items.length) {
+        // Only measure if we don't have a cached height OR if this is a newly rendered item
+        if (
+          !heightMap[actualIndex] ||
+          actualIndex < oldRenderStart ||
+          actualIndex >= oldRenderEnd
+        ) {
+          heightMap[actualIndex] = element.offsetHeight;
+        }
+      }
     }
   }
 
@@ -152,100 +211,106 @@ async function handle_scroll_immediate() {
   let y = 0;
 
   while (i < items.length) {
-    const row_height = height_map[i] || average_height || itemHeight || 50;
-    if (y + row_height > scrollTop) {
+    // Use itemHeight directly if canResize is false and no cached height
+    const rowHeight = (canResize ? averageHeight || heightMap[i] : itemHeight) || 50;
+    if (y + rowHeight > scrollTop) {
       start = i;
       top = y;
       break;
     }
-    y += row_height;
+    y += rowHeight;
     i += 1;
   }
 
   while (i < items.length) {
-    y += height_map[i] || average_height || itemHeight || 50;
+    const rowHeight = (canResize ? averageHeight || heightMap[i] : itemHeight) || 50;
+    y += rowHeight;
     i += 1;
-    if (y > scrollTop + viewport_height) break;
+    if (y > scrollTop + viewportHeight) break;
   }
 
   end = i;
-  const remaining = items.length - end;
-  average_height = y / end || itemHeight || 50;
 
-  // Fill unknown heights more defensively
-  for (let j = 0; j < items.length; j++) {
-    if (!height_map[j]) {
-      height_map[j] = average_height;
+  // Only recalculate average if canResize is true AND we have meaningful data
+  if (canResize && end > 0) {
+    // Dampen average height changes to prevent scrollbar jumping
+    const newAverage = y / end || itemHeight || 50;
+    averageHeight = averageHeight ? averageHeight * 0.8 + newAverage * 0.2 : newAverage;
+  } else {
+    averageHeight = itemHeight || 50;
+  }
+
+  if (canResize) {
+    // Only fill unknown heights for items in the current render range
+    const newRenderStart = Math.max(0, start - bufferBefore);
+    const newRenderEnd = Math.min(items.length, end + bufferAfter);
+
+    for (let j = newRenderStart; j < newRenderEnd; j++) {
+      if (!heightMap[j]) {
+        heightMap[j] = averageHeight;
+      }
     }
   }
 
   // Calculate new top padding (items before renderStart)
-  const new_renderStart = Math.max(0, start - bufferBefore);
-  top = height_map.slice(0, new_renderStart).reduce((sum, h) => sum + h, 0);
+  const newRenderStart = Math.max(0, start - bufferBefore);
+
+  // Use itemHeight directly if canResize is false
+  if (canResize) {
+    top = heightMap
+      .slice(0, newRenderStart)
+      .reduce((sum, h) => sum + (h || averageHeight), 0);
+  } else {
+    top = newRenderStart * (itemHeight || 50);
+  }
 
   // Calculate new bottom padding (items after renderEnd)
-  const new_renderEnd = Math.min(items.length, end + bufferAfter);
-  const new_remaining = items.length - new_renderEnd;
-  const new_bottomOverflow = viewport_height * 0.1;
-  bottom = new_remaining * average_height + new_bottomOverflow;
+  const newRenderEnd = Math.min(items.length, end + bufferAfter);
+  const newRemaining = items.length - newRenderEnd;
 
-  // prevent jumping if we scrolled up into unknown territory
-  if (start < old_start) {
-    await tick();
-    let expected_height = 0;
-    let actual_height = 0;
-
-    for (let i = start; i < old_start; i += 1) {
-      const rowIndex = i - new_renderStart;
-      if (rows[rowIndex]) {
-        expected_height += height_map[i] || average_height;
-        actual_height += itemHeight || (rows[rowIndex] as HTMLElement).offsetHeight;
-      }
-    }
-
-    const d = actual_height - expected_height;
-    if (Math.abs(d) > 1) {
-      // Only adjust if significant difference
-      viewport.scrollTo(0, scrollTop + d);
-    }
-  }
-
-  // Check if user is at bottom and prevent over-scrolling
-  const totalHeight = height_map.reduce((x, y) => x + (y || average_height), 0);
-  const maxScroll = Math.max(0, totalHeight + new_bottomOverflow - viewport_height);
-  const isAtBottom = scrollTop >= maxScroll - 1; // Allow 1px tolerance
-
-  if (scrollTop + viewport_height > totalHeight + new_bottomOverflow && !isAtBottom) {
-    viewport.scrollTo(0, maxScroll);
-  }
+  // Use itemHeight directly if canResize is false
+  const estimatedHeight = canResize ? averageHeight : itemHeight || 50;
+  bottom = newRemaining * estimatedHeight;
 }
+
+// ═══════════════════════
+// 7. HANDLERS :: RESIZE
+// ═══════════════════════
 
 function handleHeightChange() {
-  refresh(items, viewport_height, itemHeight);
+  refresh(items, viewportHeight, itemHeight);
 }
-// trigger initial refresh
-onMount(() => {
-  rows = contents.getElementsByTagName('svelte-virtual-list-row');
-  resizeObserver = new ResizeObserver(handleHeightChange);
 
-  // Chrome: Use passive scroll listener for better performance
-  if (isChrome && viewport) {
-    viewport.addEventListener('scroll', handle_scroll, { passive: true });
-  }
+// ═══════════════════════
+// 8. INITIALIZATION
+// ═══════════════════════
 
-  mounted = true;
+$effect(() => {
+  untrack(() => {
+    if (viewport && contents) {
+      renderedRows = contents.getElementsByTagName('svelte-virtual-list-row');
+      resizeObserver = new ResizeObserver(handleHeightChange);
+
+      // Chrome: Use passive scroll listener for better performance
+      if (isChrome && viewport) {
+        viewport.addEventListener('scroll', handle_scroll, { passive: true });
+      }
+      isMounted = true;
+    }
+  });
 });
 </script>
 
 <svelte-virtual-list-viewport
   bind:this={viewport}
-  bind:offsetHeight={viewport_height}
+  bind:offsetHeight={viewportHeight}
   onscroll={isChrome ? undefined : handle_scroll}
   style="height: {height};">
   <svelte-virtual-list-contents
     bind:this={contents}
-    style="padding-top: {top}px; padding-bottom: {bottom}px;">
-    {#each visible as row (row.id)}
+    style="padding-top: {top + padding}px; padding-bottom: {bottom +
+      padding}px; padding-left: {padding}px; padding-right: {padding}px;">
+    {#each renderedItems as row (row.id)}
       <svelte-virtual-list-row>
         {@render children?.(row.data)}
       </svelte-virtual-list-row>
@@ -322,9 +387,11 @@ svelte-virtual-list-row * {
 /* Chrome-specific optimizations that won't affect Firefox */
 @supports (-webkit-appearance: none) {
   svelte-virtual-list-viewport {
-    /* Chrome: Smooth scrolling */
+    /* Chrome: Smooth scrolling and stable scrollbar */
     overscroll-behavior: contain;
     scroll-behavior: auto !important;
+    /* Prevent scrollbar jumping during content changes */
+    overflow-anchor: auto;
   }
 }
 
