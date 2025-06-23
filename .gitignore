@@ -39,3 +39,6 @@ sql/backup/
 sql/cache/
 scripts/.ipynb_checkpoints/
 .data/
+
+# submodules
+/libs
