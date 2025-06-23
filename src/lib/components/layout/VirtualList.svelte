@@ -2,7 +2,7 @@
 // SVELTE
 import { tick, untrack } from 'svelte';
 // COMPONENTS
-import Scrollbar from '../common/Scrollbar.svelte';
+import Scrollbar from '../common/scrollbars/Scrollbar.svelte';
 // TYPES
 import type { Snippet } from 'svelte';
 
@@ -366,7 +366,7 @@ $effect(() => {
     showThumbOnTrackEnter={true}
     alwaysVisible={true}
     width={{
-      track: 19,
+      track: 18,
       thumb: 10,
       thumbActive: 12
     }}
