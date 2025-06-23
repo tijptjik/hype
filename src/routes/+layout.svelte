@@ -21,6 +21,7 @@ import { loadScript } from '$lib';
 import { monkeyPatchMapLibre } from '$lib/map/maplibre-preload';
 // STYLES
 import 'tailwindcss/tailwind.css';
+import '$lib/styles/scrollbar.css';
 // TYPES
 import type { QueryClient } from '@tanstack/svelte-query';
 import type { LayoutData, LayoutProps } from './$types';

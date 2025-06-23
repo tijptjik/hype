@@ -1,21 +1,114 @@
-.scrollbar-thin {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+/* ═══════════════════════════════════════════════════════════════════════════════
+   SCROLLBAR STYLES - NOW USING SVROLLBAR COMPONENT
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* 
+   Custom scrollbar styles have been replaced with the svrollbar component.
+   This provides better cross-browser compatibility and mobile-like behavior.
+   See: https://github.com/tijptjik/svrollbar
+*/
+
+/* ═══════════════════════
+   1. SVROLLBAR CONFIGURATION
+   ═══════════════════════ */
+
+:root {
+  --svrollbar-thumb-background: theme(colors.base-100);
+  --svrollbar-thumb-opacity: 0.7;
 }
 
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background: transparent;
-}
-.scroller::-webkit-scrollbar-track {
-  background: transparent;
-}
-.scroller:hover::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-color-thumb);
-}
-.scroller:hover::-webkit-scrollbar-track {
-  background: var(--scrollbar-color-track);
+.v-thumb {
+  min-height: 40px;
 }
 
-.scroller:hover {
-  --fix: ; /* This custom property invalidates styles on hover, thereby enforcing a style recomputation. This is needed to work around a bug in Safari. */
+/* ═══════════════════════
+   2. GLOBAL SCROLLBAR HIDING
+   ═══════════════════════ */
+
+* {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+*::-webkit-scrollbar {
+  display: none !important;
+}
+
+/* ═══════════════════════
+   3. SVROLLBAR INTERACTION PREVENTION
+   ═══════════════════════ */
+
+/* Prevent text selection and dragging during Svrollbar interaction */
+body.svrollbar-scrolling {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-user-drag: none !important;
+  -moz-user-drag: none !important;
+  user-drag: none !important;
+  /* Prevent pointer events on everything except the scrollbar */
+  pointer-events: none !important;
+}
+
+/* Re-enable pointer events on Svrollbar components during scrolling */
+body.svrollbar-scrolling [data-svrollbar] {
+  pointer-events: auto !important;
+}
+
+body.svrollbar-scrolling [data-svrollbar] * {
+  pointer-events: auto !important;
+}
+
+/* Prevent text selection on all elements during scrollbar interaction */
+body.svrollbar-scrolling * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-user-drag: none !important;
+  -moz-user-drag: none !important;
+  user-drag: none !important;
+}
+
+/* Prevent dragging of images and other elements */
+body.svrollbar-scrolling img,
+body.svrollbar-scrolling svg,
+body.svrollbar-scrolling canvas,
+body.svrollbar-scrolling video {
+  -webkit-user-drag: none !important;
+  -moz-user-drag: none !important;
+  user-drag: none !important;
+  pointer-events: none !important;
+}
+
+/* Prevent text selection in specific components that were being dragged */
+body.svrollbar-scrolling .completion-footer,
+body.svrollbar-scrolling footer,
+body.svrollbar-scrolling header,
+body.svrollbar-scrolling nav,
+body.svrollbar-scrolling [class*='footer'],
+body.svrollbar-scrolling [class*='header'],
+body.svrollbar-scrolling [class*='panel'],
+body.svrollbar-scrolling [class*='container'] {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-user-drag: none !important;
+  -moz-user-drag: none !important;
+  user-drag: none !important;
+}
+
+/* Specifically target the CompletionFooter component */
+body.svrollbar-scrolling footer[class*='completion'],
+body.svrollbar-scrolling [data-testid*='completion'],
+body.svrollbar-scrolling .bg-base-300 {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-user-drag: none !important;
+  -moz-user-drag: none !important;
+  user-drag: none !important;
 }
