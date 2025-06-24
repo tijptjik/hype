@@ -24,7 +24,7 @@
   "maps__organisations": "Organisations",
   "maps__projects": "Projects",
   "maps__layers": "Layers",
-  "maps__layers_none": "No <b class='font-mono inline-block px-2 py-2'>Layers</b> selected <br><br><code>Empty map you will find</code>",
+  "maps__layers_none": "No <b class='font-mono inline-block px-2 py-2'>Layers</b> selected",
   "maps__projects_none": "No <b class='font-mono inline-block px-2'>Project</b> filters",
   "maps__organisations_none": "No <b class='font-mono inline-block px-2'>Organisation</b> filters",
   "maps__neighbourhoods_none": "No <b class='font-mono inline-block px-2'>Neighbourhood</b> filters",
@@ -494,5 +494,6 @@
   "whole_upper_quail_bloom": "Unknown",
   "clear_patchy_bobcat_wish": "By",
   "blue_long_felix_bask": "Failed to load feature hierarchy",
-  "quaint_quaint_fly_zap": "Cannot.<br> It belongs to a Task"
+  "quaint_quaint_fly_zap": "Cannot.<br> It belongs to a Task",
+  "maps__layers_none_subline": "<br><br><code>Empty map you will find</code>"
 }
