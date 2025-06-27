@@ -21,9 +21,6 @@ let featureForm: FeatureForm['form'] = $derived(form.form);
 // STATE : UI
 let isGeocoding = $state(false);
 
-// STATE : DERIVED :: GEOMETRY
-let [lng, lat] = $derived(($featureForm.geometry as Point).coordinates);
-
 // Wrap the geocode action to handle loading state
 async function handleGeocode(e: Event) {
   isGeocoding = true;
@@ -36,18 +33,8 @@ async function handleGeocode(e: Event) {
 </script>
 
 <div class="flex flex-row items-center gap-4">
-  <a
-    draggable="false"
-    class="btn-rounded group btn btn-circle select-none bg-neutral transition-colors duration-300 hover:bg-neutral-content/20"
-    href={`https://earth.google.com/web/@${lat},${lng}`}
-    target="_blank"
-    aria-label="View on Google Earth">
-    <Icon
-      src={GlobeAsiaAustralia}
-      class="transition-size h-[2rem] w-[2rem] duration-300 hover:rotate-6 group-hover:scale-110" />
-  </a>
   <button
-    class="btn-rounded btn bg-fuchsia-700 text-base-content transition-colors duration-300 hover:bg-fuchsia-800"
+    class="btn-rounded btn btn-ghost font-bold text-base-content transition-colors duration-300"
     class:px-6={isGeocoding}
     onclick={handleGeocode}
     disabled={isGeocoding}>
