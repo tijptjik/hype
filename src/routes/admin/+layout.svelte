@@ -4,16 +4,16 @@ import { watch } from 'runed';
 import { afterNavigate } from '$app/navigation';
 import { page } from '$app/state';
 // COMPONENTS
-import Sidebar from '$lib/components/sidebar/Root.svelte';
-import SecondarySidebar from '$lib/components/sidebar/SecondarySidebar.svelte';
+import Sidebar from '$lib/components/panels/Admin.svelte';
+import AutoHide from '$lib/components/common/AutoHide.svelte';
 import MinWidthProtector from '$lib/components/layout/MinWidth.svelte';
 import Settings from '$lib/components/panels/Settings.svelte';
+import Header from '$lib/components/resources/headers/HeaderRoot.svelte';
 // STYLES
 import '$lib/styles/admin.css';
 // CONTEXT
 import { setAdminCtx } from '$lib/context/admin.svelte';
 import { getAppCtx } from '$lib/context/app.svelte';
-import { setSidebarState as setSidebarCtx } from '$lib/context/sidebar.svelte';
 // ENUMS
 import { FirstClassResource, ResourcePath } from '$lib/enums';
 // TYPES
@@ -48,9 +48,6 @@ watch(
   }
 );
 
-// CONTEXT :: SIDEBAR
-setSidebarCtx();
-
 // NAVIGATION :: Reset activeResourceRef when navigating to index pages
 afterNavigate(() => {
   if (!adminCtx.isInitialised) return;
@@ -79,25 +76,16 @@ afterNavigate(() => {
 <MinWidthProtector>
   {#if adminCtx.isInitialised}
     <div class="flex h-full w-full overflow-hidden drag-none">
-      <Sidebar />
+      <AutoHide>
+        <Sidebar />
+      </AutoHide>
       <main
-        class="flex h-full flex-1 flex-col overflow-hidden"
-        class:pb-[72px]={!adminCtx.isViewportContained}>
+        class="flex h-full flex-1 flex-col overflow-hidden bg-gradient-to-bl from-rose-500 to-fuchsia-800 bg-fixed">
+        <Header />
         {@render children()}
       </main>
-      <SecondarySidebar />
+      <Settings />
     </div>
-    {#if appCtx.state.panels.settings}
-      <div
-        class="absolute inset-0 z-50 bg-black/50"
-        onclick={() => appCtx.closePanel('settings')}>
-        <div
-          class="absolute right-0 top-0 h-full w-96 bg-base-100"
-          onclick={(e) => e.stopPropagation()}>
-          <Settings />
-        </div>
-      </div>
-    {/if}
   {:else}
     <div class="flex h-screen w-full items-center justify-center">
       <div class="loading loading-ring loading-lg"></div>
