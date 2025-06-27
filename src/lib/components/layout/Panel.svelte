@@ -1,41 +1,60 @@
 <script lang="ts">
-import { fly } from 'svelte/transition';
+import { fly, slide } from 'svelte/transition';
 import { cubicInOut } from 'svelte/easing';
-import { onMount } from 'svelte';
+// CONTEXT
+import { getAppCtx } from '$lib/context/app.svelte';
+
+const appCtx = getAppCtx();
+
+// TYPES
+import type { PanelProps } from '$lib/types';
+
 let {
   children,
+  panelContainer = $bindable(),
   position = 'right',
   scrollable = true,
-  animate = true,
-  panelContainer = $bindable()
-} = $props<{
+  inline = false,
+  isAdmin = false,
+  isNarrow = false,
+  ...panelProps
+}: PanelProps & {
   children: any;
-  position?: 'left' | 'right';
-  scrollable?: boolean;
-  animate?: boolean;
   panelContainer?: HTMLDivElement;
-}>();
-
-let isMounted = $state(false);
-
-onMount(() => {
-  isMounted = true;
-});
+} & PanelProps = $props();
 </script>
 
-<div
-  id="{position}-panel"
-  class="absolute top-0 z-50 flex h-full w-full select-none flex-col bg-black caret-transparent shadow-xl [@media(min-width:920px)]:w-[420px]"
-  class:overflow-y-hidden={!scrollable}
-  class:overflow-y-auto={scrollable}
-  class:md:left-0={position === 'left'}
-  class:md:right-0={position === 'right'}
-  transition:fly={{
-    duration: 150,
-    easing: cubicInOut,
-    x: position === 'left' ? -420 : 420
-  }}>
-  <div class="h-full" class:overflow-y-auto={scrollable} bind:this={panelContainer}>
-    {@render children()}
+{#if inline && (appCtx.isPanelOpenOrVisual(panelProps.panelType) || isNarrow)}
+  <div
+    id="{position}-panel"
+    class="flex h-full flex-shrink-0 select-none flex-col bg-black caret-transparent shadow-xl transition-all duration-500"
+    style:width={isNarrow ? '80px' : isAdmin ? '380px' : '420px'}
+    class:overflow-y-hidden={!scrollable}
+    class:overflow-y-auto={scrollable}
+    transition:slide={{
+      duration: 500,
+      easing: cubicInOut,
+      axis: 'x'
+    }}>
+    <div class="h-full" class:overflow-y-auto={scrollable} bind:this={panelContainer}>
+      {@render children()}
+    </div>
   </div>
-</div>
+{:else if appCtx.isPanelOpenOrVisual(panelProps.panelType)}
+  <div
+    id="{position}-panel"
+    class="absolute top-0 z-50 flex h-full w-full select-none flex-col bg-black caret-transparent shadow-xl [@media(min-width:920px)]:w-[420px]"
+    class:overflow-y-hidden={!scrollable}
+    class:overflow-y-auto={scrollable}
+    class:md:left-0={position === 'left'}
+    class:md:right-0={position === 'right'}
+    transition:fly={{
+      duration: 150,
+      easing: cubicInOut,
+      x: position === 'left' ? -420 : 420
+    }}>
+    <div class="h-full" class:overflow-y-auto={scrollable} bind:this={panelContainer}>
+      {@render children()}
+    </div>
+  </div>
+{/if}
