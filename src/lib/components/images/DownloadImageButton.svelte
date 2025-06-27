@@ -20,7 +20,7 @@ const imageCtx = getImageContext();
 </script>
 
 <button
-  class="btn btn-circle opacity-70 hover:text-neutral-content hover:opacity-100 hover:shadow-sm {className}"
+  class="btn btn-circle border-none bg-glass-result opacity-70 hover:bg-glass-result/100 hover:shadow-sm {className}"
   onclick={(e) => imageCtx.downloadImage(e, image, getFlash(page))}>
-  <Icon src={CloudArrowDown} class="h-6 w-6" />
+  <Icon src={CloudArrowDown} class="h-6 w-6 stroke-[2px]" />
 </button>

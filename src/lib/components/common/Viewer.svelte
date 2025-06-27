@@ -89,7 +89,10 @@ const handleDrop = async (e: CustomEvent) => {
   {:else if isError}
     {@render ErrorContent()}
   {:else}
-    <PhotoFrame class="h-full w-full rounded-2xl" mode="standalone" layout="contain">
+    <PhotoFrame
+      class="h-full w-full overflow-hidden rounded-2xl"
+      mode="standalone"
+      layout="contain">
       {#snippet children()}
         {#if image && !hideActions}
           <!-- Left Actions -->
@@ -134,7 +137,9 @@ const handleDrop = async (e: CustomEvent) => {
 {/snippet}
 
 <div
-  class="relative flex h-full w-full flex-col {isDropzone ? 'group' : ''}"
+  class="relative flex min-h-0 w-full flex-1 flex-col rounded-2xl {isDropzone
+    ? 'group'
+    : ''}"
   style="transition: outline-color 150ms ease-out"
   in:fade={{ duration: 300, delay: 50 }}>
   {#if isDropzone}

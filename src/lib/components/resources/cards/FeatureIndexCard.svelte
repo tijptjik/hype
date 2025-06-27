@@ -18,19 +18,4 @@ const keyMap: KeyMap = {
 };
 </script>
 
-<EntityCard {entity} {keyMap}>
-  {#snippet footer()}
-    <div class="font-mono text-xs uppercase tracking-wider text-neutral-content">
-      {#if entity.isPublished}
-        <span class="text-ok">{m.long_zippy_felix_mix()}</span>
-      {:else}
-        <span class="text-error">{m.weak_super_guppy_nail()}</span>
-      {/if}
-    </div>
-    <div class="flex flex-row items-center gap-2">
-      <div class="font-mono text-xs uppercase text-neutral-content">
-        {entity.isVisitable ? 'Visitable' : 'Not Visitable'}
-      </div>
-    </div>
-  {/snippet}
-</EntityCard>
+<EntityCard {entity} {keyMap} />

@@ -33,9 +33,4 @@ function handleToggle(e: Event) {
 }
 </script>
 
-<div
-  class="flex flex-row items-center justify-between gap-4 {isSolid
-    ? 'rounded-full bg-base-200'
-    : 'bg-base-100'} px-4 py-1 align-baseline">
-  <Toggle {label} {checked} {size} onChange={handleToggle} />
-</div>
+<Toggle {label} {checked} {size} onChange={handleToggle} />

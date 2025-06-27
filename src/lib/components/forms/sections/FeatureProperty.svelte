@@ -103,17 +103,16 @@ const updateFormSpecifierValue = (
 </script>
 
 <div
-  class="z-10 basis-1/2-gap-6 rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0 @container {sectionProps.cols ==
-  3
-    ? 'basis-1/2-gap-6 2xl:basis-1/3-gap-6'
-    : '2xl:basis-1/4-gap-6 basis-1/2-gap-6 '}">
+  class="z-10 basis-1/2-gap-4 rounded-2xl p-0 @container {sectionProps.cols == 3
+    ? 'basis-1/2-gap-4 2xl:basis-1/3-gap-4'
+    : '2xl:basis-1/4-gap-4 basis-1/2-gap-4 '}">
   <Header {...sectionProps} />
   {#each Object.entries(fields) as [fieldRoot_, field]}
     {@const formField = getFormField(fieldRoot_)}
     <div
       class="grid grid-cols-1 {fieldDiscriminator == 'classifier'
         ? '@xl:grid-cols-2 @3xl:grid-cols-3 @4xl:grid-cols-4 '
-        : '@4xl:grid-cols-2'} gap-2 p-4">
+        : '@4xl:grid-cols-2'} gap-4 pt-2">
       {#if field.isArray && Array.isArray(formField)}
         {#each formField as item, index}
           {#if isPropertyItem(item)}
@@ -123,7 +122,7 @@ const updateFormSpecifierValue = (
               {#if isPropertyVisible(item, property)}
                 <div
                   transition:fade
-                  class="flex items-start justify-between gap-2 rounded-lg bg-base-100 p-4 shadow-lg">
+                  class="bg-grain flex items-start justify-between gap-2 rounded-lg border-3 border-primary bg-glass-300 p-4 shadow-lg">
                   <div class="text-md w-24 flex-grow-0">
                     {getI18n(property, 'label', appCtx.getUserPreferences()) ||
                       m.red_arable_herring_trust()}
@@ -211,7 +210,7 @@ const updateFormSpecifierValue = (
       {:else if field.isArray}
         <!-- Show message when no properties are available -->
         <div class="col-span-full py-8 text-center text-neutral-content/50">
-          No {fieldDiscriminator} properties available
+          {m.known_civil_tapir_swim({ fieldDiscriminator })}
         </div>
       {/if}
     </div>

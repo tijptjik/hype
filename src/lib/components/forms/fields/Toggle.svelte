@@ -12,12 +12,12 @@ type Props = {
   isSolid?: boolean;
 };
 
-let { isSolid = true, ...toggleProps }: Props = $props();
+let { isSolid = false, ...toggleProps }: Props = $props();
 </script>
 
 <div
   class="flex flex-row items-center justify-between gap-4 {isSolid
-    ? 'rounded-full bg-base-200'
-    : 'bg-base-100'} px-4 py-1 align-baseline">
+    ? 'rounded-full bg-glass-100'
+    : 'rounded-full'} px-4 py-1 align-baseline">
   <Toggle {...toggleProps} />
 </div>

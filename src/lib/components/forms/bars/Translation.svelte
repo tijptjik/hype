@@ -102,7 +102,8 @@ async function translateFields(event: Event, source: Locale, target: Locale) {
 
 <div
   class="absolute bottom-0 left-0 right-0 z-10 m-0 overflow-hidden opacity-0 transition-opacity duration-200 group-focus-within:opacity-100 group-hover:opacity-100">
-  <div class="flex items-center justify-between rounded-b-xl bg-base-200 px-6 py-3">
+  <div
+    class="flex items-center justify-between rounded-b-xl bg-glass-result/70 px-6 py-3">
     <div class="flex items-center gap-4">
       <Icon src={Language} class="h-6 w-6 text-primary" />
       <span class="text-sm text-base-content"
@@ -113,7 +114,7 @@ async function translateFields(event: Event, source: Locale, target: Locale) {
     <div class="flex items-center gap-2">
       {#if isClearAllVisible && onClear}
         <button
-          class="text-md btn btn-circle btn-ghost text-error focus:border-none focus:outline-1 focus:outline-neutral-content"
+          class="text-md focus:outline- focus:outline-neutral-conten btn btn-circle btn-ghost text-glass-rejected hover:bg-transparent hover:text-glass-rejected/80 focus:border-none focus:ring-2 focus:ring-primary"
           title={`Clear all values for ${targetLocale.toUpperCase()}`}
           disabled={loadingLocale !== null}
           onclick={(e) => onClear(e)}>
@@ -126,7 +127,7 @@ async function translateFields(event: Event, source: Locale, target: Locale) {
       {/if}
       {#each sourceLocales as sourceLocale}
         <button
-          class="text-md btn btn-circle btn-primary font-normal text-base-content focus:border-none focus:outline-1 focus:outline-neutral-content"
+          class="text-md btn btn-circle border-none bg-glass-100 font-normal text-base-content hover:bg-glass-100/80 focus:border-none focus:outline-none focus:ring-2 focus:ring-primary"
           disabled={loadingLocale !== null || isTranslationDisabled}
           onclick={async (e) => {
             onTranslate

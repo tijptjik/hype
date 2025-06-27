@@ -35,20 +35,22 @@ $effect(() => {
 
 <div>
   <button
-    class="btn-rounded btn btn-ghost ml-auto bg-base-100"
+    class="btn-rounded btn btn-ghost ml-auto focus:outline-none focus:ring-2 focus:ring-primary"
     onclick={toggleRemoveMode}>
     {#if removeMode}
       <Icon src={XMark} class="h-4 w-4" />
-      <span class="hidden md:block"> {m.long_level_kestrel_pet()} </span>
+      <span class="hidden md:block">{m.long_level_kestrel_pet()} </span>
     {:else}
       <Icon src={XMark} class="mr-1 h-4 w-4" />
-      <span class="hidden md:block"> {m.watery_trite_shrimp_clip()} </span>
+      <span class="hidden md:block">{m.upper_caring_falcon_boost()}</span>
     {/if}
   </button>
   {#if !removeMode}
-    <button class="btn-rounded btn btn-ghost ml-auto bg-base-100" onclick={actions.add}>
+    <button
+      class="btn-rounded btn btn-ghost ml-auto focus:outline-none focus:ring-2 focus:ring-primary"
+      onclick={actions.add}>
       <Icon src={QueueList} class="mr-1 h-4 w-4" />
-      <span class="hidden md:block"> {m.wacky_home_sawfish_accept()} </span>
+      <span class="hidden md:block">{m.fun_away_bird_peek()} </span>
     </button>
   {/if}
 </div>

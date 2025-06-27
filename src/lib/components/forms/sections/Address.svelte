@@ -93,12 +93,14 @@ $effect(() => {
 
 let handleConfirmTranslation = (event: Event, locale: Locale) => {
   event.preventDefault();
+  event.stopPropagation();
   missingTranslations[locale].confirmed = true;
   missingTranslations[locale].required = false;
 };
 
 let handleTranslateComplete = (event: Event, locale: Locale) => {
   event.preventDefault();
+  event.stopPropagation();
   missingTranslations[locale].translated = true;
   missingTranslations[locale].required = false;
 };
@@ -160,17 +162,20 @@ const actions: Record<'geocode', (...args: any[]) => Promise<void>> = {
 };
 </script>
 
-<div
-  class="select-none rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0 @container">
+<div class="select-none rounded-2xl p-0 pt-3 @container">
   <Header {...sectionProps}>
     <Stats form={featureForm} />
     {#snippet actionContent()}
       <GeolocateAction form={featureForm} {actions} />
     {/snippet}
   </Header>
-  <div class="grid grid-cols-1 gap-4 p-4 @xl:grid-cols-2 @5xl:grid-cols-3">
+  <div class="grid grid-cols-1 gap-4 @xl:grid-cols-2 @5xl:grid-cols-3">
     {#each supportedLocales as locale}
-      <div class="group flex flex-grow flex-col gap-4 rounded-xl bg-base-100">
+      <div
+        class="group relative flex flex-grow flex-col gap-4 rounded-xl border-3 border-primary bg-glass-300 transition-all duration-500 {currentFormIsFeature &&
+        (!zhHansIsGenAI || !zhHantIsGenAI || !enIsGenAI)
+          ? 'pb-[70px]'
+          : 'pb-0'}">
         <div
           class="flex flex-col content-start items-start gap-4 px-6 py-2 pb-2 pt-4"
           class:pb-0={currentFormIsFeature &&
