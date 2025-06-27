@@ -9,15 +9,11 @@ import StatusSection from './Status.svelte';
 import ImageSection from './Images.svelte';
 import AuthorshipSection from './Authorship.svelte';
 import TranslationSection from './Translation.svelte';
-import ClassifierSection from './Classifiers.svelte';
-import SpecifierSection from './Specifiers.svelte';
 // ICONS
 import {
   CircleStack,
   Photo,
   Language,
-  Tag,
-  Pencil,
   Funnel,
   XMark,
   BookOpen
@@ -26,13 +22,12 @@ import {
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
 import type {
-  FeatureViewFilters,
-  FeatureTranslationFilterKey,
-  FeatureStatusFilterKey,
-  FeatureImageFilterKey,
-  FeatureAuthorshipFilterKey
+  ProjectViewFilters,
+  ProjectTranslationFilterKey,
+  ProjectStatusFilterKey,
+  ProjectAuthorshipFilterKey,
+  ProjectImageFilterKey
 } from '$lib/types';
-import { AppCtx } from '$lib/context/app.svelte';
 
 let { count } = $props();
 
@@ -40,55 +35,44 @@ const adminCtx = getAdminCtx();
 
 // STATE
 let activeSection: string | null = $state(null);
-let showSectionMenu = $derived(
-  adminCtx.appCtx.state.ui.controlMode.feature === 'filter'
-);
+let showSectionMenu = $state(true);
 
 // FILTER SECTIONS CONFIG
 const filterSections = {
   status: { icon: CircleStack, title: m.filters__status() },
   authorship: { icon: BookOpen, title: m.filters__content() },
   translation: { icon: Language, title: m.filters__translation() },
-  image: { icon: Photo, title: m.filters__image() },
-  classifier: { icon: Tag, title: m.sunny_day_lemur_conquer_short() },
-  specifier: { icon: Pencil, title: m.admin__forms_common_specifiers_short() }
+  images: { icon: Photo, title: m.filters__images() }
 };
 
-const filterKeys: Record<string, (keyof FeatureViewFilters)[]> = {
-  status: [
-    'isPublished',
-    'isPendingReview',
-    'isArchived',
-    'isIntangible',
-    'isVisitable'
-  ] as FeatureStatusFilterKey[],
-  image: [
-    'hasImage',
-    'isOneImagePublished',
-    'isAllImagePublished'
-  ] as FeatureImageFilterKey[],
+const filterKeys: Record<string, (keyof ProjectViewFilters)[]> = {
+  status: ['isPublished', 'isArchived'] as ProjectStatusFilterKey[],
+  images: ['hasImage'] as ProjectImageFilterKey[],
   authorship: [
-    'hasTitle',
+    'hasName',
+    'hasContextualName',
     'hasDescription',
-    'hasDisplayAddress'
-  ] as FeatureAuthorshipFilterKey[],
+    'hasAttribution',
+    'hasLicense'
+  ] as ProjectAuthorshipFilterKey[],
   translation: [
-    'isTitleTranslated',
+    'isNameTranslated',
+    'isContextualNameTranslated',
     'isDescriptionTranslated',
-    'isAddressTranslated',
-    'isSpecifierTranslated'
+    'isAttributionTranslated',
+    'isLicenseTranslated'
   ]
 };
 
 const getFilterCount = (section: string) => {
-  const featureFilters = adminCtx.state.viewFilters.feature;
+  const projectFilters = adminCtx.state.viewFilters.project;
   let count = 0;
 
   if (section === 'status') {
     count = filterKeys[section].filter((filterKey) => {
       // isArchived is for SuperAdmin only so we ignore
       return (
-        featureFilters[filterKey as FeatureTranslationFilterKey] !== null &&
+        projectFilters[filterKey as ProjectStatusFilterKey] !== null &&
         filterKey !== 'isArchived'
       );
     }).length;
@@ -96,36 +80,20 @@ const getFilterCount = (section: string) => {
   }
 
   if (section === 'translation') {
-    filterKeys[section].forEach((featureKey) => {
-      const filterValue = featureFilters[featureKey as FeatureTranslationFilterKey];
+    filterKeys[section].forEach((projectKey) => {
+      const filterValue = projectFilters[projectKey as ProjectTranslationFilterKey];
       if (filterValue && typeof filterValue === 'object') {
         Object.values(filterValue).forEach((v) => {
           if (v !== null) count++;
         });
       }
     });
-  } else if (section === 'classifier' || section === 'specifier') {
-    // Handle property-based filters (classifiers and specifiers)
-    const propertiesFilter = featureFilters.properties;
-    if (propertiesFilter && typeof propertiesFilter === 'object') {
-      const properties = [...adminCtx.appCtx.cache.property.values()].filter(
-        (p) => p.type === (section === 'classifier' ? 'classifier' : 'specifier')
-      );
-      properties.forEach((property) => {
-        if (
-          propertiesFilter[property.id] !== null &&
-          propertiesFilter[property.id] !== undefined
-        ) {
-          count++;
-        }
-      });
-    }
   } else if (filterKeys[section]) {
     filterKeys[section].forEach((key) => {
       if (key === 'isArchived') {
         if (!adminCtx.appCtx.user?.superAdmin) return;
       }
-      if (featureFilters[key as keyof FeatureViewFilters] !== null) {
+      if (projectFilters[key as keyof ProjectViewFilters] !== null) {
         count++;
       }
     });
@@ -144,7 +112,7 @@ const totalFilterCount = $derived(() => {
 // HANDLERS
 function selectSection(sectionKey: string) {
   if (activeSection == sectionKey) {
-    activeSection == null;
+    activeSection = null;
   }
   activeSection = sectionKey;
   showSectionMenu = false;
@@ -208,16 +176,12 @@ function resetFilters() {
         <!-- Active Section Filters -->
         {#if activeSection === 'status'}
           <StatusSection />
-        {:else if activeSection === 'image'}
+        {:else if activeSection === 'images'}
           <ImageSection />
         {:else if activeSection === 'authorship'}
           <AuthorshipSection />
         {:else if activeSection === 'translation'}
           <TranslationSection />
-        {:else if activeSection === 'classifier'}
-          <ClassifierSection />
-        {:else if activeSection === 'specifier'}
-          <SpecifierSection />
         {/if}
       </div>
     </div>

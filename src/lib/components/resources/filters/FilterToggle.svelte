@@ -29,7 +29,7 @@ const {
 </script>
 
 <div
-  class="group flex min-w-[120px] flex-col items-center gap-[8px] tracking-widest"
+  class="group flex min-w-[120px] select-none flex-col items-center gap-[8px] tracking-widest"
   style="transform: translateX({-transformOffset * idx}px)">
   <label class="text-center text-xs uppercase leading-none text-base-content/70">
     {label}
@@ -39,7 +39,7 @@ const {
     style="grid-template-columns: 1fr auto 1fr;">
     <span
       onclick={onToggleFalse}
-      class="text cursor-pointer text-right text-sm uppercase text-base-content opacity-0 transition-opacity duration-300 group-hover:opacity-40"
+      class="text cursor-pointer select-none text-right text-sm uppercase text-base-content opacity-0 transition-opacity duration-300 group-hover:opacity-40"
       role="button"
       tabindex="-1">
       {falseLabel}
@@ -61,7 +61,7 @@ const {
       }} />
     <span
       onclick={onToggleTrue}
-      class="text cursor-pointer text-left text-sm uppercase text-base-content opacity-0 transition-opacity duration-300 group-hover:opacity-40"
+      class="text cursor-pointer select-none text-left text-sm uppercase text-base-content opacity-0 transition-opacity duration-300 group-hover:opacity-40"
       role="button"
       tabindex="-1">
       {trueLabel}
