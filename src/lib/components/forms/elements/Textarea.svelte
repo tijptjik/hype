@@ -6,13 +6,17 @@ import type { InputProps } from '$lib/types';
 // STATE
 let {
   value = $bindable(),
-  isGenAI = $bindable(),
+  isGenAI,
   id,
   locale = 'core',
   placeholder,
   isTranslated = false,
-  onchange
-}: InputProps & { onchange: (e: Event) => unknown } = $props();
+  onchange,
+  onToggleGenAI
+}: InputProps & {
+  onchange: (e: Event) => unknown;
+  onToggleGenAI: (e: MouseEvent) => void;
+} = $props();
 
 // SET PLACEHOLDER
 placeholder = placeholder ? placeholder : 'Type here';
@@ -88,14 +92,14 @@ function handlePaste(e: ClipboardEvent) {
   oninput={handleInput}
   onkeydown={handleKeyDown}
   onpaste={handlePaste}
-  class="min-h-[6rem] w-full overflow-y-auto whitespace-pre-wrap break-words rounded-lg border-none bg-neutral p-4 py-[9px] focus:outline-none"
+  class="min-h-[6rem] w-full overflow-y-auto whitespace-pre-wrap break-words rounded-lg border-none bg-transparent p-4 py-[9px] caret-white selection:bg-primary selection:text-base-content focus:outline-none"
   data-placeholder={placeholder}
   class:placeholder-shown={!value}>
   {value}
 </div>
 
 {#if (isGenAI || locale !== 'core') && isTranslated}
-  <div class="absolute bottom-[11px] right-2 flex items-center gap-2">
-    <Labels {isGenAI} {locale} absolute={true} />
+  <div class="absolute bottom-[20px] right-[7px] flex items-center gap-2">
+    <Labels {isGenAI} {onToggleGenAI} />
   </div>
 {/if}
