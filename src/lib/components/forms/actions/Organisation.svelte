@@ -30,14 +30,14 @@ const toggleRemoveMode = () => {
   {#if !searchMode}
     <button
       type="button"
-      class="btn-rounded btn btn-ghost ml-auto bg-base-100"
+      class="btn-rounded btn btn-ghost ml-auto"
       onclick={toggleRemoveMode}
       data-testid="removeOrganisationsButton">
       {#if !removeMode}
-        <Icon src={XMark} class="mr-2 h-4 w-4" />
+        <Icon src={XMark} class="mr-2 h-6 w-6 stroke-[2px]" />
         <span class="hidden md:block">{m.watery_trite_shrimp_clip()}</span>
       {:else}
-        <Icon src={XMark} class="h-4 w-4" />
+        <Icon src={XMark} class="h-6 w-6 stroke-[2px]" />
         <span class="hidden md:block">{m.long_level_kestrel_pet()}</span>
       {/if}
     </button>
@@ -45,14 +45,14 @@ const toggleRemoveMode = () => {
   {#if !removeMode}
     <button
       type="button"
-      class="btn-rounded btn btn-ghost ml-auto bg-base-100"
+      class="btn-rounded btn btn-ghost ml-auto"
       onclick={toggleSearchMode}
       data-testid="addOrganisationsButton">
       {#if !searchMode}
-        <Icon src={Plus} class="mr-2 h-4 w-4" />
+        <Icon src={Plus} class="mr-2 h-6 w-6 stroke-[2px]" />
         <span class="hidden md:block">{m.wacky_home_sawfish_accept()}</span>
       {:else}
-        <Icon src={XMark} class="h-4 w-4" />
+        <Icon src={XMark} class="h-6 w-6 stroke-[2px]" />
         <span class="hidden md:block">{m.keen_antsy_bulldog_zoom()}</span>
       {/if}
     </button>

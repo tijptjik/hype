@@ -12,8 +12,8 @@ type Props = {
 let { field, fieldRoot, fieldIndex, fieldKey, constraints }: Props = $props();
 </script>
 
-<div class="label text-sm {!field.label ? 'hidden' : ''}">
-  <span class="label-text text-xs font-bold">{field.label}</span>
+<div class="label {!field.label ? 'hidden' : ''}">
+  <span class="label-text text-sm font-bold">{field.label}</span>
   <span class="label-text-alt text-xs font-bold">
     {#if field.isNested}
       {$constraints?.[fieldRoot]?.[fieldIndex]?.[fieldKey]?.required ? '*' : ''}

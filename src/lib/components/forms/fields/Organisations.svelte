@@ -114,29 +114,36 @@ $effect(() => {
   {#each organisations.sort((a: Organisation, b: Organisation) => (a.i18n?.en?.name || a.code)?.localeCompare(b.i18n?.en?.name || b.code) ?? 0) as organisation, index (organisation.id)}
     <div class="grid-span-1 group" in:scale out:scale animate:flip={{ duration: 200 }}>
       <div
-        class="card card-side relative h-full flex-row items-center overflow-hidden rounded-l-xl bg-base-100 pr-6 shadow-xl">
+        class="bg-grain card card-side relative h-full flex-row items-center overflow-hidden rounded-l-xl border-3 border-primary bg-glass-300 pr-6 shadow-xl">
         {#if removeMode}
           <div
-            class="absolute left-0 top-0 flex w-24 items-center justify-center opacity-80">
+            class="group absolute left-0 top-0 z-10 flex h-full w-24 items-center justify-center opacity-80">
             <button
               onclick={(e) => removeOrganisation(e, organisation.id)}
-              class="btn btn-ghost h-24 w-24 rounded-none bg-base-200">
-              <Icon src={Trash} class="h-6 w-6" />
+              class="btn btn-ghost h-24 w-24 rounded-none bg-glass-100 transition-all group-hover:bg-base-300">
+              <Icon
+                src={Trash}
+                class="h-8 w-8 text-white transition-all group-hover:text-glass-rejected" />
             </button>
           </div>
         {/if}
-        <figure class="flex-shrink-0 flex-grow-0 overflow-hidden rounded-l-xl md:block">
-          <img
-            src={getURLfromImage({
-              image: organisation.image as ImageDB,
-              transformation: 'c_fill,h_100,w_100,q_auto'
-            })}
-            class="h-24 w-24 object-cover" />
+        <figure
+          class="flex-shrink-0 flex-grow-0 overflow-hidden rounded-l-xl text-transparent md:block">
+          {#if organisation.image}
+            <img
+              src={getURLfromImage({
+                image: organisation.image as ImageDB,
+                transformation: 'c_fill,h_100,w_100,q_auto'
+              })}
+              class="h-24 w-24 object-cover" />
+          {:else}
+            <div class="h-24 w-24 bg-glass-100"></div>
+          {/if}
         </figure>
         <div class="card-body flex-auto py-0">
           <p
-            class="card-title flex flex-col items-start justify-start gap-1 text-lg font-normal">
-            <span class="text-xs text-gray-500">
+            class="card-title flex flex-col items-start justify-start gap-0.5 text-lg font-normal">
+            <span class="text-xs text-primary">
               {organisation.code}
             </span>
             <span>{organisation.i18n?.en?.name || organisation.code}</span>

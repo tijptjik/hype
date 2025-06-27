@@ -16,13 +16,13 @@ const imageCtx = getImageContext();
 </script>
 
 <div
-  class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-100/50 backdrop-blur-sm"
+  class="absolute inset-0 z-40 flex items-center justify-center rounded-lg bg-glass-result/70 backdrop-blur-sm"
   transition:fade={{ duration: 200 }}>
   <button
-    class="btn btn-circle btn-error btn-sm"
+    class="btn btn-circle bg-glass-rejected hover:bg-glass-rejected/80"
     onclick={(e) => {
       imageCtx.handlePreDelete(e, image);
     }}>
-    <Icon src={Trash} class="h-4 w-4" />
+    <Icon src={Trash} class="h-6 w-6 stroke-[2px] text-glass-result" />
   </button>
 </div>

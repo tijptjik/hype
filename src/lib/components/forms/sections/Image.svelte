@@ -12,7 +12,6 @@ import Dropzone from 'svelte-file-dropzone';
 import Uploading from '$lib/components/images/gallery/overlays/Uploading.svelte';
 // CONTEXT
 import { getImageContext } from '$lib/context/image.svelte';
-import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
 import type { SectionProps, Image } from '$lib/types';
 
@@ -72,10 +71,9 @@ function handleFilesSelect(
 }
 </script>
 
-<div
-  class="relative z-10 mb-4 flex h-full w-full flex-col overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500/70 to-fuchsia-800/70 p-0">
+<div class="relative z-10 flex h-full w-full flex-col overflow-hidden rounded-2xl">
   <Header {...sectionProps} />
-  <main class="relative w-full flex-grow overflow-hidden rounded-b-2xl bg-base-300">
+  <main class="relative mt-2 w-full flex-grow overflow-hidden rounded-2xl bg-base-300">
     <div class="absolute inset-0 h-full w-full flex-none">
       <Dropzone
         accept={['image/*']}

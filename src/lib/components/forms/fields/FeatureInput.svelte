@@ -20,12 +20,12 @@ let computedPlaceholder = $derived(
 );
 </script>
 
-<div class="group relative rounded-lg bg-neutral pl-2 pr-3">
+<div class="group relative rounded-lg bg-glass-100 pl-2 pr-3">
   <input
     type="text"
-    class="h-12 w-full truncate rounded-md bg-neutral p-2 text-sm focus:border-none focus:outline-none focus:ring-0 active:border-none active:outline-none {value ==
+    class="h-12 w-full truncate rounded-md bg-transparent p-2 text-sm focus:border-none focus:outline-none focus:ring-0 active:border-none active:outline-none {value ==
     ''
-      ? 'italic text-base-content/60'
+      ? 'italic text-base-content/70'
       : 'text-bold text-base-content'}"
     {value}
     placeholder={computedPlaceholder}

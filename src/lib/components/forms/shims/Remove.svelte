@@ -6,7 +6,7 @@ let { onclick } = $props();
 </script>
 
 <div
-  class="group absolute right-0 top-0 z-10 flex h-full w-full flex-col items-center justify-center rounded-lg bg-base-200/50 hover:bg-base-200/70"
+  class="group absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-glass-300/50 hover:cursor-pointer hover:bg-glass-300/70"
   {onclick}>
   <Icon
     src={Trash}

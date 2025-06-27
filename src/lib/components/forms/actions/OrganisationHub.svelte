@@ -25,7 +25,7 @@ const onChange = (e: Event): void => {
 <div class="flex flex-row items-center justify-between gap-4 align-baseline">
   <Toggle
     label={m.long_fit_vole_flow()}
-    size="sm"
+    size="md"
     checked={$organisationForm.isHubExclusive as boolean}
     {onChange} />
 </div>

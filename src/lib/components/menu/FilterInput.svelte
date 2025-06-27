@@ -6,8 +6,10 @@ import { MagnifyingGlass, XMark } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
+// ENUMS
+import type { FirstClassResource } from '$lib/enums';
 // TYPES
-import type { ResourceType, AdminFilterStates } from '$lib/types';
+import type { AdminFilterStates } from '$lib/types';
 
 // STATE : CONTEXT :: ROUTER
 const adminCtx = getAdminCtx();
@@ -19,14 +21,14 @@ const {
   clearInput = false,
   showUnpublishedToggle = false,
   showReviewedToggle = false,
-  ontabout
+  onTabOut
 }: {
   rounded?: boolean;
-  resourceType: ResourceType;
+  resourceType: FirstClassResource;
   clearInput?: boolean;
   showUnpublishedToggle?: boolean;
   showReviewedToggle?: boolean;
-  ontabout?: (event: KeyboardEvent) => void;
+  onTabOut?: (e: KeyboardEvent) => void;
 } = $props();
 
 // Reset filter text after navigation if it's for the current resource
@@ -42,12 +44,12 @@ $effect(() => {
   }
 });
 // HANDLERS : KEYBOARD EVENTS
-function handleKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape') {
+function handleKeyDown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
     resetInput();
   }
-  if (event.key === 'Tab' && !event.shiftKey) {
-    ontabout?.(event);
+  if (e.key === 'Tab' && !e.shiftKey && onTabOut) {
+    onTabOut(e);
   }
 }
 
@@ -75,7 +77,7 @@ function handleInput(e: Event) {
         : 'rounded-none'}"
       bind:value={adminCtx.state.filters[resourceType as keyof AdminFilterStates].text}
       oninput={handleInput}
-      onkeydown={handleKeydown}
+      onkeydown={handleKeyDown}
       aria-label="Filter {resourceType}s" />
     <div class="absolute inset-y-0 right-2 flex items-center pr-3">
       {#if adminCtx.state.filters[resourceType as keyof AdminFilterStates].text}

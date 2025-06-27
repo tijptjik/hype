@@ -224,8 +224,7 @@ const actions = {
 };
 </script>
 
-<div
-  class="overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
+<div class="z-10 flex flex-col gap-0 rounded-2xl bg-transparent pt-4 @container">
   <Header {...sectionProps} {fields}>
     {#snippet actionContent()}
       <PropertyTypeActions {actions} bind:removeMode />

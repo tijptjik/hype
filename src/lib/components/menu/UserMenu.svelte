@@ -12,29 +12,32 @@ const session = useSession();
 const appCtx = getAppCtx();
 </script>
 
-{#if $session.data?.user}
-  <div class="flex w-full items-center gap-2">
-    <div class="grid h-10 w-10 px-2">
-      <button
-        onclick={() => appCtx.togglePanel('settings')}
-        transition:fade={{ duration: 300 }}
-        class="btn btn-ghost btn-sm col-start-1 col-end-2 row-start-1 row-end-2 h-12 min-h-0 w-12 rounded-full p-0">
-        <div class="avatar">
-          <div class="w-10 rounded-full">
-            <img
-              alt="Avatar"
-              src={$session.data?.user?.image}
-              referrerpolicy="no-referrer" />
+{#if !appCtx.isPanelOpen('settings')}
+  {#if $session.data?.user}
+    <div class="flex flex-shrink-0 flex-grow-0 items-center gap-2">
+      <div class="h-12 w-12">
+        <button
+          onclick={() => appCtx.togglePanel('settings')}
+          transition:fade={{ duration: 300 }}
+          class="btn btn-ghost btn-sm h-12 w-12 rounded-full p-0">
+          <div class="avatar">
+            <div class="w-10 rounded-full">
+              <img
+                alt="Avatar"
+                src={$session.data?.user?.image}
+                referrerpolicy="no-referrer" />
+            </div>
           </div>
-        </div>
-      </button>
+        </button>
+      </div>
     </div>
-  </div>
-{:else}
-  <button
-    draggable="false"
-    class="btn btn-primary"
-    onclick={() => signIn.social({ provider: 'google', callbackURL: '/' })}>
-    {m.navbar__signin()}
-  </button>
+  {:else}
+    <button
+      draggable="false"
+      class="btn btn-primary"
+      onclick={() => signIn.social({ provider: 'google', callbackURL: '/' })}
+      transition:fade={{ duration: 300 }}>
+      {m.navbar__signin()}
+    </button>
+  {/if}
 {/if}

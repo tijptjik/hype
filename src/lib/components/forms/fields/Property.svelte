@@ -15,7 +15,12 @@ import FauxInput from '$lib/components/forms/fields/FauxInput.svelte';
 import TranslationBar from '$lib/components/forms/bars/Translation.svelte';
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
-import { ArrowUp, ArrowDown } from '@steeze-ui/heroicons';
+import {
+  ArrowUp,
+  ArrowDown,
+  Language as LanguageIcon,
+  Plus
+} from '@steeze-ui/heroicons';
 // TYPES
 import type {
   ProjectForm,
@@ -543,11 +548,11 @@ const allI18nErrorsForPropertyValues = $derived.by(() => {
 
 {#if currentProperty}
   <div
-    class="relative mx-auto mt-4 flex w-auto items-baseline justify-center gap-2 {collapsed
+    class="relative mt-8 flex w-auto select-none items-baseline justify-center gap-2 {collapsed
       ? 'mb-4'
       : 'mb-0'}">
     <h2
-      class="flex cursor-pointer items-center justify-between gap-3 rounded-lg bg-base-100 p-2 py-2 pl-4 text-center text-xl font-bold"
+      class="flex cursor-pointer items-center justify-between gap-4 rounded-lg border-3 border-primary bg-glass-result p-2 pl-4 text-center text-xl font-bold"
       onclick={() => (collapsed = !collapsed)}>
       <span>
         {propertyTitle}
@@ -560,10 +565,12 @@ const allI18nErrorsForPropertyValues = $derived.by(() => {
           onclick={(e) => {
             e.stopPropagation();
           }}>
-          <span class="text-xs text-neutral-content">i18n</span>
+          <Icon
+            src={LanguageIcon}
+            class="h-5 w-5 translate-x-1 stroke-[2px] text-neutral-content" />
           <input
             type="checkbox"
-            class="toggle toggle-primary toggle-xs"
+            class="toggle toggle-primary toggle-xs translate-y-[1px]"
             bind:checked={currentProperty.isTranslatable} />
         </label>
       {/if}
@@ -576,7 +583,7 @@ const allI18nErrorsForPropertyValues = $derived.by(() => {
             e.stopPropagation();
             actions.increaseRank(e, propertyId!);
           }}>
-          <Icon src={ArrowUp} class="h-4 w-4" />
+          <Icon src={ArrowUp} class="h-4 w-4 stroke-[3px]" />
         </button>
         <button
           class="btn btn-square btn-ghost btn-xs"
@@ -586,7 +593,7 @@ const allI18nErrorsForPropertyValues = $derived.by(() => {
             e.stopPropagation();
             actions.decreaseRank(e, propertyId!);
           }}>
-          <Icon src={ArrowDown} class="h-4 w-4" />
+          <Icon src={ArrowDown} class="h-4 w-4 stroke-[3px]" />
         </button>
       </span>
     </h2>
@@ -594,7 +601,7 @@ const allI18nErrorsForPropertyValues = $derived.by(() => {
   {#if !collapsed}
     <div
       transition:slide
-      class="relative my-4 mb-0 grid min-h-32 grid-cols-1 gap-4 bg-base-100 bg-opacity-30 p-4 sm:grid-cols-2 xl:grid-cols-3">
+      class="relative my-6 mb-0 grid min-h-32 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {#if removeMode && !isConfirming(propertyId ?? '')}
         <RemoveShim
           onclick={() => {
@@ -614,7 +621,7 @@ const allI18nErrorsForPropertyValues = $derived.by(() => {
 
       {#each supportedLocales as locale, colIndex (locale)}
         <div
-          class="group relative flex flex-grow flex-col gap-4 rounded-xl bg-base-100 pb-[78px] {complexActionProps.dragMode
+          class="bg-grain group relative flex flex-grow flex-col gap-4 rounded-xl border-3 border-primary bg-glass-300 pb-[78px] {complexActionProps.dragMode
             ? 'drag-mode'
             : ''}">
           <div

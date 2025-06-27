@@ -20,7 +20,7 @@ let { fields } = sectionProps;
 </script>
 
 <div
-  class="gradient-loading min-h-24 basis-2/3 overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
+  class="gradient-loading min-h-24 basis-2/3 overflow-hidden rounded-2xl bg-transparent p-0">
   <Header {...sectionProps} />
   {#if !adminCtx.appCtx.isInitialised}{:else}
     {#each Object.entries(fields) as [fieldRoot, field]: [Field, FormFieldExtendedDefinition]}

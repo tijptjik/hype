@@ -5,7 +5,7 @@ import { slide } from 'svelte/transition';
 import Header from '$lib/components/forms/extra/Header.svelte';
 import OrganisationActions from '$lib/components/forms/actions/Organisation.svelte';
 import OrganisationField from '$lib/components/forms/fields/Organisations.svelte';
-import HeaderSearch from '$lib/components/forms/extra/HeaderSearch.svelte';
+import HeaderSearch from '$lib/components/forms/extra/Search.svelte';
 import Icon from '$lib/components/common/Icon.svelte';
 import { ExclamationTriangle } from '@steeze-ui/heroicons';
 // TYPES
@@ -90,8 +90,7 @@ const toOrganisationItem = (item: any) => {
 };
 </script>
 
-<div
-  class="min-h-60 basis-2/3 overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-800 p-0">
+<div class="min-h-60 basis-2/3 overflow-hidden rounded-2xl p-0">
   <Header {...sectionProps}>
     {#snippet actionContent()}
       <OrganisationActions bind:removeMode bind:searchMode />

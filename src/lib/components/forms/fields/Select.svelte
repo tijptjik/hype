@@ -48,8 +48,7 @@ let id = $derived(
     <!-- {#if fieldDiscriminator !== 'specifier'} -->
     <FieldLabel {field} {fieldRoot} {fieldIndex} {fieldKey} {constraints} />
     <!-- {/if} -->
-    <div
-      class="flex items-center gap-2 rounded-lg border-1 border-transparent bg-neutral pl-2 pr-3 focus-within:outline focus-within:outline-1 focus-within:outline-neutral-500">
+    <div class="flex items-center gap-2 rounded-lg bg-glass-100 pl-2 pr-1">
       <Select
         bind:value={fieldValues.value as string}
         {id}
