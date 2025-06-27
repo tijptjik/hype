@@ -13,7 +13,7 @@ import {
 // SCHEMA
 import { hub } from '$lib/db/schema/index';
 // DB
-import { createHub, listHubs } from '$lib/db/services/hub';
+import { createHubWithRelated, listHubs } from '$lib/db/services/hub';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
 import { HubInsertAPI } from '$lib/db/zod';
@@ -112,7 +112,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
     }
 
     // DB : Create the hub
-    const createdHub = await createHub(db, form.data);
+    const createdHub = await createHubWithRelated(db, form.data);
 
     // FORM : Rebuild the form data
     const updatedForm = await toFormShape(createdHub);
