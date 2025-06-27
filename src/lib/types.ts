@@ -18,8 +18,7 @@ import {
   SupportedLocales,
   FieldDiscriminator as FieldDiscriminatorEnum,
   TaskType as TaskTypeEnum,
-  TaskReviewOutcome,
-  HierarchicalResource
+  TaskReviewOutcome
 } from './enums';
 // ZOD SCHEMAS
 import {
@@ -170,6 +169,8 @@ import {
   UserUpdateAPI
 } from './db/zod';
 // TYPES
+import type { Snippet } from 'svelte';
+import type { AdminCtx } from './context/admin.svelte';
 import type {
   FormPath,
   InputConstraints,
@@ -266,6 +267,11 @@ export type NestedRelations = {
 // RESOURCES
 /* -------- */
 
+export type NavigableResource = Exclude<
+  FirstClassResource,
+  FirstClassResource.property
+>;
+
 export type ResourceConfig = {
   name: string;
   table: SQLiteTableWithColumns<any>;
@@ -279,7 +285,7 @@ export type ResourceConfig = {
 export type ResourceHierarchy = ResourceConfig[];
 
 export type ResourceContext = {
-  feature?: Feature;
+  feature?: Feature | FeatureFromCollection;
   layer?: Layer;
   project?: Project;
   organisation?: Organisation;
@@ -322,20 +328,7 @@ type activeResourceType = {
   facet: FacetType | false;
 };
 
-export type NavItem = {
-  name: string;
-  icon: any;
-  seq: number;
-  path: string;
-  isShownInSidebar: boolean;
-  isAlwaysExpanded: boolean;
-};
-
-export type SidebarCtxState = {
-  isOpen: boolean;
-  isVisuallyOpen: boolean;
-  isSectionOpen: Record<HierarchicalResource, boolean | null>;
-};
+export type SidebarState = 'closed' | 'narrow' | 'open';
 
 /* ----------------- */
 // ADMIN CONTROLS
@@ -378,14 +371,98 @@ export type FeatureViewFilters = {
   properties: Record<Id, FilterTriState>; // propertyId -> state
 };
 
-// TODO implement other resource types as needed
+export type OrganisationViewFilters = {
+  // Status related
+  isPublished: FilterTriState;
+  isArchived: FilterTriState;
+
+  // Image related
+  hasImage: FilterTriState;
+
+  // Authorship related
+  hasName: FilterTriState;
+  hasContextualName: FilterTriState;
+  hasDescription: FilterTriState;
+
+  // Translation related (per locale)
+  translationLocales: Record<Locale, boolean>;
+  isNameTranslated: LocalisedFilterTriState;
+  isContextualNameTranslated: LocalisedFilterTriState;
+  isDescriptionTranslated: LocalisedFilterTriState;
+};
+
+export type ProjectViewFilters = {
+  // Status related
+  isPublished: FilterTriState;
+  isArchived: FilterTriState;
+
+  // Image related
+  hasImage: FilterTriState;
+
+  // Authorship related
+  hasName: FilterTriState;
+  hasContextualName: FilterTriState;
+  hasDescription: FilterTriState;
+  hasAttribution: FilterTriState;
+  hasLicense: FilterTriState;
+
+  // Translation related (per locale)
+  translationLocales: Record<Locale, boolean>;
+  isNameTranslated: LocalisedFilterTriState;
+  isContextualNameTranslated: LocalisedFilterTriState;
+  isDescriptionTranslated: LocalisedFilterTriState;
+  isAttributionTranslated: LocalisedFilterTriState;
+  isLicenseTranslated: LocalisedFilterTriState;
+};
+
+export type LayerViewFilters = {
+  // Status related
+  isPublished: FilterTriState;
+  isArchived: FilterTriState;
+
+  // Authorship related
+  hasName: FilterTriState;
+  hasContextualName: FilterTriState;
+  hasDescription: FilterTriState;
+
+  // Translation related (per locale)
+  translationLocales: Record<Locale, boolean>;
+  isNameTranslated: LocalisedFilterTriState;
+  isContextualNameTranslated: LocalisedFilterTriState;
+  isDescriptionTranslated: LocalisedFilterTriState;
+};
+
+export type TaskViewFilters = {
+  // Status related
+  isReviewed: FilterTriState;
+};
+
+export type HubViewFilters = {
+  // Status related
+  isArchived: FilterTriState;
+
+  // Image related
+  hasImage: FilterTriState;
+
+  // Authorship related
+  hasName: FilterTriState;
+  hasContextualName: FilterTriState;
+  hasDescription: FilterTriState;
+
+  // Translation related (per locale)
+  translationLocales: Record<Locale, boolean>;
+  isNameTranslated: LocalisedFilterTriState;
+  isContextualNameTranslated: LocalisedFilterTriState;
+  isDescriptionTranslated: LocalisedFilterTriState;
+};
+
 export type ViewFilters = {
-  organisation?: never;
-  project?: never;
-  layer?: never;
+  organisation: OrganisationViewFilters;
+  project: ProjectViewFilters;
+  layer: LayerViewFilters;
   feature: FeatureViewFilters;
-  task?: never;
-  hub?: never;
+  task: TaskViewFilters;
+  hub: HubViewFilters;
 };
 
 /* ----------------- */
@@ -414,6 +491,57 @@ export type FeatureImageFilterKey =
   | 'hasImage'
   | 'isOneImagePublished'
   | 'isAllImagePublished';
+
+// Organisation filter keys
+export type OrganisationStatusFilterKey = 'isPublished' | 'isArchived';
+export type OrganisationTranslationFilterKey =
+  | 'isNameTranslated'
+  | 'isContextualNameTranslated'
+  | 'isDescriptionTranslated';
+export type OrganisationAuthorshipFilterKey =
+  | 'hasName'
+  | 'hasContextualName'
+  | 'hasDescription';
+export type OrganisationImageFilterKey = 'hasImage';
+
+// Project filter keys
+export type ProjectStatusFilterKey = 'isPublished' | 'isArchived';
+export type ProjectTranslationFilterKey =
+  | 'isNameTranslated'
+  | 'isContextualNameTranslated'
+  | 'isDescriptionTranslated'
+  | 'isAttributionTranslated'
+  | 'isLicenseTranslated';
+export type ProjectAuthorshipFilterKey =
+  | 'hasName'
+  | 'hasContextualName'
+  | 'hasDescription'
+  | 'hasAttribution'
+  | 'hasLicense';
+export type ProjectImageFilterKey = 'hasImage';
+
+// Layer filter keys (no image filters)
+export type LayerStatusFilterKey = 'isPublished' | 'isArchived';
+export type LayerTranslationFilterKey =
+  | 'isNameTranslated'
+  | 'isContextualNameTranslated'
+  | 'isDescriptionTranslated';
+export type LayerAuthorshipFilterKey =
+  | 'hasName'
+  | 'hasContextualName'
+  | 'hasDescription';
+
+// Task filter keys
+export type TaskStatusFilterKey = 'isReviewed';
+
+// Hub filter keys (only archived status)
+export type HubStatusFilterKey = 'isArchived';
+export type HubTranslationFilterKey =
+  | 'isNameTranslated'
+  | 'isContextualNameTranslated'
+  | 'isDescriptionTranslated';
+export type HubAuthorshipFilterKey = 'hasName' | 'hasContextualName' | 'hasDescription';
+export type HubImageFilterKey = 'hasImage';
 
 /* ----------------- */
 // FILTERS :: APP
@@ -447,7 +575,7 @@ export type ActiveCollection = {
   id: string;
   type: 'neighbourhood' | 'walk' | 'feature' | 'search';
   i18n: Record<Locale, { name: string }>;
-  items: FeatureFromCollection[];
+  items: (FeatureFromCollection | Feature)[];
 } | null;
 
 /* ----------------- */
@@ -764,10 +892,15 @@ export type OrganisationJoinConfig = {
 // JSON type objects for user preferences and experimental features
 
 export type AdminPreferences = {
-  isAdminMapCollapsed: boolean;
-  isPrimaryPanelCollapsed: boolean;
-  isPrimaryPanelAutoHide: boolean;
+  isAdminMapCollapsed?: boolean;
+  isPrimaryPanelCollapsed?: boolean;
+  isPrimaryPanelAutoHide?: boolean;
 };
+
+export type AdminPreferenceCode =
+  | 'isAdminMapCollapsed'
+  | 'isPrimaryPanelCollapsed'
+  | 'isPrimaryPanelAutoHide';
 
 export type UserPreferences = {
   fallbackLocales: Locale[];
@@ -1438,6 +1571,10 @@ export type UserFeatureDBPartial = z.infer<typeof UserFeatureUpdate>;
 export type UserFeature = z.infer<typeof UserFeatureAPI>;
 export type UserFeatureNew = z.infer<typeof UserFeatureInsertAPI>;
 export type UserFeaturePartial = z.infer<typeof UserFeatureUpdateAPI>;
+export type UserFeatureWithHierarchy = UserFeature & {
+  feature: FeatureFromCollection;
+  hierarchy: ResourceContext;
+};
 // Extended on the client side to include hierarchy information
 export type FeatureExtended = z.infer<typeof FeatureClientExt>;
 
@@ -1586,8 +1723,8 @@ export interface ImageContextConfig {
 export interface ImageCtxConstructorOptions {
   isAdminMode?: boolean;
   context?: ImageContextConfig | null;
-  image?: Image | null;
-  images?: Image[] | null;
+  image?: Image | ImageDBBasic | null;
+  images?: (Image | ImageDBBasic)[] | null;
   highlightedIds?: Id[];
 }
 
@@ -1622,12 +1759,40 @@ export type DisplayFieldProps = {
 // PANELS :: APP
 /* -------- */
 
-export type PanelState = {
-  filters: boolean;
-  maps: boolean;
-  stars: boolean;
-  settings: boolean;
+export type PanelProps = {
+  panelType: keyof PanelState;
+  position: PanelPosition;
+  scrollable: boolean;
+  inline: boolean;
+  isNarrow: boolean;
+  isAdmin: boolean;
+  active?: {
+    resourceType: FirstClassResource | false;
+    resourceRef: Id | Code | false;
+    resourceId: Id | null;
+    facet: FacetType | false;
+  };
+  adminCtx?: AdminCtx;
 };
+
+export type PanelPosition = 'left' | 'right';
+
+export type PanelState = {
+  filters?: boolean;
+  prisms?: boolean;
+  stars?: boolean;
+  settings?: boolean;
+  admin?: boolean;
+};
+
+// Define a type for the function argument to avoid self-reference
+export interface SelectedResourcesProps {
+  appCtx: any;
+  resourceType: FirstClassResource | 'neighbourhood';
+  resources: Resource[] | Neighbourhood[];
+  selectedIds: Id[] | string[];
+  colorClass?: string;
+}
 
 /* ----------------- */
 // APP :: OMNIBAR
@@ -1649,7 +1814,7 @@ export type SearchResult = {
 export type AppContextState = {
   markers: Map<Id, Marker>;
   active: {
-    feature: FeatureFromCollection | null;
+    feature: FeatureFromCollection | Feature | null;
     collection: ActiveCollection | null;
   };
   filters: FilterState;
@@ -1672,7 +1837,31 @@ export type AppContextState = {
     timestamp: number;
   } | null;
   distancesFromUser: Record<Id, number>;
-  panels: PanelState;
+  isPanelOpen: PanelState;
+  isPanelOpenVisually: PanelState;
+  nav: {
+    resourceType: NavigableResource | false;
+    resourceRef: Id | false;
+    facet: FacetType | false;
+  };
+  // Header state for unified header system
+  header: {
+    icon: any | null;
+    title: string;
+    facetTabs: Map<FacetType, string>;
+    actions: {
+      showAddButton: boolean;
+      showSearch: boolean;
+      showLayoutModes: boolean;
+      showControlModes: boolean;
+      showFormActions: boolean;
+    };
+  };
+  // UI state for each resource type
+  ui: {
+    controlMode: Record<NavigableResource, ControlMode>;
+    layoutMode: Record<NavigableResource, LayoutMode>;
+  };
 };
 
 export type ImageCtxMode = 'standalone' | 'gallery' | 'carousel';
@@ -1961,8 +2150,6 @@ export function isHub(resource: Resource): resource is Hub {
 
 // FEATURE TYPES
 export type { FeatureClientExt, FeatureI18nFieldKeys } from './db/zod/schema/feature';
-
-import type { Snippet } from 'svelte';
 
 /* ----------------- */
 // VIRUAL LIST
