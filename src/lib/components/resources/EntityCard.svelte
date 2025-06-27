@@ -4,6 +4,7 @@ import { goto } from '$app/navigation';
 import { page } from '$app/state';
 // I18N
 import { getLocale } from '$lib/i18n';
+import { m } from '$lib/i18n';
 // LIB
 import { ADMIN_PATH } from '$lib/index';
 import { hashicon } from '@emeraldpay/hashicon';
@@ -20,32 +21,21 @@ import type { Snippet } from 'svelte';
 import type { Resource, ImageDB, Task, KeyMap } from '$lib/types';
 
 type EntityWithOptionalImage = Exclude<Resource, Task> & {
-  image?: (Partial<ImageDB> & { id: string }) | null;
+  image?: (Partial<ImageDB> & { id: string }) | string | null;
 };
 
 type Props = {
   entity: EntityWithOptionalImage;
   keyMap: KeyMap;
   header?: Snippet;
-  badges?: Snippet;
-  badgesExtra?: Snippet;
   content?: Snippet;
   actions?: Snippet;
   footer?: Snippet;
   onImageClick?: (entity: Exclude<Resource, Task>) => void;
 };
 
-let {
-  entity,
-  keyMap,
-  header,
-  badges,
-  badgesExtra,
-  content,
-  actions,
-  footer,
-  onImageClick
-}: Props = $props();
+let { entity, keyMap, header, content, actions, footer, onImageClick }: Props =
+  $props();
 let locale = $derived(getLocale());
 
 // Utility function to get nested property values using dot notation
@@ -142,7 +132,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
   draggable="false"
   role="article"
   tabindex="0"
-  class="duration-800 hover:scale-1 card select-none rounded-xl bg-base-100 shadow-xl transition-shadow hover:shadow-xl hover:shadow-primary focus-visible:shadow-primary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-secondary active:outline-none"
+  class="duration-800 hover:scale-1 bg-grain card flex select-none flex-col gap-4 rounded-xl bg-glass-neutral shadow-[0_0_25px_rgba(0,0,0,0.25)] transition-shadow hover:shadow-[0_0_25px_theme(colors.primary)] focus-visible:shadow-[0_0_25px_theme(colors.primary)] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-secondary active:outline-none"
   onkeydown={handleKeyDown}
   {onclick}>
   <!-- Header Section -->
@@ -167,64 +157,59 @@ const handleKeyDown = (e: KeyboardEvent) => {
         layout="cover" />
     </div>
   {/if}
-
   <!-- Content Section -->
-  <div class="card-body w-full px-6 pb-0">
+  <div class="card-body w-full gap-0 px-6 py-0">
     {#if content}
       {@render content()}
     {:else}
-      <h2 class="card-title -mt-3">
-        <ScrollableText text={getPropertyValue(entity, keyMap.title)} />
-      </h2>
       {#if keyMap.subtitle}
-        <small class="mb-2 text-sm text-gray-500"
+        <small class="my-0 py-0 text-sm text-primary"
           >{getPropertyValue(entity, keyMap.subtitle)}</small>
       {/if}
-      {#if keyMap.description}
-        <p class="-mt-5 text-neutral-content">
-          <ScrollableText text={getPropertyValue(entity, keyMap.description)} />
-        </p>
-      {/if}
+      <h2 class="card-title mt-0 pt-0">
+        <ScrollableText text={getPropertyValue(entity, keyMap.title)} />
+      </h2>
+      <p class="text-neutral-content">
+        <ScrollableText
+          text={getPropertyValue(entity, keyMap.description) ||
+            m.loved_spare_hyena_imagine()} />
+      </p>
     {/if}
 
     <!-- Actions Section -->
-    <div class="mt-2 flex w-full flex-row items-center justify-between">
-      {#if actions}
+    {#if actions}
+      <div class="mt-2 flex w-full flex-row items-center justify-between">
         {@render actions()}
-      {:else}
-        <!-- Badges Section -->
-        {#if badges}
-          {@render badges()}
-        {:else if keyMap.badges?.length}
-          <div
-            class="mb-2 flex flex-row flex-wrap justify-center gap-2 py-2 align-middle">
-            {#each keyMap.badges.filter((badge) => !badge.superAdminOnly || adminCtx.appCtx.user?.superAdmin === true) as badge}
-              {#if badge.type === 'boolean'}
-                {@const boolValue = getNestedValue(entity, badge.label)}
-                <span
-                  class="badge badge-{badge.variant ||
-                    'outline'} my-0.5 h-8 bg-base-300">
-                  {boolValue ? badge.trueText || 'True' : badge.falseText || 'False'}
-                </span>
-              {:else}
-                <span class="badge badge-{badge.variant || 'outline'}"
-                  >{getNestedValue(entity, badge.label)}</span>
-              {/if}
-            {/each}
-            <!-- Extra Badges Section -->
-            {#if badgesExtra}
-              {@render badgesExtra()}
-            {/if}
-          </div>
-        {/if}
-      {/if}
-    </div>
+      </div>
+    {/if}
   </div>
   <!-- Footer Section -->
-  {#if footer}
-    <footer
-      class="flex w-full flex-row items-center justify-between rounded-b-xl bg-black px-6 py-2">
+  <footer
+    class="flex w-full flex-row items-center justify-between rounded-b-xl bg-glass-result px-6 py-2">
+    {#if footer}
       {@render footer()}
-    </footer>
-  {/if}
+    {:else}
+      <div class="font-mono text-xs uppercase tracking-wider text-neutral-content">
+        {#if 'isPublished' in entity && entity.isPublished !== undefined}
+          {#if entity.isPublished}
+            <span class="text-ok">{m.long_zippy_felix_mix()}</span>
+          {:else}
+            <span class="text-error">{m.weak_super_guppy_nail()}</span>
+          {/if}
+          <!-- HUB -->
+        {:else if 'domain' in entity}
+          <div class="font-mono text-xs uppercase text-neutral-content">
+            {entity.organisations?.map((org) => org.code).join(', ')}
+          </div>
+        {/if}
+      </div>
+      <div class="flex flex-row items-center gap-2">
+        {#if 'isVisitable' in entity && entity.isVisitable !== undefined}
+          <div class="font-mono text-xs uppercase text-neutral-content">
+            {entity.isVisitable ? 'Visitable' : 'Not Visitable'}
+          </div>
+        {/if}
+      </div>
+    {/if}
+  </footer>
 </div>
