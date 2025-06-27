@@ -15,7 +15,7 @@ import Menu from '$lib/components/layout/Menu.svelte';
 import Map from '$lib/components/common/StandaloneMap.svelte';
 import Omnibar from '$lib/components/omnibar/Omnibar.svelte';
 import Filters from '$lib/components/panels/Filters.svelte';
-import Maps from '$lib/components/panels/Maps.svelte';
+import Maps from '$lib/components/panels/Prisms.svelte';
 import Stars from '$lib/components/panels/Stars.svelte';
 import Settings from '$lib/components/panels/Settings.svelte';
 import LayerSelectionModal from '$lib/components/modals/LayerSelectionModal.svelte';
@@ -95,18 +95,10 @@ $effect(() => {
     <main
       class="relative top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
       <!-- Panels -->
-      {#if appCtx.state.panels.filters}
-        <Filters />
-      {/if}
-      {#if appCtx.state.panels.maps}
-        <Maps />
-      {/if}
-      {#if appCtx.state.panels.stars}
-        <Stars />
-      {/if}
-      {#if appCtx.state.panels.settings}
-        <Settings />
-      {/if}
+      <Filters />
+      <Maps />
+      <Stars />
+      <Settings />
       <!-- Map Container -->
       <div class="relative flex h-full flex-1 flex-col">
         <Map />
