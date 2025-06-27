@@ -203,7 +203,7 @@ onMount(async () => {
         omniCtx.closeTray();
       }
       // Priority 3: Close panels if open
-      else if (Object.values(appCtx.state.panels).some((panel) => panel)) {
+      else if (Object.values(appCtx.state.isPanelOpen).some((panel) => panel)) {
         appCtx.closeAllPanels();
       }
     }
@@ -222,7 +222,7 @@ watch(
 
 // STATE : DERIVED
 let horizontalOffset = $derived(() => {
-  const { filters, maps, stars, settings } = appCtx.state.panels;
+  const { filters, maps, stars, settings } = appCtx.state.isPanelOpen;
   const leftPanelOpen = maps || stars;
   const rightPanelOpen = filters || settings;
   if (window.innerWidth < MOBILE_MAX_WIDTH) {
@@ -280,12 +280,12 @@ $effect(() => {
   class="map absolute inset-0 overflow-hidden rounded-2xl caret-transparent"
   data-testid="map"
   bind:this={mapContainer}>
-  {#if appCtx.user && appCtx.state.resources.layer.length > 0 && !appCtx.state.prisms.layer.length && !appCtx.state.panels.maps}
+  {#if appCtx.user && appCtx.state.resources.layer.length > 0 && !appCtx.state.prisms.layer.length && !appCtx.state.isPanelOpen.maps}
     <div
       class="pointer-events-none absolute inset-0 z-50 mx-auto flex cursor-pointer items-center justify-center bg-black/70 text-center caret-transparent"
       in:fade={{ duration: 800, delay: 3000, easing: cubicInOut }}
       out:fade={{ duration: 300, easing: cubicInOut }}
-      onclick={() => (appCtx.state.panels.maps = true)}>
+      onclick={() => (appCtx.state.isPanelOpen.maps = true)}>
       <div
         class="group pointer-events-auto flex max-w-xs flex-col items-center gap-8 rounded-lg border-2 border-[#4987E2] bg-black p-8 px-8 font-mono shadow-[0_0_15px_rgba(0,0,255,0.5)]">
         <p class="text-lg text-base-content">{m.map__no_markers_without_layers()}</p>
