@@ -364,7 +364,8 @@ export const toResponseShape = async (
           i18n: transformI18nSafely(data.project.i18n)
         }
       : null,
-    feature: transformedFeature
+    feature: transformedFeature,
+    images: data.images?.filter((taskImage) => taskImage.image) || []
   };
 
   return (isCollection ? TaskCollectionAPI : TaskAPI).parse(transformedData);
