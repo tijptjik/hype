@@ -23,7 +23,20 @@ export default {
       'map-primary': '#cb37c1',
       'map-base': '#4987e2',
       'base-50': '#556172',
-      'base-400': '#101214'
+      'base-350': '#161617',
+      'base-400': '#101214',
+      'glass-100': '#7d475f',
+      'glass-200': '#b07b8582',
+      'glass-300': '#20191e8c',
+      'glass-300-solid': '#20191e',
+      'glass-warning': '#ff9b9b',
+      'glass-result': '#3c2638e6',
+      'glass-neutral': '#262626c7',
+      'glass-rejected': '#ff7b7b',
+      'glass-accepted': '#6ba279',
+      'glass-salmon': '#ffad9a',
+      'glass-salmon-dark': '#2b092282',
+      'glass-base': 'rgba(88, 85, 113, 0.71)'
     },
     extend: {
       borderStyle: ['hover'],
@@ -94,8 +107,8 @@ export default {
         250: '62.5rem' // 1000px
       },
       flexBasis: {
-        '1/3-gap-6': 'calc(33.3% - 1rem)',
-        '1/2-gap-6': 'calc(50% - 1rem)',
+        '1/3-gap-4': 'calc(33.3% - 16px)',
+        '1/2-gap-4': 'calc(50% - 16px)',
         '1/1': '100%'
       }
     }
