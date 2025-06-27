@@ -156,54 +156,58 @@ $effect(() => {
     class="{isCollapsed
       ? 'absolute w-full justify-center'
       : 'absolute right-4 '} top-4 z-10 flex flex-row gap-2">
-    <button
-      class="btn btn-circle btn-sm bg-base-100 opacity-80 hover:opacity-100 {isFullscreen
-        ? 'hidden'
-        : ''} "
-      transition:fade={{ duration: 300 }}
-      onclick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        isCollapsed = !isCollapsed;
-        mapProps.toggleCollapsed?.(isCollapsed);
-      }}>
-      <div class="swap">
-        <input
-          name="collapsed"
-          type="checkbox"
-          checked={isCollapsed}
-          onchange={() => {
-            isCollapsed = !isCollapsed;
-            mapProps.toggleCollapsed?.(isCollapsed);
-          }} />
-        <Icon src={ArrowsPointingOut} class="swap-on h-5 w-5" />
-        <Icon src={ArrowsPointingIn} class="swap-off h-5 w-5" />
-      </div>
-    </button>
-    <button
-      class="btn btn-circle btn-sm bg-base-100 opacity-80 hover:opacity-100 {isCollapsed
-        ? 'hidden'
-        : ''}"
-      transition:fade={{ duration: 300 }}
-      onclick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        isFullscreen = !isFullscreen;
-        mapProps.toggleFullscreen?.(isFullscreen);
-      }}>
-      <div class="swap">
-        <input
-          name="fullscreen"
-          type="checkbox"
-          checked={isFullscreen}
-          onchange={() => {
-            isFullscreen = !isFullscreen;
-            mapProps.toggleFullscreen?.(isFullscreen);
-          }} />
-        <Icon src={ArrowsPointingIn} class="swap-on h-5 w-5" />
-        <Icon src={ArrowsPointingOut} class="swap-off h-5 w-5" />
-      </div>
-    </button>
+    {#if mapProps.toggleCollapsed}
+      <button
+        class="btn btn-circle btn-sm bg-base-100 opacity-80 hover:opacity-100 {isFullscreen
+          ? 'hidden'
+          : ''} "
+        transition:fade={{ duration: 300 }}
+        onclick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          isCollapsed = !isCollapsed;
+          mapProps.toggleCollapsed?.(isCollapsed);
+        }}>
+        <div class="swap">
+          <input
+            name="collapsed"
+            type="checkbox"
+            checked={isCollapsed}
+            onchange={() => {
+              isCollapsed = !isCollapsed;
+              mapProps.toggleCollapsed?.(isCollapsed);
+            }} />
+          <Icon src={ArrowsPointingOut} class="swap-on h-5 w-5" />
+          <Icon src={ArrowsPointingIn} class="swap-off h-5 w-5" />
+        </div>
+      </button>
+    {/if}
+    {#if mapProps.toggleFullscreen}
+      <button
+        class="btn btn-circle btn-sm bg-base-100 opacity-80 hover:opacity-100 {isCollapsed
+          ? 'hidden'
+          : ''}"
+        transition:fade={{ duration: 300 }}
+        onclick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          isFullscreen = !isFullscreen;
+          mapProps.toggleFullscreen?.(isFullscreen);
+        }}>
+        <div class="swap">
+          <input
+            name="fullscreen"
+            type="checkbox"
+            checked={isFullscreen}
+            onchange={() => {
+              isFullscreen = !isFullscreen;
+              mapProps.toggleFullscreen?.(isFullscreen);
+            }} />
+          <Icon src={ArrowsPointingIn} class="swap-on h-5 w-5" />
+          <Icon src={ArrowsPointingOut} class="swap-off h-5 w-5" />
+        </div>
+      </button>
+    {/if}
   </div>
   <!-- Loading Spinner -->
   {#if !isMapLoaded}
