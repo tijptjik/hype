@@ -1,75 +1,32 @@
 // SVELTE
 import { goto } from '$app/navigation';
-// I18N
-import { m } from '$lib/i18n';
 // LIB
 import { ADMIN_PATH } from '$lib/index';
-// ICONS
-import {
-  Users as OrganisationIcon,
-  Squares2x2 as ProjectIcon,
-  Square3Stack3d as LayerIcon,
-  MapPin as FeatureIcon,
-  Inbox as TaskIcon,
-  BuildingLibrary as HubIcon
-} from '@steeze-ui/heroicons';
 // ENUMS
 import { FirstClassResource, ResourcePath, ResourceRefKey } from '$lib/enums';
 // TYPES
 import type { AdminCtx } from '$lib/context/admin.svelte';
-import type { Code, FacetType, Id, NavItem, Resource } from '$lib/types';
+import type {
+  Code,
+  FacetType,
+  Id,
+  Resource,
+  Organisation,
+  Project,
+  Hub,
+  NavigableResource
+} from '$lib/types';
+
+function isNavigable(resource: any): resource is NavigableResource {
+  return (
+    Object.values(FirstClassResource).includes(resource) &&
+    resource !== FirstClassResource.property
+  );
+}
 
 // NAVIGATION
-// NOTE : We cannot use Enums here for path or seq as the build process only procudes them on a hard refresh.
-export const navItems: Record<Exclude<FirstClassResource, 'property'>, NavItem> = {
-  organisation: {
-    name: m.maps__organisations(),
-    icon: OrganisationIcon,
-    seq: 1,
-    path: 'organisations',
-    isShownInSidebar: true,
-    isAlwaysExpanded: false
-  },
-  project: {
-    name: m.maps__projects(),
-    icon: ProjectIcon,
-    seq: 2,
-    path: 'projects',
-    isShownInSidebar: true,
-    isAlwaysExpanded: false
-  },
-  layer: {
-    name: m.maps__layers(),
-    icon: LayerIcon,
-    seq: 3,
-    path: 'layers',
-    isShownInSidebar: true,
-    isAlwaysExpanded: false
-  },
-  feature: {
-    name: m.omni__title_features(),
-    icon: FeatureIcon,
-    seq: 4,
-    path: 'features',
-    isShownInSidebar: true,
-    isAlwaysExpanded: true
-  },
-  task: {
-    name: m.navbar__tasks(),
-    icon: TaskIcon,
-    seq: 5,
-    path: 'tasks',
-    isShownInSidebar: false,
-    isAlwaysExpanded: false
-  },
-  hub: {
-    name: 'Hubs',
-    icon: HubIcon,
-    seq: 6,
-    path: 'hubs',
-    isShownInSidebar: false,
-    isAlwaysExpanded: false
-  }
+export const getUrlForResourceIndex = (resource: FirstClassResource) => {
+  return `${ADMIN_PATH}/${getResourcePathPart(resource)}`;
 };
 
 export const getUrlForResource = (
@@ -80,7 +37,7 @@ export const getUrlForResource = (
 ) => {
   const ref = getResourceRef(adminCtx, resource, id);
   if (!ref) return null;
-  return `${ADMIN_PATH}/${getResourcePathPart(adminCtx, resource)}/${ref}${facet ? `#${facet}` : ''}`;
+  return `${ADMIN_PATH}/${getResourcePathPart(resource)}/${ref}${facet ? `#${facet}` : ''}`;
 };
 
 export const getResourceRef = (
@@ -95,13 +52,9 @@ export const getResourceRef = (
   return entity[refKey as keyof Resource];
 };
 
-export const getResourcePathPart = (
-  adminCtx: AdminCtx,
-  resource?: FirstClassResource
-) => {
-  const resourceKey = resource ?? adminCtx.state.active.resourceType;
-  if (!resourceKey) return null;
-  return ResourcePath[resourceKey];
+export const getResourcePathPart = (resource?: FirstClassResource) => {
+  if (!resource) return null;
+  return ResourcePath[resource];
 };
 
 export const navigateOnAdmin = (
@@ -112,18 +65,24 @@ export const navigateOnAdmin = (
   queryParams?: Record<string, string>
 ) => {
   let url = `${ADMIN_PATH}`;
-  if (resource) {
+  if (resource && isNavigable(resource)) {
     url += `/${ResourcePath[resource]}`;
     adminCtx.setResourceType(resource);
   } else {
     adminCtx.setResourceType(false);
+    if (resource) {
+      console.warn(`Attempted to navigate to a non-navigable resource: ${resource}`);
+      return;
+    }
   }
+
   if (entityRef) {
     url += `/${entityRef}`;
     adminCtx.setResourceRef(entityRef);
   } else {
     adminCtx.setResourceRef(false);
   }
+
   if (queryParams) url += `?${new URLSearchParams(queryParams).toString()}`;
   if (facet) {
     url += `#${facet}`;
@@ -134,6 +93,26 @@ export const navigateOnAdmin = (
   goto(url);
 };
 
+export async function navigateOnAdminById(
+  adminCtx: AdminCtx,
+  resourceType: FirstClassResource | false,
+  id: Id,
+  ...args: any[]
+) {
+  let ref = id;
+  if (
+    resourceType == 'organisation' ||
+    resourceType == 'project' ||
+    resourceType == 'hub'
+  ) {
+    const resource = await adminCtx.appCtx.getResourceById(resourceType, id);
+    if (resource) {
+      ref = (resource as Organisation | Project | Hub).code;
+    }
+  }
+  navigateOnAdmin(adminCtx, resourceType as FirstClassResource, ref, ...args);
+}
+
 // UTILS
 export const reversePath = new Map<string, FirstClassResource>();
 
@@ -143,6 +122,26 @@ if (ResourcePath) {
     reversePath.set(pathValue, path as FirstClassResource);
   });
 }
+
+// TODO add proper support for navigation state on appCtx so that
+// we can use it in components which are used in both admin and (app)
+export const getActiveResourceAndRefFromUrl = (): {
+  resourceType: FirstClassResource | false;
+  resourceRef: Id | Code | false;
+  facet: string | false;
+} => {
+  const urlObj = new URL(window.location.href);
+  const pathParts = urlObj.pathname.split('/').filter(Boolean);
+
+  const resourceType = reversePath.get(pathParts[0]) || false;
+  const resourceRef = pathParts[1] || false;
+
+  return {
+    resourceType,
+    resourceRef,
+    facet: urlObj.hash.slice(1) || false
+  };
+};
 
 // ═══════════════════════
 // BREADCRUMBS :: ASYNC UTILITIES
@@ -186,6 +185,13 @@ export async function getBreadcrumbs(
       breadcrumbs.push({
         name: appCtx.getContextualLayerName(hierarchy.layer, false),
         href: `${ADMIN_PATH}/${ResourcePath.layer}/${hierarchy.layer.id}`
+      });
+    }
+
+    if (hierarchy.feature && resourceType !== 'feature') {
+      breadcrumbs.push({
+        name: appCtx.getContextualFeatureName(hierarchy.feature, false),
+        href: `${ADMIN_PATH}/${ResourcePath.feature}/${hierarchy.feature.id}`
       });
     }
 
