@@ -7,21 +7,26 @@ import { m } from '$lib/i18n';
 // CONTEXT
 import { setForm } from '$lib/context/form.svelte';
 import { getAdminCtx } from '$lib/context/admin.svelte';
+// ICONS
+import { BuildingLibrary as HubIcon } from '@steeze-ui/heroicons';
 // FLASH
 import { getFlash } from 'sveltekit-flash-message';
 import { page } from '$app/state';
 // COMPONENTS
-import Header from '$lib/components/resources/headers/EntityHeader.svelte';
-import HeaderButton from '$lib/components/layout/HeaderButton.svelte';
-import EntityActions from '$lib/components/menu/EntityActions.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
 import SpecificationSection from '$lib/components/forms/sections/Specification.svelte';
 import HubOrganisationsSection from '$lib/components/forms/sections/HubOrganisations.svelte';
+import Scrollbar from '$lib/components/common/scrollbars/Scrollbar.svelte';
 // TYPES
 import type { Hub, FormPageProps, FormField } from '$lib/types';
+import { untrack } from 'svelte';
 
 // CONTEXT
 const adminCtx = getAdminCtx();
+
+// ELEMENTS
+let vietportElement: HTMLDivElement | undefined = $state();
+let contentsElement: HTMLFormElement | undefined = $state();
 
 // CONFIG
 const RESOURCE = 'hub' as any;
@@ -85,29 +90,37 @@ let enhance = $derived(form.enhance);
 let title = $derived(
   pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE
 );
+
+// HEADER SETUP
+$effect(() => {
+  const facetTabs = new Map();
+  facetTabs.set('core', m.organisation__core());
+
+  untrack(() => adminCtx.setHeaderForEntity(title, HubIcon, facetTabs));
+
+  // Set form context for header actions
+  adminCtx.appCtx.setFormContext(form);
+});
+
+// Clean up form context when component unmounts
+$effect(() => {
+  return () => {
+    adminCtx.appCtx.clearFormContext();
+  };
+});
 </script>
 
 <!-- LAYOUT -->
-<div class="mb-12 h-full bg-black">
-  <Header {title}>
-    {#snippet menuItems()}
-      <HeaderButton
-        facet={{ label: m.organisation__core(), ref: 'core' }}
-        isActive={adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false} />
-    {/snippet}
-
-    {#snippet actions()}
-      <EntityActions {form} />
-    {/snippet}
-  </Header>
+<div class="relative h-full w-full overflow-hidden" bind:this={vietportElement}>
   <form
     id="hubForm"
     method="POST"
     use:enhance
     role="form"
     data-testid="hubForm"
-    class="h-full">
-    <main class="flex h-full flex-col gap-6 overflow-y-auto p-6">
+    class="mb-24 h-full overflow-y-auto"
+    bind:this={contentsElement}>
+    <main class="flex min-h-full flex-col gap-6 p-6 pb-64">
       <I18nSection
         title={m.admin__forms_common_descriptors()}
         fields={FIELDS.i18n}
@@ -138,4 +151,19 @@ let title = $derived(
       </div>
     </main>
   </form>
+  {#if vietportElement && contentsElement}
+    <Scrollbar
+      viewport={vietportElement}
+      contents={contentsElement}
+      showThumbOnTrackEnter={true}
+      margin={{
+        top: 8,
+        bottom: 0
+      }}
+      width={{
+        track: 24,
+        thumb: 8,
+        thumbActive: 12
+      }} />
+  {/if}
 </div>
