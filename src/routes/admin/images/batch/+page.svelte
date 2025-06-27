@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
 import { fade, scale } from 'svelte/transition';
+// I18N
+import { m } from '$lib/i18n';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 import { getAppCtx } from '$lib/context/app.svelte';
@@ -234,24 +236,25 @@ let uploadingCount = $derived(
 let pendingCount = $derived(uploadResults.filter((r) => r.status === 'pending').length);
 </script>
 
-<div class="h-full bg-black">
-  <!-- Header -->
-  <div class="border-b border-base-300 bg-black px-6 py-4">
-    <h1 class="text-2xl font-light text-base-content">Batch Image Upload</h1>
-    <p class="text-sm text-base-content/70">
-      Drop images to automatically associate them with features based on filename
-    </p>
+<div class="h-full p-6">
+  <div class="flex items-center gap-4">
+    <h3 class=" text-xl font-bold uppercase">
+      {m.trite_least_parakeet_charm()}
+      <small
+        class="case hidden select-text pr-3 text-sm normal-case text-base-content/70 @sm:block"
+        >{m.caring_aloof_haddock_bubble()}</small>
+    </h3>
   </div>
 
   <div class="flex h-full flex-col gap-6 overflow-y-auto p-6">
     <!-- Dropzone -->
-    <div class="flex-none">
+    <div class="flex-1">
       <Dropzone
         accept={['image/*']}
         on:drop={handleDrop}
         on:select={handleDrop}
         multiple={true}
-        class="flex h-64 w-full flex-col justify-center gap-4 rounded-xl border-2 border-dashed border-base-content/20 bg-base-200/30 text-center transition-colors hover:border-primary hover:bg-base-200/50"
+        class="flex h-64 w-full flex-col justify-center gap-4 rounded-xl border-2 border-dashed border-base-content/20 bg-glass-300/30 text-center transition-colors hover:border-primary hover:bg-base-200/50"
         disableDefaultStyles={true}
         disabled={isUploading}>
         <Icon src={CloudArrowUp} class="mx-auto h-12 w-12 text-base-content/50" />
@@ -272,25 +275,25 @@ let pendingCount = $derived(uploadResults.filter((r) => r.status === 'pending').
     <!-- Progress Summary -->
     {#if uploadResults.length > 0}
       <div class="flex-none" in:fade={{ duration: 300 }}>
-        <div class="card bg-base-200">
+        <div class="card bg-glass-result">
           <div class="card-body">
             <h3 class="card-title text-lg">Upload Progress</h3>
             <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
               <div class="stat">
                 <div class="stat-title">Success</div>
-                <div class="stat-value text-success">{successCount}</div>
+                <div class="stat-value text-glass-accepted">{successCount}</div>
               </div>
               <div class="stat">
                 <div class="stat-title">Errors</div>
-                <div class="stat-value text-error">{errorCount}</div>
+                <div class="stat-value text-glass-rejected">{errorCount}</div>
               </div>
               <div class="stat">
                 <div class="stat-title">Uploading</div>
-                <div class="stat-value text-warning">{uploadingCount}</div>
+                <div class="stat-value text-glass-100">{uploadingCount}</div>
               </div>
               <div class="stat">
                 <div class="stat-title">Pending</div>
-                <div class="stat-value text-info">{pendingCount}</div>
+                <div class="stat-value text-glass-100">{pendingCount}</div>
               </div>
             </div>
           </div>
@@ -305,14 +308,14 @@ let pendingCount = $derived(uploadResults.filter((r) => r.status === 'pending').
         <div class="space-y-2">
           {#each uploadResults as result, index (result.file.name)}
             <div
-              class="flex items-center justify-between rounded-lg border border-base-300 bg-base-100 p-4"
+              class="flex items-center justify-between rounded-lg border border-primary bg-glass-result p-4"
               in:scale={{ duration: 200, delay: index * 50 }}>
               <div class="flex items-center space-x-3">
                 <!-- Status Icon -->
                 {#if result.status === 'success'}
-                  <Icon src={CheckCircle} class="h-5 w-5 text-success" />
+                  <Icon src={CheckCircle} class="h-5 w-5 text-glass-accepted" />
                 {:else if result.status === 'error'}
-                  <Icon src={XCircle} class="h-5 w-5 text-error" />
+                  <Icon src={XCircle} class="h-5 w-5 text-glass-rejected" />
                 {:else if result.status === 'uploading'}
                   <span class="loading loading-ring loading-sm text-warning"></span>
                 {:else}
