@@ -1,15 +1,21 @@
 <script lang="ts">
 import { m } from '$lib/i18n';
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
-import { Beaker } from '@steeze-ui/heroicons';
 import Section from '$lib/components/panels/common/Section.svelte';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
-import type { ExperimentalFeatureConfig, UserExperimental } from '$lib/types';
+import type {
+  ExperimentalFeatureConfig,
+  UserExperimental,
+  PanelProps
+} from '$lib/types';
 
+// CONTEXT
 const appCtx = getAppCtx();
+
+// PROPS
+let { ...panelProps }: PanelProps = $props();
 
 // Get experimental features from appCtx
 const experimentalFeatures = $derived(appCtx.getUser()?.experimental || {});

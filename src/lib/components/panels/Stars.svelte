@@ -4,10 +4,12 @@ import { m } from '$lib/i18n';
 // COMPONENTS
 import Panel from '$lib/components/layout/Panel.svelte';
 import Header from '$lib/components/panels/common/Header.svelte';
-import Info from '$lib/components/panels/stars/Info.svelte';
+import Info from '$lib/components/panels/info/Stars.svelte';
+import WantToVisit from '$lib/components/panels/sections/WantToVisit.svelte';
+import HaveVisited from '$lib/components/panels/sections/HaveVisited.svelte';
+// TYPES
+import type { PanelProps } from '$lib/types';
 
-import WantToVisit from '$lib/components/panels/stars/WantToVisit.svelte';
-import HaveVisited from '$lib/components/panels/stars/HaveVisited.svelte';
 // STATE
 let isInfoOpen = $state(false);
 // svelte-ignore non_reactive_update
@@ -34,11 +36,20 @@ let handleToggleWantToVisit = (e: MouseEvent | TouchEvent) => {
   e.stopPropagation();
   isWantToVisitOpen = !isWantToVisitOpen;
 };
+
+let panelProps: PanelProps = $derived({
+  panelType: 'stars',
+  position: 'left',
+  scrollable: false,
+  inline: true,
+  isNarrow: false,
+  isAdmin: false
+});
 </script>
 
-<Panel position="left" scrollable={false} bind:panelContainer>
+<Panel bind:panelContainer {...panelProps}>
   <Header
-    panel="stars"
+    {...panelProps}
     title={m.stars__title()}
     onToggleInfo={(e) => {
       handleToggleInfo(e);

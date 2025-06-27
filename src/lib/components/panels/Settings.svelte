@@ -4,15 +4,18 @@ import { m } from '$lib/i18n';
 // COMPONENTS
 import Header from '$lib/components/panels/common/Header.svelte';
 import Panel from '$lib/components/layout/Panel.svelte';
-import Info from '$lib/components/panels/settings/Info.svelte';
-import Profile from '$lib/components/panels/settings/Profile.svelte';
-import Language from '$lib/components/panels/settings/Language.svelte';
-import Contributor from '$lib/components/panels/settings/Contributor.svelte';
-import DefaultMap from '$lib/components/panels/settings/DefaultMap.svelte';
-import Experimental from '$lib/components/panels/settings/Experimental.svelte';
-import Admin from '$lib/components/panels/settings/Admin.svelte';
+import Info from '$lib/components/panels/info/Settings.svelte';
+import Profile from '$lib/components/panels/sections/Profile.svelte';
+import Language from '$lib/components/panels/sections/Language.svelte';
+import Contributor from '$lib/components/panels/sections/Contributor.svelte';
+import DefaultMap from '$lib/components/panels/sections/DefaultMap.svelte';
+import Experimental from '$lib/components/panels/sections/Experimental.svelte';
+import Admin from '$lib/components/panels/sections/Admin.svelte';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
+// TYPES
+import type { PanelState, PanelPosition, PanelProps } from '$lib/types';
+
 // CONTEXT
 const appCtx = getAppCtx();
 
@@ -30,38 +33,45 @@ let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
     }, 300);
   }
 };
+
+let panelProps: PanelProps = $derived({
+  panelType: 'settings',
+  position: 'right',
+  scrollable: true,
+  inline: appCtx.isAdmin(),
+  isNarrow: appCtx.isPanelNarrow('settings'),
+  isAdmin: appCtx.isAdmin()
+});
 </script>
 
-<Panel position="right" scrollable={true} bind:panelContainer>
+<Panel bind:panelContainer {...panelProps}>
   <Header
-    panel="settings"
     title={m.settings__title()}
     onToggleInfo={(e) => {
       handleToggleInfo(e);
-    }} />
+    }}
+    {...panelProps} />
   <Info isOpen={isInfoOpen} />
 
   <Profile />
   <div class="flex h-[calc(100vh-206px)] flex-col">
-    {#if appCtx.isAdmin()}
+    {#if panelProps.isAdmin}
       <div class="flex-grow-1 flex min-h-0 flex-shrink-0 flex-col">
-        <Admin />
+        <Admin {...panelProps} />
       </div>
+    {/if}
+    <div class="flex-grow-1 flex min-h-0 flex-shrink-0 flex-col">
+      <Language {...panelProps} />
+    </div>
+    {#if !panelProps.isAdmin}
       <div class="flex-grow-1 flex min-h-0 flex-shrink-0 flex-col">
-        <Language defaultOpen={false} />
-      </div>
-    {:else}
-      <div class="flex-grow-1 flex min-h-0 flex-shrink-0 flex-col">
-        <Language />
-      </div>
-      <div class="flex-grow-1 flex min-h-0 flex-shrink-0 flex-col">
-        <Contributor />
+        <Contributor {...panelProps} />
       </div>
       <div class="flex-grow-1 flex max-h-[calc(50vh)] min-h-0 flex-shrink-0 flex-col">
-        <DefaultMap />
+        <DefaultMap {...panelProps} />
       </div>
       <div class="flex-grow-1 flex max-h-[calc(50vh)] min-h-0 flex-shrink-0 flex-col">
-        <Experimental />
+        <Experimental {...panelProps} />
       </div>
     {/if}
   </div>
