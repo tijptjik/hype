@@ -44,7 +44,6 @@ const appCtx = setAppCtx(queryClient, $session.data?.user as SessionUser | null)
 onMount(async () => {
   try {
     // To minimize the payload in Cloudflare, we are manually inserting mapping dependencies here as they are heavy
-    console.log('loading maplibre');
     // and the max worker size in the free tier is 1 MB
     await loadScript('https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js');
     const maplibre = monkeyPatchMapLibre();
