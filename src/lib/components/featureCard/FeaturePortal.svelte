@@ -43,8 +43,12 @@ $effect(() => {
   }
 });
 
-let rightOpen = $derived(appCtx.state.panels.filters || appCtx.state.panels.settings);
-let leftOpen = $derived(appCtx.state.panels.maps || appCtx.state.panels.stars);
+let rightOpen = $derived(
+  appCtx.state.isPanelOpen.filters || appCtx.state.isPanelOpen.settings
+);
+let leftOpen = $derived(
+  appCtx.state.isPanelOpen.prisms || appCtx.state.isPanelOpen.stars
+);
 
 function getOffset() {
   const boundsMap = document.getElementById('map')?.getBoundingClientRect();
