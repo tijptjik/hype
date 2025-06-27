@@ -9,9 +9,14 @@ import { getAppCtx } from '$lib/context/app.svelte';
 import Icon from '$lib/components/common/Icon.svelte';
 import { Trophy, CheckCircle } from '@steeze-ui/heroicons';
 import Section from '$lib/components/panels/common/Section.svelte';
+// TYPES
+import type { PanelProps } from '$lib/types';
 
 // CONTEXT
 const appCtx = getAppCtx();
+
+// PROPS
+let { ...panelProps }: PanelProps = $props();
 
 // STATE
 let showSuccessIndicator = $state(false);

@@ -1,10 +1,17 @@
 <script lang="ts">
-import { slide } from 'svelte/transition';
-import { ChevronDown, ChevronRight } from '@steeze-ui/heroicons';
-import Icon from '$lib/components/common/Icon.svelte';
+// COMPONENTS
+import SectionHeader from '../elements/SectionHeader.svelte';
+import SectionContent from '../elements/SectionContent.svelte';
+// SERVICES
+import { navigateOnAdmin } from '$lib/navigation';
+// TYPES
 import type { IconSource } from '@steeze-ui/heroicons';
+import type { PanelProps } from '$lib/types';
+import type { FirstClassResource } from '$lib/enums';
 
+// PROPS
 let {
+  resourceType,
   title,
   icon,
   iconVerticalPaddingClass = 'py-3',
@@ -13,74 +20,64 @@ let {
   defaultOpen = true,
   children,
   collapsedContent = undefined,
-  position = 'left'
-} = $props<{
+  ...panelProps
+}: {
+  resourceType?: FirstClassResource;
   title: string;
-  icon: string | IconSource; // Path to SVG file
+  icon: string | IconSource;
   iconVerticalPaddingClass?: string;
   iconColorClass?: string;
   description?: string;
   defaultOpen?: boolean;
   children?: any;
   collapsedContent?: any;
-  position?: 'left' | 'right';
-}>();
+} & PanelProps = $props();
 
+// STATE
 let isOpen = $state(defaultOpen);
 
-const toggle = (e: MouseEvent) => {
+const onToggle = (e: MouseEvent) => {
   e.stopPropagation();
   isOpen = !isOpen;
+};
+
+const onNavigate = (e: MouseEvent) => {
+  e.preventDefault();
+  e.stopPropagation();
+
+  if (panelProps.isAdmin) {
+    if (!panelProps.adminCtx || !panelProps.active) {
+      return;
+    }
+    if (
+      resourceType == panelProps.active.resourceType &&
+      panelProps.active.resourceRef == false
+    ) {
+      onToggle(e);
+    } else {
+      navigateOnAdmin(panelProps.adminCtx, resourceType ?? false);
+    }
+  } else {
+  }
 };
 </script>
 
 <section
   class="flex min-h-0 flex-col overflow-hidden bg-black caret-transparent {isOpen
     ? 'flex-grow-0'
-    : 'flex-shrink-0'} {position === 'left' ? 'pr-4' : ''}">
-  <button
-    class="flex w-full flex-shrink-0 items-center justify-between px-4 {iconVerticalPaddingClass} bg-black text-base-content focus:outline-none focus:ring-0 {iconColorClass ==
-    'text-secondary'
-      ? 'focus-visible:text-secondary'
-      : iconColorClass == 'text-accent'
-        ? 'focus-visible:text-accent'
-        : 'focus-visible:text-primary'}"
-    onclick={toggle}
-    aria-expanded={isOpen}
-    tabindex="0">
-    <div class="flex items-center gap-3">
-      <div class="space-y-0.5">
-        <div class="flex items-center gap-3">
-          <Icon src={isOpen ? ChevronDown : ChevronRight} class="h-[18px] w-[18px]" />
-          <h3 class="text-sm uppercase tracking-widest">
-            {title}
-          </h3>
-        </div>
-        {#if description}
-          <p class="text-left text-sm text-base-content/60">{description}</p>
-        {/if}
-      </div>
-    </div>
-
-    {#if typeof icon === 'string'}
-      <img src={icon} alt="" class="h-12 text-base-content/60" aria-hidden="true" />
-    {:else}
-      <Icon
-        src={icon}
-        class="h-12 w-8 {iconColorClass} translate-x-0.5"
-        aria-hidden="true" />
-    {/if}
-  </button>
-
-  {#if isOpen && children}
-    <div
-      class="flex min-h-0 flex-grow flex-col bg-black caret-white"
-      transition:slide={{ duration: 200 }}>
-      {@render children()}
-    </div>
-  {:else if collapsedContent}
-    <div class="flex min-h-6 flex-shrink-0 flex-grow flex-col">
-      {@render collapsedContent()}
-    </div>
-  {/if}
+    : 'flex-shrink-0'} {panelProps.position === 'left' && !panelProps.isNarrow
+    ? 'pr-4'
+    : ''}">
+  <SectionHeader
+    {resourceType}
+    {title}
+    {icon}
+    {iconVerticalPaddingClass}
+    {iconColorClass}
+    {description}
+    {isOpen}
+    {onToggle}
+    {onNavigate}
+    {...panelProps} />
+  <SectionContent {isOpen} {children} {collapsedContent} {...panelProps} />
 </section>

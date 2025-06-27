@@ -11,12 +11,12 @@ import { getAppCtx } from '$lib/context/app.svelte';
 // ENUMS
 import { supportedLocales, localeNames } from '$lib/enums';
 // TYPES
-import type { UserPreferences } from '$lib/types';
+import type { UserPreferences, PanelProps } from '$lib/types';
 
 // CONTEXT
 const appCtx = getAppCtx();
 
-const { defaultOpen = true } = $props();
+const { ...panelProps }: PanelProps = $props();
 
 // Ensure user preferences object exists and is reactive
 const userPreferences: UserPreferences = $derived(appCtx.getUserPreferences());
@@ -62,7 +62,7 @@ let advancedOpen = $state(false);
   title={m.settings__language()}
   icon="/language.svg"
   position="right"
-  {defaultOpen}
+  defaultOpen={panelProps.isAdmin ? false : true}
   iconVerticalPaddingClass="py-3 pr-4.5">
   <div class="flex flex-col gap-4 px-4 caret-transparent">
     <!-- Primary Language Section -->

@@ -15,7 +15,7 @@ import { Squares2x2 } from '@steeze-ui/heroicons';
 // SERVICES
 import { filterUserFeaturesByHierarchy } from '$lib/client/services/userFeatures';
 // TYPES
-import type { Organisation, Project, Layer, Feature } from '$lib/types';
+import type { UserFeatureWithHierarchy } from '$lib/types';
 
 // CONTEXT
 const appCtx = getAppCtx();
@@ -25,7 +25,7 @@ const omniCtx = getOmniContext();
 let searchTerm = $state('');
 
 // Get wishlisted features with hierarchy
-let wishlistedFeaturesPromise = $derived(
+let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
   (async () => {
     if (!appCtx.state.userFeatures.wishlisted) return [];
 

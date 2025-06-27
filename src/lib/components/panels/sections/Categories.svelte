@@ -4,10 +4,10 @@ import { m } from '$lib/i18n';
 // SERVICES
 import { getGroupedClassifierProperties } from '$lib/client/services/property';
 // COMPONENTS
-import CategorySection from '$lib/components/panels/filters/CategorySection.svelte';
-import CategoryFilter from '$lib/components/panels/filters/CategoryFilter.svelte';
-import RangeFilter from '$lib/components/panels/filters/RangeFilter.svelte';
-import SelectedFilters from '$lib/components/panels/filters/SelectedFilters.svelte';
+import CategorySection from '$lib/components/panels/sections/CategorySection.svelte';
+import CategoryFilter from '$lib/components/panels/controls/CategoryFilter.svelte';
+import RangeFilter from '$lib/components/panels/controls/RangeFilter.svelte';
+import SelectedFilters from '$lib/components/panels/elements/SelectedFilters.svelte';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
