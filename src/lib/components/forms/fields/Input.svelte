@@ -1,7 +1,7 @@
 <script lang="ts">
 import { getValues, updateForm, getId } from '$lib/index';
 // COMPONENTS
-import FormInput from '../elements/Input.svelte';
+import FormInput from '$lib/components/forms/elements/Input.svelte';
 import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
 import FieldLabel from '$lib/components/forms/labels/Field.svelte';
 // TYPES
@@ -27,10 +27,6 @@ let {
 // STATE : FORM
 let { form, constraints, errors } = fieldProps.form;
 
-// STATE : LOCAL
-let inputValue = $state('');
-let isGenAI = $state(false);
-
 // EFFECT : SYNC WITH FORM
 let fieldValues = $derived(
   getValues(
@@ -42,6 +38,10 @@ let fieldValues = $derived(
     fieldKey
   )
 )!;
+
+// STATE : LOCAL
+let inputValue = $state('');
+let isGenAI = $derived(fieldValues.isGenAI);
 
 // STATE : DERIVED
 let id = $derived(
@@ -55,8 +55,7 @@ let id = $derived(
   )
 );
 
-// HANDLERS
-function handleChange(newValue: string) {
+function syncToForm(newValue: string, isGenAI: boolean) {
   updateForm(
     form,
     field,
@@ -65,22 +64,33 @@ function handleChange(newValue: string) {
     fieldIndex,
     fieldKey,
     newValue,
-    false // Set to false when human edits the field
+    isGenAI // Set to false when human edits the field
   );
+}
+
+// HANDLERS
+function handleChange(newValue: string) {
+  syncToForm(newValue, false);
+}
+
+function handleToggleGenAI(e: MouseEvent) {
+  e.stopPropagation();
+  e.preventDefault();
+  console.log('toggle genai');
+  // isGenAI = !isGenAI;
+  syncToForm(fieldValues.value as string, (isGenAI = !isGenAI));
 }
 </script>
 
 <label class="form-control w-full" for={id} aria-label={field.label}>
-  <FieldLabel {field} {fieldRoot} {fieldIndex} {fieldKey} {constraints} />
-  <div class="group relative rounded-lg bg-neutral pl-2 pr-3">
-    <FormInput
-      bind:value={fieldValues.value as string}
-      bind:isGenAI={fieldValues.isGenAI as boolean}
-      {id}
-      locale={locale as Locale}
-      {...field}
-      onchange={handleChange} />
-  </div>
+  <FieldLabel
+    {field}
+    locale={locale as Locale}
+    {fieldRoot}
+    {fieldIndex}
+    {fieldKey}
+    {constraints}
+    isTranslated={field.isTranslated} />
   <ErrorLabel
     {errors}
     {field}
@@ -88,4 +98,18 @@ function handleChange(newValue: string) {
     {fieldRoot}
     {fieldIndex}
     {fieldKey} />
+  <div class="group relative">
+    <!-- Input field with its background -->
+    <div
+      class="rounded-lg bg-glass-100 pl-2 pr-3 focus-within:ring-2 focus-within:ring-primary">
+      <FormInput
+        {id}
+        bind:value={fieldValues.value as string}
+        bind:isGenAI={fieldValues.isGenAI as boolean}
+        locale={locale as Locale}
+        {...field}
+        onchange={handleChange}
+        onToggleGenAI={handleToggleGenAI} />
+    </div>
+  </div>
 </label>
