@@ -2,6 +2,7 @@
 // SVELTE
 import { watch } from 'runed';
 import { fade } from 'svelte/transition';
+import { untrack } from 'svelte';
 // LIB
 import { NEW_TITLE, NEW_REF } from '$lib';
 // I18N
@@ -13,12 +14,11 @@ import { page } from '$app/state';
 // CONTEXT
 import { setForm } from '$lib/context/form.svelte';
 import { getAdminCtx } from '$lib/context/admin.svelte';
+// ICONS
+import { MapPin as FeatureIcon } from '@steeze-ui/heroicons';
 // PROVIDERS
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // COMPONENTS
-import Header from '$lib/components/resources/headers/EntityHeader.svelte';
-import HeaderButton from '$lib/components/layout/HeaderButton.svelte';
-import EntityActions from '$lib/components/menu/EntityActions.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
 import FeatureActions from '$lib/components/forms/actions/Feature.svelte';
 import InfoContent from '$lib/components/forms/info/FeatureCore.svelte';
@@ -30,6 +30,7 @@ import AddressComponentSection from '$lib/components/forms/sections/AddressCompo
 import GallerySection from '$lib/components/forms/sections/Gallery.svelte';
 import ViewerSection from '$lib/components/forms/sections/Viewer.svelte';
 import CanonicalImage from '$lib/components/forms/sections/CanonicalImage.svelte';
+import Scrollbar from '$lib/components/common/scrollbars/Scrollbar.svelte';
 // ENUMS
 import { FirstClassResource, ImageContextResource } from '$lib/enums';
 // TYPES
@@ -44,8 +45,13 @@ import type {
   OrganisationDB,
   Image
 } from '$lib/types';
+
 // CONTEXT
 const adminCtx = getAdminCtx();
+
+// ELEMENTS
+let vietportElement: HTMLDivElement | undefined = $state();
+let contentsElement: HTMLFormElement | undefined = $state();
 
 // CONFIG
 const FIELDS: FormFieldConfig = {
@@ -156,6 +162,28 @@ let title = $derived(
   pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.title || NEW_TITLE
 );
 
+// HEADER SETUP
+$effect(() => {
+  const facetTabs = new Map();
+  facetTabs.set('core', m.feature__core());
+  facetTabs.set('address', m.feature__address());
+  if (adminCtx.activeResourceRef !== 'new') {
+    facetTabs.set('images', m.feature__images());
+  }
+
+  untrack(() => adminCtx.setHeaderForEntity(title, FeatureIcon, facetTabs));
+
+  // Set form context for header actions
+  adminCtx.appCtx.setFormContext(form);
+});
+
+// Clean up form context when component unmounts
+$effect(() => {
+  return () => {
+    adminCtx.appCtx.clearFormContext();
+  };
+});
+
 // UTILS
 function handleMapFullscreenChange(isFullscreen: boolean): void {
   isMapFullscreen = isFullscreen;
@@ -175,26 +203,7 @@ function handleMapCollapse(): void {
 {/snippet}
 
 <!-- LAYOUT -->
-<div class="flex h-full flex-col bg-black">
-  <Header {title}>
-    {#snippet menuItems()}
-      <HeaderButton
-        facet={{ label: m.feature__core(), ref: 'core' }}
-        isActive={adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false} />
-      <HeaderButton
-        facet={{ label: m.feature__address(), ref: 'address' }}
-        isActive={adminCtx.activeFacet === 'address'} />
-      {#if adminCtx.activeResourceRef !== 'new'}
-        <HeaderButton
-          facet={{ label: m.feature__images(), ref: 'images' }}
-          isActive={adminCtx.activeFacet === 'images'} />
-      {/if}
-    {/snippet}
-
-    {#snippet actions()}
-      <EntityActions {form} />
-    {/snippet}
-  </Header>
+<div class="relative h-full w-full overflow-hidden" bind:this={vietportElement}>
   {#if adminCtx.appCtx.isInitialised && pageProps.data.validatedForm}
     {#await adminCtx.appCtx.getHierarchy(pageProps.data.validatedForm.data as Feature) then { organisation, project }}
       <ImageProvider
@@ -214,42 +223,47 @@ function handleMapCollapse(): void {
           role="form"
           transition:fade
           data-testid="featureForm"
-          class="min-h-0 flex-1">
-          <main
-            class="flex h-full min-h-0 flex-1 flex-row gap-6 overflow-visible bg-black pl-6 pt-6">
-            <div
-              class="relative h-full overflow-hidden rounded-lg pb-6 transition-all duration-300 ease-in-out @container"
-              class:flex-[0_0_3%]={isMapCollapsed}
-              class:overflow-visible={isMapCollapsed}
-              class:flex-[0_0_100%]={isMapFullscreen}
-              class:flex-[0_0_33%]={!isMapFullscreen && !isMapCollapsed}>
-              <MapSection
-                {form}
-                fields={FIELDS.map}
-                toggleFullscreen={handleMapFullscreenChange}
-                toggleCollapsed={handleMapCollapse} />
+          class="mb-12 h-full overflow-y-auto">
+          <main class="flex h-full min-h-0 flex-1 flex-row gap-6 overflow-visible pl-6">
+            {#if adminCtx.activeFacet !== 'images'}
               <div
-                class="absolute bottom-6 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex">
-                <UserAttributionCard
-                  userId={pageProps.data.validatedForm.data.contributorId}
-                  date={pageProps.data.validatedForm.data.createdAt ?? undefined}
-                  type="contributor" />
-                <UserAttributionCard
-                  userId={pageProps.data.validatedForm.data.publisherId}
-                  date={pageProps.data.validatedForm.data.publishedAt ?? undefined}
-                  type="publisher" />
+                class="relative h-full overflow-hidden rounded-lg pb-6 pt-6 transition-all duration-300 ease-in-out @container"
+                class:flex-[0_0_3%]={isMapCollapsed}
+                class:overflow-visible={isMapCollapsed}
+                class:flex-[0_0_100%]={isMapFullscreen}
+                class:flex-[0_0_33%]={!isMapFullscreen && !isMapCollapsed}>
+                <MapSection
+                  {form}
+                  fields={FIELDS.map}
+                  toggleFullscreen={handleMapFullscreenChange}
+                  toggleCollapsed={handleMapCollapse} />
+                <div
+                  class="absolute bottom-6 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex">
+                  <UserAttributionCard
+                    userId={pageProps.data.validatedForm.data.contributorId}
+                    date={pageProps.data.validatedForm.data.createdAt ?? undefined}
+                    type="contributor" />
+                  <UserAttributionCard
+                    userId={pageProps.data.validatedForm.data.publisherId}
+                    date={pageProps.data.validatedForm.data.publishedAt ?? undefined}
+                    type="publisher" />
+                </div>
               </div>
-            </div>
+            {/if}
             <div
-              class="h-full overflow-y-auto transition-all duration-300 ease-in-out"
+              class="h-full overflow-y-auto pt-6 transition-all duration-300 ease-in-out"
               class:flex-[0_0_0%]={isMapFullscreen}
               class:overflow-hidden={isMapFullscreen}
               class:opacity-0={isMapFullscreen}
               class:w-[400px]={isMapFullscreen}
               class:h-[400px]={isMapFullscreen}
-              class:flex-[0_0_96%]={isMapCollapsed}
-              class:flex-[0_0_66%]={!isMapFullscreen && !isMapCollapsed}
-              class:opacity-100={!isMapFullscreen}>
+              class:flex-[0_0_100%]={adminCtx.activeFacet === 'images'}
+              class:flex-[0_0_96%]={isMapCollapsed && adminCtx.activeFacet !== 'images'}
+              class:flex-[0_0_66%]={!isMapFullscreen &&
+                !isMapCollapsed &&
+                adminCtx.activeFacet !== 'images'}
+              class:opacity-100={!isMapFullscreen}
+              bind:this={contentsElement}>
               <div
                 class="pb-6 pr-6 {adminCtx.activeFacet === 'images' ? 'h-full' : ''}">
                 <div
@@ -286,30 +300,25 @@ function handleMapCollapse(): void {
                       {/if}
                     </div>
                   {:else if adminCtx.activeFacet === 'address'}
-                    <AddressComponentSection
-                      {form}
-                      title={m.admin__forms_feature_address_components_title()}
-                      fields={FIELDS.address as FormField & FormFieldNested} />
                     <AddressSection
                       {form}
                       title={m.admin__forms_feature_addressing_title()}
                       subtitle={m.admin__forms_feature_addressing_subtitle()}
                       fields={FIELDS.address as FormField & FormFieldNested} />
+                    <AddressComponentSection
+                      {form}
+                      title={m.admin__forms_feature_address_components_title()}
+                      fields={FIELDS.address as FormField & FormFieldNested} />
                   {:else if adminCtx.activeFacet === 'images' && pageProps.data.entity !== NEW_REF}
                     <div
-                      class="flex h-full min-h-0 flex-col items-stretch gap-6 overflow-hidden">
-                      <div class="min-h-0 flex-1 overflow-hidden">
-                        <ViewerSection
-                          {form}
-                          title={m.admin__forms_feature_viewer_title()}
-                          fields={FIELDS.viewer as FormFieldNested} />
-                      </div>
-                      <div class="flex-none">
-                        <GallerySection
-                          {form}
-                          title={m.admin__forms_feature_gallery_title()}
-                          fields={FIELDS.gallery as FormFieldNested} />
-                      </div>
+                      class="flex h-full min-h-0 w-full flex-row overflow-hidden pt-1">
+                      <ViewerSection
+                        {form}
+                        title={m.admin__forms_feature_gallery_title()}
+                        fields={FIELDS.viewer as FormFieldNested} />
+                      <GallerySection
+                        {form}
+                        fields={FIELDS.gallery as FormFieldNested} />
                     </div>
                   {/if}
                 </div>
@@ -324,5 +333,20 @@ function handleMapCollapse(): void {
         <div class="text-error">{m.blue_long_felix_bask()}</div>
       </div>
     {/await}
+  {/if}
+  {#if vietportElement && contentsElement}
+    <Scrollbar
+      viewport={vietportElement}
+      contents={contentsElement}
+      showThumbOnTrackEnter={true}
+      margin={{
+        top: 8,
+        bottom: 0
+      }}
+      width={{
+        track: 24,
+        thumb: 8,
+        thumbActive: 12
+      }} />
   {/if}
 </div>
