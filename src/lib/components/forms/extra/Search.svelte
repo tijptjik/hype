@@ -158,15 +158,17 @@ const resetResults = () => (searchResults = []);
 </script>
 
 {#if searchMode}
-  <div transition:slide={{ duration: 200 }} class="relative bg-base-200">
-    <div class="form-control">
-      <div class="input-group relative">
+  <div
+    transition:slide={{ duration: 200 }}
+    class="relative mt-3 rounded-lg bg-glass-300">
+    <div class="py-2">
+      <div class="relative">
         <input
           id="search"
           data-testid="userSearchBar"
           type="text"
           placeholder={`Search ${apiPath}...`}
-          class="input m-0 h-12 w-full rounded-none bg-neutral px-6 pr-10 text-sm caret-white focus:border-none focus:outline-none"
+          class="m-0 h-12 w-full bg-transparent px-6 pr-10 text-sm caret-white focus:border-none focus:outline-none"
           bind:value={searchQuery}
           onkeydown={(e) => handleInputKeydown(e)}
           onkeyup={(e) => handleInputKeyup(e)}
@@ -187,17 +189,17 @@ const resetResults = () => (searchResults = []);
       <div
         class="absolute z-50 w-full caret-transparent"
         transition:slide={{ duration: 200 }}>
-        <ul
+        <div
           id="search-results"
-          class="max-h-64 w-full overflow-y-auto rounded-b-lg bg-base-100 shadow-lg"
+          class="flex max-h-[296px] w-full flex-col gap-2 overflow-y-auto rounded-b-lg pt-2 shadow-lg"
           role="listbox">
           {#each searchResults as result, index ((result as any).id)}
             {@const item = result as any}
             {@const isUser = 'email' in item}
             {@const isOrganisation = 'code' in item && !('email' in item)}
-            <li class="search-result-item">
+            <div class="search-result-item">
               <button
-                class="flex w-full items-center justify-between px-4 py-3 text-left first:rounded-t-lg last:rounded-b-lg hover:bg-base-200 focus:bg-base-200 focus:outline-none"
+                class="flex w-full items-center justify-between bg-glass-result px-4 py-3 text-left first:rounded-t-lg last:rounded-b-lg hover:bg-glass-100 focus:bg-glass-100 focus:outline-none"
                 data-testid={`searchResultItem_${index}`}
                 data-item-id={(item as any).id}
                 onclick={(e) => addItem(e, item)}
@@ -216,7 +218,7 @@ const resetResults = () => (searchResults = []);
                           </div>
                           <img
                             src={item.image}
-                            class="relative h-10 w-10 rounded-full object-cover opacity-0 transition-opacity duration-200"
+                            class="relative h-10 w-10 rounded-full bg-accent object-cover opacity-0 transition-opacity duration-200"
                             onload={(e) => {
                               (e.currentTarget as HTMLImageElement).style.opacity = '1';
                               e.currentTarget.previousElementSibling?.remove();
@@ -304,9 +306,9 @@ const resetResults = () => (searchResults = []);
                   <Icon src={ChevronRight} class="h-4 w-4 text-base-content/40" />
                 </div>
               </button>
-            </li>
+            </div>
           {/each}
-        </ul>
+        </div>
       </div>
     {/if}
   </div>
