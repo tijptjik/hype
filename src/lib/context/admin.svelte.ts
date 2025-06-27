@@ -44,14 +44,15 @@ import type {
   CurrentUser,
   UserPreferences,
   AdminPreferences,
-  FeatureFromCollection
+  FeatureFromCollection,
+  NavigableResource
 } from '../types';
-import { goto } from '$app/navigation';
+import type { IconSource } from '@steeze-ui/svelte-icon';
 
 // State type for AdminCtx - only includes admin-specific state
 type AdminResourceState = {
   active: {
-    resourceType: FirstClassResource | false;
+    resourceType: NavigableResource | false;
     resourceRef: Id | Code | false;
     facet: FacetType | false;
   };
@@ -77,16 +78,130 @@ type AdminResourceState = {
 // Only affect the current route/view they are applied on, not the underlying data or map view
 
 const defaultFilters = {
-  organisation: { text: '', properties: {}, isPublished: null, isArchived: false },
-  project: { text: '', properties: {}, isPublished: null, isArchived: false },
-  layer: { text: '', properties: {}, isPublished: null, isArchived: false },
-  feature: { text: '', properties: {}, isPublished: null, isArchived: false },
-  task: { text: '', properties: {}, isReviewed: false },
-  hub: { text: '', properties: {}, isArchived: false },
+  organisation: { text: '', properties: {} },
+  project: { text: '', properties: {} },
+  layer: { text: '', properties: {} },
+  feature: { text: '', properties: {} },
+  task: { text: '', properties: {} },
+  hub: { text: '', properties: {} },
   property: { text: '', properties: {} }
 };
 
 const viewFilters: ViewFilters = {
+  organisation: {
+    // Status related
+    isPublished: null,
+    isArchived: false,
+
+    // Image related
+    hasImage: null,
+
+    // Authorship related
+    hasName: null,
+    hasContextualName: null,
+    hasDescription: null,
+
+    // Translation related
+    translationLocales: {
+      en: false, // Default: English not selected
+      'zh-hant': true,
+      'zh-hans': true
+    },
+    isNameTranslated: {
+      en: null,
+      'zh-hant': null,
+      'zh-hans': null
+    },
+    isContextualNameTranslated: {
+      en: null,
+      'zh-hant': null,
+      'zh-hans': null
+    },
+    isDescriptionTranslated: {
+      en: null,
+      'zh-hant': null,
+      'zh-hans': null
+    }
+  },
+  project: {
+    // Status related
+    isPublished: null,
+    isArchived: false,
+
+    // Image related
+    hasImage: null,
+
+    // Authorship related
+    hasName: null,
+    hasContextualName: null,
+    hasDescription: null,
+    hasAttribution: null,
+    hasLicense: null,
+
+    // Translation related
+    translationLocales: {
+      en: false,
+      'zh-hant': true,
+      'zh-hans': true
+    },
+    isNameTranslated: {
+      en: null,
+      'zh-hant': null,
+      'zh-hans': null
+    },
+    isContextualNameTranslated: {
+      en: null,
+      'zh-hant': null,
+      'zh-hans': null
+    },
+    isDescriptionTranslated: {
+      en: null,
+      'zh-hant': null,
+      'zh-hans': null
+    },
+    isAttributionTranslated: {
+      en: null,
+      'zh-hant': null,
+      'zh-hans': null
+    },
+    isLicenseTranslated: {
+      en: null,
+      'zh-hant': null,
+      'zh-hans': null
+    }
+  },
+  layer: {
+    // Status related
+    isPublished: null,
+    isArchived: false,
+
+    // Authorship related
+    hasName: null,
+    hasContextualName: null,
+    hasDescription: null,
+
+    // Translation related
+    translationLocales: {
+      en: false,
+      'zh-hant': true,
+      'zh-hans': true
+    },
+    isNameTranslated: {
+      en: null,
+      'zh-hant': null,
+      'zh-hans': null
+    },
+    isContextualNameTranslated: {
+      en: null,
+      'zh-hant': null,
+      'zh-hans': null
+    },
+    isDescriptionTranslated: {
+      en: null,
+      'zh-hant': null,
+      'zh-hans': null
+    }
+  },
   feature: {
     // Status related
     isPublished: null,
@@ -133,6 +248,44 @@ const viewFilters: ViewFilters = {
     },
     // Property related
     properties: {} as Record<Id, FilterTriState>
+  },
+  task: {
+    // Status related
+    isReviewed: null
+  },
+  hub: {
+    // Status related
+    isArchived: false,
+
+    // Image related
+    hasImage: null,
+
+    // Authorship related
+    hasName: null,
+    hasContextualName: null,
+    hasDescription: null,
+
+    // Translation related
+    translationLocales: {
+      en: false,
+      'zh-hant': false,
+      'zh-hans': false
+    },
+    isNameTranslated: {
+      en: null,
+      'zh-hant': null,
+      'zh-hans': null
+    },
+    isContextualNameTranslated: {
+      en: null,
+      'zh-hant': null,
+      'zh-hans': null
+    },
+    isDescriptionTranslated: {
+      en: null,
+      'zh-hant': null,
+      'zh-hans': null
+    }
   }
 };
 
@@ -249,7 +402,7 @@ export class AdminCtx {
   // ACTIVE RESOURCES
   // ═══════════════════════
 
-  activeResourceType: FirstClassResource | false = $derived(
+  activeResourceType: NavigableResource | false = $derived(
     this.state.active.resourceType
   );
   activeResourceRef: Id | Code | false = $derived(this.state.active.resourceRef);
@@ -259,26 +412,70 @@ export class AdminCtx {
   // ACTIVE RESOURCE :: SETTERS
   // ═══════════════════════
 
-  setResourceType(resource: FirstClassResource | false): void {
+  setResourceType(resource: NavigableResource | false): void {
+    // TODO Remove from AdminCtc
     this.state.active.resourceType = resource;
+    this.appCtx.setActiveResourceType(resource);
   }
 
-  setResourceRef(ref: Id | Code | false, resource?: FirstClassResource): void {
+  setResourceRef(ref: Id | Code | false, resource?: NavigableResource): void {
+    // TODO Remove from AdminCtx
     // If the new entity is a different resource type to the current entity, update the state
     if (resource) {
       this.setResourceType(resource);
     }
     this.state.active.resourceRef = ref;
+    this.appCtx.setActiveResourceRef(ref);
   }
 
   setFacet(
     facet: FacetType | false,
     ref?: Id | Code | false,
-    resource?: FirstClassResource
+    resource?: NavigableResource
   ): void {
+    // TODO Remove from AdminCtx
     if (ref !== undefined) this.setResourceRef(ref);
     if (resource) this.setResourceType(resource);
     this.state.active.facet = facet;
+    this.appCtx.setActiveFacet(facet);
+  }
+
+  // ═══════════════════════
+  // HEADER MANAGEMENT
+  // ═══════════════════════
+
+  setHeaderForIndex(title: string, icon: IconSource): void {
+    this.appCtx.setHeaderState({
+      icon,
+      title,
+      facetTabs: new Map(),
+      actions: {
+        showAddButton: true,
+        showSearch: true,
+        showLayoutModes: true,
+        showControlModes: true,
+        showFormActions: false
+      }
+    });
+  }
+
+  setHeaderForEntity(
+    title: string,
+    icon: IconSource,
+    facetTabs: Map<FacetType, string>
+  ): void {
+    this.appCtx.setHeaderState({
+      icon,
+      title,
+      facetTabs,
+      actions: {
+        showAddButton: false,
+        showSearch: false,
+        showLayoutModes: false,
+        showControlModes: false,
+        showFormActions: true
+      }
+    });
   }
 
   // ═══════════════════════
@@ -290,7 +487,7 @@ export class AdminCtx {
       FirstClassResource.task,
       this.appCtx.state.prisms.organisation,
       this.appCtx.state.prisms.project,
-      this.state.filters[FirstClassResource.task].isReviewed
+      this.state.viewFilters[FirstClassResource.task].isReviewed
     ];
   }
 
@@ -317,12 +514,12 @@ export class AdminCtx {
         params.append('isArchived', 'false');
       }
     } else if (resource === FirstClassResource.task) {
-      const isReviewed = this.state.filters[FirstClassResource.task].isReviewed;
+      const isReviewed = this.state.viewFilters[FirstClassResource.task].isReviewed;
       if (isReviewed !== null) {
         params.append('isReviewed', isReviewed!.toString());
       }
     }
-    // PRoperties have no filters
+    // Properties have no filters
 
     if (includeFilters) {
       // Add prism filters based on resource hierarchy
@@ -421,24 +618,19 @@ export class AdminCtx {
   // ADMIN FILTERS
   // ═══════════════════════
 
-  getFilteredResource = <T extends Organisation | Project | Layer | Feature | Hub>(
+  getFilteredResource = <
+    T extends Organisation | Project | Layer | Feature | Hub | Task
+  >(
     resource: FirstClassResource | HierarchicalResource,
     filters = { text: true, state: true }
   ): T[] => {
-    // TODO Remove these filterkeys / or move them to a more logical place
-    let filterKeys = ['isPublished', 'isArchived'];
     let query = this.state.filters[resource as keyof AdminFilterStates].text || '';
     // FULL SET
     let result = this.appCtx.state.resources[
       resource as keyof FilteredResources
     ] as T[];
-    // TIER 2 FILTERS :: (App Wide)
-    // TODO Since we've temoved the toggles from the UI this will do nothing
-    if (filters.state) {
-      result = result.filter((entity) =>
-        filterKeys.every((key) => this.booleanFilter(resource, entity, key))
-      );
-    }
+    // TIER 2 FILTERS :: Boolean State :: (App Wide)
+    // TODO Implement these filters if the data responses get too large.
     // TIER 2 FILTERS :: Text :: (App Wide)
     if (filters.text && resource !== FirstClassResource.hub) {
       result = result.filter((entity: T) => {
@@ -456,12 +648,28 @@ export class AdminCtx {
   };
 
   getViewFilteredResource = <T extends Resource>(resource: FirstClassResource): T[] => {
+    // HUB
+    if (resource === FirstClassResource.hub) {
+      const entities = this.getFilteredHub();
+      return this.applyHubViewFilters(entities) as T[];
+    }
+    // TASKS
+    if (resource === FirstClassResource.task) {
+      const entities = this.getFilteredTask();
+      return this.applyTaskViewFilters(entities) as T[];
+    }
+    // HIERARCHICAL RESOURCES
     const entities = this.getFilteredResource(resource);
 
     if (resource === FirstClassResource.feature) {
       return this.applyFeatureViewFilters(entities) as T[];
+    } else if (resource === FirstClassResource.organisation) {
+      return this.applyOrganisationViewFilters(entities) as T[];
+    } else if (resource === FirstClassResource.project) {
+      return this.applyProjectViewFilters(entities) as T[];
+    } else if (resource === FirstClassResource.layer) {
+      return this.applyLayerViewFilters(entities) as T[];
     }
-    // TODO: Implement view filters for other resource types
     return entities as T[];
   };
 
@@ -660,20 +868,6 @@ export class AdminCtx {
       const allLocalesMatch = [...activeLocales].every((locale) => {
         const filterValue = filters[filterKey]?.[locale];
         if (filterValue === null) return true;
-
-        // Debug logging for specific feature
-        if (feature.id === '-7dU5oH9HEYk' && textField === 'description') {
-          console.log(`FILTER DEBUG ${feature.id} - ${locale} ${textField}:`, {
-            hasAnyManualContent,
-            multiLocaleStatus,
-            filterValue,
-            willMatch:
-              filterValue === true
-                ? multiLocaleStatus === true
-                : multiLocaleStatus === false
-          });
-        }
-
         // Use multi-locale status for filtering
         if (filterValue === true) {
           return multiLocaleStatus === true; // ALL locales must be translated
@@ -833,6 +1027,738 @@ export class AdminCtx {
     return true;
   };
 
+  // ═══════════════════════
+  // ORGANISATION VIEW FILTERS
+  // ═══════════════════════
+
+  applyOrganisationViewFilters = (entities: Resource[]): Resource[] => {
+    const organisations = entities as Organisation[];
+    const filters = this.state.viewFilters.organisation;
+    if (!filters) return organisations;
+
+    // Determine active locales from filter state
+    const activeLocales = new Set<Locale>();
+    for (const [locale, isActive] of Object.entries(filters.translationLocales)) {
+      if (isActive) {
+        activeLocales.add(locale as Locale);
+      }
+    }
+
+    return organisations.filter((organisation) => {
+      if (!this.filterOrganisationByStatus(organisation, filters)) return false;
+      if (!this.filterOrganisationByAuthorship(organisation, filters)) return false;
+      if (!this.filterOrganisationByTranslation(organisation, filters, activeLocales))
+        return false;
+      if (!this.filterOrganisationByImages(organisation, filters)) return false;
+      return true;
+    });
+  };
+
+  private filterOrganisationByStatus = (
+    organisation: Organisation,
+    filters: ViewFilters['organisation']
+  ): boolean => {
+    if (
+      filters.isPublished !== null &&
+      organisation.isPublished !== filters.isPublished
+    )
+      return false;
+    if (filters.isArchived !== null && organisation.isArchived !== filters.isArchived)
+      return false;
+    return true;
+  };
+
+  private filterOrganisationByAuthorship = (
+    organisation: Organisation,
+    filters: ViewFilters['organisation']
+  ): boolean => {
+    if (!organisation.i18n) {
+      if (
+        filters.hasName === true ||
+        filters.hasContextualName === true ||
+        filters.hasDescription === true
+      )
+        return false;
+      return true;
+    }
+
+    const allLocales = Object.keys(organisation.i18n) as Locale[];
+
+    if (filters.hasName !== null) {
+      const hasName = allLocales.some(
+        (locale) =>
+          organisation.i18n?.[locale]?.name &&
+          organisation.i18n[locale]!.name!.length > 1 &&
+          !organisation.i18n[locale]!.nameGen
+      );
+      if (hasName !== filters.hasName) return false;
+    }
+
+    if (filters.hasContextualName !== null) {
+      const hasContextualName = allLocales.some(
+        (locale) =>
+          organisation.i18n?.[locale]?.nameShort &&
+          organisation.i18n[locale]!.nameShort!.length > 1 &&
+          !organisation.i18n[locale]!.nameShortGen
+      );
+      if (hasContextualName !== filters.hasContextualName) return false;
+    }
+
+    if (filters.hasDescription !== null) {
+      const hasDescription = allLocales.some(
+        (locale) =>
+          organisation.i18n?.[locale]?.description &&
+          organisation.i18n[locale]!.description!.length > 1 &&
+          !organisation.i18n[locale]!.descriptionGen
+      );
+      if (hasDescription !== filters.hasDescription) return false;
+    }
+
+    return true;
+  };
+
+  private filterOrganisationByTranslation = (
+    organisation: Organisation,
+    filters: ViewFilters['organisation'],
+    activeLocales: Set<Locale>
+  ): boolean => {
+    const translationChecks: {
+      filterKey:
+        | 'isNameTranslated'
+        | 'isContextualNameTranslated'
+        | 'isDescriptionTranslated';
+      textField: 'name' | 'nameShort' | 'description';
+      genField: 'nameGen' | 'nameShortGen' | 'descriptionGen';
+    }[] = [
+      { filterKey: 'isNameTranslated', textField: 'name', genField: 'nameGen' },
+      {
+        filterKey: 'isContextualNameTranslated',
+        textField: 'nameShort',
+        genField: 'nameShortGen'
+      },
+      {
+        filterKey: 'isDescriptionTranslated',
+        textField: 'description',
+        genField: 'descriptionGen'
+      }
+    ];
+
+    for (const { filterKey, textField, genField } of translationChecks) {
+      const isAnyLocaleFiltered = [...activeLocales].some(
+        (locale) => filters[filterKey]?.[locale] !== null
+      );
+      if (!isAnyLocaleFiltered) continue;
+
+      // First, check if ANY locale has manual (non-generated) content for this field
+      const hasAnyManualContent = Object.values(organisation.i18n ?? {}).some(
+        (i18n: any) => {
+          const text = i18n?.[textField];
+          const isGenerated = i18n?.[genField] ?? false;
+          return text && typeof text === 'string' && text.length > 0 && !isGenerated;
+        }
+      );
+
+      // Calculate multi-locale translation status - ALL active locales must be translated for TRUE
+      const calculateMultiLocaleTranslationStatus = (): boolean | null => {
+        if (!hasAnyManualContent) {
+          return null; // No manual content anywhere
+        }
+
+        // Check if ALL active locales have manual translation
+        const allActiveLocalesTranslated = [...activeLocales].every((locale) => {
+          const i18n = organisation.i18n?.[locale];
+          if (!i18n) return false; // No entry for this locale
+
+          const text = i18n[textField as keyof typeof i18n];
+          const isGenerated = i18n[genField as keyof typeof i18n] ?? false;
+
+          return text && typeof text === 'string' && text.length > 0 && !isGenerated;
+        });
+
+        return allActiveLocalesTranslated;
+      };
+
+      const multiLocaleStatus = calculateMultiLocaleTranslationStatus();
+
+      const allLocalesMatch = [...activeLocales].every((locale) => {
+        const filterValue = filters[filterKey]?.[locale];
+        if (filterValue === null) return true;
+        // Use multi-locale status for filtering
+        if (filterValue === true) {
+          return multiLocaleStatus === true; // ALL locales must be translated
+        } else {
+          return multiLocaleStatus === false; // Some locales are not translated (but manual content exists)
+        }
+      });
+
+      if (!allLocalesMatch) return false;
+    }
+
+    return true;
+  };
+
+  private filterOrganisationByImages = (
+    organisation: Organisation,
+    filters: ViewFilters['organisation']
+  ): boolean => {
+    if (filters.hasImage !== null) {
+      const hasImages = organisation.image ? true : false;
+      if (filters.hasImage !== hasImages) return false;
+    }
+    return true;
+  };
+
+  // ═══════════════════════
+  // PROJECT VIEW FILTERS
+  // ═══════════════════════
+
+  applyProjectViewFilters = (entities: Resource[]): Resource[] => {
+    const projects = entities as Project[];
+    const filters = this.state.viewFilters.project;
+    if (!filters) return projects;
+
+    // Determine active locales from filter state
+    const activeLocales = new Set<Locale>();
+    for (const [locale, isActive] of Object.entries(filters.translationLocales)) {
+      if (isActive) {
+        activeLocales.add(locale as Locale);
+      }
+    }
+
+    return projects.filter((project) => {
+      if (!this.filterProjectByStatus(project, filters)) return false;
+      if (!this.filterProjectByAuthorship(project, filters)) return false;
+      if (!this.filterProjectByTranslation(project, filters, activeLocales))
+        return false;
+      if (!this.filterProjectByImages(project, filters)) return false;
+      return true;
+    });
+  };
+
+  private filterProjectByStatus = (
+    project: Project,
+    filters: ViewFilters['project']
+  ): boolean => {
+    if (filters.isPublished !== null && project.isPublished !== filters.isPublished)
+      return false;
+    if (filters.isArchived !== null && project.isArchived !== filters.isArchived)
+      return false;
+    return true;
+  };
+
+  private filterProjectByAuthorship = (
+    project: Project,
+    filters: ViewFilters['project']
+  ): boolean => {
+    if (!project.i18n) {
+      if (
+        filters.hasName === true ||
+        filters.hasContextualName === true ||
+        filters.hasDescription === true ||
+        filters.hasAttribution === true ||
+        filters.hasLicense === true
+      )
+        return false;
+      return true;
+    }
+
+    const allLocales = Object.keys(project.i18n) as Locale[];
+
+    if (filters.hasName !== null) {
+      const hasName = allLocales.some(
+        (locale) =>
+          project.i18n?.[locale]?.name &&
+          project.i18n[locale]!.name!.length > 1 &&
+          !project.i18n[locale]!.nameGen
+      );
+      if (hasName !== filters.hasName) return false;
+    }
+
+    if (filters.hasContextualName !== null) {
+      const hasContextualName = allLocales.some(
+        (locale) =>
+          project.i18n?.[locale]?.nameShort &&
+          project.i18n[locale]!.nameShort!.length > 1 &&
+          !project.i18n[locale]!.nameShortGen
+      );
+      if (hasContextualName !== filters.hasContextualName) return false;
+    }
+
+    if (filters.hasDescription !== null) {
+      const hasDescription = allLocales.some(
+        (locale) =>
+          project.i18n?.[locale]?.description &&
+          project.i18n[locale]!.description!.length > 1 &&
+          !project.i18n[locale]!.descriptionGen
+      );
+      if (hasDescription !== filters.hasDescription) return false;
+    }
+
+    if (filters.hasAttribution !== null) {
+      const hasAttribution = allLocales.some(
+        (locale) =>
+          project.i18n?.[locale]?.attribution &&
+          project.i18n[locale]!.attribution!.length > 1 &&
+          !project.i18n[locale]!.attributionGen
+      );
+      if (hasAttribution !== filters.hasAttribution) return false;
+    }
+
+    if (filters.hasLicense !== null) {
+      const hasLicense = allLocales.some(
+        (locale) =>
+          project.i18n?.[locale]?.license &&
+          project.i18n[locale]!.license!.length > 1 &&
+          !project.i18n[locale]!.licenseGen
+      );
+      if (hasLicense !== filters.hasLicense) return false;
+    }
+
+    return true;
+  };
+
+  private filterProjectByTranslation = (
+    project: Project,
+    filters: ViewFilters['project'],
+    activeLocales: Set<Locale>
+  ): boolean => {
+    const translationChecks: {
+      filterKey:
+        | 'isNameTranslated'
+        | 'isContextualNameTranslated'
+        | 'isDescriptionTranslated'
+        | 'isAttributionTranslated'
+        | 'isLicenseTranslated';
+      textField: 'name' | 'nameShort' | 'description' | 'attribution' | 'license';
+      genField:
+        | 'nameGen'
+        | 'nameShortGen'
+        | 'descriptionGen'
+        | 'attributionGen'
+        | 'licenseGen';
+    }[] = [
+      { filterKey: 'isNameTranslated', textField: 'name', genField: 'nameGen' },
+      {
+        filterKey: 'isContextualNameTranslated',
+        textField: 'nameShort',
+        genField: 'nameShortGen'
+      },
+      {
+        filterKey: 'isDescriptionTranslated',
+        textField: 'description',
+        genField: 'descriptionGen'
+      },
+      {
+        filterKey: 'isAttributionTranslated',
+        textField: 'attribution',
+        genField: 'attributionGen'
+      },
+      { filterKey: 'isLicenseTranslated', textField: 'license', genField: 'licenseGen' }
+    ];
+
+    for (const { filterKey, textField, genField } of translationChecks) {
+      const isAnyLocaleFiltered = [...activeLocales].some(
+        (locale) => filters[filterKey]?.[locale] !== null
+      );
+      if (!isAnyLocaleFiltered) continue;
+
+      // First, check if ANY locale has manual (non-generated) content for this field
+      const hasAnyManualContent = Object.values(project.i18n ?? {}).some(
+        (i18n: any) => {
+          const text = i18n?.[textField];
+          const isGenerated = i18n?.[genField] ?? false;
+          return text && typeof text === 'string' && text.length > 0 && !isGenerated;
+        }
+      );
+
+      // Calculate multi-locale translation status - ALL active locales must be translated for TRUE
+      const calculateMultiLocaleTranslationStatus = (): boolean | null => {
+        if (!hasAnyManualContent) {
+          return null; // No manual content anywhere
+        }
+
+        // Check if ALL active locales have manual translation
+        const allActiveLocalesTranslated = [...activeLocales].every((locale) => {
+          const i18n = project.i18n?.[locale];
+          if (!i18n) return false; // No entry for this locale
+
+          const text = i18n[textField as keyof typeof i18n];
+          const isGenerated = i18n[genField as keyof typeof i18n] ?? false;
+
+          return text && typeof text === 'string' && text.length > 0 && !isGenerated;
+        });
+
+        return allActiveLocalesTranslated;
+      };
+
+      const multiLocaleStatus = calculateMultiLocaleTranslationStatus();
+
+      const allLocalesMatch = [...activeLocales].every((locale) => {
+        const filterValue = filters[filterKey]?.[locale];
+        if (filterValue === null) return true;
+        // Use multi-locale status for filtering
+        if (filterValue === true) {
+          return multiLocaleStatus === true; // ALL locales must be translated
+        } else {
+          return multiLocaleStatus === false; // Some locales are not translated (but manual content exists)
+        }
+      });
+
+      if (!allLocalesMatch) return false;
+    }
+
+    return true;
+  };
+
+  private filterProjectByImages = (
+    project: Project,
+    filters: ViewFilters['project']
+  ): boolean => {
+    if (filters.hasImage !== null) {
+      const hasImages = project.image ? true : false;
+      if (filters.hasImage !== hasImages) return false;
+    }
+    return true;
+  };
+
+  // ═══════════════════════
+  // LAYER VIEW FILTERS
+  // ═══════════════════════
+
+  applyLayerViewFilters = (entities: Resource[]): Resource[] => {
+    const layers = entities as Layer[];
+    const filters = this.state.viewFilters.layer;
+    if (!filters) return layers;
+
+    // Determine active locales from filter state
+    const activeLocales = new Set<Locale>();
+    for (const [locale, isActive] of Object.entries(filters.translationLocales)) {
+      if (isActive) {
+        activeLocales.add(locale as Locale);
+      }
+    }
+
+    return layers.filter((layer) => {
+      if (!this.filterLayerByStatus(layer, filters)) return false;
+      if (!this.filterLayerByAuthorship(layer, filters)) return false;
+      if (!this.filterLayerByTranslation(layer, filters, activeLocales)) return false;
+      return true;
+    });
+  };
+
+  private filterLayerByStatus = (
+    layer: Layer,
+    filters: ViewFilters['layer']
+  ): boolean => {
+    if (filters.isPublished !== null && layer.isPublished !== filters.isPublished)
+      return false;
+    if (filters.isArchived !== null && layer.isArchived !== filters.isArchived)
+      return false;
+    return true;
+  };
+
+  private filterLayerByAuthorship = (
+    layer: Layer,
+    filters: ViewFilters['layer']
+  ): boolean => {
+    if (!layer.i18n) {
+      if (
+        filters.hasName === true ||
+        filters.hasContextualName === true ||
+        filters.hasDescription === true
+      )
+        return false;
+      return true;
+    }
+
+    const allLocales = Object.keys(layer.i18n) as Locale[];
+
+    if (filters.hasName !== null) {
+      const hasName = allLocales.some(
+        (locale) =>
+          layer.i18n?.[locale]?.name &&
+          layer.i18n[locale]!.name!.length > 1 &&
+          !layer.i18n[locale]!.nameGen
+      );
+      if (hasName !== filters.hasName) return false;
+    }
+
+    if (filters.hasContextualName !== null) {
+      const hasContextualName = allLocales.some(
+        (locale) =>
+          layer.i18n?.[locale]?.nameShort &&
+          layer.i18n[locale]!.nameShort!.length > 1 &&
+          !layer.i18n[locale]!.nameShortGen
+      );
+      if (hasContextualName !== filters.hasContextualName) return false;
+    }
+
+    if (filters.hasDescription !== null) {
+      const hasDescription = allLocales.some(
+        (locale) =>
+          layer.i18n?.[locale]?.description &&
+          layer.i18n[locale]!.description!.length > 1 &&
+          !layer.i18n[locale]!.descriptionGen
+      );
+      if (hasDescription !== filters.hasDescription) return false;
+    }
+
+    return true;
+  };
+
+  private filterLayerByTranslation = (
+    layer: Layer,
+    filters: ViewFilters['layer'],
+    activeLocales: Set<Locale>
+  ): boolean => {
+    const translationChecks: {
+      filterKey:
+        | 'isNameTranslated'
+        | 'isContextualNameTranslated'
+        | 'isDescriptionTranslated';
+      textField: 'name' | 'nameShort' | 'description';
+      genField: 'nameGen' | 'nameShortGen' | 'descriptionGen';
+    }[] = [
+      { filterKey: 'isNameTranslated', textField: 'name', genField: 'nameGen' },
+      {
+        filterKey: 'isContextualNameTranslated',
+        textField: 'nameShort',
+        genField: 'nameShortGen'
+      },
+      {
+        filterKey: 'isDescriptionTranslated',
+        textField: 'description',
+        genField: 'descriptionGen'
+      }
+    ];
+
+    for (const { filterKey, textField, genField } of translationChecks) {
+      const isAnyLocaleFiltered = [...activeLocales].some(
+        (locale) => filters[filterKey]?.[locale] !== null
+      );
+      if (!isAnyLocaleFiltered) continue;
+
+      // First, check if ANY locale has manual (non-generated) content for this field
+      const hasAnyManualContent = Object.values(layer.i18n ?? {}).some((i18n: any) => {
+        const text = i18n?.[textField];
+        const isGenerated = i18n?.[genField] ?? false;
+        return text && typeof text === 'string' && text.length > 0 && !isGenerated;
+      });
+
+      // Calculate multi-locale translation status - ALL active locales must be translated for TRUE
+      const calculateMultiLocaleTranslationStatus = (): boolean | null => {
+        if (!hasAnyManualContent) {
+          return null; // No manual content anywhere
+        }
+
+        // Check if ALL active locales have manual translation
+        const allActiveLocalesTranslated = [...activeLocales].every((locale) => {
+          const i18n = layer.i18n?.[locale];
+          if (!i18n) return false; // No entry for this locale
+
+          const text = i18n[textField as keyof typeof i18n];
+          const isGenerated = i18n[genField as keyof typeof i18n] ?? false;
+
+          return text && typeof text === 'string' && text.length > 0 && !isGenerated;
+        });
+
+        return allActiveLocalesTranslated;
+      };
+
+      const multiLocaleStatus = calculateMultiLocaleTranslationStatus();
+
+      const allLocalesMatch = [...activeLocales].every((locale) => {
+        const filterValue = filters[filterKey]?.[locale];
+        if (filterValue === null) return true;
+        // Use multi-locale status for filtering
+        if (filterValue === true) {
+          return multiLocaleStatus === true; // ALL locales must be translated
+        } else {
+          return multiLocaleStatus === false; // Some locales are not translated (but manual content exists)
+        }
+      });
+
+      if (!allLocalesMatch) return false;
+    }
+
+    return true;
+  };
+
+  // ═══════════════════════
+  // TASK VIEW FILTERS
+  // ═══════════════════════
+
+  applyTaskViewFilters = (entities: Resource[]): Resource[] => {
+    const tasks = entities as Task[];
+    const filters = this.state.viewFilters.task;
+    if (!filters) return tasks;
+
+    return tasks.filter((task) => {
+      if (!this.filterTaskByStatus(task, filters)) return false;
+      return true;
+    });
+  };
+
+  private filterTaskByStatus = (task: Task, filters: ViewFilters['task']): boolean => {
+    if (filters.isReviewed !== null && task.isReviewed !== filters.isReviewed)
+      return false;
+    return true;
+  };
+
+  // ═══════════════════════
+  // HUB VIEW FILTERS
+  // ═══════════════════════
+
+  applyHubViewFilters = (entities: Resource[]): Resource[] => {
+    const hubs = entities as Hub[];
+    const filters = this.state.viewFilters.hub;
+    if (!filters) return hubs;
+
+    // Determine active locales from filter state
+    const activeLocales = new Set<Locale>();
+    for (const [locale, isActive] of Object.entries(filters.translationLocales)) {
+      if (isActive) {
+        activeLocales.add(locale as Locale);
+      }
+    }
+
+    return hubs.filter((hub) => {
+      if (!this.filterHubByStatus(hub, filters)) return false;
+      if (!this.filterHubByAuthorship(hub, filters)) return false;
+      if (!this.filterHubByTranslation(hub, filters, activeLocales)) return false;
+      if (!this.filterHubByImages(hub, filters)) return false;
+      return true;
+    });
+  };
+
+  private filterHubByStatus = (hub: Hub, filters: ViewFilters['hub']): boolean => {
+    if (filters.isArchived !== null && hub.isArchived !== filters.isArchived)
+      return false;
+    return true;
+  };
+
+  private filterHubByAuthorship = (hub: Hub, filters: ViewFilters['hub']): boolean => {
+    const allLocales = Object.keys(hub.i18n || {}) as Locale[];
+
+    if (filters.hasName !== null) {
+      const hasName = allLocales.some(
+        (locale) =>
+          hub.i18n?.[locale]?.name &&
+          hub.i18n[locale]!.name!.length > 1 &&
+          !hub.i18n[locale]!.nameGen
+      );
+      if (hasName !== filters.hasName) return false;
+    }
+
+    if (filters.hasContextualName !== null) {
+      const hasContextualName = allLocales.some(
+        (locale) =>
+          hub.i18n?.[locale]?.nameShort &&
+          hub.i18n[locale]!.nameShort!.length > 1 &&
+          !hub.i18n[locale]!.nameShortGen
+      );
+      if (hasContextualName !== filters.hasContextualName) return false;
+    }
+
+    if (filters.hasDescription !== null) {
+      const hasDescription = allLocales.some(
+        (locale) =>
+          hub.i18n?.[locale]?.description &&
+          hub.i18n[locale]!.description!.length > 1 &&
+          !hub.i18n[locale]!.descriptionGen
+      );
+      if (hasDescription !== filters.hasDescription) return false;
+    }
+
+    return true;
+  };
+
+  private filterHubByTranslation = (
+    hub: Hub,
+    filters: ViewFilters['hub'],
+    activeLocales: Set<Locale>
+  ): boolean => {
+    const translationChecks: {
+      filterKey:
+        | 'isNameTranslated'
+        | 'isContextualNameTranslated'
+        | 'isDescriptionTranslated';
+      textField: 'name' | 'nameShort' | 'description';
+      genField: 'nameGen' | 'nameShortGen' | 'descriptionGen';
+    }[] = [
+      { filterKey: 'isNameTranslated', textField: 'name', genField: 'nameGen' },
+      {
+        filterKey: 'isContextualNameTranslated',
+        textField: 'nameShort',
+        genField: 'nameShortGen'
+      },
+      {
+        filterKey: 'isDescriptionTranslated',
+        textField: 'description',
+        genField: 'descriptionGen'
+      }
+    ];
+
+    for (const { filterKey, textField, genField } of translationChecks) {
+      const isAnyLocaleFiltered = [...activeLocales].some(
+        (locale) => filters[filterKey]?.[locale] !== null
+      );
+      if (!isAnyLocaleFiltered) continue;
+
+      // First, check if ANY locale has manual (non-generated) content for this field
+      const hasAnyManualContent = Object.values(hub.i18n ?? {}).some((i18n: any) => {
+        const text = i18n?.[textField];
+        const isGenerated = i18n?.[genField] ?? false;
+        return text && typeof text === 'string' && text.length > 0 && !isGenerated;
+      });
+
+      // Calculate multi-locale translation status - ALL active locales must be translated for TRUE
+      const calculateMultiLocaleTranslationStatus = (): boolean | null => {
+        if (!hasAnyManualContent) {
+          return null; // No manual content anywhere
+        }
+
+        // Check if ALL active locales have manual translation
+        const allActiveLocalesTranslated = [...activeLocales].every((locale) => {
+          const i18n = hub.i18n?.[locale];
+          if (!i18n) return false; // No entry for this locale
+
+          const text = i18n[textField as keyof typeof i18n];
+          const isGenerated = i18n[genField as keyof typeof i18n] ?? false;
+
+          return text && typeof text === 'string' && text.length > 0 && !isGenerated;
+        });
+
+        return allActiveLocalesTranslated;
+      };
+
+      const multiLocaleStatus = calculateMultiLocaleTranslationStatus();
+
+      const allLocalesMatch = [...activeLocales].every((locale) => {
+        const filterValue = filters[filterKey]?.[locale];
+        if (filterValue === null) return true;
+        // Use multi-locale status for filtering
+        if (filterValue === true) {
+          return multiLocaleStatus === true; // ALL locales must be translated
+        } else {
+          return multiLocaleStatus === false; // Some locales are not translated (but manual content exists)
+        }
+      });
+
+      if (!allLocalesMatch) return false;
+    }
+
+    return true;
+  };
+
+  private filterHubByImages = (hub: Hub, filters: ViewFilters['hub']): boolean => {
+    if (filters.hasImage !== null) {
+      // Hubs don't have direct image relationships, this filter is not applicable
+      return true;
+    }
+    return true;
+  };
+
   /**
    * Filters features by property presence and values.
    *
@@ -919,13 +1845,6 @@ export class AdminCtx {
     // FULL SET
     let result: Task[] = this.appCtx.state.resources.task;
 
-    // STATE FILTERS - isReviewed filter
-    if (this.state.filters.task.isReviewed !== null) {
-      result = result.filter((entity) =>
-        this.booleanFilter(FirstClassResource.task, entity, 'isReviewed')
-      );
-    }
-
     // TEXT FILTER
     if (query) {
       result = result.filter((entity) => {
@@ -959,10 +1878,13 @@ export class AdminCtx {
     // FULL SET
     let result: Hub[] = this.appCtx.state.resources.hub;
 
-    // STATE FILTERS
-    result = result.filter((entity) =>
-      ['isArchived'].every((key) => this.booleanFilter('hub' as any, entity, key))
-    );
+    // Use cache if state is empty but cache has data
+    if (result.length === 0) {
+      const cacheHubs = Array.from(this.appCtx.cache.hub.values());
+      if (cacheHubs.length > 0) {
+        result = cacheHubs;
+      }
+    }
 
     // TEXT FILTER - Simple text search on code and domain
     if (query) {
@@ -1017,51 +1939,38 @@ export class AdminCtx {
     // Explicitly access reactive dependencies so Svelte tracks them
     this.appCtx.state.resources.organisation;
     this.state.filters.organisation;
-    this.state.viewFilters.organisation;
     return this.getFilteredResource<Organisation>(FirstClassResource.organisation);
   });
   filteredProjects = $derived.by(() => {
     this.appCtx.state.resources.project;
     this.state.filters.project;
-    this.state.viewFilters.project;
     return this.getFilteredResource<Project>(FirstClassResource.project);
   });
   filteredLayers = $derived.by(() => {
     this.appCtx.state.resources.layer;
     this.state.filters.layer;
-    this.state.viewFilters.layer;
     return this.getFilteredResource<Layer>(FirstClassResource.layer);
   }) as Layer[];
   filteredFeatures = $derived.by(() => {
     this.appCtx.state.resources.feature;
     this.state.filters.feature;
-    this.state.viewFilters.feature;
     return this.getFilteredResource<Feature>(FirstClassResource.feature);
   });
   filteredTasks = $derived.by(() => {
     this.appCtx.state.resources.task;
     this.state.filters.task;
-    this.state.viewFilters.task;
     return this.getFilteredTask();
   });
   filteredHubs = $derived.by(() => {
     if (!this.appCtx.isSuperAdmin()) return [];
     this.appCtx.state.resources.hub;
     this.state.filters.hub;
-    this.state.viewFilters.hub;
     return this.getFilteredHub();
   });
 
   // ═══════════════════════
   // ADMIN FILTERS :: MUTATION
   // ═══════════════════════
-
-  toggleFilter = (
-    resource: FirstClassResource,
-    property: 'isPublished' | 'isArchived' | 'isReviewed'
-  ) => {
-    this.state.filters[resource][property] = !this.state.filters[resource][property];
-  };
 
   resetViewFilters = () => {
     this.state.viewFilters = structuredClone(viewFilters);
@@ -1145,7 +2054,7 @@ export const getAdminCtx = (): AdminCtx => {
               facet: false
             },
             filters: defaultFilters,
-            viewFilters: defaultFilters
+            viewFilters: viewFilters
           };
         if (prop === 'appCtx')
           return {
