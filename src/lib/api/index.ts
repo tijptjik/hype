@@ -329,12 +329,18 @@ async function prepareNewForm<T extends Record<string, unknown>>({
     initialData = mergeOrganisationRoles(initialData as Project, parentData.userRoles);
     // CASE : Layer
   } else if (isLayer(initialData as Resource) && isProject(parentData)) {
+    // Inject organisationId from project
+    initialData.organisationId = parentData.organisationId;
     initialData = mergeProjectProperties(
       initialData as Layer,
       parentData.properties || []
     );
     // CASE : Feature
   } else if (isFeature(initialData as Resource) && isLayer(parentData)) {
+    // Inject organisationId and projectId from layer
+    initialData.organisationId = parentData.organisationId;
+    initialData.projectId = parentData.projectId;
+
     const parentLayerWithCorrectI18n: Layer = {
       ...parentData,
       i18n: transformI18nSafely(parentData.i18n),
