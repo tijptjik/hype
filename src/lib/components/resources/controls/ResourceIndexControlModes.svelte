@@ -39,6 +39,7 @@ function toggleMode(modeKey: ControlMode) {
   } else {
     controlMode = modeKey;
   }
+  adminCtx.appCtx.setControlMode(controlMode);
 }
 </script>
 
