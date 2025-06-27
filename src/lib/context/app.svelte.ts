@@ -39,15 +39,19 @@ import type {
   AppContextState,
   Cache,
   Code,
+  ControlMode,
   CurrentUser,
   DeepPartial,
+  FacetType,
   Feature,
   FeatureFromCollection,
   FeatureI18nFieldKeys,
   Hub,
   Id,
   Layer,
+  LayoutMode,
   Locale,
+  NavigableResource,
   NewFeatureTask,
   Organisation,
   PanelState,
@@ -66,6 +70,8 @@ import type {
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
 import { MOBILE_MAX_WIDTH } from '$lib/index';
+import { feature } from '../db/schema/feature';
+import { layer } from '$lib/db/schema/layer';
 
 export class AppCtx {
   // Maplibre Map instance
@@ -149,11 +155,50 @@ export class AppCtx {
     // Distances from user -- The distances from the user to the features
     distancesFromUser: {},
     // Panels -- The panels that are open
-    panels: {
+    isPanelOpen: {
       filters: false,
       maps: false,
       stars: false,
-      settings: false
+      settings: false,
+      admin: false // Will be set based on user preferences during init
+    },
+    isPanelOpenVisually: { admin: false },
+    nav: {
+      resourceType: false,
+      resourceRef: false,
+      facet: false
+    },
+    // Header state for unified header system
+    header: {
+      icon: null,
+      title: '',
+      facetTabs: new Map(),
+      actions: {
+        showAddButton: false,
+        showSearch: false,
+        showLayoutModes: false,
+        showControlModes: false,
+        showFormActions: false
+      }
+    },
+    // UI state for each resource type
+    ui: {
+      controlMode: {
+        organisation: 'hidden',
+        project: 'hidden',
+        layer: 'hidden',
+        feature: 'filter',
+        task: 'filter',
+        hub: 'hidden'
+      },
+      layoutMode: {
+        organisation: 'card',
+        project: 'card',
+        layer: 'card',
+        feature: 'table',
+        task: 'table',
+        hub: 'card'
+      }
     }
   });
 
@@ -190,6 +235,9 @@ export class AppCtx {
   ]);
   userFeaturesQueryKey = ['userFeatures'];
   userQueryKey = ['user'];
+
+  // Form context reference for header form actions
+  formCtx: any = $state(null);
 
   // Constructor
   constructor(queryClient: QueryClient, user: SessionUser | null) {
@@ -615,7 +663,7 @@ export class AppCtx {
     }
 
     const currentActiveFeature = this.getActiveFeature();
-    let updatedItems: FeatureFromCollection[] = [];
+    let updatedItems: (FeatureFromCollection | Feature)[] = [];
 
     // Get updated items based on walk type
     if (activeCollection.id === 'stars') {
@@ -656,7 +704,7 @@ export class AppCtx {
           (f) => f.id === currentActiveFeature.id
         );
 
-        let nextFeature: FeatureFromCollection | null = null;
+        let nextFeature: FeatureFromCollection | Feature | null = null;
 
         // Try to get the next feature in the original list
         if (currentIndex >= 0 && currentIndex < updatedItems.length) {
@@ -742,6 +790,13 @@ export class AppCtx {
       this.state.prisms.layer =
         this.user.userLayers?.map((layer: UserLayer) => layer.layerId) ?? [];
     }
+
+    // Set admin panel state based on user preferences
+    if (this.isAdmin() && this.user && 'preferences' in this.user) {
+      const isPrimaryPanelCollapsed =
+        (this.user as CurrentUser).preferences?.admin?.isPrimaryPanelCollapsed ?? false;
+      this.state.isPanelOpen.admin = !isPrimaryPanelCollapsed;
+    }
   };
 
   // ═══════════════════════
@@ -758,6 +813,40 @@ export class AppCtx {
 
   getHubIdByCode = (code: Code): Id | undefined => {
     return this.hubCodeToId.get(code);
+  };
+
+  // ═══════════════════════
+  // CODE TO ID MAPPINGS
+  // ═══════════════════════
+
+  getOrganisationCodeById = (id: Id): Code | undefined => {
+    // Reverse lookup: find the code for a given ID
+    for (const [code, orgId] of this.organisationCodeToId) {
+      if (orgId === id) {
+        return code;
+      }
+    }
+    return undefined;
+  };
+
+  getProjectCodeById = (id: Id): Code | undefined => {
+    // Reverse lookup: find the code for a given ID
+    for (const [code, projectId] of this.projectCodeToId) {
+      if (projectId === id) {
+        return code;
+      }
+    }
+    return undefined;
+  };
+
+  getHubCodeById = (id: Id): Code | undefined => {
+    // Reverse lookup: find the code for a given ID
+    for (const [code, hubId] of this.hubCodeToId) {
+      if (hubId === id) {
+        return code;
+      }
+    }
+    return undefined;
   };
 
   // FILTERS
@@ -1054,6 +1143,24 @@ export class AppCtx {
   };
 
   // ================================================
+  // MODE METHODS
+  // ================================================
+
+  setLayoutMode = (mode: LayoutMode) => {
+    const resourceType = this.getActiveResourceType();
+    if (resourceType) {
+      this.state.ui.layoutMode[resourceType] = mode;
+    }
+  };
+
+  setControlMode = (mode: ControlMode) => {
+    const resourceType = this.getActiveResourceType();
+    if (resourceType) {
+      this.state.ui.controlMode[resourceType] = mode;
+    }
+  };
+
+  // ================================================
   // HIERARCHY METHODS
   // ================================================
 
@@ -1112,15 +1219,33 @@ export class AppCtx {
   };
 
   getHierarchy = async (
-    resource: FeatureFromCollection | Feature | Layer | Project | Organisation
+    resource: FeatureFromCollection | Feature | Layer | Project | Organisation | Task
   ): Promise<ResourceContext> => {
     // Determine what type of resource we have and build hierarchy accordingly
+    let feature: FeatureFromCollection | undefined;
     let layer: Layer | undefined;
     let project: Project | undefined;
     let organisation: Organisation | undefined;
 
-    if ('layerId' in resource) {
+    console.log(resource);
+
+    if ('featureId' in resource) {
       // Feature - get its layer, then project, then organisation
+      feature = (await this.getFeatureById(
+        resource.featureId
+      )) as FeatureFromCollection;
+      if (feature) {
+        layer = await this.getLayerById(feature.layerId);
+        if (layer) {
+          project = await this.getProjectById(layer.projectId);
+          if (project) {
+            organisation = await this.getOrganisationById(project.organisationId);
+          }
+        }
+      }
+    } else if ('layerId' in resource) {
+      // Feature - get its layer, then project, then organisation
+      feature = resource as FeatureFromCollection;
       layer = await this.getLayerById(resource.layerId);
       if (layer) {
         project = await this.getProjectById(layer.projectId);
@@ -1145,7 +1270,7 @@ export class AppCtx {
     }
 
     return {
-      feature: 'layerId' in resource ? (resource as Feature) : undefined,
+      feature,
       layer,
       project,
       organisation
@@ -1205,6 +1330,10 @@ export class AppCtx {
       getI18n(layer, 'nameShort', this.getUserPreferences()) ||
       getI18n(layer, 'name', this.getUserPreferences())
     );
+  };
+
+  getContextualFeatureName = (feature: FeatureFromCollection): string | null => {
+    return getI18n(feature, 'title', this.getUserPreferences());
   };
 
   // FEATURE COLLECTIONS
@@ -1294,7 +1423,8 @@ export class AppCtx {
     this.state.active.feature = null;
   };
 
-  getActiveFeature = (): FeatureFromCollection | null => this.state.active.feature;
+  getActiveFeature = (): FeatureFromCollection | Feature | null =>
+    this.state.active.feature;
 
   setActiveFeature = (
     featureId: Id,
@@ -1401,7 +1531,7 @@ export class AppCtx {
     this.zoomToFeatures([feature]);
   };
 
-  zoomToFeatures = (features?: FeatureFromCollection[]): void => {
+  zoomToFeatures = (features?: (FeatureFromCollection | Feature)[]): void => {
     if (!this.map) return;
 
     // Use provided features or current state features
@@ -1429,8 +1559,13 @@ export class AppCtx {
             top: 150,
             bottom: 50,
             right:
-              50 + (this.state.panels.filters || this.state.panels.settings ? 210 : 0),
-            left: 50 + (this.state.panels.maps || this.state.panels.stars ? 210 : 0)
+              50 +
+              (this.state.isPanelOpen.filters || this.state.isPanelOpen.settings
+                ? 210
+                : 0),
+            left:
+              50 +
+              (this.state.isPanelOpen.prisms || this.state.isPanelOpen.stars ? 210 : 0)
           };
     try {
       // Convert to WGS84 and get bounds
@@ -1527,7 +1662,7 @@ export class AppCtx {
   };
 
   // Public getter for features map (O(1) lookup, no rebuilding on access)
-  get features(): SvelteMap<Id, FeatureFromCollection> {
+  get features(): SvelteMap<Id, FeatureFromCollection | Feature> {
     return this.featuresMap;
   }
 
@@ -1558,20 +1693,20 @@ export class AppCtx {
 
   // FEATURE COLLECTIONS -- Utils
 
-  getFeaturesByIds = (ids: Id[]): FeatureFromCollection[] =>
+  getFeaturesByIds = (ids: Id[]): (FeatureFromCollection | Feature)[] =>
     ids.map((id) => this.features.get(id)).filter((f) => f !== undefined);
 
   // FEATURE COLLECTIONS -- Convenience Methods
 
-  getVisibleFeatures = (): FeatureFromCollection[] => {
+  getVisibleFeatures = (): (FeatureFromCollection | Feature)[] => {
     return this.getFeaturesByIds(this.featuresVisible);
   };
 
-  getWishlistedFeatures = (): FeatureFromCollection[] => {
+  getWishlistedFeatures = (): (FeatureFromCollection | Feature)[] => {
     return this.getFeaturesByIds(this.featuresWishlisted);
   };
 
-  getVisitedFeatures = (): FeatureFromCollection[] => {
+  getVisitedFeatures = (): (FeatureFromCollection | Feature)[] => {
     return this.getFeaturesByIds(this.featuresVisited);
   };
 
@@ -1579,11 +1714,64 @@ export class AppCtx {
     return this.expandToSubNeighbourhoods(neighbourhood);
   };
 
+  // Active Navigation State Methods
+
+  setActiveResourceType = (resourceType: NavigableResource | false): void => {
+    this.state.nav.resourceType = resourceType;
+  };
+
+  setActiveResourceRef = (
+    resourceRef: Id | false,
+    resourceType?: NavigableResource | false
+  ): void => {
+    if (resourceType) {
+      this.setActiveResourceType(resourceType);
+    }
+    this.state.nav.resourceRef = resourceRef;
+  };
+
+  setActiveFacet = (
+    facet: FacetType | false,
+    resourceRef?: Id | false,
+    resourceType?: NavigableResource | false
+  ): void => {
+    if (resourceRef) {
+      this.setActiveResourceRef(resourceRef, resourceType);
+    }
+    this.state.nav.facet = facet;
+  };
+
+  getActiveResourceType = (): NavigableResource | false => {
+    return this.state.nav.resourceType;
+  };
+  getActiveResourceRef = (): Id | false => {
+    return this.state.nav.resourceRef;
+  };
+  getActiveResourceId = (): Id | null => {
+    const activeResourceType = this.getActiveResourceType();
+    const resourceRef = this.getActiveResourceRef();
+    if (typeof resourceRef === 'string') {
+      if (activeResourceType == FirstClassResource.organisation) {
+        return this.getOrganisationIdByCode(resourceRef as Code) ?? null;
+      } else if (activeResourceType == FirstClassResource.project) {
+        return this.getProjectIdByCode(resourceRef as Code) ?? null;
+      } else if (activeResourceType == FirstClassResource.hub) {
+        return this.getHubIdByCode(resourceRef as Code) ?? null;
+      } else {
+        return resourceRef;
+      }
+    }
+    return null;
+  };
+  getActiveFacet = (): FacetType | false => {
+    return this.state.nav.facet;
+  };
+
   // Panel methods
   togglePanel = (panel: keyof PanelState, closeAll: boolean = false): void => {
     const leftPanels = ['maps', 'stars'];
     const rightPanels = ['filters', 'settings'];
-    const currentState = this.state.panels[panel];
+    const currentState = this.state.isPanelOpen[panel];
     // If left panel is open, close it when toggling a left panel
     if (leftPanels.includes(panel)) {
       this.closePanel(leftPanels.filter((p) => p !== panel)[0] as keyof PanelState);
@@ -1617,27 +1805,53 @@ export class AppCtx {
   };
 
   closeLeftPanel = (): void => {
-    this.state.panels.maps = false;
-    this.state.panels.stars = false;
+    this.state.isPanelOpen.prisms = false;
+    this.state.isPanelOpen.stars = false;
+    this.state.isPanelOpen.admin = false;
   };
 
   closeRightPanel = (): void => {
-    this.state.panels.filters = false;
-    this.state.panels.settings = false;
+    this.state.isPanelOpen.filters = false;
+    this.state.isPanelOpen.settings = false;
   };
 
   closeAllPanels = (): void => {
-    Object.keys(this.state.panels).forEach((panel) => {
-      this.state.panels[panel as keyof PanelState] = false;
+    Object.keys(this.state.isPanelOpen).forEach((panel) => {
+      this.state.isPanelOpen[panel as keyof PanelState] = false;
     });
   };
 
   openPanel = (panel: keyof PanelState): void => {
-    this.state.panels[panel] = true;
+    this.state.isPanelOpen[panel] = true;
   };
 
   closePanel = (panel: keyof PanelState): void => {
-    this.state.panels[panel] = false;
+    this.state.isPanelOpen[panel] = false;
+  };
+
+  isPanelOpen = (panel: keyof PanelState): boolean => {
+    return this.state.isPanelOpen[panel] ?? false;
+  };
+
+  isPanelNarrow = (panel: keyof PanelState): boolean => {
+    return (!this.isPanelOpenOrVisual('admin') && panel === 'admin') || false;
+  };
+
+  // Visual-only panel methods for auto-hide behavior
+  openPanelVisually = (panel: keyof PanelState): void => {
+    this.state.isPanelOpenVisually[panel] = true;
+  };
+
+  closePanelVisually = (panel: keyof PanelState): void => {
+    this.state.isPanelOpenVisually[panel] = false;
+  };
+
+  isPanelOpenVisually = (panel: keyof PanelState): boolean => {
+    return this.state.isPanelOpenVisually[panel] ?? false;
+  };
+
+  isPanelOpenOrVisual = (panel: keyof PanelState): boolean => {
+    return this.isPanelOpen(panel) || this.isPanelOpenVisually(panel);
   };
 
   // Refocus map on currently visible features
@@ -1661,10 +1875,18 @@ export class AppCtx {
     let keyMatched = false;
 
     if (event.key === '1') {
-      this.togglePanel('maps');
+      if (this.isAdmin()) {
+        this.togglePanel('admin');
+      } else {
+        this.togglePanel('prisms');
+      }
       keyMatched = true;
     } else if (event.key === '2') {
-      this.togglePanel('filters');
+      if (this.isAdmin()) {
+        this.togglePanel('settings');
+      } else {
+        this.togglePanel('filters');
+      }
       keyMatched = true;
     } else if (event.key === '3') {
       this.togglePanel('stars');
@@ -2115,6 +2337,68 @@ export class AppCtx {
       (item) => item.code,
       (item) => item.id
     );
+  };
+
+  // Header management methods
+  setHeaderState = (headerState: Partial<typeof this.state.header>): void => {
+    this.state.header = { ...this.state.header, ...headerState };
+  };
+
+  setFormContext = (formCtx: any): void => {
+    this.formCtx = formCtx;
+  };
+
+  clearFormContext = (): void => {
+    this.formCtx = null;
+  };
+
+  // Derived values for header
+  isIndex = $derived(this.state.nav.resourceRef === false);
+  headerResourceType = $derived(this.state.nav.resourceType);
+  headerResourceRef = $derived(this.state.nav.resourceRef);
+
+  getResourceByIdSync = (
+    resource: FirstClassResource,
+    id: Id
+  ): Resource | undefined => {
+    switch (resource) {
+      case FirstClassResource.organisation:
+        return this.cache.organisation.get(id);
+      case FirstClassResource.project:
+        return this.cache.project.get(id);
+      case FirstClassResource.layer:
+        return this.cache.layer.get(id);
+      case FirstClassResource.feature:
+        return this.features.get(id);
+      case FirstClassResource.task:
+        return this.cache.task.get(id);
+      case FirstClassResource.hub:
+        return this.cache.hub.get(id);
+    }
+  };
+
+  getResourceByRefSync = (
+    resource: FirstClassResource,
+    ref: Id | Code
+  ): Resource | undefined => {
+    switch (resource) {
+      case FirstClassResource.organisation:
+        return this.cache.organisation.get(
+          this.getOrganisationIdByCode(ref as Code) ?? (ref as Id)
+        );
+      case FirstClassResource.project:
+        return this.cache.project.get(
+          this.getProjectIdByCode(ref as Code) ?? (ref as Id)
+        );
+      case FirstClassResource.layer:
+        return this.cache.layer.get(ref as Id);
+      case FirstClassResource.feature:
+        return this.features.get(ref as Id);
+      case FirstClassResource.task:
+        return this.cache.task.get(ref as Id);
+      case FirstClassResource.hub:
+        return this.cache.hub.get(this.getHubIdByCode(ref as Code) ?? (ref as Id));
+    }
   };
 }
 export const APPCTX_KEY = Symbol('mapContext');
