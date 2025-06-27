@@ -9,9 +9,9 @@ import neighbourhoods from '$lib/map/neighbourhoods.json';
 // COMPONENTS
 import Section from '$lib/components/panels/common/Section.svelte';
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte';
-import FilteredNeighbourhood from '$lib/components/panels/filters/FilteredNeighbourhood.svelte';
+import FilteredNeighbourhood from '$lib/components/panels/common/variants/FilteredNeighbourhood.svelte';
 import ResourceContainer from '$lib/components/panels/common/ResourceContainer.svelte';
-import SelectedResources from '$lib/components/panels/common/SelectedResources.svelte';
+import SelectedResources from '$lib/components/panels/elements/SelectedResources.svelte';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 // TYPE
@@ -61,8 +61,7 @@ watch(
 
 {#snippet SelectedNeighbourhoods()}
   <SelectedResources
-    {appCtx}
-    type="neighbourhood"
+    resourceType="neighbourhood"
     resources={Object.entries(neighbourhoods).map(([id, data]) => ({
       ...data,
       id

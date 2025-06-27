@@ -22,7 +22,7 @@ const resetInput = async (e: Event) => {
 </script>
 
 <div
-  class="relative flex-shrink-0 flex-grow-0 {position == 'right' ? 'pl-4' : ''} "
+  class="relative flex-shrink-0 flex-grow-0 py-1 {position == 'right' ? 'pl-4' : ''} "
   transition:slide={{ duration: 200 }}>
   <input
     id="search"

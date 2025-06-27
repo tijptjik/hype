@@ -7,9 +7,13 @@ import { getAppCtx } from '$lib/context/app.svelte';
 // COMPONENTS
 import Section from '$lib/components/panels/common/Section.svelte';
 // TYPES
-import type { Layer, Project, Organisation } from '$lib/types';
+import type { Layer, Project, Organisation, PanelProps } from '$lib/types';
 
+// CONTEXT
 const appCtx = getAppCtx();
+
+// PROPS
+let { ...panelProps }: PanelProps = $props();
 
 // Enhanced layer type with project and organisation
 type EnhancedLayer = Layer & {

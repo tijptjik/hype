@@ -5,9 +5,11 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { QuestionMarkCircle, XCircle } from '@steeze-ui/heroicons';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
+// TYPES
+import type { PanelState } from '$lib/types';
 
-let { panel, title, subtitle, onToggleInfo } = $props<{
-  panel: string;
+let { panelType, title, subtitle, onToggleInfo } = $props<{
+  panelType: keyof PanelState;
   title: string;
   onToggleInfo?: (e: MouseEvent | TouchEvent) => void;
 }>();
@@ -18,7 +20,7 @@ const appCtx = getAppCtx();
 $effect(() => {
   const handler = (event: KeyboardEvent) => {
     if (event.key === 'Escape') {
-      appCtx.closePanel(panel);
+      appCtx.closePanel(panelType);
     }
   };
 
@@ -47,7 +49,7 @@ $effect(() => {
     <button
       class="btn btn-ghost btn-sm m-0 h-auto flex-none p-0 hover:bg-transparent hover:text-base-content/80 focus:outline-none focus:ring-0 focus-visible:text-primary"
       onclick={() => {
-        appCtx.closePanel(panel);
+        appCtx.closePanel(panelType);
       }}>
       <Icon src={XCircle} class="h-10 w-10 transition-transform duration-300" />
     </button>
