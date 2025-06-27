@@ -1,0 +1,121 @@
+<script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
+// CONTEXT
+import { getAppCtx } from '$lib/context/app.svelte';
+// COMPONENTS
+import Panel from '$lib/components/layout/Panel.svelte';
+import Header from '$lib/components/panels/common/Header.svelte';
+import Info from '$lib/components/panels/info/Maps.svelte';
+import Organisations from '$lib/components/panels/sections/Organisations.svelte';
+import Projects from '$lib/components/panels/sections/Projects.svelte';
+import Layers from '$lib/components/panels/sections/Layers.svelte';
+import FilteredLayer from '$lib/components/panels/common/variants/FilteredLayer.svelte';
+import FilteredResource from '$lib/components/panels/common/FilteredResource.svelte';
+// ENUMS
+import { FirstClassResource } from '$lib/enums';
+// TYPES
+import type {
+  Layer,
+  PanelProps,
+  Id,
+  ResourceContext,
+  Organisation,
+  Project
+} from '$lib/types';
+
+// CONTEXT
+const appCtx = getAppCtx();
+
+// STATE
+let isInfoOpen = $state(false);
+// svelte-ignore non_reactive_update
+let panelContainer: HTMLDivElement;
+
+let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
+  e.stopPropagation();
+  isInfoOpen = !isInfoOpen;
+  if (isInfoOpen) {
+    setTimeout(() => {
+      panelContainer?.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 300);
+  }
+};
+
+let panelProps: PanelProps = $derived({
+  panelType: 'prisms',
+  position: 'left',
+  scrollable: true,
+  inline: false,
+  isNarrow: false,
+  isAdmin: false,
+  active: {
+    resourceType: appCtx.getActiveResourceType(),
+    resourceRef: appCtx.getActiveResourceRef(),
+    resourceId: appCtx.getActiveResourceId(),
+    facet: appCtx.getActiveFacet()
+  }
+});
+</script>
+
+<Panel bind:panelContainer {...panelProps}>
+  <Header
+    {...panelProps}
+    title={m.maps__title()}
+    onToggleInfo={(e) => {
+      handleToggleInfo(e);
+    }} />
+  <Info isOpen={isInfoOpen} />
+  <div class="flex flex-col overflow-y-auto overscroll-none">
+    <div class="flex-grow-1 flex min-h-0 flex-col">
+      <Organisations {...panelProps}>
+        {#snippet filteredItem(resource: Organisation, selectedOrganisations: Id[])}
+          <FilteredResource
+            resourceType={FirstClassResource.organisation}
+            {resource}
+            selectedClass="bg-primary"
+            isSelected={selectedOrganisations.includes(resource.id)}
+            onToggle={() => appCtx.toggleOrganisation(resource.id)}
+            {...panelProps} />
+        {/snippet}
+      </Organisations>
+    </div>
+    <div class="flex-grow-1 flex min-h-0 flex-col">
+      <Projects {...panelProps}>
+        {#snippet filteredItem(
+          resource: Project,
+          selectedProjects: Id[],
+          hierarchy: ResourceContext
+        )}
+          <FilteredResource
+            resourceType={FirstClassResource.project}
+            {resource}
+            hierarchy={{
+              organisation: hierarchy.organisation
+            }}
+            selectedClass="bg-accent"
+            isSelected={selectedProjects.includes(resource.id)}
+            onToggle={() => appCtx.toggleProject(resource.id)}
+            {...panelProps} />
+        {/snippet}
+      </Projects>
+    </div>
+    <div class="flex-grow-4 flex min-h-0 flex-col">
+      <Layers {...panelProps}>
+        {#snippet filteredItem(
+          layer: Layer,
+          selectedLayers: Id[],
+          hierarchy: ResourceContext
+        )}
+          <FilteredLayer
+            {layer}
+            {hierarchy}
+            selectedClass="bg-secondary"
+            isSelected={selectedLayers.includes(layer.id)}
+            onClick={() => appCtx.toggleLayer(layer.id)}
+            {...panelProps} />
+        {/snippet}
+      </Layers>
+    </div>
+  </div>
+</Panel>
