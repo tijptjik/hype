@@ -1,37 +1,30 @@
 <script lang="ts">
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
-// SERVICES
-import { focusFirstChildOfResourceIndex } from '$lib/client/services/resource';
 // COMPONENTS
 import CompletionFooter from '$lib/components/layout/CompletionFooter.svelte';
-import ResourceHeader from '$lib/components/resources/headers/ResourceHeader.svelte';
 import ResourceIndex from '$lib/components/resources/ResourceIndex.svelte';
-import LayoutModes from '$lib/components/resources/controls/ResourceIndexLayoutModes.svelte';
-import ControlModes from '$lib/components/resources/controls/ResourceIndexControlModes.svelte';
-import FilterInput from '$lib/components/menu/FilterInput.svelte';
 import FilterControlBar from '$lib/components/resources/filters/features/Root.svelte';
 import FullScreenViewer from '$lib/components/modals/FullScreenViewer.svelte';
 import FeatureRow from '$lib/components/resources/rows/FeatureRow.svelte';
 import FeatureCard from '$lib/components/resources/cards/FeatureIndexCard.svelte';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
+// I18N
+import { m } from '$lib/i18n';
+// ICONS
+import { MapPin as FeatureIcon } from '@steeze-ui/heroicons';
 // TYPES
-import type {
-  Feature,
-  ControlMode,
-  LayoutMode,
-  ImageDB,
-  ImageDBBasic
-} from '$lib/types';
+import type { Feature, ImageDB, ImageDBBasic } from '$lib/types';
 
 // CONTEXT
 const adminCtx = getAdminCtx();
 adminCtx.setFacet(false, false, FirstClassResource.feature);
 
+// HEADER SETUP
+adminCtx.setHeaderForIndex(m.omni__title_features(), FeatureIcon);
+
 // STATE
-let layoutMode: LayoutMode = $state('table');
-let controlMode: ControlMode = $state('filter');
 let listContainer: HTMLElement | null = $state(null);
 
 // MODAL STATE
@@ -141,24 +134,7 @@ function updateRowFocus(index: number) {
 }
 </script>
 
-<!-- LAYOUT -->
-<ResourceHeader>
-  {#snippet filters()}
-    <FilterInput
-      resourceType={FirstClassResource.feature}
-      rounded={true}
-      showUnpublishedToggle={false}
-      showReviewedToggle={true}
-      ontabout={(e: KeyboardEvent) =>
-        focusFirstChildOfResourceIndex(e, listContainer)} />
-  {/snippet}
-  {#snippet modes()}
-    <ControlModes bind:controlMode defaultMode="filter" />
-    <LayoutModes bind:layoutMode defaultMode="table" />
-  {/snippet}
-</ResourceHeader>
-
-<ResourceIndex {entities} {layoutMode} {controlMode} bind:listContainer>
+<ResourceIndex {entities} bind:listContainer>
   {#snippet controlBar()}
     <FilterControlBar count={entities.length} />
   {/snippet}

@@ -2,15 +2,17 @@
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
-import ResourceHeader from '$lib/components/resources/headers/ResourceHeader.svelte';
 import ResourceIndex from '$lib/components/resources/ResourceIndex.svelte';
-import LayoutModes from '$lib/components/resources/controls/ResourceIndexLayoutModes.svelte';
-import ControlModes from '$lib/components/resources/controls/ResourceIndexControlModes.svelte';
 import EntityCard from '$lib/components/resources/EntityCard.svelte';
+import FilterControlBar from '$lib/components/resources/filters/projects/Root.svelte';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
+// I18N
+import { m } from '$lib/i18n';
+// ICONS
+import { Squares2x2 as ProjectIcon } from '@steeze-ui/heroicons';
 // TYPES
-import type { KeyMap, Project, LayoutMode, ControlMode } from '$lib/types';
+import type { KeyMap, Project } from '$lib/types';
 
 // CONFIG :: KEY MAP
 const keyMap: KeyMap = {
@@ -42,21 +44,19 @@ const keyMap: KeyMap = {
 const adminCtx = getAdminCtx();
 adminCtx.setFacet(false, false, FirstClassResource.project);
 
+// HEADER SETUP
+adminCtx.setHeaderForIndex(m.maps__projects(), ProjectIcon);
+
 // STATE
-let layoutMode: LayoutMode = $state('card');
-let controlMode: ControlMode = $state('filter');
-let entities: Project[] = $derived(adminCtx.filteredProjects);
+let entities: Project[] = $derived(
+  adminCtx.getViewFilteredResource<Project>(FirstClassResource.project)
+);
 </script>
 
-<!-- LAYOUT -->
-<ResourceHeader>
-  {#snippet modes()}
-    <ControlModes bind:controlMode defaultMode="filter" />
-    <LayoutModes bind:layoutMode defaultMode="card" />
+<ResourceIndex {entities}>
+  {#snippet controlBar()}
+    <FilterControlBar count={entities.length} />
   {/snippet}
-</ResourceHeader>
-
-<ResourceIndex {entities} {layoutMode} {controlMode}>
   {#snippet card(entity: Project)}
     <EntityCard {entity} {keyMap} />
   {/snippet}
