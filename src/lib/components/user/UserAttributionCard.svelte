@@ -57,12 +57,12 @@ async function fetchUser(id: string | null): Promise<UserData> {
   {#if userId}
     {#await userPromise}
       <div
-        class="flex min-w-[200px] items-center gap-3 rounded-lg bg-base-200/30 p-3 backdrop-blur-sm transition-all duration-200">
+        class="flex min-w-[200px] items-center gap-3 rounded-lg bg-glass-result p-3 backdrop-blur-sm transition-all duration-200">
         <div class="loading loading-ring loading-md min-h-12"></div>
       </div>
     {:then user}
       <div
-        class="flex min-w-[200px] items-center gap-3 rounded-lg bg-base-200/60 p-3 backdrop-blur-sm">
+        class="flex min-w-[200px] items-center gap-3 rounded-lg bg-glass-result p-3 backdrop-blur-sm">
         <Image
           src={user.image || ''}
           alt={user.name || 'Unknown User'}

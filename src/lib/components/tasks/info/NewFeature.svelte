@@ -2,12 +2,12 @@
 import { m } from '$lib/i18n';
 </script>
 
-<section>
+<section class="leading-7">
   <h3 class="mb-2 font-bold">{m.antsy_patient_moth_taste()}</h3>
   <p>
-    {m.strong_next_zebra_quiz()}
+    {@html m.strong_next_zebra_quiz()}
   </p>
-  <ul class="ml-6 mt-2 list-disc space-y-2">
+  <ul class="ml-6 mt-4 list-disc space-y-3">
     <li>
       <span class="font-semibold">{m.dull_mushy_dachshund_dare()}</span> - {m.awful_real_newt_lift()}
     </li>

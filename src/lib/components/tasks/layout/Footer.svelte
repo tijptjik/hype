@@ -1,7 +1,7 @@
 <script lang="ts">
-let { children }: { children: any } = $props();
+let { children } = $props();
 </script>
 
-<footer class="m-0 w-full flex-shrink-0 flex-grow-0 rounded-bl-xl bg-base-100 p-0">
+<div class="h-[232px] w-full flex-shrink-0 @container">
   {@render children()}
-</footer>
+</div>

@@ -32,15 +32,12 @@ const typeDisplay: Record<TaskType, string> = {
 };
 </script>
 
-<div class="flex flex-row items-center gap-4 text-lg">
-  <Icon src={ChevronRight} class="h-6 w-6" />
-  <h3 class="text-lg">
-    {typeDisplay[task.type as TaskType]}
-    <a
-      href={`${ADMIN_PATH}/features/${task.feature?.id}`}
-      onclick={(e) =>
-        navigateOnAdmin(adminCtx, FirstClassResource.feature, task.feature?.id)}
-      class="pl-3 text-sm text-base-content/50">
-      {getI18n(task.feature, 'title', appCtx.getUserPreferences())}</a>
-  </h3>
-</div>
+<h3 class=" text-xl font-bold uppercase">
+  {typeDisplay[task.type as TaskType]}
+  <a
+    href={`${ADMIN_PATH}/features/${task.feature?.id}`}
+    onclick={(e) =>
+      navigateOnAdmin(adminCtx, FirstClassResource.feature, task.feature?.id)}
+    class="pr-3 text-sm normal-case text-base-content/70 @sm:block">
+    {getI18n(task.feature, 'title', appCtx.getUserPreferences())}</a>
+</h3>
