@@ -2,6 +2,7 @@
 // SVELTE
 import { watch } from 'runed';
 import { fade } from 'svelte/transition';
+import { untrack } from 'svelte';
 // CONFIG
 import { NEW_TITLE } from '$lib';
 // I18N
@@ -10,27 +11,31 @@ import { m } from '$lib/i18n';
 // CONTEXT
 import { setForm } from '$lib/context/form.svelte';
 import { getAdminCtx } from '$lib/context/admin.svelte';
+// ICONS
+import { Users as OrganisationIcon } from '@steeze-ui/heroicons';
 // PROVIDERS
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // FLASH
 import { getFlash } from 'sveltekit-flash-message';
 import { page } from '$app/state';
 // COMPONENTS
-import Header from '$lib/components/resources/headers/EntityHeader.svelte';
-import HeaderButton from '$lib/components/layout/HeaderButton.svelte';
-import EntityActions from '$lib/components/menu/EntityActions.svelte';
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
 import SpecificationSection from '$lib/components/forms/sections/Specification.svelte';
 import ImageSection from '$lib/components/forms/sections/Image.svelte';
 import UserSection from '$lib/components/forms/sections/User.svelte';
 import OrganisationHubActions from '$lib/components/forms/actions/OrganisationHub.svelte';
+import Scrollbar from '$lib/components/common/scrollbars/Scrollbar.svelte';
 // ENUMS
 import { FirstClassResource, ImageContextResource } from '$lib/enums';
 // TYPES
-import type { FormPageProps, FormField, Organisation, Image } from '$lib/types';
+import type { FormPageProps, FormField, Organisation, Image, Id } from '$lib/types';
 
 // CONTEXT
 const adminCtx = getAdminCtx();
+
+// ELEMENTS
+let vietportElement: HTMLDivElement | undefined = $state();
+let contentsElement: HTMLFormElement | undefined = $state();
 
 // CONFIG
 const RESOURCE = FirstClassResource.organisation;
@@ -149,6 +154,27 @@ let { form: organisationForm } = form;
 let headerActions = $derived(
   $organisationForm.hubId ? organisationHubActionSnippet : undefined
 );
+
+// HEADER SETUP
+$effect(() => {
+  const facetTabs = new Map();
+  facetTabs.set('core', m.organisation__core());
+  if (adminCtx.activeResourceRef !== 'new') {
+    facetTabs.set('images', m.organisation__images());
+  }
+
+  untrack(() => adminCtx.setHeaderForEntity(title, OrganisationIcon, facetTabs));
+
+  // Set form context for header actions
+  adminCtx.appCtx.setFormContext(form);
+});
+
+// Clean up form context when component unmounts
+$effect(() => {
+  return () => {
+    adminCtx.appCtx.clearFormContext();
+  };
+});
 </script>
 
 {#snippet organisationHubActionSnippet()}
@@ -156,22 +182,7 @@ let headerActions = $derived(
 {/snippet}
 
 <!-- LAYOUT -->
-<div class="mb-12 h-full bg-black">
-  <Header {title}>
-    {#snippet menuItems()}
-      <HeaderButton
-        facet={{ label: m.organisation__core(), ref: 'core' }}
-        isActive={adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false} />
-      {#if adminCtx.activeResourceRef !== 'new'}
-        <HeaderButton
-          facet={{ label: m.organisation__images(), ref: 'images' }}
-          isActive={adminCtx.activeFacet === 'images'} />
-      {/if}
-    {/snippet}
-    {#snippet actions()}
-      <EntityActions {form} />
-    {/snippet}
-  </Header>
+<div class="relative h-full w-full overflow-hidden" bind:this={vietportElement}>
   {#if adminCtx.appCtx.isInitialised}
     <form
       id="organisationForm"
@@ -180,8 +191,12 @@ let headerActions = $derived(
       role="form"
       data-testid="organisationForm"
       transition:fade
-      class="h-full">
-      <main class="flex h-full flex-col gap-6 overflow-y-auto p-6">
+      class="mb-24 h-full overflow-y-auto"
+      bind:this={contentsElement}>
+      <main
+        class="flex flex-col gap-6 p-6 {adminCtx.activeFacet === 'core'
+          ? 'min-h-full pb-64'
+          : 'h-full'}">
         {#if adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false}
           <I18nSection
             title={m.admin__forms_common_descriptors()}
@@ -205,22 +220,39 @@ let headerActions = $derived(
               {form} />
           </div>
         {:else if adminCtx.activeFacet === 'images'}
-          <ImageProvider
-            isAdminMode={true}
-            {image}
-            context={{
-              ctxType: ImageContextResource.organisation,
-              ctxId: (pageProps.data.validatedForm.data as Organisation).id,
-              organisation: pageProps.data.validatedForm.data as Organisation
-            }}>
-            <ImageSection
-              title={m.admin__forms_organisation_image_title()}
-              fields={FIELDS.images}
+          <div class="flex- flex h-full">
+            <ImageProvider
+              isAdminMode={true}
               {image}
-              {form} />
-          </ImageProvider>
+              context={{
+                ctxType: ImageContextResource.organisation,
+                ctxId: (pageProps.data.validatedForm.data as Organisation).id,
+                organisation: pageProps.data.validatedForm.data as Organisation
+              }}>
+              <ImageSection
+                title={m.admin__forms_organisation_image_title()}
+                fields={FIELDS.images}
+                {image}
+                {form} />
+            </ImageProvider>
+          </div>
         {/if}
       </main>
     </form>
+  {/if}
+  {#if vietportElement && contentsElement}
+    <Scrollbar
+      viewport={vietportElement}
+      contents={contentsElement}
+      showThumbOnTrackEnter={true}
+      margin={{
+        top: 8,
+        bottom: 0
+      }}
+      width={{
+        track: 24,
+        thumb: 8,
+        thumbActive: 12
+      }} />
   {/if}
 </div>
