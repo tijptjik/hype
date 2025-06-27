@@ -18,6 +18,7 @@ import type {
   Intent,
   ImageEditCtx,
   ImageDB,
+  ImageDBBasic,
   ImagePartial,
   Metadata,
   LngLat,
@@ -384,7 +385,7 @@ export function getCloudinaryUploadEndpoint(cloudname: string): string {
  * @returns The generated URL string.
  */
 export function getURLfromImage(opts: {
-  image: ImageDB;
+  image: ImageDB | ImageDBBasic;
   transformation?: string;
   raw?: boolean;
   gravity?: string;

@@ -1,7 +1,7 @@
 // I18N
 import { getLocale } from '$lib/i18n';
 // TYPES
-import type { Id, UserFeature, Feature } from '$lib/types';
+import type { Id, UserFeature, Feature, UserFeatureWithHierarchy } from '$lib/types';
 
 // ═══════════════════════
 // USER FEATURES CLIENT SERVICES
@@ -13,12 +13,10 @@ import type { Id, UserFeature, Feature } from '$lib/types';
  * @param searchTerm - Search term to filter by
  * @returns Filtered array of features
  */
-export const filterUserFeaturesByHierarchy = <
-  T extends { feature: Feature; hierarchy: any }
->(
-  features: T[],
+export const filterUserFeaturesByHierarchy = (
+  features: UserFeatureWithHierarchy[],
   searchTerm: string
-): T[] => {
+): UserFeatureWithHierarchy[] => {
   if (!searchTerm) return features;
 
   const searchLower = searchTerm.toLowerCase();
