@@ -64,7 +64,7 @@ function getUserPreferencesWithDefaults(
  * @returns The translated value of the field.
  */
 export function getI18n<T>(
-  obj: { i18n?: Record<Locale, T> | null } | Record<Locale, T> | undefined,
+  obj: { i18n: Record<Locale, T> | null } | Record<Locale, T> | undefined,
   field: string,
   userPreferences: UserPreferences,
   fallback?: string,
@@ -222,8 +222,8 @@ export async function translateText(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      sourceLang,
-      targetLang,
+      source: sourceLang,
+      target: targetLang,
       texts
     })
   });
