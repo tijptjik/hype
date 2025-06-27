@@ -5,6 +5,10 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { QueueList, Squares2x2, TableCells } from '@steeze-ui/heroicons';
 // TYPES
 import type { LayoutMode } from '$lib/types';
+import { getAppCtx } from '$lib/context/app.svelte';
+
+// CONTEXT
+const appCtx = getAppCtx();
 
 let {
   layoutMode = $bindable(),
@@ -44,6 +48,7 @@ const nextMode = $derived.by(() => {
 
 function toggleMode() {
   layoutMode = nextMode;
+  appCtx.setLayoutMode(layoutMode);
 }
 </script>
 
