@@ -24,9 +24,7 @@ export const typeColors = {
 </script>
 
 <header
-  class="mx-auto flex w-full flex-row items-center justify-between rounded-lg border-b-4 bg-base-100 px-6 py-6 {typeColors[
-    task.type as keyof typeof typeColors
-  ]} {isRoundedBottom ? '' : 'rounded-b-none'}">
+  class="relative mb-4 flex h-14 w-full flex-row items-center justify-between gap-4 rounded-2xl bg-transparent pl-1 @container">
   <div class="flex w-full items-center justify-between">
     <div class="items-left flex justify-start">
       {@render Left(task)}
