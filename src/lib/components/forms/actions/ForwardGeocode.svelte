@@ -137,7 +137,7 @@ let handleGeocodeToLocate = (e: Event) => {
   label: string
 )}
   <button
-    class="btn-rounded btn bg-fuchsia-700 text-base-content transition-colors duration-300 hover:bg-fuchsia-800"
+    class="btn-rounded btn btn-ghost text-sm font-bold transition-colors duration-300 disabled:text-base-content/70"
     class:px-6={isGeocoding}
     {onclick}
     disabled={isLoading}>
@@ -145,7 +145,7 @@ let handleGeocodeToLocate = (e: Event) => {
       <span class="loading loading-ring loading-sm"></span>
       <span class="hidden md:block">{m.admin__geo_forward_geocode_loading()}</span>
     {:else}
-      <Icon src={icon} class="h-4 w-4" />
+      <Icon src={icon} class="h-6 w-6 stroke-[2px]" />
       <span class="hidden md:block">
         {label}
       </span>
@@ -157,11 +157,11 @@ let handleGeocodeToLocate = (e: Event) => {
   <div class="flex flex-row items-center gap-2">
     <label
       for="sourceLanguage"
-      class="label flex flex-row items-center gap-2 text-neutral-500">
-      <Icon src={Language} class="h-6 w-6" />
+      class="focus:ring-none label flex flex-row items-center gap-2 text-sm font-bold focus:border-none focus:outline-none active:border-none active:outline-none">
+      <Icon src={Language} class="h-6 w-6 stroke-[2px]" />
       {m.admin__geo_source_language()}
     </label>
-    <select class="select select-bordered select-sm" bind:value={sourceLocale}>
+    <select class="select select-sm bg-glass-salmon-dark" bind:value={sourceLocale}>
       <option value="en">{m.lang__en()}</option>
       <option value="zh-hant">{m.lang__zh_hant()}</option>
       <option value="zh-hans">{m.lang__zh_hans()}</option>

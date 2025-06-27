@@ -25,7 +25,7 @@ let { image }: { image: Image } = $props();
 {/snippet}
 
 <div
-  class="flex min-w-[200px] items-center gap-3 rounded-lg bg-base-200/70 p-3 backdrop-blur-sm">
+  class="flex min-w-[200px] items-center gap-3 rounded-lg bg-glass-result p-3 backdrop-blur-sm">
   <div class="flex flex-col gap-2">
     {#if image.cameraModel}
       {@render MetadataRow(Camera, 'Camera', image.cameraModel)}

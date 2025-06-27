@@ -22,15 +22,15 @@ const onChange = (e: Event, key: 'isIntangible' | 'isVisitable'): void => {
 };
 </script>
 
-<div class="flex flex-row items-center justify-between gap-4 align-baseline">
+<div class="flex flex-row items-center justify-between align-baseline">
   <Toggle
     label={m.teary_fit_maggot_heart()}
-    size="sm"
+    size="md"
     checked={$featureForm.isIntangible as boolean}
     onChange={(e) => onChange(e, 'isIntangible')} />
   <Toggle
     label={m.even_sunny_lizard_dare()}
-    size="sm"
+    size="md"
     checked={$featureForm.isVisitable as boolean}
     onChange={(e) => onChange(e, 'isVisitable')} />
 </div>

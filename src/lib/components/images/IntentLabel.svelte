@@ -52,15 +52,15 @@ container.addEventListener('mouseleave', () => {
 </script>
 
 <div
-  class="absolute bottom-0 left-0 right-0 flex justify-center p-2"
+  class="absolute bottom-0 left-0 right-0 z-20 flex justify-center p-2"
   transition:fade={{ duration: 200, delay: 150 + idx * 50 }}>
   <div class="relative">
     <button
       class="rounded-lg px-3 py-[6px] text-sm font-medium backdrop-blur-sm transition-all duration-200
           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-secondary
           {intent === 'canonical'
-        ? 'bg-primary hover:bg-primary/90'
-        : 'bg-base-100/80 hover:bg-base-200/80'}"
+        ? 'bg-primary hover:bg-primary/80'
+        : 'bg-glass-result hover:bg-glass-result/80'}"
       onmouseenter={() => {
         intentContext.id = imageId;
       }}
@@ -74,19 +74,19 @@ container.addEventListener('mouseleave', () => {
 
     {#if intentContext.id === imageId}
       <div
-        class="absolute bottom-[34px] left-[-20px] mb-1 w-32 overflow-hidden rounded-lg bg-base-100 shadow-lg"
+        class="absolute bottom-[34px] left-[-20px] mb-1 w-32 overflow-hidden rounded-lg bg-glass-result shadow-lg"
         bind:this={intentContext.ref}
         transition:fade={{ duration: 150 }}>
         {#each intentOrder.filter((option) => option !== intent) as option, idx}
           <button
             class="w-full px-2 py-[5px] text-center text-sm hover:bg-primary focus:bg-primary
                   focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-secondary
-                  {option === intent ? 'bg-base-200' : ''}
+                  {option === intent ? 'bg-glass-result' : ''}
                   {option === 'canonical' &&
             images.some(
               (img) => img.id !== imageId && (img as any).intent === 'canonical'
             )
-              ? 'text-primary'
+              ? 'text-primary hover:text-white'
               : ''}"
             onclick={(e) => {
               e.preventDefault();

@@ -9,17 +9,17 @@ let displayLabel = $derived(
 </script>
 
 <div
-  class="first-child:rounded-t-xl last-child:rounded-b-xl w-full bg-neutral"
+  class="first-child:rounded-t-xl last-child:rounded-b-xl w-full bg-glass-100"
   class:text-right={justify === 'end'}
   class:grid-cell={gridCell}
   class:rounded-lg={gridCell}>
   <label
-    class="block px-3 pt-3 text-sm font-light text-base-content/70"
+    class="block px-6 pt-3 text-sm font-light text-base-content/70"
     style="font-variant: all-small-caps;">
     {displayLabel}
   </label>
   <p
-    class="overflow-hidden text-ellipsis px-3 pb-3 text-base font-normal text-base-content">
+    class="overflow-hidden text-ellipsis px-6 pb-3 text-base font-normal text-base-content">
     {value ?? '-'}
   </p>
 </div>

@@ -86,28 +86,31 @@ $effect(() => {
 });
 </script>
 
-<div class="grid grid-cols-1 gap-4 p-4 2xl:grid-cols-2">
+<div class="grid grid-cols-1 gap-4 pt-4 2xl:grid-cols-2">
   {#each userRoles.sort((a: OrganisationRole | ProjectRole, b: OrganisationRole | ProjectRole) => a.user.name?.localeCompare(b.user.name ?? '') ?? 0) as userRole, index (userRole.user.id)}
     <div class="grid-span-1 group" in:scale out:scale animate:flip={{ duration: 200 }}>
       <div
-        class="card card-side relative h-full flex-row items-center overflow-hidden rounded-l-xl bg-base-100 pr-6 shadow-xl">
+        class="bg-grain card card-side relative h-full flex-row items-center overflow-hidden rounded-l-xl border-3 border-primary bg-glass-300 pr-6 shadow-xl">
         {#if removeMode}
           <div
-            class="absolute left-0 top-0 flex w-24 items-center justify-center opacity-80">
+            class="group absolute left-0 top-0 z-10 flex h-full w-24 items-center justify-center opacity-80">
             <button
               onclick={(e) => removeUser(e, userRole.user.id)}
-              class="btn btn-ghost h-24 w-24 rounded-none bg-base-200">
-              <Icon src={Trash} class="h-6 w-6" />
+              class="btn btn-ghost h-24 w-24 rounded-none bg-glass-100 transition-all group-hover:bg-base-300">
+              <Icon
+                src={Trash}
+                class="h-8 w-8 text-white transition-all group-hover:text-glass-rejected" />
             </button>
           </div>
         {/if}
-        <figure class="flex-shrink-0 flex-grow-0 overflow-hidden rounded-l-xl md:block">
+        <figure
+          class="flex h-full flex-shrink-0 flex-grow-0 items-center justify-center overflow-hidden rounded-l-xl bg-glass-100 text-transparent md:block">
           <img src={userRole.user.image} alt={userRole.user.name} />
         </figure>
         <div class="card-body flex-auto py-0">
           <p
-            class="card-title flex flex-col items-start justify-start gap-1 text-lg font-normal">
-            <span class="text-xs text-gray-500">
+            class="card-title flex flex-col items-start justify-start gap-0.5 text-lg font-normal">
+            <span class="text-xs text-primary">
               {userRole.user.attribution}
             </span>
             <span>{userRole.user.name}</span>

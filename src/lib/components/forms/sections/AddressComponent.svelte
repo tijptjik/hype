@@ -106,8 +106,7 @@ function hasValue(value: string | null): boolean {
 }
 </script>
 
-<div
-  class="z-10 rounded-2xl bg-gradient-to-r from-rose-500/70 to-fuchsia-800/70 p-0 @container">
+<div class="z-10 rounded-2xl p-0 @container">
   <Header {...sectionProps} title={m.aware_cozy_impala_dine()}>
     {#snippet actionContent()}
       <ForwardGeocodeActions form={sectionProps.form as unknown as FeatureForm} />
@@ -115,16 +114,20 @@ function hasValue(value: string | null): boolean {
   </Header>
 
   <!-- Address Properties -->
-  <div class="grid grid-cols-3 gap-4 rounded-xl p-4">
+  <div class="grid grid-cols-3 gap-4 rounded-xl pt-2">
     {#each supportedLocales as locale}
       <div
-        class="overflow-hidden rounded-xl"
-        style={`background-color: ${columnColors[locale]}`}>
+        class="overflow-hidden rounded-xl border-b-3 shadow-xl"
+        style={`background-color: ${columnColors[locale]}; border-color: ${columnColors[locale]}`}>
         <h3
           class="text-md mb-4 pt-4 text-center font-medium uppercase text-base-content">
           {columnHeaders[locale]}
         </h3>
-        <div class="flex h-full flex-col rounded-b-xl bg-base-100 p-6">
+        <div
+          class="bg-grain flex h-full flex-col rounded-b-xl border-x-3 border-[{columnColors[
+            locale
+          ]}] bg-glass-300"
+          style={`border-color: ${columnColors[locale]}`}>
           <div class="flex flex-col gap-[2px]">
             {#each addressFields as fieldKey}
               {@const value = getAddressPropertyValue(fieldKey, locale)}
@@ -139,20 +142,20 @@ function hasValue(value: string | null): boolean {
   </div>
 
   <!-- Address Metadata -->
-  <div class="m-4 rounded-xl bg-base-100 px-6 py-4 pb-8">
-    <h3 class="text-md mb-4 py-2 text-center font-medium uppercase text-base-content">
-      {m.cozy_misty_ray_walk()}
-    </h3>
+  <div class="mt-4 py-4 pb-8">
+    <Header {...sectionProps} title={m.cozy_misty_ray_walk()} />
     <div class="grid grid-cols-3 gap-4">
       {#each metaFields as fieldKey}
         {@const value = getMetaPropertyValue(fieldKey)}
         {#if hasValue(value)}
-          <DisplayField
-            label={fieldKey == 'distanceFromPoint'
-              ? m.slimy_nice_sheep_hint()
-              : fieldKey}
-            {value}
-            gridCell={true} />
+          <div class="rounded-xl border-3 border-primary shadow-xl">
+            <DisplayField
+              label={fieldKey == 'distanceFromPoint'
+                ? m.slimy_nice_sheep_hint()
+                : fieldKey}
+              {value}
+              gridCell={true} />
+          </div>
         {/if}
       {/each}
     </div>

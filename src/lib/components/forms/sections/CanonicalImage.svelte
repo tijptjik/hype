@@ -25,7 +25,7 @@ const feature: Feature = $derived(adminCtx.appCtx.cache.feature.get($form?.id))!
 const canonicalImage = $derived(feature?.image as Image | null);
 </script>
 
-<div class="h-full w-full flex-1 basis-full 2xl:basis-1/3-gap-6">
+<div class="h-full w-full flex-1 basis-full 2xl:basis-1/3-gap-4">
   {#if canonicalImage}
     <a
       href={getUrlForResource(adminCtx, FirstClassResource.feature, $form.id, 'images')}
@@ -42,7 +42,7 @@ const canonicalImage = $derived(feature?.image as Image | null);
       onclick={() =>
         navigateOnAdmin(adminCtx, FirstClassResource.feature, $form.id, 'images')}>
       <div
-        class="flex h-full min-h-[282px] w-full flex-1 flex-col items-center justify-center gap-4 rounded-lg bg-base-300">
+        class="bg-grain flex h-full min-h-[282px] w-full flex-1 flex-col items-center justify-center gap-4 rounded-lg border-3 border-primary bg-glass-300">
         <Icon src={Photo} class="h-8 w-8 text-base-content/50" />
         <span class="text-base-content/50">{m.left_dizzy_trout_peel()}</span>
       </div>

@@ -44,7 +44,7 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
 }
 </script>
 
-<div class="form-control flex w-full flex-col gap-2 caret-transparent">
+<div class="form-control flex w-full select-none flex-col gap-2 caret-transparent">
   {#if field.label}
     <div class="label">
       <span class="label-text text-xs font-bold">{field.label}</span>
@@ -104,19 +104,19 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
         animate:flip={{ duration: 200 }}
         in:fade={{ duration: 150 }}
         out:fade={{ duration: 150 }}
-        class="svelte-dnd-touch-feedback relative mt-1 flex h-14 cursor-move items-center gap-4 rounded-lg border-1 border-transparent bg-base-200 p-2 font-light text-white transition-all duration-200 focus-within:border-primary">
+        class="svelte-dnd-touch-feedback relative mt-1 flex h-14 cursor-move items-center gap-4 rounded-lg border-1 border-transparent bg-glass-result p-2 font-light text-white transition-all duration-200 focus-within:border-primary">
         {#if actionProps.removeMode && actionProps.confirmingId === property.id && actionProps.removeModeLocale === locale}
           <div
             class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-200 bg-opacity-80">
             <div class="flex flex-col items-center gap-4 p-4">
               <div class="flex items-center gap-2">
                 <!-- <Icon src={ExclamationTriangle} class="h-8 w-8 text-error" /> -->
-                <p class="text-center font-bold text-error">
+                <p class="text-center font-bold text-glass-rejected">
                   {m.curly_bland_crab_arrive()}
                 </p>
                 <button
                   class="btn btn-ghost btn-sm"
-                  onclick={(e) => {
+                  onpointerdown={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     actionProps.confirmingId = undefined;
@@ -124,8 +124,8 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
                   {m.green_short_pelican_fall()}
                 </button>
                 <button
-                  class="btn btn-error btn-sm"
-                  onclick={(e) => {
+                  class="btn btn-sm bg-glass-rejected hover:bg-glass-rejected/80"
+                  onpointerdown={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     actions.remove(e, property.id);
@@ -153,9 +153,9 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
         {#if actionProps.removeMode && actionProps.removeModeLocale === locale}
           <button
             class="btn btn-ghost btn-sm text-error"
-            onclick={(e) => {
-              e.preventDefault();
+            onpointerdown={(e) => {
               e.stopPropagation();
+              e.preventDefault();
               actionProps.confirmingId = property.id;
               actionProps.removeModeLocale = locale as Locale;
             }}>

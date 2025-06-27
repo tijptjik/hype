@@ -18,7 +18,7 @@ let {
   {id}
   tabindex="0"
   name={id}
-  class="select w-full rounded-md border-none bg-neutral p-2 px-4 outline-none focus-within:border-none focus-within:outline-none focus:border-none focus:outline-none"
+  class="text-bold select w-full rounded-md border-none bg-transparent px-3 py-2 text-[1rem] text-lg text-base-content outline-none focus-within:border-none focus-within:outline-none focus:border-none focus:outline-none"
   {onchange}>
   <option value={undefined}>-- {m.great_crazy_squid_promise()} --</option>
   {#if isComplex && values.length > 0}

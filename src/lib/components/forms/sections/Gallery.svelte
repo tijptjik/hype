@@ -53,14 +53,14 @@ const openFileDialog = () => {
 </script>
 
 <div
-  class="z-10 flex w-full flex-col rounded-2xl bg-gradient-to-r from-rose-500/70 to-fuchsia-800/70 p-0 caret-transparent @container">
+  class="z-10 flex w-64 flex-shrink-0 flex-col rounded-2xl p-0 caret-transparent @container">
   <Header {...sectionProps}>
     <GalleryStats />
     {#snippet actionContent()}
       <GalleryActions {actions} bind:removeMode={actionProps.removeMode} />
     {/snippet}
   </Header>
-  <main class="relative m-4 overflow-hidden">
-    <Gallery {actionProps} bind:inputElement />
+  <main class="relative h-full overflow-hidden pl-4 pt-2">
+    <Gallery orientation="vertical" {actionProps} bind:inputElement />
   </main>
 </div>

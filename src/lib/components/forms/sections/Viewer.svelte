@@ -1,5 +1,4 @@
 <script lang="ts">
-import { beforeNavigate } from '$app/navigation';
 import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte';
 // SERVICES
 import { getImageContext } from '$lib/context/image.svelte';
@@ -22,14 +21,14 @@ let { ...sectionProps }: SectionProps = $props();
 let image = $derived(imageCtx.activeImage);
 </script>
 
-<div
-  class="relative z-10 flex h-full flex-grow-0 basis-1/1 flex-col rounded-2xl bg-gradient-to-r from-rose-500/70 to-fuchsia-800/70 p-0">
+<div class="relative z-10 flex flex-1 flex-col gap-2 rounded-2xl">
   <Header {...sectionProps}>
     {#snippet actionContent()}
       <ViewerActions />
     {/snippet}
   </Header>
-  <main class="relative flex h-full w-full flex-col rounded-b-2xl bg-base-300">
+  <main
+    class="relative flex h-full w-full flex-col overflow-hidden rounded-xl rounded-b-2xl bg-glass-result">
     <Viewer isCrossfade={false} isDropzone={true}>
       {#snippet RightActions()}
         <IconAnchor position="right" icon={InformationCircle}>
@@ -43,11 +42,12 @@ let image = $derived(imageCtx.activeImage);
         </IconAnchor>
       {/snippet}
     </Viewer>
+
     <!-- Navigation Arrows -->
     {#if imageCtx.getImages().length > 1}
       <!-- Left Navigation -->
       <div
-        class="absolute left-0 top-0 z-20 flex h-full w-[20%] cursor-pointer items-center justify-start pl-2 caret-transparent opacity-0 transition-opacity duration-200 hover:opacity-100"
+        class="absolute left-0 top-[25%] z-20 flex h-[50%] w-[20%] cursor-pointer items-center justify-start pl-2 caret-transparent opacity-0 transition-opacity duration-200 hover:opacity-100"
         onclick={(e: MouseEvent) => imageCtx.switchToImage(e, 'prev')}
         role="button"
         tabindex="0">
@@ -61,7 +61,7 @@ let image = $derived(imageCtx.activeImage);
 
       <!-- Right Navigation -->
       <div
-        class="absolute right-0 top-0 z-20 flex h-full w-[20%] cursor-pointer items-center justify-end pr-2 caret-transparent opacity-0 transition-opacity duration-200 hover:opacity-100"
+        class="absolute right-0 top-[25%] z-20 flex h-[50%] w-[20%] cursor-pointer items-center justify-end pr-2 caret-transparent opacity-0 transition-opacity duration-200 hover:opacity-100"
         onclick={(e: MouseEvent) => imageCtx.switchToImage(e, 'next')}
         role="button"
         tabindex="0">

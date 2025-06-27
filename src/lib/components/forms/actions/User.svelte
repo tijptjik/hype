@@ -42,10 +42,10 @@ $effect(() => {
 });
 </script>
 
-<div>
+<div class="flex w-full flex-row">
   {#if !searchMode && adminCtx.activeResourceType !== 'feature'}
     <button
-      class="btn-rounded btn btn-ghost ml-auto bg-base-100"
+      class="btn-rounded btn btn-ghost ml-auto focus:outline-none focus:ring-2 focus:ring-primary"
       onclick={toggleRemoveMode}>
       {#if !removeMode}
         <Icon src={UserPlus} class="mr-2 h-4 w-4" />
@@ -58,7 +58,7 @@ $effect(() => {
   {/if}
   {#if !removeMode}
     <button
-      class="btn-rounded btn btn-ghost ml-auto bg-base-100"
+      class="btn-rounded btn btn-ghost ml-auto focus:outline-none focus:ring-2 focus:ring-primary"
       onclick={toggleSearch}
       data-testid="addUserButton">
       {#if !searchMode}

@@ -17,7 +17,7 @@ let { tainted, isTainted } = menuProps.form;
 
 <button
   transition:slide={{ axis: 'x' }}
-  class="btn btn-ghost join-item flex-row items-center gap-1 overflow-hidden transition-colors duration-500 disabled:bg-transparent disabled:text-opacity-60"
+  class="btn btn-ghost join-item flex flex-row items-center gap-1 overflow-hidden transition-colors duration-500 disabled:bg-transparent disabled:text-opacity-60"
   onclick={() => {
     invalidateAll();
   }}

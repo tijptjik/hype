@@ -27,10 +27,10 @@ let placeholder = $derived(
 </script>
 
 <select
-  class="select select-sm h-12 w-full rounded-md border-none bg-neutral p-2 px-4 outline-none focus-within:border-none focus-within:outline-none focus:border-none focus:outline-none {value ==
+  class="text select select-md h-12 w-full rounded-md border-none bg-glass-100 px-4 py-2 outline-none focus-within:border-none focus-within:outline-none focus:border-none focus:outline-none {value ==
   ''
-    ? 'italic text-base-content/60'
-    : 'text-bold text-base-content'}"
+    ? 'italic placeholder:text-base-content/70'
+    : 'text-bold text-[1rem] text-base-content'}"
   {value}
   onchange={(e) => {
     const target = e.target as HTMLSelectElement;

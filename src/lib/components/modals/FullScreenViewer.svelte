@@ -4,14 +4,14 @@ import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // ENUMS
 import { FirstClassResource, ImageContextResource } from '$lib/enums';
 // TYPES
-import type { ImageDB, Feature, Organisation, Project } from '$lib/types';
+import type { ImageDB, Feature, Organisation, Project, ImageDBBasic } from '$lib/types';
 import type { AdminCtx } from '$lib/context/admin.svelte';
 import { navigateOnAdmin } from '$lib/navigation';
 import Viewer from '../common/Viewer.svelte';
 
 type Props = {
   adminCtx: AdminCtx;
-  image: ImageDB;
+  image: ImageDB | ImageDBBasic;
   feature: Feature;
   isAdminMode?: boolean;
   currentIndex?: number;

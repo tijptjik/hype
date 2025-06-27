@@ -16,9 +16,9 @@ let { position = 'right', icon, class: className = '', children }: Props = $prop
 <div class="group/anchor relative z-30 {className}">
   <!-- Icon Button -->
   <div
-    class="absolute bottom-0 {position}-0 flex items-center justify-center opacity-70 transition-opacity duration-200 group-hover/anchor:opacity-0">
-    <button class="btn btn-circle">
-      <Icon src={icon} class="h-6 w-6" />
+    class="absolute bottom-0 {position}-0 flex items-center justify-center opacity-70 transition-opacity duration-200 group-hover/anchor:opacity-90">
+    <button class="btn btn-circle border-none bg-glass-result">
+      <Icon src={icon} class="h-6 w-6 stroke-[2px]" />
     </button>
   </div>
 

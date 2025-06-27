@@ -38,14 +38,16 @@ const overallStats = $derived(
       class="h-4 w-4" />
     <span class="hidden text-xs font-medium w-512:block"
       >{filterSections[key as keyof typeof filterSections].title}</span>
-    <progress class="progress progress-primary flex-1" value={percentage} max="100"
-    ></progress>
+    <progress
+      class="progress progress-primary min-w-32 flex-1"
+      value={percentage}
+      max="100"></progress>
     <span class="text-xs font-medium">{Math.round(percentage)}%</span>
   </div>
 {/snippet}
 
 <footer
-  class="flex h-[37px] items-center justify-around gap-6 border-t-1 border-base-100 bg-base-300 px-6 uppercase text-base-content shadow-[0_-5px_15px_rgba(0,0,0,0.1)]"
+  class="flex h-[37px] items-center justify-around gap-6 border-t-1 border-base-100 bg-base-400 px-6 uppercase text-base-content shadow-[0_-5px_15px_rgba(0,0,0,0.1)]"
   in:slide={{ duration: 300, axis: 'y', easing: quadInOut, delay: 100 }}>
   {@render statSection('content', overallStats.content, m.green_born_skate_jolt())}
   {@render statSection(
