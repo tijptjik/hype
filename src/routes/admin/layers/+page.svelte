@@ -4,16 +4,18 @@ import { getLocale } from '$lib/i18n';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
-import ResourceHeader from '$lib/components/resources/headers/ResourceHeader.svelte';
 import ResourceIndex from '$lib/components/resources/ResourceIndex.svelte';
-import LayoutModes from '$lib/components/resources/controls/ResourceIndexLayoutModes.svelte';
-import ControlModes from '$lib/components/resources/controls/ResourceIndexControlModes.svelte';
 import EntityCard from '$lib/components/resources/EntityCard.svelte';
 import Image from '$lib/components/common/Image.svelte';
+import FilterControlBar from '$lib/components/resources/filters/layers/Root.svelte';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
+// I18N
+import { m } from '$lib/i18n';
+// ICONS
+import { Square3Stack3d as LayerIcon } from '@steeze-ui/heroicons';
 // TYPES
-import type { KeyMap, Layer, LayoutMode, ControlMode } from '$lib/types';
+import type { KeyMap, Layer } from '$lib/types';
 
 // CONFIG :: KEY MAP
 const keyMap: KeyMap = {
@@ -45,25 +47,24 @@ const keyMap: KeyMap = {
 const adminCtx = getAdminCtx();
 adminCtx.setFacet(false, false, FirstClassResource.layer);
 
+// HEADER SETUP
+adminCtx.setHeaderForIndex(m.maps__layers(), LayerIcon);
+
 // STATE
-let layoutMode: LayoutMode = $state('card');
-let controlMode: ControlMode = $state('filter');
-let entities: Layer[] = $derived(adminCtx.filteredLayers);
+let entities: Layer[] = $derived(
+  adminCtx.getViewFilteredResource<Layer>(FirstClassResource.layer)
+);
 </script>
 
-<ResourceHeader>
-  {#snippet modes()}
-    <ControlModes bind:controlMode defaultMode="filter" />
-    <LayoutModes bind:layoutMode defaultMode="card" />
+<ResourceIndex {entities}>
+  {#snippet controlBar()}
+    <FilterControlBar count={entities.length} />
   {/snippet}
-</ResourceHeader>
-
-<ResourceIndex {entities} {layoutMode} {controlMode}>
   {#snippet card(entity: Layer)}
     <EntityCard {entity} {keyMap}>
-      {#snippet header(entity: Layer)}
+      {#snippet header()}
         <Image
-          src="https://placehold.co/600x400/000000/CB37C1?font=source-sans-pro&text={entity
+          src="https://placehold.co/600x400/3c1535/CB37C1?font=source-sans-pro&text={entity
             .i18n?.[getLocale()]?.name}"
           alt={entity.i18n?.[getLocale()]?.name || ''}
           layout="cover" />

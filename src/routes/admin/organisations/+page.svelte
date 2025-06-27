@@ -2,15 +2,17 @@
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
-import ResourceHeader from '$lib/components/resources/headers/ResourceHeader.svelte';
 import ResourceIndex from '$lib/components/resources/ResourceIndex.svelte';
-import LayoutModes from '$lib/components/resources/controls/ResourceIndexLayoutModes.svelte';
-import ControlModes from '$lib/components/resources/controls/ResourceIndexControlModes.svelte';
 import EntityCard from '$lib/components/resources/EntityCard.svelte';
+import FilterControlBar from '$lib/components/resources/filters/organisations/Root.svelte';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
+// I18N
+import { m } from '$lib/i18n';
+// ICONS
+import { Users as OrganisationIcon } from '@steeze-ui/heroicons';
 // TYPES
-import type { KeyMap, Organisation, LayoutMode, ControlMode } from '$lib/types';
+import type { KeyMap, Organisation } from '$lib/types';
 
 // CONFIG :: KEY MAP
 const RESOURCE = FirstClassResource.organisation;
@@ -43,20 +45,19 @@ const keyMap: KeyMap = {
 const adminCtx = getAdminCtx();
 adminCtx.setFacet(false, false, RESOURCE);
 
+// HEADER SETUP
+adminCtx.setHeaderForIndex(m.maps__organisations(), OrganisationIcon);
+
 // STATE
-let layoutMode: LayoutMode = $state('card');
-let controlMode: ControlMode = $state('filter');
-let entities: Organisation[] = $derived(adminCtx.filteredOrganisations);
+let entities: Organisation[] = $derived(
+  adminCtx.getViewFilteredResource<Organisation>(FirstClassResource.organisation)
+);
 </script>
 
-<ResourceHeader>
-  {#snippet modes()}
-    <ControlModes bind:controlMode defaultMode="filter" />
-    <LayoutModes bind:layoutMode defaultMode="card" />
+<ResourceIndex {entities}>
+  {#snippet controlBar()}
+    <FilterControlBar count={entities.length} />
   {/snippet}
-</ResourceHeader>
-
-<ResourceIndex {entities} {layoutMode} {controlMode}>
   {#snippet card(entity: Organisation)}
     <EntityCard {entity} {keyMap} />
   {/snippet}
