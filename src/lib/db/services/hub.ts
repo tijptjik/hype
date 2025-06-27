@@ -407,6 +407,32 @@ export const updateI18n = async (
 // ═══════════════════════
 
 /**
+ * Creates a new hub with translations
+ * @param db - The database instance
+ * @param data - The hub data to create
+ * @returns The newly created hub with i18n data
+ */
+export const createHubWithRelated = async (
+  db: Database,
+  data: any // Using any to avoid complex type issues
+) => {
+  const hub = await createHub(db, data);
+
+  // Create i18n if provided
+  let i18n: HubI18nDB[] = [];
+  if (data.i18n) {
+    i18n = await createI18n(db, data.i18n, hub.id);
+  }
+
+  // Initialize organisations as empty array (will be assigned later if needed)
+  const organisations: any[] = [];
+
+  const result = { ...hub, i18n, organisations };
+
+  return result;
+};
+
+/**
  * Updates a hub with translations
  * @param db - The database instance
  * @param data - The hub data to update
