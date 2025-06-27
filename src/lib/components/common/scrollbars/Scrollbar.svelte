@@ -2,8 +2,9 @@
 // SVELTE
 import { onMount } from 'svelte';
 // SVROLLBAR
-import { Svrollbar } from 'svrollbar';
+// import { Svrollbar } from 'svrollbar';
 import VirtualSvrollbar from './VirtualScrollbar.svelte';
+import Svrollbar from '$lib/components/layout/Svrollbar.svelte';
 // BROWSER
 import { BROWSER } from 'esm-env';
 
@@ -201,6 +202,12 @@ onMount(() => {
       {width}
       {...restProps} />
   {:else}
-    <Svrollbar {viewport} {contents} {debug} {...restProps} />
+    <Svrollbar
+      {viewport}
+      {contents}
+      {debug}
+      {showThumbOnTrackEnter}
+      {width}
+      {...restProps} />
   {/if}
 </div>
