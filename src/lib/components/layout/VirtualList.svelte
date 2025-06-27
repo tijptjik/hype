@@ -426,11 +426,15 @@ svelte-virtual-list-row {
 }
 
 svelte-virtual-list-row {
-  overflow: hidden;
+  overflow: visible;
   /* Ensure text renders consistently with container */
   text-rendering: geometricPrecision;
   -webkit-font-smoothing: subpixel-antialiased;
-  contain: layout style paint;
+  /* Remove paint containment to allow shadows to extend beyond row bounds */
+  contain: layout style;
+  /* Create stacking context for proper z-index behavior */
+  position: relative;
+  z-index: 1;
 }
 
 /* Apply consistent rendering to all text content inside rows */
