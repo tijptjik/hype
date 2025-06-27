@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
 import { fade } from 'svelte/transition';
+// I18N
+import { m } from '$lib/i18n';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import {
@@ -13,8 +15,6 @@ import {
 // TYPES
 import type { Task } from '$lib/types';
 import type { IconSource } from '@steeze-ui/svelte-icon';
-// I18N
-import { m } from '$lib/i18n';
 
 // PROPS
 let { task, rejectActions, acceptActions, onAction } = $props<{
@@ -76,16 +76,16 @@ function closeExpand(e: MouseEvent) {
     <div class="flex flex-col gap-2 px-3 py-2">
       <div class="flex shrink-0 items-center gap-4">
         {#if reviewerName}
-          <div class="flex items-center gap-2 rounded-lg bg-base-200">
+          <div class="flex items-center gap-2 rounded-lg">
             <img src={task.reviewer?.image} class="h-8 w-8 rounded-full" />
-            <p class="rounded-xl bg-base-200 pl-1 pr-2 text-sm text-base-content">
+            <p class="rounded-xl pl-1 pr-2 text-sm font-bold text-base-content">
               {reviewerName}
             </p>
           </div>
         {/if}
         {#if task.reviewReason}
           <div
-            class="shrink-2 relative flex h-8 items-center rounded-lg bg-base-200"
+            class="shrink-2 relative flex h-8 items-center rounded-lg"
             onmouseenter={() => (isExpanded = true)}
             onmouseleave={() => (isExpanded = false)}>
             <Icon src={ExclamationCircle} class="h-8 w-8 text-base-content" />
@@ -108,24 +108,25 @@ function closeExpand(e: MouseEvent) {
             {/if}
             {#if isExpanded}
               <div
-                class="absolute left-0 top-full z-30 mt-2 w-full rounded-lg bg-base-200 p-2 shadow-lg"
+                class="absolute left-0 top-full z-30 mt-2 w-full rounded-lg p-2 shadow-lg"
                 in:fade={{ duration: 300 }}
                 out:fade={{ duration: 300 }}>
-                <p class="whitespace-pre-wrap p-2 text-sm leading-8 text-base-content">
+                <p
+                  class="text whitespace-pre-wrap rounded-xl bg-glass-salmon p-3 leading-8 text-base-content text-glass-salmon-dark">
                   {task.reviewReason}
                 </p>
               </div>
             {/if}
           </div>
         {/if}
-        <div class="flex h-8 shrink-0 items-center rounded-lg bg-base-200">
+        <div class="flex h-8 shrink-0 items-center rounded-lg">
           <Icon
             src={reviewIcon}
-            class="h-8 w-8 {task.reviewOutcome === 'accepted'
-              ? 'text-success'
-              : 'text-error'}" />
-          <p class="p-2 uppercase text-base-content">{m.mad_fresh_swan_trip()}</p>
-          <p class="p-2 font-mono text-sm uppercase text-neutral-content">
+            class="h-9 w-9 stroke-2 {task.reviewOutcome === 'accepted'
+              ? 'text-glass-accepted'
+              : 'text-glass-rejected'}" />
+          <p
+            class="tilt-neon-watermark text p-2 font-mono font-bold uppercase opacity-100">
             {task.reviewAction?.replaceAll('-', ' ')}
           </p>
         </div>
@@ -136,7 +137,7 @@ function closeExpand(e: MouseEvent) {
       <button
         class="btn btn-ghost btn-sm hover:bg-transparent hover:{action.onHoverClass}"
         onclick={(e) => handleAction(action.action, e)}>
-        <Icon src={action.icon} class="h-4 w-4" />
+        <Icon src={action.icon} class="h-6 w-6 stroke-2" />
         {action.label}
       </button>
     {/each}
@@ -144,9 +145,9 @@ function closeExpand(e: MouseEvent) {
       <div class="divider divider-horizontal"></div>
       {#each acceptActions as action}
         <button
-          class="btn btn-ghost btn-sm hover:bg-transparent hover:{action.onHoverClass}"
+          class="tilt-neon-watermark btn btn-ghost btn-sm hover:bg-transparent hover:{action.onHoverClass}"
           onclick={(e) => handleAction(action.action, e)}>
-          <Icon src={action.icon} class="h-4 w-4" />
+          <Icon src={action.icon} class="h-6 w-6 stroke-2" />
           {action.label}
         </button>
       {/each}
@@ -157,8 +158,10 @@ function closeExpand(e: MouseEvent) {
 {#if showReasonModal}
   <div class="modal modal-open">
     <div
-      class="modal-box border-2 border-[#4987E2] bg-black shadow-[0_0_15px_rgba(0,0,255,0.5)]">
-      <h3 class="mb-4 pb-2 text-center text-lg font-bold">Reason for rejection</h3>
+      class="modal-box border-2 border-[#4987E2] shadow-[0_0_15px_rgba(0,0,255,0.5)]">
+      <h3 class="mb-4 pb-2 text-center text-lg font-bold">
+        {m.north_level_niklas_tap()}
+      </h3>
       <div class="form-control">
         <textarea
           class="textarea textarea-bordered h-24 bg-black text-white focus:outline-none focus:ring-0"
@@ -169,11 +172,26 @@ function closeExpand(e: MouseEvent) {
       <div class="modal-action">
         <button
           class="btn btn-ghost hover:bg-transparent hover:text-error"
-          onclick={() => (showReasonModal = false)}>Cancel</button>
+          onclick={() => (showReasonModal = false)}
+          >{m.safe_tidy_skunk_arrive()}</button>
         <button
           class="btn bg-base-400 uppercase transition-all duration-300 hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300"
-          onclick={handleReject}>Reject</button>
+          onclick={handleReject}>{m.alive_north_albatross_lead()}</button>
       </div>
     </div>
   </div>
 {/if}
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Tilt+Neon&display=swap');
+
+.tilt-neon-watermark {
+  font-family: 'Tilt Neon', sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+  font-variation-settings:
+    'XROT' 0,
+    'YROT' 0;
+}
+</style>

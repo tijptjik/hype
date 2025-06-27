@@ -6,6 +6,8 @@ import { m } from '$lib/i18n';
 import { getAppCtx } from '$lib/context/app.svelte';
 // COMPONENTS
 import Map from '$lib/components/common/Map.svelte';
+import TaskSection from '../common/TaskSection.svelte';
+import TaskStat from '../common/TaskStat.svelte';
 // TYPES
 import type { Task } from '$lib/types';
 import type { Point } from 'geojson';
@@ -14,71 +16,89 @@ import type { Point } from 'geojson';
 let appCtx = getAppCtx();
 
 let { task }: { task: Task } = $props();
+
+// STATE: Map expansion
+let isMapCollapsed = $state(true);
+
+// FUNCTIONS: Map controls
+function handleMapCollapse(collapsed: boolean): void {
+  isMapCollapsed = collapsed;
+}
 </script>
 
-<aside class="flex w-[420px] flex-col gap-3 rounded-br-lg bg-base-200 p-6">
-  <h3 class="flex-shrink-0 flex-grow-0 text-xl font-bold text-base-content">
-    {m.long_male_ostrich_skip()}
-  </h3>
-  <div class="flex-grow-1 stats stats-vertical w-full flex-shrink-0 bg-base-200 px-2">
-    <div class="stat">
-      <div class="stat-title">{m.feature__title()}</div>
-      <div class="stat-value text-lg">
-        {getI18n(task.feature, 'title', appCtx.getUserPreferences())}
-      </div>
+<aside class="w-[380px]">
+  <!-- 3-Row Grid -->
+  <div class="flex h-full flex-col items-stretch gap-4 rounded-xl font-bold">
+    <!-- Core Details -->
+    <div class="flex-none" class:hidden={!isMapCollapsed}>
+      <TaskSection>
+        <TaskStat
+          title={m.feature__title()}
+          value={getI18n(task.feature as any, 'title', appCtx.getUserPreferences())} />
+        <TaskStat
+          title={m.feature__description()}
+          value={getI18n(
+            task.feature as any,
+            'description',
+            appCtx.getUserPreferences()
+          )}
+          textWrap={true} />
+        <TaskStat
+          title={m.feature__address()}
+          value={getI18n(
+            task.feature as any,
+            'displayAddress',
+            appCtx.getUserPreferences()
+          )}
+          textWrap={true} />
+      </TaskSection>
     </div>
 
-    <div class="stat">
-      <div class="stat-title">{m.feature__description()}</div>
-      <div class="stat-value text-wrap text-lg">
-        {getI18n(task.feature, 'description', appCtx.getUserPreferences())}
-      </div>
+    <!-- Properties -->
+    <div class="flex-none" class:hidden={!isMapCollapsed}>
+      <TaskSection>
+        {#if task.feature?.properties && task.feature.properties.length > 0}
+          <div class="grid grid-cols-2 gap-2 pt-2">
+            {#each task.feature.properties as property (property.propertyId)}
+              {#if property.property}
+                <div class="stat flex flex-col gap-1 rounded-lg bg-glass-100 p-3">
+                  <div class="stat-title text-xs">
+                    {getI18n(
+                      property.property as any,
+                      'label',
+                      appCtx.getUserPreferences()
+                    )}
+                  </div>
+                  <div class="stat-value text-wrap text-sm font-medium">
+                    {getFPI18n(property, appCtx.getUserPreferences())}
+                  </div>
+                </div>
+              {/if}
+            {/each}
+          </div>
+        {:else}
+          <div class="text-sm text-base-content/50">{m.bland_sad_goat_gasp()}</div>
+        {/if}
+      </TaskSection>
     </div>
 
-    <div class="stat">
-      <div class="stat-title">{m.feature__address()}</div>
-      <div class="stat-value text-wrap text-lg">
-        {getI18n(task.feature, 'displayAddress', appCtx.getUserPreferences())}
-      </div>
+    <!-- Location -->
+    <div class="min-h-0 flex-1" class:h-full={!isMapCollapsed}>
+      {#if (task.feature?.geometry as Point)?.coordinates}
+        <div
+          class="h-full w-full overflow-hidden rounded-lg"
+          class:min-h-48={!isMapCollapsed}>
+          <Map
+            coordinates={(task.feature?.geometry as Point)?.coordinates}
+            draggable={false}
+            addressMeta={null}
+            toggleCollapsed={handleMapCollapse} />
+        </div>
+      {:else}
+        <TaskSection title={!isMapCollapsed ? undefined : m.loose_grassy_snake_hug()}>
+          <div class="text-sm text-base-content/50">{m.active_real_cuckoo_stop()}</div>
+        </TaskSection>
+      {/if}
     </div>
   </div>
-  <h3 class="flex-shrink-0 flex-grow-0 text-xl font-bold text-base-content">
-    {m.clean_light_ray_tap()}
-  </h3>
-
-  {#if task.feature?.properties && task.feature.properties.length > 0}
-    <div class="flex-grow-1 mb-4 max-h-96 w-full flex-shrink-0 overflow-y-auto">
-      <div class="grid grid-cols-2 gap-2">
-        {#each task.feature.properties as property (property.propertyId)}
-          {#if property.property}
-            <div class="stat rounded-lg bg-base-200 p-3">
-              <div class="stat-title text-xs">
-                {getI18n(property.property, 'label', appCtx.getUserPreferences())}
-              </div>
-              <div class="stat-value text-wrap text-sm font-medium">
-                {getFPI18n(property, appCtx.getUserPreferences())}
-              </div>
-            </div>
-          {/if}
-        {/each}
-      </div>
-    </div>
-  {:else}
-    <div class="mb-4 text-sm text-base-content/50">{m.bland_sad_goat_gasp()}</div>
-  {/if}
-
-  <h3 class="flex-shrink-0 flex-grow-0 text-xl font-bold text-base-content">
-    {m.loose_grassy_snake_hug()}
-  </h3>
-
-  {#if (task.feature?.geometry as Point)?.coordinates}
-    <div class="mt-2 h-full flex-grow">
-      <Map
-        coordinates={(task.feature?.geometry as Point)?.coordinates}
-        draggable={false}
-        addressMeta={null} />
-    </div>
-  {:else}
-    <div class="mt-6 text-sm text-base-content/50">{m.active_real_cuckoo_stop()}</div>
-  {/if}
 </aside>

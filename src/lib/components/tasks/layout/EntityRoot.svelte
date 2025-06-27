@@ -18,9 +18,6 @@ export const typeColors: Record<TaskType, string> = {
 };
 </script>
 
-<div
-  class="flex h-full w-full flex-col rounded-xl border-b-4 {typeColors[
-    task.type as keyof typeof typeColors
-  ]}">
+<div class="flex h-full w-full flex-col overflow-hidden rounded-xl">
   {@render children({ task })}
 </div>
