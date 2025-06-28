@@ -61,7 +61,7 @@ const filterKeys: Record<string, (keyof OrganisationViewFilters)[]> = {
 };
 
 const getFilterCount = (section: string) => {
-  const organisationFilters = adminCtx.state.viewFilters.organisation;
+  const organisationFilters = adminCtx.appCtx.state.viewFilters.organisation;
   let count = 0;
 
   if (section === 'status') {

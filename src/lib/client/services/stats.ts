@@ -252,8 +252,8 @@ export function setCachedFeaturePropertyBoolean(
 // Helper function for tri-state specifier translation caching
 export function getCachedFeatureSpecifierTranslation(
   appCtx: AppCtx,
-  feature: FeatureFromCollection,
-  calculator: (feature: FeatureFromCollection) => boolean | null
+  feature: Feature | FeatureFromCollection,
+  calculator: (feature: Feature | FeatureFromCollection) => boolean | null
 ): boolean | null {
   const cached = getStatistic(
     appCtx,
@@ -545,7 +545,7 @@ export function calculateImageCompletion(feature: FeatureFromCollection): {
 }
 
 export function calculateSpecifierTranslation(
-  feature: FeatureFromCollection
+  feature: Feature | FeatureFromCollection
 ): boolean | null {
   // Get all feature properties
   const properties = feature.properties || [];
@@ -674,8 +674,9 @@ export function calculateOverallStats(
   // Get active locales from admin context if available
   let activeLocales = supportedLocales; // Default to all locales
 
-  if (adminCtx?.state?.viewFilters?.feature?.translationLocales) {
-    const translationLocales = adminCtx.state.viewFilters.feature.translationLocales;
+  if (adminCtx?.appCtx?.state?.viewFilters?.feature?.translationLocales) {
+    const translationLocales =
+      adminCtx.appCtx.state.viewFilters.feature.translationLocales;
     activeLocales = supportedLocales.filter((locale) => translationLocales[locale]);
     if (activeLocales.length === 0) {
       activeLocales = supportedLocales; // Fallback if no locales selected

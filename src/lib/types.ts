@@ -334,7 +334,7 @@ export type SidebarState = 'closed' | 'narrow' | 'open';
 // ADMIN CONTROLS
 /* -------- */
 export type LayoutMode = 'table' | 'list' | 'card';
-export type ControlMode = 'filter' | null;
+export type ControlMode = 'filter' | 'hidden';
 
 /* ----------------- */
 // VIEW FILTERS (TIER 3)
@@ -557,19 +557,24 @@ export type FilteredResources = {
   hub: Hub[];
 };
 
-export type FilterState = {
-  neighbourhoods: string[];
-  properties: Record<Id, Record<string, any>>;
+export type ResourceFilterState = {
+  text?: string;
+  properties?: Record<
+    Id,
+    string[] | RangeFilterValue | Record<Id, Record<Id, string[] | RangeFilterValue>>
+  >;
 };
 
-export type AdminFilterState = {
-  text?: string;
-  properties?: Record<string, any>;
-  isPublished?: boolean | null;
-  isArchived?: boolean | null;
-  isReviewed?: boolean | null;
+export type FilterState = {
+  organisation: ResourceFilterState;
+  project: ResourceFilterState;
+  layer: ResourceFilterState;
+  feature: ResourceFilterState & { neighbourhoods: string[] };
+  task: ResourceFilterState;
+  hub: ResourceFilterState;
+  property: ResourceFilterState;
 };
-export type AdminFilterStates = Record<FirstClassResource, AdminFilterState>;
+export type AdminFilterStates = Record<FirstClassResource, FilterState>;
 
 export type ActiveCollection = {
   id: string;
@@ -791,18 +796,6 @@ export type Ref = Id | Code;
 export type Key = string;
 
 /* ----------------- */
-// RESOURCE :: STATE
-/* -------- */
-
-export type ResourceState = {
-  active: activeResourceType;
-  prisms: Prisms;
-  resources: FilteredResources;
-  filters: AdminFilterStates;
-};
-export type FilterableResourceType = Exclude<ResourceType, 'feature' | 'task'>;
-
-/* ----------------- */
 // SCHEMA TYPES
 /* -------- */
 
@@ -824,7 +817,8 @@ export type Resource =
   | Feature
   | FeatureFromCollection
   | Task
-  | Hub;
+  | Hub
+  | Property;
 export type ResourceNew =
   | OrganisationNew
   | ProjectNew
@@ -1866,6 +1860,8 @@ export type AppContextState = {
     controlMode: Record<NavigableResource, ControlMode>;
     layoutMode: Record<NavigableResource, LayoutMode>;
   };
+  // TIER 3: VIEW FILTERS - Only affect current route/view
+  viewFilters: ViewFilters;
 };
 
 export type ImageCtxMode = 'standalone' | 'gallery' | 'carousel';
@@ -2150,6 +2146,11 @@ export function isFeature(resource: Resource): resource is Feature {
 
 export function isHub(resource: Resource): resource is Hub {
   return 'organisation' in resource && 'domain' in resource;
+}
+
+export function isTask(resource: Resource): resource is Task {
+  const fields = ['organisationId', 'projectId', 'layerId', 'featureId'];
+  return fields.every((field) => field in resource);
 }
 
 // FEATURE TYPES

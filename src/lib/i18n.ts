@@ -11,6 +11,7 @@ import type {
 // ENUMS
 import { supportedLocales } from '$lib/enums';
 import type { AppCtx } from './context/app.svelte';
+import type { Resource } from '$lib/types';
 
 /**
  * Get the current locale with Paraglide. Wrapping for type safety.
@@ -64,7 +65,7 @@ function getUserPreferencesWithDefaults(
  * @returns The translated value of the field.
  */
 export function getI18n<T>(
-  obj: { i18n: Record<Locale, T> | null } | Record<Locale, T> | undefined,
+  obj: Resource | { i18n: Record<Locale, T> | null } | Record<Locale, T> | undefined,
   field: string,
   userPreferences: UserPreferences,
   fallback?: string,

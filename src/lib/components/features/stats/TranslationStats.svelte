@@ -31,7 +31,8 @@ const adminCtx = getAdminCtx();
 // Get active translation locales from admin context
 const activeTranslationLocales = $derived.by(() => {
   const locales: Locale[] = [];
-  const translationLocales = adminCtx.state.viewFilters.feature.translationLocales;
+  const translationLocales =
+    adminCtx.appCtx.state.viewFilters.feature.translationLocales;
   for (const [locale, isActive] of Object.entries(translationLocales)) {
     if (isActive) {
       locales.push(locale as Locale);
