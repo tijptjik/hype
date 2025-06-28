@@ -9,14 +9,9 @@ import { getContext, setContext } from 'svelte';
 import { QueryClient } from '@tanstack/svelte-query';
 import { AppCtx } from '$lib/context/app.svelte';
 // ENUMS
-import {
-  ResourcePath,
-  ResourceRefKey as ResourceRefKey,
-  FirstClassResource,
-  HierarchicalResource
-} from '$lib/enums';
+import { ResourcePath, FirstClassResource, HierarchicalResource } from '$lib/enums';
 // GUARDS
-import { isHub } from '$lib/types';
+import { isTask } from '$lib/types';
 // CLIENT SERVICES
 import {
   getCachedFeatureSpecifierTranslation,
@@ -32,8 +27,6 @@ import type {
   FacetType,
   Task,
   Code,
-  AdminFilterStates,
-  AdminFilterState,
   Resource,
   Hub,
   FilteredResources,
@@ -45,22 +38,10 @@ import type {
   UserPreferences,
   AdminPreferences,
   FeatureFromCollection,
-  NavigableResource
+  NavigableResource,
+  FilterState
 } from '../types';
 import type { IconSource } from '@steeze-ui/svelte-icon';
-
-// State type for AdminCtx - only includes admin-specific state
-type AdminResourceState = {
-  active: {
-    resourceType: NavigableResource | false;
-    resourceRef: Id | Code | false;
-    facet: FacetType | false;
-  };
-  // TIER 2: APP FILTERS - App-wide affect
-  filters: AdminFilterStates;
-  // TIER 3: VIEW FILTERS - Only affect current route/view
-  viewFilters: ViewFilters;
-};
 
 // ═══════════════════════
 // 3-TIER FILTER SYSTEM
@@ -76,16 +57,6 @@ type AdminResourceState = {
 
 // TIER 3: VIEW FILTERS -- Handled by individual admin views (e.g., /admin/features/)
 // Only affect the current route/view they are applied on, not the underlying data or map view
-
-const defaultFilters = {
-  organisation: { text: '', properties: {} },
-  project: { text: '', properties: {} },
-  layer: { text: '', properties: {} },
-  feature: { text: '', properties: {} },
-  task: { text: '', properties: {} },
-  hub: { text: '', properties: {} },
-  property: { text: '', properties: {} }
-};
 
 const viewFilters: ViewFilters = {
   organisation: {
@@ -316,9 +287,9 @@ export class AdminCtx {
   // 9. STATS
 
   // Tanstack Query Client instance
-  queryClient: QueryClient;
+  queryClient!: QueryClient;
   // App Context
-  appCtx: AppCtx;
+  appCtx!: AppCtx;
   // Load State
   isInitialised: boolean = $state(false);
 
@@ -385,36 +356,22 @@ export class AdminCtx {
   };
 
   // ═══════════════════════
-  // STATE
-  // ═══════════════════════
-
-  state: AdminResourceState = $state({
-    active: {
-      resourceType: false,
-      resourceRef: false,
-      facet: false
-    },
-    filters: defaultFilters,
-    viewFilters: viewFilters
-  });
-
-  // ═══════════════════════
   // ACTIVE RESOURCES
   // ═══════════════════════
 
   activeResourceType: NavigableResource | false = $derived(
-    this.state.active.resourceType
+    this.appCtx.state.nav.resourceType
   );
-  activeResourceRef: Id | Code | false = $derived(this.state.active.resourceRef);
-  activeFacet: FacetType | false = $derived(this.state.active.facet);
+  activeResourceRef: Id | Code | false = $derived(this.appCtx.state.nav.resourceRef);
+  activeFacet: FacetType | false = $derived(this.appCtx.state.nav.facet);
 
   // ═══════════════════════
   // ACTIVE RESOURCE :: SETTERS
   // ═══════════════════════
 
   setResourceType(resource: NavigableResource | false): void {
-    // TODO Remove from AdminCtc
-    this.state.active.resourceType = resource;
+    // TODO Remove from AdminCtx
+    this.appCtx.state.nav.resourceType = resource;
     this.appCtx.setActiveResourceType(resource);
   }
 
@@ -424,7 +381,7 @@ export class AdminCtx {
     if (resource) {
       this.setResourceType(resource);
     }
-    this.state.active.resourceRef = ref;
+    this.appCtx.state.nav.resourceRef = ref;
     this.appCtx.setActiveResourceRef(ref);
   }
 
@@ -436,7 +393,7 @@ export class AdminCtx {
     // TODO Remove from AdminCtx
     if (ref !== undefined) this.setResourceRef(ref);
     if (resource) this.setResourceType(resource);
-    this.state.active.facet = facet;
+    this.appCtx.state.nav.facet = facet;
     this.appCtx.setActiveFacet(facet);
   }
 
@@ -487,7 +444,7 @@ export class AdminCtx {
       FirstClassResource.task,
       this.appCtx.state.prisms.organisation,
       this.appCtx.state.prisms.project,
-      this.state.viewFilters[FirstClassResource.task].isReviewed
+      this.appCtx.state.viewFilters[FirstClassResource.task].isReviewed
     ];
   }
 
@@ -514,7 +471,8 @@ export class AdminCtx {
         params.append('isArchived', 'false');
       }
     } else if (resource === FirstClassResource.task) {
-      const isReviewed = this.state.viewFilters[FirstClassResource.task].isReviewed;
+      const isReviewed =
+        this.appCtx.state.viewFilters[FirstClassResource.task].isReviewed;
       if (isReviewed !== null) {
         params.append('isReviewed', isReviewed!.toString());
       }
@@ -624,7 +582,7 @@ export class AdminCtx {
     resource: FirstClassResource | HierarchicalResource,
     filters = { text: true, state: true }
   ): T[] => {
-    let query = this.state.filters[resource as keyof AdminFilterStates].text || '';
+    let query = this.appCtx.state.filters[resource as keyof FilterState].text || '';
     // FULL SET
     let result = this.appCtx.state.resources[
       resource as keyof FilteredResources
@@ -634,13 +592,10 @@ export class AdminCtx {
     // TIER 2 FILTERS :: Text :: (App Wide)
     if (filters.text && resource !== FirstClassResource.hub) {
       result = result.filter((entity: T) => {
-        if (!isHub(entity)) {
-          return this.textFilter(
-            resource as Omit<FirstClassResource, 'hub'> as FirstClassResource,
-            entity,
-            query
-          );
+        if (!isTask(entity)) {
+          return this.appCtx.textFilter(resource as FirstClassResource, entity, query);
         }
+        return true;
       });
     }
 
@@ -659,7 +614,7 @@ export class AdminCtx {
       return this.applyTaskViewFilters(entities) as T[];
     }
     // HIERARCHICAL RESOURCES
-    const entities = this.getFilteredResource(resource);
+    const entities = this.appCtx.getFilteredResource(resource);
 
     if (resource === FirstClassResource.feature) {
       return this.applyFeatureViewFilters(entities) as T[];
@@ -675,7 +630,7 @@ export class AdminCtx {
 
   applyFeatureViewFilters = (entities: Resource[]): Resource[] => {
     const features = entities as Feature[];
-    const filters = this.state.viewFilters.feature;
+    const filters = this.appCtx.state.viewFilters.feature;
     if (!filters) return features;
 
     // Determine active locales from filter state
@@ -1033,7 +988,7 @@ export class AdminCtx {
 
   applyOrganisationViewFilters = (entities: Resource[]): Resource[] => {
     const organisations = entities as Organisation[];
-    const filters = this.state.viewFilters.organisation;
+    const filters = this.appCtx.state.viewFilters.organisation;
     if (!filters) return organisations;
 
     // Determine active locales from filter state
@@ -1214,7 +1169,7 @@ export class AdminCtx {
 
   applyProjectViewFilters = (entities: Resource[]): Resource[] => {
     const projects = entities as Project[];
-    const filters = this.state.viewFilters.project;
+    const filters = this.appCtx.state.viewFilters.project;
     if (!filters) return projects;
 
     // Determine active locales from filter state
@@ -1427,7 +1382,7 @@ export class AdminCtx {
 
   applyLayerViewFilters = (entities: Resource[]): Resource[] => {
     const layers = entities as Layer[];
-    const filters = this.state.viewFilters.layer;
+    const filters = this.appCtx.state.viewFilters.layer;
     if (!filters) return layers;
 
     // Determine active locales from filter state
@@ -1590,7 +1545,7 @@ export class AdminCtx {
 
   applyTaskViewFilters = (entities: Resource[]): Resource[] => {
     const tasks = entities as Task[];
-    const filters = this.state.viewFilters.task;
+    const filters = this.appCtx.state.viewFilters.task;
     if (!filters) return tasks;
 
     return tasks.filter((task) => {
@@ -1611,7 +1566,7 @@ export class AdminCtx {
 
   applyHubViewFilters = (entities: Resource[]): Resource[] => {
     const hubs = entities as Hub[];
-    const filters = this.state.viewFilters.hub;
+    const filters = this.appCtx.state.viewFilters.hub;
     if (!filters) return hubs;
 
     // Determine active locales from filter state
@@ -1772,7 +1727,7 @@ export class AdminCtx {
    * @returns true if feature passes all property filters
    */
   private filterByProperties = (
-    feature: Feature,
+    feature: Feature | FeatureFromCollection,
     filters: ViewFilters['feature']
   ): boolean => {
     const propertyFilters = filters.properties;
@@ -1841,7 +1796,7 @@ export class AdminCtx {
   };
 
   getFilteredTask = () => {
-    let query = this.state.filters.task.text || '';
+    let query = this.appCtx.state.filters.task.text || '';
     // FULL SET
     let result: Task[] = this.appCtx.state.resources.task;
 
@@ -1860,10 +1815,16 @@ export class AdminCtx {
         );
 
         return (
-          (feature && this.textFilter(FirstClassResource.feature, feature, query)) ||
-          (project && this.textFilter(FirstClassResource.project, project, query)) ||
+          (feature &&
+            this.appCtx.textFilter(FirstClassResource.feature, feature, query)) ||
+          (project &&
+            this.appCtx.textFilter(FirstClassResource.project, project, query)) ||
           (organisation &&
-            this.textFilter(FirstClassResource.organisation, organisation, query)) ||
+            this.appCtx.textFilter(
+              FirstClassResource.organisation,
+              organisation,
+              query
+            )) ||
           entity.message?.toLowerCase().includes(query.toLowerCase())
         );
       });
@@ -1874,7 +1835,7 @@ export class AdminCtx {
 
   getFilteredHub = () => {
     if (!this.appCtx.isSuperAdmin()) return [];
-    let query = this.state.filters.hub.text || '';
+    let query = this.appCtx.state.filters.hub.text || '';
     // FULL SET
     let result: Hub[] = this.appCtx.state.resources.hub;
 
@@ -1901,70 +1862,33 @@ export class AdminCtx {
     return result;
   };
 
-  booleanFilter = (
-    resource: FirstClassResource | HierarchicalResource,
-    entity: Resource,
-    property: string
-  ) => {
-    const filterState = this.state.filters[resource as keyof AdminFilterStates];
-    const filterValue = filterState[property as keyof AdminFilterState];
-    return filterValue === null || filterValue === entity[property as keyof Resource];
-  };
-
-  textFilter = <
-    T extends Organisation | Project | Layer | Feature | Hub | FeatureFromCollection
-  >(
-    resource: FirstClassResource,
-    entity: T,
-    query: string
-  ) => {
-    const textObject = entity.i18n?.[getLocale()];
-    if (!textObject) return false;
-    return (
-      query === '' ||
-      textObject.name?.toLowerCase().includes(query.toLowerCase()) ||
-      textObject.title?.toLowerCase().includes(query.toLowerCase()) ||
-      textObject.nameShort?.toLowerCase().includes(query.toLowerCase()) ||
-      textObject.description?.toLowerCase().includes(query.toLowerCase()) ||
-      textObject.displayAddress?.toLowerCase().includes(query.toLowerCase())
-    );
-  };
-
   // ═══════════════════════
   // ADMIN FILTERS :: DERIVED
   // ═══════════════════════
 
   // Filtered Helpers
   filteredOrganisations = $derived.by(() => {
-    // Explicitly access reactive dependencies so Svelte tracks them
-    this.appCtx.state.resources.organisation;
-    this.state.filters.organisation;
-    return this.getFilteredResource<Organisation>(FirstClassResource.organisation);
+    return this.appCtx.filteredOrganisations;
   });
   filteredProjects = $derived.by(() => {
-    this.appCtx.state.resources.project;
-    this.state.filters.project;
-    return this.getFilteredResource<Project>(FirstClassResource.project);
+    return this.appCtx.filteredProjects;
   });
   filteredLayers = $derived.by(() => {
-    this.appCtx.state.resources.layer;
-    this.state.filters.layer;
-    return this.getFilteredResource<Layer>(FirstClassResource.layer);
+    return this.appCtx.filteredLayers;
   }) as Layer[];
   filteredFeatures = $derived.by(() => {
-    this.appCtx.state.resources.feature;
-    this.state.filters.feature;
-    return this.getFilteredResource<Feature>(FirstClassResource.feature);
+    return this.appCtx.filteredFeatures;
   });
+
   filteredTasks = $derived.by(() => {
     this.appCtx.state.resources.task;
-    this.state.filters.task;
+    this.appCtx.state.filters.task;
     return this.getFilteredTask();
   });
   filteredHubs = $derived.by(() => {
     if (!this.appCtx.isSuperAdmin()) return [];
     this.appCtx.state.resources.hub;
-    this.state.filters.hub;
+    this.appCtx.state.filters.hub;
     return this.getFilteredHub();
   });
 
@@ -1973,7 +1897,7 @@ export class AdminCtx {
   // ═══════════════════════
 
   resetViewFilters = () => {
-    this.state.viewFilters = structuredClone(viewFilters);
+    this.appCtx.state.viewFilters = structuredClone(viewFilters);
   };
 
   // ═══════════════════════
@@ -2008,11 +1932,12 @@ export class AdminCtx {
   };
 
   isViewportContained = $derived(
-    this.activeResourceRef == false ||
-      this.activeFacet == 'address' ||
-      this.activeFacet == 'images' ||
-      (this.activeResourceType == 'feature' &&
-        (this.activeFacet == 'core' || this.activeFacet == false)) ||
+    this.appCtx.state.nav.resourceRef == false ||
+      this.appCtx.state.nav.facet == 'address' ||
+      this.appCtx.state.nav.facet == 'images' ||
+      (this.appCtx.state.nav.resourceType == 'feature' &&
+        (this.appCtx.state.nav.facet == 'core' ||
+          this.appCtx.state.nav.facet == false)) ||
       (this.activeResourceType == 'task' && this.activeResourceRef)
   );
 
@@ -2046,16 +1971,6 @@ export const getAdminCtx = (): AdminCtx => {
         if (prop === 'activeFacet') return false;
         if (prop === 'isShowIndex') return false;
         if (prop === 'isViewportContained') return true;
-        if (prop === 'state')
-          return {
-            active: {
-              resourceType: false,
-              resourceRef: false,
-              facet: false
-            },
-            filters: defaultFilters,
-            viewFilters: viewFilters
-          };
         if (prop === 'appCtx')
           return {
             isInitialised: false,

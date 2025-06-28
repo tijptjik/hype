@@ -41,26 +41,9 @@ $effect(() => {
   searchTerm = '';
 });
 
-function filterOrganisations(organisations: Organisation[], term: string) {
-  if (!term) return organisations;
-
-  const searchLower = term.toLowerCase();
-  return organisations.filter((organisation) => {
-    return (
-      getI18n(organisation, 'nameShort', appCtx.getUserPreferences())
-        .toLowerCase()
-        .includes(searchLower) ||
-      getI18n(organisation, 'name', appCtx.getUserPreferences())
-        .toLowerCase()
-        .includes(searchLower) ||
-      getI18n(organisation, 'description', appCtx.getUserPreferences())
-        .toLowerCase()
-        .includes(searchLower)
-    );
-  });
-}
-
-const filteredOrganisations = $derived(filterOrganisations(organisations, searchTerm));
+const filteredOrganisations = $derived(
+  appCtx.getFilteredResource(FirstClassResource.organisation)
+);
 let isDefaultOpen = $derived(document.body.clientHeight > 1000);
 
 let handleReset = () => {

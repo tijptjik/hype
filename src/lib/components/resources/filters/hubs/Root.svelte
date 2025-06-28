@@ -50,7 +50,7 @@ const filterKeys: Record<string, (keyof HubViewFilters)[]> = {
 };
 
 const getFilterCount = (section: string) => {
-  const hubFilters = adminCtx.state.viewFilters.hub;
+  const hubFilters = adminCtx.appCtx.state.viewFilters.hub;
   let count = 0;
 
   if (section === 'status') {

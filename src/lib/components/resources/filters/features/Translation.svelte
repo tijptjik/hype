@@ -38,7 +38,8 @@ const translationFilters: Record<FeatureTranslationFilterKey, { label: string }>
 // REACTIVE LOCALES from admin context - this fixes BUG 3
 const activeLocales = $derived.by(() => {
   const locales = new Set<Locale>();
-  const translationLocales = adminCtx.state.viewFilters.feature.translationLocales;
+  const translationLocales =
+    adminCtx.appCtx.state.viewFilters.feature.translationLocales;
   for (const [locale, isActive] of Object.entries(translationLocales)) {
     if (isActive) {
       locales.add(locale as Locale);
@@ -48,8 +49,8 @@ const activeLocales = $derived.by(() => {
 });
 
 function toggleLocale(locale: Locale) {
-  const current = adminCtx.state.viewFilters.feature.translationLocales[locale];
-  adminCtx.state.viewFilters.feature.translationLocales[locale] = !current;
+  const current = adminCtx.appCtx.state.viewFilters.feature.translationLocales[locale];
+  adminCtx.appCtx.state.viewFilters.feature.translationLocales[locale] = !current;
 }
 </script>
 
@@ -61,15 +62,12 @@ function toggleLocale(locale: Locale) {
       {#each supportedLocales as locale}
         <button
           class="btn btn-xs"
-          class:text-white={adminCtx.state.viewFilters.feature.translationLocales[
-            locale
-          ]}
-          class:btn-secondary={adminCtx.state.viewFilters.feature.translationLocales[
-            locale
-          ]}
-          class:btn-ghost={!adminCtx.state.viewFilters.feature.translationLocales[
-            locale
-          ]}
+          class:text-white={adminCtx.appCtx.state.viewFilters.feature
+            .translationLocales[locale]}
+          class:btn-secondary={adminCtx.appCtx.state.viewFilters.feature
+            .translationLocales[locale]}
+          class:btn-ghost={!adminCtx.appCtx.state.viewFilters.feature
+            .translationLocales[locale]}
           onclick={() => toggleLocale(locale)}>
           {localeCodes[locale]}
         </button>

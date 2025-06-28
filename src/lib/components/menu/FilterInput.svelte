@@ -9,7 +9,7 @@ import { getAdminCtx } from '$lib/context/admin.svelte';
 // ENUMS
 import type { FirstClassResource } from '$lib/enums';
 // TYPES
-import type { AdminFilterStates } from '$lib/types';
+import type { FilterState } from '$lib/types';
 
 // STATE : CONTEXT :: ROUTER
 const adminCtx = getAdminCtx();
@@ -55,12 +55,12 @@ function handleKeyDown(e: KeyboardEvent) {
 
 // UTILS
 function resetInput() {
-  adminCtx.state.filters[resourceType as keyof AdminFilterStates].text = '';
+  adminCtx.appCtx.state.filters[resourceType as keyof FilterState].text = '';
 }
 
 function handleInput(e: Event) {
   const target = e.target as HTMLInputElement;
-  adminCtx.state.filters[resourceType as keyof AdminFilterStates].text = target.value;
+  adminCtx.appCtx.state.filters[resourceType as keyof FilterState].text = target.value;
 }
 </script>
 
@@ -75,12 +75,12 @@ function handleInput(e: Event) {
       class="input m-0 w-full bg-neutral px-6 pr-10 text-sm caret-white focus:border-none focus:outline-none focus:placeholder:text-transparent {rounded
         ? 'h-10 min-w-72 rounded-xl'
         : 'rounded-none'}"
-      bind:value={adminCtx.state.filters[resourceType as keyof AdminFilterStates].text}
+      bind:value={adminCtx.appCtx.state.filters[resourceType as keyof FilterState].text}
       oninput={handleInput}
       onkeydown={handleKeyDown}
       aria-label="Filter {resourceType}s" />
     <div class="absolute inset-y-0 right-2 flex items-center pr-3">
-      {#if adminCtx.state.filters[resourceType as keyof AdminFilterStates].text}
+      {#if adminCtx.appCtx.state.filters[resourceType as keyof FilterState].text}
         <button
           onclick={resetInput}
           class="focus:outline-none"

@@ -50,7 +50,7 @@ const filterKeys: Record<string, (keyof LayerViewFilters)[]> = {
 };
 
 const getFilterCount = (section: string) => {
-  const layerFilters = adminCtx.state.viewFilters.layer;
+  const layerFilters = adminCtx.appCtx.state.viewFilters.layer;
   let count = 0;
 
   if (section === 'status') {
