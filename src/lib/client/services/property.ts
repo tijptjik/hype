@@ -270,9 +270,9 @@ export function setRangePropertyFilter(
   // Only update if the values have actually changed to prevent unnecessary reactivity triggers
   if (
     appCtx.state.filters.feature.properties![layerId]?.[propertyId]?.rangeMin !==
-      values[0] ||
+      Math.min(...values) ||
     appCtx.state.filters.feature.properties![layerId]?.[propertyId]?.rangeMax !==
-      values[1]
+      Math.max(...values)
   ) {
     // Ensure the layer object exists
     if (!appCtx.state.filters.feature.properties![layerId]) {
@@ -299,8 +299,8 @@ export function setRangePropertyFilter(
     appCtx.state.filters.feature.properties![layerId][propertyId] = {
       globalMin,
       globalMax,
-      rangeMin: values[0],
-      rangeMax: values[1]
+      rangeMin: Math.min(...values),
+      rangeMax: Math.max(...values)
     };
     appCtx.zoomToAllVisibleFeatures();
   }
