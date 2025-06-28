@@ -1094,7 +1094,7 @@ export class AppCtx {
 
   // getNeighbourhoodParams(): URLSearchParams {
   //   const params = new URLSearchParams();
-  //   this.state.filters.neighbourhoods.forEach((n) => {
+  //   this.state.filters.feature.neighbourhoods.forEach((n) => {
   //     params.append('addressProperties.neighbourhood', n);
   //   });
   //   return params;

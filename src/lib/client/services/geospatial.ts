@@ -26,10 +26,10 @@ import type { Feature, Id } from '$lib/types';
  * Returns all features if no neighbourhoods are selected.
  */
 export function getFeatureIdsForNeighbourhoods(appCtx: AppCtx): Id[] {
-  if (appCtx.state.filters.neighbourhoods.length === 0) {
+  if (appCtx.state.filters.feature.neighbourhoods.length === 0) {
     return Array.from(appCtx.features.keys());
   }
-  const neighbourhoodFeatures = appCtx.state.filters.neighbourhoods.flatMap(
+  const neighbourhoodFeatures = appCtx.state.filters.feature.neighbourhoods.flatMap(
     (neighbourhood) => {
       return expandToSubNeighbourhoods(appCtx, neighbourhood);
     }
