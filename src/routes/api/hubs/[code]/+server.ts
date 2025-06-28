@@ -169,7 +169,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 
     // RESPONSE : Get updated hub with organisations and convert to form shape
     const hubWithOrganisations = await getHub(db, hubEntityWithRelations, [
-      eq(hub.code, params.code!)
+      eq(hub.id, updatedHub.id)
     ]);
     const updatedForm = await toFormShape(hubWithOrganisations!);
 
