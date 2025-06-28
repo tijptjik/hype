@@ -31,7 +31,7 @@ function handleClick(e: Event) {
         transformation: 'c_fill,w_100,h_100,q_auto'
       })}
       {alt}
-      class="h-full w-full rounded-md object-cover" />
+      class="h-full w-full rounded-md object-cover text-transparent" />
   {:else}
     <div class="flex h-full w-full items-center justify-center rounded-md bg-base-200">
       <span class="text-xs text-base-content/60"></span>
