@@ -89,7 +89,7 @@ function handleGradeSelect(newGrade: number) {
 </script>
 
 <div
-  class="flex-basis-auto flex {cardCtx.isNewMode
+  class="flex-basis-auto pointer-events-auto flex {cardCtx.isNewMode
     ? isEditing
       ? 'flex-col pl-2 w-100:pl-4'
       : 'flex-col pl-2 w-100:pl-4'

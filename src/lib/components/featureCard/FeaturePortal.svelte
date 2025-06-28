@@ -213,7 +213,7 @@ $effect(() => {
   bind:this={portalEl}
   class="pointer-events-none relative h-[200px] w-[200px] overflow-visible pr-3 w-96:pr-12">
   <svg
-    class="absolute inset-0 h-full w-full"
+    class="pointer-events-none absolute inset-0 h-full w-full"
     viewBox="0 0 100 100"
     preserveAspectRatio="xMidYMid meet">
     <defs>
@@ -229,12 +229,12 @@ $effect(() => {
     ></circle>
   </svg>
   <div
-    class="absolute right-2 top-1/2 flex -translate-y-[90px] translate-x-3 flex-col items-end gap-1 overflow-visible transition-all duration-300 w-100:translate-x-5"
+    class="pointer-events-none absolute right-2 top-1/2 flex -translate-y-[90px] translate-x-3 flex-col items-end gap-1 overflow-visible transition-all duration-300 w-100:translate-x-5"
     style="width: max-content;">
     {#each displayAddressLines as line, index}
       {#key `${'id' in feature ? feature.id : NEW_REF}-${index}`}
         <span
-          class="absolute inline-block origin-bottom-right whitespace-nowrap rounded-full bg-[#1D232A] {line !=
+          class="pointer-events-none absolute inline-block origin-bottom-right whitespace-nowrap rounded-full bg-[#1D232A] {line !=
           ''
             ? 'px-2 py-0.5 text-sm/6'
             : ''}"
@@ -253,6 +253,6 @@ $effect(() => {
   </div>
 
   <div
-    class="absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white">
+    class="pointer-events-none absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white">
   </div>
 </div>

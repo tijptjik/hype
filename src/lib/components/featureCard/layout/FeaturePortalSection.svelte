@@ -17,7 +17,7 @@ let {
     <div class="min-h-16 flex-1 overflow-y-auto bg-black">
       {@render left()}
     </div>
-    <div class="w-48 flex-shrink-0 overflow-visible">
+    <div class="pointer-events-none w-48 flex-shrink-0 overflow-visible">
       {@render right()}
     </div>
     <div class="h-auto w-4 flex-shrink-0 bg-black"></div>
