@@ -1,5 +1,5 @@
 import type { Map as MapLibreMap, Marker } from 'maplibre-gl';
-import type { Feature } from '$lib/types';
+import type { Feature, FeatureFromCollection } from '$lib/types';
 import { AppCtx } from '$lib/context/app.svelte';
 // STYLES
 import '$lib/styles/map.css';
@@ -51,12 +51,14 @@ export function createMarkerElement(): HTMLDivElement {
   return container;
 }
 
-export function updateMarkers(appCtx: AppCtx, features: Feature[], maplibre: any) {
+export function updateMarkers(
+  appCtx: AppCtx,
+  features: FeatureFromCollection[],
+  maplibre: any
+) {
   if (!appCtx.map) return;
-
   // Create a set of new feature IDs
   const newFeatureIds = new Set(features.map((f) => f.id as string));
-
   // Remove markers that are no longer present
   for (const [id, marker] of appCtx.state.markers.entries()) {
     if (!newFeatureIds.has(id)) {
@@ -73,13 +75,21 @@ export function updateMarkers(appCtx: AppCtx, features: Feature[], maplibre: any
   features.forEach((feature) => {
     if (feature.geometry?.type === 'Point') {
       const [lng, lat] = feature.geometry.coordinates;
-
-      // Skip if marker already exists
-      if (appCtx.state.markers.has(feature.id)) return;
-
+      // Check if marker DOM element already exists on the map
+      const mapContainer = appCtx.map.getContainer();
+      const existingMarkerElement = mapContainer.querySelector(
+        `[data-feature-id="${feature.id}"]`
+      );
+      if (existingMarkerElement) {
+        return;
+      }
+      // If marker exists in state but not in DOM, remove it from state
+      const existingMarker = appCtx.state.markers.get(feature.id);
+      if (existingMarker) {
+        appCtx.state.markers.delete(feature.id);
+      }
       // Create new marker
       const el = createMarkerElement();
-
       // Add data attributes to all elements in the marker
       const addDataToElements = (element: Element) => {
         element.setAttribute('data-type', 'marker');
@@ -87,19 +97,16 @@ export function updateMarkers(appCtx: AppCtx, features: Feature[], maplibre: any
         Array.from(element.children).forEach(addDataToElements);
       };
       addDataToElements(el);
-
       const marker = new maplibre.Marker({
         element: el,
         anchor: 'center'
       })
         .setLngLat([lng, lat])
         .addTo(appCtx.map);
-
       // Add marker to appCtx
       appCtx.state.markers.set(feature.id, marker);
     }
   });
-
   // Return cleanup function
   return () => {
     // Remove all markers and their event listeners
