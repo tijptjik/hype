@@ -5,6 +5,7 @@ let {
   index,
   isSelected = false,
   gridColsClass,
+  resourceType,
   children
 }: {
   onclick: (event: MouseEvent) => void;

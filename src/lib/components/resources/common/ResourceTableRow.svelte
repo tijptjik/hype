@@ -1,4 +1,4 @@
-<script lang="ts" generics="T extends Resource">
+<script lang="ts" generics="T extends Resource & EntityWithOptionalImage">
 // I18N
 import { getI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
@@ -15,7 +15,7 @@ import { getAdminCtx } from '$lib/context/admin.svelte';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
 // TYPES
-import type { Resource } from '$lib/types';
+import type { Resource, EntityWithOptionalImage, ImageDBBasic } from '$lib/types';
 import type { Snippet } from 'svelte';
 
 let {
@@ -64,10 +64,10 @@ const getHashiconUrl = (id: string) => {
       class="block w-full cursor-pointer rounded-lg bg-glass-result p-2 shadow-sm transition-shadow hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-secondary">
       <div class="flex items-center gap-4">
         <div class="relative h-16 w-16 flex-shrink-0">
-          {#if (entity as any).image}
+          {#if entity.image}
             <img
               src={getURLfromImage({
-                image: (entity as any).image,
+                image: entity.image as ImageDBBasic,
                 transformation: 'c_fill,w_100,h_100,q_auto'
               })}
               alt={getI18n(

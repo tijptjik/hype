@@ -1,14 +1,20 @@
 <script lang="ts">
 import Icon from '$lib/components/common/Icon.svelte';
-import { getHoverTextColor } from '$lib/utils/colours';
+import type { IconSource } from '@steeze-ui/svelte-icon';
 
-let { icon, iconColorClass, onNavigate, isNarrow, href } = $props<{
-  icon: string;
+let {
+  icon,
+  iconColorClass,
+  onNavigate,
+  isNarrow,
+  href
+}: {
+  icon: string | IconSource;
   iconColorClass: string;
   onNavigate?: (e: MouseEvent) => void;
   isNarrow: boolean;
   href: string;
-}>();
+} = $props();
 </script>
 
 <a

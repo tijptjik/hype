@@ -38,7 +38,18 @@ $effect(() => {
 });
 
 function getGroupId(group: G): string {
-  return (group as any).id ?? JSON.stringify(group);
+  if ('id' in group && typeof group.id === 'string') {
+    return group.id;
+  }
+  if ('id' in group && typeof group.id === 'number') {
+    return group.id.toString();
+  }
+  try {
+    return JSON.stringify(group);
+  } catch (error) {
+    // Fallback for circular references or non-serializable objects
+    return Object.prototype.toString.call(group) + Math.random().toString(36);
+  }
 }
 </script>
 

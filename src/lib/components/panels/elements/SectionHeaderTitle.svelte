@@ -6,7 +6,15 @@ import { ChevronDown, ChevronRight } from '@steeze-ui/heroicons';
 import type { PanelProps } from '$lib/types';
 
 // PROPS
-let { title, description, isOpen, onToggle, onNavigate, href, ...panelProps } = $props<{
+let {
+  title,
+  description,
+  isOpen,
+  onToggle,
+  onNavigate = undefined,
+  href,
+  ...panelProps
+} = $props<{
   title: string;
   description: string;
   isOpen: boolean;
@@ -24,7 +32,12 @@ let { title, description, isOpen, onToggle, onNavigate, href, ...panelProps } = 
         src={isOpen ? ChevronDown : ChevronRight}
         class="h-[18px] w-[18px]"
         onclick={onToggle} />
-      <a {href} onclick={href ? onNavigate : onToggle}>
+      <a
+        {href}
+        onclick={href && onNavigate ? onNavigate : onToggle}
+        role={href ? 'link' : 'button'}
+        tabindex="0"
+        aria-label={`${title} section header`}>
         <h3 class="text-sm uppercase tracking-widest">
           {title}
         </h3>

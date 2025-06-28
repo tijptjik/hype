@@ -35,7 +35,9 @@ let props: Props = $props();
 let colorClass = $derived(props.colorClass ?? 'text-blue-400');
 
 function handleToggle(id: Id) {
-  appCtx.togglePrism(props.resourceType as FirstClassResource, id);
+  if (props.resourceType !== 'neighbourhood') {
+    appCtx.togglePrism(props.resourceType as FirstClassResource, id);
+  }
 }
 
 // Handle narrow mode circle interactions

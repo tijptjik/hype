@@ -21,10 +21,10 @@ const reviewOutcome = $derived(entity.reviewOutcome);
 const reviewOutcomeDisplay = $derived(
   reviewOutcome
     ? {
-        rejected: 'Rejected',
-        accepted: 'Accepted'
+        rejected: m.yummy_front_myna_drip(),
+        accepted: m.lazy_super_gecko_bend()
       }[reviewOutcome]
-    : 'To Review'
+    : m.candid_drab_gibbon_bubble()
 );
 
 let colorSuffix = $derived(

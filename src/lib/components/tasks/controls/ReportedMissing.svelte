@@ -23,8 +23,12 @@ let distance = $derived(
   calculateDistance(
     (task.feature?.geometry as Point).coordinates[0] || 0,
     (task.feature?.geometry as Point).coordinates[1] || 0,
-    parseFloat((task.images?.[0]?.image?.metadata as any)?.latitude || '0'),
-    parseFloat((task.images?.[0]?.image?.metadata as any)?.longitude || '0')
+    parseFloat(
+      (task.images?.[0]?.image?.metadata as Record<string, string>)?.latitude || '0'
+    ),
+    parseFloat(
+      (task.images?.[0]?.image?.metadata as Record<string, string>)?.longitude || '0'
+    )
   )
 );
 

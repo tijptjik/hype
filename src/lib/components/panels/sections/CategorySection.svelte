@@ -3,21 +3,28 @@
 import { slide } from 'svelte/transition';
 import { ChevronDown, ChevronRight } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
+import type { Snippet } from 'svelte';
+import type { IconSource } from '@steeze-ui/svelte-icon';
 
 const toggle = () => {
   isOpen = !isOpen;
 };
 
 type Props = {
-  children: any;
+  children: Snippet;
   title: string;
-  icon: string;
+  icon: string | IconSource;
   iconVerticalPaddingClass: string;
   iconColorClass: string;
-  collapsedContent: any;
+  collapsedContent: Snippet<[string, any]>;
   isOpen: boolean;
-  hierarchy: any;
-  properties: any;
+  hierarchy: {
+    organisation?: string;
+    project?: string;
+    layer?: string;
+    layerId: string;
+  };
+  properties: Record<string, any>;
 };
 
 let {

@@ -21,6 +21,7 @@ let {
 // STATE : LOCAL
 let isOpen = $state(false);
 let buttonElement: HTMLButtonElement;
+let popoverElement: HTMLDivElement = $state()!;
 
 // METHODS
 function togglePopover(event: MouseEvent) {
@@ -35,7 +36,11 @@ function closePopover() {
 // Handle click outside to close
 onMount(() => {
   function handleClickOutside(event: MouseEvent) {
-    if (isOpen && !buttonElement?.contains(event.target as Node)) {
+    if (
+      isOpen &&
+      !buttonElement?.contains(event.target as Node) &&
+      !popoverElement?.contains(event.target as Node)
+    ) {
       closePopover();
     }
   }
@@ -69,6 +74,7 @@ function handleKeydown(event: KeyboardEvent) {
   {#if isOpen}
     <Portal target="body">
       <div
+        bind:this={popoverElement}
         class="pointer-events-auto fixed z-[9999] w-full max-w-[40rem] rounded-xl border-4 {borderColor} left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-glass-300-solid p-12 shadow-2xl"
         role="dialog"
         aria-modal="true">
