@@ -174,7 +174,7 @@ export class AppCtx {
     // Panels -- The panels that are open
     isPanelOpen: {
       filters: false,
-      maps: false,
+      prisms: false,
       stars: false,
       settings: false,
       admin: false // Will be set based on user preferences during init
@@ -2071,7 +2071,7 @@ export class AppCtx {
 
   // Panel methods
   togglePanel = (panel: keyof PanelState, closeAll: boolean = false): void => {
-    const leftPanels = ['maps', 'stars'];
+    const leftPanels = ['prisms', 'stars'];
     const rightPanels = ['filters', 'settings'];
     const currentState = this.state.isPanelOpen[panel];
     // If left panel is open, close it when toggling a left panel

@@ -1,11 +1,7 @@
-import type { Map as MapLibreMap, Marker } from 'maplibre-gl';
-import type { Feature, FeatureFromCollection } from '$lib/types';
+import type { FeatureFromCollection } from '$lib/types';
 import { AppCtx } from '$lib/context/app.svelte';
 // STYLES
 import '$lib/styles/map.css';
-
-// Track markers with their IDs
-const currentMarkers: Map<string, Marker> = new Map();
 
 // Function to create SVG marker element with fade-in animation
 export function createMarkerElement(): HTMLDivElement {
