@@ -166,6 +166,19 @@ export const getDatabase = async (
   };
 };
 
+export const getDatabaseWithoutAuth = async (platform: App.Platform | undefined) => {
+  if (!platform?.env.DB) {
+    return error(500, 'Database not available');
+  }
+  // Get logger setting from platform env
+  const enableLogger = platform?.env?.PUBLIC_DRIZZLE_LOGGER === 'true';
+
+  const db = client(platform.env.DB as unknown as MiniflareD1Database, enableLogger);
+  return {
+    db
+  };
+};
+
 // Client Services
 
 export async function getResponseOrError(request: Response) {
