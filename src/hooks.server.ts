@@ -15,7 +15,7 @@ import { createAuth } from '$lib/auth';
 // SERVICES
 import { toResponseShape } from '$lib/api/services/hub';
 // TYPES
-import type { Session, SessionUser } from '$lib/types';
+import type { HubOpts, Session, SessionUser } from '$lib/types';
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1';
 
 let handle: Handle;
@@ -67,11 +67,6 @@ const handle_cors = (async ({ event, resolve }) => {
  * It is used to filter the data in the database.
  */
 const handle_hub: Handle = async ({ event, resolve }) => {
-  const coreConfig = {
-    code: 'core',
-    domain: 'hype.hk',
-    isCore: true
-  };
   // Get host from headers
   const host = event.request.headers.get('host');
 
@@ -84,7 +79,7 @@ const handle_hub: Handle = async ({ event, resolve }) => {
 
   // If on Core hub, don't lookup the hub in the database
   if (hubOpts.isCore) {
-    event.locals.hub = coreConfig;
+    event.locals.hub = hubOpts as HubOpts;
     return resolve(event);
   }
 
@@ -107,7 +102,7 @@ const handle_hub: Handle = async ({ event, resolve }) => {
     }
   } else {
     // Default to Core
-    event.locals.hub = coreConfig;
+    event.locals.hub = hubOpts as HubOpts;
   }
 
   return resolve(event);
