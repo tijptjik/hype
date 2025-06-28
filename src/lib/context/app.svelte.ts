@@ -585,6 +585,15 @@ export class AppCtx {
     });
     // Efficiently sync layer cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.layer, this.state.resources.layer);
+
+    // Auto-select single layer if there's only one available and none selected
+    if (
+      this.state.resources.layer.length === 1 &&
+      this.state.prisms.layer.length === 0
+    ) {
+      this.toggleLayer(this.state.resources.layer[0].id);
+    }
+
     // Also calls this.refreshFeatures()
     await this.postLayerMutation();
   };
