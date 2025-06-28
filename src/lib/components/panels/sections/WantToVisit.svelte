@@ -28,7 +28,6 @@ let searchTerm = $state('');
 let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
   (async () => {
     if (!appCtx.state.userFeatures.wishlisted) return [];
-
     const results = [];
     for (const wishlist of appCtx.state.userFeatures.wishlisted) {
       const feature = appCtx.state.resources.feature.find(
@@ -98,11 +97,21 @@ let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
             )}
             <div
               class="min-h-21 flex cursor-pointer flex-row items-center justify-between gap-4 bg-black px-4 py-2 text-[#374151]"
+              role="button"
+              tabindex="0"
               animate:flip={{ duration: 200 }}
               onclick={() =>
                 omniCtx.handleFeatureSelection(appCtx, wishlist.featureId, {
                   openCard: true
-                })}>
+                })}
+              onkeydown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  omniCtx.handleFeatureSelection(appCtx, wishlist.featureId, {
+                    openCard: true
+                  });
+                }
+              }}>
               <Icon src={Squares2x2} class="h-5 w-5 flex-shrink-0" theme="fill" />
               <div class="flex flex-grow flex-col">
                 <p class="text-xs uppercase tracking-widest">

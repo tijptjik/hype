@@ -96,7 +96,7 @@ const totalFilterCount = $derived(() => {
 
 // HANDLERS
 function selectSection(sectionKey: string) {
-  if (activeSection == sectionKey) {
+  if (activeSection === sectionKey) {
     activeSection = null;
   }
   activeSection = sectionKey;

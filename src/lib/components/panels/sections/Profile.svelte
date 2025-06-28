@@ -37,6 +37,9 @@ const appCtx = getAppCtx();
           fetchOptions: {
             onSuccess: () => {
               goto('/'); // redirect to login page
+            },
+            onError: (error) => {
+              console.error('Sign out failed:', error);
             }
           }
         })}>

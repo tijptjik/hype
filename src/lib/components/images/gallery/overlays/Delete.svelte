@@ -19,6 +19,7 @@ const imageCtx = getImageContext();
   class="absolute inset-0 z-40 flex items-center justify-center rounded-lg bg-glass-result/70 backdrop-blur-sm"
   transition:fade={{ duration: 200 }}>
   <button
+    aria-label="Delete image"
     class="btn btn-circle bg-glass-rejected hover:bg-glass-rejected/80"
     onclick={(e) => {
       imageCtx.handlePreDelete(e, image);

@@ -9,7 +9,7 @@ let {
 }: {
   image?: ImageDB | ImageDBBasic | null;
   alt?: string;
-  onClick?: (image: ImageDBBasic) => void;
+  onClick?: (image: ImageDB | ImageDBBasic) => void;
 } = $props();
 
 function handleClick(e: Event) {
@@ -17,19 +17,11 @@ function handleClick(e: Event) {
   e.stopPropagation();
   if (image && onClick) onClick(image as ImageDBBasic);
 }
-function handleKeyDown(e: KeyboardEvent) {
-  if (e.key === 'Enter' && image && onClick) {
-    e.preventDefault();
-    e.stopPropagation();
-    onClick(image as ImageDBBasic);
-  }
-}
 </script>
 
 <div
   class="relative h-16 w-16 flex-shrink-0 cursor-pointer"
   onclick={handleClick}
-  onkeydown={handleKeyDown}
   tabindex="-1"
   role="button">
   {#if image}

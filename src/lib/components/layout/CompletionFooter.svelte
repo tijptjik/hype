@@ -39,7 +39,7 @@ const overallStats = $derived(
     <span class="hidden text-xs font-medium w-512:block"
       >{filterSections[key as keyof typeof filterSections].title}</span>
     <progress
-      class="progress progress-primary min-w-32 flex-1"
+      class="progress progress-primary min-w-[8rem] flex-1"
       value={percentage}
       max="100"></progress>
     <span class="text-xs font-medium">{Math.round(percentage)}%</span>

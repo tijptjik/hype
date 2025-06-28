@@ -15,14 +15,7 @@ type Props = {
   isSolid?: boolean;
 };
 
-let {
-  property,
-  checked,
-  userPreferences,
-  onChange,
-  size = 'sm',
-  isSolid = true
-}: Props = $props();
+let { property, checked, userPreferences, onChange, size = 'sm' }: Props = $props();
 
 // STATE : DERIVED
 let label = $derived(getI18n(property, 'label', userPreferences) || 'Toggle');

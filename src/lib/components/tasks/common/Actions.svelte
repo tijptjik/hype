@@ -183,8 +183,6 @@ function closeExpand(e: MouseEvent) {
 {/if}
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Tilt+Neon&display=swap');
-
 .tilt-neon-watermark {
   font-family: 'Tilt Neon', sans-serif;
   font-optical-sizing: auto;

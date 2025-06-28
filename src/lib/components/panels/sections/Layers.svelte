@@ -1,4 +1,5 @@
 <script lang="ts">
+import { browser } from '$app/environment';
 // I18N
 import { getI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
@@ -60,7 +61,7 @@ function filterLayers(layers: Layer[], term: string) {
 }
 
 const filteredLayers = $derived(filterLayers(layers, searchTerm));
-let isDefaultOpen = $derived(document.body.clientHeight > 1000);
+let isDefaultOpen = $derived(browser ? window.innerHeight > 1000 : false);
 
 let handleReset = () => {
   if (selectedLayers.length == 0) {

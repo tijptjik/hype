@@ -20,7 +20,9 @@ function handleKeyDown(e: KeyboardEvent) {
 </script>
 
 <div
-  class="cursor-pointer text-sm text-base-content/60 hover:text-primary"
+  class="{onClick
+    ? 'cursor-pointer'
+    : ''} text-sm text-base-content/60 hover:text-primary"
   tabindex="-1"
   role={onClick ? 'button' : undefined}
   onclick={onClick ? handleClick : undefined}
