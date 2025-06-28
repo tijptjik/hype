@@ -93,7 +93,7 @@ $effect(() => {
 
 {#if description !== m.zany_merry_seahorse_treasure() && description.length > 0 && description !== '-'}
   <div
-    class="flex-shrink-3 relative z-10 my-0 flex min-h-12 flex-col bg-black caret-transparent">
+    class="flex-shrink-3 pointer-events-auto relative z-10 my-0 flex min-h-12 select-none flex-col bg-black caret-transparent">
     <div class="overflow-y-auto" bind:this={scrollContainer} use:smartScroll>
       <div class="h-auto min-h-8 w-100:pl-6 w-100:pr-4">
         <p
