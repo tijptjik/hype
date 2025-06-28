@@ -90,7 +90,7 @@ export const debouncedUpdateUserPreferences = (
 
   debouncedUpdateUser(
     userId,
-    { preferences: userPreferences },
+    { preferences: JSON.stringify(userPreferences) },
     {
       delay: 750,
       timerKey: 'preferences'
@@ -143,7 +143,7 @@ export const debouncedUpdateUserExperimental = (
 
   debouncedUpdateUser(
     userId,
-    { experimental },
+    { experimental: JSON.stringify(experimental) },
     {
       delay: 750,
       timerKey: 'experimental'

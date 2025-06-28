@@ -54,10 +54,36 @@ export const createAuth = (
         const userLayers: UserLayer[] = await getUserLayers(db, user.id);
         const superAdmin = user.id === env.SUPERADMIN_USERID;
 
+        // Parse JSON fields from strings to objects
+        let preferences: UserPreferences;
+        let experimental: UserExperimental;
+
+        try {
+          preferences = JSON.parse((user as any).preferences);
+        } catch {
+          preferences = {
+            fallbackLocales: [],
+            allowMachineTranslation: false,
+            preferFallbackInCurrentLocale: false,
+            isTranslateButtonVisible: true
+          };
+        }
+
+        try {
+          experimental = JSON.parse((user as any).experimental);
+        } catch {
+          experimental = {
+            contributorMode: false,
+            noLabelsMode: false
+          };
+        }
+
         // Return enriched session data
         return {
           user: {
             ...user,
+            preferences,
+            experimental,
             roles,
             userLayers,
             superAdmin

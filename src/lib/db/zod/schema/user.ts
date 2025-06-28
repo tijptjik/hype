@@ -62,8 +62,22 @@ export const UserCurrent = UserBase.pick({
   preferences: true,
   experimental: true
 } as const).extend({
-  // Override JSON fields with proper types
-  preferences: UserPreferencesSchema,
-  experimental: UserExperimentalSchema
+  // Override JSON fields with proper types - transform strings to objects
+  preferences: z.string().transform((str) => {
+    try {
+      const parsed = JSON.parse(str);
+      return UserPreferencesSchema.parse(parsed);
+    } catch {
+      return UserPreferencesSchema.parse({});
+    }
+  }),
+  experimental: z.string().transform((str) => {
+    try {
+      const parsed = JSON.parse(str);
+      return UserExperimentalSchema.parse(parsed);
+    } catch {
+      return UserExperimentalSchema.parse({});
+    }
+  })
 });
 export const UserUpdate = createUpdateSchema(user);
