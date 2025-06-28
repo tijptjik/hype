@@ -1529,8 +1529,6 @@ export class AppCtx {
     let project: Project | undefined;
     let organisation: Organisation | undefined;
 
-    console.log(resource);
-
     if ('featureId' in resource) {
       // Feature - get its layer, then project, then organisation
       feature = (await this.getFeatureById(

@@ -37,15 +37,15 @@ export const user = sqliteTable('user', {
   // If a user is archived, their account is effectively disabled, and they are not allowed to login
   isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
   // Language features
-  preferences: text('preferences', { mode: 'json' })
-    .$type<UserPreferences>()
+  preferences: text('preferences')
+    .$type<string>()
     .default(
       sql`'{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}'`
     )
     .notNull(),
   // Experimental features
-  experimental: text('experimental', { mode: 'json' })
-    .$type<UserExperimental>()
+  experimental: text('experimental')
+    .$type<string>()
     .default(sql`'{"contributorMode":false, "noLabelsMode":false}'`)
     .notNull(),
   createdAt: integer('createdAt', { mode: 'timestamp_ms' })
