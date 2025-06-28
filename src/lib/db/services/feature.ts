@@ -569,14 +569,14 @@ export const updateFeatureWithRelated = async (
     );
     // Select canonical or first image using the correct data (admin context, no filtering)
     selectedImage = selectCanonicalOrFirstImage(imagesWithData, false);
-
-    return {
-      ...feature,
-      i18n,
-      properties,
-      image: selectedImage
-    };
   }
+
+  return {
+    ...feature,
+    i18n,
+    properties,
+    image: selectedImage
+  };
 };
 
 /********************
