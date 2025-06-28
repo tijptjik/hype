@@ -8,8 +8,9 @@ import { getHubFromDomain } from '$lib/api/services/hub';
 
 // I18N
 import * as m from '$lib/paraglide/messages';
-import { locales, type AvailableLanguageTag } from '$lib/paraglide/runtime';
+import { locales } from '$lib/paraglide/runtime';
 import { getDatabaseWithoutAuth } from '$lib/api';
+import type { HubI18nDB, HubOpts, Locale } from '$lib/types';
 
 const getBaseManifest = async (code: string) => {
   try {
@@ -49,36 +50,44 @@ const getLocaleFromHeaders = (request: Request): AvailableLanguageTag => {
 };
 
 export const GET: RequestHandler = async ({ url, request, platform }) => {
-  console.log('manifest.webmanifest');
-  const { code: hubCode } = getHubFromDomain(url.hostname);
+  console.log(platform?.env);
+  const hubOpts: Partial<HubOpts> = getHubFromDomain(
+    url.hostname,
+    platform?.env?.PUBLIC_HUB_CODE
+  );
 
-  if (!hubCode) return error(404, 'Hub not found');
+  if (!hubOpts.code) return error(404, 'Hub not found');
 
-  const { db } = await getDatabaseWithoutAuth(platform);
+  const locale = getLocaleFromHeaders(request) as Locale;
+  let i18nData: Partial<HubI18nDB>;
+  let baseManifest: any;
+  let domain: string | null;
 
-  const hub = await getHubByCode(db, hubCode);
-  if (!hub) return error(404, 'Hub not found');
+  if (hubOpts.isCore) {
+    baseManifest = await getBaseManifest(hubOpts.code);
+    if (!baseManifest)
+      return error(404, `Manifest for hub "${hubOpts.code}" not found`);
+    i18nData = hubOpts.i18n![locale]!;
+    domain = hubOpts.domain!;
+  } else {
+    const { db } = await getDatabaseWithoutAuth(platform);
+    const hubDb = await getHubByCode(db, hubOpts.code);
+    if (!hubDb) return error(404, 'Hub not found');
+    baseManifest = await getBaseManifest(hubDb.code!);
+    if (!baseManifest) return error(404, `Manifest for hub "${hubDb.code}" not found`);
+    i18nData =
+      hubDb.i18n?.find((i) => i.locale === locale) ||
+      (hubDb.i18n?.find((i) => i.locale === 'en') as Partial<HubI18nDB>);
+    domain = hubDb.domain;
+  }
 
-  const baseManifest = await getBaseManifest(hub.code);
-  if (!baseManifest) return error(404, `Manifest for hub "${hub.code}" not found`);
-
-  const locale = getLocaleFromHeaders(request);
-
-  console.log(locale);
-  console.log(hub.i18n);
-
-  const i18nData =
-    hub.i18n.find((i) => i.locale === locale) ||
-    hub.i18n.find((i) => i.locale === 'en');
-
-  console.log(i18nData);
   const manifest = {
     ...baseManifest,
     name: i18nData?.name || 'HYPE',
     short_name: i18nData?.nameShort || 'HYPE',
     lang: locale,
     description: i18nData?.description || 'A HYPE.HK Hub',
-    start_url: hub.domain ? `https://${hub.domain}` : '/'
+    start_url: domain ? `https://${domain}` : '/'
   };
   // remove default as it's a module property
   delete manifest.default;
