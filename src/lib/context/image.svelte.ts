@@ -876,7 +876,7 @@ export class ImageCtx {
       if (feature) {
         // If we have feature.images array, use it
         if (feature.images && feature.images.length > 0) {
-          return feature.images;
+          return feature.images as Image[];
         }
 
         // If feature.images is undefined/null, this is likely a FeatureFromCollection
@@ -887,7 +887,7 @@ export class ImageCtx {
 
         // If we have feature.image but empty images array, use the single image
         if (feature.image && includeSingleImage) {
-          return [feature.image];
+          return [feature.image as Image];
         }
       }
     }
@@ -1486,7 +1486,7 @@ export class ImageCtx {
   // ═══════════════════════
   private sortImagesInternal() {
     const images = this.getImages();
-    const sortedImages = sortImages(images);
+    const sortedImages = sortImages(images, this.isAdminMode);
 
     // Clear and repopulate the map with sorted images
     this.state.images.clear();

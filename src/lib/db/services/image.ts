@@ -20,7 +20,7 @@ import type {
   ImageDBFlatUpdate
 } from '$lib/types';
 // UTILS
-import { sortImages } from '$lib/api/services/image';
+import { sortImages } from '$lib/client/services/image';
 
 // ═══════════════════════
 // TABLE OF CONTENTS

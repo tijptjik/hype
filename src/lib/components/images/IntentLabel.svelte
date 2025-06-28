@@ -5,7 +5,7 @@ import { onClickOutside } from 'runed';
 // CONTEXT
 import { getImageContext } from '$lib/context/image.svelte';
 // SERVICES
-import { intentOrder } from '$lib/api/services/image';
+import { adminIntentOrder } from '$lib/api/services/image';
 // TYPES
 import type { Intent } from '$lib/types';
 
@@ -77,7 +77,7 @@ container.addEventListener('mouseleave', () => {
         class="absolute bottom-[34px] left-[-20px] mb-1 w-32 overflow-hidden rounded-lg bg-glass-result shadow-lg"
         bind:this={intentContext.ref}
         transition:fade={{ duration: 150 }}>
-        {#each intentOrder.filter((option) => option !== intent) as option, idx}
+        {#each adminIntentOrder.filter((option) => option !== intent) as option, idx}
           <button
             class="w-full px-2 py-[5px] text-center text-sm hover:bg-primary focus:bg-primary
                   focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-secondary
