@@ -42,29 +42,50 @@ export const hubEntityWithRelations = {
  * Parses host to determine hub identifier without DB lookup
  * Returns hub identifier object for efficient filtering
  */
-export function getHubFromDomain(host: string | null, hubCode?: string): HubOpts {
-  // Development override
-  if (hubCode) {
-    const code = hubCode;
-    return {
-      code: code === 'core' ? undefined : code,
-      isCore: code === 'core'
-    };
-  }
+export function getHubFromDomain(
+  host: string | null,
+  hubCode?: string
+): Partial<HubOpts> {
+  const coreConfig = {
+    code: 'core',
+    domain: 'hype.hk',
+    isCore: true,
+    i18n: {
+      en: {
+        locale: 'en',
+        name: 'HYPE.HK',
+        nameShort: 'HYPE',
+        description: 'Beautiful Hong Kong'
+      },
+      'zh-hant': {
+        locale: 'zh-hant',
+        name: 'HYPE.HK',
+        nameShort: 'HYPE',
+        description: '美丽的香港'
+      },
+      'zh-hans': {
+        locale: 'zh-hans',
+        name: 'HYPE.HK',
+        nameShort: 'HYPE',
+        description: '美丽的香港'
+      }
+    }
+  };
+
   // Default to core
-  if (!host) return { isCore: true, code: 'core' };
+  if (!host) return coreConfig;
 
   // Remove port number if present
   const domain = host.split(':')[0];
 
   // localhost -> core (development)
   if (domain === 'localhost') {
-    return { isCore: true, code: 'core' };
+    return hubCode ? { code: hubCode, isCore: false } : coreConfig;
   }
 
   // hype.hk -> core || preview.hype.hk -> core (preview)
   if (domain === 'hype.hk' || domain === 'preview.hype.hk') {
-    return { isCore: true, code: 'core' };
+    return coreConfig;
   }
 
   // subdomain.hype.hk -> use subdomain as hub code
