@@ -65,7 +65,7 @@ const filterKeys: Record<string, (keyof ProjectViewFilters)[]> = {
 };
 
 const getFilterCount = (section: string) => {
-  const projectFilters = adminCtx.state.viewFilters.project;
+  const projectFilters = adminCtx.appCtx.state.viewFilters.project;
   let count = 0;
 
   if (section === 'status') {

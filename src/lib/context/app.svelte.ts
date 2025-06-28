@@ -32,7 +32,15 @@ import { SvelteMap } from 'svelte/reactivity';
 // MARKERS
 import { removeMarkerClass, addMarkerClass } from '$lib/map/markers';
 // ENUMS
-import { FirstClassResource, ResourcePath, ResourceRefKey } from '$lib/enums';
+import {
+  FirstClassResource,
+  HierarchicalResource,
+  ResourcePath,
+  ResourceRefKey
+} from '$lib/enums';
+// GUARDS
+import { isHub, isTask } from '$lib/types';
+
 // TYPES
 import type {
   ActiveCollection,
@@ -46,6 +54,9 @@ import type {
   Feature,
   FeatureFromCollection,
   FeatureI18nFieldKeys,
+  FilterState,
+  FilteredResources,
+  FilterTriState,
   Hub,
   Id,
   Layer,
@@ -70,8 +81,6 @@ import type {
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
 import { MOBILE_MAX_WIDTH } from '$lib/index';
-import { feature } from '../db/schema/feature';
-import { layer } from '$lib/db/schema/layer';
 
 export class AppCtx {
   // Maplibre Map instance
@@ -132,8 +141,16 @@ export class AppCtx {
     prisms: { organisation: [], project: [], layer: [] },
     // TIER 2: APP FILTERS -- Which neighbourhoods and properties being filtered for when showing features on the map
     // Applied in the app regardless of view - affects all features displayed on the map and in collections
-    filters: { neighbourhoods: [], properties: {} },
-    // TIER 3: VIEW FILTERS -- Handled by individual admin views (e.g., AdminCtx.state.viewFilters)
+    filters: {
+      organisation: { text: '', properties: {} },
+      project: { text: '', properties: {} },
+      layer: { text: '', properties: {} },
+      feature: { text: '', neighbourhoods: [], properties: {} },
+      task: { text: '', properties: {} },
+      hub: { text: '', properties: {} },
+      property: { text: '', properties: {} }
+    },
+    // TIER 3: VIEW FILTERS -- Handled by individual admin views (e.g., AppCtx.state.viewFilters)
     // Only affect the current route/view they are applied on, not the underlying data or map view
     // Resources -- The resources fetched from the database (post prism-filtering, pre filters-filtering)
     resources: {
@@ -198,6 +215,208 @@ export class AppCtx {
         feature: 'table',
         task: 'table',
         hub: 'card'
+      }
+    },
+    // TIER 3: VIEW FILTERS - Only affect current route/view
+    viewFilters: {
+      organisation: {
+        // Status related
+        isPublished: null,
+        isArchived: false,
+
+        // Image related
+        hasImage: null,
+
+        // Authorship related
+        hasName: null,
+        hasContextualName: null,
+        hasDescription: null,
+
+        // Translation related
+        translationLocales: {
+          en: false, // Default: English not selected
+          'zh-hant': true,
+          'zh-hans': true
+        },
+        isNameTranslated: {
+          en: null,
+          'zh-hant': null,
+          'zh-hans': null
+        },
+        isContextualNameTranslated: {
+          en: null,
+          'zh-hant': null,
+          'zh-hans': null
+        },
+        isDescriptionTranslated: {
+          en: null,
+          'zh-hant': null,
+          'zh-hans': null
+        }
+      },
+      project: {
+        // Status related
+        isPublished: null,
+        isArchived: false,
+
+        // Image related
+        hasImage: null,
+
+        // Authorship related
+        hasName: null,
+        hasContextualName: null,
+        hasDescription: null,
+        hasAttribution: null,
+        hasLicense: null,
+
+        // Translation related
+        translationLocales: {
+          en: false,
+          'zh-hant': true,
+          'zh-hans': true
+        },
+        isNameTranslated: {
+          en: null,
+          'zh-hant': null,
+          'zh-hans': null
+        },
+        isContextualNameTranslated: {
+          en: null,
+          'zh-hant': null,
+          'zh-hans': null
+        },
+        isDescriptionTranslated: {
+          en: null,
+          'zh-hant': null,
+          'zh-hans': null
+        },
+        isAttributionTranslated: {
+          en: null,
+          'zh-hant': null,
+          'zh-hans': null
+        },
+        isLicenseTranslated: {
+          en: null,
+          'zh-hant': null,
+          'zh-hans': null
+        }
+      },
+      layer: {
+        // Status related
+        isPublished: null,
+        isArchived: false,
+
+        // Authorship related
+        hasName: null,
+        hasContextualName: null,
+        hasDescription: null,
+
+        // Translation related
+        translationLocales: {
+          en: false,
+          'zh-hant': true,
+          'zh-hans': true
+        },
+        isNameTranslated: {
+          en: null,
+          'zh-hant': null,
+          'zh-hans': null
+        },
+        isContextualNameTranslated: {
+          en: null,
+          'zh-hant': null,
+          'zh-hans': null
+        },
+        isDescriptionTranslated: {
+          en: null,
+          'zh-hant': null,
+          'zh-hans': null
+        }
+      },
+      feature: {
+        // Status related
+        isPublished: null,
+        isPendingReview: null,
+        isArchived: false,
+        isIntangible: null,
+        isVisitable: null,
+
+        // Image related
+        hasImage: null,
+        isOneImagePublished: null,
+        isAllImagePublished: null,
+
+        // Authorship related
+        hasTitle: null,
+        hasDescription: null,
+        hasDisplayAddress: null,
+
+        // Translation related
+        translationLocales: {
+          en: false, // Default: English not selected
+          'zh-hant': true,
+          'zh-hans': true
+        },
+        isTitleTranslated: {
+          en: null,
+          'zh-hant': null,
+          'zh-hans': null
+        },
+        isDescriptionTranslated: {
+          en: null,
+          'zh-hant': null,
+          'zh-hans': null
+        },
+        isSpecifierTranslated: {
+          en: null,
+          'zh-hant': null,
+          'zh-hans': null
+        },
+        isAddressTranslated: {
+          en: null,
+          'zh-hant': null,
+          'zh-hans': null
+        },
+        // Property related
+        properties: {} as Record<Id, FilterTriState>
+      },
+      task: {
+        // Status related
+        isReviewed: null
+      },
+      hub: {
+        // Status related
+        isArchived: false,
+
+        // Image related
+        hasImage: null,
+
+        // Authorship related
+        hasName: null,
+        hasContextualName: null,
+        hasDescription: null,
+
+        // Translation related
+        translationLocales: {
+          en: false,
+          'zh-hant': false,
+          'zh-hans': false
+        },
+        isNameTranslated: {
+          en: null,
+          'zh-hant': null,
+          'zh-hans': null
+        },
+        isContextualNameTranslated: {
+          en: null,
+          'zh-hant': null,
+          'zh-hans': null
+        },
+        isDescriptionTranslated: {
+          en: null,
+          'zh-hant': null,
+          'zh-hans': null
+        }
       }
     }
   });
@@ -767,7 +986,7 @@ export class AppCtx {
   postLayerMutation = async (): Promise<void> => {
     const currentLayerIds = new Set(this.state.prisms.layer);
     const existingFilterLayerIds = new Set(
-      Object.keys(this.state.filters.properties || {})
+      Object.keys(this.state.filters.feature.properties || {})
     );
 
     // Initialise filters for newly added layers
@@ -782,7 +1001,7 @@ export class AppCtx {
     // Remove filters for layers that are no longer active
     existingFilterLayerIds.forEach((layerId) => {
       if (!currentLayerIds.has(layerId)) {
-        delete this.state.filters.properties![layerId];
+        delete this.state.filters.feature.properties![layerId];
       }
     });
 
@@ -863,14 +1082,14 @@ export class AppCtx {
   // FILTERS - NEIGHBOURHOODS
 
   toggleNeighbourhood = (name: string) => {
-    const current = this.state.filters.neighbourhoods;
-    this.state.filters.neighbourhoods = current.includes(name)
+    const current = this.state.filters.feature.neighbourhoods;
+    this.state.filters.feature.neighbourhoods = current.includes(name)
       ? current.filter((n) => n !== name)
       : [...current, name].sort();
   };
 
   resetNeighbourhoods = () => {
-    this.state.filters.neighbourhoods = [];
+    this.state.filters.feature.neighbourhoods = [];
   };
 
   // getNeighbourhoodParams(): URLSearchParams {
@@ -885,8 +1104,8 @@ export class AppCtx {
 
   getFilterCount = (): { neighbourhoods: number; properties: number } => {
     return {
-      neighbourhoods: this.state.filters.neighbourhoods.length,
-      properties: Object.entries(this.state.filters.properties || {}).reduce(
+      neighbourhoods: this.state.filters.feature.neighbourhoods.length,
+      properties: Object.entries(this.state.filters.feature.properties || {}).reduce(
         (total, [_, layerFilters]) => {
           // For each layer, count its active property filters
           return (
@@ -914,13 +1133,87 @@ export class AppCtx {
   };
 
   resetFilters = (): void => {
-    this.state.filters = { neighbourhoods: [], properties: {} };
+    this.state.filters = {
+      organisation: { text: '', properties: {} },
+      project: { text: '', properties: {} },
+      layer: { text: '', properties: {} },
+      feature: { text: '', neighbourhoods: [], properties: {} },
+      task: { text: '', properties: {} },
+      hub: { text: '', properties: {} },
+      property: { text: '', properties: {} }
+    };
     // Re-initialize property filters for active layers
     this.state.prisms.layer.forEach((layerId) => {
       this.initialiseCategoricalPropertyFilters(layerId);
       this.initialiseRangePropertyFilter(layerId);
     });
   };
+
+  getFilteredResource = <
+    T extends Organisation | Project | Layer | Feature | Hub | Task
+  >(
+    resource: FirstClassResource | HierarchicalResource,
+    filters = { text: true, state: true }
+  ): T[] => {
+    let query = this.state.filters[resource as keyof FilterState].text || '';
+    // FULL SET
+    let result = this.state.resources[resource as keyof FilteredResources] as T[];
+    // TIER 2 FILTERS :: Boolean State :: (App Wide)
+    // TODO Implement these filters if the data responses get too large.
+    // TIER 2 FILTERS :: Text :: (App Wide)
+    if (filters.text && resource !== FirstClassResource.hub) {
+      result = result.filter((entity: T) => {
+        if (!isTask(entity)) {
+          return this.textFilter(resource as FirstClassResource, entity, query);
+        }
+        return true;
+      });
+    }
+
+    return result;
+  };
+
+  textFilter = <
+    T extends Organisation | Project | Layer | Feature | Hub | FeatureFromCollection
+  >(
+    resource: FirstClassResource,
+    entity: T,
+    query: string
+  ) => {
+    const textObject = entity.i18n?.[getLocale()];
+    if (!textObject) return false;
+    return (
+      query === '' ||
+      textObject.name?.toLowerCase().includes(query.toLowerCase()) ||
+      textObject.title?.toLowerCase().includes(query.toLowerCase()) ||
+      textObject.nameShort?.toLowerCase().includes(query.toLowerCase()) ||
+      textObject.description?.toLowerCase().includes(query.toLowerCase()) ||
+      textObject.displayAddress?.toLowerCase().includes(query.toLowerCase())
+    );
+  };
+
+  // Filtered Helpers
+  filteredOrganisations = $derived.by(() => {
+    // Explicitly access reactive dependencies so Svelte tracks them
+    this.state.resources.organisation;
+    this.state.filters.organisation;
+    return this.getFilteredResource<Organisation>(FirstClassResource.organisation);
+  });
+  filteredProjects = $derived.by(() => {
+    this.state.resources.project;
+    this.state.filters.project;
+    return this.getFilteredResource<Project>(FirstClassResource.project);
+  });
+  filteredLayers = $derived.by(() => {
+    this.state.resources.layer;
+    this.state.filters.layer;
+    return this.getFilteredResource<Layer>(FirstClassResource.layer);
+  }) as Layer[];
+  filteredFeatures = $derived.by(() => {
+    this.state.resources.feature;
+    this.state.filters.feature;
+    return this.getFilteredResource<Feature>(FirstClassResource.feature);
+  });
 
   // PRISM RELATIONS
 
@@ -1698,7 +1991,7 @@ export class AppCtx {
 
   // Accessor for Active Property Filters
   // TODO Make properties more efficient and first-class citizens
-  propertyFilters = $derived(this.state.filters.properties);
+  propertyFilters = $derived(this.state.filters.feature.properties);
 
   // FEATURE COLLECTIONS -- Utils
 
@@ -2228,11 +2521,11 @@ export class AppCtx {
         ) || [];
 
     // Ensure the layer's filter object exists
-    if (!this.state.filters.properties![layerId]) {
-      this.state.filters.properties![layerId] = {};
+    if (!this.state.filters.feature.properties![layerId]) {
+      this.state.filters.feature.properties![layerId] = {};
     }
 
-    const layerFilters = this.state.filters.properties![layerId];
+    const layerFilters = this.state.filters.feature.properties![layerId];
 
     // Initialize each classifier property with an empty array if not already set
     classifierProperties.forEach((property: Property) => {
@@ -2270,11 +2563,11 @@ export class AppCtx {
         ) || [];
 
     // Ensure the layer's filter object exists
-    if (!this.state.filters.properties![layerId]) {
-      this.state.filters.properties![layerId] = {};
+    if (!this.state.filters.feature.properties![layerId]) {
+      this.state.filters.feature.properties![layerId] = {};
     }
 
-    const layerFilters = this.state.filters.properties![layerId];
+    const layerFilters = this.state.filters.feature.properties![layerId];
 
     // Initialize each range property using its min/max if not already set
     rangeProperties.forEach((property: Property) => {

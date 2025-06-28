@@ -40,7 +40,7 @@ let localisedOptions = $derived(
 
 // Derive selected values directly from context's propertyFilters using property ID
 let selectedPropertyValueIds = $derived(
-  appCtx.propertyFilters?.[layerId]?.[property.id] ?? []
+  appCtx.state.filters.feature.properties?.[layerId]?.[property.id] ?? []
 );
 
 let isOpen = $state(defaultOpen);

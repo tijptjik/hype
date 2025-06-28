@@ -15,7 +15,8 @@ import type {
   Id,
   RangeFilterValue,
   FeaturePropertyI18nDB,
-  Layer
+  Layer,
+  FeatureFromCollection
 } from '$lib/types';
 
 // ═══════════════════════
@@ -209,7 +210,8 @@ export function toggleCategoricalPropertyValue(
   propertyId: Id,
   propertyValueId: Id
 ): void {
-  const currentSelection = appCtx.propertyFilters?.[layerId]?.[propertyId] ?? [];
+  const currentSelection =
+    appCtx.state.filters.feature.properties?.[layerId]?.[propertyId] ?? [];
   const index = currentSelection.indexOf(propertyValueId);
   let newSelection: string[];
 
@@ -237,8 +239,8 @@ export function setCategoricalPropertyFilter(
   propertyId: Id,
   values: string[]
 ): void {
-  appCtx.state.filters.properties![layerId] = {
-    ...(appCtx.state.filters.properties![layerId] || {}),
+  appCtx.state.filters.feature.properties![layerId] = {
+    ...(appCtx.state.filters.feature.properties![layerId] || {}),
     [propertyId]: values
   };
   appCtx.zoomToAllVisibleFeatures();
@@ -252,7 +254,7 @@ export function resetCategoricalPropertyFilter(
   layerId: Id,
   propertyId: Id
 ): void {
-  delete appCtx.state.filters.properties![layerId]?.[propertyId];
+  delete appCtx.state.filters.feature.properties![layerId]?.[propertyId];
   appCtx.zoomToAllVisibleFeatures();
 }
 
@@ -267,17 +269,19 @@ export function setRangePropertyFilter(
 ): void {
   // Only update if the values have actually changed to prevent unnecessary reactivity triggers
   if (
-    appCtx.state.filters.properties![layerId]?.[propertyId]?.rangeMin !== values[0] ||
-    appCtx.state.filters.properties![layerId]?.[propertyId]?.rangeMax !== values[1]
+    appCtx.state.filters.feature.properties![layerId]?.[propertyId]?.rangeMin !==
+      values[0] ||
+    appCtx.state.filters.feature.properties![layerId]?.[propertyId]?.rangeMax !==
+      values[1]
   ) {
     // Ensure the layer object exists
-    if (!appCtx.state.filters.properties![layerId]) {
-      appCtx.state.filters.properties![layerId] = {};
+    if (!appCtx.state.filters.feature.properties![layerId]) {
+      appCtx.state.filters.feature.properties![layerId] = {};
     }
 
     // Get the existing range filter or find the property definition to get global min/max
     const existingRangeFilter =
-      appCtx.state.filters.properties![layerId]?.[propertyId] || {};
+      appCtx.state.filters.feature.properties![layerId]?.[propertyId] || {};
 
     // If globalMin/globalMax are missing, find them from the property definition
     let globalMin = existingRangeFilter.globalMin;
@@ -292,7 +296,7 @@ export function setRangePropertyFilter(
       }
     }
 
-    appCtx.state.filters.properties![layerId][propertyId] = {
+    appCtx.state.filters.feature.properties![layerId][propertyId] = {
       globalMin,
       globalMax,
       rangeMin: values[0],
@@ -313,7 +317,12 @@ export function propertyValuesToLocalisedOptions(
   return new Map(
     propertyValues.map((pv) => [
       pv.id,
-      getI18n(pv, 'value', appCtx.getUserPreferences(), m.suave_watery_mole_gulp())
+      getI18n(
+        pv as Record<'i18n', any>,
+        'value',
+        appCtx.getUserPreferences(),
+        m.suave_watery_mole_gulp()
+      )
     ])
   );
 }
@@ -442,16 +451,16 @@ export function displayRangeFilter(
  */
 export function getFeatureIdsForProperties(appCtx: AppCtx): Id[] {
   // If there are no property filters at all, return all features
-  if (Object.keys(appCtx.propertyFilters).length === 0) {
+  if (Object.keys(appCtx.state.filters.feature.properties ?? {}).length === 0) {
     return Array.from(appCtx.features.keys());
   }
 
   const featureList = Array.from(appCtx.features.values());
 
   const filteredIds = featureList
-    .filter((feature: Feature) => {
+    .filter((feature: Feature | FeatureFromCollection) => {
       // Get filters specific to this feature's layer
-      const layerFilters = appCtx.propertyFilters[feature.layerId];
+      const layerFilters = appCtx.state.filters.feature.properties?.[feature.layerId];
 
       // If no filters for this layer, feature passes
       if (!layerFilters || Object.keys(layerFilters).length === 0) {

@@ -18,7 +18,7 @@ import {
   ResourceRefKey
 } from '$lib/enums';
 // TYPES
-import type { Resource, ResourceTypeWithChildren } from '$lib/types';
+import type { FilteredResources, Resource, ResourceTypeWithChildren } from '$lib/types';
 
 // CONTEXT
 const adminCtx = getAdminCtx();
@@ -65,12 +65,13 @@ const handleConfirm = () => {
 
 const handleKeydown = (event: KeyboardEvent) => {
   if (
-    !adminCtx.appCtx.state.resources[parentResourceType as FirstClassResource]?.length
+    !adminCtx.appCtx.state.resources[parentResourceType as keyof FilteredResources]
+      ?.length
   )
     return;
 
   const items =
-    adminCtx.appCtx.state.resources[parentResourceType as FirstClassResource];
+    adminCtx.appCtx.state.resources[parentResourceType as keyof FilteredResources];
   const maxIndex = Math.min(items.length - 1, 6); // Limit to 7 items (0-6)
 
   switch (event.key) {
@@ -118,13 +119,16 @@ const open = () => {
   <div class="modal-box">
     <h3 class="mb-4 text-lg font-bold">Select {parentResourceType}</h3>
     <div class="mb-4">
-      <FilterInput resourceType={parentResourceType} rounded={true} clearInput={true} />
+      <FilterInput
+        resourceType={parentResourceType as FirstClassResource}
+        rounded={true}
+        clearInput={true} />
     </div>
 
     <div class="mb-4 max-h-60 overflow-y-auto">
-      {#if adminCtx.getFilteredResource(parentResourceType as FirstClassResource)?.length > 0}
+      {#if adminCtx.appCtx.getFilteredResource(parentResourceType as FirstClassResource)?.length > 0}
         <ul class="menu space-y-1 rounded-lg bg-base-100">
-          {#each adminCtx
+          {#each adminCtx.appCtx
             .getFilteredResource(parentResourceType as FirstClassResource)
             .slice(0, 7) as item, i}
             <li class="bg-base-200 first:rounded-t-lg last:rounded-b-lg">

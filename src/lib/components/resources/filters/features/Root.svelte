@@ -81,7 +81,7 @@ const filterKeys: Record<string, (keyof FeatureViewFilters)[]> = {
 };
 
 const getFilterCount = (section: string) => {
-  const featureFilters = adminCtx.state.viewFilters.feature;
+  const featureFilters = adminCtx.appCtx.state.viewFilters.feature;
   let count = 0;
 
   if (section === 'status') {

@@ -27,7 +27,7 @@ const filterKeys: Record<string, (keyof TaskViewFilters)[]> = {
 };
 
 const getFilterCount = (section: string) => {
-  const taskFilters = adminCtx.state.viewFilters.task;
+  const taskFilters = adminCtx.appCtx.state.viewFilters.task;
   let count = 0;
 
   if (filterKeys[section]) {

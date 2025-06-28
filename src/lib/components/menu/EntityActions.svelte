@@ -16,10 +16,9 @@ let menuProps = $props();
 // STATE : CONTEXT :: ROUTER
 const adminCtx = getAdminCtx();
 
-let showFormControler = $derived(adminCtx.state.active.facet !== 'images');
+let showFormControler = $derived(adminCtx.activeFacet !== 'images');
 let showActionButton = $derived(
-  adminCtx.state.active.resourceRef !== NEW_REF &&
-    adminCtx.state.active.resourceRef !== false
+  adminCtx.activeResourceRef !== NEW_REF && adminCtx.activeResourceRef !== false
 );
 
 // Resources that can be archived (all resources have isArchived)

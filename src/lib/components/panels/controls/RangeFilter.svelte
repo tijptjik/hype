@@ -32,7 +32,9 @@ let min = $derived(property.min!);
 let max = $derived(property.max!);
 
 let isOpen = $state(defaultOpen);
-let selectedRange = $derived(appCtx.propertyFilters?.[layerId]?.[property.id]);
+let selectedRange = $derived(
+  appCtx.state.filters.feature.properties?.[layerId]?.[property.id]
+);
 
 let values: [number, number] = $derived([
   selectedRange?.rangeMin ?? min,
