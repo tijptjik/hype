@@ -1,3 +1,8 @@
+<!--
+  @component
+  Prisms panel component that displays hierarchical resources (organisations, projects, and layers)
+  with filtering and selection capabilities.
+-->
 <script lang="ts">
 // I18N
 import { m } from '$lib/i18n';

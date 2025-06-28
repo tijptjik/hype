@@ -1,6 +1,10 @@
+<!--
+  @component
+  Organisations section component that displays a filterable list of organisations
+  with selection capabilities and optional admin controls.
+-->
 <script lang="ts">
 // I18N
-import { getI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // ICONS
 import { UserGroup } from '@steeze-ui/heroicons';
@@ -44,7 +48,9 @@ $effect(() => {
 const filteredOrganisations = $derived(
   appCtx.getFilteredResource(FirstClassResource.organisation)
 );
-let isDefaultOpen = $derived(document.body.clientHeight > 1000);
+let isDefaultOpen = $derived(
+  typeof window !== 'undefined' ? document.body.clientHeight > 1000 : false
+);
 
 let handleReset = () => {
   if (selectedOrganisations.length == 0) {
@@ -80,7 +86,7 @@ let handleReset = () => {
   {/if}
   <ResourceContainer>
     {#each filteredOrganisations as resource (resource.id)}
-      {@render filteredItem(resource, selectedOrganisations)}
+      {@render filteredItem(resource as Organisation, selectedOrganisations)}
     {/each}
   </ResourceContainer>
 </Section>
