@@ -212,7 +212,7 @@ onMount(async () => {
 });
 
 watch(
-  () => [appCtx.featuresVisible, appCtx.isMaplibreLoaded],
+  () => [appCtx.featuresVisible, appCtx.map],
   () => {
     if (!isAnimating && appCtx.maplibre && appCtx.isMaplibreLoaded) {
       updateMarkers(appCtx, appCtx.getVisibleFeatures(), appCtx.maplibre);

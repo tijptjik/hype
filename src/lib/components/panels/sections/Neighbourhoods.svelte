@@ -21,7 +21,7 @@ import type { NeighbourhoodMap, Neighbourhood } from '$lib/types';
 const appCtx = getAppCtx();
 
 // Get cached features for counting
-const selectedNeighbourhoods = $derived(appCtx.state.filters.neighbourhoods);
+const selectedNeighbourhoods = $derived(appCtx.state.filters.feature.neighbourhoods);
 
 let searchTerm = $state('');
 
