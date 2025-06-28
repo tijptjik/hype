@@ -26,6 +26,10 @@ import type {
   HubI18nDB,
   HubI18nPartial
 } from '$lib/types';
+import {
+  hubCollectionWithRelations,
+  hubEntityWithRelations
+} from '$lib/api/services/hub';
 
 // ═══════════════════════
 // HUB FILTERING FUNCTIONS
@@ -550,3 +554,25 @@ export const getHubCodeForTask = async (
 
   return result[0]?.hubCode || null;
 };
+
+export const getHubByCode = async (db: Database, code: string) =>
+  await db.query.hub.findFirst({
+    with: hubEntityWithRelations,
+    where: eq(hub.code, code)
+  });
+
+export const getHubByDomain = async (db: Database, domain: string) =>
+  await db.query.hub.findFirst({
+    with: hubEntityWithRelations,
+    where: eq(hub.domain, domain)
+  });
+
+export const getHubs = async (
+  db: Database,
+  withRelations: Record<string, boolean | object> = {},
+  conditions: SQL<unknown>[] = []
+): Promise<HubDBRaw[]> =>
+  await db.query.hub.findMany({
+    with: withRelations,
+    where: conditions.length > 0 ? and(...conditions) : undefined
+  });
