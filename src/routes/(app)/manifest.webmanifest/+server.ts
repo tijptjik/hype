@@ -2,13 +2,10 @@ import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
 // DB
-import db from '$lib/db';
 import { getHubByCode } from '$lib/db/services/hub';
 import { getHubFromDomain } from '$lib/api/services/hub';
 
 // I18N
-import * as m from '$lib/paraglide/messages';
-import { locales } from '$lib/paraglide/runtime';
 import { getDatabaseWithoutAuth } from '$lib/api';
 import type { HubI18nDB, HubOpts, Locale } from '$lib/types';
 
@@ -20,7 +17,7 @@ const getBaseManifest = async (code: string) => {
   }
 };
 
-const getLocaleFromHeaders = (request: Request): AvailableLanguageTag => {
+const getLocaleFromHeaders = (request: Request): Locale => {
   const acceptLanguage = request.headers.get('accept-language');
   if (!acceptLanguage) return 'en';
 
@@ -50,7 +47,6 @@ const getLocaleFromHeaders = (request: Request): AvailableLanguageTag => {
 };
 
 export const GET: RequestHandler = async ({ url, request, platform }) => {
-  console.log(platform?.env);
   const hubOpts: Partial<HubOpts> = getHubFromDomain(
     url.hostname,
     platform?.env?.PUBLIC_HUB_CODE

@@ -80,7 +80,9 @@ export function getHubFromDomain(
 
   // localhost -> core (development)
   if (domain === 'localhost') {
-    return hubCode ? { code: hubCode, isCore: false } : coreConfig;
+    return hubCode && hubCode !== 'core'
+      ? { code: hubCode, isCore: false }
+      : coreConfig;
   }
 
   // hype.hk -> core || preview.hype.hk -> core (preview)
