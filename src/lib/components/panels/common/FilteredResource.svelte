@@ -46,8 +46,8 @@ const {
   hierarchy?: { organisation?: any; project?: any; layer?: any };
   selectedClass?: string;
   isSelected: boolean;
-  onToggle: (e: MouseEvent) => void;
-  onNavigate?: (e: MouseEvent) => void;
+  onToggle: (e: MouseEvent | KeyboardEvent) => void;
+  onNavigate?: (e: MouseEvent | KeyboardEvent) => void;
 } & PanelProps = $props();
 
 let bgHoverClass = $derived(getHoverColor(selectedClass.replace('bg-', 'text-')));
@@ -102,7 +102,7 @@ function hideTooltip() {
   onclick={panelProps.isAdmin ? onNavigate : onToggle}
   onkeydown={(e) => {
     if (e.key === 'Enter' || e.key === ' ') {
-      panelProps.isAdmin ? onNavigate?.() : onToggle();
+      panelProps.isAdmin ? onNavigate?.(e) : onToggle(e);
     } else if (e.key === 'Escape') {
       e.stopPropagation();
       e.preventDefault();

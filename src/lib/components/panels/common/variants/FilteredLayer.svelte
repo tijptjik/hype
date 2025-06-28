@@ -30,7 +30,7 @@ const {
   out:slide={{ axis: 'y', duration: 200 }}
   onkeydown={(e) => {
     if (e.key === 'Enter' || e.key === ' ') {
-      onClick();
+      onClick(e);
     } else if (e.key === 'Escape') {
       e.stopPropagation();
       e.preventDefault();

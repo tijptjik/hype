@@ -75,7 +75,11 @@ let panelProps: PanelProps = $derived({
             {resource}
             selectedClass="bg-primary"
             isSelected={selectedOrganisations.includes(resource.id)}
-            onToggle={() => appCtx.toggleOrganisation(resource.id)}
+            onToggle={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              appCtx.toggleOrganisation(resource.id);
+            }}
             {...panelProps} />
         {/snippet}
       </Organisations>
@@ -95,7 +99,11 @@ let panelProps: PanelProps = $derived({
             }}
             selectedClass="bg-accent"
             isSelected={selectedProjects.includes(resource.id)}
-            onToggle={() => appCtx.toggleProject(resource.id)}
+            onToggle={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              appCtx.toggleProject(resource.id);
+            }}
             {...panelProps} />
         {/snippet}
       </Projects>
@@ -112,7 +120,11 @@ let panelProps: PanelProps = $derived({
             {hierarchy}
             selectedClass="bg-secondary"
             isSelected={selectedLayers.includes(layer.id)}
-            onClick={() => appCtx.toggleLayer(layer.id)}
+            onClick={(e: MouseEvent | KeyboardEvent) => {
+              e.preventDefault();
+              e.stopPropagation();
+              appCtx.toggleLayer(layer.id);
+            }}
             {...panelProps} />
         {/snippet}
       </Layers>
