@@ -19,8 +19,8 @@ let { children }: { children: any } = $props();
 
 // STATE : DERIVED
 let horizontalOffset = $derived(() => {
-  const { filters, maps, stars, settings } = appCtx.state.isPanelOpen;
-  const leftPanelOpen = maps || stars;
+  const { filters, prisms, stars, settings } = appCtx.state.isPanelOpen;
+  const leftPanelOpen = prisms || stars;
   const rightPanelOpen = filters || settings;
   if (window.innerWidth < MOBILE_MAX_WIDTH) {
     return 0;

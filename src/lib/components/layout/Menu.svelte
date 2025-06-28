@@ -36,13 +36,13 @@ let showAdminMenu = $derived(
 );
 
 const menuItems = [
-  { icon: Map, label: m.menu_maps(), panel: 'maps' },
+  { icon: Map, label: m.menu_maps(), panel: 'prisms' },
   { icon: Funnel, label: m.menu_filters(), panel: 'filters' },
   { icon: Star, label: m.menu_stars(), panel: 'stars' },
   { icon: Cog6Tooth, label: m.menu_settings(), panel: 'settings' }
 ];
 
-function handleMenuClick(panel: 'filters' | 'maps' | 'stars' | 'settings' | 'admin') {
+function handleMenuClick(panel: 'filters' | 'prisms' | 'stars' | 'settings' | 'admin') {
   if (panel === 'admin') {
     const currentPath = page.url.pathname;
     if (currentPath.startsWith('/features/')) {
