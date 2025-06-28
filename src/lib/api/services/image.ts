@@ -69,6 +69,15 @@ import { getProjectIdForFeatureId } from '$lib/db/services/feature';
  * The order of intents for feature images.
  */
 export const intentOrder = [
+  'canonical',
+  'closeUp',
+  'context',
+  'general',
+  'undefined',
+  'evidence'
+] as const;
+
+export const adminIntentOrder = [
   'undefined',
   'canonical',
   'closeUp',
