@@ -98,6 +98,8 @@ const totalFilterCount = $derived(() => {
 function selectSection(sectionKey: string) {
   if (activeSection === sectionKey) {
     activeSection = null;
+    showSectionMenu = false;
+    return;
   }
   activeSection = sectionKey;
   showSectionMenu = false;

@@ -8,10 +8,24 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { getI18n } from '$lib/i18n';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
+// COMPONENTS
 import ResourceHierarchyPath from '../ResourceHierarchyPath.svelte';
+// TYPES
+import type { Layer, Organisation, Project, PanelProps } from '$lib/types';
 
 // CONTEXT
 const appCtx = getAppCtx();
+
+interface FilteredLayerProps {
+  layer: Layer;
+  hierarchy: {
+    organisation?: Organisation;
+    project?: Project;
+  };
+  isSelected: boolean;
+  onClick: (event: Event) => void;
+  selectedClass?: string;
+}
 
 // PROPS
 const {
@@ -20,7 +34,7 @@ const {
   isSelected,
   onClick,
   selectedClass = 'bg-yellow-400'
-} = $props();
+}: FilteredLayerProps = $props();
 </script>
 
 <div

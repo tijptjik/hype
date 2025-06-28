@@ -24,6 +24,7 @@ import type {
   LngLat,
   SignData
 } from '$lib/types';
+import { hashicon } from '@emeraldpay/hashicon';
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -63,6 +64,7 @@ import type {
 // 7. UTILS
 //    - sortImages
 //    - addCtxToUrl
+//    - getHashiconUrl
 //
 
 // ═══════════════════════
@@ -733,4 +735,13 @@ function addCtxToUrl(baseUrl: string, ctx: ImageEditCtx): string {
     }
   }
   return url.pathname + url.search;
+}
+
+// Generate hashicon URL for fallback
+export function getHashiconUrl(id: string) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  hashicon(id, { size: 64, createCanvas: () => canvas });
+  return canvas.toDataURL();
 }

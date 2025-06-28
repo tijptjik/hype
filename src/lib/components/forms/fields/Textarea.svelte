@@ -28,7 +28,6 @@ let fieldValues = $derived(
 );
 
 // STATE : LOCAL
-let inputValue = $state('');
 let isGenAI = $derived(fieldValues.isGenAI);
 
 // STATE : DERIVED

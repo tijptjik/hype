@@ -59,7 +59,9 @@ function filterProjects(projects: Project[], term: string) {
 }
 
 const filteredProjects = $derived(filterProjects(projects, searchTerm));
-let isDefaultOpen = $derived(document.body.clientHeight > 1000);
+let isDefaultOpen = $derived(
+  typeof document !== 'undefined' ? document.body.clientHeight > 1000 : false
+);
 
 let handleReset = () => {
   if (selectedProjects.length == 0) {

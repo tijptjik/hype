@@ -23,8 +23,8 @@ let {
   tabindex="0"
   role="button"
   data-entity-index={index}
-  class="focus:outline:none grid cursor-pointer items-center gap-4 rounded-lg
-         bg-glass-result p-2 caret-transparent shadow-sm transition-all hover:shadow-md focus:ring-2 focus:ring-offset-2
+  class="grid cursor-pointer items-center gap-4 rounded-lg bg-glass-result
+         p-2 caret-transparent shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2
          focus:ring-offset-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-secondary active:ring-0
          {gridColsClass} hover:shadow-[0_0_25px_theme(colors.primary)]"
   class:ring-2={isSelected}
