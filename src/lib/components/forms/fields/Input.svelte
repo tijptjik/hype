@@ -40,7 +40,6 @@ let fieldValues = $derived(
 )!;
 
 // STATE : LOCAL
-let inputValue = $state('');
 let isGenAI = $derived(fieldValues.isGenAI);
 
 // STATE : DERIVED
@@ -76,8 +75,6 @@ function handleChange(newValue: string) {
 function handleToggleGenAI(e: MouseEvent) {
   e.stopPropagation();
   e.preventDefault();
-  console.log('toggle genai');
-  // isGenAI = !isGenAI;
   syncToForm(fieldValues.value as string, (isGenAI = !isGenAI));
 }
 </script>

@@ -56,7 +56,6 @@ function handleChange(e: Event) {
 function handleToggleGenAI(e: MouseEvent) {
   e.stopPropagation();
   e.preventDefault();
-  console.log('toggle genai');
   syncToForm(!isGenAI);
   isGenAI = !isGenAI;
 }

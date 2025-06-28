@@ -69,7 +69,7 @@ let displayText = $derived(displayRangeFilter(min, max, values));
           first="label"
           last="label"
           rest="pip"
-          pipstep={Math.ceil((max - min) / 10)}
+          pipstep={Math.max(1, Math.ceil((max - min) / 10))}
           pushy
           float
           on:change={() => {

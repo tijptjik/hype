@@ -10,7 +10,7 @@ import ResourceLoadingState from './ResourceLoadingState.svelte';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // TYPES
-import type { Resource } from '$lib/types';
+import type { Resource, EntityWithOptionalImage } from '$lib/types';
 import type { Snippet } from 'svelte';
 
 let {
@@ -113,14 +113,17 @@ onDestroy(() => {
       {card} />
   {:else if layoutMode === 'table'}
     <!-- For table mode, render the first (and only) entity -->
-    <ResourceTableRow entity={item.entities[0]} index={item.startingIndex} {row} />
+    <ResourceTableRow
+      entity={item.entities[0] as EntityWithOptionalImage}
+      index={item.startingIndex}
+      {row} />
   {/if}
 {/snippet}
 
 <div
   bind:clientWidth={gridWidth}
   bind:this={listContainer}
-  class="overflow-hiddencaret-transparent flex min-h-0 flex-1 flex-col gap-12 @container/grid">
+  class="flex min-h-0 flex-1 flex-col gap-12 overflow-hidden caret-transparent @container/grid">
   {#if isInitialised}
     {#if entities.length > 0 && items.length > 0}
       <div class="wrapper relative min-h-0 flex-1">

@@ -82,7 +82,7 @@ const userLayerIds = $derived(new Set(appCtx.getUserLayerIds()));
             onchange={(e) => appCtx.setUserLayer(layer.id, e.currentTarget.checked)} />
         </div>
       {:catch error}
-        <p>Error loading layers</p>
+        <p>{m.proof_grand_gadfly_dash()}</p>
       {/await}
     {/each}
   </div>

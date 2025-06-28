@@ -2,7 +2,7 @@
 // COMPONENTS
 import EntityCard from '$lib/components/resources/EntityCard.svelte';
 // TYPES
-import type { Resource } from '$lib/types';
+import type { Resource, EntityWithOptionalImage } from '$lib/types';
 import type { Snippet } from 'svelte';
 
 let {
@@ -28,7 +28,7 @@ let {
           {@render card(entity, startingIndex + columnIndex)}
         {:else}
           <EntityCard
-            entity={entity as any}
+            entity={entity as EntityWithOptionalImage}
             keyMap={{ id: 'id', title: 'id', image: '' }} />
         {/if}
       </div>

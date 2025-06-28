@@ -18,11 +18,13 @@ import Image from '$lib/components/common/Image.svelte';
 import ScrollableText from '$lib/components/common/ScrollableText.svelte';
 // TYPES
 import type { Snippet } from 'svelte';
-import type { Resource, ImageDB, Task, KeyMap } from '$lib/types';
-
-type EntityWithOptionalImage = Exclude<Resource, Task> & {
-  image?: (Partial<ImageDB> & { id: string }) | string | null;
-};
+import type {
+  Resource,
+  ImageDB,
+  Task,
+  KeyMap,
+  EntityWithOptionalImage
+} from '$lib/types';
 
 type Props = {
   entity: EntityWithOptionalImage;

@@ -599,6 +599,10 @@ export type KeyMap = {
   }>;
 };
 
+export type EntityWithOptionalImage = Exclude<Resource, Task> & {
+  image?: (Partial<ImageDB> & { id: string }) | string | null;
+};
+
 /* ----------------- */
 // STATS
 /* -------- */

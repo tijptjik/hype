@@ -5,11 +5,13 @@ import type { FirstClassResource } from '$lib/enums';
 import type { Snippet } from 'svelte';
 
 let {
+  resourceType,
   iconVerticalPaddingClass,
   focusVisibleClass,
   onNavigate,
   onToggle,
   isOpen,
+  isNarrow,
   children,
   href
 }: {

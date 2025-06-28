@@ -57,6 +57,9 @@ const authorshipFilters: Record<
     trueLabel: m.filters__has()
   }
 };
+function getNextTriState(currentValue: boolean | null): boolean | null {
+  return currentValue === null ? true : currentValue === true ? false : null;
+}
 </script>
 
 {#each Object.entries(authorshipFilters) as [filterKey, filterDef], idx (filterKey)}
@@ -76,8 +79,7 @@ const authorshipFilters: Record<
     onToggleFalse={() => toggleResourceFilterState(adminCtx, 'project', key, false)}
     onToggleTrue={() => toggleResourceFilterState(adminCtx, 'project', key, true)}
     onToggleChange={() => {
-      const nextState =
-        currentValue === null ? true : currentValue === true ? false : null;
+      const nextState = getNextTriState(currentValue);
       setResourceFilterState(adminCtx, 'project', key, nextState);
     }} />
 {/each}

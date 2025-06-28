@@ -3,10 +3,11 @@
 import { displaySelectedFilters } from '$lib/client/services/property';
 // TYPES
 import type { Id, Property } from '$lib/types';
+import type { AppCtx } from '$lib/context/app.svelte';
 
 type Props = {
   layerId: Id;
-  appCtx: any;
+  appCtx: AppCtx;
   properties: Property[];
 };
 

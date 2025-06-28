@@ -1,7 +1,7 @@
 <script lang="ts">
 // I18N
 import { m } from '$lib/i18n';
-import { getI18n, getLocale } from '$lib/i18n';
+import { getI18n } from '$lib/i18n';
 // UTILS
 import { formatDate } from '$lib';
 import { formatDistanceToNow } from 'date-fns';
@@ -17,7 +17,7 @@ import { navigateOnAdmin } from '$lib/navigation';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
 // TYPES
-import type { Task, ImageDBBasic, Feature } from '$lib/types';
+import type { Task, ImageDBBasic } from '$lib/types';
 import type { AdminCtx } from '$lib/context/admin.svelte';
 
 let {
@@ -177,8 +177,6 @@ let gridColsClass =
 </div>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Tilt+Neon&display=swap');
-
 .tilt-neon-watermark {
   font-family: 'Tilt Neon', sans-serif;
   font-optical-sizing: auto;
