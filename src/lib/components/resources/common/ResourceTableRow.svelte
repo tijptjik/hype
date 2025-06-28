@@ -7,9 +7,7 @@ import ScrollableText from '$lib/components/common/ScrollableText.svelte';
 // NAVIGATION
 import { navigateOnAdminById, getUrlForResource } from '$lib/navigation';
 // SERVICES
-import { getURLfromImage } from '$lib/client/services/image';
-// LIB
-import { hashicon } from '@emeraldpay/hashicon';
+import { getURLfromImage, getHashiconUrl } from '$lib/client/services/image';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // ENUMS
@@ -30,15 +28,6 @@ let {
 
 // CONTEXT
 const adminCtx = getAdminCtx();
-
-// Generate hashicon URL for fallback
-const getHashiconUrl = (id: string) => {
-  const canvas = document.createElement('canvas');
-  canvas.width = 64;
-  canvas.height = 64;
-  hashicon(id, { size: 64, createCanvas: () => canvas });
-  return canvas.toDataURL();
-};
 </script>
 
 <div class="px-2 py-1">

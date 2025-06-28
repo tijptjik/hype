@@ -61,7 +61,7 @@ const icon = $derived(
 <button
   class="arrow z-40 h-10 w-10 transform rounded-full bg-glass-result p-2 shadow-lg backdrop-blur-sm transition-all hover:bg-glass-result/80 hover:shadow-xl {style
     ? ''
-    : 'absolute ' + positionClasses}"
+    : 'absolute ' + positionClasses()}"
   style={style || ''}
   onclick={handleClick}
   in:fade={{ duration: 200 }}

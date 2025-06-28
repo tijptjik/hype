@@ -157,6 +157,98 @@ const resetInput = (e: Event) => {
 const resetResults = () => (searchResults = []);
 </script>
 
+{#snippet userAvatar(item: any)}
+  {#if item.image && typeof item.image === 'string'}
+    <div class="relative h-10 w-10">
+      <div class="absolute inset-0 animate-pulse rounded-full bg-base-300"></div>
+      <img
+        src={item.image}
+        class="relative h-10 w-10 rounded-full bg-accent object-cover opacity-0 transition-opacity duration-200"
+        onload={(e) => {
+          (e.currentTarget as HTMLImageElement).style.opacity = '1';
+          e.currentTarget.previousElementSibling?.remove();
+        }}
+        onerror={(e) => {
+          (e.currentTarget as HTMLImageElement).style.display = 'none';
+          e.currentTarget.previousElementSibling?.remove();
+        }} />
+    </div>
+  {:else}
+    <div
+      class="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-content">
+      {item.name?.charAt(0)?.toUpperCase() || '?'}
+    </div>
+  {/if}
+{/snippet}
+
+{#snippet organisationAvatar(item: any)}
+  {#if item.image}
+    <div class="relative h-10 w-10">
+      <div class="absolute inset-0 animate-pulse rounded bg-base-300"></div>
+      <img
+        src={getURLfromImage({
+          image: item.image,
+          transformation: 'c_fill,w_100,h_100,q_auto'
+        })}
+        class="relative h-10 w-10 rounded object-cover opacity-0 transition-opacity duration-200"
+        onload={(e) => {
+          (e.currentTarget as HTMLImageElement).style.opacity = '1';
+          e.currentTarget.previousElementSibling?.remove();
+        }}
+        onerror={(e) => {
+          (e.currentTarget as HTMLImageElement).style.display = 'none';
+          e.currentTarget.previousElementSibling?.remove();
+        }} />
+    </div>
+  {:else}
+    <div
+      class="flex h-10 w-10 items-center justify-center rounded bg-accent text-sm font-medium text-accent-content">
+      {item.i18n?.en?.name?.charAt(0)?.toUpperCase() ||
+        item.code?.charAt(0)?.toUpperCase() ||
+        '?'}
+    </div>
+  {/if}
+{/snippet}
+
+{#snippet fallbackAvatar(item: any)}
+  <div
+    class="flex h-10 w-10 items-center justify-center rounded bg-neutral text-sm font-medium text-neutral-content">
+    {item.name?.charAt(0)?.toUpperCase() || '?'}
+  </div>
+{/snippet}
+
+{#snippet itemContent(item: any, isOrganisation: boolean, isUser: boolean)}
+  <div class="min-w-0 flex-1">
+    <div class="truncate font-medium text-base-content">
+      {#if isOrganisation}
+        {item.i18n?.[getLocale()]?.name || item.code || '-'}
+      {:else}
+        {item.i18n?.[getLocale()]?.name || item.name || '-'}
+      {/if}
+    </div>
+    {#if isUser && item.attribution}
+      <div class="truncate text-sm text-base-content/70">
+        {item.attribution}
+      </div>
+    {/if}
+  </div>
+{/snippet}
+
+{#snippet itemMeta(item: any, isOrganisation: boolean, isUser: boolean)}
+  <div class="flex flex-shrink-0 items-center gap-2">
+    {#if isOrganisation && item.code}
+      <div class="font-mono text-sm text-base-content/60">
+        {item.code}
+      </div>
+    {:else if isUser && item.email}
+      <div class="text-sm text-base-content/60">
+        {item.email}
+      </div>
+    {/if}
+    <Icon src={ChevronRight} class="h-4 w-4 text-base-content/40" />
+  </div>
+{/snippet}
+
 {#if searchMode}
   <div
     transition:slide={{ duration: 200 }}
@@ -210,101 +302,20 @@ const resetResults = () => (searchResults = []);
                 <div class="flex min-w-0 flex-1 items-center gap-3">
                   <div class="flex-shrink-0">
                     {#if isUser}
-                      <!-- User avatar -->
-                      {#if item.image && typeof item.image === 'string'}
-                        <div class="relative h-10 w-10">
-                          <div
-                            class="absolute inset-0 animate-pulse rounded-full bg-base-300">
-                          </div>
-                          <img
-                            src={item.image}
-                            class="relative h-10 w-10 rounded-full bg-accent object-cover opacity-0 transition-opacity duration-200"
-                            onload={(e) => {
-                              (e.currentTarget as HTMLImageElement).style.opacity = '1';
-                              e.currentTarget.previousElementSibling?.remove();
-                            }}
-                            onerror={(e) => {
-                              (e.currentTarget as HTMLImageElement).style.display =
-                                'none';
-                              e.currentTarget.previousElementSibling?.remove();
-                            }} />
-                        </div>
-                      {:else}
-                        <div
-                          class="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-content">
-                          {item.name?.charAt(0)?.toUpperCase() || '?'}
-                        </div>
-                      {/if}
+                      {@render userAvatar(item)}
                     {:else if isOrganisation}
-                      <!-- Organisation image -->
-                      {#if item.image}
-                        <div class="relative h-10 w-10">
-                          <div
-                            class="absolute inset-0 animate-pulse rounded bg-base-300">
-                          </div>
-                          <img
-                            src={getURLfromImage({
-                              image: item.image,
-                              transformation: 'c_fill,w_100,h_100,q_auto'
-                            })}
-                            class="relative h-10 w-10 rounded object-cover opacity-0 transition-opacity duration-200"
-                            onload={(e) => {
-                              (e.currentTarget as HTMLImageElement).style.opacity = '1';
-                              e.currentTarget.previousElementSibling?.remove();
-                            }}
-                            onerror={(e) => {
-                              (e.currentTarget as HTMLImageElement).style.display =
-                                'none';
-                              e.currentTarget.previousElementSibling?.remove();
-                            }} />
-                        </div>
-                      {:else}
-                        <div
-                          class="flex h-10 w-10 items-center justify-center rounded bg-accent text-sm font-medium text-accent-content">
-                          {item.i18n?.en?.name?.charAt(0)?.toUpperCase() ||
-                            item.code?.charAt(0)?.toUpperCase() ||
-                            '?'}
-                        </div>
-                      {/if}
+                      {@render organisationAvatar(item)}
                     {:else}
-                      <!-- Fallback for other types -->
-                      <div
-                        class="flex h-10 w-10 items-center justify-center rounded bg-neutral text-sm font-medium text-neutral-content">
-                        {item.name?.charAt(0)?.toUpperCase() || '?'}
-                      </div>
+                      {@render fallbackAvatar(item)}
                     {/if}
                   </div>
 
                   <!-- Content -->
-                  <div class="min-w-0 flex-1">
-                    <div class="truncate font-medium text-base-content">
-                      {#if isOrganisation}
-                        {item.i18n?.[getLocale()]?.name || item.code || '-'}
-                      {:else}
-                        {item.i18n?.[getLocale()]?.name || item.name || '-'}
-                      {/if}
-                    </div>
-                    {#if isUser && item.attribution}
-                      <div class="truncate text-sm text-base-content/70">
-                        {item.attribution}
-                      </div>
-                    {/if}
-                  </div>
+                  {@render itemContent(item, isOrganisation, isUser)}
                 </div>
 
                 <!-- Right: Code/Email and chevron -->
-                <div class="flex flex-shrink-0 items-center gap-2">
-                  {#if isOrganisation && item.code}
-                    <div class="font-mono text-sm text-base-content/60">
-                      {item.code}
-                    </div>
-                  {:else if isUser && item.email}
-                    <div class="text-sm text-base-content/60">
-                      {item.email}
-                    </div>
-                  {/if}
-                  <Icon src={ChevronRight} class="h-4 w-4 text-base-content/40" />
-                </div>
+                {@render itemMeta(item, isOrganisation, isUser)}
               </button>
             </div>
           {/each}

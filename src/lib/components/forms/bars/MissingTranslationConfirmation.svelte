@@ -82,7 +82,7 @@ async function handleTranslate(event: Event) {
   </div>
   <div class="flex gap-2">
     <button
-      class="text-md focus:outline- focus:outline-neutral-conten btn btn-circle btn-ghost text-glass-accepted hover:bg-transparent hover:text-glass-accepted/80 focus:border-none focus:ring-2 focus:ring-primary"
+      class="text-md focus:outline-neutral-conten btn btn-circle btn-ghost text-glass-accepted hover:bg-transparent hover:text-glass-accepted/80 focus:border-none focus:outline-none focus:ring-2 focus:ring-primary"
       disabled={loadingTranslation}
       onclick={(e) => onConfirm(e)}>
       <Icon src={CheckCircle} class="h-6 w-6" />

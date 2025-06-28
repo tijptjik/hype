@@ -7,9 +7,8 @@ import { getLocale } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // LIB
 import { ADMIN_PATH } from '$lib/index';
-import { hashicon } from '@emeraldpay/hashicon';
 // SERVICES
-import { getURLfromImage } from '$lib/client/services/image';
+import { getURLfromImage, getHashiconUrl } from '$lib/client/services/image';
 import { getUrlForResource } from '$lib/navigation';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
@@ -97,15 +96,6 @@ const href = $derived(
       )}${page.url.search}`
     : null
 );
-
-// Generate hashicon URL for fallback
-const getHashiconUrl = (id: string) => {
-  const canvas = document.createElement('canvas');
-  canvas.width = 400;
-  canvas.height = 400;
-  hashicon(id, { size: 400, createCanvas: () => canvas });
-  return canvas.toDataURL();
-};
 
 const onclick = (e: MouseEvent | KeyboardEvent) => {
   e.preventDefault();
