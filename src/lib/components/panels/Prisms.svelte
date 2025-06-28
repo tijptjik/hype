@@ -46,7 +46,7 @@ let panelProps: PanelProps = $derived({
   panelType: 'prisms',
   position: 'left',
   scrollable: true,
-  inline: false,
+  inline: appCtx.isAdmin(),
   isNarrow: false,
   isAdmin: false,
   active: {

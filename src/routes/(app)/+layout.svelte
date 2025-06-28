@@ -15,7 +15,7 @@ import Menu from '$lib/components/layout/Menu.svelte';
 import Map from '$lib/components/common/StandaloneMap.svelte';
 import Omnibar from '$lib/components/omnibar/Omnibar.svelte';
 import Filters from '$lib/components/panels/Filters.svelte';
-import Maps from '$lib/components/panels/Prisms.svelte';
+import Prisms from '$lib/components/panels/Prisms.svelte';
 import Stars from '$lib/components/panels/Stars.svelte';
 import Settings from '$lib/components/panels/Settings.svelte';
 import LayerSelectionModal from '$lib/components/modals/LayerSelectionModal.svelte';
@@ -24,7 +24,6 @@ import NewFeatureCard from '$lib/components/modals/NewFeatureCard.svelte';
 // TYPES
 import type { LayoutData, LayoutProps } from '../(app)/$types';
 import type { QueryClient } from '@tanstack/svelte-query';
-import type { SessionUser } from '$lib/types';
 // STYLES
 import '$lib/styles/scrollbar.css';
 
@@ -66,7 +65,7 @@ $effect(() => {
 });
 
 // TODO sync map center and flight starting position.
-// CIRCULAR FLIGHT ANIMATION -- Authentication Effect
+// CIRCULAR FLIGHT ANIMATION
 $effect(() => {
   if (!$session.isPending) {
     if (!$session.data) {
@@ -95,8 +94,8 @@ $effect(() => {
     <main
       class="relative top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
       <!-- Panels -->
+      <Prisms />
       <Filters />
-      <Maps />
       <Stars />
       <Settings />
       <!-- Map Container -->
