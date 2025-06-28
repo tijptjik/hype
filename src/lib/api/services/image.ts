@@ -58,7 +58,6 @@ import { getProjectIdForFeatureId } from '$lib/db/services/feature';
 //
 // 5. UTILS
 //    - getCtxFromUrl
-//    - sortImages
 //
 
 // ═══════════════════════
@@ -350,53 +349,4 @@ export const getCtxFromUrl = (url: URL) => {
   }
 
   return { ctxId, ctxType };
-};
-
-/**
- * Sort images by publication status, intent, and creation date
- * @param images - The images to sort
- * @returns The sorted images
- */
-export const sortImages = (images: ImageDBFlat[] | ImageDB[]) => {
-  // Sort images by publication status, intent, and creation date
-  images!.sort((a: any, b: any) => {
-    // Priority 1: Unpublished with no intent (undefined) come first
-    const aIsUnpublishedNoIntent =
-      a.featureImage &&
-      !a.featureImage.isPublished &&
-      (!a.featureImage.intent || a.featureImage.intent === 'undefined');
-    const bIsUnpublishedNoIntent =
-      b.featureImage &&
-      !b.featureImage.isPublished &&
-      (!b.featureImage.intent || b.featureImage.intent === 'undefined');
-
-    if (aIsUnpublishedNoIntent && !bIsUnpublishedNoIntent) return -1;
-    if (!aIsUnpublishedNoIntent && bIsUnpublishedNoIntent) return 1;
-
-    // Priority 2: Published vs unpublished (published first among remaining)
-    if (
-      a.featureImage &&
-      b.featureImage &&
-      a.featureImage.isPublished !== b.featureImage.isPublished
-    ) {
-      return a.featureImage.isPublished ? -1 : 1;
-    }
-
-    // Priority 3: Intent order within same publish status
-    if (a.featureImage && b.featureImage) {
-      const intentCompare =
-        intentOrder.indexOf(a.featureImage.intent) -
-        intentOrder.indexOf(b.featureImage.intent);
-      if (intentCompare !== 0) {
-        return intentCompare;
-      }
-    }
-
-    // Priority 4: Creation date (newest first)
-    return (
-      new Date(b.createdAt as string).getTime() -
-      new Date(a.createdAt as string).getTime()
-    );
-  });
-  return images;
 };

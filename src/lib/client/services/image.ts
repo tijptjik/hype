@@ -5,7 +5,7 @@ import Coordinates from 'coordinate-parser';
 // UTILS
 import { capitalizeFirstLetter } from '$lib';
 // SERVICES
-import { intentOrder } from '$lib/api/services/image';
+import { adminIntentOrder, intentOrder } from '$lib/api/services/image';
 // ENUMS
 import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums';
 // TYPES
@@ -18,6 +18,7 @@ import type {
   Intent,
   ImageEditCtx,
   ImageDB,
+  ImageDBFlat,
   ImageDBBasic,
   ImagePartial,
   Metadata,
@@ -665,27 +666,29 @@ export function getCreditFromMetadata(metadata: Metadata): string | undefined {
 // 7. UTILS
 // ═══════════════════════
 
-export function sortImages(images: Image[]) {
+export function sortImages(images: Image[] | ImageDBFlat[], isAdmin: boolean = false) {
+  const intentOrderToUse = isAdmin ? adminIntentOrder : intentOrder;
   const sortedImages = images.sort((a, b) => {
-    // Priority 1: Unpublished with no intent (undefined) come first
-    const aIsUnpublishedNoIntent =
-      !a.isPublished && (!a.intent || a.intent === 'undefined');
-    const bIsUnpublishedNoIntent =
-      !b.isPublished && (!b.intent || b.intent === 'undefined');
+    if (isAdmin) {
+      // Priority 1: Unpublished with no intent (undefined) come first
+      const aIsUnpublishedNoIntent =
+        !a.isPublished && (!a.intent || a.intent === 'undefined');
+      const bIsUnpublishedNoIntent =
+        !b.isPublished && (!b.intent || b.intent === 'undefined');
 
-    if (aIsUnpublishedNoIntent && !bIsUnpublishedNoIntent) return -1;
-    if (!aIsUnpublishedNoIntent && bIsUnpublishedNoIntent) return 1;
+      if (aIsUnpublishedNoIntent && !bIsUnpublishedNoIntent) return -1;
+      if (!aIsUnpublishedNoIntent && bIsUnpublishedNoIntent) return 1;
 
-    // Priority 2: Published vs unpublished (published first among remaining)
-    if (a.isPublished !== b.isPublished) {
-      return a.isPublished ? -1 : 1;
+      // Priority 2: Published vs unpublished (published first among remaining)
+      if (a.isPublished !== b.isPublished) {
+        return a.isPublished ? -1 : 1;
+      }
     }
-
     // Priority 3: Intent order within same publish status
     if (a.intent && b.intent) {
       const intentCompare =
-        intentOrder.indexOf(a.intent as Intent) -
-        intentOrder.indexOf(b.intent as Intent);
+        intentOrderToUse.indexOf(a.intent as Intent) -
+        intentOrderToUse.indexOf(b.intent as Intent);
       if (intentCompare !== 0) {
         return intentCompare;
       }
@@ -697,6 +700,7 @@ export function sortImages(images: Image[]) {
       new Date(a.createdAt as string).getTime()
     );
   });
+
   return sortedImages;
 }
 
