@@ -51,21 +51,20 @@ export function getHubFromDomain(host: string | null, hubCode?: string): HubOpts
       isCore: code === 'core'
     };
   }
-
   // Default to core
-  if (!host) return { isCore: true };
+  if (!host) return { isCore: true, code: 'core' };
 
   // Remove port number if present
   const domain = host.split(':')[0];
 
   // localhost -> core (development)
   if (domain === 'localhost') {
-    return { isCore: true };
+    return { isCore: true, code: 'core' };
   }
 
   // hype.hk -> core || preview.hype.hk -> core (preview)
   if (domain === 'hype.hk' || domain === 'preview.hype.hk') {
-    return { isCore: true };
+    return { isCore: true, code: 'core' };
   }
 
   // subdomain.hype.hk -> use subdomain as hub code
