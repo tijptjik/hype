@@ -3,12 +3,17 @@ import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle } from '@sveltejs/kit';
 // I18N
 import { paraglideMiddleware } from '$lib/paraglide/server';
+// API
+import { getHubFromDomain } from '$lib/api/services/hub';
 // DB
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '$lib/db/schema/index';
+import { getHubByCode, getHubByDomain } from '$lib/db/services/hub';
 // AUTH
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { createAuth } from '$lib/auth';
+// SERVICES
+import { toResponseShape } from '$lib/api/services/hub';
 // TYPES
 import type { Session, SessionUser } from '$lib/types';
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1';
@@ -62,17 +67,48 @@ const handle_cors = (async ({ event, resolve }) => {
  * It is used to filter the data in the database.
  */
 const handle_hub: Handle = async ({ event, resolve }) => {
+  const coreConfig = {
+    code: 'core',
+    domain: 'hype.hk',
+    isCore: true
+  };
   // Get host from headers
   const host = event.request.headers.get('host');
-
-  // Parse hub info from domain without DB lookup
-  const { getHubFromDomain } = await import('$lib/api/services/hub');
 
   // Get hub code from platform env for development override
   const hubCode = event.platform?.env?.PUBLIC_HUB_CODE;
 
-  // Store hub info in locals for use throughout the app
-  event.locals.hub = getHubFromDomain(host, hubCode);
+  // Parse hub info from domain without DB lookup
+  const { getHubFromDomain } = await import('$lib/api/services/hub');
+  const hubOpts = getHubFromDomain(host, hubCode);
+
+  // If on Core hub, don't lookup the hub in the database
+  if (hubOpts.isCore) {
+    event.locals.hub = coreConfig;
+    return resolve(event);
+  }
+
+  // DB
+  const db = drizzle(event.platform?.env?.DB as unknown as MiniflareD1Database, {
+    schema
+  });
+
+  if (db && event.locals && hubOpts.code) {
+    const hubDb = await getHubByCode(db, hubOpts.code);
+    if (hubDb) {
+      const hub = await toResponseShape(hubDb, false);
+      event.locals.hub = hub;
+    }
+  } else if (db && event.locals && hubOpts.domain) {
+    const hubDb = await getHubByDomain(db, hubOpts.domain);
+    if (hubDb) {
+      const hub = await toResponseShape(hubDb, false);
+      event.locals.hub = hub;
+    }
+  } else {
+    // Default to Core
+    event.locals.hub = coreConfig;
+  }
 
   return resolve(event);
 };
