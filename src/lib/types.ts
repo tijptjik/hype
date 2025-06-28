@@ -2088,9 +2088,11 @@ export type HubI18nPartial = z.infer<typeof HubI18nUpdate>;
 
 export interface HubOpts {
   code?: string;
-  domain?: string;
+  domain?: string | null;
   isCore: boolean;
+  i18n: Record<Locale, Partial<HubI18nDB>>;
   isSuperAdmin?: boolean;
+  id?: string;
 }
 
 /* ----------------- */

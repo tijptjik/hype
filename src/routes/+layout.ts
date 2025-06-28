@@ -1,5 +1,8 @@
 import { browser } from '$app/environment';
+import { getLocale } from '$lib/i18n';
 import { QueryClient } from '@tanstack/svelte-query';
+// TYPES
+import type { HubOpts } from '$lib/types';
 
 export const ssr = false;
 export const prerender = false;
@@ -23,9 +26,15 @@ export async function load({ data }) {
   return {
     queryClient,
     PUBLIC_SVELTE_QUERY_DEVTOOLS: data.PUBLIC_SVELTE_QUERY_DEVTOOLS,
-    // TODO Properly determine the title (could be a Hub)
-    title: 'HYPE',
-    site_name: 'HYPE',
-    site_description: 'HYPE'
+    hub: data.hub as HubOpts,
+    title:
+      (data.hub as HubOpts).i18n?.[getLocale()]?.name ??
+      (data.hub as HubOpts).i18n?.en.name,
+    site_name:
+      (data.hub as HubOpts).i18n?.[getLocale()]?.name ??
+      (data.hub as HubOpts).i18n?.en.name,
+    site_description:
+      (data.hub as HubOpts).i18n?.[getLocale()]?.description ??
+      (data.hub as HubOpts).i18n?.en.description
   };
 }

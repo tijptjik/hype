@@ -555,13 +555,19 @@ export const getHubCodeForTask = async (
   return result[0]?.hubCode || null;
 };
 
-export const getHubByCode = async (db: Database, code: string) =>
+export const getHubByCode = async (
+  db: Database,
+  code: string
+): Promise<HubDBRaw | undefined> =>
   await db.query.hub.findFirst({
     with: hubEntityWithRelations,
     where: eq(hub.code, code)
   });
 
-export const getHubByDomain = async (db: Database, domain: string) =>
+export const getHubByDomain = async (
+  db: Database,
+  domain: string
+): Promise<HubDBRaw | undefined> =>
   await db.query.hub.findFirst({
     with: hubEntityWithRelations,
     where: eq(hub.domain, domain)
