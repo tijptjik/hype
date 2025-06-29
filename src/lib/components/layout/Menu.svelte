@@ -12,7 +12,14 @@ import { ADMIN_PATH } from '$lib/index';
 import { goto } from '$app/navigation';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
-import { Map, Funnel, Star, Cog6Tooth, ComputerDesktop } from '@steeze-ui/heroicons';
+import {
+  Map,
+  Funnel,
+  Star,
+  Cog6Tooth,
+  ComputerDesktop,
+  InformationCircle
+} from '@steeze-ui/heroicons';
 // TYPES
 import type { IconSource } from '@steeze-ui/svelte-icon';
 import type { PanelState, UserRoleDisco } from '$lib/types';
@@ -20,6 +27,8 @@ import { useSession } from '$lib/auth/client';
 
 // CONTEXT
 const appCtx = getAppCtx();
+
+let { hub } = $props();
 
 // STATE
 const session = useSession();
@@ -35,14 +44,24 @@ let showAdminMenu = $derived(
     )
 );
 
-const menuItems = [
-  { icon: Map, label: m.menu_maps(), panel: 'prisms' },
-  { icon: Funnel, label: m.menu_filters(), panel: 'filters' },
-  { icon: Star, label: m.menu_stars(), panel: 'stars' },
-  { icon: Cog6Tooth, label: m.menu_settings(), panel: 'settings' }
-];
+function getMenuItems() {
+  const commonPanels = [
+    { icon: Funnel, label: m.menu_filters(), panel: 'filters' },
+    { icon: Star, label: m.menu_stars(), panel: 'stars' },
+    { icon: Cog6Tooth, label: m.menu_settings(), panel: 'settings' }
+  ];
+  if (hub.isCore) {
+    const prismPanel = { icon: Map, label: m.menu_maps(), panel: 'prisms' };
+    return [prismPanel, ...commonPanels];
+  } else {
+    const hubPanel = { icon: InformationCircle, label: m.menu_about(), panel: 'hub' };
+    return [hubPanel, ...commonPanels];
+  }
+}
 
-function handleMenuClick(panel: 'filters' | 'prisms' | 'stars' | 'settings' | 'admin') {
+function handleMenuClick(
+  panel: 'filters' | 'prisms' | 'stars' | 'settings' | 'admin' | 'hub'
+) {
   if (panel === 'admin') {
     const currentPath = page.url.pathname;
     if (currentPath.startsWith('/features/')) {
@@ -88,7 +107,7 @@ let hasViewportHeightIncreased = $derived(innerHeight > initialInnerHeight);
   class="min-h-17 bottom-0 w-full border-t-3 border-base-300 bg-black px-4 py-2 caret-transparent md:px-0">
   <div class="flex w-full flex-row items-center justify-between">
     <div class="mx-auto flex max-w-[720px] flex-grow items-center justify-around">
-      {#each menuItems as { icon, label, panel }}
+      {#each getMenuItems() as { icon, label, panel }}
         {@render menuButton(icon, label, panel as keyof PanelState)}
       {/each}
     </div>
