@@ -210,10 +210,8 @@ export class ImageCtx {
       this.state.context?.ctxTypeSecondary !== context?.ctxTypeSecondary ||
       this.state.context?.ctxIdSecondary !== context?.ctxIdSecondary;
 
-    // Generate new context ID to track this context change
-    const newContextId = context
-      ? `${context.ctxType}-${context.ctxId}-${Date.now()}`
-      : null;
+    // Generate context ID based on actual context, not timing
+    const newContextId = context ? `${context.ctxType}-${context.ctxId}` : null;
     this.currentContextId = newContextId;
 
     if (isContextChange) {
@@ -283,6 +281,7 @@ export class ImageCtx {
   state = $state({
     // Context configuration
     context: null as ImageContextConfig | null,
+    isFetchingImages: false, // Track when we're fetching images from API
 
     // The IDs of the images to be highlighted
     highlightedIds: [] as Id[],
@@ -342,6 +341,11 @@ export class ImageCtx {
   });
 
   determineViewerState = () => {
+    // PRIORITY 0: Check if we're fetching images from API (early loading state)
+    if (this.state.isFetchingImages) {
+      return 'loading';
+    }
+
     // PRIORITY 1: Check if active image is currently being replaced (uploading)
     if (
       this.state.activeImage &&
@@ -749,6 +753,15 @@ export class ImageCtx {
     }
   }
 
+  setActiveImageWithLoading(image: Image | null) {
+    if (image) {
+      this.setActiveImage(image);
+      this.setLoadStatus(image.id, 'loading');
+    } else {
+      this.resetActiveImage();
+    }
+  }
+
   resetActiveImage() {
     this.state.activeImage = null;
   }
@@ -809,7 +822,7 @@ export class ImageCtx {
   setActiveImageToFirst() {
     const images = this.getImages();
     if (images.length > 0) {
-      this.setActiveImage(images[0] as Image);
+      this.setActiveImageWithLoading(images[0] as Image);
     } else {
       this.resetActiveImage();
     }
@@ -960,12 +973,15 @@ export class ImageCtx {
 
     // Capture current context ID to validate later
     const contextIdAtStart = this.currentContextId;
+    // Set fetching state to show loading immediately
+    this.state.isFetchingImages = true;
 
     // Get the images for the primary resource
     const images = await this.imagesQueryFn();
 
     // Validate context hasn't changed during async operation
     if (this.currentContextId !== contextIdAtStart) {
+      this.state.isFetchingImages = false;
       return;
     }
 
@@ -981,6 +997,7 @@ export class ImageCtx {
 
       // Validate context again after second async operation
       if (this.currentContextId !== contextIdAtStart) {
+        this.state.isFetchingImages = false;
         return;
       }
 
@@ -1000,10 +1017,16 @@ export class ImageCtx {
 
     // Final context validation before applying results
     if (this.currentContextId !== contextIdAtStart) {
+      this.state.isFetchingImages = false;
       return;
     }
 
     await this.setImages(validImages);
+
+    // Set active image with loading state immediately to maintain loading display
+    if (validImages.length > 0 && !this.state.activeImage) {
+      this.setActiveImageToFirst();
+    }
 
     // Don't set loading status here - let Picture.svelte handle it via onLoad callbacks
     // This prevents premature transitions before images are actually ready
@@ -1015,6 +1038,9 @@ export class ImageCtx {
         this.setThumbnailLoadStatus(image.id, 'loading');
       }
     });
+
+    // Clear fetching state after successful completion
+    this.state.isFetchingImages = false;
   }
 
   async imagesQueryFn() {
