@@ -39,13 +39,15 @@ $effect(() => {
     </h2>
   </div>
   <div class="flex flex-row items-center gap-4">
-    <button
-      class="m-0 h-auto flex-none p-0 text-base-50 hover:bg-transparent hover:text-base-content/80 focus:outline-none focus:ring-0 focus-visible:text-primary"
-      onclick={(e) => {
-        onToggleInfo?.(e);
-      }}>
-      <span class="text-xl">?</span>
-    </button>
+    {#if onToggleInfo}
+      <button
+        class="m-0 h-auto flex-none p-0 text-base-50 hover:bg-transparent hover:text-base-content/80 focus:outline-none focus:ring-0 focus-visible:text-primary"
+        onclick={(e) => {
+          onToggleInfo?.(e);
+        }}>
+        <span class="text-xl">?</span>
+      </button>
+    {/if}
     <button
       class="btn btn-ghost btn-sm m-0 h-auto flex-none p-0 hover:bg-transparent hover:text-base-content/80 focus:outline-none focus:ring-0 focus-visible:text-primary"
       onclick={() => {
