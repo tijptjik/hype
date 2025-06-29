@@ -281,6 +281,9 @@ export class OmniContext {
         appCtx.setActiveFeature(featureId, {
           focus: true
         });
+        if (options.openCard) {
+          this.openCard();
+        }
         return;
       }
     }
