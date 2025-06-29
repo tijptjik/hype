@@ -1781,6 +1781,7 @@ export type PanelState = {
   stars?: boolean;
   settings?: boolean;
   admin?: boolean;
+  hub?: boolean;
 };
 
 // Define a type for the function argument to avoid self-reference
