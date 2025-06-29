@@ -76,7 +76,8 @@ import type {
   UserExperimental,
   UserFeature,
   UserLayer,
-  UserPreferences
+  UserPreferences,
+  HubOpts
 } from '$lib/types';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
@@ -117,6 +118,8 @@ export class AppCtx {
     image: new SvelteMap(),
     stats: new SvelteMap()
   };
+
+  hub: HubOpts | null = $state(null);
 
   // Features map for current state (rebuilt when state.resources.feature changes)
   private featuresMap = new SvelteMap<Id, FeatureFromCollection | Feature>();
@@ -2069,7 +2072,7 @@ export class AppCtx {
 
   // Panel methods
   togglePanel = (panel: keyof PanelState, closeAll: boolean = false): void => {
-    const leftPanels = ['prisms', 'stars'];
+    const leftPanels = ['prisms', 'stars', 'hub'];
     const rightPanels = ['filters', 'settings'];
     const currentState = this.state.isPanelOpen[panel];
     // If left panel is open, close it when toggling a left panel
@@ -2178,7 +2181,11 @@ export class AppCtx {
       if (this.isAdmin()) {
         this.togglePanel('admin');
       } else {
-        this.togglePanel('prisms');
+        if (this.hub?.isCore) {
+          this.togglePanel('prisms');
+        } else {
+          this.togglePanel('hub');
+        }
       }
       keyMatched = true;
     } else if (event.key === '2') {
@@ -2588,6 +2595,17 @@ export class AppCtx {
         layerFilters[property.key] = filterConfig;
       }
     });
+  };
+
+  // ═══════════════════════
+  //
+  // ═══════════════════════
+  setHub = (hub: HubOpts) => {
+    this.hub = hub;
+  };
+
+  resetHub = () => {
+    this.hub = null;
   };
 
   // ═══════════════════════
