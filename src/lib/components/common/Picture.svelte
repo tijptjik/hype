@@ -82,7 +82,7 @@ const handleError = () => {
     <img
       {src}
       {alt}
-      class="absolute inset-0 z-0 h-full w-full object-cover blur-sm"
+      class="absolute inset-0 z-0 h-full w-full object-cover text-transparent blur-sm"
       style="opacity: {(opacity / 10) * 6}" />
   {/if}
 </figure>

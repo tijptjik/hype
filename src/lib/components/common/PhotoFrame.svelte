@@ -6,6 +6,7 @@ import { getImageContext } from '$lib/context/image.svelte';
 import { getURLfromImage } from '$lib/client/services/image';
 // COMPONENTS
 import Picture from '$lib/components/common/Picture.svelte';
+import Loading from '$lib/components/images/gallery/overlays/Loading.svelte';
 // TYPES
 import { type Snippet } from 'svelte';
 import type { Image } from '$lib/types';
@@ -220,7 +221,7 @@ function getImageOpacity(
       src={baseImage?.src || ''}
       alt={altText}
       {layout}
-      {showLoading}
+      showLoading={false}
       {showError}
       {showBackground}
       opacity={getImageOpacity(
@@ -246,7 +247,7 @@ function getImageOpacity(
         src={overlayImage?.src || ''}
         alt={`Transitioning to ${overlayImage.id}`}
         {layout}
-        {showLoading}
+        showLoading={false}
         {showError}
         {showBackground}
         opacity={getImageOpacity(overlayImage, overlayOpacity)}
@@ -261,6 +262,10 @@ function getImageOpacity(
           }
         }} />
     </div>
+  {/if}
+
+  {#if !baseImage && !overlayImage && !isTransitioning && showLoading && imageCtx.viewerState === 'loading'}
+    <Loading />
   {/if}
 
   <!-- Content overlay -->
