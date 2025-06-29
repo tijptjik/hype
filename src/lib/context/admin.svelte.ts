@@ -1960,6 +1960,8 @@ export const getAdminCtx = (): AdminCtx => {
       get(target, prop) {
         if (prop === 'isInitialised') return false;
         if (prop === 'setFacet') return () => {}; // No-op function
+        if (prop === 'setHeaderForIndex') return () => {}; // No-op function
+        if (prop === 'setHeaderForEntity') return () => {}; // No-op function
         if (prop === 'filteredOrganisations') return [];
         if (prop === 'filteredProjects') return [];
         if (prop === 'filteredLayers') return [];

@@ -156,7 +156,9 @@ watch(
 let enhance = $derived(form.enhance);
 let isMapFullscreen = $state(false);
 let isMapCollapsed = $state(
-  adminCtx.appCtx.getUserPreferences()?.admin?.isAdminMapCollapsed ?? false
+  adminCtx?.appCtx?.getUserPreferences
+    ? (adminCtx.appCtx?.getUserPreferences()?.admin?.isAdminMapCollapsed ?? false)
+    : false
 );
 let title = $derived(
   pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.title || NEW_TITLE
