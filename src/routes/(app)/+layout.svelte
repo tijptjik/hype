@@ -16,6 +16,7 @@ import Map from '$lib/components/common/StandaloneMap.svelte';
 import Omnibar from '$lib/components/omnibar/Omnibar.svelte';
 import Filters from '$lib/components/panels/Filters.svelte';
 import Prisms from '$lib/components/panels/Prisms.svelte';
+import Hub from '$lib/components/panels/Hub.svelte';
 import Stars from '$lib/components/panels/Stars.svelte';
 import Settings from '$lib/components/panels/Settings.svelte';
 import LayerSelectionModal from '$lib/components/modals/LayerSelectionModal.svelte';
@@ -35,7 +36,8 @@ type AppRootProps = LayoutProps & {
 };
 
 // PROPS
-let { children }: AppRootProps = $props();
+let { children, data }: AppRootProps = $props();
+let { hub } = data;
 
 // AUTH
 const session = useSession();
@@ -48,6 +50,8 @@ let navDest = $state('');
 // CONTEXT :: APP
 // Get the shared AppCtx from root layout
 const appCtx = getAppCtx();
+// Set Hub context in AppCtx
+appCtx.setHub(hub);
 
 // CONTEXT :: OMNI
 const omniCtx = setOmniContext(appCtx);
@@ -95,6 +99,7 @@ $effect(() => {
       class="relative top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
       <!-- Panels -->
       <Prisms />
+      <Hub {hub} />
       <Filters />
       <Stars />
       <Settings />
@@ -108,7 +113,7 @@ $effect(() => {
         <NewFeatureCard />
       </div>
     </main>
-    <Menu />
+    <Menu {hub} />
   {:else if !$session.isPending && !$session.data}
     <main class="top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
       {@render children()}
