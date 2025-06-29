@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { watch } from 'runed';
+import { untrack } from 'svelte';
 // SERVICES
 import { getImageContext } from '$lib/context/image.svelte';
 import { getURLfromImage } from '$lib/client/services/image';
@@ -108,11 +108,14 @@ $effect(() => {
 });
 
 // Simple crossfade transition logic
-watch(
-  () => [imageCtx.viewerState, imageCtx.activeImage, imageCtx.activePreview] as const,
-  () => {
-    const newDisplayImage = getDisplayImage();
+$effect(() => {
+  // Track these reactive values
+  const viewerState = imageCtx.viewerState;
+  const activeImage = imageCtx.activeImage;
+  const activePreview = imageCtx.activePreview;
 
+  untrack(() => {
+    const newDisplayImage = getDisplayImage();
     // No display image, clear everything
     if (!newDisplayImage) {
       baseImage = null;
@@ -168,32 +171,31 @@ watch(
       }
     };
     animationId = requestAnimationFrame(animate);
-  }
-);
+  });
+});
 
-// Preload adjacent images for smooth navigation
-watch(
-  () => imageCtx.activeImage,
-  (activeImage) => {
-    if (activeImage && mode !== 'standalone') {
-      const images = imageCtx.getImages();
-      const currentIndex = images.findIndex((img) => img.id === activeImage.id);
+// Preload adjacent images for smooth navigation - fix race conditions
+$effect(() => {
+  const activeImage = imageCtx.activeImage;
 
-      if (currentIndex !== -1) {
-        // Preload next and previous images
-        const nextIndex = (currentIndex + 1) % images.length;
-        const prevIndex = (currentIndex - 1 + images.length) % images.length;
+  if (activeImage && mode !== 'standalone') {
+    const images = imageCtx.getImages();
+    const currentIndex = images.findIndex((img) => img.id === activeImage.id);
 
-        [images[nextIndex], images[prevIndex]].forEach((img) => {
-          if (img) {
-            const src = getURLfromImage({ image: img, transformation });
-            imageCtx.preloadImage(src);
-          }
-        });
-      }
+    if (currentIndex !== -1) {
+      // Preload next and previous images
+      const nextIndex = (currentIndex + 1) % images.length;
+      const prevIndex = (currentIndex - 1 + images.length) % images.length;
+
+      [images[nextIndex], images[prevIndex]].forEach((img) => {
+        if (img) {
+          const src = getURLfromImage({ image: img, transformation });
+          imageCtx.preloadImage(src);
+        }
+      });
     }
   }
-);
+});
 
 // Calculate opacity for preview images during upload
 function getImageOpacity(
