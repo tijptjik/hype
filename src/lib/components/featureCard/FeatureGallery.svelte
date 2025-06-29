@@ -1,6 +1,4 @@
 <script lang="ts">
-// SVELTE
-import { fade } from 'svelte/transition';
 // ENUMS
 import { FeatureCardMode } from '$lib/enums';
 // COMPONENTS

@@ -170,6 +170,9 @@ export class ImageCtx {
   isAdminMode: boolean = false;
   appCtx = getAppCtx();
 
+  // Add context tracking to prevent race conditions
+  private currentContextId: string | null = null;
+
   // ═══════════════════════
   // 1. CONSTRUCTOR & SETUP
   // ═══════════════════════
@@ -206,6 +209,12 @@ export class ImageCtx {
       this.state.context?.ctxId !== context?.ctxId ||
       this.state.context?.ctxTypeSecondary !== context?.ctxTypeSecondary ||
       this.state.context?.ctxIdSecondary !== context?.ctxIdSecondary;
+
+    // Generate new context ID to track this context change
+    const newContextId = context
+      ? `${context.ctxType}-${context.ctxId}-${Date.now()}`
+      : null;
+    this.currentContextId = newContextId;
 
     if (isContextChange) {
       this.resetUploadStatus();
@@ -253,10 +262,13 @@ export class ImageCtx {
     } else if (context) {
       // Fetch images from API based on context
       await this.refreshImages();
-      setActiveImageWithLoading(effectiveImage);
-      // If no specific image provided, set to first available
-      if (!effectiveImage) {
-        this.setActiveImageToFirst();
+      // Validate context hasn't changed during async refreshImages
+      if (this.currentContextId === newContextId) {
+        setActiveImageWithLoading(effectiveImage);
+        // If no specific image provided, set to first available
+        if (!effectiveImage) {
+          this.setActiveImageToFirst();
+        }
       }
     } else {
       // No images to load
@@ -946,8 +958,16 @@ export class ImageCtx {
       return;
     }
 
+    // Capture current context ID to validate later
+    const contextIdAtStart = this.currentContextId;
+
     // Get the images for the primary resource
     const images = await this.imagesQueryFn();
+
+    // Validate context hasn't changed during async operation
+    if (this.currentContextId !== contextIdAtStart) {
+      return;
+    }
 
     // Filter out null/undefined images before processing
     const validImages = images.filter(
@@ -958,6 +978,11 @@ export class ImageCtx {
     // Get the images for the secondary resource
     if (this.state.context.ctxTypeSecondary) {
       const extendedImages = await this.extendedImagesQueryFn();
+
+      // Validate context again after second async operation
+      if (this.currentContextId !== contextIdAtStart) {
+        return;
+      }
 
       // Filter out null/undefined extended images too
       const validExtendedImages = extendedImages.filter(
@@ -971,6 +996,11 @@ export class ImageCtx {
           validImages.push(image);
         }
       });
+    }
+
+    // Final context validation before applying results
+    if (this.currentContextId !== contextIdAtStart) {
+      return;
     }
 
     await this.setImages(validImages);
