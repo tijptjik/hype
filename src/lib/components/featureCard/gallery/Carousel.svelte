@@ -11,7 +11,6 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { ChevronLeft, ChevronRight } from '@steeze-ui/heroicons';
 // SERVICES
 import { formatDate } from '$lib';
-import { watch } from 'runed';
 import type { Image } from '$lib/types';
 
 // CONTEXT
@@ -19,22 +18,8 @@ const imageCtx = getImageContext();
 const cardCtx = getFeatureCardContext();
 
 // SERVICES
-let images = $state<Image[]>([]);
-let currentImage = $state<Image | null>(null);
-
-watch(
-  () => imageCtx.getImages(),
-  (images) => {
-    images = images;
-  }
-);
-
-watch(
-  () => imageCtx.activeImage,
-  (image) => {
-    currentImage = image;
-  }
-);
+let images: Image[] = $derived(imageCtx.getImages());
+let currentImage: Image | null = $derived(imageCtx.activeImage);
 
 // ELEMENTS
 let container: HTMLDivElement;
