@@ -22,14 +22,14 @@ export enum LocaleNamesEn {
 
 export enum LocaleNamesZhHant {
   en = '英語',
-  'zh-hant' = '繁體字',
-  'zh-hans' = '簡體字'
+  'zh-hant' = '繁體中文',
+  'zh-hans' = '簡體中文'
 }
 
 export enum LocaleNamesZhHans {
   en = '英语',
-  'zh-hant' = '繁体字',
-  'zh-hans' = '简体字'
+  'zh-hant' = '繁体中文',
+  'zh-hans' = '简体中文'
 }
 
 export const localeNames: Record<Locale, Record<Locale, string>> = {
