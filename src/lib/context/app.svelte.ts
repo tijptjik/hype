@@ -39,7 +39,7 @@ import {
   ResourceRefKey
 } from '$lib/enums';
 // GUARDS
-import { isHub, isTask } from '$lib/types';
+import { isFeature, isHub, isTask } from '$lib/types';
 
 // TYPES
 import type {
@@ -1184,14 +1184,17 @@ export class AppCtx {
     query: string
   ) => {
     const textObject = entity.i18n?.[getLocale()];
+    const contributor = isFeature(entity) ? entity.contributor?.name : '';
     if (!textObject) return false;
+    console.log(entity);
     return (
       query === '' ||
       textObject.name?.toLowerCase().includes(query.toLowerCase()) ||
       textObject.title?.toLowerCase().includes(query.toLowerCase()) ||
       textObject.nameShort?.toLowerCase().includes(query.toLowerCase()) ||
       textObject.description?.toLowerCase().includes(query.toLowerCase()) ||
-      textObject.displayAddress?.toLowerCase().includes(query.toLowerCase())
+      textObject.displayAddress?.toLowerCase().includes(query.toLowerCase()) ||
+      contributor?.toLowerCase().includes(query.toLowerCase())
     );
   };
 

@@ -1825,7 +1825,8 @@ export class AdminCtx {
               organisation,
               query
             )) ||
-          entity.message?.toLowerCase().includes(query.toLowerCase())
+          entity.message?.toLowerCase().includes(query.toLowerCase()) ||
+          entity.contributor?.name?.toLowerCase().includes(query.toLowerCase())
         );
       });
     }
