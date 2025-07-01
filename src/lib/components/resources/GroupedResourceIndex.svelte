@@ -54,7 +54,7 @@ function getGroupId(group: G): string {
 </script>
 
 <ResourceFilterBar {controlBar} />
-<div bind:this={listContainer}>
+<div bind:this={listContainer} class="h-full">
   {#if groupedEntities.length > 0}
     {#each groupedEntities as { group, entities }, groupIndex (getGroupId(group))}
       {@const groupId = getGroupId(group)}

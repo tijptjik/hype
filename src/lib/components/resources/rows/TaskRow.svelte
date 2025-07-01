@@ -90,7 +90,7 @@ const reviewActionDisplay = $derived(
 );
 
 let gridColsClass =
-  'gridColsClass="grid-cols-[minmax(300px,40%)_1fr_1fr] @[50rem]/main:grid-cols-[minmax(300px,35%)_1fr] @[62rem]/main:grid-cols-[minmax(320px,32%)_1fr_1fr_120px] @[76rem]/main:grid-cols-[minmax(360px,30%)_1fr_1fr_120px] @[86rem]/main:grid-cols-[minmax(380px,28%)_1fr_1fr_120px] @[98rem]/main:grid-cols-[minmax(420px,25%)_1fr_1fr_120px]';
+  'gridColsClass="grid-cols-[minmax(300px,40%)_1fr_1fr_120px] @[50rem]/main:grid-cols-[minmax(300px,35%)_1fr_1fr_120px] @[62rem]/main:grid-cols-[minmax(320px,32%)_1fr_1fr_120px] @[76rem]/main:grid-cols-[minmax(360px,30%)_1fr_1fr_120px] @[86rem]/main:grid-cols-[minmax(380px,28%)_1fr_1fr_120px] @[98rem]/main:grid-cols-[minmax(420px,25%)_1fr_1fr_120px]';
 </script>
 
 <div class="select-none @container/main">
@@ -135,8 +135,8 @@ let gridColsClass =
         </span>
       {/if}
     </div>
-    <div class="flex items-center justify-center gap-0">
-      <div class="flex flex-col items-center justify-center gap-1">
+    <div class="hidden items-center justify-center gap-0 @[50rem]/main:flex">
+      <div class="hidden flex-col items-center justify-center gap-1 @[62rem]/main:flex">
         <small class="text-xs uppercase text-base-content/60">
           {m.close_muddy_trout_clap()}</small>
         <div class="tooltip" data-tip={formatDate(entity.createdAt)}>
@@ -147,12 +147,12 @@ let gridColsClass =
           </p>
         </div>
       </div>
-      <div class="flex flex-col items-center justify-center gap-1">
+      <div class="hidden flex-col items-center justify-center gap-1 @[32rem]/main:flex">
         <small class="text-xs uppercase text-base-content/60"
           >{m.profile__role_type__contributor()}</small>
         <div class="tooltip" data-tip={entity.contributor?.attribution}>
           <p
-            class="w-[80px] truncate text-sm text-base-content @[62rem]/main:w-[160px] @[74rem]/main:w-[160px] @[86rem]/main:w-[200px]">
+            class="w-[120px] truncate text-sm text-base-content @[62rem]/main:w-[160px] @[74rem]/main:w-[160px] @[86rem]/main:w-[200px]">
             {entity.contributor?.name || '-'}
           </p>
         </div>
