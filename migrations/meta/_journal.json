@@ -36,6 +36,13 @@
       "when": 1750484580133,
       "tag": "0004_seed-contributors",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1751356873878,
+      "tag": "0005_reverse_chinese_addresses",
+      "breakpoints": true
     }
   ]
 }
