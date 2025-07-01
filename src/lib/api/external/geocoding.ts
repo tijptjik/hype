@@ -493,7 +493,11 @@ function parseALSResultToDisplay(
     if (chi.ChiStreet) {
       parts.push(chi.ChiStreet.StreetName);
       if (chi.ChiStreet.BuildingNoFrom) {
-        parts.push(chi.ChiStreet.BuildingNoFrom + '號');
+        let numberRange = chi.ChiStreet.BuildingNoFrom;
+        if (chi.ChiStreet.BuildingNoTo) {
+          numberRange = `${chi.ChiStreet.BuildingNoFrom}-${chi.ChiStreet.BuildingNoTo}`;
+        }
+        parts.push(numberRange + '號');
       }
     }
 
