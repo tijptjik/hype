@@ -4,7 +4,7 @@ import { m } from '$lib/i18n';
 // CONTEXT
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 import { getImageContext } from '$lib/context/image.svelte';
-import { getAppContext } from '$lib/context/app.svelte';
+import { getAppCtx } from '$lib/context/app.svelte';
 // COMPONENTS
 import AddPhoto from '$lib/components/featureCard/gallery/AddPhoto.svelte';
 import PhotoFrame from '$lib/components/common/PhotoFrame.svelte';
@@ -17,7 +17,7 @@ import type { Image } from '$lib/types';
 // CONTEXT
 const imageCtx = getImageContext();
 const cardCtx = getFeatureCardContext();
-const appCtx = getAppContext();
+const appCtx = getAppCtx();
 
 // SERVICES
 let images: Image[] = $derived(imageCtx.getImages());
