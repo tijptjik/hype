@@ -9,8 +9,6 @@ import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 import { getImageContext } from '$lib/context/image.svelte';
 // CONTEXT
 const cardCtx = getFeatureCardContext();
-
-const imageCtx = getImageContext();
 </script>
 
 <div

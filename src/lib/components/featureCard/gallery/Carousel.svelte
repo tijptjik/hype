@@ -4,11 +4,12 @@ import { m } from '$lib/i18n';
 // CONTEXT
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 import { getImageContext } from '$lib/context/image.svelte';
+import { getAppContext } from '$lib/context/app.svelte';
 // COMPONENTS
 import AddPhoto from '$lib/components/featureCard/gallery/AddPhoto.svelte';
 import PhotoFrame from '$lib/components/common/PhotoFrame.svelte';
 import Icon from '$lib/components/common/Icon.svelte';
-import { ChevronLeft, ChevronRight } from '@steeze-ui/heroicons';
+import { ChevronLeft, ChevronRight, Camera, MapPin } from '@steeze-ui/heroicons';
 // SERVICES
 import { formatDate } from '$lib';
 import type { Image } from '$lib/types';
@@ -16,6 +17,7 @@ import type { Image } from '$lib/types';
 // CONTEXT
 const imageCtx = getImageContext();
 const cardCtx = getFeatureCardContext();
+const appCtx = getAppContext();
 
 // SERVICES
 let images: Image[] = $derived(imageCtx.getImages());
@@ -26,10 +28,13 @@ let container: HTMLDivElement;
 
 // STATE : LOCAL - simplified since PhotoFrame handles transitions
 let showContributor = $state(false);
-
 let toggleAttribution = () => {
   showContributor = !showContributor;
 };
+
+const feature = $derived(appCtx.getFeatureById(imageCtx.state.context?.ctxId));
+const contributorName = $derived(feature?.contributor?.name);
+const createdAt = $derived(feature?.createdAt);
 
 // Navigation handlers - much simpler now
 function handlePrevious(e: MouseEvent) {
@@ -93,12 +98,32 @@ function handleTouch(event: TouchEvent | MouseEvent) {
           <div
             class="absolute bottom-2 left-2 z-10 flex h-6 select-none flex-row gap-2 overflow-visible caret-transparent">
             <div
-              class="absolute z-30 flex w-64 -translate-y-16 flex-col items-start justify-start gap-1.5">
+              class="absolute z-30 flex w-64 -translate-y-[120px] flex-col items-start justify-start gap-1.5">
               <div
                 class="h-6 {showContributor
-                  ? '-translate-y-0 opacity-100'
-                  : 'translate-y-12 opacity-0'} rounded bg-black/80 px-2 py-1 font-mono text-xs text-white transition-all delay-100 duration-300">
-                <span>{m.clear_patchy_bobcat_wish()} </span>
+                  ? 'translate-y-0 opacity-100 delay-150'
+                  : 'translate-y-24 opacity-0 delay-0'} flex gap-2 rounded bg-black/80 px-2 py-1 font-mono text-xs text-white transition-all duration-300">
+                <Icon src={MapPin} class="h-4 w-4" />
+                <span>{m.clear_patchy_bobcat_wish()}</span>
+                <span class="font-bold">
+                  {contributorName || m.whole_upper_quail_bloom()}
+                </span>
+              </div>
+              <div
+                class="h-6 {showContributor
+                  ? 'translate-y-0 opacity-100 delay-100'
+                  : 'translate-y-18 delay-50 opacity-0'} rounded bg-black/80 px-2 py-1 font-mono text-xs text-white transition-all duration-300">
+                <span>{m.fluffy_fresh_ant_aim()} </span>
+                <span class="font-bold">
+                  {formatDate(createdAt ?? '')}
+                </span>
+              </div>
+              <div
+                class="h-6 {showContributor
+                  ? 'delay-50 translate-y-0 opacity-100'
+                  : 'translate-y-12 opacity-0 delay-100'} flex gap-2 rounded bg-black/80 px-2 py-1 font-mono text-xs text-white transition-all duration-300">
+                <Icon src={Camera} class="h-4 w-4" />
+                <span>{m.clear_patchy_bobcat_wish()}</span>
                 <span class="font-bold">
                   {currentImage.attribution ||
                     currentImage.credit ||
@@ -107,8 +132,8 @@ function handleTouch(event: TouchEvent | MouseEvent) {
               </div>
               <div
                 class="h-6 {showContributor
-                  ? '-translate-y-0 opacity-100'
-                  : 'translate-y-6 opacity-0'} rounded bg-black/80 px-2 py-1 font-mono text-xs text-white transition-all duration-300">
+                  ? 'translate-y-0 opacity-100 delay-0'
+                  : 'translate-y-6 opacity-0 delay-150'} rounded bg-black/80 px-2 py-1 font-mono text-xs text-white transition-all duration-300">
                 <span>{m.fluffy_fresh_ant_aim()} </span>
                 <span class="font-bold">
                   {formatDate(currentImage.capturedAt ?? currentImage.createdAt ?? '')}
