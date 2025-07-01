@@ -477,21 +477,24 @@ function parseALSResultToDisplay(
       }
     }
 
-    // Skip Region
-    // parts.push(eng.Region);
-
-    return titleCase(applyAddressAbbreviations(parts.join(', ')));
+    return removeRegion(titleCase(applyAddressAbbreviations(parts.join(', '))));
   } else {
     if (!('ChiPremisesAddress' in pa)) return null;
     const { ChiPremisesAddress: chi } = pa;
     const parts = [];
 
-    // Building/Block info
-    if (chi.BuildingName) {
-      parts.push(chi.BuildingName);
+    // Area info
+    const location = chi.ChiDistrict.DcDistrict;
+    if (location) {
+      parts.push(location);
     }
-    if (chi.ChiBlock) {
-      parts.push(`${chi.ChiBlock.BlockNo}${chi.ChiBlock.BlockDescriptor}`);
+
+    // Street address
+    if (chi.ChiStreet) {
+      parts.push(chi.ChiStreet.StreetName);
+      if (chi.ChiStreet.BuildingNoFrom) {
+        parts.push(chi.ChiStreet.BuildingNoFrom + '號');
+      }
     }
 
     // Estate/Phase info
@@ -503,22 +506,16 @@ function parseALSResultToDisplay(
       parts.push(estatePart);
     }
 
-    // Street address
-    if (chi.ChiStreet) {
-      parts.push(chi.ChiStreet.StreetName);
-      if (chi.ChiStreet.BuildingNoFrom) {
-        parts.push(chi.ChiStreet.BuildingNoFrom + '號');
-      }
+    // Building/Block info
+    if (chi.BuildingName) {
+      parts.push(chi.BuildingName);
+    }
+    if (chi.ChiBlock) {
+      parts.push(`${chi.ChiBlock.BlockNo}${chi.ChiBlock.BlockDescriptor}`);
     }
 
-    // Area info
-    const location = chi.ChiDistrict.DcDistrict;
-    if (location) {
-      parts.push(location);
-    }
-
-    // Region
-    parts.push(chi.Region);
+    // Skip adding region to avoid regional suffixes
+    // parts.push(chi.Region);
 
     return parts.join('');
   }

@@ -237,35 +237,35 @@ export function applyAddressAbbreviations(address: string): string {
   return address;
 }
 
-export function parseToDisplayAddressEn(address: string, name?: string): string {
-  let result = address;
+// export function parseToDisplayAddressEn(address: string, name?: string): string {
+//   let result = address;
 
-  result = applyAddressAbbreviations(result);
+//   result = applyAddressAbbreviations(result);
 
-  // Move street numbers to start if they're at the end
-  const numberAtEnd = result.match(/(\d+)\s*$/);
-  if (numberAtEnd) {
-    result = result.replace(/\s*\d+$/, '');
-    result = `${numberAtEnd[1]} ${result}`;
-  }
+//   // Move street numbers to start if they're at the end
+//   const numberAtEnd = result.match(/(\d+)\s*$/);
+//   if (numberAtEnd) {
+//     result = result.replace(/\s*\d+$/, '');
+//     result = `${numberAtEnd[1]} ${result}`;
+//   }
 
-  // Add name if provided
-  if (name) {
-    result = `${name}, ${result}`;
-  }
+//   // Add name if provided
+//   if (name) {
+//     result = `${name}, ${result}`;
+//   }
 
-  return result;
-}
+//   return result;
+// }
 
-export function parseToDisplayAddressZh(address: string, name?: string): string {
-  let result = address;
-  // Add name if provided
-  if (name) {
-    result = `${result}${name}`;
-  }
+// export function parseToDisplayAddressZh(address: string, name?: string): string {
+//   let result = address;
+//   // Add name if provided
+//   if (name) {
+//     result = `${result}${name}`;
+//   }
 
-  return result;
-}
+//   return result;
+// }
 
 export function capitalizeFirstLetter(str: string): string {
   if (!str) return str;
