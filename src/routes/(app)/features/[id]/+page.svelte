@@ -119,8 +119,6 @@ async function handleFeatureSelection() {
             </FeaturePortalSection>
             <Spacer />
           </Container>
-        {:else if mode === FeatureCardMode.New}
-          <FeatureGallery />
         {:else if mode === FeatureCardMode.Missing}
           <FeatureGallery />
           <MissingReportReason />
