@@ -1,4 +1,8 @@
 <script lang="ts">
+/**
+ * @component Displays image metadata including attribution and intent
+ * @param {Image} currentImage - The currently displayed image
+ */
 // COMPONENTS
 import Attribution from '$lib/components/featureCard/gallery/Attribution.svelte';
 // TYPES
@@ -7,7 +11,7 @@ import type { Image } from '$lib/types';
 // PROPS
 let { currentImage }: { currentImage: Image } = $props();
 
-const intent = $derived(currentImage.intent);
+const intent = $derived(currentImage?.intent || '');
 </script>
 
 <div

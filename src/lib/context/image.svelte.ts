@@ -50,7 +50,7 @@ import type {
 //    - setContext
 //
 // 2. REACTIVE STATE
-//    - state (Main reactive state object)import { navigateOnAdmin } from '$lib/navigation';
+//    - state (Main reactive state object)
 
 //    - imagesQueryKey ($derived)
 //    - isImagesLoading ($derived)

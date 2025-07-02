@@ -475,8 +475,8 @@ onMount(() => {
               {/if}
             {/if}
           </div>
-
-          {#if cardCtx.userData.photos.length < 1}
+          <!-- Add another photo button - moved to bottom center and restyled -->
+          {#if cardCtx.userData.photos.length > 1}
             <div class="absolute bottom-4 left-0 right-0 flex justify-center">
               <button
                 class="btn btn-ghost gap-2 rounded-full bg-base-100 text-white"
