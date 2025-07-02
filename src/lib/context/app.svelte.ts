@@ -1334,6 +1334,18 @@ export class AppCtx {
     return undefined;
   };
 
+  /**
+   * Sets a feature in the cache and adds it to the Feature SvelteMap.
+   * @remarks This is used to update the cache with the Entity API response,
+   * instead of the FeatureFromCollection which is loaded and cached by default.
+   * @param feature - The feature to set in the cache
+   */
+  setFeatureById = (feature: Feature) => {
+    this.cache.feature.set(feature.id, feature);
+    this.addFeatureToMap(feature);
+    console.log('[SET FEATURE]', feature.contributor);
+  };
+
   getTaskById = async (
     id: Id,
     fetchOnCacheMiss: boolean = true

@@ -949,6 +949,11 @@ export class ImageCtx {
 
     let result: any[] = [];
 
+    // Cache the feature response for reuse
+    if (ctxType === 'feature') {
+      this.appCtx.setFeatureById(data as Feature);
+    }
+
     if (includeSingleImage && data.image) {
       // For standalone mode, prioritize the canonical image first
       result = [data.image];
