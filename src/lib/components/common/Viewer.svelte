@@ -3,7 +3,7 @@ import { fade } from 'svelte/transition';
 // I18N
 import { m } from '$lib/i18n';
 // SERVICES
-import { getImageContext } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte';
 // COMPONENTS
 import PhotoFrame from '$lib/components/common/PhotoFrame.svelte';
 import Icon from '$lib/components/common/Icon.svelte';
@@ -39,7 +39,7 @@ let {
 }: Props = $props();
 
 // STATE : CONTEXT :: ROUTER
-const imageCtx = getImageContext();
+const imageCtx = getImageCtx();
 const adminCtx = getAdminCtx();
 
 let image = $derived(imageCtx.activeImage);
