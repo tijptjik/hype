@@ -155,10 +155,10 @@ function updateRowFocus(index: number) {
 <!-- MODAL -->
 {#if selectedImage && selectedFeature}
   <FullScreenViewer
+    appCtx={adminCtx.appCtx}
     {adminCtx}
     image={selectedImage}
     feature={selectedFeature}
-    isAdminMode={true}
     canNavigatePrevious={canNavigatePrevious()}
     canNavigateNext={canNavigateNext()}
     onClose={closeModal}
