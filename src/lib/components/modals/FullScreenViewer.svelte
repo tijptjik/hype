@@ -1,19 +1,21 @@
 <script lang="ts">
+// NAVIGATION
+import { navigateOnAdmin } from '$lib/navigation';
 // COMPONENTS
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
+import Viewer from '../common/Viewer.svelte';
 // ENUMS
 import { FirstClassResource, ImageContextResource } from '$lib/enums';
 // TYPES
 import type { ImageDB, Feature, Organisation, Project, ImageDBBasic } from '$lib/types';
+import type { AppCtx } from '$lib/context/app.svelte';
 import type { AdminCtx } from '$lib/context/admin.svelte';
-import { navigateOnAdmin } from '$lib/navigation';
-import Viewer from '../common/Viewer.svelte';
 
 type Props = {
-  adminCtx: AdminCtx;
+  appCtx: AppCtx;
+  adminCtx?: AdminCtx;
   image: ImageDB | ImageDBBasic;
   feature: Feature;
-  isAdminMode?: boolean;
   currentIndex?: number;
   totalCount?: number;
   canNavigatePrevious?: boolean;
@@ -25,10 +27,10 @@ type Props = {
 
 // STATE : PROPS
 let {
+  appCtx,
   adminCtx,
   image,
   feature,
-  isAdminMode = false,
   canNavigatePrevious = false,
   canNavigateNext = false,
   onClose,
@@ -37,11 +39,11 @@ let {
 }: Props = $props();
 
 let organisation = $derived<Organisation | undefined>(
-  feature ? adminCtx.appCtx.cache.organisation.get(feature.organisationId) : undefined
+  feature ? appCtx.cache.organisation.get(feature.organisationId) : undefined
 );
 
 let project = $derived<Project | undefined>(
-  feature ? adminCtx.appCtx.cache.project.get(feature.projectId) : undefined
+  feature ? appCtx.cache.project.get(feature.projectId) : undefined
 );
 
 function handleKeydown(event: KeyboardEvent) {
@@ -58,7 +60,11 @@ function handleKeydown(event: KeyboardEvent) {
     const featureId = feature.id; // Capture the ID before dispatching close
     // Navigate to feature address facet
     onClose();
-    navigateOnAdmin(adminCtx, FirstClassResource.feature, featureId, 'images');
+    if (adminCtx) {
+      navigateOnAdmin(adminCtx, FirstClassResource.feature, featureId, 'images');
+    } else {
+      appCtx.navNext({ isCardOpen: true });
+    }
   } else if (event.key === 'Tab') {
     event.preventDefault();
     event.stopPropagation();
@@ -86,7 +92,7 @@ function closeModal() {
     <div class="h-full w-full" onclick={closeModal}>
       {#if feature}
         <ImageProvider
-          {isAdminMode}
+          isAdminMode={adminCtx !== undefined}
           context={{
             ctxType: FirstClassResource.feature as unknown as ImageContextResource,
             ctxId: feature.id,
