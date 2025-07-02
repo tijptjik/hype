@@ -42,7 +42,13 @@ export const GET: RequestHandler = async ({ params, locals, platform, request })
   const { db, user: sessionUser, userRoles } = await getDatabase(locals, platform);
 
   // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
-  const { conditions } = getUserQueryContext(sessionUser!, request, {}, userRoles);
+  const { conditions } = getUserQueryContext(
+    sessionUser!,
+    request,
+    {},
+    userRoles,
+    false
+  );
 
   try {
     // Add condition for specific user ID
