@@ -52,14 +52,14 @@ const createdAt = $derived(
       : row == 1
         ? '-translate-y-6 opacity-0 delay-100'
         : '-translate-y-6 opacity-0 delay-0'} flex font-mono text-xs text-white transition-all duration-300">
-    <div class="flex h-6 gap-2 rounded-l bg-black/80 px-2 py-1">
+    <div class="flex h-6 gap-2 rounded-l bg-base-300/80 px-2 py-1">
       <Icon src={icon} class="h-4 w-4" />
       <span>{m.clear_patchy_bobcat_wish()}</span>
       <span class="font-bold">
         {contributorName || m.whole_upper_quail_bloom()}
       </span>
     </div>
-    <div class="h-6 rounded-r bg-black/50 px-2 py-1 font-normal">
+    <div class="h-6 rounded-r bg-base-300/70 px-2 py-1 font-normal">
       <span class="font-bold">
         {formatDate(contributedAt ?? '')}
       </span>
