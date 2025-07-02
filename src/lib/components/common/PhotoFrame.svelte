@@ -272,7 +272,7 @@ function getImageOpacity(
 
   <!-- Content overlay -->
   {#if children}
-    <div class="absolute inset-0 z-10">
+    <div class="z-1 absolute inset-0">
       {@render children()}
     </div>
   {/if}
