@@ -19,6 +19,7 @@ import PhotoCredit from '$lib/components/featureCard/PhotoCredit.svelte';
 import Spacer from '$lib/components/featureCard/layout/Spacer.svelte';
 import Container from '$lib/components/featureCard/layout/Container.svelte';
 import FeaturePortalSection from '$lib/components/featureCard/layout/FeaturePortalSection.svelte';
+import FullScreenCarousel from '$lib/components/modals/FullScreenCarousel.svelte';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 import { getOmniContext } from '$lib/context/omni.svelte';
@@ -89,19 +90,18 @@ async function handleFeatureSelection() {
 </script>
 
 {#if appCtx}
-  <FeatureCard>
-    {#if feature_}
-      {@const feature = feature_ as Feature}
-
-      <ImageProvider
-        isAdminMode={false}
-        image={feature.image as Image}
-        images={feature.images as Image[]}
-        context={{
-          ctxType: ImageContextResource.feature,
-          ctxId: featureId,
-          ...appCtx.getHierarchySync(feature_)
-        }}>
+  {#if feature_}
+    {@const feature = feature_ as Feature}
+    <ImageProvider
+      isAdminMode={false}
+      image={feature.image as Image}
+      images={feature.images as Image[]}
+      context={{
+        ctxType: ImageContextResource.feature,
+        ctxId: featureId,
+        ...appCtx.getHierarchySync(feature_)
+      }}>
+      <FeatureCard>
         {#if mode === FeatureCardMode.Display}
           <Container>
             <FeatureGallery />
@@ -127,9 +127,10 @@ async function handleFeatureSelection() {
           <PhotoCredit />
         {/if}
         <FeatureActions {feature} />
-      </ImageProvider>
-    {/if}
-  </FeatureCard>
+      </FeatureCard>
+      <FullScreenCarousel {feature} />
+    </ImageProvider>
+  {/if}
 {:else}
   <div class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-300">
     <div class="loading loading-ring loading-lg text-primary"></div>
