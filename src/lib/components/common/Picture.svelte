@@ -61,11 +61,19 @@ const handleError = () => {
     <LoadError />
   {/if}
 
+  {#if showBackground}
+    <!-- Background Image (blurred) -->
+    <img
+      {src}
+      {alt}
+      class="absolute inset-0 h-full w-full object-cover text-transparent blur-sm"
+      style="opacity: {(opacity / 10) * 6}" />
+  {/if}
   <!-- Foreground Image -->
   <img
     {src}
     {alt}
-    class="relative z-10 text-transparent {loaded && !error
+    class="relative text-transparent {loaded && !error
       ? 'opacity-100'
       : 'opacity-0'} {layout === 'cover'
       ? 'h-full w-full object-cover'
@@ -76,13 +84,4 @@ const handleError = () => {
           : 'h-full w-full object-contain'} bg-transparent"
     onload={handleLoad}
     onerror={handleError} />
-
-  {#if showBackground}
-    <!-- Background Image (blurred) - delayed to prevent pop-in -->
-    <img
-      {src}
-      {alt}
-      class="absolute inset-0 z-0 h-full w-full object-cover text-transparent blur-sm"
-      style="opacity: {(opacity / 10) * 6}" />
-  {/if}
 </figure>
