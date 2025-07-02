@@ -466,7 +466,8 @@ export class AdminCtx {
       resource !== FirstClassResource.task &&
       resource !== FirstClassResource.property
     ) {
-      // SuperAdmin users should see all archived resources, so don't force isArchived=false
+      // SuperAdmin users should see all archived resources in admin context, so don't force isArchived=false
+      // For everyone else, always filter out archived resources
       if (!this.appCtx.isSuperAdmin()) {
         params.append('isArchived', 'false');
       }
