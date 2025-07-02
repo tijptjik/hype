@@ -128,6 +128,11 @@ import type {
 //    - setActivePreview
 //    - resetActivePreview
 //
+// 3.12 STATE MANAGEMENT :: MODE
+//    - setMode
+//    - getMode
+//    - isFullscreen
+
 // 4. Data Fetching & Refreshing
 //    - refreshImages
 //    - imagesQueryFn
@@ -311,7 +316,10 @@ export class ImageCtx {
 
     // CRUD :: DELETE
     pendingConfirmation: new SvelteSet<Id>(),
-    deletionQueue: new SvelteSet<Id>()
+    deletionQueue: new SvelteSet<Id>(),
+
+    // MODES
+    isFullscreen: false
   });
 
   // ═══════════════════════
@@ -884,6 +892,23 @@ export class ImageCtx {
     );
     this.setActivePreview(activeUpload || null);
   }
+
+  // ═══════════════════════
+  // 3.12 STATE MANAGEMENT :: MODE
+  // ═══════════════════════
+  setMode(mode: 'fullscreen' | 'normal') {
+    if (mode === 'fullscreen') {
+      this.state.isFullscreen = true;
+    } else {
+      this.state.isFullscreen = false;
+    }
+  }
+
+  getMode(): 'fullscreen' | 'normal' {
+    return this.state.isFullscreen ? 'fullscreen' : 'normal';
+  }
+
+  isFullscreen: boolean = $derived(this.state.isFullscreen);
 
   // ═══════════════════════
   // 4. Data Fetching & Refreshing
