@@ -7,14 +7,14 @@ import { cubicInOut } from 'svelte/easing';
 // TRANSITIONS
 import { slide } from 'svelte/transition';
 // SERVICES
-import { getImageContext } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte';
 // COMPONENTS
 import { ArrowDownTray } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 import Toggle from '$lib/components/forms/fields/Toggle.svelte';
 
 // SERVICES
-const imageCtx = getImageContext();
+const imageCtx = getImageCtx();
 </script>
 
 {#if imageCtx.activeImage}

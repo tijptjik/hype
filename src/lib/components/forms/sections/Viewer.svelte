@@ -1,7 +1,7 @@
 <script lang="ts">
 import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte';
 // SERVICES
-import { getImageContext } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte';
 // COMPONENTS
 import { InformationCircle } from '@steeze-ui/heroicons';
 import Header from '$lib/components/forms/extra/Header.svelte';
@@ -13,7 +13,7 @@ import IconAnchor from '$lib/components/common/IconAnchor.svelte';
 import type { SectionProps } from '$lib/types';
 
 // SERVICES
-const imageCtx = getImageContext();
+const imageCtx = getImageCtx();
 
 // Props
 let { ...sectionProps }: SectionProps = $props();

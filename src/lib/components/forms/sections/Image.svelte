@@ -11,14 +11,14 @@ import { Photo } from '@steeze-ui/heroicons';
 import Dropzone from 'svelte-file-dropzone';
 import Uploading from '$lib/components/images/gallery/overlays/Uploading.svelte';
 // CONTEXT
-import { getImageContext } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte';
 // TYPES
 import type { SectionProps, Image } from '$lib/types';
 
 let sectionProps: SectionProps & { image: Image | null } = $props();
 
 // CONTEXT
-let imageCtx = getImageContext();
+let imageCtx = getImageCtx();
 
 // STATE
 let showErrorOverlay = $state(false);

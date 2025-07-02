@@ -2,7 +2,7 @@
 // SVELTE
 import { untrack } from 'svelte';
 // SERVICES
-import { getImageContext } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte';
 import { getURLfromImage } from '$lib/client/services/image';
 // COMPONENTS
 import Picture from '$lib/components/common/Picture.svelte';
@@ -30,7 +30,7 @@ type Props = {
   children?: Snippet;
 };
 
-const imageCtx = getImageContext();
+const imageCtx = getImageCtx();
 
 let {
   class: className = '',

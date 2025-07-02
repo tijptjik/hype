@@ -1,6 +1,6 @@
 <script lang="ts">
 // SERVICES
-import { getImageContext } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Photo } from '@steeze-ui/heroicons';
@@ -14,7 +14,7 @@ type Props = {
 };
 
 // SERVICES
-const imageCtx = getImageContext();
+const imageCtx = getImageCtx();
 
 let { updateScrollArrows, inputElement = $bindable() }: Props = $props();
 

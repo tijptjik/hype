@@ -33,7 +33,8 @@ import type {
   ImageUploadCtx,
   ImageCtxConstructorOptions,
   ImageContextConfig,
-  Feature
+  Feature,
+  ImageDBBasic
 } from '$lib/types';
 
 // ═══════════════════════
@@ -49,9 +50,8 @@ import type {
 //    - setContext
 //
 // 2. REACTIVE STATE
-//    - state (Main reactive state object)
-//
-// 2.1 REACTIVE STATE :: DERIVED
+//    - state (Main reactive state object)import { navigateOnAdmin } from '$lib/navigation';
+
 //    - imagesQueryKey ($derived)
 //    - isImagesLoading ($derived)
 //    - viewerState ($derived, uses determineViewerState)
@@ -192,8 +192,8 @@ export class ImageCtx {
 
   async setContext(options: {
     context?: ImageContextConfig | null;
-    image?: Image | null;
-    images?: Image[] | null;
+    image?: Image | ImageDBBasic | null;
+    images?: Image[] | ImageDBBasic[] | null;
     highlightedIds?: Id[];
   }) {
     const {
@@ -248,15 +248,15 @@ export class ImageCtx {
       // Use pre-loaded images array
       const validImages = images.filter((img): img is Image => img != null);
       await this.setImages(validImages as Image[]);
-      setActiveImageWithLoading(effectiveImage);
+      setActiveImageWithLoading(effectiveImage as Image | null);
       // If no specific image provided, set to first available
       if (!effectiveImage) {
         this.setActiveImageToFirst();
       }
     } else if (effectiveImage) {
       // Single image provided
-      await this.setImages([effectiveImage]);
-      setActiveImageWithLoading(effectiveImage);
+      await this.setImages([effectiveImage as Image]);
+      setActiveImageWithLoading(effectiveImage as Image | null);
     } else if (context) {
       // Fetch images from API based on context
       await this.refreshImages();
@@ -1563,7 +1563,7 @@ export class ImageCtx {
 
 const IMAGE_STATE_KEY = Symbol('IMAGE_STATE_KEY');
 
-export const setImageContext = (options: ImageCtxConstructorOptions) =>
+export const setImageCtx = (options: ImageCtxConstructorOptions) =>
   setContext(IMAGE_STATE_KEY, new ImageCtx(options));
 
-export const getImageContext = (): ImageCtx => getContext(IMAGE_STATE_KEY);
+export const getImageCtx = (): ImageCtx => getContext(IMAGE_STATE_KEY);

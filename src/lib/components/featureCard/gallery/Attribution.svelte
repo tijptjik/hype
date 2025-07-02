@@ -4,7 +4,7 @@ import { m } from '$lib/i18n';
 // UTILS
 import { formatDate } from '$lib';
 // CONTEXT
-import { getImageContext } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte';
 import { getAppCtx } from '$lib/context/app.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
@@ -14,7 +14,7 @@ import type { Image, Feature } from '$lib/types';
 import type { IconSource } from '@steeze-ui/heroicons';
 
 // CONTEXT
-const imageCtx = getImageContext();
+const imageCtx = getImageCtx();
 const appCtx = getAppCtx();
 
 let { currentImage }: { currentImage: Image } = $props();

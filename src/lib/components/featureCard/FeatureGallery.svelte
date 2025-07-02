@@ -6,7 +6,7 @@ import Carousel from './gallery/Carousel.svelte';
 // CONTEXT
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 // SERVICES
-import { getImageContext } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte';
 // CONTEXT
 const cardCtx = getFeatureCardContext();
 </script>

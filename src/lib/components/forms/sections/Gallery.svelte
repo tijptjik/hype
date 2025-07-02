@@ -1,6 +1,6 @@
 <script lang="ts">
 // SERVICES
-import { getImageContext } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte';
 // COMPONENTS
 import Header from '$lib/components/forms/extra/Header.svelte';
 import GalleryActions from '$lib/components/forms/actions/Gallery.svelte';
@@ -13,7 +13,7 @@ import type { SectionProps } from '$lib/types';
 type Props = SectionProps;
 
 // SERVICES
-const imageCtx = getImageContext();
+const imageCtx = getImageCtx();
 
 // STATE : PROPS
 let { ...sectionProps }: Props = $props();

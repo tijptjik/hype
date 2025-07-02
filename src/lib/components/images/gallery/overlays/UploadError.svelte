@@ -3,7 +3,7 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { ExclamationCircle } from '@steeze-ui/heroicons';
 import { fade } from 'svelte/transition';
 // SERVICES
-import { getImageContext } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte';
 // TYPES
 import type { ImageUpload } from '$lib/types';
 
@@ -13,7 +13,7 @@ type Props = {
 
 let { fileObject }: Props = $props();
 
-const imageCtx = getImageContext();
+const imageCtx = getImageCtx();
 </script>
 
 <div

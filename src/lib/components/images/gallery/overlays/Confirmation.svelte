@@ -4,11 +4,11 @@ import { fade } from 'svelte/transition';
 // I18N
 import { m } from '$lib/i18n';
 // CONTEXT
-import { getImageContext } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte';
 // TYPES
 import type { Image } from '$lib/types';
 
-const imageCtx = getImageContext();
+const imageCtx = getImageCtx();
 
 type Props = {
   image: Image;

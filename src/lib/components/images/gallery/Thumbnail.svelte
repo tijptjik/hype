@@ -3,7 +3,7 @@ import { onMount, onDestroy } from 'svelte';
 // SERVICES
 import { getURLfromImage } from '$lib/client/services/image';
 // CONTEXT
-import { getImageContext } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte';
 // COMPONENTS
 import Img from '$lib/components/common/Image.svelte';
 import IntentLabel from '$lib/components/images/IntentLabel.svelte';
@@ -15,7 +15,7 @@ import Deleting from '$lib/components/images/gallery/overlays/Deleting.svelte';
 import type { Image } from '$lib/types';
 
 // SERVICES
-const imageCtx = getImageContext();
+const imageCtx = getImageCtx();
 
 // HTML
 let thumbnailRef = $state<HTMLDivElement>();
