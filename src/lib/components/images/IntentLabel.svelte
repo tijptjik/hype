@@ -3,14 +3,14 @@
 import { fade } from 'svelte/transition';
 import { onClickOutside } from 'runed';
 // CONTEXT
-import { getImageContext } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte';
 // SERVICES
 import { adminIntentOrder } from '$lib/api/services/image';
 // TYPES
 import type { Intent } from '$lib/types';
 
 // SERVICES
-const imageCtx = getImageContext();
+const imageCtx = getImageCtx();
 
 // TYPES
 type Props = {

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { getImageContext, setImageContext } from '$lib/context/image.svelte';
+import { getImageCtx, setImageCtx } from '$lib/context/image.svelte';
 // TYPES
 import type { ImageProviderProps } from '$lib/types';
 
@@ -10,9 +10,9 @@ let lastSet: string | undefined = $state();
 let { children, ...options }: ImageProviderProps = $props();
 
 // CONTEXT
-setImageContext(options);
+setImageCtx(options);
 
-let imageCtx = getImageContext();
+let imageCtx = getImageCtx();
 
 // EFFECTS
 $effect(() => {

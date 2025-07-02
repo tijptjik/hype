@@ -5,13 +5,13 @@ import { cubicInOut } from 'svelte/easing';
 // I18N
 import { m } from '$lib/i18n';
 // SERVICES
-import { getImageContext } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte';
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Photo, XMark, Trash } from '@steeze-ui/heroicons';
 
 // SERVICES
-const imageCtx = getImageContext();
+const imageCtx = getImageCtx();
 
 type GalleryActionsProps = {
   removeMode: boolean;

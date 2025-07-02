@@ -4,7 +4,7 @@ import { CloudArrowDown } from '@steeze-ui/heroicons';
 import { getFlash } from 'sveltekit-flash-message';
 import { page } from '$app/state';
 // SERVICES
-import { getImageContext } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte';
 // TYPES
 import type { Image } from '$lib/types';
 
@@ -16,7 +16,7 @@ type Props = {
 let { image, class: className = '' } = $props();
 
 // SERVICES
-const imageCtx = getImageContext();
+const imageCtx = getImageCtx();
 </script>
 
 <button

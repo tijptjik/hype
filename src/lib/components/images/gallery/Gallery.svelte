@@ -2,7 +2,7 @@
 import { fade } from 'svelte/transition';
 import { flip } from 'svelte/animate';
 // SERVICES
-import { getImageContext } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte';
 // COMPONENTS :: GALLERY
 import Thumbnail from '$lib/components/images/gallery/Thumbnail.svelte';
 import UploadThumbnail from '$lib/components/images/gallery/ThumbnailWhileUploading.svelte';
@@ -12,7 +12,7 @@ import Dropzone from '$lib/components/images/gallery/Dropzone.svelte';
 import type { ImageUpload } from '$lib/types';
 
 // SERVICES
-const imageCtx = getImageContext();
+const imageCtx = getImageCtx();
 
 type Props = {
   inputElement?: HTMLInputElement;
