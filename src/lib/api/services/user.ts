@@ -57,7 +57,8 @@ export const getUserQueryContext = (
   currentUser: SessionUser,
   request: Request,
   params: QueryParams,
-  userRoles: UserRoleDisco[]
+  userRoles: UserRoleDisco[],
+  isCollection: boolean = true
 ) => {
   // SETUP : By default, exclude isArchived filters from the query, so
   // users cannot see disabled users
@@ -67,6 +68,11 @@ export const getUserQueryContext = (
   // NON-SUPERADMIN : Hide users which are archived
   if (!isSuperAdmin(currentUser)) {
     conditions.push(eq(user.isArchived, false));
+  }
+
+  // If a specific user is being looked up, we don't need to apply any filters
+  if (!isCollection) {
+    return { params, conditions, excludeColumns };
   }
 
   // Helper function to check if user has organisation owner role
