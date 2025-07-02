@@ -3,7 +3,6 @@
 import { onMount, tick } from 'svelte';
 // MOTION
 import { fade } from 'svelte/transition';
-import { Spring } from 'svelte/motion';
 // ENUMS
 import { FeatureCardMode } from '$lib/enums';
 // ICONS
@@ -23,12 +22,6 @@ import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 import type { UploadedPhoto, CameraPermissionStatus } from '$lib/types';
 // CONTEXT
 const cardCtx = getFeatureCardContext();
-import { getImageContext } from '$lib/context/image.svelte';
-
-const imageCtx = getImageContext();
-
-// Get configuration from ImageCtx instead of props
-let isSingleImage = $derived(imageCtx.state.mode === 'standalone');
 
 // STATE
 // Photo gallery state
@@ -37,11 +30,9 @@ let currentIndex = $state(0);
 
 // DOM references
 let fileInput: HTMLInputElement;
-let container: HTMLDivElement | null = $state(null);
 let videoElement: HTMLVideoElement | null = $state(null);
 let videoContainer: HTMLDivElement | null = $state(null);
 let canvasElement: HTMLCanvasElement | null = $state(null);
-let containerWidth = $state(0);
 
 // Camera state
 let cameraPermissionStatus: CameraPermissionStatus = $state('unknown');
@@ -50,20 +41,8 @@ let showCameraInterface = $state(false);
 let cameraStream: MediaStream | null = $state(null);
 let isLoadingCamera = $state(false);
 
-// Touch interaction state
-let isDragging = $state(false);
-let startX = $state(0);
-let currentX = $state(0);
-let offset = new Spring(0, {
-  stiffness: 0.2,
-  damping: 0.8
-});
-
 // Component visibility state
 let showComponent = $state(false);
-
-// CONSTANTS
-const SWIPE_THRESHOLD = 0.3; // 30% of container width
 
 // INITIALIZE CAMERA IF NEEDED
 $effect(() => {
@@ -331,101 +310,6 @@ function getPhotoAtIndex(index: number): UploadedPhoto {
   return cardCtx.userData.photos[getImageIndex(index)];
 }
 
-/**
- * Updates the carousel's horizontal offset, typically driven by touch gestures.
- * Uses a Svelte spring store for smooth animation.
- * @param {number} x - The new horizontal offset value in pixels.
- */
-function updateOffset(x: number) {
-  offset.set(x, { hard: false });
-}
-
-/**
- * Snaps the carousel to the nearest image based on the current drag offset and swipe velocity.
- * Updates `currentIndex` and resets the visual offset.
- * @param {number} [velocity=0] - The velocity of the swipe, used to help determine swipe intent and direction.
- */
-function snapToImage(velocity = 0) {
-  const currentOffset = $offset;
-  const percentMoved = Math.abs(currentOffset / containerWidth);
-
-  let nextIndex = currentIndex;
-
-  if (percentMoved > SWIPE_THRESHOLD || Math.abs(velocity) > 0.5) {
-    if (currentOffset < 0) {
-      nextIndex = getImageIndex(currentIndex + 1);
-    } else {
-      nextIndex = getImageIndex(currentIndex - 1);
-    }
-  }
-
-  currentIndex = nextIndex;
-  offset.set(0, { hard: false });
-}
-
-// ======== TOUCH INTERACTION HANDLERS ========
-/**
- * Handles the start of a touch interaction (touchstart event) on the carousel.
- * Initializes dragging state, records the starting touch position, and adjusts spring stiffness.
- * @param {TouchEvent} event - The touchstart event object.
- */
-function handleTouchStart(event: TouchEvent) {
-  isDragging = true;
-  startX = event.touches[0].clientX;
-  currentX = startX;
-
-  // Stop the spring animation while dragging
-  offset.stiffness = 1;
-}
-
-/**
- * Handles touch movement (touchmove event) during a swipe interaction on the carousel.
- * Updates the carousel's visual offset based on the drag delta.
- * @param {TouchEvent} event - The touchmove event object.
- */
-function handleTouchMove(event: TouchEvent) {
-  if (!isDragging) return;
-  event.preventDefault();
-
-  currentX = event.touches[0].clientX;
-  const deltaX = currentX - startX;
-  updateOffset(deltaX);
-}
-
-/**
- * Handles the end of a touch interaction (touchend event) on the carousel.
- * Finalizes the swipe action, calculates swipe velocity, and snaps the carousel to the appropriate image.
- * @param {TouchEvent} event - The touchend event object.
- */
-function handleTouchEnd(event: TouchEvent) {
-  if (!isDragging) return;
-
-  isDragging = false;
-
-  const endX = event.changedTouches[0].clientX;
-  // Calculate velocity (fix for timeStamp issue)
-  const deltaTime = event.timeStamp - event.timeStamp || 1;
-  const velocity = (endX - currentX) / deltaTime;
-
-  currentX = 0;
-  startX = 0;
-
-  // Reset spring stiffness for snap animation
-  offset.stiffness = 0.2;
-  snapToImage(velocity);
-}
-
-/**
- * Resets touch interaction state variables (dragging state, positions, and offset).
- * Typically called on `touchcancel` or when the component is unmounted to prevent lingering states.
- */
-function cleanup() {
-  isDragging = false;
-  currentX = 0;
-  startX = 0;
-  offset.set(0);
-}
-
 // ======== LIFECYCLE HOOKS ========
 onMount(() => {
   // Delay component visibility by 500ms
@@ -433,22 +317,12 @@ onMount(() => {
     showComponent = true;
   }, 500);
 
-  if (container) {
-    containerWidth = container.offsetWidth;
-  }
-
   // Check camera permission on mount
   checkCameraPermission().then((status) => {
     cameraPermissionStatus = status;
   });
 
-  // Add touchcancel handler
-  container?.addEventListener('touchcancel', cleanup);
-
   return () => {
-    // Clean up on component destruction
-    container?.removeEventListener('touchcancel', cleanup);
-
     // Clean up object URLs
     cardCtx.clearPhotos();
 
@@ -530,12 +404,9 @@ onMount(() => {
         </div>
       {:else}
         <!-- Photo Carousel -->
-        <div
-          id="photo-carousel"
-          class="relative h-full w-full caret-transparent"
-          bind:this={container}>
+        <div id="photo-carousel" class="relative h-full w-full caret-transparent">
           <!-- Image counter -->
-          {#if !isSingleImage}
+          {#if cardCtx.userData.photos.length > 1}
             <div
               class="absolute bottom-2 left-2 z-10 rounded bg-black/50 px-2 py-1 text-xs text-white">
               {currentIndex + 1} / {cardCtx.userData.photos.length}
@@ -552,13 +423,7 @@ onMount(() => {
           </button>
 
           <!-- Carousel container with touch handling -->
-          <div
-            class="relative h-full w-full touch-pan-y select-none"
-            ontouchstart={handleTouchStart}
-            ontouchmove={handleTouchMove}
-            ontouchend={handleTouchEnd}
-            class:dragging={isDragging}
-            style="transform: translateX({offset}px)">
+          <div class="relative h-full w-full touch-pan-y select-none">
             {#if cardCtx.userData.photos.length > 1}
               <!-- Previous Image -->
               <div class="absolute left-0 top-0 h-full w-full opacity-0">
@@ -586,14 +451,13 @@ onMount(() => {
                   class="h-full w-full object-contain" />
               </div>
 
-              {#if !isSingleImage}
+              {#if cardCtx.userData.photos.length > 1}
                 <!-- Navigation buttons - hidden on mobile -->
                 <div class="hidden md:block">
                   <button
                     class="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
                     onclick={() => {
                       currentIndex = getImageIndex(currentIndex - 1);
-                      offset.set(0);
                     }}
                     aria-label="Previous image">
                     <Icon src={ChevronLeft} class="h-4 w-4" />
@@ -603,7 +467,6 @@ onMount(() => {
                     class="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
                     onclick={() => {
                       currentIndex = getImageIndex(currentIndex + 1);
-                      offset.set(0);
                     }}
                     aria-label="Next image">
                     <Icon src={ChevronRight} class="h-4 w-4" />
@@ -613,8 +476,7 @@ onMount(() => {
             {/if}
           </div>
 
-          <!-- Add another photo button - moved to bottom center and restyled -->
-          {#if !isSingleImage}
+          {#if cardCtx.userData.photos.length < 1}
             <div class="absolute bottom-4 left-0 right-0 flex justify-center">
               <button
                 class="btn btn-ghost gap-2 rounded-full bg-base-100 text-white"
