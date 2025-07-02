@@ -1,23 +1,24 @@
 <script lang="ts">
-// I18N
-import { m } from '$lib/i18n';
+// GESTURES
+import { tap, swipe } from 'svelte-gestures';
 // CONTEXT
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
-import { getImageContext } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte';
 import { getAppCtx } from '$lib/context/app.svelte';
 // COMPONENTS
 import AddPhoto from '$lib/components/featureCard/gallery/AddPhoto.svelte';
 import PhotoFrame from '$lib/components/common/PhotoFrame.svelte';
 import Icon from '$lib/components/common/Icon.svelte';
-import { ChevronLeft, ChevronRight, Camera, MapPin } from '@steeze-ui/heroicons';
-// SERVICES
-import { formatDate } from '$lib';
+import Metadata from '$lib/components/featureCard/gallery/Metadata.svelte';
+import Counter from '$lib/components/featureCard/gallery/Counter.svelte';
+import { ChevronLeft, ChevronRight } from '@steeze-ui/heroicons';
+// TYPES
+import type { SwipeCustomEvent, TapCustomEvent } from 'svelte-gestures';
 import type { Image } from '$lib/types';
 
 // CONTEXT
-const imageCtx = getImageContext();
+const imageCtx = getImageCtx();
 const cardCtx = getFeatureCardContext();
-const appCtx = getAppCtx();
 
 // SERVICES
 let images: Image[] = $derived(imageCtx.getImages());
@@ -27,45 +28,67 @@ let currentImage: Image | null = $derived(imageCtx.activeImage);
 let container: HTMLDivElement;
 
 // STATE : LOCAL - simplified since PhotoFrame handles transitions
-let showContributor = $state(false);
-let toggleAttribution = () => {
-  showContributor = !showContributor;
-};
-
-const feature = $derived(appCtx.getFeatureById(imageCtx.state.context?.ctxId));
-const contributorName = $derived(feature?.contributor?.name);
-const createdAt = $derived(feature?.createdAt);
 
 // Navigation handlers - much simpler now
-function handlePrevious(e: MouseEvent) {
+function handlePrevious(e: MouseEvent | SwipeCustomEvent) {
   e.preventDefault();
   e.stopPropagation();
   imageCtx.prev();
 }
 
-function handleNext(e: MouseEvent) {
+function handleNext(e: MouseEvent | SwipeCustomEvent) {
   e.preventDefault();
   e.stopPropagation();
   imageCtx.next();
 }
 
-function handleTouch(event: TouchEvent | MouseEvent) {
-  if (images.length <= 1) return;
+// Tap gesture handler for image navigation
+function handleTap(event: TapCustomEvent) {
+  if (images.length == 0) return;
+  if (images.length == 1) {
+    // Use setTimeout to ensure tap event completes before modal opens
+    setTimeout(() => {
+      imageCtx.setMode('fullscreen');
+    }, 50);
+    return;
+  }
 
   const rect = container.getBoundingClientRect();
-  const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
-  const relativeX = clientX - rect.left;
-  const isLeftHalf = relativeX < rect.width / 2;
+  const { x: relativeX } = event.detail;
+  const leftBoundary = rect.width * 0.25;
+  const rightBoundary = rect.width * 0.75;
 
-  if (isLeftHalf) {
+  if (relativeX < leftBoundary) {
+    // Left quarter - previous image
     imageCtx.prev();
-  } else {
+  } else if (relativeX > rightBoundary) {
+    // Right quarter - next image
     imageCtx.next();
+  } else {
+    // Center half - open full screen
+    // Use setTimeout to ensure tap event completes before modal opens
+    setTimeout(() => {
+      imageCtx.setMode('fullscreen');
+    }, 25);
+  }
+}
+
+function handleSwipe(e: SwipeCustomEvent) {
+  if (images.length <= 1) return;
+
+  const { direction } = e.detail;
+
+  if (direction === 'left') {
+    handlePrevious(e);
+  } else if (direction === 'right') {
+    handleNext(e);
   }
 }
 </script>
 
-<div class="relative h-full w-full transition-all duration-300" bind:this={container}>
+<div
+  class="relative h-full w-full transition-all duration-300 focus:border-0 focus:outline-none focus:ring-0 focus-visible:border-0 focus-visible:outline-none focus-visible:ring-0"
+  bind:this={container}>
   <!-- Navigation buttons - only show if more than one image -->
   {#if images.length > 1}
     <button
@@ -101,9 +124,12 @@ function handleTouch(event: TouchEvent | MouseEvent) {
   {/if}
 
   <!-- Tap interaction layer -->
-  {#if images.length > 1}
+  {#if images.length > 0}
     <div
-      class="z-5 absolute inset-0"
+      id="photo-carousel"
+      class="z-5 absolute inset-0 focus:border-0 focus:outline-none focus:ring-0 focus-visible:border-0 focus-visible:outline-none focus-visible:ring-0"
+      use:swipe={() => ({ timeframe: 300, touchAction: 'manipulation' })}
+      onswipe={handleSwipe}
       use:tap={() => ({ timeframe: 300, touchAction: 'manipulation' })}
       ontap={handleTap}
       role="button"

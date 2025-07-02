@@ -20,6 +20,7 @@ type Props = {
   type?: 'contributor' | 'publisher' | 'imageContributor';
   class?: string;
   friendlyDate?: boolean;
+  bgClass?: string;
 };
 
 // STATE : PROPS
@@ -28,7 +29,8 @@ let {
   date,
   type = 'imageContributor',
   class: className = '',
-  friendlyDate = true
+  friendlyDate = true,
+  bgClass = 'bg-glass-result'
 }: Props = $props();
 
 // STATE : DERIVED
@@ -57,12 +59,12 @@ async function fetchUser(id: string | null): Promise<UserData> {
   {#if userId}
     {#await userPromise}
       <div
-        class="flex min-w-[200px] items-center gap-3 rounded-lg bg-glass-result p-3 backdrop-blur-sm transition-all duration-200">
+        class="flex min-w-[200px] items-center gap-3 rounded-lg {bgClass} p-3 backdrop-blur-sm transition-all duration-200">
         <div class="loading loading-ring loading-md min-h-12"></div>
       </div>
     {:then user}
       <div
-        class="flex min-w-[200px] items-center gap-3 rounded-lg bg-glass-result p-3 backdrop-blur-sm">
+        class="flex min-w-[200px] items-center gap-3 rounded-lg {bgClass} p-3 backdrop-blur-sm">
         <Image
           src={user.image || ''}
           alt={user.name || 'Unknown User'}
