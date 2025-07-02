@@ -5,7 +5,7 @@ import { NEW_REF } from '$lib';
 import FormResetButton from './buttons/FormResetButton.svelte';
 import FormSubmitButton from './buttons/FormSubmitButton.svelte';
 import PublishButton from './buttons/PublishButton.svelte';
-import ArchiveButton from './buttons/ArchiveButton.svelte';
+import DeleteButton from './buttons/DeleteButton.svelte';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // ENUMS
@@ -56,7 +56,7 @@ let showPublishButton = $derived(
     <FormSubmitButton {...menuProps} />
   {/if}
   {#if showArchiveButton}
-    <ArchiveButton {...menuProps} />
+    <DeleteButton {...menuProps} />
   {/if}
   {#if showPublishButton}
     <PublishButton {...menuProps} />
