@@ -27,6 +27,7 @@ type Props = {
   enableReplacement?: boolean;
   isCrossfade?: boolean;
   hideActions?: boolean;
+  tightActions?: boolean;
 };
 
 // STATE : PROPS
@@ -35,7 +36,8 @@ let {
   MiddleActions,
   RightActions,
   isDropzone = false,
-  hideActions = false
+  hideActions = false,
+  tightActions = false
 }: Props = $props();
 
 // STATE : CONTEXT :: ROUTER
@@ -97,7 +99,9 @@ const handleDrop = async (e: CustomEvent) => {
         {#if image && !hideActions}
           <!-- Left Actions -->
           <div
-            class="absolute bottom-0 left-0 z-30 m-10 flex flex-row items-start gap-4 overflow-visible">
+            class="absolute bottom-0 left-0 z-30 flex flex-row items-start gap-4 overflow-visible {tightActions
+              ? 'm-2'
+              : 'm-10'}">
             {#if LeftActions}
               {@render LeftActions()}
             {:else}
@@ -110,14 +114,18 @@ const handleDrop = async (e: CustomEvent) => {
           <!-- Middle Actions -->
           {#if MiddleActions}
             <div
-              class="absolute bottom-0 left-0 z-30 m-10 flex flex-row items-center gap-4 overflow-visible">
+              class="absolute bottom-0 left-0 right-0 z-30 mx-auto flex flex-row items-center gap-4 overflow-visible {tightActions
+                ? 'm-2'
+                : 'm-10'}">
               {@render MiddleActions()}
             </div>
           {/if}
 
           <!-- Right Actions -->
           <div
-            class="absolute bottom-0 right-0 z-30 m-10 flex flex-row items-end gap-4 overflow-visible">
+            class="absolute bottom-0 right-0 z-30 flex flex-row items-end gap-4 overflow-visible {tightActions
+              ? 'm-2'
+              : 'm-10'}">
             {#if RightActions}
               {@render RightActions()}
             {:else}
