@@ -163,6 +163,7 @@ let isMapCollapsed = $state(
 let title = $derived(
   pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.title || NEW_TITLE
 );
+let image = $derived(pageProps.data.validatedForm.data.image);
 
 // HEADER SETUP
 $effect(() => {
@@ -296,9 +297,7 @@ function handleMapCollapse(): void {
                         fields={FIELDS.property as FormFieldArray}
                         cols={pageProps.data.entity == NEW_REF ? 2 : 3} />
                       {#if pageProps.data.entity !== NEW_REF}
-                        <CanonicalImage
-                          {form}
-                          image={pageProps.data.validatedForm.data.image} />
+                        <CanonicalImage {form} {image} />
                       {/if}
                     </div>
                   {:else if adminCtx.activeFacet === 'address'}
