@@ -192,8 +192,38 @@ export class ImageCtx {
 
     this.isAdminMode = isAdminMode;
 
+    // Listen for publish events to refresh images when related records are published
+    this.setupEventListeners();
+
     this.setContext({ context, image, images, highlightedIds });
   }
+
+  private setupEventListeners() {
+    // Listen for refresh images events (e.g., when a feature is published)
+    window.addEventListener('refreshImages', this.handleRefreshImagesEvent.bind(this));
+  }
+
+  private handleRefreshImagesEvent = (event: CustomEvent) => {
+    // Only refresh if we have a context that matches the published resource
+    if (this.state.context?.ctxType && this.state.context?.ctxId) {
+      const { resourceType, resourceId } = event.detail;
+
+      // Refresh images if the published resource matches our current context
+      if (
+        (resourceType === 'feature' &&
+          this.state.context.ctxType === 'feature' &&
+          this.state.context.ctxId === resourceId) ||
+        (resourceType === 'project' &&
+          this.state.context.ctxType === 'project' &&
+          this.state.context.ctxId === resourceId) ||
+        (resourceType === 'organisation' &&
+          this.state.context.ctxType === 'organisation' &&
+          this.state.context.ctxId === resourceId)
+      ) {
+        this.refreshImages();
+      }
+    }
+  };
 
   async setContext(options: {
     context?: ImageContextConfig | null;

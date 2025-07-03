@@ -89,6 +89,18 @@ const handleClick = async (e: Event) => {
       if (adminCtx.activeResourceType) {
         adminCtx.invalidateAndRefresh(adminCtx.activeResourceType);
       }
+
+      // EMIT EVENT: Signal to Image Context to refresh images if record was published
+      if (result.data.isPublished) {
+        const refreshImagesEvent = new CustomEvent('refreshImages', {
+          detail: {
+            resourceType: adminCtx.activeResourceType,
+            resourceId: adminCtx.activeResourceRef
+          }
+        });
+        window.dispatchEvent(refreshImagesEvent);
+      }
+
       // UPDATE FORM - Reset with new data to avoid dirtying the form
       reset({
         keepMessage: true,
