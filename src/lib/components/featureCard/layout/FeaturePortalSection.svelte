@@ -1,4 +1,5 @@
 <script lang="ts">
+import { slide } from 'svelte/transition';
 // TYPES
 import type { Snippet } from 'svelte';
 
@@ -12,7 +13,9 @@ let {
 } = $props();
 </script>
 
-<div class="flex w-full flex-shrink-0 flex-col overflow-x-visible">
+<div
+  class="flex w-full flex-shrink-0 flex-col overflow-x-visible"
+  transition:slide={{ duration: 300 }}>
   <div class="flex-grow-1 min-h-50 flex w-full flex-shrink-0 overflow-hidden">
     <div class="min-h-16 flex-1 overflow-y-auto bg-black">
       {@render left()}

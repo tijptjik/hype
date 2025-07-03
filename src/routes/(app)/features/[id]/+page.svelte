@@ -41,6 +41,17 @@ const appCtx = getAppCtx();
 // Use state instead of async derived to prevent component destruction
 let feature_: Feature | undefined = $state()!;
 
+// ELEMENTS
+let portalElement: HTMLElement = $state()!;
+let wrapperElement: HTMLElement = $state()!;
+let descriptionElement: HTMLDivElement = $state()!;
+
+// STATE :: LAYOUT
+let isDescriptionExpanded: boolean = $state(false);
+let availableHeight: number = $state(0);
+let wrapperFixedHeight: number | null = $state(null);
+let minOverflowedHeight: number = $state(72);
+
 // Load feature in effect to avoid component hierarchy destruction
 $effect(() => {
   if (!page.params.id) {
@@ -52,9 +63,11 @@ $effect(() => {
       // 1. First, load the fresh feature data
       const loadedFeature = await appCtx.getFeatureById(page.params.id);
       // 2. Update the feature state
-      feature_ = loadedFeature!;
+      feature_ = loadedFeature as Feature;
       // 3. THEN set the featureId (which triggers ImageProvider update)
       featureId = page.params.id;
+      // 4. Reset description expansion when feature changes
+      isDescriptionExpanded = false;
       // Only react to activeCollection changes after feature is loaded
       if (appCtx.getActiveCollection() == null) {
         const isClosing = untrack(() => omniCtx.isIntentionallyClosing);
@@ -68,6 +81,16 @@ $effect(() => {
   };
 
   loadFeatureAndSetContext();
+});
+
+// Measure available height when portal section is visible
+$effect(() => {
+  if (wrapperElement && portalElement && !isDescriptionExpanded) {
+    // Wait for next frame to ensure accurate measurements
+    requestAnimationFrame(() => {
+      availableHeight = wrapperElement.offsetHeight;
+    });
+  }
 });
 
 const omniCtx = getOmniContext();
@@ -86,6 +109,36 @@ async function handleFeatureSelection() {
   if (featureId) {
     await omniCtx.handleFeatureSelection(appCtx, featureId);
   }
+}
+
+// ═══════════════════════
+// 2.1 LAYOUT :: HANDLERS
+// ═══════════════════════
+
+function handleDescriptionToggle(expanded: boolean) {
+  // FIRST: Measure wrapper height before any state changes
+  if (wrapperElement) {
+    wrapperFixedHeight = wrapperElement.offsetHeight;
+  }
+
+  // THEN: Wait for next frame to ensure measurement is captured
+  requestAnimationFrame(() => {
+    if (expanded) {
+      // Expanding: Calculate available height first, then expand
+      if (wrapperElement) {
+        availableHeight = wrapperElement.offsetHeight;
+      }
+      isDescriptionExpanded = true;
+    } else {
+      // Collapsing: Just change state
+      isDescriptionExpanded = false;
+    }
+  });
+
+  // Remove fixed height after transition completes + buffer time
+  setTimeout(() => {
+    wrapperFixedHeight = null;
+  }, 350); // Transition duration + 50ms buffer
 }
 </script>
 
@@ -107,16 +160,38 @@ async function handleFeatureSelection() {
             <FeatureGallery />
             <FeatureBreadcrumbs {feature} />
             <FeatureTitle {feature} />
-            <FeatureDescription {feature} />
-            <Spacer />
-            <FeaturePortalSection>
-              {#snippet left()}
-                <FeatureProperties {feature} />
-              {/snippet}
-              {#snippet right()}
-                <FeaturePortal {feature} />
-              {/snippet}
-            </FeaturePortalSection>
+            <div
+              class="relative"
+              bind:this={wrapperElement}
+              style="
+                {wrapperFixedHeight
+                ? `height: ${wrapperFixedHeight}px !important; 
+                     min-height: ${wrapperFixedHeight}px !important; 
+                     max-height: ${wrapperFixedHeight}px !important; 
+                     overflow: hidden !important; 
+                     transition: none !important;`
+                : 'height: auto;'}">
+              <FeatureDescription
+                {feature}
+                {descriptionElement}
+                expanded={isDescriptionExpanded}
+                onToggle={handleDescriptionToggle}
+                {availableHeight}
+                {minOverflowedHeight} />
+              {#if !isDescriptionExpanded}
+                <div bind:this={portalElement}>
+                  <Spacer />
+                  <FeaturePortalSection>
+                    {#snippet left()}
+                      <FeatureProperties {feature} />
+                    {/snippet}
+                    {#snippet right()}
+                      <FeaturePortal {feature} />
+                    {/snippet}
+                  </FeaturePortalSection>
+                </div>
+              {/if}
+            </div>
             <Spacer />
           </Container>
         {:else if mode === FeatureCardMode.Missing}

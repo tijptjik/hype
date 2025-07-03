@@ -93,7 +93,7 @@ function handleGradeSelect(newGrade: number) {
     ? isEditing
       ? 'flex-col pl-2 w-100:pl-4'
       : 'flex-col pl-2 w-100:pl-4'
-    : 'flex-row px-3 w-100:px-6'} min-h-6 flex-shrink-0 flex-grow-0 items-start justify-between overflow-visible bg-black pb-2 caret-transparent">
+    : 'flex-row px-3 w-100:px-6'} min-h-6 flex-shrink-0 flex-grow-0 items-start justify-between overflow-visible bg-black pb-0 caret-transparent">
   {#if cardCtx.isNewMode}
     {#if isEditing}
       <div class="flex w-full items-center gap-2">
