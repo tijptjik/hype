@@ -53,14 +53,33 @@ export const UserBasic = UserBase.pick({
   image: true,
   attribution: true
 } as const);
+export const UserProfileAPI = UserBase.pick({
+  id: true,
+  name: true,
+  username: true,
+  displayUsername: true,
+  image: true,
+  attribution: true,
+  createdAt: true
+} as const).extend({
+  // Contributor data - arrays of IDs for published content
+  contributedFeatures: z.array(z.string()),
+  contributedImages: z.array(z.string()),
+  reportedMissingCount: z.number(),
+  newPhotoCount: z.number(),
+  newFeatureCount: z.number()
+});
 export const UserCurrent = UserBase.pick({
   id: true,
   name: true,
+  username: true,
+  displayUsername: true,
   image: true,
   attribution: true,
   locale: true,
   preferences: true,
-  experimental: true
+  experimental: true,
+  isAnonymous: true
 } as const).extend({
   // Override JSON fields with proper types - transform strings to objects
   preferences: z.string().transform((str) => {
@@ -80,4 +99,5 @@ export const UserCurrent = UserBase.pick({
     }
   })
 });
+
 export const UserUpdate = createUpdateSchema(user);

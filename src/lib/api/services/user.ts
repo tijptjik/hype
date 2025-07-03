@@ -43,6 +43,30 @@ export const userEntityWithRelations = {
         }
       }
     }
+  },
+  contributedFeatures: {
+    columns: {
+      id: true,
+      isPublished: true
+    }
+  },
+  contributedImages: {
+    columns: {
+      id: true
+    },
+    with: {
+      featureImage: {
+        columns: {
+          isPublished: true
+        }
+      }
+    }
+  },
+  contributedTasks: {
+    columns: {
+      id: true,
+      type: true
+    }
   }
 };
 
