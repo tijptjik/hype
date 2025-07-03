@@ -35,6 +35,28 @@ export const createAuth = (
     database: drizzleAdapter(db, {
       provider: 'sqlite'
     }),
+    // DATABASE HOOKS
+    databaseHooks: {
+      user: {
+        create: {
+          before: async (user) => {
+            // Generate username if not provided
+            if (!(user as any).username) {
+              const { generateUsernameFromId } = await import('$lib/utils/username');
+              const username = generateUsernameFromId(user.id);
+              return {
+                data: {
+                  ...user,
+                  username,
+                  displayUsername: username
+                }
+              };
+            }
+            return { data: user };
+          }
+        }
+      }
+    },
     // OAUTH
     socialProviders: {
       google: {
