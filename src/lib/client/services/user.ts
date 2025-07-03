@@ -30,7 +30,7 @@ const debouncedTimers = new Map<string, ReturnType<typeof setTimeout>>();
  * @param data - Partial user data to update
  * @param options - Configuration options
  */
-const debouncedUpdateUser = async (
+export const debouncedUpdateUser = async (
   userId: Id,
   data: Record<string, any>,
   options: {

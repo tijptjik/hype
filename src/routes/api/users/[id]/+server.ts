@@ -20,6 +20,8 @@ import {
   userEntityWithRelations,
   assertPermissionsToUpdateUser
 } from '$lib/api/services/user';
+// UTILS
+import { makeUrlSafeUsername } from '$lib/utils/username';
 // TYPES
 import type {
   UserPartial,
@@ -91,7 +93,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
   const { db, user: sessionUser } = await getDatabase(locals, platform);
 
   // ASSERT : Valid form data - move outside try-catch
-  const newData: UserPartial = await request.json();
+  const rawData: UserPartial = await request.json();
 
   // Get the existing user to verify access OUTSIDE try-catch
   const existing = (await getUser(db, {}, [
@@ -106,6 +108,19 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
 
   // ASSERT : Permissions to update user OUTSIDE try-catch
   assertPermissionsToUpdateUser(sessionUser!, existing, params.id as Id);
+
+  // PROCESS : Handle username/displayUsername conversion logic
+  const newData: UserPartial = { ...rawData };
+
+  if (newData.displayUsername) {
+    // If displayUsername is provided, make it URL-safe for username
+    newData.username = makeUrlSafeUsername(newData.displayUsername);
+  } else if (newData.username && !newData.displayUsername) {
+    // If only username is provided, ensure it's URL safe, and then set both fields to the same value
+    const usernameSafe = makeUrlSafeUsername(newData.username);
+    newData.displayUsername = usernameSafe;
+    newData.username = usernameSafe;
+  }
 
   try {
     // DB : Update the userBase (no relations for PATCH)

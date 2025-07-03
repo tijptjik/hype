@@ -335,6 +335,7 @@ export const toResponseShape = async (
     newFeatureCount,
     ...(isSuperAdmin ? { superAdmin: true } : {})
   };
+
   return isCollection
     ? (UserCollectionAPI.parse(data) as User)
     : (UserCurrentAPI.parse(data) as CurrentUser);

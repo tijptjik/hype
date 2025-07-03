@@ -78,10 +78,6 @@ export const UserCurrentAPI = UserCurrent.extend({
   userFeatures: z.array(UserFeatureBase),
   roles: z.array(z.union([OrganisationRoleBase, ProjectRoleBase])),
   superAdmin: z.boolean().nullish(),
-  // User profile fields
-  username: z.string().nullish(),
-  displayUsername: z.string().nullish(),
-  isAnonymous: z.boolean().nullish(),
   // Contributor data - arrays of IDs for published content
   contributedFeatures: z.array(z.string()),
   contributedImages: z.array(z.string()),
