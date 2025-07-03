@@ -1186,7 +1186,6 @@ export class AppCtx {
     const textObject = entity.i18n?.[getLocale()];
     const contributor = isFeature(entity) ? entity.contributor?.name : '';
     if (!textObject) return false;
-    console.log(entity);
     return (
       query === '' ||
       textObject.name?.toLowerCase().includes(query.toLowerCase()) ||
@@ -1343,7 +1342,6 @@ export class AppCtx {
   setFeatureById = (feature: Feature) => {
     this.cache.feature.set(feature.id, feature);
     this.addFeatureToMap(feature);
-    console.log('[SET FEATURE]', feature.contributor);
   };
 
   getTaskById = async (
