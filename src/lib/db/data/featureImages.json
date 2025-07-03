@@ -858,7 +858,7 @@
   {
     "featureId": "UrLt8trdls7g",
     "imageId": "Emo1qZeR2fix",
-    "intent": "evidence",
+    "intent": "research",
     "isPublished": 0,
     "publishedAt": "2025-01-01T17:48:56.888Z",
     "publisherId": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM"
@@ -1322,7 +1322,7 @@
   {
     "featureId": "mMt9UC43tmwM",
     "imageId": "rbtf2nAutWbD",
-    "intent": "evidence",
+    "intent": "research",
     "isPublished": 0,
     "publishedAt": "2025-01-01T17:48:56.888Z",
     "publisherId": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM"

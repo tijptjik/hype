@@ -1458,7 +1458,7 @@ export type Intent =
   | 'closeUp'
   | 'context'
   | 'general'
-  | 'evidence'
+  | 'research'
   | 'undefined';
 
 export type EXIF = {
