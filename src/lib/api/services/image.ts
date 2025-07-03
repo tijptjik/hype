@@ -73,7 +73,7 @@ export const intentOrder = [
   'context',
   'general',
   'undefined',
-  'evidence'
+  'research'
 ] as const;
 
 export const adminIntentOrder = [
@@ -82,7 +82,7 @@ export const adminIntentOrder = [
   'closeUp',
   'context',
   'general',
-  'evidence'
+  'research'
 ] as const;
 
 // ═══════════════════════

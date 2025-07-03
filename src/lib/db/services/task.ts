@@ -382,7 +382,7 @@ export const processTaskImages = async (
       imageCtx,
       {
         isPublished: false,
-        intent: taskData.type === 'reportedMissing' ? 'evidence' : 'undefined'
+        intent: taskData.type === 'reportedMissing' ? 'research' : 'undefined'
       },
       fetch
     );
@@ -456,7 +456,7 @@ export const processTaskImagesDB = async (
       // 5. Extend image data with feature/hierarchical info
       const extendedFeatureInfo = {
         isPublished: false,
-        intent: taskData.type === 'reportedMissing' ? 'evidence' : 'undefined'
+        intent: taskData.type === 'reportedMissing' ? 'research' : 'undefined'
       };
 
       extendFeatureImage(imageData, imageCtx, { featureImage: extendedFeatureInfo });

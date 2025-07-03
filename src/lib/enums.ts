@@ -145,7 +145,7 @@ export enum ImageIntent {
   closeUp = 'closeUp',
   context = 'context',
   general = 'general',
-  evidence = 'evidence',
+  research = 'research',
   undefined = 'undefined'
 }
 
