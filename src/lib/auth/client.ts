@@ -3,12 +3,13 @@
 
 // BETTER-AUTH
 import { createAuthClient } from 'better-auth/svelte';
-import { customSessionClient } from 'better-auth/client/plugins';
+import { customSessionClient, usernameClient } from 'better-auth/client/plugins';
 // TYPES
 import type { Auth } from '$lib/auth';
 
 export const authClient = createAuthClient({
   plugins: [
+    usernameClient(),
     customSessionClient<Auth>()
   ]
 });

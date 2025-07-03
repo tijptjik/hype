@@ -1,7 +1,7 @@
 // BETTER-AUTH
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { customSession } from 'better-auth/plugins';
+import { customSession, anonymous, username } from 'better-auth/plugins';
 // CONFIG
 import { authConfig } from './auth/config';
 // DB SCHEMA
@@ -44,6 +44,40 @@ export const createAuth = (
     },
     // PLUGINS
     plugins: [
+      username({
+        usernameValidator: async (username) => {
+          if (username === 'admin') {
+            return false;
+          }
+
+          // Check if username conflicts with existing usernames or user IDs
+          const { user } = await import('$lib/db/schema/user');
+          const { or, eq } = await import('drizzle-orm');
+
+          const existingUser = await db
+            .select()
+            .from(user)
+            .where(or(eq(user.username, username), eq(user.id, username)))
+            .limit(1);
+
+          return existingUser.length === 0;
+        }
+      }),
+      anonymous({
+        disableDeleteAnonymousUser: true,
+        generateName: () => 'Anonymous',
+        onLinkAccount: async ({ anonymousUser, newUser }) => {
+          // Mark the user as no longer anonymous when linking accounts
+          const { user } = await import('$lib/db/schema/user');
+          const { eq } = await import('drizzle-orm');
+
+          await db
+            .update(user)
+            .set({ isAnonymous: false })
+            .where(eq(user.id, anonymousUser.user.id));
+        }
+      }),
+
       customSession(async ({ user, session }) => {
         // Import these here to avoid circular dependencies
         const { getUserRoles } = await import('$lib/db/services/user');
