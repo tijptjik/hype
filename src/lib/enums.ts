@@ -149,6 +149,13 @@ export enum ImageIntent {
   undefined = 'undefined'
 }
 
+export enum ImageIntentPublic {
+  canonical = 'canonical',
+  closeUp = 'closeUp',
+  context = 'context',
+  general = 'general'
+}
+
 export enum ImageEnv {
   dg6vtsga1 = 'dg6vtsga1'
 }
