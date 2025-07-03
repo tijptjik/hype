@@ -139,12 +139,28 @@ function handleSwipe(e: SwipeCustomEvent) {
       bind:this={container}>
       <div
         class="relative flex h-full max-h-full w-full max-w-full items-center justify-center">
+        <!-- Interaction layer positioned as background -->
+        {#if images.length > 0}
+          <div
+            class="absolute inset-0 z-30"
+            use:swipe={() => ({
+              timeframe: 300,
+              minSwipeDistance: 60,
+              touchAction: 'manipulation'
+            })}
+            onswipe={handleSwipe}
+            use:tap={() => ({ timeframe: 300, touchAction: 'manipulation' })}
+            ontap={handleTap}
+            onclick={(e) => e.stopPropagation()}>
+          </div>
+        {/if}
+
         {#if feature}
           <div
             class="flex h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] flex-col overflow-hidden">
             <Viewer isDropzone={false} hideActions={false} tightActions={true}>
               {#snippet LeftActions()}
-                <div class="group/anchor relative z-30" onclick={toggleAttribution}>
+                <div class="group/anchor relative z-50" onclick={toggleAttribution}>
                   <!-- Icon Button -->
                   <button
                     class="absolute bottom-0 left-0 m-2 flex cursor-pointer items-center justify-center rounded-lg bg-black/50 p-2 transition-opacity duration-200 {!isAttributionVisible
@@ -178,25 +194,6 @@ function handleSwipe(e: SwipeCustomEvent) {
           </div>
         {/if}
       </div>
-
-      <!-- Interaction layer for gestures -->
-      {#if images.length > 0}
-        <div
-          class="absolute inset-0 z-50"
-          use:swipe={() => ({
-            timeframe: 300,
-            minSwipeDistance: 60,
-            touchAction: 'manipulation'
-          })}
-          onswipe={handleSwipe}
-          use:tap={() => ({ timeframe: 300, touchAction: 'manipulation' })}
-          ontap={handleTap}
-          role="button"
-          tabindex="0"
-          aria-label="Tap left/right to navigate, center to close"
-          onclick={(e) => e.stopPropagation()}>
-        </div>
-      {/if}
     </div>
   </div>
 {/if}
