@@ -27,6 +27,8 @@ export const user = sqliteTable('user', {
     .primaryKey()
     .$defaultFn(() => nanoid(12)),
   name: text('name'),
+  username: text('username').unique(),
+  displayUsername: text('displayUsername').unique(),
   email: text('email').unique(),
   emailVerified: integer('emailVerified', { mode: 'boolean' }).default(false),
   image: text('image'),
@@ -34,6 +36,9 @@ export const user = sqliteTable('user', {
     .notNull()
     .default(SupportedLocales.en),
   attribution: text('attribution'),
+  // Anonymous users' activity is not stored, so if they don't link their accounts during a session,
+  // their session cannot be linked to their account.
+  isAnonymous: integer('isAnonymous', { mode: 'boolean' }).default(false),
   // If a user is archived, their account is effectively disabled, and they are not allowed to login
   isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
   // Language features
