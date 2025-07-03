@@ -65,6 +65,19 @@ export const authConfig = {
         type: 'boolean' as const,
         required: true,
         defaultValue: false
+      },
+      username: {
+        type: 'string' as const,
+        required: false
+      },
+      displayUsername: {
+        type: 'string' as const,
+        required: false
+      },
+      isAnonymous: {
+        type: 'boolean' as const,
+        required: true,
+        defaultValue: false
       }
       // Note: roles and userLayers are added dynamically via customSession plugin
       // in auth.ts since Better Auth doesn't support array types in additionalFields

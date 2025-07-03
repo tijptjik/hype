@@ -2405,6 +2405,53 @@ export class AppCtx {
     );
   };
 
+  setUserDisplayUsername = async (
+    displayUsername: string,
+    onSuccess?: (displayUsername: string) => void,
+    onError?: (error: any) => void
+  ) => {
+    if (!this.user) return;
+
+    // Import validation and conversion functions
+    const { validateDisplayUsername, makeUrlSafeUsername } = await import(
+      '$lib/utils/username'
+    );
+
+    // Validate before proceeding
+    if (!validateDisplayUsername(displayUsername)) {
+      onError?.(
+        new Error(
+          'Invalid display username: spaces and special characters are not allowed'
+        )
+      );
+      return;
+    }
+
+    // Create URL-safe username (matching server logic)
+    const urlSafeUsername = makeUrlSafeUsername(displayUsername);
+
+    // Update user state immediately for optimistic updates (match what server will return)
+    this.setUser({
+      ...this.user,
+      displayUsername,
+      username: urlSafeUsername
+    });
+
+    // Use generic debounced update function directly
+    const { debouncedUpdateUser } = await import('$lib/client/services/user');
+
+    await debouncedUpdateUser(
+      (this.user as CurrentUser).id,
+      { displayUsername },
+      {
+        delay: 300,
+        timerKey: 'displayUsername',
+        onSuccess: () => onSuccess?.(displayUsername),
+        onError
+      }
+    );
+  };
+
   getUserLayers = (): UserLayer[] => {
     return (this.user as CurrentUser).userLayers;
   };

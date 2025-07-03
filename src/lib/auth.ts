@@ -158,6 +158,9 @@ export type SessionUser = Session['user'] & {
   locale: Locale;
   attribution: string;
   isArchived: boolean;
+  username: string | null;
+  displayUsername: string | null;
+  isAnonymous: boolean;
   preferences: UserPreferences;
   experimental: UserExperimental;
   superAdmin: boolean;
