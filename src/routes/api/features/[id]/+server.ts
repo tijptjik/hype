@@ -35,6 +35,7 @@ import {
   updateFeature,
   buildResponseShape
 } from '$lib/db/services/feature';
+import { publishAllImagesWithPublicIntent } from '$lib/db/services/image';
 
 // TYPES
 import type { RequestHandler } from '@sveltejs/kit';
@@ -203,6 +204,11 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
 
     // DB : Update only the basic feature fields (no relations for PATCH)
     await updateFeature(db, newData, params.id);
+
+    // PUBLISH : If feature is being published, publish all images with public intent
+    if (newData.isPublished === true) {
+      await publishAllImagesWithPublicIntent(db, params.id as Id, user.id as Id);
+    }
 
     // DB : Get the updated feature with all relations for response
     const updatedWithRelations = (await getFeatureWithImage(

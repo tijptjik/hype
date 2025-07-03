@@ -1,11 +1,15 @@
 // DRIZZLE
-import { and, eq, getTableColumns, SQL } from 'drizzle-orm';
+import { and, eq, getTableColumns, inArray, SQL } from 'drizzle-orm';
 // SCHEMA
 import { featureImage, image, organisation, project, taskImage, user } from '../schema';
 // CRUD
 import { insert, insertRelated, update, updateRelated } from '../crud';
 // ENUMS
-import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums';
+import {
+  ImageContextResource,
+  ImageContextResourceExtended,
+  ImageIntentPublic
+} from '$lib/enums';
 // TYPES
 import type {
   FeatureImage,
@@ -34,6 +38,7 @@ import { sortImages } from '$lib/client/services/image';
 //    - createFeatureImage
 //    - updateFeatureImage
 //    - createTaskImagesFromImageIds
+//    - publishAllImagesWithPublicIntent
 //
 // 3. LOOKUPS
 //    - getImageById
@@ -99,10 +104,10 @@ export const updateFeatureImage = async (
   const featureImageData: Partial<FeatureImageDB> = {};
 
   if (modifiedFeatureImage.isPublished !== undefined) {
-    featureImageData.isPublished = modifiedFeatureImage.isPublished;
+    featureImageData.isPublished = modifiedFeatureImage.isPublished ?? undefined;
   }
   if (modifiedFeatureImage.intent !== undefined) {
-    featureImageData.intent = modifiedFeatureImage.intent;
+    featureImageData.intent = modifiedFeatureImage.intent ?? undefined;
   }
   if (modifiedFeatureImage.publishedAt !== undefined) {
     featureImageData.publishedAt = modifiedFeatureImage.publishedAt;
@@ -130,6 +135,35 @@ export const createTaskImagesFromImageIds = async (
       imageId
     }))
   );
+};
+
+/**
+ * Publishes all images with public intent for a feature
+ * @param db - The database instance
+ * @param featureId - The feature ID
+ * @param publisherId - The user ID of the publisher
+ * @throws {Error} If the update fails
+ */
+export const publishAllImagesWithPublicIntent = async (
+  db: Database,
+  featureId: Id,
+  publisherId: Id
+): Promise<void> => {
+  const publicIntentValues = Object.values(ImageIntentPublic);
+
+  await db
+    .update(featureImage)
+    .set({
+      isPublished: true,
+      publishedAt: new Date().toISOString(),
+      publisherId
+    })
+    .where(
+      and(
+        eq(featureImage.featureId, featureId),
+        inArray(featureImage.intent, publicIntentValues)
+      )
+    );
 };
 
 // ═══════════════════════
