@@ -3,7 +3,7 @@ import { error, type RequestHandler } from '@sveltejs/kit';
 // I18n
 import { m } from '$lib/i18n';
 // DRIZZLE
-import { eq } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 // DB
 import { user } from '$lib/db/schema/index';
 import {
@@ -35,7 +35,7 @@ import type {
  ************/
 
 /**
- * Reads a user by ID
+ * Reads a user by ID or username
  */
 export const GET: RequestHandler = async ({ params, locals, platform, request }) => {
   // ASSERT : User logged in
@@ -51,8 +51,8 @@ export const GET: RequestHandler = async ({ params, locals, platform, request })
   );
 
   try {
-    // Add condition for specific user ID
-    conditions.push(eq(user.id, params.id!));
+    // Add condition for specific user ID or username - using the same pattern as auth.ts
+    conditions.push(or(eq(user.id, params.id!), eq(user.username, params.id!)));
 
     // DB : Get the user
     const result = (await getUser(db, userEntityWithRelations, conditions)) as UserRaw;

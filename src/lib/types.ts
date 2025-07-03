@@ -166,7 +166,8 @@ import {
   UserLayerUpdate,
   UserLayerUpdateAPI,
   UserUpdate,
-  UserUpdateAPI
+  UserUpdateAPI,
+  UserProfileAPI
 } from './db/zod';
 // TYPES
 import type { Snippet } from 'svelte';
@@ -858,6 +859,7 @@ export type UserLayerDBPartial = z.infer<typeof UserLayerUpdate>;
 
 export type User = z.infer<typeof UserAPI>;
 export type CurrentUser = z.infer<typeof UserCurrentAPI>;
+export type UserProfile = z.infer<typeof UserProfileAPI>;
 export type UserCollection = z.infer<typeof UserCollectionAPI>;
 export type UserPartial = z.infer<typeof UserUpdateAPI>;
 

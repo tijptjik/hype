@@ -5,7 +5,7 @@ import { superValidate } from 'sveltekit-superforms';
 import { user, userFeature, userLayer } from '../schema';
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters';
-import { UserAPI, UserCollectionAPI, UserCurrentAPI } from '../zod';
+import { UserAPI, UserCollectionAPI, UserCurrentAPI, UserProfileAPI } from '../zod';
 // TYPES
 import type { SuperValidated } from 'sveltekit-superforms';
 import type {
@@ -24,7 +24,8 @@ import type {
   UserRaw,
   CurrentUser,
   UserPreferences,
-  UserExperimental
+  UserExperimental,
+  UserProfile
 } from '$lib/types';
 import { update } from '../crud';
 
@@ -288,7 +289,30 @@ export const toResponseShape = async (
   userFeatures: any[] = [],
   isCollection: boolean = false,
   isSuperAdmin: boolean = false
-): Promise<User | CurrentUser> => {
+): Promise<User | UserProfile | CurrentUser> => {
+  // Process contributor data if available - arrays of published IDs
+  const contributedFeatures = (user as any).contributedFeatures
+    ? (user as any).contributedFeatures
+        .filter((feature: any) => feature.isPublished)
+        .map((feature: any) => feature.id)
+    : [];
+
+  const contributedImages = (user as any).contributedImages
+    ? (user as any).contributedImages
+        .filter((image: any) => image.featureImage && image.featureImage.isPublished)
+        .map((image: any) => image.id)
+    : [];
+
+  // Count tasks by type
+  const tasks = (user as any).contributedTasks || [];
+  const reportedMissingCount = tasks.filter(
+    (task: any) => task.type === 'reportedMissing'
+  ).length;
+  const newPhotoCount = tasks.filter((task: any) => task.type === 'newPhoto').length;
+  const newFeatureCount = tasks.filter(
+    (task: any) => task.type === 'newFeature'
+  ).length;
+
   const data: any = {
     ...user,
     userLayers,
@@ -303,6 +327,12 @@ export const toResponseShape = async (
         type: 'project'
       }))
     ] as UserRoleDisco[],
+    // Add contributor data - arrays of IDs
+    contributedFeatures,
+    contributedImages,
+    reportedMissingCount,
+    newPhotoCount,
+    newFeatureCount,
     ...(isSuperAdmin ? { superAdmin: true } : {})
   };
   return isCollection

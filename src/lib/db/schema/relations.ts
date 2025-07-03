@@ -25,7 +25,8 @@ import { task, taskImage } from './task';
 export const userRelations = relations(user, ({ many }) => ({
   memberships: many(organisationRole),
   projectRoles: many(projectRole),
-  contributedImages: many(image, { relationName: 'contributor' }),
+  contributedImages: many(image, { relationName: 'contributorImages' }),
+  contributedFeatures: many(feature, { relationName: 'contributorFeatures' }),
   contributedTasks: many(task, { relationName: 'contributorTasks' }),
   reviewedTasks: many(task, { relationName: 'reviewerTasks' }),
   userFeatures: many(userFeature),
@@ -243,6 +244,7 @@ export const featureRelations = relations(feature, ({ one, many }) => ({
     references: [layer.id]
   }),
   contributor: one(user, {
+    relationName: 'contributorFeatures',
     fields: [feature.contributorId],
     references: [user.id]
   }),
@@ -308,7 +310,7 @@ export const featurePropertyI18nRelations = relations(
  */
 export const imageRelations = relations(image, ({ one, many }) => ({
   contributor: one(user, {
-    relationName: 'contributor',
+    relationName: 'contributorImages',
     fields: [image.contributorId],
     references: [user.id]
   }),
