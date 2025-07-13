@@ -26,16 +26,16 @@ export const constraints: Record<string, z.ZodType<any>> = {
     .min(1, { message: m.admin__validation_code_is_required() })
     .max(24, { message: m.admin__validation_code_lte_24_chars() })
     .regex(/^[a-zA-Z0-9_$]*$/, {
-      message: m.admin__validation_code_valid_characters()
+      message: m.admin__validation_key_valid_characters()
     }),
   name: z
     .string()
     .min(1, { message: m.admin__validation_name_is_required() })
-    .max(128, { message: m.admin__validation_name_lte_128_chars() }),
+    .max(128, { message: m.admin__validation_lte_128_chars() }),
   title: z
     .string()
     .min(1, { message: m.admin__validation_name_is_required() })
-    .max(128, { message: m.admin__validation_name_lte_128_chars() }),
+    .max(128, { message: m.admin__validation_lte_128_chars() }),
   nameShort: z
     .string()
     .min(1, { message: m.admin__validation_short_name_is_required() })
@@ -54,14 +54,14 @@ export const constraints: Record<string, z.ZodType<any>> = {
   attribution: z
     .string()
     .min(1, { message: m.admin__validation_attribution_is_required() })
-    .max(128, { message: m.admin__validation_attribution_lte_128_chars() }),
+    .max(128, { message: m.admin__validation_lte_128_chars() }),
   label: z
     .string()
     .min(1, { message: 'Label is required' })
     .max(32, { message: m.admin__validation_short_name_lte_32_chars() }),
   placeholder: z
     .string()
-    .max(128, { message: m.admin__validation_attribution_lte_128_chars() })
+    .max(128, { message: m.admin__validation_lte_128_chars() })
     .nullish()
 };
 
