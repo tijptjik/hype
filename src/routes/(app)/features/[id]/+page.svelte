@@ -1,11 +1,10 @@
 <script lang="ts">
-// Svelte
-import { untrack } from 'svelte';
-// Stores
+// SVELTE
 import { page } from '$app/state';
+import { untrack } from 'svelte';
 // PROVIDERS
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
-// Components
+// COMPONENTS
 import FeatureCard from '$lib/components/featureCard/Root.svelte';
 import FeatureGallery from '$lib/components/featureCard/FeatureGallery.svelte';
 import FeatureBreadcrumbs from '$lib/components/featureCard/FeatureBreadcrumbs.svelte';
@@ -22,7 +21,7 @@ import FeaturePortalSection from '$lib/components/featureCard/layout/FeaturePort
 import FullScreenCarousel from '$lib/components/modals/FullScreenCarousel.svelte';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
-import { getOmniContext } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte';
 import {
   setFeatureCardContext,
   getFeatureCardContext
@@ -37,9 +36,17 @@ let featureId: string = $state(page.params.id);
 
 // CONTEXT
 const appCtx = getAppCtx();
+const omniCtx = getOmniCtx();
+
+// CONTEXT :: FEATURE CARD
+setFeatureCardContext();
+const cardCtx = getFeatureCardContext();
+omniCtx.setFeatureCardContext(cardCtx);
+
+let mode = $derived(cardCtx.state.mode);
 
 // Use state instead of async derived to prevent component destruction
-let feature_: Feature | undefined = $state()!;
+let feature: Feature | undefined = $state()!;
 
 // ELEMENTS
 let portalElement: HTMLElement = $state()!;
@@ -52,64 +59,37 @@ let availableHeight: number = $state(0);
 let wrapperFixedHeight: number | null = $state(null);
 let minOverflowedHeight: number = $state(72);
 
+// ═══════════════════════
+// 1. LOADING
+// ═══════════════════════
+
+const loadFeatureAndSetContext = async () => {
+  // 1. Set featureId for consistency
+  featureId = page.params.id;
+  // 2. Load the fresh feature data
+  const loadedFeature = await appCtx.getFeatureById(page.params.id);
+  // 3. Update the feature state atomically
+  feature = loadedFeature as Feature;
+  // 4. Reset description expansion when feature changes
+  isDescriptionExpanded = false;
+
+  if (omniCtx.isColdStart(page.params.id)) {
+    // Cold start: initialize the feature with card open
+    // Prevent navigation since we're already on the feature page
+    await omniCtx.initFeature(page.params.id, {
+      focus: false,
+      openCard: false // Prevent navigation that would destroy components
+    });
+  }
+};
+
 // Load feature in effect to avoid component hierarchy destruction
 $effect(() => {
   if (!page.params.id) {
     return;
   }
-
-  const loadFeatureAndSetContext = async () => {
-    try {
-      // 1. First, load the fresh feature data
-      const loadedFeature = await appCtx.getFeatureById(page.params.id);
-      // 2. Update the feature state
-      feature_ = loadedFeature as Feature;
-      // 3. THEN set the featureId (which triggers ImageProvider update)
-      featureId = page.params.id;
-      // 4. Reset description expansion when feature changes
-      isDescriptionExpanded = false;
-      // Only react to activeCollection changes after feature is loaded
-      if (appCtx.getActiveCollection() == null) {
-        const isClosing = untrack(() => omniCtx.isIntentionallyClosing);
-        if (!isClosing) {
-          void handleFeatureSelection();
-        }
-      }
-    } catch (error) {
-      console.error('Error loading feature:', error);
-    }
-  };
-
   loadFeatureAndSetContext();
 });
-
-// Measure available height when portal section is visible
-$effect(() => {
-  if (wrapperElement && portalElement && !isDescriptionExpanded) {
-    // Wait for next frame to ensure accurate measurements
-    requestAnimationFrame(() => {
-      availableHeight = wrapperElement.offsetHeight;
-    });
-  }
-});
-
-const omniCtx = getOmniContext();
-
-// CONTEXT :: FEATURE CARD
-setFeatureCardContext();
-const cardCtx = getFeatureCardContext();
-
-omniCtx.setFeatureCardContext(cardCtx);
-
-// STATE
-let mode = $derived(cardCtx.state.mode);
-
-// Helper function to handle async operations
-async function handleFeatureSelection() {
-  if (featureId) {
-    await omniCtx.handleFeatureSelection(appCtx, featureId);
-  }
-}
 
 // ═══════════════════════
 // 2.1 LAYOUT :: HANDLERS
@@ -140,20 +120,42 @@ function handleDescriptionToggle(expanded: boolean) {
     wrapperFixedHeight = null;
   }, 350); // Transition duration + 50ms buffer
 }
+
+// ═══════════════════════
+// 2.2 LAYOUT :: MEASUREMENTS
+// ═══════════════════════
+
+// Measure available height when portal section is visible
+$effect(() => {
+  if (wrapperElement && portalElement && !isDescriptionExpanded) {
+    // Wait for next frame to ensure accurate measurements
+    requestAnimationFrame(() => {
+      availableHeight = wrapperElement.offsetHeight;
+    });
+  }
+});
+
+const imageProviderProps = $derived({
+  isAdminMode: false,
+  // Only provide valid props when feature and featureId match
+  // This prevents intermediate mismatched state during navigation
+  isValid: feature?.id === featureId,
+  image: feature?.id === featureId ? (feature.image as Image | null) : undefined,
+  images: feature?.id === featureId ? (feature.images as Image[]) : undefined,
+  context:
+    feature?.id === featureId && feature
+      ? {
+          ctxType: ImageContextResource.feature,
+          ctxId: featureId,
+          ...appCtx.getHierarchySync(feature)
+        }
+      : undefined // Don't provide mismatched context during transitions
+});
 </script>
 
 {#if appCtx}
-  {#if feature_}
-    {@const feature = feature_ as Feature}
-    <ImageProvider
-      isAdminMode={false}
-      image={feature.image as Image}
-      images={feature.images as Image[]}
-      context={{
-        ctxType: ImageContextResource.feature,
-        ctxId: featureId,
-        ...appCtx.getHierarchySync(feature_)
-      }}>
+  {#if feature}
+    <ImageProvider {page} {...imageProviderProps}>
       <FeatureCard>
         {#if mode === FeatureCardMode.Display}
           <Container>
@@ -183,10 +185,10 @@ function handleDescriptionToggle(expanded: boolean) {
                   <Spacer />
                   <FeaturePortalSection>
                     {#snippet left()}
-                      <FeatureProperties {feature} />
+                      <FeatureProperties feature={feature as Feature} />
                     {/snippet}
                     {#snippet right()}
-                      <FeaturePortal {feature} />
+                      <FeaturePortal feature={feature as Feature} />
                     {/snippet}
                   </FeaturePortalSection>
                 </div>
@@ -201,7 +203,7 @@ function handleDescriptionToggle(expanded: boolean) {
           <FeatureGallery />
           <PhotoCredit />
         {/if}
-        <FeatureActions {feature} />
+        <FeatureActions feature={feature as Feature} />
       </FeatureCard>
       <FullScreenCarousel {feature} />
     </ImageProvider>
