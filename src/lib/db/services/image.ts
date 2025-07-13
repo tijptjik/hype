@@ -1,7 +1,15 @@
 // DRIZZLE
 import { and, eq, getTableColumns, inArray, SQL } from 'drizzle-orm';
 // SCHEMA
-import { featureImage, image, organisation, project, taskImage, user } from '../schema';
+import {
+  feature,
+  featureImage,
+  image,
+  organisation,
+  project,
+  taskImage,
+  user
+} from '../schema';
 // CRUD
 import { insert, insertRelated, update, updateRelated } from '../crud';
 // ENUMS
@@ -188,6 +196,39 @@ export const getImageById = async (
     .where(and(...conditions));
   if (!result) return undefined;
   return result as ImageDBFlat;
+};
+
+export const getImagesByIds = async (
+  db: Database,
+  imageIds: string[],
+  conditions: SQL<unknown>[] = []
+): Promise<ImageDBFlat[]> => {
+  if (imageIds.length === 0) return [];
+
+  // Always filter by the provided image IDs
+  const allConditions = [inArray(image.id, imageIds), ...conditions];
+
+  const results = await db
+    .select({
+      ...getTableColumns(image),
+      intent: featureImage.intent,
+      isPublished: featureImage.isPublished,
+      publishedAt: featureImage.publishedAt,
+      publisherId: featureImage.publisherId,
+      attribution: user.attribution,
+      // Feature context fields
+      organisationId: feature.organisationId,
+      projectId: feature.projectId,
+      layerId: feature.layerId,
+      featureId: feature.id
+    })
+    .from(image)
+    .leftJoin(featureImage, eq(image.id, featureImage.imageId))
+    .leftJoin(feature, eq(featureImage.featureId, feature.id))
+    .leftJoin(user, eq(image.contributorId, user.id))
+    .where(and(...allConditions));
+
+  return results as ImageDBFlat[];
 };
 
 export const getImageForContextType = async (
