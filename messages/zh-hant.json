@@ -460,5 +460,11 @@
         "propertiesPlural=other": "{properties}類別"
       }
     }
-  ]
+  ],
+  "number__1": "一",
+  "feature__graphemes": "字素",
+  "profile__role_type__contributor": "撰稿人",
+  "omni__title_visited_walks": "已訪問",
+  "viewer__no_image": "無影像",
+  "viewer__tap_to_leave_fullscreen": "點選即可退出全螢幕"
 }
