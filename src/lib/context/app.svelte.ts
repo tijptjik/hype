@@ -1909,29 +1909,81 @@ export class AppCtx {
   setActiveCollection = (
     collection: ActiveCollection,
     options: {
-      highlight: boolean;
-      focus: boolean;
-      activateFirst: boolean;
-      focusFirst: boolean;
+      activeFeatureId?: string;
+      focus?: boolean;
+      focusFeature?: boolean;
+      highlight?: boolean;
       openCard?: boolean;
-    } = {
-      highlight: false,
-      focus: false,
-      activateFirst: true,
-      focusFirst: false,
-      openCard: false
+      openCardDelay?: number;
+      isCardOpen?: boolean;
+      navOptions?: Record<string, any>;
     }
   ) => {
+    const optionsWithDefaults = {
+      highlight: true,
+      focus: true,
+      focusFeature: true,
+      openCard: true,
+      openCardDelay: 0,
+      ...options
+    };
     this.state.active.collection = collection;
+
+    // Handle feature activation
+    this.postActiveCollectionMutation(optionsWithDefaults);
+  };
+
+  private postActiveCollectionMutation = (options: {
+    activeFeatureId?: string;
+    highlight?: boolean;
+    focus?: boolean;
+    focusFeature?: boolean;
+    openCard?: boolean;
+    openCardDelay?: number;
+    isCardOpen?: boolean;
+    navOptions?: Record<string, any>;
+  }) => {
+    const optionsWithDefaults = {
+      highlight: true,
+      focus: true,
+      focusFeature: true,
+      openCard: true,
+      openCardDelay: 0,
+      ...options
+    };
+    const collection = this.state.active.collection;
+    if (!collection?.items.length) return;
+
     if (options.highlight) {
-      this.highlightActiveCollection({ focus: options.focus });
+      this.highlightActiveCollection({ focus: optionsWithDefaults.focus });
     }
-    if (options.activateFirst) {
-      if (collection?.items.length && collection.items.length > 0) {
-        this.setActiveFeature(collection.items[0].id, {
-          focus: options.focusFirst
-        });
+
+    // Determine which feature to activate, default to first
+    let featureIdToActivate: string | null = collection.items[0].id;
+
+    if (options.activeFeatureId) {
+      // Check if the specific feature exists in the collection
+      const featureExists = collection.items.some(
+        (item) => item.id === optionsWithDefaults.activeFeatureId
+      );
+      if (featureExists) {
+        featureIdToActivate = optionsWithDefaults.activeFeatureId || null;
+      } else {
+        console.error(
+          'Feature not found in collection',
+          optionsWithDefaults.activeFeatureId
+        );
       }
+    }
+
+    if (featureIdToActivate) {
+      this.setActiveFeature(featureIdToActivate, {
+        focus: optionsWithDefaults.focusFeature,
+        openCard: optionsWithDefaults.openCard,
+        openCardDelay: optionsWithDefaults.openCardDelay,
+        isCardOpen: optionsWithDefaults.isCardOpen,
+        navOptions: optionsWithDefaults.navOptions
+      });
     }
   };
 
@@ -1952,25 +2004,61 @@ export class AppCtx {
 
   setActiveFeature = (
     featureId: Id,
-    options: { focus: boolean; isCardOpen?: boolean | null } = {
-      focus: false,
-      isCardOpen: null
+    options: {
+      focus?: boolean;
+      openCard?: boolean | null;
+      openCardDelay?: number;
+      isCardOpen?: boolean;
+      navOptions?: Record<string, any>;
     }
   ) => {
+    const optionsWithDefaults = {
+      focus: true,
+      openCard: true,
+      openCardDelay: 0,
+      ...options
+    };
+    // Pre-mutation: cleanup from previous feature
+    this.preActiveFeatureMutation();
+
+    // Set active state to new feature
+    this.state.active.feature = this.features.get(featureId)!;
+
+    // Post-mutation: setup new feature
+    this.postActiveFeatureMutation(featureId, optionsWithDefaults);
+  };
+
+  private preActiveFeatureMutation = () => {
     // Remove active state from previous feature
     if (this.state.active.feature) {
       removeMarkerClass(this, this.state.active.feature.id);
     }
-    // Set active state to new feature
-    this.state.active.feature = this.features.get(featureId)!;
+  };
+
+  private postActiveFeatureMutation = (
+    featureId: Id,
+    options: {
+      focus?: boolean;
+      openCard?: boolean | null;
+      openCardDelay?: number;
+      isCardOpen?: boolean;
+      navOptions?: Record<string, any>;
+    }
+  ) => {
+    const optionsWithDefaults = {
+      focus: true,
+      openCard: true,
+      openCardDelay: 0,
+      ...options
+    };
     // TODO : Add "active" class to the feature on the map
     addMarkerClass(this, featureId);
-    if (options.focus) {
-      if (options.isCardOpen === false) {
+
+    if (optionsWithDefaults.focus || optionsWithDefaults.openCard) {
+      if (!optionsWithDefaults.isCardOpen) {
         this.zoomToActiveFeature();
-      } else {
-        goto(`/features/${featureId}`);
       }
+      navigate(FirstClassResource.feature, featureId, optionsWithDefaults.navOptions);
     }
   };
 
