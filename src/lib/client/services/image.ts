@@ -201,6 +201,36 @@ export async function getImages(
 }
 
 /**
+ * Fetches images by their IDs.
+ *
+ * @param imageIds Array of image IDs to fetch.
+ * @param fetchFn Optional fetch function, defaults to global fetch.
+ * @returns Promise resolving with an array of images.
+ */
+export async function getImagesByIds(
+  imageIds: string[],
+  fetchFn: typeof fetch = fetch
+): Promise<(Image & { preview?: string })[]> {
+  if (imageIds.length === 0) return [];
+
+  const basePath = '/api/images';
+  const params = new URLSearchParams();
+  params.append('ids', imageIds.join(','));
+
+  const apiUrl = `${basePath}?${params.toString()}`;
+
+  const response = await fetchFn(apiUrl);
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error('Failed to fetch images by IDs via API:', apiUrl, errorBody);
+    throw new Error(
+      `Network response was not ok for fetching images by IDs: ${response.statusText}`
+    );
+  }
+  return response.json() as Promise<(Image & { preview?: string })[]>;
+}
+
+/**
  * Updates an existing image record in the backend.
  * @param imageId - The ID of the image to update.
  * @param imageData - The new image data.
@@ -319,6 +349,22 @@ export async function deleteImage(
     throw new Error(`Failed to delete image: ${errorBody}`);
   }
   return response.json();
+}
+
+/**
+ * Loads an image from the URL parameter.
+ * @returns The image data from the API.
+ */
+export async function getImageById(imageId: Id) {
+  // Fetch the specific image from the API
+  const response = await fetch(`/api/images/${imageId}`);
+  if (!response.ok) {
+    console.error('Failed to fetch image:', response.statusText);
+    return null;
+  }
+
+  const result = await response.json();
+  return result.data || result; // Handle both wrapped and direct responses
 }
 
 // ═══════════════════════
