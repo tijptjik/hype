@@ -535,29 +535,27 @@ export class AppCtx {
 
     // Initialize stats cache
     this.initStatsCache();
-
-    // Use refreshOrganisations to trigger proper cascades and post-mutation logic
-    await this.refreshOrganisations();
-
-    // Initialize user data
-    this.state.userFeatures = await this.queryClient
-      .fetchQuery({
-        queryKey: this.queryMap.get('userFeatures')!.queryKey(),
-        queryFn: this.queryMap.get('userFeatures')!.queryFn
-      })
-      .then((uf) => ({
-        wishlisted: (uf || []).filter((f: UserFeature) => f.isWishlisted),
-        visited: (uf || []).filter((f: UserFeature) => f.isVisited)
-      }));
-
-    this.user = (await this.queryClient.fetchQuery({
-      queryKey: this.userQueryKey,
-      queryFn: this.userQueryFn
-    })) as CurrentUser;
-
-    this.postUserMutation();
-
+    // Use parallel fetching for initial load
+    await this.initialFetch();
+    // Prevent init from running again, unless the user (re)authenticates
+    // see reinitializeWithAuth()
     this.isInitialised = true;
+  };
+
+  initialFetch = async (): Promise<void> => {
+    // Fetch all resources in parallel without cascading
+    await Promise.all([
+      // All resource types in parallel
+      this.refreshOrganisations(false),
+      this.refreshProjects(false),
+      this.refreshLayers(false),
+      this.refreshProperties(false),
+      this.refreshFeatures(false),
+      this.refreshUserProfile(false),
+      this.refreshUserFeatures(false),
+      this.isAdmin() ? this.refreshHubs(false) : Promise.resolve(),
+      this.isAdmin() ? this.refreshTasks(false) : Promise.resolve()
+    ]);
   };
 
   initStatsCache = (): void => {
