@@ -2550,6 +2550,18 @@ export class AppCtx {
   };
 
   handleKeydown = (event: KeyboardEvent): void => {
+    // Skip global keyboard shortcuts when any input element is focused
+    const activeElement = document.activeElement;
+    if (
+      activeElement &&
+      (activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.tagName === 'SELECT' ||
+        activeElement.getAttribute('contenteditable') === 'true')
+    ) {
+      return;
+    }
+
     let keyMatched = false;
 
     if (event.key === '1') {
