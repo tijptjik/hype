@@ -27,7 +27,6 @@ import type {
   QueryParams,
   ImageNew,
   ImageDBFlat,
-  ImageDB,
   HubOpts,
   SessionUser
 } from '$lib/types';
@@ -201,6 +200,31 @@ export const getImageEntityQueryContext = (
   }
 
   return { params, conditions, excludeColumns };
+};
+
+/**
+ * Get the query context for images fetched by IDs.
+ * This applies basic filtering for published and non-archived images for public requests.
+ * Used for the /images?ids=... route.
+ */
+export const getImageByIdsQueryContext = (
+  db: Database,
+  user: SessionUser,
+  request: Request
+) => {
+  let conditions: SQL<unknown>[] = [];
+
+  // NON-SUPERADMIN : Hide images which are archived
+  if (!isSuperAdmin(user)) {
+    conditions.push(eq(image.isArchived, false));
+  }
+
+  // PUBLIC : Only show published images
+  if (!isAdminRequest(request)) {
+    conditions.push(eq(featureImage.isPublished, true));
+  }
+
+  return { conditions };
 };
 
 // ═══════════════════════

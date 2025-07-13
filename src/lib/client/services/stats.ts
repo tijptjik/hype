@@ -8,7 +8,8 @@ import type {
   Property,
   FeatureI18nDB,
   FeatureProperty,
-  FeatureFromCollection
+  FeatureFromCollection,
+  UserContributedFeature
 } from '$lib/types';
 import type { AppCtx } from '$lib/context/app.svelte';
 
@@ -52,9 +53,11 @@ export function setStatistic(
 // Helper method to get cached boolean statistics for features (read-only)
 export function getCachedFeatureBoolean(
   appCtx: AppCtx,
-  feature: FeatureFromCollection,
+  feature: FeatureFromCollection | Feature | UserContributedFeature,
   statistic: string,
-  calculator: (feature: FeatureFromCollection) => boolean
+  calculator: (
+    feature: FeatureFromCollection | Feature | UserContributedFeature
+  ) => boolean
 ): boolean {
   const cached = getStatistic(
     appCtx,
