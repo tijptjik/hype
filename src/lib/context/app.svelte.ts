@@ -1589,6 +1589,19 @@ export class AppCtx {
     return undefined;
   };
 
+  getUserByUsername = async (username: string): Promise<UserProfile | undefined> => {
+    const user = this.cache.user.get(username);
+    if (user) return user;
+
+    const response = await this.fetchResourceById(FirstClassResource.user, username);
+    if (response) {
+      this.cache.user.set(username, response);
+      return response;
+    }
+
+    return undefined;
+  };
+
   // Helper method to get visible classifier properties for a layer
   getClassifierPropertiesForLayer = async (layer: Layer): Promise<Property[]> => {
     if (!layer.properties) return [];
