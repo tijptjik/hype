@@ -278,6 +278,8 @@ export const API_PATH = '/api';
 
 export const ADMIN_MIN_WIDTH = 1200;
 export const MOBILE_MAX_WIDTH = 920;
+export const PANEL_WIDTH = 420;
+export const DUAL_PANEL_MIN_WIDTH = 1320;
 
 export const capitalizeFirstLetter = (text: string | null) => {
   if (!text) return null;
@@ -288,4 +290,8 @@ export const fetchOrThrow = async <T>(url: string): Promise<T> => {
   const response = await fetch(url);
   if (!response.ok) throw new Error('Network response was not ok');
   return (await response.json()) as T;
+};
+
+export const isMobile = () => {
+  return typeof window !== 'undefined' && window.innerWidth < MOBILE_MAX_WIDTH;
 };
