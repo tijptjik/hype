@@ -51,8 +51,7 @@ const handleError = () => {
 <figure
   class="{className.includes('absolute') ? '' : 'relative'} {className
     ? className
-    : 'h-full w-full'} bg-transparent"
-  style="opacity: {opacity}">
+    : 'h-full w-full'} bg-transparent">
   {#if showLoading && !loaded && !error}
     <Loading />
   {/if}
@@ -67,15 +66,14 @@ const handleError = () => {
       {src}
       {alt}
       class="absolute inset-0 h-full w-full object-cover text-transparent blur-sm"
-      style="opacity: {(opacity / 10) * 6}" />
+      style="opacity: {(opacity / 10) * 6 * (loaded && !error ? 1 : 0)}" />
   {/if}
   <!-- Foreground Image -->
   <img
     {src}
     {alt}
-    class="relative text-transparent {loaded && !error
-      ? 'opacity-100'
-      : 'opacity-0'} {layout === 'cover'
+    style="opacity: {opacity * (loaded && !error ? 1 : 0)}"
+    class="relative text-transparent {layout === 'cover'
       ? 'h-full w-full object-cover'
       : layout === 'fill'
         ? 'h-full w-full object-fill'
