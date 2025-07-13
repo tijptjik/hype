@@ -9,12 +9,14 @@ import type { AppCtx } from '$lib/context/app.svelte';
 import type {
   Feature,
   FeatureExtended,
+  FeatureFromCollection,
   Layer,
   NeighbourhoodMap,
   SearchResult,
   UserFeature
 } from '$lib/types';
 import type { LngLatLike } from 'maplibre-gl';
+import { OmniCollection } from '$lib/enums';
 
 // Async version that uses getHierarchy for guaranteed data with cache-miss handling
 export async function getWishlistedFeaturesAsync(
@@ -93,14 +95,13 @@ export function getNeighbourhoodFeatureCount(
   return count;
 }
 
-// Async version that uses getWishlistedFeaturesAsync for better hierarchy data
 export async function searchAllAsync(
   term: string,
   appCtx: AppCtx
 ): Promise<SearchResult[]> {
   const results: SearchResult[] = [];
 
-  // Source 1 - Walks (using async version with proper hierarchy fetching)
+  // Source 1 - Walks
   const wishlistResults = await getWishlistedFeaturesAsync(appCtx);
   const filteredWishlistResults = wishlistResults.filter((feature: FeatureExtended) =>
     feature?.hierarchy.feature?.toLowerCase().includes(term.toLowerCase())
@@ -109,12 +110,12 @@ export async function searchAllAsync(
     results.push({
       name: m.omni__title_star_walks(),
       count: filteredWishlistResults.length,
-      group: 'walks',
+      collectionType: OmniCollection.walk,
       ref: 'stars'
     });
   }
 
-  // Source 2 - Neighbourhoods (same as sync version)
+  // Source 2 - Neighbourhoods
   const neighbourhoodResults = filterNeighbourhoods(appCtx, term);
   neighbourhoodResults.forEach(([neighbourhood, data]) => {
     results.push({
@@ -126,30 +127,35 @@ export async function searchAllAsync(
         neighbourhood,
         appCtx.state.resources.feature
       ),
-      group: 'neighbourhoods',
+      collectionType: OmniCollection.neighbourhood,
       ref: neighbourhood
     });
   });
 
-  // Source 3 - Features (same as sync version)
+  // Source 3 - Features
   Array.from(appCtx.features.values())
-    .filter(
-      (feature: Feature) =>
-        getI18n(feature, 'title', appCtx.getUserPreferences())
-          ?.toLowerCase()
-          .includes(term.toLowerCase()) ||
-        getI18n(feature, 'description', appCtx.getUserPreferences())
-          ?.toLowerCase()
-          .includes(term.toLowerCase()) ||
-        getI18n(feature, 'displayAddress', appCtx.getUserPreferences())
-          ?.toLowerCase()
-          .includes(term.toLowerCase())
-    )
+    .filter((feature): feature is FeatureFromCollection => {
+      const title = getI18n(feature, 'title', appCtx.getUserPreferences());
+      const description = getI18n(feature, 'description', appCtx.getUserPreferences());
+      const displayAddress = getI18n(
+        feature,
+        'displayAddress',
+        appCtx.getUserPreferences()
+      );
+      const lowerTerm = term.toLowerCase();
+      return (
+        (typeof title === 'string' && title.toLowerCase().includes(lowerTerm)) ||
+        (typeof description === 'string' &&
+          description.toLowerCase().includes(lowerTerm)) ||
+        (typeof displayAddress === 'string' &&
+          displayAddress.toLowerCase().includes(lowerTerm))
+      );
+    })
     .forEach((feature) => {
       results.push({
         name: getI18n(feature, 'title', appCtx.getUserPreferences()),
         count: 1,
-        group: 'features',
+        collectionType: OmniCollection.feature,
         ref: feature.id
       });
     });

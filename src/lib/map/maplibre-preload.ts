@@ -259,10 +259,10 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
       this.once('moveend', () => {
         if (this.precache_worker.time1 === undefined) {
           this.precache_worker.postMessage({ abort: true });
-          if (o.debug) console.log(`🔶 Movement has finished before preloading`);
+          if (o.debug) console.debug(`🔶 Movement has finished before preloading`);
         } else {
           if (o.debug)
-            console.log(
+            console.debug(
               `🔚 Movement ends ${
                 this.precache_worker.time1
                   ? Date.now() - this.precache_worker.time1
