@@ -682,7 +682,84 @@ export class AppCtx {
     await this.refresh(resource);
   };
 
-  invalidate = async (resource: FirstClassResource | 'userFeatures'): Promise<void> => {
+  /**
+   * Targeted invalidation for image uploads - only invalidates and refreshes the specific resource
+   * without triggering cascading refreshes. Updates the cache for that resource.
+   * @param resource - The resource type to invalidate
+   * @param resourceId - The ID of the specific resource to invalidate
+   */
+  invalidateResourceTargeted = async (
+    resource: FirstClassResource,
+    resourceId: Id
+  ): Promise<void> => {
+    // Get the specific query key for this resource
+    const queryKey = this.queryMap.get(resource)?.queryKey();
+
+    if (!queryKey) {
+      console.warn(`No query key found for resource: ${resource}`);
+      return;
+    }
+
+    // Invalidate queries for this resource type
+    await this.queryClient.invalidateQueries({
+      queryKey,
+      refetchType: 'active',
+      exact: true
+    });
+
+    // Refresh only the specific resource without cascading
+    await this.refreshResourceTargeted(resource, resourceId);
+  };
+
+  /**
+   * Refresh a specific resource without triggering cascades
+   * @param resource - The resource type to refresh
+   * @param resourceId - The ID of the specific resource to refresh
+   */
+  private refreshResourceTargeted = async (
+    resource: FirstClassResource,
+    resourceId: Id
+  ): Promise<void> => {
+    try {
+      // Fetch the updated resource data
+      const updatedResource = await this.fetchResourceById(resource, resourceId);
+
+      if (updatedResource) {
+        // Update the cache with the new resource data
+        this.cache[resource].set(resourceId, updatedResource);
+
+        // For features, also update the featuresMap
+        if (resource === FirstClassResource.feature) {
+          this.addFeatureToMap(updatedResource as Feature);
+        }
+
+        // Update the resources array if the resource exists there
+        this.updateResourceInArray(resource, updatedResource);
+      }
+    } catch (error) {
+      console.error(`Failed to refresh resource ${resource}:${resourceId}`, error);
+    }
+  };
+
+  /**
+   * Update a resource in the appropriate resources array
+   * @param resource - The resource type
+   * @param updatedResource - The updated resource data
+   */
+  private updateResourceInArray = (
+    resource: FirstClassResource,
+    updatedResource: any
+  ): void => {
+    const resourceArray =
+      this.state.resources[resource as keyof typeof this.state.resources];
+    if (resourceArray && Array.isArray(resourceArray)) {
+      const index = resourceArray.findIndex((r: any) => r.id === updatedResource.id);
+      if (index !== -1) {
+        resourceArray[index] = updatedResource;
+      }
+    }
+  };
+
     const resourcesToInvalidate = [resource];
     // Clear relevant caches when invalidating (forces fresh data)
     if (resource === FirstClassResource.organisation) {
