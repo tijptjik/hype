@@ -95,7 +95,11 @@ export const ImageAPI = ImageBase.extend({
     .optional(),
   isPublished: z.boolean().default(false).optional(),
   publishedAt: z.string().optional(),
-  preview: z.string().optional()
+  preview: z.string().optional(),
+  // Feature context fields
+  organisationId: z.string().nullish(),
+  projectId: z.string().nullish(),
+  layerId: z.string().nullish()
 });
 
 export const ImageInsertAPI = ImageInsert.extend({

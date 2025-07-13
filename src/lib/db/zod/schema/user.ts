@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { createSelectSchema, createUpdateSchema } from 'drizzle-zod';
 // DRIZZLE SCHEMA
 import { user } from '$lib/db/schema/user';
+import { isSuperAdmin } from '$lib/client/services/auth';
 // CONSTRAINTS
 // import { FeatureBase } from './feature';
 
@@ -62,12 +63,12 @@ export const UserProfileAPI = UserBase.pick({
   attribution: true,
   createdAt: true
 } as const).extend({
-  // Contributor data - arrays of IDs for published content
-  contributedFeatures: z.array(z.string()),
-  contributedImages: z.array(z.string()),
+  contributedFeatures: z.record(z.string(), z.array(z.string())),
+  contributedImages: z.record(z.string(), z.array(z.string())),
   reportedMissingCount: z.number(),
   newPhotoCount: z.number(),
-  newFeatureCount: z.number()
+  newFeatureCount: z.number(),
+  superAdmin: z.boolean().nullish()
 });
 export const UserCurrent = UserBase.pick({
   id: true,

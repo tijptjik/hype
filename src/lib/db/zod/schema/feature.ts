@@ -239,7 +239,6 @@ export const FeatureCollectionAPI = FeatureBase.omit({
   publisherId: true,
   publishedAt: true,
   visitableAsOf: true,
-  createdAt: true,
   modifiedAt: true
 }).extend({
   i18n: getLocales(

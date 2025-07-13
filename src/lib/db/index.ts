@@ -431,7 +431,6 @@ export const toLocaleMap = <T extends LocaleBundle>(
   // Test whether i18n is already transformed - if so, return as-is
   if (isTransformedLocaleMap<T>(i18n)) {
     // TODO : Figure out where the unnecessary toLocalMap call is coming from.
-    console.log('I18N already transformed:', i18n);
     return i18n;
   }
 
