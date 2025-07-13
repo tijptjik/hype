@@ -49,7 +49,7 @@ const statuses = $derived.by(() => {
 
   const statusItems = [
     { key: m.plain_broad_shell_dart(), value: !isPendingReview },
-    { key: m.yummy_ornate_snail_bend(), value: isPublished },
+    { key: m.published(), value: isPublished },
     { key: m.dry_aware_squirrel_cheer(), value: isVisitable },
     { key: m.teary_fit_maggot_socket(), value: !isIntangible }
   ];
@@ -63,4 +63,4 @@ const statuses = $derived.by(() => {
 });
 </script>
 
-<ProgressPips title="STATUS" icon={CircleStack} {statuses} {showTitle} />
+<ProgressPips title={m.filters__status()} icon={CircleStack} {statuses} {showTitle} />

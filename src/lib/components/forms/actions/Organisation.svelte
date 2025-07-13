@@ -38,7 +38,7 @@ const toggleRemoveMode = () => {
         <span class="hidden md:block">{m.watery_trite_shrimp_clip()}</span>
       {:else}
         <Icon src={XMark} class="h-6 w-6 stroke-[2px]" />
-        <span class="hidden md:block">{m.long_level_kestrel_pet()}</span>
+        <span class="hidden md:block">{m.moving_each_orangutan_care()}</span>
       {/if}
     </button>
   {/if}

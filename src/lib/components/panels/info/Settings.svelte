@@ -33,25 +33,25 @@ let sections = $state<SettingsSection[]>([
   },
   {
     id: 'language',
-    titleKey: m.sunny_key_mammoth_blend,
+    titleKey: m.settings__language,
     isOpen: false,
     hasComplexContent: true
   },
   {
     id: 'contributionCredit',
-    titleKey: m.jumpy_broad_wolf_startle,
+    titleKey: m.settings_contributor_title,
     contentKey: m.sleek_main_shell_taste,
     isOpen: false
   },
   {
     id: 'defaultMaps',
-    titleKey: m.fair_sound_goat_enchant,
+    titleKey: m.settings_default_map_title,
     contentKey: m.trite_key_insect_tickle,
     isOpen: false
   },
   {
     id: 'experimental',
-    titleKey: m.jumpy_dark_dog_nudge,
+    titleKey: m.settings_experimental_title,
     contentKey: m.big_awake_grebe_seek,
     isOpen: false
   }

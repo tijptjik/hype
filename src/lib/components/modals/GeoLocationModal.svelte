@@ -5,10 +5,10 @@ import { onMount } from 'svelte';
 import { getLocale } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // CONSTANTS
-import { MOBILE_MAX_WIDTH } from '$lib/index';
+import { PANEL_WIDTH } from '$lib/index';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
-import { getOmniContext } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { XMark, PencilSquare, Check } from '@steeze-ui/heroicons';
@@ -20,7 +20,7 @@ import type { Point } from 'geojson';
 
 // CONTEXT
 const appCtx = getAppCtx();
-const omniCtx = getOmniContext();
+const omniCtx = getOmniCtx();
 
 // STATE
 let isOpen = $state(false);
@@ -47,21 +47,7 @@ let isValid = $derived(
 );
 
 // PANEL STATE
-let horizontalOffset = $derived.by(() => {
-  const { filters, prisms, stars, settings } = appCtx.state.isPanelOpen;
-  const leftPanelOpen = prisms || stars;
-  const rightPanelOpen = filters || settings;
-  if (window.innerWidth < MOBILE_MAX_WIDTH) {
-    return 0;
-  }
-  return leftPanelOpen && rightPanelOpen
-    ? 0
-    : leftPanelOpen
-      ? 420 / 2
-      : rightPanelOpen
-        ? -420 / 2
-        : 0;
-});
+let horizontalOffset = $derived(appCtx.getHorizontalOffset());
 
 const handleShowModal = () => {
   // Sync with current newFeature state when opening
@@ -199,9 +185,9 @@ onMount(() => {
     onkeydown={handleKeydown}>
     <div
       class="modal-box m-0 flex h-full w-full flex-col items-center justify-center bg-transparent p-0 {horizontalOffset ==
-      -210
+      -(PANEL_WIDTH / 2)
         ? '-translate-x-[210px]'
-        : horizontalOffset == 210
+        : horizontalOffset == PANEL_WIDTH / 2
           ? 'translate-x-[210px]'
           : 'translate-x-0'}">
       <div
@@ -244,7 +230,7 @@ onMount(() => {
                   }
                 }}
                 bind:value={displayAddress[getLocale()]}
-                placeholder="Enter address" />
+                placeholder={m.less_quaint_clownfish_succeed()} />
               <button
                 class="btn btn-square btn-ghost absolute right-0 focus:text-primary focus:outline-none"
                 onclick={handleAddressSave}>

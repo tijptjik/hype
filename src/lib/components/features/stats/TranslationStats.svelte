@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
 // COMPONENTS
 import ProgressPips from '$lib/components/common/ProgressPips.svelte';
 // SERVICES
@@ -59,9 +61,10 @@ if (featureStats && featureStats.has(feature.id)) {
 
 // Helper function to create translation tooltip
 function getTranslationTooltip(fieldName: string, status: boolean | null): string {
-  if (status === true) return `${fieldName} Translated`;
-  if (status === false) return `${fieldName} Not Translated`;
-  return `${fieldName} Not Available`;
+  if (status === true) return `${fieldName} ${m.tooltip__translated()}`;
+  if (status === false)
+    return `${fieldName} ${m.filters__not()} ${m.tooltip__translated()}`;
+  return `${fieldName} ${m.filters__not()} ${m.awful_even_coyote_wish()}`;
 }
 
 const statuses = $derived.by(() => {
@@ -109,9 +112,10 @@ const statuses = $derived.by(() => {
   const addressStatus = calculateMultiLocaleStatus('displayAddress');
 
   const result = {
-    [getTranslationTooltip('Title', titleStatus)]: titleStatus,
-    [getTranslationTooltip('Description', descriptionStatus)]: descriptionStatus,
-    [getTranslationTooltip('Address', addressStatus)]: addressStatus
+    [getTranslationTooltip(m.feature__title(), titleStatus)]: titleStatus,
+    [getTranslationTooltip(m.feature__description(), descriptionStatus)]:
+      descriptionStatus,
+    [getTranslationTooltip(m.feature__address(), addressStatus)]: addressStatus
   };
 
   // Add property translation status for admin users only (now tri-state)
@@ -119,11 +123,12 @@ const statuses = $derived.by(() => {
     const propertyStatus = getCachedFeatureSpecifierTranslation(appCtx, feature, (f) =>
       calculateSpecifierTranslation(f)
     );
-    result[getTranslationTooltip('Properties', propertyStatus)] = propertyStatus;
+    result[getTranslationTooltip(m.spicy_ideal_butterfly_revive(), propertyStatus)] =
+      propertyStatus;
   }
 
   return result;
 });
 </script>
 
-<ProgressPips title="TRANSLATION" icon={Language} {statuses} {showTitle} />
+<ProgressPips title={m.filters__translation()} icon={Language} {statuses} {showTitle} />

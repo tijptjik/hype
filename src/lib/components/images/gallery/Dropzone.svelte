@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
 // SERVICES
 import { getImageCtx } from '$lib/context/image.svelte';
 // COMPONENTS
@@ -35,5 +37,5 @@ const handleFiles = async (e: CustomEvent) => {
   disableDefaultStyles={true}
   bind:inputElement>
   <Icon src={Photo} class="mx-auto mt-4 h-8 w-8" />
-  <span class="mx-auto pb-6 text-sm">Drop images</span>
+  <span class="mx-auto pb-6 text-sm">{m.dropzone__drop_images()}</span>
 </Dropzone>

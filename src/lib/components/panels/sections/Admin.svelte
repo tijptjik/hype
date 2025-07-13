@@ -49,7 +49,7 @@ const preferencesConfig: {
 
 {#if panelProps.isAdmin}
   <Section
-    title={m.settings_admin_title()}
+    title={m.menu_admin()}
     icon="/admin.svg"
     defaultOpen={true}
     iconVerticalPaddingClass="py-2 pr-4"

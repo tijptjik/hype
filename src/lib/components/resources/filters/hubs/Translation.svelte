@@ -41,7 +41,7 @@ const translationFilters: Record<
     trueLabel: m.filters__done()
   },
   isDescriptionTranslated: {
-    label: m.admin__forms_common_description(),
+    label: m.feature__description(),
     falseLabel: m.filters__todo(),
     trueLabel: m.filters__done()
   }

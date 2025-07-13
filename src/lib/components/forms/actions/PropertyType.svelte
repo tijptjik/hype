@@ -39,7 +39,7 @@ $effect(() => {
     onclick={toggleRemoveMode}>
     {#if removeMode}
       <Icon src={XMark} class="h-4 w-4" />
-      <span class="hidden md:block">{m.long_level_kestrel_pet()} </span>
+      <span class="hidden md:block">{m.moving_each_orangutan_care()} </span>
     {:else}
       <Icon src={XMark} class="mr-1 h-4 w-4" />
       <span class="hidden md:block">{m.upper_caring_falcon_boost()}</span>

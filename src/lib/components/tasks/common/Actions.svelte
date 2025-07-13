@@ -165,15 +165,14 @@ function closeExpand(e: MouseEvent) {
       <div class="form-control">
         <textarea
           class="textarea textarea-bordered h-24 bg-black text-white focus:outline-none focus:ring-0"
-          placeholder="For internal use only..."
+          placeholder={m.placeholder__internal_use_only()}
           bind:value={reviewReason}>
         </textarea>
       </div>
       <div class="modal-action">
         <button
           class="btn btn-ghost hover:bg-transparent hover:text-error"
-          onclick={() => (showReasonModal = false)}
-          >{m.safe_tidy_skunk_arrive()}</button>
+          onclick={() => (showReasonModal = false)}>{m.cancel()}</button>
         <button
           class="btn bg-base-400 uppercase transition-all duration-300 hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300"
           onclick={handleReject}>{m.alive_north_albatross_lead()}</button>

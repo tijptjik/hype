@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
 // COMPONENTS
 import ProgressPips from '$lib/components/common/ProgressPips.svelte';
 // SERVICES
@@ -24,19 +26,19 @@ let {
 } = $props();
 
 const statuses = $derived({
-  'Has Image': getCachedFeatureBoolean(
+  [m.filters__has() + ' ' + m.organisation__images()]: getCachedFeatureBoolean(
     appCtx,
     feature,
     'hasImage',
     () => calculateImageCompletion(appCtx, feature).hasImage
   ),
-  'One Published': getCachedFeatureTriState(
+  [m.number__1() + ' ' + m.published()]: getCachedFeatureTriState(
     appCtx,
     feature,
     'isOneImagePublished',
     () => calculateImageCompletion(appCtx, feature).isOneImagePublished
   ),
-  'All Published': getCachedFeatureTriState(
+  [m.filters__all() + ' ' + m.published()]: getCachedFeatureTriState(
     appCtx,
     feature,
     'isAllImagePublished',
@@ -45,4 +47,4 @@ const statuses = $derived({
 });
 </script>
 
-<ProgressPips title="IMAGE" icon={Photo} {statuses} {showTitle} />
+<ProgressPips title={m.organisation__images()} icon={Photo} {statuses} {showTitle} />

@@ -1,8 +1,12 @@
 <script lang="ts">
-// I18N
-import { getLocale } from '$lib/i18n';
+// SVELTE
 import { slide } from 'svelte/transition';
+// I18N
+import { m } from '$lib/i18n';
+import { getLocale } from '$lib/i18n';
+// ICONS
 import { MagnifyingGlass, XMark, ChevronRight } from '@steeze-ui/heroicons';
+// COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
@@ -259,7 +263,7 @@ const resetResults = () => (searchResults = []);
           id="search"
           data-testid="userSearchBar"
           type="text"
-          placeholder={`Search ${apiPath}...`}
+          placeholder={`${m.tidy_smart_macaw_agree()} ${apiPath}...`}
           class="m-0 h-12 w-full bg-transparent px-6 pr-10 text-sm caret-white focus:border-none focus:outline-none"
           bind:value={searchQuery}
           onkeydown={(e) => handleInputKeydown(e)}

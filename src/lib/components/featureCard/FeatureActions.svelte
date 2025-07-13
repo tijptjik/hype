@@ -13,7 +13,7 @@ import { enGB, zhCN, zhHK } from 'date-fns/locale';
 // CONTEXT
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 import { getAppCtx } from '$lib/context/app.svelte';
-import { getOmniContext } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte';
 // SERVICES
 import {
   submitMissingReport as submitMissingReportAPI,
@@ -36,13 +36,11 @@ import type { Point } from 'geojson';
 // CONTEXT
 const appCtx = getAppCtx();
 let cardCtx = getFeatureCardContext();
-let omniCtx = getOmniContext();
+let omniCtx = getOmniCtx();
 const flash = getFlash(page);
 
 // STATE : SESSION
-let attribution = $derived(
-  appCtx.getUser()!.attribution || m.misty_awake_haddock_tap()
-);
+let attribution = $derived(appCtx.getUser()!.attribution || m.anonymous());
 
 // STATE : PROPS
 let { feature }: { feature: Feature | UserContributedFeature } = $props();
@@ -157,8 +155,8 @@ async function submitMissingReport() {
     cardCtx.validationError = '';
   } catch (error) {
     console.error('Error submitting missing report:', error);
-    $flash = { type: 'error', message: m.report_missing__error() };
-    cardCtx.validationError = m.report_missing__error();
+    $flash = { type: 'error', message: m.long_crazy_peacock_care() };
+    cardCtx.validationError = m.long_crazy_peacock_care();
   } finally {
     cardCtx.isSubmitting = false;
   }
@@ -198,8 +196,8 @@ async function submitNewFeature() {
     cardCtx.validationError = '';
   } catch (error) {
     console.error('Error submitting new feature:', error);
-    $flash = { type: 'error', message: m.new_feature__error() };
-    cardCtx.validationError = m.new_feature__error();
+    $flash = { type: 'error', message: m.long_crazy_peacock_care() };
+    cardCtx.validationError = m.long_crazy_peacock_care();
   } finally {
     cardCtx.isSubmitting = false;
   }
@@ -248,8 +246,8 @@ async function submitNewPhotos() {
     cardCtx.validationError = '';
   } catch (error) {
     console.error('Error submitting new photos:', error);
-    $flash = { type: 'error', message: m.add_photos__error() };
-    cardCtx.validationError = m.add_photos__error();
+    $flash = { type: 'error', message: m.long_crazy_peacock_care() };
+    cardCtx.validationError = m.long_crazy_peacock_care();
   } finally {
     cardCtx.isSubmitting = false;
   }
@@ -334,7 +332,7 @@ function getDirections() {
       <ValidationError />
       <div class="flex flex-row items-baseline justify-between">
         <h3 class="text-lg font-bold uppercase text-primary">
-          {m.small_mellow_cod_boost()}
+          {m.smart_crazy_cuckoo_play()}
         </h3>
         <button
           class="btn btn-outline btn-primary uppercase"
@@ -382,7 +380,7 @@ function getDirections() {
           <button
             class="btn btn-outline border-base-100 uppercase hover:bg-base-200 hover:text-base-content"
             onclick={() => (cardCtx.state.mode = FeatureCardMode.Display)}>
-            {m.safe_tidy_skunk_arrive()}
+            {m.cancel()}
           </button>
           <button
             class="btn btn-outline btn-primary uppercase"

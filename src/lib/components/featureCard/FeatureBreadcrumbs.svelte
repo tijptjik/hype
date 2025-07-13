@@ -17,7 +17,7 @@ import { clickOutside } from '$lib/actions';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
-import { getOmniContext } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte';
 // ENUMS
 import { FeatureCardMode } from '$lib/enums';
 // TYPES
@@ -25,7 +25,7 @@ import type { Feature, UserContributedFeature, ResourceContext } from '$lib/type
 
 // CONTEXT
 const cardCtx = getFeatureCardContext();
-const omniCtx = getOmniContext();
+const omniCtx = getOmniCtx();
 const appCtx = getAppCtx();
 
 // STATE : PROPS
@@ -129,7 +129,7 @@ function showLayerSelectionModal() {
                 class="btn btn-ghost btn-sm h-auto w-full justify-start gap-2 rounded-t-none rounded-br-none p-2 pl-3 font-mono font-thin text-neutral-content hover:bg-base-300 active:scale-100 active:bg-base-200"
                 onclick={() => (cardCtx.state.mode = FeatureCardMode.AddPhoto)}>
                 <Icon src={Camera} class="h-5 w-5 text-primary" theme="solid" />
-                {m.mushy_level_slug_pray()}
+                {m.honest_fluffy_falcon_enjoy()}
               </button>
             </div>
           {/if}

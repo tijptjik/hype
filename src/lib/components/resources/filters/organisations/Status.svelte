@@ -30,7 +30,7 @@ const statusFilters: Record<
   }
 > = {
   isPublished: {
-    label: m.yummy_ornate_snail_bend(),
+    label: m.published(),
     falseLabel: m.filters__not(),
     trueLabel: m.filters__is()
   },

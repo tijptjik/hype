@@ -3,8 +3,8 @@
 import Icon from '$lib/components/common/Icon.svelte';
 import { Star, Check, PencilSquare } from '@steeze-ui/heroicons';
 // I18N
-import { getI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
+import { getI18n } from '$lib/i18n';
 // SERVICES
 import { updateNewFeatureProperty } from '$lib/client/services/property';
 // CONTEXT
@@ -102,7 +102,7 @@ function handleGradeSelect(newGrade: number) {
           class="input input-bordered w-full bg-black caret-white focus:outline-none"
           bind:value={title}
           bind:this={titleInput}
-          placeholder="Enter title..."
+          placeholder={m.fluffy_wide_ladybug_file()}
           onkeydown={(e) => {
             e.stopPropagation();
             if (e.key === 'Enter') {

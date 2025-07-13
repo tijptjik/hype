@@ -53,7 +53,7 @@ let panelProps: PanelProps = $derived({
 
 <Panel {...panelProps} bind:panelContainer>
   <div class="flex h-full flex-col">
-    <AdminHeader title={m.settings_admin_title()} {...panelProps} />
+    <AdminHeader title={m.menu_admin()} {...panelProps} />
     <div class="flex-grow-1 flex h-full flex-col justify-between">
       <div class="flex-grow-1 flex h-full flex-col overflow-hidden overscroll-none">
         <div class="flex-grow-1 flex min-h-0 flex-col">
@@ -66,24 +66,24 @@ let panelProps: PanelProps = $derived({
                 resource={organisation}
                 selectedClass="bg-primary"
                 isSelected={selectedOrganisations.includes(organisation.id)}
-                onNavigate={(e) => {
+                onNavigate={async (e) => {
                   if (
                     panelProps.active?.resourceType ==
                       FirstClassResource.organisation &&
                     panelProps.active?.resourceId == organisation.id
                   ) {
-                    appCtx.toggleOrganisation(organisation.id);
+                    await appCtx.toggleOrganisation(organisation.id);
                   } else {
-                    navigateOnAdminById(
+                    await navigateOnAdminById(
                       adminCtx,
                       FirstClassResource.organisation,
                       organisation.id
                     );
                   }
                 }}
-                onToggle={(e) => {
+                onToggle={async (e) => {
                   e.stopPropagation();
-                  appCtx.toggleOrganisation(organisation.id);
+                  await appCtx.toggleOrganisation(organisation.id);
                 }}
                 resourceType={FirstClassResource.organisation}
                 {...panelProps} />

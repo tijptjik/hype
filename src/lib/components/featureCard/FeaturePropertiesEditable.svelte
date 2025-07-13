@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Check, PencilSquare } from '@steeze-ui/heroicons';
@@ -253,7 +255,7 @@ function handleEditCancel(propertyId: string) {
                   type="text"
                   class="input input-sm input-bordered w-full"
                   value={getUniversalSpecifierValue(appCtx, propertyId)}
-                  placeholder="Enter value..."
+                  placeholder={m.key_full_raven_wish()}
                   onchange={(e) =>
                     handleCategoricalChange(
                       appCtx,

@@ -1,5 +1,6 @@
 <script lang="ts">
 // I18N
+import { m } from '$lib/i18n';
 import { getI18n } from '$lib/i18n';
 // TYPES
 import type { Property } from '$lib/types';
@@ -16,7 +17,9 @@ let { property, value, userPreferences, onChange, placeholder }: Props = $props(
 
 // STATE : DERIVED
 let computedPlaceholder = $derived(
-  placeholder || getI18n(property, 'placeholder', userPreferences) || 'Enter value...'
+  placeholder ||
+    getI18n(property, 'placeholder', userPreferences) ||
+    m.key_full_raven_wish()
 );
 </script>
 

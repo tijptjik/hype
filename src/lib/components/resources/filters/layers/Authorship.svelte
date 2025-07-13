@@ -45,7 +45,7 @@ const authorshipFilters: Record<
     trueLabel: m.filters__has()
   },
   hasDescription: {
-    label: m.admin__forms_common_description(),
+    label: m.feature__description(),
     falseLabel: m.filters__no(),
     trueLabel: m.filters__has()
   }

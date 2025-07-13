@@ -184,7 +184,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
       <div class="font-mono text-xs uppercase tracking-wider text-neutral-content">
         {#if 'isPublished' in entity && entity.isPublished !== undefined}
           {#if entity.isPublished}
-            <span class="text-ok">{m.long_zippy_felix_mix()}</span>
+            <span class="text-ok">{m.published()}</span>
           {:else}
             <span class="text-error">{m.weak_super_guppy_nail()}</span>
           {/if}

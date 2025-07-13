@@ -37,13 +37,13 @@ let acceptActions = [
     onHoverClass: 'text-rose-300'
   },
   {
-    label: m.loose_knotty_cow_propel(),
+    label: m.forms__unpublish(),
     icon: EyeSlash as IconSource,
     action: 'setUnpublished',
     onHoverClass: 'text-rose-300'
   },
   {
-    label: m.white_cozy_goldfish_heal(),
+    label: m.whole_deft_penguin_enchant(),
     icon: Trash as IconSource,
     action: 'setArchived',
     onHoverClass: 'text-rose-300'

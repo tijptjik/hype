@@ -115,7 +115,7 @@ async function translateFields(event: Event, source: Locale, target: Locale) {
       {#if isClearAllVisible && onClear}
         <button
           class="text-md focus:outline- focus:outline-neutral-conten btn btn-circle btn-ghost text-glass-rejected hover:bg-transparent hover:text-glass-rejected/80 focus:border-none focus:ring-2 focus:ring-primary"
-          title={`Clear all values for ${targetLocale.toUpperCase()}`}
+          title={`${m.stale_that_niklas_fetch()} ${targetLocale.toUpperCase()}`}
           disabled={loadingLocale !== null}
           onclick={(e) => onClear(e)}>
           {#if loadingLocale === targetLocale}

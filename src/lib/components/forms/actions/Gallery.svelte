@@ -63,7 +63,7 @@ $effect(() => {
       {:else}
         <Icon src={XMark} class="h-6 w-6 stroke-[2px]" />
         <span class="hidden whitespace-nowrap text-nowrap md:block"
-          >{m.long_level_kestrel_pet()}</span>
+          >{m.moving_each_orangutan_care()}</span>
       {/if}
     </button>
   {/if}

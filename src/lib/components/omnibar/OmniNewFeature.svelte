@@ -2,10 +2,10 @@
 // I18N
 import { m } from '$lib/i18n';
 // CONTEXT
-import { getOmniContext } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte';
 import { getAppCtx } from '$lib/context/app.svelte';
 // CONTEXT
-const omniCtx = getOmniContext();
+const omniCtx = getOmniCtx();
 const appCtx = getAppCtx();
 
 let activeLayers = $derived(appCtx.state.prisms.layer);

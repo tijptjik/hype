@@ -75,9 +75,7 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
         actionProps.removeModeLocale = locale;
       }}>
       <Icon src={XMark} class="h-4 w-4" />
-      {actionProps.removeMode
-        ? m.green_short_pelican_fall()
-        : m.watery_trite_shrimp_clip()}
+      {actionProps.removeMode ? m.cancel() : m.watery_trite_shrimp_clip()}
     </button>
   </div>
   {#key `${fieldRoot}-${fieldIndex}-${fieldKey}-${locale}`}
@@ -121,7 +119,7 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
                     e.stopPropagation();
                     actionProps.confirmingId = undefined;
                   }}>
-                  {m.green_short_pelican_fall()}
+                  {m.cancel()}
                 </button>
                 <button
                   class="btn btn-sm bg-glass-rejected hover:bg-glass-rejected/80"

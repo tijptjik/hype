@@ -34,7 +34,7 @@ let { image }: Props = $props();
       onclick={(e) => {
         imageCtx.handleCancelDelete(e, image);
       }}>
-      {m.green_short_pelican_fall()}
+      {m.cancel()}
     </button>
   </div>
 </div>

@@ -16,9 +16,7 @@ const appCtx = getAppCtx();
 
 // STATE
 let inputElement: HTMLInputElement | null = $state(null);
-let editedAttribution = $state(
-  appCtx.getUser()?.attribution || m.tidy_level_hawk_belong()
-);
+let editedAttribution = $state(appCtx.getUser()?.attribution || m.anonymous());
 let originalAttribution = $state('');
 let editing = $state(!(appCtx.getUser()?.attribution || '').trim());
 
@@ -28,7 +26,7 @@ function handleEditMode(e: Event) {
   e.stopPropagation();
   originalAttribution = editedAttribution;
   // Clear attribution if it's the placeholder value
-  if (editedAttribution === m.tidy_level_hawk_belong()) {
+  if (editedAttribution === m.anonymous()) {
     editedAttribution = '';
   }
   editing = true;

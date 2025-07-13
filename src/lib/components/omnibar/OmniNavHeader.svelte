@@ -16,7 +16,7 @@ import type { Feature } from '$lib/types';
 
 // CONTEXT
 const appCtx = getAppCtx();
-const omniCtx = getOmniContext();
+const omniCtx = getOmniCtx();
 
 // DERIVED -- Titles
 let collectionTitle = $derived(

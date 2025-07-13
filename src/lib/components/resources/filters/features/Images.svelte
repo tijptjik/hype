@@ -23,12 +23,12 @@ const filterConfig: Record<
     trueLabel: m.awful_ok_polecat_rise()
   },
   isOneImagePublished: {
-    label: m.long_zippy_felix_mix(),
+    label: m.published(),
     falseLabel: m.royal_civil_goldfish_fetch(),
     trueLabel: m.awful_ok_polecat_rise()
   },
   isAllImagePublished: {
-    label: m.long_zippy_felix_mix(),
+    label: m.published(),
     falseLabel: m.filters__not_all(),
     trueLabel: m.filters__all()
   }

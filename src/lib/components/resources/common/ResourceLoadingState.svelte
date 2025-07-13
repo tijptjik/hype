@@ -4,5 +4,4 @@
   role="status"
   aria-live="polite">
   <span class="loading loading-ring loading-lg text-primary" aria-hidden="true"></span>
-  <span class="sr-only">Loading…</span>
 </div>

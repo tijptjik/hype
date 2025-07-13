@@ -6,10 +6,12 @@ import { m } from '$lib/i18n';
 // COMPONENTS
 import OmniSection from './OmniSection.svelte';
 // CONTEXT
-import { getOmniContext } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte';
+// ENUMS
+import { OmniCollection } from '$lib/enums';
 
 // CONTEXT
-const omniCtx = getOmniContext();
+const omniCtx = getOmniCtx();
 </script>
 
 <div
@@ -20,14 +22,14 @@ const omniCtx = getOmniContext();
   {#if Object.values(omniCtx.searchResults).every((group) => group.length === 0)}
     <div class="p-4 text-center text-base-content/60">{m.omni__no_results()}</div>
   {:else}
-    {#if omniCtx.searchResults.features.length > 0}
-      <OmniSection title={m.omni__title_features()} group="features" />
+    {#if omniCtx.searchResults.feature.length > 0}
+      <OmniSection collectionType={OmniCollection.feature} />
     {/if}
-    {#if omniCtx.searchResults.neighbourhoods.length > 0}
-      <OmniSection title={m.omni__title_neighbourhoods()} group="neighbourhoods" />
+    {#if omniCtx.searchResults.neighbourhood.length > 0}
+      <OmniSection collectionType={OmniCollection.neighbourhood} />
     {/if}
-    {#if omniCtx.searchResults.walks.length > 0}
-      <OmniSection title={m.omni__title_walks()} group="walks" />
+    {#if omniCtx.searchResults.walk.length > 0}
+      <OmniSection collectionType={OmniCollection.walk} />
     {/if}
   {/if}
 </div>

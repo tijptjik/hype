@@ -8,14 +8,14 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { MagnifyingGlass } from '@steeze-ui/heroicons';
 // TRANSITIONS
 import { fade } from 'svelte/transition';
-import { getOmniContext } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte';
 // ACTIONS
 import { clickOutside, focusOnSlash, handleEscape, selectOnEnter } from '$lib/actions';
 // COMPONENTS
 import OmniResults from '$lib/components/omnibar/OmniResults.svelte';
 import OmniNewFeature from '$lib/components/omnibar/OmniNewFeature.svelte';
 // CONTEXT
-const omniCtx = getOmniContext();
+const omniCtx = getOmniCtx();
 
 // EFFECTS
 
