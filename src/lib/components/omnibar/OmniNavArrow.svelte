@@ -3,11 +3,11 @@
 import Icon from '$lib/components/common/Icon.svelte';
 import { ChevronLeft, ChevronRight } from '@steeze-ui/heroicons';
 // CONTEXT
-import { getOmniContext } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte';
 import { getAppCtx } from '$lib/context/app.svelte';
 
 // CONTEXT
-const omniCtx = getOmniContext();
+const omniCtx = getOmniCtx();
 const appCtx = getAppCtx();
 
 // PROPS
@@ -30,10 +30,7 @@ let currentIndex = $derived(
   disabled={direction === 'left'
     ? currentIndex <= 0
     : (appCtx.state.active.collection?.items.length || 0) - 1 <= currentIndex}
-  onclick={() =>
-    direction === 'left'
-      ? appCtx.navPrevious({ isCardOpen: omniCtx.state.isCardOpen })
-      : appCtx.navNext({ isCardOpen: omniCtx.state.isCardOpen })}>
+  onclick={() => (direction === 'left' ? omniCtx.navPrevious() : omniCtx.navNext())}>
   <Icon
     src={direction === 'left' ? ChevronLeft : ChevronRight}
     class="h-5 w-5 group-hover:text-neutral-content {(

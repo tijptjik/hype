@@ -1,23 +1,17 @@
 <script lang="ts">
-// CONTEXT
-import { getOmniContext } from '$lib/context/omni.svelte';
 // COMPONENTS
 import OmniHeader from './OmniHeader.svelte';
 import OmniEntries from './OmniSectionEntries.svelte';
 
 // TYPES
-import type { OmniGroup } from '$lib/types';
-
-// CONTEXT
-const omniCtx = getOmniContext();
+import type { OmniCollection } from '$lib/enums';
 
 // PROPS
 type Props = {
-  title: string;
-  group: OmniGroup;
+  collectionType: OmniCollection;
 };
 
-let { title, group }: Props = $props();
+let { collectionType }: Props = $props();
 </script>
 
 <div class="flex flex-shrink-0 select-none flex-col pb-2 pt-2">
