@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
-import { untrack } from 'svelte';
+import { untrack, onDestroy } from 'svelte';
+// I18N
+import { m } from '$lib/i18n';
 // SERVICES
 import { getImageCtx } from '$lib/context/image.svelte';
 import { getURLfromImage } from '$lib/client/services/image';
@@ -39,7 +41,7 @@ let {
   showLoading = true,
   showError = true,
   showBackground = true,
-  transitionDuration = 300,
+  transitionDuration = 500,
   transformation,
   children
 }: Props = $props();
@@ -50,6 +52,7 @@ let overlayImage = $state<DisplayImage | null>(null);
 let isTransitioning = $state(false);
 let overlayOpacity = $state(0);
 let animationId = $state<number | null>(null);
+let timeoutId = $state<number | null>(null);
 
 // Generate alt text
 let altText = $derived(baseImage ? `Image ${baseImage.id}` : 'No image');
@@ -75,49 +78,51 @@ function getDisplayImageFromActiveImage(
 }
 
 // Determine what should be displayed based on current state
-function getDisplayImage(): DisplayImage | null {
+function getDisplayImage(
+  viewerState: string,
+  activeImage: Image | null,
+  activePreview: any
+): DisplayImage | null {
   // Priority 1: Show preview during upload states
-  if (imageCtx.viewerState === 'previewUploading' && imageCtx.activePreview?.preview) {
-    return getDisplayImageFromPreview(imageCtx.activePreview);
+  if (viewerState === 'previewUploading' && activePreview?.preview) {
+    return getDisplayImageFromPreview(activePreview);
   }
   // Priority 2: Show preview during replacement
-  if (
-    imageCtx.viewerState === 'previewReplacement' &&
-    imageCtx.activePreview?.preview
-  ) {
-    return getDisplayImageFromPreview(imageCtx.activePreview);
+  if (viewerState === 'previewReplacement' && activePreview?.preview) {
+    return getDisplayImageFromPreview(activePreview);
   }
   // Priority 3: Show preview during transition state (replacement upload complete but not loaded)
-  if (imageCtx.viewerState === 'transition' && imageCtx.activePreview?.preview) {
-    return getDisplayImageFromPreview(imageCtx.activePreview);
+  if (viewerState === 'transition' && activePreview?.preview) {
+    return getDisplayImageFromPreview(activePreview);
   }
   // Priority 4: Show active image
-  if (imageCtx.activeImage) {
-    return getDisplayImageFromActiveImage(imageCtx.activeImage, transformation);
+  if (activeImage) {
+    return getDisplayImageFromActiveImage(activeImage, transformation);
   }
   // Priority 5: No image
   return null;
 }
 
-// Initialize display on mount
-$effect(() => {
-  const displayImage = getDisplayImage();
-  if (displayImage && !baseImage) {
-    baseImage = displayImage;
-  }
-});
-
 // Simple crossfade transition logic
 $effect(() => {
-  // Track these reactive values
-  const viewerState = imageCtx.viewerState;
+  // Only track the inputs that should trigger a new transition
   const activeImage = imageCtx.activeImage;
   const activePreview = imageCtx.activePreview;
 
   untrack(() => {
-    const newDisplayImage = getDisplayImage();
-    // No display image, clear everything
+    const viewerState = imageCtx.viewerState; // Get viewerState inside untrack
+    const newDisplayImage = getDisplayImage(viewerState, activeImage, activePreview);
+
+    // No display image - clear everything
     if (!newDisplayImage) {
+      if (animationId !== null) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
       baseImage = null;
       overlayImage = null;
       isTransitioning = false;
@@ -125,56 +130,71 @@ $effect(() => {
       return;
     }
 
-    // Same image, no transition needed
-    if (newDisplayImage.id === baseImage?.id) {
-      return;
-    }
-
-    // First image load, set directly without transition
+    // No base image - set directly (first load)
     if (!baseImage) {
       baseImage = newDisplayImage;
-      overlayImage = null;
-      isTransitioning = false;
-      overlayOpacity = 0;
       return;
     }
 
-    // Cancel any running animation
+    // Same image - no change needed
+    if (newDisplayImage.id === baseImage.id) {
+      return;
+    }
+
+    // Different image - start crossfade
+    // Cancel any existing animation and timeout
     if (animationId !== null) {
       cancelAnimationFrame(animationId);
       animationId = null;
     }
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
 
-    // Start crossfade transition
+    // Set up crossfade: overlayImage is the NEW image fading IN
     overlayImage = newDisplayImage;
     isTransitioning = true;
     overlayOpacity = 0;
 
-    // Animate crossfade
+    // Simple crossfade animation
     const startTime = performance.now();
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / transitionDuration, 1);
 
-      // Smooth easing
-      overlayOpacity = 1 - Math.pow(1 - progress, 3);
+      overlayOpacity = progress;
 
       if (progress < 1) {
         animationId = requestAnimationFrame(animate);
       } else {
-        // Transition complete
+        // Complete: overlayImage becomes the new baseImage
         baseImage = overlayImage;
-        overlayImage = null;
-        isTransitioning = false;
-        overlayOpacity = 0;
-        animationId = null;
+        timeoutId = setTimeout(() => {
+          overlayImage = null;
+          isTransitioning = false;
+          overlayOpacity = 0;
+          animationId = null;
+          timeoutId = null;
+        }, 500);
       }
     };
+
     animationId = requestAnimationFrame(animate);
   });
 });
 
-// Preload adjacent images for smooth navigation - fix race conditions
+// Cleanup on component destroy
+onDestroy(() => {
+  if (animationId !== null) {
+    cancelAnimationFrame(animationId);
+  }
+  if (timeoutId !== null) {
+    clearTimeout(timeoutId);
+  }
+});
+
+// Preload adjacent images for smooth navigation
 $effect(() => {
   const activeImage = imageCtx.activeImage;
 
@@ -247,7 +267,7 @@ function getImageOpacity(
     <div class="absolute inset-0">
       <Picture
         src={overlayImage?.src || ''}
-        alt={`Transitioning to ${overlayImage.id}`}
+        alt={m.last_born_anaconda_cuddle() + ' ' + overlayImage.id}
         {layout}
         showLoading={false}
         {showError}
