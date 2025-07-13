@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { page } from '$app/state';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // I18N
@@ -30,8 +32,7 @@ import {
   ImageContextResourceExtended
 } from '$lib/enums';
 // TYPES
-import type { Task, PageProps, Organisation, Project, Id } from '$lib/types';
-import { untrack } from 'svelte';
+import type { Task, PageProps, Id } from '$lib/types';
 
 let pageProps: PageProps<Task> = $props();
 let task = $derived(pageProps.data.task);
@@ -41,17 +42,21 @@ const adminCtx = getAdminCtx();
 adminCtx.setFacet('core', pageProps.data.task.id, FirstClassResource.task);
 
 // HEADER SETUP
-$effect(() => {
-  const facetTabs = new Map();
-  facetTabs.set('core', 'Task');
+const facetTabs = new Map();
+facetTabs.set('core', m.born_plane_javelina_strive());
 
-  untrack(() => adminCtx.setHeaderForEntity(`Task #${task.id}`, TaskIcon, facetTabs));
-});
+adminCtx.setHeaderForEntity(
+  // svelte-ignore state_referenced_locally
+  `${m.born_plane_javelina_strive()} #${task.id}`,
+  TaskIcon,
+  facetTabs
+);
 </script>
 
 <!-- LAYOUT -->
 {#await adminCtx.appCtx.getHierarchyForTask(task) then { organisation, project }}
   <ImageProvider
+    {page}
     isAdminMode={true}
     context={{
       ctxType: ImageContextResource.feature,

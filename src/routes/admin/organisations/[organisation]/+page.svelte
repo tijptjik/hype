@@ -56,7 +56,7 @@ const FIELDS: Record<string, FormField> = {
       isNested: false
     },
     description: {
-      label: m.admin__forms_common_description(),
+      label: m.feature__description(),
       component: 'TextareaField',
       isArray: false,
       isTranslated: true,
@@ -158,7 +158,7 @@ let headerActions = $derived(
 // HEADER SETUP
 $effect(() => {
   const facetTabs = new Map();
-  facetTabs.set('core', m.organisation__core());
+  facetTabs.set('core', m.resources__main());
   if (adminCtx.activeResourceRef !== 'new') {
     facetTabs.set('images', m.organisation__images());
   }
@@ -222,6 +222,7 @@ $effect(() => {
         {:else if adminCtx.activeFacet === 'images'}
           <div class="flex- flex h-full">
             <ImageProvider
+              {page}
               isAdminMode={true}
               {image}
               context={{

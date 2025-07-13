@@ -15,7 +15,7 @@ import Dropzone from 'svelte-file-dropzone';
 // ENUMS
 import { FirstClassResource, ImageContextResource } from '$lib/enums';
 // TYPES
-import type { Image, ImageUploadCtx, Id, Feature } from '$lib/types';
+import type { Image, ImageUploadCtx, Feature } from '$lib/types';
 
 type BatchUploadResult = {
   file: File;
@@ -168,11 +168,11 @@ async function processSingleUpload(result: BatchUploadResult, index: number) {
     uploadResults[index] = {
       ...result,
       status: 'error',
-      error: 'Could not extract feature ID from filename'
+      error: m.error_message__failed_to_extract_feature_id_from_image()
     };
     console.error(
       `Error for ${result.file.name}:`,
-      'Could not extract feature ID from filename'
+      m.error_message__failed_to_extract_feature_id_from_image()
     );
     return;
   }
@@ -259,13 +259,14 @@ let pendingCount = $derived(uploadResults.filter((r) => r.status === 'pending').
         disabled={isUploading}>
         <Icon src={CloudArrowUp} class="mx-auto h-12 w-12 text-base-content/50" />
         <div class="space-y-2">
-          <p class="text-lg font-medium">Drop images to upload</p>
+          <p class="text-lg font-medium">{m.maroon_teary_warbler_nourish()}</p>
           <p class="text-sm text-base-content/70">
-            Feature ID will be extracted from filename
+            {m.teal_dizzy_finch_file()}
           </p>
           {#if isUploading}
             <p class="text-sm text-warning">
-              Uploading batch {currentBatch} of {totalBatches}...
+              {m.flat_close_slug_bubble()}
+              {currentBatch} / {totalBatches}...
             </p>
           {/if}
         </div>
@@ -277,22 +278,22 @@ let pendingCount = $derived(uploadResults.filter((r) => r.status === 'pending').
       <div class="flex-none" in:fade={{ duration: 300 }}>
         <div class="card bg-glass-result">
           <div class="card-body">
-            <h3 class="card-title text-lg">Upload Progress</h3>
+            <h3 class="card-title text-lg">{m.batch_upload__progress()}</h3>
             <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
               <div class="stat">
-                <div class="stat-title">Success</div>
+                <div class="stat-title">{m.batch_upload__success()}</div>
                 <div class="stat-value text-glass-accepted">{successCount}</div>
               </div>
               <div class="stat">
-                <div class="stat-title">Errors</div>
+                <div class="stat-title">{m.batch_upload__errors()}</div>
                 <div class="stat-value text-glass-rejected">{errorCount}</div>
               </div>
               <div class="stat">
-                <div class="stat-title">Uploading</div>
+                <div class="stat-title">{m.batch_upload__uploading()}</div>
                 <div class="stat-value text-glass-100">{uploadingCount}</div>
               </div>
               <div class="stat">
-                <div class="stat-title">Pending</div>
+                <div class="stat-title">{m.batch_upload__pending()}</div>
                 <div class="stat-value text-glass-100">{pendingCount}</div>
               </div>
             </div>
@@ -304,7 +305,7 @@ let pendingCount = $derived(uploadResults.filter((r) => r.status === 'pending').
     <!-- Upload Results -->
     {#if uploadResults.length > 0}
       <div class="flex-1" in:fade={{ duration: 300, delay: 200 }}>
-        <h3 class="mb-4 text-lg font-medium">Upload Results</h3>
+        <h3 class="mb-4 text-lg font-medium">{m.batch_upload__results()}</h3>
         <div class="space-y-2">
           {#each uploadResults as result, index (result.file.name)}
             <div
@@ -326,7 +327,7 @@ let pendingCount = $derived(uploadResults.filter((r) => r.status === 'pending').
                 <div>
                   <div class="font-medium">{result.file.name}</div>
                   <div class="text-sm text-base-content/70">
-                    Feature ID: {result.featureId || 'Not found'}
+                    {m.batch_upload__feature_id()}: {result.featureId || 'Not found'}
                   </div>
                   {#if result.error}
                     <div class="text-sm text-error">{result.error}</div>

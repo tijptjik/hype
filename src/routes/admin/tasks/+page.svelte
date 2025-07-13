@@ -66,7 +66,7 @@ function navigateToNextTask() {
     const nextTask = entities[i];
     if (nextTask?.images?.[0]) {
       selectedTask = nextTask;
-      selectedImage = nextTask.images?.[0] as ImageDBBasic;
+      selectedImage = nextTask.images?.[0] as unknown as ImageDBBasic;
       selectedTaskIndex = i;
       updateRowFocus(i);
       return;
@@ -82,7 +82,7 @@ function navigateToPreviousTask() {
     const prevTask = entities[i];
     if (prevTask?.images?.[0]) {
       selectedTask = prevTask;
-      selectedImage = prevTask.images?.[0] as ImageDBBasic;
+      selectedImage = prevTask.images?.[0] as unknown as ImageDBBasic;
       selectedTaskIndex = i;
       updateRowFocus(i);
       return;

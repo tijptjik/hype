@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // COMPONENTS
@@ -26,7 +28,7 @@ const adminCtx = getAdminCtx();
 adminCtx.setFacet(false, false, FirstClassResource.hub);
 
 // HEADER SETUP
-adminCtx.setHeaderForIndex('Hubs', HubIcon);
+adminCtx.setHeaderForIndex(m.hub__title(), HubIcon);
 
 // STATE
 let entities: Hub[] = $derived(

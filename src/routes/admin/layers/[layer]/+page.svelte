@@ -56,7 +56,7 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
       isNested: false
     },
     description: {
-      label: m.admin__forms_common_description(),
+      label: m.feature__description(),
       component: 'TextareaField',
       isArray: false,
       isTranslated: true,
@@ -111,7 +111,7 @@ let title = $derived(
 // HEADER SETUP
 $effect(() => {
   const facetTabs = new Map();
-  facetTabs.set('core', m.layer__core());
+  facetTabs.set('core', m.resources__main());
 
   untrack(() => adminCtx.setHeaderForEntity(title, LayerIcon, facetTabs));
 
