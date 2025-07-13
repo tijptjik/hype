@@ -1099,6 +1099,34 @@ export class AppCtx {
     }
   };
 
+  // ═══════════════════════
+  // PRISMS
+  // ═══════════════════════
+
+  //* Removes organisation from prisms if they are no longer in the resources.
+  // This should rarely happen as we always fetch all organisations. But it could happen in cases where an organisation is unpublished or deleted.
+  syncOrganisationPrisms = () => {
+    const filteredOrganisations = this.state.prisms.organisation.filter(
+      (organisation) => {
+        return this.state.resources.organisation.some((o) => o.id === organisation);
+      }
+    );
+
+    // Only update if the array actually changed
+    if (
+      filteredOrganisations.length !== this.state.prisms.organisation.length ||
+      !filteredOrganisations.every(
+        (id, index) => id === this.state.prisms.organisation[index]
+      )
+    ) {
+      this.state.prisms.organisation = filteredOrganisations;
+    }
+  };
+
+  //* Removes project from prisms if they are no longer in the resources.
+  // This typically is required when an organisation prism is set, and a
+  // previously active prism is no longer valid given that the related
+  // organisation is not selected as a prism.
   syncProjectPrisms = () => {
     const filteredProjects = this.state.prisms.project.filter((project) => {
       return this.state.resources.project.some((p) => p.id === project);
@@ -1113,6 +1141,10 @@ export class AppCtx {
     }
   };
 
+  //* Removes layer from prisms if they are no longer in the resources.
+  // This typically is required when a organisation or project prism is set,
+  // and a previously active prism is no longer valid given that the related
+  // project or organisation is not selected as a prism.
   syncLayerPrisms = () => {
     const filteredLayers = this.state.prisms.layer.filter((layer) => {
       return this.state.resources.layer.some((l) => l.id === layer);
@@ -1133,7 +1165,15 @@ export class AppCtx {
     }
   };
 
-  postLayerMutation = async (): Promise<void> => {
+  postLayerMutation = async (isCascading: boolean = true): Promise<void> => {
+    // Auto-select single layer if there's only one available and none selected
+    if (
+      this.state.resources.layer.length === 1 &&
+      this.state.prisms.layer.length === 0
+    ) {
+      this.toggleLayer(this.state.resources.layer[0].id);
+    }
+
     const currentLayerIds = new Set(this.state.prisms.layer);
     const existingFilterLayerIds = new Set(
       Object.keys(this.state.filters.feature.properties || {})
@@ -1155,10 +1195,18 @@ export class AppCtx {
       }
     });
 
-    // Only refresh features if user is authenticated
-    if (this.user?.id) {
-      await this.refreshFeatures();
-      await this.refreshTasks();
+    if (isCascading) {
+      // Only refresh features if user is authenticated
+      if (this.user?.id) {
+        await this.refreshFeatures();
+        if (this.isAdmin()) {
+          await this.refreshTasks();
+        }
+      }
+      // Only refresh if we have a username in the profile context
+      if (this.state.panels.profile.ctx?.username) {
+        await this.refreshUserProfile();
+      }
     }
   };
 
@@ -1173,7 +1221,9 @@ export class AppCtx {
     if (this.isAdmin() && this.user && 'preferences' in this.user) {
       const isPrimaryPanelCollapsed =
         (this.user as CurrentUser).preferences?.admin?.isPrimaryPanelCollapsed ?? false;
-      this.state.isPanelOpen.admin = !isPrimaryPanelCollapsed;
+      if (!isPrimaryPanelCollapsed) {
+        this.openPanel(Panel.admin, false);
+      }
     }
   };
 
@@ -1378,11 +1428,7 @@ export class AppCtx {
   };
 
   // Helper method to fetch resource by ID with cache miss handling
-  private fetchResourceById = async <T>(
-    resource: FirstClassResource,
-    ref: Id
-  ): Promise<T | undefined> => {
-    // Guard against undefined or invalid IDs
+  private fetchResourceById = async (resource: FirstClassResource, ref: Id) => {
     if (!ref || ref === 'undefined') {
       return undefined;
     }
@@ -1409,10 +1455,7 @@ export class AppCtx {
     if (org) return org;
 
     if (fetchOnCacheMiss) {
-      org = await this.fetchResourceById<Organisation>(
-        FirstClassResource.organisation,
-        id
-      );
+      org = await this.fetchResourceById(FirstClassResource.organisation, id);
       if (org) {
         this.cache.organisation.set(id, org);
         return org;
@@ -1431,7 +1474,7 @@ export class AppCtx {
     if (project) return project;
 
     if (fetchOnCacheMiss) {
-      project = await this.fetchResourceById<Project>(FirstClassResource.project, id);
+      project = await this.fetchResourceById(FirstClassResource.project, id);
       if (project) {
         this.cache.project.set(id, project);
         return project;
@@ -1450,7 +1493,7 @@ export class AppCtx {
     if (layer) return layer;
 
     if (fetchOnCacheMiss) {
-      layer = await this.fetchResourceById<Layer>(FirstClassResource.layer, id);
+      layer = await this.fetchResourceById(FirstClassResource.layer, id);
       if (layer) {
         this.cache.layer.set(id, layer);
         return layer;
@@ -1469,7 +1512,7 @@ export class AppCtx {
     if (feature) return feature;
 
     if (fetchOnCacheMiss) {
-      feature = await this.fetchResourceById<Feature>(FirstClassResource.feature, id);
+      feature = await this.fetchResourceById(FirstClassResource.feature, id);
       if (feature) {
         this.cache.feature.set(id, feature);
         this.addFeatureToMap(feature as Feature);
@@ -1500,7 +1543,7 @@ export class AppCtx {
     if (task) return task;
 
     if (fetchOnCacheMiss) {
-      task = await this.fetchResourceById<Task>(FirstClassResource.task, id);
+      task = await this.fetchResourceById(FirstClassResource.task, id);
       if (task) {
         this.cache.task.set(id, task);
         return task;
@@ -1519,7 +1562,7 @@ export class AppCtx {
     if (hub) return hub;
 
     if (fetchOnCacheMiss) {
-      hub = await this.fetchResourceById<Hub>(FirstClassResource.hub, id);
+      hub = await this.fetchResourceById(FirstClassResource.hub, id);
       if (hub) {
         this.cache.hub.set(id, hub);
         return hub;
