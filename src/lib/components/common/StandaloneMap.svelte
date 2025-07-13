@@ -13,7 +13,7 @@ import { Square3Stack3d } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
-import { getOmniContext } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte';
 // MAPLibre STYLES
 import {
   ghosteryEarth,
@@ -26,10 +26,8 @@ import {
   ghosteryRoadsLabelsMinor,
   ghosteryRoadsLabelsMajor
 } from '$lib/map/styles/ghostery';
-// STYLES
-// import '$lib/styles/map.css';
-// CONFIG
-import { MOBILE_MAX_WIDTH } from '$lib/index';
+// ENUMS
+import { Panel } from '$lib/enums';
 // TYPES
 import type { PointLike, LngLatLike, Point } from 'maplibre-gl';
 import type { FeatureFromCollection } from '$lib/types';
@@ -39,7 +37,7 @@ let mapContainer: HTMLDivElement;
 
 // CONTEXT
 const appCtx = getAppCtx();
-const omniCtx = getOmniContext();
+const omniCtx = getOmniCtx();
 
 // STATE
 let lastHorizontalOffset = $state(0);
@@ -159,11 +157,37 @@ onMount(async () => {
             hasReceivedFirstFix = true;
             const { latitude, longitude } = geoLocation.coords;
 
-            appCtx.map?.flyTo({
-              center: [longitude, latitude],
-              zoom: 19,
-              duration: 2500
-            });
+            // Calculate horizontal offset for panels already open
+            const currentHorizontalOffset = appCtx.getHorizontalOffset();
+
+            if (currentHorizontalOffset !== 0) {
+              const originalCenter = { lng: longitude, lat: latitude };
+              const centerInPx = appCtx.map!.project(originalCenter);
+
+              // Apply empirically derived adjustment factor for GPS centering
+              // This accounts for the difference between panel positioning and GPS fix centering
+              const adjustmentFactor = -0.0215;
+              const pixelAdjustment = currentHorizontalOffset * adjustmentFactor;
+
+              const adjustedPoint = new appCtx.maplibre.Point(
+                centerInPx.x + pixelAdjustment,
+                centerInPx.y
+              );
+              const adjustedCenter = appCtx.map!.unproject(adjustedPoint);
+
+              appCtx.map?.flyTo({
+                center: [adjustedCenter.lng, adjustedCenter.lat],
+                zoom: 19,
+                duration: 2500
+              });
+            } else {
+              // No offset needed, center normally
+              appCtx.map?.flyTo({
+                center: [longitude, latitude],
+                zoom: 19,
+                duration: 2500
+              });
+            }
           }
         },
         (error) => {
@@ -193,7 +217,15 @@ onMount(async () => {
     if (target.dataset.type === 'marker') {
       const featureId = target.dataset.featureId;
       if (!featureId) return;
-      omniCtx.handleFeatureSelection(appCtx, featureId, { openCard: true });
+
+      // If card is already open, disable automatic centering to let FeaturePortal handle animation
+      const isCardAlreadyOpen = omniCtx.state.isCardOpen;
+      omniCtx.handleFeatureSelection(featureId, {
+        focus: !isCardAlreadyOpen, // Don't auto-center if card is already open,
+        navOptions: {
+          paramsToDrop: ['imageId']
+        }
+      });
     } else {
       // Priority 1: Close feature card if open
       if (omniCtx.state.isCardOpen) {
@@ -204,7 +236,7 @@ onMount(async () => {
         omniCtx.closeTray();
       }
       // Priority 3: Close panels if open
-      else if (Object.values(appCtx.state.isPanelOpen).some((panel) => panel)) {
+      else if (appCtx.isLeftPanelOpen() || appCtx.isRightPanelOpen()) {
         appCtx.closeAllPanels();
       }
     }
@@ -226,37 +258,23 @@ watch(
 );
 
 // STATE : DERIVED
-let horizontalOffset = $derived(() => {
-  const { filters, prisms, stars, settings } = appCtx.state.isPanelOpen;
-  const leftPanelOpen = prisms || stars;
-  const rightPanelOpen = filters || settings;
-  if (window.innerWidth < MOBILE_MAX_WIDTH) {
-    return 0;
-  }
-  return leftPanelOpen && rightPanelOpen
-    ? 0
-    : leftPanelOpen
-      ? 420 / 2
-      : rightPanelOpen
-        ? -420 / 2
-        : 0;
-});
+let horizontalOffset = $derived(appCtx.getHorizontalOffset());
 
 // Ensure that the center of the map is in the center of the viewport,
 // even after a panel is triggered.
 $effect(() => {
-  if (horizontalOffset() !== lastHorizontalOffset && appCtx.map && !isAnimating) {
+  if (horizontalOffset !== lastHorizontalOffset && appCtx.map && !isAnimating) {
     isAnimating = true;
     let coordinates = appCtx.map!.getCenter();
     const centerInPx: Point = appCtx.map!.project(coordinates);
     const newPoint: PointLike = new appCtx.maplibre.Point(
       centerInPx.x +
-        (horizontalOffset() === 0 ? lastHorizontalOffset : -horizontalOffset()),
+        (horizontalOffset === 0 ? lastHorizontalOffset : -horizontalOffset),
       centerInPx.y
     );
     const newCenter: LngLatLike = appCtx.map!.unproject(newPoint);
 
-    lastHorizontalOffset = horizontalOffset();
+    lastHorizontalOffset = horizontalOffset;
 
     // Set up one-time event listener for when animation completes
     const onMoveEnd = () => {
@@ -285,12 +303,12 @@ $effect(() => {
   class="map absolute inset-0 overflow-hidden rounded-2xl caret-transparent"
   data-testid="map"
   bind:this={mapContainer}>
-  {#if appCtx.user && appCtx.map && appCtx.state.resources.layer.length > 0 && !appCtx.state.prisms.layer.length && !appCtx.state.isPanelOpen.prisms}
+  {#if appCtx.user && appCtx.map && appCtx.state.resources.layer.length > 0 && !appCtx.state.prisms.layer.length && !appCtx.isPanelOpen(Panel.prisms)}
     <div
       class="pointer-events-none absolute inset-0 z-50 mx-auto flex cursor-pointer items-center justify-center bg-black/70 text-center caret-transparent"
       in:fade={{ duration: 800, delay: 3000, easing: cubicInOut }}
       out:fade={{ duration: 300, easing: cubicInOut }}
-      onclick={() => (appCtx.state.isPanelOpen.prisms = true)}>
+      onclick={() => appCtx.openPanel(Panel.prisms, false)}>
       <div
         class="group pointer-events-auto flex max-w-xs flex-col items-center gap-8 rounded-lg border-2 border-[#4987E2] bg-black p-8 px-8 font-mono shadow-[0_0_15px_rgba(0,0,255,0.5)]">
         <p class="text-lg text-base-content">{m.map__no_markers_without_layers()}</p>
