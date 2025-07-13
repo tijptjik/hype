@@ -23,7 +23,7 @@ import {
   assertPermissionsToCreateFeature
 } from '$lib/api/services/feature';
 // SCHEMA
-import { feature } from '$lib/db/schema/index';
+import { feature, layer } from '$lib/db/schema/index';
 // SERVICES
 import {
   listFeaturesWithImage,
@@ -121,6 +121,23 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
     // ASSERT : Contributor ID is set if not provided
     if (!formData.contributorId && userId) {
       formData.contributorId = userId;
+    }
+
+    // ASSERT : Project ID is derived from layer if empty or missing
+    if (!formData.projectId || formData.projectId === '') {
+      if (formData.layerId) {
+        // Get project ID from layer
+        const layer = await db.query.layer.findFirst({
+          where: (layers, { eq }) => eq(layers.id, formData.layerId)
+        });
+        if (layer?.projectId) {
+          formData.projectId = layer.projectId;
+        } else {
+          return error(400, 'Invalid layer ID or layer has no associated project');
+        }
+      } else {
+        return error(400, 'Both project ID and layer ID are missing');
+      }
     }
 
     const form = (await superValidate(
