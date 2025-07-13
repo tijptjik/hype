@@ -1,4 +1,8 @@
 <script lang="ts">
+// SVELTE
+import { page } from '$app/state';
+// CONTEXT
+import { getOmniCtx } from '$lib/context/omni.svelte';
 // NAVIGATION
 import { navigateOnAdmin } from '$lib/navigation';
 // COMPONENTS
@@ -10,6 +14,9 @@ import { FirstClassResource, ImageContextResource } from '$lib/enums';
 import type { ImageDB, Feature, Organisation, Project, ImageDBBasic } from '$lib/types';
 import type { AppCtx } from '$lib/context/app.svelte';
 import type { AdminCtx } from '$lib/context/admin.svelte';
+
+// CONTEXT
+let omniCtx = getOmniCtx();
 
 type Props = {
   appCtx: AppCtx;
@@ -63,7 +70,7 @@ function handleKeydown(event: KeyboardEvent) {
     if (adminCtx) {
       navigateOnAdmin(adminCtx, FirstClassResource.feature, featureId, 'images');
     } else {
-      appCtx.navNext({ isCardOpen: true });
+      omniCtx.navNext();
     }
   } else if (event.key === 'Tab') {
     event.preventDefault();
@@ -92,6 +99,7 @@ function closeModal() {
     <div class="h-full w-full" onclick={closeModal}>
       {#if feature}
         <ImageProvider
+          {page}
           isAdminMode={adminCtx !== undefined}
           context={{
             ctxType: FirstClassResource.feature as unknown as ImageContextResource,
