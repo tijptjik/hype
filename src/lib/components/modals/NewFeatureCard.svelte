@@ -1,6 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { onMount } from 'svelte';
+import { page } from '$app/state';
 // CONSTANTS
 import { NEW_REF } from '$lib';
 // PROVIDERS
@@ -18,7 +19,7 @@ import Container from '$lib/components/featureCard/layout/Container.svelte';
 import ContributorCredit from '$lib/components/featureCard/ContributorCredit.svelte';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
-import { getOmniContext } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte';
 import {
   setFeatureCardContext,
   getFeatureCardContext
@@ -35,7 +36,7 @@ import type {
 
 // CONTEXT
 const appCtx = getAppCtx();
-const omniCtx = getOmniContext();
+const omniCtx = getOmniCtx();
 
 // CONTEXT :: FEATURE CARD
 setFeatureCardContext();
@@ -73,6 +74,7 @@ onMount(() => {
 {#if isOpen && newFeature && feature}
   <FeatureCard>
     <ImageProvider
+      {page}
       isAdminMode={false}
       context={{
         ctxType: ImageContextResource.feature,

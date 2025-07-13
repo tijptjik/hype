@@ -126,7 +126,7 @@ function handleDescriptionCancel() {
                 }
               }}
               onblur={handleDescriptionSubmit}
-              placeholder="Enter description..."
+              placeholder={m.zany_merry_seahorse_treasure()}
               rows="1"></textarea>
           </div>
           <button

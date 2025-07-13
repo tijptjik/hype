@@ -9,6 +9,8 @@ import ResourceEmptyState from './ResourceEmptyState.svelte';
 import ResourceLoadingState from './ResourceLoadingState.svelte';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
+// ENUMS
+import { Panel } from '$lib/enums';
 // TYPES
 import type { Resource, EntityWithOptionalImage } from '$lib/types';
 import type { Snippet } from 'svelte';
@@ -18,13 +20,15 @@ let {
   card,
   row,
   listContainer = $bindable(),
-  isInitialised = true
+  isInitialised = true,
+  applyBottomOverflow = true
 }: {
   entities: T[];
   card?: Snippet<[T, number]>;
   row?: Snippet<[T, number]>;
   listContainer?: HTMLElement | null;
   isInitialised?: boolean;
+  applyBottomOverflow?: boolean;
 } = $props();
 
 // CONTEXT
@@ -34,7 +38,7 @@ const adminCtx = getAdminCtx();
 let gridWidth = $state(0);
 let stableColumnCount = $state(1);
 let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
-let lastKnownPanelOpenState = $state(adminCtx.appCtx.isPanelOpenOrVisual('admin'));
+let lastKnownPanelOpenState = $state(adminCtx.appCtx.isPanelOpenOrVisual(Panel.admin));
 let isTransitioning = $state(false);
 
 let layoutMode = $derived(
@@ -51,7 +55,7 @@ let itemHeight = $derived(layoutMode === 'table' ? 88 : 396); // Approximate wid
 $effect(() => {
   gridWidth;
   layoutMode;
-  const currentPanelState = adminCtx.appCtx.isPanelOpenOrVisual('admin');
+  const currentPanelState = adminCtx.appCtx.isPanelOpenOrVisual(Panel.admin);
   const isTransition = lastKnownPanelOpenState !== currentPanelState;
   untrack(() => {
     if (!isTransition && !isTransitioning) {
@@ -116,7 +120,7 @@ onDestroy(() => {
     <ResourceTableRow
       entity={item.entities[0] as EntityWithOptionalImage}
       index={item.startingIndex}
-      {row} />
+      row={row as Snippet<[EntityWithOptionalImage, number]> | undefined} />
   {/if}
 {/snippet}
 
@@ -135,7 +139,8 @@ onDestroy(() => {
           {itemHeight}
           bufferBefore={8}
           bufferAfter={10}
-          padding={10} />
+          padding={10}
+          {applyBottomOverflow} />
       </div>
     {:else}
       <ResourceEmptyState />

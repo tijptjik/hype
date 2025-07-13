@@ -8,7 +8,7 @@ import OmniNavHeader from './OmniNavHeader.svelte';
 import OmniNavArrow from './OmniNavArrow.svelte';
 import OmniCollection from './OmniCollection.svelte';
 // TYPES
-import { getOmniContext } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte';
 
 // CONTEXT
 const omniCtx = getOmniContext();

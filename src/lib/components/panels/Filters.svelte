@@ -57,7 +57,7 @@ even selecting a neighbourhood will not correctly affect the features shown on t
 <Panel bind:panelContainer {...panelProps}>
   <Header
     {...panelProps}
-    title={m.filters__title()}
+    title={m.menu_filters()}
     onToggleInfo={(e) => {
       handleToggleInfo(e);
     }} />

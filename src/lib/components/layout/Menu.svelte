@@ -2,13 +2,12 @@
 // SVELTE
 import { page } from '$app/state';
 import { cubicInOut } from 'svelte/easing';
-import { fade } from 'svelte/transition';
 // I18N
 import { m } from '$lib/i18n';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 // LIB
-import { ADMIN_PATH } from '$lib/index';
+import { ADMIN_PATH, DUAL_PANEL_MIN_WIDTH } from '$lib/index';
 import { goto } from '$app/navigation';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
@@ -20,9 +19,11 @@ import {
   ComputerDesktop,
   InformationCircle
 } from '@steeze-ui/heroicons';
+// ENUMS
+import { Panel } from '$lib/enums';
 // TYPES
 import type { IconSource } from '@steeze-ui/svelte-icon';
-import type { PanelState, UserRoleDisco } from '$lib/types';
+import type { UserRoleDisco } from '$lib/types';
 import { useSession } from '$lib/auth/client';
 
 // CONTEXT
@@ -46,23 +47,25 @@ let showAdminMenu = $derived(
 
 function getMenuItems() {
   const commonPanels = [
-    { icon: Funnel, label: m.menu_filters(), panel: 'filters' },
-    { icon: Star, label: m.menu_stars(), panel: 'stars' },
-    { icon: Cog6Tooth, label: m.menu_settings(), panel: 'settings' }
+    { icon: Funnel, label: m.menu_filters(), panel: Panel.filters },
+    { icon: Star, label: m.menu_stars(), panel: Panel.stars },
+    { icon: Cog6Tooth, label: m.menu_settings(), panel: Panel.settings }
   ];
   if (hub.isCore) {
-    const prismPanel = { icon: Map, label: m.menu_maps(), panel: 'prisms' };
+    const prismPanel = { icon: Map, label: m.maps__title(), panel: Panel.prisms };
     return [prismPanel, ...commonPanels];
   } else {
-    const hubPanel = { icon: InformationCircle, label: m.menu_about(), panel: 'hub' };
+    const hubPanel = {
+      icon: InformationCircle,
+      label: m.menu_about(),
+      panel: Panel.hub
+    };
     return [hubPanel, ...commonPanels];
   }
 }
 
-function handleMenuClick(
-  panel: 'filters' | 'prisms' | 'stars' | 'settings' | 'admin' | 'hub'
-) {
-  if (panel === 'admin') {
+function handleMenuClick(panel: Panel) {
+  if (panel === Panel.admin) {
     const currentPath = page.url.pathname;
     if (currentPath.startsWith('/features/')) {
       // Navigate to corresponding admin page for the current feature
@@ -72,8 +75,7 @@ function handleMenuClick(
       goto(ADMIN_PATH);
     }
   } else {
-    const closeAll = window.innerWidth < 1320;
-    appCtx.togglePanel(panel as keyof PanelState, closeAll);
+    appCtx.togglePanel(panel);
   }
 }
 
@@ -83,11 +85,11 @@ let innerHeight = $state(window.innerHeight);
 let hasViewportHeightIncreased = $derived(innerHeight > initialInnerHeight);
 </script>
 
-{#snippet menuButton(icon: IconSource, label: string, panel: string)}
+{#snippet menuButton(icon: IconSource, label: string, panel: Panel)}
   <button
     class="flex min-h-12 flex-col items-center justify-center gap-1 p-1"
     class:text-secondary={panel === 'admin'}
-    onclick={() => handleMenuClick(panel as keyof PanelState)}>
+    onclick={() => handleMenuClick(panel)}>
     <Icon
       src={icon}
       class="h-6 w-6 {panel === 'admin' ? 'text-secondary' : 'text-primary'}" />
@@ -108,13 +110,13 @@ let hasViewportHeightIncreased = $derived(innerHeight > initialInnerHeight);
   <div class="flex w-full flex-row items-center justify-between">
     <div class="mx-auto flex max-w-[720px] flex-grow items-center justify-around">
       {#each getMenuItems() as { icon, label, panel }}
-        {@render menuButton(icon, label, panel as keyof PanelState)}
+        {@render menuButton(icon, label, panel)}
       {/each}
     </div>
     {#if showAdminMenu}
       <!-- Admin Menu -->
       <div class="absolute right-0 hidden flex-row items-center gap-2 px-4 lg:flex">
-        {@render menuButton(ComputerDesktop, m.menu_admin(), 'admin')}
+        {@render menuButton(ComputerDesktop, m.menu_admin(), Panel.admin)}
       </div>
     {/if}
   </div>

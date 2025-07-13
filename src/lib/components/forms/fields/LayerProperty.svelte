@@ -46,7 +46,7 @@ let { form } = fieldProps.form;
             <label class="flex cursor-pointer items-center justify-between gap-2">
               <span
                 class="flex flex-row items-center gap-2 text-[0.8rem] font-light tracking-tighter">
-                <Icon src={Eye} class="size-4" />{m.yummy_ornate_snail_bend()}
+                <Icon src={Eye} class="size-4" />{m.published()}
               </span>
               <input
                 name={`${property?.id}_isVisible`}

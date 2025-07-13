@@ -1,7 +1,12 @@
 <script lang="ts">
-import Icon from '$lib/components/common/Icon.svelte';
+// I18N
+import { m } from '$lib/i18n';
+// ICONS
 import { ExclamationCircle } from '@steeze-ui/heroicons';
+// TRANSITIONS
 import { fade } from 'svelte/transition';
+// COMPONENTS
+import Icon from '$lib/components/common/Icon.svelte';
 // SERVICES
 import { getImageCtx } from '$lib/context/image.svelte';
 // TYPES
@@ -23,6 +28,6 @@ const imageCtx = getImageCtx();
   <button
     class="btn btn-error btn-sm mt-2"
     onclick={() => imageCtx.retryUpload(fileObject)}>
-    Retry
+    {m.retry()}
   </button>
 </div>

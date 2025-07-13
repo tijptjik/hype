@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
 // FLASH
 import { getFlash } from 'sveltekit-flash-message';
 import { page } from '$app/state';
@@ -22,7 +24,7 @@ const imageCtx = getImageCtx();
     class="flex h-12 flex-row flex-nowrap items-center justify-between gap-2 overflow-hidden whitespace-nowrap text-nowrap align-baseline"
     transition:slide={{ axis: 'x', duration: 500, easing: cubicInOut }}>
     <Toggle
-      label="Published"
+      label={m.published()}
       size="md"
       checked={imageCtx.activeImage?.isPublished ?? false}
       onChange={() => imageCtx.handlePublishToggle()}

@@ -68,7 +68,11 @@ function getGroupId(group: G): string {
 
         {#if !isCollapsed}
           <div transition:slide={{ duration: 300 }}>
-            <ResourceVirtualList {entities} {card} {row} />
+            <ResourceVirtualList
+              {entities}
+              {card}
+              {row}
+              applyBottomOverflow={groupIndex === groupedEntities.length - 1} />
           </div>
         {/if}
       </div>

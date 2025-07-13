@@ -30,7 +30,7 @@ const contextId = $derived(imageCtx.state.context?.ctxId);
 const feature = $derived(contextId ? appCtx.features.get(contextId) : undefined);
 // Note: Using simple fallbacks since user cache and createdAt may not be available
 const contributorName = $derived(
-  (feature as Feature)?.contributor?.name || m.tidy_level_hawk_belong()
+  (feature as Feature)?.contributor?.name || m.anonymous()
 );
 const createdAt = $derived(
   'createdAt' in (feature || {}) ? (feature as any).createdAt : undefined
@@ -56,7 +56,7 @@ const createdAt = $derived(
       <Icon src={icon} class="h-4 w-4" />
       <span>{m.clear_patchy_bobcat_wish()}</span>
       <span class="font-bold">
-        {contributorName || m.whole_upper_quail_bloom()}
+        {contributorName || m.jumpy_misty_panther_scold()}
       </span>
     </div>
     <div class="h-6 rounded-r bg-base-300/70 px-2 py-1 font-normal">

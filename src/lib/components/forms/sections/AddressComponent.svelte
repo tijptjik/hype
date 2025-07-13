@@ -107,7 +107,7 @@ function hasValue(value: string | null): boolean {
 </script>
 
 <div class="z-10 rounded-2xl p-0 @container">
-  <Header {...sectionProps} title={m.aware_cozy_impala_dine()}>
+  <Header {...sectionProps} title={m.admin__forms_feature_address_components_title()}>
     {#snippet actionContent()}
       <ForwardGeocodeActions form={sectionProps.form as unknown as FeatureForm} />
     {/snippet}

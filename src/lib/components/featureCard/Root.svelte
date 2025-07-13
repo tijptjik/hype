@@ -1,6 +1,4 @@
 <script lang="ts">
-// CONFIG
-import { MOBILE_MAX_WIDTH } from '$lib/index';
 // ACTIONS
 import { clickOutside } from '$lib/actions';
 // Animation
@@ -8,31 +6,19 @@ import { fade, scale } from 'svelte/transition';
 import { cubicInOut } from 'svelte/easing';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
-import { getOmniContext, PageState } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte';
+// ENUMS
+import { PageState } from '$lib/enums';
 
 // CONTEXT
 let appCtx = getAppCtx();
-let omniCtx = getOmniContext();
+let omniCtx = getOmniCtx();
 
 // STATE : PROPS
 let { children }: { children: any } = $props();
 
 // STATE : DERIVED
-let horizontalOffset = $derived(() => {
-  const { filters, prisms, stars, settings } = appCtx.state.isPanelOpen;
-  const leftPanelOpen = prisms || stars;
-  const rightPanelOpen = filters || settings;
-  if (window.innerWidth < MOBILE_MAX_WIDTH) {
-    return 0;
-  }
-  return leftPanelOpen && rightPanelOpen
-    ? 0
-    : leftPanelOpen
-      ? 420 / 2
-      : rightPanelOpen
-        ? -420 / 2
-        : 0;
-});
+let horizontalOffset = $derived(appCtx.getHorizontalOffset());
 
 // PAGE STATE HANDLING
 function handleOutroStart() {
@@ -44,9 +30,7 @@ function handleOutroStart() {
 function handleOutroEnd() {
   if (omniCtx.pageState === PageState.Transitioning) {
     omniCtx.pageState = PageState.ReadyToNav;
-    omniCtx.clearSearch();
-    omniCtx.setMode('search');
-    omniCtx.focusSearchBar();
+    omniCtx.resetToSearch(false);
   }
 }
 
@@ -55,13 +39,10 @@ function handleClickOutside(e: MouseEvent) {
   if (target?.dataset?.type === 'marker') {
     const featureId = target.dataset.featureId;
     if (featureId) {
-      omniCtx.handleFeatureSelection(appCtx, featureId);
+      omniCtx.handleFeatureSelection(featureId);
     }
   } else if (target.localName === 'canvas') {
-    // omniCtx.pageState = PageState.NeedTransition;
     omniCtx.closeCard();
-    // omniCtx.pageState = PageState.Transitioning;
-    // goto(i18n.resolveRoute('/'));
   }
 }
 
@@ -146,14 +127,14 @@ export function conditionalTouchScroll(node: HTMLElement, options = { threshold:
 {#if omniCtx.state.isCardOpen}
   <div
     class="flex-grow-1 pointer-events-none relative z-20 mx-auto flex h-full w-full max-w-[520px] overflow-x-auto overflow-y-hidden p-0 duration-300 w-92:my-4 w-92:h-auto w-92:px-4"
-    style="transform: translateX({horizontalOffset()}px); z-index: 4;"
+    style="transform: translateX({horizontalOffset}px); z-index: 4;"
     use:conditionalTouchScroll={{ threshold: 200 }}>
     <div
       id="feature-card"
       class="relative flex h-full w-full flex-col overflow-x-visible px-0 shadow-xl w-92:h-auto w-92:max-h-[calc(100svh-162px)] w-92:rounded-lg"
       in:scale={{
         duration: 300,
-        delay: 300,
+        delay: 0,
         easing: cubicInOut,
         start: 1,
         opacity: 0.3

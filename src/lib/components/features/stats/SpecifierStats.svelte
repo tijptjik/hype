@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
 // COMPONENTS
 import ProgressPips from '$lib/components/common/ProgressPips.svelte';
 // LOCALE
@@ -66,4 +68,8 @@ const statuses = $derived.by(() => {
 });
 </script>
 
-<ProgressPips title="FREEFORM" icon={Pencil} {statuses} {showTitle} />
+<ProgressPips
+  title={m.admin__forms_common_specifiers_short()}
+  icon={Pencil}
+  {statuses}
+  {showTitle} />

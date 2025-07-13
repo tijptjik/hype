@@ -561,7 +561,7 @@ const allI18nErrorsForPropertyValues = $derived.by(() => {
         <label
           for="isTranslatable"
           class="flex items-center gap-3"
-          title="Toggle translatability"
+          title={m.frail_grand_finch_heart()}
           onclick={(e) => {
             e.stopPropagation();
           }}>
@@ -577,7 +577,7 @@ const allI18nErrorsForPropertyValues = $derived.by(() => {
       <span class="flex items-center gap-1">
         <button
           class="btn btn-square btn-ghost btn-xs"
-          title="Increase Rank"
+          title={m.rank__increase()}
           disabled={currentProperty.rank === 0}
           onclick={(e) => {
             e.stopPropagation();
@@ -587,7 +587,7 @@ const allI18nErrorsForPropertyValues = $derived.by(() => {
         </button>
         <button
           class="btn btn-square btn-ghost btn-xs"
-          title="Decrease Rank"
+          title={m.rank__decrease()}
           disabled={currentProperty.rank === totalItemsOfThisType - 1}
           onclick={(e) => {
             e.stopPropagation();

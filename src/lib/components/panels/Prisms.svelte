@@ -80,10 +80,10 @@ let panelProps: PanelProps = $derived({
             {resource}
             selectedClass="bg-primary"
             isSelected={selectedOrganisations.includes(resource.id)}
-            onToggle={(e) => {
+            onToggle={async (e) => {
               e.preventDefault();
               e.stopPropagation();
-              appCtx.toggleOrganisation(resource.id);
+              await appCtx.toggleOrganisation(resource.id);
             }}
             {...panelProps} />
         {/snippet}

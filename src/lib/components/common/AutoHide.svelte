@@ -3,6 +3,8 @@
 import { onMount, onDestroy } from 'svelte';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
+//  ENUMS
+import { Panel } from '$lib/enums';
 
 // PROPS
 let { children }: { children: any } = $props();
@@ -78,7 +80,7 @@ function handleMouseEnter() {
   }
 
   // Trigger auto-hide when auto-hide is enabled and panel is NOT explicitly open
-  if (isPrimaryPanelAutoHide && !appCtx.isPanelOpen('admin')) {
+  if (isPrimaryPanelAutoHide && !appCtx.isPanelOpen(Panel.admin)) {
     autoHideEnterTimeout = setTimeout(() => {
       // Only set hovering if mouse is actually still within bounds
       if (isMouseWithinElementBounds()) {
@@ -95,7 +97,7 @@ function handleMouseEnter() {
 
               if (secondCheckX !== firstCheckX) {
                 // X changed, expand panel visually
-                appCtx.openPanelVisually('admin');
+                appCtx.openPanelVisually(Panel.admin);
                 isHovering = true;
               } else {
                 // X didn't change, do second check after another 50ms
@@ -105,7 +107,7 @@ function handleMouseEnter() {
 
                     if (thirdCheckX !== secondCheckX) {
                       // X changed in second check, expand panel visually
-                      appCtx.openPanelVisually('admin');
+                      appCtx.openPanelVisually(Panel.admin);
                       isHovering = true;
                     }
                     // If X still hasn't changed after two checks, cancel expand (do nothing)
@@ -116,7 +118,7 @@ function handleMouseEnter() {
           }, 50);
         } else {
           // Normal case - X is >= 15, expand visually immediately
-          appCtx.openPanelVisually('admin');
+          appCtx.openPanelVisually(Panel.admin);
           isHovering = true;
         }
       }
@@ -136,11 +138,11 @@ function handleMouseLeave() {
     autoHideEnterTimeout = null;
   }
 
-  if (isPrimaryPanelAutoHide && isHovering && !appCtx.isPanelOpen('admin')) {
+  if (isPrimaryPanelAutoHide && isHovering && !appCtx.isPanelOpen(Panel.admin)) {
     // Only close if panel was opened via hover (not explicit toggle)
     // Add a small delay to prevent flickering when moving between elements
     autoHideTimeout = setTimeout(() => {
-      appCtx.closePanelVisually('admin');
+      appCtx.closePanelVisually(Panel.admin);
       isHovering = false;
       autoHideTimeout = null;
     }, 250);

@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
 // SVELTE
 import { NEW_REF } from '$lib';
 // CONTEXT
@@ -149,14 +151,14 @@ const open = () => {
           {/each}
         </ul>
       {:else}
-        <p class="text-center text-gray-500">No results found</p>
+        <p class="text-center text-gray-500">{m.omni__no_results()}</p>
       {/if}
     </div>
 
     <div class="modal-action">
-      <button class="btn btn-ghost" onclick={close}>Cancel</button>
+      <button class="btn btn-ghost" onclick={close}>{m.cancel()}</button>
       <button class="btn btn-primary" onclick={handleConfirm} disabled={!selectedItem}>
-        Continue
+        {m.continue()}
       </button>
     </div>
   </div>

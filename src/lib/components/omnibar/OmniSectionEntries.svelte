@@ -1,26 +1,30 @@
 <script lang="ts">
 // CONTEXT
-import { getOmniContext } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte';
 // COMPONENTS
 import OmniEntry from './OmniEntry.svelte';
+// ENUMS
+import { OmniCollection } from '$lib/enums';
 // TYPES
-import type { SearchResult, OmniGroup } from '$lib/types';
+import type { SearchResult } from '$lib/types';
 
 // TYPES
 type Props = {
-  group: OmniGroup;
+  collectionType: OmniCollection;
 };
 
 // CONTEXT
-const omniCtx = getOmniContext();
+const omniCtx = getOmniCtx();
 
 // PROPS
-let { group }: Props = $props();
+let { collectionType }: Props = $props();
 
 // DERIVED
-let results: SearchResult[] = $derived(omniCtx.searchResults[group]);
-let limit: number = $derived(omniCtx.limits[group]);
-let onSelection: (ref: string) => void = $derived(omniCtx.searchHandlers[group]);
+let results: SearchResult[] = $derived(omniCtx.searchResults[collectionType]);
+let limit: number = $derived(omniCtx.limits[collectionType]);
+let onSelection: (ref: string) => void = $derived(
+  omniCtx.searchHandlers[collectionType]
+);
 </script>
 
 <div class="flex flex-shrink-0 select-none flex-col" role="group">

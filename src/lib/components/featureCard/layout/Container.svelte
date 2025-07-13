@@ -3,6 +3,7 @@
 import { swipe } from 'svelte-gestures';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte';
 // TYPES
 import type { SwipeCustomEvent } from 'svelte-gestures';
 
@@ -10,6 +11,7 @@ let { children }: { children: any } = $props();
 
 // CONTEXT
 const appCtx = getAppCtx();
+const omniCtx = getOmniCtx();
 
 // Navigation state - check if navigation is possible
 let canNavigatePrevious = $derived(() => {
@@ -39,9 +41,9 @@ function handleSwipe(e: SwipeCustomEvent) {
   const { direction } = e.detail;
 
   if (direction === 'left' && canNavigateNext()) {
-    appCtx.navNext({ isCardOpen: true });
+    omniCtx.navNext();
   } else if (direction === 'right' && canNavigatePrevious()) {
-    appCtx.navPrevious({ isCardOpen: true });
+    omniCtx.navPrevious();
   }
 }
 </script>

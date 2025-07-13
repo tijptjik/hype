@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
 // LIFECYCLE
 import { onMount, tick } from 'svelte';
 // MOTION
@@ -397,9 +399,9 @@ onMount(() => {
           <button
             class="btn btn-ghost gap-2 rounded-full bg-base-100 text-white focus:outline-none focus:ring-2 focus:ring-primary"
             onclick={openCamera}
-            aria-label="Add photo">
+            aria-label={m.honest_fluffy_falcon_enjoy()}>
             <Icon src={Camera} class="h-6 w-6 text-primary" theme="solid" />
-            Add photo
+            {m.honest_fluffy_falcon_enjoy()}
           </button>
         </div>
       {:else}
@@ -429,7 +431,7 @@ onMount(() => {
               <div class="absolute left-0 top-0 h-full w-full opacity-0">
                 <img
                   src={getPhotoAtIndex(currentIndex - 1).previewUrl}
-                  alt="Previous evidence"
+                  alt={m.slimy_helpful_shad_vent() + ' ' + m.hour_tame_ibex_absorb()}
                   class="h-full w-full object-contain" />
               </div>
             {/if}
@@ -438,7 +440,7 @@ onMount(() => {
             <div class="absolute left-0 top-0 h-full w-full">
               <img
                 src={getPhotoAtIndex(currentIndex).previewUrl}
-                alt="Evidence"
+                alt={m.hour_tame_ibex_absorb()}
                 class="h-full w-full object-contain" />
             </div>
 
@@ -447,7 +449,7 @@ onMount(() => {
               <div class="absolute left-0 top-0 h-full w-full opacity-0">
                 <img
                   src={getPhotoAtIndex(currentIndex + 1).previewUrl}
-                  alt="Next evidence"
+                  alt={m.curly_flaky_panther_mop() + ' ' + m.hour_tame_ibex_absorb()}
                   class="h-full w-full object-contain" />
               </div>
 
@@ -481,9 +483,9 @@ onMount(() => {
               <button
                 class="btn btn-ghost gap-2 rounded-full bg-base-100 text-white"
                 onclick={openCamera}
-                aria-label="Add another photo">
+                aria-label={m.honest_fluffy_falcon_enjoy()}>
                 <Icon src={Camera} class="h-6 w-6 text-primary" theme="solid" />
-                Add photo
+                {m.honest_fluffy_falcon_enjoy()}
               </button>
             </div>
           {/if}
@@ -500,35 +502,32 @@ onMount(() => {
         {#if cameraPermissionStatus === 'denied'}
           <div class="mb-4 flex items-center gap-3 text-error">
             <Icon src={ExclamationCircle} class="h-6 w-6" />
-            <h3 class="text-lg font-semibold">Camera Permission Denied</h3>
+            <h3 class="text-lg font-semibold">{m.camera__access_denied()}</h3>
           </div>
           <p class="mb-4">
-            Camera access was denied. You can still upload photos from your device.
+            {m.camera__access_denied_note()}
           </p>
           <div class="flex justify-end gap-2">
             <button class="btn btn-primary" onclick={useFileInput}>
               <Icon src={Photo} class="mr-2 h-5 w-5" />
-              Choose File
+              {m.camera__choose_file()}
             </button>
           </div>
         {:else}
           <!-- Show a loader for 1s before showing the permission dialog -->
           <div class="mb-4 flex items-center gap-3 text-info">
             <Icon src={Camera} class="h-6 w-6" />
-            <h3 class="text-lg font-semibold">Camera Permission</h3>
+            <h3 class="text-lg font-semibold">{m.camera__permission()}</h3>
           </div>
-          <p class="mb-4">
-            Please allow camera access when prompted by your browser. This is needed to
-            take photos.
-          </p>
+          <p class="mb-4">{m.camera__permission_note()}</p>
           <div class="flex justify-end gap-2">
             <button class="btn btn-ghost" onclick={useFileInput}>
-              Use File Instead
+              {m.camera_upload_file_instead()}
             </button>
             <button
               class="btn btn-primary"
               onclick={() => (showPermissionDialog = false)}>
-              OK
+              {m.ok()}
             </button>
           </div>
         {/if}

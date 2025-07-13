@@ -7,7 +7,7 @@ import { getI18n, getLocale } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
-import { getOmniContext } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import {
@@ -26,12 +26,10 @@ import type {
   DeepPartial,
   Id
 } from '$lib/types';
-// UTILS
-import { MOBILE_MAX_WIDTH } from '$lib/index';
 
 // CONTEXT
 const appCtx = getAppCtx();
-const omniCtx = getOmniContext();
+const omniCtx = getOmniCtx();
 
 // STATE : SESSION
 const userPreferences = $derived(appCtx.getUserPreferences());
@@ -57,21 +55,7 @@ let selectedLayer = $derived(
 );
 
 // PANEL STATE
-let horizontalOffset = $derived.by(() => {
-  const { filters, prisms, stars, settings } = appCtx.state.isPanelOpen;
-  const leftPanelOpen = prisms || stars;
-  const rightPanelOpen = filters || settings;
-  if (window.innerWidth < MOBILE_MAX_WIDTH) {
-    return 0;
-  }
-  return leftPanelOpen && rightPanelOpen
-    ? 0
-    : leftPanelOpen
-      ? 420 / 2
-      : rightPanelOpen
-        ? -420 / 2
-        : 0;
-});
+let horizontalOffset = $derived(appCtx.getHorizontalOffset());
 
 // FILTERED STATE
 let filteredOrganisations: Organisation[] = $derived(
@@ -384,7 +368,7 @@ onMount(() => {
           <div class="mb-4">
             <input
               type="text"
-              placeholder="Search..."
+              placeholder={m.legal_clear_panther_soar()}
               class="input input-bordered w-full"
               bind:value={searchQuery} />
           </div>
@@ -441,7 +425,7 @@ onMount(() => {
             ? 'bg-base-400 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300'
             : 'btn-disabled'}"
           onclick={handleAccept}>
-          {m.main_east_boar_jump()}
+          {m.ok()}
         </button>
       </div>
     </div>

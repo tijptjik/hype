@@ -52,7 +52,7 @@ function handleFilesSelect(
         }
       },
       onError: () => {
-        errorMessage = 'Upload failed. Please try again.';
+        errorMessage = m.error_message__upload_failed();
         showErrorOverlay = true;
 
         // Reset active image if this was a fresh upload (no existing image)

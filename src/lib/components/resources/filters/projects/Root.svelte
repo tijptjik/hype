@@ -42,7 +42,7 @@ const filterSections = {
   status: { icon: CircleStack, title: m.filters__status() },
   authorship: { icon: BookOpen, title: m.filters__content() },
   translation: { icon: Language, title: m.filters__translation() },
-  images: { icon: Photo, title: m.filters__images() }
+  images: { icon: Photo, title: m.filters__image() }
 };
 
 const filterKeys: Record<string, (keyof ProjectViewFilters)[]> = {

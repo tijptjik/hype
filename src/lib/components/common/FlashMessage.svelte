@@ -85,7 +85,7 @@ const flash = getFlash(page, {
       <button
         class="btn btn-ghost btn-sm absolute right-3 top-3 h-auto min-h-0 p-1"
         onclick={() => ($flash = undefined)}
-        aria-label="Close notification">
+        aria-label={m.aria__close_notification()}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           class="h-5 w-5"

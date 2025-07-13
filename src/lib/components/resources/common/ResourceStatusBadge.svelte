@@ -14,6 +14,6 @@ let {
   {isPendingReview
     ? m.tangy_zany_capybara_arise()
     : isPublished
-      ? m.yummy_ornate_snail_bend()
+      ? m.published()
       : m.weak_super_guppy_nail()}
 </span>

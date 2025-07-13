@@ -21,6 +21,6 @@ let { title, group }: Props = $props();
 </script>
 
 <div class="flex flex-shrink-0 select-none flex-col pb-2 pt-2">
-  <OmniHeader {title} {group} />
-  <OmniEntries {group} />
+  <OmniHeader {collectionType} />
+  <OmniEntries {collectionType} />
 </div>

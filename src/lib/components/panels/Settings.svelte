@@ -13,8 +13,10 @@ import Experimental from '$lib/components/panels/sections/Experimental.svelte';
 import Admin from '$lib/components/panels/sections/Admin.svelte';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
+// ENUMS
+import { Panel as PanelEnum, PanelSide } from '$lib/enums';
 // TYPES
-import type { PanelState, PanelPosition, PanelProps } from '$lib/types';
+import type { PanelPosition, PanelProps } from '$lib/types';
 
 // CONTEXT
 const appCtx = getAppCtx();
@@ -35,18 +37,18 @@ let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
 };
 
 let panelProps: PanelProps = $derived({
-  panelType: 'settings',
-  position: 'right',
+  panelType: PanelEnum.settings,
+  position: PanelSide.right,
   scrollable: true,
   inline: appCtx.isAdmin(),
-  isNarrow: appCtx.isPanelNarrow('settings'),
+  isNarrow: false,
   isAdmin: appCtx.isAdmin()
 });
 </script>
 
 <Panel bind:panelContainer {...panelProps}>
   <Header
-    title={m.settings__title()}
+    title={m.menu_settings()}
     onToggleInfo={(e) => {
       handleToggleInfo(e);
     }}

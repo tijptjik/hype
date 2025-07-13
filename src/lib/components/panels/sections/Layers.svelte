@@ -15,7 +15,7 @@ import { getAppCtx } from '$lib/context/app.svelte';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
 // TYPES
-import type { Layer, PanelState, ResourceContext, Id, PanelProps } from '$lib/types';
+import type { Layer, ResourceContext, Id, PanelProps } from '$lib/types';
 import type { Snippet } from 'svelte';
 
 // Initialize query client and map state

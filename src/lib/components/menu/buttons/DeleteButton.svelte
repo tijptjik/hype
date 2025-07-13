@@ -90,5 +90,5 @@ const handleClick = async (e: Event) => {
   <span
     >{$form.isArchived
       ? m.antsy_formal_badger_arise()
-      : m.neat_awake_panda_grip()}</span>
+      : m.whole_deft_penguin_enchant()}</span>
 </button>

@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
 import { GlobeAlt, Check, PencilSquare } from '@steeze-ui/heroicons';
@@ -84,7 +86,7 @@ function handleGlobeClick(e: Event) {
         class="input input-bordered w-full bg-black caret-white focus:outline-none"
         bind:value={currentAddress}
         bind:this={addressInput}
-        placeholder="Enter address..."
+        placeholder={m.less_quaint_clownfish_succeed()}
         onkeydown={(e) => {
           e.stopPropagation();
           if (e.key === 'Enter') {

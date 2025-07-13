@@ -26,7 +26,7 @@ let { onCancel, onAccept } = $props();
   <div class="flex gap-4">
     <button
       class="btn btn-outline hover:bg-transparent hover:text-base-content/80"
-      onclick={onCancel}>{m.green_short_pelican_fall()}</button>
+      onclick={onCancel}>{m.cancel()}</button>
     <button class="btn bg-glass-rejected hover:bg-glass-rejected/80" onclick={onAccept}
       >{m.best_swift_opossum_inspire()}</button>
   </div>

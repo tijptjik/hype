@@ -55,7 +55,7 @@ let panelProps: PanelProps = $derived({
 <Panel bind:panelContainer {...panelProps}>
   <Header
     {...panelProps}
-    title={m.stars__title()}
+    title={m.menu_stars()}
     onToggleInfo={(e) => {
       handleToggleInfo(e);
     }} />

@@ -1,5 +1,4 @@
 <script lang="ts">
-// @ts-nocheck - Debugging purposes
 import Icon from '$lib/components/common/Icon.svelte';
 import { Trash } from '@steeze-ui/heroicons';
 import { scale } from 'svelte/transition';
