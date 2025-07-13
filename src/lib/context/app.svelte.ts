@@ -843,7 +843,7 @@ export class AppCtx {
     });
   };
 
-  togglePrism = (resource: FirstClassResource, id: Id): void => {
+  togglePrism = async (resource: FirstClassResource, id: Id): Promise<void> => {
     const prisms = this.state.prisms[resource as ResourceTypeWithChildren];
     const index = prisms.indexOf(id);
     if (index === -1) {
@@ -851,24 +851,43 @@ export class AppCtx {
     } else {
       prisms.splice(index, 1);
     }
-    this.refresh(resource);
+    // Refresh all the dependent resources
+    if (resource === FirstClassResource.organisation) {
+      await this.refreshProjects();
+      await this.refreshHubs();
+    } else if (resource === FirstClassResource.project) {
+      await this.refreshProperties();
+      await this.refreshLayers();
+    } else if (resource === FirstClassResource.layer) {
+      // Only refresh features if user is authenticated
+      if (this.user?.id) {
+        await this.refreshFeatures();
+        if (this.isAdmin()) {
+          await this.refreshTasks();
+        }
+      }
+      // Only refresh if we have a username in the profile context
+      if (this.state.panels.profile.ctx?.username) {
+        await this.refreshUserProfile();
+      }
+    }
   };
 
   // Toggle methods for hierarchical filters
-  toggleOrganisation = (id: Id): void => {
-    this.togglePrism(FirstClassResource.organisation, id);
+  toggleOrganisation = async (id: Id): Promise<void> => {
+    await this.togglePrism(FirstClassResource.organisation, id);
   };
 
-  toggleProject = (id: Id): void => {
-    this.togglePrism(FirstClassResource.project, id);
+  toggleProject = async (id: Id): Promise<void> => {
+    await this.togglePrism(FirstClassResource.project, id);
   };
 
-  toggleLayer = (id: Id): void => {
-    this.togglePrism(FirstClassResource.layer, id);
+  toggleLayer = async (id: Id): Promise<void> => {
+    await this.togglePrism(FirstClassResource.layer, id);
   };
 
-  toggleFeature = (id: Id): void => {
-    this.togglePrism(FirstClassResource.feature, id);
+  toggleFeature = async (id: Id): Promise<void> => {
+    await this.togglePrism(FirstClassResource.feature, id);
   };
 
   // Cascades refresh to the next resource in the hierarchy
@@ -893,7 +912,7 @@ export class AppCtx {
     }
   };
 
-  refreshOrganisations = async (): Promise<void> => {
+  refreshOrganisations = async (isCascading: boolean = true): Promise<void> => {
     this.state.resources.organisation = await this.queryClient.fetchQuery({
       queryKey: this.queryMap.get(FirstClassResource.organisation)!.queryKey(),
       queryFn: this.queryMap.get(FirstClassResource.organisation)!.queryFn
@@ -902,11 +921,15 @@ export class AppCtx {
     this.syncCacheMap(this.cache.organisation, this.state.resources.organisation);
     // Efficiently sync organisation code-to-ID mapping
     this.syncCodeToIdMap(this.organisationCodeToId, this.state.resources.organisation);
-    await this.refreshProjects();
-    await this.refreshHubs();
+    // Sync organisation prisms to remove any invalid organisation IDs
+    this.syncOrganisationPrisms();
+    if (isCascading) {
+      await this.refreshProjects();
+      await this.refreshHubs();
+    }
   };
 
-  refreshProjects = async (): Promise<void> => {
+  refreshProjects = async (isCascading: boolean = true): Promise<void> => {
     this.state.resources.project = await this.queryClient.fetchQuery({
       queryKey: this.queryMap.get(FirstClassResource.project)!.queryKey(),
       queryFn: this.queryMap.get(FirstClassResource.project)!.queryFn
@@ -915,34 +938,28 @@ export class AppCtx {
     this.syncCacheMap(this.cache.project, this.state.resources.project);
     // Efficiently sync project code-to-ID mapping
     this.syncCodeToIdMap(this.projectCodeToId, this.state.resources.project);
+    // Sync project prisms to remove any invalid project IDs
     this.syncProjectPrisms();
-    await this.refreshProperties();
-    await this.refreshLayers();
-    // Sync layer prisms after layers are refreshed (when projects change, available layers change)
-    this.syncLayerPrisms();
+    if (isCascading) {
+      await this.refreshProperties();
+      await this.refreshLayers();
+    }
   };
 
-  refreshLayers = async (): Promise<void> => {
+  refreshLayers = async (isCascading: boolean = true): Promise<void> => {
     this.state.resources.layer = await this.queryClient.fetchQuery({
       queryKey: this.queryMap.get(FirstClassResource.layer)!.queryKey(),
       queryFn: this.queryMap.get(FirstClassResource.layer)!.queryFn
     });
     // Efficiently sync layer cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.layer, this.state.resources.layer);
-
-    // Auto-select single layer if there's only one available and none selected
-    if (
-      this.state.resources.layer.length === 1 &&
-      this.state.prisms.layer.length === 0
-    ) {
-      this.toggleLayer(this.state.resources.layer[0].id);
-    }
-
+    // Sync layer prisms to remove any layerIds which are no londer valid resources given the parent prism selection.
+    this.syncLayerPrisms();
     // Also calls this.refreshFeatures()
-    await this.postLayerMutation();
+    await this.postLayerMutation(isCascading);
   };
 
-  refreshFeatures = async (): Promise<void> => {
+  refreshFeatures = async (isCascading: boolean = true): Promise<void> => {
     const features = await this.queryClient.fetchQuery({
       queryKey: this.featuresQueryKey,
       queryFn: () => this.featuresQueryFn()
@@ -958,7 +975,7 @@ export class AppCtx {
     this.rebuildFeaturesMap();
   };
 
-  refreshTasks = async (): Promise<void> => {
+  refreshTasks = async (isCascading: boolean = true): Promise<void> => {
     this.state.resources.task = await this.queryClient.fetchQuery({
       queryKey: this.queryMap.get(FirstClassResource.task)!.queryKey(),
       queryFn: this.queryMap.get(FirstClassResource.task)!.queryFn
@@ -967,7 +984,7 @@ export class AppCtx {
     this.syncCacheMap(this.cache.task, this.state.resources.task);
   };
 
-  refreshHubs = async (): Promise<void> => {
+  refreshHubs = async (isCascading: boolean = true): Promise<void> => {
     if (!this.isSuperAdmin()) return;
     this.state.resources.hub = await this.queryClient.fetchQuery({
       queryKey: this.queryMap.get(FirstClassResource.hub)!.queryKey(),
@@ -979,7 +996,7 @@ export class AppCtx {
     this.syncCodeToIdMap(this.hubCodeToId, this.state.resources.hub);
   };
 
-  refreshProperties = async (): Promise<void> => {
+  refreshProperties = async (isCascading: boolean = true): Promise<void> => {
     const properties = await this.queryClient.fetchQuery({
       queryKey: this.queryMap.get(FirstClassResource.property)!.queryKey(),
       queryFn: this.queryMap.get(FirstClassResource.property)!.queryFn
@@ -988,7 +1005,7 @@ export class AppCtx {
     this.syncCacheMap(this.cache.property, properties);
   };
 
-  refreshUserFeatures = async (): Promise<void> => {
+  refreshUserFeatures = async (isCascading: boolean = true): Promise<void> => {
     this.state.userFeatures = await this.queryClient
       .fetchQuery({
         queryKey: this.queryMap.get('userFeatures')!.queryKey(),
@@ -1001,6 +1018,14 @@ export class AppCtx {
 
     // If active collection is a walk, refresh it and handle navigation
     this.postUserFeaturesMutation();
+  };
+
+  refreshUserProfile = async (isCascading: boolean = true): Promise<void> => {
+    const user = await this.queryClient.fetchQuery({
+      queryKey: this.userQueryKey,
+      queryFn: () => this.userQueryFn()
+    });
+    this.state.panels.profile.ctx!.userData = user;
   };
 
   /*
@@ -1021,13 +1046,15 @@ export class AppCtx {
     // Get updated items based on walk type
     if (activeCollection.id === 'stars') {
       updatedItems = this.getWishlistedFeatures();
+    } else if (activeCollection.id === 'visited') {
+      updatedItems = this.getVisitedFeatures();
     }
     // TODO: Add other walk types when implemented
 
     // If the collection is now empty, reset and navigate to home
     if (updatedItems.length === 0) {
       this.resetActiveCollection();
-      goto('/');
+      navigate('/');
       return;
     }
 
@@ -1039,9 +1066,7 @@ export class AppCtx {
       },
       {
         highlight: false,
-        focus: false,
-        activateFirst: false,
-        focusFirst: false
+        focus: false
       }
     );
 
@@ -1068,7 +1093,7 @@ export class AppCtx {
         }
 
         if (nextFeature) {
-          this.setActiveFeature(nextFeature.id, { focus: true, isCardOpen: true });
+          this.setActiveFeature(nextFeature.id, { focus: true, openCard: true });
         }
       }
     }
