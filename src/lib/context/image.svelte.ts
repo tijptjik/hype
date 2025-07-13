@@ -1269,9 +1269,36 @@ export class ImageCtx {
 
     // Only set active image to first if we're not replacing
     if (!imageToReplace) {
-      this.setActiveImageToFirst();
+
+  /**
+   * Targeted invalidation for image uploads - only invalidates and refreshes the specific resource
+   * without triggering cascading refreshes. Updates the cache for that resource.
+   * @param ctxType - The resource type
+   * @param ctxId - The resource ID
+   */
+  invalidateResource = async (
+    ctxType: ImageContextResource,
+    ctxId: Id
+  ): Promise<void> => {
+    // Map image context resource types to FirstClassResource
+    const resourceMap: Partial<Record<ImageContextResource, FirstClassResource>> = {
+      organisation: FirstClassResource.organisation,
+      project: FirstClassResource.project,
+      feature: FirstClassResource.feature
+    };
+
+    const resource = resourceMap[ctxType];
+    if (!resource) {
+      console.warn(`Unsupported resource type for invalidation: ${ctxType}`);
+      return;
     }
-  }
+
+    // Use the new targeted invalidation method
+    await this.appCtx.invalidateResourceTargeted(
+      ctxType as unknown as FirstClassResource,
+      ctxId
+    );
+  };
 
   private async processUploadQueue(config: {
     onSuccess?: (savedImage: Image) => void;

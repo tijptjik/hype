@@ -573,6 +573,15 @@ export class AdminCtx {
     await this.appCtx.refresh(resource);
   }
 
+  /**
+   * Targeted invalidation for image uploads - delegates to appCtx
+   * @param resource - The resource type to invalidate
+   * @param resourceId - The ID of the specific resource to invalidate
+   */
+  async invalidateResourceTargeted(resource: FirstClassResource, resourceId: Id) {
+    await this.appCtx.invalidateResourceTargeted(resource, resourceId);
+  }
+
   // ═══════════════════════
   // ADMIN FILTERS
   // ═══════════════════════
