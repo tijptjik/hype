@@ -70,16 +70,23 @@ let isAttributionVisible = $state(false);
 
 function handleKeydown(event: KeyboardEvent) {
   // Only handle events if the modal is actually open and feature exists
-  if (event.key === 'Escape' || event.key === ' ') {
+  if (event.key === 'Escape' || (event.key === ' ' && imageCtx.isFullscreen)) {
     event.preventDefault();
     event.stopPropagation();
-    imageCtx.setMode('normal');
+    closeModal();
+  } else if (event.key === ' ') {
+    event.preventDefault();
+    event.stopPropagation();
+    openModal();
   } else if (event.key === 'Enter') {
     event.preventDefault();
-    event.stopPropagation();
     // Navigate to feature address facet
-    imageCtx.setMode('normal');
-    appCtx.navNext({ isCardOpen: true });
+    closeModal();
+    if (event.shiftKey) {
+      omniCtx.navPrevious();
+    } else {
+      omniCtx.navNext();
+    }
   } else if (event.key === 'Tab') {
     event.preventDefault();
     event.stopPropagation();
@@ -92,7 +99,11 @@ function handleKeydown(event: KeyboardEvent) {
 }
 
 function closeModal(event?: Event) {
-  imageCtx.setMode('normal');
+  removeParamFromUrl('fullscreen');
+}
+
+function openModal(event?: Event) {
+  addParamToUrl('fullscreen', 'true');
 }
 
 function toggleAttribution(e: Event) {
