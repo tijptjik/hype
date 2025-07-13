@@ -1,13 +1,13 @@
 // DATA
 import { QueryClient } from '@tanstack/svelte-query';
 // NAVIGATION
-import { goto } from '$app/navigation';
+import { navigate, updatePanelUrlParams } from '$lib/navigation';
 // GEO
 import { bbox } from '@turf/bbox';
 // I18N
 import { getFallbackLocales, getLocale, setLocale, getI18n } from '$lib/i18n';
 // LIB
-import { fetchOrThrow } from '$lib/index';
+import { DUAL_PANEL_MIN_WIDTH, fetchOrThrow, isMobile, PANEL_WIDTH } from '$lib/index';
 // SERVICES
 import {
   debouncedUpdateUserAttribution,
@@ -35,11 +35,14 @@ import { removeMarkerClass, addMarkerClass } from '$lib/map/markers';
 import {
   FirstClassResource,
   HierarchicalResource,
+  Panel,
+  PanelLeft,
+  PanelRight,
   ResourcePath,
   ResourceRefKey
 } from '$lib/enums';
 // GUARDS
-import { isFeature, isHub, isTask } from '$lib/types';
+import { isFeature, isTask } from '$lib/types';
 
 // TYPES
 import type {
@@ -59,13 +62,13 @@ import type {
   FilterTriState,
   Hub,
   Id,
+  Image,
   Layer,
   LayoutMode,
   Locale,
   NavigableResource,
   NewFeatureTask,
   Organisation,
-  PanelState,
   Project,
   Property,
   Resource,
@@ -77,11 +80,12 @@ import type {
   UserFeature,
   UserLayer,
   UserPreferences,
-  HubOpts
+  HubOpts,
+  UserProfile,
+  Ref
 } from '$lib/types';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
-import { MOBILE_MAX_WIDTH } from '$lib/index';
 
 export class AppCtx {
   // Maplibre Map instance
@@ -93,7 +97,7 @@ export class AppCtx {
   // Tanstack Query Client instance
   queryClient: QueryClient;
   // User data (reactive)
-  user: CurrentUser | SessionUser | null = $state(null);
+  user: UserProfile | CurrentUser | SessionUser | null = $state(null);
   // Whether the map has been initialised
   isInitialised: boolean = $state(false);
 
@@ -116,10 +120,11 @@ export class AppCtx {
     hub: new Map(),
     property: new SvelteMap(),
     image: new SvelteMap(),
+    user: new SvelteMap(),
     stats: new SvelteMap()
   };
 
-  hub: HubOpts | null = $state(null);
+  hub: HubOpts | Hub | null = $state(null);
 
   // Features map for current state (rebuilt when state.resources.feature changes)
   private featuresMap = new SvelteMap<Id, FeatureFromCollection | Feature>();
@@ -127,7 +132,6 @@ export class AppCtx {
   private projectCodeToId = new Map<Code, Id>();
   private hubCodeToId = new Map<Code, Id>();
 
-  // State
   state: AppContextState = $state({
     // Markers -- Which features are shown on the map
     markers: new Map(),
@@ -174,19 +178,45 @@ export class AppCtx {
     // ENHANCEMENT: Implement distancesFromUser
     // Distances from user -- The distances from the user to the features
     distancesFromUser: {},
-    // Panels -- The panels that are open
-    isPanelOpen: {
-      filters: false,
-      prisms: false,
-      stars: false,
-      settings: false,
-      admin: false // Will be set based on user preferences during init
-    },
-    isPanelOpenVisually: { admin: false },
     nav: {
       resourceType: false,
       resourceRef: false,
       facet: false
+    },
+    panels: {
+      admin: {
+        isOpen: false,
+        isOpenVisually: false
+      },
+      profile: {
+        isOpen: false,
+        isOpenVisually: false,
+        ctx: {
+          username: null,
+          userData: null,
+          observePrisms: true
+        }
+      },
+      filters: {
+        isOpen: false,
+        isOpenVisually: false
+      },
+      prisms: {
+        isOpen: false,
+        isOpenVisually: false
+      },
+      stars: {
+        isOpen: false,
+        isOpenVisually: false
+      },
+      settings: {
+        isOpen: false,
+        isOpenVisually: false
+      },
+      hub: {
+        isOpen: false,
+        isOpenVisually: false
+      }
     },
     // Header state for unified header system
     header: {
@@ -209,7 +239,8 @@ export class AppCtx {
         layer: 'hidden',
         feature: 'filter',
         task: 'filter',
-        hub: 'hidden'
+        hub: 'hidden',
+        user: 'hidden'
       },
       layoutMode: {
         organisation: 'card',
@@ -217,7 +248,8 @@ export class AppCtx {
         layer: 'card',
         feature: 'table',
         task: 'table',
-        hub: 'card'
+        hub: 'card',
+        user: 'table'
       }
     },
     // TIER 3: VIEW FILTERS - Only affect current route/view
@@ -456,7 +488,15 @@ export class AppCtx {
     this.state.prisms.project
   ]);
   userFeaturesQueryKey = ['userFeatures'];
-  userQueryKey = ['user'];
+  userQueryKey = $derived([
+    FirstClassResource.user,
+    this.state.panels.profile.ctx?.username || this.user?.id,
+    ...(this.state.panels.profile.ctx?.observePrisms ? [
+          this.state.prisms.organisation,
+          this.state.prisms.project,
+          this.state.prisms.layer
+        ] : [])
+  ]);
 
   // Form context reference for header form actions
   formCtx: any = $state(null);
@@ -532,7 +572,6 @@ export class AppCtx {
       };
       return;
     }
-
     // Initialize stats cache
     this.initStatsCache();
     // Use parallel fetching for initial load
@@ -587,10 +626,11 @@ export class AppCtx {
   // Helper method to build API URLs with filters
   private buildApiUrl = (
     resource: FirstClassResource,
+    ref?: Ref,
     includePrisms: boolean = true,
     includeFilters: boolean = true
   ): string => {
-    const path = ResourcePath[resource];
+    const path = ResourcePath[resource] + (ref ? `/${ref}` : '');
     const params = new URLSearchParams();
 
     // Add isArchived filter by default (except for properties which don't have these fields)
@@ -616,7 +656,10 @@ export class AppCtx {
         );
       }
 
-      if (resource === FirstClassResource.feature) {
+      if (
+        resource === FirstClassResource.feature ||
+        resource === FirstClassResource.user
+      ) {
         this.state.prisms.layer.forEach((layer) =>
           params.append(FirstClassResource.layer, layer)
         );
@@ -647,7 +690,7 @@ export class AppCtx {
   };
 
   propertiesQueryFn = async (): Promise<Property[]> => {
-    const url = this.buildApiUrl(FirstClassResource.property, true, false);
+    const url = this.buildApiUrl(FirstClassResource.property, undefined, true, false);
     return fetchOrThrow<Property[]>(url);
   };
 
@@ -662,13 +705,11 @@ export class AppCtx {
     return Array.isArray(data) ? data : [];
   };
 
-  userQueryFn = async (): Promise<CurrentUser | null> => {
-    if (!this.user?.id) {
-      return null;
-    }
-    const response = await fetch(`/api/users/${this.user.id}`);
-    if (!response.ok) throw new Error('Network response was not ok');
-    return (await response.json()) as CurrentUser;
+  userQueryFn = async (): Promise<UserProfile | null> => {
+    const includePrisms = this.state.panels.profile.ctx?.observePrisms;
+    const userRef = this.state.panels.profile.ctx?.username || this.user?.id;
+    const url = this.buildApiUrl(FirstClassResource.user, userRef, includePrisms);
+    return fetchOrThrow<UserProfile>(url);
   };
 
   invalidateAndRefresh = async (
@@ -758,6 +799,9 @@ export class AppCtx {
     }
   };
 
+  invalidate = async (
+    resource: FirstClassResource | 'userFeatures' | 'user'
+  ): Promise<void> => {
     const resourcesToInvalidate = [resource];
     // Clear relevant caches when invalidating (forces fresh data)
     if (resource === FirstClassResource.organisation) {
@@ -782,6 +826,9 @@ export class AppCtx {
       resourcesToInvalidate.push(FirstClassResource.organisation);
     } else if (resource === FirstClassResource.property) {
       this.cache.property.clear();
+    } else if (resource === 'user') {
+      // TODO Should we clear the profile panel too?
+      this.cache.user.clear();
     }
 
     resourcesToInvalidate.forEach(async (resource) => {
