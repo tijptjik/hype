@@ -109,6 +109,42 @@ $effect(() => {
   }
 });
 
+// INITIAL URL SYNC - Only run once on page load
+let hasRunInitialSync = $state(false);
+
+$effect(() => {
+  if (!browser || !appCtx.isInitialised || hasRunInitialSync) {
+    return;
+  }
+
+  // Handle panel parameters from initial URL
+  handlePanelParams(appCtx, page.url.searchParams);
+  hasRunInitialSync = true; // Prevent future runs
+});
+
+// BROWSER NAVIGATION HANDLING - Listen for popstate events
+$effect(() => {
+  if (!browser) return;
+
+  const handleBrowserNavigation = () => {
+    // Parse current URL and sync panel state
+    const searchParams = new URLSearchParams(window.location.search);
+
+    // Close all current panels first (don't update URL - we're responding to URL change)
+    appCtx.closeAllPanels(false);
+
+    // Handle panel parameters from URL
+    handlePanelParams(appCtx, searchParams);
+  };
+
+  // Listen specifically for browser back/forward navigation
+  window.addEventListener('popstate', handleBrowserNavigation);
+
+  return () => {
+    window.removeEventListener('popstate', handleBrowserNavigation);
+  };
+});
+
 // TODO sync map center and flight starting position.
 // CIRCULAR FLIGHT ANIMATION
 $effect(() => {
@@ -135,7 +171,7 @@ $effect(() => {
 </script>
 
 <div class="flex h-dvh flex-col justify-around overflow-hidden">
-  {#if !$session.isPending && $session.data}
+  {#if !$session.isPending && $session.data && appCtx.isInitialised}
     <main
       class="relative top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
       <!-- Panels -->
@@ -144,6 +180,7 @@ $effect(() => {
       <Filters />
       <Stars />
       <Settings />
+      <Profile bind:panelContainer={profilePanelContainer} />
       <!-- Map Container -->
       <div class="relative flex h-full flex-1 flex-col">
         <Map />
