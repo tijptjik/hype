@@ -55,7 +55,8 @@ export enum ResourcePath {
   feature = 'features',
   task = 'tasks',
   hub = 'hubs',
-  property = 'properties'
+  property = 'properties',
+  user = 'users'
 }
 
 export enum FirstClassResource {
@@ -65,7 +66,8 @@ export enum FirstClassResource {
   feature = 'feature',
   task = 'task',
   hub = 'hub',
-  property = 'property'
+  property = 'property',
+  user = 'user'
 }
 
 export enum HierarchicalResource {
@@ -90,7 +92,8 @@ export enum ResourceRefKey {
   project = 'code',
   layer = 'id',
   feature = 'id',
-  task = 'id'
+  task = 'id',
+  user = 'id'
 }
 
 export enum HierarchicalResourceParent {
