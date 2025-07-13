@@ -8,7 +8,9 @@ import {
   feature,
   hub,
   hubI18n,
-  task
+  task,
+  featureImage,
+  image
 } from '$lib/db/schema/index';
 // DB
 import { toRelatedRecords } from '..';
@@ -26,10 +28,7 @@ import type {
   HubI18nDB,
   HubI18nPartial
 } from '$lib/types';
-import {
-  hubCollectionWithRelations,
-  hubEntityWithRelations
-} from '$lib/api/services/hub';
+import { hubEntityWithRelations } from '$lib/api/services/hub';
 
 // ═══════════════════════
 // HUB FILTERING FUNCTIONS
@@ -249,6 +248,70 @@ export function getFeatureHubFilter(
         .where(
           and(
             eq(layer.id, feature.layerId),
+            hubConditions.length === 1 ? hubConditions[0] : or(...hubConditions)
+          )
+        )
+    );
+  }
+}
+
+/**
+ * Images inherit filtering from featureImage → feature → layer → project → organisation
+ */
+export function getImageHubFilter(
+  db: Database,
+  opts: {
+    hubCode?: string;
+    hubDomain?: string;
+    isCore: boolean;
+    isSuperAdmin?: boolean;
+  }
+): SQL<unknown> | undefined {
+  // SuperAdmins bypass all hub filtering
+  if (opts.isSuperAdmin) {
+    return undefined;
+  }
+  if (opts.isCore) {
+    // Core: image's feature's layer's project's org has no hub OR org is not hub-exclusive
+    return exists(
+      db
+        .select()
+        .from(featureImage)
+        .innerJoin(feature, eq(featureImage.featureId, feature.id))
+        .innerJoin(layer, eq(feature.layerId, layer.id))
+        .innerJoin(project, eq(layer.projectId, project.id))
+        .innerJoin(organisation, eq(project.organisationId, organisation.id))
+        .where(
+          and(
+            eq(featureImage.imageId, image.id),
+            or(isNull(organisation.hubId), eq(organisation.isHubExclusive, false))
+          )
+        )
+    );
+  } else {
+    // Specific hub: image's feature's layer's project's org belongs to this hub
+    const hubConditions: SQL<unknown>[] = [];
+
+    if (opts.hubCode) {
+      hubConditions.push(eq(hub.code, opts.hubCode));
+    }
+
+    if (opts.hubDomain) {
+      hubConditions.push(eq(hub.domain, opts.hubDomain));
+    }
+
+    return exists(
+      db
+        .select()
+        .from(featureImage)
+        .innerJoin(feature, eq(featureImage.featureId, feature.id))
+        .innerJoin(layer, eq(feature.layerId, layer.id))
+        .innerJoin(project, eq(layer.projectId, project.id))
+        .innerJoin(organisation, eq(project.organisationId, organisation.id))
+        .innerJoin(hub, eq(organisation.hubId, hub.id))
+        .where(
+          and(
+            eq(featureImage.imageId, image.id),
             hubConditions.length === 1 ? hubConditions[0] : or(...hubConditions)
           )
         )
