@@ -1,6 +1,8 @@
 <script lang="ts">
 import { fly, slide } from 'svelte/transition';
 import { cubicInOut } from 'svelte/easing';
+// CONSTANTS
+import { PANEL_WIDTH } from '$lib/index';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 
@@ -22,13 +24,27 @@ let {
   children: any;
   panelContainer?: HTMLDivElement;
 } & PanelProps = $props();
+
+// Panel visibility logic
+let shouldShowInline = $derived(
+  inline &&
+    (appCtx.isPanelOpen(panelProps.panelType) ||
+      appCtx.isPanelOpenVisually(panelProps.panelType) ||
+      isNarrow)
+);
+
+let shouldShowOverlay = $derived(
+  !inline &&
+    (appCtx.isPanelOpen(panelProps.panelType) ||
+      appCtx.isPanelOpenVisually(panelProps.panelType))
+);
 </script>
 
-{#if inline && (appCtx.isPanelOpenOrVisual(panelProps.panelType) || isNarrow)}
+{#if shouldShowInline}
   <div
     id="{position}-panel"
     class="flex h-full flex-shrink-0 select-none flex-col bg-black caret-transparent shadow-xl transition-all duration-500"
-    style:width={isNarrow ? '80px' : isAdmin ? '380px' : '420px'}
+    style:width={isNarrow ? '80px' : isAdmin ? '380px' : `420px`}
     class:overflow-y-hidden={!scrollable}
     class:overflow-y-auto={scrollable}
     transition:slide={{
@@ -40,7 +56,7 @@ let {
       {@render children()}
     </div>
   </div>
-{:else if appCtx.isPanelOpenOrVisual(panelProps.panelType)}
+{:else if shouldShowOverlay}
   <div
     id="{position}-panel"
     class="absolute top-0 z-50 flex h-full w-full select-none flex-col bg-black caret-transparent shadow-xl [@media(min-width:920px)]:w-[420px]"
@@ -51,7 +67,7 @@ let {
     transition:fly={{
       duration: 150,
       easing: cubicInOut,
-      x: position === 'left' ? -420 : 420
+      x: position === 'left' ? -PANEL_WIDTH : PANEL_WIDTH
     }}>
     <div class="h-full" class:overflow-y-auto={scrollable} bind:this={panelContainer}>
       {@render children()}

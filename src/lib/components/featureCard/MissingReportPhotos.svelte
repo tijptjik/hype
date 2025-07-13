@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
 import Icon from '$lib/components/common/Icon.svelte';
 import { PlusCircle, XCircle } from '@steeze-ui/heroicons';
 
@@ -58,12 +60,17 @@ $effect.root(() => {
 </script>
 
 <div class="mt-4">
-  <label class="mb-2 block font-medium text-white"> Upload Evidence Photos </label>
+  <label class="mb-2 block font-medium text-white">
+    {m.topical_dark_halibut_blink()}
+  </label>
 
   <div class="flex flex-wrap gap-2">
     {#each photos as photo, index}
       <div class="relative h-24 w-24 overflow-hidden rounded-md">
-        <img src={photo.previewUrl} alt="Evidence" class="h-full w-full object-cover" />
+        <img
+          src={photo.previewUrl}
+          alt={m.hour_tame_ibex_absorb()}
+          class="h-full w-full object-cover" />
         <button
           type="button"
           class="absolute right-1 top-1 rounded-full bg-black bg-opacity-50 p-1 text-white"
@@ -78,7 +85,7 @@ $effect.root(() => {
       class="flex h-24 w-24 flex-col items-center justify-center rounded-md border border-dashed border-gray-500 bg-gray-800 text-white"
       onclick={() => fileInput.click()}>
       <Icon src={PlusCircle} class="h-6 w-6" />
-      <span class="mt-1 text-xs">Add Photo</span>
+      <span class="mt-1 text-xs">{m.honest_fluffy_falcon_enjoy()}</span>
     </button>
   </div>
 
