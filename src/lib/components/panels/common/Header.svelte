@@ -1,34 +1,20 @@
 <script lang="ts">
-import { onMount, onDestroy } from 'svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
-import { QuestionMarkCircle, XCircle } from '@steeze-ui/heroicons';
+import { XCircle } from '@steeze-ui/heroicons';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
+// ENUMS
+import { Panel } from '$lib/enums';
 // TYPES
-import type { PanelState } from '$lib/types';
 
-let { panelType, title, subtitle, onToggleInfo } = $props<{
-  panelType: keyof PanelState;
+let { panelType, title, onToggleInfo } = $props<{
+  panelType: Panel;
   title: string;
   onToggleInfo?: (e: MouseEvent | TouchEvent) => void;
 }>();
 
 const appCtx = getAppCtx();
-
-// Setup and cleanup event listeners
-$effect(() => {
-  const handler = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') {
-      appCtx.closePanel(panelType);
-    }
-  };
-
-  window.addEventListener('keydown', handler);
-  return () => {
-    window.removeEventListener('keydown', handler);
-  };
-});
 </script>
 
 <header
