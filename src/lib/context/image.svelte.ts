@@ -15,10 +15,9 @@ import {
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 // ENUMS
-import { ResourcePath } from '$lib/enums';
+import { ResourcePath, FirstClassResource } from '$lib/enums';
 // TYPES
 import type { Writable } from 'svelte/store';
-// import type { QueryClient } from '@tanstack/svelte-query';
 import type { ImageContextResource, ImageContextResourceExtended } from '$lib/enums';
 import type {
   Image,
@@ -36,6 +35,7 @@ import type {
   Feature,
   ImageDBBasic
 } from '$lib/types';
+import { addParamToUrl } from '$lib/navigation';
 
 // ═══════════════════════
 // TYPES :: ImageCtx
@@ -59,14 +59,11 @@ import type {
 // 3. STATE MANAGEMENT
 //    - determineViewerState
 //
-// 3.1 STATE MANAGEMENT :: MODE
-//    - setMode
-//
-// 3.2 STATE MANAGEMENT :: CONTEXT
+// 3.1 STATE MANAGEMENT :: CONTEXT
 //    - setCtx
 //    - getCtx
 //
-// 3.3 STATE MANAGEMENT :: UPLOAD
+// 3.2 STATE MANAGEMENT :: UPLOAD
 //    - getUploadCtx
 //    - getUploadQueue
 //    - setUploadQueue
@@ -77,19 +74,19 @@ import type {
 //    - setUploadStatus
 //    - setUploadToRetry
 //
-// 3.4 STATE MANAGEMENT :: PENDING CONFIRMATION
+// 3.3 STATE MANAGEMENT :: PENDING CONFIRMATION
 //    - addToPendingConfirmation
 //    - removeFromPendingConfirmation
 //    - resetPendingConfirmation
 //    - pendingConfirmationHas
 //
-// 3.5 STATE MANAGEMENT :: DELETION
+// 3.4 STATE MANAGEMENT :: DELETION
 //    - resetDeletionQueue
 //    - addToDeletionQueue
 //    - removeFromDeletionQueue
 //    - deletionQueueHas
 //
-// 3.6 STATE MANAGEMENT :: IMAGES
+// 3.5 STATE MANAGEMENT :: IMAGES
 //    - getImage
 //    - getImages
 //    - setImages
@@ -97,23 +94,23 @@ import type {
 //    - removeImage
 //    - setForImage
 //
-// 3.7 STATE MANAGEMENT :: LOAD STATUS
+// 3.6 STATE MANAGEMENT :: LOAD STATUS
 //    - getLoadStatus
 //    - setLoadStatus
 //    - getLoadStatuses
 //    - resetLoadStatus
 //
-// 3.8 STATE MANAGEMENT :: UPLOAD STATUS
+// 3.7 STATE MANAGEMENT :: UPLOAD STATUS
 //    - setUploadStatus
 //    - getUploadStatus
 //    - resetUploadStatus
 //
-// 3.9 STATE MANAGEMENT :: THUMBNAIL LOAD STATUS
+// 3.8 STATE MANAGEMENT :: THUMBNAIL LOAD STATUS
 //    - setThumbnailLoadStatus
 //    - getThumbnailLoadStatus
 //    - resetThumbnailLoadStatus
 //
-// 3.10 STATE MANAGEMENT :: ACTIVE IMAGE
+// 3.9 STATE MANAGEMENT :: ACTIVE IMAGE
 //    - setActiveImage
 //    - resetActiveImage
 //    - setActiveImageToFirst
@@ -124,11 +121,11 @@ import type {
 //    - getImageIsPublished
 //    - isImageBeingReplaced
 //
-// 3.11 STATE MANAGEMENT :: ACTIVE PREVIEW
+// 3.10 STATE MANAGEMENT :: ACTIVE PREVIEW
 //    - setActivePreview
 //    - resetActivePreview
 //
-// 3.12 STATE MANAGEMENT :: MODE
+// 3.11 STATE MANAGEMENT :: MODE
 //    - setMode
 //    - getMode
 //    - isFullscreen
@@ -164,12 +161,12 @@ import type {
 //    - downloadImage
 //
 // 10. Preloading Utilities
-//     - preloadImage
-//     - preloadImages
-//     - isImagePreloaded
+//    - preloadImage
+//    - preloadImages
+//    - isImagePreloaded
 //
 // 11. Internal Helper Methods
-//     - sortImages (private, for internal array sorting)
+//    - sortImages (private, for internal array sorting)
 
 export class ImageCtx {
   isAdminMode: boolean = false;
@@ -184,10 +181,11 @@ export class ImageCtx {
   constructor(options: ImageCtxConstructorOptions = {}) {
     const {
       isAdminMode = false,
-      context = null,
-      image = null,
-      images = null,
-      highlightedIds = []
+      context,
+      image,
+      images,
+      highlightedIds = [],
+      isFullScreen = false
     } = options;
 
     this.isAdminMode = isAdminMode;
@@ -196,17 +194,25 @@ export class ImageCtx {
     this.setupEventListeners();
 
     this.setContext({ context, image, images, highlightedIds });
+
+    if (isFullScreen) {
+      this.setMode('fullscreen');
+    }
   }
 
   private setupEventListeners() {
     // Listen for refresh images events (e.g., when a feature is published)
-    window.addEventListener('refreshImages', this.handleRefreshImagesEvent.bind(this));
+    window.addEventListener(
+      'refreshImages',
+      this.handleRefreshImagesEvent.bind(this) as EventListener
+    );
   }
 
-  private handleRefreshImagesEvent = (event: CustomEvent) => {
+  private handleRefreshImagesEvent = (event: Event) => {
+    const customEvent = event as CustomEvent;
     // Only refresh if we have a context that matches the published resource
     if (this.state.context?.ctxType && this.state.context?.ctxId) {
-      const { resourceType, resourceId } = event.detail;
+      const { resourceType, resourceId } = customEvent.detail;
 
       // Refresh images if the published resource matches our current context
       if (
@@ -227,16 +233,19 @@ export class ImageCtx {
 
   async setContext(options: {
     context?: ImageContextConfig | null;
-    image?: Image | ImageDBBasic | null;
+    image?: Image | ImageDBBasic | null | undefined;
     images?: Image[] | ImageDBBasic[] | null;
     highlightedIds?: Id[];
   }) {
-    const {
-      context = this.state.context,
-      image = null,
-      images = null,
-      highlightedIds = this.state.highlightedIds
-    } = options;
+    const optionsWithDefaults = {
+      context: this.state.context || null,
+      image: null,
+      images: null,
+      highlightedIds: this.state.highlightedIds || [],
+      ...options
+    };
+
+    const { context, image, images, highlightedIds } = optionsWithDefaults;
 
     // Check if this is actually a context change to avoid unnecessary resets
     const isContextChange =
@@ -245,7 +254,7 @@ export class ImageCtx {
       this.state.context?.ctxTypeSecondary !== context?.ctxTypeSecondary ||
       this.state.context?.ctxIdSecondary !== context?.ctxIdSecondary;
 
-    // Generate context ID based on actual context, not timing
+    // Generate context ID
     const newContextId = context ? `${context.ctxType}-${context.ctxId}` : null;
     this.currentContextId = newContextId;
 
@@ -255,8 +264,10 @@ export class ImageCtx {
       this.resetDeletionQueue();
       this.resetUploadQueue();
       this.resetImages();
-      this.resetActivePreview();
-      this.resetActiveImage();
+      // DO NOT reset the active image to allow for smooth transitions
+      // DO reset the target image so we don't have a stale image in the target image state
+      // this.resetActiveImage();
+      this.resetTargetImage();
 
       // Mark this as a context change for PhotoFrame transition logic
       this.state.lastChangeType = 'context';
@@ -265,47 +276,26 @@ export class ImageCtx {
     this.state.context = context;
     this.state.highlightedIds = highlightedIds;
 
-    // For context changes, ignore the provided image and always use first from new context
-    const effectiveImage = isContextChange ? null : image;
-
-    // Helper function to set active image and loading status
-    const setActiveImageWithLoading = (targetImage: Image | null) => {
-      if (targetImage) {
-        this.setActiveImage(targetImage);
-        this.setLoadStatus(targetImage.id, 'loading');
-      }
-      // Use first available image - but do this after images are set
-      // setActiveImageToFirst will be called after setImages() completes
-    };
-
-    // Handle image loading based on what's provided
+    // CASE 1 : Images preloaded
     if (images && images.length > 0) {
       // Use pre-loaded images array
       const validImages = images.filter((img): img is Image => img != null);
       await this.setImages(validImages as Image[]);
-      setActiveImageWithLoading(effectiveImage as Image | null);
-      // If no specific image provided, set to first available
-      if (!effectiveImage) {
-        this.setActiveImageToFirst();
-      }
-    } else if (effectiveImage) {
-      // Single image provided
-      await this.setImages([effectiveImage as Image]);
-      setActiveImageWithLoading(effectiveImage as Image | null);
-    } else if (context) {
-      // Fetch images from API based on context
+      // Set active image when we have preloaded images
+      this.setActiveImageToTargetOrFirst();
+      // CASE 2 : Images not preloaded except for the leading image
+    } else if (image) {
+      // Single image provided -- set the image as a provisional images set.
+      await this.setImages([image as Image]);
+      this.setActiveImageToTargetOrFirst();
       await this.refreshImages();
-      // Validate context hasn't changed during async refreshImages
-      if (this.currentContextId === newContextId) {
-        setActiveImageWithLoading(effectiveImage);
-        // If no specific image provided, set to first available
-        if (!effectiveImage) {
-          this.setActiveImageToFirst();
-        }
-      }
+      // CASE 3 : Initial Context - we will have an async image set
+    } else if (image === undefined) {
+      this.refreshImages();
     } else {
-      // No images to load
+      // CASE 4 : Feature has no images, so just clear the image states.
       await this.setImages([]);
+      this.resetTargetImage();
       this.resetActiveImage();
     }
   }
@@ -329,11 +319,12 @@ export class ImageCtx {
     images: new SvelteMap<Id, Image>(),
     activeImage: null as Image | null,
     targetImage: null as Image | null, // Image we're transitioning to
+    targetImageId: null as Id | null, // Use if we don't have the targetImage, so still need to fetch it.
     isTransitioning: false, // Whether we're smoothly transitioning between images
     activePreview: null as ImageUpload | null,
 
     // Change tracking for PhotoFrame transition logic
-    lastChangeType: null as 'index' | 'target' | 'context' | null,
+    lastChangeType: null as 'initial' | 'index' | 'target' | 'context' | null,
 
     // Status tracking
     loadStatus: new SvelteMap<Id, LoadStatus>(),
@@ -361,22 +352,6 @@ export class ImageCtx {
     this.state.context?.ctxType,
     this.state.context?.ctxId
   ]);
-
-  isImagesLoading = $derived.by(() => {
-    const images = Array.from(this.state.images.values());
-
-    // Don't show loading overlay during smooth transitions
-    if (this.state.isTransitioning) {
-      return 0;
-    }
-
-    // Check main image load status (since mode is now handled by PhotoFrame)
-    const loadingImages = images.filter(
-      (image: Image) => this.state.loadStatus.get(image.id) === 'loading'
-    );
-
-    return loadingImages.length;
-  });
 
   determineViewerState = () => {
     // PRIORITY 0: Check if we're fetching images from API (early loading state)
@@ -440,12 +415,6 @@ export class ImageCtx {
   // ═══════════════════════
   // 3.1 STATE MANAGEMENT :: CONTEXT
   // ═══════════════════════
-  setCtx(ctx: ImageEditCtx) {
-    this.state.context = {
-      ctxType: ctx.ctxType,
-      ctxId: ctx.ctxId
-    };
-  }
 
   getCtx(): ImageEditCtx {
     if (!this.state.context?.ctxType || !this.state.context?.ctxId) {
@@ -460,6 +429,7 @@ export class ImageCtx {
   // ═══════════════════════
   // 3.3 STATE MANAGEMENT :: UPLOAD
   // ═══════════════════════
+
   getUploadCtx(imageToReplace?: Image): ImageUploadCtx {
     if (!this.state.context?.ctxType || !this.state.context?.ctxId) {
       throw new Error('No context available for upload');
@@ -544,6 +514,7 @@ export class ImageCtx {
   // ═══════════════════════
   // 3.4 STATE MANAGEMENT :: PENDING CONFIRMATION
   // ═══════════════════════
+
   addToPendingConfirmation(imageId: Id) {
     this.state.pendingConfirmation.add(imageId);
   }
@@ -563,6 +534,7 @@ export class ImageCtx {
   // ═══════════════════════
   // 3.5 STATE MANAGEMENT :: DELETION
   // ═══════════════════════
+
   resetDeletionQueue() {
     this.state.deletionQueue = new SvelteSet<Id>();
   }
@@ -582,6 +554,7 @@ export class ImageCtx {
   // ═══════════════════════
   // 3.6 STATE MANAGEMENT :: IMAGES
   // ═══════════════════════
+
   getImage(imageId: Id): Image | undefined {
     return this.state.images.get(imageId);
   }
@@ -604,18 +577,17 @@ export class ImageCtx {
 
     const sortedImages = sortImages(validImages);
 
-    // Simple approach: just update the images and let PhotoFrame handle transitions
-    this.state.images.clear();
+    let newImages = new SvelteMap<Id, Image>();
     sortedImages.forEach((image) => {
-      this.state.images.set(image.id, image as Image);
+      newImages.set(image.id, image as Image);
     });
+    this.state.images = newImages;
 
     await this.preloadImages();
   }
 
   resetImages() {
     this.state.images.clear();
-    // Don't reset activeImage here - let it be explicitly managed
   }
 
   removeImage(imageId: Id) {
@@ -639,6 +611,7 @@ export class ImageCtx {
   // ═══════════════════════
   // 3.7 STATE MANAGEMENT :: LOAD STATUS
   // ═══════════════════════
+
   getLoadStatus(imageId: Id): LoadStatus | undefined {
     return this.state.loadStatus.get(imageId);
   }
@@ -713,6 +686,7 @@ export class ImageCtx {
   // ═══════════════════════
   // 3.8 STATE MANAGEMENT :: UPLOAD STATUS
   // ═══════════════════════
+
   setUploadStatusById(imageId: Id, status: UploadStatus) {
     this.state.uploadStatus.set(imageId, status);
   }
@@ -732,6 +706,7 @@ export class ImageCtx {
   // ═══════════════════════
   // 3.9 STATE MANAGEMENT :: THUMBNAIL LOAD STATUS
   // ═══════════════════════
+
   setThumbnailLoadStatus(imageId: Id, status: LoadStatus) {
     this.state.thumbnailLoadStatus.set(imageId, status);
   }
@@ -749,8 +724,9 @@ export class ImageCtx {
   }
 
   // ═══════════════════════
-  // 3.7 STATE MANAGEMENT :: ERROR MESSAGES
+  // 3.10 STATE MANAGEMENT :: ERROR MESSAGES
   // ═══════════════════════
+
   setErrorMessage(imageId: Id, message: string) {
     this.state.errorMessages.set(imageId, {
       message,
@@ -776,27 +752,32 @@ export class ImageCtx {
   }
 
   // ═══════════════════════
-  // 3.9 STATE MANAGEMENT :: ACTIVE IMAGE
+  // 3.11 STATE MANAGEMENT :: ACTIVE IMAGE
   // ═══════════════════════
 
   get activeImage(): Image | null {
     return this.state.activeImage;
   }
 
-  setActiveImage(image: Image | null) {
+  setActiveImage(image: Image | null, isLoading: boolean = false) {
+    // Prevent redundant calls - if we're trying to set the same image that's already active
+    if (image && this.state.activeImage && image.id === this.state.activeImage.id) {
+      return;
+    }
+
+    // Also prevent setting to the same null state
+    if (!image && !this.state.activeImage) {
+      return;
+    }
+
     this.state.activeImage = image;
+    if (image && isLoading) {
+      this.setLoadStatus(image.id, 'loading');
+    }
+
     // If lastChangeType is null, it means this is likely a context change
     if (this.state.lastChangeType === null) {
       this.state.lastChangeType = 'context';
-    }
-  }
-
-  setActiveImageWithLoading(image: Image | null) {
-    if (image) {
-      this.setActiveImage(image);
-      this.setLoadStatus(image.id, 'loading');
-    } else {
-      this.resetActiveImage();
     }
   }
 
@@ -804,13 +785,30 @@ export class ImageCtx {
     this.state.activeImage = null;
   }
 
+  get targetImage(): Image | null {
+    return this.state.targetImage;
+  }
+
+  get targetImageId(): Id | null {
+    return this.state.targetImageId;
+  }
+
   // Smooth transition methods
   setTargetImage(image: Image | null) {
     this.state.targetImage = image;
   }
 
+  setTargetImageId(imageId: Id | null) {
+    this.state.targetImageId = imageId;
+  }
+
   resetTargetImage() {
     this.state.targetImage = null;
+    this.resetTargetImageId();
+  }
+
+  resetTargetImageId() {
+    this.state.targetImageId = null;
   }
 
   // Preload an image without switching to it
@@ -820,21 +818,23 @@ export class ImageCtx {
       return true;
     }
 
-    // Set loading status to trigger preloading
+    // Set loading status
     this.setLoadStatus(targetImage.id, 'loading');
 
-    // Return a promise that resolves when the image is loaded
-    return new Promise((resolve) => {
-      const checkLoaded = () => {
-        if (this.getLoadStatus(targetImage.id) === 'loaded') {
-          resolve(true);
-        } else {
-          // Check again in a short interval
-          setTimeout(checkLoaded, 50);
-        }
-      };
-      checkLoaded();
-    });
+    try {
+      // Actually preload the image using the browser's Image API
+      const imageUrl = getURLfromImage({ image: targetImage });
+      await this.preloadImage(imageUrl);
+
+      // Mark as loaded
+      this.setLoadStatus(targetImage.id, 'loaded');
+      this.state.preloadedImages.add(imageUrl);
+
+      return true;
+    } catch (error) {
+      this.setLoadStatus(targetImage.id, 'error');
+      return false;
+    }
   }
 
   // Smoothly switch to a new image (preload then switch)
@@ -860,9 +860,24 @@ export class ImageCtx {
   setActiveImageToFirst() {
     const images = this.getImages();
     if (images.length > 0) {
-      this.setActiveImageWithLoading(images[0] as Image);
+      const firstImage = images[0] as Image;
+      // Only set if it's different from the current active image
+      if (!this.state.activeImage || this.state.activeImage.id !== firstImage.id) {
+        this.setActiveImage(firstImage, true);
+      }
     } else {
       this.resetActiveImage();
+    }
+  }
+
+  setActiveImageToTargetOrFirst() {
+    if (this.state.targetImageId) {
+      const targetImage = this.getImage(this.state.targetImageId);
+      if (targetImage) {
+        this.setActiveImage(targetImage, true);
+      }
+    } else {
+      this.setActiveImageToFirst();
     }
   }
 
@@ -901,7 +916,7 @@ export class ImageCtx {
   }
 
   // ═══════════════════════
-  // 3.10 STATE MANAGEMENT :: ACTIVE PREVIEW
+  // 3.12 STATE MANAGEMENT :: ACTIVE PREVIEW
   // ═══════════════════════
 
   get activePreview(): ImageUpload | null {
@@ -924,8 +939,9 @@ export class ImageCtx {
   }
 
   // ═══════════════════════
-  // 3.12 STATE MANAGEMENT :: MODE
+  // 3.13 STATE MANAGEMENT :: MODE
   // ═══════════════════════
+
   setMode(mode: 'fullscreen' | 'normal') {
     if (mode === 'fullscreen') {
       this.state.isFullscreen = true;
@@ -1026,7 +1042,7 @@ export class ImageCtx {
     return result;
   }
 
-  async refreshImages() {
+  async refreshImages(targetImageId?: Id) {
     if (!this.state.context) {
       return;
     }
@@ -1084,8 +1100,10 @@ export class ImageCtx {
     await this.setImages(validImages);
 
     // Set active image with loading state immediately to maintain loading display
-    if (validImages.length > 0 && !this.state.activeImage) {
-      this.setActiveImageToFirst();
+    if (validImages.length > 0 && !this.activeImage && !targetImageId) {
+      this.setActiveImageToTargetOrFirst();
+    } else if (targetImageId) {
+      this.target(targetImageId);
     }
 
     // Don't set loading status here - let Picture.svelte handle it via onLoad callbacks
@@ -1177,67 +1195,82 @@ export class ImageCtx {
   // 5.1 UI Navigation :: Index-based navigation
   // ═══════════════════════
 
-  next(): Image | null {
+  next() {
     const images = this.getImages();
-    if (images.length === 0) return null;
-
+    // Return early if there is no images
+    if (images.length === 0) return;
+    // Return early if there is no active image
     const currentActiveImage = this.state.activeImage;
-    if (!currentActiveImage) {
-      this.setActiveImageToFirst();
-      return images[0] || null;
-    }
+    if (!currentActiveImage) return;
 
     const currentIndex = images.findIndex((img) => img.id === currentActiveImage.id);
+
+    // If the current active image is not in the images array, fall-back to the first image
     if (currentIndex === -1) {
-      this.setActiveImageToFirst();
-      return images[0] || null;
+      const firstImage = images[0];
+      if (firstImage) {
+        addParamToUrl('imageId', firstImage.id, {}, true);
+        this.state.lastChangeType = 'index';
+      }
     }
 
     const newIndex = (currentIndex + 1) % images.length;
     const newImage = images[newIndex];
+
     if (newImage) {
-      this.setActiveImage(newImage);
       // Signal this was an index-based change for PhotoFrame transition logic
       this.state.lastChangeType = 'index';
+      addParamToUrl('imageId', newImage.id, {}, true);
     }
-    return newImage;
   }
 
-  prev(): Image | null {
+  prev() {
     const images = this.getImages();
-    if (images.length === 0) return null;
-
+    // Return early if there is no images
+    if (images.length === 0) return;
+    // Return early if there is no active image
     const currentActiveImage = this.state.activeImage;
-    if (!currentActiveImage) {
-      this.setActiveImageToFirst();
-      return images[0] || null;
-    }
+    if (!currentActiveImage) return;
 
     const currentIndex = images.findIndex((img) => img.id === currentActiveImage.id);
+
+    // If the current active image is not in the images array, fall-back to the first image
     if (currentIndex === -1) {
-      this.setActiveImageToFirst();
-      return images[0] || null;
+      const firstImage = images[0];
+      if (firstImage) {
+        addParamToUrl('imageId', firstImage.id, {}, true);
+        this.state.lastChangeType = 'index';
+      }
     }
 
     const newIndex = (currentIndex - 1 + images.length) % images.length;
     const newImage = images[newIndex];
+
     if (newImage) {
-      this.setActiveImage(newImage);
       // Signal this was an index-based change for PhotoFrame transition logic
       this.state.lastChangeType = 'index';
+      addParamToUrl('imageId', newImage.id, {}, true);
     }
-    return newImage;
   }
 
-  target(imageId: Id): Image | null {
-    const image = this.getImage(imageId);
-    if (image) {
-      this.setActiveImage(image as Image);
-      // Signal this was a target-based change for PhotoFrame transition logic
-      this.state.lastChangeType = 'target';
-      return image as Image;
+  target(imageId: Id) {
+    // Prevent redundant calls
+    if (this.state.activeImage && this.state.activeImage.id === imageId) {
+      return this.state.activeImage;
     }
-    return null;
+
+    const image = this.getImage(imageId);
+
+    // No need to transition if there isn't an active image
+    if (!this.state.activeImage && image) {
+      this.state.lastChangeType = 'initial';
+      this.setActiveImage(image);
+    } else if (image) {
+      this.state.lastChangeType = 'target';
+      this.switchToImageSmooth(image);
+    } else {
+      this.setTargetImageId(imageId);
+    }
   }
 
   // ═══════════════════════
@@ -1269,6 +1302,13 @@ export class ImageCtx {
 
     // Only set active image to first if we're not replacing
     if (!imageToReplace) {
+      this.setActiveImageToTargetOrFirst();
+    }
+    // Invalidate the resource with the new image
+    if (this.state.context?.ctxType && this.state.context?.ctxId) {
+      this.invalidateResource(this.state.context.ctxType, this.state.context.ctxId);
+    }
+  }
 
   /**
    * Targeted invalidation for image uploads - only invalidates and refreshes the specific resource
@@ -1513,7 +1553,7 @@ export class ImageCtx {
 
       // If we deleted the active image, set a new one
       if (this.state.activeImage?.id === imageId) {
-        this.setActiveImageToFirst();
+        this.setActiveImageToTargetOrFirst();
       }
     } catch (error: any) {
       console.error('Failed to delete image (ImageCtx.delete context):', error);
