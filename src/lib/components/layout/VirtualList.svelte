@@ -19,7 +19,8 @@ const {
   bufferBefore = 20,
   bufferAfter = 25,
   canResize = false,
-  padding = 0
+  padding = 0,
+  applyBottomOverflow = true
 }: {
   items: Array<T>;
   height: string;
@@ -30,6 +31,7 @@ const {
   bufferAfter?: number;
   canResize?: boolean;
   padding?: number;
+  applyBottomOverflow?: boolean;
 } = $props();
 
 // ═══════════════════════
@@ -158,7 +160,7 @@ async function refresh(items: Array<any>, viewportHeight: number, itemHeight?: n
 
   // Adjust bottom padding: height of items after renderEnd
   const remaining = items.length - renderEnd;
-  const bottomOverflow = viewportHeight * 0.25;
+  const bottomOverflow = applyBottomOverflow ? viewportHeight * 0.25 : 0;
   bottom = remaining * averageHeight + bottomOverflow;
 
   heightMap.length = items.length;
