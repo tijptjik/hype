@@ -2172,26 +2172,27 @@ export class AppCtx {
         properties: f.properties
       })) as GeoJSONFeature[]
     };
-    const padding =
-      window.innerWidth <= MOBILE_MAX_WIDTH
-        ? {
-            top: 48,
-            bottom: 50,
-            right: 50,
-            left: 50
-          }
-        : {
-            top: 150,
-            bottom: 50,
-            right:
-              50 +
-              (this.state.isPanelOpen.filters || this.state.isPanelOpen.settings
-                ? 210
-                : 0),
-            left:
-              50 +
-              (this.state.isPanelOpen.prisms || this.state.isPanelOpen.stars ? 210 : 0)
-          };
+    const padding = isMobile()
+      ? {
+          top: 48,
+          bottom: 50,
+          right: 50,
+          left: 50
+        }
+      : {
+          top: 150,
+          bottom: 50,
+          right:
+            50 +
+            (this.isPanelOpen(Panel.filters) ||
+            this.isPanelOpen(Panel.settings) ||
+            this.isPanelOpen(Panel.profile)
+              ? 210
+              : 0),
+          left:
+            50 +
+            (this.isPanelOpen(Panel.prisms) || this.isPanelOpen(Panel.stars) ? 210 : 0)
+        };
     try {
       // Convert to WGS84 and get bounds
       const bounds = bbox(featureCollection);
@@ -2393,26 +2394,49 @@ export class AppCtx {
   };
 
   // Panel methods
-  togglePanel = (panel: keyof PanelState, closeAll: boolean = false): void => {
-    const leftPanels = ['prisms', 'stars', 'hub'];
-    const rightPanels = ['filters', 'settings'];
-    const currentState = this.state.isPanelOpen[panel];
-    // If left panel is open, close it when toggling a left panel
-    if (leftPanels.includes(panel)) {
-      this.closePanel(leftPanels.filter((p) => p !== panel)[0] as keyof PanelState);
-    } else if (rightPanels.includes(panel)) {
-      this.closePanel(rightPanels.filter((p) => p !== panel)[0] as keyof PanelState);
+  togglePanel = (panel: Panel, updateUrl: boolean = true): void => {
+    const currentState = this.isPanelOpen(panel);
+
+    // Close other panels on the same side first (without updating URL individually)
+    if (this.isPanelOnLeft(panel)) {
+      this.getOpenLeftPanels()
+        .filter((p) => p !== (panel as unknown as PanelLeft))
+        .forEach((p) => this.closePanel(p as unknown as Panel, false));
+    } else if (this.isPanelOnRight(panel)) {
+      this.getOpenRightPanels()
+        .filter((p) => p !== (panel as unknown as PanelRight))
+        .forEach((p) => this.closePanel(p as unknown as Panel, false));
     }
-    if (closeAll) {
-      this.closeAllPanels();
-    }
-    if (currentState) {
-      this.closePanel(panel);
-    } else {
-      this.openPanel(panel);
-      if (window.innerWidth > MOBILE_MAX_WIDTH) {
-        this.focusPanel(leftPanels.includes(panel) ? 'left' : 'right');
+
+    if (window.innerWidth < DUAL_PANEL_MIN_WIDTH) {
+      // Close all panels first, then toggle the target panel based on original state
+      this.closeAllPanels(false);
+      if (!currentState) {
+        // Panel was closed, so open it
+        this.openPanel(panel, false);
+        if (!isMobile()) {
+          this.focusPanel(this.isPanelOnLeft(panel) ? 'left' : 'right');
+        }
       }
+      // If panel was open, leave it closed (toggle behavior)
+    } else {
+      // Toggle the current panel
+      if (currentState) {
+        this.closePanel(panel, false);
+      } else {
+        this.openPanel(panel, false);
+        if (!isMobile()) {
+          this.focusPanel(this.isPanelOnLeft(panel) ? 'left' : 'right');
+        }
+      }
+    }
+
+    // Update URL once at the end with the final panel state (only if updateUrl is true)
+    if (updateUrl && typeof window !== 'undefined') {
+      const panelState = Object.fromEntries(
+        Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen])
+      );
+      updatePanelUrlParams(panelState, this);
     }
   };
 
@@ -2430,53 +2454,82 @@ export class AppCtx {
   };
 
   closeLeftPanel = (): void => {
-    this.state.isPanelOpen.prisms = false;
-    this.state.isPanelOpen.stars = false;
-    this.state.isPanelOpen.admin = false;
-  };
-
-  closeRightPanel = (): void => {
-    this.state.isPanelOpen.filters = false;
-    this.state.isPanelOpen.settings = false;
-  };
-
-  closeAllPanels = (): void => {
-    Object.keys(this.state.isPanelOpen).forEach((panel) => {
-      this.state.isPanelOpen[panel as keyof PanelState] = false;
+    this.getOpenLeftPanels().forEach((panel: PanelLeft) => {
+      this.closePanel(panel as unknown as Panel, false);
     });
   };
 
-  openPanel = (panel: keyof PanelState): void => {
-    this.state.isPanelOpen[panel] = true;
+  closeRightPanel = (): void => {
+    this.getOpenRightPanels().forEach((panel: PanelRight) => {
+      this.closePanel(panel as unknown as Panel, false);
+    });
   };
 
-  closePanel = (panel: keyof PanelState): void => {
-    this.state.isPanelOpen[panel] = false;
+  closeAllPanels = (updateUrl: boolean = true): void => {
+    Object.keys(this.state.panels).forEach((panel) => {
+      this.closePanel(panel as unknown as Panel, false);
+    });
+    if (updateUrl && typeof window !== 'undefined') {
+      const panelState = Object.fromEntries(
+        Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen])
+      );
+      updatePanelUrlParams(panelState, this);
+    }
   };
 
-  isPanelOpen = (panel: keyof PanelState): boolean => {
-    return this.state.isPanelOpen[panel] ?? false;
+  openPanel = (panel: Panel, updateUrl: boolean = true): void => {
+    this.state.panels[panel].isOpen = true;
+
+    // Handle stateful parameters for specific panels
+    if (updateUrl && typeof window !== 'undefined') {
+      const panelState = Object.fromEntries(
+        Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen])
+      );
+      updatePanelUrlParams(panelState, this);
+    }
   };
 
-  isPanelNarrow = (panel: keyof PanelState): boolean => {
-    return (!this.isPanelOpenOrVisual('admin') && panel === 'admin') || false;
+  closePanel = (panel: Panel, updateUrl: boolean = true): void => {
+    this.state.panels[panel].isOpen = false;
+    if (updateUrl && typeof window !== 'undefined') {
+      const panelState = Object.fromEntries(
+        Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen])
+      );
+      updatePanelUrlParams(panelState, this);
+    }
+  };
+
+  isPanelOpen = (panel: Panel): boolean => {
+    return this.state.panels[panel].isOpen ?? false;
+  };
+
+  isPanelNarrow = (panel: Panel): boolean => {
+    return (!this.isPanelOpenOrVisual(Panel.admin) && panel === Panel.admin) || false;
   };
 
   // Visual-only panel methods for auto-hide behavior
-  openPanelVisually = (panel: keyof PanelState): void => {
-    this.state.isPanelOpenVisually[panel] = true;
+  openPanelVisually = (panel: Panel): void => {
+    this.state.panels[panel].isOpenVisually = true;
   };
 
-  closePanelVisually = (panel: keyof PanelState): void => {
-    this.state.isPanelOpenVisually[panel] = false;
+  closePanelVisually = (panel: Panel): void => {
+    this.state.panels[panel].isOpenVisually = false;
   };
 
-  isPanelOpenVisually = (panel: keyof PanelState): boolean => {
-    return this.state.isPanelOpenVisually[panel] ?? false;
+  isPanelOpenVisually = (panel: Panel): boolean => {
+    return this.state.panels[panel].isOpenVisually ?? false;
   };
 
-  isPanelOpenOrVisual = (panel: keyof PanelState): boolean => {
+  isPanelOpenOrVisual = (panel: Panel): boolean => {
     return this.isPanelOpen(panel) || this.isPanelOpenVisually(panel);
+  };
+
+  // Helper method to open profile panel with username context
+  setPanelCtx = (panel: Panel, key: string, value: string | undefined | null): void => {
+    // Set username context if provided
+    if (value && this.state.panels[panel].ctx) {
+      (this.state.panels[panel].ctx as any)[key] = value;
+    }
   };
 
   // Refocus map on currently visible features
@@ -2501,27 +2554,27 @@ export class AppCtx {
 
     if (event.key === '1') {
       if (this.isAdmin()) {
-        this.togglePanel('admin');
+        this.togglePanel(Panel.admin);
       } else {
         if (this.hub?.isCore) {
-          this.togglePanel('prisms');
+          this.togglePanel(Panel.prisms);
         } else {
-          this.togglePanel('hub');
+          this.togglePanel(Panel.hub);
         }
       }
       keyMatched = true;
     } else if (event.key === '2') {
       if (this.isAdmin()) {
-        this.togglePanel('settings');
+        this.togglePanel(Panel.settings);
       } else {
-        this.togglePanel('filters');
+        this.togglePanel(Panel.filters);
       }
       keyMatched = true;
     } else if (event.key === '3') {
-      this.togglePanel('stars');
+      this.togglePanel(Panel.stars);
       keyMatched = true;
     } else if (event.key === '4') {
-      this.togglePanel('settings');
+      this.togglePanel(Panel.settings);
       keyMatched = true;
     }
 
@@ -2600,9 +2653,10 @@ export class AppCtx {
   // USER DATA
   setUser = async (user: CurrentUser | SessionUser | null) => {
     this.user = user;
+    this.postUserMutation();
   };
 
-  getUser = (): CurrentUser | SessionUser | null => {
+  getUser = (): UserProfile | CurrentUser | SessionUser | null => {
     return this.user;
   };
 
@@ -2744,7 +2798,7 @@ export class AppCtx {
       ...this.user,
       displayUsername,
       username: urlSafeUsername
-    });
+    } as CurrentUser);
 
     // Use generic debounced update function directly
     const { debouncedUpdateUser } = await import('$lib/client/services/user');
@@ -2817,6 +2871,7 @@ export class AppCtx {
     this.cache.hub.clear();
     this.cache.property.clear();
     this.cache.image.clear();
+    this.cache.user.clear();
     this.featuresMap.clear();
     this.organisationCodeToId.clear();
     this.projectCodeToId.clear();
@@ -2904,7 +2959,7 @@ export class AppCtx {
     // Initialize each classifier property with an empty array if not already set
     classifierProperties.forEach((property: Property) => {
       if (!(property.key in layerFilters)) {
-        layerFilters[property.key] = [];
+        (layerFilters as any)[property.key] = [];
       }
     });
   };
@@ -2961,7 +3016,7 @@ export class AppCtx {
           rangeMax: max // Default rangeMax to globalMax
         };
 
-        layerFilters[property.key] = filterConfig;
+        (layerFilters as any)[property.key] = filterConfig;
       }
     });
   };
@@ -3024,6 +3079,10 @@ export class AppCtx {
       (item) => item.code,
       (item) => item.id
     );
+  };
+
+  addToCache = (resource: FirstClassResource, id: Id, item: any): void => {
+    this.cache[resource].set(id, item);
   };
 
   // Header management methods
