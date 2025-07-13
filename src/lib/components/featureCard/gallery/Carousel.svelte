@@ -4,7 +4,8 @@ import { tap, swipe } from 'svelte-gestures';
 // CONTEXT
 import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 import { getImageCtx } from '$lib/context/image.svelte';
-import { getAppCtx } from '$lib/context/app.svelte';
+// NAVIGATION
+import { addParamToUrl } from '$lib/navigation';
 // COMPONENTS
 import AddPhoto from '$lib/components/featureCard/gallery/AddPhoto.svelte';
 import PhotoFrame from '$lib/components/common/PhotoFrame.svelte';
@@ -46,10 +47,7 @@ function handleNext(e: MouseEvent | SwipeCustomEvent) {
 function handleTap(event: TapCustomEvent) {
   if (images.length == 0) return;
   if (images.length == 1) {
-    // Use setTimeout to ensure tap event completes before modal opens
-    setTimeout(() => {
-      imageCtx.setMode('fullscreen');
-    }, 50);
+    addParamToUrl('fullscreen', 'true');
     return;
   }
 
@@ -66,10 +64,7 @@ function handleTap(event: TapCustomEvent) {
     imageCtx.next();
   } else {
     // Center half - open full screen
-    // Use setTimeout to ensure tap event completes before modal opens
-    setTimeout(() => {
-      imageCtx.setMode('fullscreen');
-    }, 25);
+    addParamToUrl('fullscreen', 'true');
   }
 }
 
