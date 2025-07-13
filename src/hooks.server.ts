@@ -171,6 +171,39 @@ const handle_session_auth: Handle = async ({ event, resolve }) => {
 };
 
 // ═══════════════════════
+// AUTH REDIRECT HOOK
+// ═══════════════════════
+/**
+ * This hook redirects unauthenticated users to the home page
+ * when they try to access protected routes.
+ */
+const handle_auth_redirect: Handle = async ({ event, resolve }) => {
+  // Skip redirect for API routes, static assets, and home page
+  if (
+    event.url.pathname.startsWith('/api/') ||
+    event.url.pathname.startsWith('/static/') ||
+    event.url.pathname === '/'
+  ) {
+    return resolve(event);
+  }
+
+  // Check if user is authenticated
+  const isAuthenticated = event.locals.session && event.locals.user;
+
+  // Redirect unauthenticated users to home page
+  if (!isAuthenticated) {
+    return new Response(null, {
+      status: 302,
+      headers: {
+        location: '/'
+      }
+    });
+  }
+
+  return resolve(event);
+};
+
+// ═══════════════════════
 // HUB ENRICHMENT HOOK
 // ═══════════════════════
 /**
@@ -184,7 +217,7 @@ const handle_hub_enrichment: Handle = async ({ event, resolve }) => {
   if (event.locals.hub) {
     // Cast user to SessionUser to access superAdmin property from custom session
     const sessionUser = event.locals.user as SessionUser;
-    event.locals.hub.isSuperAdmin = sessionUser?.superAdmin || false;
+    (event.locals.hub as HubOpts).isSuperAdmin = sessionUser?.superAdmin || false;
   }
   return resolve(event);
 };
@@ -201,6 +234,7 @@ handle = sequence(
   handle_hub,
   handle_auth,
   handle_session_auth,
+  handle_auth_redirect,
   handle_hub_enrichment,
   translation
 );
