@@ -76,6 +76,14 @@ const handleDrop = async (e: CustomEvent) => {
       <span class="mx-auto pb-6 text-sm">{m.born_plain_bulldog_stop()}</span>
     </div>
   {/if}
+  <div class="flex h-full flex-col items-center justify-center">
+    <h1 class="text-2xl font-bold uppercase text-base-content/60">
+      {m.viewer__no_image()}
+    </h1>
+    <h1 class="pt-2 text-lg text-neutral-content/60">
+      {imageCtx.isFullscreen ? m.viewer__tap_to_leave_fullscreen() : ''}
+    </h1>
+  </div>
 {/snippet}
 
 {#snippet ErrorContent()}
