@@ -2086,48 +2086,61 @@ export class AppCtx {
 
   // NAVIGATION METHODS
 
-  navNext = (options: { isCardOpen: boolean } = { isCardOpen: true }): void => {
-    let navIndex =
-      this.state.active.collection?.items.findIndex(
-        (item) => item.id === this.state.active.feature?.id
-      ) ?? -1;
-    if (navIndex < (this.state.active.collection?.items.length || 1) - 1) {
-      this.setActiveFeature(
-        this.state.active.collection?.items[navIndex + 1]?.id as Id,
-        {
-          ...options,
-          focus: true
-        }
-      );
+  getHorizontalOffset = (): number => {
+    // Return 0 on mobile
+    if (isMobile()) {
+      return 0;
+    }
+
+    // Check if any left panels are open using PanelLeft enum
+    const leftPanelOpen = this.isLeftPanelOpen();
+
+    // Check if any right panels are open using PanelRight enum
+    const rightPanelOpen = this.isRightPanelOpen();
+
+    // Calculate offset based on panel state
+    if (leftPanelOpen && rightPanelOpen) {
+      return 0; // Both panels open, center the content
+    } else if (leftPanelOpen) {
+      return PANEL_WIDTH / 2; // Left panel open, shift right
+    } else if (rightPanelOpen) {
+      return -PANEL_WIDTH / 2; // Right panel open, shift left
+    } else {
+      return 0; // No panels open
     }
   };
 
-  navPrevious = (options: { isCardOpen: boolean } = { isCardOpen: true }): void => {
-    let navIndex =
-      this.state.active.collection?.items.findIndex(
-        (item) => item.id === this.state.active.feature?.id
-      ) ?? -1;
-    if (navIndex > 0) {
-      this.setActiveFeature(
-        this.state.active.collection?.items[navIndex - 1]?.id as Id,
-        {
-          ...options,
-          focus: true
-        }
-      );
-    }
+  // Helper methods for panel state
+  isLeftPanelOpen = (): boolean => {
+    return Object.values(PanelLeft).some((panel) =>
+      this.isPanelOpen(panel as unknown as Panel)
+    );
   };
 
-  navToIndex = (
-    index: number,
-    options: { isCardOpen: boolean } = { isCardOpen: true }
-  ): void => {
-    if (index > 0) {
-      this.setActiveFeature(this.state.active.collection?.items[index]?.id as Id, {
-        ...options,
-        focus: true
-      });
-    }
+  isRightPanelOpen = (): boolean => {
+    return Object.values(PanelRight).some((panel) =>
+      this.isPanelOpen(panel as unknown as Panel)
+    );
+  };
+
+  getOpenLeftPanels = (): PanelLeft[] => {
+    return Object.values(PanelLeft).filter((panel) =>
+      this.isPanelOpen(panel as unknown as Panel)
+    );
+  };
+
+  getOpenRightPanels = (): PanelRight[] => {
+    return Object.values(PanelRight).filter((panel) =>
+      this.isPanelOpen(panel as unknown as Panel)
+    );
+  };
+
+  isPanelOnLeft = (panel: Panel): boolean => {
+    return Object.values(PanelLeft).includes(panel as unknown as PanelLeft);
+  };
+
+  isPanelOnRight = (panel: Panel): boolean => {
+    return Object.values(PanelRight).includes(panel as unknown as PanelRight);
   };
 
   // MAP OPERATIONS -- REBOUNDING
