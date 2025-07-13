@@ -33,7 +33,7 @@ jobs:
       - name: 'INSTALL :: Bun'
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: '1.2.16'
+          bun-version: '1.2.18'
 
       - name: 'CACHE :: Restore Dependencies'
         uses: actions/cache@v3
@@ -93,7 +93,7 @@ jobs:
       - name: 'INSTALL :: Bun'
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: '1.2.16'
+          bun-version: '1.2.18'
 
       - name: 'CACHE :: Restore Dependencies'
         uses: actions/cache@v3
