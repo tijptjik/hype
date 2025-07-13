@@ -11,7 +11,7 @@ import OmniCollection from './OmniCollection.svelte';
 import { getOmniCtx } from '$lib/context/omni.svelte';
 
 // CONTEXT
-const omniCtx = getOmniContext();
+const omniCtx = getOmniCtx();
 const appCtx = getAppCtx();
 
 let collectionMode = $derived(omniCtx.state.mode);
@@ -42,16 +42,9 @@ let isNewFeature = $derived(omniCtx.isNewFeatureMode);
 </div>
 
 {#if collectionMode !== 'feature' && omniCtx.state.isTrayOpen && !isNewFeature}
-  <div
-    class="relative z-50 grid grid-cols-1 grid-rows-1"
-    transition:slide={{ duration: 200 }}>
+  <div class="relative z-50 grid grid-cols-1 grid-rows-1">
     <OmniCollection
       mode="navigation"
       items={appCtx.state.active.collection?.items || []} />
-  </div>
-  <div
-    class="fixed inset-0 z-[6] h-[calc(100dvh*3)] w-full -translate-y-1/2 bg-black/30"
-    onclick={(e) => omniCtx.toggleTray(e)}
-    transition:fade={{ duration: 200 }}>
   </div>
 {/if}

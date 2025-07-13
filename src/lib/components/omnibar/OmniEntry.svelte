@@ -1,4 +1,6 @@
 <script lang="ts">
+// ENUMS
+import { OmniCollection } from '$lib/enums';
 // TYPES
 import type { SearchResult } from '$lib/types';
 
@@ -37,7 +39,7 @@ let handleKeyDown = (e: KeyboardEvent) => {
   onkeydown={handleKeyDown}>
   <div class="h-1.5 w-1.5 select-none rounded-full bg-base-content/60"></div>
   <span class="flex-grow">{result.name}</span>
-  {#if result.count > 0 && result.group !== 'features'}
+  {#if result.count > 0 && result.collectionType !== OmniCollection.feature}
     <span class="w-6 select-none text-center font-mono text-base-content/60"
       >{result.count}</span>
   {/if}

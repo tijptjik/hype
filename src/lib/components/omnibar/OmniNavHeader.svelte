@@ -10,7 +10,7 @@ import { XCircle, QueueList } from '@steeze-ui/heroicons';
 import ScrollableText from '$lib/components/common/ScrollableText.svelte';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
-import { getOmniContext } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte';
 // TYPES
 import type { Feature } from '$lib/types';
 
@@ -51,7 +51,7 @@ let newFeatureTitle = $derived(
     appCtx.getNewFeature() as Feature,
     'title',
     appCtx.getUserPreferences(),
-    m.day_chunky_okapi_cherish()
+    m.red_arable_herring_trust()
   )
 );
 
@@ -80,7 +80,12 @@ let fullCollectionText = $derived(
     : 'px-6'}">
   <div
     class="min-w-0 flex-1 overflow-hidden transition-[height]"
-    onclick={() => omniCtx.toggleCard()}>
+    onclick={(e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      omniCtx.closeTray();
+      omniCtx.toggleCard();
+    }}>
     <div class="flex items-start gap-3">
       {#if isNotFeatureMode && !isNewFeatureMode}
         <button
