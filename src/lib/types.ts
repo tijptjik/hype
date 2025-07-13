@@ -18,7 +18,10 @@ import {
   SupportedLocales,
   FieldDiscriminator as FieldDiscriminatorEnum,
   TaskType as TaskTypeEnum,
-  TaskReviewOutcome
+  TaskReviewOutcome,
+  Panel,
+  OmniMode,
+  OmniCollection
 } from './enums';
 // ZOD SCHEMAS
 import {
@@ -171,6 +174,7 @@ import {
 } from './db/zod';
 // TYPES
 import type { Snippet } from 'svelte';
+import type { Page } from '@sveltejs/kit';
 import type { AdminCtx } from './context/admin.svelte';
 import type {
   FormPath,
@@ -631,6 +635,7 @@ export type Cache = {
   task: Map<Id, Task>;
   hub: Map<Id, Hub>;
   image: Map<Id, ImageDB>;
+  user: Map<Id, UserProfile>;
   stats: StatsCache;
 };
 
@@ -1709,6 +1714,7 @@ export type ListFieldProps = FieldPropsExtended & {
 
 export type ImageProviderProps = {
   children: any;
+  page: Page;
 } & ImageCtxConstructorOptions;
 
 export interface ImageContextConfig {
@@ -1722,10 +1728,12 @@ export interface ImageContextConfig {
 
 export interface ImageCtxConstructorOptions {
   isAdminMode?: boolean;
+  isValid?: boolean;
   context?: ImageContextConfig | null;
   image?: Image | ImageDBBasic | null;
   images?: (Image | ImageDBBasic)[] | null;
   highlightedIds?: Id[];
+  isFullScreen?: boolean;
 }
 
 // ELEMENTS
@@ -1760,7 +1768,7 @@ export type DisplayFieldProps = {
 /* -------- */
 
 export type PanelProps = {
-  panelType: keyof PanelState;
+  panelType: Panel;
   position: PanelPosition;
   scrollable: boolean;
   inline: boolean;
@@ -1777,15 +1785,6 @@ export type PanelProps = {
 
 export type PanelPosition = 'left' | 'right';
 
-export type PanelState = {
-  filters?: boolean;
-  prisms?: boolean;
-  stars?: boolean;
-  settings?: boolean;
-  admin?: boolean;
-  hub?: boolean;
-};
-
 // Define a type for the function argument to avoid self-reference
 export interface SelectedResourcesProps {
   appCtx: any;
@@ -1799,12 +1798,23 @@ export interface SelectedResourcesProps {
 // APP :: OMNIBAR
 /* -------- */
 
-export type OmniGroup = 'walks' | 'neighbourhoods' | 'features';
+export type OmniState = {
+  // Mode -- search, navigation, or feature
+  mode: OmniMode;
+  // Whether the results are shown
+  isTrayOpen: boolean;
+  // Whether the card is open
+  isCardOpen: boolean;
+  // The value of the search input
+  searchTerm: string;
+  // The index of the focused result
+  focusedIndex: number;
+};
 
 export type SearchResult = {
   name: string;
   count: number;
-  group: OmniGroup;
+  collectionType: OmniCollection;
   ref: string;
 };
 
@@ -1838,12 +1848,21 @@ export type AppContextState = {
     timestamp: number;
   } | null;
   distancesFromUser: Record<Id, number>;
-  isPanelOpen: PanelState;
-  isPanelOpenVisually: PanelState;
   nav: {
     resourceType: NavigableResource | false;
     resourceRef: Id | false;
     facet: FacetType | false;
+  };
+  panels: {
+    [key in Panel]: {
+      isOpen: boolean;
+      isOpenVisually?: boolean;
+      ctx?: {
+        username?: string | null;
+        userData?: UserProfile | null;
+        observePrisms?: boolean;
+      };
+    };
   };
   // Header state for unified header system
   header: {
@@ -2097,6 +2116,53 @@ export interface HubOpts {
   isSuperAdmin?: boolean;
   id?: string;
 }
+
+/* ----------------- */
+// USER :: PROFILES
+/* -------- */
+
+export type ContributedFeature = {
+  id: string;
+  title: string;
+  displayAddress: string;
+  href: string;
+  hierarchy: ResourceContext;
+  createdAt: string;
+};
+
+export type ContributedImage = Image & {
+  id: string;
+  href: string;
+  url: string;
+  hierarchy: ResourceContext;
+  createdAt: string;
+};
+
+export type GroupedFeatures = {
+  [projectId: string]: {
+    id: Id;
+    name: string;
+    code: string;
+    organisation: {
+      name: string;
+      code: string;
+    };
+    features: ContributedFeature[];
+  };
+};
+
+export type GroupedImages = {
+  [projectId: string]: {
+    id: Id;
+    name: string;
+    code: string;
+    organisation: {
+      name: string;
+      code: string;
+    };
+    images: ContributedImage[];
+  };
+};
 
 /* ----------------- */
 // TYPESCRIPT UTILITIES
