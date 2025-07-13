@@ -290,18 +290,45 @@ export const toResponseShape = async (
   isCollection: boolean = false,
   isSuperAdmin: boolean = false
 ): Promise<User | UserProfile | CurrentUser> => {
-  // Process contributor data if available - arrays of published IDs
-  const contributedFeatures = (user as any).contributedFeatures
-    ? (user as any).contributedFeatures
-        .filter((feature: any) => feature.isPublished)
-        .map((feature: any) => feature.id)
-    : [];
+  // Process contributor data if available
+  let contributedFeatures: any = [];
+  let contributedImages: any = [];
 
-  const contributedImages = (user as any).contributedImages
-    ? (user as any).contributedImages
-        .filter((image: any) => image.featureImage && image.featureImage.isPublished)
-        .map((image: any) => image.id)
-    : [];
+  // Group by project - return Record<projectId, id[]>
+  const featuresGrouped: Record<string, string[]> = {};
+  const imagesGrouped: Record<string, string[]> = {};
+
+  // Group features by projectId
+  if ((user as any).contributedFeatures) {
+    (user as any).contributedFeatures
+      .filter((feature: any) => feature.isPublished)
+      .sort((a: any, b: any) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+      .forEach((feature: any) => {
+        if (!featuresGrouped[feature.projectId]) {
+          featuresGrouped[feature.projectId] = [];
+        }
+        featuresGrouped[feature.projectId].push(feature.id);
+      });
+  }
+
+  // Group images by their feature's projectId
+  if ((user as any).contributedImages) {
+    (user as any).contributedImages
+      .filter((image: any) => image.featureImage && image.featureImage.isPublished)
+      .sort((a: any, b: any) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+      .forEach((image: any) => {
+        const projectId = image.featureImage?.feature?.projectId;
+        if (projectId) {
+          if (!imagesGrouped[projectId]) {
+            imagesGrouped[projectId] = [];
+          }
+          imagesGrouped[projectId].push(image.id);
+        }
+      });
+  }
+
+  contributedFeatures = featuresGrouped;
+  contributedImages = imagesGrouped;
 
   // Count tasks by type
   const tasks = (user as any).contributedTasks || [];
@@ -338,5 +365,5 @@ export const toResponseShape = async (
 
   return isCollection
     ? (UserCollectionAPI.parse(data) as User)
-    : (UserCurrentAPI.parse(data) as CurrentUser);
+    : (UserProfileAPI.parse(data) as UserProfile);
 };
