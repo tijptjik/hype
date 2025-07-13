@@ -7,6 +7,7 @@ import {
   createImage,
   createFeatureImage,
   getImageForContextType,
+  getImagesByIds,
   toResponseShape,
   toResponseShapeProjectOrOrganisation
 } from '$lib/db/services/image';
@@ -17,6 +18,7 @@ import { getUserById } from '$lib/db/services/user';
 import { JSONResponseOrError, isValidQueryParamsOrError, getDatabase } from '$lib/api';
 import {
   getImageQueryContext,
+  getImageByIdsQueryContext,
   getCtxFromUrl,
   assertPermissionsToCreateImage
 } from '$lib/api/services/image';
@@ -47,10 +49,32 @@ Example requests to the image API are:
  * GET /api/images?projectId=... 
  * GET /api/images?featureId=...
  * GET /api/images?taskId=...
+ * GET /api/images?ids=id1,id2,id3... (comma-separated list of image IDs)
  */
 export const GET: RequestHandler = async ({ url, locals, platform, request }) => {
   // ASSERT : User Logged in
   const { db, user, userRoles } = await getDatabase(locals, platform);
+
+  // Check if this is a request for specific image IDs
+  const idsParam = url.searchParams.get('ids');
+  if (idsParam) {
+    try {
+      const imageIds = idsParam.split(',').filter((id) => id.trim());
+      if (imageIds.length === 0) {
+        return error(400, 'No valid image IDs provided');
+      }
+
+      // Get query context for IDs endpoint (applies filtering for published/archived images)
+      const { conditions } = getImageByIdsQueryContext(db, user, request);
+
+      // Get images by IDs with feature images flattened and filtered
+      const images = await getImagesByIds(db, imageIds, conditions);
+      return JSONResponseOrError(images);
+    } catch (e) {
+      console.error('Database query error for image IDs:', e);
+      return error(500, 'Failed to fetch images by IDs');
+    }
+  }
 
   // ASSERT : Valid query parameters
   // Validate query parameters, or return 400
