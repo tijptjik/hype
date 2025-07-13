@@ -96,6 +96,48 @@ export function formatDate(dateString: string): string {
   });
 }
 
+export function formatDistanceToNow(
+  date: Date,
+  options: { addSuffix?: boolean; locale?: any } = {}
+): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+  const diffWeek = Math.floor(diffDay / 7);
+  const diffMonth = Math.floor(diffDay / 30);
+  const diffYear = Math.floor(diffDay / 365);
+
+  let result = '';
+
+  if (diffYear > 0) {
+    result = `${diffYear} year${diffYear > 1 ? 's' : ''}`;
+  } else if (diffMonth > 0) {
+    result = `${diffMonth} month${diffMonth > 1 ? 's' : ''}`;
+  } else if (diffWeek > 0) {
+    result = `${diffWeek} week${diffWeek > 1 ? 's' : ''}`;
+  } else if (diffDay > 0) {
+    result = `${diffDay} day${diffDay > 1 ? 's' : ''}`;
+  } else if (diffHour > 0) {
+    result = `${diffHour} hour${diffHour > 1 ? 's' : ''}`;
+  } else if (diffMin > 0) {
+    result = `${diffMin} minute${diffMin > 1 ? 's' : ''}`;
+  } else {
+    result = 'just now';
+  }
+
+  if (options.addSuffix && result !== 'just now') {
+    result += ' ago';
+  }
+
+  // Apply replacements
+  result = result.replace('minute', 'min').replace('hour', 'hr');
+
+  return result;
+}
+
 export const isNotLocale = (maybeLocale: LocaleExtended) => {
   return maybeLocale === 'core' || maybeLocale == undefined;
 };
@@ -267,6 +309,11 @@ export const getId = (
   } else {
     return `${fieldRoot}_${maybeLocale}`;
   }
+};
+
+export const derivedAsync = async <T>(promiseFn: () => Promise<T>) => {
+  const promise = $derived(promiseFn());
+  return $derived(await promise) as T;
 };
 
 // CONFIG
