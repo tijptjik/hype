@@ -1740,53 +1740,58 @@ export class AppCtx {
   };
 
   getHierarchy = async (
-    resource: FeatureFromCollection | Feature | Layer | Project | Organisation | Task
+    resource:
+      | FeatureFromCollection
+      | Feature
+      | Layer
+      | Project
+      | Organisation
+      | Task
+      | Image
   ): Promise<ResourceContext> => {
-    // Determine what type of resource we have and build hierarchy accordingly
-    let feature: FeatureFromCollection | undefined;
-    let layer: Layer | undefined;
-    let project: Project | undefined;
-    let organisation: Organisation | undefined;
+    const featurePromise =
+      'featureId' in resource && resource.featureId
+        ? this.getFeatureById(resource.featureId).then(
+            (f) => f as FeatureFromCollection
+          )
+        : 'layerId' in resource
+          ? Promise.resolve(resource as FeatureFromCollection)
+          : Promise.resolve(undefined);
 
-    if ('featureId' in resource) {
-      // Feature - get its layer, then project, then organisation
-      feature = (await this.getFeatureById(
-        resource.featureId
-      )) as FeatureFromCollection;
-      if (feature) {
-        layer = await this.getLayerById(feature.layerId);
-        if (layer) {
-          project = await this.getProjectById(layer.projectId);
-          if (project) {
-            organisation = await this.getOrganisationById(project.organisationId);
-          }
-        }
-      }
-    } else if ('layerId' in resource) {
-      // Feature - get its layer, then project, then organisation
-      feature = resource as FeatureFromCollection;
-      layer = await this.getLayerById(resource.layerId);
-      if (layer) {
-        project = await this.getProjectById(layer.projectId);
-        if (project) {
-          organisation = await this.getOrganisationById(project.organisationId);
-        }
-      }
-    } else if ('projectId' in resource) {
-      // Layer - use itself, get its project, then organisation
-      layer = resource as Layer;
-      project = await this.getProjectById(layer.projectId);
-      if (project) {
-        organisation = await this.getOrganisationById(project.organisationId);
-      }
-    } else if ('organisationId' in resource) {
-      // Project - use itself, get its organisation
-      project = resource as Project;
-      organisation = await this.getOrganisationById(project.organisationId);
-    } else {
-      // Organisation - use itself
-      organisation = resource as Organisation;
-    }
+    const layerPromise =
+      'layerId' in resource && resource.layerId
+        ? this.getLayerById(resource.layerId)
+        : 'projectId' in resource
+          ? Promise.resolve(resource as Layer)
+          : featurePromise.then((f) => (f ? this.getLayerById(f.layerId) : undefined));
+
+    const projectPromise =
+      'projectId' in resource && resource.projectId
+        ? this.getProjectById(resource.projectId)
+        : 'organisationId' in resource
+          ? Promise.resolve(resource as Project)
+          : layerPromise.then((l) =>
+              l ? this.getProjectById(l.projectId) : undefined
+            );
+
+    const organisationPromise =
+      'organisationId' in resource && resource.organisationId
+        ? this.getOrganisationById(resource.organisationId)
+        : !('featureId' in resource) &&
+            !('layerId' in resource) &&
+            !('projectId' in resource) &&
+            !('organisationId' in resource)
+          ? Promise.resolve(resource as Organisation)
+          : projectPromise.then((p) =>
+              p ? this.getOrganisationById(p.organisationId) : undefined
+            );
+
+    const [feature, layer, project, organisation] = await Promise.all([
+      featurePromise,
+      layerPromise,
+      projectPromise,
+      organisationPromise
+    ]);
 
     return {
       feature,
