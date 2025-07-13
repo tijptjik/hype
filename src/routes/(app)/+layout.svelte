@@ -3,11 +3,15 @@
 import { browser } from '$app/environment';
 // NAVIGATION
 import { goto } from '$app/navigation';
+import { page } from '$app/state';
+import { handlePanelParams } from '$lib/navigation';
 // AUTH
 import { useSession } from '$lib/auth/client';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
-import { setOmniContext, PageState } from '$lib/context/omni.svelte';
+import { setOmniCtx } from '$lib/context/omni.svelte';
+// ENUMS
+import { Panel } from '$lib/enums';
 // SERVICES
 import { startCircularFlight } from '$lib/client/services/geospatial';
 // COMPONENTS
@@ -19,9 +23,12 @@ import Prisms from '$lib/components/panels/Prisms.svelte';
 import Hub from '$lib/components/panels/Hub.svelte';
 import Stars from '$lib/components/panels/Stars.svelte';
 import Settings from '$lib/components/panels/Settings.svelte';
+import Profile from '$lib/components/panels/Profile.svelte';
 import LayerSelectionModal from '$lib/components/modals/LayerSelectionModal.svelte';
 import GeoLocationModal from '$lib/components/modals/GeoLocationModal.svelte';
 import NewFeatureCard from '$lib/components/modals/NewFeatureCard.svelte';
+// ENUMS
+import { PageState } from '$lib/enums';
 // TYPES
 import type { LayoutData, LayoutProps } from '../(app)/$types';
 import type { QueryClient } from '@tanstack/svelte-query';
@@ -54,10 +61,44 @@ const appCtx = getAppCtx();
 appCtx.setHub(hub);
 
 // CONTEXT :: OMNI
-const omniCtx = setOmniContext(appCtx);
+const omniCtx = setOmniCtx(appCtx);
 
 // CIRCULAR FLIGHT ANIMATION STATE
 let stopCircularFlight: (() => void) | null = $state(null);
+
+// PROFILE PANEL SCROLL POSITION
+let profilePanelContainer: HTMLDivElement | undefined = $state();
+
+// EFFECT: Store scroll position when profile panel closes, restore when it opens
+$effect(() => {
+  const isProfileOpen = appCtx.isPanelOpen(Panel.profile);
+
+  if (!isProfileOpen && profilePanelContainer) {
+    // Panel is closing - store scroll position
+    const scrollTop = profilePanelContainer.scrollTop;
+    if (scrollTop > 0) {
+      // Store in app context for this specific user
+      const username = appCtx.state.panels.profile.ctx?.username;
+      if (username) {
+        (appCtx.state.panels.profile.ctx as any).savedScrollPosition = scrollTop;
+      }
+    }
+  } else if (isProfileOpen && profilePanelContainer) {
+    // Panel is opening - restore scroll position
+    const savedScrollPosition = (appCtx.state.panels.profile.ctx as any)
+      ?.savedScrollPosition;
+    if (savedScrollPosition > 0) {
+      // Small delay to ensure content is rendered
+      setTimeout(() => {
+        if (profilePanelContainer) {
+          profilePanelContainer.scrollTop = savedScrollPosition;
+          // Clear the saved position
+          (appCtx.state.panels.profile.ctx as any).savedScrollPosition = 0;
+        }
+      }, 250);
+    }
+  }
+});
 
 // NAVIGATION HANDLING -- State Change Effect
 $effect(() => {
