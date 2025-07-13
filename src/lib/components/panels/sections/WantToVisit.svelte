@@ -6,7 +6,7 @@ import { m } from '$lib/i18n';
 import { flip } from 'svelte/animate';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
-import { getOmniContext } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte';
 // COMPONENTS
 import Section from '$lib/components/panels/common/Section.svelte';
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte';
@@ -14,15 +14,27 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { Squares2x2 } from '@steeze-ui/heroicons';
 // SERVICES
 import { filterUserFeaturesByHierarchy } from '$lib/client/services/userFeatures';
+// NAVIGATION
+import { navigateToStarred } from '$lib/navigation';
 // TYPES
 import type { UserFeatureWithHierarchy } from '$lib/types';
 
 // CONTEXT
 const appCtx = getAppCtx();
-const omniCtx = getOmniContext();
+const omniCtx = getOmniCtx();
 
 // STATE
 let searchTerm = $state('');
+
+// PANEL PROPS
+let panelProps = $derived({
+  panelType: 'stars' as const,
+  position: 'left' as const,
+  scrollable: false,
+  inline: appCtx.isAdmin(),
+  isNarrow: false,
+  isAdmin: false
+});
 
 // Get wishlisted features with hierarchy
 let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
@@ -55,10 +67,10 @@ let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
 );
 </script>
 
-<Section title={m.stars__want_to_visit()} icon="/compass.svg">
+<Section title={m.stars__want_to_visit()} icon="/compass.svg" {...panelProps}>
   {#await wishlistedFeaturesPromise}
     <div class="flex flex-wrap justify-start gap-2 px-[34px] pt-2">
-      <p class="text-sm text-base-content/60">Loading...</p>
+      <span class="loading loading-ring loading-md"></span>
     </div>
   {:then wishlistedFeatures}
     {#if wishlistedFeatures.length > 5}
@@ -100,15 +112,16 @@ let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
               role="button"
               tabindex="0"
               animate:flip={{ duration: 200 }}
-              onclick={() =>
-                omniCtx.handleFeatureSelection(appCtx, wishlist.featureId, {
-                  openCard: true
-                })}
+              onclick={() => {
+                wishlistedFeaturesPromise.then((features) => {
+                  navigateToStarred(appCtx, omniCtx, wishlist.featureId, features);
+                });
+              }}
               onkeydown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  omniCtx.handleFeatureSelection(appCtx, wishlist.featureId, {
-                    openCard: true
+                  wishlistedFeaturesPromise.then((features) => {
+                    navigateToStarred(appCtx, omniCtx, wishlist.featureId, features);
                   });
                 }
               }}>
@@ -138,7 +151,7 @@ let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
     </div>
   {:catch error}
     <div class="flex flex-wrap justify-start gap-2 px-[34px] pt-2">
-      <p class="text-sm text-red-400">Error loading wishlisted features</p>
+      <p class="text-sm text-red-400">{m.honest_swift_lamb_sew()}</p>
     </div>
   {/await}
 </Section>

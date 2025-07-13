@@ -7,7 +7,7 @@ import { m } from '$lib/i18n';
 import { flip } from 'svelte/animate';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
-import { getOmniContext } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte';
 // COMPONENTS
 import Section from '$lib/components/panels/common/Section.svelte';
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte';
@@ -18,15 +18,27 @@ import { formatDistanceToNow } from 'date-fns';
 import { enGB, zhCN, zhHK } from 'date-fns/locale';
 // SERVICES
 import { filterUserFeaturesByHierarchy } from '$lib/client/services/userFeatures';
+// NAVIGATION
+import { navigateToVisited } from '$lib/navigation';
 // TYPES
 import type { Organisation, Project, Layer, Feature } from '$lib/types';
 
 // CONTEXT
 const appCtx = getAppCtx();
-const omniCtx = getOmniContext();
+const omniCtx = getOmniCtx();
 
 // STATE
 let searchTerm = $state('');
+
+// PANEL PROPS
+let panelProps = $derived({
+  panelType: 'stars' as const,
+  position: 'left' as const,
+  scrollable: false,
+  inline: appCtx.isAdmin(),
+  isNarrow: false,
+  isAdmin: false
+});
 
 // Get visited features with hierarchy
 let visitedFeaturesPromise = $derived(
@@ -60,10 +72,10 @@ let visitedFeaturesPromise = $derived(
 );
 </script>
 
-<Section title={m.stars__have_visited()} icon="/map.svg">
+<Section title={m.stars__have_visited()} icon="/map.svg" {...panelProps}>
   {#await visitedFeaturesPromise}
     <div class="flex flex-wrap justify-start gap-2 px-[34px] pt-2">
-      <p class="text-sm text-base-content/60">Loading...</p>
+      <span class="loading loading-ring loading-md"></span>
     </div>
   {:then visitedFeatures}
     {#if visitedFeatures.length > 5}
@@ -101,10 +113,19 @@ let visitedFeaturesPromise = $derived(
             <div
               class="min-h-21 flex cursor-pointer flex-row items-start justify-between gap-4 bg-black px-4 py-2 text-[#374151]"
               animate:flip={{ duration: 200 }}
-              onclick={() =>
-                omniCtx.handleFeatureSelection(appCtx, visited.featureId, {
-                  openCard: true
-                })}>
+              onclick={() => {
+                visitedFeaturesPromise.then((features) => {
+                  navigateToVisited(appCtx, omniCtx, visited.featureId, features);
+                });
+              }}
+              onkeydown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  visitedFeaturesPromise.then((features) => {
+                    navigateToVisited(appCtx, omniCtx, visited.featureId, features);
+                  });
+                }
+              }}>
               <Icon src={Squares2x2} class="h-5 w-5 flex-shrink-0" theme="fill" />
               <div class="flex flex-grow flex-col">
                 <div class="flex flex-wrap justify-between pb-1">
@@ -134,7 +155,9 @@ let visitedFeaturesPromise = $derived(
                                 : getLocale() === 'zh-hans'
                                   ? zhCN
                                   : enGB
-                          }).replace('minute', 'min')
+                          })
+                            .replace('minute', 'min')
+                            .replace('hour', 'hr')
                         : '-'}
                     </p>
                   </div>
@@ -150,7 +173,7 @@ let visitedFeaturesPromise = $derived(
     </div>
   {:catch error}
     <div class="flex flex-wrap justify-start gap-2 px-[34px] pt-2">
-      <p class="text-sm text-red-400">Error loading visited features</p>
+      <p class="text-sm text-red-400">{m.livid_polite_mayfly_build()}</p>
     </div>
   {/await}
 </Section>
