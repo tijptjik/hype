@@ -1,7 +1,7 @@
 // DATA
 import { QueryClient } from '@tanstack/svelte-query';
 // NAVIGATION
-import { navigate, updatePanelUrlParams } from '$lib/navigation';
+import { getUrlParam, navigate, updatePanelUrlParams } from '$lib/navigation';
 // GEO
 import { bbox } from '@turf/bbox';
 // I18N
@@ -2587,6 +2587,15 @@ export class AppCtx {
       keyMatched = true;
     } else if (event.key === '4') {
       this.togglePanel(Panel.settings);
+      keyMatched = true;
+    } else if (event.key === '5') {
+      // If no username param is set, use the user's username
+      this.setPanelCtx(
+        Panel.profile,
+        'username',
+        getUrlParam('username') || this.getUser()?.username
+      );
+      this.togglePanel(Panel.profile);
       keyMatched = true;
     }
 

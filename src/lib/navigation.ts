@@ -561,6 +561,11 @@ const handleStatefulPanelParams = (
   }
 };
 
+export const getUrlParam = (param: string): string | null => {
+  const url = new URL(window.location.href);
+  return url.searchParams.get(param);
+};
+
 // ═══════════════════════
 // 6. IMAGE PARAMETER MANAGEMENT
 // ═══════════════════════
