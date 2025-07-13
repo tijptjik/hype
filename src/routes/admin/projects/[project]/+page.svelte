@@ -69,7 +69,7 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
       isNested: false
     },
     description: {
-      label: m.admin__forms_common_description(),
+      label: m.feature__description(),
       component: 'TextareaField',
       isArray: false,
       isTranslated: true,
@@ -78,14 +78,14 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
   } as FormField,
   credit: {
     license: {
-      label: m.admin__forms_project_license(),
+      label: m.admin__forms_projects_license(),
       component: 'InputField',
       isArray: false,
       isTranslated: true,
       isNested: false
     },
     attribution: {
-      label: m.admin__forms_project_attribution(),
+      label: m.profile__attribution(),
       component: 'InputField',
       isArray: false,
       isTranslated: true,
@@ -268,10 +268,10 @@ let image = $derived(pageProps.data.image as Image);
 // HEADER SETUP
 $effect(() => {
   const facetTabs = new Map();
-  facetTabs.set('core', m.project__core());
+  facetTabs.set('core', m.resources__main());
   facetTabs.set('fields', m.project__fields());
   if (adminCtx.activeResourceRef !== 'new') {
-    facetTabs.set('images', m.project__images());
+    facetTabs.set('images', m.organisation__images());
   }
 
   untrack(() => adminCtx.setHeaderForEntity(title, ProjectIcon, facetTabs));
@@ -348,6 +348,7 @@ $effect(() => {
             </div>
           {:else if adminCtx.activeFacet === 'images'}
             <ImageProvider
+              {page}
               isAdminMode={true}
               context={{
                 ctxType: ImageContextResource.project,

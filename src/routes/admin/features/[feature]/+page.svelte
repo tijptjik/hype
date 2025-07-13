@@ -57,14 +57,14 @@ let contentsElement: HTMLFormElement | undefined = $state();
 const FIELDS: FormFieldConfig = {
   i18n: {
     title: {
-      label: m.admin__forms_feature_title(),
+      label: m.feature__title(),
       component: 'InputField',
       isArray: false,
       isNested: false,
       isTranslated: true
     },
     description: {
-      label: m.admin__forms_common_description(),
+      label: m.feature__description(),
       component: 'TextareaField',
       isArray: false,
       isNested: false,
@@ -168,7 +168,7 @@ let image = $derived(pageProps.data.validatedForm.data.image);
 // HEADER SETUP
 $effect(() => {
   const facetTabs = new Map();
-  facetTabs.set('core', m.feature__core());
+  facetTabs.set('core', m.resources__main());
   facetTabs.set('address', m.feature__address());
   if (adminCtx.activeResourceRef !== 'new') {
     facetTabs.set('images', m.feature__images());
@@ -210,6 +210,7 @@ function handleMapCollapse(): void {
   {#if adminCtx.appCtx.isInitialised && pageProps.data.validatedForm}
     {#await adminCtx.appCtx.getHierarchy(pageProps.data.validatedForm.data as Feature) then { organisation, project }}
       <ImageProvider
+        {page}
         isAdminMode={true}
         image={(pageProps.data.validatedForm.data as Feature).image as Image}
         images={(pageProps.data.validatedForm.data as Feature).images as Image[]}

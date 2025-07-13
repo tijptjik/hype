@@ -47,7 +47,7 @@ const FIELDS: Record<string, FormField> = {
       isNested: false
     },
     description: {
-      label: m.admin__forms_common_description(),
+      label: m.feature__description(),
       component: 'TextareaField',
       isArray: false,
       isTranslated: true,
@@ -94,7 +94,7 @@ let title = $derived(
 // HEADER SETUP
 $effect(() => {
   const facetTabs = new Map();
-  facetTabs.set('core', m.organisation__core());
+  facetTabs.set('core', m.resources__main());
 
   untrack(() => adminCtx.setHeaderForEntity(title, HubIcon, facetTabs));
 
@@ -127,8 +127,8 @@ $effect(() => {
         {form} />
       <div class="flex flex-row gap-6">
         <HubOrganisationsSection
-          title="Hub Organisations"
-          subtitle="Manage which organisations belong to this hub"
+          title={m.hub__organisations()}
+          subtitle={m.hub__organisations_note()}
           fields={{
             organisations: {
               label: 'Hub Organisations',
