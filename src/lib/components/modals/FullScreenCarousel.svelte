@@ -2,9 +2,12 @@
 // GESTURES
 import { tap, swipe } from 'svelte-gestures';
 // I18N
+// NAVIGATION
+import { addParamToUrl, removeParamFromUrl } from '$lib/navigation';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 import { getImageCtx } from '$lib/context/image.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte';
 // COMPONENTS
 import Viewer from '../common/Viewer.svelte';
 import Counter from '$lib/components/featureCard/gallery/Counter.svelte';
@@ -12,6 +15,8 @@ import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Camera } from '@steeze-ui/heroicons';
+// UTILS
+import { PANEL_WIDTH } from '$lib/index';
 // TYPES
 import type { Feature, Image } from '$lib/types';
 import type { SwipeCustomEvent, TapCustomEvent } from 'svelte-gestures';
@@ -25,10 +30,30 @@ let { feature }: Props = $props();
 
 let appCtx = getAppCtx();
 let imageCtx = getImageCtx();
+let omniCtx = getOmniCtx();
 
 // DERIVED STATES
 let images: Image[] = $derived(imageCtx.getImages());
 let currentImage: Image | null = $derived(imageCtx.activeImage);
+
+// Calculate available width and position based on panel state
+let availableWidth = $derived.by(() => {
+  const isLeftOpen = appCtx.isLeftPanelOpen();
+  const isRightOpen = appCtx.isRightPanelOpen();
+
+  let widthReduction = 0; // Base 2rem (32px) padding
+
+  if (isLeftOpen) {
+    widthReduction += PANEL_WIDTH + 0; // Panel width + 16px gutter
+  }
+  if (isRightOpen) {
+    widthReduction += PANEL_WIDTH + 0; // Panel width + 16px gutter
+  }
+
+  return `calc(100vw - ${widthReduction}px)`;
+});
+
+let horizontalOffset = $derived(appCtx.getHorizontalOffset());
 
 // Reset attribution visibility when image changes
 $effect(() => {
@@ -37,6 +62,7 @@ $effect(() => {
 });
 
 // DOM REFERENCE
+// svelte-ignore non_reactive_update
 let container: HTMLDivElement;
 
 // UI STATE
@@ -127,16 +153,17 @@ function handleSwipe(e: SwipeCustomEvent) {
 
 <svelte:window onkeydown={handleKeydown} />
 
-{#if imageCtx.isFullscreen}
+{#if imageCtx && imageCtx.isFullscreen}
   <div
     class="fixed inset-0 z-40 flex items-center justify-center bg-black/75 caret-transparent"
     onclick={closeModal}
     role="dialog"
     aria-modal="true">
     <div
-      class="relative flex h-full w-full max-w-7xl items-center justify-center p-4"
+      class="relative flex h-full w-full max-w-7xl items-center justify-center p-4 transition-all duration-300"
       onclick={closeModal}
-      bind:this={container}>
+      bind:this={container}
+      style="width: {availableWidth}; transform: translateX({horizontalOffset}px);">
       <div
         class="relative flex h-full max-h-full w-full max-w-full items-center justify-center">
         <!-- Interaction layer positioned as background -->
@@ -156,8 +183,7 @@ function handleSwipe(e: SwipeCustomEvent) {
         {/if}
 
         {#if feature}
-          <div
-            class="flex h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] flex-col overflow-hidden">
+          <div class="flex h-[calc(100vh-2rem)] w-full flex-col overflow-hidden">
             <Viewer isDropzone={false} hideActions={false} tightActions={true}>
               {#snippet LeftActions()}
                 <div class="group/anchor relative z-50" onclick={toggleAttribution}>
