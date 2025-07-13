@@ -256,3 +256,58 @@ export const RESERVED_PARAMETERS = [
   ...SEARCH_PARAMETERS,
   ...PAGINATION_PARAMETERS
 ];
+
+/* ----------------- */
+// PANELS
+/* -------- */
+
+export enum Panel {
+  filters = 'filters',
+  prisms = 'prisms',
+  stars = 'stars',
+  settings = 'settings',
+  profile = 'profile',
+  admin = 'admin',
+  hub = 'hub'
+}
+
+export enum PanelSide {
+  left = 'left',
+  right = 'right'
+}
+
+export enum PanelLeft {
+  prisms = 'prisms',
+  stars = 'stars',
+  hub = 'hub'
+}
+
+export enum PanelRight {
+  filters = 'filters',
+  settings = 'settings',
+  profile = 'profile'
+}
+
+/* ----------------- */
+// OMNIBAR
+/* -------- */
+
+export enum PageState {
+  NoTransition,
+  NeedTransition,
+  Transitioning,
+  ReadyToNav
+}
+
+export enum OmniMode {
+  search = 'search',
+  navigation = 'navigation',
+  feature = 'feature',
+  newFeature = 'new-feature'
+}
+
+export enum OmniCollection {
+  walk = 'walk',
+  neighbourhood = 'neighbourhood',
+  feature = 'feature'
+}
