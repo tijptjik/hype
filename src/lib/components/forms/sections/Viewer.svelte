@@ -29,7 +29,7 @@ let image = $derived(imageCtx.activeImage);
   </Header>
   <main
     class="relative flex h-full w-full flex-col overflow-hidden rounded-xl rounded-b-2xl bg-glass-result">
-    <Viewer isCrossfade={true} isDropzone={true}>
+    <Viewer isDropzone={true}>
       {#snippet RightActions()}
         <IconAnchor position="right" icon={InformationCircle}>
           {#if image}

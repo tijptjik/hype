@@ -42,7 +42,6 @@ import type {
   FormFieldArrayDefinition,
   FormFieldNested,
   FormFieldConfig,
-  OrganisationDB,
   Image
 } from '$lib/types';
 
