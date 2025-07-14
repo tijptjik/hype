@@ -64,16 +64,15 @@ const imageProviderProps = $derived({
     task?.id === taskId
       ? (pageProps.data.task.images?.map((taskImage) => taskImage.image) as Image[])
       : undefined,
+  highlightedIds: task.images?.map((taskImage) => taskImage.imageId as Id) || [],
+  ...adminCtx.appCtx.getHierarchySync(task),
   context:
     task?.id === taskId && task
       ? {
           ctxType: ImageContextResource.feature,
           ctxId: task.featureId as Id,
           ctxTypeSecondary: ImageContextResourceExtended.task,
-          ctxIdSecondary: task.id,
-          highlightedIds:
-            task.images?.map((taskImage) => taskImage.imageId as Id) || [],
-          ...adminCtx.appCtx.getHierarchySync(task)
+          ctxIdSecondary: task.id
         }
       : undefined
 });
