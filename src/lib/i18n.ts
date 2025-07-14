@@ -5,6 +5,7 @@ import type {
   FeatureProperty,
   FeaturePropertyI18nDB,
   Locale,
+  Neighbourhood,
   PropertyValueI18nDB,
   UserPreferences
 } from '$lib/types';
@@ -65,7 +66,12 @@ function getUserPreferencesWithDefaults(
  * @returns The translated value of the field.
  */
 export function getI18n<T>(
-  obj: Resource | { i18n: Record<Locale, T> | null } | Record<Locale, T> | undefined,
+  obj:
+    | Resource
+    | Neighbourhood
+    | { i18n: Record<Locale, T> | null }
+    | Record<Locale, T>
+    | undefined,
   field: string,
   userPreferences: UserPreferences,
   fallback?: string,
