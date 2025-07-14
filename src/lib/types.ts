@@ -1513,7 +1513,13 @@ export type Metadata = Record<string, string>;
 /* -------- */
 
 export type LoadStatus = 'initial' | 'uploaded' | 'loading' | 'loaded' | 'error';
-export type UploadStatus = 'idle' | 'uploading' | 'uploaded' | 'error' | 'invalidated';
+export type UploadStatus =
+  | 'idle'
+  | 'staged'
+  | 'uploading'
+  | 'uploaded'
+  | 'error'
+  | 'invalidated';
 export type ImageUpload = {
   file: File;
   status: UploadStatus;

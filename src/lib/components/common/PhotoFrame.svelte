@@ -52,7 +52,7 @@ let overlayImage = $state<DisplayImage | null>(null);
 let isTransitioning = $state(false);
 let overlayOpacity = $state(0);
 let animationId = $state<number | null>(null);
-let timeoutId = $state<number | null>(null);
+let timeoutId = $state<ReturnType<typeof setTimeout> | null>(null);
 
 // Generate alt text
 let altText = $derived(baseImage ? `Image ${baseImage.id}` : 'No image');
@@ -95,7 +95,7 @@ function getDisplayImage(
   if (viewerState === 'transition' && activePreview?.preview) {
     return getDisplayImageFromPreview(activePreview);
   }
-  // Priority 4: Show active image
+  // Priority 4: Show active image (could be API image or staged image with preview)
   if (activeImage) {
     return getDisplayImageFromActiveImage(activeImage, transformation);
   }

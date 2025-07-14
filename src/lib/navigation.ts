@@ -608,6 +608,15 @@ export const handleImageParams = async (
     return null;
   }
 
+  // Skip API calls for staged images - they only exist locally
+  if (imageId.startsWith('staged-')) {
+    return {
+      targetImageId: imageId,
+      isFullScreen: fullscreen,
+      targetImage: null // Will be handled by imageCtx locally
+    };
+  }
+
   try {
     // Fetch the specific image from the API
     const response = await fetch(`/api/images/${imageId}`);

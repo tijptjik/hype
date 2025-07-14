@@ -6,13 +6,17 @@ import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
 import { getImageCtx } from '$lib/context/image.svelte';
 // NAVIGATION
 import { addParamToUrl } from '$lib/navigation';
+
 // COMPONENTS
-import AddPhoto from '$lib/components/featureCard/gallery/AddPhoto.svelte';
+import AddPhotoPrompt from './AddPhotoPrompt.svelte';
+import SelectPhotoSource from './SelectPhotoSource.svelte';
 import PhotoFrame from '$lib/components/common/PhotoFrame.svelte';
-import Icon from '$lib/components/common/Icon.svelte';
 import Metadata from '$lib/components/featureCard/gallery/Metadata.svelte';
 import Counter from '$lib/components/featureCard/gallery/Counter.svelte';
-import { ChevronLeft, ChevronRight } from '@steeze-ui/heroicons';
+import StageActions from '$lib/components/featureCard/gallery/StageActions.svelte';
+// ICONS
+import Icon from '$lib/components/common/Icon.svelte';
+import { ChevronLeft, ChevronRight, Trash } from '@steeze-ui/heroicons';
 // TYPES
 import type { SwipeCustomEvent, TapCustomEvent } from 'svelte-gestures';
 import type { Image } from '$lib/types';
@@ -110,8 +114,11 @@ function handleSwipe(e: SwipeCustomEvent) {
       transitionDuration={300}>
       {#snippet children()}
         <!-- Image intent and attribution overlay -->
-        {#if currentImage}
+        {#if currentImage && !imageCtx.isImageStaged(currentImage)}
           <Metadata {currentImage} />
+          <Counter {images} {currentImage} />
+        {:else if currentImage && imageCtx.isImageStaged(currentImage)}
+          <StageActions {currentImage} />
           <Counter {images} {currentImage} />
         {/if}
       {/snippet}
@@ -132,6 +139,8 @@ function handleSwipe(e: SwipeCustomEvent) {
       aria-label="Tap left/right to navigate, center to open full screen">
     </div>
   {:else if cardCtx.isAddPhotoMode || cardCtx.isNewMode || cardCtx.isMissingMode}
-    <AddPhoto />
+    <SelectPhotoSource />
+  {:else}
+    <AddPhotoPrompt />
   {/if}
 </div>
