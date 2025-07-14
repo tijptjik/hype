@@ -255,6 +255,7 @@ type LoadFormDataResponse<T extends Record<string, unknown>> = Promise<{
   entity: string;
   validatedForm: SuperValidated<T>;
   image?: Image | null;
+  images?: Image[] | null;
 }>;
 
 // Helper functions for data processing
@@ -396,6 +397,7 @@ async function prepareExistingForm<T extends Record<string, unknown>>({
 }): Promise<{
   form: SuperValidated<T>;
   image: Image | null;
+  images: Image[] | null;
 }> {
   const response = await fetch(
     `${API_PATH}/${ResourcePath[resourceType]}/${entityRef}`
@@ -410,16 +412,27 @@ async function prepareExistingForm<T extends Record<string, unknown>>({
   const form = await superValidate<T>(formData, zod(updateSchema));
 
   // Fetch image for organisation or project
-  const image = await getImageIfNeeded(formData, fetch);
+  const { image, images } = await getImageIfNeeded(formData, fetch);
 
-  return { form, image };
+  return { form, image, images };
 }
 
-const getImageIfNeeded = async (formData: any, fetch: typeof window.fetch) => {
+const getImageIfNeeded = async (
+  formData: any,
+  fetch: typeof window.fetch
+): Promise<{ image: Image | null; images: Image[] | null }> => {
+  const hasImages = isFeature(formData);
   const needsImage = isProject(formData) || isOrganisation(formData);
-  return needsImage && formData.imageId
-    ? await fetchImage(formData.imageId, fetch)
-    : null;
+  return {
+    image: (hasImages && formData.image !== undefined
+      ? formData.image
+      : needsImage && formData.imageId
+        ? await fetchImage(formData.imageId, fetch)
+        : null) as Image | null,
+    images: (hasImages && formData.images !== undefined ? formData.images : null) as
+      | Image[]
+      | null
+  };
 };
 
 export async function loadFormData<T extends Record<string, unknown>>({
@@ -455,7 +468,7 @@ export async function loadFormData<T extends Record<string, unknown>>({
     };
   }
 
-  const { form, image } = await prepareExistingForm<T>({
+  const { form, image, images } = await prepareExistingForm<T>({
     resourceType,
     entityRef,
     updateSchema,
@@ -465,7 +478,8 @@ export async function loadFormData<T extends Record<string, unknown>>({
   return {
     entity: entityRef,
     validatedForm: form,
-    image
+    image,
+    images
   };
 }
 

@@ -1653,6 +1653,7 @@ export type FormPageProps<T extends Resource> = {
     validatedForm: SuperValidated<T>;
     entity: Ref;
     image?: Image | null;
+    images?: Image[] | null;
   };
 };
 
