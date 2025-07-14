@@ -18,7 +18,12 @@ import client, {
 } from '$lib/db';
 import { mergeFeatureProperties } from '$lib/db/services/feature';
 // ENUMS
-import { FirstClassResource, ResourcePath, RESERVED_PARAMETERS } from '$lib/enums';
+import {
+  FirstClassResource,
+  HierarchicalResource,
+  ResourcePath,
+  RESERVED_PARAMETERS
+} from '$lib/enums';
 // GUARDS
 import { isOrganisation, isProject, isLayer, isFeature } from '$lib/types';
 // TYPES
@@ -202,7 +207,7 @@ const refToResourceType = (ref: string): FirstClassResource => {
 
 // Resource configuration mapping
 const resourceConfig: Record<
-  FirstClassResource | 'hub',
+  FirstClassResource,
   {
     parentResourceType?: FirstClassResource;
     parentRefKey?: string;
@@ -231,7 +236,8 @@ const resourceConfig: Record<
     keyToParent: 'featureId'
   },
   hub: {},
-  property: {}
+  property: {},
+  user: {}
 };
 
 type LoadFormDataOptions<T extends Record<string, unknown>> = {
@@ -253,11 +259,13 @@ type LoadFormDataResponse<T extends Record<string, unknown>> = Promise<{
 
 // Helper functions for data processing
 async function fetchParentResource(
-  parentType: FirstClassResource,
+  parentType: Omit<HierarchicalResource, 'task'>,
   parentRef: string,
   fetch: typeof window.fetch
 ): Promise<Resource> {
-  const response = await fetch(`${API_PATH}/${ResourcePath[parentType]}/${parentRef}`);
+  const response = await fetch(
+    `${API_PATH}/${ResourcePath[parentType as keyof typeof ResourcePath]}/${parentRef}`
+  );
 
   if (!response.ok) {
     throw error(response.status);
@@ -289,10 +297,10 @@ async function prepareNewForm<T extends Record<string, unknown>>({
   user,
   fetch
 }: {
-  resourceType: FirstClassResource;
+  resourceType: HierarchicalResource;
   parentId?: string;
   parentRef?: string;
-  parentResourceType?: FirstClassResource;
+  parentResourceType?: Omit<HierarchicalResource, 'task'>;
   keyToParent?: string;
   insertSchema: z.AnyZodObject;
   user?: SessionUser;
@@ -381,7 +389,7 @@ async function prepareExistingForm<T extends Record<string, unknown>>({
   updateSchema,
   fetch
 }: {
-  resourceType: FirstClassResource;
+  resourceType: HierarchicalResource;
   entityRef: string;
   updateSchema: z.AnyZodObject;
   fetch: typeof window.fetch;
@@ -424,7 +432,9 @@ export async function loadFormData<T extends Record<string, unknown>>({
   ...options
 }: LoadFormDataOptions<T>): LoadFormDataResponse<T> {
   const entityRef = entity || NEW_REF;
-  const resourceType = refToResourceType(resourcePath) as FirstClassResource;
+  const resourceType = refToResourceType(
+    resourcePath
+  ) as unknown as HierarchicalResource;
 
   if (entityRef === NEW_REF) {
     const form = await prepareNewForm<T>({
