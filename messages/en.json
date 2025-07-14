@@ -466,5 +466,9 @@
   "profile__role_type__contributor": "Contributor",
   "omni__title_visited_walks": "Visited",
   "viewer__no_image": "No Image",
-  "viewer__tap_to_leave_fullscreen": "Tap to leave fullscreen"
+  "viewer__tap_to_leave_fullscreen": "Tap to leave fullscreen",
+  "viewer__no_image_note": "Please consider adding a photo when you visit",
+  "or": "or",
+  "camera": "Camera",
+  "upload": "Upload"
 }

@@ -313,6 +313,7 @@ export class ImageCtx {
 
     // CRUD :: CREATE
     uploadQueue: [] as ImageUpload[],
+    stagingQueue: [] as ImageUpload[],
     rejected: [] as File[],
 
     // CRUD :: READ
@@ -512,6 +513,209 @@ export class ImageCtx {
   }
 
   // ═══════════════════════
+  // 3.3 STATE MANAGEMENT :: STAGING
+  // ═══════════════════════
+
+  /**
+   * Converts staged files to temporary Image objects with preview URLs
+   */
+  private createStagedImagesFromFiles(files: File[]): Image[] {
+    return files.map((file, index) => {
+      const tempId = `staged-${Date.now()}-${index}`;
+      const preview = URL.createObjectURL(file);
+
+      return {
+        id: tempId,
+        isArchived: false,
+        contributorId: null,
+        cdn: 'preview',
+        env: 'staging',
+        cdnId: null,
+        publicId: tempId,
+        version: null,
+        originalFilename: file.name,
+        originalExtension: file.name.split('.').pop() || '',
+        format: file.type.split('/')[1] || 'jpg',
+        width: null,
+        height: null,
+        originalWidth: null,
+        originalHeight: null,
+        bytes: file.size,
+        cameraModel: null,
+        createdBy: null,
+        capturedAt: null,
+        latitude: null,
+        longitude: null,
+        credit: null,
+        modifiedAt: null,
+        isPublished: false,
+        intent: 'general',
+        updatedAt: new Date().toISOString(),
+        preview,
+        file // Store the file for later upload
+      } as Partial<Image> & { preview: string; file: File };
+    });
+  }
+
+  async handleStagedFilesSelect(acceptedFiles: File[], fileRejections: File[]) {
+    const existingImages = this.getImages();
+    const hasApiImages = existingImages.some((img) => !this.isImageStaged(img));
+
+    // Only reset if we're replacing API images with staged images
+    if (hasApiImages) {
+      this.resetImages();
+      this.resetActiveImage();
+    }
+
+    // Convert files to staged Image objects
+    const stagedImages = this.createStagedImagesFromFiles(acceptedFiles);
+
+    // Add staged images to existing images (or set if we just reset)
+    if (hasApiImages) {
+      await this.setImages(stagedImages);
+    } else {
+      // Add to existing staged images
+      const allImages = [...existingImages, ...stagedImages];
+      await this.setImages(allImages);
+    }
+
+    // Set the active image to the LATEST (last) staged image
+    if (stagedImages.length > 0) {
+      const latestImage = stagedImages[stagedImages.length - 1];
+      this.setActiveImage(latestImage);
+    }
+
+    // Handle rejected files
+    this.addToRejected(fileRejections);
+
+    // Update staging queue for upload tracking
+    this.addToStagingQueue(acceptedFiles);
+  }
+
+  /**
+   * Uploads all staged images and replaces them with real images
+   */
+  async uploadStagedImages(
+    config: {
+      onSuccess?: (savedImage: Image) => void;
+      onError?: () => void;
+    } = {}
+  ) {
+    const stagedImages = this.getImages().filter(
+      (img) => (img as any).cdn === 'preview'
+    );
+
+    if (stagedImages.length === 0) {
+      return;
+    }
+
+    // Convert staged images to uploads
+    const uploads = stagedImages.map((img) => {
+      const file = (img as any).file;
+      return {
+        file,
+        status: 'uploading',
+        retries: 0,
+        preview: (img as any).preview
+      } as ImageUpload;
+    });
+
+    // Clear staged images from main array
+    this.resetImages();
+    this.resetActiveImage();
+
+    // Add to upload queue
+    this.state.uploadQueue.push(...uploads);
+
+    // Process uploads
+    await this.processUploadQueue(config);
+
+    // Clean up staging queue
+    this.state.stagingQueue = [];
+  }
+
+  addToStagingQueue(files: File[]) {
+    const newStaged = files.map(
+      (file) =>
+        ({
+          file,
+          status: 'staged',
+          retries: 0,
+          preview: URL.createObjectURL(file)
+        }) as ImageUpload
+    );
+
+    this.state.stagingQueue.push(...newStaged);
+
+    this.updateActivePreview();
+  }
+
+  /**
+   * Removes a staged image from the images array and cleans up its preview URL
+   */
+  unstageImage(imageId: Id) {
+    const image = this.getImage(imageId);
+    if (!image || !this.isImageStaged(image)) {
+      return;
+    }
+
+    // Prevent multiple simultaneous unstaging of the same image
+    if (this.state.pendingConfirmation.has(imageId)) {
+      return;
+    }
+
+    // Mark as being processed to prevent race conditions
+    this.addToPendingConfirmation(imageId);
+
+    const imageIndex = this.getImages().findIndex((img) => img.id === imageId);
+    const indexSize = this.getImages().length;
+    let isDelayRequired = false;
+
+    if (imageIndex !== -1 && imageIndex < indexSize - 1) {
+      isDelayRequired = true;
+      this.next();
+    } else if (indexSize > 1) {
+      isDelayRequired = true;
+      this.prev();
+    }
+
+    // Allow the transition to complete before removing the image
+    setTimeout(
+      () => {
+        // Double-check the image still exists and is staged
+        const currentImage = this.getImage(imageId);
+        if (!currentImage || !this.isImageStaged(currentImage)) {
+          this.removeFromPendingConfirmation(imageId);
+          return;
+        }
+
+        // Clean up the preview URL
+        if ((currentImage as any).preview) {
+          URL.revokeObjectURL((currentImage as any).preview);
+        }
+
+        // Remove from images array
+        this.removeImage(imageId);
+
+        // Remove from staging queue
+        this.state.stagingQueue = this.state.stagingQueue.filter(
+          (staged) => staged.file.name !== (currentImage as any).file?.name
+        );
+
+        // If this was the active image, set a new active image
+        if (this.state.activeImage?.id === imageId) {
+          this.setActiveImageToFirst();
+        }
+
+        // Update preview and remove from pending
+        this.updateActivePreview();
+        this.removeFromPendingConfirmation(imageId);
+      },
+      isDelayRequired ? 300 : 0
+    );
+  }
+
+  // ═══════════════════════
   // 3.4 STATE MANAGEMENT :: PENDING CONFIRMATION
   // ═══════════════════════
 
@@ -575,18 +779,30 @@ export class ImageCtx {
       return;
     }
 
-    const sortedImages = sortImages(validImages, this.isAdminMode);
+    // Only sort API images, preserve order for staged images
+    const stagedImages = validImages.filter((img) => (img as any).cdn === 'preview');
+    const apiImages = validImages.filter((img) => (img as any).cdn !== 'preview');
+
+    // Sort API images but keep staged images in selection order
+    const sortedApiImages =
+      apiImages.length > 0 ? sortImages(apiImages, this.isAdminMode) : [];
+    const finalImages = [...sortedApiImages, ...stagedImages];
 
     let newImages = new SvelteMap<Id, Image>();
-    sortedImages.forEach((image) => {
+    finalImages.forEach((image) => {
       newImages.set(image.id, image as Image);
     });
     this.state.images = newImages;
 
-    await this.preloadImages();
+    // Only preload non-preview images
+    if (sortedApiImages.length > 0) {
+      await this.preloadImages();
+    }
   }
 
   resetImages() {
+    // Clean up preview URLs before clearing
+    this.cleanupStagedImages();
     this.state.images.clear();
   }
 
@@ -1209,7 +1425,13 @@ export class ImageCtx {
     if (currentIndex === -1) {
       const firstImage = images[0];
       if (firstImage) {
-        addParamToUrl('imageId', firstImage.id, {}, true);
+        // Only add to URL if not a staged image
+        if (!this.isImageStaged(firstImage)) {
+          addParamToUrl('imageId', firstImage.id, {}, true);
+        } else {
+          // Only set active image for stages images as they don't have valid Ids
+          this.setActiveImage(firstImage);
+        }
         this.state.lastChangeType = 'index';
       }
     }
@@ -1220,7 +1442,13 @@ export class ImageCtx {
     if (newImage) {
       // Signal this was an index-based change for PhotoFrame transition logic
       this.state.lastChangeType = 'index';
-      addParamToUrl('imageId', newImage.id, {}, true);
+      // Only add to URL if not a staged image
+      if (!this.isImageStaged(newImage)) {
+        addParamToUrl('imageId', newImage.id, {}, true);
+      } else {
+        // Only set active image for stages images as they don't have valid Ids
+        this.setActiveImage(newImage);
+      }
     }
   }
 
@@ -1238,7 +1466,13 @@ export class ImageCtx {
     if (currentIndex === -1) {
       const firstImage = images[0];
       if (firstImage) {
-        addParamToUrl('imageId', firstImage.id, {}, true);
+        // Only add to URL if not a staged image
+        if (!this.isImageStaged(firstImage)) {
+          addParamToUrl('imageId', firstImage.id, {}, true);
+        } else {
+          // Only set active image for stages images as they don't have valid Ids
+          this.setActiveImage(firstImage);
+        }
         this.state.lastChangeType = 'index';
       }
     }
@@ -1249,7 +1483,13 @@ export class ImageCtx {
     if (newImage) {
       // Signal this was an index-based change for PhotoFrame transition logic
       this.state.lastChangeType = 'index';
-      addParamToUrl('imageId', newImage.id, {}, true);
+      // Only add to URL if not a staged image
+      if (!this.isImageStaged(newImage)) {
+        addParamToUrl('imageId', newImage.id, {}, true);
+      } else {
+        // Only set active image for stages images as they don't have valid Ids
+        this.setActiveImage(newImage);
+      }
     }
   }
 
@@ -1671,6 +1911,33 @@ export class ImageCtx {
   // ═══════════════════════
   // 11. Internal Helper Methods
   // ═══════════════════════
+
+  /**
+   * Checks if an image is staged (has a preview URL)
+   */
+  isImageStaged(image: Image): boolean {
+    return (image as any).cdn === 'preview' && (image as any).preview;
+  }
+
+  /**
+   * Gets staged images from the main images array
+   */
+  getStagedImages(): Image[] {
+    return this.getImages().filter((img) => this.isImageStaged(img));
+  }
+
+  /**
+   * Cleans up preview URLs for staged images
+   */
+  cleanupStagedImages() {
+    const stagedImages = this.getStagedImages();
+    stagedImages.forEach((img) => {
+      if ((img as any).preview) {
+        URL.revokeObjectURL((img as any).preview);
+      }
+    });
+  }
+
   private sortImagesInternal = () => {
     const images = this.getImages();
     const sortedImages = sortImages(images, this.isAdminMode);

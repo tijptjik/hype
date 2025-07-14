@@ -357,6 +357,11 @@ export async function deleteImage(
  * @returns The image data from the API.
  */
 export async function getImageById(imageId: Id) {
+  // Skip API calls for staged images - they only exist locally
+  if (imageId.startsWith('staged-')) {
+    return null;
+  }
+
   // Fetch the specific image from the API
   const response = await fetch(`/api/images/${imageId}`);
   if (!response.ok) {
@@ -428,6 +433,10 @@ export function getCloudinaryUploadEndpoint(cloudname: string): string {
 
 /**
  * Generates a URL for a Cloudinary image based on the image data.
+ * @remarks
+ * - If the image has a preview URL, return the preview URL.
+ * - If the image has a CDN, return the URL from the CDN.
+ * - If the image has no CDN, throw an error.
  * @param opts - Options for generating the URL.
  * @param opts.image - The image data.
  * @param opts.transformation - The transformation to apply to the image.
@@ -450,6 +459,11 @@ export function getURLfromImage(opts: {
     quality = 'auto',
     raw = false
   } = opts;
+
+  // Handle staged images with preview URLs
+  if ((image as any).preview) {
+    return (image as any).preview;
+  }
 
   const finalTransformation = `${transformation}/g_${gravity}/f_${format}/q_${quality}`;
 
@@ -795,4 +809,36 @@ export function getHashiconUrl(id: string) {
   canvas.height = 64;
   hashicon(id, { size: 64, createCanvas: () => canvas });
   return canvas.toDataURL();
+}
+
+/**
+ * Checks if the device has camera access available
+ */
+export async function checkCameraAvailability() {
+  try {
+    // Check if MediaDevices API is available
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+      return false;
+    }
+
+    // Check for video input devices
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const hasVideoInput = devices.some((device) => device.kind === 'videoinput');
+
+    if (!hasVideoInput) {
+      return false;
+    }
+
+    // Test camera access (will prompt user for permission if needed)
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' }
+    });
+
+    // If we get here, camera access is available
+    stream.getTracks().forEach((track) => track.stop()); // Clean up
+    return true;
+  } catch (error) {
+    // Camera access denied or not available
+    return false;
+  }
 }
