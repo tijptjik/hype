@@ -195,6 +195,24 @@ function handleMapFullscreenChange(isFullscreen: boolean): void {
 function handleMapCollapse(): void {
   isMapCollapsed = !isMapCollapsed;
 }
+const feature = $derived(pageProps.data.validatedForm.data);
+const featureId = $state(page.params.feature);
+const imageProviderProps = $derived({
+  isAdminMode: true,
+  // Only provide valid props when feature and featureId match
+  // This prevents intermediate mismatched state during navigation
+  isValid: feature?.id === featureId,
+  image: feature?.id === featureId ? (pageProps.data.image as Image | null) : undefined,
+  images: feature?.id === featureId ? (pageProps.data.images as Image[]) : undefined,
+  context:
+    feature?.id === featureId && feature
+      ? {
+          ctxType: ImageContextResource.feature,
+          ctxId: featureId,
+          ...adminCtx.appCtx.getHierarchySync(feature)
+        }
+      : undefined
+});
 </script>
 
 {#snippet featureInfoSnippet()}
@@ -208,133 +226,112 @@ function handleMapCollapse(): void {
 <!-- LAYOUT -->
 <div class="relative h-full w-full overflow-hidden" bind:this={vietportElement}>
   {#if adminCtx.appCtx.isInitialised && pageProps.data.validatedForm}
-    {#await adminCtx.appCtx.getHierarchy(pageProps.data.validatedForm.data as Feature) then { organisation, project }}
-      <ImageProvider
-        {page}
-        isAdminMode={true}
-        image={(pageProps.data.validatedForm.data as Feature).image as Image}
-        images={(pageProps.data.validatedForm.data as Feature).images as Image[]}
-        context={{
-          ctxType: ImageContextResource.feature,
-          ctxId: (pageProps.data.validatedForm.data as Feature).id,
-          organisation: organisation as Omit<OrganisationDB, 'isCoreInclusive'>,
-          project
-        }}>
-        <form
-          id="featureForm"
-          method="POST"
-          use:enhance
-          role="form"
-          transition:fade
-          data-testid="featureForm"
-          class="mb-12 h-full overflow-y-auto">
-          <main class="flex h-full min-h-0 flex-1 flex-row gap-6 overflow-visible pl-6">
-            {#if adminCtx.activeFacet !== 'images'}
-              <div
-                class="relative h-full overflow-hidden rounded-lg pb-6 pt-6 transition-all duration-300 ease-in-out @container"
-                class:flex-[0_0_3%]={isMapCollapsed}
-                class:overflow-visible={isMapCollapsed}
-                class:flex-[0_0_100%]={isMapFullscreen}
-                class:flex-[0_0_33%]={!isMapFullscreen && !isMapCollapsed}>
-                <MapSection
-                  {form}
-                  fields={FIELDS.map}
-                  toggleFullscreen={handleMapFullscreenChange}
-                  toggleCollapsed={handleMapCollapse} />
-                <div
-                  class="absolute bottom-6 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex">
-                  <UserAttributionCard
-                    userId={pageProps.data.validatedForm.data.contributorId}
-                    date={pageProps.data.validatedForm.data.createdAt ?? undefined}
-                    type="contributor" />
-                  <UserAttributionCard
-                    userId={pageProps.data.validatedForm.data.publisherId}
-                    date={pageProps.data.validatedForm.data.publishedAt ?? undefined}
-                    type="publisher" />
-                </div>
-              </div>
-            {/if}
+    <ImageProvider {page} {...imageProviderProps}>
+      <form
+        id="featureForm"
+        method="POST"
+        use:enhance
+        role="form"
+        transition:fade
+        data-testid="featureForm"
+        class="mb-12 h-full overflow-y-auto">
+        <main class="flex h-full min-h-0 flex-1 flex-row gap-6 overflow-visible pl-6">
+          {#if adminCtx.activeFacet !== 'images'}
             <div
-              class="h-full overflow-y-auto pt-6 transition-all duration-300 ease-in-out"
-              class:flex-[0_0_0%]={isMapFullscreen}
-              class:overflow-hidden={isMapFullscreen}
-              class:opacity-0={isMapFullscreen}
-              class:w-[400px]={isMapFullscreen}
-              class:h-[400px]={isMapFullscreen}
-              class:flex-[0_0_100%]={adminCtx.activeFacet === 'images'}
-              class:flex-[0_0_96%]={isMapCollapsed && adminCtx.activeFacet !== 'images'}
-              class:flex-[0_0_66%]={!isMapFullscreen &&
-                !isMapCollapsed &&
-                adminCtx.activeFacet !== 'images'}
-              class:opacity-100={!isMapFullscreen}
-              bind:this={contentsElement}>
+              class="relative h-full overflow-hidden rounded-lg pb-6 pt-6 transition-all duration-300 ease-in-out @container"
+              class:flex-[0_0_3%]={isMapCollapsed}
+              class:overflow-visible={isMapCollapsed}
+              class:flex-[0_0_100%]={isMapFullscreen}
+              class:flex-[0_0_33%]={!isMapFullscreen && !isMapCollapsed}>
+              <MapSection
+                {form}
+                fields={FIELDS.map}
+                toggleFullscreen={handleMapFullscreenChange}
+                toggleCollapsed={handleMapCollapse} />
               <div
-                class="pb-6 pr-6 {adminCtx.activeFacet === 'images' ? 'h-full' : ''}">
-                <div
-                  class="flex flex-col gap-6 {adminCtx.activeFacet === 'images'
-                    ? 'h-full items-stretch'
-                    : ''}">
-                  {#if adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false}
-                    <I18nSection
-                      {form}
-                      title={m.admin__forms_common_descriptors()}
-                      fields={FIELDS.i18n as FormField}
-                      headerActions={featureActionSnippet}
-                      infoContent={featureInfoSnippet} />
-                    <!-- TODO Add support for translatable specifiers -->
-                    <div class="flex flex-wrap items-start justify-between gap-6">
-                      <PropertySection
-                        {form}
-                        title={m.admin__forms_common_classifiers()}
-                        subtitle={m.admin__forms_common_classifiers_subtitle()}
-                        fieldDiscriminator="classifier"
-                        fields={FIELDS.property as FormFieldArray}
-                        cols={pageProps.data.entity == NEW_REF ? 2 : 3} />
-                      <PropertySection
-                        {form}
-                        title={m.admin__forms_common_specifiers()}
-                        subtitle={m.admin__forms_common_specifiers_subtitle()}
-                        fieldDiscriminator="specifier"
-                        fields={FIELDS.property as FormFieldArray}
-                        cols={pageProps.data.entity == NEW_REF ? 2 : 3} />
-                      {#if pageProps.data.entity !== NEW_REF}
-                        <CanonicalImage {form} {image} />
-                      {/if}
-                    </div>
-                  {:else if adminCtx.activeFacet === 'address'}
-                    <AddressSection
-                      {form}
-                      title={m.admin__forms_feature_addressing_title()}
-                      subtitle={m.admin__forms_feature_addressing_subtitle()}
-                      fields={FIELDS.address as FormField & FormFieldNested} />
-                    <AddressComponentSection
-                      {form}
-                      title={m.admin__forms_feature_address_components_title()}
-                      fields={FIELDS.address as FormField & FormFieldNested} />
-                  {:else if adminCtx.activeFacet === 'images' && pageProps.data.entity !== NEW_REF}
-                    <div
-                      class="flex h-full min-h-0 w-full flex-row overflow-hidden pt-1">
-                      <ViewerSection
-                        {form}
-                        title={m.admin__forms_feature_gallery_title()}
-                        fields={FIELDS.viewer as FormFieldNested} />
-                      <GallerySection
-                        {form}
-                        fields={FIELDS.gallery as FormFieldNested} />
-                    </div>
-                  {/if}
-                </div>
+                class="absolute bottom-6 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex">
+                <UserAttributionCard
+                  userId={pageProps.data.validatedForm.data.contributorId}
+                  date={pageProps.data.validatedForm.data.createdAt ?? undefined}
+                  type="contributor" />
+                <UserAttributionCard
+                  userId={pageProps.data.validatedForm.data.publisherId}
+                  date={pageProps.data.validatedForm.data.publishedAt ?? undefined}
+                  type="publisher" />
               </div>
             </div>
-          </main>
-        </form>
-      </ImageProvider>
-    {:catch error}
-      <!-- Error state - show fallback -->
-      <div class="flex items-center justify-center p-8">
-        <div class="text-error">{m.blue_long_felix_bask()}</div>
-      </div>
-    {/await}
+          {/if}
+          <div
+            class="h-full overflow-y-auto pt-6 transition-all duration-300 ease-in-out"
+            class:flex-[0_0_0%]={isMapFullscreen}
+            class:overflow-hidden={isMapFullscreen}
+            class:opacity-0={isMapFullscreen}
+            class:w-[400px]={isMapFullscreen}
+            class:h-[400px]={isMapFullscreen}
+            class:flex-[0_0_100%]={adminCtx.activeFacet === 'images'}
+            class:flex-[0_0_96%]={isMapCollapsed && adminCtx.activeFacet !== 'images'}
+            class:flex-[0_0_66%]={!isMapFullscreen &&
+              !isMapCollapsed &&
+              adminCtx.activeFacet !== 'images'}
+            class:opacity-100={!isMapFullscreen}
+            bind:this={contentsElement}>
+            <div class="pb-6 pr-6 {adminCtx.activeFacet === 'images' ? 'h-full' : ''}">
+              <div
+                class="flex flex-col gap-6 {adminCtx.activeFacet === 'images'
+                  ? 'h-full items-stretch'
+                  : ''}">
+                {#if adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false}
+                  <I18nSection
+                    {form}
+                    title={m.admin__forms_common_descriptors()}
+                    fields={FIELDS.i18n as FormField}
+                    headerActions={featureActionSnippet}
+                    infoContent={featureInfoSnippet} />
+                  <!-- TODO Add support for translatable specifiers -->
+                  <div class="flex flex-wrap items-start justify-between gap-6">
+                    <PropertySection
+                      {form}
+                      title={m.admin__forms_common_classifiers()}
+                      subtitle={m.admin__forms_common_classifiers_subtitle()}
+                      fieldDiscriminator="classifier"
+                      fields={FIELDS.property as FormFieldArray}
+                      cols={pageProps.data.entity == NEW_REF ? 2 : 3} />
+                    <PropertySection
+                      {form}
+                      title={m.admin__forms_common_specifiers()}
+                      subtitle={m.admin__forms_common_specifiers_subtitle()}
+                      fieldDiscriminator="specifier"
+                      fields={FIELDS.property as FormFieldArray}
+                      cols={pageProps.data.entity == NEW_REF ? 2 : 3} />
+                    {#if pageProps.data.entity !== NEW_REF}
+                      <CanonicalImage {form} {image} />
+                    {/if}
+                  </div>
+                {:else if adminCtx.activeFacet === 'address'}
+                  <AddressSection
+                    {form}
+                    title={m.admin__forms_feature_addressing_title()}
+                    subtitle={m.admin__forms_feature_addressing_subtitle()}
+                    fields={FIELDS.address as FormField & FormFieldNested} />
+                  <AddressComponentSection
+                    {form}
+                    title={m.admin__forms_feature_address_components_title()}
+                    fields={FIELDS.address as FormField & FormFieldNested} />
+                {:else if adminCtx.activeFacet === 'images' && pageProps.data.entity !== NEW_REF}
+                  <div class="flex h-full min-h-0 w-full flex-row overflow-hidden pt-1">
+                    <ViewerSection
+                      {form}
+                      title={m.admin__forms_feature_gallery_title()}
+                      fields={FIELDS.viewer as FormFieldNested} />
+                    <GallerySection {form} fields={FIELDS.gallery as FormFieldNested} />
+                  </div>
+                {/if}
+              </div>
+            </div>
+          </div>
+        </main>
+      </form>
+    </ImageProvider>
   {/if}
   {#if vietportElement && contentsElement}
     <Scrollbar
