@@ -234,7 +234,8 @@ export const getImagesByIds = async (
 export const getImageForContextType = async (
   db: Database,
   ctxType: ImageContextResource | ImageContextResourceExtended,
-  conditions: SQL<unknown>[]
+  conditions: SQL<unknown>[],
+  isAdminMode: boolean = false
 ): Promise<ImageDBFlat[] | ImageDB[]> => {
   let images;
   if (ctxType === ImageContextResource.feature) {
@@ -246,7 +247,7 @@ export const getImageForContextType = async (
   } else if (ctxType === ImageContextResourceExtended.task) {
     images = await getImagesForTask(db, conditions);
   }
-  return sortImages(images as ImageDBFlat[]);
+  return sortImages(images as ImageDBFlat[], isAdminMode);
 };
 
 /**

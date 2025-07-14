@@ -1699,7 +1699,7 @@ export class AppCtx {
 
   // Synchronous version that uses cache only (for UI components)
   getHierarchySync = (
-    resource: Feature | Layer | Project | Organisation
+    resource: Feature | Layer | Project | Organisation | Task
   ): ResourceContext => {
     // Determine what type of resource we have and build hierarchy accordingly
     let layer: Layer | undefined;
@@ -1707,7 +1707,7 @@ export class AppCtx {
     let organisation: Organisation | undefined;
 
     if ('layerId' in resource) {
-      // Feature - get its layer, then project, then organisation from cache
+      // Feature or Task - get its layer, then project, then organisation from cache
       layer = this.cache.layer.get(resource.layerId);
       if (layer) {
         project = this.cache.project.get(layer.projectId);

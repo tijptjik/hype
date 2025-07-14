@@ -15,7 +15,12 @@ import { updateOrganisationById } from '$lib/db/services/organisation';
 import { updateProjectById } from '$lib/db/services/project';
 import { getUserById } from '$lib/db/services/user';
 // API SERVICES
-import { JSONResponseOrError, isValidQueryParamsOrError, getDatabase } from '$lib/api';
+import {
+  JSONResponseOrError,
+  isValidQueryParamsOrError,
+  getDatabase,
+  isAdminRequest
+} from '$lib/api';
 import {
   getImageQueryContext,
   getImageByIdsQueryContext,
@@ -97,7 +102,12 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
   );
   try {
     // DB : Get the images for the context
-    const images = await getImageForContextType(db, ctxType, conditions);
+    const images = await getImageForContextType(
+      db,
+      ctxType,
+      conditions,
+      isAdminRequest(request)
+    );
 
     return JSONResponseOrError(images);
   } catch (e) {
