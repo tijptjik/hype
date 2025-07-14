@@ -122,6 +122,9 @@ $effect.pre(() => {
           // Don't try to apply target images manually after context reset
           initialisingContext = false;
         });
+      if (options?.context?.ctxTypeSecondary) {
+        imageCtx.refreshImages(targetImageId);
+      }
       lastSet = contextId;
       lastImageState = currentImageState;
     } else if (targetImageId && targetImageId !== lastImageId) {

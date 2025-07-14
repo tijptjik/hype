@@ -575,7 +575,7 @@ export class ImageCtx {
       return;
     }
 
-    const sortedImages = sortImages(validImages);
+    const sortedImages = sortImages(validImages, this.isAdminMode);
 
     let newImages = new SvelteMap<Id, Image>();
     sortedImages.forEach((image) => {
@@ -1671,7 +1671,7 @@ export class ImageCtx {
   // ═══════════════════════
   // 11. Internal Helper Methods
   // ═══════════════════════
-  private sortImagesInternal() {
+  private sortImagesInternal = () => {
     const images = this.getImages();
     const sortedImages = sortImages(images, this.isAdminMode);
 
@@ -1680,7 +1680,7 @@ export class ImageCtx {
     sortedImages.forEach((image) => {
       this.state.images.set(image.id, image as Image);
     });
-  }
+  };
 }
 
 // ═══════════════════════
