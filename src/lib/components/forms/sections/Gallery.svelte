@@ -29,7 +29,9 @@ let actionProps: {
 });
 
 const actions: Record<'add' | 'remove', (...args: any[]) => void> = {
-  add: () => {
+  add: (e: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
     actionProps.removeMode = false;
     openFileDialog();
   },

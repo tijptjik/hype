@@ -1474,6 +1474,9 @@ export class ImageCtx {
   // 7. Image Attribute Updates (Patching)
   // ═══════════════════════
   async handleSetIntent(imageId: Id, newIntent: Intent) {
+    const publicIntents = ['canonical', 'closeUp', 'context', 'general'] as const;
+    const isPublished = publicIntents.includes(newIntent as any);
+
     try {
       // If trying to set as canonical, first check if another image is already canonical
       if (newIntent === 'canonical') {
@@ -1490,8 +1493,9 @@ export class ImageCtx {
       }
 
       // Update the intent of the image
-      await updateImageIntent(imageId, newIntent, this.getCtx());
+      await updateImageIntent(imageId, newIntent, this.getCtx(), isPublished);
       this.setForImage(imageId, 'intent', newIntent);
+      this.setForImage(imageId, 'isPublished', isPublished);
       this.sortImagesInternal(); // Calls the private sortImages method
     } catch (error) {
       console.error('Failed to update intent:', error);

@@ -271,16 +271,17 @@ export async function updateImageIntent(
   imageId: string,
   intent: Intent,
   ctx: ImageEditCtx,
-  fetchFn: typeof fetch = fetch
+  isPublished?: boolean
 ): Promise<Image> {
   const apiUrl = addCtxToUrl(`/api/images/${imageId}`, ctx);
-  const response = await fetchFn(apiUrl, {
+  const response = await fetch(apiUrl, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       intent,
       imageId,
-      featureId: ctx.ctxId
+      featureId: ctx.ctxId,
+      ...(isPublished !== undefined && { isPublished })
     })
   });
 
