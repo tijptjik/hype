@@ -25,7 +25,6 @@ type Props = {
   RightActions?: Snippet;
   isDropzone?: boolean;
   enableReplacement?: boolean;
-  isCrossfade?: boolean;
   hideActions?: boolean;
   tightActions?: boolean;
 };
