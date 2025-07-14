@@ -417,7 +417,7 @@ export class AppCtx {
       },
       task: {
         // Status related
-        isReviewed: null
+        isReviewed: false
       },
       hub: {
         // Status related
