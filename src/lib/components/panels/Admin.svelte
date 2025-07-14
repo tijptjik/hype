@@ -15,7 +15,7 @@ import AdminFooter from '$lib/components/panels/common/variants/AdminFooter.svel
 // SERVICES
 import { navigateOnAdminById } from '$lib/navigation';
 // ENUMS
-import { FirstClassResource } from '$lib/enums';
+import { Panel as PanelEnum, FirstClassResource } from '$lib/enums';
 // TYPES
 import type {
   Id,
@@ -35,11 +35,11 @@ const adminCtx = getAdminCtx();
 let panelContainer: HTMLDivElement;
 
 let panelProps: PanelProps = $derived({
-  panelType: 'admin',
+  panelType: PanelEnum.admin,
   position: 'left',
   scrollable: false,
   inline: true,
-  isNarrow: appCtx.isPanelNarrow('admin'),
+  isNarrow: appCtx.isPanelNarrow(PanelEnum.admin),
   isAdmin: true,
   active: {
     resourceType: appCtx.getActiveResourceType(),
@@ -67,6 +67,8 @@ let panelProps: PanelProps = $derived({
                 selectedClass="bg-primary"
                 isSelected={selectedOrganisations.includes(organisation.id)}
                 onNavigate={async (e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
                   if (
                     panelProps.active?.resourceType ==
                       FirstClassResource.organisation &&
@@ -105,6 +107,8 @@ let panelProps: PanelProps = $derived({
                 selectedClass="bg-accent"
                 isSelected={selectedProjects.includes(project.id)}
                 onNavigate={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
                   if (
                     panelProps.active?.resourceType == FirstClassResource.project &&
                     panelProps.active?.resourceId == project.id
@@ -143,6 +147,8 @@ let panelProps: PanelProps = $derived({
                 selectedClass="bg-secondary"
                 isSelected={selectedLayers.includes(layer.id)}
                 onNavigate={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
                   if (
                     panelProps.active?.resourceType == FirstClassResource.layer &&
                     panelProps.active?.resourceId == layer.id

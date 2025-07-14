@@ -9,7 +9,6 @@ import { getI18n } from '$lib/i18n';
 import { Funnel, XMark } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // COMPONENTS
-import ResourceDisplay from '../elements/ResourceDisplay.svelte';
 import ResourceHierarchyPath from '../common/ResourceHierarchyPath.svelte';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
