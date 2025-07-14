@@ -50,6 +50,7 @@ import type {
   FeaturePropertyDB,
   FeaturePropertyMerge,
   Id,
+  Layer,
   LayerDB,
   LayerDBRaw,
   Locale,
@@ -778,7 +779,7 @@ export const toResponseShape = async (
  */
 export function mergeFeatureProperties(
   featureData: Feature,
-  layerData: LayerDBRaw
+  layerData: Layer
 ): Feature {
   if (!featureData.properties) {
     featureData.properties = [];

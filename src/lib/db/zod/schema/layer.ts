@@ -95,7 +95,7 @@ export const LayerAPI = LayerBase.omit({
   modifiedAt: true
 }).extend({
   i18n: getLocales(LayerI18nBase),
-  properties: z.array(LayerPropertyBase),
+  properties: z.array(LayerPropertyUpdateExtra),
   publisher: UserBasic.nullish()
 });
 

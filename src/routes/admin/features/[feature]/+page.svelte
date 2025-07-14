@@ -51,7 +51,7 @@ const adminCtx = getAdminCtx();
 
 // ELEMENTS
 let vietportElement: HTMLDivElement | undefined = $state();
-let contentsElement: HTMLFormElement | undefined = $state();
+let contentsElement: HTMLDivElement | undefined = $state();
 
 // CONFIG
 const FIELDS: FormFieldConfig = {

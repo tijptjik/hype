@@ -2204,15 +2204,19 @@ export function isOrganisation(resource: Resource): resource is Organisation {
 }
 
 export function isProject(resource: Resource): resource is Project {
-  return 'organisationId' in resource;
+  return (
+    'organisationId' in resource &&
+    !('projectId' in resource) &&
+    !('domain' in resource)
+  );
 }
 
 export function isLayer(resource: Resource): resource is Layer {
-  return 'projectId' in resource;
+  return 'projectId' in resource && !('layerId' in resource);
 }
 
 export function isFeature(resource: Resource): resource is Feature {
-  return 'layerId' in resource;
+  return 'layerId' in resource && !('featureId' in resource);
 }
 
 export function isHub(resource: Resource): resource is Hub {
