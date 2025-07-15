@@ -1,7 +1,6 @@
 <script lang="ts">
 // SVELTE
 import { page } from '$app/state';
-import { untrack } from 'svelte';
 // PROVIDERS
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // COMPONENTS
@@ -13,8 +12,22 @@ import FeatureDescription from '$lib/components/featureCard/FeatureDescription.s
 import FeatureProperties from '$lib/components/featureCard/FeatureProperties.svelte';
 import FeaturePortal from '$lib/components/featureCard/FeaturePortal.svelte';
 import FeatureActions from '$lib/components/featureCard/FeatureActions.svelte';
-import MissingReportReason from '$lib/components/featureCard/MissingReportReason.svelte';
-import PhotoCredit from '$lib/components/featureCard/PhotoCredit.svelte';
+// ACTION COMPONENTS
+import WishlistAction from '$lib/components/featureCard/actions/WishlistAction.svelte';
+import VisitAction from '$lib/components/featureCard/actions/VisitAction.svelte';
+import DirectionsAction from '$lib/components/featureCard/actions/DirectionsAction.svelte';
+import SubmitNewFeatureAction from '$lib/components/featureCard/actions/SubmitNewFeatureAction.svelte';
+import SubmitMissingReportAction from '$lib/components/featureCard/actions/SubmitMissingReportAction.svelte';
+import SubmitNewPhotosAction from '$lib/components/featureCard/actions/SubmitNewPhotosAction.svelte';
+import CancelAction from '$lib/components/featureCard/actions/CancelAction.svelte';
+import ValidationError from '$lib/components/featureCard/ValidationError.svelte';
+// ACTION LABELS
+import NewFeatureLabel from '$lib/components/featureCard/actions/labels/NewFeatureLabel.svelte';
+import MissingReportLabel from '$lib/components/featureCard/actions/labels/MissingReportLabel.svelte';
+import AddPhotoLabel from '$lib/components/featureCard/actions/labels/AddPhotoLabel.svelte';
+import MissingReportBody from '$lib/components/featureCard/MissingReportBody.svelte';
+import AddPhotoBody from '$lib/components/featureCard/AddPhotoBody.svelte';
+import SuccesfulSubmission from '$lib/components/featureCard/gallery/SuccesfulSubmission.svelte';
 import Spacer from '$lib/components/featureCard/layout/Spacer.svelte';
 import Container from '$lib/components/featureCard/layout/Container.svelte';
 import FeaturePortalSection from '$lib/components/featureCard/layout/FeaturePortalSection.svelte';
@@ -49,6 +62,7 @@ let feature: Feature | undefined = $state()!;
 let portalElement: HTMLElement = $state()!;
 let wrapperElement: HTMLElement = $state()!;
 let descriptionElement: HTMLDivElement = $state()!;
+let viewport: HTMLElement = $state()!;
 
 // STATE :: LAYOUT
 let isDescriptionExpanded: boolean = $state(false);
@@ -74,8 +88,7 @@ const loadFeatureAndSetContext = async () => {
     // Cold start: initialize the feature with card open
     // Prevent navigation since we're already on the feature page
     await omniCtx.initFeature(page.params.id, {
-      focus: false,
-      openCard: false // Prevent navigation that would destroy components
+      focus: false
     });
   }
 };
@@ -154,9 +167,9 @@ const imageProviderProps = $derived({
   {#if feature}
     <ImageProvider {page} {...imageProviderProps}>
       <FeatureCard>
-        {#if mode === FeatureCardMode.Display}
-          <Container>
-            <FeatureGallery />
+        <Container bind:viewport>
+          <FeatureGallery />
+          {#if cardCtx.isDisplayMode || cardCtx.isSubmissionSuccessMode}
             <FeatureBreadcrumbs {feature} />
             <FeatureTitle {feature} />
             <div
@@ -192,17 +205,44 @@ const imageProviderProps = $derived({
               {/if}
             </div>
             <Spacer />
-          </Container>
-        {:else if mode === FeatureCardMode.Missing}
-          <FeatureGallery />
-          <MissingReportReason />
-        {:else if mode === FeatureCardMode.AddPhoto}
-          <FeatureGallery />
-          <PhotoCredit />
-        {/if}
-        <FeatureActions feature={feature as Feature} />
+          {:else if cardCtx.isMissingMode}
+            <MissingReportBody {viewport} />
+          {:else if cardCtx.isAddPhotoMode}
+            <AddPhotoBody {viewport} />
+          {/if}
+        </Container>
+        <ValidationError />
+        <FeatureActions>
+          {#snippet leftActions()}
+            {#if feature && mode === FeatureCardMode.Display}
+              <div class="flex gap-2">
+                <WishlistAction {feature} />
+                <VisitAction {feature} />
+              </div>
+            {:else if mode === FeatureCardMode.New}
+              <NewFeatureLabel />
+            {:else if feature && mode === FeatureCardMode.Missing}
+              <MissingReportLabel />
+            {:else if feature && mode === FeatureCardMode.AddPhoto}
+              <AddPhotoLabel />
+            {/if}
+          {/snippet}
+          {#snippet rightActions()}
+            {#if feature && mode === FeatureCardMode.Display}
+              <DirectionsAction {feature} />
+            {:else if mode === FeatureCardMode.New}
+              <SubmitNewFeatureAction />
+            {:else if feature && mode === FeatureCardMode.Missing}
+              <SubmitMissingReportAction {feature} />
+            {:else if feature && mode === FeatureCardMode.AddPhoto}
+              <SubmitNewPhotosAction {feature} />
+            {/if}
+          {/snippet}
+        </FeatureActions>
       </FeatureCard>
-      <FullScreenCarousel {feature} />
+      {#if mode === FeatureCardMode.Display}
+        <FullScreenCarousel {feature} />
+      {/if}
     </ImageProvider>
   {/if}
 {:else}
