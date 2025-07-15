@@ -229,6 +229,9 @@ export class ImageCtx {
         this.refreshImages();
       }
     }
+    setTimeout(() => {
+      this.setActiveImageToFirst();
+    }, 100);
   };
 
   async setContext(options: {
@@ -669,8 +672,27 @@ export class ImageCtx {
 
     const imageIndex = this.getImages().findIndex((img) => img.id === imageId);
     const indexSize = this.getImages().length;
-    let isDelayRequired = false;
 
+    // Clean up the preview URL immediately
+    if ((image as any).preview) {
+      URL.revokeObjectURL((image as any).preview);
+    }
+
+    // Store file name for staging queue cleanup before removing from images
+    const fileName = (image as any).file?.name;
+
+    // Remove from both data structures immediately to keep them in sync
+    this.removeImage(imageId);
+
+    // Remove from staging queue by file name (only if it has a file)
+    if (fileName) {
+      this.state.stagingQueue = this.state.stagingQueue.filter(
+        (staged) => staged.file.name !== fileName
+      );
+    }
+
+    // Handle navigation after data cleanup
+    let isDelayRequired = false;
     if (imageIndex !== -1 && imageIndex < indexSize - 1) {
       isDelayRequired = true;
       this.next();
@@ -679,40 +701,21 @@ export class ImageCtx {
       this.prev();
     }
 
-    // Allow the transition to complete before removing the image
-    setTimeout(
-      () => {
-        // Double-check the image still exists and is staged
-        const currentImage = this.getImage(imageId);
-        if (!currentImage || !this.isImageStaged(currentImage)) {
-          this.removeFromPendingConfirmation(imageId);
-          return;
-        }
+    // If this was the active image, set a new active image
+    if (this.state.activeImage?.id === imageId) {
+      this.setActiveImageToFirst();
+    }
 
-        // Clean up the preview URL
-        if ((currentImage as any).preview) {
-          URL.revokeObjectURL((currentImage as any).preview);
-        }
-
-        // Remove from images array
-        this.removeImage(imageId);
-
-        // Remove from staging queue
-        this.state.stagingQueue = this.state.stagingQueue.filter(
-          (staged) => staged.file.name !== (currentImage as any).file?.name
-        );
-
-        // If this was the active image, set a new active image
-        if (this.state.activeImage?.id === imageId) {
-          this.setActiveImageToFirst();
-        }
-
-        // Update preview and remove from pending
+    // Update preview and remove from pending (with delay only for UI transitions)
+    if (isDelayRequired) {
+      setTimeout(() => {
         this.updateActivePreview();
         this.removeFromPendingConfirmation(imageId);
-      },
-      isDelayRequired ? 300 : 0
-    );
+      }, 300);
+    } else {
+      this.updateActivePreview();
+      this.removeFromPendingConfirmation(imageId);
+    }
   }
 
   // ═══════════════════════
@@ -986,7 +989,9 @@ export class ImageCtx {
       return;
     }
 
+    // Set Active Image
     this.state.activeImage = image;
+
     if (image && isLoading) {
       this.setLoadStatus(image.id, 'loading');
     }
@@ -1926,10 +1931,15 @@ export class ImageCtx {
     return this.getImages().filter((img) => this.isImageStaged(img));
   }
 
+  getStagedQueue(): ImageUpload[] {
+    return this.state.stagingQueue;
+  }
+
   /**
    * Cleans up preview URLs for staged images
    */
   cleanupStagedImages() {
+    this.state.stagingQueue = [];
     const stagedImages = this.getStagedImages();
     stagedImages.forEach((img) => {
       if ((img as any).preview) {
