@@ -154,7 +154,7 @@
   "settings_language_prefer_placeholders_description": "Shows placeholder text like \"Unknown\" instead of machine-translating content that's unavailable in your language(s)",
   "settings_experimental_no_labels_mode": "Minimal Map",
   "settings_experimental_no_labels_description": "Hide all map labels",
-  "report_missing__preface": "❤️ You - For keeping the map fresh",
+  "report_missing__preface": "You - Map Freshness",
   "forms__unpublish": "Unpublish",
   "awful_this_dingo_glow": "Intangibilize",
   "quiet_late_worm_startle": "Reject Report",
@@ -180,8 +180,8 @@
   "smart_crazy_cuckoo_play": "New Feature",
   "each_funny_cow_radiate": "Accept All",
   "shy_sunny_hare_revive": "Accept Classified",
-  "add_photos__thank_you": "❤️ You - For sharing your snaps",
-  "new_feature__thank_you": "❤️ You - For beautifying the map",
+  "add_photos__thank_you": "You - For your snaps",
+  "new_feature__thank_you": "You - Making your mark",
   "whole_house_cougar_hurl": "Add new place",
   "each_gray_felix_catch": "Select Map",
   "close_shy_jurgen_cook": "Use Location",
@@ -470,5 +470,23 @@
   "viewer__no_image_note": "Please consider adding a photo when you visit",
   "or": "or",
   "camera": "Camera",
-  "upload": "Upload"
+  "upload": "Upload",
+  "user_contributions__received_title": "Contribution Received",
+  "user_contributions__received_body": "Thank you - we will review your submission. Once the contribution is accepted, it will show up in your profile.",
+  "user_contributions__received_button": "See Profile",
+  "photo": [
+    {
+      "declarations": [
+        "input n",
+        "local photosPlural = n: plural"
+      ],
+      "selectors": [
+        "photosPlural"
+      ],
+      "match": {
+        "photosPlural=one": "photo",
+        "photosPlural=other": "photos"
+      }
+    }
+  ]
 }
