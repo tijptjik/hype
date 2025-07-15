@@ -18,11 +18,11 @@ import { clickOutside } from '$lib/actions';
 import { getAppCtx } from '$lib/context/app.svelte';
 import { getCardCtx } from '$lib/context/card.svelte';
 import { getOmniCtx } from '$lib/context/omni.svelte';
-import { ImageCtx } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte';
 // ENUMS
 import { FeatureCardMode } from '$lib/enums';
 // TYPES
-import type { Feature, UserContributedFeature, ResourceContext } from '$lib/types';
+import type { Feature, UserContributedFeature } from '$lib/types';
 
 // CONTEXT
 const appCtx = getAppCtx();
@@ -64,12 +64,13 @@ const isOnlyLayerInHub = $derived(
 );
 
 const onAddPhoto = () => {
-  imageCtx.reset();
-  cardCtx.state.mode = FeatureCardMode.AddPhoto;
+  imageCtx.resetImages();
+  cardCtx.setMode(FeatureCardMode.AddPhoto);
 };
 
 const onMissingReport = () => {
-  cardCtx.state.mode = FeatureCardMode.Missing;
+  imageCtx.resetImages();
+  cardCtx.setMode(FeatureCardMode.Missing);
 };
 </script>
 
@@ -135,7 +136,7 @@ const onMissingReport = () => {
               use:clickOutside={(e) => closeMenu(e)}>
               <button
                 class="btn btn-ghost btn-sm h-auto w-full justify-start gap-2 rounded-b-none p-2 pl-3 font-mono font-thin text-neutral-content hover:bg-base-300 active:scale-100 active:bg-base-200"
-                onclick={() => (cardCtx.state.mode = FeatureCardMode.Missing)}>
+                onclick={onMissingReport}>
                 <Icon
                   src={ExclamationCircle}
                   class="h-5 w-5 text-primary"
