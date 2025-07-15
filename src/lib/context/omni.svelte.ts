@@ -241,7 +241,17 @@ export class OmniCtx {
           });
         }); // Small delay to allow DOM cleanup
       } else if (!this.cardCtx?.isDisplayMode) {
-        // If the card is in missing mode, turn it into display mode
+        // If the card is in newPhoto reportMissing modes, reset the featureCard
+
+        // EMIT EVENT: Signal to Image Context to refresh images if record was published
+        const refreshImagesEvent = new CustomEvent('refreshImages', {
+          detail: {
+            resourceType: 'feature',
+            resourceId: this.appCtx.state.active.feature?.id
+          }
+        });
+        window.dispatchEvent(refreshImagesEvent);
+        // turn it into display mode
         this.cardCtx?.setMode(FeatureCardMode.Display);
       } else {
         this.closeCard();
