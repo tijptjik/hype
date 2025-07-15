@@ -37,7 +37,7 @@ let {
 const appCtx = adminCtx.appCtx;
 
 function handleRowKeyDown(event: KeyboardEvent) {
-  if (isSelected) return;
+  if (isSelected || !entity?.id) return;
   if (event.key === 'Enter') {
     event.preventDefault();
     event.stopPropagation();
@@ -56,25 +56,30 @@ function handleImageClick(image: ImageDBBasic) {
 }
 
 function handleTitleClick() {
+  if (!entity?.id) return;
   navigateOnAdmin(adminCtx, FirstClassResource.task, entity.id);
 }
 
-const type = $derived(entity.type);
+const type = $derived(entity?.type);
 const typeDisplay = $derived(
-  {
-    reportedMissing: m.filters__missing(),
-    newPhoto: m.aware_sea_goose_nail(),
-    newFeature: m.smart_crazy_cuckoo_play()
-  }[type]
+  type
+    ? {
+        reportedMissing: m.filters__missing(),
+        newPhoto: m.aware_sea_goose_nail(),
+        newFeature: m.smart_crazy_cuckoo_play()
+      }[type]
+    : 'Undefined'
 );
 let colorSuffix = $derived(
-  {
-    reportedMissing: 'error',
-    newPhoto: 'info',
-    newFeature: 'ok'
-  }[type]
+  type
+    ? {
+        reportedMissing: 'error',
+        newPhoto: 'info',
+        newFeature: 'ok'
+      }[type]
+    : 'base'
 );
-const reviewAction = $derived(entity.reviewAction);
+const reviewAction = $derived(entity?.reviewAction);
 const reviewActionDisplay = $derived(
   reviewAction
     ? {
@@ -104,7 +109,7 @@ let gridColsClass =
     {#if entity.feature}
       <ResourceTitleBlock
         image={entity.images?.[0]?.image}
-        alt={`Task image for feature ${entity.feature.id}`}
+        alt={`Task image for feature ${entity?.feature?.id || 'unknown'}`}
         onImageClick={entity.images?.[0]?.image ? handleImageClick : undefined}
         title={getI18n(
           entity.feature as Record<'i18n', any>,
@@ -122,7 +127,7 @@ let gridColsClass =
     <!-- Middle Section: All Stats Centered -->
     <div
       class="tilt-neon-watermark absolute -top-[0px] left-[18%] flex h-full flex-shrink-0 items-center justify-center gap-1 text-[375%] uppercase opacity-10 text-{colorSuffix} -rotate-12 font-[weight-700] font-extrabold">
-      <div class="tooltip" data-tip={entity.message}>
+      <div class="tooltip" data-tip={entity?.message || ''}>
         <span class="text-center">{typeDisplay}</span>
       </div>
     </div>
@@ -139,11 +144,14 @@ let gridColsClass =
       <div class="hidden flex-col items-center justify-center gap-1 @[62rem]/main:flex">
         <small class="text-xs uppercase text-base-content/60">
           {m.close_muddy_trout_clap()}</small>
-        <div class="tooltip" data-tip={formatDate(entity.createdAt)}>
+        <div
+          class="tooltip"
+          data-tip={entity?.createdAt ? formatDate(entity.createdAt) : ''}>
           <p
             class="w-[100px] truncate text-sm text-base-content @[62rem]/main:w-[160px] @[74rem]/main:w-[160px] @[86rem]/main:w-[200px]">
-            {formatDistanceToNow(new Date(entity.createdAt), { addSuffix: true }) ||
-              '-'}
+            {entity?.createdAt
+              ? formatDistanceToNow(new Date(entity.createdAt), { addSuffix: true })
+              : '-'}
           </p>
         </div>
       </div>

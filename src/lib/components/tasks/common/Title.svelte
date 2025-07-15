@@ -32,12 +32,14 @@ const typeDisplay: Record<TaskType, string> = {
 };
 </script>
 
-<h3 class=" text-xl font-bold uppercase">
-  {typeDisplay[task.type as TaskType]}
-  <a
-    href={`${ADMIN_PATH}/features/${task.feature?.id}`}
-    onclick={(e) =>
-      navigateOnAdmin(adminCtx, FirstClassResource.feature, task.feature?.id)}
-    class="pr-3 text-sm normal-case text-base-content/70 @sm:block">
-    {getI18n(task.feature, 'title', appCtx.getUserPreferences())}</a>
-</h3>
+{#if task?.type}
+  <h3 class=" text-xl font-bold uppercase">
+    {typeDisplay[task.type as TaskType]}
+    <a
+      href={`${ADMIN_PATH}/features/${task.feature?.id}`}
+      onclick={(e) =>
+        navigateOnAdmin(adminCtx, FirstClassResource.feature, task.feature?.id)}
+      class="pr-3 text-sm normal-case text-base-content/70 @sm:block">
+      {getI18n(task.feature, 'title', appCtx.getUserPreferences())}</a>
+  </h3>
+{/if}

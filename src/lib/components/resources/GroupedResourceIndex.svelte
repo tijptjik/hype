@@ -30,7 +30,7 @@ let collapsedGroups = $state<Record<string, boolean>>({});
 // Initialize collapsed state for all groups
 $effect(() => {
   groupedEntities.forEach(({ group }) => {
-    const groupId = (group as any).id ?? JSON.stringify(group);
+    const groupId = getGroupId(group);
     if (!(groupId in collapsedGroups)) {
       collapsedGroups[groupId] = false; // Default to expanded
     }
@@ -38,6 +38,9 @@ $effect(() => {
 });
 
 function getGroupId(group: G): string {
+  if (!group) {
+    return 'undefined-group-' + Math.random().toString(36);
+  }
   if ('id' in group && typeof group.id === 'string') {
     return group.id;
   }
