@@ -18,7 +18,7 @@ import {
 } from '$lib/client/services/property';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
-import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
+import { getCardCtx } from '$lib/context/card.svelte';
 // TYPES
 import type { Feature, UserContributedFeature } from '$lib/types';
 
@@ -27,7 +27,7 @@ let { feature }: { feature: Feature | UserContributedFeature } = $props();
 
 // STATE : CONTEXT
 const appCtx = getAppCtx();
-const cardCtx = getFeatureCardContext();
+const cardCtx = getCardCtx();
 
 // STATE : SESSION
 const userPreferences = $derived(appCtx.getUserPreferences());

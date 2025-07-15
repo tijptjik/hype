@@ -2,7 +2,7 @@
 // I18N
 import { m } from '$lib/i18n';
 // CONTEXT
-import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
+import { getCardCtx } from '$lib/context/card.svelte';
 import { getImageCtx } from '$lib/context/image.svelte';
 // SERVICES
 import { checkCameraAvailability } from '$lib/client/services/image';
@@ -13,7 +13,7 @@ import { Camera } from '@steeze-ui/heroicons';
 import { FeatureCardMode } from '$lib/enums';
 
 // CONTEXT
-const cardCtx = getFeatureCardContext();
+const cardCtx = getCardCtx();
 const imageCtx = getImageCtx();
 
 // STATE

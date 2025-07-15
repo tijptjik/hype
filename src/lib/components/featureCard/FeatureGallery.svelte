@@ -4,9 +4,9 @@ import { FeatureCardMode } from '$lib/enums';
 // COMPONENTS
 import Carousel from './gallery/Carousel.svelte';
 // CONTEXT
-import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
+import { getCardCtx } from '$lib/context/card.svelte';
 // CONTEXT
-const cardCtx = getFeatureCardContext();
+const cardCtx = getCardCtx();
 </script>
 
 <div

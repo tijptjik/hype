@@ -11,7 +11,7 @@ import { m } from '$lib/i18n';
 import { formatDistanceToNow } from 'date-fns';
 import { enGB, zhCN, zhHK } from 'date-fns/locale';
 // CONTEXT
-import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
+import { getCardCtx } from '$lib/context/card.svelte';
 import { getAppCtx } from '$lib/context/app.svelte';
 import { getOmniCtx } from '$lib/context/omni.svelte';
 // SERVICES
@@ -35,7 +35,7 @@ import type { Point } from 'geojson';
 
 // CONTEXT
 const appCtx = getAppCtx();
-let cardCtx = getFeatureCardContext();
+let cardCtx = getCardCtx();
 let omniCtx = getOmniCtx();
 const flash = getFlash(page);
 

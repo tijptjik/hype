@@ -22,10 +22,7 @@ import FullScreenCarousel from '$lib/components/modals/FullScreenCarousel.svelte
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 import { getOmniCtx } from '$lib/context/omni.svelte';
-import {
-  setFeatureCardContext,
-  getFeatureCardContext
-} from '$lib/context/featureCard.svelte';
+import { setCardCtx, getCardCtx } from '$lib/context/card.svelte';
 // ENUMS
 import { FeatureCardMode, ImageContextResource } from '$lib/enums';
 // TYPES
@@ -39,9 +36,9 @@ const appCtx = getAppCtx();
 const omniCtx = getOmniCtx();
 
 // CONTEXT :: FEATURE CARD
-setFeatureCardContext();
-const cardCtx = getFeatureCardContext();
-omniCtx.setFeatureCardContext(cardCtx);
+setCardCtx();
+const cardCtx = getCardCtx();
+omniCtx.setCardCtx(cardCtx);
 
 let mode = $derived(cardCtx.state.mode);
 

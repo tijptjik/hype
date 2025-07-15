@@ -21,7 +21,7 @@ This document outlines the cleaner separation of concerns for navigation state m
 - **Initialization**: Provides clean API for setting up navigation context
 - **Collection Helpers**: Provides factory methods for creating different collection types
 
-### `featureCardCtx` (featureCard.svelte.ts)
+### `featureCardCtx` (card.svelte.ts)
 
 - **Card Display**: Manages card display mode (Display/Missing/AddPhoto/New)
 - **Form Data**: Handles form data, validation, and submission state

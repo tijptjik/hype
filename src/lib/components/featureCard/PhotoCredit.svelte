@@ -5,10 +5,10 @@ import { m } from '$lib/i18n';
 import { PencilSquare } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 // CONTEXT
-import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
+import { getCardCtx } from '$lib/context/card.svelte';
 import { getAppCtx } from '$lib/context/app.svelte';
 
-const cardCtx = getFeatureCardContext();
+const cardCtx = getCardCtx();
 const appCtx = getAppCtx();
 
 let editedAttribution = $state(appCtx.getUser()!.attribution || '');

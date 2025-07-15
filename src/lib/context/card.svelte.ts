@@ -7,7 +7,7 @@ import type { UploadedPhoto } from '$lib/types';
 // I18N
 import { m } from '$lib/i18n';
 
-export class FeatureCardContext {
+export class CardCtx {
   state = $state({
     mode: FeatureCardMode.Display
   });
@@ -109,8 +109,6 @@ export class FeatureCardContext {
 
 export const FEATURE_CARD_CONTEXT_KEY = Symbol('featureCardContext');
 
-export const setFeatureCardContext = () =>
-  setContext(FEATURE_CARD_CONTEXT_KEY, new FeatureCardContext());
+export const setCardCtx = () => setContext(FEATURE_CARD_CONTEXT_KEY, new CardCtx());
 
-export const getFeatureCardContext = (): FeatureCardContext =>
-  getContext(FEATURE_CARD_CONTEXT_KEY);
+export const getCardCtx = (): CardCtx => getContext(FEATURE_CARD_CONTEXT_KEY);

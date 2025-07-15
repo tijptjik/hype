@@ -30,7 +30,7 @@ import type {
 } from '$lib/types';
 import type { AppCtx } from '$lib/context/app.svelte';
 // TYPES
-import type { FeatureCardContext } from './featureCard.svelte';
+import type { CardCtx } from './card.svelte';
 
 // CONSTANTS
 const MAX_RESULTS = 9;
@@ -46,7 +46,7 @@ export class OmniCtx {
   });
 
   appCtx!: AppCtx;
-  cardCtx: FeatureCardContext | null = null;
+  cardCtx: CardCtx | null = null;
 
   pageState: PageState = $state(PageState.NoTransition);
   isIntentionallyClosing: boolean = $state(false);
@@ -366,7 +366,7 @@ export class OmniCtx {
     this.state.isCardOpen = !this.state.isCardOpen;
   }
 
-  setFeatureCardContext(cardCtx: FeatureCardContext) {
+  setCardCtx(cardCtx: CardCtx) {
     this.cardCtx = cardCtx;
   }
 
