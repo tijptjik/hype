@@ -31,7 +31,8 @@ export const authConfig = {
     'https://preview.hkghostsigns.com',
     // DEV
     'http://localhost:5173',
-    'https://dove-main-tapir.ngrok-free.app'
+    'https://dove-main-tapir.ngrok-free.app',
+    'http://192.168.1.100.traefik.me:5173'
   ],
 
   user: {

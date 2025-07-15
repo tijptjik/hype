@@ -100,7 +100,7 @@ export default defineConfig({
       '127.0.0.1',
       '0.0.0.0',
       '192.168.1.100',
-      '192.168.1.100.nip.io',
+      '192.168.1.100.traefik.me',
       'dove-main-tapir.ngrok-free.app'
     ]
   }
