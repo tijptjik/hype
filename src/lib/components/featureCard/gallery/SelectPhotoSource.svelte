@@ -68,6 +68,7 @@ function handleFileSelect(event: Event) {
   <div class="flex h-32 w-full items-center justify-center gap-4">
     <button
       class="btn mt-4 flex h-28 w-28 flex-col border-2 border-base-100 bg-base-300 p-4 text-white"
+      style="box-shadow: 0 0 10px rgba(240, 77, 127, 0.2), 0 0 20px rgba(240, 77, 127, 0.1);"
       onclick={() => galleryInput.click()}>
       <div class="flex flex-col items-center justify-center gap-4">
         <Icon src={FolderOpen} class="h-8 w-8" />
@@ -78,6 +79,7 @@ function handleFileSelect(event: Event) {
       <div class="divider divider-horizontal uppercase">{m.or()}</div>
       <button
         class="btn mt-4 flex h-28 w-28 flex-col border-2 border-base-100 bg-base-300 p-4 text-white"
+        style="box-shadow: 0 0 10px rgba(240, 77, 127, 0.2), 0 0 20px rgba(240, 77, 127, 0.1);"
         onclick={() => cameraInput.click()}>
         <div class="flex flex-col items-center justify-center gap-4">
           <Icon src={Camera} class="h-8 w-8" />
