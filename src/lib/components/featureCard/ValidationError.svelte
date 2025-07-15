@@ -1,9 +1,9 @@
 <script lang="ts">
 // CONTEXT
-import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
+import { getCardCtx } from '$lib/context/card.svelte';
 
 // CONTEXT
-const cardCtx = getFeatureCardContext();
+const cardCtx = getCardCtx();
 </script>
 
 {#if cardCtx.validationError}

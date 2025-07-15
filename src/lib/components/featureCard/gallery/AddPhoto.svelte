@@ -19,11 +19,11 @@ import {
   Photo
 } from '@steeze-ui/heroicons';
 // CONTEXT
-import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
+import { getCardCtx } from '$lib/context/card.svelte';
 // TYPES
 import type { UploadedPhoto, CameraPermissionStatus } from '$lib/types';
 // CONTEXT
-const cardCtx = getFeatureCardContext();
+const cardCtx = getCardCtx();
 
 // STATE
 // Photo gallery state

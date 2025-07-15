@@ -8,7 +8,7 @@ import { Check, PencilSquare } from '@steeze-ui/heroicons';
 import { getI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
 // CONTEXT
-import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
+import { getCardCtx } from '$lib/context/card.svelte';
 import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
 import type { Feature, UserContributedFeature } from '$lib/types';
@@ -17,7 +17,7 @@ import type { Feature, UserContributedFeature } from '$lib/types';
 let { feature }: { feature: Feature | UserContributedFeature } = $props();
 
 // CONTEXT
-const cardCtx = getFeatureCardContext();
+const cardCtx = getCardCtx();
 const appCtx = getAppCtx();
 
 // STATE : SESSION

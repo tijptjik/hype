@@ -8,7 +8,7 @@ import { GlobeAlt, Check, PencilSquare } from '@steeze-ui/heroicons';
 import { getI18n } from '$lib/i18n';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
-import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
+import { getCardCtx } from '$lib/context/card.svelte';
 // TYPES
 import type { Feature } from '$lib/types';
 
@@ -23,7 +23,7 @@ let { feature }: Props = $props();
 
 // CONTEXT
 const appCtx = getAppCtx();
-const cardCtx = getFeatureCardContext();
+const cardCtx = getCardCtx();
 
 // STATE : SESSION
 const userPreferences = $derived(appCtx.getUserPreferences());

@@ -5,7 +5,7 @@ import { m } from '$lib/i18n';
 import { checkCameraAvailability } from '$lib/client/services/image';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
-import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
+import { getCardCtx } from '$lib/context/card.svelte';
 import { getImageCtx } from '$lib/context/image.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
@@ -14,7 +14,7 @@ import { Camera, FolderOpen } from '@steeze-ui/heroicons';
 import { FeatureCardMode } from '$lib/enums';
 
 const appCtx = getAppCtx();
-const cardCtx = getFeatureCardContext();
+const cardCtx = getCardCtx();
 const imageCtx = getImageCtx();
 
 // STATE

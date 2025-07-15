@@ -2,7 +2,7 @@
 // GESTURES
 import { tap, swipe } from 'svelte-gestures';
 // CONTEXT
-import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
+import { getCardCtx } from '$lib/context/card.svelte';
 import { getImageCtx } from '$lib/context/image.svelte';
 // NAVIGATION
 import { addParamToUrl } from '$lib/navigation';
@@ -23,7 +23,7 @@ import type { Image } from '$lib/types';
 
 // CONTEXT
 const imageCtx = getImageCtx();
-const cardCtx = getFeatureCardContext();
+const cardCtx = getCardCtx();
 
 // SERVICES
 let images: Image[] = $derived(imageCtx.getImages());

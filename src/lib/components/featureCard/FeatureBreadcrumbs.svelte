@@ -16,17 +16,19 @@ import {
 import { clickOutside } from '$lib/actions';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
-import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
+import { getCardCtx } from '$lib/context/card.svelte';
 import { getOmniCtx } from '$lib/context/omni.svelte';
+import { ImageCtx } from '$lib/context/image.svelte';
 // ENUMS
 import { FeatureCardMode } from '$lib/enums';
 // TYPES
 import type { Feature, UserContributedFeature, ResourceContext } from '$lib/types';
 
 // CONTEXT
-const cardCtx = getFeatureCardContext();
-const omniCtx = getOmniCtx();
 const appCtx = getAppCtx();
+const cardCtx = getCardCtx();
+const omniCtx = getOmniCtx();
+const imageCtx = getImageCtx();
 
 // STATE : PROPS
 let { feature }: { feature: Feature | UserContributedFeature } = $props();
@@ -60,6 +62,15 @@ const isOnlyLayerInHub = $derived(
     appCtx.getProjectLayerCount(feature.projectId) === 1 &&
     appCtx.getOrganisationProjectCount(feature.organisationId) === 1
 );
+
+const onAddPhoto = () => {
+  imageCtx.reset();
+  cardCtx.state.mode = FeatureCardMode.AddPhoto;
+};
+
+const onMissingReport = () => {
+  cardCtx.state.mode = FeatureCardMode.Missing;
+};
 </script>
 
 {#if appCtx.isInitialised && (!isOnlyLayerInHub || !cardCtx.isNewMode)}
@@ -133,7 +144,7 @@ const isOnlyLayerInHub = $derived(
               </button>
               <button
                 class="btn btn-ghost btn-sm h-auto w-full justify-start gap-2 rounded-t-none rounded-br-none p-2 pl-3 font-mono font-thin text-neutral-content hover:bg-base-300 active:scale-100 active:bg-base-200"
-                onclick={() => (cardCtx.state.mode = FeatureCardMode.AddPhoto)}>
+                onclick={onAddPhoto}>
                 <Icon src={Camera} class="h-5 w-5 text-primary" theme="solid" />
                 {m.honest_fluffy_falcon_enjoy()}
               </button>

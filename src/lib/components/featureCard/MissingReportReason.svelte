@@ -2,10 +2,10 @@
 // I18N
 import { m } from '$lib/i18n';
 // CONTEXT
-import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
+import { getCardCtx } from '$lib/context/card.svelte';
 
 // CONTEXT
-const cardCtx = getFeatureCardContext();
+const cardCtx = getCardCtx();
 </script>
 
 <div

@@ -41,8 +41,7 @@ const createdAt = $derived(
   icon: IconSource,
   contributorName: string | null,
   contributedAt: string | null,
-  row: number,
-  rowCount: number
+  row: number
 )}
   <div
     class="h-6 {showContributor
@@ -68,12 +67,11 @@ const createdAt = $derived(
 {/snippet}
 
 <div class="absolute z-30 flex w-64 flex-col items-start justify-start gap-1.5">
-  {@render metadataItem(MapPin, contributorName, createdAt, 1, 2)}
+  {@render metadataItem(MapPin, contributorName, createdAt, 1)}
   {@render metadataItem(
     Camera,
     currentImage.attribution || currentImage.credit,
     currentImage.capturedAt || currentImage.createdAt,
-    2,
     2
   )}
 </div>

@@ -9,7 +9,7 @@ import { getI18n } from '$lib/i18n';
 import { updateNewFeatureProperty } from '$lib/client/services/property';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
-import { getFeatureCardContext } from '$lib/context/featureCard.svelte';
+import { getCardCtx } from '$lib/context/card.svelte';
 // Types
 import type { Id, Feature, UserContributedFeature, FeatureProperty } from '$lib/types';
 
@@ -26,7 +26,7 @@ let {
 
 // CONTEXT
 const appCtx = getAppCtx();
-const cardCtx = getFeatureCardContext();
+const cardCtx = getCardCtx();
 
 // STATE : SESSION
 const userPreferences = $derived(appCtx.getUserPreferences());
