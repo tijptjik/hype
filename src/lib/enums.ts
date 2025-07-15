@@ -223,7 +223,8 @@ export enum FeatureCardMode {
   Display = 'display',
   New = 'new',
   Missing = 'missing',
-  AddPhoto = 'addPhoto'
+  AddPhoto = 'addPhoto',
+  SubmissionSuccess = 'submissionSuccess'
 }
 
 /* ----------------- */
