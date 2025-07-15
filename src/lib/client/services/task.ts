@@ -7,7 +7,8 @@ import type {
   Project,
   Organisation,
   Id,
-  UploadedPhoto
+  UploadedPhoto,
+  ImageUpload
 } from '$lib/types';
 
 // ═══════════════════════
@@ -31,7 +32,7 @@ export const submitMissingReport = async (
   project: Project,
   organisation: Organisation,
   reason: string,
-  photos: UploadedPhoto[],
+  photos: ImageUpload[],
   contributorId: Id
 ): Promise<Response> => {
   // VALIDATION : At least one photo required
@@ -88,7 +89,7 @@ export const submitMissingReport = async (
  */
 export const submitNewFeature = async (
   newFeature: NewFeatureTask,
-  photos: UploadedPhoto[]
+  photos: ImageUpload[]
 ): Promise<Response> => {
   // VALIDATION : At least one photo required
   if (photos.length === 0) {
@@ -145,7 +146,7 @@ export const submitNewPhotos = async (
   layer: Layer,
   project: Project,
   organisation: Organisation,
-  photos: UploadedPhoto[],
+  photos: ImageUpload[],
   contributorId: Id
 ): Promise<Response> => {
   // VALIDATION : At least one photo required
