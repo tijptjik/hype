@@ -38,8 +38,7 @@ import type {
   OrganisationDBRaw,
   OrganisationI18nDB,
   OrganisationRoleDB,
-  HubOpts,
-  LocaleBundle
+  HubOptsExtended
 } from '$lib/types';
 
 // ═══════════════════════
@@ -82,7 +81,7 @@ export const listOrganisations = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  opts: HubOpts
+  opts: HubOptsExtended
 ): Promise<OrganisationDBRaw[]> => {
   // Core or non-core hub filtering
   const hubFilter = getOrganisationHubFilter(db, opts);
@@ -100,7 +99,7 @@ export const getOrganisation = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  opts: HubOpts
+  opts: HubOptsExtended
 ): Promise<OrganisationDBRaw | undefined> => {
   // Core or non-core hub filtering
   const hubFilter = getOrganisationHubFilter(db, opts);
@@ -119,7 +118,7 @@ export const searchOrganisations = async (
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   search: string,
-  opts: HubOpts,
+  opts: HubOptsExtended,
   searchColumns: string[] = ['code', 'name', 'description']
 ): Promise<OrganisationDBRaw[]> => {
   // Ignore hubfilter, cause this is primarily used to configure hub settings

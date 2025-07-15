@@ -3,8 +3,6 @@ import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle } from '@sveltejs/kit';
 // I18N
 import { paraglideMiddleware } from '$lib/paraglide/server';
-// API
-import { getHubFromDomain } from '$lib/api/services/hub';
 // DB
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '$lib/db/schema/index';
@@ -15,8 +13,9 @@ import { createAuth } from '$lib/auth';
 // SERVICES
 import { toResponseShape } from '$lib/api/services/hub';
 // TYPES
-import type { HubOpts, Session, SessionUser } from '$lib/types';
+import type { HubOptsExtended, Session, SessionUser } from '$lib/types';
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1';
+import { isAdminRequest } from '$lib/api';
 
 let handle: Handle;
 
@@ -79,7 +78,7 @@ const handle_hub: Handle = async ({ event, resolve }) => {
 
   // If on Core hub, don't lookup the hub in the database
   if (hubOpts.isCore) {
-    event.locals.hub = hubOpts as HubOpts;
+    event.locals.hub = hubOpts as HubOptsExtended;
     return resolve(event);
   }
 
@@ -91,18 +90,18 @@ const handle_hub: Handle = async ({ event, resolve }) => {
   if (db && event.locals && hubOpts.code) {
     const hubDb = await getHubByCode(db, hubOpts.code);
     if (hubDb) {
-      const hub = await toResponseShape(hubDb, false);
+      const hub = (await toResponseShape(hubDb, false)) as HubOptsExtended;
       event.locals.hub = hub;
     }
   } else if (db && event.locals && hubOpts.domain) {
     const hubDb = await getHubByDomain(db, hubOpts.domain);
     if (hubDb) {
-      const hub = await toResponseShape(hubDb, false);
+      const hub = (await toResponseShape(hubDb, false)) as HubOptsExtended;
       event.locals.hub = hub;
     }
   } else {
     // Default to Core
-    event.locals.hub = hubOpts as HubOpts;
+    event.locals.hub = hubOpts as HubOptsExtended;
   }
 
   return resolve(event);
@@ -216,8 +215,18 @@ const handle_hub_enrichment: Handle = async ({ event, resolve }) => {
   // LOCALS
   if (event.locals.hub) {
     // Cast user to SessionUser to access superAdmin property from custom session
+    const { isCore } = await import('$lib/api/services/hub');
     const sessionUser = event.locals.user as SessionUser;
-    (event.locals.hub as HubOpts).isSuperAdmin = sessionUser?.superAdmin || false;
+    (event.locals.hub as HubOptsExtended).isSuperAdmin =
+      sessionUser?.superAdmin || false;
+    // Admin Panel of App
+    (event.locals.hub as HubOptsExtended).isAdminRequest = isAdminRequest(
+      event.request
+    );
+    // isCore Convenience property
+    (event.locals.hub as HubOptsExtended).isCore = isCore(
+      event.locals.hub as HubOptsExtended
+    );
   }
   return resolve(event);
 };
