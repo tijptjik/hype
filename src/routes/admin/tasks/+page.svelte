@@ -50,13 +50,18 @@ let groupedEntities: Array<{ group: Project; entities: Task[] }> = $derived(
       },
       {} as Record<Id, Task[]>
     )
-  ).map(([projectId, projectTasks]) => ({
-    group: adminCtx.appCtx.getResourceByIdSync(
-      FirstClassResource.project,
-      projectId
-    ) as Project,
-    entities: projectTasks
-  }))
+  )
+    .map(([projectId, projectTasks]) => {
+      const project = adminCtx.appCtx.getResourceByIdSync(
+        FirstClassResource.project,
+        projectId
+      ) as Project;
+      return {
+        group: project,
+        entities: projectTasks
+      };
+    })
+    .filter(({ group }) => group != null) // Filter out undefined projects during navigation
 );
 
 function navigateToNextTask() {
