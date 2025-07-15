@@ -39,10 +39,10 @@ let isExpanded = $state(false);
 let showReasonModal = $state(false);
 let reviewReason = $state('');
 // COMPUTED
-let isReviewed = $derived(task.reviewOutcome !== null);
-let reviewerName = $derived(task.reviewer?.name);
-let hasLongReason = $derived(task.reviewReason && task.reviewReason.length > 20);
-let reviewIcon = $derived(task.reviewOutcome === 'accepted' ? CheckCircle : XCircle);
+let isReviewed = $derived(task?.reviewOutcome !== null);
+let reviewerName = $derived(task?.reviewer?.name);
+let hasLongReason = $derived(task?.reviewReason && task?.reviewReason?.length > 20);
+let reviewIcon = $derived(task?.reviewOutcome === 'accepted' ? CheckCircle : XCircle);
 
 // ACTIONS
 function handleAction(action: string, e: Event) {
@@ -83,7 +83,7 @@ function closeExpand(e: MouseEvent) {
             </p>
           </div>
         {/if}
-        {#if task.reviewReason}
+        {#if task?.reviewReason}
           <div
             class="shrink-2 relative flex h-8 items-center rounded-lg"
             onmouseenter={() => (isExpanded = true)}
@@ -122,7 +122,7 @@ function closeExpand(e: MouseEvent) {
         <div class="flex h-8 shrink-0 items-center rounded-lg">
           <Icon
             src={reviewIcon}
-            class="h-9 w-9 stroke-2 {task.reviewOutcome === 'accepted'
+            class="h-9 w-9 stroke-2 {task?.reviewOutcome === 'accepted'
               ? 'text-glass-accepted'
               : 'text-glass-rejected'}" />
           <p
