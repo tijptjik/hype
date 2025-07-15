@@ -45,12 +45,16 @@ adminCtx.setFacet('core', pageProps.data.task.id, FirstClassResource.task);
 const facetTabs = new Map();
 facetTabs.set('core', m.born_plane_javelina_strive());
 
-adminCtx.setHeaderForEntity(
-  // svelte-ignore state_referenced_locally
-  `${m.born_plane_javelina_strive()} #${task.id}`,
-  TaskIcon,
-  facetTabs
-);
+// Only set header if task exists to prevent undefined access
+// svelte-ignore state_referenced_locally
+if (task && task?.id) {
+  adminCtx.setHeaderForEntity(
+    // svelte-ignore state_referenced_locally
+    `${m.born_plane_javelina_strive()} #${task.id}`,
+    TaskIcon,
+    facetTabs
+  );
+}
 
 const taskId = $state(page.params.task);
 const imageProviderProps = $derived({
@@ -64,8 +68,8 @@ const imageProviderProps = $derived({
     task?.id === taskId
       ? (pageProps.data.task.images?.map((taskImage) => taskImage.image) as Image[])
       : undefined,
-  highlightedIds: task.images?.map((taskImage) => taskImage.imageId as Id) || [],
-  ...adminCtx.appCtx.getHierarchySync(task),
+  highlightedIds: task?.images?.map((taskImage) => taskImage.imageId as Id) || [],
+  ...(task ? adminCtx.appCtx.getHierarchySync(task) : {}),
   context:
     task?.id === taskId && task
       ? {
@@ -82,34 +86,40 @@ const imageProviderProps = $derived({
 <ImageProvider {page} {...imageProviderProps}>
   <div
     class="h-full overflow-hidden bg-gradient-to-br from-rose-500 to-indigo-700 bg-fixed p-6">
-    <TaskRoot {task}>
-      <TaskHeader {task} isRoundedBottom={false}>
-        {#snippet Left()}
-          <Title {task} />
-        {/snippet}
-        {#snippet Right()}
-          {#if task.type && task.type === 'reportedMissing'}
-            <ReportedMissingActions {task} />
-          {:else if task.type && task.type === 'newPhoto'}
-            <NewPhotoActions {task} />
-          {:else if task.type && task.type === 'newFeature'}
-            <NewFeatureActions {task} />
+    {#if task?.id}
+      <TaskRoot {task}>
+        <TaskHeader {task} isRoundedBottom={false}>
+          {#snippet Left()}
+            <Title {task} />
+          {/snippet}
+          {#snippet Right()}
+            {#if task.type && task.type === 'reportedMissing'}
+              <ReportedMissingActions {task} />
+            {:else if task.type && task.type === 'newPhoto'}
+              <NewPhotoActions {task} />
+            {:else if task.type && task.type === 'newFeature'}
+              <NewFeatureActions {task} />
+            {/if}
+          {/snippet}
+        </TaskHeader>
+        <TaskMain {task}>
+          <div class="flex min-h-0 flex-1 flex-col items-stretch gap-4 @container">
+            <Viewer isDropzone={!task.isReviewed} />
+            <TaskFooter>
+              <Gallery hasDropzone={false} />
+            </TaskFooter>
+          </div>
+          {#if task?.type === 'reportedMissing'}
+            <ReportedMissingControls {task} />
+          {:else if task?.type === 'newFeature'}
+            <NewFeatureControls {task} />
           {/if}
-        {/snippet}
-      </TaskHeader>
-      <TaskMain {task}>
-        <div class="flex min-h-0 flex-1 flex-col items-stretch gap-4 @container">
-          <Viewer isDropzone={!task.isReviewed} />
-          <TaskFooter>
-            <Gallery hasDropzone={false} />
-          </TaskFooter>
-        </div>
-        {#if task?.type === 'reportedMissing'}
-          <ReportedMissingControls {task} />
-        {:else if task?.type === 'newFeature'}
-          <NewFeatureControls {task} />
-        {/if}
-      </TaskMain>
-    </TaskRoot>
+        </TaskMain>
+      </TaskRoot>
+    {:else}
+      <div class="flex h-full items-center justify-center">
+        <div class="loading loading-spinner loading-lg"></div>
+      </div>
+    {/if}
   </div>
 </ImageProvider>
