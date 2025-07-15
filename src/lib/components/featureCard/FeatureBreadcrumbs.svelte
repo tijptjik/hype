@@ -54,9 +54,15 @@ function showLayerSelectionModal() {
   omniCtx.closeCard();
   window.dispatchEvent(new CustomEvent('showLayerSelectionModal'));
 }
+
+const isOnlyLayerInHub = $derived(
+  appCtx.getOrganisationCount() === 1 &&
+    appCtx.getProjectLayerCount(feature.projectId) === 1 &&
+    appCtx.getOrganisationProjectCount(feature.organisationId) === 1
+);
 </script>
 
-{#if appCtx.isInitialised}
+{#if appCtx.isInitialised && (!isOnlyLayerInHub || !cardCtx.isNewMode)}
   {#await appCtx.getHierarchy(feature as Feature)}
     <div
       class="pointer-events-auto flex w-full flex-shrink-0 items-center justify-between bg-black pl-2 w-100:pl-4">

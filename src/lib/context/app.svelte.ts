@@ -1806,6 +1806,8 @@ export class AppCtx {
   // ================================================
 
   // COUNT METHODS
+  getOrganisationCount = (): number => this.state.resources.organisation.length;
+
   getOrganisationProjectCount = (organisationId: Id): number =>
     this.state.resources.project.filter((p) => p.organisationId === organisationId)
       .length;
