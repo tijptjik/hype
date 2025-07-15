@@ -74,15 +74,14 @@ function flyToFeature(duration: number = 2000, delay: number = 300) {
     let { xOffset, yOffset } = getOffset();
     if (feature && appCtx.map && 'geometry' in feature) {
       // @ts-ignore
-      appCtx.map.cachedFlyTo({
+      appCtx.map.easeTo({
         center: [
           (feature.geometry as Point).coordinates[0],
           (feature.geometry as Point).coordinates[1]
         ],
         offset: [xOffset, yOffset],
         zoom: 16,
-        duration,
-        run: true
+        duration
       });
     }
   }, delay);
@@ -99,6 +98,50 @@ $effect(() => {
   if (innerWidth && innerWidth > MOBILE_MAX_WIDTH) {
     flyToFeature();
   }
+});
+
+// Track portal visibility with IntersectionObserver
+let isPortalVisible = $state(false);
+
+// IntersectionObserver to track portal visibility
+$effect(() => {
+  if (!portalEl) return;
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        isPortalVisible = entry.isIntersecting;
+      });
+    },
+    {
+      // Only consider visible when at least 50% of the portal is visible
+      threshold: 0.75,
+      // Use viewport as root
+      root: null,
+      rootMargin: '0px'
+    }
+  );
+
+  observer.observe(portalEl);
+
+  return () => {
+    observer.disconnect();
+  };
+});
+
+// Recenter on scroll end (only when visible)
+$effect(() => {
+  const handleContainerScrollEnd = () => {
+    if (isPortalVisible) {
+      flyToFeature(1000, 0);
+    }
+  };
+
+  window.addEventListener('containerscrollend', handleContainerScrollEnd);
+
+  return () => {
+    window.removeEventListener('containerscrollend', handleContainerScrollEnd);
+  };
 });
 
 // Recenter on panel state change
