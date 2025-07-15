@@ -1,18 +1,39 @@
 <script lang="ts">
 // ENUMS
 import { FeatureCardMode } from '$lib/enums';
-// COMPONENTS
-import Carousel from './gallery/Carousel.svelte';
 // CONTEXT
 import { getCardCtx } from '$lib/context/card.svelte';
+import { getImageCtx } from '$lib/context/image.svelte';
+// COMPONENTS
+import AddPhotoPrompt from '$lib/components/featureCard/gallery/AddPhotoPrompt.svelte';
+import SelectPhotoSource from '$lib/components/featureCard/gallery/SelectPhotoSource.svelte';
+import SuccesfulSubmission from '$lib/components/featureCard/gallery/SuccesfulSubmission.svelte';
+import Carousel from './gallery/Carousel.svelte';
+// TYPES
+import type { Image } from '$lib/types';
+
 // CONTEXT
+const imageCtx = getImageCtx();
 const cardCtx = getCardCtx();
+
+// SERVICES
+let images: Image[] = $derived(imageCtx.getImages());
 </script>
 
 <div
   class="pointer-events-auto relative flex aspect-square w-full flex-grow items-center justify-center overflow-hidden bg-base-content/20 caret-transparent backdrop-blur-sm transition-all duration-300 {cardCtx
     .state.mode === FeatureCardMode.Display
-    ? 'min-h-56 flex-shrink'
-    : 'min-h-64 flex-shrink-0'}">
-  <Carousel />
+    ? 'max-h-[35vh] min-h-48 flex-shrink'
+    : 'max-h-[35vh] min-h-48 flex-grow-0'}">
+  {#if images.length == 0}
+    {#if cardCtx.isDisplayMode}
+      <AddPhotoPrompt />
+    {:else if cardCtx.isSubmissionSuccessMode}
+      <SuccesfulSubmission />
+    {:else if cardCtx.isAddPhotoMode || cardCtx.isNewMode || cardCtx.isMissingMode}
+      <SelectPhotoSource />
+    {/if}
+  {:else}
+    <Carousel />
+  {/if}
 </div>
