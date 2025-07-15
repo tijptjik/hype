@@ -466,5 +466,27 @@
   "profile__role_type__contributor": "撰稿人",
   "omni__title_visited_walks": "已訪問",
   "viewer__no_image": "無影像",
-  "viewer__tap_to_leave_fullscreen": "點選即可退出全螢幕"
+  "viewer__tap_to_leave_fullscreen": "點選即可退出全螢幕",
+  "viewer__no_image_note": "請考慮在訪問時添加照片",
+  "or": "或者",
+  "camera": "相機",
+  "upload": "上傳",
+  "user_contributions__received_title": "收到的捐款",
+  "user_contributions__received_body": "謝謝！我們會審核您的提交。一旦您的貢獻被接受，它將顯示在您的個人資料中。",
+  "user_contributions__received_button": "查看個人資料",
+  "photo": [
+    {
+      "declarations": [
+        "input n",
+        "local photosPlural = n: plural"
+      ],
+      "selectors": [
+        "photosPlural"
+      ],
+      "match": {
+        "photosPlural=one": "照片",
+        "photosPlural=other": "照片"
+      }
+    }
+  ]
 }
