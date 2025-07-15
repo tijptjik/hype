@@ -66,7 +66,7 @@ const createdAt = $derived(
   </div>
 {/snippet}
 
-<div class="absolute z-30 flex w-64 flex-col items-start justify-start gap-1.5">
+<div class="absolute z-30 flex w-80 flex-col items-start justify-start gap-1.5">
   {@render metadataItem(MapPin, contributorName, createdAt, 1)}
   {@render metadataItem(
     Camera,
