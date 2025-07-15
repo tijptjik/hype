@@ -12,7 +12,14 @@ import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 // TYPES
 import type { SQL } from 'drizzle-orm';
-import type { Hub, QueryParams, HubOpts, SessionUser, HubDBRaw } from '$lib/types';
+import type {
+  Hub,
+  HubOptsExtended,
+  QueryParams,
+  HubOpts,
+  SessionUser,
+  HubDBRaw
+} from '$lib/types';
 import type { SuperValidated } from 'sveltekit-superforms';
 
 // ═══════════════════════
@@ -45,11 +52,10 @@ export const hubEntityWithRelations = {
 export function getHubFromDomain(
   host: string | null,
   hubCode?: string
-): Partial<HubOpts> {
+): Partial<HubOptsExtended> {
   const coreConfig = {
     code: 'core',
     domain: 'hype.hk',
-    isCore: true,
     i18n: {
       en: {
         locale: 'en',
@@ -80,9 +86,7 @@ export function getHubFromDomain(
 
   // localhost -> core (development)
   if (domain === 'localhost') {
-    return hubCode && hubCode !== 'core'
-      ? { code: hubCode, isCore: false }
-      : coreConfig;
+    return hubCode && hubCode !== 'core' ? { code: hubCode } : coreConfig;
   }
 
   // hype.hk -> core || preview.hype.hk -> core (preview)
@@ -93,11 +97,11 @@ export function getHubFromDomain(
   // subdomain.hype.hk -> use subdomain as hub code
   if (domain.endsWith('.hype.hk')) {
     const subdomain = domain.replace('.hype.hk', '');
-    return { code: subdomain, isCore: false };
+    return { code: subdomain };
   }
 
   // custom domain -> use full domain as hub domain
-  return { domain, isCore: false };
+  return { domain };
 }
 
 /**
@@ -195,4 +199,12 @@ export const assertPermissionsToUpdateHub = (user: SessionUser) => {
   );
 
   if (assertionError) return assertionError;
+};
+
+/********************
+ *  UTILS
+ ************/
+
+export const isCore = (hub: HubOptsExtended): boolean => {
+  return hub.code === 'core' || hub.code === undefined;
 };

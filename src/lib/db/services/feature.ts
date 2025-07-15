@@ -57,7 +57,7 @@ import type {
   NewFeatureProperty,
   ImageDB,
   ImageDBFlat,
-  HubOpts
+  HubOptsExtended
 } from '$lib/types';
 
 // ═══════════════════════
@@ -103,7 +103,7 @@ export const listFeatures = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  opts: HubOpts
+  opts: HubOptsExtended
 ): Promise<FeatureDB[]> => {
   // Apply hub filtering if opts is provided
   const hubFilter = getFeatureHubFilter(db, opts);
@@ -129,7 +129,7 @@ export const listFeaturesWithImage = async (
   // Allows specifying other relations to be included alongside the feature and its image
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  opts: HubOpts
+  opts: HubOptsExtended
 ): Promise<FeatureDBRaw[]> => {
   // Apply hub filtering if opts is provided
   const hubFilter = getFeatureHubFilter(db, opts);
@@ -164,7 +164,7 @@ export const getFeature = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  opts: HubOpts
+  opts: HubOptsExtended
 ): Promise<FeatureDB | undefined> => {
   const allConditions = [...conditions];
   // Apply hub filtering if opts is provided
@@ -190,7 +190,7 @@ export const getFeatureWithImage = async (
   // Allows specifying other relations to be included alongside the feature and its image
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  opts: HubOpts
+  opts: HubOptsExtended
 ): Promise<(FeatureDB & { image: ImageDB | null }) | undefined> => {
   // Apply hub filtering if opts is provided
   const hubFilter = getFeatureHubFilter(db, opts);
@@ -593,7 +593,7 @@ export const updateFeatureWithRelated = async (
 export const getProjectIdForFeature = async (
   db: Database,
   featureData: FeatureDBNew | FeatureNew,
-  hubOpts: HubOpts
+  hubOpts: HubOptsExtended
 ) => {
   const layerId = featureData.layerId;
   const conditions = [eq(layer.id, layerId)];
@@ -604,7 +604,7 @@ export const getProjectIdForFeature = async (
 export const getProjectIdForFeatureId = async (
   db: Database,
   featureId: Id,
-  hubOpts: HubOpts
+  hubOpts: HubOptsExtended
 ) => {
   const featureData = (await getFeature(
     db,
@@ -834,7 +834,7 @@ export function mergeFeatureProperties(
 export const buildCollectionResponseShape = async (
   db: Database,
   features: FeatureDBRaw[],
-  hubOpts: HubOpts,
+  hubOpts: HubOptsExtended,
   shouldFilterUnpublishedImages: boolean = false
 ) => {
   // Get unique layer IDs from the features
@@ -852,7 +852,7 @@ export const buildCollectionResponseShape = async (
 
       // Merge properties if layer data is available
       if (layerData) {
-        processedFeature = mergeFeatureProperties(processedFeature, layerData);
+        processedFeature = mergeFeatureProperties(processedFeature, layerData as Layer);
       }
 
       return await toResponseShape(
@@ -879,7 +879,7 @@ export const buildCollectionResponseShape = async (
 export const buildResponseShape = async (
   db: Database,
   feature: FeatureDBRaw,
-  hubOpts: HubOpts,
+  hubOpts: HubOptsExtended,
   shouldFilterUnpublishedImages: boolean = false
 ) => {
   // Fetch layer data with properties to merge visible properties
@@ -897,7 +897,7 @@ export const buildResponseShape = async (
 
   // Merge properties if layer data is available
   if (layerData) {
-    processedFeature = mergeFeatureProperties(processedFeature, layerData);
+    processedFeature = mergeFeatureProperties(processedFeature, layerData as Layer);
   }
 
   try {

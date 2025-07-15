@@ -45,7 +45,8 @@ import type {
   PropertyI18nDB,
   PropertyValueI18nDB,
   PropertyValueDBRaw,
-  Code
+  Code,
+  HubOptsExtended
 } from '$lib/types';
 
 // ═══════════════════════
@@ -89,7 +90,7 @@ export const listProjects = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  opts: HubOpts
+  opts: HubOptsExtended
 ): Promise<ProjectDBRaw[]> => {
   // Apply hub filtering if opts is provided
   const hubFilter = getProjectHubFilter(db, opts);
@@ -107,7 +108,7 @@ export const getProject = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  opts: HubOpts
+  opts: HubOptsExtended
 ): Promise<ProjectDBRaw | undefined> => {
   // Apply hub filtering if opts is provided
   const hubFilter = getProjectHubFilter(db, opts);

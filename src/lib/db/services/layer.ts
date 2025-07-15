@@ -38,7 +38,7 @@ import type {
   Property,
   LayerPropertyNew,
   Id,
-  HubOpts
+  HubOptsExtended
 } from '$lib/types';
 // ZOD
 import { LayerAPI } from '../zod';
@@ -86,7 +86,7 @@ export const listLayers = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  opts: HubOpts
+  opts: HubOptsExtended
 ): Promise<LayerDBRaw[]> => {
   // Apply hub filtering if opts is provided
   const hubFilter = getLayerHubFilter(db, opts);
@@ -104,7 +104,7 @@ export const getLayer = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  opts: HubOpts
+  opts: HubOptsExtended
 ): Promise<LayerDBRaw | undefined> => {
   // Apply hub filtering if opts is provided
   const hubFilter = getLayerHubFilter(db, opts);
@@ -512,7 +512,7 @@ export const toResponseShape = async (
 export const getLayerMap = async (
   db: Database,
   layerIds: Id[],
-  opts: HubOpts
+  opts: HubOptsExtended
 ): Promise<Map<Id, LayerDBRaw>> => {
   const layersMap = new Map<Id, LayerDBRaw>();
 

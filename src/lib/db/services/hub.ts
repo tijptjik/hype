@@ -18,12 +18,12 @@ import { insertManyRelated, replaceManyRelated } from '../crud';
 // TYPES
 import type {
   Database,
-  HubOpts,
   HubDBRaw,
   HubDB,
   HubDBPartial,
   Code,
   Locale,
+  HubOptsExtended,
   HubI18nNew,
   HubI18nDB,
   HubI18nPartial
@@ -42,15 +42,10 @@ import { hubEntityWithRelations } from '$lib/api/services/hub';
  */
 export function getOrganisationHubFilter(
   db: Database,
-  opts: {
-    hubCode?: string;
-    hubDomain?: string;
-    isCore: boolean;
-    isSuperAdmin?: boolean;
-  }
+  opts: HubOptsExtended
 ): SQL<unknown> | undefined {
-  // SuperAdmins bypass all hub filtering
-  if (opts.isSuperAdmin) {
+  // SuperAdmins bypass all hub filtering on Admin Panel
+  if (opts.isSuperAdmin && opts.isAdminRequest) {
     return undefined;
   }
 
@@ -64,12 +59,12 @@ export function getOrganisationHubFilter(
     // Specific hub shows: assigned to this hub via code OR domain match
     const hubConditions: SQL<unknown>[] = [];
 
-    if (opts.hubCode) {
-      hubConditions.push(eq(hub.code, opts.hubCode));
+    if (opts.code) {
+      hubConditions.push(eq(hub.code, opts.code));
     }
 
-    if (opts.hubDomain) {
-      hubConditions.push(eq(hub.domain, opts.hubDomain));
+    if (opts.domain) {
+      hubConditions.push(eq(hub.domain, opts.domain));
     }
 
     return exists(
@@ -91,15 +86,10 @@ export function getOrganisationHubFilter(
  */
 export function getProjectHubFilter(
   db: Database,
-  opts: {
-    hubCode?: string;
-    hubDomain?: string;
-    isCore: boolean;
-    isSuperAdmin?: boolean;
-  }
+  opts: HubOptsExtended
 ): SQL<unknown> | undefined {
-  // SuperAdmins bypass all hub filtering
-  if (opts.isSuperAdmin) {
+  // SuperAdmins bypass all hub filtering on Admin Panel
+  if (opts.isSuperAdmin && opts.isAdminRequest) {
     return undefined;
   }
   if (opts.isCore) {
@@ -119,12 +109,12 @@ export function getProjectHubFilter(
     // Specific hub: project's org belongs to this hub
     const hubConditions: SQL<unknown>[] = [];
 
-    if (opts.hubCode) {
-      hubConditions.push(eq(hub.code, opts.hubCode));
+    if (opts.code) {
+      hubConditions.push(eq(hub.code, opts.code));
     }
 
-    if (opts.hubDomain) {
-      hubConditions.push(eq(hub.domain, opts.hubDomain));
+    if (opts.domain) {
+      hubConditions.push(eq(hub.domain, opts.domain));
     }
 
     return exists(
@@ -147,10 +137,10 @@ export function getProjectHubFilter(
  */
 export function getLayerHubFilter(
   db: Database,
-  opts: HubOpts
+  opts: HubOptsExtended
 ): SQL<unknown> | undefined {
-  // SuperAdmins bypass all hub filtering
-  if (opts.isSuperAdmin) {
+  // SuperAdmins bypass all hub filtering on Admin Panel
+  if (opts.isSuperAdmin && opts.isAdminRequest) {
     return undefined;
   }
   if (opts.isCore) {
@@ -200,15 +190,10 @@ export function getLayerHubFilter(
  */
 export function getFeatureHubFilter(
   db: Database,
-  opts: {
-    hubCode?: string;
-    hubDomain?: string;
-    isCore: boolean;
-    isSuperAdmin?: boolean;
-  }
+  opts: HubOptsExtended
 ): SQL<unknown> | undefined {
-  // SuperAdmins bypass all hub filtering
-  if (opts.isSuperAdmin) {
+  // SuperAdmins bypass all hub filtering on Admin Panel
+  if (opts.isSuperAdmin && opts.isAdminRequest) {
     return undefined;
   }
   if (opts.isCore) {
@@ -230,12 +215,12 @@ export function getFeatureHubFilter(
     // Specific hub: feature's layer's project's org belongs to this hub
     const hubConditions: SQL<unknown>[] = [];
 
-    if (opts.hubCode) {
-      hubConditions.push(eq(hub.code, opts.hubCode));
+    if (opts.code) {
+      hubConditions.push(eq(hub.code, opts.code));
     }
 
-    if (opts.hubDomain) {
-      hubConditions.push(eq(hub.domain, opts.hubDomain));
+    if (opts.domain) {
+      hubConditions.push(eq(hub.domain, opts.domain));
     }
 
     return exists(
@@ -260,15 +245,10 @@ export function getFeatureHubFilter(
  */
 export function getImageHubFilter(
   db: Database,
-  opts: {
-    hubCode?: string;
-    hubDomain?: string;
-    isCore: boolean;
-    isSuperAdmin?: boolean;
-  }
+  opts: HubOptsExtended
 ): SQL<unknown> | undefined {
-  // SuperAdmins bypass all hub filtering
-  if (opts.isSuperAdmin) {
+  // SuperAdmins bypass all hub filtering on Admin Panel
+  if (opts.isSuperAdmin && opts.isAdminRequest) {
     return undefined;
   }
   if (opts.isCore) {
@@ -292,12 +272,12 @@ export function getImageHubFilter(
     // Specific hub: image's feature's layer's project's org belongs to this hub
     const hubConditions: SQL<unknown>[] = [];
 
-    if (opts.hubCode) {
-      hubConditions.push(eq(hub.code, opts.hubCode));
+    if (opts.code) {
+      hubConditions.push(eq(hub.code, opts.code));
     }
 
-    if (opts.hubDomain) {
-      hubConditions.push(eq(hub.domain, opts.hubDomain));
+    if (opts.domain) {
+      hubConditions.push(eq(hub.domain, opts.domain));
     }
 
     return exists(
@@ -324,15 +304,10 @@ export function getImageHubFilter(
  */
 export function getTaskHubFilter(
   db: Database,
-  opts: {
-    hubCode?: string;
-    hubDomain?: string;
-    isCore: boolean;
-    isSuperAdmin?: boolean;
-  }
+  opts: HubOptsExtended
 ): SQL<unknown> | undefined {
-  // SuperAdmins bypass all hub filtering
-  if (opts.isSuperAdmin) {
+  // SuperAdmins bypass all hub filtering on Admin Panel
+  if (opts.isSuperAdmin && opts.isAdminRequest) {
     return undefined;
   }
   if (opts.isCore) {
@@ -355,12 +330,12 @@ export function getTaskHubFilter(
     // Specific hub: task's feature's layer's project's org belongs to this hub
     const hubConditions: SQL<unknown>[] = [];
 
-    if (opts.hubCode) {
-      hubConditions.push(eq(hub.code, opts.hubCode));
+    if (opts.code) {
+      hubConditions.push(eq(hub.code, opts.code));
     }
 
-    if (opts.hubDomain) {
-      hubConditions.push(eq(hub.domain, opts.hubDomain));
+    if (opts.domain) {
+      hubConditions.push(eq(hub.domain, opts.domain));
     }
 
     return exists(

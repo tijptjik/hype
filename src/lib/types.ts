@@ -2124,6 +2124,13 @@ export interface HubOpts {
   id?: string;
 }
 
+export interface HubOptsExtended extends Hub {
+  i18n: Record<Locale, Partial<HubI18nDB>>;
+  isSuperAdmin: boolean;
+  isAdminRequest: boolean;
+  isCore: boolean;
+}
+
 /* ----------------- */
 // USER :: PROFILES
 /* -------- */
