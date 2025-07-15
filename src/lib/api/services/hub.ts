@@ -85,7 +85,13 @@ export function getHubFromDomain(
   const domain = host.split(':')[0];
 
   // localhost -> core (development)
-  if (domain === 'localhost') {
+  if (
+    domain === 'localhost' ||
+    domain === '127.0.0.1' ||
+    domain === '192.168.1.100' ||
+    domain === '192.168.1.100.traefik.me' ||
+    domain === 'dove-main-tapir.ngrok-free.app'
+  ) {
     return hubCode && hubCode !== 'core' ? { code: hubCode } : coreConfig;
   }
 
