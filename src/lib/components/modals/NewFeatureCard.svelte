@@ -8,6 +8,7 @@ import { NEW_REF } from '$lib';
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // Components
 import FeatureCard from '$lib/components/featureCard/Root.svelte';
+import NewFeatureInfoBar from '$lib/components/featureCard/NewFeatureInfoBar.svelte';
 import FeatureGallery from '$lib/components/featureCard/FeatureGallery.svelte';
 import FeatureBreadcrumbs from '$lib/components/featureCard/FeatureBreadcrumbs.svelte';
 import FeatureTitle from '$lib/components/featureCard/FeatureTitle.svelte';
@@ -17,6 +18,9 @@ import FeatureGeoLocation from '$lib/components/featureCard/FeatureGeoLocation.s
 import FeatureActions from '$lib/components/featureCard/FeatureActions.svelte';
 import Container from '$lib/components/featureCard/layout/Container.svelte';
 import ContributorCredit from '$lib/components/featureCard/ContributorCredit.svelte';
+import NewFeatureLabel from '$lib/components/featureCard/actions/labels/NewFeatureLabel.svelte';
+import SubmitNewFeatureAction from '$lib/components/featureCard/actions/SubmitNewFeatureAction.svelte';
+import ValidationError from '$lib/components/featureCard/ValidationError.svelte';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 import { getOmniCtx } from '$lib/context/omni.svelte';
@@ -36,21 +40,29 @@ const appCtx = getAppCtx();
 const omniCtx = getOmniCtx();
 
 // CONTEXT :: FEATURE CARD
-setCardCtx();
-const cardCtx = getCardCtx();
-cardCtx.setMode(FeatureCardMode.New);
-omniCtx.setCardCtx(cardCtx);
+const cardCtx = setCardCtx();
 
 // STATE
 let isOpen = $state(false);
 // STATE : DERIVED
-let newFeature = $derived(appCtx.getNewFeature())! as NewFeatureWithLocationAndParents;
-let feature = $derived(newFeature.feature as Feature)!;
-let { organisation, project } = $derived(appCtx.getHierarchySync(feature));
+let newFeature: NewFeatureWithLocationAndParents = $state()!;
+let feature: Feature = $state()!;
+let organisation = $state()!;
+let project = $state()!;
+
+// ELEMENTS
+let viewport: HTMLElement = $state()!;
 
 // EVENT HANDLERS
 function handleShowModal() {
+  cardCtx.setMode(FeatureCardMode.New);
+  omniCtx.setCardCtx(cardCtx);
   omniCtx.openCard();
+  newFeature = appCtx.getNewFeature() as NewFeatureWithLocationAndParents;
+  feature = newFeature.feature as Feature;
+  const hierarchy = appCtx.getHierarchySync(feature);
+  organisation = hierarchy.organisation!;
+  project = hierarchy.project!;
   isOpen = true;
 }
 function handleCloseModal() {
@@ -79,8 +91,9 @@ onMount(() => {
         organisation: organisation as Omit<OrganisationDB, 'isCoreInclusive'>,
         project: project as Omit<ProjectDB, 'isCoreInclusive'>
       }}>
-      <Container>
+      <Container bind:viewport>
         <FeatureGallery />
+        <NewFeatureInfoBar {viewport} />
         <FeatureBreadcrumbs {feature} />
         <FeatureTitle {feature} />
         <FeatureGeoLocation {feature} />
@@ -88,7 +101,15 @@ onMount(() => {
         <FeaturePropertiesEditable {feature} />
         <ContributorCredit />
       </Container>
-      <FeatureActions {feature} />
+      <ValidationError />
+      <FeatureActions>
+        {#snippet leftActions()}
+          <NewFeatureLabel />
+        {/snippet}
+        {#snippet rightActions()}
+          <SubmitNewFeatureAction />
+        {/snippet}
+      </FeatureActions>
     </ImageProvider>
   </FeatureCard>
 {/if}
