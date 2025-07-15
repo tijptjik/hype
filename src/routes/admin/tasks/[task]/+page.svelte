@@ -88,11 +88,11 @@ const imageProviderProps = $derived({
           <Title {task} />
         {/snippet}
         {#snippet Right()}
-          {#if task.type === 'reportedMissing'}
+          {#if task.type && task.type === 'reportedMissing'}
             <ReportedMissingActions {task} />
-          {:else if task.type === 'newPhoto'}
+          {:else if task.type && task.type === 'newPhoto'}
             <NewPhotoActions {task} />
-          {:else if task.type === 'newFeature'}
+          {:else if task.type && task.type === 'newFeature'}
             <NewFeatureActions {task} />
           {/if}
         {/snippet}
@@ -104,9 +104,9 @@ const imageProviderProps = $derived({
             <Gallery hasDropzone={false} />
           </TaskFooter>
         </div>
-        {#if task.type === 'reportedMissing'}
+        {#if task?.type === 'reportedMissing'}
           <ReportedMissingControls {task} />
-        {:else if task.type === 'newFeature'}
+        {:else if task?.type === 'newFeature'}
           <NewFeatureControls {task} />
         {/if}
       </TaskMain>

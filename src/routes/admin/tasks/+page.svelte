@@ -159,7 +159,7 @@ function updateRowFocus(index: number) {
 </script>
 
 <div
-  class="h-full overflow-y-auto bg-gradient-to-br from-rose-500 to-indigo-700 bg-fixed pb-6">
+  class="h-full overflow-y-auto overscroll-auto bg-gradient-to-br from-rose-500 to-indigo-700 bg-fixed pb-6">
   <GroupedResourceIndex {groupedEntities} bind:listContainer>
     {#snippet controlBar()}
       <FilterControlBar count={entities.length} />
