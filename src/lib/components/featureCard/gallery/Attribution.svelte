@@ -30,7 +30,7 @@ const contextId = $derived(imageCtx.state.context?.ctxId);
 const feature = $derived(contextId ? appCtx.features.get(contextId) : undefined);
 // Note: Using simple fallbacks since user cache and createdAt may not be available
 const contributorName = $derived(
-  (feature as Feature)?.contributor?.name || m.anonymous()
+  (feature as Feature)?.contributor?.attribution || m.anonymous()
 );
 const createdAt = $derived(
   'createdAt' in (feature || {}) ? (feature as any).createdAt : undefined
