@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n';
 // Animation
 import { fade, fly } from 'svelte/transition';
 import { cubicInOut } from 'svelte/easing';
