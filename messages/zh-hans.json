@@ -488,5 +488,11 @@
         "photosPlural=other": "照片"
       }
     }
-  ]
+  ],
+  "intent__canonical": "精选",
+  "intent__closeUp": "特写",
+  "intent__context": "语境",
+  "intent__general": "一般的",
+  "intent__research": "研究",
+  "intent__undefined": "不明确的"
 }
