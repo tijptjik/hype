@@ -100,7 +100,8 @@ function toggleSection(sectionId: string) {
             <ul class="list-inside list-disc space-y-1 text-neutral-content">
               {m.drab_lost_dove_grow()}
               <li class="pl-4 text-neutral-content">
-                <b>{m.heroic_wise_ant_grip()}</b>{m.crazy_just_octopus_stop()}
+                <b>{m.heroic_wise_ant_grip()}</b>
+                {m.crazy_just_octopus_stop()}
               </li>
               <li class="pl-4 text-neutral-content">
                 <b>{m.cute_salty_puma_sew()}</b>
