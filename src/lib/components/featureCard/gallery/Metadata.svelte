@@ -5,13 +5,14 @@
  */
 // COMPONENTS
 import Attribution from '$lib/components/featureCard/gallery/Attribution.svelte';
+import { intentDisplay } from '$lib/client/services/image';
 // TYPES
-import type { Image } from '$lib/types';
+import type { Image, Intent } from '$lib/types';
 
 // PROPS
 let { currentImage }: { currentImage: Image } = $props();
 
-const intent = $derived(currentImage?.intent || '');
+const intent: Intent = $derived((currentImage?.intent || 'undefined') as Intent);
 </script>
 
 <div
@@ -20,7 +21,7 @@ const intent = $derived(currentImage?.intent || '');
   <div class="grid grid-cols-1 grid-rows-1">
     <div
       class="grid-row-1 grid-col-1 h-6 rounded bg-black/50 px-2 py-1 font-mono text-xs text-white">
-      {intent}
+      {intentDisplay[intent as Intent]}
     </div>
   </div>
 </div>

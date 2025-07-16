@@ -1,5 +1,7 @@
 // SVELTE
 import { error } from '@sveltejs/kit';
+// I18N
+import { m } from '$lib/i18n';
 // COORDINATES
 import Coordinates from 'coordinate-parser';
 // UTILS
@@ -842,3 +844,12 @@ export async function checkCameraAvailability() {
     return false;
   }
 }
+
+export const intentDisplay: Record<Intent, string> = {
+  canonical: m.intent__canonical(),
+  closeUp: m.intent__closeUp(),
+  context: m.intent__context(),
+  general: m.intent__general(),
+  research: m.intent__research(),
+  undefined: m.intent__undefined()
+};

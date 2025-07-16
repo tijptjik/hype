@@ -1,18 +1,9 @@
 <script lang="ts">
-/**
- * @component Displays image metadata including attribution and intent
- * @param {Image} currentImage - The currently displayed image
- */
 // CONTEXT
 import { getImageCtx } from '$lib/context/image.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Camera } from '@steeze-ui/heroicons';
-// TYPES
-import type { Image } from '$lib/types';
-
-// PROPS
-let { currentImage }: { currentImage: Image } = $props();
 
 // CONTEXT
 const imageCtx = getImageCtx();
