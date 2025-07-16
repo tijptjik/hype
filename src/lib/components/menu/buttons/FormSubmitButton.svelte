@@ -81,7 +81,7 @@ let isDisabled = $derived(!isTainted($tainted) || isInvalid);
   bind:this={buttonElement}
   transition:slide={{ axis: 'x' }}
   class="btn btn-ghost join-item gap-1 transition-colors duration-500 disabled:bg-transparent disabled:text-opacity-60
-  {!isInvalid ? 'text-white' : 'text-black text-opacity-100'}"
+  {!isInvalid ? 'text-white' : 'text-error/70'}"
   role="button"
   data-testid="formSubmitButton"
   onclick={(e) => submit(e)}
