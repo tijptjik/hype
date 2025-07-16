@@ -1,5 +1,9 @@
 <script lang="ts">
-let { intent, imageId }: { intent: string; imageId: string } = $props();
+import { intentDisplay } from '$lib/client/services/image';
+// TYPES
+import type { Intent } from '$lib/types';
+
+let { intent, imageId }: { intent: Intent; imageId: string } = $props();
 
 // TODO Replace this with the intention widget from Gallery
 const updateIntent = async (newIntent: string) => {
@@ -14,7 +18,7 @@ const updateIntent = async (newIntent: string) => {
       throw new Error('Failed to update intent');
     }
 
-    intent = newIntent;
+    intent = newIntent as Intent;
   } catch (error) {
     console.error('Error updating intent:', error);
   }
@@ -24,5 +28,5 @@ const updateIntent = async (newIntent: string) => {
 <div
   class="cursor-pointer rounded-full bg-base-300 px-3 py-1 text-sm font-medium"
   onclick={() => updateIntent(intent === 'context' ? 'general' : 'context')}>
-  {intent}
+  {intentDisplay[intent]}
 </div>

@@ -12,7 +12,7 @@ import Deletion from '$lib/components/images/gallery/overlays/Delete.svelte';
 import Confirmation from '$lib/components/images/gallery/overlays/Confirmation.svelte';
 import Deleting from '$lib/components/images/gallery/overlays/Deleting.svelte';
 // TYPES
-import type { Image } from '$lib/types';
+import type { Image, Intent } from '$lib/types';
 
 // SERVICES
 const imageCtx = getImageCtx();
@@ -82,7 +82,7 @@ onDestroy(() => {
   {#if thumbnailLoadState === 'loaded'}
     <IntentLabel
       container={thumbnailRef}
-      intent={image.intent || 'undefined'}
+      intent={(image.intent || 'undefined') as Intent}
       {idx}
       imageId={image.id} />
   {/if}

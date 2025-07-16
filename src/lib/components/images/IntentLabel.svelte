@@ -6,17 +6,18 @@ import { onClickOutside } from 'runed';
 import { getImageCtx } from '$lib/context/image.svelte';
 // SERVICES
 import { adminIntentOrder } from '$lib/api/services/image';
+import { intentDisplay } from '$lib/client/services/image';
 // TYPES
-import type { Intent } from '$lib/types';
+import type { Intent, Id } from '$lib/types';
 
 // SERVICES
 const imageCtx = getImageCtx();
 
 // TYPES
 type Props = {
-  intent: string;
+  intent: Intent;
   idx: number;
-  imageId: string;
+  imageId: Id;
   container: HTMLDivElement;
 };
 
@@ -29,7 +30,7 @@ const intentContext = $state({
 });
 
 // HANDLERS :: INTENT
-function handleIntentKeydown(e: KeyboardEvent, imageId: string, intent: Intent) {
+function handleIntentKeydown(e: KeyboardEvent, imageId: Id, intent: Intent) {
   e.stopPropagation();
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault();
@@ -69,7 +70,7 @@ container.addEventListener('mouseleave', () => {
         e.stopPropagation();
         intentContext.id = intentContext.id === imageId ? null : imageId;
       }}>
-      {intent}
+      {intentDisplay[intent]}
     </button>
 
     {#if intentContext.id === imageId}
@@ -97,7 +98,7 @@ container.addEventListener('mouseleave', () => {
             onkeydown={(e) => handleIntentKeydown(e, imageId, option)}
             transition:fade={{ duration: 150, delay: 100 + idx * 100 }}
             tabindex="0">
-            {option}
+            {intentDisplay[option as Intent]}
           </button>
         {/each}
       </div>

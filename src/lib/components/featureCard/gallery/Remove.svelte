@@ -1,8 +1,4 @@
 <script lang="ts">
-/**
- * @component Displays image metadata including attribution and intent
- * @param {Image} currentImage - The currently displayed image
- */
 // CONTEXT
 import { getImageCtx } from '$lib/context/image.svelte';
 // COMPONENTS
@@ -16,8 +12,6 @@ let { currentImage }: { currentImage: Image } = $props();
 
 // CONTEXT
 const imageCtx = getImageCtx();
-
-const intent = $derived(currentImage?.intent || '');
 </script>
 
 <div
