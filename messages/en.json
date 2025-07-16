@@ -488,5 +488,11 @@
         "photosPlural=other": "photos"
       }
     }
-  ]
+  ],
+  "intent__canonical": "Featured",
+  "intent__closeUp": "Close Up",
+  "intent__context": "Context",
+  "intent__general": "General",
+  "intent__research": "Research",
+  "intent__undefined": "Undefined"
 }
