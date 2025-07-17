@@ -53,10 +53,9 @@ const createdAt = $derived(
         : '-translate-y-6 opacity-0 delay-0'} flex font-mono text-xs text-white transition-all duration-300">
     <div class="flex h-6 gap-2 rounded-l bg-base-300/80 px-2 py-1">
       <Icon src={icon} class="h-4 w-4" />
-      <span>{m.clear_patchy_bobcat_wish()}</span>
-      <span class="font-bold">
-        {contributorName || m.jumpy_misty_panther_scold()}
-      </span>
+      {@html m.clear_patchy_bobcat_wish({
+        name: contributorName || m.jumpy_misty_panther_scold()
+      })}
     </div>
     <div class="h-6 rounded-r bg-base-300/70 px-2 py-1 font-normal">
       <span class="font-bold">
