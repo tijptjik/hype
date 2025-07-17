@@ -12,7 +12,7 @@
   "filters__categories": "categories",
   "filters__all": "All",
   "filters__only": "Only",
-  "filters__between": "Between",
+  "filters__between": "Between {min} and {max} stars",
   "filters__and": "and",
   "menu_stars": "Starred",
   "maps__title": "Maps",
@@ -130,7 +130,7 @@
   "short_watery_marten_race": "No places starred",
   "such_tense_samuel_smile": "Use <code class=\"text-primary\">Stars</code> to track the places you want to visit and have visited.",
   "alive_top_pelican_snap": "Add to your visit list",
-  "neat_watery_wasp_buy": "Tap <i>☆ Star</i> to add it to your list. Tap is again to remove it. Every place card has this button in the bottom left corner.",
+  "neat_watery_wasp_buy": "Tap <i>☆ Star</i> to add it to your list. Tap it again to remove it. Every place card has this button in the bottom left corner.",
   "free_day_stork_dine": "Add to your visited list",
   "same_lower_orangutan_enchant": "Tap <i>✓ Check In</i> to record your visit. Every place card has this button in the bottom left corner.",
   "topical_alive_dolphin_pinch": "Account",
@@ -156,7 +156,7 @@
   "settings_experimental_no_labels_description": "Hide all map labels",
   "report_missing__preface": "You - Map Freshness",
   "forms__unpublish": "Unpublish",
-  "awful_this_dingo_glow": "Intangibilize",
+  "awful_this_dingo_glow": "Intangibilise",
   "quiet_late_worm_startle": "Reject Report",
   "quiet_late_worm_startle_accept": "Accept Report",
   "validation__attribution_required": "Please provide name to be credited.",
@@ -200,9 +200,9 @@
   "tired_quick_snake_enjoy": "Feature will no longer be shown on the public map, <b>AND</b> it will be removed from the Admin panel. Take this action if visiting this feature is no longer of public interest, as it has physically been removed. In effect, this unpublishes the feature, and makes it unavailable in the admin panel.",
   "lime_house_pig_grasp": "UNPUBLISH",
   "great_sad_rook_cure": "Feature will no longer be shown on the public map, <b>BUT</b> it will still be visible in the Admin panel. Take this action, either because (1) visiting this feature is (temporarily) not possible; or (2) the maintainer wishes to keep the feature in the collection, but remove it from the public map. In effect, this sets the feature as <i>inaccessible</i> and <i>unpublished</i>.",
-  "small_new_bear_ask": "INTANGIBILIZE",
-  "flat_direct_bobcat_praise": "Feature should be intangibalised <i>only if</i> its presence on the public map can provide practical, historic context for the feature - places where e.g. historic events took place; there's a striking contrast with the present; or the locality is more salient than the missing materiality of the feature. In effect, this marks a feature as <i>intangible</i>, but neither removes it from the public map, nor from the Admin panel.",
-  "strong_next_zebra_quiz": " Would you like to <i>accept</i> or <i>reject</i> this user-submitted Feature?",
+  "small_new_bear_ask": "INTANGIBILISE",
+  "flat_direct_bobcat_praise": "Feature should be intangibalised <i>only if</i> its presence on the public map can provide practical, historic context for the feature — places where e.g. historic events took place; there's a striking contrast with the present; or the locality is more salient than the missing materiality of the feature. In effect, this marks a feature as <i>intangible</i>, but neither removes it from the public map, nor from the Admin panel.",
+  "strong_next_zebra_quiz": "Would you like to <i>accept</i> or <i>reject</i> this user-submitted Feature?",
   "dull_mushy_dachshund_dare": "REJECT",
   "awful_real_newt_lift": "The feature will no longer appear anywhere.",
   "loose_sad_clownfish_peel": "ACCEPT",
@@ -210,16 +210,16 @@
   "few_sunny_wren_push": "Would you like to <i>accept</i> or <i>reject</i> this user-submitted photo to the Feature's gallery?",
   "great_loose_gull_assure": "None of the submitted photos will appear anywhere.",
   "close_cute_ostrich_feel": "ACCEPT ALL",
-  "mild_deft_larva_absorb": "The photos will all become publicly visible as part of the Feature's gallery. It will be sorted by photographic intent (Canonical, CloseUp, Context, General, Research, Undefined), then by date added.",
+  "mild_deft_larva_absorb": "The photos will all become publicly visible as part of the Feature's gallery. It will be sorted by photographic intent (Featured, Close Up, Context, General, Research, Undefined), then by date added.",
   "trite_ok_salmon_empower": "ACCEPT CLASSIFIED",
-  "blue_novel_owl_stab": "Only the photos which have been asigned a photographic intent other than \"undefined\" will become publicly visible as part of the Feature's gallery. The rest will not appear anywhere.",
+  "blue_novel_owl_stab": "Only the photos which have been assigned a photographic intent other than \"undefined\" will become publicly visible as part of the Feature's gallery. The rest will not appear anywhere.",
   "short_formal_hound_splash": "Viewer",
   "happy_acidic_donkey_seek": "Reworked images can be dropped into the viewer to replace the user-submitted image. The icon row in the bottom provides:",
   "proof_keen_swan_dart": "Camera, Image and File metadata",
   "arable_clear_coyote_sing": "Contributor's name and date added",
   "zesty_same_cat_clip": "Download option for the photo",
   "cute_solid_gorilla_reap": "Thumbnail Gallery",
-  "calm_away_panther_propel": "The thumbnail gallery is a list of all images in the Feature's gallery. The photographic intent (e.g. Canonical, Context, etc) can be clicked to set another intent.",
+  "calm_away_panther_propel": "The thumbnail gallery is a list of all images in the Feature's gallery. The photographic intent (e.g. Featured, Context, etc) can be clicked to set another intent.",
   "livid_just_eel_hope": "Required translations are missing",
   "mad_fresh_swan_trap": "REASON",
   "plain_top_dingo_strive": "Add at least 1 Maintainer",
@@ -266,7 +266,7 @@
   "sleek_wise_husky_hack": "Advanced Settings",
   "drab_lost_dove_grow": "These settings control how and whether machine translation is used.",
   "heroic_wise_ant_grip": "Auto-Translate",
-  "crazy_just_octopus_stop": " automatically translates content to your preferred language. This means the full app experience will be in your preferred language, but the translations have not been validated by a human.",
+  "crazy_just_octopus_stop": "automatically translates content to your preferred language. This means the full app experience will be in your preferred language, but the translations have not been validated by a human.",
   "cute_salty_puma_sew": "Translate Toggle",
   "long_least_baboon_blend": "gives you case-by-case control over whether machine-translation is used, and you can flip back and forth between the translation in your preferred language and the original text.",
   "zippy_game_grizzly_nourish": "Prefer Placeholders",
@@ -316,7 +316,7 @@
   "tangy_zany_capybara_arise": "Suggested",
   "weak_super_guppy_nail": "Draft",
   "admin__forms_common_specifiers_short": "Freeform",
-  "green_born_skate_jolt": "Title & Description - not Address",
+  "green_born_skate_jolt": "Title & Description — not Address",
   "nice_zippy_millipede_bend": "Title & Description in Selected Locales",
   "fancy_mealy_flea_dream": "Some Published",
   "sunny_day_lemur_conquer": "All Categories",
@@ -337,7 +337,7 @@
   "born_plain_bulldog_stop": "Drop image",
   "stale_quick_fireant_enchant": "No workie",
   "jumpy_misty_panther_scold": "Unknown",
-  "clear_patchy_bobcat_wish": "By",
+  "clear_patchy_bobcat_wish": "<span>By</span><span class='font-bold'>{name}</span>",
   "blue_long_felix_bask": "Failed to load feature hierarchy",
   "quaint_quaint_fly_zap": "Cannot.<br> It belongs to a Task",
   "maps__layers_none_subline": "<br><br><code>Empty map you will find</code>",
@@ -359,8 +359,8 @@
   "north_level_niklas_tap": "Reason for rejection",
   "antsy_patient_moth_taste": "Actions",
   "home_legal_trout_hurl": "The toggles control the public visibility of the feature:",
-  "sea_born_mammoth_promise": "<span class=\"font-semibold\">ACCESSIBLE & OPEN TO PUBLIC</span> - Feature is shown on the map if its layer is active. Set true if, in ordinary circumstances, the feature is accessible to the public without restrictions or permission. If the feature is temporarily inaccessible, this should be false.",
-  "nimble_tense_guppy_devour": "<span class=\"font-semibold\">INTANGIBLE FEATURE</span> - Feature may be shown on the map with the caveat that there is (no longer) a physical presence on site. This invites visitors to experience the feature's practical, historic context - e.g. sites of historic events; a striking contrast with the present; or a locality that is more salient than the missing materiality of the feature.",
+  "sea_born_mammoth_promise": "<span class=\"font-semibold\">ACCESSIBLE & OPEN TO PUBLIC</span> — Feature is shown on the map if its layer is active. Set true if, in ordinary circumstances, the feature is accessible to the public without restrictions or permission. If the feature is temporarily inaccessible, this should be false.",
+  "nimble_tense_guppy_devour": "<span class=\"font-semibold\">INTANGIBLE FEATURE</span> — Feature may be shown on the map with the caveat that there is (no longer) a physical presence on site. This invites visitors to experience the feature's practical, historic context — e.g. sites of historic events; a striking contrast with the present; or a locality that is more salient than the missing materiality of the feature.",
   "orange_icy_slug_amaze": "Note that if a feature is permanently unavailable AND there is no historic, intangible value to the site, it should be <u>unpublished</u> to unlist it from all maps.",
   "weak_main_earthworm_thrive": "Categorical dimensions along which the features can be filtered on the map. Fields are defined at the Project level.",
   "less_new_crocodile_dust": "Free-form text fields that provide additional context and references. Fields are defined at the Project level.",
@@ -431,6 +431,40 @@
   "retry": "Retry",
   "ok": "OK",
   "cancel": "Cancel",
+  "number__1": "One",
+  "feature__graphemes": "Graphemes",
+  "profile__role_type__contributor": "Contributor",
+  "omni__title_visited_walks": "Visited",
+  "viewer__no_image": "No Image",
+  "viewer__tap_to_leave_fullscreen": "Tap to leave fullscreen",
+  "viewer__no_image_note": "Please consider adding a photo when you visit",
+  "or": "or",
+  "camera": "Camera",
+  "upload": "Upload",
+  "user_contributions__received_title": "Contribution Received",
+  "user_contributions__received_body": "Thank you — we will review your submission. Once the contribution is accepted, it will show up in your profile.",
+  "user_contributions__received_button": "See Profile",
+  "photo": [
+    {
+      "declarations": [
+        "input n",
+        "local photosPlural = n: plural"
+      ],
+      "selectors": [
+        "photosPlural"
+      ],
+      "match": {
+        "photosPlural=one": "photo",
+        "photosPlural=other": "photos"
+      }
+    }
+  ],
+  "intent__canonical": "Featured",
+  "intent__closeUp": "Close Up",
+  "intent__context": "Context",
+  "intent__general": "General",
+  "intent__research": "Research",
+  "intent__undefined": "Undefined",
   "filters__reset_count_neighbourhoods": [
     {
       "declarations": [
@@ -460,39 +494,5 @@
         "propertiesPlural=other": "{properties} categories"
       }
     }
-  ],
-  "number__1": "One",
-  "feature__graphemes": "Graphemes",
-  "profile__role_type__contributor": "Contributor",
-  "omni__title_visited_walks": "Visited",
-  "viewer__no_image": "No Image",
-  "viewer__tap_to_leave_fullscreen": "Tap to leave fullscreen",
-  "viewer__no_image_note": "Please consider adding a photo when you visit",
-  "or": "or",
-  "camera": "Camera",
-  "upload": "Upload",
-  "user_contributions__received_title": "Contribution Received",
-  "user_contributions__received_body": "Thank you - we will review your submission. Once the contribution is accepted, it will show up in your profile.",
-  "user_contributions__received_button": "See Profile",
-  "photo": [
-    {
-      "declarations": [
-        "input n",
-        "local photosPlural = n: plural"
-      ],
-      "selectors": [
-        "photosPlural"
-      ],
-      "match": {
-        "photosPlural=one": "photo",
-        "photosPlural=other": "photos"
-      }
-    }
-  ],
-  "intent__canonical": "Featured",
-  "intent__closeUp": "Close Up",
-  "intent__context": "Context",
-  "intent__general": "General",
-  "intent__research": "Research",
-  "intent__undefined": "Undefined"
+  ]
 }

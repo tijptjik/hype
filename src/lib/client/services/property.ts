@@ -437,7 +437,10 @@ export function displayRangeFilter(
   } else if (values[0] === values[1]) {
     return `${m.filters__only()} ${values[0]} ${m.menu_stars()}`;
   } else {
-    return `${m.filters__between()} ${values[0]} ${m.filters__and()} ${values[1]} ${m.menu_stars()}`;
+    return m.filters__between({
+      min: values[0],
+      max: values[1]
+    });
   }
 }
 
