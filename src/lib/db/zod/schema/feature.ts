@@ -97,7 +97,9 @@ const ImageBasicFlat = ImageFlatBase.pick({
   attribution: true,
   intent: true,
   isPublished: true,
-  publishedAt: true
+  publishedAt: true,
+  capturedAt: true,
+  createdAt: true
 }).nullish();
 
 /* ----------------- */
