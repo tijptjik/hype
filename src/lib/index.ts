@@ -27,6 +27,7 @@ import type {
   FeatureForm
 } from './types';
 import type { Task } from 'maplibre-gl';
+import { getLocale } from './i18n';
 
 /**
  * Convenience functions to prevent event handlers from being called multiple times
@@ -89,7 +90,13 @@ export function loadScript(src: string) {
 }
 
 export function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-HK', {
+  const datetimeLocale = {
+    en: 'en-HK',
+    'zh-hant': 'zh-hant',
+    'zh-hans': 'zh-hans'
+  }[getLocale()];
+
+  return new Date(dateString).toLocaleDateString(datetimeLocale, {
     year: 'numeric',
     month: 'short',
     day: 'numeric'
