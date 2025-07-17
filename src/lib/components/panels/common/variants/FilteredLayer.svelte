@@ -23,7 +23,7 @@ interface FilteredLayerProps {
     project?: Project;
   };
   isSelected: boolean;
-  onClick: (event: Event) => void;
+  onclick: (event: MouseEvent | KeyboardEvent) => void;
   selectedClass?: string;
 }
 
@@ -32,19 +32,19 @@ const {
   layer,
   hierarchy,
   isSelected,
-  onClick,
+  onclick,
   selectedClass = 'bg-yellow-400'
 }: FilteredLayerProps = $props();
 </script>
 
 <div
   class="group flex cursor-pointer flex-row items-center justify-between gap-4 bg-black py-2 pl-8 pr-4 caret-transparent transition-colors duration-200 focus:outline-none focus:ring-0"
-  onclick={onClick}
+  {onclick}
   in:slide={{ axis: 'y', duration: 200 }}
   out:slide={{ axis: 'y', duration: 200 }}
-  onkeydown={(e) => {
+  onkeydown={(e: KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
-      onClick(e);
+      onclick(e);
     } else if (e.key === 'Escape') {
       e.stopPropagation();
       e.preventDefault();

@@ -18,11 +18,12 @@ import Layers from '$lib/components/panels/sections/Layers.svelte';
 import FilteredLayer from '$lib/components/panels/common/variants/FilteredLayer.svelte';
 import FilteredResource from '$lib/components/panels/common/FilteredResource.svelte';
 // ENUMS
-import { FirstClassResource } from '$lib/enums';
+import { FirstClassResource, Panel as PanelType, PanelSide } from '$lib/enums';
 // TYPES
 import type {
   Layer,
   PanelProps,
+  PanelPosition,
   Id,
   ResourceContext,
   Organisation,
@@ -48,8 +49,8 @@ let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
 };
 
 let panelProps: PanelProps = $derived({
-  panelType: 'prisms',
-  position: 'left',
+  panelType: PanelType.prisms,
+  position: PanelSide.left,
   scrollable: true,
   inline: appCtx.isAdmin(),
   isNarrow: false,
@@ -125,7 +126,7 @@ let panelProps: PanelProps = $derived({
             {hierarchy}
             selectedClass="bg-secondary"
             isSelected={selectedLayers.includes(layer.id)}
-            onClick={(e: MouseEvent | KeyboardEvent) => {
+            onclick={(e: MouseEvent | KeyboardEvent) => {
               e.preventDefault();
               e.stopPropagation();
               appCtx.toggleLayer(layer.id);
