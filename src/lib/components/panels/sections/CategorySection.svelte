@@ -19,9 +19,9 @@ type Props = {
   collapsedContent: Snippet<[string, any]>;
   isOpen: boolean;
   hierarchy: {
-    organisation?: string;
-    project?: string;
-    layer?: string;
+    organisation?: string | null;
+    project?: string | null;
+    layer?: string | null;
     layerId: string;
   };
   properties: Record<string, any>;

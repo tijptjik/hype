@@ -15,9 +15,6 @@ import type { Id, Property } from '$lib/types';
 
 // Initialize map state
 const appCtx = getAppCtx();
-
-// @ts-expect-error SVELTE ASYNC
-let layerCategories = $derived(await getGroupedClassifierProperties(appCtx));
 </script>
 
 {#snippet SelectedCategories(layerId: Id, properties: Property[])}
@@ -26,26 +23,28 @@ let layerCategories = $derived(await getGroupedClassifierProperties(appCtx));
 
 <!-- LAYOUT -->
 
-{#each layerCategories as { hierarchy, properties }, index (hierarchy.layerId)}
-  <CategorySection
-    title={m.filters__categories()}
-    icon="/flowchart.svg"
-    iconVerticalPaddingClass="pt-2"
-    iconColorClass="text-blue-500"
-    isOpen={index === 0}
-    collapsedContent={SelectedCategories}
-    {properties}
-    {hierarchy}>
-    <div class="space-y-2">
-      {#each properties as property (property.id)}
-        {@const layerId = hierarchy.layerId}
-        {#if property.component === 'RangeField'}
-          <RangeFilter {property} {layerId} defaultOpen={property.key === 'grade'} />
-        {:else}
-          <CategoryFilter {property} {layerId} />
-        {/if}
-      {/each}
-    </div>
-  </CategorySection>
-{/each}
+{#await getGroupedClassifierProperties(appCtx) then newLayerCategories}
+  {#each newLayerCategories as { hierarchy, properties }, index (hierarchy.layerId)}
+    <CategorySection
+      title={m.filters__categories()}
+      icon="/flowchart.svg"
+      iconVerticalPaddingClass="pt-2"
+      iconColorClass="text-blue-500"
+      isOpen={index === 0}
+      collapsedContent={SelectedCategories}
+      {properties}
+      {hierarchy}>
+      <div class="space-y-2">
+        {#each properties as property (property.id)}
+          {@const layerId = hierarchy.layerId}
+          {#if property.component === 'RangeField'}
+            <RangeFilter {property} {layerId} defaultOpen={property.key === 'grade'} />
+          {:else}
+            <CategoryFilter {property} {layerId} />
+          {/if}
+        {/each}
+      </div>
+    </CategorySection>
+  {/each}
+{/await}
 <div class="flex-grow-1 h-[84px] w-full flex-shrink-0"></div>
