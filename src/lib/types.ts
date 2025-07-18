@@ -471,6 +471,34 @@ export type ViewFilters = {
 };
 
 /* ----------------- */
+// PLACECTX
+/* -------- */
+
+export type PlaceState = {
+  filters: {
+    feature: {
+      neighbourhood: {
+        include: SvelteSet<Ref>;
+        exclude: SvelteSet<Ref>;
+      };
+    };
+  };
+  contains: {
+    feature: {
+      // Mapping neighbourhood name to feature ids
+      neighbourhood: SvelteMap<Ref, SvelteSet<Id>>;
+      // Mapping district name to feature ids
+      // districts: Map<string, Id[]>;
+    };
+  };
+  counts: {
+    feature: {
+      neighbourhood: SvelteMap<Ref, number>;
+    };
+  };
+};
+
+/* ----------------- */
 // FILTERS :: ADMIN :: FEATURES
 /* -------- */
 
@@ -574,7 +602,7 @@ export type FilterState = {
   organisation: ResourceFilterState;
   project: ResourceFilterState;
   layer: ResourceFilterState;
-  feature: ResourceFilterState & { neighbourhoods: string[] };
+  feature: ResourceFilterState;
   task: ResourceFilterState;
   hub: ResourceFilterState;
   property: ResourceFilterState;
@@ -2060,18 +2088,10 @@ export interface ALSResult {
   }>;
 }
 
-export type NeighbourhoodMap = Record<
-  string,
+export type NeighbourhoodJSON = Record<
+  Ref,
   {
-    i18n: Record<
-      Locale,
-      {
-        name: string;
-        neighbourhood: string;
-        district: string;
-        region: string;
-      }
-    >;
+    i18n: Record<Locale, NeighbourhoodI18n>;
   }
 >;
 
@@ -2082,6 +2102,18 @@ export type Neighbourhood = {
     region: string;
     district: string;
   };
+};
+
+export type NeighbourhoodI18n = {
+  name: string;
+  neighbourhood: string;
+  region: string;
+  district: string;
+};
+
+export type NeighbourhoodResource = {
+  id: Ref;
+  i18n: Record<Locale, NeighbourhoodI18n>;
 };
 
 export type ALSSuggestedAddressItem = NonNullable<
