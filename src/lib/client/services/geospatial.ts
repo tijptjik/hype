@@ -1,25 +1,85 @@
 // I18N
-import { getLocale } from '$lib/i18n';
+import { getI18n, getLocale } from '$lib/i18n';
 // DATA
-import subNeighbourhoods from '$lib/map/subNeighbourhoods.json';
+import neighbourhoods from '$lib/map/neighbourhoods.json';
 // TYPES
 import type { AppCtx } from '$lib/context/app.svelte';
-import type { Feature, Id } from '$lib/types';
+import type { NeighbourhoodResource, NeighbourhoodJSON } from '$lib/types';
+import type { LngLatLike } from 'maplibre-gl';
 
 // ═══════════════════════
 // TABLE OF CONTENTS
 // ═══════════════════════
 //
 // 1. GETTERS
-//    - getFeatureIdsForNeighbourhoods
-//    - expandToSubNeighbourhoods
+//    - getFilteredNeighbourhoods(appCtx: AppCtx): NeighbourhoodJSON
+//      Gets filtered neighbourhoods data based on current filters
 //
-// 2. ANIMATION
-//    - startCircularFlight
+// 2. FILTERS
+//    - filterPlaces(appCtx: AppCtx, term: string)
+//      Filters places by search term across name, district, and region
+//
+// 3. TRANSFORMATIONS
+//    - getNeighbourhoodsAsResources(): NeighbourhoodResource[]
+//      Converts neighbourhoods data to resource format
+//
+//    - buildNeighbourhoodSubdivisionMap(locale?: string): Map<string, string[]>
+//      Builds map of neighbourhoods to their subdivisions
+//
+//    - getCoordinates(lngLat: LngLatLike | null): [number, number] | null
+//      Extracts coordinates from various LngLatLike formats
+//
+// 4. ANIMATION
+//    - startCircularFlight(appCtx: AppCtx, center: [number, number], radiusKm?: number)
+//      Starts circular flight animation around center point
+//
+// ═══════════════════════
+
+export function getFilteredNeighbourhoods(appCtx: AppCtx): NeighbourhoodJSON {
+  const filteredNeighbourhoods = appCtx.placeCtx.getFilteredNeighbourhoods();
+  const result: NeighbourhoodJSON = {};
+
+  for (const key of filteredNeighbourhoods) {
+    if (key in neighbourhoods) {
+      result[key] = neighbourhoods[key as keyof typeof neighbourhoods];
+    }
+  }
+
+  return result;
+}
 
 // ═══════════════════════
-// 1. GETTERS
+// 1. FILTERS
 // ═══════════════════════
+
+export function filterPlaces(appCtx: AppCtx, term: string) {
+  if (!term) return Object.entries(neighbourhoods);
+  const searchLower = term.toLowerCase();
+  return Object.entries(neighbourhoods).filter(([key, data]) => {
+    return (
+      getI18n(data, 'name', appCtx.getUserPreferences())
+        .toLowerCase()
+        .includes(searchLower) ||
+      getI18n(data, 'district', appCtx.getUserPreferences())
+        .toLowerCase()
+        .includes(searchLower) ||
+      getI18n(data, 'region', appCtx.getUserPreferences())
+        .toLowerCase()
+        .includes(searchLower)
+    );
+  });
+}
+
+// ═══════════════════════
+// 2. TRANSFORMATIONS
+// ═══════════════════════
+
+export function getNeighbourhoodsAsResources(): NeighbourhoodResource[] {
+  return Object.entries(neighbourhoods).map(([id, i18n]) => ({
+    ...i18n,
+    id
+  }));
+}
 
 export function buildNeighbourhoodSubdivisionMap(
   locale?: string
@@ -49,10 +109,22 @@ export function buildNeighbourhoodSubdivisionMap(
 
   return subNeighbourhoodsMap;
 }
+
+export function getCoordinates(lngLat: LngLatLike | null): [number, number] | null {
+  if (!lngLat) return null;
+  if (Array.isArray(lngLat)) {
+    return lngLat;
+  }
+  if ('lon' in lngLat) {
+    return [lngLat.lon, lngLat.lat];
+  } else if ('lng' in lngLat) {
+    return [lngLat.lng, lngLat.lat];
+  }
+  return null;
 }
 
 // ═══════════════════════
-// 2. ANIMATION
+// 3. ANIMATION
 // ═══════════════════════
 
 /**

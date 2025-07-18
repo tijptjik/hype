@@ -5,7 +5,7 @@ import { onMount } from 'svelte';
 // MapLibre
 import SpectralStyle from '$lib/map/styles/style-protomaps.json';
 import { addAddressMarker } from '$lib/map/markers';
-import { getCoordinates } from '$lib/map/data';
+import { getCoordinates } from '$lib/client/services/geospatial';
 // ICONS
 import { ArrowsPointingIn, ArrowsPointingOut } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';

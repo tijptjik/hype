@@ -1,22 +1,18 @@
 // I18N
-import { getI18n, getLocale } from '$lib/i18n';
+import { getI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
-// DATA
-import neighbourhoods from './neighbourhoods.json';
-import subNeighbourhoods from './subNeighbourhoods.json';
+// SERVICES
+import { filterPlaces } from '$lib/client/services/geospatial';
+/// ENUMS
+import { OmniCollection } from '$lib/enums';
 // TYPES
 import type { AppCtx } from '$lib/context/app.svelte';
 import type {
-  Feature,
   FeatureExtended,
   FeatureFromCollection,
   Layer,
-  NeighbourhoodMap,
-  SearchResult,
-  UserFeature
+  SearchResult
 } from '$lib/types';
-import type { LngLatLike } from 'maplibre-gl';
-import { OmniCollection } from '$lib/enums';
 
 // Async version that uses getHierarchy for guaranteed data with cache-miss handling
 export async function getWishlistedFeaturesAsync(
@@ -53,48 +49,6 @@ export async function getWishlistedFeaturesAsync(
   );
 }
 
-export function filterNeighbourhoods(appCtx: AppCtx, term: string) {
-  if (!term) return Object.entries(neighbourhoods);
-  const searchLower = term.toLowerCase();
-  return Object.entries(neighbourhoods).filter(([key, data]) => {
-    return (
-      getI18n(data, 'name', appCtx.getUserPreferences())
-        .toLowerCase()
-        .includes(searchLower) ||
-      getI18n(data, 'district', appCtx.getUserPreferences())
-        .toLowerCase()
-        .includes(searchLower) ||
-      getI18n(data, 'region', appCtx.getUserPreferences())
-        .toLowerCase()
-        .includes(searchLower)
-    );
-  });
-}
-
-export function getNeighbourhoodFeatureCount(
-  neighbourhoodKey: string,
-  features: any[]
-) {
-  let count = 0;
-  if (neighbourhoodKey in subNeighbourhoods) {
-    subNeighbourhoods[neighbourhoodKey as keyof typeof subNeighbourhoods].forEach(
-      (n) => {
-        count += features.filter(
-          (feature: Feature) =>
-            n === feature.i18n![getLocale()]?.addressProperties?.neighbourhood
-        ).length;
-      }
-    );
-  } else {
-    count = features.filter(
-      (feature: Feature) =>
-        neighbourhoodKey ===
-        feature.i18n![getLocale()]?.addressProperties?.neighbourhood
-    ).length;
-  }
-  return count;
-}
-
 export async function searchAllAsync(
   term: string,
   appCtx: AppCtx
@@ -116,20 +70,17 @@ export async function searchAllAsync(
   }
 
   // Source 2 - Neighbourhoods
-  const neighbourhoodResults = filterNeighbourhoods(appCtx, term);
-  neighbourhoodResults.forEach(([neighbourhood, data]) => {
-    results.push({
-      name:
-        getLocale() === 'en'
-          ? neighbourhood
-          : getI18n(data, 'name', appCtx.getUserPreferences()),
-      count: getNeighbourhoodFeatureCount(
-        neighbourhood,
-        appCtx.state.resources.feature
-      ),
-      collectionType: OmniCollection.neighbourhood,
-      ref: neighbourhood
-    });
+  const neighbourhoodResults = filterPlaces(appCtx, term);
+  neighbourhoodResults.forEach(([neighbourhoodRef, data]) => {
+    const count = appCtx.placeCtx.neighbourhoodFeatureCounts.get(neighbourhoodRef) ?? 0;
+    if (count > 0) {
+      results.push({
+        name: getI18n(data, 'name', appCtx.getUserPreferences()),
+        count,
+        collectionType: OmniCollection.neighbourhood,
+        ref: neighbourhoodRef
+      });
+    }
   });
 
   // Source 3 - Features
@@ -161,17 +112,4 @@ export async function searchAllAsync(
     });
 
   return results;
-}
-
-export function getCoordinates(lngLat: LngLatLike | null): [number, number] | null {
-  if (!lngLat) return null;
-  if (Array.isArray(lngLat)) {
-    return lngLat;
-  }
-  if ('lon' in lngLat) {
-    return [lngLat.lon, lngLat.lat];
-  } else if ('lng' in lngLat) {
-    return [lngLat.lng, lngLat.lat];
-  }
-  return null;
 }

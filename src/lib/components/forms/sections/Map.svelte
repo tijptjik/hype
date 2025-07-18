@@ -4,7 +4,7 @@ import { calculateDistance } from '$lib/utils/geocoding';
 // COMPONENTS
 import Map from '$lib/components/common/Map.svelte';
 // MAP
-import { getCoordinates } from '$lib/map/data';
+import { getCoordinates } from '$lib/client/services/geospatial';
 // TYPES
 import type { SectionProps, FeatureForm } from '$lib/types';
 import type { Point } from 'geojson';
