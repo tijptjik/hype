@@ -142,7 +142,7 @@ let form = setForm(
 
 // REACTIVE: Update form when pageProps change (for reset functionality)
 watch(
-  () => pageProps.data.validatedForm.data,
+  () => pageProps.data.validatedForm?.data,
   (newData) => {
     form.form.set(newData as unknown as Feature);
   },
@@ -162,7 +162,7 @@ let isMapCollapsed = $state(
 let title = $derived(
   pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.title || NEW_TITLE
 );
-let image = $derived(pageProps.data.validatedForm.data.image);
+let image = $derived(pageProps.data.validatedForm?.data?.image);
 
 // HEADER SETUP
 $effect(() => {
@@ -250,8 +250,8 @@ const imageProviderProps = $derived({
               <div
                 class="absolute bottom-6 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex">
                 <UserAttributionCard
-                  userId={pageProps.data.validatedForm.data.contributorId}
-                  date={pageProps.data.validatedForm.data.createdAt ?? undefined}
+                  userId={pageProps.data.validatedForm?.data?.contributorId}
+                  date={pageProps.data.validatedForm?.data?.createdAt ?? undefined}
                   type="contributor" />
                 <UserAttributionCard
                   userId={pageProps.data.validatedForm.data.publisherId}

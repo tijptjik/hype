@@ -93,7 +93,7 @@ let form = setForm(
 
 // REACTIVE: Update form when pageProps change (for reset functionality)
 watch(
-  () => pageProps.data.validatedForm.data,
+  () => pageProps.data.validatedForm?.data,
   (newData) => {
     form.form.set(newData as unknown as Layer);
   },

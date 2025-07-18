@@ -249,7 +249,7 @@ let form = setForm(
 
 // REACTIVE: Update form when pageProps change (for reset functionality)
 watch(
-  () => pageProps.data.validatedForm.data,
+  () => pageProps.data.validatedForm?.data,
   (newData) => {
     form.form.set(newData as unknown as Project);
   },
@@ -291,7 +291,7 @@ $effect(() => {
 <!-- LAYOUT -->
 <div class="relative h-full w-full overflow-hidden" bind:this={vietportElement}>
   {#if adminCtx.appCtx.isInitialised}
-    {#await adminCtx.appCtx.getHierarchy(pageProps.data.validatedForm.data) then { organisation, project }}
+    {#await adminCtx.appCtx.getHierarchy(pageProps.data.validatedForm?.data) then { organisation, project }}
       <form
         id="projectForm"
         method="POST"
