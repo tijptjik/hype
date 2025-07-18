@@ -182,7 +182,11 @@ export class OmniCtx {
     feature: (featureId: Id) =>
       this.handleFeatureSelection(featureId, getStandardNavOptions()),
     neighbourhood: (neighbourhood: string) =>
-      this.handleNeighbourhoodSelection(neighbourhood, getStandardNavOptions()),
+      this.handleNeighbourhoodSelection(neighbourhood, {
+        ...getStandardNavOptions(),
+        focusFeature: false,
+        isCardOpen: true
+      }),
     walk: (walkId: string) => this.handleWalkSelection(walkId, getStandardNavOptions())
   };
 
@@ -195,7 +199,7 @@ export class OmniCtx {
     return {
       walk: results.filter((r) => r.collectionType === OmniCollection.walk),
       neighbourhood: results
-        .filter((r) => r.collectionType === OmniCollection.neighbourhood)
+        .filter((r) => r.collectionType === OmniCollection.neighbourhood && r.count > 0)
         .sort((a, b) => b.count - a.count),
       feature: results.filter((r) => r.collectionType === OmniCollection.feature)
     };
@@ -327,6 +331,8 @@ export class OmniCtx {
   handleNeighbourhoodSelection(
     neighbourhood: string,
     options?: {
+      focusFeature?: boolean;
+      isCardOpen?: boolean;
       navOptions?: Record<string, any>;
     }
   ) {
@@ -447,10 +453,12 @@ export class OmniCtx {
       ...options
     });
 
-    const collection = this.toNeighbourhoodCollection(
-      neighbourhoodRef,
-      this.appCtx.getNeighbourhoodFeatures(neighbourhoodRef)
-    );
+    const featuresIds =
+      this.appCtx.placeCtx.getFeaturesForNeighbourhood(neighbourhoodRef) ?? [];
+    const features = featuresIds.map((id) =>
+      this.appCtx.getResourceByIdSync(FirstClassResource.feature, id)
+    ) as (FeatureFromCollection | Feature)[];
+    const collection = this.toNeighbourhoodCollection(neighbourhoodRef, features);
 
     initializeCollection(this, collection, OmniMode.navigation, optionsWithDefaults);
   }
@@ -703,7 +711,10 @@ export class OmniCtx {
   /**
    * Creates a neighbourhood collection from neighbourhood name and features
    */
-  toNeighbourhoodCollection(neighbourhood: string, items: any[]): ActiveCollection {
+  toNeighbourhoodCollection(
+    neighbourhood: string,
+    features: (FeatureFromCollection | Feature)[]
+  ): ActiveCollection {
     const selectedNeighbourhood =
       neighbourhoods[neighbourhood as keyof typeof neighbourhoods];
 
@@ -719,7 +730,7 @@ export class OmniCtx {
           name: selectedNeighbourhood?.i18n?.['zh-hans']?.name || neighbourhood
         }
       },
-      items
+      items: features
     };
   }
 
