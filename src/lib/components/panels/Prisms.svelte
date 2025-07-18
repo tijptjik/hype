@@ -8,6 +8,8 @@
 import { m } from '$lib/i18n';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
+// NAVIGATION
+import { navigate } from '$lib/navigation';
 // COMPONENTS
 import Panel from '$lib/components/layout/Panel.svelte';
 import Header from '$lib/components/panels/common/Header.svelte';
@@ -29,9 +31,14 @@ import type {
   Organisation,
   Project
 } from '$lib/types';
+// ENUMS
+import { OmniMode } from '$lib/enums';
+// CONTEXT
+import { getOmniCtx } from '$lib/context/omni.svelte';
 
 // CONTEXT
 const appCtx = getAppCtx();
+const omniCtx = getOmniCtx();
 
 // STATE
 let isInfoOpen = $state(false);
@@ -130,6 +137,15 @@ let panelProps: PanelProps = $derived({
               e.preventDefault();
               e.stopPropagation();
               appCtx.toggleLayer(layer.id);
+              // Close the card if it belonged to a layer which is no longer active
+              const activeFeature = appCtx.getActiveFeature();
+              if (
+                activeFeature &&
+                !appCtx.state.prisms.layer.includes(activeFeature.layerId)
+              ) {
+                navigate('/');
+                omniCtx.setMode(OmniMode.search);
+              }
             }}
             {...panelProps} />
         {/snippet}
