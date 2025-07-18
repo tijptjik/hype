@@ -26,7 +26,7 @@ const translations = {
       'Tsuen Wan': '荃灣',
       'Kwai Tsing': '葵青'
     },
-    neighborhoods: {
+    neighbourhoods: {
       Aberdeen: '香港仔',
       Bowrington: '寶靈頓',
       'Caroline Hill': '加路連山',
@@ -84,7 +84,7 @@ const translations = {
 const zhHansTranslations = {
   regions: {},
   districts: {},
-  neighborhoods: {}
+  neighbourhoods: {}
 };
 
 // Function to convert Traditional to Simplified Chinese (simplified version)
@@ -120,16 +120,16 @@ Object.entries(translations['zh-hant'].districts).forEach(([key, value]) => {
   zhHansTranslations.districts[key] = toSimplified(value);
 });
 
-Object.entries(translations['zh-hant'].neighborhoods).forEach(([key, value]) => {
-  zhHansTranslations.neighborhoods[key] = toSimplified(value);
+Object.entries(translations['zh-hant'].neighbourhoods).forEach(([key, value]) => {
+  zhHansTranslations.neighbourhoods[key] = toSimplified(value);
 });
 
-// Read the existing neighborhoods.json
+// Read the existing neighbourhoods.json
 const filePath = path.join(process.cwd(), 'src', 'lib', 'map', 'neighbourhoods.json');
-const neighborhoods = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+const neighbourhoods = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
-// Update each neighborhood with translations
-Object.entries(neighborhoods).forEach(
+// Update each neighbourhood with translations
+Object.entries(neighbourhoods).forEach(
   ([
     key,
     value
@@ -140,18 +140,18 @@ Object.entries(neighborhoods).forEach(
     value.i18n = [
       {
         lang: 'zh-hant',
-        name: translations['zh-hant'].neighborhoods[key] || key,
+        name: translations['zh-hant'].neighbourhoods[key] || key,
         neighbourhood:
-          translations['zh-hant'].neighborhoods[value.neighbourhood] ||
+          translations['zh-hant'].neighbourhoods[value.neighbourhood] ||
           value.neighbourhood,
         district: translations['zh-hant'].districts[value.district] || value.district,
         region: translations['zh-hant'].regions[value.region] || value.region
       },
       {
         lang: 'zh-hans',
-        name: zhHansTranslations.neighborhoods[key] || key,
+        name: zhHansTranslations.neighbourhoods[key] || key,
         neighbourhood:
-          zhHansTranslations.neighborhoods[value.neighbourhood] || value.neighbourhood,
+          zhHansTranslations.neighbourhoods[value.neighbourhood] || value.neighbourhood,
         district: zhHansTranslations.districts[value.district] || value.district,
         region: zhHansTranslations.regions[value.region] || value.region
       }
@@ -160,5 +160,5 @@ Object.entries(neighborhoods).forEach(
 );
 
 // Write the updated JSON back to file
-fs.writeFileSync(filePath, JSON.stringify(neighborhoods, null, 2));
+fs.writeFileSync(filePath, JSON.stringify(neighbourhoods, null, 2));
 console.info('Neighborhoods file updated successfully!');
