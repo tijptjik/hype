@@ -10,6 +10,8 @@ import Neighbourhoods from '$lib/components/panels/sections/Neighbourhoods.svelt
 import Categories from '$lib/components/panels/sections/Categories.svelte';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
+// ENUMS
+import { Panel as PanelType, PanelSide } from '$lib/enums';
 // TYPES
 import type { PanelProps } from '$lib/types';
 
@@ -32,12 +34,12 @@ let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
 };
 
 let panelProps: PanelProps = $derived({
-  panelType: 'filters',
-  position: 'right',
+  panelType: PanelType.filters,
+  position: PanelSide.right,
   scrollable: true,
-  inline: appCtx.isAdmin(),
-  isNarrow: appCtx.isPanelNarrow('settings'),
-  isAdmin: appCtx.isAdmin(),
+  inline: false,
+  isNarrow: false,
+  isAdmin: false,
   active: {
     resourceType: appCtx.getActiveResourceType(),
     resourceRef: appCtx.getActiveResourceRef(),
@@ -64,11 +66,11 @@ even selecting a neighbourhood will not correctly affect the features shown on t
   <Info isOpen={isInfoOpen} />
   <div class="flex flex-col">
     <div class="flex-grow-1 flex max-h-[40vh] min-h-0 flex-shrink-0 flex-col">
-      <Neighbourhoods />
+      <Neighbourhoods {...panelProps} />
     </div>
     <div
       class="flex-grow-1 flex max-h-[calc(100vh-206px)] min-h-0 flex-shrink-0 flex-col">
-      <Categories />
+      <Categories {...panelProps} />
     </div>
   </div>
   <Reset />
