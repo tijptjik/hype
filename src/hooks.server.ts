@@ -177,11 +177,16 @@ const handle_session_auth: Handle = async ({ event, resolve }) => {
  * when they try to access protected routes.
  */
 const handle_auth_redirect: Handle = async ({ event, resolve }) => {
-  // Skip redirect for API routes, static assets, and home page
+  // Get the pathname, handling null/undefined cases
+  const pathname = event.url.pathname || '';
+
+  // Skip redirect for API routes, static assets, home page, and empty paths
   if (
-    event.url.pathname.startsWith('/api/') ||
-    event.url.pathname.startsWith('/static/') ||
-    event.url.pathname === '/'
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/static/') ||
+    pathname === '/' ||
+    pathname === '' ||
+    pathname === '/manifest.webmanifest'
   ) {
     return resolve(event);
   }
