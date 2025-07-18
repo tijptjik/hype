@@ -4,17 +4,11 @@ import { m } from '$lib/i18n';
 // SERVICES
 import { checkCameraAvailability } from '$lib/client/services/image';
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
-import { getCardCtx } from '$lib/context/card.svelte';
 import { getImageCtx } from '$lib/context/image.svelte';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Camera, FolderOpen } from '@steeze-ui/heroicons';
-// ENUMS
-import { FeatureCardMode } from '$lib/enums';
 
-const appCtx = getAppCtx();
-const cardCtx = getCardCtx();
 const imageCtx = getImageCtx();
 
 // STATE
@@ -26,8 +20,8 @@ let galleryInput: HTMLInputElement;
 let cameraInput: HTMLInputElement;
 
 $effect(() => {
-  checkCameraAvailability().then((hasCameraAccess) => {
-    hasCameraAccess = hasCameraAccess;
+  checkCameraAvailability().then((cameraAccess) => {
+    hasCameraAccess = cameraAccess;
   });
 });
 
