@@ -16,14 +16,14 @@ import ResourceButton from './SelectedResourceNarrow.svelte';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
 // TYPES
-import type { Resource, Id, Neighbourhood, PanelProps } from '$lib/types';
+import type { Resource, Id, NeighbourhoodResource, PanelProps } from '$lib/types';
 
 // CONTEXT
 const appCtx = getAppCtx();
 
 type Props = {
   resourceType: FirstClassResource | 'neighbourhood';
-  resources: Resource[] | Neighbourhood[];
+  resources: Exclude<Resource, 'task' | 'hub'>[] | NeighbourhoodResource[];
   selectedIds: Id[] | string[];
   colorClass?: string;
 } & PanelProps;
@@ -98,17 +98,8 @@ let resourcesToDisplay = $derived([
     : 'mb-0 flex-wrap gap-2 px-8 pt-2'}">
   {#each resourcesToDisplay as id (id)}
     {@const isCurrentActive = id === props.active?.resourceId}
-    {@const isResource = (r: Resource | Neighbourhood): r is Resource => 'id' in r}
-    {@const isNeighbourhood = (r: Resource | Neighbourhood): r is Neighbourhood =>
-      'neighbourhood' in r && 'data' in r}
-    {@const resource = props.resources.find((r: Resource | Neighbourhood) =>
-      isResource(r) ? r.id === id : isNeighbourhood(r) ? r.neighbourhood === id : false
-    )}
-    {@const name = isResource(resource!)
-      ? getI18n(resource as Record<'i18n', any>, 'name', appCtx.getUserPreferences())
-      : isNeighbourhood(resource!)
-        ? getI18n(resource!.data, 'neighbourhood', appCtx.getUserPreferences()!)
-        : ''}
+    {@const resource = props.resources.find((r) => r.id === id)}
+    {@const name = getI18n(resource!.i18n, 'name', appCtx.getUserPreferences())}
     <div class="relative {props.isNarrow ? 'h-12 w-12 flex-shrink-0' : ''}">
       {#if !props.isNarrow}
         <span
