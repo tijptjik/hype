@@ -38,7 +38,11 @@ const adminCtx = getAdminCtx();
 let gridWidth = $state(0);
 let stableColumnCount = $state(1);
 let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
-let lastKnownPanelOpenState = $state(adminCtx.appCtx.isPanelOpenOrVisual(Panel.admin));
+let lastKnownPanelOpenState = $state(
+  adminCtx.appCtx && typeof adminCtx.appCtx.isPanelOpenOrVisual === 'function'
+    ? adminCtx.appCtx.isPanelOpenOrVisual(Panel.admin)
+    : false
+);
 let isTransitioning = $state(false);
 
 let layoutMode = $derived(
