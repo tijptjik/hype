@@ -1,6 +1,5 @@
 <script lang="ts">
 // SVELTE
-import { watch } from 'runed';
 import { afterNavigate } from '$app/navigation';
 import { page } from '$app/state';
 // COMPONENTS
@@ -39,14 +38,12 @@ const appCtx = getAppCtx();
 const adminCtx = setAdminCtx(queryClient, appCtx);
 
 // Initialize AdminCtx if AppCtx is ready
-watch(
-  () => appCtx.isInitialised,
-  (isInitialised) => {
-    if (isInitialised && !adminCtx.isInitialised) {
-      adminCtx.init();
-    }
+$effect(() => {
+  appCtx.isInitialised;
+  if (appCtx.isInitialised && !adminCtx.isInitialised) {
+    adminCtx.init();
   }
-);
+});
 
 // NAVIGATION :: Reset activeResourceRef when navigating to index pages
 afterNavigate(() => {
@@ -74,7 +71,7 @@ afterNavigate(() => {
 
 <!-- LAYOUT -->
 <MinWidthProtector>
-  {#if adminCtx.isInitialised}
+  {#if adminCtx.isInitialised && appCtx.isInitialised}
     <div class="flex h-full w-full overflow-hidden drag-none">
       <AutoHide>
         <Sidebar />
