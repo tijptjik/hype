@@ -2,62 +2,60 @@
 // TRANSITIONS
 import { slide } from 'svelte/transition';
 // I18N
-import { getI18n, getLocale } from '$lib/i18n';
-// DATA
-import subNeighbourhoods from '$lib/map/subNeighbourhoods.json';
+import { getI18n } from '$lib/i18n';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte';
+import { OmniMode } from '$lib/enums';
 
 const {
-  neighbourhood,
-  data,
-  selectedNeighbourhoods,
+  neighbourhoodRef,
+  i18n,
+  selectedNeighbourhoodRefs,
   selectedClass = 'bg-emerald-500'
 } = $props();
 
 // Initialize map state
 const appCtx = getAppCtx();
+const omniCtx = getOmniCtx();
 
-const features = $derived(appCtx.state.resources.feature);
+// DERIVED
+let featureCount = $derived(
+  appCtx.placeCtx.neighbourhoodFeatureCounts.get(neighbourhoodRef) || 0
+);
 
-// UTILS
+// INTERACTIONS
+let handleToggle = () => {
+  appCtx.placeCtx.toggleNeighbourhood(neighbourhoodRef);
+  appCtx.refreshFeatures();
+  appCtx.zoomToAllVisibleFeatures();
+  omniCtx.setMode(OmniMode.search);
+};
 
-// Count features for each neighbourhood
-function getFeatureCount(neighbourhoodKey: string) {
-  let count = 0;
-  if (neighbourhoodKey in subNeighbourhoods) {
-    subNeighbourhoods[neighbourhoodKey as keyof typeof subNeighbourhoods].forEach(
-      (n) => {
-        count += features.filter(
-          (feature) =>
-            n === feature.i18n?.[getLocale()]?.addressProperties?.neighbourhood
-        ).length;
-      }
-    );
-  } else {
-    count = features.filter(
-      (feature) =>
-        neighbourhoodKey ===
-        feature.i18n?.[getLocale()]?.addressProperties?.neighbourhood
-    ).length;
-  }
-  return count;
-}
+// DISPLAY TEXT
+let regionDisplay = $derived(
+  getI18n(i18n, 'region', appCtx.getUserPreferences(), undefined, true).replace(
+    'Hong Kong',
+    'HK'
+  )
+);
+
+let districtDisplay = $derived(
+  getI18n(i18n, 'district', appCtx.getUserPreferences(), undefined, true)
+);
+
+let neighbourhoodDisplay = $derived(
+  getI18n(i18n, 'name', appCtx.getUserPreferences(), undefined, true)
+);
 </script>
 
-{#if getFeatureCount(neighbourhood) > 0}
+{#if featureCount > 0}
   <div
     class="focus:-ring-offset-2 group ml-4 flex cursor-pointer flex-row items-center justify-between gap-4 overflow-visible rounded-l-md bg-black py-2 pl-4 pr-[30px] caret-transparent transition-colors duration-200 focus:outline-none focus:ring-0"
-    in:slide={{ axis: 'y', duration: 200 }}
-    out:slide={{ axis: 'y', duration: 200 }}
-    onclick={() => {
-      appCtx.toggleNeighbourhood(neighbourhood);
-      appCtx.zoomToAllVisibleFeatures();
-    }}
+    onclick={handleToggle}
     onkeydown={(e) => {
       if (e.key === 'Enter' || e.key === ' ') {
-        appCtx.toggleNeighbourhood(neighbourhood);
-        appCtx.zoomToAllVisibleFeatures();
+        handleToggle();
         e.preventDefault();
       } else if (e.key === 'Escape') {
         e.preventDefault();
@@ -71,44 +69,26 @@ function getFeatureCount(neighbourhoodKey: string) {
     tabindex="0">
     <div class="flex -translate-x-5 flex-row items-center gap-3">
       <div
-        class="h-2 w-2 rounded-full group-hover:bg-base-content/30 group-focus-visible:bg-base-content/30 {selectedNeighbourhoods.includes(
-          neighbourhood
-        )
-          ? selectedClass
-          : ''}
-        {selectedNeighbourhoods.includes(neighbourhood)
-          ? 'group-hover:bg-emerald-500/75 group-focus-visible:bg-emerald-500/75'
+        class="h-2 w-2 rounded-full group-hover:bg-base-content/30 group-focus-visible:bg-base-content/30
+        {selectedNeighbourhoodRefs.includes(neighbourhoodRef)
+          ? `group-hover:bg-emerald-500/75 group-focus-visible:bg-emerald-500/75 ${selectedClass}`
           : ''}">
       </div>
       <div class="flex flex-grow flex-col">
         <p class="flex space-x-2 font-mono text-xs uppercase tracking-wide">
-          <span class="text-primary/80"
-            >{getI18n(
-              data,
-              'region',
-              appCtx.getUserPreferences(),
-              undefined,
-              true
-            ).replace('Hong Kong', 'HK')}</span>
+          <span class="text-primary/80">{districtDisplay}</span>
           <span class="mtext-base-content/60 font-sans">::</span>
-          <span class="text-accent"
-            >{getI18n(
-              data,
-              'district',
-              appCtx.getUserPreferences(),
-              undefined,
-              true
-            )}</span>
+          <span class="text-accent">{regionDisplay}</span>
         </p>
         <p class="font-normal text-base-content">
-          {getI18n(data, 'name', appCtx.getUserPreferences(), undefined, true)}
+          {neighbourhoodDisplay}
         </p>
       </div>
     </div>
     <div class="text-sm text-base-content/60">
       <span
         class="badge flex h-8 w-8 items-center justify-center border-2 border-base-200 bg-transparent font-mono font-bold"
-        >{getFeatureCount(neighbourhood)}</span>
+        >{featureCount}</span>
     </div>
   </div>
 {/if}

@@ -11,10 +11,13 @@ import SelectedFilters from '$lib/components/panels/elements/SelectedFilters.sve
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 // TYPES
-import type { Id, Property } from '$lib/types';
+import type { Id, Property, PanelProps } from '$lib/types';
 
-// Initialize map state
+// CONTEXT
 const appCtx = getAppCtx();
+
+// PROPS
+let { ...panelProps }: PanelProps = $props();
 </script>
 
 {#snippet SelectedCategories(layerId: Id, properties: Property[])}

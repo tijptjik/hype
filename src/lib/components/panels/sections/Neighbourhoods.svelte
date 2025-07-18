@@ -1,11 +1,13 @@
 <script lang="ts">
+import I18n from './../../forms/sections/I18n.svelte';
 // I18N
-import { getI18n } from '$lib/i18n';
 import { m } from '$lib/i18n';
-// RUNED
-import { watch } from 'runed';
-// CONSTANTS
-import neighbourhoods from '$lib/map/neighbourhoods.json';
+// SERVICES
+import {
+  filterPlaces,
+  getFilteredNeighbourhoods,
+  getNeighbourhoodsAsResources
+} from '$lib/client/services/geospatial';
 // COMPONENTS
 import Section from '$lib/components/panels/common/Section.svelte';
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte';
@@ -15,46 +17,23 @@ import SelectedResources from '$lib/components/panels/elements/SelectedResources
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 // TYPE
-import type { NeighbourhoodMap, Neighbourhood } from '$lib/types';
-
-// Initialize map state
+import type { NeighbourhoodResource, PanelProps } from '$lib/types';
+// CONTEXT
 const appCtx = getAppCtx();
 
-// Get cached features for counting
-const selectedNeighbourhoods = $derived(appCtx.state.filters.feature.neighbourhoods);
+// PROPS
+let { ...panelProps }: PanelProps = $props();
 
+// STATE
 let searchTerm = $state('');
 
-// Filter function for FilterBar
-function filterNeighbourhoods(neighbourhoods: NeighbourhoodMap, term: string) {
-  if (!term) return Object.entries(neighbourhoods);
-  const searchLower = term.toLowerCase();
-  return Object.entries(neighbourhoods).filter(([key, data]) => {
-    return (
-      getI18n(data, 'name', appCtx.getUserPreferences())
-        .toLowerCase()
-        .includes(searchLower) ||
-      getI18n(data, 'district', appCtx.getUserPreferences())
-        .toLowerCase()
-        .includes(searchLower) ||
-      getI18n(data, 'region', appCtx.getUserPreferences())
-        .toLowerCase()
-        .includes(searchLower)
-    );
-  });
-}
-
-const filteredNeighbourhoods = $derived(
-  filterNeighbourhoods(neighbourhoods, searchTerm)
+// DERIVED
+const allNeighbourhoods: NeighbourhoodResource[] = $derived(
+  getNeighbourhoodsAsResources()
 );
-
-// EFFECTS
-watch(
-  () => selectedNeighbourhoods,
-  () => {
-    appCtx.refreshFeatures();
-  }
-);
+const neighbourhoodCounts = $derived(appCtx.placeCtx.neighbourhoodFeatureCounts);
+const selectedNeighbourhoodRefs = $derived(appCtx.placeCtx.getFilteredNeighbourhoods());
+const filteredNeighbourhoods = $derived(filterPlaces(appCtx, searchTerm));
 </script>
 
 <!-- COMPONENTS -->
@@ -62,12 +41,10 @@ watch(
 {#snippet SelectedNeighbourhoods()}
   <SelectedResources
     resourceType="neighbourhood"
-    resources={Object.entries(neighbourhoods).map(([id, data]) => ({
-      ...data,
-      id
-    })) as unknown as Neighbourhood[]}
-    selectedIds={selectedNeighbourhoods}
-    colorClass="text-emerald-600" />
+    resources={allNeighbourhoods}
+    selectedIds={selectedNeighbourhoodRefs}
+    colorClass="text-emerald-600"
+    {...panelProps} />
 {/snippet}
 
 <!-- LAYOUT -->
@@ -77,13 +54,19 @@ watch(
   icon="/neighbourhood.svg"
   iconVerticalPaddingClass="pt-2"
   collapsedContent={SelectedNeighbourhoods}
-  position="right">
-  {#if Object.keys(neighbourhoods).length > 4}
-    <FilterBar bind:searchTerm position="right" onReset={appCtx.resetNeighbourhoods} />
+  {...panelProps}>
+  {#if Array.from(neighbourhoodCounts.values()).filter((count) => count > 0).length == 0}
+    {@render SelectedNeighbourhoods()}
+  {/if}
+  {#if Array.from(neighbourhoodCounts.values()).filter((count) => count > 0).length > 4}
+    <FilterBar
+      bind:searchTerm
+      position="right"
+      onReset={() => appCtx.placeCtx.resetNeighbourhoods()} />
   {/if}
   <ResourceContainer>
-    {#each filteredNeighbourhoods as [neighbourhood, data]}
-      <FilteredNeighbourhood {neighbourhood} {data} {selectedNeighbourhoods} />
+    {#each filteredNeighbourhoods as [neighbourhoodRef, i18n]}
+      <FilteredNeighbourhood {neighbourhoodRef} {i18n} {selectedNeighbourhoodRefs} />
     {/each}
   </ResourceContainer>
 </Section>
