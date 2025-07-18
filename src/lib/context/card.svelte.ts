@@ -4,8 +4,6 @@ import { setContext, getContext } from 'svelte';
 import { FeatureCardMode } from '$lib/enums';
 // TYPES
 import type { UploadedPhoto } from '$lib/types';
-// I18N
-import { m } from '$lib/i18n';
 
 export class CardCtx {
   state = $state({
