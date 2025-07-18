@@ -17,10 +17,6 @@ import {
   updateLocale
 } from '$lib/client/services/user';
 import {
-  getFeatureIdsForNeighbourhoods,
-  expandToSubNeighbourhoods
-} from '$lib/client/services/geospatial';
-import {
   getFeatureIdsForProperties,
   sortProperties
 } from '$lib/client/services/property';
@@ -82,12 +78,16 @@ import type {
   UserPreferences,
   HubOpts,
   UserProfile,
-  Ref
+  Ref,
+  HubOptsExtended
 } from '$lib/types';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
+import type { PlaceCtx } from './place.svelte';
 
 export class AppCtx {
+  // Place Context
+  placeCtx: PlaceCtx;
   // Maplibre Map instance
   map: MaplibreMap = $state()!;
   // Maplibre library instance (loaded globally)
@@ -124,7 +124,7 @@ export class AppCtx {
     stats: new SvelteMap()
   };
 
-  hub: HubOpts | Hub | null = $state(null);
+  hub: HubOptsExtended | null = $state(null);
 
   // Features map for current state (rebuilt when state.resources.feature changes)
   private featuresMap = new SvelteMap<Id, FeatureFromCollection | Feature>();
@@ -152,7 +152,7 @@ export class AppCtx {
       organisation: { text: '', properties: {} },
       project: { text: '', properties: {} },
       layer: { text: '', properties: {} },
-      feature: { text: '', neighbourhoods: [], properties: {} },
+      feature: { text: '', properties: {} },
       task: { text: '', properties: {} },
       hub: { text: '', properties: {} },
       property: { text: '', properties: {} }
@@ -502,8 +502,9 @@ export class AppCtx {
   formCtx: any = $state(null);
 
   // Constructor
-  constructor(queryClient: QueryClient, user: SessionUser | null) {
+  constructor(queryClient: QueryClient, placeCtx: PlaceCtx, user: SessionUser | null) {
     this.queryClient = queryClient;
+    this.placeCtx = placeCtx;
     this.setUser(user);
     this.initializeQueryMap();
     // Note: keydown handlers are managed dynamically by the root layout
@@ -960,7 +961,7 @@ export class AppCtx {
   };
 
   refreshFeatures = async (isCascading: boolean = true): Promise<void> => {
-    const features = await this.queryClient.fetchQuery({
+    const features: FeatureFromCollection[] = await this.queryClient.fetchQuery({
       queryKey: this.featuresQueryKey,
       queryFn: () => this.featuresQueryFn()
     });
@@ -972,7 +973,13 @@ export class AppCtx {
       primeFeatureStatsCache(this, feature);
     });
 
+    // Rebuild the featureId to feature map
     this.rebuildFeaturesMap();
+
+    // Rebuild the neighbourhoodRef to featureIds map
+    this.placeCtx.setNeighbourhoodFeatures(
+      this.getPrism(FirstClassResource.layer).length > 0 ? features : []
+    );
   };
 
   refreshTasks = async (isCascading: boolean = true): Promise<void> => {
@@ -1279,32 +1286,11 @@ export class AppCtx {
 
   // FILTERS
 
-  // FILTERS - NEIGHBOURHOODS
-
-  toggleNeighbourhood = (name: string) => {
-    const current = this.state.filters.feature.neighbourhoods;
-    this.state.filters.feature.neighbourhoods = current.includes(name)
-      ? current.filter((n) => n !== name)
-      : [...current, name].sort();
-  };
-
-  resetNeighbourhoods = () => {
-    this.state.filters.feature.neighbourhoods = [];
-  };
-
-  // getNeighbourhoodParams(): URLSearchParams {
-  //   const params = new URLSearchParams();
-  //   this.state.filters.feature.neighbourhoods.forEach((n) => {
-  //     params.append('addressProperties.neighbourhood', n);
-  //   });
-  //   return params;
-  // }
-
   // FILTERS - GENERIC
 
   getFilterCount = (): { neighbourhoods: number; properties: number } => {
     return {
-      neighbourhoods: this.state.filters.feature.neighbourhoods.length,
+      neighbourhoods: this.placeCtx.neighbourhoodFilterCount,
       properties: Object.entries(this.state.filters.feature.properties || {}).reduce(
         (total, [_, layerFilters]) => {
           // For each layer, count its active property filters
@@ -1337,11 +1323,12 @@ export class AppCtx {
       organisation: { text: '', properties: {} },
       project: { text: '', properties: {} },
       layer: { text: '', properties: {} },
-      feature: { text: '', neighbourhoods: [], properties: {} },
+      feature: { text: '', properties: {} },
       task: { text: '', properties: {} },
       hub: { text: '', properties: {} },
       property: { text: '', properties: {} }
     };
+    this.placeCtx.resetNeighbourhoods();
     // Re-initialize property filters for active layers
     this.state.prisms.layer.forEach((layerId) => {
       this.initialiseCategoricalPropertyFilters(layerId);
@@ -1609,7 +1596,7 @@ export class AppCtx {
     // Get Properties associated with LayerProperties
     const properties = layer.properties
       .filter((lp) => lp.isVisible !== false)
-      .map((lp) => this.cache.property.get(lp.propertyId));
+      .map((lp) => this.cache.property.get(lp.propertyId!));
 
     // Filter classifiers then sort by rank
     return sortProperties(
@@ -1866,7 +1853,11 @@ export class AppCtx {
 
   // Features, given the selected Neighbourhoods (or all if none)
   getFeatureIdsForNeighbourhoods = (): Id[] => {
-    return getFeatureIdsForNeighbourhoods(this);
+    if (this.placeCtx.neighbourhoodFilterCount === 0) {
+      console.log('no neighbourhoods selected');
+      return Array.from(this.features.keys());
+    }
+    return this.placeCtx.getFeaturesForFilteredNeighbourhoods();
   };
 
   getFeatureIdsForProperties = (): Id[] => {
@@ -2184,16 +2175,8 @@ export class AppCtx {
       : {
           top: 150,
           bottom: 50,
-          right:
-            50 +
-            (this.isPanelOpen(Panel.filters) ||
-            this.isPanelOpen(Panel.settings) ||
-            this.isPanelOpen(Panel.profile)
-              ? 210
-              : 0),
-          left:
-            50 +
-            (this.isPanelOpen(Panel.prisms) || this.isPanelOpen(Panel.stars) ? 210 : 0)
+          right: 50 + (this.isRightPanelOpen() ? PANEL_WIDTH / 2 : 0),
+          left: 50 + (this.isLeftPanelOpen() ? PANEL_WIDTH / 2 : 0)
         };
     try {
       // Convert to WGS84 and get bounds
@@ -2257,12 +2240,6 @@ export class AppCtx {
     );
   };
 
-  // FILTER Utils
-
-  expandToSubNeighbourhoods = (neighbourhoodKey: string): Feature[] => {
-    return expandToSubNeighbourhoods(this, neighbourhoodKey);
-  };
-
   // ═══════════════════════
   // REACTIVE FEATURE COLLECTIONS
   // ═══════════════════════
@@ -2289,16 +2266,19 @@ export class AppCtx {
     this.featuresMap.set(feature.id, feature);
   };
 
-  // Public getter for features map (O(1) lookup, no rebuilding on access)
+  // Public getter for features map
   get features(): SvelteMap<Id, FeatureFromCollection | Feature> {
     return this.featuresMap;
   }
 
-  // FEATURE COLLECTIONS -- FeatureIds (Fixed $derived approach)
+  // FEATURE COLLECTIONS -- FeatureIds
 
   // FeatureIds for Selected Neighbourhoods
   featuresForNeighbourhoods: Id[] = $derived(
-    (this.featuresMap.size && this.getFeatureIdsForNeighbourhoods()) || []
+    (this.placeCtx.state.contains.feature.neighbourhood &&
+      this.placeCtx.state.filters.feature.neighbourhood.include &&
+      this.getFeatureIdsForNeighbourhoods()) ||
+      []
   ) as Id[];
 
   // FeatureIds for Selected Properties
@@ -2312,12 +2292,6 @@ export class AppCtx {
   featuresWishlisted: Id[] = $derived(this.getWishlistedFeatureIds()) as Id[];
   // FeatureIds for Visited Features
   featuresVisited: Id[] = $derived(this.getVisitedFeatureIds()) as Id[];
-
-  // FILTER -- ACCESSORS
-
-  // Accessor for Active Property Filters
-  // TODO Make properties more efficient and first-class citizens
-  propertyFilters = $derived(this.state.filters.feature.properties);
 
   // FEATURE COLLECTIONS -- Utils
 
@@ -2336,10 +2310,6 @@ export class AppCtx {
 
   getVisitedFeatures = (): (FeatureFromCollection | Feature)[] => {
     return this.getFeaturesByIds(this.featuresVisited);
-  };
-
-  getNeighbourhoodFeatures = (neighbourhood: string): Feature[] => {
-    return this.expandToSubNeighbourhoods(neighbourhood);
   };
 
   // Active Navigation State Methods
@@ -3047,7 +3017,7 @@ export class AppCtx {
   // ═══════════════════════
   //
   // ═══════════════════════
-  setHub = (hub: HubOpts) => {
+  setHub = (hub: HubOptsExtended) => {
     this.hub = hub;
   };
 
