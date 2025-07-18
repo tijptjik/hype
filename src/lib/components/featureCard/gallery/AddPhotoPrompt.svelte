@@ -32,12 +32,6 @@ function handleFileSelect(event: Event) {
   // Reset input to allow selecting same files again
   input.value = '';
 }
-
-$effect(() => {
-  checkCameraAvailability().then((hasCameraAccess) => {
-    hasCameraAccess = hasCameraAccess;
-  });
-});
 </script>
 
 <!-- Hidden file inputs -->
@@ -61,10 +55,16 @@ $effect(() => {
   </p>
   <button
     class="btn mt-4 bg-base-300 text-white"
-    onclick={() =>
-      hasCameraAccess
-        ? cardCtx.setMode(FeatureCardMode.AddPhoto)
-        : galleryInput.click()}>
+    onclick={() => {
+      checkCameraAvailability().then((hasCameraAccess) => {
+        if (hasCameraAccess) {
+          cardCtx.setMode(FeatureCardMode.AddPhoto);
+        } else {
+          galleryInput.click();
+        }
+      });
+    }}>
     <Icon src={Camera} class="h-6 w-6" />
-    {m.honest_fluffy_falcon_enjoy()}</button>
+    {m.honest_fluffy_falcon_enjoy()}
+  </button>
 </div>
