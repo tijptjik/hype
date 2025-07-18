@@ -1,5 +1,3 @@
-// MAPS
-import subNeighbourhoods from '$lib/map/subNeighbourhoods.json';
 // DRIZZLE
 import { eq, inArray, SQL, sql } from 'drizzle-orm';
 // LIB
@@ -25,6 +23,7 @@ import { HierarchicalResource } from '$lib/enums';
 import { getProjectIdForFeature } from '$lib/db/services/feature';
 // FEATURE DB SERVICES
 import { createFeatureWithRelated } from '$lib/db/services/feature';
+import { buildNeighbourhoodSubdivisionMap } from '$lib/client/services/geospatial';
 // ZOD
 import { FeatureInsertAPI } from '$lib/db/zod/schema/feature';
 // ENUMS
@@ -42,7 +41,6 @@ import type {
   UserContributedFeature,
   Locale
 } from '$lib/types';
-
 /********************
  *  COMMON
  ************/
@@ -174,16 +172,19 @@ export function withExpandedNeighbourhoods(queryParams: QueryParams) {
     // Create a Set to avoid duplicates
     const expandedNeighbourhoods = new Set<string>();
 
+    // Get the sub-neighbourhoods map from context
+    const neighbourhoodSubdivisionMap = buildNeighbourhoodSubdivisionMap();
+
     // For each provided neighbourhood
     neighbourhoods.forEach((hood) => {
       // Always add the original neighbourhood
       expandedNeighbourhoods.add(hood);
 
       // If it's a main district, also add all its sub-districts
-      if (hood in subNeighbourhoods) {
-        subNeighbourhoods[hood as keyof typeof subNeighbourhoods].forEach((n) =>
-          expandedNeighbourhoods.add(n)
-        );
+      if (neighbourhoodSubdivisionMap.has(hood)) {
+        neighbourhoodSubdivisionMap
+          .get(hood)!
+          .forEach((n) => expandedNeighbourhoods.add(n));
       }
     });
 

@@ -21,51 +21,34 @@ import type { Feature, Id } from '$lib/types';
 // 1. GETTERS
 // ═══════════════════════
 
-/**
- * Gets feature IDs filtered by selected neighbourhoods.
- * Returns all features if no neighbourhoods are selected.
- */
-export function getFeatureIdsForNeighbourhoods(appCtx: AppCtx): Id[] {
-  if (appCtx.state.filters.feature.neighbourhoods.length === 0) {
-    return Array.from(appCtx.features.keys());
+export function buildNeighbourhoodSubdivisionMap(
+  locale?: string
+): Map<string, string[]> {
+  if (!locale) {
+    locale = getLocale();
   }
-  const neighbourhoodFeatures = appCtx.state.filters.feature.neighbourhoods.flatMap(
-    (neighbourhood) => {
-      return expandToSubNeighbourhoods(appCtx, neighbourhood);
-    }
-  );
-  return neighbourhoodFeatures.map((f) => f.id);
-}
 
-/**
- * Expands a neighbourhood key to include all sub-neighbourhoods and their features.
- */
-export function expandToSubNeighbourhoods(
-  appCtx: AppCtx,
-  neighbourhoodKey: string
-): Feature[] {
-  let neighbourhoodFeatures = [];
-  if (neighbourhoodKey in subNeighbourhoods) {
-    subNeighbourhoods[neighbourhoodKey as keyof typeof subNeighbourhoods].forEach(
-      (n) => {
-        neighbourhoodFeatures.push(
-          ...appCtx.state.resources.feature.filter(
-            (feature) =>
-              n === feature.i18n?.[getLocale()]?.addressProperties?.neighbourhood
-          )
-        );
+  const subNeighbourhoodsMap = new Map<string, string[]>();
+
+  for (const [key, data] of Object.entries(neighbourhoods)) {
+    const name = data.i18n[locale as keyof typeof data.i18n]?.name;
+    const neighbourhood = data.i18n[locale as keyof typeof data.i18n]?.neighbourhood;
+
+    // Handle neighbourhood as string or array
+    const neighbourhoodKeys = Array.isArray(neighbourhood)
+      ? neighbourhood
+      : [neighbourhood];
+
+    for (const hoodKey of neighbourhoodKeys) {
+      if (!subNeighbourhoodsMap.has(hoodKey)) {
+        subNeighbourhoodsMap.set(hoodKey, []);
       }
-    );
-  } else {
-    neighbourhoodFeatures.push(
-      ...appCtx.state.resources.feature.filter(
-        (feature) =>
-          neighbourhoodKey ===
-          feature.i18n?.[getLocale()]?.addressProperties?.neighbourhood
-      )
-    );
+      subNeighbourhoodsMap.get(hoodKey)!.push(name);
+    }
   }
-  return neighbourhoodFeatures;
+
+  return subNeighbourhoodsMap;
+}
 }
 
 // ═══════════════════════
