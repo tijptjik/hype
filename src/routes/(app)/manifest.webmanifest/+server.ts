@@ -85,13 +85,15 @@ export const GET: RequestHandler = async ({ url, request, platform }) => {
     description: i18nData?.description || 'A HYPE.HK Hub',
     start_url: domain ? `https://${domain}` : '/'
   };
-  // remove default as it's a module property
-  delete manifest.default;
+
+  // Create a clean manifest object without the default property
+  const cleanManifest = { ...manifest };
+  delete cleanManifest.default;
 
   const headers = {
     'Content-Type': 'application/manifest+json',
     'Cache-Control': 'public, max-age=600'
   };
 
-  return new Response(JSON.stringify(manifest), { headers });
+  return new Response(JSON.stringify(cleanManifest), { headers });
 };
