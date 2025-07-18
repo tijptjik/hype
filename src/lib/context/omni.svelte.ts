@@ -100,7 +100,7 @@ export class OmniCtx {
     };
     if (mode === OmniMode.search) {
       this.closeCard();
-      this.openTray();
+      // this.openTray();
     } else {
       this.closeTray();
       if (optionsWithDefaults.openCard) {
