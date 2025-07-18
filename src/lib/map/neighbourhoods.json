@@ -461,7 +461,7 @@
       }
     }
   },
-  "Ping Shan": {
+  "Ping Shan, KT": {
     "i18n": {
       "en": {
         "name": "Ping Shan",
@@ -470,16 +470,38 @@
         "region": "Kowloon"
       },
       "zh-hant": {
-        "name": "屏山",
-        "neighbourhood": "屏山",
+        "name": "平山",
+        "neighbourhood": "平山",
         "district": "觀塘",
         "region": "九龍"
       },
       "zh-hans": {
-        "name": "屏山",
-        "neighbourhood": "屏山",
+        "name": "平山",
+        "neighbourhood": "平山",
         "district": "觀塘",
         "region": "九龙"
+      }
+    }
+  },
+  "Ping Shan, YL": {
+    "i18n": {
+      "en": {
+        "name": "Ping Shan",
+        "neighbourhood": "Yuen Long",
+        "district": "Yuen Long",
+        "region": "New Territories"
+      },
+      "zh-hant": {
+        "name": "屏山",
+        "neighbourhood": "元朗",
+        "district": "元朗",
+        "region": "新界"
+      },
+      "zh-hans": {
+        "name": "屏山",
+        "neighbourhood": "元朗",
+        "district": "元朗",
+        "region": "新界"
       }
     }
   },
