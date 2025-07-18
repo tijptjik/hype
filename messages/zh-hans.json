@@ -494,5 +494,6 @@
         "propertiesPlural=other": "{properties}类别"
       }
     }
-  ]
+  ],
+  "hub__title": "集线器"
 }
