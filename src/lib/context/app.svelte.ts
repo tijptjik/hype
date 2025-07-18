@@ -1854,7 +1854,6 @@ export class AppCtx {
   // Features, given the selected Neighbourhoods (or all if none)
   getFeatureIdsForNeighbourhoods = (): Id[] => {
     if (this.placeCtx.neighbourhoodFilterCount === 0) {
-      console.log('no neighbourhoods selected');
       return Array.from(this.features.keys());
     }
     return this.placeCtx.getFeaturesForFilteredNeighbourhoods();

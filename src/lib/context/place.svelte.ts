@@ -126,10 +126,6 @@ export class PlaceCtx {
    * @returns Map of neighbourhood name to feature count
    */
   get neighbourhoodFeatureCounts(): SvelteMap<Ref, number> {
-    console.log(
-      'neighbourhoodFeatureCounts',
-      this.state.counts.feature.neighbourhood.get('Mong Kok')
-    );
     return this.state.counts.feature.neighbourhood;
   }
 
@@ -195,10 +191,6 @@ export class PlaceCtx {
   }
 
   private calculateNeighbourhoodStats() {
-    console.log(
-      'calculating neighbourhood stats',
-      this.state.contains.feature.neighbourhood
-    );
     // Clear existing counts
     this.state.counts.feature.neighbourhood.clear();
 
