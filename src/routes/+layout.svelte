@@ -13,6 +13,7 @@ import { useSession } from '$lib/auth/client';
 import { getLocale, setLocale } from '$lib/i18n';
 // CONTEXT
 import { setAppCtx } from '$lib/context/app.svelte';
+import { setPlaceCtx } from '$lib/context/place.svelte';
 // COMPONENTS
 import FlashMessage from '$lib/components/common/FlashMessage.svelte';
 // LIB
@@ -38,7 +39,11 @@ const { queryClient } = data as LayoutData & {
 const session = useSession();
 
 // Set AppCtx in context
-const appCtx = setAppCtx(queryClient, $session.data?.user as SessionUser | null);
+const appCtx = setAppCtx(
+  queryClient,
+  setPlaceCtx(),
+  $session.data?.user as SessionUser | null
+);
 
 // Load maplibre globally
 onMount(async () => {
