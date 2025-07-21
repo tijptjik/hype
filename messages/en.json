@@ -495,5 +495,6 @@
       }
     }
   ],
-  "hub__title": "Hubs"
+  "hub__title": "Hubs",
+  "mapbar__show_card": "Show Details"
 }
