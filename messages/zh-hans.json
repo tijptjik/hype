@@ -495,5 +495,6 @@
       }
     }
   ],
-  "hub__title": "枢纽网站"
+  "hub__title": "枢纽网站",
+  "mapbar__show_card": "显示详细信息"
 }

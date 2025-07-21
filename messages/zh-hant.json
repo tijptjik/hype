@@ -495,5 +495,6 @@
       }
     }
   ],
-  "hub__title": "樞紐網站"
+  "hub__title": "樞紐網站",
+  "mapbar__show_card": "顯示詳細信息"
 }
