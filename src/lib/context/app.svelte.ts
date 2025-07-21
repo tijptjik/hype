@@ -100,6 +100,8 @@ export class AppCtx {
   user: UserProfile | CurrentUser | SessionUser | null = $state(null);
   // Whether the map has been initialised
   isInitialised: boolean = $state(false);
+  // Whether the app is in mobile mode
+  isMobile: boolean = $state(false);
 
   // Query map to store different query functions (can be overridden by AdminCtx)
   queryMap = new Map<
