@@ -386,6 +386,8 @@ export class OmniCtx {
     this.cardCtx = cardCtx;
   }
 
+  isCardOpen = $derived(this.state.isCardOpen);
+
   // ═══════════════════════
   // NAVIGATION
   // ═══════════════════════

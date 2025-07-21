@@ -149,7 +149,6 @@ export const navigate = (
     paramsToAdd: {}
   }
 ) => {
-  let isForcedNavigation = false;
   const paramSets = {
     panels: ['panel', 'username'],
     image: ['imageId']
