@@ -27,6 +27,7 @@ import '$lib/styles/scrollbar.css';
 import type { QueryClient } from '@tanstack/svelte-query';
 import type { LayoutData, LayoutProps } from './$types';
 import type { Locale, SessionUser } from '$lib/types';
+import { MOBILE_MAX_WIDTH } from '$lib';
 
 // PROPS
 let { children, data }: LayoutProps = $props();
@@ -44,6 +45,14 @@ const appCtx = setAppCtx(
   setPlaceCtx(),
   $session.data?.user as SessionUser | null
 );
+
+// Reactive window width binding
+let windowWidth = $state(0);
+
+// Update mobile state when window width changes
+$effect(() => {
+  appCtx.isMobile = windowWidth < MOBILE_MAX_WIDTH;
+});
 
 // Load maplibre globally
 onMount(async () => {
@@ -139,6 +148,8 @@ watch(
   }
 );
 </script>
+
+<svelte:window bind:innerWidth={windowWidth} />
 
 <svelte:head>
   <title>{title}</title>
