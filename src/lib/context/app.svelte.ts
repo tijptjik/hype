@@ -100,6 +100,8 @@ export class AppCtx {
   user: UserProfile | CurrentUser | SessionUser | null = $state(null);
   // Whether the map has been initialised
   isInitialised: boolean = $state(false);
+  // Whether the app is transitioning between states
+  isTransitioning: boolean = $state(false);
   // Whether the app is in mobile mode
   isMobile: boolean = $state(false);
 
@@ -2024,6 +2026,7 @@ export class AppCtx {
 
   private preActiveFeatureMutation = () => {
     // Remove active state from previous feature
+    this.isTransitioning = true;
     if (this.state.active.feature) {
       removeMarkerClass(this, this.state.active.feature.id);
     }
@@ -2054,6 +2057,10 @@ export class AppCtx {
       }
       navigate(FirstClassResource.feature, featureId, optionsWithDefaults.navOptions);
     }
+    // Reset transition state
+    setTimeout(() => {
+      this.isTransitioning = false;
+    }, 2000);
   };
 
   highlightActiveCollection = (options: { focus: boolean } = { focus: false }) => {
