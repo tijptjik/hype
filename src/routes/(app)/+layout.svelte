@@ -17,6 +17,7 @@ import { startCircularFlight } from '$lib/client/services/geospatial';
 // COMPONENTS
 import Menu from '$lib/components/layout/Menu.svelte';
 import Map from '$lib/components/common/StandaloneMap.svelte';
+import Mapbar from '$lib/components/mapbar/Root.svelte';
 import Omnibar from '$lib/components/omnibar/Omnibar.svelte';
 import Filters from '$lib/components/panels/Filters.svelte';
 import Prisms from '$lib/components/panels/Prisms.svelte';
@@ -183,9 +184,10 @@ $effect(() => {
       <Profile bind:panelContainer={profilePanelContainer} />
       <!-- Map Container -->
       <div class="relative flex h-full flex-1 flex-col">
-        <Map />
         <Omnibar />
+        <Map />
         {@render children()}
+        <Mapbar />
         <LayerSelectionModal />
         <GeoLocationModal />
         <NewFeatureCard />
