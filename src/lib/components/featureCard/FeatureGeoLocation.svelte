@@ -9,6 +9,8 @@ import { getI18n } from '$lib/i18n';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 import { getCardCtx } from '$lib/context/card.svelte';
+// ENUMS
+import { NewFeatureMode } from '$lib/enums';
 // TYPES
 import type { Feature } from '$lib/types';
 
@@ -72,13 +74,12 @@ function handleGlobeClick(e: Event) {
   e.preventDefault();
   e.stopPropagation();
   // Close the current modal and open GeoLocation modal
-  window.dispatchEvent(new CustomEvent('closeNewFeatureCard'));
-  window.dispatchEvent(new CustomEvent('showGeoLocationModal'));
+  appCtx.setNewFeatureMode(NewFeatureMode.location);
 }
 </script>
 
 <div
-  class="flex min-h-8 flex-shrink-0 flex-grow-0 items-center justify-between overflow-visible bg-black pl-2 caret-transparent w-100:pl-4">
+  class="pointer-events-auto flex min-h-8 flex-shrink-0 flex-grow-0 items-center justify-between overflow-visible bg-black pl-2 caret-transparent w-100:pl-4">
   {#if isEditingAddress}
     <div class="flex w-full items-center gap-2 pr-2">
       <input

@@ -188,9 +188,11 @@ $effect(() => {
         <Map />
         {@render children()}
         <Mapbar />
-        <LayerSelectionModal />
-        <GeoLocationModal />
-        <NewFeatureCard />
+        {#if omniCtx.isNewFeatureMode}
+          <LayerSelectionModal />
+          <GeoLocationModal />
+          <NewFeatureCard />
+        {/if}
       </div>
     </main>
     <Menu {hub} />

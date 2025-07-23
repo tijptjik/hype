@@ -35,11 +35,11 @@ import {
   PanelLeft,
   PanelRight,
   ResourcePath,
-  ResourceRefKey
+  ResourceRefKey,
+  NewFeatureMode
 } from '$lib/enums';
 // GUARDS
 import { isFeature, isTask } from '$lib/types';
-
 // TYPES
 import type {
   ActiveCollection,
@@ -462,6 +462,7 @@ export class AppCtx {
 
   // New Feature -- The new feature to be created
   newFeature: DeepPartial<NewFeatureTask> | null = $state(null);
+  newFeatureMode: NewFeatureMode | null = $state(null);
 
   // Silly state to track if the map has been zoomed to a marker
   zoomToMarkerOnly: boolean = $state(false);
@@ -2588,6 +2589,18 @@ export class AppCtx {
   };
 
   // NEW FEATURE
+
+  setNewFeatureMode = (mode: NewFeatureMode | null): void => {
+    this.newFeatureMode = mode;
+  };
+
+  resetNewFeatureMode = (): void => {
+    this.newFeatureMode = null;
+  };
+
+  getNewFeatureMode = (): NewFeatureMode | null => {
+    return this.newFeatureMode;
+  };
 
   setNewFeature = (newFeature: DeepPartial<NewFeatureTask>): void => {
     // Initialize with proper locale structure for all required locales
