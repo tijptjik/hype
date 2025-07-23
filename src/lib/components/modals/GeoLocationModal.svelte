@@ -14,6 +14,8 @@ import Icon from '$lib/components/common/Icon.svelte';
 import { XMark, PencilSquare, Check } from '@steeze-ui/heroicons';
 // SERVICES
 import { reverseGeocode } from '$lib/api/external/geocoding';
+// ENUMS
+import { NewFeatureMode } from '$lib/enums';
 // TYPES
 import type { Locale } from '$lib/types';
 import type { Point } from 'geojson';
@@ -22,19 +24,18 @@ import type { Point } from 'geojson';
 const appCtx = getAppCtx();
 const omniCtx = getOmniCtx();
 
+// STATE : DERIVED
+let newFeature = $derived(appCtx.getNewFeature()!);
+
 // STATE
-let isOpen = $state(false);
 let displayAddress = $state<Record<Locale, string>>({
-  en: '',
-  'zh-hant': '',
-  'zh-hans': ''
+  en: newFeature?.feature?.i18n?.en?.displayAddress || '',
+  'zh-hant': newFeature?.feature?.i18n?.['zh-hant']?.displayAddress || '',
+  'zh-hans': newFeature?.feature?.i18n?.['zh-hans']?.displayAddress || ''
 });
 let isDisplayAddressGen = $state(true);
 let isEditingAddress = $state(false);
 let isLoading = $state(false);
-
-// STATE : DERIVED
-let newFeature = $derived(appCtx.getNewFeature());
 
 let isValid = $derived(
   ((newFeature?.feature?.geometry as Point)?.coordinates &&
@@ -49,23 +50,6 @@ let isValid = $derived(
 // PANEL STATE
 let horizontalOffset = $derived(appCtx.getHorizontalOffset());
 
-const handleShowModal = () => {
-  // Sync with current newFeature state when opening
-  // const currentFeature = appCtx.getNewFeature()?.feature;
-  // if (currentFeature?.geometry) {
-  // Already has geometry, keep current address
-  // const currentDisplayAddress = currentFeature.i18n?.[getLocale()]?.displayAddress || '';
-  // if (currentDisplayAddress) {
-  // displayAddress[getLocale()] = currentDisplayAddress;
-  // }
-  // } else {
-  // No geometry, reset everything
-  reset();
-  // }
-  isOpen = true;
-  isValid = false;
-};
-
 function reset() {
   isEditingAddress = false;
   displayAddress = {
@@ -78,14 +62,12 @@ function reset() {
 
 function handleCloseModal() {
   reset();
-  isOpen = false;
+  appCtx.setNewFeatureMode(null);
   omniCtx.cancelNewFeature();
 }
 
 function handleAccept() {
-  reset();
-  isOpen = false;
-  window.dispatchEvent(new CustomEvent('showNewFeatureCard'));
+  appCtx.setNewFeatureMode(NewFeatureMode.card);
 }
 
 async function handleSetLocation() {
@@ -165,23 +147,13 @@ function handleKeydown(e: KeyboardEvent) {
     }
   }
 }
-
-// EVENT HANDLERS
-onMount(() => {
-  window.addEventListener('showGeoLocationModal', handleShowModal);
-  window.addEventListener('closeGeoLocationModal', handleCloseModal);
-  return () => {
-    window.removeEventListener('showGeoLocationModal', handleShowModal);
-    window.removeEventListener('closeGeoLocationModal', handleCloseModal);
-  };
-});
 </script>
 
-{#if isOpen}
+{#if appCtx.newFeatureMode === NewFeatureMode.location}
   <dialog
     class="modal pointer-events-none z-10 bg-transparent"
     style="background: none;"
-    class:modal-open={isOpen}
+    class:modal-open={appCtx.newFeatureMode === NewFeatureMode.location}
     onkeydown={handleKeydown}>
     <div
       class="modal-box m-0 flex h-full w-full flex-col items-center justify-center bg-transparent p-0 {horizontalOffset ==
@@ -271,6 +243,12 @@ onMount(() => {
             {/if}
           </button>
         {:else}
+          <button
+            class="btn bg-base-400 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300"
+            onclick={handleSetLocation}
+            disabled={isLoading}>
+            {m.new_feature__reset_address()}
+          </button>
           <button
             class="btn bg-base-400 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300"
             onclick={handleAccept}
