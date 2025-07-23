@@ -24,9 +24,9 @@ import ValidationError from '$lib/components/featureCard/ValidationError.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 import { getOmniCtx } from '$lib/context/omni.svelte';
-import { setCardCtx, getCardCtx } from '$lib/context/card.svelte';
+import { setCardCtx } from '$lib/context/card.svelte';
 // ENUMS
-import { FeatureCardMode, ImageContextResource } from '$lib/enums';
+import { FeatureCardMode, ImageContextResource, NewFeatureMode } from '$lib/enums';
 // TYPES
 import type {
   NewFeatureWithLocationAndParents,
@@ -42,8 +42,6 @@ const omniCtx = getOmniCtx();
 // CONTEXT :: FEATURE CARD
 const cardCtx = setCardCtx();
 
-// STATE
-let isOpen = $state(false);
 // STATE : DERIVED
 let newFeature: NewFeatureWithLocationAndParents = $state()!;
 let feature: Feature = $state()!;
@@ -63,24 +61,20 @@ function handleShowModal() {
   const hierarchy = appCtx.getHierarchySync(feature);
   organisation = hierarchy.organisation!;
   project = hierarchy.project!;
-  isOpen = true;
 }
 function handleCloseModal() {
   omniCtx.closeCard();
-  isOpen = false;
 }
-
-onMount(() => {
-  window.addEventListener('showNewFeatureCard', handleShowModal);
-  window.addEventListener('closeNewFeatureCard', handleCloseModal);
-  return () => {
-    window.removeEventListener('showNewFeatureCard', handleShowModal);
-    window.removeEventListener('closeNewFeatureCard', handleCloseModal);
-  };
+$effect(() => {
+  if (appCtx.newFeatureMode === NewFeatureMode.card) {
+    handleShowModal();
+  } else {
+    handleCloseModal();
+  }
 });
 </script>
 
-{#if isOpen && newFeature && feature}
+{#if appCtx.newFeatureMode === NewFeatureMode.card && newFeature && feature}
   <FeatureCard>
     <ImageProvider
       {page}
