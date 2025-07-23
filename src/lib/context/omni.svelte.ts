@@ -87,7 +87,6 @@ export class OmniCtx {
   private registerEventHandlers() {
     // Handler for opening card
     const handleOpenCard = (event: CustomEvent) => {
-      console.log('handleOpenCard');
       this.openCard();
     };
 
@@ -134,9 +133,9 @@ export class OmniCtx {
       openCardDelay: 2000,
       ...options
     };
+    console.log('postModeMutation', mode, optionsWithDefaults);
     if (mode === OmniMode.search) {
       this.closeCard();
-      // this.openTray();
     } else {
       this.closeTray();
       if (optionsWithDefaults.openCard) {
@@ -197,7 +196,6 @@ export class OmniCtx {
     this.setMode(OmniMode.search);
     this.appCtx.resetActiveCollection();
     this.clearSearch();
-    this.focusSearchBar();
     if (navigateToRoot) {
       navigate('/');
     }

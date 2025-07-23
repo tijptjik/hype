@@ -111,11 +111,9 @@ async function saveAttribution() {
 function cancelEdit() {
   editedAttribution = originalAttribution;
   editing = false;
-  console.log('cancelEdit', editedAttribution, originalAttribution);
 }
 
 function startEdit() {
-  console.log('startEdit', editedAttribution, originalAttribution);
   originalAttribution = editedAttribution;
   editing = true;
 }
@@ -169,9 +167,7 @@ function clickOutside(node: HTMLElement, handler: (event: MouseEvent) => void) {
 function handleButtonClick(e: MouseEvent, callback: () => void) {
   e.preventDefault();
   e.stopPropagation();
-  console.log('handleButtonClick', callback);
   callback();
-  console.log('CALLBACK');
 }
 
 // Common button classes
