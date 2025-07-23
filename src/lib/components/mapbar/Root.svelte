@@ -39,15 +39,6 @@ const handleOpenCard = (e: Event) => {
   e.stopPropagation();
   omniCtx.openCard();
 };
-$effect(() => {
-  console.log(
-    !omniCtx.isCardOpen &&
-      !appCtx.isTransitioning &&
-      appCtx.getActiveFeature() &&
-      !omniCtx.isNewFeatureMode &&
-      !center
-  );
-});
 
 const isAddButtonVisible = $derived(
   !omniCtx.isCardOpen &&
