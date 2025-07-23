@@ -41,8 +41,7 @@ const handleOpenCard = (e: Event) => {
 };
 
 const isAddButtonVisible = $derived(
-  !omniCtx.isCardOpen &&
-    !appCtx.isTransitioning &&
+  !appCtx.isTransitioning &&
     !appCtx.getActiveFeature() &&
     !omniCtx.isNewFeatureMode &&
     appCtx.isMobile
