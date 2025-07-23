@@ -72,7 +72,43 @@ export class OmniCtx {
       // Schedule async update outside reactive context
       setTimeout(() => this.updateSearchResults(searchTerm), 0);
     });
+
+    // Register custom event handlers
+    this.registerEventHandlers();
   }
+
+  // ═══════════════════════
+  // EVENT HANDLERS
+  // ═══════════════════════
+
+  /**
+   * Register custom event handlers for omni context operations
+   */
+  private registerEventHandlers() {
+    // Handler for opening card
+    const handleOpenCard = (event: CustomEvent) => {
+      console.log('handleOpenCard');
+      this.openCard();
+    };
+
+    // Handler for closing card
+    const handleCloseCard = (event: CustomEvent) => {
+      this.closeCard();
+    };
+
+    // Register event listeners with namespace
+    window.addEventListener('OmniCtx.openCard', handleOpenCard as EventListener);
+    window.addEventListener('OmniCtx.closeCard', handleCloseCard as EventListener);
+
+    // Store cleanup function for potential future use
+    this.eventCleanup = () => {
+      window.removeEventListener('OmniCtx.openCard', handleOpenCard as EventListener);
+      window.removeEventListener('OmniCtx.closeCard', handleCloseCard as EventListener);
+    };
+  }
+
+  // Cleanup function for event handlers
+  private eventCleanup?: () => void;
 
   // ═══════════════════════
   // MODE
@@ -297,6 +333,7 @@ export class OmniCtx {
     featureId: Id,
     options?: {
       openCard?: boolean;
+      openCardDelay?: number;
       focus?: boolean;
       focusFeature?: boolean;
       highlight?: boolean;
@@ -940,59 +977,80 @@ export const setOmniCtx = (appCtx: AppCtx) =>
 export const getOmniCtx = (): OmniCtx => {
   const ctx = getContext(OMNI_CONTEXT_KEY);
   if (!ctx) {
-    // Return a safe proxy object that prevents errors when OmniContext isn't ready
-    return new Proxy({} as OmniCtx, {
-      get(target, prop) {
-        if (prop === 'state')
-          return {
-            mode: 'search',
-            isTrayOpen: false,
-            isCardOpen: false,
-            searchTerm: '',
-            focusedIndex: -1
-          };
-        if (prop === 'searchResults')
-          return {
-            features: [],
-            neighbourhoods: [],
-            walks: []
-          };
-        if (prop === 'pageState') return PageState.NoTransition;
-        if (prop === 'isIntentionallyClosing') return false;
-        if (prop === 'cardCtx') return null;
-        if (prop === 'limits') return { features: 5, neighbourhoods: 3, walks: 1 };
-        if (prop === 'isFeatureMode') return false;
-        if (prop === 'isNewFeatureMode') return false;
-        if (prop === 'isSearchMode') return true;
-        if (prop === 'isNavigationMode') return false;
-        if (prop === 'totalResults') return 0;
-        if (prop === 'navIndex') return -1;
-        if (prop === 'navTitle') return '';
-        if (prop === 'appCtx') return null;
-        // Return no-op functions for methods
-        if (
-          typeof prop === 'string' &&
-          (prop.startsWith('set') ||
-            prop.startsWith('clear') ||
-            prop.startsWith('focus') ||
-            prop.startsWith('reset') ||
-            prop.startsWith('cancel') ||
-            prop.startsWith('close') ||
-            prop.startsWith('open') ||
-            prop.startsWith('toggle') ||
-            prop.startsWith('select') ||
-            prop.startsWith('handle') ||
-            prop.startsWith('nav') ||
-            prop.startsWith('init') ||
-            prop.startsWith('switch') ||
-            prop.startsWith('is') ||
-            prop.startsWith('get'))
-        ) {
-          return () => {};
-        }
-        return undefined;
-      }
-    }) as OmniCtx;
+    // Return a safe fallback object when OmniContext isn't ready
+    return {
+      state: {
+        mode: 'search',
+        isTrayOpen: false,
+        isCardOpen: false,
+        searchTerm: '',
+        focusedIndex: -1
+      },
+      searchResults: {
+        features: [],
+        neighbourhoods: [],
+        walks: []
+      },
+      pageState: PageState.NoTransition,
+      isIntentionallyClosing: false,
+      cardCtx: null,
+      appCtx: null,
+      eventCleanup: undefined,
+      limits: { features: 5, neighbourhoods: 3, walks: 1 },
+      isFeatureMode: false,
+      isNewFeatureMode: false,
+      isSearchMode: true,
+      isNavigationMode: false,
+      totalResults: 0,
+      navIndex: -1,
+      navTitle: '',
+      isCardOpen: false,
+      // No-op methods
+      setMode: () => {},
+      postModeMutation: () => {},
+      resetMode: () => {},
+      cancelNewFeature: () => {},
+      setSearchTerm: () => {},
+      clearSearch: () => {},
+      focusSearchBar: () => {},
+      resetToSearch: () => {},
+      searchHandlers: {} as Record<OmniCollection, (ref: string) => void>,
+      toGroups: () => ({ features: [], neighbourhoods: [], walks: [] }),
+      getLimits: () => ({ features: 5, neighbourhoods: 3, walks: 1 }),
+      close: () => {},
+      selectFirstResult: () => {},
+      handleFeatureSelection: () => Promise.resolve(),
+      handleWalkSelection: () => {},
+      handleNeighbourhoodSelection: () => {},
+      openTray: () => {},
+      closeTray: () => {},
+      toggleTray: () => {},
+      clearSearchOrCloseTray: () => {},
+      openCard: () => {},
+      closeCard: () => {},
+      toggleCard: () => {},
+      setCardCtx: () => {},
+      navNext: () => {},
+      navPrevious: () => {},
+      navToIndex: () => {},
+      initSelection: () => {},
+      initNeighbourhood: () => {},
+      initWalk: () => {},
+      initFeature: () => Promise.resolve(),
+      switchToFeatureInCollection: () => false,
+      isCollectionInitialized: () => false,
+      isFeatureInitialized: () => false,
+      isFeatureInCollection: () => false,
+      isColdStart: () => false,
+      toFeatureCollection: () => ({}) as ActiveCollection,
+      toWalkCollection: () => ({}) as ActiveCollection,
+      toNeighbourhoodCollection: () => ({}) as ActiveCollection,
+      toContributedFeaturesCollection: () => ({}) as ActiveCollection,
+      dispatchOpenCard: () => {},
+      dispatchCloseCard: () => {},
+      registerEventHandlers: () => {},
+      updateSearchResults: () => Promise.resolve()
+    } as unknown as OmniCtx;
   }
   return ctx;
 };
