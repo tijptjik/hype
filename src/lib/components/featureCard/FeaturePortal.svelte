@@ -46,6 +46,10 @@ $effect(() => {
 let rightOpen = $derived(appCtx.isRightPanelOpen());
 let leftOpen = $derived(appCtx.isLeftPanelOpen());
 
+// Track last known panel states to prevent unnecessary flyToFeature calls
+let lastRightOpen = $state(false);
+let lastLeftOpen = $state(false);
+
 function getOffset() {
   const boundsMap = document.getElementById('map')?.getBoundingClientRect();
   const boundsLeftPanel = document
@@ -146,9 +150,17 @@ $effect(() => {
 
 // Recenter on panel state change
 $effect(() => {
-  leftOpen;
-  rightOpen;
-  flyToFeature(0);
+  const currentRightOpen = rightOpen;
+  const currentLeftOpen = leftOpen;
+
+  // Only fly to feature if panel states actually changed
+  if (currentRightOpen !== lastRightOpen || currentLeftOpen !== lastLeftOpen) {
+    flyToFeature(0);
+
+    // Update last known states
+    lastRightOpen = currentRightOpen;
+    lastLeftOpen = currentLeftOpen;
+  }
 });
 
 function wrapText(text: string, maxWidth: number = 170): string[] {
