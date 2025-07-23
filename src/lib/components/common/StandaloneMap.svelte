@@ -221,7 +221,9 @@ onMount(async () => {
       // If card is already open, disable automatic centering to let FeaturePortal handle animation
       const isCardAlreadyOpen = omniCtx.state.isCardOpen;
       omniCtx.handleFeatureSelection(featureId, {
-        focus: !isCardAlreadyOpen, // Don't auto-center if card is already open,
+        focus: false, // Don't auto-center as card is already open,
+        openCard: true,
+        openCardDelay: 0,
         navOptions: {
           paramsToDrop: ['imageId']
         }

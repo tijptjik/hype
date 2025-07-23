@@ -2052,8 +2052,10 @@ export class AppCtx {
     addMarkerClass(this, featureId);
 
     if (optionsWithDefaults.focus || optionsWithDefaults.openCard) {
-      if (!optionsWithDefaults.isCardOpen) {
-        this.zoomToActiveFeature();
+      if (!optionsWithDefaults.isCardOpen && optionsWithDefaults.openCard) {
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('OmniCtx.openCard'));
+        }, optionsWithDefaults.openCardDelay);
       }
       navigate(FirstClassResource.feature, featureId, optionsWithDefaults.navOptions);
     }
