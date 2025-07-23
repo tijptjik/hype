@@ -228,6 +228,15 @@ export enum FeatureCardMode {
 }
 
 /* ----------------- */
+// FEATURE CARD :: NEW
+/* -------- */
+export enum NewFeatureMode {
+  parents = 'parents',
+  location = 'location',
+  card = 'card'
+}
+
+/* ----------------- */
 // COLLECTION STATISTICS
 /* -------- */
 export enum CollectionStatistic {

@@ -17,17 +17,15 @@ import { clickOutside } from '$lib/actions';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 import { getCardCtx } from '$lib/context/card.svelte';
-import { getOmniCtx } from '$lib/context/omni.svelte';
 import { getImageCtx } from '$lib/context/image.svelte';
 // ENUMS
-import { FeatureCardMode } from '$lib/enums';
+import { FeatureCardMode, NewFeatureMode } from '$lib/enums';
 // TYPES
 import type { Feature, UserContributedFeature } from '$lib/types';
 
 // CONTEXT
 const appCtx = getAppCtx();
 const cardCtx = getCardCtx();
-const omniCtx = getOmniCtx();
 const imageCtx = getImageCtx();
 
 // STATE : PROPS
@@ -53,8 +51,7 @@ function closeMenu(e: Event) {
 }
 
 function showLayerSelectionModal() {
-  omniCtx.closeCard();
-  window.dispatchEvent(new CustomEvent('showLayerSelectionModal'));
+  appCtx.setNewFeatureMode(NewFeatureMode.parents);
 }
 
 const isOnlyLayerInHub = $derived(
@@ -92,7 +89,7 @@ const onMissingReport = () => {
     {@const projectName = appCtx.getContextualProjectName(hierarchy.project)}
     {@const layerName = appCtx.getContextualLayerName(hierarchy.layer!)}
     <div
-      class="pointer-events-auto flex w-full flex-shrink-0 items-center justify-between bg-black pl-2 w-100:pl-4">
+      class="pointer-events-auto flex w-full flex-shrink-0 items-center justify-between bg-black pl-2 pt-2 w-100:pl-4">
       <div
         class="flex items-center gap-2 font-mono text-xs uppercase text-neutral-content">
         <Icon src={Squares2x2} class="h-6 w-6" />

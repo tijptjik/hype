@@ -1,6 +1,6 @@
 import { AppCtx } from '$lib/context/app.svelte';
 import { OmniCtx } from '$lib/context/omni.svelte';
-import { OmniMode } from '$lib/enums';
+import { NewFeatureMode, OmniMode } from '$lib/enums';
 
 export const initAddNewFeature = async (appCtx: AppCtx, omniCtx: OmniCtx, e: Event) => {
   const activeLayers = appCtx.state.prisms.layer;
@@ -25,12 +25,10 @@ export const initAddNewFeature = async (appCtx: AppCtx, omniCtx: OmniCtx, e: Eve
         }
       });
       // Trigger the GeoLocation modal directly
-      const event = new CustomEvent('showGeoLocationModal');
-      window.dispatchEvent(event);
+      appCtx.setNewFeatureMode(NewFeatureMode.location);
     }
   } else {
     // If multiple layers are active, dispatch event to show the layer selection modal
-    const event = new CustomEvent('showLayerSelectionModal');
-    window.dispatchEvent(event);
+    appCtx.setNewFeatureMode(NewFeatureMode.parents);
   }
 };
