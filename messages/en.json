@@ -496,5 +496,7 @@
     }
   ],
   "hub__title": "Hubs",
-  "mapbar__show_card": "Show Details"
+  "mapbar__show_card": "Show Details",
+  "new_feature__select_map_desc": "Which map should this be added to?",
+  "new_feature__reset_address": "Reset Address"
 }

@@ -496,5 +496,7 @@
     }
   ],
   "hub__title": "樞紐網站",
-  "mapbar__show_card": "顯示詳細信息"
+  "mapbar__show_card": "顯示詳細信息",
+  "new_feature__select_map_desc": "這應該要加到哪張地圖？",
+  "new_feature__reset_address": "重置地址"
 }
