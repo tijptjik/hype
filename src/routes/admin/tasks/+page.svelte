@@ -14,7 +14,6 @@ import { m } from '$lib/i18n';
 import { Inbox as TaskIcon } from '@steeze-ui/heroicons';
 // TYPES
 import type { Task, ImageDBBasic, Project, Id } from '$lib/types';
-import { AppCtx } from '$lib/context/app.svelte';
 
 // CONTEXT
 const adminCtx = getAdminCtx();
@@ -23,18 +22,18 @@ adminCtx.setFacet(false, false, FirstClassResource.task);
 // HEADER SETUP
 adminCtx.setHeaderForIndex(m.navbar__tasks(), TaskIcon);
 
-// STATE
-let entities: Task[] = $derived(
-  adminCtx.getViewFilteredResource<Task>(FirstClassResource.task)
-);
-
 // ELEMENTS
 let listContainer: HTMLElement | null = $state(null);
 
-// MODAL STATE
 let selectedImage = $state<ImageDBBasic | null>(null);
 let selectedTask = $state<Task | null>(null);
 let selectedTaskIndex = $state<number>(-1);
+
+let entities: Task[] = $derived(
+  adminCtx.isInitialised
+    ? adminCtx.getViewFilteredResource<Task>(FirstClassResource.task)
+    : []
+);
 
 // Group tasks by project
 let groupedEntities: Array<{ group: Project; entities: Task[] }> = $derived(
