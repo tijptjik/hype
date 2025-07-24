@@ -6,6 +6,7 @@ import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // COMPONENTS
 import FeatureCard from '$lib/components/featureCard/Root.svelte';
 import FeatureGallery from '$lib/components/featureCard/FeatureGallery.svelte';
+import FeatureText from '$lib/components/featureCard/layout/FeatureText.svelte';
 import FeatureBreadcrumbs from '$lib/components/featureCard/FeatureBreadcrumbs.svelte';
 import FeatureTitle from '$lib/components/featureCard/FeatureTitle.svelte';
 import FeatureDescription from '$lib/components/featureCard/FeatureDescription.svelte';
@@ -19,7 +20,6 @@ import DirectionsAction from '$lib/components/featureCard/actions/DirectionsActi
 import SubmitNewFeatureAction from '$lib/components/featureCard/actions/SubmitNewFeatureAction.svelte';
 import SubmitMissingReportAction from '$lib/components/featureCard/actions/SubmitMissingReportAction.svelte';
 import SubmitNewPhotosAction from '$lib/components/featureCard/actions/SubmitNewPhotosAction.svelte';
-import CancelAction from '$lib/components/featureCard/actions/CancelAction.svelte';
 import ValidationError from '$lib/components/featureCard/ValidationError.svelte';
 // ACTION LABELS
 import NewFeatureLabel from '$lib/components/featureCard/actions/labels/NewFeatureLabel.svelte';
@@ -27,8 +27,6 @@ import MissingReportLabel from '$lib/components/featureCard/actions/labels/Missi
 import AddPhotoLabel from '$lib/components/featureCard/actions/labels/AddPhotoLabel.svelte';
 import MissingReportBody from '$lib/components/featureCard/MissingReportBody.svelte';
 import AddPhotoBody from '$lib/components/featureCard/AddPhotoBody.svelte';
-import SuccesfulSubmission from '$lib/components/featureCard/gallery/SuccesfulSubmission.svelte';
-import Spacer from '$lib/components/featureCard/layout/Spacer.svelte';
 import Container from '$lib/components/featureCard/layout/Container.svelte';
 import FeaturePortalSection from '$lib/components/featureCard/layout/FeaturePortalSection.svelte';
 import FullScreenCarousel from '$lib/components/modals/FullScreenCarousel.svelte';
@@ -169,47 +167,47 @@ const imageProviderProps = $derived({
       <FeatureCard>
         <Container bind:viewport>
           <FeatureGallery />
-          {#if cardCtx.isDisplayMode || cardCtx.isSubmissionSuccessMode}
-            <FeatureBreadcrumbs {feature} />
-            <FeatureTitle {feature} />
-            <div
-              class="relative"
-              bind:this={wrapperElement}
-              style="
+          <FeatureText>
+            {#if cardCtx.isDisplayMode || cardCtx.isSubmissionSuccessMode}
+              <FeatureBreadcrumbs {feature} />
+              <FeatureTitle {feature} />
+              <div
+                class="relative"
+                bind:this={wrapperElement}
+                style="
                 {wrapperFixedHeight
-                ? `height: ${wrapperFixedHeight}px !important; 
+                  ? `height: ${wrapperFixedHeight}px !important; 
                      min-height: ${wrapperFixedHeight}px !important; 
                      max-height: ${wrapperFixedHeight}px !important; 
                      overflow: hidden !important; 
                      transition: none !important;`
-                : 'height: auto;'}">
-              <FeatureDescription
-                {feature}
-                {descriptionElement}
-                expanded={isDescriptionExpanded}
-                onToggle={handleDescriptionToggle}
-                {availableHeight}
-                {minOverflowedHeight} />
-              {#if !isDescriptionExpanded}
-                <div bind:this={portalElement}>
-                  <Spacer />
-                  <FeaturePortalSection>
-                    {#snippet left()}
-                      <FeatureProperties feature={feature as Feature} />
-                    {/snippet}
-                    {#snippet right()}
-                      <FeaturePortal feature={feature as Feature} />
-                    {/snippet}
-                  </FeaturePortalSection>
-                </div>
-              {/if}
-            </div>
-            <Spacer />
-          {:else if cardCtx.isMissingMode}
-            <MissingReportBody {viewport} />
-          {:else if cardCtx.isAddPhotoMode}
-            <AddPhotoBody {viewport} />
-          {/if}
+                  : 'height: auto;'}">
+                <FeatureDescription
+                  {feature}
+                  {descriptionElement}
+                  expanded={isDescriptionExpanded}
+                  onToggle={handleDescriptionToggle}
+                  {availableHeight}
+                  {minOverflowedHeight} />
+                {#if !isDescriptionExpanded}
+                  <div bind:this={portalElement}>
+                    <FeaturePortalSection>
+                      {#snippet left()}
+                        <FeatureProperties feature={feature as Feature} />
+                      {/snippet}
+                      {#snippet right()}
+                        <FeaturePortal feature={feature as Feature} />
+                      {/snippet}
+                    </FeaturePortalSection>
+                  </div>
+                {/if}
+              </div>
+            {:else if cardCtx.isMissingMode}
+              <MissingReportBody {viewport} />
+            {:else if cardCtx.isAddPhotoMode}
+              <AddPhotoBody {viewport} />
+            {/if}
+          </FeatureText>
         </Container>
         <ValidationError />
         <FeatureActions>

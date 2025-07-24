@@ -57,7 +57,7 @@ const isCardToggleVisible = $derived(
 </script>
 
 <!-- MAPBAR -->
-<div class="absolute bottom-0 left-0 right-0 z-40 p-4 px-3 pb-3 caret-transparent">
+<div class="absolute bottom-0 left-0 right-0 z-40 p-4 px-3 pb-[80px] caret-transparent">
   <div class="grid grid-cols-3 items-center">
     <!-- LEFT -->
     <div class="flex items-center gap-2">

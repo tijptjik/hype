@@ -1,5 +1,4 @@
 <script lang="ts">
-import { browser } from '$app/environment';
 // CONTEXT
 import { getOmniCtx } from '$lib/context/omni.svelte';
 import { getAppCtx } from '$lib/context/app.svelte';
@@ -24,7 +23,7 @@ let horizontalOffset = $derived(appCtx.getHorizontalOffset());
 </script>
 
 <div
-  class="relative z-40 mt-0 flex-shrink-0 flex-grow-0 select-none px-0 caret-transparent duration-300 w-120:mt-2 w-192:mt-6 w-192:px-4 w-320:mt-10 w-320:px-9"
+  class="relative z-40 mt-0 flex-shrink-0 flex-grow-0 select-none overscroll-auto px-0 caret-transparent duration-300 w-120:mt-2 w-192:mt-6 w-192:px-4 w-320:mt-10 w-320:px-9"
   style="transform: translateX({horizontalOffset}px)"
   onkeydown={handleEscape}>
   <div class="mx-auto min-w-[320px] max-w-[480px]">

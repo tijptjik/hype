@@ -128,4 +128,16 @@ let hasViewportHeightIncreased = $derived(innerHeight > initialInnerHeight);
     display: none;
   }
 }
+
+#menu {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 68px;
+  z-index: 100;
+
+  /* keep it above the curved corners / home indicator */
+  padding-bottom: env(safe-area-inset-bottom);
+}
 </style>
