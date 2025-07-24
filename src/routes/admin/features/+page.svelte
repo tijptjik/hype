@@ -27,7 +27,6 @@ adminCtx.setHeaderForIndex(m.omni__title_features(), FeatureIcon);
 // STATE
 let listContainer: HTMLElement | null = $state(null);
 
-// MODAL STATE
 let selectedImage = $state<ImageDB | null>(null);
 let selectedFeature = $state<Feature | null>(null);
 let selectedFeatureIndex = $state<number>(-1);

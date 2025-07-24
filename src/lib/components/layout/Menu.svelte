@@ -72,7 +72,7 @@ function handleMenuClick(panel: Panel) {
       goto(`${ADMIN_PATH}${currentPath}`);
     } else {
       // Navigate to admin homepage
-      goto(ADMIN_PATH);
+      goto(`${ADMIN_PATH}/tasks`);
     }
   } else {
     appCtx.togglePanel(panel);
