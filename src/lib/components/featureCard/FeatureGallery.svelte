@@ -21,10 +21,7 @@ let images: Image[] = $derived(imageCtx.getImages());
 </script>
 
 <div
-  class="pointer-events-auto relative flex aspect-square w-full flex-grow items-center justify-center overflow-hidden bg-base-content/20 caret-transparent backdrop-blur-sm transition-all duration-300 {cardCtx
-    .state.mode === FeatureCardMode.Display
-    ? 'max-h-[35vh] min-h-48 flex-shrink'
-    : 'max-h-[35vh] min-h-48 flex-grow-0'}">
+  class="pointer-events-auto relative flex min-h-[220px] w-full flex-1 items-center justify-center overflow-hidden bg-base-content/20 caret-transparent backdrop-blur-sm transition-all duration-300 w-112:min-h-[280px]">
   {#if images.length == 0}
     {#if cardCtx.isDisplayMode}
       <AddPhotoPrompt />
