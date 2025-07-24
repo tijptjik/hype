@@ -116,19 +116,6 @@ watch(
   }
 );
 
-// Handle language setup from client-side session
-watch(
-  // Set locale from client session if available
-  () => ($session.data?.user as SessionUser).locale,
-  () => {
-    const locale = getLocale();
-    const userLocale = ($session.data?.user as SessionUser).locale;
-    if (userLocale && locale !== userLocale) {
-      setLocale(userLocale as Locale);
-    }
-  }
-);
-
 // Set Page Metadata
 let title = $state(page.data.title);
 let site_name = $state(page.data.site_name);
