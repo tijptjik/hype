@@ -20,23 +20,6 @@ import { isAdminRequest } from '$lib/api';
 let handle: Handle;
 
 // ═══════════════════════
-// TRANSLATION HOOK
-// ═══════════════════════
-/**
- * This hook is used to add the paraglide middleware to the request.
- * It is used to translate the request to the correct locale.
- */
-const translation: Handle = ({ event, resolve }) =>
-  paraglideMiddleware(event.request, ({ request: localizedRequest, locale }) => {
-    event.request = localizedRequest;
-    return resolve(event, {
-      transformPageChunk: ({ html }) => {
-        return html.replace('%lang%', locale);
-      }
-    });
-  });
-
-// ═══════════════════════
 // CORS HOOK
 // ═══════════════════════
 /**
@@ -235,6 +218,23 @@ const handle_hub_enrichment: Handle = async ({ event, resolve }) => {
   }
   return resolve(event);
 };
+
+// ═══════════════════════
+// TRANSLATION HOOK
+// ═══════════════════════
+/**
+ * This hook is used to add the paraglide middleware to the request.
+ * It is used to translate the request to the correct locale.
+ */
+const translation: Handle = ({ event, resolve }) =>
+  paraglideMiddleware(event.request, ({ request: localizedRequest, locale }) => {
+    event.request = localizedRequest;
+    return resolve(event, {
+      transformPageChunk: ({ html }) => {
+        return html.replace('%lang%', event.locals.user?.locale || locale);
+      }
+    });
+  });
 
 // ═══════════════════════
 // MAIN HOOK

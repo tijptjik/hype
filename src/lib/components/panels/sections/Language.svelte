@@ -86,7 +86,7 @@ let advancedOpen = $state(false);
               value={locale}
               class="radio-primary radio radio-sm mr-4 h-5 w-5 cursor-pointer"
               checked={getLocale() === locale}
-              onclick={async () => await appCtx.setLocale(locale)} />
+              onclick={() => appCtx.setLocale(locale)} />
           </div>
         {/each}
       </div>
