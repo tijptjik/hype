@@ -134,10 +134,17 @@ let hasViewportHeightIncreased = $derived(innerHeight > initialInnerHeight);
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 68px;
   z-index: 100;
 
   /* keep it above the curved corners / home indicator */
+  /* base height + safe–area inset
+  TODO Test on IOS whether this is needed. padding-bottom: env(safe-area-inset-bottom) adds extra space inside the element, but the element’s outer height stays at a hard 68 px.
+  On devices with a non-zero bottom inset (e.g. iPhone with home-indicator), the menu may end up visually shorter than intended or its content can be pushed upward.
+
+  A more robust pattern is to fold the inset into the computed height itself and reset the inner padding:
+  height: calc(68px + env(safe-area-inset-bottom));
+  */
+  height: 68px;
   padding-bottom: env(safe-area-inset-bottom);
 }
 </style>
