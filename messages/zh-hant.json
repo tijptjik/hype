@@ -161,7 +161,7 @@
   "quiet_late_worm_startle_accept": "接受此舉報及更改",
   "validation__attribution_required": "請寫下署名以記錄為資料提供者。",
   "validation__at_least_one_image": "請至少新增一張照片。",
-  "photo_credit_initial_instruction": "你新增的所有照片均為您所擁有。",
+  "photo_credit_initial_instruction": "你新增的所有照片均為你所擁有。",
   "photo_credit_ensure_right_to_share": "僅上傳你有分享權限的照片。",
   "photo_credit_curatorial_review": "管理員會審查有待發布的照片。",
   "photo_credit_input_placeholder": "你的姓名或你所屬組織",
