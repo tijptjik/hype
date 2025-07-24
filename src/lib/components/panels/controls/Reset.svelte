@@ -17,7 +17,7 @@ const filterCount = $derived(appCtx.getFilterCount());
 <!-- TODO : Move to the bottom of the panel as an absolute bottom element -->
 
 {#if filterCount.neighbourhoods > 0 || filterCount.properties > 0}
-  <div class="absolute bottom-4 z-10 h-auto w-full">
+  <div class="absolute bottom-4 z-10 h-auto w-full pb-[68px]">
     <button
       class="btn btn-ghost btn-sm ml-4 h-auto w-[calc(100%-1rem)] items-center justify-start rounded-none rounded-l-lg border-3 border-base-300 bg-black px-4 py-4 font-mono font-normal hover:text-white"
       disabled={filterCount.neighbourhoods === 0 && filterCount.properties === 0}
