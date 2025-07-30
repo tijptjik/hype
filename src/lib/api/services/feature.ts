@@ -276,7 +276,15 @@ export const createUserContributedFeature = async (
   subscriptionKey: string
 ) => {
   // Step 1: Get the source locale (first locale with content)
-  const providedLocales = Object.keys(newFeature.i18n) as Locale[];
+  const providedLocales = Object.keys(newFeature.i18n).filter((locale) => {
+    const textObj = newFeature.i18n[locale as Locale];
+    if (!textObj) return false;
+
+    // Check if there are any non-null values for keys other than "locale"
+    return Object.entries(textObj).some(
+      ([key, value]) => key !== 'locale' && value !== null && value !== undefined
+    );
+  }) as Locale[];
 
   if (providedLocales.length === 0) {
     throw new Error('At least one locale must have content');
