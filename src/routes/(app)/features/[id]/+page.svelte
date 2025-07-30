@@ -73,19 +73,22 @@ let minOverflowedHeight: number = $state(72);
 // ═══════════════════════
 
 const loadFeatureAndSetContext = async () => {
+  const id = page.params.id;
+  if (!id) return;
+
   // 1. Set featureId for consistency
-  featureId = page.params.id;
+  featureId = id;
   // 2. Load the fresh feature data
-  const loadedFeature = await appCtx.getFeatureById(page.params.id);
+  const loadedFeature = await appCtx.getFeatureById(id);
   // 3. Update the feature state atomically
   feature = loadedFeature as Feature;
   // 4. Reset description expansion when feature changes
   isDescriptionExpanded = false;
 
-  if (omniCtx.isColdStart(page.params.id)) {
+  if (omniCtx.isColdStart(id)) {
     // Cold start: initialize the feature with card open
     // Prevent navigation since we're already on the feature page
-    await omniCtx.initFeature(page.params.id, {
+    await omniCtx.initFeature(id, {
       focus: false
     });
   }
@@ -112,10 +115,8 @@ function handleDescriptionToggle(expanded: boolean) {
   // THEN: Wait for next frame to ensure measurement is captured
   requestAnimationFrame(() => {
     if (expanded) {
-      // Expanding: Calculate available height first, then expand
-      if (wrapperElement) {
-        availableHeight = wrapperElement.offsetHeight;
-      }
+      // Expanding: Calculate available height considering viewport visibility
+      availableHeight = calculateVisibleHeight();
       isDescriptionExpanded = true;
     } else {
       // Collapsing: Just change state
@@ -133,14 +134,55 @@ function handleDescriptionToggle(expanded: boolean) {
 // 2.2 LAYOUT :: MEASUREMENTS
 // ═══════════════════════
 
+// Function to calculate visible height
+function calculateVisibleHeight() {
+  if (wrapperElement && viewport) {
+    const wrapperRect = wrapperElement.getBoundingClientRect();
+    const viewportRect = viewport.getBoundingClientRect();
+
+    // Calculate how much of the wrapper is visible within the viewport
+    const visibleTop = Math.max(wrapperRect.top, viewportRect.top);
+    const visibleBottom = Math.min(wrapperRect.bottom, viewportRect.bottom);
+    const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+
+    return visibleHeight;
+  }
+  return 0;
+}
+
 // Measure available height when portal section is visible
 $effect(() => {
-  if (wrapperElement && portalElement && !isDescriptionExpanded) {
+  if (wrapperElement && portalElement && !isDescriptionExpanded && viewport) {
     // Wait for next frame to ensure accurate measurements
     requestAnimationFrame(() => {
-      availableHeight = wrapperElement.offsetHeight;
+      availableHeight = calculateVisibleHeight();
     });
   }
+});
+
+// Update available height on viewport scroll when description is expanded
+$effect(() => {
+  if (!viewport || !wrapperElement || !isDescriptionExpanded) return;
+
+  let rafId: number | null = null;
+
+  const handleScroll = () => {
+    if (rafId) return; // Skip if already scheduled
+
+    rafId = requestAnimationFrame(() => {
+      availableHeight = calculateVisibleHeight();
+      rafId = null;
+    });
+  };
+
+  viewport.addEventListener('scroll', handleScroll, { passive: true });
+
+  return () => {
+    viewport.removeEventListener('scroll', handleScroll);
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+    }
+  };
 });
 
 const imageProviderProps = $derived({
