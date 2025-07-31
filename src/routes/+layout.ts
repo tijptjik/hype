@@ -16,9 +16,9 @@ export async function load({ data }) {
         enabled: browser,
         staleTime: 1000 * 60 * 5, // 5 minutes
         gcTime: 1000 * 60 * 30, // 30 minutes
-        refetchOnWindowFocus: false,
-        refetchOnMount: false,
-        refetchOnReconnect: false
+        refetchOnWindowFocus: true,
+        refetchOnMount: true,
+        refetchOnReconnect: true
       }
     }
   });
