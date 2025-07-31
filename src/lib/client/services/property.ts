@@ -626,7 +626,8 @@ export function getFeatureCardDisplayProperties(
  */
 export function getFeatureCardEditableProperties(
   appCtx: AppCtx,
-  layerId: Id
+  layerId: Id,
+  isGradeProperty: boolean = false
 ): Omit<FeatureProperty, 'featureId'>[] {
   if (!layerId) {
     return [];
@@ -648,7 +649,7 @@ export function getFeatureCardEditableProperties(
           (property.type === 'classifier' || property.type === 'specifier') &&
           layerProp.isVisible === true &&
           layerProp.isUserContributed === true &&
-          property.key !== 'grade'
+          (isGradeProperty ? property.key === 'grade' : property.key !== 'grade')
         );
       })
       .map((layerProp) => {

@@ -6,7 +6,10 @@ import { Star, Check, PencilSquare } from '@steeze-ui/heroicons';
 import { m } from '$lib/i18n';
 import { getI18n } from '$lib/i18n';
 // SERVICES
-import { updateNewFeatureProperty } from '$lib/client/services/property';
+import {
+  updateNewFeatureProperty,
+  getFeatureCardEditableProperties
+} from '$lib/client/services/property';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 import { getCardCtx } from '$lib/context/card.svelte';
@@ -86,6 +89,14 @@ function handleGradeSelect(newGrade: number) {
     value: newGrade.toString()
   });
 }
+
+// FUNCTIONS
+// Available properties that could be added to the feature
+const hasGradeProperty = $derived(
+  feature?.layerId
+    ? getFeatureCardEditableProperties(appCtx, feature.layerId, true).length > 0
+    : false
+);
 </script>
 
 <div
@@ -150,7 +161,9 @@ function handleGradeSelect(newGrade: number) {
     </h2>
   {/if}
   <div class="m-0 flex items-center gap-1 caret-transparent">
-    {#if cardCtx.isNewMode}
+    {#if cardCtx.isNewMode && !hasGradeProperty}
+      <!-- DO NOT SHOW -->
+    {:else if cardCtx.isNewMode && hasGradeProperty}
       <div class="mt-1 flex gap-1">
         {#each Array(5) as _, i}
           <button
@@ -167,7 +180,7 @@ function handleGradeSelect(newGrade: number) {
           </button>
         {/each}
       </div>
-    {:else if grade}
+    {:else if !cardCtx.isNewMode && grade}
       <Icon src={Star} class="h-6 w-6" theme="solid" />
       <span>{grade}/5</span>
     {:else}
