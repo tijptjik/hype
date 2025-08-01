@@ -996,6 +996,18 @@ export class AppCtx {
     this.syncCacheMap(this.cache.task, this.state.resources.task);
   };
 
+  setTaskResourceAndCache = (task: Task): void => {
+    const existingTask = this.state.resources.task.find((t) => t.id === task.id);
+    if (existingTask) {
+      this.state.resources.task = this.state.resources.task.map((t) =>
+        t.id === task.id ? task : t
+      );
+    } else {
+      this.state.resources.task = [...this.state.resources.task, task];
+    }
+    this.cache.task.set(task.id, task);
+  };
+
   refreshHubs = async (isCascading: boolean = true): Promise<void> => {
     if (!this.isSuperAdmin()) return;
     this.state.resources.hub = await this.queryClient.fetchQuery({

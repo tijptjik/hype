@@ -70,12 +70,16 @@ const handleAction = async (action: string, e: Event, reviewReason?: string) => 
         throw new Error(`Unknown action: ${action}`);
     }
 
-    await updateTaskReview(task.id, {
+    // Then update the task
+    const response = await updateTaskReview(task.id, {
       type: 'newPhoto',
       reviewOutcome,
       reviewAction,
       reviewReason
     });
+
+    // Update the task cache
+    adminCtx.appCtx.setTaskResourceAndCache(await response.json());
 
     goToNextTask(adminCtx);
   } catch (error) {

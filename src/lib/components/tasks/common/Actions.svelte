@@ -142,7 +142,7 @@ function closeExpand(e: MouseEvent) {
       </button>
     {/each}
     {#if acceptActions.length > 0}
-      <div class="divider divider-horizontal"></div>
+      <div class="divider divider-horizontal mx-0"></div>
       {#each acceptActions as action}
         <button
           class="tilt-neon-watermark btn btn-ghost btn-sm hover:bg-transparent hover:{action.onHoverClass}"
