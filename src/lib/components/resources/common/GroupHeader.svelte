@@ -1,5 +1,6 @@
 <script lang="ts" generics="G extends Record<string, any>">
 // I18N
+import { m } from '$lib/i18n';
 import { getI18n } from '$lib/i18n';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
@@ -25,7 +26,7 @@ const title =
   (group as any).id ??
   'Unknown';
 
-const subtitle = `${entityCount} ${entityCount === 1 ? 'task' : 'tasks'}`;
+const subtitle = `${entityCount} ${entityCount === 1 ? m.born_plane_javelina_strive() : m.born_plane_javelina_strive_plural()}`;
 
 function toggleCollapsed() {
   isCollapsed = !isCollapsed;
