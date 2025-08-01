@@ -530,6 +530,7 @@ export class ImageCtx {
       return {
         id: tempId,
         isArchived: false,
+        createdAt: new Date().toISOString(),
         contributorId: null,
         cdn: 'preview',
         env: 'staging',
@@ -550,13 +551,13 @@ export class ImageCtx {
         latitude: null,
         longitude: null,
         credit: null,
-        modifiedAt: null,
+        modifiedAt: new Date().toISOString(),
         isPublished: false,
         intent: 'general',
         updatedAt: new Date().toISOString(),
         preview,
         file // Store the file for later upload
-      } as Partial<Image> & { preview: string; file: File };
+      } as Image & { preview: string; file: File };
     });
   }
 

@@ -17,6 +17,7 @@ let lastSet: string | undefined = $state();
 let lastImageId: string | undefined | null = $state();
 let lastImageState: string = $state(''); // Track image state changes
 let lastFullScreen: boolean | undefined = $state(false);
+let lastPathname: string = $state(''); // Track page navigation
 let targetImage: Image | ImageDBBasic | null = $state(null);
 let initialisingContext: boolean = $state(false);
 
@@ -91,11 +92,38 @@ function applyTargetImage(targetImageId: string) {
 
 $effect.pre(() => {
   isFullScreen;
-  const contextId = options?.context?.ctxId;
+  // Create comprehensive context ID that includes both primary and secondary context
+  const contextId = options?.context
+    ? `${options.context.ctxType}-${options.context.ctxId}${options.context.ctxTypeSecondary ? `-${options.context.ctxTypeSecondary}-${options.context.ctxIdSecondary}` : ''}`
+    : undefined;
   const currentImage = options.image;
   const targetImageId = targetImage?.id;
 
   if (!options.isValid) {
+    // During navigation, isValid becomes false before new data loads
+    // We should reset the context if we're navigating to a different route
+    const currentPathname = page.url.pathname;
+    if (lastPathname && currentPathname !== lastPathname && lastSet) {
+      untrack(() => {
+        initialisingContext = true;
+        imageCtx
+          .setContext({
+            context: null,
+            image: null,
+            images: null,
+            highlightedIds: []
+          })
+          .then(() => {
+            initialisingContext = false;
+          });
+        lastSet = undefined;
+        lastImageState = '';
+        lastPathname = currentPathname;
+      });
+    } else if (!lastPathname) {
+      // First time loading
+      lastPathname = currentPathname;
+    }
     return;
   }
 
@@ -107,7 +135,7 @@ $effect.pre(() => {
   });
 
   untrack(() => {
-    // Reset context when contextId changes (different feature) OR image data changes significantly
+    // Reset context when contextId changes (different feature/task combination) OR image data changes significantly
     const contextChanged = lastSet !== contextId;
 
     if (contextChanged) {
@@ -127,6 +155,7 @@ $effect.pre(() => {
       }
       lastSet = contextId;
       lastImageState = currentImageState;
+      lastPathname = page.url.pathname;
     } else if (targetImageId && targetImageId !== lastImageId) {
       if (initialisingContext) {
         imageCtx.setTargetImageId(targetImageId);
