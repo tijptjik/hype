@@ -56,7 +56,7 @@ if (task && task?.id) {
   );
 }
 
-const taskId = $state(page.params.task);
+const taskId = $derived(page.params.task);
 const imageProviderProps = $derived({
   isAdminMode: true,
   // Only provide valid props when feature and featureId match
