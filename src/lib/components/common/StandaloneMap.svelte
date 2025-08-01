@@ -149,13 +149,36 @@ onMount(async () => {
       // WATCHER : Watch for changes in the user's location
       navigator.geolocation.watchPosition(
         (geoLocation) => {
+          const { latitude, longitude } = geoLocation.coords;
+
+          // Hong Kong bounding box check
+          const HK_BOUNDS = {
+            north: 22.4393278,
+            south: 22.1193278,
+            east: 114.3228131,
+            west: 114.0028131
+          };
+
+          const isInHongKong =
+            latitude >= HK_BOUNDS.south &&
+            latitude <= HK_BOUNDS.north &&
+            longitude >= HK_BOUNDS.west &&
+            longitude <= HK_BOUNDS.east;
+
+          if (!isInHongKong) {
+            // User is outside Hong Kong - disable location tracking
+            console.warn(
+              'User location outside Hong Kong bounds, disabling location tracking'
+            );
+            return;
+          }
+
           appCtx.state.userLocation = geoLocation;
 
           // Fly to user location on first GPS fix if no active feature
           const isViewingFeature = window.location.pathname.includes('/features/');
           if (!hasReceivedFirstFix && !isViewingFeature) {
             hasReceivedFirstFix = true;
-            const { latitude, longitude } = geoLocation.coords;
 
             // Calculate horizontal offset for panels already open
             const currentHorizontalOffset = appCtx.getHorizontalOffset();
