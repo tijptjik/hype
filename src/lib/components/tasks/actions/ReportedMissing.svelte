@@ -96,12 +96,15 @@ const handleAction = async (action: string, e: Event, reviewReason?: string) => 
       }
 
       // Update task - image handling is done in the PATCH endpoint
-      await updateTaskReview(task.id, {
+      const response = await updateTaskReview(task.id, {
         type: 'reportedMissing',
         reviewOutcome: 'accepted',
         reviewAction,
         reviewReason
       });
+
+      // Update the task cache
+      adminCtx.appCtx.setTaskResourceAndCache(await response.json());
     }
 
     goToNextTask(adminCtx);

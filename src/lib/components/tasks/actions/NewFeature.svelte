@@ -10,7 +10,7 @@ import NewFeatureContent from '$lib/components/tasks/info/NewFeature.svelte';
 import Actions from '$lib/components/tasks/common/Actions.svelte';
 // SERVICES
 import { updateTaskReview, updateFeatureFromTask } from '$lib/client/services/task';
-import { navigateOnAdmin } from '$lib/navigation';
+import { goToNextTask, navigateOnAdmin } from '$lib/navigation';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
 // TYPES
@@ -70,14 +70,21 @@ const handleAction = async (action: string, e: Event, reviewReason?: string) => 
     }
 
     // Then update the task
-    await updateTaskReview(task.id, {
+    const response = await updateTaskReview(task.id, {
       type: 'newFeature',
       reviewOutcome,
       reviewAction,
       reviewReason
     });
 
-    navigateOnAdmin(adminCtx, FirstClassResource.feature, task.featureId);
+    // Update the task cache
+    adminCtx.appCtx.setTaskResourceAndCache(await response.json());
+
+    if (action === 'accept') {
+      navigateOnAdmin(adminCtx, FirstClassResource.feature, task.featureId);
+    } else {
+      goToNextTask(adminCtx);
+    }
   } catch (error) {
     console.error(`Failed to ${action} task:`, error);
   }
