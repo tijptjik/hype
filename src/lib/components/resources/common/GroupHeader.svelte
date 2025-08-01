@@ -26,7 +26,9 @@ const title =
   (group as any).id ??
   'Unknown';
 
-const subtitle = `${entityCount} ${entityCount === 1 ? m.born_plane_javelina_strive() : m.born_plane_javelina_strive_plural()}`;
+const subtitle = $derived(
+  `${entityCount} ${entityCount === 1 ? m.born_plane_javelina_strive() : m.born_plane_javelina_strive_plural()}`
+);
 
 function toggleCollapsed() {
   isCollapsed = !isCollapsed;
