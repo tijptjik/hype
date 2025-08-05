@@ -326,6 +326,7 @@ $effect(() => {
 <div
   id="map"
   class="map absolute inset-0 bottom-[68px] overflow-hidden rounded-2xl caret-transparent"
+  style="touch-action: none; overscroll-behavior: none;"
   data-testid="map"
   bind:this={mapContainer}>
   {#if appCtx.user && appCtx.map && appCtx.state.resources.layer.length > 0 && !appCtx.state.prisms.layer.length && !appCtx.isPanelOpen(Panel.prisms)}
