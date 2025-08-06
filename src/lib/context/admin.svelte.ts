@@ -318,28 +318,28 @@ export class AdminCtx {
     // Override the default query functions with admin-specific ones
     // but reuse AppCtx query keys for common resources
     this.appCtx.queryMap.set(FirstClassResource.organisation, {
-      queryKey: () => this.appCtx.organisationsQueryKey,
+      queryKey: this.appCtx.organisationsQueryKey,
       queryFn: () => this.organisationsQueryFn()
     });
 
     this.appCtx.queryMap.set(FirstClassResource.project, {
-      queryKey: () => this.appCtx.projectsQueryKey,
+      queryKey: this.appCtx.projectsQueryKey,
       queryFn: () => this.projectsQueryFn()
     });
 
     this.appCtx.queryMap.set(FirstClassResource.layer, {
-      queryKey: () => this.appCtx.layersQueryKey,
+      queryKey: this.appCtx.layersQueryKey,
       queryFn: () => this.layersQueryFn()
     });
 
     this.appCtx.queryMap.set(FirstClassResource.feature, {
-      queryKey: () => this.appCtx.featuresQueryKey,
+      queryKey: this.appCtx.featuresQueryKey,
       queryFn: () => this.featuresQueryFn()
     });
 
     // PROPERTIES - reuse AppCtx query key and function
     this.appCtx.queryMap.set(FirstClassResource.property, {
-      queryKey: () => this.appCtx.propertiesQueryKey,
+      queryKey: this.appCtx.propertiesQueryKey,
       queryFn: () => this.propertiesQueryFn()
     });
 
