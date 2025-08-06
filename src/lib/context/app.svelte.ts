@@ -2900,6 +2900,19 @@ export class AppCtx {
     );
   };
 
+  /**
+   * Clears all images arrays from the feature cache
+   * This forces fresh API calls for image data
+   */
+  clearFeatureCacheImages = (): void => {
+    for (const [featureId, feature] of this.cache.feature) {
+      if (feature && typeof feature === 'object' && 'images' in feature) {
+        // Set images to undefined to force fresh API fetch
+        (feature as any).images = undefined;
+      }
+    }
+  };
+
   // Clear all cache maps (for actual data reset scenarios)
   clearAllCaches = (): void => {
     this.cache.organisation.clear();

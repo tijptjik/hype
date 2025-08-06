@@ -400,7 +400,12 @@ async function prepareExistingForm<T extends Record<string, unknown>>({
   images: Image[] | null;
 }> {
   const response = await fetch(
-    `${API_PATH}/${ResourcePath[resourceType]}/${entityRef}`
+    `${API_PATH}/${ResourcePath[resourceType]}/${entityRef}`,
+    {
+      headers: {
+        'x-admin-request': 'true'
+      }
+    }
   );
 
   if (!response.ok) {

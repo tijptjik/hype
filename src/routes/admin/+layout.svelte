@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { afterNavigate } from '$app/navigation';
+import { afterNavigate, beforeNavigate } from '$app/navigation';
 import { page } from '$app/state';
 // COMPONENTS
 import Sidebar from '$lib/components/panels/Admin.svelte';
@@ -42,6 +42,19 @@ $effect(() => {
   appCtx.isInitialised;
   if (appCtx.isInitialised && !adminCtx.isInitialised) {
     adminCtx.init();
+  }
+});
+
+// NAVIGATION :: Clear feature cache images when switching between admin/user apps
+beforeNavigate(({ from, to }) => {
+  if (!from || !to) return;
+
+  const fromIsAdmin = from.route.id?.startsWith('/admin');
+  const toIsAdmin = to.route.id?.startsWith('/admin');
+
+  // Clear feature cache images when switching between admin and user apps
+  if (fromIsAdmin !== toIsAdmin) {
+    appCtx.clearFeatureCacheImages();
   }
 });
 
