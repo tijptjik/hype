@@ -1748,6 +1748,7 @@ export class ImageCtx {
     }
   }
 
+  // NOTE: This is currently only used for Images belonging to a feature.
   async handlePublishToggle() {
     if (!this.state.activeImage) return;
 
@@ -1760,6 +1761,13 @@ export class ImageCtx {
       this.toggleForActiveImage('isPublished');
       // Re-sort images when publish status changes
       this.sortImagesInternal();
+      // Set the feature's images to undefined to undefined, so it'll be refetched in the user app
+      if (this.state.context?.ctxType === 'feature' && this.state.context?.ctxId) {
+        this.appCtx.cache.feature.set(this.state.context.ctxId, {
+          ...this.appCtx.cache.feature.get(this.state.context.ctxId),
+          images: undefined
+        });
+      }
     }
   }
 

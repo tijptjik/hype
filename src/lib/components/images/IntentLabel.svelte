@@ -47,9 +47,11 @@ onClickOutside(
   () => (intentContext.id = null)
 );
 
-container.addEventListener('mouseleave', () => {
-  intentContext.id = null;
-});
+if (container) {
+  container.addEventListener('mouseleave', () => {
+    intentContext.id = null;
+  });
+}
 </script>
 
 <div

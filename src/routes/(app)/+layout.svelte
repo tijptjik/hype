@@ -2,7 +2,7 @@
 // SVELTE
 import { browser } from '$app/environment';
 // NAVIGATION
-import { goto } from '$app/navigation';
+import { goto, beforeNavigate } from '$app/navigation';
 import { page } from '$app/state';
 import { handlePanelParams } from '$lib/navigation';
 // AUTH
@@ -63,6 +63,19 @@ appCtx.setHub(hub);
 
 // CONTEXT :: OMNI
 const omniCtx = setOmniCtx(appCtx);
+
+// NAVIGATION :: Clear feature cache images when switching between admin/user apps
+beforeNavigate(({ from, to }) => {
+  if (!from || !to) return;
+
+  const fromIsAdmin = from.route.id?.startsWith('/admin');
+  const toIsAdmin = to.route.id?.startsWith('/admin');
+
+  // Clear feature cache images when switching between admin and user apps
+  if (fromIsAdmin !== toIsAdmin) {
+    appCtx.clearFeatureCacheImages();
+  }
+});
 
 // CIRCULAR FLIGHT ANIMATION STATE
 let stopCircularFlight: (() => void) | null = $state(null);
