@@ -471,29 +471,35 @@ export class AppCtx {
   // QUERY KEYS
   // ═══════════════════════
 
-  organisationsQueryKey = [FirstClassResource.organisation];
-  projectsQueryKey = $derived([
+  organisationsQueryKey = () => [
+    FirstClassResource.organisation,
+    this.isAdmin()
+  ];
+  projectsQueryKey = () => [
     FirstClassResource.project,
-    this.state.prisms.organisation
-  ]);
-  layersQueryKey = $derived([
+    this.state.prisms.organisation,
+    this.isAdmin()
+  ];
+  layersQueryKey = () => [
     FirstClassResource.layer,
     this.state.prisms.organisation,
-    this.state.prisms.project
-  ]);
-  featuresQueryKey = $derived([
+    this.state.prisms.project,
+    this.isAdmin()
+  ];
+  featuresQueryKey = () => [
     FirstClassResource.feature,
     this.state.prisms.organisation,
     this.state.prisms.project,
-    this.state.prisms.layer
-  ]);
-  propertiesQueryKey = $derived([
+    this.state.prisms.layer,
+    this.isAdmin()
+  ];
+  propertiesQueryKey = () => [
     'property',
     this.state.prisms.organisation,
     this.state.prisms.project
-  ]);
-  userFeaturesQueryKey = ['userFeatures'];
-  userQueryKey = $derived([
+  ];
+  userFeaturesQueryKey = () => ['userFeatures'];
+  userQueryKey = () => [
     FirstClassResource.user,
     this.state.panels.profile.ctx?.username || this.user?.id,
     ...(this.state.panels.profile.ctx?.observePrisms ? [
@@ -501,7 +507,7 @@ export class AppCtx {
           this.state.prisms.project,
           this.state.prisms.layer
         ] : [])
-  ]);
+  ];
 
   // Form context reference for header form actions
   formCtx: any = $state(null);
@@ -518,22 +524,22 @@ export class AppCtx {
   // Initialize default query map (can be overridden by AdminCtx)
   private initializeQueryMap = (): void => {
     this.queryMap.set(FirstClassResource.organisation, {
-      queryKey: () => this.organisationsQueryKey,
+      queryKey: this.organisationsQueryKey,
       queryFn: () => this.organisationsQueryFn()
     });
 
     this.queryMap.set(FirstClassResource.project, {
-      queryKey: () => this.projectsQueryKey,
+      queryKey: this.projectsQueryKey,
       queryFn: () => this.projectsQueryFn()
     });
 
     this.queryMap.set(FirstClassResource.layer, {
-      queryKey: () => this.layersQueryKey,
+      queryKey: this.layersQueryKey,
       queryFn: () => this.layersQueryFn()
     });
 
     this.queryMap.set(FirstClassResource.feature, {
-      queryKey: () => this.featuresQueryKey,
+      queryKey: this.featuresQueryKey,
       queryFn: () => this.featuresQueryFn()
     });
 
@@ -551,13 +557,18 @@ export class AppCtx {
 
     // APP ONLY
     this.queryMap.set('userFeatures', {
-      queryKey: () => this.userFeaturesQueryKey,
+      queryKey: this.userFeaturesQueryKey,
       queryFn: () => this.userFeaturesQueryFn()
+    });
+
+    this.queryMap.set(FirstClassResource.user, {
+      queryKey: this.userQueryKey,
+      queryFn: () => this.userQueryFn()
     });
 
     // PROPERTIES
     this.queryMap.set(FirstClassResource.property, {
-      queryKey: () => this.propertiesQueryKey,
+      queryKey: this.propertiesQueryKey,
       queryFn: () => this.propertiesQueryFn()
     });
   };
@@ -967,8 +978,8 @@ export class AppCtx {
 
   refreshFeatures = async (isCascading: boolean = true): Promise<void> => {
     const features: FeatureFromCollection[] = await this.queryClient.fetchQuery({
-      queryKey: this.featuresQueryKey,
-      queryFn: () => this.featuresQueryFn()
+      queryKey: this.queryMap.get(FirstClassResource.feature)!.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.feature)!.queryFn
     });
     this.state.resources.feature = features;
     this.syncCacheMap(this.cache.feature, features);
@@ -1046,8 +1057,8 @@ export class AppCtx {
 
   refreshUserProfile = async (isCascading: boolean = true): Promise<void> => {
     const user = await this.queryClient.fetchQuery({
-      queryKey: this.userQueryKey,
-      queryFn: () => this.userQueryFn()
+      queryKey: this.queryMap.get(FirstClassResource.user)!.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.user)!.queryFn
     });
     this.state.panels.profile.ctx!.userData = user;
   };
