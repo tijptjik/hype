@@ -852,7 +852,7 @@ export class AppCtx {
       await this.queryClient.invalidateQueries({
         queryKey:
           resource === 'userFeatures'
-            ? this.userFeaturesQueryKey
+            ? this.userFeaturesQueryKey()
             : [FirstClassResource[resource]],
         refetchType: 'all',
         exact: false
