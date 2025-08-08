@@ -72,6 +72,11 @@ const getI18nObject = (entity: any, locale: string, fieldPath?: string) => {
 
 // Helper function to get the actual property value from keyMap
 const getPropertyValue = (entity: any, keyPath: string, useI18n = true): any => {
+  // Defensive check: return empty string if keyPath is undefined or null
+  if (!keyPath) {
+    return '';
+  }
+
   if (useI18n && (keyPath.includes('.i18n.') || keyPath.startsWith('i18n.'))) {
     // Get the i18n object for this specific field path
     const fieldI18nObject = getI18nObject(entity, locale, keyPath);
