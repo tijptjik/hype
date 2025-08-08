@@ -81,18 +81,6 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
   {#key `${fieldRoot}-${fieldIndex}-${fieldKey}-${locale}`}
     {#each fieldProps.values as property, index (property.id)}
       <div
-        use:draggable={{
-          container: index.toString(),
-          dragData: property,
-          callbacks: {
-            onDragStart: () => {
-              actionProps.dragMode = true;
-            },
-            onDragEnd: () => {
-              actionProps.dragMode = false;
-            }
-          }
-        }}
         use:droppable={{
           container: index.toString(),
           callbacks: {
@@ -102,7 +90,39 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
         animate:flip={{ duration: 200 }}
         in:fade={{ duration: 150 }}
         out:fade={{ duration: 150 }}
-        class="svelte-dnd-touch-feedback relative mt-1 flex h-14 cursor-move items-center gap-4 rounded-lg border-1 border-transparent bg-glass-result p-2 font-light text-white transition-all duration-200 focus-within:border-primary">
+        class="svelte-dnd-touch-feedback relative mt-1 flex h-14 items-center gap-4 rounded-lg border-1 border-transparent bg-glass-result p-2 font-light text-white transition-all duration-200 focus-within:border-primary"
+        ondragover={(e) => {
+          e.preventDefault(); // Allow drop
+        }}
+        ondrop={(e) => {
+          e.preventDefault();
+          const dragDataString = e.dataTransfer?.getData('text/plain');
+          if (dragDataString) {
+            try {
+              const dragInfo = JSON.parse(dragDataString);
+              const dragIndex = fieldProps.values.findIndex(
+                (item: IntermediateValue) => item.id === dragInfo.dragData.id
+              );
+              const dropIndex = index;
+
+              if (dragIndex !== -1 && dragIndex !== dropIndex) {
+                // Swap items
+                const [item] = fieldProps.values.splice(dragIndex, 1);
+                fieldProps.values.splice(dropIndex, 0, item);
+
+                // Update ranks
+                fieldProps.values.forEach((value: IntermediateValue, idx) => {
+                  value.rank = idx + 1;
+                });
+
+                // Sync up to form
+                actions.syncUp();
+              }
+            } catch (error) {
+              // Silently handle invalid drag data
+            }
+          }
+        }}>
         {#if actionProps.removeMode && actionProps.confirmingId === property.id && actionProps.removeModeLocale === locale}
           <div
             class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-200 bg-opacity-80">
@@ -136,16 +156,90 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
           </div>
         {/if}
 
-        <div class="handle cursor-grab text-neutral-content">
+        <div
+          class="handle cursor-grab text-neutral-content"
+          draggable="true"
+          ondragstart={(e) => {
+            actionProps.dragMode = true;
+
+            // Find the container element
+            const containerElement = e.currentTarget.closest(
+              '.svelte-dnd-touch-feedback'
+            );
+            if (containerElement && e.dataTransfer) {
+              // Add dragging class to original element
+              containerElement.classList.add('dragging-original');
+              // Clone the entire container for preview
+              const dragPreview = containerElement.cloneNode(true) as HTMLElement;
+
+              // Style the preview
+              dragPreview.style.position = 'absolute';
+              dragPreview.style.top = '-1000px';
+              dragPreview.style.left = '-1000px';
+              dragPreview.style.pointerEvents = 'none';
+              dragPreview.style.zIndex = '1000';
+              dragPreview.style.opacity = '1';
+              dragPreview.style.width =
+                (containerElement as HTMLElement).offsetWidth + 'px';
+              dragPreview.style.height =
+                (containerElement as HTMLElement).offsetHeight + 'px';
+
+              // Add to document temporarily
+              document.body.appendChild(dragPreview);
+
+              // Set as drag image
+              e.dataTransfer.setDragImage(dragPreview, 50, 25);
+
+              // Store drag data
+              e.dataTransfer.setData(
+                'text/plain',
+                JSON.stringify({
+                  container: index.toString(),
+                  dragData: property
+                })
+              );
+
+              // Clean up after a short delay
+              setTimeout(() => {
+                if (document.body.contains(dragPreview)) {
+                  document.body.removeChild(dragPreview);
+                }
+              }, 100);
+            }
+          }}
+          ondragend={(e) => {
+            actionProps.dragMode = false;
+
+            // Remove dragging class from original element
+            const containerElement = e.currentTarget.closest(
+              '.svelte-dnd-touch-feedback'
+            );
+            if (containerElement) {
+              containerElement.classList.remove('dragging-original');
+            }
+          }}>
           <Icon src={Bars3} class="h-4 w-4" />
         </div>
         <div
-          class="font-regular text-md flex-1 border-none text-white caret-white focus:border-none focus:outline-none"
+          class="font-regular text-md flex-1 cursor-text border-none text-white caret-white focus:border-none focus:outline-none"
           contenteditable={!isDragging && !actionProps.removeMode}
           tabindex="0"
           data-value-id={property.id}
           data-lang={locale}
-          onblur={(e) => actions.update(e, property.id, locale as Locale)}>
+          onblur={(e) => actions.update(e, property.id, locale as Locale)}
+          onpointerdown={(e) => {
+            // Prevent drag from starting when clicking on text
+            e.stopPropagation();
+          }}
+          onclick={(e) => {
+            // Prevent event bubbling to parent draggable container
+            e.stopPropagation();
+
+            // Try to focus if not already focused
+            if (document.activeElement !== e.currentTarget) {
+              e.currentTarget.focus();
+            }
+          }}>
           {property[locale]}
         </div>
         {#if actionProps.removeMode && actionProps.removeModeLocale === locale}
@@ -175,6 +269,21 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
 <style>
 :global(.dragging) {
   /* @ts-ignore */
-  @apply opacity-80 shadow-lg ring-2 ring-accent;
+  @apply shadow-xl ring-2 ring-accent;
+  z-index: 1000;
+}
+
+:global(.svelte-dnd-touch-feedback) {
+  transition: all 0.2s ease;
+}
+
+:global(.svelte-dnd-touch-feedback.dragging) {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
+
+:global(.svelte-dnd-touch-feedback.dragging-original) {
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
 }
 </style>
