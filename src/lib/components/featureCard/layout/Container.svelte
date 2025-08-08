@@ -72,8 +72,7 @@ function handleContainerScrollEnd() {
   class="relative flex h-full min-h-0 w-full flex-1 select-none flex-col overscroll-contain caret-transparent">
   <div
     bind:this={viewport}
-    class="h-full overflow-y-auto overflow-x-visible"
-    style="overscroll-behavior: none; -webkit-overflow-scrolling: touch;"
+    class="h-full overflow-y-auto overflow-x-visible overscroll-contain"
     use:swipe={() => ({ timeframe: 300, minSwipeDistance: 60, touchAction: 'pan-y' })}
     onswipe={handleSwipe}
     onscrollend={handleContainerScrollEnd}>

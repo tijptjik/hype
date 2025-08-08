@@ -127,20 +127,18 @@ export function conditionalTouchScroll(node: HTMLElement, options = { threshold:
 {#if omniCtx.state.isCardOpen}
   <div
     class="flex-grow-1 pointer-events-none relative z-20 mx-auto flex h-full w-full max-w-[520px] p-0 pb-[68px] duration-300 w-112:my-4 w-112:h-auto w-112:px-4"
-    style="transform: translateX({horizontalOffset}px); overflow: hidden; touch-action: none;">
+    style="transform: translateX({horizontalOffset}px);">
     <!-- Shadow wrapper -->
     <div
       class="relative h-full w-full"
       style="box-shadow: 0 0 10px rgba(59, 130, 246, 0.2), 0 0 20px rgba(59, 130, 246, 0.1);">
       <!-- Scroll container -->
       <div
-        class="h-full w-full overflow-hidden"
-        style="touch-action: none;"
+        class="h-full w-full overflow-x-auto overflow-y-hidden"
         use:conditionalTouchScroll={{ threshold: 200 }}>
         <div
           id="feature-card"
           class="relative flex h-full max-h-[calc(100dvh-132px)] w-full flex-col overflow-x-visible rounded-none px-0 shadow-xl w-112:max-h-[calc(100dvh-162px)] w-112:rounded-lg"
-          style="touch-action: pan-y; pointer-events: auto; overscroll-behavior: none;"
           in:scale={{
             duration: 300,
             delay: 0,
