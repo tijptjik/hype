@@ -48,7 +48,9 @@ let panelProps: PanelProps = $derived({
       {getI18n(hub, 'nameShort', appCtx.getUserPreferences(), m.menu_about())}
     </h2>
     <div class="preformatted">
-      {@html getI18n(hub, 'description', appCtx.getUserPreferences(), m.menu_about())}
+      <p>
+        {@html getI18n(hub, 'description', appCtx.getUserPreferences(), m.menu_about())}
+      </p>
     </div>
   </div>
 </Panel>
