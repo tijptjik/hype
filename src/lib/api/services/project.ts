@@ -7,7 +7,8 @@ import {
   assertUserLoggedIn,
   assertAdminRequest,
   runAssertions,
-  assertOrganisationOwnerOrSuperAdmin
+  assertOrganisationOwnerOrSuperAdmin,
+  assertProjectMaintainerOrSuperAdmin
 } from '$lib/auth/asserts';
 // DB
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
@@ -172,7 +173,7 @@ export const assertPermissionsToUpdateProject = (
   const assertionError = runAssertions(
     () => assertUserLoggedIn(user as any),
     () => assertAdminRequest(request),
-    () => assertOrganisationOwnerOrSuperAdmin(user, userRoles, formData.organisationId!) // Only allow org owners to update projects
+    () => assertProjectMaintainerOrSuperAdmin(user, userRoles, formData.id!) // Only allow project maintainers to update projects
   );
 
   if (assertionError) return assertionError;
