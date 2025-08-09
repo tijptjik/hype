@@ -47,8 +47,8 @@ let panelProps: PanelProps = $derived({
     <h2 class="flex-grow-0 p-6 text-lg font-semibold uppercase tracking-widest">
       {getI18n(hub, 'nameShort', appCtx.getUserPreferences(), m.menu_about())}
     </h2>
-    <div class="preformatted">
-      <p>
+    <div class="preformatted mb-12">
+      <p class="mb-12">
         {@html getI18n(hub, 'description', appCtx.getUserPreferences(), m.menu_about())}
       </p>
     </div>
@@ -109,5 +109,6 @@ let panelProps: PanelProps = $derived({
 :global(.preformatted img) {
   margin: 0 auto;
   width: 100%;
+  max-width: 320px;
 }
 </style>
