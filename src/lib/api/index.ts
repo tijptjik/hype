@@ -65,7 +65,7 @@ export const getSessionOrError = async (
   return { user: locals.user, session: locals.session };
 };
 
-export const JSONResponseOrError = async (result: any): Promise<any> => {
+export const JSONResponseOrError = async (result: any): Promise<Response> => {
   if (!result) {
     return error(404, "These aren't the signs you're looking for");
   }
