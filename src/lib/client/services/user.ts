@@ -16,6 +16,17 @@ export const updateLocale = async (userId: Id, locale: Locale) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ locale })
     });
+
+    // AUTH : Signal to client that it should refresh its session
+    const { authClient } = await import('$lib/auth/client');
+    try {
+      // Force session refresh by calling getSession with disableCookieCache
+      await authClient.getSession({
+        query: { disableCookieCache: true }
+      });
+    } catch (error) {
+      console.warn('⚠️ Failed to refresh session after locale update:', error);
+    }
   } catch (error) {
     console.error('Failed to update preferred language:', error);
   }
