@@ -48,7 +48,7 @@ const config = {
       publicPrefix: 'PUBLIC'
     },
     csrf: {
-      checkOrigin: false
+      trustedOrigins: ['*']
     }
   },
   vitePlugin: {
