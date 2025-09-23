@@ -49,6 +49,7 @@
     "test:ui": "vitest --config=vitest.config.ts --ui",
     "i18n:translate": "bunx @inlang/cli machine translate --project project.inlang",
     "i18n:build": "bunx @inlang/paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide",
+    "db:generate:dbml": "bunx tsx scripts/generate-dbml.ts",
     "commit": "git-cz"
   },
   "testDependencies": {
@@ -80,6 +81,7 @@
     "branch-name-lint": "^3.0.1",
     "commitizen": "^4.3.1",
     "dotenv-load": "^3.0.0",
+    "drizzle-dbml-generator": "^0.10.0",
     "drizzle-kit": "^0.31.4",
     "eslint": "^9.33.0",
     "eslint-config-prettier": "^10.1.8",
@@ -93,6 +95,7 @@
     "prettier-plugin-svelte": "^3.4.0",
     "prettier-plugin-tailwindcss": "^0.6.14",
     "svelte-check": "^4.3.1",
+    "tsx": "^4.20.5",
     "typescript-eslint": "^8.39.0",
     "vite-node": "^3.2.4",
     "vite-plugin-node-polyfills": "^0.24.0",

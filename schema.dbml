@@ -1,0 +1,484 @@
+table account {
+  id text [pk, not null]
+  userId text [not null]
+  accountId text [not null]
+  providerId text [not null]
+  accessToken text
+  refreshToken text
+  accessTokenExpiresAt integer
+  refreshTokenExpiresAt integer
+  scope text
+  idToken text
+  password text
+  createdAt integer [not null]
+  updatedAt integer [not null]
+}
+
+table feature {
+  id text [pk, not null]
+  organisationId text [not null]
+  projectId text [not null]
+  layerId text [not null]
+  contributorId text
+  geometry text [not null]
+  addressMeta text [default: `{}`]
+  isPublished integer [not null, default: 0]
+  publisherId text
+  publishedAt text
+  isPendingReview integer [not null, default: 0]
+  isArchived integer [not null, default: 0]
+  isIntangible integer [not null, default: 0]
+  isVisitable integer [not null, default: 1]
+  visitableAsOf text [default: `(CURRENT_DATE)`]
+  createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+  modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+}
+
+table featureI18n {
+  featureId text [not null]
+  locale text [not null]
+  title text [not null]
+  titleGen integer [not null, default: 1]
+  description text
+  descriptionGen integer [not null, default: 1]
+  displayAddress text
+  displayAddressGen integer [not null, default: 1]
+  addressProperties text
+
+  indexes {
+    (featureId, locale) [pk]
+  }
+}
+
+table featureImage {
+  featureId text [not null]
+  imageId text [not null]
+  intent text [not null, default: 'undefined']
+  isPublished integer [not null, default: 0]
+  publishedAt text
+  publisherId text
+
+  indexes {
+    (featureId, imageId) [pk]
+    featureId [name: 'canonical_intent', unique]
+  }
+}
+
+table featureProperty {
+  featureId text [not null]
+  propertyId text [not null]
+  propertyValueId text
+  value text
+
+  indexes {
+    (featureId, propertyId) [pk]
+  }
+}
+
+table featurePropertyI18n {
+  featureId text [not null]
+  propertyId text [not null]
+  locale text [not null]
+  value text
+  valueGen integer
+
+  indexes {
+    (featureId, propertyId, locale) [pk]
+    
+  }
+}
+
+table hub {
+  id text [pk, not null]
+  code text [not null, unique]
+  domain text [unique]
+  isArchived integer [not null, default: 0]
+  createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+  modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+}
+
+table hubI18n {
+  hubId text [not null]
+  locale text [not null]
+  name text [not null]
+  nameGen integer [not null, default: 1]
+  nameShort text [not null]
+  nameShortGen integer [not null, default: 1]
+  description text
+  descriptionGen integer [not null, default: 1]
+
+  indexes {
+    (hubId, locale) [pk]
+  }
+}
+
+table image {
+  id text [pk, not null]
+  contributorId text
+  cdn text [not null, default: 'cloudinary']
+  env text [not null, default: 'dg6vtsga1']
+  cdnId text
+  publicId text [not null]
+  version integer
+  originalFilename text
+  originalExtension text
+  originalWidth integer
+  originalHeight integer
+  metadata text
+  cameraModel text
+  capturedAt text
+  latitude text
+  longitude text
+  credit text
+  isArchived integer [not null, default: 0]
+  createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+  modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+}
+
+table layer {
+  id text [pk, not null]
+  organisationId text [not null]
+  projectId text [not null]
+  metadata text
+  isDefaultVisible integer [not null, default: 0]
+  isPublished integer [not null, default: 0]
+  publishedAt text
+  publisherId text
+  isArchived integer [not null, default: 0]
+  createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+  modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+}
+
+table layerI18n {
+  layerId text [not null]
+  locale text [not null]
+  name text [not null]
+  nameGen integer [not null, default: 1]
+  nameShort text [not null]
+  nameShortGen integer [not null, default: 1]
+  description text
+  descriptionGen integer [not null, default: 1]
+
+  indexes {
+    (layerId, locale) [pk]
+  }
+}
+
+table layerProperty {
+  layerId text [not null]
+  propertyId text [not null]
+  isVisible integer [not null, default: 1]
+  isUserContributed integer [not null, default: 1]
+}
+
+table organisation {
+  id text [pk, not null]
+  code text [not null, unique]
+  url text
+  imageId text
+  hubId text
+  isHubExclusive integer [not null, default: 0]
+  isCoreInclusive integer [not null, default: 1]
+  isPublished integer [not null, default: 1]
+  publishedAt text
+  publisherId text
+  isArchived integer [not null, default: 0]
+  createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+  modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+}
+
+table organisationI18n {
+  organisationId text [not null]
+  locale text [not null]
+  name text [not null]
+  nameGen integer [not null, default: 1]
+  nameShort text [not null]
+  nameShortGen integer [not null, default: 1]
+  description text
+  descriptionGen integer [not null, default: 1]
+
+  indexes {
+    (organisationId, locale) [pk]
+  }
+}
+
+table organisationRole {
+  organisationId text [not null]
+  userId text [not null]
+  role text [not null, default: 'member']
+
+  indexes {
+    (organisationId, userId) [pk]
+  }
+}
+
+table project {
+  id text [pk, not null]
+  organisationId text [not null]
+  code text [not null, unique]
+  imageId text
+  isPublished integer [not null, default: 0]
+  publishedAt text
+  publisherId text
+  isArchived integer [not null, default: 0]
+  createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+  modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+}
+
+table projectI18n {
+  projectId text [not null]
+  locale text [not null]
+  name text [not null]
+  nameGen integer [not null, default: 1]
+  nameShort text [not null]
+  nameShortGen integer [not null, default: 1]
+  description text
+  descriptionGen integer [not null, default: 1]
+  license text [not null, default: 'Copyright']
+  licenseGen integer [not null, default: 1]
+  attribution text [not null]
+  attributionGen integer [not null, default: 1]
+
+  indexes {
+    (projectId, locale) [pk]
+  }
+}
+
+table projectRole {
+  projectId text [not null]
+  userId text [not null]
+  role text [not null, default: 'maintainer']
+
+  indexes {
+    (projectId, userId) [pk]
+  }
+}
+
+table property {
+  id text [pk, not null]
+  projectId text [not null]
+  type text [not null, default: 'classifier']
+  isTranslatable integer [not null, default: 1]
+  key text [not null]
+  rank integer [not null, default: 0]
+  component text [not null, default: 'SelectField']
+  min integer
+  max integer
+  isUserContributed integer [not null, default: 1]
+  createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+  modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+}
+
+table propertyI18n {
+  propertyId text [not null]
+  locale text [not null]
+  label text [not null]
+  labelGen integer [not null, default: 1]
+  placeholder text [default: 'Type here']
+  placeholderGen integer [not null, default: 1]
+}
+
+table propertyValue {
+  id text [pk, not null]
+  propertyId text [not null]
+  rank integer [not null, default: 0]
+}
+
+table propertyValueI18n {
+  propertyValueId text [not null]
+  locale text [not null]
+  value text [not null]
+  valueGen integer [not null, default: 0]
+
+  indexes {
+    (propertyValueId, locale) [pk]
+  }
+}
+
+table session {
+  id text [pk, not null]
+  userId text [not null]
+  token text [not null]
+  expiresAt integer [not null]
+  ipAddress text
+  userAgent text
+  createdAt integer [not null]
+  updatedAt integer [not null]
+}
+
+table task {
+  id text [pk, not null]
+  organisationId text [not null]
+  projectId text [not null]
+  featureId text [not null]
+  contributorId text [not null]
+  reviewerId text
+  type text [not null]
+  message text
+  isReviewed integer [not null, default: 0]
+  reviewOutcome text
+  reviewAction text
+  reviewReason text
+  createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+  modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+}
+
+table taskImage {
+  taskId text [not null]
+  imageId text [not null]
+
+  indexes {
+    (taskId, imageId) [pk]
+  }
+}
+
+table user {
+  id text [pk, not null]
+  name text
+  username text [unique]
+  displayUsername text [unique]
+  email text [unique]
+  emailVerified integer [default: 0]
+  image text
+  locale text [not null, default: 'en']
+  attribution text
+  isAnonymous integer [default: 0]
+  isArchived integer [not null, default: 0]
+  preferences text [not null, default: `'{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}'`]
+  experimental text [not null, default: `'{"contributorMode":false, "noLabelsMode":false}'`]
+  createdAt integer [not null]
+  updatedAt integer [not null]
+}
+
+table userActivity {
+  userId text [pk, not null]
+  loginCount integer [default: `0`]
+  lastLogin text [default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+}
+
+table userFeature {
+  userId text [not null]
+  featureId text [not null]
+  isVisited integer [not null, default: 0]
+  isWishlisted integer [not null, default: 0]
+  visitedAt text
+  createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+  modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+
+  indexes {
+    (userId, featureId) [pk]
+  }
+}
+
+table userLayer {
+  layerId text [not null]
+  userId text [not null]
+  isVisibleOnLoad integer [not null, default: 0]
+
+  indexes {
+    (layerId, userId) [pk]
+  }
+}
+
+table verification {
+  id text [pk, not null]
+  identifier text [not null]
+  value text [not null]
+  expiresAt integer [not null]
+  createdAt integer [not null]
+  updatedAt integer [not null]
+}
+
+ref: featureI18n.featureId > feature.id
+
+ref: featureImage.featureId > feature.id
+
+ref: image.id - featureImage.imageId
+
+ref: featurePropertyI18n.(featureId, propertyId) > featureProperty.(featureId, propertyId)
+
+ref: featureProperty.featureId > feature.id
+
+ref: featureProperty.propertyId - property.id
+
+ref: featureProperty.propertyValueId - propertyValue.id
+
+ref: feature.organisationId - organisation.id
+
+ref: feature.projectId - project.id
+
+ref: feature.layerId > layer.id
+
+ref: feature.contributorId > user.id
+
+ref: feature.publisherId - user.id
+
+ref: hubI18n.hubId > hub.id
+
+ref: image.contributorId > user.id
+
+ref: layerI18n.layerId > layer.id
+
+ref: layerProperty.layerId > layer.id
+
+ref: layerProperty.propertyId > property.id
+
+ref: layer.organisationId - organisation.id
+
+ref: layer.projectId > project.id
+
+ref: layer.publisherId - user.id
+
+ref: organisationI18n.organisationId > organisation.id
+
+ref: organisation.imageId - image.id
+
+ref: organisation.publisherId - user.id
+
+ref: organisation.hubId > hub.id
+
+ref: organisationRole.userId > user.id
+
+ref: organisationRole.organisationId > organisation.id
+
+ref: projectI18n.projectId > project.id
+
+ref: project.organisationId > organisation.id
+
+ref: project.imageId - image.id
+
+ref: project.publisherId - user.id
+
+ref: projectRole.projectId > project.id
+
+ref: projectRole.userId > user.id
+
+ref: propertyI18n.propertyId > property.id
+
+ref: property.projectId > project.id
+
+ref: propertyValueI18n.propertyValueId > propertyValue.id
+
+ref: propertyValue.propertyId > property.id
+
+ref: taskImage.taskId > task.id
+
+ref: taskImage.imageId > image.id
+
+ref: task.organisationId > organisation.id
+
+ref: task.projectId > project.id
+
+ref: task.featureId > feature.id
+
+ref: task.contributorId > user.id
+
+ref: task.reviewerId > user.id
+
+ref: userFeature.userId > user.id
+
+ref: userFeature.featureId > feature.id
+
+ref: userLayer.userId > user.id
+
+ref: userLayer.layerId - layer.id
