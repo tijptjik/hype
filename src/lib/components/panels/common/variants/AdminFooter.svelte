@@ -68,9 +68,10 @@ const adminControlItems = $derived.by(() => {
   if (adminCtx.appCtx.isSuperAdmin()) {
     items.push(
       {
-        href: `${ADMIN_PATH}/images/batch`,
+        href: `${ADMIN_PATH}/import`,
         iconSrc: CloudArrowUp,
-        handleClick: null,
+        // TODO Add support to headers to take non-resourceTitles
+        handleClick: () => {},
         notificationCount: 0,
         color: {
           text: 'text-accent',
@@ -96,7 +97,7 @@ const adminControlItems = $derived.by(() => {
         ? `/features/${adminCtx.activeResourceRef}`
         : '/',
     iconSrc: Map,
-    handleClick: null,
+    handleClick: () => {},
     notificationCount: 0,
     color: {
       text: 'text-primary',
