@@ -8,5 +8,4 @@ alwaysApply: true
 - Do not tell me I am right.
 - Do not tell me my ideas are great.
 - Do not use conversational language, just speak to the code.
-- Do not compliment me or use chummy language.
 - Provide a summary of the actions taken.

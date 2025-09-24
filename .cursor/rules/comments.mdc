@@ -1,11 +1,8 @@
 ---
-description: 
-globs: 
+description:
+globs:
 alwaysApply: true
 ---
+
 - Do not delete existing comments - they can be ammended to reflect changes in the code.
 - Section headings use styles like : with numbering, subnumerings if needed and the domains separated by ::
-
-// ═══════════════════════
-// 2.3 CRUD :: CORE OPERATIONS
-// ═══════════════════════
