@@ -13,7 +13,7 @@ import SelectedResources from '../elements/SelectedResources.svelte';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 // ENUMS
-import { FirstClassResource } from '$lib/enums';
+import { FirstClassResource, Panel } from '$lib/enums';
 // TYPES
 import type { Layer, ResourceContext, Id, PanelProps } from '$lib/types';
 import type { Snippet } from 'svelte';
@@ -93,7 +93,7 @@ let handleReset = () => {
   collapsedContent={SelectedLayers}
   defaultOpen={isDefaultOpen}
   {...panelProps}>
-  {#if layers.length > 4}
+  {#if layers.length > 4 && !appCtx.isPanelNarrow(Panel.admin)}
     <FilterBar bind:searchTerm onReset={handleReset} />
   {/if}
   <ResourceContainer>
