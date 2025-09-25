@@ -27,15 +27,25 @@ const adminCtx = getAdminCtx();
 
 // PROPS
 let {
-  isOpen = $bindable()
+  isOpen = $bindable(),
+  resourceType,
+  onSelect,
+  mode = 'navigate'
 }: {
   isOpen: boolean;
+  resourceType?: FirstClassResource;
+  onSelect?: (resource: Resource) => void;
+  mode?: 'navigate' | 'select';
 } = $props();
 
 // RESOURCES
-const parentResourceType = HierarchicalResourceParent[
-  adminCtx.activeResourceType as keyof typeof HierarchicalResourceParent
-] as ResourceTypeWithChildren;
+const parentResourceType = $derived(
+  resourceType
+    ? resourceType
+    : (HierarchicalResourceParent[
+        adminCtx.activeResourceType as keyof typeof HierarchicalResourceParent
+      ] as ResourceTypeWithChildren)
+);
 
 // STATE
 let selectedItem: Resource | null = $state(null);
@@ -53,15 +63,21 @@ const handleSelect = (item: Resource) => {
 
 const handleConfirm = () => {
   if (!selectedItem) return;
-  navigateOnAdmin(adminCtx, adminCtx.activeResourceType, NEW_REF, undefined, {
-    parentId: selectedItem.id,
-    parentRef:
-      selectedItem[
-        ResourceRefKey[
-          parentResourceType as keyof typeof ResourceRefKey
-        ] as keyof Resource
-      ]
-  });
+
+  if (mode === 'select' && onSelect) {
+    onSelect(selectedItem);
+  } else {
+    // Original navigation behavior
+    navigateOnAdmin(adminCtx, adminCtx.activeResourceType, NEW_REF, undefined, {
+      parentId: selectedItem.id,
+      parentRef:
+        selectedItem[
+          ResourceRefKey[
+            parentResourceType as keyof typeof ResourceRefKey
+          ] as keyof Resource
+        ]
+    });
+  }
   close();
 };
 
