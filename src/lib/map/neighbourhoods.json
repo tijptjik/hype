@@ -21,6 +21,28 @@
       }
     }
   },
+  "Wong Chuk Hang": {
+    "i18n": {
+      "en": {
+        "name": "Wong Chuk Hang",
+        "neighbourhood": "Wong Chuk Hang",
+        "district": "Southern",
+        "region": "Hong Kong Island"
+      },
+      "zh-hant": {
+        "name": "黃竹坑",
+        "neighbourhood": "黃竹坑",
+        "district": "南區",
+        "region": "香港島"
+      },
+      "zh-hans": {
+        "name": "黄竹坑",
+        "neighbourhood": "黄竹坑",
+        "district": "南区",
+        "region": "香港岛"
+      }
+    }
+  },
   "Bowrington": {
     "i18n": {
       "en": {
@@ -219,6 +241,28 @@
       }
     }
   },
+  "Ho Man Tin": {
+    "i18n": {
+      "en": {
+        "name": "Ho Man Tin",
+        "neighbourhood": "Ho Man Tin",
+        "district": "Kowloon City",
+        "region": "Kowloon"
+      },
+      "zh-hant": {
+        "name": "何文田",
+        "neighbourhood": "何文田",
+        "district": "九龍城",
+        "region": "九龍"
+      },
+      "zh-hans": {
+        "name": "何文田",
+        "neighbourhood": "何文田",
+        "district": "九龙城",
+        "region": "九龙"
+      }
+    }
+  },
   "Jordan": {
     "i18n": {
       "en": {
@@ -307,6 +351,28 @@
       }
     }
   },
+  "Tsing Yi": {
+    "i18n": {
+      "en": {
+        "name": "Tsing Yi",
+        "neighbourhood": "Tsing Yi",
+        "district": "Kwai Tsing",
+        "region": "New Territories"
+      },
+      "zh-hant": {
+        "name": "青衣",
+        "neighbourhood": "青衣",
+        "district": "葵青",
+        "region": "新界"
+      },
+      "zh-hans": {
+        "name": "青衣",
+        "neighbourhood": "青衣",
+        "district": "葵青",
+        "region": "新界"
+      }
+    }
+  },
   "Kwun Chung": {
     "i18n": {
       "en": {
@@ -329,6 +395,50 @@
       }
     }
   },
+  "Sau Mau Ping": {
+    "i18n": {
+      "en": {
+        "name": "Sau Mau Ping",
+        "neighbourhood": "Sau Mau Ping",
+        "district": "Kwun Tong",
+        "region": "Kowloon"
+      },
+      "zh-hant": {
+        "name": "秀茂坪",
+        "neighbourhood": "秀茂坪",
+        "district": "觀塘",
+        "region": "九龍"
+      },
+      "zh-hans": {
+        "name": "秀茂坪",
+        "neighbourhood": "秀茂坪",
+        "district": "观塘",
+        "region": "九龙"
+      }
+    }
+  },
+  "Yau Tong": {
+    "i18n": {
+      "en": {
+        "name": "Yau Tong",
+        "neighbourhood": "Yau Tong",
+        "district": "Kwun Tong",
+        "region": "Kowloon"
+      },
+      "zh-hant": {
+        "name": "油塘",
+        "neighbourhood": "油塘",
+        "district": "觀塘",
+        "region": "九龍"
+      },
+      "zh-hans": {
+        "name": "油塘",
+        "neighbourhood": "油塘",
+        "district": "觀塘",
+        "region": "九龙"
+      }
+    }
+  },
   "Kwun Tong": {
     "i18n": {
       "en": {
@@ -346,6 +456,28 @@
       "zh-hans": {
         "name": "觀塘",
         "neighbourhood": "觀塘",
+        "district": "觀塘",
+        "region": "九龙"
+      }
+    }
+  },
+  "Kowloon Bay": {
+    "i18n": {
+      "en": {
+        "name": "Kowloon Bay",
+        "neighbourhood": "Kowloon Bay",
+        "district": "Kwun Tong",
+        "region": "Kowloon"
+      },
+      "zh-hant": {
+        "name": "九龍灣",
+        "neighbourhood": "九龍灣",
+        "district": "觀塘",
+        "region": "九龍"
+      },
+      "zh-hans": {
+        "name": "九龙湾",
+        "neighbourhood": "九龙湾",
         "district": "觀塘",
         "region": "九龙"
       }
@@ -527,6 +659,50 @@
       }
     }
   },
+  "Chai Wan": {
+    "i18n": {
+      "en": {
+        "name": "Chai Wan",
+        "neighbourhood": "Chai Wan",
+        "district": "Eastern",
+        "region": "Hong Kong Island"
+      },
+      "zh-hant": {
+        "name": "柴灣",
+        "neighbourhood": "柴灣",
+        "district": "東區",
+        "region": "香港島"
+      },
+      "zh-hans": {
+        "name": "柴湾",
+        "neighbourhood": "柴湾",
+        "district": "東区",
+        "region": "香港岛"
+      }
+    }
+  },
+  "Siu Sai Wan": {
+    "i18n": {
+      "en": {
+        "name": "Siu Sai Wan",
+        "neighbourhood": "Siu Sai Wan",
+        "district": "Eastern",
+        "region": "Hong Kong Island"
+      },
+      "zh-hant": {
+        "name": "小西灣",
+        "neighbourhood": "小西灣",
+        "district": "東區",
+        "region": "香港島"
+      },
+      "zh-hans": {
+        "name": "小西湾",
+        "neighbourhood": "小西湾",
+        "district": "東区",
+        "region": "香港岛"
+      }
+    }
+  },
   "Quarry Bay": {
     "i18n": {
       "en": {
@@ -659,6 +835,28 @@
       }
     }
   },
+  "Lai Chi Kok": {
+    "i18n": {
+      "en": {
+        "name": "Lai Chi Kok",
+        "neighbourhood": "Lai Chi Kok",
+        "district": "Sham Shui Po",
+        "region": "Kowloon"
+      },
+      "zh-hant": {
+        "name": "荔枝角",
+        "neighbourhood": "荔枝角",
+        "district": "深水埗",
+        "region": "九龍"
+      },
+      "zh-hans": {
+        "name": "荔枝角",
+        "neighbourhood": "荔枝角",
+        "district": "深水埗",
+        "region": "九龙"
+      }
+    }
+  },
   "Sham Shui Po": {
     "i18n": {
       "en": {
@@ -676,6 +874,28 @@
       "zh-hans": {
         "name": "深水埗",
         "neighbourhood": "深水埗",
+        "district": "深水埗",
+        "region": "九龙"
+      }
+    }
+  },
+  "Shek Kip Mei": {
+    "i18n": {
+      "en": {
+        "name": "Shek Kip Mei",
+        "neighbourhood": "Shek Kip Mei",
+        "district": "Sham Shui Po",
+        "region": "Kowloon"
+      },
+      "zh-hant": {
+        "name": "秀茂坪",
+        "neighbourhood": "秀茂坪",
+        "district": "深水埗",
+        "region": "九龍"
+      },
+      "zh-hans": {
+        "name": "秀茂坪",
+        "neighbourhood": "秀茂坪",
         "district": "深水埗",
         "region": "九龙"
       }
@@ -989,6 +1209,50 @@
       }
     }
   },
+  "Ma Wan": {
+    "i18n": {
+      "en": {
+        "name": "Ma Wan",
+        "neighbourhood": "Ma Wan",
+        "district": "Tsuen Wan",
+        "region": "New Territories"
+      },
+      "zh-hant": {
+        "name": "馬灣",
+        "neighbourhood": "馬灣",
+        "district": "荃灣",
+        "region": "新界"
+      },
+      "zh-hans": {
+        "name": "马湾",
+        "neighbourhood": "马湾",
+        "district": "荃湾",
+        "region": "新界"
+      }
+    }
+  },
+  "Tsuen Wan West": {
+    "i18n": {
+      "en": {
+        "name": "Tsuen Wan West",
+        "neighbourhood": "Tsuen Wan",
+        "district": "Tsuen Wan",
+        "region": "New Territories"
+      },
+      "zh-hant": {
+        "name": "荃灣西約",
+        "neighbourhood": "荃灣西約",
+        "district": "荃灣",
+        "region": "新界"
+      },
+      "zh-hans": {
+        "name": "荃湾西約",
+        "neighbourhood": "荃湾西約",
+        "district": "荃湾",
+        "region": "新界"
+      }
+    }
+  },
   "Un Chau": {
     "i18n": {
       "en": {
@@ -1095,6 +1359,226 @@
         "name": "元朗",
         "neighbourhood": "元朗",
         "district": "元朗",
+        "region": "新界"
+      }
+    }
+  },
+  "Ap Lei Chau": {
+    "i18n": {
+      "en": {
+        "name": "Ap Lei Chau",
+        "neighbourhood": "Ap Lei Chau",
+        "district": "Southern",
+        "region": "Hong Kong Island"
+      },
+      "zh-hant": {
+        "name": "筲箕灣",
+        "neighbourhood": "筲箕灣",
+        "district": "東區",
+        "region": "香港島"
+      },
+      "zh-hans": {
+        "name": "筲箕湾",
+        "neighbourhood": "筲箕湾",
+        "district": "东区",
+        "region": "香港岛"
+      }
+    }
+  },
+  "Tsz Wan Shan": {
+    "i18n": {
+      "en": {
+        "name": "Tsz Wan Shan",
+        "neighbourhood": "Tsz Wan Shan",
+        "district": "Wong Tai Sin",
+        "region": "Kowloon"
+      },
+      "zh-hant": {
+        "name": "慈雲山",
+        "neighbourhood": "慈雲山",
+        "district": "黃大仙",
+        "region": "九龍"
+      },
+      "zh-hans": {
+        "name": "慈云山",
+        "neighbourhood": "慈云山",
+        "district": "黄大仙",
+        "region": "九龙"
+      }
+    }
+  },
+  "Diamond Hill": {
+    "i18n": {
+      "en": {
+        "name": "Diamond Hill",
+        "neighbourhood": "Diamond Hill",
+        "district": "Wong Tai Sin",
+        "region": "Kowloon"
+      },
+      "zh-hant": {
+        "name": "鑽石山",
+        "neighbourhood": "鑽石山",
+        "district": "黃大仙",
+        "region": "九龍"
+      },
+      "zh-hans": {
+        "name": "钻石山",
+        "neighbourhood": "钻石山",
+        "district": "黄大仙",
+        "region": "九龙"
+      }
+    }
+  },
+  "Lok Fu": {
+    "i18n": {
+      "en": {
+        "name": "Lok Fu",
+        "neighbourhood": "Lok Fu",
+        "district": "Wong Tai Sin",
+        "region": "Kowloon"
+      },
+      "zh-hant": {
+        "name": "樂富",
+        "neighbourhood": "樂富",
+        "district": "黃大仙",
+        "region": "九龍"
+      },
+      "zh-hans": {
+        "name": "乐富",
+        "neighbourhood": "乐富",
+        "district": "黄大仙",
+        "region": "九龙"
+      }
+    }
+  },
+  "Wong Tai Sin": {
+    "i18n": {
+      "en": {
+        "name": "Wong Tai Sin",
+        "neighbourhood": "Wong Tai Sin",
+        "district": "Wong Tai Sin",
+        "region": "Kowloon"
+      },
+      "zh-hant": {
+        "name": "黃大仙",
+        "neighbourhood": "黃大仙",
+        "district": "黃大仙",
+        "region": "九龍"
+      },
+      "zh-hans": {
+        "name": "黄大仙",
+        "neighbourhood": "黄大仙",
+        "district": "黄大仙",
+        "region": "九龙"
+      }
+    }
+  },
+  "Mid-Levels": {
+    "i18n": {
+      "en": {
+        "name": "Mid-Levels",
+        "neighbourhood": "Mid-Levels",
+        "district": "Central & Western",
+        "region": "Hong Kong Island"
+      },
+      "zh-hant": {
+        "name": "中半山",
+        "neighbourhood": "中半山",
+        "district": "中西區",
+        "region": "香港島"
+      },
+      "zh-hans": {
+        "name": "中半山",
+        "neighbourhood": "中半山",
+        "district": "中西区",
+        "region": "香港岛"
+      }
+    }
+  },
+  "Peak": {
+    "i18n": {
+      "en": {
+        "name": "Peak",
+        "neighbourhood": "Peak",
+        "district": "Central & Western",
+        "region": "Hong Kong Island"
+      },
+      "zh-hant": {
+        "name": "太平山",
+        "neighbourhood": "太平山",
+        "district": "中西區",
+        "region": "香港島"
+      },
+      "zh-hans": {
+        "name": "太平山",
+        "neighbourhood": "太平山",
+        "district": "中西区",
+        "region": "香港岛"
+      }
+    }
+  },
+  "Tseung Kwan O": {
+    "i18n": {
+      "en": {
+        "name": "Tseung Kwan O",
+        "neighbourhood": "Tseung Kwan O",
+        "district": "Sai Kung",
+        "region": "New Territories"
+      },
+      "zh-hant": {
+        "name": "將軍澳",
+        "neighbourhood": "將軍澳",
+        "district": "西貢",
+        "region": "新界"
+      },
+      "zh-hans": {
+        "name": "将军澳",
+        "neighbourhood": "将军澳",
+        "district": "西贡",
+        "region": "新界"
+      }
+    }
+  },
+  "Tuen Mun": {
+    "i18n": {
+      "en": {
+        "name": "Tuen Mun",
+        "neighbourhood": "Tuen Mun",
+        "district": "Tuen Mun",
+        "region": "New Territories"
+      },
+      "zh-hant": {
+        "name": "屯門",
+        "neighbourhood": "屯門",
+        "district": "屯門",
+        "region": "新界"
+      },
+      "zh-hans": {
+        "name": "屯门",
+        "neighbourhood": "屯门",
+        "district": "屯门",
+        "region": "新界"
+      }
+    }
+  },
+  "Tung Chung": {
+    "i18n": {
+      "en": {
+        "name": "Tung Chung",
+        "neighbourhood": "Tung Chung",
+        "district": "Outlying Islands",
+        "region": "New Territories"
+      },
+      "zh-hant": {
+        "name": "東涌",
+        "neighbourhood": "東涌",
+        "district": "離島區",
+        "region": "新界"
+      },
+      "zh-hans": {
+        "name": "东涌",
+        "neighbourhood": "东涌",
+        "district": "离岛区",
         "region": "新界"
       }
     }

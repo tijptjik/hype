@@ -56,6 +56,36 @@
    3. FEATURE MARKERS
    ═══════════════════════ */
 
+/* Marker styles for isochrone analysis */
+.marker-inside-isochrone .marker-circle {
+  fill: #f49932cc !important; /* Green for inside isochrone */
+  stroke: #f9a03ad6 !important;
+  stroke-width: 2;
+  transition: opacity 0.3s ease-in-out;
+  background:
+    linear-gradient(to right, blue, transparent),
+    url(https://grainy-gradients.vercel.app/noise.svg);
+}
+
+.marker-inside-isochrone .marker-dot {
+  fill: #f9f9f9ff !important;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.marker-outside-isochrone .marker-circle {
+  fill: #6799ef !important; /* Red for outside isochrone */
+  stroke: #ffffff !important;
+  stroke-width: 0;
+  opacity: 0.3;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.marker-outside-isochrone .marker-dot {
+  fill: #efdddd !important;
+  opacity: 0.3;
+  transition: opacity 0.3s ease-in-out;
+}
+
 .marker-container {
   opacity: 0;
   cursor: pointer;

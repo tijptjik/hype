@@ -99,7 +99,9 @@ let gridColsClass =
     <div class="flex items-center justify-end px-3">
       <ResourceStatusBadge
         isPublished={entity.isPublished}
-        isPendingReview={entity.isPendingReview} />
+        isPendingReview={entity.isPendingReview}
+        resourceType={FirstClassResource.feature}
+        resourceId={entity.id} />
     </div>
   </RowRoot>
 </div>

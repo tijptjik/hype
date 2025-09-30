@@ -1084,7 +1084,11 @@ export const fieldComponentTypes = [
   'ToggleField',
   'DisplayField'
 ] as const;
-export const classifierComponentTypes = ['SelectField', 'RangeField'] as const;
+export const classifierComponentTypes = [
+  'SelectField',
+  'RangeField',
+  'ToggleField'
+] as const;
 export const specifierComponentTypes = ['InputField', 'TextareaField'] as const;
 export const displayComponentTypes = ['InputField'] as const;
 export type FieldComponentType = (typeof fieldComponentTypes)[number];
@@ -1250,6 +1254,8 @@ export type FeaturePropertyI18nPartial = z.infer<typeof FeaturePropertyI18nUpdat
 export type AddressProperties = {
   // Suggested Display Address
   formattedAddress?: string;
+  // String used as input to attain formattedAddress
+  rawAddress?: string;
 
   // ADDRESS COMPONENTS (sorted from smallest to largest unit)
 
@@ -1257,12 +1263,15 @@ export type AddressProperties = {
   unitPortion?: string;
   // Internal Building Numbering - e.g. 4, 13C,
   unitNumber?: string;
-  // Internal Building Numbering Type - e.g. floor, unit, room, etc.
+  // Internal Building Numbering Type - e.g. unit, room, etc.
   unitType?: string;
-  // Floor Numbering - e.g. 1/F, 13/F store 1 and 13.
+  // Floor Numbering - e.g. 1/F, 13/F -> 1 and 13.
   floorNumber?: string;
-  // Floor Type - e.g. concourse, upper g/f, roof, etc.
+  // Floor Type - e.g. concourse, upper g/f, roof, etc. LG/F, UG/F, etc. G/F, B/F, etc.
   floorType?: string;
+
+  // Premises Name - E.g. Lei Tung Market
+  premisesName?: string;
 
   buildingName?: string;
   buildingNumberFrom?: string;
@@ -1275,11 +1284,15 @@ export type AddressProperties = {
   // Block Type Before Number - e.g. Tower 1 of F Block
   blockTypeBeforeNumber?: boolean;
 
-  phaseName?: string;
+  phaseName?: string; // IN ONE Phase IB, Ultima Phase 1, Grand YOHO Phase 2, Sierra Sea Phase 1B
   phaseNumber?: string;
   estateName?: string;
 
-  streetNumber?: string;
+  // Lot
+  lotNumber?: string;
+  lotType?: string; // e.g. RBL (Rural Lot Block)
+
+  // streetNumber is buildingNumberFrom and buildingNumberTo
   streetName?: string;
 
   intersection?: string;
@@ -1297,6 +1310,8 @@ export type AddressMeta = {
   // IDENTIFIERS :: HKGOV
   // // Building Deparment CSUID
   geoAddressCode?: string;
+  // // Nearest Lamp Post Number - See https://data.gov.hk/en-data/dataset/hk-hyd-plis-lamppostdata
+  nearestLampPostNumber?: string;
 
   // IDENTIFIERS :: GOOGLE
   // // Google Place ID
@@ -1307,14 +1322,17 @@ export type AddressMeta = {
   // GEOSPATIAL
   longitude?: number;
   latitude?: number;
+  // Input LatLng
+  rawLongitude?: number;
+  rawLatitude?: number;
 
   // METRICS
   distanceFromPoint?: number;
   confidenceForwardGeocoder?: number;
 
   // GEOCODING
-  addressForwardGeocoder?: 'hkgov_als' | 'googlemaps';
-  addressReverseGeocoder?: 'hkgov_reverse' | 'googlemaps';
+  addressForwardGeocoder?: 'hkgov_als' | 'googlemaps' | 'invalid';
+  addressReverseGeocoder?: 'hkgov_reverse' | 'googlemaps' | 'hkgov_lamppost';
   addressReverseGen?: boolean;
   addressForwardGen?: boolean;
 };
@@ -1554,6 +1572,14 @@ export type ImageUpload = {
   retries: number;
   imageToReplace?: Image;
   preview?: string;
+};
+
+export type BatchUploadResult = {
+  file: File;
+  status: 'pending' | 'uploading' | 'success' | 'error';
+  savedImage?: Image;
+  error?: string;
+  featureId?: string | null;
 };
 
 export type UploadedPhoto = {
@@ -1962,16 +1988,16 @@ export type ImageCtxOptions = {
 // GEOCODING
 /* -------- */
 
-export type ParsedReverseGeocodeResultI18n = {
+export type ParsedGeocodeResultI18n = {
   displayAddress: string | undefined | null;
   displayAddressGen: boolean;
   addressProperties: Partial<AddressProperties>;
 };
 
 // IDENTIFY RESULT
-export interface ParsedReverseGeocodeResult {
+export interface ParsedGeocodeResult {
   addressMeta: AddressMeta;
-  i18n: Record<Locale, ParsedReverseGeocodeResultI18n>;
+  i18n: Record<Locale, ParsedGeocodeResultI18n>;
 }
 
 export interface ReverseGeocodeResult {
@@ -2372,4 +2398,160 @@ export type SvelteVirtualListDebugInfo = {
   visibleItemsCount: number;
   processedItems: number;
   averageItemHeight: number;
+};
+
+/* ----------------- */
+// IMPORTING CSV
+/* -------- */
+
+export type LayerConstraint = {
+  type: 'specific' | 'multiple' | 'all';
+  layers: string[]; // layer IDs or 'ALL'
+};
+
+export type CSVColumn = {
+  header: string;
+  sampleValues: string[];
+  modelType:
+    | 'Feature'
+    | 'User'
+    | 'Property'
+    | 'Layer'
+    | 'Address'
+    | 'AddressMeta'
+    | 'SKIP';
+  locale?: SupportedLocales | 'None';
+  propertyKey?: string; // Selected property key from dropdown
+  extractedPropertyKey?: string; // Property key extracted from header
+  propertyType?: FieldDiscriminator;
+  field?: string;
+  layerConstraint?: LayerConstraint;
+};
+
+export type CSVImportStep =
+  | 'column-mapping'
+  | 'user-matching'
+  | 'layer-matching'
+  | 'property-matching'
+  | 'translation'
+  | 'geo-lookup'
+  | 'geo-code'
+  | 'feature-resolution'
+  | 'finished';
+
+export type UserValidationResult = {
+  value: string;
+  isValid: boolean;
+  userId?: string;
+  error?: string;
+};
+
+export type LayerValidationResult = {
+  value: string;
+  isValid: boolean;
+  layerId?: string;
+  error?: string;
+};
+
+// Property validation result type for import
+export type PropertyValidationResult = {
+  value: string;
+  isValid: boolean;
+  propertyId?: string;
+  propertyValueId?: string;
+};
+
+export type ImportState = {
+  isTypeSelected: boolean;
+  file: File | null;
+  headers: string[];
+  data: string[][];
+  columns: CSVColumn[];
+  selectedOrganisation: Organisation | null;
+  selectedProject: Project | null;
+  selectedLocale: string;
+  showAssociationModal: boolean;
+  currentStep: CSVImportStep;
+  stats: { valid: number; invalid: number; truncated: number };
+  userValidation: {
+    isValidating: boolean;
+    progress: number;
+    total: number;
+    results: UserValidationResult[];
+    fallbackUserId?: string;
+    showUserSelection: boolean;
+    showUserResolution: boolean;
+  };
+  userResolution: {
+    invalidValues: string[];
+    resolutions: Map<string, { userId: string; userData?: any }>; // invalid value -> resolved user data
+  };
+  layerValidation: {
+    isValidating: boolean;
+    progress: number;
+    total: number;
+    results: LayerValidationResult[];
+    fallbackLayerId?: string;
+    showLayerSelection: boolean;
+    showLayerResolution: boolean;
+    showLayerCreation: boolean;
+  };
+  layerResolution: {
+    invalidValues: string[];
+    resolutions: Map<string, { layerId: string; layerData?: any }>; // invalid value -> resolved layer data
+  };
+  activeLayerCreation: string | null;
+  availablePropertyKeys: string[];
+  fetchedProperties: Property[];
+  isFetchingProperties: boolean;
+  userSearchQuery: string;
+  userSearchResults: UserValidationResult[];
+  resolutionSearchResults: Map<string, UserValidationResult[]>;
+  resolutionSearchQueries: Map<string, string>;
+  layerSearchQuery: string;
+  layerSearchResults: LayerValidationResult[];
+  allLayers: Layer[];
+  selectedLayer: Layer | null;
+  layersLoaded: boolean;
+  layerResolutionSearchResults: Map<string, LayerValidationResult[]>;
+  layerResolutionSearchQueries: Map<string, string>;
+  // Property reconciliation state
+  propertyReconciliation: {
+    currentAction:
+      | 'none'
+      | 'freeform-creation'
+      | 'translation-prompt'
+      | 'data-enrichment'
+      | 'value-matching'
+      | 'range-validation'
+      | 'categorical-creation';
+    enrichedData: Map<
+      string,
+      {
+        propertyId?: Id;
+        propertyValueId?: Id;
+        translatedValues?: Record<Locale, string>;
+        enrichedData?: Map<number, Record<Locale, string>>;
+        resolvedValues?: Record<string, Id | undefined>;
+      }
+    >;
+    pendingProperties: string[]; // Property keys that need processing
+    currentPropertyIndex: number;
+    translationChoices: Map<
+      string,
+      { mode: 'translate' | 'copy'; sourceLocale?: Locale }
+    >;
+    isProcessing: boolean;
+  };
+  // Row enriched data for translations and other per-row data
+  rowEnrichedData: Map<number, Record<string, any>>;
+  // Feature resolution state
+  featureResolution: {
+    isProcessing: boolean;
+    currentIndex: number;
+    total: number;
+    results: any[];
+    showPreview: boolean;
+    previewIndex: number;
+  };
 };

@@ -82,14 +82,16 @@ function getNoneSelectedMessage(props: Props) {
   }
 }
 
-let resourcesToDisplay = $derived([
-  ...props.selectedIds,
-  ...(props.active?.resourceId &&
-  !props.selectedIds.includes(props.active.resourceId) &&
-  props.active.resourceType == props.resourceType
-    ? [props.active.resourceId]
-    : [])
-]);
+let resourcesToDisplay = $derived(
+  [
+    ...props.selectedIds,
+    ...(props.active?.resourceId &&
+    !props.selectedIds.includes(props.active.resourceId) &&
+    props.active.resourceType == props.resourceType
+      ? [props.active.resourceId]
+      : [])
+  ].filter((id) => id !== 'new')
+);
 </script>
 
 <div

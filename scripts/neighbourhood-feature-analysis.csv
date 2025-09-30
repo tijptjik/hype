@@ -1,0 +1,33 @@
+neighbourhood,time,area,food-co,wetmarket,grocery store
+"Sham Shui Po",5,0.288773,5,1,3
+"Sham Shui Po",10,1.157239,21,2,6
+"Shek Tong Tsui",5,0.198696,3,1,0
+"Shek Tong Tsui",10,0.690023,5,1,0
+"Lam Tin",5,0.218810,1,2,0
+"Lam Tin",10,0.630037,4,2,0
+"Jardine s Lookout",5,0.213599,1,1,2
+"Jardine s Lookout",10,0.471861,1,1,2
+"Ping Shek",5,0.155179,2,1,0
+"Ping Shek",10,0.645574,3,1,1
+"San Po Kong",5,0.293018,1,0,1
+"San Po Kong",10,0.970138,2,1,3
+"Tsz Wan Shan",5,0.228099,1,1,0
+"Tsz Wan Shan",10,0.668823,2,2,1
+"Mid levels",5,0.219877,0,0,1
+"Mid levels",10,0.718796,0,0,5
+"Ha Kwai Chung",5,0.185121,0,0,1
+"Ha Kwai Chung",10,0.588104,0,1,1
+"Tai Hang",5,0.175644,0,0,0
+"Tai Hang",10,0.567107,0,0,3
+"Wah King",5,0.127921,1,0,0
+"Wah King",10,0.399151,1,0,1
+"Lohas Park",5,0.179930,0,0,1
+"Lohas Park",10,0.542652,0,0,1
+"Wah Fu",5,0.242348,1,0,0
+"Wah Fu",10,0.641004,1,0,0
+"Po Lam",5,0.242337,0,0,0
+"Po Lam",10,0.829199,0,1,0
+"Chung Hom Kok",5,0.209621,0,0,0
+"Chung Hom Kok",10,0.499027,0,0,0
+"Yau Yat Tsuen",5,0.161279,0,0,0
+"Yau Yat Tsuen",10,0.627595,0,0,0

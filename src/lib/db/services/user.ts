@@ -89,6 +89,11 @@ export const searchUsers = async (
   search: string,
   searchColumns: string[] = ['name', 'email']
 ): Promise<UserRaw[]> => {
+  // If search is null, undefined, or empty, just return listUsers
+  if (!search || search.trim() === '') {
+    return await listUsers(db, withRelations, conditions);
+  }
+
   const searchConditions = searchColumns
     .map((column) => {
       const userColumn = user[column as keyof typeof user];

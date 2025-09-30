@@ -48,8 +48,11 @@
     "test:watch": "vitest watch --config=vitest.config.ts",
     "test:ui": "vitest --config=vitest.config.ts --ui",
     "i18n:translate": "bunx @inlang/cli machine translate --project project.inlang",
+    "export:convert-to-csv": "node scripts/convert-export-to-csv.js",
     "i18n:build": "bunx @inlang/paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide",
     "db:generate:dbml": "bunx tsx scripts/generate-dbml.ts",
+    "analyze:features": "bunx tsx scripts/analyze-features-in-neighbourhoods.ts",
+    "convert:foodco": "bunx tsx scripts/convert-foodco-to-csv.ts",
     "commit": "git-cz"
   },
   "testDependencies": {

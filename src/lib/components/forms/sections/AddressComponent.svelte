@@ -35,6 +35,7 @@ const addressFields = [
   'unitType',
   'floorNumber',
   'floorType',
+  'premisesName',
   'buildingName',
   'buildingNumberFrom',
   'buildingNumberTo',
@@ -44,11 +45,11 @@ const addressFields = [
   'phaseNumber',
   'phaseName',
   'estateName',
-  'streetNumber',
+  'lotNumber',
+  'lotType',
   'streetName',
   'intersection',
   'neighbourhood',
-  'subDistrict',
   'district',
   'region',
   'country'
@@ -60,6 +61,7 @@ type AddressField = (typeof addressFields)[number];
 const metaFields = [
   // Identifiers
   'geoAddressCode',
+  'nearestLampPostNumber',
   'googlePlaceId',
   'plusCode',
   // Metrics

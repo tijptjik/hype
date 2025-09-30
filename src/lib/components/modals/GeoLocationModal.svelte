@@ -13,7 +13,7 @@ import { getOmniCtx } from '$lib/context/omni.svelte';
 import Icon from '$lib/components/common/Icon.svelte';
 import { XMark, PencilSquare, Check } from '@steeze-ui/heroicons';
 // SERVICES
-import { reverseGeocode } from '$lib/api/external/geocoding';
+import { getAddressFromCoordinates } from '$lib/api/external/geocoding';
 // ENUMS
 import { NewFeatureMode } from '$lib/enums';
 // TYPES
@@ -83,7 +83,7 @@ async function handleSetLocation() {
   isLoading = true;
   try {
     const [lng, lat] = (newFeature?.feature?.geometry as Point)?.coordinates;
-    const result = await reverseGeocode(lng, lat);
+    const result = await getAddressFromCoordinates(lng, lat);
 
     if (result) {
       displayAddress = {

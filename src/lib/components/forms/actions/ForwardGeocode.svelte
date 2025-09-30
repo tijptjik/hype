@@ -1,15 +1,15 @@
 <script lang="ts">
 // I18N
 import { m } from '$lib/i18n';
+// DATA
+import streetsJson from '$lib/map/streets.json';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 // SERVICES
 import {
-  fetchForwardGeocodeALSResult,
-  processForwardGeocodeResult,
-  extractNeighbourhoodFromAddress
+  getAddressFromAddress,
+  getCoordinatesFromAddress
 } from '$lib/api/external/geocoding';
-import { removeCountry, removeRegion, removeDistrict } from '$lib/utils/geocoding';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Language, MagnifyingGlass, MapPin } from '@steeze-ui/heroicons';
@@ -36,72 +36,65 @@ let sourceLocale: Locale = $state('en');
 // STATE : DERIVED :: GEOMETRY
 let [lng, lat] = $derived(($featureForm.geometry as Point).coordinates);
 
-function getStreetAddressAndNeighbourhood(address: string): {
-  streetAddress: string;
-  neighbourhood: string | null;
-} {
-  // First remove Hong Kong SAR identifiers
-  let cleaned = removeCountry(address);
-  // Then remove any region identifiers
-  cleaned = removeRegion(cleaned);
-  // Then remove any district identifiers
-  cleaned = removeDistrict(cleaned);
+// This function is no longer needed as address cleaning is handled in the orchestration layer
 
-  // Extract neighbourhood from address
-  const neighbourhood = extractNeighbourhoodFromAddress(cleaned);
-
-  // Remove neighbourhood from address
-  const streetAddress = neighbourhood
-    ? cleaned.replace(neighbourhood, '').replace(/,(\s+)?$/, '')
-    : cleaned;
-
-  return { streetAddress, neighbourhood };
-}
-
-// Wrap the geocode action to handle loading state
+/**
+ * Handle geocoding for address enrichment and/or coordinate updates
+ *
+ * @param e - The event that triggered the geocoding
+ * @param updateCoords - Whether to update coordinates based on geocoding result
+ */
 async function handleGeocode(e: Event, updateCoords: boolean = false) {
   e.preventDefault();
+  console.log(
+    `🗺️ ForwardGeocode: Starting geocoding process, updateCoords: ${updateCoords}`
+  );
 
   appCtx.zoomToMarkerOnly = false;
 
   try {
     let addressToLookup = $featureForm.i18n?.[sourceLocale]?.displayAddress;
-    if (!addressToLookup) return;
+    if (!addressToLookup) {
+      console.warn('🗺️ ForwardGeocode: No address to lookup');
+      return;
+    }
 
-    // Clean the address before lookup
-    let { streetAddress, neighbourhood } =
-      getStreetAddressAndNeighbourhood(addressToLookup);
+    console.log(
+      `🗺️ ForwardGeocode: Looking up address "${addressToLookup}" in locale "${sourceLocale}"`
+    );
 
-    const result = await fetchForwardGeocodeALSResult(streetAddress);
-    if (result) {
-      const processedResult = await processForwardGeocodeResult(
-        result,
-        neighbourhood,
-        true, // generate display addresses
-        lng,
-        lat
-      );
-
-      if (processedResult) {
+    if (updateCoords) {
+      // Use getCoordinatesFromAddress for simple coordinate lookup
+      const coordResult = await getCoordinatesFromAddress(addressToLookup);
+      if (coordResult) {
+        console.log(
+          `🗺️ ForwardGeocode: Coordinate lookup successful: ${coordResult.coordinates}`
+        );
         featureForm.update(($form) => {
           $form.addressMeta = {
             ...$form.addressMeta,
-            ...processedResult.addressMeta
+            ...coordResult.addressMeta
           };
-          if (updateCoords) {
-            if (
-              processedResult.addressMeta.longitude &&
-              processedResult.addressMeta.latitude
-            ) {
-              ($form.geometry as Point).coordinates = [
-                processedResult.addressMeta.longitude,
-                processedResult.addressMeta.latitude
-              ];
-            }
-          }
-          // Update i18n
-          Object.entries(processedResult.i18n).forEach(([locale, data]) => {
-            if ($form.i18n) {
+          ($form.geometry as Point).coordinates = coordResult.coordinates;
+          return $form;
+        });
+      }
+    } else {
+      // Use getAddressFromAddress for full address enrichment
+      const addressResult = await getAddressFromAddress(addressToLookup);
+
+      console.log('🗺️ VVV ForwardGeocode: Address result:', addressResult);
+
+      if (addressResult) {
+        featureForm.update(($form) => {
+          $form.addressMeta = {
+            ...$form.addressMeta,
+            ...addressResult.addressMeta
+          };
+
+          // Update i18n data for all locales
+          Object.entries(addressResult.i18n).forEach(([locale, data]) => {
+            if ($form.i18n && data) {
               $form.i18n[locale as Locale].displayAddress = data.displayAddress;
               $form.i18n[locale as Locale].displayAddressGen = data.displayAddressGen;
               $form.i18n[locale as Locale].addressProperties = data.addressProperties;
@@ -112,6 +105,8 @@ async function handleGeocode(e: Event, updateCoords: boolean = false) {
         });
       }
     }
+  } catch (error) {
+    console.error('🗺️ ForwardGeocode: Geocoding failed:', error);
   } finally {
     isGeocodingToEnrich = false;
     isGeocodingToLocate = false;

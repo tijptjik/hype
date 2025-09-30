@@ -1,0 +1,1369 @@
+{
+  "testAddresses": [
+    {
+      "address": "44 Centre Street, Sai Ying Pun, Hk",
+      "queryAddress": "44 Centre Street",
+      "extracted": {
+        "region": "HK",
+        "neighbourhood": "Sai Ying Pun",
+        "streetName": "Centre Street",
+        "buildingNumberFrom": "44"
+      },
+      "inferred": {
+        "district": "CW",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "1/F., 38 Des Voeux Road West, Sheung Wan, Hk",
+      "queryAddress": "38 Des Voeux Road West",
+      "extracted": {
+        "region": "HK",
+        "neighbourhood": "Sheung Wan",
+        "streetName": "Des Voeux Road West",
+        "buildingNumberFrom": "38",
+        "floorNumber": "1/F"
+      },
+      "inferred": {
+        "district": "CW",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "45 Centre Street, SYP, Hk",
+      "queryAddress": "45 Centre Street",
+      "extracted": {
+        "region": "HK",
+        "neighbourhood": "Sai Ying Pun",
+        "streetName": "Centre Street",
+        "buildingNumberFrom": "45"
+      },
+      "inferred": {
+        "district": "CW",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Shek Tong Tsui Municipal Services Building, 470 Queen'S Road West, Shek Tong Tsui, Hk",
+      "queryAddress": "470 Queen'S Road West",
+      "extracted": {
+        "region": "HK",
+        "neighbourhood": "Shek Tong Tsui",
+        "streetName": "Queen'S Road West",
+        "buildingNumberFrom": "470",
+        "buildingName": "Shek Tong Tsui Municipal Services Building"
+      },
+      "inferred": {
+        "district": "CW",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Smithfield Municipal Services Building, 12K Smithfield, Kennedy Town, Hk",
+      "queryAddress": "12K Smithfield",
+      "extracted": {
+        "region": "HK",
+        "neighbourhood": "Kennedy Town",
+        "streetName": "Smithfield",
+        "buildingNumberFrom": "12K",
+        "buildingName": "Smithfield Municipal Services Building"
+      },
+      "inferred": {
+        "district": "CW",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Sheung Wan Municipal Services Building, 345 Queen'S Road Central,Sheung Wan, Hk",
+      "queryAddress": "345 Queen'S Road Central",
+      "extracted": {
+        "region": "HK",
+        "neighbourhood": "Sheung Wan",
+        "streetName": "Queen'S Road Central",
+        "buildingNumberFrom": "345",
+        "buildingName": "Sheung Wan Municipal Services Building"
+      },
+      "inferred": {
+        "district": "CW",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "21 Bowrington Road, Wan Chai, Hk",
+      "queryAddress": "21 Bowrington Road",
+      "extracted": {
+        "region": "HK",
+        "district": "WC",
+        "neighbourhood": "Wan Chai",
+        "streetName": "Bowrington Road",
+        "buildingNumberFrom": "21"
+      },
+      "inferred": {
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "142 Electric Road, Hk",
+      "queryAddress": "142 Electric Road",
+      "extracted": {
+        "region": "HK",
+        "streetName": "Electric Road",
+        "buildingNumberFrom": "142"
+      },
+      "inferred": {
+        "district": "EST",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "67 Yi Chun Street, Sai Kung, Nt",
+      "queryAddress": "67 Yi Chun Street",
+      "extracted": {
+        "region": "NT",
+        "district": "SK",
+        "neighbourhood": "Sai Kung",
+        "streetName": "Yi Chun Street",
+        "buildingNumberFrom": "67"
+      },
+      "inferred": {
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Aberdeen Municipal Services Building, 203 Aberdeen Main Road, Aberdeen, Hk",
+      "queryAddress": "203 Aberdeen Main Road",
+      "extracted": {
+        "region": "HK",
+        "neighbourhood": "Aberdeen",
+        "streetName": "Aberdeen Main Road",
+        "buildingNumberFrom": "203",
+        "buildingName": "Aberdeen Municipal Services Building"
+      },
+      "inferred": {
+        "district": "STH",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Ap Lei Chau Municipal Services Building, 8 Hung Shing Street,Ap Lei Chau, Hk",
+      "queryAddress": "8 Hung Shing Street",
+      "extracted": {
+        "region": "HK",
+        "neighbourhood": "Ap Lei Chau",
+        "streetName": "Hung Shing Street",
+        "buildingNumberFrom": "8",
+        "buildingName": "Ap Lei Chau Municipal Services Building"
+      },
+      "inferred": {
+        "district": "STH",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Sheung Fung Street Joint User Building, J/O Sheung Fung Street & Fei Fung Street, Diamond Hill, Kln",
+      "queryAddress": "Sheung Fung Street",
+      "extracted": {
+        "region": "KL",
+        "neighbourhood": "Diamond Hill",
+        "streetName": "Sheung Fung Street",
+        "intersection": "J/O Sheung Fung Street & Fei Fung Street",
+        "buildingName": "Sheung Fung Street Joint User Building"
+      },
+      "inferred": {
+        "district": "WTS",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Pei Ho Street Municipal Services Building, 333 Ki Lung Street, Sham Shui Po, Kln",
+      "queryAddress": "333 Ki Lung Street",
+      "extracted": {
+        "region": "KL",
+        "district": "SSP",
+        "neighbourhood": "Sham Shui Po",
+        "streetName": "Ki Lung Street",
+        "buildingNumberFrom": "333",
+        "buildingName": "Pei Ho Street Municipal Services Building"
+      },
+      "inferred": {
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Chuk Yuen Market, Wong Tai Sin",
+      "queryAddress": "Chuk Yuen Market",
+      "extracted": {
+        "district": "WTS",
+        "neighbourhood": "Wong Tai Sin",
+        "buildingName": "Chuk Yuen Market"
+      },
+      "inferred": {
+        "region": "KL",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Lok Fu Market, Wong Tai Sin",
+      "queryAddress": "Lok Fu Market",
+      "extracted": {
+        "district": "WTS",
+        "neighbourhood": "Lok Fu",
+        "buildingName": "Lok Fu Market"
+      },
+      "inferred": {
+        "region": "KL",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Central Star Ferry Pier No. 7, Central, Hong Kong Island, Hong Kong",
+      "queryAddress": "7",
+      "extracted": {
+        "country": "HKSAR",
+        "region": "HK",
+        "neighbourhood": "Central",
+        "buildingName": "Central Star Ferry Pier",
+        "buildingNumberFrom": "7"
+      },
+      "inferred": {
+        "district": "CW"
+      }
+    },
+    {
+      "address": "Lee Theatre Plaza Ground Floor Main Entrance, East Point Road, Causeway Bay, Hong Kong Island, Hong Kong",
+      "queryAddress": "East Point Road",
+      "extracted": {
+        "country": "HKSAR",
+        "region": "HK",
+        "neighbourhood": "Causeway Bay",
+        "streetName": "East Point Road",
+        "buildingName": "Lee Theatre Plaza",
+        "floorType": "Ground Floor"
+      },
+      "inferred": {
+        "district": "WC"
+      }
+    },
+    {
+      "address": "Mong Kok Flower Market Park, Mong Kok, Kowloon, Hong Kong",
+      "queryAddress": "Mong Kok Flower Market Park",
+      "extracted": {
+        "country": "HKSAR",
+        "region": "KL",
+        "neighbourhood": "Mong Kok",
+        "buildingName": "Mong Kok Flower Market Park"
+      },
+      "inferred": {
+        "district": "YTM"
+      }
+    },
+    {
+      "address": "Basement - 1/F, 22-28 Queen'S Road, Central Tower, Central, Hong Kong",
+      "queryAddress": "22 Queen'S Road",
+      "extracted": {
+        "region": "HK",
+        "neighbourhood": "Central",
+        "streetName": "Queen'S Road",
+        "buildingNumberFrom": "22",
+        "buildingNumberTo": "28",
+        "buildingName": "Central Tower",
+        "floorNumber": "1/F",
+        "floorType": "Basement"
+      },
+      "inferred": {
+        "district": "CW",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Ifc Mall Level 1, Shops 1041-1049, Central",
+      "queryAddress": "Ifc Mall",
+      "extracted": {
+        "neighbourhood": "Central",
+        "buildingName": "Ifc Mall",
+        "floorNumber": "1",
+        "unitNumber": "1041-1049",
+        "unitType": "Shops"
+      },
+      "inferred": {
+        "district": "CW",
+        "region": "HK",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Lg/F, Nexxus Building, 77 Des Voeux Road Central, Central, Hong Kong",
+      "queryAddress": "77 Des Voeux Road Central",
+      "extracted": {
+        "region": "HK",
+        "neighbourhood": "Central",
+        "streetName": "Des Voeux Road Central",
+        "buildingNumberFrom": "77",
+        "buildingName": "Nexxus Building",
+        "floorType": "Lg/F"
+      },
+      "inferred": {
+        "district": "CW",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Lg/F & G/F, 1 Seymour Terrace, Mid-Levels, Hong Kong",
+      "queryAddress": "1 Seymour Terrace",
+      "extracted": {
+        "region": "HK",
+        "neighbourhood": "Mid-Levels",
+        "streetName": "Seymour Terrace",
+        "buildingNumberFrom": "1",
+        "floorType": "Lg/F & G/F"
+      },
+      "inferred": {
+        "district": "CW",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Ug/F, Clovelly Court, 12 May Road, Peak, Hong Kong",
+      "queryAddress": "12 May Road",
+      "extracted": {
+        "region": "HK",
+        "neighbourhood": "Peak",
+        "streetName": "May Road",
+        "buildingNumberFrom": "12",
+        "buildingName": "Clovelly Court",
+        "floorType": "Ug/F"
+      },
+      "inferred": {
+        "district": "CW",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "100 Peak Road, On R.B.L. 312, The Peak, Hong Kong",
+      "queryAddress": "100 Peak Road",
+      "extracted": {
+        "region": "HK",
+        "neighbourhood": "Peak",
+        "streetName": "Peak Road",
+        "buildingNumberFrom": "100",
+        "lotNumber": "312",
+        "lotType": "RBL"
+      },
+      "inferred": {
+        "district": "CW",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Basement Yau Kwong Mansion, 418-428 Hennessy Road, Wanchai, H.K.",
+      "queryAddress": "418 Hennessy Road",
+      "extracted": {
+        "region": "HK",
+        "district": "WC",
+        "neighbourhood": "Wan Chai",
+        "streetName": "Hennessy Road",
+        "buildingNumberFrom": "418",
+        "buildingNumberTo": "428",
+        "buildingName": "Yau Kwong Mansion",
+        "floorType": "Basement"
+      },
+      "inferred": {
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Unit 1-15 & 17-22 Lg/F, C C Wu Building, Nos. 302-308 Hennessy Road, Wan Chai, Hong Kong",
+      "queryAddress": "302 Hennessy Road",
+      "extracted": {
+        "region": "HK",
+        "district": "WC",
+        "neighbourhood": "Wan Chai",
+        "streetName": "Hennessy Road",
+        "buildingNumberFrom": "302",
+        "buildingNumberTo": "308",
+        "buildingName": "C C Wu Building",
+        "floorType": "Lg/F",
+        "unitNumber": "1-15 & 17-22",
+        "unitType": "Unit"
+      },
+      "inferred": {
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "The Whole Of Basement, Hopewell Centre, 183 Queen'S Road East, Wan Chai, Hong Kong",
+      "queryAddress": "183 Queen'S Road East",
+      "extracted": {
+        "region": "HK",
+        "district": "WC",
+        "neighbourhood": "Wan Chai",
+        "streetName": "Queen'S Road East",
+        "buildingNumberFrom": "183",
+        "buildingName": "Hopewell Centre",
+        "floorType": "Basement",
+        "unitPortion": "The Whole Of"
+      },
+      "inferred": {
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Basement & G/F Portion, Everwin Mansion, No. 18 Johnston Road, Wanchai, H.K.",
+      "queryAddress": "18 Johnston Road",
+      "extracted": {
+        "region": "HK",
+        "district": "WC",
+        "neighbourhood": "Wan Chai",
+        "streetName": "Johnston Road",
+        "buildingNumberFrom": "18",
+        "buildingName": "Everwin Mansion",
+        "floorType": "Basement & G/F",
+        "unitPortion": "Portion"
+      },
+      "inferred": {
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Times Square Basement 1, Causeway Bay",
+      "queryAddress": "Times Square",
+      "extracted": {
+        "neighbourhood": "Causeway Bay",
+        "buildingName": "Times Square",
+        "floorNumber": "1",
+        "floorType": "Basement"
+      },
+      "inferred": {
+        "district": "WC",
+        "region": "HK",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "165-171 Wan Chai Road, Shop No. A1, G/F, Lucky Centre",
+      "queryAddress": "165 Wan Chai Road",
+      "extracted": {
+        "streetName": "Wan Chai Road",
+        "buildingNumberFrom": "165",
+        "buildingNumberTo": "171",
+        "buildingName": "Lucky Centre",
+        "floorType": "G/F",
+        "unitNumber": "A1",
+        "unitType": "Shop"
+      },
+      "inferred": {
+        "neighbourhood": "Wan Chai",
+        "district": "WC",
+        "region": "HK",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Shop G1–G3, G/F, Windsor House, 311 Gloucester Road, Causeway Bay, Hong Kong",
+      "queryAddress": "311 Gloucester Road",
+      "extracted": {
+        "region": "HK",
+        "neighbourhood": "Causeway Bay",
+        "streetName": "Gloucester Road",
+        "buildingNumberFrom": "311",
+        "buildingName": "Windsor House",
+        "floorType": "G/F",
+        "unitNumber": "G1–G3",
+        "unitType": "Shop"
+      },
+      "inferred": {
+        "district": "WC",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "1-11 Ngan Mok Street, G/F, Grand Seaview Heights",
+      "queryAddress": "1 Ngan Mok Street",
+      "extracted": {
+        "streetName": "Ngan Mok Street",
+        "buildingNumberFrom": "1",
+        "buildingNumberTo": "11",
+        "buildingName": "Grand Seaview Heights",
+        "floorType": "G/F"
+      },
+      "inferred": {}
+    },
+    {
+      "address": "16-22 Causeway Road, Shop No.16, G/F, Causeway Tower, Causeway Bay, Hong Kong",
+      "queryAddress": "16 Causeway Road",
+      "extracted": {
+        "region": "HK",
+        "neighbourhood": "Causeway Bay",
+        "streetName": "Causeway Road",
+        "buildingNumberFrom": "16",
+        "buildingNumberTo": "22",
+        "buildingName": "Causeway Tower",
+        "floorType": "G/F",
+        "unitNumber": "16",
+        "unitType": "Shop"
+      },
+      "inferred": {
+        "district": "WC",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "61, 63 & 63A Sing Woo Road, G/F",
+      "queryAddress": "61 Sing Woo Road",
+      "extracted": {
+        "streetName": "Sing Woo Road",
+        "buildingNumberFrom": "61",
+        "buildingNumberTo": "63A",
+        "floorType": "G/F"
+      },
+      "inferred": {}
+    },
+    {
+      "address": "Shop 199, East Point City, 8 Chung Wa Road, Tseung Kwan O, New Territories",
+      "queryAddress": "8 Chung Wa Road",
+      "extracted": {
+        "region": "NT",
+        "neighbourhood": "Tseung Kwan O",
+        "streetName": "Chung Wa Road",
+        "buildingNumberFrom": "8",
+        "buildingName": "East Point City",
+        "unitNumber": "199",
+        "unitType": "Shop"
+      },
+      "inferred": {
+        "district": "SK",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Shop No. B10A On Basement 1 Floor Of Park Central, 9 Tong Tak Street, Tseung Kwan O, Sai Kung, New Territories",
+      "queryAddress": "9 Tong Tak Street",
+      "extracted": {
+        "district": "SK",
+        "region": "NT",
+        "neighbourhood": "Tseung Kwan O",
+        "streetName": "Tong Tak Street",
+        "buildingNumberFrom": "9",
+        "buildingName": "Park Central",
+        "floorNumber": "1",
+        "floorType": "Basement",
+        "unitNumber": "B10A",
+        "unitType": "Shop"
+      },
+      "inferred": {
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Shop 307B, 3/F, Choi Ming Shopping Centre, Choi Ming Court, 1 Choi Ming Street, Tko, Sai Kung, N.T.",
+      "queryAddress": "1 Choi Ming Street",
+      "extracted": {
+        "district": "SK",
+        "region": "NT",
+        "neighbourhood": "Tseung Kwan O",
+        "streetName": "Choi Ming Street",
+        "buildingNumberFrom": "1",
+        "buildingName": "Choi Ming Shopping Centre",
+        "estateName": "Choi Ming Court",
+        "floorNumber": "3/F",
+        "unitNumber": "307B",
+        "unitType": "Shop"
+      },
+      "inferred": {
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Shop No. 2, G/F, Maritime Bay, No 18 Pui Shing Road, Tseung Kwan O, Sai Kung, N.T.",
+      "queryAddress": "18 Pui Shing Road",
+      "extracted": {
+        "district": "SK",
+        "region": "NT",
+        "neighbourhood": "Tseung Kwan O",
+        "streetName": "Pui Shing Road",
+        "buildingNumberFrom": "18",
+        "buildingName": "Maritime Bay",
+        "floorType": "G/F",
+        "unitNumber": "2",
+        "unitType": "Shop"
+      },
+      "inferred": {
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "G/F, 79 & 81 Man Nin Street, Sai Kung, New Territories",
+      "queryAddress": "79 Man Nin Street",
+      "extracted": {
+        "district": "SK",
+        "region": "NT",
+        "neighbourhood": "Sai Kung",
+        "streetName": "Man Nin Street",
+        "buildingNumberFrom": "79",
+        "buildingNumberTo": "81",
+        "floorType": "G/F"
+      },
+      "inferred": {
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "G/F, Dd253, Lot 1177, Razor Hill, Clear Water Bay, Sai Kung, N.T.",
+      "queryAddress": "253",
+      "extracted": {
+        "region": "NT",
+        "district": "SK",
+        "neighbourhood": "Clear Water Bay",
+        "buildingNumberFrom": "253",
+        "floorType": "G/F"
+      },
+      "inferred": {
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Levels 5 & 6, Silverstrand Mart, 2 Silver Cape Rd, Clear Water Bay, Sai Kung, N.T.",
+      "queryAddress": "2 Silver Cape Road",
+      "extracted": {
+        "region": "NT",
+        "district": "SK",
+        "neighbourhood": "Clear Water Bay",
+        "streetName": "Silver Cape Road",
+        "buildingNumberFrom": "2",
+        "buildingName": "Silverstrand Mart",
+        "floorNumber": "5 & 6",
+        "floorType": "Levels"
+      },
+      "inferred": {
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Lg, Mikiki, 638 Prince Edward Road East, San Po Kong, Hong Kong",
+      "queryAddress": "638 Prince Edward Road East",
+      "extracted": {
+        "region": "HK",
+        "neighbourhood": "San Po Kong",
+        "streetName": "Prince Edward Road East",
+        "buildingNumberFrom": "638",
+        "buildingName": "Mikiki",
+        "floorType": "Lg"
+      },
+      "inferred": {
+        "district": "WTS",
+        "country": "HKSAR"
+      },
+      "parsed": {
+        "region": "KL"
+      }
+    },
+    {
+      "address": "36 Tai Yau Street, G/F, Block B, Wah Hing Industrial Mansions",
+      "queryAddress": "36 Tai Yau Street",
+      "extracted": {
+        "streetName": "Tai Yau Street",
+        "buildingNumberFrom": "36",
+        "buildingName": "Wah Hing Industrial Mansions",
+        "floorType": "G/F",
+        "blockType": "Block",
+        "blockNumber": "B"
+      },
+      "inferred": {}
+    },
+    {
+      "address": "Shop 2 (Portion) 1/F,Wonderland Villas Commercial Compiex, Wah King Hill Road, Kwai Chung, N.T.",
+      "queryAddress": "Wonderland Villas Commercial Compiex, Wah King Hill Road",
+      "extracted": {
+        "region": "NT",
+        "neighbourhood": "Kwai Chung",
+        "streetName": "Wah King Hill Road",
+        "buildingName": "Wonderland Villas Commercial Compiex",
+        "floorNumber": "1/F",
+        "unitNumber": "2",
+        "unitType": "Shop",
+        "unitPortion": "Portion"
+      },
+      "inferred": {
+        "district": "KC",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Shop Units 101–102 & 219–220, 1/F, Maritime Square, 33 Tsing King Road, Tsing Yi, New Territories",
+      "queryAddress": "33 Tsing King Road",
+      "extracted": {
+        "region": "NT",
+        "neighbourhood": "Tsing Yi",
+        "streetName": "Tsing King Road",
+        "buildingNumberFrom": "33",
+        "buildingName": "Maritime Square",
+        "floorNumber": "1/F",
+        "unitNumber": "101–102 & 219–220",
+        "unitType": "Shop Units"
+      },
+      "inferred": {
+        "district": "KC",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Basement, Golden Centre, 94 Yen Chow Street, Sham Shui Po, Kowloon.",
+      "queryAddress": "94 Yen Chow Street",
+      "extracted": {
+        "region": "KL",
+        "district": "SSP",
+        "neighbourhood": "Sham Shui Po",
+        "streetName": "Yen Chow Street",
+        "buildingNumberFrom": "94",
+        "buildingName": "Golden Centre",
+        "floorType": "Basement"
+      },
+      "inferred": {
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Shop N50B, G/F, Mount Sterling Mall, Stage 7 Mei Foo Sun Chuen, Nos.10-16 Lai Wan Road, Lai Chi Kok, Kowloon",
+      "queryAddress": "10 Lai Wan Road",
+      "extracted": {
+        "region": "KL",
+        "neighbourhood": "Lai Chi Kok",
+        "streetName": "Lai Wan Road",
+        "buildingNumberFrom": "10",
+        "buildingNumberTo": "16",
+        "buildingName": "Mount Sterling Mall",
+        "estateName": "Mei Foo Sun Chuen",
+        "floorType": "G/F",
+        "unitNumber": "N50B",
+        "unitType": "Shop"
+      },
+      "inferred": {
+        "district": "SSP",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "P27, Podium, Telford Plaza, Kowloon Bay, Kowloon",
+      "queryAddress": "Telford Plaza",
+      "extracted": {
+        "region": "KL",
+        "neighbourhood": "Kowloon Bay",
+        "buildingName": "Telford Plaza",
+        "floorType": "Podium",
+        "unitNumber": "27",
+        "unitType": "P"
+      },
+      "inferred": {
+        "district": "KT",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "80 Wang Kwong Road, Shop No.G18, G/F, Richland Gardens (Commercial & Garage Block)",
+      "queryAddress": "80 Wang Kwong Road",
+      "extracted": {
+        "streetName": "Wang Kwong Road",
+        "buildingNumberFrom": "80",
+        "buildingName": "Richland Gardens",
+        "blockType": "Commercial & Garage Block",
+        "floorType": "G/F",
+        "unitNumber": "G18",
+        "unitType": "Shop"
+      },
+      "inferred": {}
+    },
+    {
+      "address": "Shop Nos. 101, 102, 106 & 107 On 1/F And Shop Nos. 201, 202 & 208 On 2/F, Domain, 38 Ko Chiu Road, Yau Tong",
+      "queryAddress": "38 Ko Chiu Road",
+      "extracted": {
+        "neighbourhood": "Yau Tong",
+        "streetName": "Ko Chiu Road",
+        "buildingNumberFrom": "38",
+        "buildingName": "Domain",
+        "floorNumber": "1/F And 2/F",
+        "unitNumber": "101, 102, 106 & 107 And 201, 202 & 208",
+        "unitType": "Shop Nos"
+      },
+      "inferred": {
+        "district": "KT",
+        "region": "KL",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "G/F ,103 Belcher'S Street, Kennedy Town, Sai Wan",
+      "queryAddress": "103 Belcher'S Street",
+      "extracted": {
+        "neighbourhood": "Kennedy Town",
+        "streetName": "Belcher'S Street",
+        "buildingNumberFrom": "103",
+        "floorType": "G/F"
+      },
+      "inferred": {
+        "district": "CW",
+        "region": "HK",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "No. 19, 20, 27, G/F, Ap Lei Chau Estate Commerical Building, Ap Lei Chau",
+      "queryAddress": "Ap Lei Chau Estate Commerical Building",
+      "extracted": {
+        "neighbourhood": "Ap Lei Chau",
+        "buildingName": "Ap Lei Chau Estate Commerical Building",
+        "floorType": "G/F",
+        "unitNumber": "19, 20, 27",
+        "unitType": "No"
+      },
+      "inferred": {
+        "district": "STH",
+        "region": "HK",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Portion Of Shop 4 & 5, G/F, Car Port South Wave Court, 3 Shum Wan Road, Wong Chuk Hang",
+      "queryAddress": "3 Shum Wan Road",
+      "extracted": {
+        "neighbourhood": "Wong Chuk Hang",
+        "streetName": "Shum Wan Road",
+        "buildingNumberFrom": "3",
+        "buildingName": "Car Port South Wave Court",
+        "floorType": "G/F",
+        "unitNumber": "4 & 5",
+        "unitType": "Shop",
+        "unitPortion": "Portion Of"
+      },
+      "inferred": {
+        "district": "STH",
+        "region": "HK",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "S21, 1/F Chai Wan Market, Chai Wan",
+      "queryAddress": "Chai Wan Market",
+      "extracted": {
+        "neighbourhood": "Chai Wan",
+        "buildingName": "Chai Wan Market",
+        "floorNumber": "1/F",
+        "unitNumber": "21",
+        "unitType": "S"
+      },
+      "inferred": {
+        "district": "EST",
+        "region": "HK",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Mn 48, 1/F, Java Road Urban Council Building, North Point",
+      "queryAddress": "Java Road Urban Council Building",
+      "extracted": {
+        "neighbourhood": "North Point",
+        "buildingName": "Java Road Urban Council Building",
+        "floorNumber": "1/F",
+        "unitNumber": "48",
+        "unitType": "Mn"
+      },
+      "inferred": {
+        "district": "EST",
+        "region": "HK",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Stall 58, 37, Siu Sai Wan Market, Chai Wan",
+      "queryAddress": "Siu Sai Wan Market",
+      "extracted": {
+        "neighbourhood": "Siu Sai Wan",
+        "buildingName": "Siu Sai Wan Market",
+        "unitNumber": "58, 37",
+        "unitType": "Stall"
+      },
+      "inferred": {
+        "district": "EST",
+        "region": "HK",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Stall 55, Siu Sai Wan Plaza",
+      "queryAddress": "Siu Sai Wan Plaza",
+      "extracted": {
+        "neighbourhood": "Siu Sai Wan",
+        "buildingName": "Siu Sai Wan Plaza",
+        "unitNumber": "55",
+        "unitType": "Stall"
+      },
+      "inferred": {
+        "district": "EST",
+        "region": "HK",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Stall No. 43, 264 Queen''S Road East",
+      "queryAddress": "264 Queen'S Road East",
+      "extracted": {
+        "streetName": "Queen's Road East",
+        "buildingNumberFrom": "264",
+        "unitNumber": "43",
+        "unitType": "Stall"
+      },
+      "inferred": {
+        "district": "WC",
+        "region": "HK",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "G263, Kowloon City Market",
+      "queryAddress": "Kowloon City Market",
+      "extracted": {
+        "neighbourhood": "Kowloon City",
+        "buildingName": "Kowloon City Market",
+        "unitNumber": "263",
+        "unitType": "G"
+      },
+      "inferred": {
+        "district": "KLC",
+        "region": "KL",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Stall Stall 39, In The Market Place On Ground Floor, Homantin Plaza",
+      "queryAddress": "Homantin Plaza",
+      "extracted": {
+        "neighbourhood": "Ho Man Tin",
+        "buildingName": "Homantin Plaza",
+        "floorType": "Ground Floor",
+        "unitNumber": "39",
+        "unitType": "Stall"
+      },
+      "inferred": {
+        "district": "KLC",
+        "region": "KL",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Shop 05, Festival Walk",
+      "queryAddress": "Festival Walk",
+      "extracted": {
+        "buildingName": "Festival Walk",
+        "unitNumber": "05",
+        "unitType": "Shop"
+      },
+      "inferred": {},
+      "parsed": {
+        "neighbourhood": "Kowloon Tong",
+        "district": "WTS",
+        "region": "KL",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Mn 51,Shui Wo Street Urban Council Bldg.",
+      "queryAddress": "Shui Wo Street Urban Council Bldg",
+      "extracted": {
+        "buildingName": "Shui Wo Street Urban Council Bldg",
+        "unitNumber": "51",
+        "unitType": "Mn"
+      },
+      "inferred": {},
+      "parsed": {
+        "neighbourhood": "Kowloon City",
+        "district": "KLC",
+        "region": "KL",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Mn 38, Shui Wo Street Urban Council Bldg.",
+      "queryAddress": "Shui Wo Street Urban Council Bldg",
+      "extracted": {
+        "buildingName": "Shui Wo Street Urban Council Bldg",
+        "unitNumber": "38",
+        "unitType": "Mn"
+      },
+      "inferred": {},
+      "parsed": {
+        "neighbourhood": "Kowloon City",
+        "district": "KLC",
+        "region": "KL",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "126 & 127 Sau Mau Ping Market",
+      "queryAddress": "Sau Mau Ping Market",
+      "extracted": {
+        "neighbourhood": "Sau Mau Ping",
+        "buildingName": "Sau Mau Ping Market",
+        "unitNumber": "126 & 127",
+        "unitType": null
+      },
+      "inferred": {
+        "district": "KT",
+        "region": "KL",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Shop C, 136 Shui Wo Street",
+      "queryAddress": "136 Shui Wo Street",
+      "extracted": {
+        "streetName": "Shui Wo Street",
+        "buildingNumberFrom": "136",
+        "unitNumber": "C",
+        "unitType": "Shop"
+      },
+      "inferred": {}
+    },
+    {
+      "address": "Shopg1-G3,Yau Tong Centre Ka Wa Mall,Yau Tong",
+      "queryAddress": "Yau Tong Centre Ka Wa Mall",
+      "extracted": {
+        "neighbourhood": "Yau Tong",
+        "buildingName": "Yau Tong Centre Ka Wa Mall",
+        "unitNumber": "g1-G3",
+        "unitType": "Shop"
+      },
+      "inferred": {
+        "district": "KT",
+        "region": "KL",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Flat D1,G/F, Chung Ying Bldg.,159 Tai Kok Tsui Rd.",
+      "queryAddress": "159 Tai Kok Tsui Road",
+      "extracted": {
+        "neighbourhood": "Tai Kok Tsui",
+        "streetName": "Tai Kok Tsui Road",
+        "buildingNumberFrom": "159",
+        "buildingName": "Chung Ying Bldg",
+        "floorType": "G/F",
+        "unitNumber": "D1",
+        "unitType": "Flat"
+      },
+      "inferred": {
+        "district": "YTM",
+        "region": "KL",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Rm18,Hoi Fu Shopping Centre, Mongkok",
+      "queryAddress": "Hoi Fu Shopping Centre",
+      "extracted": {
+        "neighbourhood": "Mong Kok",
+        "buildingName": "Hoi Fu Shopping Centre",
+        "unitNumber": "18",
+        "unitType": "Rm"
+      },
+      "inferred": {
+        "district": "YTM",
+        "region": "KL",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "19, Nam Shan Estate Market",
+      "queryAddress": "Nam Shan Estate Market",
+      "extracted": {
+        "buildingName": "Nam Shan Estate Market",
+        "unitNumber": "19",
+        "unitType": null
+      },
+      "inferred": {},
+      "parsed": {
+        "neighbourhood": "Sham Shui Po",
+        "district": "SSP",
+        "region": "KL",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Shpd, G/F, Cheung Wang Bldg. 15-19, Cheungwongrd",
+      "queryAddress": "15 Cheung Wong Road",
+      "extracted": {
+        "streetName": "Cheung Wong Road",
+        "buildingNumberFrom": "15",
+        "buildingNumberTo": "19",
+        "buildingName": "Cheung Wang Bldg",
+        "floorType": "G/F",
+        "unitType": "Shpd"
+      },
+      "inferred": {}
+    },
+    {
+      "address": "306-308, Po On Rd Urban Council Bldg Mkt",
+      "queryAddress": "Po On Rd Urban Council Bldg Mkt",
+      "extracted": {
+        "buildingName": "Po On Rd Urban Council Bldg Mkt",
+        "unitNumber": "306-308",
+        "unitType": null
+      },
+      "inferred": {}
+    },
+    {
+      "address": "285, Po On Road Market",
+      "queryAddress": "Po On Road Market",
+      "extracted": {
+        "buildingName": "Po On Road Market",
+        "unitNumber": "285",
+        "unitType": null
+      },
+      "inferred": {}
+    },
+    {
+      "address": "193, Shek Kip Mei Commercial Centre",
+      "queryAddress": "Shek Kip Mei Commercial Centre",
+      "extracted": {
+        "neighbourhood": "Shek Kip Mei",
+        "buildingName": "Shek Kip Mei Commercial Centre",
+        "unitNumber": "193",
+        "unitType": null
+      },
+      "inferred": {
+        "district": "SSP",
+        "region": "KL",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "S159, Ngau Chi Wan Market",
+      "queryAddress": "Ngau Chi Wan Market",
+      "extracted": {
+        "buildingName": "Ngau Chi Wan Market",
+        "unitNumber": "159",
+        "unitType": "S"
+      },
+      "inferred": {}
+    },
+    {
+      "address": "W54, Tai Shing Market",
+      "queryAddress": "Tai Shing Market",
+      "extracted": {
+        "buildingName": "Tai Shing Market",
+        "unitNumber": "54",
+        "unitType": "W"
+      },
+      "inferred": {}
+    },
+    {
+      "address": "Stall No. 37, Lucky Market, Tsz Wan Shan",
+      "queryAddress": "Lucky Market",
+      "extracted": {
+        "neighbourhood": "Tsz Wan Shan",
+        "buildingName": "Lucky Market",
+        "unitNumber": "37",
+        "unitType": "Stall"
+      },
+      "inferred": {
+        "district": "WTS",
+        "region": "KL",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "No 6,Honeley Court,No.94-111Heung Sze Wui Road",
+      "queryAddress": "94 Heung Sze Wui Road",
+      "extracted": {
+        "streetName": "Heung Sze Wui Road",
+        "buildingNumberFrom": "94",
+        "buildingNumberTo": "111",
+        "buildingName": "Honeley Court",
+        "unitNumber": "6",
+        "unitType": "No"
+      },
+      "inferred": {}
+    },
+    {
+      "address": "G1-G3, The Parkville, 88 Heung Sze Wui Road, Tuen Mun",
+      "queryAddress": "88 Heung Sze Wui Road",
+      "extracted": {
+        "district": "TM",
+        "neighbourhood": "Tuen Mun",
+        "streetName": "Heung Sze Wui Road",
+        "buildingNumberFrom": "88",
+        "buildingName": "The Parkville",
+        "unitNumber": "G1-G3",
+        "unitType": null
+      },
+      "inferred": {
+        "region": "NT",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Tl-1,Tsui Lam Est. Shopping Mall",
+      "queryAddress": "Tsui Lam Est. Shopping Mall",
+      "extracted": {
+        "buildingName": "Tsui Lam Est. Shopping Mall",
+        "unitNumber": "1",
+        "unitType": "Tl"
+      },
+      "inferred": {
+        "district": "TM",
+        "region": "NT",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "No. 08, G/F., Beverly Garden, Tko",
+      "queryAddress": "Beverly Garden",
+      "extracted": {
+        "neighbourhood": "Tseung Kwan O",
+        "buildingName": "Beverly Garden",
+        "floorType": "G/F",
+        "unitNumber": "08",
+        "unitType": "No"
+      },
+      "inferred": {
+        "district": "SK",
+        "region": "NT",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "1/F, Stall V2, Market Street Market",
+      "queryAddress": "Market Street Market",
+      "extracted": {
+        "buildingName": "Market Street Market",
+        "floorNumber": "1/F",
+        "unitNumber": "V2",
+        "unitType": "Stall"
+      },
+      "inferred": {
+        "district": "SK",
+        "region": "NT",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "158, Market Street Market",
+      "queryAddress": "Market Street Market",
+      "extracted": {
+        "buildingName": "Market Street Market",
+        "unitNumber": "158",
+        "unitType": null
+      },
+      "inferred": {
+        "district": "SK",
+        "region": "NT",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Shp G5, G/F, Plaza 328, Bo Shek Mansion, 328 Sha Tsui Rd, Tsuen Wan",
+      "queryAddress": "328 Sha Tsui Road",
+      "extracted": {
+        "district": "TW",
+        "neighbourhood": "Tsuen Wan",
+        "streetName": "Sha Tsui Road",
+        "buildingNumberFrom": "328",
+        "buildingName": "Plaza 328",
+        "estateName": "Bo Shek Mansion",
+        "floorType": "G/F",
+        "unitNumber": "G5",
+        "unitType": "Shp"
+      },
+      "inferred": {
+        "region": "NT",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Yt28, Yt 29, Ying Tung Estate Market, Tong Chung",
+      "queryAddress": "Ying Tung Estate Market",
+      "extracted": {
+        "neighbourhood": "Tung Chung",
+        "buildingName": "Ying Tung Estate Market",
+        "unitNumber": "28, 29",
+        "unitType": "Yt"
+      },
+      "inferred": {
+        "district": "TW",
+        "region": "NT",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "4/F, Aitb, Cuhk",
+      "queryAddress": "Aitb",
+      "extracted": {
+        "buildingName": "Aitb",
+        "estateName": "Cuhk",
+        "floorNumber": "4/F"
+      },
+      "inferred": {
+        "region": "NT",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "26/F, Block F & G, Golden Bear Industrial Center, 66-82 Choi Wan Kok St, Tsuen Wan West",
+      "queryAddress": "66 Choi Wan Kok Street",
+      "extracted": {
+        "neighbourhood": "Tsuen Wan West",
+        "streetName": "Choi Wan Kok Street",
+        "buildingNumberFrom": "66",
+        "buildingNumberTo": "82",
+        "buildingName": "Golden Bear Industrial Center",
+        "floorNumber": "26/F",
+        "blockType": "Block",
+        "blockNumber": "F & G"
+      },
+      "inferred": {
+        "district": "TW",
+        "region": "NT",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Bank of America Tower, 12, Harcourt Road, Central",
+      "queryAddress": "12 Harcourt Road",
+      "extracted": {
+        "neighbourhood": "Central",
+        "streetName": "Harcourt Road",
+        "buildingNumberFrom": "12",
+        "buildingName": "Bank of America Tower"
+      },
+      "inferred": {
+        "district": "CW",
+        "region": "HK",
+        "country": "HKSAR"
+      }
+    },
+    {
+      "address": "Flat/Rm 906, BLK 1, 9/F, Kowloon Commercial Centre",
+      "queryAddress": "Kowloon Commercial Centre",
+      "extracted": {
+        "buildingName": "Kowloon Commercial Centre",
+        "floorNumber": "9/F",
+        "blockType": "BLK",
+        "blockNumber": "1",
+        "unitNumber": "906",
+        "unitType": "Flat/Rm"
+      },
+      "inferred": {}
+    },
+    {
+      "address": "Ma Wan 1868, Ma Wan, NT",
+      "queryAddress": "1868",
+      "extracted": {
+        "region": "NT",
+        "neighbourhood": "Ma Wan",
+        "buildingName": "Ma Wan 1868"
+      },
+      "inferred": {
+        "district": "TW",
+        "country": "HKSAR"
+      }
+    }
+  ]
+}

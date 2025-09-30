@@ -1,0 +1,398 @@
+[
+  {
+    "id": "6XU6wVJN-3qG",
+    "organisationId": "kP31z2fP4-k2",
+    "projectId": "LsmysOOa9RoU",
+    "metadata": {},
+    "isDefaultVisible": false,
+    "isPublished": true,
+    "publishedAt": "2025-09-29T16:11:59.030Z",
+    "publisherId": null,
+    "isArchived": false,
+    "i18n": {
+      "en": {
+        "layerId": "6XU6wVJN-3qG",
+        "locale": "en",
+        "name": "Wetmarket",
+        "nameGen": false,
+        "nameShort": "Wetmarket",
+        "nameShortGen": false,
+        "description": "",
+        "descriptionGen": true
+      },
+      "zh-hans": {
+        "layerId": "6XU6wVJN-3qG",
+        "locale": "zh-hans",
+        "name": "湿货市场",
+        "nameGen": true,
+        "nameShort": "湿货市场",
+        "nameShortGen": true,
+        "description": "",
+        "descriptionGen": true
+      },
+      "zh-hant": {
+        "layerId": "6XU6wVJN-3qG",
+        "locale": "zh-hant",
+        "name": "濕街",
+        "nameGen": true,
+        "nameShort": "濕街",
+        "nameShortGen": true,
+        "description": "",
+        "descriptionGen": true
+      }
+    },
+    "properties": [
+      {
+        "layerId": "6XU6wVJN-3qG",
+        "propertyId": "sUA0dK569U1b",
+        "isVisible": true,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "6XU6wVJN-3qG",
+        "propertyId": "1Vqa1R719Zl5",
+        "isVisible": false,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "6XU6wVJN-3qG",
+        "propertyId": "65MxwvIg6Vw1",
+        "isVisible": false,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "6XU6wVJN-3qG",
+        "propertyId": "AAJ$I$izRdO2",
+        "isVisible": false,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "6XU6wVJN-3qG",
+        "propertyId": "4Hp84Br858OH",
+        "isVisible": true,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "6XU6wVJN-3qG",
+        "propertyId": "k$fmGQJtr5TQ",
+        "isVisible": true,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "6XU6wVJN-3qG",
+        "propertyId": "aCSDByW7O0Re",
+        "isVisible": true,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "6XU6wVJN-3qG",
+        "propertyId": "p$yp9eh1Qo0y",
+        "isVisible": true,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "6XU6wVJN-3qG",
+        "propertyId": "GDmNDgN8GhrF",
+        "isVisible": true,
+        "isUserContributed": true
+      }
+    ]
+  },
+  {
+    "id": "KAbGCfWdwsKL",
+    "organisationId": "kP31z2fP4-k2",
+    "projectId": "LsmysOOa9RoU",
+    "metadata": {},
+    "isDefaultVisible": false,
+    "isPublished": true,
+    "publishedAt": "2025-09-29T16:12:01.958Z",
+    "publisherId": null,
+    "isArchived": false,
+    "i18n": {
+      "en": {
+        "layerId": "KAbGCfWdwsKL",
+        "locale": "en",
+        "name": "Grocery Store",
+        "nameGen": false,
+        "nameShort": "Grocery Store",
+        "nameShortGen": false,
+        "description": "",
+        "descriptionGen": true
+      },
+      "zh-hans": {
+        "layerId": "KAbGCfWdwsKL",
+        "locale": "zh-hans",
+        "name": "杂货店",
+        "nameGen": true,
+        "nameShort": "杂货店",
+        "nameShortGen": true,
+        "description": "",
+        "descriptionGen": true
+      },
+      "zh-hant": {
+        "layerId": "KAbGCfWdwsKL",
+        "locale": "zh-hant",
+        "name": "雜貨店",
+        "nameGen": true,
+        "nameShort": "雜貨店",
+        "nameShortGen": true,
+        "description": "",
+        "descriptionGen": true
+      }
+    },
+    "properties": [
+      {
+        "layerId": "KAbGCfWdwsKL",
+        "propertyId": "sUA0dK569U1b",
+        "isVisible": true,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "KAbGCfWdwsKL",
+        "propertyId": "1Vqa1R719Zl5",
+        "isVisible": true,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "KAbGCfWdwsKL",
+        "propertyId": "65MxwvIg6Vw1",
+        "isVisible": true,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "KAbGCfWdwsKL",
+        "propertyId": "AAJ$I$izRdO2",
+        "isVisible": true,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "KAbGCfWdwsKL",
+        "propertyId": "4Hp84Br858OH",
+        "isVisible": true,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "KAbGCfWdwsKL",
+        "propertyId": "k$fmGQJtr5TQ",
+        "isVisible": true,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "KAbGCfWdwsKL",
+        "propertyId": "aCSDByW7O0Re",
+        "isVisible": true,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "KAbGCfWdwsKL",
+        "propertyId": "p$yp9eh1Qo0y",
+        "isVisible": true,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "KAbGCfWdwsKL",
+        "propertyId": "GDmNDgN8GhrF",
+        "isVisible": false,
+        "isUserContributed": true
+      }
+    ]
+  },
+  {
+    "id": "QkulkpbJjPCU",
+    "organisationId": "kP31z2fP4-k2",
+    "projectId": "LsmysOOa9RoU",
+    "metadata": {},
+    "isDefaultVisible": false,
+    "isPublished": true,
+    "publishedAt": "2025-09-29T16:12:04.226Z",
+    "publisherId": null,
+    "isArchived": false,
+    "i18n": {
+      "en": {
+        "layerId": "QkulkpbJjPCU",
+        "locale": "en",
+        "name": "Recreational Farm",
+        "nameGen": false,
+        "nameShort": "Recreational Farm",
+        "nameShortGen": false,
+        "description": "",
+        "descriptionGen": true
+      },
+      "zh-hans": {
+        "layerId": "QkulkpbJjPCU",
+        "locale": "zh-hans",
+        "name": "休闲农场",
+        "nameGen": true,
+        "nameShort": "休闲农场",
+        "nameShortGen": true,
+        "description": "",
+        "descriptionGen": true
+      },
+      "zh-hant": {
+        "layerId": "QkulkpbJjPCU",
+        "locale": "zh-hant",
+        "name": "遊樂場",
+        "nameGen": true,
+        "nameShort": "遊樂場",
+        "nameShortGen": true,
+        "description": "",
+        "descriptionGen": true
+      }
+    },
+    "properties": [
+      {
+        "layerId": "QkulkpbJjPCU",
+        "propertyId": "sUA0dK569U1b",
+        "isVisible": false,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "QkulkpbJjPCU",
+        "propertyId": "1Vqa1R719Zl5",
+        "isVisible": false,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "QkulkpbJjPCU",
+        "propertyId": "65MxwvIg6Vw1",
+        "isVisible": false,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "QkulkpbJjPCU",
+        "propertyId": "AAJ$I$izRdO2",
+        "isVisible": false,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "QkulkpbJjPCU",
+        "propertyId": "4Hp84Br858OH",
+        "isVisible": false,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "QkulkpbJjPCU",
+        "propertyId": "k$fmGQJtr5TQ",
+        "isVisible": false,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "QkulkpbJjPCU",
+        "propertyId": "aCSDByW7O0Re",
+        "isVisible": false,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "QkulkpbJjPCU",
+        "propertyId": "p$yp9eh1Qo0y",
+        "isVisible": false,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "QkulkpbJjPCU",
+        "propertyId": "GDmNDgN8GhrF",
+        "isVisible": false,
+        "isUserContributed": true
+      }
+    ]
+  },
+  {
+    "id": "aYw7EkclafZ3",
+    "organisationId": "kP31z2fP4-k2",
+    "projectId": "LsmysOOa9RoU",
+    "metadata": {},
+    "isDefaultVisible": false,
+    "isPublished": true,
+    "publishedAt": "2025-09-29T18:58:33.487Z",
+    "publisherId": null,
+    "isArchived": false,
+    "i18n": {
+      "en": {
+        "layerId": "aYw7EkclafZ3",
+        "locale": "en",
+        "name": "FOOD-CO",
+        "nameGen": false,
+        "nameShort": "FOOD-CO",
+        "nameShortGen": false,
+        "description": "",
+        "descriptionGen": true
+      },
+      "zh-hans": {
+        "layerId": "aYw7EkclafZ3",
+        "locale": "zh-hans",
+        "name": "FOOD-CO",
+        "nameGen": false,
+        "nameShort": "FOOD-CO",
+        "nameShortGen": false,
+        "description": "",
+        "descriptionGen": true
+      },
+      "zh-hant": {
+        "layerId": "aYw7EkclafZ3",
+        "locale": "zh-hant",
+        "name": "FOOD-CO",
+        "nameGen": false,
+        "nameShort": "FOOD-CO",
+        "nameShortGen": false,
+        "description": "",
+        "descriptionGen": true
+      }
+    },
+    "properties": [
+      {
+        "layerId": "aYw7EkclafZ3",
+        "propertyId": "sUA0dK569U1b",
+        "isVisible": false,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "aYw7EkclafZ3",
+        "propertyId": "1Vqa1R719Zl5",
+        "isVisible": false,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "aYw7EkclafZ3",
+        "propertyId": "65MxwvIg6Vw1",
+        "isVisible": false,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "aYw7EkclafZ3",
+        "propertyId": "AAJ$I$izRdO2",
+        "isVisible": false,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "aYw7EkclafZ3",
+        "propertyId": "4Hp84Br858OH",
+        "isVisible": false,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "aYw7EkclafZ3",
+        "propertyId": "k$fmGQJtr5TQ",
+        "isVisible": false,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "aYw7EkclafZ3",
+        "propertyId": "aCSDByW7O0Re",
+        "isVisible": false,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "aYw7EkclafZ3",
+        "propertyId": "p$yp9eh1Qo0y",
+        "isVisible": false,
+        "isUserContributed": true
+      },
+      {
+        "layerId": "aYw7EkclafZ3",
+        "propertyId": "GDmNDgN8GhrF",
+        "isVisible": true,
+        "isUserContributed": true
+      }
+    ]
+  }
+]

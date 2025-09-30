@@ -122,7 +122,7 @@ export const GET: RequestHandler = async ({
  ************/
 
 /**
- * Updates a layer
+ * Updates a feature
  */
 export const PUT: RequestHandler = async ({ params, request, locals, platform }) => {
   // ASSERT : User logged in

@@ -471,7 +471,17 @@ export const toFormShape = async (
   const formData = {
     ...data,
     i18n: transformI18nSafely(i18n, {}),
-    properties
+    properties: properties.map((prop) => ({
+      ...prop,
+      property: {
+        ...prop.property,
+        i18n: transformI18nSafely(prop.property.i18n, {}),
+        values: prop.property.values.map((val) => ({
+          ...val,
+          i18n: transformI18nSafely(val.i18n, {})
+        }))
+      }
+    }))
   };
 
   // @ts-ignore TODO - Fix Zod type error

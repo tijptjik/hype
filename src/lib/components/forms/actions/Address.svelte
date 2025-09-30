@@ -21,11 +21,22 @@ let featureForm: FeatureForm['form'] = $derived(form.form);
 // STATE : UI
 let isGeocoding = $state(false);
 
-// Wrap the geocode action to handle loading state
+/**
+ * Handle reverse geocoding - lookup address from current coordinates
+ *
+ * This action calls the reverse geocoding service to get address information
+ * for the feature's current coordinates and updates the form with the result.
+ *
+ * @param e - The event that triggered the reverse geocoding
+ */
 async function handleGeocode(e: Event) {
+  console.log('🗺️ Address: Starting reverse geocoding process');
   isGeocoding = true;
   try {
     await actions.geocode(e);
+    console.log('🗺️ Address: Reverse geocoding completed');
+  } catch (error) {
+    console.error('🗺️ Address: Reverse geocoding failed:', error);
   } finally {
     isGeocoding = false;
   }

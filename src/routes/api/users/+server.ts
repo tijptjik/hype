@@ -2,7 +2,7 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
 // DB
 import { user } from '$lib/db/schema/index';
-import { searchUsers, toResponseShape } from '$lib/db/services/user';
+import { listUsers, searchUsers, toResponseShape } from '$lib/db/services/user';
 // API
 import { JSONResponseOrError, getDatabase, isValidQueryParamsOrError } from '$lib/api';
 import {
@@ -47,13 +47,21 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
   );
 
   try {
-    // DB : List the organisations
-    const result = await searchUsers(
-      db,
-      userCollectionWithRelations,
-      conditions,
-      searchParam
-    );
+    // DB : List the users
+    let result: UserRaw[];
+
+    if (searchParam) {
+      // If there's a search query, use the searchUsers function
+      result = await searchUsers(
+        db,
+        userCollectionWithRelations,
+        conditions,
+        searchParam
+      );
+    } else {
+      // If no search query, just list users with the applied conditions
+      result = await listUsers(db, userCollectionWithRelations, conditions);
+    }
 
     // RESPONSE : Build the response shape
     const data = await Promise.all(

@@ -8,6 +8,7 @@ import Info from '$lib/components/panels/info/Filters.svelte';
 import Reset from '$lib/components/panels/controls/Reset.svelte';
 import Neighbourhoods from '$lib/components/panels/sections/Neighbourhoods.svelte';
 import Categories from '$lib/components/panels/sections/Categories.svelte';
+import Analysis from '$lib/components/panels/sections/Analysis.svelte';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 // ENUMS
@@ -67,6 +68,10 @@ even selecting a neighbourhood will not correctly affect the features shown on t
   <div class="flex flex-col">
     <div class="flex-grow-1 flex max-h-[40vh] min-h-0 flex-shrink-0 flex-col">
       <Neighbourhoods {...panelProps} />
+    </div>
+    <div
+      class="flex-grow-1 flex max-h-[calc(100vh-206px)] min-h-0 flex-shrink-0 flex-col">
+      <Analysis {...panelProps} />
     </div>
     <div
       class="flex-grow-1 flex max-h-[calc(100vh-206px)] min-h-0 flex-shrink-0 flex-col">

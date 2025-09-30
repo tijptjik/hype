@@ -2,7 +2,7 @@
 // I18N
 import { m } from '$lib/paraglide/messages';
 // LIB
-import { reverseGeocode } from '$lib/api/external/geocoding';
+import { getAddressFromCoordinates } from '$lib/api/external/geocoding';
 import { supportedLocales } from '$lib/enums';
 // COMPONENTS
 import Header from '$lib/components/forms/extra/Header.svelte';
@@ -19,7 +19,7 @@ import type {
   TranslationStates,
   Resource,
   Feature,
-  ParsedReverseGeocodeResult,
+  ParsedGeocodeResult,
   FeatureForm,
   FieldProps,
   FormFieldDefinition,
@@ -109,10 +109,7 @@ let resetMissingTranslations = () => {
   missingTranslations = defaultMissingTranslations;
 };
 
-let setMissingTranslations = (
-  result: ParsedReverseGeocodeResult,
-  sourceLocale: Locale
-) => {
+let setMissingTranslations = (result: ParsedGeocodeResult, sourceLocale: Locale) => {
   Object.entries(result.i18n || {}).forEach(([locale, data]) => {
     if (locale === sourceLocale) return;
     if (
@@ -135,7 +132,7 @@ const actions: Record<'geocode', (...args: any[]) => Promise<void>> = {
     if (currentFormIsFeature && currentGeometryIsPoint && currentGeometry) {
       const coordinates = (currentGeometry as Point).coordinates;
       const [lng, lat] = coordinates;
-      const result = await reverseGeocode(lng, lat);
+      const result = await getAddressFromCoordinates(lng, lat);
       if (result) {
         // Reset missing translations state
         // We don't need english translations as the API returns the english address

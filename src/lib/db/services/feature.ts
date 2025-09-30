@@ -439,6 +439,22 @@ export const updateProperties = async (
   for (const prop of properties) {
     const { i18n, ...propData } = prop;
 
+    // Debug logging for TRUE/FALSE values
+    if (
+      prop.value === 'TRUE' ||
+      prop.value === 'FALSE' ||
+      prop.value === true ||
+      prop.value === false
+    ) {
+      console.log(`🐛 [updateProperties] Boolean property debug:`, {
+        propertyId: prop.propertyId,
+        originalValue: prop.value,
+        valueType: typeof prop.value,
+        propertyValueId: prop.propertyValueId,
+        hasPropertyValueId: !!prop.propertyValueId
+      });
+    }
+
     const propertyToUpsert = {
       featureId,
       propertyId: prop.propertyId,
@@ -449,16 +465,54 @@ export const updateProperties = async (
           : null
     };
 
-    await db
-      .insert(featureProperty)
-      .values(propertyToUpsert)
-      .onConflictDoUpdate({
-        target: [featureProperty.featureId, featureProperty.propertyId],
-        set: {
-          value: propertyToUpsert.value,
-          propertyValueId: propertyToUpsert.propertyValueId
-        }
-      });
+    // Debug the final upsert object for boolean values
+    if (
+      prop.value === 'TRUE' ||
+      prop.value === 'FALSE' ||
+      prop.value === true ||
+      prop.value === false
+    ) {
+      console.log(`🐛 [updateProperties] Final upsert object:`, propertyToUpsert);
+    }
+
+    try {
+      await db
+        .insert(featureProperty)
+        .values(propertyToUpsert)
+        .onConflictDoUpdate({
+          target: [featureProperty.featureId, featureProperty.propertyId],
+          set: {
+            value: propertyToUpsert.value,
+            propertyValueId: propertyToUpsert.propertyValueId
+          }
+        });
+
+      // Debug confirmation for boolean values
+      if (
+        prop.value === 'TRUE' ||
+        prop.value === 'FALSE' ||
+        prop.value === true ||
+        prop.value === false
+      ) {
+        console.log(
+          `🐛 [updateProperties] Successfully upserted boolean property ${prop.propertyId}`
+        );
+      }
+    } catch (error) {
+      // Debug database errors for boolean values
+      if (
+        prop.value === 'TRUE' ||
+        prop.value === 'FALSE' ||
+        prop.value === true ||
+        prop.value === false
+      ) {
+        console.error(
+          `🐛 [updateProperties] Database error for boolean property ${prop.propertyId}:`,
+          error
+        );
+      }
+      throw error; // Re-throw to maintain original error handling
+    }
 
     // Handle i18n records if they exist
     if (prop.i18n) {

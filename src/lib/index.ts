@@ -57,11 +57,21 @@ export function stopPropagation(fn: (event: Event) => void) {
   };
 }
 
-export function toTitleCase(str: string) {
+export function toTitleCase(str: string, removeInnerCaps: boolean = false) {
   return str.replace(
     /\w\S*/g,
-    (text) => text.charAt(0).toUpperCase() + text.substring(1).toLowerCase()
+    (text) =>
+      text.charAt(0).toUpperCase() +
+      (removeInnerCaps ? text.substring(1).toLowerCase() : text.substring(1))
   );
+}
+
+export function toUpperCase(str: string) {
+  return str.toUpperCase();
+}
+
+export function toLowerCase(str: string) {
+  return str.toLowerCase();
 }
 
 export const getFieldComponent = (componentType?: FieldComponentType) => {
