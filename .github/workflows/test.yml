@@ -83,7 +83,7 @@ jobs:
           EOF
 
       - name: 'BUILD :: Generate Paraglide i18n files'
-        run: bunx @inlang/paraglide-sveltekit compile --project ./project.inlang --outdir ./src/lib/paraglide
+        run: bunx @inlang/paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide
 
       - name: 'TEST :: Run tests'
         id: test
