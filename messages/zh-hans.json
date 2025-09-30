@@ -621,5 +621,6 @@
   "translations": "翻译",
   "translation_progress_message": "翻译专题标题以确保完整的多语言覆盖。",
   "start_translation": "开始翻译",
-  "continue_to_next_step": "继续下一步"
+  "continue_to_next_step": "继续下一步",
+  "filters__analysis": "分析"
 }
