@@ -40,7 +40,7 @@ global.__SVELTEKIT_PAYLOAD__ = {
   url: new URL('http://localhost:3000')
 };
 
-// Mock Paraglide runtime
+// Mock Paraglide runtime - import actual and only override specific functions
 vi.mock('$lib/paraglide/runtime', async () => {
   const actual = await vi.importActual<any>('$lib/paraglide/runtime');
   return {
@@ -50,7 +50,7 @@ vi.mock('$lib/paraglide/runtime', async () => {
   };
 });
 
-// Mock Paraglide messages
+// Mock Paraglide messages - use actual implementation
 vi.mock('$lib/paraglide/messages', async () => {
   const actual = await vi.importActual<any>('$lib/paraglide/messages');
   return actual;
