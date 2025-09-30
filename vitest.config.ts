@@ -1,12 +1,16 @@
 import { configDefaults, defineConfig } from 'vitest/config';
 import { resolve } from 'path';
+import { sveltekit } from '@sveltejs/kit/vite';
 
 const isWatch = process.env.CI !== 'true' && process.env.VITEST_MODE !== 'run';
 
 export default defineConfig({
+  plugins: [sveltekit()],
   resolve: {
     alias: {
-      $lib: resolve(__dirname, 'src/lib')
+      $lib: resolve(__dirname, 'src/lib'),
+      '$app/environment': resolve(__dirname, 'src/lib/mocks/app-environment.ts'),
+      '$app/state': resolve(__dirname, 'src/lib/mocks/app-state.ts')
     }
   },
   test: {

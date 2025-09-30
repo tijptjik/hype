@@ -560,6 +560,7 @@ export function parseSubPremisesComponent(
 
     // Try to match unit patterns if not a floor
     if (!floorMatched) {
+      let unitMatched = false;
       for (const { pattern, type, number } of unitPatterns) {
         const match = part.match(pattern);
         if (match) {
@@ -587,12 +588,13 @@ export function parseSubPremisesComponent(
               unitNumbers.push(unitNumber);
             }
           }
+          unitMatched = true;
           break;
         }
       }
 
       // If no unit pattern matched but we have a unit type, check if this part is just a unit number
-      if (hasFoundUnit && unitNumbers.length > 0) {
+      if (!unitMatched && hasFoundUnit && unitNumbers.length > 0) {
         const numberMatch = part.match(/^([\d\w\s,&\-–]+)$/);
         if (
           numberMatch &&

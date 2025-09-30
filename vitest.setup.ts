@@ -10,6 +10,36 @@ global.requestAnimationFrame = vi
   });
 global.cancelAnimationFrame = vi.fn((id) => clearTimeout(id));
 
+// Mock SvelteKit $app modules
+vi.mock('$app/environment', () => ({
+  browser: false,
+  dev: false,
+  building: false,
+  version: '1.0.0'
+}));
+
+vi.mock('$app/state', () => ({
+  page: {
+    subscribe: vi.fn(() => () => {}),
+    url: new URL('http://localhost:3000'),
+    params: {},
+    route: { id: null },
+    status: 200,
+    error: null,
+    data: {},
+    form: null
+  }
+}));
+
+// Mock SvelteKit global variables
+global.__SVELTEKIT_PAYLOAD__ = {
+  data: {},
+  nodes: [],
+  params: {},
+  route: { id: null },
+  url: new URL('http://localhost:3000')
+};
+
 // Reset mocks between tests
 beforeEach(() => {
   vi.useFakeTimers();
