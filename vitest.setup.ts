@@ -40,6 +40,22 @@ global.__SVELTEKIT_PAYLOAD__ = {
   url: new URL('http://localhost:3000')
 };
 
+// Mock Paraglide runtime
+vi.mock('$lib/paraglide/runtime', async () => {
+  const actual = await vi.importActual<any>('$lib/paraglide/runtime');
+  return {
+    ...actual,
+    getLocale: vi.fn(() => 'en'),
+    setLocale: vi.fn()
+  };
+});
+
+// Mock Paraglide messages
+vi.mock('$lib/paraglide/messages', async () => {
+  const actual = await vi.importActual<any>('$lib/paraglide/messages');
+  return actual;
+});
+
 // Reset mocks between tests
 beforeEach(() => {
   vi.useFakeTimers();
