@@ -239,11 +239,11 @@ let formData = $derived.by(() => {
     values: propertyValues,
     min:
       analysis.componentType === 'RangeField'
-        ? Math.min(...analysis.uniqueValues.map((v) => parseFloat(v)))
+        ? Math.floor(Math.min(...analysis.uniqueValues.map((v) => parseFloat(v))))
         : null,
     max:
       analysis.componentType === 'RangeField'
-        ? Math.max(...analysis.uniqueValues.map((v) => parseFloat(v)))
+        ? Math.ceil(Math.max(...analysis.uniqueValues.map((v) => parseFloat(v))))
         : null,
     i18n: {
       en: {
