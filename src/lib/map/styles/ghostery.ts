@@ -20,7 +20,9 @@ export const ghosteryRoads: AddLayerObject = {
   type: 'line',
   filter: ['in', 'kind', 'highway', 'major_road', 'minor_road'],
   paint: {
-    'line-color': '#4987E2',
+    // 'line-color': '#4987E2',
+    'line-color': '#CCCCCC99',
+    // 'line-color': 'rgba(240, 77, 127, 0.86)',
     'line-width': [
       'case',
       ['==', ['get', 'kind'], 'highway'],
