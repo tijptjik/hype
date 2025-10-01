@@ -270,8 +270,11 @@ onMount(async () => {
 });
 
 watch(
-  () => [appCtx.featuresVisible, appCtx.map],
+  () => [appCtx.featuresVisible, appCtx.map, appCtx.isRefreshingFeatures],
   () => {
+    // Skip marker updates while features are being refreshed to prevent flash
+    if (appCtx.isRefreshingFeatures) return;
+
     if (!isAnimating && appCtx.maplibre && appCtx.isMaplibreLoaded) {
       updateMarkers(
         appCtx,

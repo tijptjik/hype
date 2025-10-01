@@ -24,7 +24,7 @@ import { primeFeatureStatsCache } from '$lib/client/services/stats';
 // CONTEXT
 import { getContext, setContext } from 'svelte';
 // SVELTE
-import { SvelteMap } from 'svelte/reactivity';
+import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 // MARKERS
 import { removeMarkerClass, addMarkerClass } from '$lib/map/markers';
 // ENUMS
@@ -136,6 +136,9 @@ export class AppCtx {
   private organisationCodeToId = new Map<Code, Id>();
   private projectCodeToId = new Map<Code, Id>();
   private hubCodeToId = new Map<Code, Id>();
+
+  // Flag to prevent marker updates during feature refresh
+  isRefreshingFeatures = $state(false);
 
   state: AppContextState = $state({
     // Markers -- Which features are shown on the map
@@ -970,25 +973,57 @@ export class AppCtx {
   };
 
   refreshFeatures = async (isCascading: boolean = true): Promise<void> => {
+    // Set flag to block marker updates during refresh
+    this.isRefreshingFeatures = true;
+
     const features: FeatureFromCollection[] = await this.queryClient.fetchQuery({
       queryKey: this.queryMap.get(FirstClassResource.feature)!.queryKey(),
       queryFn: this.queryMap.get(FirstClassResource.feature)!.queryFn
     });
-    this.state.resources.feature = features;
-    this.syncCacheMap(this.cache.feature, features);
 
     // Pre-populate stats cache for this feature
     features.forEach((feature) => {
       primeFeatureStatsCache(this, feature);
     });
 
-    // Rebuild the featureId to feature map
+    // CRITICAL: Prepare neighbourhood data FIRST, before any reactive state updates
+    // Build neighbourhood map in isolation without triggering reactivity
+    const newNeighbourhoodMap = new SvelteMap<string, SvelteSet<Id>>();
+    const shouldSetNeighbourhoods = this.getPrism(FirstClassResource.layer).length > 0;
+
+    if (shouldSetNeighbourhoods) {
+      for (const feature of features) {
+        const neighbourhood = feature.i18n?.en?.addressProperties?.neighbourhood;
+        if (neighbourhood) {
+          const existingFeatures =
+            newNeighbourhoodMap.get(neighbourhood) || new SvelteSet<Id>();
+          existingFeatures.add(feature.id);
+          newNeighbourhoodMap.set(neighbourhood, existingFeatures);
+        }
+      }
+    }
+
+    // Now update all reactive state atomically
+    // CRITICAL ORDER: Set neighbourhood data FIRST before triggering other reactive updates
+    // This ensures neighbourhood filtering is ready when derived states recalculate
+    this.placeCtx.state.contains.feature.neighbourhood = newNeighbourhoodMap;
+
+    // Calculate simple neighbourhood counts (without subdivisions for now)
+    this.placeCtx.state.counts.feature.neighbourhood.clear();
+    for (const [neighbourhood, features] of newNeighbourhoodMap.entries()) {
+      this.placeCtx.state.counts.feature.neighbourhood.set(
+        neighbourhood,
+        features.size
+      );
+    }
+
+    // Then update feature state and rebuild maps
+    this.state.resources.feature = features;
+    this.syncCacheMap(this.cache.feature, features);
     this.rebuildFeaturesMap();
 
-    // Rebuild the neighbourhoodRef to featureIds map
-    this.placeCtx.setNeighbourhoodFeatures(
-      this.getPrism(FirstClassResource.layer).length > 0 ? features : []
-    );
+    // Clear flag to allow marker updates with complete data
+    this.isRefreshingFeatures = false;
   };
 
   refreshTasks = async (isCascading: boolean = true): Promise<void> => {
@@ -1914,8 +1949,17 @@ export class AppCtx {
 
   // Features, given the selected Neighbourhoods (or all if none)
   getFeatureIdsForNeighbourhoods = (): Id[] => {
+    // If no neighbourhoods are actively filtered
     if (this.placeCtx.neighbourhoodFilterCount === 0) {
-      return Array.from(this.features.keys());
+      // If we have features in the features map, show them all
+      // This handles both:
+      // - Features with neighbourhood data (normal case)
+      // - Features without neighbourhood data (neighbourhood.size === 0 is OK)
+      if (this.features.size > 0) {
+        return Array.from(this.features.keys());
+      }
+      // If no features in map, return empty (initial/transitional state)
+      return [];
     }
     return this.placeCtx.getFeaturesForFilteredNeighbourhoods();
   };
