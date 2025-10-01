@@ -1316,33 +1316,58 @@ export class AppCtx {
 
   // FILTERS - GENERIC
 
-  getFilterCount = (): { neighbourhoods: number; properties: number } => {
+  getFilterCount = (): {
+    neighbourhoods: number;
+    properties: number;
+    openingHours: boolean;
+  } => {
+    const globalFilters = this.state.filters.feature.properties || {};
+
+    // Check if opening hours filters are active
+    const hasOpeningHours = ['weekdayHours', 'weekendHours'].some((key) => {
+      const filter = globalFilters[key];
+      if (
+        filter &&
+        typeof filter === 'object' &&
+        'rangeMin' in filter &&
+        'globalMin' in filter
+      ) {
+        return (
+          filter.rangeMin !== filter.globalMin || filter.rangeMax !== filter.globalMax
+        );
+      }
+      return false;
+    });
+
     return {
       neighbourhoods: this.placeCtx.neighbourhoodFilterCount,
-      properties: Object.entries(this.state.filters.feature.properties || {}).reduce(
-        (total, [_, layerFilters]) => {
-          // For each layer, count its active property filters
-          return (
-            total +
-            Object.entries(layerFilters).filter(
-              ([_, values]) =>
-                // Count arrays with values
-                (Array.isArray(values) && values.length > 0) ||
-                // Count range objects only if they differ from their global limits
-                (typeof values === 'object' &&
-                  values !== null &&
-                  !Array.isArray(values) &&
-                  'rangeMin' in values &&
-                  'rangeMax' in values &&
-                  'globalMin' in values &&
-                  'globalMax' in values &&
-                  (values.rangeMin !== values.globalMin ||
-                    values.rangeMax !== values.globalMax))
-            ).length
-          );
-        },
-        0
-      )
+      properties: Object.entries(globalFilters).reduce((total, [key, layerFilters]) => {
+        // Skip opening hours filters (counted separately)
+        if (key === 'weekdayHours' || key === 'weekendHours') {
+          return total;
+        }
+
+        // For each layer, count its active property filters
+        return (
+          total +
+          Object.entries(layerFilters as any).filter(
+            ([_, values]) =>
+              // Count arrays with values
+              (Array.isArray(values) && values.length > 0) ||
+              // Count range objects only if they differ from their global limits
+              (typeof values === 'object' &&
+                values !== null &&
+                !Array.isArray(values) &&
+                'rangeMin' in values &&
+                'rangeMax' in values &&
+                'globalMin' in values &&
+                'globalMax' in values &&
+                (values.rangeMin !== values.globalMin ||
+                  values.rangeMax !== values.globalMax))
+          ).length
+        );
+      }, 0),
+      openingHours: hasOpeningHours
     };
   };
 

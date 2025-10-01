@@ -5,6 +5,10 @@ import { ChevronDown, ChevronRight } from '@steeze-ui/heroicons';
 import Icon from '$lib/components/common/Icon.svelte';
 import type { Snippet } from 'svelte';
 import type { IconSource } from '@steeze-ui/svelte-icon';
+// I18N
+import { getI18n } from '$lib/i18n';
+// CONTEXT
+import type { AppCtx } from '$lib/context/app.svelte';
 
 const toggle = () => {
   isOpen = !isOpen;
@@ -16,15 +20,17 @@ type Props = {
   icon: string | IconSource;
   iconVerticalPaddingClass: string;
   iconColorClass: string;
-  collapsedContent: Snippet<[string, any]>;
+  collapsedContent?: Snippet<[string, any]>;
   isOpen: boolean;
   hierarchy: {
     organisation?: string | null;
     project?: string | null;
     layer?: string | null;
     layerId: string;
+    projectId: string;
   };
   properties: Record<string, any>;
+  appCtx: AppCtx;
 };
 
 let {
@@ -33,11 +39,19 @@ let {
   icon,
   iconVerticalPaddingClass,
   iconColorClass,
-  collapsedContent = () => null,
+  collapsedContent,
   isOpen = false,
   hierarchy,
-  properties
+  properties,
+  appCtx
 }: Props = $props();
+
+// Get project nameShort from i18n
+let projectNameShort = $derived.by(() => {
+  const project = appCtx.cache.project.get(hierarchy.projectId);
+  if (!project) return null;
+  return getI18n(project, 'nameShort', appCtx.getUserPreferences());
+});
 </script>
 
 <div
@@ -56,9 +70,8 @@ let {
           {#if hierarchy && hierarchy.organisation}
             <span class="px-0 text-primary">{hierarchy.organisation}</span>
           {/if}
-          {#if hierarchy && hierarchy.project}
-            <span class="px-0">›</span>
-            <span class="text-accent">{hierarchy.project.replaceAll('_', '')}</span>
+          {#if projectNameShort}
+            <span class="text-accent">{projectNameShort.replaceAll('_', '')}</span>
           {/if}
           {#if hierarchy && hierarchy.layer}
             <span class="px-0">›</span>
@@ -89,7 +102,7 @@ let {
 
   {#if isOpen}
     {@render children()}
-  {:else}
+  {:else if collapsedContent}
     {@render collapsedContent(hierarchy.layerId, properties)}
   {/if}
 </div>

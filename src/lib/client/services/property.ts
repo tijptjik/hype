@@ -30,12 +30,14 @@ import type {
 //
 // 2. GROUPING
 //    - getGroupedClassifierProperties
+//    - getGlobalOpeningHoursProperties
 //
 // 3. MUTATIONS
 //    - toggleCategoricalPropertyValue
 //    - setCategoricalPropertyFilter
 //    - resetCategoricalPropertyFilter
 //    - setRangePropertyFilter
+//    - setOpeningHoursFilter
 //
 // 4. DISPLAY
 //    - displaySelectedProperties
@@ -161,6 +163,7 @@ export let getGroupedClassifierProperties = async (
       project: string | null;
       layer: string | null;
       layerId: string;
+      projectId: string;
     };
     properties: Property[];
   }>
@@ -183,7 +186,8 @@ export let getGroupedClassifierProperties = async (
         organisation: appCtx.getContextualOrganisationName(organisation),
         project: appCtx.getContextualProjectName(project),
         layer: appCtx.getContextualLayerName(layer),
-        layerId: layer.id // Pass layerId for direct filter access
+        layerId: layer.id, // Pass layerId for direct filter access
+        projectId: project.id // Pass projectId to access project i18n data
       };
 
       return {
@@ -195,6 +199,63 @@ export let getGroupedClassifierProperties = async (
 
   // Filter out nulls and empty groups
   return results.filter((group): group is NonNullable<typeof group> => group !== null);
+};
+
+/**
+ * Checks if any active layers have opening hours properties.
+ * Returns a single global filter configuration.
+ *
+ * @param appCtx - The application context
+ * @returns Global opening hours filter configuration or null
+ */
+export let getGlobalOpeningHoursProperties = async (
+  appCtx: AppCtx
+): Promise<{
+  hasWeekday: boolean;
+  hasWeekend: boolean;
+} | null> => {
+  let hasWeekday = false;
+  let hasWeekend = false;
+
+  const openingHoursKeys = [
+    'weekDayOpen',
+    'weekDayClose',
+    'weekEndOpen',
+    'weekEndClose'
+  ];
+
+  // Check all active layers for opening hours properties
+  for (const layerId of appCtx.getPrism(FirstClassResource.layer)) {
+    const layer = await appCtx.getLayerById(layerId);
+    if (!layer) continue;
+
+    const allProperties = await appCtx.getClassifierPropertiesForLayer(layer);
+    const openingHoursProps = allProperties.filter((p) =>
+      openingHoursKeys.includes(p.key)
+    );
+
+    if (openingHoursProps.length > 0) {
+      if (
+        openingHoursProps.some(
+          (p) => p.key === 'weekDayOpen' || p.key === 'weekDayClose'
+        )
+      ) {
+        hasWeekday = true;
+      }
+      if (
+        openingHoursProps.some(
+          (p) => p.key === 'weekEndOpen' || p.key === 'weekEndClose'
+        )
+      ) {
+        hasWeekend = true;
+      }
+    }
+  }
+
+  // Return null if no opening hours properties found
+  if (!hasWeekday && !hasWeekend) return null;
+
+  return { hasWeekday, hasWeekend };
 };
 
 // ═══════════════════════
@@ -301,6 +362,41 @@ export function setRangePropertyFilter(
       globalMax,
       rangeMin: Math.min(...values),
       rangeMax: Math.max(...values)
+    };
+    appCtx.zoomToAllVisibleFeatures();
+  }
+}
+
+/**
+ * Sets a global opening hours filter for weekday or weekend.
+ * Uses a special filter key format: 'weekdayHours' or 'weekendHours'
+ * This stores the search range to be used for overlap checking against features.
+ * The filter is global and applies across all layers.
+ */
+export function setOpeningHoursFilter(
+  appCtx: AppCtx,
+  type: 'weekday' | 'weekend',
+  openKey: string,
+  closeKey: string,
+  values: [number, number]
+): void {
+  const filterKey = `${type}Hours`;
+
+  // Only update if the values have actually changed
+  if (
+    appCtx.state.filters.feature.properties![filterKey]?.rangeMin !== values[0] ||
+    appCtx.state.filters.feature.properties![filterKey]?.rangeMax !== values[1]
+  ) {
+    // Store at the top level of feature properties, not per layer
+    // Max of 27 allows for businesses open past midnight (25=01:00, 26=02:00, 27=03:00)
+    appCtx.state.filters.feature.properties![filterKey] = {
+      globalMin: 0,
+      globalMax: 27,
+      rangeMin: values[0],
+      rangeMax: values[1],
+      openKey,
+      closeKey,
+      type: 'openingHours'
     };
     appCtx.zoomToAllVisibleFeatures();
   }
@@ -462,10 +558,69 @@ export function getFeatureIdsForProperties(appCtx: AppCtx): Id[] {
 
   const filteredIds = featureList
     .filter((feature: Feature | FeatureFromCollection) => {
+      // Check global opening hours filters first (not layer-specific)
+      const globalFilters = appCtx.state.filters.feature.properties || {};
+      const openingHoursFilters = ['weekdayHours', 'weekendHours'];
+
+      for (const filterKey of openingHoursFilters) {
+        const filterValue = globalFilters[filterKey];
+
+        if (
+          filterValue &&
+          typeof filterValue === 'object' &&
+          filterValue !== null &&
+          'type' in filterValue &&
+          filterValue.type === 'openingHours'
+        ) {
+          const { rangeMin, rangeMax, openKey, closeKey, globalMin, globalMax } =
+            filterValue;
+
+          // If at extremes, no filtering
+          if (rangeMin === globalMin && rangeMax === globalMax) {
+            continue;
+          }
+
+          // Find the opening and closing time properties by key
+          const openProp = feature.properties.find((fp: FeatureProperty) => {
+            const prop = appCtx.cache.property.get(fp.propertyId);
+            return prop?.key === openKey;
+          });
+          const closeProp = feature.properties.find((fp: FeatureProperty) => {
+            const prop = appCtx.cache.property.get(fp.propertyId);
+            return prop?.key === closeKey;
+          });
+
+          // If feature doesn't have these properties, it fails this filter
+          if (!openProp || !closeProp) {
+            return false;
+          }
+
+          let featureOpen = Number(openProp.value);
+          let featureClose = Number(closeProp.value);
+
+          // If values are invalid, exclude the feature
+          if (isNaN(featureOpen) || isNaN(featureClose)) {
+            return false;
+          }
+
+          // Handle businesses that close after midnight (close < open)
+          // Convert to extended hours format (e.g., 2 AM becomes 26)
+          if (featureClose < featureOpen) {
+            featureClose += 24;
+          }
+
+          // Check for overlap: feature's window overlaps with search window
+          // Overlap exists if: featureOpen < rangeMax AND featureClose > rangeMin
+          if (!(featureOpen < rangeMax && featureClose > rangeMin)) {
+            return false;
+          }
+        }
+      }
+
       // Get filters specific to this feature's layer
       const layerFilters = appCtx.state.filters.feature.properties?.[feature.layerId];
 
-      // If no filters for this layer, feature passes
+      // If no filters for this layer, feature passes (but already checked global filters above)
       if (!layerFilters || Object.keys(layerFilters).length === 0) {
         return true;
       }

@@ -13,11 +13,17 @@ type Props = {
 
 let { layerId, appCtx, properties }: Props = $props();
 
+// Exclude opening hours properties from the display
+const openingHoursKeys = ['weekDayOpen', 'weekDayClose', 'weekEndOpen', 'weekEndClose'];
+const filteredProperties = $derived(
+  properties.filter((p) => !openingHoursKeys.includes(p.key))
+);
+
 let displayText = $derived(
   displaySelectedFilters(
     appCtx,
     appCtx.state.filters.feature.properties?.[layerId],
-    properties
+    filteredProperties
   )
 );
 </script>

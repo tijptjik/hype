@@ -594,7 +594,10 @@ export type ResourceFilterState = {
   text?: string;
   properties?: Record<
     Id,
-    string[] | RangeFilterValue | Record<Id, Record<Id, string[] | RangeFilterValue>>
+    | string[]
+    | RangeFilterValue
+    | OpeningHoursFilterValue
+    | Record<Id, Record<Id, string[] | RangeFilterValue | OpeningHoursFilterValue>>
   >;
 };
 
@@ -1108,6 +1111,12 @@ export type RangeFilterValue = {
   globalMax: number;
   rangeMin: number;
   rangeMax: number;
+};
+
+export type OpeningHoursFilterValue = RangeFilterValue & {
+  type: 'openingHours';
+  openKey: string;
+  closeKey: string;
 };
 
 /* ----------------- */

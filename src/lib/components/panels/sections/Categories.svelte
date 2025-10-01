@@ -28,26 +28,41 @@ let { ...panelProps }: PanelProps = $props();
 
 {#await getGroupedClassifierProperties(appCtx) then newLayerCategories}
   {#each newLayerCategories as { hierarchy, properties }, index (hierarchy.layerId)}
-    <CategorySection
-      title={m.filters__categories()}
-      icon="/flowchart.svg"
-      iconVerticalPaddingClass="pt-2"
-      iconColorClass="text-blue-500"
-      isOpen={index === 0}
-      collapsedContent={SelectedCategories}
-      {properties}
-      {hierarchy}>
-      <div class="space-y-2">
-        {#each properties as property (property.id)}
-          {@const layerId = hierarchy.layerId}
-          {#if property.component === 'RangeField'}
-            <RangeFilter {property} {layerId} defaultOpen={property.key === 'grade'} />
-          {:else}
-            <CategoryFilter {property} {layerId} />
-          {/if}
-        {/each}
-      </div>
-    </CategorySection>
+    {@const openingHoursKeys = [
+      'weekDayOpen',
+      'weekDayClose',
+      'weekEndOpen',
+      'weekEndClose'
+    ]}
+    {@const filteredProperties = properties.filter(
+      (p) => !openingHoursKeys.includes(p.key)
+    )}
+    {#if filteredProperties.length > 0}
+      <CategorySection
+        title={m.filters__categories()}
+        icon="/flowchart.svg"
+        iconVerticalPaddingClass="pt-2"
+        iconColorClass="text-blue-500"
+        isOpen={index === 0}
+        collapsedContent={SelectedCategories}
+        properties={filteredProperties}
+        {hierarchy}
+        {appCtx}>
+        <div class="space-y-2">
+          {#each filteredProperties as property (property.id)}
+            {@const layerId = hierarchy.layerId}
+            {#if property.component === 'RangeField'}
+              <RangeFilter
+                {property}
+                {layerId}
+                defaultOpen={property.key === 'grade'} />
+            {:else}
+              <CategoryFilter {property} {layerId} />
+            {/if}
+          {/each}
+        </div>
+      </CategorySection>
+    {/if}
   {/each}
 {/await}
 <div class="flex-grow-1 h-[84px] w-full flex-shrink-0"></div>
