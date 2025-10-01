@@ -35,6 +35,19 @@ const {
   onclick,
   selectedClass = 'bg-yellow-400'
 }: FilteredLayerProps = $props();
+
+// Get layer color if this layer is selected
+const colorIndex = $derived(
+  isSelected ? appCtx.state.layerColors.get(layer.id) : undefined
+);
+const layerColor = $derived(
+  colorIndex !== undefined ? appCtx.getLayerColor(layer.id) : null
+);
+const pipStyle = $derived(
+  layerColor
+    ? `background-color: ${layerColor.base}; box-shadow: 0 0 8px ${layerColor.base}80;`
+    : ''
+);
 </script>
 
 <div
@@ -49,13 +62,16 @@ const {
       e.stopPropagation();
       e.preventDefault();
       // Find the nearest section ancestor and focus its input
-      const section = e.currentTarget.closest('section');
-      const input = section?.querySelector('input');
-      if (input) {
-        input.focus();
-      } else {
-        const button = section?.querySelector('button');
-        button?.focus();
+      const target = e.currentTarget;
+      if (target && target instanceof Element) {
+        const section = target.closest('section');
+        const input = section?.querySelector('input');
+        if (input) {
+          input.focus();
+        } else {
+          const button = section?.querySelector('button');
+          button?.focus();
+        }
       }
     }
   }}
@@ -63,11 +79,10 @@ const {
   {#if hierarchy.organisation && hierarchy.project}
     <div class="flex -translate-x-5 flex-row items-center gap-3">
       <div
-        class="h-2 w-2 rounded-full group-hover:bg-base-content/30 group-focus-visible:bg-base-content/30 {isSelected
-          ? selectedClass
-          : ''} {isSelected
-          ? 'group-hover:bg-secondary/75 group-focus-visible:bg-secondary/75'
-          : ''}">
+        class="h-2 w-2 rounded-full transition-all duration-200 {isSelected
+          ? ''
+          : 'group-hover:bg-base-content/30 group-focus-visible:bg-base-content/30'}"
+        style={isSelected ? pipStyle : ''}>
       </div>
       <div class="flex flex-col items-start gap-0">
         <ResourceHierarchyPath {hierarchy} />
@@ -79,11 +94,10 @@ const {
   {:else}
     <div class="flex -translate-x-5 flex-row items-center gap-3">
       <div
-        class="h-2 w-2 rounded-full group-hover:bg-base-content/30 group-focus-visible:bg-base-content/30 {isSelected
-          ? selectedClass
-          : ''} {isSelected
-          ? 'group-hover:bg-secondary/75 group-focus-visible:bg-secondary/75'
-          : ''}">
+        class="h-2 w-2 rounded-full transition-all duration-200 {isSelected
+          ? ''
+          : 'group-hover:bg-base-content/30 group-focus-visible:bg-base-content/30'}"
+        style={isSelected ? pipStyle : ''}>
       </div>
       <p class="font-light">{getI18n(layer, 'name', appCtx.getUserPreferences())}</p>
     </div>

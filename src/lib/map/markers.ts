@@ -4,9 +4,9 @@ import { AppCtx } from '$lib/context/app.svelte';
 import '$lib/styles/map.css';
 
 // Function to create SVG marker element with fade-in animation
-export function createMarkerElement(): HTMLDivElement {
+export function createMarkerElement(colorIndex?: number): HTMLDivElement {
   const container = document.createElement('div');
-  container.className = 'marker-container marker-fade-in';
+  container.className = `marker-container marker-fade-in${colorIndex !== undefined ? ` marker-layer-${colorIndex}` : ''}`;
   container.dataset.type = 'marker';
 
   const innerContainer = document.createElement('div');
@@ -71,25 +71,43 @@ export function updateMarkers(
   features.forEach((feature) => {
     if (feature.geometry?.type === 'Point') {
       const [lng, lat] = feature.geometry.coordinates;
+      // Get layer color index for this feature
+      const colorIndex = appCtx.state.layerColors.get(feature.layerId);
+
       // Check if marker DOM element already exists on the map
       const mapContainer = appCtx.map.getContainer();
       const existingMarkerElement = mapContainer.querySelector(
         `[data-feature-id="${feature.id}"]`
       );
+
       if (existingMarkerElement) {
+        // Update existing marker's color class
+        // Remove all existing layer color classes
+        for (let i = 0; i < 10; i++) {
+          existingMarkerElement.classList.remove(`marker-layer-${i}`);
+        }
+        // Add new color class if we have a color index
+        if (colorIndex !== undefined) {
+          existingMarkerElement.classList.add(`marker-layer-${colorIndex}`);
+        }
         return;
       }
+
       // If marker exists in state but not in DOM, remove it from state
       const existingMarker = appCtx.state.markers.get(feature.id);
       if (existingMarker) {
         appCtx.state.markers.delete(feature.id);
       }
-      // Create new marker
-      const el = createMarkerElement();
+
+      // Create new marker with layer color class
+      const el = createMarkerElement(colorIndex);
       // Add data attributes to all elements in the marker
       const addDataToElements = (element: Element) => {
         element.setAttribute('data-type', 'marker');
         element.setAttribute('data-feature-id', feature.id as string);
+        if (feature.layerId) {
+          element.setAttribute('data-layer-id', feature.layerId as string);
+        }
         Array.from(element.children).forEach(addDataToElements);
       };
       addDataToElements(el);

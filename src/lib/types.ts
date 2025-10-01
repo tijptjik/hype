@@ -1918,6 +1918,8 @@ export type AppContextState = {
     timestamp: number;
   } | null;
   distancesFromUser: Record<Id, number>;
+  // Layer color assignments -- Maps layer IDs to color indices
+  layerColors: Map<Id, number>;
   nav: {
     resourceType: NavigableResource | false;
     resourceRef: Id | false;

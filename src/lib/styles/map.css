@@ -161,11 +161,14 @@
 }
 
 .marker-circle {
-  fill: #cb37c1;
-  stroke: #ffdaf3cc;
+  fill: #03a8a0;
+  stroke: #7fd9d5cc;
   stroke-width: 1.5;
-  opacity: 0.7;
-  transition: opacity 0.2s ease-in-out;
+  opacity: 0.9;
+  transition:
+    opacity 0.2s ease-in-out,
+    fill 0.2s ease-in-out,
+    stroke 0.2s ease-in-out;
 }
 
 .highlighted .marker-circle {
@@ -233,7 +236,99 @@
 }
 
 .marker-dot {
-  fill: #cb37c1;
+  fill: #ffffff;
+  transition: fill 0.2s ease-in-out;
+}
+
+/* Layer color classes */
+/* 0: Cyan */
+.marker-layer-0 .marker-circle {
+  fill: #03a8a0;
+  stroke: #7fd9d5cc;
+}
+.marker-layer-0 .marker-dot {
+  fill: #ffffff;
+}
+
+/* 1: Green */
+.marker-layer-1 .marker-circle {
+  fill: #039c4b;
+  stroke: #7fd9a5cc;
+}
+.marker-layer-1 .marker-dot {
+  fill: #ffffff;
+}
+
+/* 2: Chartreuse */
+.marker-layer-2 .marker-circle {
+  fill: #66d313;
+  stroke: #b3e873cc;
+}
+.marker-layer-2 .marker-dot {
+  fill: #ffffff;
+}
+
+/* 3: Yellow */
+.marker-layer-3 .marker-circle {
+  fill: #fedf17;
+  stroke: #fff4b3cc;
+}
+.marker-layer-3 .marker-dot {
+  fill: #ffffff;
+}
+
+/* 4: Magenta */
+.marker-layer-4 .marker-circle {
+  fill: #ff0984;
+  stroke: #ff9dc9cc;
+}
+.marker-layer-4 .marker-dot {
+  fill: #ffffff;
+}
+
+/* 5: Navy */
+.marker-layer-5 .marker-circle {
+  fill: #21409a;
+  stroke: #9aafddcc;
+}
+.marker-layer-5 .marker-dot {
+  fill: #ffffff;
+}
+
+/* 6: Azure */
+.marker-layer-6 .marker-circle {
+  fill: #04adff;
+  stroke: #9ddeffcc;
+}
+.marker-layer-6 .marker-dot {
+  fill: #ffffff;
+}
+
+/* 7: Coral */
+.marker-layer-7 .marker-circle {
+  fill: #e48873;
+  stroke: #f4d0c7cc;
+}
+.marker-layer-7 .marker-dot {
+  fill: #ffffff;
+}
+
+/* 8: Orange */
+.marker-layer-8 .marker-circle {
+  fill: #f16623;
+  stroke: #f9bfa0cc;
+}
+.marker-layer-8 .marker-dot {
+  fill: #ffffff;
+}
+
+/* 9: Red */
+.marker-layer-9 .marker-circle {
+  fill: #f44546;
+  stroke: #fab8b8cc;
+}
+.marker-layer-9 .marker-dot {
+  fill: #ffffff;
 }
 
 /* Hover effects */

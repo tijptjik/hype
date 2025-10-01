@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { slide } from 'svelte/transition';
 // I18N
 import { m } from '$lib/i18n';
 // COMPONENTS
@@ -41,14 +43,16 @@ const shouldShowAnalysis = $derived(() => {
 </script>
 
 {#if shouldShowAnalysis()}
-  <Section
-    title="Analysis"
-    icon="/analysis.svg"
-    iconVerticalPaddingClass="pt-4"
-    iconColorClass="text-accent"
-    {...panelProps}>
-    <ResourceContainer>
-      <FilteredAnalysis title="Walking Distance" />
-    </ResourceContainer>
-  </Section>
+  <div transition:slide={{ duration: 300 }}>
+    <Section
+      title="Analysis"
+      icon="/analysis.svg"
+      iconVerticalPaddingClass="pt-4"
+      iconColorClass="text-accent"
+      {...panelProps}>
+      <ResourceContainer>
+        <FilteredAnalysis title="Walking Distance" />
+      </ResourceContainer>
+    </Section>
+  </div>
 {/if}

@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { slide } from 'svelte/transition';
 // I18N
 import { m } from '$lib/i18n';
 // SERVICES
@@ -25,21 +27,23 @@ let { ...panelProps }: PanelProps = $props();
 
 {#await getGlobalOpeningHoursProperties(appCtx) then config}
   {#if config}
-    <Section
-      title={m.filters__opening_hours()}
-      icon="/openinghours.svg"
-      iconVerticalPaddingClass="pt-1"
-      iconColorClass="text-primary"
-      collapsedContent={EmptyCollapsed}
-      {...panelProps}>
-      <ResourceContainer>
-        {#if config.hasWeekday}
-          <OpeningHoursFilter type="weekday" defaultOpen={true} />
-        {/if}
-        {#if config.hasWeekend}
-          <OpeningHoursFilter type="weekend" defaultOpen={false} />
-        {/if}
-      </ResourceContainer>
-    </Section>
+    <div transition:slide={{ duration: 300 }}>
+      <Section
+        title={m.filters__opening_hours()}
+        icon="/openinghours.svg"
+        iconVerticalPaddingClass="pt-1"
+        iconColorClass="text-primary"
+        collapsedContent={EmptyCollapsed}
+        {...panelProps}>
+        <ResourceContainer>
+          {#if config.hasWeekday}
+            <OpeningHoursFilter type="weekday" defaultOpen={true} />
+          {/if}
+          {#if config.hasWeekend}
+            <OpeningHoursFilter type="weekend" defaultOpen={false} />
+          {/if}
+        </ResourceContainer>
+      </Section>
+    </div>
   {/if}
 {/await}

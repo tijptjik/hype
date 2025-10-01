@@ -326,3 +326,20 @@ export enum OmniCollection {
   neighbourhood = 'neighbourhood',
   feature = 'feature'
 }
+
+/* ----------------- */
+// LAYER COLORS
+/* -------- */
+
+export const LAYER_COLORS = [
+  { base: '#03a8a0', stroke: '#7fd9d5cc' }, // 0: Cyan
+  { base: '#039c4b', stroke: '#7fd9a5cc' }, // 1: Green
+  { base: '#66d313', stroke: '#b3e873cc' }, // 2: Chartreuse
+  { base: '#fedf17', stroke: '#fff4b3cc' }, // 3: Yellow
+  { base: '#ff0984', stroke: '#ff9dc9cc' }, // 4: Magenta
+  { base: '#21409a', stroke: '#9aafddcc' }, // 5: Navy
+  { base: '#04adff', stroke: '#9ddeffcc' }, // 6: Azure
+  { base: '#e48873', stroke: '#f4d0c7cc' }, // 7: Coral
+  { base: '#f16623', stroke: '#f9bfa0cc' }, // 8: Orange
+  { base: '#f44546', stroke: '#fab8b8cc' } // 9: Red
+] as const;

@@ -36,7 +36,8 @@ import {
   PanelRight,
   ResourcePath,
   ResourceRefKey,
-  NewFeatureMode
+  NewFeatureMode,
+  LAYER_COLORS
 } from '$lib/enums';
 // GUARDS
 import { isFeature, isTask } from '$lib/types';
@@ -182,6 +183,8 @@ export class AppCtx {
     // ENHANCEMENT: Implement distancesFromUser
     // Distances from user -- The distances from the user to the features
     distancesFromUser: {},
+    // Layer color assignments -- Maps layer IDs to color indices (0-11)
+    layerColors: new Map(),
     nav: {
       resourceType: false,
       resourceRef: false,
@@ -876,17 +879,7 @@ export class AppCtx {
       await this.refreshProperties();
       await this.refreshLayers();
     } else if (resource === FirstClassResource.layer) {
-      // Only refresh features if user is authenticated
-      if (this.user?.id) {
-        await this.refreshFeatures();
-        if (this.isAdmin()) {
-          await this.refreshTasks();
-        }
-      }
-      // Only refresh if we have a username in the profile context
-      if (this.state.panels.profile.ctx?.username) {
-        await this.refreshUserProfile();
-      }
+      await this.postLayerMutation();
     }
   };
 
@@ -1228,6 +1221,21 @@ export class AppCtx {
       if (!currentLayerIds.has(layerId)) {
         delete this.state.filters.feature.properties![layerId];
       }
+    });
+
+    // Manage layer color assignments based on activation order
+    // Remove colors for deactivated layers
+    const existingColorLayerIds = new Set(this.state.layerColors.keys());
+    existingColorLayerIds.forEach((layerId) => {
+      if (!currentLayerIds.has(layerId)) {
+        this.state.layerColors.delete(layerId);
+      }
+    });
+
+    // Assign colors to active layers based on their order in prisms.layer
+    this.state.prisms.layer.forEach((layerId, index) => {
+      const colorIndex = index % LAYER_COLORS.length;
+      this.state.layerColors.set(layerId, colorIndex);
     });
 
     if (isCascading) {
@@ -2997,6 +3005,13 @@ export class AppCtx {
   resetLayers = () => {
     this.state.prisms.layer = [];
     this.postLayerMutation();
+  };
+
+  // Get the color configuration for a layer
+  getLayerColor = (layerId: Id): { base: string; stroke: string } | null => {
+    const colorIndex = this.state.layerColors.get(layerId);
+    if (colorIndex === undefined) return null;
+    return LAYER_COLORS[colorIndex];
   };
 
   initialiseCategoricalPropertyFilters = (layerId: Id) => {

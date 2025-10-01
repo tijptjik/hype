@@ -66,14 +66,15 @@ even selecting a neighbourhood will not correctly affect the features shown on t
       handleToggleInfo(e);
     }} />
   <Info isOpen={isInfoOpen} />
-  <div class="flex flex-col">
+  <div class="flex flex-col transition-all duration-300">
     <Analysis {...panelProps} />
     <OpeningHours {...panelProps} />
-    <div class="flex-grow-1 flex max-h-[40vh] min-h-0 flex-shrink-0 flex-col">
+    <div
+      class="flex-grow-1 flex max-h-[40vh] min-h-0 flex-shrink-0 flex-col transition-all duration-300">
       <Neighbourhoods {...panelProps} />
     </div>
     <div
-      class="flex-grow-1 flex max-h-[calc(100vh-206px)] min-h-0 flex-shrink-0 flex-col">
+      class="flex-grow-1 flex max-h-[calc(100vh-206px)] min-h-0 flex-shrink-0 flex-col transition-all duration-300">
       <Categories {...panelProps} />
     </div>
   </div>
