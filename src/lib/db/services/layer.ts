@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, eq, SQL, inArray } from 'drizzle-orm';
+import { and, eq, SQL } from 'drizzle-orm';
 // FORMS
 import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
@@ -191,7 +191,7 @@ export const updateI18n = async (
 // ═══════════════════════
 
 /**
- * Create layer property associations
+ * Create layer property associations in batches to avoid SQL parameter limits
  */
 export const createLayerProperties = async (
   db: Database,
@@ -199,12 +199,22 @@ export const createLayerProperties = async (
   properties: LayerPropertyNew[]
 ) => {
   if (properties && properties.length > 0) {
-    await db.insert(layerProperty).values(
-      properties.map((prop) => ({
-        layerId,
-        ...prop
-      }))
-    );
+    const valuesToInsert = properties.map((prop) => ({
+      layerId,
+      ...prop
+    }));
+
+    // Calculate batch size based on number of parameters per record
+    // layerProperty has 4 fields: layerId, propertyId, isVisible, isUserContributed
+    const paramsPerRecord = 4;
+    const maxParams = 100;
+    const batchSize = Math.floor(maxParams / paramsPerRecord);
+
+    // Insert in batches
+    for (let i = 0; i < valuesToInsert.length; i += batchSize) {
+      const batch = valuesToInsert.slice(i, i + batchSize);
+      await db.insert(layerProperty).values(batch);
+    }
   }
 
   return await db.query.layerProperty.findMany({
@@ -297,22 +307,22 @@ export const upsertLayerProperties = async (
     }
   }
 
-  // 4. Perform database operations
-  // DB :: DELETE
-  if (toDelete.length > 0) {
+  // 4. Perform database operations individually to avoid SQL variable limits
+  // DB :: DELETE - one at a time to avoid too many SQL variables
+  for (const propertyId of toDelete) {
     await db
       .delete(layerProperty)
       .where(
         and(
           eq(layerProperty.layerId, layerId),
-          inArray(layerProperty.propertyId, toDelete)
+          eq(layerProperty.propertyId, propertyId)
         )
       );
   }
 
-  // DB :: INSERT
-  if (toInsert.length > 0) {
-    await db.insert(layerProperty).values(toInsert);
+  // DB :: INSERT - one at a time to avoid too many SQL variables
+  for (const insertOp of toInsert) {
+    await db.insert(layerProperty).values(insertOp);
   }
 
   // DB :: UPDATE
@@ -326,6 +336,46 @@ export const upsertLayerProperties = async (
           eq(layerProperty.propertyId, updateOp.propertyId)
         )
       );
+  }
+};
+
+/**
+ * Adds a single property to ALL layers in a project without affecting existing property associations.
+ * Use this when creating a new property that should be available on all layers.
+ */
+export const addPropertyToLayers = async (
+  db: Database,
+  projectId: string,
+  propertyId: string
+): Promise<void> => {
+  // 1. Fetch all Layer IDs for the given Project ID
+  const projectLayers = await db.query.layer.findMany({
+    where: eq(layer.projectId, projectId),
+    columns: {
+      id: true
+    }
+  });
+
+  if (projectLayers.length === 0) return;
+
+  // 2. For each layer, add the property link if it doesn't already exist
+  for (const l of projectLayers) {
+    // Check if link already exists
+    const existingLink = await db.query.layerProperty.findFirst({
+      where: and(
+        eq(layerProperty.layerId, l.id),
+        eq(layerProperty.propertyId, propertyId)
+      )
+    });
+
+    // Only insert if it doesn't exist
+    if (!existingLink) {
+      await db.insert(layerProperty).values({
+        layerId: l.id,
+        propertyId: propertyId,
+        isVisible: false // Default to not visible for new properties
+      });
+    }
   }
 };
 
@@ -473,14 +523,16 @@ export const toFormShape = async (
     i18n: transformI18nSafely(i18n, {}),
     properties: properties.map((prop) => ({
       ...prop,
-      property: {
-        ...prop.property,
-        i18n: transformI18nSafely(prop.property.i18n, {}),
-        values: prop.property.values.map((val) => ({
-          ...val,
-          i18n: transformI18nSafely(val.i18n, {})
-        }))
-      }
+      property: prop.property
+        ? {
+            ...prop.property,
+            i18n: transformI18nSafely(prop.property.i18n || [], {}),
+            values: (prop.property.values || []).map((val) => ({
+              ...val,
+              i18n: transformI18nSafely(val.i18n || [], {})
+            }))
+          }
+        : undefined
     }))
   };
 

@@ -49,8 +49,6 @@ let valueMatches = $state<ValueMatchData[]>([]);
 
 // Reactive effect to reload data when property changes
 $effect(() => {
-  console.log('ValueMatching: Property changed to:', property.key);
-
   // Reset loading state when property changes
   isLoading = true;
   valueMatches = [];
@@ -64,8 +62,6 @@ $effect(() => {
 
 async function loadExistingProperty() {
   try {
-    console.log('ValueMatching: Loading existing property for key:', property.key);
-
     // First try to find in cache
     let found = Array.from(appCtx.cache.property.values()).find(
       (p: Property) => p.key === property.key
@@ -73,16 +69,8 @@ async function loadExistingProperty() {
 
     if (found) {
       existingProperty = found;
-      console.log(
-        'ValueMatching: Found existing property in cache:',
-        found.id,
-        'with',
-        found.values?.length || 0,
-        'values'
-      );
     } else {
       // If not in cache, try to fetch from API
-      console.log('ValueMatching: Property not in cache, fetching from API...');
       try {
         const response = await fetch(
           `/api/properties?key=${encodeURIComponent(property.key)}`
@@ -95,13 +83,6 @@ async function loadExistingProperty() {
             // Add to cache for future use
             if (found) {
               appCtx.addToCache(FirstClassResource.property, found.id, found);
-              console.log(
-                'ValueMatching: Found existing property via API:',
-                found.id,
-                'with',
-                found.values?.length || 0,
-                'values'
-              );
             }
           } else {
             console.error('ValueMatching: Property not found in API:', property.key);
@@ -126,11 +107,8 @@ async function loadExistingProperty() {
 
 function analyzeValues() {
   if (!existingProperty) {
-    console.log('ValueMatching: No existing property to analyze');
     return;
   }
-
-  console.log('ValueMatching: Analyzing values for property:', existingProperty.key);
 
   const data = importCtx.getData();
   const headers = importCtx.getHeaders();
@@ -138,21 +116,10 @@ function analyzeValues() {
   // Get unique values from CSV for each locale
   const csvValues = new Map<Locale, Set<string>>();
 
-  console.log('ValueMatching: Property columns:', property.columns);
-  console.log('ValueMatching: CSV headers:', headers);
-
   property.columns.forEach((col) => {
-    console.log(
-      `ValueMatching: Processing column "${col.header}" with locale "${col.locale}"`
-    );
-
     // Handle both localized columns and locale="None" columns
     const locale = col.locale && col.locale !== 'None' ? (col.locale as Locale) : 'en'; // Default to 'en' for None
     const colIndex = headers.indexOf(col.header);
-
-    console.log(
-      `ValueMatching: Column "${col.header}" found at index ${colIndex}, using locale "${locale}"`
-    );
 
     if (colIndex !== -1) {
       if (!csvValues.has(locale)) {
@@ -163,12 +130,6 @@ function analyzeValues() {
         const cellValue = row[colIndex];
         if (cellValue && cellValue.trim()) {
           const trimmedValue = cellValue.trim();
-          if (rowIndex < 5) {
-            // Log first 5 values for debugging
-            console.log(
-              `ValueMatching: Row ${rowIndex}, adding value "${trimmedValue}" for locale "${locale}" (original locale: "${col.locale}")`
-            );
-          }
           csvValues.get(locale)!.add(trimmedValue);
         }
       });
@@ -180,12 +141,8 @@ function analyzeValues() {
   // Create match data for each unique value per locale
   const matches: ValueMatchData[] = [];
 
-  console.log('ValueMatching: CSV values by locale:', Array.from(csvValues.entries()));
-
   // Check if this is a ToggleField - if so, handle differently
   if (existingProperty.component === 'ToggleField') {
-    console.log('ValueMatching: Detected ToggleField, validating boolean values');
-
     // For ToggleFields, validate that all values are truthy/falsy
     let allValidBooleans = true;
     const invalidValues: string[] = [];
@@ -201,9 +158,6 @@ function analyzeValues() {
     });
 
     if (allValidBooleans) {
-      console.log(
-        'ValueMatching: All ToggleField values are valid booleans, auto-completing'
-      );
       // For ToggleFields, we don't need property value mappings since they're just boolean
       // Store empty mapping but mark as completed
       handleAccept();
@@ -219,58 +173,20 @@ function analyzeValues() {
   }
 
   csvValues.forEach((values, locale) => {
-    console.log(
-      `ValueMatching: Processing locale ${locale} with values:`,
-      Array.from(values)
-    );
-
     values.forEach((value) => {
-      console.log(`ValueMatching: Looking for value "${value}" in locale "${locale}"`);
-
       // Log all existing property values for debugging
       const allExistingI18n =
         existingProperty?.values?.flatMap((pv) => Object.values(pv.i18n || {})) || [];
 
-      console.log(
-        'ValueMatching: All existing i18n values:',
-        allExistingI18n.map((i18n) => ({
-          locale: i18n.locale,
-          value: i18n.value,
-          propertyValueId: i18n.propertyValueId
-        }))
-      );
-
       // Check if this value exists in the existing property values
       const baseLocale = locale.split(';')[0];
-      console.log(
-        `ValueMatching: Looking for value "${value}" in locale "${baseLocale}"`
-      );
-      console.log(
-        `ValueMatching: Available property values:`,
-        existingProperty?.values?.map((pv) => ({
-          id: pv.id,
-          i18n: Object.values(pv.i18n || {}).map((i18n) => ({
-            locale: i18n.locale,
-            value: i18n.value
-          }))
-        }))
-      );
-
       const existingValueI18n = existingProperty?.values
         ?.flatMap((pv) => Object.values(pv.i18n || {}))
         .find((i18n) => {
           const localeMatch = i18n.locale === baseLocale;
           const valueMatch = i18n.value === value;
-          console.log(
-            `ValueMatching: Comparing "${i18n.value}" (${i18n.locale}) with "${value}" (${baseLocale} from ${locale}) - locale match: ${localeMatch}, value match: ${valueMatch}`
-          );
           return localeMatch && valueMatch;
         });
-
-      console.log(
-        `ValueMatching: Found existing value for "${value}" in "${locale}":`,
-        existingValueI18n
-      );
 
       // Get all existing values for this locale as options
       const existingOptions =
@@ -292,10 +208,8 @@ function analyzeValues() {
 
   // Check if all values match perfectly - if so, auto-complete
   const allValuesMatch = matches.every((match) => match.exists);
-  console.log('ValueMatching: All values match perfectly?', allValuesMatch);
 
   if (allValuesMatch) {
-    console.log('ValueMatching: All values match perfectly, auto-completing');
     // Auto-proceed after a short delay to show the matches
     setTimeout(() => {
       handleAccept();
@@ -342,9 +256,6 @@ async function handleAccept() {
     }
   });
 
-  console.log('ValueMatching: Creating property value mapping:', propertyValueMapping);
-  console.log('ValueMatching: Resolved data:', resolvedData);
-
   // Store in enriched data
   const enrichedData = {
     propertyId: existingProperty?.id,
@@ -354,33 +265,177 @@ async function handleAccept() {
     ...(importCtx.getPropertyEnrichedData(property.key) || {})
   };
 
-  console.log(
-    `ValueMatching: Storing enriched data for property "${property.key}":`,
-    enrichedData
-  );
   importCtx.setPropertyEnrichedData(property.key, enrichedData);
 
   // Verify it was stored
   const storedData = importCtx.getPropertyEnrichedData(property.key);
-  console.log(`ValueMatching: Verified stored data for "${property.key}":`, storedData);
 
   // Also check the full reconciliation state
   const reconciliation = importCtx.getPropertyReconciliation();
-  console.log(
-    'ValueMatching: Full reconciliation enrichedData size after storage:',
-    reconciliation.enrichedData.size
-  );
-  console.log(
-    'ValueMatching: All stored keys:',
-    Array.from(reconciliation.enrichedData.keys())
-  );
 
   if (hasNewValues()) {
-    // Need to create new property values - transition to creation flow
-    // This would need a separate component for creating new property values
-    console.log('Need to create new property values');
-    // For now, just proceed
-    onActionComplete();
+    // Need to create new property values by updating the property
+    try {
+      // Get new values that need to be created
+      const newValues = valueMatches.filter(
+        (match) => !match.exists && match.matchedPropertyValueId === undefined
+      );
+
+      // Auto-translate new values to all locales
+      const translatedValues = new Map<string, Record<Locale, string>>();
+
+      // Translate each new value to zh-hans and zh-hant
+      for (const match of newValues) {
+        const baseLocale = match.locale.split(';')[0] as Locale;
+        const valueTranslations: Record<Locale, string> = {
+          en: match.value,
+          'zh-hans': match.value,
+          'zh-hant': match.value
+        } as Record<Locale, string>;
+
+        // If source is English, translate to Chinese
+        if (baseLocale === 'en') {
+          try {
+            // Translate to zh-hant
+            const zhHantResponse = await fetch('/api/translation', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                source: 'en',
+                target: 'zh-hant',
+                texts: [match.value]
+              })
+            });
+            if (zhHantResponse.ok) {
+              const [zhHantValue] = await zhHantResponse.json();
+              valueTranslations['zh-hant'] = zhHantValue;
+            }
+
+            // Translate to zh-hans
+            const zhHansResponse = await fetch('/api/translation', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                source: 'en',
+                target: 'zh-hans',
+                texts: [match.value]
+              })
+            });
+            if (zhHansResponse.ok) {
+              const [zhHansValue] = await zhHansResponse.json();
+              valueTranslations['zh-hans'] = zhHansValue;
+            }
+          } catch (error) {
+            console.error('ValueMatching: Translation error:', error);
+            // Continue with English value as fallback
+          }
+        }
+
+        translatedValues.set(match.value, valueTranslations);
+      }
+
+      // Create property value records for the new values with translations
+      const newPropertyValues = newValues.map((match, index) => {
+        const valueId = crypto.randomUUID();
+        const baseLocale = match.locale.split(';')[0] as Locale;
+        const translations = translatedValues.get(match.value) || {
+          en: match.value,
+          'zh-hans': match.value,
+          'zh-hant': match.value
+        };
+
+        return {
+          id: valueId,
+          propertyId: existingProperty!.id,
+          rank: (existingProperty!.values?.length || 0) + index,
+          i18n: {
+            en: {
+              propertyValueId: valueId,
+              locale: 'en' as Locale,
+              value: translations['en'] || match.value,
+              valueGen: baseLocale !== 'en'
+            },
+            'zh-hant': {
+              propertyValueId: valueId,
+              locale: 'zh-hant' as Locale,
+              value: translations['zh-hant'] || match.value,
+              valueGen: baseLocale === 'en' && translations['zh-hant'] !== match.value
+            },
+            'zh-hans': {
+              propertyValueId: valueId,
+              locale: 'zh-hans' as Locale,
+              value: translations['zh-hans'] || match.value,
+              valueGen: baseLocale === 'en' && translations['zh-hans'] !== match.value
+            }
+          }
+        };
+      });
+
+      // Merge with existing property values
+      const updatedProperty = {
+        ...existingProperty!,
+        values: [...(existingProperty!.values || []), ...newPropertyValues]
+      };
+
+      // PUT the updated property
+      const response = await fetch(`/api/properties/${existingProperty!.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedProperty)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('ValueMatching: Failed to update property:', errorText);
+        throw new Error(`Failed to update property: ${response.statusText}`);
+      }
+
+      const updatedPropertyData: Property = await response.json();
+
+      // Update cache
+      appCtx.addToCache(
+        FirstClassResource.property,
+        updatedPropertyData.id,
+        updatedPropertyData
+      );
+
+      // Update the resolved data with the new property value IDs
+      const updatedResolvedData: Record<string, Id | undefined> = { ...resolvedData };
+      const updatedPropertyValueMapping: Record<string, string> = {
+        ...propertyValueMapping
+      };
+
+      newValues.forEach((match) => {
+        // Find the newly created property value ID
+        const baseLocale = match.locale.split(';')[0] as Locale;
+        const newPropertyValue = updatedPropertyData.values?.find((pv) => {
+          const i18nValue = pv.i18n?.[baseLocale];
+          return i18nValue && i18nValue.value === match.value;
+        });
+
+        if (newPropertyValue) {
+          const key = `${match.locale}:${match.value}`;
+          updatedResolvedData[key] = newPropertyValue.id;
+          updatedPropertyValueMapping[match.value] = newPropertyValue.id;
+        }
+      });
+
+      // Store the updated enriched data
+      const enrichedData = {
+        propertyId: existingProperty?.id,
+        propertyValueMapping: updatedPropertyValueMapping,
+        resolvedData: updatedResolvedData,
+        ...(importCtx.getPropertyEnrichedData(property.key) || {})
+      };
+
+      importCtx.setPropertyEnrichedData(property.key, enrichedData);
+
+      onActionComplete();
+    } catch (error) {
+      console.error('ValueMatching: Error creating new property values:', error);
+      // Still proceed but log the error
+      onActionComplete();
+    }
   } else {
     // All values matched, proceed to next step
     onActionComplete();

@@ -356,18 +356,40 @@ export const upsertProjectProperties = async (
     }
   });
 
-  const existingPropsMap = new Map(existingProperties.map((p) => [p.id, p]));
+  // Match by both ID and key to handle imports where properties have new IDs but existing keys
+  const existingPropsById = new Map(existingProperties.map((p) => [p.id, p]));
+  const existingPropsByKey = new Map(existingProperties.map((p) => [p.key, p]));
   const incomingPropsMap = new Map(
     properties.filter((p) => (p as Property).id).map((p) => [(p as Property).id, p])
   );
+  const incomingKeySet = new Set(properties.map((p) => p.key));
 
-  const propsToDelete = existingProperties.filter((ep) => !incomingPropsMap.has(ep.id));
-  const propsToCreate = properties.filter(
-    (p) => !(p as Property).id || !existingPropsMap.has((p as Property).id)
+  const propsToDelete = existingProperties.filter(
+    (ep) => !incomingPropsMap.has(ep.id) && !incomingKeySet.has(ep.key)
   );
-  const propsToUpdate = properties.filter(
-    (p) => (p as Property).id && existingPropsMap.has((p as Property).id)
-  ) as Property[];
+  const propsToCreate = properties.filter((p) => {
+    const hasId = !!(p as Property).id;
+    const existsById = hasId && existingPropsById.has((p as Property).id);
+    const existsByKey = existingPropsByKey.has(p.key);
+    // Only create if doesn't exist by ID AND doesn't exist by key
+    return !existsById && !existsByKey;
+  });
+  const propsToUpdate = properties
+    .filter((p) => {
+      const hasId = !!(p as Property).id;
+      const existsById = hasId && existingPropsById.has((p as Property).id);
+      const existsByKey = existingPropsByKey.has(p.key);
+      // Update if exists by ID OR exists by key
+      return existsById || existsByKey;
+    })
+    .map((p) => {
+      // If matched by key but has different ID, use the existing property's ID
+      const existingByKey = existingPropsByKey.get(p.key);
+      if (existingByKey && existingByKey.id !== (p as Property).id) {
+        return { ...p, id: existingByKey.id } as Property;
+      }
+      return p as Property;
+    });
 
   // Delete
   if (propsToDelete.length > 0) {
@@ -502,7 +524,139 @@ export const createPropertiesWithRelated = async (
   propertiesData: PropertyNew[],
   projectId: string
 ): Promise<Property[]> => {
-  return upsertProjectProperties(db, propertiesData, projectId);
+  const properties = await upsertProjectProperties(db, propertiesData, projectId);
+  // Also ensure that the properties are available on all the existing layers of the project
+  syncLayerProperties(db, projectId, properties);
+  return properties;
+};
+
+/**
+ * Updates a single property without affecting other properties in the project.
+ * Use this for updating individual properties (e.g., adding new values).
+ */
+export const updateSingleProperty = async (
+  db: Database,
+  propertyData: Property
+): Promise<Property> => {
+  const { i18n: i18nData, values: valuesData, ...basePropData } = propertyData;
+  const parsedBase = PropertyUpdate.parse(basePropData);
+
+  // Update base property
+  const updatedBaseProp = await updateBaseProperty(
+    db,
+    parsedBase as InferInsertModel<typeof property>,
+    propertyData.id!
+  );
+
+  // Update i18n
+  const updatedTranslations = await updateI18n(
+    db,
+    i18nData || ({} as Record<Locale, PropertyI18nPartial>),
+    propertyData.id!
+  );
+
+  // Sync property values
+  const syncedValues = valuesData
+    ? await syncPropertyValues(db, valuesData, propertyData.id!)
+    : [];
+
+  const updatedPropValuesWithTranslations: PropertyValue[] = [];
+  for (const syncedVal of syncedValues) {
+    const incomingValData = valuesData?.find((v) => v.id === syncedVal.id);
+
+    let valTranslations: PropertyValueI18nDB[] = [];
+    if (
+      incomingValData &&
+      incomingValData.i18n &&
+      Object.keys(incomingValData.i18n).length > 0
+    ) {
+      try {
+        valTranslations = await updatePropertyValueI18n(
+          db,
+          incomingValData.i18n,
+          syncedVal.id
+        );
+      } catch (e) {
+        valTranslations = await db.query.propertyValueI18n.findMany({
+          where: eq(propertyValueI18n.propertyValueId, syncedVal.id)
+        });
+      }
+    } else {
+      valTranslations = await db.query.propertyValueI18n.findMany({
+        where: eq(propertyValueI18n.propertyValueId, syncedVal.id)
+      });
+    }
+    updatedPropValuesWithTranslations.push({
+      ...syncedVal,
+      i18n: transformI18nSafely(valTranslations)
+    } as PropertyValue);
+  }
+
+  return {
+    ...updatedBaseProp,
+    i18n: transformI18nSafely(updatedTranslations),
+    values: updatedPropValuesWithTranslations
+  } as Property;
+};
+
+/**
+ * Creates a single new property without affecting existing properties.
+ * Use this for adding individual properties during import.
+ */
+export const createSingleProperty = async (
+  db: Database,
+  propertyData: PropertyNew
+): Promise<Property> => {
+  const {
+    i18n: i18nData,
+    values: valuesData,
+    ...basePropData
+  } = propertyData as PropertyNew;
+  const parsedBase = PropertyInsert.parse(basePropData);
+
+  // Create base property
+  const newBaseProp = await createBaseProperty(db, {
+    ...parsedBase,
+    projectId: propertyData.projectId
+  } as InferInsertModel<typeof property>);
+
+  // Create i18n
+  const newTranslations = await createI18n(
+    db,
+    i18nData as Record<Locale, PropertyI18nNew>,
+    newBaseProp.id
+  );
+
+  // Create property values if provided
+  const newPropValuesWithTranslations: PropertyValue[] = [];
+  if (valuesData) {
+    for (const valData of valuesData as PropertyValueNew[]) {
+      const { i18n: valI18nData, ...baseValData } = valData;
+      const newPropVal = await insert<typeof propertyValue>(db, propertyValue, {
+        ...baseValData,
+        propertyId: newBaseProp.id
+      } as PropertyValueNew);
+      const newValTranslations = await createPropertyValueI18n(
+        db,
+        valI18nData as Record<Locale, PropertyValueI18nNew>,
+        newPropVal.id
+      );
+      newPropValuesWithTranslations.push({
+        ...newPropVal,
+        i18n: transformI18nSafely(newValTranslations)
+      } as PropertyValue);
+    }
+  }
+
+  // Add property to all layers in the project
+  const { addPropertyToLayers } = await import('./layer');
+  await addPropertyToLayers(db, propertyData.projectId, newBaseProp.id);
+
+  return {
+    ...newBaseProp,
+    i18n: transformI18nSafely(newTranslations),
+    values: newPropValuesWithTranslations
+  } as Property;
 };
 
 /**
