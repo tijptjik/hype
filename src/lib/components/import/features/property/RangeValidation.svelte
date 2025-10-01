@@ -169,6 +169,7 @@ function validateValues() {
   // Get all numeric values from CSV
   const numericValues: number[] = [];
   const invalidValues: Array<{ value: string; numericValue: number }> = [];
+  const nonNumericValues: string[] = [];
 
   property.columns.forEach((col) => {
     const colIndex = headers.indexOf(col.header);
@@ -190,7 +191,7 @@ function validateValues() {
         if (!isNaN(numericValue)) {
           numericValues.push(numericValue);
 
-          // Check if value is within existing range
+          // Check if value is within existing range (only if range is defined)
           const min = existingProperty?.min;
           const max = existingProperty?.max;
 
@@ -200,18 +201,47 @@ function validateValues() {
           ) {
             invalidValues.push({ value, numericValue });
           }
+        } else {
+          // Track non-numeric values
+          nonNumericValues.push(value);
         }
       }
     });
   });
 
+  // If there are non-numeric values, this is invalid for a RangeField
+  if (nonNumericValues.length > 0) {
+    console.error(
+      'RangeValidation: Non-numeric values found in RangeField:',
+      nonNumericValues
+    );
+    validation = {
+      isValid: false,
+      outOfRangeValues: nonNumericValues
+        .slice(0, 10)
+        .map((v) => ({ value: v, numericValue: NaN })),
+      currentRange: {
+        min: existingProperty.min,
+        max: existingProperty.max
+      },
+      csvRange: {
+        min: numericValues.length > 0 ? Math.min(...numericValues) : 0,
+        max: numericValues.length > 0 ? Math.max(...numericValues) : 0
+      }
+    };
+    hasValidated = true;
+    return;
+  }
+
   // Calculate CSV data range
   const csvMin = Math.min(...numericValues);
   const csvMax = Math.max(...numericValues);
 
+  // All values are numeric - auto-proceed regardless of range constraints
+  // Range constraints are informational only, not blocking
   validation = {
-    isValid: invalidValues.length === 0,
-    outOfRangeValues: invalidValues,
+    isValid: true, // All numeric values = valid
+    outOfRangeValues: invalidValues, // Keep for informational purposes
     currentRange: {
       min: existingProperty.min,
       max: existingProperty.max
@@ -226,6 +256,7 @@ function validateValues() {
   console.log('RangeValidation: Validation completed:', {
     isValid: validation.isValid,
     invalidCount: invalidValues.length,
+    nonNumericCount: nonNumericValues.length,
     csvRange: { min: csvMin, max: csvMax },
     currentRange: { min: existingProperty.min, max: existingProperty.max }
   });

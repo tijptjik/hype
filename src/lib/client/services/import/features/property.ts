@@ -68,10 +68,11 @@ export function enrichFeaturesWithPropertyData(importCtx: ImportCtx): void {
   });
 
   // Debug: Check if enriched data contains property value mappings
+  // Note: Using `any` type for enriched data as it contains dynamic properties from different reconciliation sources
   console.log(
     '🔧 [PROPERTY_ENRICHMENT] CRITICAL DEBUG - Checking for property value mappings:'
   );
-  propertyReconciliation.enrichedData.forEach((data, key) => {
+  propertyReconciliation.enrichedData.forEach((data: any, key) => {
     console.log(`🔧 [PROPERTY_ENRICHMENT] Property "${key}" enriched data:`, {
       hasPropertyValueMapping: !!data.propertyValueMapping,
       propertyValueMapping: data.propertyValueMapping,
@@ -81,7 +82,7 @@ export function enrichFeaturesWithPropertyData(importCtx: ImportCtx): void {
   });
 
   // Log detailed reconciliation data
-  propertyReconciliation.enrichedData.forEach((data, key) => {
+  propertyReconciliation.enrichedData.forEach((data: any, key) => {
     console.log(`🔧 [PROPERTY_ENRICHMENT] Reconciliation data for "${key}":`, {
       propertyId: data.propertyId,
       propertyValueId: data.propertyValueId,
@@ -144,7 +145,10 @@ export function enrichFeaturesWithPropertyData(importCtx: ImportCtx): void {
         );
 
         // Get enriched data for this property key
-        const enrichedData = propertyReconciliation.enrichedData.get(propertyKey);
+        // Note: Cast to any as enriched data contains dynamic properties from various reconciliation sources
+        const enrichedData = propertyReconciliation.enrichedData.get(
+          propertyKey
+        ) as any;
 
         console.log(
           `🔧 [PROPERTY_ENRICHMENT] Row ${rowIndex + 1}: Enriched data lookup for "${propertyKey}":`,
@@ -164,6 +168,7 @@ export function enrichFeaturesWithPropertyData(importCtx: ImportCtx): void {
             {
               propertyId: enrichedData.propertyId,
               propertyValueId: enrichedData.propertyValueId,
+              propertyType: enrichedData.propertyType,
               hasResolvedValues: !!enrichedData.resolvedValues,
               resolvedValues: enrichedData.resolvedValues,
               translatedValues: enrichedData.translatedValues
@@ -183,13 +188,22 @@ export function enrichFeaturesWithPropertyData(importCtx: ImportCtx): void {
             );
           }
 
+          // Determine property type
+          const propertyType: FieldDiscriminator =
+            enrichedData.propertyType || 'classifier';
+          const isClassifier = propertyType === 'classifier';
+
+          console.log(
+            `🔧 [PROPERTY_ENRICHMENT] Row ${rowIndex + 1}: Property type for "${propertyKey}": ${propertyType}, isClassifier: ${isClassifier}`
+          );
+
           // Try to resolve propertyValueId from mapping
           let propertyValueId = enrichedData.propertyValueId || null;
           console.log(
             `🔧 [PROPERTY_ENRICHMENT] Row ${rowIndex + 1}: Direct propertyValueId for "${propertyKey}": ${propertyValueId}`
           );
 
-          // Try different possible data structures for property value mapping
+          // For classifiers, we MUST find a propertyValueId from the mapping
           if (!propertyValueId) {
             let mappingSource = null;
             let mappingData = null;
@@ -201,13 +215,13 @@ export function enrichFeaturesWithPropertyData(importCtx: ImportCtx): void {
               propertyValueId = mappingData[propertyValue] || null;
             }
             // Check propertyValueMapping (alternate structure)
-            else if (enrichedData.propertyValueMapping) {
+            if (!propertyValueId && enrichedData.propertyValueMapping) {
               mappingSource = 'propertyValueMapping';
               mappingData = enrichedData.propertyValueMapping;
               propertyValueId = mappingData[propertyValue] || null;
             }
             // Check resolvedData (another alternate structure)
-            else if (enrichedData.resolvedData) {
+            if (!propertyValueId && enrichedData.resolvedData) {
               mappingSource = 'resolvedData';
               mappingData = enrichedData.resolvedData;
               propertyValueId = mappingData[propertyValue] || null;
@@ -225,17 +239,33 @@ export function enrichFeaturesWithPropertyData(importCtx: ImportCtx): void {
             );
           }
 
+          // Handle based on property type and whether we found a propertyValueId
           if (propertyValueId) {
             // Has propertyValueId - store the reference, skip the value
             enriched.properties[propertyKey].propertyValueId = propertyValueId;
             console.log(
-              `🔧 [PROPERTY_ENRICHMENT] Row ${rowIndex + 1}: ✅ Set propertyValueId ${propertyValueId} for property "${propertyKey}" (skipping value)`
+              `🔧 [PROPERTY_ENRICHMENT] Row ${rowIndex + 1}: ✅ Set propertyValueId ${propertyValueId} for property "${propertyKey}"`
             );
+          } else if (isClassifier) {
+            // Classifier MUST have propertyValueId - this is an error state
+            console.error(
+              `🔧 [PROPERTY_ENRICHMENT] Row ${rowIndex + 1}: ❌ CRITICAL ERROR: Classifier property "${propertyKey}" has no propertyValueId for value "${propertyValue}". ` +
+                `This should have been created during reconciliation. Available mappings:`,
+              {
+                resolvedValues: enrichedData.resolvedValues,
+                propertyValueMapping: enrichedData.propertyValueMapping,
+                resolvedData: enrichedData.resolvedData
+              }
+            );
+            // Store value as fallback to avoid data loss, but this indicates a bug
+            enriched.properties[propertyKey].value = propertyValue;
+            enriched.properties[propertyKey]._error =
+              'Missing propertyValueId for classifier field';
           } else {
-            // No propertyValueId - store the direct value
+            // Non-classifier - store the direct value (this is correct)
             enriched.properties[propertyKey].value = propertyValue;
             console.log(
-              `🔧 [PROPERTY_ENRICHMENT] Row ${rowIndex + 1}: ⚠️ Set direct value "${propertyValue}" for property "${propertyKey}" (no propertyValueId found)`
+              `🔧 [PROPERTY_ENRICHMENT] Row ${rowIndex + 1}: ✅ Set direct value "${propertyValue}" for ${propertyType} property "${propertyKey}"`
             );
           }
 

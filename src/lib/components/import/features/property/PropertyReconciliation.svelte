@@ -344,9 +344,31 @@ function processNextProperty() {
       action = 'freeform-creation';
     }
   } else if (scenarios.scenario3.includes(currentKey)) {
-    action = 'value-matching';
+    // Check if existing property is a RangeField
+    const existingProperty = importCtx
+      .getFetchedProperties()
+      .find((p) => p.key === currentKey);
+    if (existingProperty?.component === 'RangeField') {
+      console.log(
+        `PropertyReconciliation: Property "${currentKey}" is a RangeField, routing to range-validation`
+      );
+      action = 'range-validation';
+    } else {
+      action = 'value-matching';
+    }
   } else if (scenarios.scenario4.includes(currentKey)) {
-    action = 'value-matching';
+    // Check if existing property is a RangeField
+    const existingProperty = importCtx
+      .getFetchedProperties()
+      .find((p) => p.key === currentKey);
+    if (existingProperty?.component === 'RangeField') {
+      console.log(
+        `PropertyReconciliation: Property "${currentKey}" is a RangeField, routing to range-validation`
+      );
+      action = 'range-validation';
+    } else {
+      action = 'value-matching';
+    }
   } else if (
     scenarios.scenario1.includes(currentKey) ||
     scenarios.scenario2.includes(currentKey)
