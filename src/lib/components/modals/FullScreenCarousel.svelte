@@ -1,6 +1,6 @@
 <script lang="ts">
 // GESTURES
-import { tap, swipe } from 'svelte-gestures';
+import { useTap, useSwipe } from 'svelte-gestures';
 // I18N
 // NAVIGATION
 import { addParamToUrl, removeParamFromUrl } from '$lib/navigation';
@@ -67,6 +67,21 @@ let container: HTMLDivElement;
 
 // UI STATE
 let isAttributionVisible = $state(false);
+
+// GESTURE CONFIGURATIONS
+const swipeConfig = useSwipe(handleSwipe, () => ({
+  timeframe: 300,
+  minSwipeDistance: 60,
+  touchAction: 'manipulation'
+}));
+const tapConfig = useTap(handleTap, () => ({
+  timeframe: 300,
+  touchAction: 'manipulation'
+}));
+
+// EXTRACT ACTIONS
+const swipeAction = swipeConfig.swipe;
+const tapAction = tapConfig.tap;
 
 function handleKeydown(event: KeyboardEvent) {
   // Only handle events if the modal is actually open and feature exists
@@ -181,13 +196,9 @@ function handleSwipe(e: SwipeCustomEvent) {
         {#if images.length > 0}
           <div
             class="absolute inset-0 z-30"
-            use:swipe={() => ({
-              timeframe: 300,
-              minSwipeDistance: 60,
-              touchAction: 'manipulation'
-            })}
+            use:swipeAction
             onswipe={handleSwipe}
-            use:tap={() => ({ timeframe: 300, touchAction: 'manipulation' })}
+            use:tapAction
             ontap={handleTap}
             onclick={(e) => e.stopPropagation()}>
           </div>

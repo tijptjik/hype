@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { swipe } from 'svelte-gestures';
+import { useSwipe } from 'svelte-gestures';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 import { getOmniCtx } from '$lib/context/omni.svelte';
@@ -36,6 +36,16 @@ let canNavigateNext = $derived(() => {
   const totalItems = appCtx.state.active.collection?.items.length || 0;
   return currentIndex < totalItems - 1;
 });
+
+// GESTURE CONFIGURATION
+const swipeConfig = useSwipe(handleSwipe, () => ({
+  timeframe: 300,
+  minSwipeDistance: 60,
+  touchAction: 'pan-y'
+}));
+
+// EXTRACT ACTION
+const swipeAction = swipeConfig.swipe;
 
 // Swipe gesture handler
 function handleSwipe(e: SwipeCustomEvent) {
@@ -73,7 +83,7 @@ function handleContainerScrollEnd() {
   <div
     bind:this={viewport}
     class="h-full overflow-y-auto overflow-x-visible overscroll-contain"
-    use:swipe={() => ({ timeframe: 300, minSwipeDistance: 60, touchAction: 'pan-y' })}
+    use:swipeAction
     onswipe={handleSwipe}
     onscrollend={handleContainerScrollEnd}>
     <div

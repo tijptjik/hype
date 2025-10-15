@@ -1,6 +1,6 @@
 <script lang="ts">
 // GESTURES
-import { tap, swipe } from 'svelte-gestures';
+import { useTap, useSwipe } from 'svelte-gestures';
 // CONTEXT
 import { getImageCtx } from '$lib/context/image.svelte';
 // NAVIGATION
@@ -29,6 +29,20 @@ let isStaged = $derived(currentImage && imageCtx.isImageStaged(currentImage));
 let container: HTMLDivElement;
 
 // STATE : LOCAL - simplified since PhotoFrame handles transitions
+
+// GESTURE CONFIGURATIONS
+const swipeConfig = useSwipe(handleSwipe, () => ({
+  timeframe: 300,
+  touchAction: 'manipulation'
+}));
+const tapConfig = useTap(handleTap, () => ({
+  timeframe: 300,
+  touchAction: 'manipulation'
+}));
+
+// EXTRACT ACTIONS
+const swipeAction = swipeConfig.swipe;
+const tapAction = tapConfig.tap;
 
 // Navigation handlers - much simpler now
 function handlePrevious(e: MouseEvent | SwipeCustomEvent) {
@@ -123,9 +137,9 @@ function handleSwipe(e: SwipeCustomEvent) {
   <div
     id="photo-carousel"
     class="z-5 absolute inset-0 focus:border-0 focus:outline-none focus:ring-0 focus-visible:border-0 focus-visible:outline-none focus-visible:ring-0"
-    use:swipe={() => ({ timeframe: 300, touchAction: 'manipulation' })}
+    use:swipeAction
     onswipe={handleSwipe}
-    use:tap={() => ({ timeframe: 300, touchAction: 'manipulation' })}
+    use:tapAction
     ontap={handleTap}
     role="button"
     tabindex="0"
