@@ -5,7 +5,7 @@ import { customSession, anonymous, username } from 'better-auth/plugins';
 // CONFIG
 import { authConfig } from './auth/config';
 // DB SCHEMA
-import * as schema from '$lib/db/schema/index';
+import type * as schema from '$lib/db/schema/index';
 // TYPES
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import type {
@@ -15,20 +15,62 @@ import type {
   UserExperimental,
   Locale
 } from '$lib/types';
+import type { user as userSchema } from '$lib/db/schema/user';
 
-// Create auth instance with the D1 database and environment variables
-export const createAuth = (
+// ═══════════════════════════════════════════════════════════════
+// CACHE: AUTH INSTANCES BY BASE URL
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Cache for auth instances keyed by base URL.
+ * This allows us to support multiple domains with a single better-auth setup.
+ */
+const authInstances = new Map<string, Auth>();
+
+/**
+ * Extract the base URL from request headers.
+ * Uses x-forwarded-proto and x-forwarded-host headers if available (from reverse proxy),
+ * otherwise falls back to development defaults.
+ */
+export function getBaseUrlFromRequestHeaders(headers: Headers): string {
+  const proto =
+    headers.get('x-forwarded-proto') ?? (import.meta.env.DEV ? 'http' : 'https');
+  const host = headers.get('x-forwarded-host') ?? headers.get('host');
+
+  if (!host) {
+    throw new Error('Cannot determine host from request headers');
+  }
+
+  return `${proto}://${host}`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FACTORY: CREATE AUTH INSTANCE
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Create a single auth instance with the D1 database, environment variables, and a specific base URL.
+ * This function is called internally by getAuthForRequest.
+ *
+ * @param db - The Drizzle D1 database instance
+ * @param env - Environment variables containing auth secrets and OAuth credentials
+ * @param baseURL - The base URL for this auth instance (e.g., https://example.com)
+ */
+function createAuthInstance(
   db: DrizzleD1Database<typeof schema>,
   env: {
     AUTH_SECRET: string;
     AUTH_GOOGLE_ID: string;
     AUTH_GOOGLE_SECRET: string;
     SUPERADMIN_USERID: string;
-  }
-) => {
+  },
+  baseURL: string
+) {
   return betterAuth({
     // COMMON CONFIG
     ...authConfig,
+    // BASE URL (dynamic per domain)
+    baseURL,
     // ENV
     secret: env.AUTH_SECRET,
     // DB
@@ -41,7 +83,8 @@ export const createAuth = (
         create: {
           before: async (user) => {
             // Generate username if not provided
-            if (!(user as any).username) {
+            const dbUser = user as Partial<typeof userSchema.$inferSelect>;
+            if (!dbUser.username) {
               const { generateUsernameFromId } = await import('$lib/utils/username');
               const username = generateUsernameFromId(user.id);
               return {
@@ -88,7 +131,7 @@ export const createAuth = (
       anonymous({
         disableDeleteAnonymousUser: true,
         generateName: () => 'Anonymous',
-        onLinkAccount: async ({ anonymousUser, newUser }) => {
+        onLinkAccount: async ({ anonymousUser }) => {
           // Mark the user as no longer anonymous when linking accounts
           const { user } = await import('$lib/db/schema/user');
           const { eq } = await import('drizzle-orm');
@@ -115,7 +158,8 @@ export const createAuth = (
         let experimental: UserExperimental;
 
         try {
-          preferences = JSON.parse((user as any).preferences);
+          const dbUser = user as typeof userSchema.$inferSelect;
+          preferences = JSON.parse(dbUser.preferences);
         } catch {
           preferences = {
             fallbackLocales: [],
@@ -126,7 +170,8 @@ export const createAuth = (
         }
 
         try {
-          experimental = JSON.parse((user as any).experimental);
+          const dbUser = user as typeof userSchema.$inferSelect;
+          experimental = JSON.parse(dbUser.experimental);
         } catch {
           experimental = {
             contributorMode: false,
@@ -149,10 +194,48 @@ export const createAuth = (
       })
     ]
   });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FACTORY: GET AUTH FOR REQUEST (CACHED)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Get or create an auth instance for the current request.
+ * Auth instances are cached by base URL to support multiple domains.
+ *
+ * @param headers - The request headers to extract the base URL from
+ * @param db - The Drizzle D1 database instance
+ * @param env - Environment variables containing auth secrets and OAuth credentials
+ * @returns An auth instance configured for this request's domain
+ */
+export const getAuthForRequest = (
+  headers: Headers,
+  db: DrizzleD1Database<typeof schema>,
+  env: {
+    AUTH_SECRET: string;
+    AUTH_GOOGLE_ID: string;
+    AUTH_GOOGLE_SECRET: string;
+    SUPERADMIN_USERID: string;
+  }
+): Auth => {
+  const baseURL = getBaseUrlFromRequestHeaders(headers);
+
+  // Return cached instance if available
+  const cachedAuth = authInstances.get(baseURL);
+  if (cachedAuth) {
+    return cachedAuth;
+  }
+
+  // Create new instance for this base URL
+  const auth = createAuthInstance(db, env, baseURL);
+  authInstances.set(baseURL, auth);
+
+  return auth;
 };
 
 // Export types using Better Auth's inference
-export type Auth = ReturnType<typeof createAuth>;
+export type Auth = ReturnType<typeof createAuthInstance>;
 export type Session = Auth['$Infer']['Session'];
 export type SessionUser = Session['user'] & {
   locale: Locale;

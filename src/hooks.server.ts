@@ -9,7 +9,7 @@ import * as schema from '$lib/db/schema/index';
 import { getHubByCode, getHubByDomain } from '$lib/db/services/hub';
 // AUTH
 import { svelteKitHandler } from 'better-auth/svelte-kit';
-import { createAuth } from '$lib/auth';
+import { getAuthForRequest } from '$lib/auth';
 // SERVICES
 import { toResponseShape } from '$lib/api/services/hub';
 // TYPES
@@ -109,8 +109,8 @@ const handle_auth: Handle = async ({ event, resolve }) => {
       schema
     });
 
-    // AUTH
-    const auth = createAuth(db, {
+    // AUTH - Get auth instance for this request's base URL
+    const auth = getAuthForRequest(event.request.headers, db, {
       AUTH_SECRET: event.platform.env.AUTH_SECRET,
       AUTH_GOOGLE_ID: event.platform.env.AUTH_GOOGLE_ID,
       AUTH_GOOGLE_SECRET: event.platform.env.AUTH_GOOGLE_SECRET,
@@ -120,7 +120,7 @@ const handle_auth: Handle = async ({ event, resolve }) => {
     // SET LOCALS
     event.locals.auth = auth;
 
-    return svelteKitHandler({ event, resolve, auth });
+    return svelteKitHandler({ event, resolve, auth, building: false });
   } catch (error) {
     console.error('🔴 Auth setup error:', error);
     return resolve(event);
