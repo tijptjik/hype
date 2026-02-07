@@ -1,5 +1,5 @@
-PRAGMA foreign_keys = OFF;
 PRAGMA defer_foreign_keys = ON;
+PRAGMA foreign_keys = OFF;
 
 -- BEGIN TRANSACTION;
 
@@ -46,10 +46,10 @@ DROP TABLE IF EXISTS image;
 DROP TABLE IF EXISTS verification;
 
 -- Recreate d1_migrations table to ensure sqlite_sequence exists
--- CREATE TABLE IF NOT EXISTS d1_migrations( 
---   id INTEGER PRIMARY KEY AUTOINCREMENT, 
---   name TEXT UNIQUE, 
---   applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL 
+-- CREATE TABLE IF NOT EXISTS d1_migrations(
+--   id INTEGER PRIMARY KEY AUTOINCREMENT,
+--   name TEXT UNIQUE,
+--   applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 -- );
 
 -- Reset the sequence counter if sqlite_sequence exists
@@ -57,5 +57,5 @@ UPDATE sqlite_sequence SET seq = 0 WHERE name = 'd1_migrations' AND EXISTS (SELE
 
 -- COMMIT;
 
-PRAGMA defer_foreign_keys = OFF;
 PRAGMA foreign_keys = ON;
+PRAGMA defer_foreign_keys = OFF;

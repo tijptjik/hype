@@ -28,29 +28,29 @@ fi
 TABLES=(
     # Level 0: Independent tables
     "d1_migrations"
-    "hub" 
+    "hub"
     "user"
     "image"
     "verification"
-    
+
     # Level 1: Depends on user/hub
     "account"
     "session"
     "userActivity"
     "hubI18n"
     "organisation"
-    
+
     # Level 2: Depends on organisation
     "organisationI18n"
     "organisationRole"
     "project"
-    
+
     # Level 3: Depends on project
     "projectI18n"
     "projectRole"
     "property"
     "layer"
-    
+
     # Level 4: Depends on property/layer
     "propertyI18n"
     "propertyValue"
@@ -58,7 +58,7 @@ TABLES=(
     "layerProperty"
     "userLayer"
     "feature"
-    
+
     # Level 5: Depends on propertyValue/feature
     "propertyValueI18n"
     "featureI18n"
@@ -66,7 +66,7 @@ TABLES=(
     "featureProperty"
     "userFeature"
     "task"
-    
+
     # Level 6: Depends on featureProperty/task
     "featurePropertyI18n"
     "taskImage"
@@ -91,10 +91,10 @@ def split_sql_statements(content):
     in_single_quote = False
     in_double_quote = False
     i = 0
-    
+
     while i < len(content):
         char = content[i]
-        
+
         if char == "'" and not in_double_quote:
             if i + 1 < len(content) and content[i + 1] == "'":
                 # Escaped single quote
@@ -113,15 +113,15 @@ def split_sql_statements(content):
             current_statement = ""
             i += 1
             continue
-        
+
         current_statement += char
         i += 1
-    
+
     # Handle last statement if it doesn't end with semicolon
     stmt = current_statement.strip()
     if stmt and not stmt.startswith('PRAGMA defer_foreign_keys'):
         statements.append(stmt)
-    
+
     return statements
 
 # Read the input file
@@ -174,9 +174,10 @@ grep -v -E "^(CREATE TABLE|INSERT INTO|ALTER TABLE|CREATE INDEX|CREATE UNIQUE IN
 echo "Generating reordered output..."
 
 {
-    echo "PRAGMA defer_foreign_keys=TRUE;"
+    echo "PRAGMA defer_foreign_keys = ON;"
+    echo "PRAGMA foreign_keys = OFF;"
     echo ""
-    
+
     # Add any other initial statements (excluding creates, inserts, constraints)
     if [ -s "$TEMP_DIR/other.sql" ]; then
         echo "-- ═══════════════════════════════════════════════════════════════════════════════"
@@ -185,15 +186,15 @@ echo "Generating reordered output..."
         cat "$TEMP_DIR/other.sql"
         echo ""
     fi
-    
+
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo "-- TABLE STRUCTURES (DEPENDENCY ORDER)"
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo ""
-    
+
     # Track processed tables to avoid duplication
     declare -A processed_tables
-    
+
     # Level 0: Independent tables
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo "-- LEVEL 0: INDEPENDENT TABLES"
@@ -207,7 +208,7 @@ echo "Generating reordered output..."
             echo ""
         fi
     done
-    
+
     # Level 1: Depends on Level 0
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo "-- LEVEL 1: DEPENDS ON LEVEL 0"
@@ -221,7 +222,7 @@ echo "Generating reordered output..."
             echo ""
         fi
     done
-    
+
     # Level 2: Depends on Level 1
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo "-- LEVEL 2: DEPENDS ON LEVEL 1"
@@ -235,7 +236,7 @@ echo "Generating reordered output..."
             echo ""
         fi
     done
-    
+
     # Level 3: Depends on Level 2
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo "-- LEVEL 3: DEPENDS ON LEVEL 2"
@@ -249,7 +250,7 @@ echo "Generating reordered output..."
             echo ""
         fi
     done
-    
+
     # Level 4: Depends on Level 3
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo "-- LEVEL 4: DEPENDS ON LEVEL 3"
@@ -263,7 +264,7 @@ echo "Generating reordered output..."
             echo ""
         fi
     done
-    
+
     # Any remaining tables not in our predefined order
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo "-- REMAINING TABLES"
@@ -277,30 +278,29 @@ echo "Generating reordered output..."
             fi
         done < "$TEMP_DIR/creates.sql"
     fi
-    
+
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo "-- TABLE DATA (DEPENDENCY ORDER)"
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo ""
-    
+
     # Insert data in the same dependency order
     all_tables=("${level0_tables[@]}" "${level1_tables[@]}" "${level2_tables[@]}" "${level3_tables[@]}" "${level4_tables[@]}")
-    
+
     for table in "${all_tables[@]}"; do
         if grep -q "^$table:" "$TEMP_DIR/inserts.sql" 2>/dev/null; then
-            echo "-- $table data"
-            grep "^$table:" "$TEMP_DIR/inserts.sql" | cut -d: -f2-
-            echo ""
+            insert_stmts=$(grep "^$table:" "$TEMP_DIR/inserts.sql" | cut -d: -f2-)
+            printf "-- %s data\n%s\n\n" "$table" "$insert_stmts"
         fi
     done
-    
+
     # Insert data for any remaining tables
     if [ -s "$TEMP_DIR/inserts.sql" ]; then
         declare -A processed_inserts
         for table in "${all_tables[@]}"; do
             processed_inserts["$table"]=1
         done
-        
+
         while IFS=: read -r table_name insert_stmt; do
             if [[ -z "${processed_inserts[$table_name]}" ]]; then
                 if [[ -z "${processed_inserts[$table_name]}" ]]; then
@@ -311,7 +311,7 @@ echo "Generating reordered output..."
             fi
         done < "$TEMP_DIR/inserts.sql"
     fi
-    
+
     # Add constraints and indexes at the end
     if [ -s "$TEMP_DIR/constraints.sql" ]; then
         echo ""
@@ -320,11 +320,11 @@ echo "Generating reordered output..."
         echo "-- ═══════════════════════════════════════════════════════════════════════════════"
         cat "$TEMP_DIR/constraints.sql"
     fi
-    
+
 } > "$OUTPUT_FILE"
 
 # Cleanup
 rm -rf "$TEMP_DIR"
 
 echo "Reordering completed: $OUTPUT_FILE"
-echo "File size: $(du -h "$OUTPUT_FILE" | cut -f1)" 
+echo "File size: $(du -h "$OUTPUT_FILE" | cut -f1)"
