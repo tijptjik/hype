@@ -138,7 +138,7 @@
     "coordinate-parser": "^1.0.7",
     "daisyui": "4.12.24",
     "date-fns": "^4.1.0",
-    "drizzle-orm": "^0.44.7",
+    "drizzle-orm": "^0.45.1",
     "drizzle-zod": "^0.7.1",
     "maplibre-gl": "^5.6.2",
     "node-gyp": "^12.2.0",
