@@ -12,14 +12,14 @@ send_metrics = false
 # The account ID to use for this project.
 account_id = "a6eeace4b6d9f8e07ab307964e74d801"
 # A date in the form yyyy-mm-dd, which will be used to determine which version of the Workers runtime is used.
-compatibility_date = "2025-04-02"
+compatibility_date = "2026-02-06"
 # A list of flags that enable features from upcoming features of the Workers runtime
 compatibility_flags = ["nodejs_compat_v2"]
-# Enables use of *.workers.dev subdomain to deploy your Worker. 
+# Enables use of *.workers.dev subdomain to deploy your Worker.
 workers_dev = false
-#Enables use of Preview URLs to test your Worker. 
+#Enables use of Preview URLs to test your Worker.
 preview_urls = false
-# Whether Wrangler should keep variables configured in the dashboard on deploy. 
+# Whether Wrangler should keep variables configured in the dashboard on deploy.
 keep_vars = false
 
 
@@ -30,7 +30,7 @@ keep_vars = false
 [placement]
 mode = "smart"
 
-# Configures automatic observability settings for telemetry data emitted from your Worker. 
+# Configures automatic observability settings for telemetry data emitted from your Worker.
 [observability]
 enabled = true
 

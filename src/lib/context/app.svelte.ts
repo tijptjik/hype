@@ -2815,9 +2815,8 @@ export class AppCtx {
     if (!this.user) return;
 
     // Import validation and conversion functions
-    const { validateDisplayUsername, makeUrlSafeUsername } = await import(
-      '$lib/utils/username'
-    );
+    const { validateDisplayUsername, makeUrlSafeUsername } =
+      await import('$lib/utils/username');
 
     // Validate before proceeding
     if (!validateDisplayUsername(displayUsername)) {
