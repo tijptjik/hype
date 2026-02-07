@@ -115,8 +115,8 @@
   ],
   "dependencies": {
     "@emeraldpay/hashicon": "^0.5.2",
-    "@inlang/paraglide-js": "^2.2.0",
-    "@libsql/client": "0.15.10",
+    "@inlang/paraglide-js": "^2.10.0",
+    "@libsql/client": "0.17.0",
     "@mapbox/tilebelt": "^2.0.3",
     "@placemarkio/geo-viewport": "^1.0.2",
     "@steeze-ui/heroicons": "^2.4.2",
