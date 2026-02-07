@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { swipe } from 'svelte-gestures';
+import { useSwipe } from 'svelte-gestures';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 import { getOmniCtx } from '$lib/context/omni.svelte';
@@ -53,6 +53,14 @@ function handleSwipe(e: SwipeCustomEvent) {
   }
 }
 
+// GESTURE HOOKS
+const { swipe: swipeAttach, onswipe } = useSwipe(
+  handleSwipe,
+  () => ({ timeframe: 300, minSwipeDistance: 60, touchAction: 'pan-y' }),
+  undefined,
+  true
+);
+
 // Handle container scroll end and dispatch custom event
 function handleContainerScrollEnd() {
   // Dispatch custom event that bubbles up
@@ -73,8 +81,8 @@ function handleContainerScrollEnd() {
   <div
     bind:this={viewport}
     class="h-full overflow-y-auto overflow-x-visible overscroll-contain"
-    use:swipe={() => ({ timeframe: 300, minSwipeDistance: 60, touchAction: 'pan-y' })}
-    onswipe={handleSwipe}
+    {@attach swipeAttach}
+    {onswipe}
     onscrollend={handleContainerScrollEnd}>
     <div
       bind:this={contents}

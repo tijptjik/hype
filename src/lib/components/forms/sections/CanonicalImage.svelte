@@ -1,14 +1,14 @@
 <script lang="ts">
-// I18n
-import { m } from '$lib/i18n';
-// CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
+import { Photo } from '@steeze-ui/heroicons';
+import Icon from '$lib/components/common/Icon.svelte';
 // COMPONENTS
 import PhotoFrame from '$lib/components/common/PhotoFrame.svelte';
-import Icon from '$lib/components/common/Icon.svelte';
-import { Photo } from '@steeze-ui/heroicons';
+// CONTEXT
+import { getAdminCtx } from '$lib/context/admin.svelte';
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
+// I18n
+import { m } from '$lib/i18n';
 // TYPES
 import { getUrlForResource, navigateOnAdmin } from '$lib/navigation';
 import type { Feature, Image } from '$lib/types';

@@ -1,6 +1,6 @@
 <script lang="ts">
 // GESTURES
-import { tap, swipe } from 'svelte-gestures';
+import { useSwipe, useTap } from 'svelte-gestures';
 // I18N
 // NAVIGATION
 import { addParamToUrl, removeParamFromUrl } from '$lib/navigation';
@@ -160,6 +160,21 @@ function handleSwipe(e: SwipeCustomEvent) {
     handlePrevious(e);
   }
 }
+
+// GESTURE HOOKS
+const { swipe: swipeAttach, onswipe } = useSwipe(
+  handleSwipe,
+  () => ({ timeframe: 300, minSwipeDistance: 60, touchAction: 'manipulation' }),
+  undefined,
+  true
+);
+
+const { tap: tapAttach, ontap } = useTap(
+  handleTap,
+  () => ({ timeframe: 300, touchAction: 'manipulation' }),
+  undefined,
+  true
+);
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -181,14 +196,10 @@ function handleSwipe(e: SwipeCustomEvent) {
         {#if images.length > 0}
           <div
             class="absolute inset-0 z-30"
-            use:swipe={() => ({
-              timeframe: 300,
-              minSwipeDistance: 60,
-              touchAction: 'manipulation'
-            })}
-            onswipe={handleSwipe}
-            use:tap={() => ({ timeframe: 300, touchAction: 'manipulation' })}
-            ontap={handleTap}
+            {@attach swipeAttach}
+            {@attach tapAttach}
+            {onswipe}
+            {ontap}
             onclick={(e) => e.stopPropagation()}>
           </div>
         {/if}
