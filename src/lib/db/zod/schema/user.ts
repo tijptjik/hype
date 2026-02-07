@@ -1,10 +1,10 @@
 // ZOD
-import { z } from 'zod';
+import { z } from 'zod'
 // DRIZZLE
-import { createSelectSchema, createUpdateSchema } from 'drizzle-zod';
+import { createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
-import { user } from '$lib/db/schema/user';
-import { isSuperAdmin } from '$lib/client/services/auth';
+import { user } from '$lib/db/schema/user'
+import { isSuperAdmin } from '$lib/client/services/auth'
 // CONSTRAINTS
 // import { FeatureBase } from './feature';
 
@@ -24,36 +24,36 @@ const UserPreferencesSchema = z
       .object({
         isAdminMapCollapsed: z.boolean().optional(),
         isPrimaryPanelCollapsed: z.boolean().optional(),
-        isPrimaryPanelAutoHide: z.boolean().optional()
+        isPrimaryPanelAutoHide: z.boolean().optional(),
       })
-      .nullish()
+      .nullish(),
   })
-  .default({
+  .prefault({
     fallbackLocales: ['en'],
     allowMachineTranslation: false,
     preferFallbackInCurrentLocale: false,
     isTranslateButtonVisible: true,
-    admin: {}
-  });
+    admin: {},
+  })
 
 const UserExperimentalSchema = z
   .object({
     contributorMode: z.boolean().nullish(),
-    noLabelsMode: z.boolean().nullish()
+    noLabelsMode: z.boolean().nullish(),
   })
-  .default({
+  .prefault({
     contributorMode: false,
-    noLabelsMode: false
+    noLabelsMode: false,
   })
-  .nullish();
+  .nullish()
 
-export const UserBase = createSelectSchema(user);
+export const UserBase = createSelectSchema(user)
 export const UserBasic = UserBase.pick({
   id: true,
   name: true,
   image: true,
-  attribution: true
-} as const);
+  attribution: true,
+} as const)
 export const UserProfileAPI = UserBase.pick({
   id: true,
   name: true,
@@ -61,15 +61,15 @@ export const UserProfileAPI = UserBase.pick({
   displayUsername: true,
   image: true,
   attribution: true,
-  createdAt: true
+  createdAt: true,
 } as const).extend({
   contributedFeatures: z.record(z.string(), z.array(z.string())),
   contributedImages: z.record(z.string(), z.array(z.string())),
   reportedMissingCount: z.number(),
   newPhotoCount: z.number(),
   newFeatureCount: z.number(),
-  superAdmin: z.boolean().nullish()
-});
+  superAdmin: z.boolean().nullish(),
+})
 export const UserCurrent = UserBase.pick({
   id: true,
   name: true,
@@ -80,25 +80,25 @@ export const UserCurrent = UserBase.pick({
   locale: true,
   preferences: true,
   experimental: true,
-  isAnonymous: true
+  isAnonymous: true,
 } as const).extend({
   // Override JSON fields with proper types - transform strings to objects
-  preferences: z.string().transform((str) => {
+  preferences: z.string().transform(str => {
     try {
-      const parsed = JSON.parse(str);
-      return UserPreferencesSchema.parse(parsed);
+      const parsed = JSON.parse(str)
+      return UserPreferencesSchema.parse(parsed)
     } catch {
-      return UserPreferencesSchema.parse({});
+      return UserPreferencesSchema.parse({})
     }
   }),
-  experimental: z.string().transform((str) => {
+  experimental: z.string().transform(str => {
     try {
-      const parsed = JSON.parse(str);
-      return UserExperimentalSchema.parse(parsed);
+      const parsed = JSON.parse(str)
+      return UserExperimentalSchema.parse(parsed)
     } catch {
-      return UserExperimentalSchema.parse({});
+      return UserExperimentalSchema.parse({})
     }
-  })
-});
+  }),
+})
 
-export const UserUpdate = createUpdateSchema(user);
+export const UserUpdate = createUpdateSchema(user)
