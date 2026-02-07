@@ -37,7 +37,7 @@
   "json": {
     "parser": {
       "allowComments": false,
-      "allowTrailingCommas": true
+      "allowTrailingCommas": false
     },
     "formatter": {
       "enabled": true,
@@ -45,7 +45,7 @@
       "indentWidth": 2,
       "lineEnding": "lf",
       "lineWidth": 88,
-      "trailingCommas": "all",
+      "trailingCommas": "none",
       "bracketSpacing": true
     },
     "assist": {
