@@ -77,7 +77,7 @@ if [[ -f "$COUNTS_CACHE_FILE" ]]; then
 else
     echo "Creating table count cache..."
     echo "# Cached table counts" > "$COUNTS_CACHE_FILE"
-    
+
     for table in $BUSINESS_TABLES; do
         output=$(bunx wrangler@3.103.2 d1 execute $DB_NAME $WRANGLER_FLAGS --command="SELECT COUNT(*) FROM $table;" 2>&1)
         # Extract count from JSON format: "COUNT(*)": 295
@@ -116,22 +116,22 @@ def extract_column_order(create_table_sql):
     sql = re.sub(r'--.*', '', create_table_sql)
     sql = re.sub(r'/\*.*?\*/', '', sql, flags=re.DOTALL)
     sql = re.sub(r'\s+', ' ', sql).strip()
-    
+
     # Match CREATE TABLE statement
     match = re.match(r'CREATE TABLE(?:\s+IF NOT EXISTS)?\s+[`"]?(\w+)[`"]?\s*\((.*)\)', sql, re.IGNORECASE | re.DOTALL)
     if not match:
         return None, []
-    
+
     table_name = match.group(1)
     columns_part = match.group(2)
-    
+
     # Split by commas, but respect parentheses and quotes
     columns = []
     current_col = ""
     paren_level = 0
     in_quote = False
     quote_char = None
-    
+
     for char in columns_part:
         if char in ['"', "'", '`'] and not in_quote:
             in_quote = True
@@ -147,12 +147,12 @@ def extract_column_order(create_table_sql):
             columns.append(current_col.strip())
             current_col = ""
             continue
-        
+
         current_col += char
-    
+
     if current_col.strip():
         columns.append(current_col.strip())
-    
+
     # Extract column names (first word of each column definition)
     column_names = []
     for col_def in columns:
@@ -162,7 +162,7 @@ def extract_column_order(create_table_sql):
             col_name = re.match(r'[`"]?(\w+)[`"]?', col_def)
             if col_name:
                 column_names.append(col_name.group(1))
-    
+
     return table_name, column_names
 
 # Read the schema export file
@@ -254,14 +254,14 @@ import json
 with open(sys.argv[2], 'r') as f:
     table_columns = json.load(f)
 
-# Read the schema export file  
+# Read the schema export file
 with open(sys.argv[1], 'r', encoding='utf-8') as f:
     content = f.read()
 
 
 
 # Start with pragma to defer FK checks
-print("PRAGMA defer_foreign_keys=TRUE;")
+print("PRAGMA defer_foreign_keys=ON;")
 print("")
 
 # Process INSERT statements (may span multiple lines)
@@ -276,21 +276,21 @@ for i in range(1, len(parts), 2):
     if i + 1 < len(parts):
         table_name = parts[i]
         values_part = parts[i + 1]
-        
+
         # Find the end of the VALUES clause by counting parentheses
         # Need to be careful about strings and function calls
         paren_count = 1
         end_pos = 0
         j = 0
-        
+
         while j < len(values_part):
             char = values_part[j]
-            
+
             # Handle string literals
             if char in ["'", '"']:
                 string_char = char
                 j += 1  # Skip opening quote
-                
+
                 # Find the end of the string
                 while j < len(values_part):
                     if values_part[j] == string_char:
@@ -313,7 +313,7 @@ for i in range(1, len(parts), 2):
                 j += 1
             else:
                 j += 1
-        
+
         if end_pos > 0:
             values_content = values_part[:end_pos]
             insert_statements.append((table_name, values_content))
@@ -339,10 +339,10 @@ for table_name, values_content in matches:
     brace_level = 0
     bracket_level = 0
     paren_level = 0  # Track parentheses for functions like replace()
-    
+
     while i < len(values_content):
         char = values_content[i]
-        
+
         if not in_quote:
             if char in ['"', "'"]:
                 in_quote = True
@@ -405,13 +405,13 @@ for table_name, values_content in matches:
                 current_value += char
             else:
                 current_value += char
-        
+
         i += 1
-    
+
     # Add the last value
     if current_value.strip():
         values.append(current_value.strip())
-    
+
     if table_name and values:
         if table_name not in table_inserts:
             table_inserts[table_name] = []
@@ -430,7 +430,7 @@ print(f"-- DEBUG: Original featureI18n statements: {original_featureI18n}", file
 
 for table_name in table_inserts:
     print(f"-- DEBUG: {table_name}: {len(table_inserts[table_name])} records", file=sys.stderr)
-    
+
     # Special debugging for featureI18n
     if table_name == 'featureI18n':
         print(f"-- DEBUG: featureI18n detailed analysis:", file=sys.stderr)
@@ -444,8 +444,8 @@ for table_name in table_inserts:
 dependency_order = [
     'd1_migrations', 'hub', 'user', 'image', 'verification',
     'account', 'session', 'userActivity', 'hubI18n', 'organisation',
-    'organisationI18n', 'organisationRole', 'project', 'projectI18n', 
-    'projectRole', 'property', 'propertyI18n', 'propertyValue', 
+    'organisationI18n', 'organisationRole', 'project', 'projectI18n',
+    'projectRole', 'property', 'propertyI18n', 'propertyValue',
     'propertyValueI18n', 'layer', 'layerI18n', 'layerProperty',
     'feature', 'featureI18n', 'featureImage', 'featureProperty',
     'featurePropertyI18n', 'userFeature', 'userLayer', 'task', 'taskImage'
@@ -456,12 +456,12 @@ total_skipped = 0
 for table_name in dependency_order:
     if table_name == 'd1_migrations':
         continue  # Skip migration table
-        
+
     if table_name in table_inserts and table_name in table_columns:
         print(f"-- {table_name} data")
         columns = table_columns[table_name]
         column_list = '(' + ', '.join(f'"{col}"' for col in columns) + ')'
-        
+
         table_skipped = 0
         for row_idx, (values, raw_content) in enumerate(table_inserts[table_name]):
             if len(values) == len(columns):
@@ -475,7 +475,7 @@ for table_name in dependency_order:
                 print(f'-- Parsed values ({len(values)}): {values[:3]}...{values[-3:] if len(values) > 6 else values[3:]}', file=sys.stderr)
                 print(f'-- Raw values content (first 200 chars): {repr(raw_content[:200])}', file=sys.stderr)
                 print('-- ' + '='*80, file=sys.stderr)
-        
+
         if table_skipped > 0:
             print(f"-- DEBUG: {table_name} skipped {table_skipped} records", file=sys.stderr)
         print("")
@@ -487,7 +487,7 @@ for table_name in table_inserts:
         print(f"-- {table_name} data (remaining)")
         columns = table_columns[table_name]
         column_list = '(' + ', '.join(f'"{col}"' for col in columns) + ')'
-        
+
         for values, raw_content in table_inserts[table_name]:
             if len(values) == len(columns):
                 value_list = '(' + ', '.join(values) + ')'
@@ -521,7 +521,7 @@ echo
 echo "7️⃣ Step 7: Verify migration success with record count comparison..."
 
 # Count all tables individually after migration
-echo "Verifying table counts after migration..." 
+echo "Verifying table counts after migration..."
 echo "# Table counts AFTER migration" > "sql/cache/counts-after-migration-${MODE}.txt"
 for table in $BUSINESS_TABLES; do
             output=$(bunx wrangler@3.103.2 d1 execute $DB_NAME $WRANGLER_FLAGS --command="SELECT COUNT(*) FROM $table;" 2>&1)
@@ -574,7 +574,7 @@ for table in sorted(all_tables):
     after = after_counts.get(table, 0)
     diff = after - before
     total_diff += abs(diff)
-    
+
     if diff == 0:
         status = "✅ OK"
     elif diff > 0:
@@ -583,7 +583,7 @@ for table in sorted(all_tables):
     else:
         status = f"❌ -{abs(diff)}"
         issues.append(f"{table}: lost {abs(diff)} records")
-    
+
     print(f"{table:<24} | {before:>6} | {after:>6} | {diff:>+6} | {status}")
 
 print("-------------------------|--------|--------|--------|--------")
@@ -602,8 +602,8 @@ PYTHON_COMPARE_EOF
 
 echo
 echo "🎉 Smart FK migration completed successfully!"
-echo "   - Schema exported with column order: $SCHEMA_EXPORT_FILE"  
+echo "   - Schema exported with column order: $SCHEMA_EXPORT_FILE"
 echo "   - Column mappings saved: sql/cache/column-mappings-${MODE}.json"
 echo "   - Smart restore file: $RESTORE_FILE"
 echo "   - Record counts before: sql/cache/counts-before-migration-${MODE}.txt"
-echo "   - Record counts after: sql/cache/counts-after-migration-${MODE}.txt" 
+echo "   - Record counts after: sql/cache/counts-after-migration-${MODE}.txt"
