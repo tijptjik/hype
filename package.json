@@ -141,6 +141,7 @@
     "coordinate-parser": "^1.0.7",
     "daisyui": "4.12.24",
     "date-fns": "^4.1.0",
+    "date-holidays": "^3.26.1",
     "drizzle-orm": "^0.44.6",
     "drizzle-zod": "^0.7.1",
     "maplibre-gl": "^5.9.0",

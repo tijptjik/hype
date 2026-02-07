@@ -1,5 +1,4 @@
 import { relations } from 'drizzle-orm';
-
 // Import all table definitions
 import { user, userFeature, userLayer } from './user';
 import { hub, hubI18n } from './hub';
@@ -10,6 +9,14 @@ import { property, propertyI18n, propertyValue, propertyValueI18n } from './prop
 import { feature, featureI18n, featureProperty, featurePropertyI18n } from './feature';
 import { image, featureImage } from './image';
 import { task, taskImage } from './task';
+import {
+  schedule,
+  scheduleRule,
+  scheduleRuleI18n,
+  scheduleException,
+  scheduleExceptionI18n
+} from './schedule';
+import { leaderboard, leaderboardRanking } from './leaderboard';
 
 /* ============================================================================
  * TABLE RELATIONS
@@ -425,5 +432,96 @@ export const hubI18nRelations = relations(hubI18n, ({ one }) => ({
   hub: one(hub, {
     fields: [hubI18n.hubId],
     references: [hub.id]
+  })
+}));
+
+/**
+ * Schedule relations
+ * @remarks
+ * Links schedules to their rules, exceptions, and translations
+ */
+export const scheduleRelations = relations(schedule, ({ many }) => ({
+  rules: many(scheduleRule),
+  exceptions: many(scheduleException)
+}));
+
+/**
+ * Schedule rule relations
+ */
+export const scheduleRuleRelations = relations(scheduleRule, ({ one, many }) => ({
+  schedule: one(schedule, {
+    fields: [scheduleRule.scheduleId],
+    references: [schedule.id]
+  }),
+  i18n: many(scheduleRuleI18n)
+}));
+
+/**
+ * Schedule exception relations
+ */
+export const scheduleExceptionRelations = relations(
+  scheduleException,
+  ({ one, many }) => ({
+    schedule: one(schedule, {
+      fields: [scheduleException.scheduleId],
+      references: [schedule.id]
+    }),
+    i18n: many(scheduleExceptionI18n)
+  })
+);
+
+/**
+ * Schedule rule I18n relations
+ */
+export const scheduleRuleI18nRelations = relations(scheduleRuleI18n, ({ one }) => ({
+  scheduleRule: one(scheduleRule, {
+    fields: [scheduleRuleI18n.scheduleRuleId],
+    references: [scheduleRule.id]
+  })
+}));
+
+/**
+ * Schedule exception I18n relations
+ */
+export const scheduleExceptionI18nRelations = relations(
+  scheduleExceptionI18n,
+  ({ one }) => ({
+    scheduleException: one(scheduleException, {
+      fields: [scheduleExceptionI18n.scheduleExceptionId],
+      references: [scheduleException.id]
+    })
+  })
+);
+
+/**
+ * Leaderboard relations
+ */
+export const leaderboardRelations = relations(leaderboard, ({ one, many }) => ({
+  project: one(project, {
+    fields: [leaderboard.projectId],
+    references: [project.id]
+  }),
+  layer: one(layer, {
+    fields: [leaderboard.layerId],
+    references: [layer.id]
+  }),
+  property: one(property, {
+    fields: [leaderboard.propertyId],
+    references: [property.id]
+  }),
+  rankings: many(leaderboardRanking)
+}));
+
+/**
+ * Leaderboard Ranking relations
+ */
+export const leaderboardRankingRelations = relations(leaderboardRanking, ({ one }) => ({
+  leaderboard: one(leaderboard, {
+    fields: [leaderboardRanking.leaderboardId],
+    references: [leaderboard.id]
+  }),
+  user: one(user, {
+    fields: [leaderboardRanking.userId],
+    references: [user.id]
   })
 }));

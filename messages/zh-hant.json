@@ -626,5 +626,6 @@
   "translation_progress_message": "翻譯專題標題以確保完整的多語言覆蓋。",
   "start_translation": "開始翻譯",
   "continue_to_next_step": "繼續下一步",
-  "filters__analysis": "分析"
+  "filters__analysis": "分析",
+  "schedule__opening_hours": "營業時間"
 }

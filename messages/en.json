@@ -626,5 +626,6 @@
   "translation_progress_message": "Translating feature titles to ensure complete multilingual coverage.",
   "start_translation": "Start Translation",
   "continue_to_next_step": "Continue to Next Step",
-  "filters__analysis": "Analysis"
+  "filters__analysis": "Analysis",
+  "schedule__opening_hours": "Opening Hours"
 }
