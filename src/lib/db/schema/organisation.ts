@@ -1,12 +1,12 @@
-import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
+import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { sql } from 'drizzle-orm'
+import { nanoid } from 'nanoid'
 // SCHEMA
-import { image } from './image';
-import { user } from './user';
-import { hub } from './hub';
+import { image } from './image'
+import { user } from './user'
+import { hub } from './hub'
 // ENUM
-import { OrganisationRoleType, supportedLocales } from '../../enums';
+import { OrganisationRoleType, supportedLocales } from '../../enums'
 
 /* ============================================================================
  * ORGANIZATION MANAGEMENT
@@ -50,12 +50,12 @@ export const organisation = sqliteTable('organisation', {
   url: text('url'),
   imageId: text('imageId').references(() => image.id, {
     onDelete: 'set null',
-    onUpdate: 'cascade'
+    onUpdate: 'cascade',
   }),
   // Hub assignment
   hubId: text('hubId').references(() => hub.id, {
     onDelete: 'set null',
-    onUpdate: 'cascade'
+    onUpdate: 'cascade',
   }),
   // If true, organisation and all its resources are exclusive to the hub, and not served on core.
   isHubExclusive: integer('isHubExclusive', { mode: 'boolean' })
@@ -69,7 +69,7 @@ export const organisation = sqliteTable('organisation', {
   publishedAt: text('publishedAt'),
   publisherId: text('publisherId').references(() => user.id, {
     onDelete: 'set null',
-    onUpdate: 'cascade'
+    onUpdate: 'cascade',
   }),
   // False : Organisation may be shown in the Admin Panel
   // True : Organisation is considered deleted
@@ -80,8 +80,8 @@ export const organisation = sqliteTable('organisation', {
   modifiedAt: text('modifiedAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .$onUpdate(() => new Date().toISOString())
-    .notNull()
-});
+    .notNull(),
+})
 
 /**
  * Organization translations
@@ -97,7 +97,7 @@ export const organisationI18n = sqliteTable(
     // IETF BCP 47 language tag
     // https://www.rfc-editor.org/info/bcp47
     locale: text('locale', {
-      enum: supportedLocales as [string, ...string[]]
+      enum: supportedLocales as [string, ...string[]],
     }).notNull(),
     // Full Name in {locale}
     name: text('name').notNull(),
@@ -109,12 +109,10 @@ export const organisationI18n = sqliteTable(
     description: text('description'),
     descriptionGen: integer('descriptionGen', { mode: 'boolean' })
       .notNull()
-      .default(true)
+      .default(true),
   },
-  (table) => [
-    primaryKey({ columns: [table.organisationId, table.locale] })
-  ]
-);
+  table => [primaryKey({ columns: [table.organisationId, table.locale] })],
+)
 
 /**
  * Organization role assignments
@@ -131,12 +129,10 @@ export const organisationRole = sqliteTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     role: text('role', {
-      enum: Object.values(OrganisationRoleType) as [string, ...string[]]
+      enum: Object.values(OrganisationRoleType) as [string, ...string[]],
     })
       .notNull()
-      .default(OrganisationRoleType.member)
+      .default(OrganisationRoleType.member),
   },
-  (table) => [
-    primaryKey({ columns: [table.organisationId, table.userId] })
-  ]
-);
+  table => [primaryKey({ columns: [table.organisationId, table.userId] })],
+)

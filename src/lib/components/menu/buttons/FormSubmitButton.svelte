@@ -73,7 +73,7 @@ $effect(() => {
     document.removeEventListener('keydown', handleKeyDown);
   };
 });
-// @ts-ignore - TODO: Fix SuperForm issue
+// @ts-expect-error - TODO: Fix SuperForm issue
 let isDisabled = $derived(!isTainted($tainted) || isInvalid);
 </script>
 

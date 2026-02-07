@@ -1,4 +1,4 @@
-@import 'https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css';
+@import "https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css";
 
 /* ═══════════════════════════════════════════════════════════════════════════════
    MAP STYLES - TABLE OF CONTENTS
@@ -258,7 +258,7 @@
   width: 14px !important;
   height: 14px !important;
   border-radius: 50% !important;
-  content: '' !important;
+  content: "" !important;
   position: absolute !important;
   z-index: -1 !important;
 }
@@ -267,7 +267,7 @@
 .maplibregl-user-location-dot::after {
   border-radius: 50% !important;
   border: none !important;
-  content: '' !important;
+  content: "" !important;
   height: 20px !important;
   left: -2px !important;
   position: absolute !important;
@@ -331,7 +331,7 @@
 }
 
 .maplibregl-ctrl-compass .maplibregl-ctrl-icon::after {
-  content: '' !important;
+  content: "" !important;
   position: absolute !important;
   top: 0 !important;
   left: 0 !important;

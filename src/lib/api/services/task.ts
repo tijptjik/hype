@@ -1,29 +1,29 @@
 // DRIZZLE
-import { eq, inArray, SQL, sql } from 'drizzle-orm';
+import { eq, inArray, type SQL, sql } from 'drizzle-orm'
 // LIB
-import { isAdminRequest } from '../index';
+import { isAdminRequest } from '../index'
 // API
-import { applyQueryFilters } from '$lib/api';
+import { applyQueryFilters } from '$lib/api'
 // AUTH
 import {
   assertUserLoggedIn,
   assertAdminRequest,
   runAssertions,
   assertProjectMaintainerOrMemberOrSuperAdmin,
-  assertParamIdentifierEqualsFormIdentifier
-} from '$lib/auth/asserts';
+  assertParamIdentifierEqualsFormIdentifier,
+} from '$lib/auth/asserts'
 
 // DB
-import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
-import { getProjectIdforRoles, isSuperAdmin } from '$lib/client/services/auth';
+import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
+import { getProjectIdforRoles, isSuperAdmin } from '$lib/client/services/auth'
 // SCHEMA
-import { task, feature, layer } from '$lib/db/schema/index';
+import { task, feature, layer } from '$lib/db/schema/index'
 // DB
-import { applyPrismConstraints, transformI18nSafely } from '$lib/db';
+import { applyPrismConstraints, transformI18nSafely } from '$lib/db'
 // ZOD
-import { TaskAPI, TaskCollectionAPI } from '$lib/db/zod/schema/task';
+import { TaskAPI, TaskCollectionAPI } from '$lib/db/zod/schema/task'
 // ENUMS
-import { HierarchicalResource } from '$lib/enums';
+import { HierarchicalResource } from '$lib/enums'
 // TYPES
 import type {
   UserRoleDisco,
@@ -38,8 +38,8 @@ import type {
   TaskDBRaw,
   HubOpts,
   SessionUser,
-  Locale
-} from '$lib/types';
+  Locale,
+} from '$lib/types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -66,31 +66,31 @@ import type {
 export const taskCollectionWithRelations = {
   organisation: {
     with: {
-      i18n: true
-    }
+      i18n: true,
+    },
   },
   project: {
     with: {
-      i18n: true
-    }
+      i18n: true,
+    },
   },
   feature: {
     with: {
-      i18n: true
-    }
+      i18n: true,
+    },
   },
   images: {
     with: {
-      image: true
-    }
+      image: true,
+    },
   },
   contributor: {
-    columns: userColumnsWithPrivacyProtected
+    columns: userColumnsWithPrivacyProtected,
   },
   reviewer: {
-    columns: userColumnsWithPrivacyProtected
-  }
-};
+    columns: userColumnsWithPrivacyProtected,
+  },
+}
 
 export const taskEntityWithRelations = {
   ...taskCollectionWithRelations,
@@ -101,15 +101,15 @@ export const taskEntityWithRelations = {
         with: {
           propertyValue: {
             with: {
-              i18n: true
-            }
+              i18n: true,
+            },
           },
           property: {
             with: {
-              i18n: true
-            }
-          }
-        }
+              i18n: true,
+            },
+          },
+        },
       },
       layer: {
         with: {
@@ -119,16 +119,16 @@ export const taskEntityWithRelations = {
               i18n: true,
               organisation: {
                 with: {
-                  i18n: true
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-};
+                  i18n: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+}
 
 // ═══════════════════════
 // 2. QUERY CONTEXT
@@ -145,12 +145,12 @@ export const getTaskQueryContext = (
   request: Request,
   params: QueryParams,
   userRoles: UserRoleDisco[],
-  prisms?: Prisms
+  prisms?: Prisms,
 ) => {
   // SETUP : By default, only show non-archived tasks,
   // and disable isArchived filters from the query for non-superadmins.
-  let conditions: SQL<unknown>[] = [];
-  const excludeColumns = ['isArchived'];
+  let conditions: SQL<unknown>[] = []
+  const excludeColumns = ['isArchived']
 
   // NON-SUPERADMIN : Hide tasks which are archived
   if (!isSuperAdmin(user)) {
@@ -160,35 +160,35 @@ export const getTaskQueryContext = (
 
   // FILTER : Apply prism conditions for organisation, project filtering
   if (prisms && db) {
-    conditions.push(...applyPrismConstraints(db, HierarchicalResource.task, prisms));
+    conditions.push(...applyPrismConstraints(db, HierarchicalResource.task, prisms))
   }
 
   // PUBLIC : Tasks are admin-only resources, so public access is not allowed
   if (!isAdminRequest(request)) {
     // Tasks should only be accessible from admin interface
-    conditions.push(sql`false`); // Block all public access
+    conditions.push(sql`false`) // Block all public access
   } else if (!isSuperAdmin(user)) {
     // ADMIN : List tasks where the user has a role in the task's project
-    const projectIds = getProjectIdforRoles(userRoles);
+    const projectIds = getProjectIdforRoles(userRoles)
     if (projectIds.length > 0) {
-      conditions.push(inArray(task.projectId, projectIds as Id[]));
+      conditions.push(inArray(task.projectId, projectIds as Id[]))
     } else {
-      conditions.push(sql`false`); // No access if no project roles
+      conditions.push(sql`false`) // No access if no project roles
     }
   } else {
     // SUPERADMIN : See all tasks
     if (!(prisms && db)) {
-      conditions = []; // List all tasks without default filters
+      conditions = [] // List all tasks without default filters
     }
   }
 
   // Apply general query filters from params
   if (Object.keys(params).length > 0) {
-    applyQueryFilters(task, params, conditions);
+    applyQueryFilters(task, params, conditions)
   }
 
-  return { params, conditions, excludeColumns };
-};
+  return { params, conditions, excludeColumns }
+}
 
 /**
  * Get the query context for a single task.
@@ -199,32 +199,32 @@ export const getTaskEntityQueryContext = (
   user: SessionUser,
   request: Request,
   params: QueryParams,
-  userRoles: UserRoleDisco[]
+  userRoles: UserRoleDisco[],
 ) => {
-  const conditions: SQL<unknown>[] = [];
-  const excludeColumns = ['isArchived'];
+  const conditions: SQL<unknown>[] = []
+  const excludeColumns = ['isArchived']
 
   // PUBLIC : Tasks are admin-only resources
   if (!isAdminRequest(request)) {
-    conditions.push(sql`false`); // Block all public access
+    conditions.push(sql`false`) // Block all public access
   } else if (!isSuperAdmin(user)) {
     // ADMIN : Access tasks where user has project role (direct relationship)
-    const projectIds = getProjectIdforRoles(userRoles);
+    const projectIds = getProjectIdforRoles(userRoles)
     if (projectIds.length > 0) {
-      conditions.push(inArray(task.projectId, projectIds as Id[]));
+      conditions.push(inArray(task.projectId, projectIds as Id[]))
     } else {
-      conditions.push(sql`false`);
+      conditions.push(sql`false`)
     }
   }
   // SUPERADMIN : No additional restrictions
 
   // Apply general query filters from params
   if (Object.keys(params).length > 0) {
-    applyQueryFilters(task, params, conditions);
+    applyQueryFilters(task, params, conditions)
   }
 
-  return { params, conditions, excludeColumns };
-};
+  return { params, conditions, excludeColumns }
+}
 
 // ═══════════════════════
 // 3. ASSERTIONS
@@ -239,15 +239,13 @@ export const assertPermissionsToCreateTask = async (
   user: SessionUser,
   request: Request,
   data: TaskDBNew,
-  userRoles: UserRoleDisco[]
+  userRoles: UserRoleDisco[],
 ) => {
-  const commonAssertions = [
-    () => assertUserLoggedIn({ user } as any)
-  ];
+  const commonAssertions = [() => assertUserLoggedIn({ user } as any)]
 
-  const assertionError = runAssertions(...commonAssertions);
-  if (assertionError) return assertionError;
-};
+  const assertionError = runAssertions(...commonAssertions)
+  if (assertionError) return assertionError
+}
 
 /**
  * Asserts permissions to update a task.
@@ -260,36 +258,36 @@ export const assertPermissionsToUpdateTask = async (
   params: QueryParams,
   userRoles: UserRoleDisco[],
   refId: Id,
-  taskData?: TaskDB
+  taskData?: TaskDB,
 ) => {
   const commonAssertions = [
     () => assertUserLoggedIn(user as any),
     () => assertAdminRequest(request),
-    () => assertParamIdentifierEqualsFormIdentifier({ id: params.id }, refId, 'id')
-  ];
+    () => assertParamIdentifierEqualsFormIdentifier({ id: params.id }, refId, 'id'),
+  ]
 
   // Get project ID through feature hierarchy
-  let projectId: Id;
+  let projectId: Id
   if (taskData?.projectId) {
-    projectId = taskData.projectId;
+    projectId = taskData.projectId
   } else {
     // Fetch task first to get featureId, then get projectId
     const taskRecord = await db.query.task.findFirst({
       where: eq(task.id, params.id as Id),
-      columns: { projectId: true }
-    });
+      columns: { projectId: true },
+    })
     if (!taskRecord) {
-      throw new Error('Task not found');
+      throw new Error('Task not found')
     }
-    projectId = taskRecord.projectId;
+    projectId = taskRecord.projectId
   }
 
   const contextAssertion = () =>
-    assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId);
+    assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId)
 
-  const assertionError = runAssertions(...commonAssertions, contextAssertion);
-  if (assertionError) return assertionError;
-};
+  const assertionError = runAssertions(...commonAssertions, contextAssertion)
+  if (assertionError) return assertionError
+}
 
 /**
  * Asserts permissions to delete a task.
@@ -302,7 +300,7 @@ export const assertPermissionsToDeleteTask = async (
   params: QueryParams,
   userRoles: UserRoleDisco[],
   refId: Id,
-  taskData?: TaskDB
+  taskData?: TaskDB,
 ) => {
   return assertPermissionsToUpdateTask(
     db,
@@ -311,9 +309,9 @@ export const assertPermissionsToDeleteTask = async (
     params,
     userRoles,
     refId,
-    taskData
-  );
-};
+    taskData,
+  )
+}
 
 // ═══════════════════════
 // 4. UTILS :: RESPONSE SHAPING
@@ -325,7 +323,7 @@ export const assertPermissionsToDeleteTask = async (
  */
 export const toResponseShape = async (
   data: TaskDBRaw,
-  isCollection: boolean = false
+  isCollection: boolean = false,
 ): Promise<Task | TaskCollection> => {
   // Transform feature properties if they exist
   const transformedFeature = data.feature
@@ -333,21 +331,21 @@ export const toResponseShape = async (
         ...data.feature,
         i18n: transformI18nSafely(data.feature.i18n),
         properties:
-          data.feature.properties?.map((prop) => ({
+          data.feature.properties?.map(prop => ({
             ...prop,
             property: {
               ...prop.property,
-              i18n: transformI18nSafely(prop.property.i18n)
+              i18n: transformI18nSafely(prop.property.i18n),
             },
             propertyValue: prop.propertyValue
               ? {
                   ...prop.propertyValue,
-                  i18n: transformI18nSafely(prop.propertyValue.i18n)
+                  i18n: transformI18nSafely(prop.propertyValue.i18n),
                 }
-              : null
-          })) || []
+              : null,
+          })) || [],
       }
-    : null;
+    : null
 
   // Transform the complete data structure
   const transformedData = {
@@ -355,18 +353,18 @@ export const toResponseShape = async (
     organisation: data.organisation
       ? {
           ...data.organisation,
-          i18n: transformI18nSafely(data.organisation.i18n)
+          i18n: transformI18nSafely(data.organisation.i18n),
         }
       : null,
     project: data.project
       ? {
           ...data.project,
-          i18n: transformI18nSafely(data.project.i18n)
+          i18n: transformI18nSafely(data.project.i18n),
         }
       : null,
     feature: transformedFeature,
-    images: data.images?.filter((taskImage) => taskImage.image) || []
-  };
+    images: data.images?.filter(taskImage => taskImage.image) || [],
+  }
 
-  return (isCollection ? TaskCollectionAPI : TaskAPI).parse(transformedData);
-};
+  return (isCollection ? TaskCollectionAPI : TaskAPI).parse(transformedData)
+}

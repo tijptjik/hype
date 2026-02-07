@@ -38,7 +38,7 @@ async function handleTranslate(event: Event) {
     let sourceLocale: Locale = 'en';
 
     for (const locale of supportedLocales) {
-      // @ts-ignore - waiting for runes version of superform
+      // @ts-expect-error - waiting for runes version of superform
       const value = $form.i18n?.[locale as Locale]?.[fieldRoot];
       if (value) {
         sourceValue = value;

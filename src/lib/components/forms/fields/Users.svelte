@@ -35,7 +35,7 @@ let userForm: (OrganisationForm | ProjectForm)['form'] = $derived(
 );
 
 const updateUserJoinState = (userId: string, isChecked: boolean) => {
-  // @ts-ignore - Debugging purposes
+  // @ts-expect-error - Debugging purposes
   userForm.update(($form) => {
     const userRoles = [...($form[fieldRoot] || [])];
     const userIndex = userRoles.findIndex(
@@ -53,7 +53,7 @@ const updateUserJoinState = (userId: string, isChecked: boolean) => {
 
 const removeUser = async (e: Event, userId: string) => {
   e.preventDefault();
-  // @ts-ignore - Debugging purposes
+  // @ts-expect-error - Debugging purposes
   userForm.update(($form) => {
     const userRoles = [...($form[fieldRoot] || [])];
     const updatedUsers = userRoles.filter(

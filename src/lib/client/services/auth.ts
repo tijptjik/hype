@@ -1,7 +1,7 @@
-import { eq } from 'drizzle-orm';
-import { userLayer, layer } from '$lib/db/schema/index';
+import { eq } from 'drizzle-orm'
+import { userLayer, layer } from '$lib/db/schema/index'
 // TYPES
-import type { UserLayer, Layer, UserRoleDisco, SessionUser, Id } from '$lib/types';
+import type { UserLayer, Layer, UserRoleDisco, SessionUser, Id } from '$lib/types'
 
 /**
  * Fetches and constructs user layers from the database.
@@ -17,10 +17,7 @@ import type { UserLayer, Layer, UserRoleDisco, SessionUser, Id } from '$lib/type
  */
 export async function getUserLayers(db: any, userId: string): Promise<UserLayer[]> {
   // Fetch user layers
-  let userLayers = await db
-    .select()
-    .from(userLayer)
-    .where(eq(userLayer.userId, userId));
+  let userLayers = await db.select().from(userLayer).where(eq(userLayer.userId, userId))
 
   // If no layers exist, create default layer
   if (userLayers.length === 0) {
@@ -29,11 +26,11 @@ export async function getUserLayers(db: any, userId: string): Promise<UserLayer[
       .select()
       .from(layer)
       .where(eq(layer.isDefaultVisible, true))
-      .all()) as Layer[];
+      .all()) as Layer[]
 
     if (!defaultLayers) {
-      console.error('Default layers not found');
-      return [];
+      console.error('Default layers not found')
+      return []
     }
 
     for (const layer of defaultLayers) {
@@ -41,16 +38,16 @@ export async function getUserLayers(db: any, userId: string): Promise<UserLayer[
       const defaultUserLayer = {
         layerId: layer.id,
         userId: userId,
-        isVisibleOnLoad: true
-      };
-      await db.insert(userLayer).values(defaultUserLayer);
+        isVisibleOnLoad: true,
+      }
+      await db.insert(userLayer).values(defaultUserLayer)
     }
 
     // Return the newly created layer with the layer data
-    userLayers = await db.select().from(userLayer).where(eq(userLayer.userId, userId));
+    userLayers = await db.select().from(userLayer).where(eq(userLayer.userId, userId))
   }
 
-  return userLayers;
+  return userLayers
 }
 /**
  * Checks if the user has access to the control panel based on their roles.
@@ -66,30 +63,30 @@ export async function getUserLayers(db: any, userId: string): Promise<UserLayer[
  * If the session is null or the user has no roles, it returns false.
  */
 export function hasControlPanelAccess(user: SessionUser | null): boolean {
-  const permittedRoles = ['superadmin', 'owner', 'maintainer'];
+  const permittedRoles = ['superadmin', 'owner', 'maintainer']
   return (
     user?.roles?.some((role: UserRoleDisco) => permittedRoles.includes(role.role)) ||
     false
-  );
+  )
 }
 
 export function isSuperAdmin(user: SessionUser): boolean {
-  return user.superAdmin || false;
+  return user.superAdmin || false
 }
 
 export const getOrganisationIdforRoles = (userRoles: UserRoleDisco[]) => {
   return userRoles
     .map((role: UserRoleDisco) =>
-      role.type === 'organisation' ? role.organisationId : null
+      role.type === 'organisation' ? role.organisationId : null,
     )
-    .filter(Boolean);
-};
+    .filter(Boolean)
+}
 
 export const getProjectIdforRoles = (userRoles: UserRoleDisco[]) => {
   return userRoles
     .map((role: UserRoleDisco) => (role.type === 'project' ? role.projectId : null))
-    .filter(Boolean);
-};
+    .filter(Boolean)
+}
 
 // ═══════════════════════
 // 2.1 PERMISSIONS :: ORGANISATION
@@ -100,7 +97,7 @@ export const getProjectIdforRoles = (userRoles: UserRoleDisco[]) => {
  * Only superadmins can manage organisations
  */
 export function canManageOrganisations(user: SessionUser | null): boolean {
-  return user?.superAdmin ?? false;
+  return user?.superAdmin ?? false
 }
 
 /**
@@ -108,16 +105,16 @@ export function canManageOrganisations(user: SessionUser | null): boolean {
  */
 export function isOrganisationOwner(
   user: SessionUser | null,
-  organisationId: string
+  organisationId: string,
 ): boolean {
-  if (!user?.roles) return false;
+  if (!user?.roles) return false
 
   return user.roles.some(
     (role: UserRoleDisco) =>
       role.type === 'organisation' &&
       role.organisationId === organisationId &&
-      role.role === 'owner'
-  );
+      role.role === 'owner',
+  )
 }
 
 /**
@@ -126,11 +123,11 @@ export function isOrganisationOwner(
  */
 export function canUpdateOrganisation(
   user: SessionUser | null,
-  organisationId: string
+  organisationId: string,
 ): boolean {
-  if (!user) return false;
+  if (!user) return false
 
-  return canManageOrganisations(user) || isOrganisationOwner(user, organisationId);
+  return canManageOrganisations(user) || isOrganisationOwner(user, organisationId)
 }
 
 // ═══════════════════════
@@ -142,28 +139,28 @@ export function canUpdateOrganisation(
  */
 export function isProjectMaintainer(
   user: SessionUser | null,
-  projectId: string
+  projectId: string,
 ): boolean {
-  if (!user?.roles) return false;
+  if (!user?.roles) return false
 
   return user.roles.some(
     (role: UserRoleDisco) =>
       role.type === 'project' &&
       role.projectId === projectId &&
-      role.role === 'maintainer'
-  );
+      role.role === 'maintainer',
+  )
 }
 
 /**
  * Checks if the user is a member of a specific project
  */
 export function isProjectMember(user: SessionUser | null, projectId: string): boolean {
-  if (!user?.roles) return false;
+  if (!user?.roles) return false
 
   return user.roles.some(
     (role: UserRoleDisco) =>
-      role.type === 'project' && role.projectId === projectId && role.role === 'member'
-  );
+      role.type === 'project' && role.projectId === projectId && role.role === 'member',
+  )
 }
 
 /**
@@ -172,24 +169,24 @@ export function isProjectMember(user: SessionUser | null, projectId: string): bo
  */
 export function canCreateProjects(
   user: SessionUser | null,
-  organisationId?: Id
+  organisationId?: Id,
 ): boolean {
-  if (!user) return false;
+  if (!user) return false
 
   // SuperAdmin can always create projects
-  if (canManageOrganisations(user)) return true;
+  if (canManageOrganisations(user)) return true
 
   // If organisationId is provided, check if user is owner of that specific organisation
   if (organisationId) {
-    return isOrganisationOwner(user, organisationId);
+    return isOrganisationOwner(user, organisationId)
   }
 
   // If no organisationId provided, check if user is owner of any organisation
   return (
     user.roles?.some(
-      (role: UserRoleDisco) => role.type === 'organisation' && role.role === 'owner'
+      (role: UserRoleDisco) => role.type === 'organisation' && role.role === 'owner',
     ) ?? false
-  );
+  )
 }
 
 /**
@@ -199,15 +196,15 @@ export function canCreateProjects(
 export function canUpdateProject(
   user: SessionUser | null,
   projectId: string,
-  organisationId?: string
+  organisationId?: string,
 ): boolean {
-  if (!user) return false;
+  if (!user) return false
 
   return (
     user.superAdmin === true ||
     isProjectMaintainer(user, projectId) ||
     (organisationId ? isOrganisationOwner(user, organisationId) : false)
-  );
+  )
 }
 
 // ═══════════════════════
@@ -219,9 +216,9 @@ export function canUpdateProject(
  * Must be project maintainer or superadmin
  */
 export function canCreateLayers(user: SessionUser | null, projectId: string): boolean {
-  if (!user) return false;
+  if (!user) return false
 
-  return user.superAdmin === true || isProjectMaintainer(user, projectId);
+  return user.superAdmin === true || isProjectMaintainer(user, projectId)
 }
 
 /**
@@ -229,13 +226,13 @@ export function canCreateLayers(user: SessionUser | null, projectId: string): bo
  * Must be project maintainer, member, or superadmin
  */
 export function canUpdateLayer(user: SessionUser | null, projectId: string): boolean {
-  if (!user) return false;
+  if (!user) return false
 
   return (
     user.superAdmin === true ||
     isProjectMaintainer(user, projectId) ||
     isProjectMember(user, projectId)
-  );
+  )
 }
 
 // ═══════════════════════
@@ -248,15 +245,15 @@ export function canUpdateLayer(user: SessionUser | null, projectId: string): boo
  */
 export function canManageFeatures(
   user: SessionUser | null,
-  projectId: string
+  projectId: string,
 ): boolean {
-  if (!user) return false;
+  if (!user) return false
 
   return (
     user.superAdmin === true ||
     isProjectMaintainer(user, projectId) ||
     isProjectMember(user, projectId)
-  );
+  )
 }
 
 // ═══════════════════════
@@ -270,14 +267,14 @@ export function canManageFeatures(
  * @returns boolean indicating if new buttons should be shown
  */
 export function canCreateEntity(user: SessionUser | null, resource: string): boolean {
-  if (!resource || !user) return false;
+  if (!resource || !user) return false
 
   switch (resource) {
     case 'organisation':
-      return canManageOrganisations(user);
+      return canManageOrganisations(user)
 
     case 'project':
-      return canCreateProjects(user);
+      return canCreateProjects(user)
 
     case 'layer': {
       // For layers, we need to check if user can create layers for any project they have access to
@@ -285,9 +282,9 @@ export function canCreateEntity(user: SessionUser | null, resource: string): boo
       return (
         user.superAdmin === true ||
         user.roles?.some(
-          (role) => role.type === 'project' && role.role === 'maintainer'
+          role => role.type === 'project' && role.role === 'maintainer',
         ) === true
-      );
+      )
     }
 
     case 'feature': {
@@ -296,22 +293,22 @@ export function canCreateEntity(user: SessionUser | null, resource: string): boo
       return (
         user.superAdmin === true ||
         user.roles?.some(
-          (role) =>
+          role =>
             role.type === 'project' &&
-            (role.role === 'maintainer' || role.role === 'member')
+            (role.role === 'maintainer' || role.role === 'member'),
         ) === true
-      );
+      )
     }
 
     case 'task':
       // Tasks cannot be created manually
-      return false;
+      return false
 
     case 'hub':
       // Only superAdmin can create hubs
-      return user.superAdmin === true;
+      return user.superAdmin === true
 
     default:
-      return false;
+      return false
   }
 }

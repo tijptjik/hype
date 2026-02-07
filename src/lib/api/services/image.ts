@@ -1,9 +1,9 @@
 // DRIZZLE
-import { eq, SQL } from 'drizzle-orm';
+import { eq, type SQL } from 'drizzle-orm'
 // LIB
-import { isAdminRequest } from '$lib/api';
+import { isAdminRequest } from '$lib/api'
 // API
-import { applyQueryFilters, removeExcludedColumns } from '$lib/api';
+import { applyQueryFilters, removeExcludedColumns } from '$lib/api'
 // AUTH
 import {
   assertUserLoggedIn,
@@ -12,13 +12,13 @@ import {
   assertProjectMaintainerOrSuperAdmin,
   assertOrganisationOwnerOrSuperAdmin,
   assertProjectMaintainerOrMemberOrSuperAdmin,
-  assertParamIdentifierEqualsFormIdentifier
-} from '$lib/auth/asserts';
+  assertParamIdentifierEqualsFormIdentifier,
+} from '$lib/auth/asserts'
 // DB
-import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
-import { isSuperAdmin } from '$lib/client/services/auth';
+import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
+import { isSuperAdmin } from '$lib/client/services/auth'
 // SCHEMA
-import { image, featureImage, project, organisation } from '$lib/db/schema/index';
+import { image, featureImage, project, organisation } from '$lib/db/schema/index'
 // TYPES
 import type {
   UserRoleDisco,
@@ -28,12 +28,12 @@ import type {
   ImageNew,
   ImageDBFlat,
   HubOpts,
-  SessionUser
-} from '$lib/types';
-import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums';
-import { error } from '@sveltejs/kit';
-import { applyResourceContextConstraints } from '$lib/db/services/image';
-import { getProjectIdForFeatureId } from '$lib/db/services/feature';
+  SessionUser,
+} from '$lib/types'
+import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
+import { error } from '@sveltejs/kit'
+import { applyResourceContextConstraints } from '$lib/db/services/image'
+import { getProjectIdForFeatureId } from '$lib/db/services/feature'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -72,8 +72,8 @@ export const intentOrder = [
   'context',
   'general',
   'undefined',
-  'research'
-] as const;
+  'research',
+] as const
 
 export const adminIntentOrder = [
   'undefined',
@@ -81,8 +81,8 @@ export const adminIntentOrder = [
   'closeUp',
   'context',
   'general',
-  'research'
-] as const;
+  'research',
+] as const
 
 // ═══════════════════════
 // 2. COMMON
@@ -91,13 +91,13 @@ export const adminIntentOrder = [
 export const imageCollectionWithRelations = {
   featureImage: true,
   contributor: {
-    columns: userColumnsWithPrivacyProtected
-  }
-};
+    columns: userColumnsWithPrivacyProtected,
+  },
+}
 
 export const imageEntityWithRelations = {
-  ...imageCollectionWithRelations
-};
+  ...imageCollectionWithRelations,
+}
 
 // ═══════════════════════
 // 3. QUERY CONTEXT
@@ -114,28 +114,28 @@ export const getImageQueryContext = (
   params: QueryParams,
   userRoles: UserRoleDisco[],
   ctxId: Id, // ID of the parent resource (e.g., featureId, projectId)
-  ctxType: ImageContextResource | ImageContextResourceExtended // Type of the parent resource
+  ctxType: ImageContextResource | ImageContextResourceExtended, // Type of the parent resource
 ) => {
   // SETUP : By default, only show non-archived images,
   // and disable isArchived and isPublished filters from the query.
-  let conditions: SQL<unknown>[] = [];
-  const excludeColumns = ['isArchived', 'isPublished'];
+  let conditions: SQL<unknown>[] = []
+  const excludeColumns = ['isArchived', 'isPublished']
 
   // NON-SUPERADMIN : Hide images which are archived
   if (!isSuperAdmin(user)) {
-    conditions.push(eq(image.isArchived, false));
+    conditions.push(eq(image.isArchived, false))
   }
 
   // PUBLIC : List all images which are isPublished, and not isArchived,
   if (!isAdminRequest(request)) {
-    params = removeExcludedColumns(params, excludeColumns);
+    params = removeExcludedColumns(params, excludeColumns)
     // For public, typically show images that are marked as published, or if their associated resource is published.
     if (ctxType === ImageContextResource.feature) {
-      conditions.push(eq(featureImage.isPublished, true));
+      conditions.push(eq(featureImage.isPublished, true))
     } else if (ctxType === ImageContextResource.project) {
-      conditions.push(eq(project.isPublished, true));
+      conditions.push(eq(project.isPublished, true))
     } else if (ctxType === ImageContextResource.organisation) {
-      conditions.push(eq(organisation.isPublished, true));
+      conditions.push(eq(organisation.isPublished, true))
     } else if (ctxType === ImageContextResourceExtended.task) {
       // NO further restrictions on task images, as they are only accessible
       // from the Admin view
@@ -144,22 +144,22 @@ export const getImageQueryContext = (
     // Admin view: allow filtering by isPublished if not a superadmin
     // TODO SECURITY : Technically, currently we allow maintainers to see unpublished feature images, from ANY project if they know the featureId.
     if (!isSuperAdmin(user)) {
-      params = removeExcludedColumns(params, ['isArchived']); // Keep isPublished filterable
+      params = removeExcludedColumns(params, ['isArchived']) // Keep isPublished filterable
     } else {
-      conditions = []; // Superadmin sees all
+      conditions = [] // Superadmin sees all
     }
   }
 
   // Filter by context (e.g., images for a specific feature)
-  applyResourceContextConstraints(ctxType, ctxId, conditions);
+  applyResourceContextConstraints(ctxType, ctxId, conditions)
 
   // Apply general query filters from params
   if (Object.keys(params).length > 0) {
-    applyQueryFilters(image, params, conditions);
+    applyQueryFilters(image, params, conditions)
   }
 
-  return { params, conditions, excludeColumns };
-};
+  return { params, conditions, excludeColumns }
+}
 
 /**
  * Get the query context for a single image.
@@ -170,37 +170,37 @@ export const getImageEntityQueryContext = (
   db: Database,
   user: SessionUser,
   request: Request,
-  params: QueryParams
+  params: QueryParams,
 ) => {
   // SETUP : By default, only show non-archived images,
   // and disable isArchived and isPublished filters from the query.
-  let conditions: SQL<unknown>[] = [];
-  const excludeColumns = ['isArchived', 'isPublished'];
+  let conditions: SQL<unknown>[] = []
+  const excludeColumns = ['isArchived', 'isPublished']
 
   // NON-SUPERADMIN : Hide images which are archived
   if (!isSuperAdmin(user)) {
-    conditions.push(eq(image.isArchived, false));
+    conditions.push(eq(image.isArchived, false))
   }
 
   // PUBLIC : List all images which are isPublished, and not isArchived,
   if (!isAdminRequest(request)) {
-    params = removeExcludedColumns(params, excludeColumns);
+    params = removeExcludedColumns(params, excludeColumns)
   } else {
     // Admin view: allow filtering by isPublished if not a superadmin
     if (!isSuperAdmin(user)) {
-      params = removeExcludedColumns(params, ['isArchived']); // Keep isPublished filterable
+      params = removeExcludedColumns(params, ['isArchived']) // Keep isPublished filterable
     } else {
-      conditions = []; // Superadmin sees all
+      conditions = [] // Superadmin sees all
     }
   }
 
   // Apply general query filters from params
   if (Object.keys(params).length > 0) {
-    applyQueryFilters(image, params, conditions);
+    applyQueryFilters(image, params, conditions)
   }
 
-  return { params, conditions, excludeColumns };
-};
+  return { params, conditions, excludeColumns }
+}
 
 /**
  * Get the query context for images fetched by IDs.
@@ -210,22 +210,22 @@ export const getImageEntityQueryContext = (
 export const getImageByIdsQueryContext = (
   db: Database,
   user: SessionUser,
-  request: Request
+  request: Request,
 ) => {
-  let conditions: SQL<unknown>[] = [];
+  const conditions: SQL<unknown>[] = []
 
   // NON-SUPERADMIN : Hide images which are archived
   if (!isSuperAdmin(user)) {
-    conditions.push(eq(image.isArchived, false));
+    conditions.push(eq(image.isArchived, false))
   }
 
   // PUBLIC : Only show published images
   if (!isAdminRequest(request)) {
-    conditions.push(eq(featureImage.isPublished, true));
+    conditions.push(eq(featureImage.isPublished, true))
   }
 
-  return { conditions };
-};
+  return { conditions }
+}
 
 // ═══════════════════════
 // 4. ASSERTIONS
@@ -242,34 +242,35 @@ export const assertPermissionsToCreateImage = async (
   data: ImageNew,
   userRoles: UserRoleDisco[],
   ctxType: ImageContextResource,
-  ctxId: Id
+  ctxId: Id,
 ) => {
   const commonAssertions = [
     () => assertUserLoggedIn(user as any),
-    () => assertAdminRequest(request)
-  ];
+    () => assertAdminRequest(request),
+  ]
 
-  let contextAssertion = () => {}; // Placeholder for context-specific assertion
+  let contextAssertion = () => {} // Placeholder for context-specific assertion
 
   switch (ctxType) {
-    case ImageContextResource.feature:
-      const projectId = await getProjectIdForFeatureId(db, ctxId as Id, hubOpts);
+    case ImageContextResource.feature: {
+      const projectId = await getProjectIdForFeatureId(db, ctxId as Id, hubOpts)
       contextAssertion = () =>
-        assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId);
-      break;
+        assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId)
+      break
+    }
     case ImageContextResource.project:
       contextAssertion = () =>
-        assertProjectMaintainerOrSuperAdmin(user, userRoles, ctxId);
-      break;
+        assertProjectMaintainerOrSuperAdmin(user, userRoles, ctxId)
+      break
     case ImageContextResource.organisation:
       contextAssertion = () =>
-        assertOrganisationOwnerOrSuperAdmin(user, userRoles, ctxId);
-      break;
+        assertOrganisationOwnerOrSuperAdmin(user, userRoles, ctxId)
+      break
   }
 
-  const assertionError = runAssertions(...commonAssertions, contextAssertion);
-  if (assertionError) return assertionError;
-};
+  const assertionError = runAssertions(...commonAssertions, contextAssertion)
+  if (assertionError) return assertionError
+}
 
 /**
  * Asserts permissions to update/delete an image.
@@ -285,38 +286,39 @@ export const assertPermissionsToUpdateImage = async (
   userRoles: UserRoleDisco[],
   refId: Id,
   ctxId: Id,
-  ctxType: ImageContextResource | ImageContextResourceExtended
+  ctxType: ImageContextResource | ImageContextResourceExtended,
 ) => {
   const commonAssertions = [
     () => assertUserLoggedIn(user as any),
     () => assertAdminRequest(request),
-    () => assertParamIdentifierEqualsFormIdentifier(data, refId, 'id')
-  ];
+    () => assertParamIdentifierEqualsFormIdentifier(data, refId, 'id'),
+  ]
 
   // Implement logic to determine who can update/delete.
   // 1. Users with specific roles in the context (feature's project members/maintainers, organisation's owners, project's maintainers).
   // 2. SuperAdmins.
-  let contextAssertion = () => {}; // Placeholder
+  let contextAssertion = () => {} // Placeholder
 
   switch (ctxType) {
-    case ImageContextResource.feature:
-      const projectId = await getProjectIdForFeatureId(db, ctxId as Id, hubOpts);
+    case ImageContextResource.feature: {
+      const projectId = await getProjectIdForFeatureId(db, ctxId as Id, hubOpts)
       contextAssertion = () =>
-        assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId);
-      break;
+        assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId)
+      break
+    }
     case ImageContextResource.project:
       contextAssertion = () =>
-        assertProjectMaintainerOrSuperAdmin(user, userRoles, ctxId);
-      break;
+        assertProjectMaintainerOrSuperAdmin(user, userRoles, ctxId)
+      break
     case ImageContextResource.organisation:
       contextAssertion = () =>
-        assertOrganisationOwnerOrSuperAdmin(user, userRoles, ctxId);
-      break;
+        assertOrganisationOwnerOrSuperAdmin(user, userRoles, ctxId)
+      break
   }
 
-  const assertionError = runAssertions(...commonAssertions, contextAssertion);
-  if (assertionError) return assertionError;
-};
+  const assertionError = runAssertions(...commonAssertions, contextAssertion)
+  if (assertionError) return assertionError
+}
 
 export const assertPermissionsToDeleteImage = async (
   db: Database,
@@ -327,7 +329,7 @@ export const assertPermissionsToDeleteImage = async (
   userRoles: UserRoleDisco[],
   refId: Id,
   ctxId: Id,
-  ctxType: ImageContextResource | ImageContextResourceExtended
+  ctxType: ImageContextResource | ImageContextResourceExtended,
 ) => {
   return assertPermissionsToUpdateImage(
     db,
@@ -339,38 +341,38 @@ export const assertPermissionsToDeleteImage = async (
     userRoles,
     refId,
     ctxId,
-    ctxType
-  );
-};
+    ctxType,
+  )
+}
 
 // ═══════════════════════
 // 5. UTILS
 // ═══════════════════════
 
 export const getCtxFromUrl = (url: URL) => {
-  const organisationId = url.searchParams.get('organisationId');
-  const projectId = url.searchParams.get('projectId');
-  const featureId = url.searchParams.get('featureId');
-  const taskId = url.searchParams.get('taskId');
+  const organisationId = url.searchParams.get('organisationId')
+  const projectId = url.searchParams.get('projectId')
+  const featureId = url.searchParams.get('featureId')
+  const taskId = url.searchParams.get('taskId')
 
-  let ctxId: Id | null = null;
-  let ctxType: ImageContextResource | ImageContextResourceExtended | null = null;
+  let ctxId: Id | null = null
+  let ctxType: ImageContextResource | ImageContextResourceExtended | null = null
 
   if (featureId) {
-    ctxId = featureId;
-    ctxType = ImageContextResource.feature;
+    ctxId = featureId
+    ctxType = ImageContextResource.feature
   } else if (projectId) {
-    ctxId = projectId;
-    ctxType = ImageContextResource.project;
+    ctxId = projectId
+    ctxType = ImageContextResource.project
   } else if (organisationId) {
-    ctxId = organisationId;
-    ctxType = ImageContextResource.organisation;
+    ctxId = organisationId
+    ctxType = ImageContextResource.organisation
   } else if (taskId) {
-    ctxId = taskId;
-    ctxType = ImageContextResourceExtended.task;
+    ctxId = taskId
+    ctxType = ImageContextResourceExtended.task
   } else {
-    return error(400, 'A featureId, organisationId, projectId, or taskId is required');
+    return error(400, 'A featureId, organisationId, projectId, or taskId is required')
   }
 
-  return { ctxId, ctxType };
-};
+  return { ctxId, ctxType }
+}

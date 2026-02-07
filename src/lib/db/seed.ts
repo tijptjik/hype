@@ -1,5 +1,5 @@
 // DB
-import connect from '../../lib/db';
+import connect from '../../lib/db'
 import {
   account,
   layer,
@@ -24,50 +24,50 @@ import {
   featureImage,
   task,
   userFeature,
-  hub
-} from './schema';
+  hub,
+} from './schema'
 // ORM
-import { count, getTableName } from 'drizzle-orm';
+import { count, getTableName } from 'drizzle-orm'
 // DATA
-import userJson from './data/users.json';
-import accountJson from './data/accounts.json';
-import projectJson from './data/projects.json';
-import projectI18nJson from './data/projectsI18n.json';
-import projectRoleJson from './data/projectRoles.json';
-import organisationJson from './data/organisations.json';
-import organisationI18nJson from './data/organisationsI18n.json';
-import organisationRoleJson from './data/organisationRoles.json';
-import layerJson from './data/layers.json';
-import layerI18nJson from './data/layersI18n.json';
-import featureHKGhostsignsJson from './data/features-hkghostsigns.json';
-import propertyJson from './data/property.json';
-import propertyI18nJson from './data/propertyI18n.json';
-import layerPropertyJson from './data/layerProperties.json';
-import propertyValueJson from './data/propertyValues.json';
-import propertyValueI18nSizeJson from './data/propertyValuesI18n-kL9mN2pQ5rS4.json';
-import propertyValueI18nMaterialJson from './data/propertyValuesI18n-vX7yZ1wA3bC6.json';
-import propertyValueI18nVisibilityJson from './data/propertyValuesI18n-hJ4kL7mN9pQ2.json';
-import propertyValueI18nCollectionJson from './data/propertyValuesI18n-hJ4kA9mN9283.json';
-import featureI18nJson from './data/featureI18n.json';
-import featurePropertyJson from './data/featureProperty.json';
-import featurePropertyI18nJson from './data/featurePropertyI18n.json';
-import imagesJson from './data/images.json';
-import featureImagesJson from './data/featureImages.json';
-import tasksJson from './data/tasks.json';
-import userFeaturesJson from './data/userFeatures.json';
-import hubsJson from './data/hubs.json';
+import userJson from './data/users.json'
+import accountJson from './data/accounts.json'
+import projectJson from './data/projects.json'
+import projectI18nJson from './data/projectsI18n.json'
+import projectRoleJson from './data/projectRoles.json'
+import organisationJson from './data/organisations.json'
+import organisationI18nJson from './data/organisationsI18n.json'
+import organisationRoleJson from './data/organisationRoles.json'
+import layerJson from './data/layers.json'
+import layerI18nJson from './data/layersI18n.json'
+import featureHKGhostsignsJson from './data/features-hkghostsigns.json'
+import propertyJson from './data/property.json'
+import propertyI18nJson from './data/propertyI18n.json'
+import layerPropertyJson from './data/layerProperties.json'
+import propertyValueJson from './data/propertyValues.json'
+import propertyValueI18nSizeJson from './data/propertyValuesI18n-kL9mN2pQ5rS4.json'
+import propertyValueI18nMaterialJson from './data/propertyValuesI18n-vX7yZ1wA3bC6.json'
+import propertyValueI18nVisibilityJson from './data/propertyValuesI18n-hJ4kL7mN9pQ2.json'
+import propertyValueI18nCollectionJson from './data/propertyValuesI18n-hJ4kA9mN9283.json'
+import featureI18nJson from './data/featureI18n.json'
+import featurePropertyJson from './data/featureProperty.json'
+import featurePropertyI18nJson from './data/featurePropertyI18n.json'
+import imagesJson from './data/images.json'
+import featureImagesJson from './data/featureImages.json'
+import tasksJson from './data/tasks.json'
+import userFeaturesJson from './data/userFeatures.json'
+import hubsJson from './data/hubs.json'
 // TYPES
-import type { DrizzleD1Database } from 'drizzle-orm/d1/driver';
-import type { SQLiteTable } from 'drizzle-orm/sqlite-core/table';
-import type { SQLiteInsertValue } from 'drizzle-orm/sqlite-core';
+import type { DrizzleD1Database } from 'drizzle-orm/d1/driver'
+import type { SQLiteTable } from 'drizzle-orm/sqlite-core/table'
+import type { SQLiteInsertValue } from 'drizzle-orm/sqlite-core'
 
 type SeedBank = {
-  name: string;
-  table: SQLiteTable;
-  data: SQLiteInsertValue<SQLiteTable>[];
-  chunk: number;
-  partial?: boolean;
-};
+  name: string
+  table: SQLiteTable
+  data: SQLiteInsertValue<SQLiteTable>[]
+  chunk: number
+  partial?: boolean
+}
 
 // Mapping between JSON files and Tables
 const seedBank: Record<string, SeedBank> = {
@@ -75,179 +75,179 @@ const seedBank: Record<string, SeedBank> = {
     name: 'Users',
     table: user,
     data: userJson,
-    chunk: 0
+    chunk: 0,
   },
   account: {
     name: 'Accounts',
     table: account,
     data: accountJson,
-    chunk: 0
+    chunk: 0,
   },
   image: {
     name: 'Images',
     table: image,
     data: imagesJson,
-    chunk: 4
+    chunk: 4,
   },
   organisation: {
     name: 'Organisations',
     table: organisation,
     data: organisationJson,
-    chunk: 0
+    chunk: 0,
   },
   organisationI18n: {
     name: 'OrganisationI18n',
     table: organisationI18n,
     data: organisationI18nJson,
-    chunk: 0
+    chunk: 0,
   },
   organisationRole: {
     name: 'OrganisationRoles',
     table: organisationRole,
     data: organisationRoleJson,
-    chunk: 0
+    chunk: 0,
   },
   project: {
     name: 'Projects',
     table: project,
     data: projectJson,
-    chunk: 0
+    chunk: 0,
   },
   projectI18n: {
     name: 'ProjectI18n',
     table: projectI18n,
     data: projectI18nJson,
-    chunk: 8
+    chunk: 8,
   },
   projectRole: {
     name: 'ProjectRoles',
     table: projectRole,
     data: projectRoleJson,
-    chunk: 0
+    chunk: 0,
   },
   layer: {
     name: 'Layers',
     table: layer,
     data: layerJson,
-    chunk: 0
+    chunk: 0,
   },
   layerI18n: {
     name: 'LayerI18n',
     table: layerI18n,
     data: layerI18nJson,
-    chunk: 0
+    chunk: 0,
   },
   featureHKGhostsigns: {
     name: 'Features::HKGhostSigns',
     table: feature,
     data: featureHKGhostsignsJson,
     chunk: 2,
-    partial: true
+    partial: true,
   },
   property: {
     name: 'Properties',
     table: property,
     data: propertyJson,
-    chunk: 8
+    chunk: 8,
   },
   propertyI18n: {
     name: 'PropertyI18n',
     table: propertyI18n,
     data: propertyI18nJson,
-    chunk: 16
+    chunk: 16,
   },
   layerProperty: {
     name: 'LayerProperties',
     table: layerProperty,
     data: layerPropertyJson,
-    chunk: 0
+    chunk: 0,
   },
   propertyValue: {
     name: 'PropertyValues',
     table: propertyValue,
     data: propertyValueJson,
-    chunk: 0
+    chunk: 0,
   },
   propertyValueI18n: {
     name: 'PropertyValueI18n::Size',
     table: propertyValueI18n,
     data: propertyValueI18nSizeJson,
     chunk: 0,
-    partial: true
+    partial: true,
   },
   propertyValueI18nMaterial: {
     name: 'PropertyValueI18n::Material',
     table: propertyValueI18n,
     data: propertyValueI18nMaterialJson,
     chunk: 8,
-    partial: true
+    partial: true,
   },
   propertyValueI18nVisibility: {
     name: 'PropertyValueI18n::Visibility',
     table: propertyValueI18n,
     data: propertyValueI18nVisibilityJson,
     chunk: 0,
-    partial: true
+    partial: true,
   },
   propertyValueI18nCollection: {
     name: 'PropertyValueI18n::Collection',
     table: propertyValueI18n,
     data: propertyValueI18nCollectionJson,
     chunk: 0,
-    partial: true
+    partial: true,
   },
   featureI18n: {
     name: 'FeatureI18n::HKGhostSigns',
     table: featureI18n,
     data: featureI18nJson,
     chunk: 4,
-    partial: true
+    partial: true,
   },
   featureProperty: {
     name: 'FeatureProperty',
     table: featureProperty,
     data: featurePropertyJson,
-    chunk: 16
+    chunk: 16,
   },
   featurePropertyI18n: {
     name: 'FeaturePropertyI18n',
     table: featurePropertyI18n,
     data: featurePropertyI18nJson,
-    chunk: 16
+    chunk: 16,
   },
   featureImage: {
     name: 'FeatureImages',
     table: featureImage,
     data: featureImagesJson,
-    chunk: 0
+    chunk: 0,
   },
   task: {
     name: 'Tasks',
     table: task,
     data: tasksJson,
-    chunk: 6
+    chunk: 6,
   },
   userFeature: {
     name: 'UserFeatures',
     table: userFeature,
     data: userFeaturesJson,
-    chunk: 0
+    chunk: 0,
   },
   hub: {
     name: 'Hubs',
     table: hub,
     data: hubsJson,
-    chunk: 0
-  }
-};
+    chunk: 0,
+  },
+}
 
 const chunkArray = <T>(array: T[], size: number): T[][] => {
-  const result: T[][] = [];
+  const result: T[][] = []
   for (let i = 0; i < array.length; i += size) {
-    result.push(array.slice(i, i + size));
+    result.push(array.slice(i, i + size))
   }
-  return result;
-};
+  return result
+}
 
 // Function to perform database operations
 async function insertData(
@@ -255,104 +255,104 @@ async function insertData(
   name: string,
   table: SQLiteTable,
   data: SQLiteInsertValue<SQLiteTable>[],
-  chunkSize: number
+  chunkSize: number,
 ) {
-  let insertedCount = 0;
+  let insertedCount = 0
   if (chunkSize > 0) {
-    const chunks = chunkArray(data, chunkSize);
+    const chunks = chunkArray(data, chunkSize)
     await Promise.all(
-      chunks.map(async (dataToInsert) => {
-        const inserted = await db.insert(table).values(dataToInsert);
-        insertedCount = insertedCount + inserted.meta.changes;
-      })
-    );
+      chunks.map(async dataToInsert => {
+        const inserted = await db.insert(table).values(dataToInsert)
+        insertedCount = insertedCount + inserted.meta.changes
+      }),
+    )
   } else {
-    const inserted = await db.insert(table).values(data);
-    insertedCount = inserted.meta.changes;
+    const inserted = await db.insert(table).values(data)
+    insertedCount = inserted.meta.changes
   }
-  console.info(`> ${name}`.padEnd(32), insertedCount);
+  console.info(`> ${name}`.padEnd(32), insertedCount)
 }
 
 type CountResult = {
-  count: number;
-};
+  count: number
+}
 
 const takeUniqueOrThrow = <T extends unknown[]>(values: T): T[number] => {
-  if (values.length !== 1) throw new Error('Found non unique or absent value');
-  return values[0]!;
-};
+  if (values.length !== 1) throw new Error('Found non unique or absent value')
+  return values[0]!
+}
 
 async function isEmpty(db: DrizzleD1Database, table: SQLiteTable) {
   const result: CountResult = await db
     .select({ count: count() })
     .from(table)
-    .then(takeUniqueOrThrow);
-  return result.count === 0;
+    .then(takeUniqueOrThrow)
+  return result.count === 0
 }
 
 export default async function seed(
   env: Record<string, string>,
-  printData: boolean = false
+  printData: boolean = false,
 ) {
   if (printData) {
-    Object.values(seedBank).map((val) => console.info(val.data));
+    Object.values(seedBank).map(val => console.info(val.data))
   }
 
   // Combine partial and non-partial data
   const SuperSeedBank = Object.values(seedBank).reduce(
     (acc, member) => {
       if (member.partial === true) {
-        const tableName = getTableName(member.table);
-        const baseName = member.name.split('::')[0];
+        const tableName = getTableName(member.table)
+        const baseName = member.name.split('::')[0]
         if (!acc[tableName]) {
           acc[tableName] = {
             name: baseName,
             table: member.table,
             data: [],
-            chunk: 0
-          };
+            chunk: 0,
+          }
         }
-        acc[tableName].data = acc[tableName].data.concat(member.data);
-        acc[tableName].chunk += member.chunk || 0;
+        acc[tableName].data = acc[tableName].data.concat(member.data)
+        acc[tableName].chunk += member.chunk || 0
       } else {
-        acc[getTableName(member.table)] = member;
+        acc[getTableName(member.table)] = member
       }
-      return acc;
+      return acc
     },
-    {} as Record<string, (typeof seedBank)[keyof typeof seedBank]>
-  );
+    {} as Record<string, (typeof seedBank)[keyof typeof seedBank]>,
+  )
 
   if (env.VITE_WRANGLER_ENV === 'local') {
     // This is an ugly hack to avoid Vite loading in the wrangler dep regardless
     // of the conditional import, and throwing errors when building for CF workers
     // as wrangler itself has node requirements :doh:
-    const wrangler = 'wrangler';
+    const wrangler = 'wrangler'
     // When developing, this hook will add proxy objects to the `platform` object
     // which will emulate any bindings defined in `wrangler.toml`.
-    const { getPlatformProxy } = await import(/* @vite-ignore */ wrangler);
-    const platform = await getPlatformProxy();
-    const db = connect(platform.env.DB);
+    const { getPlatformProxy } = await import(/* @vite-ignore */ wrangler)
+    const platform = await getPlatformProxy()
+    const db = connect(platform.env.DB)
 
-    let hasSeedingStarted = false;
+    let hasSeedingStarted = false
 
     for (const item of Object.values(SuperSeedBank)) {
       // DB : Only insert data if there is no data present in the table
-      // @ts-ignore
+      // @ts-expect-error
       if (await isEmpty(db, item.table)) {
         if (!hasSeedingStarted) {
-          console.info('\n🌱 SEEDING\n');
-          hasSeedingStarted = true;
+          console.info('\n🌱 SEEDING\n')
+          hasSeedingStarted = true
         }
-        // @ts-ignore
-        await insertData(db, item.name, item.table, item.data, item.chunk);
+        // @ts-expect-error
+        await insertData(db, item.name, item.table, item.data, item.chunk)
       } else {
         if (hasSeedingStarted) {
-          console.info(`> ${item.name} skipped`);
+          console.info(`> ${item.name} skipped`)
         }
       }
     }
     if (hasSeedingStarted) {
-      console.info('\n🌼 ALL FLOURISHING\n');
+      console.info('\n🌼 ALL FLOURISHING\n')
     }
   }
 }

@@ -127,7 +127,7 @@ onMount(async () => {
       const updateCamera = geolocateControl._updateCamera;
       // replace updateCamera method with noop operation, so that we can control
       // the initial flyTo of the user's location.
-      geolocateControl._updateCamera = function () {};
+      geolocateControl._updateCamera = () => {};
       appCtx.map!.addControl(geolocateControl, 'bottom-right');
       appCtx.map!.on('load', () => {
         // after first geolocate...

@@ -61,7 +61,7 @@ const handleClick = async (e: Event) => {
 
   try {
     // If form is dirty, submit it first
-    // @ts-ignore TODO Superform replace
+    // @ts-expect-error TODO Superform replace
     if (isTainted($tainted)) {
       submit(e);
       // Note: We proceed regardless of submit result since publish is a separate action

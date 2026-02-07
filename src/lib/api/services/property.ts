@@ -1,7 +1,7 @@
-import { property } from '$lib/db/schema/index';
-import type { QueryParams, UserRoleDisco, SessionUser } from '$lib/types';
-import type { SQL } from 'drizzle-orm';
-import { applyQueryFilters } from '..';
+import { property } from '$lib/db/schema/index'
+import type { QueryParams, UserRoleDisco, SessionUser } from '$lib/types'
+import type { SQL } from 'drizzle-orm'
+import { applyQueryFilters } from '..'
 
 /********************
  *  COMMON
@@ -11,14 +11,14 @@ export const propertyCollectionWithRelations = {
   i18n: true,
   values: {
     with: {
-      i18n: true
-    }
-  }
-};
+      i18n: true,
+    },
+  },
+}
 
 export const propertyEntityWithRelations = {
-  ...propertyCollectionWithRelations
-};
+  ...propertyCollectionWithRelations,
+}
 
 /**
  * Get the query context for the property resource - filters the query based on the user's roles, and the query parameters.
@@ -31,20 +31,20 @@ export const getPropertyQueryContext = (
   user: SessionUser,
   request: Request,
   params: QueryParams,
-  userRoles: UserRoleDisco[]
+  userRoles: UserRoleDisco[],
 ) => {
   // SETUP : By default, only show non-archived organisations,
   // and exclude isArchived and isPublished filters from the query.
-  const conditions: SQL<unknown>[] = [];
-  const excludeColumns: string[] = [];
+  const conditions: SQL<unknown>[] = []
+  const excludeColumns: string[] = []
 
   // PUBLIC : List all properties
   // ADMIN : List all properties
 
   // CONTEXT : Apply query filters to the conditions
   if (Object.keys(params).length > 0) {
-    applyQueryFilters(property, params, conditions);
+    applyQueryFilters(property, params, conditions)
   }
 
-  return { params, conditions, excludeColumns };
-};
+  return { params, conditions, excludeColumns }
+}

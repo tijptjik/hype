@@ -1,15 +1,15 @@
 /* ----------------- */
 // I18N
 
-import type { Locale } from './types';
+import type { Locale } from './types'
 
 /* -------- */
 export enum SupportedLocales {
   en = 'en',
   'zh-hant' = 'zh-hant',
-  'zh-hans' = 'zh-hans'
+  'zh-hans' = 'zh-hans',
 }
-export const supportedLocales = Object.values(SupportedLocales);
+export const supportedLocales = Object.values(SupportedLocales)
 
 // The Locale type is already defined in ./types and inferred from SupportedLocales values
 // This creates the union type: 'en' | 'zh-hant' | 'zh-hans'
@@ -17,32 +17,32 @@ export const supportedLocales = Object.values(SupportedLocales);
 export enum LocaleNamesEn {
   en = 'English',
   'zh-hant' = 'Traditional Chinese',
-  'zh-hans' = 'Simplified Chinese'
+  'zh-hans' = 'Simplified Chinese',
 }
 
 export enum LocaleNamesZhHant {
   en = '英語',
   'zh-hant' = '繁體中文',
-  'zh-hans' = '簡體中文'
+  'zh-hans' = '簡體中文',
 }
 
 export enum LocaleNamesZhHans {
   en = '英语',
   'zh-hant' = '繁体中文',
-  'zh-hans' = '简体中文'
+  'zh-hans' = '简体中文',
 }
 
 export const localeNames: Record<Locale, Record<Locale, string>> = {
   [SupportedLocales.en]: LocaleNamesEn,
   [SupportedLocales['zh-hant']]: LocaleNamesZhHant,
-  [SupportedLocales['zh-hans']]: LocaleNamesZhHans
-};
+  [SupportedLocales['zh-hans']]: LocaleNamesZhHans,
+}
 
 export const localeCodes: Record<Locale, string> = {
   [SupportedLocales.en]: 'EN',
   [SupportedLocales['zh-hant']]: 'HK',
-  [SupportedLocales['zh-hans']]: 'CN'
-};
+  [SupportedLocales['zh-hans']]: 'CN',
+}
 
 /* ----------------- */
 // HIERARCHICAL RESOURCES
@@ -56,7 +56,7 @@ export enum ResourcePath {
   task = 'tasks',
   hub = 'hubs',
   property = 'properties',
-  user = 'users'
+  user = 'users',
 }
 
 export enum FirstClassResource {
@@ -67,7 +67,7 @@ export enum FirstClassResource {
   task = 'task',
   hub = 'hub',
   property = 'property',
-  user = 'user'
+  user = 'user',
 }
 
 export enum HierarchicalResource {
@@ -75,7 +75,7 @@ export enum HierarchicalResource {
   project = 'project',
   layer = 'layer',
   feature = 'feature',
-  task = 'task'
+  task = 'task',
 }
 
 export enum HierarchicalResourceSeq {
@@ -83,7 +83,7 @@ export enum HierarchicalResourceSeq {
   project = 2,
   layer = 3,
   feature = 4,
-  task = 5
+  task = 5,
 }
 
 export enum ResourceRefKey {
@@ -93,21 +93,21 @@ export enum ResourceRefKey {
   layer = 'id',
   feature = 'id',
   task = 'id',
-  user = 'id'
+  user = 'id',
 }
 
 export enum HierarchicalResourceParent {
   project = 'organisation',
   layer = 'project',
   feature = 'layer',
-  task = 'feature'
+  task = 'feature',
 }
 
 export enum HierarchicalResourceParentRefKey {
   project = 'organisationId',
   layer = 'projectId',
   feature = 'layerId',
-  task = 'featureId'
+  task = 'featureId',
 }
 
 /* ----------------- */
@@ -115,7 +115,7 @@ export enum HierarchicalResourceParentRefKey {
 /* -------- */
 export enum OrganisationRoleType {
   member = 'member',
-  owner = 'owner'
+  owner = 'owner',
 }
 
 /* ----------------- */
@@ -123,7 +123,7 @@ export enum OrganisationRoleType {
 /* -------- */
 export enum ProjectRoleType {
   maintainer = 'maintainer',
-  member = 'member'
+  member = 'member',
 }
 
 /* ----------------- */
@@ -132,15 +132,15 @@ export enum ProjectRoleType {
 export enum ImageContextResource {
   organisation = 'organisation',
   project = 'project',
-  feature = 'feature'
+  feature = 'feature',
 }
 
 export enum ImageContextResourceExtended {
-  task = 'task'
+  task = 'task',
 }
 
 export enum ImageCDN {
-  cloudinary = 'cloudinary'
+  cloudinary = 'cloudinary',
 }
 
 export enum ImageIntent {
@@ -149,18 +149,18 @@ export enum ImageIntent {
   context = 'context',
   general = 'general',
   research = 'research',
-  undefined = 'undefined'
+  undefined = 'undefined',
 }
 
 export enum ImageIntentPublic {
   canonical = 'canonical',
   closeUp = 'closeUp',
   context = 'context',
-  general = 'general'
+  general = 'general',
 }
 
 export enum ImageEnv {
-  dg6vtsga1 = 'dg6vtsga1'
+  dg6vtsga1 = 'dg6vtsga1',
 }
 
 /* ----------------- */
@@ -169,12 +169,12 @@ export enum ImageEnv {
 export enum TaskType {
   reportedMissing = 'reportedMissing',
   newPhoto = 'newPhoto',
-  newFeature = 'newFeature'
+  newFeature = 'newFeature',
 }
 
 export enum TaskReviewOutcome {
   rejected = 'rejected',
-  accepted = 'accepted'
+  accepted = 'accepted',
 }
 
 export enum TaskReviewAction {
@@ -184,13 +184,13 @@ export enum TaskReviewAction {
   setArchived = 'set-archived',
   addedAllPhotos = 'added-all-photos',
   addedAllPhotosWithIntent = 'added-all-photos-with-intent',
-  addedFeature = 'added-feature'
+  addedFeature = 'added-feature',
 }
 
 export enum TaskTypeColor {
   reportedMissing = 'border-error',
   newPhoto = 'border-info',
-  newFeature = 'border-success'
+  newFeature = 'border-success',
 }
 
 /* ----------------- */
@@ -199,9 +199,9 @@ export enum TaskTypeColor {
 export enum FieldDiscriminator {
   classifier = 'classifier',
   specifier = 'specifier',
-  display = 'display'
+  display = 'display',
 }
-export const fieldDiscriminators = Object.values(FieldDiscriminator);
+export const fieldDiscriminators = Object.values(FieldDiscriminator)
 
 /* ----------------- */
 // COMPONENT TYPES
@@ -211,11 +211,11 @@ export enum PropertyComponentType {
   RangeField = 'RangeField',
   InputField = 'InputField',
   TextareaField = 'TextareaField',
-  ToggleField = 'ToggleField'
+  ToggleField = 'ToggleField',
 }
-export const propertyComponentTypes = Object.values(PropertyComponentType);
-export const classifierComponentTypes = ['SelectField', 'RangeField'] as const;
-export const specifierComponentTypes = ['InputField', 'TextareaField'] as const;
+export const propertyComponentTypes = Object.values(PropertyComponentType)
+export const classifierComponentTypes = ['SelectField', 'RangeField'] as const
+export const specifierComponentTypes = ['InputField', 'TextareaField'] as const
 
 /* ----------------- */
 // FEATURE CARD
@@ -225,7 +225,7 @@ export enum FeatureCardMode {
   New = 'new',
   Missing = 'missing',
   AddPhoto = 'addPhoto',
-  SubmissionSuccess = 'submissionSuccess'
+  SubmissionSuccess = 'submissionSuccess',
 }
 
 /* ----------------- */
@@ -234,7 +234,7 @@ export enum FeatureCardMode {
 export enum NewFeatureMode {
   parents = 'parents',
   location = 'location',
-  card = 'card'
+  card = 'card',
 }
 
 /* ----------------- */
@@ -244,7 +244,7 @@ export enum CollectionStatistic {
   total = 'total',
   access = 'access',
   filtered = 'filtered',
-  selected = 'selected'
+  selected = 'selected',
 }
 
 /* ----------------- */
@@ -253,20 +253,20 @@ export enum CollectionStatistic {
 export enum GeoCoder {
   hkgov_als = 'hkgov_als',
   hkgov_identify = 'hkgov_identify',
-  googlemaps = 'googlemaps'
+  googlemaps = 'googlemaps',
 }
 
 /* ----------------- */
 // QUERY PARAMETERS
 /* -------- */
-export const PRISM_PARAMETERS = ['organisation', 'project', 'layer'];
-export const SEARCH_PARAMETERS = ['q'];
-export const PAGINATION_PARAMETERS = ['offset', 'limit'];
+export const PRISM_PARAMETERS = ['organisation', 'project', 'layer']
+export const SEARCH_PARAMETERS = ['q']
+export const PAGINATION_PARAMETERS = ['offset', 'limit']
 export const RESERVED_PARAMETERS = [
   ...PRISM_PARAMETERS,
   ...SEARCH_PARAMETERS,
-  ...PAGINATION_PARAMETERS
-];
+  ...PAGINATION_PARAMETERS,
+]
 
 /* ----------------- */
 // PANELS
@@ -279,24 +279,24 @@ export enum Panel {
   settings = 'settings',
   profile = 'profile',
   admin = 'admin',
-  hub = 'hub'
+  hub = 'hub',
 }
 
 export enum PanelSide {
   left = 'left',
-  right = 'right'
+  right = 'right',
 }
 
 export enum PanelLeft {
   prisms = 'prisms',
   stars = 'stars',
-  hub = 'hub'
+  hub = 'hub',
 }
 
 export enum PanelRight {
   filters = 'filters',
   settings = 'settings',
-  profile = 'profile'
+  profile = 'profile',
 }
 
 /* ----------------- */
@@ -307,18 +307,18 @@ export enum PageState {
   NoTransition,
   NeedTransition,
   Transitioning,
-  ReadyToNav
+  ReadyToNav,
 }
 
 export enum OmniMode {
   search = 'search',
   navigation = 'navigation',
   feature = 'feature',
-  newFeature = 'new-feature'
+  newFeature = 'new-feature',
 }
 
 export enum OmniCollection {
   walk = 'walk',
   neighbourhood = 'neighbourhood',
-  feature = 'feature'
+  feature = 'feature',
 }

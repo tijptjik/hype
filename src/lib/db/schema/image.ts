@@ -3,16 +3,16 @@ import {
   primaryKey,
   sqliteTable,
   text,
-  uniqueIndex
-} from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core'
+import { sql } from 'drizzle-orm'
+import { nanoid } from 'nanoid'
 // SCHEMA
-import { feature } from './feature';
+import { feature } from './feature'
 // ENUM
-import { ImageCDN, ImageEnv, ImageIntent } from '../../enums';
+import { ImageCDN, ImageEnv, ImageIntent } from '../../enums'
 // TYPES
-import type { EXIF } from '../../types';
+import type { EXIF } from '../../types'
 
 /* ============================================================================
  * IMAGE MANAGEMENT
@@ -71,8 +71,8 @@ export const image = sqliteTable('image', {
   modifiedAt: text('modifiedAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .$onUpdate(() => new Date().toISOString())
-    .notNull()
-});
+    .notNull(),
+})
 
 /**
  * Feature image assignments
@@ -89,18 +89,18 @@ export const featureImage = sqliteTable(
       .notNull()
       .references(() => image.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     intent: text('intent', {
-      enum: Object.values(ImageIntent) as [string, ...string[]]
+      enum: Object.values(ImageIntent) as [string, ...string[]],
     })
       .default(ImageIntent.undefined)
       .notNull(),
     isPublished: integer('isPublished', { mode: 'boolean' }).default(false).notNull(),
     publishedAt: text('publishedAt'),
-    publisherId: text('publisherId')
+    publisherId: text('publisherId'),
   },
-  (table) => [
+  table => [
     primaryKey({ columns: [table.featureId, table.imageId] }),
     uniqueIndex('canonical_intent')
       .on(table.featureId)
-      .where(sql`intent = 'canonical'`)
-  ]
-);
+      .where(sql`intent = 'canonical'`),
+  ],
+)

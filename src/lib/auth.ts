@@ -1,21 +1,21 @@
 // BETTER-AUTH
-import { betterAuth } from 'better-auth';
-import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { customSession, anonymous, username } from 'better-auth/plugins';
+import { betterAuth } from 'better-auth'
+import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+import { customSession, anonymous, username } from 'better-auth/plugins'
 // CONFIG
-import { authConfig } from './auth/config';
+import { authConfig } from './auth/config'
 // DB SCHEMA
-import type * as schema from '$lib/db/schema/index';
+import type * as schema from '$lib/db/schema/index'
 // TYPES
-import type { DrizzleD1Database } from 'drizzle-orm/d1';
+import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type {
   UserRoleDisco,
   UserLayer,
   UserPreferences,
   UserExperimental,
-  Locale
-} from '$lib/types';
-import type { user as userSchema } from '$lib/db/schema/user';
+  Locale,
+} from '$lib/types'
+import type { user as userSchema } from '$lib/db/schema/user'
 
 // ═══════════════════════════════════════════════════════════════
 // CACHE: AUTH INSTANCES BY BASE URL
@@ -25,7 +25,7 @@ import type { user as userSchema } from '$lib/db/schema/user';
  * Cache for auth instances keyed by base URL.
  * This allows us to support multiple domains with a single better-auth setup.
  */
-const authInstances = new Map<string, Auth>();
+const authInstances = new Map<string, Auth>()
 
 /**
  * Extract the base URL from request headers.
@@ -34,14 +34,14 @@ const authInstances = new Map<string, Auth>();
  */
 export function getBaseUrlFromRequestHeaders(headers: Headers): string {
   const proto =
-    headers.get('x-forwarded-proto') ?? (import.meta.env.DEV ? 'http' : 'https');
-  const host = headers.get('x-forwarded-host') ?? headers.get('host');
+    headers.get('x-forwarded-proto') ?? (import.meta.env.DEV ? 'http' : 'https')
+  const host = headers.get('x-forwarded-host') ?? headers.get('host')
 
   if (!host) {
-    throw new Error('Cannot determine host from request headers');
+    throw new Error('Cannot determine host from request headers')
   }
 
-  return `${proto}://${host}`;
+  return `${proto}://${host}`
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -59,12 +59,12 @@ export function getBaseUrlFromRequestHeaders(headers: Headers): string {
 function createAuthInstance(
   db: DrizzleD1Database<typeof schema>,
   env: {
-    AUTH_SECRET: string;
-    AUTH_GOOGLE_ID: string;
-    AUTH_GOOGLE_SECRET: string;
-    SUPERADMIN_USERID: string;
+    AUTH_SECRET: string
+    AUTH_GOOGLE_ID: string
+    AUTH_GOOGLE_SECRET: string
+    SUPERADMIN_USERID: string
   },
-  baseURL: string
+  baseURL: string,
 ) {
   return betterAuth({
     // COMMON CONFIG
@@ -75,108 +75,108 @@ function createAuthInstance(
     secret: env.AUTH_SECRET,
     // DB
     database: drizzleAdapter(db, {
-      provider: 'sqlite'
+      provider: 'sqlite',
     }),
     // DATABASE HOOKS
     databaseHooks: {
       user: {
         create: {
-          before: async (user) => {
+          before: async user => {
             // Generate username if not provided
-            const dbUser = user as Partial<typeof userSchema.$inferSelect>;
+            const dbUser = user as Partial<typeof userSchema.$inferSelect>
             if (!dbUser.username) {
-              const { generateUsernameFromId } = await import('$lib/utils/username');
-              const username = generateUsernameFromId(user.id);
+              const { generateUsernameFromId } = await import('$lib/utils/username')
+              const username = generateUsernameFromId(user.id)
               return {
                 data: {
                   ...user,
                   username,
-                  displayUsername: username
-                }
-              };
+                  displayUsername: username,
+                },
+              }
             }
-            return { data: user };
-          }
-        }
-      }
+            return { data: user }
+          },
+        },
+      },
     },
     // OAUTH
     socialProviders: {
       google: {
         clientId: env.AUTH_GOOGLE_ID,
-        clientSecret: env.AUTH_GOOGLE_SECRET
-      }
+        clientSecret: env.AUTH_GOOGLE_SECRET,
+      },
     },
     // PLUGINS
     plugins: [
       username({
-        usernameValidator: async (username) => {
+        usernameValidator: async username => {
           if (username === 'admin') {
-            return false;
+            return false
           }
 
           // Check if username conflicts with existing usernames or user IDs
-          const { user } = await import('$lib/db/schema/user');
-          const { or, eq } = await import('drizzle-orm');
+          const { user } = await import('$lib/db/schema/user')
+          const { or, eq } = await import('drizzle-orm')
 
           const existingUser = await db
             .select()
             .from(user)
             .where(or(eq(user.username, username), eq(user.id, username)))
-            .limit(1);
+            .limit(1)
 
-          return existingUser.length === 0;
-        }
+          return existingUser.length === 0
+        },
       }),
       anonymous({
         disableDeleteAnonymousUser: true,
         generateName: () => 'Anonymous',
         onLinkAccount: async ({ anonymousUser }) => {
           // Mark the user as no longer anonymous when linking accounts
-          const { user } = await import('$lib/db/schema/user');
-          const { eq } = await import('drizzle-orm');
+          const { user } = await import('$lib/db/schema/user')
+          const { eq } = await import('drizzle-orm')
 
           await db
             .update(user)
             .set({ isAnonymous: false })
-            .where(eq(user.id, anonymousUser.user.id));
-        }
+            .where(eq(user.id, anonymousUser.user.id))
+        },
       }),
 
       customSession(async ({ user, session }) => {
         // Import these here to avoid circular dependencies
-        const { getUserRoles } = await import('$lib/db/services/user');
-        const { getUserLayers } = await import('./client/services/auth');
+        const { getUserRoles } = await import('$lib/db/services/user')
+        const { getUserLayers } = await import('./client/services/auth')
 
         // Get user roles and layers
-        const roles: UserRoleDisco[] = await getUserRoles(db, user.id);
-        const userLayers: UserLayer[] = await getUserLayers(db, user.id);
-        const superAdmin = user.id === env.SUPERADMIN_USERID;
+        const roles: UserRoleDisco[] = await getUserRoles(db, user.id)
+        const userLayers: UserLayer[] = await getUserLayers(db, user.id)
+        const superAdmin = user.id === env.SUPERADMIN_USERID
 
         // Parse JSON fields from strings to objects
-        let preferences: UserPreferences;
-        let experimental: UserExperimental;
+        let preferences: UserPreferences
+        let experimental: UserExperimental
 
         try {
-          const dbUser = user as typeof userSchema.$inferSelect;
-          preferences = JSON.parse(dbUser.preferences);
+          const dbUser = user as typeof userSchema.$inferSelect
+          preferences = JSON.parse(dbUser.preferences)
         } catch {
           preferences = {
             fallbackLocales: [],
             allowMachineTranslation: false,
             preferFallbackInCurrentLocale: false,
-            isTranslateButtonVisible: true
-          };
+            isTranslateButtonVisible: true,
+          }
         }
 
         try {
-          const dbUser = user as typeof userSchema.$inferSelect;
-          experimental = JSON.parse(dbUser.experimental);
+          const dbUser = user as typeof userSchema.$inferSelect
+          experimental = JSON.parse(dbUser.experimental)
         } catch {
           experimental = {
             contributorMode: false,
-            noLabelsMode: false
-          };
+            noLabelsMode: false,
+          }
         }
 
         // Return enriched session data
@@ -187,13 +187,13 @@ function createAuthInstance(
             experimental,
             roles,
             userLayers,
-            superAdmin
+            superAdmin,
           },
-          session
-        };
-      })
-    ]
-  });
+          session,
+        }
+      }),
+    ],
+  })
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -213,41 +213,41 @@ export const getAuthForRequest = (
   headers: Headers,
   db: DrizzleD1Database<typeof schema>,
   env: {
-    AUTH_SECRET: string;
-    AUTH_GOOGLE_ID: string;
-    AUTH_GOOGLE_SECRET: string;
-    SUPERADMIN_USERID: string;
-  }
+    AUTH_SECRET: string
+    AUTH_GOOGLE_ID: string
+    AUTH_GOOGLE_SECRET: string
+    SUPERADMIN_USERID: string
+  },
 ): Auth => {
-  const baseURL = getBaseUrlFromRequestHeaders(headers);
+  const baseURL = getBaseUrlFromRequestHeaders(headers)
 
   // Return cached instance if available
-  const cachedAuth = authInstances.get(baseURL);
+  const cachedAuth = authInstances.get(baseURL)
   if (cachedAuth) {
-    return cachedAuth;
+    return cachedAuth
   }
 
   // Create new instance for this base URL
-  const auth = createAuthInstance(db, env, baseURL);
-  authInstances.set(baseURL, auth);
+  const auth = createAuthInstance(db, env, baseURL)
+  authInstances.set(baseURL, auth)
 
-  return auth;
-};
+  return auth
+}
 
 // Export types using Better Auth's inference
-export type Auth = ReturnType<typeof createAuthInstance>;
-export type Session = Auth['$Infer']['Session'];
+export type Auth = ReturnType<typeof createAuthInstance>
+export type Session = Auth['$Infer']['Session']
 export type SessionUser = Session['user'] & {
-  locale: Locale;
-  attribution: string;
-  isArchived: boolean;
-  username: string | null;
-  displayUsername: string | null;
-  isAnonymous: boolean;
-  preferences: UserPreferences;
-  experimental: UserExperimental;
-  superAdmin: boolean;
-  roles: UserRoleDisco[];
-  userLayers: UserLayer[];
-};
-export type SessionSession = Session['session'];
+  locale: Locale
+  attribution: string
+  isArchived: boolean
+  username: string | null
+  displayUsername: string | null
+  isAnonymous: boolean
+  preferences: UserPreferences
+  experimental: UserExperimental
+  superAdmin: boolean
+  roles: UserRoleDisco[]
+  userLayers: UserLayer[]
+}
+export type SessionSession = Session['session']

@@ -1,7 +1,7 @@
 //I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // CONTEXT
-import { AdminCtx } from '../../context/admin.svelte';
+import type { AdminCtx } from '../../context/admin.svelte'
 // TYPES
 import type {
   FilterTriState,
@@ -11,8 +11,8 @@ import type {
   FeatureViewFilters,
   ViewFilters,
   Locale,
-  Id
-} from '$lib/types';
+  Id,
+} from '$lib/types'
 
 /* ------------------ */
 // GETTERS :: GENERIC
@@ -20,15 +20,15 @@ import type {
 
 export function getResourceFilterState<
   T extends keyof ViewFilters,
-  K extends keyof ViewFilters[T]
+  K extends keyof ViewFilters[T],
 >(
   adminCtx: AdminCtx,
   resource: T,
   filterKey: K,
-  activeLocales?: Set<Locale>
+  activeLocales?: Set<Locale>,
 ): FilterTriState {
-  const resourceFilters = adminCtx.appCtx.state?.viewFilters?.[resource];
-  if (!resourceFilters || typeof resourceFilters !== 'object') return null;
+  const resourceFilters = adminCtx.appCtx.state?.viewFilters?.[resource]
+  if (!resourceFilters || typeof resourceFilters !== 'object') return null
 
   // Handle translation filters
   if (
@@ -40,60 +40,60 @@ export function getResourceFilterState<
       adminCtx,
       resource,
       filterKey as string,
-      activeLocales
-    );
+      activeLocales,
+    )
   }
 
   // Handle simple filters
-  const sectionFilters = resourceFilters[filterKey];
-  if (sectionFilters === undefined || sectionFilters === null) return null;
-  return sectionFilters as FilterTriState;
+  const sectionFilters = resourceFilters[filterKey]
+  if (sectionFilters === undefined || sectionFilters === null) return null
+  return sectionFilters as FilterTriState
 }
 
 export function getGenericTranslationFilterState<T extends keyof ViewFilters>(
   adminCtx: AdminCtx,
   resource: T,
   filterKey: string,
-  activeLocales: Set<Locale>
+  activeLocales: Set<Locale>,
 ): FilterTriState {
-  const resourceFilters = adminCtx.appCtx.state?.viewFilters?.[resource];
-  if (!resourceFilters || typeof resourceFilters !== 'object') return null;
+  const resourceFilters = adminCtx.appCtx.state?.viewFilters?.[resource]
+  if (!resourceFilters || typeof resourceFilters !== 'object') return null
 
-  const sectionFilters = (resourceFilters as any)[filterKey];
+  const sectionFilters = (resourceFilters as any)[filterKey]
   if (!sectionFilters || typeof sectionFilters !== 'object') {
-    return null;
+    return null
   }
 
   // Check values for active locales only
-  const activeValues: FilterTriState[] = [];
+  const activeValues: FilterTriState[] = []
   for (const locale of activeLocales) {
     if (locale in sectionFilters) {
-      activeValues.push((sectionFilters as any)[locale]);
+      activeValues.push((sectionFilters as any)[locale])
     } else {
-      activeValues.push(null);
+      activeValues.push(null)
     }
   }
 
   // If no active locales or all null, return null
-  if (activeValues.length === 0 || activeValues.every((v) => v === null)) {
-    return null;
+  if (activeValues.length === 0 || activeValues.every(v => v === null)) {
+    return null
   }
 
   // Check if all active values are the same
-  const firstNonNull = activeValues.find((v) => v !== null);
+  const firstNonNull = activeValues.find(v => v !== null)
   if (firstNonNull !== undefined) {
-    const allSame = activeValues.every((v) => v === null || v === firstNonNull);
+    const allSame = activeValues.every(v => v === null || v === firstNonNull)
     if (allSame) {
-      return firstNonNull;
+      return firstNonNull
     }
   }
 
   // If they're not all the same, set them all to true and return true
   // This is to recover from inconsistent states, this should never happen.
   for (const locale of activeLocales) {
-    (sectionFilters as any)[locale] = true;
+    ;(sectionFilters as any)[locale] = true
   }
-  return true;
+  return true
 }
 
 /* ------------------ */
@@ -104,7 +104,7 @@ function getFilterState<K extends keyof FeatureViewFilters>(
   adminCtx: AdminCtx,
   filterKey: K,
   propertyId?: Id,
-  activeLocales?: Set<Locale>
+  activeLocales?: Set<Locale>,
 ): FilterTriState {
   if (
     filterKey === 'isTitleTranslated' ||
@@ -112,29 +112,29 @@ function getFilterState<K extends keyof FeatureViewFilters>(
     filterKey === 'isSpecifierTranslated' ||
     filterKey === 'isAddressTranslated'
   ) {
-    if (!activeLocales) return null;
-    return getTranslationFilterState(adminCtx, filterKey, activeLocales);
+    if (!activeLocales) return null
+    return getTranslationFilterState(adminCtx, filterKey, activeLocales)
   } else if (filterKey === 'properties' && propertyId) {
-    return getSimpleFilterState(adminCtx, 'properties', propertyId);
+    return getSimpleFilterState(adminCtx, 'properties', propertyId)
   } else {
-    return getSimpleFilterState(adminCtx, filterKey) as FilterTriState;
+    return getSimpleFilterState(adminCtx, filterKey) as FilterTriState
   }
 }
 // Generic filter state helpers
 export function getSimpleFilterState<K extends keyof FeatureViewFilters>(
   adminCtx: AdminCtx,
   filterKey: K,
-  propertyId?: Id
+  propertyId?: Id,
 ): FilterTriState | any {
-  const featureFilters = adminCtx.appCtx.state?.viewFilters?.feature;
-  if (!featureFilters || typeof featureFilters !== 'object') return null;
+  const featureFilters = adminCtx.appCtx.state?.viewFilters?.feature
+  if (!featureFilters || typeof featureFilters !== 'object') return null
 
-  const sectionFilters = featureFilters[filterKey];
-  if (sectionFilters === undefined || sectionFilters === null) return null;
+  const sectionFilters = featureFilters[filterKey]
+  if (sectionFilters === undefined || sectionFilters === null) return null
 
   // For simple filters like isPublished
   if (!propertyId) {
-    return sectionFilters as FilterTriState;
+    return sectionFilters as FilterTriState
   }
 
   // For nested filters
@@ -143,10 +143,10 @@ export function getSimpleFilterState<K extends keyof FeatureViewFilters>(
     propertyId &&
     propertyId in sectionFilters
   ) {
-    return (sectionFilters as any)[propertyId];
+    return (sectionFilters as any)[propertyId]
   }
 
-  return null;
+  return null
 }
 
 /* ------------------ */
@@ -155,16 +155,16 @@ export function getSimpleFilterState<K extends keyof FeatureViewFilters>(
 
 export function setResourceFilterState<
   T extends keyof ViewFilters,
-  K extends keyof ViewFilters[T]
+  K extends keyof ViewFilters[T],
 >(
   adminCtx: AdminCtx,
   resource: T,
   filterKey: K,
   newValue: FilterTriState,
-  activeLocales?: Set<Locale>
+  activeLocales?: Set<Locale>,
 ) {
-  const resourceFilters = adminCtx.appCtx.state?.viewFilters?.[resource];
-  if (!resourceFilters || typeof resourceFilters !== 'object') return;
+  const resourceFilters = adminCtx.appCtx.state?.viewFilters?.[resource]
+  if (!resourceFilters || typeof resourceFilters !== 'object') return
 
   // Handle translation filters
   if (
@@ -177,35 +177,35 @@ export function setResourceFilterState<
       resource,
       filterKey as string,
       activeLocales,
-      newValue
-    );
+      newValue,
+    )
   } else {
     // Handle simple filters
-    (resourceFilters as any)[filterKey] = newValue;
+    ;(resourceFilters as any)[filterKey] = newValue
   }
 }
 
 export function toggleResourceFilterState<
   T extends keyof ViewFilters,
-  K extends keyof ViewFilters[T]
+  K extends keyof ViewFilters[T],
 >(
   adminCtx: AdminCtx,
   resource: T,
   filterKey: K,
   value: FilterTriState,
-  activeLocales?: Set<Locale>
+  activeLocales?: Set<Locale>,
 ) {
   // GET
-  let currentState = getResourceFilterState(
+  const currentState = getResourceFilterState(
     adminCtx,
     resource,
     filterKey,
-    activeLocales
-  );
+    activeLocales,
+  )
   // DETERMINE
-  const newValue = value === currentState ? null : value;
+  const newValue = value === currentState ? null : value
   // SET
-  setResourceFilterState(adminCtx, resource, filterKey, newValue, activeLocales);
+  setResourceFilterState(adminCtx, resource, filterKey, newValue, activeLocales)
 }
 
 export function setGenericTranslationFilterState<T extends keyof ViewFilters>(
@@ -213,29 +213,29 @@ export function setGenericTranslationFilterState<T extends keyof ViewFilters>(
   resource: T,
   filterKey: string,
   activeLocales: Set<Locale>,
-  value: FilterTriState
+  value: FilterTriState,
 ) {
-  const resourceFilters = adminCtx.appCtx.state?.viewFilters?.[resource];
-  if (!resourceFilters || typeof resourceFilters !== 'object') return;
+  const resourceFilters = adminCtx.appCtx.state?.viewFilters?.[resource]
+  if (!resourceFilters || typeof resourceFilters !== 'object') return
 
-  let sectionFilters = (resourceFilters as any)[filterKey];
+  let sectionFilters = (resourceFilters as any)[filterKey]
   if (!sectionFilters || typeof sectionFilters !== 'object') {
     // Initialize if doesn't exist
     sectionFilters = {
       en: null,
       'zh-hant': null,
-      'zh-hans': null
-    };
-    (resourceFilters as any)[filterKey] = sectionFilters;
+      'zh-hans': null,
+    }
+    ;(resourceFilters as any)[filterKey] = sectionFilters
   }
 
   // Set all locales: inactive ones to null, active ones to the provided value
-  const translationLocales = (resourceFilters as any).translationLocales;
+  const translationLocales = (resourceFilters as any).translationLocales
   for (const locale of Object.keys(translationLocales)) {
     if (activeLocales.has(locale as Locale)) {
-      (sectionFilters as any)[locale] = value;
+      ;(sectionFilters as any)[locale] = value
     } else {
-      (sectionFilters as any)[locale] = null;
+      ;(sectionFilters as any)[locale] = null
     }
   }
 }
@@ -249,7 +249,7 @@ export function setFilterState<K extends keyof FeatureViewFilters>(
   filterKey: K,
   newValue: FilterTriState,
   propertyId?: Id,
-  activeLocales?: Set<Locale>
+  activeLocales?: Set<Locale>,
 ) {
   // Set the new state
   if (
@@ -258,12 +258,12 @@ export function setFilterState<K extends keyof FeatureViewFilters>(
     filterKey === 'isSpecifierTranslated' ||
     filterKey === 'isAddressTranslated'
   ) {
-    if (!activeLocales) return;
-    setTranslationFilterState(adminCtx, filterKey, activeLocales, newValue);
+    if (!activeLocales) return
+    setTranslationFilterState(adminCtx, filterKey, activeLocales, newValue)
   } else if (filterKey === 'properties' && propertyId) {
-    setPropertyFilterState(adminCtx, propertyId, newValue);
+    setPropertyFilterState(adminCtx, propertyId, newValue)
   } else {
-    setSimpleFilterState(adminCtx, filterKey, newValue);
+    setSimpleFilterState(adminCtx, filterKey, newValue)
   }
 }
 
@@ -271,19 +271,19 @@ export function setSimpleFilterState<K extends keyof FeatureViewFilters>(
   adminCtx: AdminCtx,
   filterKey: K,
   value: FilterTriState,
-  propertyId?: Id
+  propertyId?: Id,
 ) {
-  const featureFilters = adminCtx.appCtx.state?.viewFilters?.feature;
-  if (!featureFilters || typeof featureFilters !== 'object') return;
+  const featureFilters = adminCtx.appCtx.state?.viewFilters?.feature
+  if (!featureFilters || typeof featureFilters !== 'object') return
 
   if (!propertyId) {
     // Simple filter
-    (featureFilters as any)[filterKey] = value;
+    ;(featureFilters as any)[filterKey] = value
   } else {
     // Nested filter
-    const sectionFilters = featureFilters[filterKey];
+    const sectionFilters = featureFilters[filterKey]
     if (sectionFilters && typeof sectionFilters === 'object') {
-      (sectionFilters as any)[propertyId] = value;
+      ;(sectionFilters as any)[propertyId] = value
     }
   }
 }
@@ -297,14 +297,14 @@ export function toggleFilterState<K extends keyof FeatureViewFilters>(
   filterKey: K,
   value: FilterTriState,
   propertyId?: Id,
-  activeLocales?: Set<Locale>
+  activeLocales?: Set<Locale>,
 ) {
   // GET
-  let currentState = getFilterState(adminCtx, filterKey, propertyId, activeLocales);
+  const currentState = getFilterState(adminCtx, filterKey, propertyId, activeLocales)
   // DETERMINE
-  const newValue = value === currentState ? null : value;
+  const newValue = value === currentState ? null : value
   // SET
-  setFilterState(adminCtx, filterKey, newValue, propertyId, activeLocales);
+  setFilterState(adminCtx, filterKey, newValue, propertyId, activeLocales)
 }
 
 /* ------------------ */
@@ -313,17 +313,17 @@ export function toggleFilterState<K extends keyof FeatureViewFilters>(
 
 export function getImageFilterState(
   adminCtx: AdminCtx,
-  filterKey: FeatureImageFilterKey
+  filterKey: FeatureImageFilterKey,
 ): FilterTriState {
-  return getSimpleFilterState(adminCtx, filterKey) as FilterTriState;
+  return getSimpleFilterState(adminCtx, filterKey) as FilterTriState
 }
 
 export function setImageFilterState(
   adminCtx: AdminCtx,
   filterKey: FeatureImageFilterKey,
-  value: FilterTriState
+  value: FilterTriState,
 ) {
-  setSimpleFilterState(adminCtx, filterKey, value);
+  setSimpleFilterState(adminCtx, filterKey, value)
 }
 
 /* ------------------ */
@@ -332,17 +332,17 @@ export function setImageFilterState(
 
 export function getAuthorshipFilterState(
   adminCtx: AdminCtx,
-  filterKey: FeatureAuthorshipFilterKey
+  filterKey: FeatureAuthorshipFilterKey,
 ): FilterTriState {
-  return getSimpleFilterState(adminCtx, filterKey) as FilterTriState;
+  return getSimpleFilterState(adminCtx, filterKey) as FilterTriState
 }
 
 export function setAuthorshipFilterState(
   adminCtx: AdminCtx,
   filterKey: FeatureAuthorshipFilterKey,
-  value: FilterTriState
+  value: FilterTriState,
 ) {
-  setSimpleFilterState(adminCtx, filterKey, value);
+  setSimpleFilterState(adminCtx, filterKey, value)
 }
 
 /* ------------------ */
@@ -352,73 +352,73 @@ export function setAuthorshipFilterState(
 export function getTranslationFilterState<K extends FeatureTranslationFilterKey>(
   adminCtx: AdminCtx,
   filterKey: K,
-  activeLocales: Set<Locale>
+  activeLocales: Set<Locale>,
 ): FilterTriState {
-  const sectionFilters = getSimpleFilterState(adminCtx, filterKey);
+  const sectionFilters = getSimpleFilterState(adminCtx, filterKey)
   if (!sectionFilters || typeof sectionFilters !== 'object') {
-    return null;
+    return null
   }
 
   // Check values for active locales only
-  const activeValues: FilterTriState[] = [];
+  const activeValues: FilterTriState[] = []
   for (const locale of activeLocales) {
     if (locale in sectionFilters) {
-      activeValues.push((sectionFilters as any)[locale]);
+      activeValues.push((sectionFilters as any)[locale])
     } else {
-      activeValues.push(null);
+      activeValues.push(null)
     }
   }
 
   // If no active locales or all null, return null
-  if (activeValues.length === 0 || activeValues.every((v) => v === null)) {
-    return null;
+  if (activeValues.length === 0 || activeValues.every(v => v === null)) {
+    return null
   }
 
   // Check if all active values are the same
-  const firstNonNull = activeValues.find((v) => v !== null);
+  const firstNonNull = activeValues.find(v => v !== null)
   if (firstNonNull !== undefined) {
-    const allSame = activeValues.every((v) => v === null || v === firstNonNull);
+    const allSame = activeValues.every(v => v === null || v === firstNonNull)
     if (allSame) {
-      return firstNonNull;
+      return firstNonNull
     }
   }
 
   // If they're not all the same, set them all to true and return true
   // This is to recover from inconsistent states, this should never happen.
   for (const locale of activeLocales) {
-    (sectionFilters as any)[locale] = true;
+    ;(sectionFilters as any)[locale] = true
   }
-  return true;
+  return true
 }
 
 export function setTranslationFilterState<K extends FeatureTranslationFilterKey>(
   adminCtx: AdminCtx,
   filterKey: K,
   activeLocales: Set<Locale>,
-  value: FilterTriState
+  value: FilterTriState,
 ) {
-  const featureFilters = adminCtx.appCtx.state?.viewFilters?.feature;
-  if (!featureFilters || typeof featureFilters !== 'object') return;
+  const featureFilters = adminCtx.appCtx.state?.viewFilters?.feature
+  if (!featureFilters || typeof featureFilters !== 'object') return
 
-  let sectionFilters = featureFilters[filterKey];
+  let sectionFilters = featureFilters[filterKey]
   if (!sectionFilters || typeof sectionFilters !== 'object') {
     // Initialize if doesn't exist
     sectionFilters = {
       en: null,
       'zh-hant': null,
-      'zh-hans': null
-    };
-    (featureFilters as any)[filterKey] = sectionFilters;
+      'zh-hans': null,
+    }
+    ;(featureFilters as any)[filterKey] = sectionFilters
   }
 
   // Set all locales: inactive ones to null, active ones to the provided value
   const translationLocales =
-    adminCtx.appCtx.state.viewFilters.feature.translationLocales;
+    adminCtx.appCtx.state.viewFilters.feature.translationLocales
   for (const locale of Object.keys(translationLocales)) {
     if (activeLocales.has(locale as Locale)) {
-      (sectionFilters as any)[locale] = value;
+      ;(sectionFilters as any)[locale] = value
     } else {
-      (sectionFilters as any)[locale] = null;
+      ;(sectionFilters as any)[locale] = null
     }
   }
 }
@@ -430,9 +430,9 @@ export function setTranslationFilterState<K extends FeatureTranslationFilterKey>
 export function setPropertyFilterState(
   adminCtx: AdminCtx,
   propertyId: string,
-  value: FilterTriState
+  value: FilterTriState,
 ) {
-  setSimpleFilterState(adminCtx, 'properties', value, propertyId);
+  setSimpleFilterState(adminCtx, 'properties', value, propertyId)
 }
 
 /* ------------------ */
@@ -442,21 +442,21 @@ export function setPropertyFilterState(
 export function getFeatureTaskLabel(
   filterDef: any,
   targetState: boolean,
-  isTranslation: boolean = false
+  isTranslation: boolean = false,
 ): string {
   if (isTranslation) {
-    return !targetState ? m.filters__todo() : m.filters__done();
+    return !targetState ? m.filters__todo() : m.filters__done()
   }
 
   if (!targetState) {
     return (
       filterDef.falseLabel ||
       (filterDef.invertBoolean ? m.filters__only() : m.filters__not())
-    );
+    )
   } else {
     return (
       filterDef.trueLabel ||
       (filterDef.invertBoolean ? m.filters__not() : m.filters__only())
-    );
+    )
   }
 }

@@ -1,27 +1,27 @@
 // SVELTEKIT
-import { superValidate, type SuperValidated } from 'sveltekit-superforms';
+import { superValidate, type SuperValidated } from 'sveltekit-superforms'
 // DRIZZLE
-import { and, eq, SQL, like, sql, or } from 'drizzle-orm';
+import { and, eq, type SQL, like, sql, or } from 'drizzle-orm'
 // SCHEMA
 import {
   feature,
   organisation,
   organisationI18n,
   organisationRole,
-  project
-} from '../schema';
+  project,
+} from '../schema'
 // ZOD
-import { zod } from 'sveltekit-superforms/adapters';
+import { zod } from 'sveltekit-superforms/adapters'
 import {
   OrganisationAPI,
   OrganisationCollectionAPI,
   OrganisationSuperAdminAPI,
-  OrganisationCollectionSuperAdminAPI
-} from '../zod';
+  OrganisationCollectionSuperAdminAPI,
+} from '../zod'
 // SERVICES
-import { toRelatedRecords, transformI18nSafely } from '..';
-import { insert, update, insertManyRelated, replaceManyRelated } from '../crud';
-import { getOrganisationHubFilter } from './hub';
+import { toRelatedRecords, transformI18nSafely } from '..'
+import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
+import { getOrganisationHubFilter } from './hub'
 // TYPES
 import type {
   OrganisationDB,
@@ -38,8 +38,8 @@ import type {
   OrganisationDBRaw,
   OrganisationI18nDB,
   OrganisationRoleDB,
-  HubOptsExtended
-} from '$lib/types';
+  HubOptsExtended,
+} from '$lib/types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -81,37 +81,37 @@ export const listOrganisations = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  opts: HubOptsExtended
+  opts: HubOptsExtended,
 ): Promise<OrganisationDBRaw[]> => {
   // Core or non-core hub filtering
-  const hubFilter = getOrganisationHubFilter(db, opts);
+  const hubFilter = getOrganisationHubFilter(db, opts)
   if (hubFilter) {
-    conditions.push(hubFilter);
+    conditions.push(hubFilter)
   }
 
   return await db.query.organisation.findMany({
     with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined
-  });
-};
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+  })
+}
 
 export const getOrganisation = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  opts: HubOptsExtended
+  opts: HubOptsExtended,
 ): Promise<OrganisationDBRaw | undefined> => {
   // Core or non-core hub filtering
-  const hubFilter = getOrganisationHubFilter(db, opts);
+  const hubFilter = getOrganisationHubFilter(db, opts)
   if (hubFilter) {
-    conditions.push(hubFilter);
+    conditions.push(hubFilter)
   }
 
   return await db.query.organisation.findFirst({
     with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined
-  });
-};
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+  })
+}
 
 export const searchOrganisations = async (
   db: Database,
@@ -119,7 +119,7 @@ export const searchOrganisations = async (
   conditions: SQL<unknown>[] = [],
   search: string,
   opts: HubOptsExtended,
-  searchColumns: string[] = ['code', 'name', 'description']
+  searchColumns: string[] = ['code', 'name', 'description'],
 ): Promise<OrganisationDBRaw[]> => {
   // Ignore hubfilter, cause this is primarily used to configure hub settings
   // const hubFilter = getOrganisationHubFilter(db, opts);
@@ -129,36 +129,36 @@ export const searchOrganisations = async (
 
   // Add search conditions if search term provided
   if (search) {
-    const searchConditions: SQL<unknown>[] = [];
+    const searchConditions: SQL<unknown>[] = []
 
     // Search in base organisation table columns
-    const baseColumns = searchColumns.filter((col) => col === 'code');
+    const baseColumns = searchColumns.filter(col => col === 'code')
     for (const column of baseColumns) {
-      const orgColumn = organisation[column as keyof typeof organisation];
+      const orgColumn = organisation[column as keyof typeof organisation]
       if (orgColumn) {
         searchConditions.push(
-          like(sql`lower(${orgColumn})`, `%${search.toLowerCase()}%`)
-        );
+          like(sql`lower(${orgColumn})`, `%${search.toLowerCase()}%`),
+        )
       }
     }
 
     // Search in i18n table columns (name, description)
-    const i18nColumns = searchColumns.filter((col) =>
-      ['name', 'description'].includes(col)
-    );
+    const i18nColumns = searchColumns.filter(col =>
+      ['name', 'description'].includes(col),
+    )
     if (i18nColumns.length > 0) {
       // Create a subquery to check if any i18n record matches the search
-      const i18nSearchConditions: SQL<unknown>[] = [];
+      const i18nSearchConditions: SQL<unknown>[] = []
       for (const column of i18nColumns) {
         if (column === 'name') {
           i18nSearchConditions.push(
-            sql`lower("organisationI18n"."name") like ${`%${search.toLowerCase()}%`}`
-          );
+            sql`lower("organisationI18n"."name") like ${`%${search.toLowerCase()}%`}`,
+          )
         } else if (column === 'description') {
           // Handle nullable description field
           i18nSearchConditions.push(
-            sql`("organisationI18n"."description" IS NOT NULL AND lower("organisationI18n"."description") like ${`%${search.toLowerCase()}%`})`
-          );
+            sql`("organisationI18n"."description" IS NOT NULL AND lower("organisationI18n"."description") like ${`%${search.toLowerCase()}%`})`,
+          )
         }
       }
 
@@ -167,28 +167,28 @@ export const searchOrganisations = async (
         const combinedConditions =
           i18nSearchConditions.length === 1
             ? i18nSearchConditions[0]
-            : sql`(${sql.join(i18nSearchConditions, sql` OR `)})`;
+            : sql`(${sql.join(i18nSearchConditions, sql` OR `)})`
 
         searchConditions.push(
           sql`EXISTS (
             SELECT 1 FROM "organisationI18n" 
             WHERE "organisationI18n"."organisationId" = ${organisation.id} 
             AND ${combinedConditions}
-          )`
-        );
+          )`,
+        )
       }
     }
 
     if (searchConditions && searchConditions.length > 0) {
-      conditions.push(or(...searchConditions)!);
+      conditions.push(or(...searchConditions)!)
     }
   }
 
   return await db.query.organisation.findMany({
     with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined
-  });
-};
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+  })
+}
 
 /**
  * Creates a new organisation in the database
@@ -199,8 +199,8 @@ export const searchOrganisations = async (
  */
 export const createOrganisation = async (
   db: Database,
-  data: OrganisationDBNew
-): Promise<OrganisationDB> => await insert(db, organisation, data);
+  data: OrganisationDBNew,
+): Promise<OrganisationDB> => await insert(db, organisation, data)
 
 /**
  * Updates an existing organisation in the database
@@ -213,9 +213,9 @@ export const createOrganisation = async (
 export const updateOrganisation = async (
   db: Database,
   data: OrganisationDBPartial,
-  ref: string
+  ref: string,
 ): Promise<OrganisationDB> =>
-  await update(db, organisation, data, organisation.code, ref);
+  await update(db, organisation, data, organisation.code, ref)
 
 /**
  * Updates an existing organisation in the database by ID
@@ -227,8 +227,8 @@ export const updateOrganisation = async (
 export const updateOrganisationById = async (
   db: Database,
   data: OrganisationDBPartial,
-  id: Id
-): Promise<OrganisationDB> => await update(db, organisation, data, organisation.id, id);
+  id: Id,
+): Promise<OrganisationDB> => await update(db, organisation, data, organisation.id, id)
 
 // ═══════════════════════
 // 2. CRUD :: RELATIONAL OPERATIONS (OrganisationI18n)
@@ -244,16 +244,16 @@ export const updateOrganisationById = async (
 export const createI18n = async (
   db: Database,
   i18n: Record<Locale, OrganisationI18nNew>,
-  organisationId: string
+  organisationId: string,
 ): Promise<OrganisationI18nDB[]> => {
   return await insertManyRelated(
     db,
     organisationI18n,
     toRelatedRecords(i18n, 'organisationId', organisationId, 'locale') as any,
     'organisationId',
-    organisationId
-  );
-};
+    organisationId,
+  )
+}
 
 /**
  * Updates translations for an organisation by deleting existing ones and creating new ones
@@ -265,16 +265,16 @@ export const createI18n = async (
 export const updateI18n = async (
   db: Database,
   i18n: Record<Locale, OrganisationI18nPartial>,
-  organisationId: string
+  organisationId: string,
 ): Promise<OrganisationI18nDB[]> => {
   return await replaceManyRelated(
     db,
     organisationI18n,
     toRelatedRecords(i18n, 'organisationId', organisationId, 'locale') as any,
     organisationI18n.organisationId,
-    organisationId
-  );
-};
+    organisationId,
+  )
+}
 
 // ═══════════════════════
 // 3. CRUD :: RELATIONAL OPERATIONS (OrganisationRole)
@@ -288,15 +288,15 @@ export const updateI18n = async (
  */
 export const listUserRoles = async (
   db: Database,
-  organisationId: string
+  organisationId: string,
 ): Promise<OrganisationRoleDB[]> => {
   return await db.query.organisationRole.findMany({
     with: {
-      user: true
+      user: true,
     },
-    where: eq(organisationRole.organisationId, organisationId)
-  });
-};
+    where: eq(organisationRole.organisationId, organisationId),
+  })
+}
 
 /**
  * Creates user roles for an organisation
@@ -308,16 +308,16 @@ export const listUserRoles = async (
 export const createUserRoles = async (
   db: Database,
   userRoles: OrganisationRoleNew[],
-  organisationId: string
+  organisationId: string,
 ): Promise<OrganisationRoleDB[]> => {
   return await insertManyRelated(
     db,
     organisationRole,
     userRoles,
     'organisationId',
-    organisationId
-  );
-};
+    organisationId,
+  )
+}
 
 /**
  * Updates user roles for an organisation by deleting existing ones and creating new ones
@@ -329,16 +329,16 @@ export const createUserRoles = async (
 export const updateUserRoles = async (
   db: Database,
   userRoles: OrganisationRoleNew[],
-  organisationId: string
+  organisationId: string,
 ): Promise<OrganisationRoleDB[]> => {
   return await replaceManyRelated(
     db,
     organisationRole,
     userRoles,
     organisationRole.organisationId,
-    organisationId
-  );
-};
+    organisationId,
+  )
+}
 
 // ═══════════════════════
 // 4. CRUD :: ORCHESTRATION
@@ -352,16 +352,16 @@ export const updateUserRoles = async (
  */
 export const createOrganisationWithRelated = async (
   db: Database,
-  data: OrganisationNew
+  data: OrganisationNew,
 ) => {
-  const organisation = await createOrganisation(db, data);
-  const i18n = await createI18n(db, data.i18n!, organisation.id);
-  await createUserRoles(db, data.userRoles, organisation.id);
-  const userRoles = await listUserRoles(db, organisation.id);
+  const organisation = await createOrganisation(db, data)
+  const i18n = await createI18n(db, data.i18n!, organisation.id)
+  await createUserRoles(db, data.userRoles, organisation.id)
+  const userRoles = await listUserRoles(db, organisation.id)
   // organisation.image is null upon creation
   // organisation.publisher is null upon creation, as it's unpublished by default.
-  return { ...organisation, i18n, userRoles };
-};
+  return { ...organisation, i18n, userRoles }
+}
 
 /**
  * Updates an organisation with translations and user roles
@@ -373,15 +373,15 @@ export const createOrganisationWithRelated = async (
 export const updateOrganisationWithRelated = async (
   db: Database,
   data: Organisation,
-  lookupCode?: string
+  lookupCode?: string,
 ) => {
-  const codeToUse = lookupCode || data.code;
-  const organisation = await updateOrganisation(db, data, codeToUse);
-  const i18n = await updateI18n(db, data.i18n!, organisation.id);
-  await updateUserRoles(db, data.userRoles, organisation.id);
-  const userRoles = await listUserRoles(db, organisation.id);
-  return { ...organisation, i18n, userRoles };
-};
+  const codeToUse = lookupCode || data.code
+  const organisation = await updateOrganisation(db, data, codeToUse)
+  const i18n = await updateI18n(db, data.i18n!, organisation.id)
+  await updateUserRoles(db, data.userRoles, organisation.id)
+  const userRoles = await listUserRoles(db, organisation.id)
+  return { ...organisation, i18n, userRoles }
+}
 
 // ═══════════════════════
 // 5. UTILS :: SHAPING
@@ -398,46 +398,46 @@ export const toFormShape = async (
   organisation: OrganisationDB,
   i18n: OrganisationI18nNew[],
   userRoles: OrganisationRoleDB[],
-  isSuperAdmin: boolean = false
+  isSuperAdmin: boolean = false,
 ): Promise<SuperValidated<Organisation>> => {
   const formData: Organisation = {
     ...organisation,
     i18n: transformI18nSafely(i18n) as Record<Locale, OrganisationI18nNew>,
-    userRoles
-  };
+    userRoles,
+  }
 
   // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
-  const schema = isSuperAdmin ? OrganisationSuperAdminAPI : OrganisationAPI;
+  const schema = isSuperAdmin ? OrganisationSuperAdminAPI : OrganisationAPI
 
-  // @ts-ignore TODO - Fix Zod type error
-  const form = await superValidate(formData, zod(schema));
-  return form as SuperValidated<Organisation>;
-};
+  // @ts-expect-error TODO - Fix Zod type error
+  const form = await superValidate(formData, zod(schema))
+  return form as SuperValidated<Organisation>
+}
 
 export const toResponseShape = async (
   organisation: OrganisationDB,
   i18n: OrganisationI18nNew[],
   userRoles: OrganisationRoleDB[],
   isCollection: boolean = false,
-  isSuperAdmin: boolean = false
+  isSuperAdmin: boolean = false,
 ) => {
   const data: Organisation = {
     ...organisation,
     i18n: transformI18nSafely(i18n),
-    userRoles
-  };
+    userRoles,
+  }
 
   // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
   if (isCollection) {
     return isSuperAdmin
       ? OrganisationCollectionSuperAdminAPI.parse(data)
-      : OrganisationCollectionAPI.parse(data);
+      : OrganisationCollectionAPI.parse(data)
   } else {
     return isSuperAdmin
       ? OrganisationSuperAdminAPI.parse(data)
-      : OrganisationAPI.parse(data);
+      : OrganisationAPI.parse(data)
   }
-};
+}
 
 // ═══════════════════════
 // 6. UTILS :: LOOKUPS
@@ -451,14 +451,14 @@ export const toResponseShape = async (
  */
 export const getOrganisationForFeatureId = async (
   db: Database,
-  featureId: Id
+  featureId: Id,
 ): Promise<OrganisationDB | undefined> => {
   const record = await db.query.feature.findFirst({
     where: eq(feature.id, featureId),
-    with: { layer: { with: { project: { with: { organisation: true } } } } }
-  });
-  return record?.layer?.project?.organisation || undefined;
-};
+    with: { layer: { with: { project: { with: { organisation: true } } } } },
+  })
+  return record?.layer?.project?.organisation || undefined
+}
 
 /**
  * Retrieves the organisation associated with a project ID
@@ -468,11 +468,11 @@ export const getOrganisationForFeatureId = async (
  */
 export const getOrganisationForProjectId = async (
   db: Database,
-  projectId: Id
+  projectId: Id,
 ): Promise<OrganisationDB | undefined> => {
   const record = await db.query.project.findFirst({
     where: eq(project.id, projectId),
-    with: { organisation: true }
-  });
-  return record?.organisation || undefined;
-};
+    with: { organisation: true },
+  })
+  return record?.organisation || undefined
+}

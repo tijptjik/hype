@@ -8,8 +8,8 @@ import type {
   Organisation,
   Id,
   UploadedPhoto,
-  ImageUpload
-} from '$lib/types';
+  ImageUpload,
+} from '$lib/types'
 
 // ═══════════════════════
 // TASK CREATION CLIENT SERVICES
@@ -33,20 +33,20 @@ export const submitMissingReport = async (
   organisation: Organisation,
   reason: string,
   photos: ImageUpload[],
-  contributorId: Id
+  contributorId: Id,
 ): Promise<Response> => {
   // VALIDATION : At least one photo required
   if (photos.length === 0) {
-    throw new Error('At least one image is required as evidence');
+    throw new Error('At least one image is required as evidence')
   }
 
   // VALIDATION : Minimum reason length
   if (reason.trim().length < 5) {
-    throw new Error('Reason must be at least 5 characters long');
+    throw new Error('Reason must be at least 5 characters long')
   }
 
   // FORM DATA : Create FormData for file uploads
-  const formData = new FormData();
+  const formData = new FormData()
 
   // TASK DATA : Structure for reportedMissing task
   const taskData = {
@@ -56,29 +56,29 @@ export const submitMissingReport = async (
     projectId: project.id,
     organisationId: organisation.id,
     contributorId,
-    message: reason.trim()
-  };
+    message: reason.trim(),
+  }
 
-  formData.append('taskData', JSON.stringify(taskData));
+  formData.append('taskData', JSON.stringify(taskData))
 
   // IMAGES : Add photos to form data
   photos.forEach((photo, index) => {
-    formData.append(`photo_${index}`, photo.file);
-  });
+    formData.append(`photo_${index}`, photo.file)
+  })
 
   // API : Submit the task
   const response = await fetch('/api/tasks', {
     method: 'POST',
-    body: formData
-  });
+    body: formData,
+  })
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to submit missing report: ${errorText}`);
+    const errorText = await response.text()
+    throw new Error(`Failed to submit missing report: ${errorText}`)
   }
 
-  return response;
-};
+  return response
+}
 
 /**
  * Creates a new task for submitting a new feature
@@ -89,47 +89,47 @@ export const submitMissingReport = async (
  */
 export const submitNewFeature = async (
   newFeature: NewFeatureTask,
-  photos: ImageUpload[]
+  photos: ImageUpload[],
 ): Promise<Response> => {
   // VALIDATION : At least one photo required
   if (photos.length === 0) {
-    throw new Error('At least one image is required');
+    throw new Error('At least one image is required')
   }
 
   // VALIDATION : Title required
   if (!newFeature.feature.i18n || Object.keys(newFeature.feature.i18n).length === 0) {
-    throw new Error('Title is required');
+    throw new Error('Title is required')
   }
 
   // FORM DATA : Create FormData for file uploads
-  const formData = new FormData();
+  const formData = new FormData()
 
   // TASK DATA : Structure for newFeature task
   const taskData: NewFeatureTask = {
     ...newFeature,
-    type: 'newFeature'
-  };
+    type: 'newFeature',
+  }
 
-  formData.append('taskData', JSON.stringify(taskData));
+  formData.append('taskData', JSON.stringify(taskData))
 
   // IMAGES : Add photos to form data
   photos.forEach((photo, index) => {
-    formData.append(`photo_${index}`, photo.file);
-  });
+    formData.append(`photo_${index}`, photo.file)
+  })
 
   // API : Submit the task
   const response = await fetch('/api/tasks', {
     method: 'POST',
-    body: formData
-  });
+    body: formData,
+  })
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to submit new feature: ${errorText}`);
+    const errorText = await response.text()
+    throw new Error(`Failed to submit new feature: ${errorText}`)
   }
 
-  return response;
-};
+  return response
+}
 
 /**
  * Creates a new task for submitting new photos for an existing feature
@@ -147,15 +147,15 @@ export const submitNewPhotos = async (
   project: Project,
   organisation: Organisation,
   photos: ImageUpload[],
-  contributorId: Id
+  contributorId: Id,
 ): Promise<Response> => {
   // VALIDATION : At least one photo required
   if (photos.length === 0) {
-    throw new Error('At least one image is required');
+    throw new Error('At least one image is required')
   }
 
   // FORM DATA : Create FormData for file uploads
-  const formData = new FormData();
+  const formData = new FormData()
 
   // TASK DATA : Structure for newPhoto task
   const taskData = {
@@ -164,29 +164,29 @@ export const submitNewPhotos = async (
     layerId: layer.id,
     projectId: project.id,
     organisationId: organisation.id,
-    contributorId
-  };
+    contributorId,
+  }
 
-  formData.append('taskData', JSON.stringify(taskData));
+  formData.append('taskData', JSON.stringify(taskData))
 
   // IMAGES : Add photos to form data
   photos.forEach((photo, index) => {
-    formData.append(`photo_${index}`, photo.file);
-  });
+    formData.append(`photo_${index}`, photo.file)
+  })
 
   // API : Submit the task
   const response = await fetch('/api/tasks', {
     method: 'POST',
-    body: formData
-  });
+    body: formData,
+  })
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to submit new photos: ${errorText}`);
+    const errorText = await response.text()
+    throw new Error(`Failed to submit new photos: ${errorText}`)
   }
 
-  return response;
-};
+  return response
+}
 
 // ═══════════════════════
 // TASK UPDATE CLIENT SERVICES
@@ -201,25 +201,25 @@ export const submitNewPhotos = async (
 export const updateTaskReview = async (
   taskId: Id,
   reviewData: {
-    type: string;
-    reviewOutcome: string;
-    reviewAction: string;
-    reviewReason?: string;
-  }
+    type: string
+    reviewOutcome: string
+    reviewAction: string
+    reviewReason?: string
+  },
 ): Promise<Response> => {
   const response = await fetch(`/api/tasks/${taskId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(reviewData)
-  });
+    body: JSON.stringify(reviewData),
+  })
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to update task: ${errorText}`);
+    const errorText = await response.text()
+    throw new Error(`Failed to update task: ${errorText}`)
   }
 
-  return response;
-};
+  return response
+}
 
 /**
  * Updates a feature as part of task review process
@@ -229,18 +229,18 @@ export const updateTaskReview = async (
  */
 export const updateFeatureFromTask = async (
   featureId: Id,
-  updateData: Record<string, unknown>
+  updateData: Record<string, unknown>,
 ): Promise<Response> => {
   const response = await fetch(`/api/features/${featureId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(updateData)
-  });
+    body: JSON.stringify(updateData),
+  })
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to update feature: ${errorText}`);
+    const errorText = await response.text()
+    throw new Error(`Failed to update feature: ${errorText}`)
   }
 
-  return response;
-};
+  return response
+}

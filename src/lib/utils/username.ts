@@ -2,23 +2,23 @@ import {
   uniqueNamesGenerator,
   adjectives,
   colors,
-  animals
-} from 'unique-names-generator';
-import type { Config } from 'unique-names-generator';
+  animals,
+} from 'unique-names-generator'
+import type { Config } from 'unique-names-generator'
 
 const usernameConfig: Config = {
   dictionaries: [adjectives, colors, animals],
   separator: '',
   length: 3,
-  style: 'capital'
-};
+  style: 'capital',
+}
 
 /**
  * Generates a random username in the format: adjective + color + animal
  * e.g., "quickbluewhale", "cleverpurplecat"
  */
 export function generateRandomUsername(): string {
-  return uniqueNamesGenerator(usernameConfig);
+  return uniqueNamesGenerator(usernameConfig)
 }
 
 /**
@@ -27,10 +27,10 @@ export function generateRandomUsername(): string {
 export function generateUsernameFromId(userId: string): string {
   const seedConfig: Config = {
     ...usernameConfig,
-    seed: userId
-  };
+    seed: userId,
+  }
 
-  return uniqueNamesGenerator(seedConfig);
+  return uniqueNamesGenerator(seedConfig)
 }
 
 /**
@@ -41,7 +41,7 @@ export function makeUrlSafeUsername(displayUsername: string): string {
   return displayUsername
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '') // Remove all non-alphanumeric characters
-    .slice(0, 32); // Limit to 32 characters
+    .slice(0, 32) // Limit to 32 characters
 }
 
 /**
@@ -52,5 +52,5 @@ export function validateDisplayUsername(displayUsername: string): boolean {
     displayUsername.trim().length > 0 &&
     !displayUsername.includes(' ') &&
     displayUsername.trim() === displayUsername
-  );
+  )
 }

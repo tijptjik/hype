@@ -1,14 +1,14 @@
 // SVELTE
-import { error, json } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit'
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // FORMS
-import { superValidate } from 'sveltekit-superforms';
+import { superValidate } from 'sveltekit-superforms'
 // DRIZZLE
-import { eq, SQL } from 'drizzle-orm';
+import { eq, SQL } from 'drizzle-orm'
 // ZOD
-import { zod } from 'sveltekit-superforms/adapters';
-import { LayerUpdateAPI } from '$lib/db/zod';
+import { zod } from 'sveltekit-superforms/adapters'
+import { LayerUpdateAPI } from '$lib/db/zod'
 // API
 import {
   JSONResponseOrError,
@@ -17,41 +17,41 @@ import {
   getPrisms,
   SuperFormResponse,
   logZodError,
-  isAdminRequest
-} from '$lib/api';
+  isAdminRequest,
+} from '$lib/api'
 import {
   assertPermissionsToUpdateLayer,
   getLayerQueryContext,
-  layerEntityWithRelations
-} from '$lib/api/services/layer';
+  layerEntityWithRelations,
+} from '$lib/api/services/layer'
 // DB
-import { layer } from '$lib/db/schema/index';
+import { layer } from '$lib/db/schema/index'
 import {
   getLayer,
   updateLayerWithRelated,
   toFormShape,
   toResponseShape,
-  updateLayer
-} from '$lib/db/services/layer';
+  updateLayer,
+} from '$lib/db/services/layer'
 // TYPES
-import type { RequestHandler } from '@sveltejs/kit';
+import type { RequestHandler } from '@sveltejs/kit'
 import type {
   Layer,
   LayerDB,
   LayerI18nDB,
   LayerPartial,
   LayerPropertyPartial,
-  Id
-} from '$lib/types';
+  Id,
+} from '$lib/types'
 
-import type { SuperValidated } from 'sveltekit-superforms';
+import type { SuperValidated } from 'sveltekit-superforms'
 
 /********************
  *  COMMON
  ************/
 
-const RESOURCE_TYPE = 'layer';
-const RESOURCE_PATH = 'layers';
+const RESOURCE_TYPE = 'layer'
+const RESOURCE_PATH = 'layers'
 
 /********************
  *  READ
@@ -65,10 +65,10 @@ export const GET: RequestHandler = async ({
   url,
   locals,
   platform,
-  request
+  request,
 }) => {
   // ASSERT : User logged in
-  const { db, user, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform)
 
   // CONTEXT : Get the query context
   const { conditions } = getLayerQueryContext(
@@ -77,39 +77,39 @@ export const GET: RequestHandler = async ({
     request,
     {},
     userRoles,
-    getPrisms(url)
-  );
+    getPrisms(url),
+  )
 
   try {
     // Add condition for specific layer id code
-    conditions.push(eq(layer.id, params.id as string));
+    conditions.push(eq(layer.id, params.id as string))
 
     // DB : Get the layer
-    const result = await getLayer(db, layerEntityWithRelations, conditions, locals.hub);
+    const result = await getLayer(db, layerEntityWithRelations, conditions, locals.hub)
 
     if (!result) {
       return error(
         404,
-        m.resource_not_found({ resourceType: m.active_bold_cobra_grin() })
-      );
+        m.resource_not_found({ resourceType: m.active_bold_cobra_grin() }),
+      )
     }
 
     // RESPONSE : Build the response shape
     const data = await toResponseShape(
       result as LayerDB,
       (result as any).i18n || [],
-      (result as any).properties || []
-    );
+      (result as any).properties || [],
+    )
 
     // HTTP : 200 JSON or 404
-    return JSONResponseOrError(data);
+    return JSONResponseOrError(data)
   } catch (e) {
     // DB : Query Error
-    console.error('ERROR', e);
-    logZodError(e, 'Zod read error:');
-    return error(500, 'Dust Accumulation Critical');
+    console.error('ERROR', e)
+    logZodError(e, 'Zod read error:')
+    return error(500, 'Dust Accumulation Critical')
   }
-};
+}
 
 /********************
  *  UPDATE :: PUT
@@ -120,40 +120,40 @@ export const GET: RequestHandler = async ({
  */
 export const PUT: RequestHandler = async ({ params, request, locals, platform }) => {
   // ASSERT : User logged in
-  const { db, user, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform)
 
   // ASSERT : Valid form
-  const formData: Layer = await request.json();
+  const formData: Layer = await request.json()
   const form = (await superValidate(
     formData,
-    // @ts-ignore - FORM : Fix type error
-    zod(LayerUpdateAPI)
-  )) as SuperValidated<Layer>;
+    // @ts-expect-error - FORM : Fix type error
+    zod(LayerUpdateAPI),
+  )) as SuperValidated<Layer>
 
   // RETURN : early if the form is not valid
-  if (!form.valid) return SuperFormResponse<Layer>(form);
+  if (!form.valid) return SuperFormResponse<Layer>(form)
 
   // ACCESS CONTROL : Check permissions OUTSIDE try-catch
-  assertPermissionsToUpdateLayer(user, request, formData, userRoles, params.id as Id);
+  assertPermissionsToUpdateLayer(user, request, formData, userRoles, params.id as Id)
 
   try {
     // DB : Update the layer
-    const updatedLayer = await updateLayerWithRelated(db, form.data, params.id);
+    const updatedLayer = await updateLayerWithRelated(db, form.data, params.id)
 
     // RESPONSE : Convert to form shape and return
     const updatedForm = await toFormShape(
       updatedLayer,
       updatedLayer.i18n,
-      updatedLayer.properties
-    );
+      updatedLayer.properties,
+    )
 
     // HTTP : 200 JSON or 400
-    return SuperFormResponse<Layer>(updatedForm, false, false, RESOURCE_PATH);
+    return SuperFormResponse<Layer>(updatedForm, false, false, RESOURCE_PATH)
   } catch (err) {
-    logZodError(err, 'Update error:');
-    return SuperFormErrorResponse(RESOURCE_TYPE, 'update');
+    logZodError(err, 'Update error:')
+    return SuperFormErrorResponse(RESOURCE_TYPE, 'update')
   }
-};
+}
 
 /********************
  *  UPDATE :: PATCH
@@ -163,53 +163,51 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
  * Partially updates a layer - only the fields that are provided in the request body. This endpoint is used for updating fields that don't require a full form submission, such as the layer publish or archive status.
  */
 export const PATCH: RequestHandler = async ({ params, request, locals, platform }) => {
-  if (!params.id) return error(400, m.deft_sleek_wasp_dine());
-  const { db, user, userRoles } = await getDatabase(locals, platform);
+  if (!params.id) return error(400, m.deft_sleek_wasp_dine())
+  const { db, user, userRoles } = await getDatabase(locals, platform)
 
   // ASSERT : Valid form data
-  const newData: LayerPartial = await request.json();
+  const newData: LayerPartial = await request.json()
 
   // Get the existing layer to verify access OUTSIDE try-catch
-  const conditions = [eq(layer.id, params.id as string)];
-  const existing = (await getLayer(db, {}, conditions, locals.hub)) as LayerDB;
+  const conditions = [eq(layer.id, params.id as string)]
+  const existing = (await getLayer(db, {}, conditions, locals.hub)) as LayerDB
 
   if (!existing)
     return error(
       404,
-      m.resource_not_found({ resourceType: m.active_bold_cobra_grin() })
-    );
+      m.resource_not_found({ resourceType: m.active_bold_cobra_grin() }),
+    )
 
   // Use assertion functions for access control OUTSIDE try-catch
-  assertPermissionsToUpdateLayer(user, request, existing, userRoles, params.id as Id);
+  assertPermissionsToUpdateLayer(user, request, existing, userRoles, params.id as Id)
 
   try {
     // DB : Update only the basic layer fields (no relations for PATCH)
-    const updated = await updateLayer(db, newData, params.id);
+    const updated = await updateLayer(db, newData, params.id)
 
     // DB : Get the updated layer with all relations for response
     const updatedWithRelations = await getLayer(
       db,
       layerEntityWithRelations,
-      [
-        eq(layer.id, params.id as string)
-      ],
-      locals.hub
-    );
+      [eq(layer.id, params.id as string)],
+      locals.hub,
+    )
 
     if (!updatedWithRelations) {
-      return error(500, 'Failed to retrieve updated layer');
+      return error(500, 'Failed to retrieve updated layer')
     }
 
     // RESPONSE : Build the response shape
     const data = await toResponseShape(
       updatedWithRelations as LayerDB,
       (updatedWithRelations as any).i18n || [],
-      (updatedWithRelations as any).properties || []
-    );
+      (updatedWithRelations as any).properties || [],
+    )
 
-    return json({ type: 'success', data });
+    return json({ type: 'success', data })
   } catch (err) {
-    logZodError(err, 'Update error:');
-    return SuperFormErrorResponse(RESOURCE_TYPE, 'patch');
+    logZodError(err, 'Update error:')
+    return SuperFormErrorResponse(RESOURCE_TYPE, 'patch')
   }
-};
+}

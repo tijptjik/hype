@@ -1,26 +1,26 @@
 // DRIZZLE
-import { and, eq, SQL, inArray } from 'drizzle-orm';
+import { and, eq, type SQL, inArray } from 'drizzle-orm'
 // FORMS
-import { superValidate } from 'sveltekit-superforms';
-import { zod } from 'sveltekit-superforms/adapters';
-import type { SuperValidated } from 'sveltekit-superforms';
+import { superValidate } from 'sveltekit-superforms'
+import { zod } from 'sveltekit-superforms/adapters'
+import type { SuperValidated } from 'sveltekit-superforms'
 // SCHEMA
 import {
   layer,
   layerI18n,
   layerProperty,
   property as propertySchema,
-  project
-} from '../schema';
+  project,
+} from '../schema'
 // API
-import { layerMergeWithRelations } from '$lib/api/services/layer';
+import { layerMergeWithRelations } from '$lib/api/services/layer'
 // SERVICES
-import { getLayerHubFilter } from './hub';
+import { getLayerHubFilter } from './hub'
 // DB
-import { toRelatedRecords, transformI18nSafely } from '..';
-import { insert, update, insertManyRelated, replaceManyRelated } from '../crud';
+import { toRelatedRecords, transformI18nSafely } from '..'
+import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
 // TYPES
-import type { SQLiteInsertValue } from 'drizzle-orm/sqlite-core';
+import type { SQLiteInsertValue } from 'drizzle-orm/sqlite-core'
 import type {
   Layer,
   LayerNew,
@@ -38,10 +38,10 @@ import type {
   Property,
   LayerPropertyNew,
   Id,
-  HubOptsExtended
-} from '$lib/types';
+  HubOptsExtended,
+} from '$lib/types'
 // ZOD
-import { LayerAPI } from '../zod';
+import { LayerAPI } from '../zod'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -86,38 +86,38 @@ export const listLayers = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  opts: HubOptsExtended
+  opts: HubOptsExtended,
 ): Promise<LayerDBRaw[]> => {
   // Apply hub filtering if opts is provided
-  const hubFilter = getLayerHubFilter(db, opts);
+  const hubFilter = getLayerHubFilter(db, opts)
   if (hubFilter) {
-    conditions.push(hubFilter);
+    conditions.push(hubFilter)
   }
 
   return await db.query.layer.findMany({
     with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined
-  });
-};
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+  })
+}
 
 export const getLayer = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  opts: HubOptsExtended
+  opts: HubOptsExtended,
 ): Promise<LayerDBRaw | undefined> => {
   // Apply hub filtering if opts is provided
-  const hubFilter = getLayerHubFilter(db, opts);
+  const hubFilter = getLayerHubFilter(db, opts)
   if (hubFilter) {
-    conditions.push(hubFilter);
+    conditions.push(hubFilter)
   }
 
   const result = await db.query.layer.findFirst({
     with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined
-  });
-  return result;
-};
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+  })
+  return result
+}
 
 /**
  * Creates a new layer in the database
@@ -127,7 +127,7 @@ export const getLayer = async (
  * @throws {Error} If the layer creation fails
  */
 export const createLayer = async (db: Database, data: LayerDBNew) =>
-  await insert(db, layer, data);
+  await insert(db, layer, data)
 
 /**
  * Updates an existing layer in the database
@@ -138,7 +138,7 @@ export const createLayer = async (db: Database, data: LayerDBNew) =>
  * @throws {Error} If the layer update fails or layer is not found
  */
 export const updateLayer = async (db: Database, data: LayerDBPartial, ref: string) =>
-  await update(db, layer, data, layer.id, ref);
+  await update(db, layer, data, layer.id, ref)
 
 // ═══════════════════════
 // 2.1. CRUD :: RELATIONAL OPERATIONS (LayerI18n)
@@ -154,16 +154,16 @@ export const updateLayer = async (db: Database, data: LayerDBPartial, ref: strin
 export const createI18n = async (
   db: Database,
   i18n: Record<Locale, LayerI18nNew>,
-  layerId: string
+  layerId: string,
 ) => {
   return await insertManyRelated(
     db,
     layerI18n,
     toRelatedRecords(i18n, 'layerId', layerId, 'locale') as any,
     'layerId',
-    layerId
-  );
-};
+    layerId,
+  )
+}
 
 /**
  * Updates translations for a layer by deleting existing ones and creating new ones
@@ -175,16 +175,16 @@ export const createI18n = async (
 export const updateI18n = async (
   db: Database,
   i18n: Record<Locale, LayerI18nPartial>,
-  layerId: string
+  layerId: string,
 ) => {
   return await replaceManyRelated(
     db,
     layerI18n,
     toRelatedRecords(i18n, 'layerId', layerId, 'locale') as any,
     layerI18n.layerId,
-    layerId
-  );
-};
+    layerId,
+  )
+}
 
 // ═══════════════════════
 // 2.2. CRUD :: RELATIONAL OPERATIONS (LayerProperty)
@@ -196,15 +196,15 @@ export const updateI18n = async (
 export const createLayerProperties = async (
   db: Database,
   layerId: string,
-  properties: LayerPropertyNew[]
+  properties: LayerPropertyNew[],
 ) => {
   if (properties && properties.length > 0) {
     await db.insert(layerProperty).values(
-      properties.map((prop) => ({
+      properties.map(prop => ({
         layerId,
-        ...prop
-      }))
-    );
+        ...prop,
+      })),
+    )
   }
 
   return await db.query.layerProperty.findMany({
@@ -215,14 +215,14 @@ export const createLayerProperties = async (
           i18n: true,
           values: {
             with: {
-              i18n: true
-            }
-          }
-        }
-      }
-    }
-  });
-};
+              i18n: true,
+            },
+          },
+        },
+      },
+    },
+  })
+}
 
 /**
  * Update layer property associations (replace all)
@@ -230,13 +230,13 @@ export const createLayerProperties = async (
 export const updateLayerProperties = async (
   db: Database,
   layerId: string,
-  properties: LayerPropertyNew[]
+  properties: LayerPropertyNew[],
 ) => {
   // First delete existing properties
-  await db.delete(layerProperty).where(eq(layerProperty.layerId, layerId));
+  await db.delete(layerProperty).where(eq(layerProperty.layerId, layerId))
   // Then insert new ones
-  return await createLayerProperties(db, layerId, properties);
-};
+  return await createLayerProperties(db, layerId, properties)
+}
 
 /**
  * Upserts (inserts or updates) property links for a single layer.
@@ -254,32 +254,32 @@ export const updateLayerProperties = async (
 export const upsertLayerProperties = async (
   db: Database,
   layerId: string,
-  propertyLinks: Array<{ propertyId: string; isVisible?: boolean }>
+  propertyLinks: Array<{ propertyId: string; isVisible?: boolean }>,
 ): Promise<void> => {
   // 1. Fetch current layerProperty entries for this layer
   const currentLinks = await db.query.layerProperty.findMany({
     where: eq(layerProperty.layerId, layerId),
     columns: {
       propertyId: true,
-      isVisible: true
-    }
-  });
+      isVisible: true,
+    },
+  })
 
   const currentLinkMap = new Map(
-    currentLinks.map((link) => [link.propertyId, link.isVisible])
-  );
+    currentLinks.map(link => [link.propertyId, link.isVisible]),
+  )
   const newLinkMap = new Map(
-    propertyLinks.map((link) => [link.propertyId, link.isVisible])
-  );
+    propertyLinks.map(link => [link.propertyId, link.isVisible]),
+  )
 
-  const toDelete: string[] = [];
-  const toInsert: SQLiteInsertValue<typeof layerProperty>[] = [];
-  const toUpdate: Array<{ propertyId: string; isVisible: boolean }> = [];
+  const toDelete: string[] = []
+  const toInsert: SQLiteInsertValue<typeof layerProperty>[] = []
+  const toUpdate: Array<{ propertyId: string; isVisible: boolean }> = []
 
   // 2. Identify links to delete
   for (const currentPropertyId of currentLinkMap.keys()) {
     if (!newLinkMap.has(currentPropertyId)) {
-      toDelete.push(currentPropertyId);
+      toDelete.push(currentPropertyId)
     }
   }
 
@@ -292,8 +292,8 @@ export const upsertLayerProperties = async (
       toInsert.push({
         layerId,
         propertyId: newPropertyId,
-        isVisible: newIsVisible === undefined ? false : newIsVisible
-      });
+        isVisible: newIsVisible === undefined ? false : newIsVisible,
+      })
     }
   }
 
@@ -305,14 +305,14 @@ export const upsertLayerProperties = async (
       .where(
         and(
           eq(layerProperty.layerId, layerId),
-          inArray(layerProperty.propertyId, toDelete)
-        )
-      );
+          inArray(layerProperty.propertyId, toDelete),
+        ),
+      )
   }
 
   // DB :: INSERT
   if (toInsert.length > 0) {
-    await db.insert(layerProperty).values(toInsert);
+    await db.insert(layerProperty).values(toInsert)
   }
 
   // DB :: UPDATE
@@ -323,11 +323,11 @@ export const upsertLayerProperties = async (
       .where(
         and(
           eq(layerProperty.layerId, layerId),
-          eq(layerProperty.propertyId, updateOp.propertyId)
-        )
-      );
+          eq(layerProperty.propertyId, updateOp.propertyId),
+        ),
+      )
   }
-};
+}
 
 /**
  * Synchronizes properties for ALL layers associated with a given projectId.
@@ -347,30 +347,30 @@ export const upsertLayerProperties = async (
 export const syncLayerProperties = async (
   db: Database,
   projectId: string,
-  newProjectProperties: Property[]
+  newProjectProperties: Property[],
 ): Promise<void> => {
   // 1. Fetch all Layer IDs for the given Project ID
   const projectLayers = await db.query.layer.findMany({
     where: eq(layer.projectId, projectId),
     columns: {
-      id: true // We only need the layer IDs
-    }
-  });
+      id: true, // We only need the layer IDs
+    },
+  })
 
-  if (projectLayers.length === 0) return;
+  if (projectLayers.length === 0) return
 
   // Prepare the property links structure that upsertLayerProperties expects
   // This will be the same list of target properties for every layer in the project.
-  const targetPropertyLinks = newProjectProperties.map((prop) => ({
+  const targetPropertyLinks = newProjectProperties.map(prop => ({
     propertyId: prop.id,
-    isVisible: false // Default to not visible for new properties
-  }));
+    isVisible: false, // Default to not visible for new properties
+  }))
 
   // 2. For each layer in the project, synchronize its properties using upsertLayerProperties
   for (const l of projectLayers) {
-    await upsertLayerProperties(db, l.id, targetPropertyLinks);
+    await upsertLayerProperties(db, l.id, targetPropertyLinks)
   }
-};
+}
 
 // ═══════════════════════
 // 3. CRUD :: ORCHESTRATION
@@ -383,9 +383,9 @@ export const syncLayerProperties = async (
  * @returns The newly created layer with related data
  */
 export const createLayerWithRelated = async (db: Database, data: LayerNew) => {
-  const layer = await createLayer(db, data);
-  const i18n = await createI18n(db, data.i18n!, layer.id);
-  const properties = await createLayerProperties(db, layer.id, data.properties || []);
+  const layer = await createLayer(db, data)
+  const i18n = await createI18n(db, data.i18n!, layer.id)
+  const properties = await createLayerProperties(db, layer.id, data.properties || [])
 
   // Get project with relations using proper function signature
   const projectNested = await db.query.project.findFirst({
@@ -394,19 +394,19 @@ export const createLayerWithRelated = async (db: Database, data: LayerNew) => {
       i18n: true,
       organisation: {
         with: {
-          i18n: true
-        }
-      }
-    }
-  });
+          i18n: true,
+        },
+      },
+    },
+  })
 
   return {
     ...layer,
     i18n,
     properties,
-    project: projectNested
-  };
-};
+    project: projectNested,
+  }
+}
 
 /**
  * Updates a layer with translations and properties
@@ -418,20 +418,20 @@ export const createLayerWithRelated = async (db: Database, data: LayerNew) => {
 export const updateLayerWithRelated = async (
   db: Database,
   data: LayerPartial,
-  layerId?: string
+  layerId?: string,
 ) => {
-  const IdToUse = layerId || (data.id as string);
-  const layer = await updateLayer(db, data, IdToUse);
+  const IdToUse = layerId || (data.id as string)
+  const layer = await updateLayer(db, data, IdToUse)
   const i18n = await updateI18n(
     db,
     data.i18n as Record<Locale, LayerI18nPartial>,
-    IdToUse
-  );
+    IdToUse,
+  )
   const properties = await updateLayerProperties(
     db,
     IdToUse,
-    (data.properties || []) as LayerPropertyNew[]
-  );
+    (data.properties || []) as LayerPropertyNew[],
+  )
   // Get project with relations using proper function signature
   const projectData = await db.query.project.findFirst({
     where: eq(project.id, layer.projectId),
@@ -439,18 +439,18 @@ export const updateLayerWithRelated = async (
       i18n: true,
       organisation: {
         with: {
-          i18n: true
-        }
-      }
-    }
-  });
+          i18n: true,
+        },
+      },
+    },
+  })
   return {
     ...layer,
     i18n,
     properties,
-    project: projectData
-  };
-};
+    project: projectData,
+  }
+}
 
 // ═══════════════════════
 // 4. UTILS :: SHAPING
@@ -466,18 +466,18 @@ export const updateLayerWithRelated = async (
 export const toFormShape = async (
   data: LayerDBRaw, // Use any since this may come with relations loaded
   i18n: LayerI18nDB[],
-  properties: LayerPropertyDBRaw[]
+  properties: LayerPropertyDBRaw[],
 ) => {
   const formData = {
     ...data,
     i18n: transformI18nSafely(i18n, {}),
-    properties
-  };
+    properties,
+  }
 
-  // @ts-ignore TODO - Fix Zod type error
-  const form = await superValidate(formData, zod(LayerAPI) as any);
-  return form as SuperValidated<Layer>;
-};
+  // @ts-expect-error TODO - Fix Zod type error
+  const form = await superValidate(formData, zod(LayerAPI) as any)
+  return form as SuperValidated<Layer>
+}
 
 /**
  * Builds response data from database entities
@@ -489,15 +489,15 @@ export const toFormShape = async (
 export const toResponseShape = async (
   layer: any, // Use any since this comes with relations loaded
   i18n: LayerI18nDB[],
-  properties: any[] // Use any for the complex nested structure from DB relations
+  properties: any[], // Use any for the complex nested structure from DB relations
 ) => {
   const data = {
     ...layer,
     i18n: transformI18nSafely(i18n, {}),
-    properties
-  };
-  return LayerAPI.parse(data);
-};
+    properties,
+  }
+  return LayerAPI.parse(data)
+}
 
 // ═══════════════════════
 // 5. UTILS :: LOOKUPS
@@ -512,17 +512,17 @@ export const toResponseShape = async (
 export const getLayerMap = async (
   db: Database,
   layerIds: Id[],
-  opts: HubOptsExtended
+  opts: HubOptsExtended,
 ): Promise<Map<Id, LayerDBRaw>> => {
-  const layersMap = new Map<Id, LayerDBRaw>();
+  const layersMap = new Map<Id, LayerDBRaw>()
 
   for (const layerId of layerIds) {
-    const conditions = [eq(layer.id, layerId)];
-    const layerData = await getLayer(db, layerMergeWithRelations, conditions, opts);
+    const conditions = [eq(layer.id, layerId)]
+    const layerData = await getLayer(db, layerMergeWithRelations, conditions, opts)
     if (layerData) {
-      layersMap.set(layerId, layerData);
+      layersMap.set(layerId, layerData)
     }
   }
 
-  return layersMap;
-};
+  return layersMap
+}

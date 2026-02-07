@@ -1,9 +1,9 @@
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // SVELTE
-import { goto, pushState, replaceState } from '$app/navigation';
+import { goto, pushState, replaceState } from '$app/navigation'
 // LIB
-import { ADMIN_PATH, isMobile } from '$lib/index';
+import { ADMIN_PATH, isMobile } from '$lib/index'
 // ENUMS
 import {
   FirstClassResource,
@@ -12,11 +12,11 @@ import {
   ResourcePath,
   ResourceRefKey,
   PanelSide,
-  Panel
-} from '$lib/enums';
+  Panel,
+} from '$lib/enums'
 // TYPES
-import type { AdminCtx } from '$lib/context/admin.svelte';
-import type { AppCtx } from '$lib/context/app.svelte';
+import type { AdminCtx } from '$lib/context/admin.svelte'
+import type { AppCtx } from '$lib/context/app.svelte'
 import type {
   Code,
   FacetType,
@@ -30,8 +30,8 @@ import type {
   FeatureFromCollection,
   Feature,
   Image,
-  UserFeatureWithHierarchy
-} from '$lib/types';
+  UserFeatureWithHierarchy,
+} from '$lib/types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -91,40 +91,40 @@ function isNavigable(resource: any): resource is NavigableResource {
   return (
     Object.values(FirstClassResource).includes(resource) &&
     resource !== FirstClassResource.property
-  );
+  )
 }
 
 export const getUrlForResourceIndex = (resource: FirstClassResource) => {
-  return `${ADMIN_PATH}/${getResourcePathPart(resource)}`;
-};
+  return `${ADMIN_PATH}/${getResourcePathPart(resource)}`
+}
 
 export const getUrlForResource = (
   adminCtx: AdminCtx,
   resource: FirstClassResource,
   id: Id,
-  facet?: string
+  facet?: string,
 ) => {
-  const ref = getResourceRef(adminCtx, resource, id);
-  if (!ref) return null;
-  return `${ADMIN_PATH}/${getResourcePathPart(resource)}/${ref}${facet ? `#${facet}` : ''}`;
-};
+  const ref = getResourceRef(adminCtx, resource, id)
+  if (!ref) return null
+  return `${ADMIN_PATH}/${getResourcePathPart(resource)}/${ref}${facet ? `#${facet}` : ''}`
+}
 
 export const getResourceRef = (
   adminCtx: AdminCtx,
   resource: FirstClassResource,
-  id: Id
+  id: Id,
 ) => {
-  if (!resource) return false;
-  const refKey = ResourceRefKey[resource as keyof typeof ResourceRefKey];
-  const entity = adminCtx.appCtx.cache[resource].get(id);
-  if (!entity) return false;
-  return entity[refKey as keyof Resource];
-};
+  if (!resource) return false
+  const refKey = ResourceRefKey[resource as keyof typeof ResourceRefKey]
+  const entity = adminCtx.appCtx.cache[resource].get(id)
+  if (!entity) return false
+  return entity[refKey as keyof Resource]
+}
 
 export const getResourcePathPart = (resource?: FirstClassResource) => {
-  if (!resource) return null;
-  return ResourcePath[resource];
-};
+  if (!resource) return null
+  return ResourcePath[resource]
+}
 
 /**
  * Navigate to a resource on the user-facing app with flexible parameter handling.
@@ -142,100 +142,100 @@ export const navigate = (
   resource: NavigableResource | '/',
   entityRef?: Id,
   navOptions: {
-    paramsToDrop?: string[];
-    paramsToAdd?: Record<string, string>;
+    paramsToDrop?: string[]
+    paramsToAdd?: Record<string, string>
   } = {
     paramsToDrop: [],
-    paramsToAdd: {}
-  }
+    paramsToAdd: {},
+  },
 ) => {
   const paramSets = {
     panels: ['panel', 'username'],
-    image: ['imageId']
-  };
+    image: ['imageId'],
+  }
 
-  let baseUrl = '/';
+  let baseUrl = '/'
   if (resource !== '/') {
-    baseUrl = `/${ResourcePath[resource]}/${entityRef}`;
+    baseUrl = `/${ResourcePath[resource]}/${entityRef}`
   }
 
   // Get current URL parameters
   const currentParams = new URLSearchParams(
-    typeof window !== 'undefined' ? window.location.search : ''
-  );
+    typeof window !== 'undefined' ? window.location.search : '',
+  )
 
   // Process parameter drops (applied BEFORE adding new params)
   if (navOptions.paramsToDrop) {
-    navOptions.paramsToDrop.forEach((param) => {
-      currentParams.delete(param);
-    });
+    navOptions.paramsToDrop.forEach(param => {
+      currentParams.delete(param)
+    })
   }
 
   // Add new parameters from the params argumen
   Object.entries(navOptions.paramsToAdd || {}).forEach(([key, value]) => {
     if (Array.isArray(value)) {
       // Remove existing values for this key first
-      currentParams.delete(key);
+      currentParams.delete(key)
       // Add all values from the array
-      value.forEach((v) => currentParams.append(key, v));
+      value.forEach(v => currentParams.append(key, v))
     } else {
       // Single value - set (replaces existing)
-      currentParams.set(key, value);
+      currentParams.set(key, value)
     }
-  });
+  })
 
   // Adhere to mobile-only panel rules
   if (isMobile()) {
     // Remove panel-related parameters
-    paramSets.panels.forEach((param) => {
-      currentParams.delete(param);
-    });
+    paramSets.panels.forEach(param => {
+      currentParams.delete(param)
+    })
   }
 
   // Build final URL
-  const queryString = currentParams.toString();
-  const finalUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl;
+  const queryString = currentParams.toString()
+  const finalUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl
   // Only navigate if the URL has changed
   if (window.location.pathname + window.location.search !== finalUrl) {
-    goto(finalUrl);
+    goto(finalUrl)
   }
-};
+}
 
 export const navigateOnAdmin = (
   adminCtx: AdminCtx,
   resource: FirstClassResource | false,
   entityRef?: Id | Code,
   facet?: FacetType,
-  queryParams?: Record<string, string>
+  queryParams?: Record<string, string>,
 ) => {
-  let url = `${ADMIN_PATH}`;
+  let url = `${ADMIN_PATH}`
   if (resource && isNavigable(resource)) {
-    url += `/${ResourcePath[resource]}`;
-    adminCtx.setResourceType(resource);
+    url += `/${ResourcePath[resource]}`
+    adminCtx.setResourceType(resource)
   } else {
-    adminCtx.setResourceType(false);
+    adminCtx.setResourceType(false)
     if (resource) {
-      console.warn(`Attempted to navigate to a non-navigable resource: ${resource}`);
-      return;
+      console.warn(`Attempted to navigate to a non-navigable resource: ${resource}`)
+      return
     }
   }
 
   if (entityRef) {
-    url += `/${entityRef}`;
-    adminCtx.setResourceRef(entityRef);
+    url += `/${entityRef}`
+    adminCtx.setResourceRef(entityRef)
   } else {
-    adminCtx.setResourceRef(false);
+    adminCtx.setResourceRef(false)
   }
 
-  if (queryParams) url += `?${new URLSearchParams(queryParams).toString()}`;
+  if (queryParams) url += `?${new URLSearchParams(queryParams).toString()}`
   if (facet) {
-    url += `#${facet}`;
-    adminCtx.setFacet(facet);
+    url += `#${facet}`
+    adminCtx.setFacet(facet)
   } else {
-    adminCtx.setFacet(false);
+    adminCtx.setFacet(false)
   }
-  goto(url);
-};
+  goto(url)
+}
 
 export async function navigateOnAdminById(
   adminCtx: AdminCtx,
@@ -243,52 +243,52 @@ export async function navigateOnAdminById(
   id: Id,
   ...args: any[]
 ) {
-  let ref = id;
+  let ref = id
   if (
     resourceType == 'organisation' ||
     resourceType == 'project' ||
     resourceType == 'hub'
   ) {
-    const resource = await adminCtx.appCtx.getResourceById(resourceType, id);
+    const resource = await adminCtx.appCtx.getResourceById(resourceType, id)
     if (resource) {
-      ref = (resource as Organisation | Project | Hub).code;
+      ref = (resource as Organisation | Project | Hub).code
     }
   }
-  navigateOnAdmin(adminCtx, resourceType as FirstClassResource, ref, ...args);
+  navigateOnAdmin(adminCtx, resourceType as FirstClassResource, ref, ...args)
 }
 
 // ═══════════════════════
 // 2. URL UTILITIES
 // ═══════════════════════
 
-export const reversePath = new Map<string, FirstClassResource>();
+export const reversePath = new Map<string, FirstClassResource>()
 
 if (ResourcePath) {
   Object.keys(ResourcePath).forEach((path: string) => {
-    const pathValue: string = ResourcePath[path as keyof typeof ResourcePath];
-    reversePath.set(pathValue, path as FirstClassResource);
-  });
+    const pathValue: string = ResourcePath[path as keyof typeof ResourcePath]
+    reversePath.set(pathValue, path as FirstClassResource)
+  })
 }
 
 // TODO add proper support for navigation state on appCtx so that
 // we can use it in components which are used in both admin and (app)
 export const getActiveResourceAndRefFromUrl = (): {
-  resourceType: FirstClassResource | false;
-  resourceRef: Id | Code | false;
-  facet: string | false;
+  resourceType: FirstClassResource | false
+  resourceRef: Id | Code | false
+  facet: string | false
 } => {
-  const urlObj = new URL(window.location.href);
-  const pathParts = urlObj.pathname.split('/').filter(Boolean);
+  const urlObj = new URL(window.location.href)
+  const pathParts = urlObj.pathname.split('/').filter(Boolean)
 
-  const resourceType = reversePath.get(pathParts[0]) || false;
-  const resourceRef = pathParts[1] || false;
+  const resourceType = reversePath.get(pathParts[0]) || false
+  const resourceRef = pathParts[1] || false
 
   return {
     resourceType,
     resourceRef,
-    facet: urlObj.hash.slice(1) || false
-  };
-};
+    facet: urlObj.hash.slice(1) || false,
+  }
+}
 
 // ═══════════════════════
 // 3. BREADCRUMBS
@@ -300,52 +300,52 @@ export const getActiveResourceAndRefFromUrl = (): {
 export async function getBreadcrumbs(
   appCtx: any, // AppCtx type
   resourceType: FirstClassResource,
-  resourceRef: Id | Code
+  resourceRef: Id | Code,
 ): Promise<{ name: string; href: string }[]> {
   try {
     // Get the current resource using the unified lookup
-    const currentResource = await appCtx.getResourceByRef(resourceType, resourceRef);
+    const currentResource = await appCtx.getResourceByRef(resourceType, resourceRef)
     if (!currentResource) {
-      return [];
+      return []
     }
 
     // Get the full hierarchy for this resource
-    const hierarchy = await appCtx.getHierarchy(currentResource);
-    const breadcrumbs: { name: string; href: string }[] = [];
+    const hierarchy = await appCtx.getHierarchy(currentResource)
+    const breadcrumbs: { name: string; href: string }[] = []
 
     // Build breadcrumbs from hierarchy (organization -> project -> layer -> feature)
     if (hierarchy.organisation && resourceType !== 'organisation') {
       breadcrumbs.push({
         name: appCtx.getContextualOrganisationName(hierarchy.organisation, false),
-        href: `${ADMIN_PATH}/${ResourcePath.organisation}/${hierarchy.organisation.code}`
-      });
+        href: `${ADMIN_PATH}/${ResourcePath.organisation}/${hierarchy.organisation.code}`,
+      })
     }
 
     if (hierarchy.project && resourceType !== 'project') {
       breadcrumbs.push({
         name: appCtx.getContextualProjectName(hierarchy.project, false),
-        href: `${ADMIN_PATH}/${ResourcePath.project}/${hierarchy.project.code}`
-      });
+        href: `${ADMIN_PATH}/${ResourcePath.project}/${hierarchy.project.code}`,
+      })
     }
 
     if (hierarchy.layer && resourceType !== 'layer') {
       breadcrumbs.push({
         name: appCtx.getContextualLayerName(hierarchy.layer, false),
-        href: `${ADMIN_PATH}/${ResourcePath.layer}/${hierarchy.layer.id}`
-      });
+        href: `${ADMIN_PATH}/${ResourcePath.layer}/${hierarchy.layer.id}`,
+      })
     }
 
     if (hierarchy.feature && resourceType !== 'feature') {
       breadcrumbs.push({
         name: appCtx.getContextualFeatureName(hierarchy.feature, false),
-        href: `${ADMIN_PATH}/${ResourcePath.feature}/${hierarchy.feature.id}`
-      });
+        href: `${ADMIN_PATH}/${ResourcePath.feature}/${hierarchy.feature.id}`,
+      })
     }
 
-    return breadcrumbs;
+    return breadcrumbs
   } catch (error) {
-    console.error('Failed to generate breadcrumbs:', error);
-    return [];
+    console.error('Failed to generate breadcrumbs:', error)
+    return []
   }
 }
 
@@ -357,26 +357,26 @@ export async function getBreadcrumbs(
  * Navigates to the next task. If the current task is the last task, it will navigate to the previous task. If no tasks are available, it will navigate to the overview.
  */
 export const goToNextTask = (adminCtx: AdminCtx) => {
-  let nextIndex;
+  let nextIndex
   const currentIndex = adminCtx.filteredTasks.findIndex(
-    (task) => task.id === adminCtx.activeResourceRef
-  );
-  const taskCount = adminCtx.filteredTasks.length;
+    task => task.id === adminCtx.activeResourceRef,
+  )
+  const taskCount = adminCtx.filteredTasks.length
 
   if (currentIndex !== -1) {
     if (currentIndex < taskCount - 1) {
-      nextIndex = currentIndex + 1;
+      nextIndex = currentIndex + 1
     } else if (currentIndex === taskCount - 1 && taskCount > 1) {
-      nextIndex = currentIndex - 1;
+      nextIndex = currentIndex - 1
     } else {
-      nextIndex = undefined;
+      nextIndex = undefined
     }
   }
   const nextTaskId =
-    nextIndex !== undefined ? adminCtx.filteredTasks[nextIndex].id : undefined;
-  adminCtx.invalidateAndRefresh(FirstClassResource.task);
-  navigateOnAdmin(adminCtx, FirstClassResource.task!, nextTaskId);
-};
+    nextIndex !== undefined ? adminCtx.filteredTasks[nextIndex].id : undefined
+  adminCtx.invalidateAndRefresh(FirstClassResource.task)
+  navigateOnAdmin(adminCtx, FirstClassResource.task!, nextTaskId)
+}
 
 // ═══════════════════════
 // 5. PANEL ROUTING
@@ -390,38 +390,38 @@ export const goToNextTask = (adminCtx: AdminCtx) => {
  */
 export const getLastPanelParam = (
   searchParams: URLSearchParams,
-  side: PanelSide | null = null
+  side: PanelSide | null = null,
 ): string | null => {
-  const panels = searchParams.getAll('panel') as Panel[];
-  if (panels.length === 0) return null;
+  const panels = searchParams.getAll('panel') as Panel[]
+  if (panels.length === 0) return null
 
   if (side === null) {
     // Return the very last panel parameter
-    return panels[panels.length - 1];
+    return panels[panels.length - 1]
   }
 
   // For sided panels, we need to determine which panels go to which side
-  const leftPanels = Object.values(PanelLeft);
-  const rightPanels = Object.values(PanelRight);
+  const leftPanels = Object.values(PanelLeft)
+  const rightPanels = Object.values(PanelRight)
 
   if (side === 'left') {
     // Find the last panel that belongs to the left side
     for (let i = panels.length - 1; i >= 0; i--) {
       if (leftPanels.includes(panels[i] as unknown as PanelLeft)) {
-        return panels[i];
+        return panels[i]
       }
     }
   } else if (side === 'right') {
     // Find the last panel that belongs to the right side
     for (let i = panels.length - 1; i >= 0; i--) {
       if (rightPanels.includes(panels[i] as unknown as PanelRight)) {
-        return panels[i];
+        return panels[i]
       }
     }
   }
 
-  return null;
-};
+  return null
+}
 
 /**
  * Handle panel parameters from URL and update AppCtx accordingly
@@ -431,26 +431,26 @@ export const getLastPanelParam = (
 export const handlePanelParams = (appCtx: AppCtx, searchParams: URLSearchParams) => {
   if (isMobile()) {
     // On mobile, only one panel can be active - use the last panel parameter
-    const lastPanel = getLastPanelParam(searchParams);
+    const lastPanel = getLastPanelParam(searchParams)
 
     if (lastPanel && isValidPanelType(lastPanel)) {
-      handleStatefulPanelParams(appCtx, lastPanel, searchParams, false);
+      handleStatefulPanelParams(appCtx, lastPanel, searchParams, false)
     }
   } else {
     // On desktop, both left and right panels can be active
-    const leftPanel = getLastPanelParam(searchParams, PanelSide.left);
-    const rightPanel = getLastPanelParam(searchParams, PanelSide.right);
+    const leftPanel = getLastPanelParam(searchParams, PanelSide.left)
+    const rightPanel = getLastPanelParam(searchParams, PanelSide.right)
 
     if (leftPanel && isValidPanelType(leftPanel)) {
       // Don't update URL when syncing FROM URL to prevent infinite loops
-      appCtx.openPanel(leftPanel, false);
+      appCtx.openPanel(leftPanel, false)
     }
 
     if (rightPanel && isValidPanelType(rightPanel)) {
-      handleStatefulPanelParams(appCtx, rightPanel, searchParams, false);
+      handleStatefulPanelParams(appCtx, rightPanel, searchParams, false)
     }
   }
-};
+}
 
 /**
  * Check if a string is a valid panel type
@@ -458,8 +458,8 @@ export const handlePanelParams = (appCtx: AppCtx, searchParams: URLSearchParams)
  * @returns Whether the panel is a valid PanelState key
  */
 const isValidPanelType = (panel: string): panel is Panel => {
-  return Object.values(Panel).includes(panel as Panel);
-};
+  return Object.values(Panel).includes(panel as Panel)
+}
 
 /**
  * Update URL to reflect current panel state
@@ -468,71 +468,71 @@ const isValidPanelType = (panel: string): panel is Panel => {
  */
 export const updatePanelUrlParams = (
   panelState: Record<string, boolean>,
-  appCtx?: any
+  appCtx?: any,
 ) => {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') return
 
-  const url = new URL(window.location.href);
-  const searchParams = url.searchParams;
+  const url = new URL(window.location.href)
+  const searchParams = url.searchParams
 
   // CONSISTENCY CHECK: If URL already matches the panel state, return early
-  const currentPanels = searchParams.getAll('panel');
-  const currentUsername = searchParams.get('username');
+  const currentPanels = searchParams.getAll('panel')
+  const currentUsername = searchParams.get('username')
 
   // Build expected panel list from panelState
   const expectedPanels = Object.entries(panelState)
     .filter(([panelName, isOpen]) => isOpen && isValidPanelType(panelName))
     .map(([panelName]) => panelName)
-    .sort();
+    .sort()
 
   // Build expected username based on profile panel state
   const expectedUsername = panelState.profile
     ? currentUsername || appCtx?.state?.panels?.profile?.ctx?.username || null
-    : null;
+    : null
 
   // Compare current vs expected
-  const panelsMatch = currentPanels.sort().join(',') === expectedPanels.join(',');
-  const usernameMatch = currentUsername === expectedUsername;
+  const panelsMatch = currentPanels.sort().join(',') === expectedPanels.join(',')
+  const usernameMatch = currentUsername === expectedUsername
 
   if (panelsMatch && usernameMatch) {
-    return;
+    return
   }
 
   // Preserve stateful parameters for specific panels
-  const statefulParams: Record<string, string | null> = {};
+  const statefulParams: Record<string, string | null> = {}
 
   // Preserve username parameter ONLY if profile panel is actually open
   if (panelState.profile) {
     const currentUsername =
-      searchParams.get('username') || appCtx?.state?.panels?.profile?.ctx?.username;
+      searchParams.get('username') || appCtx?.state?.panels?.profile?.ctx?.username
     if (currentUsername) {
-      statefulParams.username = currentUsername;
+      statefulParams.username = currentUsername
     }
   } else {
-    searchParams.delete('username');
+    searchParams.delete('username')
   }
 
   // Clear all existing panel parameters
-  searchParams.delete('panel');
+  searchParams.delete('panel')
 
   // Add active panels to URL
   Object.entries(panelState).forEach(([panelName, isOpen]) => {
     if (isOpen && isValidPanelType(panelName)) {
-      searchParams.append('panel', panelName);
+      searchParams.append('panel', panelName)
     }
-  });
+  })
 
   // Restore stateful parameters
   Object.entries(statefulParams).forEach(([key, value]) => {
     if (value) {
-      searchParams.set(key, value);
+      searchParams.set(key, value)
     }
-  });
+  })
 
   // Update URL and add to browser history for back/forward navigation
-  const newUrl = `${url.pathname}${searchParams.toString() ? '?' + searchParams.toString() : ''}${url.hash}`;
-  window.history.pushState({}, '', newUrl);
-};
+  const newUrl = `${url.pathname}${searchParams.toString() ? '?' + searchParams.toString() : ''}${url.hash}`
+  window.history.pushState({}, '', newUrl)
+}
 
 /**
  * Handle stateful panel parameters (like profile with username)
@@ -545,25 +545,25 @@ const handleStatefulPanelParams = (
   appCtx: AppCtx,
   panelType: string,
   searchParams: URLSearchParams,
-  updateUrl: boolean = false
+  updateUrl: boolean = false,
 ): void => {
   if (panelType === 'profile') {
-    const username = searchParams.get('username');
+    const username = searchParams.get('username')
     if (username && appCtx.state.panels.profile.ctx) {
-      appCtx.state.panels.profile.ctx.username = username;
+      appCtx.state.panels.profile.ctx.username = username
     }
   }
 
   // Don't update URL when syncing FROM URL to prevent infinite loops
   if (isValidPanelType(panelType)) {
-    appCtx.openPanel(panelType, updateUrl);
+    appCtx.openPanel(panelType, updateUrl)
   }
-};
+}
 
 export const getUrlParam = (param: string): string | null => {
-  const url = new URL(window.location.href);
-  return url.searchParams.get(param);
-};
+  const url = new URL(window.location.href)
+  return url.searchParams.get(param)
+}
 
 // ═══════════════════════
 // 6. IMAGE PARAMETER MANAGEMENT
@@ -575,19 +575,19 @@ export const getUrlParam = (param: string): string | null => {
  * @returns Object containing imageId and fullscreen flag
  */
 export const getImageParams = (
-  searchParams: URLSearchParams
+  searchParams: URLSearchParams,
 ): {
-  imageId: string | null;
-  fullscreen: boolean;
+  imageId: string | null
+  fullscreen: boolean
 } => {
-  const imageId = searchParams.get('imageId');
-  const fullscreen = searchParams.get('fullscreen') === 'true';
+  const imageId = searchParams.get('imageId')
+  const fullscreen = searchParams.get('fullscreen') === 'true'
 
   return {
     imageId,
-    fullscreen
-  };
-};
+    fullscreen,
+  }
+}
 
 /**
  * Handle image parameters from URL and return image configuration
@@ -595,16 +595,16 @@ export const getImageParams = (
  * @returns Promise resolving to image configuration for ImageProvider
  */
 export const handleImageParams = async (
-  searchParams: URLSearchParams
+  searchParams: URLSearchParams,
 ): Promise<{
-  targetImageId?: string;
-  isFullScreen?: boolean;
-  targetImage?: any;
+  targetImageId?: string
+  isFullScreen?: boolean
+  targetImage?: any
 } | null> => {
-  const { imageId, fullscreen } = getImageParams(searchParams);
+  const { imageId, fullscreen } = getImageParams(searchParams)
 
   if (!imageId) {
-    return null;
+    return null
   }
 
   // Skip API calls for staged images - they only exist locally
@@ -612,60 +612,60 @@ export const handleImageParams = async (
     return {
       targetImageId: imageId,
       isFullScreen: fullscreen,
-      targetImage: null // Will be handled by imageCtx locally
-    };
+      targetImage: null, // Will be handled by imageCtx locally
+    }
   }
 
   try {
     // Fetch the specific image from the API
-    const response = await fetch(`/api/images/${imageId}`);
+    const response = await fetch(`/api/images/${imageId}`)
     if (!response.ok) {
-      console.error('Failed to fetch image:', response.statusText);
-      return null;
+      console.error('Failed to fetch image:', response.statusText)
+      return null
     }
 
-    const result = await response.json();
-    const targetImage = result.data || result; // Handle both wrapped and direct responses
+    const result = await response.json()
+    const targetImage = result.data || result // Handle both wrapped and direct responses
 
     return {
       targetImageId: imageId,
       isFullScreen: fullscreen,
-      targetImage
-    };
+      targetImage,
+    }
   } catch (error) {
-    console.error('Error fetching image for deep link:', error);
-    return null;
+    console.error('Error fetching image for deep link:', error)
+    return null
   }
-};
+}
 
 export const addParamToUrl = (
   param: string,
   value: string,
   pageState: App.PageState = {},
   replace: boolean = false,
-  reload: boolean = true
+  reload: boolean = true,
 ) => {
   handleUrlParamChange(
-    (url) => url.searchParams.set(param, value),
+    url => url.searchParams.set(param, value),
     pageState,
     replace,
-    reload
-  );
-};
+    reload,
+  )
+}
 
 export const removeParamFromUrl = (
   param: string,
   pageState: App.PageState = {},
   replace: boolean = false,
-  reload: boolean = true
+  reload: boolean = true,
 ) => {
   handleUrlParamChange(
-    (url) => url.searchParams.delete(param),
+    url => url.searchParams.delete(param),
     pageState,
     replace,
-    reload
-  );
-};
+    reload,
+  )
+}
 
 // ═══════════════════════
 // 7. COLLECTION NAVIGATION
@@ -681,24 +681,24 @@ export const navigateToContributedFeature = async (
   projectId: Id,
   features: (FeatureFromCollection | Feature)[],
   projectName: string,
-  username: string
+  username: string,
 ) => {
-  if (!username) return;
+  if (!username) return
 
-  initializeCollectionNavigation(omniCtx, appCtx, features);
+  initializeCollectionNavigation(omniCtx, appCtx, features)
 
-  const expectedCollectionId = `${username}${projectId}Features`;
+  const expectedCollectionId = `${username}${projectId}Features`
   const navOptions = {
     openCard: true,
     navOptions: {
-      paramsToDrop: ['imageId']
-    }
-  };
+      paramsToDrop: ['imageId'],
+    },
+  }
   const collectionTitle = {
     en: `${projectName} by ${username}`,
     'zh-hant': `貢獻者 ${username}`,
-    'zh-hans': `贡献者 ${username}`
-  } as Record<Locale, string>;
+    'zh-hans': `贡献者 ${username}`,
+  } as Record<Locale, string>
 
   handleCollectionNavigation(
     omniCtx,
@@ -706,9 +706,9 @@ export const navigateToContributedFeature = async (
     featureId,
     navOptions,
     features,
-    collectionTitle
-  );
-};
+    collectionTitle,
+  )
+}
 
 /**
  * Navigate to a contributed image with collection context
@@ -722,36 +722,36 @@ export const navigateToContributedImage = async (
   projectName: string,
   username: string,
   loadedImages: Map<string, Image>,
-  projectImageIds: Record<Id, Id[]>
+  projectImageIds: Record<Id, Id[]>,
 ) => {
-  if (!username) return;
+  if (!username) return
 
-  const imageIds = projectImageIds[projectId];
+  const imageIds = projectImageIds[projectId]
 
   // Get features from images
   const features = await getFeaturesFromImages(
     appCtx,
-    imageIds.map((id) => loadedImages.get(id)).filter(Boolean) as Image[]
-  );
+    imageIds.map(id => loadedImages.get(id)).filter(Boolean) as Image[],
+  )
 
-  initializeCollectionNavigation(omniCtx, appCtx, features);
+  initializeCollectionNavigation(omniCtx, appCtx, features)
 
-  const expectedCollectionId = `${username}${projectId}Images`;
+  const expectedCollectionId = `${username}${projectId}Images`
   const navOptions = {
     openCard: true,
     navOptions: {
       paramsToDrop: ['imageId'],
       paramsToAdd: {
         imageId,
-        fullscreen: 'true'
-      }
-    }
-  };
+        fullscreen: 'true',
+      },
+    },
+  }
   const collectionTitle = {
     en: `<b>${projectName}</b> with 📷 by <b>${username}</b>`,
     'zh-hant': `<b>${projectName}</b> 📷 貢獻者 <b>${username}</b>`,
-    'zh-hans': `<b>${projectName}</b> 📷 贡献者 <b>${username}</b>`
-  } as Record<Locale, string>;
+    'zh-hans': `<b>${projectName}</b> 📷 贡献者 <b>${username}</b>`,
+  } as Record<Locale, string>
 
   handleCollectionNavigation(
     omniCtx,
@@ -759,9 +759,9 @@ export const navigateToContributedImage = async (
     featureId,
     navOptions,
     features,
-    collectionTitle
-  );
-};
+    collectionTitle,
+  )
+}
 
 /**
  * Navigate to a starred feature with collection context
@@ -770,32 +770,32 @@ export const navigateToStarred = async (
   appCtx: any,
   omniCtx: any,
   featureId: string,
-  wishlistedFeatures: UserFeatureWithHierarchy[]
+  wishlistedFeatures: UserFeatureWithHierarchy[],
 ) => {
-  initializeCollectionNavigation(omniCtx, appCtx, wishlistedFeatures);
+  initializeCollectionNavigation(omniCtx, appCtx, wishlistedFeatures)
 
-  const expectedCollectionId = `stars`;
+  const expectedCollectionId = `stars`
   const navOptions = {
     openCard: true,
     navOptions: {
-      paramsToDrop: ['imageId']
-    }
-  };
+      paramsToDrop: ['imageId'],
+    },
+  }
   const collectionTitle = {
     en: m.omni__title_star_walks(),
     'zh-hant': m.omni__title_star_walks(),
-    'zh-hans': m.omni__title_star_walks()
-  } as Record<Locale, string>;
+    'zh-hans': m.omni__title_star_walks(),
+  } as Record<Locale, string>
 
   handleCollectionNavigation(
     omniCtx,
     expectedCollectionId,
     featureId,
     navOptions,
-    wishlistedFeatures.map((w) => w.feature),
-    collectionTitle
-  );
-};
+    wishlistedFeatures.map(w => w.feature),
+    collectionTitle,
+  )
+}
 
 /**
  * Navigate to a visited feature with collection context
@@ -804,45 +804,43 @@ export const navigateToVisited = async (
   appCtx: any,
   omniCtx: any,
   featureId: string,
-  visitedFeatures: UserFeatureWithHierarchy[]
+  visitedFeatures: UserFeatureWithHierarchy[],
 ) => {
-  initializeCollectionNavigation(omniCtx, appCtx, visitedFeatures);
+  initializeCollectionNavigation(omniCtx, appCtx, visitedFeatures)
 
-  const expectedCollectionId = `visited`;
+  const expectedCollectionId = `visited`
   const navOptions = {
     openCard: true,
     navOptions: {
-      paramsToDrop: ['imageId']
-    }
-  };
+      paramsToDrop: ['imageId'],
+    },
+  }
   const collectionTitle = {
     en: m.omni__title_visited_walks(),
     'zh-hant': m.omni__title_visited_walks(),
-    'zh-hans': m.omni__title_visited_walks()
-  } as Record<Locale, string>;
+    'zh-hans': m.omni__title_visited_walks(),
+  } as Record<Locale, string>
 
   handleCollectionNavigation(
     omniCtx,
     expectedCollectionId,
     featureId,
     navOptions,
-    visitedFeatures.map((v) => v.feature),
-    collectionTitle
-  );
-};
+    visitedFeatures.map(v => v.feature),
+    collectionTitle,
+  )
+}
 
 export const getFeaturesFromImages = async (
   appCtx: AppCtx,
-  images: Image[]
+  images: Image[],
 ): Promise<(FeatureFromCollection | Feature)[]> => {
-  const featureIds = [
-    ...new Set(images.map((img) => img.featureId).filter(Boolean))
-  ];
+  const featureIds = [...new Set(images.map(img => img.featureId).filter(Boolean))]
   const features = await Promise.all(
-    featureIds.map((featureId) => appCtx.getFeatureById(featureId!))
-  );
-  return features.filter(Boolean) as (FeatureFromCollection | Feature)[];
-};
+    featureIds.map(featureId => appCtx.getFeatureById(featureId!)),
+  )
+  return features.filter(Boolean) as (FeatureFromCollection | Feature)[]
+}
 
 // ═══════════════════════
 // 8. UTILITY FUNCTIONS
@@ -855,25 +853,25 @@ export const getFeaturesFromImages = async (
  */
 const activateLayersForFeatures = (
   appCtx: any,
-  features: (FeatureFromCollection | Feature | UserFeatureWithHierarchy)[]
+  features: (FeatureFromCollection | Feature | UserFeatureWithHierarchy)[],
 ): void => {
   const layerIds = Array.from(
     new Set([
       ...features
-        .map((f) => {
+        .map(f => {
           // Handle UserFeatureWithHierarchy type
           if ('feature' in f && f.feature) {
-            return f.feature.layerId;
+            return f.feature.layerId
           }
           // Handle direct feature types
-          return (f as FeatureFromCollection | Feature).layerId;
+          return (f as FeatureFromCollection | Feature).layerId
         })
         .filter(Boolean),
-      ...appCtx.getPrism(FirstClassResource.layer)
-    ])
-  );
-  appCtx.setLayers(layerIds);
-};
+      ...appCtx.getPrism(FirstClassResource.layer),
+    ]),
+  )
+  appCtx.setLayers(layerIds)
+}
 
 /**
  * Handle collection navigation with switch/initialize logic
@@ -892,12 +890,12 @@ const handleCollectionNavigation = (
   baseNavOptions: any,
   features: (FeatureFromCollection | Feature)[],
   collectionTitle: Record<Locale, string>,
-  additionalNavOptions: any = {}
+  additionalNavOptions: any = {},
 ): void => {
   // Check if we can switch within the current collection
   if (omniCtx.isCollectionInitialized(collectionId)) {
     // Switch to the feature within the existing collection
-    omniCtx.switchToFeatureInCollection(featureId, baseNavOptions);
+    omniCtx.switchToFeatureInCollection(featureId, baseNavOptions)
   } else {
     // Initialize new collection
     omniCtx.initWalk(
@@ -909,13 +907,13 @@ const handleCollectionNavigation = (
         focusFeature: true,
         openCard: true,
         ...baseNavOptions,
-        ...additionalNavOptions
+        ...additionalNavOptions,
       },
       features,
-      collectionTitle
-    );
+      collectionTitle,
+    )
   }
-};
+}
 
 /**
  * Handle URL parameter changes with consistent replace/reload logic
@@ -928,25 +926,25 @@ const handleUrlParamChange = (
   urlModifier: (url: URL) => void,
   pageState: App.PageState = {},
   replace: boolean = false,
-  reload: boolean = true
+  reload: boolean = true,
 ): void => {
-  const urlObj = new URL(window.location.href);
-  urlModifier(urlObj);
+  const urlObj = new URL(window.location.href)
+  urlModifier(urlObj)
 
   if (replace) {
     if (reload) {
-      goto(urlObj.toString(), { noScroll: true, replaceState: true });
+      goto(urlObj.toString(), { noScroll: true, replaceState: true })
     } else {
-      replaceState(urlObj.toString(), pageState);
+      replaceState(urlObj.toString(), pageState)
     }
   } else {
     if (reload) {
-      goto(urlObj.toString(), { noScroll: true, replaceState: false });
+      goto(urlObj.toString(), { noScroll: true, replaceState: false })
     } else {
-      pushState(urlObj.toString(), pageState);
+      pushState(urlObj.toString(), pageState)
     }
   }
-};
+}
 
 /**
  * Initialize collection navigation with common setup
@@ -957,8 +955,8 @@ const handleUrlParamChange = (
 const initializeCollectionNavigation = (
   omniCtx: any,
   appCtx: any,
-  features: (FeatureFromCollection | Feature | UserFeatureWithHierarchy)[]
+  features: (FeatureFromCollection | Feature | UserFeatureWithHierarchy)[],
 ): void => {
-  omniCtx.initSelection(false);
-  activateLayersForFeatures(appCtx, features);
-};
+  omniCtx.initSelection(false)
+  activateLayersForFeatures(appCtx, features)
+}

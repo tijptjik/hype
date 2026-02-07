@@ -1,12 +1,12 @@
-import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
+import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { sql } from 'drizzle-orm'
+import { nanoid } from 'nanoid'
 // SCHEMA
-import { organisation } from './organisation';
-import { image } from './image';
-import { user } from './user';
+import { organisation } from './organisation'
+import { image } from './image'
+import { user } from './user'
 // ENUM
-import { ProjectRoleType, supportedLocales } from '../../enums';
+import { ProjectRoleType, supportedLocales } from '../../enums'
 
 /* ============================================================================
  * PROJECT MANAGEMENT
@@ -34,14 +34,14 @@ export const project = sqliteTable('project', {
   code: text('code').unique().notNull(),
   imageId: text('imageId').references(() => image.id, {
     onDelete: 'set null',
-    onUpdate: 'cascade'
+    onUpdate: 'cascade',
   }),
   // Accessible to the public in the app
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
   publishedAt: text('publishedAt'),
   publisherId: text('publisherId').references(() => user.id, {
     onDelete: 'set null',
-    onUpdate: 'cascade'
+    onUpdate: 'cascade',
   }),
   // False : Project may be shown in the Admin Panel
   // True : Project is considered deleted
@@ -52,8 +52,8 @@ export const project = sqliteTable('project', {
   modifiedAt: text('modifiedAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .$onUpdate(() => new Date().toISOString())
-    .notNull()
-});
+    .notNull(),
+})
 
 /**
  * Project translations
@@ -67,7 +67,7 @@ export const projectI18n = sqliteTable(
       .notNull()
       .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     locale: text('locale', {
-      enum: supportedLocales as [string, ...string[]]
+      enum: supportedLocales as [string, ...string[]],
     }).notNull(),
     // Full Name in {locale}
     name: text('name').notNull(),
@@ -87,12 +87,10 @@ export const projectI18n = sqliteTable(
     attribution: text('attribution').notNull(),
     attributionGen: integer('attributionGen', { mode: 'boolean' })
       .notNull()
-      .default(true)
+      .default(true),
   },
-  (table) => [
-    primaryKey({ columns: [table.projectId, table.locale] })
-  ]
-);
+  table => [primaryKey({ columns: [table.projectId, table.locale] })],
+)
 
 /**
  * Project role assignments
@@ -109,12 +107,10 @@ export const projectRole = sqliteTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     role: text('role', {
-      enum: Object.values(ProjectRoleType) as [string, ...string[]]
+      enum: Object.values(ProjectRoleType) as [string, ...string[]],
     })
       .notNull()
-      .default(ProjectRoleType.maintainer)
+      .default(ProjectRoleType.maintainer),
   },
-  (table) => [
-    primaryKey({ columns: [table.projectId, table.userId] })
-  ]
-);
+  table => [primaryKey({ columns: [table.projectId, table.userId] })],
+)

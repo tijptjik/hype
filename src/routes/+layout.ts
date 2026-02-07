@@ -1,13 +1,13 @@
-import { browser } from '$app/environment';
-import { getLocale } from '$lib/i18n';
-import { QueryClient } from '@tanstack/svelte-query';
+import { browser } from '$app/environment'
+import { getLocale } from '$lib/i18n'
+import { QueryClient } from '@tanstack/svelte-query'
 // TYPES
-import type { HubOpts } from '$lib/types';
+import type { HubOpts } from '$lib/types'
 
-export const ssr = false;
-export const prerender = false;
+export const ssr = false
+export const prerender = false
 // See https://khromov.se/the-missing-guide-to-understanding-adapter-static-in-sveltekit/
-export const trailingSlash = 'never';
+export const trailingSlash = 'never'
 
 export async function load({ data }) {
   const queryClient = new QueryClient({
@@ -18,10 +18,10 @@ export async function load({ data }) {
         gcTime: 1000 * 60 * 30, // 30 minutes
         refetchOnWindowFocus: true,
         refetchOnMount: true,
-        refetchOnReconnect: true
-      }
-    }
-  });
+        refetchOnReconnect: true,
+      },
+    },
+  })
 
   return {
     queryClient,
@@ -35,6 +35,6 @@ export async function load({ data }) {
       (data.hub as HubOpts).i18n?.en.name,
     site_description:
       (data.hub as HubOpts).i18n?.[getLocale()]?.description ??
-      (data.hub as HubOpts).i18n?.en.description
-  };
+      (data.hub as HubOpts).i18n?.en.description,
+  }
 }

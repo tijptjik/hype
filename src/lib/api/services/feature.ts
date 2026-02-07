@@ -1,33 +1,33 @@
 // DRIZZLE
-import { eq, inArray, SQL, sql } from 'drizzle-orm';
+import { eq, inArray, type SQL, sql } from 'drizzle-orm'
 // LIB
-import { isAdminRequest } from '../index';
+import { isAdminRequest } from '../index'
 // API
-import { applyQueryFilters, removeExcludedColumns } from '$lib/api';
+import { applyQueryFilters, removeExcludedColumns } from '$lib/api'
 // AUTH
 import {
   assertUserLoggedIn,
   assertAdminRequest,
   runAssertions,
   assertProjectMaintainerOrSuperAdmin,
-  assertParamIdentifierEqualsFormIdentifier
-} from '$lib/auth/asserts';
+  assertParamIdentifierEqualsFormIdentifier,
+} from '$lib/auth/asserts'
 // DB
-import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
-import { getProjectIdforRoles, isSuperAdmin } from '$lib/client/services/auth';
+import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
+import { getProjectIdforRoles, isSuperAdmin } from '$lib/client/services/auth'
 // SCHEMA
-import { feature, layer } from '$lib/db/schema/index';
+import { feature, layer } from '$lib/db/schema/index'
 // DB
-import { applyPrismConstraints, transformI18nSafely } from '$lib/db';
-import { HierarchicalResource } from '$lib/enums';
-import { getProjectIdForFeature } from '$lib/db/services/feature';
+import { applyPrismConstraints, transformI18nSafely } from '$lib/db'
+import { HierarchicalResource } from '$lib/enums'
+import { getProjectIdForFeature } from '$lib/db/services/feature'
 // FEATURE DB SERVICES
-import { createFeatureWithRelated } from '$lib/db/services/feature';
-import { buildNeighbourhoodSubdivisionMap } from '$lib/client/services/geospatial';
+import { createFeatureWithRelated } from '$lib/db/services/feature'
+import { buildNeighbourhoodSubdivisionMap } from '$lib/client/services/geospatial'
 // ZOD
-import { FeatureInsertAPI } from '$lib/db/zod/schema/feature';
+import { FeatureInsertAPI } from '$lib/db/zod/schema/feature'
 // ENUMS
-import { supportedLocales } from '$lib/enums';
+import { supportedLocales } from '$lib/enums'
 // TYPES
 import type {
   UserRoleDisco,
@@ -39,8 +39,8 @@ import type {
   FeatureNew,
   QueryParams,
   UserContributedFeature,
-  Locale
-} from '$lib/types';
+  Locale,
+} from '$lib/types'
 /********************
  *  COMMON
  ************/
@@ -48,29 +48,29 @@ export const featureCollectionWithRelations = {
   i18n: true,
   properties: {
     with: {
-      i18n: true
-    }
-  }
-};
+      i18n: true,
+    },
+  },
+}
 
 export const featureEntityWithRelations = {
   ...featureCollectionWithRelations,
   contributor: {
-    columns: userColumnsWithPrivacyProtected
+    columns: userColumnsWithPrivacyProtected,
   },
   publisher: {
-    columns: userColumnsWithPrivacyProtected
+    columns: userColumnsWithPrivacyProtected,
   },
   images: {
     with: {
       image: {
         with: {
-          contributor: true
-        }
-      }
-    }
-  }
-};
+          contributor: true,
+        },
+      },
+    },
+  },
+}
 
 /********************
  *  QUERY CONTEXT
@@ -92,60 +92,60 @@ export const getFeatureQueryContext = (
   request: Request,
   params: QueryParams,
   userRoles: UserRoleDisco[],
-  prisms?: Prisms
+  prisms?: Prisms,
 ) => {
   // SETUP : By default, only show non-archived features,
   // and disable isArchived and isPublished filters from the query.
-  let conditions: SQL<unknown>[] = [];
-  const excludeColumns = ['isArchived', 'isPublished'];
+  let conditions: SQL<unknown>[] = []
+  const excludeColumns = ['isArchived', 'isPublished']
 
   // Hide archived features unless user is SuperAdmin making an admin request
   if (!(isSuperAdmin(user) && isAdminRequest(request))) {
-    conditions.push(eq(feature.isArchived, false));
+    conditions.push(eq(feature.isArchived, false))
   }
 
   // FILTER : Apply prism conditions for organisation, project, and layer filtering
   if (prisms && db) {
-    conditions.push(...applyPrismConstraints(db, HierarchicalResource.feature, prisms));
+    conditions.push(...applyPrismConstraints(db, HierarchicalResource.feature, prisms))
   }
 
   // PUBLIC : List all features which are isPublished, and not isArchived,
   if (!isAdminRequest(request)) {
-    params = removeExcludedColumns(params, excludeColumns);
-    conditions.push(eq(feature.isPublished, true));
+    params = removeExcludedColumns(params, excludeColumns)
+    conditions.push(eq(feature.isPublished, true))
 
     // ADMIN : List all features, where the user has a role in the feature's layer's project
   } else if (!isSuperAdmin(user)) {
-    params = removeExcludedColumns(params, ['isArchived']); // Keep isPublished filterable for admins
-    const projectIds = getProjectIdforRoles(userRoles);
+    params = removeExcludedColumns(params, ['isArchived']) // Keep isPublished filterable for admins
+    const projectIds = getProjectIdforRoles(userRoles)
     if (projectIds.length > 0) {
       const layerIdsWithProjectAccess = db
         .select({ id: layer.id })
         .from(layer)
-        .where(inArray(layer.projectId, projectIds as Id[]));
-      conditions.push(inArray(feature.layerId, layerIdsWithProjectAccess));
+        .where(inArray(layer.projectId, projectIds as Id[]))
+      conditions.push(inArray(feature.layerId, layerIdsWithProjectAccess))
     } else {
-      conditions.push(sql`false`);
+      conditions.push(sql`false`)
     }
   } else {
     // For SuperAdmin, if no prisms are applied, conditions must be empty.
     if (!(prisms && db)) {
-      conditions = []; // List all layers without the default isArchived filter
+      conditions = [] // List all layers without the default isArchived filter
     }
   }
 
   if (Object.keys(params).length > 0) {
     // For superAdmins, remove isArchived and isPublished from params so they can see all content
     if (isSuperAdmin(user)) {
-      const { isArchived, isPublished, ...filteredParams } = params;
-      applyQueryFilters(feature, filteredParams, conditions);
+      const { isArchived, isPublished, ...filteredParams } = params
+      applyQueryFilters(feature, filteredParams, conditions)
     } else {
-      applyQueryFilters(feature, params, conditions);
+      applyQueryFilters(feature, params, conditions)
     }
   }
 
-  return { params, conditions, excludeColumns };
-};
+  return { params, conditions, excludeColumns }
+}
 
 /********************
  *  QUERY UTILITIES
@@ -160,38 +160,38 @@ export const getFeatureQueryContext = (
  * @returns The query parameters with expanded neighbourhoods
  */
 export function withExpandedNeighbourhoods(queryParams: QueryParams) {
-  const params = { ...queryParams };
-  const neighbourhoodKey = 'addressProperties.neighbourhood';
+  const params = { ...queryParams }
+  const neighbourhoodKey = 'addressProperties.neighbourhood'
 
   if (neighbourhoodKey in params) {
     // Convert single value to array if necessary
     const neighbourhoods = Array.isArray(params[neighbourhoodKey])
       ? (params[neighbourhoodKey] as string[])
-      : [params[neighbourhoodKey] as string];
+      : [params[neighbourhoodKey] as string]
 
     // Create a Set to avoid duplicates
-    const expandedNeighbourhoods = new Set<string>();
+    const expandedNeighbourhoods = new Set<string>()
 
     // Get the sub-neighbourhoods map from context
-    const neighbourhoodSubdivisionMap = buildNeighbourhoodSubdivisionMap();
+    const neighbourhoodSubdivisionMap = buildNeighbourhoodSubdivisionMap()
 
     // For each provided neighbourhood
-    neighbourhoods.forEach((hood) => {
+    neighbourhoods.forEach(hood => {
       // Always add the original neighbourhood
-      expandedNeighbourhoods.add(hood);
+      expandedNeighbourhoods.add(hood)
 
       // If it's a main district, also add all its sub-districts
       if (neighbourhoodSubdivisionMap.has(hood)) {
         neighbourhoodSubdivisionMap
           .get(hood)!
-          .forEach((n) => expandedNeighbourhoods.add(n));
+          .forEach(n => expandedNeighbourhoods.add(n))
       }
-    });
+    })
 
     // Update the params with expanded array
-    params[neighbourhoodKey] = Array.from(expandedNeighbourhoods);
+    params[neighbourhoodKey] = Array.from(expandedNeighbourhoods)
   }
-  return params;
+  return params
 }
 
 /********************
@@ -213,18 +213,18 @@ export const assertPermissionsToCreateFeature = async (
   request: Request,
   locals: App.Locals,
   formData: FeatureDBNew,
-  userRoles: UserRoleDisco[]
+  userRoles: UserRoleDisco[],
 ) => {
-  const projectId = await getProjectIdForFeature(db, formData, locals.hub);
+  const projectId = await getProjectIdForFeature(db, formData, locals.hub)
 
   const assertionError = runAssertions(
     () => assertUserLoggedIn(user as any),
     () => assertAdminRequest(request),
-    () => assertProjectMaintainerOrSuperAdmin(user, userRoles, projectId!)
-  );
+    () => assertProjectMaintainerOrSuperAdmin(user, userRoles, projectId!),
+  )
 
-  if (assertionError) return assertionError;
-};
+  if (assertionError) return assertionError
+}
 
 /**
  * Asserts permissions to update a feature.
@@ -244,19 +244,19 @@ export const assertPermissionsToUpdateFeature = async (
   locals: App.Locals,
   formData: FeatureNew,
   userRoles: UserRoleDisco[],
-  refId: Id
+  refId: Id,
 ) => {
-  const projectId = await getProjectIdForFeature(db, formData, locals.hub);
+  const projectId = await getProjectIdForFeature(db, formData, locals.hub)
 
   const assertionError = runAssertions(
     () => assertUserLoggedIn(user as any),
     () => assertAdminRequest(request),
     () => assertParamIdentifierEqualsFormIdentifier(formData, refId, 'id'),
-    () => assertProjectMaintainerOrSuperAdmin(user, userRoles, projectId!)
-  );
+    () => assertProjectMaintainerOrSuperAdmin(user, userRoles, projectId!),
+  )
 
-  if (assertionError) return assertionError;
-};
+  if (assertionError) return assertionError
+}
 
 // ═══════════════════════
 // FEATURE CREATION WITH ENRICHMENT
@@ -273,36 +273,36 @@ export const createUserContributedFeature = async (
   db: Database,
   newFeature: UserContributedFeature,
   region: string,
-  subscriptionKey: string
+  subscriptionKey: string,
 ) => {
   // Step 1: Get the source locale (first locale with content)
-  const providedLocales = Object.keys(newFeature.i18n).filter((locale) => {
-    const textObj = newFeature.i18n[locale as Locale];
-    if (!textObj) return false;
+  const providedLocales = Object.keys(newFeature.i18n).filter(locale => {
+    const textObj = newFeature.i18n[locale as Locale]
+    if (!textObj) return false
 
     // Check if there are any non-null values for keys other than "locale"
     return Object.entries(textObj).some(
-      ([key, value]) => key !== 'locale' && value !== null && value !== undefined
-    );
-  }) as Locale[];
+      ([key, value]) => key !== 'locale' && value !== null && value !== undefined,
+    )
+  }) as Locale[]
 
   if (providedLocales.length === 0) {
-    throw new Error('At least one locale must have content');
+    throw new Error('At least one locale must have content')
   }
 
-  const sourceLocale = providedLocales[0];
-  const sourceTextObj = newFeature.i18n[sourceLocale];
+  const sourceLocale = providedLocales[0]
+  const sourceTextObj = newFeature.i18n[sourceLocale]
 
   if (!sourceTextObj?.title) {
-    throw new Error('Source locale must have a title');
+    throw new Error('Source locale must have a title')
   }
 
   // Step 2: Create enriched i18n textObject with all locales
-  const enrichedI18n: Partial<Record<Locale, any>> = {};
+  const enrichedI18n: Partial<Record<Locale, any>> = {}
 
   for (const locale of supportedLocales) {
-    const textObj = newFeature.i18n[locale];
-    const isSourceLocale = locale === sourceLocale;
+    const textObj = newFeature.i18n[locale]
+    const isSourceLocale = locale === sourceLocale
 
     if (isSourceLocale) {
       // For source locale, preserve original values and set Gen flags to false
@@ -314,56 +314,56 @@ export const createUserContributedFeature = async (
         titleGen: false, // Original content, not generated
         descriptionGen: false,
         displayAddressGen: false,
-        addressProperties: {}
-      };
+        addressProperties: {},
+      }
     } else {
       // For target locales, determine what needs translation
-      const needsTitle = Boolean(sourceTextObj.title);
-      const needsDescription = Boolean(sourceTextObj.description);
-      const needsDisplayAddress = Boolean(sourceTextObj.displayAddress);
+      const needsTitle = Boolean(sourceTextObj.title)
+      const needsDescription = Boolean(sourceTextObj.description)
+      const needsDisplayAddress = Boolean(sourceTextObj.displayAddress)
 
       // Collect fields that need translation (only non-empty source values)
-      const fieldsToTranslate: string[] = [];
-      if (needsTitle) fieldsToTranslate.push(sourceTextObj.title);
-      if (needsDescription) fieldsToTranslate.push(sourceTextObj.description!);
-      if (needsDisplayAddress) fieldsToTranslate.push(sourceTextObj.displayAddress!);
+      const fieldsToTranslate: string[] = []
+      if (needsTitle) fieldsToTranslate.push(sourceTextObj.title)
+      if (needsDescription) fieldsToTranslate.push(sourceTextObj.description!)
+      if (needsDisplayAddress) fieldsToTranslate.push(sourceTextObj.displayAddress!)
 
-      let translatedValues: string[] = [];
+      let translatedValues: string[] = []
 
       // Only call translation API if we have fields to translate and API key
       if (fieldsToTranslate.length > 0 && subscriptionKey) {
         // TRANSLATION
-        const { translateText } = await import('$lib/api/external/translation');
+        const { translateText } = await import('$lib/api/external/translation')
         try {
           translatedValues = await translateText(
             fieldsToTranslate,
             sourceLocale,
             locale,
             region,
-            subscriptionKey
-          );
+            subscriptionKey,
+          )
         } catch (error) {
-          console.error(`Translation failed for ${sourceLocale} -> ${locale}:`, error);
+          console.error(`Translation failed for ${sourceLocale} -> ${locale}:`, error)
           // translatedValues remains empty array, will fall back to source content
         }
       }
 
       // Build the enriched object with proper field-level tracking
-      let translationIndex = 0;
+      let translationIndex = 0
 
       // Extract translated values in order
       const translatedTitle =
         needsTitle && translationIndex < translatedValues.length
           ? translatedValues[translationIndex++]
-          : null;
+          : null
       const translatedDescription =
         needsDescription && translationIndex < translatedValues.length
           ? translatedValues[translationIndex++]
-          : null;
+          : null
       const translatedDisplayAddress =
         needsDisplayAddress && translationIndex < translatedValues.length
           ? translatedValues[translationIndex++]
-          : null;
+          : null
 
       enrichedI18n[locale as Locale] = {
         locale: locale,
@@ -374,60 +374,60 @@ export const createUserContributedFeature = async (
         titleGen: Boolean(translatedTitle), // True if translation was provided
         descriptionGen: Boolean(translatedDescription), // True if translation was provided
         displayAddressGen: Boolean(translatedDisplayAddress), // True if translation was provided
-        addressProperties: {}
-      };
+        addressProperties: {},
+      }
     }
   }
 
   // Step 3: Process translatable properties
   const enrichedProperties = await Promise.all(
-    (newFeature.properties || []).map(async (prop) => {
+    (newFeature.properties || []).map(async prop => {
       // If property has i18n content, enrich it like we do for feature-level fields
       if (prop.i18n) {
-        const propProvidedLocales = Object.keys(prop.i18n) as Locale[];
+        const propProvidedLocales = Object.keys(prop.i18n) as Locale[]
         if (propProvidedLocales.length === 0) {
-          return prop; // No i18n content, return as-is
+          return prop // No i18n content, return as-is
         }
 
-        const propSourceLocale = propProvidedLocales[0];
-        const propSourceTextObj = prop.i18n[propSourceLocale];
+        const propSourceLocale = propProvidedLocales[0]
+        const propSourceTextObj = prop.i18n[propSourceLocale]
 
         if (!propSourceTextObj?.value) {
-          return prop; // No source value, return as-is
+          return prop // No source value, return as-is
         }
 
         // Create enriched property i18n
-        const enrichedPropertyI18n: Partial<Record<Locale, any>> = {};
+        const enrichedPropertyI18n: Partial<Record<Locale, any>> = {}
 
         for (const locale of supportedLocales) {
-          const propTextObj = prop.i18n[locale];
-          const isSourceLocale = locale === propSourceLocale;
+          const propTextObj = prop.i18n[locale]
+          const isSourceLocale = locale === propSourceLocale
 
           if (isSourceLocale) {
             // For source locale, preserve original value and set Gen flag to false
             enrichedPropertyI18n[locale] = {
               locale: locale,
               value: propSourceTextObj.value,
-              valueGen: false // Original content, not generated
-            };
+              valueGen: false, // Original content, not generated
+            }
           } else {
             // For target locales, determine if translation is needed
-            const needsValue = Boolean(propSourceTextObj.value);
+            const needsValue = Boolean(propSourceTextObj.value)
 
-            let translatedValue: string | null = null;
+            let translatedValue: string | null = null
 
             // Only translate if needed and API key available
             if (needsValue && subscriptionKey) {
               try {
-                const { translateText } = await import('$lib/api/external/translation');
+                const { translateText } = await import('$lib/api/external/translation')
                 const translatedValues = await translateText(
                   [propSourceTextObj.value],
                   propSourceLocale,
                   locale,
                   region,
-                  subscriptionKey
-                );
-                translatedValue = translatedValues[0] || null;
+                  subscriptionKey,
+                )
+                translatedValue = translatedValues[0] || null
               } catch (error) {
                 // Translation failed, translatedValue remains null
               }
@@ -436,33 +436,33 @@ export const createUserContributedFeature = async (
             enrichedPropertyI18n[locale] = {
               locale: locale,
               value: translatedValue || propSourceTextObj.value,
-              valueGen: Boolean(translatedValue) // True if translation was provided
-            };
+              valueGen: Boolean(translatedValue), // True if translation was provided
+            }
           }
         }
 
         return {
           ...prop,
-          i18n: transformI18nSafely(enrichedPropertyI18n)
-        };
+          i18n: transformI18nSafely(enrichedPropertyI18n),
+        }
       }
 
-      return prop; // Non-translatable property, return as-is
-    })
-  );
+      return prop // Non-translatable property, return as-is
+    }),
+  )
 
   // Step 4: Create the enriched feature object
   const enrichedFeature = {
     ...newFeature,
     isPendingReview: true, // User-contributed features should be marked for review
     i18n: transformI18nSafely(enrichedI18n as Record<Locale, any>),
-    properties: enrichedProperties
-  };
+    properties: enrichedProperties,
+  }
 
   // Step 5: Use Zod to parse and apply all defaults
-  const validatedFeature = FeatureInsertAPI.parse(enrichedFeature);
+  const validatedFeature = FeatureInsertAPI.parse(enrichedFeature)
 
   // Step 6: Create the feature with all related data
-  const result = await createFeatureWithRelated(db, validatedFeature);
-  return result;
-};
+  const result = await createFeatureWithRelated(db, validatedFeature)
+  return result
+}

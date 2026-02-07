@@ -1,15 +1,15 @@
 // SVELTE
-import { error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit'
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // COORDINATES
-import Coordinates from 'coordinate-parser';
+import Coordinates from 'coordinate-parser'
 // UTILS
-import { capitalizeFirstLetter } from '$lib';
+import { capitalizeFirstLetter } from '$lib'
 // SERVICES
-import { adminIntentOrder, intentOrder } from '$lib/api/services/image';
+import { adminIntentOrder, intentOrder } from '$lib/api/services/image'
 // ENUMS
-import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums';
+import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
 // TYPES
 import type {
   ImageNew,
@@ -25,9 +25,9 @@ import type {
   ImagePartial,
   Metadata,
   LngLat,
-  SignData
-} from '$lib/types';
-import { hashicon } from '@emeraldpay/hashicon';
+  SignData,
+} from '$lib/types'
+import { hashicon } from '@emeraldpay/hashicon'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -89,53 +89,53 @@ export async function uploadAndProcessImage(
   file: File,
   uploadCtx: ImageUploadCtx,
   extendedFeatureInfo?: {
-    isPublished: boolean;
-    intent: Intent;
+    isPublished: boolean
+    intent: Intent
   },
-  fetchFn: typeof fetch = fetch
+  fetchFn: typeof fetch = fetch,
 ): Promise<Image> {
   // 1. Determine public path for Cloudinary
-  const { folder, public_id } = getPublicPathCloudinaryImage(uploadCtx);
+  const { folder, public_id } = getPublicPathCloudinaryImage(uploadCtx)
   const paramsToSign: ParamsToSign = uploadCtx.imageToReplace
     ? { folder, public_id: public_id! } // public_id will exist if imageToReplace is true and path is valid
-    : { folder };
+    : { folder }
 
   // 2. Fetch Cloudinary signature
-  const signData = await getCloudinarySignature(paramsToSign, fetchFn);
+  const signData = await getCloudinarySignature(paramsToSign, fetchFn)
 
   // 3. Upload file to Cloudinary
   const cloudinaryResponse = await createCloudinaryImage(
     file,
     paramsToSign,
     signData,
-    fetchFn
-  );
+    fetchFn,
+  )
 
   // 4. Process Cloudinary response into our image format
-  const imageData = getImageFromCloudinaryResponse(cloudinaryResponse);
+  const imageData = getImageFromCloudinaryResponse(cloudinaryResponse)
 
   // 5. Extend image data with feature/hierarchical info
   extendFeatureImage(
     imageData,
     uploadCtx,
-    extendedFeatureInfo ? { featureImage: extendedFeatureInfo } : undefined
-  );
-  extendImageWithResource(imageData, uploadCtx);
+    extendedFeatureInfo ? { featureImage: extendedFeatureInfo } : undefined,
+  )
+  extendImageWithResource(imageData, uploadCtx)
 
   // 6. Upsert image in the backend
-  let savedImage: Image;
+  let savedImage: Image
   if (uploadCtx.imageToReplace) {
     savedImage = await updateImage(
       uploadCtx.imageToReplace.id,
       imageData as ImagePartial,
       uploadCtx,
-      fetchFn
-    );
+      fetchFn,
+    )
   } else {
-    savedImage = await createImage(imageData as ImageNew, fetchFn);
+    savedImage = await createImage(imageData as ImageNew, fetchFn)
   }
 
-  return savedImage;
+  return savedImage
 }
 
 // ═══════════════════════
@@ -150,17 +150,17 @@ export async function uploadAndProcessImage(
  */
 export async function createImage(
   imageData: ImageNew,
-  fetchFn: typeof fetch = fetch
+  fetchFn: typeof fetch = fetch,
 ): Promise<Image> {
   const response = await fetchFn('/api/images', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(imageData)
-  });
+    body: JSON.stringify(imageData),
+  })
   if (!response.ok) {
-    throw new Error('Failed to create new image in backend');
+    throw new Error('Failed to create new image in backend')
   }
-  return response.json(); // Assumes API returns the full Image object
+  return response.json() // Assumes API returns the full Image object
 }
 
 /**
@@ -174,32 +174,32 @@ export async function createImage(
 export async function getImages(
   ctxType: ImageContextResource | ImageContextResourceExtended,
   ctxId: Id,
-  fetchFn: typeof fetch = fetch
+  fetchFn: typeof fetch = fetch,
 ): Promise<(Image & { preview?: string })[]> {
-  const basePath = '/api/images'; // Centralized base path
-  const params = new URLSearchParams();
+  const basePath = '/api/images' // Centralized base path
+  const params = new URLSearchParams()
 
   if (ctxType === ImageContextResource.feature && ctxId) {
-    params.append('featureId', ctxId);
+    params.append('featureId', ctxId)
   } else if (ctxType === ImageContextResource.project && ctxId) {
-    params.append('projectId', ctxId);
+    params.append('projectId', ctxId)
   } else if (ctxType === ImageContextResource.organisation && ctxId) {
-    params.append('organisationId', ctxId);
+    params.append('organisationId', ctxId)
   } else if (ctxType === ImageContextResourceExtended.task && ctxId) {
-    params.append('taskId', ctxId);
+    params.append('taskId', ctxId)
   }
 
-  const apiUrl = `${basePath}?${params.toString()}`;
+  const apiUrl = `${basePath}?${params.toString()}`
 
-  const response = await fetchFn(apiUrl);
+  const response = await fetchFn(apiUrl)
   if (!response.ok) {
-    const errorBody = await response.text();
-    console.error('Failed to fetch images via API:', apiUrl, errorBody);
+    const errorBody = await response.text()
+    console.error('Failed to fetch images via API:', apiUrl, errorBody)
     throw new Error(
-      `Network response was not ok for fetching images: ${response.statusText}`
-    );
+      `Network response was not ok for fetching images: ${response.statusText}`,
+    )
   }
-  return response.json() as Promise<(Image & { preview?: string })[]>;
+  return response.json() as Promise<(Image & { preview?: string })[]>
 }
 
 /**
@@ -211,25 +211,25 @@ export async function getImages(
  */
 export async function getImagesByIds(
   imageIds: string[],
-  fetchFn: typeof fetch = fetch
+  fetchFn: typeof fetch = fetch,
 ): Promise<(Image & { preview?: string })[]> {
-  if (imageIds.length === 0) return [];
+  if (imageIds.length === 0) return []
 
-  const basePath = '/api/images';
-  const params = new URLSearchParams();
-  params.append('ids', imageIds.join(','));
+  const basePath = '/api/images'
+  const params = new URLSearchParams()
+  params.append('ids', imageIds.join(','))
 
-  const apiUrl = `${basePath}?${params.toString()}`;
+  const apiUrl = `${basePath}?${params.toString()}`
 
-  const response = await fetchFn(apiUrl);
+  const response = await fetchFn(apiUrl)
   if (!response.ok) {
-    const errorBody = await response.text();
-    console.error('Failed to fetch images by IDs via API:', apiUrl, errorBody);
+    const errorBody = await response.text()
+    console.error('Failed to fetch images by IDs via API:', apiUrl, errorBody)
     throw new Error(
-      `Network response was not ok for fetching images by IDs: ${response.statusText}`
-    );
+      `Network response was not ok for fetching images by IDs: ${response.statusText}`,
+    )
   }
-  return response.json() as Promise<(Image & { preview?: string })[]>;
+  return response.json() as Promise<(Image & { preview?: string })[]>
 }
 
 /**
@@ -244,21 +244,21 @@ export async function updateImage(
   imageId: string,
   imageData: ImagePartial,
   ctx: ImageEditCtx,
-  fetchFn: typeof fetch = fetch
+  fetchFn: typeof fetch = fetch,
 ): Promise<Image> {
-  const apiUrl = addCtxToUrl(`/api/images/${imageId}`, ctx);
+  const apiUrl = addCtxToUrl(`/api/images/${imageId}`, ctx)
   const response = await fetchFn(apiUrl, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(imageData)
-  });
+    body: JSON.stringify(imageData),
+  })
   if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Failed to update existing image in backend: ${errorBody}`);
+    const errorBody = await response.text()
+    throw new Error(`Failed to update existing image in backend: ${errorBody}`)
   }
   // Assuming PATCH also returns the full Image object (or relevant parts to merge)
-  const result = await response.json();
-  return result.data || result; // API returns { type: 'success', data: responseData }
+  const result = await response.json()
+  return result.data || result // API returns { type: 'success', data: responseData }
 }
 
 /**
@@ -273,9 +273,9 @@ export async function updateImageIntent(
   imageId: string,
   intent: Intent,
   ctx: ImageEditCtx,
-  isPublished?: boolean
+  isPublished?: boolean,
 ): Promise<Image> {
-  const apiUrl = addCtxToUrl(`/api/images/${imageId}`, ctx);
+  const apiUrl = addCtxToUrl(`/api/images/${imageId}`, ctx)
   const response = await fetch(apiUrl, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -283,16 +283,16 @@ export async function updateImageIntent(
       intent,
       imageId,
       featureId: ctx.ctxId,
-      ...(isPublished !== undefined && { isPublished })
-    })
-  });
+      ...(isPublished !== undefined && { isPublished }),
+    }),
+  })
 
   if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Failed to update intent: ${errorBody}`);
+    const errorBody = await response.text()
+    throw new Error(`Failed to update intent: ${errorBody}`)
   }
-  const result = await response.json();
-  return result.data || result;
+  const result = await response.json()
+  return result.data || result
 }
 
 /**
@@ -307,26 +307,26 @@ export async function updateImageIsPublished(
   imageId: string,
   isPublished: boolean,
   ctx: ImageEditCtx,
-  fetchFn: typeof fetch = fetch
+  fetchFn: typeof fetch = fetch,
 ): Promise<Image> {
   // Expecting the updated image back
-  const apiUrl = addCtxToUrl(`/api/images/${imageId}`, ctx);
+  const apiUrl = addCtxToUrl(`/api/images/${imageId}`, ctx)
   const response = await fetchFn(apiUrl, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       isPublished,
       imageId,
-      featureId: ctx.ctxId
-    })
-  });
+      featureId: ctx.ctxId,
+    }),
+  })
 
   if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Failed to update publish status: ${errorBody}`);
+    const errorBody = await response.text()
+    throw new Error(`Failed to update publish status: ${errorBody}`)
   }
-  const result = await response.json();
-  return result.data || result;
+  const result = await response.json()
+  return result.data || result
 }
 
 /**
@@ -339,19 +339,19 @@ export async function updateImageIsPublished(
 export async function deleteImage(
   imageId: string,
   ctx: ImageEditCtx,
-  fetchFn: typeof fetch = fetch
+  fetchFn: typeof fetch = fetch,
 ): Promise<any> {
   // DELETE might not return the image, just a success message
-  const apiUrl = addCtxToUrl(`/api/images/${imageId}`, ctx);
+  const apiUrl = addCtxToUrl(`/api/images/${imageId}`, ctx)
   const response = await fetchFn(apiUrl, {
-    method: 'DELETE'
-  });
+    method: 'DELETE',
+  })
 
   if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Failed to delete image: ${errorBody}`);
+    const errorBody = await response.text()
+    throw new Error(`Failed to delete image: ${errorBody}`)
   }
-  return response.json();
+  return response.json()
 }
 
 /**
@@ -361,18 +361,18 @@ export async function deleteImage(
 export async function getImageById(imageId: Id) {
   // Skip API calls for staged images - they only exist locally
   if (imageId.startsWith('staged-')) {
-    return null;
+    return null
   }
 
   // Fetch the specific image from the API
-  const response = await fetch(`/api/images/${imageId}`);
+  const response = await fetch(`/api/images/${imageId}`)
   if (!response.ok) {
-    console.error('Failed to fetch image:', response.statusText);
-    return null;
+    console.error('Failed to fetch image:', response.statusText)
+    return null
   }
 
-  const result = await response.json();
-  return result.data || result; // Handle both wrapped and direct responses
+  const result = await response.json()
+  return result.data || result // Handle both wrapped and direct responses
 }
 
 // ═══════════════════════
@@ -391,33 +391,33 @@ export async function createCloudinaryImage(
   file: File,
   paramsToSign: ParamsToSign, // folder, public_id (if any)
   signData: SignData,
-  fetchFn: typeof fetch = fetch
+  fetchFn: typeof fetch = fetch,
 ): Promise<any> {
-  const url = getCloudinaryUploadEndpoint(signData.cloudname);
-  const formData = new FormData();
+  const url = getCloudinaryUploadEndpoint(signData.cloudname)
+  const formData = new FormData()
 
-  formData.append('file', file);
-  formData.append('folder', paramsToSign.folder);
-  formData.append('api_key', signData.apikey);
-  formData.append('timestamp', signData.timestamp);
-  formData.append('signature', signData.signature);
-  formData.append('media_metadata', 'true');
+  formData.append('file', file)
+  formData.append('folder', paramsToSign.folder)
+  formData.append('api_key', signData.apikey)
+  formData.append('timestamp', signData.timestamp)
+  formData.append('signature', signData.signature)
+  formData.append('media_metadata', 'true')
 
   if (paramsToSign.public_id) {
-    formData.append('public_id', paramsToSign.public_id);
+    formData.append('public_id', paramsToSign.public_id)
   }
 
   const response = await fetchFn(url, {
     method: 'POST',
-    body: formData
-  });
+    body: formData,
+  })
 
   if (!response.ok) {
-    const errorData = await response.text();
-    console.error('Cloudinary upload failed:', errorData);
-    throw new Error(`Cloudinary upload failed: ${response.statusText}`);
+    const errorData = await response.text()
+    console.error('Cloudinary upload failed:', errorData)
+    throw new Error(`Cloudinary upload failed: ${response.statusText}`)
   }
-  return response.json();
+  return response.json()
 }
 
 // ═══════════════════════
@@ -430,7 +430,7 @@ export async function createCloudinaryImage(
  * @returns The upload URL string.
  */
 export function getCloudinaryUploadEndpoint(cloudname: string): string {
-  return `https://api.cloudinary.com/v1_1/${cloudname}/auto/upload`;
+  return `https://api.cloudinary.com/v1_1/${cloudname}/auto/upload`
 }
 
 /**
@@ -446,12 +446,12 @@ export function getCloudinaryUploadEndpoint(cloudname: string): string {
  * @returns The generated URL string.
  */
 export function getURLfromImage(opts: {
-  image: ImageDB | ImageDBBasic;
-  transformation?: string;
-  raw?: boolean;
-  gravity?: string;
-  quality?: string;
-  format?: string;
+  image: ImageDB | ImageDBBasic
+  transformation?: string
+  raw?: boolean
+  gravity?: string
+  quality?: string
+  format?: string
 }): string {
   const {
     image,
@@ -459,22 +459,22 @@ export function getURLfromImage(opts: {
     gravity = 'auto',
     format = 'auto',
     quality = 'auto',
-    raw = false
-  } = opts;
+    raw = false,
+  } = opts
 
   // Handle staged images with preview URLs
   if ((image as any).preview) {
-    return (image as any).preview;
+    return (image as any).preview
   }
 
-  const finalTransformation = `${transformation}/g_${gravity}/f_${format}/q_${quality}`;
+  const finalTransformation = `${transformation}/g_${gravity}/f_${format}/q_${quality}`
 
   if (image.cdn === 'cloudinary') {
     return raw
       ? `https://res.cloudinary.com/${image.env}/image/upload/fl_attachment/${image.publicId}`
-      : `https://res.cloudinary.com/${image.env}/image/upload/${finalTransformation}/v${image.version}/${image.publicId}`;
+      : `https://res.cloudinary.com/${image.env}/image/upload/${finalTransformation}/v${image.version}/${image.publicId}`
   } else {
-    throw error(404, `Image CDN <code>${image.cdn}</code> not supported`);
+    throw error(404, `Image CDN <code>${image.cdn}</code> not supported`)
   }
 }
 
@@ -484,7 +484,7 @@ export function getURLfromImage(opts: {
  * @returns A partial NewImageAPI object.
  */
 export function getImageFromCloudinaryResponse(response: any): Partial<ImageNew> {
-  const metadata = response.image_metadata || {}; // Ensure metadata is an object
+  const metadata = response.image_metadata || {} // Ensure metadata is an object
   return {
     cdn: 'cloudinary' as const,
     env: response.env,
@@ -499,8 +499,8 @@ export function getImageFromCloudinaryResponse(response: any): Partial<ImageNew>
     cameraModel: getCameraFromMetadata(metadata),
     capturedAt: getCapturedAtFromMetadata(metadata),
     credit: getCreditFromMetadata(metadata),
-    ...getCoordinatesFromMetadata(metadata)
-  };
+    ...getCoordinatesFromMetadata(metadata),
+  }
 }
 
 /**
@@ -511,7 +511,7 @@ export function getImageFromCloudinaryResponse(response: any): Partial<ImageNew>
  */
 export async function getCloudinarySignature(
   paramsToSign: ParamsToSign,
-  fetchFn: typeof fetch = fetch
+  fetchFn: typeof fetch = fetch,
 ): Promise<SignData> {
   const response = await fetchFn('/api/cloudinary', {
     method: 'POST',
@@ -519,14 +519,14 @@ export async function getCloudinarySignature(
     body: JSON.stringify({
       paramsToSign: {
         ...paramsToSign,
-        media_metadata: 'true'
-      }
-    })
-  });
+        media_metadata: 'true',
+      },
+    }),
+  })
   if (!response.ok) {
-    throw new Error('Failed to fetch Cloudinary signature');
+    throw new Error('Failed to fetch Cloudinary signature')
   }
-  return response.json();
+  return response.json()
 }
 
 /**
@@ -536,14 +536,14 @@ export async function getCloudinarySignature(
  * @throws Error if ctx are invalid for determining path.
  */
 export function getPublicPathCloudinaryImage(ctx: ImageUploadCtx): {
-  folder: string;
-  public_id: string | null;
+  folder: string
+  public_id: string | null
 } {
   if (ctx.ctxType === ImageContextResource.organisation && ctx.organisation) {
     return {
       folder: `/${ctx.organisation.code}`,
-      public_id: ctx.ctxId
-    };
+      public_id: ctx.ctxId,
+    }
   } else if (
     ctx.ctxType === ImageContextResource.project &&
     ctx.project &&
@@ -551,8 +551,8 @@ export function getPublicPathCloudinaryImage(ctx: ImageUploadCtx): {
   ) {
     return {
       folder: `/${ctx.organisation.code}/${ctx.project.code}`,
-      public_id: ctx.ctxId
-    };
+      public_id: ctx.ctxId,
+    }
   } else if (
     ctx.ctxType === ImageContextResource.feature &&
     ctx.project &&
@@ -561,8 +561,8 @@ export function getPublicPathCloudinaryImage(ctx: ImageUploadCtx): {
   ) {
     return {
       folder: `/${ctx.organisation.code}/${ctx.project.code}`,
-      public_id: ctx.imageToReplace.publicId.split('/').pop()!
-    };
+      public_id: ctx.imageToReplace.publicId.split('/').pop()!,
+    }
   } else if (
     ctx.ctxType === ImageContextResource.feature &&
     ctx.project &&
@@ -571,11 +571,11 @@ export function getPublicPathCloudinaryImage(ctx: ImageUploadCtx): {
     // New feature image, no public_id for replacement
     return {
       folder: `/${ctx.organisation.code}/${ctx.project.code}`,
-      public_id: null
-    };
+      public_id: null,
+    }
   }
-  console.error('Invalid ctx for getPublicPath:', ctx);
-  throw new Error('Invalid ctx for getPublicPath');
+  console.error('Invalid ctx for getPublicPath:', ctx)
+  throw new Error('Invalid ctx for getPublicPath')
 }
 
 // ═══════════════════════
@@ -594,23 +594,23 @@ export function extendFeatureImage(
   ctx: ImageUploadCtx,
   extended?: {
     featureImage?: {
-      isPublished: boolean;
-      intent: string;
-    };
-  }
+      isPublished: boolean
+      intent: string
+    }
+  },
 ) {
   if (ctx.ctxType === 'feature') {
     image.featureImage = ctx.imageToReplace
       ? {
           featureId: ctx.imageToReplace.featureId,
           intent: ctx.imageToReplace.intent,
-          isPublished: ctx.imageToReplace.isPublished
+          isPublished: ctx.imageToReplace.isPublished,
         }
       : ({
           featureId: ctx.ctxId,
           intent: extended?.featureImage?.intent || 'undefined',
-          isPublished: extended?.featureImage?.isPublished
-        } as any); // Cast as any to match NewFeatureImages if necessary
+          isPublished: extended?.featureImage?.isPublished,
+        } as any) // Cast as any to match NewFeatureImages if necessary
   }
 }
 
@@ -624,8 +624,8 @@ export function extendImageWithResource(image: Partial<ImageNew>, ctx: ImageUplo
   if (
     Object.values(ImageContextResource).includes(ctx.ctxType as ImageContextResource)
   ) {
-    image.ctxType = ctx.ctxType as ImageContextResource;
-    image.ctxId = ctx.ctxId;
+    image.ctxType = ctx.ctxType as ImageContextResource
+    image.ctxId = ctx.ctxId
   }
 }
 
@@ -641,22 +641,22 @@ export function extendImageWithResource(image: Partial<ImageNew>, ctx: ImageUplo
 export function getCoordinatesFromMetadata(metadata: Metadata): LngLat {
   try {
     const coordinates = new Coordinates(
-      `${metadata.GPSLatitude.replace(' deg', '°')} ${metadata.GPSLongitude.replace(' deg', '°')}`
-    );
+      `${metadata.GPSLatitude.replace(' deg', '°')} ${metadata.GPSLongitude.replace(' deg', '°')}`,
+    )
     return {
       latitude: coordinates.getLatitude().toString(),
-      longitude: coordinates.getLongitude().toString()
-    };
+      longitude: coordinates.getLongitude().toString(),
+    }
   } catch (error) {
-    console.warn('Failed to parse coordinates with coordinate-parser');
+    console.warn('Failed to parse coordinates with coordinate-parser')
     // Fallback or simplified parsing if direct fields are available
     if (metadata.GPSLatitude && metadata.GPSLongitude) {
       return {
         latitude: String(metadata.GPSLatitude),
-        longitude: String(metadata.GPSLongitude)
-      };
+        longitude: String(metadata.GPSLongitude),
+      }
     }
-    return { latitude: undefined, longitude: undefined };
+    return { latitude: undefined, longitude: undefined }
   }
 }
 
@@ -667,35 +667,34 @@ export function getCoordinatesFromMetadata(metadata: Metadata): LngLat {
  */
 export function getCapturedAtFromMetadata(metadata: Metadata): string {
   const parseExifDate = (dateStr: string): string => {
-    const normalized = dateStr.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3');
-    return new Date(normalized).toISOString();
-  };
+    const normalized = dateStr.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3')
+    return new Date(normalized).toISOString()
+  }
 
-  const possibleFields = ['DateTimeOriginal', 'CreateDate', 'ModifyDate'];
+  const possibleFields = ['DateTimeOriginal', 'CreateDate', 'ModifyDate']
   for (const field of possibleFields) {
     if (metadata[field]) {
       try {
-        return parseExifDate(metadata[field]);
+        return parseExifDate(metadata[field])
       } catch (e) {
-        console.warn(`Failed to parse ${field}:`, metadata[field]);
-        continue;
+        console.warn(`Failed to parse ${field}:`, metadata[field])
       }
     }
   }
 
   if (metadata.DateCreated && metadata.TimeCreated) {
     try {
-      return parseExifDate(`${metadata.DateCreated} ${metadata.TimeCreated}`);
+      return parseExifDate(`${metadata.DateCreated} ${metadata.TimeCreated}`)
     } catch (e) {
       console.warn(
         'Failed to parse DateCreated/TimeCreated:',
         metadata.DateCreated,
-        metadata.TimeCreated
-      );
+        metadata.TimeCreated,
+      )
     }
   }
 
-  return new Date().toISOString();
+  return new Date().toISOString()
 }
 
 /**
@@ -704,10 +703,10 @@ export function getCapturedAtFromMetadata(metadata: Metadata): string {
  * @returns The camera model string, or undefined.
  */
 export function getCameraFromMetadata(metadata: Metadata): string | undefined {
-  const make = capitalizeFirstLetter(metadata.Make) ?? '';
-  const model = capitalizeFirstLetter(metadata.Model) ?? '';
-  const hasCamera = model.includes(make);
-  return hasCamera ? model.trim() : `${make} ${model}`.trim() || undefined;
+  const make = capitalizeFirstLetter(metadata.Make) ?? ''
+  const model = capitalizeFirstLetter(metadata.Model) ?? ''
+  const hasCamera = model.includes(make)
+  return hasCamera ? model.trim() : `${make} ${model}`.trim() || undefined
 }
 
 /**
@@ -716,13 +715,13 @@ export function getCameraFromMetadata(metadata: Metadata): string | undefined {
  * @returns The credit string, or undefined.
  */
 export function getCreditFromMetadata(metadata: Metadata): string | undefined {
-  const possibleFields = ['CopyrightNotice', 'Credit', 'By-line'];
+  const possibleFields = ['CopyrightNotice', 'Credit', 'By-line']
   for (const field of possibleFields) {
     if (metadata[field]) {
-      return metadata[field];
+      return metadata[field]
     }
   }
-  return undefined;
+  return undefined
 }
 
 // ═══════════════════════
@@ -730,30 +729,30 @@ export function getCreditFromMetadata(metadata: Metadata): string | undefined {
 // ═══════════════════════
 
 export function sortImages(images: Image[] | ImageDBFlat[], isAdmin: boolean = false) {
-  const intentOrderToUse = isAdmin ? adminIntentOrder : intentOrder;
+  const intentOrderToUse = isAdmin ? adminIntentOrder : intentOrder
   const sortedImages = images.sort((a, b) => {
     if (isAdmin) {
       // Priority 1: Unpublished with no intent (undefined) come first
       const aIsUnpublishedNoIntent =
-        !a.isPublished && (!a.intent || a.intent === 'undefined');
+        !a.isPublished && (!a.intent || a.intent === 'undefined')
       const bIsUnpublishedNoIntent =
-        !b.isPublished && (!b.intent || b.intent === 'undefined');
+        !b.isPublished && (!b.intent || b.intent === 'undefined')
 
-      if (aIsUnpublishedNoIntent && !bIsUnpublishedNoIntent) return -1;
-      if (!aIsUnpublishedNoIntent && bIsUnpublishedNoIntent) return 1;
+      if (aIsUnpublishedNoIntent && !bIsUnpublishedNoIntent) return -1
+      if (!aIsUnpublishedNoIntent && bIsUnpublishedNoIntent) return 1
 
       // Priority 2: Published vs unpublished (published first among remaining)
       if (a.isPublished !== b.isPublished) {
-        return a.isPublished ? -1 : 1;
+        return a.isPublished ? -1 : 1
       }
     }
     // Priority 3: Intent order within same publish status
     if (a.intent && b.intent) {
       const intentCompare =
         intentOrderToUse.indexOf(a.intent as Intent) -
-        intentOrderToUse.indexOf(b.intent as Intent);
+        intentOrderToUse.indexOf(b.intent as Intent)
       if (intentCompare !== 0) {
-        return intentCompare;
+        return intentCompare
       }
     }
 
@@ -761,10 +760,10 @@ export function sortImages(images: Image[] | ImageDBFlat[], isAdmin: boolean = f
     return (
       new Date(b.createdAt as string).getTime() -
       new Date(a.createdAt as string).getTime()
-    );
-  });
+    )
+  })
 
-  return sortedImages;
+  return sortedImages
 }
 
 /**
@@ -774,7 +773,7 @@ export function sortImages(images: Image[] | ImageDBFlat[], isAdmin: boolean = f
  * @returns The URL string with context query parameters.
  */
 function addCtxToUrl(baseUrl: string, ctx: ImageEditCtx): string {
-  const url = new URL(baseUrl, window.location.origin);
+  const url = new URL(baseUrl, window.location.origin)
   if (ctx.ctxId && ctx.ctxType) {
     if (
       ctx.ctxType === ImageContextResource.organisation ||
@@ -784,33 +783,33 @@ function addCtxToUrl(baseUrl: string, ctx: ImageEditCtx): string {
       // ctx.ctxType is definitely ImageContextResource here
       switch (ctx.ctxType) {
         case ImageContextResource.organisation:
-          url.searchParams.append('organisationId', ctx.ctxId);
-          break;
+          url.searchParams.append('organisationId', ctx.ctxId)
+          break
         case ImageContextResource.project:
-          url.searchParams.append('projectId', ctx.ctxId);
-          break;
+          url.searchParams.append('projectId', ctx.ctxId)
+          break
         case ImageContextResource.feature:
-          url.searchParams.append('featureId', ctx.ctxId);
-          break;
+          url.searchParams.append('featureId', ctx.ctxId)
+          break
       }
     } else if (ctx.ctxType === ImageContextResourceExtended.task) {
-      url.searchParams.append('taskId', ctx.ctxId);
+      url.searchParams.append('taskId', ctx.ctxId)
     } else {
       // Handle cases where ctx.ctxType might be a string not matching any enum value
       // Or if there are other values in ImageContextResourceExtended not handled above
-      console.warn(`Unsupported context type for URL: ${ctx.ctxType}`);
+      console.warn(`Unsupported context type for URL: ${ctx.ctxType}`)
     }
   }
-  return url.pathname + url.search;
+  return url.pathname + url.search
 }
 
 // Generate hashicon URL for fallback
 export function getHashiconUrl(id: string) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 64;
-  canvas.height = 64;
-  hashicon(id, { size: 64, createCanvas: () => canvas });
-  return canvas.toDataURL();
+  const canvas = document.createElement('canvas')
+  canvas.width = 64
+  canvas.height = 64
+  hashicon(id, { size: 64, createCanvas: () => canvas })
+  return canvas.toDataURL()
 }
 
 /**
@@ -820,28 +819,28 @@ export async function checkCameraAvailability() {
   try {
     // Check if MediaDevices API is available
     if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-      return false;
+      return false
     }
 
     // Check for video input devices
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const hasVideoInput = devices.some((device) => device.kind === 'videoinput');
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    const hasVideoInput = devices.some(device => device.kind === 'videoinput')
 
     if (!hasVideoInput) {
-      return false;
+      return false
     }
 
     // Test camera access (will prompt user for permission if needed)
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' }
-    });
+      video: { facingMode: 'environment' },
+    })
 
     // If we get here, camera access is available
-    stream.getTracks().forEach((track) => track.stop()); // Clean up
-    return true;
+    stream.getTracks().forEach(track => track.stop()) // Clean up
+    return true
   } catch (error) {
     // Camera access denied or not available
-    return false;
+    return false
   }
 }
 
@@ -851,5 +850,5 @@ export const intentDisplay: Record<Intent, string> = {
   context: m.intent__context(),
   general: m.intent__general(),
   research: m.intent__research(),
-  undefined: m.intent__undefined()
-};
+  undefined: m.intent__undefined(),
+}

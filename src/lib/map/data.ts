@@ -1,33 +1,33 @@
 // I18N
-import { getI18n } from '$lib/i18n';
-import { m } from '$lib/i18n';
+import { getI18n } from '$lib/i18n'
+import { m } from '$lib/i18n'
 // SERVICES
-import { filterPlaces } from '$lib/client/services/geospatial';
+import { filterPlaces } from '$lib/client/services/geospatial'
 /// ENUMS
-import { OmniCollection } from '$lib/enums';
+import { OmniCollection } from '$lib/enums'
 // TYPES
-import type { AppCtx } from '$lib/context/app.svelte';
+import type { AppCtx } from '$lib/context/app.svelte'
 import type {
   FeatureExtended,
   FeatureFromCollection,
   Layer,
-  SearchResult
-} from '$lib/types';
+  SearchResult,
+} from '$lib/types'
 
 // Async version that uses getHierarchy for guaranteed data with cache-miss handling
 export async function getWishlistedFeaturesAsync(
-  appCtx: AppCtx
+  appCtx: AppCtx,
 ): Promise<FeatureExtended[]> {
-  const wishlistedFeatures = appCtx.getWishlistedFeatures();
+  const wishlistedFeatures = appCtx.getWishlistedFeatures()
 
   return Promise.all(
-    wishlistedFeatures.map(async (feature) => {
-      const { layer, project, organisation } = await appCtx.getHierarchy(feature);
+    wishlistedFeatures.map(async feature => {
+      const { layer, project, organisation } = await appCtx.getHierarchy(feature)
 
       const projectLayerCount = project
         ? appCtx.state.resources.layer.filter((l: Layer) => l.projectId === project.id)
             .length
-        : 0;
+        : 0
 
       return {
         ...feature,
@@ -42,74 +42,74 @@ export async function getWishlistedFeaturesAsync(
             layer && projectLayerCount > 1
               ? getI18n(layer, 'nameShort', appCtx.getUserPreferences())
               : null,
-          feature: getI18n(feature, 'title', appCtx.getUserPreferences())
-        }
-      };
-    })
-  );
+          feature: getI18n(feature, 'title', appCtx.getUserPreferences()),
+        },
+      }
+    }),
+  )
 }
 
 export async function searchAllAsync(
   term: string,
-  appCtx: AppCtx
+  appCtx: AppCtx,
 ): Promise<SearchResult[]> {
-  const results: SearchResult[] = [];
+  const results: SearchResult[] = []
 
   // Source 1 - Walks
-  const wishlistResults = await getWishlistedFeaturesAsync(appCtx);
+  const wishlistResults = await getWishlistedFeaturesAsync(appCtx)
   const filteredWishlistResults = wishlistResults.filter((feature: FeatureExtended) =>
-    feature?.hierarchy.feature?.toLowerCase().includes(term.toLowerCase())
-  );
+    feature?.hierarchy.feature?.toLowerCase().includes(term.toLowerCase()),
+  )
   if (filteredWishlistResults.length > 0) {
     results.push({
       name: m.omni__title_star_walks(),
       count: filteredWishlistResults.length,
       collectionType: OmniCollection.walk,
-      ref: 'stars'
-    });
+      ref: 'stars',
+    })
   }
 
   // Source 2 - Neighbourhoods
-  const neighbourhoodResults = filterPlaces(appCtx, term);
+  const neighbourhoodResults = filterPlaces(appCtx, term)
   neighbourhoodResults.forEach(([neighbourhoodRef, data]) => {
-    const count = appCtx.placeCtx.neighbourhoodFeatureCounts.get(neighbourhoodRef) ?? 0;
+    const count = appCtx.placeCtx.neighbourhoodFeatureCounts.get(neighbourhoodRef) ?? 0
     if (count > 0) {
       results.push({
         name: getI18n(data, 'name', appCtx.getUserPreferences()),
         count,
         collectionType: OmniCollection.neighbourhood,
-        ref: neighbourhoodRef
-      });
+        ref: neighbourhoodRef,
+      })
     }
-  });
+  })
 
   // Source 3 - Features
   Array.from(appCtx.features.values())
     .filter((feature): feature is FeatureFromCollection => {
-      const title = getI18n(feature, 'title', appCtx.getUserPreferences());
-      const description = getI18n(feature, 'description', appCtx.getUserPreferences());
+      const title = getI18n(feature, 'title', appCtx.getUserPreferences())
+      const description = getI18n(feature, 'description', appCtx.getUserPreferences())
       const displayAddress = getI18n(
         feature,
         'displayAddress',
-        appCtx.getUserPreferences()
-      );
-      const lowerTerm = term.toLowerCase();
+        appCtx.getUserPreferences(),
+      )
+      const lowerTerm = term.toLowerCase()
       return (
         (typeof title === 'string' && title.toLowerCase().includes(lowerTerm)) ||
         (typeof description === 'string' &&
           description.toLowerCase().includes(lowerTerm)) ||
         (typeof displayAddress === 'string' &&
           displayAddress.toLowerCase().includes(lowerTerm))
-      );
+      )
     })
-    .forEach((feature) => {
+    .forEach(feature => {
       results.push({
         name: getI18n(feature, 'title', appCtx.getUserPreferences()),
         count: 1,
         collectionType: OmniCollection.feature,
-        ref: feature.id
-      });
-    });
+        ref: feature.id,
+      })
+    })
 
-  return results;
+  return results
 }

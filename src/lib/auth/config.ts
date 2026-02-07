@@ -12,8 +12,8 @@ export const authConfig = {
     cookieCache: {
       // signed cookie
       enabled: true,
-      maxAge: 60 // 1 min
-    }
+      maxAge: 60, // 1 min
+    },
   },
 
   // SECURITY
@@ -32,7 +32,7 @@ export const authConfig = {
     // DEV
     'http://localhost:5173',
     'https://dove-main-tapir.ngrok-free.app',
-    'http://192.168.1.100.traefik.me:5173'
+    'http://192.168.1.100.traefik.me:5173',
   ],
 
   user: {
@@ -40,48 +40,48 @@ export const authConfig = {
       locale: {
         type: 'string' as const,
         required: true,
-        defaultValue: 'en'
+        defaultValue: 'en',
       },
       attribution: {
         type: 'string' as const,
-        required: false
+        required: false,
       },
       isArchived: {
         type: 'boolean' as const,
         required: true,
-        defaultValue: false
+        defaultValue: false,
       },
       preferences: {
         type: 'string' as const,
         required: true,
         defaultValue:
-          '{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}'
+          '{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}',
       },
       experimental: {
         type: 'string' as const,
         required: true,
-        defaultValue: '{"contributorMode":false, "noLabelsMode":false}'
+        defaultValue: '{"contributorMode":false, "noLabelsMode":false}',
       },
       superAdmin: {
         type: 'boolean' as const,
         required: true,
-        defaultValue: false
+        defaultValue: false,
       },
       username: {
         type: 'string' as const,
-        required: false
+        required: false,
       },
       displayUsername: {
         type: 'string' as const,
-        required: false
+        required: false,
       },
       isAnonymous: {
         type: 'boolean' as const,
         required: true,
-        defaultValue: false
-      }
+        defaultValue: false,
+      },
       // Note: roles and userLayers are added dynamically via customSession plugin
       // in auth.ts since Better Auth doesn't support array types in additionalFields
-    }
-  }
-};
+    },
+  },
+}

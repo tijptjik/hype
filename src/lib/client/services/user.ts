@@ -1,5 +1,5 @@
 // TYPES
-import type { Id, Locale, UserPreferences, UserLayer } from '$lib/types';
+import type { Id, Locale, UserPreferences, UserLayer } from '$lib/types'
 
 /**
  * Update the user's preferred locale on the server and in Paraglide's locale store. This triggers a page reload so the user can see the new locale immediately.
@@ -7,33 +7,33 @@ import type { Id, Locale, UserPreferences, UserLayer } from '$lib/types';
  * @param locale - The new locale
  */
 export const updateLocale = async (userId: Id, locale: Locale) => {
-  if (!userId) return;
+  if (!userId) return
 
   // API : Update user's preferred locale
   try {
     await fetch(`/api/users/${userId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ locale })
-    });
+      body: JSON.stringify({ locale }),
+    })
 
     // AUTH : Signal to client that it should refresh its session
-    const { authClient } = await import('$lib/auth/client');
+    const { authClient } = await import('$lib/auth/client')
     try {
       // Force session refresh by calling getSession with disableCookieCache
       await authClient.getSession({
-        query: { disableCookieCache: true }
-      });
+        query: { disableCookieCache: true },
+      })
     } catch (error) {
-      console.warn('⚠️ Failed to refresh session after locale update:', error);
+      console.warn('⚠️ Failed to refresh session after locale update:', error)
     }
   } catch (error) {
-    console.error('Failed to update preferred language:', error);
+    console.error('Failed to update preferred language:', error)
   }
-};
+}
 
 // Generic debounced timers
-const debouncedTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const debouncedTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 /**
  * Generic debounced user update function
@@ -45,24 +45,24 @@ export const debouncedUpdateUser = async (
   userId: Id,
   data: Record<string, any>,
   options: {
-    delay?: number;
-    timerKey?: string;
-    onSuccess?: (data: any) => void;
-    onError?: (error: any) => void;
-  } = {}
+    delay?: number
+    timerKey?: string
+    onSuccess?: (data: any) => void
+    onError?: (error: any) => void
+  } = {},
 ) => {
-  const { delay = 750, timerKey = 'default', onSuccess, onError } = options;
+  const { delay = 750, timerKey = 'default', onSuccess, onError } = options
 
   // ASSERT : We have a userId
   if (!userId) {
-    console.warn('User session not found. Cannot update user data.');
-    return;
+    console.warn('User session not found. Cannot update user data.')
+    return
   }
 
   // TIMER : Clear previous timeout for this key
-  const existingTimer = debouncedTimers.get(timerKey);
+  const existingTimer = debouncedTimers.get(timerKey)
   if (existingTimer) {
-    clearTimeout(existingTimer);
+    clearTimeout(existingTimer)
   }
 
   // TIMER : Set new timeout
@@ -71,49 +71,49 @@ export const debouncedUpdateUser = async (
       const response = await fetch(`/api/users/${userId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
+        body: JSON.stringify(data),
+      })
 
       if (response.ok) {
-        onSuccess?.(data);
+        onSuccess?.(data)
       } else {
-        const errorText = await response.text();
-        console.error('Failed to update user data:', errorText);
-        onError?.(new Error(errorText));
+        const errorText = await response.text()
+        console.error('Failed to update user data:', errorText)
+        onError?.(new Error(errorText))
       }
     } catch (error) {
-      console.error('Error updating user data:', error);
-      onError?.(error);
+      console.error('Error updating user data:', error)
+      onError?.(error)
     } finally {
-      debouncedTimers.delete(timerKey);
+      debouncedTimers.delete(timerKey)
     }
-  }, delay);
+  }, delay)
 
-  debouncedTimers.set(timerKey, timer);
-};
+  debouncedTimers.set(timerKey, timer)
+}
 
 export const debouncedUpdateUserPreferences = (
   userId: Id,
-  userPreferences: UserPreferences
+  userPreferences: UserPreferences,
 ) => {
   // ASSERT : We have userPreferences
-  if (!userPreferences) return;
+  if (!userPreferences) return
 
   debouncedUpdateUser(
     userId,
     { preferences: JSON.stringify(userPreferences) },
     {
       delay: 750,
-      timerKey: 'preferences'
-    }
-  );
-};
+      timerKey: 'preferences',
+    },
+  )
+}
 
 export const debouncedUpdateUserAttribution = async (
   userId: Id,
   attribution: string,
   onSuccess?: (attribution: string) => void,
-  onError?: (error: any) => void
+  onError?: (error: any) => void,
 ) => {
   await debouncedUpdateUser(
     userId,
@@ -122,42 +122,42 @@ export const debouncedUpdateUserAttribution = async (
       delay: 800,
       timerKey: 'attribution',
       onSuccess: () => onSuccess?.(attribution),
-      onError
-    }
-  );
-};
+      onError,
+    },
+  )
+}
 
 export const debouncedUpdateUserLayers = (userId: Id, userLayers: UserLayer[]) => {
   // ASSERT : We have userLayers
-  if (!userLayers) return;
+  if (!userLayers) return
 
   debouncedUpdateUser(
     userId,
     { userLayers },
     {
       delay: 750,
-      timerKey: 'userLayers'
-    }
-  );
-};
+      timerKey: 'userLayers',
+    },
+  )
+}
 
 export const debouncedUpdateUserExperimental = (
   userId: Id,
   experimental: {
-    contributorMode?: boolean;
-    noLabelsMode?: boolean;
-    [key: string]: boolean | undefined;
-  }
+    contributorMode?: boolean
+    noLabelsMode?: boolean
+    [key: string]: boolean | undefined
+  },
 ) => {
   // ASSERT : We have experimental features
-  if (!experimental) return;
+  if (!experimental) return
 
   debouncedUpdateUser(
     userId,
     { experimental: JSON.stringify(experimental) },
     {
       delay: 750,
-      timerKey: 'experimental'
-    }
-  );
-};
+      timerKey: 'experimental',
+    },
+  )
+}

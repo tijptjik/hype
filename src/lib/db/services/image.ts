@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, eq, getTableColumns, inArray, SQL } from 'drizzle-orm';
+import { and, eq, getTableColumns, inArray, type SQL } from 'drizzle-orm'
 // SCHEMA
 import {
   feature,
@@ -8,16 +8,16 @@ import {
   organisation,
   project,
   taskImage,
-  user
-} from '../schema';
+  user,
+} from '../schema'
 // CRUD
-import { insert, insertRelated, update, updateRelated } from '../crud';
+import { insert, insertRelated, update, updateRelated } from '../crud'
 // ENUMS
 import {
   ImageContextResource,
   ImageContextResourceExtended,
-  ImageIntentPublic
-} from '$lib/enums';
+  ImageIntentPublic,
+} from '$lib/enums'
 // TYPES
 import type {
   FeatureImage,
@@ -29,10 +29,10 @@ import type {
   Image,
   ImageDB,
   ImageDBFlat,
-  ImageDBFlatUpdate
-} from '$lib/types';
+  ImageDBFlatUpdate,
+} from '$lib/types'
 // UTILS
-import { sortImages } from '$lib/client/services/image';
+import { sortImages } from '$lib/client/services/image'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -76,7 +76,7 @@ import { sortImages } from '$lib/client/services/image';
  * @throws {Error} If the image creation fails
  */
 export const createImage = async (db: Database, data: ImageDBNew): Promise<ImageDB> =>
-  await insert(db, image, data);
+  await insert(db, image, data)
 
 /**
  * Updates an existing image in the database
@@ -89,8 +89,8 @@ export const createImage = async (db: Database, data: ImageDBNew): Promise<Image
 export const updateImage = async (
   db: Database,
   data: ImageDBPartial,
-  ref: Id
-): Promise<ImageDB> => await update(db, image, data, image.id, ref);
+  ref: Id,
+): Promise<ImageDB> => await update(db, image, data, image.id, ref)
 
 // ═══════════════════════
 // 2. CRUD :: RELATIONAL OPERATIONS
@@ -99,26 +99,26 @@ export const updateImage = async (
 export const createFeatureImage = async (
   db: Database,
   newFeatureImage: FeatureImage,
-  imageId: Id
+  imageId: Id,
 ): Promise<FeatureImageDB> =>
-  await insertRelated(db, featureImage, newFeatureImage, 'imageId', imageId);
+  await insertRelated(db, featureImage, newFeatureImage, 'imageId', imageId)
 
 export const updateFeatureImage = async (
   db: Database,
   modifiedFeatureImage: ImageDBFlatUpdate,
-  imageId: string
+  imageId: string,
 ): Promise<FeatureImageDB> => {
   // Extract only the featureImage-specific fields
-  const featureImageData: Partial<FeatureImageDB> = {};
+  const featureImageData: Partial<FeatureImageDB> = {}
 
   if (modifiedFeatureImage.isPublished !== undefined) {
-    featureImageData.isPublished = modifiedFeatureImage.isPublished ?? undefined;
+    featureImageData.isPublished = modifiedFeatureImage.isPublished ?? undefined
   }
   if (modifiedFeatureImage.intent !== undefined) {
-    featureImageData.intent = modifiedFeatureImage.intent ?? undefined;
+    featureImageData.intent = modifiedFeatureImage.intent ?? undefined
   }
   if (modifiedFeatureImage.publishedAt !== undefined) {
-    featureImageData.publishedAt = modifiedFeatureImage.publishedAt;
+    featureImageData.publishedAt = modifiedFeatureImage.publishedAt
   }
 
   return await updateRelated(
@@ -128,22 +128,22 @@ export const updateFeatureImage = async (
     featureImage.imageId,
     imageId,
     featureImage.featureId,
-    modifiedFeatureImage.featureId
-  );
-};
+    modifiedFeatureImage.featureId,
+  )
+}
 
 export const createTaskImagesFromImageIds = async (
   db: Database,
   taskId: string,
-  imageIds: string[]
+  imageIds: string[],
 ) => {
   await db.insert(taskImage).values(
-    imageIds.map((imageId) => ({
+    imageIds.map(imageId => ({
       taskId,
-      imageId
-    }))
-  );
-};
+      imageId,
+    })),
+  )
+}
 
 /**
  * Publishes all images with public intent for a feature
@@ -155,24 +155,24 @@ export const createTaskImagesFromImageIds = async (
 export const publishAllImagesWithPublicIntent = async (
   db: Database,
   featureId: Id,
-  publisherId: Id
+  publisherId: Id,
 ): Promise<void> => {
-  const publicIntentValues = Object.values(ImageIntentPublic);
+  const publicIntentValues = Object.values(ImageIntentPublic)
 
   await db
     .update(featureImage)
     .set({
       isPublished: true,
       publishedAt: new Date().toISOString(),
-      publisherId
+      publisherId,
     })
     .where(
       and(
         eq(featureImage.featureId, featureId),
-        inArray(featureImage.intent, publicIntentValues)
-      )
-    );
-};
+        inArray(featureImage.intent, publicIntentValues),
+      ),
+    )
+}
 
 // ═══════════════════════
 // 3. LOOKUPS
@@ -180,7 +180,7 @@ export const publishAllImagesWithPublicIntent = async (
 
 export const getImageById = async (
   db: Database,
-  conditions: SQL<unknown>[]
+  conditions: SQL<unknown>[],
 ): Promise<ImageDBFlat | undefined> => {
   const [result] = await db
     .select({
@@ -188,25 +188,25 @@ export const getImageById = async (
       intent: featureImage.intent,
       isPublished: featureImage.isPublished,
       publishedAt: featureImage.publishedAt,
-      attribution: user.attribution
+      attribution: user.attribution,
     })
     .from(image)
     .leftJoin(featureImage, eq(image.id, featureImage.imageId))
     .leftJoin(user, eq(image.contributorId, user.id))
-    .where(and(...conditions));
-  if (!result) return undefined;
-  return result as ImageDBFlat;
-};
+    .where(and(...conditions))
+  if (!result) return undefined
+  return result as ImageDBFlat
+}
 
 export const getImagesByIds = async (
   db: Database,
   imageIds: string[],
-  conditions: SQL<unknown>[] = []
+  conditions: SQL<unknown>[] = [],
 ): Promise<ImageDBFlat[]> => {
-  if (imageIds.length === 0) return [];
+  if (imageIds.length === 0) return []
 
   // Always filter by the provided image IDs
-  const allConditions = [inArray(image.id, imageIds), ...conditions];
+  const allConditions = [inArray(image.id, imageIds), ...conditions]
 
   const results = await db
     .select({
@@ -220,35 +220,35 @@ export const getImagesByIds = async (
       organisationId: feature.organisationId,
       projectId: feature.projectId,
       layerId: feature.layerId,
-      featureId: feature.id
+      featureId: feature.id,
     })
     .from(image)
     .leftJoin(featureImage, eq(image.id, featureImage.imageId))
     .leftJoin(feature, eq(featureImage.featureId, feature.id))
     .leftJoin(user, eq(image.contributorId, user.id))
-    .where(and(...allConditions));
+    .where(and(...allConditions))
 
-  return results as ImageDBFlat[];
-};
+  return results as ImageDBFlat[]
+}
 
 export const getImageForContextType = async (
   db: Database,
   ctxType: ImageContextResource | ImageContextResourceExtended,
   conditions: SQL<unknown>[],
-  isAdminMode: boolean = false
+  isAdminMode: boolean = false,
 ): Promise<ImageDBFlat[] | ImageDB[]> => {
-  let images;
+  let images
   if (ctxType === ImageContextResource.feature) {
-    images = await getImagesForFeature(db, conditions);
+    images = await getImagesForFeature(db, conditions)
   } else if (ctxType === ImageContextResource.project) {
-    images = await getImageForProject(db, conditions);
+    images = await getImageForProject(db, conditions)
   } else if (ctxType === ImageContextResource.organisation) {
-    images = await getImageForOrganisation(db, conditions);
+    images = await getImageForOrganisation(db, conditions)
   } else if (ctxType === ImageContextResourceExtended.task) {
-    images = await getImagesForTask(db, conditions);
+    images = await getImagesForTask(db, conditions)
   }
-  return sortImages(images as ImageDBFlat[], isAdminMode);
-};
+  return sortImages(images as ImageDBFlat[], isAdminMode)
+}
 
 /**
  * Retrieves images associated with a feature, including their intent, publication status, and attribution. The conditions should already have been applied and include the featureId.
@@ -259,7 +259,7 @@ export const getImageForContextType = async (
  */
 export const getImagesForFeature = async (
   db: Database,
-  conditions: SQL<unknown>[]
+  conditions: SQL<unknown>[],
 ): Promise<ImageDBFlat[]> => {
   return (await db
     .select({
@@ -267,13 +267,13 @@ export const getImagesForFeature = async (
       intent: featureImage.intent,
       isPublished: featureImage.isPublished,
       publishedAt: featureImage.publishedAt,
-      attribution: user.attribution
+      attribution: user.attribution,
     })
     .from(image)
     .innerJoin(featureImage, eq(image.id, featureImage.imageId))
     .leftJoin(user, eq(image.contributorId, user.id))
-    .where(and(...conditions))) as ImageDBFlat[];
-};
+    .where(and(...conditions))) as ImageDBFlat[]
+}
 
 /**
  * Retrieves images associated with a task, including their intent, publication status, and attribution. The conditions should already have been applied and include the taskId.
@@ -284,7 +284,7 @@ export const getImagesForFeature = async (
  */
 export const getImagesForTask = async (
   db: Database,
-  conditions: SQL<unknown>[]
+  conditions: SQL<unknown>[],
 ): Promise<ImageDBFlat[]> => {
   return (await db
     .select({
@@ -292,34 +292,34 @@ export const getImagesForTask = async (
       intent: featureImage.intent,
       isPublished: featureImage.isPublished,
       publishedAt: featureImage.publishedAt,
-      attribution: user.attribution
+      attribution: user.attribution,
     })
     .from(image)
     .innerJoin(featureImage, eq(image.id, featureImage.imageId))
     .innerJoin(taskImage, eq(image.id, taskImage.imageId))
     .leftJoin(user, eq(image.contributorId, user.id))
-    .where(and(...conditions))) as ImageDBFlat[];
-};
+    .where(and(...conditions))) as ImageDBFlat[]
+}
 
 export const getImageForProject = async (
   db: Database,
-  conditions: SQL<unknown>[]
+  conditions: SQL<unknown>[],
 ): Promise<ImageDB[]> =>
   await db
     .select({ ...getTableColumns(image) })
     .from(image)
     .innerJoin(project, eq(image.id, project.imageId))
-    .where(and(...conditions));
+    .where(and(...conditions))
 
 export const getImageForOrganisation = async (
   db: Database,
-  conditions: SQL<unknown>[]
+  conditions: SQL<unknown>[],
 ): Promise<ImageDB[]> =>
   await db
     .select({ ...getTableColumns(image) })
     .from(image)
     .innerJoin(organisation, eq(image.id, organisation.imageId))
-    .where(and(...conditions));
+    .where(and(...conditions))
 
 // ═══════════════════════
 // 4. ACCESS CONTROL
@@ -339,28 +339,28 @@ export const getImageForOrganisation = async (
 export const applyResourceContextConstraints = (
   contextType: ImageContextResource | ImageContextResourceExtended,
   contextId: Id,
-  conditions: SQL<unknown>[]
+  conditions: SQL<unknown>[],
 ) => {
   switch (contextType) {
     case ImageContextResource.feature:
-      conditions.push(eq(featureImage.featureId, contextId));
-      break;
+      conditions.push(eq(featureImage.featureId, contextId))
+      break
     case ImageContextResource.project:
-      conditions.push(eq(project.imageId, image.id));
-      conditions.push(eq(project.id, contextId));
-      break;
+      conditions.push(eq(project.imageId, image.id))
+      conditions.push(eq(project.id, contextId))
+      break
     case ImageContextResource.organisation:
-      conditions.push(eq(organisation.imageId, image.id));
-      conditions.push(eq(organisation.id, contextId));
-      break;
+      conditions.push(eq(organisation.imageId, image.id))
+      conditions.push(eq(organisation.id, contextId))
+      break
     case ImageContextResourceExtended.task:
       // Assuming a taskImage join table
       // This requires joining with taskImage table
-      conditions.push(eq(taskImage.taskId, contextId));
-      conditions.push(eq(taskImage.imageId, image.id));
-      break;
+      conditions.push(eq(taskImage.taskId, contextId))
+      conditions.push(eq(taskImage.imageId, image.id))
+      break
   }
-};
+}
 
 // ═══════════════════════
 //  5. UTILS :: RESHAPE
@@ -369,7 +369,7 @@ export const applyResourceContextConstraints = (
 export const toResponseShape = async (
   image: ImageDB,
   featureImage: FeatureImageDB | undefined,
-  attribution: string | undefined
+  attribution: string | undefined,
 ): Promise<ImageDBFlat> => {
   return {
     ...image,
@@ -379,18 +379,18 @@ export const toResponseShape = async (
           featureId: (featureImage.featureId as Id) ?? undefined,
           intent: featureImage.intent ?? undefined,
           isPublished: featureImage.isPublished ?? undefined,
-          publishedAt: featureImage.publishedAt ?? undefined
+          publishedAt: featureImage.publishedAt ?? undefined,
         }
-      : {})
-  };
-};
+      : {}),
+  }
+}
 
 export const toResponseShapeProjectOrOrganisation = async (
   image: ImageDB,
-  attribution: string | undefined
+  attribution: string | undefined,
 ): Promise<Image> => {
   return {
     ...image,
-    attribution
-  };
-};
+    attribution,
+  }
+}

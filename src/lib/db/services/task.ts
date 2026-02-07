@@ -1,30 +1,36 @@
 // DRIZZLE
-import { eq, and, SQL } from 'drizzle-orm';
+import { eq, and, type SQL } from 'drizzle-orm'
 // SCHEMA
-import { task, taskImage, image, featureImage, feature } from '$lib/db/schema/index';
+import {
+  task,
+  taskImage,
+  image,
+  featureImage,
+  type feature,
+} from '$lib/db/schema/index'
 // CRUD
-import { insert, update, del } from '../crud';
+import { insert, update, del } from '../crud'
 // SERVICES
-import { getProjectForFeatureId } from './project';
-import { getOrganisationForProjectId } from './organisation';
-import { getTaskHubFilter } from './hub';
-import { uploadAndProcessImage } from '$lib/client/services/image';
+import { getProjectForFeatureId } from './project'
+import { getOrganisationForProjectId } from './organisation'
+import { getTaskHubFilter } from './hub'
+import { uploadAndProcessImage } from '$lib/client/services/image'
 import {
   createTaskImagesFromImageIds,
   createImage,
-  createFeatureImage
-} from '$lib/db/services/image';
+  createFeatureImage,
+} from '$lib/db/services/image'
 import {
   getCloudinarySignature,
   createCloudinaryImage,
   getPublicPathCloudinaryImage,
   getImageFromCloudinaryResponse,
   extendFeatureImage,
-  extendImageWithResource
-} from '$lib/client/services/image';
+  extendImageWithResource,
+} from '$lib/client/services/image'
 // FEATURE
 // ENUMS
-import { ImageContextResource } from '$lib/enums';
+import { ImageContextResource } from '$lib/enums'
 // TYPES
 import type {
   TaskNew,
@@ -37,10 +43,10 @@ import type {
   Database,
   UserContributedFeature,
   HubOpts,
-  TaskDBRaw
-} from '$lib/types';
+  TaskDBRaw,
+} from '$lib/types'
 // API SERVICES
-import { createUserContributedFeature } from '$lib/api/services/feature';
+import { createUserContributedFeature } from '$lib/api/services/feature'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -81,19 +87,19 @@ export const listTasks = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  opts: HubOpts
+  opts: HubOpts,
 ): Promise<TaskDBRaw[]> => {
   // Apply hub filtering - always needed as some resources are hub-exclusive
-  const hubFilter = getTaskHubFilter(db, opts);
+  const hubFilter = getTaskHubFilter(db, opts)
   if (hubFilter) {
-    conditions = [...conditions, hubFilter];
+    conditions = [...conditions, hubFilter]
   }
 
   return await db.query.task.findMany({
     with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined
-  });
-};
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+  })
+}
 
 /**
  * Gets a single task from the database
@@ -107,19 +113,19 @@ export const getTask = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  opts: HubOpts
+  opts: HubOpts,
 ): Promise<TaskDBRaw | undefined> => {
   // Apply hub filtering - always needed as some resources are hub-exclusive
-  const hubFilter = getTaskHubFilter(db, opts);
+  const hubFilter = getTaskHubFilter(db, opts)
   if (hubFilter) {
-    conditions = [...conditions, hubFilter];
+    conditions = [...conditions, hubFilter]
   }
 
   return await db.query.task.findFirst({
     with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined
-  });
-};
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+  })
+}
 
 /**
  * Creates a new task in the database
@@ -129,7 +135,7 @@ export const getTask = async (
  * @throws {Error} If task creation fails
  */
 export const createTask = async (db: Database, data: TaskNew): Promise<TaskDB> =>
-  await insert(db, task, data);
+  await insert(db, task, data)
 
 /**
  * Updates an existing task in the database
@@ -142,8 +148,8 @@ export const createTask = async (db: Database, data: TaskNew): Promise<TaskDB> =
 export const updateTask = async (
   db: Database,
   data: TaskDBPartial,
-  ref: Id
-): Promise<TaskDB> => await update(db, task, data, task.id, ref);
+  ref: Id,
+): Promise<TaskDB> => await update(db, task, data, task.id, ref)
 
 /**
  * Deletes a task from the database
@@ -153,7 +159,7 @@ export const updateTask = async (
  * @throws {Error} If task deletion fails
  */
 export const deleteTask = async (db: Database, ref: Id): Promise<TaskDB> =>
-  await del(db, task, task.id, ref);
+  await del(db, task, task.id, ref)
 
 // ═══════════════════════
 // 2. CRUD :: IMAGE HANDLING
@@ -170,39 +176,39 @@ export const deleteTask = async (db: Database, ref: Id): Promise<TaskDB> =>
 export const archiveImages = async (
   db: Database,
   taskId: string,
-  isUndefinedOnly: boolean = false
+  isUndefinedOnly: boolean = false,
 ): Promise<{ success: boolean; processedCount: number }> => {
   try {
     // Get all task images for this task
     const taskImages = await db
       .select({
         imageId: taskImage.imageId,
-        intent: featureImage.intent
+        intent: featureImage.intent,
       })
       .from(taskImage)
       .leftJoin(featureImage, eq(taskImage.imageId, featureImage.imageId))
-      .where(eq(taskImage.taskId, taskId));
+      .where(eq(taskImage.taskId, taskId))
 
     // Filter images based on isUndefinedOnly parameter
     const imagesToProcess = isUndefinedOnly
-      ? taskImages.filter((ti) => ti.intent === 'undefined')
-      : taskImages;
+      ? taskImages.filter(ti => ti.intent === 'undefined')
+      : taskImages
 
     // Process each image
     for (const ti of imagesToProcess) {
       // Delete feature image association
-      await db.delete(featureImage).where(eq(featureImage.imageId, ti.imageId));
+      await db.delete(featureImage).where(eq(featureImage.imageId, ti.imageId))
 
       // Update image record
-      await db.update(image).set({ isArchived: true }).where(eq(image.id, ti.imageId));
+      await db.update(image).set({ isArchived: true }).where(eq(image.id, ti.imageId))
     }
 
-    return { success: true, processedCount: imagesToProcess.length };
+    return { success: true, processedCount: imagesToProcess.length }
   } catch (error) {
-    console.error('Failed to archive images:', error);
-    throw error;
+    console.error('Failed to archive images:', error)
+    throw error
   }
-};
+}
 
 /**
  * Publishes images associated with a task. This is used to publish images of a task which was (partially) accepted. Optionally skipping images with undefined intent.
@@ -216,7 +222,7 @@ export const publishImages = async (
   db: Database,
   taskId: string,
   skipUndefined: boolean = false,
-  publisherId: Id
+  publisherId: Id,
 ): Promise<{ success: boolean; processedCount: number }> => {
   try {
     // Get all task images for this task
@@ -224,23 +230,23 @@ export const publishImages = async (
       .select({
         imageId: taskImage.imageId,
         intent: featureImage.intent,
-        featureId: task.featureId
+        featureId: task.featureId,
       })
       .from(taskImage)
       .leftJoin(featureImage, eq(taskImage.imageId, featureImage.imageId))
       .leftJoin(task, eq(taskImage.taskId, task.id))
-      .where(eq(taskImage.taskId, taskId));
+      .where(eq(taskImage.taskId, taskId))
 
     // Filter images based on skipUndefined parameter
     const imagesToProcess = skipUndefined
-      ? taskImages.filter((ti) => ti.intent !== 'undefined')
-      : taskImages;
+      ? taskImages.filter(ti => ti.intent !== 'undefined')
+      : taskImages
 
     // Process each image
     for (const ti of imagesToProcess) {
       if (!ti.featureId) {
-        console.warn(`Skipping image ${ti.imageId} - no featureId found`);
-        continue;
+        console.warn(`Skipping image ${ti.imageId} - no featureId found`)
+        continue
       }
 
       // Update or create feature image association
@@ -252,20 +258,24 @@ export const publishImages = async (
           intent: 'undefined',
           isPublished: true,
           publisherId,
-          publishedAt: new Date().toISOString()
+          publishedAt: new Date().toISOString(),
         })
         .onConflictDoUpdate({
           target: [featureImage.imageId, featureImage.featureId],
-          set: { isPublished: true, publisherId, publishedAt: new Date().toISOString() }
-        });
+          set: {
+            isPublished: true,
+            publisherId,
+            publishedAt: new Date().toISOString(),
+          },
+        })
     }
 
-    return { success: true, processedCount: imagesToProcess.length };
+    return { success: true, processedCount: imagesToProcess.length }
   } catch (error) {
-    console.error('Failed to publish images:', error);
-    throw error;
+    console.error('Failed to publish images:', error)
+    throw error
   }
-};
+}
 
 // ═══════════════════════
 // 3. CRUD :: ORCHESTRATION
@@ -288,12 +298,12 @@ export const createTaskWithDependencies = async (
   userId: string, // The user ID from the session
   region: string, // Azure translation region for feature enrichment
   subscriptionKey: string, // Azure translation API key for feature enrichment
-  fetch?: typeof globalThis.fetch
+  fetch?: typeof globalThis.fetch,
 ): Promise<TaskDB> => {
-  let createdFeature: typeof feature.$inferSelect | undefined;
+  let createdFeature: typeof feature.$inferSelect | undefined
 
   // Step 1 : Set contributor ID from session
-  taskData = setContributorId(taskData, userId);
+  taskData = setContributorId(taskData, userId)
 
   // Step 2: Create feature if needed for newFeature tasks
   if (taskData.type === 'newFeature') {
@@ -303,40 +313,40 @@ export const createTaskWithDependencies = async (
       db,
       taskData.feature as UserContributedFeature,
       region,
-      subscriptionKey
-    );
-    taskData.featureId = createdFeature.id;
+      subscriptionKey,
+    )
+    taskData.featureId = createdFeature.id
 
     // Update task data with the actual hierarchical IDs from the created feature
     // This ensures the task references the correct project/organisation
-    taskData.organisationId = createdFeature.organisationId;
-    taskData.projectId = createdFeature.projectId;
+    taskData.organisationId = createdFeature.organisationId
+    taskData.projectId = createdFeature.projectId
 
     // Remove the feature object from taskData since we now have featureId
     // and task validation doesn't need the full feature object
-    delete (taskData as any).feature;
+    delete (taskData as any).feature
   }
 
   // Step 3: Validate that all tasks have valid featureIds
   if (!taskData.featureId) {
-    throw new Error(`${taskData.type} task must have a valid featureId`);
+    throw new Error(`${taskData.type} task must have a valid featureId`)
   }
 
   // Add default isReviewed state before casting for createTask
   const taskToCreate = {
     ...taskData,
-    isReviewed: false // Default for new tasks
-  };
+    isReviewed: false, // Default for new tasks
+  }
 
   // Step 4: Create the task
-  const createdTask = await createTask(db, taskToCreate as any);
+  const createdTask = await createTask(db, taskToCreate as any)
 
   // Step 5: Process images if provided
   if (images && images.length > 0) {
-    await processTaskImagesDB(db, images, createdTask, fetch);
+    await processTaskImagesDB(db, images, createdTask, fetch)
   }
-  return createdTask;
-};
+  return createdTask
+}
 
 /**
  * Processes and uploads images associated with a task
@@ -350,22 +360,22 @@ export const processTaskImages = async (
   db: Database,
   images: File[],
   taskData: TaskDB,
-  fetch?: typeof globalThis.fetch
+  fetch?: typeof globalThis.fetch,
 ): Promise<Image[]> => {
-  const uploadedImages: Image[] = [];
+  const uploadedImages: Image[] = []
 
   for (const image of images) {
     // Get context for image upload
-    const project = await getProjectForFeatureId(db, taskData.featureId as Id);
+    const project = await getProjectForFeatureId(db, taskData.featureId as Id)
     if (!project) {
-      console.warn('No project found for feature:', taskData.featureId);
-      continue;
+      console.warn('No project found for feature:', taskData.featureId)
+      continue
     }
 
-    const organisation = await getOrganisationForProjectId(db, project.id);
+    const organisation = await getOrganisationForProjectId(db, project.id)
     if (!organisation) {
-      console.warn('No organisation found for project:', project.id);
-      continue;
+      console.warn('No organisation found for project:', project.id)
+      continue
     }
 
     // Create image context with required properties
@@ -373,8 +383,8 @@ export const processTaskImages = async (
       ctxType: ImageContextResource.feature,
       ctxId: taskData.featureId as Id,
       organisation,
-      project
-    };
+      project,
+    }
 
     // Upload and process the image
     const uploadedImage = await uploadAndProcessImage(
@@ -382,18 +392,18 @@ export const processTaskImages = async (
       imageCtx,
       {
         isPublished: false,
-        intent: taskData.type === 'reportedMissing' ? 'research' : 'undefined'
+        intent: taskData.type === 'reportedMissing' ? 'research' : 'undefined',
       },
-      fetch
-    );
+      fetch,
+    )
 
     if (uploadedImage) {
-      uploadedImages.push(uploadedImage);
+      uploadedImages.push(uploadedImage)
     }
   }
 
-  return uploadedImages;
-};
+  return uploadedImages
+}
 
 /**
  * Processes and uploads images associated with a task directly to the database
@@ -408,23 +418,23 @@ export const processTaskImagesDB = async (
   db: Database,
   images: File[],
   taskData: TaskDB,
-  fetch?: typeof globalThis.fetch
+  fetch?: typeof globalThis.fetch,
 ): Promise<Image[]> => {
-  const uploadedImages: Image[] = [];
+  const uploadedImages: Image[] = []
 
   for (const file of images) {
     try {
       // Get context for image upload
-      const project = await getProjectForFeatureId(db, taskData.featureId as Id);
+      const project = await getProjectForFeatureId(db, taskData.featureId as Id)
       if (!project) {
-        console.warn('No project found for feature:', taskData.featureId);
-        continue;
+        console.warn('No project found for feature:', taskData.featureId)
+        continue
       }
 
-      const organisation = await getOrganisationForProjectId(db, project.id);
+      const organisation = await getOrganisationForProjectId(db, project.id)
       if (!organisation) {
-        console.warn('No organisation found for project:', project.id);
-        continue;
+        console.warn('No organisation found for project:', project.id)
+        continue
       }
 
       // Create image context with required properties
@@ -432,64 +442,64 @@ export const processTaskImagesDB = async (
         ctxType: ImageContextResource.feature,
         ctxId: taskData.featureId as Id,
         organisation,
-        project
-      };
+        project,
+      }
 
       // 1. Determine public path for Cloudinary
-      const { folder, public_id } = getPublicPathCloudinaryImage(imageCtx);
-      const paramsToSign = { folder };
+      const { folder, public_id } = getPublicPathCloudinaryImage(imageCtx)
+      const paramsToSign = { folder }
 
       // 2. Fetch Cloudinary signature
-      const signData = await getCloudinarySignature(paramsToSign, fetch);
+      const signData = await getCloudinarySignature(paramsToSign, fetch)
 
       // 3. Upload file to Cloudinary
       const cloudinaryResponse = await createCloudinaryImage(
         file,
         paramsToSign,
         signData,
-        fetch
-      );
+        fetch,
+      )
 
       // 4. Process Cloudinary response into our image format
-      const imageData = getImageFromCloudinaryResponse(cloudinaryResponse);
+      const imageData = getImageFromCloudinaryResponse(cloudinaryResponse)
 
       // 5. Extend image data with feature/hierarchical info
       const extendedFeatureInfo = {
         isPublished: false,
-        intent: taskData.type === 'reportedMissing' ? 'research' : 'undefined'
-      };
+        intent: taskData.type === 'reportedMissing' ? 'research' : 'undefined',
+      }
 
-      extendFeatureImage(imageData, imageCtx, { featureImage: extendedFeatureInfo });
-      extendImageWithResource(imageData, imageCtx);
+      extendFeatureImage(imageData, imageCtx, { featureImage: extendedFeatureInfo })
+      extendImageWithResource(imageData, imageCtx)
 
       // 6. Set the contributor ID from the task
-      imageData.contributorId = taskData.contributorId;
+      imageData.contributorId = taskData.contributorId
 
       // 7. Create image directly in database (bypasses API permission checks)
-      const createdImage = await createImage(db, imageData as any);
+      const createdImage = await createImage(db, imageData as any)
 
       // 8. Create feature image association
       const featureImageData = {
         imageId: createdImage.id,
         featureId: taskData.featureId as Id,
         intent: extendedFeatureInfo.intent as any,
-        isPublished: extendedFeatureInfo.isPublished
-      };
+        isPublished: extendedFeatureInfo.isPublished,
+      }
 
-      await createFeatureImage(db, featureImageData as any, createdImage.id);
+      await createFeatureImage(db, featureImageData as any, createdImage.id)
 
       // 9. Create task image association
-      await createTaskImagesFromImageIds(db, taskData.id, [createdImage.id]);
+      await createTaskImagesFromImageIds(db, taskData.id, [createdImage.id])
 
-      uploadedImages.push(createdImage as any);
+      uploadedImages.push(createdImage as any)
     } catch (error) {
-      console.error('Failed to process task image:', error);
+      console.error('Failed to process task image:', error)
       // Continue with other images instead of failing the entire task
     }
   }
 
-  return uploadedImages;
-};
+  return uploadedImages
+}
 
 // ═══════════════════════
 // 4. UTILS :: HELPERS
@@ -500,9 +510,9 @@ export const processTaskImagesDB = async (
  */
 export function getImagesFromFormData(formData: FormData): File[] {
   const photoEntries = Array.from(formData.entries()).filter(([key]) =>
-    key.startsWith('photo_')
-  );
-  return photoEntries.map(([_, fileValue]) => fileValue as File);
+    key.startsWith('photo_'),
+  )
+  return photoEntries.map(([_, fileValue]) => fileValue as File)
 }
 
 /**
@@ -512,11 +522,11 @@ function setContributorId(taskData: TaskCreation, userId: string): TaskCreation 
   // Set the user as the contributor of the task
   // Always takes the userId from the session, so we don't need to trust
   // the user provided contributorId.
-  taskData.contributorId = userId;
+  taskData.contributorId = userId
 
   // Set the user as the contributor of the feature
   if (taskData.type === 'newFeature') {
-    taskData.feature.contributorId = taskData.contributorId;
+    taskData.feature.contributorId = taskData.contributorId
   }
-  return taskData;
+  return taskData
 }

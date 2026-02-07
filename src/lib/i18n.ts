@@ -1,25 +1,25 @@
 // I18N
-import * as runtime from '$lib/paraglide/runtime';
-import * as m from '$lib/paraglide/messages';
+import * as runtime from '$lib/paraglide/runtime'
+import * as m from '$lib/paraglide/messages'
 import type {
   FeatureProperty,
   FeaturePropertyI18nDB,
   Locale,
   Neighbourhood,
   PropertyValueI18nDB,
-  UserPreferences
-} from '$lib/types';
+  UserPreferences,
+} from '$lib/types'
 // ENUMS
-import { supportedLocales } from '$lib/enums';
-import type { AppCtx } from './context/app.svelte';
-import type { Resource } from '$lib/types';
+import { supportedLocales } from '$lib/enums'
+import type { AppCtx } from './context/app.svelte'
+import type { Resource } from '$lib/types'
 
 /**
  * Get the current locale with Paraglide. Wrapping for type safety.
  * @returns The current locale.
  */
 export function getLocale(): Locale {
-  return runtime.getLocale() as Locale;
+  return runtime.getLocale() as Locale
 }
 
 /**
@@ -27,7 +27,7 @@ export function getLocale(): Locale {
  * @param locale - The locale to set.
  */
 export function setLocale(locale: Locale) {
-  runtime.setLocale(locale as any);
+  runtime.setLocale(locale as any)
 }
 
 /**
@@ -36,7 +36,7 @@ export function setLocale(locale: Locale) {
  * @returns All supported locales, excluding the given locale.
  */
 export function getFallbackLocales(locale: Locale): Locale[] {
-  return supportedLocales.filter((l) => l !== locale);
+  return supportedLocales.filter(l => l !== locale)
 }
 
 /**
@@ -45,7 +45,7 @@ export function getFallbackLocales(locale: Locale): Locale[] {
  * @returns UserPreferences with defaults applied
  */
 function getUserPreferencesWithDefaults(
-  userPreferences?: Partial<UserPreferences>
+  userPreferences?: Partial<UserPreferences>,
 ): UserPreferences {
   return {
     fallbackLocales:
@@ -53,8 +53,8 @@ function getUserPreferencesWithDefaults(
     allowMachineTranslation: userPreferences?.allowMachineTranslation ?? false,
     preferFallbackInCurrentLocale:
       userPreferences?.preferFallbackInCurrentLocale ?? false,
-    isTranslateButtonVisible: userPreferences?.isTranslateButtonVisible ?? true
-  };
+    isTranslateButtonVisible: userPreferences?.isTranslateButtonVisible ?? true,
+  }
 }
 
 /**
@@ -75,63 +75,63 @@ export function getI18n<T>(
   field: string,
   userPreferences: UserPreferences,
   fallback?: string,
-  skipGenFieldCheck?: boolean
+  skipGenFieldCheck?: boolean,
 ): string {
-  const defaultFallback = '-';
-  if (!obj) return fallback || defaultFallback;
+  const defaultFallback = '-'
+  if (!obj) return fallback || defaultFallback
 
   // ASSERT : Text Object provided - else use the (default) fallback.
-  let i18nObj: Record<Locale, T>;
+  let i18nObj: Record<Locale, T>
   if ('i18n' in obj && obj.i18n) {
-    i18nObj = obj.i18n as Record<Locale, T>;
+    i18nObj = obj.i18n as Record<Locale, T>
   } else {
-    i18nObj = obj as Record<Locale, T>;
+    i18nObj = obj as Record<Locale, T>
   }
 
   // CONFIG : Locale, Options and Keys
-  const locale = getLocale() as Locale;
+  const locale = getLocale() as Locale
 
   // Set options based on user preferences
   const opts = {
     fallback: fallback || defaultFallback,
     fallbackLocales: userPreferences.fallbackLocales,
     allowMachineTranslation: userPreferences.allowMachineTranslation,
-    preferFallbackInCurrentLocale: userPreferences.preferFallbackInCurrentLocale
-  };
+    preferFallbackInCurrentLocale: userPreferences.preferFallbackInCurrentLocale,
+  }
 
   // indicator for machine-translated values
-  const genField = `${field}Gen`;
+  const genField = `${field}Gen`
 
   // SWITCH : BEST CASE : The field is available in the preferred locale as
   //  a human-provided value
-  const translation = i18nObj[locale]?.[field as keyof T] as string;
+  const translation = i18nObj[locale]?.[field as keyof T] as string
   if (translation && (!i18nObj[locale]?.[genField as keyof T] || skipGenFieldCheck))
-    return translation;
+    return translation
 
   // SWITCH : FALLBACK LOCALE CASE - The field is available in a secondary
   //   locale accepted by the user, and is a human-provided value.
   for (const fallbackLocale of opts.fallbackLocales) {
-    const translation = i18nObj[fallbackLocale]?.[field as keyof T] as string;
+    const translation = i18nObj[fallbackLocale]?.[field as keyof T] as string
     if (
       translation &&
       (!i18nObj[fallbackLocale]?.[genField as keyof T] || skipGenFieldCheck)
     )
-      return translation;
+      return translation
   }
 
   // SWITCH : FALLBACK VALUE CASE : If configured to prefer a generic fallback over any machine-translated values (and no human ones were found yet), return the generic fallback.
-  if (opts?.preferFallbackInCurrentLocale && opts.fallback) return opts.fallback;
+  if (opts?.preferFallbackInCurrentLocale && opts.fallback) return opts.fallback
 
   // SWITCH : AI <3 CASE : The field is available in the current locale,
   // as a machine-translated value, and the user allows machine translations.
-  if (translation && opts.allowMachineTranslation) return translation;
+  if (translation && opts.allowMachineTranslation) return translation
 
   // SWITCH : FALLBACK LOCALE AI CASE - The field is available in a secondary
   //   locale accepted by the user, is a machine-translated value, but the user
   //   accepts machine translations.
   for (const fallbackLocale of opts.fallbackLocales) {
-    const translation = i18nObj[fallbackLocale]?.[field as keyof T] as string;
-    if (translation && opts.allowMachineTranslation) return translation;
+    const translation = i18nObj[fallbackLocale]?.[field as keyof T] as string
+    if (translation && opts.allowMachineTranslation) return translation
   }
 
   // TODO : Implement machine translation for missing translations
@@ -156,7 +156,7 @@ export function getI18n<T>(
 
   // SWTICH : CATCHALL CASE
   // If all prior attempts to get a translation (human, allowed machine, or newly generated machine) have failed or were skipped due to preferences, this is the last resort.
-  return opts?.fallback || defaultFallback;
+  return opts?.fallback || defaultFallback
 }
 
 /**
@@ -167,14 +167,14 @@ export function getI18n<T>(
  */
 export function getFPI18n(
   obj: Omit<FeatureProperty, 'featureId'>,
-  userPreferences: UserPreferences
+  userPreferences: UserPreferences,
 ): string {
-  const field = 'value';
-  const fallback = m.great_crazy_squid_promise();
+  const field = 'value'
+  const fallback = m.great_crazy_squid_promise()
 
   // CASE : SPECIFIER Property & UNIVERSAL VALUE
   if (obj.property?.type === 'specifier' && obj.value) {
-    return obj.value;
+    return obj.value
   }
   // CASE : SPECIFIER Property & I18N VALUE
   else if (obj.property?.type === 'specifier' && obj.i18n) {
@@ -182,28 +182,28 @@ export function getFPI18n(
       obj.i18n as Record<Locale, FeaturePropertyI18nDB>,
       field,
       userPreferences,
-      fallback
-    );
+      fallback,
+    )
   }
   // CASE : RANGE FIELD Property (stores numeric values directly)
   else if (obj.property?.component === 'RangeField' && obj.value) {
-    return obj.value;
+    return obj.value
   }
   // CASE : CLASSIFIER Property
   else if (obj.property?.type === 'classifier' && obj.propertyValueId) {
     return getI18n<PropertyValueI18nDB>(
-      obj.property.values?.find((v) => v.id === obj.propertyValueId)?.i18n as Record<
+      obj.property.values?.find(v => v.id === obj.propertyValueId)?.i18n as Record<
         Locale,
         PropertyValueI18nDB
       >,
       field,
       userPreferences,
-      fallback
-    );
+      fallback,
+    )
   }
   // CASE : FALLBACK
-  console.warn('No translation found for', obj);
-  return fallback;
+  console.warn('No translation found for', obj)
+  return fallback
 }
 
 /**
@@ -213,17 +213,17 @@ export function getFPI18n(
 export const localeLabels = [
   { locale: 'en', label: 'EN' },
   { locale: 'zh-hant', label: 'HK' },
-  { locale: 'zh-hans', label: 'CN' }
-];
+  { locale: 'zh-hans', label: 'CN' },
+]
 
 // EXPORT PARAGLIDE
-export { m, runtime };
+export { m, runtime }
 
 // EXPORT CUSTOM FUNCTIONS
 export async function translateText(
   sourceLang: Locale,
   targetLang: Locale,
-  texts: string[]
+  texts: string[],
 ): Promise<string[]> {
   const response = await fetch('/api/translation', {
     method: 'POST',
@@ -231,9 +231,9 @@ export async function translateText(
     body: JSON.stringify({
       source: sourceLang,
       target: targetLang,
-      texts
-    })
-  });
-  const data = await response.json();
-  return data;
+      texts,
+    }),
+  })
+  const data = await response.json()
+  return data
 }

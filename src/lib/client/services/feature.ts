@@ -1,19 +1,19 @@
-import { AppCtx } from '$lib/context/app.svelte';
-import { OmniCtx } from '$lib/context/omni.svelte';
-import { NewFeatureMode, OmniMode } from '$lib/enums';
+import type { AppCtx } from '$lib/context/app.svelte'
+import type { OmniCtx } from '$lib/context/omni.svelte'
+import { NewFeatureMode, OmniMode } from '$lib/enums'
 
 export const initAddNewFeature = async (appCtx: AppCtx, omniCtx: OmniCtx, e: Event) => {
-  const activeLayers = appCtx.state.prisms.layer;
+  const activeLayers = appCtx.state.prisms.layer
   const singleActiveLayer =
-    activeLayers.length === 1 ? appCtx.cache.layer.get(activeLayers[0]) : null;
+    activeLayers.length === 1 ? appCtx.cache.layer.get(activeLayers[0]) : null
 
-  e.preventDefault();
-  e.stopPropagation();
-  omniCtx.setMode(OmniMode.newFeature);
+  e.preventDefault()
+  e.stopPropagation()
+  omniCtx.setMode(OmniMode.newFeature)
 
   if (activeLayers.length === 1) {
     if (singleActiveLayer) {
-      const hierarchy = await appCtx.getHierarchy(singleActiveLayer!);
+      const hierarchy = await appCtx.getHierarchy(singleActiveLayer!)
       appCtx.setNewFeature({
         organisationId: hierarchy.organisation?.id,
         projectId: hierarchy.project?.id,
@@ -21,14 +21,14 @@ export const initAddNewFeature = async (appCtx: AppCtx, omniCtx: OmniCtx, e: Eve
         feature: {
           organisationId: hierarchy.organisation?.id,
           projectId: hierarchy.project?.id,
-          layerId: hierarchy.layer?.id
-        }
-      });
+          layerId: hierarchy.layer?.id,
+        },
+      })
       // Trigger the GeoLocation modal directly
-      appCtx.setNewFeatureMode(NewFeatureMode.location);
+      appCtx.setNewFeatureMode(NewFeatureMode.location)
     }
   } else {
     // If multiple layers are active, dispatch event to show the layer selection modal
-    appCtx.setNewFeatureMode(NewFeatureMode.parents);
+    appCtx.setNewFeatureMode(NewFeatureMode.parents)
   }
-};
+}

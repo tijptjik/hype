@@ -109,7 +109,7 @@ $effect(() => {
         const progress = Math.min(elapsed / transitionDuration, 1);
 
         // Ease-out cubic
-        const eased = 1 - Math.pow(1 - progress, 3);
+        const eased = 1 - (1 - progress) ** 3;
         overlayOpacity = eased;
 
         if (progress < 1) {

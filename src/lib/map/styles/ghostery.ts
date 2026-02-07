@@ -1,4 +1,4 @@
-import type { AddLayerObject } from 'maplibre-gl';
+import type { AddLayerObject } from 'maplibre-gl'
 
 export const ghosteryEarth: AddLayerObject = {
   id: 'earth',
@@ -9,9 +9,9 @@ export const ghosteryEarth: AddLayerObject = {
   layout: { visibility: 'visible' },
   paint: {
     'fill-outline-color': 'rgb(66, 66, 66)',
-    'fill-antialias': true
-  }
-};
+    'fill-antialias': true,
+  },
+}
 
 export const ghosteryRoads: AddLayerObject = {
   id: 'roads',
@@ -27,10 +27,10 @@ export const ghosteryRoads: AddLayerObject = {
       1.5,
       ['==', ['get', 'kind'], 'major_road'],
       1.5,
-      1.2
-    ]
-  }
-};
+      1.2,
+    ],
+  },
+}
 
 export const ghosteryBuildings: AddLayerObject = {
   id: 'buildings',
@@ -42,9 +42,9 @@ export const ghosteryBuildings: AddLayerObject = {
     'fill-color': 'rgba(15, 14, 14, 1)',
     'fill-opacity': 0.5,
     // Remove fill-outline-color since we're using a separate line layer
-    'fill-outline-color': 'transparent'
-  }
-};
+    'fill-outline-color': 'transparent',
+  },
+}
 
 export const ghosteryBuildingsOutline: AddLayerObject = {
   id: 'buildings_outline',
@@ -61,24 +61,12 @@ export const ghosteryBuildingsOutline: AddLayerObject = {
       17,
       'rgba(240, 77, 127, 0.1)', // Start with hot pink at lower zoom
       20,
-      'rgba(240, 77, 127, 1)' // Full hot pink at higher zoom
+      'rgba(240, 77, 127, 1)', // Full hot pink at higher zoom
     ],
-    'line-width': [
-      'interpolate',
-      ['linear'],
-      ['zoom'],
-      17,
-      1,
-      19,
-      2,
-      21,
-      3,
-      23,
-      5
-    ],
-    'line-opacity': 0.8
-  }
-};
+    'line-width': ['interpolate', ['linear'], ['zoom'], 17, 1, 19, 2, 21, 3, 23, 5],
+    'line-opacity': 0.8,
+  },
+}
 
 export const ghosteryAddressLabel: AddLayerObject = {
   id: 'address_label',
@@ -91,23 +79,15 @@ export const ghosteryAddressLabel: AddLayerObject = {
     'symbol-placement': 'point',
     'text-font': ['Noto Sans Italic'],
     'text-field': ['get', 'addr_housenumber'],
-    'text-size': 12
+    'text-size': 12,
   },
   paint: {
     'text-color': 'rgba(240, 77, 127, 0.86)',
     'text-halo-color': '#141414',
     'text-halo-width': 1,
-    'text-opacity': [
-      'interpolate',
-      ['linear'],
-      ['zoom'],
-      18.5,
-      0,
-      20,
-      1
-    ]
-  }
-};
+    'text-opacity': ['interpolate', ['linear'], ['zoom'], 18.5, 0, 20, 1],
+  },
+}
 
 export const ghosteryPlacesLocality: AddLayerObject = {
   id: 'places_locality',
@@ -124,18 +104,14 @@ export const ghosteryPlacesLocality: AddLayerObject = {
         'all',
         ['any', ['has', 'name'], ['has', 'pgf:name']],
         ['!', ['any', ['has', 'name2'], ['has', 'pgf:name2']]],
-        ['!', ['any', ['has', 'name3'], ['has', 'pgf:name3']]]
+        ['!', ['any', ['has', 'name3'], ['has', 'pgf:name3']]],
       ],
       [
         'case',
         ['has', 'script'],
         [
           'case',
-          [
-            'any',
-            ['is-supported-script', ['get', 'name']],
-            ['has', 'pgf:name']
-          ],
+          ['any', ['is-supported-script', ['get', 'name']], ['has', 'pgf:name']],
           [
             'format',
             ['coalesce', ['get', 'name:en'], ['get', 'name:en']],
@@ -148,38 +124,33 @@ export const ghosteryPlacesLocality: AddLayerObject = {
                 'all',
                 ['!', ['has', 'name:en']],
                 ['has', 'name:en'],
-                ['!', ['has', 'script']]
+                ['!', ['has', 'script']],
               ],
               '',
-              ['coalesce', ['get', 'pgf:name'], ['get', 'name']]
+              ['coalesce', ['get', 'pgf:name'], ['get', 'name']],
             ],
             {
               'text-font': [
                 'case',
                 ['==', ['get', 'script'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
           ],
-          ['get', 'name:en']
+          ['get', 'name:en'],
         ],
         [
           'format',
-          [
-            'coalesce',
-            ['get', 'name:en'],
-            ['get', 'pgf:name'],
-            ['get', 'name']
-          ],
-          {}
-        ]
+          ['coalesce', ['get', 'name:en'], ['get', 'pgf:name'], ['get', 'name']],
+          {},
+        ],
       ],
       [
         'all',
         ['any', ['has', 'name'], ['has', 'pgf:name']],
         ['any', ['has', 'name2'], ['has', 'pgf:name2']],
-        ['!', ['any', ['has', 'name3'], ['has', 'pgf:name3']]]
+        ['!', ['any', ['has', 'name3'], ['has', 'pgf:name3']]],
       ],
       [
         'case',
@@ -196,8 +167,8 @@ export const ghosteryPlacesLocality: AddLayerObject = {
               'case',
               ['==', ['get', 'script'], 'Devanagari'],
               ['literal', ['Noto Sans Devanagari Regular v1']],
-              ['literal', ['Noto Sans Regular']]
-            ]
+              ['literal', ['Noto Sans Regular']],
+            ],
           },
           '\n',
           {},
@@ -207,21 +178,16 @@ export const ghosteryPlacesLocality: AddLayerObject = {
               'case',
               ['==', ['get', 'script2'], 'Devanagari'],
               ['literal', ['Noto Sans Devanagari Regular v1']],
-              ['literal', ['Noto Sans Regular']]
-            ]
-          }
+              ['literal', ['Noto Sans Regular']],
+            ],
+          },
         ],
         [
           'case',
           ['has', 'script2'],
           [
             'format',
-            [
-              'coalesce',
-              ['get', 'name:en'],
-              ['get', 'pgf:name'],
-              ['get', 'name']
-            ],
+            ['coalesce', ['get', 'name:en'], ['get', 'pgf:name'], ['get', 'name']],
             {},
             '\n',
             {},
@@ -231,18 +197,13 @@ export const ghosteryPlacesLocality: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script2'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
           ],
           [
             'format',
-            [
-              'coalesce',
-              ['get', 'name:en'],
-              ['get', 'pgf:name2'],
-              ['get', 'name2']
-            ],
+            ['coalesce', ['get', 'name:en'], ['get', 'pgf:name2'], ['get', 'name2']],
             {},
             '\n',
             {},
@@ -252,11 +213,11 @@ export const ghosteryPlacesLocality: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
-          ]
-        ]
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
+          ],
+        ],
       ],
       [
         'case',
@@ -273,8 +234,8 @@ export const ghosteryPlacesLocality: AddLayerObject = {
               'case',
               ['==', ['get', 'script'], 'Devanagari'],
               ['literal', ['Noto Sans Devanagari Regular v1']],
-              ['literal', ['Noto Sans Regular']]
-            ]
+              ['literal', ['Noto Sans Regular']],
+            ],
           },
           '\n',
           {},
@@ -284,8 +245,8 @@ export const ghosteryPlacesLocality: AddLayerObject = {
               'case',
               ['==', ['get', 'script2'], 'Devanagari'],
               ['literal', ['Noto Sans Devanagari Regular v1']],
-              ['literal', ['Noto Sans Regular']]
-            ]
+              ['literal', ['Noto Sans Regular']],
+            ],
           },
           '\n',
           {},
@@ -295,21 +256,16 @@ export const ghosteryPlacesLocality: AddLayerObject = {
               'case',
               ['==', ['get', 'script3'], 'Devanagari'],
               ['literal', ['Noto Sans Devanagari Regular v1']],
-              ['literal', ['Noto Sans Regular']]
-            ]
-          }
+              ['literal', ['Noto Sans Regular']],
+            ],
+          },
         ],
         [
           'case',
           ['!', ['has', 'script']],
           [
             'format',
-            [
-              'coalesce',
-              ['get', 'name:en'],
-              ['get', 'pgf:name'],
-              ['get', 'name']
-            ],
+            ['coalesce', ['get', 'name:en'], ['get', 'pgf:name'], ['get', 'name']],
             {},
             '\n',
             {},
@@ -319,8 +275,8 @@ export const ghosteryPlacesLocality: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script2'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
+                ['literal', ['Noto Sans Regular']],
+              ],
             },
             '\n',
             {},
@@ -330,19 +286,14 @@ export const ghosteryPlacesLocality: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script3'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
           ],
           ['!', ['has', 'script2']],
           [
             'format',
-            [
-              'coalesce',
-              ['get', 'name:en'],
-              ['get', 'pgf:name2'],
-              ['get', 'name2']
-            ],
+            ['coalesce', ['get', 'name:en'], ['get', 'pgf:name2'], ['get', 'name2']],
             {},
             '\n',
             {},
@@ -352,8 +303,8 @@ export const ghosteryPlacesLocality: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
+                ['literal', ['Noto Sans Regular']],
+              ],
             },
             '\n',
             {},
@@ -363,18 +314,13 @@ export const ghosteryPlacesLocality: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script3'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
           ],
           [
             'format',
-            [
-              'coalesce',
-              ['get', 'name:en'],
-              ['get', 'pgf:name3'],
-              ['get', 'name3']
-            ],
+            ['coalesce', ['get', 'name:en'], ['get', 'pgf:name3'], ['get', 'name3']],
             {},
             '\n',
             {},
@@ -384,8 +330,8 @@ export const ghosteryPlacesLocality: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
+                ['literal', ['Noto Sans Regular']],
+              ],
             },
             '\n',
             {},
@@ -395,36 +341,26 @@ export const ghosteryPlacesLocality: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script2'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
-          ]
-        ]
-      ]
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
+          ],
+        ],
+      ],
     ],
     'text-font': [
       'case',
       ['<=', ['get', 'min_zoom'], 5],
       ['literal', ['Noto Sans Medium']],
-      ['literal', ['Noto Sans Regular']]
+      ['literal', ['Noto Sans Regular']],
     ],
     'symbol-sort-key': [
       'case',
       ['has', 'sort_key'],
       ['get', 'sort_key'],
-      ['get', 'min_zoom']
+      ['get', 'min_zoom'],
     ],
-    'text-padding': [
-      'interpolate',
-      ['linear'],
-      ['zoom'],
-      5,
-      3,
-      8,
-      7,
-      12,
-      11
-    ],
+    'text-padding': ['interpolate', ['linear'], ['zoom'], 5, 3, 8, 7, 12, 11],
     'text-size': [
       'interpolate',
       ['linear'],
@@ -436,7 +372,7 @@ export const ghosteryPlacesLocality: AddLayerObject = {
         8,
         ['>=', ['get', 'population_rank'], 13],
         13,
-        0
+        0,
       ],
       4,
       [
@@ -445,7 +381,7 @@ export const ghosteryPlacesLocality: AddLayerObject = {
         10,
         ['>=', ['get', 'population_rank'], 13],
         15,
-        0
+        0,
       ],
       6,
       [
@@ -454,7 +390,7 @@ export const ghosteryPlacesLocality: AddLayerObject = {
         11,
         ['>=', ['get', 'population_rank'], 12],
         17,
-        0
+        0,
       ],
       8,
       [
@@ -463,7 +399,7 @@ export const ghosteryPlacesLocality: AddLayerObject = {
         11,
         ['>=', ['get', 'population_rank'], 11],
         18,
-        0
+        0,
       ],
       10,
       [
@@ -472,7 +408,7 @@ export const ghosteryPlacesLocality: AddLayerObject = {
         12,
         ['>=', ['get', 'population_rank'], 9],
         20,
-        0
+        0,
       ],
       15,
       [
@@ -481,8 +417,8 @@ export const ghosteryPlacesLocality: AddLayerObject = {
         12,
         ['>=', ['get', 'population_rank'], 8],
         22,
-        0
-      ]
+        0,
+      ],
     ],
     'icon-padding': [
       'interpolate',
@@ -497,7 +433,7 @@ export const ghosteryPlacesLocality: AddLayerObject = {
       12,
       6,
       22,
-      2
+      2,
     ],
     'text-justify': 'auto',
     'text-variable-anchor': [
@@ -505,16 +441,16 @@ export const ghosteryPlacesLocality: AddLayerObject = {
       ['zoom'],
       ['literal', ['bottom', 'left', 'right', 'top']],
       8,
-      ['literal', ['center']]
+      ['literal', ['center']],
     ],
-    'text-radial-offset': 0.3
+    'text-radial-offset': 0.3,
   },
   paint: {
     'text-color': '#FFFFFF',
     'text-halo-color': 'rgb(73, 135, 226)',
-    'text-halo-width': 0.5
-  }
-};
+    'text-halo-width': 0.5,
+  },
+}
 
 export const ghosteryPlacesSubplace: AddLayerObject = {
   id: 'places_subplace',
@@ -527,7 +463,7 @@ export const ghosteryPlacesSubplace: AddLayerObject = {
       'case',
       ['has', 'sort_key'],
       ['get', 'sort_key'],
-      ['get', 'min_zoom']
+      ['get', 'min_zoom'],
     ],
     'text-field': [
       'case',
@@ -535,18 +471,14 @@ export const ghosteryPlacesSubplace: AddLayerObject = {
         'all',
         ['any', ['has', 'name'], ['has', 'pgf:name']],
         ['!', ['any', ['has', 'name2'], ['has', 'pgf:name2']]],
-        ['!', ['any', ['has', 'name3'], ['has', 'pgf:name3']]]
+        ['!', ['any', ['has', 'name3'], ['has', 'pgf:name3']]],
       ],
       [
         'case',
         ['has', 'script'],
         [
           'case',
-          [
-            'any',
-            ['is-supported-script', ['get', 'name']],
-            ['has', 'pgf:name']
-          ],
+          ['any', ['is-supported-script', ['get', 'name']], ['has', 'pgf:name']],
           [
             'format',
             ['coalesce', ['get', 'name:en'], ['get', 'name:en']],
@@ -559,38 +491,33 @@ export const ghosteryPlacesSubplace: AddLayerObject = {
                 'all',
                 ['!', ['has', 'name:en']],
                 ['has', 'name:en'],
-                ['!', ['has', 'script']]
+                ['!', ['has', 'script']],
               ],
               '',
-              ['coalesce', ['get', 'pgf:name'], ['get', 'name']]
+              ['coalesce', ['get', 'pgf:name'], ['get', 'name']],
             ],
             {
               'text-font': [
                 'case',
                 ['==', ['get', 'script'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
           ],
-          ['get', 'name:en']
+          ['get', 'name:en'],
         ],
         [
           'format',
-          [
-            'coalesce',
-            ['get', 'name:en'],
-            ['get', 'pgf:name'],
-            ['get', 'name']
-          ],
-          {}
-        ]
+          ['coalesce', ['get', 'name:en'], ['get', 'pgf:name'], ['get', 'name']],
+          {},
+        ],
       ],
       [
         'all',
         ['any', ['has', 'name'], ['has', 'pgf:name']],
         ['any', ['has', 'name2'], ['has', 'pgf:name2']],
-        ['!', ['any', ['has', 'name3'], ['has', 'pgf:name3']]]
+        ['!', ['any', ['has', 'name3'], ['has', 'pgf:name3']]],
       ],
       [
         'case',
@@ -607,8 +534,8 @@ export const ghosteryPlacesSubplace: AddLayerObject = {
               'case',
               ['==', ['get', 'script'], 'Devanagari'],
               ['literal', ['Noto Sans Devanagari Regular v1']],
-              ['literal', ['Noto Sans Regular']]
-            ]
+              ['literal', ['Noto Sans Regular']],
+            ],
           },
           '\n',
           {},
@@ -618,21 +545,16 @@ export const ghosteryPlacesSubplace: AddLayerObject = {
               'case',
               ['==', ['get', 'script2'], 'Devanagari'],
               ['literal', ['Noto Sans Devanagari Regular v1']],
-              ['literal', ['Noto Sans Regular']]
-            ]
-          }
+              ['literal', ['Noto Sans Regular']],
+            ],
+          },
         ],
         [
           'case',
           ['has', 'script2'],
           [
             'format',
-            [
-              'coalesce',
-              ['get', 'name:en'],
-              ['get', 'pgf:name'],
-              ['get', 'name']
-            ],
+            ['coalesce', ['get', 'name:en'], ['get', 'pgf:name'], ['get', 'name']],
             {},
             '\n',
             {},
@@ -642,18 +564,13 @@ export const ghosteryPlacesSubplace: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script2'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
           ],
           [
             'format',
-            [
-              'coalesce',
-              ['get', 'name:en'],
-              ['get', 'pgf:name2'],
-              ['get', 'name2']
-            ],
+            ['coalesce', ['get', 'name:en'], ['get', 'pgf:name2'], ['get', 'name2']],
             {},
             '\n',
             {},
@@ -663,11 +580,11 @@ export const ghosteryPlacesSubplace: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
-          ]
-        ]
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
+          ],
+        ],
       ],
       [
         'case',
@@ -684,8 +601,8 @@ export const ghosteryPlacesSubplace: AddLayerObject = {
               'case',
               ['==', ['get', 'script'], 'Devanagari'],
               ['literal', ['Noto Sans Devanagari Regular v1']],
-              ['literal', ['Noto Sans Regular']]
-            ]
+              ['literal', ['Noto Sans Regular']],
+            ],
           },
           '\n',
           {},
@@ -695,8 +612,8 @@ export const ghosteryPlacesSubplace: AddLayerObject = {
               'case',
               ['==', ['get', 'script2'], 'Devanagari'],
               ['literal', ['Noto Sans Devanagari Regular v1']],
-              ['literal', ['Noto Sans Regular']]
-            ]
+              ['literal', ['Noto Sans Regular']],
+            ],
           },
           '\n',
           {},
@@ -706,21 +623,16 @@ export const ghosteryPlacesSubplace: AddLayerObject = {
               'case',
               ['==', ['get', 'script3'], 'Devanagari'],
               ['literal', ['Noto Sans Devanagari Regular v1']],
-              ['literal', ['Noto Sans Regular']]
-            ]
-          }
+              ['literal', ['Noto Sans Regular']],
+            ],
+          },
         ],
         [
           'case',
           ['!', ['has', 'script']],
           [
             'format',
-            [
-              'coalesce',
-              ['get', 'name:en'],
-              ['get', 'pgf:name'],
-              ['get', 'name']
-            ],
+            ['coalesce', ['get', 'name:en'], ['get', 'pgf:name'], ['get', 'name']],
             {},
             '\n',
             {},
@@ -730,8 +642,8 @@ export const ghosteryPlacesSubplace: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script2'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
+                ['literal', ['Noto Sans Regular']],
+              ],
             },
             '\n',
             {},
@@ -741,19 +653,14 @@ export const ghosteryPlacesSubplace: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script3'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
           ],
           ['!', ['has', 'script2']],
           [
             'format',
-            [
-              'coalesce',
-              ['get', 'name:en'],
-              ['get', 'pgf:name2'],
-              ['get', 'name2']
-            ],
+            ['coalesce', ['get', 'name:en'], ['get', 'pgf:name2'], ['get', 'name2']],
             {},
             '\n',
             {},
@@ -763,8 +670,8 @@ export const ghosteryPlacesSubplace: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
+                ['literal', ['Noto Sans Regular']],
+              ],
             },
             '\n',
             {},
@@ -774,18 +681,13 @@ export const ghosteryPlacesSubplace: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script3'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
           ],
           [
             'format',
-            [
-              'coalesce',
-              ['get', 'name:en'],
-              ['get', 'pgf:name3'],
-              ['get', 'name3']
-            ],
+            ['coalesce', ['get', 'name:en'], ['get', 'pgf:name3'], ['get', 'name3']],
             {},
             '\n',
             {},
@@ -795,8 +697,8 @@ export const ghosteryPlacesSubplace: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
+                ['literal', ['Noto Sans Regular']],
+              ],
             },
             '\n',
             {},
@@ -806,49 +708,27 @@ export const ghosteryPlacesSubplace: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script2'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
-          ]
-        ]
-      ]
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
+          ],
+        ],
+      ],
     ],
     'text-font': ['Noto Sans Regular'],
     'text-max-width': 7,
     'text-letter-spacing': 0.1,
-    'text-padding': [
-      'interpolate',
-      ['linear'],
-      ['zoom'],
-      5,
-      2,
-      8,
-      4,
-      12,
-      18,
-      15,
-      20
-    ],
-    'text-size': [
-      'interpolate',
-      ['exponential', 1.2],
-      ['zoom'],
-      11,
-      8,
-      14,
-      14,
-      18,
-      24
-    ],
+    'text-padding': ['interpolate', ['linear'], ['zoom'], 5, 2, 8, 4, 12, 18, 15, 20],
+    'text-size': ['interpolate', ['exponential', 1.2], ['zoom'], 11, 8, 14, 14, 18, 24],
     'text-transform': 'uppercase',
-    'icon-keep-upright': false
+    'icon-keep-upright': false,
   },
   paint: {
     'text-color': '#FFFFFF',
     'text-halo-color': 'rgb(73, 135, 226)',
-    'text-halo-width': 0.5
-  }
-};
+    'text-halo-width': 0.5,
+  },
+}
 
 export const ghosteryRoadsLabelsMajor: AddLayerObject = {
   id: 'roads_labels_major',
@@ -869,7 +749,7 @@ export const ghosteryRoadsLabelsMajor: AddLayerObject = {
       16,
       400, // Still frequent at mid zoom
       20,
-      500 // Moderate spacing at high zoom
+      500, // Moderate spacing at high zoom
     ],
     'text-font': ['Noto Sans Medium'], // Slightly bolder for major roads
     'text-field': [
@@ -878,18 +758,14 @@ export const ghosteryRoadsLabelsMajor: AddLayerObject = {
         'all',
         ['any', ['has', 'name'], ['has', 'pgf:name']],
         ['!', ['any', ['has', 'name2'], ['has', 'pgf:name2']]],
-        ['!', ['any', ['has', 'name3'], ['has', 'pgf:name3']]]
+        ['!', ['any', ['has', 'name3'], ['has', 'pgf:name3']]],
       ],
       [
         'case',
         ['has', 'script'],
         [
           'case',
-          [
-            'any',
-            ['is-supported-script', ['get', 'name']],
-            ['has', 'pgf:name']
-          ],
+          ['any', ['is-supported-script', ['get', 'name']], ['has', 'pgf:name']],
           [
             'format',
             ['coalesce', ['get', 'name:en'], ['get', 'name:en']],
@@ -902,38 +778,33 @@ export const ghosteryRoadsLabelsMajor: AddLayerObject = {
                 'all',
                 ['!', ['has', 'name:en']],
                 ['has', 'name:en'],
-                ['!', ['has', 'script']]
+                ['!', ['has', 'script']],
               ],
               '',
-              ['coalesce', ['get', 'pgf:name'], ['get', 'name']]
+              ['coalesce', ['get', 'pgf:name'], ['get', 'name']],
             ],
             {
               'text-font': [
                 'case',
                 ['==', ['get', 'script'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
           ],
-          ['get', 'name:en']
+          ['get', 'name:en'],
         ],
         [
           'format',
-          [
-            'coalesce',
-            ['get', 'name:en'],
-            ['get', 'pgf:name'],
-            ['get', 'name']
-          ],
-          {}
-        ]
+          ['coalesce', ['get', 'name:en'], ['get', 'pgf:name'], ['get', 'name']],
+          {},
+        ],
       ],
       [
         'all',
         ['any', ['has', 'name'], ['has', 'pgf:name']],
         ['any', ['has', 'name2'], ['has', 'pgf:name2']],
-        ['!', ['any', ['has', 'name3'], ['has', 'pgf:name3']]]
+        ['!', ['any', ['has', 'name3'], ['has', 'pgf:name3']]],
       ],
       [
         'case',
@@ -950,8 +821,8 @@ export const ghosteryRoadsLabelsMajor: AddLayerObject = {
               'case',
               ['==', ['get', 'script'], 'Devanagari'],
               ['literal', ['Noto Sans Devanagari Regular v1']],
-              ['literal', ['Noto Sans Regular']]
-            ]
+              ['literal', ['Noto Sans Regular']],
+            ],
           },
           '\n',
           {},
@@ -961,21 +832,16 @@ export const ghosteryRoadsLabelsMajor: AddLayerObject = {
               'case',
               ['==', ['get', 'script2'], 'Devanagari'],
               ['literal', ['Noto Sans Devanagari Regular v1']],
-              ['literal', ['Noto Sans Regular']]
-            ]
-          }
+              ['literal', ['Noto Sans Regular']],
+            ],
+          },
         ],
         [
           'case',
           ['has', 'script2'],
           [
             'format',
-            [
-              'coalesce',
-              ['get', 'name:en'],
-              ['get', 'pgf:name'],
-              ['get', 'name']
-            ],
+            ['coalesce', ['get', 'name:en'], ['get', 'pgf:name'], ['get', 'name']],
             {},
             '\n',
             {},
@@ -985,18 +851,13 @@ export const ghosteryRoadsLabelsMajor: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script2'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
           ],
           [
             'format',
-            [
-              'coalesce',
-              ['get', 'name:en'],
-              ['get', 'pgf:name2'],
-              ['get', 'name2']
-            ],
+            ['coalesce', ['get', 'name:en'], ['get', 'pgf:name2'], ['get', 'name2']],
             {},
             '\n',
             {},
@@ -1006,11 +867,11 @@ export const ghosteryRoadsLabelsMajor: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
-          ]
-        ]
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
+          ],
+        ],
       ],
       [
         'case',
@@ -1027,8 +888,8 @@ export const ghosteryRoadsLabelsMajor: AddLayerObject = {
               'case',
               ['==', ['get', 'script'], 'Devanagari'],
               ['literal', ['Noto Sans Devanagari Regular v1']],
-              ['literal', ['Noto Sans Regular']]
-            ]
+              ['literal', ['Noto Sans Regular']],
+            ],
           },
           '\n',
           {},
@@ -1038,8 +899,8 @@ export const ghosteryRoadsLabelsMajor: AddLayerObject = {
               'case',
               ['==', ['get', 'script2'], 'Devanagari'],
               ['literal', ['Noto Sans Devanagari Regular v1']],
-              ['literal', ['Noto Sans Regular']]
-            ]
+              ['literal', ['Noto Sans Regular']],
+            ],
           },
           '\n',
           {},
@@ -1049,21 +910,16 @@ export const ghosteryRoadsLabelsMajor: AddLayerObject = {
               'case',
               ['==', ['get', 'script3'], 'Devanagari'],
               ['literal', ['Noto Sans Devanagari Regular v1']],
-              ['literal', ['Noto Sans Regular']]
-            ]
-          }
+              ['literal', ['Noto Sans Regular']],
+            ],
+          },
         ],
         [
           'case',
           ['!', ['has', 'script']],
           [
             'format',
-            [
-              'coalesce',
-              ['get', 'name:en'],
-              ['get', 'pgf:name'],
-              ['get', 'name']
-            ],
+            ['coalesce', ['get', 'name:en'], ['get', 'pgf:name'], ['get', 'name']],
             {},
             '\n',
             {},
@@ -1073,8 +929,8 @@ export const ghosteryRoadsLabelsMajor: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script2'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
+                ['literal', ['Noto Sans Regular']],
+              ],
             },
             '\n',
             {},
@@ -1084,19 +940,14 @@ export const ghosteryRoadsLabelsMajor: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script3'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
           ],
           ['!', ['has', 'script2']],
           [
             'format',
-            [
-              'coalesce',
-              ['get', 'name:en'],
-              ['get', 'pgf:name2'],
-              ['get', 'name2']
-            ],
+            ['coalesce', ['get', 'name:en'], ['get', 'pgf:name2'], ['get', 'name2']],
             {},
             '\n',
             {},
@@ -1106,8 +957,8 @@ export const ghosteryRoadsLabelsMajor: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
+                ['literal', ['Noto Sans Regular']],
+              ],
             },
             '\n',
             {},
@@ -1117,18 +968,13 @@ export const ghosteryRoadsLabelsMajor: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script3'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
           ],
           [
             'format',
-            [
-              'coalesce',
-              ['get', 'name:en'],
-              ['get', 'pgf:name3'],
-              ['get', 'name3']
-            ],
+            ['coalesce', ['get', 'name:en'], ['get', 'pgf:name3'], ['get', 'name3']],
             {},
             '\n',
             {},
@@ -1138,8 +984,8 @@ export const ghosteryRoadsLabelsMajor: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
+                ['literal', ['Noto Sans Regular']],
+              ],
             },
             '\n',
             {},
@@ -1149,38 +995,28 @@ export const ghosteryRoadsLabelsMajor: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script2'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
-          ]
-        ]
-      ]
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
+          ],
+        ],
+      ],
     ],
-    'text-size': [
-      'interpolate',
-      ['linear'],
-      ['zoom'],
-      12,
-      11,
-      16,
-      13,
-      20,
-      16
-    ],
+    'text-size': ['interpolate', ['linear'], ['zoom'], 12, 11, 16, 13, 20, 16],
     'text-anchor': 'center',
     'text-justify': 'center',
     'text-rotation-alignment': 'map',
     'text-allow-overlap': false,
     'symbol-avoid-edges': true,
-    'text-max-angle': 30
+    'text-max-angle': 30,
   },
   paint: {
     'text-color': '#FFFFFF',
     'text-halo-color': 'rgb(73, 135, 226)',
     'text-halo-width': 0.5,
-    'text-translate-anchor': 'map'
-  }
-};
+    'text-translate-anchor': 'map',
+  },
+}
 
 export const ghosteryRoadsLabelsMinor: AddLayerObject = {
   id: 'roads_labels_minor',
@@ -1201,7 +1037,7 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
       18,
       600,
       20,
-      700
+      700,
     ],
     'text-font': ['Noto Sans Regular'],
     'text-field': [
@@ -1210,18 +1046,14 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
         'all',
         ['any', ['has', 'name'], ['has', 'pgf:name']],
         ['!', ['any', ['has', 'name2'], ['has', 'pgf:name2']]],
-        ['!', ['any', ['has', 'name3'], ['has', 'pgf:name3']]]
+        ['!', ['any', ['has', 'name3'], ['has', 'pgf:name3']]],
       ],
       [
         'case',
         ['has', 'script'],
         [
           'case',
-          [
-            'any',
-            ['is-supported-script', ['get', 'name']],
-            ['has', 'pgf:name']
-          ],
+          ['any', ['is-supported-script', ['get', 'name']], ['has', 'pgf:name']],
           [
             'format',
             ['coalesce', ['get', 'name:en'], ['get', 'name:en']],
@@ -1234,38 +1066,33 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
                 'all',
                 ['!', ['has', 'name:en']],
                 ['has', 'name:en'],
-                ['!', ['has', 'script']]
+                ['!', ['has', 'script']],
               ],
               '',
-              ['coalesce', ['get', 'pgf:name'], ['get', 'name']]
+              ['coalesce', ['get', 'pgf:name'], ['get', 'name']],
             ],
             {
               'text-font': [
                 'case',
                 ['==', ['get', 'script'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
           ],
-          ['get', 'name:en']
+          ['get', 'name:en'],
         ],
         [
           'format',
-          [
-            'coalesce',
-            ['get', 'name:en'],
-            ['get', 'pgf:name'],
-            ['get', 'name']
-          ],
-          {}
-        ]
+          ['coalesce', ['get', 'name:en'], ['get', 'pgf:name'], ['get', 'name']],
+          {},
+        ],
       ],
       [
         'all',
         ['any', ['has', 'name'], ['has', 'pgf:name']],
         ['any', ['has', 'name2'], ['has', 'pgf:name2']],
-        ['!', ['any', ['has', 'name3'], ['has', 'pgf:name3']]]
+        ['!', ['any', ['has', 'name3'], ['has', 'pgf:name3']]],
       ],
       [
         'case',
@@ -1282,8 +1109,8 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
               'case',
               ['==', ['get', 'script'], 'Devanagari'],
               ['literal', ['Noto Sans Devanagari Regular v1']],
-              ['literal', ['Noto Sans Regular']]
-            ]
+              ['literal', ['Noto Sans Regular']],
+            ],
           },
           '\n',
           {},
@@ -1293,21 +1120,16 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
               'case',
               ['==', ['get', 'script2'], 'Devanagari'],
               ['literal', ['Noto Sans Devanagari Regular v1']],
-              ['literal', ['Noto Sans Regular']]
-            ]
-          }
+              ['literal', ['Noto Sans Regular']],
+            ],
+          },
         ],
         [
           'case',
           ['has', 'script2'],
           [
             'format',
-            [
-              'coalesce',
-              ['get', 'name:en'],
-              ['get', 'pgf:name'],
-              ['get', 'name']
-            ],
+            ['coalesce', ['get', 'name:en'], ['get', 'pgf:name'], ['get', 'name']],
             {},
             '\n',
             {},
@@ -1317,18 +1139,13 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script2'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
           ],
           [
             'format',
-            [
-              'coalesce',
-              ['get', 'name:en'],
-              ['get', 'pgf:name2'],
-              ['get', 'name2']
-            ],
+            ['coalesce', ['get', 'name:en'], ['get', 'pgf:name2'], ['get', 'name2']],
             {},
             '\n',
             {},
@@ -1338,11 +1155,11 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
-          ]
-        ]
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
+          ],
+        ],
       ],
       [
         'case',
@@ -1359,8 +1176,8 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
               'case',
               ['==', ['get', 'script'], 'Devanagari'],
               ['literal', ['Noto Sans Devanagari Regular v1']],
-              ['literal', ['Noto Sans Regular']]
-            ]
+              ['literal', ['Noto Sans Regular']],
+            ],
           },
           '\n',
           {},
@@ -1370,8 +1187,8 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
               'case',
               ['==', ['get', 'script2'], 'Devanagari'],
               ['literal', ['Noto Sans Devanagari Regular v1']],
-              ['literal', ['Noto Sans Regular']]
-            ]
+              ['literal', ['Noto Sans Regular']],
+            ],
           },
           '\n',
           {},
@@ -1381,21 +1198,16 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
               'case',
               ['==', ['get', 'script3'], 'Devanagari'],
               ['literal', ['Noto Sans Devanagari Regular v1']],
-              ['literal', ['Noto Sans Regular']]
-            ]
-          }
+              ['literal', ['Noto Sans Regular']],
+            ],
+          },
         ],
         [
           'case',
           ['!', ['has', 'script']],
           [
             'format',
-            [
-              'coalesce',
-              ['get', 'name:en'],
-              ['get', 'pgf:name'],
-              ['get', 'name']
-            ],
+            ['coalesce', ['get', 'name:en'], ['get', 'pgf:name'], ['get', 'name']],
             {},
             '\n',
             {},
@@ -1405,8 +1217,8 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script2'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
+                ['literal', ['Noto Sans Regular']],
+              ],
             },
             '\n',
             {},
@@ -1416,19 +1228,14 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script3'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
           ],
           ['!', ['has', 'script2']],
           [
             'format',
-            [
-              'coalesce',
-              ['get', 'name:en'],
-              ['get', 'pgf:name2'],
-              ['get', 'name2']
-            ],
+            ['coalesce', ['get', 'name:en'], ['get', 'pgf:name2'], ['get', 'name2']],
             {},
             '\n',
             {},
@@ -1438,8 +1245,8 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
+                ['literal', ['Noto Sans Regular']],
+              ],
             },
             '\n',
             {},
@@ -1449,18 +1256,13 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script3'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
           ],
           [
             'format',
-            [
-              'coalesce',
-              ['get', 'name:en'],
-              ['get', 'pgf:name3'],
-              ['get', 'name3']
-            ],
+            ['coalesce', ['get', 'name:en'], ['get', 'pgf:name3'], ['get', 'name3']],
             {},
             '\n',
             {},
@@ -1470,8 +1272,8 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
+                ['literal', ['Noto Sans Regular']],
+              ],
             },
             '\n',
             {},
@@ -1481,24 +1283,24 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
                 'case',
                 ['==', ['get', 'script2'], 'Devanagari'],
                 ['literal', ['Noto Sans Devanagari Regular v1']],
-                ['literal', ['Noto Sans Regular']]
-              ]
-            }
-          ]
-        ]
-      ]
+                ['literal', ['Noto Sans Regular']],
+              ],
+            },
+          ],
+        ],
+      ],
     ],
     'text-size': 12,
     'text-anchor': 'center',
     'text-justify': 'center',
     'text-rotation-alignment': 'map',
     'text-allow-overlap': false,
-    'symbol-avoid-edges': true
+    'symbol-avoid-edges': true,
   },
   paint: {
     'text-color': 'rgba(255,255,255,0.9)',
     'text-halo-color': 'rgb(73, 135, 226)',
     'text-halo-width': 0.5,
-    'text-translate-anchor': 'map'
-  }
-};
+    'text-translate-anchor': 'map',
+  },
+}

@@ -1,7 +1,7 @@
 // SVELTE
-import { error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit'
 // DB SCHEMA
-import { image } from '$lib/db/schema/index';
+import { image } from '$lib/db/schema/index'
 // DB SERVICES
 import {
   createImage,
@@ -9,34 +9,34 @@ import {
   getImageForContextType,
   getImagesByIds,
   toResponseShape,
-  toResponseShapeProjectOrOrganisation
-} from '$lib/db/services/image';
-import { updateOrganisationById } from '$lib/db/services/organisation';
-import { updateProjectById } from '$lib/db/services/project';
-import { getUserById } from '$lib/db/services/user';
+  toResponseShapeProjectOrOrganisation,
+} from '$lib/db/services/image'
+import { updateOrganisationById } from '$lib/db/services/organisation'
+import { updateProjectById } from '$lib/db/services/project'
+import { getUserById } from '$lib/db/services/user'
 // API SERVICES
 import {
   JSONResponseOrError,
   isValidQueryParamsOrError,
   getDatabase,
-  isAdminRequest
-} from '$lib/api';
+  isAdminRequest,
+} from '$lib/api'
 import {
   getImageQueryContext,
   getImageByIdsQueryContext,
   getCtxFromUrl,
-  assertPermissionsToCreateImage
-} from '$lib/api/services/image';
+  assertPermissionsToCreateImage,
+} from '$lib/api/services/image'
 // ENUMS
-import { ImageContextResource } from '$lib/enums';
+import { ImageContextResource } from '$lib/enums'
 // TYPES
 import {
   ImageInsertWithFeatureAPI,
-  ImageInsertWithProjectOrOrganisationAPI
-} from '$lib/db/zod';
-import type { RequestHandler } from '@sveltejs/kit';
-import type { ImageNew, Id, QueryParams, FeatureImage } from '$lib/types';
-import { userColumnsWithPrivacyProtected } from '$lib/db/services/user';
+  ImageInsertWithProjectOrOrganisationAPI,
+} from '$lib/db/zod'
+import type { RequestHandler } from '@sveltejs/kit'
+import type { ImageNew, Id, QueryParams, FeatureImage } from '$lib/types'
+import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 
 /********************
  *  LIST
@@ -58,37 +58,37 @@ Example requests to the image API are:
  */
 export const GET: RequestHandler = async ({ url, locals, platform, request }) => {
   // ASSERT : User Logged in
-  const { db, user, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userRoles } = await getDatabase(locals, platform)
 
   // Check if this is a request for specific image IDs
-  const idsParam = url.searchParams.get('ids');
+  const idsParam = url.searchParams.get('ids')
   if (idsParam) {
     try {
-      const imageIds = idsParam.split(',').filter((id) => id.trim());
+      const imageIds = idsParam.split(',').filter(id => id.trim())
       if (imageIds.length === 0) {
-        return error(400, 'No valid image IDs provided');
+        return error(400, 'No valid image IDs provided')
       }
 
       // Get query context for IDs endpoint (applies filtering for published/archived images)
-      const { conditions } = getImageByIdsQueryContext(db, user, request);
+      const { conditions } = getImageByIdsQueryContext(db, user, request)
 
       // Get images by IDs with feature images flattened and filtered
-      const images = await getImagesByIds(db, imageIds, conditions);
-      return JSONResponseOrError(images);
+      const images = await getImagesByIds(db, imageIds, conditions)
+      return JSONResponseOrError(images)
     } catch (e) {
-      console.error('Database query error for image IDs:', e);
-      return error(500, 'Failed to fetch images by IDs');
+      console.error('Database query error for image IDs:', e)
+      return error(500, 'Failed to fetch images by IDs')
     }
   }
 
   // ASSERT : Valid query parameters
   // Validate query parameters, or return 400
-  const contextParams = ['organisationId', 'projectId', 'featureId', 'taskId'];
-  const queryParams = isValidQueryParamsOrError(image, url, contextParams);
+  const contextParams = ['organisationId', 'projectId', 'featureId', 'taskId']
+  const queryParams = isValidQueryParamsOrError(image, url, contextParams)
 
   // ASSERT : Valid context parameters
   // Get the context from the URL, or return 400
-  const { ctxId, ctxType } = getCtxFromUrl(url);
+  const { ctxId, ctxType } = getCtxFromUrl(url)
 
   // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
   const { conditions } = getImageQueryContext(
@@ -98,25 +98,25 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
     queryParams as QueryParams,
     userRoles,
     ctxId,
-    ctxType
-  );
+    ctxType,
+  )
   try {
     // DB : Get the images for the context
     const images = await getImageForContextType(
       db,
       ctxType,
       conditions,
-      isAdminRequest(request)
-    );
+      isAdminRequest(request),
+    )
 
-    return JSONResponseOrError(images);
+    return JSONResponseOrError(images)
   } catch (e) {
     // DB : Query Error
-    console.error('Database query error:', e);
+    console.error('Database query error:', e)
     // HTTP : 500 Error
-    return error(500, 'Dust Accumulation Critical');
+    return error(500, 'Dust Accumulation Critical')
   }
-};
+}
 
 /********************
  *  CREATE
@@ -136,45 +136,45 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
  */
 export const POST: RequestHandler = async ({ request, locals, platform }) => {
   // ASSERT : User logged in
-  const { db, user, userId, userRoles } = await getDatabase(locals, platform);
+  const { db, user, userId, userRoles } = await getDatabase(locals, platform)
   const userWithAttribution = await getUserById(
     db,
     userId,
-    userColumnsWithPrivacyProtected
-  );
+    userColumnsWithPrivacyProtected,
+  )
 
   try {
     // ASSERT : Valid submitted data
-    const data: ImageNew = await request.json();
+    const data: ImageNew = await request.json()
 
     // ASSERT : Contributor ID is set if not provided
     if (!data.contributorId && userId) {
-      data.contributorId = userId;
+      data.contributorId = userId
     }
     // ASSERT : Context type is set
     if (!data.ctxType || !data.ctxId) {
-      error(400, 'Feature, Project or Organisation -- there is no try');
+      error(400, 'Feature, Project or Organisation -- there is no try')
     }
     if (
       !Object.values(ImageContextResource).includes(
-        data.ctxType as ImageContextResource
+        data.ctxType as ImageContextResource,
       )
     ) {
       error(
         400,
-        `Invalid context type. Was ${data.ctxType} should be one of ${Object.values(ImageContextResource).join(', ')}`
-      );
+        `Invalid context type. Was ${data.ctxType} should be one of ${Object.values(ImageContextResource).join(', ')}`,
+      )
     }
     // ASSERT : Feature Image is set if context type is feature
     if (data.ctxType === ImageContextResource.feature && !data.featureImage) {
-      error(400, 'Feature Image is required when ctxType is feature');
+      error(400, 'Feature Image is required when ctxType is feature')
     }
     // ASSERT : Feature Image is valid if context type is feature
     if (
       data.ctxType === ImageContextResource.feature &&
       !data.featureImage?.featureId
     ) {
-      error(400, 'Feature Image must have a featureId when ctxType is feature');
+      error(400, 'Feature Image must have a featureId when ctxType is feature')
     }
     // ASSERT : Access to context
     await assertPermissionsToCreateImage(
@@ -185,31 +185,31 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       data,
       userRoles,
       data.ctxType as ImageContextResource,
-      data.ctxId as Id
-    );
+      data.ctxId as Id,
+    )
     // SWITCH : Feature Image
     if (data.ctxType === ImageContextResource.feature) {
-      const validatedData = ImageInsertWithFeatureAPI.parse(data);
+      const validatedData = ImageInsertWithFeatureAPI.parse(data)
       // DB : Create the image
-      const createdImage = await createImage(db, validatedData);
+      const createdImage = await createImage(db, validatedData)
       // DB : Create the feature image
       const featureImage = {
         ...validatedData.featureImage,
         imageId: createdImage.id,
-        featureId: data.ctxId
-      } as FeatureImage;
+        featureId: data.ctxId,
+      } as FeatureImage
       const createdFeatureImage = await createFeatureImage(
         db,
         featureImage,
-        createdImage.id
-      );
+        createdImage.id,
+      )
       const responseData = await toResponseShape(
         createdImage,
         createdFeatureImage,
-        userWithAttribution?.attribution ?? undefined
-      );
+        userWithAttribution?.attribution ?? undefined,
+      )
       // DB : Return the created
-      return JSONResponseOrError(responseData);
+      return JSONResponseOrError(responseData)
     }
 
     // SWITCH : Organisation or Project Image
@@ -217,26 +217,26 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       data.ctxType === ImageContextResource.project ||
       data.ctxType === ImageContextResource.organisation
     ) {
-      const validatedData = ImageInsertWithProjectOrOrganisationAPI.parse(data);
+      const validatedData = ImageInsertWithProjectOrOrganisationAPI.parse(data)
       // DB : Create the image
-      const createdImage = await createImage(db, validatedData);
+      const createdImage = await createImage(db, validatedData)
       // DB : Update the Project or Organisation
-      const payload = { imageId: createdImage.id };
+      const payload = { imageId: createdImage.id }
       if (validatedData.ctxType === ImageContextResource.project) {
-        await updateProjectById(db, payload, validatedData.ctxId);
+        await updateProjectById(db, payload, validatedData.ctxId)
       } else if (validatedData.ctxType === ImageContextResource.organisation) {
-        await updateOrganisationById(db, payload, validatedData.ctxId);
+        await updateOrganisationById(db, payload, validatedData.ctxId)
       }
 
       const responseData = await toResponseShapeProjectOrOrganisation(
         createdImage,
-        userWithAttribution?.attribution ?? undefined
-      );
+        userWithAttribution?.attribution ?? undefined,
+      )
       // DB : Return the created
-      return JSONResponseOrError(responseData);
+      return JSONResponseOrError(responseData)
     }
   } catch (err) {
-    console.error('Failed to create image:', err);
-    return error(500, 'Failed to create image');
+    console.error('Failed to create image:', err)
+    return error(500, 'Failed to create image')
   }
-};
+}

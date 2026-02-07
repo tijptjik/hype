@@ -202,7 +202,7 @@ function handleSlideStart() {
     const progress = Math.min(elapsed / scrollDuration, 1);
 
     // Ease-out curve
-    const easeOut = 1 - Math.pow(1 - progress, 3);
+    const easeOut = 1 - (1 - progress) ** 3;
     const newScrollTop = startScrollTop + scrollDistance * easeOut;
 
     viewport.scrollTop = newScrollTop;

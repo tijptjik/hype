@@ -61,7 +61,7 @@ onMount(async () => {
     // and the max worker size in the free tier is 1 MB
     await loadScript('https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js');
     const maplibre = monkeyPatchMapLibre();
-    // @ts-ignore - Adding maplibre to global scope
+    // @ts-expect-error - Adding maplibre to global scope
     globalThis.maplibregl = maplibre;
 
     // Store maplibre in the app context so components can access it

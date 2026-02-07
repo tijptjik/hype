@@ -72,7 +72,7 @@ onMount(async () => {
     }
   });
 
-  // @ts-ignore
+  // @ts-expect-error
   appCtx.map.on('load', () => {
     isMapLoaded = true;
   });
@@ -85,7 +85,7 @@ onMount(async () => {
     .setLngLat(mapProps.coordinates)
     .addTo(appCtx.map);
 
-  // @ts-ignore
+  // @ts-expect-error
   feature.on('dragend', handleDragEnd);
 });
 
@@ -94,24 +94,24 @@ $effect(() => {
   if (map && mapProps.coordinates && feature) {
     appCtx.zoomToMarkerOnly = true;
     if (mapProps.coordinates && addressLngLat && !appCtx.zoomToMarkerOnly) {
-      // @ts-ignore
+      // @ts-expect-error
       appCtx.zoomToCoordinates([mapProps.coordinates, addressLngLat]);
     } else {
-      // @ts-ignore
+      // @ts-expect-error
       map.cachedFlyTo({
         center: mapProps.coordinates,
         zoom: 20,
         run: true
       });
     }
-    // @ts-ignore
+    // @ts-expect-error
     feature.setLngLat(mapProps.coordinates);
   }
 });
 
 // EVENTS
 const handleDragEnd = (e: Event) => {
-  // @ts-ignore
+  // @ts-expect-error
   mapProps.dragEndCallback?.(e.target!.getLngLat().toArray());
   appCtx.zoomToMarkerOnly = true;
 };

@@ -1,10 +1,10 @@
-import { loadFormData } from '$lib/api';
-import { ProjectInsertAPI, ProjectUpdateAPI } from '$lib/db/zod';
+import { loadFormData } from '$lib/api'
+import { ProjectInsertAPI, ProjectUpdateAPI } from '$lib/db/zod'
 // ENUMS
-import { ResourcePath } from '$lib/enums';
+import { ResourcePath } from '$lib/enums'
 // TYPES
-import type { PageLoad } from './$types';
-import type { Project } from '$lib/types';
+import type { PageLoad } from './$types'
+import type { Project } from '$lib/types'
 
 export const load: PageLoad = async ({ params, fetch, url }) => {
   return loadFormData<Project>({
@@ -14,6 +14,6 @@ export const load: PageLoad = async ({ params, fetch, url }) => {
     updateSchema: ProjectUpdateAPI,
     fetch,
     parentId: url.searchParams.get('parentId') || undefined,
-    parentRef: url.searchParams.get('parentRef') || undefined
-  });
-};
+    parentRef: url.searchParams.get('parentRef') || undefined,
+  })
+}

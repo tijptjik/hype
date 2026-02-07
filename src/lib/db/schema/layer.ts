@@ -1,15 +1,15 @@
-import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
+import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { sql } from 'drizzle-orm'
+import { nanoid } from 'nanoid'
 // SCHEMA
-import { organisation } from './organisation';
-import { project } from './project';
-import { user } from './user';
-import { property } from './property';
+import { organisation } from './organisation'
+import { project } from './project'
+import { user } from './user'
+import { property } from './property'
 // ENUM
-import { supportedLocales } from '../../enums';
+import { supportedLocales } from '../../enums'
 // TYPES
-import type { LayerMetadata } from '../../types';
+import type { LayerMetadata } from '../../types'
 
 /* ============================================================================
  * LAYER MANAGEMENT
@@ -47,7 +47,7 @@ export const layer = sqliteTable('layer', {
   publishedAt: text('publishedAt'),
   publisherId: text('publisherId').references(() => user.id, {
     onDelete: 'set null',
-    onUpdate: 'cascade'
+    onUpdate: 'cascade',
   }),
   // False : Layer may be shown in the Admin Panel
   // True : Layer is considered deleted
@@ -58,8 +58,8 @@ export const layer = sqliteTable('layer', {
   modifiedAt: text('modifiedAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .$onUpdate(() => new Date().toISOString())
-    .notNull()
-});
+    .notNull(),
+})
 
 /**
  * Layer translations
@@ -73,7 +73,7 @@ export const layerI18n = sqliteTable(
       .notNull()
       .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     locale: text('locale', {
-      enum: supportedLocales as [string, ...string[]]
+      enum: supportedLocales as [string, ...string[]],
     }).notNull(),
     // Full Name in {locale}
     name: text('name').notNull(),
@@ -85,12 +85,10 @@ export const layerI18n = sqliteTable(
     description: text('description'),
     descriptionGen: integer('descriptionGen', { mode: 'boolean' })
       .notNull()
-      .default(true)
+      .default(true),
   },
-  (table) => [
-    primaryKey({ columns: [table.layerId, table.locale] })
-  ]
-);
+  table => [primaryKey({ columns: [table.layerId, table.locale] })],
+)
 
 /**
  * Layer property assignments
@@ -107,5 +105,5 @@ export const layerProperty = sqliteTable('layerProperty', {
   isVisible: integer('isVisible', { mode: 'boolean' }).notNull().default(true),
   isUserContributed: integer('isUserContributed', { mode: 'boolean' })
     .notNull()
-    .default(true)
-});
+    .default(true),
+})

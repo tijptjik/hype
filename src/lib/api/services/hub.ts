@@ -1,26 +1,26 @@
 // API
-import { applyQueryFilters } from '$lib/api';
+import { applyQueryFilters } from '$lib/api'
 // AUTH
-import { assertUserLoggedIn, assertSuperAdmin, runAssertions } from '$lib/auth/asserts';
+import { assertUserLoggedIn, assertSuperAdmin, runAssertions } from '$lib/auth/asserts'
 // SCHEMA
-import { hub } from '$lib/db/schema/index';
+import { hub } from '$lib/db/schema/index'
 // DB
-import { transformI18nSafely } from '$lib/db';
+import { transformI18nSafely } from '$lib/db'
 // ZOD
-import { HubAPI, HubCollectionAPI } from '$lib/db/zod/schema/hub';
-import { superValidate } from 'sveltekit-superforms';
-import { zod } from 'sveltekit-superforms/adapters';
+import { HubAPI, HubCollectionAPI } from '$lib/db/zod/schema/hub'
+import { superValidate } from 'sveltekit-superforms'
+import { zod } from 'sveltekit-superforms/adapters'
 // TYPES
-import type { SQL } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm'
 import type {
   Hub,
   HubOptsExtended,
   QueryParams,
   HubOpts,
   SessionUser,
-  HubDBRaw
-} from '$lib/types';
-import type { SuperValidated } from 'sveltekit-superforms';
+  HubDBRaw,
+} from '$lib/types'
+import type { SuperValidated } from 'sveltekit-superforms'
 
 // ═══════════════════════
 // WITH RELATIONS
@@ -32,14 +32,14 @@ export const hubCollectionWithRelations = {
   organisations: {
     with: {
       i18n: {},
-      image: {}
-    }
-  }
-};
+      image: {},
+    },
+  },
+}
 
 export const hubEntityWithRelations = {
-  ...hubCollectionWithRelations
-};
+  ...hubCollectionWithRelations,
+}
 
 // ═══════════════════════
 // HUB DOMAIN MAPPING
@@ -51,7 +51,7 @@ export const hubEntityWithRelations = {
  */
 export function getHubFromDomain(
   host: string | null,
-  hubCode?: string
+  hubCode?: string,
 ): Partial<HubOptsExtended> {
   const coreConfig = {
     code: 'core',
@@ -61,28 +61,28 @@ export function getHubFromDomain(
         locale: 'en',
         name: 'HYPE.HK',
         nameShort: 'HYPE',
-        description: 'Beautiful Hong Kong'
+        description: 'Beautiful Hong Kong',
       },
       'zh-hant': {
         locale: 'zh-hant',
         name: 'HYPE.HK',
         nameShort: 'HYPE',
-        description: '美丽的香港'
+        description: '美丽的香港',
       },
       'zh-hans': {
         locale: 'zh-hans',
         name: 'HYPE.HK',
         nameShort: 'HYPE',
-        description: '美丽的香港'
-      }
-    }
-  };
+        description: '美丽的香港',
+      },
+    },
+  }
 
   // Default to core
-  if (!host) return coreConfig;
+  if (!host) return coreConfig
 
   // Remove port number if present
-  const domain = host.split(':')[0];
+  const domain = host.split(':')[0]
 
   // localhost -> core (development)
   if (
@@ -92,22 +92,22 @@ export function getHubFromDomain(
     domain === '192.168.1.100.traefik.me' ||
     domain === 'dove-main-tapir.ngrok-free.app'
   ) {
-    return hubCode && hubCode !== 'core' ? { code: hubCode } : coreConfig;
+    return hubCode && hubCode !== 'core' ? { code: hubCode } : coreConfig
   }
 
   // hype.hk -> core || preview.hype.hk -> core (preview)
   if (domain === 'hype.hk' || domain === 'preview.hype.hk') {
-    return coreConfig;
+    return coreConfig
   }
 
   // subdomain.hype.hk -> use subdomain as hub code
   if (domain.endsWith('.hype.hk')) {
-    const subdomain = domain.replace('.hype.hk', '');
-    return { code: subdomain };
+    const subdomain = domain.replace('.hype.hk', '')
+    return { code: subdomain }
   }
 
   // custom domain -> use full domain as hub domain
-  return { domain };
+  return { domain }
 }
 
 /**
@@ -120,15 +120,15 @@ export function getHubFromDomain(
 export const getHubQueryContext = (params: QueryParams) => {
   // SETUP : Only superadmins can query hubs, so we
   // don't need to filter by anything other than the query params.
-  const conditions: SQL<unknown>[] = [];
-  const excludeColumns: string[] = [];
+  const conditions: SQL<unknown>[] = []
+  const excludeColumns: string[] = []
 
   if (Object.keys(params).length > 0) {
-    applyQueryFilters(hub, params, conditions);
+    applyQueryFilters(hub, params, conditions)
   }
 
-  return { params, conditions, excludeColumns };
-};
+  return { params, conditions, excludeColumns }
+}
 
 /********************
  *  5. UTILS :: SHAPING
@@ -145,19 +145,19 @@ export const toFormShape = async (hub: HubDBRaw): Promise<SuperValidated<Hub>> =
     ...hub,
     i18n: transformI18nSafely(hub.i18n),
     organisations:
-      hub.organisations?.map((organisation) => {
+      hub.organisations?.map(organisation => {
         return {
           ...organisation,
           i18n: transformI18nSafely(organisation.i18n),
           // Image is already a full object from the relation, no transformation needed
-          image: organisation.image || null
-        };
-      }) || null
-  };
-  // @ts-ignore TODO - Fix Zod type error
-  const form = await superValidate(transformedHub, zod(HubAPI));
-  return form as SuperValidated<Hub>;
-};
+          image: organisation.image || null,
+        }
+      }) || null,
+  }
+  // @ts-expect-error TODO - Fix Zod type error
+  const form = await superValidate(transformedHub, zod(HubAPI))
+  return form as SuperValidated<Hub>
+}
 
 /**
  * Builds response data from database entities
@@ -170,20 +170,20 @@ export const toResponseShape = async (hub: HubDBRaw, isCollection: boolean = fal
     ...hub,
     i18n: transformI18nSafely(hub.i18n),
     organisations:
-      hub.organisations?.map((organisation) => {
+      hub.organisations?.map(organisation => {
         return {
           ...organisation,
           i18n: transformI18nSafely(organisation.i18n),
           // Image is already a full object from the relation, no transformation needed
-          image: organisation.image || null
-        };
-      }) || null
-  };
+          image: organisation.image || null,
+        }
+      }) || null,
+  }
 
   return isCollection
     ? HubCollectionAPI.parse(transformedHub)
-    : HubAPI.parse(transformedHub);
-};
+    : HubAPI.parse(transformedHub)
+}
 
 /********************
  *  ACCESS CONTROL
@@ -201,16 +201,16 @@ export const assertPermissionsToUpdateHub = (user: SessionUser) => {
   // Run all access control assertions
   const assertionError = runAssertions(
     () => assertUserLoggedIn(user as any),
-    () => assertSuperAdmin(user)
-  );
+    () => assertSuperAdmin(user),
+  )
 
-  if (assertionError) return assertionError;
-};
+  if (assertionError) return assertionError
+}
 
 /********************
  *  UTILS
  ************/
 
 export const isCore = (hub: HubOptsExtended): boolean => {
-  return hub.code === 'core' || hub.code === undefined;
-};
+  return hub.code === 'core' || hub.code === undefined
+}

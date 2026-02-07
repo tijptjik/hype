@@ -1,13 +1,13 @@
 // ENV
-import { and, SQL, eq, like, sql, or, Column } from 'drizzle-orm';
+import { and, type SQL, eq, like, sql, or, Column } from 'drizzle-orm'
 // FORMS
-import { superValidate } from 'sveltekit-superforms';
-import { user, userFeature, userLayer } from '../schema';
+import { superValidate } from 'sveltekit-superforms'
+import { user, userFeature, userLayer } from '../schema'
 // ZOD
-import { zod } from 'sveltekit-superforms/adapters';
-import { UserAPI, UserCollectionAPI, UserCurrentAPI, UserProfileAPI } from '../zod';
+import { zod } from 'sveltekit-superforms/adapters'
+import { UserAPI, UserCollectionAPI, UserCurrentAPI, UserProfileAPI } from '../zod'
 // TYPES
-import type { SuperValidated } from 'sveltekit-superforms';
+import type { SuperValidated } from 'sveltekit-superforms'
 import type {
   Id,
   UserPartial,
@@ -25,9 +25,9 @@ import type {
   CurrentUser,
   UserPreferences,
   UserExperimental,
-  UserProfile
-} from '$lib/types';
-import { update } from '../crud';
+  UserProfile,
+} from '$lib/types'
+import { update } from '../crud'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -64,8 +64,8 @@ export const userColumnsWithPrivacyProtected = {
   id: true,
   name: true,
   image: true,
-  attribution: true
-};
+  attribution: true,
+}
 
 // ═══════════════════════
 // 2. CRUD :: CORE OPERATIONS
@@ -74,52 +74,52 @@ export const userColumnsWithPrivacyProtected = {
 export const listUsers = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = []
+  conditions: SQL<unknown>[] = [],
 ): Promise<UserRaw[]> => {
   return await db.query.user.findMany({
     with: withRelations,
-    where: and(...conditions)
-  });
-};
+    where: and(...conditions),
+  })
+}
 
 export const searchUsers = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   search: string,
-  searchColumns: string[] = ['name', 'email']
+  searchColumns: string[] = ['name', 'email'],
 ): Promise<UserRaw[]> => {
   const searchConditions = searchColumns
-    .map((column) => {
-      const userColumn = user[column as keyof typeof user];
-      if (!userColumn) return null;
-      return like(sql`lower(${userColumn})`, `%${search.toLowerCase()}%`);
+    .map(column => {
+      const userColumn = user[column as keyof typeof user]
+      if (!userColumn) return null
+      return like(sql`lower(${userColumn})`, `%${search.toLowerCase()}%`)
     })
-    .filter(Boolean) as SQL<unknown>[];
+    .filter(Boolean) as SQL<unknown>[]
 
   return await db.query.user.findMany({
     with: withRelations,
-    where: and(...conditions, or(...searchConditions))
-  });
-};
+    where: and(...conditions, or(...searchConditions)),
+  })
+}
 
 export const getUser = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  columns?: Record<string, boolean>
+  columns?: Record<string, boolean>,
 ): Promise<UserDB | undefined> =>
   await db.query.user.findFirst({
     with: withRelations,
     where: and(...conditions),
-    ...(columns ? { columns } : {})
-  });
+    ...(columns ? { columns } : {}),
+  })
 
 export const getUserById = async (
   db: Database,
   userId: Id,
-  columns?: Record<string, boolean>
-): Promise<UserDB | undefined> => await getUser(db, {}, [eq(user.id, userId)], columns);
+  columns?: Record<string, boolean>,
+): Promise<UserDB | undefined> => await getUser(db, {}, [eq(user.id, userId)], columns)
 
 /**
  * Updates an existing user in the database
@@ -132,52 +132,52 @@ export const getUserById = async (
 export const updateUser = async (
   db: Database,
   data: UserPartial,
-  userId: Id
-): Promise<UserDB> => await update(db, user, data, user.id, userId);
+  userId: Id,
+): Promise<UserDB> => await update(db, user, data, user.id, userId)
 
 // UPDATE
 export const updateUserWithRelated = async (
   db: Database,
   data: User,
-  userId: Id
+  userId: Id,
 ): Promise<User> => {
   // Extract userLayers from data
-  const userBase = await updateUser(db, data, userId);
-  const userLayers = await updateUserLayers(db, data.userLayers, userId);
-  const userFeatures = await updateUserFeatures(db, data.userFeatures, userId);
-  return { ...userBase, userLayers, userFeatures } as User;
-};
+  const userBase = await updateUser(db, data, userId)
+  const userLayers = await updateUserLayers(db, data.userLayers, userId)
+  const userFeatures = await updateUserFeatures(db, data.userFeatures, userId)
+  return { ...userBase, userLayers, userFeatures } as User
+}
 
 // USER LAYER PREFERENCES
 export const updateUserLayers = async (
   db: Database,
   userLayers: UserLayerNew[],
-  userId: Id
+  userId: Id,
 ): Promise<UserLayerDB[]> => {
   // Delete existing layer preferences
-  await db.delete(userLayer).where(eq(userLayer.userId, userId));
+  await db.delete(userLayer).where(eq(userLayer.userId, userId))
 
   // If no new preferences, we're done
-  if (!userLayers?.length) return [];
+  if (!userLayers?.length) return []
 
   // Insert new layer preferences
-  return await db.insert(userLayer).values(userLayers).returning();
-};
+  return await db.insert(userLayer).values(userLayers).returning()
+}
 
 export const updateUserFeatures = async (
   db: Database,
   userFeatures: UserFeatureNew[],
-  userId: Id
+  userId: Id,
 ): Promise<UserFeatureDB[]> => {
   // Delete existing feature preferences
-  await db.delete(userFeature).where(eq(userFeature.userId, userId));
+  await db.delete(userFeature).where(eq(userFeature.userId, userId))
 
   // If no new preferences, we're done
-  if (!userFeatures?.length) return [];
+  if (!userFeatures?.length) return []
 
   // Insert new feature preferences
-  return await db.insert(userFeature).values(userFeatures).returning();
-};
+  return await db.insert(userFeature).values(userFeatures).returning()
+}
 
 /**
  * Fetches and constructs user roles from the database.
@@ -208,18 +208,18 @@ export const updateUserFeatures = async (
 
 export const getUserRoles = async (
   db: Database,
-  userId: Id
+  userId: Id,
 ): Promise<UserRoleDisco[]> => {
   const orgRoles: OrganisationRole[] = await db.query.organisationRole.findMany({
     where: (organisationRole, { eq }) => eq(organisationRole.userId, userId),
     with: {
       organisation: {
         with: {
-          i18n: true
-        }
-      }
-    }
-  });
+          i18n: true,
+        },
+      },
+    },
+  })
 
   const projectRoles: ProjectRole[] = await db.query.projectRole.findMany({
     where: (projectRole, { eq }) => eq(projectRole.userId, userId),
@@ -229,25 +229,25 @@ export const getUserRoles = async (
           i18n: true,
           organisation: {
             with: {
-              i18n: true
-            }
-          }
-        }
-      }
-    }
-  });
+              i18n: true,
+            },
+          },
+        },
+      },
+    },
+  })
 
   return [
-    ...orgRoles.map((role) => ({
+    ...orgRoles.map(role => ({
       ...role,
-      type: 'organisation'
+      type: 'organisation',
     })),
-    ...projectRoles.map((role) => ({
+    ...projectRoles.map(role => ({
       ...role,
-      type: 'project'
-    }))
-  ] as UserRoleDisco[];
-};
+      type: 'project',
+    })),
+  ] as UserRoleDisco[]
+}
 
 /********************
  *  5. UTILS :: SHAPING
@@ -263,17 +263,17 @@ export const getUserRoles = async (
 export const toFormShape = async (
   user: UserDB,
   userLayers: UserLayerDB[] = [],
-  userFeatures: any[] = []
+  userFeatures: any[] = [],
 ): Promise<SuperValidated<User>> => {
   const formData: User = {
     ...user,
     userLayers,
-    userFeatures
-  };
-  // @ts-ignore TODO - Fix Zod type error
-  const form = await superValidate(formData, zod(UserAPI) as any);
-  return form as SuperValidated<User>;
-};
+    userFeatures,
+  }
+  // @ts-expect-error TODO - Fix Zod type error
+  const form = await superValidate(formData, zod(UserAPI) as any)
+  return form as SuperValidated<User>
+}
 
 /**
  * Builds response data from database entities
@@ -288,71 +288,69 @@ export const toResponseShape = async (
   userLayers: UserLayerDB[] = [],
   userFeatures: any[] = [],
   isCollection: boolean = false,
-  isSuperAdmin: boolean = false
+  isSuperAdmin: boolean = false,
 ): Promise<User | UserProfile | CurrentUser> => {
   // Process contributor data if available
-  let contributedFeatures: any = [];
-  let contributedImages: any = [];
+  let contributedFeatures: any = []
+  let contributedImages: any = []
 
   // Group by project - return Record<projectId, id[]>
-  const featuresGrouped: Record<string, string[]> = {};
-  const imagesGrouped: Record<string, string[]> = {};
+  const featuresGrouped: Record<string, string[]> = {}
+  const imagesGrouped: Record<string, string[]> = {}
 
   // Group features by projectId
   if ((user as any).contributedFeatures) {
-    (user as any).contributedFeatures
+    ;(user as any).contributedFeatures
       .filter((feature: any) => feature.isPublished)
       .sort((a: any, b: any) => (b.createdAt || '').localeCompare(a.createdAt || ''))
       .forEach((feature: any) => {
         if (!featuresGrouped[feature.projectId]) {
-          featuresGrouped[feature.projectId] = [];
+          featuresGrouped[feature.projectId] = []
         }
-        featuresGrouped[feature.projectId].push(feature.id);
-      });
+        featuresGrouped[feature.projectId].push(feature.id)
+      })
   }
 
   // Group images by their feature's projectId
   if ((user as any).contributedImages) {
-    (user as any).contributedImages
+    ;(user as any).contributedImages
       .filter((image: any) => image.featureImage && image.featureImage.isPublished)
       .sort((a: any, b: any) => (b.createdAt || '').localeCompare(a.createdAt || ''))
       .forEach((image: any) => {
-        const projectId = image.featureImage?.feature?.projectId;
+        const projectId = image.featureImage?.feature?.projectId
         if (projectId) {
           if (!imagesGrouped[projectId]) {
-            imagesGrouped[projectId] = [];
+            imagesGrouped[projectId] = []
           }
-          imagesGrouped[projectId].push(image.id);
+          imagesGrouped[projectId].push(image.id)
         }
-      });
+      })
   }
 
-  contributedFeatures = featuresGrouped;
-  contributedImages = imagesGrouped;
+  contributedFeatures = featuresGrouped
+  contributedImages = imagesGrouped
 
   // Count tasks by type
-  const tasks = (user as any).contributedTasks || [];
+  const tasks = (user as any).contributedTasks || []
   const reportedMissingCount = tasks.filter(
-    (task: any) => task.type === 'reportedMissing'
-  ).length;
-  const newPhotoCount = tasks.filter((task: any) => task.type === 'newPhoto').length;
-  const newFeatureCount = tasks.filter(
-    (task: any) => task.type === 'newFeature'
-  ).length;
+    (task: any) => task.type === 'reportedMissing',
+  ).length
+  const newPhotoCount = tasks.filter((task: any) => task.type === 'newPhoto').length
+  const newFeatureCount = tasks.filter((task: any) => task.type === 'newFeature').length
 
   const data: any = {
     ...user,
     userLayers,
     userFeatures,
     roles: [
-      ...user.memberships.map((role) => ({
+      ...user.memberships.map(role => ({
         ...role,
-        type: 'organisation'
+        type: 'organisation',
       })),
-      ...user.projectRoles.map((role) => ({
+      ...user.projectRoles.map(role => ({
         ...role,
-        type: 'project'
-      }))
+        type: 'project',
+      })),
     ] as UserRoleDisco[],
     // Add contributor data - arrays of IDs
     contributedFeatures,
@@ -360,10 +358,10 @@ export const toResponseShape = async (
     reportedMissingCount,
     newPhotoCount,
     newFeatureCount,
-    ...(isSuperAdmin ? { superAdmin: true } : {})
-  };
+    ...(isSuperAdmin ? { superAdmin: true } : {}),
+  }
 
   return isCollection
     ? (UserCollectionAPI.parse(data) as User)
-    : (UserProfileAPI.parse(data) as UserProfile);
-};
+    : (UserProfileAPI.parse(data) as UserProfile)
+}

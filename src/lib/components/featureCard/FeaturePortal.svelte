@@ -77,7 +77,7 @@ function flyToFeature(duration: number = 2000, delay: number = 300) {
   setTimeout(() => {
     let { xOffset, yOffset } = getOffset();
     if (feature && appCtx.map && 'geometry' in feature) {
-      // @ts-ignore
+      // @ts-expect-error
       appCtx.map.easeTo({
         center: [
           (feature.geometry as Point).coordinates[0],

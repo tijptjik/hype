@@ -1,12 +1,12 @@
 // DB
-import { nanoid } from 'nanoid';
+import { nanoid } from 'nanoid'
 // ORM
-import { integer, sqliteTable, primaryKey, text } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
+import { integer, sqliteTable, primaryKey, text } from 'drizzle-orm/sqlite-core'
+import { sql } from 'drizzle-orm'
 // ENUMS
-import { supportedLocales } from '../../enums';
+import { supportedLocales } from '../../enums'
 // TYPES
-import type { Locale } from '../../types';
+import type { Locale } from '../../types'
 
 /* ============================================================================
  * HUB MANAGEMENT
@@ -36,8 +36,8 @@ export const hub = sqliteTable('hub', {
   modifiedAt: text('modifiedAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .$onUpdate(() => new Date().toISOString())
-    .notNull()
-});
+    .notNull(),
+})
 
 /**
  * Hub translations
@@ -52,7 +52,7 @@ export const hubI18n = sqliteTable(
       .references(() => hub.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     // IETF BCP 47 language tag
     locale: text('locale', {
-      enum: supportedLocales as [string, ...string[]]
+      enum: supportedLocales as [string, ...string[]],
     }).notNull(),
     // Full Name in {locale}
     name: text('name').notNull(),
@@ -64,9 +64,7 @@ export const hubI18n = sqliteTable(
     description: text('description'),
     descriptionGen: integer('descriptionGen', { mode: 'boolean' })
       .notNull()
-      .default(true)
+      .default(true),
   },
-  (table) => [
-    primaryKey({ columns: [table.hubId, table.locale] })
-  ]
-);
+  table => [primaryKey({ columns: [table.hubId, table.locale] })],
+)

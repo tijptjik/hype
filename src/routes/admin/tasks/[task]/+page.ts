@@ -1,15 +1,15 @@
-import { loadData } from '$lib/api';
+import { loadData } from '$lib/api'
 // ENUMS
-import { ResourcePath } from '$lib/enums';
+import { ResourcePath } from '$lib/enums'
 // TYPES
-import type { PageLoad } from './$types';
-import type { Task } from '$lib/types';
+import type { PageLoad } from './$types'
+import type { Task } from '$lib/types'
 
 export const load: PageLoad = async ({ params, fetch }) => {
   return loadData<Task>({
     entity: params.task,
     resourcePath: ResourcePath.task,
     fetch,
-    dataKey: 'task'
-  });
-};
+    dataKey: 'task',
+  })
+}
