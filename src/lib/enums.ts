@@ -210,7 +210,8 @@ export enum PropertyComponentType {
   SelectField = 'SelectField',
   RangeField = 'RangeField',
   InputField = 'InputField',
-  TextareaField = 'TextareaField'
+  TextareaField = 'TextareaField',
+  ToggleField = 'ToggleField'
 }
 export const propertyComponentTypes = Object.values(PropertyComponentType);
 export const classifierComponentTypes = ['SelectField', 'RangeField'] as const;
