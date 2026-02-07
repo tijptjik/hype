@@ -80,52 +80,66 @@ echo "Parsing input file..."
 
 # First, inline all statements but handle quoted semicolons properly
 echo "Inlining statements..."
-python3 << EOF > "$TEMP_DIR/inlined.sql"
+# Create Python script in temp file
+cat > "$TEMP_DIR/sql_parser.py" << 'PYEOF'
 import sys
 import re
 
 def split_sql_statements(content):
     """Split SQL content into statements, respecting quoted strings"""
     statements = []
-    current_statement = ""
+    current_statement = []
     in_single_quote = False
     in_double_quote = False
+    in_backtick = False
     i = 0
+    content_len = len(content)
 
-    while i < len(content):
+    while i < content_len:
         char = content[i]
 
-        if char == "'" and not in_double_quote:
-            if i + 1 < len(content) and content[i + 1] == "'":
-                # Escaped single quote
-                current_statement += "''"
+        # Handle backtick quotes (MySQL/SQLite identifiers)
+        if char == '`' and not in_single_quote and not in_double_quote:
+            in_backtick = not in_backtick
+            current_statement.append(char)
+            i += 1
+        # Handle single quotes (SQL string literals)
+        elif char == "'" and not in_double_quote and not in_backtick:
+            # Check for escaped single quote (SQL uses '' to escape ')
+            if i + 1 < content_len and content[i + 1] == "'":
+                current_statement.append("''")
                 i += 2
-                continue
             else:
                 in_single_quote = not in_single_quote
-        elif char == '"' and not in_single_quote:
+                current_statement.append(char)
+                i += 1
+        # Handle double quotes
+        elif char == '"' and not in_single_quote and not in_backtick:
             in_double_quote = not in_double_quote
-        elif char == ';' and not in_single_quote and not in_double_quote:
-            # End of statement
-            stmt = current_statement.strip()
+            current_statement.append(char)
+            i += 1
+        # Statement terminator
+        elif char == ';' and not in_single_quote and not in_double_quote and not in_backtick:
+            stmt = ''.join(current_statement).strip()
             if stmt and not stmt.startswith('PRAGMA defer_foreign_keys'):
                 statements.append(stmt)
-            current_statement = ""
+            current_statement = []
             i += 1
-            continue
-
-        current_statement += char
-        i += 1
+        else:
+            current_statement.append(char)
+            i += 1
 
     # Handle last statement if it doesn't end with semicolon
-    stmt = current_statement.strip()
-    if stmt and not stmt.startswith('PRAGMA defer_foreign_keys'):
-        statements.append(stmt)
+    if current_statement:
+        stmt = ''.join(current_statement).strip()
+        if stmt and not stmt.startswith('PRAGMA defer_foreign_keys'):
+            statements.append(stmt)
 
     return statements
 
-# Read the input file
-with open("$INPUT_FILE", 'r', encoding='utf-8') as f:
+# Get input file from command line argument
+input_file = sys.argv[1]
+with open(input_file, 'r', encoding='utf-8') as f:
     content = f.read()
 
 statements = split_sql_statements(content)
@@ -139,7 +153,9 @@ for stmt in statements:
         if cleaned.startswith('CREATE TABLE ') and 'IF NOT EXISTS' not in cleaned:
             cleaned = cleaned.replace('CREATE TABLE ', 'CREATE TABLE IF NOT EXISTS ', 1)
         print(cleaned + ';')
-EOF
+PYEOF
+
+python3 "$TEMP_DIR/sql_parser.py" "$INPUT_FILE" > "$TEMP_DIR/inlined.sql"
 
 echo "Extracting statements..."
 
@@ -158,8 +174,9 @@ done
 grep "^INSERT INTO" "$TEMP_DIR/inlined.sql" | while read -r line; do
     if [[ $line =~ INSERT\ INTO\ (\`?[^\`[:space:]]+\`?) ]]; then
         table_name="${BASH_REMATCH[1]}"
-        # Remove backticks for consistent naming
+        # Remove backticks and quotes for consistent naming
         table_name="${table_name//\`/}"
+        table_name="${table_name//\"/}"
         echo "$table_name:$line" >> "$TEMP_DIR/inserts.sql"
     fi
 done
@@ -290,7 +307,7 @@ echo "Generating reordered output..."
     for table in "${all_tables[@]}"; do
         if grep -q "^$table:" "$TEMP_DIR/inserts.sql" 2>/dev/null; then
             insert_stmts=$(grep "^$table:" "$TEMP_DIR/inserts.sql" | cut -d: -f2-)
-            printf "-- %s data\n%s\n\n" "$table" "$insert_stmts"
+            printf -- "-- %s data\n%s\n\n" "$table" "$insert_stmts"
         fi
     done
 
