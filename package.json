@@ -149,7 +149,7 @@
     "svelte": "^5.38.0",
     "svelte-fa": "^4.0.4",
     "svelte-file-dropzone": "^2.0.9",
-    "svelte-gestures": "^5.1.4",
+    "svelte-gestures": "^5.2.2",
     "svelte-portal": "^2.2.1",
     "svelte-range-slider-pips": "3.2.1",
     "sveltekit-flash-message": "^2.4.6",
