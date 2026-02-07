@@ -3191,8 +3191,12 @@ export class AppCtx {
 }
 export const APPCTX_KEY = Symbol('mapContext')
 
-export const setAppCtx = (queryClient: QueryClient, user: SessionUser | null) => {
-  const context = new AppCtx(queryClient, user)
+export const setAppCtx = (
+  queryClient: QueryClient,
+  placeCtx: PlaceCtx,
+  user: SessionUser | null,
+) => {
+  const context = new AppCtx(queryClient, placeCtx, user)
   // Don't initialize immediately - let the session watcher handle it after mount
   return setContext(APPCTX_KEY, context)
 }
