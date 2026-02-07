@@ -3,29 +3,52 @@ import type { ParaglideLocals } from '@inlang/paraglide-sveltekit';
 import type { Auth, SessionSession, SessionUser } from '$lib/auth';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import type { MiniflareD1Database } from 'miniflare';
-import type { Hub, HubOpts, HubOptsExtended } from '$lib/types';
+import type { HubOptsExtended } from '$lib/types';
 import type { Flash } from '$lib/types';
+import type {
+  LngLatLike,
+  CameraOptions,
+  AnimationOptions,
+  FitBoundsOptions
+} from 'maplibre-gl';
 // See https://kit.svelte.dev/docs/types#app
 // for information about these interfaces
 
 // ENHANCEMENT: Add Logging - https://jeffmcmorris.medium.com/awesome-logging-in-sveltekit-6afa29c5892c
 
+// Custom options for cached navigation methods
+interface CachedMapOptions {
+  run?: boolean;
+  debug?: boolean;
+  offset?: [number, number];
+  curve?: number;
+  minZoom?: number;
+  type?: 'pan' | 'zoom' | 'jump' | 'ease' | 'fly' | 'fitBounds';
+  [key: string]: unknown;
+}
+
+// Extend Map interface with cached navigation methods
+declare module 'maplibre-gl' {
+  interface Map {
+    cachedPanTo(
+      lnglat: LngLatLike,
+      options?: CameraOptions & AnimationOptions & CachedMapOptions
+    ): void;
+    cachedZoomTo(
+      zoom: number,
+      options?: CameraOptions & AnimationOptions & CachedMapOptions
+    ): void;
+    cachedJumpTo(options?: CameraOptions & AnimationOptions & CachedMapOptions): void;
+    cachedEaseTo(options?: CameraOptions & AnimationOptions & CachedMapOptions): void;
+    cachedFlyTo(options?: CameraOptions & AnimationOptions & CachedMapOptions): void;
+    cachedFitBounds(
+      bounds: [[number, number], [number, number]],
+      options?: FitBoundsOptions & AnimationOptions & CachedMapOptions
+    ): void;
+  }
+}
+
 declare global {
-  let maplibregl: {
-    Map: {
-      prototype: {
-        cachedPanTo: (lnglat: maplibregl.LngLatLike, options?: any) => void;
-        cachedZoomTo: (zoom: number, options?: any) => void;
-        cachedJumpTo: (options?: any) => void;
-        cachedEaseTo: (options?: any) => void;
-        cachedFlyTo: (options?: any) => void;
-        cachedFitBounds: (
-          bounds: [[number, number], [number, number]],
-          options?: any
-        ) => void;
-      };
-    };
-  };
   namespace App {
     // interface Error {}
     interface Locals {
@@ -46,7 +69,7 @@ declare global {
         NODE_ENV: string;
         // Cloudflare Bindings
         DB: MiniflareD1Database;
-        ASSETS: any;
+        ASSETS: Fetcher;
         // AUTH
         AUTH_SECRET: string;
         AUTH_GOOGLE_ID: string;
@@ -66,12 +89,8 @@ declare global {
         PUBLIC_HUB_CODE: string;
         PUBLIC_GIPHY_KEY: string;
       };
-      context: {
-        waitUntil(promise: Promise<any>): void;
-      };
+      context: ExecutionContext;
       caches: CacheStorage & { default: Cache };
     }
   }
 }
-
-export {};
