@@ -77,7 +77,7 @@ import type {
  *  1. CRUD :: CORE OPERATIONS
  ************/
 
-export const listOrganisations = async (
+export const loadOrganisations = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
@@ -95,7 +95,7 @@ export const listOrganisations = async (
   })
 }
 
-export const getOrganisation = async (
+export const loadOrganisation = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
@@ -171,8 +171,8 @@ export const searchOrganisations = async (
 
         searchConditions.push(
           sql`EXISTS (
-            SELECT 1 FROM "organisationI18n" 
-            WHERE "organisationI18n"."organisationId" = ${organisation.id} 
+            SELECT 1 FROM "organisationI18n"
+            WHERE "organisationI18n"."organisationId" = ${organisation.id}
             AND ${combinedConditions}
           )`,
         )
