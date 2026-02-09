@@ -111,6 +111,13 @@ export enum HierarchicalResourceParentRefKey {
 }
 
 /* ----------------- */
+// HUB
+/* -------- */
+export enum HubRoleType {
+  admin = 'admin',
+}
+
+/* ----------------- */
 // ORGANISATION
 /* -------- */
 export enum OrganisationRoleType {
@@ -122,8 +129,11 @@ export enum OrganisationRoleType {
 // PROJECT
 /* -------- */
 export enum ProjectRoleType {
+  owner = 'owner',
   maintainer = 'maintainer',
   member = 'member',
+  translator = 'translator',
+  user = 'user',
 }
 
 /* ----------------- */
