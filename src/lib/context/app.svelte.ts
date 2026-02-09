@@ -76,7 +76,6 @@ import type {
   UserFeature,
   UserLayer,
   UserPreferences,
-  HubOpts,
   UserProfile,
   Ref,
   HubOptsExtended,
@@ -86,16 +85,16 @@ import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson'
 import type { PlaceCtx } from './place.svelte'
 
 export class AppCtx {
+  // Tanstack Query Client instance
+  queryClient!: QueryClient
   // Place Context
-  placeCtx: PlaceCtx
+  placeCtx!: PlaceCtx
   // Maplibre Map instance
-  map: MaplibreMap = $state()!
+  map: MaplibreMap | undefined = $state()
   // Maplibre library instance (loaded globally)
   maplibre: any = $state(null)
   // Whether maplibre has been loaded
   isMaplibreLoaded: boolean = $state(false)
-  // Tanstack Query Client instance
-  queryClient: QueryClient
   // User data (reactive)
   user: UserProfile | CurrentUser | SessionUser | null = $state(null)
   // Whether the map has been initialised
@@ -2210,7 +2209,6 @@ export class AppCtx {
       // Convert to WGS84 and get bounds
       const bounds = bbox(featureCollection)
 
-      // @ts-expect-error
       this.map.cachedFitBounds(
         [
           [bounds[0], bounds[1]], // southwestern corner
@@ -2247,7 +2245,6 @@ export class AppCtx {
 
     const bounds = bbox(featureCollection)
 
-    // @ts-expect-error
     this.map.cachedFitBounds(
       [
         [bounds[0], bounds[1]], // southwestern corner
