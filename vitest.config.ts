@@ -1,13 +1,13 @@
-import { configDefaults, defineConfig } from 'vitest/config';
-import { resolve } from 'path';
+import { configDefaults, defineConfig } from 'vitest/config'
+import { resolve } from 'path'
 
-const isWatch = process.env.CI !== 'true' && process.env.VITEST_MODE !== 'run';
+const isWatch = process.env.CI !== 'true' && process.env.VITEST_MODE !== 'run'
 
 export default defineConfig({
   resolve: {
     alias: {
-      $lib: resolve(__dirname, 'src/lib')
-    }
+      $lib: resolve(__dirname, 'src/lib'),
+    },
   },
   test: {
     environment: 'jsdom',
@@ -16,14 +16,13 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: 'lcov',
-      exclude: ['docs/**', '.trunk/**', '.svelte-kit/**', 'tests/**', 'src/routes/**']
+      exclude: ['docs/**', '.trunk/**', '.svelte-kit/**', 'tests/**', 'src/routes/**'],
     },
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: true
-      }
-    },
+    execArgv: ['--expose-gc'],
+    isolate: false,
+    maxWorkers: 1,
+    vmMemoryLimit: '300Mb',
     fileParallelism: false,
     testTimeout: 10000,
     hookTimeout: 5000,
@@ -32,13 +31,13 @@ export default defineConfig({
     watch: isWatch,
     // Use custom tsconfig for tests
     typecheck: {
-      tsconfig: './tsconfig.test.json'
+      tsconfig: './tsconfig.test.json',
     },
     // Disable server completely for tests
     server: {
       deps: {
-        inline: true
-      }
+        inline: true,
+      },
     },
     // Exclude problematic files that might keep handles open
     exclude: [
@@ -49,7 +48,7 @@ export default defineConfig({
       '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*',
       '**/src/lib/db/**', // Exclude database files that might keep connections open
       '**/src/hooks.server.ts', // Exclude server hooks
-      '**/src/app.html'
-    ]
-  }
-});
+      '**/src/app.html',
+    ],
+  },
+})
