@@ -4,9 +4,7 @@ import { nanoid } from 'nanoid'
 import { integer, sqliteTable, primaryKey, text } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 // ENUMS
-import { supportedLocales } from '../../enums'
-// TYPES
-import type { Locale } from '../../types'
+import { supportedLocales, HubRoleType } from '../../enums'
 
 /* ============================================================================
  * HUB MANAGEMENT
@@ -67,4 +65,27 @@ export const hubI18n = sqliteTable(
       .default(true),
   },
   table => [primaryKey({ columns: [table.hubId, table.locale] })],
+)
+
+/**
+ * Hub role assignments
+ * @remarks
+ * Links users to hubs with specific roles. This is used for settings superAdmins for Hubs.
+ */
+export const hubRole = sqliteTable(
+  'hubRole',
+  {
+    hubId: text('hubId')
+      .notNull()
+      .references(() => hub.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    userId: text('userId')
+      .notNull()
+      .references(() => hub.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    role: text('role', {
+      enum: Object.values(HubRoleType) as [string, ...string[]],
+    })
+      .notNull()
+      .default(HubRoleType.admin),
+  },
+  table => [primaryKey({ columns: [table.hubId, table.userId] })],
 )
