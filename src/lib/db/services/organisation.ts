@@ -77,7 +77,7 @@ import type {
  *  1. CRUD :: CORE OPERATIONS
  ************/
 
-export const loadOrganisations = async (
+export const listOrganisations = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
@@ -95,7 +95,7 @@ export const loadOrganisations = async (
   })
 }
 
-export const loadOrganisation = async (
+export const getOrganisation = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],

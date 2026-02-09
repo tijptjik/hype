@@ -343,7 +343,11 @@ export const toResponseShape = async (
     userLayers,
     userFeatures,
     roles: [
-      ...user.memberships.map(role => ({
+      ...user.hubRoles.map(role => ({
+        ...role,
+        type: 'hub',
+      })),
+      ...user.organisationRoles.map(role => ({
         ...role,
         type: 'organisation',
       })),

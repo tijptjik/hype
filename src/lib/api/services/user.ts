@@ -27,12 +27,14 @@ import type {
  ************/
 
 export const userCollectionWithRelations = {
-  memberships: true,
+  hubRoles: true,
+  organisationRoles: true,
   projectRoles: true,
 }
 
 export const userEntityWithRelations = {
-  memberships: true,
+  hubRoles: true,
+  organisationRoles: true,
   projectRoles: true,
   userLayers: {
     with: {

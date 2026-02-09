@@ -6,9 +6,9 @@ import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'driz
 import {
   hub,
   hubI18n,
+  hubRole,
   organisation,
   organisationI18n,
-  organisationRole,
 } from '$lib/db/schema/index'
 // ZOD SCHEMAS
 import { getDefaultConstraints } from '../constraints'
@@ -49,6 +49,10 @@ export const HubI18nInsert = createInsertSchema(hubI18n)
 export const HubI18nUpdate = createUpdateSchema(hubI18n).extend({
   ...getDefaultConstraints(hubI18n),
 })
+
+export const HubRoleBase = createSelectSchema(hubRole)
+export const HubRoleInsert = createInsertSchema(hubRole)
+export const HubRoleUpdate = createUpdateSchema(hubRole)
 
 /* ----------------- */
 // HUB API

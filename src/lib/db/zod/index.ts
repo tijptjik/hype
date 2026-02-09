@@ -59,6 +59,7 @@ import { UserLayerBase, UserLayerUpdate, UserLayerInsert } from './schema/layer'
 import { UserFeatureBase, UserFeatureInsert, UserFeatureUpdate } from './schema/feature'
 import { OrganisationRoleBase } from './schema/organisation'
 import { ProjectRoleBase } from './schema/project'
+import { HubRoleBase } from './schema/hub'
 
 export const UserAPI = UserBasic.extend({
   userLayers: z.array(UserLayerBase),
@@ -115,6 +116,7 @@ export const UserFeatureUpdateAPI = UserFeatureUpdate.extend({
 export const UserBaseRaw = UserBase.extend({
   userLayers: z.array(UserLayerBase),
   userFeatures: z.array(UserFeatureBase),
-  memberships: z.array(OrganisationRoleBase),
+  hubRoles: z.array(HubRoleBase),
+  organisationRoles: z.array(OrganisationRoleBase),
   projectRoles: z.array(ProjectRoleBase),
 })

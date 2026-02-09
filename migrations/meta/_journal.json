@@ -50,6 +50,20 @@
       "when": 1751549859742,
       "tag": "0006_extend user",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1770636842501,
+      "tag": "0007_capabilities",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1770637642365,
+      "tag": "0008_init_hub_admin",
+      "breakpoints": true
     }
   ]
 }

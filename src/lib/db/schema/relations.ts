@@ -2,7 +2,7 @@ import { relations } from 'drizzle-orm'
 
 // Import all table definitions
 import { user, userFeature, userLayer } from './user'
-import { hub, hubI18n } from './hub'
+import { hub, hubI18n, hubRole } from './hub'
 import { organisation, organisationI18n, organisationRole } from './organisation'
 import { project, projectI18n, projectRole } from './project'
 import { layer, layerI18n, layerProperty } from './layer'
@@ -20,10 +20,11 @@ import { task, taskImage } from './task'
 /**
  * User relations
  * @remarks
- * Links user to their memberships, roles, contributions, and preferences
+ * Links user to their organisationRoles, roles, contributions, and preferences
  */
 export const userRelations = relations(user, ({ many }) => ({
-  memberships: many(organisationRole),
+  hubRoles: many(hubRole),
+  organisationRoles: many(organisationRole),
   projectRoles: many(projectRole),
   contributedImages: many(image, { relationName: 'contributorImages' }),
   contributedFeatures: many(feature, { relationName: 'contributorFeatures' }),
@@ -416,6 +417,7 @@ export const taskImageRelations = relations(taskImage, ({ one }) => ({
 export const hubRelations = relations(hub, ({ many }) => ({
   i18n: many(hubI18n),
   organisations: many(organisation),
+  userRoles: many(hubRole, { relationName: 'hubUserRoles' }),
 }))
 
 /**
@@ -425,5 +427,19 @@ export const hubI18nRelations = relations(hubI18n, ({ one }) => ({
   hub: one(hub, {
     fields: [hubI18n.hubId],
     references: [hub.id],
+  }),
+}))
+
+/**
+ * Hub role relations
+ */
+export const hubRoleRelations = relations(hubRole, ({ one }) => ({
+  hub: one(hub, {
+    fields: [hubRole.hubId],
+    references: [hub.id],
+  }),
+  user: one(user, {
+    fields: [hubRole.userId],
+    references: [user.id],
   }),
 }))

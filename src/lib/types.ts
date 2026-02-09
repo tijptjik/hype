@@ -1116,8 +1116,9 @@ export type IntermediateValue = {
   'zh-hantGen': boolean
 }
 
-export type UserRole = OrganisationRole | ProjectRole
+export type UserRole = HubRole | OrganisationRole | ProjectRole
 export type UserRoleDisco =
+  | (HubRole & { type: 'hub' })
   | (OrganisationRole & { type: 'organisation' })
   | (ProjectRole & { type: 'project' })
 
