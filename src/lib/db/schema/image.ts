@@ -65,6 +65,7 @@ export const image = sqliteTable('image', {
   // False : Images may be shown in the Admin Panel
   // True : Image is considered deleted
   isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
+  localIsArchived: integer('localIsArchived', { mode: 'boolean' }),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -94,6 +95,7 @@ export const featureImage = sqliteTable(
       .default(ImageIntent.undefined)
       .notNull(),
     isPublished: integer('isPublished', { mode: 'boolean' }).default(false).notNull(),
+    localIsPublished: integer('localIsPublished', { mode: 'boolean' }),
     publishedAt: text('publishedAt'),
     publisherId: text('publisherId'),
   },

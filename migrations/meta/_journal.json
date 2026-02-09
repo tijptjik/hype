@@ -64,6 +64,13 @@
       "when": 1770637642365,
       "tag": "0008_init_hub_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1770645487173,
+      "tag": "0009_add_local_is_published_is_archived",
+      "breakpoints": true
     }
   ]
 }
