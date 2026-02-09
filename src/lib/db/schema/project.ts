@@ -96,7 +96,19 @@ export const projectI18n = sqliteTable(
  * Project role assignments
  * @remarks
  * Links users to projects with maintainer roles
+ * - capabilities: JSON object mapping capability types to boolean values
+ *   Allows for fine-grained permission control beyond the base role
  */
+
+/**
+ * Type for project role capabilities
+ */
+export type ProjectRoleCapabilities = {
+  manageBakeries?: boolean
+  manageVolunteers?: boolean
+  manageDropOffs?: boolean
+}
+
 export const projectRole = sqliteTable(
   'projectRole',
   {
@@ -111,6 +123,10 @@ export const projectRole = sqliteTable(
     })
       .notNull()
       .default(ProjectRoleType.user),
+    // JSON object for fine-grained capability control: { capabilityType: boolean }
+    capabilities: text('capabilities', {
+      mode: 'json',
+    }).$type<ProjectRoleCapabilities>(),
   },
   table => [primaryKey({ columns: [table.projectId, table.userId] })],
 )

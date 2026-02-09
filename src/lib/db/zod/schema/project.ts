@@ -17,6 +17,27 @@ import { OrganisationI18nBase } from './organisation'
 import { OrganisationBase } from './organisation'
 
 /* ----------------- */
+// PROJECT CAPABILITIES SCHEMA
+/* -------- */
+
+/**
+ * Schema for role capabilities
+ * @remarks
+ * Defines fine-grained permissions for project roles
+ * All keys are optional, defaulting to false
+ */
+export const ProjectRoleCapabilitiesSchema = z.object({
+  manageBakeries: z.boolean().optional(),
+  manageVolunteers: z.boolean().optional(),
+  manageDropOffs: z.boolean().optional(),
+})
+
+/**
+ * Type for project role capabilities
+ */
+export type ProjectRoleCapabilities = z.infer<typeof ProjectRoleCapabilitiesSchema>
+
+/* ----------------- */
 // PROJECT CORE SCHEMAS
 /* -------- */
 
@@ -51,6 +72,7 @@ export const ProjectRoleBase = createSelectSchema(projectRole)
 export const ProjectRoleBaseExtra = ProjectRoleBase.extend({
   i18n: z.array(ProjectI18nBase).nullish(),
   user: UserBasic,
+  capabilities: ProjectRoleCapabilitiesSchema.optional().default({}),
 })
 export const ProjectRoleInsert = createInsertSchema(projectRole).omit({
   projectId: true,
@@ -58,14 +80,17 @@ export const ProjectRoleInsert = createInsertSchema(projectRole).omit({
 export const ProjectRoleInsertExtra = ProjectRoleInsert.extend({
   role: z.enum(['maintainer', 'member']),
   user: UserBasic,
+  capabilities: ProjectRoleCapabilitiesSchema.optional().default({}),
 })
 export const ProjectRoleUpdate = createUpdateSchema(projectRole)
 export const ProjectRoleUpdateExtra = ProjectRoleUpdate.extend({
   role: z.enum(['maintainer', 'member']),
   user: UserBasic,
+  capabilities: ProjectRoleCapabilitiesSchema.optional().default({}),
 })
 
 export const ProjectRoleAPI = ProjectRoleBase.extend({
+  capabilities: ProjectRoleCapabilitiesSchema.optional().default({}),
   project: ProjectBase.extend({
     i18n: getLocales(ProjectI18nBase),
     organisation: OrganisationBase.extend({
@@ -75,6 +100,7 @@ export const ProjectRoleAPI = ProjectRoleBase.extend({
 })
 
 export const ProjectRoleWithUser = ProjectRoleBase.extend({
+  capabilities: ProjectRoleCapabilitiesSchema.optional().default({}),
   user: UserBasic.nullish(),
 })
 
