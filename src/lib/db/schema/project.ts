@@ -110,7 +110,7 @@ export const projectRole = sqliteTable(
       enum: Object.values(ProjectRoleType) as [string, ...string[]],
     })
       .notNull()
-      .default(ProjectRoleType.maintainer),
+      .default(ProjectRoleType.user),
   },
   table => [primaryKey({ columns: [table.projectId, table.userId] })],
 )
