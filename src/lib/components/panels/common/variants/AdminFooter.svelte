@@ -14,7 +14,7 @@ import { FirstClassResource } from '$lib/enums';
 // ICONS
 import {
   InboxArrowDown,
-  Map,
+  Map as MapIcon,
   CloudArrowUp,
   BuildingLibrary,
   MapPin
@@ -95,7 +95,7 @@ const adminControlItems = $derived.by(() => {
       adminCtx.activeResourceType === 'feature' && adminCtx.activeResourceRef
         ? `/features/${adminCtx.activeResourceRef}`
         : '/',
-    iconSrc: Map,
+    iconSrc: MapIcon,
     handleClick: null,
     notificationCount: 0,
     color: {
