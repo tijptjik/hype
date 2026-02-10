@@ -96,6 +96,7 @@ import type {
   OrganisationI18nUpdate,
   OrganisationInsert,
   OrganisationInsertAPI,
+  ListQueryParamsSchema,
   OrganisationInsertSuperAdminAPI,
   OrganisationRaw,
   OrganisationRoleAPI,
@@ -668,7 +669,19 @@ export type Cache = {
 // URL
 /* -------- */
 
-export type QueryParams = Record<string, string | string[]>
+export type QueryParams = Record<string, unknown>
+export type PaginationParams = {
+  limit?: number
+  offset?: number
+}
+export type ListQueryParams<
+  TConditions extends Record<string, unknown> = Record<string, unknown>,
+> = {
+  conditions?: Partial<TConditions>
+  prisms?: Partial<Prisms>
+  pagination?: PaginationParams
+  q?: string
+}
 
 /* ----------------- */
 // NAVIGATION :: PRISMS
@@ -985,6 +998,7 @@ export type OrganisationSuperAdminNew = z.infer<typeof OrganisationInsertSuperAd
 export type OrganisationSuperAdminPartial = z.infer<
   typeof OrganisationUpdateSuperAdminAPI
 >
+export type OrganisationListParams = z.infer<typeof ListQueryParamsSchema>
 
 /* ----------------- */
 // ORGANISATIONS :: RELATIONAL
@@ -1913,6 +1927,13 @@ export type AppContextState = {
   // TIER 3: VIEW FILTERS - Only affect current route/view
   viewFilters: ViewFilters
 }
+
+export type RemoteMapEntry = {
+  list?: (params: ListQueryParams) => unknown
+  get?: (id: Id, byCode?: boolean) => Promise<unknown>
+}
+
+export type RemoteMap = Map<FirstClassResource, RemoteMapEntry>
 
 export type ImageCtxMode = 'standalone' | 'gallery' | 'carousel'
 export type ImageCtxState = {
