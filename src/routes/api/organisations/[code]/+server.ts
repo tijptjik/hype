@@ -22,6 +22,7 @@ import {
 // API
 import {
   getDatabase,
+  isAdminRequest,
   JSONResponseOrError,
   SuperFormErrorResponse,
   SuperFormResponse,
@@ -72,7 +73,7 @@ export const GET: RequestHandler = async ({
     // GET : Context for organisation query
     const { params: queryParams, conditions } = getOrganisationQueryContext(
       user!,
-      request,
+      isAdminRequest(request),
       {},
       userRoles,
     )

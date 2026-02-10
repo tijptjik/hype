@@ -2,6 +2,7 @@
 import { getLocale } from '$lib/i18n'
 // LIB
 import { fetchOrThrow } from '$lib/index'
+import { getOrganisations } from '$lib/api/server/organisation.remote'
 // SERVICES
 import { debouncedUpdateUserPreferences } from '$lib/client/services/user'
 // CONTEXT
@@ -512,8 +513,10 @@ export class AdminCtx {
   // ═══════════════════════
 
   organisationsQueryFn = async () => {
-    const url = this.buildApiUrl(FirstClassResource.organisation)
-    return fetchOrThrow<Organisation[]>(url)
+    return (await getOrganisations({
+      conditions: this.appCtx.isSuperAdmin() ? {} : { isArchived: false },
+      prisms: this.appCtx.state.prisms,
+    })) as Organisation[]
   }
 
   projectsQueryFn = async () => {

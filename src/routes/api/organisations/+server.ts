@@ -4,6 +4,8 @@ import { error } from '@sveltejs/kit'
 import { superValidate, type SuperValidated } from 'sveltekit-superforms'
 import {
   getDatabase,
+  getPaginationOpts,
+  isAdminRequest,
   isValidQueryParamsOrError,
   JSONResponseOrError,
   SuperFormResponse,
@@ -15,7 +17,6 @@ import { organisation } from '$lib/db/schema/index'
 import {
   createOrganisationWithRelated,
   listOrganisations,
-  searchOrganisations,
   toFormShape,
   toResponseShape,
 } from '$lib/db/services/organisation'
@@ -56,27 +57,29 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
     string,
     string | string[]
   >
-  const searchParam = url.searchParams.get('q') as string
+  const searchParam = url.searchParams.get('q') || undefined
+  const pagination = getPaginationOpts(url)
 
   // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
   const { conditions } = getOrganisationQueryContext(
     user,
-    request,
+    isAdminRequest(request),
     queryParams,
     userRoles,
   )
 
   try {
-    // DB : List or search the organisations
-    const result = searchParam
-      ? await searchOrganisations(
-          db,
-          organisationWithRelations,
-          conditions,
-          searchParam,
-          locals.hub,
-        )
-      : await listOrganisations(db, organisationWithRelations, conditions, locals.hub)
+    // DB : List organisations, optionally applying search and pagination.
+    const result = await listOrganisations(
+      db,
+      organisationWithRelations,
+      conditions,
+      locals.hub,
+      pagination,
+      {
+        q: searchParam,
+      },
+    )
 
     // RESPONSE : Build the response shape
     const data = await Promise.all(

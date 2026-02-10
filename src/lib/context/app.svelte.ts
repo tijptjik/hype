@@ -8,6 +8,7 @@ import { bbox } from '@turf/bbox'
 import { getFallbackLocales, getLocale, setLocale, getI18n } from '$lib/i18n'
 // LIB
 import { DUAL_PANEL_MIN_WIDTH, fetchOrThrow, isMobile, PANEL_WIDTH } from '$lib/index'
+import { getOrganisations } from '$lib/api/server/organisation.remote'
 // SERVICES
 import {
   debouncedUpdateUserAttribution,
@@ -79,6 +80,7 @@ import type {
   UserProfile,
   Ref,
   HubOptsExtended,
+  RemoteMap,
 } from '$lib/types'
 import type { Map as MaplibreMap } from 'maplibre-gl'
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson'
@@ -112,6 +114,9 @@ export class AppCtx {
       queryFn: () => Promise<any>
     }
   >()
+
+  // Remote function map for list/get queries (parallel to queryMap).
+  remoteMap: RemoteMap = new Map()
 
   // Cache for all resources
   cache: Cache = {
@@ -515,8 +520,15 @@ export class AppCtx {
     this.queryClient = queryClient
     this.placeCtx = placeCtx
     this.setUser(user)
+    this.initializeRemoteMap()
     this.initializeQueryMap()
     // Note: keydown handlers are managed dynamically by the root layout
+  }
+
+  private initializeRemoteMap = (): void => {
+    this.remoteMap.set(FirstClassResource.organisation, {
+      list: getOrganisations,
+    })
   }
 
   // Initialize default query map (can be overridden by AdminCtx)
@@ -685,6 +697,17 @@ export class AppCtx {
   }
 
   organisationsQueryFn = async (): Promise<Organisation[]> => {
+    const remoteList = this.remoteMap.get(FirstClassResource.organisation)?.list
+    if (remoteList) {
+      return (await remoteList({
+        conditions: {
+          isArchived: false,
+          isPublished: true,
+        },
+        prisms: this.state.prisms,
+      })) as Organisation[]
+    }
+
     const url = this.buildApiUrl(FirstClassResource.organisation)
     return fetchOrThrow<Organisation[]>(url)
   }

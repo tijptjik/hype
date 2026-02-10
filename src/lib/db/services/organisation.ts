@@ -82,53 +82,25 @@ export const listOrganisations = async (
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOptsExtended,
+  pagination?: { limit?: number; offset?: number },
+  query?: {
+    q?: string
+    searchColumns?: string[]
+    ignoreHubFilter?: boolean
+  },
 ): Promise<OrganisationDBRaw[]> => {
   // Core or non-core hub filtering
-  const hubFilter = getOrganisationHubFilter(db, opts)
-  if (hubFilter) {
-    conditions.push(hubFilter)
+  if (!query?.ignoreHubFilter) {
+    const hubFilter = getOrganisationHubFilter(db, opts)
+    if (hubFilter) {
+      conditions.push(hubFilter)
+    }
   }
 
-  return await db.query.organisation.findMany({
-    with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined,
-  })
-}
-
-export const getOrganisation = async (
-  db: Database,
-  withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = [],
-  opts: HubOptsExtended,
-): Promise<OrganisationDBRaw | undefined> => {
-  // Core or non-core hub filtering
-  const hubFilter = getOrganisationHubFilter(db, opts)
-  if (hubFilter) {
-    conditions.push(hubFilter)
-  }
-
-  return await db.query.organisation.findFirst({
-    with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined,
-  })
-}
-
-export const searchOrganisations = async (
-  db: Database,
-  withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = [],
-  search: string,
-  opts: HubOptsExtended,
-  searchColumns: string[] = ['code', 'name', 'description'],
-): Promise<OrganisationDBRaw[]> => {
-  // Ignore hubfilter, cause this is primarily used to configure hub settings
-  // const hubFilter = getOrganisationHubFilter(db, opts);
-  // if (hubFilter) {
-  //   conditions.push(hubFilter);
-  // }
-
-  // Add search conditions if search term provided
-  if (search) {
+  // Search is treated as a specialised filter.
+  if (query?.q) {
+    const search = query.q.toLowerCase()
+    const searchColumns = query.searchColumns || ['code', 'name', 'description']
     const searchConditions: SQL<unknown>[] = []
 
     // Search in base organisation table columns
@@ -136,9 +108,7 @@ export const searchOrganisations = async (
     for (const column of baseColumns) {
       const orgColumn = organisation[column as keyof typeof organisation]
       if (orgColumn) {
-        searchConditions.push(
-          like(sql`lower(${orgColumn})`, `%${search.toLowerCase()}%`),
-        )
+        searchConditions.push(like(sql`lower(${orgColumn})`, `%${search}%`))
       }
     }
 
@@ -179,7 +149,7 @@ export const searchOrganisations = async (
       }
     }
 
-    if (searchConditions && searchConditions.length > 0) {
+    if (searchConditions.length > 0) {
       conditions.push(or(...searchConditions)!)
     }
   }
@@ -187,6 +157,42 @@ export const searchOrganisations = async (
   return await db.query.organisation.findMany({
     with: withRelations,
     where: conditions.length > 0 ? and(...conditions) : undefined,
+    limit: pagination?.limit,
+    offset: pagination?.offset,
+  })
+}
+
+export const getOrganisation = async (
+  db: Database,
+  withRelations: Record<string, boolean | object> = {},
+  conditions: SQL<unknown>[] = [],
+  opts: HubOptsExtended,
+): Promise<OrganisationDBRaw | undefined> => {
+  // Core or non-core hub filtering
+  const hubFilter = getOrganisationHubFilter(db, opts)
+  if (hubFilter) {
+    conditions.push(hubFilter)
+  }
+
+  return await db.query.organisation.findFirst({
+    with: withRelations,
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+  })
+}
+
+export const searchOrganisations = async (
+  db: Database,
+  withRelations: Record<string, boolean | object> = {},
+  conditions: SQL<unknown>[] = [],
+  search: string,
+  opts: HubOptsExtended,
+  searchColumns: string[] = ['code', 'name', 'description'],
+): Promise<OrganisationDBRaw[]> => {
+  return listOrganisations(db, withRelations, conditions, opts, undefined, {
+    q: search,
+    searchColumns,
+    // Ignore hubfilter, cause this is primarily used to configure hub settings
+    ignoreHubFilter: true,
   })
 }
 

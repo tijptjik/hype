@@ -1,7 +1,7 @@
 // DRIZZLE
 import { eq, inArray, type SQL } from 'drizzle-orm'
 // LIB
-import { isAdminRequest, applyQueryFilters, removeExcludedColumns } from '$lib/api'
+import { applyQueryFilters, removeExcludedColumns } from '$lib/api'
 // AUTH
 import {
   assertUserLoggedIn,
@@ -14,7 +14,7 @@ import {
 // DB
 import { isFieldUnique } from '$lib/db'
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
-import { getOrganisationIdforRoles, isSuperAdmin } from '$lib/client/services/auth'
+import { isSuperAdmin } from '$lib/client/services/auth'
 // SCHEMA
 import { organisation } from '$lib/db/schema/index'
 // ENUMS
@@ -50,56 +50,119 @@ export const organisationWithRelations = {
   },
 }
 
+const VISIBILITY_COLUMNS = ['isArchived', 'isPublished'] as const
+
+const toTriStateBoolean = (value: unknown): boolean | null | undefined => {
+  if (value === undefined) return undefined
+  if (value === null) return null
+  if (value === true || value === false) return value
+  if (value === 'true') return true
+  if (value === 'false') return false
+  if (value === 1) return true
+  if (value === 0) return false
+  return undefined
+}
+
+const applyTriStateBooleanCondition = (
+  conditions: SQL<unknown>[],
+  column: any,
+  value: boolean | null | undefined,
+) => {
+  if (value === true) conditions.push(eq(column, true))
+  if (value === false) conditions.push(eq(column, false))
+}
+
+/**
+ * Builds visibility and ownership constraints for organisation list queries.
+ *
+ * @param user - Current session user.
+ * @param isAdminRequest - Whether request originated from admin context.
+ * @param params - Raw query params from list conditions.
+ * @param userRoles - Resolved user roles from session.
+ * @returns SQL conditions plus params with visibility keys removed.
+ * @remarks
+ * Tri-state visibility semantics:
+ * - `true`: include only records where column is `true`.
+ * - `false`: include only records where column is `false`.
+ * - `null` or `undefined`: ignore that visibility column.
+ *
+ * Legacy dot-key and raw filter handling is delegated to `applyQueryFilters`;
+ * visibility keys are applied centrally here.
+ */
+export const buildVisibilityAndOwnershipConditions = (
+  user: SessionUser,
+  isAdminRequest: boolean,
+  params: QueryParams,
+  userRoles: UserRoleDisco[],
+): { params: QueryParams; conditions: SQL<unknown>[]; excludeColumns: string[] } => {
+  const conditions: SQL<unknown>[] = []
+  const excludeColumns = [...VISIBILITY_COLUMNS]
+  const filteredParams = removeExcludedColumns(params, excludeColumns)
+
+  // Full bypass for super admins and hub admins.
+  if (isSuperAdmin(user) || user.isHubAdminForActiveHub) {
+    return { params: filteredParams, conditions, excludeColumns }
+  }
+
+  // Public requests are always strictly published and not archived.
+  if (!isAdminRequest) {
+    conditions.push(eq(organisation.isPublished, true))
+    conditions.push(eq(organisation.isArchived, false))
+    return { params: filteredParams, conditions, excludeColumns }
+  }
+
+  // Admin, non-super/non-hub-admin:
+  // Users can query organisations where they have any organisation role.
+  const allowedOrganisationIds = userRoles
+    .filter(role => role.type === 'organisation')
+    .map(role => role.organisationId) as Id[]
+
+  if (allowedOrganisationIds.length === 0) {
+    conditions.push(eq(organisation.id, '__none__' as Id))
+    return { params: filteredParams, conditions, excludeColumns }
+  }
+  conditions.push(inArray(organisation.id, allowedOrganisationIds))
+
+  // Apply tri-state visibility semantics for admin owner queries.
+  const isPublished = toTriStateBoolean(params.isPublished)
+  const isArchived = toTriStateBoolean(params.isArchived)
+
+  applyTriStateBooleanCondition(conditions, organisation.isPublished, isPublished)
+  applyTriStateBooleanCondition(conditions, organisation.isArchived, isArchived)
+
+  return { params: filteredParams, conditions, excludeColumns }
+}
+
 /**
  * Get the query context for the organisation resource - filters the query based on the user's roles, and the query parameters.
  * @param user - The user object
- * @param request - The request object
+ * @param isAdminRequest - Whether the request is from admin context
  * @param params - The query parameters
  * @param userRoles - The user roles
  */
 export const getOrganisationQueryContext = (
   user: SessionUser,
-  request: Request,
+  isAdminRequest: boolean,
   params: QueryParams,
   userRoles: UserRoleDisco[],
 ) => {
-  // SETUP : By default, only show non-archived organisations,
-  // and exclude isArchived and isPublished filters from the query.
-  let conditions: SQL<unknown>[] = []
-  const excludeColumns = ['isArchived', 'isPublished']
-
-  // NON-SUPERADMIN : Hide organisations which are archived
-  if (!isSuperAdmin(user)) {
-    conditions.push(eq(organisation.isArchived, false))
-  }
-
-  // PUBLIC : List all organisations which are isPublished, and not isArchived,
-  if (!isAdminRequest(request)) {
-    params = removeExcludedColumns(params, excludeColumns)
-    conditions.push(eq(organisation.isPublished, true))
-
-    // ADMIN : List all organisations, where the user has a role in the organisation
-  } else if (!isSuperAdmin(user)) {
-    params = removeExcludedColumns(params, ['isArchived'])
-    const organisationIds = getOrganisationIdforRoles(userRoles)
-    conditions.push(inArray(organisation.id, organisationIds as Id[]))
-    // SUPERADMIN : List all organisations regardless of isPublished or isArchived
-  } else {
-    conditions = []
-  }
+  const contextRespectingVisibilityAndOwnership = buildVisibilityAndOwnershipConditions(
+    user,
+    isAdminRequest,
+    params,
+    userRoles,
+  )
 
   // CONTEXT : Apply query filters to the conditions
-  if (Object.keys(params).length > 0) {
-    // For superAdmins, remove isArchived and isPublished from params so they can see all content
-    if (isSuperAdmin(user)) {
-      const { isArchived, isPublished, ...filteredParams } = params
-      applyQueryFilters(organisation, filteredParams, conditions)
-    } else {
-      applyQueryFilters(organisation, params, conditions)
-    }
+  if (Object.keys(contextRespectingVisibilityAndOwnership.params).length > 0) {
+    applyQueryFilters(
+      organisation,
+      contextRespectingVisibilityAndOwnership.params,
+      contextRespectingVisibilityAndOwnership.conditions,
+    )
   }
 
-  return { params, conditions, excludeColumns }
+  return contextRespectingVisibilityAndOwnership
 }
 
 /**

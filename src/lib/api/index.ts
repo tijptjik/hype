@@ -44,6 +44,8 @@ import type {
   Task,
   UserRoleDisco,
   QueryParams,
+  PaginationParams,
+  DbTable,
   LayerPropertyPartialExtra,
   OrganisationRoleUser,
   ParamsToSign,
@@ -149,10 +151,12 @@ function getResourceRef<T extends Resource>(resource: T): string {
 // ACCESS CHECKS
 // ================================================
 
-export const setupRequestHandler = async (
-  locals: App.Locals,
-  platform: App.Platform | undefined,
-) => {
+export const setupRequestHandler = async (event: {
+  locals: App.Locals
+  platform: App.Platform | undefined
+  request: Request
+}) => {
+  const { locals, platform, request } = event
   const { user, session } = await getSessionOrError(locals)
   if (!platform?.env.DB) {
     return error(500, 'Database not available')
@@ -168,6 +172,8 @@ export const setupRequestHandler = async (
     user,
     userId: user.id as Id,
     userRoles: user.roles as UserRoleDisco[] | [],
+    isAdminRequest: isAdminRequest(event),
+    request,
   }
 }
 
@@ -577,6 +583,7 @@ function mergeProjectProperties(layer: Layer, properties: Property[]): Layer {
  * @param url - The URL to get the query parameters from
  * @param excludeParams - The parameters to exclude from the query parameters
  * @returns The query parameters without the reserved parameters
+ * @deprecated Use getValidQueryParams() for typed argument-based query normalization.
  */
 export const getQueryParamsWithoutReservedParams = (
   url: URL,
@@ -600,11 +607,85 @@ export const getQueryParamsWithoutReservedParams = (
   )
 }
 
+/**
+ * Build normalized query params from argument objects.
+ * Accepts defaults so callers can apply sensible baseline filters.
+ */
+export const normaliseQueryParams = <TConditions extends Record<string, unknown>>(
+  input: Partial<TConditions> | undefined,
+  defaults: Partial<TConditions> = {},
+  options: { excludeParams?: string[] } = {},
+): QueryParams => {
+  const excludeParams = options.excludeParams || []
+
+  const addParam = (acc: Record<string, unknown>, key: string, value: unknown) => {
+    if (!key || excludeParams.includes(key)) return
+
+    // Input values replace defaults for the same key.
+    acc[key] = value
+  }
+
+  const merged = {} as Record<string, unknown>
+  Object.entries(defaults).forEach(([key, value]) => {
+    addParam(merged, key, value)
+  })
+  Object.entries(input || {}).forEach(([key, value]) => {
+    addParam(merged, key, value)
+  })
+  return merged
+}
+
+/**
+ * Normalize and validate query params against a Drizzle table schema.
+ * @param table - Drizzle table
+ * @param input - raw object-like query input
+ * @param defaults - default params to apply before input params
+ * @param options - normalization options
+ * @returns validated query params object
+ */
+export const getValidQueryParams = <TConditions extends Record<string, unknown>>(
+  table: DbTable,
+  input?: Partial<TConditions>,
+  defaults?: Partial<TConditions>,
+  options?: { excludeParams?: string[] },
+): QueryParams => {
+  const effectiveDefaults =
+    defaults ??
+    ({
+      isPublished: true,
+      isArchived: false,
+    } as unknown as Partial<TConditions>)
+
+  const queryParams = normaliseQueryParams<TConditions>(
+    input,
+    effectiveDefaults,
+    options ?? {},
+  )
+  const queryParamsKeys = Object.keys(queryParams)
+
+  if (queryParamsKeys.length > 0) {
+    // Validate query keys directly against table columns.
+    const { valid, invalidColumns } = validateTableColumns(table, queryParamsKeys)
+
+    if (!valid) {
+      return error(
+        400,
+        `Invalid filter fields: <code>${invalidColumns.join(', ')}</code>`,
+      )
+    }
+  }
+
+  return queryParams
+}
+
+/**
+ * @deprecated Use getValidQueryParams() instead.
+ */
 export const isValidQueryParamsOrError = (
-  table: any,
+  table: DbTable,
   url: URL,
   excludeParams: string[] = [],
-): QueryParams | Error => {
+): QueryParams => {
   const queryParams = getQueryParamsWithoutReservedParams(url, excludeParams)
   const queryParamsKeys = Object.keys(queryParams)
 
@@ -679,30 +760,67 @@ export const applyQueryFilters = <T extends Table>(
     return
   }
 
-  const filterConditions = Object.entries(filters).map(([column, value]) => {
-    // Check if this is a nested path
-    const path = column.split('.')
+  const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null && !Array.isArray(value)
 
-    if (path.length > 1) {
-      return createJsonPathCondition(table, path, value)
-    }
+  const buildNestedJsonConditions = (
+    baseColumn: string,
+    value: Record<string, unknown>,
+    parentPath: string[] = [],
+  ): Array<SQL<any>> => {
+    const nestedConditions: Array<SQL<any>> = []
 
-    // Type assertion to ensure column exists on table and is a Drizzle column
-    const tableColumn = table[column as keyof T] as unknown as Column<any, any, any>
+    Object.entries(value).forEach(([key, nestedValue]) => {
+      if (nestedValue === undefined) return
 
-    // Handle Boolean values
-    if (Array.isArray(value) && (value[0] === 'true' || value[0] === 'false')) {
-      return eq(tableColumn, value[0] === 'true')
-    }
+      if (isPlainObject(nestedValue)) {
+        nestedConditions.push(
+          ...buildNestedJsonConditions(baseColumn, nestedValue, [...parentPath, key]),
+        )
+        return
+      }
 
-    // Handle Array values
-    if (Array.isArray(value)) {
-      return inArray(tableColumn, value)
-    }
+      nestedConditions.push(
+        createJsonPathCondition(table, [baseColumn, ...parentPath, key], nestedValue),
+      )
+    })
 
-    // Handle non-array values
-    return eq(tableColumn, value)
-  })
+    return nestedConditions
+  }
+
+  const filterConditions = Object.entries(filters)
+    .flatMap(([column, value]) => {
+      if (value === undefined) return undefined
+
+      // TODO Deprecated - Legacy style: dot-separated keys, e.g. "metadata.title".
+      const path = column.split('.')
+      if (path.length > 1) {
+        return createJsonPathCondition(table, path, value)
+      }
+
+      // Preferred style: nested object values, e.g. { metadata: { title: '...' } }.
+      if (isPlainObject(value)) {
+        return buildNestedJsonConditions(column, value)
+      }
+
+      // Type assertion to ensure column exists on table and is a Drizzle column
+      const tableColumn = table[column as keyof T] as unknown as Column<any, any, any>
+
+      // TODO Deprecated - Backward compatibility for deprecated URL-based string booleans.
+      if (value === 'true' || value === 'false') {
+        return eq(tableColumn, value === 'true')
+      }
+
+      // Handle Array values
+      if (Array.isArray(value)) {
+        if (value.length === 0) return undefined
+        return inArray(tableColumn, value)
+      }
+
+      // Handle non-array values
+      return eq(tableColumn, value)
+    })
+    .filter((condition): condition is SQL<any> => condition !== undefined)
 
   // Only add conditions if we have any
   if (filterConditions.length > 0) {
@@ -711,14 +829,28 @@ export const applyQueryFilters = <T extends Table>(
 }
 
 /**
- * Checks if a request came from the admin interface by examining the referer header or request URL
- * @param request - The request to check
+ * Checks if a request/event came from the admin interface.
+ * @param requestOrEvent - The request or event to check
  * @returns boolean indicating if the request came from the admin interface
  */
-export const isAdminRequest = (request: Request): boolean => {
-  // First check the request URL itself
+export const isAdminRequest = (
+  requestOrEvent:
+    | Request
+    | {
+        request: Request
+      },
+): boolean => {
+  const request =
+    requestOrEvent instanceof Request ? requestOrEvent : requestOrEvent.request
+
   try {
     const requestUrl = new URL(request.url)
+    if (
+      requestUrl.pathname === ADMIN_PATH ||
+      requestUrl.pathname.startsWith(ADMIN_PATH + '/')
+    ) {
+      return true
+    }
     // If the API request has admin header, treat as admin
     if (request.headers.get('x-admin-request') === 'true') {
       return true
@@ -765,6 +897,27 @@ export const getPrisms = (url: URL): Prisms => {
     organisation: url.searchParams.getAll('organisation') as string[],
     project: url.searchParams.getAll('project') as string[],
     layer: url.searchParams.getAll('layer') as string[],
+  }
+}
+
+/**
+ * Parse and validate pagination options from URL search params.
+ */
+export const getPaginationOpts = (url: URL): PaginationParams => {
+  const limitParam = url.searchParams.get('limit')
+  const offsetParam = url.searchParams.get('offset')
+  const parsedLimit = limitParam ? Number.parseInt(limitParam, 10) : null
+  const parsedOffset = offsetParam ? Number.parseInt(offsetParam, 10) : null
+
+  return {
+    limit:
+      parsedLimit !== null && Number.isInteger(parsedLimit) && parsedLimit > 0
+        ? parsedLimit
+        : undefined,
+    offset:
+      parsedOffset !== null && Number.isInteger(parsedOffset) && parsedOffset >= 0
+        ? parsedOffset
+        : undefined,
   }
 }
 
