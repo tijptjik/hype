@@ -39,3 +39,8 @@ Working notes for designing a unified authorization system with hierarchical own
   - explicit deny > allow
   - narrower scope > broader scope
   - direct subject > inherited role
+
+## Confirmed Decisions
+- Default list filters: `isPublished: true`, `isArchived: false`.
+- Prism identifiers: use IDs.
+- `hubRole` inheritance: yes, inherit across organisation/project descendants.

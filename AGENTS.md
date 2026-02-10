@@ -60,3 +60,4 @@ Run all commands with Bun:
 ## Documentation
 - Authorisation Dsign is defined in `docs/Authorization-Design.md`
 - Authorisation Roles are defined in `docs/Roles.md`
+- Use standard JSDoc for exported functions and remote APIs: include `@param`, `@returns`, and `@remarks` where behavior constraints matter.
