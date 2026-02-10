@@ -3,6 +3,8 @@ import { nanoid } from 'nanoid'
 // ORM
 import { integer, sqliteTable, primaryKey, text } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
+// SCHEMA
+import { user } from './user'
 // ENUMS
 import { supportedLocales, HubRoleType } from '../../enums'
 
@@ -80,7 +82,7 @@ export const hubRole = sqliteTable(
       .references(() => hub.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     userId: text('userId')
       .notNull()
-      .references(() => hub.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+      .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     role: text('role', {
       enum: Object.values(HubRoleType) as [string, ...string[]],
     })

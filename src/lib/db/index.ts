@@ -359,7 +359,7 @@ export const applyPrismConstraints = (
 export const createJsonPathCondition = (
   table: Table,
   path: string[],
-  value: string | string[],
+  value: unknown,
 ) => {
   const [baseColumn, ...jsonPath] = path
   const jsonPathStr = jsonPath.map(p => `$.${p}`).join('.')
@@ -372,7 +372,7 @@ export const createJsonPathCondition = (
     )})`
   }
 
-  // Handle boolean values
+  // Backward compatibility for deprecated URL-based string booleans
   if (value === 'true' || value === 'false') {
     return sql`json_extract(${table[baseColumn as keyof typeof table]}, ${jsonPathStr}) = ${value === 'true'}`
   }

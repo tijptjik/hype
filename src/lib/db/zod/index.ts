@@ -4,6 +4,11 @@
 export * from './constraints'
 
 /* ----------------- */
+// GENERIC API SCHEMAS
+/* -------- */
+export * from './schema/api'
+
+/* ----------------- */
 // USER SCHEMAS
 /* -------- */
 export * from './schema/user'
