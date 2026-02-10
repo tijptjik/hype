@@ -814,7 +814,19 @@ export const applyQueryFilters = <T extends Table>(
       // Handle Array values
       if (Array.isArray(value)) {
         if (value.length === 0) return undefined
-        return inArray(tableColumn, value)
+        // Legacy URL query params are arrays of strings; normalize boolean arrays.
+        const normalizedArray = value.map(v => {
+          if (v === 'true') return true
+          if (v === 'false') return false
+          return v
+        })
+
+        // Single-value arrays should behave like scalar filters.
+        if (normalizedArray.length === 1) {
+          return eq(tableColumn, normalizedArray[0])
+        }
+
+        return inArray(tableColumn, normalizedArray)
       }
 
       // Handle non-array values
