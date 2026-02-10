@@ -94,6 +94,8 @@ import type {
   LayerUpdateAPI,
   OrganisationAPI,
   OrganisationBase,
+  OrganisationCollectionAPI,
+  OrganisationCollectionSuperAdminAPI,
   OrganisationI18nBase,
   OrganisationI18nInsert,
   OrganisationI18nUpdate,
@@ -996,6 +998,8 @@ export type OrganisationDBPartial = z.infer<typeof OrganisationUpdate>
 
 // Organisation with all fields, including userRoles & translations, and User
 export type Organisation = z.infer<typeof OrganisationAPI>
+// Collection-safe organisation shape for regular users
+export type OrganisationCollection = z.infer<typeof OrganisationCollectionAPI>
 // Like Organisation, but without the organisationId in userRoles and translations
 export type OrganisationNew = z.infer<typeof OrganisationInsertAPI>
 // Like Organisation, but with all fields optional
@@ -1007,6 +1011,10 @@ export type OrganisationPartial = z.infer<typeof OrganisationUpdateAPI>
 
 // Organisation with all fields, including userRoles & translations, and User
 export type OrganisationSuperAdmin = z.infer<typeof OrganisationSuperAdminAPI>
+// Collection-safe organisation shape for super admins
+export type OrganisationCollectionSuperAdmin = z.infer<
+  typeof OrganisationCollectionSuperAdminAPI
+>
 // Like Organisation, but without the organisationId in userRoles and translations
 export type OrganisationSuperAdminNew = z.infer<typeof OrganisationInsertSuperAdminAPI>
 // Like Organisation, but with all fields optional
@@ -1949,7 +1957,7 @@ export type RemoteMapEntry = {
   get?: (ref: Ref, refKey?: string) => Promise<unknown>
 }
 
-export type RemoteMap = Map<FirstClassResource, RemoteMapEntry>
+export type RemoteMap = Record<FirstClassResource, RemoteMapEntry>
 
 export type ImageCtxMode = 'standalone' | 'gallery' | 'carousel'
 export type ImageCtxState = {

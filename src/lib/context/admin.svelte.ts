@@ -20,6 +20,7 @@ import {
 } from '$lib/client/services/stats'
 // TYPES
 import type {
+  ListResponse,
   Organisation,
   Project,
   Layer,
@@ -513,10 +514,11 @@ export class AdminCtx {
   // ═══════════════════════
 
   organisationsQueryFn = async () => {
-    return (await getOrganisations({
+    const result = (await getOrganisations({
       conditions: this.appCtx.isSuperAdmin() ? {} : { isArchived: false },
       prisms: this.appCtx.state.prisms,
-    })) as Organisation[]
+    })) as ListResponse<Organisation>
+    return result.data
   }
 
   projectsQueryFn = async () => {

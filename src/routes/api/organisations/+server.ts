@@ -18,7 +18,7 @@ import {
   createOrganisationWithRelated,
   listOrganisations,
   toFormShape,
-  toResponseShape,
+  toListResponseShape,
 } from '$lib/db/services/organisation'
 import {
   getOrganisationQueryContext,
@@ -87,20 +87,10 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
     )
 
     // RESPONSE : Build the response shape
-    const data = await Promise.all(
-      result.map(async organisation => {
-        return await toResponseShape(
-          organisation,
-          organisation.i18n,
-          [],
-          true, // isCollection
-          user?.superAdmin || false, // isSuperAdmin
-        )
-      }),
-    )
+    const payload = await toListResponseShape(result, user)
 
     // HTTP : 200 JSON or 404
-    return JSONResponseOrError(data)
+    return JSONResponseOrError(payload)
   } catch (e) {
     // DB : Query Error
     console.error('Database query error:', e)
@@ -152,12 +142,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
     )
 
     // FORM : Rebuild the form data
-    const updatedForm = await toFormShape(
-      createdOrganisation,
-      createdOrganisation.i18n,
-      createdOrganisation.userRoles,
-      user.superAdmin || false,
-    )
+    const updatedForm = await toFormShape(createdOrganisation, user.superAdmin || false)
 
     // HTTP : 201 JSON or 400
     return SuperFormResponse<Organisation>(

@@ -104,8 +104,6 @@ export const GET: RequestHandler = async ({
     // RESPONSE : Build the response shape
     const data = await toResponseShape(
       result,
-      result.i18n,
-      result.userRoles,
       false, // isCollection
       user.superAdmin || false, // isSuperAdmin
     )
@@ -178,12 +176,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
     )
 
     // RESPONSE : Convert to form shape
-    const updatedForm = await toFormShape(
-      updatedOrganisation,
-      updatedOrganisation.i18n,
-      updatedOrganisation.userRoles,
-      user.superAdmin || false,
-    )
+    const updatedForm = await toFormShape(updatedOrganisation, user.superAdmin || false)
 
     // ACCESS : Check for user access loss after code change
     const isAccessLost = isAccessLostUponSuccess(user, formData, userRoles)
@@ -263,8 +256,6 @@ export const PATCH: RequestHandler = async ({ params, request, locals, platform 
     // RESPONSE : Build the response shape
     const data = await toResponseShape(
       updatedWithRelations,
-      updatedWithRelations.i18n,
-      updatedWithRelations.userRoles,
       false, // isCollection
       user!.superAdmin || false, // isSuperAdmin
     )

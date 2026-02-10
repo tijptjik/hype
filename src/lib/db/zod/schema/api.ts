@@ -28,3 +28,8 @@ export const ListQueryParamsSchema = z.object({
     .optional(),
   q: z.string().trim().optional(),
 })
+
+export const GetQueryParamsSchema = z.object({
+  ref: z.string(),
+  refKey: z.enum(['id', 'code']).optional(),
+})

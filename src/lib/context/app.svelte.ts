@@ -8,7 +8,7 @@ import { bbox } from '@turf/bbox'
 import { getFallbackLocales, getLocale, setLocale, getI18n } from '$lib/i18n'
 // LIB
 import { DUAL_PANEL_MIN_WIDTH, fetchOrThrow, isMobile, PANEL_WIDTH } from '$lib/index'
-import { getOrganisations } from '$lib/api/server/organisation.remote'
+import { getOrganisation, getOrganisations } from '$lib/api/server/organisation.remote'
 // SERVICES
 import {
   debouncedUpdateUserAttribution,
@@ -73,6 +73,7 @@ import type {
   ResourceTypeWithChildren,
   SessionUser,
   Task,
+  ListResponse,
   UserExperimental,
   UserFeature,
   UserLayer,
@@ -116,7 +117,16 @@ export class AppCtx {
   >()
 
   // Remote function map for list/get queries (parallel to queryMap).
-  remoteMap: RemoteMap = new Map()
+  remoteMap: RemoteMap = {
+    [FirstClassResource.organisation]: {},
+    [FirstClassResource.project]: {},
+    [FirstClassResource.layer]: {},
+    [FirstClassResource.feature]: {},
+    [FirstClassResource.task]: {},
+    [FirstClassResource.hub]: {},
+    [FirstClassResource.property]: {},
+    [FirstClassResource.user]: {},
+  }
 
   // Cache for all resources
   cache: Cache = {
@@ -526,9 +536,10 @@ export class AppCtx {
   }
 
   private initializeRemoteMap = (): void => {
-    this.remoteMap.set(FirstClassResource.organisation, {
+    this.remoteMap[FirstClassResource.organisation] = {
       list: getOrganisations,
-    })
+      get: getOrganisation,
+    }
   }
 
   // Initialize default query map (can be overridden by AdminCtx)
@@ -697,21 +708,19 @@ export class AppCtx {
   }
 
   organisationsQueryFn = async (): Promise<Organisation[]> => {
-    const remoteList = this.remoteMap.get(FirstClassResource.organisation)?.list
-    if (remoteList) {
-      return (await remoteList({
-        conditions: {
-          isArchived: false,
-          isPublished: true,
-        },
-        prisms: this.state.prisms,
-      })) as Organisation[]
+    const remoteList = this.remoteMap[FirstClassResource.organisation].list
+    if (!remoteList) {
+      throw new Error('Organisation remote list function is not configured.')
     }
-
-    const url = this.buildApiUrl(FirstClassResource.organisation)
-    return fetchOrThrow<Organisation[]>(url)
+    const result = (await remoteList({
+      conditions: {
+        isArchived: false,
+        isPublished: true,
+      },
+      prisms: this.state.prisms,
+    })) as ListResponse<Organisation>
+    return result.data
   }
-
   projectsQueryFn = async (): Promise<Project[]> => {
     const url = this.buildApiUrl(FirstClassResource.project)
     return fetchOrThrow<Project[]>(url)

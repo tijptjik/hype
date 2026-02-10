@@ -27,6 +27,9 @@ import type {
   OrganisationDB,
   OrganisationNew,
   Organisation,
+  OrganisationCollection,
+  OrganisationCollectionSuperAdmin,
+  OrganisationSuperAdmin,
   Id,
   Database,
   OrganisationDBNew,
@@ -39,6 +42,9 @@ import type {
   OrganisationI18nDB,
   OrganisationRoleDB,
   HubOptsExtended,
+  ListResponse,
+  EntityResponse,
+  SessionUser,
 } from '$lib/types'
 
 // ═══════════════════════
@@ -89,7 +95,7 @@ export const listOrganisations = async (
     searchColumns?: string[]
     ignoreHubFilter?: boolean
   },
-): Promise<OrganisationDBRaw[]> => {
+): Promise<ListResponse<OrganisationDBRaw>> => {
   // Core or non-core hub filtering
   if (!query?.ignoreHubFilter) {
     const hubFilter = getOrganisationHubFilter(db, opts)
@@ -164,13 +170,24 @@ export const listOrganisations = async (
   const orderBy =
     sortOrder === 'desc' ? desc(sortColumn as any) : asc(sortColumn as any)
 
-  return await db.query.organisation.findMany({
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+  const data = await db.query.organisation.findMany({
     with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined,
+    where: whereClause,
     limit: pagination?.limit,
     offset: pagination?.offset,
     orderBy,
   })
+  const countQuery = db.select({ count: sql<number>`count(*)` }).from(organisation)
+  const totalRows = whereClause ? await countQuery.where(whereClause) : await countQuery
+  const totalCount = Number(totalRows[0]?.count || 0)
+
+  return {
+    data,
+    limit: pagination?.limit,
+    offset: pagination?.offset,
+    totalCount,
+  }
 }
 
 export const getOrganisation = async (
@@ -188,22 +205,6 @@ export const getOrganisation = async (
   return await db.query.organisation.findFirst({
     with: withRelations,
     where: conditions.length > 0 ? and(...conditions) : undefined,
-  })
-}
-
-export const searchOrganisations = async (
-  db: Database,
-  withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = [],
-  search: string,
-  opts: HubOptsExtended,
-  searchColumns: string[] = ['code', 'name', 'description'],
-): Promise<OrganisationDBRaw[]> => {
-  return listOrganisations(db, withRelations, conditions, opts, undefined, undefined, {
-    q: search,
-    searchColumns,
-    // Ignore hubfilter, cause this is primarily used to configure hub settings
-    ignoreHubFilter: true,
   })
 }
 
@@ -406,21 +407,17 @@ export const updateOrganisationWithRelated = async (
 
 /**
  * Rebuilds form data from database entities
- * @param organisation - The organisation database entity
- * @param translations - Array of organisation translations
- * @param userRoles - Array of organisation user roles with nested user objects
+ * @param organisation - The organisation entity with loaded relations
  * @returns Validated form data
  */
 export const toFormShape = async (
-  organisation: OrganisationDB,
-  i18n: OrganisationI18nNew[],
-  userRoles: OrganisationRoleDB[],
+  organisation: OrganisationDBRaw,
   isSuperAdmin: boolean = false,
 ): Promise<SuperValidated<Organisation>> => {
   const formData: Organisation = {
     ...organisation,
-    i18n: transformI18nSafely(i18n) as Record<Locale, OrganisationI18nNew>,
-    userRoles,
+    i18n: transformI18nSafely(organisation.i18n) as Record<Locale, OrganisationI18nNew>,
+    userRoles: organisation.userRoles,
   }
 
   // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
@@ -432,16 +429,19 @@ export const toFormShape = async (
 }
 
 export const toResponseShape = async (
-  organisation: OrganisationDB,
-  i18n: OrganisationI18nNew[],
-  userRoles: OrganisationRoleDB[],
+  organisation: OrganisationDBRaw,
   isCollection: boolean = false,
   isSuperAdmin: boolean = false,
-) => {
+): Promise<
+  | Organisation
+  | OrganisationSuperAdmin
+  | OrganisationCollection
+  | OrganisationCollectionSuperAdmin
+> => {
   const data: Organisation = {
     ...organisation,
-    i18n: transformI18nSafely(i18n),
-    userRoles,
+    i18n: transformI18nSafely(organisation.i18n),
+    userRoles: organisation.userRoles,
   }
 
   // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
@@ -453,6 +453,37 @@ export const toResponseShape = async (
     return isSuperAdmin
       ? OrganisationSuperAdminAPI.parse(data)
       : OrganisationAPI.parse(data)
+  }
+}
+
+export const toEntityResponseShape = async (
+  organisation: OrganisationDBRaw | null,
+  user?: SessionUser,
+): Promise<EntityResponse<Organisation | OrganisationSuperAdmin>> => {
+  if (!organisation) {
+    return { data: null }
+  }
+
+  const data = await toResponseShape(organisation, false, user?.superAdmin || false)
+  return { data }
+}
+
+export const toListResponseShape = async (
+  result: ListResponse<OrganisationDBRaw>,
+  user: SessionUser | undefined,
+): Promise<ListResponse<OrganisationCollection | OrganisationCollectionSuperAdmin>> => {
+  const { data: organisations, limit, offset, totalCount } = result
+  const data = await Promise.all(
+    organisations.map(organisation =>
+      toResponseShape(organisation, true, user?.superAdmin || false),
+    ),
+  )
+
+  return {
+    data,
+    limit,
+    offset,
+    totalCount,
   }
 }
 
