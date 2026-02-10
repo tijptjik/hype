@@ -1,0 +1,52 @@
+# Repository Guidelines
+
+## Project Structure & Module Organization
+This is a Bun-powered SvelteKit app.
+
+- `src/routes/`: route handlers and pages (`+page.svelte`, `+server.ts`, layouts).
+- `src/lib/`: shared app code (components, auth, DB schema/services, remove functions, API clients, map logic, styles).
+- `src/tests/`: Vitest test files (current pattern: `*.test.ts`).
+- `static/`: public assets and PWA files.
+- `messages/`: i18n message catalogs.
+- `migrations/` and `sql/`: schema migrations, routines, and DB utilities.
+- `scripts/`: maintenance, translation, scraping, and data tooling.
+- `docs/`: architecture, deployment, database, and feature flow docs.
+
+## Build, Test, and Development Commands
+Run all commands with Bun:
+
+- `bun install`: install dependencies.
+- `bun run dev`: start local dev server.
+- `bun run build`: production build (runs Svelte sync + Vite build).
+- `bun run check`: run `svelte-check`.
+- `bun run lint`: run Biome checks with auto-fixes.
+- `bun run format`: format code with Biome.
+- `bun run test:run`: run tests once in CI mode.
+- `bun run test:watch`: run tests in watch mode.
+- `bun run db:migration:new <name>`: create a new Drizzle migration.
+- `bun run db:migration:run:local`: apply local D1 migrations.
+
+## Coding Style & Naming Conventions
+- Formatter/linter: Biome (`biome.json`).
+- Indentation: 2 spaces; line width: 88; LF endings.
+- JavaScript/TypeScript style: single quotes, only use semicolons when needed.
+- Svelte components: `PascalCase.svelte` in `src/lib/components/...`.
+- Route files follow SvelteKit conventions (`+page.svelte`, `+page.ts`, `+server.ts`).
+- Keep domain service modules grouped by entity (`src/lib/db/services/feature.ts`, etc.).
+
+## Testing Guidelines
+- Framework: Vitest with `jsdom` and `@testing-library/jest-dom`.
+- Place tests as `*.test.ts` (prefer `src/tests/` or near related code when useful).
+- Run `bun run test:run` before pushing.
+- Coverage uses V8 + `lcov` output; include tests for new behavior and bug fixes.
+
+## Commit & Pull Request Guidelines
+- Use Conventional Commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`, `perf:`, `style:`, `revert:`.
+- Use `bun run commit` for Commitizen prompts; commit messages are enforced by commitlint.
+- Branch naming is enforced: `type/topic` (for example, `feat/map-filter-sync`).
+- Open PRs to `preview` (not `main`) with:
+  - clear summary and rationale,
+  - linked issue(s),
+  - screenshots/video for UI changes,
+  - notes on migrations, env vars, or deployment impact.
+- Pre-push hooks run branch-name lint and tests; ensure both pass locally.
