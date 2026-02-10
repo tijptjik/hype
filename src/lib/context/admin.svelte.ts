@@ -536,7 +536,8 @@ export class AdminCtx {
 
   tasksQueryFn = async () => {
     const url = this.buildApiUrl(FirstClassResource.task)
-    return fetchOrThrow<Task[]>(url)
+    const tasks = await fetchOrThrow<Task[]>(url)
+    return [...tasks].reverse()
   }
 
   propertiesQueryFn = async () => {
@@ -1567,11 +1568,15 @@ export class AdminCtx {
   }
 
   private filterTaskByStatus = (task: Task, filters: ViewFilters['task']): boolean => {
-    if (filters.isReviewed !== null && task.isReviewed !== filters.isReviewed)
-      return false
+    if (filters.isReviewed !== null) {
+      const filterIsReviewed =
+        filters.isReviewed === true || filters.isReviewed === 'true'
+      const taskIsReviewed =
+        task.isReviewed === true || task.isReviewed === 1 || task.isReviewed === 'true'
+      if (taskIsReviewed !== filterIsReviewed) return false
+    }
     return true
   }
-
   // ═══════════════════════
   // HUB VIEW FILTERS
   // ═══════════════════════
