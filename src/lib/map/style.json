@@ -24,19 +24,7 @@
       "type": "fill",
       "source": "hongkong-latest",
       "source-layer": "water",
-      "filter": [
-        "all",
-        [
-          "==",
-          "$type",
-          "Polygon"
-        ],
-        [
-          "!=",
-          "brunnel",
-          "tunnel"
-        ]
-      ],
+      "filter": ["all", ["==", "$type", "Polygon"], ["!=", "brunnel", "tunnel"]],
       "layout": {
         "visibility": "visible"
       },
@@ -51,19 +39,7 @@
       "source": "hongkong-latest",
       "source-layer": "landuse",
       "maxzoom": 9,
-      "filter": [
-        "all",
-        [
-          "==",
-          "$type",
-          "Polygon"
-        ],
-        [
-          "==",
-          "class",
-          "residential"
-        ]
-      ],
+      "filter": ["all", ["==", "$type", "Polygon"], ["==", "class", "residential"]],
       "layout": {
         "visibility": "visible"
       },
@@ -78,19 +54,7 @@
       "source": "hongkong-latest",
       "source-layer": "landcover",
       "minzoom": 10,
-      "filter": [
-        "all",
-        [
-          "==",
-          "$type",
-          "Polygon"
-        ],
-        [
-          "==",
-          "class",
-          "wood"
-        ]
-      ],
+      "filter": ["all", ["==", "$type", "Polygon"], ["==", "class", "wood"]],
       "layout": {
         "visibility": "visible"
       },
@@ -98,26 +62,10 @@
         "fill-color": "rgb(32,32,32)",
         "fill-opacity": {
           "base": 0.3,
-          "stops": [
-            [
-              8,
-              0
-            ],
-            [
-              10,
-              0.8
-            ],
-            [
-              13,
-              0.4
-            ]
-          ]
+          "stops": [[8, 0], [10, 0.8], [13, 0.4]]
         },
         "fill-pattern": "wood-pattern",
-        "fill-translate": [
-          0,
-          0
-        ]
+        "fill-translate": [0, 0]
       }
     },
     {
@@ -125,19 +73,7 @@
       "type": "fill",
       "source": "hongkong-latest",
       "source-layer": "landuse",
-      "filter": [
-        "all",
-        [
-          "==",
-          "$type",
-          "Polygon"
-        ],
-        [
-          "==",
-          "class",
-          "park"
-        ]
-      ],
+      "filter": ["all", ["==", "$type", "Polygon"], ["==", "class", "park"]],
       "layout": {
         "visibility": "visible"
       },
@@ -150,11 +86,7 @@
       "type": "line",
       "source": "hongkong-latest",
       "source-layer": "waterway",
-      "filter": [
-        "==",
-        "$type",
-        "LineString"
-      ],
+      "filter": ["==", "$type", "LineString"],
       "layout": {
         "visibility": "visible"
       },
@@ -167,18 +99,12 @@
       "type": "symbol",
       "source": "hongkong-latest",
       "source-layer": "water_name",
-      "filter": [
-        "==",
-        "$type",
-        "LineString"
-      ],
+      "filter": ["==", "$type", "LineString"],
       "layout": {
         "symbol-placement": "line",
         "symbol-spacing": 500,
         "text-field": "{name:latin}\n{name:nonlatin}",
-        "text-font": [
-          "Noto Sans Regular"
-        ],
+        "text-font": ["Noto Sans Regular"],
         "text-rotation-alignment": "map",
         "text-size": 12
       },
@@ -194,11 +120,7 @@
       "source-layer": "building",
       "minzoom": 17,
       "maxzoom": 19,
-      "filter": [
-        "==",
-        "$type",
-        "Polygon"
-      ],
+      "filter": ["==", "$type", "Polygon"],
       "paint": {
         "fill-antialias": true,
         "fill-color": "rgb(21,25,30,7)"
@@ -210,11 +132,7 @@
       "source": "hongkong-latest",
       "source-layer": "building",
       "minzoom": 19,
-      "filter": [
-        "==",
-        "$type",
-        "Polygon"
-      ],
+      "filter": ["==", "$type", "Polygon"],
       "paint": {
         "fill-antialias": true,
         "fill-color": "rgb(21,25,30)",
@@ -228,14 +146,7 @@
       "source": "hongkong-latest",
       "source-layer": "aeroway",
       "minzoom": 12,
-      "filter": [
-        "all",
-        [
-          "in",
-          "class",
-          "taxiway"
-        ]
-      ],
+      "filter": ["all", ["in", "class", "taxiway"]],
       "layout": {
         "line-cap": "round",
         "line-join": "round",
@@ -246,16 +157,7 @@
         "line-opacity": 1,
         "line-width": {
           "base": 1.55,
-          "stops": [
-            [
-              13,
-              1.8
-            ],
-            [
-              20,
-              20
-            ]
-          ]
+          "stops": [[13, 1.8], [20, 20]]
         }
       }
     },
@@ -266,14 +168,7 @@
       "source": "hongkong-latest",
       "source-layer": "aeroway",
       "minzoom": 11,
-      "filter": [
-        "all",
-        [
-          "in",
-          "class",
-          "runway"
-        ]
-      ],
+      "filter": ["all", ["in", "class", "runway"]],
       "layout": {
         "line-cap": "round",
         "line-join": "round",
@@ -284,16 +179,7 @@
         "line-opacity": 1,
         "line-width": {
           "base": 1.5,
-          "stops": [
-            [
-              11,
-              5
-            ],
-            [
-              17,
-              55
-            ]
-          ]
+          "stops": [[11, 5], [17, 55]]
         }
       }
     },
@@ -305,17 +191,8 @@
       "minzoom": 4,
       "filter": [
         "all",
-        [
-          "==",
-          "$type",
-          "Polygon"
-        ],
-        [
-          "in",
-          "class",
-          "runway",
-          "taxiway"
-        ]
+        ["==", "$type", "Polygon"],
+        ["in", "class", "runway", "taxiway"]
       ],
       "layout": {
         "visibility": "visible"
@@ -331,19 +208,7 @@
       "source": "hongkong-latest",
       "source-layer": "aeroway",
       "minzoom": 11,
-      "filter": [
-        "all",
-        [
-          "in",
-          "class",
-          "runway"
-        ],
-        [
-          "==",
-          "$type",
-          "LineString"
-        ]
-      ],
+      "filter": ["all", ["in", "class", "runway"], ["==", "$type", "LineString"]],
       "layout": {
         "line-cap": "round",
         "line-join": "round",
@@ -354,16 +219,7 @@
         "line-opacity": 1,
         "line-width": {
           "base": 1.5,
-          "stops": [
-            [
-              11,
-              4
-            ],
-            [
-              17,
-              50
-            ]
-          ]
+          "stops": [[11, 4], [17, 50]]
         }
       }
     },
@@ -373,19 +229,7 @@
       "metadata": {},
       "source": "hongkong-latest",
       "source-layer": "transportation",
-      "filter": [
-        "all",
-        [
-          "==",
-          "$type",
-          "Polygon"
-        ],
-        [
-          "==",
-          "class",
-          "pier"
-        ]
-      ],
+      "filter": ["all", ["==", "$type", "Polygon"], ["==", "class", "pier"]],
       "layout": {
         "visibility": "visible"
       },
@@ -400,19 +244,7 @@
       "metadata": {},
       "source": "hongkong-latest",
       "source-layer": "transportation",
-      "filter": [
-        "all",
-        [
-          "==",
-          "$type",
-          "LineString"
-        ],
-        [
-          "in",
-          "class",
-          "pier"
-        ]
-      ],
+      "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "pier"]],
       "layout": {
         "line-cap": "round",
         "line-join": "round"
@@ -421,16 +253,7 @@
         "line-color": "rgb(12,12,12)",
         "line-width": {
           "base": 1.2,
-          "stops": [
-            [
-              15,
-              1
-            ],
-            [
-              17,
-              4
-            ]
-          ]
+          "stops": [[15, 1], [17, 4]]
         }
       }
     },
@@ -442,19 +265,7 @@
       },
       "source": "hongkong-latest",
       "source-layer": "transportation",
-      "filter": [
-        "all",
-        [
-          "==",
-          "$type",
-          "LineString"
-        ],
-        [
-          "==",
-          "class",
-          "path"
-        ]
-      ],
+      "filter": ["all", ["==", "$type", "LineString"], ["==", "class", "path"]],
       "layout": {
         "line-cap": "round",
         "line-join": "round",
@@ -462,23 +273,11 @@
       },
       "paint": {
         "line-color": "rgb(27 ,27 ,29)",
-        "line-dasharray": [
-          1.5,
-          1.5
-        ],
+        "line-dasharray": [1.5, 1.5],
         "line-opacity": 0.9,
         "line-width": {
           "base": 1.2,
-          "stops": [
-            [
-              13,
-              1
-            ],
-            [
-              20,
-              10
-            ]
-          ]
+          "stops": [[13, 1], [20, 10]]
         }
       }
     },
@@ -493,18 +292,8 @@
       "minzoom": 8,
       "filter": [
         "all",
-        [
-          "==",
-          "$type",
-          "LineString"
-        ],
-        [
-          "in",
-          "class",
-          "minor",
-          "service",
-          "track"
-        ]
+        ["==", "$type", "LineString"],
+        ["in", "class", "minor", "service", "track"]
       ],
       "layout": {
         "line-cap": "round",
@@ -516,16 +305,7 @@
         "line-opacity": 0.9,
         "line-width": {
           "base": 1.55,
-          "stops": [
-            [
-              13,
-              1.8
-            ],
-            [
-              20,
-              20
-            ]
-          ]
+          "stops": [[13, 1.8], [20, 20]]
         }
       }
     },
@@ -540,19 +320,8 @@
       "minzoom": 11,
       "filter": [
         "all",
-        [
-          "==",
-          "$type",
-          "LineString"
-        ],
-        [
-          "in",
-          "class",
-          "primary",
-          "secondary",
-          "tertiary",
-          "trunk"
-        ]
+        ["==", "$type", "LineString"],
+        ["in", "class", "primary", "secondary", "tertiary", "trunk"]
       ],
       "layout": {
         "line-cap": "butt",
@@ -561,22 +330,10 @@
       },
       "paint": {
         "line-color": "rgba(60,60,60,0.8)",
-        "line-dasharray": [
-          12,
-          0
-        ],
+        "line-dasharray": [12, 0],
         "line-width": {
           "base": 1.3,
-          "stops": [
-            [
-              10,
-              3
-            ],
-            [
-              20,
-              23
-            ]
-          ]
+          "stops": [[10, 3], [20, 23]]
         }
       }
     },
@@ -591,19 +348,8 @@
       "minzoom": 11,
       "filter": [
         "all",
-        [
-          "==",
-          "$type",
-          "LineString"
-        ],
-        [
-          "in",
-          "class",
-          "primary",
-          "secondary",
-          "tertiary",
-          "trunk"
-        ]
+        ["==", "$type", "LineString"],
+        ["in", "class", "primary", "secondary", "tertiary", "trunk"]
       ],
       "layout": {
         "line-cap": "round",
@@ -614,16 +360,7 @@
         "line-color": "hsl(0, 0%, 7%)",
         "line-width": {
           "base": 1.3,
-          "stops": [
-            [
-              10,
-              2
-            ],
-            [
-              20,
-              20
-            ]
-          ]
+          "stops": [[10, 2], [20, 20]]
         }
       }
     },
@@ -639,19 +376,8 @@
       "maxzoom": 11,
       "filter": [
         "all",
-        [
-          "==",
-          "$type",
-          "LineString"
-        ],
-        [
-          "in",
-          "class",
-          "primary",
-          "secondary",
-          "tertiary",
-          "trunk"
-        ]
+        ["==", "$type", "LineString"],
+        ["in", "class", "primary", "secondary", "tertiary", "trunk"]
       ],
       "layout": {
         "line-cap": "round",
@@ -661,16 +387,7 @@
       "paint": {
         "line-color": "#2a2a2a",
         "line-width": {
-          "stops": [
-            [
-              6,
-              0
-            ],
-            [
-              8,
-              2
-            ]
-          ]
+          "stops": [[6, 0], [8, 2]]
         }
       }
     },
@@ -683,19 +400,7 @@
       "source": "hongkong-latest",
       "source-layer": "transportation",
       "minzoom": 6,
-      "filter": [
-        "all",
-        [
-          "==",
-          "$type",
-          "LineString"
-        ],
-        [
-          "==",
-          "class",
-          "motorway"
-        ]
-      ],
+      "filter": ["all", ["==", "$type", "LineString"], ["==", "class", "motorway"]],
       "layout": {
         "line-cap": "butt",
         "line-join": "miter",
@@ -703,27 +408,11 @@
       },
       "paint": {
         "line-color": "rgba(60,60,60,0.8)",
-        "line-dasharray": [
-          2,
-          0
-        ],
+        "line-dasharray": [2, 0],
         "line-opacity": 1,
         "line-width": {
           "base": 1.4,
-          "stops": [
-            [
-              5.8,
-              0
-            ],
-            [
-              6,
-              3
-            ],
-            [
-              20,
-              40
-            ]
-          ]
+          "stops": [[5.8, 0], [6, 3], [20, 40]]
         }
       }
     },
@@ -736,19 +425,7 @@
       "source": "hongkong-latest",
       "source-layer": "transportation",
       "minzoom": 6,
-      "filter": [
-        "all",
-        [
-          "==",
-          "$type",
-          "LineString"
-        ],
-        [
-          "==",
-          "class",
-          "motorway"
-        ]
-      ],
+      "filter": ["all", ["==", "$type", "LineString"], ["==", "class", "motorway"]],
       "layout": {
         "line-cap": "round",
         "line-join": "round",
@@ -757,33 +434,11 @@
       "paint": {
         "line-color": {
           "base": 1,
-          "stops": [
-            [
-              5.8,
-              "hsla(0, 0%, 85%, 0.53)"
-            ],
-            [
-              6,
-              "#000"
-            ]
-          ]
+          "stops": [[5.8, "hsla(0, 0%, 85%, 0.53)"], [6, "#000"]]
         },
         "line-width": {
           "base": 1.4,
-          "stops": [
-            [
-              4,
-              2
-            ],
-            [
-              6,
-              1.3
-            ],
-            [
-              20,
-              30
-            ]
-          ]
+          "stops": [[4, 2], [6, 1.3], [20, 30]]
         }
       }
     },
@@ -793,14 +448,7 @@
       "source": "hongkong-latest",
       "source-layer": "transportation",
       "minzoom": 15,
-      "filter": [
-        "all",
-        [
-          "==",
-          "oneway",
-          1
-        ]
-      ],
+      "filter": ["all", ["==", "oneway", 1]],
       "layout": {
         "symbol-placement": "line",
         "icon-image": "oneway",
@@ -809,16 +457,7 @@
         "icon-rotation-alignment": "map",
         "icon-rotate": 0,
         "icon-size": {
-          "stops": [
-            [
-              15,
-              0.5
-            ],
-            [
-              19,
-              1
-            ]
-          ]
+          "stops": [[15, 0.5], [19, 1]]
         }
       },
       "paint": {
@@ -831,14 +470,7 @@
       "source": "hongkong-latest",
       "source-layer": "transportation",
       "minzoom": 15,
-      "filter": [
-        "all",
-        [
-          "==",
-          "oneway",
-          -1
-        ]
-      ],
+      "filter": ["all", ["==", "oneway", -1]],
       "layout": {
         "symbol-placement": "line",
         "icon-image": "oneway",
@@ -847,16 +479,7 @@
         "icon-rotation-alignment": "map",
         "icon-rotate": 180,
         "icon-size": {
-          "stops": [
-            [
-              15,
-              0.5
-            ],
-            [
-              19,
-              1
-            ]
-          ]
+          "stops": [[15, 0.5], [19, 1]]
         }
       },
       "paint": {
@@ -872,19 +495,7 @@
       "source": "hongkong-latest",
       "source-layer": "transportation",
       "maxzoom": 6,
-      "filter": [
-        "all",
-        [
-          "==",
-          "$type",
-          "LineString"
-        ],
-        [
-          "==",
-          "class",
-          "motorway"
-        ]
-      ],
+      "filter": ["all", ["==", "$type", "LineString"], ["==", "class", "motorway"]],
       "layout": {
         "line-cap": "round",
         "line-join": "round",
@@ -894,16 +505,7 @@
         "line-color": "#181818",
         "line-width": {
           "base": 1.4,
-          "stops": [
-            [
-              4,
-              2
-            ],
-            [
-              6,
-              1.3
-            ]
-          ]
+          "stops": [[4, 2], [6, 1.3]]
         }
       }
     },
@@ -918,24 +520,8 @@
       "minzoom": 16,
       "filter": [
         "all",
-        [
-          "==",
-          "$type",
-          "LineString"
-        ],
-        [
-          "all",
-          [
-            "==",
-            "class",
-            "transit"
-          ],
-          [
-            "!in",
-            "brunnel",
-            "tunnel"
-          ]
-        ]
+        ["==", "$type", "LineString"],
+        ["all", ["==", "class", "transit"], ["!in", "brunnel", "tunnel"]]
       ],
       "layout": {
         "line-join": "round",
@@ -957,24 +543,8 @@
       "minzoom": 16,
       "filter": [
         "all",
-        [
-          "==",
-          "$type",
-          "LineString"
-        ],
-        [
-          "all",
-          [
-            "==",
-            "class",
-            "transit"
-          ],
-          [
-            "!in",
-            "brunnel",
-            "tunnel"
-          ]
-        ]
+        ["==", "$type", "LineString"],
+        ["all", ["==", "class", "transit"], ["!in", "brunnel", "tunnel"]]
       ],
       "layout": {
         "line-join": "round",
@@ -982,10 +552,7 @@
       },
       "paint": {
         "line-color": "rgb(12,12,12)",
-        "line-dasharray": [
-          3,
-          3
-        ],
+        "line-dasharray": [3, 3],
         "line-width": 2
       }
     },
@@ -1000,23 +567,8 @@
       "minzoom": 16,
       "filter": [
         "all",
-        [
-          "==",
-          "$type",
-          "LineString"
-        ],
-        [
-          "all",
-          [
-            "==",
-            "class",
-            "rail"
-          ],
-          [
-            "has",
-            "service"
-          ]
-        ]
+        ["==", "$type", "LineString"],
+        ["all", ["==", "class", "rail"], ["has", "service"]]
       ],
       "layout": {
         "line-join": "round",
@@ -1038,23 +590,8 @@
       "minzoom": 16,
       "filter": [
         "all",
-        [
-          "==",
-          "$type",
-          "LineString"
-        ],
-        [
-          "all",
-          [
-            "==",
-            "class",
-            "rail"
-          ],
-          [
-            "has",
-            "service"
-          ]
-        ]
+        ["==", "$type", "LineString"],
+        ["all", ["==", "class", "rail"], ["has", "service"]]
       ],
       "layout": {
         "line-join": "round",
@@ -1062,10 +599,7 @@
       },
       "paint": {
         "line-color": "rgb(12,12,12)",
-        "line-dasharray": [
-          3,
-          3
-        ],
+        "line-dasharray": [3, 3],
         "line-width": 2
       }
     },
@@ -1080,20 +614,9 @@
       "minzoom": 13,
       "filter": [
         "all",
-        [
-          "==",
-          "$type",
-          "LineString"
-        ],
-        [
-          "==",
-          "class",
-          "rail"
-        ],
-        [
-          "!has",
-          "service"
-        ]
+        ["==", "$type", "LineString"],
+        ["==", "class", "rail"],
+        ["!has", "service"]
       ],
       "layout": {
         "line-join": "round",
@@ -1103,16 +626,7 @@
         "line-color": "rgb(35,35,35)",
         "line-width": {
           "base": 1.3,
-          "stops": [
-            [
-              16,
-              3
-            ],
-            [
-              20,
-              7
-            ]
-          ]
+          "stops": [[16, 3], [20, 7]]
         }
       }
     },
@@ -1127,20 +641,9 @@
       "minzoom": 13,
       "filter": [
         "all",
-        [
-          "==",
-          "$type",
-          "LineString"
-        ],
-        [
-          "==",
-          "class",
-          "rail"
-        ],
-        [
-          "!has",
-          "service"
-        ]
+        ["==", "$type", "LineString"],
+        ["==", "class", "rail"],
+        ["!has", "service"]
       ],
       "layout": {
         "line-join": "round",
@@ -1148,22 +651,10 @@
       },
       "paint": {
         "line-color": "rgb(12,12,12)",
-        "line-dasharray": [
-          3,
-          3
-        ],
+        "line-dasharray": [3, 3],
         "line-width": {
           "base": 1.3,
-          "stops": [
-            [
-              16,
-              2
-            ],
-            [
-              20,
-              6
-            ]
-          ]
+          "stops": [[16, 2], [20, 6]]
         }
       }
     },
@@ -1175,26 +666,12 @@
       },
       "source": "hongkong-latest",
       "source-layer": "transportation_name",
-      "filter": [
-        "all",
-        [
-          "!=",
-          "class",
-          "motorway"
-        ],
-        [
-          "==",
-          "$type",
-          "LineString"
-        ]
-      ],
+      "filter": ["all", ["!=", "class", "motorway"], ["==", "$type", "LineString"]],
       "layout": {
         "symbol-placement": "line",
         "symbol-spacing": 350,
         "text-field": "{name:latin} {name:nonlatin}",
-        "text-font": [
-          "Noto Sans Regular"
-        ],
+        "text-font": ["Noto Sans Regular"],
         "text-max-angle": 30,
         "text-pitch-alignment": "viewport",
         "text-rotation-alignment": "map",
@@ -1207,10 +684,7 @@
         "text-halo-blur": 0,
         "text-halo-color": "rgba(0, 0, 0, 1)",
         "text-halo-width": 1,
-        "text-translate": [
-          0,
-          0
-        ]
+        "text-translate": [0, 0]
       }
     },
     {
@@ -1221,26 +695,12 @@
       },
       "source": "hongkong-latest",
       "source-layer": "transportation_name",
-      "filter": [
-        "all",
-        [
-          "==",
-          "$type",
-          "LineString"
-        ],
-        [
-          "==",
-          "class",
-          "motorway"
-        ]
-      ],
+      "filter": ["all", ["==", "$type", "LineString"], ["==", "class", "motorway"]],
       "layout": {
         "symbol-placement": "line",
         "symbol-spacing": 350,
         "text-field": "{ref}",
-        "text-font": [
-          "Noto Sans Regular"
-        ],
+        "text-font": ["Noto Sans Regular"],
         "text-pitch-alignment": "viewport",
         "text-rotation-alignment": "viewport",
         "text-size": 10,
@@ -1248,10 +708,7 @@
       },
       "paint": {
         "text-color": "hsl(0, 0%, 37%)",
-        "text-translate": [
-          0,
-          2
-        ]
+        "text-translate": [0, 2]
       }
     },
     {
@@ -1262,11 +719,7 @@
       },
       "source": "hongkong-latest",
       "source-layer": "boundary",
-      "filter": [
-        "==",
-        "admin_level",
-        4
-      ],
+      "filter": ["==", "admin_level", 4],
       "layout": {
         "line-cap": "round",
         "line-join": "round",
@@ -1275,23 +728,11 @@
       "paint": {
         "line-blur": 0.4,
         "line-color": "hsl(0, 0%, 21%)",
-        "line-dasharray": [
-          2,
-          2
-        ],
+        "line-dasharray": [2, 2],
         "line-opacity": 1,
         "line-width": {
           "base": 1.3,
-          "stops": [
-            [
-              3,
-              1
-            ],
-            [
-              22,
-              15
-            ]
-          ]
+          "stops": [[3, 1], [22, 15]]
         }
       }
     },
@@ -1304,18 +745,7 @@
       "source": "hongkong-latest",
       "source-layer": "boundary",
       "maxzoom": 5,
-      "filter": [
-        "all",
-        [
-          "==",
-          "admin_level",
-          2
-        ],
-        [
-          "!has",
-          "claimed_by"
-        ]
-      ],
+      "filter": ["all", ["==", "admin_level", 2], ["!has", "claimed_by"]],
       "layout": {
         "line-cap": "round",
         "line-join": "round"
@@ -1323,31 +753,13 @@
       "paint": {
         "line-blur": {
           "base": 1,
-          "stops": [
-            [
-              0,
-              0.4
-            ],
-            [
-              22,
-              4
-            ]
-          ]
+          "stops": [[0, 0.4], [22, 4]]
         },
         "line-color": "hsl(0, 0%, 23%)",
         "line-opacity": 1,
         "line-width": {
           "base": 1.1,
-          "stops": [
-            [
-              3,
-              1
-            ],
-            [
-              22,
-              20
-            ]
-          ]
+          "stops": [[3, 1], [22, 20]]
         }
       }
     },
@@ -1360,11 +772,7 @@
       "source": "hongkong-latest",
       "source-layer": "boundary",
       "minzoom": 5,
-      "filter": [
-        "==",
-        "admin_level",
-        2
-      ],
+      "filter": ["==", "admin_level", 2],
       "layout": {
         "line-cap": "round",
         "line-join": "round"
@@ -1372,31 +780,13 @@
       "paint": {
         "line-blur": {
           "base": 1,
-          "stops": [
-            [
-              0,
-              0.4
-            ],
-            [
-              22,
-              4
-            ]
-          ]
+          "stops": [[0, 0.4], [22, 4]]
         },
         "line-color": "hsl(0, 0%, 23%)",
         "line-opacity": 1,
         "line-width": {
           "base": 1.1,
-          "stops": [
-            [
-              3,
-              1
-            ],
-            [
-              22,
-              20
-            ]
-          ]
+          "stops": [[3, 1], [22, 20]]
         }
       }
     },
@@ -1411,30 +801,15 @@
       "maxzoom": 14,
       "filter": [
         "all",
-        [
-          "==",
-          "$type",
-          "Point"
-        ],
-        [
-          "in",
-          "class",
-          "hamlet",
-          "isolated_dwelling",
-          "neighbourhood"
-        ]
+        ["==", "$type", "Point"],
+        ["in", "class", "hamlet", "isolated_dwelling", "neighbourhood"]
       ],
       "layout": {
         "text-anchor": "center",
         "text-field": "{name:latin}\n{name:nonlatin}",
-        "text-font": [
-          "Noto Sans Regular"
-        ],
+        "text-font": ["Noto Sans Regular"],
         "text-justify": "center",
-        "text-offset": [
-          0.5,
-          0
-        ],
+        "text-offset": [0.5, 0],
         "text-size": 10,
         "text-transform": "uppercase",
         "visibility": "visible"
@@ -1455,30 +830,13 @@
       "source": "hongkong-latest",
       "source-layer": "place",
       "maxzoom": 15,
-      "filter": [
-        "all",
-        [
-          "==",
-          "$type",
-          "Point"
-        ],
-        [
-          "==",
-          "class",
-          "suburb"
-        ]
-      ],
+      "filter": ["all", ["==", "$type", "Point"], ["==", "class", "suburb"]],
       "layout": {
         "text-anchor": "center",
         "text-field": "{name:latin}\n{name:nonlatin}",
-        "text-font": [
-          "Noto Sans Regular"
-        ],
+        "text-font": ["Noto Sans Regular"],
         "text-justify": "center",
-        "text-offset": [
-          0.5,
-          0
-        ],
+        "text-offset": [0.5, 0],
         "text-size": 10,
         "text-transform": "uppercase",
         "visibility": "visible"
@@ -1499,31 +857,14 @@
       "source": "hongkong-latest",
       "source-layer": "place",
       "maxzoom": 14,
-      "filter": [
-        "all",
-        [
-          "==",
-          "$type",
-          "Point"
-        ],
-        [
-          "==",
-          "class",
-          "village"
-        ]
-      ],
+      "filter": ["all", ["==", "$type", "Point"], ["==", "class", "village"]],
       "layout": {
         "icon-size": 0.4,
         "text-anchor": "left",
         "text-field": "{name:latin}\n{name:nonlatin}",
-        "text-font": [
-          "Noto Sans Regular"
-        ],
+        "text-font": ["Noto Sans Regular"],
         "text-justify": "left",
-        "text-offset": [
-          0.5,
-          0.2
-        ],
+        "text-offset": [0.5, 0.2],
         "text-size": 10,
         "text-transform": "uppercase",
         "visibility": "visible"
@@ -1545,56 +886,21 @@
       "source": "hongkong-latest",
       "source-layer": "place",
       "maxzoom": 15,
-      "filter": [
-        "all",
-        [
-          "==",
-          "$type",
-          "Point"
-        ],
-        [
-          "==",
-          "class",
-          "town"
-        ]
-      ],
+      "filter": ["all", ["==", "$type", "Point"], ["==", "class", "town"]],
       "layout": {
         "icon-image": {
           "base": 1,
-          "stops": [
-            [
-              0,
-              "circle-11"
-            ],
-            [
-              9,
-              ""
-            ]
-          ]
+          "stops": [[0, "circle-11"], [9, ""]]
         },
         "icon-size": 0.4,
         "text-anchor": {
           "base": 1,
-          "stops": [
-            [
-              0,
-              "left"
-            ],
-            [
-              8,
-              "center"
-            ]
-          ]
+          "stops": [[0, "left"], [8, "center"]]
         },
         "text-field": "{name:latin}\n{name:nonlatin}",
-        "text-font": [
-          "Noto Sans Regular"
-        ],
+        "text-font": ["Noto Sans Regular"],
         "text-justify": "left",
-        "text-offset": [
-          0.5,
-          0.2
-        ],
+        "text-offset": [0.5, 0.2],
         "text-size": 10,
         "text-transform": "uppercase",
         "visibility": "visible"
@@ -1618,59 +924,24 @@
       "maxzoom": 14,
       "filter": [
         "all",
-        [
-          "==",
-          "$type",
-          "Point"
-        ],
-        [
-          "==",
-          "class",
-          "city"
-        ],
-        [
-          ">",
-          "rank",
-          3
-        ]
+        ["==", "$type", "Point"],
+        ["==", "class", "city"],
+        [">", "rank", 3]
       ],
       "layout": {
         "icon-image": {
           "base": 1,
-          "stops": [
-            [
-              0,
-              "circle-11"
-            ],
-            [
-              9,
-              ""
-            ]
-          ]
+          "stops": [[0, "circle-11"], [9, ""]]
         },
         "icon-size": 0.4,
         "text-anchor": {
           "base": 1,
-          "stops": [
-            [
-              0,
-              "left"
-            ],
-            [
-              8,
-              "center"
-            ]
-          ]
+          "stops": [[0, "left"], [8, "center"]]
         },
         "text-field": "{name:latin}\n{name:nonlatin}",
-        "text-font": [
-          "Noto Sans Regular"
-        ],
+        "text-font": ["Noto Sans Regular"],
         "text-justify": "left",
-        "text-offset": [
-          0.5,
-          0.2
-        ],
+        "text-offset": [0.5, 0.2],
         "text-size": 10,
         "text-transform": "uppercase",
         "visibility": "visible"
@@ -1694,59 +965,24 @@
       "maxzoom": 12,
       "filter": [
         "all",
-        [
-          "==",
-          "$type",
-          "Point"
-        ],
-        [
-          "<=",
-          "rank",
-          3
-        ],
-        [
-          "==",
-          "class",
-          "city"
-        ]
+        ["==", "$type", "Point"],
+        ["<=", "rank", 3],
+        ["==", "class", "city"]
       ],
       "layout": {
         "icon-image": {
           "base": 1,
-          "stops": [
-            [
-              0,
-              "circle-11"
-            ],
-            [
-              9,
-              ""
-            ]
-          ]
+          "stops": [[0, "circle-11"], [9, ""]]
         },
         "icon-size": 0.4,
         "text-anchor": {
           "base": 1,
-          "stops": [
-            [
-              0,
-              "left"
-            ],
-            [
-              8,
-              "center"
-            ]
-          ]
+          "stops": [[0, "left"], [8, "center"]]
         },
         "text-field": "{name:latin}\n{name:nonlatin}",
-        "text-font": [
-          "Noto Sans Regular"
-        ],
+        "text-font": ["Noto Sans Regular"],
         "text-justify": "left",
-        "text-offset": [
-          0.5,
-          0.2
-        ],
+        "text-offset": [0.5, 0.2],
         "text-size": 14,
         "text-transform": "uppercase",
         "visibility": "visible"
@@ -1768,24 +1004,10 @@
       "source": "hongkong-latest",
       "source-layer": "place",
       "maxzoom": 12,
-      "filter": [
-        "all",
-        [
-          "==",
-          "$type",
-          "Point"
-        ],
-        [
-          "==",
-          "class",
-          "state"
-        ]
-      ],
+      "filter": ["all", ["==", "$type", "Point"], ["==", "class", "state"]],
       "layout": {
         "text-field": "{name:latin}\n{name:nonlatin}",
-        "text-font": [
-          "Noto Sans Regular"
-        ],
+        "text-font": ["Noto Sans Regular"],
         "text-size": 10,
         "text-transform": "uppercase",
         "visibility": "visible"
@@ -1808,38 +1030,16 @@
       "maxzoom": 8,
       "filter": [
         "all",
-        [
-          "==",
-          "$type",
-          "Point"
-        ],
-        [
-          "==",
-          "class",
-          "country"
-        ],
-        [
-          "!has",
-          "iso_a2"
-        ]
+        ["==", "$type", "Point"],
+        ["==", "class", "country"],
+        ["!has", "iso_a2"]
       ],
       "layout": {
         "text-field": "{name:latin}",
-        "text-font": [
-          "Noto Sans Regular"
-        ],
+        "text-font": ["Noto Sans Regular"],
         "text-size": {
           "base": 1,
-          "stops": [
-            [
-              0,
-              9
-            ],
-            [
-              1,
-              11
-            ]
-          ]
+          "stops": [[0, 9], [1, 11]]
         },
         "text-transform": "uppercase",
         "visibility": "visible"
@@ -1861,43 +1061,17 @@
       "maxzoom": 8,
       "filter": [
         "all",
-        [
-          "==",
-          "$type",
-          "Point"
-        ],
-        [
-          "==",
-          "class",
-          "country"
-        ],
-        [
-          ">=",
-          "rank",
-          2
-        ],
-        [
-          "has",
-          "iso_a2"
-        ]
+        ["==", "$type", "Point"],
+        ["==", "class", "country"],
+        [">=", "rank", 2],
+        ["has", "iso_a2"]
       ],
       "layout": {
         "text-field": "{name:latin}",
-        "text-font": [
-          "Noto Sans Regular"
-        ],
+        "text-font": ["Noto Sans Regular"],
         "text-size": {
           "base": 1,
-          "stops": [
-            [
-              0,
-              10
-            ],
-            [
-              6,
-              12
-            ]
-          ]
+          "stops": [[0, 10], [6, 12]]
         },
         "text-transform": "uppercase",
         "visibility": "visible"
@@ -1919,48 +1093,18 @@
       "maxzoom": 6,
       "filter": [
         "all",
-        [
-          "==",
-          "$type",
-          "Point"
-        ],
-        [
-          "<=",
-          "rank",
-          1
-        ],
-        [
-          "==",
-          "class",
-          "country"
-        ],
-        [
-          "has",
-          "iso_a2"
-        ]
+        ["==", "$type", "Point"],
+        ["<=", "rank", 1],
+        ["==", "class", "country"],
+        ["has", "iso_a2"]
       ],
       "layout": {
         "text-anchor": "center",
         "text-field": "{name:latin}",
-        "text-font": [
-          "Noto Sans Regular"
-        ],
+        "text-font": ["Noto Sans Regular"],
         "text-size": {
           "base": 1.4,
-          "stops": [
-            [
-              0,
-              10
-            ],
-            [
-              3,
-              12
-            ],
-            [
-              4,
-              14
-            ]
-          ]
+          "stops": [[0, 10], [3, 12], [4, 14]]
         },
         "text-transform": "uppercase",
         "visibility": "visible"
@@ -1981,14 +1125,9 @@
         "icon-size": 0.4,
         "text-anchor": "left",
         "text-field": "{name:latin}\n{name:nonlatin}",
-        "text-font": [
-          "Noto Sans Regular"
-        ],
+        "text-font": ["Noto Sans Regular"],
         "text-justify": "left",
-        "text-offset": [
-          0.5,
-          0.2
-        ],
+        "text-offset": [0.5, 0.2],
         "text-size": 10,
         "text-transform": "uppercase",
         "visibility": "visible"
@@ -2011,9 +1150,7 @@
         "icon-size": 0.4,
         "text-anchor": "left",
         "text-field": "{housenumber}",
-        "text-font": [
-          "Noto Sans Regular"
-        ],
+        "text-font": ["Noto Sans Regular"],
         "text-justify": "left",
         "text-size": 10,
         "text-transform": "uppercase",

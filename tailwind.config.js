@@ -1,11 +1,11 @@
-import plugin from 'tailwindcss/plugin';
-import colors from 'tailwindcss/colors';
+import plugin from 'tailwindcss/plugin'
+import colors from 'tailwindcss/colors'
 // removing old colors
-delete colors.lightBlue;
-delete colors.warmGray;
-delete colors.trueGray;
-delete colors.coolGray;
-delete colors.blueGray;
+delete colors.lightBlue
+delete colors.warmGray
+delete colors.trueGray
+delete colors.coolGray
+delete colors.blueGray
 
 export default {
   content: ['./src/**/*.{html,svelte,js,ts}'],
@@ -16,7 +16,7 @@ export default {
       hans: ['Noto Sans SC', 'sans-serif'],
       admin: ['Geologica', 'sans-serif'],
       serif: ['Merriweather', 'serif'],
-      mono: ['IBM Plex Mono', 'monospace']
+      mono: ['IBM Plex Mono', 'monospace'],
     },
     colors: {
       ...colors,
@@ -36,17 +36,17 @@ export default {
       'glass-accepted': '#6ba279',
       'glass-salmon': '#ffad9a',
       'glass-salmon-dark': '#2b092282',
-      'glass-base': 'rgba(88, 85, 113, 0.71)'
+      'glass-base': 'rgba(88, 85, 113, 0.71)',
     },
     extend: {
       borderStyle: ['hover'],
       transitionDuration: {
         1500: '1500ms',
-        2000: '2000ms'
+        2000: '2000ms',
       },
       transitionDelay: {
         1500: '1500ms',
-        2000: '2000ms'
+        2000: '2000ms',
       },
       screens: {
         '3xl': '1800px',
@@ -73,11 +73,11 @@ export default {
         'w-384': { raw: '(min-width: 1536px)' },
         'w-512': { raw: '(min-width: 2048px)' },
         'w-640': { raw: '(min-width: 2560px)' },
-        'w-768': { raw: '(min-width: 3072px)' }
+        'w-768': { raw: '(min-width: 3072px)' },
       },
       borderWidth: {
         1: '1px',
-        3: '3px'
+        3: '3px',
       },
       colors: {
         'gradient-end': 'hsl(var(--fuchsia-800))', // color-variable
@@ -85,33 +85,33 @@ export default {
         secondary: '#7482FF', // color-variable
         ok: 'rgb(62, 173, 142)', // color-variable
         pending: '#e0c285', // color-variable
-        error: 'rgb(223, 69, 69)' // color-variable
+        error: 'rgb(223, 69, 69)', // color-variable
       },
       fontSize: {
         '2xs': '0.625rem',
-        '3xs': '0.55rem'
+        '3xs': '0.55rem',
       },
       height: {
         0.25: '0.0625rem',
-        17.5: '4.375rem'
+        17.5: '4.375rem',
       },
       width: {
-        17.5: '4.375rem'
+        17.5: '4.375rem',
       },
       minHeight: {
         200: '50rem', // 800px
-        250: '62.5rem' // 1000px
+        250: '62.5rem', // 1000px
       },
       minWidth: {
         200: '50rem', // 800px
-        250: '62.5rem' // 1000px
+        250: '62.5rem', // 1000px
       },
       flexBasis: {
         '1/3-gap-4': 'calc(33.3% - 16px)',
         '1/2-gap-4': 'calc(50% - 16px)',
-        '1/1': '100%'
-      }
-    }
+        '1/1': '100%',
+      },
+    },
   },
   // daisyUI config
   daisyui: {
@@ -153,29 +153,29 @@ export default {
           // Borders
           '--border-btn': '1px', // border width of buttons
           '--tab-border': '1px', // border width of tabs
-          '--border-focus': '2px' // border width of focus
-        }
+          '--border-focus': '2px', // border width of focus
+        },
       },
       'dark',
-      'emerald'
-    ]
+      'emerald',
+    ],
   },
   plugins: [
     require('tailwindcss-unimportant'),
     require('@tailwindcss/container-queries'),
     require('@tailwindcss/typography'),
     require('daisyui'),
-    plugin(function ({ addUtilities }) {
+    plugin(({ addUtilities }) => {
       addUtilities({
         '.drag-none': {
           '-webkit-user-drag': 'none',
           '-khtml-user-drag': 'none',
           '-moz-user-drag': 'none',
           '-o-user-drag': 'none',
-          'user-drag': 'none'
-        }
-      });
-    })
+          'user-drag': 'none',
+        },
+      })
+    }),
   ],
-  darkMode: ['class', '[data-theme="spectre"]']
-};
+  darkMode: ['class', '[data-theme="spectre"]'],
+}

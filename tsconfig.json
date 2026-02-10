@@ -11,7 +11,5 @@
     "strict": true,
     "moduleResolution": "node"
   },
-  "exclude": [
-    "src/lib/paraglide/**/*"
-  ]
+  "exclude": ["src/lib/paraglide/**/*"]
 }

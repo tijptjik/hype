@@ -73,11 +73,7 @@
             ]
           ],
           "#181818",
-          [
-            "in",
-            ["get", "kind"],
-            ["literal", ["wood", "nature_reserve", "forest"]]
-          ],
+          ["in", ["get", "kind"], ["literal", ["wood", "nature_reserve", "forest"]]],
           "#1a1a1a",
           ["in", ["get", "kind"], ["literal", ["scrub", "grassland", "grass"]]],
           "#1c1c1c",
@@ -85,11 +81,7 @@
           "#191919",
           ["in", ["get", "kind"], ["literal", ["sand"]]],
           "#161616",
-          [
-            "in",
-            ["get", "kind"],
-            ["literal", ["military", "naval_base", "airfield"]]
-          ],
+          ["in", ["get", "kind"], ["literal", ["military", "naval_base", "airfield"]]],
           "#191919",
           "#141414"
         ]
@@ -265,15 +257,7 @@
       "filter": ["all", ["has", "is_tunnel"], ["in", "kind", "other", "path"]],
       "paint": {
         "line-color": "#101010",
-        "line-gap-width": [
-          "interpolate",
-          ["exponential", 1.6],
-          ["zoom"],
-          14,
-          0,
-          20,
-          7
-        ]
+        "line-gap-width": ["interpolate", ["exponential", 1.6], ["zoom"], 14, 0, 20, 7]
       }
     },
     {
@@ -298,15 +282,7 @@
           18,
           11
         ],
-        "line-width": [
-          "interpolate",
-          ["exponential", 1.6],
-          ["zoom"],
-          12,
-          0,
-          12.5,
-          1
-        ]
+        "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 12, 0, 12.5, 1]
       }
     },
     {
@@ -329,15 +305,7 @@
           18,
           11
         ],
-        "line-width": [
-          "interpolate",
-          ["exponential", 1.6],
-          ["zoom"],
-          12,
-          0,
-          12.5,
-          1
-        ]
+        "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 12, 0, 12.5, 1]
       }
     },
     {
@@ -365,15 +333,7 @@
           18,
           13
         ],
-        "line-width": [
-          "interpolate",
-          ["exponential", 1.6],
-          ["zoom"],
-          9,
-          0,
-          9.5,
-          1
-        ]
+        "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 9, 0, 9.5, 1]
       }
     },
     {
@@ -424,15 +384,7 @@
       "paint": {
         "line-color": "#292929",
         "line-dasharray": [4.5, 0.5],
-        "line-width": [
-          "interpolate",
-          ["exponential", 1.6],
-          ["zoom"],
-          14,
-          0,
-          20,
-          7
-        ]
+        "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 14, 0, 20, 7]
       }
     },
     {
@@ -542,10 +494,7 @@
         "fill-color": "rgba(15, 14, 14, 1)",
         "fill-opacity": 0.5,
         "fill-outline-color": {
-          "stops": [
-            [16, "rgba(13, 13, 13, 1)"],
-            [20, "rgba(240, 77, 127, 0.66)"]
-          ]
+          "stops": [[16, "rgba(13, 13, 13, 1)"], [20, "rgba(240, 77, 127, 0.66)"]]
         }
       }
     },
@@ -566,19 +515,7 @@
           20,
           "rgba(230, 58, 94, 1)"
         ],
-        "line-width": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          17,
-          1,
-          19,
-          2,
-          21,
-          3,
-          23,
-          5
-        ],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 17, 1, 19, 2, 21, 3, 23, 5],
         "line-opacity": 0.8
       }
     },
@@ -618,24 +555,8 @@
       ],
       "paint": {
         "line-color": "#141414",
-        "line-gap-width": [
-          "interpolate",
-          ["exponential", 1.6],
-          ["zoom"],
-          13,
-          0,
-          18,
-          8
-        ],
-        "line-width": [
-          "interpolate",
-          ["exponential", 1.6],
-          ["zoom"],
-          13,
-          0,
-          13.5,
-          0.8
-        ]
+        "line-gap-width": ["interpolate", ["exponential", 1.6], ["zoom"], 13, 0, 18, 8],
+        "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 13, 0, 13.5, 0.8]
       }
     },
     {
@@ -665,15 +586,7 @@
           18,
           11
         ],
-        "line-width": [
-          "interpolate",
-          ["exponential", 1.6],
-          ["zoom"],
-          12,
-          0,
-          12.5,
-          1
-        ]
+        "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 12, 0, 12.5, 1]
       }
     },
     {
@@ -696,15 +609,7 @@
           18,
           11
         ],
-        "line-width": [
-          "interpolate",
-          ["exponential", 1.6],
-          ["zoom"],
-          13,
-          0,
-          13.5,
-          1.5
-        ]
+        "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 13, 0, 13.5, 1.5]
       }
     },
     {
@@ -734,15 +639,7 @@
           18,
           13
         ],
-        "line-width": [
-          "interpolate",
-          ["exponential", 1.6],
-          ["zoom"],
-          9,
-          0,
-          9.5,
-          1
-        ]
+        "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 9, 0, 9.5, 1]
       }
     },
     {
@@ -799,15 +696,7 @@
       "paint": {
         "line-color": "#1f1f1f",
         "line-dasharray": [3, 1],
-        "line-width": [
-          "interpolate",
-          ["exponential", 1.6],
-          ["zoom"],
-          14,
-          0,
-          20,
-          7
-        ]
+        "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 14, 0, 20, 7]
       }
     },
     {
@@ -845,15 +734,7 @@
       ],
       "paint": {
         "line-color": "#1f1f1f",
-        "line-width": [
-          "interpolate",
-          ["exponential", 1.6],
-          ["zoom"],
-          13,
-          0,
-          18,
-          8
-        ]
+        "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 13, 0, 18, 8]
       }
     },
     {
@@ -918,15 +799,7 @@
           18,
           13
         ],
-        "line-width": [
-          "interpolate",
-          ["exponential", 1.6],
-          ["zoom"],
-          9,
-          0,
-          9.5,
-          1
-        ]
+        "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 9, 0, 9.5, 1]
       }
     },
     {
@@ -983,15 +856,7 @@
           18,
           15
         ],
-        "line-width": [
-          "interpolate",
-          ["exponential", 1.6],
-          ["zoom"],
-          7,
-          0,
-          7.5,
-          1
-        ]
+        "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 7, 0, 7.5, 1]
       }
     },
     {
@@ -1057,13 +922,7 @@
       "paint": {
         "line-color": "#707070",
         "line-width": 0.7,
-        "line-dasharray": [
-          "step",
-          ["zoom"],
-          ["literal", [2]],
-          4,
-          ["literal", [2, 1]]
-        ]
+        "line-dasharray": ["step", ["zoom"], ["literal", [2]], 4, ["literal", [2, 1]]]
       }
     },
     {
@@ -1075,13 +934,7 @@
       "paint": {
         "line-color": "#707070",
         "line-width": 0.4,
-        "line-dasharray": [
-          "step",
-          ["zoom"],
-          ["literal", [2]],
-          4,
-          ["literal", [2, 1]]
-        ]
+        "line-dasharray": ["step", ["zoom"], ["literal", [2]], 4, ["literal", [2, 1]]]
       }
     },
     {
@@ -1093,15 +946,7 @@
       "filter": ["all", ["has", "is_bridge"], ["in", "kind", "other", "path"]],
       "paint": {
         "line-color": "#141414",
-        "line-gap-width": [
-          "interpolate",
-          ["exponential", 1.6],
-          ["zoom"],
-          14,
-          0,
-          20,
-          7
-        ]
+        "line-gap-width": ["interpolate", ["exponential", 1.6], ["zoom"], 14, 0, 20, 7]
       }
     },
     {
@@ -1124,15 +969,7 @@
           18,
           11
         ],
-        "line-width": [
-          "interpolate",
-          ["exponential", 1.6],
-          ["zoom"],
-          12,
-          0,
-          12.5,
-          1.5
-        ]
+        "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 12, 0, 12.5, 1.5]
       }
     },
     {
@@ -1157,15 +994,7 @@
           18,
           11
         ],
-        "line-width": [
-          "interpolate",
-          ["exponential", 1.6],
-          ["zoom"],
-          13,
-          0,
-          13.5,
-          0.8
-        ]
+        "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 13, 0, 13.5, 0.8]
       }
     },
     {
@@ -1188,15 +1017,7 @@
           18,
           10
         ],
-        "line-width": [
-          "interpolate",
-          ["exponential", 1.6],
-          ["zoom"],
-          9,
-          0,
-          9.5,
-          1.5
-        ]
+        "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 9, 0, 9.5, 1.5]
       }
     },
     {
@@ -1209,15 +1030,7 @@
       "paint": {
         "line-color": "#1f1f1f",
         "line-dasharray": [2, 1],
-        "line-width": [
-          "interpolate",
-          ["exponential", 1.6],
-          ["zoom"],
-          14,
-          0,
-          20,
-          7
-        ]
+        "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 14, 0, 20, 7]
       }
     },
     {
@@ -1370,11 +1183,7 @@
         "text-font": ["Noto Sans Italic"],
         "text-field": ["get", "addr_housenumber"],
         "text-size": {
-          "stops": [
-            [17, 10],
-            [20, 16],
-            [22, 20]
-          ]
+          "stops": [[17, 10], [20, 16], [22, 20]]
         }
       },
       "paint": {
@@ -1382,10 +1191,7 @@
         "text-halo-color": "#141414",
         "text-halo-width": 1,
         "text-opacity": {
-          "stops": [
-            [17, 0],
-            [18, 1]
-          ]
+          "stops": [[17, 0], [18, 1]]
         }
       }
     },
@@ -1412,11 +1218,7 @@
             ["has", "script"],
             [
               "case",
-              [
-                "any",
-                ["is-supported-script", ["get", "name"]],
-                ["has", "pgf:name"]
-              ],
+              ["any", ["is-supported-script", ["get", "name"]], ["has", "pgf:name"]],
               [
                 "format",
                 ["coalesce", ["get", "name:en"], ["get", "name:en"]],
@@ -1447,12 +1249,7 @@
             ],
             [
               "format",
-              [
-                "coalesce",
-                ["get", "name:en"],
-                ["get", "pgf:name"],
-                ["get", "name"]
-              ],
+              ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
               {}
             ]
           ],
@@ -1497,12 +1294,7 @@
               ["has", "script2"],
               [
                 "format",
-                [
-                  "coalesce",
-                  ["get", "name:en"],
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
                 {},
                 "\n",
                 {},
@@ -1585,12 +1377,7 @@
               ["!", ["has", "script"]],
               [
                 "format",
-                [
-                  "coalesce",
-                  ["get", "name:en"],
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
                 {},
                 "\n",
                 {},
@@ -1716,11 +1503,7 @@
             ["has", "script"],
             [
               "case",
-              [
-                "any",
-                ["is-supported-script", ["get", "name"]],
-                ["has", "pgf:name"]
-              ],
+              ["any", ["is-supported-script", ["get", "name"]], ["has", "pgf:name"]],
               [
                 "format",
                 ["coalesce", ["get", "name:en"], ["get", "name:en"]],
@@ -1751,12 +1534,7 @@
             ],
             [
               "format",
-              [
-                "coalesce",
-                ["get", "name:en"],
-                ["get", "pgf:name"],
-                ["get", "name"]
-              ],
+              ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
               {}
             ]
           ],
@@ -1801,12 +1579,7 @@
               ["has", "script2"],
               [
                 "format",
-                [
-                  "coalesce",
-                  ["get", "name:en"],
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
                 {},
                 "\n",
                 {},
@@ -1889,12 +1662,7 @@
               ["!", ["has", "script"]],
               [
                 "format",
-                [
-                  "coalesce",
-                  ["get", "name:en"],
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
                 {},
                 "\n",
                 {},
@@ -1988,11 +1756,7 @@
           ]
         ],
         "text-size": {
-          "stops": [
-            [10, 12],
-            [17, 14],
-            [22, 22]
-          ]
+          "stops": [[10, 12], [17, 14], [22, 22]]
         },
         "text-anchor": "center",
         "text-justify": "center",
@@ -2029,11 +1793,7 @@
             ["has", "script"],
             [
               "case",
-              [
-                "any",
-                ["is-supported-script", ["get", "name"]],
-                ["has", "pgf:name"]
-              ],
+              ["any", ["is-supported-script", ["get", "name"]], ["has", "pgf:name"]],
               [
                 "format",
                 ["coalesce", ["get", "name:en"], ["get", "name:en"]],
@@ -2064,12 +1824,7 @@
             ],
             [
               "format",
-              [
-                "coalesce",
-                ["get", "name:en"],
-                ["get", "pgf:name"],
-                ["get", "name"]
-              ],
+              ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
               {}
             ]
           ],
@@ -2114,12 +1869,7 @@
               ["has", "script2"],
               [
                 "format",
-                [
-                  "coalesce",
-                  ["get", "name:en"],
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
                 {},
                 "\n",
                 {},
@@ -2202,12 +1952,7 @@
               ["!", ["has", "script"]],
               [
                 "format",
-                [
-                  "coalesce",
-                  ["get", "name:en"],
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
                 {},
                 "\n",
                 {},
@@ -2332,11 +2077,7 @@
             ["has", "script"],
             [
               "case",
-              [
-                "any",
-                ["is-supported-script", ["get", "name"]],
-                ["has", "pgf:name"]
-              ],
+              ["any", ["is-supported-script", ["get", "name"]], ["has", "pgf:name"]],
               [
                 "format",
                 ["coalesce", ["get", "name:en"], ["get", "name:en"]],
@@ -2367,12 +2108,7 @@
             ],
             [
               "format",
-              [
-                "coalesce",
-                ["get", "name:en"],
-                ["get", "pgf:name"],
-                ["get", "name"]
-              ],
+              ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
               {}
             ]
           ],
@@ -2417,12 +2153,7 @@
               ["has", "script2"],
               [
                 "format",
-                [
-                  "coalesce",
-                  ["get", "name:en"],
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
                 {},
                 "\n",
                 {},
@@ -2505,12 +2236,7 @@
               ["!", ["has", "script"]],
               [
                 "format",
-                [
-                  "coalesce",
-                  ["get", "name:en"],
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
                 {},
                 "\n",
                 {},
@@ -2634,11 +2360,7 @@
             ["has", "script"],
             [
               "case",
-              [
-                "any",
-                ["is-supported-script", ["get", "name"]],
-                ["has", "pgf:name"]
-              ],
+              ["any", ["is-supported-script", ["get", "name"]], ["has", "pgf:name"]],
               [
                 "format",
                 ["coalesce", ["get", "name:en"], ["get", "name:en"]],
@@ -2669,12 +2391,7 @@
             ],
             [
               "format",
-              [
-                "coalesce",
-                ["get", "name:en"],
-                ["get", "pgf:name"],
-                ["get", "name"]
-              ],
+              ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
               {}
             ]
           ],
@@ -2719,12 +2436,7 @@
               ["has", "script2"],
               [
                 "format",
-                [
-                  "coalesce",
-                  ["get", "name:en"],
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
                 {},
                 "\n",
                 {},
@@ -2807,12 +2519,7 @@
               ["!", ["has", "script"]],
               [
                 "format",
-                [
-                  "coalesce",
-                  ["get", "name:en"],
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
                 {},
                 "\n",
                 {},
@@ -2905,17 +2612,7 @@
             ]
           ]
         ],
-        "text-size": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          3,
-          10,
-          6,
-          12,
-          10,
-          12
-        ],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 3, 10, 6, 12, 10, 12],
         "text-letter-spacing": 0.1,
         "text-max-width": 9
       },
@@ -2950,11 +2647,7 @@
             ["has", "script"],
             [
               "case",
-              [
-                "any",
-                ["is-supported-script", ["get", "name"]],
-                ["has", "pgf:name"]
-              ],
+              ["any", ["is-supported-script", ["get", "name"]], ["has", "pgf:name"]],
               [
                 "format",
                 ["coalesce", ["get", "name:en"], ["get", "name:en"]],
@@ -2985,12 +2678,7 @@
             ],
             [
               "format",
-              [
-                "coalesce",
-                ["get", "name:en"],
-                ["get", "pgf:name"],
-                ["get", "name"]
-              ],
+              ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
               {}
             ]
           ],
@@ -3035,12 +2723,7 @@
               ["has", "script2"],
               [
                 "format",
-                [
-                  "coalesce",
-                  ["get", "name:en"],
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
                 {},
                 "\n",
                 {},
@@ -3123,12 +2806,7 @@
               ["!", ["has", "script"]],
               [
                 "format",
-                [
-                  "coalesce",
-                  ["get", "name:en"],
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
                 {},
                 "\n",
                 {},
@@ -3222,11 +2900,7 @@
           ]
         ],
         "text-size": {
-          "stops": [
-            [10, 12],
-            [16, 14],
-            [20, 16]
-          ]
+          "stops": [[10, 12], [16, 14], [20, 16]]
         }
       },
       "paint": {
@@ -3261,11 +2935,7 @@
             ["has", "script"],
             [
               "case",
-              [
-                "any",
-                ["is-supported-script", ["get", "name"]],
-                ["has", "pgf:name"]
-              ],
+              ["any", ["is-supported-script", ["get", "name"]], ["has", "pgf:name"]],
               [
                 "format",
                 ["coalesce", ["get", "name:en"], ["get", "name:en"]],
@@ -3296,12 +2966,7 @@
             ],
             [
               "format",
-              [
-                "coalesce",
-                ["get", "name:en"],
-                ["get", "pgf:name"],
-                ["get", "name"]
-              ],
+              ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
               {}
             ]
           ],
@@ -3346,12 +3011,7 @@
               ["has", "script2"],
               [
                 "format",
-                [
-                  "coalesce",
-                  ["get", "name:en"],
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
                 {},
                 "\n",
                 {},
@@ -3434,12 +3094,7 @@
               ["!", ["has", "script"]],
               [
                 "format",
-                [
-                  "coalesce",
-                  ["get", "name:en"],
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
                 {},
                 "\n",
                 {},
@@ -3594,11 +3249,7 @@
               ["has", "script"],
               [
                 "case",
-                [
-                  "any",
-                  ["is-supported-script", ["get", "name"]],
-                  ["has", "pgf:name"]
-                ],
+                ["any", ["is-supported-script", ["get", "name"]], ["has", "pgf:name"]],
                 [
                   "format",
                   ["coalesce", ["get", "name:en"], ["get", "name:en"]],
@@ -3629,12 +3280,7 @@
               ],
               [
                 "format",
-                [
-                  "coalesce",
-                  ["get", "name:en"],
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
                 {}
               ]
             ],
@@ -3723,12 +3369,7 @@
             ],
             [
               "case",
-              [
-                "all",
-                ["has", "script"],
-                ["has", "script2"],
-                ["has", "script3"]
-              ],
+              ["all", ["has", "script"], ["has", "script2"], ["has", "script3"]],
               [
                 "format",
                 ["get", "name:en"],
@@ -3906,11 +3547,7 @@
             ["has", "script"],
             [
               "case",
-              [
-                "any",
-                ["is-supported-script", ["get", "name"]],
-                ["has", "pgf:name"]
-              ],
+              ["any", ["is-supported-script", ["get", "name"]], ["has", "pgf:name"]],
               [
                 "format",
                 ["coalesce", ["get", "name:en"], ["get", "name:en"]],
@@ -3941,12 +3578,7 @@
             ],
             [
               "format",
-              [
-                "coalesce",
-                ["get", "name:en"],
-                ["get", "pgf:name"],
-                ["get", "name"]
-              ],
+              ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
               {}
             ]
           ],
@@ -3991,12 +3623,7 @@
               ["has", "script2"],
               [
                 "format",
-                [
-                  "coalesce",
-                  ["get", "name:en"],
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
                 {},
                 "\n",
                 {},
@@ -4079,12 +3706,7 @@
               ["!", ["has", "script"]],
               [
                 "format",
-                [
-                  "coalesce",
-                  ["get", "name:en"],
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
                 {},
                 "\n",
                 {},
@@ -4189,17 +3811,7 @@
           ["get", "sort_key"],
           ["get", "min_zoom"]
         ],
-        "text-padding": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          5,
-          3,
-          8,
-          7,
-          12,
-          11
-        ],
+        "text-padding": ["interpolate", ["linear"], ["zoom"], 5, 3, 8, 7, 12, 11],
         "text-size": [
           "interpolate",
           ["linear"],
@@ -4399,11 +4011,7 @@
             ]
           ]
         ],
-        [
-          ">=",
-          ["zoom"],
-          ["+", ["get", "min_zoom"], 1]
-        ]
+        [">=", ["zoom"], ["+", ["get", "min_zoom"], 1]]
       ],
       "layout": {
         "icon-image": [
@@ -4419,48 +4027,19 @@
           "case",
           [
             "all",
-            [
-              "any",
-              ["has", "name"],
-              ["has", "pgf:name"]
-            ],
-            [
-              "!",
-              [
-                "any",
-                ["has", "name2"],
-                ["has", "pgf:name2"]
-              ]
-            ],
-            [
-              "!",
-              [
-                "any",
-                ["has", "name3"],
-                ["has", "pgf:name3"]
-              ]
-            ]
+            ["any", ["has", "name"], ["has", "pgf:name"]],
+            ["!", ["any", ["has", "name2"], ["has", "pgf:name2"]]],
+            ["!", ["any", ["has", "name3"], ["has", "pgf:name3"]]]
           ],
           [
             "case",
             ["has", "script"],
             [
               "case",
-              [
-                "any",
-                [
-                  "is-supported-script",
-                  ["get", "name"]
-                ],
-                ["has", "pgf:name"]
-              ],
+              ["any", ["is-supported-script", ["get", "name"]], ["has", "pgf:name"]],
               [
                 "format",
-                [
-                  "coalesce",
-                  ["get", "name:en"],
-                  ["get", "name:en"]
-                ],
+                ["coalesce", ["get", "name:en"], ["get", "name:en"]],
                 {},
                 "\n",
                 {},
@@ -4468,38 +4047,19 @@
                   "case",
                   [
                     "all",
-                    [
-                      "!",
-                      ["has", "name:en"]
-                    ],
+                    ["!", ["has", "name:en"]],
                     ["has", "name:en"],
                     ["!", ["has", "script"]]
                   ],
                   "",
-                  [
-                    "coalesce",
-                    ["get", "pgf:name"],
-                    ["get", "name"]
-                  ]
+                  ["coalesce", ["get", "pgf:name"], ["get", "name"]]
                 ],
                 {
                   "text-font": [
                     "case",
-                    [
-                      "==",
-                      ["get", "script"],
-                      "Devanagari"
-                    ],
-                    [
-                      "literal",
-                      [
-                        "Noto Sans Devanagari Regular v1"
-                      ]
-                    ],
-                    [
-                      "literal",
-                      ["Noto Sans Regular"]
-                    ]
+                    ["==", ["get", "script"], "Devanagari"],
+                    ["literal", ["Noto Sans Devanagari Regular v1"]],
+                    ["literal", ["Noto Sans Regular"]]
                   ]
                 }
               ],
@@ -4507,99 +4067,43 @@
             ],
             [
               "format",
-              [
-                "coalesce",
-                ["get", "name:en"],
-                ["get", "pgf:name"],
-                ["get", "name"]
-              ],
+              ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
               {}
             ]
           ],
           [
             "all",
-            [
-              "any",
-              ["has", "name"],
-              ["has", "pgf:name"]
-            ],
-            [
-              "any",
-              ["has", "name2"],
-              ["has", "pgf:name2"]
-            ],
-            [
-              "!",
-              [
-                "any",
-                ["has", "name3"],
-                ["has", "pgf:name3"]
-              ]
-            ]
+            ["any", ["has", "name"], ["has", "pgf:name"]],
+            ["any", ["has", "name2"], ["has", "pgf:name2"]],
+            ["!", ["any", ["has", "name3"], ["has", "pgf:name3"]]]
           ],
           [
             "case",
-            [
-              "all",
-              ["has", "script"],
-              ["has", "script2"]
-            ],
+            ["all", ["has", "script"], ["has", "script2"]],
             [
               "format",
               ["get", "name:en"],
               {},
               "\n",
               {},
-              [
-                "coalesce",
-                ["get", "pgf:name"],
-                ["get", "name"]
-              ],
+              ["coalesce", ["get", "pgf:name"], ["get", "name"]],
               {
                 "text-font": [
                   "case",
-                  [
-                    "==",
-                    ["get", "script"],
-                    "Devanagari"
-                  ],
-                  [
-                    "literal",
-                    [
-                      "Noto Sans Devanagari Regular v1"
-                    ]
-                  ],
-                  [
-                    "literal",
-                    ["Noto Sans Regular"]
-                  ]
+                  ["==", ["get", "script"], "Devanagari"],
+                  ["literal", ["Noto Sans Devanagari Regular v1"]],
+                  ["literal", ["Noto Sans Regular"]]
                 ]
               },
               "\n",
               {},
-              [
-                "coalesce",
-                ["get", "pgf:name2"],
-                ["get", "name2"]
-              ],
+              ["coalesce", ["get", "pgf:name2"], ["get", "name2"]],
               {
                 "text-font": [
                   "case",
-                  [
-                    "==",
-                    ["get", "script2"],
-                    "Devanagari"
-                  ],
-                  [
-                    "literal",
-                    [
-                      "Noto Sans Devanagari Regular v1"
-                    ]
-                  ],
-                  [
-                    "literal",
-                    ["Noto Sans Regular"]
-                  ]
+                  ["==", ["get", "script2"], "Devanagari"],
+                  ["literal", ["Noto Sans Devanagari Regular v1"]],
+                  ["literal", ["Noto Sans Regular"]]
                 ]
               }
             ],
@@ -4608,38 +4112,17 @@
               ["has", "script2"],
               [
                 "format",
-                [
-                  "coalesce",
-                  ["get", "name:en"],
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
                 {},
                 "\n",
                 {},
-                [
-                  "coalesce",
-                  ["get", "pgf:name2"],
-                  ["get", "name2"]
-                ],
+                ["coalesce", ["get", "pgf:name2"], ["get", "name2"]],
                 {
                   "text-font": [
                     "case",
-                    [
-                      "==",
-                      ["get", "script2"],
-                      "Devanagari"
-                    ],
-                    [
-                      "literal",
-                      [
-                        "Noto Sans Devanagari Regular v1"
-                      ]
-                    ],
-                    [
-                      "literal",
-                      ["Noto Sans Regular"]
-                    ]
+                    ["==", ["get", "script2"], "Devanagari"],
+                    ["literal", ["Noto Sans Devanagari Regular v1"]],
+                    ["literal", ["Noto Sans Regular"]]
                   ]
                 }
               ],
@@ -4654,29 +4137,13 @@
                 {},
                 "\n",
                 {},
-                [
-                  "coalesce",
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "pgf:name"], ["get", "name"]],
                 {
                   "text-font": [
                     "case",
-                    [
-                      "==",
-                      ["get", "script"],
-                      "Devanagari"
-                    ],
-                    [
-                      "literal",
-                      [
-                        "Noto Sans Devanagari Regular v1"
-                      ]
-                    ],
-                    [
-                      "literal",
-                      ["Noto Sans Regular"]
-                    ]
+                    ["==", ["get", "script"], "Devanagari"],
+                    ["literal", ["Noto Sans Devanagari Regular v1"]],
+                    ["literal", ["Noto Sans Regular"]]
                   ]
                 }
               ]
@@ -4684,95 +4151,42 @@
           ],
           [
             "case",
-            [
-              "all",
-              ["has", "script"],
-              ["has", "script2"],
-              ["has", "script3"]
-            ],
+            ["all", ["has", "script"], ["has", "script2"], ["has", "script3"]],
             [
               "format",
               ["get", "name:en"],
               {},
               "\n",
               {},
-              [
-                "coalesce",
-                ["get", "pgf:name"],
-                ["get", "name"]
-              ],
+              ["coalesce", ["get", "pgf:name"], ["get", "name"]],
               {
                 "text-font": [
                   "case",
-                  [
-                    "==",
-                    ["get", "script"],
-                    "Devanagari"
-                  ],
-                  [
-                    "literal",
-                    [
-                      "Noto Sans Devanagari Regular v1"
-                    ]
-                  ],
-                  [
-                    "literal",
-                    ["Noto Sans Regular"]
-                  ]
+                  ["==", ["get", "script"], "Devanagari"],
+                  ["literal", ["Noto Sans Devanagari Regular v1"]],
+                  ["literal", ["Noto Sans Regular"]]
                 ]
               },
               "\n",
               {},
-              [
-                "coalesce",
-                ["get", "pgf:name2"],
-                ["get", "name2"]
-              ],
+              ["coalesce", ["get", "pgf:name2"], ["get", "name2"]],
               {
                 "text-font": [
                   "case",
-                  [
-                    "==",
-                    ["get", "script2"],
-                    "Devanagari"
-                  ],
-                  [
-                    "literal",
-                    [
-                      "Noto Sans Devanagari Regular v1"
-                    ]
-                  ],
-                  [
-                    "literal",
-                    ["Noto Sans Regular"]
-                  ]
+                  ["==", ["get", "script2"], "Devanagari"],
+                  ["literal", ["Noto Sans Devanagari Regular v1"]],
+                  ["literal", ["Noto Sans Regular"]]
                 ]
               },
               "\n",
               {},
-              [
-                "coalesce",
-                ["get", "pgf:name3"],
-                ["get", "name3"]
-              ],
+              ["coalesce", ["get", "pgf:name3"], ["get", "name3"]],
               {
                 "text-font": [
                   "case",
-                  [
-                    "==",
-                    ["get", "script3"],
-                    "Devanagari"
-                  ],
-                  [
-                    "literal",
-                    [
-                      "Noto Sans Devanagari Regular v1"
-                    ]
-                  ],
-                  [
-                    "literal",
-                    ["Noto Sans Regular"]
-                  ]
+                  ["==", ["get", "script3"], "Devanagari"],
+                  ["literal", ["Noto Sans Devanagari Regular v1"]],
+                  ["literal", ["Noto Sans Regular"]]
                 ]
               }
             ],
@@ -4781,65 +4195,28 @@
               ["!", ["has", "script"]],
               [
                 "format",
-                [
-                  "coalesce",
-                  ["get", "name:en"],
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "name:en"], ["get", "pgf:name"], ["get", "name"]],
                 {},
                 "\n",
                 {},
-                [
-                  "coalesce",
-                  ["get", "pgf:name2"],
-                  ["get", "name2"]
-                ],
+                ["coalesce", ["get", "pgf:name2"], ["get", "name2"]],
                 {
                   "text-font": [
                     "case",
-                    [
-                      "==",
-                      ["get", "script2"],
-                      "Devanagari"
-                    ],
-                    [
-                      "literal",
-                      [
-                        "Noto Sans Devanagari Regular v1"
-                      ]
-                    ],
-                    [
-                      "literal",
-                      ["Noto Sans Regular"]
-                    ]
+                    ["==", ["get", "script2"], "Devanagari"],
+                    ["literal", ["Noto Sans Devanagari Regular v1"]],
+                    ["literal", ["Noto Sans Regular"]]
                   ]
                 },
                 "\n",
                 {},
-                [
-                  "coalesce",
-                  ["get", "pgf:name3"],
-                  ["get", "name3"]
-                ],
+                ["coalesce", ["get", "pgf:name3"], ["get", "name3"]],
                 {
                   "text-font": [
                     "case",
-                    [
-                      "==",
-                      ["get", "script3"],
-                      "Devanagari"
-                    ],
-                    [
-                      "literal",
-                      [
-                        "Noto Sans Devanagari Regular v1"
-                      ]
-                    ],
-                    [
-                      "literal",
-                      ["Noto Sans Regular"]
-                    ]
+                    ["==", ["get", "script3"], "Devanagari"],
+                    ["literal", ["Noto Sans Devanagari Regular v1"]],
+                    ["literal", ["Noto Sans Regular"]]
                   ]
                 }
               ],
@@ -4855,56 +4232,24 @@
                 {},
                 "\n",
                 {},
-                [
-                  "coalesce",
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "pgf:name"], ["get", "name"]],
                 {
                   "text-font": [
                     "case",
-                    [
-                      "==",
-                      ["get", "script"],
-                      "Devanagari"
-                    ],
-                    [
-                      "literal",
-                      [
-                        "Noto Sans Devanagari Regular v1"
-                      ]
-                    ],
-                    [
-                      "literal",
-                      ["Noto Sans Regular"]
-                    ]
+                    ["==", ["get", "script"], "Devanagari"],
+                    ["literal", ["Noto Sans Devanagari Regular v1"]],
+                    ["literal", ["Noto Sans Regular"]]
                   ]
                 },
                 "\n",
                 {},
-                [
-                  "coalesce",
-                  ["get", "pgf:name3"],
-                  ["get", "name3"]
-                ],
+                ["coalesce", ["get", "pgf:name3"], ["get", "name3"]],
                 {
                   "text-font": [
                     "case",
-                    [
-                      "==",
-                      ["get", "script3"],
-                      "Devanagari"
-                    ],
-                    [
-                      "literal",
-                      [
-                        "Noto Sans Devanagari Regular v1"
-                      ]
-                    ],
-                    [
-                      "literal",
-                      ["Noto Sans Regular"]
-                    ]
+                    ["==", ["get", "script3"], "Devanagari"],
+                    ["literal", ["Noto Sans Devanagari Regular v1"]],
+                    ["literal", ["Noto Sans Regular"]]
                   ]
                 }
               ],
@@ -4919,77 +4264,34 @@
                 {},
                 "\n",
                 {},
-                [
-                  "coalesce",
-                  ["get", "pgf:name"],
-                  ["get", "name"]
-                ],
+                ["coalesce", ["get", "pgf:name"], ["get", "name"]],
                 {
                   "text-font": [
                     "case",
-                    [
-                      "==",
-                      ["get", "script"],
-                      "Devanagari"
-                    ],
-                    [
-                      "literal",
-                      [
-                        "Noto Sans Devanagari Regular v1"
-                      ]
-                    ],
-                    [
-                      "literal",
-                      ["Noto Sans Regular"]
-                    ]
+                    ["==", ["get", "script"], "Devanagari"],
+                    ["literal", ["Noto Sans Devanagari Regular v1"]],
+                    ["literal", ["Noto Sans Regular"]]
                   ]
                 },
                 "\n",
                 {},
-                [
-                  "coalesce",
-                  ["get", "pgf:name2"],
-                  ["get", "name2"]
-                ],
+                ["coalesce", ["get", "pgf:name2"], ["get", "name2"]],
                 {
                   "text-font": [
                     "case",
-                    [
-                      "==",
-                      ["get", "script2"],
-                      "Devanagari"
-                    ],
-                    [
-                      "literal",
-                      [
-                        "Noto Sans Devanagari Regular v1"
-                      ]
-                    ],
-                    [
-                      "literal",
-                      ["Noto Sans Regular"]
-                    ]
+                    ["==", ["get", "script2"], "Devanagari"],
+                    ["literal", ["Noto Sans Devanagari Regular v1"]],
+                    ["literal", ["Noto Sans Regular"]]
                   ]
                 }
               ]
             ]
           ]
         ],
-        "text-size": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          17,
-          10,
-          19,
-          16
-        ],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 17, 10, 19, 16],
         "text-max-width": 8,
         "text-offset": [1.1, 0],
-        "text-variable-anchor": [
-          "left",
-          "right"
-        ]
+        "text-variable-anchor": ["left", "right"]
       },
       "paint": {
         "text-color": [
@@ -4999,31 +4301,14 @@
             ["get", "kind"],
             [
               "literal",
-              [
-                "beach",
-                "forest",
-                "marina",
-                "park",
-                "peak",
-                "zoo",
-                "garden",
-                "bench"
-              ]
+              ["beach", "forest", "marina", "park", "peak", "zoo", "garden", "bench"]
             ]
           ],
           "#30C573",
           [
             "in",
             ["get", "kind"],
-            [
-              "literal",
-              [
-                "aerodrome",
-                "station",
-                "bus_stop",
-                "ferry_terminal"
-              ]
-            ]
+            ["literal", ["aerodrome", "station", "bus_stop", "ferry_terminal"]]
           ],
           "#2B5CEA",
           [
