@@ -26,7 +26,7 @@ import '$lib/styles/scrollbar.css';
 // TYPES
 import type { QueryClient } from '@tanstack/svelte-query';
 import type { LayoutData, LayoutProps } from './$types';
-import type { Locale, SessionUser } from '$lib/types';
+import type { HubOptsExtended, SessionUser } from '$lib/types';
 import { MOBILE_MAX_WIDTH } from '$lib';
 
 // PROPS
@@ -45,6 +45,14 @@ const appCtx = setAppCtx(
   setPlaceCtx(),
   $session.data?.user as SessionUser | null
 );
+
+// Keep hub context available for both app and admin route trees.
+$effect(() => {
+  const rootHub = (data as LayoutData).hub as HubOptsExtended | undefined;
+  if (rootHub) {
+    appCtx.setHub(rootHub);
+  }
+});
 
 // Reactive window width binding
 let windowWidth = $state(0);

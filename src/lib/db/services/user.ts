@@ -14,8 +14,6 @@ import type {
   UserLayerDB,
   User,
   UserDB,
-  OrganisationRole,
-  ProjectRole,
   UserRoleDisco,
   Database,
   UserFeatureDB,
@@ -210,7 +208,18 @@ export const getUserRoles = async (
   db: Database,
   userId: Id,
 ): Promise<UserRoleDisco[]> => {
-  const orgRoles: OrganisationRole[] = await db.query.organisationRole.findMany({
+  const hubRoles = await db.query.hubRole.findMany({
+    where: (hubRole, { eq }) => eq(hubRole.userId, userId),
+    with: {
+      hub: {
+        columns: {
+          code: true,
+        },
+      },
+    },
+  })
+
+  const orgRoles = await db.query.organisationRole.findMany({
     where: (organisationRole, { eq }) => eq(organisationRole.userId, userId),
     with: {
       organisation: {
@@ -221,7 +230,7 @@ export const getUserRoles = async (
     },
   })
 
-  const projectRoles: ProjectRole[] = await db.query.projectRole.findMany({
+  const projectRoles = await db.query.projectRole.findMany({
     where: (projectRole, { eq }) => eq(projectRole.userId, userId),
     with: {
       project: {
@@ -238,6 +247,10 @@ export const getUserRoles = async (
   })
 
   return [
+    ...hubRoles.map(role => ({
+      ...role,
+      type: 'hub',
+    })),
     ...orgRoles.map(role => ({
       ...role,
       type: 'organisation',

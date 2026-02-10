@@ -57,6 +57,9 @@ import type {
   HubI18nBase,
   HubI18nInsert,
   HubI18nUpdate,
+  HubRoleBase,
+  HubRoleInsert,
+  HubRoleUpdate,
   HubInsert,
   HubInsertAPI,
   HubRaw,
@@ -2158,6 +2161,10 @@ export type HubI18nDB = z.infer<typeof HubI18nBase>
 export type HubI18nNew = z.infer<typeof HubI18nInsert>
 // Same as HubI18nNew, but all fields are optional
 export type HubI18nPartial = z.infer<typeof HubI18nUpdate>
+export type HubRole = z.infer<typeof HubRoleBase>
+export type HubRoleDB = z.infer<typeof HubRoleBase>
+export type HubRoleNew = z.infer<typeof HubRoleInsert>
+export type HubRolePartial = z.infer<typeof HubRoleUpdate>
 
 export interface HubOpts {
   code?: string

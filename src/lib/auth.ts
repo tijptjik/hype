@@ -150,6 +150,11 @@ function createAuthInstance(
         // Get user roles and layers
         const roles: UserRoleDisco[] = await getUserRoles(db, user.id)
         const userLayers: UserLayer[] = await getUserLayers(db, user.id)
+        const superAdmin = roles.some(role => {
+          if (role.type !== 'hub' || role.role !== 'admin') return false
+          const hubRole = role as unknown as { hub?: { code?: string } }
+          return hubRole.hub?.code === 'core'
+        })
 
         // Parse JSON fields from strings to objects
         let preferences: UserPreferences
@@ -185,7 +190,8 @@ function createAuthInstance(
             experimental,
             roles,
             userLayers,
-            superAdmin: false,
+            superAdmin,
+            // Set in hooks.server.ts
             isHubAdminForActiveHub: false,
           },
           session,

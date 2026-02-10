@@ -1,7 +1,6 @@
 // SVELTE
 import { sequence } from '@sveltejs/kit/hooks'
 import type { Handle } from '@sveltejs/kit'
-import { and, eq, or } from 'drizzle-orm'
 // I18N
 import { paraglideMiddleware } from '$lib/paraglide/server'
 // DB
@@ -17,9 +16,6 @@ import { toResponseShape } from '$lib/api/services/hub'
 import type { HubOptsExtended, Session, SessionUser } from '$lib/types'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 import { isAdminRequest } from '$lib/api'
-import { HubRoleType } from '$lib/enums'
-
-let handle: Handle
 
 // ═══════════════════════
 // CORS HOOK
@@ -212,27 +208,15 @@ const handle_hub_enrichment: Handle = async ({ event, resolve }) => {
     let isHubAdminForActiveHub = false
     let isSuperAdmin = false
 
-    if (sessionUser?.id && hub?.code && event.platform?.env?.DB) {
-      const db = drizzle(event.platform.env.DB as unknown as MiniflareD1Database, {
-        schema,
-      })
+    if (sessionUser?.roles && hub?.code) {
+      const adminHubCodes = new Set(
+        sessionUser.roles
+          .filter(role => role.type === 'hub' && role.role === 'admin')
+          .map(role => (role as unknown as { hub?: { code?: string } }).hub?.code)
+          .filter((code): code is string => Boolean(code)),
+      )
 
-      const adminHubRoles = await db
-        .select({ hubCode: schema.hub.code })
-        .from(schema.hubRole)
-        .innerJoin(schema.hub, eq(schema.hub.id, schema.hubRole.hubId))
-        .where(
-          and(
-            eq(schema.hubRole.userId, sessionUser.id),
-            eq(schema.hubRole.role, HubRoleType.admin),
-            or(eq(schema.hub.code, CORE_HUB_CODE), eq(schema.hub.code, hub.code)),
-          ),
-        )
-        .all()
-
-      const adminHubCodes = new Set(adminHubRoles.map(role => role.hubCode))
       isHubAdminForActiveHub = adminHubCodes.has(hub.code)
-
       // Super admin = hub admin on the core hub.
       isSuperAdmin = adminHubCodes.has(CORE_HUB_CODE)
     }
@@ -274,7 +258,7 @@ const translation: Handle = ({ event, resolve }) =>
  * This is the main hook that is used to sequence the other hooks.
  */
 
-handle = sequence(
+const handle = sequence(
   handle_cors,
   handle_hub,
   handle_auth,
