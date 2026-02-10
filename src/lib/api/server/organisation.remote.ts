@@ -20,6 +20,7 @@ import type { OrganisationDB } from '$lib/types'
  * @param params - List query params validated by `ListQueryParamsSchema`.
  * @param params.conditions - Optional typed filters for organisation columns.
  * @param params.pagination - Optional pagination controls (`limit`, `offset`).
+ * @param params.sorting - Optional column and direction for sortOrder(`asc` or `desc`).
  * @param params.q - Optional text query applied by the service layer.
  * @returns A promise resolving to organisation records mapped to API response shape.
  * @remarks
@@ -52,6 +53,7 @@ export const getOrganisations = query(ListQueryParamsSchema, async params => {
     conditions,
     event.locals.hub,
     params.pagination,
+    params.sorting,
     {
       q: params.q,
     },

@@ -20,5 +20,11 @@ export const ListQueryParamsSchema = z.object({
       offset: z.number().int().nonnegative().optional(),
     })
     .optional(),
+  sorting: z
+    .object({
+      sortBy: z.string().trim().min(1).optional(),
+      sortOrder: z.enum(['asc', 'desc']).optional(),
+    })
+    .optional(),
   q: z.string().trim().optional(),
 })

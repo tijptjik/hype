@@ -59,6 +59,10 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
   >
   const searchParam = url.searchParams.get('q') || undefined
   const pagination = getPaginationOpts(url)
+  const sortBy = url.searchParams.get('sortBy') || undefined
+  const sortOrderParam = url.searchParams.get('sortOrder')
+  const sortOrder =
+    sortOrderParam === 'asc' || sortOrderParam === 'desc' ? sortOrderParam : undefined
 
   // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
   const { conditions } = getOrganisationQueryContext(
@@ -76,6 +80,7 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
       conditions,
       locals.hub,
       pagination,
+      { sortBy, sortOrder },
       {
         q: searchParam,
       },

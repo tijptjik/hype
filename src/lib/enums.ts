@@ -272,10 +272,12 @@ export enum GeoCoder {
 export const PRISM_PARAMETERS = ['organisation', 'project', 'layer']
 export const SEARCH_PARAMETERS = ['q']
 export const PAGINATION_PARAMETERS = ['offset', 'limit']
+export const SORT_PARAMETERS = ['sortBy', 'sortOrder']
 export const RESERVED_PARAMETERS = [
   ...PRISM_PARAMETERS,
   ...SEARCH_PARAMETERS,
   ...PAGINATION_PARAMETERS,
+  ...SORT_PARAMETERS,
 ]
 
 /* ----------------- */

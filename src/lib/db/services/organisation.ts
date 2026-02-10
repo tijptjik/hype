@@ -1,7 +1,7 @@
 // SVELTEKIT
 import { superValidate, type SuperValidated } from 'sveltekit-superforms'
 // DRIZZLE
-import { and, eq, type SQL, like, sql, or } from 'drizzle-orm'
+import { and, eq, type SQL, like, sql, or, asc, desc } from 'drizzle-orm'
 // SCHEMA
 import {
   feature,
@@ -83,6 +83,7 @@ export const listOrganisations = async (
   conditions: SQL<unknown>[] = [],
   opts: HubOptsExtended,
   pagination?: { limit?: number; offset?: number },
+  sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
   query?: {
     q?: string
     searchColumns?: string[]
@@ -154,11 +155,21 @@ export const listOrganisations = async (
     }
   }
 
+  const sortBy = sorting?.sortBy || 'modifiedAt'
+  const sortOrder = sorting?.sortOrder || 'desc'
+  const sortColumn = organisation[sortBy as keyof typeof organisation]
+  if (!sortColumn) {
+    throw new Error(`Invalid sort column: ${sortBy}`)
+  }
+  const orderBy =
+    sortOrder === 'desc' ? desc(sortColumn as any) : asc(sortColumn as any)
+
   return await db.query.organisation.findMany({
     with: withRelations,
     where: conditions.length > 0 ? and(...conditions) : undefined,
     limit: pagination?.limit,
     offset: pagination?.offset,
+    orderBy,
   })
 }
 
@@ -188,7 +199,7 @@ export const searchOrganisations = async (
   opts: HubOptsExtended,
   searchColumns: string[] = ['code', 'name', 'description'],
 ): Promise<OrganisationDBRaw[]> => {
-  return listOrganisations(db, withRelations, conditions, opts, undefined, {
+  return listOrganisations(db, withRelations, conditions, opts, undefined, undefined, {
     q: search,
     searchColumns,
     // Ignore hubfilter, cause this is primarily used to configure hub settings

@@ -683,6 +683,8 @@ export type ListQueryParams<
   conditions?: Partial<TConditions>
   prisms?: Partial<Prisms>
   pagination?: PaginationParams
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
   q?: string
 }
 
