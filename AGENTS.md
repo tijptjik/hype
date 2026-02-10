@@ -50,3 +50,13 @@ Run all commands with Bun:
   - screenshots/video for UI changes,
   - notes on migrations, env vars, or deployment impact.
 - Pre-push hooks run branch-name lint and tests; ensure both pass locally.
+
+## Agent-Specific Notes
+- For Svelte/SvelteKit questions and implementation work, consult Context7 docs first, especially for experimental or cutting-edge APIs.
+- Treat framework docs as authoritative over memory; verify behavior against the current docs before coding.
+- Add new TypeScript types in `src/lib/types.ts`, not inline in feature files.
+- Place new types under the correct existing heading in `src/lib/types.ts` (usually resource-based or domain-based) so related type changes can be reviewed together.
+
+## Documentation
+- Authorisation Dsign is defined in `docs/Authorization-Design.md`
+- Authorisation Roles are defined in `docs/Roles.md`
