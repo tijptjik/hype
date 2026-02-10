@@ -48,7 +48,7 @@ const RESOURCE_PATH = 'organisations'
  */
 export const GET: RequestHandler = async ({ url, locals, platform, request }) => {
   // ASSERT : User Logged in
-  const { db, session, user, userRoles } = await getDatabase(locals, platform)
+  const { db, user, userRoles } = await getDatabase(locals, platform)
 
   // ASSERT : Valid query parameters
   // Validate query parameters, or return 400

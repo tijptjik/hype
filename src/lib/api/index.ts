@@ -149,6 +149,29 @@ function getResourceRef<T extends Resource>(resource: T): string {
 // ACCESS CHECKS
 // ================================================
 
+export const setupRequestHandler = async (
+  locals: App.Locals,
+  platform: App.Platform | undefined,
+) => {
+  const { user, session } = await getSessionOrError(locals)
+  if (!platform?.env.DB) {
+    return error(500, 'Database not available')
+  }
+
+  // Get logger setting from platform env
+  const enableLogger = platform?.env?.PUBLIC_DRIZZLE_LOGGER === 'true'
+
+  const db = client(platform.env.DB as unknown as MiniflareD1Database, enableLogger)
+  return {
+    db,
+    session,
+    user,
+    userId: user.id as Id,
+    userRoles: user.roles as UserRoleDisco[] | [],
+  }
+}
+
+// @deprecated - use setupRequestHandler instead
 export const getDatabase = async (
   locals: App.Locals,
   platform: App.Platform | undefined,
