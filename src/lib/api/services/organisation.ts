@@ -94,21 +94,25 @@ export const buildVisibilityAndOwnershipConditions = (
   isAdminRequest: boolean,
   params: QueryParams,
   userRoles: UserRoleDisco[],
-): { params: QueryParams; conditions: SQL<unknown>[]; excludeColumns: string[] } => {
+): {
+  filtersToApply: QueryParams
+  conditions: SQL<unknown>[]
+  excludeColumns: string[]
+} => {
   const conditions: SQL<unknown>[] = []
   const excludeColumns = [...VISIBILITY_COLUMNS]
   const filteredParams = removeExcludedColumns(params, excludeColumns)
 
   // Full bypass for super admins and hub admins.
   if (isSuperAdmin(user) || user.isHubAdminForActiveHub) {
-    return { params: filteredParams, conditions, excludeColumns }
+    return { filtersToApply: filteredParams, conditions, excludeColumns }
   }
 
   // Public requests are always strictly published and not archived.
   if (!isAdminRequest) {
     conditions.push(eq(organisation.isPublished, true))
     conditions.push(eq(organisation.isArchived, false))
-    return { params: filteredParams, conditions, excludeColumns }
+    return { filtersToApply: filteredParams, conditions, excludeColumns }
   }
 
   // Admin, non-super/non-hub-admin:
@@ -119,7 +123,7 @@ export const buildVisibilityAndOwnershipConditions = (
 
   if (allowedOrganisationIds.length === 0) {
     conditions.push(eq(organisation.id, '__none__' as Id))
-    return { params: filteredParams, conditions, excludeColumns }
+    return { filtersToApply: filteredParams, conditions, excludeColumns }
   }
   conditions.push(inArray(organisation.id, allowedOrganisationIds))
 
@@ -130,7 +134,7 @@ export const buildVisibilityAndOwnershipConditions = (
   applyTriStateBooleanCondition(conditions, organisation.isPublished, isPublished)
   applyTriStateBooleanCondition(conditions, organisation.isArchived, isArchived)
 
-  return { params: filteredParams, conditions, excludeColumns }
+  return { filtersToApply: filteredParams, conditions, excludeColumns }
 }
 
 /**
@@ -140,12 +144,16 @@ export const buildVisibilityAndOwnershipConditions = (
  * @param params - The query parameters
  * @param userRoles - The user roles
  */
-export const getOrganisationQueryContext = (
+export const toQueryConditions = (
   user: SessionUser,
   isAdminRequest: boolean,
   params: QueryParams,
   userRoles: UserRoleDisco[],
-) => {
+): {
+  filtersToApply: QueryParams
+  conditions: SQL<unknown>[]
+  excludeColumns: string[]
+} => {
   const contextRespectingVisibilityAndOwnership = buildVisibilityAndOwnershipConditions(
     user,
     isAdminRequest,
@@ -154,10 +162,10 @@ export const getOrganisationQueryContext = (
   )
 
   // CONTEXT : Apply query filters to the conditions
-  if (Object.keys(contextRespectingVisibilityAndOwnership.params).length > 0) {
+  if (Object.keys(contextRespectingVisibilityAndOwnership.filtersToApply).length > 0) {
     applyQueryFilters(
       organisation,
-      contextRespectingVisibilityAndOwnership.params,
+      contextRespectingVisibilityAndOwnership.filtersToApply,
       contextRespectingVisibilityAndOwnership.conditions,
     )
   }

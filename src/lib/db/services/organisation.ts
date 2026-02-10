@@ -1,7 +1,7 @@
 // SVELTEKIT
 import { superValidate, type SuperValidated } from 'sveltekit-superforms'
 // DRIZZLE
-import { and, eq, type SQL, like, sql, or, asc, desc } from 'drizzle-orm'
+import { and, eq, like, sql, or, asc, desc } from 'drizzle-orm'
 // SCHEMA
 import {
   feature,
@@ -23,9 +23,11 @@ import { toRelatedRecords, transformI18nSafely } from '..'
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
 import { getOrganisationHubFilter } from './hub'
 // TYPES
+import type { AnyColumn, InferInsertModel, SQL } from 'drizzle-orm'
 import type {
   OrganisationDB,
-  OrganisationNew,
+  OrganisationNewWithI18n,
+  OrganisationWithI18n,
   Organisation,
   OrganisationCollection,
   OrganisationCollectionSuperAdmin,
@@ -34,6 +36,7 @@ import type {
   Database,
   OrganisationDBNew,
   Locale,
+  QueryParams,
   OrganisationI18nNew,
   OrganisationI18nPartial,
   OrganisationRoleNew,
@@ -94,8 +97,10 @@ export const listOrganisations = async (
     q?: string
     searchColumns?: string[]
     ignoreHubFilter?: boolean
+    filtersToApply?: QueryParams
   },
 ): Promise<ListResponse<OrganisationDBRaw>> => {
+  const startedAt = Date.now()
   // Core or non-core hub filtering
   if (!query?.ignoreHubFilter) {
     const hubFilter = getOrganisationHubFilter(db, opts)
@@ -157,7 +162,14 @@ export const listOrganisations = async (
     }
 
     if (searchConditions.length > 0) {
-      conditions.push(or(...searchConditions)!)
+      if (searchConditions.length === 1) {
+        conditions.push(searchConditions[0])
+      } else {
+        const combinedSearchCondition = or(...searchConditions)
+        if (combinedSearchCondition) {
+          conditions.push(combinedSearchCondition)
+        }
+      }
     }
   }
 
@@ -168,7 +180,7 @@ export const listOrganisations = async (
     throw new Error(`Invalid sort column: ${sortBy}`)
   }
   const orderBy =
-    sortOrder === 'desc' ? desc(sortColumn as any) : asc(sortColumn as any)
+    sortOrder === 'desc' ? desc(sortColumn as AnyColumn) : asc(sortColumn as AnyColumn)
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
   const data = await db.query.organisation.findMany({
@@ -181,12 +193,23 @@ export const listOrganisations = async (
   const countQuery = db.select({ count: sql<number>`count(*)` }).from(organisation)
   const totalRows = whereClause ? await countQuery.where(whereClause) : await countQuery
   const totalCount = Number(totalRows[0]?.count || 0)
+  const offset = pagination?.offset ?? 0
+  const hasMore = offset + data.length < totalCount
+  const nextOffset = hasMore ? offset + data.length : null
+  const durationMs = Date.now() - startedAt
 
   return {
     data,
     limit: pagination?.limit,
-    offset: pagination?.offset,
+    offset,
     totalCount,
+    hasMore,
+    nextOffset,
+    sortBy,
+    sortOrder,
+    appliedFilters: query?.filtersToApply,
+    q: query?.q,
+    durationMs,
   }
 }
 
@@ -264,10 +287,17 @@ export const createI18n = async (
   i18n: Record<Locale, OrganisationI18nNew>,
   organisationId: string,
 ): Promise<OrganisationI18nDB[]> => {
+  const relatedRecords = toRelatedRecords(
+    i18n,
+    'organisationId',
+    organisationId,
+    'locale',
+  ) as InferInsertModel<typeof organisationI18n>[]
+
   return await insertManyRelated(
     db,
     organisationI18n,
-    toRelatedRecords(i18n, 'organisationId', organisationId, 'locale') as any,
+    relatedRecords,
     'organisationId',
     organisationId,
   )
@@ -285,10 +315,17 @@ export const updateI18n = async (
   i18n: Record<Locale, OrganisationI18nPartial>,
   organisationId: string,
 ): Promise<OrganisationI18nDB[]> => {
+  const relatedRecords = toRelatedRecords(
+    i18n,
+    'organisationId',
+    organisationId,
+    'locale',
+  ) as InferInsertModel<typeof organisationI18n>[]
+
   return await replaceManyRelated(
     db,
     organisationI18n,
-    toRelatedRecords(i18n, 'organisationId', organisationId, 'locale') as any,
+    relatedRecords,
     organisationI18n.organisationId,
     organisationId,
   )
@@ -370,10 +407,10 @@ export const updateUserRoles = async (
  */
 export const createOrganisationWithRelated = async (
   db: Database,
-  data: OrganisationNew,
+  data: OrganisationNewWithI18n,
 ) => {
   const organisation = await createOrganisation(db, data)
-  const i18n = await createI18n(db, data.i18n!, organisation.id)
+  const i18n = await createI18n(db, data.i18n, organisation.id)
   await createUserRoles(db, data.userRoles, organisation.id)
   const userRoles = await listUserRoles(db, organisation.id)
   // organisation.image is null upon creation
@@ -390,12 +427,12 @@ export const createOrganisationWithRelated = async (
  */
 export const updateOrganisationWithRelated = async (
   db: Database,
-  data: Organisation,
+  data: OrganisationWithI18n,
   lookupCode?: string,
 ) => {
   const codeToUse = lookupCode || data.code
   const organisation = await updateOrganisation(db, data, codeToUse)
-  const i18n = await updateI18n(db, data.i18n!, organisation.id)
+  const i18n = await updateI18n(db, data.i18n, organisation.id)
   await updateUserRoles(db, data.userRoles, organisation.id)
   const userRoles = await listUserRoles(db, organisation.id)
   return { ...organisation, i18n, userRoles }
@@ -428,6 +465,16 @@ export const toFormShape = async (
   return form as SuperValidated<Organisation>
 }
 
+export function toResponseShape(
+  organisation: OrganisationDBRaw,
+  isCollection: true,
+  isSuperAdmin?: boolean,
+): Promise<OrganisationCollection | OrganisationCollectionSuperAdmin>
+export function toResponseShape(
+  organisation: OrganisationDBRaw,
+  isCollection?: false,
+  isSuperAdmin?: boolean,
+): Promise<Organisation | OrganisationSuperAdmin>
 export const toResponseShape = async (
   organisation: OrganisationDBRaw,
   isCollection: boolean = false,
@@ -460,19 +507,33 @@ export const toEntityResponseShape = async (
   organisation: OrganisationDBRaw | null,
   user?: SessionUser,
 ): Promise<EntityResponse<Organisation | OrganisationSuperAdmin>> => {
+  const startedAt = Date.now()
+
   if (!organisation) {
-    return { data: null }
+    return { data: null, durationMs: Date.now() - startedAt }
   }
 
   const data = await toResponseShape(organisation, false, user?.superAdmin || false)
-  return { data }
+  return { data, durationMs: Date.now() - startedAt }
 }
 
 export const toListResponseShape = async (
   result: ListResponse<OrganisationDBRaw>,
   user: SessionUser | undefined,
 ): Promise<ListResponse<OrganisationCollection | OrganisationCollectionSuperAdmin>> => {
-  const { data: organisations, limit, offset, totalCount } = result
+  const {
+    data: organisations,
+    limit,
+    offset,
+    totalCount,
+    hasMore,
+    nextOffset,
+    sortBy,
+    sortOrder,
+    appliedFilters,
+    q,
+    durationMs,
+  } = result
   const data = await Promise.all(
     organisations.map(organisation =>
       toResponseShape(organisation, true, user?.superAdmin || false),
@@ -484,6 +545,13 @@ export const toListResponseShape = async (
     limit,
     offset,
     totalCount,
+    hasMore,
+    nextOffset,
+    sortBy,
+    sortOrder,
+    appliedFilters,
+    q,
+    durationMs,
   }
 }
 

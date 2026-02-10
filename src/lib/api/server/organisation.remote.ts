@@ -2,7 +2,7 @@
 import { getRequestEvent, query } from '$app/server'
 // SERVICES
 import {
-  getOrganisationQueryContext as toQueryConditions,
+  toQueryConditions,
   organisationWithRelations,
 } from '$lib/api/services/organisation'
 import {
@@ -56,7 +56,12 @@ export const getOrganisations = query(ListQueryParamsSchema, async params => {
   )
 
   // Build final SQL conditions based on request scope and role permissions.
-  const { conditions } = toQueryConditions(user, isAdminRequest, queryParams, userRoles)
+  const { conditions, filtersToApply } = toQueryConditions(
+    user,
+    isAdminRequest,
+    queryParams,
+    userRoles,
+  )
 
   // Execute list query with optional text search and pagination.
   const result = await listOrganisations(
@@ -68,6 +73,7 @@ export const getOrganisations = query(ListQueryParamsSchema, async params => {
     params.sorting,
     {
       q: params.q,
+      filtersToApply,
     },
   )
 

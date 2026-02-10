@@ -21,7 +21,7 @@ import {
   toListResponseShape,
 } from '$lib/db/services/organisation'
 import {
-  getOrganisationQueryContext,
+  toQueryConditions,
   assertPermissionsToCreateOrganisation,
   organisationWithRelations,
   assertCodeUnique,
@@ -31,7 +31,7 @@ import { zod } from 'sveltekit-superforms/adapters'
 import { OrganisationInsertAPI, OrganisationInsertSuperAdminAPI } from '$lib/db/zod'
 // TYPES
 import type { RequestHandler } from '@sveltejs/kit'
-import type { OrganisationNew, Organisation } from '$lib/types'
+import type { OrganisationNew, Organisation, OrganisationNewWithI18n } from '$lib/types'
 
 /********************
  *  COMMON
@@ -65,7 +65,7 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
     sortOrderParam === 'asc' || sortOrderParam === 'desc' ? sortOrderParam : undefined
 
   // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
-  const { conditions } = getOrganisationQueryContext(
+  const { conditions, filtersToApply } = toQueryConditions(
     user,
     isAdminRequest(request),
     queryParams,
@@ -83,6 +83,7 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
       { sortBy, sortOrder },
       {
         q: searchParam,
+        filtersToApply,
       },
     )
 
@@ -135,10 +136,15 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
     // ASSERT : Permissions to update organisation
     assertPermissionsToCreateOrganisation(user, request)
 
+    // Insert schema currently allows nullable/optional i18n, but this path requires it.
+    if (!form.data.i18n) {
+      return error(400, 'Organisation i18n is required')
+    }
+
     // DB : Create the organisation
     const createdOrganisation = await createOrganisationWithRelated(
       db,
-      form.data as OrganisationNew,
+      form.data as OrganisationNewWithI18n,
     )
 
     // FORM : Rebuild the form data

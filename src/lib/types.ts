@@ -685,9 +685,17 @@ export type ListResponse<T> = {
   limit?: number
   offset?: number
   totalCount: number
+  hasMore?: boolean
+  nextOffset?: number | null
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+  appliedFilters?: QueryParams
+  q?: string
+  durationMs?: number
 }
 export type EntityResponse<T> = {
   data: T | null
+  durationMs?: number
 }
 export type ListQueryParams<
   TConditions extends Record<string, unknown> = Record<string, unknown>,
@@ -1002,6 +1010,14 @@ export type Organisation = z.infer<typeof OrganisationAPI>
 export type OrganisationCollection = z.infer<typeof OrganisationCollectionAPI>
 // Like Organisation, but without the organisationId in userRoles and translations
 export type OrganisationNew = z.infer<typeof OrganisationInsertAPI>
+// Service-layer create payload with required non-null i18n translations
+export type OrganisationNewWithI18n = Omit<OrganisationNew, 'i18n'> & {
+  i18n: Record<Locale, OrganisationI18nNew>
+}
+// Service-layer update payload with required non-null i18n translations
+export type OrganisationWithI18n = Omit<Organisation, 'i18n'> & {
+  i18n: Record<Locale, OrganisationI18nPartial>
+}
 // Like Organisation, but with all fields optional
 export type OrganisationPartial = z.infer<typeof OrganisationUpdateAPI>
 

@@ -29,7 +29,7 @@ import {
 } from '$lib/api'
 import {
   assertPermissionsToUpdateOrganisation,
-  getOrganisationQueryContext,
+  toQueryConditions,
   isAccessLostUponSuccess,
   organisationWithRelations,
   assertCodeUnique,
@@ -41,6 +41,7 @@ import type {
   Organisation,
   OrganisationDB,
   OrganisationPartial,
+  OrganisationWithI18n,
   Code,
 } from '$lib/types'
 import { OrganisationInsertAPI, OrganisationInsertSuperAdminAPI } from '$lib/db/zod'
@@ -71,8 +72,8 @@ export const GET: RequestHandler = async ({
 
   try {
     // GET : Context for organisation query
-    const { params: queryParams, conditions } = getOrganisationQueryContext(
-      user!,
+    const { conditions } = toQueryConditions(
+      user,
       isAdminRequest(request),
       {},
       userRoles,
@@ -168,10 +169,14 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
   assertPermissionsToUpdateOrganisation(user, request, existingForPermCheck, userRoles)
 
   try {
+    if (!form.data.i18n) {
+      return error(400, 'Organisation i18n is required')
+    }
+
     // DB : Update the organisation
     const updatedOrganisation = await updateOrganisationWithRelated(
       db,
-      form.data,
+      form.data as OrganisationWithI18n,
       params.code,
     )
 

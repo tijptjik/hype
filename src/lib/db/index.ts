@@ -554,17 +554,18 @@ export const isFieldChanged = async <T extends ResourceDB>(
  */
 export const toRelatedRecords = <
   T extends Record<string, unknown>,
+  KeyValue extends string = string,
   K extends string = 'id',
   F extends string = 'id',
 >(
-  data: Record<string, T>,
+  data: Record<KeyValue, T>,
   foreignKeyName: F,
   foreignKeyValue: string,
   keyName: K = 'id' as K,
-): Array<T & Record<K, string> & Record<F, string>> => {
+): Array<T & Record<K, KeyValue> & Record<F, string>> => {
   return Object.entries(data).map(([key, value]) => ({
     ...value,
-    [keyName]: key,
+    [keyName]: key as KeyValue,
     [foreignKeyName]: foreignKeyValue,
   }))
 }

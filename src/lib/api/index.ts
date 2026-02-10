@@ -753,7 +753,7 @@ export async function loadData<T>({
 export const applyQueryFilters = <T extends Table>(
   table: T,
   filters: QueryParams,
-  conditions: SQL<any>[],
+  conditions: SQL<unknown>[],
 ) => {
   // Only process if there are filters
   if (Object.keys(filters).length === 0) {
@@ -767,8 +767,8 @@ export const applyQueryFilters = <T extends Table>(
     baseColumn: string,
     value: Record<string, unknown>,
     parentPath: string[] = [],
-  ): Array<SQL<any>> => {
-    const nestedConditions: Array<SQL<any>> = []
+  ): Array<SQL<unknown>> => {
+    const nestedConditions: Array<SQL<unknown>> = []
 
     Object.entries(value).forEach(([key, nestedValue]) => {
       if (nestedValue === undefined) return
@@ -832,7 +832,7 @@ export const applyQueryFilters = <T extends Table>(
       // Handle non-array values
       return eq(tableColumn, value)
     })
-    .filter((condition): condition is SQL<any> => condition !== undefined)
+    .filter((condition): condition is SQL<unknown> => condition !== undefined)
 
   // Only add conditions if we have any
   if (filterConditions.length > 0) {
