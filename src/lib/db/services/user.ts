@@ -1,11 +1,11 @@
 // ENV
-import { and, type SQL, eq, like, sql, or, Column } from 'drizzle-orm'
+import { and, type SQL, eq, like, sql, or } from 'drizzle-orm'
 // FORMS
 import { superValidate } from 'sveltekit-superforms'
 import { user, userFeature, userLayer } from '../schema'
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters'
-import { UserAPI, UserCollectionAPI, UserCurrentAPI, UserProfileAPI } from '../zod'
+import { UserAPI, UserCollectionAPI, UserProfileAPI } from '../zod'
 // TYPES
 import type { SuperValidated } from 'sveltekit-superforms'
 import type {
@@ -21,8 +21,6 @@ import type {
   UserLayerNew,
   UserRaw,
   CurrentUser,
-  UserPreferences,
-  UserExperimental,
   UserProfile,
 } from '$lib/types'
 import { update } from '../crud'
