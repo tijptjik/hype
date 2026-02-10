@@ -74,7 +74,6 @@ declare global {
         AUTH_SECRET: string
         AUTH_GOOGLE_ID: string
         AUTH_GOOGLE_SECRET: string
-        SUPERADMIN_USERID: string
         // CLOUDINARY
         CLOUDINARY_API_KEY: string
         CLOUDINARY_API_SECRET: string

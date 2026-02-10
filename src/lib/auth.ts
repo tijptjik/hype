@@ -62,7 +62,6 @@ function createAuthInstance(
     AUTH_SECRET: string
     AUTH_GOOGLE_ID: string
     AUTH_GOOGLE_SECRET: string
-    SUPERADMIN_USERID: string
   },
   baseURL: string,
 ) {
@@ -151,7 +150,6 @@ function createAuthInstance(
         // Get user roles and layers
         const roles: UserRoleDisco[] = await getUserRoles(db, user.id)
         const userLayers: UserLayer[] = await getUserLayers(db, user.id)
-        const superAdmin = user.id === env.SUPERADMIN_USERID
 
         // Parse JSON fields from strings to objects
         let preferences: UserPreferences
@@ -187,7 +185,8 @@ function createAuthInstance(
             experimental,
             roles,
             userLayers,
-            superAdmin,
+            superAdmin: false,
+            isHubAdminForActiveHub: false,
           },
           session,
         }
@@ -216,7 +215,6 @@ export const getAuthForRequest = (
     AUTH_SECRET: string
     AUTH_GOOGLE_ID: string
     AUTH_GOOGLE_SECRET: string
-    SUPERADMIN_USERID: string
   },
 ): Auth => {
   const baseURL = getBaseUrlFromRequestHeaders(headers)
@@ -247,6 +245,7 @@ export type SessionUser = Session['user'] & {
   preferences: UserPreferences
   experimental: UserExperimental
   superAdmin: boolean
+  isHubAdminForActiveHub: boolean
   roles: UserRoleDisco[]
   userLayers: UserLayer[]
 }

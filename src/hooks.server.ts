@@ -1,6 +1,7 @@
 // SVELTE
 import { sequence } from '@sveltejs/kit/hooks'
 import type { Handle } from '@sveltejs/kit'
+import { and, eq, or } from 'drizzle-orm'
 // I18N
 import { paraglideMiddleware } from '$lib/paraglide/server'
 // DB
@@ -16,6 +17,7 @@ import { toResponseShape } from '$lib/api/services/hub'
 import type { HubOptsExtended, Session, SessionUser } from '$lib/types'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 import { isAdminRequest } from '$lib/api'
+import { HubRoleType } from '$lib/enums'
 
 let handle: Handle
 
@@ -114,7 +116,6 @@ const handle_auth: Handle = async ({ event, resolve }) => {
       AUTH_SECRET: event.platform.env.AUTH_SECRET,
       AUTH_GOOGLE_ID: event.platform.env.AUTH_GOOGLE_ID,
       AUTH_GOOGLE_SECRET: event.platform.env.AUTH_GOOGLE_SECRET,
-      SUPERADMIN_USERID: event.platform.env.SUPERADMIN_USERID,
     })
 
     // SET LOCALS
@@ -204,17 +205,47 @@ const handle_hub_enrichment: Handle = async ({ event, resolve }) => {
   if (event.locals.hub) {
     // Cast user to SessionUser to access superAdmin property from custom session
     const { isCore } = await import('$lib/api/services/hub')
-    const sessionUser = event.locals.user as SessionUser
-    ;(event.locals.hub as HubOptsExtended).isSuperAdmin =
-      sessionUser?.superAdmin || false
+    const sessionUser = event.locals.user as SessionUser | undefined
+    const hub = event.locals.hub as HubOptsExtended
+    const CORE_HUB_CODE = 'core'
+
+    let isHubAdminForActiveHub = false
+    let isSuperAdmin = false
+
+    if (sessionUser?.id && hub?.code && event.platform?.env?.DB) {
+      const db = drizzle(event.platform.env.DB as unknown as MiniflareD1Database, {
+        schema,
+      })
+
+      const adminHubRoles = await db
+        .select({ hubCode: schema.hub.code })
+        .from(schema.hubRole)
+        .innerJoin(schema.hub, eq(schema.hub.id, schema.hubRole.hubId))
+        .where(
+          and(
+            eq(schema.hubRole.userId, sessionUser.id),
+            eq(schema.hubRole.role, HubRoleType.admin),
+            or(eq(schema.hub.code, CORE_HUB_CODE), eq(schema.hub.code, hub.code)),
+          ),
+        )
+        .all()
+
+      const adminHubCodes = new Set(adminHubRoles.map(role => role.hubCode))
+      isHubAdminForActiveHub = adminHubCodes.has(hub.code)
+
+      // Super admin = hub admin on the core hub.
+      isSuperAdmin = adminHubCodes.has(CORE_HUB_CODE)
+    }
+
+    if (sessionUser) {
+      sessionUser.isHubAdminForActiveHub = isHubAdminForActiveHub
+      sessionUser.superAdmin = isSuperAdmin
+    }
+    hub.isSuperAdmin = isSuperAdmin
     // Admin Panel of App
-    ;(event.locals.hub as HubOptsExtended).isAdminRequest = isAdminRequest(
-      event.request,
-    )
+    hub.isAdminRequest = isAdminRequest(event.request)
     // isCore Convenience property
-    ;(event.locals.hub as HubOptsExtended).isCore = isCore(
-      event.locals.hub as HubOptsExtended,
-    )
+    hub.isCore = isCore(hub)
   }
   return resolve(event)
 }
