@@ -100,6 +100,7 @@ import type {
   OrganisationInsert,
   OrganisationInsertAPI,
   ListQueryParamsSchema,
+  GetQueryParamsSchema,
   OrganisationInsertSuperAdminAPI,
   OrganisationRaw,
   OrganisationRoleAPI,
@@ -677,6 +678,15 @@ export type PaginationParams = {
   limit?: number
   offset?: number
 }
+export type ListResponse<T> = {
+  data: T[]
+  limit?: number
+  offset?: number
+  totalCount: number
+}
+export type EntityResponse<T> = {
+  data: T | null
+}
 export type ListQueryParams<
   TConditions extends Record<string, unknown> = Record<string, unknown>,
 > = {
@@ -1004,6 +1014,7 @@ export type OrganisationSuperAdminPartial = z.infer<
   typeof OrganisationUpdateSuperAdminAPI
 >
 export type OrganisationListParams = z.infer<typeof ListQueryParamsSchema>
+export type OrganisationGetParams = z.infer<typeof GetQueryParamsSchema>
 
 /* ----------------- */
 // ORGANISATIONS :: RELATIONAL
@@ -1934,8 +1945,8 @@ export type AppContextState = {
 }
 
 export type RemoteMapEntry = {
-  list?: (params: ListQueryParams) => unknown
-  get?: (id: Id, byCode?: boolean) => Promise<unknown>
+  list?: (params: ListQueryParams) => Promise<unknown>
+  get?: (ref: Ref, refKey?: string) => Promise<unknown>
 }
 
 export type RemoteMap = Map<FirstClassResource, RemoteMapEntry>
