@@ -1,0 +1,232 @@
+@layer components {
+  /* Base */
+  .bits-theme .bits-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-[var(--radius-input)] border px-[21px] active:scale-[0.98];
+    --btn-size: 3rem;
+    --btn-base-size: 3rem;
+    --btn-base-label-size: 1rem;
+    --btn-label-multiplier: 0.2;
+    --btn-label-penalty: 0.25;
+    --btn-icon-ratio: 0.48;
+    --btn-padding-ratio: 0.4375;
+    height: var(--btn-size);
+    font-size: calc(
+      var(--btn-base-label-size) +
+      ((var(--btn-size) - var(--btn-base-size)) * var(--btn-label-multiplier))
+    );
+    line-height: 1;
+    box-shadow: var(--shadow-mini);
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      color 0.15s ease,
+      transform 0.1s ease;
+    --btn-bg: var(--btn-color);
+    --btn-fg: var(--btn-color-content);
+    --btn-border: color-mix(in oklab, var(--btn-color) 86%, black);
+    --btn-hover-bg: color-mix(in oklab, var(--btn-color) 92%, black);
+    --btn-active-bg: color-mix(in oklab, var(--btn-color) 84%, black);
+    border-color: var(--btn-border);
+    background-color: var(--btn-bg);
+    color: var(--btn-fg);
+    padding-inline: calc(var(--btn-size) * var(--btn-padding-ratio));
+  }
+
+  /* Interactive states */
+  .bits-theme .bits-btn:hover:not(:disabled):not([aria-disabled="true"]) {
+    border-color: var(--btn-hover-border, var(--btn-border));
+    background-color: var(--btn-hover-bg, var(--btn-bg));
+    color: var(--btn-hover-fg, var(--btn-fg));
+  }
+
+  .bits-theme .bits-btn:active:not(:disabled):not([aria-disabled="true"]) {
+    border-color: var(--btn-active-border, var(--btn-border));
+    background-color: var(--btn-active-bg, var(--btn-bg));
+    color: var(--btn-active-fg, var(--btn-fg));
+  }
+
+  .bits-theme .bits-btn:disabled,
+  .bits-theme .bits-btn[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.3;
+    pointer-events: none;
+    border-color: var(--btn-disabled-border, var(--btn-border));
+    background-color: var(--btn-disabled-bg, var(--btn-bg));
+    color: var(--btn-disabled-fg, var(--btn-fg));
+    text-decoration: none;
+    box-shadow: none;
+  }
+
+  /* Element internals */
+  .bits-theme .bits-btn__icon {
+    @apply inline-flex shrink-0 items-center justify-center;
+    line-height: 0;
+  }
+
+  .bits-theme .bits-btn__icon svg {
+    width: calc(var(--btn-size) * var(--btn-icon-ratio));
+    height: calc(var(--btn-size) * var(--btn-icon-ratio));
+    display: block;
+    vertical-align: middle;
+  }
+
+  .bits-theme .bits-btn__label {
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  /* Size variants */
+  .bits-theme .bits-btn--size-xs {
+    --btn-size: 1.5rem;
+  }
+
+  .bits-theme .bits-btn--size-sm {
+    --btn-size: 2rem;
+  }
+
+  .bits-theme .bits-btn--size-md {
+    --btn-size: 3rem;
+  }
+
+  .bits-theme .bits-btn--size-lg {
+    --btn-size: 3.5rem;
+  }
+
+  .bits-theme .bits-btn--size-xl {
+    --btn-size: 4rem;
+  }
+
+  /* Modifiers */
+  .bits-theme .bits-btn--modifier-wide {
+    width: 16rem;
+  }
+
+  .bits-theme .bits-btn--modifier-block {
+    width: 100%;
+  }
+
+  .bits-theme .bits-btn--modifier-circle,
+  .bits-theme .bits-btn--modifier-square {
+    width: var(--btn-size);
+    min-width: var(--btn-size);
+    padding-inline: 0;
+  }
+
+  .bits-theme .bits-btn--modifier-circle {
+    border-radius: 9999px;
+  }
+
+  /* Style variants */
+  .bits-theme .bits-btn--style-outline,
+  .bits-theme .bits-btn--style-dash {
+    --btn-bg: transparent;
+    --btn-fg: var(--btn-outline-fg, var(--btn-color));
+    --btn-border: var(--btn-color);
+    --btn-hover-bg: transparent;
+    --btn-hover-fg: color-mix(
+      in oklab,
+      var(--btn-outline-fg, var(--btn-color)) 88%,
+      white
+    );
+    --btn-active-bg: transparent;
+    --btn-active-fg: color-mix(
+      in oklab,
+      var(--btn-outline-fg, var(--btn-color)) 76%,
+      white
+    );
+  }
+
+  .bits-theme .bits-btn--style-dash {
+    border-style: dashed;
+  }
+
+  .bits-theme .bits-btn--style-soft {
+    --btn-bg: color-mix(in oklab, var(--btn-color) 16%, transparent);
+    --btn-fg: var(--btn-soft-fg, var(--btn-color));
+    --btn-border: color-mix(in oklab, var(--btn-color) 24%, transparent);
+    --btn-hover-bg: color-mix(in oklab, var(--btn-color) 22%, transparent);
+    --btn-active-bg: color-mix(in oklab, var(--btn-color) 28%, transparent);
+  }
+
+  .bits-theme .bits-btn--style-ghost {
+    --btn-bg: transparent;
+    --btn-fg: var(--btn-outline-fg, var(--btn-color));
+    --btn-border: transparent;
+    --btn-hover-bg: color-mix(in oklab, var(--btn-color) 12%, transparent);
+    --btn-active-bg: color-mix(in oklab, var(--btn-color) 18%, transparent);
+    box-shadow: none;
+  }
+
+  .bits-theme .bits-btn--style-link {
+    --btn-bg: transparent;
+    --btn-fg: var(--btn-outline-fg, var(--btn-color));
+    --btn-border: transparent;
+    --btn-hover-bg: transparent;
+    --btn-hover-fg: color-mix(
+      in oklab,
+      var(--btn-outline-fg, var(--btn-color)) 88%,
+      white
+    );
+    --btn-active-bg: transparent;
+    --btn-active-fg: color-mix(
+      in oklab,
+      var(--btn-outline-fg, var(--btn-color)) 76%,
+      white
+    );
+    height: auto;
+    padding-inline: 0;
+    border-width: 0;
+    border-radius: 0;
+    text-decoration: underline;
+    text-underline-offset: 0.25rem;
+    box-shadow: none;
+  }
+
+  .bits-theme .bits-btn--style-link .bits-btn__label {
+    text-decoration: underline;
+    text-underline-offset: 0.25rem;
+  }
+
+  /* Color variants */
+  .bits-theme .bits-btn--color-neutral {
+    --btn-color: var(--color-neutral);
+    --btn-color-content: var(--color-neutral-content);
+    --btn-outline-fg: var(--color-neutral-content);
+    --btn-soft-fg: var(--color-neutral-content);
+  }
+
+  .bits-theme .bits-btn--color-primary {
+    --btn-color: var(--color-primary);
+    --btn-color-content: var(--color-white);
+  }
+
+  .bits-theme .bits-btn--color-secondary {
+    --btn-color: var(--color-secondary);
+    --btn-color-content: var(--color-white);
+  }
+
+  .bits-theme .bits-btn--color-accent {
+    --btn-color: var(--color-accent);
+    --btn-color-content: var(--color-white);
+  }
+
+  .bits-theme .bits-btn--color-info {
+    --btn-color: var(--color-info);
+    --btn-color-content: var(--color-info-content);
+  }
+
+  .bits-theme .bits-btn--color-success {
+    --btn-color: var(--color-success);
+    --btn-color-content: var(--color-success-content);
+  }
+
+  .bits-theme .bits-btn--color-warning {
+    --btn-color: var(--color-warning);
+    --btn-color-content: var(--color-warning-content);
+  }
+
+  .bits-theme .bits-btn--color-error {
+    --btn-color: var(--color-error);
+    --btn-color-content: var(--color-error-content);
+  }
+}
