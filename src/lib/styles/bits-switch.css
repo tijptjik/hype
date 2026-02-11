@@ -1,0 +1,129 @@
+@property --switch-thumb-x {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@layer components {
+  /* Base switch */
+  .bits-theme .bits-switch {
+    --switch-size-base: 2rem;
+    --switch-size: var(--switch-size-base);
+    --switch-height: calc(var(--switch-size));
+    --switch-width: calc(var(--switch-height) * 1.666666667);
+    --switch-border-width: 1px;
+    --switch-padding-ratio: 0.08;
+    --switch-padding: calc(var(--switch-height) * var(--switch-padding-ratio));
+    --switch-thumb-size: calc(var(--switch-height) - (var(--switch-padding) * 2));
+    --switch-translate-checked: calc(
+      var(--switch-width) -
+      var(--switch-thumb-size) -
+      (var(--switch-padding) * 2) -
+      (var(--switch-border-width) * 2)
+    );
+    --switch-translate-indeterminate: calc(var(--switch-translate-checked) / 2);
+
+    --switch-neutral-color: var(--color-neutral);
+    --switch-current-color: var(--switch-left-color, var(--switch-neutral-color));
+
+    @apply inline-flex shrink-0 cursor-pointer items-center rounded-full;
+    width: var(--switch-width);
+    min-width: var(--switch-width);
+    height: var(--switch-height);
+    min-height: var(--switch-height);
+    border-width: var(--switch-border-width);
+    padding: var(--switch-padding);
+    border-color: var(--switch-current-color);
+    background-color: transparent;
+    transition:
+      border-color 0.15s ease,
+      background-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .bits-theme .bits-switch[data-state="unchecked"] {
+    --switch-current-color: var(--switch-left-color, var(--switch-neutral-color));
+    background-color: transparent;
+  }
+
+  .bits-theme .bits-switch--states-3[data-state="unchecked"] {
+    background-color: color-mix(in oklab, var(--switch-current-color) 28%, transparent);
+  }
+
+  .bits-theme .bits-switch[data-state="indeterminate"] {
+    --switch-current-color: var(--switch-mid-color, var(--switch-neutral-color));
+    background-color: transparent;
+  }
+
+  .bits-theme .bits-switch[data-state="checked"] {
+    --switch-current-color: var(--switch-right-color, var(--switch-neutral-color));
+    background-color: color-mix(
+      in oklab,
+      var(--switch-current-color) var(--switch-track-on-mix, 28%),
+      transparent
+    );
+  }
+
+  .bits-theme .bits-switch:disabled,
+  .bits-theme .bits-switch[aria-disabled="true"] {
+    cursor: not-allowed;
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  /* Thumb */
+  .bits-theme .bits-switch__thumb {
+    @apply pointer-events-none inline-flex shrink-0 items-center justify-center rounded-full;
+    width: var(--switch-thumb-size);
+    height: var(--switch-thumb-size);
+    border-width: var(--switch-border-width);
+    border-color: var(--switch-current-color);
+    background-color: var(--switch-current-color);
+    box-shadow: var(--shadow-mini);
+    --switch-thumb-x: 0px;
+    translate: var(--switch-thumb-x) 0;
+    will-change: translate;
+    transition:
+      --switch-thumb-x 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 0.15s ease,
+      background-color 0.15s ease;
+  }
+
+  .bits-theme .bits-switch__thumb[data-state="unchecked"] {
+    --switch-thumb-x: 0px;
+  }
+
+  .bits-theme .bits-switch__thumb[data-state="indeterminate"] {
+    --switch-thumb-x: var(--switch-translate-indeterminate);
+  }
+
+  .bits-theme .bits-switch__thumb[data-state="checked"] {
+    --switch-thumb-x: var(--switch-translate-checked);
+  }
+
+  /* Size variants */
+  .bits-theme .bits-switch--size-xs {
+    --switch-size: calc(var(--switch-size-base) * 0.5);
+    --switch-padding-ratio: 0.16;
+  }
+
+  .bits-theme .bits-switch--size-sm {
+    --switch-size: calc(var(--switch-size-base) * 0.75);
+    --switch-padding-ratio: 0.13;
+  }
+
+  .bits-theme .bits-switch--size-md {
+    --switch-size: var(--switch-size-base);
+    --switch-padding-ratio: 0.11;
+  }
+
+  .bits-theme .bits-switch--size-lg {
+    --switch-size: calc(var(--switch-size-base) * 1.25);
+    --switch-padding-ratio: 0.1;
+  }
+
+  .bits-theme .bits-switch--size-xl {
+    --switch-size: calc(var(--switch-size-base) * 1.5);
+    --switch-padding-ratio: 0.1;
+  }
+}
