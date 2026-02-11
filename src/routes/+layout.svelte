@@ -164,8 +164,17 @@ watch(
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
   <link
-    href="https://fonts.googleapis.com/css2?family=Geologica:wght@100..900&family=Tilt+Neon&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Geologica:wght,CRSV@100..900,0&family=IBM+Plex+Mono:wght@400;700&family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&family=Tilt+Neon&display=swap"
     rel="stylesheet" />
+  {#if getLocale() === 'zh-hant'}
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@100..900&display=swap"
+      rel="stylesheet" />
+  {:else if getLocale() === 'zh-hans'}
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@100..900&display=swap"
+      rel="stylesheet" />
+  {/if}
 </svelte:head>
 
 <QueryClientProvider client={queryClient}>
@@ -184,15 +193,6 @@ watch(
       {/snippet}
       {@render children()}
     </svelte:boundary>
-    {#if getLocale() === 'zh-hant'}
-      <link
-        href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@100..900&display=swap"
-        rel="stylesheet" />
-    {:else if getLocale() === 'zh-hans'}
-      <link
-        href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@100..900&display=swap"
-        rel="stylesheet" />
-    {/if}
   </div>
   <!-- TODO Prevent this from ever running in PRODUCTION (but it's OK on Preview) -->
   {#if data.PUBLIC_SVELTE_QUERY_DEVTOOLS === 'true'}
