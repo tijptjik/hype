@@ -16,23 +16,35 @@ This is a Bun-powered SvelteKit app.
 Run all commands with Bun:
 
 - `bun install`: install dependencies.
-- `bun run dev`: start local dev server.
 - `bun run build`: production build (runs Svelte sync + Vite build).
 - `bun run check`: run `svelte-check`.
 - `bun run lint`: run Biome checks with auto-fixes.
 - `bun run format`: format code with Biome.
 - `bun run test:run`: run tests once in CI mode.
-- `bun run test:watch`: run tests in watch mode.
 - `bun run db:migration:new <name>`: create a new Drizzle migration.
 - `bun run db:migration:run:local`: apply local D1 migrations.
+
+## Documentation
+- Authorisation Dsign is defined in `docs/Authorization-Design.md`
+- Authorisation Roles are defined in `docs/Roles.md`
 
 ## Coding Style & Naming Conventions
 - Formatter/linter: Biome (`biome.json`).
 - Indentation: 2 spaces; line width: 88; LF endings.
 - JavaScript/TypeScript style: single quotes, only use semicolons when needed.
-- Svelte components: `PascalCase.svelte` in `src/lib/components/...`.
-- Route files follow SvelteKit conventions (`+page.svelte`, `+page.ts`, `+server.ts`).
+- Svelte components:
+  - Bits Components : `PascalCase.svelte` in `src/lib/bits/...`.
+  - Legacy : `PascalCase.svelte` in `src/lib/components/...`.
+- Route files follow SvelteKit conventions (`+page.svelte`, `+server.ts`).
+  - `+page.ts` are dropped in favour of svelte remote functions.
+  - Remote functions are stored in `src/api/server/<resourceType>.remote.ts`
 - Keep domain service modules grouped by entity (`src/lib/db/services/feature.ts`, etc.).
+- Imports:
+  - Keep import blocks grouped by section comments such as `// SVELTE`, `// I18N`, `// BITS COMPONENTS`, `// COMPONENTS`, `// TYPES`, `// DB`, `// API`, `// DRIZZLE`.
+  - Order imports by: framework first, then third-party, then project/library imports, then type imports.
+- Comments:
+  - Use standard JSDoc for exported functions and remote APIs: include `@param`, `@returns`, and `@remarks` where behavior constraints matter.
+  - Preserve existing comments when editing code; update wording if behavior changes instead of deleting useful context.
 
 ## Testing Guidelines
 - Framework: Vitest with `jsdom` and `@testing-library/jest-dom`.
@@ -40,7 +52,38 @@ Run all commands with Bun:
 - Run `bun run test:run` before pushing.
 - Coverage uses V8 + `lcov` output; include tests for new behavior and bug fixes.
 
+## Package and Library specific instructions
+
+- `ts` TypeScript guidance:
+  - Prefer explicit return types for exported functions and non-trivial functions.
+  - Use type guards/type predicates for runtime narrowing where needed.
+  - Prefer discriminated unions for complex state machines.
+  - Use utility types (`Partial`, `Readonly`, `Pick`, etc.) and `as const` for enum-like constants.
+  - Add new TypeScript types in `src/lib/types.ts`, not inline in feature files.
+  - Place new types under the correct existing heading in `src/lib/types.ts` (usually resource-based or domain-based) so related type changes can be reviewed together.
+- `bun` - Package/runtime tooling:
+  - Use Bun for dependency management and command execution.
+  - Use `bunx` where `npx` would normally be used.
+  - Do not use `npm` or `pnpm` for this repository.
+- `drizzle-orm` - Drizzle conventions:
+  - Import query helpers from `drizzle-orm`.
+  - Use `eq`/`and`/`or` for conditions.
+  - Use `insert`/`select`/`update`/`delete` patterns for CRUD.
+  - Define schema relations with `relations`.
+- `paraglide-js` - i18n:
+  - Use Paraglide for translations in `messages/`.
+  - Supported locales are `en`, `zh-hans`, and `zh-hant`.
+  - Write messages using Inlang Message Syntax.
+
+## Agent-Specific Notes
+- For Svelte/SvelteKit questions and implementation work, consult Context7 docs first, especially for experimental or cutting-edge APIs.
+- Treat framework docs as authoritative over memory; verify behavior against the current docs before coding.
+- New UI and form migration rules:
+  - Prefer SvelteKit remote functions `form` calls over `sveltekit-superforms` for new work and refactors.
+  - Prefer Bits UI primitives over DaisyUI for new UI development.
+
 ## Commit & Pull Request Guidelines
+
 - Use Conventional Commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`, `perf:`, `style:`, `revert:`.
 - Use `bun run commit` for Commitizen prompts; commit messages are enforced by commitlint.
 - Branch naming is enforced: `type/topic` (for example, `feat/map-filter-sync`).
@@ -50,21 +93,3 @@ Run all commands with Bun:
   - screenshots/video for UI changes,
   - notes on migrations, env vars, or deployment impact.
 - Pre-push hooks run branch-name lint and tests; ensure both pass locally.
-
-## Agent-Specific Notes
-- For Svelte/SvelteKit questions and implementation work, consult Context7 docs first, especially for experimental or cutting-edge APIs.
-- Treat framework docs as authoritative over memory; verify behavior against the current docs before coding.
-- Add new TypeScript types in `src/lib/types.ts`, not inline in feature files.
-- Place new types under the correct existing heading in `src/lib/types.ts` (usually resource-based or domain-based) so related type changes can be reviewed together.
-- New UI and form migration rules:
-  - Prefer SvelteKit remote functions `form` calls over `sveltekit-superforms` for new work and refactors.
-  - Prefer Bits UI primitives over DaisyUI for new UI development.
-  - Place Bits-based components under `src/lib/bits`.
-  - In Svelte files that mix old and new UI, keep imports separated with explicit headings:
-    - `// BITS COMPONENTS` for new Bits-based imports.
-    - `// COMPONENTS` for legacy imports.
-
-## Documentation
-- Authorisation Dsign is defined in `docs/Authorization-Design.md`
-- Authorisation Roles are defined in `docs/Roles.md`
-- Use standard JSDoc for exported functions and remote APIs: include `@param`, `@returns`, and `@remarks` where behavior constraints matter.
