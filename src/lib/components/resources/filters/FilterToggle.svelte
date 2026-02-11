@@ -46,12 +46,12 @@ const {
     </span>
     <input
       type="checkbox"
-      class="toggle toggle-sm justify-self-center border-neutral-content/30 bg-[#CF4FB0] text-neutral-content/30 transition-colors {currentValue ===
+      class="toggle toggle-sm border-1 justify-self-center bg-base-200 checked:bg-base-200 indeterminate:bg-base-200 transition-colors {currentValue ===
       null
-        ? 'bg-neutral-content/30'
+        ? 'border-neutral-content/30 text-neutral-content/30'
         : currentValue === false
-          ? 'bg-red-500'
-          : ''}"
+          ? 'border-red-500 text-red-500'
+          : 'border-[#CF4FB0] text-[#CF4FB0]'}"
       checked={currentValue === true}
       indeterminate={currentValue === null}
       onchange={(e) => {

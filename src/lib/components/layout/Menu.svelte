@@ -12,7 +12,7 @@ import { goto } from '$app/navigation';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import {
-  Map,
+  Map as MapIcon,
   Funnel,
   Star,
   Cog6Tooth,
@@ -52,7 +52,7 @@ function getMenuItems() {
     { icon: Cog6Tooth, label: m.menu_settings(), panel: Panel.settings }
   ];
   if (hub.isCore) {
-    const prismPanel = { icon: Map, label: m.maps__title(), panel: Panel.prisms };
+    const prismPanel = { icon: MapIcon, label: m.maps__title(), panel: Panel.prisms };
     return [prismPanel, ...commonPanels];
   } else {
     const hubPanel = {
@@ -108,7 +108,7 @@ let hasViewportHeightIncreased = $derived(innerHeight > initialInnerHeight);
   id="menu"
   class="min-h-17 bottom-0 w-full border-t-3 border-base-300 bg-black px-4 py-2 caret-transparent md:px-0">
   <div class="flex w-full flex-row items-center justify-between">
-    <div class="mx-auto flex max-w-[720px] flex-grow items-center justify-around">
+    <div class="mx-auto flex max-w-180 grow items-center justify-around">
       {#each getMenuItems() as { icon, label, panel }}
         {@render menuButton(icon, label, panel)}
       {/each}

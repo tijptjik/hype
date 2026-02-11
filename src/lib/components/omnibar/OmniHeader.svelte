@@ -4,7 +4,7 @@ import { m } from '$lib/i18n';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 // ICONS
-import { Map, BuildingLibrary as Building, MapPin } from '@steeze-ui/heroicons';
+import { Map as MapIcon, BuildingLibrary as Building, MapPin } from '@steeze-ui/heroicons';
 // ENUMS
 import { OmniCollection } from '$lib/enums';
 
@@ -13,7 +13,7 @@ import { OmniCollection } from '$lib/enums';
 let { collectionType }: { collectionType: OmniCollection } = $props();
 
 const icons = {
-  walk: Map,
+  walk: MapIcon,
   neighbourhood: Building,
   feature: MapPin
 };
