@@ -11,6 +11,8 @@ import { m } from '$lib/i18n';
 // CONTEXT
 import { setForm } from '$lib/context/form.svelte';
 import { getAdminCtx } from '$lib/context/admin.svelte';
+// REMOTE
+import { getOrganisation } from '$lib/api/server/organisation.remote'
 // ICONS
 import { Users as OrganisationIcon } from '@steeze-ui/heroicons';
 // PROVIDERS
@@ -30,6 +32,7 @@ import { FirstClassResource, ImageContextResource } from '$lib/enums';
 // TYPES
 import type { FormPageProps, FormField, Organisation, Image, Id } from '$lib/types';
 
+
 // CONTEXT
 const adminCtx = getAdminCtx();
 
@@ -39,142 +42,142 @@ let contentsElement: HTMLFormElement | undefined = $state();
 
 // CONFIG
 const RESOURCE = FirstClassResource.organisation;
-const FIELDS: Record<string, FormField> = {
-  i18n: {
-    name: {
-      label: m.admin__forms_common_name_full(),
-      component: 'InputField',
-      isArray: false,
-      isTranslated: true,
-      isNested: false
-    },
-    nameShort: {
-      label: m.admin__forms_common_name_short(),
-      component: 'InputField',
-      isArray: false,
-      isTranslated: true,
-      isNested: false
-    },
-    description: {
-      label: m.feature__description(),
-      component: 'TextareaField',
-      isArray: false,
-      isTranslated: true,
-      isNested: false
-    }
-  } as FormField,
-  users: {
-    userRoles: {
-      label: m.admin__forms_organisation_members_title(),
-      isArray: true,
-      isTranslated: false,
-      isNested: false
-    }
-  } as FormField,
-  specification: {
-    code: {
-      label: m.admin__forms_common_code(),
-      component: 'InputField',
-      isArray: false,
-      isTranslated: false,
-      isNested: false
-    },
-    url: {
-      label: m.admin__forms_organisation_url(),
-      component: 'InputField',
-      isArray: false,
-      isTranslated: false,
-      isNested: false
-    }
-  } as FormField,
-  images: {
-    image: {
-      label: m.admin__forms_organisation_image_title(),
-      component: 'InputField',
-      isArray: false,
-      isTranslated: false,
-      isNested: false
-    }
-  } as FormField
-};
+// const FIELDS: Record<string, FormField> = {
+//   i18n: {
+//     name: {
+//       label: m.admin__forms_common_name_full(),
+//       component: 'InputField',
+//       isArray: false,
+//       isTranslated: true,
+//       isNested: false
+//     },
+//     nameShort: {
+//       label: m.admin__forms_common_name_short(),
+//       component: 'InputField',
+//       isArray: false,
+//       isTranslated: true,
+//       isNested: false
+//     },
+//     description: {
+//       label: m.feature__description(),
+//       component: 'TextareaField',
+//       isArray: false,
+//       isTranslated: true,
+//       isNested: false
+//     }
+//   } as FormField,
+//   users: {
+//     userRoles: {
+//       label: m.admin__forms_organisation_members_title(),
+//       isArray: true,
+//       isTranslated: false,
+//       isNested: false
+//     }
+//   } as FormField,
+//   specification: {
+//     code: {
+//       label: m.admin__forms_common_code(),
+//       component: 'InputField',
+//       isArray: false,
+//       isTranslated: false,
+//       isNested: false
+//     },
+//     url: {
+//       label: m.admin__forms_organisation_url(),
+//       component: 'InputField',
+//       isArray: false,
+//       isTranslated: false,
+//       isNested: false
+//     }
+//   } as FormField,
+//   images: {
+//     image: {
+//       label: m.admin__forms_organisation_image_title(),
+//       component: 'InputField',
+//       isArray: false,
+//       isTranslated: false,
+//       isNested: false
+//     }
+//   } as FormField
+// };
 
-// STATE : PROPS
-let pageProps: FormPageProps<Organisation> = $props();
+// // STATE : PROPS
+// let pageProps: FormPageProps<Organisation> = $props();
 
-// Read facet from URL hash
-const hashFacet = $derived(() => {
-  if (typeof window !== 'undefined') {
-    const hash = page.url.hash;
-    return hash ? hash.substring(1) : null;
-  }
-  return null;
-});
+// // Read facet from URL hash
+// const hashFacet = $derived(() => {
+//   if (typeof window !== 'undefined') {
+//     const hash = page.url.hash;
+//     return hash ? hash.substring(1) : null;
+//   }
+//   return null;
+// });
 
-// Set facet from hash or default to 'core'
-$effect(() => {
-  const facet = hashFacet();
-  if (facet && ['core', 'images'].includes(facet)) {
-    adminCtx.setFacet(
-      facet as any,
-      pageProps.data.entity,
-      FirstClassResource.organisation
-    );
-  } else {
-    adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.organisation);
-  }
-});
+// // Set facet from hash or default to 'core'
+// $effect(() => {
+//   const facet = hashFacet();
+//   if (facet && ['core', 'images'].includes(facet)) {
+//     adminCtx.setFacet(
+//       facet as any,
+//       pageProps.data.entity,
+//       FirstClassResource.organisation
+//     );
+//   } else {
+//     adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.organisation);
+//   }
+// });
 
-let form = setForm(
-  RESOURCE,
-  pageProps.data.entity,
-  pageProps.data.validatedForm,
-  getAdminCtx(),
-  getFlash(page, { clearOnNavigate: false, clearAfterMs: 2500 })
-);
+// let form = setForm(
+//   RESOURCE,
+//   pageProps.data.entity,
+//   pageProps.data.validatedForm,
+//   getAdminCtx(),
+//   getFlash(page, { clearOnNavigate: false, clearAfterMs: 2500 })
+// );
 
-// REACTIVE: Update form when pageProps change (for reset functionality)
-watch(
-  () => pageProps.data.validatedForm?.data,
-  (newData) => {
-    form.form.set(newData as unknown as Organisation);
-  },
-  {
-    lazy: true
-  }
-);
+// // REACTIVE: Update form when pageProps change (for reset functionality)
+// watch(
+//   () => pageProps.data.validatedForm?.data,
+//   (newData) => {
+//     form.form.set(newData as unknown as Organisation);
+//   },
+//   {
+//     lazy: true
+//   }
+// );
 
-// STATE : DERIVED
-let enhance = $derived(form.enhance);
-let title = $derived(
-  pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE
-);
-let image = $derived(pageProps.data.image as Image);
-let { form: organisationForm } = form;
+// // STATE : DERIVED
+// let enhance = $derived(form.enhance);
+// let title = $derived(
+//   pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE
+// );
+// let image = $derived(pageProps.data.image as Image);
+// let { form: organisationForm } = form;
 
-let headerActions = $derived(
-  $organisationForm.hubId ? organisationHubActionSnippet : undefined
-);
+// let headerActions = $derived(
+//   $organisationForm.hubId ? organisationHubActionSnippet : undefined
+// );
 
-// HEADER SETUP
-$effect(() => {
-  const facetTabs = new Map();
-  facetTabs.set('core', m.resources__main());
-  if (adminCtx.activeResourceRef !== 'new') {
-    facetTabs.set('images', m.organisation__images());
-  }
+// // HEADER SETUP
+// $effect(() => {
+//   const facetTabs = new Map();
+//   facetTabs.set('core', m.resources__main());
+//   if (adminCtx.activeResourceRef !== 'new') {
+//     facetTabs.set('images', m.organisation__images());
+//   }
 
-  untrack(() => adminCtx.setHeaderForEntity(title, OrganisationIcon, facetTabs));
+//   untrack(() => adminCtx.setHeaderForEntity(title, OrganisationIcon, facetTabs));
 
-  // Set form context for header actions
-  adminCtx.appCtx.setFormContext(form);
-});
+//   // Set form context for header actions
+//   adminCtx.appCtx.setFormContext(form);
+// });
 
-// Clean up form context when component unmounts
-$effect(() => {
-  return () => {
-    adminCtx.appCtx.clearFormContext();
-  };
-});
+// // Clean up form context when component unmounts
+// $effect(() => {
+//   return () => {
+//     adminCtx.appCtx.clearFormContext();
+//   };
+// });
 </script>
 
 {#snippet organisationHubActionSnippet()}
@@ -182,7 +185,7 @@ $effect(() => {
 {/snippet}
 
 <!-- LAYOUT -->
-<div class="relative h-full w-full overflow-hidden" bind:this={vietportElement}>
+<!-- <div class="relative h-full w-full overflow-hidden" bind:this={vietportElement}>
   {#if adminCtx.appCtx.isInitialised}
     <form
       id="organisationForm"
@@ -256,4 +259,23 @@ $effect(() => {
         thumbActive: 12
       }} />
   {/if}
-</div>
+</div> -->
+
+
+<main class="p-6">
+  {#await getOrganisation({
+    ref: page.params.organisation as string,
+    refKey: 'code',
+  }) then result}
+    {#if result.data}
+      <h1 class="text-xl font-semibold">{result.data.code} <sup class="text-xs text-pretty">{result.data.id}</sup></h1>
+      <pre class="mt-4 overflow-auto rounded bg-base-200 p-4 text-xs"
+        >{JSON.stringify(result, null, 2)}</pre
+      >
+    {:else}
+      <p>Organisation not found.</p>
+    {/if}
+  {:catch}
+    <p>Failed to load organisation.</p>
+  {/await}
+</main>
