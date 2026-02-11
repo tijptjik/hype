@@ -1,6 +1,7 @@
 <script lang="ts">
 // BITS COMPONENTS
 import { Button } from '$lib/bits'
+    import { uppercase } from 'zod';
 
 const BUTTON_COLORS = [
   'neutral',
@@ -42,7 +43,7 @@ function onButtonClick(variant: string) {
 
     <div class="space-y-4">
       <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
-        Colors (style: none)
+        Colors
       </h2>
       <div class="flex flex-wrap gap-3">
         {#each BUTTON_COLORS as color}
@@ -53,10 +54,10 @@ function onButtonClick(variant: string) {
 
     <div class="space-y-4">
       <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
-        Styles x Colors
+        Styles
       </h2>
       <div class="space-y-3">
-        {#each BUTTON_STYLES as style}
+        {#each BUTTON_STYLES.filter((style) => style !== 'none') as style}
           <div class="space-y-2">
             <p class="text-xs font-semibold uppercase tracking-wider text-foreground-alt">
               {style}
@@ -79,12 +80,13 @@ function onButtonClick(variant: string) {
       <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">Sizes</h2>
       <div class="flex flex-wrap items-end gap-3">
         {#each BUTTON_SIZES as size}
-          <Button text={size} color="primary" {size} onClick={() => onButtonClick(`size:${size}`)} />
+          <Button class="uppercase font-mono" text={size} color="primary" {size} onClick={() => onButtonClick(`size:${size}`)} />
         {/each}
       </div>
       <div class="flex flex-wrap items-end gap-3">
         {#each BUTTON_SIZES as size}
           <Button
+
             text={`circle-${size}`}
             color="accent"
             icon={globeIcon}
