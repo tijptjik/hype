@@ -33,7 +33,7 @@
   --color-success-content: #1d232a;
   --color-warning: #f7e1a0;
   --color-warning-content: #1d232a;
-  --color-error: #ff7a7a;
+  --color-error: #ff5b5b;
   --color-error-content: #1d232a;
 
   --radius-box: 1rem;
@@ -84,7 +84,7 @@
   --color-secondary: #7482ff;
   --color-ok: rgb(62 173 142);
   --color-pending: #e0c285;
-  --color-error: #ff7a7a;
+  --color-error: #ff5b5b;
 
   --text-2xs: 0.625rem;
   --text-3xs: 0.55rem;
