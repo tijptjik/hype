@@ -27,6 +27,8 @@ Run all commands with Bun:
 ## Documentation
 - Authorisation Dsign is defined in `docs/Authorization-Design.md`
 - Authorisation Roles are defined in `docs/Roles.md`
+- Refactor roadmap is tracked in `docs/refactor-roadmap.md`
+- Refactor checklist/TODOs are tracked in `docs/refactor-todo.md`
 
 ## Coding Style & Naming Conventions
 - Formatter/linter: Biome (`biome.json`).
