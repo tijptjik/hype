@@ -3,6 +3,7 @@
   Apply by wrapping migrated sections with: <div class="bits-theme">...</div>
 */
 @import "./bits-btn.css";
+@import "./bits-switch.css";
 
 @layer theme {
   .bits-theme {
