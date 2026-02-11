@@ -56,6 +56,8 @@ let panelProps: PanelProps = $derived({
 </Panel>
 
 <style>
+@reference '../../styles/app.css';
+
 :global(.preformatted) {
   white-space: pre-wrap;
 }

@@ -25,7 +25,7 @@ const feature: Feature = $derived(adminCtx.appCtx.cache.feature.get($form?.id))!
 const canonicalImage = $derived(feature?.image as Image | null);
 </script>
 
-<div class="h-full w-full flex-1 basis-full 2xl:basis-1/3-gap-4">
+<div class="h-full w-full flex-1 basis-full 2xl:basis-1-3-gap-4">
   {#if canonicalImage}
     <a
       href={getUrlForResource(adminCtx, FirstClassResource.feature, $form.id, 'images')}

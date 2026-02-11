@@ -103,9 +103,9 @@ const updateFormSpecifierValue = (
 </script>
 
 <div
-  class="z-10 basis-1/2-gap-4 rounded-2xl p-0 @container {sectionProps.cols == 3
-    ? 'basis-1/2-gap-4 2xl:basis-1/3-gap-4'
-    : '2xl:basis-1/4-gap-4 basis-1/2-gap-4 '}">
+  class="z-10 basis-1-2-gap-4 rounded-2xl p-0 @container {sectionProps.cols == 3
+    ? 'basis-1-2-gap-4 2xl:basis-1-3-gap-4'
+    : '2xl:basis-1/4-gap-4 basis-1-2-gap-4 '}">
   <Header {...sectionProps} />
   {#each Object.entries(fields) as [fieldRoot_, field]}
     {@const formField = getFormField(fieldRoot_)}

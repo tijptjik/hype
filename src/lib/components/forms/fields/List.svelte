@@ -267,6 +267,8 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
 </div>
 
 <style>
+@reference '../../../styles/app.css';
+
 :global(.dragging) {
   /* @ts-ignore */
   @apply shadow-xl ring-2 ring-accent;

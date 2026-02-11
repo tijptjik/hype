@@ -13,7 +13,7 @@
    ═══════════════════════ */
 
 :root {
-  --svrollbar-thumb-background: theme(colors.base-100);
+  --svrollbar-thumb-background: var(--color-base-100);
   --svrollbar-thumb-opacity: 0.7;
 }
 
@@ -87,10 +87,10 @@ body.svrollbar-scrolling .completion-footer,
 body.svrollbar-scrolling footer,
 body.svrollbar-scrolling header,
 body.svrollbar-scrolling nav,
-body.svrollbar-scrolling [class*='footer'],
-body.svrollbar-scrolling [class*='header'],
-body.svrollbar-scrolling [class*='panel'],
-body.svrollbar-scrolling [class*='container'] {
+body.svrollbar-scrolling [class*="footer"],
+body.svrollbar-scrolling [class*="header"],
+body.svrollbar-scrolling [class*="panel"],
+body.svrollbar-scrolling [class*="container"] {
   -webkit-user-select: none !important;
   -moz-user-select: none !important;
   -ms-user-select: none !important;
@@ -101,8 +101,8 @@ body.svrollbar-scrolling [class*='container'] {
 }
 
 /* Specifically target the CompletionFooter component */
-body.svrollbar-scrolling footer[class*='completion'],
-body.svrollbar-scrolling [data-testid*='completion'],
+body.svrollbar-scrolling footer[class*="completion"],
+body.svrollbar-scrolling [data-testid*="completion"],
 body.svrollbar-scrolling .bg-base-300 {
   -webkit-user-select: none !important;
   -moz-user-select: none !important;

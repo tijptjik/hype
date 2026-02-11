@@ -85,10 +85,14 @@ let displayText = $derived(displayRangeFilter(min, max, values));
 <style>
 :global(.rangeSlider) {
   /* Slider main elements */
-  --range-slider: theme(colors.base-100);
-  --range-handle-inactive: theme(colors.base-content / 0.3);
-  --range-handle: theme(colors.sky.600);
-  --range-handle-focus: theme(colors.sky.600);
+  --range-slider: var(--color-base-100);
+  --range-handle-inactive: color-mix(
+    in srgb,
+    var(--color-base-content) 30%,
+    transparent
+  );
+  --range-handle: var(--color-sky-600);
+  --range-handle-focus: var(--color-sky-600);
   --range-handle-border: var(--range-handle);
   --range-range-inactive: var(--range-handle-inactive);
   --range-range: var(--range-handle-focus);
@@ -99,10 +103,10 @@ let displayText = $derived(displayRangeFilter(min, max, values));
 
   /* Float elements */
   --range-float-inactive: var(--range-handle-inactive);
-  --range-float: theme(colors.sky.600);
-  --range-float-text: theme(colors.white);
-  --range-float-background: theme(colors.base-content);
-  --range-float-border: theme(colors.base-300);
+  --range-float: var(--color-sky-600);
+  --range-float-text: var(--color-white);
+  --range-float-background: var(--color-base-content);
+  --range-float-border: var(--color-base-300);
   --range-float-width: 32px;
 
   /* Pips and labels */
@@ -110,13 +114,13 @@ let displayText = $derived(displayRangeFilter(min, max, values));
   --range-pip-text: var(--range-pip); /* color of the base labels */
   --range-pip-active: #a1a1aa; /* active pips (when handle is on a slider-stop) */
   --range-pip-active-text: var(--range-pip-active);
-  --range-pip-hover: theme(colors.base-50); /* when a slider-stop is hovered */
+  --range-pip-hover: var(--color-base-50); /* when a slider-stop is hovered */
   --range-pip-hover-text: var(--range-pip-hover); /* when a slider-stop is hovered */
-  --range-pip-in-range: theme(colors.base-50); /* pips inside the range */
+  --range-pip-in-range: var(--color-base-50); /* pips inside the range */
   --range-pip-in-range-text: var(--range-pip-active-text); /* labels inside the range */
 
   /* Additional customizations */
-  --range-track: theme(colors.base-300);
+  --range-track: var(--color-base-300);
 
   /* Vertical spacing adjustments */
   margin: 2rem 0.5rem;

@@ -129,7 +129,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
   draggable="false"
   role="article"
   tabindex="0"
-  class="duration-800 hover:scale-1 bg-grain card flex select-none flex-col gap-4 rounded-xl bg-glass-neutral shadow-[0_0_25px_rgba(0,0,0,0.25)] transition-shadow hover:shadow-[0_0_25px_theme(colors.primary)] focus-visible:shadow-[0_0_25px_theme(colors.primary)] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-secondary active:outline-none"
+  class="duration-800 hover:scale-1 bg-grain card flex select-none flex-col gap-4 rounded-xl bg-glass-neutral shadow-[0_0_25px_rgba(0,0,0,0.25)] transition-shadow hover:shadow-[0_0_25px_var(--color-primary)] focus-visible:shadow-[0_0_25px_var(--color-primary)] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-secondary active:outline-none"
   onkeydown={handleKeyDown}
   {onclick}>
   <!-- Header Section -->
