@@ -5,6 +5,67 @@
 }
 
 @layer components {
+  /* Field + labels */
+  .bits-theme .bits-switch-field {
+    --switch-size-base: 2rem;
+    --switch-size: var(--switch-size-base);
+    --switch-base-label-size: 0.875rem;
+    --switch-label-multiplier: 0.2;
+    --switch-label-size: calc(
+      var(--switch-base-label-size) +
+      ((var(--switch-size) - var(--switch-size-base)) * var(--switch-label-multiplier))
+    );
+    --switch-label-gap-block: 0.5rem;
+    --switch-label-gap-inline: 0.75rem;
+    @apply inline-flex flex-col items-center gap-1;
+    row-gap: var(--switch-label-gap-block);
+  }
+
+  .bits-theme .bits-switch-row {
+    @apply inline-flex items-center justify-center gap-3;
+    column-gap: var(--switch-label-gap-inline);
+  }
+
+  .bits-theme .bits-switch-label {
+    font-size: var(--switch-label-size);
+    line-height: 1.1;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s ease;
+  }
+
+  .bits-theme .bits-switch-label--side {
+    color: var(--color-foreground-alt);
+    font-weight: 600;
+  }
+
+  .bits-theme .bits-switch-label--active {
+    color: var(--color-foreground);
+  }
+
+  .bits-theme .bits-switch-label--inactive {
+    color: var(--color-foreground-alt);
+  }
+
+  .bits-theme .bits-switch-label--stack {
+    color: var(--color-foreground);
+    align-self: center;
+    text-align: center;
+  }
+
+  .bits-theme .bits-switch-label--hover-only {
+    color: transparent;
+  }
+
+  .bits-theme .bits-switch-field:hover .bits-switch-label--hover-only {
+    color: var(--color-foreground-alt);
+  }
+
+  .bits-theme .bits-switch-field--disabled .bits-switch-label {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
   /* Base switch */
   .bits-theme .bits-switch {
     --switch-size-base: 2rem;
@@ -106,24 +167,39 @@
     --switch-size: calc(var(--switch-size-base) * 0.5);
     --switch-padding-ratio: 0.16;
   }
+  .bits-theme .bits-switch-field--size-xs {
+    --switch-size: calc(var(--switch-size-base) * 0.5);
+  }
 
   .bits-theme .bits-switch--size-sm {
     --switch-size: calc(var(--switch-size-base) * 0.75);
     --switch-padding-ratio: 0.13;
+  }
+  .bits-theme .bits-switch-field--size-sm {
+    --switch-size: calc(var(--switch-size-base) * 0.75);
   }
 
   .bits-theme .bits-switch--size-md {
     --switch-size: var(--switch-size-base);
     --switch-padding-ratio: 0.11;
   }
+  .bits-theme .bits-switch-field--size-md {
+    --switch-size: var(--switch-size-base);
+  }
 
   .bits-theme .bits-switch--size-lg {
     --switch-size: calc(var(--switch-size-base) * 1.25);
     --switch-padding-ratio: 0.1;
   }
+  .bits-theme .bits-switch-field--size-lg {
+    --switch-size: calc(var(--switch-size-base) * 1.25);
+  }
 
   .bits-theme .bits-switch--size-xl {
     --switch-size: calc(var(--switch-size-base) * 1.5);
     --switch-padding-ratio: 0.1;
+  }
+  .bits-theme .bits-switch-field--size-xl {
+    --switch-size: calc(var(--switch-size-base) * 1.5);
   }
 }

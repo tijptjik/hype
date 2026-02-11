@@ -15,6 +15,11 @@ export interface SwitchProps {
   leftColor?: ButtonColor
   midColor?: ButtonColor
   size?: ButtonSize
+  leftText?: string
+  rightText?: string
+  topText?: string
+  bottomText?: string
+  showLabelsOnHoverOnly?: boolean
   class?: string
   thumbClass?: string
   onCheckedChange?: (checked: SwitchState) => void
