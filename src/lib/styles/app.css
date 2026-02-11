@@ -35,7 +35,7 @@
   --radius-box: 1rem;
   --radius-field: 0.5rem;
   --radius-selector: 1.9rem;
-  --border: 1px;
+  --border: 0px;
 }
 
 @theme {
