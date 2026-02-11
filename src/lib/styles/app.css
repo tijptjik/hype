@@ -1,6 +1,9 @@
 @import "tailwindcss";
+@import "./bits.css";
 
+/* Plugins */
 @plugin "tailwindcss-animate";
+
 @plugin "daisyui" {
   logs: false;
   themes: dark, emerald;
@@ -39,6 +42,8 @@
   --border: 0px;
 }
 
+/* Layers */
+
 @layer base {
   button,
   [type="button"],
@@ -52,9 +57,10 @@
   --font-sans: Geologica, sans-serif;
   --font-hant: "Noto Sans HK", sans-serif;
   --font-hans: "Noto Sans SC", sans-serif;
-  --font-admin: Geologica, sans-serif;
   --font-serif: Merriweather, serif;
   --font-mono: "IBM Plex Mono", monospace;
+  --font-alt: "IBM Plex Mono", monospace;
+  --font-display: "Neon Tilt", sans-serif;
 
   --color-map-primary: #cb37c1;
   --color-map-base: #4987e2;
