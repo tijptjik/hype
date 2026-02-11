@@ -1,6 +1,7 @@
 // VITE
 import { defineConfig } from 'vite'
 import { sveltekit } from '@sveltejs/kit/vite'
+import tailwindcss from '@tailwindcss/vite'
 // CLOUDFLARE
 import { cloudflare } from '@cloudflare/vite-plugin'
 // TRANSLATION
@@ -72,6 +73,7 @@ export default defineConfig({
     }),
     // seedDrizzle(),
     sveltekit(),
+    tailwindcss(),
     localCloudflare(),
   ],
   optimizeDeps: {
