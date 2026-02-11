@@ -83,6 +83,11 @@ Run all commands with Bun:
 - New UI and form migration rules:
   - Prefer SvelteKit remote functions `form` calls over `sveltekit-superforms` for new work and refactors.
   - Prefer Bits UI primitives over DaisyUI for new UI development.
+  - Keep Bits UI work under `src/lib/bits` with this structure:
+    - `core/`: wrappers over `bits-ui` primitives.
+    - `custom/`: app-owned components with Bits-compatible APIs.
+    - `patterns/`: composed components built from `core` and `custom`.
+  - In route/page Svelte files, import from `$lib/bits` instead of importing from `bits-ui` directly.
 
 ## Commit & Pull Request Guidelines
 
