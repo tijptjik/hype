@@ -41,7 +41,7 @@
         "svelte-file-dropzone": "^2.0.9",
         "svelte-gestures": "^5.2.2",
         "svelte-portal": "^2.2.1",
-        "svelte-range-slider-pips": "3.2.1",
+        "svelte-range-slider-pips": "4.1.0",
         "sveltekit-flash-message": "^2.4.6",
         "sveltekit-superforms": "^2.29.1",
         "svrollbar": "https://github.com/tijptjik/svrollbar",
@@ -1784,7 +1784,7 @@
 
     "svelte-portal": ["svelte-portal@2.2.1", "", {}, "sha512-uF7is5sM4aq5iN7QF/67XLnTUvQCf2iiG/B1BHTqLwYVY1dsVmTeXZ/LeEyU6dLjApOQdbEG9lkqHzxiQtOLEQ=="],
 
-    "svelte-range-slider-pips": ["svelte-range-slider-pips@3.2.1", "", { "peerDependencies": { "svelte": "^4.2.7 || ^5.0.0" } }, "sha512-q6KX7zg1Lsm9EbqvkrNODLjbfO1uoiSc9tRkJ2/p5yyvSuJVlqdO9vvGS6hPOBrpHEpd90/t7a2fweleP310uA=="],
+    "svelte-range-slider-pips": ["svelte-range-slider-pips@4.1.0", "", { "peerDependencies": { "svelte": "^4.2.7 || ^5.0.0" } }, "sha512-2Zw7MngIuPeqdyJ3ueEp7jPSx0hce+Sx8r1eteCeUPxEWlNavKhBtqJyuoAdpvh5csPPFVZJ4TJ4MX9s4G70uw=="],
 
     "svelte-toolbelt": ["svelte-toolbelt@0.10.6", "", { "dependencies": { "clsx": "^2.1.1", "runed": "^0.35.1", "style-to-object": "^1.0.8" }, "peerDependencies": { "svelte": "^5.30.2" } }, "sha512-YWuX+RE+CnWYx09yseAe4ZVMM7e7GRFZM6OYWpBKOb++s+SQ8RBIMMe+Bs/CznBMc0QPLjr+vDBxTAkozXsFXQ=="],
 

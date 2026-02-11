@@ -138,7 +138,7 @@
     "svelte-file-dropzone": "^2.0.9",
     "svelte-gestures": "^5.2.2",
     "svelte-portal": "^2.2.1",
-    "svelte-range-slider-pips": "3.2.1",
+    "svelte-range-slider-pips": "4.1.0",
     "sveltekit-flash-message": "^2.4.6",
     "sveltekit-superforms": "^2.29.1",
     "svrollbar": "https://github.com/tijptjik/svrollbar",
