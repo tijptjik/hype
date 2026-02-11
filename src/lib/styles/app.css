@@ -38,6 +38,15 @@
   --border: 0px;
 }
 
+@layer base {
+  button,
+  [type="button"],
+  [type="submit"],
+  [type="reset"] {
+    cursor: pointer;
+  }
+}
+
 @theme {
   --font-sans: Geologica, sans-serif;
   --font-hant: "Noto Sans HK", sans-serif;
