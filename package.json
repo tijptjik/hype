@@ -143,6 +143,7 @@
     "sveltekit-superforms": "^2.29.1",
     "svrollbar": "https://github.com/tijptjik/svrollbar",
     "tailwindcss": "^4.1.18",
+    "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.9.3",
     "unique-names-generator": "^4.7.1",
     "vite": "^7.3.1",
