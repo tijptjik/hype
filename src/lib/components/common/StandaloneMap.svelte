@@ -325,7 +325,7 @@ $effect(() => {
 
 <div
   id="map"
-  class="map absolute inset-0 {appCtx.user
+  class="map !absolute !inset-0 {appCtx.user
     ? 'mb-[68px]'
     : ''} overflow-hidden rounded-2xl caret-transparent"
   data-testid="map"
