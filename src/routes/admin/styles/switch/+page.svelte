@@ -17,6 +17,14 @@ const colors: ButtonColor[] = [
 
 let biState = $state(true)
 let triState = $state<boolean | null>(null)
+let labelTop = $state(true)
+let labelBottom = $state(false)
+let labelLeft = $state(true)
+let labelRight = $state(false)
+let labelLeftRight = $state(true)
+let labelAll = $state(null)
+let labelHoverOnly = $state(false)
+let triHoverState = $state<boolean | null>(null)
 </script>
 
 <main class="h-full overflow-y-auto p-6">
@@ -69,6 +77,23 @@ let triState = $state<boolean | null>(null)
 
     <div class="space-y-4">
       <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+        Sizes With Labels
+      </h2>
+      <div class="flex flex-wrap items-center gap-6">
+        {#each sizes as size}
+          <Switch
+            checked={true}
+            {size}
+            color="primary"
+            rightText={`Size ${size.toUpperCase()}`}
+            id={`size-label-${size}`}
+            name={`size-label-${size}`} />
+        {/each}
+      </div>
+    </div>
+
+    <div class="space-y-4">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
         Colors
       </h2>
       <div class="flex flex-wrap items-center gap-5">
@@ -100,6 +125,40 @@ let triState = $state<boolean | null>(null)
           <Switch checked={null} states={3} disabled={true} id="disabled-indeterminate-switch" />
           <span class="text-sm text-foreground">Indeterminate</span>
         </div>
+      </div>
+    </div>
+
+    <div class="space-y-4">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+        Labels
+      </h2>
+      <div class="flex flex-wrap items-center gap-8">
+        <Switch bind:checked={labelTop} topText="Top label" />
+        <Switch bind:checked={labelBottom} bottomText="Bottom label" />
+        <Switch bind:checked={labelLeft} leftText="Left label" />
+        <Switch bind:checked={labelRight} rightText="Right label" />
+        <Switch
+          bind:checked={labelLeftRight}
+          leftText="Disabled"
+          rightText="Enabled"
+          color="success" />
+        <Switch
+          bind:checked={labelAll}
+          states={3}
+          leftText="No"
+          rightText="Yes"
+          topText="Availability"
+          leftColor="warning"
+          rightColor="success" />
+        <Switch
+          bind:checked={triHoverState}
+          states={3}
+          leftText="Accepted"
+          rightText="Rejected"
+          topText="Tri-state hover labels"
+          showLabelsOnHoverOnly={true}
+          leftColor="success"
+          rightColor="error" />
       </div>
     </div>
   </section>
