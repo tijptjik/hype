@@ -56,6 +56,13 @@ Run all commands with Bun:
 - Treat framework docs as authoritative over memory; verify behavior against the current docs before coding.
 - Add new TypeScript types in `src/lib/types.ts`, not inline in feature files.
 - Place new types under the correct existing heading in `src/lib/types.ts` (usually resource-based or domain-based) so related type changes can be reviewed together.
+- New UI and form migration rules:
+  - Prefer SvelteKit remote functions `form` calls over `sveltekit-superforms` for new work and refactors.
+  - Prefer Bits UI primitives over DaisyUI for new UI development.
+  - Place Bits-based components under `src/lib/bits`.
+  - In Svelte files that mix old and new UI, keep imports separated with explicit headings:
+    - `// BITS COMPONENTS` for new Bits-based imports.
+    - `// COMPONENTS` for legacy imports.
 
 ## Documentation
 - Authorisation Dsign is defined in `docs/Authorization-Design.md`
