@@ -46,6 +46,16 @@
     --header-icon-size: calc(var(--header-text-size) * 1.2);
   }
 
+  .bits-theme .bits-header--with-crumbs .bits-header__icon-wrap {
+    grid-row: 2;
+  }
+
+  .bits-theme
+    .bits-header--with-crumbs.bits-header--with-title-and-subtitle
+    .bits-header__icon-wrap {
+    grid-row: 2 / span 2;
+  }
+
   .bits-theme .bits-header__icon {
     width: 100%;
     height: 100%;
@@ -64,6 +74,10 @@
 
   .bits-theme .bits-header--with-icon .bits-header__title {
     grid-column: 2;
+  }
+
+  .bits-theme .bits-header--with-crumbs .bits-header__title {
+    grid-row: 2;
   }
 
   .bits-theme .bits-header__subtitle {
@@ -85,6 +99,42 @@
 
   .bits-theme .bits-header__subtitle--solo {
     grid-row: 1;
+  }
+
+  .bits-theme .bits-header--with-crumbs .bits-header__subtitle--with-title {
+    grid-row: 3;
+  }
+
+  .bits-theme .bits-header--with-crumbs .bits-header__subtitle--solo {
+    grid-row: 2;
+  }
+
+  .bits-theme .bits-header__breadcrumbs {
+    @apply flex items-center gap-2 text-sm font-medium;
+    grid-column: 1;
+    grid-row: 1;
+    width: fit-content;
+    max-width: 100%;
+    color: color-mix(in oklab, var(--color-base-content) 74%, black);
+  }
+
+  .bits-theme .bits-header--with-icon .bits-header__breadcrumbs {
+    grid-column: 2;
+  }
+
+  .bits-theme .bits-header__breadcrumb-link {
+    @apply inline-block h-5 select-none overflow-hidden whitespace-nowrap;
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .bits-theme .bits-header__breadcrumb-link:hover {
+    color: var(--color-base-content);
+  }
+
+  .bits-theme .bits-header__breadcrumb-separator {
+    color: color-mix(in oklab, var(--color-base-content) 58%, black);
   }
 
   .bits-theme .bits-header--size-xs {
