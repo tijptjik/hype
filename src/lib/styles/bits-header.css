@@ -1,0 +1,109 @@
+@layer components {
+  .bits-theme .bits-header {
+    --header-text-size-base: 1.2rem;
+    --header-text-size: var(--header-text-size-base);
+    --header-description-ratio: 0.75;
+    --header-description-size: calc(
+      var(--header-text-size) *
+      var(--header-description-ratio)
+    );
+    --header-line-height: 1.2;
+    --header-icon-size: calc(var(--header-text-size) * 0.85);
+    --header-gap-inline: 0.75rem;
+    --header-gap-block: 0.125rem;
+
+    @apply grid;
+    grid-template-columns: auto;
+    grid-template-rows: auto auto;
+    column-gap: 0;
+    row-gap: 0;
+    align-items: center;
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  .bits-theme .bits-header--with-icon {
+    grid-template-columns: auto auto;
+    column-gap: var(--header-gap-inline);
+  }
+
+  .bits-theme .bits-header--with-subtitle {
+    row-gap: var(--header-gap-block);
+  }
+
+  .bits-theme .bits-header__icon-wrap {
+    @apply inline-flex items-center justify-center;
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+    width: var(--header-icon-size);
+    height: var(--header-icon-size);
+    color: var(--color-base-content);
+  }
+
+  .bits-theme .bits-header--with-title-and-subtitle .bits-header__icon-wrap {
+    grid-row: 1 / span 2;
+    --header-icon-size: calc(var(--header-text-size) * 1.2);
+  }
+
+  .bits-theme .bits-header__icon {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .bits-theme .bits-header__title {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: var(--header-text-size);
+    line-height: var(--header-line-height);
+    color: var(--color-base-content);
+    margin: 0;
+    text-align: left;
+  }
+
+  .bits-theme .bits-header--with-icon .bits-header__title {
+    grid-column: 2;
+  }
+
+  .bits-theme .bits-header__subtitle {
+    grid-column: 1;
+    font-size: var(--header-description-size);
+    line-height: var(--header-line-height);
+    color: color-mix(in oklab, var(--color-base-content) 54%, black);
+    margin: 0;
+    text-align: left;
+  }
+
+  .bits-theme .bits-header--with-icon .bits-header__subtitle {
+    grid-column: 2;
+  }
+
+  .bits-theme .bits-header__subtitle--with-title {
+    grid-row: 2;
+  }
+
+  .bits-theme .bits-header__subtitle--solo {
+    grid-row: 1;
+  }
+
+  .bits-theme .bits-header--size-xs {
+    --header-text-size: calc(var(--header-text-size-base) * 0.875);
+  }
+
+  .bits-theme .bits-header--size-sm {
+    --header-text-size: var(--header-text-size-base);
+  }
+
+  .bits-theme .bits-header--size-md {
+    --header-text-size: calc(var(--header-text-size-base) * 1.25);
+  }
+
+  .bits-theme .bits-header--size-lg {
+    --header-text-size: calc(var(--header-text-size-base) * 1.5);
+  }
+
+  .bits-theme .bits-header--size-xl {
+    --header-text-size: calc(var(--header-text-size-base) * 1.75);
+  }
+}

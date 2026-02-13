@@ -4,6 +4,7 @@
 */
 @import "./bits-btn.css";
 @import "./bits-checkbox.css";
+@import "./bits-header.css";
 @import "./bits-switch.css";
 
 @layer theme {
