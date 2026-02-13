@@ -19,6 +19,7 @@ export type ButtonModifier = 'wide' | 'block' | 'square' | 'circle'
 export interface ButtonProps {
   text: string
   disabled?: boolean
+  hideLabel?: boolean
   icon?: Snippet
   href?: string
   onClick?: (event: MouseEvent) => void

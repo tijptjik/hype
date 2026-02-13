@@ -6,6 +6,7 @@ import type { ButtonProps } from './button.types'
 let {
   text,
   disabled = false,
+  hideLabel = false,
   icon,
   href,
   onClick,
@@ -18,6 +19,7 @@ let {
 }: ButtonProps = $props()
 
 const isIconOnly = $derived(modifier === 'square' || modifier === 'circle')
+const shouldHideLabel = $derived(hideLabel || isIconOnly)
 
 const classes = $derived(
   [
@@ -47,14 +49,14 @@ function handleClick(event: MouseEvent) {
   <Button.Root
     {href}
     class={classes}
-    aria-label={isIconOnly ? text : undefined}
+    aria-label={shouldHideLabel ? text : undefined}
     aria-disabled={disabled ? 'true' : undefined}
     tabindex={disabled ? -1 : undefined}
     onclick={handleClick}>
     {#if icon}
       <span class="bits-btn__icon" aria-hidden="true">{@render icon()}</span>
     {/if}
-    {#if !isIconOnly}
+    {#if !shouldHideLabel}
       <span class="bits-btn__label">{text}</span>
     {/if}
   </Button.Root>
@@ -62,13 +64,13 @@ function handleClick(event: MouseEvent) {
   <Button.Root
     {type}
     class={classes}
-    aria-label={isIconOnly ? text : undefined}
+    aria-label={shouldHideLabel ? text : undefined}
     {disabled}
     onclick={handleClick}>
     {#if icon}
       <span class="bits-btn__icon" aria-hidden="true">{@render icon()}</span>
     {/if}
-    {#if !isIconOnly}
+    {#if !shouldHideLabel}
       <span class="bits-btn__label">{text}</span>
     {/if}
   </Button.Root>
