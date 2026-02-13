@@ -67,6 +67,7 @@
     "@commitlint/config-conventional": "^20.4.1",
     "@commitlint/cz-commitlint": "^20.4.1",
     "@commitlint/prompt-cli": "^20.4.1",
+    "@iconify/json": "^2.2.439",
     "@miniflare/d1": "^2.14.4",
     "@nerdfolio/drizzle-d1-helpers": "^0.1.5",
     "@sveltejs/adapter-static": "^3.0.10",
