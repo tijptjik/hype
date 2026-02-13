@@ -1,0 +1,13 @@
+@layer components {
+  .bits-theme .bits-separator {
+    @apply bg-border my-4 shrink-0;
+  }
+
+  .bits-theme .bits-separator[data-orientation="horizontal"] {
+    @apply h-px w-full;
+  }
+
+  .bits-theme .bits-separator[data-orientation="vertical"] {
+    @apply h-full w-px;
+  }
+}
