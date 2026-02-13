@@ -45,6 +45,17 @@
 /* Layers */
 
 @layer base {
+  /* Hide caret everywhere except editable inputs */
+  * {
+    caret-color: transparent;
+  }
+
+  input,
+  textarea,
+  [contenteditable]:not([contenteditable="false"]) {
+    caret-color: currentColor;
+  }
+
   button,
   [type="button"],
   [type="submit"],
