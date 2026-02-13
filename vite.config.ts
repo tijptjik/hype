@@ -1,6 +1,7 @@
 // VITE
 import { defineConfig } from 'vite'
 import { sveltekit } from '@sveltejs/kit/vite'
+import Icons from 'unplugin-icons/vite'
 import tailwindcss from '@tailwindcss/vite'
 // CLOUDFLARE
 import { cloudflare } from '@cloudflare/vite-plugin'
@@ -73,6 +74,9 @@ export default defineConfig({
     }),
     // seedDrizzle(),
     sveltekit(),
+    Icons({
+      compiler: 'svelte',
+    }),
     tailwindcss(),
     localCloudflare(),
   ],

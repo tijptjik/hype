@@ -4,7 +4,7 @@ import type { Auth, SessionSession, SessionUser } from '$lib/auth'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type { MiniflareD1Database } from 'miniflare'
 import type { HubOptsExtended } from '$lib/types'
-import type { Flash } from '$lib/types'
+import 'unplugin-icons/types/svelte'
 import type {
   LngLatLike,
   CameraOptions,
@@ -58,9 +58,6 @@ declare global {
       auth: Auth
       session?: SessionSession
       user?: SessionUser
-    }
-    interface PageData {
-      flash?: Flash
     }
     // interface PageState {}
     interface Platform {
