@@ -1,6 +1,8 @@
 <script lang="ts">
+import { onMount } from 'svelte';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getHeaderCtrl } from '$lib/context/header.svelte';
 // COMPONENTS
 import ResourceIndex from '$lib/components/resources/ResourceIndex.svelte';
 import EntityCard from '$lib/components/resources/EntityCard.svelte';
@@ -10,7 +12,7 @@ import { FirstClassResource } from '$lib/enums';
 // I18N
 import { m } from '$lib/i18n';
 // ICONS
-import { Users as OrganisationIcon } from '@steeze-ui/heroicons';
+import OrganisationIcon from 'virtual:icons/lucide/users-round';
 // TYPES
 import type { KeyMap, Organisation } from '$lib/types';
 
@@ -43,6 +45,7 @@ const keyMap: KeyMap = {
 
 // CONTEXT
 const adminCtx = getAdminCtx();
+const headerCtrl = getHeaderCtrl();
 adminCtx.setFacet(false, false, RESOURCE);
 
 // HEADER SETUP
