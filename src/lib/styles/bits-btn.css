@@ -61,6 +61,7 @@
   .bits-theme .bits-btn__icon {
     @apply inline-flex shrink-0 items-center justify-center;
     line-height: 0;
+    color: inherit;
   }
 
   .bits-theme .bits-btn__icon svg {
@@ -68,11 +69,13 @@
     height: calc(var(--btn-size) * var(--btn-icon-ratio));
     display: block;
     vertical-align: middle;
+    color: inherit;
   }
 
   .bits-theme .bits-btn__label {
     line-height: 1;
     white-space: nowrap;
+    color: inherit;
   }
 
   /* Size variants */
@@ -155,6 +158,11 @@
     --btn-hover-bg: color-mix(in oklab, var(--btn-color) 12%, transparent);
     --btn-active-bg: color-mix(in oklab, var(--btn-color) 18%, transparent);
     box-shadow: none;
+  }
+
+  .bits-theme .bits-btn--style-ghost.bits-btn--color-neutral {
+    --btn-hover-fg: var(--color-primary);
+    --btn-active-fg: color-mix(in oklab, var(--color-primary) 84%, white);
   }
 
   .bits-theme .bits-btn--style-link {
