@@ -1,9 +1,6 @@
 <script lang="ts">
 // I18N
 import { m } from '$lib/i18n';
-// FLASH
-import { getFlash } from 'sveltekit-flash-message';
-import { page } from '$app/state';
 // EASING
 import { cubicInOut } from 'svelte/easing';
 // TRANSITIONS
@@ -32,7 +29,7 @@ const imageCtx = getImageCtx();
   </div>
   <div
     class="flex h-12 cursor-pointer flex-row flex-nowrap items-center justify-between gap-2 overflow-hidden whitespace-nowrap text-nowrap pr-2 align-baseline transition-colors duration-200 hover:text-neutral-content active:text-primary"
-    onclick={(e) => imageCtx.downloadImage(e, imageCtx.activeImage!, getFlash(page))}
+    onclick={(e) => imageCtx.downloadImage(e, imageCtx.activeImage!)}
     transition:slide={{ axis: 'x', duration: 500, easing: cubicInOut }}>
     <Icon class="h-6 w-6 stroke-[2px]" src={ArrowDownTray} />
   </div>

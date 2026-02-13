@@ -1,9 +1,8 @@
 <script lang="ts">
-// SVELTE
-import { page } from '$app/state';
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Check } from '@steeze-ui/heroicons';
+import { toast } from 'svelte-sonner';
 // I18N
 import { getLocale } from '$lib/i18n';
 import { m } from '$lib/i18n';
@@ -14,7 +13,6 @@ import { enGB, zhCN, zhHK } from 'date-fns/locale';
 import { getAppCtx } from '$lib/context/app.svelte';
 // SERVICES
 import { toggleVisitedStatus } from '$lib/client/services/userFeatures';
-import { getFlash } from 'sveltekit-flash-message';
 // TYPES
 import type { Feature, UserContributedFeature } from '$lib/types';
 
@@ -23,7 +21,6 @@ let { feature }: { feature: Feature | UserContributedFeature } = $props();
 
 // CONTEXT
 const appCtx = getAppCtx();
-const flash = getFlash(page);
 
 // STATE
 let isSubmitting = $state(false);
@@ -63,7 +60,7 @@ async function toggleVisited() {
     await appCtx.invalidateAndRefresh('userFeatures');
   } catch (error) {
     console.error('Error updating visited status:', error);
-    $flash = { type: 'error', message: 'Failed to update visited status' };
+    toast.error('Failed to update visited status');
   } finally {
     isSubmitting = false;
   }

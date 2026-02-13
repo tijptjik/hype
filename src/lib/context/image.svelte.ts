@@ -1,6 +1,7 @@
 // SVELTE
 import { getContext, setContext } from 'svelte'
 import { SvelteSet, SvelteMap } from 'svelte/reactivity'
+import { toast } from 'svelte-sonner'
 // I18N
 import { m } from '$lib/i18n'
 // SERVICES
@@ -17,7 +18,6 @@ import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
 import { ResourcePath, FirstClassResource } from '$lib/enums'
 // TYPES
-import type { Writable } from 'svelte/store'
 import type { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
 import type {
   Image,
@@ -1834,11 +1834,7 @@ export class ImageCtx {
   // ═══════════════════════
   // 9. Download Functionality
   // ═══════════════════════
-  async downloadImage(
-    e: MouseEvent,
-    image: Image = this.state.activeImage!,
-    flash: Writable<any>,
-  ) {
+  async downloadImage(e: MouseEvent, image: Image = this.state.activeImage!) {
     if (!image) return
     let downloadUrl = ''
 
@@ -1864,16 +1860,9 @@ export class ImageCtx {
       link.click()
       document.body.removeChild(link)
 
-      flash.set({
-        type: 'success',
-        message: `Downloaded ${filename}`,
-        options: { removeOnNavigate: false },
-      })
+      toast.success(`Downloaded ${filename}`)
     } catch (err) {
-      flash.set({
-        type: 'error',
-        message: `Failed to download image: ${err}`,
-      })
+      toast.error(`Failed to download image: ${err}`)
     }
   }
 

@@ -1,6 +1,5 @@
 <script lang="ts">
-// SVELTE
-import { page } from '$app/state';
+import { toast } from 'svelte-sonner';
 // I18N
 import { m } from '$lib/i18n';
 // CONTEXT
@@ -13,7 +12,6 @@ import { submitMissingReport as submitMissingReportAPI } from '$lib/client/servi
 import SubmitButton from '$lib/components/featureCard/actions/SubmitButton.svelte';
 // ENUMS
 import { FeatureCardMode } from '$lib/enums';
-import { getFlash } from 'sveltekit-flash-message';
 // TYPES
 import type { Feature } from '$lib/types';
 
@@ -24,7 +22,6 @@ let { feature }: { feature: Feature } = $props();
 const appCtx = getAppCtx();
 const cardCtx = getCardCtx();
 const imageCtx = getImageCtx();
-const flash = getFlash(page);
 
 // HANDLERS
 async function submitMissingReport() {
@@ -46,12 +43,12 @@ async function submitMissingReport() {
 
     await submitMissingReportAPI(
       feature,
-      layer!,
-      project!,
-      organisation!,
+      layer,
+      project,
+      organisation,
       cardCtx.userData.missingReason,
       imageCtx.getStagedQueue(),
-      appCtx.user!.id
+      appCtx.user.id
     );
 
     imageCtx.resetImages();
@@ -62,7 +59,7 @@ async function submitMissingReport() {
     cardCtx.validationError = '';
   } catch (error) {
     console.error('Error submitting missing report:', error);
-    $flash = { type: 'error', message: m.long_crazy_peacock_care() };
+    toast.error(m.long_crazy_peacock_care());
     cardCtx.validationError = m.long_crazy_peacock_care();
   } finally {
     cardCtx.isSubmitting = false;

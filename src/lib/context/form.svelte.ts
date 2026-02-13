@@ -8,6 +8,8 @@ import { zod } from 'sveltekit-superforms/adapters'
 import { get } from 'svelte/store'
 import { defaults, superForm } from 'sveltekit-superforms'
 import { deserialize } from '$app/forms'
+// TOAST
+import { toast } from 'svelte-sonner'
 // LIB
 import { ADMIN_PATH, API_PATH, NEW_REF } from '$lib'
 import { goto } from '$app/navigation'
@@ -27,7 +29,6 @@ import {
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // TYPES
-import type { Writable } from 'svelte/store'
 import type { ActionResult } from '@sveltejs/kit'
 import type { AdminCtx } from './admin.svelte'
 import type { SuperValidated } from 'sveltekit-superforms/client'
@@ -53,7 +54,6 @@ class BaseForm<T extends Record<string, unknown>> {
   protected formResult: SuperFormResult<T>
   protected adminCtx: AdminCtx
   protected resourceType: FalsableResourceType
-  protected flash: Writable<App.PageData['flash']>
 
   clientErrors: Record<string, string> = $state({})
 
@@ -64,7 +64,6 @@ class BaseForm<T extends Record<string, unknown>> {
     updateSchema: any,
     adminCtx: AdminCtx,
     resourceType: FalsableResourceType,
-    flash: Writable<App.PageData['flash']>,
   ) {
     this.adminCtx = adminCtx
     this.resourceType = resourceType
@@ -106,8 +105,6 @@ class BaseForm<T extends Record<string, unknown>> {
 
     // @ts-expect-error
     this.formResult = superForm(formData, formOptions)
-
-    this.flash = flash
   }
 
   get form() {
@@ -164,7 +161,7 @@ class BaseForm<T extends Record<string, unknown>> {
     // LOCAL VALIDATION
     if (!validatedForm.valid || this.hasClientErrors) {
       this.errors.set(validatedForm.errors)
-      this.flash.set({ type: 'error', message: 'Validation failed' })
+      toast.error('Validation failed')
       cancel()
       return
       // SERVER VALIDATION
@@ -192,17 +189,13 @@ class BaseForm<T extends Record<string, unknown>> {
         const flashMessage = isCreateOperation
           ? m.gaudy_heavy_puma_adore()
           : m.tidy_game_jellyfish_pop()
-        this.flash.set({
-          type: 'success',
-          message: flashMessage,
-          options: { clearOnNavigate: false, clearAfterMs: 5000 },
-        })
+        toast.success(flashMessage)
 
         this.adminCtx.setResourceRef(result.location.split('/').pop() as Id | Code)
 
         await goto(url.toString())
       } else if (result.type === 'success') {
-        this.flash.set({ type: 'success', message: m.tidy_game_jellyfish_pop() })
+        toast.success(m.tidy_game_jellyfish_pop())
         // Invalidate cache for the resource type; refresh resources
         this.adminCtx.invalidateAndRefresh(this.resourceType as FirstClassResource)
 
@@ -213,7 +206,7 @@ class BaseForm<T extends Record<string, unknown>> {
       } else {
         // FAILURE / ERROR
         if (result.type === 'failure') {
-          this.flash.set({ type: 'error', message: m.long_crazy_peacock_care() })
+          toast.error(m.long_crazy_peacock_care())
           console.error('[FORM CONTEXT]', result.data?.errors)
           // this.form.set(result.data?.data);
           this.errors.set(result.data?.errors)
@@ -221,10 +214,10 @@ class BaseForm<T extends Record<string, unknown>> {
           // Extract the actual error message from SvelteKit error responses (403, 404, etc.)
           const errorMessage =
             (result as any)?.error?.message || result.status + ' Error'
-          this.flash.set({ type: 'error', message: errorMessage })
+          toast.error(errorMessage)
           console.error('[FORM CONTEXT] HTTP Error:', result)
         } else {
-          this.flash.set({ type: 'error', message: m.round_pretty_lark_drip() })
+          toast.error(m.round_pretty_lark_drip())
         }
         cancel()
       }
@@ -266,12 +259,7 @@ class BaseForm<T extends Record<string, unknown>> {
 }
 
 export class OrganisationForm extends BaseForm<Organisation> {
-  constructor(
-    form: SuperValidated<Organisation>,
-    isNew: boolean,
-    adminCtx: AdminCtx,
-    flash: Writable<App.PageData['flash']>,
-  ) {
+  constructor(form: SuperValidated<Organisation>, isNew: boolean, adminCtx: AdminCtx) {
     super(
       form,
       isNew,
@@ -279,18 +267,12 @@ export class OrganisationForm extends BaseForm<Organisation> {
       OrganisationUpdateAPI,
       adminCtx,
       FirstClassResource.organisation,
-      flash,
     )
   }
 }
 
 export class ProjectForm extends BaseForm<Project> {
-  constructor(
-    form: SuperValidated<Project>,
-    isNew: boolean,
-    adminCtx: AdminCtx,
-    flash: Writable<App.PageData['flash']>,
-  ) {
+  constructor(form: SuperValidated<Project>, isNew: boolean, adminCtx: AdminCtx) {
     super(
       form,
       isNew,
@@ -298,18 +280,12 @@ export class ProjectForm extends BaseForm<Project> {
       ProjectUpdateAPI,
       adminCtx,
       FirstClassResource.project,
-      flash,
     )
   }
 }
 
 export class LayerForm extends BaseForm<Layer> {
-  constructor(
-    form: SuperValidated<Layer>,
-    isNew: boolean,
-    adminCtx: AdminCtx,
-    flash: Writable<App.PageData['flash']>,
-  ) {
+  constructor(form: SuperValidated<Layer>, isNew: boolean, adminCtx: AdminCtx) {
     super(
       form,
       isNew,
@@ -317,18 +293,12 @@ export class LayerForm extends BaseForm<Layer> {
       LayerUpdateAPI,
       adminCtx,
       FirstClassResource.layer,
-      flash,
     )
   }
 }
 
 export class FeatureForm extends BaseForm<Feature> {
-  constructor(
-    form: SuperValidated<Feature>,
-    isNew: boolean,
-    adminCtx: AdminCtx,
-    flash: Writable<App.PageData['flash']>,
-  ) {
+  constructor(form: SuperValidated<Feature>, isNew: boolean, adminCtx: AdminCtx) {
     super(
       form,
       isNew,
@@ -336,27 +306,13 @@ export class FeatureForm extends BaseForm<Feature> {
       FeatureUpdateAPI,
       adminCtx,
       FirstClassResource.feature,
-      flash,
     )
   }
 }
 
 export class HubForm extends BaseForm<Hub> {
-  constructor(
-    form: SuperValidated<Hub>,
-    isNew: boolean,
-    adminCtx: AdminCtx,
-    flash: Writable<App.PageData['flash']>,
-  ) {
-    super(
-      form,
-      isNew,
-      HubInsertAPI,
-      HubUpdateAPI,
-      adminCtx,
-      FirstClassResource.hub,
-      flash,
-    )
+  constructor(form: SuperValidated<Hub>, isNew: boolean, adminCtx: AdminCtx) {
+    super(form, isNew, HubInsertAPI, HubUpdateAPI, adminCtx, FirstClassResource.hub)
   }
 }
 
@@ -371,7 +327,6 @@ export function setForm(
   entity: Ref,
   form: SuperValidated<OrganisationNew | Organisation>,
   adminCtx: AdminCtx,
-  flash: Writable<App.PageData['flash']>,
 ): OrganisationForm
 
 export function setForm(
@@ -379,7 +334,6 @@ export function setForm(
   entity: Ref,
   form: SuperValidated<ProjectNew | Project>,
   adminCtx: AdminCtx,
-  flash: Writable<App.PageData['flash']>,
 ): ProjectForm
 
 export function setForm(
@@ -387,7 +341,6 @@ export function setForm(
   entity: Ref,
   form: SuperValidated<LayerNew | Layer>,
   adminCtx: AdminCtx,
-  flash: Writable<App.PageData['flash']>,
 ): LayerForm
 
 export function setForm(
@@ -395,7 +348,6 @@ export function setForm(
   entity: Ref,
   form: SuperValidated<Feature>,
   adminCtx: AdminCtx,
-  flash: Writable<App.PageData['flash']>,
 ): FeatureForm
 
 export function setForm(
@@ -403,7 +355,6 @@ export function setForm(
   entity: Ref,
   form: SuperValidated<HubNew | Hub>,
   adminCtx: AdminCtx,
-  flash: Writable<App.PageData['flash']>,
 ): HubForm
 
 export function setForm<T extends Organisation | Project | Layer | Feature | Hub>(
@@ -411,7 +362,6 @@ export function setForm<T extends Organisation | Project | Layer | Feature | Hub
   entity: Ref,
   form: SuperValidated<T>,
   adminCtx: AdminCtx,
-  flash: Writable<App.PageData['flash']>,
 ): OrganisationForm | ProjectForm | LayerForm | FeatureForm | HubForm {
   if (!entity) {
     console.trace()
@@ -424,7 +374,6 @@ export function setForm<T extends Organisation | Project | Layer | Feature | Hub
         form as SuperValidated<Organisation>,
         entity === NEW_REF,
         adminCtx,
-        flash,
       )
       return setContext(getContextRef(resourceType, entity), instance)
     }
@@ -433,7 +382,6 @@ export function setForm<T extends Organisation | Project | Layer | Feature | Hub
         form as SuperValidated<Project>,
         entity === NEW_REF,
         adminCtx,
-        flash,
       )
       return setContext(getContextRef(resourceType, entity), instance)
     }
@@ -442,7 +390,6 @@ export function setForm<T extends Organisation | Project | Layer | Feature | Hub
         form as SuperValidated<Layer>,
         entity === NEW_REF,
         adminCtx,
-        flash,
       )
       return setContext(getContextRef(resourceType, entity), instance)
     }
@@ -451,7 +398,6 @@ export function setForm<T extends Organisation | Project | Layer | Feature | Hub
         form as SuperValidated<Feature>,
         entity === NEW_REF,
         adminCtx,
-        flash,
       )
       return setContext(getContextRef(resourceType, entity), instance)
     }
@@ -460,7 +406,6 @@ export function setForm<T extends Organisation | Project | Layer | Feature | Hub
         form as SuperValidated<Hub>,
         entity === NEW_REF,
         adminCtx,
-        flash,
       )
       return setContext(getContextRef(resourceType, entity), instance)
     }

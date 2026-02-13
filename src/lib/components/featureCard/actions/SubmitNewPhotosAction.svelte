@@ -1,6 +1,5 @@
 <script lang="ts">
-// SVELTE
-import { page } from '$app/state';
+import { toast } from 'svelte-sonner';
 // I18N
 import { m } from '$lib/i18n';
 // CONTEXT
@@ -13,7 +12,6 @@ import { submitNewPhotos as submitNewPhotosAPI } from '$lib/client/services/task
 import SubmitButton from '$lib/components/featureCard/actions/SubmitButton.svelte';
 // ENUMS
 import { FeatureCardMode } from '$lib/enums';
-import { getFlash } from 'sveltekit-flash-message';
 // TYPES
 import type { Feature } from '$lib/types';
 
@@ -24,10 +22,9 @@ let { feature }: { feature: Feature } = $props();
 const appCtx = getAppCtx();
 const cardCtx = getCardCtx();
 const imageCtx = getImageCtx();
-const flash = getFlash(page);
 
 // STATE
-let attribution = $derived(appCtx.getUser()!.attribution || m.anonymous());
+let attribution = $derived(appCtx.getUser().attribution || m.anonymous());
 
 // HANDLERS
 async function submitNewPhotos() {
@@ -52,11 +49,11 @@ async function submitNewPhotos() {
 
     await submitNewPhotosAPI(
       feature,
-      layer!,
-      project!,
-      organisation!,
+      layer,
+      project,
+      organisation,
       imageCtx.getStagedQueue(),
-      appCtx.user!.id
+      appCtx.user.id
     );
 
     imageCtx.resetImages();
@@ -65,7 +62,7 @@ async function submitNewPhotos() {
     cardCtx.validationError = '';
   } catch (error) {
     console.error('Error submitting new photos:', error);
-    $flash = { type: 'error', message: m.long_crazy_peacock_care() };
+    toast.error(m.long_crazy_peacock_care());
     cardCtx.validationError = m.long_crazy_peacock_care();
   } finally {
     cardCtx.isSubmitting = false;

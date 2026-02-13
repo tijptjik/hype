@@ -15,7 +15,7 @@ import { getLocale, setLocale } from '$lib/i18n';
 import { setAppCtx } from '$lib/context/app.svelte';
 import { setPlaceCtx } from '$lib/context/place.svelte';
 // COMPONENTS
-import FlashMessage from '$lib/components/common/FlashMessage.svelte';
+import Toaster from '$lib/components/common/Toaster.svelte';
 // LIB
 import { loadScript } from '$lib';
 // MAPLIBRE
@@ -182,7 +182,7 @@ watch(
     class="flex h-lvh w-dvw flex-row overscroll-contain bg-black"
     class:font-hant={getLocale() === 'zh-hant'}
     class:font-hans={getLocale() === 'zh-hans'}>
-    <FlashMessage />
+    <Toaster />
     <svelte:boundary>
       <!-- @ts-expect-error SVELTE ASYNC -->
       {#snippet pending()}

@@ -8,8 +8,6 @@ import { NEW_TITLE, NEW_REF } from '$lib';
 // I18N
 import { getLocale } from '$lib/i18n';
 import { m } from '$lib/i18n';
-// FLASH
-import { getFlash } from 'sveltekit-flash-message';
 import { page } from '$app/state';
 // CONTEXT
 import { setForm } from '$lib/context/form.svelte';
@@ -136,8 +134,7 @@ let form = setForm(
   FirstClassResource.feature,
   pageProps.data.entity,
   pageProps.data.validatedForm,
-  getAdminCtx(),
-  getFlash(page, { clearOnNavigate: false, clearAfterMs: 2500 })
+  getAdminCtx()
 );
 
 // REACTIVE: Update form when pageProps change (for reset functionality)

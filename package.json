@@ -141,7 +141,6 @@
     "svelte-portal": "^2.2.1",
     "svelte-range-slider-pips": "4.1.0",
     "svelte-sonner": "^1.0.7",
-    "sveltekit-flash-message": "^2.4.6",
     "sveltekit-superforms": "^2.29.1",
     "svrollbar": "https://github.com/tijptjik/svrollbar",
     "tailwindcss": "^4.1.18",

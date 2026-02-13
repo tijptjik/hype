@@ -13,8 +13,6 @@ import { setForm } from '$lib/context/form.svelte';
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // ICONS
 import { Square3Stack3d as LayerIcon } from '@steeze-ui/heroicons';
-// FLASH
-import { getFlash } from 'sveltekit-flash-message';
 import { page } from '$app/state';
 // COMPONENTS
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
@@ -87,8 +85,7 @@ let form = setForm(
   FirstClassResource.layer,
   pageProps.data.entity,
   pageProps.data.validatedForm,
-  getAdminCtx(),
-  getFlash(page, { clearOnNavigate: false, clearAfterMs: 2500 })
+  getAdminCtx()
 );
 
 // REACTIVE: Update form when pageProps change (for reset functionality)

@@ -1,16 +1,14 @@
 <script lang="ts">
-// SVELTE
-import { page } from '$app/state';
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Star } from '@steeze-ui/heroicons';
+import { toast } from 'svelte-sonner';
 // I18N
 import { m } from '$lib/i18n';
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte';
 // SERVICES
 import { toggleWishlistStatus } from '$lib/client/services/userFeatures';
-import { getFlash } from 'sveltekit-flash-message';
 // TYPES
 import type { Feature, UserContributedFeature } from '$lib/types';
 
@@ -19,7 +17,6 @@ let { feature }: { feature: Feature | UserContributedFeature } = $props();
 
 // CONTEXT
 const appCtx = getAppCtx();
-const flash = getFlash(page);
 
 // STATE
 let isSubmitting = $state(false);
@@ -54,7 +51,7 @@ async function toggleWishlisted() {
     await appCtx.invalidateAndRefresh('userFeatures');
   } catch (error) {
     console.error('Error updating wishlist status:', error);
-    $flash = { type: 'error', message: 'Failed to update wishlist status' };
+    toast.error('Failed to update wishlist status');
   } finally {
     isSubmitting = false;
   }

@@ -9,9 +9,6 @@ import { setForm } from '$lib/context/form.svelte';
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // ICONS
 import { BuildingLibrary as HubIcon } from '@steeze-ui/heroicons';
-// FLASH
-import { getFlash } from 'sveltekit-flash-message';
-import { page } from '$app/state';
 // COMPONENTS
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
 import SpecificationSection from '$lib/components/forms/sections/Specification.svelte';
@@ -81,8 +78,7 @@ let form = setForm(
   RESOURCE,
   pageProps.data.entity,
   pageProps.data.validatedForm,
-  getAdminCtx(),
-  getFlash(page, { clearOnNavigate: false, clearAfterMs: 2500 })
+  getAdminCtx()
 );
 let enhance = $derived(form.enhance);
 

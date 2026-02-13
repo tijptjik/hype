@@ -1,6 +1,5 @@
 <script lang="ts">
-// SVELTE
-import { page } from '$app/state';
+import { toast } from 'svelte-sonner';
 // I18N
 import { getLocale } from '$lib/i18n';
 import { m } from '$lib/i18n';
@@ -15,7 +14,6 @@ import { submitNewFeature as submitNewFeatureAPI } from '$lib/client/services/ta
 import SubmitButton from '$lib/components/featureCard/actions/SubmitButton.svelte';
 // ENUMS
 import { FeatureCardMode } from '$lib/enums';
-import { getFlash } from 'sveltekit-flash-message';
 // TYPES
 import type { ImageUpload, NewFeatureTask } from '$lib/types';
 
@@ -24,7 +22,6 @@ const appCtx = getAppCtx();
 const cardCtx = getCardCtx();
 const omniCtx = getOmniCtx();
 const imageCtx = getImageCtx();
-const flash = getFlash(page);
 
 // HANDLERS
 async function submitNewFeature() {
@@ -48,7 +45,7 @@ async function submitNewFeature() {
 
     await submitNewFeatureAPI(newFeature, imageCtx.getStagedQueue() as ImageUpload[]);
 
-    $flash = { type: 'success', message: m.new_feature__success() };
+    toast.success(m.new_feature__success());
 
     omniCtx.close();
     cardCtx.setMode(FeatureCardMode.Display);
@@ -57,7 +54,7 @@ async function submitNewFeature() {
     cardCtx.validationError = '';
   } catch (error) {
     console.error('Error submitting new feature:', error);
-    $flash = { type: 'error', message: m.long_crazy_peacock_care() };
+    toast.error(m.long_crazy_peacock_care());
     cardCtx.validationError = m.long_crazy_peacock_care();
   } finally {
     cardCtx.isSubmitting = false;
