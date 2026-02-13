@@ -1,0 +1,84 @@
+# Component Architecture
+
+This document defines the UI layering model for Bits components and how logic should be distributed.
+
+## Layering
+
+1. `src/lib/bits/custom/{componentType}/src/*`
+- Lowest-level subcomponents.
+- Raw HTML structure only.
+- Headless by default; no app/domain coupling.
+- No component-theme styles applied here.
+
+2. `src/lib/bits/custom/{componentType}/{ComponentType}.svelte`
+- Smallest complete reusable custom component.
+- Composes only local subcomponents.
+- Provides default classes/styles.
+- Allows style extension via `class`.
+- No app/domain coupling.
+
+3. `src/lib/bits/core/{componentType}/{ComponentType}.svelte`
+- Same as 2, but but built from official Bits UI primitives.
+
+4. `src/lib/bits/patterns/{componentType}/components/*`
+- Pattern subcomponents that adapt core/custom components to app usage.
+- Can include conditional rendering and UI behavior.
+- Should remain context-agnostic where possible.
+
+5. `src/lib/bits/patterns/{componentType}/{ComponentType}.svelte`
+- Pattern composite.
+- Mostly routes nested props to pattern subcomponents.
+- Minimal orchestration state only.
+- Avoid direct app context coupling unless unavoidable.
+
+6. `+page.svelte` / `+layout.svelte`
+- Consumption boundary.
+- Owns app wiring, state ownership, and side effects.
+- Owns controller intent (for example `HeaderCtrl`) for page-level visibility/mode overrides.
+- Integrates with `appCtx`/`adminCtx`.
+- Builds/uses an adapter model (for example `createAdminHeaderModel`) to map app/context state into pattern props.
+- Passes controlled/bindable state + callbacks into patterns via the adapter output.
+
+## Handler Placement
+
+- Local UI handlers:
+  - Keep in component/pattern subcomponent.
+  - Examples: input value forwarding, local toggle visuals, keyboard interactions.
+
+- Domain/app handlers:
+  - Keep in page/layout or adapter model.
+  - Examples: filter mutations, facet changes, navigation, save/publish/delete behavior.
+
+- Async orchestration:
+  - Keep in page/layout or adapter model.
+  - Examples: breadcrumb loading, URL sync, context sync, resource lookup.
+
+## State Principles
+
+- Prefer controlled/bindable props for pattern components.
+- Keep pattern components "dumb" relative to app domain.
+- Use adapters (for example `createAdminHeaderModel`) when page/layout glue becomes too large.
+- Avoid hardcoded data dependencies inside reusable components; inject via props.
+
+## Layout Component Control Pattern
+
+- Use a page-callable controller context (e.g. `HeaderCtrl`) for per-route header visibility/behavior overrides.
+- Keep the Header pattern itself stateless and prop-driven.
+- Keep admin defaults in the adapter (`createAdminHeaderModel`) and merge `HeaderCtrl` overrides last.
+- Recommended merge precedence:
+  1. app/admin derived defaults
+  2. adapter-level mode mapping (`auto` / `view` / `form` / `none`)
+  3. page-level `HeaderCtrl.setVisibility(...)` overrides
+- Place domain decisions in route/page code; keep components focused on rendering and local UI interactions.
+
+## Pattern Styling Placement
+
+- Prefer semantic pattern classes in component CSS files (for example `bits-pattern-*.css`) even when rules are mostly `@apply`.
+- Keep these styles centralized to preserve theme scoping (`.bits-theme`), maintain layering consistency, and support future growth into variables, container queries, and non-utility CSS.
+- Inline utility classes in Svelte markup only for truly local, one-off layout details that are unlikely to need reuse or theme-level overrides.
+
+## Primitive Composition Convention
+
+- When composing pattern or custom primitives, prefer namespaced usage: `<ComponentPrimitive.Root>`, `<ComponentPrimitive.Part>`.
+- For pattern components, expose a local namespace via `components/index.ts` and import it as `import * as ComponentPrimitive from './components'`.
+- This keeps composition explicit, aligns with Bits-style API shape, and avoids flat import sprawl in composites.

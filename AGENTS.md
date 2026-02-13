@@ -29,6 +29,7 @@ Run all commands with Bun:
 - Authorisation Roles are defined in `docs/Roles.md`
 - Refactor roadmap is tracked in `docs/refactor-roadmap.md`
 - Refactor checklist/TODOs are tracked in `docs/refactor-todo.md`
+- Component architecture and boundary rules are defined in `docs/Component Architecture.md`
 
 ## Coding Style & Naming Conventions
 - Formatter/linter: Biome (`biome.json`).
