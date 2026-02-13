@@ -76,6 +76,9 @@ Run all commands with Bun:
   - Use Paraglide for translations in `messages/`.
   - Supported locales are `en`, `zh-hans`, and `zh-hant`.
   - Write messages using Inlang Message Syntax.
+- `unplugin-icons` - icon usage:
+  - Use Lucide icons via unplugin-icons for new work; do not add new Heroicons usage.
+  - Import icons with `import IconName from 'virtual:icons/lucide/<icon-name>'`.
 
 ## Agent-Specific Notes
 - For Svelte/SvelteKit questions and implementation work, consult Context7 docs first, especially for experimental or cutting-edge APIs.
