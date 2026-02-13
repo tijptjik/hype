@@ -9,8 +9,6 @@ import type {
   PropertyValueI18nDB,
   UserPreferences,
 } from '$lib/types'
-// ENUMS
-import { supportedLocales } from '$lib/enums'
 import type { AppCtx } from './context/app.svelte'
 import type { Resource } from '$lib/types'
 
@@ -28,6 +26,17 @@ export function getLocale(): Locale {
  */
 export function setLocale(locale: Locale) {
   runtime.setLocale(locale as any)
+}
+
+/**
+ * Get canonical locale order for rendering and fallback checks.
+ * @param locale - The preferred locale.
+ * @returns Ordered locales with preferred locale first.
+ */
+export function getLocaleOrder(locale: Locale): Locale[] {
+  if (locale === 'en') return ['en', 'zh-hant', 'zh-hans']
+  if (locale === 'zh-hant') return ['zh-hant', 'zh-hans', 'en']
+  return ['zh-hans', 'zh-hant', 'en']
 }
 
 /**

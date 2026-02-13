@@ -52,7 +52,7 @@ export function use<T>(
       if (!mounted) {
         if (args.mount) args.mount(current)
         mounted = true
-        return void
+        return
       }
       const cleanup = args.effect?.(current, prev)
       prev = current
@@ -159,7 +159,7 @@ export function configureForm<Input extends RemoteFormInput = RemoteFormInput>(
           }
         } catch (error) {
           // TODO Add a error toast
-          onresult?.({ success: false, error: 'ERROR' })
+          onresult?.({ success: false, error: (error as Error).message })
           dirty = wasDirty
         } finally {
           submitting = false
