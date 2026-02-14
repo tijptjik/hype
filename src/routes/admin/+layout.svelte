@@ -7,12 +7,15 @@ import Sidebar from '$lib/components/panels/Admin.svelte';
 import AutoHide from '$lib/components/common/AutoHide.svelte';
 import MinWidthProtector from '$lib/components/layout/MinWidth.svelte';
 import Settings from '$lib/components/panels/Settings.svelte';
-import Header from '$lib/components/resources/headers/HeaderRoot.svelte';
+import Header from '$lib/bits/patterns/header/Header.svelte';
+// ADAPTERS
+import { useHeaderAdapter } from '$lib/bits/patterns/header/HeaderAdapter.svelte';
 // STYLES
 import '$lib/styles/admin.css';
 // CONTEXT
 import { setAdminCtx } from '$lib/context/admin.svelte';
 import { getAppCtx } from '$lib/context/app.svelte';
+import { setHeaderCtrl } from '$lib/context/header.svelte';
 // ENUMS
 import { FirstClassResource, ResourcePath } from '$lib/enums';
 // TYPES
@@ -20,7 +23,7 @@ import type { LayoutProps, LayoutData } from './$types';
 import type { QueryClient } from '@tanstack/svelte-query';
 
 type AdminRootProps = LayoutProps & {
-  children: any;
+  children: () => unknown;
   data: LayoutData & {
     queryClient: QueryClient;
   };
@@ -36,6 +39,8 @@ const appCtx = getAppCtx();
 
 // CONTEXT :: ADMIN
 const adminCtx = setAdminCtx(queryClient, appCtx);
+setHeaderCtrl();
+const useAdapter = useHeaderAdapter(appCtx, adminCtx);
 
 // Initialize AdminCtx if AppCtx is ready
 $effect(() => {
@@ -80,6 +85,7 @@ afterNavigate(() => {
     }
   }
 });
+
 </script>
 
 <!-- LAYOUT -->
@@ -91,7 +97,7 @@ afterNavigate(() => {
       </AutoHide>
       <main
         class="flex h-full flex-1 flex-col overflow-hidden bg-gradient-to-bl from-rose-500 to-fuchsia-800 bg-fixed">
-        <Header />
+        <Header {...useAdapter.getHeaderProps()} />
         {@render children()}
       </main>
       <Settings />
@@ -102,7 +108,3 @@ afterNavigate(() => {
     </div>
   {/if}
 </MinWidthProtector>
-
-<svelte:head>
-  <link rel="stylesheet" href="/src/lib/styles/admin.css" />
-</svelte:head>

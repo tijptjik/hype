@@ -19,7 +19,7 @@ import Toaster from '$lib/components/common/Toaster.svelte';
 // LIB
 import { loadScript } from '$lib';
 // MAPLIBRE
-import { monkeyPatchMapLibre } from '$lib/map/maplibre-preload';
+import { monkeyPatchMapLibre } from '$lib/map/maplibrePreload';
 // STYLES
 import '$lib/styles/app.css';
 import '$lib/styles/scrollbar.css';
