@@ -806,9 +806,9 @@ function addCtxToUrl(baseUrl: string, ctx: ImageEditCtx): string {
 // Generate hashicon URL for fallback
 export function getHashiconUrl(id: string) {
   const canvas = document.createElement('canvas')
-  canvas.width = 64
-  canvas.height = 64
-  hashicon(id, { size: 64, createCanvas: () => canvas })
+  canvas.width = 256
+  canvas.height = 256
+  hashicon(id, { size: 256, createCanvas: () => canvas })
   return canvas.toDataURL()
 }
 
