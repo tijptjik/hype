@@ -38,7 +38,18 @@
     align-self: center;
     width: var(--header-icon-size);
     height: var(--header-icon-size);
+    border-radius: 9999px;
     color: var(--color-base-content);
+  }
+
+  .bits-theme .bits-header__icon-wrap[href] {
+    text-decoration: none;
+    color: var(--color-base-content);
+  }
+
+  .bits-theme .bits-header__icon-wrap[href]:focus-visible {
+    outline: 2px solid var(--color-neutral);
+    outline-offset: 2px;
   }
 
   .bits-theme .bits-header--with-title-and-subtitle .bits-header__icon-wrap {
