@@ -24,11 +24,19 @@ function getInitials(value?: string | null): string {
 
 const resolvedAlt = $derived(alt || (name ? `${name} avatar` : 'Avatar'))
 const resolvedFallback = $derived(fallback || getInitials(name))
+const rootClass = $derived(
+  ['relative inline-flex size-10 shrink-0 overflow-hidden rounded-full', className]
+    .filter(Boolean)
+    .join(' ')
+)
 </script>
 
-<Avatar.Root class={className}>
+<Avatar.Root class={rootClass}>
   {#if src}
-    <Avatar.Image {src} alt={resolvedAlt} />
+    <Avatar.Image {src} alt={resolvedAlt} class="h-full w-full object-cover" />
   {/if}
-  <Avatar.Fallback>{resolvedFallback}</Avatar.Fallback>
+  <Avatar.Fallback
+    class="flex h-full w-full items-center justify-center bg-base-200 text-sm font-semibold uppercase text-base-content">
+    {resolvedFallback}
+  </Avatar.Fallback>
 </Avatar.Root>
