@@ -180,7 +180,7 @@ import type {
   UserProfileAPI,
 } from './db/zod'
 // TYPES
-import type { Snippet } from 'svelte'
+import type { Component, Snippet } from 'svelte'
 import type { Page } from '@sveltejs/kit'
 import type { AdminCtx } from './context/admin.svelte'
 import type {
@@ -344,6 +344,35 @@ export type SidebarState = 'closed' | 'narrow' | 'open'
 /* -------- */
 export type LayoutMode = 'table' | 'list' | 'card'
 export type ControlMode = 'filter' | 'hidden'
+export type HeaderControlsMode = 'auto' | 'view' | 'form' | 'none'
+
+export interface HeaderVisibilityOverrides {
+  showNew?: boolean
+  showFilter?: boolean
+  showFacets?: boolean
+  showViewActions?: boolean
+  showFormActions?: boolean
+  showAvatar?: boolean
+  showLayoutToggle?: boolean
+  showControlsToggle?: boolean
+}
+
+export type HeaderFacetItem = {
+  ref: FacetType
+  label: string
+}
+
+export type HeaderMetaState = {
+  title: string
+  icon: Component | null
+  facets: HeaderFacetItem[]
+}
+
+export type HeaderCtrlState = {
+  controlsMode: HeaderControlsMode
+  visibility: HeaderVisibilityOverrides
+  meta: HeaderMetaState
+}
 
 /* ----------------- */
 // VIEW FILTERS (TIER 3)

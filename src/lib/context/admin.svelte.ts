@@ -7,8 +7,10 @@ import { getOrganisations } from '$lib/api/server/organisation.remote'
 import { debouncedUpdateUserPreferences } from '$lib/client/services/user'
 // CONTEXT
 import { getContext, setContext } from 'svelte'
+import type { Component } from 'svelte'
 import type { QueryClient } from '@tanstack/svelte-query'
 import type { AppCtx } from '$lib/context/app.svelte'
+import { getHeaderCtrl } from '$lib/context/header.svelte'
 // ENUMS
 import { ResourcePath, FirstClassResource, type HierarchicalResource } from '$lib/enums'
 // GUARDS
@@ -43,7 +45,6 @@ import type {
   NavigableResource,
   FilterState,
 } from '../types'
-import type { IconSource } from '@steeze-ui/svelte-icon'
 
 // ═══════════════════════
 // 3-TIER FILTER SYSTEM
@@ -403,38 +404,18 @@ export class AdminCtx {
   // HEADER MANAGEMENT
   // ═══════════════════════
 
-  setHeaderForIndex(title: string, icon: IconSource): void {
-    this.appCtx.setHeaderState({
-      icon,
-      title,
-      facetTabs: new Map(),
-      actions: {
-        showAddButton: true,
-        showSearch: true,
-        showLayoutModes: true,
-        showControlModes: true,
-        showFormActions: false,
-      },
-    })
+  setHeaderForIndex(title: string, icon: Component): void {
+    const headerCtrl = getHeaderCtrl()
+    headerCtrl.setIndexHeader(title, icon)
   }
 
   setHeaderForEntity(
     title: string,
-    icon: IconSource,
+    icon: Component,
     facetTabs: Map<FacetType, string>,
   ): void {
-    this.appCtx.setHeaderState({
-      icon,
-      title,
-      facetTabs,
-      actions: {
-        showAddButton: false,
-        showSearch: false,
-        showLayoutModes: false,
-        showControlModes: false,
-        showFormActions: true,
-      },
-    })
+    const headerCtrl = getHeaderCtrl()
+    headerCtrl.setEntityHeader(title, icon, facetTabs)
   }
 
   // ═══════════════════════
