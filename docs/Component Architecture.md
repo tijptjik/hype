@@ -86,3 +86,9 @@ This document defines the UI layering model for Bits components and how logic sh
 - When composing pattern or custom primitives, prefer namespaced usage: `<ComponentPrimitive.Root>`, `<ComponentPrimitive.Part>`.
 - For pattern components, expose a local namespace via `components/index.ts` and import it as `import * as ComponentPrimitive from './components'`.
 - This keeps composition explicit, aligns with Bits-style API shape, and avoids flat import sprawl in composites.
+
+## File Naming Convention
+
+- Svelte components (`*.svelte`): use `TitleCase` filenames (for example `HeaderRoot.svelte`).
+- Non-component modules (`*.ts`, `*.svelte.ts`): use `camelCase` filenames (for example `useAdminHeaderModel.svelte.ts`).
+- Keep SvelteKit route-convention files unchanged (`+page.svelte`, `+layout.svelte`, `+server.ts`, etc.).
