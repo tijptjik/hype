@@ -91,6 +91,13 @@ const getPropertyValue = (entity: any, keyPath: string, useI18n = true): any => 
 };
 
 const adminCtx = getAdminCtx();
+const imageSrc = $derived(
+  getNestedValue(entity, keyMap.image)
+    ? getURLfromImage({
+        image: getNestedValue(entity, keyMap.image) as ImageDB
+      })
+    : getHashiconUrl(entity.id)
+);
 
 const href = $derived(
   adminCtx.activeResourceType
@@ -137,21 +144,24 @@ const handleKeyDown = (e: KeyboardEvent) => {
     {@render header()}
   {:else}
     <div
-      class="cursor-pointer overflow-hidden rounded-t-xl"
+      class="relative cursor-pointer overflow-hidden rounded-t-xl"
       onclick={(e) => {
         if (onImageClick && entity.image) {
           e.stopPropagation();
           onImageClick(entity);
         }
       }}>
+      <img
+        src={imageSrc}
+        alt=""
+        aria-hidden="true"
+        class="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-50 blur" />
+      <div class="pointer-events-none absolute inset-0 bg-white/20"></div>
       <Image
-        src={getNestedValue(entity, keyMap.image)
-          ? getURLfromImage({
-              image: getNestedValue(entity, keyMap.image) as ImageDB
-            })
-          : getHashiconUrl(entity.id)}
+        src={imageSrc}
         alt={getPropertyValue(entity, keyMap.title)}
-        layout="cover" />
+        class="relative z-10 h-64 w-full"
+        />
     </div>
   {/if}
   <!-- Content Section -->

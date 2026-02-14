@@ -157,7 +157,7 @@ $effect(() => {
       class="absolute inset-0 opacity-100 {layout === 'cover'
         ? 'h-full w-full object-cover'
         : layout === 'fill'
-          ? 'object-fill'
+          ? 'object-fill m-auto'
           : layout === 'fit'
             ? 'object-fit'
             : 'object-contain'} bg-transparent"
@@ -172,7 +172,7 @@ $effect(() => {
       class="absolute inset-0 transition-opacity duration-300 {layout === 'cover'
         ? 'h-full w-full object-cover'
         : layout === 'fill'
-          ? 'object-fill'
+          ? 'object-fill m-auto'
           : layout === 'fit'
             ? 'object-fit'
             : 'object-contain'} bg-transparent"
