@@ -1,7 +1,7 @@
 <script lang="ts">
 // COMPONENTS
 import { Header as HeaderPrimitive } from './src'
-import HeaderBreadcrumbs from './src/components/header-breadcrumbs.svelte'
+import HeaderBreadcrumbs from './src/components/HeaderBreadcrumbs.svelte'
 // TYPES
 import type { HeaderProps } from './header.types'
 

@@ -245,7 +245,7 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
     const precache_run = function (this: typeof _lib.Map, o: MaplibreOptions) {
       if (window === self && !this.precache_worker) {
         this.precache_worker = new Worker(
-          new URL('./maplibre-preload-worker.ts', import.meta.url),
+          new URL('./maplibrePreloadWorker.ts', import.meta.url),
           { type: 'module' },
         )
         this.precache_worker.onmessage = (e: MessageEvent) => {

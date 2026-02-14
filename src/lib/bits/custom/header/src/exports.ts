@@ -1,8 +1,8 @@
-export { default as Root } from './components/header-root.svelte'
-export { default as Breadcrumbs } from './components/header-breadcrumbs.svelte'
-export { default as Icon } from './components/header-icon.svelte'
-export { default as Title } from './components/header-title.svelte'
-export { default as Subtitle } from './components/header-subtitle.svelte'
+export { default as Root } from './components/HeaderRoot.svelte'
+export { default as Breadcrumbs } from './components/HeaderBreadcrumbs.svelte'
+export { default as Icon } from './components/HeaderIcon.svelte'
+export { default as Title } from './components/HeaderTitle.svelte'
+export { default as Subtitle } from './components/HeaderSubtitle.svelte'
 
 export type {
   HeaderRootProps as RootProps,

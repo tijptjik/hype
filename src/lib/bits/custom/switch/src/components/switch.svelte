@@ -2,7 +2,7 @@
 	import { boxWith, mergeProps } from "svelte-toolbelt";
 	import type { SwitchRootProps } from "../types.js";
 	import { SwitchRootState } from "../switch.svelte.js";
-	import SwitchInput from "./switch-input.svelte";
+	import SwitchInput from "./SwitchInput.svelte";
 	import { createId } from "$lib/internal/create-id.js";
 	import { noop } from "$lib/internal/noop.js";
 

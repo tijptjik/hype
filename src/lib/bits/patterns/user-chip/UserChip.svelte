@@ -2,7 +2,7 @@
 // BITS COMPONENTS
 import { Avatar } from '$lib/bits/core'
 // TYPES
-import type { UserChipProps } from './user-chip.types'
+import type { UserChipProps } from './userChip.types'
 
 let {
   name,
