@@ -10,7 +10,7 @@ import FilterControlBar from '$lib/components/resources/filters/hubs/Root.svelte
 // ENUMS
 import { FirstClassResource } from '$lib/enums';
 // ICONS
-import { BuildingLibrary as HubIcon } from '@steeze-ui/heroicons';
+import HubIcon from 'virtual:icons/lucide/building-2';
 // TYPES
 import type { KeyMap, Hub } from '$lib/types';
 

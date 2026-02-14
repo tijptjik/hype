@@ -13,7 +13,7 @@ import { FirstClassResource } from '$lib/enums';
 // I18N
 import { m } from '$lib/i18n';
 // ICONS
-import { Square3Stack3d as LayerIcon } from '@steeze-ui/heroicons';
+import LayerIcon from 'virtual:icons/lucide/layers';
 // TYPES
 import type { KeyMap, Layer } from '$lib/types';
 

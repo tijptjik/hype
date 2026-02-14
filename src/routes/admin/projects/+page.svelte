@@ -10,7 +10,7 @@ import { FirstClassResource } from '$lib/enums';
 // I18N
 import { m } from '$lib/i18n';
 // ICONS
-import { Squares2x2 as ProjectIcon } from '@steeze-ui/heroicons';
+import ProjectIcon from 'virtual:icons/lucide/layout-grid';
 // TYPES
 import type { KeyMap, Project } from '$lib/types';
 

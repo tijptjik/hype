@@ -13,7 +13,7 @@ import { page } from '$app/state';
 import { setForm } from '$lib/context/form.svelte';
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // ICONS
-import { MapPin as FeatureIcon } from '@steeze-ui/heroicons';
+import FeatureIcon from 'virtual:icons/lucide/map-pin';
 // PROVIDERS
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 // COMPONENTS

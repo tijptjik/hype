@@ -12,7 +12,7 @@ import { m } from '$lib/i18n';
 import { setForm } from '$lib/context/form.svelte';
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // ICONS
-import { Squares2x2 as ProjectIcon } from '@steeze-ui/heroicons';
+import ProjectIcon from 'virtual:icons/lucide/layout-grid';
 // PROVIDERS
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
 import { page } from '$app/state';

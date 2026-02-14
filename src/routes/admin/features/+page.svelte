@@ -13,7 +13,7 @@ import { FirstClassResource } from '$lib/enums';
 // I18N
 import { m } from '$lib/i18n';
 // ICONS
-import { MapPin as FeatureIcon } from '@steeze-ui/heroicons';
+import FeatureIcon from 'virtual:icons/lucide/map-pin';
 // TYPES
 import type { Feature, ImageDB, ImageDBBasic } from '$lib/types';
 

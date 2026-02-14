@@ -11,7 +11,7 @@ import { FirstClassResource } from '$lib/enums';
 // I18N
 import { m } from '$lib/i18n';
 // ICONS
-import { Inbox as TaskIcon } from '@steeze-ui/heroicons';
+import TaskIcon from 'virtual:icons/lucide/inbox';
 // TYPES
 import type { Task, ImageDBBasic, Project, Id } from '$lib/types';
 

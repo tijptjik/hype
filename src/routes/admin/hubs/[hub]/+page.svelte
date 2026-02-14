@@ -8,7 +8,7 @@ import { m } from '$lib/i18n';
 import { setForm } from '$lib/context/form.svelte';
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // ICONS
-import { BuildingLibrary as HubIcon } from '@steeze-ui/heroicons';
+import HubIcon from 'virtual:icons/lucide/building-2';
 // COMPONENTS
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
 import SpecificationSection from '$lib/components/forms/sections/Specification.svelte';

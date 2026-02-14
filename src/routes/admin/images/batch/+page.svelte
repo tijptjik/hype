@@ -6,11 +6,13 @@ import { m } from '$lib/i18n';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 import { getAppCtx } from '$lib/context/app.svelte';
+import { getHeaderCtrl, getIndexVisibility } from '$lib/context/header.svelte';
 // SERVICES
 import { uploadAndProcessImage } from '$lib/client/services/image';
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte';
 import { Photo, CheckCircle, XCircle, CloudArrowUp } from '@steeze-ui/heroicons';
+import ImageUp from 'virtual:icons/lucide/image-up';
 import Dropzone from 'svelte-file-dropzone';
 // ENUMS
 import { FirstClassResource, ImageContextResource } from '$lib/enums';
@@ -28,9 +30,21 @@ type BatchUploadResult = {
 // CONTEXT
 const adminCtx = getAdminCtx();
 const appCtx = getAppCtx();
+const headerCtrl = getHeaderCtrl();
 
 // Set the active resource to something appropriate for admin context
 adminCtx.setFacet(false, false, FirstClassResource.feature);
+headerCtrl.setIndexHeader('Batch Image Upload', ImageUp);
+headerCtrl.showControls('none');
+headerCtrl.setVisibility(
+  getIndexVisibility({
+    showNew: false,
+    showFilter: false,
+    showViewActions: false,
+    showLayoutToggle: false,
+    showControlsToggle: false
+  })
+);
 
 // STATE
 let uploadResults: BatchUploadResult[] = $state([]);

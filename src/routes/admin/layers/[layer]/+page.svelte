@@ -12,7 +12,7 @@ import { getLocale } from '$lib/i18n';
 import { setForm } from '$lib/context/form.svelte';
 import { getAdminCtx } from '$lib/context/admin.svelte';
 // ICONS
-import { Square3Stack3d as LayerIcon } from '@steeze-ui/heroicons';
+import LayerIcon from 'virtual:icons/lucide/layers';
 import { page } from '$app/state';
 // COMPONENTS
 import I18nSection from '$lib/components/forms/sections/I18n.svelte';
