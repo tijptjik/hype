@@ -1958,4 +1958,12 @@ const IMAGE_STATE_KEY = Symbol('IMAGE_STATE_KEY')
 export const setImageCtx = (options: ImageCtxConstructorOptions) =>
   setContext(IMAGE_STATE_KEY, new ImageCtx(options))
 
-export const getImageCtx = (): ImageCtx => getContext(IMAGE_STATE_KEY)
+export const getImageCtx = (): ImageCtx => {
+  const ctx = getContext<ImageCtx | undefined>(IMAGE_STATE_KEY)
+  if (!ctx) {
+    throw new Error(
+      'ImageCtx context is missing. Ensure setImageCtx() is called before using getImageCtx().',
+    )
+  }
+  return ctx
+}

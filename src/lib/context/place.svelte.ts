@@ -211,4 +211,12 @@ export const PLACE_CONTEXT_KEY = Symbol('placeContext')
 
 export const setPlaceCtx = () => setContext(PLACE_CONTEXT_KEY, new PlaceCtx())
 
-export const getPlaceCtx = (): PlaceCtx => getContext(PLACE_CONTEXT_KEY)
+export const getPlaceCtx = (): PlaceCtx => {
+  const ctx = getContext<PlaceCtx | undefined>(PLACE_CONTEXT_KEY)
+  if (!ctx) {
+    throw new Error(
+      'PlaceCtx context is missing. Ensure setPlaceCtx() is called before using getPlaceCtx().',
+    )
+  }
+  return ctx
+}

@@ -428,7 +428,13 @@ export function getForm<T extends Organisation | Project | Layer | Feature | Hub
   resource: ResourceType,
   entity: Ref,
 ): OrganisationForm | ProjectForm | LayerForm | FeatureForm | HubForm {
-  return getContext<OrganisationForm | ProjectForm | LayerForm | FeatureForm | HubForm>(
-    getContextRef(resource, entity),
-  )
+  const ctx = getContext<
+    OrganisationForm | ProjectForm | LayerForm | FeatureForm | HubForm | undefined
+  >(getContextRef(resource, entity))
+  if (!ctx) {
+    throw new Error(
+      `Form context is missing for resource '${resource}' and entity '${entity}'. Ensure setForm() is called before using getForm().`,
+    )
+  }
+  return ctx
 }

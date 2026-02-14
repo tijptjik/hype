@@ -66,4 +66,12 @@ export const FEATURE_CARD_CONTEXT_KEY = Symbol('featureCardContext')
 
 export const setCardCtx = () => setContext(FEATURE_CARD_CONTEXT_KEY, new CardCtx())
 
-export const getCardCtx = (): CardCtx => getContext(FEATURE_CARD_CONTEXT_KEY)
+export const getCardCtx = (): CardCtx => {
+  const ctx = getContext<CardCtx | undefined>(FEATURE_CARD_CONTEXT_KEY)
+  if (!ctx) {
+    throw new Error(
+      'CardCtx context is missing. Ensure setCardCtx() is called before using getCardCtx().',
+    )
+  }
+  return ctx
+}

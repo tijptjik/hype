@@ -3230,4 +3230,12 @@ export const setAppCtx = (
   return setContext(APPCTX_KEY, context)
 }
 
-export const getAppCtx = (): ReturnType<typeof setAppCtx> => getContext(APPCTX_KEY)
+export const getAppCtx = (): ReturnType<typeof setAppCtx> => {
+  const ctx = getContext<ReturnType<typeof setAppCtx> | undefined>(APPCTX_KEY)
+  if (!ctx) {
+    throw new Error(
+      'AppCtx context is missing. Ensure setAppCtx() is called in the root layout before using getAppCtx().',
+    )
+  }
+  return ctx
+}

@@ -46,10 +46,7 @@ export class HeaderCtrl {
   }
 
   setVisibility(overrides: HeaderVisibilityOverrides): void {
-    this.state.visibility = {
-      ...this.state.visibility,
-      ...overrides,
-    }
+    this.state.visibility = { ...overrides }
   }
 
   setTitle(title: string): void {
@@ -102,5 +99,11 @@ export const setHeaderCtrl = (): HeaderCtrl => {
 }
 
 export const getHeaderCtrl = (): HeaderCtrl => {
-  return getContext<HeaderCtrl | undefined>(HEADER_CTRL_KEY)
+  const ctrl = getContext<HeaderCtrl | undefined>(HEADER_CTRL_KEY)
+  if (!ctrl) {
+    throw new Error(
+      'HeaderCtrl context is missing. Ensure setHeaderCtrl() is called in the parent layout before using getHeaderCtrl().',
+    )
+  }
+  return ctrl
 }
