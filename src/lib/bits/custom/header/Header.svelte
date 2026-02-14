@@ -11,6 +11,7 @@ let {
   hideTitle = false,
   hideDescription = false,
   icon: IconComponent,
+  href,
   crumbs = [],
   size = 'md',
   ref = $bindable(null),
@@ -45,7 +46,11 @@ const resolvedStyle = $derived(style ?? undefined)
   {/if}
 
   {#if IconComponent}
-    <HeaderPrimitive.Icon class="bits-header__icon-wrap" icon={IconComponent} aria-hidden="true" />
+    <HeaderPrimitive.Icon
+      class="bits-header__icon-wrap"
+      icon={IconComponent}
+      {href}
+      aria-hidden="true" />
   {/if}
 
   {#if text && !hideTitle}

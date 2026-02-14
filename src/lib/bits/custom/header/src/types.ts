@@ -8,8 +8,9 @@ export interface HeaderRootProps extends HTMLAttributes<HTMLDivElement> {
   children?: Snippet
 }
 
-export interface HeaderIconProps extends HTMLAttributes<HTMLSpanElement> {
+export interface HeaderIconProps extends HTMLAttributes<HTMLElement> {
   icon?: Component
+  href?: string
   class?: string
   children?: Snippet
 }
