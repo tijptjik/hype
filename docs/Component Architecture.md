@@ -65,6 +65,10 @@ This document defines the UI layering model for Bits components and how logic sh
 - Use a page-callable controller context (e.g. `HeaderCtrl`) for per-route header visibility/behavior overrides.
 - Keep the Header pattern itself stateless and prop-driven.
 - Keep admin defaults in the adapter (`createAdminHeaderModel`) and merge `HeaderCtrl` overrides last.
+- Enforce separation:
+  - Automatic wiring (adapter): derive structural defaults from app/admin state (`activeResource`, `activeRef`, UI mode state).
+  - Manual wiring (page): set programmatic header metadata (`title`, `icon`, `facets`) and per-page visibility intent via `HeaderCtrl`.
+- Do not use `appCtx.state.header` as the source of truth for Bits header rendering.
 - Recommended merge precedence:
   1. app/admin derived defaults
   2. adapter-level mode mapping (`auto` / `view` / `form` / `none`)
