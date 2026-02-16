@@ -20,7 +20,9 @@
       background-color 0.15s ease,
       border-color 0.15s ease,
       color 0.15s ease,
-      transform 0.1s ease;
+      transform 0.2s ease,
+      gap 0.2s ease,
+      padding-inline 0.2s ease;
     --btn-bg: var(--btn-color);
     --btn-fg: var(--btn-color-content);
     --btn-border: color-mix(in oklab, var(--btn-color) 86%, black);
@@ -73,9 +75,32 @@
   }
 
   .bits-theme .bits-btn__label {
+    display: inline-block;
     line-height: 1;
     white-space: nowrap;
+    overflow: hidden;
+    max-width: 20ch;
+    opacity: 1;
+    margin-inline: 0;
+    transform: translateX(0);
+    transition:
+      max-width 0.2s ease,
+      opacity 0.15s ease,
+      margin-inline 0.2s ease,
+      transform 0.2s ease;
     color: inherit;
+  }
+
+  .bits-theme .bits-btn--label-hidden {
+    gap: 0;
+    padding-inline: calc(var(--btn-size) * 0.25);
+  }
+
+  .bits-theme .bits-btn--label-hidden .bits-btn__label {
+    max-width: 0;
+    opacity: 0;
+    margin-inline: 0;
+    transform: translateX(-0.125rem);
   }
 
   /* Size variants */

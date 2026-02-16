@@ -77,24 +77,6 @@ export class HeaderCtrl {
   }
 
   /**
-   * Set the header title text.
-   * @param title - Header title.
-   * @returns void
-   */
-  private setTitle(title: string): void {
-    this.state.meta.title = title
-  }
-
-  /**
-   * Set the header icon component.
-   * @param icon - Header icon component or null.
-   * @returns void
-   */
-  private setIcon(icon: Component | null): void {
-    this.state.meta.icon = icon
-  }
-
-  /**
    * Set available facet tabs.
    * @param facets - Facets as map labels or fully-configured facet items.
    * @returns void
