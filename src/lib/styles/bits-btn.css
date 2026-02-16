@@ -10,6 +10,7 @@
     --btn-icon-ratio: 0.5;
     --btn-padding-ratio: 0.4;
     height: var(--btn-size);
+    max-height: 100%;
     font-size: calc(
       var(--btn-base-label-size) +
       ((var(--btn-size) - var(--btn-base-size)) * var(--btn-label-multiplier))
@@ -135,8 +136,9 @@
 
   .bits-theme .bits-btn--modifier-circle,
   .bits-theme .bits-btn--modifier-square {
-    width: var(--btn-size);
-    min-width: var(--btn-size);
+    width: auto;
+    min-width: 0;
+    aspect-ratio: 1 / 1;
     padding-inline: 0;
   }
 

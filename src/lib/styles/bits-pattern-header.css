@@ -31,6 +31,7 @@
     border-color: transparent;
   }
 
+  /* biome-ignore lint: intentional hidden placeholder for focus-driven search UI */
   .bits-theme .bits-pattern-header__search-input::placeholder {
     color: transparent;
   }
@@ -47,7 +48,11 @@
   }
 
   .bits-theme .bits-pattern-header__facets {
-    @apply flex items-center gap-2 bg-base-200 rounded-xl;
+    @apply flex items-center gap-2 bg-base-300 rounded-xl;
+  }
+
+  .bits-theme .bits-pattern-header__facet-item {
+    @apply h-10;
   }
 
   .bits-theme .bits-pattern-header__view-actions {

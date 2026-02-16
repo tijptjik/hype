@@ -8,7 +8,7 @@ let {
   items = [],
   active = false,
   hideLabel = false,
-  onFacetChange
+  onFacetChange,
 }: {
   items?: HeaderFacetItem[]
   active?: string | false
@@ -23,7 +23,7 @@ let {
       {#each items as facet (facet.ref)}
         {@const isActive = active === facet.ref || (active === false && facet.ref === 'core')}
         {@const FacetIcon = facet.icon}
-        <li>
+        <li class="bits-pattern-header__facet-item">
           {#snippet facetIcon()}
             <FacetIcon />
           {/snippet}
@@ -33,7 +33,8 @@ let {
             style="ghost"
             icon={FacetIcon ? facetIcon : undefined}
             {hideLabel}
-            onClick={() => onFacetChange?.(facet.ref)} />
+            onClick={() => onFacetChange?.(facet.ref)}
+          />
         </li>
       {/each}
     </ul>
