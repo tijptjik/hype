@@ -102,7 +102,7 @@ export const getHeaderCtrl = (): HeaderCtrl => {
   const ctrl = getContext<HeaderCtrl | undefined>(HEADER_CTRL_KEY)
   if (!ctrl) {
     throw new Error(
-      'HeaderCtrl context is missing. Ensure setHeaderCtrl() is called in the parent layout before using getHeaderCtrl().',
+      'HeaderCtrl context is missing. Ensure setHeaderCtrl() is called before using getHeaderCtrl().',
     )
   }
   return ctrl

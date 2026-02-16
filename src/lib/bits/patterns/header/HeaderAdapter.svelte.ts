@@ -3,7 +3,7 @@ import type { AppCtx } from '$lib/context/app.svelte'
 import type { AdminCtx } from '$lib/context/admin.svelte'
 import type { HeaderProps } from './header.types'
 import type { Component } from 'svelte'
-import type { CurrentUserLike, FilterState } from '$lib/types'
+import type { FilterState } from '$lib/types'
 import type { HeaderCrumb } from '$lib/bits/custom/header'
 import { FirstClassResource, Panel, ResourcePath } from '$lib/enums'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
@@ -93,7 +93,7 @@ export function useHeaderAdapter(
       : false,
   )
   const showAvatar = $derived(!appCtx.state.panels.settings.isOpen)
-  const currentUser = $derived((appCtx.user ?? null) as CurrentUserLike | null)
+  const currentUser = $derived(appCtx.user ?? null)
   const currentUserName = $derived(
     currentUser?.displayUsername ?? currentUser?.name ?? currentUser?.username ?? null,
   )

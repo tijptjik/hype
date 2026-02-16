@@ -1,5 +1,7 @@
 // SVELTE
-import { getRequestEvent, query } from '$app/server'
+import { getRequestEvent, query, form } from '$app/server'
+// ZOD
+import { z } from 'zod'
 // SERVICES
 import {
   toQueryConditions,
@@ -19,7 +21,11 @@ import {
 // SCHEMA
 import { organisation } from '$lib/db/schema'
 // SCHEMA
-import { ListQueryParamsSchema, GetQueryParamsSchema } from '$lib/db/zod'
+import {
+  ListQueryParamsSchema,
+  GetQueryParamsSchema,
+  OrganisationAPI,
+} from '$lib/db/zod'
 import type { OrganisationDB, Id } from '$lib/types'
 
 const toLookupConditions = (params: {
@@ -114,4 +120,8 @@ export const getOrganisation = query(GetQueryParamsSchema, async params => {
   )
 
   return toEntityResponseShape(result ?? null, user)
+})
+
+export const organisationForm = form(OrganisationAPI, async _params => {
+  return
 })

@@ -1,5 +1,4 @@
 <script lang="ts">
-import { onMount } from 'svelte';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 import { getHeaderCtrl } from '$lib/context/header.svelte';
@@ -49,7 +48,7 @@ const headerCtrl = getHeaderCtrl();
 adminCtx.setFacet(false, false, RESOURCE);
 
 // HEADER SETUP
-adminCtx.setHeaderForIndex(m.maps__organisations(), OrganisationIcon);
+headerCtrl.setIndexHeader(m.maps__organisations(), OrganisationIcon);
 
 // STATE
 let entities: Organisation[] = $derived(
