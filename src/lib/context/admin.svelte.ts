@@ -394,7 +394,6 @@ export class AdminCtx {
     // TODO Remove from AdminCtx
     if (ref !== undefined) this.setResourceRef(ref)
     if (resource) this.setResourceType(resource)
-    this.appCtx.state.nav.facet = facet
     this.appCtx.setActiveFacet(facet)
   }
 

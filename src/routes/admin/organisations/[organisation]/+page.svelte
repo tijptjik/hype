@@ -1,33 +1,48 @@
 <script lang="ts">
 import { page } from '$app/state'
+import { fade } from 'svelte/transition'
 import { getOrganisation, organisationForm } from '$lib/api/server/organisation.remote'
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
 import { FirstClassResource } from '$lib/enums'
 import { getLocale, getLocaleOrder } from '$lib/i18n'
 import OrganisationIcon from 'virtual:icons/lucide/users-round'
-import FormInput from 'virtual:icons/lucide/form-input'
-import ImageIcon from 'virtual:icons/lucide/image'
 
-let organisation = await getOrganisation({
-  ref: page.params.organisation as string,
-  refKey: 'code',
-})
+let organisation = $state<Awaited<ReturnType<typeof getOrganisation>> | null>(null)
+let isLoading = $state(true)
 
 const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
-
-adminCtx.setFacet(
-  'core',
-  page.params.organisation as string,
-  FirstClassResource.organisation,
-)
+const organisationRef = $derived(page.params.organisation as string)
 
 let contentsElement: HTMLFormElement | undefined = $state()
 
-if (organisation?.data) {
-  organisationForm.fields.set(organisation.data as any)
-}
+$effect(() => {
+  const ref = organisationRef
+  let cancelled = false
+
+  adminCtx.setFacet('core', ref, FirstClassResource.organisation)
+  isLoading = true
+
+  void getOrganisation({ ref, refKey: 'code' })
+    .then(result => {
+      if (cancelled) return
+      organisation = result
+      if (result?.data) {
+        organisationForm.fields.set(result.data as any)
+      }
+      isLoading = false
+    })
+    .catch(() => {
+      if (cancelled) return
+      organisation = null
+      isLoading = false
+    })
+
+  return () => {
+    cancelled = true
+  }
+})
 
 const formFieldKeys = $derived(
   organisationForm?.fields ? Object.keys(organisationForm.fields) : [],
@@ -38,81 +53,87 @@ const fieldLocaleKeys = $derived(
     : [],
 )
 const orderedLocales = $derived(getLocaleOrder(getLocale()))
-
-headerCtrl.setHeaderForEntity(
-  organisation?.data?.i18n?.[getLocale()]?.name ??
-    organisation?.data?.code ??
-    'Organisation',
-  OrganisationIcon,
-  new Map([['core', 'Core']]),
-)
-headerCtrl.setFacets([
-  { ref: 'core', label: 'Core', icon: FormInput },
-  { ref: 'images', label: 'Profile', icon: ImageIcon },
-])
+const activeFacet = $derived(adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet)
+const isCoreFacet = $derived(activeFacet === 'core')
+const isImagesFacet = $derived(activeFacet === 'images')
 
 $effect(() => {
-  console.log('code', !!organisationForm?.fields?.code)
-  console.log('url', !!organisationForm?.fields?.url)
-  console.log('i18n', !!organisationForm?.fields?.i18n)
-  console.log(
-    'i18n.en.name',
-    !!organisationForm?.fields?.i18n?.en?.name,
-  )
-  console.log(
-    'i18n.en.description',
-    !!organisationForm?.fields?.i18n?.en?.description,
+  const facetTabs = new Map([
+    ['core', 'Core'],
+    ['images', 'Profile'],
+  ] as const)
+
+  headerCtrl.setHeaderForEntity(
+    organisation?.data?.i18n?.[getLocale()]?.name ??
+      organisation?.data?.code ??
+      'Organisation',
+    OrganisationIcon,
+    facetTabs,
   )
 })
 </script>
 
 <main class="h-full overflow-y-auto p-6">
   <form bind:this={contentsElement} {...organisationForm} class="space-y-4">
-    {#if organisationForm?.fields}
-      {#if organisationForm.fields.code}
-        <label>
-          <p>Code</p>
-          <input {...organisationForm.fields.code.as('text')} />
-        </label>
-      {/if}
+    {#if isLoading}
+      <p class="text-sm text-neutral-content" transition:fade={{ duration: 150 }}>
+        Loading organisation...
+      </p>
+    {:else if organisationForm?.fields && organisation?.data}
+      <section class:hidden={!isCoreFacet} transition:fade={{ duration: 150 }}>
+        {#if organisationForm.fields.code}
+          <label>
+            <p>Code</p>
+            <input {...organisationForm.fields.code.as('text')} />
+          </label>
+        {/if}
 
-      {#if organisationForm.fields.url}
-        <label>
-          <p>Url</p>
-          <input {...organisationForm.fields.url.as('url')} />
-        </label>
-      {/if}
+        {#if organisationForm.fields.url}
+          <label>
+            <p>Url</p>
+            <input {...organisationForm.fields.url.as('url')} />
+          </label>
+        {/if}
 
-      {#if organisationForm.fields.i18n}
-        {#each orderedLocales as locale (locale)}
-          {@const fields = organisationForm.fields.i18n?.[locale]}
-          {#if fields}
-            <h2>{locale}</h2>
-            {#if fields.name}
-              <label>
-                <p>Name</p>
-                <input {...fields.name.as('text')} />
-              </label>
+        {#if organisationForm.fields.i18n}
+          {#each orderedLocales as locale (locale)}
+            {@const fields = organisationForm.fields.i18n?.[locale]}
+            {#if fields}
+              <h2>{locale}</h2>
+              {#if fields.name}
+                <label>
+                  <p>Name</p>
+                  <input {...fields.name.as('text')} />
+                </label>
+              {/if}
+              {#if fields.description}
+                <label>
+                  <p>Description</p>
+                  <textarea {...fields.description.as('text')}></textarea>
+                </label>
+              {/if}
             {/if}
-            {#if fields.description}
-              <label>
-                <p>Description</p>
-                <textarea {...fields.description.as('text')}></textarea>
-              </label>
-            {/if}
-          {/if}
-        {/each}
-      {/if}
+          {/each}
+        {/if}
+      </section>
+
+      <section class:hidden={!isImagesFacet} transition:fade={{ duration: 150 }}>
+        <p class="text-sm text-neutral-content">
+          Active tab: profile image management.
+        </p>
+      </section>
     {:else}
-      <p>Form fields are not available.</p>
+      <p transition:fade={{ duration: 150 }}>Form fields are not available.</p>
     {/if}
 
-    <p class="text-xs text-neutral-content">
-      form field keys: {formFieldKeys.length > 0 ? formFieldKeys.join(', ') : 'none'}
-    </p>
-    <p class="text-xs text-neutral-content">
-      i18n field locales: {fieldLocaleKeys.length > 0 ? fieldLocaleKeys.join(', ') : 'none'}
-    </p>
+    {#if !isLoading}
+      <p class="text-xs text-neutral-content">
+        form field keys: {formFieldKeys.length > 0 ? formFieldKeys.join(', ') : 'none'}
+      </p>
+      <p class="text-xs text-neutral-content">
+        i18n field locales: {fieldLocaleKeys.length > 0 ? fieldLocaleKeys.join(', ') : 'none'}
+      </p>
+    {/if}
   </form>
 
   <!-- {#if organisation?.data}
