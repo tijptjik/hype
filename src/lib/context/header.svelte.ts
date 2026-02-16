@@ -8,6 +8,11 @@ import type {
   HeaderVisibilityOverrides,
 } from '$lib/types'
 
+/**
+ * Build the default visibility profile for index/list routes.
+ * @param overrides - Optional visibility overrides merged onto defaults.
+ * @returns Visibility configuration for index pages.
+ */
 export const getIndexVisibility = (
   overrides: HeaderVisibilityOverrides = {},
 ): HeaderVisibilityOverrides => ({
@@ -19,6 +24,11 @@ export const getIndexVisibility = (
   ...overrides,
 })
 
+/**
+ * Build the default visibility profile for entity/detail routes.
+ * @param overrides - Optional visibility overrides merged onto defaults.
+ * @returns Visibility configuration for entity pages.
+ */
 export const getEntityVisibility = (
   overrides: HeaderVisibilityOverrides = {},
 ): HeaderVisibilityOverrides => ({
@@ -30,7 +40,14 @@ export const getEntityVisibility = (
   ...overrides,
 })
 
+/**
+ * Central controller for header UI state.
+ * @remarks
+ * Public methods are intended for route/page usage.
+ * Private methods are internal composition helpers.
+ */
 export class HeaderCtrl {
+  /** Reactive header state consumed by the header adapter/components. */
   state: HeaderCtrlState = $state({
     controlsMode: 'auto',
     visibility: {},
@@ -41,35 +58,137 @@ export class HeaderCtrl {
     },
   })
 
-  showControls(mode: HeaderControlsMode): void {
+  /**
+   * Set which control cluster should be shown.
+   * @param mode - Header controls mode.
+   * @returns void
+   */
+  private showControls(mode: HeaderControlsMode): void {
     this.state.controlsMode = mode
   }
 
-  setVisibility(overrides: HeaderVisibilityOverrides): void {
+  /**
+   * Override header visibility flags.
+   * @param overrides - Visibility overrides to apply.
+   * @returns void
+   */
+  private setVisibility(overrides: HeaderVisibilityOverrides): void {
     this.state.visibility = { ...overrides }
   }
 
-  setTitle(title: string): void {
+  /**
+   * Set the header title text.
+   * @param title - Header title.
+   * @returns void
+   */
+  private setTitle(title: string): void {
     this.state.meta.title = title
   }
 
-  setIcon(icon: Component | null): void {
+  /**
+   * Set the header icon component.
+   * @param icon - Header icon component or null.
+   * @returns void
+   */
+  private setIcon(icon: Component | null): void {
     this.state.meta.icon = icon
   }
 
+  /**
+   * Set available facet tabs.
+   * @param facets - Facets as map labels or fully-configured facet items.
+   * @returns void
+   */
   setFacets(facets: Map<FacetType, string> | HeaderFacetItem[]): void {
-    this.state.meta.facets = Array.isArray(facets)
-      ? facets
-      : Array.from(facets.entries()).map(([ref, label]) => ({ ref, label }))
+    this.state.meta.facets = this.normalizeFacetItems(facets)
   }
 
-  setIndexHeader(title: string, icon: Component): void {
+  /**
+   * Configure header for index/list routes.
+   * @param title - Header title.
+   * @param icon - Header icon component.
+   * @returns void
+   */
+  setHeaderForIndex(title: string, icon: Component): void {
+    this.applyIndexMeta(title, icon)
+    this.showControls('view')
+    this.setVisibility(getIndexVisibility())
+  }
+
+  /**
+   * Configure header for stand-alone index-like pages.
+   * @param title - Header title.
+   * @param icon - Header icon component.
+   * @param visibilityOverrides - Visibility overrides merged onto index defaults.
+   * @returns void
+   */
+  setHeaderForStandAlone(
+    title: string,
+    icon: Component,
+    visibilityOverrides: HeaderVisibilityOverrides = {},
+  ): void {
+    this.applyIndexMeta(title, icon)
+    this.showControls('none')
+    this.setVisibility(getIndexVisibility(visibilityOverrides))
+  }
+
+  /**
+   * Configure header for entity/detail routes.
+   * @param title - Header title.
+   * @param icon - Header icon component.
+   * @param facets - Facets to render for the entity page.
+   * @returns void
+   */
+  setHeaderForEntity(
+    title: string,
+    icon: Component,
+    facets: Map<FacetType, string>,
+  ): void {
+    this.applyEntityMeta(title, icon, facets)
+    this.showControls('form')
+    this.setVisibility(getEntityVisibility())
+  }
+
+  /**
+   * Clear header metadata while preserving controls mode/visibility.
+   * @returns void
+   */
+  clearMeta(): void {
+    this.state.meta.title = ''
+    this.state.meta.icon = null
+    this.state.meta.facets = []
+  }
+
+  /**
+   * Fully reset header controls, visibility, and metadata.
+   * @returns void
+   */
+  reset(): void {
+    this.state.controlsMode = 'auto'
+    this.state.visibility = {}
+    this.clearMeta()
+  }
+
+  /**
+   * Apply base metadata for index/list pages.
+   * @param title - Header title.
+   * @param icon - Header icon component.
+   * @returns void
+   */
+  private applyIndexMeta(title: string, icon: Component): void {
     this.state.meta.title = title
     this.state.meta.icon = icon
     this.state.meta.facets = []
   }
 
-  setEntityHeader(
+  /**
+   * Apply base metadata for entity/detail pages.
+   * @param title - Header title.
+   * @param icon - Header icon component.
+   * @param facets - Facets for the entity page.
+   * @returns void
+   */
+  private applyEntityMeta(
     title: string,
     icon: Component,
     facets: Map<FacetType, string>,
@@ -79,25 +198,39 @@ export class HeaderCtrl {
     this.setFacets(facets)
   }
 
-  clearMeta(): void {
-    this.state.meta.title = ''
-    this.state.meta.icon = null
-    this.state.meta.facets = []
-  }
-
-  reset(): void {
-    this.state.controlsMode = 'auto'
-    this.state.visibility = {}
-    this.clearMeta()
+  /**
+   * Normalize facet input into the internal facet item shape.
+   * @param facets - Facets as map labels or fully-configured facet items.
+   * @returns Normalized facet items.
+   */
+  private normalizeFacetItems(
+    facets: Map<FacetType, string> | HeaderFacetItem[],
+  ): HeaderFacetItem[] {
+    return Array.isArray(facets)
+      ? facets
+      : Array.from(facets.entries()).map(([ref, label]) => ({
+          ref,
+          label,
+          icon: null,
+        }))
   }
 }
 
 export const HEADER_CTRL_KEY = Symbol('headerCtrl')
 
+/**
+ * Create and register a header controller in Svelte context.
+ * @returns The created header controller.
+ */
 export const setHeaderCtrl = (): HeaderCtrl => {
   return setContext(HEADER_CTRL_KEY, new HeaderCtrl())
 }
 
+/**
+ * Read the header controller from Svelte context.
+ * @returns Active header controller.
+ * @throws Error when context has not been initialized.
+ */
 export const getHeaderCtrl = (): HeaderCtrl => {
   const ctrl = getContext<HeaderCtrl | undefined>(HEADER_CTRL_KEY)
   if (!ctrl) {

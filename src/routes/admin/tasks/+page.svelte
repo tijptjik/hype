@@ -1,6 +1,7 @@
 <script lang="ts">
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getHeaderCtrl } from '$lib/context/header.svelte';
 // COMPONENTS
 import GroupedResourceIndex from '$lib/components/resources/GroupedResourceIndex.svelte';
 import FilterControlBar from '$lib/components/resources/filters/tasks/Root.svelte';
@@ -17,10 +18,11 @@ import type { Task, ImageDBBasic, Project, Id } from '$lib/types';
 
 // CONTEXT
 const adminCtx = getAdminCtx();
+const headerCtrl = getHeaderCtrl();
 adminCtx.setFacet(false, false, FirstClassResource.task);
 
 // HEADER SETUP
-adminCtx.setHeaderForIndex(m.navbar__tasks(), TaskIcon);
+headerCtrl.setHeaderForIndex(m.navbar__tasks(), TaskIcon);
 
 // ELEMENTS
 let listContainer: HTMLElement | null = $state(null);

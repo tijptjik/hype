@@ -1,0 +1,79 @@
+@layer components {
+  .bits-theme .bits-pattern-header {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .bits-theme .bits-pattern-header__left {
+    @apply flex min-w-0 flex-1 items-center gap-4;
+  }
+
+  .bits-theme .bits-pattern-header__right {
+    @apply ml-4 flex items-center gap-3;
+  }
+
+  .bits-theme .bits-pattern-header__search {
+    @apply relative inline-flex min-w-44 items-center;
+  }
+
+  .bits-theme .bits-pattern-header__search-icon {
+    @apply pointer-events-none absolute right-4 h-5 w-5;
+    color: color-mix(in oklab, var(--color-base-content) 65%, black);
+  }
+
+  .bits-theme .bits-pattern-header__search-input {
+    @apply h-9 w-full rounded-full border px-8 text-sm;
+    background-color: var(--color-base-100);
+    color: var(--color-base-content);
+    user-select: text;
+    -webkit-user-select: text;
+    box-shadow: none;
+    border-color: transparent;
+  }
+
+  .bits-theme .bits-pattern-header__search-input::placeholder {
+    color: transparent;
+  }
+
+  .bits-theme .bits-pattern-header__search-input:focus-visible {
+    border-color: var(--color-neutral);
+    --tw-ring-color: var(--color-neutral);
+    outline: 2px solid var(--color-neutral-content);
+    box-shadow: none;
+  }
+
+  .bits-theme .bits-pattern-header__facets-wrap {
+    @apply flex items-center gap-2;
+  }
+
+  .bits-theme .bits-pattern-header__facets {
+    @apply flex items-center gap-2 bg-base-200 rounded-xl;
+  }
+
+  .bits-theme .bits-pattern-header__view-actions {
+    @apply flex items-center gap-0;
+  }
+
+  .bits-theme .bits-pattern-header__form-actions {
+    @apply flex items-center gap-0;
+  }
+
+  .bits-theme .bits-pattern-header.bits-pattern-header--measuring .bits-btn,
+  .bits-theme .bits-pattern-header.bits-pattern-header--measuring .bits-btn__label,
+  .bits-theme .bits-pattern-header.bits-pattern-header--measuring .bits-header__title,
+  .bits-theme
+    .bits-pattern-header.bits-pattern-header--measuring
+    .bits-header__subtitle,
+  .bits-theme
+    .bits-pattern-header.bits-pattern-header--measuring
+    .bits-header__breadcrumbs {
+    transition: none;
+    animation: none;
+  }
+
+  .bits-theme
+    .bits-pattern-header.bits-pattern-header--mask-button-labels
+    .bits-btn__label {
+    visibility: hidden;
+  }
+}

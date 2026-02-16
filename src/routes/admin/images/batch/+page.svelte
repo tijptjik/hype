@@ -6,7 +6,7 @@ import { m } from '$lib/i18n';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
 import { getAppCtx } from '$lib/context/app.svelte';
-import { getHeaderCtrl, getIndexVisibility } from '$lib/context/header.svelte';
+import { getHeaderCtrl } from '$lib/context/header.svelte';
 // SERVICES
 import { uploadAndProcessImage } from '$lib/client/services/image';
 // COMPONENTS
@@ -17,7 +17,7 @@ import Dropzone from 'svelte-file-dropzone';
 // ENUMS
 import { FirstClassResource, ImageContextResource } from '$lib/enums';
 // TYPES
-import type { Image, ImageUploadCtx, Feature } from '$lib/types';
+import type { Image, ImageUploadCtx, Feature, Layer, Project, Organisation } from '$lib/types';
 
 type BatchUploadResult = {
   file: File;
@@ -34,17 +34,13 @@ const headerCtrl = getHeaderCtrl();
 
 // Set the active resource to something appropriate for admin context
 adminCtx.setFacet(false, false, FirstClassResource.feature);
-headerCtrl.setIndexHeader('Batch Image Upload', ImageUp);
-headerCtrl.showControls('none');
-headerCtrl.setVisibility(
-  getIndexVisibility({
-    showNew: false,
-    showFilter: false,
-    showViewActions: false,
-    showLayoutToggle: false,
-    showControlsToggle: false
-  })
-);
+headerCtrl.setHeaderForStandAlone(m.admin__batch_image_upload(), ImageUp, {
+  showNew: false,
+  showFilter: false,
+  showViewActions: false,
+  showLayoutToggle: false,
+  showControlsToggle: false
+});
 
 // STATE
 let uploadResults: BatchUploadResult[] = $state([]);
@@ -70,9 +66,9 @@ function extractFeatureIdFromFilename(filename: string): string | null {
 // Define the context type
 type FeatureContext = {
   feature: Feature;
-  layer: any;
-  project: any;
-  organisation: any;
+  layer: Layer;
+  project: Project;
+  organisation: Organisation;
   layerId: string;
   projectId: string;
   organisationId: string;
@@ -253,7 +249,7 @@ let pendingCount = $derived(uploadResults.filter((r) => r.status === 'pending').
 <div class="h-full p-6">
   <div class="flex items-center gap-4">
     <h3 class=" text-xl font-bold uppercase">
-      {m.trite_least_parakeet_charm()}
+      {m.admin__batch_image_upload()}
       <small
         class="case hidden select-text pr-3 text-sm normal-case text-base-content/70 @sm:block"
         >{m.caring_aloof_haddock_bubble()}</small>

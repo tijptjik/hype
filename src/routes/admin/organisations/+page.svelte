@@ -48,8 +48,7 @@ const headerCtrl = getHeaderCtrl();
 adminCtx.setFacet(false, false, RESOURCE);
 
 // HEADER SETUP
-headerCtrl.setIndexHeader(m.maps__organisations(), OrganisationIcon);
-
+headerCtrl.setHeaderForIndex(m.maps__organisations(), OrganisationIcon);
 // STATE
 let entities: Organisation[] = $derived(
   adminCtx.getViewFilteredResource<Organisation>(FirstClassResource.organisation)

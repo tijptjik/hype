@@ -81,6 +81,7 @@
     color: var(--color-base-content);
     margin: 0;
     text-align: left;
+    white-space: nowrap;
   }
 
   .bits-theme .bits-header--with-icon .bits-header__title {
@@ -126,6 +127,8 @@
     grid-row: 1;
     width: fit-content;
     max-width: 100%;
+    flex-wrap: nowrap;
+    white-space: nowrap;
     color: color-mix(in oklab, var(--color-base-content) 74%, black);
   }
 

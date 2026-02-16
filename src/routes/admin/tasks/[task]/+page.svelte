@@ -3,6 +3,7 @@
 import { page } from '$app/state';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getHeaderCtrl } from '$lib/context/header.svelte';
 // I18N
 import { m } from '$lib/i18n';
 // ICONS
@@ -39,6 +40,7 @@ let task: Task = $derived(pageProps.data.task);
 
 // CONTEXT
 const adminCtx = getAdminCtx();
+const headerCtrl = getHeaderCtrl();
 adminCtx.setFacet('core', pageProps.data.task.id, FirstClassResource.task);
 
 // HEADER SETUP
@@ -48,7 +50,7 @@ facetTabs.set('core', m.born_plane_javelina_strive());
 // Only set header if task exists to prevent undefined access
 // svelte-ignore state_referenced_locally
 if (task && task?.id) {
-  adminCtx.setHeaderForEntity(
+  headerCtrl.setHeaderForEntity(
     // svelte-ignore state_referenced_locally
     `${m.born_plane_javelina_strive()} #${task.id}`,
     TaskIcon,

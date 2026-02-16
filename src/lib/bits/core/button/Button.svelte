@@ -24,6 +24,7 @@ const shouldHideLabel = $derived(hideLabel || isIconOnly)
 const classes = $derived(
   [
     'bits-btn',
+    shouldHideLabel ? 'bits-btn--label-hidden' : '',
     `bits-btn--color-${color}`,
     `bits-btn--style-${style}`,
     `bits-btn--size-${size}`,
@@ -56,9 +57,7 @@ function handleClick(event: MouseEvent) {
     {#if icon}
       <span class="bits-btn__icon" aria-hidden="true">{@render icon()}</span>
     {/if}
-    {#if !shouldHideLabel}
-      <span class="bits-btn__label">{text}</span>
-    {/if}
+    <span class="bits-btn__label">{text}</span>
   </Button.Root>
 {:else}
   <Button.Root
@@ -70,8 +69,6 @@ function handleClick(event: MouseEvent) {
     {#if icon}
       <span class="bits-btn__icon" aria-hidden="true">{@render icon()}</span>
     {/if}
-    {#if !shouldHideLabel}
-      <span class="bits-btn__label">{text}</span>
-    {/if}
+    <span class="bits-btn__label">{text}</span>
   </Button.Root>
 {/if}

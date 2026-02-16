@@ -11,6 +11,7 @@ import { m } from '$lib/i18n';
 // CONTEXT
 import { setForm } from '$lib/context/form.svelte';
 import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getHeaderCtrl } from '$lib/context/header.svelte';
 // ICONS
 import ProjectIcon from 'virtual:icons/lucide/layout-grid';
 // PROVIDERS
@@ -43,6 +44,7 @@ import type {
 
 // CONTEXT
 const adminCtx = getAdminCtx();
+const headerCtrl = getHeaderCtrl();
 
 // ELEMENTS
 let vietportElement: HTMLDivElement | undefined = $state();
@@ -271,7 +273,7 @@ $effect(() => {
     facetTabs.set('images', m.organisation__images());
   }
 
-  untrack(() => adminCtx.setHeaderForEntity(title, ProjectIcon, facetTabs));
+  untrack(() => headerCtrl.setHeaderForEntity(title, ProjectIcon, facetTabs));
 
   // Set form context for header actions
   adminCtx.appCtx.setFormContext(form);

@@ -1,4 +1,5 @@
 <script lang="ts">
+import { fly } from 'svelte/transition'
 // TYPES
 import type { HeaderCrumb } from '../../header.types'
 
@@ -6,7 +7,11 @@ let { crumbs = [] }: { crumbs?: HeaderCrumb[] } = $props()
 </script>
 
 {#if crumbs.length > 0}
-  <nav class="bits-header__breadcrumbs" aria-label="Breadcrumb">
+  <nav
+    class="bits-header__breadcrumbs"
+    aria-label="Breadcrumb"
+    in:fly={{ x: 10, delay: 180, duration: 180, opacity: 0.15 }}
+    out:fly={{ x: -10, duration: 180, opacity: 0.15 }}>
     {#each crumbs as crumb, index (crumb.href)}
       <a
         href={crumb.href}

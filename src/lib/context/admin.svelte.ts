@@ -7,14 +7,8 @@ import { getOrganisations } from '$lib/api/server/organisation.remote'
 import { debouncedUpdateUserPreferences } from '$lib/client/services/user'
 // CONTEXT
 import { getContext, setContext } from 'svelte'
-import type { Component } from 'svelte'
 import type { QueryClient } from '@tanstack/svelte-query'
 import type { AppCtx } from '$lib/context/app.svelte'
-import {
-  getEntityVisibility,
-  getHeaderCtrl,
-  getIndexVisibility,
-} from '$lib/context/header.svelte'
 // ENUMS
 import { ResourcePath, FirstClassResource, type HierarchicalResource } from '$lib/enums'
 // GUARDS
@@ -402,28 +396,6 @@ export class AdminCtx {
     if (resource) this.setResourceType(resource)
     this.appCtx.state.nav.facet = facet
     this.appCtx.setActiveFacet(facet)
-  }
-
-  // ═══════════════════════
-  // HEADER MANAGEMENT
-  // ═══════════════════════
-
-  setHeaderForIndex(title: string, icon: Component): void {
-    const headerCtrl = getHeaderCtrl()
-    headerCtrl.setIndexHeader(title, icon)
-    headerCtrl.showControls('view')
-    headerCtrl.setVisibility(getIndexVisibility())
-  }
-
-  setHeaderForEntity(
-    title: string,
-    icon: Component,
-    facetTabs: Map<FacetType, string>,
-  ): void {
-    const headerCtrl = getHeaderCtrl()
-    headerCtrl.setEntityHeader(title, icon, facetTabs)
-    headerCtrl.showControls('form')
-    headerCtrl.setVisibility(getEntityVisibility())
   }
 
   // ═══════════════════════
@@ -1969,8 +1941,6 @@ export const getAdminCtx = (): AdminCtx => {
       get(target, prop) {
         if (prop === 'isInitialised') return false
         if (prop === 'setFacet') return () => {}
-        if (prop === 'setHeaderForIndex') return () => {}
-        if (prop === 'setHeaderForEntity') return () => {}
         if (prop === 'filteredOrganisations') return []
         if (prop === 'filteredProjects') return []
         if (prop === 'filteredLayers') return []

@@ -1,4 +1,5 @@
 <script lang="ts">
+import { fly } from 'svelte/transition'
 import type { HeaderSubtitleProps } from '../types.js'
 
 let {
@@ -9,7 +10,11 @@ let {
 }: HeaderSubtitleProps = $props()
 </script>
 
-<p class={className} {...restProps}>
+<p
+  class={className}
+  in:fly={{ x: 10, delay: 180, duration: 180, opacity: 0.15 }}
+  out:fly={{ x: -10, duration: 180, opacity: 0.15 }}
+  {...restProps}>
   {#if text}
     {text}
   {:else}

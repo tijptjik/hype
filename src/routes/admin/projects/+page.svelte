@@ -1,6 +1,7 @@
 <script lang="ts">
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getHeaderCtrl } from '$lib/context/header.svelte';
 // COMPONENTS
 import ResourceIndex from '$lib/components/resources/ResourceIndex.svelte';
 import EntityCard from '$lib/components/resources/EntityCard.svelte';
@@ -42,10 +43,11 @@ const keyMap: KeyMap = {
 
 // CONTEXT
 const adminCtx = getAdminCtx();
+const headerCtrl = getHeaderCtrl();
 adminCtx.setFacet(false, false, FirstClassResource.project);
 
 // HEADER SETUP
-adminCtx.setHeaderForIndex(m.maps__projects(), ProjectIcon);
+headerCtrl.setHeaderForIndex(m.maps__projects(), ProjectIcon);
 
 // STATE
 let entities: Project[] = $derived(

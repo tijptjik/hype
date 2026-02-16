@@ -3,6 +3,7 @@
 import { getLocale } from '$lib/i18n';
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getHeaderCtrl } from '$lib/context/header.svelte';
 // COMPONENTS
 import ResourceIndex from '$lib/components/resources/ResourceIndex.svelte';
 import EntityCard from '$lib/components/resources/EntityCard.svelte';
@@ -45,10 +46,11 @@ const keyMap: KeyMap = {
 
 // CONTEXT
 const adminCtx = getAdminCtx();
+const headerCtrl = getHeaderCtrl();
 adminCtx.setFacet(false, false, FirstClassResource.layer);
 
 // HEADER SETUP
-adminCtx.setHeaderForIndex(m.maps__layers(), LayerIcon);
+headerCtrl.setHeaderForIndex(m.maps__layers(), LayerIcon);
 
 // STATE
 let entities: Layer[] = $derived(

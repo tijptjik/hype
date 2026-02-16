@@ -360,6 +360,7 @@ export interface HeaderVisibilityOverrides {
 export type HeaderFacetItem = {
   ref: FacetType
   label: string
+  icon: Component | null
 }
 
 export type HeaderMetaState = {
