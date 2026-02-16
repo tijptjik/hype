@@ -1,281 +1,127 @@
 <script lang="ts">
-// SVELTE
-import { watch } from 'runed';
-import { fade } from 'svelte/transition';
-import { untrack } from 'svelte';
-// CONFIG
-import { NEW_TITLE } from '$lib';
-// I18N
-import { getLocale } from '$lib/i18n';
-import { m } from '$lib/i18n';
-// CONTEXT
-import { setForm } from '$lib/context/form.svelte';
-import { getAdminCtx } from '$lib/context/admin.svelte';
-// REMOTE
-import { getOrganisation } from '$lib/api/server/organisation.remote'
-// ICONS
-import { Users as OrganisationIcon } from '@steeze-ui/heroicons';
-// PROVIDERS
-import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
-// FLASH
-import { getFlash } from 'sveltekit-flash-message';
-import { page } from '$app/state';
-// COMPONENTS
-import I18nSection from '$lib/components/forms/sections/I18n.svelte';
-import SpecificationSection from '$lib/components/forms/sections/Specification.svelte';
-import ImageSection from '$lib/components/forms/sections/Image.svelte';
-import UserSection from '$lib/components/forms/sections/User.svelte';
-import OrganisationHubActions from '$lib/components/forms/actions/OrganisationHub.svelte';
-import Scrollbar from '$lib/components/common/scrollbars/Scrollbar.svelte';
-// ENUMS
-import { FirstClassResource, ImageContextResource } from '$lib/enums';
-// TYPES
-import type { FormPageProps, FormField, Organisation, Image, Id } from '$lib/types';
+import { page } from '$app/state'
+import { getOrganisation, organisationForm } from '$lib/api/server/organisation.remote'
+import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getHeaderCtrl } from '$lib/context/header.svelte'
+import { FirstClassResource } from '$lib/enums'
+import { getLocale, getLocaleOrder } from '$lib/i18n'
+import OrganisationIcon from 'virtual:icons/lucide/users-round'
+import FormInput from 'virtual:icons/lucide/form-input'
+import ImageIcon from 'virtual:icons/lucide/image'
 
+let organisation = await getOrganisation({
+  ref: page.params.organisation as string,
+  refKey: 'code',
+})
 
-// CONTEXT
-const adminCtx = getAdminCtx();
+const adminCtx = getAdminCtx()
+const headerCtrl = getHeaderCtrl()
 
-// ELEMENTS
-let vietportElement: HTMLDivElement | undefined = $state();
-let contentsElement: HTMLFormElement | undefined = $state();
+adminCtx.setFacet(
+  'core',
+  page.params.organisation as string,
+  FirstClassResource.organisation,
+)
 
-// CONFIG
-const RESOURCE = FirstClassResource.organisation;
-// const FIELDS: Record<string, FormField> = {
-//   i18n: {
-//     name: {
-//       label: m.admin__forms_common_name_full(),
-//       component: 'InputField',
-//       isArray: false,
-//       isTranslated: true,
-//       isNested: false
-//     },
-//     nameShort: {
-//       label: m.admin__forms_common_name_short(),
-//       component: 'InputField',
-//       isArray: false,
-//       isTranslated: true,
-//       isNested: false
-//     },
-//     description: {
-//       label: m.feature__description(),
-//       component: 'TextareaField',
-//       isArray: false,
-//       isTranslated: true,
-//       isNested: false
-//     }
-//   } as FormField,
-//   users: {
-//     userRoles: {
-//       label: m.admin__forms_organisation_members_title(),
-//       isArray: true,
-//       isTranslated: false,
-//       isNested: false
-//     }
-//   } as FormField,
-//   specification: {
-//     code: {
-//       label: m.admin__forms_common_code(),
-//       component: 'InputField',
-//       isArray: false,
-//       isTranslated: false,
-//       isNested: false
-//     },
-//     url: {
-//       label: m.admin__forms_organisation_url(),
-//       component: 'InputField',
-//       isArray: false,
-//       isTranslated: false,
-//       isNested: false
-//     }
-//   } as FormField,
-//   images: {
-//     image: {
-//       label: m.admin__forms_organisation_image_title(),
-//       component: 'InputField',
-//       isArray: false,
-//       isTranslated: false,
-//       isNested: false
-//     }
-//   } as FormField
-// };
+let contentsElement: HTMLFormElement | undefined = $state()
 
-// // STATE : PROPS
-// let pageProps: FormPageProps<Organisation> = $props();
+if (organisation?.data) {
+  organisationForm.fields.set(organisation.data as any)
+}
 
-// // Read facet from URL hash
-// const hashFacet = $derived(() => {
-//   if (typeof window !== 'undefined') {
-//     const hash = page.url.hash;
-//     return hash ? hash.substring(1) : null;
-//   }
-//   return null;
-// });
+const formFieldKeys = $derived(
+  organisationForm?.fields ? Object.keys(organisationForm.fields) : [],
+)
+const fieldLocaleKeys = $derived(
+  organisationForm?.fields?.i18n
+    ? Object.keys(organisationForm.fields.i18n)
+    : [],
+)
+const orderedLocales = $derived(getLocaleOrder(getLocale()))
 
-// // Set facet from hash or default to 'core'
-// $effect(() => {
-//   const facet = hashFacet();
-//   if (facet && ['core', 'images'].includes(facet)) {
-//     adminCtx.setFacet(
-//       facet as any,
-//       pageProps.data.entity,
-//       FirstClassResource.organisation
-//     );
-//   } else {
-//     adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.organisation);
-//   }
-// });
+headerCtrl.setHeaderForEntity(
+  organisation?.data?.i18n?.[getLocale()]?.name ??
+    organisation?.data?.code ??
+    'Organisation',
+  OrganisationIcon,
+  new Map([['core', 'Core']]),
+)
+headerCtrl.setFacets([
+  { ref: 'core', label: 'Core', icon: FormInput },
+  { ref: 'images', label: 'Profile', icon: ImageIcon },
+])
 
-// let form = setForm(
-//   RESOURCE,
-//   pageProps.data.entity,
-//   pageProps.data.validatedForm,
-//   getAdminCtx(),
-//   getFlash(page, { clearOnNavigate: false, clearAfterMs: 2500 })
-// );
-
-// // REACTIVE: Update form when pageProps change (for reset functionality)
-// watch(
-//   () => pageProps.data.validatedForm?.data,
-//   (newData) => {
-//     form.form.set(newData as unknown as Organisation);
-//   },
-//   {
-//     lazy: true
-//   }
-// );
-
-// // STATE : DERIVED
-// let enhance = $derived(form.enhance);
-// let title = $derived(
-//   pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE
-// );
-// let image = $derived(pageProps.data.image as Image);
-// let { form: organisationForm } = form;
-
-// let headerActions = $derived(
-//   $organisationForm.hubId ? organisationHubActionSnippet : undefined
-// );
-
-// // HEADER SETUP
-// $effect(() => {
-//   const facetTabs = new Map();
-//   facetTabs.set('core', m.resources__main());
-//   if (adminCtx.activeResourceRef !== 'new') {
-//     facetTabs.set('images', m.organisation__images());
-//   }
-
-//   untrack(() => adminCtx.setHeaderForEntity(title, OrganisationIcon, facetTabs));
-
-//   // Set form context for header actions
-//   adminCtx.appCtx.setFormContext(form);
-// });
-
-// // Clean up form context when component unmounts
-// $effect(() => {
-//   return () => {
-//     adminCtx.appCtx.clearFormContext();
-//   };
-// });
+$effect(() => {
+  console.log('code', !!organisationForm?.fields?.code)
+  console.log('url', !!organisationForm?.fields?.url)
+  console.log('i18n', !!organisationForm?.fields?.i18n)
+  console.log(
+    'i18n.en.name',
+    !!organisationForm?.fields?.i18n?.en?.name,
+  )
+  console.log(
+    'i18n.en.description',
+    !!organisationForm?.fields?.i18n?.en?.description,
+  )
+})
 </script>
 
-{#snippet organisationHubActionSnippet()}
-  <OrganisationHubActions {form} />
-{/snippet}
+<main class="h-full overflow-y-auto p-6">
+  <form bind:this={contentsElement} {...organisationForm} class="space-y-4">
+    {#if organisationForm?.fields}
+      {#if organisationForm.fields.code}
+        <label>
+          <p>Code</p>
+          <input {...organisationForm.fields.code.as('text')} />
+        </label>
+      {/if}
 
-<!-- LAYOUT -->
-<!-- <div class="relative h-full w-full overflow-hidden" bind:this={vietportElement}>
-  {#if adminCtx.appCtx.isInitialised}
-    <form
-      id="organisationForm"
-      method="POST"
-      use:enhance
-      role="form"
-      data-testid="organisationForm"
-      transition:fade
-      class="mb-24 h-full overflow-y-auto"
-      bind:this={contentsElement}>
-      <main
-        class="flex flex-col gap-6 p-6 {adminCtx.activeFacet === 'core'
-          ? 'min-h-full pb-64'
-          : 'h-full'}">
-        {#if adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false}
-          <I18nSection
-            title={m.admin__forms_common_descriptors()}
-            fields={FIELDS.i18n}
-            {form}
-            {headerActions} />
-          <div class="flex flex-row gap-6">
-            <UserSection
-              title={m.admin__forms_organisation_members_title()}
-              subtitle={m.admin__forms_organisation_members_subtitle()}
-              fields={FIELDS.users}
-              {form}
-              joinConfig={{
-                discriminator: 'role',
-                checkedValue: 'owner',
-                uncheckedValue: 'member'
-              }} />
-            <SpecificationSection
-              title={m.admin__forms_common_specifiers()}
-              fields={FIELDS.specification}
-              {form} />
-          </div>
-        {:else if adminCtx.activeFacet === 'images'}
-          <div class="flex- flex h-full">
-            <ImageProvider
-              {page}
-              isAdminMode={true}
-              {image}
-              context={{
-                ctxType: ImageContextResource.organisation,
-                ctxId: (pageProps.data.validatedForm.data as Organisation).id,
-                organisation: pageProps.data.validatedForm.data as Organisation
-              }}>
-              <ImageSection
-                title={m.admin__forms_organisation_image_title()}
-                fields={FIELDS.images}
-                {image}
-                {form} />
-            </ImageProvider>
-          </div>
-        {/if}
-      </main>
-    </form>
-  {/if}
-  {#if vietportElement && contentsElement}
-    <Scrollbar
-      viewport={vietportElement}
-      contents={contentsElement}
-      showThumbOnTrackEnter={true}
-      margin={{
-        top: 8,
-        bottom: 0
-      }}
-      width={{
-        track: 24,
-        thumb: 8,
-        thumbActive: 12
-      }} />
-  {/if}
-</div> -->
+      {#if organisationForm.fields.url}
+        <label>
+          <p>Url</p>
+          <input {...organisationForm.fields.url.as('url')} />
+        </label>
+      {/if}
 
-
-<main class="p-6">
-  {#await getOrganisation({
-    ref: page.params.organisation as string,
-    refKey: 'code',
-  }) then result}
-    {#if result.data}
-      <h1 class="text-xl font-semibold">{result.data.code} <sup class="text-xs text-pretty">{result.data.id}</sup></h1>
-      <pre class="mt-4 overflow-auto rounded bg-base-200 p-4 text-xs"
-        >{JSON.stringify(result, null, 2)}</pre
-      >
+      {#if organisationForm.fields.i18n}
+        {#each orderedLocales as locale (locale)}
+          {@const fields = organisationForm.fields.i18n?.[locale]}
+          {#if fields}
+            <h2>{locale}</h2>
+            {#if fields.name}
+              <label>
+                <p>Name</p>
+                <input {...fields.name.as('text')} />
+              </label>
+            {/if}
+            {#if fields.description}
+              <label>
+                <p>Description</p>
+                <textarea {...fields.description.as('text')}></textarea>
+              </label>
+            {/if}
+          {/if}
+        {/each}
+      {/if}
     {:else}
-      <p>Organisation not found.</p>
+      <p>Form fields are not available.</p>
     {/if}
-  {:catch}
-    <p>Failed to load organisation.</p>
-  {/await}
+
+    <p class="text-xs text-neutral-content">
+      form field keys: {formFieldKeys.length > 0 ? formFieldKeys.join(', ') : 'none'}
+    </p>
+    <p class="text-xs text-neutral-content">
+      i18n field locales: {fieldLocaleKeys.length > 0 ? fieldLocaleKeys.join(', ') : 'none'}
+    </p>
+  </form>
+
+  <!-- {#if organisation?.data}
+    <h1 class="text-xl font-semibold">
+      {organisation.data.code}
+      <sup class="text-xs text-pretty">{organisation.data.id}</sup>
+    </h1>
+    <pre class="mt-4 overflow-auto rounded bg-base-200 p-4 text-xs">{JSON.stringify(organisation, null, 2)}</pre>
+  {:else}
+    <p>Organisation not found.</p>
+  {/if} -->
 </main>
