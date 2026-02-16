@@ -16,7 +16,7 @@ import { Panel } from '$lib/enums';
 import { startCircularFlight } from '$lib/client/services/geospatial';
 // COMPONENTS
 import Menu from '$lib/components/layout/Menu.svelte';
-import Map from '$lib/components/common/StandaloneMap.svelte';
+import LibreMap from '$lib/components/common/StandaloneMap.svelte';
 import Mapbar from '$lib/components/mapbar/Root.svelte';
 import Omnibar from '$lib/components/omnibar/Omnibar.svelte';
 import Filters from '$lib/components/panels/Filters.svelte';
@@ -198,7 +198,7 @@ $effect(() => {
       <!-- Map Container -->
       <div class="relative flex h-full flex-1 flex-col">
         <Omnibar />
-        <Map />
+        <LibreMap />
         {@render children()}
         <Mapbar />
         {#if omniCtx.isNewFeatureMode}
@@ -212,7 +212,7 @@ $effect(() => {
   {:else if !$session.isPending && !$session.data}
     <main class="top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
       {@render children()}
-      <Map />
+      <LibreMap />
     </main>
   {:else}
     <!-- Loading state while session is pending -->

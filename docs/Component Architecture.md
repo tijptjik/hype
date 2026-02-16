@@ -89,6 +89,7 @@ This document defines the UI layering model for Bits components and how logic sh
 
 ## File Naming Convention
 
+- Directories: use `camelCase` for component folders in `src/lib/bits/**` (for example `formI18nSection`, `inputField`, `labelPrimitive`).
 - Svelte components (`*.svelte`): use `TitleCase` filenames (for example `HeaderRoot.svelte`).
 - Non-component modules (`*.ts`, `*.svelte.ts`): use `camelCase` filenames (for example `useAdminHeaderModel.svelte.ts`).
 - Keep SvelteKit route-convention files unchanged (`+page.svelte`, `+layout.svelte`, `+server.ts`, etc.).

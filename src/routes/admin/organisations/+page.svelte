@@ -1,22 +1,22 @@
 <script lang="ts">
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
-import { getHeaderCtrl } from '$lib/context/header.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getHeaderCtrl } from '$lib/context/header.svelte'
 // COMPONENTS
-import ResourceIndex from '$lib/components/resources/ResourceIndex.svelte';
-import EntityCard from '$lib/components/resources/EntityCard.svelte';
-import FilterControlBar from '$lib/components/resources/filters/organisations/Root.svelte';
+import ResourceIndex from '$lib/components/resources/ResourceIndex.svelte'
+import EntityCard from '$lib/components/resources/EntityCard.svelte'
+import FilterControlBar from '$lib/components/resources/filters/organisations/Root.svelte'
 // ENUMS
-import { FirstClassResource } from '$lib/enums';
+import { FirstClassResource } from '$lib/enums'
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // ICONS
-import OrganisationIcon from 'virtual:icons/lucide/users-round';
+import OrganisationIcon from 'virtual:icons/lucide/users-round'
 // TYPES
-import type { KeyMap, Organisation } from '$lib/types';
+import type { KeyMap, Organisation } from '$lib/types'
 
 // CONFIG :: KEY MAP
-const RESOURCE = FirstClassResource.organisation;
+const RESOURCE = FirstClassResource.organisation
 const keyMap: KeyMap = {
   id: 'code',
   title: 'i18n.name',
@@ -29,7 +29,7 @@ const keyMap: KeyMap = {
       variant: 'primary',
       type: 'boolean',
       trueText: 'Published',
-      falseText: 'Draft'
+      falseText: 'Draft',
     },
     {
       label: 'isArchived',
@@ -37,22 +37,22 @@ const keyMap: KeyMap = {
       type: 'boolean',
       trueText: 'Dead',
       falseText: 'Live',
-      superAdminOnly: true
-    }
-  ]
-};
+      superAdminOnly: true,
+    },
+  ],
+}
 
 // CONTEXT
-const adminCtx = getAdminCtx();
-const headerCtrl = getHeaderCtrl();
-adminCtx.setFacet(false, false, RESOURCE);
+const adminCtx = getAdminCtx()
+const headerCtrl = getHeaderCtrl()
+adminCtx.setFacet(false, false, RESOURCE)
 
 // HEADER SETUP
-headerCtrl.setHeaderForIndex(m.maps__organisations(), OrganisationIcon);
+headerCtrl.setHeaderForIndex(m.maps__organisations(), OrganisationIcon)
 // STATE
 let entities: Organisation[] = $derived(
-  adminCtx.getViewFilteredResource<Organisation>(FirstClassResource.organisation)
-);
+  adminCtx.getViewFilteredResource<Organisation>(FirstClassResource.organisation),
+)
 </script>
 
 <ResourceIndex {entities}>

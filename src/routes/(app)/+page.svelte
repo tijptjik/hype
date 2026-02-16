@@ -20,12 +20,12 @@ const hubName = hub.i18n?.[getLocale()]?.nameShort ?? hub.i18n?.en.nameShort;
 
 const hubStyleClasses = hub.isCore
   ? 'text-[9rem] md:tracking-widest transition-all duration-500'
-  : hub.code == 'hkghostsigns'
+  : hub.code === 'hkghostsigns'
     ? 'text-[6rem]/[6rem] mb-8 translate-y-20 w-[245px] md:text-center md:mx-auto md:w-[800px]'
     : 'text-4xl';
 const buttonStyleClasses = hub.isCore
   ? 'fixed bottom-20 left-1/2 -translate-x-1/2 w-320:bottom-40 w-512:bottom-64 transition-all duration-500'
-  : hub.code == 'hkghostsigns'
+  : hub.code === 'hkghostsigns'
     ? 'absolute left-1/2 -translate-x-1/2 top-[calc(50%+240px)] w-192:top-[calc(50%+160px)]'
     : '';
 </script>
