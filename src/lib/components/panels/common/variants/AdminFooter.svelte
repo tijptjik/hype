@@ -46,7 +46,7 @@ const adminControlItems = $derived.by(() => {
     {
       href: `${ADMIN_PATH}/features`,
       iconSrc: MapPin,
-      handleClick: (e: Event) => navigateOnAdmin(adminCtx, FirstClassResource.feature),
+      handleClick: () => navigateOnAdmin(adminCtx, FirstClassResource.feature),
       notificationCount: featureCount,
       color: {
         text: 'text-primary',
@@ -56,7 +56,7 @@ const adminControlItems = $derived.by(() => {
     {
       href: `${ADMIN_PATH}/tasks`,
       iconSrc: InboxArrowDown,
-      handleClick: (e: Event) => navigateOnAdmin(adminCtx, FirstClassResource.task),
+      handleClick: () => navigateOnAdmin(adminCtx, FirstClassResource.task),
       notificationCount: notificationCount,
       color: {
         text: 'text-secondary',
@@ -80,7 +80,7 @@ const adminControlItems = $derived.by(() => {
       {
         href: `${ADMIN_PATH}/hubs`,
         iconSrc: BuildingLibrary,
-        handleClick: (e: Event) => navigateOnAdmin(adminCtx, FirstClassResource.hub),
+        handleClick: () => navigateOnAdmin(adminCtx, FirstClassResource.hub),
         notificationCount: 0,
         color: {
           text: 'text-accent',
