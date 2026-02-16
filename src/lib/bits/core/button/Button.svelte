@@ -8,6 +8,7 @@ let {
   disabled = false,
   hideLabel = false,
   icon,
+  iconComponent: IconComponent,
   href,
   onClick,
   color = 'neutral',
@@ -15,7 +16,7 @@ let {
   size = 'md',
   modifier,
   class: className = '',
-  type = 'button'
+  type = 'button',
 }: ButtonProps = $props()
 
 const isIconOnly = $derived(modifier === 'square' || modifier === 'circle')
@@ -29,10 +30,10 @@ const classes = $derived(
     `bits-btn--style-${style}`,
     `bits-btn--size-${size}`,
     modifier ? `bits-btn--modifier-${modifier}` : '',
-    className
+    className,
   ]
     .filter(Boolean)
-    .join(' ')
+    .join(' '),
 )
 
 function handleClick(event: MouseEvent) {
@@ -53,9 +54,16 @@ function handleClick(event: MouseEvent) {
     aria-label={shouldHideLabel ? text : undefined}
     aria-disabled={disabled ? 'true' : undefined}
     tabindex={disabled ? -1 : undefined}
-    onclick={handleClick}>
-    {#if icon}
-      <span class="bits-btn__icon" aria-hidden="true">{@render icon()}</span>
+    onclick={handleClick}
+  >
+    {#if icon || IconComponent}
+      <span class="bits-btn__icon" aria-hidden="true">
+        {#if icon}
+          {@render icon()}
+        {:else if IconComponent}
+          <IconComponent />
+        {/if}
+      </span>
     {/if}
     <span class="bits-btn__label">{text}</span>
   </Button.Root>
@@ -65,9 +73,16 @@ function handleClick(event: MouseEvent) {
     class={classes}
     aria-label={shouldHideLabel ? text : undefined}
     {disabled}
-    onclick={handleClick}>
-    {#if icon}
-      <span class="bits-btn__icon" aria-hidden="true">{@render icon()}</span>
+    onclick={handleClick}
+  >
+    {#if icon || IconComponent}
+      <span class="bits-btn__icon" aria-hidden="true">
+        {#if icon}
+          {@render icon()}
+        {:else if IconComponent}
+          <IconComponent />
+        {/if}
+      </span>
     {/if}
     <span class="bits-btn__label">{text}</span>
   </Button.Root>

@@ -1,7 +1,7 @@
 import { getBreadcrumbs } from '$lib/navigation'
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { AdminCtx } from '$lib/context/admin.svelte'
-import type { HeaderProps } from './header.types'
+import type { HeaderLayoutMode, HeaderProps } from './header.types'
 import type { Component } from 'svelte'
 import type { FilterState } from '$lib/types'
 import type { HeaderCrumb } from '$lib/bits/custom/header'
@@ -24,6 +24,7 @@ export function useHeaderAdapter(
   const headerCtrl = getHeaderCtrl()
   let query = $state('')
   let crumbs: HeaderCrumb[] = $state([])
+  let isEditing = $state(false)
 
   // Narrow unknown resource keys to filterable resource keys.
   function isFilterResource(value: unknown): value is keyof FilterState {
@@ -71,8 +72,8 @@ export function useHeaderAdapter(
 
   const headerResourceType = $derived(appCtx.headerResourceType)
   const isIndex = $derived(adminCtx.activeResourceRef === false)
-  const layoutModes = $derived.by(() => {
-    if (!headerResourceType) return [] as ('card' | 'table' | 'list')[]
+  const layoutModes = $derived.by((): HeaderLayoutMode[] => {
+    if (!headerResourceType) return []
     if (headerResourceType === FirstClassResource.feature) return ['card', 'table']
     if (
       headerResourceType === FirstClassResource.organisation ||
@@ -112,6 +113,13 @@ export function useHeaderAdapter(
   const isDeleted = $derived(false)
   const isPublished = $derived(false)
 
+  // Reset editing state when navigating between resources/routes.
+  $effect(() => {
+    adminCtx.activeResourceType
+    adminCtx.activeResourceRef
+    isEditing = false
+  })
+
   // Apply free-text filter changes to the currently active resource list.
   function handleFilter(nextQuery: string): void {
     query = nextQuery
@@ -128,10 +136,7 @@ export function useHeaderAdapter(
     const supportedModes = layoutModes
     if (supportedModes.length <= 1) return
 
-    const currentMode = appCtx.state.ui.layoutMode[resourceType] as
-      | 'card'
-      | 'table'
-      | 'list'
+    const currentMode = appCtx.state.ui.layoutMode[resourceType] as HeaderLayoutMode
     const currentIndex = Math.max(0, supportedModes.indexOf(currentMode))
     const nextMode = supportedModes[(currentIndex + 1) % supportedModes.length]
     appCtx.setLayoutMode(nextMode)
@@ -145,7 +150,7 @@ export function useHeaderAdapter(
     const isActive = appCtx.state.ui.controlMode[resourceType] === 'filter'
     const next = !isActive
 
-    appCtx.setControlMode(next ? 'filter' : null)
+    appCtx.setControlMode(next ? 'filter' : 'hidden')
     if (!next) {
       adminCtx.resetViewFilters()
     }
@@ -164,6 +169,11 @@ export function useHeaderAdapter(
   // Form reset handling is pending form context migration.
   function handleReset(): void {
     console.log('not implemented')
+  }
+
+  // Toggle field edit/view mode for modal-style form components.
+  function handleEditingToggle(next: boolean): void {
+    isEditing = next
   }
 
   // Form submit handling is pending form context migration.
@@ -257,9 +267,11 @@ export function useHeaderAdapter(
     },
     formActions: {
       visible: resolvedVisibility.showFormActions,
+      isEditing,
       isTainted,
       isDeleted,
       isPublished,
+      onEditingToggle: handleEditingToggle,
       onReset: handleReset,
       onSave: handleSave,
       onDeleteToggle: handleDeleteToggle,

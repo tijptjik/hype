@@ -44,9 +44,10 @@ const measurementKey = $derived(
     isFilterable: showFilter,
     showAvatar,
     tainted: formActions.isTainted ?? false,
+    editing: formActions.isEditing ?? false,
     deleted: formActions.isDeleted ?? false,
-    published: formActions.isPublished ?? false
-  })
+    published: formActions.isPublished ?? false,
+  }),
 )
 </script>
 
@@ -59,12 +60,14 @@ const measurementKey = $derived(
       href={title.href}
       crumbs={title.crumbs}
       hideDescription={!showDescription}
-      hideTitle={!showTitle} />
+      hideTitle={!showTitle}
+    />
     <HeaderPrimitive.New
       isCreatable={showNew}
       label={newAction.label}
       hideLabel={!showButtonText}
-      onCreate={newAction.onCreate} />
+      onCreate={newAction.onCreate}
+    />
   {/snippet}
 
   {#snippet right({ showButtonText })}
@@ -72,24 +75,28 @@ const measurementKey = $derived(
       bind:query
       isFilterable={showFilter}
       placeholder={filter.placeholder}
-      onFilter={filter.onFilter} />
+      onFilter={filter.onFilter}
+    />
 
     {#if showFacets}
       <div
         in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
-        out:fly={{ x: 12, duration: 180, opacity: 0.15 }}>
+        out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
+      >
         <HeaderPrimitive.Facets
           items={facetItems}
           active={facets.active}
           hideLabel={!showButtonText}
-          onFacetChange={facets.onFacetChange} />
+          onFacetChange={facets.onFacetChange}
+        />
       </div>
     {/if}
 
     {#if showViewActions}
       <div
         in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
-        out:fly={{ x: 12, duration: 180, opacity: 0.15 }}>
+        out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
+      >
         <HeaderPrimitive.ViewActions
           showLayoutToggle={viewActions.showLayoutToggle ?? true}
           showControlsToggle={viewActions.showControlsToggle ?? true}
@@ -98,23 +105,28 @@ const measurementKey = $derived(
           {controlMode}
           hideLabel={true}
           onLayoutToggle={viewActions.onLayoutToggle}
-          onControlsToggle={viewActions.onControlsToggle} />
+          onControlsToggle={viewActions.onControlsToggle}
+        />
       </div>
     {/if}
 
     {#if showFormActions}
       <div
         in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
-        out:fly={{ x: 12, duration: 180, opacity: 0.15 }}>
+        out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
+      >
         <HeaderPrimitive.FormActions
           isTainted={formActions.isTainted}
+          isEditing={formActions.isEditing}
           isDeleted={formActions.isDeleted}
           isPublished={formActions.isPublished}
           hideLabel={!showButtonText}
+          onEditingToggle={formActions.onEditingToggle}
           onReset={formActions.onReset}
           onSave={formActions.onSave}
           onDeleteToggle={formActions.onDeleteToggle}
-          onPublishToggle={formActions.onPublishToggle} />
+          onPublishToggle={formActions.onPublishToggle}
+        />
       </div>
     {/if}
 
@@ -125,6 +137,7 @@ const measurementKey = $derived(
       alt={avatar.alt}
       fallback={avatar.fallback}
       transitionDirection={avatar.transitionDirection}
-      onClick={avatar.onClick} />
+      onClick={avatar.onClick}
+    />
   {/snippet}
 </HeaderPrimitive.Root>

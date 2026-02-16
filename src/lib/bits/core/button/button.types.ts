@@ -1,4 +1,4 @@
-import type { Snippet } from 'svelte'
+import type { Component, Snippet } from 'svelte'
 
 export type ButtonColor =
   | 'neutral'
@@ -21,6 +21,7 @@ export interface ButtonProps {
   disabled?: boolean
   hideLabel?: boolean
   icon?: Snippet
+  iconComponent?: Component | null
   href?: string
   onClick?: (event: MouseEvent) => void
   color?: ButtonColor

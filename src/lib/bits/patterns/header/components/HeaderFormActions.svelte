@@ -4,6 +4,7 @@ import { Button } from '$lib/bits/core'
 // ICONS
 import Eye from 'virtual:icons/lucide/eye'
 import EyeOff from 'virtual:icons/lucide/eye-off'
+import Pencil from 'virtual:icons/lucide/pencil'
 import RotateCcw from 'virtual:icons/lucide/rotate-ccw'
 import Save from 'virtual:icons/lucide/save'
 import Trash2 from 'virtual:icons/lucide/trash-2'
@@ -12,22 +13,43 @@ import Undo2 from 'virtual:icons/lucide/undo-2'
 import type { HeaderFormActionsProps } from './headerPrimitives.types'
 
 let {
+  isEditing = false,
   isTainted = false,
   isDeleted = false,
   isPublished = false,
   hideLabel = false,
+  onEditingToggle,
   onReset,
   onSave,
   onDeleteToggle,
   onPublishToggle,
 }: HeaderFormActionsProps = $props()
 
+const primaryLabel = $derived(!isEditing ? 'Edit' : isTainted ? 'Reset' : 'Cancel')
 const deleteLabel = $derived(isDeleted ? 'Restore' : 'Delete')
 const publishLabel = $derived(isPublished ? 'Unpublish' : 'Publish')
+
+function handlePrimaryAction(): void {
+  if (!isEditing) {
+    onEditingToggle?.(true)
+    return
+  }
+
+  if (!isTainted) {
+    onEditingToggle?.(false)
+    return
+  }
+
+  onReset?.()
+}
 </script>
 
-{#snippet resetIcon()}
-  <RotateCcw />
+{#snippet primaryIcon()}
+  {#if isEditing}
+    <RotateCcw />
+  {:else}
+    <Pencil />
+  {/if}
 {/snippet}
 
 {#snippet saveIcon()}
@@ -52,33 +74,34 @@ const publishLabel = $derived(isPublished ? 'Unpublish' : 'Publish')
 
 <div class="bits-pattern-header__form-actions">
   <Button
-    text="Reset"
+    text={primaryLabel}
     color="neutral"
     style="ghost"
-    icon={resetIcon}
+    icon={primaryIcon}
     {hideLabel}
-    disabled={!isTainted}
-    onClick={() => onReset?.()}
+    onClick={handlePrimaryAction}
   />
 
-  <Button
-    text="Save"
-    color="neutral"
-    style="ghost"
-    icon={saveIcon}
-    {hideLabel}
-    disabled={!isTainted}
-    onClick={() => onSave?.()}
-  />
+  {#if isEditing}
+    <Button
+      text={deleteLabel}
+      color={isDeleted ? 'warning' : 'error'}
+      style="ghost"
+      icon={deleteIcon}
+      {hideLabel}
+      onClick={() => onDeleteToggle?.()}
+    />
 
-  <Button
-    text={deleteLabel}
-    color={isDeleted ? 'warning' : 'error'}
-    style="ghost"
-    icon={deleteIcon}
-    {hideLabel}
-    onClick={() => onDeleteToggle?.()}
-  />
+    <Button
+      text="Save"
+      color="neutral"
+      style="ghost"
+      icon={saveIcon}
+      {hideLabel}
+      disabled={!isTainted}
+      onClick={() => onSave?.()}
+    />
+  {/if}
 
   <Button
     text={publishLabel}
