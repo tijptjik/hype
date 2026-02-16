@@ -53,7 +53,9 @@ let layoutMode = $derived(
 
 // GRID CONFIGURATION
 let itemWidth = 340; // Approximate width of EntityCard + margins
-let itemHeight = $derived(layoutMode === 'table' ? 88 : 396); // Approximate width of EntityCard + margins
+let itemHeight = $derived(
+  layoutMode === 'table' || layoutMode === 'list' ? 88 : 396
+); // Approximate row/card heights
 
 // Smart column count calculation - debounce only during panel transitions
 $effect(() => {
@@ -64,7 +66,7 @@ $effect(() => {
   untrack(() => {
     if (!isTransition && !isTransitioning) {
       stableColumnCount =
-        layoutMode === 'table'
+        layoutMode === 'table' || layoutMode === 'list'
           ? 1
           : gridWidth > itemWidth
             ? Math.floor(gridWidth / itemWidth)
@@ -87,7 +89,7 @@ let columnCount = $derived(stableColumnCount);
 // Function to calculate grid data
 const calculateGridData = () => {
   const acc: { id: string; entities: T[]; startingIndex: number }[] = [];
-  if (layoutMode === 'table' || columnCount === 0) {
+  if (layoutMode === 'table' || layoutMode === 'list' || columnCount === 0) {
     return entities.map((e, i) => ({ id: e.id, entities: [e], startingIndex: i }));
   }
   for (let i = 0; i < entities.length; i += columnCount) {
@@ -119,7 +121,7 @@ onDestroy(() => {
       startingIndex={item.startingIndex}
       {columnCount}
       {card} />
-  {:else if layoutMode === 'table'}
+  {:else if layoutMode === 'table' || layoutMode === 'list'}
     <!-- For table mode, render the first (and only) entity -->
     <ResourceTableRow
       entity={item.entities[0] as EntityWithOptionalImage}
