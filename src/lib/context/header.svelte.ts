@@ -81,7 +81,11 @@ export class HeaderCtrl {
    * @param facets - Facets as map labels or fully-configured facet items.
    * @returns void
    */
-  setFacets(facets: Map<FacetType, string> | HeaderFacetItem[]): void {
+  setFacets(
+    facets:
+      | Map<FacetType, string | { label: string; icon?: Component | null }>
+      | HeaderFacetItem[],
+  ): void {
     this.state.meta.facets = this.normalizeFacetItems(facets)
   }
 
@@ -124,7 +128,7 @@ export class HeaderCtrl {
   setHeaderForEntity(
     title: string,
     icon: Component,
-    facets: Map<FacetType, string>,
+    facets: Map<FacetType, string | { label: string; icon?: Component | null }>,
   ): void {
     this.applyEntityMeta(title, icon, facets)
     this.showControls('form')
@@ -173,7 +177,7 @@ export class HeaderCtrl {
   private applyEntityMeta(
     title: string,
     icon: Component,
-    facets: Map<FacetType, string>,
+    facets: Map<FacetType, string | { label: string; icon?: Component | null }>,
   ): void {
     this.state.meta.title = title
     this.state.meta.icon = icon
@@ -186,15 +190,26 @@ export class HeaderCtrl {
    * @returns Normalized facet items.
    */
   private normalizeFacetItems(
-    facets: Map<FacetType, string> | HeaderFacetItem[],
+    facets:
+      | Map<FacetType, string | { label: string; icon?: Component | null }>
+      | HeaderFacetItem[],
   ): HeaderFacetItem[] {
     return Array.isArray(facets)
       ? facets
-      : Array.from(facets.entries()).map(([ref, label]) => ({
-          ref,
-          label,
-          icon: null,
-        }))
+      : Array.from(facets.entries()).map(([ref, value]) => {
+          if (typeof value === 'string') {
+            return {
+              ref,
+              label: value,
+              icon: null,
+            }
+          }
+          return {
+            ref,
+            label: value.label,
+            icon: value.icon ?? null,
+          }
+        })
   }
 }
 
