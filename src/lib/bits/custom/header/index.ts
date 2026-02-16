@@ -7,4 +7,4 @@ export type {
   HeaderIconProps as HeaderPrimitiveIconProps,
   HeaderTitleProps as HeaderPrimitiveTitleProps,
   HeaderSubtitleProps as HeaderPrimitiveSubtitleProps,
-} from './src/types.js'
+} from './src/headerPrimitive.types.js'

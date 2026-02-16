@@ -93,3 +93,17 @@ This document defines the UI layering model for Bits components and how logic sh
 - Svelte components (`*.svelte`): use `TitleCase` filenames (for example `HeaderRoot.svelte`).
 - Non-component modules (`*.ts`, `*.svelte.ts`): use `camelCase` filenames (for example `useAdminHeaderModel.svelte.ts`).
 - Keep SvelteKit route-convention files unchanged (`+page.svelte`, `+layout.svelte`, `+server.ts`, etc.).
+
+## Type File Convention
+
+- Default for component-scoped types: `name.types.ts` in the same folder as the component entry.
+- Use `types.ts` only when the file is intentionally shared by multiple subcomponents in a local `src/` primitive package (for example `custom/*/src/types.ts`).
+- Prefer naming by public component contract:
+  - `button.types.ts`, `header.types.ts`, `sectionHeader.types.ts`, `formI18nSection.types.ts`.
+- Placement rules:
+  - `core/{componentType}/name.types.ts` for core wrappers.
+  - `custom/{componentType}/name.types.ts` for custom component public APIs.
+  - `custom/{componentType}/src/types.ts` only for shared internal primitive contracts.
+  - `patterns/{patternType}/name.types.ts` for pattern public APIs.
+- Avoid adding new plain `types.ts` files outside internal `src/` primitive folders.
+- Existing inconsistent files can remain until touched; when editing or adding nearby types, migrate to this convention.

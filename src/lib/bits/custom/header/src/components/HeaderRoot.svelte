@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { HeaderRootProps } from '../types.js'
+import type { HeaderRootProps } from '../headerPrimitive.types.js'
 
 let {
   ref = $bindable(null),
@@ -10,6 +10,6 @@ let {
 }: HeaderRootProps = $props()
 </script>
 
-<div bind:this={ref} class={className} style={style} {...restProps}>
+<div bind:this={ref} class={className} {style} {...restProps}>
   {@render children?.()}
 </div>

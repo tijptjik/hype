@@ -9,4 +9,4 @@ export type {
   HeaderIconProps as IconProps,
   HeaderTitleProps as TitleProps,
   HeaderSubtitleProps as SubtitleProps,
-} from './types.js'
+} from './headerPrimitive.types.js'

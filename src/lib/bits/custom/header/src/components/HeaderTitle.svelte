@@ -1,6 +1,6 @@
 <script lang="ts">
 import { fade } from 'svelte/transition'
-import type { HeaderTitleProps } from '../types.js'
+import type { HeaderTitleProps } from '../headerPrimitive.types.js'
 
 let { text, class: className = '', children, ...restProps }: HeaderTitleProps = $props()
 </script>
@@ -9,7 +9,8 @@ let { text, class: className = '', children, ...restProps }: HeaderTitleProps = 
   class={className}
   in:fade={{ delay: 180, duration: 180 }}
   out:fade={{ duration: 180 }}
-  {...restProps}>
+  {...restProps}
+>
   {#if text}
     {text}
   {:else}

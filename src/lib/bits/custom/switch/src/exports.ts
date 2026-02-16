@@ -4,4 +4,4 @@ export { default as Thumb } from './components/SwitchThumb.svelte'
 export type {
   SwitchRootProps as RootProps,
   SwitchThumbProps as ThumbProps,
-} from './types.js'
+} from './switchPrimitive.types.js'

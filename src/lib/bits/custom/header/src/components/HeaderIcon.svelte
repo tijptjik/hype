@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { HeaderIconProps } from '../types.js'
+import type { HeaderIconProps } from '../headerPrimitive.types.js'
 
 let {
   icon: IconComponent,
@@ -11,7 +11,7 @@ let {
 </script>
 
 {#if href}
-  <a href={href} class={className} {...restProps}>
+  <a {href} class={className} {...restProps}>
     {#if IconComponent}
       <IconComponent class="bits-header__icon" />
     {:else}
