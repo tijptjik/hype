@@ -37,8 +37,7 @@ export type SwitchRootPropsWithoutHTML = WithChild<
      *
      * @defaultValue undefined
      */
-    // oxlint-disable-next-line no-explicit-any
-    value?: any
+    value?: string
 
     /**
      * The checked state of the switch.
@@ -69,7 +68,10 @@ export type SwitchRootProps = SwitchRootPropsWithoutHTML &
 
 export type SwitchThumbSnippetProps = SwitchRootSnippetProps
 
-export type SwitchThumbPropsWithoutHTML = WithChild<{}, SwitchThumbSnippetProps>
+export type SwitchThumbPropsWithoutHTML = WithChild<
+  Record<never, never>,
+  SwitchThumbSnippetProps
+>
 
 export type SwitchThumbProps = SwitchThumbPropsWithoutHTML &
   Without<BitsPrimitiveSpanAttributes, SwitchThumbPropsWithoutHTML>
