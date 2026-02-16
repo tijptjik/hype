@@ -2,11 +2,14 @@
 import { page } from '$app/state'
 import { fade } from 'svelte/transition'
 import { getOrganisation, organisationForm } from '$lib/api/server/organisation.remote'
+import { FormI18nSection } from '$lib/bits'
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
 import { FirstClassResource } from '$lib/enums'
 import { getLocale, getLocaleOrder } from '$lib/i18n'
 import OrganisationIcon from 'virtual:icons/lucide/users-round'
+import FormInputIcon from 'virtual:icons/lucide/form-input'
+import ImageIcon from 'virtual:icons/lucide/image'
 
 let organisation = $state<Awaited<ReturnType<typeof getOrganisation>> | null>(null)
 let isLoading = $state(true)
@@ -29,7 +32,7 @@ $effect(() => {
       if (cancelled) return
       organisation = result
       if (result?.data) {
-        organisationForm.fields.set(result.data as any)
+        organisationForm.fields.set(result.data)
       }
       isLoading = false
     })
@@ -48,21 +51,20 @@ const formFieldKeys = $derived(
   organisationForm?.fields ? Object.keys(organisationForm.fields) : [],
 )
 const fieldLocaleKeys = $derived(
-  organisationForm?.fields?.i18n
-    ? Object.keys(organisationForm.fields.i18n)
-    : [],
+  organisationForm?.fields?.i18n ? Object.keys(organisationForm.fields.i18n) : [],
 )
 const orderedLocales = $derived(getLocaleOrder(getLocale()))
-const activeFacet = $derived(adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet)
+const activeFacet = $derived(
+  adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
+)
 const isCoreFacet = $derived(activeFacet === 'core')
 const isImagesFacet = $derived(activeFacet === 'images')
+const facetTabs = new Map([
+  ['core', { label: 'Profile', icon: FormInputIcon }],
+  ['images', { label: 'Image', icon: ImageIcon }],
+] as const)
 
 $effect(() => {
-  const facetTabs = new Map([
-    ['core', 'Core'],
-    ['images', 'Profile'],
-  ] as const)
-
   headerCtrl.setHeaderForEntity(
     organisation?.data?.i18n?.[getLocale()]?.name ??
       organisation?.data?.code ??
@@ -74,67 +76,50 @@ $effect(() => {
 </script>
 
 <main class="h-full overflow-y-auto p-6">
-  <form bind:this={contentsElement} {...organisationForm} class="space-y-4">
-    {#if isLoading}
-      <p class="text-sm text-neutral-content" transition:fade={{ duration: 150 }}>
-        Loading organisation...
-      </p>
-    {:else if organisationForm?.fields && organisation?.data}
-      <section class:hidden={!isCoreFacet} transition:fade={{ duration: 150 }}>
-        {#if organisationForm.fields.code}
-          <label>
-            <p>Code</p>
-            <input {...organisationForm.fields.code.as('text')} />
-          </label>
-        {/if}
-
-        {#if organisationForm.fields.url}
-          <label>
-            <p>Url</p>
-            <input {...organisationForm.fields.url.as('url')} />
-          </label>
-        {/if}
-
-        {#if organisationForm.fields.i18n}
-          {#each orderedLocales as locale (locale)}
-            {@const fields = organisationForm.fields.i18n?.[locale]}
-            {#if fields}
-              <h2>{locale}</h2>
-              {#if fields.name}
-                <label>
-                  <p>Name</p>
-                  <input {...fields.name.as('text')} />
-                </label>
-              {/if}
-              {#if fields.description}
-                <label>
-                  <p>Description</p>
-                  <textarea {...fields.description.as('text')}></textarea>
-                </label>
-              {/if}
-            {/if}
-          {/each}
-        {/if}
-      </section>
-
-      <section class:hidden={!isImagesFacet} transition:fade={{ duration: 150 }}>
-        <p class="text-sm text-neutral-content">
-          Active tab: profile image management.
+  <section class:hidden={!isCoreFacet} transition:fade={{ duration: 150 }}>
+    <form
+      bind:this={contentsElement}
+      {...organisationForm}
+      class="bits-theme space-y-4"
+    >
+      {#if isLoading}
+        <p class="text-sm text-neutral-content" transition:fade={{ duration: 150 }}>
+          Loading organisation...
         </p>
-      </section>
-    {:else}
-      <p transition:fade={{ duration: 150 }}>Form fields are not available.</p>
-    {/if}
+      {:else if organisationForm?.fields && organisation?.data}
+        <FormI18nSection
+          title="Translations"
+          subtitle="Edit per-locale values."
+          locales={orderedLocales}
+        >
+          {#snippet children(locale)}
+            {@const fields = organisationForm.fields.i18n[locale]}
+            <label class="flex flex-col gap-1">
+              <p class="text-sm font-bold">Name</p>
+              <input {...fields.name.as('text')}>
+            </label>
+            <label class="flex flex-col gap-1">
+              <p class="text-sm font-bold">Description</p>
+              <textarea {...fields.description.as('text')}></textarea>
+            </label>
+          {/snippet}
+        </FormI18nSection>
 
-    {#if !isLoading}
-      <p class="text-xs text-neutral-content">
-        form field keys: {formFieldKeys.length > 0 ? formFieldKeys.join(', ') : 'none'}
-      </p>
-      <p class="text-xs text-neutral-content">
-        i18n field locales: {fieldLocaleKeys.length > 0 ? fieldLocaleKeys.join(', ') : 'none'}
-      </p>
-    {/if}
-  </form>
+        <label>
+          <p>Code</p>
+          <input {...organisationForm.fields.code.as('text')}>
+        </label>
+
+        <label>
+          <p>Url</p>
+          <input {...organisationForm.fields.url.as('url')}>
+        </label>
+      {/if}
+    </form>
+  </section>
+  <section class:hidden={!isImagesFacet} transition:fade={{ duration: 150 }}>
+    <p class="text-sm text-neutral-content">Active tab: profile image management.</p>
+  </section>
 
   <!-- {#if organisation?.data}
     <h1 class="text-xl font-semibold">
