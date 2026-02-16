@@ -1,9 +1,9 @@
 @layer components {
   /* Base */
   .bits-theme .bits-btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-[var(--radius-input)] border px-[21px] active:scale-[0.98];
-    --btn-size: 3rem;
-    --btn-base-size: 3rem;
+    @apply inline-flex items-center justify-center gap-2 rounded-[--radius-input] border px-5.25 active:scale-[0.98];
+    --btn-size: 2.75rem;
+    --btn-base-size: 2.75rem;
     --btn-base-label-size: 1rem;
     --btn-label-multiplier: 0.2;
     --btn-label-penalty: 0.25;
@@ -71,13 +71,12 @@
     width: calc(var(--btn-size) * var(--btn-icon-ratio));
     height: calc(var(--btn-size) * var(--btn-icon-ratio));
     display: block;
-    vertical-align: middle;
     color: inherit;
   }
 
   .bits-theme .bits-btn__label {
     display: inline-block;
-    line-height: 1;
+    line-height: 1.4;
     white-space: nowrap;
     overflow: hidden;
     max-width: 20ch;
