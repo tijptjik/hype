@@ -10,7 +10,11 @@ import { getContext, setContext } from 'svelte'
 import type { Component } from 'svelte'
 import type { QueryClient } from '@tanstack/svelte-query'
 import type { AppCtx } from '$lib/context/app.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
+import {
+  getEntityVisibility,
+  getHeaderCtrl,
+  getIndexVisibility,
+} from '$lib/context/header.svelte'
 // ENUMS
 import { ResourcePath, FirstClassResource, type HierarchicalResource } from '$lib/enums'
 // GUARDS
@@ -407,6 +411,8 @@ export class AdminCtx {
   setHeaderForIndex(title: string, icon: Component): void {
     const headerCtrl = getHeaderCtrl()
     headerCtrl.setIndexHeader(title, icon)
+    headerCtrl.showControls('view')
+    headerCtrl.setVisibility(getIndexVisibility())
   }
 
   setHeaderForEntity(
@@ -416,6 +422,8 @@ export class AdminCtx {
   ): void {
     const headerCtrl = getHeaderCtrl()
     headerCtrl.setEntityHeader(title, icon, facetTabs)
+    headerCtrl.showControls('form')
+    headerCtrl.setVisibility(getEntityVisibility())
   }
 
   // ═══════════════════════
@@ -1954,15 +1962,15 @@ export const setAdminCtx = (queryClient: QueryClient, appCtx: AppCtx) =>
   setContext(ADMINCTX_KEY, new AdminCtx(queryClient, appCtx))
 
 export const getAdminCtx = (): AdminCtx => {
-  const ctx = getContext(ADMINCTX_KEY)
+  const ctx = getContext<AdminCtx | undefined>(ADMINCTX_KEY)
   if (!ctx) {
     // Return a safe proxy object that prevents errors when AdminCtx isn't ready
     return new Proxy({} as any, {
       get(target, prop) {
         if (prop === 'isInitialised') return false
-        if (prop === 'setFacet') return () => {} // No-op function
-        if (prop === 'setHeaderForIndex') return () => {} // No-op function
-        if (prop === 'setHeaderForEntity') return () => {} // No-op function
+        if (prop === 'setFacet') return () => {}
+        if (prop === 'setHeaderForIndex') return () => {}
+        if (prop === 'setHeaderForEntity') return () => {}
         if (prop === 'filteredOrganisations') return []
         if (prop === 'filteredProjects') return []
         if (prop === 'filteredLayers') return []
@@ -1983,5 +1991,5 @@ export const getAdminCtx = (): AdminCtx => {
       },
     }) as AdminCtx
   }
-  return ctx as AdminCtx
+  return ctx
 }
