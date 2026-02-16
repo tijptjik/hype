@@ -5,4 +5,4 @@ export type { SwitchProps, SwitchState } from './switch.types'
 export type {
   SwitchRootProps as SwitchPrimitiveRootProps,
   SwitchThumbProps as SwitchPrimitiveThumbProps,
-} from './src/types.js'
+} from './src/switchPrimitive.types.js'
