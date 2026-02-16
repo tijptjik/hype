@@ -3,6 +3,8 @@
 import { Avatar } from '$lib/bits/core'
 // SVELTE
 import { fly } from 'svelte/transition'
+// TYPES
+import type { HeaderAvatarProps } from './headerPrimitives.types'
 
 let {
   visible = true,
@@ -11,16 +13,8 @@ let {
   alt = '',
   fallback = '',
   onClick,
-  transitionDirection = 'right'
-}: {
-  visible?: boolean
-  name?: string | null
-  src?: string | null
-  alt?: string
-  fallback?: string
-  onClick?: () => void
-  transitionDirection?: 'left' | 'right'
-} = $props()
+  transitionDirection = 'right',
+}: HeaderAvatarProps = $props()
 
 const transitionX = $derived(transitionDirection === 'left' ? -64 : 64)
 </script>
@@ -32,7 +26,8 @@ const transitionX = $derived(transitionDirection === 'left' ? -64 : 64)
     type="button"
     class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full p-0.5 text-xl transition-colors duration-300 hover:bg-primary/20"
     onclick={() => onClick?.()}
-    aria-label="Open admin panel">
+    aria-label="Open admin panel"
+  >
     <Avatar {name} {src} {alt} {fallback} />
   </button>
 {/if}

@@ -15,6 +15,7 @@ This directory is the UI boundary for Bits-based work.
 ## Type Naming Rules
 - Use `name.types.ts` for component or pattern public type files.
 - Use `types.ts` only for shared internal primitive packages under `src/` (for example `custom/switch/src/types.ts`).
+- For primitive component bundles under `components/`, name shared prop files as `<component>Primitives.types.ts`.
 - Keep type file placement aligned with ownership:
   - `core/*/name.types.ts`
   - `custom/*/name.types.ts`

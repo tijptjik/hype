@@ -24,3 +24,22 @@ export interface FormI18nSectionProps {
   children?: Snippet<[Locale]>
   footer?: Snippet<[Locale]>
 }
+
+export interface FormI18nHeaderProps {
+  title?: string
+  subtitle?: string
+  headerActions?: Snippet
+  formFlags?: SectionHeaderFormFlag[]
+  actions?: SectionHeaderAction[]
+  infoTrigger?: SectionHeaderInfoTrigger | SectionHeaderInfoTrigger[]
+  left?: Snippet
+  right?: Snippet
+}
+
+export interface FormI18nLocaleCardProps {
+  locale: Locale
+  cardClass?: string
+  localeCodeClass?: string
+  children?: Snippet<[Locale]>
+  footer?: Snippet<[Locale]>
+}

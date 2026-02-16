@@ -1,20 +1,6 @@
 <script lang="ts">
 import { onMount, tick } from 'svelte'
-import type { Snippet } from 'svelte'
-import type { HTMLAttributes } from 'svelte/elements'
-
-type RenderState = {
-  showDescription: boolean
-  showTitle: boolean
-  showButtonText: boolean
-}
-
-type HeaderRootProps = HTMLAttributes<HTMLElement> & {
-  class?: string
-  measurementKey?: string
-  left?: Snippet<[RenderState]>
-  right?: Snippet<[RenderState]>
-}
+import type { HeaderRootProps } from './headerPrimitives.types'
 
 let {
   class: className = '',
@@ -47,13 +33,13 @@ const rootClass = $derived(
     className,
   ]
     .filter(Boolean)
-    .join(' ')
+    .join(' '),
 )
 
 const renderState = $derived({
   showDescription,
   showTitle,
-  showButtonText
+  showButtonText,
 })
 
 function hasOverlap(a: Element | null, b: Element | null): boolean {
@@ -72,7 +58,10 @@ function overflowsRight(container: Element | null, target: Element | null): bool
   return targetRect.right > containerRect.right - 8
 }
 
-function hasContentOverlap(leftGroup: Element | null, rightGroup: Element | null): boolean {
+function hasContentOverlap(
+  leftGroup: Element | null,
+  rightGroup: Element | null,
+): boolean {
   if (!leftGroup || !rightGroup) return false
   const leftRect = leftGroup.getBoundingClientRect()
   const rightRect = rightGroup.getBoundingClientRect()
@@ -108,7 +97,7 @@ async function resolveOverflow(): Promise<void> {
   const probeAndCommit = async (
     current: boolean,
     setVisible: (next: boolean) => void,
-    canFit: () => boolean
+    canFit: () => boolean,
   ): Promise<boolean> => {
     if (current) return current
 
@@ -138,7 +127,7 @@ async function resolveOverflow(): Promise<void> {
     next => {
       showButtonText = next
     },
-    () => !isRightConstrained()
+    () => !isRightConstrained(),
   )
 
   if (!hasResolvedOnce) {
@@ -154,18 +143,21 @@ function scheduleOverflowResolution(): void {
     clearTimeout(debounceId)
   }
 
-  debounceId = setTimeout(() => {
-    debounceId = null
+  debounceId = setTimeout(
+    () => {
+      debounceId = null
 
-    if (frameId !== null) {
-      cancelAnimationFrame(frameId)
-    }
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId)
+      }
 
-    frameId = requestAnimationFrame(() => {
-      frameId = null
-      void resolveOverflow()
-    })
-  }, hasResolvedOnce ? RESOLVE_DEBOUNCE_MS + ANIMATION_SETTLE_MS : 0)
+      frameId = requestAnimationFrame(() => {
+        frameId = null
+        void resolveOverflow()
+      })
+    },
+    hasResolvedOnce ? RESOLVE_DEBOUNCE_MS + ANIMATION_SETTLE_MS : 0,
+  )
 }
 
 $effect(() => {

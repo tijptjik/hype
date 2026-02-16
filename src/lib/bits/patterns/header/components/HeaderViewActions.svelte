@@ -9,7 +9,7 @@ import LayoutGrid from 'virtual:icons/lucide/layout-grid'
 import List from 'virtual:icons/lucide/list'
 import Table2 from 'virtual:icons/lucide/table-2'
 // TYPES
-import type { HeaderLayoutMode } from '../header.types'
+import type { HeaderViewActionsProps } from './headerPrimitives.types'
 
 let {
   showLayoutToggle = true,
@@ -19,28 +19,17 @@ let {
   controlMode = false,
   hideLabel = false,
   onLayoutToggle,
-  onControlsToggle
-}: {
-  showLayoutToggle?: boolean
-  showControlsToggle?: boolean
-  layoutModes?: HeaderLayoutMode[]
-  layoutMode?: HeaderLayoutMode
-  controlMode?: boolean
-  hideLabel?: boolean
-  onLayoutToggle?: (next: HeaderLayoutMode) => void
-  onControlsToggle?: (next: boolean) => void
-} = $props()
+  onControlsToggle,
+}: HeaderViewActionsProps = $props()
 
-const currentIndex = $derived(
-  Math.max(0, layoutModes.indexOf(layoutMode))
-)
+const currentIndex = $derived(Math.max(0, layoutModes.indexOf(layoutMode)))
 const nextLayoutMode = $derived(
   layoutModes.length > 0
     ? layoutModes[(currentIndex + 1) % layoutModes.length]
-    : layoutMode
+    : layoutMode,
 )
 const layoutText = $derived(
-  layoutMode === 'card' ? 'Card' : layoutMode === 'table' ? 'Table' : 'List'
+  layoutMode === 'card' ? 'Card' : layoutMode === 'table' ? 'Table' : 'List',
 )
 </script>
 
@@ -68,7 +57,8 @@ const layoutText = $derived(
   {#if showControlsToggle}
     <div
       in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
-      out:fly={{ x: 12, duration: 180, opacity: 0.15 }}>
+      out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
+    >
       <Button
         text="Filters"
         class="px-4"
@@ -76,14 +66,16 @@ const layoutText = $derived(
         style="ghost"
         icon={controlsIcon}
         {hideLabel}
-        onClick={() => onControlsToggle?.(!controlMode)} />
+        onClick={() => onControlsToggle?.(!controlMode)}
+      />
     </div>
   {/if}
 
   {#if showLayoutToggle && layoutModes.length > 1}
     <div
       in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
-      out:fly={{ x: 12, duration: 180, opacity: 0.15 }}>
+      out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
+    >
       <Button
         text={layoutText}
         class="px-4"
@@ -91,7 +83,8 @@ const layoutText = $derived(
         style="ghost"
         icon={nextLayoutMode === 'card' ? cardIcon : nextLayoutMode === 'table' ? tableIcon : listIcon}
         {hideLabel}
-        onClick={() => onLayoutToggle?.(nextLayoutMode)} />
+        onClick={() => onLayoutToggle?.(nextLayoutMode)}
+      />
     </div>
   {/if}
 </div>

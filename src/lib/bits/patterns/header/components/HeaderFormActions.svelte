@@ -8,6 +8,8 @@ import RotateCcw from 'virtual:icons/lucide/rotate-ccw'
 import Save from 'virtual:icons/lucide/save'
 import Trash2 from 'virtual:icons/lucide/trash-2'
 import Undo2 from 'virtual:icons/lucide/undo-2'
+// TYPES
+import type { HeaderFormActionsProps } from './headerPrimitives.types'
 
 let {
   isTainted = false,
@@ -17,17 +19,8 @@ let {
   onReset,
   onSave,
   onDeleteToggle,
-  onPublishToggle
-}: {
-  isTainted?: boolean
-  isDeleted?: boolean
-  isPublished?: boolean
-  hideLabel?: boolean
-  onReset?: () => void
-  onSave?: () => void
-  onDeleteToggle?: () => void
-  onPublishToggle?: () => void
-} = $props()
+  onPublishToggle,
+}: HeaderFormActionsProps = $props()
 
 const deleteLabel = $derived(isDeleted ? 'Restore' : 'Delete')
 const publishLabel = $derived(isPublished ? 'Unpublish' : 'Publish')
@@ -65,7 +58,8 @@ const publishLabel = $derived(isPublished ? 'Unpublish' : 'Publish')
     icon={resetIcon}
     {hideLabel}
     disabled={!isTainted}
-    onClick={() => onReset?.()} />
+    onClick={() => onReset?.()}
+  />
 
   <Button
     text="Save"
@@ -74,7 +68,8 @@ const publishLabel = $derived(isPublished ? 'Unpublish' : 'Publish')
     icon={saveIcon}
     {hideLabel}
     disabled={!isTainted}
-    onClick={() => onSave?.()} />
+    onClick={() => onSave?.()}
+  />
 
   <Button
     text={deleteLabel}
@@ -82,7 +77,8 @@ const publishLabel = $derived(isPublished ? 'Unpublish' : 'Publish')
     style="ghost"
     icon={deleteIcon}
     {hideLabel}
-    onClick={() => onDeleteToggle?.()} />
+    onClick={() => onDeleteToggle?.()}
+  />
 
   <Button
     text={publishLabel}
@@ -90,5 +86,6 @@ const publishLabel = $derived(isPublished ? 'Unpublish' : 'Publish')
     style="ghost"
     icon={publishIcon}
     {hideLabel}
-    onClick={() => onPublishToggle?.()} />
+    onClick={() => onPublishToggle?.()}
+  />
 </div>

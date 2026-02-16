@@ -98,6 +98,8 @@ This document defines the UI layering model for Bits components and how logic sh
 
 - Default for component-scoped types: `name.types.ts` in the same folder as the component entry.
 - Use `types.ts` only when the file is intentionally shared by multiple subcomponents in a local `src/` primitive package (for example `custom/*/src/types.ts`).
+- Primitive component prop types should live alongside primitive components, typically under the same `components/` folder (for example `components/headerPrimitives.types.ts`), not in the parent composite type file.
+- Primitive bundle type files should be named `<component>Primitives.types.ts`.
 - Prefer naming by public component contract:
   - `button.types.ts`, `header.types.ts`, `sectionHeader.types.ts`, `formI18nSection.types.ts`.
 - Placement rules:

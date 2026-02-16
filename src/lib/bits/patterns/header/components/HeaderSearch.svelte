@@ -2,18 +2,15 @@
 import { fly } from 'svelte/transition'
 // ICONS
 import Search from 'virtual:icons/lucide/search'
+// TYPES
+import type { HeaderSearchProps } from './headerPrimitives.types'
 
 let {
   isFilterable = false,
   query = $bindable(''),
   placeholder = 'Filter...',
-  onFilter
-}: {
-  isFilterable?: boolean
-  query?: string
-  placeholder?: string
-  onFilter?: (query: string) => void
-} = $props()
+  onFilter,
+}: HeaderSearchProps = $props()
 
 function handleInput(event: Event): void {
   const target = event.currentTarget as HTMLInputElement
@@ -23,7 +20,7 @@ function handleInput(event: Event): void {
 
 function focusFirstResourceItem(): void {
   const firstItem = document.querySelector(
-    '[data-entity-index="0"][tabindex], svelte-virtual-list-row [tabindex="0"], svelte-virtual-list-row [tabindex]'
+    '[data-entity-index="0"][tabindex], svelte-virtual-list-row [tabindex="0"], svelte-virtual-list-row [tabindex]',
   ) as HTMLElement | null
 
   firstItem?.focus()
@@ -37,12 +34,18 @@ function handleKeydown(event: KeyboardEvent): void {
     return
   }
 
-  if (event.key !== 'Tab' || event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) {
+  if (
+    event.key !== 'Tab' ||
+    event.shiftKey ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.altKey
+  ) {
     return
   }
 
   const firstItem = document.querySelector(
-    '[data-entity-index="0"][tabindex], svelte-virtual-list-row [tabindex="0"], svelte-virtual-list-row [tabindex]'
+    '[data-entity-index="0"][tabindex], svelte-virtual-list-row [tabindex="0"], svelte-virtual-list-row [tabindex]',
   ) as HTMLElement | null
 
   if (!firstItem) return
@@ -55,7 +58,8 @@ function handleKeydown(event: KeyboardEvent): void {
 {#if isFilterable}
   <div
     in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
-    out:fly={{ x: 12, duration: 180, opacity: 0.15 }}>
+    out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
+  >
     <label class="bits-pattern-header__search" aria-label="Filter">
       <input
         type="text"
@@ -63,7 +67,8 @@ function handleKeydown(event: KeyboardEvent): void {
         value={query}
         placeholder=""
         oninput={handleInput}
-        onkeydown={handleKeydown} />
+        onkeydown={handleKeydown}
+      >
       <Search class="bits-pattern-header__search-icon" aria-hidden="true" />
     </label>
   </div>

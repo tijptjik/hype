@@ -2,19 +2,14 @@
 // BITS COMPONENTS
 import { Button, Separator } from '$lib/bits/core'
 // TYPES
-import type { HeaderFacetItem } from '../header.types'
+import type { HeaderFacetsProps } from './headerPrimitives.types'
 
 let {
   items = [],
   active = false,
   hideLabel = false,
   onFacetChange,
-}: {
-  items?: HeaderFacetItem[]
-  active?: string | false
-  hideLabel?: boolean
-  onFacetChange?: (ref: string) => void
-} = $props()
+}: HeaderFacetsProps = $props()
 </script>
 
 {#if items.length > 0}
