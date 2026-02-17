@@ -10,16 +10,21 @@ import { getHeaderCtrl } from '$lib/context/header.svelte'
 // REMOTE
 import { getOrganisation, organisationForm } from '$lib/api/server/organisation.remote'
 // BITS COMPONENTS
-import { FormI18nSection, FormSection, GridSpacer } from '$lib/bits'
+import {
+  FormI18nSection,
+  FormSection,
+  FormUserRolesSection,
+  GridSpacer,
+} from '$lib/bits'
 import { SectionHeader, TextArea, TextInput } from '$lib/bits/custom/form'
 // ICONS
 import OrganisationIcon from 'virtual:icons/lucide/users-round'
 import FormInputIcon from 'virtual:icons/lucide/form-input'
 import ImageIcon from 'virtual:icons/lucide/image'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource, OrganisationRoleType } from '$lib/enums'
 // TYPES
-import type { Locale, Organisation } from '$lib/types'
+import type { Locale, Organisation, User } from '$lib/types'
 
 // § Config
 
@@ -133,6 +138,60 @@ function handleHubExclusiveToggle(nextChecked: boolean | null): void {
     data.isHubExclusive = Boolean(nextChecked)
     return data
   })
+}
+
+function handleAddOrganisationUser(user: User): void {
+  updateOrganisationFormData(data => {
+    const existing = data.userRoles ?? []
+    if (existing.some(userRole => userRole.userId === user.id)) return data
+
+    const nextRole = {
+      organisationId: data.id,
+      userId: user.id,
+      role: OrganisationRoleType.member,
+      user: {
+        id: user.id,
+        name: user.name,
+        image: user.image,
+        attribution: user.attribution,
+      },
+    }
+
+    data.userRoles = [...existing, nextRole]
+    return data
+  })
+}
+
+function handleRemoveOrganisationUser(userId: string): void {
+  updateOrganisationFormData(data => {
+    data.userRoles = (data.userRoles ?? []).filter(
+      userRole => userRole.userId !== userId,
+    )
+    return data
+  })
+}
+
+function handleOrganisationRoleChange(
+  userId: string,
+  role: OrganisationRoleType,
+): void {
+  updateOrganisationFormData(data => {
+    data.userRoles = (data.userRoles ?? []).map(userRole =>
+      userRole.userId === userId ? { ...userRole, role } : userRole,
+    )
+    return data
+  })
+}
+
+async function searchUsers(query: string): Promise<User[]> {
+  if (query.trim().length < 2) return []
+  try {
+    const response = await fetch(`/api/users?q=${encodeURIComponent(query)}`)
+    if (!response.ok) return []
+    return (await response.json()) as User[]
+  } catch {
+    return []
+  }
 }
 
 async function handleTranslateLocale(
@@ -265,22 +324,22 @@ $effect(() => {
 
         <GridSpacer>
           {#snippet left()}
-            <section class="bits-form__i18n-section">
-              <SectionHeader
-                title={m.admin__forms_organisation_members_title()}
-                description={m.admin__forms_organisation_members_subtitle()}
-              />
-
-              <p class="px-1 text-sm text-base-content/70">
-                Member management placeholder.
-              </p>
-            </section>
+            <FormUserRolesSection
+              title={m.admin__forms_organisation_members_title()}
+              subtitle={m.admin__forms_organisation_members_subtitle()}
+              userRoles={organisation?.data?.userRoles ?? []}
+              {isEditing}
+              onSearchUsers={searchUsers}
+              onAddUser={handleAddOrganisationUser}
+              onRemoveUser={handleRemoveOrganisationUser}
+              onRoleChange={handleOrganisationRoleChange}
+            />
           {/snippet}
 
           {#snippet right()}
             {@const codeInputAttrs = organisationForm.fields.code.as('text')}
             {@const urlInputAttrs = organisationForm.fields.url.as('url')}
-            <section class="bits-form__i18n-section">
+            <section class="bits-form__section">
               <SectionHeader title={m.admin__forms_common_specifiers()} />
               <FormSection>
                 <TextInput
@@ -307,5 +366,6 @@ $effect(() => {
   </section>
   <section class:hidden={!isImagesFacet}>
     <p class="text-sm text-neutral-content">Active tab: profile image management.</p>
+    <pre> {JSON.stringify(organisation?.data, null, 2)} </pre>
   </section>
 </main>
