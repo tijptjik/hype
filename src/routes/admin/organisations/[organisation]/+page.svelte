@@ -62,7 +62,7 @@ const activeFacet = $derived(
 const isCoreFacet = $derived(activeFacet === 'core')
 const isImagesFacet = $derived(activeFacet === 'images')
 const isEditing = $derived(headerCtrl.state.isEditing)
-const sectionFlags = $derived(
+const flags = $derived(
   organisation?.data?.hubId != null
     ? [
         {
@@ -217,7 +217,7 @@ $effect(() => {
           locales={orderedLocales}
           onTranslate={handleTranslateLocale}
           {isEditing}
-          {sectionFlags}
+          {flags}
         >
           {#snippet children(locale)}
             {@const fields = organisationForm.fields.i18n[locale]}

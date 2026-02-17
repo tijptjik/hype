@@ -31,7 +31,7 @@ export interface FormI18nHeaderProps {
   title?: string
   subtitle?: string
   headerActions?: Snippet
-  sectionFlags?: SectionHeaderFlag[]
+  flags?: SectionHeaderFlag[]
   actions?: SectionHeaderAction[]
   triggers?: SectionHeaderTrigger[]
   left?: Snippet
