@@ -11,6 +11,7 @@ import type {
 } from '$lib/types'
 import type { AppCtx } from './context/app.svelte'
 import type { Resource } from '$lib/types'
+import { supportedLocales } from './enums'
 
 /**
  * Get the current locale with Paraglide. Wrapping for type safety.
@@ -45,7 +46,7 @@ export function getLocaleOrder(locale: Locale): Locale[] {
  * @returns All supported locales, excluding the given locale.
  */
 export function getFallbackLocales(locale: Locale): Locale[] {
-  return supportedLocales.filter(l => l !== locale)
+  return supportedLocales.filter((nextLocale: Locale) => nextLocale !== locale)
 }
 
 /**
@@ -245,4 +246,43 @@ export async function translateText(
   })
   const data = await response.json()
   return data
+}
+
+type TranslateI18nFieldsParams = {
+  source: Locale
+  target: Locale
+  fields: string[]
+  i18n: Partial<Record<Locale, Record<string, string | null | undefined>>>
+  onSuccess?: (translated: Record<string, string>) => void
+  onFailure?: (error: unknown) => void
+}
+
+/**
+ * Translate selected i18n fields from one locale to another.
+ * @param params - Translation request payload and lifecycle callbacks.
+ * @returns A field/value map for translated strings.
+ */
+export async function translateI18nFields({
+  source,
+  target,
+  fields,
+  i18n,
+  onSuccess,
+  onFailure,
+}: TranslateI18nFieldsParams): Promise<Record<string, string>> {
+  try {
+    const sourceTexts = fields.map(field => i18n[source]?.[field] ?? '')
+    const translatedTexts = await translateText(source, target, sourceTexts)
+
+    const translated = fields.reduce<Record<string, string>>((acc, field, index) => {
+      acc[field] = translatedTexts[index] ?? ''
+      return acc
+    }, {})
+
+    onSuccess?.(translated)
+    return translated
+  } catch (error) {
+    onFailure?.(error)
+    throw error
+  }
 }
