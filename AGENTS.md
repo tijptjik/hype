@@ -48,6 +48,9 @@ Run all commands with Bun:
 - Comments:
   - Use standard JSDoc for exported functions and remote APIs: include `@param`, `@returns`, and `@remarks` where behavior constraints matter.
   - Preserve existing comments when editing code; update wording if behavior changes instead of deleting useful context.
+- Styling:
+  - For Bits `core/custom/pattern` components, do not use inline Tailwind utility class strings in Svelte markup.
+  - Define and apply semantic class names, and place style rules in `src/lib/styles/*.css` under `@layer components`.
 
 ## Testing Guidelines
 - Framework: Vitest with `jsdom` and `@testing-library/jest-dom`.
