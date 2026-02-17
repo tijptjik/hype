@@ -181,6 +181,38 @@
     @apply z-10 flex flex-col gap-3 rounded-2xl;
   }
 
+  .bits-theme .bits-form__grid-spacer {
+    --bits-form-grid-spacer-cols: 3;
+    --bits-form-grid-spacer-left-cols: 2;
+    --bits-form-grid-spacer-right-cols: 1;
+    --bits-form-grid-spacer-gap: calc(var(--spacing) * 3);
+    @apply grid grid-cols-1;
+    gap: var(--bits-form-grid-spacer-gap);
+  }
+
+  .bits-theme .bits-form__grid-spacer-left,
+  .bits-theme .bits-form__grid-spacer-right {
+    @apply min-w-0;
+  }
+
+  @media (min-width: 768px) {
+    .bits-theme .bits-form__grid-spacer {
+      grid-template-columns: repeat(var(--bits-form-grid-spacer-cols), minmax(0, 1fr));
+    }
+
+    .bits-theme .bits-form__grid-spacer-left {
+      grid-column:
+        span var(--bits-form-grid-spacer-left-cols) / span
+        var(--bits-form-grid-spacer-left-cols);
+    }
+
+    .bits-theme .bits-form__grid-spacer-right {
+      grid-column:
+        span var(--bits-form-grid-spacer-right-cols) / span
+        var(--bits-form-grid-spacer-right-cols);
+    }
+  }
+
   .bits-theme .bits-form__section-header {
     @apply flex flex-wrap items-start justify-between gap-3 pb-2;
   }
