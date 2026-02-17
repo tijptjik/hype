@@ -120,6 +120,7 @@
 
   .bits-theme .bits-form__control--textarea.bits-form__control--display {
     white-space: pre-wrap;
+    min-height: 7.25rem;
     padding-bottom: 10px;
   }
 
@@ -176,10 +177,14 @@
   /* ----------------- */
   /* I18n Section Layout */
   /* --------- */
+  .bits-theme .bits-form__section,
   .bits-theme .bits-form__i18n-section {
-    @apply z-10 flex flex-col gap-3 rounded-2xl pb-4;
+    @apply z-10 flex flex-col gap-0 rounded-2xl pb-4;
   }
 
+  .bits-theme
+    .bits-form__section
+    .bits-btn:not(.bits-btn--modifier-circle):not(.bits-btn--modifier-square),
   .bits-theme
     .bits-form__i18n-section
     .bits-btn:not(.bits-btn--modifier-circle):not(.bits-btn--modifier-square) {
@@ -219,7 +224,7 @@
   }
 
   .bits-theme .bits-form__section-header {
-    @apply flex flex-wrap items-start justify-between gap-3 pb-2;
+    @apply flex min-h-16 flex-wrap items-start justify-between pt-2 pb-4;
   }
 
   .bits-theme .bits-form__section-header-left {
@@ -231,7 +236,11 @@
   }
 
   .bits-theme .bits-form__section-header-heading {
-    @apply text-right font-bold uppercase;
+    @apply text-right;
+  }
+
+  .bits-theme .bits-form__section-header-heading .bits-header__title {
+    @apply font-bold uppercase;
   }
 
   .bits-theme .bits-form__i18n-header {

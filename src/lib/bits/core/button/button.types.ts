@@ -2,6 +2,8 @@ import type { Component, Snippet } from 'svelte'
 
 export type ButtonColor =
   | 'neutral'
+  | 'light'
+  | 'dark'
   | 'primary'
   | 'secondary'
   | 'accent'

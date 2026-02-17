@@ -1,7 +1,7 @@
 import type { ButtonColor, ButtonSize } from '$lib/bits/core/button/button.types'
 
 export type SwitchState = boolean | null
-export type SwitchColor = ButtonColor | 'light' | 'dark'
+export type SwitchColor = ButtonColor
 
 export interface SwitchProps {
   checked?: SwitchState

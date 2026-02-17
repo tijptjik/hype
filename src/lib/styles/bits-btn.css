@@ -229,6 +229,20 @@
     --btn-soft-fg: var(--color-neutral-content);
   }
 
+  .bits-theme .bits-btn--color-light {
+    --btn-color: var(--color-base-100);
+    --btn-color-content: var(--color-base-content);
+    --btn-outline-fg: var(--color-base-content);
+    --btn-soft-fg: var(--color-base-content);
+  }
+
+  .bits-theme .bits-btn--color-dark {
+    --btn-color: var(--color-base-content);
+    --btn-color-content: var(--color-base-100);
+    --btn-outline-fg: var(--color-base-content);
+    --btn-soft-fg: var(--color-base-content);
+  }
+
   .bits-theme .bits-btn--color-primary {
     --btn-color: var(--color-primary);
     --btn-color-content: var(--color-white);
