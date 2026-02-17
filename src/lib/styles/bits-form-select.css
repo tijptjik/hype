@@ -1,0 +1,38 @@
+@layer components {
+  .bits-theme .bits-form__select-trigger {
+    @apply inline-flex h-12 w-full items-center rounded-lg border px-3 text-sm outline-none transition-colors;
+    border-color: color-mix(in oklab, var(--color-border-input) 90%, transparent);
+    background-color: var(--color-glass-100);
+  }
+
+  .bits-theme .bits-form__select-label {
+    @apply block min-w-0 truncate;
+  }
+
+  .bits-theme .bits-form__select-trigger-icon {
+    @apply ml-auto h-4 w-4 shrink-0 opacity-70;
+  }
+
+  .bits-theme .bits-form__select-trigger[data-placeholder] {
+    color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  }
+
+  .bits-theme .bits-form__select-display {
+    @apply inline-flex h-12 w-full items-center bg-transparent px-3 pr-9 text-sm;
+    color: color-mix(in oklab, var(--color-base-content) 90%, transparent);
+  }
+
+  .bits-theme .bits-form__select-content {
+    @apply z-50 max-h-72 overflow-hidden rounded-lg border bg-base-100 p-1 shadow-xl;
+    min-width: var(--bits-select-anchor-width);
+    border-color: color-mix(in oklab, var(--color-border-input) 90%, transparent);
+  }
+
+  .bits-theme .bits-form__select-item {
+    @apply flex h-10 w-full items-center rounded-md px-3 text-sm outline-none data-[highlighted]:bg-base-200 data-[disabled]:opacity-50;
+  }
+
+  .bits-theme .bits-form__select-item-check-icon {
+    @apply ml-auto h-4 w-4 shrink-0;
+  }
+}

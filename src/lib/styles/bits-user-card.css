@@ -1,0 +1,13 @@
+@layer components {
+  .bits-theme .bits-form__user-card-actions {
+    @apply flex shrink-0 items-center gap-2 py-2 pl-2;
+  }
+
+  .bits-theme .bits-form__user-card-actions-select .bits-form__select-display {
+    @apply pr-16 bg-black;
+  }
+
+  .bits-theme .bits-form__user-card-actions-remove-button {
+    @apply min-w-0 px-3;
+  }
+}

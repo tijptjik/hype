@@ -1,0 +1,70 @@
+@layer components {
+  /* ----------------- */
+  /* Section Layout */
+  /* --------- */
+  .bits-theme .bits-form__section,
+  .bits-theme .bits-form__i18n-section {
+    @apply z-10 flex flex-col gap-0 rounded-2xl pb-4;
+  }
+
+  .bits-theme
+    .bits-form__section
+    .bits-btn:not(.bits-btn--modifier-circle):not(.bits-btn--modifier-square),
+  .bits-theme
+    .bits-form__i18n-section
+    .bits-btn:not(.bits-btn--modifier-circle):not(.bits-btn--modifier-square) {
+    @apply px-8;
+  }
+
+  .bits-theme .bits-form__grid-spacer {
+    --bits-form-grid-spacer-cols: 3;
+    --bits-form-grid-spacer-left-cols: 2;
+    --bits-form-grid-spacer-right-cols: 1;
+    --bits-form-grid-spacer-gap: calc(var(--spacing) * 3);
+    @apply grid grid-cols-1;
+    gap: var(--bits-form-grid-spacer-gap);
+  }
+
+  .bits-theme .bits-form__grid-spacer-left,
+  .bits-theme .bits-form__grid-spacer-right {
+    @apply min-w-0;
+  }
+
+  @media (min-width: 768px) {
+    .bits-theme .bits-form__grid-spacer {
+      grid-template-columns: repeat(var(--bits-form-grid-spacer-cols), minmax(0, 1fr));
+    }
+
+    .bits-theme .bits-form__grid-spacer-left {
+      grid-column:
+        span var(--bits-form-grid-spacer-left-cols) / span
+        var(--bits-form-grid-spacer-left-cols);
+    }
+
+    .bits-theme .bits-form__grid-spacer-right {
+      grid-column:
+        span var(--bits-form-grid-spacer-right-cols) / span
+        var(--bits-form-grid-spacer-right-cols);
+    }
+  }
+
+  .bits-theme .bits-form__section-header {
+    @apply flex min-h-16 flex-wrap items-start justify-between pt-2 pb-4;
+  }
+
+  .bits-theme .bits-form__section-header-left {
+    @apply flex min-w-48 flex-wrap items-center gap-2 pl-1;
+  }
+
+  .bits-theme .bits-form__section-header-right {
+    @apply flex min-w-48 justify-end pr-1;
+  }
+
+  .bits-theme .bits-form__section-header-heading {
+    @apply text-right;
+  }
+
+  .bits-theme .bits-form__section-header-heading .bits-header__title {
+    @apply font-bold uppercase;
+  }
+}

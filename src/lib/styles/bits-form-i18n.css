@@ -1,0 +1,126 @@
+@layer components {
+  /* ----------------- */
+  /* I18n Layout */
+  /* --------- */
+  .bits-theme .bits-form__i18n-header {
+    @apply flex flex-wrap items-start justify-between gap-3;
+  }
+
+  .bits-theme .bits-form__i18n-header-copy {
+    @apply flex min-w-48 flex-col gap-1;
+  }
+
+  .bits-theme .bits-form__i18n-title {
+    @apply text-base font-bold;
+    color: var(--color-foreground);
+  }
+
+  .bits-theme .bits-form__i18n-subtitle {
+    @apply text-sm;
+    color: color-mix(in oklab, var(--color-foreground) 65%, transparent);
+  }
+
+  .bits-theme .bits-form__i18n-header-actions {
+    @apply flex items-center gap-2;
+  }
+
+  .bits-theme .bits-form__i18n-grid {
+    @apply grid grid-cols-3 gap-4 @xl:grid-cols-4 @5xl:grid-cols-5;
+  }
+
+  /* ----------------- */
+  /* I18n Cards */
+  /* --------- */
+  .bits-theme .bits-form__i18n-card {
+    @apply relative flex flex-col overflow-visible rounded-xl border-4 bg-glass-300 p-5;
+    border-color: color-mix(in oklab, var(--color-primary) 100%, transparent);
+  }
+
+  .bits-theme .bits-form__i18n-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 600'%3E%3Cfilter id='a'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23a)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 200px;
+    opacity: 0.18;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .bits-theme .bits-form__i18n-card > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  .bits-theme .bits-form__i18n-locale-code {
+    @apply absolute right-5.5 top-4 text-2xl font-bold uppercase;
+    color: color-mix(in oklab, var(--color-white) 66%, transparent);
+  }
+
+  .bits-theme .bits-form__i18n-card-content {
+    @apply flex flex-col gap-4 pb-2 pt-2;
+  }
+
+  .bits-theme .bits-form__i18n-card-footer {
+    @apply mt-auto pt-4;
+  }
+
+  /* ----------------- */
+  /* Translation Controls */
+  /* --------- */
+  .bits-theme .bits-form__i18n-translation {
+    @apply absolute right-1 -top-1 z-10 flex flex-col items-end;
+  }
+
+  .bits-theme .bits-form__i18n-translation-bar {
+    @apply pointer-events-none flex items-center overflow-hidden rounded-md py-0 opacity-0 transition-all duration-100;
+    background-color: color-mix(in oklab, var(--color-glass-200) 50%, transparent);
+    margin-top: 1rem;
+    transform: translateX(-4rem);
+  }
+
+  .bits-theme
+    .bits-form__i18n-translation-bar.bits-form__i18n-translation-bar--visible {
+    @apply pointer-events-auto opacity-100;
+  }
+
+  .bits-theme .bits-form__i18n-translation-icon {
+    @apply inline-flex h-8 w-8 items-center justify-center text-sm;
+    color: color-mix(in oklab, var(--color-foreground) 55%, transparent);
+    background: var(--color-glass-300);
+  }
+
+  .bits-theme .bits-form__i18n-translation-status-icon {
+    @apply inline-block h-5 w-5;
+    color: color-mix(in oklab, var(--color-foreground) 40%, transparent);
+  }
+
+  .bits-theme .bits-form__i18n-translation-status-icon--error {
+    color: var(--color-error);
+  }
+
+  .bits-theme .bits-form__i18n-translation-source {
+    @apply inline-flex h-8 min-w-9 items-center justify-center rounded-sm border-none px-1.5 text-xs font-semibold uppercase;
+    color: var(--color-base-content);
+    transition:
+      color 0.15s ease,
+      background-color 0.15s ease,
+      opacity 0.15s ease;
+  }
+
+  .bits-theme .bits-form__i18n-translation-source:focus-visible:not(:disabled),
+  .bits-theme .bits-form__i18n-translation-source:hover:not(:disabled) {
+    background-color: color-mix(in oklab, var(--color-glass-200) 68%, transparent);
+    color: color-mix(in oklab, var(--color-primary) 80%, white);
+  }
+
+  .bits-theme .bits-form__i18n-translation-source:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .bits-theme .bits-form__i18n-translation-source-icon {
+    @apply h-4 w-4;
+  }
+}
