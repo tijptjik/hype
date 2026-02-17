@@ -9,6 +9,7 @@ const generatedId = useId()
 let {
   checked = $bindable(false),
   disabled = false,
+  isDisplay = false,
   required = false,
   name,
   value = 'on',
@@ -26,29 +27,31 @@ let {
   showLabelsOnHoverOnly = false,
   class: className = '',
   thumbClass = '',
-  onCheckedChange
+  onCheckedChange,
 }: SwitchProps = $props()
 
+const isInteractionDisabled = $derived(disabled || isDisplay)
 const resolvedRightColor = $derived(rightColor ?? color)
-const resolvedRightColorValue = $derived(
-  resolvedRightColor === 'neutral'
-    ? 'var(--color-glass-base)'
-    : `var(--color-${resolvedRightColor})`
-)
-const resolvedOnTrackMix = $derived(
-  resolvedRightColor === 'neutral' ? '32%' : '28%'
-)
+const resolveSwitchColorToken = (
+  targetColor: NonNullable<SwitchProps['color']>,
+): string => {
+  if (targetColor === 'neutral') return 'var(--color-glass-base)'
+  return `var(--color-${targetColor})`
+}
+const resolvedRightColorValue = $derived(resolveSwitchColorToken(resolvedRightColor))
+const resolvedOnTrackMix = $derived(resolvedRightColor === 'neutral' ? '32%' : '28%')
 
 const rootClass = $derived(
   [
     'bits-switch',
     `bits-switch--states-${states}`,
     `bits-switch--size-${size}`,
+    isDisplay ? 'bits-switch--display' : '',
     'focus-visible:ring-foreground focus-visible:ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 peer',
-    className
+    className,
   ]
     .filter(Boolean)
-    .join(' ')
+    .join(' '),
 )
 
 const fieldClass = $derived(
@@ -56,10 +59,11 @@ const fieldClass = $derived(
     'bits-switch-field',
     `bits-switch-field--states-${states}`,
     `bits-switch-field--size-${size}`,
-    disabled ? 'bits-switch-field--disabled' : ''
+    disabled ? 'bits-switch-field--disabled' : '',
+    isDisplay ? 'bits-switch-field--display' : '',
   ]
     .filter(Boolean)
-    .join(' ')
+    .join(' '),
 )
 
 const leftLabelClass = $derived(
@@ -67,10 +71,10 @@ const leftLabelClass = $derived(
     'bits-switch-label bits-switch-label--side',
     states === 3 && checked === false ? 'bits-switch-label--active' : '',
     states === 3 && checked === null ? 'bits-switch-label--inactive' : '',
-    showLabelsOnHoverOnly ? 'bits-switch-label--hover-only' : ''
+    showLabelsOnHoverOnly ? 'bits-switch-label--hover-only' : '',
   ]
     .filter(Boolean)
-    .join(' ')
+    .join(' '),
 )
 
 const rightLabelClass = $derived(
@@ -78,22 +82,22 @@ const rightLabelClass = $derived(
     'bits-switch-label bits-switch-label--side',
     states === 3 && checked === true ? 'bits-switch-label--active' : '',
     states === 3 && checked === null ? 'bits-switch-label--inactive' : '',
-    showLabelsOnHoverOnly ? 'bits-switch-label--hover-only' : ''
+    showLabelsOnHoverOnly ? 'bits-switch-label--hover-only' : '',
   ]
     .filter(Boolean)
-    .join(' ')
+    .join(' '),
 )
 
 const topBottomLabelClass = 'bits-switch-label bits-switch-label--stack'
 
 const colorStyle = $derived(
-  `--switch-right-color: ${resolvedRightColorValue}; --switch-left-color: var(--color-${leftColor}); --switch-mid-color: var(--color-${midColor}); --switch-track-on-mix: ${resolvedOnTrackMix};`
+  `--switch-right-color: ${resolvedRightColorValue}; --switch-left-color: ${resolveSwitchColorToken(leftColor)}; --switch-mid-color: ${resolveSwitchColorToken(midColor)}; --switch-track-on-mix: ${resolvedOnTrackMix};`,
 )
 
 const defaultThumbClass = 'bits-switch__thumb'
 
 const resolvedThumbClass = $derived(
-  [defaultThumbClass, thumbClass].filter(Boolean).join(' ')
+  [defaultThumbClass, thumbClass].filter(Boolean).join(' '),
 )
 
 function handleCheckedChange(nextChecked: boolean | null) {
@@ -107,7 +111,7 @@ function setTriState(next: boolean | null) {
 }
 
 function handleLeftLabelClick(event: MouseEvent) {
-  if (states !== 3 || disabled) return
+  if (states !== 3 || isInteractionDisabled) return
   event.preventDefault()
   event.stopPropagation()
 
@@ -120,7 +124,7 @@ function handleLeftLabelClick(event: MouseEvent) {
 }
 
 function handleRightLabelClick(event: MouseEvent) {
-  if (states !== 3 || disabled) return
+  if (states !== 3 || isInteractionDisabled) return
   event.preventDefault()
   event.stopPropagation()
 
@@ -133,7 +137,7 @@ function handleRightLabelClick(event: MouseEvent) {
 }
 
 function handleTopLabelClick(event: MouseEvent) {
-  if (states !== 3 || disabled) return
+  if (states !== 3 || isInteractionDisabled) return
   event.preventDefault()
   event.stopPropagation()
 
@@ -166,14 +170,15 @@ function handleTopLabelClick(event: MouseEvent) {
     <SwitchPrimitive.Root
       bind:checked
       {states}
-      {disabled}
+      disabled={isInteractionDisabled}
       {required}
       {name}
       {value}
       {id}
       class={rootClass}
       style={colorStyle}
-      onCheckedChange={handleCheckedChange}>
+      onCheckedChange={handleCheckedChange}
+    >
       <SwitchPrimitive.Thumb class={resolvedThumbClass} />
     </SwitchPrimitive.Root>
 
