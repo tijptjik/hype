@@ -1,0 +1,161 @@
+<script lang="ts">
+import { scale, slide } from 'svelte/transition'
+import { m } from '$lib/i18n'
+import { SectionHeader, Search } from '$lib/bits/custom'
+import { OrganisationRoleType } from '$lib/enums'
+import { resolveAvatarImageSrc } from '$lib/utils/avatar'
+import * as FormUserRolesSectionPrimitive from './components'
+import { UserCard } from '$lib/bits/patterns/userCard'
+import type { FormUserRolesSectionProps } from './formUserRolesSection.types'
+import type { User } from '$lib/types'
+
+let {
+  title,
+  subtitle,
+  userRoles,
+  isEditing = true,
+  availableRoles = [
+    { value: OrganisationRoleType.member, label: m.profile__role_type__member() },
+    { value: OrganisationRoleType.owner, label: m.profile__role_type__owner() },
+  ],
+  onSearchUsers,
+  onAddUser,
+  onRemoveUser,
+  onRoleChange,
+  class: className = '',
+}: FormUserRolesSectionProps = $props()
+
+let isAdding = $state(false)
+let isRemoving = $state(false)
+
+const sortedRoles = $derived(
+  [...userRoles].sort((a, b) => (a.user.name ?? '').localeCompare(b.user.name ?? '')),
+)
+const userIdSet = $derived(new Set(userRoles.map(userRole => userRole.userId)))
+
+function toImageSrc(value: unknown): string | null {
+  if (typeof value === 'string') return resolveAvatarImageSrc(value)
+  if (value && typeof value === 'object' && 'url' in value) {
+    const urlValue = (value as { url?: unknown }).url
+    return typeof urlValue === 'string' ? resolveAvatarImageSrc(urlValue) : null
+  }
+  return null
+}
+
+const rootClass = $derived(
+  ['bits-form__section min-h-60 basis-2/3 rounded-2xl p-0', className]
+    .filter(Boolean)
+    .join(' '),
+)
+
+function toggleAdding(): void {
+  isAdding = !isAdding
+}
+
+function toggleRemoving(): void {
+  isRemoving = !isRemoving
+}
+
+function handleAddUser(user: User): void {
+  if (userIdSet.has(user.id)) return
+  onAddUser(user)
+}
+
+async function handleSearchUsers(query: string): Promise<User[]> {
+  const results = await onSearchUsers(query)
+  return results.filter(user => !userIdSet.has(user.id))
+}
+
+$effect(() => {
+  if (!isRemoving) return
+  const handleEscape = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape') isRemoving = false
+  }
+  window.addEventListener('keydown', handleEscape)
+  return () => window.removeEventListener('keydown', handleEscape)
+})
+
+$effect(() => {
+  if (!isAdding) return
+  const handleEscape = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape') isAdding = false
+  }
+  window.addEventListener('keydown', handleEscape)
+  return () => window.removeEventListener('keydown', handleEscape)
+})
+
+$effect(() => {
+  if (sortedRoles.length === 0 && isRemoving) {
+    isRemoving = false
+    isAdding = true
+  }
+})
+
+$effect(() => {
+  if (isEditing) return
+  isAdding = false
+  isRemoving = false
+})
+</script>
+
+<section class={rootClass}>
+  <SectionHeader {title} description={subtitle} class="flex-nowrap items-center">
+    {#snippet right()}
+      <FormUserRolesSectionPrimitive.Actions
+        {isAdding}
+        {isRemoving}
+        {isEditing}
+        onToggleAdding={toggleAdding}
+        onToggleRemoving={toggleRemoving}
+      />
+    {/snippet}
+  </SectionHeader>
+
+  {#if isAdding && isEditing}
+    <div transition:slide={{ duration: 200 }}>
+      <Search
+        placeholder="Search users…"
+        focusOnMount={true}
+        onInput={handleSearchUsers}
+        onSelect={handleAddUser}
+        resultMap={{
+          image: (user: User) => toImageSrc(user.image),
+          title: (user: User) => user.name || '-',
+          descriminator: (user: User & { email?: string }) => user.email,
+        }}
+        class="px-2"
+      />
+    </div>
+  {/if}
+
+  {#if isRemoving && isEditing}
+    <div transition:slide={{ duration: 200 }}>
+      <FormUserRolesSectionPrimitive.WarningBar />
+    </div>
+  {/if}
+
+  <UserCard.Wrapper>
+    {#each sortedRoles as userRole (userRole.userId)}
+      <div transition:scale={{ duration: 180, start: 0.94 }}>
+        <UserCard.Root>
+          <UserCard.Avatar
+            name={userRole.user.name}
+            image={toImageSrc(userRole.user.image)}
+          />
+          <UserCard.Body
+            name={userRole.user.name}
+            attribution={userRole.user.attribution}
+          />
+          <UserCard.Actions
+            selectedRole={userRole.role as OrganisationRoleType}
+            roleOptions={availableRoles}
+            {isRemoving}
+            {isEditing}
+            onRoleChange={role => onRoleChange(userRole.userId, role)}
+            onRemove={() => onRemoveUser(userRole.userId)}
+          />
+        </UserCard.Root>
+      </div>
+    {/each}
+  </UserCard.Wrapper>
+</section>

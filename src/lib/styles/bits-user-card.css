@@ -1,4 +1,36 @@
 @layer components {
+  .bits-theme .bits-form__user-card-root {
+    @apply bg-grain relative flex min-h-16 flex-row items-center overflow-hidden rounded-xl border-3 border-primary bg-glass-300 pr-3 shadow-xl;
+  }
+
+  .bits-theme .bits-form__user-card-wrapper {
+    @apply grid grid-cols-1 gap-4 2xl:grid-cols-2;
+  }
+
+  .bits-theme .bits-form__user-card-avatar {
+    @apply h-16 w-16 shrink-0 overflow-hidden bg-glass-100;
+  }
+
+  .bits-theme .bits-form__user-card-avatar-image {
+    @apply block h-full w-full object-cover text-transparent;
+  }
+
+  .bits-theme .bits-form__user-card-avatar-fallback {
+    @apply flex h-full w-full items-center justify-center bg-base-200 text-sm font-semibold uppercase text-base-content;
+  }
+
+  .bits-theme .bits-form__user-card-body {
+    @apply flex min-w-0 flex-1 flex-col justify-center overflow-hidden py-0 pl-4;
+  }
+
+  .bits-theme .bits-form__user-card-body-attribution {
+    @apply w-full truncate text-xs text-primary;
+  }
+
+  .bits-theme .bits-form__user-card-body-name {
+    @apply w-full truncate text-lg font-normal;
+  }
+
   .bits-theme .bits-form__user-card-actions {
     @apply flex shrink-0 items-center gap-2 py-2 pl-2;
   }

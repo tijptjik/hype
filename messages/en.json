@@ -440,6 +440,8 @@
   "number__1": "One",
   "feature__graphemes": "Graphemes",
   "profile__role_type__contributor": "Contributor",
+  "profile__role_type__member": "Member",
+  "profile__role_type__owner": "Owner",
   "omni__title_visited_walks": "Visited",
   "viewer__no_image": "No Image",
   "viewer__tap_to_leave_fullscreen": "Tap to leave fullscreen",

@@ -440,6 +440,8 @@
   "number__1": "一",
   "feature__graphemes": "字素",
   "profile__role_type__contributor": "貢獻者用戶",
+  "profile__role_type__member": "成員",
+  "profile__role_type__owner": "擁有者",
   "omni__title_visited_walks": "去過",
   "viewer__no_image": "沒有圖像",
   "viewer__tap_to_leave_fullscreen": "輕觸畫面以離開全螢幕",
