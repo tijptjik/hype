@@ -10,8 +10,8 @@ import { getHeaderCtrl } from '$lib/context/header.svelte'
 // REMOTE
 import { getOrganisation, organisationForm } from '$lib/api/server/organisation.remote'
 // BITS COMPONENTS
-import { FormI18nSection } from '$lib/bits'
-import { TextArea, TextInput } from '$lib/bits/custom/form'
+import { FormI18nSection, FormSection, GridSpacer } from '$lib/bits'
+import { SectionHeader, TextArea, TextInput } from '$lib/bits/custom/form'
 // ICONS
 import OrganisationIcon from 'virtual:icons/lucide/users-round'
 import FormInputIcon from 'virtual:icons/lucide/form-input'
@@ -263,21 +263,45 @@ $effect(() => {
           {/snippet}
         </FormI18nSection>
 
-        {@const codeInputAttrs = organisationForm.fields.code.as('text')}
-        <TextInput
-          label="Code"
-          {isEditing}
-          value={(codeInputAttrs as { value?: string }).value ?? ''}
-          inputAttrs={codeInputAttrs as Record<string, unknown>}
-        />
+        <GridSpacer>
+          {#snippet left()}
+            <section class="bits-form__i18n-section">
+              <SectionHeader
+                title={m.admin__forms_organisation_members_title()}
+                description={m.admin__forms_organisation_members_subtitle()}
+              />
 
-        {@const urlInputAttrs = organisationForm.fields.url.as('url')}
-        <TextInput
-          label="Url"
-          {isEditing}
-          value={(urlInputAttrs as { value?: string }).value ?? ''}
-          inputAttrs={urlInputAttrs as Record<string, unknown>}
-        />
+              <p class="px-1 text-sm text-base-content/70">
+                Member management placeholder.
+              </p>
+            </section>
+          {/snippet}
+
+          {#snippet right()}
+            {@const codeInputAttrs = organisationForm.fields.code.as('text')}
+            {@const urlInputAttrs = organisationForm.fields.url.as('url')}
+            <section class="bits-form__i18n-section">
+              <SectionHeader title={m.admin__forms_common_specifiers()} />
+              <FormSection>
+                <TextInput
+                  label="Code"
+                  class="font-mono"
+                  {isEditing}
+                  value={(codeInputAttrs as { value?: string }).value ?? ''}
+                  inputAttrs={codeInputAttrs as Record<string, unknown>}
+                />
+
+                <TextInput
+                  label="Url"
+                  class="font-mono"
+                  {isEditing}
+                  value={(urlInputAttrs as { value?: string }).value ?? ''}
+                  inputAttrs={urlInputAttrs as Record<string, unknown>}
+                />
+              </FormSection>
+            </section>
+          {/snippet}
+        </GridSpacer>
       {/if}
     </form>
   </section>

@@ -96,7 +96,6 @@
     overflow-y: hidden;
   }
 
-  /* biome-ignore lint: biome bug */
   .bits-theme .bits-form__control--placeholder::placeholder {
     color: color-mix(in oklab, var(--color-foreground) 55%, transparent);
     font-style: italic;
@@ -178,7 +177,13 @@
   /* I18n Section Layout */
   /* --------- */
   .bits-theme .bits-form__i18n-section {
-    @apply z-10 flex flex-col gap-3 rounded-2xl;
+    @apply z-10 flex flex-col gap-3 rounded-2xl pb-4;
+  }
+
+  .bits-theme
+    .bits-form__i18n-section
+    .bits-btn:not(.bits-btn--modifier-circle):not(.bits-btn--modifier-square) {
+    @apply px-8;
   }
 
   .bits-theme .bits-form__grid-spacer {
@@ -263,7 +268,6 @@
     border-color: color-mix(in oklab, var(--color-primary) 100%, transparent);
   }
 
-  /* biome-ignore lint: biome bug */
   .bits-theme .bits-form__i18n-card::before {
     content: "";
     position: absolute;

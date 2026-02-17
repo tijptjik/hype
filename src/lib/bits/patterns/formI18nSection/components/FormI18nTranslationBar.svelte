@@ -5,9 +5,9 @@ import type { Locale } from '$lib/types'
 import AlertCircle from 'virtual:icons/lucide/alert-circle'
 import Languages from 'virtual:icons/lucide/languages'
 import LoaderCircle from 'virtual:icons/lucide/loader-circle'
-import type { FormI18nLocaleCardProps } from '../formI18nSection.types'
+import type { FormSectionProps } from '../formI18nSection.types'
 
-type Props = Pick<FormI18nLocaleCardProps, 'localeCodeClass' | 'onTranslate'> & {
+type Props = Pick<FormSectionProps, 'localeCodeClass' | 'onTranslate'> & {
   targetLocale: Locale
   isVisible?: boolean
   isEditing?: boolean

@@ -38,12 +38,15 @@ export interface FormI18nHeaderProps {
   right?: Snippet
 }
 
-export interface FormI18nLocaleCardProps {
-  locale: Locale
+export interface FormSectionProps {
+  locale?: Locale
   cardClass?: string
+  contentClass?: string
+  footerClass?: string
   localeCodeClass?: string
   onTranslate?: (sourceLocale: Locale, targetLocale: Locale) => Promise<void>
   isEditing?: boolean
-  children?: Snippet<[Locale]>
-  footer?: Snippet<[Locale]>
+  showTranslationBar?: boolean
+  children?: Snippet | Snippet<[Locale]>
+  footer?: Snippet | Snippet<[Locale]>
 }

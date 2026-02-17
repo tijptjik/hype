@@ -50,12 +50,13 @@ const resolvedGridClass = $derived(
 
   <div class={resolvedGridClass}>
     {#each orderedLocales as locale (locale)}
-      <FormI18nSectionPrimitive.LocaleCard
+      <FormI18nSectionPrimitive.FormSection
         locale={locale as Locale}
         {cardClass}
         {localeCodeClass}
         {onTranslate}
         {isEditing}
+        showTranslationBar={true}
         {children}
         {footer}
       />
