@@ -7,15 +7,6 @@
     @apply z-10 flex flex-col gap-0 rounded-2xl pb-4;
   }
 
-  .bits-theme
-    .bits-form__section
-    .bits-btn:not(.bits-btn--modifier-circle):not(.bits-btn--modifier-square),
-  .bits-theme
-    .bits-form__i18n-section
-    .bits-btn:not(.bits-btn--modifier-circle):not(.bits-btn--modifier-square) {
-    @apply px-8;
-  }
-
   .bits-theme .bits-form__grid-spacer {
     --bits-form-grid-spacer-cols: 3;
     --bits-form-grid-spacer-left-cols: 2;
@@ -49,7 +40,8 @@
   }
 
   .bits-theme .bits-form__section-header {
-    @apply flex min-h-16 flex-wrap items-start justify-between pt-2 pb-4;
+    @apply flex min-h-16 h-16 flex-wrap items-start justify-between pt-2 pb-4;
+    overflow: visible;
   }
 
   .bits-theme .bits-form__section-header-left {
@@ -57,7 +49,12 @@
   }
 
   .bits-theme .bits-form__section-header-right {
-    @apply flex min-w-48 justify-end pr-1;
+    @apply flex min-w-48 justify-end gap-0 pr-1;
+    overflow: visible;
+  }
+
+  .bits-theme .bits-form__section-header-right .bits-btn {
+    max-height: none;
   }
 
   .bits-theme .bits-form__section-header-heading {
