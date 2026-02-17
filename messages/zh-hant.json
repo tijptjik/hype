@@ -393,6 +393,8 @@
   "slimy_helpful_shad_vent": "上一項",
   "curly_flaky_panther_mop": "下一項",
   "tooltip__translated": "已被翻譯",
+  "tooltip__machine_translated": "機器翻譯",
+  "tooltip__human_validated": "人工校驗",
   "awful_even_coyote_wish": "現存有效",
   "camera__access_denied": "相機使用權限被拒絕",
   "camera__access_denied_note": "相機存取權限被拒，你仍可從裝置上載照片",

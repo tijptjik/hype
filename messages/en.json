@@ -393,6 +393,8 @@
   "slimy_helpful_shad_vent": "Previous",
   "curly_flaky_panther_mop": "Next",
   "tooltip__translated": "Translated",
+  "tooltip__machine_translated": "Machine Translated",
+  "tooltip__human_validated": "Human Validated",
   "awful_even_coyote_wish": "Available",
   "camera__access_denied": "Camera Permission Denied",
   "camera__access_denied_note": "Camera access was denied. You can still upload photos from your device.",
