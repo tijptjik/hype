@@ -8,7 +8,9 @@ let {
   src = null,
   alt = '',
   fallback = '',
-  class: className = ''
+  shape = 'circle',
+  fitHeight = false,
+  class: className = '',
 }: AvatarProps = $props()
 
 function getInitials(value?: string | null): string {
@@ -24,19 +26,32 @@ function getInitials(value?: string | null): string {
 
 const resolvedAlt = $derived(alt || (name ? `${name} avatar` : 'Avatar'))
 const resolvedFallback = $derived(fallback || getInitials(name))
+const resolvedSrc = $derived(
+  typeof src === 'string' && src.trim().length > 0 ? src : null,
+)
 const rootClass = $derived(
-  ['relative inline-flex size-10 shrink-0 overflow-hidden rounded-full', className]
+  [
+    'relative inline-flex shrink-0 overflow-hidden',
+    shape === 'circle' ? 'size-10 rounded-full' : 'size-10 rounded-none',
+    fitHeight ? 'h-full w-auto aspect-square' : '',
+    className,
+  ]
     .filter(Boolean)
-    .join(' ')
+    .join(' '),
 )
 </script>
 
 <Avatar.Root class={rootClass}>
-  {#if src}
-    <Avatar.Image {src} alt={resolvedAlt} class="h-full w-full object-cover" />
+  {#if resolvedSrc}
+    <Avatar.Image
+      src={resolvedSrc}
+      alt={resolvedAlt}
+      class="h-full w-full object-cover"
+    />
   {/if}
   <Avatar.Fallback
-    class="flex h-full w-full items-center justify-center bg-base-200 text-sm font-semibold uppercase text-base-content">
+    class="flex h-full w-full items-center justify-center bg-base-200 text-sm font-semibold uppercase text-base-content"
+  >
     {resolvedFallback}
   </Avatar.Fallback>
 </Avatar.Root>
