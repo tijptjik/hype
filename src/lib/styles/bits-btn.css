@@ -1,14 +1,14 @@
 @layer components {
   /* Base */
   .bits-theme .bits-btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-[--radius-input] border px-5.25 active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border px-5.25 active:scale-[0.98];
     --btn-size: 2.75rem;
     --btn-base-size: 2.75rem;
     --btn-base-label-size: 1rem;
     --btn-label-multiplier: 0.2;
     --btn-label-penalty: 0.25;
     --btn-icon-ratio: 0.5;
-    --btn-padding-ratio: 0.4;
+    --btn-padding-x: 1.3125rem;
     height: var(--btn-size);
     max-height: 100%;
     font-size: calc(
@@ -32,7 +32,7 @@
     border-color: var(--btn-border);
     background-color: var(--btn-bg);
     color: var(--btn-fg);
-    padding-inline: calc(var(--btn-size) * var(--btn-padding-ratio));
+    padding-inline: var(--btn-padding-x);
   }
 
   /* Interactive states */
@@ -40,6 +40,13 @@
     border-color: var(--btn-hover-border, var(--btn-border));
     background-color: var(--btn-hover-bg, var(--btn-bg));
     color: var(--btn-hover-fg, var(--btn-fg));
+  }
+
+  .bits-theme .bits-btn:focus-visible:not(:disabled):not([aria-disabled="true"]) {
+    border-color: var(--btn-hover-border, var(--btn-border));
+    background-color: var(--btn-hover-bg, var(--btn-bg));
+    color: var(--btn-hover-fg, var(--btn-fg));
+    outline: none;
   }
 
   .bits-theme .bits-btn:active:not(:disabled):not([aria-disabled="true"]) {
@@ -106,22 +113,27 @@
   /* Size variants */
   .bits-theme .bits-btn--size-xs {
     --btn-size: calc(var(--btn-base-size) * 0.5);
+    --btn-padding-x: 0.75rem;
   }
 
   .bits-theme .bits-btn--size-sm {
     --btn-size: calc(var(--btn-base-size) * 0.75);
+    --btn-padding-x: 1rem;
   }
 
   .bits-theme .bits-btn--size-md {
     --btn-size: var(--btn-base-size);
+    --btn-padding-x: 1.3125rem;
   }
 
   .bits-theme .bits-btn--size-lg {
     --btn-size: calc(var(--btn-base-size) * 1.25);
+    --btn-padding-x: 1.5rem;
   }
 
   .bits-theme .bits-btn--size-xl {
     --btn-size: calc(var(--btn-base-size) * 1.5);
+    --btn-padding-x: 1.75rem;
   }
 
   /* Modifiers */
