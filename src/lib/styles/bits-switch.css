@@ -5,7 +5,9 @@
 }
 
 @layer components {
-  /* Field + labels */
+  /* ----------------- */
+  /* Field + Labels */
+  /* --------- */
   .bits-theme .bits-switch-field {
     --switch-size-base: 2rem;
     --switch-size: var(--switch-size-base);
@@ -66,28 +68,48 @@
     opacity: 0.7;
   }
 
-  /* Base switch */
+  .bits-theme .bits-switch-field--display .bits-switch-label {
+    cursor: not-allowed;
+    opacity: 1;
+  }
+
+  /* ----------------- */
+  /* Base Switch */
+  /* --------- */
   .bits-theme .bits-switch {
     --switch-size-base: 2rem;
+    --switch-scale: 1;
     --switch-size: var(--switch-size-base);
     --switch-height: calc(var(--switch-size));
-    --switch-width: calc(var(--switch-height) * 1.666666667);
-    --switch-border-width: 1px;
-    --switch-padding-ratio: 0.08;
+    --switch-width: calc(var(--switch-height) * 1.782);
+    --switch-border-width-base: 3px;
+    --switch-border-width: calc(var(--switch-border-width-base) * var(--switch-scale));
+    --switch-padding-ratio: 0.11;
     --switch-padding: calc(var(--switch-height) * var(--switch-padding-ratio));
-    --switch-thumb-size: calc(var(--switch-height) - (var(--switch-padding) * 2));
-    --switch-translate-checked: calc(
+    --switch-inner-height: calc(
+      var(--switch-height) -
+      ((var(--switch-padding) + var(--switch-border-width)) * 2)
+    );
+    --switch-inner-width: calc(
       var(--switch-width) -
-      var(--switch-thumb-size) -
-      (var(--switch-padding) * 2) -
-      (var(--switch-border-width) * 2)
+      ((var(--switch-padding) + var(--switch-border-width)) * 2)
+    );
+    --switch-thumb-size: var(--switch-inner-height);
+    --switch-translate-checked: calc(
+      var(--switch-inner-width) -
+      var(--switch-thumb-size)
     );
     --switch-translate-indeterminate: calc(var(--switch-translate-checked) / 2);
 
     --switch-neutral-color: var(--color-neutral);
     --switch-current-color: var(--switch-left-color, var(--switch-neutral-color));
+    --switch-inner-border-color: color-mix(
+      in oklab,
+      var(--color-contrast) 75%,
+      transparent
+    );
 
-    @apply inline-flex shrink-0 cursor-pointer items-center rounded-full;
+    @apply relative inline-flex shrink-0 cursor-pointer items-center rounded-full;
     width: var(--switch-width);
     min-width: var(--switch-width);
     height: var(--switch-height);
@@ -102,18 +124,37 @@
       color 0.15s ease;
   }
 
+  /* biome-ignore lint: biome bug */
+  .bits-theme .bits-switch::before {
+    content: "";
+    position: absolute;
+    inset: var(--switch-border-width);
+    border-radius: inherit;
+    border: 1px solid var(--switch-inner-border-color);
+    pointer-events: none;
+    z-index: 0;
+    transition: border-color 0.15s ease;
+  }
+
+  /* ----------------- */
+  /* State Styles */
+  /* --------- */
   .bits-theme .bits-switch[data-state="unchecked"] {
-    --switch-current-color: var(--switch-left-color, var(--switch-neutral-color));
-    background-color: transparent;
+    --switch-current-color: rgba(202, 202, 202, 0.77);
+    background-color: #313131cc;
+    box-shadow: none;
   }
 
   .bits-theme .bits-switch--states-3[data-state="unchecked"] {
-    background-color: color-mix(in oklab, var(--switch-current-color) 28%, transparent);
+    --switch-current-color: rgba(202, 202, 202, 0.77);
+    background-color: #313131cc;
+    box-shadow: none;
   }
 
   .bits-theme .bits-switch[data-state="indeterminate"] {
     --switch-current-color: var(--switch-mid-color, var(--switch-neutral-color));
     background-color: transparent;
+    box-shadow: none;
   }
 
   .bits-theme .bits-switch[data-state="checked"] {
@@ -121,20 +162,32 @@
     background-color: color-mix(
       in oklab,
       var(--switch-current-color) var(--switch-track-on-mix, 28%),
-      transparent
+      #313131cc
     );
+    box-shadow: none;
   }
 
+  /* ----------------- */
+  /* Disabled State */
+  /* --------- */
   .bits-theme .bits-switch:disabled,
   .bits-theme .bits-switch[aria-disabled="true"] {
     cursor: not-allowed;
     pointer-events: none;
-    opacity: 0.5;
   }
 
+  .bits-theme .bits-switch:not(.bits-switch--display):disabled,
+  .bits-theme .bits-switch:not(.bits-switch--display)[aria-disabled="true"] {
+    opacity: 0.7;
+  }
+
+  /* ----------------- */
   /* Thumb */
+  /* --------- */
   .bits-theme .bits-switch__thumb {
     @apply pointer-events-none inline-flex shrink-0 items-center justify-center rounded-full;
+    position: relative;
+    z-index: 1;
     width: var(--switch-thumb-size);
     height: var(--switch-thumb-size);
     border-width: var(--switch-border-width);
@@ -162,42 +215,44 @@
     --switch-thumb-x: var(--switch-translate-checked);
   }
 
-  /* Size variants */
+  /* ----------------- */
+  /* Size Variants */
+  /* --------- */
   .bits-theme .bits-switch--size-xs {
+    --switch-scale: 0.5;
     --switch-size: calc(var(--switch-size-base) * 0.5);
-    --switch-padding-ratio: 0.16;
   }
   .bits-theme .bits-switch-field--size-xs {
     --switch-size: calc(var(--switch-size-base) * 0.5);
   }
 
   .bits-theme .bits-switch--size-sm {
+    --switch-scale: 0.75;
     --switch-size: calc(var(--switch-size-base) * 0.75);
-    --switch-padding-ratio: 0.13;
   }
   .bits-theme .bits-switch-field--size-sm {
     --switch-size: calc(var(--switch-size-base) * 0.75);
   }
 
   .bits-theme .bits-switch--size-md {
+    --switch-scale: 1;
     --switch-size: var(--switch-size-base);
-    --switch-padding-ratio: 0.11;
   }
   .bits-theme .bits-switch-field--size-md {
     --switch-size: var(--switch-size-base);
   }
 
   .bits-theme .bits-switch--size-lg {
+    --switch-scale: 1.25;
     --switch-size: calc(var(--switch-size-base) * 1.25);
-    --switch-padding-ratio: 0.1;
   }
   .bits-theme .bits-switch-field--size-lg {
     --switch-size: calc(var(--switch-size-base) * 1.25);
   }
 
   .bits-theme .bits-switch--size-xl {
+    --switch-scale: 1.5;
     --switch-size: calc(var(--switch-size-base) * 1.5);
-    --switch-padding-ratio: 0.1;
   }
   .bits-theme .bits-switch-field--size-xl {
     --switch-size: calc(var(--switch-size-base) * 1.5);

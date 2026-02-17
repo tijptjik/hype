@@ -96,7 +96,7 @@
     grid-column: 1;
     font-size: var(--header-description-size);
     line-height: var(--header-line-height);
-    color: color-mix(in oklab, var(--color-base-content) 54%, black);
+    color: color-mix(in oklab, var(--color-base-content));
     margin: 0;
     text-align: left;
   }
