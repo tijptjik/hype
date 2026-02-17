@@ -1,46 +1,47 @@
 <script lang="ts">
 // SVELTE
-import { flip } from 'svelte/animate';
-import { fade } from 'svelte/transition';
-import { draggable, droppable } from '@thisux/sveltednd';
+import { flip } from 'svelte/animate'
+import { fade } from 'svelte/transition'
+import { draggable, droppable } from '@thisux/sveltednd'
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
-import { Plus, Bars3, XMark, Trash } from '@steeze-ui/heroicons';
-import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
+import Icon from '$lib/components/common/Icon.svelte'
+import { Plus, Bars3, XMark, Trash } from '@steeze-ui/heroicons'
+import ErrorLabel from '$lib/components/forms/labels/Error.svelte'
 // TYPES
-import type { DragDropState } from '@thisux/sveltednd';
-import type { IntermediateValue, ListFieldProps, Locale } from '$lib/types';
+import type { DragDropState } from '@thisux/sveltednd'
+import type { IntermediateValue, ListFieldProps, Locale } from '$lib/types'
 
 // STATE : PROPS
-let fieldProps: ListFieldProps = $props();
+let fieldProps: ListFieldProps = $props()
 let { locale, fieldRoot, fieldIndex, fieldKey, field, actions, actionProps } =
-  fieldProps;
+  fieldProps
 
 // STATE : FORM
-const { constraints, errors } = fieldProps.form;
+const constraints = $derived(fieldProps.form.constraints)
+const errors = $derived(fieldProps.form.errors)
 
-let isDragging = $derived(actionProps.dragMode);
+let isDragging = $derived(actionProps.dragMode)
 
 function handleDrop(state: DragDropState<IntermediateValue>) {
-  const { draggedItem, targetContainer } = state;
+  const { draggedItem, targetContainer } = state
   const dragIndex = fieldProps.values.findIndex(
-    (item: IntermediateValue) => item.id === draggedItem.id
-  );
-  const dropIndex = parseInt(targetContainer ?? '0');
+    (item: IntermediateValue) => item.id === draggedItem.id,
+  )
+  const dropIndex = parseInt(targetContainer ?? '0')
 
   // Swap items
   if (dragIndex !== -1 && !isNaN(dropIndex)) {
-    const [item] = fieldProps.values.splice(dragIndex, 1);
-    fieldProps.values.splice(dropIndex, 0, item);
+    const [item] = fieldProps.values.splice(dragIndex, 1)
+    fieldProps.values.splice(dropIndex, 0, item)
   }
   // Update ranks
   fieldProps.values.forEach((value, index) => {
-    value.rank = index + 1;
-  });
+    value.rank = index + 1
+  })
   // Sync up to form
-  actions.syncUp();
+  actions.syncUp()
 }
 </script>
 
@@ -62,7 +63,8 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
     <button
       class="btn btn-ghost btn-sm"
       onclick={actions.add}
-      disabled={actionProps.removeMode}>
+      disabled={actionProps.removeMode}
+    >
       <Icon src={Plus} class="h-4 w-4" />
       {m.wacky_home_sawfish_accept()}
     </button>
@@ -73,7 +75,8 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
         e.stopPropagation();
         actionProps.removeMode = !actionProps.removeMode;
         actionProps.removeModeLocale = locale;
-      }}>
+      }}
+    >
       <Icon src={XMark} class="h-4 w-4" />
       {actionProps.removeMode ? m.cancel() : m.watery_trite_shrimp_clip()}
     </button>
@@ -122,10 +125,12 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
               // Silently handle invalid drag data
             }
           }
-        }}>
+        }}
+      >
         {#if actionProps.removeMode && actionProps.confirmingId === property.id && actionProps.removeModeLocale === locale}
           <div
-            class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-200 bg-opacity-80">
+            class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-200 bg-opacity-80"
+          >
             <div class="flex flex-col items-center gap-4 p-4">
               <div class="flex items-center gap-2">
                 <!-- <Icon src={ExclamationTriangle} class="h-8 w-8 text-error" /> -->
@@ -138,7 +143,8 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
                     e.preventDefault();
                     e.stopPropagation();
                     actionProps.confirmingId = undefined;
-                  }}>
+                  }}
+                >
                   {m.cancel()}
                 </button>
                 <button
@@ -148,7 +154,8 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
                     e.stopPropagation();
                     actions.remove(e, property.id);
                     actionProps.confirmingId = undefined;
-                  }}>
+                  }}
+                >
                   {m.whole_deft_penguin_enchant()}
                 </button>
               </div>
@@ -217,7 +224,8 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
             if (containerElement) {
               containerElement.classList.remove('dragging-original');
             }
-          }}>
+          }}
+        >
           <Icon src={Bars3} class="h-4 w-4" />
         </div>
         <div
@@ -239,7 +247,8 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
             if (document.activeElement !== e.currentTarget) {
               e.currentTarget.focus();
             }
-          }}>
+          }}
+        >
           {property[locale]}
         </div>
         {#if actionProps.removeMode && actionProps.removeModeLocale === locale}
@@ -250,7 +259,8 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
               e.preventDefault();
               actionProps.confirmingId = property.id;
               actionProps.removeModeLocale = locale as Locale;
-            }}>
+            }}
+          >
             <Icon src={Trash} class="h-4 w-4" />
           </button>
         {/if}
@@ -263,11 +273,12 @@ function handleDrop(state: DragDropState<IntermediateValue>) {
     locale={locale as Locale}
     {fieldRoot}
     {fieldIndex}
-    {fieldKey} />
+    {fieldKey}
+  />
 </div>
 
 <style>
-@reference '../../../styles/app.css';
+@reference "../../../styles/app.css";
 
 :global(.dragging) {
   /* @ts-ignore */
