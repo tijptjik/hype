@@ -1,6 +1,8 @@
 <script lang="ts">
 // BITS COMPONENTS
 import { Button } from '$lib/bits/core'
+// I18N
+import { m } from '$lib/i18n'
 // ICONS
 import Eye from 'virtual:icons/lucide/eye'
 import EyeOff from 'virtual:icons/lucide/eye-off'
@@ -25,9 +27,11 @@ let {
   onPublishToggle,
 }: HeaderFormActionsProps = $props()
 
-const primaryLabel = $derived(!isEditing ? 'Edit' : isTainted ? 'Reset' : 'Cancel')
-const deleteLabel = $derived(isDeleted ? 'Restore' : 'Delete')
-const publishLabel = $derived(isPublished ? 'Unpublish' : 'Publish')
+const primaryLabel = $derived(
+  !isEditing ? m.forms__edit() : isTainted ? m.forms__reset() : m.cancel(),
+)
+const deleteLabel = $derived(isDeleted ? m.forms__restore() : m.forms__delete())
+const publishLabel = $derived(isPublished ? m.forms__unpublish() : m.forms__publish())
 
 function handlePrimaryAction(): void {
   if (!isEditing) {
@@ -73,15 +77,6 @@ function handlePrimaryAction(): void {
 {/snippet}
 
 <div class="bits-pattern-header__form-actions">
-  <Button
-    text={primaryLabel}
-    color="neutral"
-    style="ghost"
-    icon={primaryIcon}
-    {hideLabel}
-    onClick={handlePrimaryAction}
-  />
-
   {#if isEditing}
     <Button
       text={deleteLabel}
@@ -93,13 +88,31 @@ function handlePrimaryAction(): void {
     />
 
     <Button
-      text="Save"
+      text={m.forms__save()}
       color="neutral"
       style="ghost"
       icon={saveIcon}
       {hideLabel}
       disabled={!isTainted}
       onClick={() => onSave?.()}
+    />
+
+    <Button
+      text={primaryLabel}
+      color="neutral"
+      style="ghost"
+      icon={primaryIcon}
+      {hideLabel}
+      onClick={handlePrimaryAction}
+    />
+  {:else}
+    <Button
+      text={primaryLabel}
+      color="neutral"
+      style="ghost"
+      icon={primaryIcon}
+      {hideLabel}
+      onClick={handlePrimaryAction}
     />
   {/if}
 

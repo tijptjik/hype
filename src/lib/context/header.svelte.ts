@@ -50,6 +50,7 @@ export class HeaderCtrl {
   /** Reactive header state consumed by the header adapter/components. */
   state: HeaderCtrlState = $state({
     controlsMode: 'auto',
+    isEditing: false,
     visibility: {},
     meta: {
       title: '',
@@ -65,6 +66,15 @@ export class HeaderCtrl {
    */
   private showControls(mode: HeaderControlsMode): void {
     this.state.controlsMode = mode
+  }
+
+  /**
+   * Set edit/view mode for form-oriented pages.
+   * @param isEditing - True when form fields should be editable.
+   * @returns void
+   */
+  setEditing(isEditing: boolean): void {
+    this.state.isEditing = isEditing
   }
 
   /**
@@ -151,6 +161,7 @@ export class HeaderCtrl {
    */
   reset(): void {
     this.state.controlsMode = 'auto'
+    this.state.isEditing = false
     this.state.visibility = {}
     this.clearMeta()
   }

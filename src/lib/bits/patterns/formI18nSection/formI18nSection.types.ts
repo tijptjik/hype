@@ -1,7 +1,7 @@
 import type { Locale } from '$lib/types'
 import type {
   SectionHeaderAction,
-  SectionHeaderFormFlag,
+  SectionHeaderFlag,
   SectionHeaderInfoTrigger,
 } from '$lib/bits/custom/form/sectionHeader.types'
 import type { Snippet } from 'svelte'
@@ -15,8 +15,10 @@ export interface FormI18nSectionProps {
   gridClass?: string
   cardClass?: string
   localeCodeClass?: string
+  onTranslate?: (sourceLocale: Locale, targetLocale: Locale) => Promise<void>
+  isEditing?: boolean
   headerActions?: Snippet
-  formFlags?: SectionHeaderFormFlag[]
+  sectionFlags?: SectionHeaderFlag[]
   actions?: SectionHeaderAction[]
   infoTrigger?: SectionHeaderInfoTrigger | SectionHeaderInfoTrigger[]
   left?: Snippet
@@ -29,7 +31,7 @@ export interface FormI18nHeaderProps {
   title?: string
   subtitle?: string
   headerActions?: Snippet
-  formFlags?: SectionHeaderFormFlag[]
+  sectionFlags?: SectionHeaderFlag[]
   actions?: SectionHeaderAction[]
   infoTrigger?: SectionHeaderInfoTrigger | SectionHeaderInfoTrigger[]
   left?: Snippet
@@ -40,6 +42,8 @@ export interface FormI18nLocaleCardProps {
   locale: Locale
   cardClass?: string
   localeCodeClass?: string
+  onTranslate?: (sourceLocale: Locale, targetLocale: Locale) => Promise<void>
+  isEditing?: boolean
   children?: Snippet<[Locale]>
   footer?: Snippet<[Locale]>
 }

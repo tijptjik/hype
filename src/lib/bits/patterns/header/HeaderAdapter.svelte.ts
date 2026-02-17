@@ -24,7 +24,6 @@ export function useHeaderAdapter(
   const headerCtrl = getHeaderCtrl()
   let query = $state('')
   let crumbs: HeaderCrumb[] = $state([])
-  let isEditing = $state(false)
 
   // Narrow unknown resource keys to filterable resource keys.
   function isFilterResource(value: unknown): value is keyof FilterState {
@@ -100,6 +99,7 @@ export function useHeaderAdapter(
   )
   const currentUserImage = $derived(currentUser?.image ?? null)
   const controlsMode = $derived(headerCtrl.state.controlsMode)
+  const isEditing = $derived(headerCtrl.state.isEditing)
   const visibility = $derived(headerCtrl.state.visibility)
   const headerTitle = $derived(headerCtrl.state.meta.title)
   const headerIcon = $derived(headerCtrl.state.meta.icon)
@@ -117,7 +117,7 @@ export function useHeaderAdapter(
   $effect(() => {
     adminCtx.activeResourceType
     adminCtx.activeResourceRef
-    isEditing = false
+    headerCtrl.setEditing(false)
   })
 
   // Apply free-text filter changes to the currently active resource list.
@@ -173,7 +173,7 @@ export function useHeaderAdapter(
 
   // Toggle field edit/view mode for modal-style form components.
   function handleEditingToggle(next: boolean): void {
-    isEditing = next
+    headerCtrl.setEditing(next)
   }
 
   // Form submit handling is pending form context migration.
