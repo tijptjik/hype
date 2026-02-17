@@ -71,6 +71,10 @@
     background-color: var(--color-glass-100);
   }
 
+  .bits-theme .bits-form__control-wrap--textarea {
+    min-height: 118px;
+  }
+
   .bits-theme .bits-form__control-wrap:focus-within {
     border-color: color-mix(in oklab, var(--color-primary) 60%, transparent);
     box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-primary) 25%, transparent);
@@ -120,7 +124,6 @@
 
   .bits-theme .bits-form__control--textarea.bits-form__control--display {
     white-space: pre-wrap;
-    min-height: 7.25rem;
     padding-bottom: 10px;
   }
 
