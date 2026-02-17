@@ -1,18 +1,21 @@
 <script lang="ts">
 // BITS COMPONENTS
 import { Switch } from '$lib/bits/custom'
-import type { ButtonColor, ButtonSize } from '$lib/bits/core/button/button.types'
+import type { ButtonSize } from '$lib/bits/core/button/button.types'
+import type { SwitchColor } from '$lib/bits/custom/switch/switch.types'
 
 const sizes: ButtonSize[] = ['xs', 'sm', 'md', 'lg', 'xl']
-const colors: ButtonColor[] = [
+const colors: SwitchColor[] = [
   'neutral',
+  'light',
+  'dark',
   'primary',
   'secondary',
   'accent',
   'info',
   'success',
   'warning',
-  'error'
+  'error',
 ]
 
 let biState = $state(true)
@@ -28,7 +31,9 @@ let triHoverState = $state<boolean | null>(null)
 </script>
 
 <main class="h-full overflow-y-auto p-6">
-  <section class="bits-theme space-y-10 rounded-xl border border-base-300 bg-base-100 p-6">
+  <section
+    class="bits-theme space-y-10 rounded-xl border border-base-300 bg-base-100 p-6"
+  >
     <h1 class="text-xl font-semibold text-foreground">Switch Variations</h1>
 
     <div class="space-y-4">
@@ -38,7 +43,9 @@ let triHoverState = $state<boolean | null>(null)
       <div class="flex flex-wrap items-center gap-8">
         <label class="flex items-center gap-3">
           <Switch bind:checked={biState} name="enabled-switch" id="enabled-switch" />
-          <span class="text-sm text-foreground">Bi-state ({biState ? 'on' : 'off'})</span>
+          <span class="text-sm text-foreground"
+            >Bi-state ({biState ? 'on' : 'off'})</span
+          >
         </label>
 
         <label class="flex items-center gap-3">
@@ -48,7 +55,8 @@ let triHoverState = $state<boolean | null>(null)
             name="tri-switch"
             id="tri-switch"
             rightColor="secondary"
-            leftColor="primary" />
+            leftColor="primary"
+          />
           <span class="text-sm text-foreground">
             Tri-state ({triState === null ? 'unset' : triState ? 'on' : 'off'})
           </span>
@@ -68,8 +76,11 @@ let triHoverState = $state<boolean | null>(null)
               {size}
               color="primary"
               id={`size-${size}`}
-              name={`size-${size}`} />
-            <span class="text-xs uppercase tracking-wide text-foreground-alt">{size}</span>
+              name={`size-${size}`}
+            />
+            <span class="text-xs uppercase tracking-wide text-foreground-alt"
+              >{size}</span
+            >
           </div>
         {/each}
       </div>
@@ -87,7 +98,8 @@ let triHoverState = $state<boolean | null>(null)
             color="primary"
             rightText={`Size ${size.toUpperCase()}`}
             id={`size-label-${size}`}
-            name={`size-label-${size}`} />
+            name={`size-label-${size}`}
+          />
         {/each}
       </div>
     </div>
@@ -99,8 +111,15 @@ let triHoverState = $state<boolean | null>(null)
       <div class="flex flex-wrap items-center gap-5">
         {#each colors as color}
           <div class="flex flex-col items-center gap-2">
-            <Switch checked={true} {color} id={`color-${color}`} name={`color-${color}`} />
-            <span class="text-xs uppercase tracking-wide text-foreground-alt">{color}</span>
+            <Switch
+              checked={true}
+              {color}
+              id={`color-${color}`}
+              name={`color-${color}`}
+            />
+            <span class="text-xs uppercase tracking-wide text-foreground-alt"
+              >{color}</span
+            >
           </div>
         {/each}
       </div>
@@ -122,9 +141,51 @@ let triHoverState = $state<boolean | null>(null)
         </div>
 
         <div class="flex items-center gap-3 opacity-70">
-          <Switch checked={null} states={3} disabled={true} id="disabled-indeterminate-switch" />
+          <Switch
+            checked={null}
+            states={3}
+            disabled={true}
+            id="disabled-indeterminate-switch"
+          />
           <span class="text-sm text-foreground">Indeterminate</span>
         </div>
+      </div>
+    </div>
+
+    <div class="space-y-4">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+        Display Only
+      </h2>
+      <div class="flex flex-wrap items-center gap-8">
+        <div class="flex items-center gap-3">
+          <Switch checked={true} isDisplay={true} id="display-on-switch" />
+          <span class="text-sm text-foreground">On</span>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <Switch checked={false} isDisplay={true} id="display-off-switch" />
+          <span class="text-sm text-foreground">Off</span>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <Switch
+            checked={null}
+            states={3}
+            isDisplay={true}
+            id="display-indeterminate-switch"
+          />
+          <span class="text-sm text-foreground">Indeterminate</span>
+        </div>
+
+        <Switch
+          checked={true}
+          isDisplay={true}
+          leftText="Inactive"
+          rightText="Active"
+          color="light"
+          id="display-label-switch"
+          name="display-label-switch"
+        />
       </div>
     </div>
 
@@ -141,7 +202,8 @@ let triHoverState = $state<boolean | null>(null)
           bind:checked={labelLeftRight}
           leftText="Disabled"
           rightText="Enabled"
-          color="success" />
+          color="success"
+        />
         <Switch
           bind:checked={labelAll}
           states={3}
@@ -149,7 +211,8 @@ let triHoverState = $state<boolean | null>(null)
           rightText="Yes"
           topText="Availability"
           leftColor="warning"
-          rightColor="success" />
+          rightColor="success"
+        />
         <Switch
           bind:checked={triHoverState}
           states={3}
@@ -158,7 +221,8 @@ let triHoverState = $state<boolean | null>(null)
           topText="Tri-state hover labels"
           showLabelsOnHoverOnly={true}
           leftColor="success"
-          rightColor="error" />
+          rightColor="error"
+        />
       </div>
     </div>
   </section>

@@ -371,6 +371,7 @@ export type HeaderMetaState = {
 
 export type HeaderCtrlState = {
   controlsMode: HeaderControlsMode
+  isEditing: boolean
   visibility: HeaderVisibilityOverrides
   meta: HeaderMetaState
 }
