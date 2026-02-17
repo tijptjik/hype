@@ -1,5 +1,6 @@
 <script lang="ts">
 import { Avatar } from 'bits-ui'
+import { resolveAvatarImageSrc } from '$lib/utils/avatar'
 // TYPES
 import type { AvatarProps } from './avatar.types'
 
@@ -27,7 +28,7 @@ function getInitials(value?: string | null): string {
 const resolvedAlt = $derived(alt || (name ? `${name} avatar` : 'Avatar'))
 const resolvedFallback = $derived(fallback || getInitials(name))
 const resolvedSrc = $derived(
-  typeof src === 'string' && src.trim().length > 0 ? src : null,
+  typeof src === 'string' && src.trim().length > 0 ? resolveAvatarImageSrc(src) : null,
 )
 const rootClass = $derived(
   [
