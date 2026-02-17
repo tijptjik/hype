@@ -2,7 +2,7 @@ import type { Locale } from '$lib/types'
 import type {
   SectionHeaderAction,
   SectionHeaderFlag,
-  SectionHeaderInfoTrigger,
+  SectionHeaderTrigger,
 } from '$lib/bits/custom/form/sectionHeader.types'
 import type { Snippet } from 'svelte'
 
@@ -18,9 +18,9 @@ export interface FormI18nSectionProps {
   onTranslate?: (sourceLocale: Locale, targetLocale: Locale) => Promise<void>
   isEditing?: boolean
   headerActions?: Snippet
-  sectionFlags?: SectionHeaderFlag[]
+  flags?: SectionHeaderFlag[]
   actions?: SectionHeaderAction[]
-  infoTrigger?: SectionHeaderInfoTrigger | SectionHeaderInfoTrigger[]
+  triggers?: SectionHeaderTrigger[]
   left?: Snippet
   right?: Snippet
   children?: Snippet<[Locale]>
@@ -33,7 +33,7 @@ export interface FormI18nHeaderProps {
   headerActions?: Snippet
   sectionFlags?: SectionHeaderFlag[]
   actions?: SectionHeaderAction[]
-  infoTrigger?: SectionHeaderInfoTrigger | SectionHeaderInfoTrigger[]
+  triggers?: SectionHeaderTrigger[]
   left?: Snippet
   right?: Snippet
 }
