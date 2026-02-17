@@ -72,6 +72,7 @@ function handleClick(event: MouseEvent) {
     {type}
     class={classes}
     aria-label={shouldHideLabel ? text : undefined}
+    tabindex={disabled ? -1 : 0}
     {disabled}
     onclick={handleClick}
   >
