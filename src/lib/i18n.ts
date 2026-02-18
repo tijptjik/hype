@@ -6,10 +6,10 @@ import type {
   FeaturePropertyI18nDB,
   Locale,
   Neighbourhood,
+  OrganisationFormLocaleKey,
   PropertyValueI18nDB,
   UserPreferences,
 } from '$lib/types'
-import type { AppCtx } from './context/app.svelte'
 import type { Resource } from '$lib/types'
 import { supportedLocales } from './enums'
 
@@ -40,6 +40,12 @@ export function getLocaleOrder(locale: Locale): Locale[] {
   return ['zh-hans', 'zh-hant', 'en']
 }
 
+export function toOrganisationFormLocaleKey(locale: Locale): OrganisationFormLocaleKey {
+  if (locale === 'zh-hans') return 'zhHans'
+  if (locale === 'zh-hant') return 'zhHant'
+  return 'en'
+}
+
 /**
  * Get the fallback locales for a given locale.
  * @param locale - The locale to get the fallback locales for.
@@ -47,24 +53,6 @@ export function getLocaleOrder(locale: Locale): Locale[] {
  */
 export function getFallbackLocales(locale: Locale): Locale[] {
   return supportedLocales.filter((nextLocale: Locale) => nextLocale !== locale)
-}
-
-/**
- * Get user preferences with safe defaults
- * @param userPreferences - User preferences from sessionUser
- * @returns UserPreferences with defaults applied
- */
-function getUserPreferencesWithDefaults(
-  userPreferences?: Partial<UserPreferences>,
-): UserPreferences {
-  return {
-    fallbackLocales:
-      userPreferences?.fallbackLocales || getFallbackLocales(getLocale()),
-    allowMachineTranslation: userPreferences?.allowMachineTranslation ?? false,
-    preferFallbackInCurrentLocale:
-      userPreferences?.preferFallbackInCurrentLocale ?? false,
-    isTranslateButtonVisible: userPreferences?.isTranslateButtonVisible ?? true,
-  }
 }
 
 /**
