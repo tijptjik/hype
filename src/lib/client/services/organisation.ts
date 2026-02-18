@@ -29,9 +29,32 @@ function normalizeOrganisationFormLocale(
   }
 }
 
-export function toOrganisationFormInput(data: Organisation): OrganisationFormInput {
+export function toOrganisationFormInput(
+  data?: Organisation | null,
+): OrganisationFormInput {
+  if (!data) {
+    return {
+      meta: { mode: 'create', isAdminRequest: true },
+      data: {
+        code: '',
+        url: '',
+        i18n: {
+          en: normalizeOrganisationFormLocale(undefined),
+          zhHans: normalizeOrganisationFormLocale(undefined),
+          zhHant: normalizeOrganisationFormLocale(undefined),
+        },
+        userRoles: [],
+      },
+    }
+  }
+
   return {
-    meta: { id: data.id, updatedAt: data.modifiedAt, isAdminRequest: true },
+    meta: {
+      id: data.id,
+      updatedAt: data.modifiedAt,
+      mode: 'update',
+      isAdminRequest: true,
+    },
     data: {
       code: data.code,
       url: data.url ?? '',
