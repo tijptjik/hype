@@ -13,6 +13,38 @@ import { v7 } from 'uuid'
 
 type Awaitable<T> = T | PromiseLike<T>
 
+const META_HIDDEN_ATTR = 'data-remote-meta-hidden'
+const META_KEYS = ['id', 'updatedAt', 'mode', 'isAdminRequest'] as const
+
+// Insert meta hidden inputs into the form
+// This is necessary because the form data is not available in the `onsubmit` hook.
+const syncMetaHiddenInputs = (
+  formEl: HTMLFormElement | undefined,
+  meta: unknown,
+): void => {
+  if (!formEl) return
+
+  for (const existing of Array.from(
+    formEl.querySelectorAll(`input[${META_HIDDEN_ATTR}="true"]`),
+  )) {
+    existing.remove()
+  }
+
+  if (!meta || typeof meta !== 'object') return
+  const metaRecord = meta as Record<string, unknown>
+
+  for (const key of META_KEYS) {
+    const value = metaRecord[key]
+    if (value === undefined) continue
+    const input = document.createElement('input')
+    input.type = 'hidden'
+    input.name = `meta.${key}`
+    input.value = String(value)
+    input.setAttribute(META_HIDDEN_ATTR, 'true')
+    formEl.appendChild(input)
+  }
+}
+
 export function use<T>(
   args:
     | (() => T)
@@ -183,7 +215,13 @@ export function configureForm<Input extends RemoteFormInput = RemoteFormInput>(
         }
       }),
       {
-        onsubmit: focusInvalid,
+        onsubmit: () => {
+          syncMetaHiddenInputs(
+            formEl,
+            (form.fields.value() as { meta?: unknown })?.meta,
+          )
+          return focusInvalid()
+        },
         oninput: () => {
           if (lastIssues) debouncedValidate.call()
         },
