@@ -53,46 +53,23 @@ export async function handleResourceFormSubmissionResult({
   headerCtrl,
   refreshResource,
   entity,
-  locale,
-  formLocaleKey,
-  formLocaleValues,
-  resourceLocaleValues,
   resourceValues,
   invalidMessage = m.forms__invalid(),
   fallbackErrorMessage = m.long_crazy_peacock_care(),
   successPrefix = m.tidy_game_jellyfish_pop(),
 }: ResourceFormSubmissionResultParams): Promise<void> {
-  const asTrimmedString = (value: unknown): string => {
-    if (typeof value !== 'string') return ''
-    return value.trim()
-  }
-
-  const resolvedLocale = locale ?? getLocale()
-  const resolvedFormLocaleKey =
-    formLocaleKey ?? toOrganisationFormLocaleKey(resolvedLocale)
+  const asTrimmedString = (value: unknown): string =>
+    typeof value === 'string' ? value.trim() : ''
 
   const entityData =
     entity && typeof entity === 'object'
       ? ((entity as { data?: Record<string, unknown> | null }).data ?? undefined)
       : undefined
-  const entityI18n =
-    entityData && typeof entityData === 'object'
-      ? ((entityData as Record<string, unknown>).i18n as
-          | Record<string, Record<string, unknown>>
-          | undefined)
-      : undefined
-
-  const resolvedFormLocaleValues =
-    formLocaleValues ??
-    (resolvedFormLocaleKey ? entityI18n?.[resolvedFormLocaleKey] : undefined)
-  const resolvedResourceLocaleValues =
-    resourceLocaleValues ?? (resolvedLocale ? entityI18n?.[resolvedLocale] : undefined)
   const resolvedResourceValues = resourceValues ?? entityData ?? undefined
 
   if (success) {
     const name =
-      asTrimmedString(resolvedFormLocaleValues?.[nameKey]) ||
-      asTrimmedString(resolvedResourceLocaleValues?.[nameKey]) ||
+      getNameForToast(entity, nameKey) ||
       asTrimmedString(resolvedResourceValues?.[nameFallbackKey]) ||
       ''
     toast.success(`${successPrefix}${name ? ` ${name}` : ''}`)
@@ -112,6 +89,38 @@ export async function handleResourceFormSubmissionResult({
   }
 
   toast.error(fallbackErrorMessage)
+}
+
+export function getNameForToast(
+  entity: { data?: Record<string, unknown> | null } | null | undefined,
+  key: string = 'shortName',
+): string {
+  const asTrimmedString = (value: unknown): string => {
+    if (typeof value !== 'string') return ''
+    return value.trim()
+  }
+
+  const data =
+    entity && typeof entity === 'object'
+      ? ((entity as { data?: Record<string, unknown> | null }).data ?? undefined)
+      : undefined
+  if (!data) return ''
+
+  const locale = getLocale()
+  const i18n =
+    data && typeof data === 'object'
+      ? ((data as Record<string, unknown>).i18n as
+          | Record<string, Record<string, unknown>>
+          | undefined)
+      : undefined
+
+  const byLocale = asTrimmedString(i18n?.[locale]?.[key])
+  if (byLocale) return byLocale
+
+  const byRoot = asTrimmedString((data as Record<string, unknown>)[key])
+  if (byRoot) return byRoot
+
+  return asTrimmedString((data as Record<string, unknown>).code)
 }
 
 export function getRoleFieldNameByUserId(
