@@ -13,6 +13,7 @@ import { organisationPolicyMap } from './organisation'
 export {
   toOrganisationSubmittedFields,
   toOrganisationUserRoleSignature,
+  toOrganisationAuthActor,
   authorizeOrganisationRead,
   authorizeOrganisationList,
   authorizeOrganisationCreate,

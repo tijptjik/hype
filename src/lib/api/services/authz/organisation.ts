@@ -13,7 +13,7 @@ type OrganisationPolicyHandler = (params: AuthorizeParams) => AuthorizationDecis
 // AUTH INPUT TYPES
 /* -------- */
 
-type OrganisationAuthActor = {
+export type OrganisationAuthActor = {
   userId?: string | null
   userRoles: UserRoleDisco[]
   isAuthenticated?: boolean
@@ -259,6 +259,34 @@ export const toOrganisationUserRoleSignature = (
     .map(role => `${role.userId}:${role.role}`)
     .sort((a, b) => a.localeCompare(b))
     .join('|')
+
+export const toOrganisationAuthActor = (user: unknown): OrganisationAuthActor => {
+  if (!user || typeof user !== 'object') {
+    return {
+      userId: undefined,
+      userRoles: [],
+      isAuthenticated: false,
+      isAnonymous: false,
+    }
+  }
+
+  const userId = (() => {
+    const value = (user as { id?: unknown }).id
+    return typeof value === 'string' ? value : undefined
+  })()
+  const userRoles = (() => {
+    const value = (user as { roles?: unknown }).roles
+    return Array.isArray(value) ? (value as UserRoleDisco[]) : []
+  })()
+  const isAnonymous = (user as { isAnonymous?: unknown }).isAnonymous === true
+
+  return {
+    userId,
+    userRoles,
+    isAuthenticated: Boolean(userId) && !isAnonymous,
+    isAnonymous,
+  }
+}
 
 export const authorizeOrganisationRead = (
   actor: OrganisationAuthActor,
