@@ -101,6 +101,7 @@ import type {
   OrganisationI18nUpdate,
   OrganisationInsert,
   OrganisationInsertAPI,
+  OrganisationFormData,
   ListQueryParamsSchema,
   GetQueryParamsSchema,
   OrganisationInsertSuperAdminAPI,
@@ -178,10 +179,11 @@ import type {
   UserUpdate,
   UserUpdateAPI,
   UserProfileAPI,
+  UserSearchQueryParamsSchema,
 } from './db/zod'
 // TYPES
 import type { Component, Snippet } from 'svelte'
-import type { Page } from '@sveltejs/kit'
+import type { Page, RemoteFormIssue } from '@sveltejs/kit'
 import type { AdminCtx } from './context/admin.svelte'
 import type {
   FormPath,
@@ -752,6 +754,8 @@ export type ListQueryParams<
   sortOrder?: 'asc' | 'desc'
   q?: string
 }
+export type UserSearchQueryParams = z.input<typeof UserSearchQueryParamsSchema>
+export type UserSearchQueryOptions = Omit<UserSearchQueryParams, 'q'>
 
 /* ----------------- */
 // NAVIGATION :: PRISMS
@@ -852,6 +856,180 @@ export type ProjectForm = ProjectFormType
 export type FeatureForm = FeatureFormType
 export type HubForm = HubFormType
 export type Form = LayerForm | OrganisationForm | ProjectForm | FeatureForm | HubForm
+
+export type FormSubmissionResultHandlerParams = {
+  success: boolean
+  issues?: RemoteFormIssue[]
+  error?: string
+  onSuccess: () => void | Promise<void>
+  onError: (error: string) => void | Promise<void>
+  onInvalid: (issues: RemoteFormIssue[]) => void | Promise<void>
+  onFallback: () => void | Promise<void>
+}
+
+export type FormHeaderController = {
+  setEditing: (isEditing: boolean) => void
+}
+
+export type ResourceFormSubmissionResultParams = {
+  success: boolean
+  issues?: RemoteFormIssue[]
+  error?: string
+  nameKey: string
+  nameFallbackKey: string
+  headerCtrl: FormHeaderController
+  refreshResource: () => Promise<void>
+  entity?: { data?: Record<string, unknown> | null } | null
+  locale?: Locale
+  formLocaleKey?: string
+  formLocaleValues?: Record<string, unknown>
+  resourceLocaleValues?: Record<string, unknown>
+  resourceValues?: Record<string, unknown>
+  invalidMessage?: string
+  fallbackErrorMessage?: string
+  successPrefix?: string
+}
+
+export type UserRoleFieldNameResolverForm = {
+  fields: {
+    value: () => {
+      data?: {
+        userRoles?: Array<{ userId: string }>
+      }
+    }
+    data: {
+      userRoles: {
+        [index: number]: {
+          role: { as: (type: 'select') => { name?: string } }
+        }
+      }
+    }
+  }
+}
+
+export type GenAiField = 'name' | 'nameShort' | 'description'
+export type I18nTranslatableField = 'name' | 'nameShort' | 'description'
+
+export type GenAiStateResolverForm = {
+  fields: {
+    value: () => {
+      data?: {
+        i18n?: Record<
+          string,
+          {
+            nameGen?: boolean
+            nameShortGen?: boolean
+            descriptionGen?: boolean
+          }
+        >
+      }
+    }
+  }
+}
+
+export type FormDataUpdaterForm<T> = {
+  fields: {
+    value: () => {
+      data?: T
+    }
+    set: (value: any) => void
+  }
+}
+
+export type AddUserRoleSelectionParams<
+  TEntity extends { data?: Record<string, unknown> | null } | null,
+  TFormData extends { userRoles?: Array<{ userId: string; role: string }> },
+> = {
+  form: FormDataUpdaterForm<TFormData>
+  entity: TEntity
+  user: {
+    id: string
+    name?: string | null
+    image?: unknown
+    attribution?: string | null
+  }
+  defaultRole: string
+  foreignKey: string
+}
+
+export type RemoveUserRoleSelectionParams<
+  TEntity extends { data?: Record<string, unknown> | null } | null,
+  TFormData extends { userRoles?: Array<{ userId: string; role: string }> },
+> = {
+  form: FormDataUpdaterForm<TFormData>
+  entity: TEntity
+  userId: string
+}
+
+export type UpdateUserRoleSelectionParams<
+  TEntity extends { data?: Record<string, unknown> | null } | null,
+  TFormData extends { userRoles?: Array<{ userId: string; role: string }> },
+> = {
+  form: FormDataUpdaterForm<TFormData>
+  entity: TEntity
+  userId: string
+  role: string
+}
+
+export type TranslateLocaleIntoEmptyFieldsParams<
+  TFormData extends {
+    i18n?: Record<
+      string,
+      {
+        name?: string
+        nameShort?: string
+        description?: string
+        nameGen?: boolean
+        nameShortGen?: boolean
+        descriptionGen?: boolean
+      }
+    >
+  },
+> = {
+  form: FormDataUpdaterForm<TFormData>
+  sourceLocale: Locale
+  targetLocale: Locale
+  fields?: I18nTranslatableField[]
+}
+
+export type ResetLocaleFieldsParams<
+  TFormData extends {
+    i18n?: Record<
+      string,
+      {
+        name?: string
+        nameShort?: string
+        description?: string
+        nameGen?: boolean
+        nameShortGen?: boolean
+        descriptionGen?: boolean
+      }
+    >
+  },
+> = {
+  form: FormDataUpdaterForm<TFormData>
+  targetLocale: Locale
+  fields?: I18nTranslatableField[]
+}
+
+export type UserRoleEntityType = 'hub' | 'organisation' | 'project'
+export type UserParentEntityType = 'organisation' | 'project'
+
+export type UserRoleFilter = {
+  entityType: UserRoleEntityType
+  entityId: string
+  role?: string
+  roles?: string[]
+  anyRole?: boolean
+}
+
+export type UserParentChainRoleFilter = {
+  fromEntityType: UserParentEntityType
+  fromEntityId: string
+  role?: string
+  roles?: string[]
+  anyRole?: boolean
+}
 
 /* ----------------- */
 // FORM FIELDS
@@ -1084,6 +1262,23 @@ export type OrganisationSuperAdminPartial = z.infer<
 >
 export type OrganisationListParams = z.infer<typeof ListQueryParamsSchema>
 export type OrganisationGetParams = z.infer<typeof GetQueryParamsSchema>
+
+/* ----------------- */
+// ORGANISATIONS :: REMOTE FORMS
+/* -------- */
+
+export type OrganisationFormInput = z.input<typeof OrganisationFormData>
+export type OrganisationFormLocaleKey = keyof OrganisationFormInput['data']['i18n']
+export type OrganisationFormLocaleInput =
+  OrganisationFormInput['data']['i18n'][OrganisationFormLocaleKey]
+export type OrganisationFormLocaleSource =
+  | Partial<OrganisationFormLocaleInput>
+  | null
+  | undefined
+export type OrganisationGetResponse = EntityResponse<
+  Organisation | OrganisationSuperAdmin
+>
+export type OrganisationGetState = OrganisationGetResponse | null
 
 /* ----------------- */
 // ORGANISATIONS :: RELATIONAL
