@@ -73,8 +73,17 @@ export const RESERVED_CODES = new Set(
 export const isReservedCode = (value: string): boolean =>
   RESERVED_CODES.has(value.trim().toLowerCase())
 
-export const toAuthMessage = (code: string): string =>
-  `${code}: ${m.missing_permissions()}`
+export const toAuthMessage = (code: string): string => {
+  if (code === 'UNAUTHENTICATED') return `${code}: ${m.admin__authz_unauthenticated()}`
+  if (code === 'HUB_SCOPE_FORBIDDEN')
+    return `${code}: ${m.admin__authz_hub_scope_forbidden()}`
+  if (code === 'REQUEST_STATE_REQUIRED')
+    return `${code}: ${m.admin__authz_request_state_required()}`
+  if (code === 'INSUFFICIENT_ROLE')
+    return `${code}: ${m.admin__authz_insufficient_role()}`
+  if (code === 'FIELD_FORBIDDEN') return `${code}: ${m.admin__authz_field_forbidden()}`
+  return `${code}: ${m.missing_permissions()}`
+}
 
 const policyMap = {
   organisation: organisationPolicyMap,
