@@ -374,6 +374,19 @@ function handleHeaderFormReset(): void {
 }
 
 function handleHeaderFormSubmit(): void {
+  if (organisation?.data) {
+    const current = formCtx.form.fields.value()
+    formCtx.form.fields.set({
+      ...current,
+      meta: {
+        ...(current.meta ?? {}),
+        id: organisation.data.id,
+        updatedAt: organisation.data.modifiedAt,
+        mode: 'update',
+        isAdminRequest: true,
+      },
+    })
+  }
   contentsElement?.requestSubmit()
 }
 
