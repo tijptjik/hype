@@ -9,6 +9,24 @@ import type {
 
 type OrganisationPolicyHandler = (params: AuthorizeParams) => AuthorizationDecision
 
+/* ----------------- */
+// AUTH INPUT TYPES
+/* -------- */
+
+type OrganisationAuthActor = {
+  userId?: string | null
+  userRoles: UserRoleDisco[]
+  isAuthenticated?: boolean
+}
+type OrganisationAuthTarget = {
+  resourceId?: string
+  resourceHubId?: string | null
+}
+
+/* ----------------- */
+// POLICY CONSTANTS
+/* -------- */
+
 const CORE_HUB_CODE = 'core'
 
 const ORGANISATION_CORE_ADMIN_ONLY_FIELDS = new Set<OrganisationAuthorizationField>([
@@ -19,6 +37,10 @@ const ORGANISATION_CORE_ADMIN_ONLY_FIELDS = new Set<OrganisationAuthorizationFie
 const ORGANISATION_HUB_ADMIN_ONLY_FIELDS = new Set<OrganisationAuthorizationField>([
   'isHubExclusive',
 ])
+
+/* ----------------- */
+// ROLE RESOLUTION
+/* -------- */
 
 const isHubAdminRole = (role: UserRoleDisco): boolean =>
   role.type === 'hub' && role.role === 'admin'
@@ -62,6 +84,10 @@ const isRelevantHubAdmin = (
   return getScopedHubAdminIds(roles).has(organisationHubId)
 }
 
+/* ----------------- */
+// READ/LIST POLICY EVALUATION
+/* -------- */
+
 const evaluateOrganisationReadStatePolicy = (
   params: AuthorizeParams,
 ): AuthorizationDecision => {
@@ -89,6 +115,10 @@ const evaluateOrganisationReadStatePolicy = (
 
   return { allowed: true }
 }
+
+/* ----------------- */
+// ACTION POLICIES
+/* -------- */
 
 const createOrganisationPolicy: OrganisationPolicyHandler = params => {
   if (params.isAuthenticated === false || !params.userId) {
@@ -166,6 +196,95 @@ const manageOrganisationRolesPolicy: OrganisationPolicyHandler = params => {
 
 const deleteOrganisationPolicy: OrganisationPolicyHandler = params =>
   createOrganisationPolicy(params)
+
+/* ----------------- */
+// AUTH HELPERS (SERVER CALL SITES)
+/* -------- */
+
+export const toOrganisationSubmittedFields = (
+  data: Partial<Record<OrganisationAuthorizationField, unknown>>,
+): OrganisationAuthorizationField[] => {
+  const fields: OrganisationAuthorizationField[] = []
+  if ('code' in data) fields.push('code')
+  if ('url' in data) fields.push('url')
+  if ('i18n' in data) fields.push('i18n')
+  if ('userRoles' in data) fields.push('userRoles')
+  return fields
+}
+
+export const toOrganisationUserRoleSignature = (
+  userRoles: Array<{ userId: string; role: string }>,
+): string =>
+  userRoles
+    .map(role => `${role.userId}:${role.role}`)
+    .sort((a, b) => a.localeCompare(b))
+    .join('|')
+
+export const authorizeOrganisationRead = (
+  actor: OrganisationAuthActor,
+  target: OrganisationAuthTarget,
+  requestedState: { isPublished: boolean; isArchived: boolean },
+): AuthorizationDecision =>
+  readOrganisationPolicy({
+    userId: actor.userId,
+    userRoles: actor.userRoles,
+    isAuthenticated: actor.isAuthenticated,
+    resourceType: 'organisation',
+    action: 'readOrganisation',
+    resourceId: target.resourceId,
+    resourceHubId: target.resourceHubId,
+    requestedState,
+  })
+
+export const authorizeOrganisationCreate = (
+  actor: OrganisationAuthActor,
+  target: Pick<OrganisationAuthTarget, 'resourceHubId'>,
+  fields: OrganisationAuthorizationField[],
+): AuthorizationDecision =>
+  createOrganisationPolicy({
+    userId: actor.userId,
+    userRoles: actor.userRoles,
+    isAuthenticated: actor.isAuthenticated,
+    resourceType: 'organisation',
+    action: 'createOrganisation',
+    resourceHubId: target.resourceHubId,
+    fields,
+  })
+
+export const authorizeOrganisationUpdate = (
+  actor: OrganisationAuthActor,
+  target: Required<OrganisationAuthTarget>,
+  fields: OrganisationAuthorizationField[],
+): AuthorizationDecision =>
+  updateOrganisationPolicy({
+    userId: actor.userId,
+    userRoles: actor.userRoles,
+    isAuthenticated: actor.isAuthenticated,
+    resourceType: 'organisation',
+    action: 'updateOrganisation',
+    resourceId: target.resourceId,
+    resourceHubId: target.resourceHubId,
+    fields,
+  })
+
+export const authorizeOrganisationManageRoles = (
+  actor: OrganisationAuthActor,
+  target: Required<OrganisationAuthTarget>,
+): AuthorizationDecision =>
+  manageOrganisationRolesPolicy({
+    userId: actor.userId,
+    userRoles: actor.userRoles,
+    isAuthenticated: actor.isAuthenticated,
+    resourceType: 'organisation',
+    action: 'manageOrganisationRoles',
+    resourceId: target.resourceId,
+    resourceHubId: target.resourceHubId,
+    fields: ['userRoles'],
+  })
+
+/* ----------------- */
+// POLICY MAP
+/* -------- */
 
 export const organisationPolicyMap: Record<
   OrganisationAuthorizationAction,
