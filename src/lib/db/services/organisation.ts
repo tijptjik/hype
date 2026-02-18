@@ -39,6 +39,7 @@ import type {
   QueryParams,
   OrganisationI18nNew,
   OrganisationI18nPartial,
+  OrganisationFormInput,
   OrganisationRoleNew,
   OrganisationDBPartial,
   OrganisationDBRaw,
@@ -373,6 +374,19 @@ export const createUserRoles = async (
     organisationId,
   )
 }
+
+/**
+ * Maps organisation form role rows into persisted role rows bound to organisationId.
+ */
+export const toPersistedOrganisationUserRoles = (
+  userRoles: OrganisationFormInput['data']['userRoles'],
+  organisationId: string,
+): Array<{ organisationId: string; userId: string; role: string }> =>
+  userRoles.map(userRole => ({
+    organisationId,
+    userId: userRole.userId,
+    role: userRole.role,
+  }))
 
 /**
  * Updates user roles for an organisation by deleting existing ones and creating new ones
