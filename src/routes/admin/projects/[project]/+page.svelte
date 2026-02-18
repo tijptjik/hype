@@ -339,7 +339,7 @@ $effect(() => {
               />
             </div>
           {:else if adminCtx.activeFacet === 'fields'}
-            <div class="flex flex-col gap-6 pb-[256px]">
+            <div class="flex flex-col gap-6 pb-64">
               <PropertySection
                 title={m.admin__forms_common_classifiers()}
                 subtitle={m.admin__forms_common_classifiers_subtitle()}

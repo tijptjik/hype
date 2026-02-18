@@ -1465,6 +1465,73 @@ export type UserRoleDisco =
   | (ProjectRole & { type: 'project' })
 
 /* ----------------- */
+// AUTHORIZATION
+/* -------- */
+
+export const authorizationResourceTypes = [
+  'organisation',
+  'project',
+  'layer',
+  'feature',
+  'task',
+  'hub',
+  'property',
+  'user',
+] as const
+export type AuthorizationResourceType = (typeof authorizationResourceTypes)[number]
+
+export const organisationAuthorizationActions = [
+  'readOrganisation',
+  'createOrganisation',
+  'updateOrganisation',
+  'publishOrganisation',
+  'manageOrganisationRoles',
+  'deleteOrganisation',
+] as const
+export type OrganisationAuthorizationAction =
+  (typeof organisationAuthorizationActions)[number]
+
+export type AuthorizationAction = OrganisationAuthorizationAction
+
+export const organisationAuthorizationFields = [
+  'code',
+  'url',
+  'i18n',
+  'userRoles',
+  'hubId',
+  'isCoreInclusive',
+  'isHubExclusive',
+  'isPublished',
+] as const
+export type OrganisationAuthorizationField =
+  (typeof organisationAuthorizationFields)[number]
+
+export const authorizationDenyCodes = [
+  'UNAUTHENTICATED',
+  'INSUFFICIENT_ROLE',
+  'HUB_SCOPE_FORBIDDEN',
+  'FIELD_FORBIDDEN',
+  'NOT_IMPLEMENTED',
+] as const
+export type AuthorizationDenyCode = (typeof authorizationDenyCodes)[number]
+
+export type AuthorizeParams = {
+  userId?: string | null
+  userRoles: UserRoleDisco[]
+  isAuthenticated?: boolean
+  resourceType: AuthorizationResourceType
+  action: AuthorizationAction
+  resourceId?: string
+  resourceHubId?: string | null
+  fields?: OrganisationAuthorizationField[]
+}
+
+export type AuthorizationDecision = {
+  allowed: boolean
+  code?: AuthorizationDenyCode
+}
+
+/* ----------------- */
 // LAYERS
 /* -------- */
 
