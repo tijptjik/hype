@@ -374,6 +374,7 @@ export type HeaderMetaState = {
 export type HeaderFormActionsState = {
   dirty: boolean
   submitting: boolean
+  hasIssues: boolean
   isPublishing: boolean
   isDeleting: boolean
   isDeleted: boolean

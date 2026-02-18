@@ -19,6 +19,7 @@ let {
   isEditing = false,
   isTainted = false,
   isSubmitting = false,
+  hasIssues = false,
   isPublishing = false,
   isDeleting = false,
   isDeleted = false,
@@ -102,7 +103,7 @@ function handlePrimaryAction(): void {
       style="ghost"
       icon={saveIcon}
       {hideLabel}
-      disabled={!isTainted || isSubmitting}
+      disabled={!isTainted || isSubmitting || hasIssues}
       onClick={() => onSave?.()}
     />
 

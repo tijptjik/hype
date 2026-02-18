@@ -52,6 +52,7 @@ export interface HeaderFormActionsConfig {
   isEditing?: boolean
   isTainted?: boolean
   isSubmitting?: boolean
+  hasIssues?: boolean
   isPublishing?: boolean
   isDeleting?: boolean
   isDeleted?: boolean

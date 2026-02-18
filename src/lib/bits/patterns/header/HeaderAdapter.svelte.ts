@@ -110,6 +110,7 @@ export function useHeaderAdapter(
     return `/admin/${ResourcePath[headerResourceType as FirstClassResource]}`
   })
   const isTainted = $derived(Boolean(formActions?.dirty ?? false))
+  const hasIssues = $derived(Boolean(formActions?.hasIssues ?? false))
   const isSubmitting = $derived(
     Boolean(formActions?.submitting ?? formActions?.isPublishing ?? false),
   )
@@ -271,6 +272,7 @@ export function useHeaderAdapter(
       visible: resolvedVisibility.showFormActions,
       isEditing,
       isTainted,
+      hasIssues,
       isSubmitting,
       isPublishing,
       isDeleting,

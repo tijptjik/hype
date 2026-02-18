@@ -14,6 +14,7 @@ const DEFAULT_HEADER_FORM_ACTIONS: HeaderFormActionsState = {
   reset: () => {},
   submit: () => {},
   submitting: false,
+  hasIssues: false,
   togglePublish: () => {},
   isPublishing: false,
   isPublished: false,

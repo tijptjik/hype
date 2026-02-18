@@ -121,6 +121,7 @@ const measurementKey = $derived(
         <HeaderPrimitive.FormActions
           isTainted={formActions.isTainted}
           isSubmitting={formActions.isSubmitting}
+          hasIssues={formActions.hasIssues}
           isPublishing={formActions.isPublishing}
           isDeleting={formActions.isDeleting}
           isEditing={formActions.isEditing}
