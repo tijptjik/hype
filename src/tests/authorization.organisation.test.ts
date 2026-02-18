@@ -128,7 +128,7 @@ describe('organisation authorization policy matrix', () => {
       {
         name: 'unpublished + non-archived',
         requestedState: { isPublished: false, isArchived: false },
-        allowedActors: ['coreAdmin', 'hubAdminSame', 'owner'],
+        allowedActors: ['coreAdmin', 'hubAdminSame', 'owner', 'member'],
       },
       {
         name: 'archived',
@@ -182,14 +182,29 @@ describe('organisation authorization policy matrix', () => {
   describe('listOrganisations', () => {
     const action: AuthorizeParams['action'] = 'listOrganisations'
 
-    it('uses same state policy as readOrganisation (unpublished owner allowed)', () => {
+    it('allows members to request unpublished + non-archived lists', () => {
       const decision = authorize(
-        withActor(ACTORS.owner, {
+        withActor(ACTORS.member, {
           action,
+          resourceId: undefined,
+          resourceHubId: undefined,
           requestedState: { isPublished: false, isArchived: false },
         }),
       )
       expect(decision.allowed).toBe(true)
+    })
+
+    it('denies members for archived lists', () => {
+      const decision = authorize(
+        withActor(ACTORS.member, {
+          action,
+          resourceId: undefined,
+          resourceHubId: undefined,
+          requestedState: { isPublished: true, isArchived: true },
+        }),
+      )
+      expect(decision.allowed).toBe(false)
+      expect(decision.code).toBe('INSUFFICIENT_ROLE')
     })
 
     it('requires requestedState', () => {
