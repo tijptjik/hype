@@ -183,40 +183,34 @@ export class HeaderCtrl {
     }
   }
 
-  /**
-   * Read or set publish in-flight state on header form actions.
-   * @param next - Optional next publish state. When omitted, returns current value.
-   * @returns Current publish state.
-   */
-  isPublishing(next?: boolean): boolean {
-    if (typeof next === 'boolean') {
-      this.patchFormActions({ isPublishing: next })
-    }
+  /** Read publish in-flight state from header form actions. */
+  getPublishing(): boolean {
     return Boolean(this.state.formActions?.isPublishing)
   }
 
-  /**
-   * Read or set submit in-flight state on header form actions.
-   * @param next - Optional next submit state. When omitted, returns current value.
-   * @returns Current submit state.
-   */
-  isSubmitting(next?: boolean): boolean {
-    if (typeof next === 'boolean') {
-      this.patchFormActions({ submitting: next })
-    }
+  /** Set publish in-flight state on header form actions. */
+  setPublishing(next: boolean): void {
+    this.patchFormActions({ isPublishing: next })
+  }
+
+  /** Read submit in-flight state from header form actions. */
+  getIsSubmitting(): boolean {
     return Boolean(this.state.formActions?.submitting)
   }
 
-  /**
-   * Read or set delete in-flight state on header form actions.
-   * @param next - Optional next delete state. When omitted, returns current value.
-   * @returns Current delete state.
-   */
-  isDeleting(next?: boolean): boolean {
-    if (typeof next === 'boolean') {
-      this.patchFormActions({ isDeleting: next })
-    }
+  /** Set submit in-flight state on header form actions. */
+  setIsSubmitting(next: boolean): void {
+    this.patchFormActions({ submitting: next })
+  }
+
+  /** Read delete in-flight state from header form actions. */
+  getDeleting(): boolean {
     return Boolean(this.state.formActions?.isDeleting)
+  }
+
+  /** Set delete in-flight state on header form actions. */
+  setDeleting(next: boolean): void {
+    this.patchFormActions({ isDeleting: next })
   }
 
   /**
