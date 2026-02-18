@@ -8,6 +8,7 @@ import type { UserCardActionsProps } from '../userCard.types'
 let {
   selectedRole,
   roleOptions,
+  roleFieldName,
   isRemoving = false,
   isEditing = true,
   onRoleChange,
@@ -39,6 +40,7 @@ function handleRoleChange(nextValue: string): void {
     <Select
       value={selectedRole}
       items={roleOptions}
+      name={roleFieldName}
       variant="ghost"
       allowDeselect={false}
       onValueChange={handleRoleChange}

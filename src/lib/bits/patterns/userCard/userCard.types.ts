@@ -28,6 +28,7 @@ export interface UserCardActionsRoleOption {
 export interface UserCardActionsProps {
   selectedRole: OrganisationRoleType
   roleOptions: UserCardActionsRoleOption[]
+  roleFieldName?: string
   isRemoving?: boolean
   isEditing?: boolean
   onRoleChange?: (nextRole: OrganisationRoleType) => void
