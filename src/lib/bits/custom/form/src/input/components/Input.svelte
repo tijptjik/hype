@@ -22,6 +22,10 @@ const resolvedPlaceholder = $derived(
     (type === 'text' ? m.suave_livid_wombat_zoom() : m.muddy_each_herring_boil()),
 )
 const resolvedType = $derived((attrs?.type as string | undefined) ?? type)
+const resolvedId = $derived((id ?? (attrs?.id as string | undefined)) || undefined)
+const resolvedName = $derived(
+  (name ?? (attrs?.name as string | undefined) ?? resolvedId) || undefined,
+)
 
 const inputClass = $derived(
   [
@@ -47,12 +51,12 @@ function handleInput(event: Event): void {
 
 <input
   {...attrs}
-  {id}
+  id={resolvedId}
   {disabled}
   {readonly}
-  data-testid={id}
+  data-testid={resolvedId}
   type={resolvedType}
-  name={name ?? id}
+  name={resolvedName}
   bind:value
   placeholder={resolvedPlaceholder}
   class={inputClass}

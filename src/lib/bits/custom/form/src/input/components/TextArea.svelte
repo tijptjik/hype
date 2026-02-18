@@ -18,6 +18,10 @@ let {
 }: FormTextAreaPrimitiveProps = $props()
 let textareaElement: HTMLTextAreaElement | null = $state(null)
 const resolvedPlaceholder = $derived(placeholder ?? m.suave_livid_wombat_zoom())
+const resolvedId = $derived((id ?? (attrs?.id as string | undefined)) || undefined)
+const resolvedName = $derived(
+  (name ?? (attrs?.name as string | undefined) ?? resolvedId) || undefined,
+)
 
 const textareaClass = $derived(
   [
@@ -63,11 +67,11 @@ $effect(() => {
 <textarea
   bind:this={textareaElement}
   {...attrs}
-  {id}
+  id={resolvedId}
   {disabled}
   {readonly}
-  data-testid={id}
-  name={name ?? id}
+  data-testid={resolvedId}
+  name={resolvedName}
   bind:value
   {rows}
   placeholder={resolvedPlaceholder}
