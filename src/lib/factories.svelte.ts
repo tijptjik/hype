@@ -182,11 +182,14 @@ export function configureForm<Input extends RemoteFormInput = RemoteFormInput>(
     Object.assign(
       form.enhance(async ({ submit, form: formEl, data }) => {
         if (submitting) return
+        submitting = true
 
         const bf = !onsubmit || (await onsubmit({ dirty, form: formEl, data }))
-        if (!bf) return
+        if (!bf) {
+          submitting = false
+          return
+        }
 
-        submitting = true
         const wasDirty = dirty
         let resultDispatched = false
         try {
