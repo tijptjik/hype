@@ -63,6 +63,11 @@
     @apply flex items-center gap-0;
   }
 
+  .bits-theme .bits-pattern-header__form-action-primary {
+    width: 128px;
+    justify-content: center;
+  }
+
   .bits-theme .bits-pattern-header.bits-pattern-header--measuring .bits-btn,
   .bits-theme .bits-pattern-header.bits-pattern-header--measuring .bits-btn__label,
   .bits-theme .bits-pattern-header.bits-pattern-header--measuring .bits-header__title,
