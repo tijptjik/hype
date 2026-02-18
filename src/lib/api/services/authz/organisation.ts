@@ -17,6 +17,7 @@ type OrganisationAuthActor = {
   userId?: string | null
   userRoles: UserRoleDisco[]
   isAuthenticated?: boolean
+  isAnonymous?: boolean
 }
 type OrganisationAuthTarget = {
   resourceId?: string
@@ -75,6 +76,18 @@ const isOrganisationOwner = (
       role.role === 'owner',
   )
 
+const hasOrganisationRole = (
+  roles: UserRoleDisco[],
+  organisationId?: string,
+): boolean =>
+  Boolean(organisationId) &&
+  roles.some(
+    role => role.type === 'organisation' && role.organisationId === organisationId,
+  )
+
+const hasAnyOrganisationRole = (roles: UserRoleDisco[]): boolean =>
+  roles.some(role => role.type === 'organisation')
+
 const isRelevantHubAdmin = (
   roles: UserRoleDisco[],
   organisationHubId?: string | null,
@@ -82,6 +95,11 @@ const isRelevantHubAdmin = (
   if (isCoreHubAdmin(roles)) return true
   if (!organisationHubId) return false
   return getScopedHubAdminIds(roles).has(organisationHubId)
+}
+
+const hasAuthenticatedSession = (params: AuthorizeParams): boolean => {
+  if (params.isAuthenticated !== undefined) return params.isAuthenticated
+  return Boolean(params.userId)
 }
 
 /* ----------------- */
@@ -101,14 +119,14 @@ const evaluateOrganisationReadStatePolicy = (
   const isArchived = params.requestedState.isArchived
   const isPublished = params.requestedState.isPublished
   const isStrong = isRelevantHubAdmin(params.userRoles, params.resourceHubId)
-  const isOwner = isOrganisationOwner(params.userRoles, params.resourceId)
+  const isMemberOrOwner = hasOrganisationRole(params.userRoles, params.resourceId)
 
   if (isArchived) {
     return isStrong ? { allowed: true } : { allowed: false, code: 'INSUFFICIENT_ROLE' }
   }
 
   if (!isPublished) {
-    return isOwner || isStrong
+    return isMemberOrOwner || isStrong
       ? { allowed: true }
       : { allowed: false, code: 'INSUFFICIENT_ROLE' }
   }
@@ -121,7 +139,7 @@ const evaluateOrganisationReadStatePolicy = (
 /* -------- */
 
 const createOrganisationPolicy: OrganisationPolicyHandler = params => {
-  if (params.isAuthenticated === false || !params.userId) {
+  if (!hasAuthenticatedSession(params) || !params.userId) {
     return { allowed: false, code: 'UNAUTHENTICATED' }
   }
 
@@ -137,7 +155,7 @@ const createOrganisationPolicy: OrganisationPolicyHandler = params => {
 }
 
 const readOrganisationPolicy: OrganisationPolicyHandler = params => {
-  if (params.isAuthenticated === false || !params.userId) {
+  if (!hasAuthenticatedSession(params) || !params.userId) {
     return { allowed: false, code: 'UNAUTHENTICATED' }
   }
 
@@ -145,15 +163,37 @@ const readOrganisationPolicy: OrganisationPolicyHandler = params => {
 }
 
 const listOrganisationsPolicy: OrganisationPolicyHandler = params => {
-  if (params.isAuthenticated === false || !params.userId) {
+  if (!hasAuthenticatedSession(params) || !params.userId) {
     return { allowed: false, code: 'UNAUTHENTICATED' }
   }
 
-  return evaluateOrganisationReadStatePolicy(params)
+  if (
+    params.requestedState?.isArchived === undefined ||
+    params.requestedState?.isPublished === undefined
+  ) {
+    return { allowed: false, code: 'REQUEST_STATE_REQUIRED' }
+  }
+
+  const isArchived = params.requestedState.isArchived
+  const isPublished = params.requestedState.isPublished
+  const isStrong = isRelevantHubAdmin(params.userRoles, params.resourceHubId)
+  const hasOrgMembership = hasAnyOrganisationRole(params.userRoles)
+
+  if (isArchived) {
+    return isStrong ? { allowed: true } : { allowed: false, code: 'INSUFFICIENT_ROLE' }
+  }
+
+  if (!isPublished) {
+    return hasOrgMembership || isStrong
+      ? { allowed: true }
+      : { allowed: false, code: 'INSUFFICIENT_ROLE' }
+  }
+
+  return { allowed: true }
 }
 
 const updateOrganisationPolicy: OrganisationPolicyHandler = params => {
-  if (params.isAuthenticated === false || !params.userId) {
+  if (!hasAuthenticatedSession(params) || !params.userId) {
     return { allowed: false, code: 'UNAUTHENTICATED' }
   }
 
@@ -181,7 +221,7 @@ const publishOrganisationPolicy: OrganisationPolicyHandler = params =>
   updateOrganisationPolicy(params)
 
 const manageOrganisationRolesPolicy: OrganisationPolicyHandler = params => {
-  if (params.isAuthenticated === false || !params.userId) {
+  if (!hasAuthenticatedSession(params) || !params.userId) {
     return { allowed: false, code: 'UNAUTHENTICATED' }
   }
 
@@ -229,9 +269,26 @@ export const authorizeOrganisationRead = (
     userId: actor.userId,
     userRoles: actor.userRoles,
     isAuthenticated: actor.isAuthenticated,
+    isAnonymous: actor.isAnonymous,
     resourceType: 'organisation',
     action: 'readOrganisation',
     resourceId: target.resourceId,
+    resourceHubId: target.resourceHubId,
+    requestedState,
+  })
+
+export const authorizeOrganisationList = (
+  actor: OrganisationAuthActor,
+  target: Pick<OrganisationAuthTarget, 'resourceHubId'>,
+  requestedState: { isPublished: boolean; isArchived: boolean },
+): AuthorizationDecision =>
+  listOrganisationsPolicy({
+    userId: actor.userId,
+    userRoles: actor.userRoles,
+    isAuthenticated: actor.isAuthenticated,
+    isAnonymous: actor.isAnonymous,
+    resourceType: 'organisation',
+    action: 'listOrganisations',
     resourceHubId: target.resourceHubId,
     requestedState,
   })
@@ -245,6 +302,7 @@ export const authorizeOrganisationCreate = (
     userId: actor.userId,
     userRoles: actor.userRoles,
     isAuthenticated: actor.isAuthenticated,
+    isAnonymous: actor.isAnonymous,
     resourceType: 'organisation',
     action: 'createOrganisation',
     resourceHubId: target.resourceHubId,
@@ -260,6 +318,7 @@ export const authorizeOrganisationUpdate = (
     userId: actor.userId,
     userRoles: actor.userRoles,
     isAuthenticated: actor.isAuthenticated,
+    isAnonymous: actor.isAnonymous,
     resourceType: 'organisation',
     action: 'updateOrganisation',
     resourceId: target.resourceId,
@@ -275,11 +334,42 @@ export const authorizeOrganisationManageRoles = (
     userId: actor.userId,
     userRoles: actor.userRoles,
     isAuthenticated: actor.isAuthenticated,
+    isAnonymous: actor.isAnonymous,
     resourceType: 'organisation',
     action: 'manageOrganisationRoles',
     resourceId: target.resourceId,
     resourceHubId: target.resourceHubId,
     fields: ['userRoles'],
+  })
+
+export const authorizeOrganisationPublish = (
+  actor: OrganisationAuthActor,
+  target: Required<OrganisationAuthTarget>,
+): AuthorizationDecision =>
+  publishOrganisationPolicy({
+    userId: actor.userId,
+    userRoles: actor.userRoles,
+    isAuthenticated: actor.isAuthenticated,
+    isAnonymous: actor.isAnonymous,
+    resourceType: 'organisation',
+    action: 'publishOrganisation',
+    resourceId: target.resourceId,
+    resourceHubId: target.resourceHubId,
+    fields: ['isPublished'],
+  })
+
+export const authorizeOrganisationDelete = (
+  actor: OrganisationAuthActor,
+  target: Pick<OrganisationAuthTarget, 'resourceHubId'>,
+): AuthorizationDecision =>
+  deleteOrganisationPolicy({
+    userId: actor.userId,
+    userRoles: actor.userRoles,
+    isAuthenticated: actor.isAuthenticated,
+    isAnonymous: actor.isAnonymous,
+    resourceType: 'organisation',
+    action: 'deleteOrganisation',
+    resourceHubId: target.resourceHubId,
   })
 
 /* ----------------- */
