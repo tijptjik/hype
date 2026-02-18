@@ -102,3 +102,51 @@ export const UserCurrent = UserBase.pick({
 })
 
 export const UserUpdate = createUpdateSchema(user)
+
+/* ----------------- */
+// USER SEARCH SCHEMAS
+/* -------- */
+
+export const UserRoleFilterSchema = z
+  .object({
+    entityType: z.enum(['hub', 'organisation', 'project']),
+    entityId: z.string().min(1),
+    role: z.string().trim().min(1).optional(),
+    roles: z.array(z.string().trim().min(1)).optional(),
+    anyRole: z.boolean().optional(),
+  })
+  .refine(
+    value => Boolean(value.anyRole || value.role || (value.roles?.length ?? 0) > 0),
+    'At least one role selector must be provided',
+  )
+
+export const UserParentChainRoleFilterSchema = z
+  .object({
+    fromEntityType: z.enum(['organisation', 'project']),
+    fromEntityId: z.string().min(1),
+    role: z.string().trim().min(1).optional(),
+    roles: z.array(z.string().trim().min(1)).optional(),
+    anyRole: z.boolean().optional(),
+  })
+  .refine(
+    value => Boolean(value.anyRole || value.role || (value.roles?.length ?? 0) > 0),
+    'At least one role selector must be provided',
+  )
+
+export const UserSearchQueryParamsSchema = z.object({
+  q: z.string().trim().optional(),
+  pagination: z
+    .object({
+      limit: z.number().int().positive().optional(),
+      offset: z.number().int().nonnegative().optional(),
+    })
+    .optional(),
+  sorting: z
+    .object({
+      sortBy: z.enum(['name', 'email', 'createdAt', 'updatedAt']).optional(),
+      sortOrder: z.enum(['asc', 'desc']).optional(),
+    })
+    .optional(),
+  roleOnEntity: UserRoleFilterSchema.optional(),
+  roleUpParentChain: UserParentChainRoleFilterSchema.optional(),
+})
