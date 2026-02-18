@@ -5,6 +5,7 @@ export interface FormUserRolesSectionProps {
   title?: string
   subtitle?: string
   userRoles: OrganisationRoleUser[]
+  roleFieldNameByUserId?: Record<string, string>
   isEditing?: boolean
   availableRoles?: Array<{ value: OrganisationRoleType; label: string }>
   onSearchUsers: (query: string) => Promise<User[]>

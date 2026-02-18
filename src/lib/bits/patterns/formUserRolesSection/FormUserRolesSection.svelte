@@ -13,6 +13,7 @@ let {
   title,
   subtitle,
   userRoles,
+  roleFieldNameByUserId = {},
   isEditing = true,
   availableRoles = [
     { value: OrganisationRoleType.member, label: m.profile__role_type__member() },
@@ -149,6 +150,7 @@ $effect(() => {
           <UserCard.Actions
             selectedRole={userRole.role as OrganisationRoleType}
             roleOptions={availableRoles}
+            roleFieldName={roleFieldNameByUserId[userRole.userId]}
             {isRemoving}
             {isEditing}
             onRoleChange={role => onRoleChange(userRole.userId, role)}
