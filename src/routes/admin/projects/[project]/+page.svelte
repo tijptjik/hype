@@ -267,7 +267,7 @@ let image = $derived(pageProps.data.image as Image)
 // HEADER SETUP
 $effect(() => {
   const facetTabs = new Map()
-  facetTabs.set('core', m.resources__main())
+  facetTabs.set('core', m.resources__profile())
   facetTabs.set('fields', m.project__fields())
   if (adminCtx.activeResourceRef !== 'new') {
     facetTabs.set('images', m.organisation__images())

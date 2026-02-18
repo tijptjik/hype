@@ -92,7 +92,7 @@ let title = $derived(
 // HEADER SETUP
 $effect(() => {
   const facetTabs = new Map()
-  facetTabs.set('core', m.resources__main())
+  facetTabs.set('core', m.resources__profile())
 
   untrack(() => headerCtrl.setHeaderForEntity(title, HubIcon, facetTabs))
 

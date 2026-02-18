@@ -166,7 +166,7 @@ let image = $derived(pageProps.data.validatedForm?.data?.image)
 // HEADER SETUP
 $effect(() => {
   const facetTabs = new Map()
-  facetTabs.set('core', m.resources__main())
+  facetTabs.set('core', m.resources__profile())
   facetTabs.set('address', m.feature__address())
   if (adminCtx.activeResourceRef !== 'new') {
     facetTabs.set('images', m.feature__images())
