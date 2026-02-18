@@ -1,5 +1,5 @@
 import type { LocaleExtended } from '$lib/types'
-import type { FormErrorValue } from './textInput.types'
+import type { FormIssueValue } from './textInput.types'
 
 export interface TextAreaProps {
   id?: string
@@ -11,7 +11,7 @@ export interface TextAreaProps {
   required?: boolean
   disabled?: boolean
   readonly?: boolean
-  error?: FormErrorValue
+  issues?: FormIssueValue
   locale?: LocaleExtended
   isTranslated?: boolean
   isGenAI?: boolean

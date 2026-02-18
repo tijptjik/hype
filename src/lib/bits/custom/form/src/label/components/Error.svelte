@@ -1,12 +1,12 @@
 <script lang="ts">
-import type { FormLabelErrorProps } from '../types'
+import type { FormLabelIssuesProps } from '../types'
 
-let { error, class: className = '' }: FormLabelErrorProps = $props()
+let { issues, class: className = '' }: FormLabelIssuesProps = $props()
 
 const messages = $derived.by(() => {
-  if (!error) return []
-  if (Array.isArray(error)) return error.filter(Boolean)
-  return [error]
+  if (!issues) return []
+  if (Array.isArray(issues)) return issues.filter(Boolean)
+  return [issues]
 })
 </script>
 

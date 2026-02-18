@@ -1,6 +1,6 @@
 import type { InputType, LocaleExtended } from '$lib/types'
 
-export type FormErrorValue = string | string[] | null | undefined
+export type FormIssueValue = string | string[] | null | undefined
 
 export interface TextInputProps {
   id?: string
@@ -12,7 +12,7 @@ export interface TextInputProps {
   required?: boolean
   disabled?: boolean
   readonly?: boolean
-  error?: FormErrorValue
+  issues?: FormIssueValue
   locale?: LocaleExtended
   isTranslated?: boolean
   isGenAI?: boolean
@@ -20,6 +20,7 @@ export interface TextInputProps {
   inputAttrs?: Record<string, unknown>
   class?: string
   controlClass?: string
+  inputClass?: string
   onValueChange?: (value: string) => void
   onToggleGenAI?: (event: MouseEvent) => void
 }

@@ -1,10 +1,10 @@
-export type FormErrorValue = string | string[] | null | undefined
+export type FormIssueValue = string | string[] | null | undefined
 
 export interface FormLabelProps {
   for?: string
   text?: string
   required?: boolean
-  error?: FormErrorValue
+  issues?: FormIssueValue
   class?: string
   textClass?: string
   requiredClass?: string
@@ -23,7 +23,7 @@ export interface FormLabelRequiredProps {
   class?: string
 }
 
-export interface FormLabelErrorProps {
-  error?: FormErrorValue
+export interface FormLabelIssuesProps {
+  issues?: FormIssueValue
   class?: string
 }

@@ -13,7 +13,7 @@ let {
   required = false,
   disabled = false,
   readonly = false,
-  error,
+  issues,
   locale = 'core',
   isTranslated = false,
   isGenAI = false,
@@ -28,7 +28,7 @@ let {
 const wrapperClass = $derived(
   [
     'bits-form__field',
-    isEditing && error ? 'bits-form__field--error' : '',
+    isEditing && issues ? 'bits-form__field--error' : '',
     disabled ? 'bits-form__field--disabled' : '',
     className,
   ]
@@ -62,7 +62,7 @@ const isGenAiDisabled = $derived(!isEditing || disabled)
 </script>
 
 <label class={wrapperClass} for={id}>
-  <Label for={id} text={label} {required} error={isEditing ? error : undefined} />
+  <Label for={id} text={label} {required} issues={isEditing ? issues : undefined} />
 
   <div class={controlWrapClass}>
     {#if isEditing}

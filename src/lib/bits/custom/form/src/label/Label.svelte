@@ -6,7 +6,7 @@ let {
   for: htmlFor,
   text,
   required = false,
-  error,
+  issues,
   class: className = '',
   textClass = '',
   requiredClass = '',
@@ -21,5 +21,5 @@ let {
       <LabelPrimitive.Required {required} class={requiredClass} />
     </span>
   </div>
-  <LabelPrimitive.Error {error} class={errorClass} />
+  <LabelPrimitive.Error {issues} class={errorClass} />
 </div>
