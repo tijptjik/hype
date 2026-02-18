@@ -42,7 +42,7 @@ export const constraints: Record<string, z.ZodType<any>> = {
     .max(32, { message: m.admin__validation_short_name_lte_32_chars() }),
   description: z
     .string()
-    .max(8192, { message: m.admin__validation_description_lte_1024_chars() })
+    .max(8192, { message: m.admin__validation_description_lte_8192_chars() })
     .nullish(),
   key: z
     .string()
