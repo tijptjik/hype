@@ -218,3 +218,13 @@ export const OrganisationUpdateFormData = z.object({
     'Update forms require at least one field',
   ),
 })
+
+export const PublishOrganisationSchema = z.object({
+  id: z.string().min(1),
+  state: z.coerce.boolean<boolean>(),
+})
+
+export const RemoveOrganisationSchema = z.object({
+  id: z.string().min(1),
+  state: z.coerce.boolean<boolean>(),
+})

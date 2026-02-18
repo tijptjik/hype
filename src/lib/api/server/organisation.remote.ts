@@ -1,7 +1,10 @@
 // SVELTE
-import { getRequestEvent, query, form } from '$app/server'
-// ZOD
-import { z } from 'zod'
+import { getRequestEvent, query, form, command } from '$app/server'
+import { invalid } from '@sveltejs/kit'
+// I18N
+import { m } from '$lib/i18n'
+// DRIZZLE
+import { eq } from 'drizzle-orm'
 // SERVICES
 import {
   toQueryConditions,
@@ -10,6 +13,7 @@ import {
 import {
   listOrganisations,
   getOrganisation as loadOrganisation,
+  updateOrganisationById,
   toEntityResponseShape,
   toListResponseShape,
 } from '$lib/db/services/organisation'
@@ -24,7 +28,9 @@ import { organisation } from '$lib/db/schema'
 import {
   ListQueryParamsSchema,
   GetQueryParamsSchema,
-  OrganisationAPI,
+  OrganisationFormData,
+  PublishOrganisationSchema,
+  RemoveOrganisationSchema,
 } from '$lib/db/zod'
 import type { OrganisationDB, Id } from '$lib/types'
 
@@ -98,30 +104,96 @@ export const getOrganisations = query(ListQueryParamsSchema, async params => {
  * visibility filters via `getValidQueryParams`.
  */
 export const getOrganisation = query(GetQueryParamsSchema, async params => {
-  // Resolve request context (db, current user, roles, and admin-route detection).
-  const event = getRequestEvent()
-  const { db, user, userRoles, isAdminRequest } = await setupRequestHandler(event)
+  try {
+    // Resolve request context (db, current user, roles, and admin-route detection).
+    const event = getRequestEvent()
+    const { db, user, userRoles, isAdminRequest } = await setupRequestHandler(event)
 
-  // Validate incoming filter keys against table columns and set default visibility filters.
-  const queryParams = validateQueryParams<OrganisationDB>(
-    organisation,
-    toLookupConditions(params),
-  )
+    // Validate incoming filter keys against table columns and set default visibility filters.
+    const queryParams = validateQueryParams<OrganisationDB>(
+      organisation,
+      toLookupConditions(params),
+    )
 
-  // Build final SQL conditions based on request scope and role permissions.
-  const { conditions } = toQueryConditions(user, isAdminRequest, queryParams, userRoles)
+    // Build final SQL conditions based on request scope and role permissions.
+    const { conditions } = toQueryConditions(
+      user,
+      isAdminRequest,
+      queryParams,
+      userRoles,
+    )
 
-  // Execute a single-record query.
-  const result = await loadOrganisation(
-    db,
-    organisationWithRelations,
-    conditions,
-    event.locals.hub,
-  )
+    // Execute a single-record query.
+    const result = await loadOrganisation(
+      db,
+      organisationWithRelations,
+      conditions,
+      event.locals.hub,
+    )
 
-  return toEntityResponseShape(result ?? null, user)
+    return toEntityResponseShape(result ?? null, user)
+  } catch (error) {
+    console.error('[remote:getOrganisation] Failed', {
+      params,
+      error,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    })
+    throw error
+  }
 })
 
-export const organisationForm = form(OrganisationAPI, async _params => {
+export const organisationForm = form(OrganisationFormData, async (params, issue) => {
+  if (params.meta?.mode === 'create') {
+    const event = getRequestEvent()
+    const { db } = await setupRequestHandler(event)
+
+    const existing = await db
+      .select({ id: organisation.id })
+      .from(organisation)
+      .where(eq(organisation.code, params.data.code))
+      .limit(1)
+
+    if (existing.length > 0) {
+      invalid(issue.data.code(m.admin__validation_code_already_exists()))
+    }
+  }
+
   return
+})
+
+export const publishOrganisation = command(PublishOrganisationSchema, async params => {
+  const event = getRequestEvent()
+  const { db } = await setupRequestHandler(event)
+
+  const updated = await updateOrganisationById(
+    db,
+    { isPublished: params.state },
+    params.id as Id,
+  )
+
+  return {
+    data: {
+      id: updated.id,
+      isPublished: updated.isPublished,
+    },
+  }
+})
+
+export const removeOrganisation = command(RemoveOrganisationSchema, async params => {
+  const event = getRequestEvent()
+  const { db } = await setupRequestHandler(event)
+
+  const updated = await updateOrganisationById(
+    db,
+    { isArchived: params.state },
+    params.id as Id,
+  )
+
+  return {
+    data: {
+      id: updated.id,
+      isArchived: updated.isArchived,
+    },
+  }
 })
