@@ -63,6 +63,21 @@ export async function handleResourceFormSubmissionResult({
 }: ResourceFormSubmissionResultParams): Promise<void> {
   const asTrimmedString = (value: unknown): string =>
     typeof value === 'string' ? value.trim() : ''
+  const toIssueParts = (message: string): { code: string; detail: string } => {
+    const [rawCode, ...rest] = message.split(':')
+    const code = (rawCode ?? '').trim()
+    const detail = rest.join(':').trim()
+    if (!code) return { code: invalidMessage, detail: message }
+    if (!detail) return { code, detail: invalidMessage }
+    return { code, detail }
+  }
+  const firstIssueMessage = (issues ?? [])
+    .map(issue =>
+      issue && typeof issue === 'object' && 'message' in issue
+        ? asTrimmedString((issue as { message?: unknown }).message)
+        : '',
+    )
+    .find(Boolean)
 
   const entityData =
     entity && typeof entity === 'object'
@@ -87,6 +102,11 @@ export async function handleResourceFormSubmissionResult({
   }
 
   if ((issues?.length ?? 0) > 0) {
+    if (firstIssueMessage) {
+      const { code, detail } = toIssueParts(firstIssueMessage)
+      toast.error(code, { description: detail })
+      return
+    }
     toast.error(invalidMessage)
     return
   }
