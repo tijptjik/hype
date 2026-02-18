@@ -60,6 +60,21 @@ export function toLocaleFromOrganisationFormLocaleKey(
 }
 
 /**
+ * Convert organisation form i18n map keys (`en`, `zhHans`, `zhHant`) to locale keys.
+ * @param i18n - Form-keyed i18n object.
+ * @returns Locale-keyed i18n object.
+ */
+export function toLocaleRecordFromOrganisationFormI18n<T>(
+  i18n: Record<OrganisationFormLocaleKey, T>,
+): Record<Locale, T> {
+  return {
+    en: i18n.en,
+    'zh-hans': i18n.zhHans,
+    'zh-hant': i18n.zhHant,
+  }
+}
+
+/**
  * Get the fallback locales for a given locale.
  * @param locale - The locale to get the fallback locales for.
  * @returns All supported locales, excluding the given locale.
