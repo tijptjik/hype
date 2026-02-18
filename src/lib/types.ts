@@ -1482,6 +1482,7 @@ export type AuthorizationResourceType = (typeof authorizationResourceTypes)[numb
 
 export const organisationAuthorizationActions = [
   'readOrganisation',
+  'listOrganisations',
   'createOrganisation',
   'updateOrganisation',
   'publishOrganisation',
@@ -1508,6 +1509,7 @@ export type OrganisationAuthorizationField =
 
 export const authorizationDenyCodes = [
   'UNAUTHENTICATED',
+  'REQUEST_STATE_REQUIRED',
   'INSUFFICIENT_ROLE',
   'HUB_SCOPE_FORBIDDEN',
   'FIELD_FORBIDDEN',
@@ -1524,6 +1526,10 @@ export type AuthorizeParams = {
   resourceId?: string
   resourceHubId?: string | null
   fields?: OrganisationAuthorizationField[]
+  requestedState?: {
+    isPublished?: boolean
+    isArchived?: boolean
+  }
 }
 
 export type AuthorizationDecision = {
