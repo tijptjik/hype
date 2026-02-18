@@ -44,6 +44,8 @@
     "prepare": "husky && svelte-kit sync",
     "test": "vitest --config=vitest.config.ts",
     "test:run": "vitest run --config=vitest.config.ts",
+    "test:run:verbose": "vitest run --config=vitest.config.ts --reporter=verbose",
+    "test:run:metrics": "vitest run --config=vitest.config.ts --reporter=default",
     "test:watch": "vitest watch --config=vitest.config.ts",
     "test:ui": "vitest --config=vitest.config.ts --ui",
     "i18n:translate": "bunx @inlang/cli machine translate --project project.inlang",
