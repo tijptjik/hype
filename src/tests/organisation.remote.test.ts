@@ -7,6 +7,7 @@ const {
   mockAuthorizeOrganisationDelete,
   mockAuthorizeOrganisationRead,
   mockAuthorizeOrganisationList,
+  mockToQueryConditions,
   mockToAuthMessage,
   mockUpdateOrganisationById,
   mockLoadOrganisation,
@@ -18,6 +19,7 @@ const {
   mockAuthorizeOrganisationDelete: vi.fn(),
   mockAuthorizeOrganisationRead: vi.fn(),
   mockAuthorizeOrganisationList: vi.fn(),
+  mockToQueryConditions: vi.fn(),
   mockToAuthMessage: vi.fn((code: string) => code),
   mockUpdateOrganisationById: vi.fn(),
   mockLoadOrganisation: vi.fn(),
@@ -67,7 +69,7 @@ vi.mock('$lib/api/services/authz', () => ({
 }))
 
 vi.mock('$lib/api/services/organisation', () => ({
-  toQueryConditions: () => ({ conditions: [], filtersToApply: {} }),
+  toQueryConditions: mockToQueryConditions,
   organisationWithRelations: {},
 }))
 
@@ -124,7 +126,14 @@ import {
   archiveOrganisation,
 } from '$lib/api/server/organisation.remote'
 
-const buildDb = (probeRows: Array<{ id: string; hubId: string | null }>) => ({
+const buildDb = (
+  probeRows: Array<{
+    id: string
+    hubId: string | null
+    isPublished?: boolean
+    isArchived?: boolean
+  }>,
+) => ({
   select: vi.fn(() => ({
     from: vi.fn(() => ({
       where: vi.fn(() => ({
@@ -142,6 +151,7 @@ describe('organisation.remote authz', () => {
     mockToAuthMessage.mockImplementation((code: string) => code)
     mockAuthorizeOrganisationRead.mockReturnValue({ allowed: true })
     mockAuthorizeOrganisationList.mockReturnValue({ allowed: true })
+    mockToQueryConditions.mockReturnValue({ conditions: [], filtersToApply: {} })
   })
 
   afterEach(() => {
@@ -166,6 +176,62 @@ describe('organisation.remote authz', () => {
     expect(mockListOrganisations).not.toHaveBeenCalled()
   })
 
+  it('getOrganisations uses admin-scoped query conditions for allowed unpublished requests', async () => {
+    mockSetupRequestHandler.mockResolvedValue({
+      db: {},
+      user: { id: 'u-1', isAnonymous: false },
+      userRoles: [
+        {
+          type: 'organisation',
+          role: 'member',
+          organisationId: 'org-1',
+          userId: 'u-1',
+        },
+      ],
+      isAdminRequest: false,
+    })
+    mockAuthorizeOrganisationList.mockReturnValue({ allowed: true })
+
+    await getOrganisations({
+      conditions: { isPublished: false, isArchived: false },
+    })
+
+    expect(mockToQueryConditions).toHaveBeenCalledWith(
+      expect.any(Object),
+      true,
+      expect.objectContaining({ isPublished: false, isArchived: false }),
+      expect.any(Array),
+    )
+  })
+
+  it('getOrganisations uses admin-scoped query conditions for tri-state published filter', async () => {
+    mockSetupRequestHandler.mockResolvedValue({
+      db: {},
+      user: { id: 'u-1', isAnonymous: false },
+      userRoles: [
+        {
+          type: 'organisation',
+          role: 'member',
+          organisationId: 'org-1',
+          userId: 'u-1',
+        },
+      ],
+      isAdminRequest: false,
+    })
+    mockAuthorizeOrganisationList.mockReturnValue({ allowed: true })
+
+    await getOrganisations({
+      conditions: { isPublished: null, isArchived: false },
+    })
+
+    expect(mockToQueryConditions).toHaveBeenCalledWith(
+      expect.any(Object),
+      true,
+      expect.objectContaining({ isPublished: null, isArchived: false }),
+      expect.any(Array),
+    )
+  })
+
   it('getOrganisation denies when read authz denies', async () => {
     const db = buildDb([{ id: 'org-1', hubId: 'hub-a' }])
     mockSetupRequestHandler.mockResolvedValue({
@@ -185,6 +251,35 @@ describe('organisation.remote authz', () => {
       },
     )
     expect(mockLoadOrganisation).not.toHaveBeenCalled()
+  })
+
+  it('getOrganisation uses admin-scoped query conditions for allowed unpublished records', async () => {
+    const db = buildDb([
+      { id: 'org-1', hubId: 'hub-a', isPublished: false, isArchived: false },
+    ])
+    mockSetupRequestHandler.mockResolvedValue({
+      db,
+      user: { id: 'u-1', isAnonymous: false },
+      userRoles: [
+        {
+          type: 'organisation',
+          role: 'member',
+          organisationId: 'org-1',
+          userId: 'u-1',
+        },
+      ],
+      isAdminRequest: false,
+    })
+    mockAuthorizeOrganisationRead.mockReturnValue({ allowed: true })
+
+    await getOrganisation({ ref: 'org-1', refKey: 'id' })
+
+    expect(mockToQueryConditions).toHaveBeenCalledWith(
+      expect.any(Object),
+      true,
+      expect.objectContaining({ id: 'org-1' }),
+      expect.any(Array),
+    )
   })
 
   it('publishOrganisation denies when authz denies', async () => {
