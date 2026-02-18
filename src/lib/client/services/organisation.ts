@@ -1,13 +1,20 @@
 // ENUMS
 import type { OrganisationRoleType } from '$lib/enums'
+// I18N
+import {
+  toLocaleFromOrganisationFormLocaleKey,
+  toOrganisationFormLocaleKey,
+} from '$lib/i18n'
 // TYPES
 import type {
+  Locale,
+  OrganisationBooleanField,
   Organisation,
   OrganisationFormInput,
   OrganisationFormLocaleSource,
+  OrganisationIdentityPatch,
+  OrganisationSubmitUpdatesParams,
 } from '$lib/types'
-
-type OrganisationBooleanField = 'isPublished' | 'isArchived'
 
 function normalizeOrganisationFormLocale(
   locale: OrganisationFormLocaleSource,
@@ -64,4 +71,98 @@ export function overrideOrganisationListItemBoolean(
       item.id === organisationId ? { ...item, [field]: value } : item,
     ),
   })
+}
+
+export function toOrganisationIdentityPatch(
+  formData: OrganisationFormInput,
+  locale: Locale,
+): OrganisationIdentityPatch {
+  const formLocale = toOrganisationFormLocaleKey(locale)
+  const entityLocale = toLocaleFromOrganisationFormLocaleKey(formLocale)
+  const localeData = formData.data?.i18n?.[formLocale]
+
+  return {
+    code: formData.data?.code ?? '',
+    locale: entityLocale,
+    name: localeData?.name ?? '',
+    nameShort: localeData?.nameShort ?? '',
+  }
+}
+
+function mergeOrganisationIdentityAtLocale(
+  source: Record<string, unknown>,
+  patch: OrganisationIdentityPatch,
+): Record<string, unknown> {
+  return {
+    ...source,
+    code: patch.code,
+    i18n: {
+      ...(source.i18n as Record<string, Record<string, unknown>> | undefined),
+      [patch.locale]: {
+        ...((source.i18n as Record<string, Record<string, unknown>> | undefined)?.[
+          patch.locale
+        ] ?? {}),
+        name: patch.name,
+        nameShort: patch.nameShort,
+      },
+    },
+  }
+}
+
+export function overrideOrganisationEntityIdentity(patch: OrganisationIdentityPatch) {
+  return <T extends { data: Record<string, unknown> | null }>(current: T): T => ({
+    ...current,
+    data: current.data ? mergeOrganisationIdentityAtLocale(current.data, patch) : null,
+  })
+}
+
+export function overrideOrganisationListItemIdentity(
+  organisationId: string,
+  patch: OrganisationIdentityPatch,
+) {
+  return <T extends { data?: Array<Record<string, unknown>> | null }>(
+    current: T,
+  ): T => ({
+    ...current,
+    data: (current.data ?? []).map(item =>
+      item.id === organisationId
+        ? mergeOrganisationIdentityAtLocale(item, patch)
+        : item,
+    ),
+  })
+}
+
+export function getOrganisationSubmitUpdates<
+  TEntityCurrent,
+  TListCurrent,
+  TEntityResult,
+  TListResult,
+>({
+  data,
+  locale,
+  organisationId,
+  entityQuery,
+  listQuery,
+}: OrganisationSubmitUpdatesParams<
+  TEntityCurrent,
+  TListCurrent,
+  TEntityResult,
+  TListResult
+>): Array<TEntityResult | TListResult> {
+  if (!organisationId) return []
+
+  const patch = toOrganisationIdentityPatch(data, locale)
+
+  return [
+    entityQuery.withOverride(
+      overrideOrganisationEntityIdentity(patch) as (
+        current: TEntityCurrent,
+      ) => TEntityCurrent,
+    ),
+    listQuery.withOverride(
+      overrideOrganisationListItemIdentity(organisationId, patch) as (
+        current: TListCurrent,
+      ) => TListCurrent,
+    ),
+  ]
 }

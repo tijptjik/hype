@@ -1275,6 +1275,28 @@ export type OrganisationFormLocaleSource =
   | Partial<OrganisationFormLocaleInput>
   | null
   | undefined
+export type OrganisationBooleanField = 'isPublished' | 'isArchived'
+export type OrganisationIdentityPatch = {
+  code: string
+  locale: Locale
+  name: string
+  nameShort: string
+}
+export type QueryWithOverride<TCurrent = unknown, TResult = unknown> = {
+  withOverride(update: (current: TCurrent) => TCurrent): TResult
+}
+export type OrganisationSubmitUpdatesParams<
+  TEntityCurrent,
+  TListCurrent,
+  TEntityResult,
+  TListResult,
+> = {
+  data: OrganisationFormInput
+  locale: Locale
+  organisationId?: string | null
+  entityQuery: QueryWithOverride<TEntityCurrent, TEntityResult>
+  listQuery: QueryWithOverride<TListCurrent, TListResult>
+}
 export type OrganisationGetResponse = EntityResponse<
   Organisation | OrganisationSuperAdmin
 >
