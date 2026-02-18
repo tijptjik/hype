@@ -60,7 +60,7 @@ export async function handleResourceFormSubmissionResult({
   resourceValues,
   invalidMessage = m.forms__invalid(),
   fallbackErrorMessage = m.long_crazy_peacock_care(),
-  successPrefix = 'Updated',
+  successPrefix = m.tidy_game_jellyfish_pop(),
 }: ResourceFormSubmissionResultParams): Promise<void> {
   const asTrimmedString = (value: unknown): string => {
     if (typeof value !== 'string') return ''
@@ -177,13 +177,8 @@ const DEFAULT_TRANSLATABLE_FIELDS: I18nTranslatableField[] = [
   'description',
 ]
 
-const toGenField = (
-  field: I18nTranslatableField,
-): 'nameGen' | 'nameShortGen' | 'descriptionGen' => {
-  if (field === 'name') return 'nameGen'
-  if (field === 'nameShort') return 'nameShortGen'
-  return 'descriptionGen'
-}
+const toGenField = (field: I18nTranslatableField): `${I18nTranslatableField}Gen` =>
+  `${field}Gen`
 
 export async function translateLocaleIntoEmptyFields<
   TFormData extends {
