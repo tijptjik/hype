@@ -42,14 +42,12 @@ const measurementKey = $derived(
     controlMode,
     isCreatable: showNew,
     isFilterable: showFilter,
+    showFacets,
+    showViewActions,
+    showFormActions,
     showAvatar,
-    tainted: formActions.isTainted ?? false,
-    submitting: formActions.isSubmitting ?? false,
-    publishing: formActions.isPublishing ?? false,
-    deleting: formActions.isDeleting ?? false,
     editing: formActions.isEditing ?? false,
     deleted: formActions.isDeleted ?? false,
-    published: formActions.isPublished ?? false,
   }),
 )
 </script>

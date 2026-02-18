@@ -1,14 +1,48 @@
 <script lang="ts">
 // SVELTE
 import { page } from '$app/state'
+import { dev } from '$app/environment'
+import { untrack } from 'svelte'
 // I18N
 import { m } from '$lib/i18n'
-import { getLocale, getLocaleOrder, translateI18nFields } from '$lib/i18n'
+import { getLocale, getLocaleOrder, toOrganisationFormLocaleKey } from '$lib/i18n'
+// TOAST
+import { toast } from 'svelte-sonner'
+// SERVICES
+import {
+  addUserRoleSelection,
+  getGenAiState,
+  getNameForToast,
+  getRoleFieldNameByUserId,
+  handleResourceFormSubmissionResult,
+  resetLocaleFields,
+  removeUserRoleSelection,
+  syncHeaderFormActionStatus,
+  toggleEntityDataBoolean,
+  toggleGenAiField,
+  translateLocaleIntoEmptyFields,
+  updateUserRoleSelection,
+  wireHeaderFormActionHandlers,
+} from '$lib/client/services/form'
+import {
+  getOrganisationSubmitUpdates,
+  overrideOrganisationEntityBoolean,
+  overrideOrganisationListItemBoolean,
+  toOrganisationFormInput,
+} from '$lib/client/services/organisation'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
 // REMOTE
-import { getOrganisation, organisationForm } from '$lib/api/server/organisation.remote'
+import {
+  archiveOrganisation,
+  getOrganisation,
+  getOrganisations,
+  organisationForm,
+  publishOrganisation,
+} from '$lib/api/server/organisation.remote'
+// SCHEMA
+import { OrganisationPreflightFormData } from '$lib/db/zod'
 // BITS COMPONENTS
 import {
   FormI18nSection,
@@ -16,7 +50,11 @@ import {
   FormUserRolesSection,
   GridSpacer,
 } from '$lib/bits'
-import { SectionHeader, TextArea, TextInput } from '$lib/bits/custom/form'
+import { FormDebug, SectionHeader, TextArea, TextInput } from '$lib/bits/custom/form'
+// FACTORIES
+import { configureForm } from '$lib/factories.svelte'
+// UTILS
+import { createSchemaRequiredInferer, toIssueMessages } from '$lib/utils/form-schema'
 // ICONS
 import OrganisationIcon from 'virtual:icons/lucide/users-round'
 import FormInputIcon from 'virtual:icons/lucide/form-input'
@@ -24,49 +62,51 @@ import ImageIcon from 'virtual:icons/lucide/image'
 // ENUMS
 import { FirstClassResource, OrganisationRoleType } from '$lib/enums'
 // TYPES
-import type { Locale, Organisation, User } from '$lib/types'
+import type {
+  Locale,
+  User,
+  OrganisationFormInput,
+  OrganisationGetState,
+  UserSearchQueryOptions,
+} from '$lib/types'
 
 // § Config
 
 const facetTabs = new Map([
-  ['core', { label: 'Profile', icon: FormInputIcon }],
-  ['images', { label: 'Image', icon: ImageIcon }],
+  ['core', { label: m.resources__profile(), icon: FormInputIcon }],
+  ['images', { label: m.organisation__images(), icon: ImageIcon }],
 ] as const)
+const userQueryParams: UserSearchQueryOptions = {
+  pagination: { limit: 20, offset: 0 },
+  sorting: { sortBy: 'name', sortOrder: 'asc' },
+}
+const translatableI18nFields = ['name', 'nameShort', 'description'] as const
 
 // § Context
 
 const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 
-// § State
+// § State - Elements
 
 let contentsElement: HTMLFormElement | undefined = $state()
-let organisation = $state<Awaited<ReturnType<typeof getOrganisation>> | null>(null)
-let genAiByLocale = $state<
-  Record<Locale, { name: boolean; nameShort: boolean; description: boolean }>
->({
-  en: { name: false, nameShort: false, description: false },
-  'zh-hans': { name: false, nameShort: false, description: false },
-  'zh-hant': { name: false, nameShort: false, description: false },
-})
 
-// § Reactive Aliases
+// § State - State
+
+let lastHeaderKey = $state('')
+let lastFormActionsSignature = $state('')
+
+// § State - Data
+
+let organisation = $state<OrganisationGetState>(null)
+
+// § Derived State - Config
 
 const organisationRef = $derived(page.params.organisation as string)
-
-const formFieldKeys = $derived(
-  organisationForm?.fields ? Object.keys(organisationForm.fields) : [],
-)
-const fieldLocaleKeys = $derived(
-  organisationForm?.fields?.i18n ? Object.keys(organisationForm.fields.i18n) : [],
-)
 const orderedLocales = $derived(getLocaleOrder(getLocale()))
 const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
 )
-const isCoreFacet = $derived(activeFacet === 'core')
-const isImagesFacet = $derived(activeFacet === 'images')
-const isEditing = $derived(headerCtrl.state.isEditing)
 const flags = $derived(
   organisation?.data?.hubId != null
     ? [
@@ -74,100 +114,110 @@ const flags = $derived(
           key: 'isHubExclusive',
           label: m.long_fit_vole_flow(),
           checked: Boolean(organisation.data.isHubExclusive),
-          isEditing,
+          isEditing: headerCtrl.state.isEditing,
           isNullable: false,
-          onCheckedChange: handleHubExclusiveToggle,
+          onCheckedChange: (nextChecked: boolean | null) => {
+            organisation = toggleEntityDataBoolean(
+              organisation,
+              'isHubExclusive',
+              nextChecked,
+            )
+          },
         },
       ]
     : [],
 )
-let lastHeaderKey = $state('')
+
+// § Form
+
+const configuredOrganisationForm = configureForm<OrganisationFormInput>(() => ({
+  form: organisationForm,
+  formEl: contentsElement,
+  key: organisation?.data?.id ?? organisationRef,
+  schema: OrganisationPreflightFormData,
+  data: organisation?.data ? toOrganisationFormInput(organisation.data) : undefined,
+  onsubmitupdates: ({ data }) =>
+    getOrganisationSubmitUpdates({
+      data,
+      locale: getLocale(),
+      organisationId: organisation?.data?.id,
+      entityQuery: getOrganisation({ ref: organisationRef, refKey: 'code' }),
+      listQuery: getOrganisations({
+        conditions: adminCtx.appCtx.isSuperAdmin() ? {} : { isArchived: false },
+        prisms: adminCtx.appCtx.state.prisms,
+      }),
+    }),
+  onresult: async ({ success, issues, error }) => {
+    await handleResourceFormSubmissionResult({
+      success,
+      issues,
+      error,
+      nameKey: 'nameShort',
+      nameFallbackKey: 'code',
+      headerCtrl,
+      refreshResource: async () => {
+        const refreshed = await refreshOrganisation()
+        organisation = refreshed
+        if (refreshed?.data) {
+          formCtx.form.fields.set(toOrganisationFormInput(refreshed.data))
+        }
+      },
+      entity: organisation,
+    })
+  },
+}))
+
+const formCtx = $derived(configuredOrganisationForm())
+const isRequiredInPreflight = createSchemaRequiredInferer(OrganisationPreflightFormData)
+
+// § Derived State - Flags
+
+const isCoreFacet = $derived(activeFacet === 'core')
+const isImagesFacet = $derived(activeFacet === 'images')
+const isEditing = $derived(headerCtrl.state.isEditing)
+const isDirty = $derived(Boolean(formCtx.dirty))
 
 // § Handlers
 
-function syncGenAiFromOrganisation(data: Organisation): void {
-  genAiByLocale = {
-    en: {
-      name: Boolean(data.i18n?.en?.nameGen),
-      nameShort: Boolean(data.i18n?.en?.nameShortGen),
-      description: Boolean(data.i18n?.en?.descriptionGen),
-    },
-    'zh-hans': {
-      name: Boolean(data.i18n?.['zh-hans']?.nameGen),
-      nameShort: Boolean(data.i18n?.['zh-hans']?.nameShortGen),
-      description: Boolean(data.i18n?.['zh-hans']?.descriptionGen),
-    },
-    'zh-hant': {
-      name: Boolean(data.i18n?.['zh-hant']?.nameGen),
-      nameShort: Boolean(data.i18n?.['zh-hant']?.nameShortGen),
-      description: Boolean(data.i18n?.['zh-hant']?.descriptionGen),
-    },
-  }
-}
+// i18N CARDS
 
-function updateOrganisationFormData(
-  updater: (data: Organisation) => Organisation,
-): void {
-  if (!organisation?.data) return
-  // `organisation.data` is a Svelte proxy; structuredClone throws on proxies.
-  // Clone through JSON to get a plain object for safe mutation in updater.
-  const nextData = updater(
-    JSON.parse(JSON.stringify(organisation.data)) as Organisation,
-  )
-  organisation = { ...organisation, data: nextData }
-  organisationForm.fields.set(nextData)
-  syncGenAiFromOrganisation(nextData)
-}
-
-function handleToggleGenAi(
-  locale: Locale,
-  field: 'name' | 'nameShort' | 'description',
-): void {
-  updateOrganisationFormData(data => {
-    if (!data.i18n) return data
-    if (!data.i18n[locale]) return data
-    const nextValue = !data.i18n[locale][`${field}Gen`]
-    data.i18n[locale][`${field}Gen` as 'nameGen' | 'nameShortGen' | 'descriptionGen'] =
-      nextValue
-    return data
+async function handleTranslateLocale(
+  sourceLocale: Locale,
+  targetLocale: Locale,
+): Promise<void> {
+  await translateLocaleIntoEmptyFields({
+    form: formCtx.form,
+    sourceLocale,
+    targetLocale,
+    fields: [...translatableI18nFields],
   })
 }
 
-function handleHubExclusiveToggle(nextChecked: boolean | null): void {
-  updateOrganisationFormData(data => {
-    data.isHubExclusive = Boolean(nextChecked)
-    return data
+function handleResetLocale(targetLocale: Locale): void {
+  resetLocaleFields({
+    form: formCtx.form,
+    targetLocale,
+    fields: [...translatableI18nFields],
   })
 }
+
+// USER ROLES
 
 function handleAddOrganisationUser(user: User): void {
-  updateOrganisationFormData(data => {
-    const existing = data.userRoles ?? []
-    if (existing.some(userRole => userRole.userId === user.id)) return data
-
-    const nextRole = {
-      organisationId: data.id,
-      userId: user.id,
-      role: OrganisationRoleType.member,
-      user: {
-        id: user.id,
-        name: user.name,
-        image: user.image,
-        attribution: user.attribution,
-      },
-    }
-
-    data.userRoles = [...existing, nextRole]
-    return data
+  organisation = addUserRoleSelection({
+    form: formCtx.form,
+    entity: organisation,
+    user,
+    defaultRole: OrganisationRoleType.member,
+    foreignKey: 'organisationId',
   })
 }
 
 function handleRemoveOrganisationUser(userId: string): void {
-  updateOrganisationFormData(data => {
-    data.userRoles = (data.userRoles ?? []).filter(
-      userRole => userRole.userId !== userId,
-    )
-    return data
+  organisation = removeUserRoleSelection({
+    form: formCtx.form,
+    entity: organisation,
+    userId,
   })
 }
 
@@ -175,85 +225,149 @@ function handleOrganisationRoleChange(
   userId: string,
   role: OrganisationRoleType,
 ): void {
-  updateOrganisationFormData(data => {
-    data.userRoles = (data.userRoles ?? []).map(userRole =>
-      userRole.userId === userId ? { ...userRole, role } : userRole,
-    )
-    return data
+  organisation = updateUserRoleSelection({
+    form: formCtx.form,
+    entity: organisation,
+    userId,
+    role,
   })
 }
 
-async function searchUsers(query: string): Promise<User[]> {
-  if (query.trim().length < 2) return []
+// RESOURCE STATE
+
+async function refreshOrganisation(
+  ref: string = organisationRef,
+): Promise<OrganisationGetState> {
+  return await getOrganisation({ ref, refKey: 'code' }).catch(() => null)
+}
+
+async function handlePublishOrganisation(): Promise<void> {
+  if (!organisation || !organisation.data) return
+  const nextState = !organisation.data.isPublished
+
+  headerCtrl.setPublishing(true)
+
   try {
-    const response = await fetch(`/api/users?q=${encodeURIComponent(query)}`)
-    if (!response.ok) return []
-    return (await response.json()) as User[]
+    await publishOrganisation({
+      id: organisation.data.id,
+      state: nextState,
+    }).updates(
+      getOrganisation({ ref: organisationRef, refKey: 'code' }).withOverride(
+        overrideOrganisationEntityBoolean('isPublished', nextState),
+        // TODO Invalidate cache
+      ),
+      getOrganisations({
+        conditions: adminCtx.appCtx.isSuperAdmin() ? {} : { isArchived: false },
+        prisms: adminCtx.appCtx.state.prisms,
+      }).withOverride(
+        overrideOrganisationListItemBoolean(
+          organisation.data.id,
+          'isPublished',
+          nextState,
+        ),
+        // TODO Invalidate cache
+      ),
+    )
+    organisation = await refreshOrganisation()
+
+    toast.success(
+      `${nextState ? 'Published' : 'Unpublished'} ${getNameForToast(organisation, 'nameShort')}`,
+    )
   } catch {
-    return []
+    toast.error(m.long_crazy_peacock_care())
+  } finally {
+    headerCtrl.setPublishing(false)
   }
 }
 
-async function handleTranslateLocale(
-  sourceLocale: Locale,
-  targetLocale: Locale,
-): Promise<void> {
-  if (!organisation?.data) return
+async function handleDeleteOrganisation(): Promise<void> {
+  if (!organisation || !organisation.data) return
+  const nextState = !organisation.data.isArchived
 
-  const translated = await translateI18nFields({
-    source: sourceLocale,
-    target: targetLocale,
-    fields: ['name', 'description'],
-    i18n: organisation.data.i18n as Record<
-      Locale,
-      Record<string, string | null | undefined>
-    >,
-  })
+  headerCtrl.setDeleting(true)
 
-  updateOrganisationFormData(data => {
-    if (!data.i18n) return data
-    if (!data.i18n[targetLocale]) return data
-    data.i18n[targetLocale].name = translated.name
-    data.i18n[targetLocale].description = translated.description
-    data.i18n[targetLocale].nameGen = true
-    data.i18n[targetLocale].descriptionGen = true
-    return data
-  })
+  try {
+    await archiveOrganisation({
+      id: organisation.data.id,
+      state: nextState,
+    }).updates(
+      getOrganisation({ ref: organisationRef, refKey: 'code' }).withOverride(
+        overrideOrganisationEntityBoolean('isArchived', nextState),
+        // TODO Invalidate cache
+      ),
+      getOrganisations({
+        conditions: adminCtx.appCtx.isSuperAdmin() ? {} : { isArchived: false },
+        prisms: adminCtx.appCtx.state.prisms,
+      }).withOverride(
+        overrideOrganisationListItemBoolean(
+          organisation.data.id,
+          'isArchived',
+          nextState,
+        ),
+        // TODO Invalidate cache
+      ),
+    )
+    organisation = await refreshOrganisation()
+
+    toast.success(
+      `${nextState ? 'Removed' : 'Restored'} ${getNameForToast(organisation, 'nameShort')}`,
+    )
+  } catch {
+    toast.error(m.long_crazy_peacock_care())
+  } finally {
+    headerCtrl.setDeleting(false)
+  }
+}
+
+function handleHeaderFormReset(): void {
+  if (organisation?.data) {
+    formCtx.form.fields.set(toOrganisationFormInput(organisation.data))
+    return
+  }
+  formCtx.reset()
+}
+
+function handleHeaderFormSubmit(): void {
+  contentsElement?.requestSubmit()
+}
+
+function handleHeaderPublishToggle(): void {
+  void handlePublishOrganisation()
+}
+
+function handleHeaderDeleteToggle(): void {
+  void handleDeleteOrganisation()
 }
 
 // § Effects
 
+// Keep facet + entity data in sync with the current route ref.
 $effect(() => {
   const ref = organisationRef
   let cancelled = false
+  lastFormActionsSignature = ''
 
-  adminCtx.setFacet('core', ref, FirstClassResource.organisation)
+  untrack(() => {
+    adminCtx.setFacet('core', ref, FirstClassResource.organisation)
+  })
 
-  void getOrganisation({ ref, refKey: 'code' })
-    .then(result => {
-      if (cancelled) return
-      organisation = result
-      if (result?.data) {
-        organisationForm.fields.set(result.data)
-        syncGenAiFromOrganisation(result.data)
-      }
-    })
-    .catch(() => {
-      if (cancelled) return
-      organisation = null
-    })
+  void refreshOrganisation(ref).then(result => {
+    if (cancelled) return
+    organisation = result
+  })
 
   return () => {
     cancelled = true
   }
 })
 
+// Keep entity header metadata (title/icon/facets) aligned with loaded organisation data.
 $effect(() => {
   const ref = organisationRef
   const title =
     organisation?.data?.i18n?.[getLocale()]?.name ??
     organisation?.data?.code ??
-    'Organisation'
+    m.any_small_midge_aim()
   const headerKey = `${ref}:${title}`
 
   if (headerKey === lastHeaderKey) return
@@ -261,38 +375,94 @@ $effect(() => {
 
   headerCtrl.setHeaderForEntity(title, OrganisationIcon, facetTabs)
 })
+
+// Archived entities are read-only until restored.
+$effect(() => {
+  if (!organisation?.data?.isArchived) return
+  if (!headerCtrl.state.isEditing) return
+  headerCtrl.setEditing(false)
+})
+
+// Wire stable header action handlers once.
+$effect(() => {
+  wireHeaderFormActionHandlers({
+    headerCtrl,
+    handlers: {
+      reset: handleHeaderFormReset,
+      submit: handleHeaderFormSubmit,
+      togglePublish: handleHeaderPublishToggle,
+      toggleDelete: handleHeaderDeleteToggle,
+    },
+  })
+})
+
+// Push reactive form/resource status state into shared header controls.
+$effect(() => {
+  const dirty = isDirty
+  const isSubmitting = formCtx.submitting
+  const hasIssues = (formCtx.allIssues?.length ?? 0) > 0
+  const isPublished = Boolean(organisation?.data?.isPublished)
+  const isDeleted = Boolean(organisation?.data?.isArchived)
+  lastFormActionsSignature = syncHeaderFormActionStatus({
+    headerCtrl,
+    status: {
+      dirty,
+      isSubmitting,
+      hasIssues,
+      isPublished,
+      isDeleted,
+    },
+    lastSignature: lastFormActionsSignature,
+  })
+})
+
+// Clear route-provided header form actions on unmount.
+$effect(() => {
+  return () => {
+    headerCtrl.clearFormActions()
+  }
+})
 </script>
 
 <main class="h-full overflow-y-auto p-6">
   <section class:hidden={!isCoreFacet}>
     <form
       bind:this={contentsElement}
-      {...organisationForm}
+      {...formCtx.attributes}
       class="bits-theme space-y-4"
     >
-      {#if organisationForm?.fields && organisation?.data}
+      {#if formCtx.form?.fields && organisation?.data}
         <FormI18nSection
           title={m.admin__forms_common_descriptors()}
           locales={orderedLocales}
           onTranslate={handleTranslateLocale}
+          onResetLocale={handleResetLocale}
           {isEditing}
           {flags}
         >
           {#snippet children(locale)}
-            {@const fields = organisationForm.fields.i18n[locale]}
+            {@const formLocale = toOrganisationFormLocaleKey(locale)}
+            {@const fields = formCtx.form.fields.data.i18n[formLocale]}
             {@const nameInputAttrs = fields.name.as('text')}
+            {@const nameRequired = isRequiredInPreflight(['data', 'i18n', formLocale, 'name'])}
+            {@const nameIssues = toIssueMessages(fields.name.issues())}
             {@const nameShortInputAttrs = fields.nameShort.as('text')}
+            {@const nameShortRequired = isRequiredInPreflight(['data', 'i18n', formLocale, 'nameShort'])}
+            {@const nameShortIssues = toIssueMessages(fields.nameShort.issues())}
             {@const descriptionTextAreaAttrs = fields.description.as('text')}
+            {@const descriptionRequired = isRequiredInPreflight(['data', 'i18n', formLocale, 'description'])}
+            {@const descriptionIssues = toIssueMessages(fields.description.issues())}
 
             <TextInput
               label={m.admin__forms_common_name_full()}
               {locale}
               isTranslated={true}
-              required={true}
+              required={nameRequired}
               {isEditing}
-              isGenAI={genAiByLocale[locale].name}
-              onToggleGenAI={() => handleToggleGenAi(locale, 'name')}
+              isGenAI={getGenAiState(formCtx.form, locale, 'name')}
+              onToggleGenAI={() => toggleGenAiField(formCtx.form, locale, 'name')}
               value={(nameInputAttrs as { value?: string }).value ?? ''}
+              issues={nameIssues}
               inputAttrs={nameInputAttrs as Record<string, unknown>}
             />
 
@@ -300,11 +470,12 @@ $effect(() => {
               label={m.admin__forms_common_name_short()}
               {locale}
               isTranslated={true}
-              required={true}
+              required={nameShortRequired}
               {isEditing}
-              isGenAI={genAiByLocale[locale].nameShort}
-              onToggleGenAI={() => handleToggleGenAi(locale, 'nameShort')}
+              isGenAI={getGenAiState(formCtx.form, locale, 'nameShort')}
+              onToggleGenAI={() => toggleGenAiField(formCtx.form, locale, 'nameShort')}
               value={(nameShortInputAttrs as { value?: string }).value ?? ''}
+              issues={nameShortIssues}
               inputAttrs={nameShortInputAttrs as Record<string, unknown>}
             />
 
@@ -312,11 +483,12 @@ $effect(() => {
               label="Description"
               {locale}
               isTranslated={true}
-              required={true}
+              required={descriptionRequired}
               {isEditing}
-              isGenAI={genAiByLocale[locale].description}
-              onToggleGenAI={() => handleToggleGenAi(locale, 'description')}
+              isGenAI={getGenAiState(formCtx.form, locale, 'description')}
+              onToggleGenAI={() => toggleGenAiField(formCtx.form, locale, 'description')}
               value={(descriptionTextAreaAttrs as { value?: string }).value ?? ''}
+              issues={descriptionIssues}
               textareaAttrs={descriptionTextAreaAttrs as Record<string, unknown>}
             />
           {/snippet}
@@ -324,37 +496,52 @@ $effect(() => {
 
         <GridSpacer>
           {#snippet left()}
+            {@const userRoleValues = formCtx.form.fields.value().data?.userRoles ?? []}
+            {@const roleFieldNameByUserId = getRoleFieldNameByUserId(formCtx.form)}
             <FormUserRolesSection
               title={m.admin__forms_organisation_members_title()}
               subtitle={m.admin__forms_organisation_members_subtitle()}
               userRoles={organisation?.data?.userRoles ?? []}
+              {roleFieldNameByUserId}
+              {userQueryParams}
               {isEditing}
-              onSearchUsers={searchUsers}
               onAddUser={handleAddOrganisationUser}
               onRemoveUser={handleRemoveOrganisationUser}
               onRoleChange={handleOrganisationRoleChange}
             />
+            <div class="hidden" aria-hidden="true">
+              {#each userRoleValues as _userRole, index (index)}
+                {@const userRoleField = (formCtx.form.fields.data.userRoles as any)[index]}
+                <input {...userRoleField.userId.as('hidden', _userRole.userId)}>
+              {/each}
+            </div>
           {/snippet}
 
           {#snippet right()}
-            {@const codeInputAttrs = organisationForm.fields.code.as('text')}
-            {@const urlInputAttrs = organisationForm.fields.url.as('url')}
+            {@const codeInputAttrs = formCtx.form.fields.data.code.as('text')}
+            {@const codeRequired = isRequiredInPreflight(['data', 'code'])}
+            {@const codeIssues = toIssueMessages(formCtx.form.fields.data.code.issues())}
+            {@const urlInputAttrs = formCtx.form.fields.data.url.as('url')}
+            {@const urlRequired = isRequiredInPreflight(['data', 'url'])}
+            {@const urlIssues = toIssueMessages(formCtx.form.fields.data.url.issues())}
             <section class="bits-form__section">
               <SectionHeader title={m.admin__forms_common_specifiers()} />
               <FormSection>
                 <TextInput
                   label="Code"
-                  class="font-mono"
+                  required={codeRequired}
                   {isEditing}
                   value={(codeInputAttrs as { value?: string }).value ?? ''}
+                  issues={codeIssues}
                   inputAttrs={codeInputAttrs as Record<string, unknown>}
                 />
 
                 <TextInput
                   label="Url"
-                  class="font-mono"
+                  required={urlRequired}
                   {isEditing}
                   value={(urlInputAttrs as { value?: string }).value ?? ''}
+                  issues={urlIssues}
                   inputAttrs={urlInputAttrs as Record<string, unknown>}
                 />
               </FormSection>
@@ -363,9 +550,11 @@ $effect(() => {
         </GridSpacer>
       {/if}
     </form>
+    {#if dev}
+      <FormDebug form={formCtx.form} />
+    {/if}
   </section>
   <section class:hidden={!isImagesFacet}>
     <p class="text-sm text-neutral-content">Active tab: profile image management.</p>
-    <pre> {JSON.stringify(organisation?.data, null, 2)} </pre>
   </section>
 </main>

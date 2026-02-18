@@ -12,6 +12,7 @@ import Save from 'virtual:icons/lucide/save'
 import Trash2 from 'virtual:icons/lucide/trash-2'
 import Undo2 from 'virtual:icons/lucide/undo-2'
 import LoaderCircle from 'virtual:icons/lucide/loader-circle'
+import X from 'virtual:icons/lucide/x'
 // TYPES
 import type { HeaderFormActionsProps } from './headerPrimitives.types'
 
@@ -55,8 +56,10 @@ function handlePrimaryAction(): void {
 </script>
 
 {#snippet primaryIcon()}
-  {#if isEditing}
+  {#if isEditing && isTainted}
     <RotateCcw />
+  {:else if isEditing}
+    <X />
   {:else}
     <Pencil />
   {/if}
@@ -123,7 +126,7 @@ function handlePrimaryAction(): void {
       color="neutral"
       style="ghost"
       icon={primaryIcon}
-      class="bits-pattern-header__form-action-primary"
+      class={hideLabel ? '' : 'bits-pattern-header__form-action-primary'}
       {hideLabel}
       disabled={isInFlight}
       onClick={handlePrimaryAction}
@@ -134,7 +137,7 @@ function handlePrimaryAction(): void {
       color="neutral"
       style="ghost"
       icon={primaryIcon}
-      class="bits-pattern-header__form-action-primary"
+      class={hideLabel ? '' : 'bits-pattern-header__form-action-primary'}
       {hideLabel}
       disabled={isInFlight}
       onClick={handlePrimaryAction}

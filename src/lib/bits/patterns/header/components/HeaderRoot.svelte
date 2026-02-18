@@ -17,6 +17,8 @@ let debounceId: ReturnType<typeof setTimeout> | null = null
 let suppressTransitions = $state(false)
 let maskButtonLabels = $state(true)
 let hasResolvedOnce = false
+let lastResolvedWidth = $state(0)
+let lastResolvedKey = $state('')
 
 const RESOLVE_DEBOUNCE_MS = 100
 const ANIMATION_SETTLE_MS = 420
@@ -161,7 +163,19 @@ function scheduleOverflowResolution(): void {
 }
 
 $effect(() => {
-  measurementKey
+  const key = measurementKey
+  const width = rootEl ? Math.round(rootEl.getBoundingClientRect().width) : 0
+  const widthChanged = width !== lastResolvedWidth
+  const keyChanged = key !== lastResolvedKey
+
+  if (widthChanged) {
+    lastResolvedWidth = width
+  }
+  if (keyChanged) {
+    lastResolvedKey = key
+  }
+
+  if (!widthChanged && !keyChanged && hasResolvedOnce) return
   scheduleOverflowResolution()
 })
 
