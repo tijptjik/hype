@@ -5,15 +5,18 @@ import type {
   AddUserRoleSelectionParams,
   GenAiField,
   GenAiStateResolverForm,
+  HeaderFormActionStatus,
   FormDataUpdaterForm,
   FormSubmissionResultHandlerParams,
   I18nTranslatableField,
   RemoveUserRoleSelectionParams,
   ResetLocaleFieldsParams,
   ResourceFormSubmissionResultParams,
+  SyncHeaderFormActionStatusParams,
   TranslateLocaleIntoEmptyFieldsParams,
   UpdateUserRoleSelectionParams,
   UserRoleFieldNameResolverForm,
+  WireHeaderFormActionHandlersParams,
   Locale,
 } from '$lib/types'
 
@@ -89,6 +92,30 @@ export async function handleResourceFormSubmissionResult({
   }
 
   toast.error(fallbackErrorMessage)
+}
+
+export function wireHeaderFormActionHandlers({
+  headerCtrl,
+  handlers,
+}: WireHeaderFormActionHandlersParams): void {
+  headerCtrl.setFormActions(handlers)
+}
+
+export function toHeaderFormActionStatusSignature(
+  status: HeaderFormActionStatus,
+): string {
+  return `${status.dirty}|${status.isSubmitting}|${status.hasIssues}|${status.isPublished}|${status.isDeleted}`
+}
+
+export function syncHeaderFormActionStatus({
+  headerCtrl,
+  status,
+  lastSignature,
+}: SyncHeaderFormActionStatusParams): string {
+  const signature = toHeaderFormActionStatusSignature(status)
+  if (signature === lastSignature) return lastSignature
+  headerCtrl.setFormActions(status)
+  return signature
 }
 
 export function getNameForToast(

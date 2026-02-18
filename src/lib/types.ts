@@ -872,6 +872,31 @@ export type FormHeaderController = {
   setEditing: (isEditing: boolean) => void
 }
 
+export type HeaderFormActionsController = {
+  setFormActions: (formActions: Partial<HeaderFormActionsState>) => void
+}
+
+export type HeaderFormActionHandlers = Pick<
+  HeaderFormActionsState,
+  'reset' | 'submit' | 'togglePublish' | 'toggleDelete'
+>
+
+export type HeaderFormActionStatus = Pick<
+  HeaderFormActionsState,
+  'dirty' | 'isSubmitting' | 'hasIssues' | 'isPublished' | 'isDeleted'
+>
+
+export type WireHeaderFormActionHandlersParams = {
+  headerCtrl: HeaderFormActionsController
+  handlers: HeaderFormActionHandlers
+}
+
+export type SyncHeaderFormActionStatusParams = {
+  headerCtrl: HeaderFormActionsController
+  status: HeaderFormActionStatus
+  lastSignature: string
+}
+
 export type ResourceFormSubmissionResultParams = {
   success: boolean
   issues?: RemoteFormIssue[]
