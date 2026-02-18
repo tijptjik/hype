@@ -369,11 +369,25 @@ export type HeaderMetaState = {
   facets: HeaderFacetItem[]
 }
 
+export type HeaderFormActionsState = {
+  dirty: boolean
+  submitting: boolean
+  isPublishing: boolean
+  isDeleting: boolean
+  isDeleted: boolean
+  isPublished: boolean
+  reset: () => void
+  submit: () => void
+  togglePublish: () => void | Promise<void>
+  toggleDelete: () => void
+}
+
 export type HeaderCtrlState = {
   controlsMode: HeaderControlsMode
   isEditing: boolean
   visibility: HeaderVisibilityOverrides
   meta: HeaderMetaState
+  formActions: HeaderFormActionsState | null
 }
 
 /* ----------------- */
