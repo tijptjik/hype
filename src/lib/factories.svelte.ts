@@ -188,6 +188,7 @@ export function configureForm<Input extends RemoteFormInput = RemoteFormInput>(
 
         submitting = true
         const wasDirty = dirty
+        let resultDispatched = false
         try {
           dirty = false
           const updates = await onsubmitupdates?.({ dirty, form: formEl, data })
@@ -198,17 +199,25 @@ export function configureForm<Input extends RemoteFormInput = RemoteFormInput>(
           }
           submitted = true
 
-          const success = !allIssues
-          onresult?.({ success, result: form.result, issues: allIssues })
+          const hasIssues = (allIssues?.length ?? 0) > 0
+          const success = !hasIssues
+          resultDispatched = true
+          onresult?.({
+            success,
+            result: form.result,
+            issues: hasIssues ? allIssues : undefined,
+          })
 
           if (!success) {
             dirty = wasDirty
             await focusInvalid()
-            onissues?.({ issues: allIssues })
+            if (allIssues) onissues?.({ issues: allIssues })
           }
         } catch (error) {
           // TODO Add a error toast
-          onresult?.({ success: false, error: (error as Error).message })
+          if (!resultDispatched) {
+            onresult?.({ success: false, error: (error as Error).message })
+          }
           dirty = wasDirty
         } finally {
           submitting = false
