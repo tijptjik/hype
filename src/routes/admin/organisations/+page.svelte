@@ -10,6 +10,11 @@ import FilterControlBar from '$lib/components/resources/filters/organisations/Ro
 import { FirstClassResource } from '$lib/enums'
 // I18N
 import { m } from '$lib/i18n'
+// AUTHORIZATION
+import {
+  authorizeOrganisationCreate,
+  toOrganisationAuthActor,
+} from '$lib/api/services/authz'
 // ICONS
 import OrganisationIcon from 'virtual:icons/lucide/users-round'
 // TYPES
@@ -47,8 +52,28 @@ const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 adminCtx.setFacet(false, false, RESOURCE)
 
+const currentUser = $derived(adminCtx.appCtx.getUser())
+const currentHub = $derived(adminCtx.appCtx.hub)
+const currentActor = $derived(toOrganisationAuthActor(currentUser))
+
+const canCreateOrganisation = $derived.by(() => {
+  const decision = authorizeOrganisationCreate(
+    currentActor,
+    {
+      resourceHubId: currentHub?.isCore ? null : (currentHub?.id ?? null),
+    },
+    ['code'],
+  )
+
+  return decision.allowed
+})
+
 // HEADER SETUP
-headerCtrl.setHeaderForIndex(m.maps__organisations(), OrganisationIcon)
+$effect(() => {
+  headerCtrl.setHeaderForIndex(m.maps__organisations(), OrganisationIcon, {
+    showNew: canCreateOrganisation,
+  })
+})
 // STATE
 let entities: Organisation[] = $derived(
   adminCtx.getViewFilteredResource<Organisation>(FirstClassResource.organisation),

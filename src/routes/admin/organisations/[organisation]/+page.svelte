@@ -1,7 +1,6 @@
 <script lang="ts">
 // SVELTE
 import { page } from '$app/state'
-import { dev } from '$app/environment'
 import { untrack } from 'svelte'
 // I18N
 import { m } from '$lib/i18n'
@@ -41,6 +40,11 @@ import {
   organisationForm,
   publishOrganisation,
 } from '$lib/api/server/organisation.remote'
+import {
+  toOrganisationAuthActor,
+  authorizeOrganisationPublish,
+  authorizeOrganisationUpdate,
+} from '$lib/api/services/authz'
 // SCHEMA
 import { OrganisationPreflightFormData } from '$lib/db/zod'
 // BITS COMPONENTS
@@ -50,7 +54,7 @@ import {
   FormUserRolesSection,
   GridSpacer,
 } from '$lib/bits'
-import { FormDebug, SectionHeader, TextArea, TextInput } from '$lib/bits/custom/form'
+import { SectionHeader, TextArea, TextInput } from '$lib/bits/custom/form'
 // FACTORIES
 import { configureForm } from '$lib/factories.svelte'
 // UTILS
@@ -176,6 +180,27 @@ const isCoreFacet = $derived(activeFacet === 'core')
 const isImagesFacet = $derived(activeFacet === 'images')
 const isEditing = $derived(headerCtrl.state.isEditing)
 const isDirty = $derived(Boolean(formCtx.dirty))
+
+const currentUser = $derived(adminCtx.appCtx.getUser())
+const currentActor = $derived(toOrganisationAuthActor(currentUser))
+const canEditOrganisation = $derived.by(() => {
+  if (!organisation?.data) return false
+  return authorizeOrganisationUpdate(
+    currentActor,
+    {
+      resourceId: organisation.data.id,
+      resourceHubId: organisation.data.hubId,
+    },
+    ['code'],
+  ).allowed
+})
+const canPublishOrganisation = $derived.by(() => {
+  if (!organisation?.data) return false
+  return authorizeOrganisationPublish(currentActor, {
+    resourceId: organisation.data.id,
+    resourceHubId: organisation.data.hubId,
+  }).allowed
+})
 
 // § Handlers
 
@@ -332,6 +357,7 @@ function handleHeaderFormSubmit(): void {
 }
 
 function handleHeaderPublishToggle(): void {
+  if (!canPublishOrganisation) return
   void handlePublishOrganisation()
 }
 
@@ -383,6 +409,13 @@ $effect(() => {
   headerCtrl.setEditing(false)
 })
 
+// Keep unauthorized users out of edit mode if the header state gets toggled externally.
+$effect(() => {
+  if (canEditOrganisation) return
+  if (!headerCtrl.state.isEditing) return
+  headerCtrl.setEditing(false)
+})
+
 // Wire stable header action handlers once.
 $effect(() => {
   wireHeaderFormActionHandlers({
@@ -411,6 +444,8 @@ $effect(() => {
       hasIssues,
       isPublished,
       isDeleted,
+      canEdit: canEditOrganisation,
+      canPublish: canPublishOrganisation,
     },
     lastSignature: lastFormActionsSignature,
   })
@@ -550,9 +585,6 @@ $effect(() => {
         </GridSpacer>
       {/if}
     </form>
-    {#if dev}
-      <FormDebug form={formCtx.form} />
-    {/if}
   </section>
   <section class:hidden={!isImagesFacet}>
     <p class="text-sm text-neutral-content">Active tab: profile image management.</p>
