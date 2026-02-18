@@ -32,7 +32,7 @@
   /* I18n Cards */
   /* --------- */
   .bits-theme .bits-form__i18n-card {
-    @apply relative flex flex-col overflow-visible rounded-xl border-4 bg-glass-300 p-5;
+    @apply relative flex flex-col overflow-visible rounded-xl border-4 bg-glass-300 p-5 shadow-xl;
     border-color: color-mix(in oklab, var(--color-primary) 100%, transparent);
   }
 
