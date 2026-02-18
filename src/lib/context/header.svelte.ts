@@ -1,4 +1,4 @@
-import { getContext, setContext } from 'svelte'
+import { getContext, setContext, untrack } from 'svelte'
 import type { Component } from 'svelte'
 import type {
   FacetType,
@@ -177,7 +177,7 @@ export class HeaderCtrl {
    * @returns void
    */
   setFormActions(formActions: Partial<HeaderFormActionsState>): void {
-    const current = this.state.formActions ?? DEFAULT_HEADER_FORM_ACTIONS
+    const current = untrack(() => this.state.formActions ?? DEFAULT_HEADER_FORM_ACTIONS)
     this.state.formActions = {
       ...DEFAULT_HEADER_FORM_ACTIONS,
       ...current,
@@ -298,8 +298,9 @@ export class HeaderCtrl {
    * @returns void
    */
   private patchFormActions(patch: Partial<HeaderFormActionsState>): void {
+    const current = untrack(() => this.state.formActions ?? {})
     this.setFormActions({
-      ...(this.state.formActions ?? {}),
+      ...current,
       ...patch,
     })
   }
