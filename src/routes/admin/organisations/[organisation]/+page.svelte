@@ -294,8 +294,8 @@ const canPublishOrganisation = $derived.by(() => {
 async function handleTranslateLocale(
   sourceLocale: Locale,
   targetLocale: Locale,
-): Promise<void> {
-  await translateLocaleIntoEmptyFields({
+): Promise<boolean> {
+  return await translateLocaleIntoEmptyFields({
     form: formCtx.form,
     sourceLocale,
     targetLocale,

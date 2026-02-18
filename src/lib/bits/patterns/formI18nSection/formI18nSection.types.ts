@@ -15,7 +15,7 @@ export interface FormI18nSectionProps {
   gridClass?: string
   cardClass?: string
   localeCodeClass?: string
-  onTranslate?: (sourceLocale: Locale, targetLocale: Locale) => Promise<void>
+  onTranslate?: (sourceLocale: Locale, targetLocale: Locale) => Promise<void | boolean>
   onResetLocale?: (targetLocale: Locale) => void | Promise<void>
   isEditing?: boolean
   headerActions?: Snippet
@@ -45,7 +45,7 @@ export interface FormSectionProps {
   contentClass?: string
   footerClass?: string
   localeCodeClass?: string
-  onTranslate?: (sourceLocale: Locale, targetLocale: Locale) => Promise<void>
+  onTranslate?: (sourceLocale: Locale, targetLocale: Locale) => Promise<void | boolean>
   onResetLocale?: (targetLocale: Locale) => void | Promise<void>
   isEditing?: boolean
   showTranslationBar?: boolean

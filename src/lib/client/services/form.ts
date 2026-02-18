@@ -255,31 +255,40 @@ export async function translateLocaleIntoEmptyFields<
   sourceLocale,
   targetLocale,
   fields = DEFAULT_TRANSLATABLE_FIELDS,
-}: TranslateLocaleIntoEmptyFieldsParams<TFormData>): Promise<void> {
+}: TranslateLocaleIntoEmptyFieldsParams<TFormData>): Promise<boolean> {
   const currentFormData = form.fields.value().data
-  if (!currentFormData?.i18n) return
+  if (!currentFormData?.i18n) return false
 
   const localeKeyMap: Record<Locale, string> = {
     en: 'en',
     'zh-hans': 'zhHans',
     'zh-hant': 'zhHant',
   }
+  const targetFormLocale = toOrganisationFormLocaleKey(targetLocale)
+  const targetLocaleData = currentFormData.i18n?.[targetFormLocale]
+  if (!targetLocaleData) return false
+
+  const fieldsToTranslate = fields.filter(field => {
+    const currentValue = targetLocaleData[field]
+    return !(typeof currentValue === 'string' && currentValue.trim().length > 0)
+  })
+  if (fieldsToTranslate.length === 0) return false
 
   const i18n = {
     en: Object.fromEntries(
-      fields.map(field => [
+      fieldsToTranslate.map(field => [
         field,
         currentFormData.i18n?.[localeKeyMap.en]?.[field] ?? '',
       ]),
     ),
     'zh-hans': Object.fromEntries(
-      fields.map(field => [
+      fieldsToTranslate.map(field => [
         field,
         currentFormData.i18n?.[localeKeyMap['zh-hans']]?.[field] ?? '',
       ]),
     ),
     'zh-hant': Object.fromEntries(
-      fields.map(field => [
+      fieldsToTranslate.map(field => [
         field,
         currentFormData.i18n?.[localeKeyMap['zh-hant']]?.[field] ?? '',
       ]),
@@ -289,16 +298,15 @@ export async function translateLocaleIntoEmptyFields<
   const translated = await translateI18nFields({
     source: sourceLocale,
     target: targetLocale,
-    fields,
+    fields: fieldsToTranslate,
     i18n,
   })
 
   updateFormData(form, data => {
-    const targetFormLocale = toOrganisationFormLocaleKey(targetLocale)
     const targetLocaleData = data.i18n?.[targetFormLocale]
     if (!targetLocaleData) return data
 
-    for (const field of fields) {
+    for (const field of fieldsToTranslate) {
       const currentValue = targetLocaleData[field]
       if (typeof currentValue === 'string' && currentValue.trim().length > 0) continue
       const nextValue = translated[field] ?? ''
@@ -309,6 +317,8 @@ export async function translateLocaleIntoEmptyFields<
     }
     return data
   })
+
+  return true
 }
 
 export function resetLocaleFields<

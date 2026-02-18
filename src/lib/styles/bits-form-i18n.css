@@ -123,4 +123,27 @@
   .bits-theme .bits-form__i18n-translation-source-icon {
     @apply h-4 w-4;
   }
+
+  .bits-theme .bits-form__i18n-translation-source-icon--flash {
+    animation: bits-form-i18n-reset-pulse 360ms cubic-bezier(0.2, 0.85, 0.2, 1) 2;
+  }
+
+  @keyframes bits-form-i18n-reset-pulse {
+    0%,
+    12% {
+      opacity: 0.55;
+      transform: scale(0.9);
+      color: var(--color-base-content);
+    }
+    24% {
+      opacity: 1;
+      transform: scale(1.06);
+      color: var(--color-error);
+    }
+    100% {
+      opacity: 0.9;
+      transform: scale(1);
+      color: var(--color-base-content);
+    }
+  }
 }

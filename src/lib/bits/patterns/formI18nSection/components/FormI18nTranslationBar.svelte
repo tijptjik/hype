@@ -29,6 +29,7 @@ let {
 let status = $state<'idle' | 'loading' | 'error'>('idle')
 let loadingLocale = $state<Locale | null>(null)
 let errorResetTimer = $state<ReturnType<typeof setTimeout> | null>(null)
+let resetFlashToken = $state(0)
 
 const sourceLocales = $derived(
   supportedLocales.filter(locale => locale !== targetLocale) as Locale[],
@@ -51,7 +52,10 @@ async function handleTranslate(event: MouseEvent, sourceLocale: Locale): Promise
   loadingLocale = sourceLocale
 
   try {
-    await onTranslate(sourceLocale, targetLocale)
+    const translated = await onTranslate(sourceLocale, targetLocale)
+    if (translated === false) {
+      resetFlashToken += 1
+    }
     status = 'idle'
   } catch {
     status = 'error'
@@ -123,7 +127,11 @@ $effect(() => {
         onclick={handleResetLocale}
         aria-label={`Reset ${targetLocale} fields`}
       >
-        <Eraser class="bits-form__i18n-translation-source-icon" />
+        {#key resetFlashToken}
+          <Eraser
+            class={`bits-form__i18n-translation-source-icon ${resetFlashToken > 0 ? 'bits-form__i18n-translation-source-icon--flash' : ''}`}
+          />
+        {/key}
       </button>
     </div>
   {/if}
