@@ -14,6 +14,7 @@ let {
   cardClass = 'bits-form__i18n-card',
   localeCodeClass = 'bits-form__i18n-locale-code',
   onTranslate,
+  onResetLocale,
   isEditing = false,
   headerActions,
   flags = [],
@@ -55,6 +56,7 @@ const resolvedGridClass = $derived(
         {cardClass}
         {localeCodeClass}
         {onTranslate}
+        {onResetLocale}
         {isEditing}
         showTranslationBar={true}
         {children}

@@ -3,11 +3,15 @@ import { fade } from 'svelte/transition'
 import { localeCodes, supportedLocales } from '$lib/enums'
 import type { Locale } from '$lib/types'
 import AlertCircle from 'virtual:icons/lucide/alert-circle'
+import Eraser from 'virtual:icons/lucide/eraser'
 import Languages from 'virtual:icons/lucide/languages'
 import LoaderCircle from 'virtual:icons/lucide/loader-circle'
 import type { FormSectionProps } from '../formI18nSection.types'
 
-type Props = Pick<FormSectionProps, 'localeCodeClass' | 'onTranslate'> & {
+type Props = Pick<
+  FormSectionProps,
+  'localeCodeClass' | 'onTranslate' | 'onResetLocale'
+> & {
   targetLocale: Locale
   isVisible?: boolean
   isEditing?: boolean
@@ -17,6 +21,7 @@ let {
   targetLocale,
   localeCodeClass = 'bits-form__i18n-locale-code',
   onTranslate,
+  onResetLocale,
   isVisible = false,
   isEditing = false,
 }: Props = $props()
@@ -57,6 +62,13 @@ async function handleTranslate(event: MouseEvent, sourceLocale: Locale): Promise
   } finally {
     loadingLocale = null
   }
+}
+
+async function handleResetLocale(event: MouseEvent): Promise<void> {
+  event.preventDefault()
+  event.stopPropagation()
+  if (!onResetLocale || status === 'loading') return
+  await onResetLocale(targetLocale)
 }
 
 $effect(() => {
@@ -103,6 +115,16 @@ $effect(() => {
           {localeCodes[sourceLocale] ?? sourceLocale.toUpperCase()}
         </button>
       {/each}
+      <button
+        type="button"
+        class="bits-form__i18n-translation-source"
+        disabled={!onResetLocale}
+        tabindex={isVisible ? 0 : -1}
+        onclick={handleResetLocale}
+        aria-label={`Reset ${targetLocale} fields`}
+      >
+        <Eraser class="bits-form__i18n-translation-source-icon" />
+      </button>
     </div>
   {/if}
 </div>

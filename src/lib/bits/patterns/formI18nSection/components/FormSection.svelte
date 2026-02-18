@@ -11,6 +11,7 @@ let {
   footerClass = 'bits-form__i18n-card-footer',
   localeCodeClass = 'bits-form__i18n-locale-code',
   onTranslate,
+  onResetLocale,
   isEditing = false,
   showTranslationBar = false,
   children,
@@ -96,6 +97,7 @@ $effect(() => {
       targetLocale={locale as Locale}
       {localeCodeClass}
       {onTranslate}
+      {onResetLocale}
       {isEditing}
       isVisible={isTranslationBarVisible}
     />
