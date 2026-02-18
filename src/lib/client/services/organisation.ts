@@ -7,6 +7,8 @@ import type {
   OrganisationFormLocaleSource,
 } from '$lib/types'
 
+type OrganisationBooleanField = 'isPublished' | 'isArchived'
+
 function normalizeOrganisationFormLocale(
   locale: OrganisationFormLocaleSource,
 ): OrganisationFormInput['data']['i18n']['en'] {
@@ -37,4 +39,29 @@ export function toOrganisationFormInput(data: Organisation): OrganisationFormInp
       })),
     },
   }
+}
+
+export function overrideOrganisationEntityBoolean(
+  field: OrganisationBooleanField,
+  value: boolean,
+) {
+  return <T extends { data: Record<string, unknown> | null }>(current: T): T => ({
+    ...current,
+    data: current.data ? { ...current.data, [field]: value } : current.data,
+  })
+}
+
+export function overrideOrganisationListItemBoolean(
+  organisationId: string,
+  field: OrganisationBooleanField,
+  value: boolean,
+) {
+  return <T extends { data?: Array<Record<string, unknown>> | null }>(
+    current: T,
+  ): T => ({
+    ...current,
+    data: (current.data ?? []).map(item =>
+      item.id === organisationId ? { ...item, [field]: value } : item,
+    ),
+  })
 }
