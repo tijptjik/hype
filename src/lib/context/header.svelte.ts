@@ -18,6 +18,8 @@ const DEFAULT_HEADER_FORM_ACTIONS: HeaderFormActionsState = {
   togglePublish: () => {},
   isPublishing: false,
   isPublished: false,
+  canEdit: true,
+  canPublish: true,
   toggleDelete: () => {},
   isDeleting: false,
   isDeleted: false,
@@ -119,12 +121,17 @@ export class HeaderCtrl {
    * Configure header for index/list routes.
    * @param title - Header title.
    * @param icon - Header icon component.
+   * @param visibilityOverrides - Visibility overrides merged onto index defaults.
    * @returns void
    */
-  setHeaderForIndex(title: string, icon: Component): void {
+  setHeaderForIndex(
+    title: string,
+    icon: Component,
+    visibilityOverrides: HeaderVisibilityOverrides = {},
+  ): void {
     this.applyIndexMeta(title, icon)
     this.showControls('view')
-    this.setVisibility(getIndexVisibility())
+    this.setVisibility(getIndexVisibility(visibilityOverrides))
   }
 
   /**
