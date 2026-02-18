@@ -5,8 +5,22 @@ import type {
   HeaderCtrlState,
   HeaderControlsMode,
   HeaderFacetItem,
+  HeaderFormActionsState,
   HeaderVisibilityOverrides,
 } from '$lib/types'
+
+const DEFAULT_HEADER_FORM_ACTIONS: HeaderFormActionsState = {
+  dirty: false,
+  reset: () => {},
+  submit: () => {},
+  submitting: false,
+  togglePublish: () => {},
+  isPublishing: false,
+  isPublished: false,
+  toggleDelete: () => {},
+  isDeleting: false,
+  isDeleted: false,
+}
 
 /**
  * Build the default visibility profile for index/list routes.
@@ -57,6 +71,7 @@ export class HeaderCtrl {
       icon: null,
       facets: [],
     },
+    formActions: null,
   })
 
   /**
@@ -156,6 +171,26 @@ export class HeaderCtrl {
   }
 
   /**
+   * Register header form actions from the current route form controller.
+   * @param formActions - Partial form action handlers/state merged with defaults.
+   * @returns void
+   */
+  setFormActions(formActions: Partial<HeaderFormActionsState>): void {
+    this.state.formActions = {
+      ...DEFAULT_HEADER_FORM_ACTIONS,
+      ...formActions,
+    }
+  }
+
+  /**
+   * Clear route-provided form actions.
+   * @returns void
+   */
+  clearFormActions(): void {
+    this.state.formActions = null
+  }
+
+  /**
    * Fully reset header controls, visibility, and metadata.
    * @returns void
    */
@@ -163,6 +198,7 @@ export class HeaderCtrl {
     this.state.controlsMode = 'auto'
     this.state.isEditing = false
     this.state.visibility = {}
+    this.state.formActions = null
     this.clearMeta()
   }
 

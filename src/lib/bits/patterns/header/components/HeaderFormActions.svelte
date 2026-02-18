@@ -11,12 +11,16 @@ import RotateCcw from 'virtual:icons/lucide/rotate-ccw'
 import Save from 'virtual:icons/lucide/save'
 import Trash2 from 'virtual:icons/lucide/trash-2'
 import Undo2 from 'virtual:icons/lucide/undo-2'
+import LoaderCircle from 'virtual:icons/lucide/loader-circle'
 // TYPES
 import type { HeaderFormActionsProps } from './headerPrimitives.types'
 
 let {
   isEditing = false,
   isTainted = false,
+  isSubmitting = false,
+  isPublishing = false,
+  isDeleting = false,
   isDeleted = false,
   isPublished = false,
   hideLabel = false,
@@ -61,7 +65,9 @@ function handlePrimaryAction(): void {
 {/snippet}
 
 {#snippet deleteIcon()}
-  {#if isDeleted}
+  {#if isDeleting}
+    <LoaderCircle class="animate-spin" />
+  {:else if isDeleted}
     <Undo2 />
   {:else}
     <Trash2 />
@@ -69,7 +75,9 @@ function handlePrimaryAction(): void {
 {/snippet}
 
 {#snippet publishIcon()}
-  {#if isPublished}
+  {#if isPublishing}
+    <LoaderCircle class="animate-spin" />
+  {:else if isPublished}
     <EyeOff />
   {:else}
     <Eye />
@@ -79,21 +87,22 @@ function handlePrimaryAction(): void {
 <div class="bits-pattern-header__form-actions">
   {#if isEditing}
     <Button
-      text={deleteLabel}
+      text={isDeleting ? m.forms__pending() : deleteLabel}
       color={isDeleted ? 'warning' : 'error'}
       style="ghost"
       icon={deleteIcon}
       {hideLabel}
+      disabled={isDeleting || isSubmitting}
       onClick={() => onDeleteToggle?.()}
     />
 
     <Button
-      text={m.forms__save()}
-      color="neutral"
+      text={isSubmitting ? m.forms__pending() : m.forms__save()}
+      color="success"
       style="ghost"
       icon={saveIcon}
       {hideLabel}
-      disabled={!isTainted}
+      disabled={!isTainted || isSubmitting}
       onClick={() => onSave?.()}
     />
 
@@ -102,6 +111,7 @@ function handlePrimaryAction(): void {
       color="neutral"
       style="ghost"
       icon={primaryIcon}
+      class="bits-pattern-header__form-action-primary"
       {hideLabel}
       onClick={handlePrimaryAction}
     />
@@ -111,6 +121,7 @@ function handlePrimaryAction(): void {
       color="neutral"
       style="ghost"
       icon={primaryIcon}
+      class="bits-pattern-header__form-action-primary"
       {hideLabel}
       onClick={handlePrimaryAction}
     />
@@ -122,6 +133,7 @@ function handlePrimaryAction(): void {
     style="ghost"
     icon={publishIcon}
     {hideLabel}
+    disabled={isTainted || isSubmitting}
     onClick={() => onPublishToggle?.()}
   />
 </div>

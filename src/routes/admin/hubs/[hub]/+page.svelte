@@ -1,34 +1,34 @@
 <script lang="ts">
 // LIB
-import { NEW_TITLE } from '$lib';
+import { NEW_TITLE } from '$lib'
 // I18N
-import { getLocale } from '$lib/i18n';
-import { m } from '$lib/i18n';
+import { getLocale } from '$lib/i18n'
+import { m } from '$lib/i18n'
 // CONTEXT
-import { setForm } from '$lib/context/form.svelte';
-import { getAdminCtx } from '$lib/context/admin.svelte';
-import { getHeaderCtrl } from '$lib/context/header.svelte';
+import { setForm } from '$lib/context/form.svelte'
+import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getHeaderCtrl } from '$lib/context/header.svelte'
 // ICONS
-import HubIcon from 'virtual:icons/lucide/building-2';
+import HubIcon from 'virtual:icons/lucide/building-2'
 // COMPONENTS
-import I18nSection from '$lib/components/forms/sections/I18n.svelte';
-import SpecificationSection from '$lib/components/forms/sections/Specification.svelte';
-import HubOrganisationsSection from '$lib/components/forms/sections/HubOrganisations.svelte';
-import Scrollbar from '$lib/components/common/scrollbars/Scrollbar.svelte';
+import I18nSection from '$lib/components/forms/sections/I18n.svelte'
+import SpecificationSection from '$lib/components/forms/sections/Specification.svelte'
+import HubOrganisationsSection from '$lib/components/forms/sections/HubOrganisations.svelte'
+import Scrollbar from '$lib/components/common/scrollbars/Scrollbar.svelte'
 // TYPES
-import type { Hub, FormPageProps, FormField } from '$lib/types';
-import { untrack } from 'svelte';
+import type { Hub, FormPageProps, FormField } from '$lib/types'
+import { untrack } from 'svelte'
 
 // CONTEXT
-const adminCtx = getAdminCtx();
-const headerCtrl = getHeaderCtrl();
+const adminCtx = getAdminCtx()
+const headerCtrl = getHeaderCtrl()
 
 // ELEMENTS
-let vietportElement: HTMLDivElement | undefined = $state();
-let contentsElement: HTMLFormElement | undefined = $state();
+let vietportElement: HTMLDivElement | undefined = $state()
+let contentsElement: HTMLFormElement | undefined = $state()
 
 // CONFIG
-const RESOURCE = 'hub' as any;
+const RESOURCE = 'hub' as any
 const FIELDS: Record<string, FormField> = {
   i18n: {
     name: {
@@ -36,22 +36,22 @@ const FIELDS: Record<string, FormField> = {
       component: 'InputField',
       isArray: false,
       isTranslated: true,
-      isNested: false
+      isNested: false,
     },
     nameShort: {
       label: m.admin__forms_common_name_short(),
       component: 'InputField',
       isArray: false,
       isTranslated: true,
-      isNested: false
+      isNested: false,
     },
     description: {
       label: m.feature__description(),
       component: 'TextareaField',
       isArray: false,
       isTranslated: true,
-      isNested: false
-    }
+      isNested: false,
+    },
   } as FormField,
   specification: {
     code: {
@@ -59,53 +59,55 @@ const FIELDS: Record<string, FormField> = {
       component: 'InputField',
       isArray: false,
       isTranslated: false,
-      isNested: false
+      isNested: false,
     },
     domain: {
       label: 'Domain',
       component: 'InputField',
       isArray: false,
       isTranslated: false,
-      isNested: false
-    }
-  } as FormField
-};
+      isNested: false,
+    },
+  } as FormField,
+}
 
 // STATE : PROPS
-let pageProps: FormPageProps<Hub> = $props();
-adminCtx.setFacet('core', pageProps.data.entity, RESOURCE);
+let pageProps: FormPageProps<Hub> = $props()
+adminCtx.setFacet('core', pageProps.data.entity, RESOURCE)
 
 // STATE : FORM
 let form = setForm(
   RESOURCE,
   pageProps.data.entity,
   pageProps.data.validatedForm,
-  getAdminCtx()
-);
-let enhance = $derived(form.enhance);
+  getAdminCtx(),
+)
+let enhance = $derived(form.enhance)
 
 // STATE : DERIVED :: TITLE
 let title = $derived(
-  pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE
-);
+  pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE,
+)
 
 // HEADER SETUP
 $effect(() => {
-  const facetTabs = new Map();
-  facetTabs.set('core', m.resources__main());
+  const facetTabs = new Map()
+  facetTabs.set('core', m.resources__main())
 
-  untrack(() => headerCtrl.setHeaderForEntity(title, HubIcon, facetTabs));
+  untrack(() => headerCtrl.setHeaderForEntity(title, HubIcon, facetTabs))
 
-  // Set form context for header actions
-  adminCtx.appCtx.setFormContext(form);
-});
+  headerCtrl.setFormActions({
+    dirty: Boolean(form.isTainted),
+    submit: () => void form.submit(),
+  })
+})
 
-// Clean up form context when component unmounts
+// Clean up form actions when component unmounts
 $effect(() => {
   return () => {
-    adminCtx.appCtx.clearFormContext();
-  };
-});
+    headerCtrl.clearFormActions()
+  }
+})
 </script>
 
 <!-- LAYOUT -->
@@ -117,12 +119,14 @@ $effect(() => {
     role="form"
     data-testid="hubForm"
     class="mb-24 h-full overflow-y-auto"
-    bind:this={contentsElement}>
+    bind:this={contentsElement}
+  >
     <main class="flex min-h-full flex-col gap-6 p-6 pb-64">
       <I18nSection
         title={m.admin__forms_common_descriptors()}
         fields={FIELDS.i18n}
-        {form} />
+        {form}
+      />
       <div class="flex flex-row gap-6">
         <HubOrganisationsSection
           title={m.hub__organisations()}
@@ -141,11 +145,13 @@ $effect(() => {
             discriminator: 'isCoreInclusive',
             checkedValue: true,
             uncheckedValue: false
-          }} />
+          }}
+        />
         <SpecificationSection
           title={m.admin__forms_common_specifiers()}
           fields={FIELDS.specification as FormField}
-          {form} />
+          {form}
+        />
       </div>
     </main>
   </form>
@@ -162,6 +168,7 @@ $effect(() => {
         track: 24,
         thumb: 8,
         thumbActive: 12
-      }} />
+      }}
+    />
   {/if}
 </div>

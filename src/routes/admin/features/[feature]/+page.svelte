@@ -1,37 +1,37 @@
 <script lang="ts">
 // SVELTE
-import { watch } from 'runed';
-import { fade } from 'svelte/transition';
-import { untrack } from 'svelte';
+import { watch } from 'runed'
+import { fade } from 'svelte/transition'
+import { untrack } from 'svelte'
 // LIB
-import { NEW_TITLE, NEW_REF } from '$lib';
+import { NEW_TITLE, NEW_REF } from '$lib'
 // I18N
-import { getLocale } from '$lib/i18n';
-import { m } from '$lib/i18n';
-import { page } from '$app/state';
+import { getLocale } from '$lib/i18n'
+import { m } from '$lib/i18n'
+import { page } from '$app/state'
 // CONTEXT
-import { setForm } from '$lib/context/form.svelte';
-import { getAdminCtx } from '$lib/context/admin.svelte';
-import { getHeaderCtrl } from '$lib/context/header.svelte';
+import { setForm } from '$lib/context/form.svelte'
+import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getHeaderCtrl } from '$lib/context/header.svelte'
 // ICONS
-import FeatureIcon from 'virtual:icons/lucide/map-pin';
+import FeatureIcon from 'virtual:icons/lucide/map-pin'
 // PROVIDERS
-import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
+import ImageProvider from '$lib/components/providers/ImageProvider.svelte'
 // COMPONENTS
-import I18nSection from '$lib/components/forms/sections/I18n.svelte';
-import FeatureActions from '$lib/components/forms/actions/Feature.svelte';
-import InfoContent from '$lib/components/forms/info/FeatureCore.svelte';
-import PropertySection from '$lib/components/forms/sections/FeatureProperty.svelte';
-import MapSection from '$lib/components/forms/sections/Map.svelte';
-import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte';
-import AddressSection from '$lib/components/forms/sections/Address.svelte';
-import AddressComponentSection from '$lib/components/forms/sections/AddressComponent.svelte';
-import GallerySection from '$lib/components/forms/sections/Gallery.svelte';
-import ViewerSection from '$lib/components/forms/sections/Viewer.svelte';
-import CanonicalImage from '$lib/components/forms/sections/CanonicalImage.svelte';
-import Scrollbar from '$lib/components/common/scrollbars/Scrollbar.svelte';
+import I18nSection from '$lib/components/forms/sections/I18n.svelte'
+import FeatureActions from '$lib/components/forms/actions/Feature.svelte'
+import InfoContent from '$lib/components/forms/info/FeatureCore.svelte'
+import PropertySection from '$lib/components/forms/sections/FeatureProperty.svelte'
+import MapSection from '$lib/components/forms/sections/Map.svelte'
+import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte'
+import AddressSection from '$lib/components/forms/sections/Address.svelte'
+import AddressComponentSection from '$lib/components/forms/sections/AddressComponent.svelte'
+import GallerySection from '$lib/components/forms/sections/Gallery.svelte'
+import ViewerSection from '$lib/components/forms/sections/Viewer.svelte'
+import CanonicalImage from '$lib/components/forms/sections/CanonicalImage.svelte'
+import Scrollbar from '$lib/components/common/scrollbars/Scrollbar.svelte'
 // ENUMS
-import { FirstClassResource, ImageContextResource } from '$lib/enums';
+import { FirstClassResource, ImageContextResource } from '$lib/enums'
 // TYPES
 import type {
   Feature,
@@ -41,16 +41,16 @@ import type {
   FormFieldArrayDefinition,
   FormFieldNested,
   FormFieldConfig,
-  Image
-} from '$lib/types';
+  Image,
+} from '$lib/types'
 
 // CONTEXT
-const adminCtx = getAdminCtx();
-const headerCtrl = getHeaderCtrl();
+const adminCtx = getAdminCtx()
+const headerCtrl = getHeaderCtrl()
 
 // ELEMENTS
-let vietportElement: HTMLDivElement | undefined = $state();
-let contentsElement: HTMLDivElement | undefined = $state();
+let vietportElement: HTMLDivElement | undefined = $state()
+let contentsElement: HTMLDivElement | undefined = $state()
 
 // CONFIG
 const FIELDS: FormFieldConfig = {
@@ -60,15 +60,15 @@ const FIELDS: FormFieldConfig = {
       component: 'InputField',
       isArray: false,
       isNested: false,
-      isTranslated: true
+      isTranslated: true,
     },
     description: {
       label: m.feature__description(),
       component: 'TextareaField',
       isArray: false,
       isNested: false,
-      isTranslated: true
-    }
+      isTranslated: true,
+    },
   } as FormField,
   property: {
     properties: {
@@ -78,10 +78,10 @@ const FIELDS: FormFieldConfig = {
         values: ['classifier', 'specifier'],
         specs: {
           classifier: {},
-          specifier: {}
-        }
-      }
-    } as FormFieldArrayDefinition
+          specifier: {},
+        },
+      },
+    } as FormFieldArrayDefinition,
   } as FormFieldArray,
   address: {
     displayAddress: {
@@ -90,111 +90,113 @@ const FIELDS: FormFieldConfig = {
       component: 'TextareaField',
       isArray: false,
       isNested: false,
-      isTranslated: true
+      isTranslated: true,
     },
     addressProperties: {
       label: m.admin__forms_feature_address_components_title(),
       component: 'DisplayField',
       isArray: false,
       isNested: true,
-      isTranslated: true
+      isTranslated: true,
     },
     addressMeta: {
       label: m.admin__forms_feature_addressing_title(),
       component: 'DisplayField',
       isArray: false,
       isNested: true,
-      isTranslated: false
-    }
-  } as FormFieldNested
-};
+      isTranslated: false,
+    },
+  } as FormFieldNested,
+}
 
 // STATE : PROPS
-let pageProps: FormPageProps<Feature> = $props();
+let pageProps: FormPageProps<Feature> = $props()
 
 // Read facet from URL hash
 const hashFacet = $derived(() => {
   if (typeof window !== 'undefined') {
-    const hash = page.url.hash;
-    return hash ? hash.substring(1) : null;
+    const hash = page.url.hash
+    return hash ? hash.substring(1) : null
   }
-  return null;
-});
+  return null
+})
 
 // Set facet from hash or default to 'core'
 $effect(() => {
-  const facet = hashFacet();
+  const facet = hashFacet()
   if (facet && ['core', 'address', 'images'].includes(facet)) {
-    adminCtx.setFacet(facet as any, pageProps.data.entity, FirstClassResource.feature);
+    adminCtx.setFacet(facet as any, pageProps.data.entity, FirstClassResource.feature)
   } else {
-    adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.feature);
+    adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.feature)
   }
-});
+})
 
 // STATE : FORM
 let form = setForm(
   FirstClassResource.feature,
   pageProps.data.entity,
   pageProps.data.validatedForm,
-  getAdminCtx()
-);
+  getAdminCtx(),
+)
 
 // REACTIVE: Update form when pageProps change (for reset functionality)
 watch(
   () => pageProps.data.validatedForm?.data,
-  (newData) => {
-    form.form.set(newData as unknown as Feature);
+  newData => {
+    form.form.set(newData as unknown as Feature)
   },
   {
-    lazy: true
-  }
-);
+    lazy: true,
+  },
+)
 
 // STATE : DERIVED
-let enhance = $derived(form.enhance);
-let isMapFullscreen = $state(false);
+let enhance = $derived(form.enhance)
+let isMapFullscreen = $state(false)
 let isMapCollapsed = $state(
   adminCtx?.appCtx?.getUserPreferences
     ? (adminCtx.appCtx?.getUserPreferences()?.admin?.isAdminMapCollapsed ?? false)
-    : false
-);
+    : false,
+)
 let title = $derived(
-  pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.title || NEW_TITLE
-);
-let image = $derived(pageProps.data.validatedForm?.data?.image);
+  pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.title || NEW_TITLE,
+)
+let image = $derived(pageProps.data.validatedForm?.data?.image)
 
 // HEADER SETUP
 $effect(() => {
-  const facetTabs = new Map();
-  facetTabs.set('core', m.resources__main());
-  facetTabs.set('address', m.feature__address());
+  const facetTabs = new Map()
+  facetTabs.set('core', m.resources__main())
+  facetTabs.set('address', m.feature__address())
   if (adminCtx.activeResourceRef !== 'new') {
-    facetTabs.set('images', m.feature__images());
+    facetTabs.set('images', m.feature__images())
   }
 
-  untrack(() => headerCtrl.setHeaderForEntity(title, FeatureIcon, facetTabs));
+  untrack(() => headerCtrl.setHeaderForEntity(title, FeatureIcon, facetTabs))
 
-  // Set form context for header actions
-  adminCtx.appCtx.setFormContext(form);
-});
+  headerCtrl.setFormActions({
+    dirty: Boolean(form.isTainted),
+    submit: () => void form.submit(),
+  })
+})
 
-// Clean up form context when component unmounts
+// Clean up form actions when component unmounts
 $effect(() => {
   return () => {
-    adminCtx.appCtx.clearFormContext();
-  };
-});
+    headerCtrl.clearFormActions()
+  }
+})
 
 // UTILS
 function handleMapFullscreenChange(isFullscreen: boolean): void {
-  isMapFullscreen = isFullscreen;
+  isMapFullscreen = isFullscreen
 }
 
 function handleMapCollapse(): void {
-  isMapCollapsed = !isMapCollapsed;
+  isMapCollapsed = !isMapCollapsed
 }
-const feature = $derived(pageProps.data.validatedForm.data);
-const featureId = $state(page.params.feature);
+const feature = $derived(pageProps.data.validatedForm.data)
+const featureId = $state(page.params.feature)
 const imageProviderProps = $derived({
   isAdminMode: true,
   // Only provide valid props when feature and featureId match
@@ -207,10 +209,10 @@ const imageProviderProps = $derived({
       ? {
           ctxType: ImageContextResource.feature,
           ctxId: featureId,
-          ...adminCtx.appCtx.getHierarchySync(feature)
+          ...adminCtx.appCtx.getHierarchySync(feature),
         }
-      : undefined
-});
+      : undefined,
+})
 </script>
 
 {#snippet featureInfoSnippet()}
@@ -232,7 +234,8 @@ const imageProviderProps = $derived({
         role="form"
         transition:fade
         data-testid="featureForm"
-        class="mb-12 h-full overflow-y-auto">
+        class="mb-12 h-full overflow-y-auto"
+      >
         <main class="flex h-full min-h-0 flex-1 flex-row gap-6 overflow-visible pl-6">
           {#if adminCtx.activeFacet !== 'images'}
             <div
@@ -240,22 +243,27 @@ const imageProviderProps = $derived({
               class:flex-[0_0_3%]={isMapCollapsed}
               class:overflow-visible={isMapCollapsed}
               class:flex-[0_0_100%]={isMapFullscreen}
-              class:flex-[0_0_33%]={!isMapFullscreen && !isMapCollapsed}>
+              class:flex-[0_0_33%]={!isMapFullscreen && !isMapCollapsed}
+            >
               <MapSection
                 {form}
                 fields={FIELDS.map}
                 toggleFullscreen={handleMapFullscreenChange}
-                toggleCollapsed={handleMapCollapse} />
+                toggleCollapsed={handleMapCollapse}
+              />
               <div
-                class="absolute bottom-6 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex">
+                class="absolute bottom-6 left-0 right-0 hidden items-center justify-center gap-6 p-4 @md:flex"
+              >
                 <UserAttributionCard
                   userId={pageProps.data.validatedForm?.data?.contributorId}
                   date={pageProps.data.validatedForm?.data?.createdAt ?? undefined}
-                  type="contributor" />
+                  type="contributor"
+                />
                 <UserAttributionCard
                   userId={pageProps.data.validatedForm.data.publisherId}
                   date={pageProps.data.validatedForm.data.publishedAt ?? undefined}
-                  type="publisher" />
+                  type="publisher"
+                />
               </div>
             </div>
           {/if}
@@ -272,19 +280,22 @@ const imageProviderProps = $derived({
               !isMapCollapsed &&
               adminCtx.activeFacet !== 'images'}
             class:opacity-100={!isMapFullscreen}
-            bind:this={contentsElement}>
+            bind:this={contentsElement}
+          >
             <div class="pb-6 pr-6 {adminCtx.activeFacet === 'images' ? 'h-full' : ''}">
               <div
                 class="flex flex-col gap-6 {adminCtx.activeFacet === 'images'
                   ? 'h-full items-stretch'
-                  : ''}">
+                  : ''}"
+              >
                 {#if adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false}
                   <I18nSection
                     {form}
                     title={m.admin__forms_common_descriptors()}
                     fields={FIELDS.i18n as FormField}
                     headerActions={featureActionSnippet}
-                    infoContent={featureInfoSnippet} />
+                    infoContent={featureInfoSnippet}
+                  />
                   <!-- TODO Add support for translatable specifiers -->
                   <div class="flex flex-wrap items-start justify-between gap-6">
                     <PropertySection
@@ -293,14 +304,16 @@ const imageProviderProps = $derived({
                       subtitle={m.admin__forms_common_classifiers_subtitle()}
                       fieldDiscriminator="classifier"
                       fields={FIELDS.property as FormFieldArray}
-                      cols={pageProps.data.entity == NEW_REF ? 2 : 3} />
+                      cols={pageProps.data.entity == NEW_REF ? 2 : 3}
+                    />
                     <PropertySection
                       {form}
                       title={m.admin__forms_common_specifiers()}
                       subtitle={m.admin__forms_common_specifiers_subtitle()}
                       fieldDiscriminator="specifier"
                       fields={FIELDS.property as FormFieldArray}
-                      cols={pageProps.data.entity == NEW_REF ? 2 : 3} />
+                      cols={pageProps.data.entity == NEW_REF ? 2 : 3}
+                    />
                     {#if pageProps.data.entity !== NEW_REF}
                       <CanonicalImage {form} {image} />
                     {/if}
@@ -310,17 +323,20 @@ const imageProviderProps = $derived({
                     {form}
                     title={m.admin__forms_feature_addressing_title()}
                     subtitle={m.admin__forms_feature_addressing_subtitle()}
-                    fields={FIELDS.address as FormField & FormFieldNested} />
+                    fields={FIELDS.address as FormField & FormFieldNested}
+                  />
                   <AddressComponentSection
                     {form}
                     title={m.admin__forms_feature_address_components_title()}
-                    fields={FIELDS.address as FormField & FormFieldNested} />
+                    fields={FIELDS.address as FormField & FormFieldNested}
+                  />
                 {:else if adminCtx.activeFacet === 'images' && pageProps.data.entity !== NEW_REF}
                   <div class="flex h-full min-h-0 w-full flex-row overflow-hidden pt-1">
                     <ViewerSection
                       {form}
                       title={m.admin__forms_feature_gallery_title()}
-                      fields={FIELDS.viewer as FormFieldNested} />
+                      fields={FIELDS.viewer as FormFieldNested}
+                    />
                     <GallerySection {form} fields={FIELDS.gallery as FormFieldNested} />
                   </div>
                 {/if}
@@ -344,6 +360,7 @@ const imageProviderProps = $derived({
         track: 24,
         thumb: 8,
         thumbActive: 12
-      }} />
+      }}
+    />
   {/if}
 </div>

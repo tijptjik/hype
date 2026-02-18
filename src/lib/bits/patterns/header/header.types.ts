@@ -51,6 +51,9 @@ export interface HeaderFormActionsConfig {
   visible?: boolean
   isEditing?: boolean
   isTainted?: boolean
+  isSubmitting?: boolean
+  isPublishing?: boolean
+  isDeleting?: boolean
   isDeleted?: boolean
   isPublished?: boolean
   onEditingToggle?: (next: boolean) => void

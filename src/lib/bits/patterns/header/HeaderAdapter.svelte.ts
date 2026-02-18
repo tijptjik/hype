@@ -103,15 +103,20 @@ export function useHeaderAdapter(
   const visibility = $derived(headerCtrl.state.visibility)
   const headerTitle = $derived(headerCtrl.state.meta.title)
   const headerIcon = $derived(headerCtrl.state.meta.icon)
+  const formActions = $derived(headerCtrl.state.formActions)
   const headerHref = $derived.by(() => {
     if (!headerResourceType) return undefined
     if (!(headerResourceType in ResourcePath)) return undefined
     return `/admin/${ResourcePath[headerResourceType as FirstClassResource]}`
   })
-  // Form action state is pending integration and intentionally static for now.
-  const isTainted = $derived(false)
-  const isDeleted = $derived(false)
-  const isPublished = $derived(false)
+  const isTainted = $derived(Boolean(formActions?.dirty ?? false))
+  const isSubmitting = $derived(
+    Boolean(formActions?.submitting ?? formActions?.isPublishing ?? false),
+  )
+  const isPublishing = $derived(Boolean(formActions?.isPublishing ?? false))
+  const isPublished = $derived(Boolean(formActions?.isPublished ?? false))
+  const isDeleting = $derived(Boolean(formActions?.isDeleting ?? false))
+  const isDeleted = $derived(Boolean(formActions?.isDeleted ?? false))
 
   // Reset editing state when navigating between resources/routes.
   $effect(() => {
@@ -166,9 +171,8 @@ export function useHeaderAdapter(
     // TODO: wire parity behavior with NewEntityButton (association modal + navigation)
   }
 
-  // Form reset handling is pending form context migration.
   function handleReset(): void {
-    console.log('not implemented')
+    formActions?.reset?.()
   }
 
   // Toggle field edit/view mode for modal-style form components.
@@ -176,19 +180,17 @@ export function useHeaderAdapter(
     headerCtrl.setEditing(next)
   }
 
-  // Form submit handling is pending form context migration.
   function handleSave(): void {
-    console.log('not implemented')
+    formActions?.submit?.()
   }
 
-  // Placeholder delete toggle handler until form migration is complete.
   function handleDeleteToggle(): void {
-    // TODO: wire delete toggle behavior when form context migration is complete
+    formActions?.toggleDelete?.()
   }
 
   // Placeholder publish toggle handler until form migration is complete.
   function handlePublishToggle(): void {
-    // TODO: wire publish toggle behavior when form context migration is complete
+    void formActions?.togglePublish?.()
   }
 
   const defaultVisibility = $derived.by(() => {
@@ -269,6 +271,9 @@ export function useHeaderAdapter(
       visible: resolvedVisibility.showFormActions,
       isEditing,
       isTainted,
+      isSubmitting,
+      isPublishing,
+      isDeleting,
       isDeleted,
       isPublished,
       onEditingToggle: handleEditingToggle,

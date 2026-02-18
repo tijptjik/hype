@@ -522,7 +522,8 @@ export class AppCtx {
       : []),
   ]
 
-  // Form context reference for header form actions
+  // Deprecated: legacy form context bridge for header form actions.
+  // Prefer headerCtrl.setFormActions(...) in route pages.
   formCtx: any = $state(null)
 
   // Constructor
@@ -3161,10 +3162,16 @@ export class AppCtx {
     this.state.header = { ...this.state.header, ...headerState }
   }
 
+  /**
+   * @deprecated Prefer headerCtrl.setFormActions(...) from route/page form controllers.
+   */
   setFormContext = (formCtx: any): void => {
     this.formCtx = formCtx
   }
 
+  /**
+   * @deprecated Prefer headerCtrl.clearFormActions(...) from route/page cleanup.
+   */
   clearFormContext = (): void => {
     this.formCtx = null
   }

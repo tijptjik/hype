@@ -44,6 +44,9 @@ const measurementKey = $derived(
     isFilterable: showFilter,
     showAvatar,
     tainted: formActions.isTainted ?? false,
+    submitting: formActions.isSubmitting ?? false,
+    publishing: formActions.isPublishing ?? false,
+    deleting: formActions.isDeleting ?? false,
     editing: formActions.isEditing ?? false,
     deleted: formActions.isDeleted ?? false,
     published: formActions.isPublished ?? false,
@@ -117,6 +120,9 @@ const measurementKey = $derived(
       >
         <HeaderPrimitive.FormActions
           isTainted={formActions.isTainted}
+          isSubmitting={formActions.isSubmitting}
+          isPublishing={formActions.isPublishing}
+          isDeleting={formActions.isDeleting}
           isEditing={formActions.isEditing}
           isDeleted={formActions.isDeleted}
           isPublished={formActions.isPublished}

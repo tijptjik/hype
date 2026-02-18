@@ -1,42 +1,42 @@
 <script lang="ts">
 // SVELTE
-import { watch } from 'runed';
-import { fade } from 'svelte/transition';
-import { untrack } from 'svelte';
+import { watch } from 'runed'
+import { fade } from 'svelte/transition'
+import { untrack } from 'svelte'
 // LIB
-import { NEW_TITLE } from '$lib';
+import { NEW_TITLE } from '$lib'
 // I18N
-import { m } from '$lib/i18n';
-import { getLocale } from '$lib/i18n';
+import { m } from '$lib/i18n'
+import { getLocale } from '$lib/i18n'
 // CONTEXT
-import { setForm } from '$lib/context/form.svelte';
-import { getAdminCtx } from '$lib/context/admin.svelte';
-import { getHeaderCtrl } from '$lib/context/header.svelte';
+import { setForm } from '$lib/context/form.svelte'
+import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getHeaderCtrl } from '$lib/context/header.svelte'
 // ICONS
-import LayerIcon from 'virtual:icons/lucide/layers';
-import { page } from '$app/state';
+import LayerIcon from 'virtual:icons/lucide/layers'
+import { page } from '$app/state'
 // COMPONENTS
-import I18nSection from '$lib/components/forms/sections/I18n.svelte';
-import LayerPropertySection from '$lib/components/forms/sections/LayerProperty.svelte';
-import Scrollbar from '$lib/components/common/scrollbars/Scrollbar.svelte';
+import I18nSection from '$lib/components/forms/sections/I18n.svelte'
+import LayerPropertySection from '$lib/components/forms/sections/LayerProperty.svelte'
+import Scrollbar from '$lib/components/common/scrollbars/Scrollbar.svelte'
 // ENUMS
-import { FirstClassResource } from '$lib/enums';
+import { FirstClassResource } from '$lib/enums'
 // TYPES
 import type {
   Layer,
   FormPageProps,
   FormField,
   FormFieldArray,
-  FormFieldArrayDefinition
-} from '$lib/types';
+  FormFieldArrayDefinition,
+} from '$lib/types'
 
 // CONTEXT
-const adminCtx = getAdminCtx();
-const headerCtrl = getHeaderCtrl();
+const adminCtx = getAdminCtx()
+const headerCtrl = getHeaderCtrl()
 
 // ELEMENTS
-let vietportElement: HTMLDivElement | undefined = $state();
-let contentsElement: HTMLFormElement | undefined = $state();
+let vietportElement: HTMLDivElement | undefined = $state()
+let contentsElement: HTMLFormElement | undefined = $state()
 
 // CONFIG
 const FIELDS: Record<string, FormField | FormFieldArray> = {
@@ -46,22 +46,22 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
       component: 'InputField',
       isArray: false,
       isTranslated: true,
-      isNested: false
+      isNested: false,
     },
     nameShort: {
       label: m.admin__forms_common_name_short(),
       component: 'InputField',
       isArray: false,
       isTranslated: true,
-      isNested: false
+      isNested: false,
     },
     description: {
       label: m.feature__description(),
       component: 'TextareaField',
       isArray: false,
       isTranslated: true,
-      isNested: false
-    }
+      isNested: false,
+    },
   } as FormField,
   property: {
     properties: {
@@ -71,59 +71,61 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
         values: ['classifier', 'specifier'],
         specs: {
           classifier: {},
-          specifier: {}
-        }
-      }
-    } as FormFieldArrayDefinition
-  } as FormFieldArray
-};
+          specifier: {},
+        },
+      },
+    } as FormFieldArrayDefinition,
+  } as FormFieldArray,
+}
 
 // STATE : PROPS
-let pageProps: FormPageProps<Layer> = $props();
-adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.layer);
+let pageProps: FormPageProps<Layer> = $props()
+adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.layer)
 
 // STATE : FORM
 let form = setForm(
   FirstClassResource.layer,
   pageProps.data.entity,
   pageProps.data.validatedForm,
-  getAdminCtx()
-);
+  getAdminCtx(),
+)
 
 // REACTIVE: Update form when pageProps change (for reset functionality)
 watch(
   () => pageProps.data.validatedForm?.data,
-  (newData) => {
-    form.form.set(newData as unknown as Layer);
+  newData => {
+    form.form.set(newData as unknown as Layer)
   },
   {
-    lazy: true
-  }
-);
+    lazy: true,
+  },
+)
 
 // STATE : DERIVED :: TITLE
-let enhance = $derived(form.enhance);
+let enhance = $derived(form.enhance)
 let title = $derived(
-  pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE
-);
+  pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE,
+)
 
 // HEADER SETUP
 $effect(() => {
-  const facetTabs = new Map();
-  facetTabs.set('core', m.resources__main());
+  const facetTabs = new Map()
+  facetTabs.set('core', m.resources__main())
 
-  untrack(() => headerCtrl.setHeaderForEntity(title, LayerIcon, facetTabs));
+  untrack(() => headerCtrl.setHeaderForEntity(title, LayerIcon, facetTabs))
 
-  // Set form context for header actions
-  adminCtx.appCtx.setFormContext(form);
-});
+  headerCtrl.setFormActions({
+    dirty: Boolean(form.isTainted),
+    submit: () => void form.submit(),
+  })
+})
 
-// Clean up form context when component unmounts
+// Clean up form actions when component unmounts
 $effect(() => {
   return () => {
-    adminCtx.appCtx.clearFormContext();
-  };
-});
+    headerCtrl.clearFormActions()
+  }
+})
 </script>
 
 <!-- LAYOUT -->
@@ -137,28 +139,33 @@ $effect(() => {
       data-testid="layerForm"
       transition:fade
       class="mb-12 h-full overflow-y-auto"
-      bind:this={contentsElement}>
+      bind:this={contentsElement}
+    >
       <main
         class="flex flex-col gap-6 p-6 {adminCtx.activeFacet === 'core'
           ? 'min-h-full pb-32'
-          : 'h-full'}">
+          : 'h-full'}"
+      >
         <I18nSection
           title={m.admin__forms_common_descriptors()}
           fields={FIELDS.i18n as FormField}
-          {form} />
+          {form}
+        />
         <div class="flex flex-row gap-4">
           <LayerPropertySection
             title={m.admin__forms_common_classifiers()}
             subtitle={m.admin__forms_common_classifiers_subtitle()}
             fieldDiscriminator="classifier"
             fields={FIELDS.property as FormField & FormFieldArray}
-            {form} />
+            {form}
+          />
           <LayerPropertySection
             title={m.admin__forms_common_specifiers()}
             subtitle={m.admin__forms_common_specifiers_subtitle()}
             fieldDiscriminator="specifier"
             fields={FIELDS.property as FormField & FormFieldArray}
-            {form} />
+            {form}
+          />
         </div>
       </main>
     </form>
@@ -176,6 +183,7 @@ $effect(() => {
         track: 24,
         thumb: 8,
         thumbActive: 12
-      }} />
+      }}
+    />
   {/if}
 </div>

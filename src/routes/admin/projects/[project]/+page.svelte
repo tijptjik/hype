@@ -1,36 +1,36 @@
 <script lang="ts">
 // SVELTE
-import { watch } from 'runed';
-import { fade } from 'svelte/transition';
-import { untrack } from 'svelte';
+import { watch } from 'runed'
+import { fade } from 'svelte/transition'
+import { untrack } from 'svelte'
 // LIB
-import { NEW_TITLE } from '$lib';
+import { NEW_TITLE } from '$lib'
 // I18N
-import { getLocale } from '$lib/i18n';
-import { m } from '$lib/i18n';
+import { getLocale } from '$lib/i18n'
+import { m } from '$lib/i18n'
 // CONTEXT
-import { setForm } from '$lib/context/form.svelte';
-import { getAdminCtx } from '$lib/context/admin.svelte';
-import { getHeaderCtrl } from '$lib/context/header.svelte';
+import { setForm } from '$lib/context/form.svelte'
+import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getHeaderCtrl } from '$lib/context/header.svelte'
 // ICONS
-import ProjectIcon from 'virtual:icons/lucide/layout-grid';
+import ProjectIcon from 'virtual:icons/lucide/layout-grid'
 // PROVIDERS
-import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
-import { page } from '$app/state';
+import ImageProvider from '$lib/components/providers/ImageProvider.svelte'
+import { page } from '$app/state'
 // COMPONENTS
-import I18nSection from '$lib/components/forms/sections/I18n.svelte';
-import SpecificationSection from '$lib/components/forms/sections/Specification.svelte';
-import ImageSection from '$lib/components/forms/sections/Image.svelte';
-import PropertySection from '$lib/components/forms/sections/PropertyType.svelte';
-import UserSection from '$lib/components/forms/sections/User.svelte';
-import Scrollbar from '$lib/components/common/scrollbars/Scrollbar.svelte';
+import I18nSection from '$lib/components/forms/sections/I18n.svelte'
+import SpecificationSection from '$lib/components/forms/sections/Specification.svelte'
+import ImageSection from '$lib/components/forms/sections/Image.svelte'
+import PropertySection from '$lib/components/forms/sections/PropertyType.svelte'
+import UserSection from '$lib/components/forms/sections/User.svelte'
+import Scrollbar from '$lib/components/common/scrollbars/Scrollbar.svelte'
 // ENUMS
 import {
   FirstClassResource,
   classifierComponentTypes,
   specifierComponentTypes,
-  ImageContextResource
-} from '$lib/enums';
+  ImageContextResource,
+} from '$lib/enums'
 // TYPES
 import type {
   Project,
@@ -39,19 +39,19 @@ import type {
   FormFieldArray,
   FormFieldArrayDefinition,
   Image,
-  Id
-} from '$lib/types';
+  Id,
+} from '$lib/types'
 
 // CONTEXT
-const adminCtx = getAdminCtx();
-const headerCtrl = getHeaderCtrl();
+const adminCtx = getAdminCtx()
+const headerCtrl = getHeaderCtrl()
 
 // ELEMENTS
-let vietportElement: HTMLDivElement | undefined = $state();
-let contentsElement: HTMLFormElement | undefined = $state();
+let vietportElement: HTMLDivElement | undefined = $state()
+let contentsElement: HTMLFormElement | undefined = $state()
 
 // CONFIG
-const RESOURCE = FirstClassResource.project;
+const RESOURCE = FirstClassResource.project
 const FIELDS: Record<string, FormField | FormFieldArray> = {
   i18n: {
     name: {
@@ -59,22 +59,22 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
       component: 'InputField',
       isArray: false,
       isTranslated: true,
-      isNested: false
+      isNested: false,
     },
     nameShort: {
       label: m.admin__forms_common_name_short(),
       component: 'InputField',
       isArray: false,
       isTranslated: true,
-      isNested: false
+      isNested: false,
     },
     description: {
       label: m.feature__description(),
       component: 'TextareaField',
       isArray: false,
       isTranslated: true,
-      isNested: false
-    }
+      isNested: false,
+    },
   } as FormField,
   credit: {
     license: {
@@ -82,23 +82,23 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
       component: 'InputField',
       isArray: false,
       isTranslated: true,
-      isNested: false
+      isNested: false,
     },
     attribution: {
       label: m.profile__attribution(),
       component: 'InputField',
       isArray: false,
       isTranslated: true,
-      isNested: false
-    }
+      isNested: false,
+    },
   } as FormField,
   users: {
     maintainerRoles: {
       label: m.admin__forms_project_members_title(),
       isArray: true,
       isTranslated: false,
-      isNested: false
-    }
+      isNested: false,
+    },
   } as FormField,
   specification: {
     code: {
@@ -106,8 +106,8 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
       component: 'InputField',
       isArray: false,
       isTranslated: false,
-      isNested: false
-    }
+      isNested: false,
+    },
   } as FormField,
   config: {
     properties: {
@@ -122,21 +122,21 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
               component: 'InputField',
               isArray: false,
               isTranslated: false,
-              isNested: true
+              isNested: true,
             },
             label: {
               label: 'Name in UI',
               component: 'InputField',
               isArray: false,
               isTranslated: true,
-              isNested: true
+              isNested: true,
             },
             placeholder: {
               label: 'Input Placeholder',
               component: 'InputField',
               isArray: false,
               isTranslated: true,
-              isNested: true
+              isNested: true,
             },
             component: {
               label: 'Component',
@@ -144,14 +144,14 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
               values: classifierComponentTypes,
               isArray: false,
               isTranslated: false,
-              isNested: true
+              isNested: true,
             },
             values: {
               component: 'ListField',
               isArray: true,
               isTranslated: true,
               isNested: true,
-              showForComponent: ['SelectField']
+              showForComponent: ['SelectField'],
             },
             min: {
               label: 'Minimum',
@@ -160,7 +160,7 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
               isArray: false,
               isTranslated: false,
               isNested: true,
-              showForComponent: ['RangeField']
+              showForComponent: ['RangeField'],
             },
             max: {
               label: 'Maximum',
@@ -169,8 +169,8 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
               isArray: false,
               isTranslated: false,
               isNested: true,
-              showForComponent: ['RangeField']
-            }
+              showForComponent: ['RangeField'],
+            },
           },
           specifier: {
             key: {
@@ -178,21 +178,21 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
               component: 'InputField',
               isArray: false,
               isNested: true,
-              isTranslated: false
+              isTranslated: false,
             },
             label: {
               label: 'Name in UI',
               component: 'InputField',
               isArray: false,
               isNested: true,
-              isTranslated: true
+              isTranslated: true,
             },
             placeholder: {
               label: 'Input Placeholder',
               component: 'InputField',
               isArray: false,
               isNested: true,
-              isTranslated: true
+              isTranslated: true,
             },
             component: {
               label: 'Component',
@@ -200,91 +200,93 @@ const FIELDS: Record<string, FormField | FormFieldArray> = {
               values: specifierComponentTypes,
               isArray: false,
               isNested: true,
-              isTranslated: false
-            }
-          }
-        }
-      }
-    } as FormFieldArrayDefinition
+              isTranslated: false,
+            },
+          },
+        },
+      },
+    } as FormFieldArrayDefinition,
   } as FormFieldArray,
   images: {
     image: {
       label: m.admin__forms_project_image_title(),
       component: 'InputField',
-      isArray: false
-    }
-  } as FormField
-};
+      isArray: false,
+    },
+  } as FormField,
+}
 
 // STATE : PROPS
-let pageProps: FormPageProps<Project> = $props();
+let pageProps: FormPageProps<Project> = $props()
 
 // Read facet from URL hash
 const hashFacet = $derived(() => {
   if (typeof window !== 'undefined') {
-    const hash = page.url.hash;
-    return hash ? hash.substring(1) : null;
+    const hash = page.url.hash
+    return hash ? hash.substring(1) : null
   }
-  return null;
-});
+  return null
+})
 
 // Set facet from hash or default to 'core'
 $effect(() => {
-  const facet = hashFacet();
+  const facet = hashFacet()
   if (facet && ['core', 'fields', 'images'].includes(facet)) {
-    adminCtx.setFacet(facet as any, pageProps.data.entity, FirstClassResource.project);
+    adminCtx.setFacet(facet as any, pageProps.data.entity, FirstClassResource.project)
   } else {
-    adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.project);
+    adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.project)
   }
-});
+})
 
 // STATE : FORM
 let form = setForm(
   RESOURCE,
   pageProps.data.entity,
   pageProps.data.validatedForm,
-  getAdminCtx()
-);
+  getAdminCtx(),
+)
 
 // REACTIVE: Update form when pageProps change (for reset functionality)
 watch(
   () => pageProps.data.validatedForm?.data,
-  (newData) => {
-    form.form.set(newData as unknown as Project);
+  newData => {
+    form.form.set(newData as unknown as Project)
   },
   {
-    lazy: true
-  }
-);
+    lazy: true,
+  },
+)
 
 // STATE : DERIVED
-let enhance = $derived(form.enhance);
+let enhance = $derived(form.enhance)
 let title = $derived(
-  pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE
-);
-let image = $derived(pageProps.data.image as Image);
+  pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE,
+)
+let image = $derived(pageProps.data.image as Image)
 
 // HEADER SETUP
 $effect(() => {
-  const facetTabs = new Map();
-  facetTabs.set('core', m.resources__main());
-  facetTabs.set('fields', m.project__fields());
+  const facetTabs = new Map()
+  facetTabs.set('core', m.resources__main())
+  facetTabs.set('fields', m.project__fields())
   if (adminCtx.activeResourceRef !== 'new') {
-    facetTabs.set('images', m.organisation__images());
+    facetTabs.set('images', m.organisation__images())
   }
 
-  untrack(() => headerCtrl.setHeaderForEntity(title, ProjectIcon, facetTabs));
+  untrack(() => headerCtrl.setHeaderForEntity(title, ProjectIcon, facetTabs))
 
-  // Set form context for header actions
-  adminCtx.appCtx.setFormContext(form);
-});
+  headerCtrl.setFormActions({
+    dirty: Boolean(form.isTainted),
+    submit: () => void form.submit(),
+  })
+})
 
-// Clean up form context when component unmounts
+// Clean up form actions when component unmounts
 $effect(() => {
   return () => {
-    adminCtx.appCtx.clearFormContext();
-  };
-});
+    headerCtrl.clearFormActions()
+  }
+})
 </script>
 
 <!-- LAYOUT -->
@@ -299,21 +301,25 @@ $effect(() => {
         transition:fade
         data-testid="projectForm"
         class="mb-24 h-full overflow-y-auto"
-        bind:this={contentsElement}>
+        bind:this={contentsElement}
+      >
         <main
           class="flex flex-col gap-6 p-6 {adminCtx.activeFacet === 'core'
             ? 'min-h-full pb-64'
-            : 'h-full'}">
+            : 'h-full'}"
+        >
           {#if adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false}
             <I18nSection
               title={m.admin__forms_common_descriptors()}
               fields={FIELDS.i18n}
-              {form} />
+              {form}
+            />
             <I18nSection
               title={m.admin__forms_project_credit()}
               subtitle={m.admin__forms_project_credit_subtitle()}
               fields={FIELDS.credit}
-              {form} />
+              {form}
+            />
             <div class="flex flex-row gap-4 pt-4">
               <UserSection
                 title={m.admin__forms_project_members_title()}
@@ -324,11 +330,13 @@ $effect(() => {
                   discriminator: 'role',
                   checkedValue: 'maintainer',
                   uncheckedValue: 'member'
-                }} />
+                }}
+              />
               <SpecificationSection
                 title={m.admin__forms_common_specifiers()}
                 fields={FIELDS.specification as FormField}
-                {form} />
+                {form}
+              />
             </div>
           {:else if adminCtx.activeFacet === 'fields'}
             <div class="flex flex-col gap-6 pb-[256px]">
@@ -337,13 +345,15 @@ $effect(() => {
                 subtitle={m.admin__forms_common_classifiers_subtitle()}
                 fieldDiscriminator="classifier"
                 fields={FIELDS.config as FormFieldArray}
-                {form} />
+                {form}
+              />
               <PropertySection
                 title={m.admin__forms_common_specifiers()}
                 subtitle={m.admin__forms_common_specifiers_subtitle()}
                 fieldDiscriminator="specifier"
                 fields={FIELDS.config as FormFieldArray}
-                {form} />
+                {form}
+              />
             </div>
           {:else if adminCtx.activeFacet === 'images'}
             <ImageProvider
@@ -355,12 +365,14 @@ $effect(() => {
                 organisation,
                 project
               }}
-              {image}>
+              {image}
+            >
               <ImageSection
                 title={m.admin__forms_project_image_title()}
                 fields={FIELDS.images as FormField}
                 {image}
-                {form} />
+                {form}
+              />
             </ImageProvider>
           {/if}
         </main>
@@ -380,6 +392,7 @@ $effect(() => {
         track: 24,
         thumb: 8,
         thumbActive: 12
-      }} />
+      }}
+    />
   {/if}
 </div>
