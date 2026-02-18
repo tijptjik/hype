@@ -17,7 +17,6 @@ import {
   resetLocaleFields,
   removeUserRoleSelection,
   syncHeaderFormActionStatus,
-  toggleEntityDataBoolean,
   toggleGenAiField,
   translateLocaleIntoEmptyFields,
   updateUserRoleSelection,
@@ -111,26 +110,6 @@ const orderedLocales = $derived(getLocaleOrder(getLocale()))
 const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
 )
-const flags = $derived(
-  organisation?.data?.hubId != null
-    ? [
-        {
-          key: 'isHubExclusive',
-          label: m.long_fit_vole_flow(),
-          checked: Boolean(organisation.data.isHubExclusive),
-          isEditing: headerCtrl.state.isEditing,
-          isNullable: false,
-          onCheckedChange: (nextChecked: boolean | null) => {
-            organisation = toggleEntityDataBoolean(
-              organisation,
-              'isHubExclusive',
-              nextChecked,
-            )
-          },
-        },
-      ]
-    : [],
-)
 
 // § Form
 
@@ -139,7 +118,18 @@ const configuredOrganisationForm = configureForm<OrganisationFormInput>(() => ({
   formEl: contentsElement,
   key: organisation?.data?.id ?? organisationRef,
   schema: OrganisationPreflightFormData,
-  data: organisation?.data ? toOrganisationFormInput(organisation.data) : undefined,
+  data: toOrganisationFormInput(organisation?.data),
+  onsubmit: ({ data }) => {
+    const payload = data as OrganisationFormInput
+    if (organisation?.data) {
+      const baseMeta = toOrganisationFormInput(organisation.data).meta ?? {}
+      payload.meta = {
+        ...baseMeta,
+        ...(payload.meta ?? {}),
+      }
+    }
+    return true
+  },
   onsubmitupdates: ({ data }) =>
     getOrganisationSubmitUpdates({
       data,
@@ -157,6 +147,19 @@ const configuredOrganisationForm = configureForm<OrganisationFormInput>(() => ({
       }),
     }),
   onresult: async ({ success, issues, error }) => {
+    const hasCodeConflict = (issues ?? [])
+      .map(toIssueMessage)
+      .some((message): message is string =>
+        Boolean(message && codeConflictMessages.has(message)),
+      )
+    if (hasCodeConflict) {
+      lastCodeConflictValue = formCtx.form.fields.value().data?.code?.trim() ?? null
+      suppressStaleCodeConflict = false
+    } else if (success) {
+      lastCodeConflictValue = null
+      suppressStaleCodeConflict = false
+    }
+
     await handleResourceFormSubmissionResult({
       success,
       issues,
@@ -178,6 +181,20 @@ const configuredOrganisationForm = configureForm<OrganisationFormInput>(() => ({
 
 const formCtx = $derived(configuredOrganisationForm())
 const isRequiredInPreflight = createSchemaRequiredInferer(OrganisationPreflightFormData)
+const formUserRoleValues = $derived(formCtx.form.fields.value().data?.userRoles ?? [])
+const displayUserRoles = $derived.by(() => {
+  const base = organisation?.data?.userRoles ?? []
+  if (base.length === 0) return base
+
+  const roleByUserId = new Map(
+    formUserRoleValues.map(userRole => [userRole.userId, userRole.role] as const),
+  )
+
+  return base.map(userRole => {
+    const nextRole = roleByUserId.get(userRole.userId)
+    return nextRole ? { ...userRole, role: nextRole } : userRole
+  })
+})
 
 // § Derived State - Flags
 
@@ -185,6 +202,51 @@ const isCoreFacet = $derived(activeFacet === 'core')
 const isImagesFacet = $derived(activeFacet === 'images')
 const isEditing = $derived(headerCtrl.state.isEditing)
 const isDirty = $derived(Boolean(formCtx.dirty))
+const codeAlreadyExistsMessage = String(m.admin__validation_code_already_exists())
+const codeReservedMessage = String(m.admin__validation_code_is_reserved())
+const codeConflictMessages = new Set([codeAlreadyExistsMessage, codeReservedMessage])
+let lastCodeConflictValue = $state<string | null>(null)
+let suppressStaleCodeConflict = $state(false)
+let suppressFormLevelIssues = $state(false)
+
+const toIssueMessage = (issue: unknown): string | null => {
+  if (!issue || typeof issue !== 'object' || !('message' in issue)) return null
+  const message = (issue as { message?: unknown }).message
+  return typeof message === 'string' ? message : null
+}
+
+const isRootIssue = (issue: unknown): boolean => {
+  if (!issue || typeof issue !== 'object' || !('path' in issue)) return true
+  const path = (issue as { path?: unknown }).path
+  return !Array.isArray(path) || path.length === 0
+}
+
+const isStaleCodeConflictMessage = (message: string): boolean => {
+  return suppressStaleCodeConflict && codeConflictMessages.has(message)
+}
+
+const visibleAllIssues = $derived.by(() =>
+  (suppressFormLevelIssues ? [] : (formCtx.allIssues ?? [])).filter(issue => {
+    const message = toIssueMessage(issue)
+    return !(message && isStaleCodeConflictMessage(message))
+  }),
+)
+
+const formLevelIssues = $derived.by(() => {
+  const messages = visibleAllIssues
+    .filter(isRootIssue)
+    .map(toIssueMessage)
+    .filter((message): message is string => Boolean(message))
+  return Array.from(new Set(messages))
+})
+
+const toIssueChipParts = (message: string): { code: string; detail: string } => {
+  const parts = message.split(':')
+  if (parts.length < 2) return { code: 'ERROR', detail: message }
+  const code = parts[0]?.trim() || 'ERROR'
+  const detail = parts.slice(1).join(':').trim() || message
+  return { code, detail }
+}
 
 const currentUser = $derived(adminCtx.appCtx.getUser())
 const currentActor = $derived(toOrganisationAuthActor(currentUser))
@@ -366,6 +428,9 @@ async function handleDeleteOrganisation(): Promise<void> {
 }
 
 function handleHeaderFormReset(): void {
+  lastCodeConflictValue = null
+  suppressStaleCodeConflict = false
+  suppressFormLevelIssues = true
   if (organisation?.data) {
     formCtx.form.fields.set(toOrganisationFormInput(organisation.data))
     return
@@ -374,21 +439,28 @@ function handleHeaderFormReset(): void {
 }
 
 function handleHeaderFormSubmit(): void {
+  suppressStaleCodeConflict = false
+  suppressFormLevelIssues = false
   if (organisation?.data) {
     const current = formCtx.form.fields.value()
+    const baseMeta = toOrganisationFormInput(organisation.data).meta ?? {}
     formCtx.form.fields.set({
       ...current,
       meta: {
+        ...baseMeta,
         ...(current.meta ?? {}),
-        id: organisation.data.id,
-        updatedAt: organisation.data.modifiedAt,
-        mode: 'update',
-        isAdminRequest: true,
       },
     })
   }
   contentsElement?.requestSubmit()
 }
+
+$effect(() => {
+  if (!lastCodeConflictValue || suppressStaleCodeConflict) return
+  const currentCode = formCtx.form.fields.value().data?.code?.trim() ?? ''
+  if (currentCode === lastCodeConflictValue) return
+  suppressStaleCodeConflict = true
+})
 
 function handleHeaderPublishToggle(): void {
   if (!canPublishOrganisation) return
@@ -467,7 +539,7 @@ $effect(() => {
 $effect(() => {
   const dirty = isDirty
   const isSubmitting = formCtx.submitting
-  const hasIssues = (formCtx.allIssues?.length ?? 0) > 0
+  const hasIssues = visibleAllIssues.length > 0
   const isPublished = Boolean(organisation?.data?.isPublished)
   const isDeleted = Boolean(organisation?.data?.isArchived)
   lastFormActionsSignature = syncHeaderFormActionStatus({
@@ -500,6 +572,29 @@ $effect(() => {
       {...formCtx.attributes}
       class="bits-theme space-y-4"
     >
+      {#if formLevelIssues.length > 0}
+        <div
+          class="flex flex-wrap items-center justify-center gap-2"
+          role="alert"
+          aria-live="polite"
+        >
+          {#each formLevelIssues as message (message)}
+            {@const chip = toIssueChipParts(message)}
+            <span
+              class="inline-flex items-stretch overflow-hidden rounded-md border border-2 border-error/70"
+            >
+              <span
+                class="bg-border-error/70 px-2 py-1 font-bold font-mono tracking-wide text-content-neutral px-4"
+              >
+                {chip.code}
+              </span>
+              <span class="bg-glass-300 px-4 py-1 text-white tracking-wide">
+                {chip.detail}
+              </span>
+            </span>
+          {/each}
+        </div>
+      {/if}
       {#if formCtx.form?.fields && organisation?.data}
         <FormI18nSection
           title={m.admin__forms_common_descriptors()}
@@ -507,7 +602,6 @@ $effect(() => {
           onTranslate={handleTranslateLocale}
           onResetLocale={handleResetLocale}
           {isEditing}
-          {flags}
         >
           {#snippet children(locale)}
             {@const formLocale = toOrganisationFormLocaleKey(locale)}
@@ -565,12 +659,11 @@ $effect(() => {
 
         <GridSpacer>
           {#snippet left()}
-            {@const userRoleValues = formCtx.form.fields.value().data?.userRoles ?? []}
             {@const roleFieldNameByUserId = getRoleFieldNameByUserId(formCtx.form)}
             <FormUserRolesSection
               title={m.admin__forms_organisation_members_title()}
               subtitle={m.admin__forms_organisation_members_subtitle()}
-              userRoles={organisation?.data?.userRoles ?? []}
+              userRoles={displayUserRoles}
               {roleFieldNameByUserId}
               {userQueryParams}
               {isEditing}
@@ -579,7 +672,7 @@ $effect(() => {
               onRoleChange={handleOrganisationRoleChange}
             />
             <div class="hidden" aria-hidden="true">
-              {#each userRoleValues as _userRole, index (index)}
+              {#each formUserRoleValues as _userRole, index (index)}
                 {@const userRoleField = (formCtx.form.fields.data.userRoles as any)[index]}
                 <input {...userRoleField.userId.as('hidden', _userRole.userId)}>
               {/each}
@@ -589,7 +682,12 @@ $effect(() => {
           {#snippet right()}
             {@const codeInputAttrs = formCtx.form.fields.data.code.as('text')}
             {@const codeRequired = isRequiredInPreflight(['data', 'code'])}
-            {@const codeIssues = toIssueMessages(formCtx.form.fields.data.code.issues())}
+            {@const codeIssues = (() => {
+              const messages = toIssueMessages(formCtx.form.fields.data.code.issues())
+              if (!messages) return undefined
+              const filtered = messages.filter(message => !isStaleCodeConflictMessage(message))
+              return filtered.length > 0 ? filtered : undefined
+            })()}
             {@const urlInputAttrs = formCtx.form.fields.data.url.as('url')}
             {@const urlRequired = isRequiredInPreflight(['data', 'url'])}
             {@const urlIssues = toIssueMessages(formCtx.form.fields.data.url.issues())}

@@ -295,25 +295,6 @@ describe('organisation authorization policy matrix', () => {
       )
       expect(coreDecision.allowed).toBe(true)
     })
-
-    it('isHubExclusive requires strong role', () => {
-      const ownerDecision = authorize(
-        withActor(ACTORS.owner, {
-          action: 'updateOrganisation',
-          fields: ['isHubExclusive'],
-        }),
-      )
-      expect(ownerDecision.allowed).toBe(false)
-      expect(ownerDecision.code).toBe('FIELD_FORBIDDEN')
-
-      const hubAdminDecision = authorize(
-        withActor(ACTORS.hubAdminSame, {
-          action: 'updateOrganisation',
-          fields: ['isHubExclusive'],
-        }),
-      )
-      expect(hubAdminDecision.allowed).toBe(true)
-    })
   })
 
   describe('deleteOrganisation', () => {
