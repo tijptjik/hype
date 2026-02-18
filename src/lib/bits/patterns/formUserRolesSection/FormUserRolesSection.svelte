@@ -19,7 +19,7 @@ let {
     { value: OrganisationRoleType.member, label: m.profile__role_type__member() },
     { value: OrganisationRoleType.owner, label: m.profile__role_type__owner() },
   ],
-  onSearchUsers,
+  userQueryParams,
   onAddUser,
   onRemoveUser,
   onRoleChange,
@@ -60,11 +60,6 @@ function toggleRemoving(): void {
 function handleAddUser(user: User): void {
   if (userIdSet.has(user.id)) return
   onAddUser(user)
-}
-
-async function handleSearchUsers(query: string): Promise<User[]> {
-  const results = await onSearchUsers(query)
-  return results.filter(user => !userIdSet.has(user.id))
 }
 
 $effect(() => {
@@ -117,7 +112,9 @@ $effect(() => {
       <Search
         placeholder="Search users…"
         focusOnMount={true}
-        onInput={handleSearchUsers}
+        {userQueryParams}
+        excludeIds={Array.from(userIdSet)}
+        getItemId={(user: User) => user.id}
         onSelect={handleAddUser}
         resultMap={{
           image: (user: User) => toImageSrc(user.image),

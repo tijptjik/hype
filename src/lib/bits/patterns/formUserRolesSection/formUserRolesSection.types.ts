@@ -1,5 +1,5 @@
 import type { OrganisationRoleType } from '$lib/enums'
-import type { OrganisationRoleUser, User } from '$lib/types'
+import type { OrganisationRoleUser, User, UserSearchQueryOptions } from '$lib/types'
 
 export interface FormUserRolesSectionProps {
   title?: string
@@ -8,7 +8,7 @@ export interface FormUserRolesSectionProps {
   roleFieldNameByUserId?: Record<string, string>
   isEditing?: boolean
   availableRoles?: Array<{ value: OrganisationRoleType; label: string }>
-  onSearchUsers: (query: string) => Promise<User[]>
+  userQueryParams?: UserSearchQueryOptions
   onAddUser: (user: User) => void
   onRemoveUser: (userId: string) => void
   onRoleChange: (userId: string, role: OrganisationRoleType) => void
