@@ -1,7 +1,13 @@
 import { beforeNavigate } from '$app/navigation'
 import { debounce, deepEqual } from '@sillvva/utils'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
-import type { RemoteForm, RemoteFormInput, RemoteFormIssue } from '@sveltejs/kit'
+import type {
+  RemoteForm,
+  RemoteFormInput,
+  RemoteFormIssue,
+  RemoteQuery,
+  RemoteQueryOverride,
+} from '@sveltejs/kit'
 import { onMount, tick, untrack } from 'svelte'
 import { v7 } from 'uuid'
 
@@ -89,6 +95,11 @@ export interface RemoteFormOptions<Input extends RemoteFormInput = RemoteFormInp
     readonly form: HTMLFormElement
     readonly data: Input
   }) => Awaitable<T>
+  onsubmitupdates?: (ctx: {
+    readonly dirty: boolean
+    readonly form: HTMLFormElement
+    readonly data: Input
+  }) => Awaitable<Array<RemoteQuery<any> | RemoteQueryOverride> | undefined>
   onresult?: (ctx: {
     readonly success: boolean
     readonly result?: RemoteForm<Input, unknown>['result']
@@ -109,6 +120,7 @@ export function configureForm<Input extends RemoteFormInput = RemoteFormInput>(
     initialErrors: initialErrorsProp,
     navBlockMessage,
     onsubmit,
+    onsubmitupdates,
     onresult,
     onissues,
     formEl,
@@ -146,7 +158,12 @@ export function configureForm<Input extends RemoteFormInput = RemoteFormInput>(
         const wasDirty = dirty
         try {
           dirty = false
-          await submit()
+          const updates = await onsubmitupdates?.({ dirty, form: formEl, data })
+          if (updates && updates.length > 0) {
+            await submit().updates(...updates)
+          } else {
+            await submit()
+          }
           submitted = true
 
           const success = !allIssues
