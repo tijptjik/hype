@@ -180,6 +180,7 @@ export const OrganisationEntityFormDataSuper = OrganisationEntityFormData.extend
 
 export const OrganisationFormMeta = z.object({
   id: z.string().optional(),
+  updatedAt: z.string().min(1).optional(),
   mode: z.enum(['create', 'replace', 'update']).optional(),
 })
 
@@ -211,6 +212,7 @@ export const OrganisationReplaceFormData = OrganisationFormData.refine(
 export const OrganisationUpdateFormData = z.object({
   meta: OrganisationFormMeta.extend({
     id: z.string().min(1),
+    updatedAt: z.string().min(1),
     mode: z.literal('update').optional(),
   }),
   data: OrganisationEntityFormData.partial().refine(
