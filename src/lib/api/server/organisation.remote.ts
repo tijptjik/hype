@@ -180,7 +180,7 @@ export const publishOrganisation = command(PublishOrganisationSchema, async para
   }
 })
 
-export const removeOrganisation = command(RemoveOrganisationSchema, async params => {
+export const archiveOrganisation = command(RemoveOrganisationSchema, async params => {
   const event = getRequestEvent()
   const { db } = await setupRequestHandler(event)
 

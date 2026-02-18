@@ -47,6 +47,19 @@ export function toOrganisationFormLocaleKey(locale: Locale): OrganisationFormLoc
 }
 
 /**
+ * Convert organisation form i18n key back to app locale.
+ * @param localeKey - Form locale key.
+ * @returns Locale value used by entity i18n payloads.
+ */
+export function toLocaleFromOrganisationFormLocaleKey(
+  localeKey: OrganisationFormLocaleKey,
+): Locale {
+  if (localeKey === 'zhHans') return 'zh-hans'
+  if (localeKey === 'zhHant') return 'zh-hant'
+  return 'en'
+}
+
+/**
  * Get the fallback locales for a given locale.
  * @param locale - The locale to get the fallback locales for.
  * @returns All supported locales, excluding the given locale.
