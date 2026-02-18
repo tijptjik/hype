@@ -475,7 +475,9 @@ export class AdminCtx {
 
   organisationsQueryFn = async () => {
     const result = (await getOrganisations({
-      conditions: this.appCtx.isSuperAdmin() ? {} : { isArchived: false },
+      conditions: this.appCtx.isSuperAdmin()
+        ? { isArchived: null, isPublished: null }
+        : { isArchived: false, isPublished: null },
       prisms: this.appCtx.state.prisms,
     })) as ListResponse<Organisation>
     return result.data
