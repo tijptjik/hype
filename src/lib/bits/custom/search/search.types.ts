@@ -1,4 +1,5 @@
 import type { Snippet } from 'svelte'
+import type { UserSearchQueryOptions } from '$lib/types'
 
 export interface SearchResultMap<T> {
   image: (item: T) => string | null | undefined
@@ -10,7 +11,10 @@ export interface SearchProps<T> {
   placeholder?: string
   minChars?: number
   focusOnMount?: boolean
-  onInput: (query: string) => Promise<T[]>
+  onInput?: (query: string) => Promise<T[]>
+  userQueryParams?: UserSearchQueryOptions
+  excludeIds?: string[]
+  getItemId?: (item: T) => string
   onSelect: (item: T) => void
   resultMap: SearchResultMap<T>
   class?: string

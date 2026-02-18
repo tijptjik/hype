@@ -2,12 +2,16 @@
 import { tick } from 'svelte'
 import type { SearchProps } from './search.types'
 import * as SearchPrimitive from './src/components'
+import { searchUsers as searchUsersRemote } from '$lib/api/server/user.remote'
 
 let {
   placeholder = 'Search',
   minChars = 2,
   focusOnMount = false,
   onInput,
+  userQueryParams,
+  excludeIds = [],
+  getItemId,
   onSelect,
   resultMap,
   class: className = '',
@@ -30,9 +34,25 @@ async function handleQuery(nextQuery: string): Promise<void> {
   const currentRequestId = ++requestId
   isLoading = true
   try {
-    const response = await onInput(nextQuery.trim())
+    const response = userQueryParams
+      ? ((
+          await searchUsersRemote({
+            ...userQueryParams,
+            q: nextQuery.trim(),
+          })
+        ).data as T[])
+      : onInput
+        ? await onInput(nextQuery.trim())
+        : []
     if (currentRequestId !== requestId) return
-    results = response
+    const toId =
+      getItemId ??
+      ((item: T) => {
+        const candidate = (item as { id?: unknown }).id
+        return typeof candidate === 'string' ? candidate : ''
+      })
+    const excluded = new Set(excludeIds)
+    results = response.filter(item => !excluded.has(toId(item)))
   } catch {
     if (currentRequestId !== requestId) return
     results = []
