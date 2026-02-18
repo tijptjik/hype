@@ -164,7 +164,36 @@ export const organisationForm = form(OrganisationFormData, async (params, issue)
 
 export const publishOrganisation = command(PublishOrganisationSchema, async params => {
   const event = getRequestEvent()
-  const { db } = await setupRequestHandler(event)
+  const { db, user, userRoles } = await setupRequestHandler(event)
+
+  const [current] = await db
+    .select({
+      id: organisation.id,
+      hubId: organisation.hubId,
+    })
+    .from(organisation)
+    .where(eq(organisation.id, params.id as Id))
+    .limit(1)
+
+  if (!current) {
+    throw error(404, 'ORGANISATION_NOT_FOUND')
+  }
+
+  const publishDecision = authorizeOrganisationPublish(
+    {
+      userId: user.id,
+      userRoles,
+      isAuthenticated: true,
+      isAnonymous: user.isAnonymous,
+    },
+    {
+      resourceId: current.id,
+      resourceHubId: current.hubId,
+    },
+  )
+  if (!publishDecision.allowed) {
+    throw error(403, toAuthMessage(publishDecision.code ?? 'INSUFFICIENT_ROLE'))
+  }
 
   const updated = await updateOrganisationById(
     db,
@@ -182,7 +211,35 @@ export const publishOrganisation = command(PublishOrganisationSchema, async para
 
 export const archiveOrganisation = command(RemoveOrganisationSchema, async params => {
   const event = getRequestEvent()
-  const { db } = await setupRequestHandler(event)
+  const { db, user, userRoles } = await setupRequestHandler(event)
+
+  const [current] = await db
+    .select({
+      id: organisation.id,
+      hubId: organisation.hubId,
+    })
+    .from(organisation)
+    .where(eq(organisation.id, params.id as Id))
+    .limit(1)
+
+  if (!current) {
+    throw error(404, 'ORGANISATION_NOT_FOUND')
+  }
+
+  const deleteDecision = authorizeOrganisationDelete(
+    {
+      userId: user.id,
+      userRoles,
+      isAuthenticated: true,
+      isAnonymous: user.isAnonymous,
+    },
+    {
+      resourceHubId: current.hubId,
+    },
+  )
+  if (!deleteDecision.allowed) {
+    throw error(403, toAuthMessage(deleteDecision.code ?? 'INSUFFICIENT_ROLE'))
+  }
 
   const updated = await updateOrganisationById(
     db,
