@@ -1692,10 +1692,25 @@ export class AppCtx {
     ref: Id | Code,
   ): Promise<Resource | undefined> => {
     switch (resource) {
-      case FirstClassResource.organisation:
-        return await this.getOrganisationById(
-          this.getOrganisationIdByCode(ref as Code)! as Id,
-        )
+      case FirstClassResource.organisation: {
+        const code = ref as Code
+        const cachedId = this.getOrganisationIdByCode(code)
+        if (cachedId) {
+          const cached = await this.getOrganisationById(cachedId, false)
+          if (cached) return cached
+        }
+
+        const remote = (await getOrganisation({
+          ref: String(ref),
+          refKey: 'code',
+        })) as { data?: Organisation | null }
+
+        if (!remote?.data) return undefined
+
+        this.cache.organisation.set(remote.data.id, remote.data)
+        this.organisationCodeToId.set(remote.data.code, remote.data.id)
+        return remote.data
+      }
       case FirstClassResource.project:
         return await this.getProjectById(this.getProjectIdByCode(ref as Code)! as Id)
       case FirstClassResource.layer:
