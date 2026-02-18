@@ -58,6 +58,7 @@ import { SectionHeader, TextArea, TextInput } from '$lib/bits/custom/form'
 import { configureForm } from '$lib/factories.svelte'
 // UTILS
 import { createSchemaRequiredInferer, toIssueMessages } from '$lib/utils/form-schema'
+import { navigateOnAdmin } from '$lib/navigation'
 // ICONS
 import OrganisationIcon from 'virtual:icons/lucide/users-round'
 import FormInputIcon from 'virtual:icons/lucide/form-input'
@@ -147,6 +148,11 @@ const configuredOrganisationForm = configureForm<OrganisationFormInput>(() => ({
       }),
     }),
   onresult: async ({ success, issues, error }) => {
+    const submittedCode = formCtx.form.fields.value().data?.code?.trim() ?? ''
+    const currentRouteCode = organisationRef
+    const shouldRedirectToCode =
+      success && submittedCode.length > 0 && submittedCode !== currentRouteCode
+
     const hasCodeConflict = (issues ?? [])
       .map(toIssueMessage)
       .some((message): message is string =>
@@ -168,7 +174,9 @@ const configuredOrganisationForm = configureForm<OrganisationFormInput>(() => ({
       nameFallbackKey: 'code',
       headerCtrl,
       refreshResource: async () => {
-        const refreshed = await refreshOrganisation()
+        const refreshed = await refreshOrganisation(
+          shouldRedirectToCode ? submittedCode : undefined,
+        )
         organisation = refreshed
         if (refreshed?.data) {
           formCtx.form.fields.set(toOrganisationFormInput(refreshed.data))
@@ -176,6 +184,16 @@ const configuredOrganisationForm = configureForm<OrganisationFormInput>(() => ({
       },
       entity: organisation,
     })
+
+    if (shouldRedirectToCode) {
+      navigateOnAdmin(
+        adminCtx,
+        FirstClassResource.organisation,
+        submittedCode,
+        activeFacet,
+      )
+      return
+    }
   },
 }))
 
