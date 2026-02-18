@@ -111,9 +111,7 @@ export function useHeaderAdapter(
   })
   const isTainted = $derived(Boolean(formActions?.dirty ?? false))
   const hasIssues = $derived(Boolean(formActions?.hasIssues ?? false))
-  const isSubmitting = $derived(
-    Boolean(formActions?.isSubmitting ?? formActions?.isPublishing ?? false),
-  )
+  const isSubmitting = $derived(Boolean(formActions?.isSubmitting ?? false))
   const isPublishing = $derived(Boolean(formActions?.isPublishing ?? false))
   const isPublished = $derived(Boolean(formActions?.isPublished ?? false))
   const isDeleting = $derived(Boolean(formActions?.isDeleting ?? false))

@@ -37,6 +37,7 @@ const primaryLabel = $derived(
 )
 const deleteLabel = $derived(isDeleted ? m.forms__restore() : m.forms__delete())
 const publishLabel = $derived(isPublished ? m.forms__unpublish() : m.forms__publish())
+const isInFlight = $derived(isSubmitting || isPublishing || isDeleting)
 
 function handlePrimaryAction(): void {
   if (!isEditing) {
@@ -86,14 +87,24 @@ function handlePrimaryAction(): void {
 {/snippet}
 
 <div class="bits-pattern-header__form-actions">
-  {#if isEditing}
+  {#if isDeleted}
     <Button
-      text={isDeleting ? m.forms__pending() : deleteLabel}
+      text={deleteLabel}
+      color="warning"
+      style="ghost"
+      icon={deleteIcon}
+      {hideLabel}
+      disabled={isInFlight}
+      onClick={() => onDeleteToggle?.()}
+    />
+  {:else if isEditing}
+    <Button
+      text={deleteLabel}
       color={isDeleted ? 'warning' : 'error'}
       style="ghost"
       icon={deleteIcon}
       {hideLabel}
-      disabled={isDeleting || isSubmitting}
+      disabled={isInFlight}
       onClick={() => onDeleteToggle?.()}
     />
 
@@ -103,7 +114,7 @@ function handlePrimaryAction(): void {
       style="ghost"
       icon={saveIcon}
       {hideLabel}
-      disabled={!isTainted || isSubmitting || hasIssues}
+      disabled={!isTainted || isInFlight || hasIssues}
       onClick={() => onSave?.()}
     />
 
@@ -114,6 +125,7 @@ function handlePrimaryAction(): void {
       icon={primaryIcon}
       class="bits-pattern-header__form-action-primary"
       {hideLabel}
+      disabled={isInFlight}
       onClick={handlePrimaryAction}
     />
   {:else}
@@ -124,17 +136,20 @@ function handlePrimaryAction(): void {
       icon={primaryIcon}
       class="bits-pattern-header__form-action-primary"
       {hideLabel}
+      disabled={isInFlight}
       onClick={handlePrimaryAction}
     />
   {/if}
 
-  <Button
-    text={publishLabel}
-    color={isPublished ? 'warning' : 'success'}
-    style="ghost"
-    icon={publishIcon}
-    {hideLabel}
-    disabled={isTainted || isSubmitting}
-    onClick={() => onPublishToggle?.()}
-  />
+  {#if !isDeleted}
+    <Button
+      text={publishLabel}
+      color={isPublished ? 'warning' : 'success'}
+      style="ghost"
+      icon={publishIcon}
+      {hideLabel}
+      disabled={isTainted || isInFlight}
+      onClick={() => onPublishToggle?.()}
+    />
+  {/if}
 </div>

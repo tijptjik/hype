@@ -177,8 +177,10 @@ export class HeaderCtrl {
    * @returns void
    */
   setFormActions(formActions: Partial<HeaderFormActionsState>): void {
+    const current = this.state.formActions ?? DEFAULT_HEADER_FORM_ACTIONS
     this.state.formActions = {
       ...DEFAULT_HEADER_FORM_ACTIONS,
+      ...current,
       ...formActions,
     }
   }
