@@ -9,6 +9,7 @@ Current strategic goals:
 - Continue Tailwind v4 + DaisyUI v5 migration safely while legacy UI remains.
 
 Related checklist: `docs/refactor-todo.md`
+Resource cache architecture: `docs/Resource-Cache-Architecture.md`
 
 ## Principles
 - Keep behavior stable while migrating implementation.
@@ -20,19 +21,19 @@ Related checklist: `docs/refactor-todo.md`
 
 ## Phases
 
-### Phase 1: Foundation (in progress)
-- Tailwind v4 config moved to CSS-first (`src/lib/styles/app.css`).
-- DaisyUI v5 theme config aligned with Tailwind v4.
-- Font loading moved to `<svelte:head>` and locale-specific CJK fonts loaded conditionally.
-- Guardrails added for post-migration UX regressions (pointer cursor, button border defaults).
+### Phase 1: Foundation
+- [x] Tailwind v4 config moved to CSS-first (`src/lib/styles/app.css`).
+- [x] DaisyUI v5 theme config aligned with Tailwind v4.
+- [x] Font loading moved to `<svelte:head>` and locale-specific CJK fonts loaded conditionally.
+- [x] Guardrails added for post-migration UX regressions (pointer cursor, button border defaults).
 
-### Phase 2: Forms Migration
+### Phase 2: Forms Migration (`in progress`)
 - Identify all `sveltekit-superforms` usage by route/feature.
 - Replace with SvelteKit remote functions `form` call patterns.
 - Keep validation and error UX equivalent.
 - Add tests for submission success/error flows where missing.
 
-### Phase 3: Component Migration (Bits UI)
+### Phase 3: Component Migration (Bits UI) (`in progress`)
 - Build new primitives/components in `src/lib/bits`.
 - Migrate feature UIs progressively from DaisyUI to Bits UI.
 - Keep legacy components functional until parity is reached.
@@ -42,17 +43,18 @@ Related checklist: `docs/refactor-todo.md`
 - Remove unused DaisyUI dependencies when migration completes.
 - Confirm no regressions in map, filters, and admin flows.
 
+### Phase 5: Resource Cache Unification
+- Introduce `CacheCtx` as a dedicated canonical entity/query cache dependency for `AppCtx`.
+- Treat Svelte remote-function cache as transport cache only.
+- Introduce query-index model (ids + metadata) for active collections.
+- Add stale-while-revalidate + persistence strategy (IndexedDB) for cross-session offline support.
+- Start rollout with organisations only, then expand to projects/layers/features.
+
 ## Workstreams from Previous Cursor Checklist
 - Svelte modernization:
   - Evaluate async branch guidance: https://github.com/sveltejs/svelte/discussions/15845#discussioncomment-13456944
   - Evaluate `@attach` migration path: https://svelte.dev/docs/svelte/@attach
   - Continue using `<svelte:boundary>` where async/error boundaries are beneficial.
-- Icon system:
-  - Evaluate Iconify/unplugin-icons for SvelteKit:
-    - https://github.com/unplugin/unplugin-icons/tree/main/examples/vite-svelte
-    - https://github.com/unplugin/unplugin-icons/tree/main
-    - https://icones.js.org
-    - https://iconify.design
 - Map stack:
   - Evaluate move from current map integration to `svelte-maplibre-gl`:
     - https://github.com/MIERUNE/svelte-maplibre-gl
