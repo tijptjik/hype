@@ -7,6 +7,7 @@ export default defineConfig({
   resolve: {
     alias: {
       $lib: resolve(__dirname, 'src/lib'),
+      '$app/server': resolve(__dirname, 'src/tests/mocks/app-server.ts'),
     },
   },
   test: {
