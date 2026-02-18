@@ -25,9 +25,19 @@ type GuardedFormContext<Input extends RemoteFormInput = RemoteFormInput> =
 type GuardedCommandContext = GuardedBaseContext
 
 type SetupRequestEvent = Parameters<typeof setupRequestHandler>[0]
-type GuardedContextResolver = () => Promise<GuardedBaseContext>
+type GuardedContextResolver = (payload?: unknown) => Promise<GuardedBaseContext>
 
-const resolveGuardedContext = async (): Promise<GuardedBaseContext> => {
+const toMetaAdminRequest = (payload: unknown): boolean => {
+  if (!payload || typeof payload !== 'object') return false
+  if (!('meta' in payload)) return false
+  const meta = (payload as { meta?: unknown }).meta
+  if (!meta || typeof meta !== 'object') return false
+  return (meta as { isAdminRequest?: unknown }).isAdminRequest === true
+}
+
+const resolveGuardedContext = async (
+  payload?: unknown,
+): Promise<GuardedBaseContext> => {
   const event = getRequestEvent()
   const setupEvent: SetupRequestEvent = {
     locals: event.locals,
@@ -38,6 +48,7 @@ const resolveGuardedContext = async (): Promise<GuardedBaseContext> => {
 
   return {
     ...ctx,
+    isAdminRequest: ctx.isAdminRequest || toMetaAdminRequest(payload),
     event,
   }
 }
@@ -68,7 +79,7 @@ export function guardedQuery(
 
   if (typeof maybeFn === 'function' && typeof schemaOrFn !== 'function') {
     return query(schemaOrFn, async output => {
-      const ctx = await resolveCtx()
+      const ctx = await resolveCtx(output)
       return maybeFn(output, ctx)
     })
   }
@@ -125,7 +136,7 @@ export function guardedForm(
     schemaOrFn !== 'unchecked'
   ) {
     return form(schemaOrFn, async (output, invalid) => {
-      const ctx = await resolveCtx()
+      const ctx = await resolveCtx(output)
       return maybeFn(output, {
         ...ctx,
         invalid: invalid as GuardedInvalid<RemoteFormInput>,
@@ -135,7 +146,7 @@ export function guardedForm(
 
   if (schemaOrFn === 'unchecked' && typeof maybeFn === 'function') {
     return form('unchecked', async (input: unknown, invalid) => {
-      const ctx = await resolveCtx()
+      const ctx = await resolveCtx(input)
       return maybeFn(input, {
         ...ctx,
         invalid: invalid as GuardedInvalid<RemoteFormInput>,
@@ -182,14 +193,14 @@ export function guardedCommand(
 
   if (typeof maybeFn === 'function' && typeof schemaOrFn !== 'function') {
     return command(schemaOrFn, async output => {
-      const ctx = await resolveCtx()
+      const ctx = await resolveCtx(output)
       return maybeFn(output, ctx)
     })
   }
 
   if (typeof schemaOrFn === 'function' && !maybeFn) {
     return command('unchecked', async (input: unknown) => {
-      const ctx = await resolveCtx()
+      const ctx = await resolveCtx(input)
       return schemaOrFn(input, ctx)
     })
   }

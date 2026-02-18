@@ -145,10 +145,15 @@ const configuredOrganisationForm = configureForm<OrganisationFormInput>(() => ({
       data,
       locale: getLocale(),
       organisationId: organisation?.data?.id,
-      entityQuery: getOrganisation({ ref: organisationRef, refKey: 'code' }),
+      entityQuery: getOrganisation({
+        ref: organisationRef,
+        refKey: 'code',
+        meta: { isAdminRequest: true },
+      }),
       listQuery: getOrganisations({
         conditions: adminCtx.appCtx.isSuperAdmin() ? {} : { isArchived: false },
         prisms: adminCtx.appCtx.state.prisms,
+        meta: { isAdminRequest: true },
       }),
     }),
   onresult: async ({ success, issues, error }) => {
@@ -263,7 +268,11 @@ function handleOrganisationRoleChange(
 async function refreshOrganisation(
   ref: string = organisationRef,
 ): Promise<OrganisationGetState> {
-  return await getOrganisation({ ref, refKey: 'code' }).catch(() => null)
+  return await getOrganisation({
+    ref,
+    refKey: 'code',
+    meta: { isAdminRequest: true },
+  }).catch(() => null)
 }
 
 async function handlePublishOrganisation(): Promise<void> {
@@ -276,14 +285,20 @@ async function handlePublishOrganisation(): Promise<void> {
     await publishOrganisation({
       id: organisation.data.id,
       state: nextState,
+      meta: { isAdminRequest: true },
     }).updates(
-      getOrganisation({ ref: organisationRef, refKey: 'code' }).withOverride(
+      getOrganisation({
+        ref: organisationRef,
+        refKey: 'code',
+        meta: { isAdminRequest: true },
+      }).withOverride(
         overrideOrganisationEntityBoolean('isPublished', nextState),
         // TODO Invalidate cache
       ),
       getOrganisations({
         conditions: adminCtx.appCtx.isSuperAdmin() ? {} : { isArchived: false },
         prisms: adminCtx.appCtx.state.prisms,
+        meta: { isAdminRequest: true },
       }).withOverride(
         overrideOrganisationListItemBoolean(
           organisation.data.id,
@@ -315,14 +330,20 @@ async function handleDeleteOrganisation(): Promise<void> {
     await archiveOrganisation({
       id: organisation.data.id,
       state: nextState,
+      meta: { isAdminRequest: true },
     }).updates(
-      getOrganisation({ ref: organisationRef, refKey: 'code' }).withOverride(
+      getOrganisation({
+        ref: organisationRef,
+        refKey: 'code',
+        meta: { isAdminRequest: true },
+      }).withOverride(
         overrideOrganisationEntityBoolean('isArchived', nextState),
         // TODO Invalidate cache
       ),
       getOrganisations({
         conditions: adminCtx.appCtx.isSuperAdmin() ? {} : { isArchived: false },
         prisms: adminCtx.appCtx.state.prisms,
+        meta: { isAdminRequest: true },
       }).withOverride(
         overrideOrganisationListItemBoolean(
           organisation.data.id,

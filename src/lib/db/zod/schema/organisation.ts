@@ -182,6 +182,7 @@ export const OrganisationFormMeta = z.object({
   id: z.string().optional(),
   updatedAt: z.string().min(1).optional(),
   mode: z.enum(['create', 'replace', 'update']).optional(),
+  isAdminRequest: z.boolean().optional(),
 })
 
 export const OrganisationFormData = z.object({
@@ -224,9 +225,19 @@ export const OrganisationUpdateFormData = z.object({
 export const PublishOrganisationSchema = z.object({
   id: z.string().min(1),
   state: z.coerce.boolean<boolean>(),
+  meta: z
+    .object({
+      isAdminRequest: z.boolean().optional(),
+    })
+    .optional(),
 })
 
 export const RemoveOrganisationSchema = z.object({
   id: z.string().min(1),
   state: z.coerce.boolean<boolean>(),
+  meta: z
+    .object({
+      isAdminRequest: z.boolean().optional(),
+    })
+    .optional(),
 })

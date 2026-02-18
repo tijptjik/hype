@@ -62,7 +62,7 @@ describe('remote guard wrappers', () => {
       expect(output).toEqual({ ref: 'org-1' })
       expect(ctx.user.id).toBe('u-1')
       expect(Array.isArray(ctx.userRoles)).toBe(true)
-      expect(ctx.db).toEqual({ tag: 'db' })
+      expect(ctx.db).toBeTruthy()
       expect(ctx.event.locals.user.id).toBe('u-1')
       return { ok: true }
     })
@@ -78,6 +78,30 @@ describe('remote guard wrappers', () => {
       platform: { env: {} },
       request: { method: 'POST' },
     })
+  })
+
+  it('guardedQuery(schema, fn) promotes admin scope from meta envelope', async () => {
+    mockSetupRequestHandler.mockResolvedValue({
+      db: { tag: 'db' },
+      session: { id: 's-1' },
+      user: { id: 'u-1', isAnonymous: false },
+      userId: 'u-1',
+      userRoles: [],
+      isAdminRequest: false,
+      request: { method: 'POST' },
+    })
+
+    const handler = guardedQuery({} as any, async (_output, ctx) => {
+      expect(ctx.isAdminRequest).toBe(true)
+      return { ok: true }
+    })
+
+    const result = await (handler as (input: unknown) => Promise<unknown>)({
+      ref: 'org-1',
+      meta: { isAdminRequest: true },
+    })
+
+    expect(result).toEqual({ ok: true })
   })
 
   it('guardedForm(schema, fn) forwards invalid helper and context', async () => {

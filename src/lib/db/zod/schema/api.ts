@@ -1,6 +1,12 @@
 // ZOD
 import { z } from 'zod'
 
+const RequestMetaSchema = z
+  .object({
+    isAdminRequest: z.boolean().optional(),
+  })
+  .optional()
+
 /* ----------------- */
 // API :: QUERY PARAM SCHEMAS
 /* -------- */
@@ -27,9 +33,11 @@ export const ListQueryParamsSchema = z.object({
     })
     .optional(),
   q: z.string().trim().optional(),
+  meta: RequestMetaSchema,
 })
 
 export const GetQueryParamsSchema = z.object({
   ref: z.string(),
   refKey: z.enum(['id', 'code']).optional(),
+  meta: RequestMetaSchema,
 })

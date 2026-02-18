@@ -194,6 +194,7 @@ describe('organisation.remote authz', () => {
 
     await getOrganisations({
       conditions: { isPublished: false, isArchived: false },
+      meta: { isAdminRequest: true },
     })
 
     expect(mockToQueryConditions).toHaveBeenCalledWith(
@@ -222,6 +223,7 @@ describe('organisation.remote authz', () => {
 
     await getOrganisations({
       conditions: { isPublished: null, isArchived: false },
+      meta: { isAdminRequest: true },
     })
 
     expect(mockToQueryConditions).toHaveBeenCalledWith(
@@ -272,7 +274,11 @@ describe('organisation.remote authz', () => {
     })
     mockAuthorizeOrganisationRead.mockReturnValue({ allowed: true })
 
-    await getOrganisation({ ref: 'org-1', refKey: 'id' })
+    await getOrganisation({
+      ref: 'org-1',
+      refKey: 'id',
+      meta: { isAdminRequest: true },
+    })
 
     expect(mockToQueryConditions).toHaveBeenCalledWith(
       expect.any(Object),

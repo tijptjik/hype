@@ -31,7 +31,7 @@ function normalizeOrganisationFormLocale(
 
 export function toOrganisationFormInput(data: Organisation): OrganisationFormInput {
   return {
-    meta: { id: data.id, updatedAt: data.modifiedAt },
+    meta: { id: data.id, updatedAt: data.modifiedAt, isAdminRequest: true },
     data: {
       code: data.code,
       url: data.url ?? '',
