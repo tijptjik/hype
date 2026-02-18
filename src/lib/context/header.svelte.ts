@@ -183,6 +183,42 @@ export class HeaderCtrl {
   }
 
   /**
+   * Read or set publish in-flight state on header form actions.
+   * @param next - Optional next publish state. When omitted, returns current value.
+   * @returns Current publish state.
+   */
+  isPublishing(next?: boolean): boolean {
+    if (typeof next === 'boolean') {
+      this.patchFormActions({ isPublishing: next })
+    }
+    return Boolean(this.state.formActions?.isPublishing)
+  }
+
+  /**
+   * Read or set submit in-flight state on header form actions.
+   * @param next - Optional next submit state. When omitted, returns current value.
+   * @returns Current submit state.
+   */
+  isSubmitting(next?: boolean): boolean {
+    if (typeof next === 'boolean') {
+      this.patchFormActions({ submitting: next })
+    }
+    return Boolean(this.state.formActions?.submitting)
+  }
+
+  /**
+   * Read or set delete in-flight state on header form actions.
+   * @param next - Optional next delete state. When omitted, returns current value.
+   * @returns Current delete state.
+   */
+  isDeleting(next?: boolean): boolean {
+    if (typeof next === 'boolean') {
+      this.patchFormActions({ isDeleting: next })
+    }
+    return Boolean(this.state.formActions?.isDeleting)
+  }
+
+  /**
    * Clear route-provided form actions.
    * @returns void
    */
@@ -257,6 +293,18 @@ export class HeaderCtrl {
             icon: value.icon ?? null,
           }
         })
+  }
+
+  /**
+   * Patch existing form actions while preserving current handlers/state defaults.
+   * @param patch - Partial action state to merge.
+   * @returns void
+   */
+  private patchFormActions(patch: Partial<HeaderFormActionsState>): void {
+    this.setFormActions({
+      ...(this.state.formActions ?? {}),
+      ...patch,
+    })
   }
 }
 
