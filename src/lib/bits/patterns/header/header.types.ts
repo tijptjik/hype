@@ -57,6 +57,8 @@ export interface HeaderFormActionsConfig {
   isDeleting?: boolean
   isDeleted?: boolean
   isPublished?: boolean
+  canEdit?: boolean
+  canPublish?: boolean
   onEditingToggle?: (next: boolean) => void
   onReset?: () => void
   onSave?: () => void

@@ -379,6 +379,8 @@ export type HeaderFormActionsState = {
   isDeleting: boolean
   isDeleted: boolean
   isPublished: boolean
+  canEdit: boolean
+  canPublish: boolean
   reset: () => void
   submit: () => void
   togglePublish: () => void | Promise<void>
@@ -883,7 +885,13 @@ export type HeaderFormActionHandlers = Pick<
 
 export type HeaderFormActionStatus = Pick<
   HeaderFormActionsState,
-  'dirty' | 'isSubmitting' | 'hasIssues' | 'isPublished' | 'isDeleted'
+  | 'dirty'
+  | 'isSubmitting'
+  | 'hasIssues'
+  | 'isPublished'
+  | 'isDeleted'
+  | 'canEdit'
+  | 'canPublish'
 >
 
 export type WireHeaderFormActionHandlersParams = {
@@ -1521,6 +1529,7 @@ export type AuthorizeParams = {
   userId?: string | null
   userRoles: UserRoleDisco[]
   isAuthenticated?: boolean
+  isAnonymous?: boolean
   resourceType: AuthorizationResourceType
   action: AuthorizationAction
   resourceId?: string

@@ -116,6 +116,8 @@ export function useHeaderAdapter(
   const isPublished = $derived(Boolean(formActions?.isPublished ?? false))
   const isDeleting = $derived(Boolean(formActions?.isDeleting ?? false))
   const isDeleted = $derived(Boolean(formActions?.isDeleted ?? false))
+  const canEdit = $derived(Boolean(formActions?.canEdit ?? true))
+  const canPublish = $derived(Boolean(formActions?.canPublish ?? true))
 
   // Reset editing state when navigating between resources/routes.
   $effect(() => {
@@ -276,6 +278,8 @@ export function useHeaderAdapter(
       isDeleting,
       isDeleted,
       isPublished,
+      canEdit,
+      canPublish,
       onEditingToggle: handleEditingToggle,
       onReset: handleReset,
       onSave: handleSave,

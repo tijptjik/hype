@@ -68,6 +68,15 @@
     justify-content: center;
   }
 
+  .bits-theme .bits-pattern-header__publish-status {
+    @apply inline-flex h-10 items-center gap-2 px-3 text-sm font-medium;
+    color: var(--color-base-content);
+  }
+
+  .bits-theme .bits-pattern-header__publish-status-label {
+    @apply whitespace-nowrap;
+  }
+
   .bits-theme .bits-pattern-header.bits-pattern-header--measuring .bits-btn,
   .bits-theme .bits-pattern-header.bits-pattern-header--measuring .bits-btn__label,
   .bits-theme .bits-pattern-header.bits-pattern-header--measuring .bits-header__title,

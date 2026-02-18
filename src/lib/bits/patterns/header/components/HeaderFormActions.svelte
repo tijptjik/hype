@@ -25,6 +25,8 @@ let {
   isDeleting = false,
   isDeleted = false,
   isPublished = false,
+  canEdit = true,
+  canPublish = true,
   hideLabel = false,
   onEditingToggle,
   onReset,
@@ -38,6 +40,9 @@ const primaryLabel = $derived(
 )
 const deleteLabel = $derived(isDeleted ? m.forms__restore() : m.forms__delete())
 const publishLabel = $derived(isPublished ? m.forms__unpublish() : m.forms__publish())
+const publishStatusLabel = $derived(
+  isPublished ? m.published() : m.forms__unpublished(),
+)
 const isInFlight = $derived(isSubmitting || isPublishing || isDeleting)
 
 function handlePrimaryAction(): void {
@@ -89,6 +94,14 @@ function handlePrimaryAction(): void {
   {/if}
 {/snippet}
 
+{#snippet publishStatusIcon()}
+  {#if isPublished}
+    <Eye />
+  {:else}
+    <EyeOff />
+  {/if}
+{/snippet}
+
 <div class="bits-pattern-header__form-actions">
   {#if isDeleted}
     <Button
@@ -121,38 +134,53 @@ function handlePrimaryAction(): void {
       onClick={() => onSave?.()}
     />
 
-    <Button
-      text={primaryLabel}
-      color="neutral"
-      style="ghost"
-      icon={primaryIcon}
-      class={hideLabel ? '' : 'bits-pattern-header__form-action-primary'}
-      {hideLabel}
-      disabled={isInFlight}
-      onClick={handlePrimaryAction}
-    />
+    {#if canEdit}
+      <Button
+        text={primaryLabel}
+        color="neutral"
+        style="ghost"
+        icon={primaryIcon}
+        class={hideLabel ? '' : 'bits-pattern-header__form-action-primary'}
+        {hideLabel}
+        disabled={isInFlight}
+        onClick={handlePrimaryAction}
+      />
+    {/if}
   {:else}
-    <Button
-      text={primaryLabel}
-      color="neutral"
-      style="ghost"
-      icon={primaryIcon}
-      class={hideLabel ? '' : 'bits-pattern-header__form-action-primary'}
-      {hideLabel}
-      disabled={isInFlight}
-      onClick={handlePrimaryAction}
-    />
+    {#if canEdit}
+      <Button
+        text={primaryLabel}
+        color="neutral"
+        style="ghost"
+        icon={primaryIcon}
+        class={hideLabel ? '' : 'bits-pattern-header__form-action-primary'}
+        {hideLabel}
+        disabled={isInFlight}
+        onClick={handlePrimaryAction}
+      />
+    {/if}
   {/if}
 
   {#if !isDeleted}
-    <Button
-      text={publishLabel}
-      color={isPublished ? 'warning' : 'success'}
-      style="ghost"
-      icon={publishIcon}
-      {hideLabel}
-      disabled={isTainted || isInFlight}
-      onClick={() => onPublishToggle?.()}
-    />
+    {#if canPublish}
+      <Button
+        text={publishLabel}
+        color={isPublished ? 'warning' : 'success'}
+        style="ghost"
+        icon={publishIcon}
+        {hideLabel}
+        disabled={isTainted || isInFlight}
+        onClick={() => onPublishToggle?.()}
+      />
+    {:else}
+      <div class="bits-pattern-header__publish-status" aria-live="polite">
+        {@render publishStatusIcon()}
+        {#if !hideLabel}
+          <span class="bits-pattern-header__publish-status-label"
+            >{publishStatusLabel}</span
+          >
+        {/if}
+      </div>
+    {/if}
   {/if}
 </div>
