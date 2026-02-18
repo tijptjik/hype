@@ -13,7 +13,7 @@ const DEFAULT_HEADER_FORM_ACTIONS: HeaderFormActionsState = {
   dirty: false,
   reset: () => {},
   submit: () => {},
-  submitting: false,
+  isSubmitting: false,
   hasIssues: false,
   togglePublish: () => {},
   isPublishing: false,
@@ -195,12 +195,12 @@ export class HeaderCtrl {
 
   /** Read submit in-flight state from header form actions. */
   getIsSubmitting(): boolean {
-    return Boolean(this.state.formActions?.submitting)
+    return Boolean(this.state.formActions?.isSubmitting)
   }
 
   /** Set submit in-flight state on header form actions. */
   setIsSubmitting(next: boolean): void {
-    this.patchFormActions({ submitting: next })
+    this.patchFormActions({ isSubmitting: next })
   }
 
   /** Read delete in-flight state from header form actions. */
