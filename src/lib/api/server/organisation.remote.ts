@@ -1,10 +1,12 @@
 // REMOTE
 import { guardedCommand, guardedForm, guardedQuery } from '$lib/api/server/remote'
-import { error, invalid } from '@sveltejs/kit'
+import { error } from '@sveltejs/kit'
 // I18N
 import { toLocaleRecordFromOrganisationFormI18n } from '$lib/i18n'
 // DRIZZLE
 import { and, eq, ne } from 'drizzle-orm'
+// UTILS
+import { nanoid } from 'nanoid'
 // AUTHORIZATION
 import {
   isReservedCode,
@@ -353,6 +355,7 @@ export const organisationForm = guardedForm('unchecked', async (input, ctx) => {
     }
 
     const created = await createOrganisation(db, {
+      id: nanoid(12),
       code: normalizedCode,
       url: data.url.trim() === '' ? null : data.url.trim(),
       hubId: activeHubId,
