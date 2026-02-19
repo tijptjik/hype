@@ -65,7 +65,7 @@ export const organisation = sqliteTable('organisation', {
   isCoreInclusive: integer('isCoreInclusive', { mode: 'boolean' })
     .notNull()
     .default(true),
-  isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(true),
+  isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
   publishedAt: text('publishedAt'),
   publisherId: text('publisherId').references(() => user.id, {
     onDelete: 'set null',
