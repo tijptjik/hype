@@ -1,4 +1,7 @@
-export type FormIssueValue = string | string[] | null | undefined
+export type FormIssueValue =
+  | Array<{ message: string; path?: Array<string | number> }>
+  | null
+  | undefined
 
 export interface FormLabelProps {
   for?: string

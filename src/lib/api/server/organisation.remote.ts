@@ -10,7 +10,6 @@ import {
   isReservedCode,
   toAuthMessage,
   toIssueDetailMessage,
-  toFormIssueMessage,
   toOrganisationSubmittedFields,
   toOrganisationUserRoleSignature,
   authorizeOrganisationRead,
@@ -291,10 +290,10 @@ export const organisationForm = guardedForm('unchecked', async (input, ctx) => {
   // Defensive validation: enforce role invariants server-side even if payload parsing
   // quirks bypass client/schema checks.
   if (submittedRoles.length === 0) {
-    invalid(issue(toFormIssueMessage('USER_ROLES_REQUIRED')))
+    invalid(issue(toIssueDetailMessage('USER_ROLES_REQUIRED')))
   }
   if (!submittedRoles.some(userRole => userRole.role === 'owner')) {
-    invalid(issue(toFormIssueMessage('OWNER_REQUIRED')))
+    invalid(issue(toIssueDetailMessage('OWNER_REQUIRED')))
   }
   if (duplicateSubmittedRoleUserIds.length > 0) {
     invalid(
@@ -336,7 +335,7 @@ export const organisationForm = guardedForm('unchecked', async (input, ctx) => {
       toOrganisationSubmittedFields(data),
     )
     if (!createDecision.allowed) {
-      invalid(issue(toFormIssueMessage(createDecision.code ?? 'INSUFFICIENT_ROLE')))
+      invalid(issue(toIssueDetailMessage(createDecision.code ?? 'INSUFFICIENT_ROLE')))
     }
 
     if (isReservedCode(normalizedCode)) {
@@ -403,7 +402,7 @@ export const organisationForm = guardedForm('unchecked', async (input, ctx) => {
     toOrganisationSubmittedFields(data),
   )
   if (!updateDecision.allowed) {
-    invalid(issue(toFormIssueMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE')))
+    invalid(issue(toIssueDetailMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE')))
   }
 
   const existingRoleRows = await db
@@ -429,15 +428,15 @@ export const organisationForm = guardedForm('unchecked', async (input, ctx) => {
       },
     )
     if (!roleDecision.allowed) {
-      invalid(issue(toFormIssueMessage(roleDecision.code ?? 'INSUFFICIENT_ROLE')))
+      invalid(issue(toIssueDetailMessage(roleDecision.code ?? 'INSUFFICIENT_ROLE')))
     }
   }
 
   if (!meta?.updatedAt) {
-    invalid(issue(toFormIssueMessage('STALE_WRITE')))
+    invalid(issue(toIssueDetailMessage('STALE_WRITE')))
   }
   if (meta.updatedAt !== current.modifiedAt) {
-    invalid(issue(toFormIssueMessage('STALE_WRITE')))
+    invalid(issue(toIssueDetailMessage('STALE_WRITE')))
   }
 
   if (isReservedCode(normalizedCode)) {
@@ -470,7 +469,7 @@ export const organisationForm = guardedForm('unchecked', async (input, ctx) => {
     })
 
   if (!updated) {
-    invalid(issue(toFormIssueMessage('STALE_WRITE')))
+    invalid(issue(toIssueDetailMessage('STALE_WRITE')))
   }
 
   const nextI18n = toLocaleRecordFromOrganisationFormI18n(data.i18n)

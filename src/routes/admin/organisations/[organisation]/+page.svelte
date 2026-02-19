@@ -186,16 +186,15 @@ const isDirty = $derived(Boolean(formCtx.dirty))
 
 // ISSUES
 
-const visibleFieldIssues = $derived(formCtx.visibleIssues ?? [])
-const visibleAllIssues = $derived.by(() =>
-  suppressFormLevelIssues ? [] : visibleFieldIssues,
+const visibleAllIssues = $derived.by((): unknown[] =>
+  suppressFormLevelIssues ? [] : (formCtx.allIssues ?? []),
 )
 
-const formLevelIssues = $derived.by(() => {
+const formLevelIssues = $derived.by((): string[] => {
   const messages = visibleAllIssues
     .filter(isFormLevelIssue)
     .map(toIssueMessage)
-    .filter((message): message is string => Boolean(message))
+    .filter((message: string | null): message is string => Boolean(message))
   return Array.from(new Set(messages))
 })
 
@@ -559,7 +558,6 @@ $effect(() => {
             form={formCtx.form}
             {isEditing}
             {isRequiredInPreflight}
-            visibleIssues={visibleFieldIssues}
           />
         {/snippet}
       </GridSpacer>

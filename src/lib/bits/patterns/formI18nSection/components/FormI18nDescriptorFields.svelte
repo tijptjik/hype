@@ -1,7 +1,6 @@
 <script lang="ts">
 import { m } from '$lib/i18n'
 import { getGenAiState, toggleGenAiField } from '$lib/client/services/form'
-import { toIssueMessages } from '$lib/utils/form-schema'
 import { TextArea, TextInput } from '$lib/bits/custom/form'
 import type { GenAiField, Locale } from '$lib/types'
 
@@ -38,7 +37,7 @@ let {
   {@const field = fields[config.key]}
   {@const attrs = field.as('text')}
   {@const required = isRequiredInPreflight(['data', 'i18n', formLocale, config.key])}
-  {@const issues = toIssueMessages(field.issues())}
+  {@const issues = field.issues()}
 
   {#if config.kind === 'textarea'}
     <TextArea
