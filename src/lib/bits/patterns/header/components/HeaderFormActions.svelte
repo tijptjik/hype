@@ -44,6 +44,7 @@ const publishStatusLabel = $derived(
   isPublished ? m.published() : m.forms__unpublished(),
 )
 const isInFlight = $derived(isSubmitting || isPublishing || isDeleting)
+const isPublishBlocked = $derived((isEditing && isTainted) || isInFlight)
 
 function handlePrimaryAction(): void {
   if (!isEditing) {
@@ -71,7 +72,11 @@ function handlePrimaryAction(): void {
 {/snippet}
 
 {#snippet saveIcon()}
-  <Save />
+  {#if isSubmitting}
+    <LoaderCircle class="animate-spin" />
+  {:else}
+    <Save />
+  {/if}
 {/snippet}
 
 {#snippet deleteIcon()}
@@ -125,7 +130,7 @@ function handlePrimaryAction(): void {
     />
 
     <Button
-      text={isSubmitting ? m.forms__pending() : m.forms__save()}
+      text={m.forms__save()}
       color="success"
       style="ghost"
       icon={saveIcon}
@@ -169,7 +174,7 @@ function handlePrimaryAction(): void {
         style="ghost"
         icon={publishIcon}
         {hideLabel}
-        disabled={isTainted || isInFlight}
+        disabled={isPublishBlocked}
         onClick={() => onPublishToggle?.()}
       />
     {:else}
