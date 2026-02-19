@@ -939,6 +939,16 @@ export type ResourceFormSubmissionResultParams = {
   successPrefix?: string
 }
 
+export type CollectionNavOptions = {
+  openCard?: boolean
+  openCardDelay?: number
+  isCardOpen?: boolean
+  focus?: boolean
+  focusFeature?: boolean
+  highlight?: boolean
+  navOptions?: Record<string, string>
+}
+
 export type ConfigureFormResourceResultOptions<Input> = {
   nameKey?: string
   nameFallbackKey?: string

@@ -17,8 +17,10 @@ import {
 // TYPES
 import type { AdminCtx } from '$lib/context/admin.svelte'
 import type { AppCtx } from '$lib/context/app.svelte'
+import type { OmniCtx } from '$lib/context/omni.svelte'
 import type {
   Code,
+  CollectionNavOptions,
   FacetType,
   Id,
   Resource,
@@ -87,7 +89,7 @@ import type {
 // 1. CORE NAVIGATION
 // ═══════════════════════
 
-function isNavigable(resource: any): resource is NavigableResource {
+function isNavigable(resource: unknown): resource is NavigableResource {
   return (
     Object.values(FirstClassResource).includes(resource) &&
     resource !== FirstClassResource.property
@@ -237,12 +239,58 @@ export const navigateOnAdmin = (
   goto(url)
 }
 
+const toSubmittedCode = (data: unknown): string => {
+  const code = (data as { data?: { code?: unknown } })?.data?.code
+  return typeof code === 'string' ? code.trim() : ''
+}
+
+export function shouldRedirectToSubmittedCode({
+  adminCtx,
+  data,
+  success,
+  isRefCode = true,
+}: {
+  adminCtx: Pick<AdminCtx, 'activeResourceRef'>
+  data: unknown
+  success: boolean
+  isRefCode?: boolean
+}): boolean {
+  if (!success || !isRefCode) return false
+  const submittedCode = toSubmittedCode(data)
+  const currentRef = adminCtx.activeResourceRef
+  return (
+    submittedCode.length > 0 &&
+    typeof currentRef === 'string' &&
+    submittedCode !== currentRef
+  )
+}
+
+export function navigateToSubmittedCode({
+  adminCtx,
+  resourceType,
+  data,
+}: {
+  adminCtx: AdminCtx
+  resourceType: FirstClassResource
+  data: unknown
+}): void {
+  const submittedCode = toSubmittedCode(data)
+  if (!submittedCode) return
+  navigateOnAdmin(
+    adminCtx,
+    resourceType,
+    submittedCode,
+    adminCtx.activeFacet || undefined,
+  )
+}
+
 export async function navigateOnAdminById(
   adminCtx: AdminCtx,
   resourceType: FirstClassResource | false,
   id: Id,
-  ...args: any[]
-) {
+  facet?: FacetType,
+  queryParams?: Record<string, string>,
+): Promise<void> {
   let ref = id
   if (
     resourceType == 'organisation' ||
@@ -254,7 +302,7 @@ export async function navigateOnAdminById(
       ref = (resource as Organisation | Project | Hub).code
     }
   }
-  navigateOnAdmin(adminCtx, resourceType as FirstClassResource, ref, ...args)
+  navigateOnAdmin(adminCtx, resourceType, ref, facet, queryParams)
 }
 
 // ═══════════════════════
@@ -298,7 +346,7 @@ export const getActiveResourceAndRefFromUrl = (): {
  * Generate breadcrumbs for a resource hierarchy using async lookups
  */
 export async function getBreadcrumbs(
-  appCtx: any, // AppCtx type
+  appCtx: AppCtx,
   resourceType: FirstClassResource,
   resourceRef: Id | Code,
 ): Promise<{ name: string; href: string }[]> {
@@ -468,7 +516,7 @@ const isValidPanelType = (panel: string): panel is Panel => {
  */
 export const updatePanelUrlParams = (
   panelState: Record<string, boolean>,
-  appCtx?: any,
+  appCtx?: AppCtx,
 ) => {
   if (typeof window === 'undefined') return
 
@@ -599,7 +647,7 @@ export const handleImageParams = async (
 ): Promise<{
   targetImageId?: string
   isFullScreen?: boolean
-  targetImage?: any
+  targetImage?: unknown
 } | null> => {
   const { imageId, fullscreen } = getImageParams(searchParams)
 
@@ -675,8 +723,8 @@ export const removeParamFromUrl = (
  * Navigate to a contributed feature with collection context
  */
 export const navigateToContributedFeature = async (
-  appCtx: any,
-  omniCtx: any,
+  appCtx: AppCtx,
+  omniCtx: OmniCtx,
   featureId: string,
   projectId: Id,
   features: (FeatureFromCollection | Feature)[],
@@ -714,8 +762,8 @@ export const navigateToContributedFeature = async (
  * Navigate to a contributed image with collection context
  */
 export const navigateToContributedImage = async (
-  appCtx: any,
-  omniCtx: any,
+  appCtx: AppCtx,
+  omniCtx: OmniCtx,
   featureId: string,
   projectId: Id,
   imageId: string,
@@ -767,8 +815,8 @@ export const navigateToContributedImage = async (
  * Navigate to a starred feature with collection context
  */
 export const navigateToStarred = async (
-  appCtx: any,
-  omniCtx: any,
+  appCtx: AppCtx,
+  omniCtx: OmniCtx,
   featureId: string,
   wishlistedFeatures: UserFeatureWithHierarchy[],
 ) => {
@@ -801,8 +849,8 @@ export const navigateToStarred = async (
  * Navigate to a visited feature with collection context
  */
 export const navigateToVisited = async (
-  appCtx: any,
-  omniCtx: any,
+  appCtx: AppCtx,
+  omniCtx: OmniCtx,
   featureId: string,
   visitedFeatures: UserFeatureWithHierarchy[],
 ) => {
@@ -852,7 +900,7 @@ export const getFeaturesFromImages = async (
  * @param features - Features to extract layer IDs from
  */
 const activateLayersForFeatures = (
-  appCtx: any,
+  appCtx: AppCtx,
   features: (FeatureFromCollection | Feature | UserFeatureWithHierarchy)[],
 ): void => {
   const layerIds = Array.from(
@@ -884,13 +932,13 @@ const activateLayersForFeatures = (
  * @param additionalNavOptions - Additional navigation options for initialization
  */
 const handleCollectionNavigation = (
-  omniCtx: any,
+  omniCtx: OmniCtx,
   collectionId: string,
   featureId: string,
-  baseNavOptions: any,
+  baseNavOptions: CollectionNavOptions,
   features: (FeatureFromCollection | Feature)[],
   collectionTitle: Record<Locale, string>,
-  additionalNavOptions: any = {},
+  additionalNavOptions: CollectionNavOptions = {},
 ): void => {
   // Check if we can switch within the current collection
   if (omniCtx.isCollectionInitialized(collectionId)) {
@@ -953,8 +1001,8 @@ const handleUrlParamChange = (
  * @param features - Features to activate layers for
  */
 const initializeCollectionNavigation = (
-  omniCtx: any,
-  appCtx: any,
+  omniCtx: OmniCtx,
+  appCtx: AppCtx,
   features: (FeatureFromCollection | Feature | UserFeatureWithHierarchy)[],
 ): void => {
   omniCtx.initSelection(false)
