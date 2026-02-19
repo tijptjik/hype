@@ -1,7 +1,6 @@
 import { toast } from 'svelte-sonner'
 import { getLocale, toOrganisationFormLocaleKey, translateI18nFields } from '$lib/i18n'
 import { m } from '$lib/i18n'
-import { navigateToSubmittedCode, shouldRedirectToSubmittedCode } from '$lib/navigation'
 import type { FirstClassResource } from '$lib/enums'
 import type { AdminCtx } from '$lib/context/admin.svelte'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
@@ -28,6 +27,55 @@ import type {
   ResourceEditorHeaderController,
   Locale,
 } from '$lib/types'
+
+const toSubmittedCode = (data: unknown): string => {
+  const code = (data as { data?: { code?: unknown } })?.data?.code
+  return typeof code === 'string' ? code.trim() : ''
+}
+
+// Keep redirect helpers local to form services so tests/routes that only need
+// form helpers do not eagerly import the full navigation module graph.
+const shouldRedirectToSubmittedCode = ({
+  adminCtx,
+  data,
+  success,
+  isRefCode = true,
+}: {
+  adminCtx: Pick<AdminCtx, 'activeResourceRef'>
+  data: unknown
+  success: boolean
+  isRefCode?: boolean
+}): boolean => {
+  if (!success || !isRefCode) return false
+  const submittedCode = toSubmittedCode(data)
+  const currentRef = adminCtx.activeResourceRef
+  return (
+    submittedCode.length > 0 &&
+    typeof currentRef === 'string' &&
+    submittedCode !== currentRef
+  )
+}
+
+const navigateToSubmittedCode = ({
+  adminCtx,
+  resourceType,
+  data,
+}: {
+  adminCtx: AdminCtx
+  resourceType: FirstClassResource
+  data: unknown
+}): void => {
+  const submittedCode = toSubmittedCode(data)
+  if (!submittedCode) return
+  void import('$lib/navigation').then(({ navigateOnAdmin }) => {
+    navigateOnAdmin(
+      adminCtx,
+      resourceType,
+      submittedCode,
+      adminCtx.activeFacet || undefined,
+    )
+  })
+}
 
 export function createCodeRefResourceResult({
   adminCtx,

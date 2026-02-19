@@ -239,51 +239,6 @@ export const navigateOnAdmin = (
   goto(url)
 }
 
-const toSubmittedCode = (data: unknown): string => {
-  const code = (data as { data?: { code?: unknown } })?.data?.code
-  return typeof code === 'string' ? code.trim() : ''
-}
-
-export function shouldRedirectToSubmittedCode({
-  adminCtx,
-  data,
-  success,
-  isRefCode = true,
-}: {
-  adminCtx: Pick<AdminCtx, 'activeResourceRef'>
-  data: unknown
-  success: boolean
-  isRefCode?: boolean
-}): boolean {
-  if (!success || !isRefCode) return false
-  const submittedCode = toSubmittedCode(data)
-  const currentRef = adminCtx.activeResourceRef
-  return (
-    submittedCode.length > 0 &&
-    typeof currentRef === 'string' &&
-    submittedCode !== currentRef
-  )
-}
-
-export function navigateToSubmittedCode({
-  adminCtx,
-  resourceType,
-  data,
-}: {
-  adminCtx: AdminCtx
-  resourceType: FirstClassResource
-  data: unknown
-}): void {
-  const submittedCode = toSubmittedCode(data)
-  if (!submittedCode) return
-  navigateOnAdmin(
-    adminCtx,
-    resourceType,
-    submittedCode,
-    adminCtx.activeFacet || undefined,
-  )
-}
-
 export async function navigateOnAdminById(
   adminCtx: AdminCtx,
   resourceType: FirstClassResource | false,
