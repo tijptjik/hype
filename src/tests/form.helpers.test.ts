@@ -59,7 +59,7 @@ import {
 import type { AdminCtx } from '$lib/context/admin.svelte'
 
 describe('form helpers', () => {
-  it('createCodeRefResourceResult wires success, redirect decision and navigation', () => {
+  it('createCodeRefResourceResult wires success, redirect decision and navigation', async () => {
     const setEditing = vi.fn()
     const adminCtx = {
       activeResourceRef: 'old-code',
@@ -85,6 +85,9 @@ describe('form helpers', () => {
     ).toBe(false)
 
     helper.onRedirect({ data: { data: { code: 'new-code' } } })
+    await vi.waitFor(() => {
+      expect(navigateOnAdminMock).toHaveBeenCalled()
+    })
     expect(navigateOnAdminMock).toHaveBeenCalledWith(
       adminCtx,
       FirstClassResource.organisation,

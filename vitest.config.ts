@@ -23,7 +23,7 @@ export default defineConfig({
     },
     pool: 'forks',
     execArgv: ['--expose-gc'],
-    isolate: false,
+    isolate: true,
     maxWorkers: 1,
     vmMemoryLimit: '300Mb',
     fileParallelism: false,

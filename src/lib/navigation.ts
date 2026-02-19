@@ -3,7 +3,7 @@ import { m } from '$lib/i18n'
 // SVELTE
 import { goto, pushState, replaceState } from '$app/navigation'
 // LIB
-import { ADMIN_PATH, isMobile } from '$lib/index'
+import { ADMIN_PATH, isMobile } from '$lib/constants'
 // ENUMS
 import {
   FirstClassResource,

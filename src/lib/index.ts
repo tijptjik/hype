@@ -1,7 +1,5 @@
 // SVELTE
 import { derived, type Writable } from 'svelte/store'
-import { browser } from '$app/environment'
-import { page } from '$app/state'
 // UTILITIES
 // COMPONENTS
 import InputField from '$lib/components/forms/fields/Input.svelte'
