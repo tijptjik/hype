@@ -41,6 +41,8 @@ let fieldValues = $derived(
 
 // STATE : LOCAL
 let isGenAI = $derived(fieldValues.isGenAI)
+let inputValue = $derived((fieldValues.value ?? '') as string)
+let inputIsGenAI = $derived(Boolean(fieldValues.isGenAI))
 
 // STATE : DERIVED
 let id = $derived(
@@ -75,7 +77,8 @@ function handleChange(newValue: string) {
 function handleToggleGenAI(e: MouseEvent) {
   e.stopPropagation()
   e.preventDefault()
-  syncToForm(fieldValues.value as string, (isGenAI = !isGenAI))
+  const nextIsGenAI = !isGenAI
+  syncToForm(inputValue, nextIsGenAI)
 }
 </script>
 
@@ -104,8 +107,8 @@ function handleToggleGenAI(e: MouseEvent) {
     >
       <FormInput
         {id}
-        bind:value={fieldValues.value as string}
-        bind:isGenAI={fieldValues.isGenAI as boolean}
+        value={inputValue}
+        isGenAI={inputIsGenAI}
         locale={locale as Locale}
         {...field}
         onchange={handleChange}
