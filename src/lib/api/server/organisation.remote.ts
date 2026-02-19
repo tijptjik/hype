@@ -538,7 +538,11 @@ export const publishOrganisation = guardedCommand(
 
     const updated = await updateOrganisationById(
       db,
-      { isPublished: params.state },
+      {
+        isPublished: params.state,
+        publishedAt: params.state ? new Date().toISOString() : null,
+        publisherId: params.state ? user.id : null,
+      },
       params.id as Id,
     )
 
