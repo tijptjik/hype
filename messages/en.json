@@ -36,6 +36,7 @@
   "forms__edit": "Edit",
   "forms__delete": "Delete",
   "forms__restore": "Restore",
+  "forms__restored": "Restored",
   "resources__profile": "Profile",
   "organisation__images": "Image",
   "project__fields": "Fields",

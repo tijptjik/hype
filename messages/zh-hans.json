@@ -36,6 +36,7 @@
   "forms__edit": "编辑",
   "forms__delete": "删除",
   "forms__restore": "恢复",
+  "forms__restored": "恢复",
   "resources__profile": "主页",
   "organisation__images": "图像",
   "project__fields": "信息栏位",

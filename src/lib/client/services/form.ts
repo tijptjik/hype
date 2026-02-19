@@ -1,8 +1,14 @@
 import { toast } from 'svelte-sonner'
 import { getLocale, toOrganisationFormLocaleKey, translateI18nFields } from '$lib/i18n'
 import { m } from '$lib/i18n'
+import { navigateToSubmittedCode, shouldRedirectToSubmittedCode } from '$lib/navigation'
+import type { FirstClassResource } from '$lib/enums'
+import type { AdminCtx } from '$lib/context/admin.svelte'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
+import type { RemoteQuery, RemoteQueryOverride } from '@sveltejs/kit'
 import type {
   AddUserRoleSelectionParams,
+  FormHeaderController,
   GenAiField,
   GenAiStateResolverForm,
   HeaderFormActionStatus,
@@ -11,14 +17,179 @@ import type {
   I18nTranslatableField,
   RemoveUserRoleSelectionParams,
   ResetLocaleFieldsParams,
+  ResolveDisplayUserRolesParams,
   ResourceFormSubmissionResultParams,
   SyncHeaderFormActionStatusParams,
   TranslateLocaleIntoEmptyFieldsParams,
+  UserRoleHiddenInputAttrs,
   UpdateUserRoleSelectionParams,
   UserRoleFieldNameResolverForm,
   WireHeaderFormActionHandlersParams,
+  ResourceEditorHeaderController,
   Locale,
 } from '$lib/types'
+
+export function createCodeRefResourceResult({
+  adminCtx,
+  headerCtrl,
+  resourceType,
+  isRefCode = true,
+}: {
+  adminCtx: AdminCtx
+  headerCtrl: FormHeaderController
+  resourceType: FirstClassResource
+  isRefCode?: boolean
+}): {
+  onSuccess: () => void
+  shouldRedirect: (ctx: { data: unknown; success: boolean }) => boolean
+  onRedirect: (ctx: { data: unknown }) => void
+} {
+  return {
+    onSuccess: () => headerCtrl.setEditing(false),
+    shouldRedirect: ({ data, success }) =>
+      shouldRedirectToSubmittedCode({ adminCtx, data, success, isRefCode }),
+    onRedirect: ({ data }) => navigateToSubmittedCode({ adminCtx, resourceType, data }),
+  }
+}
+
+export function createResourceFormConfig<Input>({
+  formEl,
+  key,
+  schema,
+  data,
+  submitUpdates,
+  adminCtx,
+  headerCtrl,
+  resourceType,
+  getEntity,
+  refreshResource,
+}: {
+  formEl: HTMLFormElement | undefined
+  key: string | number
+  schema: StandardSchemaV1<Input, unknown>
+  data: Input
+  submitUpdates: (ctx: {
+    data: Input
+  }) => Promise<Array<RemoteQuery<any> | RemoteQueryOverride> | undefined>
+  adminCtx: AdminCtx
+  headerCtrl: FormHeaderController
+  resourceType: FirstClassResource
+  getEntity: () => { data?: Record<string, unknown> | null } | null | undefined
+  refreshResource: (ctx: {
+    data: Input
+    shouldRedirect: boolean
+    success: boolean
+    issues?: unknown[]
+    error?: string
+    result?: unknown
+  }) => Promise<void>
+}): {
+  formEl: HTMLFormElement | undefined
+  key: string | number
+  schema: StandardSchemaV1<Input, unknown>
+  data: Input
+  onsubmitupdates: (ctx: {
+    data: Input
+  }) => Promise<Array<RemoteQuery<any> | RemoteQueryOverride> | undefined>
+  resourceResult: {
+    onSuccess: () => void
+    shouldRedirect: (ctx: { data: unknown; success: boolean }) => boolean
+    onRedirect: (ctx: { data: unknown }) => void
+    getEntity: () => { data?: Record<string, unknown> | null } | null | undefined
+    refreshResource: (ctx: {
+      data: Input
+      shouldRedirect: boolean
+      success: boolean
+      issues?: unknown[]
+      error?: string
+      result?: unknown
+    }) => Promise<void>
+  }
+} {
+  return {
+    formEl,
+    key,
+    schema,
+    data,
+    onsubmitupdates: submitUpdates,
+    resourceResult: {
+      ...createCodeRefResourceResult({
+        adminCtx,
+        headerCtrl,
+        resourceType,
+      }),
+      getEntity,
+      refreshResource,
+    },
+  }
+}
+
+export function createResourceEditorPage({
+  headerCtrl,
+  icon,
+  facetTabs,
+}: {
+  headerCtrl: ResourceEditorHeaderController
+  icon: unknown
+  facetTabs: ReadonlyMap<string, { label: string; icon: unknown }>
+}): {
+  syncRouteAndLoad: <T>(params: {
+    ref: string
+    resetFormActionsSignature: () => void
+    setFacetForRef: (ref: string) => void
+    load: (ref: string) => Promise<T>
+    commit: (value: T) => void
+  }) => () => void
+  syncHeader: (params: {
+    ref: string
+    title: string
+    lastHeaderKey: string
+    setLastHeaderKey: (next: string) => void
+  }) => void
+  wireHeaderHandlers: (handlers: WireHeaderFormActionHandlersParams['handlers']) => void
+  syncHeaderStatus: (params: SyncHeaderFormActionStatusParams) => string
+  clearHeaderActions: () => void
+} {
+  return {
+    syncRouteAndLoad: <T>({
+      ref,
+      resetFormActionsSignature,
+      setFacetForRef,
+      load,
+      commit,
+    }: {
+      ref: string
+      resetFormActionsSignature: () => void
+      setFacetForRef: (ref: string) => void
+      load: (ref: string) => Promise<T>
+      commit: (value: T) => void
+    }) => {
+      let cancelled = false
+      resetFormActionsSignature()
+      setFacetForRef(ref)
+      void load(ref).then(result => {
+        if (cancelled) return
+        commit(result)
+      })
+      return () => {
+        cancelled = true
+      }
+    },
+    syncHeader: ({ ref, title, lastHeaderKey, setLastHeaderKey }) => {
+      const headerKey = `${ref}:${title}`
+      if (headerKey === lastHeaderKey) return
+      setLastHeaderKey(headerKey)
+      headerCtrl.setHeaderForEntity(title, icon, facetTabs)
+    },
+    wireHeaderHandlers: handlers => {
+      wireHeaderFormActionHandlers({ headerCtrl, handlers })
+    },
+    syncHeaderStatus: params => syncHeaderFormActionStatus(params),
+    clearHeaderActions: () => {
+      headerCtrl.clearFormActions()
+    },
+  }
+}
 
 export async function handleSubmissionResult({
   success,
@@ -53,7 +224,7 @@ export async function handleResourceFormSubmissionResult({
   error,
   nameKey,
   nameFallbackKey,
-  headerCtrl,
+  onSuccess,
   refreshResource,
   entity,
   resourceValues,
@@ -91,8 +262,8 @@ export async function handleResourceFormSubmissionResult({
       asTrimmedString(resolvedResourceValues?.[nameFallbackKey]) ||
       ''
     toast.success(`${successPrefix}${name ? ` ${name}` : ''}`)
-    headerCtrl.setEditing(false)
     await refreshResource()
+    await onSuccess?.()
     return
   }
 
@@ -170,18 +341,59 @@ export function getNameForToast(
   return asTrimmedString((data as Record<string, unknown>).code)
 }
 
+export function toIssueMessage(issue: unknown): string | null {
+  if (!issue || typeof issue !== 'object' || !('message' in issue)) return null
+  const message = (issue as { message?: unknown }).message
+  return typeof message === 'string' ? message : null
+}
+
+export function isFormLevelIssue(issue: unknown): boolean {
+  if (!issue || typeof issue !== 'object' || !('path' in issue)) return true
+  const path = (issue as { path?: unknown }).path
+  // Issues with related models are treated as form-level issues.
+  if (!Array.isArray(path) || path.length === 0) return true
+  return path[0] === 'data' && path[1] === 'userRoles'
+}
+
+export function toIssueChipParts(message: string): { code: string; detail: string } {
+  const parts = message.split(':')
+  if (parts.length < 2) return { code: 'INVALID', detail: message }
+  const code = parts[0]?.trim() || 'INVALID'
+  const detail = parts.slice(1).join(':').trim() || message
+  return { code, detail }
+}
+
 export function getRoleFieldNameByUserId(
   form: UserRoleFieldNameResolverForm,
 ): Record<string, string> {
   const userRoles = form.fields.value().data?.userRoles ?? []
-  const roleFields = form.fields.data.userRoles
+  const roleFields = form.fields.data?.userRoles ?? []
 
   return Object.fromEntries(
     userRoles.map((userRole, index) => [
       userRole.userId,
-      roleFields[index]?.role.as('select').name ?? '',
+      roleFields[index]?.role?.as('select').name ?? '',
     ]),
   )
+}
+
+export function revalidateAfterSubmitAttempt(params: {
+  wasSubmitAttempted: boolean
+  validate: () => Promise<unknown>
+}): boolean {
+  if (!params.wasSubmitAttempted) return false
+  void params.validate()
+  return true
+}
+
+export function getUserRoleHiddenInputAttrs(
+  form: UserRoleFieldNameResolverForm,
+  userRoles: Array<{ userId: string }>,
+): UserRoleHiddenInputAttrs[] {
+  const roleFields = form.fields.data?.userRoles ?? []
+  return userRoles
+    .map((userRole, index) => roleFields[index]?.userId?.as('hidden', userRole.userId))
+    .filter((attrs): attrs is UserRoleHiddenInputAttrs => Boolean(attrs))
 }
 
 /* ----------------- */
@@ -370,6 +582,19 @@ export function updateFormData<T>(
     ...current,
     data: updater(clonedData),
   })
+}
+
+export function resolveDisplayUserRoles<
+  TUserRole extends { userId: string; role: string },
+>({ baseRoles, formUserRoles }: ResolveDisplayUserRolesParams<TUserRole>): TUserRole[] {
+  const roleByUserId = new Map(
+    formUserRoles.map(userRole => [userRole.userId, userRole.role] as const),
+  )
+
+  return baseRoles.map(userRole => ({
+    ...userRole,
+    role: (roleByUserId.get(userRole.userId) ?? userRole.role) as TUserRole['role'],
+  }))
 }
 
 /* ----------------- */

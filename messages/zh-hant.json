@@ -36,6 +36,7 @@
   "forms__edit": "編輯",
   "forms__delete": "刪除",
   "forms__restore": "還原",
+  "forms__restored": "還原",
   "resources__profile": "主頁",
   "organisation__images": "影像",
   "project__fields": "資料欄位",
