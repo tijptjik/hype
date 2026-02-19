@@ -72,7 +72,7 @@ function hasContentOverlap(
   return leftContentRight + 8 > rightRect.left
 }
 
-async function resolveOverflow(): Promise<void> {
+async function resolveOverflow(allowProbe = true): Promise<void> {
   if (!rootEl) return
 
   const leftGroup = rootEl.querySelector('[data-header-left-group]')
@@ -124,13 +124,15 @@ async function resolveOverflow(): Promise<void> {
     return false
   }
 
-  showButtonText = await probeAndCommit(
-    showButtonText,
-    next => {
-      showButtonText = next
-    },
-    () => !isRightConstrained(),
-  )
+  if (allowProbe) {
+    showButtonText = await probeAndCommit(
+      showButtonText,
+      next => {
+        showButtonText = next
+      },
+      () => !isRightConstrained(),
+    )
+  }
 
   if (!hasResolvedOnce) {
     hasResolvedOnce = true
@@ -138,11 +140,16 @@ async function resolveOverflow(): Promise<void> {
   }
 }
 
-function scheduleOverflowResolution(): void {
+let pendingAllowProbe = false
+
+function scheduleOverflowResolution(allowProbe = true): void {
   if (typeof window === 'undefined') return
 
   if (debounceId !== null) {
     clearTimeout(debounceId)
+    pendingAllowProbe = pendingAllowProbe || allowProbe
+  } else {
+    pendingAllowProbe = allowProbe
   }
 
   debounceId = setTimeout(
@@ -155,7 +162,9 @@ function scheduleOverflowResolution(): void {
 
       frameId = requestAnimationFrame(() => {
         frameId = null
-        void resolveOverflow()
+        const nextAllowProbe = pendingAllowProbe
+        pendingAllowProbe = false
+        void resolveOverflow(nextAllowProbe)
       })
     },
     hasResolvedOnce ? RESOLVE_DEBOUNCE_MS + ANIMATION_SETTLE_MS : 0,
@@ -165,6 +174,7 @@ function scheduleOverflowResolution(): void {
 $effect(() => {
   const key = measurementKey
   const width = rootEl ? Math.round(rootEl.getBoundingClientRect().width) : 0
+  const previousWidth = lastResolvedWidth
   const widthChanged = width !== lastResolvedWidth
   const keyChanged = key !== lastResolvedKey
 
@@ -176,7 +186,11 @@ $effect(() => {
   }
 
   if (!widthChanged && !keyChanged && hasResolvedOnce) return
-  scheduleOverflowResolution()
+  const widthGrew = width > previousWidth
+  // Prevent jitter: when labels are already hidden, a key-only change should not
+  // force a temporary re-show probe. Re-probe only when width actually changes.
+  const allowProbe = showButtonText || widthChanged || widthGrew
+  scheduleOverflowResolution(allowProbe)
 })
 
 onMount(() => {
