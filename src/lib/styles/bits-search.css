@@ -84,6 +84,10 @@
     @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-base-100 text-xs font-semibold uppercase;
   }
 
+  .bits-theme .bits-search-result-item__fallback--image-failed {
+    @apply bg-primary text-primary-content;
+  }
+
   .bits-theme .bits-search-result-item__title-wrap {
     @apply min-w-0 flex-1 pr-2;
   }
