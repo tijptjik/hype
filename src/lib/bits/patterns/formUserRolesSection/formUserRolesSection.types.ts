@@ -5,10 +5,11 @@ export interface FormUserRolesSectionProps {
   title?: string
   subtitle?: string
   userRoles: OrganisationRoleUser[]
+  hiddenUserIdInputAttrs?: Array<Record<string, unknown>>
   roleFieldNameByUserId?: Record<string, string>
   isEditing?: boolean
   isSubmitting?: boolean
-  submitSignal?: number
+  isSubmitRequested?: boolean
   availableRoles?: Array<{ value: OrganisationRoleType; label: string }>
   userQueryParams?: UserSearchQueryOptions
   onAddUser: (user: User) => void
@@ -21,6 +22,7 @@ export interface FormUserRolesSectionActionsProps {
   isAdding: boolean
   isRemoving: boolean
   isEditing?: boolean
+  isSubmitting?: boolean
   onToggleAdding: () => void
   onToggleRemoving: () => void
 }

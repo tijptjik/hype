@@ -13,6 +13,7 @@ let {
   title,
   subtitle,
   userRoles,
+  hiddenUserIdInputAttrs = [],
   roleFieldNameByUserId = {},
   isEditing = true,
   isSubmitting = false,
@@ -177,4 +178,10 @@ $effect(() => {
       </div>
     {/each}
   </UserCard.Wrapper>
+
+  <div class="hidden" aria-hidden="true">
+    {#each hiddenUserIdInputAttrs as inputAttrs, index (index)}
+      <input {...inputAttrs}>
+    {/each}
+  </div>
 </section>

@@ -1,3 +1,5 @@
 export { default as FormI18nSection } from './FormI18nSection.svelte'
 export { default as FormSection } from './components/FormSection.svelte'
+export { default as FormI18nDescriptorFields } from './components/FormI18nDescriptorFields.svelte'
+export { default as FormSpecifiersFields } from './components/FormSpecifiersFields.svelte'
 export type { FormI18nSectionProps, FormSectionProps } from './formI18nSection.types'
