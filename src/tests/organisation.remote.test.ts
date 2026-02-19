@@ -119,12 +119,7 @@ vi.mock('$lib/i18n', () => ({
   toLocaleRecordFromOrganisationFormI18n: vi.fn(),
 }))
 
-import {
-  getOrganisations,
-  getOrganisation,
-  publishOrganisation,
-  archiveOrganisation,
-} from '$lib/api/server/organisation.remote'
+let remote: Awaited<typeof import('$lib/api/server/organisation.remote')>
 
 const buildDb = (
   probeRows: Array<{
@@ -144,7 +139,9 @@ const buildDb = (
 })
 
 describe('organisation.remote authz', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    vi.resetModules()
+    remote = await import('$lib/api/server/organisation.remote')
     vi.clearAllMocks()
     vi.spyOn(console, 'error').mockImplementation(() => {})
     mockGetRequestEvent.mockReturnValue({ locals: { hub: null } })
@@ -170,7 +167,7 @@ describe('organisation.remote authz', () => {
       code: 'INSUFFICIENT_ROLE',
     })
 
-    await expect(getOrganisations({ conditions: {} })).rejects.toMatchObject({
+    await expect(remote.getOrganisations({ conditions: {} })).rejects.toMatchObject({
       status: 403,
     })
     expect(mockListOrganisations).not.toHaveBeenCalled()
@@ -192,7 +189,7 @@ describe('organisation.remote authz', () => {
     })
     mockAuthorizeOrganisationList.mockReturnValue({ allowed: true })
 
-    await getOrganisations({
+    await remote.getOrganisations({
       conditions: { isPublished: false, isArchived: false },
       meta: { isAdminRequest: true },
     })
@@ -221,7 +218,7 @@ describe('organisation.remote authz', () => {
     })
     mockAuthorizeOrganisationList.mockReturnValue({ allowed: true })
 
-    await getOrganisations({
+    await remote.getOrganisations({
       conditions: { isPublished: null, isArchived: false },
       meta: { isAdminRequest: true },
     })
@@ -247,11 +244,11 @@ describe('organisation.remote authz', () => {
       code: 'INSUFFICIENT_ROLE',
     })
 
-    await expect(getOrganisation({ ref: 'org-1', refKey: 'id' })).rejects.toMatchObject(
-      {
-        status: 403,
-      },
-    )
+    await expect(
+      remote.getOrganisation({ ref: 'org-1', refKey: 'id' }),
+    ).rejects.toMatchObject({
+      status: 403,
+    })
     expect(mockLoadOrganisation).not.toHaveBeenCalled()
   })
 
@@ -274,7 +271,7 @@ describe('organisation.remote authz', () => {
     })
     mockAuthorizeOrganisationRead.mockReturnValue({ allowed: true })
 
-    await getOrganisation({
+    await remote.getOrganisation({
       ref: 'org-1',
       refKey: 'id',
       meta: { isAdminRequest: true },
@@ -301,7 +298,7 @@ describe('organisation.remote authz', () => {
     })
 
     await expect(
-      publishOrganisation({ id: 'org-1', state: true }),
+      remote.publishOrganisation({ id: 'org-1', state: true }),
     ).rejects.toMatchObject({
       status: 403,
     })
@@ -321,7 +318,7 @@ describe('organisation.remote authz', () => {
       isPublished: true,
     })
 
-    const result = await publishOrganisation({ id: 'org-1', state: true })
+    const result = await remote.publishOrganisation({ id: 'org-1', state: true })
     expect(mockUpdateOrganisationById).toHaveBeenCalledWith(
       db,
       { isPublished: true },
@@ -348,7 +345,7 @@ describe('organisation.remote authz', () => {
     })
 
     await expect(
-      archiveOrganisation({ id: 'org-1', state: true }),
+      remote.archiveOrganisation({ id: 'org-1', state: true }),
     ).rejects.toMatchObject({
       status: 403,
     })
@@ -368,7 +365,7 @@ describe('organisation.remote authz', () => {
       isArchived: true,
     })
 
-    const result = await archiveOrganisation({ id: 'org-1', state: true })
+    const result = await remote.archiveOrganisation({ id: 'org-1', state: true })
     expect(mockUpdateOrganisationById).toHaveBeenCalledWith(
       db,
       { isArchived: true },
@@ -391,7 +388,7 @@ describe('organisation.remote authz', () => {
     })
 
     await expect(
-      publishOrganisation({ id: 'org-1', state: true }),
+      remote.publishOrganisation({ id: 'org-1', state: true }),
     ).rejects.toMatchObject({
       status: 404,
     })
