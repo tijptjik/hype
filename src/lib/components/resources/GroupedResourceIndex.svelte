@@ -1,57 +1,59 @@
-<script lang="ts" generics="T extends Resource, G extends Record<string, any>">
+<script lang="ts">
 // SVELTE
-import { slide } from 'svelte/transition';
+import { slide } from 'svelte/transition'
 // COMPONENTS
-import ResourceFilterBar from './common/ResourceFilterBar.svelte';
-import ResourceVirtualList from './common/ResourceVirtualList.svelte';
-import GroupHeader from './common/GroupHeader.svelte';
-import ResourceEmptyState from './common/ResourceEmptyState.svelte';
+import ResourceFilterBar from './common/ResourceFilterBar.svelte'
+import ResourceVirtualList from './common/ResourceVirtualList.svelte'
+import GroupHeader from './common/GroupHeader.svelte'
+import ResourceEmptyState from './common/ResourceEmptyState.svelte'
 // TYPES
-import type { Resource } from '$lib/types';
-import type { Snippet } from 'svelte';
+import type { Resource } from '$lib/types'
+import type { Snippet } from 'svelte'
+
+type GroupedEntity = { group: Record<string, unknown>; entities: Resource[] }
 
 let {
   groupedEntities,
   card,
   row,
   controlBar,
-  listContainer = $bindable()
+  listContainer = $bindable(),
 }: {
-  groupedEntities: Array<{ group: G; entities: T[] }>;
-  card?: (entity: T, index: number) => any;
-  row?: (entity: T, index: number) => any;
-  controlBar?: Snippet;
-  listContainer?: HTMLElement | null;
-} = $props();
+  groupedEntities: GroupedEntity[]
+  card?: (entity: Resource, index: number) => unknown
+  row?: (entity: Resource, index: number) => unknown
+  controlBar?: Snippet
+  listContainer?: HTMLElement | null
+} = $props()
 
 // STATE - Track collapsed state for each group
-let collapsedGroups = $state<Record<string, boolean>>({});
+let collapsedGroups = $state<Record<string, boolean>>({})
 
 // Initialize collapsed state for all groups
 $effect(() => {
   groupedEntities.forEach(({ group }) => {
-    const groupId = getGroupId(group);
+    const groupId = getGroupId(group)
     if (!(groupId in collapsedGroups)) {
-      collapsedGroups[groupId] = false; // Default to expanded
+      collapsedGroups[groupId] = false // Default to expanded
     }
-  });
-});
+  })
+})
 
-function getGroupId(group: G): string {
+function getGroupId(group: Record<string, unknown>): string {
   if (!group) {
-    return 'undefined-group-' + Math.random().toString(36);
+    return 'undefined-group-' + Math.random().toString(36)
   }
   if ('id' in group && typeof group.id === 'string') {
-    return group.id;
+    return group.id
   }
   if ('id' in group && typeof group.id === 'number') {
-    return group.id.toString();
+    return group.id.toString()
   }
   try {
-    return JSON.stringify(group);
+    return JSON.stringify(group)
   } catch (error) {
     // Fallback for circular references or non-serializable objects
-    return Object.prototype.toString.call(group) + Math.random().toString(36);
+    return Object.prototype.toString.call(group) + Math.random().toString(36)
   }
 }
 </script>
@@ -59,23 +61,22 @@ function getGroupId(group: G): string {
 <ResourceFilterBar {controlBar} />
 <div bind:this={listContainer} class="h-full">
   {#if groupedEntities.length > 0}
-    {#each groupedEntities as { group, entities }, groupIndex (getGroupId(group))}
-      {@const groupId = getGroupId(group)}
-      {@const isCollapsed = collapsedGroups[groupId] ?? false}
-
+    {#each groupedEntities as groupedEntity, groupIndex}
       <div class="flex flex-col">
         <GroupHeader
-          {group}
-          bind:isCollapsed={collapsedGroups[groupId]}
-          entityCount={entities.length} />
+          group={groupedEntity.group}
+          bind:isCollapsed={collapsedGroups[getGroupId(groupedEntity.group)]}
+          entityCount={groupedEntity.entities.length}
+        />
 
-        {#if !isCollapsed}
+        {#if !(collapsedGroups[getGroupId(groupedEntity.group)] ?? false)}
           <div transition:slide={{ duration: 300 }}>
             <ResourceVirtualList
-              {entities}
+              entities={groupedEntity.entities}
               {card}
               {row}
-              applyBottomOverflow={groupIndex === groupedEntities.length - 1} />
+              applyBottomOverflow={groupIndex === groupedEntities.length - 1}
+            />
           </div>
         {/if}
       </div>
