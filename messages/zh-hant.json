@@ -83,6 +83,7 @@
   "admin__authz_request_state_required": "必須提供請求狀態。",
   "admin__authz_insufficient_role": "權限不足。",
   "admin__authz_field_forbidden": "嘗試設定受限欄位。",
+  "admin__authz_stale_write": "此記錄在你開啟表單後已被更新。請重新整理後再試。",
   "admin__validation_attribution_is_required": "署名為必填項",
   "admin__validation_lte_128_chars": "最多為128個字元",
   "admin__geo_lookup_address_at_location": "取得位置位址",

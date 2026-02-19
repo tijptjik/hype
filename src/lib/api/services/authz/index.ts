@@ -73,15 +73,36 @@ export const RESERVED_CODES = new Set(
 export const isReservedCode = (value: string): boolean =>
   RESERVED_CODES.has(value.trim().toLowerCase())
 
+export const toIssueDetailMessage = (code: string): string => {
+  if (code === 'UNAUTHENTICATED') return m.admin__authz_unauthenticated()
+  if (code === 'HUB_SCOPE_FORBIDDEN') return m.admin__authz_hub_scope_forbidden()
+  if (code === 'REQUEST_STATE_REQUIRED') return m.admin__authz_request_state_required()
+  if (code === 'INSUFFICIENT_ROLE') return m.admin__authz_insufficient_role()
+  if (code === 'FIELD_FORBIDDEN') return m.admin__authz_field_forbidden()
+  if (code === 'STALE_WRITE') return m.admin__authz_stale_write()
+  if (code === 'CODE_RESERVED') return m.admin__validation_code_is_reserved()
+  if (code === 'CODE_ALREADY_EXISTS') return m.admin__validation_code_already_exists()
+  if (code === 'USER_ROLES_REQUIRED') return m.admin__validation_user_roles_add_user()
+  if (code === 'OWNER_REQUIRED')
+    return m.admin__validation_user_roles_at_least_one_owner()
+  return m.forms__invalid()
+}
+
+export const toFormIssueMessage = (code: string): string => {
+  return `${code}: ${toIssueDetailMessage(code)}`
+}
+
 export const toAuthMessage = (code: string): string => {
-  if (code === 'UNAUTHENTICATED') return `${code}: ${m.admin__authz_unauthenticated()}`
-  if (code === 'HUB_SCOPE_FORBIDDEN')
-    return `${code}: ${m.admin__authz_hub_scope_forbidden()}`
-  if (code === 'REQUEST_STATE_REQUIRED')
-    return `${code}: ${m.admin__authz_request_state_required()}`
-  if (code === 'INSUFFICIENT_ROLE')
-    return `${code}: ${m.admin__authz_insufficient_role()}`
-  if (code === 'FIELD_FORBIDDEN') return `${code}: ${m.admin__authz_field_forbidden()}`
+  if (
+    code === 'UNAUTHENTICATED' ||
+    code === 'HUB_SCOPE_FORBIDDEN' ||
+    code === 'REQUEST_STATE_REQUIRED' ||
+    code === 'INSUFFICIENT_ROLE' ||
+    code === 'FIELD_FORBIDDEN' ||
+    code === 'STALE_WRITE'
+  ) {
+    return toFormIssueMessage(code)
+  }
   return `${code}: ${m.missing_permissions()}`
 }
 
