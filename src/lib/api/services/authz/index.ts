@@ -21,6 +21,7 @@ export {
   authorizeOrganisationManageRoles,
   authorizeOrganisationPublish,
   authorizeOrganisationDelete,
+  resolveOrganisationActionPermissions,
 } from './organisation'
 
 const RESOURCE_CODE_SEGMENTS = [

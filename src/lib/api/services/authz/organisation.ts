@@ -2,6 +2,7 @@
 import type {
   AuthorizeParams,
   AuthorizationDecision,
+  OrganisationActionPermissions,
   OrganisationAuthorizationAction,
   OrganisationAuthorizationField,
   UserRoleDisco,
@@ -399,6 +400,31 @@ export const authorizeOrganisationDelete = (
     action: 'deleteOrganisation',
     resourceHubId: target.resourceHubId,
   })
+
+export const resolveOrganisationActionPermissions = (
+  actor: OrganisationAuthActor,
+  target: OrganisationAuthTarget | null | undefined,
+  fields: OrganisationAuthorizationField[] = ['code'],
+): OrganisationActionPermissions => {
+  if (!target?.resourceId || target.resourceHubId === undefined) {
+    return { canEdit: false, canPublish: false }
+  }
+
+  return {
+    canEdit: authorizeOrganisationUpdate(
+      actor,
+      {
+        resourceId: target.resourceId,
+        resourceHubId: target.resourceHubId,
+      },
+      fields,
+    ).allowed,
+    canPublish: authorizeOrganisationPublish(actor, {
+      resourceId: target.resourceId,
+      resourceHubId: target.resourceHubId,
+    }).allowed,
+  }
+}
 
 /* ----------------- */
 // POLICY MAP
