@@ -1,0 +1,108 @@
+import { describe, expect, it, vi } from 'vitest'
+
+const { navigateOnAdminMock } = vi.hoisted(() => ({
+  navigateOnAdminMock: vi.fn(),
+}))
+
+vi.mock('svelte-sonner', () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
+}))
+
+vi.mock('$lib/navigation', () => ({
+  navigateOnAdmin: navigateOnAdminMock,
+}))
+
+import { FirstClassResource } from '$lib/enums'
+import {
+  createCodeRefResourceResult,
+  revalidateAfterSubmitAttempt,
+  resolveDisplayUserRoles,
+} from '$lib/client/services/form'
+import type { AdminCtx } from '$lib/context/admin.svelte'
+
+describe('form helpers', () => {
+  it('createCodeRefResourceResult wires success, redirect decision and navigation', () => {
+    const setEditing = vi.fn()
+    const adminCtx = {
+      activeResourceRef: 'old-code',
+      activeFacet: 'core',
+    } as unknown as AdminCtx
+    const helper = createCodeRefResourceResult({
+      adminCtx,
+      headerCtrl: { setEditing },
+      resourceType: FirstClassResource.organisation,
+    })
+
+    helper.onSuccess()
+    expect(setEditing).toHaveBeenCalledWith(false)
+
+    expect(
+      helper.shouldRedirect({ data: { data: { code: 'new-code' } }, success: true }),
+    ).toBe(true)
+    expect(
+      helper.shouldRedirect({ data: { data: { code: 'old-code' } }, success: true }),
+    ).toBe(false)
+    expect(
+      helper.shouldRedirect({ data: { data: { code: 'new-code' } }, success: false }),
+    ).toBe(false)
+
+    helper.onRedirect({ data: { data: { code: 'new-code' } } })
+    expect(navigateOnAdminMock).toHaveBeenCalledWith(
+      adminCtx,
+      FirstClassResource.organisation,
+      'new-code',
+      'core',
+    )
+  })
+
+  it('resolveDisplayUserRoles overlays role values by userId while preserving rows', () => {
+    const base = [
+      {
+        userId: 'u1',
+        role: 'member',
+        organisationId: 'org-1',
+        user: { id: 'u1', name: 'Alpha' },
+      },
+      {
+        userId: 'u2',
+        role: 'owner',
+        organisationId: 'org-1',
+        user: { id: 'u2', name: 'Beta' },
+      },
+    ]
+
+    const result = resolveDisplayUserRoles({
+      baseRoles: base,
+      formUserRoles: [
+        { userId: 'u1', role: 'owner' },
+        { userId: 'u2', role: 'owner' },
+      ],
+    })
+
+    expect(result).toHaveLength(2)
+    expect(result[0]?.role).toBe('owner')
+    expect(result[1]?.role).toBe('owner')
+    expect(result[0]?.organisationId).toBe('org-1')
+    expect(result[0]?.user?.name).toBe('Alpha')
+  })
+
+  it('revalidateAfterSubmitAttempt only runs validate after submit was attempted', () => {
+    const validate = vi.fn(async () => undefined)
+
+    expect(
+      revalidateAfterSubmitAttempt({
+        wasSubmitAttempted: false,
+        validate,
+      }),
+    ).toBe(false)
+    expect(validate).toHaveBeenCalledTimes(0)
+
+    expect(
+      revalidateAfterSubmitAttempt({
+        wasSubmitAttempted: true,
+        validate,
+      }),
+    ).toBe(true)
+    expect(validate).toHaveBeenCalledTimes(1)
+  })
+})
