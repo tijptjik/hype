@@ -117,6 +117,7 @@ let contentsElement: HTMLFormElement | undefined = $state()
 let lastHeaderKey = $state('')
 let lastFormActionsSignature = $state('')
 let suppressFormLevelIssues = $state(false)
+let selectedUsersById = $state<Record<string, User>>({})
 
 // § State - Data
 
@@ -221,6 +222,7 @@ const userRoles = $derived.by(() =>
     baseRoles: (organisation?.data?.userRoles ?? []) as OrganisationRoleUser[],
     formUserRoles: formUserRoleValues,
     organisationId: organisation?.data?.id,
+    fallbackUsersById: selectedUsersById,
   }),
 )
 
@@ -289,6 +291,7 @@ function onResetLocale(targetLocale: Locale): void {
 // USER ROLES
 
 function onAddUser(user: User): void {
+  selectedUsersById[user.id] = user
   organisation = addUserRoleSelection({
     form: formCtx.form,
     entity: organisation,
@@ -300,6 +303,8 @@ function onAddUser(user: User): void {
 }
 
 function onRemoveUser(userId: string): void {
+  const { [userId]: _removedUser, ...rest } = selectedUsersById
+  selectedUsersById = rest
   organisation = removeUserRoleSelection({
     form: formCtx.form,
     entity: organisation,
