@@ -1,5 +1,5 @@
 <script lang="ts">
-import { scale, slide } from 'svelte/transition'
+import { slide } from 'svelte/transition'
 import { m } from '$lib/i18n'
 import { SectionHeader, Search } from '$lib/bits/custom'
 import { OrganisationRoleType } from '$lib/enums'
@@ -153,29 +153,27 @@ $effect(() => {
     </div>
   {/if}
 
-  <UserCard.Wrapper>
+  <UserCard.Wrapper isAnimated>
     {#each renderedRoles as userRole (userRole.userId)}
-      <div transition:scale={{ duration: 180, start: 0.94 }}>
-        <UserCard.Root>
-          <UserCard.Avatar
-            name={userRole.user.name}
-            image={toImageSrc(userRole.user.image)}
-          />
-          <UserCard.Body
-            name={userRole.user.name}
-            attribution={userRole.user.attribution}
-          />
-          <UserCard.Actions
-            selectedRole={userRole.role as OrganisationRoleType}
-            roleOptions={availableRoles}
-            roleFieldName={roleFieldNameByUserId[userRole.userId]}
-            {isRemoving}
-            isEditing={isEditing && !isSubmitting}
-            onRoleChange={role => onRoleChange(userRole.userId, role)}
-            onRemove={() => onRemoveUser(userRole.userId)}
-          />
-        </UserCard.Root>
-      </div>
+      <UserCard.Root>
+        <UserCard.Avatar
+          name={userRole.user.name}
+          image={toImageSrc(userRole.user.image)}
+        />
+        <UserCard.Body
+          name={userRole.user.name}
+          attribution={userRole.user.attribution}
+        />
+        <UserCard.Actions
+          selectedRole={userRole.role as OrganisationRoleType}
+          roleOptions={availableRoles}
+          roleFieldName={roleFieldNameByUserId[userRole.userId]}
+          {isRemoving}
+          isEditing={isEditing && !isSubmitting}
+          onRoleChange={role => onRoleChange(userRole.userId, role)}
+          onRemove={() => onRemoveUser(userRole.userId)}
+        />
+      </UserCard.Root>
     {/each}
   </UserCard.Wrapper>
 

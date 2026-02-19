@@ -2,6 +2,7 @@ import type { OrganisationRoleType } from '$lib/enums'
 
 export interface UserCardWrapperProps {
   class?: string
+  isAnimated?: boolean
 }
 
 export interface UserCardRootProps {
