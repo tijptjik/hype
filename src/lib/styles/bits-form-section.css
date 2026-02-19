@@ -80,4 +80,29 @@
   .bits-theme .bits-form__section-header-heading .bits-header__title {
     @apply font-bold uppercase;
   }
+
+  .bits-theme .bits-form__section-header-issues {
+    @apply flex flex-wrap items-center justify-center gap-2;
+  }
+
+  .bits-theme .bits-form__section-header-issue-chip {
+    @apply inline-flex items-stretch overflow-hidden rounded-md border border-2 border-error/70;
+  }
+
+  .bits-theme .bits-form__section-header-issue-icon {
+    @apply inline-flex items-center justify-center bg-error px-3 py-1 text-white;
+  }
+
+  .bits-theme .bits-form__section-header-issue-icon-svg {
+    @apply h-[1.2rem] w-[1.2rem] text-white;
+  }
+
+  .bits-theme .bits-form__section-header-issue-icon-svg g,
+  .bits-theme .bits-form__section-header-issue-icon-svg path {
+    stroke-width: 3;
+  }
+
+  .bits-theme .bits-form__section-header-issue-detail {
+    @apply bg-glass-300 px-4 py-1 text-white tracking-wide;
+  }
 }
