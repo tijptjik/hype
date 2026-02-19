@@ -3241,6 +3241,7 @@ export class AppCtx {
   }
 }
 export const APPCTX_KEY = Symbol('mapContext')
+let appCtxSingleton: AppCtx | null = null
 
 export const setAppCtx = (
   queryClient: QueryClient,
@@ -3248,16 +3249,20 @@ export const setAppCtx = (
   user: SessionUser | null,
 ) => {
   const context = new AppCtx(queryClient, placeCtx, user)
+  appCtxSingleton = context
   // Don't initialize immediately - let the session watcher handle it after mount
   return setContext(APPCTX_KEY, context)
 }
 
 export const getAppCtx = (): ReturnType<typeof setAppCtx> => {
   const ctx = getContext<ReturnType<typeof setAppCtx> | undefined>(APPCTX_KEY)
-  if (!ctx) {
-    throw new Error(
-      'AppCtx context is missing. Ensure setAppCtx() is called in the root layout before using getAppCtx().',
-    )
+  if (ctx) return ctx
+
+  if (appCtxSingleton) {
+    return appCtxSingleton as ReturnType<typeof setAppCtx>
   }
-  return ctx
+
+  throw new Error(
+    'AppCtx context is missing. Ensure setAppCtx() is called in the root layout before using getAppCtx().',
+  )
 }
