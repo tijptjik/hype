@@ -284,6 +284,9 @@ export const organisationForm = guardedForm('unchecked', async (input, ctx) => {
   const isExplicitCreateMode = mode === 'create'
   const hasUpdateToken = Boolean(meta?.updatedAt)
   const submittedRoles = Array.isArray(data.userRoles) ? data.userRoles : []
+  const duplicateSubmittedRoleUserIds = submittedRoles
+    .map(userRole => userRole.userId)
+    .filter((userId, index, array) => array.indexOf(userId) !== index)
 
   // Defensive validation: enforce role invariants server-side even if payload parsing
   // quirks bypass client/schema checks.
@@ -292,6 +295,13 @@ export const organisationForm = guardedForm('unchecked', async (input, ctx) => {
   }
   if (!submittedRoles.some(userRole => userRole.role === 'owner')) {
     invalid(issue(toFormIssueMessage('OWNER_REQUIRED')))
+  }
+  if (duplicateSubmittedRoleUserIds.length > 0) {
+    invalid(
+      issue.data.userRoles(
+        `INVALID: Duplicate user roles submitted (${Array.from(new Set(duplicateSubmittedRoleUserIds)).join(', ')})`,
+      ),
+    )
   }
 
   if (mode === 'create' && organisationId) {
@@ -443,21 +453,31 @@ export const organisationForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue.data.code(toIssueDetailMessage('CODE_ALREADY_EXISTS')))
   }
 
-  const updated = await updateOrganisationById(
-    db,
-    {
+  // Atomic optimistic-concurrency check to prevent parallel submissions from
+  // racing into relation replacement and throwing unique-key 500s.
+  const [updated] = await db
+    .update(organisation)
+    .set({
       code: normalizedCode,
       url: data.url.trim() === '' ? null : data.url.trim(),
-    },
-    current.id as Id,
-  )
+    })
+    .where(
+      and(eq(organisation.id, current.id), eq(organisation.modifiedAt, meta.updatedAt)),
+    )
+    .returning({
+      id: organisation.id,
+      modifiedAt: organisation.modifiedAt,
+    })
 
-  await updateI18n(db, toLocaleRecordFromOrganisationFormI18n(data.i18n), current.id)
-  await updateUserRoles(
-    db,
-    toPersistedOrganisationUserRoles(data.userRoles, current.id),
-    current.id,
-  )
+  if (!updated) {
+    invalid(issue(toFormIssueMessage('STALE_WRITE')))
+  }
+
+  const nextI18n = toLocaleRecordFromOrganisationFormI18n(data.i18n)
+  const nextRoles = toPersistedOrganisationUserRoles(data.userRoles, current.id)
+
+  await updateI18n(db, nextI18n, current.id)
+  await updateUserRoles(db, nextRoles, current.id)
 
   return {
     data: {
