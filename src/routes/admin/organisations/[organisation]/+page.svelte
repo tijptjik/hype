@@ -15,10 +15,11 @@ import {
   getUserRoleHiddenInputAttrs,
   getNameForToast,
   getRoleFieldNameByUserId,
+  guardRefDesync,
+  guardUserRolesDesync,
   isFormLevelIssue,
   revalidateAfterSubmitAttempt,
   resetLocaleFields,
-  resolveDisplayUserRoles,
   removeUserRoleSelection,
   toIssueMessage,
   translateLocaleIntoEmptyFields,
@@ -128,6 +129,10 @@ const commitOrganisationState = (value: OrganisationGetState): void => {
 const isCoreFacet = $derived(activeFacet === 'core')
 const isImagesFacet = $derived(activeFacet === 'images')
 const isEditing = $derived(headerCtrl.state.isEditing)
+// Desync Guard
+const isCurrentRefLoaded = $derived.by(() =>
+  guardRefDesync(organisation, committedOrganisation, organisationRef),
+)
 
 // § Form
 
@@ -204,13 +209,13 @@ const formUserRoleValues = $derived(
 const hiddenUserIdInputAttrs = $derived(
   getUserRoleHiddenInputAttrs(formCtx.form, formUserRoleValues),
 )
-const userRoles = $derived.by(() => {
-  return resolveDisplayUserRoles<OrganisationRoleUser>({
-    // Keep optimistic rows stable from entity state while still reflecting in-form role edits.
+const userRoles = $derived.by(() =>
+  guardUserRolesDesync({
     baseRoles: (organisation?.data?.userRoles ?? []) as OrganisationRoleUser[],
     formUserRoles: formUserRoleValues,
-  })
-})
+    organisationId: organisation?.data?.id,
+  }),
+)
 
 // § Auth
 
@@ -364,7 +369,7 @@ async function handleOrganisationStateToggle({
 }
 
 async function onPublishToggle(): Promise<void> {
-  if (!canPublishOrganisation) return
+  if (!isCurrentRefLoaded || !canPublishOrganisation) return
   await handleOrganisationStateToggle({
     field: 'isPublished',
     successWhenTrue: m.published(),
@@ -375,6 +380,7 @@ async function onPublishToggle(): Promise<void> {
 }
 
 async function onDeleteToggle(): Promise<void> {
+  if (!isCurrentRefLoaded) return
   await handleOrganisationStateToggle({
     field: 'isArchived',
     successWhenTrue: m.bad_swift_cheetah_surge(),
@@ -397,8 +403,9 @@ function onReset(): void {
 
 function onSubmit(): void {
   suppressFormLevelIssues = false
-  const baseMeta = organisation?.data
-    ? (toOrganisationFormInput(organisation.data).meta ?? {})
+  if (!isCurrentRefLoaded) return
+  const baseMeta = committedOrganisation?.data
+    ? (toOrganisationFormInput(committedOrganisation.data).meta ?? {})
     : undefined
   formCtx.requestSubmit(baseMeta ? { meta: baseMeta } : undefined)
 }
@@ -412,6 +419,7 @@ $effect(() => {
     ref,
     resetFormActionsSignature: () => {
       lastFormActionsSignature = ''
+      suppressFormLevelIssues = true
     },
     setFacetForRef: nextRef => {
       untrack(() => {
@@ -479,8 +487,8 @@ $effect(() => {
       hasIssues,
       isPublished,
       isDeleted,
-      canEdit: canEditOrganisation,
-      canPublish: canPublishOrganisation,
+      canEdit: canEditOrganisation && isCurrentRefLoaded,
+      canPublish: canPublishOrganisation && isCurrentRefLoaded,
     },
     lastSignature: lastFormActionsSignature,
   })

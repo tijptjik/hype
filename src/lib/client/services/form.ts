@@ -26,6 +26,8 @@ import type {
   WireHeaderFormActionHandlersParams,
   ResourceEditorHeaderController,
   Locale,
+  OrganisationGetState,
+  OrganisationRoleUser,
 } from '$lib/types'
 
 const toSubmittedCode = (data: unknown): string => {
@@ -237,6 +239,21 @@ export function createResourceEditorPage({
       headerCtrl.clearFormActions()
     },
   }
+}
+
+export function guardRefDesync(
+  organisationState: OrganisationGetState,
+  committedOrganisationState: OrganisationGetState,
+  ref: string,
+): boolean {
+  const entityCode = organisationState?.data?.code
+  const committedCode = committedOrganisationState?.data?.code
+  return (
+    typeof entityCode === 'string' &&
+    typeof committedCode === 'string' &&
+    entityCode === ref &&
+    committedCode === ref
+  )
 }
 
 export async function handleSubmissionResult({
@@ -643,6 +660,43 @@ export function resolveDisplayUserRoles<
     ...userRole,
     role: (roleByUserId.get(userRole.userId) ?? userRole.role) as TUserRole['role'],
   }))
+}
+
+export function guardUserRolesDesync({
+  baseRoles,
+  formUserRoles,
+  organisationId,
+}: {
+  baseRoles: OrganisationRoleUser[]
+  formUserRoles: Array<{ userId: string; role: string }>
+  organisationId?: string | null
+}): OrganisationRoleUser[] {
+  const baseRoleByUserId = new Map(
+    baseRoles.map(userRole => [userRole.userId, userRole]),
+  )
+
+  return formUserRoles.map(formUserRole => {
+    const baseRole = baseRoleByUserId.get(formUserRole.userId)
+    if (baseRole) {
+      return {
+        ...baseRole,
+        role: formUserRole.role as OrganisationRoleUser['role'],
+      }
+    }
+
+    // Fallback should be rare and transient (e.g. during async refresh races).
+    return {
+      organisationId: organisationId ?? '',
+      userId: formUserRole.userId,
+      role: formUserRole.role as OrganisationRoleUser['role'],
+      user: {
+        id: formUserRole.userId,
+        name: formUserRole.userId,
+        image: null,
+        attribution: null,
+      },
+    } as OrganisationRoleUser
+  })
 }
 
 /* ----------------- */
