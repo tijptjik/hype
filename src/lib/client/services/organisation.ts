@@ -246,8 +246,6 @@ export function getOrganisationSubmitUpdates<
   TEntityResult,
   TListResult,
 >({
-  data,
-  locale,
   organisationId,
   entityQuery,
   listQuery,
@@ -258,19 +256,5 @@ export function getOrganisationSubmitUpdates<
   TListResult
 >): Array<TEntityResult | TListResult> {
   if (!organisationId) return []
-
-  const patch = toOrganisationIdentityPatch(data, locale)
-
-  return [
-    entityQuery.withOverride(
-      overrideOrganisationEntityFromFormInput(data) as (
-        current: TEntityCurrent,
-      ) => TEntityCurrent,
-    ),
-    listQuery.withOverride(
-      overrideOrganisationListItemIdentity(organisationId, patch) as (
-        current: TListCurrent,
-      ) => TListCurrent,
-    ),
-  ]
+  return [entityQuery as TEntityResult, listQuery as TListResult]
 }
