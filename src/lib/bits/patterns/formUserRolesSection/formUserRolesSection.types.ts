@@ -7,6 +7,8 @@ export interface FormUserRolesSectionProps {
   userRoles: OrganisationRoleUser[]
   roleFieldNameByUserId?: Record<string, string>
   isEditing?: boolean
+  isSubmitting?: boolean
+  submitSignal?: number
   availableRoles?: Array<{ value: OrganisationRoleType; label: string }>
   userQueryParams?: UserSearchQueryOptions
   onAddUser: (user: User) => void

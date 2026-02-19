@@ -15,6 +15,8 @@ let {
   userRoles,
   roleFieldNameByUserId = {},
   isEditing = true,
+  isSubmitting = false,
+  submitSignal = 0,
   availableRoles = [
     { value: OrganisationRoleType.member, label: m.profile__role_type__member() },
     { value: OrganisationRoleType.owner, label: m.profile__role_type__owner() },
@@ -48,6 +50,7 @@ const rootClass = $derived(
     .filter(Boolean)
     .join(' '),
 )
+const showModeUi = $derived(isEditing && !isSubmitting)
 
 function toggleAdding(): void {
   isAdding = !isAdding
@@ -88,7 +91,13 @@ $effect(() => {
 })
 
 $effect(() => {
-  if (isEditing) return
+  if (isEditing && !isSubmitting) return
+  isAdding = false
+  isRemoving = false
+})
+
+$effect.pre(() => {
+  if (submitSignal <= 0) return
   isAdding = false
   isRemoving = false
 })
@@ -107,8 +116,8 @@ $effect(() => {
     {/snippet}
   </SectionHeader>
 
-  {#if isAdding && isEditing}
-    <div transition:slide={{ duration: 200 }}>
+  {#if isAdding && showModeUi}
+    <div transition:slide={{ duration: showModeUi ? 200 : 0 }}>
       <Search
         placeholder="Search users…"
         focusOnMount={true}
@@ -126,8 +135,8 @@ $effect(() => {
     </div>
   {/if}
 
-  {#if isRemoving && isEditing}
-    <div transition:slide={{ duration: 200 }}>
+  {#if isRemoving && showModeUi}
+    <div transition:slide={{ duration: showModeUi ? 200 : 0 }}>
       <FormUserRolesSectionPrimitive.WarningBar />
     </div>
   {/if}
