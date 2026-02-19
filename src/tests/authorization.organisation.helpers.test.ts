@@ -23,6 +23,7 @@ describe('resolveOrganisationActionPermissions', () => {
     }
 
     expect(resolveOrganisationActionPermissions(actor, null)).toEqual({
+      canCreate: false,
       canEdit: false,
       canPublish: false,
     })
@@ -33,6 +34,7 @@ describe('resolveOrganisationActionPermissions', () => {
         resourceHubId: undefined,
       }),
     ).toEqual({
+      canCreate: false,
       canEdit: false,
       canPublish: false,
     })
@@ -51,6 +53,7 @@ describe('resolveOrganisationActionPermissions', () => {
     })
 
     expect(decision).toEqual({
+      canCreate: true,
       canEdit: true,
       canPublish: true,
     })

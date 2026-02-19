@@ -321,7 +321,10 @@ describe('organisation.remote authz', () => {
     const result = await remote.publishOrganisation({ id: 'org-1', state: true })
     expect(mockUpdateOrganisationById).toHaveBeenCalledWith(
       db,
-      { isPublished: true },
+      expect.objectContaining({
+        isPublished: true,
+        publisherId: 'u-1',
+      }),
       'org-1',
     )
     expect(result).toEqual({
