@@ -220,7 +220,10 @@ export const getFeatureWithImage = async (
  * @throws {Error} If the feature update fails or feature is not found
  */
 export const createFeature = async (db: Database, data: FeatureDBNew) =>
-  await insert(db, feature, data)
+  await insert(db, feature, {
+    ...data,
+    isPublished: data.isPublished ?? false,
+  })
 
 /**
  * Updates an existing feature in the database

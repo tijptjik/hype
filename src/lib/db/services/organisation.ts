@@ -242,7 +242,11 @@ export const getOrganisation = async (
 export const createOrganisation = async (
   db: Database,
   data: OrganisationDBNew,
-): Promise<OrganisationDB> => await insert(db, organisation, data)
+): Promise<OrganisationDB> =>
+  await insert(db, organisation, {
+    ...data,
+    isPublished: data.isPublished ?? false,
+  })
 
 /**
  * Updates an existing organisation in the database

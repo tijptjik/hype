@@ -127,7 +127,10 @@ export const getLayer = async (
  * @throws {Error} If the layer creation fails
  */
 export const createLayer = async (db: Database, data: LayerDBNew) =>
-  await insert(db, layer, data)
+  await insert(db, layer, {
+    ...data,
+    isPublished: data.isPublished ?? false,
+  })
 
 /**
  * Updates an existing layer in the database

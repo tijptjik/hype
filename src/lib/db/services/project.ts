@@ -126,7 +126,11 @@ export const getProject = async (
 export const createProject = async (
   db: Database,
   data: ProjectDBNew,
-): Promise<ProjectDB> => await insert(db, project, data)
+): Promise<ProjectDB> =>
+  await insert(db, project, {
+    ...data,
+    isPublished: data.isPublished ?? false,
+  })
 
 /**
  * Updates an existing project in the database
