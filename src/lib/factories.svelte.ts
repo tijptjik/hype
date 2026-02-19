@@ -182,13 +182,22 @@ export function configureForm<Input extends RemoteFormInput = RemoteFormInput>(
     Object.assign(
       form.enhance(async ({ submit, form: formEl, data }) => {
         if (submitting) return
-        submitting = true
 
         const bf = !onsubmit || (await onsubmit({ dirty, form: formEl, data }))
         if (!bf) {
-          submitting = false
           return
         }
+
+        await validate()
+        const hasPreflightIssues = (allIssues?.length ?? 0) > 0
+        if (hasPreflightIssues) {
+          await focusInvalid()
+          await onresult?.({ success: false, issues: allIssues ?? [] })
+          onissues?.({ issues: allIssues ?? [] })
+          return
+        }
+
+        submitting = true
 
         const wasDirty = dirty
         let resultDispatched = false
@@ -205,7 +214,7 @@ export function configureForm<Input extends RemoteFormInput = RemoteFormInput>(
           const hasIssues = (allIssues?.length ?? 0) > 0
           const success = !hasIssues
           resultDispatched = true
-          onresult?.({
+          await onresult?.({
             success,
             result: form.result,
             issues: hasIssues ? allIssues : undefined,
@@ -215,11 +224,22 @@ export function configureForm<Input extends RemoteFormInput = RemoteFormInput>(
             dirty = wasDirty
             await focusInvalid()
             if (allIssues) onissues?.({ issues: allIssues })
+          } else {
+            // Re-baseline dirty tracking against the committed post-submit form state.
+            await tick()
+            initial = $state.snapshot(form.fields.value()) as FormData
+            dirty = false
+            lastIssues = undefined
           }
         } catch (error) {
           // TODO Add a error toast
           if (!resultDispatched) {
-            onresult?.({ success: false, error: (error as Error).message })
+            const hasIssues = (allIssues?.length ?? 0) > 0
+            await onresult?.({
+              success: false,
+              issues: hasIssues ? allIssues : undefined,
+              error: hasIssues ? undefined : (error as Error).message,
+            })
           }
           dirty = wasDirty
         } finally {
