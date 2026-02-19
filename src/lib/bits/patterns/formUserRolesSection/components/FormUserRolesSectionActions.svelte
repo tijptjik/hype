@@ -10,6 +10,7 @@ let {
   isAdding,
   isRemoving,
   isEditing = true,
+  isSubmitting = false,
   onToggleAdding,
   onToggleRemoving,
 }: FormUserRolesSectionActionsProps = $props()
@@ -27,7 +28,7 @@ let {
         size="sm"
         iconComponent={isRemoving ? XIcon : UserMinusIcon}
         onClick={() => onToggleRemoving()}
-        disabled={!isEditing}
+        disabled={!isEditing || isSubmitting}
         class="whitespace-nowrap h-10"
       />
     {/if}
@@ -40,7 +41,7 @@ let {
         size="sm"
         iconComponent={isAdding ? XIcon : UserPlusIcon}
         onClick={() => onToggleAdding()}
-        disabled={!isEditing}
+        disabled={!isEditing || isSubmitting}
         class="whitespace-nowrap h-10"
       />
     {/if}
