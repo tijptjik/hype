@@ -528,19 +528,21 @@ $effect(() => {
       <GridSpacer>
         {#snippet left()}
           {@const roleFieldNameByUserId = getRoleFieldNameByUserId(formCtx.form)}
-          <FormUserRolesSection
-            title={m.admin__forms_organisation_members_title()}
-            subtitle={m.admin__forms_organisation_members_subtitle()}
-            isSubmitting={formCtx.submitting}
-            isSubmitRequested={formCtx.isSubmitRequested}
-            {userRoles}
-            {hiddenUserIdInputAttrs}
-            {roleFieldNameByUserId}
-            {isEditing}
-            {onAddUser}
-            {onRemoveUser}
-            {onRoleChange}
-          />
+          {#key organisationRef}
+            <FormUserRolesSection
+              title={m.admin__forms_organisation_members_title()}
+              subtitle={m.admin__forms_organisation_members_subtitle()}
+              isSubmitting={formCtx.submitting}
+              isSubmitRequested={formCtx.isSubmitRequested}
+              {userRoles}
+              {hiddenUserIdInputAttrs}
+              {roleFieldNameByUserId}
+              {isEditing}
+              {onAddUser}
+              {onRemoveUser}
+              {onRoleChange}
+            />
+          {/key}
         {/snippet}
 
         {#snippet right()}
