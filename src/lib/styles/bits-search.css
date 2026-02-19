@@ -57,7 +57,27 @@
   }
 
   .bits-theme .bits-search-result-item__image {
-    @apply h-9 w-9 shrink-0 rounded-full object-cover text-transparent;
+    @apply absolute inset-0 h-full w-full rounded-full object-cover text-transparent opacity-0;
+  }
+
+  .bits-theme
+    .bits-search-result-item__avatar[data-loaded="true"]
+    .bits-search-result-item__image {
+    @apply opacity-100;
+  }
+
+  .bits-theme .bits-search-result-item__avatar {
+    @apply relative h-9 w-9 shrink-0 overflow-hidden rounded-full;
+  }
+
+  .bits-theme .bits-search-result-item__avatar-skeleton {
+    @apply absolute inset-0 opacity-100 bg-[#4a4a4a];
+  }
+
+  .bits-theme
+    .bits-search-result-item__avatar[data-loaded="true"]
+    .bits-search-result-item__avatar-skeleton {
+    @apply opacity-0;
   }
 
   .bits-theme .bits-search-result-item__fallback {
