@@ -112,29 +112,85 @@ export function toOrganisationIdentityPatch(
   }
 }
 
-function toOrganisationEntityI18nFromFormInput(
+type OrganisationFormI18nValue = OrganisationFormInput['data']['i18n']['en']
+
+function toOrganisationEntityI18nPatchFromFormInput(
   formData: OrganisationFormInput,
-): Record<string, OrganisationFormInput['data']['i18n']['en']> {
-  return {
-    en: normalizeOrganisationFormLocale(formData.data?.i18n?.en),
-    'zh-hans': normalizeOrganisationFormLocale(formData.data?.i18n?.zhHans),
-    'zh-hant': normalizeOrganisationFormLocale(formData.data?.i18n?.zhHant),
+): Record<string, Partial<OrganisationFormI18nValue>> {
+  const formLocaleKeys = ['en', 'zhHans', 'zhHant'] as const
+  const formI18n = (formData.data?.i18n ?? {}) as Partial<
+    Record<(typeof formLocaleKeys)[number], Partial<OrganisationFormI18nValue>>
+  >
+  const next: Record<string, Partial<OrganisationFormI18nValue>> = {}
+
+  for (const formLocaleKey of formLocaleKeys) {
+    const entityLocaleKey = toLocaleFromOrganisationFormLocaleKey(formLocaleKey)
+    const localeData = formI18n[formLocaleKey]
+    if (!localeData || typeof localeData !== 'object') continue
+
+    const patch: Partial<OrganisationFormI18nValue> = {}
+    if ('name' in localeData && typeof localeData.name === 'string') {
+      patch.name = localeData.name
+    }
+    if ('nameShort' in localeData && typeof localeData.nameShort === 'string') {
+      patch.nameShort = localeData.nameShort
+    }
+    if ('description' in localeData && typeof localeData.description === 'string') {
+      patch.description = localeData.description
+    }
+    if ('nameGen' in localeData && typeof localeData.nameGen === 'boolean') {
+      patch.nameGen = localeData.nameGen
+    }
+    if ('nameShortGen' in localeData && typeof localeData.nameShortGen === 'boolean') {
+      patch.nameShortGen = localeData.nameShortGen
+    }
+    if (
+      'descriptionGen' in localeData &&
+      typeof localeData.descriptionGen === 'boolean'
+    ) {
+      patch.descriptionGen = localeData.descriptionGen
+    }
+
+    if (Object.keys(patch).length > 0) {
+      next[entityLocaleKey] = patch
+    }
   }
+
+  return next
 }
 
 export function overrideOrganisationEntityFromFormInput(
   formData: OrganisationFormInput,
 ) {
+  const i18nPatch = toOrganisationEntityI18nPatchFromFormInput(formData)
+  const nextCode =
+    typeof (formData.data as { code?: unknown } | undefined)?.code === 'string'
+      ? ((formData.data as { code?: string }).code ?? '')
+      : undefined
+  const nextUrl =
+    typeof (formData.data as { url?: unknown } | undefined)?.url === 'string'
+      ? ((formData.data as { url?: string }).url ?? '')
+      : undefined
   return <T extends { data: Record<string, unknown> | null }>(current: T): T => ({
     ...current,
     data: current.data
       ? {
           ...current.data,
-          code: formData.data?.code ?? '',
-          url: formData.data?.url ?? '',
+          ...(nextCode !== undefined ? { code: nextCode } : {}),
+          ...(nextUrl !== undefined ? { url: nextUrl } : {}),
           i18n: {
             ...((current.data.i18n as Record<string, Record<string, unknown>>) ?? {}),
-            ...toOrganisationEntityI18nFromFormInput(formData),
+            ...Object.fromEntries(
+              Object.entries(i18nPatch).map(([localeKey, patch]) => [
+                localeKey,
+                {
+                  ...(((
+                    current.data?.i18n as Record<string, Record<string, unknown>> | null
+                  )?.[localeKey] ?? {}) as Record<string, unknown>),
+                  ...patch,
+                },
+              ]),
+            ),
           },
         }
       : current.data,
