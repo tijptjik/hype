@@ -21,6 +21,7 @@ let {
   actions = [],
   triggers = [],
   left,
+  center,
   right,
   children,
   footer,
@@ -46,6 +47,7 @@ const resolvedGridClass = $derived(
     {actions}
     {triggers}
     {left}
+    {center}
     {right}
   />
 

@@ -23,6 +23,7 @@ export interface FormI18nSectionProps {
   actions?: SectionHeaderAction[]
   triggers?: SectionHeaderTrigger[]
   left?: Snippet
+  center?: Snippet
   right?: Snippet
   children?: Snippet<[Locale]>
   footer?: Snippet<[Locale]>
@@ -36,6 +37,7 @@ export interface FormI18nHeaderProps {
   actions?: SectionHeaderAction[]
   triggers?: SectionHeaderTrigger[]
   left?: Snippet
+  center?: Snippet
   right?: Snippet
 }
 

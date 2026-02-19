@@ -10,11 +10,12 @@ let {
   actions = [],
   triggers = [],
   left,
+  center,
   right,
 }: FormI18nHeaderProps = $props()
 </script>
 
-{#if title || subtitle || headerActions || flags.length > 0 || actions.length > 0 || triggers.length > 0 || left || right}
+{#if title || subtitle || headerActions || flags.length > 0 || actions.length > 0 || triggers.length > 0 || left || center || right}
   <SectionHeader
     {title}
     description={subtitle}
@@ -22,6 +23,7 @@ let {
     {actions}
     {triggers}
     left={left ?? headerActions}
+    {center}
     {right}
   />
 {/if}
