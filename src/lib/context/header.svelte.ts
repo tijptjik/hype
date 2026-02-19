@@ -20,6 +20,8 @@ const DEFAULT_HEADER_FORM_ACTIONS: HeaderFormActionsState = {
   isPublished: false,
   canEdit: true,
   canPublish: true,
+  showDeleteAction: true,
+  showPublishAction: true,
   toggleDelete: () => {},
   isDeleting: false,
   isDeleted: false,

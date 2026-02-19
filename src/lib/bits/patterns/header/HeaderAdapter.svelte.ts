@@ -1,4 +1,5 @@
 import { getBreadcrumbs } from '$lib/navigation'
+import { navigateOnAdmin } from '$lib/navigation'
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { AdminCtx } from '$lib/context/admin.svelte'
 import type { HeaderLayoutMode, HeaderProps } from './header.types'
@@ -6,6 +7,7 @@ import type { Component } from 'svelte'
 import type { FilterState } from '$lib/types'
 import type { HeaderCrumb } from '$lib/bits/custom/header'
 import { FirstClassResource, Panel, ResourcePath } from '$lib/enums'
+import { NEW_REF } from '$lib/constants'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
 
 /**
@@ -118,6 +120,8 @@ export function useHeaderAdapter(
   const isDeleted = $derived(Boolean(formActions?.isDeleted ?? false))
   const canEdit = $derived(Boolean(formActions?.canEdit ?? true))
   const canPublish = $derived(Boolean(formActions?.canPublish ?? true))
+  const showDeleteAction = $derived(Boolean(formActions?.showDeleteAction ?? true))
+  const showPublishAction = $derived(Boolean(formActions?.showPublishAction ?? true))
 
   // Reset editing state when navigating between resources/routes.
   $effect(() => {
@@ -167,17 +171,36 @@ export function useHeaderAdapter(
     adminCtx.setFacet(ref as Parameters<typeof adminCtx.setFacet>[0])
   }
 
-  // Placeholder create handler until new-entity flow parity is wired.
   function handleCreate(): void {
-    // TODO: wire parity behavior with NewEntityButton (association modal + navigation)
+    const resourceType = adminCtx.activeResourceType
+    if (!resourceType) return
+    navigateOnAdmin(adminCtx, resourceType, NEW_REF, 'core')
   }
 
   function handleReset(): void {
+    if (
+      !isTainted &&
+      adminCtx.activeResourceRef === NEW_REF &&
+      adminCtx.activeResourceType !== false &&
+      adminCtx.activeResourceType
+    ) {
+      navigateOnAdmin(adminCtx, adminCtx.activeResourceType)
+      return
+    }
     formActions?.reset?.()
   }
 
   // Toggle field edit/view mode for modal-style form components.
   function handleEditingToggle(next: boolean): void {
+    if (
+      !next &&
+      adminCtx.activeResourceRef === NEW_REF &&
+      adminCtx.activeResourceType !== false &&
+      adminCtx.activeResourceType
+    ) {
+      navigateOnAdmin(adminCtx, adminCtx.activeResourceType)
+      return
+    }
     headerCtrl.setEditing(next)
   }
 
@@ -280,6 +303,8 @@ export function useHeaderAdapter(
       isPublished,
       canEdit,
       canPublish,
+      showDeleteAction,
+      showPublishAction,
       onEditingToggle: handleEditingToggle,
       onReset: handleReset,
       onSave: handleSave,

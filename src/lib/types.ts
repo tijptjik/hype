@@ -381,6 +381,8 @@ export type HeaderFormActionsState = {
   isPublished: boolean
   canEdit: boolean
   canPublish: boolean
+  showDeleteAction: boolean
+  showPublishAction: boolean
   reset: () => void
   submit: () => void
   togglePublish: () => void | Promise<void>
@@ -905,6 +907,8 @@ export type HeaderFormActionStatus = Pick<
   | 'isDeleted'
   | 'canEdit'
   | 'canPublish'
+  | 'showDeleteAction'
+  | 'showPublishAction'
 >
 
 export type OrganisationToggleField = 'isPublished' | 'isArchived'
@@ -1603,6 +1607,7 @@ export type AuthorizationDecision = {
 }
 
 export type OrganisationActionPermissions = {
+  canCreate: boolean
   canEdit: boolean
   canPublish: boolean
 }

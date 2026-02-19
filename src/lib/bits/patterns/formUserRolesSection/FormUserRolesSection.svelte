@@ -18,6 +18,7 @@ let {
   isEditing = true,
   isSubmitting = false,
   isSubmitRequested = false,
+  startInAddingMode = false,
   availableRoles = [
     { value: OrganisationRoleType.member, label: m.profile__role_type__member() },
     { value: OrganisationRoleType.owner, label: m.profile__role_type__owner() },
@@ -32,6 +33,7 @@ let {
 let isAdding = $state(false)
 let isRemoving = $state(false)
 let wasSubmitRequested = $state(false)
+let hasAutoOpenedAdding = $state(false)
 let stableRoles = $state<OrganisationRoleUser[]>([])
 
 const sortedRoles = $derived(
@@ -111,6 +113,15 @@ $effect(() => {
 $effect(() => {
   if (isSubmitting) return
   stableRoles = sortedRoles
+})
+
+$effect(() => {
+  if (hasAutoOpenedAdding) return
+  if (!startInAddingMode) return
+  if (!showModeUi) return
+  isAdding = true
+  isRemoving = false
+  hasAutoOpenedAdding = true
 })
 </script>
 

@@ -406,11 +406,19 @@ export const resolveOrganisationActionPermissions = (
   target: OrganisationAuthTarget | null | undefined,
   fields: OrganisationAuthorizationField[] = ['code'],
 ): OrganisationActionPermissions => {
+  const canCreate =
+    target?.resourceHubId === undefined
+      ? false
+      : authorizeOrganisationCreate(actor, {
+          resourceHubId: target.resourceHubId,
+        }).allowed
+
   if (!target?.resourceId || target.resourceHubId === undefined) {
-    return { canEdit: false, canPublish: false }
+    return { canCreate, canEdit: false, canPublish: false }
   }
 
   return {
+    canCreate,
     canEdit: authorizeOrganisationUpdate(
       actor,
       {

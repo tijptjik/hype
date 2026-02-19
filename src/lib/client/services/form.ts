@@ -360,7 +360,7 @@ export function wireHeaderFormActionHandlers({
 export function toHeaderFormActionStatusSignature(
   status: HeaderFormActionStatus,
 ): string {
-  return `${status.dirty}|${status.isSubmitting}|${status.hasIssues}|${status.isPublished}|${status.isDeleted}|${status.canEdit}|${status.canPublish}`
+  return `${status.dirty}|${status.isSubmitting}|${status.hasIssues}|${status.isPublished}|${status.isDeleted}|${status.canEdit}|${status.canPublish}|${status.showDeleteAction}|${status.showPublishAction}`
 }
 
 export function syncHeaderFormActionStatus({

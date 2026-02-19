@@ -10,6 +10,7 @@ export interface FormUserRolesSectionProps {
   isEditing?: boolean
   isSubmitting?: boolean
   isSubmitRequested?: boolean
+  startInAddingMode?: boolean
   availableRoles?: Array<{ value: OrganisationRoleType; label: string }>
   userQueryParams?: UserSearchQueryOptions
   onAddUser: (user: User) => void

@@ -48,6 +48,8 @@ import {
 } from '$lib/api/services/authz'
 // SCHEMA
 import { OrganisationPreflightFormData } from '$lib/db/zod'
+// CONFIG
+import { NEW_REF, NEW_TITLE } from '$lib/constants'
 // BITS COMPONENTS
 import {
   FormI18nDescriptorFields,
@@ -129,10 +131,13 @@ const commitOrganisationState = (value: OrganisationGetState): void => {
 const isCoreFacet = $derived(activeFacet === 'core')
 const isImagesFacet = $derived(activeFacet === 'images')
 const isEditing = $derived(headerCtrl.state.isEditing)
+const isNewOrganisationRef = $derived(organisationRef === NEW_REF)
+
 // Desync Guard
-const isCurrentRefLoaded = $derived.by(() =>
-  guardRefDesync(organisation, committedOrganisation, organisationRef),
-)
+const isCurrentRefLoaded = $derived.by(() => {
+  if (isNewOrganisationRef) return true
+  return guardRefDesync(organisation, committedOrganisation, organisationRef)
+})
 
 // § Form
 
@@ -220,9 +225,11 @@ const userRoles = $derived.by(() =>
 // § Auth
 
 const currentUser = $derived(adminCtx.appCtx.getUser())
+const currentHub = $derived(adminCtx.appCtx.hub)
 const currentActor = $derived(toOrganisationAuthActor(currentUser))
 const organisationPermissions = $derived.by(() => {
   const organisationData = organisation?.data
+  const newEntityHubId = currentHub?.isCore ? null : (currentHub?.id ?? null)
   return resolveOrganisationActionPermissions(
     currentActor,
     organisationData
@@ -230,12 +237,18 @@ const organisationPermissions = $derived.by(() => {
           resourceId: organisationData.id,
           resourceHubId: organisationData.hubId,
         }
-      : null,
+      : {
+          resourceHubId: newEntityHubId,
+        },
     ['code'],
   )
 })
+const canCreateOrganisation = $derived(organisationPermissions.canCreate)
 const canEditOrganisation = $derived(organisationPermissions.canEdit)
 const canPublishOrganisation = $derived(organisationPermissions.canPublish)
+const canSubmitOrganisation = $derived(
+  isNewOrganisationRef ? canCreateOrganisation : canEditOrganisation,
+)
 
 // § Handlers
 
@@ -308,6 +321,7 @@ function onRoleChange(userId: string, role: OrganisationRoleType): void {
 async function refreshOrganisation(
   ref: string = organisationRef,
 ): Promise<OrganisationGetState> {
+  if (ref === NEW_REF) return null
   return await getOrganisation({
     ref,
     refKey: 'code',
@@ -435,6 +449,7 @@ $effect(() => {
 $effect(() => {
   const ref = organisationRef
   const title =
+    (isNewOrganisationRef ? `${NEW_TITLE} ${m.any_small_midge_aim()}` : undefined) ??
     organisation?.data?.i18n?.[getLocale()]?.name ??
     organisation?.data?.code ??
     m.any_small_midge_aim()
@@ -455,9 +470,17 @@ $effect(() => {
   headerCtrl.setEditing(false)
 })
 
+// New entities start in edit mode.
+$effect(() => {
+  if (!isNewOrganisationRef) return
+  if (!canSubmitOrganisation) return
+  if (headerCtrl.state.isEditing) return
+  headerCtrl.setEditing(true)
+})
+
 // Keep unauthorized users out of edit mode if the header state gets toggled externally.
 $effect(() => {
-  if (canEditOrganisation) return
+  if (canSubmitOrganisation) return
   if (!headerCtrl.state.isEditing) return
   headerCtrl.setEditing(false)
 })
@@ -487,8 +510,10 @@ $effect(() => {
       hasIssues,
       isPublished,
       isDeleted,
-      canEdit: canEditOrganisation && isCurrentRefLoaded,
-      canPublish: canPublishOrganisation && isCurrentRefLoaded,
+      canEdit: canSubmitOrganisation && isCurrentRefLoaded,
+      canPublish: !isNewOrganisationRef && canPublishOrganisation && isCurrentRefLoaded,
+      showDeleteAction: !isNewOrganisationRef,
+      showPublishAction: !isNewOrganisationRef,
     },
     lastSignature: lastFormActionsSignature,
   })
@@ -507,7 +532,7 @@ $effect(() => {
     <Main.Form
       bind:formEl={contentsElement}
       attrs={formCtx.attributes}
-      isReady={Boolean(formCtx.form?.fields && organisation?.data)}
+      isReady={Boolean(formCtx.form?.fields && (organisation?.data || isNewOrganisationRef))}
     >
       <FormI18nSection
         title={m.admin__forms_common_descriptors()}
@@ -541,6 +566,7 @@ $effect(() => {
             subtitle={m.admin__forms_organisation_members_subtitle()}
             isSubmitting={formCtx.submitting}
             isSubmitRequested={formCtx.isSubmitRequested}
+            startInAddingMode={isNewOrganisationRef}
             {userRoles}
             {hiddenUserIdInputAttrs}
             {roleFieldNameByUserId}

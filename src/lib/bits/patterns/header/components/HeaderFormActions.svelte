@@ -27,6 +27,8 @@ let {
   isPublished = false,
   canEdit = true,
   canPublish = true,
+  showDeleteAction = true,
+  showPublishAction = true,
   hideLabel = false,
   onEditingToggle,
   onReset,
@@ -108,7 +110,7 @@ function handlePrimaryAction(): void {
 {/snippet}
 
 <div class="bits-pattern-header__form-actions">
-  {#if isDeleted}
+  {#if showDeleteAction && isDeleted}
     <Button
       text={deleteLabel}
       color="warning"
@@ -119,15 +121,17 @@ function handlePrimaryAction(): void {
       onClick={() => onDeleteToggle?.()}
     />
   {:else if isEditing}
-    <Button
-      text={deleteLabel}
-      color={isDeleted ? 'warning' : 'error'}
-      style="ghost"
-      icon={deleteIcon}
-      {hideLabel}
-      disabled={isInFlight}
-      onClick={() => onDeleteToggle?.()}
-    />
+    {#if showDeleteAction}
+      <Button
+        text={deleteLabel}
+        color={isDeleted ? 'warning' : 'error'}
+        style="ghost"
+        icon={deleteIcon}
+        {hideLabel}
+        disabled={isInFlight}
+        onClick={() => onDeleteToggle?.()}
+      />
+    {/if}
 
     <Button
       text={m.forms__save()}
@@ -166,7 +170,7 @@ function handlePrimaryAction(): void {
     {/if}
   {/if}
 
-  {#if !isDeleted}
+  {#if !isDeleted && showPublishAction}
     {#if canPublish}
       <Button
         text={publishLabel}
