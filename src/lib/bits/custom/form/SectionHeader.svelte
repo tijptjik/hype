@@ -11,12 +11,19 @@ let {
   actions = [],
   triggers = [],
   left,
+  center,
   right,
   class: className = '',
 }: SectionHeaderProps = $props()
 
 const rootClass = $derived(
-  ['bits-form__section-header', className].filter(Boolean).join(' '),
+  [
+    'bits-form__section-header',
+    center ? 'bits-form__section-header--with-center' : '',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' '),
 )
 </script>
 
@@ -33,6 +40,12 @@ const rootClass = $derived(
       />
     {/if}
   </div>
+
+  {#if center}
+    <div class="bits-form__section-header-center">
+      <div class="bits-form__section-header-center-content">{@render center()}</div>
+    </div>
+  {/if}
 
   <div class="bits-form__section-header-right">
     {#if right}

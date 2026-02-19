@@ -16,6 +16,7 @@ export interface SectionHeaderProps {
   actions?: SectionHeaderAction[]
   triggers?: SectionHeaderTrigger[]
   left?: Snippet
+  center?: Snippet
   right?: Snippet
   class?: string
 }
