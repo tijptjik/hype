@@ -15,3 +15,7 @@ export interface SectionHeaderAction extends ButtonProps {
 export interface SectionHeaderTrigger extends ButtonProps {
   key?: string
 }
+
+export interface SectionHeaderIssues {
+  issues?: string[]
+}

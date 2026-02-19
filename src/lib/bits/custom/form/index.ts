@@ -9,6 +9,7 @@ export type {
   SectionHeaderTrigger,
   SectionHeaderProps,
 } from './sectionHeader.types'
+export * as SectionHeaderPrimitive from './src/sectionHeader/components'
 
 export * as Input from './src/input'
 export * as Label from './src/label'
