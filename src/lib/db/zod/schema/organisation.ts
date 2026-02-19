@@ -153,13 +153,16 @@ export const OrganisationI18nByLocaleFormData = z.object({
   zhHant: OrganisationI18nFormData,
 })
 
-export const OrganisationUserRolesFormData = z
-  .array(OrganisationRoleFormData)
-  .refine(schema => schema.length > 0, m.admin__validation_user_roles_add_user())
-  .refine(
-    schema => schema.map(user => user.role).some(role => role === 'owner'),
-    m.admin__validation_user_roles_at_least_one_owner(),
-  )
+export const OrganisationUserRolesFormData = z.preprocess(
+  value => (value === undefined || value === null ? [] : value),
+  z
+    .array(OrganisationRoleFormData)
+    .refine(schema => schema.length > 0, m.admin__validation_user_roles_add_user())
+    .refine(
+      schema => schema.map(user => user.role).some(role => role === 'owner'),
+      m.admin__validation_user_roles_at_least_one_owner(),
+    ),
+)
 
 export const OrganisationEntityFormData = z.object({
   code: z
