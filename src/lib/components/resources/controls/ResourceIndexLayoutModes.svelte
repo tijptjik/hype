@@ -1,54 +1,54 @@
 <script lang="ts">
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
+import Icon from '$lib/components/common/Icon.svelte'
 // ICONS
-import { QueueList, Squares2x2, TableCells } from '@steeze-ui/heroicons';
+import { QueueList, Squares2x2, TableCells } from '@steeze-ui/heroicons'
 // TYPES
-import type { LayoutMode } from '$lib/types';
-import { getAppCtx } from '$lib/context/app.svelte';
+import type { LayoutMode } from '$lib/types'
+import { getAppCtx } from '$lib/context/app.svelte'
 
 // CONTEXT
-const appCtx = getAppCtx();
+const appCtx = getAppCtx()
 
 let {
   layoutMode = $bindable(),
   defaultMode = 'card',
-  modes = ['card', 'table']
+  modes = ['card', 'table'],
 }: {
-  layoutMode: LayoutMode;
-  defaultMode?: LayoutMode;
-  modes?: LayoutMode[];
-} = $props();
+  layoutMode: LayoutMode
+  defaultMode?: LayoutMode
+  modes?: LayoutMode[]
+} = $props()
 
 // Initialize mode if not set
 if (!layoutMode) {
-  layoutMode = defaultMode;
+  layoutMode = defaultMode
 }
 
 const modeConfig = {
   table: {
     icon: TableCells,
-    label: 'Table View'
+    label: 'Table View',
   },
   list: {
     icon: QueueList,
-    label: 'List View'
+    label: 'List View',
   },
   card: {
     icon: Squares2x2,
-    label: 'Card View'
-  }
-};
+    label: 'Card View',
+  },
+}
 
 const nextMode = $derived.by(() => {
-  const currentIndex = modes.indexOf(layoutMode);
-  const nextIndex = (currentIndex + 1) % modes.length;
-  return modes[nextIndex];
-});
+  const currentIndex = modes.indexOf(layoutMode)
+  const nextIndex = (currentIndex + 1) % modes.length
+  return modes[nextIndex]
+})
 
 function toggleMode() {
-  layoutMode = nextMode;
-  appCtx.setLayoutMode(layoutMode);
+  layoutMode = nextMode
+  appCtx.setLayoutMode(layoutMode)
 }
 </script>
 
@@ -56,7 +56,8 @@ function toggleMode() {
   <button
     class="btn btn-ghost px-3 transition-opacity duration-200"
     onclick={toggleMode}
-    title={`Switch to ${modeConfig[nextMode].label}`}>
+    title={`Switch to ${modeConfig[nextMode].label}`}
+  >
     <Icon src={modeConfig[nextMode].icon as any} class="h-6 w-6" />
   </button>
 </div>

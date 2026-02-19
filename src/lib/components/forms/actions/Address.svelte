@@ -1,33 +1,33 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
-import { MagnifyingGlass, GlobeAsiaAustralia } from '@steeze-ui/heroicons';
+import Icon from '$lib/components/common/Icon.svelte'
+import { MagnifyingGlass, GlobeAsiaAustralia } from '@steeze-ui/heroicons'
 // TYPES
-import type { FeatureForm } from '$lib/types';
-import type { Point } from 'geojson';
+import type { FeatureForm } from '$lib/types'
+import type { Point } from 'geojson'
 
 type AddressActionsProps = {
-  form: FeatureForm;
-  actions: Record<string, (...args: any[]) => Promise<void>>;
-};
+  form: FeatureForm
+  actions: Record<string, (...args: any[]) => Promise<void>>
+}
 // STATE : PROPS
-let { actions, form }: AddressActionsProps = $props();
+let { actions, form }: AddressActionsProps = $props()
 
 // STATE : CONTEXT :: FORM
-let featureForm: FeatureForm['form'] = $derived(form.form);
+let featureForm: FeatureForm['form'] = $derived(form.form)
 
 // STATE : UI
-let isGeocoding = $state(false);
+let isGeocoding = $state(false)
 
 // Wrap the geocode action to handle loading state
 async function handleGeocode(e: Event) {
-  isGeocoding = true;
+  isGeocoding = true
   try {
-    await actions.geocode(e);
+    await actions.geocode(e)
   } finally {
-    isGeocoding = false;
+    isGeocoding = false
   }
 }
 </script>
@@ -37,16 +37,16 @@ async function handleGeocode(e: Event) {
     class="btn-rounded btn btn-ghost font-bold text-base-content transition-colors duration-300"
     class:px-6={isGeocoding}
     onclick={handleGeocode}
-    disabled={isGeocoding}>
+    disabled={isGeocoding}
+  >
     {#if isGeocoding}
       <span class="loading loading-ring loading-sm"></span>
       <span class="hidden md:block"
-        >{m.admin__geo_lookup_address_at_location_loading()}</span>
+        >{m.admin__geo_lookup_address_at_location_loading()}</span
+      >
     {:else}
       <Icon src={MagnifyingGlass} class="h-4 w-4" />
-      <span class="hidden md:block">
-        {m.admin__geo_lookup_address_at_location()}
-      </span>
+      <span class="hidden md:block"> {m.admin__geo_lookup_address_at_location()} </span>
     {/if}
   </button>
 </div>

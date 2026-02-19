@@ -1,29 +1,28 @@
 <script lang="ts">
 // I18N
-import { getI18n } from '$lib/i18n';
+import { getI18n } from '$lib/i18n'
 // SERVICES
-import { getLocalisedPropertyValues } from '$lib/client/services/property';
+import { getLocalisedPropertyValues } from '$lib/client/services/property'
 // TYPES
-import type { Property } from '$lib/types';
-import type { AppCtx } from '$lib/context/app.svelte';
+import type { Property } from '$lib/types'
+import type { AppCtx } from '$lib/context/app.svelte'
 
 type Props = {
-  property: Property;
-  value: string;
-  userPreferences: any;
-  appCtx: AppCtx;
-  propertyId: string;
-  onChange: (value: string) => void;
-};
+  property: Property
+  value: string
+  userPreferences: any
+  appCtx: AppCtx
+  propertyId: string
+  onChange: (value: string) => void
+}
 
-let { property, value, userPreferences, appCtx, propertyId, onChange }: Props =
-  $props();
+let { property, value, userPreferences, appCtx, propertyId, onChange }: Props = $props()
 
 // STATE : DERIVED
-let propertyValues = $derived(getLocalisedPropertyValues(appCtx, propertyId));
+let propertyValues = $derived(getLocalisedPropertyValues(appCtx, propertyId))
 let placeholder = $derived(
-  getI18n(property, 'placeholder', userPreferences) || 'Select...'
-);
+  getI18n(property, 'placeholder', userPreferences) || 'Select...',
+)
 </script>
 
 <select
@@ -35,9 +34,10 @@ let placeholder = $derived(
   onchange={(e) => {
     const target = e.target as HTMLSelectElement;
     onChange(target.value);
-  }}>
+  }}
+>
   <option value="" class="text-primary">{placeholder}</option>
-  {#each propertyValues.entries() as [id, localisedValue]}
+  {#each propertyValues.entries() as [ id, localisedValue ]}
     <option value={id}>{localisedValue}</option>
   {/each}
 </select>

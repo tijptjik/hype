@@ -6,68 +6,68 @@ LAYERS :: FILTERS :: TRANSLATION
 
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte'
 // SERVICES
 import {
   getResourceFilterState,
   toggleResourceFilterState,
   setResourceFilterState,
-  getFeatureTaskLabel
-} from '$lib/client/services/filters';
+  getFeatureTaskLabel,
+} from '$lib/client/services/filters'
 // COMPONENTS
-import FilterToggle from '../FilterToggle.svelte';
+import FilterToggle from '../FilterToggle.svelte'
 // ENUM
-import { supportedLocales, localeCodes } from '$lib/enums';
+import { supportedLocales, localeCodes } from '$lib/enums'
 // TYPES
-import type { LayerTranslationFilterKey, Locale } from '$lib/types';
+import type { LayerTranslationFilterKey, Locale } from '$lib/types'
 
 // CONTEXT
-const adminCtx = getAdminCtx();
+const adminCtx = getAdminCtx()
 
 // FILTER DEFINITIONS
 const translationFilters: Record<
   LayerTranslationFilterKey,
   {
-    label: string;
-    invertBoolean?: boolean;
-    trueLabel?: string;
-    falseLabel?: string;
+    label: string
+    invertBoolean?: boolean
+    trueLabel?: string
+    falseLabel?: string
   }
 > = {
   isNameTranslated: {
     label: m.admin__forms_common_name_full(),
     falseLabel: m.filters__todo(),
-    trueLabel: m.filters__done()
+    trueLabel: m.filters__done(),
   },
   isContextualNameTranslated: {
     label: m.admin__forms_common_name_short(),
     falseLabel: m.filters__todo(),
-    trueLabel: m.filters__done()
+    trueLabel: m.filters__done(),
   },
   isDescriptionTranslated: {
     label: m.feature__description(),
     falseLabel: m.filters__todo(),
-    trueLabel: m.filters__done()
-  }
-};
+    trueLabel: m.filters__done(),
+  },
+}
 
 // REACTIVE LOCALES from admin context
 const activeLocales = $derived.by(() => {
-  const locales = new Set<Locale>();
-  const translationLocales = adminCtx.appCtx.state.viewFilters.layer.translationLocales;
+  const locales = new Set<Locale>()
+  const translationLocales = adminCtx.appCtx.state.viewFilters.layer.translationLocales
   for (const [locale, isActive] of Object.entries(translationLocales)) {
     if (isActive) {
-      locales.add(locale as Locale);
+      locales.add(locale as Locale)
     }
   }
-  return locales;
-});
+  return locales
+})
 
 function toggleLocale(locale: Locale) {
-  const current = adminCtx.appCtx.state.viewFilters.layer.translationLocales[locale];
-  adminCtx.appCtx.state.viewFilters.layer.translationLocales[locale] = !current;
+  const current = adminCtx.appCtx.state.viewFilters.layer.translationLocales[locale]
+  adminCtx.appCtx.state.viewFilters.layer.translationLocales[locale] = !current
 }
 </script>
 
@@ -87,7 +87,8 @@ function toggleLocale(locale: Locale) {
           class:btn-ghost={!adminCtx.appCtx.state.viewFilters.layer.translationLocales[
             locale
           ]}
-          onclick={() => toggleLocale(locale)}>
+          onclick={() => toggleLocale(locale)}
+        >
           {localeCodes[locale]}
         </button>
       {/each}
@@ -96,7 +97,7 @@ function toggleLocale(locale: Locale) {
   </div>
 
   <!-- Translation Filters -->
-  {#each Object.entries(translationFilters) as [filterKey, filterDef], idx (filterKey)}
+  {#each Object.entries(translationFilters) as [ filterKey, filterDef ], idx (filterKey)}
     {@const currentValue = getResourceFilterState(
       adminCtx,
       'layer',
@@ -119,6 +120,7 @@ function toggleLocale(locale: Locale) {
         const nextState =
           currentValue === null ? true : currentValue === true ? false : null;
         setResourceFilterState(adminCtx, 'layer', key, nextState, activeLocales);
-      }} />
+      }}
+    />
   {/each}
 </div>

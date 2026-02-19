@@ -1,8 +1,8 @@
 <script lang="ts">
-import ResourceThumbnail from './ResourceThumbnail.svelte';
-import ResourceTitle from './ResourceTitle.svelte';
-import ResourceDescription from './ResourceDescription.svelte';
-import type { ImageDB, ImageDBBasic } from '$lib/types';
+import ResourceThumbnail from './ResourceThumbnail.svelte'
+import ResourceTitle from './ResourceTitle.svelte'
+import ResourceDescription from './ResourceDescription.svelte'
+import type { ImageDB, ImageDBBasic } from '$lib/types'
 
 let {
   image,
@@ -11,16 +11,16 @@ let {
   title,
   onTitleClick,
   description,
-  onDescriptionClick
+  onDescriptionClick,
 }: {
-  image?: ImageDB | ImageDBBasic | null;
-  alt?: string;
-  onImageClick?: (image: ImageDBBasic) => void;
-  title: string;
-  onTitleClick?: () => void;
-  description: string;
-  onDescriptionClick?: () => void;
-} = $props();
+  image?: ImageDB | ImageDBBasic | null
+  alt?: string
+  onImageClick?: (image: ImageDBBasic) => void
+  title: string
+  onTitleClick?: () => void
+  description: string
+  onDescriptionClick?: () => void
+} = $props()
 </script>
 
 <div class="flex items-center gap-4">

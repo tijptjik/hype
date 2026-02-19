@@ -1,21 +1,21 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
-import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
+import { getAdminCtx } from '$lib/context/admin.svelte'
 // COMPONENTS
-import Panel from '$lib/components/layout/Panel.svelte';
-import AdminHeader from '$lib/components/panels/common/variants/AdminHeader.svelte';
-import Organisations from '$lib/components/panels/sections/Organisations.svelte';
-import Projects from '$lib/components/panels/sections/Projects.svelte';
-import Layers from '$lib/components/panels/sections/Layers.svelte';
-import FilteredResource from '$lib/components/panels/common/FilteredResource.svelte';
-import AdminFooter from '$lib/components/panels/common/variants/AdminFooter.svelte';
+import Panel from '$lib/components/layout/Panel.svelte'
+import AdminHeader from '$lib/components/panels/common/variants/AdminHeader.svelte'
+import Organisations from '$lib/components/panels/sections/Organisations.svelte'
+import Projects from '$lib/components/panels/sections/Projects.svelte'
+import Layers from '$lib/components/panels/sections/Layers.svelte'
+import FilteredResource from '$lib/components/panels/common/FilteredResource.svelte'
+import AdminFooter from '$lib/components/panels/common/variants/AdminFooter.svelte'
 // SERVICES
-import { navigateOnAdminById } from '$lib/navigation';
+import { navigateOnAdminById } from '$lib/navigation'
 // ENUMS
-import { Panel as PanelEnum, FirstClassResource } from '$lib/enums';
+import { Panel as PanelEnum, FirstClassResource } from '$lib/enums'
 // TYPES
 import type {
   Id,
@@ -23,16 +23,16 @@ import type {
   Project,
   Layer,
   ResourceContext,
-  PanelProps
-} from '$lib/types';
+  PanelProps,
+} from '$lib/types'
 
 // CONTEXT
-const appCtx = getAppCtx();
-const adminCtx = getAdminCtx();
+const appCtx = getAppCtx()
+const adminCtx = getAdminCtx()
 
 // ELEMENTS
 // svelte-ignore non_reactive_update
-let panelContainer: HTMLDivElement;
+let panelContainer: HTMLDivElement
 
 let panelProps: PanelProps = $derived({
   panelType: PanelEnum.admin,
@@ -45,10 +45,10 @@ let panelProps: PanelProps = $derived({
     resourceType: appCtx.getActiveResourceType(),
     resourceRef: appCtx.getActiveResourceRef(),
     resourceId: appCtx.getActiveResourceId(),
-    facet: appCtx.getActiveFacet()
+    facet: appCtx.getActiveFacet(),
   },
-  adminCtx
-});
+  adminCtx,
+})
 </script>
 
 <Panel {...panelProps} bind:panelContainer>
@@ -88,7 +88,8 @@ let panelProps: PanelProps = $derived({
                   await appCtx.toggleOrganisation(organisation.id);
                 }}
                 resourceType={FirstClassResource.organisation}
-                {...panelProps} />
+                {...panelProps}
+              />
             {/snippet}
           </Organisations>
         </div>
@@ -127,7 +128,8 @@ let panelProps: PanelProps = $derived({
                   appCtx.toggleProject(project.id);
                 }}
                 resourceType={FirstClassResource.project}
-                {...panelProps} />
+                {...panelProps}
+              />
             {/snippet}
           </Projects>
         </div>
@@ -163,7 +165,8 @@ let panelProps: PanelProps = $derived({
                   appCtx.toggleLayer(layer.id);
                 }}
                 resourceType={FirstClassResource.layer}
-                {...panelProps} />
+                {...panelProps}
+              />
             {/snippet}
           </Layers>
         </div>

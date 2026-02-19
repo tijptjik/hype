@@ -1,18 +1,18 @@
 <script lang="ts">
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
+import Icon from '$lib/components/common/Icon.svelte'
 
 let {
   title,
   icon,
   statuses,
-  showTitle = true
+  showTitle = true,
 }: {
-  title: string;
-  icon?: any;
-  statuses: Record<string, boolean | null>;
-  showTitle?: boolean;
-} = $props();
+  title: string
+  icon?: any
+  statuses: Record<string, boolean | null>
+  showTitle?: boolean
+} = $props()
 </script>
 
 <div class="pointer-events-auto flex h-10 flex-col items-center gap-2">
@@ -29,15 +29,15 @@ let {
     {/if}
   </span>
   <div class="flex gap-1.5">
-    {#each Object.entries(statuses) as [key, status]}
+    {#each Object.entries(statuses) as [ key, status ]}
       <div class="tooltip" data-tip={key}>
         <div
           class="h-2 w-2 rounded-full {status === true
             ? 'bg-ok'
             : status === false
               ? 'bg-error/50'
-              : 'bg-pending'}">
-        </div>
+              : 'bg-pending'}"
+        ></div>
       </div>
     {/each}
   </div>

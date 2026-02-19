@@ -1,9 +1,10 @@
 <script lang="ts">
-import { fade } from 'svelte/transition';
+import { fade } from 'svelte/transition'
 </script>
 
 <div
   class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-100/50 backdrop-blur-sm"
-  transition:fade={{ duration: 200 }}>
+  transition:fade={{ duration: 200 }}
+>
   <span class="loading loading-ring loading-md"></span>
 </div>

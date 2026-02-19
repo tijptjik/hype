@@ -5,22 +5,22 @@
 -->
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
 // NAVIGATION
-import { navigate } from '$lib/navigation';
+import { navigate } from '$lib/navigation'
 // COMPONENTS
-import Panel from '$lib/components/layout/Panel.svelte';
-import Header from '$lib/components/panels/common/Header.svelte';
-import Info from '$lib/components/panels/info/Maps.svelte';
-import Organisations from '$lib/components/panels/sections/Organisations.svelte';
-import Projects from '$lib/components/panels/sections/Projects.svelte';
-import Layers from '$lib/components/panels/sections/Layers.svelte';
-import FilteredLayer from '$lib/components/panels/common/variants/FilteredLayer.svelte';
-import FilteredResource from '$lib/components/panels/common/FilteredResource.svelte';
+import Panel from '$lib/components/layout/Panel.svelte'
+import Header from '$lib/components/panels/common/Header.svelte'
+import Info from '$lib/components/panels/info/Maps.svelte'
+import Organisations from '$lib/components/panels/sections/Organisations.svelte'
+import Projects from '$lib/components/panels/sections/Projects.svelte'
+import Layers from '$lib/components/panels/sections/Layers.svelte'
+import FilteredLayer from '$lib/components/panels/common/variants/FilteredLayer.svelte'
+import FilteredResource from '$lib/components/panels/common/FilteredResource.svelte'
 // ENUMS
-import { FirstClassResource, Panel as PanelType, PanelSide } from '$lib/enums';
+import { FirstClassResource, Panel as PanelType, PanelSide } from '$lib/enums'
 // TYPES
 import type {
   Layer,
@@ -29,31 +29,31 @@ import type {
   Id,
   ResourceContext,
   Organisation,
-  Project
-} from '$lib/types';
+  Project,
+} from '$lib/types'
 // ENUMS
-import { OmniMode } from '$lib/enums';
+import { OmniMode } from '$lib/enums'
 // CONTEXT
-import { getOmniCtx } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte'
 
 // CONTEXT
-const appCtx = getAppCtx();
-const omniCtx = getOmniCtx();
+const appCtx = getAppCtx()
+const omniCtx = getOmniCtx()
 
 // STATE
-let isInfoOpen = $state(false);
+let isInfoOpen = $state(false)
 // svelte-ignore non_reactive_update
-let panelContainer: HTMLDivElement;
+let panelContainer: HTMLDivElement
 
 let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
-  e.stopPropagation();
-  isInfoOpen = !isInfoOpen;
+  e.stopPropagation()
+  isInfoOpen = !isInfoOpen
   if (isInfoOpen) {
     setTimeout(() => {
-      panelContainer?.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 300);
+      panelContainer?.scrollTo({ top: 0, behavior: 'smooth' })
+    }, 300)
   }
-};
+}
 
 let panelProps: PanelProps = $derived({
   panelType: PanelType.prisms,
@@ -66,9 +66,9 @@ let panelProps: PanelProps = $derived({
     resourceType: appCtx.getActiveResourceType(),
     resourceRef: appCtx.getActiveResourceRef(),
     resourceId: appCtx.getActiveResourceId(),
-    facet: appCtx.getActiveFacet()
-  }
-});
+    facet: appCtx.getActiveFacet(),
+  },
+})
 </script>
 
 <Panel bind:panelContainer {...panelProps}>
@@ -77,7 +77,8 @@ let panelProps: PanelProps = $derived({
     title={m.maps__title()}
     onToggleInfo={(e) => {
       handleToggleInfo(e);
-    }} />
+    }}
+  />
   <Info isOpen={isInfoOpen} />
   <div class="flex flex-col overflow-y-auto overscroll-none">
     <div class="flex-grow-1 flex min-h-0 flex-col">
@@ -93,7 +94,8 @@ let panelProps: PanelProps = $derived({
               e.stopPropagation();
               await appCtx.toggleOrganisation(resource.id);
             }}
-            {...panelProps} />
+            {...panelProps}
+          />
         {/snippet}
       </Organisations>
     </div>
@@ -117,7 +119,8 @@ let panelProps: PanelProps = $derived({
               e.stopPropagation();
               appCtx.toggleProject(resource.id);
             }}
-            {...panelProps} />
+            {...panelProps}
+          />
         {/snippet}
       </Projects>
     </div>
@@ -147,7 +150,8 @@ let panelProps: PanelProps = $derived({
                 omniCtx.setMode(OmniMode.search);
               }
             }}
-            {...panelProps} />
+            {...panelProps}
+          />
         {/snippet}
       </Layers>
     </div>

@@ -1,13 +1,13 @@
 <script lang="ts">
-import { m } from '$lib/i18n';
-import { ADMIN_MIN_WIDTH } from '$lib';
+import { m } from '$lib/i18n'
+import { ADMIN_MIN_WIDTH } from '$lib'
 // SVELTE
-import { fade } from 'svelte/transition';
+import { fade } from 'svelte/transition'
 // STATE :: VIEWPORT
-let innerWidth = $state(0);
-let isViewportWideEnough = $derived(innerWidth >= ADMIN_MIN_WIDTH);
+let innerWidth = $state(0)
+let isViewportWideEnough = $derived(innerWidth >= ADMIN_MIN_WIDTH)
 
-let { children }: { children: any } = $props();
+let { children }: { children: any } = $props()
 </script>
 
 <svelte:window bind:innerWidth />
@@ -18,7 +18,8 @@ let { children }: { children: any } = $props();
 {#if innerWidth && !isViewportWideEnough}
   <div
     class="fixed z-[100] flex h-screen w-full items-center justify-center bg-base-100 p-4 caret-transparent"
-    transition:fade={{ duration: 300 }}>
+    transition:fade={{ duration: 300 }}
+  >
     <div class="card w-full max-w-md border border-base-300 bg-base-200 shadow-xl">
       <div class="card-body text-center">
         <div class="mb-4 flex justify-center">
@@ -27,7 +28,8 @@ let { children }: { children: any } = $props();
             class="h-16 w-16 text-warning"
             fill="none"
             viewBox="0 0 24 24"
-            stroke="currentColor">
+            stroke="currentColor"
+          >
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -50,8 +52,8 @@ let { children }: { children: any } = $props();
             class="progress progress-warning w-full"
             value={innerWidth}
             max="1200"
-            aria-label="Progress toward minimum width requirement">
-          </progress>
+            aria-label="Progress toward minimum width requirement"
+          ></progress>
         </div>
       </div>
     </div>

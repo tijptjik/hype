@@ -4,11 +4,15 @@ import { Separator } from '$lib/bits'
 </script>
 
 <main class="h-full overflow-y-auto p-6">
-  <section class="bits-theme space-y-8 rounded-xl border border-base-300 bg-base-100 p-6">
+  <section
+    class="bits-theme space-y-8 rounded-xl border border-base-300 bg-base-100 p-6"
+  >
     <h1 class="text-xl font-semibold text-foreground">Bits Separator Variations</h1>
 
     <div class="space-y-1">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">Default</h2>
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+        Default
+      </h2>
       <div class="space-y-1">
         <h4 class="font-semibold">Bits UI</h4>
         <p class="text-muted-foreground text-sm">Headless UI components for Svelte.</p>
@@ -24,7 +28,9 @@ import { Separator } from '$lib/bits'
     </div>
 
     <div class="space-y-1">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">Dot</h2>
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+        Dot
+      </h2>
       <div class="flex items-center text-sm">
         <div>Blog</div>
         <Separator orientation="vertical" variant="dot" decorative={true} />

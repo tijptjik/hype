@@ -1,25 +1,25 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // COMPONENTS
-import Toggle from '$lib/components/forms/fields/Toggle.svelte';
+import Toggle from '$lib/components/forms/fields/Toggle.svelte'
 // TYPES
-import type { FeatureForm } from '$lib/types';
+import type { FeatureForm } from '$lib/types'
 
 // STATE : PROPS
-let { form }: { form: FeatureForm } = $props();
+let { form }: { form: FeatureForm } = $props()
 
 // STATE : CONTEXT :: FORM
-let featureForm: FeatureForm['form'] = $derived(form.form);
+let featureForm: FeatureForm['form'] = $derived(form.form)
 
 // UTILS
 const onChange = (e: Event, key: 'isIntangible' | 'isVisitable'): void => {
-  e.preventDefault();
-  featureForm.update(($form) => {
-    $form[key] = !$form[key];
-    return $form;
-  });
-};
+  e.preventDefault()
+  featureForm.update($form => {
+    $form[key] = !$form[key]
+    return $form
+  })
+}
 </script>
 
 <div class="flex flex-row items-center justify-between align-baseline">
@@ -27,10 +27,12 @@ const onChange = (e: Event, key: 'isIntangible' | 'isVisitable'): void => {
     label={m.teary_fit_maggot_heart()}
     size="md"
     checked={$featureForm.isIntangible as boolean}
-    onChange={(e) => onChange(e, 'isIntangible')} />
+    onChange={(e) => onChange(e, 'isIntangible')}
+  />
   <Toggle
     label={m.even_sunny_lizard_dare()}
     size="md"
     checked={$featureForm.isVisitable as boolean}
-    onChange={(e) => onChange(e, 'isVisitable')} />
+    onChange={(e) => onChange(e, 'isVisitable')}
+  />
 </div>

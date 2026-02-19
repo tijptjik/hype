@@ -1,117 +1,120 @@
 <script lang="ts">
 // GESTURES
-import { useSwipe, useTap } from 'svelte-gestures';
+import { useSwipe, useTap } from 'svelte-gestures'
 // CONTEXT
-import { getImageCtx } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte'
 // NAVIGATION
-import { addParamToUrl } from '$lib/navigation';
+import { addParamToUrl } from '$lib/navigation'
 // COMPONENTS
-import PhotoFrame from '$lib/components/common/PhotoFrame.svelte';
-import Metadata from '$lib/components/featureCard/gallery/Metadata.svelte';
-import Counter from '$lib/components/featureCard/gallery/Counter.svelte';
-import StageActions from '$lib/components/featureCard/gallery/StageActions.svelte';
+import PhotoFrame from '$lib/components/common/PhotoFrame.svelte'
+import Metadata from '$lib/components/featureCard/gallery/Metadata.svelte'
+import Counter from '$lib/components/featureCard/gallery/Counter.svelte'
+import StageActions from '$lib/components/featureCard/gallery/StageActions.svelte'
 // ICONS
-import Icon from '$lib/components/common/Icon.svelte';
-import { ChevronLeft, ChevronRight } from '@steeze-ui/heroicons';
+import Icon from '$lib/components/common/Icon.svelte'
+import { ChevronLeft, ChevronRight } from '@steeze-ui/heroicons'
 // TYPES
-import type { SwipeCustomEvent, TapCustomEvent } from 'svelte-gestures';
-import type { Image } from '$lib/types';
+import type { SwipeCustomEvent, TapCustomEvent } from 'svelte-gestures'
+import type { Image } from '$lib/types'
 
 // CONTEXT
-const imageCtx = getImageCtx();
+const imageCtx = getImageCtx()
 
 // SERVICES
-let images: Image[] = $derived(imageCtx.getImages());
-let currentImage: Image | null = $derived(imageCtx.activeImage);
-let isStaged = $derived(currentImage && imageCtx.isImageStaged(currentImage));
+let images: Image[] = $derived(imageCtx.getImages())
+let currentImage: Image | null = $derived(imageCtx.activeImage)
+let isStaged = $derived(currentImage && imageCtx.isImageStaged(currentImage))
 
 // ELEMENTS
-let container: HTMLDivElement;
+let container: HTMLDivElement
 
 // GESTURE HOOKS
 const { swipe: swipeAttach, onswipe } = useSwipe(
   handleSwipe,
   () => ({ timeframe: 300, touchAction: 'manipulation' }),
   undefined,
-  true
-);
+  true,
+)
 
 const { tap: tapAttach, ontap } = useTap(
   handleTap,
   () => ({ timeframe: 300, touchAction: 'manipulation' }),
   undefined,
-  true
-);
+  true,
+)
 
 // STATE : LOCAL - simplified since PhotoFrame handles transitions
 
 // Navigation handlers - much simpler now
 function handlePrevious(e: MouseEvent | SwipeCustomEvent) {
-  e.preventDefault();
-  e.stopPropagation();
-  imageCtx.prev();
+  e.preventDefault()
+  e.stopPropagation()
+  imageCtx.prev()
 }
 
 function handleNext(e: MouseEvent | SwipeCustomEvent) {
-  e.preventDefault();
-  e.stopPropagation();
-  imageCtx.next();
+  e.preventDefault()
+  e.stopPropagation()
+  imageCtx.next()
 }
 
 // Tap gesture handler for image navigation
 function handleTap(event: TapCustomEvent) {
-  if (images.length == 0) return;
+  if (images.length == 0) return
   if (images.length == 1 && !isStaged) {
-    addParamToUrl('fullscreen', 'true');
-    return;
+    addParamToUrl('fullscreen', 'true')
+    return
   }
 
-  const rect = container.getBoundingClientRect();
-  const { x: relativeX } = event.detail;
-  const leftBoundary = rect.width * (isStaged ? 0.5 : 0.25);
-  const rightBoundary = rect.width * (isStaged ? 0.5 : 0.75);
+  const rect = container.getBoundingClientRect()
+  const { x: relativeX } = event.detail
+  const leftBoundary = rect.width * (isStaged ? 0.5 : 0.25)
+  const rightBoundary = rect.width * (isStaged ? 0.5 : 0.75)
 
   if (relativeX < leftBoundary) {
     // Left quarter - previous image
-    imageCtx.prev();
+    imageCtx.prev()
   } else if (relativeX > rightBoundary) {
     // Right quarter - next image
-    imageCtx.next();
+    imageCtx.next()
   } else if (!isStaged) {
     // Center half - open full screen
-    addParamToUrl('fullscreen', 'true');
+    addParamToUrl('fullscreen', 'true')
   }
 }
 
 function handleSwipe(e: SwipeCustomEvent) {
-  if (images.length <= 1) return;
+  if (images.length <= 1) return
 
-  const { direction } = e.detail;
+  const { direction } = e.detail
 
   if (direction === 'left') {
-    handlePrevious(e);
+    handlePrevious(e)
   } else if (direction === 'right') {
-    handleNext(e);
+    handleNext(e)
   }
 }
 </script>
 
 <div
   class="relative h-full w-full transition-all duration-300 focus:border-0 focus:outline-none focus:ring-0 focus-visible:border-0 focus-visible:outline-none focus-visible:ring-0"
-  bind:this={container}>
+  bind:this={container}
+>
   <!-- Navigation buttons - only show if more than one image -->
   {#if images.length > 1}
     <button
       class="absolute left-4 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/30 p-2 text-white hover:bg-black/70"
       onclick={handlePrevious}
-      aria-label="Previous image">
+      aria-label="Previous image"
+    >
       <Icon src={ChevronLeft} class="h-4 w-4" />
     </button>
 
     <button
       class="absolute right-4 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/30 p-2 text-white hover:bg-black/70"
       onclick={handleNext}
-      aria-label="Next image">
+      aria-label="Next image"
+    >
       <Icon src={ChevronRight} class="h-4 w-4" />
     </button>
   {/if}
@@ -121,7 +124,8 @@ function handleSwipe(e: SwipeCustomEvent) {
     class="h-full w-full"
     mode="carousel"
     layout="contain"
-    transitionDuration={300}>
+    transitionDuration={300}
+  >
     {#snippet children()}
       <!-- Image intent and attribution overlay -->
       {#if currentImage && !imageCtx.isImageStaged(currentImage)}
@@ -144,6 +148,6 @@ function handleSwipe(e: SwipeCustomEvent) {
     {ontap}
     role="button"
     tabindex="0"
-    aria-label="Tap left/right to navigate, center to open full screen">
-  </div>
+    aria-label="Tap left/right to navigate, center to open full screen"
+  ></div>
 </div>

@@ -1,45 +1,45 @@
 <script lang="ts">
-import { toast } from 'svelte-sonner';
+import { toast } from 'svelte-sonner'
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // CONTEXT
-import { getCardCtx } from '$lib/context/card.svelte';
-import { getAppCtx } from '$lib/context/app.svelte';
-import { getImageCtx } from '$lib/context/image.svelte';
+import { getCardCtx } from '$lib/context/card.svelte'
+import { getAppCtx } from '$lib/context/app.svelte'
+import { getImageCtx } from '$lib/context/image.svelte'
 // SERVICES
-import { submitMissingReport as submitMissingReportAPI } from '$lib/client/services/task';
+import { submitMissingReport as submitMissingReportAPI } from '$lib/client/services/task'
 // COMPONENTS
-import SubmitButton from '$lib/components/featureCard/actions/SubmitButton.svelte';
+import SubmitButton from '$lib/components/featureCard/actions/SubmitButton.svelte'
 // ENUMS
-import { FeatureCardMode } from '$lib/enums';
+import { FeatureCardMode } from '$lib/enums'
 // TYPES
-import type { Feature } from '$lib/types';
+import type { Feature } from '$lib/types'
 
 // PROPS
-let { feature }: { feature: Feature } = $props();
+let { feature }: { feature: Feature } = $props()
 
 // CONTEXT
-const appCtx = getAppCtx();
-const cardCtx = getCardCtx();
-const imageCtx = getImageCtx();
+const appCtx = getAppCtx()
+const cardCtx = getCardCtx()
+const imageCtx = getImageCtx()
 
 // HANDLERS
 async function submitMissingReport() {
   // Validate inputs
   if (imageCtx.getStagedQueue().length === 0) {
-    cardCtx.setError(m.validation__at_least_one_image());
-    return;
+    cardCtx.setError(m.validation__at_least_one_image())
+    return
   }
 
   if (cardCtx.userData.missingReason.trim().length < 5) {
-    cardCtx.validationError = m.validation__at_least_five_characters();
-    return;
+    cardCtx.validationError = m.validation__at_least_five_characters()
+    return
   }
 
   try {
-    cardCtx.isSubmitting = true;
+    cardCtx.isSubmitting = true
 
-    const { layer, project, organisation } = await appCtx.getHierarchy(feature);
+    const { layer, project, organisation } = await appCtx.getHierarchy(feature)
 
     await submitMissingReportAPI(
       feature,
@@ -48,21 +48,21 @@ async function submitMissingReport() {
       organisation,
       cardCtx.userData.missingReason,
       imageCtx.getStagedQueue(),
-      appCtx.user.id
-    );
+      appCtx.user.id,
+    )
 
-    imageCtx.resetImages();
+    imageCtx.resetImages()
 
-    cardCtx.userData.missingReason = '';
+    cardCtx.userData.missingReason = ''
 
-    cardCtx.state.mode = FeatureCardMode.SubmissionSuccess;
-    cardCtx.validationError = '';
+    cardCtx.state.mode = FeatureCardMode.SubmissionSuccess
+    cardCtx.validationError = ''
   } catch (error) {
-    console.error('Error submitting missing report:', error);
-    toast.error(m.long_crazy_peacock_care());
-    cardCtx.validationError = m.long_crazy_peacock_care();
+    console.error('Error submitting missing report:', error)
+    toast.error(m.long_crazy_peacock_care())
+    cardCtx.validationError = m.long_crazy_peacock_care()
   } finally {
-    cardCtx.isSubmitting = false;
+    cardCtx.isSubmitting = false
   }
 }
 </script>

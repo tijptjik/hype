@@ -1,62 +1,63 @@
 <script lang="ts">
-import { onMount, tick } from 'svelte';
-import { checkScrollNeed, resetAnimation } from '$lib/client/services/text';
+import { onMount, tick } from 'svelte'
+import { checkScrollNeed, resetAnimation } from '$lib/client/services/text'
 
 let {
   text,
   separator = '~',
   padding = 20,
   containerClass = '',
-  textClass = ''
-} = $props();
+  textClass = '',
+} = $props()
 
-let container: HTMLDivElement | null = $state(null);
-let contentSpan: HTMLSpanElement | null = $state(null);
-let needsScroll = $state(false);
+let container: HTMLDivElement | null = $state(null)
+let contentSpan: HTMLSpanElement | null = $state(null)
+let needsScroll = $state(false)
 
 function performCheck() {
   if (container && contentSpan) {
-    needsScroll = checkScrollNeed(container, contentSpan);
+    needsScroll = checkScrollNeed(container, contentSpan)
   }
 }
 
 // Effect for text changes
 $effect(() => {
-  text; // depend on text
+  text // depend on text
   async function update() {
-    await tick();
-    performCheck();
-    resetAnimation(container); // Always reset on text change
+    await tick()
+    performCheck()
+    resetAnimation(container) // Always reset on text change
   }
-  update();
-});
+  update()
+})
 
 // Lifecycle for resize handling
 onMount(() => {
-  const handleResize = () => performCheck();
-  window.addEventListener('resize', handleResize);
-  return () => window.removeEventListener('resize', handleResize);
-});
+  const handleResize = () => performCheck()
+  window.addEventListener('resize', handleResize)
+  return () => window.removeEventListener('resize', handleResize)
+})
 </script>
 
 <div
   class="scroll-container relative w-full {containerClass}"
   class:overflow-hidden={needsScroll}
   bind:this={container}
-  style="--scroll-padding: {padding}px; --scroll-padding-half: {padding / 2}px;">
+  style="--scroll-padding: {padding}px; --scroll-padding-half: {padding / 2}px;"
+>
   <div
     class="scroll-wrapper"
     class:animate={needsScroll}
-    class:needs-scroll={needsScroll}>
+    class:needs-scroll={needsScroll}
+  >
     <span class="scroll-primary {textClass}" bind:this={contentSpan}>
       {@html text}
     </span>
     {#if needsScroll}
       <span class="separator text-neutral-content" style="width: {padding}px;"
-        >{separator}</span>
-      <span class="scroll-secondary {textClass}">
-        {@html text}
-      </span>
+        >{separator}</span
+      >
+      <span class="scroll-secondary {textClass}"> {@html text} </span>
     {/if}
   </div>
 </div>

@@ -1,51 +1,51 @@
 <script lang="ts">
 // SVELTE
-import { page } from '$app/state';
+import { page } from '$app/state'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
-import { getHeaderCtrl } from '$lib/context/header.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getHeaderCtrl } from '$lib/context/header.svelte'
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // ICONS
-import TaskIcon from 'virtual:icons/lucide/inbox';
+import TaskIcon from 'virtual:icons/lucide/inbox'
 // PROVIDERS
-import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
+import ImageProvider from '$lib/components/providers/ImageProvider.svelte'
 // COMPONENTS :: COMMON
-import Gallery from '$lib/components/images/gallery/Gallery.svelte';
-import Viewer from '$lib/components/common/Viewer.svelte';
+import Gallery from '$lib/components/images/gallery/Gallery.svelte'
+import Viewer from '$lib/components/common/Viewer.svelte'
 // COMPONENTS :: LAYOUT
-import TaskRoot from '$lib/components/tasks/layout/EntityRoot.svelte';
-import TaskHeader from '$lib/components/tasks/layout/Header.svelte';
-import TaskMain from '$lib/components/tasks/layout/Main.svelte';
-import TaskFooter from '$lib/components/tasks/layout/Footer.svelte';
-import Title from '$lib/components/tasks/common/Title.svelte';
+import TaskRoot from '$lib/components/tasks/layout/EntityRoot.svelte'
+import TaskHeader from '$lib/components/tasks/layout/Header.svelte'
+import TaskMain from '$lib/components/tasks/layout/Main.svelte'
+import TaskFooter from '$lib/components/tasks/layout/Footer.svelte'
+import Title from '$lib/components/tasks/common/Title.svelte'
 // COMPONENTS :: ACTIONS
-import ReportedMissingActions from '$lib/components/tasks/actions/ReportedMissing.svelte';
-import NewPhotoActions from '$lib/components/tasks/actions/NewPhoto.svelte';
-import NewFeatureActions from '$lib/components/tasks/actions/NewFeature.svelte';
+import ReportedMissingActions from '$lib/components/tasks/actions/ReportedMissing.svelte'
+import NewPhotoActions from '$lib/components/tasks/actions/NewPhoto.svelte'
+import NewFeatureActions from '$lib/components/tasks/actions/NewFeature.svelte'
 // COMPONENTS :: CONTROLS
-import ReportedMissingControls from '$lib/components/tasks/controls/ReportedMissing.svelte';
-import NewFeatureControls from '$lib/components/tasks/controls/NewFeature.svelte';
+import ReportedMissingControls from '$lib/components/tasks/controls/ReportedMissing.svelte'
+import NewFeatureControls from '$lib/components/tasks/controls/NewFeature.svelte'
 // ENUMS
 import {
   FirstClassResource,
   ImageContextResource,
-  ImageContextResourceExtended
-} from '$lib/enums';
+  ImageContextResourceExtended,
+} from '$lib/enums'
 // TYPES
-import type { Image, Task, PageProps, Id } from '$lib/types';
+import type { Image, Task, PageProps, Id } from '$lib/types'
 
-let pageProps: PageProps<Task> = $props();
-let task: Task = $derived(pageProps.data.task);
+let pageProps: PageProps<Task> = $props()
+let task: Task = $derived(pageProps.data.task)
 
 // CONTEXT
-const adminCtx = getAdminCtx();
-const headerCtrl = getHeaderCtrl();
-adminCtx.setFacet('core', pageProps.data.task.id, FirstClassResource.task);
+const adminCtx = getAdminCtx()
+const headerCtrl = getHeaderCtrl()
+adminCtx.setFacet('core', pageProps.data.task.id, FirstClassResource.task)
 
 // HEADER SETUP
-const facetTabs = new Map();
-facetTabs.set('core', m.born_plane_javelina_strive());
+const facetTabs = new Map()
+facetTabs.set('core', m.born_plane_javelina_strive())
 
 // Only set header if task exists to prevent undefined access
 // svelte-ignore state_referenced_locally
@@ -54,11 +54,11 @@ if (task && task?.id) {
     // svelte-ignore state_referenced_locally
     `${m.born_plane_javelina_strive()} #${task.id}`,
     TaskIcon,
-    facetTabs
-  );
+    facetTabs,
+  )
 }
 
-const taskId = $derived(page.params.task);
+const taskId = $derived(page.params.task)
 const imageProviderProps = $derived({
   isAdminMode: true,
   // Only provide valid props when feature and featureId match
@@ -68,9 +68,9 @@ const imageProviderProps = $derived({
     task?.id === taskId ? (pageProps.data.task.images?.[0]?.image as Image) : undefined,
   images:
     task?.id === taskId
-      ? (pageProps.data.task.images?.map((taskImage) => taskImage.image) as Image[])
+      ? (pageProps.data.task.images?.map(taskImage => taskImage.image) as Image[])
       : undefined,
-  highlightedIds: task?.images?.map((taskImage) => taskImage.imageId as Id) || [],
+  highlightedIds: task?.images?.map(taskImage => taskImage.imageId as Id) || [],
   ...(task ? adminCtx.appCtx.getHierarchySync(task) : {}),
   context:
     task?.id === taskId && task
@@ -78,16 +78,17 @@ const imageProviderProps = $derived({
           ctxType: ImageContextResource.feature,
           ctxId: task.featureId as Id,
           ctxTypeSecondary: ImageContextResourceExtended.task,
-          ctxIdSecondary: task.id
+          ctxIdSecondary: task.id,
         }
-      : undefined
-});
+      : undefined,
+})
 </script>
 
 <!-- LAYOUT -->
 <ImageProvider {page} {...imageProviderProps}>
   <div
-    class="h-full overflow-hidden bg-gradient-to-br from-rose-500 to-indigo-700 bg-fixed p-6">
+    class="h-full overflow-hidden bg-gradient-to-br from-rose-500 to-indigo-700 bg-fixed p-6"
+  >
     {#if task?.id}
       <TaskRoot {task}>
         <TaskHeader {task} isRoundedBottom={false}>
@@ -107,9 +108,7 @@ const imageProviderProps = $derived({
         <TaskMain {task}>
           <div class="flex min-h-0 flex-1 flex-col items-stretch gap-4 @container">
             <Viewer isDropzone={!task.isReviewed} />
-            <TaskFooter>
-              <Gallery hasDropzone={false} />
-            </TaskFooter>
+            <TaskFooter> <Gallery hasDropzone={false} /> </TaskFooter>
           </div>
           {#if task?.type === 'reportedMissing'}
             <ReportedMissingControls {task} />

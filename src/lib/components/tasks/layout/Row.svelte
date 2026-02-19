@@ -1,22 +1,22 @@
 <script lang="ts">
 // LIB
-import { navigateOnAdmin } from '$lib/navigation';
+import { navigateOnAdmin } from '$lib/navigation'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
-import { CheckCircle, PencilSquare, XCircle } from '@steeze-ui/heroicons';
-import Title from '$lib/components/tasks/common/Title.svelte';
+import Icon from '$lib/components/common/Icon.svelte'
+import { CheckCircle, PencilSquare, XCircle } from '@steeze-ui/heroicons'
+import Title from '$lib/components/tasks/common/Title.svelte'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte'
 // ENUMS
-import { FirstClassResource, TaskTypeColor, TaskType } from '$lib/enums';
+import { FirstClassResource, TaskTypeColor, TaskType } from '$lib/enums'
 // TYPES
-import type { Task } from '$lib/types';
+import type { Task } from '$lib/types'
 
 // PROPS
-let { task }: { task: Task } = $props();
+let { task }: { task: Task } = $props()
 
 // CONTEXT
-const adminCtx = getAdminCtx();
+const adminCtx = getAdminCtx()
 </script>
 
 <div
@@ -26,12 +26,14 @@ const adminCtx = getAdminCtx();
   onclick={(e) => {
     e.preventDefault();
     navigateOnAdmin(adminCtx, FirstClassResource.task, task.id);
-  }}>
+  }}
+>
   <Title {task} />
   <button
     class="btn btn-ghost btn-sm {task.reviewOutcome
       ? 'text-neutral-500'
-      : 'text-white'} hover:bg-transparent">
+      : 'text-white'} hover:bg-transparent"
+  >
     {#if task.reviewOutcome === 'accepted'}
       <Icon src={CheckCircle} class="mr-2 h-4 w-4 text-success" />
       {task.reviewOutcome.toUpperCase()}

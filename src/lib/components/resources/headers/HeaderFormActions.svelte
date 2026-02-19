@@ -1,17 +1,17 @@
 <script lang="ts">
 // COMPONENTS
-import FormResetButton from '$lib/components/menu/buttons/FormResetButton.svelte';
-import FormSubmitButton from '$lib/components/menu/buttons/FormSubmitButton.svelte';
-import DeleteButton from '$lib/components/menu/buttons/DeleteButton.svelte';
-import PublishButton from '$lib/components/menu/buttons/PublishButton.svelte';
+import FormResetButton from '$lib/components/menu/buttons/FormResetButton.svelte'
+import FormSubmitButton from '$lib/components/menu/buttons/FormSubmitButton.svelte'
+import DeleteButton from '$lib/components/menu/buttons/DeleteButton.svelte'
+import PublishButton from '$lib/components/menu/buttons/PublishButton.svelte'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
 
 // STATE : CONTEXT
-const appCtx = getAppCtx();
+const appCtx = getAppCtx()
 
 // STATE : DERIVED
-let formCtx = $derived(appCtx.formCtx);
+let formCtx = $derived(appCtx.formCtx)
 </script>
 
 {#if formCtx}

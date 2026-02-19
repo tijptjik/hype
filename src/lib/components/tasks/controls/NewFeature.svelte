@@ -1,28 +1,28 @@
 <script lang="ts">
 // I18N
-import { getI18n, getFPI18n } from '$lib/i18n';
-import { m } from '$lib/i18n';
+import { getI18n, getFPI18n } from '$lib/i18n'
+import { m } from '$lib/i18n'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
 // COMPONENTS
-import Map from '$lib/components/common/Map.svelte';
-import TaskSection from '../common/TaskSection.svelte';
-import TaskStat from '../common/TaskStat.svelte';
+import Map from '$lib/components/common/Map.svelte'
+import TaskSection from '../common/TaskSection.svelte'
+import TaskStat from '../common/TaskStat.svelte'
 // TYPES
-import type { Task } from '$lib/types';
-import type { Point } from 'geojson';
+import type { Task } from '$lib/types'
+import type { Point } from 'geojson'
 
 // CONTEXT
-let appCtx = getAppCtx();
+let appCtx = getAppCtx()
 
-let { task }: { task: Task } = $props();
+let { task }: { task: Task } = $props()
 
 // STATE: Map expansion
-let isMapCollapsed = $state(true);
+let isMapCollapsed = $state(true)
 
 // FUNCTIONS: Map controls
 function handleMapCollapse(collapsed: boolean): void {
-  isMapCollapsed = collapsed;
+  isMapCollapsed = collapsed
 }
 </script>
 
@@ -34,7 +34,8 @@ function handleMapCollapse(collapsed: boolean): void {
       <TaskSection>
         <TaskStat
           title={m.feature__title()}
-          value={getI18n(task.feature as any, 'title', appCtx.getUserPreferences())} />
+          value={getI18n(task.feature as any, 'title', appCtx.getUserPreferences())}
+        />
         <TaskStat
           title={m.feature__description()}
           value={getI18n(
@@ -42,7 +43,8 @@ function handleMapCollapse(collapsed: boolean): void {
             'description',
             appCtx.getUserPreferences()
           )}
-          textWrap={true} />
+          textWrap={true}
+        />
         <TaskStat
           title={m.feature__address()}
           value={getI18n(
@@ -50,7 +52,8 @@ function handleMapCollapse(collapsed: boolean): void {
             'displayAddress',
             appCtx.getUserPreferences()
           )}
-          textWrap={true} />
+          textWrap={true}
+        />
       </TaskSection>
     </div>
 
@@ -87,12 +90,14 @@ function handleMapCollapse(collapsed: boolean): void {
       {#if (task.feature?.geometry as Point)?.coordinates}
         <div
           class="h-full w-full overflow-hidden rounded-lg"
-          class:min-h-48={!isMapCollapsed}>
+          class:min-h-48={!isMapCollapsed}
+        >
           <Map
             coordinates={(task.feature?.geometry as Point)?.coordinates}
             draggable={false}
             addressMeta={null}
-            toggleCollapsed={handleMapCollapse} />
+            toggleCollapsed={handleMapCollapse}
+          />
         </div>
       {:else}
         <TaskSection title={!isMapCollapsed ? undefined : m.loose_grassy_snake_hug()}>

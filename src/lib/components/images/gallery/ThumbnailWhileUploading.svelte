@@ -1,19 +1,20 @@
 <script lang="ts">
-import Uploading from './overlays/Uploading.svelte';
-import UploadError from './overlays/UploadError.svelte';
-import type { ImageUpload } from '$lib/types';
+import Uploading from './overlays/Uploading.svelte'
+import UploadError from './overlays/UploadError.svelte'
+import type { ImageUpload } from '$lib/types'
 
 type Props = {
-  fileObject: ImageUpload;
-};
+  fileObject: ImageUpload
+}
 
-let { fileObject }: Props = $props();
+let { fileObject }: Props = $props()
 </script>
 
 <img
   src={URL.createObjectURL(fileObject.file)}
   alt=""
-  class="h-full w-full rounded-lg object-cover" />
+  class="h-full w-full rounded-lg object-cover"
+>
 
 <!-- Loading overlay -->
 {#if fileObject.status === 'uploading'}

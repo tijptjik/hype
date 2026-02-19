@@ -1,33 +1,33 @@
 <script lang="ts">
-import { fade } from 'svelte/transition';
+import { fade } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // SERVICES
-import { getImageCtx } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte'
 // COMPONENTS
-import PhotoFrame from '$lib/components/common/PhotoFrame.svelte';
-import Icon from '$lib/components/common/Icon.svelte';
-import { Camera, Photo, InformationCircle } from '@steeze-ui/heroicons';
-import Dropzone from 'svelte-file-dropzone';
-import Metadata from '$lib/components/common/ImageMetadata.svelte';
-import DownloadImageButton from '$lib/components/images/DownloadImageButton.svelte';
-import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte';
-import IconAnchor from '$lib/components/common/IconAnchor.svelte';
+import PhotoFrame from '$lib/components/common/PhotoFrame.svelte'
+import Icon from '$lib/components/common/Icon.svelte'
+import { Camera, Photo, InformationCircle } from '@steeze-ui/heroicons'
+import Dropzone from 'svelte-file-dropzone'
+import Metadata from '$lib/components/common/ImageMetadata.svelte'
+import DownloadImageButton from '$lib/components/images/DownloadImageButton.svelte'
+import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte'
+import IconAnchor from '$lib/components/common/IconAnchor.svelte'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte'
 // TYPES
-import type { Snippet } from 'svelte';
-import type { Image } from '$lib/types';
+import type { Snippet } from 'svelte'
+import type { Image } from '$lib/types'
 
 type Props = {
-  LeftActions?: Snippet;
-  MiddleActions?: Snippet;
-  RightActions?: Snippet;
-  isDropzone?: boolean;
-  enableReplacement?: boolean;
-  hideActions?: boolean;
-  tightActions?: boolean;
-};
+  LeftActions?: Snippet
+  MiddleActions?: Snippet
+  RightActions?: Snippet
+  isDropzone?: boolean
+  enableReplacement?: boolean
+  hideActions?: boolean
+  tightActions?: boolean
+}
 
 // STATE : PROPS
 let {
@@ -36,36 +36,36 @@ let {
   RightActions,
   isDropzone = false,
   hideActions = false,
-  tightActions = false
-}: Props = $props();
+  tightActions = false,
+}: Props = $props()
 
 // STATE : CONTEXT :: ROUTER
-const imageCtx = getImageCtx();
-const adminCtx = getAdminCtx();
+const imageCtx = getImageCtx()
+const adminCtx = getAdminCtx()
 
-let image = $derived(imageCtx.activeImage);
-let isEmpty = $derived(imageCtx.viewerState == 'empty');
-let isError = $derived(imageCtx.viewerState == 'error');
+let image = $derived(imageCtx.activeImage)
+let isEmpty = $derived(imageCtx.viewerState == 'empty')
+let isError = $derived(imageCtx.viewerState == 'error')
 
 // HANDLERS :: FILE DROP
 const handleDrop = async (e: CustomEvent) => {
-  if (!isDropzone) return;
+  if (!isDropzone) return
   imageCtx.handleFilesSelect(
     e.detail.acceptedFiles,
     e.detail.fileRejections,
     {
       onSuccess: () => {
         if (adminCtx.activeResourceType) {
-          adminCtx.invalidateAndRefresh(adminCtx.activeResourceType);
+          adminCtx.invalidateAndRefresh(adminCtx.activeResourceType)
         }
       },
       onError: () => {
-        console.error('[Viewer] Upload error');
-      }
+        console.error('[Viewer] Upload error')
+      },
     },
-    imageCtx.activeImage as Image
-  );
-};
+    imageCtx.activeImage as Image,
+  )
+}
 </script>
 
 {#snippet EmptyContent()}
@@ -101,14 +101,16 @@ const handleDrop = async (e: CustomEvent) => {
     <PhotoFrame
       class="h-full w-full overflow-hidden rounded-2xl"
       mode="standalone"
-      layout="contain">
+      layout="contain"
+    >
       {#snippet children()}
         {#if image && !hideActions}
           <!-- Left Actions -->
           <div
             class="absolute bottom-0 left-0 z-30 flex flex-row items-start gap-4 overflow-visible {tightActions
               ? 'm-2'
-              : 'm-10'}">
+              : 'm-10'}"
+          >
             {#if LeftActions}
               {@render LeftActions()}
             {:else}
@@ -123,7 +125,8 @@ const handleDrop = async (e: CustomEvent) => {
             <div
               class="absolute bottom-0 left-0 right-0 z-30 mx-auto flex flex-row items-center gap-4 overflow-visible {tightActions
                 ? 'm-2'
-                : 'm-10'}">
+                : 'm-10'}"
+            >
               {@render MiddleActions()}
             </div>
           {/if}
@@ -132,7 +135,8 @@ const handleDrop = async (e: CustomEvent) => {
           <div
             class="absolute bottom-0 right-0 z-30 flex flex-row items-end gap-4 overflow-visible {tightActions
               ? 'm-2'
-              : 'm-10'}">
+              : 'm-10'}"
+          >
             {#if RightActions}
               {@render RightActions()}
             {:else}
@@ -140,7 +144,8 @@ const handleDrop = async (e: CustomEvent) => {
                 <UserAttributionCard
                   userId={image.contributorId}
                   date={image.createdAt || undefined}
-                  type="imageContributor" />
+                  type="imageContributor"
+                />
               </IconAnchor>
               <DownloadImageButton {image} />
             {/if}
@@ -156,7 +161,8 @@ const handleDrop = async (e: CustomEvent) => {
     ? 'group'
     : ''}"
   style="transition: outline-color 150ms ease-out"
-  in:fade={{ duration: 300, delay: 50 }}>
+  in:fade={{ duration: 300, delay: 50 }}
+>
   {#if isDropzone}
     <Dropzone
       accept={['image/*']}
@@ -164,10 +170,11 @@ const handleDrop = async (e: CustomEvent) => {
       on:select={handleDrop}
       multiple={false}
       class="group flex h-full w-full flex-col justify-center gap-2 rounded-xl bg-neutral text-center align-middle transition-colors"
-      disableDefaultStyles={true}>
+      disableDefaultStyles={true}
+    >
       <div
-        class="border-offset-2 pointer-events-none absolute inset-0 z-50 m-4 rounded-xl border-4 border-dashed border-transparent transition-colors delay-500 group-hover:border-primary">
-      </div>
+        class="border-offset-2 pointer-events-none absolute inset-0 z-50 m-4 rounded-xl border-4 border-dashed border-transparent transition-colors delay-500 group-hover:border-primary"
+      ></div>
       {@render PhotoFrameWithActions()}
     </Dropzone>
   {:else}

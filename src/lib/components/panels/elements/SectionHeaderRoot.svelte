@@ -1,8 +1,8 @@
 <script lang="ts">
 // ENUMS
-import type { FirstClassResource } from '$lib/enums';
+import type { FirstClassResource } from '$lib/enums'
 // TYPES
-import type { Snippet } from 'svelte';
+import type { Snippet } from 'svelte'
 
 let {
   resourceType,
@@ -13,18 +13,18 @@ let {
   isOpen,
   isNarrow,
   children,
-  href
+  href,
 }: {
-  resourceType: FirstClassResource;
-  iconVerticalPaddingClass: string;
-  focusVisibleClass: string;
-  onNavigate: (e: MouseEvent) => void;
-  onToggle: (e: MouseEvent) => void;
-  isOpen: boolean;
-  isNarrow: boolean;
-  children: Snippet;
-  href: string;
-} = $props();
+  resourceType: FirstClassResource
+  iconVerticalPaddingClass: string
+  focusVisibleClass: string
+  onNavigate: (e: MouseEvent) => void
+  onToggle: (e: MouseEvent) => void
+  isOpen: boolean
+  isNarrow: boolean
+  children: Snippet
+  href: string
+} = $props()
 </script>
 
 <a
@@ -32,6 +32,7 @@ let {
   onclick={href ? onNavigate : onToggle}
   {href}
   aria-expanded={isOpen}
-  tabindex="0">
+  tabindex="0"
+>
   {@render children()}
 </a>

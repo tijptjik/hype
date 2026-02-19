@@ -1,26 +1,26 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
-import { getLocale } from '$lib/i18n';
+import { m } from '$lib/i18n'
+import { getLocale } from '$lib/i18n'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte'
 // SERVICES
-import { getSimpleFilterState, setFilterState } from '$lib/client/services/filters';
-import { sortProperties } from '$lib/client/services/property';
+import { getSimpleFilterState, setFilterState } from '$lib/client/services/filters'
+import { sortProperties } from '$lib/client/services/property'
 // COMPONENTS
-import FilterToggle from '../FilterToggle.svelte';
+import FilterToggle from '../FilterToggle.svelte'
 // TYPES
-import type { Property } from '$lib/types';
+import type { Property } from '$lib/types'
 
-const adminCtx = getAdminCtx();
+const adminCtx = getAdminCtx()
 
 let properties = $derived(
   sortProperties(
     [...adminCtx.appCtx.cache.property.values()]
       .filter((p: Property) => p.type === 'specifier')
-      .map((property) => ({ property }))
-  ).map((item) => item.property)
-);
+      .map(property => ({ property })),
+  ).map(item => item.property),
+)
 </script>
 
 {#each properties as property, idx (property.id)}
@@ -47,5 +47,6 @@ let properties = $derived(
     trueLabel={m.filters__has()}
     {onToggleChange}
     {onToggleFalse}
-    {onToggleTrue} />
+    {onToggleTrue}
+  />
 {/each}

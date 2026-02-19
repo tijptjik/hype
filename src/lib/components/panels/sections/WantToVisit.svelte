@@ -1,30 +1,30 @@
 <script lang="ts">
 // I18N
-import { getI18n } from '$lib/i18n';
-import { m } from '$lib/i18n';
+import { getI18n } from '$lib/i18n'
+import { m } from '$lib/i18n'
 // ANIMATIONS
-import { flip } from 'svelte/animate';
+import { flip } from 'svelte/animate'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
-import { getOmniCtx } from '$lib/context/omni.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
+import { getOmniCtx } from '$lib/context/omni.svelte'
 // COMPONENTS
-import Section from '$lib/components/panels/common/Section.svelte';
-import FilterBar from '$lib/components/panels/common/FilterBar.svelte';
-import Icon from '$lib/components/common/Icon.svelte';
-import { Squares2x2 } from '@steeze-ui/heroicons';
+import Section from '$lib/components/panels/common/Section.svelte'
+import FilterBar from '$lib/components/panels/common/FilterBar.svelte'
+import Icon from '$lib/components/common/Icon.svelte'
+import { Squares2x2 } from '@steeze-ui/heroicons'
 // SERVICES
-import { filterUserFeaturesByHierarchy } from '$lib/client/services/userFeatures';
+import { filterUserFeaturesByHierarchy } from '$lib/client/services/userFeatures'
 // NAVIGATION
-import { navigateToStarred } from '$lib/navigation';
+import { navigateToStarred } from '$lib/navigation'
 // TYPES
-import type { UserFeatureWithHierarchy } from '$lib/types';
+import type { UserFeatureWithHierarchy } from '$lib/types'
 
 // CONTEXT
-const appCtx = getAppCtx();
-const omniCtx = getOmniCtx();
+const appCtx = getAppCtx()
+const omniCtx = getOmniCtx()
 
 // STATE
-let searchTerm = $state('');
+let searchTerm = $state('')
 
 // PANEL PROPS
 let panelProps = $derived({
@@ -33,38 +33,38 @@ let panelProps = $derived({
   scrollable: false,
   inline: appCtx.isAdmin(),
   isNarrow: false,
-  isAdmin: false
-});
+  isAdmin: false,
+})
 
 // Get wishlisted features with hierarchy
 let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
   (async () => {
-    if (!appCtx.state.userFeatures.wishlisted) return [];
-    const results = [];
+    if (!appCtx.state.userFeatures.wishlisted) return []
+    const results = []
     for (const wishlist of appCtx.state.userFeatures.wishlisted) {
       const feature = appCtx.state.resources.feature.find(
-        (f) => f.id === wishlist.featureId
-      );
+        f => f.id === wishlist.featureId,
+      )
 
       // Skip if feature doesn't exist
-      if (!feature) continue;
+      if (!feature) continue
 
       try {
-        const hierarchy = await appCtx.getHierarchy(feature);
+        const hierarchy = await appCtx.getHierarchy(feature)
 
         results.push({
           ...wishlist,
           feature,
-          hierarchy
-        });
+          hierarchy,
+        })
       } catch (error) {
-        console.warn('Failed to get hierarchy for feature:', feature.id, error);
+        console.warn('Failed to get hierarchy for feature:', feature.id, error)
       }
     }
 
-    return results;
-  })()
-);
+    return results
+  })(),
+)
 </script>
 
 <Section title={m.stars__want_to_visit()} icon="/compass.svg" {...panelProps}>
@@ -124,7 +124,8 @@ let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
                     navigateToStarred(appCtx, omniCtx, wishlist.featureId, features);
                   });
                 }
-              }}>
+              }}
+            >
               <Icon src={Squares2x2} class="h-5 w-5 flex-shrink-0" theme="fill" />
               <div class="flex flex-grow flex-col">
                 <p class="text-xs uppercase tracking-widest">
@@ -140,9 +141,7 @@ let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
                     <span class="text-secondary">{layerName}</span>
                   {/if}
                 </p>
-                <p class="font-normal text-neutral-300">
-                  {featureName}
-                </p>
+                <p class="font-normal text-neutral-300">{featureName}</p>
               </div>
             </div>
           {/each}

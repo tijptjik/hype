@@ -1,139 +1,141 @@
 <script lang="ts">
 // SVELTE
-import { goto } from '$app/navigation';
-import { fade } from 'svelte/transition';
+import { goto } from '$app/navigation'
+import { fade } from 'svelte/transition'
 // AUTH
-import { signOut } from '$lib/auth/client';
+import { signOut } from '$lib/auth/client'
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
-import { PencilSquare, Check, ArrowPath, XMark } from '@steeze-ui/heroicons';
+import Icon from '$lib/components/common/Icon.svelte'
+import { PencilSquare, Check, ArrowPath, XMark } from '@steeze-ui/heroicons'
 // UTILS
-import { validateDisplayUsername } from '$lib/utils/username';
+import { validateDisplayUsername } from '$lib/utils/username'
 // ENUMS
-import { Panel } from '$lib/enums';
+import { Panel } from '$lib/enums'
 
 // PROPS
 type Props = {
-  hideActions?: boolean;
-  hideEditableFields?: boolean;
-};
+  hideActions?: boolean
+  hideEditableFields?: boolean
+}
 
-let { hideActions = false, hideEditableFields = false }: Props = $props();
+let { hideActions = false, hideEditableFields = false }: Props = $props()
 
-const appCtx = getAppCtx();
+const appCtx = getAppCtx()
 
 // STATE
-let isEditingUsername = $state(false);
-let isLoadingUsername = $state(false);
-let showSuccessIndicator = $state(false);
-let showErrorIndicator = $state(false);
-let editedUsername = $state('');
+let isEditingUsername = $state(false)
+let isLoadingUsername = $state(false)
+let showSuccessIndicator = $state(false)
+let showErrorIndicator = $state(false)
+let editedUsername = $state('')
 
 // TIMERS
-let successTimer: ReturnType<typeof setTimeout>;
-let errorTimer: ReturnType<typeof setTimeout>;
+let successTimer: ReturnType<typeof setTimeout>
+let errorTimer: ReturnType<typeof setTimeout>
 
 // VALIDATION
 $effect(() => {
   if (editedUsername && !validateDisplayUsername(editedUsername)) {
-    showErrorIndicator = true;
-    clearTimeout(errorTimer);
+    showErrorIndicator = true
+    clearTimeout(errorTimer)
     errorTimer = setTimeout(() => {
-      showErrorIndicator = false;
-    }, 2500);
+      showErrorIndicator = false
+    }, 2500)
   } else {
-    showErrorIndicator = false;
-    clearTimeout(errorTimer);
+    showErrorIndicator = false
+    clearTimeout(errorTimer)
   }
-});
+})
 
 // HANDLERS
 const startEditingUsername = () => {
-  const user = appCtx.getUser();
+  const user = appCtx.getUser()
   if (user) {
-    editedUsername = user.displayUsername || user.username || '';
-    isEditingUsername = true;
+    editedUsername = user.displayUsername || user.username || ''
+    isEditingUsername = true
     // Focus the input after it renders
     setTimeout(() => {
-      const input = document.querySelector('#username-input') as HTMLInputElement;
+      const input = document.querySelector('#username-input') as HTMLInputElement
       if (input) {
-        input.focus();
-        input.select();
+        input.focus()
+        input.select()
       }
-    }, 0);
+    }, 0)
   }
-};
+}
 
 const saveUsername = async () => {
-  const user = appCtx.getUser();
-  if (!user || !editedUsername.trim()) return;
+  const user = appCtx.getUser()
+  if (!user || !editedUsername.trim()) return
 
   // Validate before saving
   if (!validateDisplayUsername(editedUsername.trim())) {
-    showErrorIndicator = true;
-    clearTimeout(errorTimer);
+    showErrorIndicator = true
+    clearTimeout(errorTimer)
     errorTimer = setTimeout(() => {
-      showErrorIndicator = false;
-    }, 2500);
-    return;
+      showErrorIndicator = false
+    }, 2500)
+    return
   }
 
-  isLoadingUsername = true;
+  isLoadingUsername = true
 
   // Use appCtx method which handles optimistic updates and debounced API calls
   await appCtx.setUserDisplayUsername(
     editedUsername.trim(),
     // onSuccess
     () => {
-      showSuccessIndicator = true;
-      isEditingUsername = false;
-      isLoadingUsername = false;
+      showSuccessIndicator = true
+      isEditingUsername = false
+      isLoadingUsername = false
 
-      clearTimeout(successTimer);
+      clearTimeout(successTimer)
       successTimer = setTimeout(() => {
-        showSuccessIndicator = false;
-      }, 2500);
+        showSuccessIndicator = false
+      }, 2500)
     },
     // onError
     (error: any) => {
-      console.error('Failed to save username:', error);
-      isLoadingUsername = false;
-      showErrorIndicator = true;
-      clearTimeout(errorTimer);
+      console.error('Failed to save username:', error)
+      isLoadingUsername = false
+      showErrorIndicator = true
+      clearTimeout(errorTimer)
       errorTimer = setTimeout(() => {
-        showErrorIndicator = false;
-      }, 2500);
-    }
-  );
-};
+        showErrorIndicator = false
+      }, 2500)
+    },
+  )
+}
 
 const cancelEdit = () => {
-  isEditingUsername = false;
-  editedUsername = '';
-};
+  isEditingUsername = false
+  editedUsername = ''
+}
 
 const handleKeydown = (event: KeyboardEvent) => {
   if (event.key === 'Enter') {
-    saveUsername();
+    saveUsername()
   } else if (event.key === 'Escape') {
-    cancelEdit();
+    cancelEdit()
   }
-};
+}
 </script>
 
 <div class="relative flex w-full flex-col items-center overflow-hidden">
   <!-- Background SVG with Glow -->
   <div
-    class="pointer-events-none absolute z-0 flex w-full -translate-y-[110px] items-center justify-center overflow-hidden px-1.5">
+    class="pointer-events-none absolute z-0 flex w-full -translate-y-[110px] items-center justify-center overflow-hidden px-1.5"
+  >
     <svg
       width="362"
       height="340"
       viewBox="0 0 362 340"
-      class="h-full w-full object-cover opacity-80">
+      class="h-full w-full object-cover opacity-80"
+    >
       <defs>
         <!-- Glow filter -->
         <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
@@ -161,7 +163,8 @@ const handleKeydown = (event: KeyboardEvent) => {
         stroke="#F04D7F"
         stroke-width="2"
         filter="url(#strongGlow)"
-        opacity="0.8"></path>
+        opacity="0.8"
+      ></path>
 
       <!-- Additional inner glow layer -->
       <path
@@ -172,7 +175,8 @@ const handleKeydown = (event: KeyboardEvent) => {
         stroke="#F04D7F"
         stroke-width="1"
         filter="url(#glow)"
-        opacity="0.6"></path>
+        opacity="0.6"
+      ></path>
     </svg>
   </div>
 
@@ -181,7 +185,7 @@ const handleKeydown = (event: KeyboardEvent) => {
     <!-- Avatar -->
     <div class="avatar">
       <div class="w-32 rounded-full ring ring-black/40">
-        <img alt="Avatar" src={appCtx.getUser()?.image} referrerpolicy="no-referrer" />
+        <img alt="Avatar" src={appCtx.getUser()?.image} referrerpolicy="no-referrer">
       </div>
     </div>
 
@@ -192,7 +196,8 @@ const handleKeydown = (event: KeyboardEvent) => {
           <!-- Display Mode: Username (non-editable) -->
           <span
             class="tooltip font-medium text-white"
-            data-tip={appCtx.getUser()?.attribution || 'No attribution set'}>
+            data-tip={appCtx.getUser()?.attribution || 'No attribution set'}
+          >
             {#if appCtx.getUser()}
               {@const user = appCtx.getUser()!}
               {user.displayUsername ?? user.username ?? user.name ?? 'Anonymous User'}
@@ -207,7 +212,8 @@ const handleKeydown = (event: KeyboardEvent) => {
               class="min-w-0 border-none bg-transparent font-medium text-white outline-none placeholder:text-white/60 focus:outline-none"
               bind:value={editedUsername}
               onkeydown={handleKeydown}
-              placeholder={m.warm_that_duck_slide()} />
+              placeholder={m.warm_that_duck_slide()}
+            >
           {:else}
             <!-- Display Mode: Username -->
             <span class="font-medium text-white">
@@ -221,7 +227,8 @@ const handleKeydown = (event: KeyboardEvent) => {
           <!-- Edit Icon -->
           <button
             class="flex h-4 w-4 items-center justify-center text-white/80 transition-colors hover:text-white"
-            onclick={isEditingUsername ? saveUsername : startEditingUsername}>
+            onclick={isEditingUsername ? saveUsername : startEditingUsername}
+          >
             {#if isLoadingUsername}
               <Icon src={ArrowPath} class="h-4 w-4 animate-spin" />
             {:else if showErrorIndicator}
@@ -252,7 +259,8 @@ const handleKeydown = (event: KeyboardEvent) => {
             const user = appCtx.getUser();
             appCtx.setPanelCtx(Panel.profile, 'username', user?.username);
             appCtx.togglePanel(Panel.profile);
-          }}>
+          }}
+        >
           {m.whole_livid_alligator_commend()}
         </button>
         <button
@@ -267,7 +275,8 @@ const handleKeydown = (event: KeyboardEvent) => {
                   console.error('Sign out failed:', error);
                 }
               }
-            })}>
+            })}
+        >
           {m.profile__logout()}
         </button>
       </div>

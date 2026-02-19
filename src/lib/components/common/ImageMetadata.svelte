@@ -1,19 +1,19 @@
 <script lang="ts">
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
+import Icon from '$lib/components/common/Icon.svelte'
 import {
   Camera,
   Square2Stack,
   Document,
   AtSymbol,
-  Calendar
-} from '@steeze-ui/heroicons';
-import { formatDate } from '$lib';
+  Calendar,
+} from '@steeze-ui/heroicons'
+import { formatDate } from '$lib'
 // TYPES
-import type { Image, ImageUploadCtx as Refs } from '$lib/types';
-import type { IconSource } from '@steeze-ui/svelte-icon';
+import type { Image, ImageUploadCtx as Refs } from '$lib/types'
+import type { IconSource } from '@steeze-ui/svelte-icon'
 
-let { image }: { image: Image } = $props();
+let { image }: { image: Image } = $props()
 </script>
 
 {#snippet MetadataRow(icon: IconSource, label: string, value: string)}
@@ -25,7 +25,8 @@ let { image }: { image: Image } = $props();
 {/snippet}
 
 <div
-  class="flex min-w-[200px] items-center gap-3 rounded-lg bg-glass-result p-3 backdrop-blur-sm">
+  class="flex min-w-[200px] items-center gap-3 rounded-lg bg-glass-result p-3 backdrop-blur-sm"
+>
   <div class="flex flex-col gap-2">
     {#if image.cameraModel}
       {@render MetadataRow(Camera, 'Camera', image.cameraModel)}

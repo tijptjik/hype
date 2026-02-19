@@ -1,36 +1,36 @@
 <script lang="ts">
 // SVELTE
-import { page } from '$app/state';
+import { page } from '$app/state'
 // CONTEXT
-import { getOmniCtx } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte'
 // NAVIGATION
-import { navigateOnAdmin } from '$lib/navigation';
+import { navigateOnAdmin } from '$lib/navigation'
 // COMPONENTS
-import ImageProvider from '$lib/components/providers/ImageProvider.svelte';
-import Viewer from '../common/Viewer.svelte';
+import ImageProvider from '$lib/components/providers/ImageProvider.svelte'
+import Viewer from '../common/Viewer.svelte'
 // ENUMS
-import { FirstClassResource, ImageContextResource } from '$lib/enums';
+import { FirstClassResource, ImageContextResource } from '$lib/enums'
 // TYPES
-import type { ImageDB, Feature, Organisation, Project, ImageDBBasic } from '$lib/types';
-import type { AppCtx } from '$lib/context/app.svelte';
-import type { AdminCtx } from '$lib/context/admin.svelte';
+import type { ImageDB, Feature, Organisation, Project, ImageDBBasic } from '$lib/types'
+import type { AppCtx } from '$lib/context/app.svelte'
+import type { AdminCtx } from '$lib/context/admin.svelte'
 
 // CONTEXT
-let omniCtx = getOmniCtx();
+let omniCtx = getOmniCtx()
 
 type Props = {
-  appCtx: AppCtx;
-  adminCtx?: AdminCtx;
-  image: ImageDB | ImageDBBasic;
-  feature: Feature;
-  currentIndex?: number;
-  totalCount?: number;
-  canNavigatePrevious?: boolean;
-  canNavigateNext?: boolean;
-  onClose: () => void;
-  onNavigateNext?: () => void;
-  onNavigatePrevious?: () => void;
-};
+  appCtx: AppCtx
+  adminCtx?: AdminCtx
+  image: ImageDB | ImageDBBasic
+  feature: Feature
+  currentIndex?: number
+  totalCount?: number
+  canNavigatePrevious?: boolean
+  canNavigateNext?: boolean
+  onClose: () => void
+  onNavigateNext?: () => void
+  onNavigatePrevious?: () => void
+}
 
 // STATE : PROPS
 let {
@@ -42,49 +42,49 @@ let {
   canNavigateNext = false,
   onClose,
   onNavigateNext,
-  onNavigatePrevious
-}: Props = $props();
+  onNavigatePrevious,
+}: Props = $props()
 
 let organisation = $derived<Organisation | undefined>(
-  feature ? appCtx.cache.organisation.get(feature.organisationId) : undefined
-);
+  feature ? appCtx.cache.organisation.get(feature.organisationId) : undefined,
+)
 
 let project = $derived<Project | undefined>(
-  feature ? appCtx.cache.project.get(feature.projectId) : undefined
-);
+  feature ? appCtx.cache.project.get(feature.projectId) : undefined,
+)
 
 function handleKeydown(event: KeyboardEvent) {
   // Only handle events if the modal is actually open and feature exists
-  if (!feature || !image) return;
+  if (!feature || !image) return
 
   if (event.key === 'Escape' || event.key === ' ') {
-    event.preventDefault();
-    event.stopPropagation();
-    onClose();
+    event.preventDefault()
+    event.stopPropagation()
+    onClose()
   } else if (event.key === 'Enter') {
-    event.preventDefault();
-    event.stopPropagation();
-    const featureId = feature.id; // Capture the ID before dispatching close
+    event.preventDefault()
+    event.stopPropagation()
+    const featureId = feature.id // Capture the ID before dispatching close
     // Navigate to feature address facet
-    onClose();
+    onClose()
     if (adminCtx) {
-      navigateOnAdmin(adminCtx, FirstClassResource.feature, featureId, 'images');
+      navigateOnAdmin(adminCtx, FirstClassResource.feature, featureId, 'images')
     } else {
-      omniCtx.navNext();
+      omniCtx.navNext()
     }
   } else if (event.key === 'Tab') {
-    event.preventDefault();
-    event.stopPropagation();
+    event.preventDefault()
+    event.stopPropagation()
     if (event.shiftKey && canNavigatePrevious && onNavigatePrevious) {
-      onNavigatePrevious();
+      onNavigatePrevious()
     } else if (!event.shiftKey && canNavigateNext && onNavigateNext) {
-      onNavigateNext();
+      onNavigateNext()
     }
   }
 }
 
 function closeModal() {
-  onClose();
+  onClose()
 }
 </script>
 
@@ -94,7 +94,8 @@ function closeModal() {
   class="fixed inset-0 z-50 flex items-center justify-center bg-black/75"
   onclick={closeModal}
   role="dialog"
-  aria-modal="true">
+  aria-modal="true"
+>
   <div class="h-screen w-screen" onclick={(e) => e.stopPropagation()}>
     <div class="h-full w-full" onclick={closeModal}>
       {#if feature}
@@ -107,7 +108,8 @@ function closeModal() {
             organisation,
             project
           }}
-          {image}>
+          {image}
+        >
           <Viewer isDropzone={false} hideActions={true} />
         </ImageProvider>
       {/if}

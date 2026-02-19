@@ -1,30 +1,30 @@
 <script lang="ts">
 // SVELTE
-import { slide } from 'svelte/transition';
+import { slide } from 'svelte/transition'
 // ICONS
-import { MinusCircle, PlusCircle } from '@steeze-ui/heroicons';
-import Icon from '$lib/components/common/Icon.svelte';
+import { MinusCircle, PlusCircle } from '@steeze-ui/heroicons'
+import Icon from '$lib/components/common/Icon.svelte'
 // I18N
-import { getI18n } from '$lib/i18n';
+import { getI18n } from '$lib/i18n'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
 // COMPONENTS
-import ResourceHierarchyPath from '../ResourceHierarchyPath.svelte';
+import ResourceHierarchyPath from '../ResourceHierarchyPath.svelte'
 // TYPES
-import type { Layer, Organisation, Project, PanelProps } from '$lib/types';
+import type { Layer, Organisation, Project, PanelProps } from '$lib/types'
 
 // CONTEXT
-const appCtx = getAppCtx();
+const appCtx = getAppCtx()
 
 interface FilteredLayerProps {
-  layer: Layer;
+  layer: Layer
   hierarchy: {
-    organisation?: Organisation;
-    project?: Project;
-  };
-  isSelected: boolean;
-  onclick: (event: MouseEvent | KeyboardEvent) => void;
-  selectedClass?: string;
+    organisation?: Organisation
+    project?: Project
+  }
+  isSelected: boolean
+  onclick: (event: MouseEvent | KeyboardEvent) => void
+  selectedClass?: string
 }
 
 // PROPS
@@ -33,8 +33,8 @@ const {
   hierarchy,
   isSelected,
   onclick,
-  selectedClass = 'bg-yellow-400'
-}: FilteredLayerProps = $props();
+  selectedClass = 'bg-yellow-400',
+}: FilteredLayerProps = $props()
 </script>
 
 <div
@@ -59,7 +59,8 @@ const {
       }
     }
   }}
-  tabindex="0">
+  tabindex="0"
+>
   {#if hierarchy.organisation && hierarchy.project}
     <div class="flex -translate-x-5 flex-row items-center gap-3">
       <div
@@ -67,8 +68,8 @@ const {
           ? selectedClass
           : ''} {isSelected
           ? 'group-hover:bg-secondary/75 group-focus-visible:bg-secondary/75'
-          : ''}">
-      </div>
+          : ''}"
+      ></div>
       <div class="flex flex-col items-start gap-0">
         <ResourceHierarchyPath {hierarchy} />
         <p class="font-light">
@@ -83,13 +84,14 @@ const {
           ? selectedClass
           : ''} {isSelected
           ? 'group-hover:bg-secondary/75 group-focus-visible:bg-secondary/75'
-          : ''}">
-      </div>
+          : ''}"
+      ></div>
       <p class="font-light">{getI18n(layer, 'name', appCtx.getUserPreferences())}</p>
     </div>
   {/if}
   <div
-    class="relative text-sm text-base-content/60 group-hover:text-base-content/80 group-focus-visible:text-base-content/80">
+    class="relative text-sm text-base-content/60 group-hover:text-base-content/80 group-focus-visible:text-base-content/80"
+  >
     {#if isSelected}
       <Icon src={MinusCircle} class="relative h-6 w-6" aria-hidden="true"></Icon>
     {:else}

@@ -1,53 +1,54 @@
 <script lang="ts">
-import { ChevronDown, ChevronUp } from '@steeze-ui/heroicons';
-import Icon from '$lib/components/common/Icon.svelte';
-import RangeSlider from 'svelte-range-slider-pips';
+import { ChevronDown, ChevronUp } from '@steeze-ui/heroicons'
+import Icon from '$lib/components/common/Icon.svelte'
+import RangeSlider from 'svelte-range-slider-pips'
 // I18N
-import { m } from '$lib/i18n';
-import { getI18n } from '$lib/i18n';
+import { m } from '$lib/i18n'
+import { getI18n } from '$lib/i18n'
 // SERVICES
 import {
   setRangePropertyFilter,
-  displayRangeFilter
-} from '$lib/client/services/property';
+  displayRangeFilter,
+} from '$lib/client/services/property'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
 // TYPES
-import type { Id, Property } from '$lib/types';
-let appCtx = getAppCtx();
+import type { Id, Property } from '$lib/types'
+let appCtx = getAppCtx()
 
 type Props = {
-  property: Property;
-  layerId: Id;
-  defaultOpen: boolean;
-};
+  property: Property
+  layerId: Id
+  defaultOpen: boolean
+}
 
-let { property, layerId, defaultOpen = false }: Props = $props();
+let { property, layerId, defaultOpen = false }: Props = $props()
 
 // Derive values from property
 let label = $derived(
-  getI18n(property, 'label', appCtx.getUserPreferences(), property.key)
-);
-let min = $derived(property.min!);
-let max = $derived(property.max!);
+  getI18n(property, 'label', appCtx.getUserPreferences(), property.key),
+)
+let min = $derived(property.min!)
+let max = $derived(property.max!)
 
-let isOpen = $state(defaultOpen);
+let isOpen = $state(defaultOpen)
 let selectedRange = $derived(
-  appCtx.state.filters.feature.properties?.[layerId]?.[property.id]
-);
+  appCtx.state.filters.feature.properties?.[layerId]?.[property.id],
+)
 
 let values: [number, number] = $derived([
   selectedRange?.rangeMin ?? min,
-  selectedRange?.rangeMax ?? max
-]);
+  selectedRange?.rangeMax ?? max,
+])
 
-let displayText = $derived(displayRangeFilter(min, max, values));
+let displayText = $derived(displayRangeFilter(min, max, values))
 </script>
 
 <div class="ml-4 min-h-10 flex-shrink-0 rounded-l-md bg-[#0a0a0a]">
   <button
     class="flex w-full flex-shrink-0 items-center justify-between rounded-none py-2 pl-6 pr-9 focus:outline-none focus:ring-0 focus-visible:text-primary"
-    onclick={() => (isOpen = !isOpen)}>
+    onclick={() => (isOpen = !isOpen)}
+  >
     <div class="flex flex-col justify-start gap-0 text-left">
       <p class="text-xs font-thin uppercase tracking-widest text-base-content/60">
         {label}
@@ -59,7 +60,8 @@ let displayText = $derived(displayRangeFilter(min, max, values));
   <!-- Options -->
   {#if isOpen}
     <div
-      class="flex max-h-[260px] flex-col overflow-y-auto overscroll-contain rounded-l-md bg-base-300 px-3">
+      class="flex max-h-[260px] flex-col overflow-y-auto overscroll-contain rounded-l-md bg-base-300 px-3"
+    >
       <div class="pb-4 pl-2 pr-4 pt-8">
         <RangeSlider
           {min}
@@ -76,7 +78,8 @@ let displayText = $derived(displayRangeFilter(min, max, values));
           float
           on:change={() => {
             setRangePropertyFilter(appCtx, layerId, property.id, values);
-          }} />
+          }}
+        />
       </div>
     </div>
   {/if}

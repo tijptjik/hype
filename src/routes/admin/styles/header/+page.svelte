@@ -22,7 +22,9 @@ const HEADER_SIZES: HeaderSize[] = ['xs', 'sm', 'md', 'lg', 'xl']
 </script>
 
 <main class="h-full overflow-y-auto p-6">
-  <section class="bits-theme space-y-8 rounded-xl border border-base-300 bg-base-100 p-6">
+  <section
+    class="bits-theme space-y-8 rounded-xl border border-base-300 bg-base-100 p-6"
+  >
     <h1 class="text-xl font-semibold text-foreground">Bits Header Variations</h1>
 
     <div class="space-y-4">
@@ -31,7 +33,9 @@ const HEADER_SIZES: HeaderSize[] = ['xs', 'sm', 'md', 'lg', 'xl']
       </h2>
       <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-wide text-foreground-alt">Text only</p>
+          <p class="text-xs font-semibold uppercase tracking-wide text-foreground-alt">
+            Text only
+          </p>
           <Header text="Secret Societies" />
         </div>
 
@@ -43,7 +47,9 @@ const HEADER_SIZES: HeaderSize[] = ['xs', 'sm', 'md', 'lg', 'xl']
         </div>
 
         <div class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-wide text-foreground-alt">Icon only</p>
+          <p class="text-xs font-semibold uppercase tracking-wide text-foreground-alt">
+            Icon only
+          </p>
           <Header icon={Globe} />
         </div>
 
@@ -53,7 +59,8 @@ const HEADER_SIZES: HeaderSize[] = ['xs', 'sm', 'md', 'lg', 'xl']
           </p>
           <Header
             text="Secret Societies"
-            description="Global domination has never been easier" />
+            description="Global domination has never been easier"
+          />
         </div>
 
         <div class="space-y-2">
@@ -70,20 +77,24 @@ const HEADER_SIZES: HeaderSize[] = ['xs', 'sm', 'md', 'lg', 'xl']
           <Header
             text="Secret Societies"
             description="Global domination has never been easier"
-            icon={Globe} />
+            icon={Globe}
+          />
         </div>
       </div>
     </div>
 
     <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">Sizes</h2>
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+        Sizes
+      </h2>
       <div class="flex flex-col items-start gap-5">
         {#each HEADER_SIZES as size}
           <Header
             text={`Header ${size.toUpperCase()}`}
             description="Description scales at 75% of heading size"
             icon={Heart}
-            {size} />
+            {size}
+          />
         {/each}
       </div>
     </div>
@@ -100,41 +111,49 @@ const HEADER_SIZES: HeaderSize[] = ['xs', 'sm', 'md', 'lg', 'xl']
         <Header text="Victory Committee" icon={Trophy} size="md" />
         <Header text="Tooling Bureau" icon={Wrench} size="md" />
       </div>
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt py-4">
-            With Descriptions
-        </h2>
-        <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+      <h2
+        class="text-sm font-semibold uppercase tracking-wide text-foreground-alt py-4"
+      >
+        With Descriptions
+      </h2>
+      <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
         <Header
           text="Midnight Cartographers"
           description="Mapping moonlit routes since forever"
           icon={Moon}
-          size="md" />
+          size="md"
+        />
         <Header
           text="Silent Processors"
           description="Cold logic, warm intentions"
           icon={Cpu}
-          size="md" />
+          size="md"
+        />
         <Header
           text="Harbor Syndicate"
           description="Anchored power with fluid strategy"
           icon={Anchor}
-          size="md" />
+          size="md"
+        />
         <Header
           text="Kindling Council"
           description="Small sparks, massive outcomes"
           icon={Flame}
-          size="md" />
+          size="md"
+        />
         <Header
           text="Verdant Network"
           description="Growing influence root by root"
           icon={Leaf}
-          size="md" />
+          size="md"
+        />
         <Header
           text="World Operators"
           description="Global domination has never been easier"
           icon={Globe}
-          size="md" />
+          size="md"
+        />
       </div>
-      </div>
+    </div>
   </section>
 </main>

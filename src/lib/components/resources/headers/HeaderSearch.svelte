@@ -1,23 +1,23 @@
 <script lang="ts">
 // COMPONENTS
-import FilterInput from '$lib/components/menu/FilterInput.svelte';
+import FilterInput from '$lib/components/menu/FilterInput.svelte'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
-import type { FirstClassResource } from '$lib/enums';
+import { getAppCtx } from '$lib/context/app.svelte'
+import type { FirstClassResource } from '$lib/enums'
 
 // STATE : CONTEXT
-const appCtx = getAppCtx();
+const appCtx = getAppCtx()
 
 // STATE : DERIVED
-let resourceType = $derived(appCtx.headerResourceType) as FirstClassResource;
+let resourceType = $derived(appCtx.headerResourceType) as FirstClassResource
 
 function focusFirstVirtualListItem(e: KeyboardEvent) {
-  e.preventDefault();
+  e.preventDefault()
   const firstItem = document.querySelector(
-    'svelte-virtual-list-row [tabindex]'
-  ) as HTMLElement;
+    'svelte-virtual-list-row [tabindex]',
+  ) as HTMLElement
   if (firstItem) {
-    firstItem.focus();
+    firstItem.focus()
   }
 }
 </script>

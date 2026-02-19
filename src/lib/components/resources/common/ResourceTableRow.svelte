@@ -1,33 +1,33 @@
 <script lang="ts" generics="T extends Resource & EntityWithOptionalImage">
 // I18N
-import { getI18n } from '$lib/i18n';
-import { m } from '$lib/i18n';
+import { getI18n } from '$lib/i18n'
+import { m } from '$lib/i18n'
 // COMPONENTS
-import ScrollableText from '$lib/components/common/ScrollableText.svelte';
+import ScrollableText from '$lib/components/common/ScrollableText.svelte'
 // NAVIGATION
-import { navigateOnAdminById, getUrlForResource } from '$lib/navigation';
+import { navigateOnAdminById, getUrlForResource } from '$lib/navigation'
 // SERVICES
-import { getURLfromImage, getHashiconUrl } from '$lib/client/services/image';
+import { getURLfromImage, getHashiconUrl } from '$lib/client/services/image'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte'
 // ENUMS
-import { FirstClassResource } from '$lib/enums';
+import { FirstClassResource } from '$lib/enums'
 // TYPES
-import type { Resource, EntityWithOptionalImage, ImageDBBasic } from '$lib/types';
-import type { Snippet } from 'svelte';
+import type { Resource, EntityWithOptionalImage, ImageDBBasic } from '$lib/types'
+import type { Snippet } from 'svelte'
 
 let {
   entity,
   index,
-  row
+  row,
 }: {
-  entity: T;
-  index: number;
-  row?: Snippet<[T, number]>;
-} = $props();
+  entity: T
+  index: number
+  row?: Snippet<[T, number]>
+} = $props()
 
 // CONTEXT
-const adminCtx = getAdminCtx();
+const adminCtx = getAdminCtx()
 </script>
 
 <div class="px-2 py-1">
@@ -50,7 +50,8 @@ const adminCtx = getAdminCtx();
       }}
       role="button"
       tabindex="0"
-      class="block w-full cursor-pointer rounded-lg bg-glass-result p-2 shadow-sm transition-shadow hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-secondary">
+      class="block w-full cursor-pointer rounded-lg bg-glass-result p-2 shadow-sm transition-shadow hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-secondary"
+    >
       <div class="flex items-center gap-4">
         <div class="relative h-16 w-16 flex-shrink-0">
           {#if entity.image}
@@ -64,7 +65,8 @@ const adminCtx = getAdminCtx();
                 'name',
                 adminCtx.appCtx.getUserPreferences()
               ) ?? entity.id}
-              class="h-full w-full rounded-md object-cover" />
+              class="h-full w-full rounded-md object-cover"
+            >
           {:else}
             <img
               src={getHashiconUrl(entity.id)}
@@ -73,7 +75,8 @@ const adminCtx = getAdminCtx();
                 'name',
                 adminCtx.appCtx.getUserPreferences()
               ) ?? entity.id}
-              class="h-full w-full rounded-md object-cover" />
+              class="h-full w-full rounded-md object-cover"
+            >
           {/if}
         </div>
         <div class="flex flex-1 items-center justify-between overflow-hidden pr-4">
@@ -91,7 +94,8 @@ const adminCtx = getAdminCtx();
                   entity as Record<'i18n', any>,
                   'description',
                   adminCtx.appCtx.getUserPreferences()
-                ) ?? ''} />
+                ) ?? ''}
+              />
             </p>
           </div>
           <div class="ml-4 flex items-center">
@@ -100,7 +104,8 @@ const adminCtx = getAdminCtx();
               class:text-orange-500={(entity as any).isPendingReview}
               class:text-ok={(entity as any).isPublished}
               class:text-error={!(entity as any).isPublished &&
-                !(entity as any).isPendingReview}>
+                !(entity as any).isPendingReview}
+            >
               {(entity as any).isPendingReview
                 ? m.tangy_zany_capybara_arise()
                 : (entity as any).isPublished

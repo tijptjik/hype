@@ -1,60 +1,60 @@
 <script lang="ts">
 // SVELTE
-import { fade } from 'svelte/transition';
+import { fade } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // ICONS
-import { PlusCircle, Swatch } from '@steeze-ui/heroicons';
-import Icon from '$lib/components/common/Icon.svelte';
+import { PlusCircle, Swatch } from '@steeze-ui/heroicons'
+import Icon from '$lib/components/common/Icon.svelte'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
-import { getOmniCtx } from '$lib/context/omni.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
+import { getOmniCtx } from '$lib/context/omni.svelte'
 // SERVICES
-import { initAddNewFeature } from '$lib/client/services/feature';
+import { initAddNewFeature } from '$lib/client/services/feature'
 
 // PROPS
 let {
   left,
   center,
-  right
+  right,
 }: {
-  left?: any;
-  center?: any;
-  right?: any;
-} = $props();
+  left?: any
+  center?: any
+  right?: any
+} = $props()
 
 // CONTEXT
-const appCtx = getAppCtx();
-const omniCtx = getOmniCtx();
+const appCtx = getAppCtx()
+const omniCtx = getOmniCtx()
 
 // HANDLERS
 const handleAddFeature = async (e: Event) => {
-  e.preventDefault();
-  e.stopPropagation();
-  await initAddNewFeature(appCtx, omniCtx, e);
-};
+  e.preventDefault()
+  e.stopPropagation()
+  await initAddNewFeature(appCtx, omniCtx, e)
+}
 
 const handleOpenCard = (e: Event) => {
-  e.preventDefault();
-  e.stopPropagation();
-  omniCtx.openCard();
-};
+  e.preventDefault()
+  e.stopPropagation()
+  omniCtx.openCard()
+}
 
 const isAddButtonVisible = $derived(
   !omniCtx.state.isTrayOpen &&
     !appCtx.isTransitioning &&
     !appCtx.getActiveFeature() &&
     !omniCtx.isNewFeatureMode &&
-    appCtx.isMobile
-);
+    appCtx.isMobile,
+)
 
 const isCardToggleVisible = $derived(
   !omniCtx.isCardOpen &&
     !appCtx.isTransitioning &&
     appCtx.getActiveFeature() &&
     !omniCtx.isNewFeatureMode &&
-    !center
-);
+    !center,
+)
 </script>
 
 <!-- MAPBAR -->
@@ -70,10 +70,12 @@ const isCardToggleVisible = $derived(
           out:fade={{ duration: 100, delay: 0 }}
           class="group btn btn-circle border-0 bg-transparent shadow-lg hover:text-primary"
           onclick={handleAddFeature}
-          title={m.whole_house_cougar_hurl()}>
+          title={m.whole_house_cougar_hurl()}
+        >
           <Icon
             src={PlusCircle}
-            class="h-12 w-12 stroke-[1.5px] transition-transform duration-300 group-hover:rotate-90" />
+            class="h-12 w-12 stroke-[1.5px] transition-transform duration-300 group-hover:rotate-90"
+          />
         </button>
       {/if}
     </div>
@@ -88,7 +90,8 @@ const isCardToggleVisible = $derived(
           out:fade={{ duration: 100, delay: 0 }}
           class="btn z-30 bg-black text-white shadow-lg hover:text-primary"
           onclick={handleOpenCard}
-          title={m.mapbar__show_card()}>
+          title={m.mapbar__show_card()}
+        >
           <Icon src={Swatch} class="h-6 w-6 stroke-[2px]" />
           {m.mapbar__show_card()}
         </button>

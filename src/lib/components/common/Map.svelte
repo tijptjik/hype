@@ -1,63 +1,63 @@
 <script lang="ts">
 // SVELTE
-import { fade } from 'svelte/transition';
-import { onMount } from 'svelte';
+import { fade } from 'svelte/transition'
+import { onMount } from 'svelte'
 // MapLibre
-import SpectralStyle from '$lib/map/styles/style-protomaps.json';
-import { addAddressMarker } from '$lib/map/markers';
-import { getCoordinates } from '$lib/client/services/geospatial';
+import SpectralStyle from '$lib/map/styles/style-protomaps.json'
+import { addAddressMarker } from '$lib/map/markers'
+import { getCoordinates } from '$lib/client/services/geospatial'
 // ICONS
-import { ArrowsPointingIn, ArrowsPointingOut } from '@steeze-ui/heroicons';
-import Icon from '$lib/components/common/Icon.svelte';
+import { ArrowsPointingIn, ArrowsPointingOut } from '@steeze-ui/heroicons'
+import Icon from '$lib/components/common/Icon.svelte'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
-import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
+import { getAdminCtx } from '$lib/context/admin.svelte'
 // TYPES
-import type { Marker, LngLatLike } from 'maplibre-gl';
-import type { Id, AddressMeta } from '$lib/types';
+import type { Marker, LngLatLike } from 'maplibre-gl'
+import type { Id, AddressMeta } from '$lib/types'
 type MapProps = {
-  coordinates: number[];
-  addressMeta: AddressMeta | null;
-  draggable?: boolean;
-  toggleFullscreen?: (isFullscreen: boolean) => void;
-  toggleCollapsed?: (isCollapsed: boolean) => void;
-  dragEndCallback?: (lngLat: number[]) => void;
-};
+  coordinates: number[]
+  addressMeta: AddressMeta | null
+  draggable?: boolean
+  toggleFullscreen?: (isFullscreen: boolean) => void
+  toggleCollapsed?: (isCollapsed: boolean) => void
+  dragEndCallback?: (lngLat: number[]) => void
+}
 
 // CONTEXT
-let appCtx = getAppCtx();
-let adminCtx = getAdminCtx();
+let appCtx = getAppCtx()
+let adminCtx = getAdminCtx()
 
 let isMapCollapsed = $state(
-  adminCtx.appCtx.getUserPreferences().admin?.isAdminMapCollapsed ?? false
-);
+  adminCtx.appCtx.getUserPreferences().admin?.isAdminMapCollapsed ?? false,
+)
 
-let isFullscreen = $state(false);
-let isCollapsed = $state(isMapCollapsed);
+let isFullscreen = $state(false)
+let isCollapsed = $state(isMapCollapsed)
 
 // STATE : PROPS
-let mapProps: MapProps = $props();
+let mapProps: MapProps = $props()
 
 // STATE : MAP
-let mapContainer: HTMLDivElement;
-let map = $derived(appCtx.map);
-let feature = $state();
-let isMapLoaded = $state(false);
+let mapContainer: HTMLDivElement
+let map = $derived(appCtx.map)
+let feature = $state()
+let isMapLoaded = $state(false)
 
 // STATE : DERIVED
-let markedAddressLngLat: [number, number] | null = $state(null);
+let markedAddressLngLat: [number, number] | null = $state(null)
 let addressLngLat: [number, number] | null = $derived(
-  getCoordinates(mapProps.addressMeta as LngLatLike)
-);
+  getCoordinates(mapProps.addressMeta as LngLatLike),
+)
 
 // STATE : UI
-let addressMarker: Marker | null = $state(null);
-let featureMarkerId: Id | null = $state(null);
+let addressMarker: Marker | null = $state(null)
+let featureMarkerId: Id | null = $state(null)
 
 onMount(async () => {
   // Wait for maplibre to be loaded globally
   while (!appCtx.isMaplibreLoaded || !appCtx.maplibre) {
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await new Promise(resolve => setTimeout(resolve, 10))
   }
 
   appCtx.map = new appCtx.maplibre.Map({
@@ -68,85 +68,85 @@ onMount(async () => {
     hash: false,
     attributionControl: false,
     canvasContextAttributes: {
-      antialias: true
-    }
-  });
+      antialias: true,
+    },
+  })
 
   // @ts-expect-error
   appCtx.map.on('load', () => {
-    isMapLoaded = true;
-  });
+    isMapLoaded = true
+  })
 
   feature = new appCtx.maplibre.Marker({
     color: '#F04D7F',
     clickTolerance: 24,
-    draggable: mapProps.draggable || true
+    draggable: mapProps.draggable || true,
   })
     .setLngLat(mapProps.coordinates)
-    .addTo(appCtx.map);
+    .addTo(appCtx.map)
 
   // @ts-expect-error
-  feature.on('dragend', handleDragEnd);
-});
+  feature.on('dragend', handleDragEnd)
+})
 
 // EFFECTS :: ON UPDATE
 $effect(() => {
   if (map && mapProps.coordinates && feature) {
-    appCtx.zoomToMarkerOnly = true;
+    appCtx.zoomToMarkerOnly = true
     if (mapProps.coordinates && addressLngLat && !appCtx.zoomToMarkerOnly) {
       // @ts-expect-error
-      appCtx.zoomToCoordinates([mapProps.coordinates, addressLngLat]);
+      appCtx.zoomToCoordinates([mapProps.coordinates, addressLngLat])
     } else {
       // @ts-expect-error
       map.cachedFlyTo({
         center: mapProps.coordinates,
         zoom: 20,
-        run: true
-      });
+        run: true,
+      })
     }
     // @ts-expect-error
-    feature.setLngLat(mapProps.coordinates);
+    feature.setLngLat(mapProps.coordinates)
   }
-});
+})
 
 // EVENTS
 const handleDragEnd = (e: Event) => {
   // @ts-expect-error
-  mapProps.dragEndCallback?.(e.target!.getLngLat().toArray());
-  appCtx.zoomToMarkerOnly = true;
-};
+  mapProps.dragEndCallback?.(e.target!.getLngLat().toArray())
+  appCtx.zoomToMarkerOnly = true
+}
 
 let isSameCoordinates = (lngLat1: LngLatLike | null, lngLat2: LngLatLike | null) => {
-  if (!lngLat1 || !lngLat2) return false;
+  if (!lngLat1 || !lngLat2) return false
   if (Array.isArray(lngLat1) && Array.isArray(lngLat2)) {
-    return lngLat1[0] === lngLat2[0] && lngLat1[1] === lngLat2[1];
+    return lngLat1[0] === lngLat2[0] && lngLat1[1] === lngLat2[1]
   }
   if ('lon' in lngLat1 && 'lon' in lngLat2) {
-    return lngLat1.lon === lngLat2.lon && lngLat1.lat === lngLat2.lat;
+    return lngLat1.lon === lngLat2.lon && lngLat1.lat === lngLat2.lat
   } else if ('lng' in lngLat1 && 'lng' in lngLat2) {
-    return lngLat1.lng === lngLat2.lng && lngLat1.lat === lngLat2.lat;
+    return lngLat1.lng === lngLat2.lng && lngLat1.lat === lngLat2.lat
   }
-  return false;
-};
+  return false
+}
 
 // Handle address marker updates
 $effect(() => {
   if (map && addressLngLat && !isSameCoordinates(addressLngLat, markedAddressLngLat)) {
     // Remove existing marker if it exists
     if (addressMarker) {
-      addressMarker.remove();
+      addressMarker.remove()
     }
     // Add new marker
-    addressMarker = addAddressMarker(appCtx.maplibre, appCtx, addressLngLat);
-    markedAddressLngLat = addressLngLat;
+    addressMarker = addAddressMarker(appCtx.maplibre, appCtx, addressLngLat)
+    markedAddressLngLat = addressLngLat
   }
   if (adminCtx.activeResourceRef && adminCtx.activeResourceRef !== featureMarkerId) {
-    featureMarkerId = adminCtx.activeResourceRef;
+    featureMarkerId = adminCtx.activeResourceRef
     if (addressMarker) {
-      addressMarker.remove();
+      addressMarker.remove()
     }
   }
-});
+})
 </script>
 
 <!-- ENHANCEMENT - show the canonical image on top of the marker, so that we 
@@ -155,7 +155,8 @@ $effect(() => {
   <div
     class="{isCollapsed
       ? 'absolute w-full justify-center'
-      : 'absolute right-4 '} top-4 z-10 flex flex-row gap-2">
+      : 'absolute right-4 '} top-4 z-10 flex flex-row gap-2"
+  >
     {#if mapProps.toggleCollapsed}
       <button
         class="btn btn-circle btn-sm bg-base-100 opacity-80 hover:opacity-100 {isFullscreen
@@ -167,7 +168,8 @@ $effect(() => {
           e.stopPropagation();
           isCollapsed = !isCollapsed;
           mapProps.toggleCollapsed?.(isCollapsed);
-        }}>
+        }}
+      >
         <div class="swap">
           <input
             name="collapsed"
@@ -176,7 +178,8 @@ $effect(() => {
             onchange={() => {
               isCollapsed = !isCollapsed;
               mapProps.toggleCollapsed?.(isCollapsed);
-            }} />
+            }}
+          >
           <Icon src={ArrowsPointingOut} class="swap-on h-5 w-5" />
           <Icon src={ArrowsPointingIn} class="swap-off h-5 w-5" />
         </div>
@@ -193,7 +196,8 @@ $effect(() => {
           e.stopPropagation();
           isFullscreen = !isFullscreen;
           mapProps.toggleFullscreen?.(isFullscreen);
-        }}>
+        }}
+      >
         <div class="swap">
           <input
             name="fullscreen"
@@ -202,7 +206,8 @@ $effect(() => {
             onchange={() => {
               isFullscreen = !isFullscreen;
               mapProps.toggleFullscreen?.(isFullscreen);
-            }} />
+            }}
+          >
           <Icon src={ArrowsPointingIn} class="swap-on h-5 w-5" />
           <Icon src={ArrowsPointingOut} class="swap-off h-5 w-5" />
         </div>
@@ -212,7 +217,8 @@ $effect(() => {
   <!-- Loading Spinner -->
   {#if !isMapLoaded}
     <div
-      class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-300">
+      class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-300"
+    >
       <div class="loading loading-ring loading-lg text-primary"></div>
     </div>
   {/if}
@@ -223,12 +229,12 @@ $effect(() => {
     class:opacity-0={!isMapLoaded}
     class:opacity-100={isMapLoaded}
     data-testid="map"
-    bind:this={mapContainer}>
-  </div>
+    bind:this={mapContainer}
+  ></div>
 </div>
 
 <style>
-@import 'https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css';
+@import "https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css";
 .maplibregl-canvas {
   outline: none;
 }

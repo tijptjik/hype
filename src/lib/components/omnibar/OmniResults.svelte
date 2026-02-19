@@ -1,24 +1,25 @@
 <script lang="ts">
 // TRANSITIONS
-import { slide } from 'svelte/transition';
+import { slide } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // COMPONENTS
-import OmniSection from './OmniSection.svelte';
+import OmniSection from './OmniSection.svelte'
 // CONTEXT
-import { getOmniCtx } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte'
 // ENUMS
-import { OmniCollection } from '$lib/enums';
+import { OmniCollection } from '$lib/enums'
 
 // CONTEXT
-const omniCtx = getOmniCtx();
+const omniCtx = getOmniCtx()
 </script>
 
 <div
   class="flex select-none flex-col divide-y divide-neutral-800 overscroll-none bg-neutral-900 caret-transparent"
   transition:slide={{ duration: 200 }}
   role="listbox"
-  tabindex="-1">
+  tabindex="-1"
+>
   {#if Object.values(omniCtx.searchResults).every((group) => group.length === 0)}
     <div class="p-4 text-center text-base-content/60">{m.omni__no_results()}</div>
   {:else}

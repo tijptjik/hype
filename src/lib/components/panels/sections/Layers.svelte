@@ -1,54 +1,54 @@
 <script lang="ts">
-import { browser } from '$app/environment';
+import { browser } from '$app/environment'
 // I18N
-import { getI18n } from '$lib/i18n';
-import { m } from '$lib/i18n';
+import { getI18n } from '$lib/i18n'
+import { m } from '$lib/i18n'
 // ICONS
-import { Square3Stack3d } from '@steeze-ui/heroicons';
+import { Square3Stack3d } from '@steeze-ui/heroicons'
 // COMPONENTS
-import Section from '$lib/components/panels/common/Section.svelte';
-import FilterBar from '$lib/components/panels/common/FilterBar.svelte';
-import ResourceContainer from '$lib/components/panels/common/ResourceContainer.svelte';
-import SelectedResources from '../elements/SelectedResources.svelte';
+import Section from '$lib/components/panels/common/Section.svelte'
+import FilterBar from '$lib/components/panels/common/FilterBar.svelte'
+import ResourceContainer from '$lib/components/panels/common/ResourceContainer.svelte'
+import SelectedResources from '../elements/SelectedResources.svelte'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
-import { FirstClassResource } from '$lib/enums';
+import { FirstClassResource } from '$lib/enums'
 // TYPES
-import type { Layer, ResourceContext, Id, PanelProps } from '$lib/types';
-import type { Snippet } from 'svelte';
+import type { Layer, ResourceContext, Id, PanelProps } from '$lib/types'
+import type { Snippet } from 'svelte'
 
 // Initialize query client and map state
-const appCtx = getAppCtx();
-const resourceType = FirstClassResource.layer;
+const appCtx = getAppCtx()
+const resourceType = FirstClassResource.layer
 
 // PROPS
 let {
   filteredItem,
   ...panelProps
 }: {
-  filteredItem: Snippet<[Layer, Id[], ResourceContext]>;
-} & PanelProps = $props();
+  filteredItem: Snippet<[Layer, Id[], ResourceContext]>
+} & PanelProps = $props()
 
 // STATE
-const selectedLayers = $derived(appCtx.state.prisms.layer);
+const selectedLayers = $derived(appCtx.state.prisms.layer)
 // Get cached features for counting
-const layers = $derived(appCtx.state.resources.layer);
+const layers = $derived(appCtx.state.resources.layer)
 
-let searchTerm = $state('');
+let searchTerm = $state('')
 
 // Reset search term when projects change
 $effect(() => {
-  layers; // track layers
-  searchTerm = '';
-});
+  layers // track layers
+  searchTerm = ''
+})
 
 function filterLayers(layers: Layer[], term: string) {
-  if (!term) return layers;
+  if (!term) return layers
 
-  const searchLower = term.toLowerCase();
+  const searchLower = term.toLowerCase()
   return layers.filter((layer: Layer) => {
-    if (!layer) return false;
+    if (!layer) return false
     return (
       getI18n(layer, 'name', appCtx.getUserPreferences())
         .toLowerCase()
@@ -56,20 +56,20 @@ function filterLayers(layers: Layer[], term: string) {
       getI18n(layer, 'description', appCtx.getUserPreferences())
         .toLowerCase()
         .includes(searchLower)
-    );
-  });
+    )
+  })
 }
 
-const filteredLayers = $derived(filterLayers(layers, searchTerm));
-let isDefaultOpen = $derived(browser ? window.innerHeight > 1000 : false);
+const filteredLayers = $derived(filterLayers(layers, searchTerm))
+let isDefaultOpen = $derived(browser ? window.innerHeight > 1000 : false)
 
 let handleReset = () => {
   if (selectedLayers.length == 0) {
-    appCtx.closePanel(panelProps.panelType);
+    appCtx.closePanel(panelProps.panelType)
   } else {
-    appCtx.resetLayers();
+    appCtx.resetLayers()
   }
-};
+}
 </script>
 
 <!-- COMPONENTS -->
@@ -80,7 +80,8 @@ let handleReset = () => {
     resources={layers}
     selectedIds={selectedLayers}
     colorClass="text-secondary"
-    {...panelProps} />
+    {...panelProps}
+  />
 {/snippet}
 
 <!-- LAYOUT -->
@@ -92,7 +93,8 @@ let handleReset = () => {
   iconColorClass="text-secondary"
   collapsedContent={SelectedLayers}
   defaultOpen={isDefaultOpen}
-  {...panelProps}>
+  {...panelProps}
+>
   {#if layers.length > 4}
     <FilterBar bind:searchTerm onReset={handleReset} />
   {/if}

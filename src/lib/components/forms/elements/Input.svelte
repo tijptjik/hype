@@ -1,10 +1,10 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // COMPONENTS
-import Labels from '$lib/components/forms/labels/Input.svelte';
+import Labels from '$lib/components/forms/labels/Input.svelte'
 // TYPES
-import type { InputProps } from '$lib/types';
+import type { InputProps } from '$lib/types'
 
 // STATE
 let {
@@ -16,18 +16,18 @@ let {
   isTranslated = false,
   inputType = 'text',
   onchange,
-  onToggleGenAI
+  onToggleGenAI,
 }: InputProps & {
-  onchange: (value: string) => unknown;
-  onToggleGenAI: (e: MouseEvent) => void;
-} = $props();
+  onchange: (value: string) => unknown
+  onToggleGenAI: (e: MouseEvent) => void
+} = $props()
 
 // SET PLACEHOLDER
 placeholder = placeholder
   ? placeholder
   : inputType === 'text'
     ? m.suave_livid_wombat_zoom()
-    : m.muddy_each_herring_boil();
+    : m.muddy_each_herring_boil()
 </script>
 
 <input
@@ -45,22 +45,21 @@ placeholder = placeholder
     : inputType == 'number'
       ? 'pl-3 pr-1 group-focus-within:pr-1'
       : ''}"
-  oninput={(e) => onchange((e.target as HTMLInputElement).value)} />
+  oninput={(e) => onchange((e.target as HTMLInputElement).value)}
+>
 
 {#if (isGenAI || locale !== 'core') && isTranslated}
-  <div class="absolute right-2 top-[12px]">
-    <Labels {isGenAI} {onToggleGenAI} />
-  </div>
+  <div class="absolute right-2 top-[12px]"><Labels {isGenAI} {onToggleGenAI} /></div>
 {/if}
 
 <style>
-input[type='number']::-webkit-inner-spin-button,
-input[type='number']::-webkit-outer-spin-button {
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
 
-input[type='number'] {
+input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
   margin: 0;

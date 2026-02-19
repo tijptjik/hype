@@ -1,28 +1,28 @@
 <script lang="ts">
-import { Photo } from '@steeze-ui/heroicons';
-import Icon from '$lib/components/common/Icon.svelte';
+import { Photo } from '@steeze-ui/heroicons'
+import Icon from '$lib/components/common/Icon.svelte'
 // COMPONENTS
-import PhotoFrame from '$lib/components/common/PhotoFrame.svelte';
+import PhotoFrame from '$lib/components/common/PhotoFrame.svelte'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte'
 // ENUMS
-import { FirstClassResource } from '$lib/enums';
+import { FirstClassResource } from '$lib/enums'
 // I18n
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // TYPES
-import { getUrlForResource, navigateOnAdmin } from '$lib/navigation';
-import type { Feature, Image } from '$lib/types';
+import { getUrlForResource, navigateOnAdmin } from '$lib/navigation'
+import type { Feature, Image } from '$lib/types'
 
-let SectionProps = $props();
+let SectionProps = $props()
 
-let { form } = SectionProps.form;
+let { form } = SectionProps.form
 
 // HANDLERS
-const adminCtx = getAdminCtx();
+const adminCtx = getAdminCtx()
 
 // Get the feature from admin context to access the canonical image
-const feature: Feature = $derived(adminCtx.appCtx.cache.feature.get($form?.id))!;
-const canonicalImage = $derived(feature?.image as Image | null);
+const feature: Feature = $derived(adminCtx.appCtx.cache.feature.get($form?.id))!
+const canonicalImage = $derived(feature?.image as Image | null)
 </script>
 
 <div class="h-full w-full flex-1 basis-full 2xl:basis-1-3-gap-4">
@@ -30,7 +30,8 @@ const canonicalImage = $derived(feature?.image as Image | null);
     <a
       href={getUrlForResource(adminCtx, FirstClassResource.feature, $form.id, 'images')}
       onclick={() =>
-        navigateOnAdmin(adminCtx, FirstClassResource.feature, $form.id, 'images')}>
+        navigateOnAdmin(adminCtx, FirstClassResource.feature, $form.id, 'images')}
+    >
       <div class="relative h-[512px] w-full overflow-hidden rounded-lg">
         <PhotoFrame class="h-full w-full" transformation="c_fill,h_512,w_512,q_auto" />
       </div>
@@ -40,9 +41,11 @@ const canonicalImage = $derived(feature?.image as Image | null);
       class="h-full flex-1"
       href={getUrlForResource(adminCtx, FirstClassResource.feature, $form.id, 'images')}
       onclick={() =>
-        navigateOnAdmin(adminCtx, FirstClassResource.feature, $form.id, 'images')}>
+        navigateOnAdmin(adminCtx, FirstClassResource.feature, $form.id, 'images')}
+    >
       <div
-        class="bg-grain flex h-full min-h-[282px] w-full flex-1 flex-col items-center justify-center gap-4 rounded-lg border-3 border-primary bg-glass-300">
+        class="bg-grain flex h-full min-h-[282px] w-full flex-1 flex-col items-center justify-center gap-4 rounded-lg border-3 border-primary bg-glass-300"
+      >
         <Icon src={Photo} class="h-8 w-8 text-base-content/50" />
         <span class="text-base-content/50">{m.left_dizzy_trout_peel()}</span>
       </div>

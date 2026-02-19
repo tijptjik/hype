@@ -1,93 +1,97 @@
 <script lang="ts">
 // Icons
-import Icon from '$lib/components/common/Icon.svelte';
-import { Star, Check, PencilSquare } from '@steeze-ui/heroicons';
+import Icon from '$lib/components/common/Icon.svelte'
+import { Star, Check, PencilSquare } from '@steeze-ui/heroicons'
 // I18N
-import { m } from '$lib/i18n';
-import { getI18n } from '$lib/i18n';
+import { m } from '$lib/i18n'
+import { getI18n } from '$lib/i18n'
 // SERVICES
 import {
   updateNewFeatureProperty,
-  getFeatureCardEditableProperties
-} from '$lib/client/services/property';
+  getFeatureCardEditableProperties,
+} from '$lib/client/services/property'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
-import { getCardCtx } from '$lib/context/card.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
+import { getCardCtx } from '$lib/context/card.svelte'
 // Types
-import type { Id, Feature, UserContributedFeature, FeatureProperty } from '$lib/types';
+import type { Id, Feature, UserContributedFeature, FeatureProperty } from '$lib/types'
 
 // HTML ELEMENTS
-let titleInput: HTMLInputElement = $state()!;
+let titleInput: HTMLInputElement = $state()!
 
 // STATE : PROPS
 let {
-  feature
+  feature,
 }: {
-  feature: Feature | UserContributedFeature;
-  hideDescription?: boolean;
-} = $props();
+  feature: Feature | UserContributedFeature
+  hideDescription?: boolean
+} = $props()
 
 // CONTEXT
-const appCtx = getAppCtx();
-const cardCtx = getCardCtx();
+const appCtx = getAppCtx()
+const cardCtx = getCardCtx()
 
 // STATE : SESSION
-const userPreferences = $derived(appCtx.getUserPreferences());
+const userPreferences = $derived(appCtx.getUserPreferences())
 
 // STATE : LOCAL
 let gradePropertyId: Id = $derived(
   appCtx.cache.layer.get(feature.layerId)?.properties?.find((p: any) => {
-    const property = appCtx.cache.property.get(p.propertyId);
-    return property?.key === 'grade';
-  })?.propertyId
-) as Id;
+    const property = appCtx.cache.property.get(p.propertyId)
+    return property?.key === 'grade'
+  })?.propertyId,
+) as Id
 
 let grade = $derived(
-  (feature.properties as FeatureProperty[])?.find(
-    (p) => p.propertyId === gradePropertyId
-  )?.value || ''
-);
-let isEditing = $state(false);
+  (feature.properties as FeatureProperty[])?.find(p => p.propertyId === gradePropertyId)
+    ?.value || '',
+)
+let isEditing = $state(false)
 let title = $derived(
-  getI18n(feature as Feature, 'title', userPreferences, m.empty_lofty_meerkat_support())
-);
-let originalTitle = $state('');
+  getI18n(
+    feature as Feature,
+    'title',
+    userPreferences,
+    m.empty_lofty_meerkat_support(),
+  ),
+)
+let originalTitle = $state('')
 
 function handleEditMode(e: Event) {
-  e.preventDefault();
-  e.stopPropagation();
-  originalTitle = title;
+  e.preventDefault()
+  e.stopPropagation()
+  originalTitle = title
   // Clear title if it's the placeholder value
   if (title === m.empty_lofty_meerkat_support()) {
-    title = '';
+    title = ''
   }
-  isEditing = true;
+  isEditing = true
   // focus the title input
   setTimeout(() => {
-    titleInput.focus();
-  }, 0);
+    titleInput.focus()
+  }, 0)
 }
 
 // Update the feature title in the context
 function handleTitleSubmit() {
   if (title.trim()) {
-    isEditing = false;
+    isEditing = false
     if (cardCtx.isNewMode) {
-      appCtx.updateNewFeatureValueI18n('title', title);
+      appCtx.updateNewFeatureValueI18n('title', title)
     }
   }
 }
 
 function handleTitleCancel() {
-  title = originalTitle;
-  isEditing = false;
+  title = originalTitle
+  isEditing = false
 }
 
 function handleGradeSelect(newGrade: number) {
   updateNewFeatureProperty(appCtx, gradePropertyId, {
     propertyId: gradePropertyId,
-    value: newGrade.toString()
-  });
+    value: newGrade.toString(),
+  })
 }
 
 // FUNCTIONS
@@ -95,8 +99,8 @@ function handleGradeSelect(newGrade: number) {
 const hasGradeProperty = $derived(
   feature?.layerId
     ? getFeatureCardEditableProperties(appCtx, feature.layerId, true).length > 0
-    : false
-);
+    : false,
+)
 </script>
 
 <div
@@ -104,7 +108,8 @@ const hasGradeProperty = $derived(
     ? isEditing
       ? 'flex-col pl-2 w-100:pl-4'
       : 'flex-col pl-2 w-100:pl-4'
-    : 'flex-row px-3 w-100:px-6'} min-h-6 flex-shrink-0 flex-grow-0 items-start justify-between overflow-visible bg-black pb-0 caret-transparent">
+    : 'flex-row px-3 w-100:px-6'} min-h-6 flex-shrink-0 flex-grow-0 items-start justify-between overflow-visible bg-black pb-0 caret-transparent"
+>
   {#if cardCtx.isNewMode}
     {#if isEditing}
       <div class="flex w-full items-center gap-2">
@@ -131,26 +136,31 @@ const hasGradeProperty = $derived(
               }, 0);
             }
           }}
-          onblur={handleTitleSubmit} />
+          onblur={handleTitleSubmit}
+        >
         <button
           class="btn btn-ghost btn-sm rounded-none rounded-l-lg px-3 py-1 hover:bg-base-300 focus:text-primary focus:outline-none active:scale-100 active:bg-base-200"
           onclick={handleTitleSubmit}
-          disabled={!title.trim()}>
+          disabled={!title.trim()}
+        >
           <Icon src={Check} class="h-5 w-5" />
         </button>
       </div>
     {:else}
       <div
         class="flex h-12 w-full items-center gap-2 pl-2 caret-transparent transition-all"
-        onclick={handleEditMode}>
+        onclick={handleEditMode}
+      >
         <h2
           class="w-full overflow-visible text-lg text-white"
           class:text-gray-500={!title.trim()}
-          class:font-bold={!title.trim()}>
+          class:font-bold={!title.trim()}
+        >
           {title || m.empty_lofty_meerkat_support()}
         </h2>
         <button
-          class="btn btn-ghost btn-sm rounded-none rounded-l-lg px-3 py-1 hover:bg-base-300 focus:text-primary focus:outline-none active:scale-100 active:bg-base-200">
+          class="btn btn-ghost btn-sm rounded-none rounded-l-lg px-3 py-1 hover:bg-base-300 focus:text-primary focus:outline-none active:scale-100 active:bg-base-200"
+        >
           <Icon src={PencilSquare} class="h-5 w-5" />
         </button>
       </div>
@@ -162,13 +172,14 @@ const hasGradeProperty = $derived(
   {/if}
   <div class="m-0 flex items-center gap-1 caret-transparent">
     {#if cardCtx.isNewMode && !hasGradeProperty}
-      <!-- DO NOT SHOW -->
+    <!-- DO NOT SHOW -->
     {:else if cardCtx.isNewMode && hasGradeProperty}
       <div class="mt-1 flex gap-1">
         {#each Array(5) as _, i}
           <button
             class="group btn btn-ghost btn-sm p-1 focus:text-primary focus:outline-none"
-            onclick={() => handleGradeSelect(i + 1)}>
+            onclick={() => handleGradeSelect(i + 1)}
+          >
             <Icon
               src={Star}
               class="h-6 w-6 group-hover:text-primary group-focus:text-primary {Number(
@@ -176,7 +187,8 @@ const hasGradeProperty = $derived(
               ) > i
                 ? 'text-primary'
                 : 'text-neutral-content'}"
-              theme="solid" />
+              theme="solid"
+            />
           </button>
         {/each}
       </div>
@@ -185,7 +197,8 @@ const hasGradeProperty = $derived(
       <span>{grade}/5</span>
     {:else}
       <span class="translate-x-[28px] rounded-full bg-black text-[8px] text-white"
-        >{m.misty_quiet_sheep_push()}</span>
+        >{m.misty_quiet_sheep_push()}</span
+      >
       <Icon src={Star} class="h-6 w-6" theme="solid" />
     {/if}
   </div>

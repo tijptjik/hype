@@ -1,42 +1,42 @@
 <script lang="ts">
 // TRANSITIONS
-import { slide, fade } from 'svelte/transition';
+import { slide, fade } from 'svelte/transition'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
-import { getOmniCtx } from '$lib/context/omni.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
+import { getOmniCtx } from '$lib/context/omni.svelte'
 // I18N
-import { getI18n } from '$lib/i18n';
-import { m } from '$lib/i18n';
+import { getI18n } from '$lib/i18n'
+import { m } from '$lib/i18n'
 // ICONS
-import Icon from '$lib/components/common/Icon.svelte';
-import { XMark } from '@steeze-ui/heroicons';
+import Icon from '$lib/components/common/Icon.svelte'
+import { XMark } from '@steeze-ui/heroicons'
 
 // TYPES
-import type { Feature, FeatureFromCollection } from '$lib/types';
+import type { Feature, FeatureFromCollection } from '$lib/types'
 
 type OmniCollectionProps = {
-  mode: 'results' | 'navigation';
-  items: (FeatureFromCollection | Feature)[];
-};
+  mode: 'results' | 'navigation'
+  items: (FeatureFromCollection | Feature)[]
+}
 
 // PROPS
 let {
   mode = 'results', // 'results' | 'navigation'
-  items = []
-}: OmniCollectionProps = $props();
+  items = [],
+}: OmniCollectionProps = $props()
 
 // CONTEXT
-const omniCtx = getOmniCtx();
-const appCtx = getAppCtx();
-const userPreferences = $derived(appCtx.getUserPreferences());
+const omniCtx = getOmniCtx()
+const appCtx = getAppCtx()
+const userPreferences = $derived(appCtx.getUserPreferences())
 
 // STATE
 let currentIndex = $derived(
   appCtx.state.active.collection?.items.findIndex(
-    (item) => item.id === appCtx.state.active.feature?.id
-  ) || -1
-);
-let listContainer: HTMLUListElement | null = $state(null);
+    item => item.id === appCtx.state.active.feature?.id,
+  ) || -1,
+)
+let listContainer: HTMLUListElement | null = $state(null)
 
 // HANDLERS
 // function handleKeydown(event: KeyboardEvent) {
@@ -53,31 +53,31 @@ let listContainer: HTMLUListElement | null = $state(null);
 
 function handleItemClick(event: Event, index: number) {
   if (mode === 'navigation') {
-    omniCtx.toggleTray(event);
+    omniCtx.toggleTray(event)
   }
-  omniCtx.navToIndex(index);
+  omniCtx.navToIndex(index)
   setTimeout(() => {
-    omniCtx.openCard();
-  }, 2000);
+    omniCtx.openCard()
+  }, 2000)
 }
 
 // GLOW COLOR HELPER
 const getGlowColor = (): string => {
-  return 'rgba(240, 77, 127, 0.15)'; // primary: '#F04D7F'
-};
+  return 'rgba(240, 77, 127, 0.15)' // primary: '#F04D7F'
+}
 
 // EFFECTS
 $effect(() => {
   if (mode === 'navigation' && listContainer) {
-    const items = listContainer.children;
+    const items = listContainer.children
     if (items[currentIndex]) {
-      (items[currentIndex] as HTMLElement).scrollIntoView({
+      ;(items[currentIndex] as HTMLElement).scrollIntoView({
         behavior: 'smooth',
-        block: 'nearest'
-      });
+        block: 'nearest',
+      })
     }
   }
-});
+})
 </script>
 
 <div
@@ -92,12 +92,11 @@ $effect(() => {
     duration: 300,
     axis: 'y',
     delay: omniCtx.state.isCardOpen ? 300 : 0
-  }}>
+  }}
+>
   <div class="max-h-[260px] overflow-y-auto px-4 pb-2 pt-1.5">
     {#if items.length === 0}
-      <div class="p-4 text-center text-base-content/60">
-        {m.omni__no_results()}
-      </div>
+      <div class="p-4 text-center text-base-content/60">{m.omni__no_results()}</div>
     {:else}
       <ul class="space-y-2 overscroll-none" bind:this={listContainer}>
         {#each items as itemId, i}
@@ -111,23 +110,25 @@ $effect(() => {
           {@const whiteOpacity = 100 - primaryOpacity}
           <li
             class="group flex cursor-pointer items-center space-x-2"
-            onclick={(e) => handleItemClick(e, i)}>
+            onclick={(e) => handleItemClick(e, i)}
+          >
             {#if mode === 'navigation'}
               <div class="relative h-2 w-2 rounded-full">
                 <div
                   class="absolute left-0 top-0 h-2 w-2 rounded-full bg-primary group-hover:bg-primary group-hover:opacity-100"
-                  style="opacity: {primaryOpacity}%">
-                </div>
+                  style="opacity: {primaryOpacity}%"
+                ></div>
                 <div
                   class="absolute right-0 top-0 h-2 w-2 rounded-full bg-white group-hover:bg-primary group-hover:opacity-100"
-                  style="opacity: {whiteOpacity}%">
-                </div>
+                  style="opacity: {whiteOpacity}%"
+                ></div>
               </div>
             {/if}
             <span
               class="select-none pl-2 text-[0.92rem] font-medium text-base-content/80"
               style="font-weight: 300;"
-              >{getI18n(itemId, 'title', userPreferences)}</span>
+              >{getI18n(itemId, 'title', userPreferences)}</span
+            >
           </li>
         {/each}
       </ul>
@@ -138,7 +139,8 @@ $effect(() => {
       class="flex h-12 items-center justify-between rounded-b-lg border-t-2 border-primary bg-black px-4"
       style="box-shadow: 
         inset 0 2px 4px {getGlowColor()},
-        inset 0 1px 2px {getGlowColor()};">
+        inset 0 1px 2px {getGlowColor()};"
+    >
       <span class="text-xs uppercase tracking-wider text-base-content/60">
         {omniCtx.navTitle}
       </span>

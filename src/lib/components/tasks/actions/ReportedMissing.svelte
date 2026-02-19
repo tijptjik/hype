@@ -1,23 +1,23 @@
 <script lang="ts">
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte'
 // i18n
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // COMPONENTS
-import { Trash, EyeSlash, XCircle, CubeTransparent } from '@steeze-ui/heroicons';
-import Info from '$lib/components/forms/extra/Info.svelte';
-import ReportedMissingContent from '$lib/components/tasks/info/ReportedMissing.svelte';
-import Actions from '$lib/components/tasks/common/Actions.svelte';
+import { Trash, EyeSlash, XCircle, CubeTransparent } from '@steeze-ui/heroicons'
+import Info from '$lib/components/forms/extra/Info.svelte'
+import ReportedMissingContent from '$lib/components/tasks/info/ReportedMissing.svelte'
+import Actions from '$lib/components/tasks/common/Actions.svelte'
 // SERVICES
-import { updateTaskReview, updateFeatureFromTask } from '$lib/client/services/task';
+import { updateTaskReview, updateFeatureFromTask } from '$lib/client/services/task'
 // NAVIGATION
-import { goToNextTask } from '$lib/navigation';
+import { goToNextTask } from '$lib/navigation'
 // TYPES
-import type { Task } from '$lib/types';
-import type { IconSource } from '@steeze-ui/svelte-icon';
+import type { Task } from '$lib/types'
+import type { IconSource } from '@steeze-ui/svelte-icon'
 
 // STATE :: PROPS
-let { task }: { task: Task } = $props();
+let { task }: { task: Task } = $props()
 
 // CONFIG
 let rejectActions = [
@@ -25,37 +25,37 @@ let rejectActions = [
     label: m.quiet_late_worm_startle(),
     icon: XCircle as IconSource,
     action: 'reject',
-    onHoverClass: 'text-rose-300'
-  }
-];
+    onHoverClass: 'text-rose-300',
+  },
+]
 
 let acceptActions = [
   {
     label: m.awful_this_dingo_glow(),
     icon: CubeTransparent as IconSource,
     action: 'setIntangible',
-    onHoverClass: 'text-rose-300'
+    onHoverClass: 'text-rose-300',
   },
   {
     label: m.forms__unpublish(),
     icon: EyeSlash as IconSource,
     action: 'setUnpublished',
-    onHoverClass: 'text-rose-300'
+    onHoverClass: 'text-rose-300',
   },
   {
     label: m.whole_deft_penguin_enchant(),
     icon: Trash as IconSource,
     action: 'setArchived',
-    onHoverClass: 'text-rose-300'
-  }
-];
+    onHoverClass: 'text-rose-300',
+  },
+]
 
 // CONTEXT :: ROUTER
-const adminCtx = getAdminCtx();
+const adminCtx = getAdminCtx()
 
 // ACTIONS
 const handleAction = async (action: string, e: Event, reviewReason?: string) => {
-  e.preventDefault();
+  e.preventDefault()
   try {
     if (action === 'reject') {
       // Simple rejection - just update the task
@@ -63,36 +63,36 @@ const handleAction = async (action: string, e: Event, reviewReason?: string) => 
         type: 'reportedMissing',
         reviewOutcome: 'rejected',
         reviewAction: 'ignored',
-        reviewReason
-      });
+        reviewReason,
+      })
     } else {
       // Accept with specific action - update feature first, then task
-      let changeSet: Record<string, unknown> = {};
-      let reviewAction: string;
+      let changeSet: Record<string, unknown> = {}
+      let reviewAction: string
 
       switch (action) {
         case 'setArchived':
-          changeSet.isArchived = true;
-          changeSet.isPublished = false;
-          changeSet.isVisitable = false;
-          reviewAction = 'set-archived';
-          break;
+          changeSet.isArchived = true
+          changeSet.isPublished = false
+          changeSet.isVisitable = false
+          reviewAction = 'set-archived'
+          break
         case 'setUnpublished':
-          changeSet.isPublished = false;
-          changeSet.isVisitable = false;
-          reviewAction = 'set-unpublished';
-          break;
+          changeSet.isPublished = false
+          changeSet.isVisitable = false
+          reviewAction = 'set-unpublished'
+          break
         case 'setIntangible':
-          changeSet.isIntangible = true;
-          reviewAction = 'set-intangible';
-          break;
+          changeSet.isIntangible = true
+          reviewAction = 'set-intangible'
+          break
         default:
-          throw new Error(`Unknown action: ${action}`);
+          throw new Error(`Unknown action: ${action}`)
       }
 
       // Update feature first
       if (task.feature?.id) {
-        await updateFeatureFromTask(task.feature.id, changeSet);
+        await updateFeatureFromTask(task.feature.id, changeSet)
       }
 
       // Update task - image handling is done in the PATCH endpoint
@@ -100,23 +100,21 @@ const handleAction = async (action: string, e: Event, reviewReason?: string) => 
         type: 'reportedMissing',
         reviewOutcome: 'accepted',
         reviewAction,
-        reviewReason
-      });
+        reviewReason,
+      })
 
       // Update the task cache
-      adminCtx.appCtx.setTaskResourceAndCache(await response.json());
+      adminCtx.appCtx.setTaskResourceAndCache(await response.json())
     }
 
-    goToNextTask(adminCtx);
+    goToNextTask(adminCtx)
   } catch (error) {
-    console.error('Failed to set task state:', error);
+    console.error('Failed to set task state:', error)
   }
-};
+}
 </script>
 
 <div class="flex items-center gap-4">
   <Actions {task} {rejectActions} {acceptActions} onAction={handleAction} />
-  <Info>
-    <ReportedMissingContent />
-  </Info>
+  <Info> <ReportedMissingContent /> </Info>
 </div>

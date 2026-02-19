@@ -1,23 +1,23 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // SERVICES
-import { getGroupedClassifierProperties } from '$lib/client/services/property';
+import { getGroupedClassifierProperties } from '$lib/client/services/property'
 // COMPONENTS
-import CategorySection from '$lib/components/panels/sections/CategorySection.svelte';
-import CategoryFilter from '$lib/components/panels/controls/CategoryFilter.svelte';
-import RangeFilter from '$lib/components/panels/controls/RangeFilter.svelte';
-import SelectedFilters from '$lib/components/panels/elements/SelectedFilters.svelte';
+import CategorySection from '$lib/components/panels/sections/CategorySection.svelte'
+import CategoryFilter from '$lib/components/panels/controls/CategoryFilter.svelte'
+import RangeFilter from '$lib/components/panels/controls/RangeFilter.svelte'
+import SelectedFilters from '$lib/components/panels/elements/SelectedFilters.svelte'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
 // TYPES
-import type { Id, Property, PanelProps } from '$lib/types';
+import type { Id, Property, PanelProps } from '$lib/types'
 
 // CONTEXT
-const appCtx = getAppCtx();
+const appCtx = getAppCtx()
 
 // PROPS
-let { ...panelProps }: PanelProps = $props();
+let { ...panelProps }: PanelProps = $props()
 </script>
 
 {#snippet SelectedCategories(layerId: Id, properties: Property[])}
@@ -36,7 +36,8 @@ let { ...panelProps }: PanelProps = $props();
       isOpen={index === 0}
       collapsedContent={SelectedCategories}
       {properties}
-      {hierarchy}>
+      {hierarchy}
+    >
       <div class="space-y-2">
         {#each properties as property (property.id)}
           {@const layerId = hierarchy.layerId}

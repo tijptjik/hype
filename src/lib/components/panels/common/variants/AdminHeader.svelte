@@ -1,27 +1,28 @@
 <script lang="ts">
 // ICONS
-import Icon from '$lib/components/common/Icon.svelte';
-import { Bolt, Bars3 as Menu } from '@steeze-ui/heroicons';
+import Icon from '$lib/components/common/Icon.svelte'
+import { Bolt, Bars3 as Menu } from '@steeze-ui/heroicons'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
 // TYPES
-import type { PanelProps } from '$lib/types';
-import { Panel } from '$lib/enums';
+import type { PanelProps } from '$lib/types'
+import { Panel } from '$lib/enums'
 
 // PROPS
 let {
   title,
-  isNarrow
+  isNarrow,
 }: {
-  title: string;
-} & PanelProps = $props();
+  title: string
+} & PanelProps = $props()
 
 // CONTEXT
-const appCtx = getAppCtx();
+const appCtx = getAppCtx()
 </script>
 
 <div
-  class="flex h-[72px] flex-shrink-0 flex-row items-center justify-between bg-black p-4">
+  class="flex h-[72px] flex-shrink-0 flex-row items-center justify-between bg-black p-4"
+>
   {#if !isNarrow}
     <h1 class="text-lg font-semibold uppercase text-white">{title}</h1>
     <div class="flex gap-2">
@@ -31,7 +32,8 @@ const appCtx = getAppCtx();
           // Clear any visual-only state when explicitly toggling
           appCtx.closePanelVisually(Panel.admin);
           appCtx.togglePanel(Panel.admin);
-        }}>
+        }}
+      >
         <Icon src={Menu} class="h-6 w-6" />
       </button>
     </div>
@@ -42,7 +44,8 @@ const appCtx = getAppCtx();
         // Clear any visual-only state when explicitly toggling
         appCtx.closePanelVisually(Panel.admin);
         appCtx.togglePanel(Panel.admin);
-      }}>
+      }}
+    >
       <Icon src={Bolt} class="h-8 w-8 text-primary" />
     </div>
   {/if}

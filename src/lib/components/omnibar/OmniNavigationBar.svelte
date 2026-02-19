@@ -1,43 +1,36 @@
 <script lang="ts">
 // TRANSITIONS
-import { fade, slide } from 'svelte/transition';
+import { fade, slide } from 'svelte/transition'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
 // COMPONENTS
-import OmniNavHeader from './OmniNavHeader.svelte';
-import OmniNavArrow from './OmniNavArrow.svelte';
-import OmniCollection from './OmniCollection.svelte';
+import OmniNavHeader from './OmniNavHeader.svelte'
+import OmniNavArrow from './OmniNavArrow.svelte'
+import OmniCollection from './OmniCollection.svelte'
 // TYPES
-import { getOmniCtx } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte'
 
 // CONTEXT
-const omniCtx = getOmniCtx();
-const appCtx = getAppCtx();
+const omniCtx = getOmniCtx()
+const appCtx = getAppCtx()
 
-let collectionMode = $derived(omniCtx.state.mode);
-let isNotFeatureMode = $derived(collectionMode !== 'feature');
-let isNewFeature = $derived(omniCtx.isNewFeatureMode);
+let collectionMode = $derived(omniCtx.state.mode)
+let isNotFeatureMode = $derived(collectionMode !== 'feature')
+let isNewFeature = $derived(omniCtx.isNewFeatureMode)
 </script>
 
 <div
   id="omni-nav-bar"
-  class="relative z-30 col-start-1 row-start-1 flex min-h-16 w-full items-center border-b-3 border-base-300 bg-black transition-[height] w-120:rounded-lg w-120:border-3 w-192:min-h-14">
+  class="relative z-30 col-start-1 row-start-1 flex min-h-16 w-full items-center border-b-3 border-base-300 bg-black transition-[height] w-120:rounded-lg w-120:border-3 w-192:min-h-14"
+>
   {#if isNotFeatureMode && !isNewFeature && appCtx.state.active.collection}
     <div class="flex h-full w-full items-center">
-      <div class="h-full flex-shrink-0">
-        <OmniNavArrow direction="left" />
-      </div>
-      <div class="min-w-0 flex-1">
-        <OmniNavHeader />
-      </div>
-      <div class="h-full flex-shrink-0">
-        <OmniNavArrow direction="right" />
-      </div>
+      <div class="h-full flex-shrink-0"><OmniNavArrow direction="left" /></div>
+      <div class="min-w-0 flex-1"><OmniNavHeader /></div>
+      <div class="h-full flex-shrink-0"><OmniNavArrow direction="right" /></div>
     </div>
   {:else}
-    <div class="w-full">
-      <OmniNavHeader />
-    </div>
+    <div class="w-full"><OmniNavHeader /></div>
   {/if}
 </div>
 
@@ -45,6 +38,7 @@ let isNewFeature = $derived(omniCtx.isNewFeatureMode);
   <div class="relative z-50 grid grid-cols-1 grid-rows-1">
     <OmniCollection
       mode="navigation"
-      items={appCtx.state.active.collection?.items || []} />
+      items={appCtx.state.active.collection?.items || []}
+    />
   </div>
 {/if}

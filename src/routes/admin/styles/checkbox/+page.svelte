@@ -12,7 +12,7 @@ const colors: ButtonColor[] = [
   'info',
   'success',
   'warning',
-  'error'
+  'error',
 ]
 
 let checked = $state(true)
@@ -26,7 +26,9 @@ let labelHoverOnly = $state(false)
 </script>
 
 <main class="h-full overflow-y-auto p-6">
-  <section class="bits-theme space-y-10 rounded-xl border border-base-300 bg-base-100 p-6">
+  <section
+    class="bits-theme space-y-10 rounded-xl border border-base-300 bg-base-100 p-6"
+  >
     <h1 class="text-xl font-semibold text-foreground">Checkbox Variations</h1>
 
     <div class="space-y-4">
@@ -36,7 +38,12 @@ let labelHoverOnly = $state(false)
       <div class="flex flex-wrap items-center gap-8">
         <Checkbox bind:checked leftText="Enabled" />
 
-        <Checkbox bind:indeterminate checked={false} leftText="Indeterminate" color="info" />
+        <Checkbox
+          bind:indeterminate
+          checked={false}
+          leftText="Indeterminate"
+          color="info"
+        />
       </div>
     </div>
 
@@ -47,8 +54,15 @@ let labelHoverOnly = $state(false)
       <div class="flex flex-wrap items-center gap-6">
         {#each sizes as size}
           <div class="flex flex-col items-center gap-2">
-            <Checkbox checked={true} {size} color="primary" id={`checkbox-size-${size}`} />
-            <span class="text-xs uppercase tracking-wide text-foreground-alt">{size}</span>
+            <Checkbox
+              checked={true}
+              {size}
+              color="primary"
+              id={`checkbox-size-${size}`}
+            />
+            <span class="text-xs uppercase tracking-wide text-foreground-alt"
+              >{size}</span
+            >
           </div>
         {/each}
       </div>
@@ -65,7 +79,8 @@ let labelHoverOnly = $state(false)
             {size}
             color="primary"
             rightText={`Size ${size.toUpperCase()}`}
-            id={`checkbox-size-label-${size}`} />
+            id={`checkbox-size-label-${size}`}
+          />
         {/each}
       </div>
     </div>
@@ -78,7 +93,9 @@ let labelHoverOnly = $state(false)
         {#each colors as color}
           <div class="flex flex-col items-center gap-2">
             <Checkbox checked={true} {color} id={`checkbox-color-${color}`} />
-            <span class="text-xs uppercase tracking-wide text-foreground-alt">{color}</span>
+            <span class="text-xs uppercase tracking-wide text-foreground-alt"
+              >{color}</span
+            >
           </div>
         {/each}
       </div>
@@ -91,7 +108,12 @@ let labelHoverOnly = $state(false)
       <div class="flex flex-wrap items-center gap-8">
         <Checkbox checked={true} disabled={true} leftText="Checked" />
         <Checkbox checked={false} disabled={true} leftText="Unchecked" />
-        <Checkbox checked={false} indeterminate={true} disabled={true} leftText="Indeterminate" />
+        <Checkbox
+          checked={false}
+          indeterminate={true}
+          disabled={true}
+          leftText="Indeterminate"
+        />
       </div>
     </div>
 
@@ -108,13 +130,15 @@ let labelHoverOnly = $state(false)
           bind:checked={labelLeftRight}
           leftText=">>>>"
           rightText="<<<<"
-          color="success" />
+          color="success"
+        />
         <Checkbox
           bind:checked={labelHoverOnly}
           leftText="MORE"
           rightText="MORE"
           topText="Hover-only side labels"
-          showLabelsOnHoverOnly={true} />
+          showLabelsOnHoverOnly={true}
+        />
       </div>
     </div>
   </section>

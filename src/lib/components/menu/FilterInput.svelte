@@ -1,18 +1,18 @@
 <script lang="ts">
 // NAVIGATION
-import { afterNavigate } from '$app/navigation';
+import { afterNavigate } from '$app/navigation'
 // ICONS
-import { MagnifyingGlass, XMark } from '@steeze-ui/heroicons';
-import Icon from '$lib/components/common/Icon.svelte';
+import { MagnifyingGlass, XMark } from '@steeze-ui/heroicons'
+import Icon from '$lib/components/common/Icon.svelte'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte'
 // ENUMS
-import type { FirstClassResource } from '$lib/enums';
+import type { FirstClassResource } from '$lib/enums'
 // TYPES
-import type { FilterState } from '$lib/types';
+import type { FilterState } from '$lib/types'
 
 // STATE : CONTEXT :: ROUTER
-const adminCtx = getAdminCtx();
+const adminCtx = getAdminCtx()
 
 // STATE : PROPS
 const {
@@ -21,53 +21,54 @@ const {
   clearInput = false,
   showUnpublishedToggle = false,
   showReviewedToggle = false,
-  onTabOut
+  onTabOut,
 }: {
-  rounded?: boolean;
-  resourceType: FirstClassResource;
-  clearInput?: boolean;
-  showUnpublishedToggle?: boolean;
-  showReviewedToggle?: boolean;
-  onTabOut?: (e: KeyboardEvent) => void;
-} = $props();
+  rounded?: boolean
+  resourceType: FirstClassResource
+  clearInput?: boolean
+  showUnpublishedToggle?: boolean
+  showReviewedToggle?: boolean
+  onTabOut?: (e: KeyboardEvent) => void
+} = $props()
 
 // Reset filter text after navigation if it's for the current resource
 afterNavigate(() => {
   if (adminCtx.activeResourceType === resourceType && resourceType !== 'feature') {
-    resetInput();
+    resetInput()
   }
-});
+})
 
 $effect(() => {
   if (clearInput) {
-    resetInput();
+    resetInput()
   }
-});
+})
 // HANDLERS : KEYBOARD EVENTS
 function handleKeyDown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
-    resetInput();
+    resetInput()
   }
   if (e.key === 'Tab' && !e.shiftKey && onTabOut) {
-    onTabOut(e);
+    onTabOut(e)
   }
 }
 
 // UTILS
 function resetInput() {
-  adminCtx.appCtx.state.filters[resourceType as keyof FilterState].text = '';
+  adminCtx.appCtx.state.filters[resourceType as keyof FilterState].text = ''
 }
 
 function handleInput(e: Event) {
-  const target = e.target as HTMLInputElement;
-  adminCtx.appCtx.state.filters[resourceType as keyof FilterState].text = target.value;
+  const target = e.target as HTMLInputElement
+  adminCtx.appCtx.state.filters[resourceType as keyof FilterState].text = target.value
 }
 </script>
 
 <div class={showUnpublishedToggle || showReviewedToggle ? 'flex gap-4' : ''}>
   <div
     class="relative {rounded ? '' : 'flex-shrink-0 border-l-3 border-base-200'}"
-    role="search">
+    role="search"
+  >
     <input
       name="text"
       type="text"
@@ -78,14 +79,16 @@ function handleInput(e: Event) {
       bind:value={adminCtx.appCtx.state.filters[resourceType as keyof FilterState].text}
       oninput={handleInput}
       onkeydown={handleKeyDown}
-      aria-label="Filter {resourceType}s" />
+      aria-label="Filter {resourceType}s"
+    >
     <div class="absolute inset-y-0 right-2 flex items-center pr-3">
       {#if adminCtx.appCtx.state.filters[resourceType as keyof FilterState].text}
         <button
           onclick={resetInput}
           class="focus:outline-none"
           tabindex="-1"
-          aria-label="Clear {resourceType} filter">
+          aria-label="Clear {resourceType} filter"
+        >
           <Icon src={XMark} class="h-6 w-6" />
         </button>
       {:else}

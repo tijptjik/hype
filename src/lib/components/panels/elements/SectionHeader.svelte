@@ -1,15 +1,15 @@
 <script lang="ts">
 // SERVICES
-import { getUrlForResourceIndex } from '$lib/navigation';
+import { getUrlForResourceIndex } from '$lib/navigation'
 // ICONS
-import SectionHeaderRoot from './SectionHeaderRoot.svelte';
-import SectionHeaderTitle from './SectionHeaderTitle.svelte';
-import SectionHeaderIcon from './SectionHeaderIcon.svelte';
+import SectionHeaderRoot from './SectionHeaderRoot.svelte'
+import SectionHeaderTitle from './SectionHeaderTitle.svelte'
+import SectionHeaderIcon from './SectionHeaderIcon.svelte'
 // ENUMS
-import type { FirstClassResource } from '$lib/enums';
+import type { FirstClassResource } from '$lib/enums'
 // TYPES
-import type { IconSource } from '@steeze-ui/heroicons';
-import type { PanelProps } from '$lib/types';
+import type { IconSource } from '@steeze-ui/heroicons'
+import type { PanelProps } from '$lib/types'
 
 let {
   resourceType,
@@ -24,25 +24,25 @@ let {
   ...panelProps
 } = $props<
   {
-    resourceType: FirstClassResource;
-    title: string;
-    icon: string | IconSource;
-    iconVerticalPaddingClass?: string;
-    iconColorClass?: string;
-    description?: string;
-    isOpen: boolean;
-    onToggle: (e: MouseEvent) => void;
-    onNavigate?: (e: MouseEvent) => void;
+    resourceType: FirstClassResource
+    title: string
+    icon: string | IconSource
+    iconVerticalPaddingClass?: string
+    iconColorClass?: string
+    description?: string
+    isOpen: boolean
+    onToggle: (e: MouseEvent) => void
+    onNavigate?: (e: MouseEvent) => void
   } & PanelProps
->();
+>()
 
 let focusVisibleClass = $derived(
   iconColorClass == 'text-secondary'
     ? 'focus-visible:text-secondary'
     : iconColorClass == 'text-accent'
       ? 'focus-visible:text-accent'
-      : 'focus-visible:text-primary'
-);
+      : 'focus-visible:text-primary',
+)
 
 let href = $derived(
   !panelProps.isAdmin ||
@@ -50,8 +50,8 @@ let href = $derived(
     (resourceType == panelProps.active?.resourceType &&
       panelProps.active?.resourceRef == false)
     ? null
-    : getUrlForResourceIndex(resourceType)
-);
+    : getUrlForResourceIndex(resourceType),
+)
 </script>
 
 <SectionHeaderRoot
@@ -62,7 +62,8 @@ let href = $derived(
   {onToggle}
   {isOpen}
   {href}
-  {...panelProps}>
+  {...panelProps}
+>
   {#if !panelProps.isNarrow}
     <SectionHeaderTitle
       {resourceType}
@@ -72,7 +73,8 @@ let href = $derived(
       {onToggle}
       {onNavigate}
       {href}
-      {...panelProps} />
+      {...panelProps}
+    />
   {/if}
   <SectionHeaderIcon
     {resourceType}
@@ -80,5 +82,6 @@ let href = $derived(
     {iconColorClass}
     {onNavigate}
     {href}
-    {...panelProps} />
+    {...panelProps}
+  />
 </SectionHeaderRoot>

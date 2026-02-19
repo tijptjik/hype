@@ -1,18 +1,18 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 
 // TYPES
 interface Props {
-  label: string;
-  currentValue: boolean | null;
-  onToggleFalse: () => void;
-  onToggleTrue: () => void;
-  onToggleChange: (e: Event) => void;
-  idx?: number;
-  falseLabel?: string;
-  trueLabel?: string;
-  transformOffset?: number;
+  label: string
+  currentValue: boolean | null
+  onToggleFalse: () => void
+  onToggleTrue: () => void
+  onToggleChange: (e: Event) => void
+  idx?: number
+  falseLabel?: string
+  trueLabel?: string
+  transformOffset?: number
 }
 
 const {
@@ -24,24 +24,27 @@ const {
   idx = 0,
   falseLabel = m.filters__no(),
   trueLabel = m.filters__has(),
-  transformOffset = 16
-}: Props = $props();
+  transformOffset = 16,
+}: Props = $props()
 </script>
 
 <div
   class="group flex min-w-[120px] select-none flex-col items-center gap-[8px] tracking-widest"
-  style="transform: translateX({-transformOffset * idx}px)">
+  style="transform: translateX({-transformOffset * idx}px)"
+>
   <label class="text-center text-xs uppercase leading-none text-base-content/70">
     {label}
   </label>
   <div
     class="grid w-full items-center gap-2"
-    style="grid-template-columns: 1fr auto 1fr;">
+    style="grid-template-columns: 1fr auto 1fr;"
+  >
     <span
       onclick={onToggleFalse}
       class="text cursor-pointer select-none text-right text-sm uppercase text-base-content opacity-0 transition-opacity duration-300 group-hover:opacity-40"
       role="button"
-      tabindex="-1">
+      tabindex="-1"
+    >
       {falseLabel}
     </span>
     <input
@@ -58,12 +61,14 @@ const {
         e.preventDefault();
         e.stopPropagation();
         onToggleChange(e);
-      }} />
+      }}
+    >
     <span
       onclick={onToggleTrue}
       class="text cursor-pointer select-none text-left text-sm uppercase text-base-content opacity-0 transition-opacity duration-300 group-hover:opacity-40"
       role="button"
-      tabindex="-1">
+      tabindex="-1"
+    >
       {trueLabel}
     </span>
   </div>

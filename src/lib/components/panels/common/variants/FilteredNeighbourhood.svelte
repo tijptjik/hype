@@ -1,52 +1,52 @@
 <script lang="ts">
 // TRANSITIONS
-import { slide } from 'svelte/transition';
+import { slide } from 'svelte/transition'
 // I18N
-import { getI18n } from '$lib/i18n';
+import { getI18n } from '$lib/i18n'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
-import { getOmniCtx } from '$lib/context/omni.svelte';
-import { OmniMode } from '$lib/enums';
+import { getAppCtx } from '$lib/context/app.svelte'
+import { getOmniCtx } from '$lib/context/omni.svelte'
+import { OmniMode } from '$lib/enums'
 
 const {
   neighbourhoodRef,
   i18n,
   selectedNeighbourhoodRefs,
-  selectedClass = 'bg-emerald-500'
-} = $props();
+  selectedClass = 'bg-emerald-500',
+} = $props()
 
 // Initialize map state
-const appCtx = getAppCtx();
-const omniCtx = getOmniCtx();
+const appCtx = getAppCtx()
+const omniCtx = getOmniCtx()
 
 // DERIVED
 let featureCount = $derived(
-  appCtx.placeCtx.neighbourhoodFeatureCounts.get(neighbourhoodRef) || 0
-);
+  appCtx.placeCtx.neighbourhoodFeatureCounts.get(neighbourhoodRef) || 0,
+)
 
 // INTERACTIONS
 let handleToggle = () => {
-  appCtx.placeCtx.toggleNeighbourhood(neighbourhoodRef);
-  appCtx.refreshFeatures();
-  appCtx.zoomToAllVisibleFeatures();
-  omniCtx.setMode(OmniMode.search);
-};
+  appCtx.placeCtx.toggleNeighbourhood(neighbourhoodRef)
+  appCtx.refreshFeatures()
+  appCtx.zoomToAllVisibleFeatures()
+  omniCtx.setMode(OmniMode.search)
+}
 
 // DISPLAY TEXT
 let regionDisplay = $derived(
   getI18n(i18n, 'region', appCtx.getUserPreferences(), undefined, true).replace(
     'Hong Kong',
-    'HK'
-  )
-);
+    'HK',
+  ),
+)
 
 let districtDisplay = $derived(
-  getI18n(i18n, 'district', appCtx.getUserPreferences(), undefined, true)
-);
+  getI18n(i18n, 'district', appCtx.getUserPreferences(), undefined, true),
+)
 
 let neighbourhoodDisplay = $derived(
-  getI18n(i18n, 'name', appCtx.getUserPreferences(), undefined, true)
-);
+  getI18n(i18n, 'name', appCtx.getUserPreferences(), undefined, true),
+)
 </script>
 
 {#if featureCount > 0}
@@ -66,29 +66,29 @@ let neighbourhoodDisplay = $derived(
         input?.focus();
       }
     }}
-    tabindex="0">
+    tabindex="0"
+  >
     <div class="flex -translate-x-5 flex-row items-center gap-3">
       <div
         class="h-2 w-2 rounded-full group-hover:bg-base-content/30 group-focus-visible:bg-base-content/30
         {selectedNeighbourhoodRefs.includes(neighbourhoodRef)
           ? `group-hover:bg-emerald-500/75 group-focus-visible:bg-emerald-500/75 ${selectedClass}`
-          : ''}">
-      </div>
+          : ''}"
+      ></div>
       <div class="flex flex-grow flex-col">
         <p class="flex space-x-2 font-mono text-xs uppercase tracking-wide">
           <span class="text-primary/80">{districtDisplay}</span>
           <span class="mtext-base-content/60 font-sans">::</span>
           <span class="text-accent">{regionDisplay}</span>
         </p>
-        <p class="font-normal text-base-content">
-          {neighbourhoodDisplay}
-        </p>
+        <p class="font-normal text-base-content">{neighbourhoodDisplay}</p>
       </div>
     </div>
     <div class="text-sm text-base-content/60">
       <span
         class="badge flex h-8 w-8 items-center justify-center border-2 border-base-200 bg-transparent font-mono font-bold"
-        >{featureCount}</span>
+        >{featureCount}</span
+      >
     </div>
   </div>
 {/if}

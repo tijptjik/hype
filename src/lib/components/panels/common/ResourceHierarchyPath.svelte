@@ -1,20 +1,20 @@
 <script lang="ts">
-import { getI18n } from '$lib/i18n';
-import { getAppCtx } from '$lib/context/app.svelte';
-const appCtx = getAppCtx();
+import { getI18n } from '$lib/i18n'
+import { getAppCtx } from '$lib/context/app.svelte'
+const appCtx = getAppCtx()
 
 let {
-  hierarchy = {}
+  hierarchy = {},
 }: {
-  hierarchy?: { organisation?: any; project?: any; layer?: any };
-} = $props();
+  hierarchy?: { organisation?: any; project?: any; layer?: any }
+} = $props()
 
 let organisationName = hierarchy.organisation
   ? getI18n(hierarchy.organisation, 'nameShort', appCtx.getUserPreferences())
-  : '';
+  : ''
 let projectName = hierarchy.project
   ? appCtx.getContextualProjectName(hierarchy.project, false)
-  : '';
+  : ''
 </script>
 
 {#if organisationName || projectName}

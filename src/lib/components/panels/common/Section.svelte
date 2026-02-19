@@ -1,13 +1,13 @@
 <script lang="ts">
 // COMPONENTS
-import SectionHeader from '../elements/SectionHeader.svelte';
-import SectionContent from '../elements/SectionContent.svelte';
+import SectionHeader from '../elements/SectionHeader.svelte'
+import SectionContent from '../elements/SectionContent.svelte'
 // SERVICES
-import { navigateOnAdmin } from '$lib/navigation';
+import { navigateOnAdmin } from '$lib/navigation'
 // TYPES
-import type { IconSource } from '@steeze-ui/heroicons';
-import type { PanelProps } from '$lib/types';
-import type { FirstClassResource } from '$lib/enums';
+import type { IconSource } from '@steeze-ui/heroicons'
+import type { PanelProps } from '$lib/types'
+import type { FirstClassResource } from '$lib/enums'
 
 // PROPS
 let {
@@ -22,44 +22,44 @@ let {
   collapsedContent = undefined,
   ...panelProps
 }: {
-  resourceType?: FirstClassResource;
-  title: string;
-  icon: string | IconSource;
-  iconVerticalPaddingClass?: string;
-  iconColorClass?: string;
-  description?: string;
-  defaultOpen?: boolean;
-  children?: any;
-  collapsedContent?: any;
-} & PanelProps = $props();
+  resourceType?: FirstClassResource
+  title: string
+  icon: string | IconSource
+  iconVerticalPaddingClass?: string
+  iconColorClass?: string
+  description?: string
+  defaultOpen?: boolean
+  children?: any
+  collapsedContent?: any
+} & PanelProps = $props()
 
 // STATE
-let isOpen = $state(defaultOpen);
+let isOpen = $state(defaultOpen)
 
 const onToggle = (e: MouseEvent) => {
-  e.stopPropagation();
-  isOpen = !isOpen;
-};
+  e.stopPropagation()
+  isOpen = !isOpen
+}
 
 const onNavigate = (e: MouseEvent) => {
-  e.preventDefault();
-  e.stopPropagation();
+  e.preventDefault()
+  e.stopPropagation()
 
   if (panelProps.isAdmin) {
     if (!panelProps.adminCtx || !panelProps.active) {
-      return;
+      return
     }
     if (
       resourceType == panelProps.active.resourceType &&
       panelProps.active.resourceRef == false
     ) {
-      onToggle(e);
+      onToggle(e)
     } else {
-      navigateOnAdmin(panelProps.adminCtx, resourceType ?? false);
+      navigateOnAdmin(panelProps.adminCtx, resourceType ?? false)
     }
   } else {
   }
-};
+}
 </script>
 
 <section
@@ -67,7 +67,8 @@ const onNavigate = (e: MouseEvent) => {
     ? 'flex-grow-0'
     : 'flex-shrink-0'} {panelProps.position === 'left' && !panelProps.isNarrow
     ? 'pr-4'
-    : ''}">
+    : ''}"
+>
   <SectionHeader
     {resourceType}
     {title}
@@ -78,6 +79,7 @@ const onNavigate = (e: MouseEvent) => {
     {isOpen}
     {onToggle}
     {onNavigate}
-    {...panelProps} />
+    {...panelProps}
+  />
   <SectionContent {isOpen} {children} {collapsedContent} {...panelProps} />
 </section>

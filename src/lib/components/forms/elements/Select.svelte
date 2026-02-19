@@ -1,7 +1,7 @@
 <script lang="ts">
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // TYPES
-import type { SelectProps } from '$lib/types';
+import type { SelectProps } from '$lib/types'
 
 // STATE
 let {
@@ -9,8 +9,8 @@ let {
   value = $bindable(),
   values = $bindable([]),
   isComplex = false,
-  onchange
-}: SelectProps & { onchange: (e: Event) => unknown } = $props();
+  onchange,
+}: SelectProps & { onchange: (e: Event) => unknown } = $props()
 </script>
 
 <select
@@ -19,7 +19,8 @@ let {
   tabindex="0"
   name={id}
   class="select w-full rounded-md border-none bg-transparent px-3 py-2 text-lg font-bold text-base-content outline-none focus-within:border-none focus-within:outline-none focus:border-none focus:outline-none"
-  {onchange}>
+  {onchange}
+>
   <option value={undefined}>-- {m.great_crazy_squid_promise()} --</option>
   {#if isComplex && values.length > 0}
     {#each values as complexValue (typeof complexValue === 'object' ? complexValue.id : complexValue)}

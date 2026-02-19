@@ -1,17 +1,17 @@
 <script lang="ts">
-import { getValues, updateForm, getId } from '$lib/index';
+import { getValues, updateForm, getId } from '$lib/index'
 // COMPONENTS
-import FormInput from '$lib/components/forms/elements/Input.svelte';
-import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
-import FieldLabel from '$lib/components/forms/labels/Field.svelte';
+import FormInput from '$lib/components/forms/elements/Input.svelte'
+import ErrorLabel from '$lib/components/forms/labels/Error.svelte'
+import FieldLabel from '$lib/components/forms/labels/Field.svelte'
 // TYPES
 import type {
   FieldPropsExtended,
   FieldDiscriminator,
   Locale,
   LocaleExtended,
-  Field
-} from '$lib/types';
+  Field,
+} from '$lib/types'
 
 // STATE : PROPS
 let {
@@ -22,10 +22,10 @@ let {
   fieldKey,
   field,
   ...fieldProps
-}: FieldPropsExtended & { fieldDiscriminator: FieldDiscriminator } = $props();
+}: FieldPropsExtended & { fieldDiscriminator: FieldDiscriminator } = $props()
 
 // STATE : FORM
-let { form, constraints, errors } = fieldProps.form;
+let { form, constraints, errors } = fieldProps.form
 
 // EFFECT : SYNC WITH FORM
 let fieldValues = $derived(
@@ -35,12 +35,12 @@ let fieldValues = $derived(
     locale as LocaleExtended,
     fieldRoot,
     fieldIndex,
-    fieldKey
-  )
-)!;
+    fieldKey,
+  ),
+)!
 
 // STATE : LOCAL
-let isGenAI = $derived(fieldValues.isGenAI);
+let isGenAI = $derived(fieldValues.isGenAI)
 
 // STATE : DERIVED
 let id = $derived(
@@ -50,9 +50,9 @@ let id = $derived(
     fieldIndex,
     fieldDiscriminator,
     fieldKey,
-    locale as LocaleExtended
-  )
-);
+    locale as LocaleExtended,
+  ),
+)
 
 function syncToForm(newValue: string, isGenAI: boolean) {
   updateForm(
@@ -63,19 +63,19 @@ function syncToForm(newValue: string, isGenAI: boolean) {
     fieldIndex,
     fieldKey,
     newValue,
-    isGenAI // Set to false when human edits the field
-  );
+    isGenAI, // Set to false when human edits the field
+  )
 }
 
 // HANDLERS
 function handleChange(newValue: string) {
-  syncToForm(newValue, false);
+  syncToForm(newValue, false)
 }
 
 function handleToggleGenAI(e: MouseEvent) {
-  e.stopPropagation();
-  e.preventDefault();
-  syncToForm(fieldValues.value as string, (isGenAI = !isGenAI));
+  e.stopPropagation()
+  e.preventDefault()
+  syncToForm(fieldValues.value as string, (isGenAI = !isGenAI))
 }
 </script>
 
@@ -87,18 +87,21 @@ function handleToggleGenAI(e: MouseEvent) {
     {fieldIndex}
     {fieldKey}
     {constraints}
-    isTranslated={field.isTranslated} />
+    isTranslated={field.isTranslated}
+  />
   <ErrorLabel
     {errors}
     {field}
     locale={locale as Locale}
     {fieldRoot}
     {fieldIndex}
-    {fieldKey} />
+    {fieldKey}
+  />
   <div class="group relative">
     <!-- Input field with its background -->
     <div
-      class="rounded-lg bg-glass-100 pl-2 pr-3 focus-within:ring-2 focus-within:ring-primary">
+      class="rounded-lg bg-glass-100 pl-2 pr-3 focus-within:ring-2 focus-within:ring-primary"
+    >
       <FormInput
         {id}
         bind:value={fieldValues.value as string}
@@ -106,7 +109,8 @@ function handleToggleGenAI(e: MouseEvent) {
         locale={locale as Locale}
         {...field}
         onchange={handleChange}
-        onToggleGenAI={handleToggleGenAI} />
+        onToggleGenAI={handleToggleGenAI}
+      />
     </div>
   </div>
 </label>

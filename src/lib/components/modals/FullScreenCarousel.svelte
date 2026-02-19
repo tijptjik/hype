@@ -1,163 +1,163 @@
 <script lang="ts">
 // GESTURES
-import { useSwipe, useTap } from 'svelte-gestures';
+import { useSwipe, useTap } from 'svelte-gestures'
 // I18N
 // NAVIGATION
-import { addParamToUrl, removeParamFromUrl } from '$lib/navigation';
+import { addParamToUrl, removeParamFromUrl } from '$lib/navigation'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
-import { getImageCtx } from '$lib/context/image.svelte';
-import { getOmniCtx } from '$lib/context/omni.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
+import { getImageCtx } from '$lib/context/image.svelte'
+import { getOmniCtx } from '$lib/context/omni.svelte'
 // COMPONENTS
-import Viewer from '../common/Viewer.svelte';
-import Counter from '$lib/components/featureCard/gallery/Counter.svelte';
-import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte';
+import Viewer from '../common/Viewer.svelte'
+import Counter from '$lib/components/featureCard/gallery/Counter.svelte'
+import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte'
 // ICONS
-import Icon from '$lib/components/common/Icon.svelte';
-import { Camera } from '@steeze-ui/heroicons';
+import Icon from '$lib/components/common/Icon.svelte'
+import { Camera } from '@steeze-ui/heroicons'
 // UTILS
-import { PANEL_WIDTH } from '$lib/index';
+import { PANEL_WIDTH } from '$lib/index'
 // TYPES
-import type { Feature, Image } from '$lib/types';
-import type { SwipeCustomEvent, TapCustomEvent } from 'svelte-gestures';
+import type { Feature, Image } from '$lib/types'
+import type { SwipeCustomEvent, TapCustomEvent } from 'svelte-gestures'
 
 type Props = {
-  feature: Feature;
-};
+  feature: Feature
+}
 
 // STATE : PROPS
-let { feature }: Props = $props();
+let { feature }: Props = $props()
 
-let appCtx = getAppCtx();
-let imageCtx = getImageCtx();
-let omniCtx = getOmniCtx();
+let appCtx = getAppCtx()
+let imageCtx = getImageCtx()
+let omniCtx = getOmniCtx()
 
 // DERIVED STATES
-let images: Image[] = $derived(imageCtx.getImages());
-let currentImage: Image | null = $derived(imageCtx.activeImage);
+let images: Image[] = $derived(imageCtx.getImages())
+let currentImage: Image | null = $derived(imageCtx.activeImage)
 
 // Calculate available width and position based on panel state
 let availableWidth = $derived.by(() => {
-  const isLeftOpen = appCtx.isLeftPanelOpen();
-  const isRightOpen = appCtx.isRightPanelOpen();
+  const isLeftOpen = appCtx.isLeftPanelOpen()
+  const isRightOpen = appCtx.isRightPanelOpen()
 
-  let widthReduction = 0; // Base 2rem (32px) padding
+  let widthReduction = 0 // Base 2rem (32px) padding
 
   if (isLeftOpen) {
-    widthReduction += PANEL_WIDTH + 0; // Panel width + 16px gutter
+    widthReduction += PANEL_WIDTH + 0 // Panel width + 16px gutter
   }
   if (isRightOpen) {
-    widthReduction += PANEL_WIDTH + 0; // Panel width + 16px gutter
+    widthReduction += PANEL_WIDTH + 0 // Panel width + 16px gutter
   }
 
-  return `calc(100vw - ${widthReduction}px)`;
-});
+  return `calc(100vw - ${widthReduction}px)`
+})
 
-let horizontalOffset = $derived(appCtx.getHorizontalOffset());
+let horizontalOffset = $derived(appCtx.getHorizontalOffset())
 
 // Reset attribution visibility when image changes
 $effect(() => {
-  currentImage;
-  isAttributionVisible = false;
-});
+  currentImage
+  isAttributionVisible = false
+})
 
 // DOM REFERENCE
 // svelte-ignore non_reactive_update
-let container: HTMLDivElement;
+let container: HTMLDivElement
 
 // UI STATE
-let isAttributionVisible = $state(false);
+let isAttributionVisible = $state(false)
 
 function handleKeydown(event: KeyboardEvent) {
   // Only handle events if the modal is actually open and feature exists
   if (event.key === 'Escape' || (event.key === ' ' && imageCtx.isFullscreen)) {
-    event.preventDefault();
-    event.stopPropagation();
-    closeModal();
+    event.preventDefault()
+    event.stopPropagation()
+    closeModal()
   } else if (event.key === ' ') {
-    event.preventDefault();
-    event.stopPropagation();
-    openModal();
+    event.preventDefault()
+    event.stopPropagation()
+    openModal()
   } else if (event.key === 'Enter') {
-    event.preventDefault();
+    event.preventDefault()
     // Navigate to feature address facet
-    closeModal();
+    closeModal()
     if (event.shiftKey) {
-      omniCtx.navPrevious();
+      omniCtx.navPrevious()
     } else {
-      omniCtx.navNext();
+      omniCtx.navNext()
     }
   } else if (event.key === 'Tab') {
-    event.preventDefault();
-    event.stopPropagation();
+    event.preventDefault()
+    event.stopPropagation()
     if (event.shiftKey) {
-      imageCtx.prev();
+      imageCtx.prev()
     } else if (!event.shiftKey) {
-      imageCtx.next();
+      imageCtx.next()
     }
   }
 }
 
 function closeModal(event?: Event) {
-  removeParamFromUrl('fullscreen');
+  removeParamFromUrl('fullscreen')
 }
 
 function openModal(event?: Event) {
-  addParamToUrl('fullscreen', 'true');
+  addParamToUrl('fullscreen', 'true')
 }
 
 function toggleAttribution(e: Event) {
-  e.preventDefault();
-  e.stopPropagation();
-  isAttributionVisible = !isAttributionVisible;
+  e.preventDefault()
+  e.stopPropagation()
+  isAttributionVisible = !isAttributionVisible
 }
 
 // NAVIGATION HANDLERS
 function handlePrevious(e: MouseEvent | SwipeCustomEvent | TapCustomEvent) {
-  imageCtx.prev();
+  imageCtx.prev()
 }
 
 function handleNext(e: MouseEvent | SwipeCustomEvent | TapCustomEvent) {
-  imageCtx.next();
+  imageCtx.next()
 }
 
 // TAP GESTURE HANDLER
 function handleTap(e: TapCustomEvent) {
-  e.preventDefault();
-  e.stopPropagation();
+  e.preventDefault()
+  e.stopPropagation()
   if (images.length <= 1) {
     // If only one image, center tap closes modal
-    closeModal();
-    return;
+    closeModal()
+    return
   }
 
-  const rect = container.getBoundingClientRect();
-  const { x: relativeX } = e.detail;
-  const leftBoundary = rect.width * 0.25;
-  const rightBoundary = rect.width * 0.75;
+  const rect = container.getBoundingClientRect()
+  const { x: relativeX } = e.detail
+  const leftBoundary = rect.width * 0.25
+  const rightBoundary = rect.width * 0.75
 
   if (relativeX < leftBoundary) {
     // Left quarter - previous image
-    handlePrevious(e as any);
+    handlePrevious(e as any)
   } else if (relativeX > rightBoundary) {
     // Right quarter - next image
-    handleNext(e as any);
+    handleNext(e as any)
   } else {
     // Center half - close modal
-    closeModal();
+    closeModal()
   }
 }
 
 // SWIPE GESTURE HANDLER
 function handleSwipe(e: SwipeCustomEvent) {
-  e.preventDefault();
-  e.stopPropagation();
-  if (images.length <= 1) return;
-  const { direction } = e.detail;
+  e.preventDefault()
+  e.stopPropagation()
+  if (images.length <= 1) return
+  const { direction } = e.detail
   if (direction === 'left') {
-    handleNext(e);
+    handleNext(e)
   } else if (direction === 'right') {
-    handlePrevious(e);
+    handlePrevious(e)
   }
 }
 
@@ -166,15 +166,15 @@ const { swipe: swipeAttach, onswipe } = useSwipe(
   handleSwipe,
   () => ({ timeframe: 300, minSwipeDistance: 60, touchAction: 'manipulation' }),
   undefined,
-  true
-);
+  true,
+)
 
 const { tap: tapAttach, ontap } = useTap(
   handleTap,
   () => ({ timeframe: 300, touchAction: 'manipulation' }),
   undefined,
-  true
-);
+  true,
+)
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -184,14 +184,17 @@ const { tap: tapAttach, ontap } = useTap(
     class="fixed inset-0 z-40 flex items-center justify-center bg-black/75 caret-transparent"
     onclick={closeModal}
     role="dialog"
-    aria-modal="true">
+    aria-modal="true"
+  >
     <div
       class="relative flex h-full w-full max-w-7xl items-center justify-center p-4 transition-all duration-300"
       onclick={closeModal}
       bind:this={container}
-      style="width: {availableWidth}; transform: translateX({horizontalOffset}px);">
+      style="width: {availableWidth}; transform: translateX({horizontalOffset}px);"
+    >
       <div
-        class="relative flex h-full max-h-full w-full max-w-full items-center justify-center">
+        class="relative flex h-full max-h-full w-full max-w-full items-center justify-center"
+      >
         <!-- Interaction layer positioned as background -->
         {#if images.length > 0}
           <div
@@ -200,8 +203,8 @@ const { tap: tapAttach, ontap } = useTap(
             {@attach tapAttach}
             {onswipe}
             {ontap}
-            onclick={(e) => e.stopPropagation()}>
-          </div>
+            onclick={(e) => e.stopPropagation()}
+          ></div>
         {/if}
 
         {#if feature}
@@ -214,25 +217,29 @@ const { tap: tapAttach, ontap } = useTap(
                     class="absolute bottom-0 left-0 m-2 flex cursor-pointer items-center justify-center rounded-lg bg-black/50 p-2 transition-opacity duration-200 {!isAttributionVisible
                       ? 'opacity-70 group-hover/anchor:opacity-0'
                       : 'opacity-0'}"
-                    aria-label="Toggle image attribution">
+                    aria-label="Toggle image attribution"
+                  >
                     <Icon src={Camera} class="h-6 w-6 stroke-[2px]" />
                   </button>
                   <!-- Revealed Content -->
                   <div
                     class="m-2 transition-opacity duration-200 {isAttributionVisible
                       ? 'opacity-100'
-                      : 'opacity-0 group-hover/anchor:opacity-100'}">
+                      : 'opacity-0 group-hover/anchor:opacity-100'}"
+                  >
                     {#if currentImage}
                       <UserAttributionCard
                         userId={currentImage.contributorId || ''}
                         date={currentImage.createdAt || undefined}
                         type="imageContributor"
-                        bgClass="bg-black/50" />
+                        bgClass="bg-black/50"
+                      />
                     {/if}
                   </div>
                 </div>
               {/snippet}
-              {#snippet MiddleActions()}{/snippet}
+              {#snippet MiddleActions()}
+              {/snippet}
               {#snippet RightActions()}
                 {#if currentImage}
                   <Counter {images} {currentImage} />

@@ -1,22 +1,22 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte'
 // COMPONENTS
-import FilterToggle from '../FilterToggle.svelte';
+import FilterToggle from '../FilterToggle.svelte'
 // SERVICES
 import {
   getResourceFilterState,
   toggleResourceFilterState,
   setResourceFilterState,
-  getFeatureTaskLabel
-} from '$lib/client/services/filters';
+  getFeatureTaskLabel,
+} from '$lib/client/services/filters'
 // TYPES
-import type { ProjectStatusFilterKey } from '$lib/types';
+import type { ProjectStatusFilterKey } from '$lib/types'
 
 // CONTEXT
-const adminCtx = getAdminCtx();
+const adminCtx = getAdminCtx()
 
 // ═══════════════════════════════════════════════════════════════════════
 // STATUS FILTERS CONFIG
@@ -25,28 +25,28 @@ const adminCtx = getAdminCtx();
 const statusFilters: Record<
   ProjectStatusFilterKey,
   {
-    label: string;
-    invertBoolean?: boolean;
-    trueLabel?: string;
-    falseLabel?: string;
-    superAdminOnly?: boolean;
+    label: string
+    invertBoolean?: boolean
+    trueLabel?: string
+    falseLabel?: string
+    superAdminOnly?: boolean
   }
 > = {
   isPublished: {
     label: m.published(),
     trueLabel: m.filters__not(),
-    falseLabel: m.filters__is()
+    falseLabel: m.filters__is(),
   },
   isArchived: {
     label: m.bad_swift_cheetah_surge(),
     trueLabel: m.filters__not(),
     falseLabel: m.filters__is(),
-    superAdminOnly: true
-  }
-};
+    superAdminOnly: true,
+  },
+}
 </script>
 
-{#each Object.entries(statusFilters) as [filterKey, filterDef], idx (filterKey)}
+{#each Object.entries(statusFilters) as [ filterKey, filterDef ], idx (filterKey)}
   {#if !filterDef.superAdminOnly || adminCtx.appCtx.user?.superAdmin}
     {@const currentValue = getResourceFilterState(
       adminCtx,
@@ -67,6 +67,7 @@ const statusFilters: Record<
         const nextState =
           currentValue === null ? true : currentValue === true ? false : null;
         setResourceFilterState(adminCtx, 'project', key, nextState);
-      }} />
+      }}
+    />
   {/if}
 {/each}

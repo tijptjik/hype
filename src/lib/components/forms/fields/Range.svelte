@@ -1,18 +1,18 @@
 <script lang="ts">
 // LIB
-import { updateFeaturePropertyValue } from '$lib';
+import { updateFeaturePropertyValue } from '$lib'
 // TYPES
-import type { FieldPropsExtended, FeatureForm } from '$lib/types';
+import type { FieldPropsExtended, FeatureForm } from '$lib/types'
 
-let { fieldRoot, fieldIndex, fieldKey, ...fieldProps }: FieldPropsExtended = $props();
+let { fieldRoot, fieldIndex, fieldKey, ...fieldProps }: FieldPropsExtended = $props()
 
 // STATE : FORM
-let { form } = fieldProps.form as unknown as FeatureForm;
+let { form } = fieldProps.form as unknown as FeatureForm
 
 // STATE : DERIVED
-let currentItem = $derived(($form as any)[fieldRoot]?.[fieldIndex]);
-let property = $derived(currentItem?.property);
-let currentValue = $derived(currentItem?.[fieldKey] || property?.min || 0);
+let currentItem = $derived(($form as any)[fieldRoot]?.[fieldIndex])
+let property = $derived(currentItem?.property)
+let currentValue = $derived(currentItem?.[fieldKey] || property?.min || 0)
 </script>
 
 <!-- TODO: Make into an actual field instead of an element-->
@@ -30,7 +30,8 @@ let currentValue = $derived(currentItem?.[fieldKey] || property?.min || 0);
     const target = e.target as HTMLInputElement;
     const newValue = target.value;
     updateFeaturePropertyValue(form, fieldRoot, fieldIndex, newValue, fieldKey);
-  }} />
+  }}
+>
 <div class="flex w-full justify-between px-2 text-xs">
   <span>{property?.min || 0}</span>
   <span>❘</span>

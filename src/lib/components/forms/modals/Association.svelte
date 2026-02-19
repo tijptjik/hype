@@ -1,58 +1,58 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // SVELTE
-import { NEW_REF } from '$lib';
+import { NEW_REF } from '$lib'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte'
 // NAVIGATION
-import { navigateOnAdmin } from '$lib/navigation';
+import { navigateOnAdmin } from '$lib/navigation'
 // I18N
-import { getLocale, getI18n } from '$lib/i18n';
+import { getLocale, getI18n } from '$lib/i18n'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
-import { Check } from '@steeze-ui/heroicons';
-import FilterInput from '$lib/components/menu/FilterInput.svelte';
+import Icon from '$lib/components/common/Icon.svelte'
+import { Check } from '@steeze-ui/heroicons'
+import FilterInput from '$lib/components/menu/FilterInput.svelte'
 // ENUMS
 import {
   FirstClassResource,
   HierarchicalResourceParent,
-  ResourceRefKey
-} from '$lib/enums';
+  ResourceRefKey,
+} from '$lib/enums'
 // TYPES
-import type { FilteredResources, Resource, ResourceTypeWithChildren } from '$lib/types';
+import type { FilteredResources, Resource, ResourceTypeWithChildren } from '$lib/types'
 
 // CONTEXT
-const adminCtx = getAdminCtx();
+const adminCtx = getAdminCtx()
 
 // PROPS
 let {
-  isOpen = $bindable()
+  isOpen = $bindable(),
 }: {
-  isOpen: boolean;
-} = $props();
+  isOpen: boolean
+} = $props()
 
 // RESOURCES
 const parentResourceType = HierarchicalResourceParent[
   adminCtx.activeResourceType as keyof typeof HierarchicalResourceParent
-] as ResourceTypeWithChildren;
+] as ResourceTypeWithChildren
 
 // STATE
-let selectedItem: Resource | null = $state(null);
-let selectedIndex: number = $state(-1);
+let selectedItem: Resource | null = $state(null)
+let selectedIndex: number = $state(-1)
 
 // UTILITIES
 const close = () => {
-  isOpen = false;
-  selectedItem = null;
-};
+  isOpen = false
+  selectedItem = null
+}
 
 const handleSelect = (item: Resource) => {
-  selectedItem = item;
-};
+  selectedItem = item
+}
 
 const handleConfirm = () => {
-  if (!selectedItem) return;
+  if (!selectedItem) return
   navigateOnAdmin(adminCtx, adminCtx.activeResourceType, NEW_REF, undefined, {
     parentId: selectedItem.id,
     parentRef:
@@ -60,59 +60,59 @@ const handleConfirm = () => {
         ResourceRefKey[
           parentResourceType as keyof typeof ResourceRefKey
         ] as keyof Resource
-      ]
-  });
-  close();
-};
+      ],
+  })
+  close()
+}
 
 const handleKeydown = (event: KeyboardEvent) => {
   if (
     !adminCtx.appCtx.state.resources[parentResourceType as keyof FilteredResources]
       ?.length
   )
-    return;
+    return
 
   const items =
-    adminCtx.appCtx.state.resources[parentResourceType as keyof FilteredResources];
-  const maxIndex = Math.min(items.length - 1, 6); // Limit to 7 items (0-6)
+    adminCtx.appCtx.state.resources[parentResourceType as keyof FilteredResources]
+  const maxIndex = Math.min(items.length - 1, 6) // Limit to 7 items (0-6)
 
   switch (event.key) {
     case 'ArrowDown':
-      event.preventDefault();
-      selectedIndex = selectedIndex < maxIndex ? selectedIndex + 1 : 0;
-      handleSelect(items[selectedIndex]);
-      break;
+      event.preventDefault()
+      selectedIndex = selectedIndex < maxIndex ? selectedIndex + 1 : 0
+      handleSelect(items[selectedIndex])
+      break
 
     case 'ArrowUp':
-      event.preventDefault();
-      selectedIndex = selectedIndex > 0 ? selectedIndex - 1 : maxIndex;
-      handleSelect(items[selectedIndex]);
-      break;
+      event.preventDefault()
+      selectedIndex = selectedIndex > 0 ? selectedIndex - 1 : maxIndex
+      handleSelect(items[selectedIndex])
+      break
 
     case 'Tab':
-      event.preventDefault();
+      event.preventDefault()
       if (event.shiftKey) {
-        selectedIndex = selectedIndex > 0 ? selectedIndex - 1 : maxIndex;
+        selectedIndex = selectedIndex > 0 ? selectedIndex - 1 : maxIndex
       } else {
-        selectedIndex = selectedIndex < maxIndex ? selectedIndex + 1 : 0;
+        selectedIndex = selectedIndex < maxIndex ? selectedIndex + 1 : 0
       }
-      handleSelect(items[selectedIndex]);
-      break;
+      handleSelect(items[selectedIndex])
+      break
 
     case 'Enter':
-      event.preventDefault();
+      event.preventDefault()
       if (selectedItem) {
-        handleConfirm();
+        handleConfirm()
       }
-      break;
+      break
   }
-};
+}
 
 // Reset selectedIndex when modal opens
 const open = () => {
-  selectedIndex = -1;
-  isOpen = true;
-};
+  selectedIndex = -1
+  isOpen = true
+}
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -124,7 +124,8 @@ const open = () => {
       <FilterInput
         resourceType={parentResourceType as FirstClassResource}
         rounded={true}
-        clearInput={true} />
+        clearInput={true}
+      />
     </div>
 
     <div class="mb-4 max-h-60 overflow-y-auto">
@@ -139,10 +140,12 @@ const open = () => {
                 onclick={() => {
                   selectedIndex = i;
                   handleSelect(item);
-                }}>
+                }}
+              >
                 <span
                   >{getI18n(item, 'name', adminCtx.appCtx.getUserPreferences()) ||
-                    getI18n(item, 'title', adminCtx.appCtx.getUserPreferences())}</span>
+                    getI18n(item, 'title', adminCtx.appCtx.getUserPreferences())}</span
+                >
                 {#if selectedItem?.id === item.id}
                   <Icon src={Check} class="h-5 w-5" />
                 {/if}

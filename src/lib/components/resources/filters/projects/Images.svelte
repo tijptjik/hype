@@ -1,22 +1,22 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte'
 // SERVICES
 import {
   getResourceFilterState,
   toggleResourceFilterState,
   setResourceFilterState,
-  getFeatureTaskLabel
-} from '$lib/client/services/filters';
+  getFeatureTaskLabel,
+} from '$lib/client/services/filters'
 // COMPONENTS
-import FilterToggle from '../FilterToggle.svelte';
+import FilterToggle from '../FilterToggle.svelte'
 // TYPES
-import type { ProjectImageFilterKey } from '$lib/types';
+import type { ProjectImageFilterKey } from '$lib/types'
 
 // CONTEXT
-const adminCtx = getAdminCtx();
+const adminCtx = getAdminCtx()
 
 // ═══════════════════════════════════════════════════════════════════════
 // IMAGE FILTERS CONFIG
@@ -25,21 +25,21 @@ const adminCtx = getAdminCtx();
 const imageFilters: Record<
   ProjectImageFilterKey,
   {
-    label: string;
-    invertBoolean?: boolean;
-    trueLabel?: string;
-    falseLabel?: string;
+    label: string
+    invertBoolean?: boolean
+    trueLabel?: string
+    falseLabel?: string
   }
 > = {
   hasImage: {
     label: m.filters__image(),
     falseLabel: m.filters__no(),
-    trueLabel: m.filters__has()
-  }
-};
+    trueLabel: m.filters__has(),
+  },
+}
 </script>
 
-{#each Object.entries(imageFilters) as [filterKey, filterDef], idx (filterKey)}
+{#each Object.entries(imageFilters) as [ filterKey, filterDef ], idx (filterKey)}
   {@const currentValue = getResourceFilterState(
     adminCtx,
     'project',
@@ -59,5 +59,6 @@ const imageFilters: Record<
       const nextState =
         currentValue === null ? true : currentValue === true ? false : null;
       setResourceFilterState(adminCtx, 'project', key, nextState);
-    }} />
+    }}
+  />
 {/each}

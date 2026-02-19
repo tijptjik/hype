@@ -1,15 +1,11 @@
 <script lang="ts">
-import { getValues, updateForm, getId } from '$lib/index';
+import { getValues, updateForm, getId } from '$lib/index'
 // COMPONENTS
-import Select from '$lib/components/forms/elements/Select.svelte';
-import ErrorLabel from '$lib/components/forms/labels/Error.svelte';
-import FieldLabel from '$lib/components/forms/labels/Field.svelte';
+import Select from '$lib/components/forms/elements/Select.svelte'
+import ErrorLabel from '$lib/components/forms/labels/Error.svelte'
+import FieldLabel from '$lib/components/forms/labels/Field.svelte'
 // TYPES
-import type {
-  FieldPropsExtended,
-  FieldDiscriminator,
-  LocaleExtended
-} from '$lib/types';
+import type { FieldPropsExtended, FieldDiscriminator, LocaleExtended } from '$lib/types'
 
 // STATE : PROPS
 let {
@@ -21,23 +17,23 @@ let {
   field,
   ...fieldProps
 }: FieldPropsExtended & {
-  fieldDiscriminator: FieldDiscriminator;
-  locale: LocaleExtended;
-} = $props();
+  fieldDiscriminator: FieldDiscriminator
+  locale: LocaleExtended
+} = $props()
 
 // STATE : FORM
-let { form, constraints, errors } = fieldProps.form;
+let { form, constraints, errors } = fieldProps.form
 
 let fieldValues = $derived(
   getValues($form, field, locale, fieldRoot, fieldIndex, fieldKey) || {
-    value: ''
-  }
-);
+    value: '',
+  },
+)
 
 // STATE : DERIVED
 let id = $derived(
-  getId(field, fieldRoot, fieldIndex, fieldDiscriminator, fieldKey, locale)
-);
+  getId(field, fieldRoot, fieldIndex, fieldDiscriminator, fieldKey, locale),
+)
 </script>
 
 {#if !field.isTranslated && locale !== 'core' && locale !== 'en'}
@@ -67,7 +63,8 @@ let id = $derived(
             newValue,
             false // Set to false when human edits the field
           );
-        }} />
+        }}
+      />
     </div>
     <ErrorLabel {errors} {field} {locale} {fieldRoot} {fieldIndex} {fieldKey} />
   </label>

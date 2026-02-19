@@ -1,26 +1,26 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
-import { getI18n } from '$lib/i18n';
+import { m } from '$lib/i18n'
+import { getI18n } from '$lib/i18n'
 // TYPES
-import type { Property } from '$lib/types';
+import type { Property } from '$lib/types'
 
 type Props = {
-  property: Property;
-  value: string;
-  userPreferences: any;
-  onChange: (value: string) => void;
-  placeholder?: string;
-};
+  property: Property
+  value: string
+  userPreferences: any
+  onChange: (value: string) => void
+  placeholder?: string
+}
 
-let { property, value, userPreferences, onChange, placeholder }: Props = $props();
+let { property, value, userPreferences, onChange, placeholder }: Props = $props()
 
 // STATE : DERIVED
 let computedPlaceholder = $derived(
   placeholder ||
     getI18n(property, 'placeholder', userPreferences) ||
-    m.key_full_raven_wish()
-);
+    m.key_full_raven_wish(),
+)
 </script>
 
 <div class="group relative rounded-lg bg-glass-100 pl-2 pr-3">
@@ -32,5 +32,6 @@ let computedPlaceholder = $derived(
       : 'text-bold text-base-content'}"
     {value}
     placeholder={computedPlaceholder}
-    oninput={(e) => onChange((e.target as HTMLInputElement).value)} />
+    oninput={(e) => onChange((e.target as HTMLInputElement).value)}
+  >
 </div>

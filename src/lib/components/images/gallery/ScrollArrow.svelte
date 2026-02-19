@@ -1,30 +1,25 @@
 <script lang="ts">
-import { fade } from 'svelte/transition';
-import Icon from '$lib/components/common/Icon.svelte';
-import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  ChevronDown
-} from '@steeze-ui/heroicons';
+import { fade } from 'svelte/transition'
+import Icon from '$lib/components/common/Icon.svelte'
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from '@steeze-ui/heroicons'
 
 type Props = {
-  direction: 'left' | 'right' | 'up' | 'down';
-  onClick?: (e: MouseEvent) => void;
-  onScroll?: (direction: 'left' | 'right' | 'up' | 'down') => void;
-  style?: string;
-};
+  direction: 'left' | 'right' | 'up' | 'down'
+  onClick?: (e: MouseEvent) => void
+  onScroll?: (direction: 'left' | 'right' | 'up' | 'down') => void
+  style?: string
+}
 
-let { direction, onClick, onScroll, style }: Props = $props();
+let { direction, onClick, onScroll, style }: Props = $props()
 
 function handleClick(e: MouseEvent) {
-  e.preventDefault();
-  e.stopPropagation();
+  e.preventDefault()
+  e.stopPropagation()
 
   if (onClick) {
-    onClick(e);
+    onClick(e)
   } else if (onScroll) {
-    onScroll(direction);
+    onScroll(direction)
   }
 }
 
@@ -32,17 +27,17 @@ function handleClick(e: MouseEvent) {
 const positionClasses = $derived(() => {
   switch (direction) {
     case 'left':
-      return 'left-8 top-1/2 -translate-y-1/2';
+      return 'left-8 top-1/2 -translate-y-1/2'
     case 'right':
-      return 'right-8 top-1/2 -translate-y-1/2';
+      return 'right-8 top-1/2 -translate-y-1/2'
     case 'up':
-      return 'top-0 left-1/2 -translate-x-1/2 -translate-y-1/2';
+      return 'top-0 left-1/2 -translate-x-1/2 -translate-y-1/2'
     case 'down':
-      return 'bottom-0 left-1/2 -translate-x-1/2 -translate-y-1/2';
+      return 'bottom-0 left-1/2 -translate-x-1/2 -translate-y-1/2'
     default:
-      return 'left-8 top-1/2 -translate-y-1/2';
+      return 'left-8 top-1/2 -translate-y-1/2'
   }
-});
+})
 
 // COMPUTED :: ICON
 const icon = $derived(
@@ -54,8 +49,8 @@ const icon = $derived(
         ? ChevronUp
         : direction === 'down'
           ? ChevronDown
-          : ChevronLeft
-);
+          : ChevronLeft,
+)
 </script>
 
 <button
@@ -65,7 +60,8 @@ const icon = $derived(
   style={style || ''}
   onclick={handleClick}
   in:fade={{ duration: 200 }}
-  out:fade={{ duration: 200 }}>
+  out:fade={{ duration: 200 }}
+>
   <Icon src={icon} class="h-6 w-6 stroke-[2px]" />
 </button>
 

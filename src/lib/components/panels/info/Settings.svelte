@@ -1,27 +1,27 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // SVELTE
-import { slide } from 'svelte/transition';
+import { slide } from 'svelte/transition'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
+import Icon from '$lib/components/common/Icon.svelte'
 // ICONS
-import { ChevronDown, ChevronRight } from '@steeze-ui/heroicons';
+import { ChevronDown, ChevronRight } from '@steeze-ui/heroicons'
 
 let { isOpen = false } = $props<{
-  isOpen?: boolean;
-}>();
+  isOpen?: boolean
+}>()
 
 // ═══════════════════════
 // 2. SECTION CONFIGURATION
 // ═══════════════════════
 
 interface SettingsSection {
-  id: string;
-  titleKey: () => string;
-  contentKey?: () => string;
-  isOpen: boolean;
-  hasComplexContent?: boolean;
+  id: string
+  titleKey: () => string
+  contentKey?: () => string
+  isOpen: boolean
+  hasComplexContent?: boolean
 }
 
 let sections = $state<SettingsSection[]>([
@@ -29,42 +29,42 @@ let sections = $state<SettingsSection[]>([
     id: 'account',
     titleKey: m.topical_alive_dolphin_pinch,
     contentKey: m.extra_yummy_midge_wish,
-    isOpen: false
+    isOpen: false,
   },
   {
     id: 'language',
     titleKey: m.settings__language,
     isOpen: false,
-    hasComplexContent: true
+    hasComplexContent: true,
   },
   {
     id: 'contributionCredit',
     titleKey: m.settings_contributor_title,
     contentKey: m.sleek_main_shell_taste,
-    isOpen: false
+    isOpen: false,
   },
   {
     id: 'defaultMaps',
     titleKey: m.settings_default_map_title,
     contentKey: m.trite_key_insect_tickle,
-    isOpen: false
+    isOpen: false,
   },
   {
     id: 'experimental',
     titleKey: m.settings_experimental_title,
     contentKey: m.big_awake_grebe_seek,
-    isOpen: false
-  }
-]);
+    isOpen: false,
+  },
+])
 
 // ═══════════════════════
 // 3. SECTION HANDLERS
 // ═══════════════════════
 
 function toggleSection(sectionId: string) {
-  const section = sections.find((s) => s.id === sectionId);
+  const section = sections.find(s => s.id === sectionId)
   if (section) {
-    section.isOpen = !section.isOpen;
+    section.isOpen = !section.isOpen
   }
 }
 </script>
@@ -72,16 +72,19 @@ function toggleSection(sectionId: string) {
 {#if isOpen}
   <div
     class="flex flex-col gap-4 border-b-4 border-primary px-6 py-3 pb-8"
-    transition:slide>
+    transition:slide
+  >
     <h2 class="text-xl font-bold text-base-content">{m.these_helpful_moose_bend()}</h2>
 
     {#each sections as section (section.id)}
       <div
         class="flex cursor-pointer items-center gap-2"
-        onclick={() => toggleSection(section.id)}>
+        onclick={() => toggleSection(section.id)}
+      >
         <Icon
           src={section.isOpen ? ChevronDown : ChevronRight}
-          class="h-5 w-5 flex-shrink-0 text-base-content" />
+          class="h-5 w-5 flex-shrink-0 text-base-content"
+        />
         <h3 class="text-lg text-base-content">{section.titleKey()}</h3>
       </div>
 
@@ -89,9 +92,7 @@ function toggleSection(sectionId: string) {
         {#if section.id === 'language'}
           <!-- Special handling for language section with complex content -->
           <div class="flex flex-col gap-2 pl-7" transition:slide>
-            <p class="text-neutral-content">
-              {@html m.petty_steep_dove_clasp()}
-            </p>
+            <p class="text-neutral-content">{@html m.petty_steep_dove_clasp()}</p>
             <h4 class="text-base-content">{m.settings_language_preferred()}</h4>
             <p class="text-neutral-content">{m.awful_loved_shrimp_cuddle()}</p>
             <h4 class="text-base-content">{m.same_late_parrot_accept()}</h4>

@@ -1,27 +1,27 @@
 <script lang="ts">
 // I18N
-import { getI18n } from '$lib/i18n';
-import { m } from '$lib/i18n';
+import { getI18n } from '$lib/i18n'
+import { m } from '$lib/i18n'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
 // COMPONENTS
-import Section from '$lib/components/panels/common/Section.svelte';
+import Section from '$lib/components/panels/common/Section.svelte'
 // TYPES
-import type { Layer, Project, Organisation, PanelProps } from '$lib/types';
+import type { Layer, Project, Organisation, PanelProps } from '$lib/types'
 
 // CONTEXT
-const appCtx = getAppCtx();
+const appCtx = getAppCtx()
 
 // PROPS
-let { ...panelProps }: PanelProps = $props();
+let { ...panelProps }: PanelProps = $props()
 
 // Enhanced layer type with project and organisation
 type EnhancedLayer = Layer & {
-  project?: Project;
-  organisation?: Organisation;
-};
+  project?: Project
+  organisation?: Organisation
+}
 
-const userLayerIds = $derived(new Set(appCtx.getUserLayerIds()));
+const userLayerIds = $derived(new Set(appCtx.getUserLayerIds()))
 </script>
 
 <Section title={m.settings_default_map_title()} icon="/globe.svg" position="right">
@@ -40,14 +40,16 @@ const userLayerIds = $derived(new Set(appCtx.getUserLayerIds()));
           appCtx.getUserPreferences()
         )}
         <div
-          class="min-h-21 flex w-full flex-row items-center justify-between gap-4 px-4 py-2 pl-2">
+          class="min-h-21 flex w-full flex-row items-center justify-between gap-4 px-4 py-2 pl-2"
+        >
           <!-- <Icon src={Map} class="flex-grow-1 my-6 h-5 w-5 flex-shrink-0" /> -->
           <div class="flex flex-grow flex-col gap-0.5">
             {#if organisation && project}
               <div class="flex flex-row items-center gap-3">
                 <div class="flex flex-col items-start gap-0">
                   <p
-                    class="flex space-x-0.5 font-mono text-xs uppercase tracking-widest">
+                    class="flex space-x-0.5 font-mono text-xs uppercase tracking-widest"
+                  >
                     {#if organisationName}
                       <span class="text-primary">{organisationName}</span>
                     {/if}
@@ -79,7 +81,8 @@ const userLayerIds = $derived(new Set(appCtx.getUserLayerIds()));
             type="checkbox"
             class="flex-grow-1 toggle toggle-primary toggle-sm flex-shrink-0"
             checked={userLayerIds.has(layer.id)}
-            onchange={(e) => appCtx.setUserLayer(layer.id, e.currentTarget.checked)} />
+            onchange={(e) => appCtx.setUserLayer(layer.id, e.currentTarget.checked)}
+          >
         </div>
       {:catch error}
         <p>{m.proof_grand_gadfly_dash()}</p>

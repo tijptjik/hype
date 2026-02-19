@@ -1,214 +1,212 @@
 <script lang="ts">
-import { fade } from 'svelte/transition';
-import { flip } from 'svelte/animate';
+import { fade } from 'svelte/transition'
+import { flip } from 'svelte/animate'
 // SERVICES
-import { getImageCtx } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte'
 // COMPONENTS :: GALLERY
-import Thumbnail from '$lib/components/images/gallery/Thumbnail.svelte';
-import UploadThumbnail from '$lib/components/images/gallery/ThumbnailWhileUploading.svelte';
-import ScrollArrow from '$lib/components/images/gallery/ScrollArrow.svelte';
-import Dropzone from '$lib/components/images/gallery/Dropzone.svelte';
+import Thumbnail from '$lib/components/images/gallery/Thumbnail.svelte'
+import UploadThumbnail from '$lib/components/images/gallery/ThumbnailWhileUploading.svelte'
+import ScrollArrow from '$lib/components/images/gallery/ScrollArrow.svelte'
+import Dropzone from '$lib/components/images/gallery/Dropzone.svelte'
 // TYPES
-import type { ImageUpload } from '$lib/types';
+import type { ImageUpload } from '$lib/types'
 
 // SERVICES
-const imageCtx = getImageCtx();
+const imageCtx = getImageCtx()
 
 type Props = {
-  inputElement?: HTMLInputElement;
+  inputElement?: HTMLInputElement
   actionProps?: {
-    removeMode: boolean;
-  };
-  hasDropzone?: boolean;
-  orientation?: 'horizontal' | 'vertical';
-};
+    removeMode: boolean
+  }
+  hasDropzone?: boolean
+  orientation?: 'horizontal' | 'vertical'
+}
 
 // STATE :: PROPS
 let {
   inputElement = $bindable(),
   actionProps,
   hasDropzone = true,
-  orientation = 'horizontal'
-}: Props = $props();
+  orientation = 'horizontal',
+}: Props = $props()
 
 // STATE :: SCROLL ARROWS
-let showLeftArrow = $state(false);
-let showRightArrow = $state(false);
-let showTopArrow = $state(false);
-let showBottomArrow = $state(false);
+let showLeftArrow = $state(false)
+let showRightArrow = $state(false)
+let showTopArrow = $state(false)
+let showBottomArrow = $state(false)
 
 // DOM
-let scrollContainer: HTMLElement;
-let galleryWrapper: HTMLElement;
+let scrollContainer: HTMLElement
+let galleryWrapper: HTMLElement
 
 // Get images for rendering
-let images = $derived(imageCtx.getImages());
+let images = $derived(imageCtx.getImages())
 
 // COMPUTED :: LAYOUT CLASSES
-const isHorizontal = $derived(orientation === 'horizontal');
+const isHorizontal = $derived(orientation === 'horizontal')
 const containerClasses = $derived(
   isHorizontal
     ? 'flex w-full min-w-0 gap-4 overflow-x-auto scroll-smooth rounded-xl bg-glass-result p-4'
-    : 'flex flex-col h-full min-h-0 gap-4 items-center overflow-y-auto scroll-smooth rounded-xl bg-glass-result p-4'
-);
+    : 'flex flex-col h-full min-h-0 gap-4 items-center overflow-y-auto scroll-smooth rounded-xl bg-glass-result p-4',
+)
 
 // HANDLERS :: SCROLL
 const handleWheel = (event: WheelEvent) => {
   // Prevent default only when necessary
-  if (!scrollContainer) return;
+  if (!scrollContainer) return
 
-  const { deltaY } = event;
+  const { deltaY } = event
 
   if (isHorizontal) {
-    const { scrollLeft, scrollWidth, clientWidth } = scrollContainer;
+    const { scrollLeft, scrollWidth, clientWidth } = scrollContainer
     // Calculate if we're at the edges
-    const isAtLeftEdge = scrollLeft <= 0;
-    const isAtRightEdge = scrollLeft + clientWidth >= scrollWidth;
+    const isAtLeftEdge = scrollLeft <= 0
+    const isAtRightEdge = scrollLeft + clientWidth >= scrollWidth
 
     // Only prevent default if:
     // 1. Scrolling right and not at right edge
     // 2. Scrolling left and not at left edge
     if ((deltaY > 0 && !isAtRightEdge) || (deltaY < 0 && !isAtLeftEdge)) {
-      event.preventDefault();
+      event.preventDefault()
 
       // Smooth scroll horizontally
       scrollContainer.scrollBy({
         left: deltaY * 2,
-        behavior: 'smooth'
-      });
+        behavior: 'smooth',
+      })
     }
   } else {
     // For vertical orientation, let natural scroll behavior work
     // but update arrows after scroll
-    setTimeout(updateScrollArrows, 0);
+    setTimeout(updateScrollArrows, 0)
   }
-};
+}
 
 const handleScroll = () => {
-  updateScrollArrows();
-};
+  updateScrollArrows()
+}
 
 // UTILS :: SCROLL
 const updateScrollArrows = () => {
-  if (!scrollContainer) return;
+  if (!scrollContainer) return
 
   if (isHorizontal) {
-    const { scrollLeft, scrollWidth, clientWidth } = scrollContainer;
+    const { scrollLeft, scrollWidth, clientWidth } = scrollContainer
 
     // Show left arrow if we're not at the start
-    showLeftArrow = scrollLeft > 20;
+    showLeftArrow = scrollLeft > 20
 
     // Show right arrow if we're not at the end (with small buffer)
     showRightArrow =
-      scrollWidth > clientWidth && scrollLeft + clientWidth < scrollWidth - 20;
+      scrollWidth > clientWidth && scrollLeft + clientWidth < scrollWidth - 20
 
     // Reset vertical arrows
-    showTopArrow = false;
-    showBottomArrow = false;
+    showTopArrow = false
+    showBottomArrow = false
   } else {
-    const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainer
 
     // Show top arrow if we're not at the start
-    showTopArrow = scrollTop > 20;
+    showTopArrow = scrollTop > 20
 
     // Show bottom arrow if we're not at the end (with small buffer)
     showBottomArrow =
-      scrollHeight > clientHeight && scrollTop + clientHeight < scrollHeight - 20;
+      scrollHeight > clientHeight && scrollTop + clientHeight < scrollHeight - 20
 
     // Reset horizontal arrows
-    showLeftArrow = false;
-    showRightArrow = false;
+    showLeftArrow = false
+    showRightArrow = false
   }
-};
+}
 
 const scrollTo = (direction: 'left' | 'right' | 'up' | 'down') => {
-  if (!scrollContainer) return;
+  if (!scrollContainer) return
 
-  const scrollAmount = 600; // Width/height of 3 images
+  const scrollAmount = 600 // Width/height of 3 images
 
   if (isHorizontal && (direction === 'left' || direction === 'right')) {
-    const currentScroll = scrollContainer.scrollLeft;
+    const currentScroll = scrollContainer.scrollLeft
     const targetScroll =
-      direction === 'left'
-        ? currentScroll - scrollAmount
-        : currentScroll + scrollAmount;
+      direction === 'left' ? currentScroll - scrollAmount : currentScroll + scrollAmount
 
     scrollContainer.scrollTo({
       left: targetScroll,
-      behavior: 'smooth'
-    });
+      behavior: 'smooth',
+    })
   } else if (!isHorizontal && (direction === 'up' || direction === 'down')) {
-    const currentScroll = scrollContainer.scrollTop;
+    const currentScroll = scrollContainer.scrollTop
     const targetScroll =
-      direction === 'up' ? currentScroll - scrollAmount : currentScroll + scrollAmount;
+      direction === 'up' ? currentScroll - scrollAmount : currentScroll + scrollAmount
 
     scrollContainer.scrollTo({
       top: targetScroll,
-      behavior: 'smooth'
-    });
+      behavior: 'smooth',
+    })
   }
-};
+}
 
 // HANDLERS :: THUMBNAIL INTERACTION
 const handleThumbnailHover = (imageId: string, event: MouseEvent) => {
-  event.preventDefault();
-  event.stopPropagation();
+  event.preventDefault()
+  event.stopPropagation()
   // Use target() method for proper communication with main viewer
-  imageCtx.target(imageId);
-};
+  imageCtx.target(imageId)
+}
 
 const handleThumbnailClick = (imageId: string, event: MouseEvent) => {
-  event.preventDefault();
-  event.stopPropagation();
+  event.preventDefault()
+  event.stopPropagation()
   // Use target() method which sets lastChangeType to 'target' for proper PhotoFrame transitions
-  imageCtx.target(imageId);
-};
+  imageCtx.target(imageId)
+}
 
 // EFFECT :: AUTO-SCROLL TO ACTIVE IMAGE
 $effect(() => {
   if (imageCtx.activeImage) {
     const activeImageElement = document.getElementById(
-      `thumbnail-${imageCtx.activeImage.id}`
-    );
+      `thumbnail-${imageCtx.activeImage.id}`,
+    )
     if (activeImageElement && scrollContainer) {
       // Get container and element positions
-      const containerRect = scrollContainer.getBoundingClientRect();
-      const elementRect = activeImageElement.getBoundingClientRect();
+      const containerRect = scrollContainer.getBoundingClientRect()
+      const elementRect = activeImageElement.getBoundingClientRect()
 
       if (isHorizontal) {
         // Calculate if element is outside visible area horizontally
-        const isLeft = elementRect.left < containerRect.left;
-        const isRight = elementRect.right > containerRect.right;
+        const isLeft = elementRect.left < containerRect.left
+        const isRight = elementRect.right > containerRect.right
 
         if (isLeft || isRight) {
           const newScrollLeft = isLeft
             ? scrollContainer.scrollLeft + (elementRect.left - containerRect.left)
-            : scrollContainer.scrollLeft + (elementRect.right - containerRect.right);
+            : scrollContainer.scrollLeft + (elementRect.right - containerRect.right)
 
           scrollContainer.scrollTo({
             left: newScrollLeft,
-            behavior: 'smooth'
-          });
+            behavior: 'smooth',
+          })
         }
       } else {
         // Calculate if element is outside visible area vertically
-        const isAbove = elementRect.top < containerRect.top;
-        const isBelow = elementRect.bottom > containerRect.bottom;
+        const isAbove = elementRect.top < containerRect.top
+        const isBelow = elementRect.bottom > containerRect.bottom
 
         if (isAbove || isBelow) {
           const newScrollTop = isAbove
             ? scrollContainer.scrollTop + (elementRect.top - containerRect.top)
-            : scrollContainer.scrollTop + (elementRect.bottom - containerRect.bottom);
+            : scrollContainer.scrollTop + (elementRect.bottom - containerRect.bottom)
 
           scrollContainer.scrollTo({
             top: newScrollTop,
-            behavior: 'smooth'
-          });
+            behavior: 'smooth',
+          })
         }
       }
     }
   }
-});
+})
 </script>
 
 <!-- Gallery wrapper with relative positioning for arrow placement -->
@@ -219,26 +217,30 @@ $effect(() => {
       <ScrollArrow
         direction="left"
         onScroll={scrollTo}
-        style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); z-index: 40;" />
+        style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); z-index: 40;"
+      />
     {/if}
     {#if showRightArrow}
       <ScrollArrow
         direction="right"
         onScroll={scrollTo}
-        style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: 40;" />
+        style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: 40;"
+      />
     {/if}
   {:else}
     {#if showTopArrow}
       <ScrollArrow
         direction="up"
         onScroll={scrollTo}
-        style="position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 40;" />
+        style="position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 40;"
+      />
     {/if}
     {#if showBottomArrow}
       <ScrollArrow
         direction="down"
         onScroll={scrollTo}
-        style="position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 40;" />
+        style="position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 40;"
+      />
     {/if}
   {/if}
 
@@ -247,7 +249,8 @@ $effect(() => {
     class={containerClasses}
     bind:this={scrollContainer}
     onwheel={handleWheel}
-    onscroll={handleScroll}>
+    onscroll={handleScroll}
+  >
     <!-- Dropzone always first -->
     {#if hasDropzone}
       <div class="h-[200px] w-[200px] flex-none">
@@ -274,17 +277,20 @@ $effect(() => {
         out:fade={{ duration: 200 }}
         class="relative h-[200px] w-[200px] flex-none cursor-pointer"
         onmouseenter={(e) => handleThumbnailHover(image.id, e)}
-        onclick={(e) => handleThumbnailClick(image.id, e)}>
+        onclick={(e) => handleThumbnailClick(image.id, e)}
+      >
         {#if imageCtx.isImageBeingReplaced(image.id)}
           <!-- Show upload thumbnail for replacement -->
           <UploadThumbnail
-            fileObject={imageCtx.getReplacementUpload(image.id) as ImageUpload} />
+            fileObject={imageCtx.getReplacementUpload(image.id) as ImageUpload}
+          />
         {:else}
           <Thumbnail
             {image}
             idx={i}
             {actionProps}
-            isHighlighted={imageCtx.isImageHighlighted(image.id)} />
+            isHighlighted={imageCtx.isImageHighlighted(image.id)}
+          />
         {/if}
       </div>
     {/each}

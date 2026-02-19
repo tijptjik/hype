@@ -1,36 +1,36 @@
 <script lang="ts">
 // I18N
-import { getI18n } from '$lib/i18n';
-import { m } from '$lib/i18n';
+import { getI18n } from '$lib/i18n'
+import { m } from '$lib/i18n'
 // UTILS
-import { calculateDistance } from '$lib/map';
-import { formatDistanceToNow } from 'date-fns';
+import { calculateDistance } from '$lib/map'
+import { formatDistanceToNow } from 'date-fns'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
 // COMPONENTS
-import TaskSection from '../common/TaskSection.svelte';
-import TaskStat from '../common/TaskStat.svelte';
+import TaskSection from '../common/TaskSection.svelte'
+import TaskStat from '../common/TaskStat.svelte'
 // TYPES
-import type { Task } from '$lib/types';
-import type { Point } from 'geojson';
+import type { Task } from '$lib/types'
+import type { Point } from 'geojson'
 
 // CONTEXT
-const appCtx = getAppCtx();
+const appCtx = getAppCtx()
 
-let { task }: { task: Task } = $props();
+let { task }: { task: Task } = $props()
 
 let distance = $derived(
   calculateDistance(
     (task.feature?.geometry as Point).coordinates[0] || 0,
     (task.feature?.geometry as Point).coordinates[1] || 0,
     parseFloat(
-      (task.images?.[0]?.image?.metadata as Record<string, string>)?.latitude || '0'
+      (task.images?.[0]?.image?.metadata as Record<string, string>)?.latitude || '0',
     ),
     parseFloat(
-      (task.images?.[0]?.image?.metadata as Record<string, string>)?.longitude || '0'
-    )
-  )
-);
+      (task.images?.[0]?.image?.metadata as Record<string, string>)?.longitude || '0',
+    ),
+  ),
+)
 
 // Format dates using relative time
 let captureDate = $derived(
@@ -38,17 +38,17 @@ let captureDate = $derived(
     ? formatDistanceToNow(
         new Date((task.images?.[0]?.image?.metadata as any)?.capturedAt),
         {
-          addSuffix: true
-        }
+          addSuffix: true,
+        },
       )
-    : '-'
-);
+    : '-',
+)
 
 let reportDate = $derived(
   task.createdAt
     ? formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })
-    : '-'
-);
+    : '-',
+)
 </script>
 
 <aside class="w-[380px]">
@@ -67,7 +67,8 @@ let reportDate = $derived(
         title={m.house_watery_jaguar_edit()}
         value={distance
           ? `${distance.toFixed(0)} ${m.plane_zany_fish_value()}`
-          : '-'} />
+          : '-'}
+      />
     </TaskSection>
 
     <!-- Location Details -->
@@ -79,7 +80,8 @@ let reportDate = $derived(
           'displayAddress',
           appCtx.getUserPreferences()
         )}
-        textWrap={true} />
+        textWrap={true}
+      />
     </TaskSection>
   </div>
 </aside>

@@ -6,15 +6,15 @@ let {
   isSelected = false,
   gridColsClass,
   resourceType,
-  children
+  children,
 }: {
-  onclick: (event: MouseEvent) => void;
-  onkeydown: (event: KeyboardEvent) => void;
-  index: number;
-  isSelected?: boolean;
-  gridColsClass: string;
-  children: () => any;
-} = $props();
+  onclick: (event: MouseEvent) => void
+  onkeydown: (event: KeyboardEvent) => void
+  index: number
+  isSelected?: boolean
+  gridColsClass: string
+  children: () => any
+} = $props()
 </script>
 
 <div
@@ -29,6 +29,7 @@ let {
          {gridColsClass} hover:shadow-[0_0_25px_var(--color-primary)]"
   class:ring-2={isSelected}
   class:ring-primary={isSelected}
-  class:ring-offset-2={isSelected}>
+  class:ring-offset-2={isSelected}
+>
   {@render children()}
 </div>

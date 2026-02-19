@@ -1,34 +1,34 @@
 <script lang="ts">
 // ENUMS
-import { OmniCollection } from '$lib/enums';
+import { OmniCollection } from '$lib/enums'
 // TYPES
-import type { SearchResult } from '$lib/types';
+import type { SearchResult } from '$lib/types'
 
 // TYPES
 type Props = {
-  result: SearchResult;
-  onSelection?: (ref: string) => void;
-};
+  result: SearchResult
+  onSelection?: (ref: string) => void
+}
 
-let { result, onSelection }: Props = $props();
+let { result, onSelection }: Props = $props()
 
 let handleClick = (e: Event) => {
-  e.preventDefault();
-  e.stopPropagation();
+  e.preventDefault()
+  e.stopPropagation()
   if (onSelection) {
-    onSelection(result.ref);
+    onSelection(result.ref)
   }
-};
+}
 
 let handleKeyDown = (e: KeyboardEvent) => {
   if (e.key === 'Enter' || e.key === ' ') {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault()
+    e.stopPropagation()
     if (onSelection) {
-      onSelection(result.ref);
+      onSelection(result.ref)
     }
   }
-};
+}
 </script>
 
 <div
@@ -36,11 +36,13 @@ let handleKeyDown = (e: KeyboardEvent) => {
   tabindex="0"
   role="option"
   onclick={handleClick}
-  onkeydown={handleKeyDown}>
+  onkeydown={handleKeyDown}
+>
   <div class="h-1.5 w-1.5 select-none rounded-full bg-base-content/60"></div>
   <span class="flex-grow">{result.name}</span>
   {#if result.count > 0 && result.collectionType !== OmniCollection.feature}
     <span class="w-6 select-none text-center font-mono text-base-content/60"
-      >{result.count}</span>
+      >{result.count}</span
+    >
   {/if}
 </div>

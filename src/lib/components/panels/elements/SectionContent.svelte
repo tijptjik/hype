@@ -1,8 +1,8 @@
 <script lang="ts">
 // SVELTE
-import { slide } from 'svelte/transition';
+import { slide } from 'svelte/transition'
 // TYPES
-import type { PanelProps } from '$lib/types';
+import type { PanelProps } from '$lib/types'
 
 let {
   isOpen,
@@ -10,16 +10,17 @@ let {
   collapsedContent = undefined,
   ...panelProps
 }: {
-  isOpen: boolean;
-  children?: any;
-  collapsedContent?: any;
-} & PanelProps = $props();
+  isOpen: boolean
+  children?: any
+  collapsedContent?: any
+} & PanelProps = $props()
 </script>
 
 {#if isOpen && children}
   <div
     class="flex min-h-0 flex-grow flex-col bg-black caret-white"
-    transition:slide={{ duration: 200 }}>
+    transition:slide={{ duration: 200 }}
+  >
     {@render children()}
   </div>
 {:else if collapsedContent}

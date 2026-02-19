@@ -1,15 +1,15 @@
 <script lang="ts">
-import type { Field } from '$lib/types';
+import type { Field } from '$lib/types'
 
 type Props = {
-  field: Field;
-  fieldRoot: string;
-  fieldIndex: number;
-  fieldKey: string;
-  constraints: Record<string, any>;
-};
+  field: Field
+  fieldRoot: string
+  fieldIndex: number
+  fieldKey: string
+  constraints: Record<string, any>
+}
 
-let { field, fieldRoot, fieldIndex, fieldKey, constraints }: Props = $props();
+let { field, fieldRoot, fieldIndex, fieldKey, constraints }: Props = $props()
 </script>
 
 <div class="label {!field.label ? 'hidden' : ''}">

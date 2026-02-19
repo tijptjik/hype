@@ -1,11 +1,11 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // CONTEXT
-import { getImageCtx } from '$lib/context/image.svelte';
+import { getImageCtx } from '$lib/context/image.svelte'
 
 // CONTEXT
-const imageCtx = getImageCtx();
+const imageCtx = getImageCtx()
 </script>
 
 <h3 class="text-lg font-bold uppercase text-base-100">

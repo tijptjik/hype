@@ -1,84 +1,84 @@
 <script lang="ts">
 // TRANSITIONS
-import { fade } from 'svelte/transition';
+import { fade } from 'svelte/transition'
 // ICONS
-import Icon from '$lib/components/common/Icon.svelte';
-import { XMark } from '@steeze-ui/heroicons';
+import Icon from '$lib/components/common/Icon.svelte'
+import { XMark } from '@steeze-ui/heroicons'
 // I18N
-import { getI18n } from '$lib/i18n';
-import { m } from '$lib/i18n';
+import { getI18n } from '$lib/i18n'
+import { m } from '$lib/i18n'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
 // SERVICES
-import { navigateOnAdminById } from '$lib/navigation';
+import { navigateOnAdminById } from '$lib/navigation'
 // COMPONENTS
-import ResourceButton from './SelectedResourceNarrow.svelte';
+import ResourceButton from './SelectedResourceNarrow.svelte'
 // ENUMS
-import { FirstClassResource } from '$lib/enums';
+import { FirstClassResource } from '$lib/enums'
 // TYPES
-import type { Resource, Id, NeighbourhoodResource, PanelProps } from '$lib/types';
+import type { Resource, Id, NeighbourhoodResource, PanelProps } from '$lib/types'
 
 // CONTEXT
-const appCtx = getAppCtx();
+const appCtx = getAppCtx()
 
 type Props = {
-  resourceType: FirstClassResource | 'neighbourhood';
-  resources: Exclude<Resource, 'task' | 'hub'>[] | NeighbourhoodResource[];
-  selectedIds: Id[] | string[];
-  colorClass?: string;
-} & PanelProps;
+  resourceType: FirstClassResource | 'neighbourhood'
+  resources: Exclude<Resource, 'task' | 'hub'>[] | NeighbourhoodResource[]
+  selectedIds: Id[] | string[]
+  colorClass?: string
+} & PanelProps
 
 // First, get the props without destructuring
-let props: Props = $props();
+let props: Props = $props()
 
 // Then reference props directly or create derived values if needed
-let colorClass = $derived(props.colorClass ?? 'text-blue-400');
+let colorClass = $derived(props.colorClass ?? 'text-blue-400')
 
 function handleToggle(id: Id) {
   if (props.resourceType !== 'neighbourhood') {
-    appCtx.togglePrism(props.resourceType as FirstClassResource, id);
+    appCtx.togglePrism(props.resourceType as FirstClassResource, id)
   }
 }
 
 // Handle narrow mode circle interactions
 const handleClickOnNarrow = async (id: string, e: MouseEvent) => {
-  e.stopPropagation();
-  if (!props.resourceType) return;
+  e.stopPropagation()
+  if (!props.resourceType) return
 
-  const isCurrentActive = id === props.active?.resourceId;
-  const isInPrism = props.selectedIds.includes(id);
+  const isCurrentActive = id === props.active?.resourceId
+  const isInPrism = props.selectedIds.includes(id)
 
   if (isInPrism && isCurrentActive) {
-    appCtx.togglePrism(props.resourceType as FirstClassResource, id);
+    appCtx.togglePrism(props.resourceType as FirstClassResource, id)
   } else
     await navigateOnAdminById(
       props.adminCtx!,
       props.resourceType as FirstClassResource,
-      id
-    );
-};
+      id,
+    )
+}
 
 function getNoneSelectedMessage(props: Props) {
   if (props.resourceType == 'layer') {
-    const baseMsg = m.maps__layers_none();
-    const subMsg = m.maps__layers_none_subline();
-    return `${baseMsg} ${props.isAdmin ? '' : subMsg}`;
+    const baseMsg = m.maps__layers_none()
+    const subMsg = m.maps__layers_none_subline()
+    return `${baseMsg} ${props.isAdmin ? '' : subMsg}`
   } else if (
     props.resourceType == 'project' &&
     appCtx.state.prisms.organisation.length == 0
   ) {
-    return m.maps__projects_none();
+    return m.maps__projects_none()
   } else if (
     props.resourceType == 'project' &&
     appCtx.state.prisms.organisation.length > 0
   ) {
     return m.maps__projects_none_with_n_organisations({
-      n: appCtx.state.prisms.organisation.length.toString()
-    });
+      n: appCtx.state.prisms.organisation.length.toString(),
+    })
   } else if (props.resourceType == 'neighbourhood') {
-    return m.maps__neighbourhoods_none();
+    return m.maps__neighbourhoods_none()
   } else {
-    return m.maps__organisations_none();
+    return m.maps__organisations_none()
   }
 }
 
@@ -88,14 +88,15 @@ let resourcesToDisplay = $derived([
   !props.selectedIds.includes(props.active.resourceId) &&
   props.active.resourceType == props.resourceType
     ? [props.active.resourceId]
-    : [])
-]);
+    : []),
+])
 </script>
 
 <div
   class="flex {props.isNarrow
     ? 'flex-col items-center justify-center gap-1 px-2'
-    : 'mb-0 flex-wrap gap-2 px-8 pt-2'}">
+    : 'mb-0 flex-wrap gap-2 px-8 pt-2'}"
+>
   {#each resourcesToDisplay as id (id)}
     {@const isCurrentActive = id === props.active?.resourceId}
     {@const resource = props.resources.find((r) => r.id === id)}
@@ -108,7 +109,8 @@ let resourcesToDisplay = $derived([
           onclick={(e) => {
             e.stopPropagation();
             handleToggle(id);
-          }}>
+          }}
+        >
           {name}
           <Icon src={XMark} class="ml-1 h-3 w-3" />
         </span>
@@ -121,7 +123,8 @@ let resourcesToDisplay = $derived([
           isSelected={props.selectedIds.includes(id)}
           {id}
           {name}
-          onclick={(e: MouseEvent) => handleClickOnNarrow(id, e)} />
+          onclick={(e: MouseEvent) => handleClickOnNarrow(id, e)}
+        />
       {/if}
     </div>
   {/each}

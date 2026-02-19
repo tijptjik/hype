@@ -5,26 +5,26 @@
  * @param {boolean} hasCameraAccess - Whether camera access is available
  */
 // SERVICES
-import { checkCameraAvailability } from '$lib/client/services/image';
+import { checkCameraAvailability } from '$lib/client/services/image'
 // COMPONENTS
-import AddFromCamera from './AddFromCamera.svelte';
-import AddFromFiles from './AddFromFiles.svelte';
-import Remove from '$lib/components/featureCard/gallery/Remove.svelte';
+import AddFromCamera from './AddFromCamera.svelte'
+import AddFromFiles from './AddFromFiles.svelte'
+import Remove from '$lib/components/featureCard/gallery/Remove.svelte'
 
 // TYPES
-import type { Image } from '$lib/types';
+import type { Image } from '$lib/types'
 
 // STATE
-let hasCameraAccess = $state(false);
+let hasCameraAccess = $state(false)
 
 // PROPS
-let { currentImage }: { currentImage: Image } = $props();
+let { currentImage }: { currentImage: Image } = $props()
 
 $effect(() => {
-  checkCameraAvailability().then((cameraAvailable) => {
-    hasCameraAccess = cameraAvailable;
-  });
-});
+  checkCameraAvailability().then(cameraAvailable => {
+    hasCameraAccess = cameraAvailable
+  })
+})
 </script>
 
 <div class="absolute bottom-2 left-2 z-10 flex flex-row gap-2">

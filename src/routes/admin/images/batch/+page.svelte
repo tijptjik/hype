@@ -1,97 +1,104 @@
 <script lang="ts">
 // SVELTE
-import { fade, scale } from 'svelte/transition';
+import { fade, scale } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
-import { getAppCtx } from '$lib/context/app.svelte';
-import { getHeaderCtrl } from '$lib/context/header.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getAppCtx } from '$lib/context/app.svelte'
+import { getHeaderCtrl } from '$lib/context/header.svelte'
 // SERVICES
-import { uploadAndProcessImage } from '$lib/client/services/image';
+import { uploadAndProcessImage } from '$lib/client/services/image'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
-import { Photo, CheckCircle, XCircle, CloudArrowUp } from '@steeze-ui/heroicons';
-import ImageUp from 'virtual:icons/lucide/image-up';
-import Dropzone from 'svelte-file-dropzone';
+import Icon from '$lib/components/common/Icon.svelte'
+import { Photo, CheckCircle, XCircle, CloudArrowUp } from '@steeze-ui/heroicons'
+import ImageUp from 'virtual:icons/lucide/image-up'
+import Dropzone from 'svelte-file-dropzone'
 // ENUMS
-import { FirstClassResource, ImageContextResource } from '$lib/enums';
+import { FirstClassResource, ImageContextResource } from '$lib/enums'
 // TYPES
-import type { Image, ImageUploadCtx, Feature, Layer, Project, Organisation } from '$lib/types';
+import type {
+  Image,
+  ImageUploadCtx,
+  Feature,
+  Layer,
+  Project,
+  Organisation,
+} from '$lib/types'
 
 type BatchUploadResult = {
-  file: File;
-  status: 'pending' | 'uploading' | 'success' | 'error';
-  savedImage?: Image;
-  error?: string;
-  featureId?: string | null;
-};
+  file: File
+  status: 'pending' | 'uploading' | 'success' | 'error'
+  savedImage?: Image
+  error?: string
+  featureId?: string | null
+}
 
 // CONTEXT
-const adminCtx = getAdminCtx();
-const appCtx = getAppCtx();
-const headerCtrl = getHeaderCtrl();
+const adminCtx = getAdminCtx()
+const appCtx = getAppCtx()
+const headerCtrl = getHeaderCtrl()
 
 // Set the active resource to something appropriate for admin context
-adminCtx.setFacet(false, false, FirstClassResource.feature);
+adminCtx.setFacet(false, false, FirstClassResource.feature)
 headerCtrl.setHeaderForStandAlone(m.admin__batch_image_upload(), ImageUp, {
   showNew: false,
   showFilter: false,
   showViewActions: false,
   showLayoutToggle: false,
-  showControlsToggle: false
-});
+  showControlsToggle: false,
+})
 
 // STATE
-let uploadResults: BatchUploadResult[] = $state([]);
-let isUploading = $state(false);
-let currentBatch = $state(0);
-let totalBatches = $state(0);
+let uploadResults: BatchUploadResult[] = $state([])
+let isUploading = $state(false)
+let currentBatch = $state(0)
+let totalBatches = $state(0)
 
 // Extract feature ID from filename
 function extractFeatureIdFromFilename(filename: string): string | null {
   // Remove file extension
-  const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
+  const nameWithoutExt = filename.replace(/\.[^/.]+$/, '')
 
   // Validate the feature ID exists in our resources
-  const feature = appCtx.getFeatureById(nameWithoutExt);
+  const feature = appCtx.getFeatureById(nameWithoutExt)
   if (!feature) {
-    console.warn(`No matching feature found for ID: ${nameWithoutExt}`);
-    return null;
+    console.warn(`No matching feature found for ID: ${nameWithoutExt}`)
+    return null
   }
 
-  return nameWithoutExt;
+  return nameWithoutExt
 }
 
 // Define the context type
 type FeatureContext = {
-  feature: Feature;
-  layer: Layer;
-  project: Project;
-  organisation: Organisation;
-  layerId: string;
-  projectId: string;
-  organisationId: string;
-};
+  feature: Feature
+  layer: Layer
+  project: Project
+  organisation: Organisation
+  layerId: string
+  projectId: string
+  organisationId: string
+}
 
 // Get context for a feature ID
 async function getContextForFeature(featureId: string): Promise<FeatureContext | null> {
   try {
-    const feature = await appCtx.getFeatureById(featureId);
+    const feature = await appCtx.getFeatureById(featureId)
     if (!feature) {
-      console.error(`Feature not found for ID: ${featureId}`);
-      return null;
+      console.error(`Feature not found for ID: ${featureId}`)
+      return null
     }
 
-    const { layer, project, organisation } = await appCtx.getHierarchy(feature);
+    const { layer, project, organisation } = await appCtx.getHierarchy(feature)
 
     if (!layer || !project || !organisation) {
       console.error(`Missing hierarchy for feature ${featureId}:`, {
         layer,
         project,
-        organisation
-      });
-      return null;
+        organisation,
+      })
+      return null
     }
 
     return {
@@ -101,75 +108,75 @@ async function getContextForFeature(featureId: string): Promise<FeatureContext |
       organisation,
       layerId: layer.id,
       projectId: project.id,
-      organisationId: organisation.id
-    };
+      organisationId: organisation.id,
+    }
   } catch (error) {
-    console.error(`Error getting context for feature ${featureId}:`, error);
-    return null;
+    console.error(`Error getting context for feature ${featureId}:`, error)
+    return null
   }
 }
 
 // Create upload context for feature
 async function createUploadContextForFeature(
   featureId: string,
-  context: FeatureContext
+  context: FeatureContext,
 ): Promise<ImageUploadCtx | null> {
   try {
     const uploadCtx: ImageUploadCtx = {
       ctxType: ImageContextResource.feature,
       ctxId: featureId,
       organisation: context.organisation,
-      project: context.project
-    };
+      project: context.project,
+    }
 
-    return uploadCtx;
+    return uploadCtx
   } catch (error) {
-    console.error(`Error creating upload context for feature ${featureId}:`, error);
-    return null;
+    console.error(`Error creating upload context for feature ${featureId}:`, error)
+    return null
   }
 }
 
 // Handle file drop
 async function handleDrop(e: CustomEvent) {
-  const acceptedFiles: File[] = e.detail.acceptedFiles;
-  const fileRejections: any[] = e.detail.fileRejections;
+  const acceptedFiles: File[] = e.detail.acceptedFiles
+  const fileRejections: any[] = e.detail.fileRejections
 
   if (fileRejections.length > 0) {
-    console.warn('Some files were rejected:', fileRejections);
+    console.warn('Some files were rejected:', fileRejections)
   }
 
-  if (acceptedFiles.length === 0) return;
+  if (acceptedFiles.length === 0) return
 
   // Initialize upload results
-  uploadResults = acceptedFiles.map((file) => ({
+  uploadResults = acceptedFiles.map(file => ({
     file,
     status: 'pending' as const,
-    featureId: extractFeatureIdFromFilename(file.name)
-  }));
+    featureId: extractFeatureIdFromFilename(file.name),
+  }))
 
   // Process in batches of 10
-  const batchSize = 10;
-  totalBatches = Math.ceil(uploadResults.length / batchSize);
+  const batchSize = 10
+  totalBatches = Math.ceil(uploadResults.length / batchSize)
 
-  isUploading = true;
+  isUploading = true
 
   for (let i = 0; i < uploadResults.length; i += batchSize) {
-    currentBatch = Math.floor(i / batchSize) + 1;
-    const batch = uploadResults.slice(i, i + batchSize);
+    currentBatch = Math.floor(i / batchSize) + 1
+    const batch = uploadResults.slice(i, i + batchSize)
 
     // Process batch in parallel
     await Promise.allSettled(
       batch.map(async (result, index) => {
-        const globalIndex = i + index;
-        await processSingleUpload(result, globalIndex);
-      })
-    );
+        const globalIndex = i + index
+        await processSingleUpload(result, globalIndex)
+      }),
+    )
   }
 
-  isUploading = false;
+  isUploading = false
 
-  const successful = uploadResults.filter((r) => r.status === 'success').length;
-  const failed = uploadResults.filter((r) => r.status === 'error').length;
+  const successful = uploadResults.filter(r => r.status === 'success').length
+  const failed = uploadResults.filter(r => r.status === 'error').length
 }
 
 // Process a single upload
@@ -178,72 +185,72 @@ async function processSingleUpload(result: BatchUploadResult, index: number) {
     uploadResults[index] = {
       ...result,
       status: 'error',
-      error: m.error_message__failed_to_extract_feature_id_from_image()
-    };
+      error: m.error_message__failed_to_extract_feature_id_from_image(),
+    }
     console.error(
       `Error for ${result.file.name}:`,
-      m.error_message__failed_to_extract_feature_id_from_image()
-    );
-    return;
+      m.error_message__failed_to_extract_feature_id_from_image(),
+    )
+    return
   }
 
-  const context = await getContextForFeature(result.featureId);
+  const context = await getContextForFeature(result.featureId)
   if (!context) {
     uploadResults[index] = {
       ...result,
       status: 'error',
-      error: `Feature not found or missing hierarchy for ID: ${result.featureId}`
-    };
+      error: `Feature not found or missing hierarchy for ID: ${result.featureId}`,
+    }
     console.error(
       `Error for ${result.file.name}:`,
-      `Feature not found or missing hierarchy for ID: ${result.featureId}`
-    );
-    return;
+      `Feature not found or missing hierarchy for ID: ${result.featureId}`,
+    )
+    return
   }
 
-  const uploadCtx = await createUploadContextForFeature(result.featureId, context);
+  const uploadCtx = await createUploadContextForFeature(result.featureId, context)
   if (!uploadCtx) {
     uploadResults[index] = {
       ...result,
       status: 'error',
-      error: 'Could not create upload context'
-    };
-    console.error(`Error for ${result.file.name}:`, 'Could not create upload context');
-    return;
+      error: 'Could not create upload context',
+    }
+    console.error(`Error for ${result.file.name}:`, 'Could not create upload context')
+    return
   }
 
   try {
-    uploadResults[index] = { ...result, status: 'uploading' };
+    uploadResults[index] = { ...result, status: 'uploading' }
 
     const savedImage = await uploadAndProcessImage(result.file, uploadCtx, {
       isPublished: true,
-      intent: 'canonical'
-    });
+      intent: 'canonical',
+    })
 
     uploadResults[index] = {
       ...result,
       status: 'success',
-      savedImage
-    };
+      savedImage,
+    }
     // Refresh the features in resource state
-    adminCtx.invalidateAndRefresh(FirstClassResource.feature);
+    adminCtx.invalidateAndRefresh(FirstClassResource.feature)
   } catch (error) {
     uploadResults[index] = {
       ...result,
       status: 'error',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    };
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
 
-    console.error(`Error for ${result.file.name}:`, error);
+    console.error(`Error for ${result.file.name}:`, error)
   }
 }
 
-let successCount = $derived(uploadResults.filter((r) => r.status === 'success').length);
-let errorCount = $derived(uploadResults.filter((r) => r.status === 'error').length);
+let successCount = $derived(uploadResults.filter(r => r.status === 'success').length)
+let errorCount = $derived(uploadResults.filter(r => r.status === 'error').length)
 let uploadingCount = $derived(
-  uploadResults.filter((r) => r.status === 'uploading').length
-);
-let pendingCount = $derived(uploadResults.filter((r) => r.status === 'pending').length);
+  uploadResults.filter(r => r.status === 'uploading').length,
+)
+let pendingCount = $derived(uploadResults.filter(r => r.status === 'pending').length)
 </script>
 
 <div class="h-full p-6">
@@ -252,7 +259,8 @@ let pendingCount = $derived(uploadResults.filter((r) => r.status === 'pending').
       {m.admin__batch_image_upload()}
       <small
         class="case hidden select-text pr-3 text-sm normal-case text-base-content/70 @sm:block"
-        >{m.caring_aloof_haddock_bubble()}</small>
+        >{m.caring_aloof_haddock_bubble()}</small
+      >
     </h3>
   </div>
 
@@ -266,17 +274,17 @@ let pendingCount = $derived(uploadResults.filter((r) => r.status === 'pending').
         multiple={true}
         class="flex h-64 w-full flex-col justify-center gap-4 rounded-xl border-2 border-dashed border-base-content/20 bg-glass-300/30 text-center transition-colors hover:border-primary hover:bg-base-200/50"
         disableDefaultStyles={true}
-        disabled={isUploading}>
+        disabled={isUploading}
+      >
         <Icon src={CloudArrowUp} class="mx-auto h-12 w-12 text-base-content/50" />
         <div class="space-y-2">
           <p class="text-lg font-medium">{m.maroon_teary_warbler_nourish()}</p>
-          <p class="text-sm text-base-content/70">
-            {m.teal_dizzy_finch_file()}
-          </p>
+          <p class="text-sm text-base-content/70">{m.teal_dizzy_finch_file()}</p>
           {#if isUploading}
             <p class="text-sm text-warning">
               {m.flat_close_slug_bubble()}
-              {currentBatch} / {totalBatches}...
+              {currentBatch}
+              / {totalBatches}...
             </p>
           {/if}
         </div>
@@ -320,7 +328,8 @@ let pendingCount = $derived(uploadResults.filter((r) => r.status === 'pending').
           {#each uploadResults as result, index (result.file.name)}
             <div
               class="flex items-center justify-between rounded-lg border border-primary bg-glass-result p-4"
-              in:scale={{ duration: 200, delay: index * 50 }}>
+              in:scale={{ duration: 200, delay: index * 50 }}
+            >
               <div class="flex items-center space-x-3">
                 <!-- Status Icon -->
                 {#if result.status === 'success'}
@@ -353,7 +362,8 @@ let pendingCount = $derived(uploadResults.filter((r) => r.status === 'pending').
                     ? 'badge-error'
                     : result.status === 'uploading'
                       ? 'badge-warning'
-                      : 'badge-ghost'}">
+                      : 'badge-ghost'}"
+              >
                 {result.status}
               </div>
             </div>

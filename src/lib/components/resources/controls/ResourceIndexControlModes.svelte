@@ -1,45 +1,45 @@
 <script lang="ts">
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
+import Icon from '$lib/components/common/Icon.svelte'
 // ICONS
-import { Funnel } from '@steeze-ui/heroicons';
+import { Funnel } from '@steeze-ui/heroicons'
 // TYPES
-import type { ControlMode } from '$lib/types';
+import type { ControlMode } from '$lib/types'
 
 let {
   controlMode = $bindable(),
   defaultMode = null,
-  modes = ['filter']
+  modes = ['filter'],
 }: {
-  controlMode: ControlMode;
-  defaultMode?: ControlMode;
-  modes?: Exclude<ControlMode, null>[];
-} = $props();
+  controlMode: ControlMode
+  defaultMode?: ControlMode
+  modes?: Exclude<ControlMode, null>[]
+} = $props()
 
-const adminCtx = getAdminCtx();
+const adminCtx = getAdminCtx()
 
 // Initialize mode if not set
 if (!controlMode) {
-  controlMode = defaultMode;
+  controlMode = defaultMode
 }
 
 const modeConfig = {
   filter: {
     icon: Funnel,
-    label: 'Filters'
-  }
-};
+    label: 'Filters',
+  },
+}
 
 function toggleMode(modeKey: ControlMode) {
   if (controlMode === modeKey) {
-    controlMode = null;
-    adminCtx.resetViewFilters();
+    controlMode = null
+    adminCtx.resetViewFilters()
   } else {
-    controlMode = modeKey;
+    controlMode = modeKey
   }
-  adminCtx.appCtx.setControlMode(controlMode);
+  adminCtx.appCtx.setControlMode(controlMode)
 }
 </script>
 
@@ -52,7 +52,8 @@ function toggleMode(modeKey: ControlMode) {
       class:opacity-70={controlMode !== modeKey}
       class:hover:opacity-100={controlMode !== modeKey}
       onclick={() => toggleMode(modeKey)}
-      title={label}>
+      title={label}
+    >
       <Icon src={icon as any} class="h-6 w-6" />
     </button>
   {/each}

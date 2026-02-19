@@ -1,18 +1,18 @@
 <script lang="ts">
 // I18N
-import { getI18n } from '$lib/i18n';
+import { getI18n } from '$lib/i18n'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
 // TYPES
-import type { Resource } from '$lib/types';
+import type { Resource } from '$lib/types'
 
 let { resource, resourceParent = undefined } = $props<{
-  resource: Resource;
-  resourceParent?: Resource;
-}>();
+  resource: Resource
+  resourceParent?: Resource
+}>()
 
 // CONTEXT
-const appCtx = getAppCtx();
+const appCtx = getAppCtx()
 </script>
 
 <div class="flex flex-col items-start gap-0">

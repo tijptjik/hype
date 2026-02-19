@@ -1,18 +1,18 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
-import { slide } from 'svelte/transition';
+import { m } from '$lib/i18n'
+import { slide } from 'svelte/transition'
 // LIB
-import { invalidateAll } from '$app/navigation';
+import { invalidateAll } from '$app/navigation'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
-import { XCircle } from '@steeze-ui/heroicons';
+import Icon from '$lib/components/common/Icon.svelte'
+import { XCircle } from '@steeze-ui/heroicons'
 
 // STATE : PROPS
-let menuProps = $props();
+let menuProps = $props()
 
 // STATE : FORM
-let { tainted, isTainted } = menuProps.form;
+let { tainted, isTainted } = menuProps.form
 </script>
 
 <button
@@ -21,7 +21,8 @@ let { tainted, isTainted } = menuProps.form;
   onclick={() => {
     invalidateAll();
   }}
-  disabled={!isTainted($tainted)}>
+  disabled={!isTainted($tainted)}
+>
   <Icon src={XCircle} class="h-6 w-6" />
   {m.forms__reset()}
 </button>

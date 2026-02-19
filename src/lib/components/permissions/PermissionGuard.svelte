@@ -1,6 +1,6 @@
 <script lang="ts">
 // TYPES
-import type { SessionUser } from '$lib/types';
+import type { SessionUser } from '$lib/types'
 // PERMISSIONS
 import {
   canManageOrganisations,
@@ -9,8 +9,8 @@ import {
   canUpdateProject,
   canCreateLayers,
   canUpdateLayer,
-  canManageFeatures
-} from '$lib/client/services/auth';
+  canManageFeatures,
+} from '$lib/client/services/auth'
 
 type PermissionType =
   | 'manage-organisations'
@@ -19,16 +19,16 @@ type PermissionType =
   | 'update-project'
   | 'create-layers'
   | 'update-layer'
-  | 'manage-features';
+  | 'manage-features'
 
 interface Props {
-  user: SessionUser | null;
-  permission: PermissionType;
-  organisationId?: string;
-  projectId?: string;
-  children: any;
-  fallback?: any;
-  disabled?: boolean;
+  user: SessionUser | null
+  permission: PermissionType
+  organisationId?: string
+  projectId?: string
+  children: any
+  fallback?: any
+  disabled?: boolean
 }
 
 let {
@@ -38,39 +38,39 @@ let {
   projectId,
   children,
   fallback,
-  disabled = false
-}: Props = $props();
+  disabled = false,
+}: Props = $props()
 
 // Check if user has the required permission
 let hasPermission = $derived.by(() => {
-  if (!user) return false;
+  if (!user) return false
 
   switch (permission) {
     case 'manage-organisations':
-      return canManageOrganisations(user);
+      return canManageOrganisations(user)
 
     case 'update-organisation':
-      return organisationId ? canUpdateOrganisation(user, organisationId) : false;
+      return organisationId ? canUpdateOrganisation(user, organisationId) : false
 
     case 'create-projects':
-      return canCreateProjects(user);
+      return canCreateProjects(user)
 
     case 'update-project':
-      return projectId ? canUpdateProject(user, projectId, organisationId) : false;
+      return projectId ? canUpdateProject(user, projectId, organisationId) : false
 
     case 'create-layers':
-      return projectId ? canCreateLayers(user, projectId) : false;
+      return projectId ? canCreateLayers(user, projectId) : false
 
     case 'update-layer':
-      return projectId ? canUpdateLayer(user, projectId) : false;
+      return projectId ? canUpdateLayer(user, projectId) : false
 
     case 'manage-features':
-      return projectId ? canManageFeatures(user, projectId) : false;
+      return projectId ? canManageFeatures(user, projectId) : false
 
     default:
-      return false;
+      return false
   }
-});
+})
 
 // If disabled prop is true, pass the hasPermission check to children
 // Otherwise, conditionally render children or fallback

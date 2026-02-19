@@ -1,12 +1,12 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
-import { XCircle } from '@steeze-ui/heroicons';
+import Icon from '$lib/components/common/Icon.svelte'
+import { XCircle } from '@steeze-ui/heroicons'
 
-let { onclick } = $props();
+let { onclick } = $props()
 </script>
 
 <button class="btn btn-ghost btn-sm hover:bg-transparent hover:text-rose-300" {onclick}>

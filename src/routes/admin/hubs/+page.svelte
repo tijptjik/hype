@@ -1,19 +1,19 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
-import { getHeaderCtrl } from '$lib/context/header.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getHeaderCtrl } from '$lib/context/header.svelte'
 // COMPONENTS
-import ResourceIndex from '$lib/components/resources/ResourceIndex.svelte';
-import EntityCard from '$lib/components/resources/EntityCard.svelte';
-import FilterControlBar from '$lib/components/resources/filters/hubs/Root.svelte';
+import ResourceIndex from '$lib/components/resources/ResourceIndex.svelte'
+import EntityCard from '$lib/components/resources/EntityCard.svelte'
+import FilterControlBar from '$lib/components/resources/filters/hubs/Root.svelte'
 // ENUMS
-import { FirstClassResource } from '$lib/enums';
+import { FirstClassResource } from '$lib/enums'
 // ICONS
-import HubIcon from 'virtual:icons/lucide/building-2';
+import HubIcon from 'virtual:icons/lucide/building-2'
 // TYPES
-import type { KeyMap, Hub } from '$lib/types';
+import type { KeyMap, Hub } from '$lib/types'
 
 // CONFIG :: KEY MAP
 const keyMap: KeyMap = {
@@ -21,23 +21,23 @@ const keyMap: KeyMap = {
   title: 'i18n.name',
   subtitle: 'domain',
   description: 'i18n.description',
-  image: 'organisations.image'
-};
+  image: 'organisations.image',
+}
 
 // CONTEXT
-const adminCtx = getAdminCtx();
-const headerCtrl = getHeaderCtrl();
-adminCtx.setFacet(false, false, FirstClassResource.hub);
+const adminCtx = getAdminCtx()
+const headerCtrl = getHeaderCtrl()
+adminCtx.setFacet(false, false, FirstClassResource.hub)
 
 // HEADER SETUP
-headerCtrl.setHeaderForIndex(m.hub__title(), HubIcon);
+headerCtrl.setHeaderForIndex(m.hub__title(), HubIcon)
 
 // STATE
 let entities: Hub[] = $derived(
   adminCtx.isInitialised
     ? adminCtx.getViewFilteredResource<Hub>(FirstClassResource.hub)
-    : []
-);
+    : [],
+)
 </script>
 
 <ResourceIndex {entities}>

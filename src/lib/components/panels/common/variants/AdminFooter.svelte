@@ -1,37 +1,37 @@
 <script lang="ts">
 // SVELTE
-import { page } from '$app/state';
+import { page } from '$app/state'
 // LIB
-import { ADMIN_PATH } from '$lib/index';
+import { ADMIN_PATH } from '$lib/index'
 // AUTH
-import { hasControlPanelAccess } from '$lib/client/services/auth';
+import { hasControlPanelAccess } from '$lib/client/services/auth'
 // NAVIGATION
-import { navigateOnAdmin } from '$lib/navigation';
+import { navigateOnAdmin } from '$lib/navigation'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
+import Icon from '$lib/components/common/Icon.svelte'
 // ENUMS
-import { FirstClassResource } from '$lib/enums';
+import { FirstClassResource } from '$lib/enums'
 // ICONS
 import {
   InboxArrowDown,
   Map as MapIcon,
   CloudArrowUp,
   BuildingLibrary,
-  MapPin
-} from '@steeze-ui/heroicons';
+  MapPin,
+} from '@steeze-ui/heroicons'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte'
 // TYPES
-import type { SessionUser, PanelProps } from '$lib/types';
+import type { SessionUser, PanelProps } from '$lib/types'
 
 // CONTEXT
-const adminCtx = getAdminCtx();
+const adminCtx = getAdminCtx()
 
 // PROPS
-const { ...panelProps }: PanelProps = $props();
+const { ...panelProps }: PanelProps = $props()
 
-let notificationCount = $derived(adminCtx.filteredTasks.length);
-let featureCount = $derived(adminCtx.filteredFeatures.length);
+let notificationCount = $derived(adminCtx.filteredTasks.length)
+let featureCount = $derived(adminCtx.filteredFeatures.length)
 
 // Admin control items configuration
 const adminControlItems = $derived.by(() => {
@@ -39,7 +39,7 @@ const adminControlItems = $derived.by(() => {
     !adminCtx.appCtx.user ||
     !hasControlPanelAccess(adminCtx.appCtx.user as SessionUser)
   ) {
-    return [];
+    return []
   }
 
   const items = [
@@ -50,8 +50,8 @@ const adminControlItems = $derived.by(() => {
       notificationCount: featureCount,
       color: {
         text: 'text-primary',
-        border: 'border-primary'
-      }
+        border: 'border-primary',
+      },
     },
     {
       href: `${ADMIN_PATH}/tasks`,
@@ -60,10 +60,10 @@ const adminControlItems = $derived.by(() => {
       notificationCount: notificationCount,
       color: {
         text: 'text-secondary',
-        border: 'border-secondary'
-      }
-    }
-  ];
+        border: 'border-secondary',
+      },
+    },
+  ]
 
   if (adminCtx.appCtx.isSuperAdmin()) {
     items.push(
@@ -74,8 +74,8 @@ const adminControlItems = $derived.by(() => {
         notificationCount: 0,
         color: {
           text: 'text-accent',
-          border: 'border-accent'
-        }
+          border: 'border-accent',
+        },
       },
       {
         href: `${ADMIN_PATH}/hubs`,
@@ -84,10 +84,10 @@ const adminControlItems = $derived.by(() => {
         notificationCount: 0,
         color: {
           text: 'text-accent',
-          border: 'border-accent'
-        }
-      }
-    );
+          border: 'border-accent',
+        },
+      },
+    )
   }
 
   items.push({
@@ -100,26 +100,27 @@ const adminControlItems = $derived.by(() => {
     notificationCount: 0,
     color: {
       text: 'text-primary',
-      border: 'border-primary'
-    }
-  });
+      border: 'border-primary',
+    },
+  })
 
-  return items;
-});
+  return items
+})
 
 const isActive = (href: string) => {
   if (href === '/') {
-    return false;
+    return false
   }
-  return page.url.pathname.startsWith(href);
-};
+  return page.url.pathname.startsWith(href)
+}
 </script>
 
 <!-- SECONDARY SIDEBAR -->
 <footer
   class="flex min-h-0 w-full flex-shrink-0 {panelProps.isNarrow
     ? 'flex-col items-center pb-2'
-    : 'flex-row-reverse items-center justify-center gap-3'}">
+    : 'flex-row-reverse items-center justify-center gap-3'}"
+>
   <!-- ADMIN CONTROLS arranged vertically -->
   {#each adminControlItems as item}
     <div class="flex-shrink-0 flex-col items-center justify-center">
@@ -131,13 +132,15 @@ const isActive = (href: string) => {
           item.href
         )
           ? item.color.text
-          : 'text-base-content/90 hover:text-base-content/70'}">
+          : 'text-base-content/90 hover:text-base-content/70'}"
+      >
         {#if item.notificationCount > 0}
           <div
             class="badge badge-primary badge-sm absolute right-0.5 top-[8px] size-5 {item.notificationCount >
             99
               ? 'text-[1.2em]'
-              : 'text-xs'}">
+              : 'text-xs'}"
+          >
             {item.notificationCount > 99 ? '∞' : item.notificationCount}
           </div>
         {/if}

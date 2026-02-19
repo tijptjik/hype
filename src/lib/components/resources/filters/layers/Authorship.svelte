@@ -6,57 +6,57 @@ LAYERS :: FILTERS :: AUTHORSHIP
 
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte'
 // SERVICES
 import {
   getResourceFilterState,
   toggleResourceFilterState,
   setResourceFilterState,
-  getFeatureTaskLabel
-} from '$lib/client/services/filters';
+  getFeatureTaskLabel,
+} from '$lib/client/services/filters'
 // COMPONENTS
-import FilterToggle from '../FilterToggle.svelte';
+import FilterToggle from '../FilterToggle.svelte'
 // TYPES
-import type { LayerAuthorshipFilterKey } from '$lib/types';
+import type { LayerAuthorshipFilterKey } from '$lib/types'
 
 // CONTEXT
-const adminCtx = getAdminCtx();
+const adminCtx = getAdminCtx()
 
 // FILTER DEFINITIONS
 const authorshipFilters: Record<
   LayerAuthorshipFilterKey,
   {
-    label: string;
-    invertBoolean?: boolean;
-    trueLabel?: string;
-    falseLabel?: string;
+    label: string
+    invertBoolean?: boolean
+    trueLabel?: string
+    falseLabel?: string
   }
 > = {
   hasName: {
     label: m.admin__forms_common_name_full(),
     falseLabel: m.filters__no(),
-    trueLabel: m.filters__has()
+    trueLabel: m.filters__has(),
   },
   hasContextualName: {
     label: m.admin__forms_common_name_short(),
     falseLabel: m.filters__no(),
-    trueLabel: m.filters__has()
+    trueLabel: m.filters__has(),
   },
   hasDescription: {
     label: m.feature__description(),
     falseLabel: m.filters__no(),
-    trueLabel: m.filters__has()
-  }
-};
+    trueLabel: m.filters__has(),
+  },
+}
 </script>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- AUTHORSHIP FILTERS -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
-{#each Object.entries(authorshipFilters) as [filterKey, filterDef], idx (filterKey)}
+{#each Object.entries(authorshipFilters) as [ filterKey, filterDef ], idx (filterKey)}
   {@const currentValue = getResourceFilterState(
     adminCtx,
     'layer',
@@ -76,5 +76,6 @@ const authorshipFilters: Record<
       const nextState =
         currentValue === null ? true : currentValue === true ? false : null;
       setResourceFilterState(adminCtx, 'layer', key, nextState);
-    }} />
+    }}
+  />
 {/each}

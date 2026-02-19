@@ -1,19 +1,19 @@
 <script lang="ts">
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
-import { getHeaderCtrl } from '$lib/context/header.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getHeaderCtrl } from '$lib/context/header.svelte'
 // COMPONENTS
-import ResourceIndex from '$lib/components/resources/ResourceIndex.svelte';
-import EntityCard from '$lib/components/resources/EntityCard.svelte';
-import FilterControlBar from '$lib/components/resources/filters/projects/Root.svelte';
+import ResourceIndex from '$lib/components/resources/ResourceIndex.svelte'
+import EntityCard from '$lib/components/resources/EntityCard.svelte'
+import FilterControlBar from '$lib/components/resources/filters/projects/Root.svelte'
 // ENUMS
-import { FirstClassResource } from '$lib/enums';
+import { FirstClassResource } from '$lib/enums'
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // ICONS
-import ProjectIcon from 'virtual:icons/lucide/layout-grid';
+import ProjectIcon from 'virtual:icons/lucide/layout-grid'
 // TYPES
-import type { KeyMap, Project } from '$lib/types';
+import type { KeyMap, Project } from '$lib/types'
 
 // CONFIG :: KEY MAP
 const keyMap: KeyMap = {
@@ -28,7 +28,7 @@ const keyMap: KeyMap = {
       variant: 'primary',
       type: 'boolean',
       trueText: 'Published',
-      falseText: 'Draft'
+      falseText: 'Draft',
     },
     {
       label: 'isArchived',
@@ -36,23 +36,23 @@ const keyMap: KeyMap = {
       type: 'boolean',
       trueText: 'Dead',
       falseText: 'Alive',
-      superAdminOnly: true
-    }
-  ]
-};
+      superAdminOnly: true,
+    },
+  ],
+}
 
 // CONTEXT
-const adminCtx = getAdminCtx();
-const headerCtrl = getHeaderCtrl();
-adminCtx.setFacet(false, false, FirstClassResource.project);
+const adminCtx = getAdminCtx()
+const headerCtrl = getHeaderCtrl()
+adminCtx.setFacet(false, false, FirstClassResource.project)
 
 // HEADER SETUP
-headerCtrl.setHeaderForIndex(m.maps__projects(), ProjectIcon);
+headerCtrl.setHeaderForIndex(m.maps__projects(), ProjectIcon)
 
 // STATE
 let entities: Project[] = $derived(
-  adminCtx.getViewFilteredResource<Project>(FirstClassResource.project)
-);
+  adminCtx.getViewFilteredResource<Project>(FirstClassResource.project),
+)
 </script>
 
 <ResourceIndex {entities}>
