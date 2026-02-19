@@ -17,7 +17,7 @@ let {
   ref = $bindable(null),
   id,
   class: className = '',
-  style = ''
+  style = '',
 }: HeaderProps = $props()
 
 const rootClass = $derived(
@@ -31,10 +31,10 @@ const rootClass = $derived(
     text && !hideTitle && description && !hideDescription
       ? 'bits-header--with-title-and-subtitle'
       : '',
-    className
+    className,
   ]
     .filter(Boolean)
-    .join(' ')
+    .join(' '),
 )
 
 const resolvedStyle = $derived(style ?? undefined)
@@ -50,11 +50,16 @@ const resolvedStyle = $derived(style ?? undefined)
       class="bits-header__icon-wrap"
       icon={IconComponent}
       {href}
-      aria-hidden="true" />
+      aria-hidden="true"
+    />
   {/if}
 
   {#if text && !hideTitle}
-    <HeaderPrimitive.Title class="bits-header__title" data-header-title-text="" text={text} />
+    <HeaderPrimitive.Title
+      class="bits-header__title"
+      data-header-title-text=""
+      {text}
+    />
   {/if}
 
   {#if description && !hideDescription}
@@ -66,6 +71,7 @@ const resolvedStyle = $derived(style ?? undefined)
         .filter(Boolean)
         .join(' ')}
       data-header-title-description=""
-      text={description} />
+      text={description}
+    />
   {/if}
 </HeaderPrimitive.Root>

@@ -23,7 +23,7 @@ let {
   showLabelsOnHoverOnly = false,
   class: className = '',
   onCheckedChange,
-  onIndeterminateChange
+  onIndeterminateChange,
 }: CheckboxProps = $props()
 
 const rootClass = $derived(
@@ -32,29 +32,29 @@ const rootClass = $derived(
     `bits-checkbox--color-${color}`,
     `bits-checkbox--size-${size}`,
     'focus-visible:ring-foreground focus-visible:ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 peer',
-    className
+    className,
   ]
     .filter(Boolean)
-    .join(' ')
+    .join(' '),
 )
 
 const fieldClass = $derived(
   [
     'bits-checkbox-field',
     `bits-checkbox-field--size-${size}`,
-    disabled ? 'bits-checkbox-field--disabled' : ''
+    disabled ? 'bits-checkbox-field--disabled' : '',
   ]
     .filter(Boolean)
-    .join(' ')
+    .join(' '),
 )
 
 const sideLabelClass = $derived(
   [
     'bits-checkbox-label bits-checkbox-label--side',
-    showLabelsOnHoverOnly ? 'bits-checkbox-label--hover-only' : ''
+    showLabelsOnHoverOnly ? 'bits-checkbox-label--hover-only' : '',
   ]
     .filter(Boolean)
-    .join(' ')
+    .join(' '),
 )
 
 const topBottomLabelClass = 'bits-checkbox-label bits-checkbox-label--stack'
@@ -91,25 +91,40 @@ function handleIndeterminateChange(nextIndeterminate: boolean) {
       {id}
       class={rootClass}
       onCheckedChange={handleCheckedChange}
-      onIndeterminateChange={handleIndeterminateChange}>
+      onIndeterminateChange={handleIndeterminateChange}
+    >
       {#snippet children({ checked: isChecked, indeterminate: isIndeterminate })}
         <span class="bits-checkbox__icon" aria-hidden="true">
           {#if isIndeterminate}
-            <svg viewBox="0 0 16 16" class="bits-checkbox__icon-svg" fill="none">
+            <svg
+              viewBox="0 0 16 16"
+              class="bits-checkbox__icon-svg"
+              fill="none"
+              aria-hidden="true"
+              focusable="false"
+            >
               <path
                 d="M3.5 8H12.5"
                 stroke="currentColor"
                 stroke-width="2"
-                stroke-linecap="round" />
+                stroke-linecap="round"
+              />
             </svg>
           {:else if isChecked}
-            <svg viewBox="0 0 16 16" class="bits-checkbox__icon-svg" fill="none">
+            <svg
+              viewBox="0 0 16 16"
+              class="bits-checkbox__icon-svg"
+              fill="none"
+              aria-hidden="true"
+              focusable="false"
+            >
               <path
                 d="M3.5 8.2L6.6 11.3L12.5 5.4"
                 stroke="currentColor"
                 stroke-width="2"
                 stroke-linecap="round"
-                stroke-linejoin="round" />
+                stroke-linejoin="round"
+              />
             </svg>
           {/if}
         </span>

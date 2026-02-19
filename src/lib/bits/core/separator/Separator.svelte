@@ -16,7 +16,7 @@ let {
 const classes = $derived(
   ['bits-separator', `bits-separator--variant-${variant}`, className]
     .filter(Boolean)
-    .join(' ')
+    .join(' '),
 )
 </script>
 

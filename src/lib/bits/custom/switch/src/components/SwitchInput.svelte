@@ -1,10 +1,10 @@
 <script lang="ts">
-	import HiddenInput from "$lib/bits/utilities/HiddenInput.svelte";
-	import { SwitchInputState } from "../switch.svelte.js";
+import HiddenInput from '$lib/bits/utilities/HiddenInput.svelte'
+import { SwitchInputState } from '../switch.svelte.js'
 
-	const inputState = SwitchInputState.create();
+const inputState = SwitchInputState.create()
 </script>
 
 {#if inputState.shouldRender}
-	<HiddenInput {...inputState.props} />
+  <HiddenInput {...inputState.props} />
 {/if}
