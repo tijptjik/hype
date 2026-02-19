@@ -231,10 +231,6 @@ export function configureForm<Input = RemoteFormInput>(
             shouldRedirect,
           }),
         entity: resourceResult.getEntity?.(),
-        resourceValues:
-          data && typeof data === 'object'
-            ? (data as Record<string, unknown>)
-            : undefined,
       })
 
       if (shouldRedirect) {
