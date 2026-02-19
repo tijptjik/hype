@@ -412,6 +412,24 @@ export function toIssueMessage(issue: unknown): string | null {
   return typeof message === 'string' ? message : null
 }
 
+export function getIssueMessagesForPath(
+  issues: unknown[] | undefined,
+  path: Array<string | number>,
+): string[] | undefined {
+  if (!Array.isArray(issues) || path.length === 0) return undefined
+  const messages = issues
+    .filter(issue => {
+      if (!issue || typeof issue !== 'object' || !('path' in issue)) return false
+      const issuePath = (issue as { path?: unknown }).path
+      if (!Array.isArray(issuePath) || issuePath.length !== path.length) return false
+      return path.every((segment, index) => issuePath[index] === segment)
+    })
+    .map(toIssueMessage)
+    .filter((message): message is string => Boolean(message))
+
+  return messages.length > 0 ? messages : undefined
+}
+
 export function isFormLevelIssue(issue: unknown): boolean {
   if (!issue || typeof issue !== 'object' || !('path' in issue)) return true
   const path = (issue as { path?: unknown }).path

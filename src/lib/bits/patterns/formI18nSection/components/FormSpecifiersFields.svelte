@@ -1,30 +1,28 @@
 <script lang="ts">
 import { m } from '$lib/i18n'
 import { TextInput, SectionHeader } from '$lib/bits/custom/form'
-import { toIssueMessages } from '$lib/utils/form-schema'
+import { getIssueMessagesForPath } from '$lib/client/services/form'
 import FormSection from './FormSection.svelte'
 
 let {
   form,
   isEditing = false,
   isRequiredInPreflight,
+  visibleIssues,
 }: {
   form: any
   isEditing?: boolean
   isRequiredInPreflight: (path: Array<string | number>) => boolean
+  visibleIssues?: unknown[]
 } = $props()
 
 const codeInputAttrs = $derived(form.fields.data.code.as('text'))
 const codeRequired = $derived(isRequiredInPreflight(['data', 'code']))
-const codeIssues = $derived.by(() => {
-  const messages = toIssueMessages(form.fields.data.code.issues())
-  if (!messages) return undefined
-  return messages.length > 0 ? messages : undefined
-})
+const codeIssues = $derived(getIssueMessagesForPath(visibleIssues, ['data', 'code']))
 
 const urlInputAttrs = $derived(form.fields.data.url.as('url'))
 const urlRequired = $derived(isRequiredInPreflight(['data', 'url']))
-const urlIssues = $derived(toIssueMessages(form.fields.data.url.issues()))
+const urlIssues = $derived(getIssueMessagesForPath(visibleIssues, ['data', 'url']))
 </script>
 
 <section class="bits-form__section">

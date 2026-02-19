@@ -186,8 +186,9 @@ const isDirty = $derived(Boolean(formCtx.dirty))
 
 // ISSUES
 
+const visibleFieldIssues = $derived(formCtx.visibleIssues ?? [])
 const visibleAllIssues = $derived.by(() =>
-  suppressFormLevelIssues ? [] : (formCtx.visibleIssues ?? []),
+  suppressFormLevelIssues ? [] : visibleFieldIssues,
 )
 
 const formLevelIssues = $derived.by(() => {
@@ -558,6 +559,7 @@ $effect(() => {
             form={formCtx.form}
             {isEditing}
             {isRequiredInPreflight}
+            visibleIssues={visibleFieldIssues}
           />
         {/snippet}
       </GridSpacer>
