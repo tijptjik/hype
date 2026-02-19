@@ -1,6 +1,7 @@
 import { beforeNavigate } from '$app/navigation'
 import { debounce, deepEqual } from '@sillvva/utils'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
+import { handleResourceFormSubmissionResult } from '$lib/client/services/form'
 import type {
   RemoteForm,
   RemoteFormInput,
@@ -8,6 +9,7 @@ import type {
   RemoteQuery,
   RemoteQueryOverride,
 } from '@sveltejs/kit'
+import type { ConfigureFormResourceResultOptions, SubmitOutcome } from '$lib/types'
 import { onMount, tick, untrack } from 'svelte'
 import { v7 } from 'uuid'
 
@@ -15,6 +17,71 @@ type Awaitable<T> = T | PromiseLike<T>
 
 const META_HIDDEN_ATTR = 'data-remote-meta-hidden'
 const META_KEYS = ['id', 'updatedAt', 'mode', 'isAdminRequest'] as const
+
+export const toRemoteIssueFieldKey = (issue: unknown): string | null => {
+  if (!issue || typeof issue !== 'object' || !('message' in issue)) return null
+  const message = (issue as { message?: unknown }).message
+  if (typeof message !== 'string') return null
+  const code = message.split(':')[0]?.trim() ?? ''
+  if (!code) return null
+
+  if (!('path' in issue)) return null
+  const path = (issue as { path?: unknown }).path
+  if (!Array.isArray(path) || path.length === 0) return null
+
+  return `${path.map(String).join('.')}:${code}`
+}
+
+export const isPreflightFailureOutcome = (outcome: SubmitOutcome): boolean =>
+  !outcome.success &&
+  !outcome.result &&
+  (outcome.issues?.length ?? 0) > 0 &&
+  !outcome.error
+
+export const shouldClearSubmitRequestOnInteraction = (params: {
+  isSubmitRequested: boolean
+  awaitsPostPreflightInteraction: boolean
+}): boolean => params.isSubmitRequested && params.awaitsPostPreflightInteraction
+
+const toRemoteIssuePath = (issue: unknown): Array<string | number> | null => {
+  if (!issue || typeof issue !== 'object' || !('path' in issue)) return null
+  const path = (issue as { path?: unknown }).path
+  if (!Array.isArray(path)) return null
+  return path as Array<string | number>
+}
+
+const readPathValue = (source: unknown, path: Array<string | number>): unknown => {
+  let current: unknown = source
+  for (const segment of path) {
+    if (current == null || typeof current !== 'object') return undefined
+    current = (current as Record<string | number, unknown>)[segment]
+  }
+  return current
+}
+
+const valuesEqual = (left: unknown, right: unknown): boolean => {
+  try {
+    return JSON.stringify(left) === JSON.stringify(right)
+  } catch {
+    return left === right
+  }
+}
+
+const isStaleSubmitAttemptIssue = (
+  issue: unknown,
+  submitAttemptBaseline: unknown,
+  submitAttemptIssueKeySet: Set<string>,
+  currentValue: unknown,
+): boolean => {
+  const fieldKey = toRemoteIssueFieldKey(issue)
+  const fieldPath = toRemoteIssuePath(issue)
+  if (!fieldKey || !fieldPath || !submitAttemptBaseline) return false
+  if (!submitAttemptIssueKeySet.has(fieldKey)) return false
+
+  const baselineValue = readPathValue(submitAttemptBaseline, fieldPath)
+  const nextValue = readPathValue(currentValue, fieldPath)
+  return !valuesEqual(baselineValue, nextValue)
+}
 
 // Insert meta hidden inputs into the form
 // This is necessary because the form data is not available in the `onsubmit` hook.
@@ -101,12 +168,8 @@ export function use<T>(
   return $state.snapshot(initial)
 }
 
-export type GenericFormConfig<T extends RemoteFormInput = RemoteFormInput> = ReturnType<
-  typeof configureForm<T>
->
-export type GenericForm<T extends RemoteFormInput = RemoteFormInput> = ReturnType<
-  GenericFormConfig<T>
->
+export type GenericFormConfig<T = RemoteFormInput> = ReturnType<typeof configureForm<T>>
+export type GenericForm<T = RemoteFormInput> = ReturnType<GenericFormConfig<T>>
 
 type FormId<Input> = Input extends { id: infer Id }
   ? Id extends string | number
@@ -114,7 +177,7 @@ type FormId<Input> = Input extends { id: infer Id }
     : string | number
   : string | number
 
-export interface RemoteFormOptions<Input extends RemoteFormInput = RemoteFormInput> {
+export interface RemoteFormOptions<Input = RemoteFormInput> {
   form: RemoteForm<Input, unknown>
   schema?: StandardSchemaV1<Input, unknown>
   key?: FormId<Input>
@@ -131,17 +194,18 @@ export interface RemoteFormOptions<Input extends RemoteFormInput = RemoteFormInp
     readonly dirty: boolean
     readonly form: HTMLFormElement
     readonly data: Input
-  }) => Awaitable<Array<RemoteQuery<any> | RemoteQueryOverride> | undefined>
+  }) => Awaitable<Array<RemoteQuery<unknown> | RemoteQueryOverride> | undefined>
   onresult?: (ctx: {
     readonly success: boolean
-    readonly result?: RemoteForm<Input, unknown>['result']
+    readonly result?: unknown
     readonly issues?: RemoteFormIssue[]
     readonly error?: string
   }) => Awaitable<void>
+  resourceResult?: ConfigureFormResourceResultOptions<Input>
   formEl?: HTMLFormElement
 }
 
-export function configureForm<Input extends RemoteFormInput = RemoteFormInput>(
+export function configureForm<Input = RemoteFormInput>(
   getProps: () => RemoteFormOptions<Input>,
 ) {
   const {
@@ -155,44 +219,134 @@ export function configureForm<Input extends RemoteFormInput = RemoteFormInput>(
     onsubmitupdates,
     onresult,
     onissues,
+    resourceResult,
     formEl,
   } = $derived(getProps())
 
   type FormData = Input extends undefined ? Record<string, never> : Input
   const data = $derived((formData ?? {}) as FormData)
-  const key = $derived(formKey ?? ((data.id ?? v7()) as FormId<Input>))
+  const dataId = $derived((data as { id?: string | number } | null)?.id)
+  const key = $derived(formKey ?? ((dataId ?? v7()) as FormId<Input>))
   const form = $derived(
     schema ? remoteForm.for(key).preflight(schema) : remoteForm.for(key),
   )
 
-  let initial = $state.raw(
+  let initial: FormData = $state.raw(
     use({
       track: () => data,
       ssr: form.fields.set,
       pre: form.fields.set,
-    }),
+    }) as FormData,
   )
 
   let touched = $state.raw(false)
   let submitting = $state.raw(false)
   let submitted = $state.raw(false)
   let dirty = $derived(!deepEqual(initial, $state.snapshot(form.fields.value())))
+  let wasSubmitAttempted = $state.raw(false)
+  let isSubmitRequested = $state.raw(false)
+  let awaitsPostPreflightInteraction = $state.raw(false)
+  let submitAttemptBaseline = $state.raw<FormData | null>(null)
+  let submitAttemptIssueKeys = $state.raw<string[]>([])
+
+  function clearSubmitAttemptState(): void {
+    if (wasSubmitAttempted) wasSubmitAttempted = false
+    if (isSubmitRequested) isSubmitRequested = false
+    if (awaitsPostPreflightInteraction) awaitsPostPreflightInteraction = false
+    if (submitAttemptBaseline !== null) submitAttemptBaseline = null
+    if (submitAttemptIssueKeys.length > 0) submitAttemptIssueKeys = []
+  }
+
+  function beginSubmitAttempt(): void {
+    wasSubmitAttempted = true
+    isSubmitRequested = true
+    awaitsPostPreflightInteraction = false
+    submitAttemptIssueKeys = []
+    submitAttemptBaseline = $state.snapshot(form.fields.value()) as FormData
+  }
+
+  function settleSubmitAttempt(outcome: SubmitOutcome): void {
+    submitAttemptIssueKeys = Array.from(
+      new Set(
+        (outcome.issues ?? [])
+          .map(toRemoteIssueFieldKey)
+          .filter((key): key is string => Boolean(key)),
+      ),
+    )
+
+    const isPreflightFailure = isPreflightFailureOutcome(outcome)
+
+    if (isPreflightFailure) {
+      awaitsPostPreflightInteraction = true
+    } else {
+      isSubmitRequested = false
+      awaitsPostPreflightInteraction = false
+    }
+
+    if (outcome.success) {
+      clearSubmitAttemptState()
+    }
+  }
+
+  async function dispatchResult(outcome: SubmitOutcome, data: Input): Promise<void> {
+    if (resourceResult) {
+      const shouldRedirect = Boolean(
+        resourceResult.shouldRedirect?.({
+          data,
+          success: outcome.success,
+          issues: outcome.issues,
+          error: outcome.error,
+          result: outcome.result,
+        }),
+      )
+
+      await handleResourceFormSubmissionResult({
+        success: outcome.success,
+        issues: outcome.issues,
+        error: outcome.error,
+        nameKey: resourceResult.nameKey ?? 'nameShort',
+        nameFallbackKey: resourceResult.nameFallbackKey ?? 'code',
+        onSuccess: resourceResult.onSuccess,
+        refreshResource: () =>
+          resourceResult.refreshResource({
+            data,
+            success: outcome.success,
+            issues: outcome.issues,
+            error: outcome.error,
+            result: outcome.result,
+            shouldRedirect,
+          }),
+        entity: resourceResult.getEntity?.(),
+      })
+
+      if (shouldRedirect) {
+        await resourceResult.onRedirect?.({ data, success: outcome.success })
+      }
+    }
+
+    await onresult?.(outcome)
+  }
 
   const attributes = $derived(
     Object.assign(
       form.enhance(async ({ submit, form: formEl, data }) => {
         if (submitting) return
 
-        const bf = !onsubmit || (await onsubmit({ dirty, form: formEl, data }))
+        const typedData = data as Input
+        const bf =
+          !onsubmit || (await onsubmit({ dirty, form: formEl, data: typedData }))
         if (!bf) {
           return
         }
+        beginSubmitAttempt()
 
         await validate()
         const hasPreflightIssues = (allIssues?.length ?? 0) > 0
         if (hasPreflightIssues) {
           await focusInvalid()
-          await onresult?.({ success: false, issues: allIssues ?? [] })
+          const outcome: SubmitOutcome = { success: false, issues: allIssues ?? [] }
+          settleSubmitAttempt(outcome)
+          await dispatchResult(outcome, typedData)
           onissues?.({ issues: allIssues ?? [] })
           return
         }
@@ -203,7 +357,11 @@ export function configureForm<Input extends RemoteFormInput = RemoteFormInput>(
         let resultDispatched = false
         try {
           dirty = false
-          const updates = await onsubmitupdates?.({ dirty, form: formEl, data })
+          const updates = await onsubmitupdates?.({
+            dirty,
+            form: formEl,
+            data: typedData,
+          })
           if (updates && updates.length > 0) {
             await submit().updates(...updates)
           } else {
@@ -214,11 +372,13 @@ export function configureForm<Input extends RemoteFormInput = RemoteFormInput>(
           const hasIssues = (allIssues?.length ?? 0) > 0
           const success = !hasIssues
           resultDispatched = true
-          await onresult?.({
+          const outcome: SubmitOutcome = {
             success,
             result: form.result,
             issues: hasIssues ? allIssues : undefined,
-          })
+          }
+          settleSubmitAttempt(outcome)
+          await dispatchResult(outcome, typedData)
 
           if (!success) {
             dirty = wasDirty
@@ -235,11 +395,13 @@ export function configureForm<Input extends RemoteFormInput = RemoteFormInput>(
           // TODO Add a error toast
           if (!resultDispatched) {
             const hasIssues = (allIssues?.length ?? 0) > 0
-            await onresult?.({
+            const outcome: SubmitOutcome = {
               success: false,
               issues: hasIssues ? allIssues : undefined,
               error: hasIssues ? undefined : (error as Error).message,
-            })
+            }
+            settleSubmitAttempt(outcome)
+            await dispatchResult(outcome, typedData)
           }
           dirty = wasDirty
         } finally {
@@ -264,7 +426,15 @@ export function configureForm<Input extends RemoteFormInput = RemoteFormInput>(
   const result = $derived(form.result)
   const issues = $derived(form.fields.issues())
   const allIssues = $derived(form.fields.allIssues())
-  const initialErrors = $derived(initialErrorsProp ?? !!data?.id)
+  const visibleIssues = $derived.by(() => {
+    const baseline = submitAttemptBaseline
+    const currentValue = form.fields.value()
+    const keySet = new Set(submitAttemptIssueKeys)
+    return (allIssues ?? []).filter(
+      issue => !isStaleSubmitAttemptIssue(issue, baseline, keySet, currentValue),
+    )
+  })
+  const initialErrors = $derived(initialErrorsProp ?? !!dataId)
   let lastIssues = $state.raw<RemoteFormIssue[] | undefined>()
 
   use({
@@ -274,8 +444,9 @@ export function configureForm<Input extends RemoteFormInput = RemoteFormInput>(
     },
     effect: () => {
       form.fields.set(data)
-      initial = $state.snapshot(data)
+      initial = $state.snapshot(data) as FormData
       touched = false
+      clearSubmitAttemptState()
       if (initialErrors) validate(true).then(focusInvalid)
     },
   })
@@ -313,13 +484,29 @@ export function configureForm<Input extends RemoteFormInput = RemoteFormInput>(
   }
 
   onMount(() => {
+    const clearPostPreflightInteraction = () => {
+      if (
+        !shouldClearSubmitRequestOnInteraction({
+          isSubmitRequested,
+          awaitsPostPreflightInteraction,
+        })
+      ) {
+        return
+      }
+      isSubmitRequested = false
+      awaitsPostPreflightInteraction = false
+    }
+
     const handleFocusIn = () => {
       if (touched) return
       touched = true
+      clearPostPreflightInteraction()
     }
     formEl?.addEventListener('focusin', handleFocusIn)
+    formEl?.addEventListener('input', clearPostPreflightInteraction)
     return () => {
       formEl?.removeEventListener('focusin', handleFocusIn)
+      formEl?.removeEventListener('input', clearPostPreflightInteraction)
     }
   })
 
@@ -335,11 +522,36 @@ export function configureForm<Input extends RemoteFormInput = RemoteFormInput>(
     dirty,
     submitting,
     submitted,
+    wasSubmitAttempted,
+    isSubmitRequested,
+    awaitsPostPreflightInteraction,
+    submitAttemptBaseline,
+    submitAttemptIssueKeys,
     result,
     issues,
     allIssues,
+    visibleIssues,
     validate,
     debouncedValidate,
+    beginSubmitAttempt,
+    requestSubmit: (options?: { meta?: Record<string, unknown> }) => {
+      if (options?.meta) {
+        const current = form.fields.value() as {
+          meta?: Record<string, unknown>
+        } & Record<string, unknown>
+        form.fields.set({
+          ...current,
+          meta: {
+            ...options.meta,
+            ...(current.meta ?? {}),
+          },
+        } as Parameters<typeof form.fields.set>[0])
+      }
+      beginSubmitAttempt()
+      formEl?.requestSubmit()
+    },
+    settleSubmitAttempt,
+    clearSubmitAttemptState,
     reset: () => form.fields.set(initial),
   })
 }
