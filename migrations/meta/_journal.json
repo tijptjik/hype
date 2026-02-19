@@ -71,13 +71,6 @@
       "when": 1770645487173,
       "tag": "0009_add_local_is_published_is_archived",
       "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "6",
-      "when": 1771508136377,
-      "tag": "0010_default_unpublished",
-      "breakpoints": true
     }
   ]
 }
