@@ -62,6 +62,8 @@ import {
 import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
 // FACTORIES
 import { configureForm } from '$lib/factories.svelte'
+// NAVIGATION
+import { navigateOnAdmin } from '$lib/navigation'
 // UTILS
 import { createSchemaRequiredInferer, toIssueMessages } from '$lib/utils/form-schema'
 // ICONS
@@ -468,6 +470,13 @@ $effect(() => {
   if (!organisation?.data?.isArchived) return
   if (!headerCtrl.state.isEditing) return
   headerCtrl.setEditing(false)
+})
+
+// New routes are create-only; users without create access are sent back to index.
+$effect(() => {
+  if (!isNewOrganisationRef) return
+  if (canCreateOrganisation) return
+  navigateOnAdmin(adminCtx, FirstClassResource.organisation)
 })
 
 // New entities start in edit mode.
