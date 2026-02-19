@@ -40,8 +40,12 @@
   }
 
   .bits-theme .bits-form__section-header {
-    @apply flex min-h-16 h-16 flex-wrap items-start justify-between pt-2 pb-4;
+    @apply relative flex min-h-16 h-16 flex-wrap items-start justify-between pt-2 pb-4;
     overflow: visible;
+  }
+
+  .bits-theme .bits-form__section-header--with-center {
+    @apply items-center pt-0 pb-0;
   }
 
   .bits-theme .bits-form__section-header-left {
@@ -51,6 +55,18 @@
   .bits-theme .bits-form__section-header-right {
     @apply flex min-w-48 justify-end gap-0 pr-1;
     overflow: visible;
+  }
+
+  .bits-theme .bits-form__section-header-center {
+    @apply absolute left-1/2 top-1/2;
+    transform: translate(-50%, -50%);
+    width: min(100%, 56rem);
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .bits-theme .bits-form__section-header-center-content {
+    @apply flex w-full justify-center;
   }
 
   .bits-theme .bits-form__section-header-right .bits-btn {
