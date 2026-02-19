@@ -40,10 +40,12 @@ function handleRoleChange(nextValue: string): void {
       class="bits-form__user-card-actions-remove-button"
     />
   {:else}
+    {#if roleFieldName}
+      <input type="hidden" name={roleFieldName} value={selectedRole}>
+    {/if}
     <Select
       value={selectedRole}
       items={roleOptions}
-      name={roleFieldName}
       variant="ghost"
       allowDeselect={false}
       onValueChange={handleRoleChange}
