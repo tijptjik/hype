@@ -27,6 +27,9 @@ function handleRoleChange(nextValue: string): void {
 
 <div class={`bits-form__user-card-actions ${className}`}>
   {#if isRemoving}
+    {#if roleFieldName}
+      <input type="hidden" name={roleFieldName} value={selectedRole}>
+    {/if}
     <Button
       text={m.watery_trite_shrimp_clip()}
       style="ghost"
