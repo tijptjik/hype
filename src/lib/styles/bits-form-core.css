@@ -94,7 +94,9 @@
   }
 
   .bits-theme .bits-form__control--textarea {
-    @apply resize-none px-2 py-2;
+    @apply resize-none px-2;
+    padding-top: 14px;
+    padding-bottom: 14px;
     min-height: 6.5rem;
     max-height: 32rem;
     overflow-y: hidden;
@@ -124,7 +126,8 @@
 
   .bits-theme .bits-form__control--textarea.bits-form__control--display {
     white-space: pre-wrap;
-    padding-bottom: 10px;
+    padding-top: 14px;
+    padding-bottom: 16px;
   }
 
   /* ----------------- */
