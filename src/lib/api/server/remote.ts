@@ -1,4 +1,5 @@
 import { command, form, getRequestEvent, query } from '$app/server'
+import { invalid } from '@sveltejs/kit'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type {
   RemoteCommand,
@@ -14,13 +15,12 @@ type GuardedBaseContext = Awaited<ReturnType<typeof setupRequestHandler>> & {
 }
 
 type GuardedQueryContext = GuardedBaseContext
-type GuardedInvalid<Input extends RemoteFormInput = RemoteFormInput> = {
-  (message: string): never
-  data: Record<string, (message: string) => never>
-}
+type GuardedInvalid = (...issues: unknown[]) => never
+type GuardedIssue<Input extends RemoteFormInput = RemoteFormInput> = any
 type GuardedFormContext<Input extends RemoteFormInput = RemoteFormInput> =
   GuardedBaseContext & {
-    invalid: GuardedInvalid<Input>
+    invalid: GuardedInvalid
+    issue: GuardedIssue<Input>
   }
 type GuardedCommandContext = GuardedBaseContext
 
@@ -135,31 +135,34 @@ export function guardedForm(
     typeof schemaOrFn !== 'function' &&
     schemaOrFn !== 'unchecked'
   ) {
-    return form(schemaOrFn, async (output, invalid) => {
+    return form(schemaOrFn, async (output, issue) => {
       const ctx = await resolveCtx(output)
       return maybeFn(output, {
         ...ctx,
-        invalid: invalid as GuardedInvalid<RemoteFormInput>,
+        invalid,
+        issue: issue as GuardedIssue<RemoteFormInput>,
       })
     })
   }
 
   if (schemaOrFn === 'unchecked' && typeof maybeFn === 'function') {
-    return form('unchecked', async (input: unknown, invalid) => {
+    return form('unchecked', async (input: unknown, issue) => {
       const ctx = await resolveCtx(input)
       return maybeFn(input, {
         ...ctx,
-        invalid: invalid as GuardedInvalid<RemoteFormInput>,
+        invalid,
+        issue: issue as GuardedIssue<RemoteFormInput>,
       })
     })
   }
 
   if (typeof schemaOrFn === 'function' && !maybeFn) {
-    return form('unchecked', async (_input: unknown, invalid) => {
+    return form('unchecked', async (_input: unknown, issue) => {
       const ctx = await resolveCtx()
       return schemaOrFn({
         ...ctx,
-        invalid: invalid as GuardedInvalid<RemoteFormInput>,
+        invalid,
+        issue: issue as GuardedIssue<RemoteFormInput>,
       })
     })
   }
