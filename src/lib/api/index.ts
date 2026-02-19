@@ -17,6 +17,7 @@ import client, {
   validateTableColumns,
 } from '$lib/db'
 import { mergeFeatureProperties } from '$lib/db/services/feature'
+import { getUserRoles } from '$lib/db/services/user'
 // ENUMS
 import {
   FirstClassResource,
@@ -166,12 +167,13 @@ export const setupRequestHandler = async (event: {
   const enableLogger = platform?.env?.PUBLIC_DRIZZLE_LOGGER === 'true'
 
   const db = client(platform.env.DB as unknown as MiniflareD1Database, enableLogger)
+  const userRoles = await getUserRoles(db, user.id as Id)
   return {
     db,
     session,
     user,
     userId: user.id as Id,
-    userRoles: user.roles as UserRoleDisco[] | [],
+    userRoles,
     isAdminRequest: isAdminRequest(event),
     request,
   }
@@ -191,12 +193,13 @@ export const getDatabase = async (
   const enableLogger = platform?.env?.PUBLIC_DRIZZLE_LOGGER === 'true'
 
   const db = client(platform.env.DB as unknown as MiniflareD1Database, enableLogger)
+  const userRoles = await getUserRoles(db, user.id as Id)
   return {
     db,
     session,
     user,
     userId: user.id as Id,
-    userRoles: user.roles as UserRoleDisco[] | [],
+    userRoles,
   }
 }
 
