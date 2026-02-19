@@ -40,10 +40,6 @@ const formCtx = $derived(configured())
 function simulatePreflightFailure(): void {
   formCtx.beginSubmitAttempt()
   currentIssues = [{ message: 'INVALID: test', path: ['data', 'userRoles'] }]
-  formCtx.settleSubmitAttempt({
-    success: false,
-    issues: currentIssues,
-  })
 }
 
 function onRoleChangeAfterSubmitAttempt(): void {
@@ -64,8 +60,5 @@ function onRoleChangeAfterSubmitAttempt(): void {
   Role
 </button>
 <div data-testid="is-submit-requested">{String(formCtx.isSubmitRequested)}</div>
-<div data-testid="awaits-post-interaction">
-  {String(formCtx.awaitsPostPreflightInteraction)}
-</div>
 <div data-testid="was-submit-attempted">{String(formCtx.wasSubmitAttempted)}</div>
 <div data-testid="revalidate-calls">{String(revalidateCalls)}</div>
