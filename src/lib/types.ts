@@ -894,6 +894,8 @@ export type HeaderFormActionStatus = Pick<
   | 'canPublish'
 >
 
+export type OrganisationToggleField = 'isPublished' | 'isArchived'
+
 export type WireHeaderFormActionHandlersParams = {
   headerCtrl: HeaderFormActionsController
   handlers: HeaderFormActionHandlers
@@ -911,7 +913,7 @@ export type ResourceFormSubmissionResultParams = {
   error?: string
   nameKey: string
   nameFallbackKey: string
-  headerCtrl: FormHeaderController
+  onSuccess?: () => void | Promise<void>
   refreshResource: () => Promise<void>
   entity?: { data?: Record<string, unknown> | null } | null
   locale?: Locale
@@ -924,6 +926,29 @@ export type ResourceFormSubmissionResultParams = {
   successPrefix?: string
 }
 
+export type ConfigureFormResourceResultOptions<Input> = {
+  nameKey?: string
+  nameFallbackKey?: string
+  onSuccess?: () => void | Promise<void>
+  getEntity?: () => { data?: Record<string, unknown> | null } | null | undefined
+  refreshResource: (ctx: {
+    data: Input
+    success: boolean
+    issues?: RemoteFormIssue[]
+    error?: string
+    result?: unknown
+    shouldRedirect: boolean
+  }) => Promise<void>
+  shouldRedirect?: (ctx: {
+    data: Input
+    success: boolean
+    issues?: RemoteFormIssue[]
+    error?: string
+    result?: unknown
+  }) => boolean
+  onRedirect?: (ctx: { data: Input; success: boolean }) => void | Promise<void>
+}
+
 export type UserRoleFieldNameResolverForm = {
   fields: {
     value: () => {
@@ -931,15 +956,16 @@ export type UserRoleFieldNameResolverForm = {
         userRoles?: Array<{ userId: string }>
       }
     }
-    data: {
-      userRoles: {
-        [index: number]: {
-          role: { as: (type: 'select') => { name?: string } }
-        }
-      }
+    data?: {
+      userRoles?: Array<{
+        role?: { as: (type: 'select') => { name?: string } }
+        userId?: { as: (type: 'hidden', value: string) => Record<string, unknown> }
+      }>
     }
   }
 }
+
+export type UserRoleHiddenInputAttrs = Record<string, unknown>
 
 export type GenAiField = 'name' | 'nameShort' | 'description'
 export type I18nTranslatableField = 'name' | 'nameShort' | 'description'
@@ -1003,6 +1029,13 @@ export type UpdateUserRoleSelectionParams<
   entity: TEntity
   userId: string
   role: string
+}
+
+export type ResolveDisplayUserRolesParams<
+  TUserRole extends { userId: string; role: string },
+> = {
+  baseRoles: TUserRole[]
+  formUserRoles: Array<{ userId: string; role: string }>
 }
 
 export type TranslateLocaleIntoEmptyFieldsParams<
@@ -1544,6 +1577,11 @@ export type AuthorizeParams = {
 export type AuthorizationDecision = {
   allowed: boolean
   code?: AuthorizationDenyCode
+}
+
+export type OrganisationActionPermissions = {
+  canEdit: boolean
+  canPublish: boolean
 }
 
 /* ----------------- */
