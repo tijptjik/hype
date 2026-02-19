@@ -19,7 +19,7 @@ import { HubBasic } from './hub'
 export const OrganisationBase = createSelectSchema(organisation)
 export const OrganisationInsert = createInsertSchema(organisation).extend({
   ...getDefaultConstraints(organisation),
-  code: z.string().min(1, { message: m.admin__validation_short_name_lte_32_chars() }),
+  code: z.string().min(2, { message: m.admin__validation_short_name_lte_32_chars() }),
 })
 export const OrganisationUpdate = createUpdateSchema(organisation).extend({
   ...getDefaultConstraints(organisation),
@@ -167,7 +167,7 @@ export const OrganisationUserRolesFormData = z.preprocess(
 export const OrganisationEntityFormData = z.object({
   code: z
     .string()
-    .min(1, { message: m.admin__validation_code_is_required() })
+    .min(2, { message: m.admin__validation_code_is_required() })
     .max(24, { message: m.admin__validation_code_lte_24_chars() })
     .regex(/^[a-zA-Z0-9_$]*$/, {
       message: m.admin__validation_key_valid_characters(),
