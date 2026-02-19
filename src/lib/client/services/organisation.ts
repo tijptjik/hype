@@ -112,6 +112,35 @@ export function toOrganisationIdentityPatch(
   }
 }
 
+function toOrganisationEntityI18nFromFormInput(
+  formData: OrganisationFormInput,
+): Record<string, OrganisationFormInput['data']['i18n']['en']> {
+  return {
+    en: normalizeOrganisationFormLocale(formData.data?.i18n?.en),
+    'zh-hans': normalizeOrganisationFormLocale(formData.data?.i18n?.zhHans),
+    'zh-hant': normalizeOrganisationFormLocale(formData.data?.i18n?.zhHant),
+  }
+}
+
+export function overrideOrganisationEntityFromFormInput(
+  formData: OrganisationFormInput,
+) {
+  return <T extends { data: Record<string, unknown> | null }>(current: T): T => ({
+    ...current,
+    data: current.data
+      ? {
+          ...current.data,
+          code: formData.data?.code ?? '',
+          url: formData.data?.url ?? '',
+          i18n: {
+            ...((current.data.i18n as Record<string, Record<string, unknown>>) ?? {}),
+            ...toOrganisationEntityI18nFromFormInput(formData),
+          },
+        }
+      : current.data,
+  })
+}
+
 function mergeOrganisationIdentityAtLocale(
   source: Record<string, unknown>,
   patch: OrganisationIdentityPatch,
@@ -178,7 +207,7 @@ export function getOrganisationSubmitUpdates<
 
   return [
     entityQuery.withOverride(
-      overrideOrganisationEntityIdentity(patch) as (
+      overrideOrganisationEntityFromFormInput(data) as (
         current: TEntityCurrent,
       ) => TEntityCurrent,
     ),
