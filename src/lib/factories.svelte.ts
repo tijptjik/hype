@@ -2,6 +2,7 @@ import { beforeNavigate } from '$app/navigation'
 import { debounce, deepEqual } from '@sillvva/utils'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { handleResourceFormSubmissionResult } from '$lib/client/services/form'
+import { m } from '$lib/i18n'
 import type {
   RemoteForm,
   RemoteFormInput,
@@ -231,6 +232,18 @@ export function configureForm<Input = RemoteFormInput>(
             shouldRedirect,
           }),
         entity: resourceResult.getEntity?.(),
+        resourceValues:
+          data && typeof data === 'object'
+            ? (data as Record<string, unknown>)
+            : undefined,
+        successPrefix:
+          ((
+            data as {
+              meta?: { mode?: unknown }
+            } | null
+          )?.meta?.mode ?? undefined) === 'create'
+            ? m.gaudy_heavy_puma_adore()
+            : m.tidy_game_jellyfish_pop(),
       })
 
       if (shouldRedirect) {
