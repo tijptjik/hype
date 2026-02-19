@@ -275,7 +275,7 @@ export const getOrganisation = guardedQuery(
  */
 export const organisationForm = guardedForm('unchecked', async (input, ctx) => {
   const params = OrganisationFormData.parse(input)
-  const { db, user, userRoles, event, invalid: issue } = ctx
+  const { db, user, userRoles, event, invalid, issue } = ctx
   const { meta, data } = params
   let organisationId = meta?.id?.trim()
   const mode = meta?.mode
