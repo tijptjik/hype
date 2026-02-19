@@ -338,6 +338,9 @@ export function configureForm<Input = RemoteFormInput>(
         if (!bf) {
           return
         }
+        // Lock immediately so rapid repeat submits cannot race preflight and send
+        // duplicate requests with the same optimistic-concurrency token.
+        submitting = true
         beginSubmitAttempt()
 
         await validate()
@@ -347,11 +350,9 @@ export function configureForm<Input = RemoteFormInput>(
           const outcome: SubmitOutcome = { success: false, issues: allIssues ?? [] }
           settleSubmitAttempt(outcome)
           await dispatchResult(outcome, typedData)
-          onissues?.({ issues: allIssues ?? [] })
+          submitting = false
           return
         }
-
-        submitting = true
 
         const wasDirty = dirty
         let resultDispatched = false
@@ -438,16 +439,26 @@ export function configureForm<Input = RemoteFormInput>(
   let lastIssues = $state.raw<RemoteFormIssue[] | undefined>()
 
   use({
-    track: () => form,
-    mount: async () => {
-      if (initialErrors) await validate().then(focusInvalid)
+    track: () => ({ form, data, initialErrors }),
+    mount: async current => {
+      if (current.initialErrors) await validate().then(focusInvalid)
     },
-    effect: () => {
-      form.fields.set(data)
-      initial = $state.snapshot(data) as FormData
-      touched = false
-      clearSubmitAttemptState()
-      if (initialErrors) validate(true).then(focusInvalid)
+    effect: current => {
+      const nextData = $state.snapshot(current.data) as FormData
+      const currentValue = $state.snapshot(current.form.fields.value()) as FormData
+      const shouldSyncFields = !deepEqual(currentValue, nextData)
+
+      if (shouldSyncFields) {
+        current.form.fields.set(nextData)
+      }
+
+      if (!deepEqual(initial, nextData)) {
+        initial = nextData
+        touched = false
+        clearSubmitAttemptState()
+      }
+
+      if (current.initialErrors) validate(true).then(focusInvalid)
     },
   })
 
@@ -542,8 +553,8 @@ export function configureForm<Input = RemoteFormInput>(
         form.fields.set({
           ...current,
           meta: {
-            ...options.meta,
             ...(current.meta ?? {}),
+            ...options.meta,
           },
         } as Parameters<typeof form.fields.set>[0])
       }
