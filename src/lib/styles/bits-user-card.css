@@ -1,6 +1,6 @@
 @layer components {
   .bits-theme .bits-form__user-card-root {
-    @apply bg-grain relative flex min-h-16 flex-row items-center overflow-hidden rounded-xl border-3 border-primary bg-glass-300 pr-3 shadow-xl;
+    @apply bg-grain relative flex h-16 min-h-16 max-h-16 flex-row items-center overflow-hidden rounded-xl border-3 border-primary bg-glass-300 pr-3 shadow-xl;
   }
 
   .bits-theme .bits-form__user-card-wrapper {
