@@ -870,6 +870,13 @@ export type FormSubmissionResultHandlerParams = {
   onFallback: () => void | Promise<void>
 }
 
+export type SubmitOutcome = {
+  success: boolean
+  result?: unknown
+  issues?: RemoteFormIssue[]
+  error?: string
+}
+
 export type FormHeaderController = {
   setEditing: (isEditing: boolean) => void
 }
@@ -877,6 +884,12 @@ export type FormHeaderController = {
 export type HeaderFormActionsController = {
   setFormActions: (formActions: Partial<HeaderFormActionsState>) => void
 }
+
+export type ResourceEditorHeaderController = FormHeaderController &
+  HeaderFormActionsController & {
+    setHeaderForEntity: (...args: any[]) => void
+    clearFormActions: () => void
+  }
 
 export type HeaderFormActionHandlers = Pick<
   HeaderFormActionsState,
