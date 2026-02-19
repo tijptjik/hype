@@ -34,16 +34,18 @@ async function handleQuery(nextQuery: string): Promise<void> {
   const currentRequestId = ++requestId
   isLoading = true
   try {
-    const response = userQueryParams
-      ? ((
-          await searchUsersRemote({
-            ...userQueryParams,
-            q: nextQuery.trim(),
-          })
+    const response = onInput
+      ? await onInput(nextQuery.trim())
+      : ((
+          await searchUsersRemote(
+            userQueryParams
+              ? {
+                  ...userQueryParams,
+                  q: nextQuery.trim(),
+                }
+              : { q: nextQuery.trim() },
+          )
         ).data as T[])
-      : onInput
-        ? await onInput(nextQuery.trim())
-        : []
     if (currentRequestId !== requestId) return
     const toId =
       getItemId ??
