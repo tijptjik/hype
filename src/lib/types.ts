@@ -929,15 +929,13 @@ export type ResourceFormSubmissionResultParams = {
   issues?: RemoteFormIssue[]
   error?: string
   nameKey: string
-  nameFallbackKey: string
   onSuccess?: () => void | Promise<void>
   refreshResource: () => Promise<void>
-  entity?: { data?: Record<string, unknown> | null } | null
   locale?: Locale
   formLocaleKey?: string
   formLocaleValues?: Record<string, unknown>
   resourceLocaleValues?: Record<string, unknown>
-  resourceValues?: Record<string, unknown>
+  submittedValues?: Record<string, unknown>
   invalidMessage?: string
   fallbackErrorMessage?: string
   successPrefix?: string

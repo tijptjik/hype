@@ -118,6 +118,7 @@ let lastHeaderKey = $state('')
 let lastFormActionsSignature = $state('')
 let suppressFormLevelIssues = $state(false)
 let selectedUsersById = $state<Record<string, User>>({})
+let hasAutoEnteredEditForNew = $state(false)
 
 // § State - Data
 
@@ -222,7 +223,7 @@ const userRoles = $derived.by(() =>
     baseRoles: (organisation?.data?.userRoles ?? []) as OrganisationRoleUser[],
     formUserRoles: formUserRoleValues,
     organisationId: organisation?.data?.id,
-    fallbackUsersById: selectedUsersById,
+    usersById: selectedUsersById,
   }),
 )
 
@@ -486,10 +487,15 @@ $effect(() => {
 
 // New entities start in edit mode.
 $effect(() => {
-  if (!isNewOrganisationRef) return
+  if (!isNewOrganisationRef) {
+    hasAutoEnteredEditForNew = false
+    return
+  }
   if (!canSubmitOrganisation) return
+  if (hasAutoEnteredEditForNew) return
   if (headerCtrl.state.isEditing) return
   headerCtrl.setEditing(true)
+  hasAutoEnteredEditForNew = true
 })
 
 // Keep unauthorized users out of edit mode if the header state gets toggled externally.

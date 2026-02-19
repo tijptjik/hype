@@ -220,7 +220,6 @@ export function configureForm<Input = RemoteFormInput>(
         issues: outcome.issues,
         error: outcome.error,
         nameKey: resourceResult.nameKey ?? 'nameShort',
-        nameFallbackKey: resourceResult.nameFallbackKey ?? 'code',
         onSuccess: resourceResult.onSuccess,
         refreshResource: () =>
           resourceResult.refreshResource({
@@ -231,8 +230,7 @@ export function configureForm<Input = RemoteFormInput>(
             result: outcome.result,
             shouldRedirect,
           }),
-        entity: resourceResult.getEntity?.(),
-        resourceValues:
+        submittedValues:
           data && typeof data === 'object'
             ? (data as Record<string, unknown>)
             : undefined,

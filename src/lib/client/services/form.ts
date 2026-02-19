@@ -28,6 +28,7 @@ import type {
   Locale,
   OrganisationGetState,
   OrganisationRoleUser,
+  User,
 } from '$lib/types'
 
 const toSubmittedCode = (data: unknown): string => {
@@ -288,17 +289,17 @@ export async function handleResourceFormSubmissionResult({
   issues,
   error,
   nameKey,
-  nameFallbackKey,
   onSuccess,
   refreshResource,
-  entity,
-  resourceValues,
+  submittedValues,
   invalidMessage = m.forms__invalid(),
   fallbackErrorMessage = m.long_crazy_peacock_care(),
   successPrefix = m.tidy_game_jellyfish_pop(),
 }: ResourceFormSubmissionResultParams): Promise<void> {
   const asTrimmedString = (value: unknown): string =>
     typeof value === 'string' ? value.trim() : ''
+  const asRecord = (value: unknown): Record<string, unknown> | undefined =>
+    value && typeof value === 'object' ? (value as Record<string, unknown>) : undefined
   const toIssueParts = (message: string): { code: string; detail: string } => {
     const [rawCode, ...rest] = message.split(':')
     const code = (rawCode ?? '').trim()
@@ -315,17 +316,20 @@ export async function handleResourceFormSubmissionResult({
     )
     .find(Boolean)
 
-  const entityData =
-    entity && typeof entity === 'object'
-      ? ((entity as { data?: Record<string, unknown> | null }).data ?? undefined)
-      : undefined
-  const resolvedResourceValues = resourceValues ?? entityData ?? undefined
+  const submittedRoot = asRecord(submittedValues)
+  const submittedData = asRecord(submittedRoot?.data)
+  const getSubmittedNameAtLocale = (localeKey: string, field: string): string => {
+    const i18nByLocale = asRecord(submittedData?.i18n)
+    const localeValues = asRecord(i18nByLocale?.[localeKey])
+    return asTrimmedString(localeValues?.[field])
+  }
+  const getSubmittedName = (field: string): string =>
+    getSubmittedNameAtLocale(toOrganisationFormLocaleKey(getLocale()), field) ||
+    asTrimmedString(submittedData?.[field]) ||
+    asTrimmedString(submittedRoot?.[field])
 
   if (success) {
-    const name =
-      getNameForToast(entity, nameKey) ||
-      asTrimmedString(resolvedResourceValues?.[nameFallbackKey]) ||
-      ''
+    const name = getSubmittedName(nameKey)
     toast.success(`${successPrefix}${name ? ` ${name}` : ''}`)
     await refreshResource()
     await onSuccess?.()
@@ -684,36 +688,50 @@ export function guardUserRolesDesync({
   baseRoles,
   formUserRoles,
   organisationId,
+  usersById,
 }: {
   baseRoles: OrganisationRoleUser[]
   formUserRoles: Array<{ userId: string; role: string }>
   organisationId?: string | null
+  usersById?: Record<string, User>
 }): OrganisationRoleUser[] {
   const baseRoleByUserId = new Map(
     baseRoles.map(userRole => [userRole.userId, userRole]),
   )
 
-  return formUserRoles.map(formUserRole => {
+  return formUserRoles.flatMap(formUserRole => {
     const baseRole = baseRoleByUserId.get(formUserRole.userId)
     if (baseRole) {
-      return {
-        ...baseRole,
-        role: formUserRole.role as OrganisationRoleUser['role'],
-      }
+      return [
+        {
+          ...baseRole,
+          role: formUserRole.role as OrganisationRoleUser['role'],
+        },
+      ]
     }
 
-    // Fallback should be rare and transient (e.g. during async refresh races).
-    return {
-      organisationId: organisationId ?? '',
-      userId: formUserRole.userId,
-      role: formUserRole.role as OrganisationRoleUser['role'],
-      user: {
-        id: formUserRole.userId,
-        name: formUserRole.userId,
-        image: null,
-        attribution: null,
-      },
-    } as OrganisationRoleUser
+    const selectedUser = usersById?.[formUserRole.userId]
+    if (!selectedUser) {
+      console.warn('[form] Missing user details for role row', {
+        userId: formUserRole.userId,
+        organisationId: organisationId ?? '',
+      })
+      return []
+    }
+
+    return [
+      {
+        organisationId: organisationId ?? '',
+        userId: formUserRole.userId,
+        role: formUserRole.role as OrganisationRoleUser['role'],
+        user: {
+          id: selectedUser.id,
+          name: selectedUser.name,
+          image: selectedUser.image,
+          attribution: selectedUser.attribution,
+        },
+      } as OrganisationRoleUser,
+    ]
   })
 }
 
