@@ -7,7 +7,7 @@ import { resolveAvatarImageSrc } from '$lib/utils/avatar'
 import * as FormUserRolesSectionPrimitive from './components'
 import { UserCard } from '$lib/bits/patterns/userCard'
 import type { FormUserRolesSectionProps } from './formUserRolesSection.types'
-import type { User } from '$lib/types'
+import type { OrganisationRoleUser, User } from '$lib/types'
 
 let {
   title,
@@ -16,7 +16,7 @@ let {
   roleFieldNameByUserId = {},
   isEditing = true,
   isSubmitting = false,
-  submitSignal = 0,
+  isSubmitRequested = false,
   availableRoles = [
     { value: OrganisationRoleType.member, label: m.profile__role_type__member() },
     { value: OrganisationRoleType.owner, label: m.profile__role_type__owner() },
@@ -30,6 +30,8 @@ let {
 
 let isAdding = $state(false)
 let isRemoving = $state(false)
+let wasSubmitRequested = $state(false)
+let stableRoles = $state<OrganisationRoleUser[]>([])
 
 const sortedRoles = $derived(
   [...userRoles].sort((a, b) => (a.user.name ?? '').localeCompare(b.user.name ?? '')),
@@ -51,6 +53,7 @@ const rootClass = $derived(
     .join(' '),
 )
 const showModeUi = $derived(isEditing && !isSubmitting)
+const renderedRoles = $derived(isSubmitting ? stableRoles : sortedRoles)
 
 function toggleAdding(): void {
   isAdding = !isAdding
@@ -91,15 +94,22 @@ $effect(() => {
 })
 
 $effect(() => {
-  if (isEditing && !isSubmitting) return
+  if (showModeUi) return
   isAdding = false
   isRemoving = false
 })
 
-$effect.pre(() => {
-  if (submitSignal <= 0) return
-  isAdding = false
-  isRemoving = false
+$effect(() => {
+  if (isSubmitRequested && !wasSubmitRequested) {
+    isAdding = false
+    isRemoving = false
+  }
+  wasSubmitRequested = isSubmitRequested
+})
+
+$effect(() => {
+  if (isSubmitting) return
+  stableRoles = sortedRoles
 })
 </script>
 
@@ -110,6 +120,7 @@ $effect.pre(() => {
         {isAdding}
         {isRemoving}
         {isEditing}
+        {isSubmitting}
         onToggleAdding={toggleAdding}
         onToggleRemoving={toggleRemoving}
       />
@@ -142,7 +153,7 @@ $effect.pre(() => {
   {/if}
 
   <UserCard.Wrapper>
-    {#each sortedRoles as userRole (userRole.userId)}
+    {#each renderedRoles as userRole (userRole.userId)}
       <div transition:scale={{ duration: 180, start: 0.94 }}>
         <UserCard.Root>
           <UserCard.Avatar
@@ -158,7 +169,7 @@ $effect.pre(() => {
             roleOptions={availableRoles}
             roleFieldName={roleFieldNameByUserId[userRole.userId]}
             {isRemoving}
-            {isEditing}
+            isEditing={isEditing && !isSubmitting}
             onRoleChange={role => onRoleChange(userRole.userId, role)}
             onRemove={() => onRemoveUser(userRole.userId)}
           />
