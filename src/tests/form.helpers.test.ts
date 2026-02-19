@@ -10,6 +10,44 @@ vi.mock('svelte-sonner', () => ({
 
 vi.mock('$lib/navigation', () => ({
   navigateOnAdmin: navigateOnAdminMock,
+  shouldRedirectToSubmittedCode: ({
+    adminCtx,
+    data,
+    success,
+    isRefCode = true,
+  }: {
+    adminCtx: { activeResourceRef?: string | false }
+    data: unknown
+    success: boolean
+    isRefCode?: boolean
+  }) => {
+    if (!success || !isRefCode) return false
+    const submittedCode =
+      (data as { data?: { code?: string } })?.data?.code?.trim?.() ?? ''
+    const currentRef = adminCtx.activeResourceRef
+    return Boolean(
+      submittedCode && typeof currentRef === 'string' && submittedCode !== currentRef,
+    )
+  },
+  navigateToSubmittedCode: ({
+    adminCtx,
+    resourceType,
+    data,
+  }: {
+    adminCtx: { activeFacet?: string }
+    resourceType: FirstClassResource
+    data: unknown
+  }) => {
+    const submittedCode =
+      (data as { data?: { code?: string } })?.data?.code?.trim?.() ?? ''
+    if (!submittedCode) return
+    navigateOnAdminMock(
+      adminCtx,
+      resourceType,
+      submittedCode,
+      adminCtx.activeFacet || undefined,
+    )
+  },
 }))
 
 import { FirstClassResource } from '$lib/enums'
