@@ -2,6 +2,7 @@
 import Icon from '$lib/components/common/Icon.svelte'
 import { Eye, PlusCircle } from '@steeze-ui/heroicons'
 import { formatDate } from '$lib'
+import { resolveAvatarImageSrc } from '$lib/utils/avatar'
 import { formatDistanceToNow } from 'date-fns'
 import Image from '../common/Image.svelte'
 import User from '../forms/actions/User.svelte'
@@ -68,7 +69,7 @@ async function fetchUser(id: string | null): Promise<UserData> {
         class="flex min-w-[200px] items-center gap-3 rounded-lg {bgClass} p-3 backdrop-blur-sm"
       >
         <Image
-          src={user.image || ''}
+          src={resolveAvatarImageSrc(user.image) ?? ''}
           alt={user.name || 'Unknown User'}
           class="h-12 w-12 rounded-full object-cover"
         />
