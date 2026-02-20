@@ -2,6 +2,8 @@
 import { m } from '$lib/i18n'
 // SVELTE
 import { goto, pushState, replaceState } from '$app/navigation'
+// SERVICES
+import { getImageById } from '$lib/client/services/image'
 // LIB
 import { ADMIN_PATH, isMobile } from '$lib/constants'
 // ENUMS
@@ -620,15 +622,8 @@ export const handleImageParams = async (
   }
 
   try {
-    // Fetch the specific image from the API
-    const response = await fetch(`/api/images/${imageId}`)
-    if (!response.ok) {
-      console.error('Failed to fetch image:', response.statusText)
-      return null
-    }
-
-    const result = await response.json()
-    const targetImage = result.data || result // Handle both wrapped and direct responses
+    const targetImage = await getImageById(imageId)
+    if (!targetImage) return null
 
     return {
       targetImageId: imageId,

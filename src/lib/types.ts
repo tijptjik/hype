@@ -1997,6 +1997,7 @@ export type ImageNewWithProjectOrOrganisation = z.infer<
   typeof ImageInsertWithProjectOrOrganisationAPI
 >
 export type ImagePartial = z.infer<typeof ImageUpdateAPI>
+export type ImageUpdateData = Omit<ImagePartial, 'ctxType' | 'refId'>
 
 export type FeatureImageDB = z.infer<typeof FeatureImageBase>
 export type FeatureImageDBNew = z.infer<typeof FeatureImageInsert>
@@ -2103,6 +2104,82 @@ export type ImageEditCtx = {
   ctxId: Id
 }
 
+export type ImageContextType = ImageContextResource | ImageContextResourceExtended
+
+export type ImageRemoteMeta = {
+  isAdminRequest?: boolean
+}
+
+export type ImagesForContextParams = {
+  ctxType: ImageContextType
+  ctxId: Id
+  includeSingleImage?: boolean
+  meta?: ImageRemoteMeta
+}
+
+export type ImagesForIdsParams = {
+  ids: Id[]
+  meta?: ImageRemoteMeta
+}
+
+export type ImageByIdParams = {
+  id: Id
+  meta?: ImageRemoteMeta
+}
+
+export type CreateImageParams = {
+  data: ImageNew
+  meta?: ImageRemoteMeta
+}
+
+export type UpdateImageParams = {
+  id: Id
+  ctxType: ImageContextType
+  ctxId: Id
+  data: Record<string, unknown>
+  meta?: ImageRemoteMeta
+}
+
+export type SetImageIntentParams = {
+  id: Id
+  ctxType: ImageContextType
+  ctxId: Id
+  intent: Intent
+  featureId?: Id
+  isPublished?: boolean
+  meta?: ImageRemoteMeta
+}
+
+export type SetImagePublishedParams = {
+  id: Id
+  ctxType: ImageContextType
+  ctxId: Id
+  featureId?: Id
+  isPublished: boolean
+  meta?: ImageRemoteMeta
+}
+
+export type DeleteImageParams = {
+  id: Id
+  ctxType: ImageContextType
+  ctxId: Id
+  meta?: ImageRemoteMeta
+}
+
+export type CloudinarySignatureParams = {
+  paramsToSign: ParamsToSign
+  meta?: ImageRemoteMeta
+}
+
+export type ImageCollectionResponse = {
+  image?: Image
+  images?: Image[]
+}
+
+export type ImageByIdResponse = {
+  data: Image | null
+}
+
 export type SignData = {
   cloudname: string
   apikey: string
@@ -2113,6 +2190,7 @@ export type SignData = {
 export type ParamsToSign = {
   folder: string
   public_id?: string | null
+  media_metadata?: 'true'
 }
 
 export type DeleteParamsToSign = {

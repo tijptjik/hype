@@ -6,7 +6,12 @@ import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'driz
 import { image, featureImage } from '$lib/db/schema/index'
 // ZOD SCHEMAS
 import { FeatureBase } from './feature'
-import { ImageCDN, ImageContextResource, ImageIntent } from '$lib/enums'
+import {
+  ImageCDN,
+  ImageContextResource,
+  ImageContextResourceExtended,
+  ImageIntent,
+} from '$lib/enums'
 import { UserBase } from './user'
 
 /* ----------------- */
@@ -43,6 +48,7 @@ export const ImageBasic = ImageBase.pick({
   cdnId: true,
   publicId: true,
   version: true,
+  presentationMode: true,
   metadata: true,
 })
 export const ImageInsert = createInsertSchema(image).extend({
@@ -150,4 +156,79 @@ export const ImageFlatUpdate = ImageUpdate.extend({
 export const ImageBaseRaw = ImageBase.extend({
   featureImage: FeatureImageBase,
   contributor: UserBase,
+})
+
+/* ----------------- */
+// SVELTE REMOTE FUNCTION REFACTOR
+/* -------- */
+
+export const ImageRequestMetaSchema = z
+  .object({
+    isAdminRequest: z.boolean().optional(),
+  })
+  .optional()
+
+export const ImageContextTypeExtendedSchema = z.enum([
+  ...Object.values(ImageContextResource),
+  ...Object.values(ImageContextResourceExtended),
+] as [string, ...string[]])
+
+export const ImagesByContextSchema = z.object({
+  ctxType: ImageContextTypeExtendedSchema,
+  ctxId: z.string().min(1),
+  includeSingleImage: z.boolean().optional(),
+  meta: ImageRequestMetaSchema,
+})
+
+export const ImagesByIdsSchema = z.object({
+  ids: z.array(z.string().min(1)).min(1),
+  meta: ImageRequestMetaSchema,
+})
+
+export const ImageByIdSchema = z.object({
+  id: z.string().min(1),
+  meta: ImageRequestMetaSchema,
+})
+
+export const UpdateImageSchema = z.object({
+  id: z.string().min(1),
+  ctxType: ImageContextTypeExtendedSchema,
+  ctxId: z.string().min(1),
+  data: z.record(z.string(), z.unknown()),
+  meta: ImageRequestMetaSchema,
+})
+
+export const SetImageIntentSchema = z.object({
+  id: z.string().min(1),
+  ctxType: ImageContextTypeExtendedSchema,
+  ctxId: z.string().min(1),
+  intent: z.string().min(1),
+  featureId: z.string().optional(),
+  isPublished: z.boolean().optional(),
+  meta: ImageRequestMetaSchema,
+})
+
+export const SetImagePublishedSchema = z.object({
+  id: z.string().min(1),
+  ctxType: ImageContextTypeExtendedSchema,
+  ctxId: z.string().min(1),
+  featureId: z.string().optional(),
+  isPublished: z.boolean(),
+  meta: ImageRequestMetaSchema,
+})
+
+export const DeleteImageSchema = z.object({
+  id: z.string().min(1),
+  ctxType: ImageContextTypeExtendedSchema,
+  ctxId: z.string().min(1),
+  meta: ImageRequestMetaSchema,
+})
+
+export const CloudinarySignatureSchema = z.object({
+  paramsToSign: z.object({
+    folder: z.string().optional(),
+    public_id: z.string().nullish(),
+    media_metadata: z.literal('true').optional(),
+  }),
+  meta: ImageRequestMetaSchema,
 })

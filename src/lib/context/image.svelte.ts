@@ -6,6 +6,7 @@ import { toast } from 'svelte-sonner'
 import { m } from '$lib/i18n'
 // SERVICES
 import {
+  getImages,
   uploadAndProcessImage,
   updateImageIntent,
   updateImageIsPublished,
@@ -16,7 +17,7 @@ import {
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
-import { ResourcePath, FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '$lib/enums'
 // TYPES
 import type { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
 import type {
@@ -1209,50 +1210,9 @@ export class ImageCtx {
   private async fetchImagesFromAPI(
     ctxType: ImageContextResource | ImageContextResourceExtended,
     ctxId: Id,
-    includeSingleImage = true,
+    _includeSingleImage = true,
   ): Promise<Image[]> {
-    const resourcePath = ResourcePath[ctxType]
-    if (!resourcePath) {
-      throw new Error(`Unknown context type: ${ctxType}`)
-    }
-
-    // Build API URL
-    let url = `/api/${resourcePath}/${ctxId}`
-
-    // Add byId=true for organisations, projects, and hubs
-    if (['organisation', 'project', 'hub'].includes(ctxType)) {
-      url += '?byId=true'
-    }
-
-    const response = await fetch(url)
-    if (!response.ok) {
-      throw new Error(`Failed to fetch images: ${response.statusText}`)
-    }
-
-    const data = await response.json()
-
-    let result: any[] = []
-
-    // Cache the feature response for reuse
-    if (ctxType === 'feature') {
-      this.appCtx.setFeatureById(data as Feature)
-    }
-
-    if (includeSingleImage && data.image) {
-      // For standalone mode, prioritize the canonical image first
-      result = [data.image]
-
-      // Add other images that aren't the canonical one
-      if (data.images) {
-        const otherImages = data.images.filter((img: any) => img.id !== data.image.id)
-        result = [...result, ...otherImages]
-      }
-    } else {
-      // For collection mode, just return the images array
-      result = data.images || []
-    }
-
-    return result
+    return await getImages(ctxType, ctxId)
   }
 
   async refreshImages(targetImageId?: Id) {

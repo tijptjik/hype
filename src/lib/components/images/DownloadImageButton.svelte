@@ -15,11 +15,22 @@ let { image, class: className = '' } = $props()
 
 // SERVICES
 const imageCtx = getImageCtx()
+
+function stopEvent(e: MouseEvent | PointerEvent): void {
+  e.preventDefault()
+  e.stopPropagation()
+}
+
+function handleClick(e: MouseEvent): void {
+  stopEvent(e)
+  void imageCtx.downloadImage(e, image)
+}
 </script>
 
 <button
   class="btn btn-circle border-none bg-glass-result opacity-70 hover:bg-glass-result/100 hover:shadow-sm {className}"
-  onclick={(e) => imageCtx.downloadImage(e, image)}
+  onpointerdown={stopEvent}
+  onclick={handleClick}
 >
   <Icon src={CloudArrowDown} class="h-6 w-6 stroke-[2px]" />
 </button>

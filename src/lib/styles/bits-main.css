@@ -4,7 +4,7 @@
   }
 
   .bits-main__section {
-    @apply block;
+    @apply block absolute inset-6;
   }
 
   .bits-main__section--hidden {

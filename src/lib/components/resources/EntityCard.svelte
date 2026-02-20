@@ -97,6 +97,12 @@ const imageSrc = $derived(
       })
     : getHashiconUrl(entity.id),
 )
+const imageLayout = $derived.by(() => {
+  const cardImage = getNestedValue(entity, keyMap.image) as
+    | (ImageDB & { presentationMode?: 'cover' | 'contain' })
+    | undefined
+  return cardImage?.presentationMode === 'contain' ? 'contain' : 'cover'
+})
 
 const href = $derived(
   adminCtx.activeResourceType
@@ -163,6 +169,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
         src={imageSrc}
         alt={getPropertyValue(entity, keyMap.title)}
         class="relative z-10 h-64 w-full"
+        layout={imageLayout}
       />
     </div>
   {/if}

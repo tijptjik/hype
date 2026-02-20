@@ -169,6 +169,11 @@ export enum ImageIntentPublic {
   general = 'general',
 }
 
+export enum ImagePresentationMode {
+  cover = 'cover',
+  contain = 'contain',
+}
+
 export enum ImageEnv {
   dg6vtsga1 = 'dg6vtsga1',
 }

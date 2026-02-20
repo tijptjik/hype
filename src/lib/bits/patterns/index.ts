@@ -1,3 +1,4 @@
+export * from './entityImage'
 export * from './formUserRolesSection'
 export * from './formI18nSection'
 export * from './gridSpacer'

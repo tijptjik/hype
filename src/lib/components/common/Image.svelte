@@ -160,8 +160,8 @@ $effect(() => {
         : layout === 'fill'
           ? 'object-fill m-auto'
           : layout === 'fit'
-            ? 'object-fit'
-            : 'object-contain'} bg-transparent"
+            ? 'h-full w-full object-contain'
+            : 'h-full w-full object-contain'} bg-transparent"
       style="z-index: 1;"
     >
   {/if}
@@ -176,8 +176,8 @@ $effect(() => {
         : layout === 'fill'
           ? 'object-fill m-auto'
           : layout === 'fit'
-            ? 'object-fit'
-            : 'object-contain'} bg-transparent"
+            ? 'h-full w-full object-contain'
+            : 'h-full w-full object-contain'} bg-transparent"
       style="opacity: {overlayOpacity}; z-index: 2;"
     >
   {/if}

@@ -27,6 +27,7 @@ type Props = {
   enableReplacement?: boolean
   hideActions?: boolean
   tightActions?: boolean
+  layout?: 'cover' | 'contain'
 }
 
 // STATE : PROPS
@@ -37,6 +38,7 @@ let {
   isDropzone = false,
   hideActions = false,
   tightActions = false,
+  layout = 'contain',
 }: Props = $props()
 
 // STATE : CONTEXT :: ROUTER
@@ -44,8 +46,8 @@ const imageCtx = getImageCtx()
 const adminCtx = getAdminCtx()
 
 let image = $derived(imageCtx.activeImage)
-let isEmpty = $derived(imageCtx.viewerState == 'empty')
-let isError = $derived(imageCtx.viewerState == 'error')
+let isEmpty = $derived(imageCtx.viewerState === 'empty')
+let isError = $derived(imageCtx.viewerState === 'error')
 
 // HANDLERS :: FILE DROP
 const handleDrop = async (e: CustomEvent) => {
@@ -101,7 +103,7 @@ const handleDrop = async (e: CustomEvent) => {
     <PhotoFrame
       class="h-full w-full overflow-hidden rounded-2xl"
       mode="standalone"
-      layout="contain"
+      {layout}
     >
       {#snippet children()}
         {#if image && !hideActions}

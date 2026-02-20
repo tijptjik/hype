@@ -9,6 +9,7 @@ export interface MainSectionProps {
   children?: Snippet
   class?: string
   isVisible?: boolean
+  transition?: 'none' | 'fade'
 }
 
 export interface MainFormProps {

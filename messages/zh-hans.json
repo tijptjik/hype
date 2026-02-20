@@ -108,6 +108,7 @@
   "admin__forms_organisation_members_subtitle": "成员可被设置为项目维护者",
   "admin__forms_organisation_url": "网址",
   "admin__forms_organisation_image_title": "个人档案图像",
+  "admin__forms_organisation_image_save_hint": "请先保存组织，再添加其图像。",
   "admin__forms_project_credit": "内容提供",
   "admin__forms_project_credit_subtitle": "本项目是以哪种许可协议（例如 <code>CC-BY-SA</code> 或 <code>Copyrighted</code>）发布，应如何注明归属？",
   "admin__forms_project_members_title": "具有编辑权限的成员",

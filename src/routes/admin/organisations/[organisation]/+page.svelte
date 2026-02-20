@@ -58,8 +58,11 @@ import {
   FormUserRolesSection,
   GridSpacer,
   Main,
+  EntityImage,
 } from '$lib/bits'
 import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
+// CLIENT SERVICES
+import { setOrganisationImagePresentationMode } from '$lib/client/services/image'
 // FACTORIES
 import { configureForm } from '$lib/factories.svelte'
 // NAVIGATION
@@ -71,15 +74,24 @@ import OrganisationIcon from 'virtual:icons/lucide/users-round'
 import FormInputIcon from 'virtual:icons/lucide/form-input'
 import ImageIcon from 'virtual:icons/lucide/image'
 // ENUMS
-import { FirstClassResource, OrganisationRoleType } from '$lib/enums'
+import {
+  FirstClassResource,
+  ImageContextResource,
+  OrganisationRoleType,
+} from '$lib/enums'
 // TYPES
 import type {
+  Image,
+  ImageDBBasic,
   Locale,
   User,
   OrganisationFormInput,
   OrganisationGetState,
   OrganisationRoleUser,
   OrganisationToggleField,
+  UserRoleFieldNameResolverForm,
+  FormDataUpdaterForm,
+  OrganisationDB,
 } from '$lib/types'
 
 // § Context
@@ -137,7 +149,8 @@ const isImagesFacet = $derived(activeFacet === 'images')
 const isEditing = $derived(headerCtrl.state.isEditing)
 const isNewOrganisationRef = $derived(organisationRef === NEW_REF)
 
-// Desync Guard
+// § Desync Guard
+
 const isCurrentRefLoaded = $derived.by(() => {
   if (isNewOrganisationRef) return true
   return guardRefDesync(organisation, committedOrganisation, organisationRef)
@@ -215,8 +228,16 @@ const formUserRoleValues = $derived(
     role: string
   }>,
 )
+const userRoleResolverForm = $derived(
+  formCtx.form as unknown as UserRoleFieldNameResolverForm,
+)
+const userRoleUpdaterForm = $derived(
+  formCtx.form as unknown as FormDataUpdaterForm<{
+    userRoles?: Array<{ userId: string; role: string }>
+  }>,
+)
 const hiddenUserIdInputAttrs = $derived(
-  getUserRoleHiddenInputAttrs(formCtx.form, formUserRoleValues),
+  getUserRoleHiddenInputAttrs(userRoleResolverForm, formUserRoleValues),
 )
 const userRoles = $derived.by(() =>
   guardUserRolesDesync({
@@ -226,6 +247,32 @@ const userRoles = $derived.by(() =>
     usersById: selectedUsersById,
   }),
 )
+
+// IMAGE
+
+const activeOrganisationImage = $derived(
+  ((organisation as OrganisationGetState)?.data?.image ?? null) as
+    | Image
+    | ImageDBBasic
+    | null,
+)
+const imageProviderProps = $derived.by(() => {
+  const organisationData = organisation?.data
+  const isValid = isCurrentRefLoaded && Boolean(organisationData?.id)
+
+  return {
+    isAdminMode: true,
+    isValid,
+    image: isValid ? activeOrganisationImage : undefined,
+    context: isValid
+      ? {
+          ctxType: ImageContextResource.organisation,
+          ctxId: organisationData?.id,
+          organisation: organisationData as unknown as OrganisationDB,
+        }
+      : undefined,
+  }
+})
 
 // § Auth
 
@@ -294,7 +341,7 @@ function onResetLocale(targetLocale: Locale): void {
 function onAddUser(user: User): void {
   selectedUsersById[user.id] = user
   organisation = addUserRoleSelection({
-    form: formCtx.form,
+    form: userRoleUpdaterForm,
     entity: organisation,
     user,
     defaultRole: OrganisationRoleType.member,
@@ -307,7 +354,7 @@ function onRemoveUser(userId: string): void {
   const { [userId]: _removedUser, ...rest } = selectedUsersById
   selectedUsersById = rest
   organisation = removeUserRoleSelection({
-    form: formCtx.form,
+    form: userRoleUpdaterForm,
     entity: organisation,
     userId,
   })
@@ -316,7 +363,7 @@ function onRemoveUser(userId: string): void {
 
 function onRoleChange(userId: string, role: OrganisationRoleType): void {
   organisation = updateUserRoleSelection({
-    form: formCtx.form,
+    form: userRoleUpdaterForm,
     entity: organisation,
     userId,
     role,
@@ -330,7 +377,7 @@ async function refreshOrganisation(
   ref: string = organisationRef,
 ): Promise<OrganisationGetState> {
   if (ref === NEW_REF) return null
-  return await getOrganisation({
+  return await getOrganisation<'admin'>({
     ref,
     refKey: 'code',
     meta: { isAdminRequest: true, profile: 'admin' },
@@ -432,6 +479,11 @@ function onSubmit(): void {
   formCtx.requestSubmit(baseMeta ? { meta: baseMeta } : undefined)
 }
 
+function onPresentationModeCommitted(nextMode: 'cover' | 'contain'): void {
+  setOrganisationImagePresentationMode(organisation, nextMode)
+  setOrganisationImagePresentationMode(committedOrganisation, nextMode)
+}
+
 // § Effects
 
 // Keep facet + entity data in sync with the current route ref.
@@ -517,6 +569,7 @@ $effect(() => {
 
 // Push reactive form/resource status state into shared header controls.
 $effect(() => {
+  const isImageFacetActive = isImagesFacet
   const dirty = isDirty
   const isSubmitting = formCtx.submitting
   const hasIssues = visibleAllIssues.length > 0
@@ -525,14 +578,14 @@ $effect(() => {
   lastFormActionsSignature = resourceEditorPage.syncHeaderStatus({
     headerCtrl,
     status: {
-      dirty,
-      isSubmitting,
-      hasIssues,
+      dirty: isImageFacetActive ? false : dirty,
+      isSubmitting: isImageFacetActive ? false : isSubmitting,
+      hasIssues: isImageFacetActive ? false : hasIssues,
       isPublished,
       isDeleted,
-      canEdit: canSubmitOrganisation && isCurrentRefLoaded,
+      canEdit: isImageFacetActive ? false : canSubmitOrganisation && isCurrentRefLoaded,
       canPublish: !isNewOrganisationRef && canPublishOrganisation && isCurrentRefLoaded,
-      showDeleteAction: !isNewOrganisationRef,
+      showDeleteAction: isImageFacetActive ? false : !isNewOrganisationRef,
       showPublishAction: !isNewOrganisationRef,
     },
     lastSignature: lastFormActionsSignature,
@@ -548,7 +601,7 @@ $effect(() => {
 </script>
 
 <Main.Root>
-  <Main.Section isVisible={isCoreFacet}>
+  <Main.Section isVisible={isCoreFacet} transition="fade">
     <Main.Form
       bind:formEl={contentsElement}
       attrs={formCtx.attributes}
@@ -580,7 +633,7 @@ $effect(() => {
 
       <GridSpacer>
         {#snippet left()}
-          {@const roleFieldNameByUserId = getRoleFieldNameByUserId(formCtx.form)}
+          {@const roleFieldNameByUserId = getRoleFieldNameByUserId(userRoleResolverForm)}
           <FormUserRolesSection
             title={m.admin__forms_organisation_members_title()}
             subtitle={m.admin__forms_organisation_members_subtitle()}
@@ -607,7 +660,23 @@ $effect(() => {
       </GridSpacer>
     </Main.Form>
   </Main.Section>
-  <Main.Section isVisible={isImagesFacet}>
-    <p class="text-sm text-neutral-content">Active tab: profile image management.</p>
+  <Main.Section
+    isVisible={isImagesFacet}
+    transition="fade"
+    class="flex min-h-0 flex-col"
+  >
+    <EntityImage
+      {page}
+      entityId={organisation?.data?.id}
+      {imageProviderProps}
+      currentImage={activeOrganisationImage}
+      ctx={organisation?.data?.id
+        ? {
+            ctxType: ImageContextResource.organisation,
+            ctxId: organisation?.data?.id,
+          }
+        : undefined}
+      {onPresentationModeCommitted}
+    />
   </Main.Section>
 </Main.Root>

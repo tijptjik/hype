@@ -10,7 +10,7 @@ import { nanoid } from 'nanoid'
 // SCHEMA
 import { feature } from './feature'
 // ENUM
-import { ImageCDN, ImageEnv, ImageIntent } from '../../enums'
+import { ImageCDN, ImageEnv, ImageIntent, ImagePresentationMode } from '../../enums'
 // TYPES
 import type { EXIF } from '../../types'
 
@@ -48,6 +48,12 @@ export const image = sqliteTable('image', {
   publicId: text('publicId').notNull(),
   // Cloudinary Version
   version: integer('version'),
+  // Preferred presentation policy for UI rendering
+  presentationMode: text('presentationMode', {
+    enum: Object.values(ImagePresentationMode) as [string, ...string[]],
+  })
+    .default(ImagePresentationMode.contain)
+    .notNull(),
 
   originalFilename: text('originalFilename'),
   originalExtension: text('originalExtension'),

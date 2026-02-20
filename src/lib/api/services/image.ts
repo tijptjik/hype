@@ -19,6 +19,12 @@ import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 import { isSuperAdmin } from '$lib/client/services/auth'
 // SCHEMA
 import { image, featureImage, project, organisation } from '$lib/db/schema/index'
+import {
+  getImageById as loadImageById,
+  toResponseShape,
+  updateFeatureImage,
+  updateImage as updateImageRecord,
+} from '$lib/db/services/image'
 // TYPES
 import type {
   UserRoleDisco,
@@ -29,11 +35,17 @@ import type {
   ImageDBFlat,
   HubOpts,
   SessionUser,
+  ImageContextType,
+  ParamsToSign,
+  DeleteParamsToSign,
+  SignData,
 } from '$lib/types'
 import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
 import { error } from '@sveltejs/kit'
 import { applyResourceContextConstraints } from '$lib/db/services/image'
 import { getProjectIdForFeatureId } from '$lib/db/services/feature'
+import { ImageFlatUpdate, ImageUpdate } from '$lib/db/zod/schema/image'
+import { getUserById } from '$lib/db/services/user'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -57,6 +69,9 @@ import { getProjectIdForFeatureId } from '$lib/db/services/feature'
 //
 // 5. UTILS
 //    - getCtxFromUrl
+//    - updateImageForContext
+//    - createCloudinarySignature
+//    - deleteCloudinaryImage
 //
 
 // ═══════════════════════
@@ -375,4 +390,140 @@ export const getCtxFromUrl = (url: URL) => {
   }
 
   return { ctxId, ctxType }
+}
+
+/**
+ * Updates an image for a given context with authorization and feature-image relation updates.
+ */
+export const updateImageForContext = async (args: {
+  db: Database
+  user: SessionUser
+  userId: Id
+  userRoles: UserRoleDisco[]
+  event: App.RequestEvent
+  id: string
+  ctxType: ImageContextType
+  ctxId: string
+  data: Record<string, unknown>
+}): Promise<{ data: ImageDBFlat }> => {
+  const { db, user, userId, userRoles, event, id, ctxType, ctxId, data } = args
+  const userWithAttribution = await getUserById(db, userId)
+
+  const payload = {
+    ...data,
+    id,
+  } as ImageDBFlat
+
+  await assertPermissionsToUpdateImage(
+    db,
+    user,
+    event.request,
+    event.locals.hub,
+    { id } as QueryParams,
+    payload,
+    userRoles,
+    id as Id,
+    ctxId as Id,
+    ctxType,
+  )
+
+  const imageToUpdate = ImageUpdate.parse(data)
+  let updatedImage: ImageDBFlat | undefined
+
+  if (Object.keys(imageToUpdate).length > 0) {
+    updatedImage = (await updateImageRecord(db, imageToUpdate, id as Id)) as ImageDBFlat
+  } else {
+    updatedImage = await loadImageById(db, [eq(image.id, id as Id)])
+  }
+
+  if (!updatedImage) {
+    throw error(404, 'Image not found')
+  }
+
+  let updatedFeatureImage: Awaited<ReturnType<typeof updateFeatureImage>> | undefined
+  const parseResult = ImageFlatUpdate.safeParse(data)
+  if (parseResult.success && parseResult.data.featureId) {
+    updatedFeatureImage = await updateFeatureImage(db, parseResult.data, id)
+  }
+
+  const responseData = await toResponseShape(
+    updatedImage,
+    updatedFeatureImage,
+    userWithAttribution?.attribution ?? undefined,
+  )
+
+  return { data: responseData }
+}
+
+/**
+ * Creates Cloudinary signature payload for direct uploads/deletes.
+ */
+export const createCloudinarySignature = async (
+  paramsToSign: ParamsToSign | DeleteParamsToSign,
+  platform: App.Platform | undefined,
+): Promise<SignData> => {
+  const timestamp = String(Date.now())
+  const apiSecret = platform?.env?.CLOUDINARY_API_SECRET
+  const apiKey = platform?.env?.CLOUDINARY_API_KEY
+  const cloudName = platform?.env?.PUBLIC_CLOUDINARY_CLOUD_NAME
+
+  if (!apiSecret || !apiKey || !cloudName) {
+    throw error(500, 'Missing Cloudinary API credentials')
+  }
+
+  const params = Object.fromEntries(
+    Object.entries({ ...paramsToSign, timestamp }).filter(
+      ([, value]) => value !== undefined && value !== null,
+    ),
+  )
+  const sortedParams = Object.keys(params)
+    .sort()
+    .map(key => `${key}=${params[key as keyof typeof params]}`)
+    .join('&')
+
+  const payload = new TextEncoder().encode(sortedParams + apiSecret)
+  const hashBuffer = await crypto.subtle.digest('SHA-1', payload)
+  const signature = Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+
+  return {
+    signature,
+    timestamp,
+    cloudname: cloudName,
+    apikey: apiKey,
+  }
+}
+
+/**
+ * Deletes a Cloudinary image by publicId using signed credentials.
+ */
+export const deleteCloudinaryImage = async (
+  signData: SignData,
+  publicId: string,
+): Promise<void> => {
+  const destroyResponse = await fetch(
+    `https://api.cloudinary.com/v1_1/${signData.cloudname}/image/destroy`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        public_id: publicId,
+        api_key: signData.apikey,
+        timestamp: signData.timestamp,
+        signature: signData.signature,
+      }),
+    },
+  )
+
+  if (!destroyResponse.ok) {
+    const destroyJson = await destroyResponse.json()
+    console.error('Cloudinary delete failed:', destroyJson.error?.message)
+    return
+  }
+
+  const destroyJson = await destroyResponse.json()
+  if (destroyJson.result !== 'ok' && destroyJson.result !== 'not found') {
+    console.warn('Cloudinary deletion reported non-standard result:', destroyJson)
+  }
 }
