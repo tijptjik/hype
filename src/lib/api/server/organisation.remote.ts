@@ -58,6 +58,7 @@ import type {
   Id,
   ListResponse,
   OrganisationDB,
+  OrganisationFormInput,
   OrganisationEntityByProfile,
   OrganisationGetParamsByProfile,
   OrganisationListByProfile,
@@ -296,7 +297,10 @@ export const getOrganisation = getOrganisationQuery as typeof getOrganisationQue
  * Update flow enforces optimistic concurrency via `meta.updatedAt === current.modifiedAt`.
  * Authorization is checked before uniqueness lookups to avoid leaking existence details.
  */
-export const organisationForm = guardedForm('unchecked', async (input, ctx) => {
+export const organisationForm = guardedForm<
+  OrganisationFormInput,
+  { data: { id: string; modifiedAt: string } }
+>('unchecked', async (input, ctx) => {
   const params = OrganisationFormData.parse(input)
   const { db, user, userRoles, event, invalid, issue } = ctx
   const { meta, data } = params
