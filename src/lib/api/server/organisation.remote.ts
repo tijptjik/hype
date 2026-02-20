@@ -25,7 +25,8 @@ import {
 // SERVICES
 import {
   toQueryConditions,
-  organisationWithRelations,
+  getOrganisationWithRelations,
+  toOrganisationProfile,
 } from '$lib/api/services/organisation'
 import {
   createI18n,
@@ -52,7 +53,17 @@ import {
   PublishOrganisationSchema,
   RemoveOrganisationSchema,
 } from '$lib/db/zod'
-import type { OrganisationDB, Id } from '$lib/types'
+import type {
+  EntityResponse,
+  Id,
+  ListResponse,
+  OrganisationDB,
+  OrganisationEntityByProfile,
+  OrganisationGetParamsByProfile,
+  OrganisationListByProfile,
+  OrganisationListParamsByProfile,
+  OrganisationProfile,
+} from '$lib/types'
 
 /* ----------------- */
 // QUERY HELPERS
@@ -93,16 +104,18 @@ const toRequestedListState = (conditions: Partial<OrganisationDB>) => ({
  * @param params.q - Optional text query applied by the service layer.
  * @param params.meta - Optional request metadata.
  * @param params.meta.isAdminRequest - Explicit admin-origin hint used by guarded context resolution.
+ * @param params.meta.profile - Optional response profile (`list`, `card`, `detail`, `admin`).
  * @returns A promise resolving to `{ data, limit, offset, totalCount }`.
  * @remarks
  * Uses `authorizeOrganisationList` for visibility-state authorization before querying.
  * Query conditions are then built via `toQueryConditions`, using guarded
  * `isAdminRequest` context so admin callers can request non-default visibility states.
  */
-export const getOrganisations = guardedQuery(
+const getOrganisationsQuery = guardedQuery(
   ListQueryParamsSchema,
   async (params, ctx) => {
     const { db, user, userRoles, isAdminRequest, event } = ctx
+    const profile = toOrganisationProfile(params.meta?.profile, 'list')
 
     // Validate incoming filter keys against table columns and set default visibility filters.
     const queryParams = validateQueryParams<OrganisationDB>(
@@ -141,7 +154,7 @@ export const getOrganisations = guardedQuery(
     // Execute list query with optional text search and pagination.
     const result = await listOrganisations(
       db,
-      organisationWithRelations,
+      getOrganisationWithRelations(profile, Boolean(user.superAdmin)),
       conditions,
       event.locals.hub,
       params.pagination,
@@ -152,9 +165,14 @@ export const getOrganisations = guardedQuery(
       },
     )
 
-    return toListResponseShape(result, user)
+    return toListResponseShape(result, user, profile)
   },
 )
+
+export const getOrganisations = getOrganisationsQuery as typeof getOrganisationsQuery &
+  (<P extends OrganisationProfile = 'list'>(
+    params: OrganisationListParamsByProfile<P>,
+  ) => Promise<ListResponse<OrganisationListByProfile<P>>>)
 
 /**
  * Returns a role-aware organisation record for guarded remote callers.
@@ -164,98 +182,102 @@ export const getOrganisations = guardedQuery(
  * @param params.refKey - Optional lookup column (`id` or `code`), defaults to `id`.
  * @param params.meta - Optional request metadata.
  * @param params.meta.isAdminRequest - Explicit admin-origin hint used by guarded context resolution.
+ * @param params.meta.profile - Optional response profile (`list`, `card`, `detail`, `admin`).
  * @returns A promise resolving to `{ data }`, where `data` is the matched organisation.
  * @remarks
  * Performs a minimal probe query first (`id`, `hubId`, `isPublished`, `isArchived`)
  * so authorization can evaluate the real persisted state before loading the full record.
  */
-export const getOrganisation = guardedQuery(
-  GetQueryParamsSchema,
-  async (params, ctx) => {
-    try {
-      const { db, user, userRoles, isAdminRequest, event } = ctx
+const getOrganisationQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => {
+  try {
+    const { db, user, userRoles, isAdminRequest, event } = ctx
+    const profile = toOrganisationProfile(params.meta?.profile, 'detail')
 
-      // Probe the requested organisation for flags.
-      const probeQuery = db
-        .select({
-          id: organisation.id,
-          hubId: organisation.hubId,
-          isPublished: organisation.isPublished,
-          isArchived: organisation.isArchived,
-        })
-        .from(organisation)
-        .where(
-          params.refKey === 'code'
-            ? eq(organisation.code, params.ref)
-            : eq(organisation.id, params.ref as Id),
-        )
-        .limit(1)
-
-      const [probe] = await probeQuery
-      if (!probe) {
-        return toEntityResponseShape(null, user)
-      }
-
-      // Apply role-based authorization.
-      const readDecision = authorizeOrganisationRead(
-        {
-          userId: user.id,
-          userRoles,
-          isAuthenticated: true,
-          isAnonymous: user.isAnonymous,
-        },
-        {
-          resourceId: probe.id,
-          resourceHubId: probe.hubId,
-        },
-        {
-          isPublished: probe.isPublished,
-          isArchived: probe.isArchived,
-        },
-      )
-
-      if (!readDecision.allowed) {
-        throw error(403, toAuthMessage(readDecision.code ?? 'INSUFFICIENT_ROLE'))
-      }
-
-      // Validate incoming filter keys against table columns and set default visibility filters.
-      const queryParams = validateQueryParams<OrganisationDB>(
-        organisation,
-        toLookupConditions(params),
-        {
-          isPublished: probe.isPublished,
-          isArchived: probe.isArchived,
-        } as Partial<OrganisationDB>,
-      )
-
-      // Build final SQL conditions based on request scope and role permissions.
-      const { conditions } = toQueryConditions(
-        user,
-        isAdminRequest,
-        queryParams,
-        userRoles,
-      )
-
-      // Execute a single-record query.
-      const result = await loadOrganisation(
-        db,
-        organisationWithRelations,
-        conditions,
-        event.locals.hub,
-      )
-
-      return toEntityResponseShape(result ?? null, user)
-    } catch (error) {
-      console.error('[remote:getOrganisation] Failed', {
-        params,
-        error,
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
+    // Probe the requested organisation for flags.
+    const probeQuery = db
+      .select({
+        id: organisation.id,
+        hubId: organisation.hubId,
+        isPublished: organisation.isPublished,
+        isArchived: organisation.isArchived,
       })
-      throw error
+      .from(organisation)
+      .where(
+        params.refKey === 'code'
+          ? eq(organisation.code, params.ref)
+          : eq(organisation.id, params.ref as Id),
+      )
+      .limit(1)
+
+    const [probe] = await probeQuery
+    if (!probe) {
+      return toEntityResponseShape(null, user)
     }
-  },
-)
+
+    // Apply role-based authorization.
+    const readDecision = authorizeOrganisationRead(
+      {
+        userId: user.id,
+        userRoles,
+        isAuthenticated: true,
+        isAnonymous: user.isAnonymous,
+      },
+      {
+        resourceId: probe.id,
+        resourceHubId: probe.hubId,
+      },
+      {
+        isPublished: probe.isPublished,
+        isArchived: probe.isArchived,
+      },
+    )
+
+    if (!readDecision.allowed) {
+      throw error(403, toAuthMessage(readDecision.code ?? 'INSUFFICIENT_ROLE'))
+    }
+
+    // Validate incoming filter keys against table columns and set default visibility filters.
+    const queryParams = validateQueryParams<OrganisationDB>(
+      organisation,
+      toLookupConditions(params),
+      {
+        isPublished: probe.isPublished,
+        isArchived: probe.isArchived,
+      } as Partial<OrganisationDB>,
+    )
+
+    // Build final SQL conditions based on request scope and role permissions.
+    const { conditions } = toQueryConditions(
+      user,
+      isAdminRequest,
+      queryParams,
+      userRoles,
+    )
+
+    // Execute a single-record query.
+    const result = await loadOrganisation(
+      db,
+      getOrganisationWithRelations(profile, Boolean(user.superAdmin)),
+      conditions,
+      event.locals.hub,
+    )
+
+    return toEntityResponseShape(result ?? null, user, profile)
+  } catch (error) {
+    console.error('[remote:getOrganisation] Failed', {
+      params,
+      error,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    })
+    throw error
+  }
+})
+
+export const getOrganisation = getOrganisationQuery as typeof getOrganisationQuery &
+  (<P extends OrganisationProfile = 'detail'>(
+    params: OrganisationGetParamsByProfile<P>,
+  ) => Promise<EntityResponse<OrganisationEntityByProfile<P>>>)
 
 /* ----------------- */
 // REMOTE FORM

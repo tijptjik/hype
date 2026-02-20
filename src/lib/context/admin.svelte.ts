@@ -479,7 +479,7 @@ export class AdminCtx {
         ? { isArchived: null, isPublished: null }
         : { isArchived: false, isPublished: null },
       prisms: this.appCtx.state.prisms,
-      meta: { isAdminRequest: true },
+      meta: { isAdminRequest: true, profile: 'card' },
     })) as ListResponse<Organisation>
     return result.data
   }

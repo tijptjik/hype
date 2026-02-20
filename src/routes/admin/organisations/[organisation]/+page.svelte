@@ -164,12 +164,12 @@ const configuredOrganisationForm = configureForm<OrganisationFormInput>(() => ({
         entityQuery: getOrganisation({
           ref: organisationRef,
           refKey: 'code',
-          meta: { isAdminRequest: true },
+          meta: { isAdminRequest: true, profile: 'admin' },
         }),
         listQuery: getOrganisations({
           conditions: adminCtx.appCtx.isSuperAdmin() ? {} : { isArchived: false },
           prisms: adminCtx.appCtx.state.prisms,
-          meta: { isAdminRequest: true },
+          meta: { isAdminRequest: true, profile: 'card' },
         }),
       }),
     adminCtx,
@@ -333,7 +333,7 @@ async function refreshOrganisation(
   return await getOrganisation({
     ref,
     refKey: 'code',
-    meta: { isAdminRequest: true },
+    meta: { isAdminRequest: true, profile: 'admin' },
   }).catch(() => null)
 }
 
@@ -365,7 +365,7 @@ async function handleOrganisationStateToggle({
       getOrganisation({
         ref: organisationRef,
         refKey: 'code',
-        meta: { isAdminRequest: true },
+        meta: { isAdminRequest: true, profile: 'admin' },
       }).withOverride(
         overrideOrganisationEntityBoolean(field, nextState),
         // TODO Invalidate cache
@@ -373,7 +373,7 @@ async function handleOrganisationStateToggle({
       getOrganisations({
         conditions: adminCtx.appCtx.isSuperAdmin() ? {} : { isArchived: false },
         prisms: adminCtx.appCtx.state.prisms,
-        meta: { isAdminRequest: true },
+        meta: { isAdminRequest: true, profile: 'card' },
       }).withOverride(
         overrideOrganisationListItemBoolean(organisationData.id, field, nextState),
         // TODO Invalidate cache

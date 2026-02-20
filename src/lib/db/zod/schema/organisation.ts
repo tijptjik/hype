@@ -177,10 +177,6 @@ export const OrganisationEntityFormData = z.object({
   userRoles: OrganisationUserRolesFormData,
 })
 
-export const OrganisationEntityFormDataSuper = OrganisationEntityFormData.extend({
-  isHubExclusive: z.boolean(),
-})
-
 export const OrganisationFormMeta = z.object({
   id: z.string().optional(),
   updatedAt: z.string().min(1).optional(),
@@ -193,15 +189,9 @@ export const OrganisationFormData = z.object({
   data: OrganisationEntityFormData,
 })
 
-export const OrganisationFormDataSuper = z.object({
-  meta: OrganisationFormMeta.optional(),
-  data: OrganisationEntityFormDataSuper,
-})
-
 // Frontend-only preflight schemas (no DB lookups/uniqueness checks).
 // Keep these structurally aligned with submit payloads.
 export const OrganisationPreflightFormData = OrganisationFormData
-export const OrganisationSuperPreflightFormData = OrganisationFormDataSuper
 
 export const OrganisationCreateFormData = OrganisationFormData.refine(
   value => !value.meta?.id,
@@ -243,4 +233,40 @@ export const RemoveOrganisationSchema = z.object({
       isAdminRequest: z.coerce.boolean<boolean>().optional(),
     })
     .optional(),
+})
+
+// Profiles
+
+export const OrganisationProfile = z.enum(['list', 'card', 'detail', 'admin'])
+
+const OrganisationListFields = OrganisationBase.pick({
+  id: true,
+  code: true,
+  createdAt: true,
+  modifiedAt: true,
+})
+
+const OrganisationCardFields = OrganisationBase.pick({
+  url: true,
+  isPublished: true,
+  isArchived: true,
+})
+
+const OrganisationDetailFields = OrganisationBase.pick({
+  publishedAt: true,
+  publisherId: true,
+  hubId: true,
+})
+
+export const OrganisationListProfileAPI = OrganisationListFields.extend({
+  i18n: getLocales(OrganisationI18nBase),
+})
+
+export const OrganisationCardProfileAPI = OrganisationListProfileAPI.extend({
+  ...OrganisationCardFields.shape,
+  image: ImageBasic.nullish(),
+})
+
+export const OrganisationDetailProfileAPI = OrganisationCardProfileAPI.extend({
+  ...OrganisationDetailFields.shape,
 })

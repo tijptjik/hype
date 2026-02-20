@@ -102,6 +102,10 @@ import type {
   OrganisationInsert,
   OrganisationInsertAPI,
   OrganisationFormData,
+  OrganisationProfile as OrganisationProfileSchema,
+  OrganisationListProfileAPI,
+  OrganisationCardProfileAPI,
+  OrganisationDetailProfileAPI,
   ListQueryParamsSchema,
   GetQueryParamsSchema,
   OrganisationInsertSuperAdminAPI,
@@ -1354,6 +1358,43 @@ export type OrganisationSuperAdminPartial = z.infer<
 >
 export type OrganisationListParams = z.infer<typeof ListQueryParamsSchema>
 export type OrganisationGetParams = z.infer<typeof GetQueryParamsSchema>
+export type OrganisationProfile = z.infer<typeof OrganisationProfileSchema>
+export type OrganisationListProfile = z.infer<typeof OrganisationListProfileAPI>
+export type OrganisationCardProfile = z.infer<typeof OrganisationCardProfileAPI>
+export type OrganisationDetailProfile = z.infer<typeof OrganisationDetailProfileAPI>
+export type OrganisationEntityByProfile<P extends OrganisationProfile> =
+  P extends 'list'
+    ? OrganisationListProfile
+    : P extends 'card'
+      ? OrganisationCardProfile
+      : P extends 'detail'
+        ? OrganisationDetailProfile
+        : Organisation | OrganisationSuperAdmin
+export type OrganisationListByProfile<P extends OrganisationProfile> = P extends 'list'
+  ? OrganisationListProfile
+  : P extends 'card'
+    ? OrganisationCardProfile
+    : P extends 'detail'
+      ? OrganisationDetailProfile
+      : OrganisationCollection | OrganisationCollectionSuperAdmin
+export type OrganisationGetParamsByProfile<P extends OrganisationProfile> = Omit<
+  OrganisationGetParams,
+  'meta'
+> & {
+  meta?: {
+    isAdminRequest?: boolean
+    profile?: P
+  }
+}
+export type OrganisationListParamsByProfile<P extends OrganisationProfile> = Omit<
+  OrganisationListParams,
+  'meta'
+> & {
+  meta?: {
+    isAdminRequest?: boolean
+    profile?: P
+  }
+}
 
 /* ----------------- */
 // ORGANISATIONS :: REMOTE FORMS

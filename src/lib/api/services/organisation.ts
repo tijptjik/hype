@@ -23,6 +23,7 @@ import { FirstClassResource } from '$lib/enums'
 import type {
   Database,
   Id,
+  OrganisationProfile,
   Organisation,
   OrganisationDB,
   OrganisationNew,
@@ -49,6 +50,51 @@ export const organisationWithRelations = {
     columns: userColumnsWithPrivacyProtected,
   },
 }
+
+export const getOrganisationWithRelations = (
+  profile: OrganisationProfile,
+  isSuperAdmin: boolean,
+) => {
+  if (profile === 'admin') {
+    return {
+      i18n: true,
+      userRoles: {
+        with: {
+          user: {
+            columns: userColumnsWithPrivacyProtected,
+          },
+        },
+      },
+      image: true,
+      publisher: {
+        columns: userColumnsWithPrivacyProtected,
+      },
+      ...(isSuperAdmin ? { hub: true } : {}),
+    }
+  }
+
+  if (profile === 'card' || profile === 'detail') {
+    return {
+      i18n: true,
+      image: true,
+    }
+  }
+
+  return {
+    i18n: true,
+  }
+}
+
+const organisationProfiles = ['list', 'card', 'detail', 'admin'] as const
+
+export const toOrganisationProfile = (
+  value: unknown,
+  fallback: OrganisationProfile,
+): OrganisationProfile =>
+  typeof value === 'string' &&
+  (organisationProfiles as readonly string[]).includes(value)
+    ? (value as OrganisationProfile)
+    : fallback
 
 const VISIBILITY_COLUMNS = ['isArchived', 'isPublished'] as const
 

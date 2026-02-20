@@ -14,9 +14,12 @@ import {
 import { zod } from 'sveltekit-superforms/adapters'
 import {
   OrganisationAPI,
+  OrganisationCardProfileAPI,
   OrganisationCollectionAPI,
   OrganisationSuperAdminAPI,
   OrganisationCollectionSuperAdminAPI,
+  OrganisationDetailProfileAPI,
+  OrganisationListProfileAPI,
 } from '../zod'
 // SERVICES
 import { toRelatedRecords, transformI18nSafely } from '..'
@@ -44,6 +47,9 @@ import type {
   OrganisationDBPartial,
   OrganisationDBRaw,
   OrganisationI18nDB,
+  OrganisationEntityByProfile,
+  OrganisationListByProfile,
+  OrganisationProfile,
   OrganisationRoleDB,
   HubOptsExtended,
   ListResponse,
@@ -493,7 +499,7 @@ export function toResponseShape(
   isCollection?: false,
   isSuperAdmin?: boolean,
 ): Promise<Organisation | OrganisationSuperAdmin>
-export const toResponseShape = async (
+export async function toResponseShape(
   organisation: OrganisationDBRaw,
   isCollection: boolean = false,
   isSuperAdmin: boolean = false,
@@ -502,7 +508,7 @@ export const toResponseShape = async (
   | OrganisationSuperAdmin
   | OrganisationCollection
   | OrganisationCollectionSuperAdmin
-> => {
+> {
   const data: Organisation = {
     ...organisation,
     i18n: transformI18nSafely(organisation.i18n),
@@ -521,24 +527,66 @@ export const toResponseShape = async (
   }
 }
 
-export const toEntityResponseShape = async (
+const toProfileResponseShape = async (
+  organisation: OrganisationDBRaw,
+  profile: OrganisationProfile,
+  isCollection: boolean,
+  isSuperAdmin: boolean,
+):
+  | Organisation
+  | OrganisationSuperAdmin
+  | OrganisationCollection
+  | OrganisationCollectionSuperAdmin
+  | OrganisationListProfile
+  | OrganisationCardProfile
+  | OrganisationDetailProfile => {
+  const data = {
+    ...organisation,
+    i18n: transformI18nSafely(organisation.i18n),
+    userRoles: organisation.userRoles,
+  }
+
+  if (profile === 'list') return OrganisationListProfileAPI.parse(data)
+  if (profile === 'card') return OrganisationCardProfileAPI.parse(data)
+  if (profile === 'detail') return OrganisationDetailProfileAPI.parse(data)
+
+  return isCollection
+    ? isSuperAdmin
+      ? OrganisationCollectionSuperAdminAPI.parse(data)
+      : OrganisationCollectionAPI.parse(data)
+    : isSuperAdmin
+      ? OrganisationSuperAdminAPI.parse(data)
+      : OrganisationAPI.parse(data)
+}
+
+export const toEntityResponseShape = async <P extends OrganisationProfile = 'detail'>(
   organisation: OrganisationDBRaw | null,
   user?: SessionUser,
-): Promise<EntityResponse<Organisation | OrganisationSuperAdmin>> => {
+  profile: P = 'detail' as P,
+): Promise<EntityResponse<OrganisationEntityByProfile<P>>> => {
   const startedAt = Date.now()
 
   if (!organisation) {
     return { data: null, durationMs: Date.now() - startedAt }
   }
 
-  const data = await toResponseShape(organisation, false, user?.superAdmin || false)
-  return { data, durationMs: Date.now() - startedAt }
+  const data = await toProfileResponseShape(
+    organisation,
+    profile,
+    false,
+    user?.superAdmin || false,
+  )
+  return {
+    data: data as OrganisationEntityByProfile<P>,
+    durationMs: Date.now() - startedAt,
+  }
 }
 
-export const toListResponseShape = async (
+export const toListResponseShape = async <P extends OrganisationProfile = 'list'>(
   result: ListResponse<OrganisationDBRaw>,
   user: SessionUser | undefined,
-): Promise<ListResponse<OrganisationCollection | OrganisationCollectionSuperAdmin>> => {
+  profile: P = 'list' as P,
+): Promise<ListResponse<OrganisationListByProfile<P>>> => {
   const {
     data: organisations,
     limit,
@@ -554,12 +602,12 @@ export const toListResponseShape = async (
   } = result
   const data = await Promise.all(
     organisations.map(organisation =>
-      toResponseShape(organisation, true, user?.superAdmin || false),
+      toProfileResponseShape(organisation, profile, true, user?.superAdmin || false),
     ),
   )
 
   return {
-    data,
+    data: data as Array<OrganisationListByProfile<P>>,
     limit,
     offset,
     totalCount,
