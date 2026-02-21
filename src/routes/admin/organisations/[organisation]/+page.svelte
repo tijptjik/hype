@@ -105,6 +105,13 @@ const facetTabs = new Map([
   ['core', { label: m.resources__profile(), icon: FormInputIcon }],
   ['images', { label: m.organisation__images(), icon: ImageIcon }],
 ] as const)
+const resolvedFacetTabs = $derived.by(() =>
+  isNewOrganisationRef
+    ? new Map([
+        ['core', { label: m.resources__profile(), icon: FormInputIcon }],
+      ] as const)
+    : facetTabs,
+)
 
 const resourceEditorPage = createResourceEditorPage({
   headerCtrl,
@@ -497,7 +504,8 @@ $effect(() => {
     },
     setFacetForRef: nextRef => {
       untrack(() => {
-        adminCtx.setFacet('core', nextRef, FirstClassResource.organisation)
+        const nextFacet = adminCtx.activeFacet === 'images' ? 'images' : 'core'
+        adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.organisation)
       })
     },
     load: refreshOrganisation,
@@ -513,14 +521,11 @@ $effect(() => {
     organisation?.data?.i18n?.[getLocale()]?.name ??
     organisation?.data?.code ??
     m.any_small_midge_aim()
-  resourceEditorPage.syncHeader({
-    ref,
-    title,
-    lastHeaderKey,
-    setLastHeaderKey: next => {
-      lastHeaderKey = next
-    },
-  })
+  const facetKey = Array.from(resolvedFacetTabs.keys()).join('|')
+  const headerKey = `${ref}:${title}:${facetKey}`
+  if (headerKey === lastHeaderKey) return
+  lastHeaderKey = headerKey
+  headerCtrl.setHeaderForEntity(title, OrganisationIcon, resolvedFacetTabs)
 })
 
 // Archived entities are read-only until restored.
