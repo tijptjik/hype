@@ -1,11 +1,17 @@
 // ENV
-import { and, type SQL, eq, like, sql, or } from 'drizzle-orm'
+import { and, type SQL, eq, inArray, like, sql, or } from 'drizzle-orm'
 // FORMS
 import { superValidate } from 'sveltekit-superforms'
 import { user, userFeature, userLayer } from '../schema'
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters'
-import { UserAPI, UserCollectionAPI, UserProfileAPI } from '../zod'
+import {
+  UserAPI,
+  UserCollectionAPI,
+  UserHydrationAdminProfileAPI,
+  UserHydrationPrivacyProfileAPI,
+  UserProfileAPI,
+} from '../zod'
 // TYPES
 import type { SuperValidated } from 'sveltekit-superforms'
 import type {
@@ -22,6 +28,8 @@ import type {
   UserRaw,
   CurrentUser,
   UserProfile,
+  UserHydrationEntityByProfile,
+  UserHydrationProfile,
 } from '$lib/types'
 import { update } from '../crud'
 
@@ -37,6 +45,7 @@ import { update } from '../crud'
 //    - searchUsers
 //    - getUser
 //    - getUserById
+//    - getUsersForHydration
 //    - updateUser
 //
 // 3. CRUD :: RELATIONAL OPERATIONS
@@ -49,6 +58,7 @@ import { update } from '../crud'
 //
 // 5. UTILS :: SHAPING
 //    - toFormShape
+//    - toEntityResponseShape
 //    - toResponseShape
 //
 
@@ -116,6 +126,26 @@ export const getUserById = async (
   userId: Id,
   columns?: Record<string, boolean>,
 ): Promise<UserDB | undefined> => await getUser(db, {}, [eq(user.id, userId)], columns)
+
+export const getUsersForHydration = async (
+  db: Database,
+  ids: Id[],
+): Promise<
+  Array<Pick<UserDB, 'id' | 'name' | 'image' | 'attribution' | 'isArchived'>>
+> => {
+  if (ids.length === 0) return []
+
+  return await db
+    .select({
+      id: user.id,
+      name: user.name,
+      image: user.image,
+      attribution: user.attribution,
+      isArchived: user.isArchived,
+    })
+    .from(user)
+    .where(inArray(user.id, ids))
+}
 
 /**
  * Updates an existing user in the database
@@ -284,6 +314,23 @@ export const toFormShape = async (
   // @ts-expect-error TODO - Fix Zod type error
   const form = await superValidate(formData, zod(UserAPI) as any)
   return form as SuperValidated<User>
+}
+
+export const toEntityResponseShape = <P extends UserHydrationProfile = 'privacy'>(
+  userEntity: Pick<UserDB, 'id' | 'attribution' | 'name' | 'image'> | null | undefined,
+  profile: P = 'privacy' as P,
+): UserHydrationEntityByProfile<P> | null => {
+  if (!userEntity) return null
+
+  if (profile === 'admin') {
+    return UserHydrationAdminProfileAPI.parse(
+      userEntity,
+    ) as UserHydrationEntityByProfile<P>
+  }
+
+  return UserHydrationPrivacyProfileAPI.parse(
+    userEntity,
+  ) as UserHydrationEntityByProfile<P>
 }
 
 /**
