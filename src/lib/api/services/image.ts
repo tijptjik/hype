@@ -1,5 +1,5 @@
 // DRIZZLE
-import { eq, type SQL } from 'drizzle-orm'
+import { eq, sql, type SQL } from 'drizzle-orm'
 // LIB
 import { isAdminRequest } from '$lib/api'
 // API
@@ -18,7 +18,7 @@ import {
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 import { isSuperAdmin } from '$lib/client/services/auth'
 // SCHEMA
-import { image, featureImage, project, organisation } from '$lib/db/schema/index'
+import { image, featureImage, project, organisation, hub } from '$lib/db/schema/index'
 import {
   getImageById as loadImageById,
   toResponseShape,
@@ -39,6 +39,7 @@ import type {
   ParamsToSign,
   DeleteParamsToSign,
   SignData,
+  ImageProfile,
 } from '$lib/types'
 import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
 import { error } from '@sveltejs/kit'
@@ -99,6 +100,13 @@ export const adminIntentOrder = [
   'research',
 ] as const
 
+const imageProfiles = ['list', 'card', 'detail', 'admin'] as const
+
+export const toImageProfile = (value: unknown, fallback: ImageProfile): ImageProfile =>
+  typeof value === 'string' && (imageProfiles as readonly string[]).includes(value)
+    ? (value as ImageProfile)
+    : fallback
+
 // ═══════════════════════
 // 2. COMMON
 // ═══════════════════════
@@ -123,11 +131,9 @@ export const imageEntityWithRelations = {
  * Filters the query based on user roles, context (featureId, projectId, etc.), and query parameters.
  */
 export const getImageQueryContext = (
-  db: Database,
   user: SessionUser,
-  request: Request,
+  adminContext: Request | boolean,
   params: QueryParams,
-  userRoles: UserRoleDisco[],
   ctxId: Id, // ID of the parent resource (e.g., featureId, projectId)
   ctxType: ImageContextResource | ImageContextResourceExtended, // Type of the parent resource
 ) => {
@@ -142,15 +148,24 @@ export const getImageQueryContext = (
   }
 
   // PUBLIC : List all images which are isPublished, and not isArchived,
-  if (!isAdminRequest(request)) {
+  const isAdmin =
+    typeof adminContext === 'boolean' ? adminContext : isAdminRequest(adminContext)
+
+  if (!isAdmin) {
     params = removeExcludedColumns(params, excludeColumns)
     // For public, typically show images that are marked as published, or if their associated resource is published.
     if (ctxType === ImageContextResource.feature) {
       conditions.push(eq(featureImage.isPublished, true))
+    } else if (ctxType === ImageContextResource.hub) {
+      conditions.push(eq(hub.isPublished, true))
     } else if (ctxType === ImageContextResource.project) {
       conditions.push(eq(project.isPublished, true))
     } else if (ctxType === ImageContextResource.organisation) {
       conditions.push(eq(organisation.isPublished, true))
+    } else if (ctxType === ImageContextResource.user) {
+      conditions.push(
+        sql`exists (select 1 from "user" where "user"."id" = ${image.contributorId} and "user"."isArchived" = false)`,
+      )
     } else if (ctxType === ImageContextResourceExtended.task) {
       // NO further restrictions on task images, as they are only accessible
       // from the Admin view
@@ -184,7 +199,7 @@ export const getImageQueryContext = (
 export const getImageEntityQueryContext = (
   db: Database,
   user: SessionUser,
-  request: Request,
+  adminContext: Request | boolean,
   params: QueryParams,
 ) => {
   // SETUP : By default, only show non-archived images,
@@ -198,7 +213,10 @@ export const getImageEntityQueryContext = (
   }
 
   // PUBLIC : List all images which are isPublished, and not isArchived,
-  if (!isAdminRequest(request)) {
+  const isAdmin =
+    typeof adminContext === 'boolean' ? adminContext : isAdminRequest(adminContext)
+
+  if (!isAdmin) {
     params = removeExcludedColumns(params, excludeColumns)
   } else {
     // Admin view: allow filtering by isPublished if not a superadmin
@@ -225,7 +243,7 @@ export const getImageEntityQueryContext = (
 export const getImageByIdsQueryContext = (
   db: Database,
   user: SessionUser,
-  request: Request,
+  adminContext: Request | boolean,
 ) => {
   const conditions: SQL<unknown>[] = []
 
@@ -235,7 +253,10 @@ export const getImageByIdsQueryContext = (
   }
 
   // PUBLIC : Only show published images
-  if (!isAdminRequest(request)) {
+  const isAdmin =
+    typeof adminContext === 'boolean' ? adminContext : isAdminRequest(adminContext)
+
+  if (!isAdmin) {
     conditions.push(eq(featureImage.isPublished, true))
   }
 
@@ -365,9 +386,11 @@ export const assertPermissionsToDeleteImage = async (
 // ═══════════════════════
 
 export const getCtxFromUrl = (url: URL) => {
+  const hubId = url.searchParams.get('hubId')
   const organisationId = url.searchParams.get('organisationId')
   const projectId = url.searchParams.get('projectId')
   const featureId = url.searchParams.get('featureId')
+  const userId = url.searchParams.get('userId')
   const taskId = url.searchParams.get('taskId')
 
   let ctxId: Id | null = null
@@ -376,17 +399,29 @@ export const getCtxFromUrl = (url: URL) => {
   if (featureId) {
     ctxId = featureId
     ctxType = ImageContextResource.feature
+  } else if (hubId) {
+    ctxId = hubId
+    ctxType = ImageContextResource.hub
   } else if (projectId) {
     ctxId = projectId
     ctxType = ImageContextResource.project
   } else if (organisationId) {
     ctxId = organisationId
     ctxType = ImageContextResource.organisation
+  } else if (userId) {
+    ctxId = userId
+    ctxType = ImageContextResource.user
   } else if (taskId) {
+    // DEPRECATED: Task-as-primary image context.
+    // Remove after all callers migrate to:
+    // ctxType=feature, ctxId=<featureId>, ctxNarrowingType=task, ctxNarrowingId=<taskId>.
     ctxId = taskId
     ctxType = ImageContextResourceExtended.task
   } else {
-    return error(400, 'A featureId, organisationId, projectId, or taskId is required')
+    return error(
+      400,
+      'A hubId, featureId, organisationId, projectId, userId, or taskId is required',
+    )
   }
 
   return { ctxId, ctxType }
