@@ -17,13 +17,13 @@ import IconAnchor from '$lib/components/common/IconAnchor.svelte'
 import { getAdminCtx } from '$lib/context/admin.svelte'
 // TYPES
 import type { Snippet } from 'svelte'
-import type { Image } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/types'
 
 type Props = {
   LeftActions?: Snippet
   MiddleActions?: Snippet
   RightActions?: Snippet
-  onActiveImageChange?: (image: Image | null) => void
+  onActiveImageChange?: (image: ImageCtxEnvelope | null) => void
   isDropzone?: boolean
   enableReplacement?: boolean
   hideActions?: boolean
@@ -50,7 +50,7 @@ const adminCtx = getAdminCtx()
 let image = $derived(imageCtx.activeImage)
 let viewerState = $derived(imageCtx.viewerState)
 let isError = $derived(viewerState === 'error')
-let hasActiveImage = $derived(Boolean(image?.id))
+let hasActiveImage = $derived(Boolean(image?.image.id))
 let imageCount = $derived(imageCtx.getImages().length)
 let isPendingEmptyResolution = $derived(
   viewerState === 'empty' && !hasActiveImage && imageCount === 0,
@@ -78,7 +78,7 @@ const handleDrop = async (e: CustomEvent) => {
         console.error('[Viewer] Upload error')
       },
     },
-    imageCtx.activeImage as Image,
+    imageCtx.activeImage ?? undefined,
   )
 }
 
@@ -116,19 +116,6 @@ $effect(() => {
 
 $effect(() => {
   onActiveImageChange?.(image ?? null)
-})
-
-$effect(() => {
-  if (!import.meta.env.DEV) return
-  console.info('[Viewer][debug]', {
-    viewerState,
-    activeImageId: image?.id ?? null,
-    hideActions,
-    shouldRenderActions: Boolean(image) && !hideActions,
-    contributorId: image?.contributorId ?? null,
-    createdAt: image?.createdAt ?? null,
-    presentationMode: image?.presentationMode ?? null,
-  })
 })
 </script>
 
@@ -189,7 +176,7 @@ $effect(() => {
               {@render LeftActions()}
             {:else}
               <IconAnchor position="left" icon={Camera}>
-                <Metadata {image} />
+                <Metadata image={image.image} />
               </IconAnchor>
             {/if}
           </div>
@@ -216,8 +203,8 @@ $effect(() => {
             {:else}
               <IconAnchor position="right" icon={InformationCircle} class="mr-4">
                 <UserAttributionCard
-                  userId={image.contributorId}
-                  date={image.createdAt || undefined}
+                  userId={image.image.contributorId}
+                  date={image.image.createdAt || undefined}
                   type="imageContributor"
                 />
               </IconAnchor>

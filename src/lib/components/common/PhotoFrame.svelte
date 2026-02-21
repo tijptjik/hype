@@ -11,13 +11,13 @@ import Picture from '$lib/components/common/Picture.svelte'
 import Loading from '$lib/components/images/gallery/overlays/Loading.svelte'
 // TYPES
 import { type Snippet } from 'svelte'
-import type { Image } from '$lib/types'
+import type { Image, ImageCtxEnvelope } from '$lib/types'
 
 type DisplayImage = {
   id: string
   src: string | undefined
   isPreview: boolean
-  image?: Image
+  image?: ImageCtxEnvelope
 }
 
 type Props = {
@@ -66,12 +66,12 @@ function getDisplayImageFromPreview(preview: any): DisplayImage {
 }
 
 function getDisplayImageFromActiveImage(
-  activeImage: Image,
+  activeImage: ImageCtxEnvelope,
   transformation?: string,
 ): DisplayImage {
   return {
-    id: activeImage.id,
-    src: getURLfromImage({ image: activeImage, transformation }),
+    id: activeImage.image.id,
+    src: getURLfromImage({ image: activeImage.image, transformation }),
     isPreview: false,
     image: activeImage,
   }
@@ -80,7 +80,7 @@ function getDisplayImageFromActiveImage(
 // Determine what should be displayed based on current state
 function getDisplayImage(
   viewerState: string,
-  activeImage: Image | null,
+  activeImage: ImageCtxEnvelope | null,
   activePreview: any,
 ): DisplayImage | null {
   // Priority 1: Show preview during upload states
@@ -200,7 +200,7 @@ $effect(() => {
 
   if (activeImage && mode !== 'standalone') {
     const images = imageCtx.getImages()
-    const currentIndex = images.findIndex(img => img.id === activeImage.id)
+    const currentIndex = images.findIndex(img => img.image.id === activeImage.image.id)
 
     if (currentIndex !== -1) {
       // Preload next and previous images
@@ -209,7 +209,7 @@ $effect(() => {
 
       ;[images[nextIndex], images[prevIndex]].forEach(img => {
         if (img) {
-          const src = getURLfromImage({ image: img, transformation })
+          const src = getURLfromImage({ image: img.image, transformation })
           imageCtx.preloadImage(src)
         }
       })
