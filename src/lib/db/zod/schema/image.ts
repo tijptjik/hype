@@ -104,6 +104,20 @@ export const ImageAPI = ImageBase.extend({
   layerId: z.string().nullish(),
 })
 
+const ImageListFields = ImageBase.pick({
+  id: true,
+  cdn: true,
+  env: true,
+  cdnId: true,
+  publicId: true,
+  version: true,
+  presentationMode: true,
+  capturedAt: true,
+  contributorId: true,
+  createdAt: true,
+  modifiedAt: true,
+})
+
 export const ImageInsertAPI = ImageInsert.extend({
   featureImage: FeatureImageInsert.omit({ imageId: true }).optional(),
   ctxType: z.enum(Object.values(ImageContextResource) as [string, ...string[]]),
@@ -165,18 +179,56 @@ export const ImageBaseRaw = ImageBase.extend({
 export const ImageRequestMetaSchema = z
   .object({
     isAdminRequest: z.boolean().optional(),
+    profile: z.enum(['list', 'card', 'detail', 'admin']).optional(),
   })
   .optional()
+
+export const ImageProfile = z.enum(['list', 'card', 'detail', 'admin'])
+
+export const ImageListProfileAPI = ImageListFields
+// Alias for compatibility with organisation profile semantics.
+export const ImageDetailProfileAPI = ImageListProfileAPI
+const ImageAdminFields = ImageBase.pick({
+  originalFilename: true,
+  originalExtension: true,
+  originalWidth: true,
+  originalHeight: true,
+  cameraModel: true,
+  credit: true,
+  latitude: true,
+  longitude: true,
+})
+export const ImageAdminProfileAPI = ImageDetailProfileAPI.extend({
+  ...ImageAdminFields.shape,
+})
 
 export const ImageContextTypeExtendedSchema = z.enum([
   ...Object.values(ImageContextResource),
   ...Object.values(ImageContextResourceExtended),
 ] as [string, ...string[]])
 
+export const ImageContextNarrowingTypeSchema = z.enum(
+  Object.values(ImageContextResourceExtended) as [string, ...string[]],
+)
+
 export const ImagesByContextSchema = z.object({
   ctxType: ImageContextTypeExtendedSchema,
   ctxId: z.string().min(1),
-  includeSingleImage: z.boolean().optional(),
+  // Optional secondary narrowing (for example task-scoped images within a feature context).
+  ctxNarrowingType: ImageContextNarrowingTypeSchema.optional(),
+  ctxNarrowingId: z.string().min(1).optional(),
+  pagination: z
+    .object({
+      limit: z.number().int().positive().optional(),
+      offset: z.number().int().nonnegative().optional(),
+    })
+    .optional(),
+  sorting: z
+    .object({
+      sortBy: z.string().trim().min(1).optional(),
+      sortOrder: z.enum(['asc', 'desc']).optional(),
+    })
+    .optional(),
   meta: ImageRequestMetaSchema,
 })
 
