@@ -4,7 +4,6 @@ import { z } from 'zod'
 import { createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
 import { user } from '$lib/db/schema/user'
-import { isSuperAdmin } from '$lib/client/services/auth'
 // CONSTRAINTS
 // import { FeatureBase } from './feature';
 
@@ -135,6 +134,11 @@ export const UserParentChainRoleFilterSchema = z
 
 export const UserSearchQueryParamsSchema = z.object({
   q: z.string().trim().optional(),
+  conditions: z
+    .object({
+      isArchived: z.boolean().nullable().optional(),
+    })
+    .optional(),
   pagination: z
     .object({
       limit: z.number().int().positive().optional(),
@@ -149,4 +153,34 @@ export const UserSearchQueryParamsSchema = z.object({
     .optional(),
   roleOnEntity: UserRoleFilterSchema.optional(),
   roleUpParentChain: UserParentChainRoleFilterSchema.optional(),
+})
+
+/* ----------------- */
+// USER HYDRATION SCHEMAS
+/* -------- */
+
+export const UserHydrationMetaSchema = z
+  .object({
+    isAdminRequest: z.boolean().optional(),
+    profile: z.enum(['privacy', 'admin']).optional(),
+  })
+  .optional()
+
+export const UserHydrationSchema = z.object({
+  id: z.string().min(1),
+  meta: UserHydrationMetaSchema,
+})
+
+export const UserHydrationPrivacyProfileAPI = UserBase.pick({
+  id: true,
+  attribution: true,
+})
+
+const UserHydrationAdminFields = UserBase.pick({
+  name: true,
+  image: true,
+})
+
+export const UserHydrationAdminProfileAPI = UserHydrationPrivacyProfileAPI.extend({
+  ...UserHydrationAdminFields.shape,
 })
