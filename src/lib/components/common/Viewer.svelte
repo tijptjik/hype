@@ -23,6 +23,7 @@ type Props = {
   LeftActions?: Snippet
   MiddleActions?: Snippet
   RightActions?: Snippet
+  onActiveImageChange?: (image: Image | null) => void
   isDropzone?: boolean
   enableReplacement?: boolean
   hideActions?: boolean
@@ -35,6 +36,7 @@ let {
   LeftActions,
   MiddleActions,
   RightActions,
+  onActiveImageChange,
   isDropzone = false,
   hideActions = false,
   tightActions = false,
@@ -46,12 +48,23 @@ const imageCtx = getImageCtx()
 const adminCtx = getAdminCtx()
 
 let image = $derived(imageCtx.activeImage)
-let isEmpty = $derived(imageCtx.viewerState === 'empty')
-let isError = $derived(imageCtx.viewerState === 'error')
+let viewerState = $derived(imageCtx.viewerState)
+let isError = $derived(viewerState === 'error')
+let hasActiveImage = $derived(Boolean(image?.id))
+let imageCount = $derived(imageCtx.getImages().length)
+let isPendingEmptyResolution = $derived(
+  viewerState === 'empty' && !hasActiveImage && imageCount === 0,
+)
+let isResolvedEmpty = $state(false)
+let emptyStateTimer: ReturnType<typeof setTimeout> | null = null
+let isEmpty = $derived(isPendingEmptyResolution && isResolvedEmpty)
+let showResolvingLoader = $derived(!hasActiveImage && !isError && !isEmpty)
+let isDropzoneDisabled = $derived(showResolvingLoader)
 
 // HANDLERS :: FILE DROP
 const handleDrop = async (e: CustomEvent) => {
   if (!isDropzone) return
+  if (isDropzoneDisabled) return
   imageCtx.handleFilesSelect(
     e.detail.acceptedFiles,
     e.detail.fileRejections,
@@ -68,6 +81,55 @@ const handleDrop = async (e: CustomEvent) => {
     imageCtx.activeImage as Image,
   )
 }
+
+$effect(() => {
+  if (emptyStateTimer) {
+    clearTimeout(emptyStateTimer)
+    emptyStateTimer = null
+  }
+
+  if (!isPendingEmptyResolution) {
+    isResolvedEmpty = false
+    return
+  }
+
+  emptyStateTimer = setTimeout(() => {
+    if (
+      imageCtx.viewerState === 'empty' &&
+      !imageCtx.activeImage &&
+      imageCtx.getImages().length === 0
+    ) {
+      isResolvedEmpty = true
+    }
+    emptyStateTimer = null
+  }, 900)
+})
+
+$effect(() => {
+  return () => {
+    if (emptyStateTimer) {
+      clearTimeout(emptyStateTimer)
+      emptyStateTimer = null
+    }
+  }
+})
+
+$effect(() => {
+  onActiveImageChange?.(image ?? null)
+})
+
+$effect(() => {
+  if (!import.meta.env.DEV) return
+  console.info('[Viewer][debug]', {
+    viewerState,
+    activeImageId: image?.id ?? null,
+    hideActions,
+    shouldRenderActions: Boolean(image) && !hideActions,
+    contributorId: image?.contributorId ?? null,
+    createdAt: image?.createdAt ?? null,
+    presentationMode: image?.presentationMode ?? null,
+  })
+})
 </script>
 
 {#snippet EmptyContent()}
@@ -76,14 +138,21 @@ const handleDrop = async (e: CustomEvent) => {
       <Icon src={Photo} class="mx-auto mt-4 h-8 w-8" />
       <span class="mx-auto pb-6 text-sm">{m.born_plain_bulldog_stop()}</span>
     </div>
+  {:else}
+    <div class="flex h-full flex-col items-center justify-center">
+      <h1 class="text-2xl font-bold uppercase text-base-content/60">
+        {m.viewer__no_image()}
+      </h1>
+      <h1 class="pt-2 text-lg text-neutral-content/60">
+        {imageCtx.isFullscreen ? m.viewer__tap_to_leave_fullscreen() : ''}
+      </h1>
+    </div>
   {/if}
+{/snippet}
+
+{#snippet LoadingContent()}
   <div class="flex h-full flex-col items-center justify-center">
-    <h1 class="text-2xl font-bold uppercase text-base-content/60">
-      {m.viewer__no_image()}
-    </h1>
-    <h1 class="pt-2 text-lg text-neutral-content/60">
-      {imageCtx.isFullscreen ? m.viewer__tap_to_leave_fullscreen() : ''}
-    </h1>
+    <div class="viewer-resolve-loader" aria-label="Loading image" role="status"></div>
   </div>
 {/snippet}
 
@@ -95,7 +164,9 @@ const handleDrop = async (e: CustomEvent) => {
 {/snippet}
 
 {#snippet PhotoFrameWithActions()}
-  {#if isEmpty}
+  {#if showResolvingLoader}
+    {@render LoadingContent()}
+  {:else if isEmpty}
     {@render EmptyContent()}
   {:else if isError}
     {@render ErrorContent()}
@@ -103,6 +174,7 @@ const handleDrop = async (e: CustomEvent) => {
     <PhotoFrame
       class="h-full w-full overflow-hidden rounded-2xl"
       mode="standalone"
+      showLoading={false}
       {layout}
     >
       {#snippet children()}
@@ -171,11 +243,14 @@ const handleDrop = async (e: CustomEvent) => {
       on:drop={handleDrop}
       on:select={handleDrop}
       multiple={false}
+      disabled={isDropzoneDisabled}
       class="group flex h-full w-full flex-col justify-center gap-2 rounded-xl bg-neutral text-center align-middle transition-colors"
       disableDefaultStyles={true}
     >
       <div
-        class="border-offset-2 pointer-events-none absolute inset-0 z-50 m-4 rounded-xl border-4 border-dashed border-transparent transition-colors delay-500 group-hover:border-primary"
+        class="border-offset-2 pointer-events-none absolute inset-0 z-50 m-4 rounded-xl border-4 border-dashed border-transparent transition-colors delay-500 {!isDropzoneDisabled
+          ? 'group-hover:border-primary'
+          : ''}"
       ></div>
       {@render PhotoFrameWithActions()}
     </Dropzone>
@@ -183,3 +258,39 @@ const handleDrop = async (e: CustomEvent) => {
     {@render PhotoFrameWithActions()}
   {/if}
 </div>
+
+<style>
+.viewer-resolve-loader {
+  display: inline-flex;
+  gap: 5px;
+  opacity: 0.5;
+}
+
+.viewer-resolve-loader::before,
+.viewer-resolve-loader::after {
+  content: "";
+  width: 25px;
+  aspect-ratio: 1;
+  box-shadow: 0 0 0 3px inset #fff;
+  animation: viewer-resolve-loader-frames 1.5s infinite;
+}
+
+.viewer-resolve-loader::after {
+  --s: -1;
+}
+
+@keyframes viewer-resolve-loader-frames {
+  0% {
+    transform: scaleX(var(--s, 1)) translate(0) scale(1);
+  }
+  33% {
+    transform: scaleX(var(--s, 1)) translate(calc(50% + 2.5px)) scale(1);
+  }
+  66% {
+    transform: scaleX(var(--s, 1)) translate(calc(50% + 2.5px)) scale(2);
+  }
+  100% {
+    transform: scaleX(var(--s, 1)) translate(0) scale(1);
+  }
+}
+</style>
