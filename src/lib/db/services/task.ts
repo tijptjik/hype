@@ -21,13 +21,13 @@ import {
   createFeatureImage,
 } from '$lib/db/services/image'
 import {
-  getCloudinarySignature,
   createCloudinaryImage,
   getPublicPathCloudinaryImage,
   getImageFromCloudinaryResponse,
   extendFeatureImage,
   extendImageWithResource,
 } from '$lib/client/services/image'
+import { getCloudinarySignature } from '$lib/api/server/image.remote'
 // FEATURE
 // ENUMS
 import { ImageContextResource } from '$lib/enums'
@@ -450,7 +450,10 @@ export const processTaskImagesDB = async (
       const paramsToSign = { folder }
 
       // 2. Fetch Cloudinary signature
-      const signData = await getCloudinarySignature(paramsToSign, fetch)
+      const signData = await getCloudinarySignature({
+        paramsToSign,
+        meta: { isAdminRequest: true },
+      })
 
       // 3. Upload file to Cloudinary
       const cloudinaryResponse = await createCloudinaryImage(
