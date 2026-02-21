@@ -315,6 +315,9 @@ export const imageRelations = relations(image, ({ one, many }) => ({
     fields: [image.contributorId],
     references: [user.id],
   }),
+  featureImages: many(featureImage),
+  // DEPRECATED: Backward-compat alias while callers migrate from one-to-many relation.
+  // Remove this after feature image relation refactor is complete.
   featureImage: one(featureImage, {
     fields: [image.id],
     references: [featureImage.imageId],
@@ -414,10 +417,14 @@ export const taskImageRelations = relations(taskImage, ({ one }) => ({
  * @remarks
  * Links hub to its organizations and translations
  */
-export const hubRelations = relations(hub, ({ many }) => ({
+export const hubRelations = relations(hub, ({ one, many }) => ({
   i18n: many(hubI18n),
   organisations: many(organisation),
   userRoles: many(hubRole, { relationName: 'hubUserRoles' }),
+  image: one(image, {
+    fields: [hub.imageId],
+    references: [image.id],
+  }),
 }))
 
 /**

@@ -5,6 +5,7 @@ import { integer, sqliteTable, primaryKey, text } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 // SCHEMA
 import { user } from './user'
+import { image } from './image'
 // ENUMS
 import { supportedLocales, HubRoleType } from '../../enums'
 
@@ -29,6 +30,11 @@ export const hub = sqliteTable('hub', {
   // Subdomain
   code: text('code').unique().notNull(),
   domain: text('domain').unique(),
+  imageId: text('imageId').references(() => image.id, {
+    onDelete: 'set null',
+    onUpdate: 'cascade',
+  }),
+  isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(true),
   isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
