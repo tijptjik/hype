@@ -51,7 +51,7 @@ This means that the API for images is a bit different from the API for other res
 Example requests to the image API are:
 
  * GET /api/images?organisationId=...
- * GET /api/images?projectId=... 
+ * GET /api/images?projectId=...
  * GET /api/images?featureId=...
  * GET /api/images?taskId=...
  * GET /api/images?ids=id1,id2,id3... (comma-separated list of image IDs)
@@ -83,7 +83,14 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
 
   // ASSERT : Valid query parameters
   // Validate query parameters, or return 400
-  const contextParams = ['organisationId', 'projectId', 'featureId', 'taskId']
+  const contextParams = [
+    'hubId',
+    'organisationId',
+    'projectId',
+    'featureId',
+    'userId',
+    'taskId',
+  ]
   const queryParams = isValidQueryParamsOrError(image, url, contextParams)
 
   // ASSERT : Valid context parameters
@@ -92,11 +99,9 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
 
   // CONTEXT : Get the query context - this applies filters based on the user's permissions and the query parameters.
   const { conditions } = getImageQueryContext(
-    db,
     user,
     request,
     queryParams as QueryParams,
-    userRoles,
     ctxId,
     ctxType,
   )
@@ -106,6 +111,8 @@ export const GET: RequestHandler = async ({ url, locals, platform, request }) =>
       db,
       ctxType,
       conditions,
+      undefined,
+      undefined,
       isAdminRequest(request),
     )
 

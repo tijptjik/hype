@@ -50,7 +50,14 @@ export const GET: RequestHandler = async ({
 
   // ASSERT : Valid query parameters
   // Validate query parameters, or return 400
-  const contextParams = ['organisationId', 'projectId', 'featureId', 'taskId']
+  const contextParams = [
+    'hubId',
+    'organisationId',
+    'projectId',
+    'featureId',
+    'userId',
+    'taskId',
+  ]
   const queryParams = isValidQueryParamsOrError(image, url, contextParams)
 
   // CONTEXT : Get the query context
