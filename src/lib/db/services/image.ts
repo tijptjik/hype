@@ -1,9 +1,19 @@
 // DRIZZLE
-import { and, eq, getTableColumns, inArray, type SQL } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  type AnyColumn,
+  type SQL,
+} from 'drizzle-orm'
 // SCHEMA
 import {
   feature,
   featureImage,
+  hub,
   image,
   organisation,
   project,
@@ -30,7 +40,14 @@ import type {
   ImageDB,
   ImageDBFlat,
   ImageDBFlatUpdate,
+  ImageProfile,
+  ImageEntityByProfile,
+  ImageListByProfile,
+  EntityResponse,
+  ImageContextEnvelope,
+  ImageContextType,
 } from '$lib/types'
+import { ImageListProfileAPI, ImageAdminProfileAPI } from '$lib/db/zod'
 // UTILS
 import { sortImages } from '$lib/client/services/image'
 
@@ -185,6 +202,7 @@ export const getImageById = async (
   const [result] = await db
     .select({
       ...getTableColumns(image),
+      featureId: featureImage.featureId,
       intent: featureImage.intent,
       isPublished: featureImage.isPublished,
       publishedAt: featureImage.publishedAt,
@@ -235,19 +253,37 @@ export const getImageForContextType = async (
   db: Database,
   ctxType: ImageContextResource | ImageContextResourceExtended,
   conditions: SQL<unknown>[],
+  pagination?: { limit?: number; offset?: number },
+  sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
   isAdminMode: boolean = false,
 ): Promise<ImageDBFlat[] | ImageDB[]> => {
-  let images
+  let images: ImageDBFlat[]
   if (ctxType === ImageContextResource.feature) {
-    images = await getImagesForFeature(db, conditions)
+    images = await getImagesForFeature(db, conditions, pagination, sorting)
+  } else if (ctxType === ImageContextResource.hub) {
+    images = await getImageForHub(db, conditions, pagination, sorting)
   } else if (ctxType === ImageContextResource.project) {
-    images = await getImageForProject(db, conditions)
+    images = await getImageForProject(db, conditions, pagination, sorting)
   } else if (ctxType === ImageContextResource.organisation) {
-    images = await getImageForOrganisation(db, conditions)
+    images = await getImageForOrganisation(db, conditions, pagination, sorting)
+  } else if (ctxType === ImageContextResource.user) {
+    images = await getImagesForUser(db, conditions, pagination, sorting)
   } else if (ctxType === ImageContextResourceExtended.task) {
-    images = await getImagesForTask(db, conditions)
+    images = await getImagesForTask(db, conditions, pagination, sorting)
   }
-  return sortImages(images as ImageDBFlat[], isAdminMode)
+  return sortImages(images, isAdminMode)
+}
+
+const toOrderBy = (sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' }) => {
+  const sortBy = sorting?.sortBy || 'modifiedAt'
+  const sortOrder = sorting?.sortOrder || 'desc'
+  const sortColumn = image[sortBy as keyof typeof image]
+  if (!sortColumn) {
+    throw new Error(`Invalid sort column: ${sortBy}`)
+  }
+  return sortOrder === 'asc'
+    ? asc(sortColumn as AnyColumn)
+    : desc(sortColumn as AnyColumn)
 }
 
 /**
@@ -260,7 +296,10 @@ export const getImageForContextType = async (
 export const getImagesForFeature = async (
   db: Database,
   conditions: SQL<unknown>[],
+  pagination?: { limit?: number; offset?: number },
+  sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
 ): Promise<ImageDBFlat[]> => {
+  const orderBy = toOrderBy(sorting)
   return (await db
     .select({
       ...getTableColumns(image),
@@ -272,7 +311,10 @@ export const getImagesForFeature = async (
     .from(image)
     .innerJoin(featureImage, eq(image.id, featureImage.imageId))
     .leftJoin(user, eq(image.contributorId, user.id))
-    .where(and(...conditions))) as ImageDBFlat[]
+    .where(and(...conditions))
+    .orderBy(orderBy)
+    .limit(pagination?.limit)
+    .offset(pagination?.offset)) as ImageDBFlat[]
 }
 
 /**
@@ -285,7 +327,10 @@ export const getImagesForFeature = async (
 export const getImagesForTask = async (
   db: Database,
   conditions: SQL<unknown>[],
+  pagination?: { limit?: number; offset?: number },
+  sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
 ): Promise<ImageDBFlat[]> => {
+  const orderBy = toOrderBy(sorting)
   return (await db
     .select({
       ...getTableColumns(image),
@@ -298,28 +343,78 @@ export const getImagesForTask = async (
     .innerJoin(featureImage, eq(image.id, featureImage.imageId))
     .innerJoin(taskImage, eq(image.id, taskImage.imageId))
     .leftJoin(user, eq(image.contributorId, user.id))
-    .where(and(...conditions))) as ImageDBFlat[]
+    .where(and(...conditions))
+    .orderBy(orderBy)
+    .limit(pagination?.limit)
+    .offset(pagination?.offset)) as ImageDBFlat[]
 }
 
 export const getImageForProject = async (
   db: Database,
   conditions: SQL<unknown>[],
-): Promise<ImageDB[]> =>
-  await db
+  pagination?: { limit?: number; offset?: number },
+  sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
+): Promise<ImageDB[]> => {
+  const orderBy = toOrderBy(sorting)
+  return await db
     .select({ ...getTableColumns(image) })
     .from(image)
     .innerJoin(project, eq(image.id, project.imageId))
     .where(and(...conditions))
+    .orderBy(orderBy)
+    .limit(pagination?.limit)
+    .offset(pagination?.offset)
+}
 
 export const getImageForOrganisation = async (
   db: Database,
   conditions: SQL<unknown>[],
-): Promise<ImageDB[]> =>
-  await db
+  pagination?: { limit?: number; offset?: number },
+  sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
+): Promise<ImageDB[]> => {
+  const orderBy = toOrderBy(sorting)
+  return await db
     .select({ ...getTableColumns(image) })
     .from(image)
     .innerJoin(organisation, eq(image.id, organisation.imageId))
     .where(and(...conditions))
+    .orderBy(orderBy)
+    .limit(pagination?.limit)
+    .offset(pagination?.offset)
+}
+
+export const getImageForHub = async (
+  db: Database,
+  conditions: SQL<unknown>[],
+  pagination?: { limit?: number; offset?: number },
+  sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
+): Promise<ImageDB[]> => {
+  const orderBy = toOrderBy(sorting)
+  return await db
+    .select({ ...getTableColumns(image) })
+    .from(image)
+    .innerJoin(hub, eq(image.id, hub.imageId))
+    .where(and(...conditions))
+    .orderBy(orderBy)
+    .limit(pagination?.limit)
+    .offset(pagination?.offset)
+}
+
+export const getImagesForUser = async (
+  db: Database,
+  conditions: SQL<unknown>[],
+  pagination?: { limit?: number; offset?: number },
+  sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
+): Promise<ImageDB[]> => {
+  const orderBy = toOrderBy(sorting)
+  return await db
+    .select({ ...getTableColumns(image) })
+    .from(image)
+    .where(and(...conditions))
+    .orderBy(orderBy)
+    .limit(pagination?.limit)
+    .offset(pagination?.offset)
+}
 
 // ═══════════════════════
 // 4. ACCESS CONTROL
@@ -345,6 +440,10 @@ export const applyResourceContextConstraints = (
     case ImageContextResource.feature:
       conditions.push(eq(featureImage.featureId, contextId))
       break
+    case ImageContextResource.hub:
+      conditions.push(eq(hub.imageId, image.id))
+      conditions.push(eq(hub.id, contextId))
+      break
     case ImageContextResource.project:
       conditions.push(eq(project.imageId, image.id))
       conditions.push(eq(project.id, contextId))
@@ -352,6 +451,9 @@ export const applyResourceContextConstraints = (
     case ImageContextResource.organisation:
       conditions.push(eq(organisation.imageId, image.id))
       conditions.push(eq(organisation.id, contextId))
+      break
+    case ImageContextResource.user:
+      conditions.push(eq(image.contributorId, contextId))
       break
     case ImageContextResourceExtended.task:
       // Assuming a taskImage join table
@@ -365,6 +467,72 @@ export const applyResourceContextConstraints = (
 // ═══════════════════════
 //  5. UTILS :: RESHAPE
 // ═══════════════════════
+
+const toProfileResponseShape = <P extends ImageProfile>(
+  value: Image,
+  profile: P,
+): ImageEntityByProfile<P> => {
+  if (profile === 'list' || profile === 'card' || profile === 'detail') {
+    return ImageListProfileAPI.parse(value) as ImageEntityByProfile<P>
+  }
+  return ImageAdminProfileAPI.parse(value) as ImageEntityByProfile<P>
+}
+
+const toEnvelope = <P extends ImageProfile>(
+  value: Image,
+  profile: P,
+  ctxType: ImageContextType,
+  ctxId: Id,
+): ImageContextEnvelope<P> => ({
+  ctxType,
+  ctxId,
+  image: toProfileResponseShape(value, profile) as ImageListByProfile<P>,
+  ...(ctxType === ImageContextResource.feature ||
+  ctxType === ImageContextResourceExtended.task
+    ? {
+        intent: (value as Partial<ImageDBFlat>).intent ?? null,
+        isPublished: (value as Partial<ImageDBFlat>).isPublished ?? null,
+        publishedAt: (value as Partial<ImageDBFlat>).publishedAt ?? null,
+      }
+    : {}),
+})
+
+export const toImageEntityResponseShape = <P extends ImageProfile = 'detail'>(
+  image: Image | null,
+  context: { ctxType: ImageContextType; ctxId: Id },
+  profile: P = 'detail' as P,
+): EntityResponse<ImageContextEnvelope<P> | null> & { profile: P } => {
+  const startedAt = Date.now()
+  if (!image) {
+    return { data: null, durationMs: Date.now() - startedAt, profile }
+  }
+
+  return {
+    data: toEnvelope(image, profile, context.ctxType, context.ctxId),
+    durationMs: Date.now() - startedAt,
+    profile,
+  }
+}
+
+export const toImageListResponseShape = <P extends ImageProfile = 'list'>(
+  images: Image[],
+  context:
+    | { ctxType: ImageContextType; ctxId: Id }
+    | ((image: Image) => { ctxType: ImageContextType; ctxId: Id }),
+  profile: P = 'list' as P,
+): EntityResponse<Array<ImageContextEnvelope<P>>> & { profile: P } => {
+  const startedAt = Date.now()
+  const data = images.map(image => {
+    const nextContext = typeof context === 'function' ? context(image) : context
+    return toEnvelope(image, profile, nextContext.ctxType, nextContext.ctxId)
+  })
+
+  return {
+    data,
+    durationMs: Date.now() - startedAt,
+    profile,
+  }
+}
 
 export const toResponseShape = async (
   image: ImageDB,
