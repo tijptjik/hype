@@ -8,25 +8,32 @@ import Coordinates from 'coordinate-parser'
 import { capitalizeFirstLetter } from '$lib'
 // SERVICES
 import { adminIntentOrder, intentOrder } from '$lib/api/services/image'
+// REMOTE
+import {
+  createImage as createImageRemote,
+  getCloudinarySignature as getCloudinarySignatureRemote,
+  updateImage as updateImageRemote,
+} from '$lib/api/server/image.remote'
 // ENUMS
-import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
+import { ImageContextResource } from '$lib/enums'
 // TYPES
 import type {
   ImageNew,
   Image,
   ParamsToSign,
   ImageUploadCtx,
-  Id,
   Intent,
   ImageEditCtx,
   ImageDB,
   ImageDBFlat,
   ImageDBBasic,
-  ImagePartial,
   Metadata,
   LngLat,
   SignData,
+  OrganisationGetState,
 } from '$lib/types'
+// CONTEXT
+import type { ImageCtx } from '$lib/context/image.svelte'
 import { hashicon } from '@emeraldpay/hashicon'
 
 // ═══════════════════════
@@ -36,14 +43,6 @@ import { hashicon } from '@emeraldpay/hashicon'
 // 1. ORCHESTRATION
 //    - uploadAndProcessImage
 //
-// 2. INTERNAL :: API
-//    - createImage
-//    - getImages
-//    - updateImage
-//    - updateImageIntent
-//    - updateImageIsPublished
-//    - deleteImage
-//
 // 3. CLOUDINARY :: API
 //    - createCloudinaryImage
 //
@@ -51,7 +50,6 @@ import { hashicon } from '@emeraldpay/hashicon'
 //    - getCloudinaryUploadEndpoint
 //    - getURLfromImage
 //    - getImageFromCloudinaryResponse
-//    - getCloudinarySignature
 //    - getPublicPathCloudinaryImage
 //
 // 5. EXTENSIONS
@@ -66,8 +64,9 @@ import { hashicon } from '@emeraldpay/hashicon'
 //
 // 7. UTILS
 //    - sortImages
-//    - addCtxToUrl
 //    - getHashiconUrl
+//    - updateImagePresentationMode
+//    - setOrganisationImagePresentationMode
 //
 
 // ═══════════════════════
@@ -82,7 +81,6 @@ import { hashicon } from '@emeraldpay/hashicon'
  * @param file The file to upload.
  * @param uploadCtx Context for the upload (resource type, ID, org, project, imageToReplace).
  * @param extendedFeatureInfo Optional info for feature images (publish status, intent).
- * @param fetchFn Optional fetch function, defaults to global fetch.
  * @returns The saved/updated image data from the backend.
  */
 export async function uploadAndProcessImage(
@@ -96,12 +94,17 @@ export async function uploadAndProcessImage(
 ): Promise<Image> {
   // 1. Determine public path for Cloudinary
   const { folder, public_id } = getPublicPathCloudinaryImage(uploadCtx)
-  const paramsToSign: ParamsToSign = uploadCtx.imageToReplace
-    ? { folder, public_id: public_id! } // public_id will exist if imageToReplace is true and path is valid
-    : { folder }
+  const paramsToSign: ParamsToSign = {
+    folder,
+    media_metadata: 'true',
+    ...(uploadCtx.imageToReplace && public_id ? { public_id } : {}),
+  }
 
   // 2. Fetch Cloudinary signature
-  const signData = await getCloudinarySignature(paramsToSign, fetchFn)
+  const signData = await getCloudinarySignatureRemote({
+    paramsToSign: { ...paramsToSign },
+    meta: { isAdminRequest: true },
+  })
 
   // 3. Upload file to Cloudinary
   const cloudinaryResponse = await createCloudinaryImage(
@@ -123,256 +126,24 @@ export async function uploadAndProcessImage(
   extendImageWithResource(imageData, uploadCtx)
 
   // 6. Upsert image in the backend
-  let savedImage: Image
   if (uploadCtx.imageToReplace) {
-    savedImage = await updateImage(
-      uploadCtx.imageToReplace.id,
-      imageData as ImagePartial,
-      uploadCtx,
-      fetchFn,
-    )
-  } else {
-    savedImage = await createImage(imageData as ImageNew, fetchFn)
+    const result = await updateImageRemote({
+      id: uploadCtx.imageToReplace.image.id,
+      ctxType: uploadCtx.ctxType,
+      ctxId: uploadCtx.ctxId,
+      data: imageData as Record<string, unknown>,
+      meta: { isAdminRequest: true },
+    })
+    return (result.data || result) as Image
   }
-
-  return savedImage
-}
-
-// ═══════════════════════
-// 2. INTERNAL :: API
-// ═══════════════════════
-
-/**
- * Creates a new image record in the backend.
- * @param imageData - The image data to save.
- * @param fetchFn - The fetch function to use for the API call.
- * @returns The saved image data from the backend.
- */
-export async function createImage(
-  imageData: ImageNew,
-  fetchFn: typeof fetch = fetch,
-): Promise<Image> {
-  const response = await fetchFn('/api/images', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(imageData),
+  const result = await createImageRemote({
+    data: imageData as ImageNew,
+    meta: { isAdminRequest: true },
   })
-  if (!response.ok) {
+  if (!result?.data) {
     throw new Error('Failed to create new image in backend')
   }
-  return response.json() // Assumes API returns the full Image object
-}
-
-/**
- * Fetches images from the API based on provided parameters.
- *
- * @param ctxType The resourceType the image is associated with (e.g., feature, project).
- * @param ctxId The ID of the resource the image is associated with.
- * @param fetchFn Optional fetch function, defaults to global fetch.
- * @returns Promise resolving with an array of images.
- */
-export async function getImages(
-  ctxType: ImageContextResource | ImageContextResourceExtended,
-  ctxId: Id,
-  fetchFn: typeof fetch = fetch,
-): Promise<(Image & { preview?: string })[]> {
-  const basePath = '/api/images' // Centralized base path
-  const params = new URLSearchParams()
-
-  if (ctxType === ImageContextResource.feature && ctxId) {
-    params.append('featureId', ctxId)
-  } else if (ctxType === ImageContextResource.project && ctxId) {
-    params.append('projectId', ctxId)
-  } else if (ctxType === ImageContextResource.organisation && ctxId) {
-    params.append('organisationId', ctxId)
-  } else if (ctxType === ImageContextResourceExtended.task && ctxId) {
-    params.append('taskId', ctxId)
-  }
-
-  const apiUrl = `${basePath}?${params.toString()}`
-
-  const response = await fetchFn(apiUrl)
-  if (!response.ok) {
-    const errorBody = await response.text()
-    console.error('Failed to fetch images via API:', apiUrl, errorBody)
-    throw new Error(
-      `Network response was not ok for fetching images: ${response.statusText}`,
-    )
-  }
-  return response.json() as Promise<(Image & { preview?: string })[]>
-}
-
-/**
- * Fetches images by their IDs.
- *
- * @param imageIds Array of image IDs to fetch.
- * @param fetchFn Optional fetch function, defaults to global fetch.
- * @returns Promise resolving with an array of images.
- */
-export async function getImagesByIds(
-  imageIds: string[],
-  fetchFn: typeof fetch = fetch,
-): Promise<(Image & { preview?: string })[]> {
-  if (imageIds.length === 0) return []
-
-  const basePath = '/api/images'
-  const params = new URLSearchParams()
-  params.append('ids', imageIds.join(','))
-
-  const apiUrl = `${basePath}?${params.toString()}`
-
-  const response = await fetchFn(apiUrl)
-  if (!response.ok) {
-    const errorBody = await response.text()
-    console.error('Failed to fetch images by IDs via API:', apiUrl, errorBody)
-    throw new Error(
-      `Network response was not ok for fetching images by IDs: ${response.statusText}`,
-    )
-  }
-  return response.json() as Promise<(Image & { preview?: string })[]>
-}
-
-/**
- * Updates an existing image record in the backend.
- * @param imageId - The ID of the image to update.
- * @param imageData - The new image data.
- * @param ctx - The context for the update (used for URL query params).
- * @param fetchFn - The fetch function to use for the API call.
- * @returns The updated image data from the backend.
- */
-export async function updateImage(
-  imageId: string,
-  imageData: ImagePartial,
-  ctx: ImageEditCtx,
-  fetchFn: typeof fetch = fetch,
-): Promise<Image> {
-  const apiUrl = addCtxToUrl(`/api/images/${imageId}`, ctx)
-  const response = await fetchFn(apiUrl, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(imageData),
-  })
-  if (!response.ok) {
-    const errorBody = await response.text()
-    throw new Error(`Failed to update existing image in backend: ${errorBody}`)
-  }
-  // Assuming PATCH also returns the full Image object (or relevant parts to merge)
-  const result = await response.json()
-  return result.data || result // API returns { type: 'success', data: responseData }
-}
-
-/**
- * Updates the intent of an image via the API.
- * @param imageId The ID of the image to update.
- * @param intent The new intent for the image.
- * @param ctx Context (ctxType, ctxId) for the API call.
- * @param fetchFn Optional fetch function, defaults to global fetch.
- * @returns Promise resolving when the update is complete.
- */
-export async function updateImageIntent(
-  imageId: string,
-  intent: Intent,
-  ctx: ImageEditCtx,
-  isPublished?: boolean,
-): Promise<Image> {
-  const apiUrl = addCtxToUrl(`/api/images/${imageId}`, ctx)
-  const response = await fetch(apiUrl, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      intent,
-      imageId,
-      featureId: ctx.ctxId,
-      ...(isPublished !== undefined && { isPublished }),
-    }),
-  })
-
-  if (!response.ok) {
-    const errorBody = await response.text()
-    throw new Error(`Failed to update intent: ${errorBody}`)
-  }
-  const result = await response.json()
-  return result.data || result
-}
-
-/**
- * Updates the publish status of an image via the API.
- * @param imageId The ID of the image to update.
- * @param isPublished The new publish status for the image.
- * @param ctx Context (ctxType, ctxId) for the API call.
- * @param fetchFn Optional fetch function, defaults to global fetch.
- * @returns Promise resolving with the JSON response from the API.
- */
-export async function updateImageIsPublished(
-  imageId: string,
-  isPublished: boolean,
-  ctx: ImageEditCtx,
-  fetchFn: typeof fetch = fetch,
-): Promise<Image> {
-  // Expecting the updated image back
-  const apiUrl = addCtxToUrl(`/api/images/${imageId}`, ctx)
-  const response = await fetchFn(apiUrl, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      isPublished,
-      imageId,
-      featureId: ctx.ctxId,
-    }),
-  })
-
-  if (!response.ok) {
-    const errorBody = await response.text()
-    throw new Error(`Failed to update publish status: ${errorBody}`)
-  }
-  const result = await response.json()
-  return result.data || result
-}
-
-/**
- * Deletes an image via the API.
- * @param imageId The ID of the image to delete.
- * @param ctx Context (ctxType, ctxId) for the API call.
- * @param fetchFn Optional fetch function, defaults to global fetch.
- * @returns Promise resolving with the JSON response from the API.
- */
-export async function deleteImage(
-  imageId: string,
-  ctx: ImageEditCtx,
-  fetchFn: typeof fetch = fetch,
-): Promise<any> {
-  // DELETE might not return the image, just a success message
-  const apiUrl = addCtxToUrl(`/api/images/${imageId}`, ctx)
-  const response = await fetchFn(apiUrl, {
-    method: 'DELETE',
-  })
-
-  if (!response.ok) {
-    const errorBody = await response.text()
-    throw new Error(`Failed to delete image: ${errorBody}`)
-  }
-  return response.json()
-}
-
-/**
- * Loads an image from the URL parameter.
- * @returns The image data from the API.
- */
-export async function getImageById(imageId: Id) {
-  // Skip API calls for staged images - they only exist locally
-  if (imageId.startsWith('staged-')) {
-    return null
-  }
-
-  // Fetch the specific image from the API
-  const response = await fetch(`/api/images/${imageId}`)
-  if (!response.ok) {
-    console.error('Failed to fetch image:', response.statusText)
-    return null
-  }
-
-  const result = await response.json()
-  return result.data || result // Handle both wrapped and direct responses
+  return result.data
 }
 
 // ═══════════════════════
@@ -506,29 +277,8 @@ export function getImageFromCloudinaryResponse(response: any): Partial<ImageNew>
 /**
  * Fetches the signature required for Cloudinary upload from the backend.
  * @param paramsToSign - Parameters to be signed for the Cloudinary upload.
- * @param fetchFn - The fetch function to use for the API call.
  * @returns The signature data from the backend.
  */
-export async function getCloudinarySignature(
-  paramsToSign: ParamsToSign,
-  fetchFn: typeof fetch = fetch,
-): Promise<SignData> {
-  const response = await fetchFn('/api/cloudinary', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      paramsToSign: {
-        ...paramsToSign,
-        media_metadata: 'true',
-      },
-    }),
-  })
-  if (!response.ok) {
-    throw new Error('Failed to fetch Cloudinary signature')
-  }
-  return response.json()
-}
-
 /**
  * Determines the public path for Cloudinary upload based on resource type.
  * @param ctx - The upload context containing resource type, entity, organisation, project, and imageToReplace.
@@ -561,7 +311,7 @@ export function getPublicPathCloudinaryImage(ctx: ImageUploadCtx): {
   ) {
     return {
       folder: `/${ctx.organisation.code}/${ctx.project.code}`,
-      public_id: ctx.imageToReplace.publicId.split('/').pop()!,
+      public_id: ctx.imageToReplace.image.publicId.split('/').pop()!,
     }
   } else if (
     ctx.ctxType === ImageContextResource.feature &&
@@ -600,17 +350,17 @@ export function extendFeatureImage(
   },
 ) {
   if (ctx.ctxType === 'feature') {
-    image.featureImage = ctx.imageToReplace
-      ? {
-          featureId: ctx.imageToReplace.featureId,
-          intent: ctx.imageToReplace.intent,
-          isPublished: ctx.imageToReplace.isPublished,
-        }
-      : ({
-          featureId: ctx.ctxId,
-          intent: extended?.featureImage?.intent || 'undefined',
-          isPublished: extended?.featureImage?.isPublished,
-        } as any) // Cast as any to match NewFeatureImages if necessary
+    image.featureImage = {
+      featureId: ctx.imageToReplace ? ctx.imageToReplace.ctxId : ctx.ctxId,
+      intent: ctx.imageToReplace
+        ? (ctx.imageToReplace.intent ?? extended?.featureImage?.intent ?? 'undefined')
+        : (extended?.featureImage?.intent ?? 'undefined'),
+      isPublished: ctx.imageToReplace
+        ? (ctx.imageToReplace.isPublished ??
+          extended?.featureImage?.isPublished ??
+          false)
+        : (extended?.featureImage?.isPublished ?? false),
+    }
   }
 }
 
@@ -647,9 +397,8 @@ export function getCoordinatesFromMetadata(metadata: Metadata): LngLat {
       latitude: coordinates.getLatitude().toString(),
       longitude: coordinates.getLongitude().toString(),
     }
-  } catch (error) {
-    console.warn('Failed to parse coordinates with coordinate-parser')
-    // Fallback or simplified parsing if direct fields are available
+  } catch {
+    console.warn('Failed to parse coordinates with coordinate-parser') // Fallback or simplified parsing if direct fields are available
     if (metadata.GPSLatitude && metadata.GPSLongitude) {
       return {
         latitude: String(metadata.GPSLatitude),
@@ -676,7 +425,7 @@ export function getCapturedAtFromMetadata(metadata: Metadata): string {
     if (metadata[field]) {
       try {
         return parseExifDate(metadata[field])
-      } catch (e) {
+      } catch {
         console.warn(`Failed to parse ${field}:`, metadata[field])
       }
     }
@@ -685,7 +434,7 @@ export function getCapturedAtFromMetadata(metadata: Metadata): string {
   if (metadata.DateCreated && metadata.TimeCreated) {
     try {
       return parseExifDate(`${metadata.DateCreated} ${metadata.TimeCreated}`)
-    } catch (e) {
+    } catch {
       console.warn(
         'Failed to parse DateCreated/TimeCreated:',
         metadata.DateCreated,
@@ -766,43 +515,6 @@ export function sortImages(images: Image[] | ImageDBFlat[], isAdmin: boolean = f
   return sortedImages
 }
 
-/**
- * Adds context information as query parameters to a URL.
- * @param baseUrl The base URL string.
- * @param ctx The image edit context.
- * @returns The URL string with context query parameters.
- */
-function addCtxToUrl(baseUrl: string, ctx: ImageEditCtx): string {
-  const url = new URL(baseUrl, window.location.origin)
-  if (ctx.ctxId && ctx.ctxType) {
-    if (
-      ctx.ctxType === ImageContextResource.organisation ||
-      ctx.ctxType === ImageContextResource.project ||
-      ctx.ctxType === ImageContextResource.feature
-    ) {
-      // ctx.ctxType is definitely ImageContextResource here
-      switch (ctx.ctxType) {
-        case ImageContextResource.organisation:
-          url.searchParams.append('organisationId', ctx.ctxId)
-          break
-        case ImageContextResource.project:
-          url.searchParams.append('projectId', ctx.ctxId)
-          break
-        case ImageContextResource.feature:
-          url.searchParams.append('featureId', ctx.ctxId)
-          break
-      }
-    } else if (ctx.ctxType === ImageContextResourceExtended.task) {
-      url.searchParams.append('taskId', ctx.ctxId)
-    } else {
-      // Handle cases where ctx.ctxType might be a string not matching any enum value
-      // Or if there are other values in ImageContextResourceExtended not handled above
-      console.warn(`Unsupported context type for URL: ${ctx.ctxType}`)
-    }
-  }
-  return url.pathname + url.search
-}
-
 // Generate hashicon URL for fallback
 export function getHashiconUrl(id: string) {
   const canvas = document.createElement('canvas')
@@ -810,6 +522,82 @@ export function getHashiconUrl(id: string) {
   canvas.height = 256
   hashicon(id, { size: 256, createCanvas: () => canvas })
   return canvas.toDataURL()
+}
+
+/**
+ * Updates an image presentation mode with optional context inference from `imageCtx`.
+ *
+ * @param options.currentImage Explicit image target. Falls back to `imageCtx.activeImage`.
+ * @param options.nextChecked Switch-like checked value. Used only when `nextMode` is not provided.
+ * @param options.nextMode Explicit target mode (`cover` or `contain`).
+ * @param options.ctx Explicit image edit context. Falls back to `imageCtx.getCtx()`.
+ * @param options.imageCtx Image context used to infer `currentImage` and `ctx` when omitted.
+ * @param options.onSuccess Callback invoked after a successful update.
+ * @param options.onFailure Callback invoked when the update request fails.
+ * @returns `true` when a backend update ran successfully, otherwise `false`.
+ * @remarks If required inputs are missing, or the target mode matches current mode, the function no-ops and returns `false`.
+ */
+export async function updateImagePresentationMode(options: {
+  currentImage?: Pick<Image, 'id' | 'presentationMode'> | ImageDBBasic | null
+  nextChecked?: boolean | null
+  nextMode?: 'cover' | 'contain'
+  ctx?: ImageEditCtx
+  imageCtx?: ImageCtx | null
+  onSuccess?: (nextMode: 'cover' | 'contain') => void
+  onFailure?: (error: unknown) => void
+}): Promise<boolean> {
+  const currentImageFromCtx = options.imageCtx?.activeImage?.image ?? null
+  const currentImage = options.currentImage ?? currentImageFromCtx ?? null
+  if (!currentImage?.id) return false
+
+  const nextMode =
+    options.nextMode ??
+    (options.nextChecked === null || options.nextChecked === undefined
+      ? undefined
+      : options.nextChecked
+        ? 'cover'
+        : 'contain')
+
+  const currentMode = currentImage.presentationMode ?? 'contain'
+  if (nextMode === currentMode) return false
+
+  let ctx = options.ctx
+  if (!ctx && options.imageCtx) {
+    try {
+      ctx = options.imageCtx.getCtx()
+    } catch {
+      ctx = undefined
+    }
+  }
+  if (!ctx?.ctxType || !ctx?.ctxId) return false
+
+  try {
+    await updateImageRemote({
+      id: currentImage.id,
+      ctxType: ctx.ctxType,
+      ctxId: ctx.ctxId,
+      data: { presentationMode: nextMode },
+      meta: { isAdminRequest: true },
+    })
+    options.onSuccess?.(nextMode)
+    return true
+  } catch (error) {
+    options.onFailure?.(error)
+    return false
+  }
+}
+
+/**
+ * Mutates an organisation response state in place to update image presentation mode.
+ * Returns `true` when an image exists and was updated.
+ */
+export function setOrganisationImagePresentationMode(
+  state: OrganisationGetState,
+  mode: 'cover' | 'contain',
+): boolean {
+  if (!state?.data?.image) return false
+  state.data.image.presentationMode = mode
+  return true
 }
 
 /**
@@ -836,9 +624,11 @@ export async function checkCameraAvailability() {
     })
 
     // If we get here, camera access is available
-    stream.getTracks().forEach(track => track.stop()) // Clean up
+    stream.getTracks().forEach(track => {
+      track.stop()
+    }) // Clean up
     return true
-  } catch (error) {
+  } catch {
     // Camera access denied or not available
     return false
   }
