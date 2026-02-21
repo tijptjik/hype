@@ -66,13 +66,11 @@ import { setOrganisationImagePresentationMode } from '$lib/client/services/image
 // FACTORIES
 import { configureForm } from '$lib/factories.svelte'
 // NAVIGATION
-import { navigateOnAdmin } from '$lib/navigation'
+import { getAdminFacetTabsForResource, navigateOnAdmin } from '$lib/navigation'
 // UTILS
 import { createSchemaRequiredInferer, toIssueMessages } from '$lib/utils/form-schema'
 // ICONS
 import OrganisationIcon from 'virtual:icons/lucide/users-round'
-import FormInputIcon from 'virtual:icons/lucide/form-input'
-import ImageIcon from 'virtual:icons/lucide/image'
 // ENUMS
 import {
   FirstClassResource,
@@ -101,15 +99,12 @@ const headerCtrl = getHeaderCtrl()
 
 // § Config
 
-const facetTabs = new Map([
-  ['core', { label: m.resources__profile(), icon: FormInputIcon }],
-  ['images', { label: m.organisation__images(), icon: ImageIcon }],
-] as const)
+const facetTabs = getAdminFacetTabsForResource(FirstClassResource.organisation)
 const resolvedFacetTabs = $derived.by(() =>
   isNewOrganisationRef
-    ? new Map([
-        ['core', { label: m.resources__profile(), icon: FormInputIcon }],
-      ] as const)
+    ? getAdminFacetTabsForResource(FirstClassResource.organisation, {
+        coreOnly: true,
+      })
     : facetTabs,
 )
 

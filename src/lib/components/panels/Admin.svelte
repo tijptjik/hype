@@ -13,7 +13,7 @@ import Layers from '$lib/components/panels/sections/Layers.svelte'
 import FilteredResource from '$lib/components/panels/common/FilteredResource.svelte'
 import AdminFooter from '$lib/components/panels/common/variants/AdminFooter.svelte'
 // SERVICES
-import { navigateOnAdminById } from '$lib/navigation'
+import { getSupportedFacetForResource, navigateOnAdminById } from '$lib/navigation'
 // ENUMS
 import { Panel as PanelEnum, FirstClassResource } from '$lib/enums'
 // TYPES
@@ -79,7 +79,8 @@ let panelProps: PanelProps = $derived({
                     await navigateOnAdminById(
                       adminCtx,
                       FirstClassResource.organisation,
-                      organisation.id
+                      organisation.id,
+                       getSupportedFacetForResource(FirstClassResource.organisation, panelProps.active?.facet)
                     );
                   }
                 }}
@@ -119,7 +120,8 @@ let panelProps: PanelProps = $derived({
                     navigateOnAdminById(
                       adminCtx,
                       FirstClassResource.project,
-                      project.id
+                      project.id,
+                      getSupportedFacetForResource(FirstClassResource.project, panelProps.active?.facet)
                     );
                   }
                 }}
@@ -157,7 +159,12 @@ let panelProps: PanelProps = $derived({
                   ) {
                     appCtx.toggleLayer(layer.id);
                   } else {
-                    navigateOnAdminById(adminCtx, FirstClassResource.layer, layer.id);
+                    navigateOnAdminById(
+                      adminCtx,
+                      FirstClassResource.layer,
+                      layer.id,
+                      getSupportedFacetForResource(FirstClassResource.layer, panelProps.active?.facet)
+                    );
                   }
                 }}
                 onToggle={(e) => {
