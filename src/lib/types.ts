@@ -75,6 +75,10 @@ import type {
   ImageInsertAPI,
   ImageInsertWithFeatureAPI,
   ImageInsertWithProjectOrOrganisationAPI,
+  ImageProfile as ImageProfileSchema,
+  ImageListProfileAPI,
+  ImageDetailProfileAPI,
+  ImageAdminProfileAPI,
   ImageUpdate,
   ImageUpdateAPI,
   LayerAPI,
@@ -184,6 +188,8 @@ import type {
   UserUpdateAPI,
   UserProfileAPI,
   UserSearchQueryParamsSchema,
+  UserHydrationPrivacyProfileAPI,
+  UserHydrationAdminProfileAPI,
 } from './db/zod'
 // TYPES
 import type { Component, Snippet } from 'svelte'
@@ -1248,6 +1254,15 @@ export type UserPartial = z.infer<typeof UserUpdateAPI>
 export type UserLayer = z.infer<typeof UserLayerAPI>
 export type UserLayerNew = z.infer<typeof UserLayerInsert>
 export type UserLayerPartial = z.infer<typeof UserLayerUpdateAPI>
+export type UserHydrationProfile = 'privacy' | 'admin'
+export type UserHydrationPrivacyProfile = z.infer<typeof UserHydrationPrivacyProfileAPI>
+export type UserHydrationAdminProfile = z.infer<typeof UserHydrationAdminProfileAPI>
+export type UserHydrationEntityByProfile<P extends UserHydrationProfile> =
+  P extends 'admin' ? UserHydrationAdminProfile : UserHydrationPrivacyProfile
+export type UserHydrationResult =
+  | UserHydrationPrivacyProfile
+  | UserHydrationAdminProfile
+  | null
 
 /* ----------------- */
 // USERS :: JOIN
@@ -1991,6 +2006,10 @@ export type ImageDBFlatUpdate = z.infer<typeof ImageFlatUpdate>
 export type ImageDBRaw = z.infer<typeof ImageBaseRaw>
 
 export type Image = z.infer<typeof ImageAPI>
+export type ImageListProfile = z.infer<typeof ImageListProfileAPI>
+export type ImageDetailProfile = z.infer<typeof ImageDetailProfileAPI>
+export type ImageAdminProfile = z.infer<typeof ImageAdminProfileAPI>
+export type ImageProfile = z.infer<typeof ImageProfileSchema>
 export type ImageNew = z.infer<typeof ImageInsertAPI>
 export type ImageNewWithFeature = z.infer<typeof ImageInsertWithFeatureAPI>
 export type ImageNewWithProjectOrOrganisation = z.infer<
@@ -1998,6 +2017,36 @@ export type ImageNewWithProjectOrOrganisation = z.infer<
 >
 export type ImagePartial = z.infer<typeof ImageUpdateAPI>
 export type ImageUpdateData = Omit<ImagePartial, 'ctxType' | 'refId'>
+export type ImageEntityByProfile<P extends ImageProfile> = P extends 'list'
+  ? ImageListProfile
+  : P extends 'card'
+    ? ImageListProfile
+    : P extends 'detail'
+      ? ImageDetailProfile
+      : ImageAdminProfile
+export type ImageListByProfile<P extends ImageProfile> = P extends 'list'
+  ? ImageListProfile
+  : P extends 'card'
+    ? ImageListProfile
+    : P extends 'detail'
+      ? ImageDetailProfile
+      : ImageAdminProfile
+
+export type ImageContextEnvelope<P extends ImageProfile = 'list'> = {
+  ctxType: ImageContextType
+  ctxId: Id
+  image: ImageListByProfile<P>
+  intent?: Intent | null
+  isPublished?: boolean | null
+  publishedAt?: string | null
+}
+
+export type ImageCtxEnvelope = Omit<ImageContextEnvelope<'detail'>, 'image'> & {
+  image: Image & {
+    preview?: string
+    file?: File
+  }
+}
 
 export type FeatureImageDB = z.infer<typeof FeatureImageBase>
 export type FeatureImageDBNew = z.infer<typeof FeatureImageInsert>
@@ -2075,7 +2124,7 @@ export type ImageUpload = {
   file: File
   status: UploadStatus
   retries: number
-  imageToReplace?: Image
+  imageToReplace?: ImageCtxEnvelope
   preview?: string
 }
 
@@ -2094,7 +2143,7 @@ export type ImageUploadCtx = {
   // Parent Project
   project?: ProjectDB
   // Image to replace is used to determine the image being replaced
-  imageToReplace?: Image
+  imageToReplace?: ImageCtxEnvelope
 }
 
 export type ImageEditCtx = {
@@ -2108,13 +2157,30 @@ export type ImageContextType = ImageContextResource | ImageContextResourceExtend
 
 export type ImageRemoteMeta = {
   isAdminRequest?: boolean
+  profile?: ImageProfile
 }
 
 export type ImagesForContextParams = {
   ctxType: ImageContextType
   ctxId: Id
-  includeSingleImage?: boolean
+  ctxNarrowingType?: ImageContextResourceExtended
+  ctxNarrowingId?: Id
+  pagination?: {
+    limit?: number
+    offset?: number
+  }
+  sorting?: {
+    sortBy?: string
+    sortOrder?: 'asc' | 'desc'
+  }
   meta?: ImageRemoteMeta
+}
+
+export type ImagesForContextParamsByProfile<P extends ImageProfile> = Omit<
+  ImagesForContextParams,
+  'meta'
+> & {
+  meta?: ImageRemoteMeta & { profile?: P }
 }
 
 export type ImagesForIdsParams = {
@@ -2122,9 +2188,23 @@ export type ImagesForIdsParams = {
   meta?: ImageRemoteMeta
 }
 
+export type ImagesForIdsParamsByProfile<P extends ImageProfile> = Omit<
+  ImagesForIdsParams,
+  'meta'
+> & {
+  meta?: ImageRemoteMeta & { profile?: P }
+}
+
 export type ImageByIdParams = {
   id: Id
   meta?: ImageRemoteMeta
+}
+
+export type ImageByIdParamsByProfile<P extends ImageProfile> = Omit<
+  ImageByIdParams,
+  'meta'
+> & {
+  meta?: ImageRemoteMeta & { profile?: P }
 }
 
 export type CreateImageParams = {
@@ -2171,14 +2251,16 @@ export type CloudinarySignatureParams = {
   meta?: ImageRemoteMeta
 }
 
-export type ImageCollectionResponse = {
-  image?: Image
-  images?: Image[]
+export type ImageCollectionResponse<P extends ImageProfile = 'list'> = EntityResponse<
+  Array<ImageContextEnvelope<P>>
+> & {
+  profile: P
 }
 
-export type ImageByIdResponse = {
-  data: Image | null
-}
+export type ImageByIdResponse<P extends ImageProfile = 'detail'> =
+  EntityResponse<ImageContextEnvelope<P> | null> & {
+    profile: P
+  }
 
 export type SignData = {
   cloudname: string
@@ -2365,8 +2447,8 @@ export interface ImageCtxConstructorOptions {
   isAdminMode?: boolean
   isValid?: boolean
   context?: ImageContextConfig | null
-  image?: Image | ImageDBBasic | null
-  images?: (Image | ImageDBBasic)[] | null
+  image?: ImageCtxEnvelope | null
+  images?: ImageCtxEnvelope[] | null
   highlightedIds?: Id[]
   isFullScreen?: boolean
 }
@@ -2544,7 +2626,7 @@ export type ImageCtxState = {
   uploadQueue: ImageUpload[]
   loadStatus: Record<string, LoadStatus>
   activeId: string | null
-  images: (Image & { preview?: string })[]
+  images: ImageCtxEnvelope[]
   preloadedImages: Set<string>
   pendingConfirmation: SvelteSet<string>
   deletionQueue: SvelteSet<string>
@@ -2559,7 +2641,7 @@ export type ImageCtxOptions = {
   ctxId: Id
   organisation?: OrganisationDB
   project?: ProjectDB
-  image?: Image
+  image?: ImageCtxEnvelope
   ctxTypeSecondary?: ImageContextResourceExtended
   ctxIdSecondary?: Id
   highlightedIds?: Id[]
