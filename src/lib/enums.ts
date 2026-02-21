@@ -140,9 +140,11 @@ export enum ProjectRoleType {
 // IMAGE RESOURCES
 /* -------- */
 export enum ImageContextResource {
+  hub = 'hub',
   organisation = 'organisation',
   project = 'project',
   feature = 'feature',
+  user = 'user',
 }
 
 export enum ImageContextResourceExtended {
