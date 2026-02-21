@@ -43,9 +43,13 @@ let {
 let isUpdatingPresentationMode = $state(false)
 let presentationModeFeedback = $state<'idle' | 'loading' | 'success' | 'error'>('idle')
 let presentationModeFeedbackTimer: ReturnType<typeof setTimeout> | null = $state(null)
+let viewerActiveImage = $state<Image | ImageDBBasic | null>(null)
 
-const hasActiveImage = $derived(Boolean(currentImage?.id))
-const isCoverPresentationMode = $derived(currentImage?.presentationMode === 'cover')
+const effectiveImage = $derived(
+  (viewerActiveImage ?? currentImage ?? null) as Image | ImageDBBasic | null,
+)
+const hasActiveImage = $derived(Boolean(effectiveImage?.id))
+const isCoverPresentationMode = $derived(effectiveImage?.presentationMode === 'cover')
 
 function clearPresentationModeFeedbackTimer(): void {
   if (!presentationModeFeedbackTimer) return
@@ -71,10 +75,16 @@ async function onPresentationModeChange(nextChecked: boolean | null): Promise<vo
   setPresentationModeFeedback('loading')
   try {
     const didUpdate = await updateImagePresentationMode({
-      currentImage,
+      currentImage: effectiveImage,
       nextChecked,
       ctx,
       onSuccess: nextMode => {
+        if (viewerActiveImage) {
+          viewerActiveImage = {
+            ...viewerActiveImage,
+            presentationMode: nextMode,
+          } as Image | ImageDBBasic
+        }
         onPresentationModeCommitted?.(nextMode)
         setPresentationModeFeedback('success')
       },
@@ -110,6 +120,8 @@ $effect(() => {
               class="bits-entity-image__header"
               size="sm"
             >
+              {#snippet center()}
+              {/snippet}
               {#snippet right()}
                 <div class="bits-entity-image__switch-wrap">
                   <span class="bits-entity-image__feedback">
@@ -141,6 +153,9 @@ $effect(() => {
               <Viewer
                 isDropzone={true}
                 layout={isCoverPresentationMode ? 'cover' : 'contain'}
+                onActiveImageChange={image => {
+                  viewerActiveImage = image
+                }}
               />
             </main>
           </div>
