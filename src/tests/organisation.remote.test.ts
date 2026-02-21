@@ -8,6 +8,8 @@ const {
   mockAuthorizeOrganisationRead,
   mockAuthorizeOrganisationList,
   mockToQueryConditions,
+  mockGetOrganisationWithRelations,
+  mockToOrganisationProfile,
   mockToAuthMessage,
   mockUpdateOrganisationById,
   mockLoadOrganisation,
@@ -20,6 +22,10 @@ const {
   mockAuthorizeOrganisationRead: vi.fn(),
   mockAuthorizeOrganisationList: vi.fn(),
   mockToQueryConditions: vi.fn(),
+  mockGetOrganisationWithRelations: vi.fn(() => ({})),
+  mockToOrganisationProfile: vi.fn((value: unknown, fallback: string) =>
+    typeof value === 'string' ? value : fallback,
+  ),
   mockToAuthMessage: vi.fn((code: string) => code),
   mockUpdateOrganisationById: vi.fn(),
   mockLoadOrganisation: vi.fn(),
@@ -70,6 +76,8 @@ vi.mock('$lib/api/services/authz', () => ({
 
 vi.mock('$lib/api/services/organisation', () => ({
   toQueryConditions: mockToQueryConditions,
+  getOrganisationWithRelations: mockGetOrganisationWithRelations,
+  toOrganisationProfile: mockToOrganisationProfile,
   organisationWithRelations: {},
 }))
 
