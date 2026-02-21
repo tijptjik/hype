@@ -28,6 +28,7 @@ import {
   getOrganisationWithRelations,
   toOrganisationProfile,
 } from '$lib/api/services/organisation'
+import { toBooleanOrUndefined } from '$lib/api/services'
 import {
   createI18n,
   createOrganisation,
@@ -77,13 +78,6 @@ const toLookupConditions = (params: {
   params.refKey === 'code'
     ? ({ code: params.ref } as Partial<OrganisationDB>)
     : ({ id: params.ref as Id } as Partial<OrganisationDB>)
-
-const toBooleanOrUndefined = (value: unknown): boolean | undefined => {
-  if (value === true || value === false) return value
-  if (value === 'true') return true
-  if (value === 'false') return false
-  return undefined
-}
 
 const toRequestedListState = (conditions: Partial<OrganisationDB>) => ({
   isPublished: toBooleanOrUndefined(conditions.isPublished) ?? true,
