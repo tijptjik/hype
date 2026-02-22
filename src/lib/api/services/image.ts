@@ -21,6 +21,7 @@ import { isSuperAdmin } from '$lib/client/services/auth'
 import { image, featureImage, project, organisation, hub } from '$lib/db/schema/index'
 import {
   getImageById as loadImageById,
+  toImageEntityResponseShape,
   toResponseShape,
   updateFeatureImage,
   updateImage as updateImageRecord,
@@ -31,6 +32,7 @@ import type {
   Database,
   Id,
   QueryParams,
+  Image,
   ImageNew,
   ImageDBFlat,
   HubOpts,
@@ -40,6 +42,7 @@ import type {
   DeleteParamsToSign,
   SignData,
   ImageProfile,
+  ImageContextEnvelope,
 } from '$lib/types'
 import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
 import { error } from '@sveltejs/kit'
@@ -440,7 +443,7 @@ export const updateImageForContext = async (args: {
   ctxType: ImageContextType
   ctxId: string
   data: Record<string, unknown>
-}): Promise<{ data: ImageDBFlat }> => {
+}): Promise<{ data: ImageContextEnvelope<'detail'> }> => {
   const { db, user, userId, userRoles, event, id, ctxType, ctxId, data } = args
   const userWithAttribution = await getUserById(db, userId)
 
@@ -487,7 +490,16 @@ export const updateImageForContext = async (args: {
     userWithAttribution?.attribution ?? undefined,
   )
 
-  return { data: responseData }
+  const envelope = toImageEntityResponseShape(
+    responseData as unknown as Image,
+    { ctxType, ctxId: ctxId as Id },
+    'detail',
+  ).data
+  if (!envelope) {
+    throw error(500, 'Failed to shape image envelope')
+  }
+
+  return { data: envelope }
 }
 
 /**

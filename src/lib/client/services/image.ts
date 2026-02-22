@@ -93,7 +93,7 @@ export async function uploadAndProcessImage(
     intent: Intent
   },
   fetchFn: typeof fetch = fetch,
-): Promise<Image> {
+): Promise<ImageCtxEnvelope> {
   // 1. Determine public path for Cloudinary
   const { folder, public_id } = getPublicPathCloudinaryImage(uploadCtx)
   const paramsToSign: ParamsToSign = {
@@ -136,7 +136,10 @@ export async function uploadAndProcessImage(
       data: imageData as Record<string, unknown>,
       meta: { isAdminRequest: true },
     })
-    return (result.data || result) as Image
+    if (!result?.data) {
+      throw new Error('Failed to update image in backend')
+    }
+    return result.data as ImageCtxEnvelope
   }
   const result = await createImageRemote({
     data: imageData as ImageNew,
@@ -145,7 +148,7 @@ export async function uploadAndProcessImage(
   if (!result?.data) {
     throw new Error('Failed to create new image in backend')
   }
-  return result.data
+  return result.data as ImageCtxEnvelope
 }
 
 // ═══════════════════════

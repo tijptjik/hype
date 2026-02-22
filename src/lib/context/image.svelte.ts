@@ -37,8 +37,6 @@ import type {
   ImageCtxConstructorOptions,
   ImageContextConfig,
   Feature,
-  ImageDBBasic,
-  ImageContextEnvelope,
 } from '$lib/types'
 import { addParamToUrl } from '$lib/navigation'
 
@@ -239,30 +237,6 @@ export class ImageCtx {
     }, 100)
   }
 
-  private isEnvelope(value: unknown): value is ImageCtxEnvelope {
-    return Boolean(
-      value &&
-        typeof value === 'object' &&
-        'image' in value &&
-        'ctxType' in value &&
-        'ctxId' in value,
-    )
-  }
-
-  private toEnvelope(value: ImageCtxEnvelope | Image | ImageDBBasic): ImageCtxEnvelope {
-    if (this.isEnvelope(value)) return value
-    const ctxType = this.state.context?.ctxType ?? ('feature' as ImageContextResource)
-    const ctxId = this.state.context?.ctxId ?? ''
-    return {
-      ctxType,
-      ctxId,
-      image: value as Image,
-      intent: (value as unknown as ImageContextEnvelope).intent ?? null,
-      isPublished: (value as unknown as ImageContextEnvelope).isPublished ?? null,
-      publishedAt: (value as unknown as ImageContextEnvelope).publishedAt ?? null,
-    }
-  }
-
   async setContext(options: {
     context?: ImageContextConfig | null
     image?: ImageCtxEnvelope | null | undefined
@@ -310,15 +284,13 @@ export class ImageCtx {
 
     // CASE 1 : Images preloaded
     if (images && images.length > 0) {
-      const validImages = images
-        .filter((img): img is ImageCtxEnvelope => img != null)
-        .map(img => this.toEnvelope(img))
+      const validImages = images.filter((img): img is ImageCtxEnvelope => img != null)
       await this.setImages(validImages)
       // Set active image when we have preloaded images
       this.setActiveImageToTargetOrFirst()
       // CASE 2 : Images not preloaded except for the leading image
     } else if (image) {
-      await this.setImages([this.toEnvelope(image)])
+      await this.setImages([image])
       this.setActiveImageToTargetOrFirst()
       await this.refreshImages()
       // CASE 3 : Initial Context - we will have an async image set
@@ -646,7 +618,10 @@ export class ImageCtx {
    * Uploads all staged images and replaces them with real images
    */
   async uploadStagedImages(
-    config: { onSuccess?: (savedImage: Image) => void; onError?: () => void } = {},
+    config: {
+      onSuccess?: (savedImage: ImageCtxEnvelope) => void
+      onError?: () => void
+    } = {},
   ) {
     const stagedImages = this.getImages().filter(img => img.image.cdn === 'preview')
 
@@ -1552,7 +1527,7 @@ export class ImageCtx {
     acceptedFiles: File[],
     fileRejections: File[],
     config: {
-      onSuccess?: (savedImage: Image) => void
+      onSuccess?: (savedImage: ImageCtxEnvelope) => void
       onError?: () => void
     } = {},
     imageToReplace?: ImageCtxEnvelope,
@@ -1613,7 +1588,7 @@ export class ImageCtx {
   }
 
   private async processUploadQueue(config: {
-    onSuccess?: (savedImage: Image) => void
+    onSuccess?: (savedImage: ImageCtxEnvelope) => void
     onError?: () => void
   }) {
     await Promise.all(
@@ -1665,7 +1640,7 @@ export class ImageCtx {
       if (savedImage) {
         if (uploadCtx.imageToReplace) {
           // Update existing image in map
-          const savedEnvelope = this.toEnvelope(savedImage)
+          const savedEnvelope = savedImage
           this.state.images.set(savedEnvelope.image.id, savedEnvelope)
           // Update active image if it was the one being replaced
           if (this.state.activeImage?.image.id === uploadCtx.imageToReplace.image.id) {
@@ -1675,7 +1650,7 @@ export class ImageCtx {
           }
         } else {
           // Add new image to map
-          const savedEnvelope = this.toEnvelope(savedImage)
+          const savedEnvelope = savedImage
           this.state.images.set(savedEnvelope.image.id, savedEnvelope)
           // For fresh uploads, always set as active image if no active image exists
           if (!this.state.activeImage) {
@@ -1683,7 +1658,7 @@ export class ImageCtx {
           }
         }
         this.setUploadStatus(fileObject, 'uploaded')
-        this.setLoadStatus(savedImage.id, 'loading')
+        this.setLoadStatus(savedImage.image.id, 'loading')
         return savedImage
       }
     } catch (error) {
@@ -1806,7 +1781,7 @@ export class ImageCtx {
       isPublished: !this.state.activeImage.isPublished,
       meta: { isAdminRequest: true },
     })
-    if (updatedImage?.data?.id) {
+    if (updatedImage?.data?.image?.id) {
       this.toggleForActiveImage('isPublished')
       // Re-sort images when publish status changes
       this.sortImagesInternal()

@@ -398,7 +398,7 @@ export const processTaskImages = async (
     )
 
     if (uploadedImage) {
-      uploadedImages.push(uploadedImage)
+      uploadedImages.push(uploadedImage.image as Image)
     }
   }
 
