@@ -1569,6 +1569,7 @@ export class ImageCtx {
   ): Promise<void> => {
     // Map image context resource types to FirstClassResource
     const resourceMap: Partial<Record<ImageContextResource, FirstClassResource>> = {
+      hub: FirstClassResource.hub,
       organisation: FirstClassResource.organisation,
       project: FirstClassResource.project,
       feature: FirstClassResource.feature,
