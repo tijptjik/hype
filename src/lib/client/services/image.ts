@@ -292,7 +292,7 @@ export function getImageFromCloudinaryResponse(response: any): Partial<ImageNew>
  */
 /**
  * Determines the public path for Cloudinary upload based on resource type.
- * @param ctx - The upload context containing resource type, entity, organisation, project, and imageToReplace.
+ * @param ctx - The upload context containing resource type, IDs and optional parent entities.
  * @returns An object with folder and public_id (which can be null).
  * @throws Error if ctx are invalid for determining path.
  */
@@ -300,7 +300,16 @@ export function getPublicPathCloudinaryImage(ctx: ImageUploadCtx): {
   folder: string
   public_id: string | null
 } {
-  if (ctx.ctxType === ImageContextResource.organisation && ctx.organisation) {
+  if (ctx.ctxType === ImageContextResource.hub) {
+    if (!ctx.hub?.code) {
+      console.error('Missing hub code for hub image path:', ctx)
+      throw new Error('Missing hub code for hub image path')
+    }
+    return {
+      folder: `/+/hubs/${ctx.hub.code}`,
+      public_id: ctx.ctxId,
+    }
+  } else if (ctx.ctxType === ImageContextResource.organisation && ctx.organisation) {
     return {
       folder: `/${ctx.organisation.code}`,
       public_id: ctx.ctxId,

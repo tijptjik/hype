@@ -135,6 +135,11 @@ export const ImageInsertWithProjectOrOrganisationAPI = ImageInsert.extend({
   ctxId: z.string(),
 })
 
+export const ImageInsertWithHubAPI = ImageInsert.extend({
+  ctxType: z.enum([ImageContextResource.hub]),
+  ctxId: z.string(),
+})
+
 export const ImageUpdateAPI = ImageUpdate.extend({
   featureImage: FeatureImageUpdate.optional(),
   ctxType: z.enum(Object.values(ImageContextResource) as [string, ...string[]]),

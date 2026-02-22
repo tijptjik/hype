@@ -31,6 +31,7 @@ import type {
   UploadStatus,
   ImageEditCtx,
   Id,
+  HubDB,
   OrganisationDB,
   ProjectDB,
   ImageUploadCtx,
@@ -442,6 +443,7 @@ export class ImageCtx {
     return {
       ctxType: this.state.context.ctxType,
       ctxId: this.state.context.ctxId,
+      hub: this.state.context.hub as HubDB,
       organisation: this.state.context.organisation as OrganisationDB,
       project: this.state.context.project as ProjectDB,
       ...(imageToReplace !== undefined ? { imageToReplace } : {}),

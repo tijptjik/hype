@@ -2127,8 +2127,10 @@ export type ImageUploadCtx = {
   ctxType: ImageContextResource
   // ID of the entity which the image is associated with
   ctxId: Id
-  // Parent Organisation
-  organisation: OrganisationDB
+  // Hub context (required for hub uploads when code-based folder naming is needed)
+  hub?: HubDB
+  // Parent Organisation (required for organisation/project/feature)
+  organisation?: OrganisationDB
   // Parent Project
   project?: ProjectDB
   // Image to replace is used to determine the image being replaced
@@ -2426,6 +2428,7 @@ export type ImageProviderProps = {
 export interface ImageContextConfig {
   ctxType?: ImageContextResource
   ctxId?: Id
+  hub?: HubDB
   organisation?: OrganisationDB
   project?: ProjectDB
   ctxTypeSecondary?: ImageContextResourceExtended
@@ -2628,6 +2631,7 @@ export type ImageCtxOptions = {
   isAdminMode: boolean
   ctxType: ImageContextResource
   ctxId: Id
+  hub?: HubDB
   organisation?: OrganisationDB
   project?: ProjectDB
   image?: ImageCtxEnvelope
