@@ -4,10 +4,10 @@ import { CloudArrowDown } from '@steeze-ui/heroicons'
 // SERVICES
 import { getImageCtx } from '$lib/context/image.svelte'
 // TYPES
-import type { Image } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/types'
 
 type Props = {
-  image: Image
+  image: ImageCtxEnvelope
   class?: string
 }
 

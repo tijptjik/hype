@@ -12,7 +12,7 @@ import Deletion from '$lib/components/images/gallery/overlays/Delete.svelte'
 import Confirmation from '$lib/components/images/gallery/overlays/Confirmation.svelte'
 import Deleting from '$lib/components/images/gallery/overlays/Deleting.svelte'
 // TYPES
-import type { Image, Intent } from '$lib/types'
+import type { ImageCtxEnvelope, Intent } from '$lib/types'
 
 // SERVICES
 const imageCtx = getImageCtx()
@@ -21,7 +21,7 @@ const imageCtx = getImageCtx()
 let thumbnailRef = $state<HTMLDivElement>()
 
 type Props = {
-  image: Image
+  image: ImageCtxEnvelope
   idx: number
   actionProps?: { removeMode: boolean }
   isHighlighted?: boolean
@@ -30,11 +30,11 @@ type Props = {
 let { image, idx, actionProps, isHighlighted = false }: Props = $props()
 
 // Track thumbnail load state (main image load state is handled by PhotoFrame/Viewer)
-let thumbnailLoadState = $derived(imageCtx.getThumbnailLoadStatus(image.id))
+let thumbnailLoadState = $derived(imageCtx.getThumbnailLoadStatus(image.image.id))
 // Make isPublished reactive to changes in the image context state
 // First check the updated image from context, then fall back to image prop
 let isPublished = $derived.by(() => {
-  const contextImage = imageCtx.getImage(image.id)
+  const contextImage = imageCtx.getImage(image.image.id)
   const result = contextImage?.isPublished ?? image.isPublished
   return result
 })
@@ -43,18 +43,22 @@ let isPublished = $derived.by(() => {
 onMount(() => {
   // Set initial thumbnail load state if not already set
   if (thumbnailLoadState === undefined) {
-    imageCtx.setThumbnailLoadStatus(image.id, 'loading')
+    imageCtx.setThumbnailLoadStatus(image.image.id, 'loading')
   }
 })
 
 // Cleanup on component destruction
 onDestroy(() => {
   // Clean up thumbnail load status when component is destroyed
-  imageCtx.resetThumbnailLoadStatus(image.id)
+  imageCtx.resetThumbnailLoadStatus(image.image.id)
 })
 </script>
 
-<div class="relative h-full w-full" data-image-id={image.id} bind:this={thumbnailRef}>
+<div
+  class="relative h-full w-full"
+  data-image-id={image.image.id}
+  bind:this={thumbnailRef}
+>
   <Img
     class="mx-auto h-[200px] w-[200px] overflow-hidden rounded-lg border-base-100 text-neutral transition-opacity duration-300 
       {isPublished ? 'opacity-100' : 'border-2 border-base-200/60 blur-sm'}
@@ -67,10 +71,10 @@ onDestroy(() => {
     layout="cover"
     showLoading={true}
     onLoad={() => {
-      imageCtx.setThumbnailLoadStatus(image.id, 'loaded');
+      imageCtx.setThumbnailLoadStatus(image.image.id, 'loaded');
     }}
     onError={() => {
-      imageCtx.setThumbnailLoadStatus(image.id, 'error');
+      imageCtx.setThumbnailLoadStatus(image.image.id, 'error');
     }}
   />
 
@@ -85,30 +89,30 @@ onDestroy(() => {
       container={thumbnailRef}
       intent={(image.intent || 'undefined') as Intent}
       {idx}
-      imageId={image.id}
+      imageId={image.image.id}
     />
   {/if}
 
   <!-- Error message overlay (highest priority) -->
-  {#if imageCtx.hasErrorMessage(image.id)}
+  {#if imageCtx.hasErrorMessage(image.image.id)}
     <div
       class="absolute inset-0 z-30 flex flex-col items-center justify-center rounded-lg bg-error text-error-content backdrop-blur-sm"
     >
       <div class="p-2 text-center">
         <div class="mb-1 text-2xl text-white">⚠</div>
         <p class="text-lg font-semibold text-white/70">
-          {@html imageCtx.getErrorMessage(image.id)?.message}
+          {@html imageCtx.getErrorMessage(image.image.id)?.message}
         </p>
       </div>
     </div>
   {:else if thumbnailLoadState === 'loading'}
     <Loading />
   {:else if actionProps}
-    {#if actionProps.removeMode && thumbnailLoadState === 'loaded' && !imageCtx.pendingConfirmationHas(image.id) && !imageCtx.deletionQueueHas(image.id)}
+    {#if actionProps.removeMode && thumbnailLoadState === 'loaded' && !imageCtx.pendingConfirmationHas(image.image.id) && !imageCtx.deletionQueueHas(image.image.id)}
       <Deletion {image} />
-    {:else if imageCtx.pendingConfirmationHas(image.id) && !imageCtx.deletionQueueHas(image.id)}
+    {:else if imageCtx.pendingConfirmationHas(image.image.id) && !imageCtx.deletionQueueHas(image.image.id)}
       <Confirmation {image} />
-    {:else if imageCtx.deletionQueueHas(image.id)}
+    {:else if imageCtx.deletionQueueHas(image.image.id)}
       <Deleting />
     {/if}
   {/if}

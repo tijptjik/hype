@@ -6,18 +6,19 @@ import { formatDate } from '$lib'
 // CONTEXT
 import { getImageCtx } from '$lib/context/image.svelte'
 import { getAppCtx } from '$lib/context/app.svelte'
+import { getUserForAttribution } from '$lib/api/server/user.remote'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
 import { Camera, MapPin } from '@steeze-ui/heroicons'
 // TYPES
-import type { Image, Feature } from '$lib/types'
+import type { Feature, ImageCtxEnvelope } from '$lib/types'
 import type { IconSource } from '@steeze-ui/heroicons'
 
 // CONTEXT
 const imageCtx = getImageCtx()
 const appCtx = getAppCtx()
 
-let { currentImage }: { currentImage: Image } = $props()
+let { currentImage }: { currentImage: ImageCtxEnvelope } = $props()
 
 let showContributor = $state(false)
 
@@ -28,13 +29,38 @@ let toggleAttribution = () => {
 // Get feature data with proper null checking
 const contextId = $derived(imageCtx.state.context?.ctxId)
 const feature = $derived(contextId ? appCtx.features.get(contextId) : undefined)
-// Note: Using simple fallbacks since user cache and createdAt may not be available
+let contributorAttribution = $state<string | null>(null)
 const contributorName = $derived(
-  (feature as Feature)?.contributor?.attribution || m.anonymous(),
+  contributorAttribution ||
+    (feature as Feature)?.contributor?.attribution ||
+    m.anonymous(),
 )
 const createdAt = $derived(
   'createdAt' in (feature || {}) ? (feature as any).createdAt : undefined,
 )
+
+$effect(() => {
+  const contributorId = currentImage?.image.contributorId
+  if (!contributorId) {
+    contributorAttribution = null
+    return
+  }
+
+  const profile = appCtx.isAdmin() ? 'admin' : 'privacy'
+  void getUserForAttribution({
+    id: contributorId,
+    meta: {
+      profile,
+      ...(appCtx.isAdmin() ? { isAdminRequest: true } : {}),
+    },
+  })
+    .then(user => {
+      contributorAttribution = user?.attribution ?? null
+    })
+    .catch(() => {
+      contributorAttribution = null
+    })
+})
 </script>
 
 {#snippet metadataItem(
@@ -68,8 +94,8 @@ const createdAt = $derived(
   {@render metadataItem(MapPin, contributorName, createdAt, 1)}
   {@render metadataItem(
     Camera,
-    currentImage.attribution || currentImage.credit,
-    currentImage.capturedAt || currentImage.createdAt,
+    currentImage.image.attribution || currentImage.image.credit,
+    currentImage.image.capturedAt || currentImage.image.createdAt,
     2
   )}
 </div>

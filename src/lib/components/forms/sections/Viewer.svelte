@@ -35,8 +35,8 @@ let image = $derived(imageCtx.activeImage)
         <IconAnchor position="right" icon={InformationCircle}>
           {#if image}
             <UserAttributionCard
-              userId={image.contributorId}
-              date={image.createdAt}
+              userId={image.image.contributorId}
+              date={image.image.createdAt}
               type="imageContributor"
               class="mr-4"
             />

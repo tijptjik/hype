@@ -12,13 +12,13 @@ import AddFromFiles from './AddFromFiles.svelte'
 import Remove from '$lib/components/featureCard/gallery/Remove.svelte'
 
 // TYPES
-import type { Image } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/types'
 
 // STATE
 let hasCameraAccess = $state(false)
 
 // PROPS
-let { currentImage }: { currentImage: Image } = $props()
+let { currentImage }: { currentImage: ImageCtxEnvelope } = $props()
 
 $effect(() => {
   checkCameraAvailability().then(cameraAvailable => {

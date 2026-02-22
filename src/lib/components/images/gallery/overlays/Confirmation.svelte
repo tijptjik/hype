@@ -6,12 +6,12 @@ import { m } from '$lib/i18n'
 // CONTEXT
 import { getImageCtx } from '$lib/context/image.svelte'
 // TYPES
-import type { Image } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/types'
 
 const imageCtx = getImageCtx()
 
 type Props = {
-  image: Image
+  image: ImageCtxEnvelope
 }
 
 let { image }: Props = $props()

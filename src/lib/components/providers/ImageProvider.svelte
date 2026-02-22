@@ -1,12 +1,12 @@
 <script lang="ts">
 // SVELTE
 import { untrack } from 'svelte'
-// SERVICES
-import { getImageById } from '$lib/client/services/image'
+// REMOTE
+import { getImageById } from '$lib/api/server/image.remote'
 // CONTEXT
 import { ImageCtx, setImageCtx } from '$lib/context/image.svelte'
 // TYPES
-import type { ImageProviderProps, Image, ImageDBBasic } from '$lib/types'
+import type { ImageProviderProps, ImageCtxEnvelope } from '$lib/types'
 
 // ═══════════════════════
 // REACTIVE STATE
@@ -18,7 +18,7 @@ let lastImageId: string | undefined | null = $state()
 let lastImageState: string = $state('') // Track image state changes
 let lastFullScreen: boolean | undefined = $state(false)
 let lastPathname: string = $state('') // Track page navigation
-let targetImage: Image | ImageDBBasic | null = $state(null)
+let targetImage: ImageCtxEnvelope | null = $state(null)
 let initialisingContext: boolean = $state(false)
 
 // PROPS
@@ -33,8 +33,8 @@ let isFullScreen: boolean = $derived(page.url.searchParams.get('fullscreen') ===
 // ═══════════════════════
 
 let getInitialImage = () =>
-  options.image && (options.image.id == urlImageId || !urlImageId)
-    ? (options.image as Image)
+  options.image && ((options.image.image.id ?? null) === urlImageId || !urlImageId)
+    ? options.image
     : urlImageId
       ? undefined
       : null
@@ -57,12 +57,18 @@ let imageCtx: ImageCtx = setImageCtx({
 $effect.pre(() => {
   const defaultImage = options.image
   const urlBasedImageId = urlImageId
+  const defaultImageId = defaultImage?.image.id ?? null
 
   if (options.isValid) {
-    if (urlBasedImageId && urlBasedImageId !== defaultImage?.id) {
-      untrack(() => getImageById(urlImageId).then(image => (targetImage = image)))
+    if (urlBasedImageId && urlBasedImageId !== defaultImageId) {
+      untrack(() =>
+        getImageById({
+          id: urlImageId,
+          meta: { isAdminRequest: true },
+        }).then(result => (targetImage = result?.data ?? null)),
+      )
     } else {
-      untrack(() => (targetImage = options.image || null))
+      untrack(() => (targetImage = options.image ?? null))
     }
   }
 })
@@ -74,13 +80,13 @@ $effect.pre(() => {
 function applyTargetImage(targetImageId: string) {
   // Return early if this image is already the active image
   // Or if the imageContext is in an inValid state (Feature.id and featureId mismatch)
-  const currentActiveImageId = imageCtx.state.activeImage?.id
+  const currentActiveImageId = imageCtx.state.activeImage?.image.id
   if (currentActiveImageId === targetImageId || !options.isValid) {
     return
   }
   // Target the image if it exists in the images array
   // Targetting will transition the image from target to active image.
-  if (imageCtx.state.images && imageCtx.state.images.get(targetImageId)) {
+  if (imageCtx.state.images?.get(targetImageId)) {
     imageCtx.target(targetImageId)
   } else {
     imageCtx.refreshImages(targetImageId)
@@ -95,7 +101,7 @@ $effect.pre(() => {
     ? `${options.context.ctxType}-${options.context.ctxId}${options.context.ctxTypeSecondary ? `-${options.context.ctxTypeSecondary}-${options.context.ctxIdSecondary}` : ''}`
     : undefined
   const currentImage = options.image
-  const targetImageId = targetImage?.id
+  const targetImageId = targetImage?.image.id
 
   if (!options.isValid) {
     // During navigation, isValid becomes false before new data loads
@@ -127,7 +133,7 @@ $effect.pre(() => {
 
   // Create signature of current image state to detect changes
   const currentImageState = JSON.stringify({
-    imageId: currentImage?.id || null,
+    imageId: currentImage?.image.id ?? null,
     imagesLength: options.images?.length || 0,
     hasImages: !!options.images,
   })

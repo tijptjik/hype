@@ -45,12 +45,6 @@ function handleFilesSelect(
     acceptedFiles,
     fileRejections,
     {
-      onSuccess: savedImage => {
-        // For fresh uploads (no existing image), ensure the uploaded image becomes active
-        if (!sectionProps.image && savedImage) {
-          imageCtx.setActiveImage(savedImage)
-        }
-      },
       onError: () => {
         errorMessage = m.error_message__upload_failed()
         showErrorOverlay = true
@@ -66,7 +60,7 @@ function handleFilesSelect(
         }, 3000)
       },
     },
-    sectionProps.image || undefined, // Pass existing image for replacement, or undefined for new upload
+    imageCtx.activeImage || undefined, // Pass existing image for replacement, or undefined for new upload
   )
 }
 </script>

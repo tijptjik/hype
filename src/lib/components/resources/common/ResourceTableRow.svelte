@@ -13,7 +13,11 @@ import { getAdminCtx } from '$lib/context/admin.svelte'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // TYPES
-import type { Resource, EntityWithOptionalImage, ImageDBBasic } from '$lib/types'
+import type {
+  Resource,
+  EntityWithOptionalImage,
+  ImageContextEnvelope,
+} from '$lib/types'
 import type { Snippet } from 'svelte'
 
 let {
@@ -57,7 +61,7 @@ const adminCtx = getAdminCtx()
           {#if entity.image}
             <img
               src={getURLfromImage({
-                image: entity.image as ImageDBBasic,
+                image: entity.image as ImageContextEnvelope,
                 transformation: 'c_fill,w_100,h_100,q_auto'
               })}
               alt={getI18n(

@@ -14,14 +14,14 @@ import { getLocale } from '$lib/i18n'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // TYPES
-import type { Feature, ImageDBBasic } from '$lib/types'
+import type { Feature, ImageCtxEnvelope } from '$lib/types'
 import type { AdminCtx } from '$lib/context/admin.svelte'
 
 type Props = {
   adminCtx: AdminCtx
   entity: Feature
   index: number
-  onImageClick?: (image: ImageDBBasic, feature: Feature) => void
+  onImageClick?: (image: ImageCtxEnvelope, feature: Feature) => void
   isSelected?: boolean
 }
 
@@ -49,12 +49,12 @@ function handleRowKeyDown(event: KeyboardEvent) {
     event.preventDefault()
     event.stopPropagation()
     if (entity.image && onImageClick) {
-      onImageClick(entity.image as ImageDBBasic, entity)
+      onImageClick(entity.image as ImageCtxEnvelope, entity)
     }
   }
 }
 
-function handleImageClick(image: ImageDBBasic) {
+function handleImageClick(image: ImageCtxEnvelope) {
   if (onImageClick) onImageClick(image, entity)
 }
 

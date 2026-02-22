@@ -1,21 +1,21 @@
 <script lang="ts">
 import { getURLfromImage } from '$lib/client/services/image'
-import type { ImageDB, ImageDBBasic } from '$lib/types'
+import type { ImageContextEnvelope, ImageCtxEnvelope } from '$lib/types'
 
 let {
   image = null,
   alt = 'Resource image',
   onClick,
 }: {
-  image?: ImageDB | ImageDBBasic | null
+  image?: ImageContextEnvelope | ImageCtxEnvelope | null
   alt?: string
-  onClick?: (image: ImageDB | ImageDBBasic) => void
+  onClick?: (image: ImageContextEnvelope | ImageCtxEnvelope) => void
 } = $props()
 
 function handleClick(e: Event) {
   e.preventDefault()
   e.stopPropagation()
-  if (image && onClick) onClick(image as ImageDBBasic)
+  if (image && onClick) onClick(image)
 }
 </script>
 

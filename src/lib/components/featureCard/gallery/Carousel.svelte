@@ -15,14 +15,14 @@ import Icon from '$lib/components/common/Icon.svelte'
 import { ChevronLeft, ChevronRight } from '@steeze-ui/heroicons'
 // TYPES
 import type { SwipeCustomEvent, TapCustomEvent } from 'svelte-gestures'
-import type { Image } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/types'
 
 // CONTEXT
 const imageCtx = getImageCtx()
 
 // SERVICES
-let images: Image[] = $derived(imageCtx.getImages())
-let currentImage: Image | null = $derived(imageCtx.activeImage)
+let images: ImageCtxEnvelope[] = $derived(imageCtx.getImages())
+let currentImage: ImageCtxEnvelope | null = $derived(imageCtx.activeImage)
 let isStaged = $derived(currentImage && imageCtx.isImageStaged(currentImage))
 
 // ELEMENTS

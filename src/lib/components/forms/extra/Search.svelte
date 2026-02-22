@@ -14,7 +14,15 @@ import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getURLfromImage } from '$lib/client/services/image'
 
 // TYPES
-import type { Field, Project, Layer, Form, User, Organisation } from '$lib/types'
+import type {
+  Field,
+  Project,
+  Layer,
+  Form,
+  User,
+  Organisation,
+  ImageContextEnvelope,
+} from '$lib/types'
 
 type ResultType = User | Project | Layer | Organisation
 
@@ -253,7 +261,7 @@ const resetResults = () => (searchResults = [])
                           ></div>
                           <img
                             src={getURLfromImage({
-                              image: item.image,
+                              image: item.image as ImageContextEnvelope,
                               transformation: 'c_fill,w_100,h_100,q_auto',
                             })}
                             class="relative h-10 w-10 rounded object-cover opacity-0 transition-opacity duration-200"

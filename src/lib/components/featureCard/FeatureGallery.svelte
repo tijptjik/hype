@@ -10,14 +10,14 @@ import SelectPhotoSource from '$lib/components/featureCard/gallery/SelectPhotoSo
 import SuccesfulSubmission from '$lib/components/featureCard/gallery/SuccesfulSubmission.svelte'
 import Carousel from './gallery/Carousel.svelte'
 // TYPES
-import type { Image } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/types'
 
 // CONTEXT
 const imageCtx = getImageCtx()
 const cardCtx = getCardCtx()
 
 // SERVICES
-let images: Image[] = $derived(imageCtx.getImages())
+let images: ImageCtxEnvelope[] = $derived(imageCtx.getImages())
 </script>
 
 <div

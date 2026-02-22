@@ -71,7 +71,7 @@ function getDisplayImageFromActiveImage(
 ): DisplayImage {
   return {
     id: activeImage.image.id,
-    src: getURLfromImage({ image: activeImage.image, transformation }),
+    src: getURLfromImage({ image: activeImage, transformation }),
     isPreview: false,
     image: activeImage,
   }
@@ -209,7 +209,7 @@ $effect(() => {
 
       ;[images[nextIndex], images[prevIndex]].forEach(img => {
         if (img) {
-          const src = getURLfromImage({ image: img.image, transformation })
+          const src = getURLfromImage({ image: img, transformation })
           imageCtx.preloadImage(src)
         }
       })

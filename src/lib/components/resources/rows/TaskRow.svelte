@@ -17,7 +17,7 @@ import { navigateOnAdmin } from '$lib/navigation'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // TYPES
-import type { Task, ImageDBBasic } from '$lib/types'
+import type { Task, ImageCtxEnvelope } from '$lib/types'
 import type { AdminCtx } from '$lib/context/admin.svelte'
 
 let {
@@ -30,7 +30,7 @@ let {
   adminCtx: AdminCtx
   entity: Task
   index: number
-  onImageClick?: (image: ImageDBBasic, task: Task) => void
+  onImageClick?: (image: ImageCtxEnvelope, task: Task) => void
   isSelected?: boolean
 } = $props()
 
@@ -45,13 +45,13 @@ function handleRowKeyDown(event: KeyboardEvent) {
   } else if (event.key === ' ' || event.key === 'Space') {
     event.preventDefault()
     event.stopPropagation()
-    if (entity.images?.[0]?.image && onImageClick) {
-      onImageClick(entity.images[0].image as ImageDBBasic, entity)
+    if (entity.images?.[0] && onImageClick) {
+      onImageClick(entity.images[0] as ImageCtxEnvelope, entity)
     }
   }
 }
 
-function handleImageClick(image: ImageDBBasic) {
+function handleImageClick(image: ImageCtxEnvelope) {
   if (onImageClick) onImageClick(image, entity)
 }
 
@@ -109,9 +109,9 @@ let gridColsClass =
     <!-- Left Section: Image + Title/Address -->
     {#if entity.feature}
       <ResourceTitleBlock
-        image={entity.images?.[0]?.image}
+        image={entity.images?.[0]}
         alt={`Task image for feature ${entity?.feature?.id || 'unknown'}`}
-        onImageClick={entity.images?.[0]?.image ? handleImageClick : undefined}
+        onImageClick={entity.images?.[0] ? handleImageClick : undefined}
         title={getI18n(
           entity.feature as Record<'i18n', any>,
           'title',

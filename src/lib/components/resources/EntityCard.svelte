@@ -19,7 +19,7 @@ import ScrollableText from '$lib/components/common/ScrollableText.svelte'
 import type { Snippet } from 'svelte'
 import type {
   Resource,
-  ImageDB,
+  ImageContextEnvelope,
   Task,
   KeyMap,
   EntityWithOptionalImage,
@@ -90,18 +90,23 @@ const getPropertyValue = (entity: any, keyPath: string, useI18n = true): any => 
 }
 
 const adminCtx = getAdminCtx()
+const cardImageEnvelope = $derived.by(() => {
+  const raw = getNestedValue(entity, keyMap.image) as any
+  if (!raw) return null
+  return raw as ImageContextEnvelope
+})
 const imageSrc = $derived(
-  getNestedValue(entity, keyMap.image)
+  cardImageEnvelope
     ? getURLfromImage({
-        image: getNestedValue(entity, keyMap.image) as ImageDB,
+        image: cardImageEnvelope,
       })
     : getHashiconUrl(entity.id),
 )
 const imageLayout = $derived.by(() => {
-  const cardImage = getNestedValue(entity, keyMap.image) as
-    | (ImageDB & { presentationMode?: 'cover' | 'contain' })
+  const image = cardImageEnvelope?.image as
+    | ({ presentationMode?: 'cover' | 'contain' } & Record<string, unknown>)
     | undefined
-  return cardImage?.presentationMode === 'contain' ? 'contain' : 'cover'
+  return image?.presentationMode === 'contain' ? 'contain' : 'cover'
 })
 
 const href = $derived(

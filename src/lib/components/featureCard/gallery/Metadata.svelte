@@ -7,10 +7,10 @@
 import Attribution from '$lib/components/featureCard/gallery/Attribution.svelte'
 import { intentDisplay } from '$lib/client/services/image'
 // TYPES
-import type { Image, Intent } from '$lib/types'
+import type { ImageCtxEnvelope, Intent } from '$lib/types'
 
 // PROPS
-let { currentImage }: { currentImage: Image } = $props()
+let { currentImage }: { currentImage: ImageCtxEnvelope } = $props()
 
 const intent: Intent = $derived((currentImage?.intent || 'undefined') as Intent)
 </script>

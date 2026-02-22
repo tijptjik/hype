@@ -2,7 +2,7 @@
 import ResourceThumbnail from './ResourceThumbnail.svelte'
 import ResourceTitle from './ResourceTitle.svelte'
 import ResourceDescription from './ResourceDescription.svelte'
-import type { ImageDB, ImageDBBasic } from '$lib/types'
+import type { ImageContextEnvelope, ImageCtxEnvelope } from '$lib/types'
 
 let {
   image,
@@ -13,9 +13,9 @@ let {
   description,
   onDescriptionClick,
 }: {
-  image?: ImageDB | ImageDBBasic | null
+  image?: ImageContextEnvelope | ImageCtxEnvelope | null
   alt?: string
-  onImageClick?: (image: ImageDBBasic) => void
+  onImageClick?: (image: ImageContextEnvelope | ImageCtxEnvelope) => void
   title: string
   onTitleClick?: () => void
   description: string

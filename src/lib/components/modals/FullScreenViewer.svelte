@@ -11,7 +11,7 @@ import Viewer from '../common/Viewer.svelte'
 // ENUMS
 import { FirstClassResource, ImageContextResource } from '$lib/enums'
 // TYPES
-import type { ImageDB, Feature, Organisation, Project, ImageDBBasic } from '$lib/types'
+import type { Feature, Organisation, Project, ImageCtxEnvelope } from '$lib/types'
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { AdminCtx } from '$lib/context/admin.svelte'
 
@@ -21,7 +21,7 @@ let omniCtx = getOmniCtx()
 type Props = {
   appCtx: AppCtx
   adminCtx?: AdminCtx
-  image: ImageDB | ImageDBBasic
+  image: ImageCtxEnvelope
   feature: Feature
   currentIndex?: number
   totalCount?: number

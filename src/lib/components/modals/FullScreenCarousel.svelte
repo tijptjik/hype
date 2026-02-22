@@ -18,7 +18,7 @@ import { Camera } from '@steeze-ui/heroicons'
 // UTILS
 import { PANEL_WIDTH } from '$lib/index'
 // TYPES
-import type { Feature, Image } from '$lib/types'
+import type { Feature, ImageCtxEnvelope } from '$lib/types'
 import type { SwipeCustomEvent, TapCustomEvent } from 'svelte-gestures'
 
 type Props = {
@@ -33,8 +33,8 @@ let imageCtx = getImageCtx()
 let omniCtx = getOmniCtx()
 
 // DERIVED STATES
-let images: Image[] = $derived(imageCtx.getImages())
-let currentImage: Image | null = $derived(imageCtx.activeImage)
+let images: ImageCtxEnvelope[] = $derived(imageCtx.getImages())
+let currentImage: ImageCtxEnvelope | null = $derived(imageCtx.activeImage)
 
 // Calculate available width and position based on panel state
 let availableWidth = $derived.by(() => {
@@ -229,8 +229,8 @@ const { tap: tapAttach, ontap } = useTap(
                   >
                     {#if currentImage}
                       <UserAttributionCard
-                        userId={currentImage.contributorId || ''}
-                        date={currentImage.createdAt || undefined}
+                        userId={currentImage.image.contributorId || ''}
+                        date={currentImage.image.createdAt || undefined}
                         type="imageContributor"
                         bgClass="bg-black/50"
                       />

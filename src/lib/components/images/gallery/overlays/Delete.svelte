@@ -2,12 +2,12 @@
 import { fade } from 'svelte/transition'
 import Icon from '$lib/components/common/Icon.svelte'
 import { Trash } from '@steeze-ui/heroicons'
-import type { Image } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/types'
 // SERVICES
 import { getImageCtx } from '$lib/context/image.svelte'
 
 type Props = {
-  image: Image
+  image: ImageCtxEnvelope
 }
 
 let { image }: Props = $props()

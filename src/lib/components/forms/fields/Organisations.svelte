@@ -10,7 +10,7 @@ import { Trash } from '@steeze-ui/heroicons'
 // SERVICES
 import { getURLfromImage } from '$lib/client/services/image'
 // TYPES
-import type { Organisation, ImageDB } from '$lib/types'
+import type { Organisation, ImageContextEnvelope } from '$lib/types'
 
 // STATE : PROPS
 let {
@@ -137,7 +137,7 @@ $effect(() => {
           {#if organisation.image}
             <img
               src={getURLfromImage({
-                image: organisation.image as ImageDB,
+                image: organisation.image as ImageContextEnvelope,
                 transformation: 'c_fill,h_100,w_100,q_auto'
               })}
               class="h-24 w-24 object-cover"

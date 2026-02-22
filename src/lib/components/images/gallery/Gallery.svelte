@@ -166,7 +166,7 @@ const handleThumbnailClick = (imageId: string, event: MouseEvent) => {
 $effect(() => {
   if (imageCtx.activeImage) {
     const activeImageElement = document.getElementById(
-      `thumbnail-${imageCtx.activeImage.id}`,
+      `thumbnail-${imageCtx.activeImage.image.id}`,
     )
     if (activeImageElement && scrollContainer) {
       // Get container and element positions
@@ -269,27 +269,27 @@ $effect(() => {
     {/each}
 
     <!-- Thumbnails with proper interaction handlers -->
-    {#each imageCtx.getImages() as image, i (image.id)}
+    {#each imageCtx.getImages() as image, i (image.image.id)}
       <div
-        id="thumbnail-{image.id}"
+        id="thumbnail-{image.image.id}"
         animate:flip={{ duration: 300 }}
         in:fade={{ duration: 200, delay: i * 100 }}
         out:fade={{ duration: 200 }}
         class="relative h-[200px] w-[200px] flex-none cursor-pointer"
-        onmouseenter={(e) => handleThumbnailHover(image.id, e)}
-        onclick={(e) => handleThumbnailClick(image.id, e)}
+        onmouseenter={(e) => handleThumbnailHover(image.image.id, e)}
+        onclick={(e) => handleThumbnailClick(image.image.id, e)}
       >
-        {#if imageCtx.isImageBeingReplaced(image.id)}
+        {#if imageCtx.isImageBeingReplaced(image.image.id)}
           <!-- Show upload thumbnail for replacement -->
           <UploadThumbnail
-            fileObject={imageCtx.getReplacementUpload(image.id) as ImageUpload}
+            fileObject={imageCtx.getReplacementUpload(image.image.id) as ImageUpload}
           />
         {:else}
           <Thumbnail
             {image}
             idx={i}
             {actionProps}
-            isHighlighted={imageCtx.isImageHighlighted(image.id)}
+            isHighlighted={imageCtx.isImageHighlighted(image.image.id)}
           />
         {/if}
       </div>

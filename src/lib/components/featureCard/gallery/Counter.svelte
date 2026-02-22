@@ -1,7 +1,10 @@
 <script lang="ts">
-import type { Image } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/types'
 
-let { images, currentImage }: { images: Image[]; currentImage: Image } = $props()
+let {
+  images,
+  currentImage,
+}: { images: ImageCtxEnvelope[]; currentImage: ImageCtxEnvelope } = $props()
 </script>
 
 <!-- Image counter - only show if more than one image -->
@@ -9,7 +12,9 @@ let { images, currentImage }: { images: Image[]; currentImage: Image } = $props(
   <div
     class="absolute bottom-2 right-2 z-10 whitespace-nowrap rounded bg-black/50 px-2 py-1 text-xs text-white"
   >
-    {currentImage ? images.findIndex((img) => img.id === currentImage?.id) + 1 : 0}
+    {currentImage
+      ? images.findIndex((img) => img.image.id === currentImage?.image.id) + 1
+      : 0}
     / {images.length}
   </div>
 {/if}
