@@ -2,37 +2,26 @@
 import { m } from '$lib/i18n'
 // SVELTE
 import { goto, pushState, replaceState } from '$app/navigation'
-import FormInputIcon from 'virtual:icons/lucide/form-input'
-import ImageIcon from 'virtual:icons/lucide/image'
-import MapPinIcon from 'virtual:icons/lucide/map-pin'
-import SlidersHorizontalIcon from 'virtual:icons/lucide/sliders-horizontal'
 // SERVICES
-import { getImageById } from '$lib/client/services/image'
+import { getImageById } from '$lib/api/server/image.remote'
 // LIB
-import { ADMIN_PATH, isMobile } from '$lib/constants'
+import { isMobile } from '$lib/constants'
 // ENUMS
 import {
   FirstClassResource,
   PanelRight,
   PanelLeft,
   ResourcePath,
-  ResourceRefKey,
   PanelSide,
   Panel,
 } from '$lib/enums'
 // TYPES
-import type { AdminCtx } from '$lib/context/admin.svelte'
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { OmniCtx } from '$lib/context/omni.svelte'
 import type {
   Code,
   CollectionNavOptions,
-  FacetType,
   Id,
-  Resource,
-  Organisation,
-  Project,
-  Hub,
   NavigableResource,
   Locale,
   FeatureFromCollection,
@@ -42,103 +31,8 @@ import type {
 } from '$lib/types'
 
 // ═══════════════════════
-// TABLE OF CONTENTS
-// ═══════════════════════
-//
-// 1. CORE NAVIGATION
-//    - isNavigable()
-//    - getUrlForResourceIndex()
-//    - getUrlForResource()
-//    - getResourceRef()
-//    - getResourcePathPart()
-//    - navigate()
-//    - navigateOnAdmin()
-//    - navigateOnAdminById()
-//
-// 2. URL UTILITIES
-//    - reversePath
-//    - getActiveResourceAndRefFromUrl()
-//
-// 3. BREADCRUMBS
-//    - getBreadcrumbs()
-//
-// 4. TASK NAVIGATION
-//    - goToNextTask()
-//
-// 5. PANEL ROUTING
-//    - getLastPanelParam()
-//    - handlePanelParams()
-//    - isValidPanelType()
-//    - updatePanelUrlParams()
-//    - handleStatefulPanelParams()
-//
-// 6. IMAGE PARAMETER MANAGEMENT
-//    - getImageParams()
-//    - handleImageParams()
-//    - addParamToUrl()
-//    - removeParamFromUrl()
-//
-// 7. COLLECTION NAVIGATION
-//    - navigateToContributedFeature()
-//    - navigateToContributedImage()
-//    - navigateToStarred()
-//    - navigateToVisited()
-//    - getFeaturesFromImages()
-//
-// 8. UTILITY FUNCTIONS
-//    - activateLayersForFeatures()
-//    - handleCollectionNavigation()
-//    - handleUrlParamChange()
-//    - initializeCollectionNavigation()
-//
-// 9. ADMIN FACETS
-//    - ADMIN_FACETS
-//    - ADMIN_SUPPORTED_FACETS_BY_RESOURCE
-//    - getAdminFacetSetForResource()
-//    - getSupportedFacetForResource()
-
-// ═══════════════════════
 // 1. CORE NAVIGATION
 // ═══════════════════════
-
-function isNavigable(resource: unknown): resource is NavigableResource {
-  return (
-    Object.values(FirstClassResource).includes(resource) &&
-    resource !== FirstClassResource.property
-  )
-}
-
-export const getUrlForResourceIndex = (resource: FirstClassResource) => {
-  return `${ADMIN_PATH}/${getResourcePathPart(resource)}`
-}
-
-export const getUrlForResource = (
-  adminCtx: AdminCtx,
-  resource: FirstClassResource,
-  id: Id,
-  facet?: string,
-) => {
-  const ref = getResourceRef(adminCtx, resource, id)
-  if (!ref) return null
-  return `${ADMIN_PATH}/${getResourcePathPart(resource)}/${ref}${facet ? `#${facet}` : ''}`
-}
-
-export const getResourceRef = (
-  adminCtx: AdminCtx,
-  resource: FirstClassResource,
-  id: Id,
-) => {
-  if (!resource) return false
-  const refKey = ResourceRefKey[resource as keyof typeof ResourceRefKey]
-  const entity = adminCtx.appCtx.cache[resource].get(id)
-  if (!entity) return false
-  return entity[refKey as keyof Resource]
-}
-
-export const getResourcePathPart = (resource?: FirstClassResource) => {
-  if (!resource) return null
-  return ResourcePath[resource]
-}
 
 /**
  * Navigate to a resource on the user-facing app with flexible parameter handling.
@@ -191,7 +85,9 @@ export const navigate = (
       // Remove existing values for this key first
       currentParams.delete(key)
       // Add all values from the array
-      value.forEach(v => currentParams.append(key, v))
+      value.forEach(v => {
+        currentParams.append(key, v)
+      })
     } else {
       // Single value - set (replaces existing)
       currentParams.set(key, value)
@@ -213,63 +109,6 @@ export const navigate = (
   if (window.location.pathname + window.location.search !== finalUrl) {
     goto(finalUrl)
   }
-}
-
-export const navigateOnAdmin = (
-  adminCtx: AdminCtx,
-  resource: FirstClassResource | false,
-  entityRef?: Id | Code,
-  facet?: FacetType,
-  queryParams?: Record<string, string>,
-) => {
-  let url = `${ADMIN_PATH}`
-  if (resource && isNavigable(resource)) {
-    url += `/${ResourcePath[resource]}`
-    adminCtx.setResourceType(resource)
-  } else {
-    adminCtx.setResourceType(false)
-    if (resource) {
-      console.warn(`Attempted to navigate to a non-navigable resource: ${resource}`)
-      return
-    }
-  }
-
-  if (entityRef) {
-    url += `/${entityRef}`
-    adminCtx.setResourceRef(entityRef)
-  } else {
-    adminCtx.setResourceRef(false)
-  }
-
-  if (queryParams) url += `?${new URLSearchParams(queryParams).toString()}`
-  if (facet) {
-    url += `#${facet}`
-    adminCtx.setFacet(facet)
-  } else {
-    adminCtx.setFacet(false)
-  }
-  goto(url)
-}
-
-export async function navigateOnAdminById(
-  adminCtx: AdminCtx,
-  resourceType: FirstClassResource | false,
-  id: Id,
-  facet?: FacetType,
-  queryParams?: Record<string, string>,
-): Promise<void> {
-  let ref = id
-  if (
-    resourceType == 'organisation' ||
-    resourceType == 'project' ||
-    resourceType == 'hub'
-  ) {
-    const resource = await adminCtx.appCtx.getResourceById(resourceType, id)
-    if (resource) {
-      ref = (resource as Organisation | Project | Hub).code
-    }
-  }
-  navigateOnAdmin(adminCtx, resourceType, ref, facet, queryParams)
 }
 
 // ═══════════════════════
@@ -303,94 +142,6 @@ export const getActiveResourceAndRefFromUrl = (): {
     resourceRef,
     facet: urlObj.hash.slice(1) || false,
   }
-}
-
-// ═══════════════════════
-// 3. BREADCRUMBS
-// ═══════════════════════
-
-/**
- * Generate breadcrumbs for a resource hierarchy using async lookups
- */
-export async function getBreadcrumbs(
-  appCtx: AppCtx,
-  resourceType: FirstClassResource,
-  resourceRef: Id | Code,
-): Promise<{ name: string; href: string }[]> {
-  try {
-    // Get the current resource using the unified lookup
-    const currentResource = await appCtx.getResourceByRef(resourceType, resourceRef)
-    if (!currentResource) {
-      return []
-    }
-
-    // Get the full hierarchy for this resource
-    const hierarchy = await appCtx.getHierarchy(currentResource)
-    const breadcrumbs: { name: string; href: string }[] = []
-
-    // Build breadcrumbs from hierarchy (organization -> project -> layer -> feature)
-    if (hierarchy.organisation && resourceType !== 'organisation') {
-      breadcrumbs.push({
-        name: appCtx.getContextualOrganisationName(hierarchy.organisation, false),
-        href: `${ADMIN_PATH}/${ResourcePath.organisation}/${hierarchy.organisation.code}`,
-      })
-    }
-
-    if (hierarchy.project && resourceType !== 'project') {
-      breadcrumbs.push({
-        name: appCtx.getContextualProjectName(hierarchy.project, false),
-        href: `${ADMIN_PATH}/${ResourcePath.project}/${hierarchy.project.code}`,
-      })
-    }
-
-    if (hierarchy.layer && resourceType !== 'layer') {
-      breadcrumbs.push({
-        name: appCtx.getContextualLayerName(hierarchy.layer, false),
-        href: `${ADMIN_PATH}/${ResourcePath.layer}/${hierarchy.layer.id}`,
-      })
-    }
-
-    if (hierarchy.feature && resourceType !== 'feature') {
-      breadcrumbs.push({
-        name: appCtx.getContextualFeatureName(hierarchy.feature, false),
-        href: `${ADMIN_PATH}/${ResourcePath.feature}/${hierarchy.feature.id}`,
-      })
-    }
-
-    return breadcrumbs
-  } catch (error) {
-    console.error('Failed to generate breadcrumbs:', error)
-    return []
-  }
-}
-
-// ═══════════════════════
-// 4. TASK NAVIGATION
-// ═══════════════════════
-
-/**
- * Navigates to the next task. If the current task is the last task, it will navigate to the previous task. If no tasks are available, it will navigate to the overview.
- */
-export const goToNextTask = (adminCtx: AdminCtx) => {
-  let nextIndex
-  const currentIndex = adminCtx.filteredTasks.findIndex(
-    task => task.id === adminCtx.activeResourceRef,
-  )
-  const taskCount = adminCtx.filteredTasks.length
-
-  if (currentIndex !== -1) {
-    if (currentIndex < taskCount - 1) {
-      nextIndex = currentIndex + 1
-    } else if (currentIndex === taskCount - 1 && taskCount > 1) {
-      nextIndex = currentIndex - 1
-    } else {
-      nextIndex = undefined
-    }
-  }
-  const nextTaskId =
-    nextIndex !== undefined ? adminCtx.filteredTasks[nextIndex].id : undefined
-  adminCtx.invalidateAndRefresh(FirstClassResource.task)
-  navigateOnAdmin(adminCtx, FirstClassResource.task!, nextTaskId)
 }
 
 // ═══════════════════════
@@ -545,7 +296,7 @@ export const updatePanelUrlParams = (
   })
 
   // Update URL and add to browser history for back/forward navigation
-  const newUrl = `${url.pathname}${searchParams.toString() ? '?' + searchParams.toString() : ''}${url.hash}`
+  const newUrl = `${url.pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}${url.hash}`
   window.history.pushState({}, '', newUrl)
 }
 
@@ -632,13 +383,16 @@ export const handleImageParams = async (
   }
 
   try {
-    const targetImage = await getImageById(imageId)
-    if (!targetImage) return null
+    const target = await getImageById({
+      id: imageId,
+      meta: { isAdminRequest: true },
+    })
+    if (!target?.data?.image) return null
 
     return {
       targetImageId: imageId,
       isFullScreen: fullscreen,
-      targetImage,
+      targetImage: target.data.image,
     }
   } catch (error) {
     console.error('Error fetching image for deep link:', error)
@@ -843,9 +597,11 @@ export const getFeaturesFromImages = async (
   appCtx: AppCtx,
   images: Image[],
 ): Promise<(FeatureFromCollection | Feature)[]> => {
-  const featureIds = [...new Set(images.map(img => img.featureId).filter(Boolean))]
+  const featureIds = [
+    ...new Set(images.map(img => img.featureId).filter((f): f is string => !!f)),
+  ]
   const features = await Promise.all(
-    featureIds.map(featureId => appCtx.getFeatureById(featureId!)),
+    featureIds.map(featureId => appCtx.getFeatureById(featureId)),
   )
   return features.filter(Boolean) as (FeatureFromCollection | Feature)[]
 }
@@ -967,84 +723,4 @@ const initializeCollectionNavigation = (
 ): void => {
   omniCtx.initSelection(false)
   activateLayersForFeatures(appCtx, features)
-}
-
-// ═══════════════════════
-// 9. ADMIN FACETS
-// ═══════════════════════
-
-export const ADMIN_FACETS = {
-  core: 'core',
-  address: 'address',
-  images: 'images',
-  fields: 'fields',
-} as const satisfies Record<FacetType, FacetType>
-
-export const ADMIN_FACET_DEFINITIONS = {
-  [ADMIN_FACETS.core]: {
-    label: () => m.resources__profile(),
-    icon: FormInputIcon,
-  },
-  [ADMIN_FACETS.address]: {
-    label: () => m.feature__address(),
-    icon: MapPinIcon,
-  },
-  [ADMIN_FACETS.images]: {
-    label: () => m.organisation__images(),
-    icon: ImageIcon,
-  },
-  [ADMIN_FACETS.fields]: {
-    label: () => m.project__fields(),
-    icon: SlidersHorizontalIcon,
-  },
-} as const satisfies Record<FacetType, { label: () => string; icon: unknown }>
-
-export const ADMIN_FACET_LABEL_OVERRIDES_BY_RESOURCE: Partial<
-  Record<FirstClassResource, Partial<Record<FacetType, () => string>>>
-> = {
-  feature: {
-    images: () => m.feature__images(),
-  },
-}
-
-export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
-  Record<FirstClassResource, readonly FacetType[]>
-> = {
-  hub: [ADMIN_FACETS.core],
-  organisation: [ADMIN_FACETS.core, ADMIN_FACETS.images],
-  project: [ADMIN_FACETS.core, ADMIN_FACETS.fields, ADMIN_FACETS.images],
-  layer: [ADMIN_FACETS.core],
-  feature: [ADMIN_FACETS.core, ADMIN_FACETS.address, ADMIN_FACETS.images],
-  task: [ADMIN_FACETS.core],
-}
-
-export const getAdminFacetSetForResource = (
-  resourceType: FirstClassResource,
-): readonly FacetType[] =>
-  ADMIN_SUPPORTED_FACETS_BY_RESOURCE[resourceType] ?? [ADMIN_FACETS.core]
-
-export const getSupportedFacetForResource = (
-  resourceType: FirstClassResource,
-  facet: FacetType | false | undefined,
-): FacetType | undefined => {
-  if (!facet) return undefined
-  return getAdminFacetSetForResource(resourceType).includes(facet) ? facet : undefined
-}
-
-export const getAdminFacetTabsForResource = (
-  resourceType: FirstClassResource,
-  options: { coreOnly?: boolean } = {},
-): Map<FacetType, { label: string; icon: unknown }> => {
-  const supported = getAdminFacetSetForResource(resourceType).filter(
-    facet => !options.coreOnly || facet === ADMIN_FACETS.core,
-  )
-  const labelOverrides = ADMIN_FACET_LABEL_OVERRIDES_BY_RESOURCE[resourceType] ?? {}
-
-  return new Map(
-    supported.map(facet => {
-      const definition = ADMIN_FACET_DEFINITIONS[facet]
-      const labelResolver = labelOverrides[facet] ?? definition.label
-      return [facet, { label: labelResolver(), icon: definition.icon }] as const
-    }),
-  )
 }

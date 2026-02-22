@@ -10,6 +10,8 @@ import { transformI18nSafely } from '$lib/db'
 import { HubAPI, HubCollectionAPI } from '$lib/db/zod/schema/hub'
 import { superValidate } from 'sveltekit-superforms'
 import { zod } from 'sveltekit-superforms/adapters'
+import { toImageEnvelope } from '$lib/db/services/image'
+import { ImageContextResource } from '$lib/enums'
 // TYPES
 import type { SQL } from 'drizzle-orm'
 import type {
@@ -149,8 +151,14 @@ export const toFormShape = async (hub: HubDBRaw): Promise<SuperValidated<Hub>> =
         return {
           ...organisation,
           i18n: transformI18nSafely(organisation.i18n),
-          // Image is already a full object from the relation, no transformation needed
-          image: organisation.image || null,
+          image: organisation.image
+            ? toImageEnvelope(
+                organisation.image as any,
+                'list',
+                ImageContextResource.organisation,
+                organisation.id,
+              )
+            : null,
         }
       }) || null,
   }
@@ -174,8 +182,14 @@ export const toResponseShape = async (hub: HubDBRaw, isCollection: boolean = fal
         return {
           ...organisation,
           i18n: transformI18nSafely(organisation.i18n),
-          // Image is already a full object from the relation, no transformation needed
-          image: organisation.image || null,
+          image: organisation.image
+            ? toImageEnvelope(
+                organisation.image as any,
+                'list',
+                ImageContextResource.organisation,
+                organisation.id,
+              )
+            : null,
         }
       }) || null,
   }
