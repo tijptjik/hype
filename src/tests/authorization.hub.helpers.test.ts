@@ -24,6 +24,25 @@ const scopedAdminRole = (): UserRoleDisco =>
   }) as unknown as UserRoleDisco
 
 describe('resolveHubActionPermissions', () => {
+  it('denies all actions for unauthenticated actors', () => {
+    const actor: HubAuthActor = {
+      userRoles: [coreAdminRole()],
+      isAuthenticated: false,
+    }
+
+    const decision = resolveHubActionPermissions(actor, {
+      resourceId: 'hub-core',
+      resourceHubId: 'hub-core',
+    })
+
+    expect(decision).toEqual({
+      canCreate: false,
+      canEdit: false,
+      canPublish: false,
+      canDelete: false,
+    })
+  })
+
   it('returns denied when target is missing resource id or hub is undefined', () => {
     const actor: HubAuthActor = {
       userId: 'u-1',
