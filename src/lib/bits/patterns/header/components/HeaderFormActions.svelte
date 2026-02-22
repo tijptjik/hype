@@ -133,15 +133,17 @@ function handlePrimaryAction(): void {
       />
     {/if}
 
-    <Button
-      text={m.forms__save()}
-      color="success"
-      style="ghost"
-      icon={saveIcon}
-      {hideLabel}
-      disabled={!isTainted || isInFlight || hasIssues}
-      onClick={() => onSave?.()}
-    />
+    {#if canEdit}
+      <Button
+        text={m.forms__save()}
+        color="success"
+        style="ghost"
+        icon={saveIcon}
+        {hideLabel}
+        disabled={!isTainted || isInFlight || hasIssues}
+        onClick={() => onSave?.()}
+      />
+    {/if}
 
     {#if canEdit}
       <Button
