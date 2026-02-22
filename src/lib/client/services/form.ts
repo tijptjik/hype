@@ -70,7 +70,7 @@ const navigateToSubmittedCode = ({
 }): void => {
   const submittedCode = toSubmittedCode(data)
   if (!submittedCode) return
-  void import('$lib/navigation').then(({ navigateOnAdmin }) => {
+  void import('$lib/navigation/admin').then(({ navigateOnAdmin }) => {
     navigateOnAdmin(
       adminCtx,
       resourceType,
