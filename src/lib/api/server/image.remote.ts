@@ -52,6 +52,7 @@ import {
   CloudinarySignatureSchema,
   DeleteImageSchema,
   ImageByIdSchema,
+  ImageInsertWithHubAPI,
   ImageInsertWithFeatureAPI,
   ImageInsertWithProjectOrOrganisationAPI,
   ImagesByContextSchema,
@@ -442,6 +443,29 @@ export const createImage = guardedCommand(async (input, ctx) => {
         validatedData.ctxId,
       )
     }
+
+    const responseData = await toResponseShapeProjectOrOrganisation(
+      createdImage,
+      userWithAttribution?.attribution ?? undefined,
+    )
+    return {
+      data: toImageEnvelope(
+        responseData,
+        'detail',
+        validatedData.ctxType as ImageContextType,
+        validatedData.ctxId,
+      ),
+    }
+  }
+
+  if (imageData.ctxType === ImageContextResource.hub) {
+    const validatedData = ImageInsertWithHubAPI.parse(imageData)
+    const createdImage = await createImageRecord(db, validatedData)
+
+    await db
+      .update(hub)
+      .set({ imageId: createdImage.id })
+      .where(eq(hub.id, validatedData.ctxId))
 
     const responseData = await toResponseShapeProjectOrOrganisation(
       createdImage,
