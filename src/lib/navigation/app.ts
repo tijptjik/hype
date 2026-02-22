@@ -483,7 +483,7 @@ export const navigateToContributedImage = async (
   imageId: string,
   projectName: string,
   username: string,
-  loadedImages: Map<string, Image>,
+  loadedImages: Map<string, Pick<Image, 'featureId'>>,
   projectImageIds: Record<Id, Id[]>,
 ) => {
   if (!username) return
@@ -493,7 +493,9 @@ export const navigateToContributedImage = async (
   // Get features from images
   const features = await getFeaturesFromImages(
     appCtx,
-    imageIds.map(id => loadedImages.get(id)).filter(Boolean) as Image[],
+    imageIds
+      .map(id => loadedImages.get(id))
+      .filter((loadedImage): loadedImage is Pick<Image, 'featureId'> => !!loadedImage),
   )
 
   initializeCollectionNavigation(omniCtx, appCtx, features)
@@ -595,7 +597,7 @@ export const navigateToVisited = async (
 
 export const getFeaturesFromImages = async (
   appCtx: AppCtx,
-  images: Image[],
+  images: Array<Pick<Image, 'featureId'>>,
 ): Promise<(FeatureFromCollection | Feature)[]> => {
   const featureIds = [
     ...new Set(images.map(img => img.featureId).filter((f): f is string => !!f)),

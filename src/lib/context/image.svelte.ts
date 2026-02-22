@@ -6,14 +6,16 @@ import { toast } from 'svelte-sonner'
 import { m } from '$lib/i18n'
 // SERVICES
 import {
-  getImages,
   uploadAndProcessImage,
-  updateImageIntent,
-  updateImageIsPublished,
-  deleteImage,
   getURLfromImage,
   sortImages,
 } from '$lib/client/services/image'
+import {
+  deleteImage as deleteImageRemote,
+  getImagesForContext,
+  setImageIntent,
+  setImagePublished,
+} from '$lib/api/server/image.remote'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
@@ -22,6 +24,7 @@ import { FirstClassResource } from '$lib/enums'
 import type { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
 import type {
   Image,
+  ImageCtxEnvelope,
   Intent,
   ImageUpload,
   LoadStatus,
@@ -35,6 +38,7 @@ import type {
   ImageContextConfig,
   Feature,
   ImageDBBasic,
+  ImageContextEnvelope,
 } from '$lib/types'
 import { addParamToUrl } from '$lib/navigation'
 
@@ -235,10 +239,34 @@ export class ImageCtx {
     }, 100)
   }
 
+  private isEnvelope(value: unknown): value is ImageCtxEnvelope {
+    return Boolean(
+      value &&
+        typeof value === 'object' &&
+        'image' in value &&
+        'ctxType' in value &&
+        'ctxId' in value,
+    )
+  }
+
+  private toEnvelope(value: ImageCtxEnvelope | Image | ImageDBBasic): ImageCtxEnvelope {
+    if (this.isEnvelope(value)) return value
+    const ctxType = this.state.context?.ctxType ?? ('feature' as ImageContextResource)
+    const ctxId = this.state.context?.ctxId ?? ''
+    return {
+      ctxType,
+      ctxId,
+      image: value as Image,
+      intent: (value as unknown as ImageContextEnvelope).intent ?? null,
+      isPublished: (value as unknown as ImageContextEnvelope).isPublished ?? null,
+      publishedAt: (value as unknown as ImageContextEnvelope).publishedAt ?? null,
+    }
+  }
+
   async setContext(options: {
     context?: ImageContextConfig | null
-    image?: Image | ImageDBBasic | null | undefined
-    images?: Image[] | ImageDBBasic[] | null
+    image?: ImageCtxEnvelope | null | undefined
+    images?: ImageCtxEnvelope[] | null
     highlightedIds?: Id[]
   }) {
     const optionsWithDefaults = {
@@ -282,15 +310,15 @@ export class ImageCtx {
 
     // CASE 1 : Images preloaded
     if (images && images.length > 0) {
-      // Use pre-loaded images array
-      const validImages = images.filter((img): img is Image => img != null)
-      await this.setImages(validImages as Image[])
+      const validImages = images
+        .filter((img): img is ImageCtxEnvelope => img != null)
+        .map(img => this.toEnvelope(img))
+      await this.setImages(validImages)
       // Set active image when we have preloaded images
       this.setActiveImageToTargetOrFirst()
       // CASE 2 : Images not preloaded except for the leading image
     } else if (image) {
-      // Single image provided -- set the image as a provisional images set.
-      await this.setImages([image as Image])
+      await this.setImages([this.toEnvelope(image)])
       this.setActiveImageToTargetOrFirst()
       await this.refreshImages()
       // CASE 3 : Initial Context - we will have an async image set
@@ -321,9 +349,9 @@ export class ImageCtx {
     rejected: [] as File[],
 
     // CRUD :: READ
-    images: new SvelteMap<Id, Image>(),
-    activeImage: null as Image | null,
-    targetImage: null as Image | null, // Image we're transitioning to
+    images: new SvelteMap<Id, ImageCtxEnvelope>(),
+    activeImage: null as ImageCtxEnvelope | null,
+    targetImage: null as ImageCtxEnvelope | null, // Image we're transitioning to
     targetImageId: null as Id | null, // Use if we don't have the targetImage, so still need to fetch it.
     isTransitioning: false, // Whether we're smoothly transitioning between images
     activePreview: null as ImageUpload | null,
@@ -367,7 +395,7 @@ export class ImageCtx {
     // PRIORITY 1: Check if active image is currently being replaced (uploading)
     if (
       this.state.activeImage &&
-      this.isReplacementStatus(this.state.activeImage.id, 'uploading')
+      this.isReplacementStatus(this.state.activeImage.image.id, 'uploading')
     ) {
       return 'previewReplacement'
     }
@@ -375,8 +403,8 @@ export class ImageCtx {
     // PRIORITY 2: Check if active image is being replaced with uploaded content
     if (
       this.state.activeImage &&
-      this.isReplacementStatus(this.state.activeImage.id, 'uploaded') &&
-      this.getLoadStatus(this.state.activeImage.id) !== 'loaded'
+      this.isReplacementStatus(this.state.activeImage.image.id, 'uploaded') &&
+      this.getLoadStatus(this.state.activeImage.image.id) !== 'loaded'
     ) {
       return 'transition'
     }
@@ -388,7 +416,7 @@ export class ImageCtx {
 
     // PRIORITY 4: Check load status of active image
     if (this.state.activeImage) {
-      const loadStatus = this.getLoadStatus(this.state.activeImage.id)
+      const loadStatus = this.getLoadStatus(this.state.activeImage.image.id)
       if (loadStatus === 'loading') {
         return 'loading'
       } else if (loadStatus === 'error') {
@@ -435,7 +463,7 @@ export class ImageCtx {
   // 3.3 STATE MANAGEMENT :: UPLOAD
   // ═══════════════════════
 
-  getUploadCtx(imageToReplace?: Image): ImageUploadCtx {
+  getUploadCtx(imageToReplace?: ImageCtxEnvelope): ImageUploadCtx {
     if (!this.state.context?.ctxType || !this.state.context?.ctxId) {
       throw new Error('No context available for upload')
     }
@@ -463,7 +491,7 @@ export class ImageCtx {
     this.resetActivePreview()
   }
 
-  addToUploadQueue(files: File[], imageToReplace?: Image) {
+  addToUploadQueue(files: File[], imageToReplace?: ImageCtxEnvelope) {
     const newUploads = files.map(
       file =>
         ({
@@ -479,9 +507,17 @@ export class ImageCtx {
 
     // Update preview URLs for replacing images
     files.forEach(file => {
-      if (imageToReplace && this.state.images.has(imageToReplace.id)) {
-        const existingImage = this.state.images.get(imageToReplace.id)! as any
-        existingImage.preview = URL.createObjectURL(file)
+      if (imageToReplace && this.state.images.has(imageToReplace.image.id)) {
+        const existingImage = this.state.images.get(imageToReplace.image.id)
+        if (existingImage) {
+          this.state.images.set(existingImage.image.id, {
+            ...existingImage,
+            image: {
+              ...existingImage.image,
+              preview: URL.createObjectURL(file),
+            },
+          })
+        }
       }
     })
 
@@ -523,42 +559,51 @@ export class ImageCtx {
   /**
    * Converts staged files to temporary Image objects with preview URLs
    */
-  private createStagedImagesFromFiles(files: File[]): Image[] {
+  private createStagedImagesFromFiles(files: File[]): ImageCtxEnvelope[] {
+    const ctxType = this.state.context?.ctxType ?? ('feature' as ImageContextResource)
+    const ctxId = this.state.context?.ctxId ?? ''
     return files.map((file, index) => {
       const tempId = `staged-${Date.now()}-${index}`
       const preview = URL.createObjectURL(file)
 
       return {
-        id: tempId,
-        isArchived: false,
-        createdAt: new Date().toISOString(),
-        contributorId: null,
-        cdn: 'preview',
-        env: 'staging',
-        cdnId: null,
-        publicId: tempId,
-        version: null,
-        originalFilename: file.name,
-        originalExtension: file.name.split('.').pop() || '',
-        format: file.type.split('/')[1] || 'jpg',
-        width: null,
-        height: null,
-        originalWidth: null,
-        originalHeight: null,
-        bytes: file.size,
-        cameraModel: null,
-        createdBy: null,
-        capturedAt: null,
-        latitude: null,
-        longitude: null,
-        credit: null,
-        modifiedAt: new Date().toISOString(),
-        isPublished: false,
+        ctxType,
+        ctxId,
         intent: 'general',
-        updatedAt: new Date().toISOString(),
-        preview,
-        file, // Store the file for later upload
-      } as Image & { preview: string; file: File }
+        isPublished: false,
+        publishedAt: null,
+        image: {
+          id: tempId,
+          isArchived: false,
+          localIsArchived: null,
+          presentationMode: 'contain',
+          createdAt: new Date().toISOString(),
+          contributorId: null,
+          cdn: 'preview',
+          env: 'staging',
+          cdnId: null,
+          publicId: tempId,
+          version: null,
+          originalFilename: file.name,
+          originalExtension: file.name.split('.').pop() || '',
+          format: file.type.split('/')[1] || 'jpg',
+          width: null,
+          height: null,
+          originalWidth: null,
+          originalHeight: null,
+          bytes: file.size,
+          cameraModel: null,
+          createdBy: null,
+          capturedAt: null,
+          latitude: null,
+          longitude: null,
+          credit: null,
+          modifiedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          preview,
+          file,
+        } as Image & { preview: string; file: File },
+      }
     })
   }
 
@@ -603,7 +648,7 @@ export class ImageCtx {
   async uploadStagedImages(
     config: { onSuccess?: (savedImage: Image) => void; onError?: () => void } = {},
   ) {
-    const stagedImages = this.getImages().filter(img => (img as any).cdn === 'preview')
+    const stagedImages = this.getImages().filter(img => img.image.cdn === 'preview')
 
     if (stagedImages.length === 0) {
       return
@@ -611,12 +656,12 @@ export class ImageCtx {
 
     // Convert staged images to uploads
     const uploads = stagedImages.map(img => {
-      const file = (img as any).file
+      const file = (img.image as any).file
       return {
         file,
         status: 'uploading',
         retries: 0,
-        preview: (img as any).preview,
+        preview: (img.image as any).preview,
       } as ImageUpload
     })
 
@@ -667,16 +712,16 @@ export class ImageCtx {
     // Mark as being processed to prevent race conditions
     this.addToPendingConfirmation(imageId)
 
-    const imageIndex = this.getImages().findIndex(img => img.id === imageId)
+    const imageIndex = this.getImages().findIndex(img => img.image.id === imageId)
     const indexSize = this.getImages().length
 
     // Clean up the preview URL immediately
-    if ((image as any).preview) {
-      URL.revokeObjectURL((image as any).preview)
+    if ((image.image as any).preview) {
+      URL.revokeObjectURL((image.image as any).preview)
     }
 
     // Store file name for staging queue cleanup before removing from images
-    const fileName = (image as any).file?.name
+    const fileName = (image.image as any).file?.name
 
     // Remove from both data structures immediately to keep them in sync
     this.removeImage(imageId)
@@ -699,7 +744,7 @@ export class ImageCtx {
     }
 
     // If this was the active image, set a new active image
-    if (this.state.activeImage?.id === imageId) {
+    if (this.state.activeImage?.image.id === imageId) {
       this.setActiveImageToFirst()
     }
 
@@ -759,19 +804,17 @@ export class ImageCtx {
   // 3.6 STATE MANAGEMENT :: IMAGES
   // ═══════════════════════
 
-  getImage(imageId: Id): Image | undefined {
+  getImage(imageId: Id): ImageCtxEnvelope | undefined {
     return this.state.images.get(imageId)
   }
 
-  getImages(): Image[] {
+  getImages(): ImageCtxEnvelope[] {
     return Array.from(this.state.images.values())
   }
 
-  async setImages(images: (Image & { preview?: string })[]) {
-    // Filter out null/undefined images and sort
+  async setImages(images: ImageCtxEnvelope[]) {
     const validImages = images.filter(
-      (image): image is Image & { preview?: string } =>
-        image != null && image.id != null,
+      (image): image is ImageCtxEnvelope => image != null && image.image.id != null,
     )
 
     if (validImages.length === 0) {
@@ -780,17 +823,23 @@ export class ImageCtx {
     }
 
     // Only sort API images, preserve order for staged images
-    const stagedImages = validImages.filter(img => (img as any).cdn === 'preview')
-    const apiImages = validImages.filter(img => (img as any).cdn !== 'preview')
+    const stagedImages = validImages.filter(img => img.image.cdn === 'preview')
+    const apiImages = validImages.filter(img => img.image.cdn !== 'preview')
 
-    // Sort API images but keep staged images in selection order
-    const sortedApiImages =
-      apiImages.length > 0 ? sortImages(apiImages, this.isAdminMode) : []
+    const sortableApiImages = apiImages.map(item => ({
+      ...item.image,
+      intent: item.intent ?? undefined,
+      isPublished: item.isPublished ?? undefined,
+      publishedAt: item.publishedAt ?? undefined,
+    }))
+    const sortedApiImages = sortImages(sortableApiImages, this.isAdminMode)
+      .map(sorted => apiImages.find(item => item.image.id === sorted.id))
+      .filter((item): item is ImageCtxEnvelope => Boolean(item))
     const finalImages = [...sortedApiImages, ...stagedImages]
 
-    const newImages = new SvelteMap<Id, Image>()
+    const newImages = new SvelteMap<Id, ImageCtxEnvelope>()
     finalImages.forEach(image => {
-      newImages.set(image.id, image as Image)
+      newImages.set(image.image.id, image)
     })
     this.state.images = newImages
 
@@ -810,17 +859,19 @@ export class ImageCtx {
     this.state.images.delete(imageId)
   }
 
-  setForImage(imageId: Id, key: keyof Image, value: any) {
+  setForImage(imageId: Id, key: string, value: unknown) {
     const image = this.getImage(imageId)
     if (!image) return
 
-    // Create a new object to trigger reactivity
-    const updatedImage = { ...image, [key]: value }
-    this.state.images.set(imageId, updatedImage as Image)
+    const updatedImage: ImageCtxEnvelope =
+      key === 'intent' || key === 'isPublished' || key === 'publishedAt'
+        ? ({ ...image, [key]: value } as ImageCtxEnvelope)
+        : ({ ...image, image: { ...image.image, [key]: value } } as ImageCtxEnvelope)
+    this.state.images.set(imageId, updatedImage)
 
     // Also update activeImage if it's the same image
-    if (this.state.activeImage?.id === imageId) {
-      this.state.activeImage = updatedImage as Image
+    if (this.state.activeImage?.image.id === imageId) {
+      this.state.activeImage = updatedImage
     }
   }
 
@@ -842,7 +893,7 @@ export class ImageCtx {
     // to prevent preview from disappearing before final image is ready to display
     if (status === 'loaded') {
       const replacementUpload = this.state.uploadQueue.find(
-        upload => upload.imageToReplace?.id === imageId,
+        upload => upload.imageToReplace?.image.id === imageId,
       )
 
       const freshUpload = this.state.uploadQueue.find(
@@ -859,7 +910,7 @@ export class ImageCtx {
           this.state.uploadQueue = this.state.uploadQueue
             .map(upload => {
               if (
-                upload.imageToReplace?.id === imageId &&
+                upload.imageToReplace?.image.id === imageId &&
                 upload.status === 'uploaded'
               ) {
                 URL.revokeObjectURL(upload.preview ?? '')
@@ -971,13 +1022,17 @@ export class ImageCtx {
   // 3.11 STATE MANAGEMENT :: ACTIVE IMAGE
   // ═══════════════════════
 
-  get activeImage(): Image | null {
+  get activeImage(): ImageCtxEnvelope | null {
     return this.state.activeImage
   }
 
-  setActiveImage(image: Image | null, isLoading: boolean = false) {
+  setActiveImage(image: ImageCtxEnvelope | null, isLoading: boolean = false) {
     // Prevent redundant calls - if we're trying to set the same image that's already active
-    if (image && this.state.activeImage && image.id === this.state.activeImage.id) {
+    if (
+      image &&
+      this.state.activeImage &&
+      image.image.id === this.state.activeImage.image.id
+    ) {
       return
     }
 
@@ -990,7 +1045,7 @@ export class ImageCtx {
     this.state.activeImage = image
 
     if (image && isLoading) {
-      this.setLoadStatus(image.id, 'loading')
+      this.setLoadStatus(image.image.id, 'loading')
     }
 
     // If lastChangeType is null, it means this is likely a context change
@@ -1003,7 +1058,7 @@ export class ImageCtx {
     this.state.activeImage = null
   }
 
-  get targetImage(): Image | null {
+  get targetImage(): ImageCtxEnvelope | null {
     return this.state.targetImage
   }
 
@@ -1012,7 +1067,7 @@ export class ImageCtx {
   }
 
   // Smooth transition methods
-  setTargetImage(image: Image | null) {
+  setTargetImage(image: ImageCtxEnvelope | null) {
     this.state.targetImage = image
   }
 
@@ -1030,14 +1085,14 @@ export class ImageCtx {
   }
 
   // Preload an image without switching to it
-  async preloadImageForTransition(targetImage: Image): Promise<boolean> {
+  async preloadImageForTransition(targetImage: ImageCtxEnvelope): Promise<boolean> {
     // If the image is already loaded, return immediately
-    if (this.getLoadStatus(targetImage.id) === 'loaded') {
+    if (this.getLoadStatus(targetImage.image.id) === 'loaded') {
       return true
     }
 
     // Set loading status
-    this.setLoadStatus(targetImage.id, 'loading')
+    this.setLoadStatus(targetImage.image.id, 'loading')
 
     try {
       // Actually preload the image using the browser's Image API
@@ -1045,20 +1100,20 @@ export class ImageCtx {
       await this.preloadImage(imageUrl)
 
       // Mark as loaded
-      this.setLoadStatus(targetImage.id, 'loaded')
+      this.setLoadStatus(targetImage.image.id, 'loaded')
       this.state.preloadedImages.add(imageUrl)
 
       return true
     } catch (error) {
-      this.setLoadStatus(targetImage.id, 'error')
+      this.setLoadStatus(targetImage.image.id, 'error')
       return false
     }
   }
 
   // Smoothly switch to a new image (preload then switch)
-  async switchToImageSmooth(targetImage: Image) {
+  async switchToImageSmooth(targetImage: ImageCtxEnvelope) {
     // If we're already transitioning to this image, do nothing
-    if (this.state.targetImage?.id === targetImage.id) {
+    if (this.state.targetImage?.image.id === targetImage.image.id) {
       return
     }
 
@@ -1078,9 +1133,12 @@ export class ImageCtx {
   setActiveImageToFirst() {
     const images = this.getImages()
     if (images.length > 0) {
-      const firstImage = images[0] as Image
+      const firstImage = images[0] as ImageCtxEnvelope
       // Only set if it's different from the current active image
-      if (!this.state.activeImage || this.state.activeImage.id !== firstImage.id) {
+      if (
+        !this.state.activeImage ||
+        this.state.activeImage.image.id !== firstImage.image.id
+      ) {
         this.setActiveImage(firstImage, true)
       }
     } else {
@@ -1099,22 +1157,24 @@ export class ImageCtx {
     }
   }
 
-  setForActiveImage(key: keyof Image, value: any) {
+  setForActiveImage(key: string, value: unknown) {
     if (!this.state.activeImage) return
-    this.setForImage(this.state.activeImage.id, key, value)
+    this.setForImage(this.state.activeImage.image.id, key, value)
   }
 
-  toggleForActiveImage(key: keyof Image) {
+  toggleForActiveImage(key: string) {
     if (!this.state.activeImage) return
     this.setForImage(
-      this.state.activeImage.id,
+      this.state.activeImage.image.id,
       key,
       !(this.state.activeImage as any)[key],
     )
   }
 
   getReplacementUpload(imageId: Id): ImageUpload | undefined {
-    return this.state.uploadQueue.find(upload => upload.imageToReplace?.id === imageId)
+    return this.state.uploadQueue.find(
+      upload => upload.imageToReplace?.image.id === imageId,
+    )
   }
 
   isImageHighlighted(imageId: Id): boolean {
@@ -1122,11 +1182,13 @@ export class ImageCtx {
   }
 
   getImageIsPublished(imageId: Id): boolean {
-    return (this.getImage(imageId) as Image)?.isPublished ?? false
+    return this.getImage(imageId)?.isPublished ?? false
   }
 
   isImageBeingReplaced(imageId: Id): boolean {
-    return this.state.uploadQueue.some(upload => upload.imageToReplace?.id === imageId)
+    return this.state.uploadQueue.some(
+      upload => upload.imageToReplace?.image.id === imageId,
+    )
   }
 
   // ═══════════════════════
@@ -1178,7 +1240,7 @@ export class ImageCtx {
     ctxType: ImageContextResource | ImageContextResourceExtended,
     ctxId: Id,
     includeSingleImage = true,
-  ): Promise<Image[]> {
+  ): Promise<ImageCtxEnvelope[]> {
     // Try to get images from AppCtx cache first
     if (ctxType === 'feature') {
       const feature = this.appCtx.cache.feature.get(ctxId) as Feature | undefined
@@ -1186,7 +1248,7 @@ export class ImageCtx {
       if (feature) {
         // If we have feature.images array, use it
         if (feature.images && feature.images.length > 0) {
-          return feature.images as Image[]
+          return feature.images
         }
 
         // If feature.images is undefined/null, this is likely a FeatureFromCollection
@@ -1197,7 +1259,7 @@ export class ImageCtx {
 
         // If we have feature.image but empty images array, use the single image
         if (feature.image && includeSingleImage) {
-          return [feature.image as Image]
+          return [feature.image]
         }
       }
     }
@@ -1211,8 +1273,17 @@ export class ImageCtx {
     ctxType: ImageContextResource | ImageContextResourceExtended,
     ctxId: Id,
     _includeSingleImage = true,
-  ): Promise<Image[]> {
-    return await getImages(ctxType, ctxId)
+  ): Promise<ImageCtxEnvelope[]> {
+    const result = await getImagesForContext({
+      ctxType,
+      ctxId,
+      meta: { isAdminRequest: true },
+    })
+
+    return (result?.data ?? []).map(item => ({
+      ...item,
+      image: item.image as Image,
+    })) as ImageCtxEnvelope[]
   }
 
   async refreshImages(targetImageId?: Id) {
@@ -1236,9 +1307,9 @@ export class ImageCtx {
 
     // Filter out null/undefined images before processing
     const validImages = images.filter(
-      (image): image is Image => image != null && image.id != null,
+      (image): image is ImageCtxEnvelope => image != null && image.image.id != null,
     )
-    const imageIds = validImages.map((image: Image) => image.id)
+    const imageIds = validImages.map((image: ImageCtxEnvelope) => image.image.id)
 
     // Get the images for the secondary resource
     if (this.state.context.ctxTypeSecondary) {
@@ -1252,13 +1323,13 @@ export class ImageCtx {
 
       // Filter out null/undefined extended images too
       const validExtendedImages = extendedImages.filter(
-        (image): image is Image => image != null && image.id != null,
+        (image): image is ImageCtxEnvelope => image != null && image.image.id != null,
       )
 
       // Typically there will be an overlap of images between the primary and secondary resources, so we only add the images that are not already in the primary resource,
       // A scenario where this is not true is when the secondary resource is a task and the images have been rejected (i.e. deleted from the primary resource). We would still want to show the rejected images in the task viewer. To give context for the decision.
-      validExtendedImages.forEach((image: Image) => {
-        if (!imageIds.includes(image.id)) {
+      validExtendedImages.forEach((image: ImageCtxEnvelope) => {
+        if (!imageIds.includes(image.image.id)) {
           validImages.push(image)
         }
       })
@@ -1283,10 +1354,10 @@ export class ImageCtx {
     // This prevents premature transitions before images are actually ready
 
     // Set appropriate loading status based on mode
-    validImages.forEach((image: Image) => {
-      const currentThumbnailStatus = this.getThumbnailLoadStatus(image.id)
+    validImages.forEach((image: ImageCtxEnvelope) => {
+      const currentThumbnailStatus = this.getThumbnailLoadStatus(image.image.id)
       if (currentThumbnailStatus !== 'loaded') {
-        this.setThumbnailLoadStatus(image.id, 'loading')
+        this.setThumbnailLoadStatus(image.image.id, 'loading')
       }
     })
 
@@ -1329,7 +1400,7 @@ export class ImageCtx {
       if (images && images.length > 0) {
         // Filter out null/undefined images
         const validImages = images.filter(
-          (img): img is Image => img != null && img.id != null,
+          (img): img is ImageCtxEnvelope => img != null && img.image.id != null,
         )
 
         if (validImages.length > 0) {
@@ -1376,7 +1447,9 @@ export class ImageCtx {
     const currentActiveImage = this.state.activeImage
     if (!currentActiveImage) return
 
-    const currentIndex = images.findIndex(img => img.id === currentActiveImage.id)
+    const currentIndex = images.findIndex(
+      img => img.image.id === currentActiveImage.image.id,
+    )
 
     // If the current active image is not in the images array, fall-back to the first image
     if (currentIndex === -1) {
@@ -1384,7 +1457,7 @@ export class ImageCtx {
       if (firstImage) {
         // Only add to URL if not a staged image
         if (!this.isImageStaged(firstImage)) {
-          addParamToUrl('imageId', firstImage.id, {}, true)
+          addParamToUrl('imageId', firstImage.image.id, {}, true)
         } else {
           // Only set active image for stages images as they don't have valid Ids
           this.setActiveImage(firstImage)
@@ -1401,7 +1474,7 @@ export class ImageCtx {
       this.state.lastChangeType = 'index'
       // Only add to URL if not a staged image
       if (!this.isImageStaged(newImage)) {
-        addParamToUrl('imageId', newImage.id, {}, true)
+        addParamToUrl('imageId', newImage.image.id, {}, true)
       } else {
         // Only set active image for stages images as they don't have valid Ids
         this.setActiveImage(newImage)
@@ -1417,7 +1490,9 @@ export class ImageCtx {
     const currentActiveImage = this.state.activeImage
     if (!currentActiveImage) return
 
-    const currentIndex = images.findIndex(img => img.id === currentActiveImage.id)
+    const currentIndex = images.findIndex(
+      img => img.image.id === currentActiveImage.image.id,
+    )
 
     // If the current active image is not in the images array, fall-back to the first image
     if (currentIndex === -1) {
@@ -1425,7 +1500,7 @@ export class ImageCtx {
       if (firstImage) {
         // Only add to URL if not a staged image
         if (!this.isImageStaged(firstImage)) {
-          addParamToUrl('imageId', firstImage.id, {}, true)
+          addParamToUrl('imageId', firstImage.image.id, {}, true)
         } else {
           // Only set active image for stages images as they don't have valid Ids
           this.setActiveImage(firstImage)
@@ -1442,7 +1517,7 @@ export class ImageCtx {
       this.state.lastChangeType = 'index'
       // Only add to URL if not a staged image
       if (!this.isImageStaged(newImage)) {
-        addParamToUrl('imageId', newImage.id, {}, true)
+        addParamToUrl('imageId', newImage.image.id, {}, true)
       } else {
         // Only set active image for stages images as they don't have valid Ids
         this.setActiveImage(newImage)
@@ -1452,7 +1527,7 @@ export class ImageCtx {
 
   target(imageId: Id) {
     // Prevent redundant calls
-    if (this.state.activeImage && this.state.activeImage.id === imageId) {
+    if (this.state.activeImage && this.state.activeImage.image.id === imageId) {
       return this.state.activeImage
     }
 
@@ -1480,7 +1555,7 @@ export class ImageCtx {
       onSuccess?: (savedImage: Image) => void
       onError?: () => void
     } = {},
-    imageToReplace?: Image,
+    imageToReplace?: ImageCtxEnvelope,
   ) {
     if (acceptedFiles.length > 1 && imageToReplace) {
       throw new Error('Cannot replace multiple images')
@@ -1491,7 +1566,7 @@ export class ImageCtx {
     this.addToRejected(fileRejections)
 
     if (imageToReplace) {
-      this.resetLoadStatus(imageToReplace.id)
+      this.resetLoadStatus(imageToReplace.image.id)
     }
 
     await this.processUploadQueue(config)
@@ -1590,19 +1665,21 @@ export class ImageCtx {
       if (savedImage) {
         if (uploadCtx.imageToReplace) {
           // Update existing image in map
-          this.state.images.set(savedImage.id, savedImage as Image)
+          const savedEnvelope = this.toEnvelope(savedImage)
+          this.state.images.set(savedEnvelope.image.id, savedEnvelope)
           // Update active image if it was the one being replaced
-          if (this.state.activeImage?.id === uploadCtx.imageToReplace.id) {
+          if (this.state.activeImage?.image.id === uploadCtx.imageToReplace.image.id) {
             // Set change type to enable smooth transition from replacement preview to final image
             this.state.lastChangeType = 'target'
-            this.setActiveImage(savedImage)
+            this.setActiveImage(savedEnvelope)
           }
         } else {
           // Add new image to map
-          this.state.images.set(savedImage.id, savedImage as Image)
+          const savedEnvelope = this.toEnvelope(savedImage)
+          this.state.images.set(savedEnvelope.image.id, savedEnvelope)
           // For fresh uploads, always set as active image if no active image exists
           if (!this.state.activeImage) {
-            this.setActiveImage(savedImage)
+            this.setActiveImage(savedEnvelope)
           }
         }
         this.setUploadStatus(fileObject, 'uploaded')
@@ -1644,7 +1721,7 @@ export class ImageCtx {
 
   isReplacementStatus(imageId: Id, status: UploadStatus) {
     return this.state.uploadQueue.some(
-      upload => upload.imageToReplace?.id === imageId && upload.status === status,
+      upload => upload.imageToReplace?.image.id === imageId && upload.status === status,
     )
   }
 
@@ -1657,13 +1734,13 @@ export class ImageCtx {
   // There can be only 1 image per project, so replace on upload
 
   // Feature images are stored in
-  // - {organsation.code}/{project.code}/{image.publicId}
+  // - {organsation.code}/{project.code}/{image.image.publicId}
   // There can be multiple images per feature, so by default, we consider an upload to not replace the existing image and cloudinary will generate a new publicId.
   // However, if we do want to replace the existing image, we can set the publicId in the paramsToSign object to override the asset in Cloudinary.
   // Admins can drop images into the viewer to replace the existing image from the Feature Image section.
 
   // Task images are stored in
-  // - {organsation.code}/{project.code}/{image.publicId}
+  // - {organsation.code}/{project.code}/{image.image.publicId}
   // There can be multiple images per task, however, these images are used in review and will often require postprocessing. So uploads against these items are considered replacements.
   // Admins can drop images into the task viewer to replace the existing image in the Review Queue.
 
@@ -1679,18 +1756,36 @@ export class ImageCtx {
       if (newIntent === 'canonical') {
         const images = this.getImages()
         const currentCanonical = images.find(
-          (img: Image) => img.id !== imageId && img.intent === 'canonical',
+          (img: ImageCtxEnvelope) =>
+            img.image.id !== imageId && img.intent === 'canonical',
         )
 
         // If another image is already canonical, update its intent to undefined
         if (currentCanonical) {
-          await updateImageIntent(currentCanonical.id, 'undefined', this.getCtx())
-          this.setForImage(currentCanonical.id, 'intent', 'undefined')
+          await setImageIntent({
+            id: currentCanonical.image.id,
+            ctxType: this.getCtx().ctxType,
+            ctxId: this.getCtx().ctxId,
+            intent: 'undefined',
+            featureId:
+              this.getCtx().ctxType === 'feature' ? this.getCtx().ctxId : undefined,
+            meta: { isAdminRequest: true },
+          })
+          this.setForImage(currentCanonical.image.id, 'intent', 'undefined')
         }
       }
 
       // Update the intent of the image
-      await updateImageIntent(imageId, newIntent, this.getCtx(), isPublished)
+      await setImageIntent({
+        id: imageId,
+        ctxType: this.getCtx().ctxType,
+        ctxId: this.getCtx().ctxId,
+        intent: newIntent,
+        featureId:
+          this.getCtx().ctxType === 'feature' ? this.getCtx().ctxId : undefined,
+        ...(isPublished !== undefined ? { isPublished } : {}),
+        meta: { isAdminRequest: true },
+      })
       this.setForImage(imageId, 'intent', newIntent)
       this.setForImage(imageId, 'isPublished', isPublished)
       this.sortImagesInternal() // Calls the private sortImages method
@@ -1703,21 +1798,27 @@ export class ImageCtx {
   async handlePublishToggle() {
     if (!this.state.activeImage) return
 
-    const updatedImage = await updateImageIsPublished(
-      this.state.activeImage.id,
-      !this.state.activeImage.isPublished,
-      this.getCtx(),
-    )
-    if (updatedImage.id) {
+    const updatedImage = await setImagePublished({
+      id: this.state.activeImage.image.id,
+      ctxType: this.getCtx().ctxType,
+      ctxId: this.getCtx().ctxId,
+      featureId: this.getCtx().ctxType === 'feature' ? this.getCtx().ctxId : undefined,
+      isPublished: !this.state.activeImage.isPublished,
+      meta: { isAdminRequest: true },
+    })
+    if (updatedImage?.data?.id) {
       this.toggleForActiveImage('isPublished')
       // Re-sort images when publish status changes
       this.sortImagesInternal()
       // Set the feature's images to undefined to undefined, so it'll be refetched in the user app
       if (this.state.context?.ctxType === 'feature' && this.state.context?.ctxId) {
-        this.appCtx.cache.feature.set(this.state.context.ctxId, {
-          ...this.appCtx.cache.feature.get(this.state.context.ctxId),
-          images: undefined,
-        })
+        const feature = this.appCtx.cache.feature.get(this.state.context.ctxId)
+        if (feature) {
+          this.appCtx.cache.feature.set(this.state.context.ctxId, {
+            ...feature,
+            images: undefined,
+          })
+        }
       }
     }
   }
@@ -1725,22 +1826,22 @@ export class ImageCtx {
   // ═══════════════════════
   // 8. Deletion Handling
   // ═══════════════════════
-  handlePreDelete(e: MouseEvent, image: Image) {
+  handlePreDelete(e: MouseEvent, image: ImageCtxEnvelope) {
     e.stopPropagation()
     e.preventDefault()
-    this.addToPendingConfirmation(image.id)
+    this.addToPendingConfirmation(image.image.id)
   }
 
-  handleCancelDelete(e: MouseEvent, image: Image) {
+  handleCancelDelete(e: MouseEvent, image: ImageCtxEnvelope) {
     e.stopPropagation()
     e.preventDefault()
-    this.removeFromPendingConfirmation(image.id)
+    this.removeFromPendingConfirmation(image.image.id)
   }
 
-  handleConfirmDelete(e: MouseEvent, image: Image) {
+  handleConfirmDelete(e: MouseEvent, image: ImageCtxEnvelope) {
     e.stopPropagation()
     e.preventDefault()
-    this.addToDeletionQueue(image.id)
+    this.addToDeletionQueue(image.image.id)
     this.processDeletionQueue()
   }
 
@@ -1755,13 +1856,18 @@ export class ImageCtx {
   async delete(imageId: Id, ctx: ImageEditCtx) {
     try {
       // Call the service function for the API call
-      await deleteImage(imageId, ctx)
+      await deleteImageRemote({
+        id: imageId,
+        ctxType: ctx.ctxType,
+        ctxId: ctx.ctxId,
+        meta: { isAdminRequest: true },
+      })
 
       // State updates remain in the class method
       this.removeImage(imageId)
 
       // If we deleted the active image, set a new one
-      if (this.state.activeImage?.id === imageId) {
+      if (this.state.activeImage?.image.id === imageId) {
         this.setActiveImageToTargetOrFirst()
       }
     } catch (error: any) {
@@ -1794,11 +1900,14 @@ export class ImageCtx {
   // ═══════════════════════
   // 9. Download Functionality
   // ═══════════════════════
-  async downloadImage(e: MouseEvent, image: Image = this.state.activeImage!) {
+  async downloadImage(
+    e: MouseEvent,
+    image: ImageCtxEnvelope = this.state.activeImage!,
+  ) {
     if (!image) return
     let downloadUrl = ''
 
-    if (image.cdn.toLowerCase() === 'cloudinary') {
+    if (image.image.cdn.toLowerCase() === 'cloudinary') {
       downloadUrl = getURLfromImage({ image, raw: true })
     } else {
       throw new Error('Unsupported CDN')
@@ -1808,7 +1917,7 @@ export class ImageCtx {
       const response = await fetch(downloadUrl)
       const contentType = response.headers.get('content-type')
       const extension = contentType ? `.${contentType.split('/')[1]}` : ''
-      const filename = `${image.publicId.split('/').pop()}${extension}`
+      const filename = `${image.image.publicId.split('/').pop()}${extension}`
 
       const link = document.createElement('a')
       link.style.display = 'none'
@@ -1857,7 +1966,7 @@ export class ImageCtx {
     )
   }
 
-  isImagePreloaded(image: Image): boolean {
+  isImagePreloaded(image: ImageCtxEnvelope): boolean {
     const url = getURLfromImage({ image })
     return this.state.preloadedImages.has(url)
   }
@@ -1869,14 +1978,14 @@ export class ImageCtx {
   /**
    * Checks if an image is staged (has a preview URL)
    */
-  isImageStaged(image: Image): boolean {
-    return (image as any).cdn === 'preview' && (image as any).preview
+  isImageStaged(image: ImageCtxEnvelope): boolean {
+    return image.image.cdn === 'preview' && Boolean((image.image as any).preview)
   }
 
   /**
    * Gets staged images from the main images array
    */
-  getStagedImages(): Image[] {
+  getStagedImages(): ImageCtxEnvelope[] {
     return this.getImages().filter(img => this.isImageStaged(img))
   }
 
@@ -1891,20 +2000,28 @@ export class ImageCtx {
     this.state.stagingQueue = []
     const stagedImages = this.getStagedImages()
     stagedImages.forEach(img => {
-      if ((img as any).preview) {
-        URL.revokeObjectURL((img as any).preview)
+      if (img.image.preview) {
+        URL.revokeObjectURL(img.image.preview)
       }
     })
   }
 
   private sortImagesInternal = () => {
     const images = this.getImages()
-    const sortedImages = sortImages(images, this.isAdminMode)
+    const sortableImages = images.map(item => ({
+      ...item.image,
+      intent: item.intent ?? undefined,
+      isPublished: item.isPublished ?? undefined,
+      publishedAt: item.publishedAt ?? undefined,
+    }))
+    const sortedImages = sortImages(sortableImages, this.isAdminMode)
+      .map(sorted => images.find(item => item.image.id === sorted.id))
+      .filter((item): item is ImageCtxEnvelope => item != null)
 
     // Clear and repopulate the map with sorted images
     this.state.images.clear()
     sortedImages.forEach(image => {
-      this.state.images.set(image.id, image as Image)
+      this.state.images.set(image.image.id, image)
     })
   }
 }

@@ -20,6 +20,8 @@ import { ImageContextResource } from '$lib/enums'
 import type {
   ImageNew,
   Image,
+  ImageContextEnvelope,
+  ImageCtxEnvelope,
   ParamsToSign,
   ImageUploadCtx,
   Intent,
@@ -217,7 +219,7 @@ export function getCloudinaryUploadEndpoint(cloudname: string): string {
  * @returns The generated URL string.
  */
 export function getURLfromImage(opts: {
-  image: ImageDB | ImageDBBasic
+  image: ImageContextEnvelope | ImageCtxEnvelope
   transformation?: string
   raw?: boolean
   gravity?: string
@@ -225,13 +227,19 @@ export function getURLfromImage(opts: {
   format?: string
 }): string {
   const {
-    image,
+    image: inputImage,
     transformation = 'c_fit,h_1000,w_1000',
     gravity = 'auto',
     format = 'auto',
     quality = 'auto',
     raw = false,
   } = opts
+
+  if (!inputImage || typeof inputImage !== 'object' || !('image' in inputImage)) {
+    throw error(404, 'Deprecated image payload: expected image envelope')
+  }
+
+  const image = inputImage.image
 
   // Handle staged images with preview URLs
   if ((image as any).preview) {
@@ -596,7 +604,7 @@ export function setOrganisationImagePresentationMode(
   mode: 'cover' | 'contain',
 ): boolean {
   if (!state?.data?.image) return false
-  state.data.image.presentationMode = mode
+  state.data.image.image.presentationMode = mode
   return true
 }
 

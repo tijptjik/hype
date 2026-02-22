@@ -12,21 +12,20 @@ import { getOmniCtx } from '$lib/context/omni.svelte'
 import Icon from '$lib/components/common/Icon.svelte'
 import { ChevronDown } from '@steeze-ui/heroicons'
 import Scrollbar from '$lib/components/common/scrollbars/Scrollbar.svelte'
+// REMOTE
+import { getImagesForIds } from '$lib/api/server/image.remote'
 // SERVICES
-import { getImagesByIds } from '$lib/client/services/image'
 import { getURLfromImage } from '$lib/client/services/image'
 // NAVIGATION
 import { navigateToContributedImage } from '$lib/navigation'
 // TYPES
 import type {
   UserProfile,
-  Image,
-  FeatureFromCollection,
   Id,
   Project,
   ResourceContext,
   UserPreferences,
-  Feature,
+  ImageContextEnvelope,
 } from '$lib/types'
 import { untrack } from 'svelte'
 
@@ -71,7 +70,13 @@ let projectGroups = $derived<Id[]>(Object.keys(userData.contributedImages)) // O
 let projectLoadProgress = $state<Record<Id, number>>({}) // Track how many images loaded per project
 
 // INFINITE SCROLL :: STATE
-let loadedImages: SvelteMap<string, Image> = $state(new SvelteMap())
+type ContributedImage = ImageContextEnvelope['image'] & {
+  featureId?: Id
+  href?: string
+  url: string
+}
+
+let loadedImages: SvelteMap<Id, ContributedImage> = $state(new SvelteMap())
 let currentBatchIndex = $state(0)
 let isLoadingBatch = $state(false)
 let hasMoreImages = $state(true)
@@ -177,22 +182,33 @@ const loadNextBatch = async () => {
       return
     }
 
-    const batchImages = await getImagesByIds(batchIds)
+    const batchResult = await getImagesForIds({
+      ids: batchIds,
+      meta: { isAdminRequest: true },
+    })
+    const batchImages = batchResult?.data ?? []
 
     const processedImages = batchImages
-      .map(image => ({
-        ...image,
-        url: getURLfromImage({
-          image,
-          transformation: 'c_fill,h_200,w_200,q_auto',
-          quality: 'auto',
-        }),
-        href: `/features/${image.featureId}`,
-      }))
+      .map((entity: ImageContextEnvelope) => {
+        const featureId = entity.ctxType === 'feature' ? entity.ctxId : undefined
+        const image = {
+          ...entity.image,
+          ...(featureId ? { featureId } : {}),
+        }
+        return {
+          ...image,
+          url: getURLfromImage({
+            image: entity,
+            transformation: 'c_fill,h_200,w_200,q_auto',
+            quality: 'auto',
+          }),
+          href: featureId ? `/features/${featureId}` : undefined,
+        }
+      })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
     for (const img of processedImages) {
-      loadedImages.set(img.id, img)
+      loadedImages.set(img.id as Id, img)
     }
 
     // Check if there are more images to load from visible projects only
@@ -438,20 +454,6 @@ const setupNextTrigger = () => {
     }
   }
 }
-
-// ================================
-// NAVIGATION
-// ================================
-
-async function getFeaturesFromImages(
-  images: Image[],
-): Promise<(FeatureFromCollection | Feature)[]> {
-  const featureIds = [...new Set(images.map(img => img.featureId).filter(Boolean))]
-  const features = await Promise.all(
-    featureIds.map(featureId => appCtx.getFeatureById(featureId!)),
-  )
-  return features.filter(Boolean) as (FeatureFromCollection | Feature)[]
-}
 </script>
 
 <div id="contributed-images" class="border-b border-base-300">
@@ -515,7 +517,7 @@ async function getFeaturesFromImages(
                     <a
                       class="aspect-square cursor-pointer overflow-hidden rounded bg-base-200 transition-transform hover:scale-105"
                       data-image-id={imageId}
-                      href={(loadedImages.get(imageId) as any)?.href}
+                      href={loadedImages.get(imageId)?.href}
                       onclick={async (e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -537,24 +539,37 @@ async function getFeaturesFromImages(
                         } else {
                           // Fallback: If image not in loadedImages but is visible, try to load it
                           try {
-                            const [fallbackImage] = await getImagesByIds([imageId]);
-                            if (fallbackImage?.featureId) {
+                            const fallbackResult = await getImagesForIds({
+                              ids: [imageId],
+                              meta: { isAdminRequest: true }
+                            });
+                            const fallbackEntity = fallbackResult?.data?.[0] as
+                              | ImageContextEnvelope
+                              | undefined;
+                            const fallbackFeatureId = fallbackEntity?.ctxType === 'feature'
+                              ? fallbackEntity.ctxId
+                              : undefined;
+                            if (fallbackEntity?.image && fallbackFeatureId) {
+                              const fallbackImage = {
+                                ...fallbackEntity.image,
+                                featureId: fallbackFeatureId
+                              };
                               // Add to loadedImages for future use
                               const processedImage = {
                                 ...fallbackImage,
                                 url: getURLfromImage({
-                                  image: fallbackImage,
+                                  image: fallbackEntity,
                                   transformation: 'c_fill,h_200,w_200,q_auto',
                                   quality: 'auto'
                                 }),
-                                href: `/features/${fallbackImage.featureId}`
+                                href: `/features/${fallbackFeatureId}`
                               };
-                              loadedImages.set(imageId, processedImage);
+                              loadedImages.set(imageId as Id, processedImage);
 
                               navigateToContributedImage(
                                 appCtx,
                                 omniCtx,
-                                fallbackImage.featureId,
+                                fallbackFeatureId,
                                 projectId,
                                 imageId,
                                 getI18n(hierarchies?.[projectId]?.project, 'name', {
@@ -565,7 +580,7 @@ async function getFeaturesFromImages(
                                 projectImageIds
                               );
                             }
-                          } catch (error) {
+                          } catch (_error) {
                             // Silently handle errors for fallback loading
                           }
                         }
@@ -573,7 +588,7 @@ async function getFeaturesFromImages(
                     >
                       {#if loadedImages.has(imageId)}
                         <img
-                          src={(loadedImages.get(imageId) as any)?.url}
+                          src={loadedImages.get(imageId)?.url}
                           alt=""
                           class="h-full w-full object-cover transition-opacity duration-200"
                           loading="lazy"
