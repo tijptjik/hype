@@ -46,6 +46,7 @@ import type {
   EntityResponse,
   ImageContextEnvelope,
   ImageContextType,
+  Intent,
 } from '$lib/types'
 import { ImageListProfileAPI, ImageAdminProfileAPI } from '$lib/db/zod'
 // UTILS
@@ -483,19 +484,26 @@ export const toImageEnvelope = <P extends ImageProfile>(
   profile: P,
   ctxType: ImageContextType,
   ctxId: Id,
-): ImageContextEnvelope<P> => ({
-  ctxType,
-  ctxId,
-  image: toProfileResponseShape(value, profile) as ImageListByProfile<P>,
-  ...(ctxType === ImageContextResource.feature ||
-  ctxType === ImageContextResourceExtended.task
-    ? {
-        intent: (value as Partial<ImageDBFlat>).intent ?? null,
-        isPublished: (value as Partial<ImageDBFlat>).isPublished ?? null,
-        publishedAt: (value as Partial<ImageDBFlat>).publishedAt ?? null,
-      }
-    : {}),
-})
+): ImageContextEnvelope<P> => {
+  const featureContextFields: Partial<
+    Pick<ImageContextEnvelope<P>, 'intent' | 'isPublished' | 'publishedAt'>
+  > =
+    ctxType === ImageContextResource.feature ||
+    ctxType === ImageContextResourceExtended.task
+      ? {
+          intent: ((value as Partial<ImageDBFlat>).intent ?? null) as Intent | null,
+          isPublished: (value as Partial<ImageDBFlat>).isPublished ?? null,
+          publishedAt: (value as Partial<ImageDBFlat>).publishedAt ?? null,
+        }
+      : {}
+
+  return {
+    ctxType,
+    ctxId,
+    image: toProfileResponseShape(value, profile) as ImageListByProfile<P>,
+    ...featureContextFields,
+  }
+}
 
 export const toImageEntityResponseShape = <P extends ImageProfile = 'detail'>(
   image: Image | null,
