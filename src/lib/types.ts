@@ -704,7 +704,7 @@ export type KeyMap = {
 }
 
 export type EntityWithOptionalImage = Exclude<Resource, Task> & {
-  image?: (Partial<ImageDB> & { id: string }) | string | null
+  image?: ImageContextEnvelope | ImageCtxEnvelope | string | null
 }
 
 /* ----------------- */
@@ -2080,26 +2080,6 @@ export type EXIF = {
   'By-line': string
   [key: string]: string
 }
-
-export type EXIFBasic = Partial<{
-  Copyright: string
-  CopyrightNotice: string
-  Credit: string
-  DateTimeOriginal: string
-  CreateDate: string
-  ModifyDate: string
-  GPSLatitude: string
-  GPSLongitude: string
-  'By-line': string
-  Keywords: string
-  ImageWidth: string
-  ImageHeight: string
-  Make: string
-  Model: string
-  LensModel: string
-  LensInfo: string
-  RawFileName: string
-}>
 
 export type LngLat = {
   latitude?: string
