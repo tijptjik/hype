@@ -54,14 +54,23 @@ import type {
   HubBase,
   HubBasic,
   HubCollectionAPI,
+  HubDetailProfileAPI,
+  HubCardProfileAPI,
+  HubListProfileAPI,
+  HubFormData,
+  HubPreflightFormData,
+  HubProfile as HubProfileSchema,
   HubI18nBase,
   HubI18nInsert,
   HubI18nUpdate,
   HubRoleBase,
   HubRoleInsert,
+  HubRoleWithUser,
   HubRoleUpdate,
   HubInsert,
   HubInsertAPI,
+  PublishHubSchema,
+  RemoveHubSchema,
   HubRaw,
   HubUpdate,
   HubUpdateAPI,
@@ -2584,8 +2593,8 @@ export type AppContextState = {
 }
 
 export type RemoteMapEntry = {
-  list?: (params: ListQueryParams) => Promise<unknown>
-  get?: (ref: Ref, refKey?: string) => Promise<unknown>
+  list?: (params: unknown) => Promise<unknown>
+  get?: (params: unknown) => Promise<unknown>
 }
 
 export type RemoteMap = Record<FirstClassResource, RemoteMapEntry>
@@ -2800,6 +2809,37 @@ export type Hub = z.infer<typeof HubAPI>
 export type HubCollection = z.infer<typeof HubCollectionAPI>
 export type HubNew = z.infer<typeof HubInsertAPI>
 export type HubPartial = z.infer<typeof HubUpdateAPI>
+export type HubListParams = z.infer<typeof ListQueryParamsSchema>
+export type HubGetParams = z.infer<typeof GetQueryParamsSchema>
+export type HubProfile = z.infer<typeof HubProfileSchema>
+export type HubListProfile = z.infer<typeof HubListProfileAPI>
+export type HubCardProfile = z.infer<typeof HubCardProfileAPI>
+export type HubDetailProfile = z.infer<typeof HubDetailProfileAPI>
+export type HubEntityByProfile<P extends HubProfile> = P extends 'list'
+  ? HubListProfile
+  : P extends 'card'
+    ? HubCardProfile
+    : HubDetailProfile
+export type HubListByProfile<P extends HubProfile> = P extends 'list'
+  ? HubListProfile
+  : P extends 'card'
+    ? HubCardProfile
+    : HubDetailProfile
+export type HubGetParamsByProfile<P extends HubProfile> = Omit<HubGetParams, 'meta'> & {
+  meta?: {
+    isAdminRequest?: boolean
+    profile?: P
+  }
+}
+export type HubListParamsByProfile<P extends HubProfile> = Omit<
+  HubListParams,
+  'meta'
+> & {
+  meta?: {
+    isAdminRequest?: boolean
+    profile?: P
+  }
+}
 
 export type HubDBRaw = z.infer<typeof HubRaw>
 
@@ -2817,6 +2857,17 @@ export type HubRole = z.infer<typeof HubRoleBase>
 export type HubRoleDB = z.infer<typeof HubRoleBase>
 export type HubRoleNew = z.infer<typeof HubRoleInsert>
 export type HubRolePartial = z.infer<typeof HubRoleUpdate>
+export type HubRoleUser = z.infer<typeof HubRoleWithUser>
+
+/* ----------------- */
+// HUBS :: REMOTE FORMS
+/* -------- */
+
+export type HubFormInput = z.input<typeof HubFormData>
+export type HubPreflightInput = z.input<typeof HubPreflightFormData>
+export type HubBooleanField = 'isPublished' | 'isArchived'
+export type HubPublishInput = z.infer<typeof PublishHubSchema>
+export type HubArchiveInput = z.infer<typeof RemoveHubSchema>
 
 export interface HubOpts {
   code?: string
