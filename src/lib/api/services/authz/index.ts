@@ -23,6 +23,19 @@ export {
   authorizeOrganisationDelete,
   resolveOrganisationActionPermissions,
 } from './organisation'
+export {
+  toHubSubmittedFields,
+  toHubUserRoleSignature,
+  toHubAuthActor,
+  authorizeHubRead,
+  authorizeHubList,
+  authorizeHubCreate,
+  authorizeHubUpdate,
+  authorizeHubManageRoles,
+  authorizeHubPublish,
+  authorizeHubDelete,
+  resolveHubActionPermissions,
+} from './hub'
 export { authorizeImageList, authorizeImageRead } from './image'
 export { canSearchUsers, canOverrideUserSearchArchivedFilter } from './user'
 
