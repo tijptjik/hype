@@ -3,6 +3,7 @@ import { getLocale } from '$lib/i18n'
 // LIB
 import { fetchOrThrow } from '$lib/index'
 import { getOrganisations } from '$lib/api/server/organisation.remote'
+import { getHubs } from '$lib/api/server/hub.remote'
 // SERVICES
 import { debouncedUpdateUserPreferences } from '$lib/client/services/user'
 // CONTEXT
@@ -511,9 +512,14 @@ export class AdminCtx {
   }
 
   hubsQueryFn = async () => {
-    if (!this.appCtx.isSuperAdmin()) return []
-    const url = this.buildApiUrl(FirstClassResource.hub)
-    return fetchOrThrow<Hub[]>(url)
+    if (!this.appCtx.isAdmin()) return []
+    const result = (await getHubs({
+      conditions: this.appCtx.isSuperAdmin()
+        ? { isArchived: null, isPublished: null }
+        : { isArchived: false, isPublished: null },
+      meta: { isAdminRequest: true, profile: 'card' },
+    })) as ListResponse<Hub>
+    return result.data
   }
 
   // Initialize data using appCtx's refresh methods
