@@ -14,7 +14,7 @@ import { m } from '$lib/i18n'
 // ICONS
 import TaskIcon from 'virtual:icons/lucide/inbox'
 // TYPES
-import type { Task, ImageDBBasic, Project, Id } from '$lib/types'
+import type { Task, ImageCtxEnvelope, Project, Id } from '$lib/types'
 
 // CONTEXT
 const adminCtx = getAdminCtx()
@@ -27,7 +27,7 @@ headerCtrl.setHeaderForIndex(m.navbar__tasks(), TaskIcon)
 // ELEMENTS
 let listContainer: HTMLElement | null = $state(null)
 
-let selectedImage = $state<ImageDBBasic | null>(null)
+let selectedImage = $state<ImageCtxEnvelope | null>(null)
 let selectedTask = $state<Task | null>(null)
 let selectedTaskIndex = $state<number>(-1)
 
@@ -72,7 +72,7 @@ function navigateToNextTask() {
     const nextTask = entities[i]
     if (nextTask?.images?.[0]) {
       selectedTask = nextTask
-      selectedImage = nextTask.images?.[0] as unknown as ImageDBBasic
+      selectedImage = nextTask.images?.[0] as ImageCtxEnvelope
       selectedTaskIndex = i
       updateRowFocus(i)
       return
@@ -88,7 +88,7 @@ function navigateToPreviousTask() {
     const prevTask = entities[i]
     if (prevTask?.images?.[0]) {
       selectedTask = prevTask
-      selectedImage = prevTask.images?.[0] as unknown as ImageDBBasic
+      selectedImage = prevTask.images?.[0] as ImageCtxEnvelope
       selectedTaskIndex = i
       updateRowFocus(i)
       return
@@ -127,7 +127,7 @@ function closeModal() {
   }
 }
 
-function openModal(image: ImageDBBasic, task: Task) {
+function openModal(image: ImageCtxEnvelope, task: Task) {
   selectedImage = image
   selectedTask = task
   selectedTaskIndex = entities.findIndex(f => f.id === task.id)

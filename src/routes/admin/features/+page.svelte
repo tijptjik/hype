@@ -16,7 +16,7 @@ import { m } from '$lib/i18n'
 // ICONS
 import FeatureIcon from 'virtual:icons/lucide/map-pin'
 // TYPES
-import type { Feature, ImageDB, ImageDBBasic } from '$lib/types'
+import type { Feature, ImageCtxEnvelope } from '$lib/types'
 
 // CONTEXT
 const adminCtx = getAdminCtx()
@@ -29,7 +29,7 @@ headerCtrl.setHeaderForIndex(m.omni__title_features(), FeatureIcon)
 // STATE
 let listContainer: HTMLElement | null = $state(null)
 
-let selectedImage = $state<ImageDB | null>(null)
+let selectedImage = $state<ImageCtxEnvelope | null>(null)
 let selectedFeature = $state<Feature | null>(null)
 let selectedFeatureIndex = $state<number>(-1)
 
@@ -55,8 +55,8 @@ let canNavigateNext = $derived(() => {
   return false
 })
 
-function openModal(image: ImageDBBasic | ImageDB, feature: Feature) {
-  selectedImage = image as ImageDB
+function openModal(image: ImageCtxEnvelope, feature: Feature) {
+  selectedImage = image
   selectedFeature = feature
   selectedFeatureIndex = entities.findIndex(f => f.id === feature.id)
 }
@@ -80,7 +80,7 @@ function navigateToNextFeature() {
     const nextFeature = entities[i]
     if (nextFeature?.image) {
       selectedFeature = nextFeature
-      selectedImage = nextFeature.image as ImageDB
+      selectedImage = nextFeature.image as ImageCtxEnvelope
       selectedFeatureIndex = i
       updateRowFocus(i)
       return
@@ -96,7 +96,7 @@ function navigateToPreviousFeature() {
     const prevFeature = entities[i]
     if (prevFeature?.image) {
       selectedFeature = prevFeature
-      selectedImage = prevFeature.image as ImageDB
+      selectedImage = prevFeature.image as ImageCtxEnvelope
       selectedFeatureIndex = i
       updateRowFocus(i)
       return

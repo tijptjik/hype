@@ -79,8 +79,7 @@ import {
 } from '$lib/enums'
 // TYPES
 import type {
-  Image,
-  ImageDBBasic,
+  ImageCtxEnvelope,
   Locale,
   User,
   OrganisationFormInput,
@@ -253,10 +252,8 @@ const userRoles = $derived.by(() =>
 // IMAGE
 
 const activeOrganisationImage = $derived(
-  ((organisation as OrganisationGetState)?.data?.image ?? null) as
-    | Image
-    | ImageDBBasic
-    | null,
+  ((organisation as OrganisationGetState)?.data?.image ??
+    null) as ImageCtxEnvelope | null,
 )
 const imageProviderProps = $derived.by(() => {
   const organisationData = organisation?.data

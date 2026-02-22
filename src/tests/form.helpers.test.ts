@@ -8,7 +8,7 @@ vi.mock('svelte-sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }))
 
-vi.mock('$lib/navigation', () => ({
+vi.mock('$lib/navigation/admin', () => ({
   navigateOnAdmin: navigateOnAdminMock,
   shouldRedirectToSubmittedCode: ({
     adminCtx,
