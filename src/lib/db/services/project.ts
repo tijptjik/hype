@@ -9,6 +9,8 @@ import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 // DB
 import { toRelatedRecords, transformI18nSafely } from '..'
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
+import { toImageEnvelope } from './image'
+import { ImageContextResource } from '$lib/enums'
 // ZOD
 import { zod } from 'sveltekit-superforms/adapters'
 import { ProjectAPI, ProjectCollectionAPI } from '../zod'
@@ -386,7 +388,7 @@ export const listMaintainerRoles = async (db: Database, projectId: string) => {
  * @returns Validated form data
  */
 export const toFormShape = async (
-  project: ProjectDB,
+  project: ProjectDBRaw,
   i18n: ProjectI18nNew[],
   maintainerRoles: ProjectRoleNew[],
   properties: PropertyNew[],
@@ -415,6 +417,14 @@ export const toFormShape = async (
           i18n: transformI18nSafely(value.i18n as PropertyValueI18nDB[]) as any,
         })),
       })) as Property[],
+    image: project.image
+      ? (toImageEnvelope(
+          project.image as Image,
+          'detail',
+          ImageContextResource.project,
+          project.id,
+        ) as any)
+      : null,
   }
   // @ts-expect-error TODO - Fix Zod type error
   const form = await superValidate(formData, zod(ProjectAPI) as any)
@@ -430,12 +440,13 @@ export const toFormShape = async (
  * @returns A parsed response shape
  */
 export const toResponseShape = async (
-  project: ProjectDB,
+  project: ProjectDBRaw,
   i18n: ProjectI18nNew[],
   maintainerRoles: ProjectRoleNew[],
   properties: PropertyDBRaw[],
   isCollection: boolean = false,
 ) => {
+  const profile = isCollection ? 'list' : 'detail'
   const data = {
     ...project,
     i18n: transformI18nSafely(i18n),
@@ -449,6 +460,14 @@ export const toResponseShape = async (
           i18n: transformI18nSafely(value.i18n),
         })) || [],
     })),
+    image: project.image
+      ? toImageEnvelope(
+          project.image as Image,
+          profile,
+          ImageContextResource.project,
+          project.id,
+        )
+      : null,
   }
 
   return isCollection ? ProjectCollectionAPI.parse(data) : ProjectAPI.parse(data)

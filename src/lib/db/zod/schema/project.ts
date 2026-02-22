@@ -12,7 +12,7 @@ import { getDefaultConstraints, getLocales, getMaintainerRoles } from '../constr
 // ZOD SCHEMAS
 import { UserBasic } from './user'
 import { PropertyAPI, PropertyInsertAPI, PropertyUpdateAPI } from './property'
-import { ImageBasic, ImageBase } from './image'
+import { ImageContextEnvelopeAPI } from './image'
 import { OrganisationI18nBase } from './organisation'
 import { OrganisationBase } from './organisation'
 
@@ -110,14 +110,14 @@ export const ProjectRoleWithUser = ProjectRoleBase.extend({
 
 export const ProjectCollectionAPI = ProjectBase.extend({
   i18n: getLocales(ProjectI18nBase),
-  image: ImageBasic.nullish(),
+  image: ImageContextEnvelopeAPI.nullish(),
 })
 
 export const ProjectAPI = ProjectBase.extend({
   i18n: getLocales(ProjectI18nBase),
   maintainerRoles: getMaintainerRoles(ProjectRoleBaseExtra),
   properties: z.array(PropertyAPI).nullish(),
-  image: ImageBase.nullish(),
+  image: ImageContextEnvelopeAPI.nullish(),
   publisher: UserBasic.nullish(),
 })
 
@@ -125,7 +125,7 @@ export const ProjectInsertAPI = ProjectInsert.extend({
   i18n: getLocales(ProjectI18nInsert),
   maintainerRoles: getMaintainerRoles(ProjectRoleInsertExtra),
   properties: z.array(PropertyInsertAPI).nullish(),
-  image: ImageBase.nullish(),
+  image: ImageContextEnvelopeAPI.nullish(),
   publisher: UserBasic.nullish(),
 })
 
@@ -133,7 +133,7 @@ export const ProjectUpdateAPI = ProjectUpdate.extend({
   i18n: getLocales(ProjectI18nUpdate),
   maintainerRoles: getMaintainerRoles(ProjectRoleUpdateExtra),
   properties: z.array(PropertyUpdateAPI).nullish(),
-  image: ImageBase.nullish(),
+  image: ImageContextEnvelopeAPI.nullish(),
   publisher: UserBasic.nullish(),
 })
 
@@ -145,6 +145,6 @@ export const ProjectRaw = ProjectBase.extend({
   i18n: z.array(ProjectI18nBase).nullish(),
   maintainerRoles: z.array(ProjectRoleWithUser).nullish(),
   properties: z.array(PropertyAPI).nullish(),
-  image: ImageBase.nullish(),
+  image: ImageContextEnvelopeAPI.nullish(),
   publisher: UserBasic.nullish(),
 })

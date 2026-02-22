@@ -146,6 +146,16 @@ export const FeatureImageUpdateAPI = FeatureImageUpdate.extend({
   image: ImageBase,
 })
 
+export const ImageContextEnvelopeAPI = z.object({
+  ctxType: z.string(), // ImageContextType
+  ctxId: z.string(), // Id
+  // New envelope contract: profile-based image payloads only.
+  image: z.lazy(() => z.union([ImageListProfileAPI, ImageAdminProfileAPI])),
+  intent: z.enum(Object.values(ImageIntent) as [string, ...string[]]).nullish(),
+  isPublished: z.boolean().nullish(),
+  publishedAt: z.string().nullish(),
+})
+
 /* ----------------- */
 // INTERMEDIATE
 /* -------- */

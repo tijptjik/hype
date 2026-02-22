@@ -9,7 +9,7 @@ import { organisation, organisationI18n, organisationRole } from '$lib/db/schema
 // ZOD SCHEMAS
 import { getDefaultConstraints, getLocales, getUserRoles } from '../constraints'
 import { UserBasic } from './user'
-import { ImageBasic, ImageBase } from './image'
+import { ImageBase, ImageContextEnvelopeAPI } from './image'
 import { HubBasic } from './hub'
 
 /* ----------------- */
@@ -68,14 +68,14 @@ export const OrganisationRoleAPI = OrganisationRoleBase.extend({
 
 export const OrganisationCollectionSuperAdminAPI = OrganisationBase.extend({
   i18n: getLocales(OrganisationI18nBase),
-  image: ImageBasic.nullish(),
+  image: ImageContextEnvelopeAPI.nullish(),
   hub: HubBasic.nullish(),
 })
 
 export const OrganisationSuperAdminAPI = OrganisationBase.extend({
   i18n: getLocales(OrganisationI18nBase),
   userRoles: getUserRoles(OrganisationRoleWithUser),
-  image: ImageBase.nullish(),
+  image: ImageContextEnvelopeAPI.nullish(),
   publisher: UserBasic.nullish(),
   hub: HubBasic.nullish(),
 })
@@ -264,7 +264,7 @@ export const OrganisationListProfileAPI = OrganisationListFields.extend({
 
 export const OrganisationCardProfileAPI = OrganisationListProfileAPI.extend({
   ...OrganisationCardFields.shape,
-  image: ImageBasic.nullish(),
+  image: ImageContextEnvelopeAPI.nullish(),
 })
 
 export const OrganisationDetailProfileAPI = OrganisationCardProfileAPI.extend({

@@ -9,7 +9,6 @@ import {
   featureImage,
   featureProperty,
   featurePropertyI18n,
-  image,
   userFeature,
 } from '$lib/db/schema/index'
 // CONSTRAINTS
@@ -29,74 +28,14 @@ import {
 } from './property'
 import { UserBasic } from './user'
 // ENUMS
-import { ImageIntent, supportedLocales } from '$lib/enums'
+import { supportedLocales } from '$lib/enums'
 // TYPES
-import type { AddressMeta, AddressProperties, EXIF } from '$lib/types'
+import type { AddressMeta, AddressProperties, ImageCtxEnvelope } from '$lib/types'
 import type { GeometryObject } from 'geojson'
 
 /* ----------------- */
 // LOCAL SCHEMAS (Private - not exported to avoid circular dependencies)
 /* -------- */
-
-const EXIFBasic = z.object({
-  Copyright: z.string().nullish(),
-  CopyrightNotice: z.string().nullish(),
-  Credit: z.string().nullish(),
-  DateTimeOriginal: z.string().nullish(),
-  CreateDate: z.string().nullish(),
-  ModifyDate: z.string().nullish(),
-  GPSLatitude: z.string().nullish(),
-  GPSLongitude: z.string().nullish(),
-  'By-line': z.string().nullish(),
-  Keywords: z.string().nullish(),
-  ImageWidth: z.string().nullish(),
-  ImageHeight: z.string().nullish(),
-  Make: z.string().nullish(),
-  Model: z.string().nullish(),
-  LensModel: z.string().nullish(),
-  LensInfo: z.string().nullish(),
-  RawFileName: z.string().nullish(),
-})
-
-const ImageBase = createSelectSchema(image).extend({
-  metadata: EXIFBasic.nullish(),
-})
-
-const ImageAPI = ImageBase.extend({
-  altText: z.string().nullish(),
-  featureId: z.string().nullish(),
-  attribution: z.string().nullish(),
-  intent: z
-    .enum(Object.values(ImageIntent) as [string, ...string[]])
-    .prefault(ImageIntent.undefined)
-    .optional(),
-  isPublished: z.boolean().prefault(false).optional(),
-  publishedAt: z.string().nullish(),
-  preview: z.string().optional(),
-})
-
-const ImageFlatBase = createSelectSchema(image).extend({
-  metadata: EXIFBasic.nullish(),
-  attribution: z.string().nullish(),
-  intent: z.enum(Object.values(ImageIntent) as [string, ...string[]]).optional(),
-  isPublished: z.boolean().nullish(),
-  publishedAt: z.string().nullish(),
-})
-
-const ImageBasicFlat = ImageFlatBase.pick({
-  id: true,
-  cdn: true,
-  env: true,
-  cdnId: true,
-  publicId: true,
-  version: true,
-  attribution: true,
-  intent: true,
-  isPublished: true,
-  publishedAt: true,
-  capturedAt: true,
-  createdAt: true,
-}).nullish()
 
 /* ----------------- */
 // FEATURE CORE
@@ -253,7 +192,7 @@ export const FeatureCollectionAPI = FeatureBase.omit({
       i18n: getLocales(FeaturePropertyI18nBase).nullish(),
     }),
   ),
-  image: ImageBasicFlat,
+  image: z.custom<ImageCtxEnvelope>().nullish(),
   imageCount: z.number(),
   imagePublishedCount: z.number(),
 })
@@ -264,8 +203,8 @@ export const FeatureAPI = FeatureBase.extend({
   properties: z.array(FeaturePropertyAPI),
   contributor: UserBasic.nullish(),
   publisher: UserBasic.nullish(),
-  image: ImageAPI.nullish(),
-  images: z.lazy(() => z.array(ImageAPI).nullish()),
+  image: z.custom<ImageCtxEnvelope>().nullish(),
+  images: z.lazy(() => z.array(z.custom<ImageCtxEnvelope>()).nullish()),
 })
 
 export const FeatureInsertAPI = FeatureInsert.extend({

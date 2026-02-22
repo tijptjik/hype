@@ -25,6 +25,8 @@ import {
 import { toRelatedRecords, transformI18nSafely } from '..'
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
 import { getOrganisationHubFilter } from './hub'
+import { toImageEnvelope } from './image'
+import { ImageContextResource } from '$lib/enums'
 // TYPES
 import type { AnyColumn, InferInsertModel, SQL } from 'drizzle-orm'
 import type {
@@ -475,10 +477,19 @@ export const toFormShape = async (
   organisation: OrganisationDBRaw,
   isSuperAdmin: boolean = false,
 ): Promise<SuperValidated<Organisation>> => {
+  const profile = isSuperAdmin ? 'admin' : 'detail'
   const formData: Organisation = {
     ...organisation,
     i18n: transformI18nSafely(organisation.i18n) as Record<Locale, OrganisationI18nNew>,
     userRoles: organisation.userRoles,
+    image: organisation.image
+      ? (toImageEnvelope(
+          organisation.image as Image,
+          profile,
+          ImageContextResource.organisation,
+          organisation.id,
+        ) as any)
+      : null,
   }
 
   // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
@@ -509,10 +520,19 @@ export async function toResponseShape(
   | OrganisationCollection
   | OrganisationCollectionSuperAdmin
 > {
+  const profile = isSuperAdmin ? 'admin' : 'detail'
   const data: Organisation = {
     ...organisation,
     i18n: transformI18nSafely(organisation.i18n),
     userRoles: organisation.userRoles,
+    image: organisation.image
+      ? (toImageEnvelope(
+          organisation.image as Image,
+          profile,
+          ImageContextResource.organisation,
+          organisation.id,
+        ) as any)
+      : null,
   }
 
   // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
@@ -544,6 +564,14 @@ const toProfileResponseShape = async (
     ...organisation,
     i18n: transformI18nSafely(organisation.i18n),
     userRoles: organisation.userRoles,
+    image: organisation.image
+      ? toImageEnvelope(
+          organisation.image as Image,
+          profile,
+          ImageContextResource.organisation,
+          organisation.id,
+        )
+      : null,
   }
 
   if (profile === 'list') return OrganisationListProfileAPI.parse(data)

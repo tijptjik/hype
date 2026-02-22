@@ -13,7 +13,7 @@ import {
 // ZOD SCHEMAS
 import { getDefaultConstraints } from '../constraints'
 import { getLocales } from '../constraints'
-import { ImageBasic } from './image'
+import { ImageContextEnvelopeAPI } from './image'
 
 /* ----------------- */
 // HUB CORE SCHEMAS
@@ -64,7 +64,7 @@ export const HubCollectionAPI = HubBase.extend({
     .array(
       createSelectSchema(organisation).extend({
         i18n: getLocales(createSelectSchema(organisationI18n)),
-        image: ImageBasic.nullish(),
+        image: ImageContextEnvelopeAPI.nullish(),
       }),
     )
     .nullish(),
@@ -82,7 +82,7 @@ export const HubUpdateAPI = HubUpdate.extend({
     .array(
       createSelectSchema(organisation).extend({
         i18n: getLocales(createSelectSchema(organisationI18n)),
-        image: ImageBasic.nullish(),
+        image: ImageContextEnvelopeAPI.nullish(),
         hubId: z.string().nullish(),
         isCoreInclusive: z.boolean().optional(),
         isHubExclusive: z.boolean().optional(),
@@ -101,7 +101,7 @@ export const HubRaw = HubBase.extend({
     .array(
       createSelectSchema(organisation).extend({
         i18n: z.array(createSelectSchema(organisationI18n)).nullish(),
-        image: ImageBasic.nullish(),
+        image: ImageContextEnvelopeAPI.nullish(),
         isCoreInclusive: z.boolean().nullish(),
         // userRoles: z.array(createSelectSchema(organisationRole))
       }),

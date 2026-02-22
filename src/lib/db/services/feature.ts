@@ -23,6 +23,8 @@ import {
 // SERVICES
 import { getLayer } from './layer'
 import { getFeatureHubFilter } from './hub'
+import { toImageEnvelope } from './image'
+import { ImageContextResource } from '$lib/enums'
 // ZOD
 import {
   FeatureUpdateAPI,
@@ -704,11 +706,15 @@ export const toFormShape = async (
     }
   })
 
+  const rawImages = (data as any).images || []
+  const selectedImage = selectCanonicalOrFirstImage(rawImages, false, 'detail')
+
   return (await superValidate(
     {
       ...data,
       i18n: transformI18nSafely(i18n),
       properties: transformedProperties,
+      image: selectedImage,
     },
     // @ts-expect-error TODO - Fix Zod type error
     zod(FeatureUpdateAPI),
@@ -739,6 +745,7 @@ export const toResponseShape = async (
   const selectedImage = selectCanonicalOrFirstImage(
     rawImages,
     shouldFilterUnpublishedImages,
+    isCollection ? 'list' : 'detail',
   )
   const imageCount = rawImages.length
   const imagePublishedCount = rawImages.filter((img: any) => img.isPublished).length
@@ -756,13 +763,14 @@ export const toResponseShape = async (
   } else {
     // Entity response - includes both selected image and images array
     const imagesArray =
-      filteredImages?.map((img: any) => ({
-        ...img.image,
-        intent: img.intent,
-        isPublished: img.isPublished,
-        publishedAt: img.publishedAt,
-        attribution: img.image?.contributor?.attribution || img.image?.credit || null,
-      })) || null
+      filteredImages?.map((img: any) =>
+        toImageEnvelope(
+          img.image as any,
+          'detail',
+          ImageContextResource.feature,
+          data.id,
+        ),
+      ) || null
 
     return FeatureAPI.parse({
       ...data,
@@ -927,7 +935,7 @@ export const buildResponseShape = async (
  * Selects the canonical image, or the first available image, from a list of feature images.
  * @param featureImages - Array of feature image records (relation from feature to featureImage, with nested image).
  * @param shouldFilterUnpublished - Whether to filter out unpublished images (for public requests)
- * @returns The selected ImageDB record or null if no suitable image is found.
+ * @returns The selected image envelope or null if no suitable image is found.
  */
 const selectCanonicalOrFirstImage = (
   featureImages?: (NonNullable<unknown> & {
@@ -939,7 +947,8 @@ const selectCanonicalOrFirstImage = (
       | undefined
   })[],
   shouldFilterUnpublished: boolean = false,
-): ImageDBFlat | null => {
+  profile: 'list' | 'detail' = 'list',
+): any => {
   let selectedFeatureImage: any = null
 
   if (featureImages && featureImages.length > 0) {
@@ -964,17 +973,10 @@ const selectCanonicalOrFirstImage = (
     return null
   }
 
-  // Extract attribution from contributor
-  const attribution =
-    selectedFeatureImage.image.contributor?.attribution ||
-    selectedFeatureImage.image.credit ||
-    null
-
-  return {
-    ...selectedFeatureImage.image,
-    intent: selectedFeatureImage.intent,
-    isPublished: selectedFeatureImage.isPublished,
-    publishedAt: selectedFeatureImage.publishedAt,
-    attribution,
-  }
+  return toImageEnvelope(
+    selectedFeatureImage.image as any,
+    profile,
+    ImageContextResource.feature,
+    selectedFeatureImage.featureId || '', // Context ID
+  )
 }

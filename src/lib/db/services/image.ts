@@ -478,7 +478,7 @@ const toProfileResponseShape = <P extends ImageProfile>(
   return ImageAdminProfileAPI.parse(value) as ImageEntityByProfile<P>
 }
 
-const toEnvelope = <P extends ImageProfile>(
+export const toImageEnvelope = <P extends ImageProfile>(
   value: Image,
   profile: P,
   ctxType: ImageContextType,
@@ -508,7 +508,7 @@ export const toImageEntityResponseShape = <P extends ImageProfile = 'detail'>(
   }
 
   return {
-    data: toEnvelope(image, profile, context.ctxType, context.ctxId),
+    data: toImageEnvelope(image, profile, context.ctxType, context.ctxId),
     durationMs: Date.now() - startedAt,
     profile,
   }
@@ -524,7 +524,7 @@ export const toImageListResponseShape = <P extends ImageProfile = 'list'>(
   const startedAt = Date.now()
   const data = images.map(image => {
     const nextContext = typeof context === 'function' ? context(image) : context
-    return toEnvelope(image, profile, nextContext.ctxType, nextContext.ctxId)
+    return toImageEnvelope(image, profile, nextContext.ctxType, nextContext.ctxId)
   })
 
   return {
