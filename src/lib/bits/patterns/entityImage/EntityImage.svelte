@@ -18,9 +18,8 @@ import CheckIcon from 'virtual:icons/lucide/check'
 import XIcon from 'virtual:icons/lucide/x'
 // TYPES
 import type {
-  Image,
   ImageCtxConstructorOptions,
-  ImageDBBasic,
+  ImageCtxEnvelope,
   ImageEditCtx,
 } from '$lib/types'
 
@@ -35,7 +34,7 @@ let {
   page: Page
   entityId?: string | null
   imageProviderProps: ImageCtxConstructorOptions
-  currentImage?: Image | ImageDBBasic | null
+  currentImage?: ImageCtxEnvelope | null
   ctx?: ImageEditCtx
   onPresentationModeCommitted?: (nextMode: 'cover' | 'contain') => void
 } = $props()
@@ -43,13 +42,15 @@ let {
 let isUpdatingPresentationMode = $state(false)
 let presentationModeFeedback = $state<'idle' | 'loading' | 'success' | 'error'>('idle')
 let presentationModeFeedbackTimer: ReturnType<typeof setTimeout> | null = $state(null)
-let viewerActiveImage = $state<Image | ImageDBBasic | null>(null)
+let viewerActiveImage = $state<ImageCtxEnvelope | null>(null)
 
 const effectiveImage = $derived(
-  (viewerActiveImage ?? currentImage ?? null) as Image | ImageDBBasic | null,
+  (viewerActiveImage ?? currentImage ?? null) as ImageCtxEnvelope | null,
 )
-const hasActiveImage = $derived(Boolean(effectiveImage?.id))
-const isCoverPresentationMode = $derived(effectiveImage?.presentationMode === 'cover')
+const hasActiveImage = $derived(Boolean(effectiveImage?.image?.id))
+const isCoverPresentationMode = $derived(
+  effectiveImage?.image?.presentationMode === 'cover',
+)
 
 function clearPresentationModeFeedbackTimer(): void {
   if (!presentationModeFeedbackTimer) return
@@ -75,15 +76,18 @@ async function onPresentationModeChange(nextChecked: boolean | null): Promise<vo
   setPresentationModeFeedback('loading')
   try {
     const didUpdate = await updateImagePresentationMode({
-      currentImage: effectiveImage,
+      currentImage: effectiveImage?.image ?? null,
       nextChecked,
       ctx,
       onSuccess: nextMode => {
         if (viewerActiveImage) {
           viewerActiveImage = {
             ...viewerActiveImage,
-            presentationMode: nextMode,
-          } as Image | ImageDBBasic
+            image: {
+              ...viewerActiveImage.image,
+              presentationMode: nextMode,
+            },
+          }
         }
         onPresentationModeCommitted?.(nextMode)
         setPresentationModeFeedback('success')
