@@ -146,6 +146,7 @@ export const toFormShape = async (hub: HubDBRaw): Promise<SuperValidated<Hub>> =
   const transformedHub = {
     ...hub,
     i18n: transformI18nSafely(hub.i18n),
+    userRoles: hub.userRoles ?? [],
     organisations:
       hub.organisations?.map(organisation => {
         return {
@@ -160,7 +161,7 @@ export const toFormShape = async (hub: HubDBRaw): Promise<SuperValidated<Hub>> =
               )
             : null,
         }
-      }) || null,
+      }) || [],
   }
   // @ts-expect-error TODO - Fix Zod type error
   const form = await superValidate(transformedHub, zod(HubAPI))
@@ -177,6 +178,7 @@ export const toResponseShape = async (hub: HubDBRaw, isCollection: boolean = fal
   const transformedHub = {
     ...hub,
     i18n: transformI18nSafely(hub.i18n),
+    userRoles: hub.userRoles ?? [],
     organisations:
       hub.organisations?.map(organisation => {
         return {
@@ -191,7 +193,7 @@ export const toResponseShape = async (hub: HubDBRaw, isCollection: boolean = fal
               )
             : null,
         }
-      }) || null,
+      }) || [],
   }
 
   return isCollection
