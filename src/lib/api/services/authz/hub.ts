@@ -124,7 +124,7 @@ export const authorizeHubRead = (
   actor: HubAuthActor,
   target: Required<Pick<HubAuthTarget, 'resourceHubId'>>,
 ): AuthorizationDecision => {
-  if (!hasAuthenticatedSession(actor) || !actor.userId) {
+  if (!hasAuthenticatedSession(actor)) {
     return { allowed: false, code: 'UNAUTHENTICATED' }
   }
 
@@ -134,7 +134,7 @@ export const authorizeHubRead = (
 }
 
 export const authorizeHubList = (actor: HubAuthActor): AuthorizationDecision => {
-  if (!hasAuthenticatedSession(actor) || !actor.userId) {
+  if (!hasAuthenticatedSession(actor)) {
     return { allowed: false, code: 'UNAUTHENTICATED' }
   }
 
@@ -148,7 +148,7 @@ export const authorizeHubCreate = (
   actor: HubAuthActor,
   _fields: HubAuthorizationField[],
 ): AuthorizationDecision => {
-  if (!hasAuthenticatedSession(actor) || !actor.userId) {
+  if (!hasAuthenticatedSession(actor)) {
     return { allowed: false, code: 'UNAUTHENTICATED' }
   }
 
@@ -162,7 +162,7 @@ export const authorizeHubUpdate = (
   target: Required<Pick<HubAuthTarget, 'resourceId' | 'resourceHubId'>>,
   _fields: HubAuthorizationField[],
 ): AuthorizationDecision => {
-  if (!hasAuthenticatedSession(actor) || !actor.userId) {
+  if (!hasAuthenticatedSession(actor)) {
     return { allowed: false, code: 'UNAUTHENTICATED' }
   }
 
@@ -191,7 +191,7 @@ export const authorizeHubDelete = (
   actor: HubAuthActor,
   _target: Required<Pick<HubAuthTarget, 'resourceId' | 'resourceHubId'>>,
 ): AuthorizationDecision => {
-  if (!hasAuthenticatedSession(actor) || !actor.userId) {
+  if (!hasAuthenticatedSession(actor)) {
     return { allowed: false, code: 'UNAUTHENTICATED' }
   }
 
