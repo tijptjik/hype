@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, eq, exists, isNull, or, type SQL } from 'drizzle-orm'
+import { and, eq, exists, inArray, isNull, or, type SQL } from 'drizzle-orm'
 // SCHEMA
 import {
   organisation,
@@ -29,6 +29,10 @@ import type {
   HubI18nNew,
   HubI18nDB,
   HubI18nPartial,
+  HubProbe,
+  HubUpdateProbe,
+  HubCommandProbe,
+  Id,
 } from '$lib/types'
 import { hubEntityWithRelations } from '$lib/api/services/hub'
 
@@ -382,12 +386,6 @@ export const getHub = async (
     where: and(...conditions),
   })
 
-export type HubProbe = {
-  id: string
-  isPublished: boolean
-  isArchived: boolean
-}
-
 export const probeHubQuery = async (
   db: Database,
   params: { ref: string; refKey?: 'id' | 'code' },
@@ -405,6 +403,51 @@ export const probeHubQuery = async (
   return probe ?? null
 }
 
+export const probeExistingHub = async (
+  db: Database,
+  code: string,
+): Promise<{ id: string } | null> => {
+  const [existing] = await db
+    .select({ id: hub.id })
+    .from(hub)
+    .where(eq(hub.code, code))
+    .limit(1)
+
+  return existing ?? null
+}
+
+export const probeHubForUpdate = async (
+  db: Database,
+  hubId: Id,
+): Promise<HubUpdateProbe | null> => {
+  const [current] = await db
+    .select({
+      id: hub.id,
+      code: hub.code,
+      modifiedAt: hub.modifiedAt,
+    })
+    .from(hub)
+    .where(eq(hub.id, hubId))
+    .limit(1)
+
+  return current ?? null
+}
+
+export const probeHubForCommand = async (
+  db: Database,
+  hubId: Id,
+): Promise<HubCommandProbe | null> => {
+  const [current] = await db
+    .select({
+      id: hub.id,
+    })
+    .from(hub)
+    .where(eq(hub.id, hubId))
+    .limit(1)
+
+  return current ?? null
+}
+
 export const createHub = async (db: Database, data: any): Promise<HubDB> => {
   const [created] = await db.insert(hub).values(data).returning()
   return created
@@ -417,6 +460,58 @@ export const updateHub = async (
 ): Promise<HubDBRaw> => {
   const [updated] = await db.update(hub).set(data).where(eq(hub.code, code)).returning()
   return updated
+}
+
+export const updateHubByIdWithConcurrency = async (
+  db: Database,
+  params: {
+    id: Id
+    updatedAt: string
+    data: { code: string; domain: string | null }
+  },
+): Promise<{ id: string; modifiedAt: string } | null> => {
+  const [updated] = await db
+    .update(hub)
+    .set(params.data)
+    .where(and(eq(hub.id, params.id), eq(hub.modifiedAt, params.updatedAt)))
+    .returning({
+      id: hub.id,
+      modifiedAt: hub.modifiedAt,
+    })
+
+  return updated ?? null
+}
+
+export const updateHubPublishedStateById = async (
+  db: Database,
+  params: { id: Id; state: boolean },
+): Promise<{ id: string; isPublished: boolean } | null> => {
+  const [updated] = await db
+    .update(hub)
+    .set({ isPublished: params.state })
+    .where(eq(hub.id, params.id))
+    .returning({
+      id: hub.id,
+      isPublished: hub.isPublished,
+    })
+
+  return updated ?? null
+}
+
+export const updateHubArchivedStateById = async (
+  db: Database,
+  params: { id: Id; state: boolean },
+): Promise<{ id: string; isArchived: boolean } | null> => {
+  const [updated] = await db
+    .update(hub)
+    .set({ isArchived: params.state })
+    .where(eq(hub.id, params.id))
+    .returning({
+      id: hub.id,
+      isArchived: hub.isArchived,
+    })
+
+  return updated ?? null
 }
 
 const toPersistedHubUserRoles = (
@@ -438,7 +533,7 @@ export const createHubUserRoles = async (
   await db.insert(hubRole).values(toPersistedHubUserRoles(roles, hubId))
 }
 
-export const updateHubUserRoles = async (
+export const syncHubUserRoles = async (
   db: Parameters<typeof createHub>[0],
   roles: Array<{ userId: string; role: string }>,
   hubId: string,
@@ -493,6 +588,30 @@ export const syncHubOrganisations = async (
       ),
     ),
   )
+}
+
+export const listHubOrganisationLookups = async (
+  db: Database,
+  organisationIds: string[],
+): Promise<
+  Array<{
+    id: string
+    hubId: string | null
+    isCoreInclusive: boolean
+    isHubExclusive: boolean
+  }>
+> => {
+  if (organisationIds.length === 0) return []
+
+  return await db
+    .select({
+      id: organisation.id,
+      hubId: organisation.hubId,
+      isCoreInclusive: organisation.isCoreInclusive,
+      isHubExclusive: organisation.isHubExclusive,
+    })
+    .from(organisation)
+    .where(inArray(organisation.id, organisationIds))
 }
 
 // ═══════════════════════

@@ -57,6 +57,9 @@ import type {
   ListResponse,
   EntityResponse,
   SessionUser,
+  OrganisationProbe,
+  OrganisationUpdateProbe,
+  OrganisationCommandProbe,
 } from '$lib/types'
 
 // ═══════════════════════
@@ -75,7 +78,7 @@ import type {
 //
 // 3. CRUD :: RELATIONAL OPERATIONS (OrganisationRole)
 //    - createUserRoles
-//    - updateUserRoles
+//    - syncOrganisationUserRoles
 //    - listUserRoles
 //
 // 4. CRUD :: ORCHESTRATION
@@ -240,13 +243,6 @@ export const getOrganisation = async (
   })
 }
 
-export type OrganisationProbe = {
-  id: string
-  hubId: string | null
-  isPublished: boolean
-  isArchived: boolean
-}
-
 export const probeOrganisationQuery = async (
   db: Database,
   params: { ref: string; refKey?: 'id' | 'code' },
@@ -267,6 +263,53 @@ export const probeOrganisationQuery = async (
     .limit(1)
 
   return probe ?? null
+}
+
+export const probeExistingOrganisation = async (
+  db: Database,
+  code: string,
+): Promise<{ id: string } | null> => {
+  const [existing] = await db
+    .select({ id: organisation.id })
+    .from(organisation)
+    .where(eq(organisation.code, code))
+    .limit(1)
+
+  return existing ?? null
+}
+
+export const probeOrganisationForUpdate = async (
+  db: Database,
+  organisationId: Id,
+): Promise<OrganisationUpdateProbe | null> => {
+  const [current] = await db
+    .select({
+      id: organisation.id,
+      code: organisation.code,
+      hubId: organisation.hubId,
+      modifiedAt: organisation.modifiedAt,
+    })
+    .from(organisation)
+    .where(eq(organisation.id, organisationId))
+    .limit(1)
+
+  return current ?? null
+}
+
+export const probeOrganisationForCommand = async (
+  db: Database,
+  organisationId: Id,
+): Promise<OrganisationCommandProbe | null> => {
+  const [current] = await db
+    .select({
+      id: organisation.id,
+      hubId: organisation.hubId,
+    })
+    .from(organisation)
+    .where(eq(organisation.id, organisationId))
+    .limit(1)
+
+  return current ?? null
 }
 
 /**
@@ -312,6 +355,67 @@ export const updateOrganisationById = async (
   data: OrganisationDBPartial,
   id: Id,
 ): Promise<OrganisationDB> => await update(db, organisation, data, organisation.id, id)
+
+export const updateOrganisationByIdWithConcurrency = async (
+  db: Database,
+  params: {
+    id: Id
+    updatedAt: string
+    data: { code: string; url: string | null }
+  },
+): Promise<{ id: string; modifiedAt: string } | null> => {
+  const [updated] = await db
+    .update(organisation)
+    .set(params.data)
+    .where(
+      and(
+        eq(organisation.id, params.id),
+        eq(organisation.modifiedAt, params.updatedAt),
+      ),
+    )
+    .returning({
+      id: organisation.id,
+      modifiedAt: organisation.modifiedAt,
+    })
+
+  return updated ?? null
+}
+
+export const updateOrganisationPublishedStateById = async (
+  db: Database,
+  params: { id: Id; state: boolean; publisherId: string | null },
+): Promise<{ id: string; isPublished: boolean } | null> => {
+  const [updated] = await db
+    .update(organisation)
+    .set({
+      isPublished: params.state,
+      publishedAt: params.state ? new Date().toISOString() : null,
+      publisherId: params.state ? params.publisherId : null,
+    })
+    .where(eq(organisation.id, params.id))
+    .returning({
+      id: organisation.id,
+      isPublished: organisation.isPublished,
+    })
+
+  return updated ?? null
+}
+
+export const updateOrganisationArchivedStateById = async (
+  db: Database,
+  params: { id: Id; state: boolean },
+): Promise<{ id: string; isArchived: boolean } | null> => {
+  const [updated] = await db
+    .update(organisation)
+    .set({ isArchived: params.state })
+    .where(eq(organisation.id, params.id))
+    .returning({
+      id: organisation.id,
+      isArchived: organisation.isArchived,
+    })
+
+  return updated ?? null
+}
 
 // ═══════════════════════
 // 2. CRUD :: RELATIONAL OPERATIONS (OrganisationI18n)
@@ -436,7 +540,7 @@ export const toPersistedOrganisationUserRoles = (
  * @param organisationId - The ID of the organisation
  * @returns Array of updated user roles with associated user information
  */
-export const updateUserRoles = async (
+export const syncOrganisationUserRoles = async (
   db: Database,
   userRoles: OrganisationRoleNew[],
   organisationId: string,
@@ -488,7 +592,7 @@ export const updateOrganisationWithRelated = async (
   const codeToUse = lookupCode || data.code
   const organisation = await updateOrganisation(db, data, codeToUse)
   const i18n = await updateI18n(db, data.i18n, organisation.id)
-  await updateUserRoles(db, data.userRoles, organisation.id)
+  await syncOrganisationUserRoles(db, data.userRoles, organisation.id)
   const userRoles = await listUserRoles(db, organisation.id)
   return { ...organisation, i18n, userRoles }
 }

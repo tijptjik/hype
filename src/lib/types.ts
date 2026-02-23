@@ -1,5 +1,6 @@
 // ZOD SCHEMAS
 import type { z } from 'zod'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
 // COMPONENTS
 import type CustomField from '$lib/components/forms/fields/Property.svelte'
 import type InputField from '$lib/components/forms/fields/Input.svelte'
@@ -203,6 +204,7 @@ import type {
 // TYPES
 import type { Component, Snippet } from 'svelte'
 import type { Page, RemoteFormIssue } from '@sveltejs/kit'
+import type { RequestEvent } from '@sveltejs/kit'
 import type { AdminCtx } from './context/admin.svelte'
 import type {
   FormPath,
@@ -232,6 +234,7 @@ import type {
   SessionSession as BetterAuthSessionSession,
   SessionUser as BetterAuthSessionUser,
 } from './auth'
+import type { setupRequestHandler } from '$lib/api'
 
 /* ----------------- */
 // NAMING CONVENTIONS
@@ -288,6 +291,58 @@ import type {
 
 // Drizzle Database
 export type Database = DrizzleD1Database<typeof import('$lib/db/schema')>
+
+export type GuardedBaseContext = Awaited<ReturnType<typeof setupRequestHandler>> & {
+  event: RequestEvent
+}
+export type GuardedQueryContext = GuardedBaseContext
+export type GuardedInvalid = (...issues: StandardSchemaV1.Issue[]) => never
+export type GuardedIssueResolver = (message: string) => StandardSchemaV1.Issue
+export type GuardedIssue = GuardedIssueResolver & {
+  data: Record<string, GuardedIssueResolver>
+}
+export type GuardedFormContext = GuardedBaseContext & {
+  invalid: GuardedInvalid
+  issue: GuardedIssue
+}
+export type GuardedCommandContext = GuardedBaseContext
+export type SetupRequestEvent = Parameters<typeof setupRequestHandler>[0]
+export type GuardedContextResolver = (payload?: unknown) => Promise<GuardedBaseContext>
+
+export type HubProbe = {
+  id: string
+  isPublished: boolean
+  isArchived: boolean
+}
+
+export type HubUpdateProbe = {
+  id: string
+  code: string
+  modifiedAt: string
+}
+
+export type HubCommandProbe = {
+  id: string
+}
+
+export type OrganisationProbe = {
+  id: string
+  hubId: string | null
+  isPublished: boolean
+  isArchived: boolean
+}
+
+export type OrganisationUpdateProbe = {
+  id: string
+  code: string
+  hubId: string | null
+  modifiedAt: string
+}
+
+export type OrganisationCommandProbe = {
+  id: string
+  hubId: string | null
+}
 
 export type DbTable = SQLiteTable<any>
 
