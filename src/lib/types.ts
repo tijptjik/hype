@@ -1221,6 +1221,8 @@ export type Code = string
 export type Ref = Id | Code
 // Property name in API or Database
 export type Key = string
+// Drizzle relation selection shape used by service query helpers.
+export type RelationShape = Record<string, boolean | object>
 
 /* ----------------- */
 // SCHEMA TYPES

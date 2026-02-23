@@ -240,6 +240,35 @@ export const getOrganisation = async (
   })
 }
 
+export type OrganisationProbe = {
+  id: string
+  hubId: string | null
+  isPublished: boolean
+  isArchived: boolean
+}
+
+export const probeOrganisationQuery = async (
+  db: Database,
+  params: { ref: string; refKey?: 'id' | 'code' },
+): Promise<OrganisationProbe | null> => {
+  const [probe] = await db
+    .select({
+      id: organisation.id,
+      hubId: organisation.hubId,
+      isPublished: organisation.isPublished,
+      isArchived: organisation.isArchived,
+    })
+    .from(organisation)
+    .where(
+      params.refKey === 'code'
+        ? eq(organisation.code, params.ref)
+        : eq(organisation.id, params.ref as Id),
+    )
+    .limit(1)
+
+  return probe ?? null
+}
+
 /**
  * Creates a new organisation in the database
  * @param db - The database instance

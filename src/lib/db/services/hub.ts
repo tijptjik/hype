@@ -382,6 +382,29 @@ export const getHub = async (
     where: and(...conditions),
   })
 
+export type HubProbe = {
+  id: string
+  isPublished: boolean
+  isArchived: boolean
+}
+
+export const probeHubQuery = async (
+  db: Database,
+  params: { ref: string; refKey?: 'id' | 'code' },
+): Promise<HubProbe | null> => {
+  const [probe] = await db
+    .select({
+      id: hub.id,
+      isPublished: hub.isPublished,
+      isArchived: hub.isArchived,
+    })
+    .from(hub)
+    .where(params.refKey === 'code' ? eq(hub.code, params.ref) : eq(hub.id, params.ref))
+    .limit(1)
+
+  return probe ?? null
+}
+
 export const createHub = async (db: Database, data: any): Promise<HubDB> => {
   const [created] = await db.insert(hub).values(data).returning()
   return created

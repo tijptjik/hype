@@ -306,6 +306,33 @@ export const authorizeOrganisationRead = (
     requestedState,
   })
 
+export const authorizeOrganisationReadForProbe = (params: {
+  user: { id: string; isAnonymous?: boolean }
+  userRoles: UserRoleDisco[]
+  probe: {
+    id: string
+    hubId: string | null
+    isPublished: boolean
+    isArchived: boolean
+  }
+}): AuthorizationDecision =>
+  authorizeOrganisationRead(
+    {
+      userId: params.user.id,
+      userRoles: params.userRoles,
+      isAuthenticated: true,
+      isAnonymous: params.user.isAnonymous === true,
+    },
+    {
+      resourceId: params.probe.id,
+      resourceHubId: params.probe.hubId,
+    },
+    {
+      isPublished: params.probe.isPublished,
+      isArchived: params.probe.isArchived,
+    },
+  )
+
 export const authorizeOrganisationList = (
   actor: OrganisationAuthActor,
   target: Pick<OrganisationAuthTarget, 'resourceHubId'>,
@@ -321,6 +348,25 @@ export const authorizeOrganisationList = (
     resourceHubId: target.resourceHubId,
     requestedState,
   })
+
+export const authorizeOrganisationListForContext = (params: {
+  user: { id: string; isAnonymous?: boolean }
+  userRoles: UserRoleDisco[]
+  hub: { id?: string | null; isCore?: boolean } | null | undefined
+  requestedListState: { isPublished: boolean; isArchived: boolean }
+}): AuthorizationDecision =>
+  authorizeOrganisationList(
+    {
+      userId: params.user.id,
+      userRoles: params.userRoles,
+      isAuthenticated: true,
+      isAnonymous: params.user.isAnonymous === true,
+    },
+    {
+      resourceHubId: params.hub?.isCore ? null : (params.hub?.id ?? null),
+    },
+    params.requestedListState,
+  )
 
 export const authorizeOrganisationCreate = (
   actor: OrganisationAuthActor,

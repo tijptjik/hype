@@ -1,5 +1,10 @@
+// DRIZZLE
+import { eq, inArray } from 'drizzle-orm'
+// SCHEMA
+import { hub } from '$lib/db/schema'
 // TYPES
-import type { AuthorizationDecision, UserRoleDisco } from '$lib/types'
+import type { SQL } from 'drizzle-orm'
+import type { AuthorizationDecision, Id, UserRoleDisco } from '$lib/types'
 
 export type HubAuthActor = {
   userId?: string | null
@@ -29,19 +34,24 @@ export type HubActionPermissions = {
   canDelete: boolean
 }
 
+export type HubRequestedListState = {
+  isPublished?: boolean
+  isArchived?: boolean
+}
+
 const CORE_HUB_CODE = 'core'
 
 const isHubAdminRole = (role: UserRoleDisco): boolean =>
   role.type === 'hub' && role.role === 'admin'
 
-const isCoreHubAdmin = (roles: UserRoleDisco[]): boolean =>
+export const isCoreHubAdmin = (roles: UserRoleDisco[]): boolean =>
   roles.some(
     role =>
       isHubAdminRole(role) &&
       (role as { hub?: { code?: string | null } }).hub?.code === CORE_HUB_CODE,
   )
 
-const getScopedHubAdminIds = (roles: UserRoleDisco[]): Set<string> =>
+export const getScopedHubAdminIds = (roles: UserRoleDisco[]): Set<string> =>
   new Set(
     roles
       .filter(role => isHubAdminRole(role))
@@ -51,6 +61,27 @@ const getScopedHubAdminIds = (roles: UserRoleDisco[]): Set<string> =>
       )
       .map(role => (role as { hubId: string }).hubId),
   )
+
+export const toHubListConditions = (
+  roles: UserRoleDisco[],
+  requestedListState: HubRequestedListState,
+): SQL<unknown>[] => {
+  const isCoreAdmin = isCoreHubAdmin(roles)
+  const scopedHubIds = Array.from(getScopedHubAdminIds(roles))
+
+  return [
+    ...(!isCoreAdmin && scopedHubIds.length > 0 ? [inArray(hub.id, scopedHubIds)] : []),
+    ...(!isCoreAdmin && scopedHubIds.length === 0
+      ? [eq(hub.id, '__none__' as Id)]
+      : []),
+    ...(requestedListState.isPublished === undefined
+      ? []
+      : [eq(hub.isPublished, requestedListState.isPublished)]),
+    ...(requestedListState.isArchived === undefined
+      ? []
+      : [eq(hub.isArchived, requestedListState.isArchived)]),
+  ]
+}
 
 const hasAuthenticatedSession = (actor: HubAuthActor): boolean => {
   if (actor.isAuthenticated !== undefined) return actor.isAuthenticated
@@ -130,6 +161,23 @@ export const authorizeHubRead = (
     ? { allowed: true }
     : { allowed: false, code: 'INSUFFICIENT_ROLE' }
 }
+
+export const authorizeHubReadForProbe = (params: {
+  user: { id: string; isAnonymous?: boolean }
+  userRoles: UserRoleDisco[]
+  probe: { id: string }
+}): AuthorizationDecision =>
+  authorizeHubRead(
+    {
+      userId: params.user.id,
+      userRoles: params.userRoles,
+      isAuthenticated: true,
+      isAnonymous: params.user.isAnonymous === true,
+    },
+    {
+      resourceHubId: params.probe.id,
+    },
+  )
 
 export const authorizeHubList = (actor: HubAuthActor): AuthorizationDecision => {
   if (!hasAuthenticatedSession(actor)) {

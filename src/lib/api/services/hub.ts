@@ -96,8 +96,16 @@ export const toRequestedListState = (conditions: Partial<HubDB>) => ({
   isArchived: toBooleanOrUndefined(conditions.isArchived) ?? false,
 })
 
+export const toQueryConditions = (
+  params: { refKey?: 'id' | 'code' },
+  queryParams: Partial<HubDB>,
+): SQL<unknown>[] =>
+  params.refKey === 'code'
+    ? [eq(hub.code, queryParams.code as string)]
+    : [eq(hub.id, queryParams.id as Id)]
+
 export const toHubResponseShape = <P extends HubProfileType>(
-  row: Record<string, unknown>,
+  row: HubDBRaw,
   profile: P,
 ): HubEntityByProfile<P> => {
   const shaped = {
@@ -141,14 +149,14 @@ export const toHubResponseShape = <P extends HubProfileType>(
 }
 
 export const toHubEntityResponse = <P extends HubProfileType>(
-  data: Record<string, unknown> | null,
+  data: HubDBRaw | null,
   profile: P,
 ): EntityResponse<HubEntityByProfile<P> | null> => ({
   data: data ? toHubResponseShape(data, profile) : null,
 })
 
 export const toHubListResponse = <P extends HubProfileType>(params: {
-  data: Array<Record<string, unknown>>
+  data: HubDBRaw[]
   profile: P
   limit?: number | undefined
   offset?: number
