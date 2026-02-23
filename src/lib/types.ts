@@ -136,6 +136,10 @@ import type {
   OrganisationUpdateSuperAdminAPI,
   ProjectAPI,
   ProjectBase,
+  ProjectProfile as ProjectProfileSchema,
+  ProjectListProfileAPI,
+  ProjectCardProfileAPI,
+  ProjectDetailProfileAPI,
   ProjectFormData,
   ProjectPreflightFormData,
   ProjectI18nBase,
@@ -1614,6 +1618,44 @@ export type Project = z.infer<typeof ProjectAPI>
 export type ProjectNew = z.infer<typeof ProjectInsertAPI>
 // Like Project, but with all fields optional
 export type ProjectPartial = z.infer<typeof ProjectUpdateAPI>
+export type ProjectListParams = z.infer<typeof ListQueryParamsSchema>
+export type ProjectGetParams = z.infer<typeof GetQueryParamsSchema>
+export type ProjectProfile = z.infer<typeof ProjectProfileSchema>
+export type ProjectListProfile = z.infer<typeof ProjectListProfileAPI>
+export type ProjectCardProfile = z.infer<typeof ProjectCardProfileAPI>
+export type ProjectDetailProfile = z.infer<typeof ProjectDetailProfileAPI>
+export type ProjectEntityByProfile<P extends ProjectProfile> = P extends 'list'
+  ? ProjectListProfile
+  : P extends 'card'
+    ? ProjectCardProfile
+    : P extends 'detail'
+      ? ProjectDetailProfile
+      : Project
+export type ProjectListByProfile<P extends ProjectProfile> = P extends 'list'
+  ? ProjectListProfile
+  : P extends 'card'
+    ? ProjectCardProfile
+    : P extends 'detail'
+      ? ProjectDetailProfile
+      : Project
+export type ProjectGetParamsByProfile<P extends ProjectProfile> = Omit<
+  ProjectGetParams,
+  'meta'
+> & {
+  meta?: {
+    isAdminRequest?: boolean
+    profile?: P
+  }
+}
+export type ProjectListParamsByProfile<P extends ProjectProfile> = Omit<
+  ProjectListParams,
+  'meta'
+> & {
+  meta?: {
+    isAdminRequest?: boolean
+    profile?: P
+  }
+}
 
 /* ----------------- */
 // PROJECTS :: REMOTE FORMS
@@ -1760,6 +1802,17 @@ export const organisationAuthorizationFields = [
 ] as const
 export type OrganisationAuthorizationField =
   (typeof organisationAuthorizationFields)[number]
+
+export const projectAuthorizationFields = [
+  'organisationId',
+  'code',
+  'i18n',
+  'maintainerRoles',
+  'properties',
+  'isPublished',
+  'isArchived',
+] as const
+export type ProjectAuthorizationField = (typeof projectAuthorizationFields)[number]
 
 export const authorizationDenyCodes = [
   'UNAUTHENTICATED',
