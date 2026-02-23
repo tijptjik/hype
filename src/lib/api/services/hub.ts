@@ -12,15 +12,29 @@ import { superValidate } from 'sveltekit-superforms'
 import { zod } from 'sveltekit-superforms/adapters'
 import { toImageEnvelope } from '$lib/db/services/image'
 import { ImageContextResource } from '$lib/enums'
+import {
+  HubCardProfileAPI,
+  HubDetailProfileAPI,
+  HubListProfileAPI,
+  HubProfile,
+} from '$lib/db/zod'
+import { toBooleanOrUndefined } from '$lib/api/services'
 // TYPES
 import type { SQL } from 'drizzle-orm'
 import type {
   Hub,
+  HubDB,
+  HubEntityByProfile,
+  HubListByProfile,
+  HubProfile as HubProfileType,
+  Id,
   HubOptsExtended,
   QueryParams,
   HubOpts,
   SessionUser,
   HubDBRaw,
+  EntityResponse,
+  ListResponse,
 } from '$lib/types'
 import type { SuperValidated } from 'sveltekit-superforms'
 
@@ -30,18 +44,127 @@ import type { SuperValidated } from 'sveltekit-superforms'
 
 // Simple relations for hub collection
 export const hubCollectionWithRelations = {
-  i18n: {},
+  i18n: true,
+  image: true,
+}
+
+export const hubEntityWithRelations = {
+  i18n: true,
+  image: true,
+  userRoles: {
+    with: {
+      user: {
+        columns: {
+          id: true,
+          name: true,
+          image: true,
+          attribution: true,
+        },
+      },
+    },
+  },
   organisations: {
     with: {
-      i18n: {},
-      image: {},
+      i18n: true,
+      image: true,
     },
   },
 }
 
-export const hubEntityWithRelations = {
-  ...hubCollectionWithRelations,
+// ═══════════════════════
+// QUERY HELPERS
+// ═══════════════════════
+
+export const toHubProfile = (
+  value: unknown,
+  fallback: HubProfileType,
+): HubProfileType => {
+  const parsed = HubProfile.safeParse(value)
+  return parsed.success ? parsed.data : fallback
 }
+
+export const toLookupConditions = (params: {
+  ref: string
+  refKey?: 'id' | 'code'
+}): Partial<HubDB> =>
+  params.refKey === 'code'
+    ? ({ code: params.ref } as Partial<HubDB>)
+    : ({ id: params.ref as Id } as Partial<HubDB>)
+
+export const toRequestedListState = (conditions: Partial<HubDB>) => ({
+  isPublished: toBooleanOrUndefined(conditions.isPublished) ?? true,
+  isArchived: toBooleanOrUndefined(conditions.isArchived) ?? false,
+})
+
+export const toHubResponseShape = <P extends HubProfileType>(
+  row: Record<string, unknown>,
+  profile: P,
+): HubEntityByProfile<P> => {
+  const shaped = {
+    ...row,
+    i18n: transformI18nSafely(row.i18n as never),
+    image: row.image
+      ? toImageEnvelope(
+          row.image as never,
+          'card',
+          ImageContextResource.hub,
+          row.id as string,
+        )
+      : null,
+    userRoles: (
+      (row.userRoles as Array<Record<string, unknown>> | undefined) ?? []
+    ).map(userRole => ({
+      ...userRole,
+      user: userRole.user,
+    })),
+    organisations: (
+      (row.organisations as Array<Record<string, unknown>> | undefined) ?? []
+    ).map(organisationRow => ({
+      ...organisationRow,
+      i18n: transformI18nSafely(organisationRow.i18n as never),
+      image: organisationRow.image
+        ? toImageEnvelope(
+            organisationRow.image as never,
+            'card',
+            ImageContextResource.organisation,
+            organisationRow.id as string,
+          )
+        : null,
+    })),
+  }
+
+  if (profile === 'list')
+    return HubListProfileAPI.parse(shaped) as HubEntityByProfile<P>
+  if (profile === 'card')
+    return HubCardProfileAPI.parse(shaped) as HubEntityByProfile<P>
+  return HubDetailProfileAPI.parse(shaped) as HubEntityByProfile<P>
+}
+
+export const toHubEntityResponse = <P extends HubProfileType>(
+  data: Record<string, unknown> | null,
+  profile: P,
+): EntityResponse<HubEntityByProfile<P> | null> => ({
+  data: data ? toHubResponseShape(data, profile) : null,
+})
+
+export const toHubListResponse = <P extends HubProfileType>(params: {
+  data: Array<Record<string, unknown>>
+  profile: P
+  limit?: number | undefined
+  offset?: number
+  totalCount?: number
+  hasMore?: boolean
+  nextOffset?: number | null
+}): ListResponse<HubListByProfile<P>> => ({
+  data: params.data.map(row =>
+    toHubResponseShape(row, params.profile),
+  ) as HubListByProfile<P>[],
+  limit: params.limit ?? undefined,
+  offset: params.offset ?? 0,
+  totalCount: params.totalCount ?? 0,
+  hasMore: params.hasMore ?? false,
+  nextOffset: params.nextOffset,
+})
 
 // ═══════════════════════
 // HUB DOMAIN MAPPING
@@ -146,6 +269,9 @@ export const toFormShape = async (hub: HubDBRaw): Promise<SuperValidated<Hub>> =
   const transformedHub = {
     ...hub,
     i18n: transformI18nSafely(hub.i18n),
+    image: hub.image
+      ? toImageEnvelope(hub.image as any, 'list', ImageContextResource.hub, hub.id)
+      : null,
     userRoles: hub.userRoles ?? [],
     organisations:
       hub.organisations?.map(organisation => {
@@ -178,6 +304,9 @@ export const toResponseShape = async (hub: HubDBRaw, isCollection: boolean = fal
   const transformedHub = {
     ...hub,
     i18n: transformI18nSafely(hub.i18n),
+    image: hub.image
+      ? toImageEnvelope(hub.image as any, 'list', ImageContextResource.hub, hub.id)
+      : null,
     userRoles: hub.userRoles ?? [],
     organisations:
       hub.organisations?.map(organisation => {
