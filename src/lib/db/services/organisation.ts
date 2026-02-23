@@ -63,19 +63,22 @@ import type {
 // ═══════════════════════
 //
 // 1. CRUD :: CORE OPERATIONS
-//    - listOrganisations
-//    - getOrganisation
-//    - probeOrganisationQuery
-//    - probeExistingOrganisation
-//    - probeOrganisationForUpdate
-//    - probeOrganisationForCommand
-//    - resolveOrganisationCommandProbe
-//    - createOrganisation
-//    - updateOrganisation
-//    - updateOrganisationById
-//    - updateOrganisationByIdWithConcurrency
-//    - updateOrganisationPublishedStateById
-//    - updateOrganisationArchivedStateById
+//    - fetch
+//      - listOrganisations
+//      - getOrganisation
+//    - probe
+//      - probeOrganisationQuery
+//      - probeExistingOrganisation
+//      - probeOrganisationForUpdate
+//      - probeOrganisationForCommand
+//      - resolveOrganisationCommandProbe
+//    - persist
+//      - createOrganisation
+//      - updateOrganisation
+//      - updateOrganisationById
+//      - updateOrganisationByIdWithConcurrency
+//      - updateOrganisationPublishedStateById
+//      - updateOrganisationArchivedStateById
 //
 // 2. CRUD :: RELATIONAL OPERATIONS (OrganisationI18n)
 //    - createI18n
