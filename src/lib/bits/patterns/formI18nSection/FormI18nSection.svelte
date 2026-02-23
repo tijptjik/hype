@@ -15,6 +15,7 @@ let {
   localeCodeClass = 'bits-form__i18n-locale-code',
   onTranslate,
   onResetLocale,
+  sectionKey,
   isEditing = false,
   headerActions,
   flags = [],
@@ -59,6 +60,7 @@ const resolvedGridClass = $derived(
         {localeCodeClass}
         {onTranslate}
         {onResetLocale}
+        {sectionKey}
         {isEditing}
         showTranslationBar={true}
         {children}

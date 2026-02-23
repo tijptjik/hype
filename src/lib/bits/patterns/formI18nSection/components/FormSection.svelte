@@ -12,6 +12,7 @@ let {
   localeCodeClass = 'bits-form__i18n-locale-code',
   onTranslate,
   onResetLocale,
+  sectionKey,
   isEditing = false,
   showTranslationBar = false,
   children,
@@ -98,6 +99,7 @@ $effect(() => {
       {localeCodeClass}
       {onTranslate}
       {onResetLocale}
+      {sectionKey}
       {isEditing}
       isVisible={isTranslationBarVisible}
     />

@@ -10,7 +10,7 @@ import type { FormSectionProps } from '../formI18nSection.types'
 
 type Props = Pick<
   FormSectionProps,
-  'localeCodeClass' | 'onTranslate' | 'onResetLocale'
+  'localeCodeClass' | 'onTranslate' | 'onResetLocale' | 'sectionKey'
 > & {
   targetLocale: Locale
   isVisible?: boolean
@@ -22,6 +22,7 @@ let {
   localeCodeClass = 'bits-form__i18n-locale-code',
   onTranslate,
   onResetLocale,
+  sectionKey,
   isVisible = false,
   isEditing = false,
 }: Props = $props()
@@ -52,7 +53,7 @@ async function handleTranslate(event: MouseEvent, sourceLocale: Locale): Promise
   loadingLocale = sourceLocale
 
   try {
-    const translated = await onTranslate(sourceLocale, targetLocale)
+    const translated = await onTranslate(sourceLocale, targetLocale, sectionKey)
     if (translated === false) {
       resetFlashToken += 1
     }
@@ -72,7 +73,7 @@ async function handleResetLocale(event: MouseEvent): Promise<void> {
   event.preventDefault()
   event.stopPropagation()
   if (!onResetLocale || status === 'loading') return
-  await onResetLocale(targetLocale)
+  await onResetLocale(targetLocale, sectionKey)
 }
 
 $effect(() => {
