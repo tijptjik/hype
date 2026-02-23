@@ -113,7 +113,7 @@
   "admin__forms_organisation_image_title": "Profile Image",
   "admin__forms_organisation_image_save_hint": "Save the organisation first to add its image.",
   "admin__forms_project_credit": "Credit",
-  "admin__forms_project_credit_subtitle": "Under which licence (e.g. <code>CC-BY-SA</code> or <code>Copyrighted</code>) is this project published, and how should it be attributed?",
+  "admin__forms_project_credit_subtitle": "The terms under which the project is made available and how the creators should be acknowledged.",
   "admin__forms_project_members_title": "Members with Edit Access",
   "admin__forms_project_members_subtitle": "Maintainers have access to the review queue and can accept or reject feature changes",
   "admin__forms_project_image_title": "Banner Image",
