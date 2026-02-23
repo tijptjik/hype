@@ -26,7 +26,6 @@ export function toHubFormInput(data?: Hub | null): HubFormInput {
       data: {
         code: '',
         domain: '',
-        imageId: null,
         i18n: {
           en: normalizeHubFormLocale(undefined),
           zhHans: normalizeHubFormLocale(undefined),
@@ -48,7 +47,6 @@ export function toHubFormInput(data?: Hub | null): HubFormInput {
     data: {
       code: data.code,
       domain: data.domain ?? '',
-      imageId: data.image?.image?.id ?? null,
       i18n: {
         en: normalizeHubFormLocale(data.i18n?.en),
         zhHans: normalizeHubFormLocale(data.i18n?.['zh-hans']),
