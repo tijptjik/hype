@@ -486,8 +486,18 @@ export class AdminCtx {
   }
 
   projectsQueryFn = async () => {
-    const url = this.buildApiUrl(FirstClassResource.project)
-    return fetchOrThrow<Project[]>(url)
+    const remoteList = this.appCtx.remoteMap[FirstClassResource.project].list
+    if (!remoteList) {
+      throw new Error('Project remote list function is not configured.')
+    }
+    const result = (await remoteList({
+      conditions: this.appCtx.isSuperAdmin()
+        ? { isArchived: null, isPublished: null }
+        : { isArchived: false, isPublished: null },
+      prisms: this.appCtx.state.prisms,
+      meta: { isAdminRequest: true, profile: 'card' },
+    })) as ListResponse<Project>
+    return result.data
   }
 
   layersQueryFn = async () => {

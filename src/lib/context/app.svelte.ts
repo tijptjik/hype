@@ -10,6 +10,7 @@ import { getFallbackLocales, getLocale, setLocale, getI18n } from '$lib/i18n'
 import { DUAL_PANEL_MIN_WIDTH, fetchOrThrow, isMobile, PANEL_WIDTH } from '$lib/index'
 import { getOrganisation, getOrganisations } from '$lib/api/server/organisation.remote'
 import { getHub, getHubs } from '$lib/api/server/hub.remote'
+import { getProject, getProjects } from '$lib/api/server/project.remote'
 // SERVICES
 import {
   debouncedUpdateUserAttribution,
@@ -83,6 +84,8 @@ import type {
   Ref,
   HubOptsExtended,
   RemoteMap,
+  RemoteListFn,
+  RemoteGetFn,
 } from '$lib/types'
 import type { Map as MaplibreMap } from 'maplibre-gl'
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson'
@@ -542,6 +545,10 @@ export class AppCtx {
       list: getOrganisations,
       get: getOrganisation,
     }
+    this.remoteMap[FirstClassResource.project] = {
+      list: getProjects as unknown as RemoteListFn<unknown, unknown>,
+      get: getProject as unknown as RemoteGetFn<unknown, unknown>,
+    }
     this.remoteMap[FirstClassResource.hub] = {
       list: getHubs,
       get: getHub,
@@ -727,8 +734,19 @@ export class AppCtx {
     return result.data
   }
   projectsQueryFn = async (): Promise<Project[]> => {
-    const url = this.buildApiUrl(FirstClassResource.project)
-    return fetchOrThrow<Project[]>(url)
+    const remoteList = this.remoteMap[FirstClassResource.project].list
+    if (!remoteList) {
+      throw new Error('Project remote list function is not configured.')
+    }
+    const result = (await remoteList({
+      conditions: {
+        isArchived: false,
+        isPublished: true,
+      },
+      prisms: this.state.prisms,
+      meta: { profile: 'card' },
+    })) as ListResponse<Project>
+    return result.data
   }
 
   layersQueryFn = async (): Promise<Layer[]> => {
