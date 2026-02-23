@@ -1,5 +1,3 @@
-// SVELTEKIT
-import { superValidate, type SuperValidated } from 'sveltekit-superforms'
 // DRIZZLE
 import { and, eq, like, sql, or, asc, desc } from 'drizzle-orm'
 // SCHEMA
@@ -10,8 +8,6 @@ import {
   organisationRole,
   project,
 } from '../schema'
-// ZOD
-import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import {
   OrganisationAPI,
   OrganisationCardProfileAPI,
@@ -69,34 +65,44 @@ import type {
 // 1. CRUD :: CORE OPERATIONS
 //    - listOrganisations
 //    - getOrganisation
+//    - probeOrganisationQuery
+//    - probeExistingOrganisation
+//    - probeOrganisationForUpdate
+//    - probeOrganisationForCommand
+//    - resolveOrganisationCommandProbe
 //    - createOrganisation
 //    - updateOrganisation
+//    - updateOrganisationById
+//    - updateOrganisationByIdWithConcurrency
+//    - updateOrganisationPublishedStateById
+//    - updateOrganisationArchivedStateById
 //
 // 2. CRUD :: RELATIONAL OPERATIONS (OrganisationI18n)
 //    - createI18n
 //    - updateI18n
 //
 // 3. CRUD :: RELATIONAL OPERATIONS (OrganisationRole)
-//    - createUserRoles
-//    - syncOrganisationUserRoles
 //    - listUserRoles
+//    - createUserRoles
+//    - toPersistedOrganisationUserRoles
+//    - syncOrganisationUserRoles
 //
 // 4. CRUD :: ORCHESTRATION
 //    - createOrganisationWithRelated
 //    - updateOrganisationWithRelated
 //
 // 5. UTILS :: SHAPING
-//    - toFormShape
-//    - toResponseShape
+//    - toProfileResponseShape
+//    - toEntityResponseShape
+//    - toListResponseShape
 //
 // 6. UTILS :: LOOKUPS
 //    - getOrganisationForFeatureId
 //    - getOrganisationForProjectId
 //
-
-/********************
- *  1. CRUD :: CORE OPERATIONS
- ************/
+// ═══════════════════════
+// 1. CRUD :: CORE OPERATIONS
+// ═══════════════════════
 
 export const listOrganisations = async (
   db: Database,
@@ -610,85 +616,6 @@ export const updateOrganisationWithRelated = async (
 // ═══════════════════════
 // 5. UTILS :: SHAPING
 // ═══════════════════════
-
-/**
- * Rebuilds form data from database entities
- * @param organisation - The organisation entity with loaded relations
- * @returns Validated form data
- */
-export const toFormShape = async (
-  organisation: OrganisationDBRaw,
-  isSuperAdmin: boolean = false,
-): Promise<SuperValidated<Organisation>> => {
-  const profile = isSuperAdmin ? 'admin' : 'detail'
-  const formData: Organisation = {
-    ...organisation,
-    i18n: transformI18nSafely(organisation.i18n) as Record<Locale, OrganisationI18nNew>,
-    userRoles: organisation.userRoles,
-    image: organisation.image
-      ? (toImageEnvelope(
-          organisation.image as Image,
-          profile,
-          ImageContextResource.organisation,
-          organisation.id,
-        ) as any)
-      : null,
-  }
-
-  // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
-  const schema = isSuperAdmin ? OrganisationSuperAdminAPI : OrganisationAPI
-
-  // @ts-expect-error TODO - Fix Zod type error
-  const form = await superValidate(formData, zod(schema))
-  return form as SuperValidated<Organisation>
-}
-
-export function toResponseShape(
-  organisation: OrganisationDBRaw,
-  isCollection: true,
-  isSuperAdmin?: boolean,
-): Promise<OrganisationCollection | OrganisationCollectionSuperAdmin>
-export function toResponseShape(
-  organisation: OrganisationDBRaw,
-  isCollection?: false,
-  isSuperAdmin?: boolean,
-): Promise<Organisation | OrganisationSuperAdmin>
-export async function toResponseShape(
-  organisation: OrganisationDBRaw,
-  isCollection: boolean = false,
-  isSuperAdmin: boolean = false,
-): Promise<
-  | Organisation
-  | OrganisationSuperAdmin
-  | OrganisationCollection
-  | OrganisationCollectionSuperAdmin
-> {
-  const profile = isSuperAdmin ? 'admin' : 'detail'
-  const data: Organisation = {
-    ...organisation,
-    i18n: transformI18nSafely(organisation.i18n),
-    userRoles: organisation.userRoles,
-    image: organisation.image
-      ? (toImageEnvelope(
-          organisation.image as Image,
-          profile,
-          ImageContextResource.organisation,
-          organisation.id,
-        ) as any)
-      : null,
-  }
-
-  // Use SuperAdmin schema if user is SuperAdmin, otherwise regular schema
-  if (isCollection) {
-    return isSuperAdmin
-      ? OrganisationCollectionSuperAdminAPI.parse(data)
-      : OrganisationCollectionAPI.parse(data)
-  } else {
-    return isSuperAdmin
-      ? OrganisationSuperAdminAPI.parse(data)
-      : OrganisationAPI.parse(data)
-  }
-}
 
 const toProfileResponseShape = async (
   organisation: OrganisationDBRaw,
