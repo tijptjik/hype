@@ -21,7 +21,7 @@ const keyMap: KeyMap = {
   title: 'i18n.name',
   subtitle: 'domain',
   description: 'i18n.description',
-  image: 'organisations.image',
+  image: 'image',
 }
 
 // CONTEXT
