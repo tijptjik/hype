@@ -9,6 +9,7 @@ import { getFallbackLocales, getLocale, setLocale, getI18n } from '$lib/i18n'
 // LIB
 import { DUAL_PANEL_MIN_WIDTH, fetchOrThrow, isMobile, PANEL_WIDTH } from '$lib/index'
 import { getOrganisation, getOrganisations } from '$lib/api/server/organisation.remote'
+import { getHub, getHubs } from '$lib/api/server/hub.remote'
 // SERVICES
 import {
   debouncedUpdateUserAttribution,
@@ -524,7 +525,7 @@ export class AppCtx {
 
   // Deprecated: legacy form context bridge for header form actions.
   // Prefer headerCtrl.setFormActions(...) in route pages.
-  formCtx: any = $state(null)
+  formCtx = $state(null)
 
   // Constructor
   constructor(queryClient: QueryClient, placeCtx: PlaceCtx, user: SessionUser | null) {
@@ -540,6 +541,10 @@ export class AppCtx {
     this.remoteMap[FirstClassResource.organisation] = {
       list: getOrganisations,
       get: getOrganisation,
+    }
+    this.remoteMap[FirstClassResource.hub] = {
+      list: getHubs,
+      get: getHub,
     }
   }
 
@@ -631,7 +636,6 @@ export class AppCtx {
       this.refreshFeatures(false),
       this.refreshUserProfile(false),
       this.refreshUserFeatures(false),
-      this.isAdmin() ? this.refreshHubs(false) : Promise.resolve(),
       this.isAdmin() ? this.refreshTasks(false) : Promise.resolve(),
     ])
   }
@@ -902,7 +906,6 @@ export class AppCtx {
     // Refresh all the dependent resources
     if (resource === FirstClassResource.organisation) {
       await this.refreshProjects()
-      await this.refreshHubs()
     } else if (resource === FirstClassResource.project) {
       await this.refreshProperties()
       await this.refreshLayers()
@@ -951,8 +954,6 @@ export class AppCtx {
       await this.refreshFeatures()
     } else if (resource === 'task') {
       await this.refreshTasks()
-    } else if (resource === 'hub') {
-      await this.refreshHubs()
     } else if (resource === 'property') {
       await this.refreshProperties()
     } else if (resource === 'userFeatures') {
@@ -973,7 +974,6 @@ export class AppCtx {
     this.syncOrganisationPrisms()
     if (isCascading) {
       await this.refreshProjects()
-      await this.refreshHubs()
     }
   }
 
@@ -1051,7 +1051,7 @@ export class AppCtx {
   }
 
   refreshHubs = async (isCascading: boolean = true): Promise<void> => {
-    if (!this.isSuperAdmin()) return
+    if (!this.isAdmin()) return
     this.state.resources.hub = await this.queryClient.fetchQuery({
       queryKey: this.queryMap.get(FirstClassResource.hub)!.queryKey(),
       queryFn: this.queryMap.get(FirstClassResource.hub)!.queryFn,
@@ -1479,9 +1479,18 @@ export class AppCtx {
       return undefined
     }
 
-    const refKey = ResourceRefKey[resource as keyof typeof ResourceRefKey]
+    const remoteGet = this.remoteMap[resource]?.get
 
     try {
+      if (remoteGet) {
+        const response = (await remoteGet({
+          ref,
+          refKey: 'id',
+        } as any)) as { data?: unknown }
+        return response?.data
+      }
+
+      const refKey = ResourceRefKey[resource as keyof typeof ResourceRefKey]
       const response = await fetch(
         `/api/${ResourcePath[resource]}/${ref}${refKey === 'code' ? '?byId=true' : ''}`,
       )
@@ -1719,8 +1728,24 @@ export class AppCtx {
         return await this.getFeatureById(ref as Id)
       case FirstClassResource.task:
         return await this.getTaskById(ref as Id)
-      case FirstClassResource.hub:
-        return await this.getHubById(this.getHubIdByCode(ref as Code)! as Id)
+      case FirstClassResource.hub: {
+        const code = ref as Code
+        const cachedId = this.getHubIdByCode(code)
+        if (cachedId) {
+          const cached = await this.getHubById(cachedId, false)
+          if (cached) return cached
+        }
+
+        const remote = (await getHub({
+          ref: String(ref),
+          refKey: 'code',
+        })) as { data?: Hub | null }
+        if (!remote?.data) return undefined
+
+        this.cache.hub.set(remote.data.id, remote.data)
+        this.hubCodeToId.set(remote.data.code, remote.data.id)
+        return remote.data
+      }
     }
   }
 
@@ -1907,8 +1932,7 @@ export class AppCtx {
     const i18nPrefs = useFallbacks
       ? preferences
       : { ...preferences, fallbackLocales: [] }
-    const shortName =
-      getI18n(project, 'nameShort', i18nPrefs, '', !useFallbacks) || ''
+    const shortName = getI18n(project, 'nameShort', i18nPrefs, '', !useFallbacks) || ''
     const name = getI18n(project, 'name', i18nPrefs, '', !useFallbacks) || ''
     return shortName || name || '-'
   }
@@ -1926,8 +1950,7 @@ export class AppCtx {
     const i18nPrefs = useFallbacks
       ? preferences
       : { ...preferences, fallbackLocales: [] }
-    const shortName =
-      getI18n(layer, 'nameShort', i18nPrefs, '', !useFallbacks) || ''
+    const shortName = getI18n(layer, 'nameShort', i18nPrefs, '', !useFallbacks) || ''
     const name = getI18n(layer, 'name', i18nPrefs, '', !useFallbacks) || ''
     return shortName || name || '-'
   }

@@ -129,7 +129,11 @@ export async function getBreadcrumbs(
 
     if (hierarchy.organisation && resourceType !== 'organisation') {
       breadcrumbs.push({
-        name: appCtx.getContextualOrganisationName(hierarchy.organisation, false, false),
+        name: appCtx.getContextualOrganisationName(
+          hierarchy.organisation,
+          false,
+          false,
+        ),
         href: `${ADMIN_PATH}/${ResourcePath.organisation}/${hierarchy.organisation.code}`,
       })
     }

@@ -531,6 +531,7 @@ export class AdminCtx {
 
     // Use AppCtx's cascading refresh logic but with admin query functions
     await this.appCtx.refreshOrganisations()
+    await this.refreshHubs(false)
 
     // Always refresh tasks when admin initializes to ensure fresh task data
     // This is especially important when navigating from app to admin
@@ -539,12 +540,20 @@ export class AdminCtx {
     this.isInitialised = true
   }
 
+  refreshHubs = async (isCascading: boolean = true): Promise<void> => {
+    await this.appCtx.refreshHubs(isCascading)
+  }
+
   // ═══════════════════════
   // ADMIN QUERY :: INVALIDATION
   // ═══════════════════════
 
   async invalidateAndRefresh(resource: FirstClassResource) {
     await this.appCtx.invalidate(resource)
+    if (resource === FirstClassResource.hub) {
+      await this.refreshHubs()
+      return
+    }
     await this.appCtx.refresh(resource)
   }
 
