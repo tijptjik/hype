@@ -6,25 +6,17 @@ import type {
   RemoteForm,
   RemoteFormInput,
   RemoteQueryFunction,
-  RequestEvent,
 } from '@sveltejs/kit'
 import { setupRequestHandler } from '$lib/api'
-
-type GuardedBaseContext = Awaited<ReturnType<typeof setupRequestHandler>> & {
-  event: RequestEvent
-}
-
-type GuardedQueryContext = GuardedBaseContext
-type GuardedInvalid = typeof invalid
-type GuardedIssue = unknown
-type GuardedFormContext = GuardedBaseContext & {
-  invalid: GuardedInvalid
-  issue: GuardedIssue
-}
-type GuardedCommandContext = GuardedBaseContext
-
-type SetupRequestEvent = Parameters<typeof setupRequestHandler>[0]
-type GuardedContextResolver = (payload?: unknown) => Promise<GuardedBaseContext>
+import type {
+  GuardedBaseContext,
+  GuardedCommandContext,
+  GuardedContextResolver,
+  GuardedFormContext,
+  GuardedIssue,
+  GuardedQueryContext,
+  SetupRequestEvent,
+} from '$lib/types'
 
 /**
  * Extract explicit admin intent from a single remote payload item.

@@ -20,7 +20,7 @@ import {
 } from '$lib/db/zod'
 import { toBooleanOrUndefined } from '$lib/api/services'
 // TYPES
-import type { SQL } from 'drizzle-orm'
+import { eq, type SQL } from 'drizzle-orm'
 import type {
   Hub,
   HubDB,
