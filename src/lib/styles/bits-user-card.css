@@ -4,7 +4,9 @@
   }
 
   .bits-theme .bits-form__user-card-wrapper {
-    @apply grid grid-cols-1 gap-4 2xl:grid-cols-2;
+    display: grid;
+    gap: calc(var(--spacing) * 2);
+    grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
   }
 
   .bits-theme .bits-form__user-card-avatar {
