@@ -41,6 +41,7 @@ const isDisabled = $derived(!isEditing || isSubmitting)
         <Switch
           checked={isHubExclusive}
           disabled={isDisabled}
+          size="sm"
           onCheckedChange={value => onToggleHubExclusive(value === true)}
         />
       </label>
@@ -51,6 +52,7 @@ const isDisabled = $derived(!isEditing || isSubmitting)
           <Switch
             checked={isCoreInclusive}
             disabled={isDisabled}
+            size="sm"
             onCheckedChange={value => onToggleCoreInclusive(value === true)}
           />
         </label>

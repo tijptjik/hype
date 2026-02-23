@@ -1,12 +1,19 @@
 @layer components {
   .bits-theme .bits-form__user-card-root {
     @apply bg-grain relative flex h-16 min-h-16 max-h-16 flex-row items-center overflow-hidden rounded-xl border-3 border-primary bg-glass-300 pr-3 shadow-xl;
+    width: 100%;
+    max-width: 24rem;
+  }
+
+  .bits-theme .bits-form__user-card-root.bits-form__user-card-root--full {
+    max-width: none;
   }
 
   .bits-theme .bits-form__user-card-wrapper {
     display: grid;
     gap: calc(var(--spacing) * 2);
-    grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(24rem, 100%), 1fr));
+    justify-items: start;
   }
 
   .bits-theme .bits-form__user-card-avatar {

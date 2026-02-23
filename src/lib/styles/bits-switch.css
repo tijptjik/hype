@@ -229,6 +229,8 @@
   .bits-theme .bits-switch--size-sm {
     --switch-scale: 0.75;
     --switch-size: calc(var(--switch-size-base) * 0.75);
+    --switch-border-width: 2px;
+    --switch-padding: 2px;
   }
   .bits-theme .bits-switch-field--size-sm {
     --switch-size: calc(var(--switch-size-base) * 0.75);

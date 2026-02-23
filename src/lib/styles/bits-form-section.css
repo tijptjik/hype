@@ -49,7 +49,8 @@
 
   .bits-theme .bits-form__section-header {
     @apply relative flex min-h-16 h-16 flex-wrap items-start justify-between pt-2 pb-4;
-    overflow: visible;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .bits-theme .bits-form__section-header--with-center {
@@ -57,12 +58,20 @@
   }
 
   .bits-theme .bits-form__section-header-left {
-    @apply flex min-w-48 flex-wrap items-center gap-2 pl-1;
+    @apply flex min-w-0 items-center gap-2 pl-1;
+    flex: 0 1 auto;
+    overflow: hidden;
   }
 
   .bits-theme .bits-form__section-header-right {
-    @apply flex min-w-48 justify-end gap-0 pr-1;
-    overflow: visible;
+    @apply flex min-w-0 flex-1 justify-end gap-0 pr-1;
+    container-type: inline-size;
+    overflow: hidden;
+  }
+
+  .bits-theme .bits-form__section-header-actions {
+    @apply min-w-0 flex-nowrap;
+    overflow: hidden;
   }
 
   .bits-theme .bits-form__section-header-center {
@@ -79,6 +88,21 @@
 
   .bits-theme .bits-form__section-header-right .bits-btn {
     max-height: none;
+  }
+
+  /* Header action label collapse tolerance. Lower value = labels stay visible longer. */
+  @container (max-width: 14rem) {
+    .bits-theme .bits-form__section-header-action-btn {
+      gap: 0;
+      padding-inline: calc(var(--btn-size) * 0.25);
+    }
+
+    .bits-theme .bits-form__section-header-action-btn .bits-btn__label {
+      max-width: 0;
+      opacity: 0;
+      margin-inline: 0;
+      transform: translateX(-0.125rem);
+    }
   }
 
   .bits-theme .bits-form__section-header-heading {

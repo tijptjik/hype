@@ -1,10 +1,13 @@
 <script lang="ts">
 import { slide } from 'svelte/transition'
 import { Search, SectionHeader } from '$lib/bits/custom'
-import { m } from '$lib/i18n'
 import { getURLfromImage } from '$lib/client/services/image'
 import * as FormOrganisationsSectionPrimitive from './components'
 import { OrganisationCard } from '$lib/bits/patterns/organisationCard'
+import {
+  isOrganisationSearchResultDisabled,
+  toOrganisationSearchDiscriminator,
+} from './formOrganisationsSection.utils'
 import type {
   FormOrganisationsSectionProps,
   HubOrganisationItem,
@@ -16,6 +19,7 @@ let {
   subtitle,
   organisations,
   selections,
+  hiddenOrganisationInputAttrs = [],
   isEditing = true,
   isSubmitting = false,
   isSubmitRequested = false,
@@ -181,18 +185,18 @@ $effect(() => {
           image: (organisation: any) => toImageSrc(organisation as HubOrganisationItem),
           title: (organisation: any) =>
             organisation.i18n?.en?.name || organisation.code,
-          descriminator: (organisation: any) => organisation.code,
+          descriminator: (organisation: any) =>
+            toOrganisationSearchDiscriminator(organisation),
+          disabled: (organisation: any) =>
+            isOrganisationSearchResultDisabled(organisation),
         }}
       />
     </div>
   {/if}
 
   {#if isRemoving && showModeUi}
-    <div
-      transition:slide={{ duration: showModeUi ? 200 : 0 }}
-      class="bits-form__hub-orgs-warning"
-    >
-      {m.admin__forms_remove_mode_active()}
+    <div transition:slide={{ duration: showModeUi ? 200 : 0 }}>
+      <FormOrganisationsSectionPrimitive.WarningBar />
     </div>
   {/if}
 
@@ -220,6 +224,12 @@ $effect(() => {
           onRemove={() => onRemoveOrganisation(organisation.id)}
         />
       </OrganisationCard.Root>
+    {/each}
+  </div>
+
+  <div class="hidden" aria-hidden="true">
+    {#each hiddenOrganisationInputAttrs as inputAttrs, index (index)}
+      <input {...inputAttrs}>
     {/each}
   </div>
 </section>

@@ -166,7 +166,7 @@ $effect(() => {
 
   <UserCard.Wrapper isAnimated>
     {#each renderedRoles as userRole (userRole.userId)}
-      <UserCard.Root>
+      <UserCard.Root class="bits-form__user-card-root--full">
         <UserCard.Avatar
           name={userRole.user.name}
           image={toImageSrc(userRole.user.image)}

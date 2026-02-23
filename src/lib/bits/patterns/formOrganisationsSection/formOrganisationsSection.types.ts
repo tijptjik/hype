@@ -24,6 +24,7 @@ export interface FormOrganisationsSectionProps {
   subtitle?: string
   organisations: HubOrganisationItem[]
   selections: HubOrganisationSelection[]
+  hiddenOrganisationInputAttrs?: Array<Record<string, unknown>>
   isEditing?: boolean
   isSubmitting?: boolean
   isSubmitRequested?: boolean
