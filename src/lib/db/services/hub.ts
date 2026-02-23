@@ -7,6 +7,7 @@ import {
   layer,
   feature,
   hub,
+  hubRole,
   hubI18n,
   task,
   featureImage,
@@ -15,6 +16,7 @@ import {
 // DB
 import { toRelatedRecords } from '..'
 import { insertManyRelated, replaceManyRelated } from '../crud'
+import { updateOrganisationById } from './organisation'
 // TYPES
 import type {
   Database,
@@ -392,6 +394,82 @@ export const updateHub = async (
 ): Promise<HubDBRaw> => {
   const [updated] = await db.update(hub).set(data).where(eq(hub.code, code)).returning()
   return updated
+}
+
+const toPersistedHubUserRoles = (
+  userRoles: Array<{ userId: string; role: string }>,
+  hubId: string,
+) =>
+  userRoles.map(userRole => ({
+    hubId,
+    userId: userRole.userId,
+    role: userRole.role,
+  }))
+
+export const createHubUserRoles = async (
+  db: Parameters<typeof createHub>[0],
+  roles: Array<{ userId: string; role: string }>,
+  hubId: string,
+): Promise<void> => {
+  if (roles.length === 0) return
+  await db.insert(hubRole).values(toPersistedHubUserRoles(roles, hubId))
+}
+
+export const updateHubUserRoles = async (
+  db: Parameters<typeof createHub>[0],
+  roles: Array<{ userId: string; role: string }>,
+  hubId: string,
+): Promise<void> => {
+  await db.delete(hubRole).where(eq(hubRole.hubId, hubId))
+  if (roles.length === 0) return
+  await db.insert(hubRole).values(toPersistedHubUserRoles(roles, hubId))
+}
+
+export const syncHubOrganisations = async (
+  db: Parameters<typeof createHub>[0],
+  hubId: string,
+  nextRows: Array<{
+    organisationId: string
+    isCoreInclusive: boolean
+    isHubExclusive: boolean
+  }>,
+): Promise<void> => {
+  const currentAssignments = await db
+    .select({ id: organisation.id })
+    .from(organisation)
+    .where(eq(organisation.hubId, hubId))
+
+  if (currentAssignments.length > 0) {
+    await Promise.all(
+      currentAssignments.map(row =>
+        updateOrganisationById(
+          db,
+          {
+            hubId: null,
+            isCoreInclusive: true,
+            isHubExclusive: false,
+          },
+          row.id,
+        ),
+      ),
+    )
+  }
+
+  if (nextRows.length === 0) return
+
+  await Promise.all(
+    nextRows.map(row =>
+      updateOrganisationById(
+        db,
+        {
+          hubId,
+          isCoreInclusive: row.isCoreInclusive,
+          isHubExclusive: row.isHubExclusive,
+        },
+        row.organisationId,
+      ),
+    ),
+  )
 }
 
 // ═══════════════════════
