@@ -1875,17 +1875,26 @@ export class AppCtx {
   getContextualOrganisationName = (
     organisation: Organisation,
     hideIfOnly: boolean = true,
+    useFallbacks: boolean = true,
   ): string | null => {
     const projectCount = this.getOrganisationProjectCount(organisation.id)
     if (hideIfOnly && projectCount === 1) {
       return null
     }
-    return getI18n(organisation, 'nameShort', this.getUserPreferences())
+    const preferences = this.getUserPreferences()
+    const i18nPrefs = useFallbacks
+      ? preferences
+      : { ...preferences, fallbackLocales: [] }
+    const shortName =
+      getI18n(organisation, 'nameShort', i18nPrefs, '', !useFallbacks) || ''
+    const name = getI18n(organisation, 'name', i18nPrefs, '', !useFallbacks) || ''
+    return shortName || name || '-'
   }
 
   getContextualProjectName = (
     project?: Project,
     hideIfOnly: boolean = true,
+    useFallbacks: boolean = true,
   ): string | null => {
     if (!project?.organisationId) return null
     const organisationProjectCount = this.getOrganisationProjectCount(
@@ -1894,24 +1903,33 @@ export class AppCtx {
     if (hideIfOnly && organisationProjectCount === 1) {
       return null
     }
-    return (
-      getI18n(project, 'nameShort', this.getUserPreferences()) ||
-      getI18n(project, 'name', this.getUserPreferences())
-    )
+    const preferences = this.getUserPreferences()
+    const i18nPrefs = useFallbacks
+      ? preferences
+      : { ...preferences, fallbackLocales: [] }
+    const shortName =
+      getI18n(project, 'nameShort', i18nPrefs, '', !useFallbacks) || ''
+    const name = getI18n(project, 'name', i18nPrefs, '', !useFallbacks) || ''
+    return shortName || name || '-'
   }
 
   getContextualLayerName = (
     layer: Layer,
     hideIfOnly: boolean = true,
+    useFallbacks: boolean = true,
   ): string | null => {
     const projectLayerCount = this.getProjectLayerCount(layer.projectId)
     if (hideIfOnly && projectLayerCount === 1) {
       return null
     }
-    return (
-      getI18n(layer, 'nameShort', this.getUserPreferences()) ||
-      getI18n(layer, 'name', this.getUserPreferences())
-    )
+    const preferences = this.getUserPreferences()
+    const i18nPrefs = useFallbacks
+      ? preferences
+      : { ...preferences, fallbackLocales: [] }
+    const shortName =
+      getI18n(layer, 'nameShort', i18nPrefs, '', !useFallbacks) || ''
+    const name = getI18n(layer, 'name', i18nPrefs, '', !useFallbacks) || ''
+    return shortName || name || '-'
   }
 
   getContextualFeatureName = (feature: FeatureFromCollection): string | null => {

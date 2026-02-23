@@ -129,21 +129,21 @@ export async function getBreadcrumbs(
 
     if (hierarchy.organisation && resourceType !== 'organisation') {
       breadcrumbs.push({
-        name: appCtx.getContextualOrganisationName(hierarchy.organisation, false),
+        name: appCtx.getContextualOrganisationName(hierarchy.organisation, false, false),
         href: `${ADMIN_PATH}/${ResourcePath.organisation}/${hierarchy.organisation.code}`,
       })
     }
 
     if (hierarchy.project && resourceType !== 'project') {
       breadcrumbs.push({
-        name: appCtx.getContextualProjectName(hierarchy.project, false),
+        name: appCtx.getContextualProjectName(hierarchy.project, false, false),
         href: `${ADMIN_PATH}/${ResourcePath.project}/${hierarchy.project.code}`,
       })
     }
 
     if (hierarchy.layer && resourceType !== 'layer') {
       breadcrumbs.push({
-        name: appCtx.getContextualLayerName(hierarchy.layer, false),
+        name: appCtx.getContextualLayerName(hierarchy.layer, false, false),
         href: `${ADMIN_PATH}/${ResourcePath.layer}/${hierarchy.layer.id}`,
       })
     }
