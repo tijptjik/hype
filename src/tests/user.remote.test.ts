@@ -5,6 +5,7 @@ const {
   mockSetupRequestHandler,
   mockGetUsersForHydration,
   mockSearchUsersByConditions,
+  mockToUserSearchTextCondition,
   mockToEntityResponseShape,
   mockToAuthMessage,
 } = vi.hoisted(() => ({
@@ -12,6 +13,7 @@ const {
   mockSetupRequestHandler: vi.fn(),
   mockGetUsersForHydration: vi.fn(),
   mockSearchUsersByConditions: vi.fn(),
+  mockToUserSearchTextCondition: vi.fn(),
   mockToEntityResponseShape: vi.fn(),
   mockToAuthMessage: vi.fn((code: string) => code),
 }))
@@ -84,6 +86,7 @@ vi.mock('$lib/api/server/remote', () => ({
 vi.mock('$lib/db/services/user', () => ({
   getUsersForHydration: mockGetUsersForHydration,
   searchUsersByConditions: mockSearchUsersByConditions,
+  toUserSearchTextCondition: mockToUserSearchTextCondition,
   toEntityResponseShape: mockToEntityResponseShape,
 }))
 
@@ -159,6 +162,10 @@ describe('user.remote', () => {
       request: { method: 'POST' },
     })
     mockSearchUsersByConditions.mockResolvedValue({ data: [], totalCount: 0 })
+    mockToUserSearchTextCondition.mockReturnValue({
+      fn: 'or',
+      args: [],
+    })
   })
 
   afterEach(() => {

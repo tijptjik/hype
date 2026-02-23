@@ -59,6 +59,34 @@ export const isPrivilegedArchivedSearchRequested = (state: {
   isArchived: boolean | null
 }): boolean => state.isArchived === true || state.isArchived === null
 
+export const toUserSearchPagingAndSorting = (params: {
+  pagination?: { limit?: number; offset?: number } | null
+  sorting?: { sortBy?: string; sortOrder?: string } | null
+}): {
+  limit: number
+  offset: number
+  sortBy: 'name' | 'email' | 'createdAt' | 'updatedAt'
+  sortOrder: 'asc' | 'desc'
+} => {
+  const limit = Math.min(params.pagination?.limit ?? 20, 100)
+  const offset = params.pagination?.offset ?? 0
+  const sortBy = params.sorting?.sortBy ?? 'name'
+  const sortOrder = params.sorting?.sortOrder ?? 'asc'
+
+  const resolvedSortBy =
+    sortBy === 'email' || sortBy === 'createdAt' || sortBy === 'updatedAt'
+      ? sortBy
+      : 'name'
+  const resolvedSortOrder = sortOrder === 'desc' ? 'desc' : 'asc'
+
+  return {
+    limit,
+    offset,
+    sortBy: resolvedSortBy,
+    sortOrder: resolvedSortOrder,
+  }
+}
+
 const toRoleConditions = (
   roleColumn: AnyColumn,
   filter: { role?: string; roles?: string[]; anyRole?: boolean },

@@ -201,6 +201,18 @@ export const searchUsersByConditions = async (
   }
 }
 
+export const toUserSearchTextCondition = (q: string): SQL<unknown> => {
+  const qLike = `%${q.toLowerCase()}%`
+  return (
+    or(
+      like(sql`lower(${user.name})`, qLike),
+      like(sql`lower(${user.username})`, qLike),
+      like(sql`lower(${user.attribution})`, qLike),
+      like(sql`lower(${user.email})`, qLike),
+    ) ?? sql`1 = 0`
+  )
+}
+
 /**
  * Updates an existing user in the database
  * @param db - The database instance
