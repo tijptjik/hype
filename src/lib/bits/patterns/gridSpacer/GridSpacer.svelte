@@ -5,9 +5,11 @@ let {
   class: className = '',
   cols = 3,
   leftCols = 2,
+  centerCols = 1,
   rightCols = 1,
   gap = 'calc(var(--spacing) * 3)',
   left,
+  center,
   right,
 }: GridSpacerProps = $props()
 
@@ -18,6 +20,9 @@ const resolvedLeftCols = $derived(
 const resolvedRightCols = $derived(
   Math.min(resolvedCols, Math.max(1, Math.floor(rightCols))),
 )
+const resolvedCenterCols = $derived(
+  Math.min(resolvedCols, Math.max(1, Math.floor(centerCols))),
+)
 
 const rootClass = $derived(
   ['bits-form__grid-spacer', className].filter(Boolean).join(' '),
@@ -26,11 +31,17 @@ const rootClass = $derived(
 
 <div
   class={rootClass}
-  style={`--bits-form-grid-spacer-cols: ${resolvedCols}; --bits-form-grid-spacer-left-cols: ${resolvedLeftCols}; --bits-form-grid-spacer-right-cols: ${resolvedRightCols}; --bits-form-grid-spacer-gap: ${gap};`}
+  style={`--bits-form-grid-spacer-cols: ${resolvedCols}; --bits-form-grid-spacer-left-cols: ${resolvedLeftCols}; --bits-form-grid-spacer-center-cols: ${resolvedCenterCols}; --bits-form-grid-spacer-right-cols: ${resolvedRightCols}; --bits-form-grid-spacer-gap: ${gap};`}
 >
   <div class="bits-form__grid-spacer-left">
     {#if left}
       {@render left()}
+    {/if}
+  </div>
+
+  <div class="bits-form__grid-spacer-center">
+    {#if center}
+      {@render center()}
     {/if}
   </div>
 
