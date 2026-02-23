@@ -12,8 +12,20 @@ let {
 const formClass = $derived(
   ['bits-theme', 'space-y-4', className].filter(Boolean).join(' '),
 )
+const formAttrs = $derived(attrs ?? {})
+
+function handleKeyDown(event: KeyboardEvent): void {
+  if (event.key !== 'Enter') return
+  if (!(event.ctrlKey || event.metaKey)) return
+  if (event.isComposing) return
+
+  event.preventDefault()
+  formEl?.requestSubmit()
+}
 </script>
 
 {#if isReady}
-  <form bind:this={formEl} {...attrs} class={formClass}>{@render children?.()}</form>
+  <form bind:this={formEl} {...formAttrs} class={formClass} onkeydown={handleKeyDown}>
+    {@render children?.()}
+  </form>
 {/if}
