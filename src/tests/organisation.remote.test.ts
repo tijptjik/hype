@@ -15,6 +15,7 @@ const {
   mockToAuthMessage,
   mockProbeOrganisationQuery,
   mockProbeOrganisationForCommand,
+  mockResolveOrganisationCommandProbe,
   mockUpdateOrganisationPublishedStateById,
   mockUpdateOrganisationArchivedStateById,
   mockLoadOrganisation,
@@ -36,6 +37,7 @@ const {
   mockToAuthMessage: vi.fn((code: string) => code),
   mockProbeOrganisationQuery: vi.fn(),
   mockProbeOrganisationForCommand: vi.fn(),
+  mockResolveOrganisationCommandProbe: vi.fn(),
   mockUpdateOrganisationPublishedStateById: vi.fn(),
   mockUpdateOrganisationArchivedStateById: vi.fn(),
   mockLoadOrganisation: vi.fn(),
@@ -84,6 +86,17 @@ vi.mock('$lib/api/services/authz', () => ({
     mockAuthorizeOrganisationPublishForSubmission,
   authorizeOrganisationDeleteForSubmission:
     mockAuthorizeOrganisationDeleteForSubmission,
+  ensureOrganisationCommandAllowed: (decision: { allowed: boolean; code?: string }) => {
+    if (!decision.allowed) {
+      const err = new Error(
+        mockToAuthMessage(decision.code ?? 'INSUFFICIENT_ROLE'),
+      ) as Error & {
+        status: number
+      }
+      err.status = 403
+      throw err
+    }
+  },
 }))
 
 vi.mock('$lib/api/services/organisation', () => ({
@@ -102,6 +115,7 @@ vi.mock('$lib/db/services/organisation', () => ({
   probeExistingOrganisation: vi.fn(async () => null),
   probeOrganisationForUpdate: vi.fn(async () => null),
   probeOrganisationForCommand: mockProbeOrganisationForCommand,
+  resolveOrganisationCommandProbe: mockResolveOrganisationCommandProbe,
   probeOrganisationQuery: mockProbeOrganisationQuery,
   getOrganisation: mockLoadOrganisation,
   updateI18n: vi.fn(),
@@ -171,6 +185,13 @@ describe('organisation.remote authz', () => {
       isArchived: false,
     })
     mockProbeOrganisationForCommand.mockResolvedValue({ id: 'org-1', hubId: 'hub-a' })
+    mockResolveOrganisationCommandProbe.mockImplementation(
+      async (_db: unknown, _id: string, onNotFound: () => never) => {
+        const result = await mockProbeOrganisationForCommand()
+        if (!result) return onNotFound()
+        return result
+      },
+    )
     mockUpdateOrganisationPublishedStateById.mockResolvedValue({
       id: 'org-1',
       isPublished: true,

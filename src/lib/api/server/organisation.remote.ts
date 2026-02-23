@@ -4,7 +4,7 @@ import { error } from '@sveltejs/kit'
 // I18N
 import { toLocaleRecordFromOrganisationFormI18n } from '$lib/i18n'
 // DRIZZLE
-import { and, eq, ne } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 // UTILS
 import { nanoid } from 'nanoid'
 // AUTHORIZATION
@@ -12,32 +12,45 @@ import {
   isReservedCode,
   toAuthMessage,
   toIssueDetailMessage,
-  toOrganisationSubmittedFields,
+  authorizeOrganisationListForContext,
+  authorizeOrganisationReadForProbe,
+  authorizeOrganisationCreateForSubmission,
+  authorizeOrganisationUpdateForSubmission,
+  authorizeOrganisationManageRolesForSubmission,
   toOrganisationUserRoleSignature,
-  authorizeOrganisationRead,
-  authorizeOrganisationList,
-  authorizeOrganisationCreate,
-  authorizeOrganisationUpdate,
-  authorizeOrganisationManageRoles,
-  authorizeOrganisationPublish,
-  authorizeOrganisationDelete,
+  authorizeOrganisationPublishForSubmission,
+  authorizeOrganisationDeleteForSubmission,
+  ensureOrganisationCommandAllowed,
 } from '$lib/api/services/authz'
 // SERVICES
 import {
   toQueryConditions,
   getOrganisationWithRelations,
   toOrganisationProfile,
+  toLookupConditions,
+  toRequestedListState,
 } from '$lib/api/services/organisation'
-import { toBooleanOrUndefined } from '$lib/api/services'
+import {
+  getDuplicateValues,
+  hasRoleMembershipChanged,
+  requireValue,
+  validateUniqueNonReservedCode,
+} from '$lib/api/services'
 import {
   createI18n,
   createOrganisation,
   createUserRoles,
   listOrganisations,
+  probeExistingOrganisation,
+  probeOrganisationForUpdate,
+  resolveOrganisationCommandProbe,
+  probeOrganisationQuery,
   getOrganisation as loadOrganisation,
   updateI18n,
-  updateOrganisationById,
-  updateUserRoles,
+  updateOrganisationByIdWithConcurrency,
+  updateOrganisationPublishedStateById,
+  updateOrganisationArchivedStateById,
+  syncOrganisationUserRoles,
   toPersistedOrganisationUserRoles,
   toEntityResponseShape,
   toListResponseShape,
@@ -59,30 +72,13 @@ import type {
   Id,
   ListResponse,
   OrganisationDB,
-  OrganisationFormInput,
   OrganisationEntityByProfile,
   OrganisationGetParamsByProfile,
   OrganisationListByProfile,
   OrganisationListParamsByProfile,
   OrganisationProfile,
+  RelationShape,
 } from '$lib/types'
-
-/* ----------------- */
-// QUERY HELPERS
-/* -------- */
-
-const toLookupConditions = (params: {
-  ref: string
-  refKey?: 'id' | 'code'
-}): Partial<OrganisationDB> =>
-  params.refKey === 'code'
-    ? ({ code: params.ref } as Partial<OrganisationDB>)
-    : ({ id: params.ref as Id } as Partial<OrganisationDB>)
-
-const toRequestedListState = (conditions: Partial<OrganisationDB>) => ({
-  isPublished: toBooleanOrUndefined(conditions.isPublished) ?? true,
-  isArchived: toBooleanOrUndefined(conditions.isArchived) ?? false,
-})
 
 /* ----------------- */
 // REMOTE QUERIES
@@ -110,35 +106,31 @@ const getOrganisationsQuery = guardedQuery(
   ListQueryParamsSchema,
   async (params, ctx) => {
     const { db, user, userRoles, isAdminRequest, event } = ctx
+    // Resolve desired `profile`.
     const profile = toOrganisationProfile(params.meta?.profile, 'list')
 
-    // Validate incoming filter keys against table columns and set default visibility filters.
+    // Resolve desired `query params`.
     const queryParams = validateQueryParams<OrganisationDB>(
       organisation,
       params.conditions as Partial<OrganisationDB> | undefined,
     )
+    // Resolve requested visibility state from query params.
     const requestedListState = toRequestedListState(
       queryParams as Partial<OrganisationDB>,
     )
 
     // Apply role-based authorization.
-    const listDecision = authorizeOrganisationList(
-      {
-        userId: user.id,
-        userRoles,
-        isAuthenticated: true,
-        isAnonymous: user.isAnonymous,
-      },
-      {
-        resourceHubId: event.locals.hub?.isCore ? null : (event.locals.hub?.id ?? null),
-      },
+    const listDecision = authorizeOrganisationListForContext({
+      user,
+      userRoles,
+      hub: event.locals.hub,
       requestedListState,
-    )
+    })
     if (!listDecision.allowed) {
       throw error(403, toAuthMessage(listDecision.code ?? 'INSUFFICIENT_ROLE'))
     }
 
-    // Build final SQL conditions based on request scope and role permissions.
+    // Resolve query conditions.
     const { conditions, filtersToApply } = toQueryConditions(
       user,
       isAdminRequest,
@@ -146,10 +138,10 @@ const getOrganisationsQuery = guardedQuery(
       userRoles,
     )
 
-    // Execute list query with optional text search and pagination.
+    // Load records from DB.
     const result = await listOrganisations(
       db,
-      getOrganisationWithRelations(profile, Boolean(user.superAdmin)),
+      getOrganisationWithRelations(profile, Boolean(user.superAdmin)) as RelationShape,
       conditions,
       event.locals.hub,
       params.pagination,
@@ -160,6 +152,7 @@ const getOrganisationsQuery = guardedQuery(
       },
     )
 
+    // Return loaded records with desired profile.
     return toListResponseShape(result, user, profile)
   },
 )
@@ -186,52 +179,27 @@ export const getOrganisations = getOrganisationsQuery as typeof getOrganisations
 const getOrganisationQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => {
   try {
     const { db, user, userRoles, isAdminRequest, event } = ctx
+    // Resolve desired `profile`.
     const profile = toOrganisationProfile(params.meta?.profile, 'detail')
 
     // Probe the requested organisation for flags.
-    const probeQuery = db
-      .select({
-        id: organisation.id,
-        hubId: organisation.hubId,
-        isPublished: organisation.isPublished,
-        isArchived: organisation.isArchived,
-      })
-      .from(organisation)
-      .where(
-        params.refKey === 'code'
-          ? eq(organisation.code, params.ref)
-          : eq(organisation.id, params.ref as Id),
-      )
-      .limit(1)
-
-    const [probe] = await probeQuery
+    const probe = await probeOrganisationQuery(db, params)
     if (!probe) {
       return toEntityResponseShape(null, user)
     }
 
     // Apply role-based authorization.
-    const readDecision = authorizeOrganisationRead(
-      {
-        userId: user.id,
-        userRoles,
-        isAuthenticated: true,
-        isAnonymous: user.isAnonymous,
-      },
-      {
-        resourceId: probe.id,
-        resourceHubId: probe.hubId,
-      },
-      {
-        isPublished: probe.isPublished,
-        isArchived: probe.isArchived,
-      },
-    )
+    const readDecision = authorizeOrganisationReadForProbe({
+      user,
+      userRoles,
+      probe,
+    })
 
     if (!readDecision.allowed) {
       throw error(403, toAuthMessage(readDecision.code ?? 'INSUFFICIENT_ROLE'))
     }
 
-    // Validate incoming filter keys against table columns and set default visibility filters.
+    // Resolve desired `query params`.
     const queryParams = validateQueryParams<OrganisationDB>(
       organisation,
       toLookupConditions(params),
@@ -241,7 +209,7 @@ const getOrganisationQuery = guardedQuery(GetQueryParamsSchema, async (params, c
       } as Partial<OrganisationDB>,
     )
 
-    // Build final SQL conditions based on request scope and role permissions.
+    // Resolve query conditions.
     const { conditions } = toQueryConditions(
       user,
       isAdminRequest,
@@ -249,14 +217,15 @@ const getOrganisationQuery = guardedQuery(GetQueryParamsSchema, async (params, c
       userRoles,
     )
 
-    // Execute a single-record query.
+    // Load record from DB.
     const result = await loadOrganisation(
       db,
-      getOrganisationWithRelations(profile, Boolean(user.superAdmin)),
+      getOrganisationWithRelations(profile, Boolean(user.superAdmin)) as RelationShape,
       conditions,
       event.locals.hub,
     )
 
+    // Return loaded record with desired profile.
     return toEntityResponseShape(result ?? null, user, profile)
   } catch (error) {
     console.error('[remote:getOrganisation] Failed', {
@@ -291,223 +260,204 @@ export const getOrganisation = getOrganisationQuery as typeof getOrganisationQue
  * Update flow enforces optimistic concurrency via `meta.updatedAt === current.modifiedAt`.
  * Authorization is checked before uniqueness lookups to avoid leaking existence details.
  */
-export const organisationForm = guardedForm<
-  OrganisationFormInput,
-  { data: { id: string; modifiedAt: string } }
->('unchecked', async (input, ctx) => {
-  const params = OrganisationFormData.parse(input)
-  const { db, user, userRoles, event, invalid, issue } = ctx
-  const { meta, data } = params
-  let organisationId = meta?.id?.trim()
-  const mode = meta?.mode
-  const normalizedCode = data.code.trim()
-  const activeHubId = event.locals.hub?.isCore ? null : (event.locals.hub?.id ?? null)
-  const isExplicitCreateMode = mode === 'create'
-  const hasUpdateToken = Boolean(meta?.updatedAt)
-  const submittedRoles = Array.isArray(data.userRoles) ? data.userRoles : []
-  const duplicateSubmittedRoleUserIds = submittedRoles
-    .map(userRole => userRole.userId)
-    .filter((userId, index, array) => array.indexOf(userId) !== index)
+export const organisationForm = guardedForm(
+  'unchecked',
+  async (
+    input: unknown,
+    ctx,
+  ): Promise<{ data: { id: string; modifiedAt: string } }> => {
+    // Parse and normalize submitted form input.
+    const params = OrganisationFormData.parse(input)
+    const { db, user, userRoles, event, invalid } = ctx
+    const issue = ctx.issue
+    const { meta, data } = params
 
-  // Defensive validation: enforce role invariants server-side even if payload parsing
-  // quirks bypass client/schema checks.
-  if (submittedRoles.length === 0) {
-    invalid(issue(toIssueDetailMessage('USER_ROLES_REQUIRED')))
-  }
-  if (!submittedRoles.some(userRole => userRole.role === 'owner')) {
-    invalid(issue(toIssueDetailMessage('OWNER_REQUIRED')))
-  }
-  if (duplicateSubmittedRoleUserIds.length > 0) {
-    invalid(
-      issue.data.userRoles(
-        `INVALID: Duplicate user roles submitted (${Array.from(new Set(duplicateSubmittedRoleUserIds)).join(', ')})`,
-      ),
+    const organisationId = meta?.id?.trim()
+    const mode = meta?.mode
+    const normalizedCode = data.code.trim()
+    const activeHubId = event.locals.hub?.isCore ? null : (event.locals.hub?.id ?? null)
+    const isExplicitCreateMode = mode === 'create'
+    const hasUpdateToken = Boolean(meta?.updatedAt)
+    const submittedRoles = Array.isArray(data.userRoles) ? data.userRoles : []
+    const duplicateSubmittedRoleUserIds = getDuplicateValues(
+      submittedRoles.map(userRole => userRole.userId),
     )
-  }
 
-  if (mode === 'create' && organisationId) {
-    invalid(issue('CREATE_MODE_CANNOT_INCLUDE_ID'))
-  }
-  if (mode === 'update' && !organisationId) {
-    invalid(issue('MISSING_ORGANISATION_ID'))
-  }
+    // Validate payload invariants.
+    if (submittedRoles.length === 0) {
+      invalid(issue(toIssueDetailMessage('USER_ROLES_REQUIRED')))
+    }
+    if (!submittedRoles.some(userRole => userRole.role === 'owner')) {
+      invalid(issue(toIssueDetailMessage('OWNER_REQUIRED')))
+    }
+    if (duplicateSubmittedRoleUserIds.length > 0) {
+      invalid(
+        issue.data.userRoles(
+          `INVALID: Duplicate user roles submitted (${Array.from(new Set(duplicateSubmittedRoleUserIds)).join(', ')})`,
+        ),
+      )
+    }
+    if (mode === 'create' && organisationId) {
+      invalid(issue('CREATE_MODE_CANNOT_INCLUDE_ID'))
+    }
+    if (mode === 'update' && !organisationId) {
+      invalid(issue('MISSING_ORGANISATION_ID'))
+    }
 
-  // Defensive fallback: if update metadata id is missing, recover by unique code.
-  if (!organisationId && !isExplicitCreateMode && meta?.updatedAt) {
-    const [existingByCode] = await db
-      .select({ id: organisation.id })
-      .from(organisation)
-      .where(eq(organisation.code, normalizedCode))
-      .limit(1)
-    organisationId = existingByCode?.id
-  }
+    const isCreateMode =
+      !organisationId && !hasUpdateToken && (!mode || isExplicitCreateMode)
 
-  const isCreateMode =
-    !organisationId && !hasUpdateToken && (!mode || isExplicitCreateMode)
-
-  if (isCreateMode) {
-    const createDecision = authorizeOrganisationCreate(
-      {
-        userId: user.id,
+    if (isCreateMode) {
+      // Apply role-based authorization.
+      const createDecision = authorizeOrganisationCreateForSubmission({
+        user,
         userRoles,
-        isAuthenticated: true,
-        isAnonymous: user.isAnonymous,
-      },
-      { resourceHubId: activeHubId },
-      toOrganisationSubmittedFields(data),
+        resourceHubId: activeHubId,
+        submittedData: data,
+      })
+      if (!createDecision.allowed) {
+        invalid(issue(toIssueDetailMessage(createDecision.code ?? 'INSUFFICIENT_ROLE')))
+      }
+
+      await validateUniqueNonReservedCode({
+        code: normalizedCode,
+        isReservedCode,
+        probeExisting: code => probeExistingOrganisation(db, code),
+        onReserved: () =>
+          invalid(issue.data.code(toIssueDetailMessage('CODE_RESERVED'))),
+        onConflict: () =>
+          invalid(issue.data.code(toIssueDetailMessage('CODE_ALREADY_EXISTS'))),
+      })
+
+      // Create main record and related rows.
+      const created = await createOrganisation(db, {
+        id: nanoid(12),
+        code: normalizedCode,
+        url: data.url.trim() === '' ? null : data.url.trim(),
+        hubId: activeHubId,
+      })
+
+      await createI18n(
+        db,
+        toLocaleRecordFromOrganisationFormI18n(data.i18n),
+        created.id,
+      )
+      await createUserRoles(
+        db,
+        toPersistedOrganisationUserRoles(data.userRoles, created.id),
+        created.id,
+      )
+
+      return {
+        data: {
+          id: created.id,
+          modifiedAt: created.modifiedAt,
+        },
+      }
+    }
+
+    const targetOrganisationId = requireValue(organisationId, () =>
+      invalid(issue('MISSING_ORGANISATION_ID')),
+    ) as Id
+
+    // Load current record for update flow.
+    const current = requireValue(
+      await probeOrganisationForUpdate(db, targetOrganisationId),
+      () => invalid(issue('ORGANISATION_NOT_FOUND')),
     )
-    if (!createDecision.allowed) {
-      invalid(issue(toIssueDetailMessage(createDecision.code ?? 'INSUFFICIENT_ROLE')))
+
+    // Apply role-based authorization for core update fields.
+    const updateDecision = authorizeOrganisationUpdateForSubmission({
+      user,
+      userRoles,
+      resource: {
+        id: current.id,
+        hubId: current.hubId,
+      },
+      submittedData: data,
+    })
+    if (!updateDecision.allowed) {
+      invalid(issue(toIssueDetailMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE')))
     }
 
-    if (isReservedCode(normalizedCode)) {
-      invalid(issue.data.code(toIssueDetailMessage('CODE_RESERVED')))
+    const existingRoleRows = await db
+      .select({
+        userId: organisationRole.userId,
+        role: organisationRole.role,
+      })
+      .from(organisationRole)
+      .where(eq(organisationRole.organisationId, current.id))
+    // Apply role-management authorization only when role membership changed.
+    if (
+      hasRoleMembershipChanged(
+        submittedRoles,
+        existingRoleRows,
+        toOrganisationUserRoleSignature,
+      )
+    ) {
+      const roleDecision = authorizeOrganisationManageRolesForSubmission({
+        user,
+        userRoles,
+        resource: {
+          id: current.id,
+          hubId: current.hubId,
+        },
+      })
+      if (!roleDecision.allowed) {
+        invalid(issue(toIssueDetailMessage(roleDecision.code ?? 'INSUFFICIENT_ROLE')))
+      }
     }
 
-    const existing = await db
-      .select({ id: organisation.id })
-      .from(organisation)
-      .where(eq(organisation.code, normalizedCode))
-      .limit(1)
-
-    if (existing.length > 0) {
-      invalid(issue.data.code(toIssueDetailMessage('CODE_ALREADY_EXISTS')))
+    // Enforce optimistic concurrency guard.
+    const updatedAt = meta?.updatedAt
+    if (!updatedAt) {
+      invalid(issue(toIssueDetailMessage('STALE_WRITE')))
+    }
+    if (updatedAt !== current.modifiedAt) {
+      invalid(issue(toIssueDetailMessage('STALE_WRITE')))
     }
 
-    const created = await createOrganisation(db, {
-      id: nanoid(12),
+    await validateUniqueNonReservedCode({
       code: normalizedCode,
-      url: data.url.trim() === '' ? null : data.url.trim(),
-      hubId: activeHubId,
+      current,
+      isReservedCode,
+      probeExisting: code => probeExistingOrganisation(db, code),
+      onReserved: () => invalid(issue.data.code(toIssueDetailMessage('CODE_RESERVED'))),
+      onConflict: () =>
+        invalid(issue.data.code(toIssueDetailMessage('CODE_ALREADY_EXISTS'))),
     })
 
-    await createI18n(db, toLocaleRecordFromOrganisationFormI18n(data.i18n), created.id)
-    await createUserRoles(
-      db,
-      toPersistedOrganisationUserRoles(data.userRoles, created.id),
-      created.id,
+    // Persist main record atomically with optimistic concurrency.
+    const result = await updateOrganisationByIdWithConcurrency(db, {
+      id: current.id,
+      updatedAt: updatedAt as string,
+      data: {
+        code: normalizedCode,
+        url: data.url.trim() === '' ? null : data.url.trim(),
+      },
+    })
+
+    const persisted = requireValue(result, () =>
+      invalid(issue(toIssueDetailMessage('STALE_WRITE'))),
     )
 
+    // Persist related i18n and role assignments.
+    await updateI18n(db, toLocaleRecordFromOrganisationFormI18n(data.i18n), current.id)
+    await syncOrganisationUserRoles(
+      db,
+      toPersistedOrganisationUserRoles(data.userRoles, current.id),
+      current.id,
+    )
+
+    // Return persisted identity and write token.
     return {
       data: {
-        id: created.id,
-        modifiedAt: created.modifiedAt,
+        id: persisted.id,
+        modifiedAt: persisted.modifiedAt,
       },
     }
-  }
-
-  if (!organisationId) invalid(issue('MISSING_ORGANISATION_ID'))
-
-  const [current] = await db
-    .select({
-      id: organisation.id,
-      code: organisation.code,
-      hubId: organisation.hubId,
-      modifiedAt: organisation.modifiedAt,
-    })
-    .from(organisation)
-    .where(eq(organisation.id, organisationId as Id))
-    .limit(1)
-
-  if (!current) invalid(issue('ORGANISATION_NOT_FOUND'))
-
-  const updateDecision = authorizeOrganisationUpdate(
-    {
-      userId: user.id,
-      userRoles,
-      isAuthenticated: true,
-      isAnonymous: user.isAnonymous,
-    },
-    {
-      resourceId: current.id,
-      resourceHubId: current.hubId,
-    },
-    toOrganisationSubmittedFields(data),
-  )
-  if (!updateDecision.allowed) {
-    invalid(issue(toIssueDetailMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE')))
-  }
-
-  const existingRoleRows = await db
-    .select({
-      userId: organisationRole.userId,
-      role: organisationRole.role,
-    })
-    .from(organisationRole)
-    .where(eq(organisationRole.organisationId, current.id))
-  const incomingRolesSignature = toOrganisationUserRoleSignature(data.userRoles)
-  const existingRolesSignature = toOrganisationUserRoleSignature(existingRoleRows)
-  if (incomingRolesSignature !== existingRolesSignature) {
-    const roleDecision = authorizeOrganisationManageRoles(
-      {
-        userId: user.id,
-        userRoles,
-        isAuthenticated: true,
-        isAnonymous: user.isAnonymous,
-      },
-      {
-        resourceId: current.id,
-        resourceHubId: current.hubId,
-      },
-    )
-    if (!roleDecision.allowed) {
-      invalid(issue(toIssueDetailMessage(roleDecision.code ?? 'INSUFFICIENT_ROLE')))
-    }
-  }
-
-  if (!meta?.updatedAt) {
-    invalid(issue(toIssueDetailMessage('STALE_WRITE')))
-  }
-  if (meta.updatedAt !== current.modifiedAt) {
-    invalid(issue(toIssueDetailMessage('STALE_WRITE')))
-  }
-
-  if (isReservedCode(normalizedCode)) {
-    invalid(issue.data.code(toIssueDetailMessage('CODE_RESERVED')))
-  }
-
-  const conflictingCode = await db
-    .select({ id: organisation.id })
-    .from(organisation)
-    .where(and(eq(organisation.code, normalizedCode), ne(organisation.id, current.id)))
-    .limit(1)
-  if (conflictingCode.length > 0) {
-    invalid(issue.data.code(toIssueDetailMessage('CODE_ALREADY_EXISTS')))
-  }
-
-  // Atomic optimistic-concurrency check to prevent parallel submissions from
-  // racing into relation replacement and throwing unique-key 500s.
-  const [updated] = await db
-    .update(organisation)
-    .set({
-      code: normalizedCode,
-      url: data.url.trim() === '' ? null : data.url.trim(),
-    })
-    .where(
-      and(eq(organisation.id, current.id), eq(organisation.modifiedAt, meta.updatedAt)),
-    )
-    .returning({
-      id: organisation.id,
-      modifiedAt: organisation.modifiedAt,
-    })
-
-  if (!updated) {
-    invalid(issue(toIssueDetailMessage('STALE_WRITE')))
-  }
-
-  const nextI18n = toLocaleRecordFromOrganisationFormI18n(data.i18n)
-  const nextRoles = toPersistedOrganisationUserRoles(data.userRoles, current.id)
-
-  await updateI18n(db, nextI18n, current.id)
-  await updateUserRoles(db, nextRoles, current.id)
-
-  return {
-    data: {
-      id: updated.id,
-      modifiedAt: updated.modifiedAt,
-    },
-  }
-})
+  },
+)
 
 /* ----------------- */
 // REMOTE COMMANDS
@@ -526,50 +476,45 @@ export const publishOrganisation = guardedCommand(
   PublishOrganisationSchema,
   async (params, ctx) => {
     const { db, user, userRoles } = ctx
+    const commandOrganisationId = params.id as Id
 
-    const [current] = await db
-      .select({
-        id: organisation.id,
-        hubId: organisation.hubId,
-      })
-      .from(organisation)
-      .where(eq(organisation.id, params.id as Id))
-      .limit(1)
-
-    if (!current) {
-      throw error(404, 'ORGANISATION_NOT_FOUND')
-    }
-
-    const publishDecision = authorizeOrganisationPublish(
-      {
-        userId: user.id,
-        userRoles,
-        isAuthenticated: true,
-        isAnonymous: user.isAnonymous,
-      },
-      {
-        resourceId: current.id,
-        resourceHubId: current.hubId,
+    // Probe target record existence.
+    const probed = await resolveOrganisationCommandProbe(
+      db,
+      commandOrganisationId,
+      () => {
+        throw error(404, 'ORGANISATION_NOT_FOUND')
       },
     )
-    if (!publishDecision.allowed) {
-      throw error(403, toAuthMessage(publishDecision.code ?? 'INSUFFICIENT_ROLE'))
-    }
 
-    const updated = await updateOrganisationById(
-      db,
-      {
-        isPublished: params.state,
-        publishedAt: params.state ? new Date().toISOString() : null,
-        publisherId: params.state ? user.id : null,
+    // Apply role-based authorization.
+    ensureOrganisationCommandAllowed(
+      authorizeOrganisationPublishForSubmission({
+        user,
+        userRoles,
+        resource: {
+          id: probed.id,
+          hubId: probed.hubId,
+        },
+      }),
+    )
+
+    // Persist publish state update.
+    const persisted = requireValue(
+      await updateOrganisationPublishedStateById(db, {
+        id: commandOrganisationId,
+        state: params.state,
+        publisherId: user.id,
+      }),
+      () => {
+        throw error(404, 'ORGANISATION_NOT_FOUND')
       },
-      params.id as Id,
     )
 
     return {
       data: {
-        id: updated.id,
-        isPublished: updated.isPublished,
+        id: persisted.id,
+        isPublished: persisted.isPublished,
       },
     }
   },
@@ -588,45 +533,43 @@ export const archiveOrganisation = guardedCommand(
   RemoveOrganisationSchema,
   async (params, ctx) => {
     const { db, user, userRoles } = ctx
+    const commandOrganisationId = params.id as Id
 
-    const [current] = await db
-      .select({
-        id: organisation.id,
-        hubId: organisation.hubId,
-      })
-      .from(organisation)
-      .where(eq(organisation.id, params.id as Id))
-      .limit(1)
-
-    if (!current) {
-      throw error(404, 'ORGANISATION_NOT_FOUND')
-    }
-
-    const deleteDecision = authorizeOrganisationDelete(
-      {
-        userId: user.id,
-        userRoles,
-        isAuthenticated: true,
-        isAnonymous: user.isAnonymous,
-      },
-      {
-        resourceHubId: current.hubId,
+    // Probe target record existence.
+    const probed = await resolveOrganisationCommandProbe(
+      db,
+      commandOrganisationId,
+      () => {
+        throw error(404, 'ORGANISATION_NOT_FOUND')
       },
     )
-    if (!deleteDecision.allowed) {
-      throw error(403, toAuthMessage(deleteDecision.code ?? 'INSUFFICIENT_ROLE'))
-    }
 
-    const updated = await updateOrganisationById(
-      db,
-      { isArchived: params.state },
-      params.id as Id,
+    // Apply role-based authorization.
+    ensureOrganisationCommandAllowed(
+      authorizeOrganisationDeleteForSubmission({
+        user,
+        userRoles,
+        resource: {
+          hubId: probed.hubId,
+        },
+      }),
+    )
+
+    // Persist archive state update.
+    const persisted = requireValue(
+      await updateOrganisationArchivedStateById(db, {
+        id: commandOrganisationId,
+        state: params.state,
+      }),
+      () => {
+        throw error(404, 'ORGANISATION_NOT_FOUND')
+      },
     )
 
     return {
       data: {
-        id: updated.id,
-        isArchived: updated.isArchived,
+        id: persisted.id,
+        isArchived: persisted.isArchived,
       },
     }
   },
