@@ -1,5 +1,7 @@
 import { error } from '@sveltejs/kit'
 import { toAuthMessage } from '.'
+import { getScopedHubAdminIds, isCoreHubAdmin } from './hub'
+import { hasAuthenticatedSession } from './user'
 // TYPES
 import type {
   AuthorizeParams,
@@ -31,8 +33,6 @@ type OrganisationAuthTarget = {
 // POLICY CONSTANTS
 /* -------- */
 
-const CORE_HUB_CODE = 'core'
-
 const ORGANISATION_CORE_ADMIN_ONLY_FIELDS = new Set<OrganisationAuthorizationField>([
   'hubId',
   'isCoreInclusive',
@@ -46,28 +46,7 @@ const ORGANISATION_HUB_ADMIN_ONLY_FIELDS = new Set<OrganisationAuthorizationFiel
 // ROLE RESOLUTION
 /* -------- */
 
-const isHubAdminRole = (role: UserRoleDisco): boolean =>
-  role.type === 'hub' && role.role === 'admin'
-
-const isCoreHubAdmin = (roles: UserRoleDisco[]): boolean =>
-  roles.some(
-    role =>
-      isHubAdminRole(role) &&
-      (role as { hub?: { code?: string | null } }).hub?.code === CORE_HUB_CODE,
-  )
-
-const getScopedHubAdminIds = (roles: UserRoleDisco[]): Set<string> =>
-  new Set(
-    roles
-      .filter(role => isHubAdminRole(role))
-      .filter(
-        role =>
-          (role as { hub?: { code?: string | null } }).hub?.code !== CORE_HUB_CODE,
-      )
-      .map(role => (role as { hubId: string }).hubId),
-  )
-
-const isOrganisationOwner = (
+export const isOrganisationOwner = (
   roles: UserRoleDisco[],
   organisationId?: string,
 ): boolean =>
@@ -88,7 +67,7 @@ const hasOrganisationRole = (
     role => role.type === 'organisation' && role.organisationId === organisationId,
   )
 
-const hasAnyOrganisationRole = (roles: UserRoleDisco[]): boolean =>
+export const hasAnyOrganisationRole = (roles: UserRoleDisco[]): boolean =>
   roles.some(role => role.type === 'organisation')
 
 const isRelevantHubAdmin = (
@@ -98,11 +77,6 @@ const isRelevantHubAdmin = (
   if (isCoreHubAdmin(roles)) return true
   if (!organisationHubId) return false
   return getScopedHubAdminIds(roles).has(organisationHubId)
-}
-
-const hasAuthenticatedSession = (params: AuthorizeParams): boolean => {
-  if (params.isAuthenticated !== undefined) return params.isAuthenticated
-  return Boolean(params.userId)
 }
 
 /* ----------------- */
@@ -241,7 +215,7 @@ const deleteOrganisationPolicy: OrganisationPolicyHandler = params =>
   createOrganisationPolicy(params)
 
 /* ----------------- */
-// AUTH HELPERS (SERVER CALL SITES)
+// INPUT NORMALIZERS
 /* -------- */
 
 export const toOrganisationSubmittedFields = (
@@ -262,6 +236,10 @@ export const toOrganisationUserRoleSignature = (
     .map(role => `${role.userId}:${role.role}`)
     .sort((a, b) => a.localeCompare(b))
     .join('|')
+
+/* ----------------- */
+// ACTOR RESOLUTION
+/* -------- */
 
 export const toOrganisationAuthActor = (user: unknown): OrganisationAuthActor => {
   if (!user || typeof user !== 'object') {
@@ -302,6 +280,10 @@ const toOrganisationSubmissionActor = (
   }),
   userRoles,
 })
+
+/* ----------------- */
+// READ/LIST AUTHORIZATION
+/* -------- */
 
 export const authorizeOrganisationRead = (
   actor: OrganisationAuthActor,
@@ -371,6 +353,10 @@ export const authorizeOrganisationListForContext = (params: {
     },
     params.requestedListState,
   )
+
+/* ----------------- */
+// WRITE AUTHORIZATION
+/* -------- */
 
 export const authorizeOrganisationCreate = (
   actor: OrganisationAuthActor,
@@ -516,6 +502,10 @@ export const authorizeOrganisationDeleteForSubmission = (params: {
     },
   )
 
+/* ----------------- */
+// COMMAND AUTHORIZATION
+/* -------- */
+
 export const ensureOrganisationCommandAllowed = (
   decision: AuthorizationDecision,
 ): void => {
@@ -523,6 +513,10 @@ export const ensureOrganisationCommandAllowed = (
     throw error(403, toAuthMessage(decision.code ?? 'INSUFFICIENT_ROLE'))
   }
 }
+
+/* ----------------- */
+// ACTION PERMISSIONS
+/* -------- */
 
 export const resolveOrganisationActionPermissions = (
   actor: OrganisationAuthActor,

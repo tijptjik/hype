@@ -4,6 +4,8 @@ import { toAuthMessage } from '.'
 import { eq, inArray } from 'drizzle-orm'
 // SCHEMA
 import { hub, organisation } from '$lib/db/schema'
+// AUTHZ
+import { hasAuthenticatedSession } from './user'
 // TYPES
 import type { SQL } from 'drizzle-orm'
 import type { AuthorizationDecision, Database, Id, UserRoleDisco } from '$lib/types'
@@ -41,7 +43,7 @@ export type HubRequestedListState = {
   isArchived?: boolean
 }
 
-const CORE_HUB_CODE = 'core'
+export const CORE_HUB_CODE = 'core'
 
 const isHubAdminRole = (role: UserRoleDisco): boolean =>
   role.type === 'hub' && role.role === 'admin'
@@ -83,11 +85,6 @@ export const toHubListConditions = (
       ? []
       : [eq(hub.isArchived, requestedListState.isArchived)]),
   ]
-}
-
-const hasAuthenticatedSession = (actor: HubAuthActor): boolean => {
-  if (actor.isAuthenticated !== undefined) return actor.isAuthenticated
-  return Boolean(actor.userId)
 }
 
 const isRelevantHubAdmin = (

@@ -1,5 +1,10 @@
 import type { UserRoleDisco } from '$lib/types'
 
+export type AuthenticatedSessionActor = {
+  isAuthenticated?: boolean
+  userId?: string | null
+}
+
 type UserSearchActor = {
   superAdmin?: boolean | null
   userRoles: UserRoleDisco[]
@@ -35,4 +40,9 @@ export const canOverrideUserSearchArchivedFilter = (
 ): boolean => {
   if (actor.superAdmin) return true
   return actor.userRoles.some(role => role.type === 'hub' && role.role === 'admin')
+}
+
+export const hasAuthenticatedSession = (actor: AuthenticatedSessionActor): boolean => {
+  if (actor.isAuthenticated !== undefined) return actor.isAuthenticated
+  return Boolean(actor.userId)
 }
