@@ -228,14 +228,33 @@ export const RemoveProjectSchema = z.object({
     .optional(),
 })
 
-/* ----------------- */
-// PROJECT INTERMEDIATE SCHEMAS
-/* -------- */
+// Profiles
 
-export const ProjectRaw = ProjectBase.extend({
-  i18n: z.array(ProjectI18nBase).nullish(),
-  maintainerRoles: z.array(ProjectRoleWithUser).nullish(),
-  properties: z.array(PropertyAPI).nullish(),
+export const ProjectProfile = z.enum(['list', 'card', 'detail', 'admin'])
+
+const ProjectListFields = ProjectBase.pick({
+  id: true,
+  code: true,
+  createdAt: true,
+  modifiedAt: true,
+})
+
+const ProjectCardFields = ProjectBase.pick({
+  isPublished: true,
+  isArchived: true,
+})
+
+const ProjectDetailFields = ProjectCardFields
+
+export const ProjectListProfileAPI = ProjectListFields.extend({
+  i18n: getLocales(OrganisationI18nBase),
+})
+
+export const ProjectCardProfileAPI = ProjectListProfileAPI.extend({
+  ...ProjectCardFields.shape,
   image: ImageContextEnvelopeAPI.nullish(),
-  publisher: UserBasic.nullish(),
+})
+
+export const ProjectDetailProfileAPI = ProjectCardProfileAPI.extend({
+  ...ProjectDetailFields.shape,
 })
