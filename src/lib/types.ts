@@ -136,12 +136,16 @@ import type {
   OrganisationUpdateSuperAdminAPI,
   ProjectAPI,
   ProjectBase,
+  ProjectFormData,
+  ProjectPreflightFormData,
   ProjectI18nBase,
   ProjectI18nInsert,
   ProjectI18nUpdate,
   ProjectInsert,
   ProjectInsertAPI,
+  PublishProjectSchema,
   ProjectRaw,
+  RemoveProjectSchema,
   ProjectRoleAPI,
   ProjectRoleBase,
   ProjectRoleInsert,
@@ -1594,6 +1598,23 @@ export type Project = z.infer<typeof ProjectAPI>
 export type ProjectNew = z.infer<typeof ProjectInsertAPI>
 // Like Project, but with all fields optional
 export type ProjectPartial = z.infer<typeof ProjectUpdateAPI>
+
+/* ----------------- */
+// PROJECTS :: REMOTE FORMS
+/* -------- */
+
+export type ProjectFormInput = z.input<typeof ProjectFormData>
+export type ProjectBooleanField = 'isPublished' | 'isArchived'
+export type ProjectSubmitUpdatesParams<TEntityResult, TListResult> = {
+  projectId?: string | null
+  entityQuery: TEntityResult
+  listQuery: TListResult
+}
+export type ProjectGetResponse = EntityResponse<Project>
+export type ProjectGetState = ProjectGetResponse | null
+export type ProjectPublishInput = z.input<typeof PublishProjectSchema>
+export type ProjectArchiveInput = z.input<typeof RemoveProjectSchema>
+export type ProjectPreflightInput = z.input<typeof ProjectPreflightFormData>
 
 /* ----------------- */
 // PROJECTS :: RELATIONAL
