@@ -2595,12 +2595,57 @@ export type AppContextState = {
   viewFilters: ViewFilters
 }
 
-export type RemoteMapEntry = {
-  list?: (params: unknown) => Promise<unknown>
-  get?: (params: unknown) => Promise<unknown>
+export type RemoteListFn<Params, Result> = (
+  params: Params,
+) => Promise<ListResponse<Result>>
+export type RemoteGetFn<Params, Result> = (
+  params: Params,
+) => Promise<EntityResponse<Result>>
+
+type OrganisationRemoteListFn = <P extends OrganisationProfile = OrganisationProfile>(
+  params: OrganisationListParamsByProfile<P>,
+) => Promise<ListResponse<OrganisationListByProfile<P>>>
+
+type OrganisationRemoteGetFn = <P extends OrganisationProfile = OrganisationProfile>(
+  params: OrganisationGetParamsByProfile<P>,
+) => Promise<EntityResponse<OrganisationEntityByProfile<P>>>
+
+type HubRemoteListFn = <P extends HubProfile = HubProfile>(
+  params: HubListParamsByProfile<P>,
+) => Promise<ListResponse<HubListByProfile<P>>>
+
+type HubRemoteGetFn = <P extends HubProfile = HubProfile>(
+  params: HubGetParamsByProfile<P>,
+) => Promise<EntityResponse<HubEntityByProfile<P>>>
+
+export type RemoteMapEntry<
+  ListParams = unknown,
+  ListResult = unknown,
+  GetParams = unknown,
+  GetResult = unknown,
+> = {
+  list?: RemoteListFn<ListParams, ListResult>
+  get?: RemoteGetFn<GetParams, GetResult>
 }
 
-export type RemoteMap = Record<FirstClassResource, RemoteMapEntry>
+type RemoteMapEntryByResource = {
+  [FirstClassResource.organisation]: {
+    list?: OrganisationRemoteListFn
+    get?: OrganisationRemoteGetFn
+  }
+  [FirstClassResource.hub]: {
+    list?: HubRemoteListFn
+    get?: HubRemoteGetFn
+  }
+  [FirstClassResource.project]: RemoteMapEntry
+  [FirstClassResource.layer]: RemoteMapEntry
+  [FirstClassResource.feature]: RemoteMapEntry
+  [FirstClassResource.task]: RemoteMapEntry
+  [FirstClassResource.property]: RemoteMapEntry
+  [FirstClassResource.user]: RemoteMapEntry
+}
+
+export type RemoteMap = { [Key in FirstClassResource]: RemoteMapEntryByResource[Key] }
 
 export type ImageCtxMode = 'standalone' | 'gallery' | 'carousel'
 export type ImageCtxState = {
