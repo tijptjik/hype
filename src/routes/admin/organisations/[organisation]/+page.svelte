@@ -471,7 +471,9 @@ function onReset(): void {
 
 function onSubmit(): void {
   suppressFormLevelIssues = false
-  if (!isCurrentRefLoaded) return
+  if (!isCurrentRefLoaded) {
+    return
+  }
   const baseMeta = committedOrganisation?.data
     ? (toOrganisationFormInput(committedOrganisation.data).meta ?? {})
     : undefined

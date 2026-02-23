@@ -1011,6 +1011,35 @@ export type UserRoleFieldNameResolverForm = {
 
 export type UserRoleHiddenInputAttrs = Record<string, unknown>
 
+export type HubOrganisationFieldNameResolverForm = {
+  fields: {
+    value: () => {
+      data?: {
+        organisations?: Array<{
+          organisationId: string
+          isCoreInclusive: boolean
+          isHubExclusive: boolean
+        }>
+      }
+    }
+    data?: {
+      organisations?: Array<{
+        organisationId?: {
+          as: (type: 'hidden', value: string) => Record<string, unknown>
+        }
+        isCoreInclusive?: {
+          as: (type: 'hidden', value: string) => Record<string, unknown>
+        }
+        isHubExclusive?: {
+          as: (type: 'hidden', value: string) => Record<string, unknown>
+        }
+      }>
+    }
+  }
+}
+
+export type HubOrganisationHiddenInputAttrs = Record<string, unknown>
+
 export type GenAiField = 'name' | 'nameShort' | 'description'
 export type I18nTranslatableField = 'name' | 'nameShort' | 'description'
 
