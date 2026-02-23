@@ -4,12 +4,14 @@ const {
   mockGetRequestEvent,
   mockSetupRequestHandler,
   mockGetUsersForHydration,
+  mockSearchUsersByConditions,
   mockToEntityResponseShape,
   mockToAuthMessage,
 } = vi.hoisted(() => ({
   mockGetRequestEvent: vi.fn(),
   mockSetupRequestHandler: vi.fn(),
   mockGetUsersForHydration: vi.fn(),
+  mockSearchUsersByConditions: vi.fn(),
   mockToEntityResponseShape: vi.fn(),
   mockToAuthMessage: vi.fn((code: string) => code),
 }))
@@ -81,6 +83,7 @@ vi.mock('$lib/api/server/remote', () => ({
 
 vi.mock('$lib/db/services/user', () => ({
   getUsersForHydration: mockGetUsersForHydration,
+  searchUsersByConditions: mockSearchUsersByConditions,
   toEntityResponseShape: mockToEntityResponseShape,
 }))
 
@@ -134,38 +137,6 @@ vi.mock('drizzle-orm', () => ({
 
 let remote: Awaited<typeof import('$lib/api/server/user.remote')>
 
-const buildSearchDb = (params: {
-  rows: Array<{
-    id: string
-    name: string
-    email: string | null
-    image: string | null
-    attribution: string | null
-  }>
-  count: string | number | null
-}) => {
-  const dataChain = {
-    from: vi.fn(() => dataChain),
-    where: vi.fn(() => dataChain),
-    orderBy: vi.fn(() => dataChain),
-    limit: vi.fn(() => dataChain),
-    offset: vi.fn(async () => params.rows),
-  }
-
-  const countChain = {
-    from: vi.fn(() => countChain),
-    where: vi.fn(async () => [{ count: params.count }]),
-  }
-
-  return {
-    select: vi.fn((shape: Record<string, unknown>) =>
-      'count' in shape ? countChain : dataChain,
-    ),
-    dataWhere: dataChain.where,
-    countWhere: countChain.where,
-  }
-}
-
 describe('user.remote', () => {
   beforeEach(async () => {
     vi.resetModules()
@@ -187,6 +158,7 @@ describe('user.remote', () => {
       isAdminRequest: false,
       request: { method: 'POST' },
     })
+    mockSearchUsersByConditions.mockResolvedValue({ data: [], totalCount: 0 })
   })
 
   afterEach(() => {
@@ -248,8 +220,9 @@ describe('user.remote', () => {
   })
 
   it('searchUsers caps limit at 100 and parses count rows', async () => {
-    const db = buildSearchDb({
-      rows: [
+    const db = { __tag: 'db-caps-limit' }
+    mockSearchUsersByConditions.mockResolvedValue({
+      data: [
         {
           id: 'u-1',
           name: 'Alice',
@@ -258,7 +231,7 @@ describe('user.remote', () => {
           attribution: 'Alice',
         },
       ],
-      count: '7',
+      totalCount: 7,
     })
 
     mockSetupRequestHandler.mockResolvedValue({
@@ -298,22 +271,28 @@ describe('user.remote', () => {
         },
       ],
     })
-    expect(db.dataWhere).toHaveBeenCalled()
-    const whereArg = db.dataWhere.mock.calls[0]?.[0]
-    expect(whereArg).toMatchObject({
-      fn: 'and',
-      args: expect.arrayContaining([
+    const searchParams = mockSearchUsersByConditions.mock.calls[0]?.[1]
+    const searchDb = mockSearchUsersByConditions.mock.calls[0]?.[0]
+    expect(searchDb).toBe(db)
+    expect(searchParams).toMatchObject({
+      limit: 100,
+      offset: 3,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    })
+    expect(searchParams?.conditions).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({
           fn: 'eq',
           left: 'user.isArchived',
           right: false,
         }),
       ]),
-    })
+    )
   })
 
   it('searchUsers denies when caller has no ownership/admin role and is not superAdmin', async () => {
-    const db = buildSearchDb({ rows: [], count: 0 })
+    const db = { __tag: 'db-deny-no-role' }
 
     mockSetupRequestHandler.mockResolvedValue({
       db,
@@ -343,7 +322,7 @@ describe('user.remote', () => {
   })
 
   it('searchUsers allows superAdmin to explicitly set conditions.isArchived=true', async () => {
-    const db = buildSearchDb({ rows: [], count: 0 })
+    const db = { __tag: 'db-superadmin-archived-true' }
 
     mockSetupRequestHandler.mockResolvedValue({
       db,
@@ -362,21 +341,22 @@ describe('user.remote', () => {
       sorting: { sortBy: 'name', sortOrder: 'asc' },
     })
 
-    const whereArg = db.dataWhere.mock.calls[0]?.[0]
-    expect(whereArg).toMatchObject({
-      fn: 'and',
-      args: expect.arrayContaining([
+    const searchParams = mockSearchUsersByConditions.mock.calls[0]?.[1]
+    const searchDb = mockSearchUsersByConditions.mock.calls[0]?.[0]
+    expect(searchDb).toBe(db)
+    expect(searchParams?.conditions).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({
           fn: 'eq',
           left: 'user.isArchived',
           right: true,
         }),
       ]),
-    })
+    )
   })
 
   it('searchUsers allows hub admin to explicitly set conditions.isArchived=true', async () => {
-    const db = buildSearchDb({ rows: [], count: 0 })
+    const db = { __tag: 'db-hub-admin-archived-true' }
 
     mockSetupRequestHandler.mockResolvedValue({
       db,
@@ -402,21 +382,22 @@ describe('user.remote', () => {
       sorting: { sortBy: 'name', sortOrder: 'asc' },
     })
 
-    const whereArg = db.dataWhere.mock.calls[0]?.[0]
-    expect(whereArg).toMatchObject({
-      fn: 'and',
-      args: expect.arrayContaining([
+    const searchParams = mockSearchUsersByConditions.mock.calls[0]?.[1]
+    const searchDb = mockSearchUsersByConditions.mock.calls[0]?.[0]
+    expect(searchDb).toBe(db)
+    expect(searchParams?.conditions).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({
           fn: 'eq',
           left: 'user.isArchived',
           right: true,
         }),
       ]),
-    })
+    )
   })
 
   it('searchUsers denies owner when explicitly setting conditions.isArchived', async () => {
-    const db = buildSearchDb({ rows: [], count: 0 })
+    const db = { __tag: 'db-owner-archived-true-deny' }
 
     mockSetupRequestHandler.mockResolvedValue({
       db,
@@ -447,7 +428,7 @@ describe('user.remote', () => {
   })
 
   it('searchUsers allows owner to explicitly set conditions.isArchived=false', async () => {
-    const db = buildSearchDb({ rows: [], count: 0 })
+    const db = { __tag: 'db-owner-archived-false' }
 
     mockSetupRequestHandler.mockResolvedValue({
       db,
@@ -479,10 +460,12 @@ describe('user.remote', () => {
       totalCount: 0,
       data: [],
     })
+    const searchDb = mockSearchUsersByConditions.mock.calls[0]?.[0]
+    expect(searchDb).toBe(db)
   })
 
   it('searchUsers denies owner when explicitly setting conditions.isArchived=null', async () => {
-    const db = buildSearchDb({ rows: [], count: 0 })
+    const db = { __tag: 'db-owner-archived-null-deny' }
 
     mockSetupRequestHandler.mockResolvedValue({
       db,
@@ -513,7 +496,7 @@ describe('user.remote', () => {
   })
 
   it('searchUsers allows superAdmin to set conditions.isArchived=null (no archived filter)', async () => {
-    const db = buildSearchDb({ rows: [], count: 0 })
+    const db = { __tag: 'db-superadmin-archived-null' }
 
     mockSetupRequestHandler.mockResolvedValue({
       db,
@@ -532,10 +515,9 @@ describe('user.remote', () => {
       sorting: { sortBy: 'name', sortOrder: 'asc' },
     })
 
-    const whereArg = db.dataWhere.mock.calls[0]?.[0]
-    expect(whereArg).toMatchObject({
-      fn: 'and',
-      args: [],
-    })
+    const searchParams = mockSearchUsersByConditions.mock.calls[0]?.[1]
+    const searchDb = mockSearchUsersByConditions.mock.calls[0]?.[0]
+    expect(searchDb).toBe(db)
+    expect(searchParams?.conditions).toEqual([])
   })
 })
