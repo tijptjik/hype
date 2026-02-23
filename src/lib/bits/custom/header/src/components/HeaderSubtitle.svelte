@@ -17,7 +17,7 @@ let {
   {...restProps}
 >
   {#if text}
-    {text}
+    {@html text}
   {:else}
     {@render children?.()}
   {/if}
