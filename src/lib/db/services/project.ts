@@ -1,7 +1,5 @@
 // DRIZZLE
 import { and, eq, type SQL } from 'drizzle-orm'
-// FORMS
-import { superValidate, type SuperValidated } from 'sveltekit-superforms'
 // SCHEMA
 import { project, projectI18n, projectRole, organisationRole, feature } from '../schema'
 // AUTH
@@ -12,7 +10,6 @@ import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
 import { toImageEnvelope } from './image'
 import { ImageContextResource } from '$lib/enums'
 // ZOD
-import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { ProjectAPI, ProjectCollectionAPI } from '../zod'
 // SERVICES
 import { createPropertiesWithRelated, updatePropertiesWithRelated } from './property'
@@ -558,11 +555,16 @@ export const toFormShape = async (
   i18n: ProjectI18nNew[],
   maintainerRoles: ProjectRoleNew[],
   properties: PropertyNew[],
-): Promise<SuperValidated<Project>> => {
+): Promise<Project> => {
+  const normalizedMaintainerRoles = maintainerRoles.map(userRole => ({
+    ...userRole,
+    capabilities: userRole.capabilities ?? {},
+  }))
+
   const formData: Project = {
     ...project,
     i18n: transformI18nSafely(i18n) as any,
-    maintainerRoles,
+    maintainerRoles: normalizedMaintainerRoles,
     properties: properties
       .sort((a, b) => {
         // Primary sort: 'classifier' before 'specifier'
@@ -592,9 +594,7 @@ export const toFormShape = async (
         ) as any)
       : null,
   }
-  // @ts-expect-error TODO - Fix Zod type error
-  const form = await superValidate(formData, zod(ProjectAPI) as any)
-  return form as SuperValidated<Project>
+  return ProjectAPI.parse(formData)
 }
 
 /**
@@ -613,10 +613,14 @@ export const toResponseShape = async (
   isCollection: boolean = false,
 ) => {
   const profile = isCollection ? 'list' : 'detail'
+  const normalizedMaintainerRoles = maintainerRoles.map(userRole => ({
+    ...userRole,
+    capabilities: userRole.capabilities ?? {},
+  }))
   const data = {
     ...project,
     i18n: transformI18nSafely(i18n),
-    maintainerRoles,
+    maintainerRoles: normalizedMaintainerRoles,
     properties: properties.map((property: PropertyDBRaw) => ({
       ...property,
       i18n: transformI18nSafely(property.i18n),
