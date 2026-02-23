@@ -2,6 +2,8 @@
 // SVELTE
 import { page } from '$app/state'
 import { untrack } from 'svelte'
+import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
 // I18N
 import { m } from '$lib/i18n'
 import { getLocale, getLocaleOrder, toOrganisationFormLocaleKey } from '$lib/i18n'
@@ -82,7 +84,6 @@ import type {
   ImageCtxEnvelope,
   Locale,
   User,
-  OrganisationFormInput,
   OrganisationGetState,
   OrganisationRoleUser,
   OrganisationToggleField,
@@ -160,16 +161,27 @@ const isCurrentRefLoaded = $derived.by(() => {
 // § Form
 
 const translatableI18nFields = ['name', 'nameShort', 'description'] as const
-const configuredOrganisationForm = configureForm<OrganisationFormInput>(() => ({
-  form: organisationForm,
-  ...createResourceFormConfig<OrganisationFormInput>({
+type OrganisationEditorFormInput = ReturnType<typeof toOrganisationFormInput>
+type OrganisationRemoteFormInput = RemoteFormInput & OrganisationEditorFormInput
+const configuredOrganisationForm = configureForm<OrganisationRemoteFormInput>(() => ({
+  form: organisationForm as unknown as RemoteForm<
+    OrganisationRemoteFormInput,
+    { data: { id: string; modifiedAt: string } }
+  >,
+  ...createResourceFormConfig<OrganisationRemoteFormInput>({
     formEl: contentsElement,
     key: organisationRef,
-    schema: OrganisationPreflightFormData,
+    schema:
+      OrganisationPreflightFormData as unknown as StandardSchemaV1<
+        OrganisationRemoteFormInput,
+        unknown
+      >,
     // Keep form source anchored to the committed entity snapshot so
     // optimistic view-only entity tweaks (e.g. role UI rows) cannot
     // rehydrate stale i18n values back into the live form.
-    data: toOrganisationFormInput(committedOrganisation?.data),
+    data: toOrganisationFormInput(
+      committedOrganisation?.data,
+    ) as OrganisationRemoteFormInput,
     submitUpdates: async ({ data }) =>
       getOrganisationSubmitUpdates({
         data,
