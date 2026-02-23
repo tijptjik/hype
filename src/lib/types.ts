@@ -1100,7 +1100,13 @@ export type HubOrganisationFieldNameResolverForm = {
 export type HubOrganisationHiddenInputAttrs = Record<string, unknown>
 
 export type GenAiField = 'name' | 'nameShort' | 'description'
-export type I18nTranslatableField = 'name' | 'nameShort' | 'description'
+export type I18nTranslatableField =
+  | 'name'
+  | 'nameShort'
+  | 'description'
+  | 'license'
+  | 'attribution'
+export type FormBooleanValue = boolean | 'true' | 'false'
 
 export type GenAiStateResolverForm = {
   fields: {
@@ -1109,9 +1115,11 @@ export type GenAiStateResolverForm = {
         i18n?: Record<
           string,
           {
-            nameGen?: boolean
-            nameShortGen?: boolean
-            descriptionGen?: boolean
+            nameGen?: FormBooleanValue
+            nameShortGen?: FormBooleanValue
+            descriptionGen?: FormBooleanValue
+            licenseGen?: FormBooleanValue
+            attributionGen?: FormBooleanValue
           }
         >
       }
@@ -1178,9 +1186,13 @@ export type TranslateLocaleIntoEmptyFieldsParams<
         name?: string
         nameShort?: string
         description?: string
-        nameGen?: boolean
-        nameShortGen?: boolean
-        descriptionGen?: boolean
+        license?: string
+        attribution?: string
+        nameGen?: FormBooleanValue
+        nameShortGen?: FormBooleanValue
+        descriptionGen?: FormBooleanValue
+        licenseGen?: FormBooleanValue
+        attributionGen?: FormBooleanValue
       }
     >
   },
@@ -1199,9 +1211,13 @@ export type ResetLocaleFieldsParams<
         name?: string
         nameShort?: string
         description?: string
-        nameGen?: boolean
-        nameShortGen?: boolean
-        descriptionGen?: boolean
+        license?: string
+        attribution?: string
+        nameGen?: FormBooleanValue
+        nameShortGen?: FormBooleanValue
+        descriptionGen?: FormBooleanValue
+        licenseGen?: FormBooleanValue
+        attributionGen?: FormBooleanValue
       }
     >
   },
