@@ -3,31 +3,41 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const {
   mockGetRequestEvent,
   mockSetupRequestHandler,
-  mockAuthorizeOrganisationPublish,
-  mockAuthorizeOrganisationDelete,
-  mockAuthorizeOrganisationRead,
-  mockAuthorizeOrganisationList,
+  mockAuthorizeOrganisationListForContext,
+  mockAuthorizeOrganisationReadForProbe,
+  mockAuthorizeOrganisationPublishForSubmission,
+  mockAuthorizeOrganisationDeleteForSubmission,
   mockToQueryConditions,
+  mockToLookupConditions,
+  mockToRequestedListState,
   mockGetOrganisationWithRelations,
   mockToOrganisationProfile,
   mockToAuthMessage,
-  mockUpdateOrganisationById,
+  mockProbeOrganisationQuery,
+  mockProbeOrganisationForCommand,
+  mockUpdateOrganisationPublishedStateById,
+  mockUpdateOrganisationArchivedStateById,
   mockLoadOrganisation,
   mockListOrganisations,
 } = vi.hoisted(() => ({
   mockGetRequestEvent: vi.fn(),
   mockSetupRequestHandler: vi.fn(),
-  mockAuthorizeOrganisationPublish: vi.fn(),
-  mockAuthorizeOrganisationDelete: vi.fn(),
-  mockAuthorizeOrganisationRead: vi.fn(),
-  mockAuthorizeOrganisationList: vi.fn(),
+  mockAuthorizeOrganisationListForContext: vi.fn(),
+  mockAuthorizeOrganisationReadForProbe: vi.fn(),
+  mockAuthorizeOrganisationPublishForSubmission: vi.fn(),
+  mockAuthorizeOrganisationDeleteForSubmission: vi.fn(),
   mockToQueryConditions: vi.fn(),
+  mockToLookupConditions: vi.fn((params: unknown) => params),
+  mockToRequestedListState: vi.fn(() => ({ isPublished: true, isArchived: false })),
   mockGetOrganisationWithRelations: vi.fn(() => ({})),
   mockToOrganisationProfile: vi.fn((value: unknown, fallback: string) =>
     typeof value === 'string' ? value : fallback,
   ),
   mockToAuthMessage: vi.fn((code: string) => code),
-  mockUpdateOrganisationById: vi.fn(),
+  mockProbeOrganisationQuery: vi.fn(),
+  mockProbeOrganisationForCommand: vi.fn(),
+  mockUpdateOrganisationPublishedStateById: vi.fn(),
+  mockUpdateOrganisationArchivedStateById: vi.fn(),
   mockLoadOrganisation: vi.fn(),
   mockListOrganisations: vi.fn(),
 }))
@@ -63,22 +73,25 @@ vi.mock('$lib/api', () => ({
 vi.mock('$lib/api/services/authz', () => ({
   isReservedCode: (_value: string) => false,
   toAuthMessage: mockToAuthMessage,
-  toOrganisationSubmittedFields: (_data: unknown) => [],
+  toIssueDetailMessage: (code: string) => code,
   toOrganisationUserRoleSignature: (_roles: unknown[]) => '',
-  authorizeOrganisationRead: mockAuthorizeOrganisationRead,
-  authorizeOrganisationList: mockAuthorizeOrganisationList,
-  authorizeOrganisationCreate: () => ({ allowed: true }),
-  authorizeOrganisationUpdate: () => ({ allowed: true }),
-  authorizeOrganisationManageRoles: () => ({ allowed: true }),
-  authorizeOrganisationPublish: mockAuthorizeOrganisationPublish,
-  authorizeOrganisationDelete: mockAuthorizeOrganisationDelete,
+  authorizeOrganisationListForContext: mockAuthorizeOrganisationListForContext,
+  authorizeOrganisationReadForProbe: mockAuthorizeOrganisationReadForProbe,
+  authorizeOrganisationCreateForSubmission: () => ({ allowed: true }),
+  authorizeOrganisationUpdateForSubmission: () => ({ allowed: true }),
+  authorizeOrganisationManageRolesForSubmission: () => ({ allowed: true }),
+  authorizeOrganisationPublishForSubmission:
+    mockAuthorizeOrganisationPublishForSubmission,
+  authorizeOrganisationDeleteForSubmission:
+    mockAuthorizeOrganisationDeleteForSubmission,
 }))
 
 vi.mock('$lib/api/services/organisation', () => ({
   toQueryConditions: mockToQueryConditions,
+  toLookupConditions: mockToLookupConditions,
+  toRequestedListState: mockToRequestedListState,
   getOrganisationWithRelations: mockGetOrganisationWithRelations,
   toOrganisationProfile: mockToOrganisationProfile,
-  organisationWithRelations: {},
 }))
 
 vi.mock('$lib/db/services/organisation', () => ({
@@ -86,13 +99,19 @@ vi.mock('$lib/db/services/organisation', () => ({
   createOrganisation: vi.fn(),
   createUserRoles: vi.fn(),
   listOrganisations: mockListOrganisations,
+  probeExistingOrganisation: vi.fn(async () => null),
+  probeOrganisationForUpdate: vi.fn(async () => null),
+  probeOrganisationForCommand: mockProbeOrganisationForCommand,
+  probeOrganisationQuery: mockProbeOrganisationQuery,
   getOrganisation: mockLoadOrganisation,
   updateI18n: vi.fn(),
-  updateOrganisationById: mockUpdateOrganisationById,
-  updateUserRoles: vi.fn(),
+  updateOrganisationByIdWithConcurrency: vi.fn(async () => null),
+  updateOrganisationPublishedStateById: mockUpdateOrganisationPublishedStateById,
+  updateOrganisationArchivedStateById: mockUpdateOrganisationArchivedStateById,
+  syncOrganisationUserRoles: vi.fn(),
   toPersistedOrganisationUserRoles: vi.fn(),
-  toEntityResponseShape: vi.fn(),
-  toListResponseShape: vi.fn(),
+  toEntityResponseShape: vi.fn((value: unknown) => ({ data: value })),
+  toListResponseShape: vi.fn((value: unknown) => value),
 }))
 
 vi.mock('$lib/db/schema', () => ({
@@ -114,7 +133,7 @@ vi.mock('$lib/db/schema', () => ({
 vi.mock('$lib/db/zod', () => ({
   ListQueryParamsSchema: {},
   GetQueryParamsSchema: {},
-  OrganisationFormData: {},
+  OrganisationFormData: { parse: (value: unknown) => value },
   PublishOrganisationSchema: {},
   RemoveOrganisationSchema: {},
 }))
@@ -129,34 +148,47 @@ vi.mock('$lib/i18n', () => ({
 
 let remote: Awaited<typeof import('$lib/api/server/organisation.remote')>
 
-const buildDb = (
-  probeRows: Array<{
-    id: string
-    hubId: string | null
-    isPublished?: boolean
-    isArchived?: boolean
-  }>,
-) => ({
-  select: vi.fn(() => ({
-    from: vi.fn(() => ({
-      where: vi.fn(() => ({
-        limit: vi.fn(async () => probeRows),
-      })),
-    })),
-  })),
-})
-
 describe('organisation.remote authz', () => {
   beforeEach(async () => {
     vi.resetModules()
     remote = await import('$lib/api/server/organisation.remote')
     vi.clearAllMocks()
     vi.spyOn(console, 'error').mockImplementation(() => {})
+
     mockGetRequestEvent.mockReturnValue({ locals: { hub: null } })
     mockToAuthMessage.mockImplementation((code: string) => code)
-    mockAuthorizeOrganisationRead.mockReturnValue({ allowed: true })
-    mockAuthorizeOrganisationList.mockReturnValue({ allowed: true })
+
+    mockAuthorizeOrganisationListForContext.mockReturnValue({ allowed: true })
+    mockAuthorizeOrganisationReadForProbe.mockReturnValue({ allowed: true })
+    mockAuthorizeOrganisationPublishForSubmission.mockReturnValue({ allowed: true })
+    mockAuthorizeOrganisationDeleteForSubmission.mockReturnValue({ allowed: true })
+
     mockToQueryConditions.mockReturnValue({ conditions: [], filtersToApply: {} })
+    mockProbeOrganisationQuery.mockResolvedValue({
+      id: 'org-1',
+      hubId: 'hub-a',
+      isPublished: true,
+      isArchived: false,
+    })
+    mockProbeOrganisationForCommand.mockResolvedValue({ id: 'org-1', hubId: 'hub-a' })
+    mockUpdateOrganisationPublishedStateById.mockResolvedValue({
+      id: 'org-1',
+      isPublished: true,
+    })
+    mockUpdateOrganisationArchivedStateById.mockResolvedValue({
+      id: 'org-1',
+      isArchived: true,
+    })
+
+    mockSetupRequestHandler.mockResolvedValue({
+      db: {},
+      user: { id: 'u-1', isAnonymous: false },
+      userRoles: [],
+      isAdminRequest: false,
+      event: { locals: { hub: null } },
+      invalid: vi.fn(),
+      issue: vi.fn(),
+    })
   })
 
   afterEach(() => {
@@ -164,13 +196,7 @@ describe('organisation.remote authz', () => {
   })
 
   it('getOrganisations denies when authz denies', async () => {
-    mockSetupRequestHandler.mockResolvedValue({
-      db: {},
-      user: { id: 'u-1', isAnonymous: false },
-      userRoles: [],
-      isAdminRequest: false,
-    })
-    mockAuthorizeOrganisationList.mockReturnValue({
+    mockAuthorizeOrganisationListForContext.mockReturnValue({
       allowed: false,
       code: 'INSUFFICIENT_ROLE',
     })
@@ -182,21 +208,6 @@ describe('organisation.remote authz', () => {
   })
 
   it('getOrganisations uses admin-scoped query conditions for allowed unpublished requests', async () => {
-    mockSetupRequestHandler.mockResolvedValue({
-      db: {},
-      user: { id: 'u-1', isAnonymous: false },
-      userRoles: [
-        {
-          type: 'organisation',
-          role: 'member',
-          organisationId: 'org-1',
-          userId: 'u-1',
-        },
-      ],
-      isAdminRequest: false,
-    })
-    mockAuthorizeOrganisationList.mockReturnValue({ allowed: true })
-
     await remote.getOrganisations({
       conditions: { isPublished: false, isArchived: false },
       meta: { isAdminRequest: true },
@@ -211,21 +222,6 @@ describe('organisation.remote authz', () => {
   })
 
   it('getOrganisations uses admin-scoped query conditions for tri-state published filter', async () => {
-    mockSetupRequestHandler.mockResolvedValue({
-      db: {},
-      user: { id: 'u-1', isAnonymous: false },
-      userRoles: [
-        {
-          type: 'organisation',
-          role: 'member',
-          organisationId: 'org-1',
-          userId: 'u-1',
-        },
-      ],
-      isAdminRequest: false,
-    })
-    mockAuthorizeOrganisationList.mockReturnValue({ allowed: true })
-
     await remote.getOrganisations({
       conditions: { isPublished: null, isArchived: false },
       meta: { isAdminRequest: true },
@@ -240,44 +236,24 @@ describe('organisation.remote authz', () => {
   })
 
   it('getOrganisation denies when read authz denies', async () => {
-    const db = buildDb([{ id: 'org-1', hubId: 'hub-a' }])
-    mockSetupRequestHandler.mockResolvedValue({
-      db,
-      user: { id: 'u-1', isAnonymous: false },
-      userRoles: [],
-      isAdminRequest: false,
-    })
-    mockAuthorizeOrganisationRead.mockReturnValue({
+    mockAuthorizeOrganisationReadForProbe.mockReturnValue({
       allowed: false,
       code: 'INSUFFICIENT_ROLE',
     })
 
     await expect(
       remote.getOrganisation({ ref: 'org-1', refKey: 'id' }),
-    ).rejects.toMatchObject({
-      status: 403,
-    })
+    ).rejects.toMatchObject({ status: 403 })
     expect(mockLoadOrganisation).not.toHaveBeenCalled()
   })
 
   it('getOrganisation uses admin-scoped query conditions for allowed unpublished records', async () => {
-    const db = buildDb([
-      { id: 'org-1', hubId: 'hub-a', isPublished: false, isArchived: false },
-    ])
-    mockSetupRequestHandler.mockResolvedValue({
-      db,
-      user: { id: 'u-1', isAnonymous: false },
-      userRoles: [
-        {
-          type: 'organisation',
-          role: 'member',
-          organisationId: 'org-1',
-          userId: 'u-1',
-        },
-      ],
-      isAdminRequest: false,
+    mockProbeOrganisationQuery.mockResolvedValue({
+      id: 'org-1',
+      hubId: 'hub-a',
+      isPublished: false,
+      isArchived: false,
     })
-    mockAuthorizeOrganisationRead.mockReturnValue({ allowed: true })
 
     await remote.getOrganisation({
       ref: 'org-1',
@@ -286,54 +262,35 @@ describe('organisation.remote authz', () => {
     })
 
     expect(mockToQueryConditions).toHaveBeenCalledWith(
-      expect.any(Object),
+      expect.objectContaining({ id: 'u-1', isAnonymous: false }),
       true,
-      expect.objectContaining({ id: 'org-1' }),
-      expect.any(Array),
+      expect.objectContaining({ ref: 'org-1', refKey: 'id' }),
+      [],
     )
   })
 
   it('publishOrganisation denies when authz denies', async () => {
-    const db = buildDb([{ id: 'org-1', hubId: 'hub-a' }])
-    mockSetupRequestHandler.mockResolvedValue({
-      db,
-      user: { id: 'u-1', isAnonymous: false },
-      userRoles: [],
-    })
-    mockAuthorizeOrganisationPublish.mockReturnValue({
+    mockAuthorizeOrganisationPublishForSubmission.mockReturnValue({
       allowed: false,
       code: 'INSUFFICIENT_ROLE',
     })
 
     await expect(
       remote.publishOrganisation({ id: 'org-1', state: true }),
-    ).rejects.toMatchObject({
-      status: 403,
-    })
-    expect(mockUpdateOrganisationById).not.toHaveBeenCalled()
+    ).rejects.toMatchObject({ status: 403 })
+    expect(mockUpdateOrganisationPublishedStateById).not.toHaveBeenCalled()
   })
 
   it('publishOrganisation updates when authz allows', async () => {
-    const db = buildDb([{ id: 'org-1', hubId: 'hub-a' }])
-    mockSetupRequestHandler.mockResolvedValue({
-      db,
-      user: { id: 'u-1', isAnonymous: false },
-      userRoles: [],
-    })
-    mockAuthorizeOrganisationPublish.mockReturnValue({ allowed: true })
-    mockUpdateOrganisationById.mockResolvedValue({
-      id: 'org-1',
-      isPublished: true,
-    })
-
     const result = await remote.publishOrganisation({ id: 'org-1', state: true })
-    expect(mockUpdateOrganisationById).toHaveBeenCalledWith(
-      db,
+
+    expect(mockUpdateOrganisationPublishedStateById).toHaveBeenCalledWith(
+      expect.any(Object),
       expect.objectContaining({
-        isPublished: true,
+        id: 'org-1',
+        state: true,
         publisherId: 'u-1',
       }),
-      'org-1',
     )
     expect(result).toEqual({
       data: {
@@ -344,43 +301,23 @@ describe('organisation.remote authz', () => {
   })
 
   it('archiveOrganisation denies when authz denies', async () => {
-    const db = buildDb([{ id: 'org-1', hubId: 'hub-a' }])
-    mockSetupRequestHandler.mockResolvedValue({
-      db,
-      user: { id: 'u-1', isAnonymous: false },
-      userRoles: [],
-    })
-    mockAuthorizeOrganisationDelete.mockReturnValue({
+    mockAuthorizeOrganisationDeleteForSubmission.mockReturnValue({
       allowed: false,
       code: 'INSUFFICIENT_ROLE',
     })
 
     await expect(
       remote.archiveOrganisation({ id: 'org-1', state: true }),
-    ).rejects.toMatchObject({
-      status: 403,
-    })
-    expect(mockUpdateOrganisationById).not.toHaveBeenCalled()
+    ).rejects.toMatchObject({ status: 403 })
+    expect(mockUpdateOrganisationArchivedStateById).not.toHaveBeenCalled()
   })
 
   it('archiveOrganisation updates when authz allows', async () => {
-    const db = buildDb([{ id: 'org-1', hubId: 'hub-a' }])
-    mockSetupRequestHandler.mockResolvedValue({
-      db,
-      user: { id: 'u-1', isAnonymous: false },
-      userRoles: [],
-    })
-    mockAuthorizeOrganisationDelete.mockReturnValue({ allowed: true })
-    mockUpdateOrganisationById.mockResolvedValue({
-      id: 'org-1',
-      isArchived: true,
-    })
-
     const result = await remote.archiveOrganisation({ id: 'org-1', state: true })
-    expect(mockUpdateOrganisationById).toHaveBeenCalledWith(
-      db,
-      { isArchived: true },
-      'org-1',
+
+    expect(mockUpdateOrganisationArchivedStateById).toHaveBeenCalledWith(
+      expect.any(Object),
+      { id: 'org-1', state: true },
     )
     expect(result).toEqual({
       data: {
@@ -391,17 +328,10 @@ describe('organisation.remote authz', () => {
   })
 
   it('publishOrganisation returns 404 when organisation is missing', async () => {
-    const db = buildDb([])
-    mockSetupRequestHandler.mockResolvedValue({
-      db,
-      user: { id: 'u-1', isAnonymous: false },
-      userRoles: [],
-    })
+    mockProbeOrganisationForCommand.mockResolvedValue(null)
 
     await expect(
       remote.publishOrganisation({ id: 'org-1', state: true }),
-    ).rejects.toMatchObject({
-      status: 404,
-    })
+    ).rejects.toMatchObject({ status: 404 })
   })
 })

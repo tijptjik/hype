@@ -8,7 +8,14 @@ const {
   mockCreateHubUserRoles,
   mockSyncHubOrganisations,
   mockUpdateI18n,
-  mockUpdateHubUserRoles,
+  mockSyncHubUserRoles,
+  mockProbeExistingHub,
+  mockProbeHubForUpdate,
+  mockUpdateHubByIdWithConcurrency,
+  mockAuthorizeHubCreateForSubmission,
+  mockAuthorizeHubUpdateForSubmission,
+  mockAuthorizeHubManageRolesForSubmission,
+  mockHasInvalidHubOrganisationAssignmentsForSubmission,
   mockGuardedContext,
 } = vi.hoisted(() => ({
   mockHubFormDataParse: vi.fn((input: unknown) => input),
@@ -22,7 +29,14 @@ const {
   mockCreateHubUserRoles: vi.fn(async () => undefined),
   mockSyncHubOrganisations: vi.fn(async () => undefined),
   mockUpdateI18n: vi.fn(async () => undefined),
-  mockUpdateHubUserRoles: vi.fn(async () => undefined),
+  mockSyncHubUserRoles: vi.fn(async () => undefined),
+  mockProbeExistingHub: vi.fn(async () => null),
+  mockProbeHubForUpdate: vi.fn(async () => null),
+  mockUpdateHubByIdWithConcurrency: vi.fn(async () => null),
+  mockAuthorizeHubCreateForSubmission: vi.fn(() => ({ allowed: true })),
+  mockAuthorizeHubUpdateForSubmission: vi.fn(() => ({ allowed: true })),
+  mockAuthorizeHubManageRolesForSubmission: vi.fn(() => ({ allowed: true })),
+  mockHasInvalidHubOrganisationAssignmentsForSubmission: vi.fn(async () => false),
   mockGuardedContext: vi.fn(),
 }))
 
@@ -84,19 +98,21 @@ vi.mock('$lib/api/services/authz', () => ({
   isReservedCode: (_value: string) => false,
   toAuthMessage: (code: string) => code,
   toIssueDetailMessage: (code: string) => code,
-  toHubSubmittedFields: (_data: unknown) => [],
   toHubUserRoleSignature: (roles: Array<{ userId: string; role: string }>) =>
     roles
       .map(role => `${role.userId}:${role.role}`)
       .sort()
       .join('|'),
-  authorizeHubRead: () => ({ allowed: true }),
   authorizeHubList: () => ({ allowed: true }),
-  authorizeHubCreate: () => ({ allowed: true }),
-  authorizeHubUpdate: () => ({ allowed: true }),
-  authorizeHubManageRoles: () => ({ allowed: true }),
-  authorizeHubPublish: () => ({ allowed: true }),
-  authorizeHubDelete: () => ({ allowed: true }),
+  authorizeHubReadForProbe: () => ({ allowed: true }),
+  authorizeHubCreateForSubmission: mockAuthorizeHubCreateForSubmission,
+  authorizeHubUpdateForSubmission: mockAuthorizeHubUpdateForSubmission,
+  authorizeHubManageRolesForSubmission: mockAuthorizeHubManageRolesForSubmission,
+  authorizeHubPublishForSubmission: () => ({ allowed: true }),
+  authorizeHubDeleteForSubmission: () => ({ allowed: true }),
+  hasInvalidHubOrganisationAssignmentsForSubmission:
+    mockHasInvalidHubOrganisationAssignmentsForSubmission,
+  toHubListConditions: vi.fn(() => []),
 }))
 
 vi.mock('$lib/api/services/hub', () => ({
@@ -108,6 +124,7 @@ vi.mock('$lib/api/services/hub', () => ({
     typeof value === 'string' ? value : fallback,
   ),
   toLookupConditions: vi.fn(() => ({})),
+  toQueryConditions: vi.fn(() => []),
   toRequestedListState: vi.fn(() => ({
     isPublished: undefined,
     isArchived: undefined,
@@ -118,9 +135,15 @@ vi.mock('$lib/db/services/hub', () => ({
   createHub: mockCreateHub,
   createI18n: mockCreateI18n,
   createHubUserRoles: mockCreateHubUserRoles,
-  updateHub: vi.fn(),
+  probeExistingHub: mockProbeExistingHub,
+  probeHubForUpdate: mockProbeHubForUpdate,
+  updateHubByIdWithConcurrency: mockUpdateHubByIdWithConcurrency,
+  probeHubForCommand: vi.fn(async () => null),
+  updateHubPublishedStateById: vi.fn(async () => null),
+  updateHubArchivedStateById: vi.fn(async () => null),
   updateI18n: mockUpdateI18n,
-  updateHubUserRoles: mockUpdateHubUserRoles,
+  syncHubUserRoles: mockSyncHubUserRoles,
+  listHubOrganisationLookups: vi.fn(async () => []),
   listHubs: vi.fn(),
   getHub: vi.fn(),
   syncHubOrganisations: mockSyncHubOrganisations,
@@ -158,13 +181,8 @@ const buildDbForCreate = () => ({
 })
 
 const buildDbForUpdate = (params: {
-  current: { id: string; code: string; modifiedAt: string }
   existingRoles: Array<{ userId: string; role: string }>
-  updated: { id: string; modifiedAt: string }
 }) => {
-  let hubSelectCall = 0
-  let setPayload: Record<string, unknown> | null = null
-
   const db = {
     select: vi.fn((_shape: unknown) => ({
       from: vi.fn((table: unknown) => {
@@ -174,31 +192,11 @@ const buildDbForUpdate = (params: {
             where: vi.fn(async () => params.existingRoles),
           }
         }
-
-        return {
-          where: vi.fn(() => ({
-            limit: vi.fn(async () => {
-              hubSelectCall += 1
-              if (hubSelectCall === 1) return [params.current]
-              return []
-            }),
-          })),
-        }
-      }),
-    })),
-    update: vi.fn(() => ({
-      set: vi.fn((payload: Record<string, unknown>) => {
-        setPayload = payload
-        return {
-          where: vi.fn(() => ({
-            returning: vi.fn(async () => [params.updated]),
-          })),
-        }
+        return { where: vi.fn(async () => []) }
       }),
     })),
   }
-
-  return { db, getSetPayload: () => setPayload }
+  return { db }
 }
 
 describe('hub.remote form image handling', () => {
@@ -206,6 +204,11 @@ describe('hub.remote form image handling', () => {
     vi.resetModules()
     remote = await import('$lib/api/server/hub.remote')
     vi.clearAllMocks()
+    mockAuthorizeHubCreateForSubmission.mockReturnValue({ allowed: true })
+    mockAuthorizeHubUpdateForSubmission.mockReturnValue({ allowed: true })
+    mockAuthorizeHubManageRolesForSubmission.mockReturnValue({ allowed: true })
+    mockHasInvalidHubOrganisationAssignmentsForSubmission.mockResolvedValue(false)
+    mockProbeExistingHub.mockResolvedValue(null)
   })
 
   it('create mode ignores imageId from incoming form payload', async () => {
@@ -237,10 +240,17 @@ describe('hub.remote form image handling', () => {
   })
 
   it('update mode ignores imageId from incoming form payload', async () => {
-    const { db, getSetPayload } = buildDbForUpdate({
-      current: { id: 'hub-1', code: 'core', modifiedAt: '2026-02-23T00:00:00.000Z' },
+    const { db } = buildDbForUpdate({
       existingRoles: [{ userId: 'u-1', role: 'admin' }],
-      updated: { id: 'hub-1', modifiedAt: '2026-02-23T01:00:00.000Z' },
+    })
+    mockProbeHubForUpdate.mockResolvedValue({
+      id: 'hub-1',
+      code: 'core',
+      modifiedAt: '2026-02-23T00:00:00.000Z',
+    })
+    mockUpdateHubByIdWithConcurrency.mockResolvedValue({
+      id: 'hub-1',
+      modifiedAt: '2026-02-23T01:00:00.000Z',
     })
 
     mockGuardedContext.mockResolvedValue({
@@ -268,10 +278,17 @@ describe('hub.remote form image handling', () => {
       (() => undefined) as any,
     )
 
-    expect(getSetPayload()).toEqual({
-      code: 'core',
-      domain: 'example.org',
-    })
-    expect(getSetPayload()).not.toHaveProperty('imageId')
+    expect(mockUpdateHubByIdWithConcurrency).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        data: {
+          code: 'core',
+          domain: 'example.org',
+        },
+      }),
+    )
+    expect(
+      mockUpdateHubByIdWithConcurrency.mock.calls[0]?.[1]?.data,
+    ).not.toHaveProperty('imageId')
   })
 })
