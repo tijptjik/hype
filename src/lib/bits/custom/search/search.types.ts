@@ -5,6 +5,7 @@ export interface SearchResultMap<T> {
   image: (item: T) => string | null | undefined
   title: (item: T) => string
   descriminator?: (item: T) => string | null | undefined
+  disabled?: (item: T) => boolean
 }
 
 export interface SearchProps<T> {
@@ -41,6 +42,7 @@ export interface SearchResultItemProps {
   image?: string | null
   title: string
   descriminator?: string | null
+  disabled?: boolean
   onSelect?: () => void
   class?: string
 }

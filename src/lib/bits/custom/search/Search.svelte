@@ -1,6 +1,7 @@
 <script lang="ts" generics="T extends Record<string, unknown>">
 import { tick } from 'svelte'
 import type { SearchProps } from './search.types'
+import { getFirstEnabledResultButton, isSearchResultDisabled } from './search.utils'
 import * as SearchPrimitive from './src/components'
 import { searchUsers as searchUsersRemote } from '$lib/api/server/user.remote'
 
@@ -80,13 +81,12 @@ function handleInputKeydown(event: KeyboardEvent): void {
 
   if (event.key !== 'Tab' || event.shiftKey || results.length === 0) return
   event.preventDefault()
-  const firstResult = rootEl?.querySelector<HTMLButtonElement>(
-    '[data-search-result-item="true"]',
-  )
+  const firstResult = getFirstEnabledResultButton(rootEl)
   firstResult?.focus()
 }
 
 function selectItem(item: T): void {
+  if (isSearchResultDisabled(item, resultMap)) return
   onSelect(item)
   query = ''
   results = []
@@ -117,6 +117,7 @@ function selectItem(item: T): void {
             image={resultMap.image(item)}
             title={resultMap.title(item)}
             descriminator={resultMap.descriminator?.(item)}
+            disabled={isSearchResultDisabled(item, resultMap)}
             onSelect={() => selectItem(item)}
           />
         {/each}

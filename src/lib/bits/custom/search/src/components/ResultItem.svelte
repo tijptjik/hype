@@ -5,6 +5,7 @@ let {
   image = null,
   title,
   descriminator = null,
+  disabled = false,
   onSelect,
   class: className = '',
 }: SearchResultItemProps = $props()
@@ -24,6 +25,8 @@ $effect(() => {
   type="button"
   data-search-result-item="true"
   class={`bits-search-result-item ${className}`}
+  aria-disabled={disabled}
+  {disabled}
   onclick={() => onSelect?.()}
 >
   {#if image && !imageFailed}
