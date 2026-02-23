@@ -1,4 +1,5 @@
 import { error } from '@sveltejs/kit'
+import { toAuthMessage } from '.'
 // DRIZZLE
 import { eq, inArray } from 'drizzle-orm'
 // SCHEMA

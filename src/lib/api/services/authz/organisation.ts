@@ -1,4 +1,5 @@
 import { error } from '@sveltejs/kit'
+import { toAuthMessage } from '.'
 // TYPES
 import type {
   AuthorizeParams,

@@ -32,7 +32,6 @@ import type {
   LayerDBPartial,
   LayerI18nPartial,
   LayerI18nNew,
-  ProjectDBRaw,
   LayerPartial,
   LayerPropertyDBRaw,
   Property,

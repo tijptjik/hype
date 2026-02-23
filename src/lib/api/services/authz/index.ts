@@ -55,6 +55,19 @@ export {
   authorizeHubDelete,
   resolveHubActionPermissions,
 } from './hub'
+export {
+  toProjectSubmittedFields,
+  toProjectUserRoleSignature,
+  toProjectAuthActor,
+  authorizeProjectListForContext,
+  authorizeProjectReadForProbe,
+  authorizeProjectCreateForSubmission,
+  authorizeProjectUpdateForSubmission,
+  authorizeProjectManageRolesForSubmission,
+  authorizeProjectPublishForSubmission,
+  authorizeProjectDeleteForSubmission,
+  ensureProjectCommandAllowed,
+} from './project'
 export { authorizeImageList, authorizeImageRead } from './image'
 export { canSearchUsers, canOverrideUserSearchArchivedFilter } from './user'
 
