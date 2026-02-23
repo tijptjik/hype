@@ -14,6 +14,7 @@ import {
 } from '$lib/db/schema/index'
 // ZOD SCHEMAS
 import { getDefaultConstraints, getLocales } from '../constraints'
+import { FormBoolean } from '../form'
 import { UserBasic } from './user'
 import { ImageContextEnvelopeAPI } from './image'
 
@@ -145,9 +146,9 @@ export const HubI18nFormData = z.object({
     .string()
     .max(8192, { message: m.admin__validation_description_lte_8192_chars() })
     .optional(),
-  nameGen: z.boolean().default(false),
-  nameShortGen: z.boolean().default(false),
-  descriptionGen: z.boolean().optional(),
+  nameGen: FormBoolean.default(false),
+  nameShortGen: FormBoolean.default(false),
+  descriptionGen: FormBoolean.optional(),
 })
 
 export const HubRoleFormData = z.object({
@@ -168,8 +169,8 @@ export const HubUserRolesFormData = z.preprocess(
 
 export const HubOrganisationFormData = z.object({
   organisationId: z.string().min(1),
-  isCoreInclusive: z.boolean().default(true),
-  isHubExclusive: z.boolean().default(false),
+  isCoreInclusive: FormBoolean.default(true),
+  isHubExclusive: FormBoolean.default(false),
 })
 
 export const HubEntityFormData = z.object({
@@ -181,7 +182,6 @@ export const HubEntityFormData = z.object({
       message: m.admin__validation_key_valid_characters(),
     }),
   domain: z.union([z.literal(''), z.string().min(3).max(255)]),
-  imageId: z.string().min(1).nullable().optional(),
   i18n: HubI18nByLocaleFormData,
   userRoles: HubUserRolesFormData,
   organisations: z.array(HubOrganisationFormData).default([]),

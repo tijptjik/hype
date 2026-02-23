@@ -8,6 +8,7 @@ import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'driz
 import { organisation, organisationI18n, organisationRole } from '$lib/db/schema/index'
 // ZOD SCHEMAS
 import { getDefaultConstraints, getLocales, getUserRoles } from '../constraints'
+import { FormBoolean } from '../form'
 import { UserBasic } from './user'
 import { ImageBase, ImageContextEnvelopeAPI } from './image'
 import { HubBasic } from './hub'
@@ -137,9 +138,9 @@ export const OrganisationI18nFormData = z.object({
     .string()
     .max(8192, { message: m.admin__validation_description_lte_8192_chars() })
     .optional(),
-  nameGen: z.boolean().default(false),
-  nameShortGen: z.boolean().default(false),
-  descriptionGen: z.boolean().optional(),
+  nameGen: FormBoolean.default(false),
+  nameShortGen: FormBoolean.default(false),
+  descriptionGen: FormBoolean.optional(),
 })
 
 export const OrganisationRoleFormData = z.object({

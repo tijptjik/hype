@@ -2,6 +2,7 @@
 // CONSTRAINTS & UTILITIES
 /* -------- */
 export * from './constraints'
+export * from './form'
 
 /* ----------------- */
 // GENERIC API SCHEMAS
