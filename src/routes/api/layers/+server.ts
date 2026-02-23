@@ -3,7 +3,7 @@ import { error } from '@sveltejs/kit'
 // FORMS
 import { superValidate } from 'sveltekit-superforms'
 // ZOD
-import { zod } from 'sveltekit-superforms/adapters'
+import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { LayerInsertAPI } from '$lib/db/zod'
 // API
 import {

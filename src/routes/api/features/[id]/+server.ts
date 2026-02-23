@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm'
 // FORMS
 import { superValidate } from 'sveltekit-superforms'
 // ZOD
-import { zod } from 'sveltekit-superforms/adapters'
+import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { FeatureUpdateAPI } from '$lib/db/zod/schema/feature'
 // I18N
 import { m } from '$lib/i18n'

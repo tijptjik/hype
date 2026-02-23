@@ -12,7 +12,7 @@ import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
 import { toImageEnvelope } from './image'
 import { ImageContextResource } from '$lib/enums'
 // ZOD
-import { zod } from 'sveltekit-superforms/adapters'
+import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { ProjectAPI, ProjectCollectionAPI } from '../zod'
 // SERVICES
 import { createPropertiesWithRelated, updatePropertiesWithRelated } from './property'

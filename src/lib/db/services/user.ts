@@ -4,7 +4,7 @@ import { and, asc, desc, type SQL, eq, inArray, like, sql, or } from 'drizzle-or
 import { superValidate } from 'sveltekit-superforms'
 import { user, userFeature, userLayer } from '../schema'
 // ZOD
-import { zod } from 'sveltekit-superforms/adapters'
+import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import {
   UserAPI,
   UserCollectionAPI,

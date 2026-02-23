@@ -9,7 +9,7 @@ import { transformI18nSafely } from '$lib/db'
 // ZOD
 import { HubAPI, HubCollectionAPI } from '$lib/db/zod/schema/hub'
 import { superValidate } from 'sveltekit-superforms'
-import { zod } from 'sveltekit-superforms/adapters'
+import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { toImageEnvelope } from '$lib/db/services/image'
 import { ImageContextResource } from '$lib/enums'
 import {

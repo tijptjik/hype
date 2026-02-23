@@ -11,7 +11,7 @@ import {
   project,
 } from '../schema'
 // ZOD
-import { zod } from 'sveltekit-superforms/adapters'
+import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import {
   OrganisationAPI,
   OrganisationCardProfileAPI,

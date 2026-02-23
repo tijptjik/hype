@@ -16,7 +16,7 @@ import { superValidate } from 'sveltekit-superforms'
 // SCHEMA
 import { property, propertyI18n, propertyValue, propertyValueI18n } from '../schema'
 // ZOD
-import { zod } from 'sveltekit-superforms/adapters'
+import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { PropertyAPI, PropertyInsert, PropertyUpdate, PropertyUpdateAPI } from '../zod'
 // TYPES
 import type { InferInsertModel, SQL } from 'drizzle-orm'

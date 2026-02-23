@@ -27,7 +27,7 @@ import {
   assertCodeUnique,
 } from '$lib/api/services/organisation'
 // ZOD
-import { zod } from 'sveltekit-superforms/adapters'
+import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { OrganisationInsertAPI, OrganisationInsertSuperAdminAPI } from '$lib/db/zod'
 // TYPES
 import type { RequestHandler } from '@sveltejs/kit'

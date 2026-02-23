@@ -2,7 +2,7 @@
 import { and, eq, type SQL, inArray } from 'drizzle-orm'
 // FORMS
 import { superValidate } from 'sveltekit-superforms'
-import { zod } from 'sveltekit-superforms/adapters'
+import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import type { SuperValidated } from 'sveltekit-superforms'
 // SCHEMA
 import {

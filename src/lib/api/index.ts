@@ -5,7 +5,7 @@ import { eq, inArray } from 'drizzle-orm'
 // SUPERFORMS
 import { superValidate, actionResult } from 'sveltekit-superforms'
 // ZOD
-import { zod } from 'sveltekit-superforms/adapters'
+import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import type { z } from 'zod'
 // LIB
 import { ADMIN_PATH, API_PATH, NEW_REF } from '$lib'

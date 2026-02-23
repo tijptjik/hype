@@ -100,7 +100,7 @@ const resolvedFacetTabs = $derived.by(() =>
 const resourceEditorPage = createResourceEditorPage({
   headerCtrl,
   icon: HubIcon,
-  facetTabs: facetTabs as any,
+  facetTabs,
 })
 
 // § Config - Derived

@@ -9,7 +9,7 @@ import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
 import { logZodError } from '$lib/api'
 // SUPERFORMS
 import { superValidate, type SuperValidated } from 'sveltekit-superforms'
-import { zod } from 'sveltekit-superforms/adapters'
+import { zod4 as zod } from 'sveltekit-superforms/adapters'
 // SCHEMAS
 import {
   feature,

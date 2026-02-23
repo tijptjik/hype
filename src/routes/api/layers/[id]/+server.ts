@@ -7,7 +7,7 @@ import { superValidate } from 'sveltekit-superforms'
 // DRIZZLE
 import { eq, SQL } from 'drizzle-orm'
 // ZOD
-import { zod } from 'sveltekit-superforms/adapters'
+import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { LayerUpdateAPI } from '$lib/db/zod'
 // API
 import {
