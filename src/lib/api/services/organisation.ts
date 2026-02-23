@@ -2,6 +2,7 @@
 import { eq, inArray, type SQL } from 'drizzle-orm'
 // LIB
 import { applyQueryFilters, removeExcludedColumns } from '$lib/api'
+import { toBooleanOrUndefined } from '$lib/api/services'
 // AUTH
 import {
   assertUserLoggedIn,
@@ -95,6 +96,19 @@ export const toOrganisationProfile = (
   (organisationProfiles as readonly string[]).includes(value)
     ? (value as OrganisationProfile)
     : fallback
+
+export const toLookupConditions = (params: {
+  ref: string
+  refKey?: 'id' | 'code'
+}): Partial<OrganisationDB> =>
+  params.refKey === 'code'
+    ? ({ code: params.ref } as Partial<OrganisationDB>)
+    : ({ id: params.ref as Id } as Partial<OrganisationDB>)
+
+export const toRequestedListState = (conditions: Partial<OrganisationDB>) => ({
+  isPublished: toBooleanOrUndefined(conditions.isPublished) ?? true,
+  isArchived: toBooleanOrUndefined(conditions.isArchived) ?? false,
+})
 
 const VISIBILITY_COLUMNS = ['isArchived', 'isPublished'] as const
 
