@@ -312,6 +312,16 @@ export const probeOrganisationForCommand = async (
   return current ?? null
 }
 
+export const resolveOrganisationCommandProbe = async (
+  db: Database,
+  organisationId: Id,
+  onNotFound: () => never,
+): Promise<OrganisationCommandProbe> => {
+  const probed = await probeOrganisationForCommand(db, organisationId)
+  if (!probed) return onNotFound()
+  return probed
+}
+
 /**
  * Creates a new organisation in the database
  * @param db - The database instance

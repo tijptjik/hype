@@ -448,6 +448,16 @@ export const probeHubForCommand = async (
   return current ?? null
 }
 
+export const resolveHubCommandProbe = async (
+  db: Database,
+  hubId: Id,
+  onNotFound: () => never,
+): Promise<HubCommandProbe> => {
+  const probed = await probeHubForCommand(db, hubId)
+  if (!probed) return onNotFound()
+  return probed
+}
+
 export const createHub = async (db: Database, data: any): Promise<HubDB> => {
   const [created] = await db.insert(hub).values(data).returning()
   return created
