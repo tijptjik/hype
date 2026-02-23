@@ -1,398 +1,754 @@
 <script lang="ts">
 // SVELTE
-import { watch } from 'runed'
-import { fade } from 'svelte/transition'
+import { page } from '$app/state'
 import { untrack } from 'svelte'
-// LIB
-import { NEW_TITLE } from '$lib'
 // I18N
-import { getLocale } from '$lib/i18n'
 import { m } from '$lib/i18n'
+import { getLocale, getLocaleOrder, toOrganisationFormLocaleKey } from '$lib/i18n'
+// TOAST
+import { toast } from 'svelte-sonner'
+// SERVICES
+import {
+  addUserRoleSelection,
+  createResourceEditorPage,
+  createResourceFormConfig,
+  getNameForToast,
+  guardRefDesync,
+  isFormLevelIssue,
+  revalidateAfterSubmitAttempt,
+  removeUserRoleSelection,
+  resetLocaleFields,
+  toIssueMessage,
+  translateLocaleIntoEmptyFields,
+  updateUserRoleSelection,
+} from '$lib/client/services/form'
+import {
+  getProjectSubmitUpdates,
+  overrideProjectEntityBoolean,
+  overrideProjectListItemBoolean,
+  toProjectFormInput,
+} from '$lib/client/services/project'
+import { canCreateProjects, canUpdateProject } from '$lib/client/services/auth'
 // CONTEXT
-import { setForm } from '$lib/context/form.svelte'
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
+// REMOTE
+import {
+  archiveProject,
+  getProject,
+  getProjects,
+  projectForm,
+  publishProject,
+} from '$lib/api/server/project.remote'
+// SCHEMA
+import { ProjectPreflightFormData } from '$lib/db/zod'
+// CONFIG
+import { NEW_REF, NEW_TITLE } from '$lib/constants'
+// BITS COMPONENTS
+import {
+  EntityImage,
+  FormCreditFields,
+  FormI18nDescriptorFields,
+  FormI18nSection,
+  FormSpecifiersFields,
+  FormUserRolesSection,
+  GridSpacer,
+  Main,
+} from '$lib/bits'
+import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
+// FACTORIES
+import { configureForm } from '$lib/factories.svelte'
+// NAVIGATION
+import { getAdminFacetTabsForResource, navigateOnAdmin } from '$lib/navigation'
+// UTILS
+import { createSchemaRequiredInferer } from '$lib/utils/form-schema'
 // ICONS
 import ProjectIcon from 'virtual:icons/lucide/layout-grid'
-// PROVIDERS
-import ImageProvider from '$lib/components/providers/ImageProvider.svelte'
-import { page } from '$app/state'
-// COMPONENTS
-import I18nSection from '$lib/components/forms/sections/I18n.svelte'
-import SpecificationSection from '$lib/components/forms/sections/Specification.svelte'
-import ImageSection from '$lib/components/forms/sections/Image.svelte'
-import PropertySection from '$lib/components/forms/sections/PropertyType.svelte'
-import UserSection from '$lib/components/forms/sections/User.svelte'
-import Scrollbar from '$lib/components/common/scrollbars/Scrollbar.svelte'
 // ENUMS
-import {
-  FirstClassResource,
-  classifierComponentTypes,
-  specifierComponentTypes,
-  ImageContextResource,
-} from '$lib/enums'
+import { FirstClassResource, ImageContextResource, ProjectRoleType } from '$lib/enums'
 // TYPES
 import type {
-  Project,
-  FormPageProps,
-  FormField,
-  FormFieldArray,
-  FormFieldArrayDefinition,
-  Image,
-  Id,
+  ImageCtxEnvelope,
+  Locale,
+  ProjectBooleanField,
+  ProjectRoleUser,
+  User,
+  FormDataUpdaterForm,
 } from '$lib/types'
 
-// CONTEXT
+// § Context
+
 const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 
-// ELEMENTS
-let vietportElement: HTMLDivElement | undefined = $state()
+// § Config
+
+const facetTabs = getAdminFacetTabsForResource(FirstClassResource.project)
+const resolvedFacetTabs = $derived.by(() =>
+  isNewProjectRef
+    ? getAdminFacetTabsForResource(FirstClassResource.project, {
+        coreOnly: true,
+      })
+    : facetTabs,
+)
+
+const resourceEditorPage = createResourceEditorPage({
+  headerCtrl,
+  icon: ProjectIcon,
+  facetTabs,
+})
+
+// § Config - Derived
+
+const projectRef = $derived(page.params.project as string)
+const locales = $derived(getLocaleOrder(getLocale()))
+const activeFacet = $derived(
+  adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
+)
+const parentOrganisationId = $derived(page.url.searchParams.get('parentId') ?? '')
+
+// § State - Elements
+
 let contentsElement: HTMLFormElement | undefined = $state()
 
-// CONFIG
-const RESOURCE = FirstClassResource.project
-const FIELDS: Record<string, FormField | FormFieldArray> = {
-  i18n: {
-    name: {
-      label: m.admin__forms_common_name_full(),
-      component: 'InputField',
-      isArray: false,
-      isTranslated: true,
-      isNested: false,
-    },
-    nameShort: {
-      label: m.admin__forms_common_name_short(),
-      component: 'InputField',
-      isArray: false,
-      isTranslated: true,
-      isNested: false,
-    },
-    description: {
-      label: m.feature__description(),
-      component: 'TextareaField',
-      isArray: false,
-      isTranslated: true,
-      isNested: false,
-    },
-  } as FormField,
-  credit: {
-    license: {
-      label: m.admin__forms_projects_license(),
-      component: 'InputField',
-      isArray: false,
-      isTranslated: true,
-      isNested: false,
-    },
-    attribution: {
-      label: m.profile__attribution(),
-      component: 'InputField',
-      isArray: false,
-      isTranslated: true,
-      isNested: false,
-    },
-  } as FormField,
-  users: {
-    maintainerRoles: {
-      label: m.admin__forms_project_members_title(),
-      isArray: true,
-      isTranslated: false,
-      isNested: false,
-    },
-  } as FormField,
-  specification: {
-    code: {
-      label: m.admin__forms_common_code(),
-      component: 'InputField',
-      isArray: false,
-      isTranslated: false,
-      isNested: false,
-    },
-  } as FormField,
-  config: {
-    properties: {
-      isArray: true,
-      discriminators: {
-        key: 'type',
-        values: ['classifier', 'specifier'],
-        specs: {
-          classifier: {
-            key: {
-              label: 'Name in API',
-              component: 'InputField',
-              isArray: false,
-              isTranslated: false,
-              isNested: true,
-            },
-            label: {
-              label: 'Name in UI',
-              component: 'InputField',
-              isArray: false,
-              isTranslated: true,
-              isNested: true,
-            },
-            placeholder: {
-              label: 'Input Placeholder',
-              component: 'InputField',
-              isArray: false,
-              isTranslated: true,
-              isNested: true,
-            },
-            component: {
-              label: 'Component',
-              component: 'SelectField',
-              values: classifierComponentTypes,
-              isArray: false,
-              isTranslated: false,
-              isNested: true,
-            },
-            values: {
-              component: 'ListField',
-              isArray: true,
-              isTranslated: true,
-              isNested: true,
-              showForComponent: ['SelectField'],
-            },
-            min: {
-              label: 'Minimum',
-              component: 'InputField',
-              inputType: 'number',
-              isArray: false,
-              isTranslated: false,
-              isNested: true,
-              showForComponent: ['RangeField'],
-            },
-            max: {
-              label: 'Maximum',
-              component: 'InputField',
-              inputType: 'number',
-              isArray: false,
-              isTranslated: false,
-              isNested: true,
-              showForComponent: ['RangeField'],
-            },
-          },
-          specifier: {
-            key: {
-              label: 'Name in API',
-              component: 'InputField',
-              isArray: false,
-              isNested: true,
-              isTranslated: false,
-            },
-            label: {
-              label: 'Name in UI',
-              component: 'InputField',
-              isArray: false,
-              isNested: true,
-              isTranslated: true,
-            },
-            placeholder: {
-              label: 'Input Placeholder',
-              component: 'InputField',
-              isArray: false,
-              isNested: true,
-              isTranslated: true,
-            },
-            component: {
-              label: 'Component',
-              component: 'SelectField',
-              values: specifierComponentTypes,
-              isArray: false,
-              isNested: true,
-              isTranslated: false,
-            },
-          },
-        },
-      },
-    } as FormFieldArrayDefinition,
-  } as FormFieldArray,
-  images: {
-    image: {
-      label: m.admin__forms_project_image_title(),
-      component: 'InputField',
-      isArray: false,
-    },
-  } as FormField,
+// § State - State
+
+let lastHeaderKey = $state('')
+let lastFormActionsSignature = $state('')
+let suppressFormLevelIssues = $state(false)
+let selectedUsersById = $state<Record<string, User>>({})
+let hasAutoEnteredEditForNew = $state(false)
+let hierarchy = $state<{ organisation: any; project: any } | null>(null)
+
+// § State - Data
+
+type ProjectGetState = any
+let project: ProjectGetState = $state(null)
+let committedProject: ProjectGetState = $state(null)
+
+const commitProjectState = (value: ProjectGetState): void => {
+  committedProject = value
+  project = value
 }
 
-// STATE : PROPS
-let pageProps: FormPageProps<Project> = $props()
+// § Derived State - Flags
 
-// Read facet from URL hash
-const hashFacet = $derived(() => {
-  if (typeof window !== 'undefined') {
-    const hash = page.url.hash
-    return hash ? hash.substring(1) : null
-  }
-  return null
+const isCoreFacet = $derived(activeFacet === 'core')
+const isFieldsFacet = $derived(activeFacet === 'fields')
+const isImagesFacet = $derived(activeFacet === 'images')
+const isEditing = $derived(headerCtrl.state.isEditing)
+const isNewProjectRef = $derived(projectRef === NEW_REF)
+
+const isCurrentRefLoaded = $derived.by(() => {
+  if (isNewProjectRef) return true
+  return guardRefDesync(project as any, committedProject as any, projectRef)
 })
 
-// Set facet from hash or default to 'core'
-$effect(() => {
-  const facet = hashFacet()
-  if (facet && ['core', 'fields', 'images'].includes(facet)) {
-    adminCtx.setFacet(facet as any, pageProps.data.entity, FirstClassResource.project)
-  } else {
-    adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.project)
-  }
+// § Form
+
+type ProjectI18nSectionKey = 'descriptor' | 'credit'
+const translatableI18nFieldsBySection: Record<
+  ProjectI18nSectionKey,
+  ReadonlyArray<'name' | 'nameShort' | 'description' | 'license' | 'attribution'>
+> = {
+  descriptor: ['name', 'nameShort', 'description'],
+  credit: ['license', 'attribution'],
+}
+const configuredProjectForm = configureForm(() => ({
+  form: projectForm as any,
+  ...createResourceFormConfig({
+    formEl: contentsElement,
+    key: projectRef,
+    schema: ProjectPreflightFormData,
+    data: toProjectFormInput(committedProject?.data, {
+      organisationId: parentOrganisationId,
+    }),
+    submitUpdates: async () =>
+      getProjectSubmitUpdates({
+        projectId: project?.data?.id,
+        entityQuery: getProject({
+          ref: projectRef,
+          refKey: 'code',
+          meta: { isAdminRequest: true, profile: 'admin' },
+        }),
+        listQuery: getProjects({
+          conditions: adminCtx.appCtx.isSuperAdmin() ? {} : { isArchived: false },
+          prisms: adminCtx.appCtx.state.prisms,
+          meta: { isAdminRequest: true, profile: 'card' },
+        }),
+      }),
+    adminCtx,
+    headerCtrl,
+    resourceType: FirstClassResource.project,
+    getEntity: () => project,
+    refreshResource: async ({ data, shouldRedirect }) => {
+      const submittedCode = data.data?.code?.trim() ?? ''
+      const refreshed = await refreshProject(shouldRedirect ? submittedCode : undefined)
+      commitProjectState(refreshed)
+      if (refreshed?.data) {
+        formCtx.form.fields.set(toProjectFormInput(refreshed.data))
+      }
+    },
+  }),
+}))
+
+const formCtx = $derived(configuredProjectForm())
+const isRequiredInPreflight = createSchemaRequiredInferer(ProjectPreflightFormData)
+const isDirty = $derived(Boolean(formCtx.dirty))
+
+const visibleAllIssues = $derived.by((): unknown[] =>
+  suppressFormLevelIssues ? [] : (formCtx.allIssues ?? []),
+)
+
+const formLevelIssues = $derived.by((): string[] => {
+  const messages = visibleAllIssues
+    .filter(isFormLevelIssue)
+    .map(toIssueMessage)
+    .filter((message: string | null): message is string => Boolean(message))
+  return Array.from(new Set(messages))
 })
 
-// STATE : FORM
-let form = setForm(
-  RESOURCE,
-  pageProps.data.entity,
-  pageProps.data.validatedForm,
-  getAdminCtx(),
+// USER ROLES
+
+const formUserRoleValues = $derived(
+  (formCtx.form.fields.value().data?.maintainerRoles ?? []) as Array<{
+    userId: string
+    role: string
+  }>,
 )
-
-// REACTIVE: Update form when pageProps change (for reset functionality)
-watch(
-  () => pageProps.data.validatedForm?.data,
-  newData => {
-    form.form.set(newData as unknown as Project)
-  },
-  {
-    lazy: true,
-  },
+const userRoleUpdaterForm = $derived(
+  formCtx.form as unknown as FormDataUpdaterForm<{
+    maintainerRoles?: Array<{ userId: string; role: string }>
+  }>,
 )
+const hiddenUserIdInputAttrs = $derived.by(() => {
+  const rows = (formCtx.form as any).fields?.data?.maintainerRoles ?? []
+  return formUserRoleValues
+    .map((userRole, index) => {
+      const userId = typeof userRole.userId === 'string' ? userRole.userId : ''
+      if (!userId) return null
+      return rows[index]?.userId?.as('hidden', userId)
+    })
+    .filter(Boolean) as Array<Record<string, unknown>>
+})
+const roleFieldNameByUserId = $derived.by(() => {
+  const rows = (formCtx.form as any).fields?.data?.maintainerRoles ?? []
+  return Object.fromEntries(
+    formUserRoleValues.map((userRole, index) => [
+      userRole.userId,
+      rows[index]?.role?.as('select')?.name ?? '',
+    ]),
+  ) as Record<string, string>
+})
 
-// STATE : DERIVED
-let enhance = $derived(form.enhance)
-let title = $derived(
-  pageProps.data.validatedForm?.data?.i18n?.[getLocale()]?.name || NEW_TITLE,
-)
-let image = $derived(pageProps.data.image as Image)
+const projectUserRoles = $derived.by(() => {
+  const baseRoles = (project?.data?.maintainerRoles ?? []) as ProjectRoleUser[]
+  const roleByUserId = new Map(formUserRoleValues.map(role => [role.userId, role.role]))
 
-// HEADER SETUP
-$effect(() => {
-  const facetTabs = new Map()
-  facetTabs.set('core', m.resources__profile())
-  facetTabs.set('fields', m.project__fields())
-  if (adminCtx.activeResourceRef !== 'new') {
-    facetTabs.set('images', m.organisation__images())
-  }
+  return formUserRoleValues.flatMap(formUserRole => {
+    const baseRole = baseRoles.find(userRole => userRole.userId === formUserRole.userId)
+    if (baseRole) {
+      return [
+        {
+          ...baseRole,
+          role: roleByUserId.get(formUserRole.userId) ?? baseRole.role,
+        },
+      ]
+    }
 
-  untrack(() => headerCtrl.setHeaderForEntity(title, ProjectIcon, facetTabs))
+    const selectedUser = selectedUsersById[formUserRole.userId]
+    if (!selectedUser) return []
 
-  headerCtrl.setFormActions({
-    dirty: Boolean(form.isTainted),
-    submit: () => void form.submit(),
+    return [
+      {
+        projectId: project?.data?.id ?? '',
+        userId: formUserRole.userId,
+        role: formUserRole.role,
+        user: {
+          id: selectedUser.id,
+          name: selectedUser.name,
+          image: selectedUser.image,
+          attribution: selectedUser.attribution,
+        },
+      } as ProjectRoleUser,
+    ]
   })
 })
 
-// Clean up form actions when component unmounts
+// IMAGE
+
+const activeProjectImage = $derived(
+  (project?.data?.image ?? null) as ImageCtxEnvelope | null,
+)
+const imageProviderProps = $derived.by(() => {
+  const projectData = project?.data
+  const isValid = isCurrentRefLoaded && Boolean(projectData?.id)
+
+  return {
+    isAdminMode: true,
+    isValid,
+    image: isValid ? activeProjectImage : undefined,
+    context:
+      isValid && hierarchy
+        ? {
+            ctxType: ImageContextResource.project,
+            ctxId: projectData?.id,
+            organisation: hierarchy.organisation,
+            project: hierarchy.project,
+          }
+        : undefined,
+  }
+})
+
+// § Auth
+
+const currentUser = $derived(adminCtx.appCtx.getUser())
+const canCreateProject = $derived(
+  canCreateProjects(currentUser as any, parentOrganisationId || undefined),
+)
+const canEditProject = $derived.by(() => {
+  const projectData = project?.data
+  if (!projectData) return false
+  return canUpdateProject(
+    currentUser as any,
+    projectData.id,
+    projectData.organisationId,
+  )
+})
+const canSubmitProject = $derived(isNewProjectRef ? canCreateProject : canEditProject)
+const canPublishProject = $derived(canEditProject)
+const canDeleteProject = $derived(canEditProject)
+
+// § Handlers
+
+// i18N CARDS
+
+function revalidateAfterProgrammaticChange(): void {
+  revalidateAfterSubmitAttempt({
+    wasSubmitAttempted: formCtx.wasSubmitAttempted,
+    validate: formCtx.validate,
+  })
+}
+
+async function onTranslate(
+  sourceLocale: Locale,
+  targetLocale: Locale,
+  sectionKey: string = 'descriptor',
+): Promise<boolean> {
+  const section =
+    sectionKey === 'credit' ? ('credit' as const) : ('descriptor' as const)
+  const translated = await translateLocaleIntoEmptyFields({
+    form: formCtx.form as any,
+    sourceLocale,
+    targetLocale,
+    fields: [...translatableI18nFieldsBySection[section]],
+  })
+  if (translated) revalidateAfterProgrammaticChange()
+  return translated
+}
+
+function onResetLocale(targetLocale: Locale, sectionKey: string = 'descriptor'): void {
+  const section =
+    sectionKey === 'credit' ? ('credit' as const) : ('descriptor' as const)
+  resetLocaleFields({
+    form: formCtx.form as any,
+    targetLocale,
+    fields: [...translatableI18nFieldsBySection[section]],
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+function onAddUser(user: User): void {
+  selectedUsersById[user.id] = user
+  project = addUserRoleSelection({
+    form: userRoleUpdaterForm,
+    entity: project,
+    user,
+    defaultRole: ProjectRoleType.maintainer,
+    foreignKey: 'projectId',
+  } as any)
+  revalidateAfterProgrammaticChange()
+}
+
+function onRemoveUser(userId: string): void {
+  const { [userId]: _removedUser, ...rest } = selectedUsersById
+  selectedUsersById = rest
+  project = removeUserRoleSelection({
+    form: userRoleUpdaterForm,
+    entity: project,
+    userId,
+  } as any)
+  revalidateAfterProgrammaticChange()
+}
+
+function onRoleChange(userId: string, role: ProjectRoleType): void {
+  project = updateUserRoleSelection({
+    form: userRoleUpdaterForm,
+    entity: project,
+    userId,
+    role,
+  } as any)
+  revalidateAfterProgrammaticChange()
+}
+
+async function refreshProject(ref: string = projectRef): Promise<ProjectGetState> {
+  if (ref === NEW_REF) return null
+  return await getProject({
+    ref,
+    refKey: 'code',
+    meta: { isAdminRequest: true, profile: 'detail' },
+  }).catch(() => null)
+}
+
+async function handleProjectStateToggle({
+  field,
+  successWhenTrue,
+  successWhenFalse,
+  setBusy,
+  mutate,
+}: {
+  field: ProjectBooleanField
+  successWhenTrue: string
+  successWhenFalse: string
+  setBusy: (value: boolean) => void
+  mutate: typeof publishProject | typeof archiveProject
+}): Promise<void> {
+  const projectData = project?.data
+  if (!projectData) return
+
+  const nextState = !projectData[field]
+  setBusy(true)
+
+  try {
+    await mutate({
+      id: projectData.id,
+      state: nextState,
+      meta: { isAdminRequest: true },
+    }).updates(
+      getProject({
+        ref: projectRef,
+        refKey: 'code',
+        meta: { isAdminRequest: true, profile: 'detail' },
+      }).withOverride(overrideProjectEntityBoolean(field, nextState)),
+      getProjects({
+        conditions: adminCtx.appCtx.isSuperAdmin() ? {} : { isArchived: false },
+        prisms: adminCtx.appCtx.state.prisms,
+        meta: { isAdminRequest: true, profile: 'card' },
+      }).withOverride(overrideProjectListItemBoolean(projectData.id, field, nextState)),
+    )
+
+    commitProjectState(await refreshProject())
+    toast.success(
+      `${nextState ? successWhenTrue : successWhenFalse} ${getNameForToast(project, 'nameShort')}`,
+    )
+  } catch {
+    toast.error(m.long_crazy_peacock_care())
+  } finally {
+    setBusy(false)
+  }
+}
+
+async function onPublishToggle(): Promise<void> {
+  if (!isCurrentRefLoaded || !canPublishProject) return
+  await handleProjectStateToggle({
+    field: 'isPublished',
+    successWhenTrue: m.published(),
+    successWhenFalse: m.forms__unpublished(),
+    setBusy: value => headerCtrl.setPublishing(value),
+    mutate: publishProject,
+  })
+}
+
+async function onDeleteToggle(): Promise<void> {
+  if (!isCurrentRefLoaded || !canDeleteProject) return
+  await handleProjectStateToggle({
+    field: 'isArchived',
+    successWhenTrue: m.bad_swift_cheetah_surge(),
+    successWhenFalse: m.forms__restored(),
+    setBusy: value => headerCtrl.setDeleting(value),
+    mutate: archiveProject,
+  })
+}
+
+function onReset(): void {
+  suppressFormLevelIssues = true
+  formCtx.clearSubmitAttemptState()
+  if (committedProject?.data) {
+    project = committedProject
+    formCtx.form.fields.set(toProjectFormInput(committedProject.data))
+    return
+  }
+  formCtx.reset()
+}
+
+function onSubmit(): void {
+  suppressFormLevelIssues = false
+  if (!isCurrentRefLoaded) return
+  const baseMeta = committedProject?.data
+    ? (toProjectFormInput(committedProject.data).meta ?? {})
+    : (toProjectFormInput(null, { organisationId: parentOrganisationId }).meta ?? {})
+  formCtx.requestSubmit(baseMeta ? { meta: baseMeta } : undefined)
+}
+
+function onPresentationModeCommitted(nextMode: 'cover' | 'contain'): void {
+  if (project?.data?.image) {
+    project.data.image.image.presentationMode = nextMode
+  }
+  if (committedProject?.data?.image) {
+    committedProject.data.image.image.presentationMode = nextMode
+  }
+}
+
+// § Effects
+
+$effect(() => {
+  const ref = projectRef
+  return resourceEditorPage.syncRouteAndLoad({
+    ref,
+    resetFormActionsSignature: () => {
+      lastFormActionsSignature = ''
+      suppressFormLevelIssues = true
+    },
+    setFacetForRef: nextRef => {
+      untrack(() => {
+        const nextFacet = adminCtx.activeFacet === 'images' ? 'images' : 'core'
+        adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.project)
+      })
+    },
+    load: refreshProject,
+    commit: commitProjectState,
+  })
+})
+
+// Keep entity header metadata (title/icon/facets) aligned with loaded organisation data.
+$effect(() => {
+  const ref = projectRef
+  const title =
+    (isNewProjectRef ? `${NEW_TITLE} ${m.deft_mealy_ant_vent()}` : undefined) ??
+    project?.data?.i18n?.[getLocale()]?.name ??
+    project?.data?.code ??
+    m.deft_mealy_ant_vent()
+  const facetKey = Array.from(resolvedFacetTabs.keys()).join('|')
+  const headerKey = `${ref}:${title}:${facetKey}`
+  if (headerKey === lastHeaderKey) return
+  lastHeaderKey = headerKey
+  headerCtrl.setHeaderForEntity(title, ProjectIcon, resolvedFacetTabs as any)
+})
+
+// Archived entities are read-only until restored.
+$effect(() => {
+  const currentProject = project?.data
+  if (!currentProject?.id) {
+    hierarchy = null
+    return
+  }
+
+  let cancelled = false
+  void adminCtx.appCtx.getHierarchy(currentProject).then(result => {
+    if (cancelled) return
+    hierarchy = result as { organisation: any; project: any }
+  })
+
+  return () => {
+    cancelled = true
+  }
+})
+
+// Archived entities are read-only until restored.
+$effect(() => {
+  if (!project?.data?.isArchived) return
+  if (!headerCtrl.state.isEditing) return
+  headerCtrl.setEditing(false)
+})
+
+// New routes are create-only; users without create access are sent back to index.
+$effect(() => {
+  if (!isNewProjectRef) return
+  if (canCreateProject) return
+  navigateOnAdmin(adminCtx, FirstClassResource.project)
+})
+
+// New entities start in edit mode.
+$effect(() => {
+  if (!isNewProjectRef) {
+    hasAutoEnteredEditForNew = false
+    return
+  }
+  if (!canSubmitProject) return
+  if (hasAutoEnteredEditForNew) return
+  if (headerCtrl.state.isEditing) return
+  headerCtrl.setEditing(true)
+  hasAutoEnteredEditForNew = true
+})
+
+// Keep unauthorized users out of edit mode if the header state gets toggled externally.
+$effect(() => {
+  if (canSubmitProject) return
+  if (!headerCtrl.state.isEditing) return
+  headerCtrl.setEditing(false)
+})
+
+$effect(() => {
+  resourceEditorPage.wireHeaderHandlers({
+    reset: onReset,
+    submit: onSubmit,
+    togglePublish: onPublishToggle,
+    toggleDelete: onDeleteToggle,
+  })
+})
+
+// Wire stable header action handlers once.
+$effect(() => {
+  const isImageFacetActive = isImagesFacet
+  const dirty = isDirty
+  const isSubmitting = formCtx.submitting
+  const hasIssues = visibleAllIssues.length > 0
+  const isPublished = Boolean(project?.data?.isPublished)
+  const isDeleted = Boolean(project?.data?.isArchived)
+
+  lastFormActionsSignature = resourceEditorPage.syncHeaderStatus({
+    headerCtrl,
+    status: {
+      dirty: isImageFacetActive ? false : dirty,
+      isSubmitting: isImageFacetActive ? false : isSubmitting,
+      hasIssues: isImageFacetActive ? false : hasIssues,
+      isPublished,
+      isDeleted,
+      canEdit: isImageFacetActive ? false : canSubmitProject && isCurrentRefLoaded,
+      canPublish: !isNewProjectRef && canPublishProject && isCurrentRefLoaded,
+      showDeleteAction: isImageFacetActive
+        ? false
+        : !isNewProjectRef && canDeleteProject,
+      showPublishAction: !isNewProjectRef,
+    },
+    lastSignature: lastFormActionsSignature,
+  })
+})
+
+// Clear route-provided header form actions on unmount.
 $effect(() => {
   return () => {
-    headerCtrl.clearFormActions()
+    resourceEditorPage.clearHeaderActions()
   }
 })
 </script>
 
-<!-- LAYOUT -->
-<div class="relative h-full w-full overflow-hidden" bind:this={vietportElement}>
-  {#if adminCtx.appCtx.isInitialised}
-    {#await adminCtx.appCtx.getHierarchy(pageProps.data.validatedForm?.data) then { organisation, project }}
-      <form
-        id="projectForm"
-        method="POST"
-        use:enhance
-        role="form"
-        transition:fade
-        data-testid="projectForm"
-        class="mb-24 h-full overflow-y-auto"
-        bind:this={contentsElement}
+<Main.Root>
+  <Main.Section isVisible={isCoreFacet} transition="fade">
+    <Main.Form
+      bind:formEl={contentsElement}
+      attrs={formCtx.attributes}
+      isReady={Boolean(formCtx.form?.fields && (project?.data || isNewProjectRef))}
+    >
+      <FormI18nSection
+        title={m.admin__forms_common_descriptors()}
+        {locales}
+        {onTranslate}
+        {onResetLocale}
+        sectionKey="descriptor"
+        {isEditing}
       >
-        <main
-          class="flex flex-col gap-6 p-6 {adminCtx.activeFacet === 'core'
-            ? 'min-h-full pb-64'
-            : 'h-full'}"
-        >
-          {#if adminCtx.activeFacet === 'core' || adminCtx.activeFacet === false}
-            <I18nSection
-              title={m.admin__forms_common_descriptors()}
-              fields={FIELDS.i18n}
-              {form}
-            />
-            <I18nSection
-              title={m.admin__forms_project_credit()}
-              subtitle={m.admin__forms_project_credit_subtitle()}
-              fields={FIELDS.credit}
-              {form}
-            />
-            <div class="flex flex-row gap-4 pt-4">
-              <UserSection
-                title={m.admin__forms_project_members_title()}
-                subtitle={m.admin__forms_project_members_subtitle()}
-                fields={FIELDS.users}
-                {form}
-                joinConfig={{
-                  discriminator: 'role',
-                  checkedValue: 'maintainer',
-                  uncheckedValue: 'member'
-                }}
-              />
-              <SpecificationSection
-                title={m.admin__forms_common_specifiers()}
-                fields={FIELDS.specification as FormField}
-                {form}
-              />
-            </div>
-          {:else if adminCtx.activeFacet === 'fields'}
-            <div class="flex flex-col gap-6 pb-64">
-              <PropertySection
-                title={m.admin__forms_common_classifiers()}
-                subtitle={m.admin__forms_common_classifiers_subtitle()}
-                fieldDiscriminator="classifier"
-                fields={FIELDS.config as FormFieldArray}
-                {form}
-              />
-              <PropertySection
-                title={m.admin__forms_common_specifiers()}
-                subtitle={m.admin__forms_common_specifiers_subtitle()}
-                fieldDiscriminator="specifier"
-                fields={FIELDS.config as FormFieldArray}
-                {form}
-              />
-            </div>
-          {:else if adminCtx.activeFacet === 'images'}
-            <ImageProvider
-              {page}
-              isAdminMode={true}
-              context={{
-                ctxType: ImageContextResource.project,
-                ctxId: (pageProps.data.validatedForm.data as Project).id,
-                organisation,
-                project
-              }}
-              {image}
-            >
-              <ImageSection
-                title={m.admin__forms_project_image_title()}
-                fields={FIELDS.images as FormField}
-                {image}
-                {form}
-              />
-            </ImageProvider>
+        {#snippet center()}
+          <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
+        {/snippet}
+
+        {#snippet children(locale)}
+          {@const formLocale = toOrganisationFormLocaleKey(locale)}
+          <FormI18nDescriptorFields
+            form={formCtx.form}
+            fields={formCtx.form.fields.data.i18n[formLocale]}
+            {formLocale}
+            {locale}
+            {isEditing}
+            {isRequiredInPreflight}
+          />
+        {/snippet}
+      </FormI18nSection>
+
+      <FormI18nSection
+        title={m.admin__forms_project_credit()}
+        subtitle={m.admin__forms_project_credit_subtitle()}
+        {locales}
+        {onTranslate}
+        {onResetLocale}
+        sectionKey="credit"
+        {isEditing}
+      >
+        {#snippet children(locale)}
+          {@const formLocale = toOrganisationFormLocaleKey(locale)}
+          <FormCreditFields
+            fields={formCtx.form.fields.data.i18n[formLocale]}
+            {formLocale}
+            {locale}
+            {isEditing}
+            {isRequiredInPreflight}
+          />
+        {/snippet}
+      </FormI18nSection>
+
+      <GridSpacer>
+        {#snippet left()}
+          <FormUserRolesSection
+            title={m.admin__forms_project_members_title()}
+            subtitle={m.admin__forms_project_members_subtitle()}
+            userRoles={projectUserRoles as any}
+            {hiddenUserIdInputAttrs}
+            {roleFieldNameByUserId}
+            {isEditing}
+            isSubmitting={formCtx.submitting}
+            isSubmitRequested={formCtx.isSubmitRequested}
+            startInAddingMode={isNewProjectRef}
+            availableRoles={[
+              { value: ProjectRoleType.maintainer as any, label: 'Maintainer' },
+              { value: ProjectRoleType.member as any, label: m.profile__role_type__member() },
+            ]}
+            {onAddUser}
+            {onRemoveUser}
+            onRoleChange={onRoleChange as any}
+          />
+        {/snippet}
+
+        {#snippet right()}
+          {@const organisationId = String(formCtx.form.fields.data.organisationId.value() ?? '')}
+
+          {#if organisationId.length > 0}
+            {@const organisationHiddenAttrs = formCtx.form.fields.data.organisationId.as('hidden', organisationId)}
+            <input {...organisationHiddenAttrs}>
           {/if}
-        </main>
-      </form>
-    {/await}
-  {/if}
-  {#if vietportElement && contentsElement}
-    <Scrollbar
-      viewport={vietportElement}
-      contents={contentsElement}
-      showThumbOnTrackEnter={true}
-      margin={{
-        top: 8,
-        bottom: 0
-      }}
-      width={{
-        track: 24,
-        thumb: 8,
-        thumbActive: 12
-      }}
+          <FormSpecifiersFields
+            form={formCtx.form}
+            fields={['code']}
+            {isEditing}
+            {isRequiredInPreflight}
+          />
+        {/snippet}
+      </GridSpacer>
+    </Main.Form>
+  </Main.Section>
+
+  <Main.Section
+    isVisible={isFieldsFacet}
+    transition="fade"
+    class="flex min-h-0 flex-col"
+  > </Main.Section>
+
+  <Main.Section
+    isVisible={isImagesFacet}
+    transition="fade"
+    class="flex min-h-0 flex-col"
+  >
+    <EntityImage
+      {page}
+      entityId={project?.data?.id}
+      {imageProviderProps}
+      currentImage={activeProjectImage}
+      ctx={project?.data?.id
+        ? {
+            ctxType: ImageContextResource.project,
+            ctxId: project.data.id,
+          }
+        : undefined}
+      {onPresentationModeCommitted}
     />
-  {/if}
-</div>
+  </Main.Section>
+</Main.Root>
