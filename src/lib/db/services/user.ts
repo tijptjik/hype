@@ -1,5 +1,5 @@
 // ENV
-import { and, type SQL, eq, inArray, like, sql, or } from 'drizzle-orm'
+import { and, asc, desc, type SQL, eq, inArray, like, sql, or } from 'drizzle-orm'
 // FORMS
 import { superValidate } from 'sveltekit-superforms'
 import { user, userFeature, userLayer } from '../schema'
@@ -145,6 +145,60 @@ export const getUsersForHydration = async (
     })
     .from(user)
     .where(inArray(user.id, ids))
+}
+
+export const searchUsersByConditions = async (
+  db: Database,
+  params: {
+    conditions: SQL<unknown>[]
+    limit: number
+    offset: number
+    sortBy: 'name' | 'email' | 'createdAt' | 'updatedAt'
+    sortOrder: 'asc' | 'desc'
+  },
+): Promise<{
+  data: Array<{
+    id: string
+    name: string | null
+    email: string | null
+    image: unknown
+    attribution: string | null
+  }>
+  totalCount: number
+}> => {
+  const sortColumns = {
+    name: user.name,
+    email: user.email,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  } as const
+
+  const sortColumn = sortColumns[params.sortBy] ?? sortColumns.name
+  const orderBy = params.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)
+
+  const data = await db
+    .select({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      attribution: user.attribution,
+    })
+    .from(user)
+    .where(and(...params.conditions))
+    .orderBy(orderBy)
+    .limit(params.limit)
+    .offset(params.offset)
+
+  const [countRow] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(user)
+    .where(and(...params.conditions))
+
+  return {
+    data,
+    totalCount: Number(countRow?.count ?? 0),
+  }
 }
 
 /**
