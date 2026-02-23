@@ -1,7 +1,17 @@
 // DRIZZLE
-import { eq, type SQL } from 'drizzle-orm'
+import {
+  and,
+  eq,
+  exists,
+  inArray,
+  or,
+  sql,
+  type AnyColumn,
+  type SQL,
+} from 'drizzle-orm'
 // API
 import { isAdminRequest, applyQueryFilters, removeExcludedColumns } from '$lib/api'
+import { toTriStateBooleanOrUndefined } from '$lib/api/services'
 // AUTH
 import {
   assertUserLoggedIn,
@@ -11,20 +21,178 @@ import {
 } from '$lib/auth/asserts'
 import { isSuperAdmin } from '$lib/client/services/auth'
 // SCHEMA
-import { user } from '$lib/db/schema/index'
+import {
+  user,
+  hubRole,
+  organisation,
+  organisationRole,
+  project,
+  projectRole,
+} from '$lib/db/schema/index'
 // TYPES
 import type {
   UserRoleDisco,
   UserDB,
-  Session,
   SessionUser,
   QueryParams,
   Id,
+  Database,
+  UserRoleFilter,
+  UserParentChainRoleFilter,
+  UserRoleEntityType,
 } from '$lib/types'
 
 /********************
  *  COMMON
  ************/
+
+export const toRequestedSearchState = (conditions: { isArchived?: unknown }) => {
+  // Resolve tri-state archived filter from incoming query conditions.
+  const isArchived = toTriStateBooleanOrUndefined(conditions.isArchived)
+  return {
+    // Default user search to active (non-archived) records.
+    isArchived: isArchived === undefined ? false : isArchived,
+  }
+}
+
+export const isPrivilegedArchivedSearchRequested = (state: {
+  isArchived: boolean | null
+}): boolean => state.isArchived === true || state.isArchived === null
+
+const toRoleConditions = (
+  roleColumn: AnyColumn,
+  filter: { role?: string; roles?: string[]; anyRole?: boolean },
+): SQL<unknown>[] => {
+  // Resolve role predicates; `anyRole` disables role-level filtering.
+  if (filter.anyRole) return []
+  if (filter.role) return [eq(roleColumn, filter.role)]
+  if ((filter.roles?.length ?? 0) > 0) {
+    return [inArray(roleColumn, filter.roles as [string, ...string[]])]
+  }
+  return []
+}
+
+export const toEntityRoleExistsCondition = (
+  db: Database,
+  filter: UserRoleFilter,
+): SQL<unknown> => {
+  // Resolve role-exists predicate scoped to the requested entity type.
+  switch (filter.entityType) {
+    case 'hub': {
+      const roleConditions = toRoleConditions(hubRole.role, filter)
+      return exists(
+        db
+          .select({ userId: hubRole.userId })
+          .from(hubRole)
+          .where(
+            and(
+              eq(hubRole.userId, user.id),
+              eq(hubRole.hubId, filter.entityId),
+              ...roleConditions,
+            ),
+          ),
+      )
+    }
+
+    case 'organisation': {
+      const roleConditions = toRoleConditions(organisationRole.role, filter)
+      return exists(
+        db
+          .select({ userId: organisationRole.userId })
+          .from(organisationRole)
+          .where(
+            and(
+              eq(organisationRole.userId, user.id),
+              eq(organisationRole.organisationId, filter.entityId),
+              ...roleConditions,
+            ),
+          ),
+      )
+    }
+
+    case 'project': {
+      const roleConditions = toRoleConditions(projectRole.role, filter)
+      return exists(
+        db
+          .select({ userId: projectRole.userId })
+          .from(projectRole)
+          .where(
+            and(
+              eq(projectRole.userId, user.id),
+              eq(projectRole.projectId, filter.entityId),
+              ...roleConditions,
+            ),
+          ),
+      )
+    }
+  }
+}
+
+const resolveParentChain = async (
+  db: Database,
+  filter: UserParentChainRoleFilter,
+): Promise<Array<{ entityType: UserRoleEntityType; entityId: string }>> => {
+  // Resolve parent role chain for organisation -> hub.
+  if (filter.fromEntityType === 'organisation') {
+    const [organisationRecord] = await db
+      .select({ hubId: organisation.hubId })
+      .from(organisation)
+      .where(eq(organisation.id, filter.fromEntityId))
+      .limit(1)
+
+    if (!organisationRecord?.hubId) return []
+
+    return [{ entityType: 'hub', entityId: organisationRecord.hubId }]
+  }
+
+  // Resolve parent role chain for project -> organisation -> hub.
+  const [projectRecord] = await db
+    .select({ organisationId: project.organisationId })
+    .from(project)
+    .where(eq(project.id, filter.fromEntityId))
+    .limit(1)
+
+  if (!projectRecord?.organisationId) return []
+
+  const [organisationRecord] = await db
+    .select({ hubId: organisation.hubId })
+    .from(organisation)
+    .where(eq(organisation.id, projectRecord.organisationId))
+    .limit(1)
+
+  const chain: Array<{ entityType: UserRoleEntityType; entityId: string }> = [
+    { entityType: 'organisation', entityId: projectRecord.organisationId },
+  ]
+
+  if (organisationRecord?.hubId) {
+    chain.push({ entityType: 'hub', entityId: organisationRecord.hubId })
+  }
+
+  return chain
+}
+
+export const toParentChainCondition = async (
+  db: Database,
+  filter: UserParentChainRoleFilter,
+): Promise<SQL<unknown>> => {
+  // Resolve candidate parent entities for this filter.
+  const parentEntities = await resolveParentChain(db, filter)
+  if (parentEntities.length === 0) return sql`0 = 1`
+
+  // Resolve OR-ed role-exists predicates across the parent chain.
+  const roleConditions = parentEntities.map(parentEntity =>
+    toEntityRoleExistsCondition(db, {
+      entityType: parentEntity.entityType,
+      entityId: parentEntity.entityId,
+      role: filter.role,
+      roles: filter.roles,
+      anyRole: filter.anyRole,
+    }),
+  )
+
+  // Return a never-match fallback when no role predicates are produced.
+  return or(...roleConditions) ?? sql`0 = 1`
+}
 
 export const userCollectionWithRelations = {
   hubRoles: true,
