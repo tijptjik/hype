@@ -119,7 +119,7 @@
 
   .bits-theme .bits-form__control--input.bits-form__control--display {
     @apply flex items-center;
-    line-height: 2rem;
+    line-height: 1.2rem;
   }
 
   .bits-theme

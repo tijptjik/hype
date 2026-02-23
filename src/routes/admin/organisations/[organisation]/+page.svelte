@@ -171,11 +171,10 @@ const configuredOrganisationForm = configureForm<OrganisationRemoteFormInput>(()
   ...createResourceFormConfig<OrganisationRemoteFormInput>({
     formEl: contentsElement,
     key: organisationRef,
-    schema:
-      OrganisationPreflightFormData as unknown as StandardSchemaV1<
-        OrganisationRemoteFormInput,
-        unknown
-      >,
+    schema: OrganisationPreflightFormData as unknown as StandardSchemaV1<
+      OrganisationRemoteFormInput,
+      unknown
+    >,
     // Keep form source anchored to the committed entity snapshot so
     // optimistic view-only entity tweaks (e.g. role UI rows) cannot
     // rehydrate stale i18n values back into the live form.
