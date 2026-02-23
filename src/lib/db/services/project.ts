@@ -87,7 +87,7 @@ export const listProjects = async (
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOptsExtended,
-): Promise<ProjectDBRaw[]> => {
+): Promise<any[]> => {
   // Apply hub filtering if opts is provided
   const hubFilter = getProjectHubFilter(db, opts)
   if (hubFilter) {
@@ -105,7 +105,7 @@ export const getProject = async (
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOptsExtended,
-): Promise<ProjectDBRaw | undefined> => {
+): Promise<any | undefined> => {
   // Apply hub filtering if opts is provided
   const hubFilter = getProjectHubFilter(db, opts)
   if (hubFilter) {
@@ -116,6 +116,95 @@ export const getProject = async (
     with: withRelations,
     where: conditions.length > 0 ? and(...conditions) : undefined,
   })
+}
+
+export const probeProjectQuery = async (
+  db: Database,
+  params: { ref: string; refKey?: 'id' | 'code' },
+): Promise<{
+  id: string
+  organisationId: string
+  isPublished: boolean
+  isArchived: boolean
+} | null> => {
+  const [probe] = await db
+    .select({
+      id: project.id,
+      organisationId: project.organisationId,
+      isPublished: project.isPublished,
+      isArchived: project.isArchived,
+    })
+    .from(project)
+    .where(
+      params.refKey === 'code'
+        ? eq(project.code, params.ref)
+        : eq(project.id, params.ref),
+    )
+    .limit(1)
+
+  return probe ?? null
+}
+
+export const probeExistingProject = async (
+  db: Database,
+  code: string,
+): Promise<{ id: string } | null> => {
+  const [existing] = await db
+    .select({ id: project.id })
+    .from(project)
+    .where(eq(project.code, code))
+    .limit(1)
+
+  return existing ?? null
+}
+
+export const probeProjectForUpdate = async (
+  db: Database,
+  projectId: Id,
+): Promise<{
+  id: string
+  code: string
+  organisationId: string
+  modifiedAt: string
+} | null> => {
+  const [current] = await db
+    .select({
+      id: project.id,
+      code: project.code,
+      organisationId: project.organisationId,
+      modifiedAt: project.modifiedAt,
+    })
+    .from(project)
+    .where(eq(project.id, projectId))
+    .limit(1)
+
+  return current ?? null
+}
+
+export const probeProjectForCommand = async (
+  db: Database,
+  projectId: Id,
+): Promise<{ id: string; organisationId: string } | null> => {
+  const [current] = await db
+    .select({
+      id: project.id,
+      organisationId: project.organisationId,
+    })
+    .from(project)
+    .where(eq(project.id, projectId))
+    .limit(1)
+
+  return current ?? null
+}
+
+export const resolveProjectCommandProbe = async (
+  db: Database,
+  projectId: Id,
+  onNotFound: () => never,
+): Promise<{ id: string; organisationId: string }> => {
+  const probed = await probeProjectForCommand(db, projectId)
+  if (!probed) return onNotFound()
+  return probed
 }
 
 /**
@@ -153,6 +242,64 @@ export const updateProjectById = async (
   data: ProjectDBPartial,
   id: Id,
 ): Promise<ProjectDB> => await update(db, project, data, project.id, id)
+
+export const updateProjectByIdWithConcurrency = async (
+  db: Database,
+  params: {
+    id: Id
+    updatedAt: string
+    data: { code: string }
+  },
+): Promise<{ id: string; modifiedAt: string } | null> => {
+  const [updated] = await db
+    .update(project)
+    .set(params.data)
+    .where(and(eq(project.id, params.id), eq(project.modifiedAt, params.updatedAt)))
+    .returning({
+      id: project.id,
+      modifiedAt: project.modifiedAt,
+    })
+
+  return updated ?? null
+}
+
+export const updateProjectPublishedStateById = async (
+  db: Database,
+  params: { id: Id; state: boolean; publisherId: string | null },
+): Promise<{ id: string; isPublished: boolean } | null> => {
+  const [updated] = await db
+    .update(project)
+    .set({
+      isPublished: params.state,
+      publishedAt: params.state ? new Date().toISOString() : null,
+      publisherId: params.state ? params.publisherId : null,
+    })
+    .where(eq(project.id, params.id))
+    .returning({
+      id: project.id,
+      isPublished: project.isPublished,
+    })
+
+  return updated ?? null
+}
+
+export const updateProjectArchivedStateById = async (
+  db: Database,
+  params: { id: Id; state: boolean },
+): Promise<{ id: string; isArchived: boolean } | null> => {
+  const [updated] = await db
+    .update(project)
+    .set({
+      isArchived: params.state,
+    })
+    .where(eq(project.id, params.id))
+    .returning({
+      id: project.id,
+      isArchived: project.isArchived,
+    })
+
+  return updated ?? null
+}
 
 /********************
  *  2. CRUD :: RELATIONAL OPERATIONS
@@ -263,6 +410,16 @@ export const createMaintainerRoles = async (
   )
 }
 
+export const toPersistedProjectMaintainerRoles = (
+  maintainerRoles: Array<{ userId: string; role: string }>,
+  projectId: string,
+): ProjectRoleNew[] =>
+  maintainerRoles.map(userRole => ({
+    projectId,
+    userId: userRole.userId,
+    role: userRole.role,
+  }))
+
 /**
  * Updates maintainer roles for a project by deleting existing ones and creating new ones
  * Also ensures that new maintainers are added as members to the parent organisation
@@ -289,6 +446,15 @@ export const updateMaintainerRoles = async (
     projectRole.projectId,
     projectId,
   )
+}
+
+export const syncProjectMaintainerRoles = async (
+  db: Database,
+  maintainerRoles: ProjectRoleNew[],
+  projectId: Id,
+  organisationId: Id,
+) => {
+  return await updateMaintainerRoles(db, maintainerRoles, projectId, organisationId)
 }
 
 // ═══════════════════════
@@ -342,7 +508,7 @@ export const updateProjectWithRelated = async (
 ) => {
   const codeToUse = lookupCode || data.code
   const project = await updateProject(db, data, codeToUse)
-  const i18n = await updateI18n(db, data.i18n!, project.id)
+  const i18n = await updateI18n(db, data.i18n as any, project.id)
   await updateMaintainerRoles(
     db,
     data.maintainerRoles,
@@ -419,7 +585,7 @@ export const toFormShape = async (
       })) as Property[],
     image: project.image
       ? (toImageEnvelope(
-          project.image as Image,
+          project.image as any,
           'detail',
           ImageContextResource.project,
           project.id,
@@ -462,7 +628,7 @@ export const toResponseShape = async (
     })),
     image: project.image
       ? toImageEnvelope(
-          project.image as Image,
+          project.image as any,
           profile,
           ImageContextResource.project,
           project.id,
