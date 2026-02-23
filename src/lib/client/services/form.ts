@@ -1,6 +1,7 @@
 import { toast } from 'svelte-sonner'
 import { getLocale, toOrganisationFormLocaleKey, translateI18nFields } from '$lib/i18n'
 import { m } from '$lib/i18n'
+import type { Component } from 'svelte'
 import type { FirstClassResource } from '$lib/enums'
 import type { AdminCtx } from '$lib/context/admin.svelte'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
@@ -26,6 +27,7 @@ import type {
   WireHeaderFormActionHandlersParams,
   ResourceEditorHeaderController,
   Locale,
+  FacetType,
   OrganisationGetState,
   OrganisationRoleUser,
   User,
@@ -182,7 +184,7 @@ export function createResourceEditorPage({
 }: {
   headerCtrl: ResourceEditorHeaderController
   icon: unknown
-  facetTabs: ReadonlyMap<string, { label: string; icon: unknown }>
+  facetTabs: ReadonlyMap<FacetType, string | { label: string; icon?: Component | null }>
 }): {
   syncRouteAndLoad: <T>(params: {
     ref: string

@@ -3,7 +3,7 @@ import { m } from '$lib/i18n'
 // SVELTE
 import { getContext, setContext } from 'svelte'
 // ZOD
-import { zod } from 'sveltekit-superforms/adapters'
+import { zod4 as zod } from 'sveltekit-superforms/adapters'
 // SUPERFORMS
 import { get } from 'svelte/store'
 import { defaults, superForm } from 'sveltekit-superforms'

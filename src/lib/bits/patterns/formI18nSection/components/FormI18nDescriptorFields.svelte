@@ -36,7 +36,7 @@ let {
 {#each fieldConfigs as config (config.key)}
   {@const field = fields[config.key]}
   {@const genField = fields[`${config.key}Gen`]}
-  {@const attrs = field.as('text')}
+  {@const attrs = field.as(config.kind === 'textarea' ? 'textarea' : 'text')}
   {@const genValue = getGenAiState(form, locale, config.key)}
   {@const genAttrs = genField?.as('hidden', genValue ? 'true' : 'false')}
   {@const required = isRequiredInPreflight(['data', 'i18n', formLocale, config.key])}
