@@ -89,6 +89,32 @@ const getPropertyValue = (entity: any, keyPath: string, useI18n = true): any => 
   return result
 }
 
+const toDescriptionPreview = (value: unknown): string => {
+  if (typeof value !== 'string') return ''
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+
+  // Prefer first paragraph when HTML content is stored.
+  if (trimmed.includes('</p>')) {
+    const firstParagraph = trimmed.split('</p>')[0] ?? ''
+    const withoutOpenTag = firstParagraph.replace(/<p[^>]*>/i, '')
+    const withoutTags = withoutOpenTag.replace(/<[^>]+>/g, '').trim()
+    if (withoutTags) return withoutTags
+  }
+
+  const withoutTags = trimmed
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!withoutTags) return ''
+
+  // Fallback: first sentence for plain text content.
+  const firstSentenceMatch = withoutTags.match(/^.*?[.!?。！？](?:\s|$)/)
+  if (firstSentenceMatch?.[0]) return firstSentenceMatch[0].trim()
+
+  return withoutTags
+}
+
 const adminCtx = getAdminCtx()
 const cardImageEnvelope = $derived.by(() => {
   const raw = getNestedValue(entity, keyMap.image) as any
@@ -193,7 +219,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
       </h2>
       <p class="text-neutral-content">
         <ScrollableText
-          text={getPropertyValue(entity, keyMap.description) ||
+          text={toDescriptionPreview(getPropertyValue(entity, keyMap.description)) ||
             m.loved_spare_hyena_imagine()}
         />
       </p>

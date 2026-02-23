@@ -1,9 +1,10 @@
 import { error } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
+import { eq } from 'drizzle-orm'
 
 // DB
-import { getHubByCode } from '$lib/db/services/hub'
 import { getHubFromDomain } from '$lib/api/services/hub'
+import { hub } from '$lib/db/schema'
 
 // I18N
 import { getDatabaseWithoutAuth } from '$lib/api'
@@ -66,7 +67,10 @@ export const GET: RequestHandler = async ({ url, request, platform }) => {
     domain = hubOpts.domain!
   } else {
     const { db } = await getDatabaseWithoutAuth(platform)
-    const hubDb = await getHubByCode(db, hubOpts.code)
+    const hubDb = await db.query.hub.findFirst({
+      with: { i18n: true },
+      where: eq(hub.code, hubOpts.code),
+    })
     if (!hubDb) return error(404, 'Hub not found')
     baseManifest = await getBaseManifest(hubDb.code!)
     if (!baseManifest) return error(404, `Manifest for hub "${hubDb.code}" not found`)
