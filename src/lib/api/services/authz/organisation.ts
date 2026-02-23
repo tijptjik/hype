@@ -289,6 +289,18 @@ export const toOrganisationAuthActor = (user: unknown): OrganisationAuthActor =>
   }
 }
 
+const toOrganisationSubmissionActor = (
+  user: { id: string; isAnonymous?: boolean },
+  userRoles: UserRoleDisco[],
+): OrganisationAuthActor => ({
+  ...toOrganisationAuthActor({
+    id: user.id,
+    isAnonymous: user.isAnonymous,
+    roles: userRoles,
+  }),
+  userRoles,
+})
+
 export const authorizeOrganisationRead = (
   actor: OrganisationAuthActor,
   target: OrganisationAuthTarget,
@@ -317,12 +329,7 @@ export const authorizeOrganisationReadForProbe = (params: {
   }
 }): AuthorizationDecision =>
   authorizeOrganisationRead(
-    {
-      userId: params.user.id,
-      userRoles: params.userRoles,
-      isAuthenticated: true,
-      isAnonymous: params.user.isAnonymous === true,
-    },
+    toOrganisationSubmissionActor(params.user, params.userRoles),
     {
       resourceId: params.probe.id,
       resourceHubId: params.probe.hubId,
@@ -356,12 +363,7 @@ export const authorizeOrganisationListForContext = (params: {
   requestedListState: { isPublished: boolean; isArchived: boolean }
 }): AuthorizationDecision =>
   authorizeOrganisationList(
-    {
-      userId: params.user.id,
-      userRoles: params.userRoles,
-      isAuthenticated: true,
-      isAnonymous: params.user.isAnonymous === true,
-    },
+    toOrganisationSubmissionActor(params.user, params.userRoles),
     {
       resourceHubId: params.hub?.isCore ? null : (params.hub?.id ?? null),
     },
@@ -384,6 +386,18 @@ export const authorizeOrganisationCreate = (
     fields,
   })
 
+export const authorizeOrganisationCreateForSubmission = (params: {
+  user: { id: string; isAnonymous?: boolean }
+  userRoles: UserRoleDisco[]
+  resourceHubId: string | null
+  submittedData: Partial<Record<OrganisationAuthorizationField, unknown>>
+}): AuthorizationDecision =>
+  authorizeOrganisationCreate(
+    toOrganisationSubmissionActor(params.user, params.userRoles),
+    { resourceHubId: params.resourceHubId },
+    toOrganisationSubmittedFields(params.submittedData),
+  )
+
 export const authorizeOrganisationUpdate = (
   actor: OrganisationAuthActor,
   target: Required<OrganisationAuthTarget>,
@@ -401,6 +415,21 @@ export const authorizeOrganisationUpdate = (
     fields,
   })
 
+export const authorizeOrganisationUpdateForSubmission = (params: {
+  user: { id: string; isAnonymous?: boolean }
+  userRoles: UserRoleDisco[]
+  resource: { id: string; hubId: string | null }
+  submittedData: Partial<Record<OrganisationAuthorizationField, unknown>>
+}): AuthorizationDecision =>
+  authorizeOrganisationUpdate(
+    toOrganisationSubmissionActor(params.user, params.userRoles),
+    {
+      resourceId: params.resource.id,
+      resourceHubId: params.resource.hubId,
+    },
+    toOrganisationSubmittedFields(params.submittedData),
+  )
+
 export const authorizeOrganisationManageRoles = (
   actor: OrganisationAuthActor,
   target: Required<OrganisationAuthTarget>,
@@ -416,6 +445,19 @@ export const authorizeOrganisationManageRoles = (
     resourceHubId: target.resourceHubId,
     fields: ['userRoles'],
   })
+
+export const authorizeOrganisationManageRolesForSubmission = (params: {
+  user: { id: string; isAnonymous?: boolean }
+  userRoles: UserRoleDisco[]
+  resource: { id: string; hubId: string | null }
+}): AuthorizationDecision =>
+  authorizeOrganisationManageRoles(
+    toOrganisationSubmissionActor(params.user, params.userRoles),
+    {
+      resourceId: params.resource.id,
+      resourceHubId: params.resource.hubId,
+    },
+  )
 
 export const authorizeOrganisationPublish = (
   actor: OrganisationAuthActor,
@@ -433,6 +475,19 @@ export const authorizeOrganisationPublish = (
     fields: ['isPublished'],
   })
 
+export const authorizeOrganisationPublishForSubmission = (params: {
+  user: { id: string; isAnonymous?: boolean }
+  userRoles: UserRoleDisco[]
+  resource: { id: string; hubId: string | null }
+}): AuthorizationDecision =>
+  authorizeOrganisationPublish(
+    toOrganisationSubmissionActor(params.user, params.userRoles),
+    {
+      resourceId: params.resource.id,
+      resourceHubId: params.resource.hubId,
+    },
+  )
+
 export const authorizeOrganisationDelete = (
   actor: OrganisationAuthActor,
   target: Pick<OrganisationAuthTarget, 'resourceHubId'>,
@@ -447,6 +502,18 @@ export const authorizeOrganisationDelete = (
     resourceHubId: target.resourceHubId,
   })
 
+export const authorizeOrganisationDeleteForSubmission = (params: {
+  user: { id: string; isAnonymous?: boolean }
+  userRoles: UserRoleDisco[]
+  resource: { hubId: string | null }
+}): AuthorizationDecision =>
+  authorizeOrganisationDelete(
+    toOrganisationSubmissionActor(params.user, params.userRoles),
+    {
+      resourceHubId: params.resource.hubId,
+    },
+  )
+
 export const resolveOrganisationActionPermissions = (
   actor: OrganisationAuthActor,
   target: OrganisationAuthTarget | null | undefined,
@@ -455,9 +522,13 @@ export const resolveOrganisationActionPermissions = (
   const canCreate =
     target?.resourceHubId === undefined
       ? false
-      : authorizeOrganisationCreate(actor, {
-          resourceHubId: target.resourceHubId,
-        }).allowed
+      : authorizeOrganisationCreate(
+          actor,
+          {
+            resourceHubId: target.resourceHubId,
+          },
+          fields,
+        ).allowed
 
   if (!target?.resourceId || target.resourceHubId === undefined) {
     return { canCreate, canEdit: false, canPublish: false }

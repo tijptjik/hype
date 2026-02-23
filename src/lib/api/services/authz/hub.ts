@@ -1,10 +1,10 @@
 // DRIZZLE
 import { eq, inArray } from 'drizzle-orm'
 // SCHEMA
-import { hub } from '$lib/db/schema'
+import { hub, organisation } from '$lib/db/schema'
 // TYPES
 import type { SQL } from 'drizzle-orm'
-import type { AuthorizationDecision, Id, UserRoleDisco } from '$lib/types'
+import type { AuthorizationDecision, Database, Id, UserRoleDisco } from '$lib/types'
 
 export type HubAuthActor = {
   userId?: string | null
@@ -149,6 +149,18 @@ export const toHubAuthActor = (user: unknown): HubAuthActor => {
   }
 }
 
+const toHubSubmissionActor = (
+  user: { id: string; isAnonymous?: boolean },
+  userRoles: UserRoleDisco[],
+): HubAuthActor => ({
+  ...toHubAuthActor({
+    id: user.id,
+    isAnonymous: user.isAnonymous,
+    roles: userRoles,
+  }),
+  userRoles,
+})
+
 export const authorizeHubRead = (
   actor: HubAuthActor,
   target: Required<Pick<HubAuthTarget, 'resourceHubId'>>,
@@ -167,17 +179,9 @@ export const authorizeHubReadForProbe = (params: {
   userRoles: UserRoleDisco[]
   probe: { id: string }
 }): AuthorizationDecision =>
-  authorizeHubRead(
-    {
-      userId: params.user.id,
-      userRoles: params.userRoles,
-      isAuthenticated: true,
-      isAnonymous: params.user.isAnonymous === true,
-    },
-    {
-      resourceHubId: params.probe.id,
-    },
-  )
+  authorizeHubRead(toHubSubmissionActor(params.user, params.userRoles), {
+    resourceHubId: params.probe.id,
+  })
 
 export const authorizeHubList = (actor: HubAuthActor): AuthorizationDecision => {
   if (!hasAuthenticatedSession(actor)) {
@@ -203,6 +207,16 @@ export const authorizeHubCreate = (
     : { allowed: false, code: 'HUB_SCOPE_FORBIDDEN' }
 }
 
+export const authorizeHubCreateForSubmission = (params: {
+  user: { id: string; isAnonymous?: boolean }
+  userRoles: UserRoleDisco[]
+  submittedData: Partial<Record<HubAuthorizationField, unknown>>
+}): AuthorizationDecision =>
+  authorizeHubCreate(
+    toHubSubmissionActor(params.user, params.userRoles),
+    toHubSubmittedFields(params.submittedData),
+  )
+
 export const authorizeHubUpdate = (
   actor: HubAuthActor,
   target: Required<Pick<HubAuthTarget, 'resourceId' | 'resourceHubId'>>,
@@ -219,11 +233,70 @@ export const authorizeHubUpdate = (
     : { allowed: false, code: 'INSUFFICIENT_ROLE' }
 }
 
+export const authorizeHubUpdateForSubmission = (params: {
+  user: { id: string; isAnonymous?: boolean }
+  userRoles: UserRoleDisco[]
+  resource: { id: string }
+  submittedData: Partial<Record<HubAuthorizationField, unknown>>
+}): AuthorizationDecision =>
+  authorizeHubUpdate(
+    toHubSubmissionActor(params.user, params.userRoles),
+    {
+      resourceId: params.resource.id,
+      resourceHubId: params.resource.id,
+    },
+    toHubSubmittedFields(params.submittedData),
+  )
+
 export const authorizeHubManageRoles = (
   actor: HubAuthActor,
   target: Required<Pick<HubAuthTarget, 'resourceId' | 'resourceHubId'>>,
 ): AuthorizationDecision => {
   return authorizeHubUpdate(actor, target, ['userRoles'])
+}
+
+export const authorizeHubManageRolesForSubmission = (params: {
+  user: { id: string; isAnonymous?: boolean }
+  userRoles: UserRoleDisco[]
+  resource: { id: string }
+}): AuthorizationDecision =>
+  authorizeHubManageRoles(toHubSubmissionActor(params.user, params.userRoles), {
+    resourceId: params.resource.id,
+    resourceHubId: params.resource.id,
+  })
+
+export const hasInvalidHubOrganisationAssignmentsForSubmission = async (params: {
+  db: Database
+  user: { superAdmin?: boolean }
+  userRoles: UserRoleDisco[]
+  resource: { id: string }
+  submittedOrganisations: Array<{ organisationId: string }>
+}): Promise<boolean> => {
+  if (params.user.superAdmin) return false
+
+  const existingOrganisationRows = await params.db
+    .select({ id: organisation.id })
+    .from(organisation)
+    .where(eq(organisation.hubId, params.resource.id))
+
+  const existingOrganisationIds = new Set(existingOrganisationRows.map(row => row.id))
+  const incomingOrganisationIds = params.submittedOrganisations.map(
+    item => item.organisationId,
+  )
+  const addedOrganisationIds = incomingOrganisationIds.filter(
+    organisationId => !existingOrganisationIds.has(organisationId),
+  )
+  if (addedOrganisationIds.length === 0) return false
+
+  const memberOrganisationIds = new Set(
+    params.userRoles
+      .filter(role => role.type === 'organisation')
+      .map(role => role.organisationId),
+  )
+
+  return addedOrganisationIds.some(
+    organisationId => !memberOrganisationIds.has(organisationId),
+  )
 }
 
 export const authorizeHubPublish = (
@@ -232,6 +305,16 @@ export const authorizeHubPublish = (
 ): AuthorizationDecision => {
   return authorizeHubUpdate(actor, target, ['isPublished'])
 }
+
+export const authorizeHubPublishForSubmission = (params: {
+  user: { id: string; isAnonymous?: boolean }
+  userRoles: UserRoleDisco[]
+  resource: { id: string }
+}): AuthorizationDecision =>
+  authorizeHubPublish(toHubSubmissionActor(params.user, params.userRoles), {
+    resourceId: params.resource.id,
+    resourceHubId: params.resource.id,
+  })
 
 export const authorizeHubDelete = (
   actor: HubAuthActor,
@@ -245,6 +328,16 @@ export const authorizeHubDelete = (
     ? { allowed: true }
     : { allowed: false, code: 'HUB_SCOPE_FORBIDDEN' }
 }
+
+export const authorizeHubDeleteForSubmission = (params: {
+  user: { id: string; isAnonymous?: boolean }
+  userRoles: UserRoleDisco[]
+  resource: { id: string }
+}): AuthorizationDecision =>
+  authorizeHubDelete(toHubSubmissionActor(params.user, params.userRoles), {
+    resourceId: params.resource.id,
+    resourceHubId: params.resource.id,
+  })
 
 export const resolveHubActionPermissions = (
   actor: HubAuthActor,
