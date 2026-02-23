@@ -442,6 +442,7 @@ export const hubI18nRelations = relations(hubI18n, ({ one }) => ({
  */
 export const hubRoleRelations = relations(hubRole, ({ one }) => ({
   hub: one(hub, {
+    relationName: 'hubUserRoles',
     fields: [hubRole.hubId],
     references: [hub.id],
   }),
