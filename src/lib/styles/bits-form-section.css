@@ -10,6 +10,7 @@
   .bits-theme .bits-form__grid-spacer {
     --bits-form-grid-spacer-cols: 3;
     --bits-form-grid-spacer-left-cols: 2;
+    --bits-form-grid-spacer-center-cols: 1;
     --bits-form-grid-spacer-right-cols: 1;
     --bits-form-grid-spacer-gap: calc(var(--spacing) * 3);
     @apply grid grid-cols-1;
@@ -17,6 +18,7 @@
   }
 
   .bits-theme .bits-form__grid-spacer-left,
+  .bits-theme .bits-form__grid-spacer-center,
   .bits-theme .bits-form__grid-spacer-right {
     @apply min-w-0;
   }
@@ -30,6 +32,12 @@
       grid-column:
         span var(--bits-form-grid-spacer-left-cols) / span
         var(--bits-form-grid-spacer-left-cols);
+    }
+
+    .bits-theme .bits-form__grid-spacer-center {
+      grid-column:
+        span var(--bits-form-grid-spacer-center-cols) / span
+        var(--bits-form-grid-spacer-center-cols);
     }
 
     .bits-theme .bits-form__grid-spacer-right {
