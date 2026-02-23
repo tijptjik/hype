@@ -1,3 +1,4 @@
+import { error } from '@sveltejs/kit'
 // TYPES
 import type {
   AuthorizeParams,
@@ -513,6 +514,14 @@ export const authorizeOrganisationDeleteForSubmission = (params: {
       resourceHubId: params.resource.hubId,
     },
   )
+
+export const ensureOrganisationCommandAllowed = (
+  decision: AuthorizationDecision,
+): void => {
+  if (!decision.allowed) {
+    throw error(403, toAuthMessage(decision.code ?? 'INSUFFICIENT_ROLE'))
+  }
+}
 
 export const resolveOrganisationActionPermissions = (
   actor: OrganisationAuthActor,

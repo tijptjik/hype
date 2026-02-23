@@ -1,3 +1,4 @@
+import { error } from '@sveltejs/kit'
 // DRIZZLE
 import { eq, inArray } from 'drizzle-orm'
 // SCHEMA
@@ -338,6 +339,12 @@ export const authorizeHubDeleteForSubmission = (params: {
     resourceId: params.resource.id,
     resourceHubId: params.resource.id,
   })
+
+export const ensureHubCommandAllowed = (decision: AuthorizationDecision): void => {
+  if (!decision.allowed) {
+    throw error(403, toAuthMessage(decision.code ?? 'INSUFFICIENT_ROLE'))
+  }
+}
 
 export const resolveHubActionPermissions = (
   actor: HubAuthActor,
