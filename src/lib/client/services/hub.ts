@@ -4,7 +4,14 @@ import {
   toOrganisationFormLocaleKey,
 } from '$lib/i18n'
 // TYPES
-import type { Hub, HubBooleanField, HubFormInput, Locale } from '$lib/types'
+import type {
+  Hub,
+  HubBooleanField,
+  HubFormInput,
+  HubOrganisationFieldNameResolverForm,
+  HubOrganisationHiddenInputAttrs,
+  Locale,
+} from '$lib/types'
 
 function normalizeHubFormLocale(
   locale: Partial<HubFormInput['data']['i18n']['en']> | null | undefined,
@@ -70,6 +77,36 @@ export function overrideHubEntityBoolean(field: HubBooleanField, value: boolean)
     ...current,
     data: current.data ? { ...current.data, [field]: value } : current.data,
   })
+}
+
+export function getHubOrganisationHiddenInputAttrs(
+  form: HubOrganisationFieldNameResolverForm,
+  organisations: Array<{
+    organisationId: string
+    isCoreInclusive: boolean
+    isHubExclusive: boolean
+  }>,
+): HubOrganisationHiddenInputAttrs[] {
+  const organisationFields = form.fields.data?.organisations ?? []
+
+  return organisations
+    .flatMap((organisation, index) => {
+      const row = organisationFields[index]
+      if (!row) return []
+
+      return [
+        row.organisationId?.as('hidden', organisation.organisationId),
+        row.isCoreInclusive?.as(
+          'hidden',
+          organisation.isCoreInclusive ? 'true' : 'false',
+        ),
+        row.isHubExclusive?.as(
+          'hidden',
+          organisation.isHubExclusive ? 'true' : 'false',
+        ),
+      ]
+    })
+    .filter((attrs): attrs is HubOrganisationHiddenInputAttrs => Boolean(attrs))
 }
 
 export function overrideHubListItemBoolean(
