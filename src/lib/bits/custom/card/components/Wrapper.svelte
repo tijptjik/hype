@@ -1,7 +1,7 @@
 <script lang="ts">
 import type { Snippet } from 'svelte'
 import { flip } from 'svelte-auto-animate'
-import type { CardWrapperProps } from '../cardPrimitives.types'
+import type { CardWrapperProps } from '../card.types'
 
 type Props = CardWrapperProps & { children?: Snippet }
 

@@ -1,5 +1,7 @@
 <script lang="ts">
+import { Button } from '$lib/bits/core'
 import { Switch } from '$lib/bits/custom'
+import Trash2Icon from 'virtual:icons/lucide/trash-2'
 import type { OrganisationCardActionsProps } from '../organisationCard.types'
 
 let {
@@ -21,14 +23,16 @@ const isDisabled = $derived(!isEditing || isSubmitting)
 <div class={className}>
   {#if isRemoving}
     <div class="bits-form__hub-orgs-item-remove">
-      <button
-        type="button"
-        class="bits-form__hub-orgs-remove-btn"
-        onclick={() => onRemove()}
+      <Button
+        text="Remove"
+        style="ghost"
+        color="error"
+        size="sm"
+        iconComponent={Trash2Icon}
+        onClick={() => onRemove()}
         disabled={isDisabled}
-      >
-        Remove
-      </button>
+        class="bits-form__hub-orgs-remove-btn"
+      />
     </div>
   {:else}
     <div class="bits-form__hub-orgs-item-flags">

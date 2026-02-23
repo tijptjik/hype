@@ -1,6 +1,6 @@
 <script lang="ts">
 import type { Snippet } from 'svelte'
-import { Card } from '$lib/bits/patterns/cardPrimitives'
+import { Card } from '$lib/bits/custom'
 import type { UserCardRootProps } from '../userCard.types'
 
 type Props = UserCardRootProps & { children?: Snippet }
