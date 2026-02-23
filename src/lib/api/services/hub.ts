@@ -20,7 +20,7 @@ import {
 } from '$lib/db/zod'
 import { toBooleanOrUndefined } from '$lib/api/services'
 // TYPES
-import { eq, type SQL } from 'drizzle-orm'
+import { sql, type SQL } from 'drizzle-orm'
 import type {
   Hub,
   HubDB,
@@ -101,8 +101,8 @@ export const toQueryConditions = (
   queryParams: Partial<HubDB>,
 ): SQL<unknown>[] =>
   params.refKey === 'code'
-    ? [eq(hub.code, queryParams.code as string)]
-    : [eq(hub.id, queryParams.id as Id)]
+    ? [sql`${hub.code} = ${queryParams.code as string}`]
+    : [sql`${hub.id} = ${queryParams.id as Id}`]
 
 export const toHubResponseShape = <P extends HubProfileType>(
   row: HubDBRaw,
@@ -273,12 +273,18 @@ export const getHubQueryContext = (params: QueryParams) => {
  * @returns Validated form data
  */
 export const toFormShape = async (hub: HubDBRaw): Promise<SuperValidated<Hub>> => {
+  type ToImageArg = Parameters<typeof toImageEnvelope>[0]
   // Transform the hub data structure
   const transformedHub = {
     ...hub,
     i18n: transformI18nSafely(hub.i18n),
     image: hub.image
-      ? toImageEnvelope(hub.image as any, 'list', ImageContextResource.hub, hub.id)
+      ? toImageEnvelope(
+          hub.image as unknown as ToImageArg,
+          'list',
+          ImageContextResource.hub,
+          hub.id,
+        )
       : null,
     userRoles: hub.userRoles ?? [],
     organisations:
@@ -288,7 +294,7 @@ export const toFormShape = async (hub: HubDBRaw): Promise<SuperValidated<Hub>> =
           i18n: transformI18nSafely(organisation.i18n),
           image: organisation.image
             ? toImageEnvelope(
-                organisation.image as any,
+                organisation.image as unknown as ToImageArg,
                 'list',
                 ImageContextResource.organisation,
                 organisation.id,
@@ -297,8 +303,10 @@ export const toFormShape = async (hub: HubDBRaw): Promise<SuperValidated<Hub>> =
         }
       }) || [],
   }
-  // @ts-expect-error TODO - Fix Zod type error
-  const form = await superValidate(transformedHub, zod(HubAPI))
+  const form = await superValidate(
+    transformedHub as unknown as Parameters<typeof superValidate>[0],
+    zod(HubAPI) as unknown as Parameters<typeof superValidate>[1],
+  )
   return form as SuperValidated<Hub>
 }
 
@@ -308,12 +316,18 @@ export const toFormShape = async (hub: HubDBRaw): Promise<SuperValidated<Hub>> =
  * @returns A parsed response shape
  */
 export const toResponseShape = async (hub: HubDBRaw, isCollection: boolean = false) => {
+  type ToImageArg = Parameters<typeof toImageEnvelope>[0]
   // Transform the hub data structure
   const transformedHub = {
     ...hub,
     i18n: transformI18nSafely(hub.i18n),
     image: hub.image
-      ? toImageEnvelope(hub.image as any, 'list', ImageContextResource.hub, hub.id)
+      ? toImageEnvelope(
+          hub.image as unknown as ToImageArg,
+          'list',
+          ImageContextResource.hub,
+          hub.id,
+        )
       : null,
     userRoles: hub.userRoles ?? [],
     organisations:
@@ -323,7 +337,7 @@ export const toResponseShape = async (hub: HubDBRaw, isCollection: boolean = fal
           i18n: transformI18nSafely(organisation.i18n),
           image: organisation.image
             ? toImageEnvelope(
-                organisation.image as any,
+                organisation.image as unknown as ToImageArg,
                 'list',
                 ImageContextResource.organisation,
                 organisation.id,
@@ -353,7 +367,8 @@ export const toResponseShape = async (hub: HubDBRaw, isCollection: boolean = fal
 export const assertPermissionsToUpdateHub = (user: SessionUser) => {
   // Run all access control assertions
   const assertionError = runAssertions(
-    () => assertUserLoggedIn(user as any),
+    () =>
+      assertUserLoggedIn(user as unknown as Parameters<typeof assertUserLoggedIn>[0]),
     () => assertSuperAdmin(user),
   )
 
