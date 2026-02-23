@@ -5,13 +5,13 @@ import type { Handle } from '@sveltejs/kit'
 import { paraglideMiddleware } from '$lib/paraglide/server'
 // DB
 import { drizzle } from 'drizzle-orm/d1'
+import { eq } from 'drizzle-orm'
 import * as schema from '$lib/db/schema/index'
-import { getHubByCode, getHubByDomain } from '$lib/db/services/hub'
 // AUTH
 import { svelteKitHandler } from 'better-auth/svelte-kit'
 import { getAuthForRequest } from '$lib/auth'
 // SERVICES
-import { toResponseShape } from '$lib/api/services/hub'
+import { hubEntityWithRelations, toResponseShape } from '$lib/api/services/hub'
 // TYPES
 import type { HubOptsExtended, Session, SessionUser } from '$lib/types'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
@@ -69,13 +69,19 @@ const handle_hub: Handle = async ({ event, resolve }) => {
   })
 
   if (db && event.locals && hubOpts.code) {
-    const hubDb = await getHubByCode(db, hubOpts.code)
+    const hubDb = await db.query.hub.findFirst({
+      with: hubEntityWithRelations,
+      where: eq(schema.hub.code, hubOpts.code),
+    })
     if (hubDb) {
       const hub = (await toResponseShape(hubDb, false)) as HubOptsExtended
       event.locals.hub = hub
     }
   } else if (db && event.locals && hubOpts.domain) {
-    const hubDb = await getHubByDomain(db, hubOpts.domain)
+    const hubDb = await db.query.hub.findFirst({
+      with: hubEntityWithRelations,
+      where: eq(schema.hub.domain, hubOpts.domain),
+    })
     if (hubDb) {
       const hub = (await toResponseShape(hubDb, false)) as HubOptsExtended
       event.locals.hub = hub
