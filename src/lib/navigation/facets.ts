@@ -4,7 +4,7 @@ import { m } from '$lib/i18n'
 import FormInputIcon from 'virtual:icons/lucide/form-input'
 import ImageIcon from 'virtual:icons/lucide/image'
 import MapPinIcon from 'virtual:icons/lucide/map-pin'
-import SlidersHorizontalIcon from 'virtual:icons/lucide/sliders-horizontal'
+import TagIcon from 'virtual:icons/lucide/tag'
 import type { Component } from 'svelte'
 // ENUMS
 import type { FirstClassResource } from '$lib/enums'
@@ -33,7 +33,7 @@ export const ADMIN_FACET_DEFINITIONS = {
   },
   [ADMIN_FACETS.fields]: {
     label: () => m.project__fields(),
-    icon: SlidersHorizontalIcon,
+    icon: TagIcon,
   },
 } as const satisfies Record<FacetType, { label: () => string; icon: Component | null }>
 
