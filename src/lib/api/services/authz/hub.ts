@@ -17,7 +17,6 @@ type HubAuthorizationField =
   | 'code'
   | 'domain'
   | 'i18n'
-  | 'imageId'
   | 'userRoles'
   | 'organisations'
   | 'isPublished'
@@ -74,7 +73,6 @@ export const toHubSubmittedFields = (
   if ('code' in data) fields.push('code')
   if ('domain' in data) fields.push('domain')
   if ('i18n' in data) fields.push('i18n')
-  if ('imageId' in data) fields.push('imageId')
   if ('userRoles' in data) fields.push('userRoles')
   if ('organisations' in data) fields.push('organisations')
   if ('isPublished' in data) fields.push('isPublished')
