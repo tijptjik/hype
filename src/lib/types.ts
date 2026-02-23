@@ -1612,9 +1612,9 @@ export type ProjectDBPartial = z.infer<typeof ProjectUpdate>
 // PROJECTS :: API
 /* -------- */
 
-// Project with all fields, including maintainerRoles & translations, and User
+// Project with all fields, including userRoles & translations, and User
 export type Project = z.infer<typeof ProjectAPI>
-// Like Project, but without the projectId in maintainerRoles and translations
+// Like Project, but without the projectId in userRoles and translations
 export type ProjectNew = z.infer<typeof ProjectInsertAPI>
 // Like Project, but with all fields optional
 export type ProjectPartial = z.infer<typeof ProjectUpdateAPI>
@@ -1807,7 +1807,7 @@ export const projectAuthorizationFields = [
   'organisationId',
   'code',
   'i18n',
-  'maintainerRoles',
+  'userRoles',
   'properties',
   'isPublished',
   'isArchived',

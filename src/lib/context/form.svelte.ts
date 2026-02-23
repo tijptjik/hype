@@ -83,16 +83,16 @@ class BaseForm<T extends Record<string, unknown>> {
       (prop: any) => prop.property,
     )
     const hasUserRoles = (form.data as any).userRoles?.length > 0
-    const hasMaintainerRoles = (form.data as any).maintainerRoles?.length > 0
+    const hasProjectUserRoles = (form.data as any).userRoles?.length > 0
     const hasOrganisations = (form.data as any).organisations?.length > 0
     const hasImage = (form.data as any).image != null
 
-    let formData
+    let formData: unknown
     // TODO: This is a hack to preserve nested data. We should find a better way to do this.
     if (
       hasNestedProperties ||
       hasUserRoles ||
-      hasMaintainerRoles ||
+      hasProjectUserRoles ||
       hasOrganisations ||
       hasImage
     ) {
@@ -109,12 +109,6 @@ class BaseForm<T extends Record<string, unknown>> {
 
   get form() {
     const formValue = this.formResult.form
-    const formSnapshot = $state.snapshot(formValue)
-
-    // Check correct field based on resource type
-    const userField =
-      this.resourceType === 'organisation' ? 'userRoles' : 'maintainerRoles'
-
     return formValue
   }
   get enhance() {
@@ -212,8 +206,9 @@ class BaseForm<T extends Record<string, unknown>> {
           this.errors.set(result.data?.errors)
         } else if (result.type === 'error') {
           // Extract the actual error message from SvelteKit error responses (403, 404, etc.)
+          const statusLabel = `${result.status} Error`
           const errorMessage =
-            (result as any)?.error?.message || result.status + ' Error'
+            (result as { error?: { message?: string } })?.error?.message || statusLabel
           toast.error(errorMessage)
           console.error('[FORM CONTEXT] HTTP Error:', result)
         } else {

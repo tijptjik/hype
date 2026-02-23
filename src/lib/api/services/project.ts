@@ -44,7 +44,7 @@ export const projectCollectionWithRelations = {
 
 export const projectEntityWithRelations = {
   i18n: true,
-  maintainerRoles: {
+  userRoles: {
     with: {
       user: {
         columns: userColumnsWithPrivacyProtected,
@@ -318,7 +318,7 @@ export const isAccessLostUponSuccess = (
   formData: ProjectNew,
   userRoles?: UserRoleDisco[],
 ) => {
-  const userRolesToCheck = userRoles || (formData.maintainerRoles as UserRoleDisco[])
+  const userRolesToCheck = userRoles || (formData.userRoles as UserRoleDisco[])
   return (
     !userRolesToCheck.some(
       (role: any) =>

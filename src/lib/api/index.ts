@@ -531,7 +531,7 @@ function mergeOrganisationRoles(
   // Add organization members that aren't already maintainers
   userRoles.forEach(userRole => {
     if (!existingUserIds.includes(userRole.userId)) {
-      project.maintainerRoles.push({
+      project.userRoles.push({
         userId: userRole.userId,
         role: 'member',
         user: {

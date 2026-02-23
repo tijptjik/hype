@@ -93,7 +93,7 @@ export const projectRelations = relations(project, ({ one, many }) => ({
     references: [organisation.id],
   }),
   i18n: many(projectI18n),
-  maintainerRoles: many(projectRole),
+  userRoles: many(projectRole),
   properties: many(property),
   layers: many(layer),
   tasks: many(task),

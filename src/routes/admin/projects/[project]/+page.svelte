@@ -211,18 +211,18 @@ const formLevelIssues = $derived.by((): string[] => {
 // USER ROLES
 
 const formUserRoleValues = $derived(
-  (formCtx.form.fields.value().data?.maintainerRoles ?? []) as Array<{
+  (formCtx.form.fields.value().data?.userRoles ?? []) as Array<{
     userId: string
     role: string
   }>,
 )
 const userRoleUpdaterForm = $derived(
   formCtx.form as unknown as FormDataUpdaterForm<{
-    maintainerRoles?: Array<{ userId: string; role: string }>
+    userRoles?: Array<{ userId: string; role: string }>
   }>,
 )
 const hiddenUserIdInputAttrs = $derived.by(() => {
-  const rows = (formCtx.form as any).fields?.data?.maintainerRoles ?? []
+  const rows = (formCtx.form as any).fields?.data?.userRoles ?? []
   return formUserRoleValues
     .map((userRole, index) => {
       const userId = typeof userRole.userId === 'string' ? userRole.userId : ''
@@ -232,7 +232,7 @@ const hiddenUserIdInputAttrs = $derived.by(() => {
     .filter(Boolean) as Array<Record<string, unknown>>
 })
 const roleFieldNameByUserId = $derived.by(() => {
-  const rows = (formCtx.form as any).fields?.data?.maintainerRoles ?? []
+  const rows = (formCtx.form as any).fields?.data?.userRoles ?? []
   return Object.fromEntries(
     formUserRoleValues.map((userRole, index) => [
       userRole.userId,
@@ -242,7 +242,7 @@ const roleFieldNameByUserId = $derived.by(() => {
 })
 
 const projectUserRoles = $derived.by(() => {
-  const baseRoles = (project?.data?.maintainerRoles ?? []) as ProjectRoleUser[]
+  const baseRoles = (project?.data?.userRoles ?? []) as ProjectRoleUser[]
   const roleByUserId = new Map(formUserRoleValues.map(role => [role.userId, role.role]))
 
   return formUserRoleValues.flatMap(formUserRole => {

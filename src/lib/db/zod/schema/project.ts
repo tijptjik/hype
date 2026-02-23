@@ -116,7 +116,7 @@ export const ProjectCollectionAPI = ProjectBase.extend({
 
 export const ProjectAPI = ProjectBase.extend({
   i18n: getLocales(ProjectI18nBase),
-  maintainerRoles: getMaintainerRoles(ProjectRoleBaseExtra),
+  userRoles: getMaintainerRoles(ProjectRoleBaseExtra),
   properties: z.array(PropertyAPI).nullish(),
   image: ImageContextEnvelopeAPI.nullish(),
   publisher: UserBasic.nullish(),
@@ -124,7 +124,7 @@ export const ProjectAPI = ProjectBase.extend({
 
 export const ProjectInsertAPI = ProjectInsert.extend({
   i18n: getLocales(ProjectI18nInsert),
-  maintainerRoles: getMaintainerRoles(ProjectRoleInsertExtra),
+  userRoles: getMaintainerRoles(ProjectRoleInsertExtra),
   properties: z.array(PropertyInsertAPI).nullish(),
   image: ImageContextEnvelopeAPI.nullish(),
   publisher: UserBasic.nullish(),
@@ -132,7 +132,7 @@ export const ProjectInsertAPI = ProjectInsert.extend({
 
 export const ProjectUpdateAPI = ProjectUpdate.extend({
   i18n: getLocales(ProjectI18nUpdate),
-  maintainerRoles: getMaintainerRoles(ProjectRoleUpdateExtra),
+  userRoles: getMaintainerRoles(ProjectRoleUpdateExtra),
   properties: z.array(PropertyUpdateAPI).nullish(),
   image: ImageContextEnvelopeAPI.nullish(),
   publisher: UserBasic.nullish(),
@@ -175,7 +175,7 @@ export const ProjectI18nByLocaleFormData = z.object({
   zhHant: ProjectI18nFormData,
 })
 
-export const ProjectMaintainerRolesFormData = z.preprocess(
+export const ProjectUserRolesFormData = z.preprocess(
   value => (value === undefined || value === null ? [] : value),
   z.array(ProjectRoleFormData).refine(schema => schema.length > 0, 'Add a User'),
 )
@@ -190,7 +190,7 @@ export const ProjectEntityFormData = z.object({
       message: m.admin__validation_key_valid_characters(),
     }),
   i18n: ProjectI18nByLocaleFormData,
-  maintainerRoles: ProjectMaintainerRolesFormData,
+  userRoles: ProjectUserRolesFormData,
   properties: z.array(z.union([PropertyInsertAPI, PropertyUpdateAPI])).optional(),
 })
 
@@ -247,7 +247,7 @@ const ProjectCardFields = ProjectBase.pick({
 const ProjectDetailFields = ProjectCardFields
 
 export const ProjectListProfileAPI = ProjectListFields.extend({
-  i18n: getLocales(OrganisationI18nBase),
+  i18n: getLocales(ProjectI18nBase),
 })
 
 export const ProjectCardProfileAPI = ProjectListProfileAPI.extend({

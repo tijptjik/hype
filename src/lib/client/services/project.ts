@@ -45,7 +45,7 @@ export function toProjectFormInput(
           zhHans: normalizeProjectFormLocale(undefined),
           zhHant: normalizeProjectFormLocale(undefined),
         },
-        maintainerRoles: [],
+        userRoles: [],
         properties: [],
       },
     }
@@ -66,7 +66,7 @@ export function toProjectFormInput(
         zhHans: normalizeProjectFormLocale(data.i18n?.['zh-hans']),
         zhHant: normalizeProjectFormLocale(data.i18n?.['zh-hant']),
       },
-      maintainerRoles: (data.maintainerRoles ?? []).map(userRole => ({
+      userRoles: (data.userRoles ?? []).map(userRole => ({
         userId: userRole.userId,
         role: userRole.role,
       })),
