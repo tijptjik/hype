@@ -39,11 +39,9 @@ const rootClass = $derived(
     {/if}
   </div>
 
-  <div class="bits-form__grid-spacer-center">
-    {#if center}
-      {@render center()}
-    {/if}
-  </div>
+  {#if center}
+    <div class="bits-form__grid-spacer-center">{@render center()}</div>
+  {/if}
 
   <div class="bits-form__grid-spacer-right">
     {#if right}
