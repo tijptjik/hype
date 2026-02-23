@@ -19,31 +19,31 @@ let {
 
 {#if isEditing}
   <div
-    class="bits-form__hub-orgs-actions flex w-full flex-row items-center justify-end gap-0"
+    class="bits-form__section-header-actions flex w-full flex-row items-center justify-end gap-0"
   >
     {#if !isAdding}
       <Button
-        text={isRemoving ? m.moving_each_orangutan_care() : m.hour_polite_ocelot_kiss()}
+        text={isRemoving ? m.moving_each_orangutan_care() : m.admin__forms_hub_remove_org()}
         style="ghost"
         color="light"
         size="sm"
         iconComponent={isRemoving ? XIcon : MinusIcon}
         onClick={() => onToggleRemoving()}
         disabled={!isEditing || isSubmitting || !canRemove}
-        class="bits-form__hub-orgs-action whitespace-nowrap h-10"
+        class="bits-form__section-header-action-btn whitespace-nowrap h-10"
       />
     {/if}
 
     {#if !isRemoving}
       <Button
-        text={isAdding ? m.keen_antsy_bulldog_zoom() : m.kind_active_haddock_ascend()}
+        text={isAdding ? m.keen_antsy_bulldog_zoom() : m.admin__forms_hub_add_org()}
         style="ghost"
         color="light"
         size="sm"
         iconComponent={isAdding ? XIcon : PlusIcon}
         onClick={() => onToggleAdding()}
         disabled={!isEditing || isSubmitting}
-        class="bits-form__hub-orgs-action whitespace-nowrap h-10"
+        class="bits-form__section-header-action-btn whitespace-nowrap h-10"
       />
     {/if}
   </div>

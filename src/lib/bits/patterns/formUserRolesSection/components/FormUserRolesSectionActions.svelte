@@ -17,7 +17,9 @@ let {
 </script>
 
 {#if isEditing}
-  <div class="flex w-full flex-row items-center justify-end gap-0">
+  <div
+    class="bits-form__section-header-actions flex w-full flex-row items-center justify-end gap-0"
+  >
     {#if !isAdding}
       <Button
         text={isRemoving
@@ -29,7 +31,7 @@ let {
         iconComponent={isRemoving ? XIcon : UserMinusIcon}
         onClick={() => onToggleRemoving()}
         disabled={!isEditing || isSubmitting}
-        class="whitespace-nowrap h-10"
+        class="bits-form__section-header-action-btn whitespace-nowrap h-10"
       />
     {/if}
 
@@ -42,7 +44,7 @@ let {
         iconComponent={isAdding ? XIcon : UserPlusIcon}
         onClick={() => onToggleAdding()}
         disabled={!isEditing || isSubmitting}
-        class="whitespace-nowrap h-10"
+        class="bits-form__section-header-action-btn whitespace-nowrap h-10"
       />
     {/if}
   </div>
