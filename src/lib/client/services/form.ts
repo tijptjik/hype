@@ -28,6 +28,7 @@ import type {
   ResourceEditorHeaderController,
   Locale,
   FacetType,
+  FormBooleanValue,
   OrganisationGetState,
   OrganisationRoleUser,
   User,
@@ -507,9 +508,9 @@ export function toggleGenAiField<
     i18n?: Record<
       string,
       {
-        nameGen?: boolean
-        nameShortGen?: boolean
-        descriptionGen?: boolean
+        nameGen?: FormBooleanValue
+        nameShortGen?: FormBooleanValue
+        descriptionGen?: FormBooleanValue
       }
     >
   },
@@ -545,9 +546,13 @@ export async function translateLocaleIntoEmptyFields<
         name?: string
         nameShort?: string
         description?: string
-        nameGen?: boolean
-        nameShortGen?: boolean
-        descriptionGen?: boolean
+        license?: string
+        attribution?: string
+        nameGen?: FormBooleanValue
+        nameShortGen?: FormBooleanValue
+        descriptionGen?: FormBooleanValue
+        licenseGen?: FormBooleanValue
+        attributionGen?: FormBooleanValue
       }
     >
   },
@@ -630,9 +635,13 @@ export function resetLocaleFields<
         name?: string
         nameShort?: string
         description?: string
-        nameGen?: boolean
-        nameShortGen?: boolean
-        descriptionGen?: boolean
+        license?: string
+        attribution?: string
+        nameGen?: FormBooleanValue
+        nameShortGen?: FormBooleanValue
+        descriptionGen?: FormBooleanValue
+        licenseGen?: FormBooleanValue
+        attributionGen?: FormBooleanValue
       }
     >
   },
