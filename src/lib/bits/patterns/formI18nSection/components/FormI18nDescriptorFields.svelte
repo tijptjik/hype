@@ -35,9 +35,16 @@ let {
 
 {#each fieldConfigs as config (config.key)}
   {@const field = fields[config.key]}
+  {@const genField = fields[`${config.key}Gen`]}
   {@const attrs = field.as('text')}
+  {@const genValue = getGenAiState(form, locale, config.key)}
+  {@const genAttrs = genField?.as('hidden', genValue ? 'true' : 'false')}
   {@const required = isRequiredInPreflight(['data', 'i18n', formLocale, config.key])}
   {@const issues = field.issues()}
+
+  {#if genAttrs}
+    <input {...genAttrs}>
+  {/if}
 
   {#if config.kind === 'textarea'}
     <TextArea
@@ -46,7 +53,7 @@ let {
       isTranslated={true}
       {required}
       {isEditing}
-      isGenAI={getGenAiState(form, locale, config.key)}
+      isGenAI={genValue}
       onToggleGenAI={() => toggleGenAiField(form, locale, config.key)}
       value={(attrs as { value?: string }).value ?? ''}
       {issues}
@@ -59,7 +66,7 @@ let {
       isTranslated={true}
       {required}
       {isEditing}
-      isGenAI={getGenAiState(form, locale, config.key)}
+      isGenAI={genValue}
       onToggleGenAI={() => toggleGenAiField(form, locale, config.key)}
       value={(attrs as { value?: string }).value ?? ''}
       {issues}
