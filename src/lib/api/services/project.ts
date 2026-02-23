@@ -1,7 +1,7 @@
 // DRIZZLE
-import { eq, inArray, type SQL } from 'drizzle-orm'
+import { eq, inArray, or, type SQL } from 'drizzle-orm'
 // API
-import { isAdminRequest, applyQueryFilters, removeExcludedColumns } from '$lib/api'
+import { applyQueryFilters, removeExcludedColumns } from '$lib/api'
 // AUTH
 import {
   assertUserLoggedIn,
@@ -12,18 +12,20 @@ import {
 } from '$lib/auth/asserts'
 // DB
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
-import { getProjectIdforRoles, isSuperAdmin } from '$lib/client/services/auth'
+import { isSuperAdmin } from '$lib/client/services/auth'
 // SCHEMA
 import { project } from '$lib/db/schema/index'
 // DB
 import { applyPrismConstraints, isFieldUnique } from '$lib/db'
 import { FirstClassResource, HierarchicalResource } from '$lib/enums'
+import { toBooleanOrUndefined } from '$lib/api/services'
 // TYPES
 import type {
   UserRoleDisco,
   ProjectNew,
   Prisms,
   ProjectDB,
+  ProjectProfile,
   Database,
   Id,
   QueryParams,
@@ -63,6 +65,138 @@ export const projectEntityWithRelations = {
   publisher: true,
 }
 
+export const getProjectWithRelations = (profile: ProjectProfile) => {
+  if (profile === 'admin') {
+    return projectEntityWithRelations
+  }
+
+  if (profile === 'card' || profile === 'detail') {
+    return projectCollectionWithRelations
+  }
+
+  return {
+    i18n: true,
+  }
+}
+
+const projectProfiles = ['list', 'card', 'detail', 'admin'] as const
+
+export const toProjectProfile = (
+  value: unknown,
+  fallback: ProjectProfile,
+): ProjectProfile =>
+  typeof value === 'string' && (projectProfiles as readonly string[]).includes(value)
+    ? (value as ProjectProfile)
+    : fallback
+
+export const toRequestedListState = (params: Partial<ProjectDB>) => ({
+  isPublished: typeof params.isPublished === 'boolean' ? params.isPublished : true,
+  isArchived: typeof params.isArchived === 'boolean' ? params.isArchived : false,
+})
+
+const VISIBILITY_COLUMNS = ['isArchived', 'isPublished'] as const
+
+const toProjectRoleIds = (userRoles: UserRoleDisco[]): Id[] =>
+  userRoles.filter(role => role.type === 'project').map(role => role.projectId as Id)
+
+const toOrganisationRoleIds = (userRoles: UserRoleDisco[]): Id[] =>
+  userRoles
+    .filter(role => role.type === 'organisation')
+    .map(role => role.organisationId as Id)
+
+const toProjectPrisms = (prisms?: Prisms): Prisms | undefined => {
+  if (!prisms) return undefined
+  return {
+    organisation: Array.isArray(prisms.organisation) ? prisms.organisation : [],
+    project: [],
+    layer: [],
+  }
+}
+
+const applyTriStateBooleanCondition = (
+  conditions: SQL<unknown>[],
+  column: typeof project.isPublished | typeof project.isArchived,
+  value: boolean | null | undefined,
+) => {
+  if (value === true) conditions.push(eq(column, true))
+  if (value === false) conditions.push(eq(column, false))
+}
+
+export const buildVisibilityAndOwnershipConditions = (
+  db: Database,
+  user: SessionUser,
+  isAdminRequest: boolean,
+  params: QueryParams,
+  userRoles: UserRoleDisco[],
+  prisms?: Prisms,
+): {
+  filtersToApply: QueryParams
+  conditions: SQL<unknown>[]
+  excludeColumns: string[]
+} => {
+  const conditions: SQL<unknown>[] = []
+  const excludeColumns = [...VISIBILITY_COLUMNS]
+  const filteredParams = removeExcludedColumns(params, excludeColumns)
+
+  const projectPrisms = toProjectPrisms(prisms)
+  if (projectPrisms && db) {
+    conditions.push(
+      ...applyPrismConstraints(db, HierarchicalResource.project, projectPrisms),
+    )
+  }
+
+  if (isSuperAdmin(user)) {
+    return { filtersToApply: filteredParams, conditions, excludeColumns }
+  }
+
+  const projectIds = toProjectRoleIds(userRoles)
+  const organisationIds = toOrganisationRoleIds(userRoles)
+
+  if (isAdminRequest) {
+    if (projectIds.length === 0 && organisationIds.length === 0) {
+      conditions.push(eq(project.id, '__none__' as Id))
+      return { filtersToApply: filteredParams, conditions, excludeColumns }
+    }
+    const ownershipScopes: SQL<unknown>[] = []
+    if (projectIds.length > 0) ownershipScopes.push(inArray(project.id, projectIds))
+    if (organisationIds.length > 0)
+      ownershipScopes.push(inArray(project.organisationId, organisationIds))
+    const ownershipCondition =
+      ownershipScopes.length === 1 ? ownershipScopes[0] : or(...ownershipScopes)
+    if (ownershipCondition) conditions.push(ownershipCondition)
+  }
+
+  const isPublished = toBooleanOrUndefined(params.isPublished)
+  const isArchived = toBooleanOrUndefined(params.isArchived)
+
+  applyTriStateBooleanCondition(
+    conditions,
+    project.isPublished,
+    isPublished ?? (isAdminRequest ? undefined : true),
+  )
+  applyTriStateBooleanCondition(
+    conditions,
+    project.isArchived,
+    isArchived ?? (isAdminRequest ? undefined : false),
+  )
+
+  if (!isAdminRequest && isPublished === false) {
+    if (projectIds.length === 0 && organisationIds.length === 0) {
+      conditions.push(eq(project.id, '__none__' as Id))
+      return { filtersToApply: filteredParams, conditions, excludeColumns }
+    }
+    const membershipScopes: SQL<unknown>[] = []
+    if (projectIds.length > 0) membershipScopes.push(inArray(project.id, projectIds))
+    if (organisationIds.length > 0)
+      membershipScopes.push(inArray(project.organisationId, organisationIds))
+    const membershipCondition =
+      membershipScopes.length === 1 ? membershipScopes[0] : or(...membershipScopes)
+    if (membershipCondition) conditions.push(membershipCondition)
+  }
+
+  return { filtersToApply: filteredParams, conditions, excludeColumns }
+}
+
 /**
  * Get the query context for the project resource - filters the query based on the user's roles, prisms, and the query parameters.
  * @param db - The Drizzle instance
@@ -72,60 +206,32 @@ export const projectEntityWithRelations = {
  * @param userRoles - The user roles
  * @param prisms - The prism filters
  */
-export const getProjectQueryContext = (
+export const toQueryConditions = (
   db: Database,
   user: SessionUser,
-  request: Request,
+  isAdminRequest: boolean,
   params: QueryParams,
   userRoles: UserRoleDisco[],
   prisms?: Prisms,
 ) => {
-  // SETUP : By default, only show non-archived projects,
-  // and exclude isArchived and isPublished filters from the query.
-  let conditions: SQL<unknown>[] = []
-  const excludeColumns = ['isArchived', 'isPublished']
+  const contextRespectingVisibilityAndOwnership = buildVisibilityAndOwnershipConditions(
+    db,
+    user,
+    isAdminRequest,
+    params,
+    userRoles,
+    prisms,
+  )
 
-  // NON-SUPERADMIN : Hide projects which are archived
-  if (!isSuperAdmin(user)) {
-    conditions.push(eq(project.isArchived, false))
+  if (Object.keys(contextRespectingVisibilityAndOwnership.filtersToApply).length > 0) {
+    applyQueryFilters(
+      project,
+      contextRespectingVisibilityAndOwnership.filtersToApply,
+      contextRespectingVisibilityAndOwnership.conditions,
+    )
   }
 
-  // Apply prism conditions for organisation filtering
-  if (prisms && db) {
-    // Ensure db is available
-    conditions.push(...applyPrismConstraints(db, HierarchicalResource.project, prisms))
-  }
-
-  // PUBLIC : List all projects which are isPublished, and not isArchived,
-  if (!isAdminRequest(request)) {
-    params = removeExcludedColumns(params, excludeColumns)
-    conditions.push(eq(project.isPublished, true))
-
-    // ADMIN : List all projects, where the user has a role in the project
-  } else if (!isSuperAdmin(user)) {
-    params = removeExcludedColumns(params, ['isArchived'])
-    const projectIds = getProjectIdforRoles(userRoles)
-    conditions.push(inArray(project.id, projectIds as Id[]))
-    // SUPERADMIN : List all projects regardless of isPublished or isArchived, respecting the prism filters.
-  } else {
-    // For SuperAdmin, if no prisms are applied, conditions must be empty.
-    if (!(prisms && db)) {
-      conditions = [] // List all projects without the default isArchived filter for superadmins
-    }
-  }
-
-  // CONTEXT : Apply query filters to the conditions
-  if (Object.keys(params).length > 0) {
-    // For superAdmins, remove isArchived and isPublished from params so they can see all content
-    if (isSuperAdmin(user)) {
-      const { isArchived, isPublished, ...filteredParams } = params
-      applyQueryFilters(project, filteredParams, conditions)
-    } else {
-      applyQueryFilters(project, params, conditions)
-    }
-  }
-
-  return { params, conditions, excludeColumns }
+  return contextRespectingVisibilityAndOwnership
 }
 
 /**
