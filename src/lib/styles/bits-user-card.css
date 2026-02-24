@@ -16,6 +16,10 @@
     justify-items: start;
   }
 
+  .bits-theme .bits-form__user-card-wrapper.bits-form__user-card-wrapper--spacious {
+    gap: calc(var(--spacing) * 4);
+  }
+
   .bits-theme .bits-form__user-card-avatar {
     @apply h-16 w-16 shrink-0 overflow-hidden bg-glass-100;
   }
