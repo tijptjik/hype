@@ -39,6 +39,8 @@ import type {
 //
 // 4. INPUT NORMALIZERS
 //    - toProjectSubmittedFields
+//    - toProjectStableAuthzSignature
+//    - normalizeProjectI18nForFormInput
 //    - toProjectUserRoleCapabilitiesSignature
 //
 // 5. ACTOR RESOLUTION
@@ -321,6 +323,57 @@ export const toProjectSubmittedFields = (
   if ('isPublished' in data) fields.push('isPublished')
   if ('isArchived' in data) fields.push('isArchived')
   return fields
+}
+
+const PROJECT_AUTHZ_DIFF_OMIT_KEYS = new Set([
+  'createdAt',
+  'modifiedAt',
+  'projectId',
+  'propertyId',
+  'valueId',
+])
+
+const toAuthzComparable = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(toAuthzComparable)
+  if (!value || typeof value !== 'object') return value
+
+  const entries = Object.entries(value as Record<string, unknown>)
+    .filter(
+      ([key, fieldValue]) =>
+        !PROJECT_AUTHZ_DIFF_OMIT_KEYS.has(key) && fieldValue !== undefined,
+    )
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, fieldValue]) => [key, toAuthzComparable(fieldValue)])
+
+  return Object.fromEntries(entries)
+}
+
+export const toProjectStableAuthzSignature = (value: unknown): string => {
+  return JSON.stringify(toAuthzComparable(value))
+}
+
+export const normalizeProjectI18nForFormInput = (
+  i18n: unknown,
+): Record<string, unknown> => {
+  const source = (i18n ?? {}) as Record<string, Record<string, unknown>>
+  const normalizeLocale = (locale: Record<string, unknown> | undefined) => ({
+    name: locale?.name ?? '',
+    nameShort: locale?.nameShort ?? '',
+    description: locale?.description ?? '',
+    license: locale?.license ?? '',
+    attribution: locale?.attribution ?? '',
+    nameGen: locale?.nameGen ?? false,
+    nameShortGen: locale?.nameShortGen ?? false,
+    descriptionGen: locale?.descriptionGen ?? false,
+    licenseGen: locale?.licenseGen ?? false,
+    attributionGen: locale?.attributionGen ?? false,
+  })
+
+  return {
+    en: normalizeLocale(source.en),
+    zhHans: normalizeLocale(source['zh-hans']),
+    zhHant: normalizeLocale(source['zh-hant']),
+  }
 }
 
 export const toProjectUserRoleCapabilitiesSignature = (

@@ -1,6 +1,8 @@
 // REMOTE
 import { guardedCommand, guardedForm, guardedQuery } from '$lib/api/server/remote'
 import { error } from '@sveltejs/kit'
+// DRIZZLE
+import { eq } from 'drizzle-orm'
 // API
 import { getPrisms, getValidQueryParams as validateQueryParams } from '$lib/api'
 import {
@@ -26,8 +28,10 @@ import {
   authorizeProjectListForContext,
   authorizeProjectManageCapabilitiesForSubmission,
   authorizeProjectManageRolesForSubmission,
+  normalizeProjectI18nForFormInput,
   authorizeProjectPublishForSubmission,
   authorizeProjectReadForProbe,
+  toProjectStableAuthzSignature,
   authorizeProjectUpdateForSubmission,
   ensureProjectCommandAllowed,
   isReservedCode,
@@ -80,6 +84,7 @@ import { project } from '$lib/db/schema'
 import type {
   Id,
   Prisms,
+  ProjectAuthorizationField,
   ProjectDB,
   ProjectI18nNew,
   ProjectI18nPartial,
@@ -365,7 +370,67 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue('PROJECT_NOT_FOUND')),
   )
 
-  const { organisationId: _submittedOrganisationId, ...submittedDataForUpdate } = data
+  // Load the full persisted entity so field-level auth can compare against real DB state.
+  const currentWithRelations = requireValue(
+    await db.query.project.findFirst({
+      with: getProjectWithRelations('admin'),
+      where: eq(project.id, current.id),
+    }),
+    () => invalid(issue('PROJECT_NOT_FOUND')),
+  )
+  const currentEntity = requireValue(
+    (await toEntityResponseShape(currentWithRelations, 'admin')).data,
+    () => invalid(issue('PROJECT_NOT_FOUND')),
+  )
+
+  // Read current role assignments so membership/capability changes can be authorized separately.
+  const existingRoleRows = await listProjectRoleAssignments(db, current.id)
+  // Detect membership changes (add/remove/swap users or roles) for manage-roles auth checks.
+  const roleMembershipChanged = hasRoleMembershipChanged(
+    submittedRoles,
+    existingRoleRows,
+    toProjectUserRoleSignature,
+  )
+  // Detect per-role capability assignment changes for assign-capabilities auth checks.
+  const roleCapabilityAssignmentsChanged =
+    toProjectUserRoleCapabilitiesSignature(
+      submittedRolesWithCapabilities.map(role => ({
+        userId: role.userId,
+        capabilities: role.capabilities,
+      })),
+    ) !==
+    toProjectUserRoleCapabilitiesSignature(
+      existingRoleRows.map(role => ({
+        userId: role.userId,
+        capabilities: role.capabilities ?? {},
+      })),
+    )
+  // Detect property changes only when the properties section was part of the submitted payload.
+  const propertiesChanged =
+    hasSubmittedProperties &&
+    toProjectStableAuthzSignature(submittedProperties) !==
+      toProjectStableAuthzSignature(currentEntity.properties ?? [])
+  // Compare normalized i18n payloads so translator-only submissions resolve to i18n field auth.
+  const i18nChanged =
+    toProjectStableAuthzSignature(data.i18n) !==
+    toProjectStableAuthzSignature(normalizeProjectI18nForFormInput(currentEntity.i18n))
+
+  // Build the submitted field set from actual diffs so authz checks changed fields only.
+  const submittedDataForUpdate: Partial<Record<ProjectAuthorizationField, unknown>> = {}
+  if (normalizedCode !== current.code) submittedDataForUpdate.code = normalizedCode
+  if (i18nChanged) submittedDataForUpdate.i18n = data.i18n
+  if (
+    toProjectStableAuthzSignature(data.capabilities ?? {}) !==
+    toProjectStableAuthzSignature(current.capabilities ?? {})
+  ) {
+    submittedDataForUpdate.capabilities = data.capabilities ?? {}
+  }
+  if (roleMembershipChanged || roleCapabilityAssignmentsChanged) {
+    submittedDataForUpdate.userRoles = submittedRolesWithCapabilities
+  }
+  if (propertiesChanged) {
+    submittedDataForUpdate.properties = submittedProperties
+  }
 
   // Apply role-based authorization for core update fields.
   const updateDecision = authorizeProjectUpdateForSubmission({
@@ -383,14 +448,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   }
 
   // Apply role-management authorization only when role membership changed.
-  const existingRoleRows = await listProjectRoleAssignments(db, current.id)
-  if (
-    hasRoleMembershipChanged(
-      submittedRoles,
-      existingRoleRows,
-      toProjectUserRoleSignature,
-    )
-  ) {
+  if (roleMembershipChanged) {
     const roleDecision = authorizeProjectManageRolesForSubmission({
       user,
       userRoles,
@@ -406,20 +464,6 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   }
 
   // Handle changes to role-based capabilities, respecting the new ones.
-  const roleCapabilityAssignmentsChanged =
-    toProjectUserRoleCapabilitiesSignature(
-      submittedRolesWithCapabilities.map(role => ({
-        userId: role.userId,
-        capabilities: role.capabilities,
-      })),
-    ) !==
-    toProjectUserRoleCapabilitiesSignature(
-      existingRoleRows.map(role => ({
-        userId: role.userId,
-        capabilities: role.capabilities ?? {},
-      })),
-    )
-
   if (roleCapabilityAssignmentsChanged) {
     const assignDecision = authorizeProjectAssignCapabilitiesForSubmission({
       user,

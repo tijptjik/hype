@@ -100,7 +100,9 @@ export {
   hubPolicyMap,
 } from './hub'
 export {
+  normalizeProjectI18nForFormInput,
   toProjectAuthActor,
+  toProjectStableAuthzSignature,
   toProjectSubmittedFields,
   toProjectUserRoleCapabilitiesSignature,
   authorizeProjectList,
