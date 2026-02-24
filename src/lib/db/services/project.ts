@@ -716,6 +716,24 @@ export const listProjectRoleAssignments = async (
     .where(eq(projectRole.projectId, projectId))
 }
 
+export const listOrganisationOwnerRoleAssignments = async (
+  db: Database,
+  organisationId: string,
+): Promise<Array<{ userId: string; role: string }>> => {
+  return await db
+    .select({
+      userId: organisationRole.userId,
+      role: organisationRole.role,
+    })
+    .from(organisationRole)
+    .where(
+      and(
+        eq(organisationRole.organisationId, organisationId),
+        eq(organisationRole.role, 'owner'),
+      ),
+    )
+}
+
 // ═══════════════════════
 // 4. ROLES
 // ═══════════════════════
