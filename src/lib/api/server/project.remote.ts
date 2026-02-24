@@ -277,9 +277,6 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   )
 
   // Validate payload invariants.
-  if (submittedRoles.length === 0) {
-    invalid(issue(toIssueDetailMessage('USER_ROLES_REQUIRED')))
-  }
   if (duplicateSubmittedRoleUserIds.length > 0) {
     invalid(
       issue.data.userRoles(
