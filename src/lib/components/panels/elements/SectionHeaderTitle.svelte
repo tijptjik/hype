@@ -16,32 +16,43 @@ let {
   ...panelProps
 } = $props<{
   title: string
-  description: string
+  description?: string
   isOpen: boolean
   onToggle: (e: MouseEvent) => void
   onNavigate?: (e: MouseEvent) => void
-  href: string
+  href?: string | null
   panelProps: PanelProps
 }>()
+
+const onActivate = (event: KeyboardEvent): void => {
+  if (event.key !== 'Enter' && event.key !== ' ') return
+  event.preventDefault()
+  const mouseEvent = event as unknown as MouseEvent
+  if (href && onNavigate) {
+    onNavigate(mouseEvent)
+    return
+  }
+  onToggle(mouseEvent)
+}
 </script>
 
-<div class="flex items-center gap-3">
+<div class="bits-theme flex items-center gap-3">
   <div class="space-y-0.5">
     <div class="flex items-center gap-3">
       <Icon
         src={isOpen ? ChevronDown : ChevronRight}
-        class="h-[18px] w-[18px]"
+        class="h-4.5 w-4.5"
         onclick={onToggle}
       />
-      <a
-        {href}
+      <div
         onclick={href && onNavigate ? onNavigate : onToggle}
-        role={href ? 'link' : 'button'}
+        onkeydown={onActivate}
+        role="button"
         tabindex="0"
         aria-label={`${title} section header`}
       >
         <h3 class="text-sm uppercase tracking-widest">{title}</h3>
-      </a>
+      </div>
     </div>
     {#if description}
       <p class="text-left text-sm text-base-content/60">{description}</p>

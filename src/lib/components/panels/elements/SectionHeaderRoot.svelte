@@ -25,14 +25,26 @@ let {
   children: Snippet
   href: string
 } = $props()
+
+const onActivate = (event: KeyboardEvent): void => {
+  if (event.key !== 'Enter' && event.key !== ' ') return
+  event.preventDefault()
+  const mouseEvent = event as unknown as MouseEvent
+  if (href) {
+    onNavigate(mouseEvent)
+    return
+  }
+  onToggle(mouseEvent)
+}
 </script>
 
-<a
-  class="group flex w-full flex-shrink-0 items-center justify-between px-4 {iconVerticalPaddingClass} {focusVisibleClass} cursor-pointer bg-black text-base-content focus:outline-none focus:ring-0"
+<div
+  class="bits-theme group flex w-full shrink-0 items-center justify-between px-4 {iconVerticalPaddingClass} {focusVisibleClass} cursor-pointer bg-black text-base-content focus:outline-none focus:ring-0"
   onclick={href ? onNavigate : onToggle}
-  {href}
+  onkeydown={onActivate}
   aria-expanded={isOpen}
   tabindex="0"
+  role="button"
 >
   {@render children()}
-</a>
+</div>
