@@ -1,14 +1,103 @@
 import { error } from '@sveltejs/kit'
-import { toAuthMessage } from '.'
+import {
+  shouldLogAuthzDeny,
+  toActorPolicyBase,
+  toAuthMessage,
+  toUserRoleSignature,
+} from '.'
 // DRIZZLE
 import { eq, inArray } from 'drizzle-orm'
 // SCHEMA
 import { hub, organisation } from '$lib/db/schema'
-// AUTHZ
 import { hasAuthenticatedSession } from './user'
 // TYPES
 import type { SQL } from 'drizzle-orm'
-import type { AuthorizationDecision, Database, Id, UserRoleDisco } from '$lib/types'
+import type {
+  AuthorizationDecision,
+  Database,
+  HubAuthorizationAction,
+  HubAuthorizationField,
+  HubAuthorizeParams,
+  Id,
+  UserRoleDisco,
+} from '$lib/types'
+
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. AUTH INPUT TYPES
+//    - HubPolicyHandler (type)
+//    - HubAuthActor (type)
+//    - HubAuthTarget (type)
+//    - HubAuthorizationAction (type)
+//    - HubAuthorizationField (type)
+//    - HubAuthorizeParams (type)
+//
+// 2. POLICY CONSTANTS
+//    - CORE_HUB_CODE
+//    - HUB_AUTHZ_DENY_LOG_SCOPE
+//    - logHubReject
+//
+// 3. ROLE RESOLUTION
+//    - isHubAdminRole
+//    - isCoreHubAdmin
+//    - getScopedHubAdminIds
+//    - isRelevantHubAdmin
+//
+// 4. INPUT NORMALIZERS
+//    - toHubListConditions
+//    - toHubSubmittedFields
+//    - toHubUserRoleSignature
+//
+// 5. ACTOR RESOLUTION
+//    - toHubAuthActor
+//    - toHubSubmissionActor
+//    - toHubPolicyBase
+//
+// 6. ACTION POLICIES
+//    - listHubsPolicy
+//    - readHubPolicy
+//    - createHubPolicy
+//    - updateHubPolicy
+//    - deleteHubPolicy
+//    - manageHubRolesPolicy
+//    - publishHubPolicy
+//
+// 7. READ/LIST AUTHORIZATION
+//    - authorizeHubList
+//    - authorizeHubRead
+//    - authorizeHubReadForProbe
+//
+// 8. WRITE AUTHORIZATION
+//    - authorizeHubCreate
+//    - authorizeHubCreateForSubmission
+//    - authorizeHubUpdate
+//    - authorizeHubUpdateForSubmission
+//    - authorizeHubDelete
+//    - authorizeHubDeleteForSubmission
+//    - authorizeHubManageRoles
+//    - authorizeHubManageRolesForSubmission
+//    - authorizeHubPublish
+//    - authorizeHubPublishForSubmission
+//
+// 9. ADDITIONAL GUARDS
+//    - hasInvalidHubOrganisationAssignmentsForSubmission
+//
+// 10. COMMAND AUTHORIZATION
+//    - ensureHubCommandAllowed
+//
+// 11. ACTION PERMISSIONS
+//    - resolveHubActionPermissions
+//
+// 12. POLICY MAP
+//    - hubPolicyMap
+
+type HubPolicyHandler = (params: HubAuthorizeParams) => AuthorizationDecision
+
+/* ----------------- */
+// AUTH INPUT TYPES
+/* -------- */
 
 export type HubAuthActor = {
   userId?: string | null
@@ -22,15 +111,6 @@ export type HubAuthTarget = {
   resourceHubId?: string | null
 }
 
-type HubAuthorizationField =
-  | 'code'
-  | 'domain'
-  | 'i18n'
-  | 'userRoles'
-  | 'organisations'
-  | 'isPublished'
-  | 'isArchived'
-
 export type HubActionPermissions = {
   canCreate: boolean
   canEdit: boolean
@@ -43,7 +123,40 @@ export type HubRequestedListState = {
   isArchived?: boolean
 }
 
+/* ----------------- */
+// POLICY CONSTANTS
+/* -------- */
+
 export const CORE_HUB_CODE = 'core'
+
+const HUB_AUTHZ_DENY_LOG_SCOPE = '[authz][hub][deny]'
+
+const logHubReject = (
+  scope: string,
+  params: HubAuthorizeParams,
+  code: AuthorizationDecision['code'],
+  extra: Record<string, unknown> = {},
+): AuthorizationDecision => {
+  if (shouldLogAuthzDeny()) {
+    console.log(`${HUB_AUTHZ_DENY_LOG_SCOPE}[${scope}]`, {
+      code,
+      action: params.action,
+      userId: params.userId ?? null,
+      isAuthenticated: params.isAuthenticated ?? null,
+      isAnonymous: params.isAnonymous ?? null,
+      userRoleCount: params.userRoles.length,
+      resourceId: params.resourceId ?? null,
+      resourceHubId: params.resourceHubId ?? null,
+      fields: params.fields ?? null,
+      ...extra,
+    })
+  }
+  return { allowed: false, code }
+}
+
+/* ----------------- */
+// ROLE RESOLUTION
+/* -------- */
 
 const isHubAdminRole = (role: UserRoleDisco): boolean =>
   role.type === 'hub' && role.role === 'admin'
@@ -66,6 +179,19 @@ export const getScopedHubAdminIds = (roles: UserRoleDisco[]): Set<string> =>
       .map(role => (role as { hubId: string }).hubId),
   )
 
+export const isRelevantHubAdmin = (
+  roles: UserRoleDisco[],
+  resourceHubId?: string | null,
+): boolean => {
+  if (isCoreHubAdmin(roles)) return true
+  if (!resourceHubId) return false
+  return getScopedHubAdminIds(roles).has(resourceHubId)
+}
+
+/* ----------------- */
+// INPUT NORMALIZERS
+/* -------- */
+
 export const toHubListConditions = (
   roles: UserRoleDisco[],
   requestedListState: HubRequestedListState,
@@ -87,15 +213,6 @@ export const toHubListConditions = (
   ]
 }
 
-const isRelevantHubAdmin = (
-  roles: UserRoleDisco[],
-  resourceHubId?: string | null,
-): boolean => {
-  if (isCoreHubAdmin(roles)) return true
-  if (!resourceHubId) return false
-  return getScopedHubAdminIds(roles).has(resourceHubId)
-}
-
 export const toHubSubmittedFields = (
   data: Partial<Record<HubAuthorizationField, unknown>>,
 ): HubAuthorizationField[] => {
@@ -110,13 +227,11 @@ export const toHubSubmittedFields = (
   return fields
 }
 
-export const toHubUserRoleSignature = (
-  userRoles: Array<{ userId: string; role: string }>,
-): string =>
-  userRoles
-    .map(role => `${role.userId}:${role.role}`)
-    .sort((a, b) => a.localeCompare(b))
-    .join('|')
+export const toHubUserRoleSignature = toUserRoleSignature
+
+/* ----------------- */
+// ACTOR RESOLUTION
+/* -------- */
 
 export const toHubAuthActor = (user: unknown): HubAuthActor => {
   if (!user || typeof user !== 'object') {
@@ -160,18 +275,108 @@ const toHubSubmissionActor = (
   userRoles,
 })
 
+const toHubPolicyBase = (
+  actor: HubAuthActor,
+): Pick<
+  HubAuthorizeParams,
+  'userId' | 'userRoles' | 'isAuthenticated' | 'isAnonymous'
+> => toActorPolicyBase(actor)
+
+/* ----------------- */
+// ACTION POLICIES
+/* -------- */
+
+const listHubsPolicy: HubPolicyHandler = params => {
+  if (!hasAuthenticatedSession(params)) {
+    return logHubReject('list', params, 'UNAUTHENTICATED')
+  }
+
+  if (isCoreHubAdmin(params.userRoles)) {
+    return { allowed: true }
+  }
+
+  if (!params.resourceHubId) {
+    return logHubReject('list', params, 'HUB_SCOPE_FORBIDDEN')
+  }
+
+  return isRelevantHubAdmin(params.userRoles, params.resourceHubId)
+    ? { allowed: true }
+    : logHubReject('list', params, 'INSUFFICIENT_ROLE')
+}
+
+const readHubPolicy: HubPolicyHandler = params => {
+  if (!hasAuthenticatedSession(params)) {
+    return logHubReject('read', params, 'UNAUTHENTICATED')
+  }
+
+  return isRelevantHubAdmin(params.userRoles, params.resourceHubId)
+    ? { allowed: true }
+    : logHubReject('read', params, 'INSUFFICIENT_ROLE')
+}
+
+const createHubPolicy: HubPolicyHandler = params => {
+  if (!hasAuthenticatedSession(params)) {
+    return logHubReject('create', params, 'UNAUTHENTICATED')
+  }
+
+  return isCoreHubAdmin(params.userRoles)
+    ? { allowed: true }
+    : logHubReject('create', params, 'HUB_SCOPE_FORBIDDEN')
+}
+
+const updateHubPolicy: HubPolicyHandler = params => {
+  if (!hasAuthenticatedSession(params)) {
+    return logHubReject('update', params, 'UNAUTHENTICATED')
+  }
+
+  if (!params.resourceId) {
+    return logHubReject('update', params, 'INSUFFICIENT_ROLE')
+  }
+
+  return isRelevantHubAdmin(params.userRoles, params.resourceHubId)
+    ? { allowed: true }
+    : logHubReject('update', params, 'INSUFFICIENT_ROLE')
+}
+
+const deleteHubPolicy: HubPolicyHandler = params => {
+  if (!hasAuthenticatedSession(params)) {
+    return logHubReject('delete', params, 'UNAUTHENTICATED')
+  }
+
+  return isCoreHubAdmin(params.userRoles)
+    ? { allowed: true }
+    : logHubReject('delete', params, 'HUB_SCOPE_FORBIDDEN')
+}
+
+const manageHubRolesPolicy: HubPolicyHandler = params =>
+  updateHubPolicy({ ...params, fields: ['userRoles'] })
+
+const publishHubPolicy: HubPolicyHandler = params =>
+  updateHubPolicy({ ...params, fields: ['isPublished'] })
+
+/* ----------------- */
+// READ/LIST AUTHORIZATION
+/* -------- */
+
+export const authorizeHubList = (
+  actor: HubAuthActor,
+  target: Pick<HubAuthTarget, 'resourceHubId'>,
+): AuthorizationDecision =>
+  listHubsPolicy({
+    ...toHubPolicyBase(actor),
+    action: 'listHubs',
+    resourceHubId: target.resourceHubId,
+  })
+
 export const authorizeHubRead = (
   actor: HubAuthActor,
   target: Required<Pick<HubAuthTarget, 'resourceHubId'>>,
-): AuthorizationDecision => {
-  if (!hasAuthenticatedSession(actor)) {
-    return { allowed: false, code: 'UNAUTHENTICATED' }
-  }
-
-  return isRelevantHubAdmin(actor.userRoles, target.resourceHubId)
-    ? { allowed: true }
-    : { allowed: false, code: 'INSUFFICIENT_ROLE' }
-}
+): AuthorizationDecision =>
+  readHubPolicy({
+    ...toHubPolicyBase(actor),
+    action: 'readHub',
+    resourceHubId: target.resourceHubId,
+  })
 
 export const authorizeHubReadForProbe = (params: {
   user: { id: string; isAnonymous?: boolean }
@@ -182,29 +387,19 @@ export const authorizeHubReadForProbe = (params: {
     resourceHubId: params.probe.id,
   })
 
-export const authorizeHubList = (actor: HubAuthActor): AuthorizationDecision => {
-  if (!hasAuthenticatedSession(actor)) {
-    return { allowed: false, code: 'UNAUTHENTICATED' }
-  }
-
-  const hasHubAdminRole = actor.userRoles.some(isHubAdminRole)
-  return hasHubAdminRole
-    ? { allowed: true }
-    : { allowed: false, code: 'INSUFFICIENT_ROLE' }
-}
+/* ----------------- */
+// WRITE AUTHORIZATION
+/* -------- */
 
 export const authorizeHubCreate = (
   actor: HubAuthActor,
-  _fields: HubAuthorizationField[],
-): AuthorizationDecision => {
-  if (!hasAuthenticatedSession(actor)) {
-    return { allowed: false, code: 'UNAUTHENTICATED' }
-  }
-
-  return isCoreHubAdmin(actor.userRoles)
-    ? { allowed: true }
-    : { allowed: false, code: 'HUB_SCOPE_FORBIDDEN' }
-}
+  fields: HubAuthorizationField[],
+): AuthorizationDecision =>
+  createHubPolicy({
+    ...toHubPolicyBase(actor),
+    action: 'createHub',
+    fields,
+  })
 
 export const authorizeHubCreateForSubmission = (params: {
   user: { id: string; isAnonymous?: boolean }
@@ -219,18 +414,15 @@ export const authorizeHubCreateForSubmission = (params: {
 export const authorizeHubUpdate = (
   actor: HubAuthActor,
   target: Required<Pick<HubAuthTarget, 'resourceId' | 'resourceHubId'>>,
-  _fields: HubAuthorizationField[],
-): AuthorizationDecision => {
-  if (!hasAuthenticatedSession(actor)) {
-    return { allowed: false, code: 'UNAUTHENTICATED' }
-  }
-
-  if (!target.resourceId) return { allowed: false, code: 'INSUFFICIENT_ROLE' }
-
-  return isRelevantHubAdmin(actor.userRoles, target.resourceHubId)
-    ? { allowed: true }
-    : { allowed: false, code: 'INSUFFICIENT_ROLE' }
-}
+  fields: HubAuthorizationField[],
+): AuthorizationDecision =>
+  updateHubPolicy({
+    ...toHubPolicyBase(actor),
+    action: 'updateHub',
+    resourceId: target.resourceId,
+    resourceHubId: target.resourceHubId,
+    fields,
+  })
 
 export const authorizeHubUpdateForSubmission = (params: {
   user: { id: string; isAnonymous?: boolean }
@@ -247,12 +439,37 @@ export const authorizeHubUpdateForSubmission = (params: {
     toHubSubmittedFields(params.submittedData),
   )
 
+export const authorizeHubDelete = (
+  actor: HubAuthActor,
+  target: Required<Pick<HubAuthTarget, 'resourceId' | 'resourceHubId'>>,
+): AuthorizationDecision =>
+  deleteHubPolicy({
+    ...toHubPolicyBase(actor),
+    action: 'deleteHub',
+    resourceId: target.resourceId,
+    resourceHubId: target.resourceHubId,
+  })
+
+export const authorizeHubDeleteForSubmission = (params: {
+  user: { id: string; isAnonymous?: boolean }
+  userRoles: UserRoleDisco[]
+  resource: { id: string }
+}): AuthorizationDecision =>
+  authorizeHubDelete(toHubSubmissionActor(params.user, params.userRoles), {
+    resourceId: params.resource.id,
+    resourceHubId: params.resource.id,
+  })
+
 export const authorizeHubManageRoles = (
   actor: HubAuthActor,
   target: Required<Pick<HubAuthTarget, 'resourceId' | 'resourceHubId'>>,
-): AuthorizationDecision => {
-  return authorizeHubUpdate(actor, target, ['userRoles'])
-}
+): AuthorizationDecision =>
+  manageHubRolesPolicy({
+    ...toHubPolicyBase(actor),
+    action: 'manageHubRoles',
+    resourceId: target.resourceId,
+    resourceHubId: target.resourceHubId,
+  })
 
 export const authorizeHubManageRolesForSubmission = (params: {
   user: { id: string; isAnonymous?: boolean }
@@ -263,6 +480,31 @@ export const authorizeHubManageRolesForSubmission = (params: {
     resourceId: params.resource.id,
     resourceHubId: params.resource.id,
   })
+
+export const authorizeHubPublish = (
+  actor: HubAuthActor,
+  target: Required<Pick<HubAuthTarget, 'resourceId' | 'resourceHubId'>>,
+): AuthorizationDecision =>
+  publishHubPolicy({
+    ...toHubPolicyBase(actor),
+    action: 'publishHub',
+    resourceId: target.resourceId,
+    resourceHubId: target.resourceHubId,
+  })
+
+export const authorizeHubPublishForSubmission = (params: {
+  user: { id: string; isAnonymous?: boolean }
+  userRoles: UserRoleDisco[]
+  resource: { id: string }
+}): AuthorizationDecision =>
+  authorizeHubPublish(toHubSubmissionActor(params.user, params.userRoles), {
+    resourceId: params.resource.id,
+    resourceHubId: params.resource.id,
+  })
+
+/* ----------------- */
+// ADDITIONAL GUARDS
+/* -------- */
 
 export const hasInvalidHubOrganisationAssignmentsForSubmission = async (params: {
   db: Database
@@ -298,51 +540,19 @@ export const hasInvalidHubOrganisationAssignmentsForSubmission = async (params: 
   )
 }
 
-export const authorizeHubPublish = (
-  actor: HubAuthActor,
-  target: Required<Pick<HubAuthTarget, 'resourceId' | 'resourceHubId'>>,
-): AuthorizationDecision => {
-  return authorizeHubUpdate(actor, target, ['isPublished'])
-}
-
-export const authorizeHubPublishForSubmission = (params: {
-  user: { id: string; isAnonymous?: boolean }
-  userRoles: UserRoleDisco[]
-  resource: { id: string }
-}): AuthorizationDecision =>
-  authorizeHubPublish(toHubSubmissionActor(params.user, params.userRoles), {
-    resourceId: params.resource.id,
-    resourceHubId: params.resource.id,
-  })
-
-export const authorizeHubDelete = (
-  actor: HubAuthActor,
-  _target: Required<Pick<HubAuthTarget, 'resourceId' | 'resourceHubId'>>,
-): AuthorizationDecision => {
-  if (!hasAuthenticatedSession(actor)) {
-    return { allowed: false, code: 'UNAUTHENTICATED' }
-  }
-
-  return isCoreHubAdmin(actor.userRoles)
-    ? { allowed: true }
-    : { allowed: false, code: 'HUB_SCOPE_FORBIDDEN' }
-}
-
-export const authorizeHubDeleteForSubmission = (params: {
-  user: { id: string; isAnonymous?: boolean }
-  userRoles: UserRoleDisco[]
-  resource: { id: string }
-}): AuthorizationDecision =>
-  authorizeHubDelete(toHubSubmissionActor(params.user, params.userRoles), {
-    resourceId: params.resource.id,
-    resourceHubId: params.resource.id,
-  })
+/* ----------------- */
+// COMMAND AUTHORIZATION
+/* -------- */
 
 export const ensureHubCommandAllowed = (decision: AuthorizationDecision): void => {
   if (!decision.allowed) {
     throw error(403, toAuthMessage(decision.code ?? 'INSUFFICIENT_ROLE'))
   }
 }
+
+/* ----------------- */
+// ACTION PERMISSIONS
+/* -------- */
 
 export const resolveHubActionPermissions = (
   actor: HubAuthActor,
@@ -371,4 +581,18 @@ export const resolveHubActionPermissions = (
     canPublish: authorizeHubPublish(actor, scopedTarget).allowed,
     canDelete: authorizeHubDelete(actor, scopedTarget).allowed,
   }
+}
+
+/* ----------------- */
+// POLICY MAP
+/* -------- */
+
+export const hubPolicyMap: Record<HubAuthorizationAction, HubPolicyHandler> = {
+  listHubs: listHubsPolicy,
+  readHub: readHubPolicy,
+  createHub: createHubPolicy,
+  updateHub: updateHubPolicy,
+  deleteHub: deleteHubPolicy,
+  manageHubRoles: manageHubRolesPolicy,
+  publishHub: publishHubPolicy,
 }

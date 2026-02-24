@@ -2,7 +2,13 @@
 import type {
   AuthorizeParams,
   AuthorizationDecision,
+  HubAuthorizationAction,
+  HubAuthorizeParams,
+  OrganisationAuthorizeParams,
   OrganisationAuthorizationAction,
+  ProjectAuthorizationAction,
+  ProjectAuthorizeParams,
+  UserRoleDisco,
 } from '$lib/types'
 // I18N
 import { m } from '$lib/i18n'
@@ -10,9 +16,42 @@ import { m } from '$lib/i18n'
 import { FirstClassResource, RESERVED_PARAMETERS, ResourcePath } from '$lib/enums'
 // POLICIES
 import { organisationPolicyMap } from './organisation'
+import { projectPolicyMap } from './project'
+import { hubPolicyMap } from './hub'
+export type AuthzActorBase = {
+  userId?: string | null
+  userRoles: UserRoleDisco[]
+  isAuthenticated?: boolean
+  isAnonymous?: boolean
+  isSuperAdmin?: boolean
+}
+
+export const toActorPolicyBase = (actor: AuthzActorBase): AuthzActorBase => ({
+  userId: actor.userId,
+  userRoles: actor.userRoles,
+  isAuthenticated: actor.isAuthenticated,
+  isAnonymous: actor.isAnonymous,
+  isSuperAdmin: actor.isSuperAdmin,
+})
+
+export const toUserRoleSignature = (
+  userRoles: Array<{ userId: string; role: string }>,
+): string =>
+  userRoles
+    .map(role => `${role.userId}:${role.role}`)
+    .sort((a, b) => a.localeCompare(b))
+    .join('|')
+
+export const shouldLogAuthzDeny = (): boolean => {
+  const value = process.env.AUTHZ_LOG_DENY?.toLowerCase()
+  return value === '1' || value === 'true'
+}
+
+export const toOrganisationUserRoleSignature = toUserRoleSignature
+export const toProjectUserRoleSignature = toUserRoleSignature
+
 export {
   toOrganisationSubmittedFields,
-  toOrganisationUserRoleSignature,
   toOrganisationAuthActor,
   authorizeOrganisationCreateForSubmission,
   authorizeOrganisationUpdateForSubmission,
@@ -54,19 +93,32 @@ export {
   authorizeHubPublish,
   authorizeHubDelete,
   resolveHubActionPermissions,
+  hubPolicyMap,
 } from './hub'
 export {
-  toProjectSubmittedFields,
-  toProjectUserRoleSignature,
   toProjectAuthActor,
+  toProjectSubmittedFields,
+  toProjectUserRoleCapabilitiesSignature,
+  authorizeProjectList,
   authorizeProjectListForContext,
+  authorizeProjectRead,
   authorizeProjectReadForProbe,
+  authorizeProjectCreate,
   authorizeProjectCreateForSubmission,
+  authorizeProjectUpdate,
   authorizeProjectUpdateForSubmission,
+  authorizeProjectManageRoles,
   authorizeProjectManageRolesForSubmission,
+  authorizeProjectManageCapabilities,
+  authorizeProjectManageCapabilitiesForSubmission,
+  authorizeProjectAssignCapabilities,
+  authorizeProjectAssignCapabilitiesForSubmission,
+  authorizeProjectPublish,
   authorizeProjectPublishForSubmission,
+  authorizeProjectDelete,
   authorizeProjectDeleteForSubmission,
   ensureProjectCommandAllowed,
+  projectPolicyMap,
 } from './project'
 export { authorizeImageList, authorizeImageRead } from './image'
 export { canSearchUsers, canOverrideUserSearchArchivedFilter } from './user'
@@ -155,27 +207,48 @@ export const toAuthMessage = (code: string): string => {
 }
 
 const policyMap = {
+  hub: hubPolicyMap,
   organisation: organisationPolicyMap,
+  project: projectPolicyMap,
 } as const
 
 /**
  * Central authorization entry point.
- * Resource types other than `organisation` intentionally return NOT_IMPLEMENTED in v1.
+ * Resource types without policy maps intentionally return NOT_IMPLEMENTED.
  */
 function authorize(params: AuthorizeParams): AuthorizationDecision {
-  if (params.resourceType !== 'organisation') {
-    throw new Error(`NOT_IMPLEMENTED: authorize(${params.resourceType})`)
+  if (params.resourceType === 'organisation') {
+    const handler =
+      policyMap.organisation[params.action as OrganisationAuthorizationAction]
+    if (!handler) {
+      throw new Error(
+        `NOT_IMPLEMENTED: authorize(${params.resourceType}/${params.action})`,
+      )
+    }
+    return handler(params as OrganisationAuthorizeParams)
   }
 
-  const resourcePolicyMap = policyMap[params.resourceType]
-  const handler = resourcePolicyMap[params.action as OrganisationAuthorizationAction]
-  if (!handler) {
-    throw new Error(
-      `NOT_IMPLEMENTED: authorize(${params.resourceType}/${params.action})`,
-    )
+  if (params.resourceType === 'project') {
+    const handler = policyMap.project[params.action as ProjectAuthorizationAction]
+    if (!handler) {
+      throw new Error(
+        `NOT_IMPLEMENTED: authorize(${params.resourceType}/${params.action})`,
+      )
+    }
+    return handler(params as ProjectAuthorizeParams)
   }
 
-  return handler(params)
+  if (params.resourceType === 'hub') {
+    const handler = policyMap.hub[params.action as HubAuthorizationAction]
+    if (!handler) {
+      throw new Error(
+        `NOT_IMPLEMENTED: authorize(${params.resourceType}/${params.action})`,
+      )
+    }
+    return handler(params as HubAuthorizeParams)
+  }
+
+  throw new Error(`NOT_IMPLEMENTED: authorize(${params.resourceType})`)
 }
 
 export default authorize
