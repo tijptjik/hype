@@ -256,6 +256,7 @@ export const ProjectProfile = z.enum(['list', 'card', 'detail', 'admin'])
 
 const ProjectListFields = ProjectBase.pick({
   id: true,
+  organisationId: true,
   code: true,
   createdAt: true,
   modifiedAt: true,
