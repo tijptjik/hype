@@ -9,6 +9,7 @@ const {
   mockSyncHubOrganisations,
   mockUpdateI18n,
   mockSyncHubUserRoles,
+  mockListHubRoleAssignments,
   mockProbeExistingHub,
   mockProbeHubForUpdate,
   mockUpdateHubByIdWithConcurrency,
@@ -30,6 +31,7 @@ const {
   mockSyncHubOrganisations: vi.fn(async () => undefined),
   mockUpdateI18n: vi.fn(async () => undefined),
   mockSyncHubUserRoles: vi.fn(async () => undefined),
+  mockListHubRoleAssignments: vi.fn(async () => []),
   mockProbeExistingHub: vi.fn(async () => null),
   mockProbeHubForUpdate: vi.fn(async () => null),
   mockUpdateHubByIdWithConcurrency: vi.fn(async () => null),
@@ -143,6 +145,7 @@ vi.mock('$lib/db/services/hub', () => ({
   updateHubArchivedStateById: vi.fn(async () => null),
   updateI18n: mockUpdateI18n,
   syncHubUserRoles: mockSyncHubUserRoles,
+  listHubRoleAssignments: mockListHubRoleAssignments,
   listHubOrganisationLookups: vi.fn(async () => []),
   listHubs: vi.fn(),
   getHub: vi.fn(),
@@ -209,6 +212,7 @@ describe('hub.remote form image handling', () => {
     mockAuthorizeHubManageRolesForSubmission.mockReturnValue({ allowed: true })
     mockHasInvalidHubOrganisationAssignmentsForSubmission.mockResolvedValue(false)
     mockProbeExistingHub.mockResolvedValue(null)
+    mockListHubRoleAssignments.mockResolvedValue([])
   })
 
   it('create mode ignores imageId from incoming form payload', async () => {
@@ -243,6 +247,7 @@ describe('hub.remote form image handling', () => {
     const { db } = buildDbForUpdate({
       existingRoles: [{ userId: 'u-1', role: 'admin' }],
     })
+    mockListHubRoleAssignments.mockResolvedValue([{ userId: 'u-1', role: 'admin' }])
     mockProbeHubForUpdate.mockResolvedValue({
       id: 'hub-1',
       code: 'core',

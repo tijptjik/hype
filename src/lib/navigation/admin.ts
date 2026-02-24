@@ -127,14 +127,47 @@ export async function getBreadcrumbs(
     const hierarchy = await appCtx.getHierarchy(currentResource)
     const breadcrumbs: { name: string; href: string }[] = []
 
-    if (hierarchy.organisation && resourceType !== 'organisation') {
+    const projectOrganisationCode = async (): Promise<string | null> => {
+      if (resourceType !== FirstClassResource.project) return null
+      const projectResource = currentResource as {
+        code?: unknown
+        organisationId?: unknown
+      }
+      const hierarchyOrgCode = hierarchy.organisation?.code
+      const currentCode =
+        typeof projectResource.code === 'string' ? projectResource.code : null
+      const organisationId =
+        typeof projectResource.organisationId === 'string'
+          ? projectResource.organisationId
+          : null
+
+      // Guard against stale/partial hierarchy where organisation code collapses to project code.
+      if (
+        hierarchyOrgCode &&
+        currentCode &&
+        hierarchyOrgCode === currentCode &&
+        organisationId &&
+        typeof appCtx.getOrganisationById === 'function'
+      ) {
+        const parentOrganisation = await appCtx.getOrganisationById(organisationId)
+        if (parentOrganisation?.code) return parentOrganisation.code
+      }
+      return hierarchyOrgCode ?? null
+    }
+
+    const organisationCode =
+      resourceType === FirstClassResource.project
+        ? await projectOrganisationCode()
+        : (hierarchy.organisation?.code ?? null)
+
+    if (organisationCode && resourceType !== 'organisation') {
       breadcrumbs.push({
         name: appCtx.getContextualOrganisationName(
           hierarchy.organisation,
           false,
           false,
         ),
-        href: `${ADMIN_PATH}/${ResourcePath.organisation}/${hierarchy.organisation.code}`,
+        href: `${ADMIN_PATH}/${ResourcePath.organisation}/${organisationCode}`,
       })
     }
 
