@@ -10,6 +10,8 @@ import FilterControlBar from '$lib/components/resources/filters/projects/Root.sv
 import { FirstClassResource } from '$lib/enums'
 // I18N
 import { m } from '$lib/i18n'
+// AUTHORIZATION
+import { canCreateAnyProject, toProjectAuthActor } from '$lib/api/services/authz'
 // ICONS
 import ProjectIcon from 'virtual:icons/lucide/layout-grid'
 // TYPES
@@ -46,8 +48,22 @@ const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 adminCtx.setFacet(false, false, FirstClassResource.project)
 
+const currentUser = $derived(adminCtx.appCtx.getUser())
+const currentHub = $derived(adminCtx.appCtx.hub)
+const currentActor = $derived(toProjectAuthActor(currentUser))
+
+const canCreateProject = $derived.by(() =>
+  canCreateAnyProject(currentActor, {
+    resourceHubId: currentHub?.isCore ? null : (currentHub?.id ?? null),
+  }),
+)
+
 // HEADER SETUP
-headerCtrl.setHeaderForIndex(m.maps__projects(), ProjectIcon)
+$effect(() => {
+  headerCtrl.setHeaderForIndex(m.maps__projects(), ProjectIcon, {
+    showNew: canCreateProject,
+  })
+})
 
 // STATE
 let entities: Project[] = $derived(
