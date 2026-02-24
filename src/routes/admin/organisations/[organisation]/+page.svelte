@@ -311,6 +311,9 @@ const canPublishOrganisation = $derived(organisationPermissions.canPublish)
 const canSubmitOrganisation = $derived(
   isNewOrganisationRef ? canCreateOrganisation : canEditOrganisation,
 )
+const canEditImagePresentationMode = $derived(
+  canSubmitOrganisation && isCurrentRefLoaded,
+)
 
 // § Handlers
 
@@ -492,6 +495,7 @@ function onSubmit(): void {
 }
 
 function onPresentationModeCommitted(nextMode: 'cover' | 'contain'): void {
+  if (!canEditImagePresentationMode) return
   setOrganisationImagePresentationMode(organisation, nextMode)
   setOrganisationImagePresentationMode(committedOrganisation, nextMode)
 }
@@ -686,6 +690,7 @@ $effect(() => {
             ctxId: organisation?.data?.id,
           }
         : undefined}
+      canEditPresentationMode={canEditImagePresentationMode}
       {onPresentationModeCommitted}
     />
   </Main.Section>

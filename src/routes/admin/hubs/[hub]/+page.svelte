@@ -346,6 +346,7 @@ const canEditHub = $derived(hubPermissions.canEdit)
 const canPublishHub = $derived(hubPermissions.canPublish)
 const canDeleteHub = $derived(hubPermissions.canDelete)
 const canSubmitHub = $derived(isNewHubRef ? canCreateHub : canEditHub)
+const canEditImagePresentationMode = $derived(canSubmitHub && isCurrentRefLoaded)
 const canSetCoreInclusive = $derived(canCreateHub)
 const allowedOrganisationIds = $derived.by(() => {
   if (adminCtx.appCtx.isSuperAdmin()) return null
@@ -612,6 +613,7 @@ function onSubmit(): void {
 }
 
 function onPresentationModeCommitted(nextMode: 'cover' | 'contain'): void {
+  if (!canEditImagePresentationMode) return
   if (hub?.data?.image) {
     hub.data.image.image.presentationMode = nextMode
   }
@@ -823,6 +825,7 @@ $effect(() => {
               ctxId: hub.data.id,
             }
           : undefined}
+      canEditPresentationMode={canEditImagePresentationMode}
       {onPresentationModeCommitted}
     />
   </Main.Section>
