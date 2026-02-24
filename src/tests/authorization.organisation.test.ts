@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { afterAll, describe, expect, it } from 'vitest'
 import authorize from '$lib/api/services/authz'
 import type { AuthorizeParams, UserRoleDisco } from '$lib/types'
+import { createAuthzMatrixReporter } from './authz-matrix-report'
 
 const coreAdminRole = (): UserRoleDisco =>
   ({
@@ -109,6 +110,24 @@ const withActor = (
   userRoles: actor.userRoles,
 })
 
+const matrix = createAuthzMatrixReporter('organisation')
+
+const assertMatrix = (row: {
+  action: string
+  scenario: string
+  actor: string
+  expected: boolean
+  actual: boolean
+  code?: string
+}): void => {
+  matrix.record(row)
+  expect(row.actual).toBe(row.expected)
+}
+
+afterAll(() => {
+  matrix.flush()
+})
+
 describe('organisation authorization policy matrix', () => {
   describe('readOrganisation', () => {
     const action: AuthorizeParams['action'] = 'readOrganisation'
@@ -133,7 +152,7 @@ describe('organisation authorization policy matrix', () => {
       {
         name: 'archived',
         requestedState: { isPublished: true, isArchived: true },
-        allowedActors: ['coreAdmin', 'hubAdminSame'],
+        allowedActors: ['coreAdmin', 'hubAdminSame', 'owner'],
       },
     ] as const
 
@@ -162,7 +181,14 @@ describe('organisation authorization policy matrix', () => {
               requestedState: stateCase.requestedState,
             }),
           )
-          expect(decision.allowed).toBe(expected)
+          assertMatrix({
+            action,
+            scenario: stateCase.name,
+            actor: actor.name,
+            expected,
+            actual: decision.allowed,
+            code: decision.code,
+          })
         })
       }
     }
@@ -174,7 +200,14 @@ describe('organisation authorization policy matrix', () => {
           requestedState: undefined,
         }),
       )
-      expect(decision.allowed).toBe(false)
+      assertMatrix({
+        action,
+        scenario: 'requestedState required',
+        actor: ACTORS.unrelated.name,
+        expected: false,
+        actual: decision.allowed,
+        code: decision.code,
+      })
       expect(decision.code).toBe('REQUEST_STATE_REQUIRED')
     })
   })
@@ -191,7 +224,14 @@ describe('organisation authorization policy matrix', () => {
           requestedState: { isPublished: false, isArchived: false },
         }),
       )
-      expect(decision.allowed).toBe(true)
+      assertMatrix({
+        action,
+        scenario: 'unpublished list',
+        actor: ACTORS.member.name,
+        expected: true,
+        actual: decision.allowed,
+        code: decision.code,
+      })
     })
 
     it('denies members for archived lists', () => {
@@ -203,8 +243,34 @@ describe('organisation authorization policy matrix', () => {
           requestedState: { isPublished: true, isArchived: true },
         }),
       )
-      expect(decision.allowed).toBe(false)
+      assertMatrix({
+        action,
+        scenario: 'archived list',
+        actor: ACTORS.member.name,
+        expected: false,
+        actual: decision.allowed,
+        code: decision.code,
+      })
       expect(decision.code).toBe('INSUFFICIENT_ROLE')
+    })
+
+    it('allows owners for archived lists', () => {
+      const decision = authorize(
+        withActor(ACTORS.owner, {
+          action,
+          resourceId: undefined,
+          resourceHubId: undefined,
+          requestedState: { isPublished: true, isArchived: true },
+        }),
+      )
+      assertMatrix({
+        action,
+        scenario: 'archived list',
+        actor: ACTORS.owner.name,
+        expected: true,
+        actual: decision.allowed,
+        code: decision.code,
+      })
     })
 
     it('requires requestedState', () => {
@@ -214,7 +280,14 @@ describe('organisation authorization policy matrix', () => {
           requestedState: undefined,
         }),
       )
-      expect(decision.allowed).toBe(false)
+      assertMatrix({
+        action,
+        scenario: 'requestedState required',
+        actor: ACTORS.coreAdmin.name,
+        expected: false,
+        actual: decision.allowed,
+        code: decision.code,
+      })
       expect(decision.code).toBe('REQUEST_STATE_REQUIRED')
     })
   })
@@ -234,7 +307,14 @@ describe('organisation authorization policy matrix', () => {
     for (const [key, actor] of Object.entries(ACTORS)) {
       it(`${actor.name}`, () => {
         const decision = authorize(withActor(actor, { action }))
-        expect(decision.allowed).toBe(expectedByActor[key])
+        assertMatrix({
+          action,
+          scenario: 'create',
+          actor: actor.name,
+          expected: expectedByActor[key],
+          actual: decision.allowed,
+          code: decision.code,
+        })
       })
     }
 
@@ -270,7 +350,14 @@ describe('organisation authorization policy matrix', () => {
       for (const [key, actor] of Object.entries(ACTORS)) {
         it(`${action} :: ${actor.name}`, () => {
           const decision = authorize(withActor(actor, { action, fields: [] }))
-          expect(decision.allowed).toBe(expectedByActor[key])
+          assertMatrix({
+            action,
+            scenario: 'write',
+            actor: actor.name,
+            expected: expectedByActor[key],
+            actual: decision.allowed,
+            code: decision.code,
+          })
         })
       }
     }
@@ -303,7 +390,7 @@ describe('organisation authorization policy matrix', () => {
       coreAdmin: true,
       hubAdminSame: true,
       hubAdminOther: false,
-      owner: false,
+      owner: true,
       member: false,
       unrelated: false,
       anonymous: false,
@@ -312,7 +399,14 @@ describe('organisation authorization policy matrix', () => {
     for (const [key, actor] of Object.entries(ACTORS)) {
       it(`${actor.name}`, () => {
         const decision = authorize(withActor(actor, { action }))
-        expect(decision.allowed).toBe(expectedByActor[key])
+        assertMatrix({
+          action,
+          scenario: 'delete',
+          actor: actor.name,
+          expected: expectedByActor[key],
+          actual: decision.allowed,
+          code: decision.code,
+        })
       })
     }
   })
@@ -321,8 +415,8 @@ describe('organisation authorization policy matrix', () => {
     expect(() =>
       authorize(
         withActor(ACTORS.coreAdmin, {
-          resourceType: 'project',
-          action: 'updateOrganisation',
+          resourceType: 'layer',
+          action: 'readOrganisation',
         }),
       ),
     ).toThrow('NOT_IMPLEMENTED')
