@@ -17,7 +17,44 @@
   }
 
   .bits-theme .bits-form__user-card-wrapper.bits-form__user-card-wrapper--spacious {
-    gap: calc(var(--spacing) * 4);
+    --bits-user-card-grid-gap: calc(var(--spacing) * 4);
+    gap: var(--bits-user-card-grid-gap);
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: stretch;
+  }
+
+  .bits-theme
+    .bits-form__section.basis-2\/3
+    .bits-form__user-card-wrapper.bits-form__user-card-wrapper--spacious {
+    max-width: none;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bits-theme .bits-form__section.basis-2\/3 {
+    container-type: inline-size;
+    container-name: bits-user-card-section;
+  }
+
+  @container bits-user-card-section (min-width: 48rem) {
+    .bits-theme
+      .bits-form__section.basis-2\/3
+      .bits-form__user-card-wrapper.bits-form__user-card-wrapper--spacious {
+      grid-template-columns: repeat(
+          2,
+          minmax(0, calc((100% - var(--bits-user-card-grid-gap)) / 2))
+        );
+    }
+  }
+
+  @container bits-user-card-section (min-width: 72rem) {
+    .bits-theme
+      .bits-form__section.basis-2\/3
+      .bits-form__user-card-wrapper.bits-form__user-card-wrapper--spacious {
+      grid-template-columns: repeat(
+          3,
+          minmax(0, calc((100% - (var(--bits-user-card-grid-gap) * 2)) / 3))
+        );
+    }
   }
 
   .bits-theme .bits-form__user-card-avatar {
