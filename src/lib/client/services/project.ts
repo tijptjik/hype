@@ -8,6 +8,7 @@ import type {
   Project,
   ProjectBooleanField,
   ProjectFormInput,
+  ProjectParentOrganisationScope,
   ProjectOwnerRoleSeedOrganisation,
   ProjectSubmitUpdatesParams,
   User,
@@ -135,6 +136,21 @@ export function getProjectSubmitUpdates<TEntityResult, TListResult>({
 > {
   if (!projectId) return []
   return [entityQuery, listQuery]
+}
+
+export function resolveDefaultProjectOrganisationIdForCreate(params: {
+  isNewProjectRef: boolean
+  currentOrganisationId?: string | null
+  scope: ProjectParentOrganisationScope
+}): string | null {
+  if (!params.isNewProjectRef) return null
+  if (params.currentOrganisationId) return null
+  if (params.scope.allowAll) return null
+  if (params.scope.hubIds.length > 0) return null
+
+  const uniqueOrganisationIds = Array.from(new Set(params.scope.organisationIds))
+  if (uniqueOrganisationIds.length !== 1) return null
+  return uniqueOrganisationIds[0] ?? null
 }
 
 export async function seedOwnerRolesForNewProject(params: {

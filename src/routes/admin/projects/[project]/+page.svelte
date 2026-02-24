@@ -27,6 +27,7 @@ import {
   getProjectSubmitUpdates,
   overrideProjectEntityBoolean,
   overrideProjectListItemBoolean,
+  resolveDefaultProjectOrganisationIdForCreate,
   seedOwnerRolesForNewProject as resolveOwnerRoleSeedForNewProject,
   toProjectFormInput,
 } from '$lib/client/services/project'
@@ -745,6 +746,42 @@ $effect(() => {
   if (canSubmitProject) return
   if (!headerCtrl.state.isEditing) return
   headerCtrl.setEditing(false)
+})
+
+$effect(() => {
+  if (!isNewProjectRef) return
+  if (parentOrganisationIdValue) return
+
+  const scope = resolveProjectParentOrganisationScope({
+    actor: authActor,
+    isCreateMode: true,
+    createContextHubId,
+    sourceHubId: hierarchy?.organisation?.hubId ?? null,
+  })
+  const defaultOrganisationId = resolveDefaultProjectOrganisationIdForCreate({
+    isNewProjectRef,
+    currentOrganisationId: parentOrganisationIdValue,
+    scope,
+  })
+  if (!defaultOrganisationId) return
+
+  void getOrganisation({
+    ref: defaultOrganisationId,
+    refKey: 'id',
+    meta: { isAdminRequest: true, profile: 'admin' },
+  }).then(result => {
+    if (!result?.data) return
+    if (parentOrganisationIdValue) return
+
+    selectedParentOrganisationById = {
+      [defaultOrganisationId]: result.data as ParentSectionOrganisationItem,
+    }
+    updateFormData(formCtx.form as any, (data: any) => {
+      data.organisationId = defaultOrganisationId
+      return data
+    })
+    revalidateAfterProgrammaticChange()
+  })
 })
 
 $effect(() => {
