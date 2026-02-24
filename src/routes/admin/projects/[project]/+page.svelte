@@ -396,7 +396,7 @@ async function refreshProject(ref: string = projectRef): Promise<ProjectGetState
   return await getProject({
     ref,
     refKey: 'code',
-    meta: { isAdminRequest: true, profile: 'detail' },
+    meta: { isAdminRequest: true, profile: 'admin' },
   }).catch(() => null)
 }
 
@@ -428,7 +428,7 @@ async function handleProjectStateToggle({
       getProject({
         ref: projectRef,
         refKey: 'code',
-        meta: { isAdminRequest: true, profile: 'detail' },
+        meta: { isAdminRequest: true, profile: 'admin' },
       }).withOverride(overrideProjectEntityBoolean(field, nextState)),
       getProjects({
         conditions: adminCtx.appCtx.isSuperAdmin() ? {} : { isArchived: false },
@@ -699,8 +699,11 @@ $effect(() => {
             isSubmitRequested={formCtx.isSubmitRequested}
             startInAddingMode={isNewProjectRef}
             availableRoles={[
+              { value: ProjectRoleType.owner as any, label: m.profile__role_type__owner() },
               { value: ProjectRoleType.maintainer as any, label: 'Maintainer' },
               { value: ProjectRoleType.member as any, label: m.profile__role_type__member() },
+              { value: ProjectRoleType.translator as any, label: 'Translator' },
+              { value: ProjectRoleType.user as any, label: 'User' },
             ]}
             {onAddUser}
             {onRemoveUser}

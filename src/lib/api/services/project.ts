@@ -248,12 +248,12 @@ export const assertPermissionsToCreateProject = (
   formData: ProjectNew,
   userRoles: UserRoleDisco[],
 ) => {
+  const organisationId = formData.organisationId as Id
   // Run all access control assertions
   const assertionError = runAssertions(
     () => assertUserLoggedIn(user),
     () => assertAdminRequest(request),
-    () =>
-      assertOrganisationOwnerOrSuperAdmin(user, userRoles, formData.organisationId!), // Only allow org owners to create projects
+    () => assertOrganisationOwnerOrSuperAdmin(user, userRoles, organisationId), // Only allow org owners to create projects
   )
 
   if (assertionError) return assertionError
@@ -276,11 +276,12 @@ export const assertPermissionsToUpdateProject = (
   formData: ProjectDB,
   userRoles: UserRoleDisco[],
 ) => {
+  const projectId = formData.id as Id
   // Run all access control assertions
   const assertionError = runAssertions(
-    () => assertUserLoggedIn(user as any),
+    () => assertUserLoggedIn(user),
     () => assertAdminRequest(request),
-    () => assertProjectMaintainerOrSuperAdmin(user, userRoles, formData.id!), // Only allow project maintainers to update projects
+    () => assertProjectMaintainerOrSuperAdmin(user, userRoles, projectId), // Only allow project maintainers to update projects
   )
 
   if (assertionError) return assertionError
@@ -321,7 +322,7 @@ export const isAccessLostUponSuccess = (
   const userRolesToCheck = userRoles || (formData.userRoles as UserRoleDisco[])
   return (
     !userRolesToCheck.some(
-      (role: any) =>
+      (role: UserRoleDisco) =>
         role.type === 'project' &&
         role.projectId === formData.id &&
         role.userId === user.id,

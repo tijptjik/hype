@@ -1,5 +1,6 @@
 // I18N
 import { m } from '$lib/i18n'
+import { ProjectRoleType } from '$lib/enums'
 
 // ZOD
 import { z } from 'zod'
@@ -79,13 +80,13 @@ export const ProjectRoleInsert = createInsertSchema(projectRole).omit({
   projectId: true,
 })
 export const ProjectRoleInsertExtra = ProjectRoleInsert.extend({
-  role: z.enum(['maintainer', 'member']),
+  role: z.nativeEnum(ProjectRoleType),
   user: UserBasic,
   capabilities: ProjectRoleCapabilitiesSchema.optional().default({}),
 })
 export const ProjectRoleUpdate = createUpdateSchema(projectRole)
 export const ProjectRoleUpdateExtra = ProjectRoleUpdate.extend({
-  role: z.enum(['maintainer', 'member']),
+  role: z.nativeEnum(ProjectRoleType),
   user: UserBasic,
   capabilities: ProjectRoleCapabilitiesSchema.optional().default({}),
 })
