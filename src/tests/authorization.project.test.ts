@@ -543,4 +543,92 @@ describe('project authorization policy matrix', () => {
       expect(coreDecision.allowed).toBe(true)
     })
   })
+
+  describe('move project authorization composition', () => {
+    const canMoveProject = (params: {
+      actor: Actor
+      source: { projectId: string; organisationId: string; hubId: string | null }
+      target: { organisationId: string; hubId: string | null }
+    }): { allowed: boolean; createAllowed: boolean; deleteAllowed: boolean } => {
+      const createDecision = authorize(
+        withActor(params.actor, {
+          action: 'createProject',
+          resourceId: undefined,
+          organisationId: params.target.organisationId,
+          resourceHubId: params.target.hubId,
+          fields: [],
+        }),
+      )
+      const deleteDecision = authorize(
+        withActor(params.actor, {
+          action: 'deleteProject',
+          resourceId: params.source.projectId,
+          organisationId: params.source.organisationId,
+          resourceHubId: params.source.hubId,
+          fields: ['isArchived'],
+        }),
+      )
+
+      return {
+        allowed: createDecision.allowed && deleteDecision.allowed,
+        createAllowed: createDecision.allowed,
+        deleteAllowed: deleteDecision.allowed,
+      }
+    }
+
+    it('requires both create(target) and delete(source) permissions', () => {
+      const source = {
+        projectId: 'project-1',
+        organisationId: 'org-1',
+        hubId: 'hub-a',
+      }
+
+      const sourceOwnerMove = canMoveProject({
+        actor: ACTORS.orgOwner,
+        source,
+        target: { organisationId: 'org-2', hubId: 'hub-a' },
+      })
+      expect(sourceOwnerMove.createAllowed).toBe(false)
+      expect(sourceOwnerMove.deleteAllowed).toBe(true)
+      expect(sourceOwnerMove.allowed).toBe(false)
+
+      const targetOwner: Actor = {
+        name: 'organisation owner (target)',
+        userId: 'u-org-owner-org-2',
+        isAuthenticated: true,
+        userRoles: [organisationRole('owner', 'org-2')],
+      }
+      const targetOwnerMove = canMoveProject({
+        actor: targetOwner,
+        source,
+        target: { organisationId: 'org-2', hubId: 'hub-a' },
+      })
+      expect(targetOwnerMove.createAllowed).toBe(true)
+      expect(targetOwnerMove.deleteAllowed).toBe(false)
+      expect(targetOwnerMove.allowed).toBe(false)
+    })
+
+    it('allows scoped hub admin moves only inside scoped hub', () => {
+      const source = {
+        projectId: 'project-1',
+        organisationId: 'org-1',
+        hubId: 'hub-a',
+      }
+
+      const sameHubMove = canMoveProject({
+        actor: ACTORS.hubAdminSame,
+        source,
+        target: { organisationId: 'org-2', hubId: 'hub-a' },
+      })
+      expect(sameHubMove.allowed).toBe(true)
+
+      const otherHubMove = canMoveProject({
+        actor: ACTORS.hubAdminSame,
+        source,
+        target: { organisationId: 'org-3', hubId: 'hub-b' },
+      })
+      expect(otherHubMove.createAllowed).toBe(false)
+      expect(otherHubMove.allowed).toBe(false)
+    })
+  })
 })
