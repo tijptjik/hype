@@ -227,7 +227,9 @@ export const toHubSubmittedFields = (
   return fields
 }
 
-export const toHubUserRoleSignature = toUserRoleSignature
+export const toHubUserRoleSignature = (
+  userRoles: Array<{ userId: string; role: string }>,
+): string => toUserRoleSignature(userRoles)
 
 /* ----------------- */
 // ACTOR RESOLUTION
