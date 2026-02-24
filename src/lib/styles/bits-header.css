@@ -58,13 +58,13 @@
   }
 
   .bits-theme .bits-header--with-crumbs .bits-header__icon-wrap {
-    grid-row: 2;
+    grid-row: 1 / span 2;
   }
 
   .bits-theme
     .bits-header--with-crumbs.bits-header--with-title-and-subtitle
     .bits-header__icon-wrap {
-    grid-row: 2 / span 2;
+    grid-row: 1 / span 3;
   }
 
   .bits-theme .bits-header__icon {
