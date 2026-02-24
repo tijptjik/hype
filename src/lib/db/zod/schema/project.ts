@@ -178,9 +178,15 @@ export const ProjectI18nFormData = z.object({
     .max(8192, { message: m.admin__validation_description_lte_8192_chars() })
     .optional(),
   descriptionGen: FormBoolean.optional(),
-  license: z.string().min(1).max(512),
+  license: z
+    .string()
+    .min(1, { message: m.admin__validation_license_is_required() })
+    .max(128, { message: m.admin__validation_lte_128_chars() }),
   licenseGen: FormBoolean.optional(),
-  attribution: z.string().min(1).max(512),
+  attribution: z
+    .string()
+    .min(1, { message: m.admin__validation_attribution_is_required() })
+    .max(128, { message: m.admin__validation_lte_128_chars() }),
   attributionGen: FormBoolean.optional(),
 })
 
