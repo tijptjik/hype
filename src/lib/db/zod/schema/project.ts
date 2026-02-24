@@ -1,6 +1,12 @@
 // I18N
 import { m } from '$lib/i18n'
 import { ProjectRoleType } from '$lib/enums'
+import type {
+  CapabilityDefinitions,
+  CapabilityDefinition,
+  ProjectCapabilityKey,
+  ProjectRoleCapabilities,
+} from '$lib/types'
 
 // ZOD
 import { z } from 'zod'
@@ -28,28 +34,41 @@ import { OrganisationBase } from './organisation'
  * Defines fine-grained permissions for project roles
  * All keys are optional, defaulting to false
  */
-export const ProjectRoleCapabilitiesSchema = z.object({
-  manageBakeries: z.boolean().optional(),
-  manageVolunteers: z.boolean().optional(),
-  manageDropOffs: z.boolean().optional(),
+export const ProjectRoleCapabilitiesSchema: z.ZodType<ProjectRoleCapabilities> =
+  z.object({
+    manageBakeries: z.boolean().optional(),
+    manageVolunteers: z.boolean().optional(),
+    manageDropOffs: z.boolean().optional(),
+  })
+export const ProjectCapabilityLabelI18nSchema = z.object({
+  en: z.string().optional(),
+  zhHans: z.string().optional(),
+  zhHant: z.string().optional(),
 })
 
-/**
- * Type for project role capabilities
- */
-export type ProjectRoleCapabilities = z.infer<typeof ProjectRoleCapabilitiesSchema>
+export const ProjectCapabilityDefinitionSchema: z.ZodType<CapabilityDefinition> =
+  z.object({
+    i18n: ProjectCapabilityLabelI18nSchema.optional(),
+  })
+
+export const ProjectCapabilityDefinitionsSchema: z.ZodType<CapabilityDefinitions> =
+  z.record(z.custom<ProjectCapabilityKey>(), ProjectCapabilityDefinitionSchema)
 
 /* ----------------- */
 // PROJECT CORE SCHEMAS
 /* -------- */
 
-export const ProjectBase = createSelectSchema(project)
+export const ProjectBase = createSelectSchema(project).extend({
+  capabilities: ProjectCapabilityDefinitionsSchema.optional().default({}),
+})
 export const ProjectInsert = createInsertSchema(project).extend({
   ...getDefaultConstraints(project),
   code: z.string().min(1, { message: m.admin__validation_short_name_lte_32_chars() }),
+  capabilities: ProjectCapabilityDefinitionsSchema.optional().default({}),
 })
 export const ProjectUpdate = createUpdateSchema(project).extend({
   ...getDefaultConstraints(project),
+  capabilities: ProjectCapabilityDefinitionsSchema.optional(),
 })
 
 /* ----------------- */
@@ -168,6 +187,7 @@ export const ProjectI18nFormData = z.object({
 export const ProjectRoleFormData = z.object({
   userId: z.string().min(1),
   role: ProjectRoleBase.shape.role,
+  capabilities: ProjectRoleCapabilitiesSchema.optional().default({}),
 })
 
 export const ProjectI18nByLocaleFormData = z.object({
@@ -191,6 +211,7 @@ export const ProjectEntityFormData = z.object({
       message: m.admin__validation_key_valid_characters(),
     }),
   i18n: ProjectI18nByLocaleFormData,
+  capabilities: ProjectCapabilityDefinitionsSchema.optional().default({}),
   userRoles: ProjectUserRolesFormData,
   properties: z.array(z.union([PropertyInsertAPI, PropertyUpdateAPI])).optional(),
 })

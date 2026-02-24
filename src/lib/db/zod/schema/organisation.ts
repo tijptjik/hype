@@ -1,5 +1,10 @@
 // I18N
 import { m } from '$lib/i18n'
+import type {
+  CapabilityDefinition,
+  CapabilityDefinitions,
+  ProjectCapabilityKey,
+} from '$lib/types'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
@@ -13,17 +18,35 @@ import { UserBasic } from './user'
 import { ImageBase, ImageContextEnvelopeAPI } from './image'
 import { HubBasic } from './hub'
 
+export const OrganisationCapabilityLabelI18nSchema = z.object({
+  en: z.string().optional(),
+  zhHans: z.string().optional(),
+  zhHant: z.string().optional(),
+})
+
+export const OrganisationCapabilityDefinitionSchema: z.ZodType<CapabilityDefinition> =
+  z.object({
+    i18n: OrganisationCapabilityLabelI18nSchema.optional(),
+  })
+
+export const OrganisationCapabilityDefinitionsSchema: z.ZodType<CapabilityDefinitions> =
+  z.record(z.custom<ProjectCapabilityKey>(), OrganisationCapabilityDefinitionSchema)
+
 /* ----------------- */
 // ORGANISATION CORE SCHEMAS
 /* -------- */
 
-export const OrganisationBase = createSelectSchema(organisation)
+export const OrganisationBase = createSelectSchema(organisation).extend({
+  capabilities: OrganisationCapabilityDefinitionsSchema.optional().default({}),
+})
 export const OrganisationInsert = createInsertSchema(organisation).extend({
   ...getDefaultConstraints(organisation),
   code: z.string().min(2, { message: m.admin__validation_short_name_lte_32_chars() }),
+  capabilities: OrganisationCapabilityDefinitionsSchema.optional().default({}),
 })
 export const OrganisationUpdate = createUpdateSchema(organisation).extend({
   ...getDefaultConstraints(organisation),
+  capabilities: OrganisationCapabilityDefinitionsSchema.optional(),
 })
 
 /* ----------------- */
@@ -174,6 +197,7 @@ export const OrganisationEntityFormData = z.object({
       message: m.admin__validation_key_valid_characters(),
     }),
   url: z.union([z.literal(''), z.url({ message: m.admin__validation_url_invalid() })]),
+  capabilities: OrganisationCapabilityDefinitionsSchema.optional().default({}),
   i18n: OrganisationI18nByLocaleFormData,
   userRoles: OrganisationUserRolesFormData,
 })
