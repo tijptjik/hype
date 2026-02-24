@@ -43,7 +43,11 @@ export const toUserRoleSignature = (
     .join('|')
 
 export const shouldLogAuthzDeny = (): boolean => {
-  const value = process.env.AUTHZ_LOG_DENY?.toLowerCase()
+  const fromProcess =
+    typeof process !== 'undefined' ? process.env?.AUTHZ_LOG_DENY : undefined
+  const fromImportMeta = (import.meta as { env?: Record<string, string | undefined> })
+    .env?.AUTHZ_LOG_DENY
+  const value = (fromProcess ?? fromImportMeta)?.toLowerCase()
   return value === '1' || value === 'true'
 }
 
