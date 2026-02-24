@@ -34,8 +34,8 @@
     --dark-10: color-mix(in oklab, var(--color-base-content) 10%, transparent);
     --dark-40: color-mix(in oklab, var(--color-base-content) 40%, transparent);
     --dark-04: color-mix(in oklab, var(--color-base-content) 4%, transparent);
-    --accent: var(--color-secondary);
-    --accent-foreground: var(--color-secondary-content);
+    --accent: var(--color-accent);
+    --accent-foreground: var(--color-accent-content);
     --destructive: var(--color-error);
     --tertiary: var(--color-warning);
     --line: var(--color-base-300);
